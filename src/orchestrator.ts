@@ -1096,6 +1096,7 @@ export class Orchestrator {
             });
           result = { text: '', usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, costUsd: 0 }, estimated: false, model: cand.model, runtime: 'n/a', durationMs: 0, error: re.message, errorKind: re.kind };
           if (!shouldFailover(re.kind)) break;
+          if (this.pauseRequests.has(task.id)) throw new PauseSignal('manual', 'Tạm dừng theo yêu cầu');
           if (i + 1 < maxTry) logs.write({ level: 'warn', kind: 'runtime.failover', msg: `${agent.name}: chuyển ${cand.label} → ${list[i + 1].label}`, taskId: task.id, agentId: agent.id, department: deptId });
         }
       }
@@ -1218,7 +1219,8 @@ export class Orchestrator {
     const jobFile = path.join(dir, `${req.meta.callId}.json`);
     const resultFile = path.join(dir, `${req.meta.callId}.result.json`);
     writeJsonAtomic(jobFile, { runtime: runtimeId, request: req, resultFile, paneId: pane });
-    await herdr.runJob(pane, jobFile, resultFile, req.timeoutMs, signal);
+    // vòng lặp công cụ (cài dependency, chạy test…) có thể dài hơn nhiều so với một lượt trả lời
+    await herdr.runJob(pane, jobFile, resultFile, req.toolPolicy ? req.timeoutMs * 3 : req.timeoutMs, signal);
     const res = readJsonFile<RunResult | null>(resultFile, null);
     if (!res) throw new Error('Không đọc được kết quả từ pane herdr');
     const agentUsage = this.d.usage.total({ agent: agent.id });
