@@ -72,6 +72,8 @@ code, pre { font-family: var(--mono); }
 
 /* ── Layout ─────────────────────────────────────────────── */
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 440px; height: calc(100vh - 62px); }
+.layout > * { min-width: 0; }
+body { overflow-x: hidden; }
 .stage { display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--line); background: #0a0d13; }
 .stage-inner { position: relative; flex: 1; min-height: 0; display: grid; place-items: center; overflow: hidden; }
 #office { width: 100%; height: 100%; display: block; image-rendering: pixelated; cursor: default; }
@@ -102,7 +104,8 @@ code, pre { font-family: var(--mono); }
 
 /* ── Panel ─────────────────────────────────────────────── */
 .panel { display: flex; flex-direction: column; min-height: 0; background: var(--panel); }
-.tabs { display: flex; border-bottom: 1px solid var(--line); padding: 0 6px; background: var(--bg-2); }
+.tabs { display: flex; border-bottom: 1px solid var(--line); padding: 0 6px; background: var(--bg-2); overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
 .tabs button {
   background: none; border: 0; padding: 11px 11px 10px; color: var(--muted); cursor: pointer; font-weight: 500;
   border-bottom: 2px solid transparent; white-space: nowrap;
@@ -295,13 +298,18 @@ code, pre { font-family: var(--mono); }
 .logs .lm small { color: var(--faint); }
 
 @media (max-width: 1100px) {
-  .layout { grid-template-columns: 1fr; height: auto; }
+  .layout { grid-template-columns: minmax(0, 1fr); height: auto; }
   .stage { height: 62vh; border-right: 0; border-bottom: 1px solid var(--line); }
   .panel { min-height: 70vh; }
   .kpis .kpi:nth-child(n+4) { display: none; }
 }
 @media (max-width: 640px) {
-  .topbar { flex-wrap: wrap; gap: 10px; }
+  .topbar { flex-wrap: wrap; gap: 10px; padding: 10px 12px; }
+  .kpi { min-width: 0; flex: 1; padding: 4px 8px; }
+  .stage { height: 46vh; }
+  .ticker { height: 92px; }
+  .legend { font-size: 10.5px; gap: 6px; padding: 4px 7px; }
+  .tabs button { padding: 10px 8px 9px; }
   .meta { display: none; }
   .agents-grid, .modes, .grid2 { grid-template-columns: 1fr; }
 }
