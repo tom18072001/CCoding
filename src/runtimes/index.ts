@@ -34,6 +34,11 @@ export class RuntimeManager {
       new MockRuntime(rc('mock')),
     ];
     for (const r of all) this.runtimes.set(r.id, r);
+    // Runtime tùy biến khai báo trong cấu hình, ví dụ "bifrost", "ollama", "litellm": { "type": "openai-api", … }
+    for (const [id, c] of Object.entries(config.runtimes)) {
+      if (this.runtimes.has(id) || !c || c.type !== 'openai-api') continue;
+      this.runtimes.set(id, new OpenAiApiRuntime(c, mm(id), id));
+    }
   }
 
   get(id: string): Runtime | undefined {

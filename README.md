@@ -98,10 +98,12 @@ Tùy chọn: `--rounds 0-3` (số vòng họp), `--parallel 1-8`, `--no-review`,
 | `codex-cli` | Có Codex CLI | chính xác | gửi ra ngoài |
 | `kimi-cli` | Có Kimi Code CLI (`kimi`) | ước lượng nếu CLI không báo | gửi ra ngoài |
 | `anthropic-api` | Có `ANTHROPIC_API_KEY` | chính xác | gửi ra ngoài |
-| `openai-api` | 9router (`http://localhost:20128/v1`), Ollama, OpenRouter… | chính xác nếu server trả `usage` | cục bộ nếu đặt `"local": true` (Ollama) |
+| `bifrost` | Gateway [Bifrost](https://github.com/maximhq/bifrost) tại `http://localhost:8080/v1` — gắn tag agent/phòng/task, key ảo + ngân sách riêng từng phòng | chính xác | tùy provider phía sau |
+| `ollama` | Ollama `http://localhost:11434/v1` | chính xác | **cục bộ** — dùng được cho dự án Bảo mật/Hạn chế |
+| `openai-api` | API tương thích OpenAI bất kỳ (9router, LiteLLM, OpenRouter…) | chính xác nếu server trả `usage` | cục bộ nếu đặt `"local": true` |
 | `mock` | Demo, kiểm thử, dữ liệu "Hạn chế" khi chưa có model cục bộ | ước lượng | cục bộ |
 
-Mặc định `runtime: auto` chọn runtime đầu tiên **sẵn sàng và được phép** theo thứ tự `claude-cli → anthropic-api → openai-api → codex-cli → kimi-cli → mock`. Ghi đè trong `ccoding.local.json` (không commit) — xem [ccoding.local.example.json](ccoding.local.example.json) và [docs/RUNTIMES.md](docs/RUNTIMES.md).
+Mặc định `runtime: auto` chọn runtime đầu tiên **sẵn sàng và được phép** theo thứ tự `claude-cli → bifrost → anthropic-api → openai-api → codex-cli → kimi-cli → ollama → mock`. Có thể thêm runtime tương thích OpenAI bất kỳ bằng `"type": "openai-api"`; `herdr up` có thể tự chạy kèm Bifrost (`herdr.services`). Ghi đè trong `ccoding.local.json` (không commit) — xem [ccoding.local.example.json](ccoding.local.example.json) và [docs/RUNTIMES.md](docs/RUNTIMES.md).
 
 ## Log & bộ đếm token
 

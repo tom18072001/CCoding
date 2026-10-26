@@ -7,7 +7,7 @@
 
   "runtime": {
     "default": "auto",
-    "order": ["claude-cli", "anthropic-api", "openai-api", "codex-cli", "kimi-cli", "mock"]
+    "order": ["claude-cli", "bifrost", "anthropic-api", "openai-api", "codex-cli", "kimi-cli", "ollama", "mock"]
   },
   "runner": "auto",
   "maxConcurrentTasks": 2,
@@ -26,7 +26,8 @@
     "workspaceLabel": "CCoding Office",
     "agentPanes": true,
     "closeAgentPanes": false,
-    "notify": true
+    "notify": true,
+    "services": []
   },
 
   "runtimes": {
@@ -35,12 +36,26 @@
     "kimi-cli": { "command": "kimi", "extraArgs": [] },
     "anthropic-api": { "baseUrl": "https://api.anthropic.com", "apiKeyEnv": "ANTHROPIC_API_KEY", "maxTokens": 8000 },
     "openai-api": { "baseUrl": "http://localhost:20128/v1", "apiKeyEnv": "OPENAI_API_KEY", "maxTokens": 8000, "local": false, "defaultModel": "" },
+    "bifrost": {
+      "type": "openai-api",
+      "label": "Bifrost gateway",
+      "baseUrl": "http://localhost:8080/v1",
+      "apiKeyEnv": "BIFROST_API_KEY",
+      "tags": "bifrost",
+      "virtualKeyHeader": "x-bf-vk",
+      "virtualKeys": { "dev": "env:BIFROST_VK_DEV", "research": "env:BIFROST_VK_RESEARCH", "office": "env:BIFROST_VK_OFFICE" },
+      "maxTokens": 8000,
+      "local": false
+    },
+    "ollama": { "type": "openai-api", "label": "Ollama (cục bộ)", "baseUrl": "http://localhost:11434/v1", "tags": "none", "maxTokens": 8000, "local": true },
     "mock": { "minDelayMs": 500, "maxDelayMs": 1600 }
   },
 
   "models": {
     "anthropic-api": { "opus": "claude-opus-5-5", "sonnet": "claude-sonnet-5-5", "haiku": "claude-haiku-5-5" },
     "openai-api": {},
+    "bifrost": {},
+    "ollama": {},
     "codex-cli": {},
     "kimi-cli": {},
     "claude-cli": {}

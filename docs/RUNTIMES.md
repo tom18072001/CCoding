@@ -7,6 +7,8 @@ Mỗi lượt gọi agent được giao cho một **runtime**. Thứ tự chọn
 3. `runtime:` trong frontmatter agent.md (mặc định `inherit`)
 4. `runtime.default` trong cấu hình (`auto`)
 
+Thứ tự `auto` mặc định: `claude-cli → bifrost → anthropic-api → openai-api → codex-cli → kimi-cli → ollama → mock`.
+
 Runtime được chỉ định nhưng **chưa sẵn sàng** hoặc **bị chặn bởi nhãn dữ liệu** ⇒ rơi về `auto` và ghi cảnh báo `runtime.fallback` vào log. `auto` duyệt `runtime.order` và chọn runtime đầu tiên vừa sẵn sàng vừa được phép.
 
 ## Bảng runtime
@@ -35,17 +37,37 @@ Runtime được chỉ định nhưng **chưa sẵn sàng** hoặc **bị chặn
 - **Ollama** (cục bộ): `baseUrl: http://localhost:11434/v1`, `"local": true` ⇒ được phép xử lý dữ liệu *Bảo mật*/*Hạn chế*.
 - Không ánh xạ model ⇒ dùng `defaultModel`, nếu trống lấy model đầu tiên server liệt kê.
 
+### `bifrost` — gateway Bifrost (khuyến nghị)
+- Runtime tùy biến kiểu `openai-api`, mặc định `http://localhost:8080/v1`. Chạy Bifrost: `npx -y @maximhq/bifrost` (web UI cùng cổng 8080) — hoặc để `herdr up` tự chạy (xem `herdr.services`).
+- Model đặt theo dạng `provider/model` của Bifrost, ví dụ `ollama/qwen3:8b`, `anthropic/claude-sonnet-…`, `openai/gpt-…` — ánh xạ alias trong `models.bifrost`.
+- **Gắn tag mỗi request** (chỉ mã định danh, không nội dung): `x-bf-dim-app=ccoding`, `x-bf-dim-agent`, `x-bf-dim-department`, `x-bf-dim-task`, `x-bf-dim-phase`, `x-bf-dim-project`, `x-bf-dim-subtask`, và `x-request-id` = mã lượt gọi trong sổ cái token ⇒ đối chiếu được log Bifrost với `data/usage/ledger.jsonl`.
+- **Key ảo theo phòng ban**: tạo virtual key trong Bifrost (Virtual Keys → Add), đặt ngân sách/giới hạn, rồi khai báo:
+  ```json
+  "bifrost": { "virtualKeys": { "dev": "env:BIFROST_VK_DEV", "research": "env:BIFROST_VK_RESEARCH", "office": "env:BIFROST_VK_OFFICE" } }
+  ```
+  Giá trị dạng `env:TEN_BIEN` đọc từ biến môi trường (khuyến nghị, Windows: `setx BIFROST_VK_DEV sk-bf-…`); có thể ghi thẳng khóa trong `ccoding.local.json` (đã `.gitignore`). Key gửi qua header `x-bf-vk`.
+- **LiteLLM** dùng cùng cơ chế: `"tags": "litellm"` (gửi `x-litellm-tags`), `"virtualKeyHeader": "authorization"`.
+
+### `ollama` — mô hình cục bộ
+- Runtime tùy biến `openai-api` tại `http://localhost:11434/v1`, `"local": true` ⇒ **được phép** xử lý dự án *Bảo mật*/*Hạn chế*. Cần `ollama pull <model>` trước; đặt `models.ollama` (ví dụ `"sonnet": "qwen3:8b"`).
+
+### Thêm runtime tùy biến
+Bất kỳ khóa mới trong `runtimes` có `"type": "openai-api"` sẽ thành một runtime riêng (ví dụ `litellm`, `openrouter`, `vllm`), dùng được trong `runtime.order`, dự án và agent.md.
+
 ### `mock`
 - Không gọi LLM; sinh kế hoạch/thảo luận/sản phẩm mô phỏng theo vai trò. Dùng để demo giao diện, kiểm thử, và làm "lưới an toàn" khi không có runtime nào được phép.
 - `runtimes.mock.minDelayMs/maxDelayMs` chỉnh tốc độ; `reviewRejectRate` (0–1) mô phỏng reviewer yêu cầu sửa.
 
-## Ví dụ `ccoding.local.json`
+## Ví dụ `ccoding.local.json` (Bifrost + Ollama, chạy kèm trong herdr)
 
 ```json
 {
-  "runtime": { "default": "openai-api" },
-  "runtimes": { "openai-api": { "baseUrl": "http://localhost:20128/v1", "apiKeyEnv": "NINEROUTER_API_KEY" } },
-  "models": { "openai-api": { "opus": "cc/claude-opus-4-6", "sonnet": "cc/claude-sonnet-4-5", "haiku": "cc/claude-haiku-4-5" } }
+  "runtime": { "order": ["bifrost", "ollama", "kimi-cli", "mock"] },
+  "models": {
+    "bifrost": { "opus": "anthropic/claude-opus-5-5", "sonnet": "anthropic/claude-sonnet-5-5", "haiku": "ollama/qwen3:8b" },
+    "ollama": { "opus": "qwen3:14b", "sonnet": "qwen3:8b", "haiku": "qwen3:8b" }
+  },
+  "herdr": { "services": [ { "label": "bifrost", "command": "npx -y @maximhq/bifrost" } ] }
 }
 ```
 

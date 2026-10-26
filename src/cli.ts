@@ -463,7 +463,7 @@ async function cmdHerdr(args: string[]): Promise<void> {
     const running = await serverUp();
     const notes = await h.up([...registry.departments.values()], { startServer: !running });
     for (const n of notes) console.log(`${c.green('✓')} ${n}`);
-    if (running) console.log(c.gray('Server đã chạy sẵn ở ngoài herdr — giữ nguyên.'));
+    if (running) console.log(c.gray('Server CCoding đang chạy — giữ nguyên.'));
     else if (h.state.serverPaneId && !notes.some((n) => n.startsWith('Tạo workspace'))) {
       await h.exec(['pane', 'run', h.state.serverPaneId, `node "${path.join(config.root, 'dist', 'cli.js')}" serve`]).catch(() => undefined);
       console.log(`${c.green('✓')} Khởi động lại server trong pane ${h.state.serverPaneId}`);

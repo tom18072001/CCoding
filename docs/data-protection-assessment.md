@@ -97,3 +97,18 @@ GitHub ◀── chỉ mã nguồn (data/, workspaces/, ccoding.local.json bị 
 - Regex không bắt hết PII (tên người, địa chỉ, số hợp đồng).
 - Agent dùng công cụ (Bash) có thể đọc file ngoài workspace nếu tài khoản Windows cho phép ⇒ nên chạy CCoding dưới tài khoản ít quyền và dùng `permissionMode: acceptEdits` (không dùng `bypassPermissions`).
 - Câu hỏi mở cho chủ dự án: (1) Repo GitHub để public hay private? (2) Dự án nào sẽ chứa dữ liệu khách hàng thật? (3) Có cần đưa log CCoding vào hệ thống giám sát của công ty không?
+
+---
+
+## Bổ sung 26/10/2026 — Gateway Bifrost + Ollama
+
+**Thay đổi luồng dữ liệu:** CCoding → **Bifrost (127.0.0.1:8080, trên cùng máy)** → provider (Ollama cục bộ hoặc nhà cung cấp ngoài). Thêm một chặng lưu trữ: Bifrost ghi log yêu cầu vào SQLite (`logs.db`) trong thư mục ứng dụng của nó — **mặc định có thể chứa nội dung prompt/đầu ra**, nằm ngoài `data/` và không qua bộ che PII của CCoding.
+
+| Mã | Ảnh hưởng | Khuyến nghị | Ưu tiên |
+|---|---|---|---|
+| PRE-01 / PRE-06 | Tốt hơn: key ảo riêng từng phòng ban, giới hạn provider/model, ngân sách và rate limit theo key | Bật *Enforce Virtual Keys on Inference* trong Bifrost; mỗi phòng một key, chỉ cho phép provider cần thiết | Nên có |
+| PRE-04 / DET-04 | Rủi ro: log nội dung trong `logs.db` của Bifrost | Tắt content logging trong Bifrost (hoặc dùng header `x-bf-disable-content-logging` khi được bật cho phép), giữ thư mục Bifrost trên ổ BitLocker | **Bắt buộc** khi dùng cho dự án Nội bộ trở lên |
+| DET-04 / GOV-05 | Tốt hơn: CCoding gửi `x-bf-dim-*` (agent, phòng, task, pha, dự án) và `x-request-id` = mã lượt gọi ⇒ đối chiếu được log gateway với sổ cái token | Xuất OpenTelemetry của Bifrost vào ELK nội bộ | Nên có |
+| PRE-01 | Bifrost UI/API nghe cổng 8080 | Chỉ nghe localhost; không mở cổng 8080 ra mạng LAN/Internet | **Bắt buộc** |
+
+Header `x-bf-dim-*` chỉ mang mã định danh (agent, phòng, task, pha, dự án) — **không** chứa nội dung hay dữ liệu cá nhân. Runtime `bifrost` mặc định *không* phải cục bộ ⇒ dự án *Bảo mật*/*Hạn chế* vẫn bị chặn; các dự án này dùng runtime `ollama` (cục bộ, `local: true`).

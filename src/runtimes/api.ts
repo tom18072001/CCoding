@@ -80,16 +80,59 @@ export class AnthropicApiRuntime implements Runtime {
   }
 }
 
-// ── OpenAI-compatible Chat Completions (9router, Ollama, OpenRouter, vLLM, …) ─
+// ── OpenAI-compatible Chat Completions (Bifrost, LiteLLM, 9router, Ollama, OpenRouter, vLLM, …) ─
+
+/** Giá trị bí mật: "env:TEN_BIEN", "TEN_BIEN" (nếu có trong môi trường) hoặc chuỗi khóa trực tiếp. */
+export function resolveSecret(v: string | undefined): string | undefined {
+  if (!v) return undefined;
+  if (v.startsWith('env:')) return process.env[v.slice(4)] || undefined;
+  if (/^[A-Z_][A-Z0-9_]*$/.test(v)) return process.env[v] || undefined;
+  return v;
+}
+
+const headerSafe = (s: string) => s.replace(/[^A-Za-z0-9._:-]/g, '-').slice(0, 120);
+
+/**
+ * Header gửi kèm để gateway (Bifrost/LiteLLM) thống kê theo agent/phòng/task và áp key riêng từng phòng.
+ * Chỉ chứa mã định danh (không PII, không nội dung).
+ */
+export function gatewayHeaders(cfg: RuntimeConfig, req: Pick<RunRequest, 'agent' | 'phase' | 'meta'>): Record<string, string> {
+  const h: Record<string, string> = {};
+  const style = String(cfg.tags ?? 'both');
+  const dept = req.meta.department;
+  const dims: Record<string, string> = {
+    app: 'ccoding',
+    agent: req.agent.id,
+    department: dept,
+    task: req.meta.taskId,
+    phase: req.phase,
+    ...(req.meta.projectId ? { project: req.meta.projectId } : {}),
+    ...(req.meta.subtaskId ? { subtask: req.meta.subtaskId } : {}),
+  };
+  if (style !== 'none') h['x-request-id'] = headerSafe(req.meta.callId);
+  if (style === 'bifrost' || style === 'both') for (const [k, v] of Object.entries(dims)) h[`x-bf-dim-${k}`] = headerSafe(v);
+  if (style === 'litellm' || style === 'both')
+    h['x-litellm-tags'] = ['ccoding', ...Object.entries(dims).filter(([k]) => k !== 'app').map(([k, v]) => `${k}:${headerSafe(v)}`)].join(',');
+  const vks = (cfg.virtualKeys ?? {}) as Record<string, string>;
+  const vk = resolveSecret(vks[dept] ?? vks['*']);
+  if (vk) {
+    const name = String(cfg.virtualKeyHeader ?? 'x-bf-vk').toLowerCase();
+    h[name] = name === 'authorization' ? `Bearer ${vk}` : vk;
+  }
+  for (const [k, v] of Object.entries((cfg.headers ?? {}) as Record<string, string>)) h[k.toLowerCase()] = String(v);
+  return h;
+}
 
 export class OpenAiApiRuntime implements Runtime {
-  id = 'openai-api';
-  label = 'OpenAI-compatible API';
+  id: string;
+  label: string;
   local: boolean;
   supportsTools = false;
   private modelList?: string[];
 
-  constructor(private cfg: RuntimeConfig, private models: Record<string, string>) {
+  constructor(private cfg: RuntimeConfig, private models: Record<string, string>, id = 'openai-api') {
+    this.id = id;
+    this.label = String(cfg.label ?? (id === 'openai-api' ? 'OpenAI-compatible API' : id));
     this.local = cfg.local === true;
   }
 
@@ -97,17 +140,23 @@ export class OpenAiApiRuntime implements Runtime {
     return (this.cfg.baseUrl ?? 'http://localhost:20128/v1').replace(/\/$/, '');
   }
 
-  private headers(): Record<string, string> {
+  private headers(extra: Record<string, string> = {}): Record<string, string> {
     const key = apiKey(this.cfg, 'OPENAI_API_KEY');
-    return { 'content-type': 'application/json', ...(key ? { authorization: `Bearer ${key}` } : {}) };
+    return { 'content-type': 'application/json', ...(key ? { authorization: `Bearer ${key}` } : {}), ...extra };
   }
 
   async available(): Promise<RuntimeAvailability> {
     try {
-      const res = await fetch(`${this.base()}/models`, { headers: this.headers(), signal: AbortSignal.timeout(4000) });
+      const vks = (this.cfg.virtualKeys ?? {}) as Record<string, string>;
+      const anyVk = resolveSecret(vks['*'] ?? Object.values(vks)[0]);
+      const vkHeader = String(this.cfg.virtualKeyHeader ?? 'x-bf-vk').toLowerCase();
+      const extra = anyVk ? { [vkHeader]: vkHeader === 'authorization' ? `Bearer ${anyVk}` : anyVk } : {};
+      const res = await fetch(`${this.base()}/models`, { headers: this.headers(extra), signal: AbortSignal.timeout(4000) });
       if (!res.ok) return { ok: false, detail: `${this.base()} trả ${res.status}` };
       const body = (await res.json()) as { data?: Array<{ id: string }> };
       this.modelList = (body.data ?? []).map((m) => m.id);
+      if (!this.modelList.length && !this.cfg.defaultModel && !Object.keys(this.models).length)
+        return { ok: false, detail: `${this.base()} chạy nhưng chưa có model nào — thêm provider/model trước`, models: [] };
       return { ok: true, detail: `${this.base()} · ${this.modelList.length} model`, models: this.modelList };
     } catch (e) {
       return { ok: false, detail: `không kết nối được ${this.base()} (${(e as Error).message.slice(0, 60)})` };
@@ -127,7 +176,7 @@ export class OpenAiApiRuntime implements Runtime {
     const model = this.resolveModel(req.model);
     const res = await fetch(`${this.base()}/chat/completions`, {
       method: 'POST',
-      headers: this.headers(),
+      headers: this.headers(gatewayHeaders(this.cfg, req)),
       body: JSON.stringify({
         model,
         max_tokens: this.cfg.maxTokens ?? 8000,

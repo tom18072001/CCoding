@@ -7,6 +7,16 @@ import type { Classification, TaskOptions } from './types.js';
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 export interface RuntimeConfig {
+  /** Kiểu cho runtime tùy biến: "openai-api". */
+  type?: string;
+  label?: string;
+  /** Key ảo theo phòng ban: { "dev": "env:BIFROST_VK_DEV", "*": "…" }. */
+  virtualKeys?: Record<string, string>;
+  /** Header mang key ảo: "x-bf-vk" (Bifrost) hoặc "authorization" (LiteLLM). */
+  virtualKeyHeader?: string;
+  /** Kiểu tag gửi gateway: "bifrost" | "litellm" | "both" | "none". */
+  tags?: string;
+  headers?: Record<string, string>;
   command?: string;
   extraArgs?: string[];
   permissionMode?: string;
@@ -32,7 +42,16 @@ export interface Config {
   runner: 'auto' | 'process' | 'herdr';
   maxConcurrentTasks: number;
   defaults: TaskOptions & { timeoutMs: number };
-  herdr: { session: string; workspaceLabel: string; agentPanes: boolean; closeAgentPanes: boolean; notify: boolean; bin?: string };
+  herdr: {
+    session: string;
+    workspaceLabel: string;
+    agentPanes: boolean;
+    closeAgentPanes: boolean;
+    notify: boolean;
+    bin?: string;
+    /** Dịch vụ chạy kèm trong tab "Dịch vụ" (ví dụ Bifrost, Ollama). */
+    services?: Array<{ label: string; command: string; cwd?: string; enabled?: boolean }>;
+  };
   runtimes: Record<string, RuntimeConfig>;
   models: Record<string, Record<string, string>>;
   pricing: Record<string, { input: number; output: number; cacheRead?: number; cacheWrite?: number }>;
@@ -77,11 +96,11 @@ const BUILTIN: Omit<Config, 'root'> = {
   workspacesDir: 'workspaces',
   agentsDir: 'agents',
   departmentsDir: 'departments',
-  runtime: { default: 'auto', order: ['claude-cli', 'anthropic-api', 'openai-api', 'codex-cli', 'kimi-cli', 'mock'] },
+  runtime: { default: 'auto', order: ['claude-cli', 'bifrost', 'anthropic-api', 'openai-api', 'codex-cli', 'kimi-cli', 'ollama', 'mock'] },
   runner: 'auto',
   maxConcurrentTasks: 2,
   defaults: { discussionRounds: 1, review: true, maxParallel: 3, maxRevisions: 1, budgetTokens: 600000, timeoutMs: 1200000 },
-  herdr: { session: 'ccoding', workspaceLabel: 'CCoding Office', agentPanes: true, closeAgentPanes: false, notify: true },
+  herdr: { session: 'ccoding', workspaceLabel: 'CCoding Office', agentPanes: true, closeAgentPanes: false, notify: true, services: [] },
   runtimes: {},
   models: {},
   pricing: {},

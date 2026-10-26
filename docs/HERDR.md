@@ -46,6 +46,7 @@ herdr --session ccoding server stop   # dừng hẳn server herdr (dừng cả c
 | `agentPanes` | `true` | chạy mỗi lượt agent trong pane riêng (tắt → chạy tiến trình con trực tiếp) |
 | `notify` | `true` | thông báo herdr khi xong nhiệm vụ |
 | `bin` | (tự tìm) | đường dẫn `herdr.exe` nếu không có trong PATH |
+| `services` | `[]` | dịch vụ chạy kèm trong tab **Dịch vụ**, ví dụ `[{ "label": "bifrost", "command": "npx -y @maximhq/bifrost" }]` — khởi động trước server CCoding |
 
 `runner`: `auto` (herdr nếu server chạy trong pane herdr), `process` hoặc `herdr` (biến môi trường `CCODING_RUNNER`).
 

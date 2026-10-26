@@ -15,6 +15,8 @@ interface HerdrState {
   tabs: Record<string, string>; // dept -> tab id
   tabPanes: Record<string, string[]>; // dept -> pane ids (theo thứ tự tạo)
   panes: Record<string, string>; // agent -> pane id
+  serviceTabId?: string;
+  servicePanes?: Record<string, string>; // nhãn dịch vụ -> pane id
 }
 
 /**
@@ -135,6 +137,8 @@ export class Herdr {
       this.state.tabs = {};
       this.state.tabPanes = {};
       this.state.panes = {};
+      this.state.servicePanes = {};
+      this.state.serviceTabId = undefined;
       await this.exec(['tab', 'rename', this.state.officeTabId!, 'Văn phòng']);
       await this.exec(['pane', 'rename', this.state.serverPaneId!, 'server']);
       startServer = opts.startServer !== false;
@@ -149,6 +153,27 @@ export class Herdr {
       notes.push(`Tạo workspace ${this.state.workspaceId}: server + logs + tokens`);
     } else {
       notes.push(`Workspace ${this.state.workspaceId} đã tồn tại`);
+    }
+    // dịch vụ chạy kèm (Bifrost, Ollama…) — chạy trước server để runtime sẵn sàng
+    const services = (this.config.herdr.services ?? []).filter((x) => x.enabled !== false && x.command);
+    this.state.servicePanes ??= {};
+    for (const svc of services) {
+      if (await this.alive(this.state.servicePanes[svc.label])) continue;
+      let pane: string;
+      if (!this.state.serviceTabId || !(await this.alive(Object.values(this.state.servicePanes)[0]))) {
+        const t = await this.exec(['tab', 'create', '--workspace', this.state.workspaceId!, '--label', 'Dịch vụ', '--cwd', svc.cwd ?? root, '--no-focus']);
+        this.state.serviceTabId = t.result.tab.tab_id;
+        this.state.servicePanes = {};
+        pane = t.result.root_pane.pane_id;
+      } else {
+        const last = Object.values(this.state.servicePanes).at(-1)!;
+        const sp = await this.exec(['pane', 'split', last, '--direction', 'down', '--cwd', svc.cwd ?? root, '--no-focus']);
+        pane = sp.result.pane.pane_id;
+      }
+      this.state.servicePanes[svc.label] = pane;
+      await this.exec(['pane', 'rename', pane, svc.label]);
+      await this.exec(['pane', 'run', pane, svc.command]);
+      notes.push(`Dịch vụ ${svc.label}: ${svc.command}`);
     }
     for (const d of departments) {
       if (this.state.tabs[d.id] && (await this.alive(this.state.tabPanes[d.id]?.[0]))) continue;
