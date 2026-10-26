@@ -120,8 +120,16 @@
     try {
       const st = await api('/api/state');
       const keepAgents = S.agents;
+      const sig = (m) => [...m.values()].map((a) => `${a.id}|${a.name}|${a.short}|${a.department}|${a.look?.shirt}`).join(';');
+      const before = sig(keepAgents);
       applyState(st);
       for (const [id, a] of S.agents) if (!keepAgents.has(id)) avatarCache.delete(id);
+      // hồ sơ nhân sự thay đổi (đổi tên vị trí, thêm/bớt agent) → vẽ lại sơ đồ văn phòng
+      if (sig(S.agents) !== before) {
+        avatarCache.clear();
+        office.setData(S.departments, [...S.agents.values()]);
+        if (S.tab === 'people' && !S.selectedAgent) renderPeople();
+      }
       renderKpis();
       if (S.tab === 'tokens') renderTokens();
       if (S.tab === 'tasks' && !S.selectedTask) renderTaskList();
