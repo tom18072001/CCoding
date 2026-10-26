@@ -1,10 +1,16 @@
+import { spawnSync } from 'node:child_process';
 import { estimateTokens } from '../util/tokens.js';
 import { sseData, withTimeout } from './common.js';
 import type { RuntimeConfig } from '../config.js';
 import type { RunHooks, RunRequest, RunResult, Runtime, RuntimeAvailability } from '../types.js';
 
 function apiKey(cfg: RuntimeConfig, fallbackEnv: string): string | undefined {
-  return process.env[cfg.apiKeyEnv ?? fallbackEnv] || undefined;
+  return readEnv(cfg.apiKeyEnv ?? fallbackEnv);
+}
+
+/** Biến môi trường bắt buộc phải có (ví dụ khóa của dịch vụ phía sau gateway). */
+function missingEnv(cfg: RuntimeConfig): string[] {
+  return (cfg.requireEnv ?? []).filter((n) => !readEnv(n));
 }
 
 // ── Anthropic Messages API ───────────────────────────────────────────────────
@@ -82,11 +88,35 @@ export class AnthropicApiRuntime implements Runtime {
 
 // ── OpenAI-compatible Chat Completions (Bifrost, LiteLLM, 9router, Ollama, OpenRouter, vLLM, …) ─
 
+const userEnvCache = new Map<string, { at: number; val: string | undefined }>();
+
+/**
+ * Đọc biến môi trường; trên Windows nếu tiến trình chưa thấy (biến vừa đặt bằng `setx`)
+ * thì đọc thẳng từ HKCU\Environment. Không bao giờ ghi giá trị ra log.
+ */
+export function readEnv(name: string): string | undefined {
+  if (process.env[name]) return process.env[name];
+  if (process.platform !== 'win32') return undefined;
+  const hit = userEnvCache.get(name);
+  if (!hit || Date.now() - hit.at > 30_000) {
+    let val: string | undefined;
+    try {
+      const r = spawnSync('reg', ['query', 'HKCU\\Environment', '/v', name], { encoding: 'utf8', windowsHide: true, timeout: 3000 });
+      const m = new RegExp(`${name}\\s+REG_(?:EXPAND_)?SZ\\s+(.*)`, 'i').exec(r.stdout ?? '');
+      val = m?.[1]?.trim() || undefined;
+    } catch {
+      val = undefined;
+    }
+    userEnvCache.set(name, { at: Date.now(), val });
+  }
+  return userEnvCache.get(name)!.val;
+}
+
 /** Giá trị bí mật: "env:TEN_BIEN", "TEN_BIEN" (nếu có trong môi trường) hoặc chuỗi khóa trực tiếp. */
 export function resolveSecret(v: string | undefined): string | undefined {
   if (!v) return undefined;
-  if (v.startsWith('env:')) return process.env[v.slice(4)] || undefined;
-  if (/^[A-Z_][A-Z0-9_]*$/.test(v)) return process.env[v] || undefined;
+  if (v.startsWith('env:')) return readEnv(v.slice(4));
+  if (/^[A-Z_][A-Z0-9_]*$/.test(v)) return readEnv(v);
   return v;
 }
 
@@ -146,6 +176,8 @@ export class OpenAiApiRuntime implements Runtime {
   }
 
   async available(): Promise<RuntimeAvailability> {
+    const miss = missingEnv(this.cfg);
+    if (miss.length) return { ok: false, detail: `chưa đặt ${miss.map((m) => `$${m}`).join(', ')}` };
     try {
       const vks = (this.cfg.virtualKeys ?? {}) as Record<string, string>;
       const anyVk = resolveSecret(vks['*'] ?? Object.values(vks)[0]);

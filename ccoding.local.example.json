@@ -1,46 +1,89 @@
 {
   "//": "Sao chép thành ccoding.local.json (đã .gitignore) rồi chỉnh. Chỉ cần ghi những khóa muốn đổi.",
-
   "runtime": {
     "default": "auto",
-    "order": ["bifrost", "ollama", "kimi-cli", "claude-cli", "mock"]
+    "order": [
+      "bifrost",
+      "openai-api",
+      "kimi-cli",
+      "ollama",
+      "mock"
+    ]
   },
-
   "runtimes": {
     "bifrost": {
-      "baseUrl": "http://localhost:8080/v1",
-      "virtualKeys": { "dev": "env:BIFROST_VK_DEV", "research": "env:BIFROST_VK_RESEARCH", "office": "env:BIFROST_VK_OFFICE" }
+      "baseUrl": "http://127.0.0.1:8080/v1",
+      "requireEnv": [
+        "NINEROUTER_API_KEY"
+      ],
+      "virtualKeys": {
+        "dev": "env:BIFROST_VK_DEV",
+        "research": "env:BIFROST_VK_RESEARCH",
+        "office": "env:BIFROST_VK_OFFICE"
+      }
     },
-    "ollama": { "baseUrl": "http://localhost:11434/v1", "local": true },
+    "openai-api": {
+      "label": "9router (trực tiếp)",
+      "baseUrl": "http://127.0.0.1:20128/v1",
+      "apiKeyEnv": "NINEROUTER_API_KEY",
+      "requireEnv": [
+        "NINEROUTER_API_KEY"
+      ]
+    },
+    "ollama": {
+      "baseUrl": "http://127.0.0.1:11434/v1",
+      "local": true
+    },
     "litellm": {
       "type": "openai-api",
       "label": "LiteLLM proxy",
       "baseUrl": "http://localhost:4000/v1",
       "tags": "litellm",
       "virtualKeyHeader": "authorization",
-      "virtualKeys": { "*": "env:LITELLM_KEY" }
+      "virtualKeys": {
+        "*": "env:LITELLM_KEY"
+      }
     }
   },
-
   "models": {
-    "bifrost": { "opus": "anthropic/claude-opus-5-5", "sonnet": "anthropic/claude-sonnet-5-5", "haiku": "ollama/qwen3:8b" },
-    "ollama": { "opus": "qwen3:14b", "sonnet": "qwen3:8b", "haiku": "qwen3:8b" }
+    "bifrost": {
+      "opus": "ninerouter/cc/claude-opus-5-5",
+      "sonnet": "ninerouter/cc/claude-sonnet-5-5",
+      "haiku": "ninerouter/cc/claude-haiku-4-5-20251001"
+    },
+    "openai-api": {
+      "opus": "cc/claude-opus-5-5",
+      "sonnet": "cc/claude-sonnet-5-5",
+      "haiku": "cc/claude-haiku-4-5-20251001"
+    },
+    "ollama": {
+      "opus": "qwen3:8b",
+      "sonnet": "qwen3:8b",
+      "haiku": "qwen3:4b"
+    }
   },
-
   "herdr": {
-    "services": [{ "label": "bifrost", "command": "npx -y @maximhq/bifrost" }]
+    "services": [
+      {
+        "label": "bifrost",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts\\bifrost.ps1"
+      }
+    ]
   },
-
-  "pricing": {
-    "//": "USD / 1 triệu token — chỉ dùng khi runtime không tự báo chi phí. Điền theo bảng giá hiện hành của nhà cung cấp."
-  },
-
   "dataProtection": {
     "allowedRuntimes": {
-      "public": ["*"],
-      "internal": ["*"],
-      "confidential": ["local"],
-      "restricted": ["local"]
+      "public": [
+        "*"
+      ],
+      "internal": [
+        "*"
+      ],
+      "confidential": [
+        "local"
+      ],
+      "restricted": [
+        "local"
+      ]
     }
   }
 }

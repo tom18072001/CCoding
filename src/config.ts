@@ -17,6 +17,8 @@ export interface RuntimeConfig {
   /** Kiểu tag gửi gateway: "bifrost" | "litellm" | "both" | "none". */
   tags?: string;
   headers?: Record<string, string>;
+  /** Runtime chỉ "sẵn sàng" khi các biến môi trường này đã được đặt. */
+  requireEnv?: string[];
   command?: string;
   extraArgs?: string[];
   permissionMode?: string;

@@ -78,3 +78,12 @@ test('runtime tùy biến "bifrost" gọi API tương thích OpenAI, gửi heade
     srv.close();
   }
 });
+
+test('requireEnv: runtime chưa sẵn sàng khi thiếu biến môi trường', async () => {
+  const base = loadConfig();
+  delete process.env.CCODING_TEST_MISSING;
+  const rm = new RuntimeManager({ ...base, runtimes: { ...base.runtimes, bifrost: { ...base.runtimes.bifrost, requireEnv: ['CCODING_TEST_MISSING'] } } });
+  const a = await rm.availability('bifrost', true);
+  assert.equal(a.ok, false);
+  assert.match(a.detail, /CCODING_TEST_MISSING/);
+});

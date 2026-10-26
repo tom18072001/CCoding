@@ -48,6 +48,14 @@ Runtime được chỉ định nhưng **chưa sẵn sàng** hoặc **bị chặn
   Giá trị dạng `env:TEN_BIEN` đọc từ biến môi trường (khuyến nghị, Windows: `setx BIFROST_VK_DEV sk-bf-…`); có thể ghi thẳng khóa trong `ccoding.local.json` (đã `.gitignore`). Key gửi qua header `x-bf-vk`.
 - **LiteLLM** dùng cùng cơ chế: `"tags": "litellm"` (gửi `x-litellm-tags`), `"virtualKeyHeader": "authorization"`.
 
+#### Thiết lập Bifrost trên Windows (đã kiểm chứng với Bifrost v2.3)
+1. `scripts\new-bifrost-keys.ps1` — sinh key ảo ngẫu nhiên cho 3 phòng (`BIFROST_VK_DEV/RESEARCH/OFFICE`, lưu vào biến môi trường người dùng, không in ra).
+2. Đặt khóa của dịch vụ phía sau (ví dụ 9router — lấy ở dashboard 9router): `setx NINEROUTER_API_KEY "<khóa>"`.
+3. `scripts\bifrost.ps1` (hoặc để `herdr up` chạy trong tab **Dịch vụ**) — lần đầu tạo `data\bifrost\config.json` từ [`docs/bifrost.config.example.json`](bifrost.config.example.json): provider tùy biến `ninerouter` (OpenAI-compatible → `http://127.0.0.1:20128`), 3 key ảo theo phòng, **không lưu nội dung prompt** (`disable_content_logging`), bắt buộc key khi suy luận (`enforce_auth_on_inference`).
+4. Bảng điều khiển Bifrost (http://127.0.0.1:8080) bị khóa cho tới khi tạo tài khoản quản trị: `setx BIFROST_SETUP_TOKEN "<chuỗi bí mật tự đặt>"`, khởi động lại Bifrost, mở trang và nhập token để tạo admin. Việc định tuyến/tag vẫn chạy bình thường khi chưa mở bảng điều khiển.
+
+`requireEnv` trong cấu hình runtime: runtime chỉ được coi là sẵn sàng khi các biến đó đã đặt (trên Windows CCoding đọc cả biến vừa `setx` mà không cần mở lại terminal).
+
 ### `ollama` — mô hình cục bộ
 - Runtime tùy biến `openai-api` tại `http://localhost:11434/v1`, `"local": true` ⇒ **được phép** xử lý dự án *Bảo mật*/*Hạn chế*. Cần `ollama pull <model>` trước; đặt `models.ollama` (ví dụ `"sonnet": "qwen3:8b"`).
 
