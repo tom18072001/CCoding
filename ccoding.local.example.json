@@ -1,0 +1,41 @@
+{
+  "//": "Sao chép thành ccoding.local.json (đã .gitignore) rồi chỉnh. Chỉ cần ghi những khóa muốn đổi.",
+
+  "runtime": {
+    "default": "auto",
+    "order": ["claude-cli", "openai-api", "kimi-cli", "codex-cli", "anthropic-api", "mock"]
+  },
+
+  "runtimes": {
+    "openai-api": {
+      "baseUrl": "http://localhost:20128/v1",
+      "apiKeyEnv": "NINEROUTER_API_KEY",
+      "local": false
+    },
+    "kimi-cli": { "command": "kimi" },
+    "claude-cli": { "command": "claude", "permissionMode": "acceptEdits" }
+  },
+
+  "models": {
+    "openai-api": {
+      "opus": "cc/claude-opus-4-6",
+      "sonnet": "cc/claude-sonnet-4-5",
+      "haiku": "cc/claude-haiku-4-5"
+    }
+  },
+
+  "pricing": {
+    "//": "USD / 1 triệu token — chỉ dùng khi runtime không tự báo chi phí. Điền theo bảng giá hiện hành của nhà cung cấp.",
+    "example-model-id": { "input": 3, "output": 15 }
+  },
+
+  "dataProtection": {
+    "defaultClassification": "internal",
+    "allowedRuntimes": {
+      "public": ["*"],
+      "internal": ["*"],
+      "confidential": ["local"],
+      "restricted": ["local"]
+    }
+  }
+}

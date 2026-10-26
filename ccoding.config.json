@@ -1,0 +1,65 @@
+{
+  "server": { "host": "127.0.0.1", "port": 7420 },
+  "dataDir": "data",
+  "workspacesDir": "workspaces",
+  "agentsDir": "agents",
+  "departmentsDir": "departments",
+
+  "runtime": {
+    "default": "auto",
+    "order": ["claude-cli", "anthropic-api", "openai-api", "codex-cli", "kimi-cli", "mock"]
+  },
+  "runner": "auto",
+  "maxConcurrentTasks": 2,
+
+  "defaults": {
+    "discussionRounds": 1,
+    "review": true,
+    "maxParallel": 3,
+    "maxRevisions": 1,
+    "budgetTokens": 600000,
+    "timeoutMs": 1200000
+  },
+
+  "herdr": {
+    "session": "ccoding",
+    "workspaceLabel": "CCoding Office",
+    "agentPanes": true,
+    "closeAgentPanes": false,
+    "notify": true
+  },
+
+  "runtimes": {
+    "claude-cli": { "command": "claude", "permissionMode": "acceptEdits", "extraArgs": [] },
+    "codex-cli": { "command": "codex", "sandbox": "workspace-write", "extraArgs": [] },
+    "kimi-cli": { "command": "kimi", "extraArgs": [] },
+    "anthropic-api": { "baseUrl": "https://api.anthropic.com", "apiKeyEnv": "ANTHROPIC_API_KEY", "maxTokens": 8000 },
+    "openai-api": { "baseUrl": "http://localhost:20128/v1", "apiKeyEnv": "OPENAI_API_KEY", "maxTokens": 8000, "local": false, "defaultModel": "" },
+    "mock": { "minDelayMs": 500, "maxDelayMs": 1600 }
+  },
+
+  "models": {
+    "anthropic-api": { "opus": "claude-opus-5-5", "sonnet": "claude-sonnet-5-5", "haiku": "claude-haiku-5-5" },
+    "openai-api": {},
+    "codex-cli": {},
+    "kimi-cli": {},
+    "claude-cli": {}
+  },
+
+  "pricing": {},
+
+  "dataProtection": {
+    "defaultClassification": "internal",
+    "allowedRuntimes": {
+      "public": ["*"],
+      "internal": ["*"],
+      "confidential": ["local"],
+      "restricted": ["local"]
+    },
+    "redactSecrets": true,
+    "redactPii": true,
+    "logPrompts": true,
+    "hashChain": true,
+    "retentionDays": 400
+  }
+}

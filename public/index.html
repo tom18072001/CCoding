@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CCoding Office</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%231c2130'/%3E%3Crect x='3' y='3' width='4' height='4' fill='%232563eb'/%3E%3Crect x='9' y='3' width='4' height='4' fill='%237c3aed'/%3E%3Crect x='3' y='9' width='10' height='4' fill='%23f59e0b'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <div>
+        <h1>CCoding Office</h1>
+        <p>Văn phòng AI đa tác tử</p>
+      </div>
+    </div>
+    <div class="kpis" id="kpis">
+      <div class="kpi"><span>Input</span><b id="k-in">0</b></div>
+      <div class="kpi"><span>Output</span><b id="k-out">0</b></div>
+      <div class="kpi"><span>Cache đọc</span><b id="k-cache">0</b></div>
+      <div class="kpi"><span>Lượt gọi</span><b id="k-calls">0</b></div>
+      <div class="kpi"><span>Đang chạy</span><b id="k-running">0</b></div>
+    </div>
+    <div class="meta">
+      <span class="chip" id="m-runner" title="Cách chạy agent">runner: —</span>
+      <span class="chip" id="m-runtime" title="Runtime mặc định">runtime: —</span>
+      <span class="conn" id="conn" title="Kết nối thời gian thực"><i></i><span>đang kết nối</span></span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="stage">
+      <div class="stage-inner" id="stage">
+        <canvas id="office" aria-label="Sơ đồ văn phòng với các agent"></canvas>
+        <div class="tooltip" id="tooltip" hidden></div>
+        <div class="legend">
+          <span><i style="--c:var(--st-idle)"></i>rảnh</span>
+          <span><i style="--c:var(--st-thinking)"></i>suy nghĩ</span>
+          <span><i style="--c:var(--st-working)"></i>đang làm</span>
+          <span><i style="--c:var(--st-discussing)"></i>họp</span>
+          <span><i style="--c:var(--st-reviewing)"></i>review</span>
+          <span><i style="--c:var(--st-error)"></i>lỗi</span>
+          <label class="toggle"><input type="checkbox" id="lively" checked /> sinh động</label>
+        </div>
+      </div>
+      <div class="ticker" id="ticker" aria-live="polite"></div>
+    </section>
+
+    <aside class="panel">
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="assign" class="active">Giao việc</button>
+        <button role="tab" data-tab="tasks">Nhiệm vụ <em id="badge-tasks"></em></button>
+        <button role="tab" data-tab="people">Nhân sự</button>
+        <button role="tab" data-tab="tokens">Token</button>
+        <button role="tab" data-tab="logs">Nhật ký</button>
+      </nav>
+
+      <!-- Giao việc -->
+      <div class="tab-body active" data-body="assign">
+        <form id="task-form" class="card form">
+          <h2>Giao nhiệm vụ mới</h2>
+          <fieldset class="modes">
+            <legend>Chế độ xử lý</legend>
+            <label><input type="radio" name="mode" value="auto" checked /><span><b>Tự động</b><small>Điều phối viên tự chọn phòng</small></span></label>
+            <label><input type="radio" name="mode" value="department" /><span><b>Theo phòng ban</b><small>Chỉ định phòng xử lý</small></span></label>
+            <label><input type="radio" name="mode" value="project" /><span><b>Theo dự án</b><small>Dùng cấu hình & workspace dự án</small></span></label>
+            <label><input type="radio" name="mode" value="joint" /><span><b>Liên phòng</b><small>Nghiên cứu → Phát triển</small></span></label>
+          </fieldset>
+          <div class="row" id="row-dept" hidden>
+            <label>Phòng ban<select name="department" id="sel-dept"></select></label>
+          </div>
+          <div class="row" id="row-project" hidden>
+            <label>Dự án<select name="projectId" id="sel-project"></select></label>
+          </div>
+          <label>Tiêu đề <small>(tùy chọn)</small><input name="title" maxlength="90" placeholder="Để trống: tự đặt tiêu đề" /></label>
+          <label>Yêu cầu<textarea name="brief" rows="6" required placeholder="Ví dụ: Thiết kế pipeline Logstash thu thập log IIS từ 50 máy chủ Windows, chuẩn hóa ECS, cảnh báo lỗi 5xx tăng đột biến."></textarea></label>
+          <details class="adv">
+            <summary>Tùy chọn nâng cao</summary>
+            <div class="grid2">
+              <label>Vòng thảo luận<input type="number" name="discussionRounds" min="0" max="3" /></label>
+              <label>Song song tối đa<input type="number" name="maxParallel" min="1" max="8" /></label>
+              <label>Ngân sách token<input type="number" name="budgetTokens" min="1000" step="1000" /></label>
+              <label>Runtime<select name="runtime" id="sel-runtime"><option value="">Mặc định</option></select></label>
+            </div>
+            <label class="check"><input type="checkbox" name="review" checked /> Review chất lượng & cho phép sửa</label>
+          </details>
+          <div class="actions">
+            <button type="submit" class="btn primary">Giao việc</button>
+            <span class="form-msg" id="form-msg"></span>
+          </div>
+        </form>
+
+        <div class="card">
+          <div class="card-head"><h2>Dự án</h2><button class="btn ghost sm" id="btn-new-project">+ Dự án</button></div>
+          <form id="project-form" class="form" hidden>
+            <div class="grid2">
+              <label>Mã<input name="id" required pattern="[a-z0-9][a-z0-9-]{1,40}" placeholder="vd: elk-iis" /></label>
+              <label>Tên<input name="name" required placeholder="Tên dự án" /></label>
+              <label>Phòng mặc định<select name="department" id="sel-proj-dept"></select></label>
+              <label>Phân loại dữ liệu<select name="classification">
+                <option value="public">Công khai</option>
+                <option value="internal" selected>Nội bộ</option>
+                <option value="confidential">Bảo mật</option>
+                <option value="restricted">Hạn chế</option>
+              </select></label>
+              <label>Runtime<select name="runtime" id="sel-proj-runtime"><option value="">Mặc định</option></select></label>
+              <label>Ngân sách token<input name="budgetTokens" type="number" min="1000" step="1000" /></label>
+            </div>
+            <label>Thư mục làm việc <small>(để trống: workspaces/&lt;mã&gt;)</small><input name="workspace" placeholder="C:\Users\...\du-an hoặc đường dẫn tương đối" /></label>
+            <label>Mô tả<textarea name="description" rows="2"></textarea></label>
+            <div class="actions"><button class="btn primary sm" type="submit">Lưu dự án</button><button class="btn ghost sm" type="button" id="btn-cancel-project">Hủy</button></div>
+          </form>
+          <ul class="projects" id="projects"></ul>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h2>Runtime</h2><button class="btn ghost sm" id="btn-refresh-rt">Kiểm tra lại</button></div>
+          <ul class="runtimes" id="runtimes"></ul>
+        </div>
+      </div>
+
+      <!-- Nhiệm vụ -->
+      <div class="tab-body" data-body="tasks">
+        <div id="task-list" class="task-list"></div>
+        <div id="task-detail" class="task-detail" hidden></div>
+      </div>
+
+      <!-- Nhân sự -->
+      <div class="tab-body" data-body="people">
+        <div id="people"></div>
+        <div id="agent-detail" class="agent-detail" hidden></div>
+      </div>
+
+      <!-- Token -->
+      <div class="tab-body" data-body="tokens">
+        <div id="tokens"></div>
+      </div>
+
+      <!-- Nhật ký -->
+      <div class="tab-body" data-body="logs">
+        <div class="log-filters">
+          <select id="log-dept"><option value="">Mọi phòng</option></select>
+          <select id="log-agent"><option value="">Mọi agent</option></select>
+          <select id="log-level"><option value="">Mọi mức</option><option value="info">info</option><option value="warn">warn</option><option value="error">error</option></select>
+          <label class="check"><input type="checkbox" id="log-pause" /> tạm dừng</label>
+        </div>
+        <ol class="logs" id="logs"></ol>
+      </div>
+    </aside>
+  </main>
+
+  <script src="md.js"></script>
+  <script src="office.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

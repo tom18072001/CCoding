@@ -1,0 +1,35 @@
+{
+  "name": "ccoding",
+  "version": "0.1.0",
+  "description": "CCoding Office — văn phòng AI đa tác tử: điều phối sub-agent theo phòng ban, tự thảo luận, log theo từng vị trí, đếm token in/out, chạy nền bằng herdr.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "private": true,
+  "bin": {
+    "ccoding": "bin/ccoding.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepare": "npm run build",
+    "start": "node dist/cli.js serve",
+    "serve": "node dist/cli.js serve",
+    "dev": "tsx watch src/cli.ts serve",
+    "cli": "node dist/cli.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test --test-reporter=spec \"test/**/*.test.ts\"",
+    "herdr:up": "node dist/cli.js herdr up",
+    "doctor": "node dist/cli.js doctor",
+    "demo": "node dist/cli.js task \"Thiết kế API quản lý hồ sơ nhân sự bằng Node.js/TypeScript, có phân quyền và log kiểm toán\" --mode auto --runtime mock --wait"
+  },
+  "dependencies": {
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}
