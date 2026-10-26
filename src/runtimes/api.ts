@@ -183,7 +183,7 @@ export class OpenAiApiRuntime implements Runtime {
       const anyVk = resolveSecret(vks['*'] ?? Object.values(vks)[0]);
       const vkHeader = String(this.cfg.virtualKeyHeader ?? 'x-bf-vk').toLowerCase();
       const extra = anyVk ? { [vkHeader]: vkHeader === 'authorization' ? `Bearer ${anyVk}` : anyVk } : {};
-      const res = await fetch(`${this.base()}/models`, { headers: this.headers(extra), signal: AbortSignal.timeout(4000) });
+      const res = await fetch(`${this.base()}/models`, { headers: this.headers(extra), signal: AbortSignal.timeout(Number(this.cfg.probeTimeoutMs ?? 12000)) });
       if (!res.ok) return { ok: false, detail: `${this.base()} trả ${res.status}` };
       const body = (await res.json()) as { data?: Array<{ id: string }> };
       this.modelList = (body.data ?? []).map((m) => m.id);

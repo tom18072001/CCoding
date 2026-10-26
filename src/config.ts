@@ -19,6 +19,8 @@ export interface RuntimeConfig {
   headers?: Record<string, string>;
   /** Runtime chỉ "sẵn sàng" khi các biến môi trường này đã được đặt. */
   requireEnv?: string[];
+  /** Thời gian chờ khi kiểm tra runtime sẵn sàng (ms). */
+  probeTimeoutMs?: number;
   command?: string;
   extraArgs?: string[];
   permissionMode?: string;

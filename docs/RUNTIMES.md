@@ -46,7 +46,10 @@ Runtime được chỉ định nhưng **chưa sẵn sàng** hoặc **bị chặn
   "bifrost": { "virtualKeys": { "dev": "env:BIFROST_VK_DEV", "research": "env:BIFROST_VK_RESEARCH", "office": "env:BIFROST_VK_OFFICE" } }
   ```
   Giá trị dạng `env:TEN_BIEN` đọc từ biến môi trường (khuyến nghị, Windows: `setx BIFROST_VK_DEV sk-bf-…`); có thể ghi thẳng khóa trong `ccoding.local.json` (đã `.gitignore`). Key gửi qua header `x-bf-vk`.
-- **LiteLLM** dùng cùng cơ chế: `"tags": "litellm"` (gửi `x-litellm-tags`), `"virtualKeyHeader": "authorization"`.
+- **LiteLLM** dùng cùng cơ chế — thêm runtime tùy biến:
+  ```json
+  "litellm": { "type": "openai-api", "label": "LiteLLM proxy", "baseUrl": "http://localhost:4000/v1", "tags": "litellm", "virtualKeyHeader": "authorization", "virtualKeys": { "*": "env:LITELLM_KEY" } }
+  ```
 
 #### Thiết lập Bifrost trên Windows (đã kiểm chứng với Bifrost v2.3)
 1. `scripts\new-bifrost-keys.ps1` — sinh key ảo ngẫu nhiên cho 3 phòng (`BIFROST_VK_DEV/RESEARCH/OFFICE`, lưu vào biến môi trường người dùng, không in ra).

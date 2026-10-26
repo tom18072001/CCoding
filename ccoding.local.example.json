@@ -33,16 +33,6 @@
     "ollama": {
       "baseUrl": "http://127.0.0.1:11434/v1",
       "local": true
-    },
-    "litellm": {
-      "type": "openai-api",
-      "label": "LiteLLM proxy",
-      "baseUrl": "http://localhost:4000/v1",
-      "tags": "litellm",
-      "virtualKeyHeader": "authorization",
-      "virtualKeys": {
-        "*": "env:LITELLM_KEY"
-      }
     }
   },
   "models": {
