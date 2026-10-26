@@ -8,6 +8,8 @@ export class RuntimeError extends Error {
     public status?: number,
     /** Thời điểm (ms epoch) tài nguyên mở lại, nếu nhà cung cấp cho biết. */
     public retryAt?: number,
+    /** Phần đã làm trước khi lỗi (vòng lặp công cụ dài): usage cộng dồn, thao tác công cụ — để vẫn ghi sổ token. */
+    public partial?: { input: number; output: number; cacheRead: number; turns: number; toolCalls?: import('../types.js').ToolCallRecord[]; model?: string },
   ) {
     super(message);
     this.name = 'RuntimeError';
@@ -19,7 +21,7 @@ const QUOTA_RE =
 const RATE_RE = /(rate.?limit|too many requests|overloaded|slow down|try again later|capacity)/i;
 const CONTEXT_RE = /(context (length|window)|maximum context|too many tokens|prompt is too long|input is too long|max_tokens.*exceed)/i;
 const MODEL_RE = /(model[^\n]{0,40}(not found|does not exist|not supported|unavailable|invalid)|unknown model|no such model|no provider)/i;
-const NET_RE = /(ECONNREFUSED|ECONNRESET|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|EPIPE|socket hang up|fetch failed|network|terminated|other side closed|connection (was )?(closed|reset|aborted)|UND_ERR|premature close|bad gateway|service unavailable|gateway timeout)/i;
+const NET_RE = /(ECONNREFUSED|ECONNRESET|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|EPIPE|socket hang up|fetch failed|network|terminated|other side closed|connection (was )?(closed|reset|aborted|lost|refused)|upstream (connection|error|timeout|closed)|stream (closed|ended|error)|UND_ERR|premature close|bad gateway|service unavailable|gateway timeout|ECONNABORTED|wsasend|wsarecv)/i;
 
 const LOGIN_RE = /(not logged in|log ?in required|please (log|sign) in|use \/login|sign in|No model configured|no api key|missing api key|unauthenticated|invalid (api )?key|authentication_error)/i;
 

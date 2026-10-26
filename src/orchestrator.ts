@@ -1092,7 +1092,14 @@ export class Orchestrator {
           } else {
             r = await rt.run(req, hooks);
           }
-          if (r.error && !r.text) throw new RuntimeError(r.error, r.errorKind ?? classifyError(undefined, r.error), undefined, r.retryAt);
+          if (r.error && !r.text)
+            throw new RuntimeError(
+              r.error,
+              r.errorKind ?? classifyError(undefined, r.error),
+              undefined,
+              r.retryAt,
+              r.usage.input || r.usage.output ? { input: r.usage.input, output: r.usage.output, cacheRead: r.usage.cacheRead, turns: r.turns ?? 0, toolCalls: r.toolCalls, model: r.model } : undefined,
+            );
           if (r.truncated && r.text && CONTINUE_PHASES.has(phase)) r = await this.continueTruncated(rt, req, r, hooks, task, agent);
           result = runtimes.applyPricing(r);
           runtimes.markOk(cand.key);
@@ -1122,7 +1129,29 @@ export class Orchestrator {
               taskId: task.id,
               runtime: rt.id,
             });
-          result = { text: '', usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, costUsd: 0 }, estimated: false, model: cand.model, runtime: 'n/a', durationMs: 0, error: re.message, errorKind: re.kind };
+          // phần token đã tiêu trước khi lỗi vẫn ghi sổ (runtime thật), kèm các thao tác công cụ đã làm
+          const pu = re.partial;
+          result = {
+            text: '',
+            usage: { input: pu?.input ?? 0, output: pu?.output ?? 0, cacheRead: pu?.cacheRead ?? 0, cacheWrite: 0, costUsd: 0 },
+            estimated: false,
+            model: pu?.model ?? cand.model,
+            runtime: pu ? rt.id : 'n/a',
+            durationMs: 0,
+            error: re.message,
+            errorKind: re.kind,
+            turns: pu?.turns,
+            toolCalls: pu?.toolCalls,
+          };
+          if (pu) {
+            const partialRec = { ts: nowIso(), callId: `${callId}-p${i}`, taskId: task.id, subtaskId: ctx.subtask?.id, projectId: task.projectId, department: deptId, agentId: agent.id, phase, runtime: rt.id, model: pu.model ?? cand.model, requestedModel: cand.model, input: pu.input, output: pu.output, cacheRead: pu.cacheRead, cacheWrite: 0, costUsd: 0, durationMs: 0, estimated: false, toolCalls: pu.toolCalls?.length, error: re.message };
+            usage.record(partialRec);
+            addUsage(task.usage, { ...partialRec, calls: 1 });
+            if (ctx.run) addUsage(ctx.run.usage, { ...partialRec, calls: 1 });
+            if (ctx.subtask) addUsage(ctx.subtask.usage, { ...partialRec, calls: 1 });
+            for (const tc of pu.toolCalls ?? []) logs.write({ level: tc.ok ? 'info' : 'warn', kind: 'tool.call', msg: `${agent.name} · ${tc.name} ${tc.args.slice(0, 160)} ${tc.ok ? '✓' : '✗'} (${tc.ms} ms)`, taskId: task.id, agentId: agent.id, department: deptId, subtaskId: ctx.subtask?.id, phase, data: { callId, ...tc } });
+            result = { ...result, runtime: 'n/a' }; // đã ghi sổ ở trên — tránh ghi lần hai bên dưới
+          }
           if (!shouldFailover(re.kind)) break;
           if (this.pauseRequests.has(task.id)) throw new PauseSignal('manual', 'Tạm dừng theo yêu cầu');
           if (i + 1 < maxTry) logs.write({ level: 'warn', kind: 'runtime.failover', msg: `${agent.name}: chuyển ${cand.label} → ${list[i + 1].label}`, taskId: task.id, agentId: agent.id, department: deptId });

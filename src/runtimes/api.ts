@@ -337,7 +337,30 @@ export class OpenAiApiRuntime implements Runtime {
     let turns = 0;
     for (;;) {
       turns++;
-      const t = await this.turn(req, hooks, model, messages, tools);
+      let t: StreamTurn;
+      try {
+        t = await this.turn(req, hooks, model, messages, tools);
+      } catch (e) {
+        if (hooks.signal?.aborted) throw e;
+        const re = toRuntimeError(e);
+        // giữa vòng lặp công cụ dài: thử lại lượt này một lần (mất kết nối thoáng qua) thay vì bỏ cả công việc đã làm
+        let retried: StreamTurn | undefined;
+        if (turns > 1 && (re.kind === 'transient' || re.kind === 'timeout' || re.kind === 'empty')) {
+          hooks.onActivity?.(`↻ thử lại lượt ${turns} sau lỗi: ${re.message.slice(0, 80)}`);
+          diag.push(`lượt ${turns} lỗi (${re.kind}) — đã thử lại`);
+          await new Promise((r) => setTimeout(r, 3000));
+          try {
+            retried = await this.turn(req, hooks, model, messages, tools);
+          } catch (e2) {
+            if (hooks.signal?.aborted) throw e2;
+          }
+        }
+        if (!retried) {
+          if (turns > 1) re.partial = { input: Math.max(0, usage.input - usage.cached), output: usage.output, cacheRead: usage.cached, turns: turns - 1, toolCalls: records.length ? records : undefined, model: usedModel };
+          throw re;
+        }
+        t = retried;
+      }
       usage.input += t.input;
       usage.output += t.output;
       usage.cached += t.cached;

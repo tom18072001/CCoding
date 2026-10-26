@@ -518,7 +518,20 @@ async function cmdAgentExec(args: string[]): Promise<void> {
     result = rm.applyPricing(result);
   } catch (e) {
     const re = toRuntimeError(e);
-    result = { text: '', usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, costUsd: 0 }, estimated: false, model: req.model, runtime: job.runtime, durationMs: 0, error: re.message, errorKind: re.kind, retryAt: re.retryAt };
+    const pu = re.partial;
+    result = {
+      text: '',
+      usage: { input: pu?.input ?? 0, output: pu?.output ?? 0, cacheRead: pu?.cacheRead ?? 0, cacheWrite: 0, costUsd: 0 },
+      estimated: false,
+      model: pu?.model ?? req.model,
+      runtime: job.runtime,
+      durationMs: 0,
+      error: re.message,
+      errorKind: re.kind,
+      retryAt: re.retryAt,
+      turns: pu?.turns,
+      toolCalls: pu?.toolCalls,
+    };
   }
   writeJsonAtomic(job.resultFile, result);
   console.log(c.gray('─'.repeat(60)));

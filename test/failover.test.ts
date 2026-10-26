@@ -166,3 +166,51 @@ test('mọi tài nguyên hết hạn mức → tạm dừng nhiệm vụ (không
     fs.rmSync(dataDir, { recursive: true, force: true });
   }
 });
+
+test('mất kết nối giữa vòng lặp công cụ: thử lại lượt đó; vẫn lỗi thì giữ token đã tiêu trong lỗi (partial)', async () => {
+  let n = 0;
+  let dropTimes = 1;
+  const srv = http.createServer(async (req, res) => {
+    let raw = '';
+    for await (const c of req) raw += c;
+    const body = JSON.parse(raw);
+    n++;
+    const toolMsgs = body.messages.filter((m: { role: string }) => m.role === 'tool').length;
+    if (toolMsgs > 0 && dropTimes > 0) {
+      dropTimes--;
+      res.destroy(); // mất kết nối
+      return;
+    }
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    const send = (o: unknown) => res.write(`data: ${JSON.stringify(o)}\n\n`);
+    if (toolMsgs === 0) send({ choices: [{ delta: { tool_calls: [{ index: 0, id: 'c1', function: { name: 'list_files', arguments: '{}' } }] }, finish_reason: 'tool_calls' }] });
+    else send({ choices: [{ delta: { content: '## Tóm tắt\nXong.' }, finish_reason: 'stop' }] });
+    send({ choices: [], usage: { prompt_tokens: 1000, completion_tokens: 50 } });
+    res.end('data: [DONE]\n\n');
+  });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-drop-'));
+  try {
+    const { OpenAiApiRuntime } = await import('../src/runtimes/api.js');
+    const { RuntimeError } = await import('../src/runtimes/errors.js');
+    const { parseAgent } = await import('../src/registry.js');
+    const rt = new OpenAiApiRuntime({ baseUrl: `http://127.0.0.1:${(srv.address() as AddressInfo).port}/v1`, tags: 'none' }, {}, 'drop');
+    const agent = parseAgent('a.md', '---\nid: backend-dev\nname: Backend\ndepartment: dev\nrole: member\n---\nbody');
+    const req = {
+      agent, phase: 'execute' as const, system: 's', prompt: 'p', model: 'm', cwd: root, tools: [], allowTools: true, timeoutMs: 10000,
+      toolPolicy: { root, allow: ['list_files' as const], maxTurns: 5, commandTimeoutSec: 10, maxOutputChars: 2000, denyCommands: [], allowGitCommit: false },
+      meta: { taskId: 'T-x', department: 'dev', callId: 'c1' },
+    };
+    const ok = await rt.run(req, {});
+    assert.equal(ok.text, '## Tóm tắt\nXong.', 'thử lại lượt bị rớt rồi xong');
+    assert.match(ok.diag ?? '', /đã thử lại/);
+    dropTimes = 2; // rớt cả lần thử lại
+    await assert.rejects(
+      () => rt.run(req, {}),
+      (e: unknown) => e instanceof RuntimeError && e.kind === 'transient' && e.partial?.input === 1000 && e.partial.toolCalls?.length === 1,
+    );
+  } finally {
+    srv.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
