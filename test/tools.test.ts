@@ -73,8 +73,13 @@ test('run_command: chạy lệnh trong workspace, chặn lệnh nguy hiểm, b�
       assert.match(r.output, /bị chặn/, cmd);
     }
     assert.equal(deniedReason('git commit -m "x"', [], true), undefined, 'được commit khi làm trên nhánh riêng');
-    const env = scrubEnv({ PATH: '/bin', NINEROUTER_API_KEY: 'k', BIFROST_VK_DEV: 'v', MY_TOKEN: 't', HOME: '/h' });
-    assert.deepEqual(Object.keys(env).filter((k) => !['CI', 'CCODING_AGENT'].includes(k)).sort(), ['HOME', 'PATH']);
+    const env = scrubEnv({ PATH: '/bin', NINEROUTER_API_KEY: 'k', BIFROST_VK_DEV: 'v', MY_TOKEN: 't', HOME: '/h', NODE_ENV: 'production', NPM_CONFIG_OMIT: 'dev' });
+    assert.deepEqual(Object.keys(env).filter((k) => !['CI', 'CCODING_AGENT', 'npm_config_include'].includes(k)).sort(), ['HOME', 'PATH']);
+    assert.equal(env.npm_config_include, 'dev');
+    assert.equal(deniedReason('echo $env:NODE_ENV; npm config get omit'), undefined);
+    assert.ok(deniedReason('Get-ChildItem env:'));
+    assert.ok(deniedReason('npm ci; printenv'));
+    assert.ok(deniedReason('echo $env:NINEROUTER_API_KEY'));
   } finally {
     cleanup();
   }

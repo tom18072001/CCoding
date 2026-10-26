@@ -214,7 +214,8 @@ export const DEFAULT_DENY: Array<[RegExp, string]> = [
   [/\bprisma\s+migrate\s+reset\b|--force-reset|--accept-data-loss/i, 'reset/xóa dữ liệu DB'],
   [/\b(setx|reg\s+(add|delete|import))\b|Set-ExecutionPolicy|\bnet\s+user\b/i, 'đổi cấu hình hệ thống'],
   [/\b(ssh|scp|sftp|ftp|telnet)\s/i, 'kết nối máy khác'],
-  [/\b(printenv|env)\s*($|\|)|Get-ChildItem\s+env:|\bgci\s+env:|\$env:[A-Z_]*(KEY|TOKEN|SECRET|PASS)/i, 'in biến môi trường'],
+  // chỉ chặn liệt kê TOÀN BỘ biến môi trường hoặc đọc biến chứa khóa; xem một biến cụ thể (vd. $env:NODE_ENV) vẫn được
+  [/(^|[;&|]\s*)(printenv|env|set)\s*($|[;&|])|\b(Get-ChildItem|gci|dir|ls)\s+env:\\?\s*($|[;&|])|\$env:[A-Z_]*(KEY|TOKEN|SECRET|PASS)/i, 'liệt kê toàn bộ biến môi trường / đọc biến chứa khóa'],
   [/(^|[\s;&|])(:\(\)\s*\{|fork\s*bomb)/i, 'fork bomb'],
 ];
 
@@ -240,6 +241,10 @@ export function scrubEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   }
   out.CI = out.CI ?? '1';
   out.CCODING_AGENT = '1';
+  // workspace của agent là môi trường phát triển: không để NODE_ENV=production / omit=dev của máy làm thiếu devDependencies
+  if (out.NODE_ENV === 'production') delete out.NODE_ENV;
+  for (const k of Object.keys(out)) if (/^npm_config_(omit|production|only)$/i.test(k)) delete out[k];
+  out.npm_config_include = 'dev';
   return out;
 }
 
