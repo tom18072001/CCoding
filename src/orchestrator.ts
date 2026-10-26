@@ -173,7 +173,8 @@ export class Orchestrator {
   private holds = new Map<string, Omit<AgentState, 'id' | 'since'>>();
   private pauseRequests = new Set<string>();
   private resumeTimers = new Map<string, NodeJS.Timeout>();
-  private seq = 0;
+  /** Số thứ tự lượt gọi — khởi tạo theo thời gian để không trùng giữa các lần khởi động lại server (tên file job/prompt, callId). */
+  private seq = Math.max(0, Math.floor(Date.now() / 1000) - 1_790_000_000);
 
   constructor(private d: OrchestratorDeps) {
     for (const a of d.registry.agents.values()) this.agentStates.set(a.id, { id: a.id, status: 'idle', since: nowIso() });
