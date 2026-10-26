@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Config } from './config.js';
 import type { EventBus } from './events.js';
-import { addWorktree, changeSummary, commitAll, copyUntracked, headCommit, isGitRepo } from './git.js';
+import { addWorktree, changeSummary, commitAll, copyUntracked, currentBranch, headCommit, isGitRepo } from './git.js';
 import type { Herdr } from './herdr.js';
 import type { LogStore } from './logger.js';
 import { blockedSubtasks, keywordRoute, orderJoint, parsePlan, parseReview, parseRoute, readySubtasks } from './planner.js';
@@ -933,6 +933,13 @@ export class Orchestrator {
   /** Kết thúc: commit thay đổi của agent trên nhánh nhiệm vụ (không push). */
   private finishWorkspace(task: Task): void {
     if (!task.branch || !task.workspace) return;
+    // agent có thể đã chuyển worktree sang nhánh khác (vd. theo quy ước nhánh của repo) → báo đúng nhánh thực tế
+    const cur = currentBranch(task.workspace);
+    if (cur && cur !== 'HEAD' && cur !== task.branch) {
+      this.d.logs.write({ level: 'warn', kind: 'workspace.branch', msg: `Worktree đang ở nhánh ${cur} (tạo ban đầu: ${task.branch})`, taskId: task.id, projectId: task.projectId });
+      this.message(task, 'office', 'system', 'system', `🌿 Agent đã làm việc trên nhánh \`${cur}\` (worktree tạo với nhánh \`${task.branch}\`). Báo cáo dùng nhánh thực tế.`);
+      task.branch = cur;
+    }
     task.changes = this.workspaceChanges(task);
     const r = commitAll(task.workspace, `CCoding ${task.id}: ${task.title}`.slice(0, 200));
     task.commit = r.ok ? (r.out.split('\n')[0] ?? 'ok').slice(0, 200) : `chưa commit: ${r.out.slice(0, 200)}`;
