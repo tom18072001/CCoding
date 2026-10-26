@@ -293,7 +293,18 @@ function walk(root: string, dir: string, depth: number, out: string[], limit: nu
 
 async function runShell(command: string, cwd: string, timeoutSec: number, maxChars: number, signal?: AbortSignal): Promise<{ code: number | null; out: string; timedOut: boolean }> {
   const [file, args] = isWin
-    ? ['powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', `$ProgressPreference='SilentlyContinue'; [Console]::OutputEncoding=[Text.Encoding]::UTF8; ${command}`]]
+    ? [
+        'powershell.exe',
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-ExecutionPolicy',
+          'Bypass',
+          '-Command',
+          // PowerShell gộp mã thoát của lệnh native thành 1 → trả lại đúng mã thoát cuối cùng
+          `$ProgressPreference='SilentlyContinue'; [Console]::OutputEncoding=[Text.Encoding]::UTF8; $global:LASTEXITCODE=0; ${command}\n$__ok=$?; if ($LASTEXITCODE) { exit $LASTEXITCODE } elseif (-not $__ok) { exit 1 } else { exit 0 }`,
+        ],
+      ]
     : [fs.existsSync('/bin/bash') ? '/bin/bash' : '/bin/sh', ['-c', command]];
   return new Promise((resolve) => {
     const child = spawn(file, args, { cwd, env: scrubEnv(process.env), windowsHide: true, detached: !isWin, stdio: ['ignore', 'pipe', 'pipe'] });
