@@ -11,7 +11,7 @@ import { readJsonl } from '../src/util/fsx.js';
 
 /** Gateway giả tương thích OpenAI: model "m-quota" luôn báo hết hạn mức, "m-ok" trả lời + gọi công cụ ghi file khi thực thi. */
 async function fakeGateway() {
-  const seen: Array<{ model: string; tools: boolean; toolMsgs: number }> = [];
+  const seen: Array<{ model: string; tools: boolean; names: string[]; toolMsgs: number }> = [];
   const srv = http.createServer(async (req, res) => {
     if (req.url === '/v1/models') {
       res.writeHead(200, { 'content-type': 'application/json' });
@@ -21,7 +21,7 @@ async function fakeGateway() {
     for await (const c of req) raw += c;
     const body = JSON.parse(raw);
     const toolMsgs = body.messages.filter((m: { role: string }) => m.role === 'tool').length;
-    seen.push({ model: body.model, tools: !!body.tools, toolMsgs });
+    seen.push({ model: body.model, tools: !!body.tools, names: (body.tools ?? []).map((t: { function: { name: string } }) => t.function.name), toolMsgs });
     if (body.model === 'm-quota') {
       res.writeHead(429, { 'content-type': 'application/json', 'retry-after': '900' });
       return res.end(JSON.stringify({ error: { message: 'Claude AI usage limit reached' } }));
@@ -84,12 +84,13 @@ test('hết hạn mức → tự chuyển sang model kế tiếp trong chuỗi, 
     assert.equal(calls[0].attempts[0].kind, 'quota');
     assert.ok(calls.some((c) => c.tools?.length));
     assert.ok(fs.existsSync(path.join(done.workspace!, '.ccoding', '.gitignore')));
-    // nhiệm vụ không thuộc dự án: không cấp công cụ (tránh tốn token đọc lại chính sản phẩm của mình)
+    // nhiệm vụ không thuộc dự án: không cấp công cụ workspace (tránh tốn token đọc lại chính sản phẩm của mình); chỉ công cụ tra cứu
     const before = gw.seen.length;
     const t2 = app.orchestrator.submit({ brief: 'Viết đề cương ngắn', mode: 'department', department: 'research', options: { discussionRounds: 0, review: false } });
     const d2 = await app.orchestrator.waitFor(t2.id);
     assert.equal(d2.status, 'done');
-    assert.ok(gw.seen.slice(before).every((x) => !x.tools));
+    assert.ok(gw.seen.slice(before).every((x) => x.names.every((n) => ['search_papers', 'web_search', 'fetch_url'].includes(n))));
+    assert.ok(gw.seen.slice(before).some((x) => x.names.includes('search_papers')), 'phòng nghiên cứu có công cụ tra cứu');
     fs.rmSync(ws, { recursive: true, force: true });
   } finally {
     gw.srv.close();
