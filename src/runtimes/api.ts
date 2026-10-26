@@ -331,7 +331,9 @@ export class OpenAiApiRuntime implements Runtime {
     const records: ToolCallRecord[] = [];
     const diag: string[] = [];
     const maxTurns = useTools ? Math.max(1, policy!.maxTurns) : 1;
+    const inputCap = useTools ? (policy!.maxInputTokens ?? 0) : 0;
     let nudged = false;
+    let finalAsked = false;
     let turns = 0;
     for (;;) {
       turns++;
@@ -341,7 +343,7 @@ export class OpenAiApiRuntime implements Runtime {
       usage.cached += t.cached;
       if (t.model) usedModel = t.model;
       finish = t.finish;
-      if (t.toolCalls.length && useTools && turns <= maxTurns) {
+      if (t.toolCalls.length && useTools && turns <= maxTurns && !finalAsked) {
         if (t.text.trim()) narration += `${t.text.trim()}\n`;
         messages.push({ role: 'assistant', content: t.text || null, tool_calls: t.toolCalls.map((c) => ({ id: c.id, type: 'function', function: { name: c.name, arguments: c.args || '{}' } })) });
         for (const c of t.toolCalls) {
@@ -361,8 +363,11 @@ export class OpenAiApiRuntime implements Runtime {
           messages.push({ role: 'tool', tool_call_id: c.id, content: req.redact ? redact(out.output, req.redact) : out.output });
         }
         compactHistory(messages);
-        if (turns === maxTurns) {
-          messages.push({ role: 'user', content: 'Đã dùng hết số lượt công cụ cho bước này. KHÔNG gọi thêm công cụ — hãy viết ngay câu trả lời cuối cùng (sản phẩm bàn giao) theo đúng mẫu, ghi rõ việc còn dang dở.' });
+        const overBudget = inputCap > 0 && usage.input >= inputCap;
+        if (turns >= maxTurns || overBudget) {
+          finalAsked = true;
+          if (overBudget) diag.push(`chạm trần ${inputCap} token đầu vào của vòng lặp công cụ sau ${turns} lượt`);
+          messages.push({ role: 'user', content: `${overBudget ? 'Đã dùng hết ngân sách token cho công cụ ở bước này.' : 'Đã dùng hết số lượt công cụ cho bước này.'} KHÔNG gọi thêm công cụ — hãy viết ngay câu trả lời cuối cùng (sản phẩm bàn giao) theo đúng mẫu, ghi rõ việc còn dang dở.` });
         }
         continue;
       }
@@ -377,7 +382,7 @@ export class OpenAiApiRuntime implements Runtime {
         }
       }
       finalText = t.text;
-      if (!finalText.trim() && t.toolCalls.length && useTools) diag.push('hết lượt công cụ nhưng model vẫn gọi công cụ');
+      if (t.toolCalls.length && useTools && finalAsked) diag.push('đã yêu cầu viết câu trả lời cuối nhưng model vẫn gọi công cụ (bỏ qua)');
       if (!t.text.trim()) diag.push(`lượt cuối rỗng (finish=${t.finish ?? '?'}, ${t.events} sự kiện stream)`);
       break;
     }
@@ -413,7 +418,7 @@ export class OpenAiApiRuntime implements Runtime {
  * Giữ lịch sử hội thoại công cụ gọn: kết quả công cụ cũ (trừ 6 kết quả gần nhất) rút còn 600 ký tự —
  * mỗi lượt gửi lại toàn bộ lịch sử nên phần này quyết định chi phí token của vòng lặp.
  */
-export function compactHistory(messages: ChatMsg[], keep = 6, max = 600): void {
+export function compactHistory(messages: ChatMsg[], keep = 4, max = 500): void {
   const toolIdx = messages.map((m, i) => (m.role === 'tool' ? i : -1)).filter((i) => i >= 0);
   for (const i of toolIdx.slice(0, Math.max(0, toolIdx.length - keep))) {
     const c = String(messages[i].content ?? '');

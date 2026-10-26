@@ -95,6 +95,8 @@ export interface Config {
     models: Partial<Record<Phase, string>>;
     maxTokens: Partial<Record<Phase, number>>;
     toolTurns: Partial<Record<Phase, number>>;
+    /** Trần token đầu vào cộng dồn của vòng lặp công cụ theo pha — chạm trần thì model phải viết câu trả lời cuối. */
+    toolInputBudget: Partial<Record<Phase, number>>;
   };
   /** Công cụ workspace cho agent (đọc/ghi file, chạy lệnh) — xem docs/TOOLS.md. */
   tools: {
@@ -174,10 +176,11 @@ const BUILTIN: Omit<Config, 'root'> = {
   phases: {
     models: { route: 'haiku', discuss: 'haiku' },
     maxTokens: { route: 800, plan: 8000, discuss: 700, finalize: 8000, execute: 32000, review: 6000, revise: 32000, synthesize: 10000 },
-    toolTurns: { plan: 12, finalize: 6, execute: 40, review: 14, revise: 25, synthesize: 6 },
+    toolTurns: { plan: 8, finalize: 4, execute: 30, review: 8, revise: 12, synthesize: 4 },
+    toolInputBudget: { plan: 100000, finalize: 50000, execute: 400000, review: 120000, revise: 150000, synthesize: 60000 },
   },
   tools: {
-    defaultAccess: 'write',
+    defaultAccess: 'none',
     projectAccess: 'exec',
     commandTimeoutSec: 600,
     maxOutputChars: 12000,

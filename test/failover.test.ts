@@ -60,7 +60,10 @@ test('hết hạn mức → tự chuyển sang model kế tiếp trong chuỗi, 
     herdr: { ...base.herdr, notify: false, agentPanes: false },
   });
   try {
-    const t = app.orchestrator.submit({ brief: 'Viết API Node.js nhỏ và tài liệu', mode: 'department', department: 'dev', options: { discussionRounds: 0, review: false, maxParallel: 1 } });
+    // công cụ chỉ cấp cho nhiệm vụ thuộc dự án có workspace thật
+    const ws = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-fo-ws-'));
+    app.store.saveProject({ id: 'demo', name: 'Demo', department: 'dev', workspace: ws, classification: 'internal', toolAccess: 'write', createdAt: new Date().toISOString() });
+    const t = app.orchestrator.submit({ brief: 'Viết API Node.js nhỏ và tài liệu', projectId: 'demo', options: { discussionRounds: 0, review: false, maxParallel: 1 } });
     const done = await app.orchestrator.waitFor(t.id);
     assert.equal(done.status, 'done', done.error ?? done.pause?.detail);
     // chỉ thử model hết hạn mức một lần, sau đó bị "nghỉ" và bỏ qua
@@ -81,9 +84,58 @@ test('hết hạn mức → tự chuyển sang model kế tiếp trong chuỗi, 
     assert.equal(calls[0].attempts[0].kind, 'quota');
     assert.ok(calls.some((c) => c.tools?.length));
     assert.ok(fs.existsSync(path.join(done.workspace!, '.ccoding', '.gitignore')));
+    // nhiệm vụ không thuộc dự án: không cấp công cụ (tránh tốn token đọc lại chính sản phẩm của mình)
+    const before = gw.seen.length;
+    const t2 = app.orchestrator.submit({ brief: 'Viết đề cương ngắn', mode: 'department', department: 'research', options: { discussionRounds: 0, review: false } });
+    const d2 = await app.orchestrator.waitFor(t2.id);
+    assert.equal(d2.status, 'done');
+    assert.ok(gw.seen.slice(before).every((x) => !x.tools));
+    fs.rmSync(ws, { recursive: true, force: true });
   } finally {
     gw.srv.close();
     fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('vòng lặp công cụ dừng khi chạm trần token đầu vào và buộc viết câu trả lời cuối', async () => {
+  let calls = 0;
+  const srv = http.createServer(async (req, res) => {
+    let raw = '';
+    for await (const c of req) raw += c;
+    const body = JSON.parse(raw);
+    calls++;
+    const last = body.messages[body.messages.length - 1];
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    const send = (o: unknown) => res.write(`data: ${JSON.stringify(o)}\n\n`);
+    if (last.role === 'user' && String(last.content).includes('KHÔNG gọi thêm công cụ')) {
+      send({ choices: [{ delta: { content: '## Tóm tắt\nKết thúc theo yêu cầu.' }, finish_reason: 'stop' }] });
+    } else {
+      send({ choices: [{ delta: { tool_calls: [{ index: 0, id: `c${calls}`, function: { name: 'list_files', arguments: '{}' } }] }, finish_reason: 'tool_calls' }] });
+    }
+    send({ choices: [], usage: { prompt_tokens: 60000, completion_tokens: 10 } });
+    res.end('data: [DONE]\n\n');
+  });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-cap-'));
+  try {
+    const { OpenAiApiRuntime } = await import('../src/runtimes/api.js');
+    const { parseAgent } = await import('../src/registry.js');
+    const rt = new OpenAiApiRuntime({ baseUrl: `http://127.0.0.1:${(srv.address() as AddressInfo).port}/v1`, tags: 'none' }, {}, 'cap');
+    const agent = parseAgent('a.md', '---\nid: backend-dev\nname: Backend\ndepartment: dev\nrole: member\n---\nbody');
+    const r = await rt.run(
+      {
+        agent, phase: 'review', system: 's', prompt: 'p', model: 'm', cwd: root, tools: [], allowTools: true, timeoutMs: 10000,
+        toolPolicy: { root, allow: ['list_files'], maxTurns: 20, maxInputTokens: 100000, commandTimeoutSec: 10, maxOutputChars: 2000, denyCommands: [], allowGitCommit: false },
+        meta: { taskId: 'T-x', department: 'dev', callId: 'c1' },
+      },
+      {},
+    );
+    assert.equal(r.text, '## Tóm tắt\nKết thúc theo yêu cầu.');
+    assert.equal(calls, 3, '2 lượt công cụ (120k ≥ 100k) rồi 1 lượt viết câu trả lời cuối');
+    assert.match(r.diag ?? '', /chạm trần 100000 token/);
+  } finally {
+    srv.close();
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });
 

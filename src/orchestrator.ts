@@ -1000,7 +1000,8 @@ export class Orchestrator {
             ? {
                 root: ctx.cwd,
                 allow,
-                maxTurns: config.phases?.toolTurns?.[phase] ?? 10,
+                maxTurns: config.phases?.toolTurns?.[phase] ?? 8,
+                maxInputTokens: config.phases?.toolInputBudget?.[phase],
                 commandTimeoutSec: config.tools.commandTimeoutSec,
                 maxOutputChars: config.tools.maxOutputChars,
                 denyCommands: [...config.tools.denyCommands, ...(ctx.project?.denyCommands ?? [])],

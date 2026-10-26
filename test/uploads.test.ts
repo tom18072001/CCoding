@@ -46,8 +46,7 @@ test('tải tệp lên qua API → đính kèm nhiệm vụ → nội dung vào 
     const plan = prompts.find((f) => f.endsWith('-plan.md'))!;
     const text = fs.readFileSync(path.join(dir, 'prompts', plan), 'utf8');
     assert.ok(text.includes('Tài liệu đính kèm') && text.includes('MÃ-KIỂM-TRA-4711'));
-    // workspace của nhiệm vụ có bản đầu vào cho agent đọc bằng công cụ
-    assert.ok(fs.existsSync(path.join(done.workspace!, '.ccoding', t.id, 'inputs', 'BRIEF.md')));
+    assert.ok(fs.existsSync(path.join(dir, 'inputs', 'BRIEF.md')));
     const ev = await (await fetch(`${base}/api/tasks/${t.id}/events?limit=50`)).json();
     assert.ok(Array.isArray(ev) && ev.length > 0);
     const calls = await (await fetch(`${base}/api/tasks/${t.id}/calls`)).json();

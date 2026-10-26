@@ -89,6 +89,8 @@ export interface ToolPolicy {
   root: string;
   allow: ToolName[];
   maxTurns: number;
+  /** Trần token đầu vào cộng dồn của cả vòng lặp công cụ trong một lượt gọi (mỗi lượt gửi lại toàn bộ lịch sử). */
+  maxInputTokens?: number;
   commandTimeoutSec: number;
   maxOutputChars: number;
   /** Mẫu regex lệnh bị cấm (bổ sung cho danh sách mặc định). */

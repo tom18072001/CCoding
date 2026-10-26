@@ -22,9 +22,13 @@ Quyền = giao của (1) `tools:` trong hồ sơ agent, (2) quyền của dự �
 | Review | đọc + `run_command` (chạy test để xác nhận) |
 | Thực thi, sửa theo review | theo quyền dự án |
 
-Quyền dự án (`toolAccess`): `none` · `read` · `write` (đọc/ghi file) · `exec` (đọc/ghi + chạy lệnh). Mặc định: dự án → `tools.projectAccess` (`exec`); nhiệm vụ không thuộc dự án → `tools.defaultAccess` (`write`, trong `workspaces/<task>`).
+Quyền dự án (`toolAccess`): `none` · `read` · `write` (đọc/ghi file) · `exec` (đọc/ghi + chạy lệnh). Mặc định: dự án → `tools.projectAccess` (`exec`); nhiệm vụ không thuộc dự án → `tools.defaultAccess` (`none` — không có gì thật để đọc ngoài chính sản phẩm đã nằm trong prompt, bật công cụ chỉ tốn token).
 
-Số lượt công cụ tối đa theo pha: `phases.toolTurns` (thực thi 40, sửa 25, review 14, lập kế hoạch 12). Hết lượt ⇒ model được yêu cầu viết báo cáo cuối ngay.
+Giới hạn theo pha (mỗi lượt công cụ gửi lại toàn bộ hội thoại, nên chi phí tăng theo số lượt):
+- `phases.toolTurns` — số lượt tối đa: thực thi 30, sửa 12, review 8, lập kế hoạch 8, tổng hợp 4, chốt 4.
+- `phases.toolInputBudget` — trần token đầu vào cộng dồn của cả vòng lặp trong một lượt gọi: thực thi 400k, sửa 150k, review 120k, lập kế hoạch 100k, tổng hợp 60k, chốt 50k.
+
+Chạm một trong hai ⇒ model được yêu cầu viết báo cáo cuối ngay (log `call.diag`). Kết quả công cụ cũ được rút gọn (giữ nguyên 4 kết quả gần nhất), nội dung file đã ghi trong lịch sử cũng được rút gọn.
 
 ## Cách ly bằng git worktree
 
