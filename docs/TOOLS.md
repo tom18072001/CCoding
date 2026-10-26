@@ -10,8 +10,13 @@ Với runtime API có tool calling (Bifrost, 9router, OpenAI-compatible), CCodin
 | `write_file` | Write | Tạo/ghi đè file |
 | `edit_file` | Edit / MultiEdit | Thay một đoạn chính xác (chịu được CRLF) |
 | `run_command` | Bash | Chạy lệnh (PowerShell trên Windows, bash trên Linux) trong gốc workspace: cài dependency, typecheck, test, migration DB dev… |
+| `search_papers` | WebSearch | Tìm bài báo trên **OpenAlex** (chỉ mục học thuật mở, không cần khóa): tiêu đề, năm, venue, số trích dẫn, tác giả, DOI, tóm tắt; lọc `year_from/year_to/venue`, sắp theo trích dẫn |
+| `web_search` | WebSearch | Tìm kiếm web chung (DuckDuckGo HTML): văn bản pháp luật, tiêu chuẩn, tài liệu kỹ thuật |
+| `fetch_url` | WebFetch | Đọc trang web/PDF công khai thành chữ (đọc tiếp bằng `offset`); **chặn localhost/LAN/link-local**, tối đa 5 lần chuyển hướng |
 
 ## Ai được dùng gì
+
+Công cụ tra cứu (`search_papers`, `web_search`, `fetch_url`) **không cần workspace** — có ở pha lập kế hoạch, thực thi, sửa, review cho agent có `WebSearch`/`WebFetch` trong hồ sơ, chỉ với dữ liệu *Công khai/Nội bộ* (truy vấn đi ra dịch vụ bên ngoài) và khi `tools.web: true`.
 
 Quyền = giao của (1) `tools:` trong hồ sơ agent, (2) quyền của dự án, (3) pha:
 

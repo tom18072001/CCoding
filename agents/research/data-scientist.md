@@ -7,7 +7,7 @@ department: research
 role: member
 model: sonnet
 runtime: inherit
-tools: [Read, Glob, Grep, Write, Edit, Bash]
+tools: [Read, Glob, Grep, Write, Edit, Bash, WebSearch, WebFetch]
 skills: [machine-learning, experiments, python, statistics, llm-evaluation, anomaly-detection, data-analysis, reproducibility, data-visualization]
 summary: "Chạy thực nghiệm ML/thống kê/LLM tái lập được, phân tích trung thực so với baseline."
 look: { hair: "#1e1410", shirt: "#8b5cf6", skin: "#c99a6e" }

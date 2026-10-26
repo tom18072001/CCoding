@@ -37,7 +37,8 @@
     "commandTimeoutSec": 600,
     "maxOutputChars": 12000,
     "denyCommands": [],
-    "worktreeCopy": [".env", ".env.local", ".env.development", ".env.development.local", ".env.test", ".env.test.local"]
+    "worktreeCopy": [".env", ".env.local", ".env.development", ".env.development.local", ".env.test", ".env.test.local"],
+    "web": true
   },
 
   "herdr": {

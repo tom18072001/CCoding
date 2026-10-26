@@ -7,7 +7,7 @@ department: research
 role: reviewer
 model: opus
 runtime: inherit
-tools: [Read, Glob, Grep]
+tools: [Read, Glob, Grep, WebSearch, WebFetch]
 skills: [peer-review, critique, threats-to-validity, citation-check, argument-analysis, defense-prep, plan-grilling]
 summary: "Phản biện như hội đồng khó tính: chất vấn phương pháp, bằng chứng, trích dẫn, lập luận theo rubric blocker/major/minor."
 look: { hair: "#1a120b", shirt: "#b45309", skin: "#cf9f74" }

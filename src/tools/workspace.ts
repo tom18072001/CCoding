@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { killTree } from '../runtimes/spawn.js';
+import { fetchUrl, searchPapers, WebError, webSearch } from './web.js';
 import type { Phase, ToolAccess, ToolName, ToolPolicy } from '../types.js';
 
 /**
@@ -13,6 +14,9 @@ import type { Phase, ToolAccess, ToolName, ToolPolicy } from '../types.js';
 const isWin = process.platform === 'win32';
 
 const READ_TOOLS: ToolName[] = ['list_files', 'read_file', 'search'];
+export const WEB_TOOLS: ToolName[] = ['search_papers', 'web_search', 'fetch_url'];
+/** Pha được tra cứu web (họp/định tuyến/chốt/tổng hợp thì không — tránh tốn token). */
+const WEB_PHASES = new Set<Phase>(['plan', 'execute', 'revise', 'review']);
 const WRITE_TOOLS: ToolName[] = ['write_file', 'edit_file'];
 
 /** Tên công cụ trong agent.md (kiểu Claude Code) → công cụ workspace. */
@@ -25,6 +29,8 @@ const AGENT_TOOL_MAP: Record<string, ToolName[]> = {
   edit: ['edit_file'],
   multiedit: ['edit_file'],
   bash: ['run_command'],
+  websearch: ['search_papers', 'web_search'],
+  webfetch: ['fetch_url'],
 };
 
 const LEVEL: Record<ToolAccess, ToolName[]> = {
@@ -35,16 +41,17 @@ const LEVEL: Record<ToolAccess, ToolName[]> = {
 };
 
 /** Công cụ một agent được dùng ở một pha, theo hồ sơ (tools:) và quyền của dự án. */
-export function toolsFor(agentTools: string[], access: ToolAccess, phase: Phase): ToolName[] {
+export function toolsFor(agentTools: string[], access: ToolAccess, phase: Phase, web = false): ToolName[] {
   if (phase === 'route' || phase === 'discuss') return [];
   const fromAgent = new Set(agentTools.flatMap((t) => AGENT_TOOL_MAP[t.toLowerCase()] ?? []));
+  const webAllowed = web && WEB_PHASES.has(phase) ? WEB_TOOLS.filter((t) => fromAgent.has(t)) : [];
   // agent được đọc/sửa file thì luôn được liệt kê/tìm kiếm để định hướng
   if (fromAgent.size) for (const t of READ_TOOLS) if (fromAgent.has('read_file') || fromAgent.has('write_file')) fromAgent.add(t);
   let allowed = LEVEL[access].filter((t) => fromAgent.has(t));
   // review: được chạy test/typecheck để xác nhận (không ghi file); lập kế hoạch/tổng hợp: chỉ đọc
   if (phase === 'review') allowed = allowed.filter((t) => READ_TOOLS.includes(t) || t === 'run_command');
   else if (phase !== 'execute' && phase !== 'revise') allowed = allowed.filter((t) => READ_TOOLS.includes(t));
-  return allowed;
+  return [...allowed, ...webAllowed];
 }
 
 // ── Định nghĩa công cụ (OpenAI function calling) ────────────────────────────
@@ -105,6 +112,29 @@ const DEFS: Record<ToolName, { description: string; parameters: Record<string, u
       },
       required: ['path', 'old_string', 'new_string'],
     },
+  },
+  search_papers: {
+    description: 'Tìm bài báo học thuật trên OpenAlex (chỉ mục mở): trả về tiêu đề, năm, venue, loại, số trích dẫn, tác giả, DOI và tóm tắt. Dùng để tổng quan tài liệu, đếm bài theo venue, kiểm chứng trích dẫn.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Từ khóa tiếng Anh, vd. "permission-aware retrieval augmented generation"' },
+        year_from: { type: 'integer' },
+        year_to: { type: 'integer' },
+        venue: { type: 'string', description: 'Lọc venue chứa chuỗi này, vd. "ACL", "EMNLP", "USENIX"' },
+        sort: { type: 'string', enum: ['relevance', 'cited'] },
+        limit: { type: 'integer', description: 'Số kết quả (≤ 25, mặc định 10)' },
+      },
+      required: ['query'],
+    },
+  },
+  web_search: {
+    description: 'Tìm kiếm web chung (tiêu đề, URL, đoạn trích) — văn bản pháp luật, tiêu chuẩn, tài liệu kỹ thuật, trang dự án.',
+    parameters: { type: 'object', properties: { query: { type: 'string' }, limit: { type: 'integer' } }, required: ['query'] },
+  },
+  fetch_url: {
+    description: 'Đọc nội dung một trang web hoặc PDF công khai thành chữ (đọc tiếp bằng offset). Không truy cập được địa chỉ nội bộ.',
+    parameters: { type: 'object', properties: { url: { type: 'string' }, offset: { type: 'integer', description: 'Vị trí ký tự bắt đầu' } }, required: ['url'] },
   },
   run_command: {
     description:
@@ -481,6 +511,12 @@ export async function executeTool(name: string, rawArgs: unknown, policy: ToolPo
         fs.writeFileSync(abs, next, 'utf8');
         return done(true, `Đã sửa ${relOf(root, abs)} (${args.replace_all ? count : 1} chỗ)`, `edit ${relOf(root, abs)}`);
       }
+      case 'search_papers':
+        return done(true, await searchPapers(args, signal), `papers "${str(args.query).slice(0, 80)}"`);
+      case 'web_search':
+        return done(true, await webSearch(args, signal), `web "${str(args.query).slice(0, 80)}"`);
+      case 'fetch_url':
+        return done(true, await fetchUrl(args, max, signal), `fetch ${str(args.url).slice(0, 100)}`);
       case 'run_command': {
         const command = str(args.command).trim();
         if (!command) throw new ToolError('Thiếu command');
@@ -502,7 +538,7 @@ export async function executeTool(name: string, rawArgs: unknown, policy: ToolPo
         throw new ToolError(`Không có công cụ "${name}"`);
     }
   } catch (e) {
-    const msg = e instanceof ToolError ? e.message : `Lỗi khi chạy ${name}: ${(e as Error).message}`;
+    const msg = e instanceof ToolError || e instanceof WebError ? e.message : `Lỗi khi chạy ${name}: ${(e as Error).message}`;
     return { ok: false, output: `LỖI: ${msg}`, ms: Date.now() - t0, summary: `${name} ✗ ${msg.slice(0, 100)}` };
   }
 }

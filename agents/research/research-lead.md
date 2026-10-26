@@ -7,7 +7,7 @@ department: research
 role: lead
 model: opus
 runtime: inherit
-tools: [Read, Glob, Grep, Write]
+tools: [Read, Glob, Grep, Write, WebSearch, WebFetch]
 skills: [research-planning, research-questions, task-decomposition, thesis-supervision, synthesis, academic-integrity, topic-selection]
 summary: "Định hình câu hỏi nghiên cứu, định cỡ kế hoạch theo sản phẩm, giao việc, giữ liêm chính học thuật và tổng hợp báo cáo."
 look: { hair: "#2a1a10", shirt: "#6d28d9", skin: "#d9a066" }

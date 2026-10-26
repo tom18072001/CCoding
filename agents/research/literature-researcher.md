@@ -7,7 +7,7 @@ department: research
 role: member
 model: sonnet
 runtime: inherit
-tools: [Read, Glob, Grep, Write, Edit]
+tools: [Read, Glob, Grep, Write, Edit, WebSearch, WebFetch]
 skills: [literature-review, search-strategy, source-evaluation, citation, prisma, state-of-the-art, gap-analysis, standards-review]
 summary: "Tìm, sàng lọc, tổng hợp tài liệu học thuật, tiêu chuẩn, văn bản theo chiến lược tái lập được; đánh dấu nguồn chưa kiểm chứng."
 look: { hair: "#4b2e1e", shirt: "#7c3aed", skin: "#f2c6a0" }

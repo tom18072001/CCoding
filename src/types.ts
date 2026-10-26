@@ -9,7 +9,7 @@ export type TaskStatus = 'queued' | 'running' | 'paused' | 'done' | 'failed' | '
 export type BudgetMode = 'pause' | 'complete';
 /** Quyền công cụ của agent trong thư mục làm việc: không · chỉ đọc · đọc/ghi file · đọc/ghi + chạy lệnh. */
 export type ToolAccess = 'none' | 'read' | 'write' | 'exec';
-export type ToolName = 'list_files' | 'read_file' | 'search' | 'write_file' | 'edit_file' | 'run_command';
+export type ToolName = 'list_files' | 'read_file' | 'search' | 'write_file' | 'edit_file' | 'run_command' | 'search_papers' | 'web_search' | 'fetch_url';
 /** Nhóm lỗi runtime — quyết định có chuyển sang tài nguyên khác hay không. */
 export type ErrorKind = 'quota' | 'rate' | 'auth' | 'transient' | 'timeout' | 'model' | 'context' | 'empty' | 'fatal';
 export type SubtaskStatus = 'pending' | 'running' | 'done' | 'failed' | 'skipped';

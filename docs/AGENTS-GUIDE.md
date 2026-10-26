@@ -36,6 +36,8 @@ Chỉ dùng các tên sau; runtime API ánh xạ sang công cụ sandbox trong t
 | `Write` | `write_file` | tạo/ghi tệp |
 | `Edit` | `edit_file` | sửa tệp |
 | `Bash` | `run_command` | chạy test, typecheck, migration trên DB dev… |
+| `WebSearch` | `search_papers`, `web_search` | tìm bài báo (OpenAlex), tìm web — chỉ dữ liệu Công khai/Nội bộ |
+| `WebFetch` | `fetch_url` | đọc trang/PDF công khai (chặn địa chỉ nội bộ) |
 
 Pha thực thi/sửa nhận đủ `tools`; pha lập kế hoạch/review/tổng hợp chỉ nhận phần chỉ đọc (`Read`, `Glob`, `Grep`). Gợi ý theo vai trò: thành viên hiện thực và QA — đủ 6; ATTT — `Read, Glob, Grep, Bash, Write`; kiến trúc, BA, viết, tổng quan, phương pháp — `Read, Glob, Grep, Write, Edit`; trưởng phòng — `Read, Glob, Grep, Write`; phản biện — `Read, Glob, Grep`; điều phối — `[]` hoặc `[Read]`.
 

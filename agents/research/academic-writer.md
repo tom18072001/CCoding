@@ -7,7 +7,7 @@ department: research
 role: member
 model: sonnet
 runtime: inherit
-tools: [Read, Glob, Grep, Write, Edit]
+tools: [Read, Glob, Grep, Write, Edit, WebSearch, WebFetch]
 skills: [academic-writing, vietnamese, english, editing, citation-style, thesis-structure, abstract-writing, proposal-writing]
 summary: "Viết, biên tập đề cương, luận văn, bài báo, tóm tắt VI/EN theo mẫu yêu cầu, trích dẫn đúng chuẩn, giữ giọng của Tom."
 look: { hair: "#2e1d12", shirt: "#d97706", skin: "#e5b887" }

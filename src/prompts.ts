@@ -172,8 +172,29 @@ Trả lời DUY NHẤT một khối JSON:
 \`\`\``;
 }
 
+const WEB: ToolName[] = ['search_papers', 'web_search', 'fetch_url'];
+
+function webNote(tools: ToolName[], phase: Phase): string {
+  const web = tools.filter((t) => WEB.includes(t));
+  if (!web.length) return '';
+  const what =
+    phase === 'review'
+      ? 'kiểm chứng ngẫu nhiên các trích dẫn/khẳng định quan trọng (tồn tại, đúng năm/venue/DOI)'
+      : phase === 'plan'
+        ? 'ước lượng nhanh quy mô tài liệu/khoảng trống trước khi chia việc (vài truy vấn)'
+        : 'tìm, đọc và kiểm chứng nguồn THẬT (bài báo, tiêu chuẩn, văn bản pháp luật)';
+  return `\n## Tra cứu nguồn\nBạn có ${web.join(', ')} để ${what}. search_papers = OpenAlex (tiêu đề, venue, năm, DOI, số trích dẫn, tóm tắt; lọc year_from/venue); web_search = web chung; fetch_url = đọc trang/PDF (arXiv, ACL Anthology, văn bản luật…). Quy tắc: mỗi nguồn dẫn ra phải có DOI/URL đã thấy trong kết quả công cụ; nguồn chưa đọc được ghi [CHƯA KIỂM CHỨNG]; số đếm phải nêu truy vấn + bộ lọc đã dùng để tái lập; không bịa. Gộp truy vấn có mục tiêu — mỗi lượt công cụ gửi lại cả hội thoại nên tốn token.\n`;
+}
+
 function toolNote(c: Ctx, tools: ToolName[], phase: Phase): string {
   if (!tools.length) return '';
+  const wn = webNote(tools, phase);
+  tools = tools.filter((t) => !WEB.includes(t));
+  if (!tools.length) return wn;
+  return fileToolNote(c, tools, phase) + wn;
+}
+
+function fileToolNote(c: Ctx, tools: ToolName[], phase: Phase): string {
   const read = tools.filter((t) => ['list_files', 'read_file', 'search'].includes(t));
   if (phase === 'plan' || phase === 'finalize' || phase === 'synthesize')
     return `\n## Công cụ\nBạn có thể dùng ${read.join(', ')} để khảo sát nhanh workspace (quy tắc repo như CLAUDE.md/AGENTS.md, cấu trúc, README, cấu hình, tài liệu đính kèm) trước khi trả lời — chỉ đọc những gì cần cho bước này, gộp nhiều file trong một lần read_file.\n`;

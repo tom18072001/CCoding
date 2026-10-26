@@ -7,7 +7,7 @@ department: dev
 role: member
 model: opus
 runtime: inherit
-tools: [Read, Glob, Grep, Write, Edit]
+tools: [Read, Glob, Grep, Write, Edit, WebSearch, WebFetch]
 skills: [architecture, adr, nfr, system-design, architecture-review, integration, data-architecture, cost-estimation, security-by-design]
 summary: "Thiết kế, phản biện kiến trúc tương xứng từng dự án (quy mô, stack, cấp độ ATTT xác định riêng); ghi quyết định bằng ADR."
 look: { hair: "#3b2a1a", shirt: "#1d4ed8", skin: "#c68642" }

@@ -1005,7 +1005,9 @@ export class Orchestrator {
       for (let i = 0; i < maxTry; i++) {
         cand = list[i];
         const rt = cand.runtime;
-        const allow = rt.supportsTools && rt.id !== 'mock' ? toolsFor(agent.tools, access, phase) : [];
+        // tra cứu web chỉ với dữ liệu Công khai/Nội bộ (truy vấn đi ra máy tìm kiếm bên ngoài)
+        const web = config.tools.web !== false && (cls === 'public' || cls === 'internal');
+        const allow = rt.supportsTools && rt.id !== 'mock' ? toolsFor(agent.tools, access, phase, web) : [];
         const built = build(allow);
         const system = P.systemFor(agent, ctx.dept, cls, phase);
         const piiOut = cls === 'confidential' || cls === 'restricted';

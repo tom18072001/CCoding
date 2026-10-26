@@ -109,6 +109,8 @@ export interface Config {
     denyCommands: string[];
     /** File chưa track chép vào worktree mặc định (nếu có). */
     worktreeCopy: string[];
+    /** Cho agent có WebSearch/WebFetch tra cứu nguồn (OpenAlex, web, đọc URL) với dữ liệu Công khai/Nội bộ. */
+    web: boolean;
   };
   herdr: {
     session: string;
@@ -186,6 +188,7 @@ const BUILTIN: Omit<Config, 'root'> = {
     maxOutputChars: 12000,
     denyCommands: [],
     worktreeCopy: ['.env', '.env.local', '.env.development', '.env.development.local', '.env.test', '.env.test.local'],
+    web: true,
   },
   herdr: { session: 'ccoding', workspaceLabel: 'CCoding Office', agentPanes: true, closeAgentPanes: false, notify: true, services: [] },
   runtimes: {},

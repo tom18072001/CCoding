@@ -7,7 +7,7 @@ department: dev
 role: member
 model: sonnet
 runtime: inherit
-tools: [Read, Glob, Grep, Write, Edit]
+tools: [Read, Glob, Grep, Write, Edit, WebSearch, WebFetch]
 skills: [requirements, user-stories, acceptance-criteria, process-mapping, hsdt, presales, solution-proposal, sharepoint, power-automate, questionnaire]
 summary: "Làm rõ yêu cầu, viết user story và tiêu chí chấp nhận, soạn thuyết minh/HSDT, khảo sát quy trình (kể cả M365) theo bối cảnh khách hàng."
 look: { hair: "#5a3825", shirt: "#3b82f6", skin: "#f5d0b0" }

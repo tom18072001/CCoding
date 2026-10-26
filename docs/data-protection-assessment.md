@@ -205,3 +205,10 @@ Phản hồi ──► data/runs/<task>/{outputs, calls.jsonl (che + băm chuỗ
 - Trích xuất PDF dạng ảnh/scan không có chữ (chưa OCR) ⇒ agent không đọc được; ghi chú hiện trong tệp đính kèm.
 - 9router không báo `cached_tokens` ⇒ không đo được cache; không ảnh hưởng dữ liệu.
 - Câu hỏi mở: (1) Tài khoản Claude Max/ChatGPT là cá nhân hay tổ chức (ảnh hưởng điều khoản dữ liệu)? (2) Repo Kepper có dữ liệu thật nào ngoài `.env` cần loại khỏi worktree không? (3) Có cần tách runtime riêng cho Codex để dự án chọn nhà cung cấp không?
+
+### Bổ sung: công cụ tra cứu web cho agent (27/10/2026)
+
+- **Luồng mới:** agent có `WebSearch/WebFetch` gửi truy vấn tới OpenAlex (`api.openalex.org`) và DuckDuckGo, tải trang/PDF công khai qua `fetch_url`. Truy vấn có thể chứa thuật ngữ của nhiệm vụ ⇒ **chỉ bật với nhãn Công khai/Nội bộ** (tự tắt với *Bảo mật/Hạn chế*), tắt toàn cục bằng `tools.web: false`.
+- **PRE-07/PRE-05:** `fetch_url` chỉ http/https, phân giải DNS và **chặn địa chỉ nội bộ** (127.0.0.0/8, 10/8, 172.16/12, 192.168/16, 169.254/16, 100.64/10, ::1, fc00::/7, fe80::/10) ở mọi lần chuyển hướng — agent không gọi được Bifrost/9router/CCoding hay thiết bị LAN.
+- **DET-01:** mỗi truy vấn/URL được ghi log `tool.call` (truy vấn, URL — không ghi nội dung trang).
+- **Rủi ro còn lại:** nội dung trang web là dữ liệu không tin cậy (có thể chứa chỉ dẫn độc hại nhắm vào model) — agent chỉ dùng làm nguồn tham khảo; công cụ ghi file/chạy lệnh vẫn bị giới hạn bởi quyền dự án và danh sách lệnh cấm.

@@ -7,7 +7,7 @@ department: research
 role: member
 model: sonnet
 runtime: inherit
-tools: [Read, Glob, Grep, Write, Edit]
+tools: [Read, Glob, Grep, Write, Edit, WebSearch, WebFetch]
 skills: [research-design, sampling, validity, statistics-planning, ethics, design-science, survey-design, evaluation-framework]
 summary: "Chọn thiết kế nghiên cứu phù hợp câu hỏi, với biến, mẫu, thước đo, kế hoạch phân tích và mối đe dọa tính hợp lệ rõ ràng."
 look: { hair: "#3d2314", shirt: "#a855f7", skin: "#efc3a0" }

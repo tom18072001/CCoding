@@ -7,7 +7,7 @@ department: dev
 role: member
 model: sonnet
 runtime: inherit
-tools: [Read, Glob, Grep, Bash, Write]
+tools: [Read, Glob, Grep, Bash, Write, WebSearch, WebFetch]
 skills: [attt, data-protection, threat-model, compliance, iam, appsec, privacy, security-review, logging-audit]
 summary: "Chạy cổng bảo vệ dữ liệu theo rủi ro thật của dự án, đề xuất cấp độ ATTT có căn cứ, review bảo mật thiết kế, code, cấu hình."
 look: { hair: "#3a1f14", shirt: "#155e75", skin: "#f0c8a0" }
