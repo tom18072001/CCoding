@@ -128,6 +128,8 @@ export interface ResumeOptions {
   runtime?: string;
   /** Chạy lại các hạng mục đã xong (vd. để áp dụng thật vào repo sau khi có workspace): id hoặc "all". */
   rerun?: string[] | 'all';
+  /** Làm lại từ pha review (review → sửa → tổng hợp) hoặc chỉ báo cáo tổng hợp. */
+  from?: 'review' | 'synthesize';
 }
 
 export interface PackageOptions extends ResumeOptions {
@@ -307,7 +309,7 @@ export class Orchestrator {
     const { store, logs } = this.d;
     const t = store.get(id);
     if (!t) throw new Error('Không có nhiệm vụ');
-    const hasRerun = o.rerun === 'all' || (Array.isArray(o.rerun) && o.rerun.length > 0);
+    const hasRerun = o.rerun === 'all' || (Array.isArray(o.rerun) && o.rerun.length > 0) || !!o.from;
     if (!['paused', 'failed', 'cancelled'].includes(t.status) && !(t.status === 'done' && hasRerun))
       throw new Error(`Nhiệm vụ đang ở trạng thái "${t.status}" — chỉ tiếp tục được khi tạm dừng, lỗi hoặc đã hủy (nhiệm vụ đã xong: chọn hạng mục cần chạy lại)`);
     this.applyBudget(t, o);
@@ -331,6 +333,15 @@ export class Orchestrator {
         r.finalPath = undefined;
         r.status = 'pending';
         logs.write({ level: 'info', kind: 'task.rerun', msg: `${t.id}: chạy lại ${again.map((s) => s.id).join(', ')}`, taskId: t.id, department: r.department });
+      }
+      if (o.from && r.subtasks.length) {
+        const back: RunStage = o.from === 'review' ? 'executed' : 'reviewed';
+        r.stage ??= inferStage(r);
+        if (!r.stage || STAGES.indexOf(r.stage) > STAGES.indexOf(back)) r.stage = back;
+        if (o.from === 'review') r.review = undefined;
+        r.finalPath = undefined;
+        r.status = 'pending';
+        logs.write({ level: 'info', kind: 'task.rerun', msg: `${t.id}: làm lại từ ${o.from === 'review' ? 'review' : 'báo cáo tổng hợp'} (${r.department})`, taskId: t.id, department: r.department });
       }
       if (r.status !== 'done') r.status = 'pending';
       for (const s of r.subtasks)
@@ -622,6 +633,8 @@ export class Orchestrator {
     if (!reached(run, 'planned')) {
       this.setPhase(task, run, 'plan');
       const planRes = await this.call(lead, 'plan', (tools) => P.planPrompt(pctx, prior, tools), { ...base, hints: { brief: task.brief, roster: rosterHints, department: dept.name } });
+      // lượt gọi lỗi → dừng (tiếp tục được) thay vì làm theo kế hoạch dự phòng đoán mò
+      if (planRes.error && !planRes.text) throw new Error(`Trưởng phòng không lập được kế hoạch: ${planRes.error}`);
       plan = parsePlan(planRes.text, roster, lead, task.brief);
       run.subtasks = plan.subtasks;
       run.planSummary = plan.summary;
@@ -696,6 +709,8 @@ export class Orchestrator {
             ...base,
             hints: { brief: task.brief, subtasks: items.map((i) => stHint(i.st)), attempt },
           });
+          // review lỗi KHÔNG được coi là "duyệt"
+          if (res.error && !res.text) throw new Error(`Không review được: ${res.error}`);
           const review = parseReview(res.text, items.map((i) => i.st.id));
           run.review = { approved: review.approved, summary: review.summary, issues: review.issues };
           this.message(
@@ -744,7 +759,8 @@ export class Orchestrator {
       ...base,
       hints: { brief: task.brief, subtasks: run.subtasks.map(stHint), departmentName: dept.name },
     });
-    const finalText = fin.text || `# ${dept.name}\n\n(Trưởng phòng không trả về báo cáo — xem các file đầu ra.)`;
+    if (!fin.text) throw new Error(`Trưởng phòng không viết được báo cáo tổng hợp${fin.error ? `: ${fin.error}` : ''}`);
+    const finalText = fin.text;
     const rel = `${safeName(dept.id)}-FINAL.md`;
     writeText(path.join(this.d.store.runDir(task.id), rel), finalText);
     run.finalPath = rel;

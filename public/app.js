@@ -711,6 +711,14 @@
           </form>
         </div>`
       : '';
+    const redo =
+      t.status === 'done' && (t.runs || []).length
+        ? `<details class="redo"><summary>↻ Làm lại một phần…</summary><div class="pb-actions">
+            <button class="btn ghost sm" data-redo="review">Làm lại từ review (review → sửa → tổng hợp)</button>
+            <button class="btn ghost sm" data-redo="synthesize">Viết lại báo cáo tổng hợp</button></div>
+            ${doneSubs.length ? `<div class="rerun">${doneSubs.map((x) => `<label class="check"><input type="checkbox" value="${esc(x.id)}" /> <code>${esc(x.id)}</code> ${esc(x.title)} <small>@${esc(x.assignee)}</small></label>`).join('')}<button class="btn ghost sm" data-redo="rerun">Chạy lại hạng mục đã chọn</button></div>` : ''}
+          </details>`
+        : '';
     const atts = (t.attachments || []).length
       ? `<div class="t-atts">📎 ${t.attachments.map((a) => `<a data-file="${esc(a.textPath || a.path)}" title="${esc(a.note || '')}">${esc(a.name)} <small>(${esc(a.kind)}, ${fmt(a.chars)} ký tự)</small></a>`).join(' · ')}</div>`
       : '';
@@ -725,7 +733,7 @@
         ${t.routing ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">🧭 ${esc(t.routing.reason)}</p>` : ''}
         ${t.error && !canResume ? `<p style="font-size:12.5px;color:var(--bad);margin:0 0 8px">${esc(t.error)}</p>` : ''}
       </div>
-      ${banner}
+      ${banner}${redo}
       <details class="doc" style="margin-bottom:10px"><summary style="cursor:pointer;color:var(--muted);font-size:12.5px">Yêu cầu gốc</summary><div class="md">${md(t.brief)}</div></details>
       ${blocks || '<div class="empty">Đang định tuyến…</div>'}
       <div class="subtabs">
@@ -757,6 +765,17 @@
         if (b.dataset.act === 'resume-complete') act(`/api/tasks/${t.id}/resume`, { budgetMode: 'complete', rerun: rerun() }, 'Tiếp tục — chạy tới khi hoàn thành');
         if (b.dataset.act === 'resume-add') act(`/api/tasks/${t.id}/resume`, { addBudget: Math.max(100000, Math.round(budget * 0.5)), rerun: rerun() }, 'Đã tăng ngân sách & tiếp tục');
         if (b.dataset.act === 'package') $('#pkg-form').hidden = !$('#pkg-form').hidden;
+      }),
+    );
+    el.querySelectorAll('[data-redo]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const m = b.dataset.redo;
+        if (m === 'rerun') {
+          const ids = [...el.querySelectorAll('.redo .rerun input:checked')].map((x) => x.value);
+          if (!ids.length) return toast({ level: 'info', title: 'Chọn hạng mục cần chạy lại', msg: t.title });
+          return act(`/api/tasks/${t.id}/resume`, { rerun: ids, budgetMode: 'complete' }, 'Đang chạy lại hạng mục');
+        }
+        act(`/api/tasks/${t.id}/resume`, { from: m, budgetMode: 'complete' }, m === 'review' ? 'Làm lại từ review' : 'Viết lại báo cáo tổng hợp');
       }),
     );
     const pkg = $('#pkg-form');

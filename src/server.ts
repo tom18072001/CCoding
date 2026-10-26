@@ -34,9 +34,10 @@ function budgetOpts(b: any) {
     o.budgetMode = b.budgetMode;
   }
   if (b.runtime !== undefined) o.runtime = String(b.runtime);
+  if (b.from === 'review' || b.from === 'synthesize') (o as { from?: 'review' | 'synthesize' }).from = b.from;
   if (b.rerun === 'all') (o as { rerun?: string[] | 'all' }).rerun = 'all';
   else if (Array.isArray(b.rerun)) (o as { rerun?: string[] | 'all' }).rerun = b.rerun.map(String).slice(0, 50);
-  return o as typeof o & { rerun?: string[] | 'all' };
+  return o as typeof o & { rerun?: string[] | 'all'; from?: 'review' | 'synthesize' };
 }
 
 async function readRaw(req: http.IncomingMessage, limit: number): Promise<Buffer> {

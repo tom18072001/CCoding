@@ -380,3 +380,6 @@ body { overflow-x: hidden; }
 .call-body .tools li.bad { color: #fca5a5; }
 .call-body .raw { margin: 0; max-height: 340px; overflow: auto; background: var(--bg-2); border-radius: 6px; padding: 8px; font: 11.5px/1.45 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 .subtabs { flex-wrap: wrap; }
+.redo { margin: 0 0 10px; font-size: 12.5px; }
+.redo summary { cursor: pointer; color: var(--muted); }
+.redo .pb-actions, .redo .rerun { margin-top: 6px; }

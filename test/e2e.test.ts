@@ -95,6 +95,14 @@ test('ngân sách: chế độ "pause" tạm dừng khi chạm trần, tiếp t�
     assert.equal(r3.status, 'done');
     assert.ok(r3.runs[0].subtasks.find((s) => s.id === st.id)!.attempts >= 2);
 
+    // làm lại từ review (vd. khi review/tổng hợp trước đó lỗi) — không chạy lại thực thi
+    const execBefore = app.usage.all({ task: t.id }).filter((x) => x.phase === 'execute').length;
+    app.orchestrator.resume(t.id, { from: 'review' });
+    const r4 = await app.orchestrator.waitFor(t.id);
+    assert.equal(r4.status, 'done');
+    assert.equal(app.usage.all({ task: t.id }).filter((x) => x.phase === 'execute').length, execBefore);
+    assert.ok(app.usage.all({ task: t.id }).slice(-1)[0].phase === 'synthesize');
+
     const c = app.orchestrator.submit({ brief: 'Sẽ bị hủy', mode: 'department', department: 'dev' });
     setTimeout(() => app.orchestrator.cancel(c.id), 15);
     const cr = await app.orchestrator.waitFor(c.id);

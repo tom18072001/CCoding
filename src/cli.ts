@@ -35,7 +35,8 @@ ${c.bold('Giao việc')}
       --runtime <id>        --budget <token>   --budget-mode pause|complete   --wait
   cancel <taskId>                            Hủy nhiệm vụ đang chạy
   pause <taskId>                             Tạm dừng (giữ tiến độ)
-  resume <taskId> [--add <token>] [--budget-mode pause|complete]   Tiếp tục từ checkpoint
+  resume <taskId> [--add <token>] [--budget-mode pause|complete] [--from review|synthesize] [--rerun S1,S2|all]
+                                             Tiếp tục từ checkpoint / làm lại từ review / chạy lại hạng mục
   status                                     Danh sách nhiệm vụ & trạng thái agent
   show <taskId>                              Chi tiết một nhiệm vụ
 
@@ -533,10 +534,16 @@ async function cmdPause(args: string[]): Promise<void> {
 }
 
 async function cmdResume(args: string[]): Promise<void> {
-  const { values, positionals } = parseArgs({ args, allowPositionals: true, options: { add: { type: 'string' }, budget: { type: 'string' }, 'budget-mode': { type: 'string' } } });
+  const { values, positionals } = parseArgs({ args, allowPositionals: true, options: { add: { type: 'string' }, budget: { type: 'string' }, 'budget-mode': { type: 'string' }, from: { type: 'string' }, rerun: { type: 'string' } } });
   if (!positionals[0]) throw new Error('Cần taskId');
   if (!(await serverUp())) throw new Error('Server không chạy');
-  const body = { addBudget: values.add ? Number(values.add) : undefined, budgetTokens: values.budget ? Number(values.budget) : undefined, budgetMode: values['budget-mode'] };
+  const body = {
+    addBudget: values.add ? Number(values.add) : undefined,
+    budgetTokens: values.budget ? Number(values.budget) : undefined,
+    budgetMode: values['budget-mode'],
+    from: values.from,
+    rerun: values.rerun ? (values.rerun === 'all' ? 'all' : values.rerun.split(',')) : undefined,
+  };
   const t = await api<Task>(`/api/tasks/${positionals[0]}/resume`, { method: 'POST', body: JSON.stringify(body) });
   console.log(`${c.green('✓')} Tiếp tục ${t.id} — ngân sách ${fmtNum(t.options.budgetTokens)} · ${t.options.budgetMode === 'complete' ? 'chạy tới khi hoàn thành' : 'dừng khi chạm trần'}`);
 }
