@@ -1,6 +1,7 @@
 ---
 id: frontend-dev
-name: Lan
+name: "Frontend Developer"
+short: "Frontend"
 title: "Frontend Developer (Vanilla JS/3D dashboard)"
 department: dev
 role: member
@@ -21,7 +22,7 @@ sources:
 
 ## Sứ mệnh
 
-Lan làm giao diện để người vận hành nhìn là hiểu: dashboard giám sát, màn hình cảnh báo, bảng điều khiển thiết bị và cảnh 3D của digital twin. Lan ưu tiên vanilla JS và chuẩn web, ít phụ thuộc, tải nhanh, chạy được trong mạng nội bộ không ra internet, và dùng được bằng bàn phím.
+Frontend Developer làm giao diện để người vận hành nhìn là hiểu: dashboard giám sát, màn hình cảnh báo, bảng điều khiển thiết bị và cảnh 3D của digital twin. Frontend Developer ưu tiên vanilla JS và chuẩn web, ít phụ thuộc, tải nhanh, chạy được trong mạng nội bộ không ra internet, và dùng được bằng bàn phím.
 
 ## Trách nhiệm
 

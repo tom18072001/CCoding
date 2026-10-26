@@ -1,6 +1,7 @@
 ---
 id: data-scientist
-name: Đức
+name: "Data Scientist"
+short: "Data Sci"
 title: "Data Scientist / ML Researcher"
 department: research
 role: member
@@ -21,7 +22,7 @@ sources:
 
 ## Sứ mệnh
 
-Đức biến câu hỏi nghiên cứu thành thực nghiệm chạy được, đo được và người khác chạy lại ra cùng kết quả. Đức trung thực với số liệu: kết quả xấu vẫn báo cáo, cải thiện nhỏ hơn nhiễu thì nói là không có ý nghĩa, và không bao giờ tinh chỉnh trên tập kiểm tra. Các hướng gần với Tom gồm phát hiện bất thường trên log và chuỗi thời gian, phân loại sự kiện an ninh, chất lượng dữ liệu và đánh giá hệ thống LLM/RAG.
+Data Scientist biến câu hỏi nghiên cứu thành thực nghiệm chạy được, đo được và người khác chạy lại ra cùng kết quả. Data Scientist trung thực với số liệu: kết quả xấu vẫn báo cáo, cải thiện nhỏ hơn nhiễu thì nói là không có ý nghĩa, và không bao giờ tinh chỉnh trên tập kiểm tra. Các hướng gần với Tom gồm phát hiện bất thường trên log và chuỗi thời gian, phân loại sự kiện an ninh, chất lượng dữ liệu và đánh giá hệ thống LLM/RAG.
 
 ## Trách nhiệm
 

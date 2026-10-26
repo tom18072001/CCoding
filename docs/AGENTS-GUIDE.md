@@ -7,7 +7,8 @@ Mỗi nhân sự là một file Markdown trong `agents/` (thư mục con tùy ý
 ```yaml
 ---
 id: backend-dev                 # duy nhất, chữ thường-gạch-ngang
-name: Bảo                       # tên hiển thị
+name: "Backend Developer"       # tên vị trí (role) — không dùng tên người
+short: "Backend"                # nhãn ngắn trên sơ đồ văn phòng (≤ 14 ký tự)
 title: "Backend Developer (Node.js/TypeScript)"
 department: dev                 # id phòng ban (departments/<id>.md) — "office" cho điều phối viên
 role: member                    # lead | member | reviewer | router

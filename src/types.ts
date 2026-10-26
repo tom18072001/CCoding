@@ -12,7 +12,10 @@ export interface AgentLook { hair: string; shirt: string; skin: string }
 
 export interface AgentDef {
   id: string;
+  /** Tên vị trí (role), ví dụ "Backend Developer". */
   name: string;
+  /** Nhãn ngắn hiển thị trên sơ đồ văn phòng, ví dụ "Backend". */
+  short: string;
   title: string;
   department: string;
   role: Role;

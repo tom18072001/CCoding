@@ -7,8 +7,8 @@ import { extractJson } from '../src/util/json-extract.js';
 const agent = (id: string, role: string, skills: string[], name = id) =>
   parseAgent(`${id}.md`, `---\nid: ${id}\nname: ${name}\ntitle: ${id} title\ndepartment: dev\nrole: ${role}\nskills: [${skills.join(', ')}]\n---\nbody`);
 
-const lead = agent('dev-lead', 'lead', ['planning'], 'Minh');
-const roster = [lead, agent('backend-dev', 'member', ['nodejs', 'api'], 'Bảo'), agent('data-engineer', 'member', ['logstash', 'elasticsearch'], 'Hùng'), agent('qa-tester', 'reviewer', ['testing'], 'Phúc')];
+const lead = agent('dev-lead', 'lead', ['planning'], 'Trưởng phòng');
+const roster = [lead, agent('backend-dev', 'member', ['nodejs', 'api'], 'Backend Developer'), agent('data-engineer', 'member', ['logstash', 'elasticsearch'], 'Data Engineer'), agent('qa-tester', 'reviewer', ['testing'], 'QA Engineer')];
 
 test('extractJson đọc được khối ```json và JSON lẫn trong văn bản', () => {
   assert.deepEqual(extractJson('abc ```json\n{"a":1}\n``` x'), { a: 1 });
@@ -17,7 +17,7 @@ test('extractJson đọc được khối ```json và JSON lẫn trong văn bản
 });
 
 test('parsePlan chuẩn hóa id, người nhận và phụ thuộc', () => {
-  const text = '```json\n{"summary":"ok","subtasks":[{"id":"S1","title":"Pipeline","assignee":"@data-engineer","description":"logstash","dependsOn":[]},{"id":"S2","title":"API","assignee":"Bảo","description":"api","dependsOn":["S1","S9"]}]}\n```';
+  const text = '```json\n{"summary":"ok","subtasks":[{"id":"S1","title":"Pipeline","assignee":"@data-engineer","description":"logstash","dependsOn":[]},{"id":"S2","title":"API","assignee":"Backend Developer","description":"api","dependsOn":["S1","S9"]}]}\n```';
   const p = parsePlan(text, roster, lead, 'brief');
   assert.equal(p.parsed, true);
   assert.equal(p.subtasks.length, 2);

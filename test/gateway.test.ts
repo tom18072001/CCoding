@@ -7,7 +7,7 @@ import { RuntimeManager } from '../src/runtimes/index.js';
 import { loadConfig } from '../src/config.js';
 import { parseAgent } from '../src/registry.js';
 
-const agent = parseAgent('data-engineer.md', '---\nid: data-engineer\nname: Hùng\ndepartment: dev\nrole: member\n---\nbody');
+const agent = parseAgent('data-engineer.md', '---\nid: data-engineer\nname: Data Engineer\ndepartment: dev\nrole: member\n---\nbody');
 const meta = { taskId: 'T-20261026-210000-abc', department: 'dev', projectId: 'elk-iis', subtaskId: 'S2', callId: 'T-20261026-210000-abc-7' };
 
 test('resolveSecret: env:, tên biến và giá trị trực tiếp', () => {

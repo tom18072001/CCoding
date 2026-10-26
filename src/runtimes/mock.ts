@@ -206,7 +206,7 @@ export class MockRuntime implements Runtime {
     const n = 3 + Math.floor(rnd() * 3);
     const bullets = Array.from({ length: n }, (_, i) => `- Điểm ${i + 1}: phân tích theo góc nhìn ${req.agent.title.toLowerCase()} cho "${brief.slice(0, 50)}".`).join('\n');
     return `## Tóm tắt
-${req.agent.name} (${req.agent.title}) hoàn thành **${title}**.${rev}
+${req.agent.title} hoàn thành **${title}**.${rev}
 
 ## Nội dung chính
 ${bullets}

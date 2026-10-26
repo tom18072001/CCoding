@@ -632,16 +632,23 @@
     }
 
     drawTag(p, a, now) {
-      const name = a.def.name;
+      const name = a.def.short || a.def.name;
       const st = a.state?.status ?? 'idle';
       const lead = this.depts.some((d) => d.lead === a.def.id);
       const y = a.y - 1.62;
       const c = p.c;
-      c.font = `600 ${Math.max(7, 6 * p.s)}px "Be Vietnam Pro", system-ui, sans-serif`;
-      const wpx = c.measureText(name).width / (T * p.s) + 0.75;
-      p.round(a.x - wpx / 2, y - 0.3, wpx, 0.58, 3, 'rgba(10,13,20,0.82)', lead ? '#f59e0b' : null);
-      p.round(a.x - wpx / 2 + 0.14, y - 0.07, 0.14, 0.14, 2, STATUS_COLOR[st] ?? '#64748b');
-      p.text(name, a.x + 0.09, y, 6, '#e7eaf2');
+      const speaking = a.bubble && now < a.bubble.until;
+      // Trong phòng họp ghế sát nhau: chỉ hiện nhãn của trưởng phòng, người đang nói, người được chọn/rê chuột
+      const compact = a.target === 'meeting' && !a.path.length && !lead && !speaking && this.hover !== a.def.id && this.selected !== a.def.id;
+      if (compact) {
+        p.round(a.x - 0.12, y - 0.12, 0.24, 0.24, 3, STATUS_COLOR[st] ?? '#64748b');
+      } else {
+        c.font = `600 ${Math.max(7, 6 * p.s)}px "Be Vietnam Pro", system-ui, sans-serif`;
+        const wpx = c.measureText(name).width / (T * p.s) + 0.75;
+        p.round(a.x - wpx / 2, y - 0.3, wpx, 0.58, 3, 'rgba(10,13,20,0.82)', lead ? '#f59e0b' : null);
+        p.round(a.x - wpx / 2 + 0.14, y - 0.07, 0.14, 0.14, 2, STATUS_COLOR[st] ?? '#64748b');
+        p.text(name, a.x + 0.09, y, 6, '#e7eaf2');
+      }
       // bong bóng
       let text = null;
       let style = 'say';

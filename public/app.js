@@ -278,7 +278,7 @@
     if (!a) return;
     const st = a.state || { status: 'idle' };
     const u = a.usage || {};
-    tt.innerHTML = `<b>${esc(a.name)}</b> <small>@${esc(a.id)}</small><div style="color:var(--muted);margin-bottom:4px">${esc(a.title)}</div>
+    tt.innerHTML = `<b>${esc(a.title)}</b> <small>@${esc(a.id)}</small><div style="margin-bottom:4px"></div>
       <div class="tt-row"><span>Phòng</span><span>${esc(deptShort(a.department))}</span></div>
       <div class="tt-row"><span>Trạng thái</span><span style="color:${window.STATUS_COLOR[st.status]}">${esc(STATUS_VI[st.status] || st.status)}</span></div>
       ${st.activity ? `<div class="tt-row"><span>Đang</span><span>${esc(st.activity.slice(0, 40))}</span></div>` : ''}
@@ -623,7 +623,7 @@
     const u = a.usage || {};
     return `<button class="agent-card" data-agent="${esc(a.id)}">
       <img src="${avatarUrl(a.id)}" width="34" height="34" alt="" style="image-rendering:pixelated;background:var(--bg-2);border-radius:7px">
-      <div style="min-width:0"><b>${esc(a.name)}${a.role === 'lead' ? ' ★' : ''}</b><div class="role">${esc(a.title)}</div>
+      <div style="min-width:0"><b>${esc(a.name)}${a.role === 'lead' ? ' ★' : ''}</b><div class="role">@${esc(a.id)} · ${esc(a.title)}</div>
       <div class="st"><span class="dot" style="background:${window.STATUS_COLOR[st.status]}"></span>${esc(STATUS_VI[st.status] || st.status)}${st.activity && st.status !== 'discussing' ? ` · ${esc(st.activity.slice(0, 26))}` : ''}</div>
       <div class="tok">${fmt(u.input)} in · ${fmt(u.output)} out</div></div></button>`;
   }
@@ -678,8 +678,8 @@
     el.hidden = false;
     el.innerHTML = `<button class="btn ghost sm back" id="ad-back" style="margin-bottom:10px">← Nhân sự</button>
       <div class="ad-head"><img src="${avatarUrl(id)}" width="56" height="56" alt="" style="image-rendering:pixelated;background:var(--bg-2);border-radius:10px">
-        <div><h2 style="font-size:16px">${esc(a.name)} <small>@${esc(a.id)}</small></h2>
-        <div style="color:var(--muted);font-size:12.5px">${esc(a.title)} · <span style="color:${deptColor(a.department)}">${esc(deptName(a.department))}</span> · vai trò ${esc(a.role)} · model ${esc(a.model)}</div>
+        <div><h2 style="font-size:16px">${esc(a.title)} <small>@${esc(a.id)}</small></h2>
+        <div style="color:var(--muted);font-size:12.5px"><span style="color:${deptColor(a.department)}">${esc(deptName(a.department))}</span> · vai trò ${esc(a.role)} · model ${esc(a.model)}</div>
         <div class="st" style="font-size:12.5px;margin-top:3px"><span class="dot" style="background:${window.STATUS_COLOR[st.status]}"></span> ${esc(STATUS_VI[st.status] || st.status)}${st.activity ? ` · ${esc(st.activity)}` : ''}${st.runtime ? ` · <code>${esc(st.runtime)}</code>` : ''}</div></div></div>
       <div class="stats">
         <div class="stat"><span>Input</span><b>${fmt(u.input)}</b></div>
@@ -774,7 +774,7 @@
     const aSel = $('#log-agent');
     if (dSel.options.length <= 1) {
       dSel.innerHTML = '<option value="">Mọi phòng</option>' + [...S.departments.map((d) => [d.id, d.name]), ['office', 'Điều phối']].map(([id, n]) => `<option value="${esc(id)}">${esc(n)}</option>`).join('');
-      aSel.innerHTML = '<option value="">Mọi agent</option>' + [...S.agents.values()].map((a) => `<option value="${esc(a.id)}">${esc(a.name)} — ${esc(a.id)}</option>`).join('');
+      aSel.innerHTML = '<option value="">Mọi agent</option>' + [...S.agents.values()].map((a) => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join('');
     }
     const q = new URLSearchParams({ limit: '300' });
     if (aSel.value) q.set('agent', aSel.value);

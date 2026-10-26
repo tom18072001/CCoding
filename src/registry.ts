@@ -34,8 +34,9 @@ export function parseAgent(file: string, text: string, index = 0): AgentDef {
   const fallback = DEFAULT_LOOKS[index % DEFAULT_LOOKS.length];
   return {
     id,
-    name: String(data.name ?? id),
-    title: String(data.title ?? id),
+    name: String(data.name ?? data.title ?? id),
+    short: String(data.short ?? data.name ?? id),
+    title: String(data.title ?? data.name ?? id),
     department: String(data.department ?? path.basename(path.dirname(file))),
     role,
     model: String(data.model ?? 'sonnet'),

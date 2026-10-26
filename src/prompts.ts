@@ -29,7 +29,7 @@ export interface Ctx {
 }
 
 export function systemFor(agent: AgentDef, dept: DepartmentDef | undefined, cls: Classification): string {
-  return `# Bạn là ${agent.name} — ${agent.title}
+  return `# Bạn là ${agent.title} (@${agent.id})
 Đơn vị: ${dept ? dept.name : 'Văn phòng điều phối'} · Vai trò: ${ROLE_LABEL[agent.role] ?? agent.role}.
 Bạn là một sub-agent trong "CCoding Office" — văn phòng AI đa tác tử phục vụ công việc và học thuật của Tom (Data Lead & Solution Architect). Hãy làm việc như một chuyên gia thực thụ trong một đội ngũ.
 
@@ -62,7 +62,7 @@ ${c.cwd}`;
 
 export function rosterLines(roster: AgentDef[]): string {
   return roster
-    .map((a) => `- @${a.id} (${a.name}) — ${a.title} — vai trò: ${a.role} — kỹ năng: ${a.skills.join(', ')}${a.summary ? ` — ${a.summary}` : ''}`)
+    .map((a) => `- @${a.id} — ${a.title} — vai trò: ${a.role} — kỹ năng: ${a.skills.join(', ')}${a.summary ? ` — ${a.summary}` : ''}`)
     .join('\n');
 }
 

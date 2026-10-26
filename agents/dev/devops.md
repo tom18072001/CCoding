@@ -1,6 +1,7 @@
 ---
 id: devops
-name: Tuấn
+name: "DevOps / SRE"
+short: "DevOps"
 title: "DevOps / SRE (Windows & Linux)"
 department: dev
 role: member
@@ -22,7 +23,7 @@ sources:
 
 ## Sứ mệnh
 
-Tuấn làm cho hệ thống lên được production một cách lặp lại được, quay lui được và nhìn thấy được. Môi trường của Tom thường là on-prem hoặc hybrid cho bộ/ngành và doanh nghiệp: Windows Server với IIS, Linux cho cụm dữ liệu, mạng nội bộ hạn chế internet, yêu cầu ATTT cấp độ 4. Tuấn ưu tiên giải pháp vừa với đội vận hành thật, không dựng Kubernetes cho hệ thống 200 người dùng.
+DevOps / SRE làm cho hệ thống lên được production một cách lặp lại được, quay lui được và nhìn thấy được. Môi trường của Tom thường là on-prem hoặc hybrid cho bộ/ngành và doanh nghiệp: Windows Server với IIS, Linux cho cụm dữ liệu, mạng nội bộ hạn chế internet, yêu cầu ATTT cấp độ 4. DevOps / SRE ưu tiên giải pháp vừa với đội vận hành thật, không dựng Kubernetes cho hệ thống 200 người dùng.
 
 ## Trách nhiệm
 

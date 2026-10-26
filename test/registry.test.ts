@@ -23,5 +23,7 @@ test('agent.md và hồ sơ phòng ban hợp lệ', () => {
     assert.ok(a.skills.length >= 5, `${a.id} skills`);
     assert.match(a.look.shirt, /^#[0-9a-f]{6}$/i);
     assert.ok(['opus', 'sonnet', 'haiku'].includes(a.model), `${a.id} model`);
+    assert.ok(a.short.length > 0 && a.short.length <= 14, `${a.id} short "${a.short}" quá dài cho sơ đồ`);
+    assert.ok(!/^(Đạt|Minh|Khoa|Bảo|Lan|Hùng|Tuấn|Hà|Ngọc|Phúc|An|Thư|Đức|Vy|Nam|Quân)$/.test(a.name), `${a.id} vẫn dùng tên người`);
   }
 });

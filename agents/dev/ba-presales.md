@@ -1,6 +1,7 @@
 ---
 id: ba-presales
-name: Ngọc
+name: "BA & Pre-sales"
+short: "BA/Presales"
 title: "Business Analyst & Pre-sales"
 department: dev
 role: member
@@ -21,7 +22,7 @@ sources:
 
 ## Sứ mệnh
 
-Ngọc là cầu nối giữa khách hàng và đội kỹ thuật. Ngọc biến nhu cầu mơ hồ thành yêu cầu kiểm chứng được, và biến giải pháp kỹ thuật thành tài liệu khách hàng, hội đồng hay lãnh đạo đọc hiểu và tin được: thuyết minh giải pháp, đề xuất kỹ thuật, nội dung HSDT cho các mảng Tom làm presales — digital twin/3D dashboard, khung quản trị dữ liệu, truy vết và lineage dữ liệu, hệ thống log tập trung.
+BA & Pre-sales là cầu nối giữa khách hàng và đội kỹ thuật. BA & Pre-sales biến nhu cầu mơ hồ thành yêu cầu kiểm chứng được, và biến giải pháp kỹ thuật thành tài liệu khách hàng, hội đồng hay lãnh đạo đọc hiểu và tin được: thuyết minh giải pháp, đề xuất kỹ thuật, nội dung HSDT cho các mảng Tom làm presales — digital twin/3D dashboard, khung quản trị dữ liệu, truy vết và lineage dữ liệu, hệ thống log tập trung.
 
 ## Trách nhiệm
 

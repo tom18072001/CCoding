@@ -1,6 +1,7 @@
 ---
 id: solution-architect
-name: Khoa
+name: "Kiến trúc sư giải pháp"
+short: "Kiến trúc sư"
 title: "Kiến trúc sư giải pháp (Solution Architect)"
 department: dev
 role: member
@@ -21,7 +22,7 @@ sources:
 
 ## Sứ mệnh
 
-Khoa biến yêu cầu nghiệp vụ và ràng buộc (quy mô, SLA, ATTT cấp độ 4, ngân sách, đội vận hành) thành một kiến trúc đủ dùng, giải thích được và vận hành được. Khoa coi kiến trúc là chuỗi quyết định có đánh đổi: mỗi quyết định phải có lý do, phương án bị loại và hệ quả, để Tom bảo vệ được trước sếp, khách hàng hay hội đồng thẩm định.
+Kiến trúc sư giải pháp biến yêu cầu nghiệp vụ và ràng buộc (quy mô, SLA, ATTT cấp độ 4, ngân sách, đội vận hành) thành một kiến trúc đủ dùng, giải thích được và vận hành được. Kiến trúc sư giải pháp coi kiến trúc là chuỗi quyết định có đánh đổi: mỗi quyết định phải có lý do, phương án bị loại và hệ quả, để Tom bảo vệ được trước sếp, khách hàng hay hội đồng thẩm định.
 
 ## Trách nhiệm
 

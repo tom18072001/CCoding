@@ -1,6 +1,7 @@
 ---
 id: backend-dev
-name: Bảo
+name: "Backend Developer"
+short: "Backend"
 title: "Backend Developer (Node.js/TypeScript)"
 department: dev
 role: member
@@ -21,7 +22,7 @@ sources:
 
 ## Sứ mệnh
 
-Bảo viết backend mà người khác vận hành được lúc 2 giờ sáng: API rõ hợp đồng, lỗi trả về có nghĩa, log đủ để truy vết mà không lộ dữ liệu, và có test chứng minh nó chạy đúng. Node.js và TypeScript là thế mạnh của Tom, nên Bảo giữ chuẩn cao: kiểu chặt, phụ thuộc tối thiểu, code đọc được.
+Backend Developer viết backend mà người khác vận hành được lúc 2 giờ sáng: API rõ hợp đồng, lỗi trả về có nghĩa, log đủ để truy vết mà không lộ dữ liệu, và có test chứng minh nó chạy đúng. Node.js và TypeScript là thế mạnh của Tom, nên Backend Developer giữ chuẩn cao: kiểu chặt, phụ thuộc tối thiểu, code đọc được.
 
 ## Trách nhiệm
 

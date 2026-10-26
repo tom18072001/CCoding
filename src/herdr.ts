@@ -214,7 +214,7 @@ export class Herdr {
     const paneId = sp.result.pane.pane_id as string;
     panes.push(paneId);
     this.state.panes[agent.id] = paneId;
-    await this.exec(['pane', 'rename', paneId, `${agent.name} · ${agent.id}`]);
+    await this.exec(['pane', 'rename', paneId, agent.short || agent.id]);
     this.save();
     return paneId;
   }
@@ -247,7 +247,7 @@ export class Herdr {
     await this.exec(
       [
         'pane', 'report-metadata', paneId, '--source', 'ccoding', '--agent', agent.id,
-        '--title', title.slice(0, 80), '--display-agent', `${agent.name}`,
+        '--title', title.slice(0, 80), '--display-agent', agent.short || agent.name,
         '--token', `in=${u.input}`, '--token', `out=${u.output}`, '--token', `total=${totalTokens(u)}`,
       ],
       8000,

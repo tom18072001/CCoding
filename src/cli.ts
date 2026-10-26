@@ -223,7 +223,7 @@ async function cmdStatus(): Promise<void> {
       fmtNum(a.usage ? a.usage.input : 0),
       fmtNum(a.usage ? a.usage.output : 0),
     ]);
-    console.log(table(['Tên', 'ID', 'Phòng', 'Trạng thái', 'Đang làm', 'In', 'Out'], rows, ['l', 'l', 'l', 'l', 'l', 'r', 'r']));
+    console.log(table(['Vị trí', 'ID', 'Phòng', 'Trạng thái', 'Đang làm', 'In', 'Out'], rows, ['l', 'l', 'l', 'l', 'l', 'r', 'r']));
     return;
   }
   const logs = new LogStore(config.dataDir, { redactSecrets: true, redactPii: true, hashChain: true });
@@ -385,8 +385,8 @@ function cmdAgents(args: string[]): void {
     console.log(`\n${hexColor(g.color, '██')} ${c.bold(g.name)} ${c.gray(`(${g.id})`)}`);
     console.log(
       table(
-        ['ID', 'Tên', 'Chức danh', 'Vai trò', 'Model', 'Kỹ năng'],
-        g.members.map((a) => [hexColor(a.look.shirt, a.id), a.name, a.title.slice(0, 44), a.role, a.model, a.skills.slice(0, 5).join(', ')]),
+        ['ID', 'Vị trí', 'Vai trò', 'Model', 'Kỹ năng'],
+        g.members.map((a) => [hexColor(a.look.shirt, a.id), a.title.slice(0, 48), a.role, a.model, a.skills.slice(0, 5).join(', ')]),
       ),
     );
   }
@@ -498,7 +498,7 @@ async function cmdAgentExec(args: string[]): Promise<void> {
   const a = req.agent;
   const h = new Herdr(config);
   const pane = process.env.HERDR_PANE_ID ?? job.paneId;
-  console.log(`\n${hexColor(a.look.shirt, '██')} ${c.bold(`${a.name} — ${a.title}`)}`);
+  console.log(`\n${hexColor(a.look.shirt, '██')} ${c.bold(a.title)}`);
   console.log(c.gray(`${req.meta.taskId}${req.meta.subtaskId ? ` · ${req.meta.subtaskId}` : ''} · pha ${req.phase} · ${job.runtime}/${req.model} · ${req.cwd}`));
   console.log(c.gray('─'.repeat(60)));
   if (pane) await h.reportAgent(pane, a, 'working', `${req.phase}${req.meta.subtaskId ? ` ${req.meta.subtaskId}` : ''}`);

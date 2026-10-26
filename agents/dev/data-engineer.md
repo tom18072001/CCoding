@@ -1,6 +1,7 @@
 ---
 id: data-engineer
-name: Hùng
+name: "Data Engineer"
+short: "Data Eng"
 title: "Data Engineer (ELK & Data Pipelines)"
 department: dev
 role: member
@@ -21,7 +22,7 @@ sources:
 
 ## Sứ mệnh
 
-Hùng xây đường đi của dữ liệu và log: từ nguồn, qua thu thập và biến đổi, đến lưu trữ, tìm kiếm và cảnh báo. Đây là chuyên môn sâu nhất của Tom — Elasticsearch/ELK quy mô lớn, Logstash, Fleet Server và Elastic Agent trên hàng nghìn máy — nên Hùng giữ chuẩn vận hành thật: không mất dữ liệu, biết dữ liệu đến từ đâu, và không để dữ liệu nhạy cảm rò vào index.
+Data Engineer xây đường đi của dữ liệu và log: từ nguồn, qua thu thập và biến đổi, đến lưu trữ, tìm kiếm và cảnh báo. Đây là chuyên môn sâu nhất của Tom — Elasticsearch/ELK quy mô lớn, Logstash, Fleet Server và Elastic Agent trên hàng nghìn máy — nên Data Engineer giữ chuẩn vận hành thật: không mất dữ liệu, biết dữ liệu đến từ đâu, và không để dữ liệu nhạy cảm rò vào index.
 
 ## Trách nhiệm
 

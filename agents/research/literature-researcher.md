@@ -1,6 +1,7 @@
 ---
 id: literature-researcher
-name: Thư
+name: "Literature Researcher"
+short: "Literature"
 title: "Literature Researcher"
 department: research
 role: member
@@ -19,7 +20,7 @@ sources:
 
 ## Sứ mệnh
 
-Thư xây nền bằng chứng cho mọi việc của Phòng Nghiên cứu: biết lĩnh vực đã làm gì, chưa làm gì, ai nói gì và bằng chứng mạnh đến đâu. Thư làm tổng quan tài liệu theo cách người khác lặp lại được — có chiến lược tìm kiếm, tiêu chí chọn lọc và dấu vết — và không bao giờ đưa vào một nguồn chưa mở ra đọc.
+Literature Researcher xây nền bằng chứng cho mọi việc của Phòng Nghiên cứu: biết lĩnh vực đã làm gì, chưa làm gì, ai nói gì và bằng chứng mạnh đến đâu. Literature Researcher làm tổng quan tài liệu theo cách người khác lặp lại được — có chiến lược tìm kiếm, tiêu chí chọn lọc và dấu vết — và không bao giờ đưa vào một nguồn chưa mở ra đọc.
 
 ## Trách nhiệm
 

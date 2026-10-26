@@ -129,24 +129,24 @@ ccoding logs verify                 # kiểm tra toàn vẹn chuỗi băm
 
 ## Nhân sự
 
-| Phòng | ID | Tên | Vị trí | Model |
-|---|---|---|---|---|
-| Điều phối | `orchestrator` | Đạt | Điều phối viên (Chief of Staff) | sonnet |
-| Phát triển | `dev-lead` ★ | Minh | Trưởng phòng Phát triển Dự án | opus |
-| | `solution-architect` | Khoa | Kiến trúc sư giải pháp | opus |
-| | `backend-dev` | Bảo | Backend (Node.js/TypeScript) | sonnet |
-| | `frontend-dev` | Lan | Frontend (Vanilla JS/3D dashboard) | sonnet |
-| | `data-engineer` | Hùng | Data Engineer (ELK & pipelines) | sonnet |
-| | `devops` | Tuấn | DevOps / SRE (Windows & Linux) | sonnet |
-| | `security` | Hà | ATTT & Bảo vệ dữ liệu | sonnet |
-| | `ba-presales` | Ngọc | Business Analyst & Pre-sales | sonnet |
-| | `qa-tester` | Phúc | QA & Reviewer | sonnet |
-| Nghiên cứu | `research-lead` ★ | An | Trưởng phòng Nghiên cứu (PI) | opus |
-| | `literature-researcher` | Thư | Literature Researcher | sonnet |
-| | `data-scientist` | Đức | Data Scientist / ML Researcher | sonnet |
-| | `methodologist` | Vy | Research Methodologist | sonnet |
-| | `academic-writer` | Nam | Academic Writer & Editor (VI/EN) | sonnet |
-| | `peer-reviewer` | Quân | Peer Reviewer (Devil's Advocate) | opus |
+| Phòng | ID | Vị trí (nhãn trên sơ đồ) | Model |
+|---|---|---|---|
+| Điều phối | `orchestrator` | Điều phối viên (Điều phối) | sonnet |
+| Phát triển | `dev-lead` ★ | Trưởng phòng Phát triển (TP Phát triển) | opus |
+| | `solution-architect` | Kiến trúc sư giải pháp (Kiến trúc sư) | opus |
+| | `backend-dev` | Backend Developer — Node.js/TypeScript (Backend) | sonnet |
+| | `frontend-dev` | Frontend Developer — Vanilla JS/3D dashboard (Frontend) | sonnet |
+| | `data-engineer` | Data Engineer — ELK & pipelines (Data Eng) | sonnet |
+| | `devops` | DevOps / SRE — Windows & Linux (DevOps) | sonnet |
+| | `security` | Chuyên viên ATTT & Bảo vệ dữ liệu (ATTT) | sonnet |
+| | `ba-presales` | BA & Pre-sales (BA/Presales) | sonnet |
+| | `qa-tester` | QA Engineer & Reviewer (QA) | sonnet |
+| Nghiên cứu | `research-lead` ★ | Trưởng phòng Nghiên cứu — PI (TP Nghiên cứu) | opus |
+| | `literature-researcher` | Literature Researcher (Literature) | sonnet |
+| | `data-scientist` | Data Scientist / ML Researcher (Data Sci) | sonnet |
+| | `methodologist` | Research Methodologist (Phương pháp) | sonnet |
+| | `academic-writer` | Academic Writer & Editor VI/EN (Writer) | sonnet |
+| | `peer-reviewer` | Peer Reviewer — Devil's Advocate (Phản biện) | opus |
 
 Thêm/sửa nhân sự: chỉ cần thêm file `agents/<phòng>/<id>.md` (frontmatter + nội dung) — xem [docs/AGENTS-GUIDE.md](docs/AGENTS-GUIDE.md). Thêm phòng ban mới: thêm `departments/<id>.md`.
 
