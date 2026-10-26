@@ -414,7 +414,7 @@ function decodeEntities(s: string, html = false): string {
 }
 
 const BLOCK_TAGS =
-  'p|div|section|article|header|footer|nav|aside|main|ul|ol|dl|dt|dd|table|thead|tbody|tfoot|tr|caption|' +
+  'p|div|section|article|header|footer|nav|aside|main|ul|ol|dl|dt|dd|table|thead|tbody|tfoot|caption|' +
   'blockquote|pre|hr|figure|figcaption|form|fieldset|legend|address|details|summary|center|h[1-6]';
 
 /** HTML → văn bản đọc được: bỏ script/style/comment, giữ cấu trúc khối, bảng `a | b`, danh sách `- `. */
@@ -430,6 +430,8 @@ function htmlToText(html: string): string {
     .replace(/<li\b[^>]*>/gi, '\n- ')
     .replace(/<h([1-6])\b[^>]*>/gi, (_m, n: string) => `\n\n${'#'.repeat(Number(n))} `)
     .replace(/<\/t[dh]\s*>/gi, ' | ')
+    .replace(/<tr\b[^>]*>/gi, '\n')
+    .replace(/<\/tr\s*>/gi, '')
     .replace(new RegExp(`</?(?:${BLOCK_TAGS})\\b[^>]*>`, 'gi'), '\n')
     .replace(/<\/?[A-Za-z!?][^>]*>/g, '');
   s = decodeEntities(s, true).replace(/\u00a0/g, ' ');
@@ -775,7 +777,7 @@ function ooxmlToText(xml: string, mode: OxMode, styleOf?: (styleId: string) => P
   const closeP = () => {
     const p = popTo('p');
     if (!p) return;
-    const body = p.parts.join('');
+    const body = p.parts.join('').replace(/^\n+|\n+$/g, '');
     let line = body;
     if (body.trim()) {
       if (p.level > 0) line = `${'#'.repeat(Math.min(p.level, 6))} ${body.trim()}`;
