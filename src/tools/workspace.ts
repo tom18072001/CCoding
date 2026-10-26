@@ -224,7 +224,10 @@ export const DEFAULT_DENY: Array<[RegExp, string]> = [
   [/\bgit\s+push\b/i, 'git push (người dùng tự review và push)'],
   [/\bgit\s+reset\s+--hard\b/i, 'git reset --hard'],
   [/\bgit\s+clean\b[^\n]*-[a-z]*f/i, 'git clean -f'],
-  [/\bgit\s+(checkout|switch)\s+(-f\s+)?(main|master)\b/i, 'chuyển sang nhánh main/master'],
+  // nhánh của nhiệm vụ cố định: nhiều agent dùng chung một worktree — đổi/tạo nhánh làm các agent khác làm nhầm chỗ
+  [/\bgit\s+switch\b|\bgit\s+checkout\s+(?!--\s)/i, 'tạo/chuyển nhánh (làm trên nhánh hiện tại của worktree; khôi phục file dùng `git checkout -- <file>` hoặc `git restore`)'],
+  [/\bgit\s+branch\s+(?!(-a|-r|-v|-vv|--list|--show-current|--contains|--merged|--no-merged|--all|--remotes)\b)[^\s|;]/i, 'tạo/xóa/đổi tên nhánh'],
+  [/\bgit\s+worktree\b/i, 'thao tác git worktree'],
   [/\bgit\s+(rebase|filter-branch|filter-repo|update-ref|branch\s+-D)\b/i, 'viết lại lịch sử git'],
   [/\bgit\s+config\b[^\n]*(credential|url\.|user\.)/i, 'đổi cấu hình git'],
   [/\brm\s+-[a-z]*r/i, 'xóa đệ quy (rm -r)'],

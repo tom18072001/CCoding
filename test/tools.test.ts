@@ -73,6 +73,8 @@ test('run_command: chạy lệnh trong workspace, chặn lệnh nguy hiểm, b�
       assert.match(r.output, /bị chặn/, cmd);
     }
     assert.equal(deniedReason('git commit -m "x"', [], true), undefined, 'được commit khi làm trên nhánh riêng');
+    for (const cmd of ['git switch -c kepper/p2', 'git checkout -b x origin/main', 'git checkout main', 'git branch kepper/p3', 'git branch -D x', 'git worktree add ../x']) assert.ok(deniedReason(cmd, [], true), cmd);
+    for (const cmd of ['git checkout -- app/a.js', 'git restore app/a.js', 'git branch --show-current', 'git branch -a', 'git merge --no-ff origin/kepper/gd3', 'git status; git log --oneline -5']) assert.equal(deniedReason(cmd, [], true), undefined, cmd);
     const env = scrubEnv({ PATH: '/bin', NINEROUTER_API_KEY: 'k', BIFROST_VK_DEV: 'v', MY_TOKEN: 't', HOME: '/h', NODE_ENV: 'production', NPM_CONFIG_OMIT: 'dev' });
     assert.deepEqual(Object.keys(env).filter((k) => !['CI', 'CCODING_AGENT', 'npm_config_include'].includes(k)).sort(), ['HOME', 'PATH']);
     assert.equal(env.npm_config_include, 'dev');

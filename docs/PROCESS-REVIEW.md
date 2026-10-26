@@ -67,3 +67,11 @@ Xuyên suốt:
 - Gắn mọi nhiệm vụ làm việc trên mã nguồn vào **dự án có workspace = repo** (quyền `exec`, cách ly `worktree`) để agent đọc repo, sửa và chạy test thật.
 - Đính kèm tài liệu (PDF/DOCX/XLSX…) thay vì dán đường dẫn trên máy; PDF dạng scan cần OCR (chưa hỗ trợ) — cài Poppler (`pdftotext`) để trích chữ PDF tốt hơn.
 - Nếu có tài nguyên miễn phí muốn dùng trước Claude Max: đặt nó ở đầu chuỗi model kèm `dailyTokenLimit` (xem `docs/RUNTIMES.md`).
+
+## 5. Bài học từ lượt chạy lại (27/10/2026)
+
+- **Claude Max bị giới hạn tốc độ giữa chừng** — 9router bọc lỗi 429 trong 503 nên lúc đầu bị hiểu là lỗi mạng, cả hai gateway bị "nghỉ" và lượt gọi rơi xuống `kimi-cli` (chưa đăng nhập). Đã sửa: đọc mã lỗi gốc của nhà cung cấp, lỗi giới hạn chỉ chặn đúng model đó, Codex tiếp quản; CLI chưa đăng nhập = lỗi xác thực.
+- **Lượt lập kế hoạch/review/tổng hợp lỗi từng bị coi là xong** (review rỗng = "duyệt", báo cáo rỗng vẫn "done"). Đã sửa: dừng ở trạng thái tiếp tục được; tiếp tục sẽ chạy lại hạng mục lỗi rồi review/tổng hợp lại.
+- **Nhiều agent dùng chung một worktree và tự tạo/chuyển nhánh** theo quy ước của repo (`kepper/p0-…`, `kepper/p2-auth`, `kepper/p3-…`) ⇒ các agent khác làm nhầm nhánh, phải dừng để tránh đè thay đổi của nhau. Đã sửa: agent không được tạo/chuyển/xóa nhánh hay worktree (vẫn được `git merge` nhánh khác vào nhánh hiện tại).
+- **Mất kết nối giữa vòng lặp công cụ dài** làm mất cả lượt (14 phút) và token không được ghi sổ. Đã sửa: thử lại lượt bị rớt; lỗi giữa chừng vẫn ghi sổ token và thao tác công cụ đã làm.
+- **Phòng Nghiên cứu không có nguồn để làm tổng quan** ⇒ thêm công cụ tra cứu `search_papers` (OpenAlex), `web_search`, `fetch_url`.
