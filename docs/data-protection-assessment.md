@@ -112,3 +112,96 @@ GitHub ◀── chỉ mã nguồn (data/, workspaces/, ccoding.local.json bị 
 | PRE-01 | Bifrost UI/API nghe cổng 8080 | Chỉ nghe localhost; không mở cổng 8080 ra mạng LAN/Internet | **Bắt buộc** |
 
 Header `x-bf-dim-*` chỉ mang mã định danh (agent, phòng, task, pha, dự án) — **không** chứa nội dung hay dữ liệu cá nhân. Runtime `bifrost` mặc định *không* phải cục bộ ⇒ dự án *Bảo mật*/*Hạn chế* vẫn bị chặn; các dự án này dùng runtime `ollama` (cục bộ, `local: true`).
+
+---
+
+## Đánh giá bảo vệ dữ liệu — CCoding v0.2 (bổ sung 26/10/2026): tệp đính kèm, công cụ workspace cho agent, bản ghi lượt gọi đầy đủ, tự chuyển tài nguyên khi hết token
+
+**Giả định** (chủ dự án vắng mặt khi đánh giá → chọn mức nhạy cảm cao hơn): tệp đính kèm *có thể* chứa dữ liệu cá nhân cơ bản (tên, email, chức danh trong tài liệu dự án) và tài liệu nội bộ của đơn vị; repo dự án (vd. Kepper PMHub) chứa mã nguồn + cấu hình dev, *không* chứa dữ liệu thật (theo quy tắc của repo); số chủ thể < 10.000; không có bí mật nhà nước; chạy trên một máy Windows cá nhân, server chỉ nghe 127.0.0.1.
+
+**Kết luận cổng: ĐẠT CÓ ĐIỀU KIỆN** — với nhãn *Nội bộ* trở xuống. Điều kiện: (1) không tải lên tài liệu có dữ liệu cá nhân thật/dữ liệu khách hàng cho nhiệm vụ nhãn *Nội bộ* (gắn *Bảo mật*/*Hạn chế* ⇒ chỉ runtime cục bộ); (2) tắt tùy chọn cho phép nhà cung cấp dùng dữ liệu để cải thiện mô hình trên tài khoản Claude Max và ChatGPT/Codex đang nối qua 9router; (3) dự án có quyền `exec` chỉ trỏ vào repo dev (DB dev, dữ liệu giả).
+
+### 1. Phân loại
+
+| Tập dữ liệu | Nhãn nội bộ | Phân loại pháp lý | Số chủ thể | Cấp độ HTTT |
+|---|---|---|---|---|
+| Tệp đính kèm (`data/uploads/` tạm ≤ 24 giờ → `data/runs/<task>/inputs/` + `<workspace>/.ccoding/<task>/inputs/`) | Theo nhãn nhiệm vụ/dự án (mặc định *Nội bộ*) | Dữ liệu khác; DLCN cơ bản nếu tài liệu có thông tin cá nhân | < 10.000 (giả định) | Không đổi (công cụ cá nhân, không phải HTTT phục vụ công dân) |
+| Mã nguồn & cấu hình repo dự án được agent đọc/ghi | Theo dự án (Kepper: *Nội bộ*) | Dữ liệu khác | 0 (dữ liệu giả) | N/A |
+| File `.env` của repo (chép sang worktree để chạy test/migration) | *Bảo mật* (khóa, chuỗi kết nối DB dev) | Dữ liệu khác — bí mật xác thực | 0 | N/A |
+| Bản ghi lượt gọi đầy đủ `data/runs/<task>/calls.jsonl` (phản hồi model, tham số công cụ, lỗi) | Theo nhãn nhiệm vụ | Như tập đầu vào của nhiệm vụ | như trên | N/A |
+| Sức khỏe/hạn mức runtime (bộ nhớ), cảnh báo | Nội bộ | Dữ liệu khác | 0 | N/A |
+
+### 2. Dòng dữ liệu
+
+```
+Người dùng ──(tải tệp, 127.0.0.1)──► data/uploads/<id> ──(trích chữ cục bộ: DOCX/XLSX/PPTX/PDF/TXT)──► data/runs/<task>/inputs ──► <workspace>/.ccoding/<task>/inputs (git bỏ qua)
+                                                                                                     │
+Repo dự án ──(git worktree, nhánh ccoding/<task>)──► worktree ◄──(read/write/edit/run_command của agent, sandbox theo quy ước)
+                                                                                                     │
+Prompt (bối cảnh + hồ sơ + công việc) + kết quả công cụ ──[che bí mật; + che PII nếu Bảo mật/Hạn chế]──► ★ Bifrost (localhost, không lưu nội dung) ──► ★ 9router (localhost) ──► ★★ Anthropic (Claude Max) | ★★ OpenAI (Codex) — tự chuyển khi hết hạn mức
+Phản hồi ──► data/runs/<task>/{outputs, calls.jsonl (che + băm chuỗi), events.jsonl} ──► giao diện 127.0.0.1
+```
+★ chặng có nội dung tài liệu/mã nguồn; ★★ chặng **ra khỏi máy, xuyên biên giới** (nhà cung cấp Mỹ). Nhãn *Bảo mật*/*Hạn chế* bị chặn ở chặng ★★ (chỉ runtime `local: true`).
+
+### 3. Rà năng lực
+
+| Mã | Trạng thái | Khuyến nghị cụ thể | Ưu tiên |
+|---|---|---|---|
+| GOV-01 | Một phần | Chính sách công cụ (quyền `none/read/write/exec`, danh sách lệnh cấm, worktree) đã là policy-as-code trong `ccoding.config.json` + dự án; ghi ngoại lệ (`denyCommands`, `toolAccess`) vào mô tả dự án | Nên có |
+| GOV-02 | Một phần | Tom là chủ sở hữu & người phê duyệt; ghi rõ trong mỗi dự án ai được bật `exec` | Nên có |
+| GOV-03 | Một phần | Mỗi tệp đính kèm có siêu dữ liệu (tên, loại, kích thước, sha256, số ký tự) trong log `upload` và `task.attachments` | Nên có |
+| GOV-04 | Một phần | Nhãn lấy theo dự án/mặc định; chưa tự phát hiện PII trong tệp tải lên → **Nâng cao:** quét Presidio/NER tiếng Việt lúc tải lên, gợi ý nâng nhãn | Nâng cao |
+| GOV-05 | Một phần | Dòng dữ liệu theo lượt gọi truy được qua `callId` (sổ cái ↔ calls.jsonl ↔ header `x-request-id` của Bifrost); thay đổi repo truy qua nhánh git `ccoding/<task>` | Nên có |
+| GOV-06 | Chưa có | Hai nhà cung cấp ngoài (Anthropic, OpenAI) nhận dữ liệu; chuỗi model trong runtime `bifrost` trộn hai nhà cung cấp ⇒ dự án cần giữ một nhà cung cấp thì ghim `runtime`/`models` của dự án hoặc tách runtime riêng | **Bắt buộc** (khi dự án có ràng buộc nhà cung cấp) |
+| PRE-01 | Một phần | Server chỉ nghe 127.0.0.1, chống DNS rebinding/CSRF; upload cần header `X-Filename` (chặn form chéo trang); bật `CCODING_TOKEN` nếu mở ra LAN | Bắt buộc (đã có) |
+| PRE-02 | N/A | Không có tài khoản quản trị riêng của CCoding; nhưng lệnh của agent chạy **dưới tài khoản Windows của người dùng** ⇒ xem Rủi ro còn lại | — |
+| PRE-03 | Một phần | Kết nối ra ngoài đi qua 9router (TLS tới nhà cung cấp); dữ liệu tại chỗ chưa mã hóa ⇒ bật BitLocker cho ổ chứa `data/`, `workspaces/` | **Bắt buộc** |
+| PRE-04 | Một phần | Che bí mật (và PII khi *Bảo mật/Hạn chế*) cho prompt, **kết quả công cụ**, log, calls.jsonl; chặn đọc `.env*`, khóa, `.git/` qua công cụ; biến môi trường chứa khóa bị loại khỏi lệnh của agent | Bắt buộc (đã có) |
+| PRE-05 | Chưa có | Không có DLP; giảm thiểu bằng chặn `curl/iwr … | sh`, `ssh/scp`, in biến môi trường; nâng cao: chặn mạng ra ngoài cho tiến trình lệnh của agent (Windows Firewall theo chương trình/tài khoản) | Nâng cao |
+| PRE-06 | Một phần | Quyền công cụ theo pha (họp: không công cụ; lập kế hoạch/tổng hợp: chỉ đọc; review: đọc + chạy test; thực thi: theo quyền dự án); không push, không đổi nhánh, không reset DB | Bắt buộc (đã có) |
+| PRE-07 | Một phần | Bifrost bắt buộc key ảo theo phòng; 9router cần API key; cả hai chỉ nghe localhost | Bắt buộc (đã có) |
+| DET-01 | Một phần | Mỗi thao tác công cụ ghi `tool.call` (tên, tham số tóm tắt — không ghi nội dung file, kết quả, thời gian) theo agent/nhiệm vụ | Nên có |
+| DET-02 | Chưa có | Định kỳ rà `workspaces/` và `.ccoding/` trong các repo; xóa worktree đã merge (`git worktree remove`) | Nên có |
+| DET-03 | N/A | Một người dùng, một máy — chưa cần UEBA; cảnh báo hiện có: hết hạn mức, ngân sách 80/100%, lỗi xác thực runtime | — |
+| DET-04 | Một phần | Log tập trung trong `data/logs` (hệ thống/agent/phòng/nhiệm vụ), giữ 400 ngày (≥ 12 tháng); nên đẩy về ELK nội bộ | Nên có |
+| DET-05 | Một phần | `calls.jsonl`, `events.jsonl`, sổ cái token có chuỗi băm (`ccoding logs verify`); chưa WORM/ký số/TSA | Nâng cao |
+| PRI-01 | N/A | CCoding không thu thập dữ liệu từ chủ thể; tài liệu do người dùng chủ động đưa vào | — |
+| PRI-02 | Một phần | Tối thiểu hóa: mỗi pha chỉ gửi phần yêu cầu/tài liệu cần thiết (giới hạn ký tự theo pha), phần còn lại agent tự đọc trong workspace khi cần | Nên có |
+| PRI-03 | Một phần | Xóa được theo nhiệm vụ (`data/runs/<task>`, `.ccoding/<task>`); tệp tải lên tạm tự xóa sau 24 giờ hoặc ngay khi gắn vào nhiệm vụ | Nên có |
+| PRI-04 | Chưa có | Nếu tài liệu có DLCN và gửi tới Anthropic/OpenAI (Mỹ) ⇒ **chuyển DLCN xuyên biên giới**: cần hồ sơ đánh giá tác động trước khi làm; cách đơn giản nhất là **không** đưa DLCN thật vào nhiệm vụ nhãn *Nội bộ* | **Bắt buộc** (khi có DLCN) |
+| RES-01 | Một phần | Thay đổi của agent nằm trên nhánh git riêng (khôi phục được bằng git); `data/` cần sao lưu định kỳ (restic/Borg tới ổ ngoài) | Nên có |
+| RES-02 | Một phần | `retentionDays: 400`; tệp tải lên tạm 24 giờ; chưa có tác vụ tự xóa `data/runs` quá hạn ⇒ thêm lịch dọn | Nên có |
+| RES-03 | Một phần | Cảnh báo + tạm dừng nhiệm vụ khi hết tài nguyên; kịch bản sự cố DLCN (72 giờ) theo quy trình chung của Tom | Nên có |
+
+**AI (Luật Trí tuệ nhân tạo 134/2025 Đ7):** agent được truy cập dữ liệu trong phạm vi workspace dự án và tài liệu đính kèm; dữ liệu đi tới mô hình bên thứ ba ⇒ kiểm soát qua nhãn phân loại (chặn runtime ngoài với *Bảo mật/Hạn chế*), quyền công cụ theo dự án, và cài đặt "không dùng dữ liệu để huấn luyện" của tài khoản nhà cung cấp.
+
+### 4. Nghĩa vụ pháp lý phát sinh
+
+| Nghĩa vụ | Căn cứ | Hạn/ngưỡng | Người phụ trách |
+|---|---|---|---|
+| Hồ sơ đánh giá tác động chuyển DLCN xuyên biên giới (nếu tài liệu đính kèm/repo có DLCN gửi tới Anthropic/OpenAI) | Luật BVDLCN Đ20, Đ21; Luật Dữ liệu Đ23; NĐ 165/2025 Đ12 | Trước khi chuyển; gửi ≤ 60 ngày | Tom |
+| Thông báo vi phạm DLCN (vd. agent làm lộ dữ liệu qua lệnh/kết quả) | Luật BVDLCN Đ23 | ≤ 72 giờ | Tom |
+| Nhật ký hệ thống truy xuất được | NĐ 333/2026 | ≥ 12 tháng (đang 400 ngày) | Tom |
+| Không dùng dữ liệu thật trên DEV (migration/test do agent chạy) | Quy tắc dự án (Kepper CLAUDE.md) + nguyên tắc PRE-04 | Luôn luôn | Chủ repo |
+| Không đưa bí mật nhà nước vào công cụ | Luật Bảo vệ bí mật nhà nước 117/2025/QH15 | Luôn luôn | Tom |
+
+> Căn cứ cập nhật đến 28/9/2026; soát lại với Công báo trước khi trích dẫn chính thức (NĐ 363/2026 hiệu lực 11/11/2026).
+
+### 5. Khuyến nghị ưu tiên
+
+1. **[Bắt buộc]** Tắt tùy chọn cho phép dùng dữ liệu để cải thiện mô hình trên tài khoản Claude (gói Max) và ChatGPT (Codex) đang nối với 9router; kiểm tra lại sau mỗi lần nhà cung cấp đổi điều khoản.
+2. **[Bắt buộc]** Tài liệu có dữ liệu cá nhân/khách hàng thật ⇒ gắn dự án *Bảo mật* hoặc *Hạn chế* (chỉ runtime cục bộ) hoặc dùng bản đã che; không tải lên cho nhiệm vụ *Nội bộ*.
+3. **[Bắt buộc]** Chỉ bật `toolAccess: exec` cho repo dev, DB dev chứa dữ liệu giả; giữ `isolation: worktree` (nhánh `ccoding/<task>`, người dùng tự review/merge/push).
+4. **[Bắt buộc]** BitLocker cho ổ chứa `data/`, `workspaces/` (chứa tài liệu, `.env` chép sang worktree, calls.jsonl).
+5. **[Nên có]** Chạy server CCoding dưới tài khoản Windows ít quyền (hoặc Windows Sandbox/VM) — lệnh của agent kế thừa quyền của tài khoản này.
+6. **[Nên có]** Dọn worktree sau khi merge; lịch xóa `data/runs` quá `retentionDays`.
+7. **[Nên có]** Ghim nhà cung cấp cho dự án có ràng buộc (dự án đặt `runtime` + `models` riêng) vì chuỗi dự phòng mặc định chuyển Claude Max → Codex.
+8. **[Nâng cao]** Quét PII tệp tải lên (Presidio + NER tiếng Việt), chặn mạng ra ngoài cho lệnh của agent, WORM/ký số cho calls.jsonl nếu cần giá trị chứng cứ.
+
+### 6. Rủi ro còn lại & câu hỏi mở
+
+- **Sandbox theo quy ước, không phải cô lập hệ điều hành:** công cụ file chặn thoát thư mục/symlink và file bí mật, nhưng `run_command` chạy shell thật dưới tài khoản người dùng — một lệnh không nằm trong danh sách cấm vẫn có thể đọc file ngoài workspace. Giảm thiểu: danh sách lệnh cấm, loại biến môi trường chứa khóa, che bí mật trong kết quả gửi đi, log từng lệnh; chấp nhận rủi ro cho repo dev, không dùng `exec` cho dự án nhạy cảm.
+- Regex che PII không bắt hết tên người/địa chỉ trong tài liệu tiếng Việt.
+- Trích xuất PDF dạng ảnh/scan không có chữ (chưa OCR) ⇒ agent không đọc được; ghi chú hiện trong tệp đính kèm.
+- 9router không báo `cached_tokens` ⇒ không đo được cache; không ảnh hưởng dữ liệu.
+- Câu hỏi mở: (1) Tài khoản Claude Max/ChatGPT là cá nhân hay tổ chức (ảnh hưởng điều khoản dữ liệu)? (2) Repo Kepper có dữ liệu thật nào ngoài `.env` cần loại khỏi worktree không? (3) Có cần tách runtime riêng cho Codex để dự án chọn nhà cung cấp không?

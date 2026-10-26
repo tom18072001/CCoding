@@ -9,7 +9,38 @@ Mỗi lượt gọi agent được giao cho một **runtime**. Thứ tự chọn
 
 Thứ tự `auto` mặc định: `claude-cli → bifrost → anthropic-api → openai-api → codex-cli → kimi-cli → ollama → mock`.
 
-Runtime được chỉ định nhưng **chưa sẵn sàng** hoặc **bị chặn bởi nhãn dữ liệu** ⇒ rơi về `auto` và ghi cảnh báo `runtime.fallback` vào log. `auto` duyệt `runtime.order` và chọn runtime đầu tiên vừa sẵn sàng vừa được phép.
+Runtime được chỉ định nhưng **chưa sẵn sàng** hoặc **bị chặn bởi nhãn dữ liệu** ⇒ rơi về `auto` và ghi cảnh báo `runtime.fallback` vào log. `auto` duyệt `runtime.order` và chọn runtime đầu tiên vừa sẵn sàng vừa được phép. `mock` chỉ được dùng khi nằm trong `runtime.order` (cấu hình máy thật nên bỏ `mock` khỏi `order` để không bao giờ nhận sản phẩm giả).
+
+## Chuỗi model dự phòng, hạn mức và tự chuyển khi hết token
+
+Mỗi bí danh (`opus`/`sonnet`/`haiku`) trong `models.<runtime>` có thể là **một chuỗi** theo thứ tự ưu tiên:
+
+```json
+"models": {
+  "bifrost": {
+    "sonnet": [
+      { "model": "ninerouter/xx/free-model", "dailyTokenLimit": 2000000, "label": "Mốc miễn phí" },
+      { "model": "ninerouter/cc/claude-sonnet-5-5", "label": "Claude Max" },
+      { "model": "ninerouter/cx/gpt-6-sol", "label": "Codex" }
+    ]
+  }
+}
+```
+
+Mỗi lượt gọi, CCoding dựng danh sách tài nguyên = (runtime ưu tiên → `runtime.order`) × (chuỗi model của runtime đó), bỏ qua tài nguyên:
+
+- đang **nghỉ**: hết hạn mức (`quota` — tới thời điểm reset nhà cung cấp báo trong `Retry-After`/thông báo, mặc định `runtime.quotaCooldownMs` = 30 phút), giới hạn tốc độ (`rate` — 1–5 phút), lỗi kết nối/timeout lặp lại (2–10 phút), phản hồi rỗng lặp lại (10 phút), lỗi xác thực (30 phút), model không hỗ trợ (6 giờ);
+- đã chạm **`dailyTokenLimit`** trong ngày (của mục trong chuỗi hoặc của cả runtime) — đếm từ sổ cái token.
+
+Lỗi trong lúc gọi ⇒ ghi `runtime.error`, đánh dấu nghỉ, **thử ngay tài nguyên kế tiếp** (`runtime.failover`, tối đa `runtime.maxFailover` lần). Hết hạn mức/lỗi xác thực ⇒ cảnh báo trên giao diện (chuông + thông báo nổi), log và thông báo herdr. Không còn tài nguyên nào ⇒ nhiệm vụ **tạm dừng** (không lỗi) và tự tiếp tục khi tài nguyên sớm nhất mở lại. Trạng thái từng runtime/model (đang nghỉ tới mấy giờ, token hôm nay/hạn mức) hiện ở thẻ *Runtime*.
+
+Pha nhẹ dùng model rẻ hơn: `phases.models` (mặc định định tuyến và họp dùng `haiku`). Giới hạn token đầu ra theo pha: `phases.maxTokens` (thực thi 32k; đầu ra bị cắt được tự viết tiếp tối đa 2 lần).
+
+Máy của Tom (9router): Claude Max (`cc/`) đứng đầu chuỗi, Codex `cx/gpt-6-sol` dự phòng. Model `cu/` (Cursor) qua 9router trả phản hồi rỗng và `cx/gpt-5.5` không hỗ trợ với tài khoản ChatGPT — không đưa vào chuỗi. Có tài nguyên miễn phí muốn dùng trước ⇒ đặt ở đầu chuỗi kèm `dailyTokenLimit`.
+
+## Công cụ của agent
+
+Runtime API tương thích OpenAI có `supportsTools` (mặc định bật; Ollama tắt) chạy vòng lặp công cụ của CCoding: đọc/ghi file, chạy lệnh trong workspace dự án. Xem [TOOLS.md](TOOLS.md).
 
 ## Bảng runtime
 
@@ -75,9 +106,9 @@ Bất kỳ khóa mới trong `runtimes` có `"type": "openai-api"` sẽ thành m
 
 ```json
 {
-  "runtime": { "order": ["bifrost", "ollama", "kimi-cli", "mock"] },
+  "runtime": { "order": ["bifrost", "ollama", "kimi-cli"] },
   "models": {
-    "bifrost": { "opus": "anthropic/claude-opus-5-5", "sonnet": "anthropic/claude-sonnet-5-5", "haiku": "ollama/qwen3:8b" },
+    "bifrost": { "opus": ["anthropic/claude-opus-5-5", "openai/gpt-6-sol"], "sonnet": "anthropic/claude-sonnet-5-5", "haiku": "ollama/qwen3:8b" },
     "ollama": { "opus": "qwen3:14b", "sonnet": "qwen3:8b", "haiku": "qwen3:8b" }
   },
   "herdr": { "services": [ { "label": "bifrost", "command": "npx -y @maximhq/bifrost" } ] }

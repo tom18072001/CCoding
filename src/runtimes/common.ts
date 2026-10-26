@@ -1,9 +1,20 @@
 import type { RunRequest } from '../types.js';
 
-/** CLI agent chỉ nhận một khối prompt: ghép hồ sơ vị trí + công việc. */
-export function combinedPrompt(req: Pick<RunRequest, 'system' | 'prompt'>): string {
-  if (!req.system) return req.prompt;
-  return `${req.system}\n\n═══════════════════ CÔNG VIỆC ═══════════════════\n\n${req.prompt}`;
+/**
+ * Ghép một khối prompt duy nhất: bối cảnh chung của nhiệm vụ (giống nhau giữa các agent → tận dụng cache tiền tố)
+ * → hồ sơ vị trí → công việc của lượt gọi.
+ */
+export function combinedPrompt(req: Pick<RunRequest, 'system' | 'prompt' | 'context'>): string {
+  const parts: string[] = [];
+  if (req.context) parts.push(req.context);
+  if (req.system) parts.push(`═══════════════════ VAI TRÒ CỦA BẠN ═══════════════════\n\n${req.system}`);
+  parts.push(`${req.system || req.context ? '═══════════════════ CÔNG VIỆC ═══════════════════\n\n' : ''}${req.prompt}`);
+  return parts.join('\n\n');
+}
+
+/** Nội dung user cho kiểu "split" (system riêng): bối cảnh chung + công việc. */
+export function userPrompt(req: Pick<RunRequest, 'prompt' | 'context'>): string {
+  return req.context ? `${req.context}\n\n═══════════════════ CÔNG VIỆC ═══════════════════\n\n${req.prompt}` : req.prompt;
 }
 
 /** Ghép tín hiệu hủy của người dùng với hạn thời gian. */

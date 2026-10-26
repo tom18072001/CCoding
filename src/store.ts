@@ -31,10 +31,11 @@ export class Store {
       const t = readJsonFile<Task | null>(path.join(this.runsDir(), e.name, 'task.json'), null);
       if (!t) continue;
       if (t.status === 'running' || t.status === 'queued') {
-        // tiến trình trước bị dừng giữa chừng
-        t.status = 'failed';
-        t.error = t.error ?? 'Bị gián đoạn do server khởi động lại';
-        for (const r of t.runs) if (r.status === 'running') r.status = 'failed';
+        // tiến trình trước bị dừng giữa chừng → tạm dừng, có thể tiếp tục từ checkpoint
+        t.status = 'paused';
+        t.pause = { reason: 'interrupted', detail: 'Bị gián đoạn do server khởi động lại — bấm "Tiếp tục" để chạy tiếp từ chỗ đã xong', at: new Date().toISOString() };
+        for (const r of t.runs) if (r.status === 'running') r.status = 'paused';
+        for (const r of t.runs) for (const s of r.subtasks) if (s.status === 'running') s.status = 'pending';
       }
       this.tasks.set(t.id, t);
     }
@@ -81,6 +82,10 @@ export class Store {
 
   transcript(taskId: string): ChatMessage[] {
     return readJsonl<ChatMessage>(path.join(this.runDir(taskId), 'transcript.jsonl'));
+  }
+
+  callsFile(taskId: string): string {
+    return path.join(this.runDir(taskId), 'calls.jsonl');
   }
 
   outputs(taskId: string): string[] {

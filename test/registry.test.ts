@@ -4,7 +4,7 @@ import path from 'node:path';
 import { ROOT } from '../src/config.js';
 import { Registry } from '../src/registry.js';
 
-const SECTIONS = ['## Sứ mệnh', '## Trách nhiệm', '## Chuyên môn & kỹ năng', '## Quy trình làm việc', '## Mẫu đầu ra', '## Phối hợp & bàn giao', '## Definition of Done', '## Giới hạn & an toàn'];
+const SECTIONS = ['## Sứ mệnh', '## Trách nhiệm', '## Chuyên môn & kỹ năng', '## Điều chỉnh theo bối cảnh dự án', '## Quy trình làm việc', '## Mẫu đầu ra', '## Phối hợp & bàn giao', '## Definition of Done', '## Giới hạn & an toàn'];
 
 test('agent.md và hồ sơ phòng ban hợp lệ', () => {
   const r = new Registry(path.join(ROOT, 'agents'), path.join(ROOT, 'departments'));

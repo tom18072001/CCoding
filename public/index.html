@@ -26,11 +26,15 @@
       <div class="kpi"><span>Đang chạy</span><b id="k-running">0</b></div>
     </div>
     <div class="meta">
+      <button class="bell" id="bell" title="Cảnh báo (hết token, ngân sách, lỗi runtime)" aria-label="Cảnh báo"><span aria-hidden="true">🔔</span><em id="bell-n"></em></button>
       <span class="chip" id="m-runner" title="Cách chạy agent">runner: —</span>
       <span class="chip" id="m-runtime" title="Runtime mặc định">runtime: —</span>
       <span class="conn" id="conn" title="Kết nối thời gian thực"><i></i><span>đang kết nối</span></span>
     </div>
   </header>
+
+  <div class="alerts-panel" id="alerts-panel" hidden></div>
+  <div class="toasts" id="toasts" aria-live="assertive"></div>
 
   <main class="layout">
     <section class="stage">
@@ -78,12 +82,24 @@
           </div>
           <label>Tiêu đề <small>(tùy chọn)</small><input name="title" maxlength="90" placeholder="Để trống: tự đặt tiêu đề" /></label>
           <label>Yêu cầu<textarea name="brief" rows="6" required placeholder="Ví dụ: Thiết kế pipeline Logstash thu thập log IIS từ 50 máy chủ Windows, chuẩn hóa ECS, cảnh báo lỗi 5xx tăng đột biến."></textarea></label>
+          <div class="drop" id="drop">
+            <input type="file" id="files" multiple hidden />
+            <button type="button" class="btn ghost sm" id="btn-files">📎 Đính kèm tệp</button>
+            <small>PDF, DOCX, XLSX, PPTX, MD, TXT, CSV, JSON, code… (≤ 30 MB/tệp) — hoặc kéo thả vào đây</small>
+            <ul class="att-list" id="att-list"></ul>
+          </div>
+          <div class="grid2">
+            <label>Ngân sách token<input type="number" name="budgetTokens" min="1000" step="1000" /></label>
+            <label>Khi chạm trần<select name="budgetMode">
+              <option value="complete">Chạy tới khi hoàn thành (chỉ cảnh báo)</option>
+              <option value="pause">Tạm dừng chờ quyết định</option>
+            </select></label>
+          </div>
           <details class="adv">
             <summary>Tùy chọn nâng cao</summary>
             <div class="grid2">
               <label>Vòng thảo luận<input type="number" name="discussionRounds" min="0" max="3" /></label>
               <label>Song song tối đa<input type="number" name="maxParallel" min="1" max="8" /></label>
-              <label>Ngân sách token<input type="number" name="budgetTokens" min="1000" step="1000" /></label>
               <label>Runtime<select name="runtime" id="sel-runtime"><option value="">Mặc định</option></select></label>
             </div>
             <label class="check"><input type="checkbox" name="review" checked /> Review chất lượng & cho phép sửa</label>
@@ -109,6 +125,16 @@
               </select></label>
               <label>Runtime<select name="runtime" id="sel-proj-runtime"><option value="">Mặc định</option></select></label>
               <label>Ngân sách token<input name="budgetTokens" type="number" min="1000" step="1000" /></label>
+              <label>Quyền công cụ của agent<select name="toolAccess">
+                <option value="exec" selected>Đọc/ghi file + chạy lệnh (test, migration)</option>
+                <option value="write">Đọc/ghi file</option>
+                <option value="read">Chỉ đọc</option>
+                <option value="none">Không dùng công cụ</option>
+              </select></label>
+              <label>Cách ly thay đổi<select name="isolation">
+                <option value="worktree" selected>Git worktree + nhánh riêng mỗi nhiệm vụ</option>
+                <option value="none">Làm trực tiếp trong thư mục</option>
+              </select></label>
             </div>
             <label>Thư mục làm việc <small>(để trống: workspaces/&lt;mã&gt;)</small><input name="workspace" placeholder="C:\Users\...\du-an hoặc đường dẫn tương đối" /></label>
             <label>Mô tả<textarea name="description" rows="2"></textarea></label>

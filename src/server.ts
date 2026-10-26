@@ -4,7 +4,9 @@ import path from 'node:path';
 import type { App } from './app.js';
 import type { BusEvent } from './events.js';
 import { nowIso } from './util/ids.js';
-import type { Classification, ProjectDef, TaskMode } from './types.js';
+import { readJsonl } from './util/fsx.js';
+import { MAX_UPLOAD_BYTES } from './uploads.js';
+import type { BudgetMode, Classification, ProjectDef, TaskMode, ToolAccess } from './types.js';
 import type { UsageDim } from './usage.js';
 
 const MIME: Record<string, string> = {
@@ -20,6 +22,33 @@ const MIME: Record<string, string> = {
 const CLASSES: Classification[] = ['public', 'internal', 'confidential', 'restricted'];
 const MODES: TaskMode[] = ['auto', 'department', 'project', 'joint'];
 const DIMS: UsageDim[] = ['agent', 'department', 'task', 'project', 'model', 'runtime', 'day', 'phase'];
+const ACCESS: ToolAccess[] = ['none', 'read', 'write', 'exec'];
+const BUDGET_MODES: BudgetMode[] = ['pause', 'complete'];
+
+function budgetOpts(b: any) {
+  const o: { addBudget?: number; budgetTokens?: number; budgetMode?: BudgetMode; runtime?: string } = {};
+  if (b.addBudget !== undefined) o.addBudget = Math.max(0, Number(b.addBudget) || 0);
+  if (b.budgetTokens !== undefined) o.budgetTokens = Math.max(0, Number(b.budgetTokens) || 0);
+  if (b.budgetMode !== undefined) {
+    if (!BUDGET_MODES.includes(b.budgetMode)) throw new HttpError(400, 'Chế độ ngân sách không hợp lệ (pause | complete)');
+    o.budgetMode = b.budgetMode;
+  }
+  if (b.runtime !== undefined) o.runtime = String(b.runtime);
+  if (b.rerun === 'all') (o as { rerun?: string[] | 'all' }).rerun = 'all';
+  else if (Array.isArray(b.rerun)) (o as { rerun?: string[] | 'all' }).rerun = b.rerun.map(String).slice(0, 50);
+  return o as typeof o & { rerun?: string[] | 'all' };
+}
+
+async function readRaw(req: http.IncomingMessage, limit: number): Promise<Buffer> {
+  let size = 0;
+  const chunks: Buffer[] = [];
+  for await (const c of req) {
+    size += (c as Buffer).length;
+    if (size > limit) throw new HttpError(413, `Tệp quá lớn (tối đa ${Math.round(limit / 1024 / 1024)} MB)`);
+    chunks.push(c as Buffer);
+  }
+  return Buffer.concat(chunks);
+}
 
 class HttpError extends Error {
   constructor(public status: number, msg: string) {
@@ -70,6 +99,8 @@ export function snapshot(app: App) {
     agents: [...registry.agents.values()].map(({ body, file, ...a }) => ({ ...a, state: states.get(a.id), usage: byAgent.get(a.id) ?? null })),
     tasks: store.list().slice(0, 100),
     projects: store.projects(),
+    alerts: orchestrator.alerts.slice(-30),
+    tools: { defaultAccess: config.tools.defaultAccess, projectAccess: config.tools.projectAccess },
     usage: {
       total: usage.total(),
       byDepartment: usage.summary('department'),
@@ -147,6 +178,7 @@ export function createServer(app: App): http.Server {
           department: b.department || undefined,
           projectId: b.projectId || undefined,
           options: b.options ?? {},
+          attachments: Array.isArray(b.attachments) ? b.attachments.map(String) : undefined,
         });
         return send(res, 201, t);
       } catch (e) {
@@ -166,6 +198,81 @@ export function createServer(app: App): http.Server {
     if ((mm = m(/^\/api\/tasks\/([^/]+)\/cancel$/)) && req.method === 'POST') {
       return send(res, orchestrator.cancel(mm[1]) ? 200 : 409, { ok: true });
     }
+    if ((mm = m(/^\/api\/tasks\/([^/]+)\/pause$/)) && req.method === 'POST') {
+      return send(res, orchestrator.pause(mm[1]) ? 200 : 409, { ok: true });
+    }
+    if ((mm = m(/^\/api\/tasks\/([^/]+)\/resume$/)) && req.method === 'POST') {
+      const b = await readBody(req);
+      try {
+        return send(res, 200, orchestrator.resume(mm[1], budgetOpts(b)));
+      } catch (e) {
+        if (e instanceof HttpError) throw e;
+        throw new HttpError(409, (e as Error).message);
+      }
+    }
+    if ((mm = m(/^\/api\/tasks\/([^/]+)\/budget$/)) && req.method === 'POST') {
+      const b = await readBody(req);
+      try {
+        return send(res, 200, orchestrator.updateBudget(mm[1], budgetOpts(b)));
+      } catch (e) {
+        if (e instanceof HttpError) throw e;
+        throw new HttpError(400, (e as Error).message);
+      }
+    }
+    if ((mm = m(/^\/api\/tasks\/([^/]+)\/package$/)) && req.method === 'POST') {
+      const b = await readBody(req);
+      if (b.toolAccess && !ACCESS.includes(b.toolAccess)) throw new HttpError(400, 'Quyền công cụ không hợp lệ');
+      if (b.workspace && !fs.existsSync(String(b.workspace))) throw new HttpError(400, `Thư mục không tồn tại: ${b.workspace}`);
+      try {
+        const r = orchestrator.packageTask(mm[1], {
+          ...budgetOpts(b),
+          projectId: b.projectId ? String(b.projectId) : undefined,
+          name: b.name ? String(b.name) : undefined,
+          description: b.description ? String(b.description) : undefined,
+          workspace: b.workspace ? String(b.workspace) : undefined,
+          toolAccess: b.toolAccess,
+          isolation: b.isolation === 'none' || b.isolation === 'worktree' ? b.isolation : undefined,
+          resume: !!b.resume,
+        });
+        return send(res, 200, r);
+      } catch (e) {
+        if (e instanceof HttpError) throw e;
+        throw new HttpError(409, (e as Error).message);
+      }
+    }
+    if ((mm = m(/^\/api\/tasks\/([^/]+)\/calls$/))) {
+      if (!store.get(mm[1])) throw new HttpError(404, 'Không có nhiệm vụ');
+      const limit = Math.min(500, Number(q('limit') ?? 200));
+      const full = q('call');
+      const rows = readJsonl<Record<string, unknown>>(store.callsFile(mm[1]), full ? 0 : limit).map((r) =>
+        full && r.callId === full ? r : { ...r, text: typeof r.text === 'string' ? (r.text as string).slice(0, 1500) : r.text, textChars: typeof r.text === 'string' ? (r.text as string).length : 0 },
+      );
+      return send(res, 200, full ? rows.filter((r) => r.callId === full) : rows);
+    }
+    if ((mm = m(/^\/api\/tasks\/([^/]+)\/events$/))) {
+      return send(res, 200, logs.query({ task: mm[1], limit: Math.min(2000, Number(q('limit') ?? 500)) }));
+    }
+
+    if (p === '/api/uploads' && req.method === 'POST') {
+      const name = decodeURIComponent(String(req.headers['x-filename'] ?? '')).trim();
+      if (!name) throw new HttpError(400, 'Thiếu tên tệp (header X-Filename)');
+      const buf = await readRaw(req, MAX_UPLOAD_BYTES);
+      try {
+        const meta = await app.uploads.save(name, buf, String(req.headers['content-type'] ?? '') || undefined);
+        logs.write({ level: 'info', kind: 'upload', msg: `Tải lên ${meta.name} (${meta.kind}, ${meta.size} byte, ${meta.chars} ký tự)`, data: { id: meta.id, kind: meta.kind, size: meta.size, chars: meta.chars, sha256: meta.sha256 } });
+        return send(res, 201, meta);
+      } catch (e) {
+        throw new HttpError(400, (e as Error).message);
+      }
+    }
+    if ((mm = m(/^\/api\/uploads\/([^/]+)$/)) && req.method === 'DELETE') {
+      try {
+        return send(res, app.uploads.remove(mm[1]) ? 200 : 404, { ok: true });
+      } catch (e) {
+        throw new HttpError(400, (e as Error).message);
+      }
+    }
+    if (p === '/api/alerts') return send(res, 200, orchestrator.alerts.slice(-100));
 
     if (p === '/api/agents') return send(res, 200, snapshot(app).agents);
     if ((mm = m(/^\/api\/agents\/([^/]+)$/))) {
@@ -202,6 +309,9 @@ export function createServer(app: App): http.Server {
       const dept = String(b.department ?? 'auto');
       if (!['auto', 'joint', ...registry.departments.keys()].includes(dept)) throw new HttpError(400, 'Phòng ban không hợp lệ');
       if (b.runtime && !runtimes.get(String(b.runtime))) throw new HttpError(400, 'Runtime không tồn tại');
+      if (b.toolAccess && !ACCESS.includes(b.toolAccess)) throw new HttpError(400, 'Quyền công cụ không hợp lệ');
+      if (b.budgetMode && !BUDGET_MODES.includes(b.budgetMode)) throw new HttpError(400, 'Chế độ ngân sách không hợp lệ');
+      if (b.workspace && path.isAbsolute(String(b.workspace)) && !fs.existsSync(String(b.workspace))) throw new HttpError(400, `Thư mục không tồn tại: ${b.workspace}`);
       const existing = store.project(id);
       const proj: ProjectDef = {
         id,
@@ -213,6 +323,11 @@ export function createServer(app: App): http.Server {
         runtime: b.runtime ? String(b.runtime) : undefined,
         agents: Array.isArray(b.agents) ? b.agents.map(String).filter((x: string) => registry.agents.has(x)) : undefined,
         budgetTokens: b.budgetTokens ? Number(b.budgetTokens) : undefined,
+        budgetMode: b.budgetMode || undefined,
+        toolAccess: b.toolAccess || undefined,
+        isolation: b.isolation === 'none' || b.isolation === 'worktree' ? b.isolation : undefined,
+        worktreeCopy: Array.isArray(b.worktreeCopy) ? b.worktreeCopy.map(String).filter((x: string) => /^[\w.-]+$/.test(x)) : existing?.worktreeCopy,
+        denyCommands: Array.isArray(b.denyCommands) ? b.denyCommands.map(String).slice(0, 50) : existing?.denyCommands,
         createdAt: existing?.createdAt ?? nowIso(),
       };
       store.saveProject(proj);

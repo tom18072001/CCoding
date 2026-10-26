@@ -65,18 +65,66 @@ test('liên phòng chạy nghiên cứu trước rồi phát triển; chế đ�
   }
 });
 
-test('ngân sách token và hủy nhiệm vụ', async () => {
+test('ngân sách: chế độ "pause" tạm dừng khi chạm trần, tiếp tục từ checkpoint; "complete" chạy tới khi xong; hủy', async () => {
   const app = testApp();
   try {
-    const t = app.orchestrator.submit({ brief: 'Việc lớn', mode: 'department', department: 'dev', options: { budgetTokens: 1000 } });
+    const t = app.orchestrator.submit({ brief: 'Việc lớn', mode: 'department', department: 'dev', options: { budgetTokens: 1000, budgetMode: 'pause' } });
     const r = await app.orchestrator.waitFor(t.id);
-    assert.equal(r.status, 'failed');
-    assert.match(r.error ?? '', /ngân sách/);
+    assert.equal(r.status, 'paused');
+    assert.equal(r.pause?.reason, 'budget');
+    assert.ok(app.orchestrator.alerts.some((a) => a.kind === 'budget.100' && a.taskId === t.id));
+    const plansBefore = app.store.transcript(t.id).filter((m) => m.kind === 'plan').length;
+    assert.throws(() => app.orchestrator.resume(t.id), /tăng ngân sách/);
+    app.orchestrator.resume(t.id, { addBudget: 50_000_000 });
+    const r2 = await app.orchestrator.waitFor(t.id);
+    assert.equal(r2.status, 'done', r2.error ?? r2.pause?.detail);
+    assert.equal(r2.resumes, 1);
+    assert.equal(app.store.transcript(t.id).filter((m) => m.kind === 'plan').length, plansBefore, 'không lập lại kế hoạch đã có');
+    assert.ok(r2.runs[0].subtasks.every((s) => s.status === 'done'));
+
+    const over = app.orchestrator.submit({ brief: 'Việc vượt trần nhưng phải xong', mode: 'department', department: 'research', options: { budgetTokens: 1000, budgetMode: 'complete', review: false } });
+    const o = await app.orchestrator.waitFor(over.id);
+    assert.equal(o.status, 'done');
+    assert.ok(o.usage.input + o.usage.output > 1000);
+    assert.ok(app.orchestrator.alerts.some((a) => a.kind === 'budget.100' && a.level === 'warn' && a.taskId === over.id), 'vượt trần ở chế độ complete chỉ cảnh báo');
+
+    // chạy lại một hạng mục đã xong (vd. để áp dụng vào repo) → review/tổng hợp chạy lại
+    const st = r2.runs[0].subtasks[0];
+    app.orchestrator.resume(t.id, { rerun: [st.id] });
+    const r3 = await app.orchestrator.waitFor(t.id);
+    assert.equal(r3.status, 'done');
+    assert.ok(r3.runs[0].subtasks.find((s) => s.id === st.id)!.attempts >= 2);
 
     const c = app.orchestrator.submit({ brief: 'Sẽ bị hủy', mode: 'department', department: 'dev' });
     setTimeout(() => app.orchestrator.cancel(c.id), 15);
     const cr = await app.orchestrator.waitFor(c.id);
     assert.equal(cr.status, 'cancelled');
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('server khởi động lại giữa chừng → nhiệm vụ chuyển "tạm dừng" để tiếp tục, không mất tiến độ', async () => {
+  const app = testApp();
+  try {
+    const t = app.orchestrator.submit({ brief: 'Viết đề cương', mode: 'department', department: 'research', options: { review: false } });
+    await app.orchestrator.waitFor(t.id);
+    const saved = app.store.get(t.id)!;
+    saved.status = 'running';
+    saved.runs[0].status = 'running';
+    saved.runs[0].stage = 'executed';
+    saved.runs[0].finalPath = undefined;
+    app.store.put(saved, true);
+    const again = testApp({ dataDir: app.config.dataDir });
+    const t2 = again.store.get(t.id)!;
+    assert.equal(t2.status, 'paused');
+    assert.equal(t2.pause?.reason, 'interrupted');
+    const calls = again.usage.all({ task: t.id }).length;
+    again.orchestrator.resume(t.id);
+    const done = await again.orchestrator.waitFor(t.id);
+    assert.equal(done.status, 'done');
+    const phases = again.usage.all({ task: t.id }).slice(calls).map((r) => r.phase);
+    assert.deepEqual([...new Set(phases)], ['synthesize'], 'chỉ chạy phần còn thiếu');
   } finally {
     app.cleanup();
   }

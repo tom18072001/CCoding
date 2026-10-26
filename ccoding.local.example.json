@@ -1,14 +1,15 @@
 {
-  "//": "Sao chép thành ccoding.local.json (đã .gitignore) rồi chỉnh. Chỉ cần ghi những khóa muốn đổi.",
+  "//": "Sao chép thành ccoding.local.json (đã .gitignore) rồi chỉnh. Chỉ cần ghi những khóa muốn đổi. Model có thể là chuỗi hoặc mảng (chuỗi dự phòng theo thứ tự; mục có dailyTokenLimit = 'mốc miễn phí' — vượt thì tự chuyển sang mục kế tiếp).",
   "runtime": {
     "default": "auto",
     "order": [
       "bifrost",
       "openai-api",
       "kimi-cli",
-      "ollama",
-      "mock"
-    ]
+      "ollama"
+    ],
+    "quotaCooldownMs": 1800000,
+    "maxFailover": 6
   },
   "runtimes": {
     "bifrost": {
@@ -21,7 +22,8 @@
         "research": "env:BIFROST_VK_RESEARCH",
         "office": "env:BIFROST_VK_OFFICE"
       },
-      "promptStyle": "combined"
+      "promptStyle": "combined",
+      "label": "Bifrost → 9router (Claude Max + Codex)"
     },
     "openai-api": {
       "label": "9router (trực tiếp)",
@@ -39,14 +41,50 @@
   },
   "models": {
     "bifrost": {
-      "opus": "ninerouter/cc/claude-opus-5-5",
-      "sonnet": "ninerouter/cc/claude-sonnet-5-5",
-      "haiku": "ninerouter/cc/claude-haiku-4-5-20251001"
+      "opus": [
+        {
+          "model": "ninerouter/cc/claude-opus-5-5",
+          "label": "Claude Max · Opus"
+        },
+        {
+          "model": "ninerouter/cx/gpt-6-sol",
+          "label": "Codex · GPT-6 Sol"
+        }
+      ],
+      "sonnet": [
+        {
+          "model": "ninerouter/cc/claude-sonnet-5-5",
+          "label": "Claude Max · Sonnet"
+        },
+        {
+          "model": "ninerouter/cx/gpt-6-sol",
+          "label": "Codex · GPT-6 Sol"
+        }
+      ],
+      "haiku": [
+        {
+          "model": "ninerouter/cc/claude-haiku-4-5-20251001",
+          "label": "Claude Max · Haiku"
+        },
+        {
+          "model": "ninerouter/cc/claude-sonnet-5-5",
+          "label": "Claude Max · Sonnet"
+        }
+      ]
     },
     "openai-api": {
-      "opus": "cc/claude-opus-5-5",
-      "sonnet": "cc/claude-sonnet-5-5",
-      "haiku": "cc/claude-haiku-4-5-20251001"
+      "opus": [
+        "cc/claude-opus-5-5",
+        "cx/gpt-6-sol"
+      ],
+      "sonnet": [
+        "cc/claude-sonnet-5-5",
+        "cx/gpt-6-sol"
+      ],
+      "haiku": [
+        "cc/claude-haiku-4-5-20251001",
+        "cc/claude-sonnet-5-5"
+      ]
     },
     "ollama": {
       "opus": "qwen3:8b",
@@ -77,5 +115,9 @@
         "local"
       ]
     }
+  },
+  "defaults": {
+    "budgetTokens": 1500000,
+    "budgetMode": "complete"
   }
 }

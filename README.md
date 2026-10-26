@@ -11,8 +11,12 @@
   - 🟣 **Phòng Nghiên cứu** (học thuật): Trưởng phòng (PI), Literature Researcher, Data Scientist, Methodologist, Academic Writer, Peer Reviewer.
   - 🔴 **Điều phối viên** định tuyến nhiệm vụ.
 - **4 chế độ xử lý**: *Tự động* (điều phối viên chọn phòng) · *Theo phòng ban* · *Theo dự án* (workspace, runtime, phân loại dữ liệu, ngân sách riêng) · *Liên phòng* (Nghiên cứu → Phát triển).
-- **Quy trình như một phòng ban thật**: lập kế hoạch → họp thảo luận (agent đi vào phòng họp, phát biểu, @nhắc nhau) → chốt → thực thi song song theo phụ thuộc → review & sửa → báo cáo tổng hợp.
-- **Log theo vị trí** (`data/logs/agents/<id>.jsonl`), theo phòng ban, theo nhiệm vụ; có **chuỗi băm** để phát hiện chỉnh sửa (`ccoding logs verify`).
+- **Quy trình như một phòng ban thật**: lập kế hoạch → họp thảo luận (agent đi vào phòng họp, phát biểu, @nhắc nhau; tự bỏ họp khi việc nhỏ) → chốt → thực thi song song theo phụ thuộc → review & sửa → báo cáo tổng hợp. Mỗi mốc là một **checkpoint**: tạm dừng / tiếp tục / chạy lại hạng mục mà không mất tiến độ.
+- **Agent làm việc thật trên repo**: đọc/ghi file, chạy test, typecheck, migration DB dev trong **git worktree + nhánh riêng** cho từng nhiệm vụ (không đụng nhánh chính, không push) — xem [docs/TOOLS.md](docs/TOOLS.md).
+- **Đính kèm tệp** (PDF, DOCX, XLSX, PPTX, MD, CSV, JSON, code…): trích chữ tại chỗ, đưa vào bối cảnh nhiệm vụ.
+- **Ngân sách token 2 chế độ**: *chạy tới khi hoàn thành* (chỉ cảnh báo 80%/100%) hoặc *tạm dừng khi chạm trần* — kèm nút tăng ngân sách, chạy tiếp, đóng gói vào dự án.
+- **Hết token ⇒ tự chuyển tài nguyên** theo chuỗi model dự phòng (vd. Claude Max → Codex), hạn mức theo ngày, cảnh báo trên giao diện/herdr; hết sạch thì tạm dừng và tự chạy lại khi mở hạn mức.
+- **Log theo vị trí** (`data/logs/agents/<id>.jsonl`), theo phòng ban, theo nhiệm vụ; **bản ghi đầy đủ từng lượt gọi** (`data/runs/<task>/calls.jsonl`: phản hồi thô, công cụ, các lần chuyển runtime, finish_reason, kích thước prompt); có **chuỗi băm** để phát hiện chỉnh sửa (`ccoding logs verify`). Báo cáo phân tích token: [docs/PROCESS-REVIEW.md](docs/PROCESS-REVIEW.md).
 - **Bộ đếm token** cho từng lượt gọi: input, output, cache đọc/ghi, chi phí — tổng hợp theo agent / phòng / task / dự án / model / ngày (UI, CLI `ccoding usage --watch`, và hiển thị trên sidebar herdr).
 - **Nhiều runtime**: Claude Code CLI, Codex CLI, Kimi Code CLI, Anthropic API, API tương thích OpenAI (9router, Ollama, OpenRouter…), và `mock` để chạy thử offline.
 - **Data Protection Gate tích hợp**: nhãn dữ liệu theo dự án quyết định runtime nào được nhận dữ liệu; tự che khóa bí mật/PII trước khi ghi log hay gửi ra ngoài.
@@ -84,11 +88,13 @@ ccoding task "Nghiên cứu phát hiện bất thường log rồi dựng protot
 ccoding status            # nhiệm vụ & trạng thái agent
 ccoding show <taskId>     # chi tiết, file đầu ra, báo cáo
 ccoding cancel <taskId>
+ccoding pause <taskId>                        # tạm dừng, giữ tiến độ
+ccoding resume <taskId> --budget-mode complete # chạy tiếp tới khi xong (hoặc --add 500000)
 ```
 
-Tùy chọn: `--rounds 0-3` (số vòng họp), `--parallel 1-8`, `--no-review`, `--runtime <id>`, `--budget <token>`.
+Tùy chọn: `--rounds 0-3` (số vòng họp), `--parallel 1-8`, `--no-review`, `--runtime <id>`, `--budget <token>`, `--budget-mode complete|pause`.
 
-**Dự án**: `ccoding project add elk-iis --name "Giám sát log IIS" --dept dev --class internal --path D:\work\elk-iis` — agent sẽ làm việc (đọc/ghi file) trong thư mục đó.
+**Dự án**: `ccoding project add elk-iis --name "Giám sát log IIS" --dept dev --class internal --path D:\work\elk-iis` — agent sẽ làm việc (đọc/ghi file, chạy lệnh theo quyền dự án) trong thư mục đó; nếu là repo git thì trên worktree + nhánh `ccoding/<task>` riêng. Nhiệm vụ đã chạy mà chưa gắn dự án: mở nhiệm vụ → *Đóng gói vào dự án*.
 
 ## Runtime
 

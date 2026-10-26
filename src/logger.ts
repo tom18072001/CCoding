@@ -54,6 +54,11 @@ export class LogStore {
     return full;
   }
 
+  /** Ghi bản ghi đã che bí mật/PII (dùng cho bản ghi lượt gọi đầy đủ: data/runs/<task>/calls.jsonl). */
+  record(file: string, record: object): void {
+    this.append(file, redactDeep(record as Record<string, unknown>, { secrets: this.opts.redactSecrets, pii: this.opts.redactPii }));
+  }
+
   /** Ghi một bản ghi vào file JSONL bất kỳ, giữ chuỗi băm riêng của file đó. */
   append(file: string, record: object): void {
     let line: string;

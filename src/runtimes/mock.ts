@@ -40,7 +40,7 @@ const DISCUSS: Record<string, string[]> = {
     'Ưu tiên làm phần lõi trước, phần mở rộng để sau. Mỗi người bàn giao kèm giả định rõ ràng nhé.',
   ],
   'solution-architect': [
-    'Đề xuất tách rõ lớp dữ liệu và lớp API ngay từ đầu, ghi quyết định kiến trúc dạng ADR. Cần chốt yêu cầu phi chức năng (tải, HA, ATTT cấp độ 4) trước khi @backend-dev code.',
+    'Đề xuất tách rõ lớp dữ liệu và lớp API ngay từ đầu, ghi quyết định kiến trúc dạng ADR. Cần chốt yêu cầu phi chức năng (tải, HA, cấp độ ATTT theo phân loại hệ thống của dự án) trước khi @backend-dev code.',
     'Mình sẽ rà theo 10 nhóm phản biện (resilience, dữ liệu, bảo mật, vận hành, DR, chi phí…). Rủi ro lớn nhất hiện tại là luồng dữ liệu chưa được vẽ.',
   ],
   'backend-dev': [
@@ -55,7 +55,7 @@ const DISCUSS: Record<string, string[]> = {
   devops: ['Mình chuẩn bị Docker/compose và script triển khai cho cả Windows lẫn Linux, có backup và rollback. Đề nghị thêm cảnh báo khi dịch vụ chết.'],
   security: [
     'Bắt buộc chạy Data Protection Gate: phân loại dữ liệu, IAM/RBAC, mã hóa in-transit, log bất biến. Không đưa dữ liệu thật vào DEV/UAT.',
-    'Mình sẽ đối chiếu yêu cầu ATTT cấp độ 4: xác thực đa yếu tố cho quản trị, nhật ký truy xuất ≥ 12 tháng, sao lưu định kỳ.',
+    'Mình sẽ xác định cấp độ ATTT tương xứng dự án rồi đối chiếu: xác thực cho quản trị, nhật ký truy xuất, sao lưu định kỳ.',
   ],
   'ba-presales': ['Mình viết user story và tiêu chí nghiệm thu để cả nhóm bám theo; đồng thời chuẩn bị phần thuyết minh nếu cần đưa vào hồ sơ đề xuất.'],
   'qa-tester': ['Mình sẽ review theo checklist: đúng yêu cầu, có test, xử lý lỗi, không lộ bí mật. Đề nghị mỗi hạng mục ghi rõ cách kiểm chứng.'],
@@ -102,7 +102,7 @@ export class MockRuntime implements Runtime {
     return {
       text,
       usage: {
-        input: estimateTokens(req.system) + estimateTokens(req.prompt),
+        input: estimateTokens(req.system) + estimateTokens(req.context ?? '') + estimateTokens(req.prompt),
         output: estimateTokens(text),
         cacheRead: req.phase === 'discuss' ? Math.round(estimateTokens(req.system) * 0.8) : 0,
         cacheWrite: 0,

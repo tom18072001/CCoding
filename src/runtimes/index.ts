@@ -1,15 +1,31 @@
-import type { Config } from '../config.js';
-import type { Classification, RunResult, Runtime, RuntimeAvailability } from '../types.js';
+import { firstModels, modelChain, type Config, type ModelEntry } from '../config.js';
+import type { Classification, ErrorKind, RunResult, Runtime, RuntimeAvailability } from '../types.js';
 import { AnthropicApiRuntime, OpenAiApiRuntime } from './api.js';
 import { ClaudeCliRuntime } from './claude-cli.js';
 import { CodexCliRuntime, KimiCliRuntime } from './cli-agents.js';
 import { MockRuntime } from './mock.js';
+
+export interface HealthInfo {
+  /** Tạm ngừng dùng tới thời điểm này (ms epoch). */
+  until?: number;
+  kind?: ErrorKind;
+  reason?: string;
+  failures: number;
+  lastError?: string;
+  lastErrorAt?: number;
+  lastOkAt?: number;
+}
 
 export interface RuntimeStatus extends RuntimeAvailability {
   id: string;
   label: string;
   local: boolean;
   supportsTools: boolean;
+  health?: HealthInfo;
+  usageToday?: number;
+  dailyTokenLimit?: number;
+  models?: string[];
+  chains?: Record<string, Array<{ model: string; dailyTokenLimit?: number; usageToday: number; health?: HealthInfo }>>;
 }
 
 export interface Resolution {
@@ -17,14 +33,37 @@ export interface Resolution {
   note?: string;
 }
 
-/** Quản lý các runtime (CLI agent, API, mock) + chọn runtime theo cấu hình và phân loại dữ liệu. */
+/** Một tài nguyên cụ thể để thử: runtime + model (id thật hoặc bí danh với runtime CLI). */
+export interface Candidate {
+  runtime: Runtime;
+  model: string;
+  /** Khóa theo dõi sức khỏe/hạn mức: "<runtime>::<model>". */
+  key: string;
+  label: string;
+}
+
+export class NoCapacityError extends Error {
+  constructor(message: string, public retryAt?: number) {
+    super(message);
+  }
+}
+
+/** Nguồn số token đã dùng hôm nay (từ sổ cái) — được gắn sau khi dựng app. */
+export type UsageSource = (runtime: string, model?: string) => number;
+
+const ALIASES = ['opus', 'sonnet', 'haiku'];
+
+/** Quản lý các runtime (CLI agent, API, mock) + chọn tài nguyên theo cấu hình, phân loại dữ liệu, quota và sức khỏe. */
 export class RuntimeManager {
   readonly runtimes = new Map<string, Runtime>();
   private cache = new Map<string, { at: number; res: RuntimeAvailability }>();
+  readonly health = new Map<string, HealthInfo>();
+  private usageSource?: UsageSource;
+  onChange?: (id: string) => void;
 
   constructor(private config: Config) {
     const rc = (id: string) => config.runtimes[id] ?? {};
-    const mm = (id: string) => config.models[id] ?? {};
+    const mm = (id: string) => firstModels(config.models[id]);
     const all: Runtime[] = [
       new ClaudeCliRuntime(rc('claude-cli'), mm('claude-cli')),
       new CodexCliRuntime(rc('codex-cli'), mm('codex-cli')),
@@ -39,6 +78,10 @@ export class RuntimeManager {
       if (this.runtimes.has(id) || !c || c.type !== 'openai-api') continue;
       this.runtimes.set(id, new OpenAiApiRuntime(c, mm(id), id));
     }
+  }
+
+  setUsageSource(fn: UsageSource): void {
+    this.usageSource = fn;
   }
 
   get(id: string): Runtime | undefined {
@@ -65,15 +108,142 @@ export class RuntimeManager {
     return res;
   }
 
+  /** Chuỗi model (theo thứ tự ưu tiên) của một runtime cho bí danh/model đã yêu cầu. */
+  chainFor(runtimeId: string, want: string): ModelEntry[] {
+    const map = this.config.models[runtimeId] ?? {};
+    const chain = modelChain(map[want]);
+    if (chain.length) return chain;
+    // runtime CLI/mock tự ánh xạ bí danh; model id đầy đủ được dùng nguyên
+    return [{ model: want }];
+  }
+
+  private usageToday(runtime: string, model?: string): number {
+    return this.usageSource ? this.usageSource(runtime, model) : 0;
+  }
+
+  /** Lý do tài nguyên đang không dùng được (hết quota / cooldown / chạm hạn mức ngày) — undefined nếu dùng được. */
+  blocked(runtimeId: string, entry?: ModelEntry): string | undefined {
+    const now = Date.now();
+    for (const key of [runtimeId, entry ? `${runtimeId}::${entry.model}` : '']) {
+      if (!key) continue;
+      const h = this.health.get(key);
+      if (h?.until && h.until > now) return `${key} tạm ngừng tới ${new Date(h.until).toLocaleTimeString('vi-VN')} (${h.reason ?? h.kind})`;
+    }
+    const rl = Number(this.config.runtimes[runtimeId]?.dailyTokenLimit ?? 0);
+    if (rl > 0) {
+      const used = this.usageToday(runtimeId);
+      if (used >= rl) return `${runtimeId} đã dùng ${used} / ${rl} token hôm nay`;
+    }
+    if (entry?.dailyTokenLimit) {
+      const used = this.usageToday(runtimeId, entry.model);
+      if (used >= entry.dailyTokenLimit) return `${entry.model} đã dùng ${used} / ${entry.dailyTokenLimit} token hôm nay`;
+    }
+    return undefined;
+  }
+
+  /** Thời điểm sớm nhất một tài nguyên đang bị chặn mở lại. */
+  earliestRecovery(): number | undefined {
+    const now = Date.now();
+    const times = [...this.health.values()].map((h) => h.until ?? 0).filter((t) => t > now);
+    return times.length ? Math.min(...times) : undefined;
+  }
+
+  markOk(key: string): void {
+    const h = this.health.get(key);
+    if (!h) return;
+    h.failures = 0;
+    h.until = undefined;
+    h.lastOkAt = Date.now();
+    const rt = key.split('::')[0];
+    if (rt !== key) {
+      const rh = this.health.get(rt);
+      if (rh) {
+        rh.failures = 0;
+        rh.until = undefined;
+        rh.lastOkAt = Date.now();
+      }
+    }
+    this.onChange?.(rt);
+  }
+
+  /**
+   * Ghi nhận lỗi và quyết định thời gian nghỉ:
+   * quota → tới lúc nhà cung cấp mở lại (hoặc quotaCooldownMs) · rate → 1 phút · lỗi mạng/timeout → nghỉ 2 phút từ lần thứ 2 liên tiếp ·
+   * auth → 30 phút · model không tồn tại → 6 giờ (chỉ model đó).
+   */
+  markFailure(runtimeId: string, model: string | undefined, kind: ErrorKind, message: string, retryAt?: number): HealthInfo {
+    const now = Date.now();
+    const scopeModel = kind === 'quota' || kind === 'rate' || kind === 'model' || kind === 'context' || kind === 'empty';
+    // lỗi quota/model gắn với model cụ thể; lỗi mạng/xác thực gắn với cả runtime
+    const key = scopeModel && model ? `${runtimeId}::${model}` : runtimeId;
+    const h = this.health.get(key) ?? { failures: 0 };
+    h.failures++;
+    h.kind = kind;
+    h.lastError = message.slice(0, 300);
+    h.lastErrorAt = now;
+    let until: number | undefined;
+    switch (kind) {
+      case 'quota':
+        until = retryAt && retryAt > now ? retryAt : now + this.config.runtime.quotaCooldownMs;
+        h.reason = 'hết hạn mức';
+        break;
+      case 'rate':
+        until = retryAt && retryAt > now ? Math.min(retryAt, now + 15 * 60_000) : now + 60_000 * Math.min(5, h.failures);
+        h.reason = 'giới hạn tốc độ';
+        break;
+      case 'auth':
+        until = now + 30 * 60_000;
+        h.reason = 'lỗi xác thực/khóa';
+        break;
+      case 'model':
+        until = now + 6 * 3_600_000;
+        h.reason = 'model không dùng được';
+        break;
+      case 'empty':
+        until = h.failures >= 2 ? now + 10 * 60_000 : undefined;
+        h.reason = 'phản hồi rỗng';
+        break;
+      case 'transient':
+      case 'timeout':
+        until = h.failures >= 2 ? now + 2 * 60_000 * Math.min(5, h.failures - 1) : undefined;
+        h.reason = kind === 'timeout' ? 'quá thời gian' : 'lỗi kết nối';
+        break;
+      default:
+        h.reason = 'lỗi';
+    }
+    h.until = until;
+    this.health.set(key, h);
+    if (kind === 'transient' || kind === 'auth') this.cache.delete(runtimeId);
+    this.onChange?.(runtimeId);
+    return h;
+  }
+
   async status(force = false): Promise<RuntimeStatus[]> {
     return Promise.all(
-      [...this.runtimes.values()].map(async (r) => ({
-        id: r.id,
-        label: r.label,
-        local: r.local,
-        supportsTools: r.supportsTools,
-        ...(await this.availability(r.id, force)),
-      })),
+      [...this.runtimes.values()].map(async (r) => {
+        const chains: RuntimeStatus['chains'] = {};
+        for (const [alias, spec] of Object.entries(this.config.models[r.id] ?? {})) {
+          const list = modelChain(spec);
+          if (list.length > 1 || list.some((e) => e.dailyTokenLimit))
+            chains[alias] = list.map((e) => ({ model: e.model, dailyTokenLimit: e.dailyTokenLimit, usageToday: this.usageToday(r.id, e.model), health: this.health.get(`${r.id}::${e.model}`) }));
+        }
+        const modelHealth = [...this.health.entries()].filter(([k]) => k.startsWith(`${r.id}::`));
+        const blockedModels = modelHealth.filter(([, h]) => h.until && h.until > Date.now()).map(([k, h]) => `${k.split('::')[1]} (${h.reason})`);
+        const av = await this.availability(r.id, force);
+        return {
+          id: r.id,
+          label: r.label,
+          local: r.local,
+          supportsTools: r.supportsTools,
+          ...av,
+          detail: blockedModels.length ? `${av.detail} · tạm ngừng: ${blockedModels.join(', ')}` : av.detail,
+          models: undefined,
+          health: this.health.get(r.id),
+          usageToday: this.usageToday(r.id),
+          dailyTokenLimit: Number(this.config.runtimes[r.id]?.dailyTokenLimit ?? 0) || undefined,
+          chains: Object.keys(chains).length ? chains : undefined,
+        };
+      }),
     );
   }
 
@@ -86,34 +256,60 @@ export class RuntimeManager {
   }
 
   /**
-   * Chọn runtime theo chuỗi ưu tiên (task → dự án → agent → mặc định).
-   * Runtime được chỉ định nhưng không sẵn sàng/không được phép → rơi về chế độ auto, kèm ghi chú.
+   * Danh sách tài nguyên (runtime + model) theo thứ tự thử: runtime được chỉ định (task → dự án → agent → mặc định)
+   * rồi tới thứ tự runtime.order; trong mỗi runtime là chuỗi model dự phòng. Bỏ qua runtime bị chặn với phân loại dữ liệu,
+   * chưa sẵn sàng, đang nghỉ (hết quota/lỗi) hoặc đã chạm hạn mức ngày.
    */
-  async resolve(chain: Array<string | undefined>, cls: Classification): Promise<Resolution> {
+  async candidates(prefs: Array<string | undefined>, cls: Classification, want: string): Promise<{ list: Candidate[]; notes: string[]; skipped: string[] }> {
     const notes: string[] = [];
-    for (const want of chain) {
-      if (!want || want === 'inherit') continue;
-      if (want === 'auto') break;
-      if (!this.runtimes.has(want)) {
-        notes.push(`runtime "${want}" không tồn tại`);
+    const skipped: string[] = [];
+    const ids: string[] = [];
+    for (const p of prefs) {
+      if (!p || p === 'inherit') continue;
+      if (p === 'auto') break;
+      if (!this.runtimes.has(p)) {
+        notes.push(`runtime "${p}" không tồn tại`);
         break;
       }
-      if (!this.allowed(want, cls)) {
-        notes.push(`runtime "${want}" bị chặn với dữ liệu "${cls}"`);
+      if (!this.allowed(p, cls)) {
+        notes.push(`runtime "${p}" bị chặn với dữ liệu "${cls}"`);
         break;
       }
-      const a = await this.availability(want);
-      if (a.ok) return { runtime: this.runtimes.get(want)!, note: notes.join('; ') || undefined };
-      notes.push(`runtime "${want}" chưa sẵn sàng (${a.detail})`);
+      ids.push(p);
       break;
     }
-    for (const id of this.config.runtime.order) {
-      if (!this.allowed(id, cls)) continue;
+    for (const id of this.config.runtime.order) if (!ids.includes(id)) ids.push(id);
+    const list: Candidate[] = [];
+    for (const id of ids) {
+      const rt = this.runtimes.get(id);
+      if (!rt || !this.allowed(id, cls)) continue;
       const a = await this.availability(id);
-      if (a.ok) return { runtime: this.runtimes.get(id)!, note: notes.length ? `${notes.join('; ')} → dùng ${id}` : undefined };
+      if (!a.ok) {
+        if (id === ids[0] && notes.length === 0 && prefs.some((p) => p === id)) notes.push(`runtime "${id}" chưa sẵn sàng (${a.detail})`);
+        continue;
+      }
+      // pha nhẹ có thể xin model rẻ ("haiku") — runtime không có ánh xạ thì dùng model của agent
+      for (const e of this.chainFor(id, want)) {
+        const why = this.blocked(id, e);
+        if (why) {
+          skipped.push(why);
+          continue;
+        }
+        list.push({ runtime: rt, model: e.model, key: `${id}::${e.model}`, label: `${id}/${e.label ?? e.model}` });
+      }
     }
-    const mock = this.runtimes.get('mock')!;
-    return { runtime: mock, note: `${notes.concat('không có runtime thật khả dụng').join('; ')} → dùng mock` };
+    return { list, notes, skipped };
+  }
+
+  /** Tương thích ngược: chọn runtime đầu tiên khả dụng. */
+  async resolve(chain: Array<string | undefined>, cls: Classification): Promise<Resolution> {
+    const { list, notes } = await this.candidates(chain, cls, 'sonnet');
+    if (list.length) {
+      const first = list[0].runtime;
+      const wanted = chain.find((x) => x && x !== 'inherit' && x !== 'auto');
+      return { runtime: first, note: notes.length || (wanted && wanted !== first.id) ? `${notes.join('; ')} → dùng ${first.id}`.replace(/^ → /, '') : undefined };
+    }
+    throw new NoCapacityError(`Không có runtime khả dụng (${notes.join('; ') || 'tất cả đang nghỉ hoặc chưa cấu hình'})`, this.earliestRecovery());
   }
 
   /** Tính chi phí theo bảng giá cấu hình khi runtime không tự báo (USD / 1 triệu token). */
@@ -127,3 +323,5 @@ export class RuntimeManager {
     return { ...res, usage: { ...res.usage, costUsd: cost } };
   }
 }
+
+export { ALIASES };

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Classification, TaskOptions } from './types.js';
+import type { Classification, Phase, TaskOptions, ToolAccess } from './types.js';
 
 /** Thư mục gốc của repo (chứa package.json). */
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -37,7 +37,39 @@ export interface RuntimeConfig {
   defaultModel?: string;
   minDelayMs?: number;
   maxDelayMs?: number;
+  /** Hạn mức token/ngày của cả runtime (vd. mốc miễn phí) — vượt thì tự chuyển sang tài nguyên khác. */
+  dailyTokenLimit?: number;
+  /** Runtime API có hỗ trợ gọi công cụ (tool calling) hay không — mặc định true với kiểu openai-api. */
+  supportsTools?: boolean;
   [k: string]: unknown;
+}
+
+/** Một mục trong chuỗi model: id model + hạn mức/ngày (tùy chọn). */
+export interface ModelEntry {
+  model: string;
+  dailyTokenLimit?: number;
+  label?: string;
+}
+
+/** Ánh xạ bí danh (opus/sonnet/haiku) → một model hoặc chuỗi model dự phòng theo thứ tự ưu tiên. */
+export type ModelSpec = string | Array<string | ModelEntry>;
+
+export function modelChain(spec: ModelSpec | undefined): ModelEntry[] {
+  if (!spec) return [];
+  const list = Array.isArray(spec) ? spec : [spec];
+  return list
+    .map((x) => (typeof x === 'string' ? { model: x } : x))
+    .filter((x): x is ModelEntry => !!x && typeof x.model === 'string' && x.model.trim() !== '');
+}
+
+/** Bản phẳng alias → model đầu tiên (cho runtime CLI). */
+export function firstModels(map: Record<string, ModelSpec> | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(map ?? {})) {
+    const m = modelChain(v)[0];
+    if (m) out[k] = m.model;
+  }
+  return out;
 }
 
 export interface Config {
@@ -47,10 +79,35 @@ export interface Config {
   workspacesDir: string;
   agentsDir: string;
   departmentsDir: string;
-  runtime: { default: string; order: string[] };
+  runtime: {
+    default: string;
+    order: string[];
+    /** Thời gian "nghỉ" khi một runtime/model báo hết quota mà không cho biết lúc mở lại (ms). */
+    quotaCooldownMs: number;
+    /** Số lần chuyển runtime/model tối đa trong một lượt gọi. */
+    maxFailover: number;
+  };
   runner: 'auto' | 'process' | 'herdr';
   maxConcurrentTasks: number;
   defaults: TaskOptions & { timeoutMs: number };
+  /** Tinh chỉnh theo pha: model rẻ hơn cho pha nhẹ, giới hạn token đầu ra, số lượt công cụ. */
+  phases: {
+    models: Partial<Record<Phase, string>>;
+    maxTokens: Partial<Record<Phase, number>>;
+    toolTurns: Partial<Record<Phase, number>>;
+  };
+  /** Công cụ workspace cho agent (đọc/ghi file, chạy lệnh) — xem docs/TOOLS.md. */
+  tools: {
+    /** Quyền mặc định khi nhiệm vụ không thuộc dự án (workspace riêng của CCoding). */
+    defaultAccess: ToolAccess;
+    /** Quyền mặc định cho dự án có workspace riêng. */
+    projectAccess: ToolAccess;
+    commandTimeoutSec: number;
+    maxOutputChars: number;
+    denyCommands: string[];
+    /** File chưa track chép vào worktree mặc định (nếu có). */
+    worktreeCopy: string[];
+  };
   herdr: {
     session: string;
     workspaceLabel: string;
@@ -62,7 +119,7 @@ export interface Config {
     services?: Array<{ label: string; command: string; cwd?: string; enabled?: boolean }>;
   };
   runtimes: Record<string, RuntimeConfig>;
-  models: Record<string, Record<string, string>>;
+  models: Record<string, Record<string, ModelSpec>>;
   pricing: Record<string, { input: number; output: number; cacheRead?: number; cacheWrite?: number }>;
   dataProtection: {
     defaultClassification: Classification;
@@ -105,10 +162,28 @@ const BUILTIN: Omit<Config, 'root'> = {
   workspacesDir: 'workspaces',
   agentsDir: 'agents',
   departmentsDir: 'departments',
-  runtime: { default: 'auto', order: ['claude-cli', 'bifrost', 'anthropic-api', 'openai-api', 'codex-cli', 'kimi-cli', 'ollama', 'mock'] },
+  runtime: {
+    default: 'auto',
+    order: ['claude-cli', 'bifrost', 'anthropic-api', 'openai-api', 'codex-cli', 'kimi-cli', 'ollama', 'mock'],
+    quotaCooldownMs: 30 * 60_000,
+    maxFailover: 6,
+  },
   runner: 'auto',
   maxConcurrentTasks: 2,
-  defaults: { discussionRounds: 1, review: true, maxParallel: 3, maxRevisions: 1, budgetTokens: 600000, timeoutMs: 1200000 },
+  defaults: { discussionRounds: 1, review: true, maxParallel: 3, maxRevisions: 1, budgetTokens: 1500000, budgetMode: 'complete', timeoutMs: 1800000 },
+  phases: {
+    models: { route: 'haiku', discuss: 'haiku' },
+    maxTokens: { route: 800, plan: 8000, discuss: 700, finalize: 8000, execute: 32000, review: 6000, revise: 32000, synthesize: 10000 },
+    toolTurns: { plan: 12, finalize: 6, execute: 40, review: 14, revise: 25, synthesize: 6 },
+  },
+  tools: {
+    defaultAccess: 'write',
+    projectAccess: 'exec',
+    commandTimeoutSec: 600,
+    maxOutputChars: 12000,
+    denyCommands: [],
+    worktreeCopy: ['.env', '.env.local', '.env.development', '.env.development.local', '.env.test', '.env.test.local'],
+  },
   herdr: { session: 'ccoding', workspaceLabel: 'CCoding Office', agentPanes: true, closeAgentPanes: false, notify: true, services: [] },
   runtimes: {},
   models: {},

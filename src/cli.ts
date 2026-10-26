@@ -8,6 +8,7 @@ import { Herdr } from './herdr.js';
 import { LogStore, verifyChain } from './logger.js';
 import { Registry } from './registry.js';
 import { RuntimeManager } from './runtimes/index.js';
+import { toRuntimeError } from './runtimes/errors.js';
 import { createServer } from './server.js';
 import { Store } from './store.js';
 import { UsageLedger, type UsageDim, type UsageRow } from './usage.js';
@@ -31,8 +32,10 @@ ${c.bold('Giao việc')}
       --dept dev|research                    Phòng ban (khi --mode department)
       --project <id>                         Gắn vào dự án (chế độ project)
       --title "<tiêu đề>"   --rounds 0-3   --parallel 1-8   --no-review
-      --runtime <id>        --budget <token>   --wait (chờ và in tiến trình)
+      --runtime <id>        --budget <token>   --budget-mode pause|complete   --wait
   cancel <taskId>                            Hủy nhiệm vụ đang chạy
+  pause <taskId>                             Tạm dừng (giữ tiến độ)
+  resume <taskId> [--add <token>] [--budget-mode pause|complete]   Tiếp tục từ checkpoint
   status                                     Danh sách nhiệm vụ & trạng thái agent
   show <taskId>                              Chi tiết một nhiệm vụ
 
@@ -86,7 +89,7 @@ function localTime(iso: string, withDate = false): string {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function statusColor(s: string): string {
-  const map: Record<string, (x: string) => string> = { done: c.green, running: c.cyan, queued: c.yellow, failed: c.red, cancelled: c.gray, working: c.cyan, thinking: c.blue, discussing: c.magenta, reviewing: c.yellow, error: c.red, idle: c.gray };
+  const map: Record<string, (x: string) => string> = { done: c.green, running: c.cyan, queued: c.yellow, paused: c.magenta, failed: c.red, cancelled: c.gray, working: c.cyan, thinking: c.blue, discussing: c.magenta, reviewing: c.yellow, error: c.red, idle: c.gray };
   return (map[s] ?? ((x: string) => x))(s);
 }
 
@@ -148,6 +151,7 @@ async function cmdTask(args: string[]): Promise<void> {
       'no-review': { type: 'boolean' },
       runtime: { type: 'string' },
       budget: { type: 'string' },
+      'budget-mode': { type: 'string' },
       wait: { type: 'boolean', short: 'w' },
       local: { type: 'boolean' },
     },
@@ -166,6 +170,7 @@ async function cmdTask(args: string[]): Promise<void> {
       ...(values['no-review'] ? { review: false } : {}),
       ...(values.runtime ? { runtime: values.runtime } : {}),
       ...(values.budget ? { budgetTokens: Number(values.budget) } : {}),
+      ...(values['budget-mode'] ? { budgetMode: values['budget-mode'] as 'pause' | 'complete' } : {}),
     },
   };
 
@@ -180,7 +185,7 @@ async function cmdTask(args: string[]): Promise<void> {
       const d = await api<{ task: Task; transcript: ChatMessage[] }>(`/api/tasks/${t.id}`);
       for (const m of d.transcript.slice(seen)) printMessage(m, names);
       seen = d.transcript.length;
-      if (['done', 'failed', 'cancelled'].includes(d.task.status)) return finishTask(d.task, path.join(config.dataDir, 'runs', t.id));
+      if (['done', 'failed', 'cancelled', 'paused'].includes(d.task.status)) return finishTask(d.task, path.join(config.dataDir, 'runs', t.id));
       await sleep(1500);
     }
   }
@@ -202,7 +207,7 @@ async function cmdTask(args: string[]): Promise<void> {
 }
 
 function finishTask(t: Task, runDir: string): void {
-  console.log(`\n${c.bold('Kết thúc')} ${t.id}: ${statusColor(t.status)}${t.error ? c.red(` — ${t.error}`) : ''}`);
+  console.log(`\n${c.bold('Kết thúc')} ${t.id}: ${statusColor(t.status)}${t.error ? c.red(` — ${t.error}`) : ''}${t.pause ? c.yellow(` — ${t.pause.detail} (tiếp tục: ccoding resume ${t.id})`) : ''}`);
   console.log(`Token: in ${fmtNum(t.usage.input)} · out ${fmtNum(t.usage.output)} · cache ${fmtNum(t.usage.cacheRead)} · ${t.usage.calls} lượt${t.usage.costUsd ? ` · ${fmtUsd(t.usage.costUsd)}` : ''}`);
   if (t.finalPath) console.log(`Báo cáo: ${c.cyan(path.join(runDir, t.finalPath))}`);
   if (t.status !== 'done') process.exitCode = 1;
@@ -511,12 +516,29 @@ async function cmdAgentExec(args: string[]): Promise<void> {
     });
     result = rm.applyPricing(result);
   } catch (e) {
-    result = { text: '', usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, costUsd: 0 }, estimated: false, model: req.model, runtime: job.runtime, durationMs: 0, error: (e as Error).message };
+    const re = toRuntimeError(e);
+    result = { text: '', usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, costUsd: 0 }, estimated: false, model: req.model, runtime: job.runtime, durationMs: 0, error: re.message, errorKind: re.kind, retryAt: re.retryAt };
   }
   writeJsonAtomic(job.resultFile, result);
   console.log(c.gray('─'.repeat(60)));
   console.log(`${result.error ? c.red(`✗ ${result.error}`) : c.green('✓ xong')} · in ${fmtNum(result.usage.input)} · out ${fmtNum(result.usage.output)} · ${fmtDuration(result.durationMs)}`);
   if (pane) await h.reportAgent(pane, a, 'idle');
+}
+
+async function cmdPause(args: string[]): Promise<void> {
+  if (!args[0]) throw new Error('Cần taskId');
+  if (!(await serverUp())) throw new Error('Server không chạy');
+  await api(`/api/tasks/${args[0]}/pause`, { method: 'POST', body: '{}' });
+  console.log(`${c.green('✓')} Đã yêu cầu tạm dừng ${args[0]} (các lượt đang chạy sẽ làm nốt)`);
+}
+
+async function cmdResume(args: string[]): Promise<void> {
+  const { values, positionals } = parseArgs({ args, allowPositionals: true, options: { add: { type: 'string' }, budget: { type: 'string' }, 'budget-mode': { type: 'string' } } });
+  if (!positionals[0]) throw new Error('Cần taskId');
+  if (!(await serverUp())) throw new Error('Server không chạy');
+  const body = { addBudget: values.add ? Number(values.add) : undefined, budgetTokens: values.budget ? Number(values.budget) : undefined, budgetMode: values['budget-mode'] };
+  const t = await api<Task>(`/api/tasks/${positionals[0]}/resume`, { method: 'POST', body: JSON.stringify(body) });
+  console.log(`${c.green('✓')} Tiếp tục ${t.id} — ngân sách ${fmtNum(t.options.budgetTokens)} · ${t.options.budgetMode === 'complete' ? 'chạy tới khi hoàn thành' : 'dừng khi chạm trần'}`);
 }
 
 async function cmdCancel(args: string[]): Promise<void> {
@@ -559,6 +581,10 @@ async function main(): Promise<void> {
       return cmdAgentExec(rest);
     case 'cancel':
       return cmdCancel(rest);
+    case 'pause':
+      return cmdPause(rest);
+    case 'resume':
+      return cmdResume(rest);
     case undefined:
     case 'help':
     case '--help':

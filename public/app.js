@@ -33,6 +33,9 @@
     logs: [],
     live: new Map(),
     tab: 'assign',
+    alerts: [],
+    alertsSeen: 0,
+    pending: [], // tệp đã tải lên chờ giao việc
   };
 
   const PHASES = [
@@ -40,7 +43,10 @@
   ];
   const PHASE_INDEX = { route: -1, plan: 0, discuss: 1, finalize: 1, execute: 2, review: 3, revise: 3, synthesize: 4 };
   const STATUS_VI = { idle: 'rảnh', thinking: 'suy nghĩ', working: 'đang làm', discussing: 'đang họp', reviewing: 'review', waiting: 'chờ', error: 'lỗi' };
-  const TASK_VI = { queued: 'chờ', running: 'đang chạy', done: 'xong', failed: 'lỗi', cancelled: 'đã hủy', pending: 'chờ', skipped: 'bỏ qua' };
+  const TASK_VI = { queued: 'chờ', running: 'đang chạy', paused: 'tạm dừng', done: 'xong', failed: 'lỗi', cancelled: 'đã hủy', pending: 'chờ', skipped: 'bỏ qua' };
+  const PAUSE_VI = { budget: 'chạm trần ngân sách', quota: 'hết tài nguyên token', interrupted: 'server khởi động lại', manual: 'tạm dừng thủ công' };
+  const ACCESS_VI = { none: 'không công cụ', read: 'chỉ đọc', write: 'đọc/ghi file', exec: 'đọc/ghi + chạy lệnh' };
+  const size = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n >= 1024 ? Math.round(n / 1024) + ' KB' : n + ' B');
   const MODE_VI = { auto: 'Tự động', department: 'Theo phòng', project: 'Theo dự án', joint: 'Liên phòng' };
   const KIND_VI = { plan: 'kế hoạch', discussion: 'thảo luận', decision: 'quyết định', handoff: 'bàn giao', review: 'review', final: 'báo cáo', system: 'hệ thống' };
   const CLS_VI = { public: 'Công khai', internal: 'Nội bộ', confidential: 'Bảo mật', restricted: 'Hạn chế' };
@@ -93,6 +99,11 @@
     S.projects = st.projects;
     S.usage = st.usage;
     S.defaults = st.defaults;
+    S.toolsDefault = st.tools?.projectAccess;
+    if (st.alerts) {
+      S.alerts = st.alerts;
+      renderBell();
+    }
     $('#m-runner').textContent = `runner: ${st.runner}${st.herdr.inside ? ' · herdr' : ''}`;
     $('#m-runtime').textContent = `runtime: ${st.defaultRuntime}`;
     if (st.registryErrors?.length) console.warn('registry', st.registryErrors);
@@ -153,6 +164,8 @@
     es.addEventListener('usage', (e) => onUsage(JSON.parse(e.data).record));
     es.addEventListener('log', (e) => onLog(JSON.parse(e.data).entry));
     es.addEventListener('output', (e) => onOutput(JSON.parse(e.data)));
+    es.addEventListener('alert', (e) => onAlert(JSON.parse(e.data).alert));
+    es.addEventListener('runtime', () => throttle('rt', () => loadRuntimes(false), 1500));
     es.addEventListener('hello', () => resync());
   }
 
@@ -254,6 +267,88 @@
     }
   }
 
+  // ── Cảnh báo ─────────────────────────────────────────────────────────────
+  function onAlert(a) {
+    if (S.alerts.some((x) => x.id === a.id)) return;
+    S.alerts.push(a);
+    if (S.alerts.length > 100) S.alerts.shift();
+    renderBell();
+    toast(a);
+    if (!$('#alerts-panel').hidden) renderAlerts();
+  }
+
+  function toast(a) {
+    const el = document.createElement('div');
+    el.className = `toast ${a.level}`;
+    el.innerHTML = `<b>${esc(a.title)}</b><span>${esc(a.msg)}</span>${a.taskId ? '<small>Bấm để mở nhiệm vụ</small>' : ''}`;
+    el.onclick = () => {
+      el.remove();
+      if (a.taskId) openTask(a.taskId);
+    };
+    $('#toasts').prepend(el);
+    while ($('#toasts').children.length > 4) $('#toasts').lastChild.remove();
+    setTimeout(() => el.remove(), a.level === 'error' ? 20000 : 10000);
+  }
+
+  function renderBell() {
+    const unseen = S.alerts.filter((a) => a.level !== 'info').length - S.alertsSeen;
+    const n = $('#bell-n');
+    n.textContent = unseen > 0 ? (unseen > 9 ? '9+' : unseen) : '';
+    $('#bell').classList.toggle('hot', unseen > 0 && S.alerts.slice(-unseen).some((a) => a.level === 'error'));
+  }
+
+  function renderAlerts() {
+    const box = $('#alerts-panel');
+    const list = [...S.alerts].reverse();
+    box.innerHTML = `<div class="ap-head"><b>Cảnh báo</b><button class="btn ghost sm" id="ap-close">Đóng</button></div>${
+      list.length
+        ? list.map((a) => `<div class="ap-row ${esc(a.level)}" ${a.taskId ? `data-task="${esc(a.taskId)}"` : ''}><time>${dateTime(a.ts)}</time><div><b>${esc(a.title)}</b><p>${esc(a.msg)}</p></div></div>`).join('')
+        : '<div class="empty">Chưa có cảnh báo.</div>'
+    }`;
+    $('#ap-close').onclick = () => (box.hidden = true);
+    box.querySelectorAll('[data-task]').forEach((r) => (r.onclick = () => {
+      box.hidden = true;
+      openTask(r.dataset.task);
+    }));
+  }
+
+  // ── Tệp đính kèm ─────────────────────────────────────────────────────────
+  async function uploadFiles(files) {
+    for (const f of files) {
+      const item = { name: f.name, size: f.size, status: 'uploading' };
+      S.pending.push(item);
+      renderPending();
+      try {
+        const headers = { 'content-type': f.type || 'application/octet-stream', 'x-filename': encodeURIComponent(f.name) };
+        if (TOKEN) headers.authorization = `Bearer ${TOKEN}`;
+        const res = await fetch('/api/uploads', { method: 'POST', headers, body: f });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(body.error || res.status);
+        Object.assign(item, body, { status: 'ok' });
+      } catch (e) {
+        item.status = 'error';
+        item.error = e.message;
+      }
+      renderPending();
+    }
+  }
+
+  function renderPending() {
+    const ul = $('#att-list');
+    ul.innerHTML = S.pending
+      .map(
+        (a, i) => `<li class="${a.status}"><span class="grow"><b>${esc(a.name)}</b> <small>${size(a.size)}${a.status === 'ok' ? ` · ${esc(a.kind)} · ${fmt(a.chars)} ký tự chữ` : a.status === 'uploading' ? ' · đang tải…' : ` · lỗi: ${esc(a.error)}`}${a.note ? ` · ${esc(a.note)}` : ''}</small></span><button type="button" class="btn ghost sm" data-rm="${i}" title="Bỏ">×</button></li>`,
+      )
+      .join('');
+    ul.querySelectorAll('[data-rm]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const [a] = S.pending.splice(Number(b.dataset.rm), 1);
+        if (a?.id) api(`/api/uploads/${a.id}`, { method: 'DELETE' }).catch(() => {});
+        renderPending();
+      }),
+    );
+  }
+
   // ── Ticker & tooltip ─────────────────────────────────────────────────────
   function addTicker(m) {
     const el = document.createElement('div');
@@ -325,6 +420,30 @@
     $('#btn-cancel-project').onclick = () => ($('#project-form').hidden = true);
     $('#project-form').addEventListener('submit', saveProject);
     $('#btn-refresh-rt').onclick = () => loadRuntimes(true);
+    $('#btn-files').onclick = () => $('#files').click();
+    $('#files').addEventListener('change', (e) => {
+      uploadFiles([...e.target.files]);
+      e.target.value = '';
+    });
+    const drop = $('#drop');
+    for (const ev of ['dragenter', 'dragover']) drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); });
+    for (const ev of ['dragleave', 'drop']) drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('over'); });
+    drop.addEventListener('drop', (e) => uploadFiles([...(e.dataTransfer?.files || [])]));
+    $('#task-form [name=brief]').addEventListener('drop', (e) => {
+      if (e.dataTransfer?.files?.length) {
+        e.preventDefault();
+        uploadFiles([...e.dataTransfer.files]);
+      }
+    });
+    $('#bell').onclick = () => {
+      const box = $('#alerts-panel');
+      box.hidden = !box.hidden;
+      if (!box.hidden) {
+        S.alertsSeen = S.alerts.filter((a) => a.level !== 'info').length;
+        renderBell();
+        renderAlerts();
+      }
+    };
     for (const id of ['#log-dept', '#log-agent', '#log-level']) $(id).addEventListener('change', loadLogs);
   }
 
@@ -355,6 +474,8 @@
     f.discussionRounds.placeholder = S.defaults.discussionRounds ?? 1;
     f.maxParallel.placeholder = S.defaults.maxParallel ?? 3;
     f.budgetTokens.placeholder = S.defaults.budgetTokens ?? '';
+    if (!f.dataset.touched) f.budgetMode.value = S.defaults.budgetMode || 'complete';
+    f.budgetMode.onchange = () => (f.dataset.touched = '1');
     f.review.checked = S.defaults.review !== false;
     syncMode();
   }
@@ -375,8 +496,15 @@
     if (f.maxParallel.value !== '') opt.maxParallel = Number(f.maxParallel.value);
     if (f.budgetTokens.value !== '') opt.budgetTokens = Number(f.budgetTokens.value);
     if (f.runtime.value) opt.runtime = f.runtime.value;
+    opt.budgetMode = f.budgetMode.value;
     opt.review = f.review.checked;
-    const body = { brief: f.brief.value, title: f.title.value || undefined, mode, options: opt };
+    if (S.pending.some((a) => a.status === 'uploading')) {
+      msg.className = 'form-msg err';
+      msg.textContent = 'Đang tải tệp lên — chờ một chút';
+      return;
+    }
+    const attachments = S.pending.filter((a) => a.status === 'ok').map((a) => a.id);
+    const body = { brief: f.brief.value, title: f.title.value || undefined, mode, options: opt, attachments };
     if (mode === 'department') body.department = f.department.value;
     if (mode === 'project') {
       if (!f.projectId.value) {
@@ -395,6 +523,8 @@
       msg.textContent = `Đã giao ${t.id}`;
       f.brief.value = '';
       f.title.value = '';
+      S.pending = [];
+      renderPending();
       openTask(t.id);
     } catch (err) {
       msg.className = 'form-msg err';
@@ -413,7 +543,7 @@
     ul.innerHTML = S.projects
       .map(
         (p) => `<li><span class="dot" style="background:${deptColor(p.department === 'auto' || p.department === 'joint' ? 'office' : p.department)}"></span>
-        <div class="grow"><b>${esc(p.name)}</b> <small>${esc(p.id)} · ${esc(p.department === 'auto' ? 'tự động' : p.department === 'joint' ? 'liên phòng' : deptShort(p.department))}${p.runtime ? ' · ' + esc(p.runtime) : ''} · ${esc(p.workspace || 'workspaces/' + p.id)}</small></div>
+        <div class="grow"><b>${esc(p.name)}</b> <small>${esc(p.id)} · ${esc(p.department === 'auto' ? 'tự động' : p.department === 'joint' ? 'liên phòng' : deptShort(p.department))}${p.runtime ? ' · ' + esc(p.runtime) : ''} · ${esc(p.workspace || 'workspaces/' + p.id)} · 🛠 ${esc(ACCESS_VI[p.toolAccess || S.toolsDefault || 'exec'])}${p.workspace && (p.isolation || 'worktree') === 'worktree' ? ' · 🌿 worktree' : ''}</small></div>
         <span class="cls ${esc(p.classification)}">${esc(CLS_VI[p.classification] || p.classification)}</span>
         <button class="btn ghost sm" data-del="${esc(p.id)}" title="Xóa dự án">×</button></li>`,
       )
@@ -452,12 +582,24 @@
     } catch {
       return;
     }
+    const now = Date.now();
+    const down = (h) => h && h.until && Date.parse(new Date(h.until).toISOString()) > now;
     $('#runtimes').innerHTML = S.runtimes
-      .map(
-        (r) => `<li><span class="dot" style="background:${r.ok ? 'var(--ok)' : '#475569'}"></span>
-        <div class="grow"><b>${esc(r.id)}</b> <small>${esc(r.label)} · ${esc(r.detail)}</small></div>
-        <span class="cls ${r.local ? 'public' : ''}" title="Dữ liệu ${r.local ? 'ở lại trên máy' : 'gửi tới nhà cung cấp bên ngoài'}">${r.local ? 'cục bộ' : 'bên ngoài'}</span></li>`,
-      )
+      .map((r) => {
+        const h = r.health;
+        const resting = down(h);
+        const color = !r.ok ? '#475569' : resting ? 'var(--warn)' : 'var(--ok)';
+        const limit = r.dailyTokenLimit ? ` · hôm nay ${fmt(r.usageToday)}/${fmt(r.dailyTokenLimit)}` : r.usageToday ? ` · hôm nay ${fmt(r.usageToday)} token` : '';
+        const chains = r.chains
+          ? Object.entries(r.chains)
+              .map(([alias, list]) => `<div class="chain"><code>${esc(alias)}</code> ${list.map((e) => `<span class="${down(e.health) ? 'off' : ''}" title="${esc(e.health?.lastError || '')}">${esc(e.model.split('/').slice(-2).join('/'))}${e.dailyTokenLimit ? ` ${fmt(e.usageToday)}/${fmt(e.dailyTokenLimit)}` : ''}${down(e.health) ? ` ⏸ ${time(new Date(e.health.until).toISOString())}` : ''}</span>`).join(' → ')}</div>`)
+              .join('')
+          : '';
+        return `<li><span class="dot" style="background:${color}"></span>
+        <div class="grow"><b>${esc(r.id)}</b> <small>${esc(r.label)} · ${esc(r.detail)}${limit}${r.supportsTools ? ' · 🛠 công cụ' : ''}</small>
+        ${resting ? `<div class="rt-warn">⏸ ${esc(h.reason || h.kind)} — nghỉ tới ${time(new Date(h.until).toISOString())}${h.lastError ? `: ${esc(h.lastError.slice(0, 120))}` : ''}</div>` : h?.lastError && h.failures ? `<div class="rt-warn soft">Lỗi gần nhất: ${esc(h.lastError.slice(0, 120))}</div>` : ''}${chains}</div>
+        <span class="cls ${r.local ? 'public' : ''}" title="Dữ liệu ${r.local ? 'ở lại trên máy' : 'gửi tới nhà cung cấp bên ngoài'}">${r.local ? 'cục bộ' : 'bên ngoài'}</span></li>`;
+      })
       .join('');
     const opts = '<option value="">Mặc định</option>' + S.runtimes.map((r) => `<option value="${esc(r.id)}">${esc(r.id)}${r.ok ? '' : ' (chưa sẵn sàng)'}</option>`).join('');
     $('#sel-runtime').innerHTML = opts;
@@ -533,16 +675,57 @@
         </div>`;
       })
       .join('');
-    const canCancel = t.status === 'running' || t.status === 'queued';
+    const canCancel = t.status === 'running' || t.status === 'queued' || t.status === 'paused';
+    const canPause = t.status === 'running';
+    const canResume = ['paused', 'failed', 'cancelled'].includes(t.status) && (t.runs || []).length > 0;
+    const used = total(t.usage);
+    const budget = t.options?.budgetTokens || 0;
+    const pct = budget ? Math.round((used / budget) * 100) : 0;
+    const bmode = t.options?.budgetMode || S.defaults.budgetMode || 'complete';
+    const meter = budget
+      ? `<div class="budget ${pct >= 100 ? 'over' : pct >= 80 ? 'warn' : ''}" title="Ngân sách token của nhiệm vụ"><div class="bm-bar"><i style="width:${Math.min(100, pct)}%"></i></div><span>${fmt(used)} / ${fmt(budget)} token (${pct}%) · ${bmode === 'complete' ? 'chạy tới khi hoàn thành' : 'dừng khi chạm trần'}</span>${t.status === 'running' || t.status === 'queued' ? `<button class="btn ghost sm" data-budget="add">+50%</button>${bmode === 'pause' ? '<button class="btn ghost sm" data-budget="complete">Chạy tới khi xong</button>' : ''}` : ''}</div>`
+      : '';
+    const doneSubs = (t.runs || []).flatMap((r) => r.subtasks.filter((x) => x.status === 'done'));
+    const banner = canResume
+      ? `<div class="pause-box ${t.status}">
+          <div><b>${t.status === 'paused' ? `⏸ Tạm dừng — ${esc(PAUSE_VI[t.pause?.reason] || t.pause?.reason || '')}` : t.status === 'failed' ? '⚠️ Nhiệm vụ lỗi — có thể chạy tiếp phần chưa xong' : '⏹ Đã hủy — có thể chạy tiếp'}</b>
+          <p>${esc(t.pause?.detail || t.error || '')}${t.pause?.resumeAt ? ` · tự tiếp tục lúc ${esc(dateTime(t.pause.resumeAt))}` : ''}</p></div>
+          <div class="pb-actions">
+            <button class="btn primary sm" data-act="resume-complete">▶ Chạy tới khi hoàn thành</button>
+            <button class="btn ghost sm" data-act="resume-add">+50% ngân sách & tiếp tục</button>
+            <button class="btn ghost sm" data-act="package">📦 Đóng gói vào dự án…</button>
+          </div>
+          ${doneSubs.length ? `<details class="rerun"><summary>Chạy lại hạng mục đã xong (vd. để áp dụng thật vào repo)</summary>${doneSubs.map((x) => `<label class="check"><input type="checkbox" value="${esc(x.id)}" /> <code>${esc(x.id)}</code> ${esc(x.title)} <small>@${esc(x.assignee)}</small></label>`).join('')}</details>` : ''}
+          <form class="form pkg" id="pkg-form" hidden>
+            <div class="grid2">
+              <label>Mã dự án<input name="projectId" placeholder="vd. kepper-pmhub" value="${esc(t.projectId || '')}" /></label>
+              <label>Tên dự án<input name="name" placeholder="${esc(t.title.slice(0, 60))}" /></label>
+            </div>
+            <label>Thư mục làm việc (repo thật)<input name="workspace" placeholder="C:\\Users\\...\\repo — để trống: workspaces/&lt;mã&gt;" /></label>
+            <div class="grid2">
+              <label>Quyền công cụ<select name="toolAccess"><option value="exec">Đọc/ghi + chạy lệnh</option><option value="write">Đọc/ghi file</option><option value="read">Chỉ đọc</option></select></label>
+              <label>Cách ly<select name="isolation"><option value="worktree">Git worktree + nhánh riêng</option><option value="none">Trực tiếp</option></select></label>
+            </div>
+            <label class="check"><input type="checkbox" name="resume" checked /> Tiếp tục chạy ngay (chạy tới khi hoàn thành)</label>
+            <div class="actions"><button class="btn primary sm" type="submit">Đóng gói</button><span class="form-msg" id="pkg-msg"></span></div>
+          </form>
+        </div>`
+      : '';
+    const atts = (t.attachments || []).length
+      ? `<div class="t-atts">📎 ${t.attachments.map((a) => `<a data-file="${esc(a.textPath || a.path)}" title="${esc(a.note || '')}">${esc(a.name)} <small>(${esc(a.kind)}, ${fmt(a.chars)} ký tự)</small></a>`).join(' · ')}</div>`
+      : '';
+    const git = t.branch ? `<div class="t-git">🌿 nhánh <code>${esc(t.branch)}</code> · worktree <code>${esc(t.workspace)}</code>${t.commit ? ` · ${esc(t.commit)}` : ''}</div>` : t.workspace ? `<div class="t-git">📁 <code>${esc(t.workspace)}</code></div>` : '';
     el.innerHTML = `<button class="btn ghost sm back" id="td-back">← Danh sách</button>
       <div class="td-head"><h2>${esc(t.title)}</h2>
         <div class="t-meta"><span class="status ${t.status}">${TASK_VI[t.status] || t.status}</span><span>${esc(t.id)}</span><span>${esc(MODE_VI[t.mode] || t.mode)}</span>
         <span class="cls ${esc(t.classification)}">${esc(CLS_VI[t.classification] || t.classification)}</span>
         ${t.projectId ? `<span>dự án: ${esc(t.projectId)}</span>` : ''}<span>token <b style="font-family:var(--mono);color:var(--text)">${fmt(t.usage.input)} in / ${fmt(t.usage.output)} out</b></span>
-        ${canCancel ? '<button class="btn ghost sm danger" id="td-cancel">Hủy</button>' : ''}</div>
+        ${canPause ? '<button class="btn ghost sm" id="td-pause">⏸ Tạm dừng</button>' : ''}${canCancel ? '<button class="btn ghost sm danger" id="td-cancel">Hủy</button>' : ''}</div>
+        ${meter}${git}${atts}
         ${t.routing ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">🧭 ${esc(t.routing.reason)}</p>` : ''}
-        ${t.error ? `<p style="font-size:12.5px;color:var(--bad);margin:0 0 8px">${esc(t.error)}</p>` : ''}
+        ${t.error && !canResume ? `<p style="font-size:12.5px;color:var(--bad);margin:0 0 8px">${esc(t.error)}</p>` : ''}
       </div>
+      ${banner}
       <details class="doc" style="margin-bottom:10px"><summary style="cursor:pointer;color:var(--muted);font-size:12.5px">Yêu cầu gốc</summary><div class="md">${md(t.brief)}</div></details>
       ${blocks || '<div class="empty">Đang định tuyến…</div>'}
       <div class="subtabs">
@@ -550,14 +733,50 @@
         <button data-v="final" class="${S.taskView === 'final' ? 'active' : ''}" ${t.finalPath ? '' : 'disabled'}>🏁 Báo cáo</button>
         <button data-v="files" class="${S.taskView === 'files' ? 'active' : ''}">📦 Sản phẩm</button>
         <button data-v="tokens" class="${S.taskView === 'tokens' ? 'active' : ''}">🔢 Token</button>
+        <button data-v="events" class="${S.taskView === 'events' ? 'active' : ''}">🧾 Nhật ký</button>
+        <button data-v="calls" class="${S.taskView === 'calls' ? 'active' : ''}">📡 Lượt gọi</button>
       </div>
       <div id="td-body"></div>`;
+    const act = async (path, body, okMsg) => {
+      try {
+        const r = await api(path, { method: 'POST', body: JSON.stringify(body || {}) });
+        if (r && r.id) S.tasks.set(r.id, r);
+        if (r && r.task) S.tasks.set(r.task.id, r.task);
+        if (okMsg) toast({ level: 'info', title: okMsg, msg: t.title });
+        renderTaskDetail(true);
+      } catch (e) {
+        toast({ level: 'error', title: 'Không thực hiện được', msg: e.message });
+      }
+    };
+    const rerun = () => [...el.querySelectorAll('.rerun input:checked')].map((x) => x.value);
+    el.querySelectorAll('[data-budget]').forEach((b) =>
+      b.addEventListener('click', () => act(`/api/tasks/${t.id}/budget`, b.dataset.budget === 'add' ? { addBudget: Math.max(100000, Math.round(budget * 0.5)) } : { budgetMode: 'complete' }, 'Đã cập nhật ngân sách')),
+    );
+    el.querySelectorAll('[data-act]').forEach((b) =>
+      b.addEventListener('click', () => {
+        if (b.dataset.act === 'resume-complete') act(`/api/tasks/${t.id}/resume`, { budgetMode: 'complete', rerun: rerun() }, 'Tiếp tục — chạy tới khi hoàn thành');
+        if (b.dataset.act === 'resume-add') act(`/api/tasks/${t.id}/resume`, { addBudget: Math.max(100000, Math.round(budget * 0.5)), rerun: rerun() }, 'Đã tăng ngân sách & tiếp tục');
+        if (b.dataset.act === 'package') $('#pkg-form').hidden = !$('#pkg-form').hidden;
+      }),
+    );
+    const pkg = $('#pkg-form');
+    if (pkg)
+      pkg.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const b = Object.fromEntries(new FormData(pkg).entries());
+        b.resume = pkg.resume.checked;
+        if (b.resume) b.budgetMode = 'complete';
+        b.rerun = rerun();
+        for (const k of Object.keys(b)) if (b[k] === '') delete b[k];
+        act(`/api/tasks/${t.id}/package`, b, 'Đã đóng gói vào dự án').then(() => loadProjectsQuiet());
+      });
+    if (canPause) $('#td-pause').onclick = () => act(`/api/tasks/${t.id}/pause`, {}, 'Đã yêu cầu tạm dừng (các lượt đang chạy sẽ làm nốt)');
     $('#td-back').onclick = () => {
       S.selectedTask = null;
       S.taskDetail = null;
       renderTaskList();
     };
-    if (canCancel) $('#td-cancel').onclick = () => api(`/api/tasks/${t.id}/cancel`, { method: 'POST', body: '{}' }).catch((e) => alert(e.message));
+    if (canCancel) $('#td-cancel').onclick = () => confirm('Hủy nhiệm vụ này?') && api(`/api/tasks/${t.id}/cancel`, { method: 'POST', body: '{}' }).catch((e) => alert(e.message));
     el.querySelectorAll('.subtabs button').forEach((b) =>
       b.addEventListener('click', () => {
         S.taskView = b.dataset.v;
@@ -616,6 +835,42 @@
       );
       return;
     }
+    if (S.taskView === 'events') {
+      box.innerHTML = '<div class="empty">Đang tải…</div>';
+      try {
+        const rows = await api(`/api/tasks/${t.id}/events?limit=800`);
+        box.innerHTML = `<ol class="logs">${rows.slice().reverse().map(logRow).join('') || '<li class="empty">Chưa có log</li>'}</ol>`;
+      } catch (e) {
+        box.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+      }
+      return;
+    }
+    if (S.taskView === 'calls') {
+      box.innerHTML = '<div class="empty">Đang tải…</div>';
+      try {
+        const rows = await api(`/api/tasks/${t.id}/calls?limit=300`);
+        box.innerHTML = rows.length
+          ? `<div class="calls">${rows
+              .slice()
+              .reverse()
+              .map(
+                (c) => `<details class="call ${c.error ? 'err' : ''}"><summary><time>${time(c.ts)}</time><b>${esc(agentName(c.agentId))}</b><span>${esc(c.phase)}${c.subtaskId ? ' ' + esc(c.subtaskId) : ''}</span><code>${esc(c.runtime)}/${esc(String(c.requestedModel || c.model || '').split('/').slice(-1)[0])}</code><span class="mono">${fmt(c.input)} in / ${fmt(c.output)} out</span>${c.tools?.length ? `<span>🛠 ${c.tools.length}</span>` : ''}${c.attempts?.length ? `<span class="warn">↪ ${c.attempts.length} lần chuyển</span>` : ''}${c.truncated ? '<span class="warn">✂ bị cắt</span>' : ''}${c.error ? '<span class="bad">lỗi</span>' : ''}</summary>
+                <div class="call-body">
+                  <div class="kv">prompt: hệ thống ${fmt(c.sizes?.system)} · bối cảnh ${fmt(c.sizes?.context)} · công việc ${fmt(c.sizes?.prompt)} ký tự · max_tokens ${esc(c.maxTokens ?? '—')} · finish ${esc(c.finishReason ?? '—')} · ${c.turns ?? 1} lượt · ${Math.round((c.durationMs || 0) / 1000)} s</div>
+                  ${c.attempts?.length ? `<div class="kv warn">${c.attempts.map((a) => `${esc(a.runtime)}/${esc(a.model)}: [${esc(a.kind)}] ${esc(a.error)}`).join('<br>')}</div>` : ''}
+                  ${c.error ? `<div class="kv bad">${esc(c.error)}</div>` : ''}${c.diag ? `<div class="kv warn">${esc(c.diag)}</div>` : ''}
+                  ${c.tools?.length ? `<ol class="tools">${c.tools.map((x) => `<li class="${x.ok ? '' : 'bad'}"><code>${esc(x.name)}</code> ${esc(x.args)} <small>${x.ms} ms · ${fmt(x.outputChars)} ký tự${x.error ? ' · ' + esc(x.error.slice(0, 160)) : ''}</small></li>`).join('')}</ol>` : ''}
+                  <pre class="raw">${esc(c.text || '(rỗng)')}${c.textChars > 1500 ? `
+… (${fmt(c.textChars)} ký tự — xem đầy đủ trong data/runs/${esc(t.id)}/calls.jsonl)` : ''}</pre>
+                </div></details>`,
+              )
+              .join('')}</div>`
+          : '<div class="empty">Chưa có lượt gọi (nhiệm vụ cũ chưa ghi calls.jsonl — xem tab Nhật ký).</div>';
+      } catch (e) {
+        box.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+      }
+      return;
+    }
     if (S.taskView === 'tokens') {
       let rows = d.usage;
       try {
@@ -623,6 +878,14 @@
       } catch {}
       box.innerHTML = usageTable(rows, 'Agent', (k) => `<span class="who">${av(k)}${esc(agentName(k))}</span>`);
     }
+  }
+
+  async function loadProjectsQuiet() {
+    try {
+      S.projects = await api('/api/projects');
+      renderProjects();
+      renderAssign();
+    } catch {}
   }
 
   // ── Nhân sự ──────────────────────────────────────────────────────────────

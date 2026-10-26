@@ -7,7 +7,9 @@
 
   "runtime": {
     "default": "auto",
-    "order": ["claude-cli", "bifrost", "anthropic-api", "openai-api", "codex-cli", "kimi-cli", "ollama", "mock"]
+    "order": ["claude-cli", "bifrost", "anthropic-api", "openai-api", "codex-cli", "kimi-cli", "ollama", "mock"],
+    "quotaCooldownMs": 1800000,
+    "maxFailover": 6
   },
   "runner": "auto",
   "maxConcurrentTasks": 2,
@@ -17,8 +19,24 @@
     "review": true,
     "maxParallel": 3,
     "maxRevisions": 1,
-    "budgetTokens": 600000,
-    "timeoutMs": 1200000
+    "budgetTokens": 1500000,
+    "budgetMode": "complete",
+    "timeoutMs": 1800000
+  },
+
+  "phases": {
+    "models": { "route": "haiku", "discuss": "haiku" },
+    "maxTokens": { "route": 800, "plan": 8000, "discuss": 700, "finalize": 8000, "execute": 32000, "review": 6000, "revise": 32000, "synthesize": 10000 },
+    "toolTurns": { "plan": 12, "finalize": 6, "execute": 40, "review": 14, "revise": 25, "synthesize": 6 }
+  },
+
+  "tools": {
+    "defaultAccess": "write",
+    "projectAccess": "exec",
+    "commandTimeoutSec": 600,
+    "maxOutputChars": 12000,
+    "denyCommands": [],
+    "worktreeCopy": [".env", ".env.local", ".env.development", ".env.development.local", ".env.test", ".env.test.local"]
   },
 
   "herdr": {
@@ -47,7 +65,7 @@
       "maxTokens": 8000,
       "local": false
     },
-    "ollama": { "type": "openai-api", "label": "Ollama (cục bộ)", "baseUrl": "http://localhost:11434/v1", "tags": "none", "maxTokens": 8000, "local": true },
+    "ollama": { "type": "openai-api", "label": "Ollama (cục bộ)", "baseUrl": "http://localhost:11434/v1", "tags": "none", "maxTokens": 8000, "local": true, "supportsTools": false },
     "mock": { "minDelayMs": 500, "maxDelayMs": 1600 }
   },
 

@@ -83,6 +83,22 @@ export class UsageLedger {
       .sort((a, b) => b.total - a.total);
   }
 
+  /** Tổng token hôm nay (theo giờ máy) của một runtime, tùy chọn lọc theo model đã yêu cầu — dùng cho hạn mức ngày. */
+  today(runtime: string, model?: string): number {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    const since = d.toISOString();
+    let n = 0;
+    for (let i = this.records.length - 1; i >= 0; i--) {
+      const r = this.records[i];
+      if (r.ts < since) break;
+      if (r.runtime !== runtime) continue;
+      if (model && r.requestedModel !== model && r.model !== model) continue;
+      n += totalTokens(r);
+    }
+    return n;
+  }
+
   /** Ma trận phòng ban × agent — dùng cho dashboard. */
   byDepartmentAgent(filter: UsageFilter = {}): Record<string, UsageRow[]> {
     const out: Record<string, UsageRow[]> = {};

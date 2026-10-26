@@ -4,7 +4,14 @@ export type Role = 'lead' | 'member' | 'reviewer' | 'router';
 export type Classification = 'public' | 'internal' | 'confidential' | 'restricted';
 export type TaskMode = 'auto' | 'department' | 'project' | 'joint';
 export type Phase = 'route' | 'plan' | 'discuss' | 'finalize' | 'execute' | 'review' | 'revise' | 'synthesize';
-export type TaskStatus = 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
+export type TaskStatus = 'queued' | 'running' | 'paused' | 'done' | 'failed' | 'cancelled';
+/** pause: chạm trần thì tạm dừng chờ quyết định · complete: chạy tới khi hoàn thành (chấp nhận vượt trần, chỉ cảnh báo). */
+export type BudgetMode = 'pause' | 'complete';
+/** Quyền công cụ của agent trong thư mục làm việc: không · chỉ đọc · đọc/ghi file · đọc/ghi + chạy lệnh. */
+export type ToolAccess = 'none' | 'read' | 'write' | 'exec';
+export type ToolName = 'list_files' | 'read_file' | 'search' | 'write_file' | 'edit_file' | 'run_command';
+/** Nhóm lỗi runtime — quyết định có chuyển sang tài nguyên khác hay không. */
+export type ErrorKind = 'quota' | 'rate' | 'auth' | 'transient' | 'timeout' | 'model' | 'context' | 'empty' | 'fatal';
 export type SubtaskStatus = 'pending' | 'running' | 'done' | 'failed' | 'skipped';
 export type AgentStatus = 'idle' | 'thinking' | 'working' | 'discussing' | 'reviewing' | 'waiting' | 'error';
 
@@ -55,6 +62,15 @@ export interface ProjectDef {
   agents?: string[]; // giới hạn tập agent tham gia (tùy chọn)
   models?: Record<string, string>; // agentId -> model override
   budgetTokens?: number;
+  budgetMode?: BudgetMode;
+  /** Quyền công cụ của agent trong workspace dự án (mặc định theo cấu hình tools.projectAccess). */
+  toolAccess?: ToolAccess;
+  /** "worktree": nếu workspace là repo git, mỗi nhiệm vụ làm trên git worktree + nhánh ccoding/<task> riêng. */
+  isolation?: 'none' | 'worktree';
+  /** File chưa track (vd. .env) cần chép vào worktree để chạy test/migration ([] = không chép gì). */
+  worktreeCopy?: string[];
+  /** Mẫu regex lệnh bị cấm riêng cho dự án (vd. container/cổng DB của môi trường đang chạy). */
+  denyCommands?: string[];
   createdAt: string;
 }
 
@@ -68,18 +84,48 @@ export interface Usage {
   estimatedCalls: number;
 }
 
+export interface ToolPolicy {
+  /** Thư mục gốc agent được làm việc (đọc/ghi) — mọi đường dẫn bị giới hạn trong đây. */
+  root: string;
+  allow: ToolName[];
+  maxTurns: number;
+  commandTimeoutSec: number;
+  maxOutputChars: number;
+  /** Mẫu regex lệnh bị cấm (bổ sung cho danh sách mặc định). */
+  denyCommands: string[];
+  /** Cho phép git commit (chỉ khi làm trên nhánh/worktree riêng). */
+  allowGitCommit: boolean;
+}
+
+export interface ToolCallRecord {
+  name: string;
+  args: string;
+  ok: boolean;
+  ms: number;
+  outputChars: number;
+  error?: string;
+}
+
 export interface RunRequest {
   agent: AgentDef;
   phase: Phase;
-  /** Hồ sơ vị trí (agent.md) + quy tắc chung — gửi làm system prompt với runtime API. */
+  /** Hồ sơ vị trí (agent.md) + quy tắc chung của văn phòng. */
   system: string;
-  /** Nội dung công việc của lượt gọi này. */
+  /** Bối cảnh chung của nhiệm vụ (giống nhau giữa các agent trong cùng pha) — đặt đầu prompt để tận dụng cache. */
+  context?: string;
+  /** Nội dung công việc riêng của lượt gọi này. */
   prompt: string;
   model: string;
   cwd: string;
   tools: string[];
   allowTools: boolean;
   timeoutMs: number;
+  /** Giới hạn token đầu ra của lượt gọi (theo pha). */
+  maxTokens?: number;
+  /** Công cụ workspace (đọc/ghi file, chạy lệnh) cho runtime API có vòng lặp tool. */
+  toolPolicy?: ToolPolicy;
+  /** Che bí mật/PII trong kết quả công cụ trước khi gửi lại cho model (runtime bên ngoài). */
+  redact?: { secrets: boolean; pii: boolean };
   meta: { taskId: string; subtaskId?: string; department: string; projectId?: string; callId: string };
   /** Dữ liệu có cấu trúc kèm theo (runtime mock dùng để mô phỏng; runtime thật bỏ qua). */
   hints?: Record<string, unknown>;
@@ -99,6 +145,17 @@ export interface RunResult {
   runtime: string;
   durationMs: number;
   error?: string;
+  errorKind?: ErrorKind;
+  /** Lý do dừng của model (stop, length, tool_calls…). */
+  finishReason?: string;
+  /** Đầu ra bị cắt do chạm giới hạn max_tokens. */
+  truncated?: boolean;
+  turns?: number;
+  /** Thời điểm tài nguyên mở lại (khi lỗi hết hạn mức). */
+  retryAt?: number;
+  toolCalls?: ToolCallRecord[];
+  /** Chẩn đoán khi đầu ra rỗng/lạ (không chứa nội dung bí mật). */
+  diag?: string;
 }
 
 export interface RuntimeAvailability { ok: boolean; detail: string; models?: string[] }
@@ -122,6 +179,8 @@ export interface Subtask {
   deliverable?: string;
   status: SubtaskStatus;
   output?: string; // đường dẫn file đầu ra (tương đối data/runs/<task>)
+  /** Bản trước khi chạy lại hạng mục (vd. bản nháp văn bản cần áp dụng vào repo). */
+  draft?: string;
   summary?: string;
   attempts: number;
   startedAt?: string;
@@ -132,9 +191,13 @@ export interface Subtask {
 
 export interface ReviewIssue { subtask: string; severity: 'blocker' | 'major' | 'minor'; comment: string }
 
+/** Mốc đã hoàn thành của một phòng — dùng để tiếp tục từ checkpoint. */
+export type RunStage = 'planned' | 'finalized' | 'executed' | 'reviewed' | 'done';
+
 export interface DeptRun {
   department: string;
-  status: 'pending' | 'running' | 'done' | 'failed' | 'cancelled';
+  status: 'pending' | 'running' | 'paused' | 'done' | 'failed' | 'cancelled';
+  stage?: RunStage;
   phase?: Phase;
   planSummary?: string;
   decisions?: string;
@@ -152,7 +215,39 @@ export interface TaskOptions {
   maxParallel: number;
   maxRevisions: number;
   budgetTokens: number;
+  budgetMode: BudgetMode;
   runtime?: string;
+}
+
+export interface Attachment {
+  id: string;
+  name: string;
+  size: number;
+  kind: string;
+  chars: number;
+  /** Tương đối data/runs/<task>/ — file gốc và bản chữ đã trích xuất. */
+  path: string;
+  textPath?: string;
+  note?: string;
+}
+
+export interface Alert {
+  id: string;
+  ts: string;
+  level: 'info' | 'warn' | 'error';
+  kind: string;
+  title: string;
+  msg: string;
+  taskId?: string;
+  runtime?: string;
+}
+
+export interface PauseInfo {
+  reason: 'budget' | 'quota' | 'interrupted' | 'manual';
+  detail: string;
+  at: string;
+  /** Tự tiếp tục lúc này (khi hết thời gian chờ quota). */
+  resumeAt?: string;
 }
 
 export interface Task {
@@ -172,6 +267,19 @@ export interface Task {
   usage: Usage;
   finalPath?: string;
   error?: string;
+  attachments?: Attachment[];
+  pause?: PauseInfo;
+  /** Mốc cảnh báo ngân sách đã phát (80, 100). */
+  budgetAlerted?: number;
+  /** Thư mục làm việc thực tế (worktree) và nhánh git của nhiệm vụ. */
+  workspace?: string;
+  branch?: string;
+  /** Commit gốc khi tạo worktree — để thống kê thay đổi của agent. */
+  baseRef?: string;
+  /** Tóm tắt thay đổi git (diff --stat) và kết quả commit trên nhánh nhiệm vụ. */
+  changes?: string;
+  commit?: string;
+  resumes?: number;
   createdAt: string;
   updatedAt: string;
   startedAt?: string;
@@ -201,6 +309,8 @@ export interface UsageRecord {
   phase: Phase;
   runtime: string;
   model: string;
+  /** Model đã yêu cầu (id trong cấu hình) — dùng đếm hạn mức theo ngày. */
+  requestedModel?: string;
   input: number;
   output: number;
   cacheRead: number;
@@ -208,6 +318,8 @@ export interface UsageRecord {
   costUsd: number;
   durationMs: number;
   estimated: boolean;
+  toolCalls?: number;
+  finishReason?: string;
   error?: string;
 }
 
@@ -243,6 +355,8 @@ export interface NewTaskInput {
   department?: string;
   projectId?: string;
   options?: Partial<TaskOptions>;
+  /** id các file đã tải lên (POST /api/uploads). */
+  attachments?: string[];
 }
 
 export function emptyUsage(): Usage {
