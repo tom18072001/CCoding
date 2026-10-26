@@ -103,6 +103,15 @@ test('ngân sách: chế độ "pause" tạm dừng khi chạm trần, tiếp t�
     assert.equal(app.usage.all({ task: t.id }).filter((x) => x.phase === 'execute').length, execBefore);
     assert.ok(app.usage.all({ task: t.id }).slice(-1)[0].phase === 'synthesize');
 
+    // nhiệm vụ "xong" nhưng còn hạng mục lỗi → tiếp tục sẽ chạy lại hạng mục đó rồi review/tổng hợp lại
+    const fs0 = app.store.get(t.id)!;
+    fs0.runs[0].subtasks[1].status = 'failed';
+    fs0.runs[0].status = 'failed';
+    app.orchestrator.resume(t.id);
+    const r5 = await app.orchestrator.waitFor(t.id);
+    assert.equal(r5.status, 'done');
+    assert.ok(r5.runs[0].subtasks.every((x) => x.status === 'done'));
+
     const c = app.orchestrator.submit({ brief: 'Sẽ bị hủy', mode: 'department', department: 'dev' });
     setTimeout(() => app.orchestrator.cancel(c.id), 15);
     const cr = await app.orchestrator.waitFor(c.id);

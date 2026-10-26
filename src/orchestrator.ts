@@ -309,7 +309,8 @@ export class Orchestrator {
     const { store, logs } = this.d;
     const t = store.get(id);
     if (!t) throw new Error('Không có nhiệm vụ');
-    const hasRerun = o.rerun === 'all' || (Array.isArray(o.rerun) && o.rerun.length > 0) || !!o.from;
+    const hasFailed = t.runs.some((r) => r.subtasks.some((x) => x.status === 'failed' || x.status === 'skipped'));
+    const hasRerun = o.rerun === 'all' || (Array.isArray(o.rerun) && o.rerun.length > 0) || !!o.from || hasFailed;
     if (!['paused', 'failed', 'cancelled'].includes(t.status) && !(t.status === 'done' && hasRerun))
       throw new Error(`Nhiệm vụ đang ở trạng thái "${t.status}" — chỉ tiếp tục được khi tạm dừng, lỗi hoặc đã hủy (nhiệm vụ đã xong: chọn hạng mục cần chạy lại)`);
     this.applyBudget(t, o);
@@ -333,6 +334,15 @@ export class Orchestrator {
         r.finalPath = undefined;
         r.status = 'pending';
         logs.write({ level: 'info', kind: 'task.rerun', msg: `${t.id}: chạy lại ${again.map((s) => s.id).join(', ')}`, taskId: t.id, department: r.department });
+      }
+      // còn hạng mục lỗi/bỏ qua → làm lại thực thi các hạng mục đó rồi review/tổng hợp lại
+      if (r.subtasks.some((x) => x.status === 'failed' || x.status === 'skipped')) {
+        r.stage ??= inferStage(r);
+        if (r.stage && STAGES.indexOf(r.stage) > STAGES.indexOf('finalized')) {
+          r.stage = 'finalized';
+          r.review = undefined;
+          r.finalPath = undefined;
+        }
       }
       if (o.from && r.subtasks.length) {
         const back: RunStage = o.from === 'review' ? 'executed' : 'reviewed';
