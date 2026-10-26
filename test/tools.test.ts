@@ -106,6 +106,11 @@ test('phân loại lỗi runtime: hết hạn mức, giới hạn tốc độ, m
   assert.equal(classifyError(401, 'invalid api key'), 'auth');
   assert.equal(classifyError(undefined, 'TypeError: fetch failed (ECONNREFUSED)'), 'transient');
   assert.equal(classifyError(400, 'invalid request: messages required'), 'fatal');
+  const wrapped = 'http://127.0.0.1:20128/v1 503: {"error":{"message":"[claude/claude-sonnet-5-5] [429]: {\\"type\\":\\"error\\",\\"error\\":{\\"type\\":\\"rate_limit_error\\",\\"message\\":\\"This request would exceed your account\'s rate limit. Please try again later.\\"}} (reset after 1h2m)"}}';
+  assert.equal(classifyError(503, wrapped), 'rate', 'lỗi 429 bị proxy bọc trong 503');
+  assert.ok(Math.abs((parseRetryAt(undefined, wrapped, 0) ?? 0) - 62 * 60_000) < 1000);
+  assert.equal(classifyError(undefined, 'error: failed to run prompt: No model configured. Run `kimi` and use /login to sign in'), 'auth');
+  assert.equal(classifyError(502, '{"error":{"error":"write tcp 127.0.0.1:1->127.0.0.1:20128: wsasend: An established connection was aborted","type":"provider_connection_failed"}}'), 'transient');
   assert.equal(parseRetryAt(undefined, 'usage limit reached|1761500000'), 1761500000 * 1000);
   const now = Date.now();
   assert.equal(parseRetryAt(new Headers({ 'retry-after': '120' }), '', now), now + 120_000);

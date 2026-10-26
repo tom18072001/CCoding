@@ -21,9 +21,26 @@ const CONTEXT_RE = /(context (length|window)|maximum context|too many tokens|pro
 const MODEL_RE = /(model[^\n]{0,40}(not found|does not exist|not supported|unavailable|invalid)|unknown model|no such model|no provider)/i;
 const NET_RE = /(ECONNREFUSED|ECONNRESET|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|EPIPE|socket hang up|fetch failed|network|terminated|other side closed|connection (was )?(closed|reset|aborted)|UND_ERR|premature close|bad gateway|service unavailable|gateway timeout)/i;
 
+const LOGIN_RE = /(not logged in|log ?in required|please (log|sign) in|use \/login|sign in|No model configured|no api key|missing api key|unauthenticated|invalid (api )?key|authentication_error)/i;
+
+/** Mã lỗi của nhà cung cấp gốc khi proxy (9router, Bifrost) bọc lại: "[claude/x] [429]: …", "status_code":429, "type":"rate_limit_error". */
+export function upstreamStatus(text: string): number | undefined {
+  const m = /\]\s*\[(\d{3})\]\s*:/.exec(text) ?? /\\?"status(?:_code)?\\?"\s*:\s*(4\d\d|5\d\d)/.exec(text);
+  if (m) return Number(m[1]);
+  if (/rate_limit_error/.test(text)) return 429;
+  if (/overloaded_error/.test(text)) return 529;
+  return undefined;
+}
+
 /** Phân loại lỗi từ mã HTTP + nội dung thông báo. */
 export function classifyError(status: number | undefined, text: string): ErrorKind {
   const t = text ?? '';
+  // proxy trả 5xx nhưng lỗi thật của nhà cung cấp là 429/401… → phân loại theo lỗi gốc
+  const inner = upstreamStatus(t);
+  if (inner && inner !== status && (status === undefined || status >= 500)) {
+    if (inner === 429 || inner === 402 || inner === 401 || inner === 403 || inner === 529 || inner === 400 || inner === 404) return classifyError(inner, t.replace(/\]\s*\[\d{3}\]\s*:/g, ']:'));
+  }
+  if (LOGIN_RE.test(t) && !QUOTA_RE.test(t) && (!status || status === 401 || status === 403 || status === 400)) return 'auth';
   if (status === 402) return 'quota';
   if (status === 401 || status === 403) return QUOTA_RE.test(t) ? 'quota' : 'auth';
   if (status === 429) return QUOTA_RE.test(t) && !/per minute|rpm|tpm/i.test(t) ? 'quota' : 'rate';
@@ -73,6 +90,13 @@ export function parseRetryAt(headers: Headers | undefined, text: string, now = D
   if (epoch) return Number(epoch[1]) * 1000;
   const iso = /(?:reset|resets|available)[^0-9]{0,20}(\d{4}-\d{2}-\d{2}T[\d:.]+Z?)/i.exec(text);
   if (iso && Number.isFinite(Date.parse(iso[1]))) return Date.parse(iso[1]);
+  // 9router: "(reset after 1h23m4s)" / "reset after 42s"
+  const ra2 = /reset (?:after|in)\s+((?:\d+(?:\.\d+)?\s*(?:ms|h|m|s)\s*)+)/i.exec(text);
+  if (ra2) {
+    let ms = 0;
+    for (const [, n, u] of ra2[1].matchAll(/(\d+(?:\.\d+)?)\s*(ms|h|m|s)/gi)) ms += Number(n) * ({ ms: 1, s: 1000, m: 60_000, h: 3_600_000 } as Record<string, number>)[u.toLowerCase()];
+    if (ms > 0) return now + ms;
+  }
   const mins = /(?:in|after|sau)\s+(\d+)\s*(?:minutes?|mins?|phút)/i.exec(text);
   if (mins) return now + Number(mins[1]) * 60_000;
   const hours = /(?:in|after|sau)\s+(\d+)\s*(?:hours?|giờ)/i.exec(text);
