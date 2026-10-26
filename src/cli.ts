@@ -512,8 +512,8 @@ async function cmdAgentExec(args: string[]): Promise<void> {
   try {
     if (!rt) throw new Error(`Runtime ${job.runtime} không tồn tại`);
     result = await rt.run(req, {
-      onText: (t) => process.stdout.write(`${t}\n`),
-      onActivity: (t) => console.log(c.gray(`  ⚙ ${t}`)),
+      onText: (t) => process.stdout.write(t),
+      onActivity: (t) => process.stdout.write(`\n${c.gray(`  ⚙ ${t}`)}\n`),
     });
     result = rm.applyPricing(result);
   } catch (e) {
