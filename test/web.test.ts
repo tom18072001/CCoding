@@ -24,6 +24,10 @@ test('công cụ tra cứu: search_papers (OpenAlex), web_search, fetch_url; ch�
       res.writeHead(200, { 'content-type': 'text/html' });
       return res.end('<div><a class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.org%2Fluat&amp;rut=x">Luật Bảo vệ dữ liệu cá nhân</a><a class="result__snippet">Văn bản hợp nhất</a></div>');
     }
+    if (req.url?.startsWith('/sx/search')) {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ results: [{ title: 'NIST AI RMF', url: 'https://www.nist.gov/itl/ai-risk-management-framework', content: 'Framework' }] }));
+    }
     if (req.url === '/page') {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
       return res.end('<html><body><h1>Tiêu đề</h1><p>Nội dung trang về kiểm soát truy cập.</p><script>evil()</script></body></html>');
@@ -48,6 +52,10 @@ test('công cụ tra cứu: search_papers (OpenAlex), web_search, fetch_url; ch�
     assert.ok(!p.output.includes('Other paper'), 'lọc theo venue');
     const w = await executeTool('web_search', { query: 'luật bảo vệ dữ liệu cá nhân' }, policy);
     assert.match(w.output, /Luật Bảo vệ dữ liệu cá nhân\n\s+https:\/\/example\.org\/luat/);
+    process.env.CCODING_SEARXNG_URL = `${base}/sx`;
+    const sx = await executeTool('web_search', { query: 'nist ai rmf' }, policy);
+    assert.match(sx.output, /\(SearXNG\)[\s\S]*NIST AI RMF\n\s+https:\/\/www\.nist\.gov\/itl\/ai-risk-management-framework/);
+    delete process.env.CCODING_SEARXNG_URL;
     // mặc định chặn localhost/LAN
     delete process.env.CCODING_WEB_ALLOW_PRIVATE;
     const blocked = await executeTool('fetch_url', { url: `${base}/page` }, policy);

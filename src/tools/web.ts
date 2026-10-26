@@ -120,19 +120,44 @@ function decodeHtml(s: string): string {
     .trim();
 }
 
-export async function webSearch(args: Record<string, unknown>, signal?: AbortSignal): Promise<string> {
-  const query = String(args.query ?? '').trim();
-  if (!query) throw new WebError('Thiếu query');
-  const limit = Math.min(15, Math.max(1, Number(args.limit) || 8));
-  const res = await fetch(searchBase(), {
-    method: 'POST',
-    headers: { 'user-agent': UA, 'content-type': 'application/x-www-form-urlencoded' },
-    body: `q=${encodeURIComponent(query)}`,
-    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(20_000)]) : AbortSignal.timeout(20_000),
-  });
-  if (!res.ok) throw new WebError(`Máy tìm kiếm trả ${res.status}`);
+interface Hit {
+  title: string;
+  url: string;
+  snippet?: string;
+}
+
+function fmtHits(query: string, hits: Hit[], source: string): string {
+  return `Kết quả tìm kiếm "${query}" (${source}):\n\n${hits.map((h, i) => `[${i + 1}] ${h.title}\n    ${h.url}${h.snippet ? `\n    ${h.snippet.slice(0, 300)}` : ''}`).join('\n')}`;
+}
+
+const sig = (signal?: AbortSignal, ms = 20_000) => (signal ? AbortSignal.any([signal, AbortSignal.timeout(ms)]) : AbortSignal.timeout(ms));
+
+/** SearXNG tự dựng (CCODING_SEARXNG_URL, API JSON) — không cần khóa. */
+async function searxng(query: string, limit: number, signal?: AbortSignal): Promise<Hit[] | undefined> {
+  const base = process.env.CCODING_SEARXNG_URL;
+  if (!base) return undefined;
+  const r = await fetch(`${base.replace(/\/$/, '')}/search?q=${encodeURIComponent(query)}&format=json`, { headers: { 'user-agent': UA }, signal: sig(signal) });
+  if (!r.ok) throw new WebError(`SearXNG trả ${r.status}`);
+  const j = (await r.json()) as { results?: Array<{ title: string; url: string; content?: string }> };
+  return (j.results ?? []).slice(0, limit).map((x) => ({ title: x.title, url: x.url, snippet: x.content }));
+}
+
+/** Brave Search API (BRAVE_API_KEY — có gói miễn phí). */
+async function brave(query: string, limit: number, signal?: AbortSignal): Promise<Hit[] | undefined> {
+  const key = process.env.BRAVE_API_KEY ?? process.env.CCODING_BRAVE_API_KEY;
+  if (!key) return undefined;
+  const r = await fetch(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${limit}`, { headers: { accept: 'application/json', 'x-subscription-token': key }, signal: sig(signal) });
+  if (!r.ok) throw new WebError(`Brave Search trả ${r.status}`);
+  const j = (await r.json()) as { web?: { results?: Array<{ title: string; url: string; description?: string }> } };
+  return (j.web?.results ?? []).slice(0, limit).map((x) => ({ title: decodeHtml(x.title), url: x.url, snippet: x.description ? decodeHtml(x.description) : undefined }));
+}
+
+/** DuckDuckGo HTML — thường bị chặn khi gọi tự động; trả undefined nếu bị chặn. */
+async function ddg(query: string, limit: number, signal?: AbortSignal): Promise<Hit[] | undefined> {
+  const res = await fetch(searchBase(), { method: 'POST', headers: { 'user-agent': UA, 'content-type': 'application/x-www-form-urlencoded' }, body: `q=${encodeURIComponent(query)}`, signal: sig(signal) });
+  if (!res.ok && res.status !== 202) return undefined;
   const html = await res.text();
-  const out: string[] = [];
+  const out: Hit[] = [];
   const re = /<a[^>]+class="[^"]*result__a[^"]*"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>([\s\S]*?)(?=<a[^>]+class="[^"]*result__a|$)/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(html)) && out.length < limit) {
@@ -140,11 +165,39 @@ export async function webSearch(args: Record<string, unknown>, signal?: AbortSig
     const ud = /[?&]uddg=([^&]+)/.exec(href);
     if (ud) href = decodeURIComponent(ud[1]);
     if (href.startsWith('//')) href = `https:${href}`;
-    if (/duckduckgo\.com\/y\.js|\/\/duckduckgo\.com\/l\/\?.*ad_/.test(href)) continue; // quảng cáo
+    if (/duckduckgo\.com\/y\.js/.test(href)) continue; // quảng cáo
     const snip = /class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/(a|div|td)>/.exec(m[3]);
-    out.push(`[${out.length + 1}] ${decodeHtml(m[2])}\n    ${href}${snip ? `\n    ${decodeHtml(snip[1]).slice(0, 300)}` : ''}`);
+    out.push({ title: decodeHtml(m[2]), url: href, snippet: snip ? decodeHtml(snip[1]) : undefined });
   }
-  return out.length ? `Kết quả tìm kiếm "${query}":\n\n${out.join('\n')}` : `Không có kết quả (hoặc máy tìm kiếm chặn truy vấn tự động) cho "${query}". Thử search_papers hoặc fetch_url trực tiếp.`;
+  return out.length ? out : undefined;
+}
+
+/** Wikipedia (API chính thức) — dự phòng khi không có máy tìm kiếm web. */
+async function wikipedia(query: string, limit: number, signal?: AbortSignal): Promise<Hit[]> {
+  const out: Hit[] = [];
+  for (const lang of /[à-ỹđ]/i.test(query) ? ['vi', 'en'] : ['en']) {
+    const r = await fetch(`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&srlimit=${limit}`, { headers: { 'user-agent': UA }, signal: sig(signal) }).catch(() => undefined);
+    if (!r?.ok) continue;
+    const j = (await r.json()) as { query?: { search?: Array<{ title: string; snippet: string }> } };
+    for (const x of j.query?.search ?? []) out.push({ title: `${x.title} (Wikipedia ${lang})`, url: `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(x.title.replace(/ /g, '_'))}`, snippet: decodeHtml(x.snippet) });
+  }
+  return out.slice(0, limit);
+}
+
+export async function webSearch(args: Record<string, unknown>, signal?: AbortSignal): Promise<string> {
+  const query = String(args.query ?? '').trim();
+  if (!query) throw new WebError('Thiếu query');
+  const limit = Math.min(15, Math.max(1, Number(args.limit) || 8));
+  for (const [name, fn] of [['SearXNG', searxng], ['Brave', brave]] as const) {
+    const hits = await fn(query, limit, signal);
+    if (hits) return hits.length ? fmtHits(query, hits, name) : `Không có kết quả cho "${query}" (${name}).`;
+  }
+  const d = await ddg(query, limit, signal).catch(() => undefined);
+  if (d) return fmtHits(query, d, 'DuckDuckGo');
+  const w = await wikipedia(query, Math.min(limit, 5), signal);
+  const hint =
+    'Máy tìm kiếm web chặn truy vấn tự động (chưa cấu hình SearXNG/Brave). Với văn bản pháp luật/tiêu chuẩn: dùng fetch_url tới nguồn chính thức đã biết (vd. https://thuvienphapluat.vn, https://chinhphu.vn, https://vanban.chinhphu.vn, https://eur-lex.europa.eu, https://csrc.nist.gov, https://www.iso.org); với bài báo: dùng search_papers.';
+  return w.length ? `${fmtHits(query, w, 'Wikipedia — dự phòng')}\n\n${hint}` : `Không có kết quả cho "${query}". ${hint}`;
 }
 
 export async function fetchUrl(args: Record<string, unknown>, maxChars: number, signal?: AbortSignal): Promise<string> {

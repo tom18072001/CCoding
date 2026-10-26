@@ -11,7 +11,7 @@ Với runtime API có tool calling (Bifrost, 9router, OpenAI-compatible), CCodin
 | `edit_file` | Edit / MultiEdit | Thay một đoạn chính xác (chịu được CRLF) |
 | `run_command` | Bash | Chạy lệnh (PowerShell trên Windows, bash trên Linux) trong gốc workspace: cài dependency, typecheck, test, migration DB dev… |
 | `search_papers` | WebSearch | Tìm bài báo trên **OpenAlex** (chỉ mục học thuật mở, không cần khóa): tiêu đề, năm, venue, số trích dẫn, tác giả, DOI, tóm tắt; lọc `year_from/year_to/venue`, sắp theo trích dẫn |
-| `web_search` | WebSearch | Tìm kiếm web chung (DuckDuckGo HTML): văn bản pháp luật, tiêu chuẩn, tài liệu kỹ thuật |
+| `web_search` | WebSearch | Tìm kiếm web chung qua **SearXNG tự dựng** (`CCODING_SEARXNG_URL`) hoặc **Brave Search API** (`BRAVE_API_KEY`, có gói miễn phí); không cấu hình thì thử DuckDuckGo (thường chặn truy vấn tự động) rồi dự phòng Wikipedia + gợi ý nguồn chính thức để `fetch_url` |
 | `fetch_url` | WebFetch | Đọc trang web/PDF công khai thành chữ (đọc tiếp bằng `offset`); **chặn localhost/LAN/link-local**, tối đa 5 lần chuyển hướng |
 
 ## Ai được dùng gì
