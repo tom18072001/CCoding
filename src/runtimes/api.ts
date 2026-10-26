@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { estimateTokens } from '../util/tokens.js';
-import { sseData, withTimeout } from './common.js';
+import { combinedPrompt, sseData, withTimeout } from './common.js';
 import type { RuntimeConfig } from '../config.js';
 import type { RunHooks, RunRequest, RunResult, Runtime, RuntimeAvailability } from '../types.js';
 
@@ -214,10 +214,13 @@ export class OpenAiApiRuntime implements Runtime {
         max_tokens: this.cfg.maxTokens ?? 8000,
         stream: true,
         stream_options: { include_usage: true },
-        messages: [
-          { role: 'system', content: req.system },
-          { role: 'user', content: req.prompt },
-        ],
+        messages:
+          this.cfg.promptStyle === 'combined'
+            ? [{ role: 'user', content: combinedPrompt(req) }]
+            : [
+                { role: 'system', content: req.system },
+                { role: 'user', content: req.prompt },
+              ],
       }),
       signal: withTimeout(hooks.signal, req.timeoutMs),
     });

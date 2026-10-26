@@ -57,6 +57,8 @@ Runtime được chỉ định nhưng **chưa sẵn sàng** hoặc **bị chặn
 3. `scripts\bifrost.ps1` (hoặc để `herdr up` chạy trong tab **Dịch vụ**) — lần đầu tạo `data\bifrost\config.json` từ [`docs/bifrost.config.example.json`](bifrost.config.example.json): provider tùy biến `ninerouter` (OpenAI-compatible → `http://127.0.0.1:20128`), 3 key ảo theo phòng, **không lưu nội dung prompt** (`disable_content_logging`), bắt buộc key khi suy luận (`enforce_auth_on_inference`).
 4. Bảng điều khiển Bifrost (http://127.0.0.1:8080) bị khóa cho tới khi tạo tài khoản quản trị: `setx BIFROST_SETUP_TOKEN "<chuỗi bí mật tự đặt>"`, khởi động lại Bifrost, mở trang và nhập token để tạo admin. Việc định tuyến/tag vẫn chạy bình thường khi chưa mở bảng điều khiển.
 
+`promptStyle: "combined"`: gửi hồ sơ vị trí và công việc trong một tin nhắn — cần khi upstream tự chèn system prompt (9router với model `cc/…` của gói Claude Code), nếu không agent có thể tự nhận là "Claude Code" thay vì vai trò trong agent.md.
+
 `requireEnv` trong cấu hình runtime: runtime chỉ được coi là sẵn sàng khi các biến đó đã đặt (trên Windows CCoding đọc cả biến vừa `setx` mà không cần mở lại terminal).
 
 ### `ollama` — mô hình cục bộ

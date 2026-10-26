@@ -20,7 +20,8 @@
         "dev": "env:BIFROST_VK_DEV",
         "research": "env:BIFROST_VK_RESEARCH",
         "office": "env:BIFROST_VK_OFFICE"
-      }
+      },
+      "promptStyle": "combined"
     },
     "openai-api": {
       "label": "9router (trực tiếp)",
@@ -28,7 +29,8 @@
       "apiKeyEnv": "NINEROUTER_API_KEY",
       "requireEnv": [
         "NINEROUTER_API_KEY"
-      ]
+      ],
+      "promptStyle": "combined"
     },
     "ollama": {
       "baseUrl": "http://127.0.0.1:11434/v1",

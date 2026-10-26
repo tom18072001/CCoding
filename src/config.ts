@@ -19,6 +19,11 @@ export interface RuntimeConfig {
   headers?: Record<string, string>;
   /** Runtime chỉ "sẵn sàng" khi các biến môi trường này đã được đặt. */
   requireEnv?: string[];
+  /**
+   * "combined": gửi hồ sơ vị trí + công việc trong MỘT tin nhắn user — dùng khi upstream tự chèn
+   * system prompt riêng (ví dụ 9router với model cc/… của gói Claude Code) làm agent "quên" vai trò.
+   */
+  promptStyle?: 'split' | 'combined';
   /** Thời gian chờ khi kiểm tra runtime sẵn sàng (ms). */
   probeTimeoutMs?: number;
   command?: string;
