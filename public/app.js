@@ -544,7 +544,7 @@
     ul.innerHTML = S.projects
       .map(
         (p) => `<li><span class="dot" style="background:${deptColor(p.department === 'auto' || p.department === 'joint' ? 'office' : p.department)}"></span>
-        <div class="grow"><b>${esc(p.name)}</b> <small>${esc(p.id)} · ${esc(p.department === 'auto' ? 'tự động' : p.department === 'joint' ? 'liên phòng' : deptShort(p.department))}${p.runtime ? ' · ' + esc(p.runtime) : ''} · ${esc(p.workspace || 'workspaces/' + p.id)} · 🛠 ${esc(ACCESS_VI[p.toolAccess || S.toolsDefault || 'exec'])}${p.workspace && (p.isolation || 'worktree') === 'worktree' ? ' · 🌿 worktree' + (p.baseRef ? ' từ ' + esc(p.baseRef) : '') : ''}</small></div>
+        <div class="grow"><b>${esc(p.name)}</b> <small>${esc(p.id)} · ${esc(p.department === 'auto' ? 'tự động' : p.department === 'joint' ? 'liên phòng' : deptShort(p.department))}${p.runtime ? ' · ' + esc(p.runtime) : ''} · ${esc(p.workspace || 'workspaces/' + p.id)} · 🛠 ${esc(ACCESS_VI[p.toolAccess || S.toolsDefault || 'exec'])}${p.workspace && (p.isolation || 'worktree') === 'worktree' ? ' · 🌿 worktree' + (p.baseRef ? ' từ ' + esc(p.baseRef) : '') + (p.worktreeCopy && !p.worktreeCopy.length ? ' · không chép .env' : '') : ''}${(p.denyCommands || []).length ? ` · ⛔ ${p.denyCommands.length} lệnh cấm` : ''}</small></div>
         <span class="cls ${esc(p.classification)}">${esc(CLS_VI[p.classification] || p.classification)}</span>
         <button class="btn ghost sm" data-del="${esc(p.id)}" title="Xóa dự án">×</button></li>`,
       )
@@ -565,6 +565,12 @@
     const f = e.target;
     const body = Object.fromEntries(new FormData(f).entries());
     if (!body.budgetTokens) delete body.budgetTokens;
+    const wc = String(body.worktreeCopy || '').trim();
+    if (!wc) delete body.worktreeCopy;
+    else body.worktreeCopy = /^(không|khong|none|-)$/i.test(wc) ? [] : wc.split(/[\s,;]+/).filter(Boolean);
+    const dc = String(body.denyCommands || '').split('\n').map((x) => x.trim()).filter(Boolean);
+    if (dc.length) body.denyCommands = dc;
+    else delete body.denyCommands;
     try {
       const p = await api('/api/projects', { method: 'POST', body: JSON.stringify(body) });
       S.projects = S.projects.filter((x) => x.id !== p.id).concat(p);

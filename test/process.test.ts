@@ -340,3 +340,32 @@ test('worktree tách từ nhánh xuất phát (baseRef) thay vì HEAD; ref khôn
   for (const bad of ['-x', '--upload-pack=x', 'a..b', 'a b', '', 'x/', 'a;rm']) assert.ok(!isSafeRef(bad), bad);
   assert.equal(addWorktree(repo, path.join(repo + '-wt', 'z'), 'ccoding/t-3', '--orphan').ok, false);
 });
+
+test('API dự án: lưu baseRef, worktreeCopy rỗng, lệnh cấm; từ chối ref/regex không hợp lệ', async () => {
+  const { createServer } = await import('../src/server.js');
+  const app = testApp();
+  const probe = createServer(app);
+  await new Promise<void>((r) => probe.listen(0, '127.0.0.1', r));
+  const port = (probe.address() as AddressInfo).port;
+  probe.close();
+  app.config.server.port = port;
+  const srv = createServer(app);
+  await new Promise<void>((r) => srv.listen(port, '127.0.0.1', r));
+  const post = (body: object) => fetch(`http://127.0.0.1:${port}/api/projects`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  try {
+    const ok = await post({ id: 'nd-test', name: 'Thử', baseRef: 'origin/main', worktreeCopy: [], denyCommands: ['\\bdocker\\b', ':5434\\b'] });
+    assert.equal(ok.status, 201);
+    const p = await ok.json();
+    assert.equal(p.baseRef, 'origin/main');
+    assert.deepEqual(p.worktreeCopy, []);
+    assert.equal(p.denyCommands.length, 2);
+    // sửa dự án mà không gửi các trường này → giữ nguyên
+    const again = await (await post({ id: 'nd-test', name: 'Thử 2' })).json();
+    assert.equal(again.baseRef, 'origin/main');
+    assert.deepEqual(again.worktreeCopy, []);
+    assert.equal((await post({ id: 'nd-bad', name: 'x', baseRef: '--upload-pack=x' })).status, 400);
+    assert.equal((await post({ id: 'nd-bad', name: 'x', denyCommands: ['(unclosed'] })).status, 400);
+  } finally {
+    srv.close();
+  }
+});

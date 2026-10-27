@@ -139,6 +139,8 @@
             </div>
             <label>Thư mục làm việc <small>(để trống: workspaces/&lt;mã&gt;)</small><input name="workspace" placeholder="C:\Users\...\du-an hoặc đường dẫn tương đối" /></label>
             <label>Nhánh xuất phát <small>(worktree tách từ đây; để trống: HEAD hiện tại)</small><input name="baseRef" pattern="[\w][\w./-]{0,119}" placeholder="vd: origin/main" /></label>
+            <label>Tệp chưa track chép sang worktree <small>(để trống: mặc định .env, .env.local…; ghi «không» nếu thư mục chứa .env của môi trường thật)</small><input name="worktreeCopy" placeholder=".env.test, .env.local — hoặc: không" /></label>
+            <label>Lệnh cấm thêm cho dự án <small>(regex, mỗi dòng một mẫu — vd. container/cổng DB đang chạy)</small><textarea name="denyCommands" rows="2" placeholder="\bdocker\b&#10;:5434\b"></textarea></label>
             <label>Mô tả<textarea name="description" rows="2"></textarea></label>
             <div class="actions"><button class="btn primary sm" type="submit">Lưu dự án</button><button class="btn ghost sm" type="button" id="btn-cancel-project">Hủy</button></div>
           </form>

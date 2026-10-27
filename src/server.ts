@@ -335,6 +335,14 @@ export function createServer(app: App): http.Server {
       if (b.toolAccess && !ACCESS.includes(b.toolAccess)) throw new HttpError(400, 'Quyền công cụ không hợp lệ');
       if (b.budgetMode && !BUDGET_MODES.includes(b.budgetMode)) throw new HttpError(400, 'Chế độ ngân sách không hợp lệ');
       if (b.baseRef && !isSafeRef(String(b.baseRef))) throw new HttpError(400, 'Nhánh xuất phát không hợp lệ');
+      if (Array.isArray(b.denyCommands))
+        for (const re of b.denyCommands) {
+          try {
+            new RegExp(String(re), 'i');
+          } catch {
+            throw new HttpError(400, `Mẫu lệnh cấm không hợp lệ: ${String(re).slice(0, 80)}`);
+          }
+        }
       if (b.workspace && path.isAbsolute(String(b.workspace)) && !fs.existsSync(String(b.workspace))) throw new HttpError(400, `Thư mục không tồn tại: ${b.workspace}`);
       const existing = store.project(id);
       const proj: ProjectDef = {
