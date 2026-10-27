@@ -126,3 +126,7 @@ Một số agent chạy runtime khác: thêm `runtime: kimi-cli` vào frontmatte
 ## Bảng giá (tùy chọn)
 
 Runtime không báo chi phí ⇒ có thể khai báo `pricing` (USD / 1 triệu token) theo id model để UI tính chi phí. Hãy điền theo bảng giá hiện hành của nhà cung cấp — CCoding không tự đoán giá.
+
+### Chuyển runtime giữa chừng khi đã sửa workspace
+
+Lượt gọi có công cụ bị lỗi ở giữa vòng lặp (vd. Claude Max trả 429 ở lượt cuối) sau khi đã ghi tệp/chạy lệnh/commit: lần thử trên runtime kế tiếp nhận thêm mục **"Lần thử trước bị ngắt giữa chừng"** liệt kê các thao tác đã làm (tối đa 40) và yêu cầu kiểm `git status/log/diff` rồi làm tiếp — không làm lại từ đầu (ND57 27/10: S2 đã sửa + commit trên Sonnet, 429 ở lượt cuối, Codex làm lại ~10 phút).

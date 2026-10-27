@@ -601,3 +601,69 @@ test('vòng công cụ: đọc trùng không gửi lại nội dung; chưa ghi t
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('lỗi giữa vòng công cụ sau khi đã ghi workspace (vd. 429) → lần thử trên runtime khác nhận danh sách thao tác đã làm để làm tiếp', async () => {
+  const prompts: string[] = [];
+  const mk = (name: 'a' | 'b') =>
+    http.createServer(async (req, res) => {
+      if (req.url === '/v1/models') {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        return res.end(JSON.stringify({ data: [{ id: `m-${name}` }] }));
+      }
+      let raw = '';
+      for await (const c of req) raw += c;
+      const body = JSON.parse(raw);
+      const text = (m: { content: unknown }) => (typeof m.content === 'string' ? m.content : '');
+      const user = body.messages.filter((m: { role: string }) => m.role === 'user').map(text).join('\n');
+      const toolMsgs = body.messages.filter((m: { role: string }) => m.role === 'tool').length;
+      const executing = user.includes('## Hạng mục của bạn');
+      if (name === 'a' && executing && toolMsgs >= 1) {
+        res.writeHead(429, { 'content-type': 'application/json' });
+        return res.end(JSON.stringify({ error: { type: 'rate_limit_error', message: 'rate limited' } }));
+      }
+      res.writeHead(200, { 'content-type': 'text/event-stream' });
+      const send = (o: unknown) => res.write(`data: ${JSON.stringify(o)}\n\n`);
+      const say = (s: string) => send({ model: `m-${name}`, choices: [{ delta: { content: s }, finish_reason: 'stop' }] });
+      if (user.includes('LẬP KẾ HOẠCH')) say(`\`\`\`json\n${JSON.stringify({ summary: 'Một việc', subtasks: [{ id: 'S1', title: 'API', assignee: 'backend-dev', description: 'Viết API', dependsOn: [] }] })}\n\`\`\``);
+      else if (user.includes('REVIEW CHẤT LƯỢNG')) say('```json\n{"approved": true, "summary": "Ổn", "issues": []}\n```');
+      else if (executing && name === 'a') send({ model: 'm-a', choices: [{ delta: { tool_calls: [{ index: 0, id: 'w1', type: 'function', function: { name: 'write_file', arguments: JSON.stringify({ path: 'api.js', content: 'module.exports = 1;' }) } }] }, finish_reason: 'tool_calls' }] });
+      else {
+        if (executing) prompts.push(user);
+        say('## Tóm tắt\nXong.');
+      }
+      send({ choices: [], usage: { prompt_tokens: 300, completion_tokens: 20 } });
+      res.end('data: [DONE]\n\n');
+    });
+  const sa = mk('a');
+  const sb = mk('b');
+  await new Promise<void>((r) => sa.listen(0, '127.0.0.1', r));
+  await new Promise<void>((r) => sb.listen(0, '127.0.0.1', r));
+  const url = (s: http.Server) => `http://127.0.0.1:${(s.address() as AddressInfo).port}/v1`;
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-ho-'));
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-ho-ws-'));
+  const base = loadConfig();
+  const app = createApp({
+    dataDir,
+    workspacesDir: path.join(dataDir, 'workspaces'),
+    runner: 'process',
+    runtime: { ...base.runtime, default: 'auto', order: ['a', 'b'] },
+    runtimes: { a: { type: 'openai-api', baseUrl: url(sa), tags: 'none', local: false }, b: { type: 'openai-api', baseUrl: url(sb), tags: 'none', local: false } },
+    models: { a: { opus: ['m-a'], sonnet: ['m-a'], haiku: ['m-a'] }, b: { opus: ['m-b'], sonnet: ['m-b'], haiku: ['m-b'] } },
+    herdr: { ...base.herdr, notify: false, agentPanes: false },
+  });
+  try {
+    app.store.saveProject({ id: 'repo', name: 'Repo', department: 'dev', workspace: ws, classification: 'internal', toolAccess: 'write', createdAt: new Date().toISOString() });
+    const t = app.orchestrator.submit({ brief: 'API', projectId: 'repo', options: { discussionRounds: 0, maxRevisions: 0 } });
+    const done = await app.orchestrator.waitFor(t.id);
+    assert.equal(done.status, 'done', done.error);
+    assert.ok(fs.existsSync(path.join(ws, 'api.js')));
+    assert.equal(prompts.length, 1);
+    assert.match(prompts[0], /Lần thử trước bị ngắt giữa chừng/);
+    assert.match(prompts[0], /write_file .*api\.js/);
+  } finally {
+    sa.close();
+    sb.close();
+    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(ws, { recursive: true, force: true });
+  }
+});

@@ -1326,6 +1326,8 @@ export class Orchestrator {
     let result: RunResult | undefined;
     let req: RunRequest | undefined;
     let cand: Candidate | undefined;
+    /** Lần thử trước đã sửa workspace rồi mới lỗi (vd. 429 ở lượt cuối) → lần thử sau phải làm tiếp, không làm lại từ đầu. */
+    let handover = '';
     const attempts: Array<{ runtime: string; model: string; kind: ErrorKind; error: string; ms: number }> = [];
     let failedMs = 0;
     try {
@@ -1352,6 +1354,7 @@ export class Orchestrator {
         const web = config.tools.web !== false && (cls === 'public' || cls === 'internal');
         const allow = rt.supportsTools && rt.id !== 'mock' ? toolsFor(agent.tools, access, phase, web) : [];
         const built = build(allow);
+        if (handover && allow.length) built.prompt = `${built.prompt}\n\n${handover}`;
         const system = P.systemFor(agent, ctx.dept, cls, phase);
         const piiOut = cls === 'confidential' || cls === 'restricted';
         const outbound = (s: string) => (rt.local ? s : redact(s, { secrets: config.dataProtection.redactSecrets, pii: piiOut }));
@@ -1479,6 +1482,7 @@ export class Orchestrator {
             });
           // phần token đã tiêu trước khi lỗi vẫn ghi sổ (runtime thật), kèm các thao tác công cụ đã làm
           const pu = re.partial;
+          if (pu?.toolCalls?.some((tc) => tc.ok && ['write_file', 'edit_file', 'run_command'].includes(tc.name))) handover = P.handoverNote(cand.label, re.kind, pu.toolCalls);
           result = {
             text: '',
             usage: { input: pu?.input ?? 0, output: pu?.output ?? 0, cacheRead: pu?.cacheRead ?? 0, cacheWrite: 0, costUsd: 0 },

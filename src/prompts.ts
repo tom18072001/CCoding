@@ -1,5 +1,5 @@
 import { truncate } from './util/fsx.js';
-import type { AgentDef, ChatMessage, Classification, DepartmentDef, Phase, ProjectDef, Subtask, Task, ToolName } from './types.js';
+import type { AgentDef, ChatMessage, Classification, DepartmentDef, Phase, ProjectDef, Subtask, Task, ToolCallRecord, ToolName } from './types.js';
 
 /**
  * Prompt cho từng pha. Mỗi lượt gọi gồm 3 phần:
@@ -454,4 +454,12 @@ export function continuePrompt(original: string, partial: string): string {
 
 ## Việc của bạn
 Viết TIẾP ngay từ chỗ bị cắt ở trên — không lặp lại phần đã viết, không mở đầu lại, không thêm lời dẫn.`;
+}
+
+/** Ghi chú cho lần thử trên runtime khác khi lần trước đã thao tác workspace rồi mới lỗi (giới hạn tốc độ, mất kết nối…). */
+export function handoverNote(label: string, kind: string, calls: ToolCallRecord[]): string {
+  const lines = calls.slice(-40).map((tc) => `- ${tc.name} ${tc.args.replace(/\s+/g, ' ').slice(0, 160)} ${tc.ok ? '✓' : '✗'}`);
+  return `## ⚠️ Lần thử trước bị ngắt giữa chừng (${label}: ${kind})
+Lần thử trước đã thực hiện các thao tác dưới đây TRONG WORKSPACE trước khi lỗi — thay đổi (và commit, nếu có) vẫn còn. Kiểm tra \`git status\`/\`git log -3\`/\`git diff\` trước, rồi làm TIẾP phần còn thiếu và chạy kiểm chứng — KHÔNG làm lại, không sửa chồng.
+${lines.join('\n')}${calls.length > 40 ? `\n- … (${calls.length - 40} thao tác trước đó)` : ''}`;
 }
