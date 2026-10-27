@@ -56,18 +56,23 @@ export interface AgentKpi {
   role: string;
   tasks: number;
   calls: number;
+  /** Lượt gọi hỏng do chính agent/đầu ra (rỗng, quá ngữ cảnh, lỗi khác) — tính vào KPI. */
   failedCalls: number;
+  /** Lượt gọi hỏng do hạ tầng (hạn mức, giới hạn tốc độ, đăng nhập, mạng) — KHÔNG tính vào KPI của agent. */
+  infraFailedCalls: number;
   failovers: number;
   phases: Record<string, number>;
   subtasks: number;
   attemptsAvg: number;
   attemptsMax: number;
-  tokens: { input: number; cache: number; output: number; total: number; perSubtask: number };
+  /** perSubtask: token của các lượt gắn với hạng mục (thực thi/sửa) chia cho số hạng mục — không tính lượt review/họp/lập kế hoạch. */
+  tokens: { input: number; cache: number; output: number; total: number; subtaskWork: number; perSubtask: number };
   durationSec: number;
   outTokPerSec?: number;
   tools: { calls: number; failed: number; byName: Record<string, { n: number; failed: number }>; capHits: number; avgTurns: number; maxTurns: number };
   truncated: number;
-  quality: { reviewed: number; firstPassOk: number; blocker: number; major: number; minor: number; topIssues: string[] };
+  /** reviewed: hạng mục được review; firstPassOk: không bị blocker/major ở lần review đầu; finalClean: không còn blocker ở lần review cuối; blocker/major/minor: số lần bị nêu qua mọi vòng. */
+  quality: { reviewed: number; firstPassOk: number; finalClean: number; blocker: number; major: number; minor: number; topIssues: string[] };
   compliance: { outputs: number; templateCoverage?: number; missing: Array<{ heading: string; count: number }>; summaryOk: number };
   evidence: { execEligible: number; execWithCommands: number; doi: number; urls: number; unverified: number; webCalls: number };
   reviewer?: { reviews: number; issuesRaised: number; verified: number; checkable: number };
@@ -172,16 +177,17 @@ export function computeKpi(src: KpiSource): KpiReport {
           tasks: 0,
           calls: 0,
           failedCalls: 0,
+          infraFailedCalls: 0,
           failovers: 0,
           phases: {},
           subtasks: 0,
           attemptsAvg: 0,
           attemptsMax: 0,
-          tokens: { input: 0, cache: 0, output: 0, total: 0, perSubtask: 0 },
+          tokens: { input: 0, cache: 0, output: 0, total: 0, subtaskWork: 0, perSubtask: 0 },
           durationSec: 0,
           tools: { calls: 0, failed: 0, byName: {}, capHits: 0, avgTurns: 0, maxTurns: 0 },
           truncated: 0,
-          quality: { reviewed: 0, firstPassOk: 0, blocker: 0, major: 0, minor: 0, topIssues: [] },
+          quality: { reviewed: 0, firstPassOk: 0, finalClean: 0, blocker: 0, major: 0, minor: 0, topIssues: [] },
           compliance: { outputs: 0, missing: [], summaryOk: 0 },
           evidence: { execEligible: 0, execWithCommands: 0, doi: 0, urls: 0, unverified: 0, webCalls: 0 },
           scores: {},
@@ -217,11 +223,15 @@ export function computeKpi(src: KpiSource): KpiReport {
       k.calls++;
       k.phases[r.phase] = (k.phases[r.phase] ?? 0) + 1;
       const failed = !!r.error && !r.text;
-      if (failed) k.failedCalls++;
+      if (failed) {
+        if (isInfra(r)) k.infraFailedCalls++;
+        else k.failedCalls++;
+      }
       k.failovers += (r.attempts ?? []).length;
       k.tokens.input += r.input ?? 0;
       k.tokens.cache += r.cacheRead ?? 0;
       k.tokens.output += r.output ?? 0;
+      if (r.subtaskId && (r.phase === 'execute' || r.phase === 'revise')) k.tokens.subtaskWork += (r.input ?? 0) + (r.cacheRead ?? 0) + (r.output ?? 0);
       tokens += (r.input ?? 0) + (r.cacheRead ?? 0) + (r.output ?? 0) + (r.cacheWrite ?? 0);
       k.durationSec += (r.durationMs ?? 0) / 1000;
       if (r.truncated || (r.output && (r.output === 8000 || r.output === 64000) && !r.tools?.length && r.phase !== 'plan')) k.truncated++;
@@ -282,51 +292,39 @@ export function computeKpi(src: KpiSource): KpiReport {
         a.attempts.push(st.attempts);
       }
     }
-    // ── các vòng review (từ hội thoại) ──
-    const firstSeen = new Set<string>();
-    const reviewed = new Map<string, { first: boolean; bad: boolean }>();
+    // ── các vòng review (từ hội thoại): lần đầu = qua review lần đầu? lần cuối = còn blocker? ──
+    const reviews = new Map<string, Array<Array<{ sev: string; sid: string; comment: string }>>>();
     for (const m of transcript) {
       if (m.kind === 'plan' && /kế hoạch dự phòng/.test(m.text) && m.from) {
         const l = get(m.from, m.department);
         (l.k.lead ??= { plans: 0, planFallback: 0, syntheses: 0 }).planFallback++;
       }
       if (m.kind !== 'review' || /Không đọc được kết quả review|Không đọc được kết luận review/.test(m.text)) continue;
-      const first = !firstSeen.has(m.department);
-      firstSeen.add(m.department);
       const rv = get(m.from, m.department);
+      const issues: Array<{ sev: string; sid: string; comment: string }> = [];
       for (const line of m.text.split('\n')) {
         const im = ISSUE_RE.exec(line.trim());
         if (!im) continue;
         const [, sev, sid, comment] = im;
+        issues.push({ sev, sid, comment });
         if (rv.k.reviewer) rv.k.reviewer.issuesRaised++;
         const who = owner.get(`${m.department}:${sid}`);
-        if (!who) continue;
-        const a = get(who, m.department);
-        a.k.quality[sev as 'blocker' | 'major' | 'minor']++;
-        if (sev !== 'minor') a.issueTexts.push(`${sid}: ${comment.slice(0, 140)}`);
-        const key = `${task.id}:${m.department}:${sid}`;
-        if (first) {
-          const cur = reviewed.get(key) ?? { first: true, bad: false };
-          if (sev !== 'minor') cur.bad = true;
-          reviewed.set(key, cur);
-        }
+        if (who) get(who, m.department).k.quality[sev as 'blocker' | 'major' | 'minor']++;
       }
-      // hạng mục có trong lần review đầu mà không bị nêu lỗi nặng → qua lần đầu
-      if (first)
-        for (const run of task.runs.filter((r) => r.department === m.department))
-          for (const st of run.subtasks) {
-            const key = `${task.id}:${m.department}:${st.id}`;
-            if (!st.output && !st.attempts) continue;
-            if (!reviewed.has(key)) reviewed.set(key, { first: true, bad: false });
-          }
+      (reviews.get(m.department) ?? reviews.set(m.department, []).get(m.department)!).push(issues);
     }
-    for (const [key, v] of reviewed) {
-      const [, dept, sid] = key.split(':');
-      const who = owner.get(`${dept}:${sid}`);
-      if (!who) continue;
-      const a = get(who, dept);
-      a.k.quality.reviewed++;
-      if (!v.bad) a.k.quality.firstPassOk++;
+    for (const [dept, list] of reviews) {
+      const first = list[0];
+      const last = list[list.length - 1];
+      for (const run of task.runs.filter((r) => r.department === dept))
+        for (const st of run.subtasks) {
+          if (!st.output && !st.attempts) continue;
+          const a = get(st.assignee, dept);
+          a.k.quality.reviewed++;
+          if (!first.some((i) => i.sid === st.id && i.sev !== 'minor')) a.k.quality.firstPassOk++;
+          if (!last.some((i) => i.sid === st.id && i.sev === 'blocker')) a.k.quality.finalClean++;
+          for (const i of last) if (i.sid === st.id && i.sev !== 'minor') a.issueTexts.push(`${st.id} [${i.sev}]: ${i.comment.slice(0, 140)}`);
+        }
     }
   }
 
@@ -336,7 +334,7 @@ export function computeKpi(src: KpiSource): KpiReport {
     const k = a.k;
     k.tasks = a.taskIds.size;
     k.tokens.total = k.tokens.input + k.tokens.cache + k.tokens.output;
-    k.tokens.perSubtask = k.subtasks ? Math.round(k.tokens.total / k.subtasks) : 0;
+    k.tokens.perSubtask = k.subtasks ? Math.round(k.tokens.subtaskWork / k.subtasks) : 0;
     k.attemptsAvg = a.attempts.length ? Math.round((a.attempts.reduce((s, x) => s + x, 0) / a.attempts.length) * 10) / 10 : 0;
     k.attemptsMax = a.attempts.length ? Math.max(...a.attempts) : 0;
     k.tools.avgTurns = a.turns.length ? Math.round((a.turns.reduce((s, x) => s + x, 0) / a.turns.length) * 10) / 10 : 0;
@@ -354,7 +352,7 @@ export function computeKpi(src: KpiSource): KpiReport {
   for (const a of list) {
     const k = a.k;
     const s = k.scores;
-    if (k.quality.reviewed) s.quality = clamp((100 * k.quality.firstPassOk) / k.quality.reviewed - (15 * k.quality.blocker) / k.quality.reviewed);
+    if (k.quality.reviewed) s.quality = clamp((50 * k.quality.firstPassOk + 50 * k.quality.finalClean) / k.quality.reviewed);
     if (k.subtasks) {
       const med = medByDept.get(k.department) || k.tokens.perSubtask;
       const ratio = k.tokens.perSubtask ? med / k.tokens.perSubtask : 1;
@@ -405,7 +403,7 @@ export function computeKpi(src: KpiSource): KpiReport {
     agents: list.map((a) => a.k),
     departments,
     method:
-      'Chất lượng 40%: tỉ lệ hạng mục không bị blocker/major ở lần review đầu, trừ 15 điểm mỗi blocker/hạng mục · Hiệu quả 25%: token/hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng, thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số.',
+      'Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số.',
   };
 }
 
@@ -444,6 +442,12 @@ export function kpiReport(d: { store: Store; registry: Registry; config: Config 
 
 const pct = (a: number, b: number) => (b ? Math.round((100 * a) / b) : 0);
 
+/** Lỗi do hạ tầng (không phải do agent): hạn mức, giới hạn tốc độ, đăng nhập/khóa, mạng/proxy. */
+function isInfra(r: CallRow): boolean {
+  if (r.errorKind && ['quota', 'rate', 'auth', 'transient', 'timeout'].includes(r.errorKind)) return true;
+  return /No model configured|log ?in|sign in|unauthori|api key|rate.?limit|429|quota|usage limit|connection|upstream|ECONN|socket|fetch failed|50[234]|timed? ?out|TimeoutError/i.test(r.error ?? '');
+}
+
 /** "Việc cần sửa" sinh tự động theo ngưỡng — gợi ý hướng sửa agent.md / cách giao việc. */
 function findings(k: AgentKpi, med: number): string[] {
   const f: string[] = [];
@@ -461,9 +465,10 @@ function findings(k: AgentKpi, med: number): string[] {
     f.push(`Có quyền chạy lệnh nhưng ít kiểm chứng (${k.evidence.execWithCommands}/${k.evidence.execEligible} lượt thực thi có chạy lệnh) — Definition of Done phải bắt buộc lệnh + exit code thật.`);
   if (k.department === 'research' && k.compliance.outputs >= 1 && k.evidence.webCalls === 0 && k.evidence.doi + k.evidence.urls === 0 && k.role !== 'lead')
     f.push('Không có nguồn kiểm chứng được (DOI/URL) và không dùng công cụ tra cứu.');
-  if (k.quality.reviewed >= 2 && k.quality.firstPassOk / k.quality.reviewed < 0.5)
-    f.push(`Ít hạng mục qua review lần đầu (${k.quality.firstPassOk}/${k.quality.reviewed}; ${k.quality.blocker} blocker, ${k.quality.major} major). Lỗi tiêu biểu: ${k.quality.topIssues.slice(0, 2).join(' | ')}`);
-  if (k.failedCalls >= 2) f.push(`${k.failedCalls}/${k.calls} lượt gọi hỏng hẳn — kiểm tra runtime/model gán cho agent.`);
+  if (k.quality.reviewed >= 1 && (k.quality.firstPassOk / k.quality.reviewed < 0.5 || k.quality.finalClean < k.quality.reviewed))
+    f.push(`Qua review lần đầu ${k.quality.firstPassOk}/${k.quality.reviewed} hạng mục, còn blocker ở review cuối ${k.quality.reviewed - k.quality.finalClean}/${k.quality.reviewed} (bị nêu qua các vòng: ${k.quality.blocker} blocker, ${k.quality.major} major). Lỗi ở review cuối: ${k.quality.topIssues.slice(0, 2).join(' | ') || '—'}`);
+  if (k.failedCalls >= 2) f.push(`${k.failedCalls}/${k.calls} lượt gọi hỏng do đầu ra (rỗng/quá ngữ cảnh/lỗi khác) — kiểm tra model gán cho agent và độ dài prompt.`);
+  if (k.infraFailedCalls) f.push(`(Hạ tầng, không tính điểm) ${k.infraFailedCalls} lượt hỏng do hạn mức/đăng nhập/mạng.`);
   if (k.truncated) f.push(`${k.truncated} lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp.`);
   if (med && k.subtasks && k.tokens.perSubtask > 2 * med) f.push(`Tốn token gấp ${Math.round((k.tokens.perSubtask / med) * 10) / 10} lần trung vị phòng cho mỗi hạng mục (${Math.round(k.tokens.perSubtask / 1000)}k so với ${Math.round(med / 1000)}k).`);
   if (k.reviewer && k.reviewer.reviews && k.reviewer.checkable && k.reviewer.verified < k.reviewer.checkable)
