@@ -7,6 +7,7 @@ import { nowIso } from './util/ids.js';
 import { readJsonl } from './util/fsx.js';
 import { MAX_UPLOAD_BYTES } from './uploads.js';
 import { kpiReport } from './kpi.js';
+import { isSafeRef } from './git.js';
 import type { BudgetMode, Classification, ProjectDef, TaskMode, ToolAccess } from './types.js';
 import type { UsageDim } from './usage.js';
 
@@ -333,6 +334,7 @@ export function createServer(app: App): http.Server {
       if (b.runtime && !runtimes.get(String(b.runtime))) throw new HttpError(400, 'Runtime không tồn tại');
       if (b.toolAccess && !ACCESS.includes(b.toolAccess)) throw new HttpError(400, 'Quyền công cụ không hợp lệ');
       if (b.budgetMode && !BUDGET_MODES.includes(b.budgetMode)) throw new HttpError(400, 'Chế độ ngân sách không hợp lệ');
+      if (b.baseRef && !isSafeRef(String(b.baseRef))) throw new HttpError(400, 'Nhánh xuất phát không hợp lệ');
       if (b.workspace && path.isAbsolute(String(b.workspace)) && !fs.existsSync(String(b.workspace))) throw new HttpError(400, `Thư mục không tồn tại: ${b.workspace}`);
       const existing = store.project(id);
       const proj: ProjectDef = {
@@ -348,6 +350,7 @@ export function createServer(app: App): http.Server {
         budgetMode: b.budgetMode || undefined,
         toolAccess: b.toolAccess || undefined,
         isolation: b.isolation === 'none' || b.isolation === 'worktree' ? b.isolation : undefined,
+        baseRef: b.baseRef !== undefined ? String(b.baseRef).trim() || undefined : existing?.baseRef,
         worktreeCopy: Array.isArray(b.worktreeCopy) ? b.worktreeCopy.map(String).filter((x: string) => /^[\w.-]+$/.test(x)) : existing?.worktreeCopy,
         denyCommands: Array.isArray(b.denyCommands) ? b.denyCommands.map(String).slice(0, 50) : existing?.denyCommands,
         createdAt: existing?.createdAt ?? nowIso(),

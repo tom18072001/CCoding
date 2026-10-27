@@ -138,6 +138,7 @@
               </select></label>
             </div>
             <label>Thư mục làm việc <small>(để trống: workspaces/&lt;mã&gt;)</small><input name="workspace" placeholder="C:\Users\...\du-an hoặc đường dẫn tương đối" /></label>
+            <label>Nhánh xuất phát <small>(worktree tách từ đây; để trống: HEAD hiện tại)</small><input name="baseRef" pattern="[\w][\w./-]{0,119}" placeholder="vd: origin/main" /></label>
             <label>Mô tả<textarea name="description" rows="2"></textarea></label>
             <div class="actions"><button class="btn primary sm" type="submit">Lưu dự án</button><button class="btn ghost sm" type="button" id="btn-cancel-project">Hủy</button></div>
           </form>

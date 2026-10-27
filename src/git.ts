@@ -30,11 +30,26 @@ export function currentBranch(dir: string): string | undefined {
   return r.ok ? r.out.trim() : undefined;
 }
 
-/** Tạo worktree mới trên nhánh riêng từ HEAD hiện tại (hoặc gắn lại nhánh đã có). */
-export function addWorktree(repo: string, wtPath: string, branch: string): GitResult {
+/** Tên ref an toàn để dùng làm điểm xuất phát (không bắt đầu bằng '-', không có '..'). */
+export function isSafeRef(ref: string): boolean {
+  return /^[\w][\w./-]{0,119}$/.test(ref) && !ref.includes('..') && !ref.endsWith('.lock') && !ref.endsWith('/');
+}
+
+/**
+ * Tạo worktree mới trên nhánh riêng từ `startPoint` (mặc định HEAD hiện tại) hoặc gắn lại nhánh đã có.
+ * startPoint dạng remote/nhánh (vd. origin/main) được fetch trước — lỗi mạng thì dùng bản đã có.
+ */
+export function addWorktree(repo: string, wtPath: string, branch: string, startPoint = 'HEAD'): GitResult {
   fs.mkdirSync(path.dirname(wtPath), { recursive: true });
   const exists = git(repo, ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`], 15_000).ok;
-  return exists ? git(repo, ['worktree', 'add', wtPath, branch]) : git(repo, ['worktree', 'add', '-b', branch, wtPath, 'HEAD']);
+  if (exists) return git(repo, ['worktree', 'add', wtPath, branch]);
+  if (!isSafeRef(startPoint)) return { ok: false, out: `Điểm xuất phát không hợp lệ: ${startPoint}` };
+  const slash = startPoint.indexOf('/');
+  if (startPoint !== 'HEAD' && slash > 0) {
+    const remote = startPoint.slice(0, slash);
+    if (git(repo, ['remote', 'get-url', remote], 15_000).ok) git(repo, ['fetch', '--quiet', remote, startPoint.slice(slash + 1)], 120_000);
+  }
+  return git(repo, ['worktree', 'add', '--no-track', '-b', branch, wtPath, startPoint]);
 }
 
 /** File chưa track (vd. .env) chép từ repo gốc sang worktree để chạy test/migration — không bao giờ đọc nội dung. */

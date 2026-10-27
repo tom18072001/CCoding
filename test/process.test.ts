@@ -311,3 +311,32 @@ test('bằng chứng kiểm chứng: lệnh test/typecheck khác lệnh khảo s
   assert.ok(!isNoMatch({ name: 'run_command', args: "rg -n 'foo' src/{a,b}", ok: false, error: 'exit code: 2 rg: …' }));
   assert.ok(!isNoMatch({ name: 'run_command', args: 'npm test', ok: false, error: 'exit code: 1' }));
 });
+
+test('worktree tách từ nhánh xuất phát (baseRef) thay vì HEAD; ref không an toàn bị từ chối', async () => {
+  const { addWorktree, git, isSafeRef } = await import('../src/git.js');
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-base-'));
+  const run = (...a: string[]) => assert.ok(git(repo, a).ok, a.join(' '));
+  run('init', '-q', '-b', 'main');
+  run('config', 'user.email', 't@example.invalid');
+  run('config', 'user.name', 't');
+  fs.writeFileSync(path.join(repo, 'a.txt'), 'main');
+  run('add', '.');
+  run('commit', '-qm', 'main');
+  run('checkout', '-qb', 'feature');
+  fs.writeFileSync(path.join(repo, 'b.txt'), 'feature');
+  run('add', '.');
+  run('commit', '-qm', 'feature');
+  // repo đang đứng ở nhánh feature; worktree phải tách từ main
+  const wt = path.join(repo + '-wt', 'x');
+  const r = addWorktree(repo, wt, 'ccoding/t-1', 'main');
+  assert.ok(r.ok, r.out);
+  assert.ok(fs.existsSync(path.join(wt, 'a.txt')));
+  assert.ok(!fs.existsSync(path.join(wt, 'b.txt')), 'không được mang commit của nhánh đang đứng');
+  // mặc định vẫn là HEAD
+  const wt2 = path.join(repo + '-wt', 'y');
+  assert.ok(addWorktree(repo, wt2, 'ccoding/t-2').ok);
+  assert.ok(fs.existsSync(path.join(wt2, 'b.txt')));
+  for (const ok of ['origin/main', 'main', 'release/1.2', 'HEAD']) assert.ok(isSafeRef(ok), ok);
+  for (const bad of ['-x', '--upload-pack=x', 'a..b', 'a b', '', 'x/', 'a;rm']) assert.ok(!isSafeRef(bad), bad);
+  assert.equal(addWorktree(repo, path.join(repo + '-wt', 'z'), 'ccoding/t-3', '--orphan').ok, false);
+});

@@ -1225,14 +1225,14 @@ export class Orchestrator {
       if (project?.workspace && (project.isolation ?? 'worktree') === 'worktree' && isGitRepo(base)) {
         const wt = path.join(config.workspacesDir, safeName(project.id), `wt-${safeName(task.id)}`);
         const branch = `ccoding/${task.id.toLowerCase()}`;
-        const r = addWorktree(base, wt, branch);
+        const r = addWorktree(base, wt, branch, project.baseRef || 'HEAD');
         if (r.ok) {
           const copied = copyUntracked(base, wt, project.worktreeCopy ?? config.tools.worktreeCopy);
           task.workspace = wt;
           task.branch = branch;
           task.baseRef = headCommit(wt);
-          logs.write({ level: 'info', kind: 'workspace.worktree', msg: `Worktree ${wt} (nhánh ${branch})${copied.length ? ` · chép ${copied.join(', ')}` : ''}`, taskId: task.id, projectId: project.id });
-          this.message(task, 'office', 'system', 'system', `🌿 Làm việc trên git worktree riêng \`${wt}\` (nhánh \`${branch}\`) — nhánh chính của repo không bị đụng tới.`);
+          logs.write({ level: 'info', kind: 'workspace.worktree', msg: `Worktree ${wt} (nhánh ${branch} từ ${project.baseRef || 'HEAD'})${copied.length ? ` · chép ${copied.join(', ')}` : ''}`, taskId: task.id, projectId: project.id });
+          this.message(task, 'office', 'system', 'system', `🌿 Làm việc trên git worktree riêng \`${wt}\` (nhánh \`${branch}\`${project.baseRef ? ` tách từ \`${project.baseRef}\`` : ''}) — nhánh chính của repo không bị đụng tới.`);
         } else {
           logs.write({ level: 'warn', kind: 'workspace.worktree', msg: `Không tạo được worktree: ${r.out.slice(0, 300)} — làm trực tiếp trong ${base}`, taskId: task.id, projectId: project.id });
           this.alert({ level: 'warn', kind: 'workspace', title: 'Không tạo được git worktree', msg: `${r.out.slice(0, 200)} — agent làm trực tiếp trong ${base} (không commit)`, taskId: task.id });

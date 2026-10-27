@@ -67,6 +67,8 @@ export interface ProjectDef {
   toolAccess?: ToolAccess;
   /** "worktree": nếu workspace là repo git, mỗi nhiệm vụ làm trên git worktree + nhánh ccoding/<task> riêng. */
   isolation?: 'none' | 'worktree';
+  /** Điểm xuất phát của nhánh worktree (vd. origin/main); mặc định HEAD hiện tại của repo. */
+  baseRef?: string;
   /** File chưa track (vd. .env) cần chép vào worktree để chạy test/migration ([] = không chép gì). */
   worktreeCopy?: string[];
   /** Mẫu regex lệnh bị cấm riêng cho dự án (vd. container/cổng DB của môi trường đang chạy). */
