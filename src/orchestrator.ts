@@ -1256,6 +1256,7 @@ export class Orchestrator {
   /** Chuẩn bị thư mục làm việc: worktree git riêng (nếu dự án là repo) + .ccoding/<task>/inputs cho agent đọc. */
   private prepareWorkspace(task: Task, project?: ProjectDef): void {
     const { config, logs } = this.d;
+    ensurePackageBoundary(config.workspacesDir);
     if (!task.workspace || !fs.existsSync(task.workspace)) {
       const base = this.workspaceFor(task, project);
       task.workspace = base;
@@ -1858,3 +1859,15 @@ export function ensureDataDirs(dataDir: string): void {
 }
 
 export type { Attachment };
+
+/**
+ * CCoding là gói ESM (`"type": "module"`). Node quyết định CJS/ESM của tệp .js theo package.json GẦN NHẤT đi ngược lên thư mục cha,
+ * nên repo/worktree đặt dưới `workspaces/` mà có thư mục không có package.json riêng (vd. `app/web/*.js` dạng UMD) sẽ bị nạp thành ESM
+ * và mất `module.exports` — test của dự án đỏ dù trên máy dự án vẫn xanh. Đặt một package.json trung tính làm ranh giới.
+ */
+export function ensurePackageBoundary(dir: string): void {
+  const f = path.join(dir, 'package.json');
+  if (fs.existsSync(f)) return;
+  ensureDir(dir);
+  fs.writeFileSync(f, `${JSON.stringify({ private: true, description: 'Ranh giới package của CCoding: dự án trong workspaces/ không kế thừa "type": "module" của CCoding' }, null, 2)}\n`);
+}

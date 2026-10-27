@@ -469,6 +469,9 @@ test('hạng mục chạm trần công cụ khi chưa xong → chạy tiếp v�
     assert.equal(s1.status, 'done');
     assert.equal(s1.continuations, 1);
     assert.ok(fs.existsSync(path.join(ws, 'api.txt')), 'lần chạy tiếp ghi được tệp');
+    // ranh giới package: dự án trong workspaces/ không kế thừa "type": "module" của CCoding
+    const boundary = JSON.parse(fs.readFileSync(path.join(dataDir, 'workspaces', 'package.json'), 'utf8'));
+    assert.equal(boundary.type, undefined);
     assert.deepEqual(seen.filter((x, i) => x !== seen[i - 1]), ['S1', 'S1-cont', 'frontend-dev'], 'S2 chỉ chạy sau khi S1 xong thật (mỗi phần tử: các lượt của một lần gọi)');
     assert.ok(app.logs.query({ task: t.id, limit: 2000 }).some((e) => e.kind === 'subtask.continue'));
   } finally {

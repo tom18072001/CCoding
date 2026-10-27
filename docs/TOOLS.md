@@ -45,6 +45,8 @@ Chạm một trong hai ⇒ model được yêu cầu viết báo cáo cuối nga
 
 ## Cách ly bằng git worktree
 
+> **Ranh giới package:** CCoding là gói ESM (`"type": "module"`). Worktree/thư mục làm việc nằm dưới `workspaces/` nên CCoding tự đặt `workspaces/package.json` trung tính — nếu không, thư mục nào của dự án không có package.json riêng (vd. `app/web/*.js` dạng UMD của ND57) bị Node nạp thành ESM, mất `module.exports`, và test của dự án đỏ dù trên máy dự án vẫn xanh (lỗi "baseline đỏ" giả ở lượt chạy ND57 27/10).
+
 Dự án có `workspace` là repo git và `isolation: "worktree"` (mặc định): mỗi nhiệm vụ có worktree riêng `workspaces/<dự án>/wt-<task>` trên nhánh `ccoding/<task>` tạo từ HEAD hiện tại — hoặc từ `baseRef` của dự án (vd. `"baseRef": "origin/main"`, CCoding `git fetch` nhánh đó trước) khi thư mục đang đứng ở nhánh khác mà nhiệm vụ cần làm trên nhánh chính. Agent chỉ sửa trong worktree; nhánh đang làm việc của bạn không bị đụng tới. Các file chưa track cần để chạy (mặc định `.env`, `.env.local`, `.env.development`, `.env.test`…) được **chép** sang worktree (agent không đọc được nội dung). Xong nhiệm vụ, CCoding commit thay đổi trên nhánh đó (không push) và ghi vào báo cáo cách xem/gộp:
 
 ```bash
