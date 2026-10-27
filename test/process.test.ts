@@ -369,3 +369,107 @@ test('API dự án: lưu baseRef, worktreeCopy rỗng, lệnh cấm; từ chối
     srv.close();
   }
 });
+
+test('read_file dừng ở ranh giới dòng theo hạn mức ký tự và chỉ offset đọc tiếp (không cắt mất phần giữa)', async () => {
+  const { executeTool } = await import('../src/tools/workspace.js');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-read-'));
+  try {
+    const lines = Array.from({ length: 420 }, (_, i) => `model M${i + 1} { id String @id // ${'x'.repeat(30)} }`);
+    fs.writeFileSync(path.join(root, 'schema.prisma'), lines.join('\n'));
+    fs.writeFileSync(path.join(root, 'b.txt'), 'b');
+    const policy = { root, allow: ['read_file'] as const, maxOutputChars: 12000, commandTimeoutMs: 1000, denyCommands: [], allowGitCommit: false };
+    const r1 = await executeTool('read_file', { paths: ['schema.prisma', 'b.txt'] }, policy as never);
+    assert.ok(r1.ok);
+    assert.ok(r1.output.length <= 12000, `${r1.output.length}`);
+    assert.doesNotMatch(r1.output, /đã lược/);
+    const m = /offset=(\d+)/.exec(r1.output);
+    assert.ok(m, 'có chỉ dẫn offset đọc tiếp');
+    const next = Number(m![1]);
+    assert.match(r1.output, new RegExp(`\\b${next - 1}\\| model M${next - 1} `), 'dòng cuối đã đọc liền trước offset');
+    assert.match(r1.output, /chưa đọc vì đã hết hạn mức ký tự.*b\.txt/);
+    const r2 = await executeTool('read_file', { path: 'schema.prisma', offset: next }, policy as never);
+    assert.match(r2.output, new RegExp(`\\b${next}\\| model M${next} `));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('hạng mục chạm trần công cụ khi chưa xong → chạy tiếp với ngữ cảnh mới; hạng mục sau chỉ chạy khi hạng mục trước thật sự xong', async () => {
+  const { cappedDone } = await import('../src/runtimes/api.js');
+  assert.equal(cappedDone('TRẠNG THÁI: XONG\n## Tóm tắt\nok'), true);
+  assert.equal(cappedDone('TRẠNG THÁI: CHƯA XONG — còn migration\n## Tóm tắt'), false);
+  assert.equal(cappedDone('## Tóm tắt\nĐã làm một phần'), false);
+  const seen: string[] = [];
+  const srv = http.createServer(async (req, res) => {
+    if (req.url === '/v1/models') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ data: [{ id: 'm-ok' }] }));
+    }
+    let raw = '';
+    for await (const c of req) raw += c;
+    const body = JSON.parse(raw);
+    const text = (m: { content: unknown }) => (typeof m.content === 'string' ? m.content : '');
+    const user = body.messages.filter((m: { role: string }) => m.role === 'user').map(text).join('\n');
+    const sys = body.messages.filter((m: { role: string }) => m.role === 'system').map(text).join('\n');
+    const who = /\(@([a-z-]+)\)/.exec(sys)?.[1] ?? '?';
+    const last = body.messages[body.messages.length - 1];
+    const toolMsgs = body.messages.filter((m: { role: string }) => m.role === 'tool').length;
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    const send = (o: unknown) => res.write(`data: ${JSON.stringify(o)}\n\n`);
+    const say = (s: string) => send({ model: 'm-ok', choices: [{ delta: { content: s }, finish_reason: 'stop' }] });
+    const tool = (name: string, args: object) => send({ model: 'm-ok', choices: [{ delta: { tool_calls: [{ index: 0, id: `c${toolMsgs}`, type: 'function', function: { name, arguments: JSON.stringify(args) } }] }, finish_reason: 'tool_calls' }] });
+    if (user.includes('LẬP KẾ HOẠCH'))
+      say(`\`\`\`json\n${JSON.stringify({ summary: 'API rồi UI', subtasks: [
+        { id: 'S1', title: 'API', assignee: 'backend-dev', description: 'Viết API', dependsOn: [] },
+        { id: 'S2', title: 'UI', assignee: 'frontend-dev', description: 'Viết UI', dependsOn: ['S1'] },
+      ] })}\n\`\`\``);
+    else if (user.includes('REVIEW CHẤT LƯỢNG')) say('```json\n{"approved": true, "summary": "Ổn", "issues": []}\n```');
+    else if (user.includes('## Hạng mục của bạn') && who === 'backend-dev') {
+      const contd = /CHẠY TIẾP \(lần 1\/2\)/.test(user);
+      seen.push(contd ? 'S1-cont' : 'S1');
+      if (!contd) {
+        if (last.role === 'user' && String(last.content).includes('KHÔNG gọi thêm công cụ')) say('TRẠNG THÁI: CHƯA XONG — còn ghi api.txt\n## Tóm tắt\nMới khảo sát.');
+        else tool('list_files', {});
+      } else {
+        assert.match(user, /Mới khảo sát/, 'lần chạy tiếp nhận bàn giao dở dang');
+        if (toolMsgs === 0) tool('write_file', { path: 'api.txt', content: 'api' });
+        else say('## Tóm tắt\nĐã ghi api.txt.');
+      }
+    } else {
+      if (user.includes('## Hạng mục của bạn')) seen.push(who);
+      say('## Tóm tắt\nXong.');
+    }
+    send({ choices: [], usage: { prompt_tokens: 400, completion_tokens: 30 } });
+    res.end('data: [DONE]\n\n');
+  });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-cont-'));
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-cont-ws-'));
+  const base = loadConfig();
+  const app = createApp({
+    dataDir,
+    workspacesDir: path.join(dataDir, 'workspaces'),
+    runner: 'process',
+    runtime: { ...base.runtime, default: 'auto', order: ['fake'] },
+    runtimes: { fake: { type: 'openai-api', baseUrl: `http://127.0.0.1:${(srv.address() as AddressInfo).port}/v1`, tags: 'none', local: false } },
+    models: { fake: { opus: ['m-ok'], sonnet: ['m-ok'], haiku: ['m-ok'] } },
+    phases: { ...base.phases, toolTurns: { ...base.phases.toolTurns, execute: 3 } },
+    herdr: { ...base.herdr, notify: false, agentPanes: false },
+  });
+  try {
+    app.store.saveProject({ id: 'repo', name: 'Repo', department: 'dev', workspace: ws, classification: 'internal', toolAccess: 'write', createdAt: new Date().toISOString() });
+    const t = app.orchestrator.submit({ brief: 'API + UI', projectId: 'repo', options: { discussionRounds: 0, maxRevisions: 0 } });
+    const done = await app.orchestrator.waitFor(t.id);
+    assert.equal(done.status, 'done', done.error);
+    const s1 = done.runs[0].subtasks.find((s) => s.id === 'S1')!;
+    assert.equal(s1.status, 'done');
+    assert.equal(s1.continuations, 1);
+    assert.ok(fs.existsSync(path.join(ws, 'api.txt')), 'lần chạy tiếp ghi được tệp');
+    assert.deepEqual(seen.filter((x, i) => x !== seen[i - 1]), ['S1', 'S1-cont', 'frontend-dev'], 'S2 chỉ chạy sau khi S1 xong thật (mỗi phần tử: các lượt của một lần gọi)');
+    assert.ok(app.logs.query({ task: t.id, limit: 2000 }).some((e) => e.kind === 'subtask.continue'));
+  } finally {
+    srv.close();
+    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(ws, { recursive: true, force: true });
+  }
+});

@@ -430,7 +430,15 @@ export async function executeTool(name: string, rawArgs: unknown, policy: ToolPo
         const offset = Math.max(1, Number(args.offset) || 1);
         const limit = Math.min(2000, Math.max(1, Number(args.limit) || 400));
         const parts: string[] = [];
+        // ngân sách ký tự dùng chung cho các file trong lần đọc: dừng ở ranh giới dòng và chỉ offset đọc tiếp
+        // (không để clip() cắt mất phần giữa file — agent sẽ đọc lại mãi cùng một đoạn)
+        let room = Math.max(4000, max - 400);
+        const skipped: string[] = [];
         for (const rel of list) {
+          if (room < 1500) {
+            skipped.push(rel);
+            continue;
+          }
           try {
             const abs = resolveInside(root, rel);
             assertReadable(root, abs);
@@ -441,14 +449,24 @@ export async function executeTool(name: string, rawArgs: unknown, policy: ToolPo
             const buf = fs.readFileSync(abs);
             if (isBinary(buf)) throw new ToolError(`${rel} là file nhị phân`);
             const lines = buf.toString('utf8').replace(/^﻿/, '').split(/\r?\n/);
-            const slice = lines.slice(offset - 1, offset - 1 + limit);
-            const body = slice.map((l, i) => `${String(offset + i).padStart(5)}| ${l}`).join('\n');
-            const more = offset - 1 + limit < lines.length ? `\n… còn ${lines.length - (offset - 1 + limit)} dòng (dùng offset=${offset + limit})` : '';
-            parts.push(`=== ${relOf(root, abs)} (${lines.length} dòng) ===\n${body}${more}`);
+            const head = `=== ${relOf(root, abs)} (${lines.length} dòng) ===`;
+            const out: string[] = [];
+            let used = head.length + 120;
+            let next = offset;
+            for (; next <= Math.min(lines.length, offset - 1 + limit); next++) {
+              const ln = `${String(next).padStart(5)}| ${lines[next - 1]}`;
+              if (used + ln.length + 1 > room && out.length) break;
+              out.push(ln.length > room ? `${ln.slice(0, room - 200)} … [dòng quá dài, đã cắt]` : ln);
+              used += ln.length + 1;
+            }
+            const more = next <= lines.length ? `\n… còn ${lines.length - next + 1} dòng — đọc tiếp: read_file path="${relOf(root, abs)}" offset=${next}` : '';
+            room -= used;
+            parts.push(`${head}\n${out.join('\n')}${more}`);
           } catch (e) {
             parts.push(`=== ${rel} ===\nLỖI: ${(e as Error).message}`);
           }
         }
+        if (skipped.length) parts.push(`(chưa đọc vì đã hết hạn mức ký tự của lần đọc này: ${skipped.join(', ')} — đọc ở lượt sau)`);
         return done(!parts.every((p) => p.includes('\nLỖI: ')), parts.join('\n\n'), `read ${list.join(', ')}`.slice(0, 160));
       }
       case 'search': {

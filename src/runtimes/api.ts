@@ -337,6 +337,7 @@ export class OpenAiApiRuntime implements Runtime {
     const inputCap = useTools ? (policy!.maxInputTokens ?? 0) : 0;
     let nudged = false;
     let finalAsked = false;
+    let capped: 'turns' | 'input' | undefined;
     let turns = 0;
     for (;;) {
       turns++;
@@ -393,8 +394,9 @@ export class OpenAiApiRuntime implements Runtime {
         const overBudget = inputCap > 0 && usage.input >= inputCap;
         if (turns >= maxTurns || overBudget) {
           finalAsked = true;
-          if (overBudget) diag.push(`chạm trần ${inputCap} token đầu vào của vòng lặp công cụ sau ${turns} lượt`);
-          messages.push({ role: 'user', content: `${overBudget ? 'Đã dùng hết ngân sách token cho công cụ ở bước này.' : 'Đã dùng hết số lượt công cụ cho bước này.'} KHÔNG gọi thêm công cụ — hãy viết ngay câu trả lời cuối cùng (sản phẩm bàn giao) theo đúng mẫu, ghi rõ việc còn dang dở.` });
+          capped = overBudget ? 'input' : 'turns';
+          diag.push(overBudget ? `chạm trần ${inputCap} token đầu vào của vòng lặp công cụ sau ${turns} lượt` : `hết ${maxTurns} lượt công cụ`);
+          messages.push({ role: 'user', content: `${overBudget ? 'Đã dùng hết ngân sách token cho công cụ ở bước này.' : 'Đã dùng hết số lượt công cụ cho bước này.'} KHÔNG gọi thêm công cụ — hãy viết ngay câu trả lời cuối cùng (sản phẩm bàn giao) theo đúng mẫu. ${CAP_STATUS_RULE}` });
         }
         continue;
       }
@@ -437,8 +439,20 @@ export class OpenAiApiRuntime implements Runtime {
       turns,
       toolCalls: records.length ? records : undefined,
       diag: diag.length ? diag.join('; ') : undefined,
+      capped,
     };
   }
+}
+
+/** Yêu cầu dòng trạng thái khi vòng công cụ bị dừng giữa chừng — điều phối viên dựa vào đây để cho chạy tiếp. */
+export const CAP_STATUS_RULE =
+  'Dòng ĐẦU TIÊN của câu trả lời phải là đúng một trong hai: "TRẠNG THÁI: XONG" (mọi tiêu chí hoàn thành của hạng mục đã đạt và đã ghi vào workspace) hoặc "TRẠNG THÁI: CHƯA XONG — <việc còn lại>". Sau đó ghi rõ đã làm gì (tệp đã sửa), việc còn dang dở và bước tiếp theo cụ thể để lần chạy sau làm tiếp mà không phải khảo sát lại.';
+
+/** Câu trả lời sau khi chạm trần có tự nhận là đã xong không (thiếu dòng trạng thái ⇒ coi là chưa xong). */
+export function cappedDone(text: string): boolean {
+  const head = text.trim().split(/\r?\n/).slice(0, 3).join(' ').normalize('NFC');
+  if (/TRẠNG THÁI:\s*CHƯA\s*XONG/iu.test(head)) return false;
+  return /TRẠNG THÁI:\s*XONG\b/iu.test(head);
 }
 
 /**

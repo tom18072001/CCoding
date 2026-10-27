@@ -12,6 +12,7 @@ import { classifyError, RuntimeError, shouldFailover, toRuntimeError } from './r
 import type { Candidate, RuntimeManager } from './runtimes/index.js';
 import type { Store } from './store.js';
 import { kpiMarkdown, kpiReport } from './kpi.js';
+import { cappedDone } from './runtimes/api.js';
 import { isCheckCommand, toolsFor } from './tools/workspace.js';
 import type { Uploads } from './uploads.js';
 import type { UsageLedger } from './usage.js';
@@ -1062,15 +1063,38 @@ export class Orchestrator {
       .filter((s): s is Subtask => !!s && !!s.output)
       .map((s) => this.depInput(task, s));
     const draft = st.draft ? { text: (this.d.store.readRunFile(task.id, st.draft) ?? '').replace(/^<!--[\s\S]*?-->\s*/, ''), wsPath: `.ccoding/${safeName(task.id)}/${st.draft}` } : undefined;
+    const maxCont = Math.max(0, this.d.config.phases?.maxContinuations ?? 2);
+    let cont: P.Continuation | undefined;
+    let conts = 0; // tính riêng cho lần chạy này (chạy lại hạng mục khi tiếp tục nhiệm vụ thì đếm lại)
     for (let attempt = 1; attempt <= 2; attempt++) {
       this.noteAttempt(task, run, st);
-      const res = await this.call(agent, 'execute', (tools) => P.executePrompt(pctx, agent, st, run.planSummary ?? '', run.decisions ?? '', deps, tools, prior, run.subtasks, draft), {
+      const res = await this.call(agent, 'execute', (tools) => P.executePrompt(pctx, agent, st, run.planSummary ?? '', run.decisions ?? '', deps, tools, prior, run.subtasks, draft, cont), {
         ...base,
         subtask: st,
-        activity: `${st.id}: ${st.title}`,
+        activity: cont ? `${st.id}: chạy tiếp lần ${cont.n}` : `${st.id}: ${st.title}`,
         hints: { brief: task.brief, subtask: stHint(st) },
       });
       st.attempts++;
+      if (res.text && !res.error && res.capped && !cappedDone(res.text)) {
+        // chạm trần công cụ khi chưa xong: KHÔNG coi là xong (hạng mục sau sẽ dựa vào nó) — chạy tiếp với ngữ cảnh mới
+        const n = ++conts;
+        this.writeOutput(task, run, st, agent, res);
+        if (n <= maxCont) {
+          st.continuations = (st.continuations ?? 0) + 1;
+          cont = { n, max: maxCont, previous: res.text, changes: this.workspaceChanges(task) };
+          const why = res.capped === 'input' ? 'hết trần token công cụ' : 'hết lượt công cụ';
+          this.d.logs.write({ level: 'warn', kind: 'subtask.continue', msg: `${st.id} ${why} khi chưa xong — chạy tiếp lần ${n}/${maxCont}`, taskId: task.id, agentId: agent.id, department: run.department, subtaskId: st.id });
+          this.message(task, run.department, 'system', 'system', `↻ ${st.id} (@${st.assignee}) ${why} khi chưa xong — chạy tiếp lần ${n}/${maxCont} với ngữ cảnh mới (giữ bàn giao dở dang + thay đổi đã ghi).`, { subtaskId: st.id });
+          attempt--;
+          continue;
+        }
+        st.status = 'failed';
+        st.error = `Chưa xong sau ${maxCont} lần chạy tiếp (vòng công cụ chạm trần) — tách nhỏ hạng mục hoặc tăng phases.toolInputBudget.execute`;
+        st.finishedAt = nowIso();
+        this.alert({ level: 'warn', kind: 'subtask.incomplete', title: `${st.id} chưa xong`, msg: `${task.title}: ${st.error}`, taskId: task.id });
+        this.message(task, run.department, 'system', 'system', `${st.id} (@${st.assignee}) chưa xong: ${st.error}`, { subtaskId: st.id });
+        return;
+      }
       if (res.text && !res.error) {
         this.writeOutput(task, run, st, agent, res);
         st.status = 'done';
@@ -1582,7 +1606,7 @@ export class Orchestrator {
       usage.output += r2.usage.output;
       usage.cacheRead += r2.usage.cacheRead;
       usage.cacheWrite += r2.usage.cacheWrite;
-      res = { ...r2, text, usage: { ...usage }, toolCalls: first.toolCalls, turns: (res.turns ?? 1) + (r2.turns ?? 1) };
+      res = { ...r2, text, usage: { ...usage }, toolCalls: first.toolCalls, turns: (res.turns ?? 1) + (r2.turns ?? 1), capped: first.capped, diag: first.diag };
     }
     return res;
   }

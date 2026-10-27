@@ -160,6 +160,8 @@ export interface RunResult {
   toolCalls?: ToolCallRecord[];
   /** Chẩn đoán khi đầu ra rỗng/lạ (không chứa nội dung bí mật). */
   diag?: string;
+  /** Vòng lặp công cụ bị dừng vì hết lượt ('turns') hoặc hết trần token đầu vào ('input') — sản phẩm có thể còn dang dở. */
+  capped?: 'turns' | 'input';
 }
 
 export interface RuntimeAvailability { ok: boolean; detail: string; models?: string[] }
@@ -197,6 +199,8 @@ export interface Subtask {
   attemptAlerted?: number;
   /** Nhiệm vụ mới được tách ra từ hạng mục này. */
   splitTo?: string;
+  /** Số lần chạy tiếp (ngữ cảnh mới) sau khi chạm trần công cụ khi chưa xong. */
+  continuations?: number;
 }
 
 export interface ReviewIssue { subtask: string; severity: 'blocker' | 'major' | 'minor'; comment: string }

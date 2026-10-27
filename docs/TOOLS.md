@@ -36,6 +36,8 @@ Quyền dự án (`toolAccess`): `none` · `read` · `write` (đọc/ghi file) �
 Giới hạn theo pha (mỗi lượt công cụ gửi lại toàn bộ hội thoại, nên chi phí tăng theo số lượt):
 - `phases.toolTurns` — số lượt tối đa: thực thi 30, sửa 12, review 8, lập kế hoạch 8, tổng hợp 4, chốt 4.
 - `phases.toolInputBudget` — trần token đầu vào cộng dồn của cả vòng lặp trong một lượt gọi: thực thi 400k, sửa 150k, review 160k, lập kế hoạch 100k, tổng hợp 60k, chốt 50k.
+- `phases.maxContinuations` (mặc định 2) — hạng mục thực thi chạm trần lượt/token **khi chưa xong** không bị coi là xong: model phải mở đầu câu trả lời bằng `TRẠNG THÁI: XONG` hoặc `TRẠNG THÁI: CHƯA XONG — …`; nếu chưa xong (hoặc thiếu dòng trạng thái), CCoding cho **chạy tiếp với ngữ cảnh mới** (bàn giao dở dang + `git diff --stat` của worktree, không mang lịch sử công cụ cũ nên không tốn token lặp lại). Hết số lần chạy tiếp mà vẫn chưa xong → hạng mục `failed`, hạng mục phụ thuộc bị bỏ qua (không chạy trên nền dang dở), có cảnh báo `subtask.incomplete`.
+- `read_file` tự dừng ở ranh giới dòng khi chạm `maxOutputChars` và ghi `offset=` để đọc tiếp (trước đây phần giữa file bị cắt khiến agent đọc lại mãi cùng một đoạn); các file chưa đọc kịp trong lần gọi được liệt kê để đọc ở lượt sau.
 
 Chạm một trong hai ⇒ model được yêu cầu viết báo cáo cuối ngay (log `call.diag`). Kết quả công cụ cũ được rút gọn (giữ nguyên 4 kết quả gần nhất), nội dung file đã ghi trong lịch sử cũng được rút gọn.
 

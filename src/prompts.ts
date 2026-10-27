@@ -218,8 +218,8 @@ Câu trả lời cuối cùng là báo cáo bàn giao theo ĐÚNG các mục tro
 Bạn có công cụ: ${tools.join(', ')} — làm việc THẬT trong workspace \`${c.cwd}\`${c.branch ? ` (nhánh git riêng \`${c.branch}\`, không ảnh hưởng nhánh chính)` : ''}${c.serialWriters && tools.includes('run_command') ? '; các hạng mục chạy lệnh khác làm lần lượt nên không ai cài đặt/chạy test song song với bạn' : ''}.
 - Đọc quy tắc của repo trước (CLAUDE.md, AGENTS.md, README, CONTRIBUTING nếu có) và tuân thủ tuyệt đối; khảo sát repo trước khi sửa (list_files, search, read_file — gộp nhiều file một lần); giữ đúng cấu trúc, phong cách và stack sẵn có. Mỗi lượt công cụ gửi lại toàn bộ hội thoại nên tốn token: đọc có mục tiêu, không đọc lại nội dung đã có trong prompt hoặc đã đọc.
 - Đọc/tìm code bằng read_file/search/list_files — KHÔNG dùng Get-Content/cat/rg/grep qua run_command (lỗi cú pháp shell, sai mã hóa, tốn lượt). run_command chỉ để cài đặt, build, typecheck, test, migration, git.${tools.includes('run_command') && process.platform === 'win32' ? ' Shell là PowerShell: không có {a,b}, dấu * trong đường dẫn không tự mở rộng.' : ''}
-- Tạo/sửa file thật bằng write_file/edit_file; không dán toàn bộ code vào câu trả lời cuối — chỉ liệt kê file và điểm chính.
-${tools.includes('run_command') ? '- Chạy kiểm tra thật bằng run_command (cài dependency nếu thiếu, typecheck, test, lint, migration trên DB dev) và báo kết quả THẬT: lệnh, exit code, tóm tắt lỗi. Lệnh nào không chạy được thì ghi rõ lý do — không bịa kết quả.\n' : '- Không có quyền chạy lệnh: ghi rõ lệnh kiểm tra cần chạy để người khác thực hiện.\n'}${c.ccDir ? `- Tài liệu đầu vào: \`${c.ccDir}/inputs/\` · sản phẩm các hạng mục khác: \`${c.ccDir}/outputs/\`.\n` : ''}- Làm và commit (nếu cần) ngay trên nhánh hiện tại của worktree — KHÔNG tạo/chuyển/xóa nhánh (các đồng nghiệp đang làm song song trong cùng worktree); cần hợp nhất nhánh khác thì \`git merge <nhánh>\` vào nhánh hiện tại. Không push, không xóa hàng loạt; không đưa dữ liệu thật hay bí mật vào code, seed, test, fixture.
+- Tạo/sửa file thật bằng write_file/edit_file; không dán toàn bộ code vào câu trả lời cuối — chỉ liệt kê file và điểm chính. GHI SỚM: đọc đủ đoạn cần sửa là sửa ngay; khảo sát không dùng quá ~1/3 số lượt công cụ — hết lượt mà chưa ghi gì là hạng mục thất bại.
+${tools.includes('run_command') ? '- Test/typecheck đã ĐỎ TRƯỚC khi bạn sửa (baseline): ghi tên test lỗi một lần rồi làm tiếp — không điều tra/sửa lỗi có sẵn ngoài phạm vi hạng mục; tiêu chí là không phát sinh lỗi MỚI so với baseline (so sánh danh sách test lỗi trước/sau).\n' : ''}${tools.includes('run_command') ? '- Chạy kiểm tra thật bằng run_command (cài dependency nếu thiếu, typecheck, test, lint, migration trên DB dev) và báo kết quả THẬT: lệnh, exit code, tóm tắt lỗi. Lệnh nào không chạy được thì ghi rõ lý do — không bịa kết quả.\n' : '- Không có quyền chạy lệnh: ghi rõ lệnh kiểm tra cần chạy để người khác thực hiện.\n'}${c.ccDir ? `- Tài liệu đầu vào: \`${c.ccDir}/inputs/\` · sản phẩm các hạng mục khác: \`${c.ccDir}/outputs/\`.\n` : ''}- Làm và commit (nếu cần) ngay trên nhánh hiện tại của worktree — KHÔNG tạo/chuyển/xóa nhánh (các đồng nghiệp đang làm song song trong cùng worktree); cần hợp nhất nhánh khác thì \`git merge <nhánh>\` vào nhánh hiện tại. Không push, không xóa hàng loạt; không đưa dữ liệu thật hay bí mật vào code, seed, test, fixture.
 Câu trả lời cuối cùng là báo cáo bàn giao theo ĐÚNG các mục trong "Mẫu đầu ra" của bạn (giữ nguyên tên mục, mở đầu "## Tóm tắt"); mục nào không áp dụng thì ghi "Không áp dụng" thay vì bỏ. Bắt buộc có: tệp đã tạo/sửa (đường dẫn) và lệnh kiểm chứng đã chạy (lệnh → exit code/kết quả thật, hoặc lý do chưa chạy).
 `;
 }
@@ -318,6 +318,14 @@ function depsText(c: Ctx, deps: DepInput[], total: number): string {
     .join('\n\n');
 }
 
+/** Ngữ cảnh khi cho một hạng mục chạy tiếp sau khi chạm trần công cụ. */
+export interface Continuation {
+  n: number;
+  max: number;
+  previous: string;
+  changes: string;
+}
+
 export function executePrompt(
   c: Ctx,
   agent: AgentDef,
@@ -329,10 +337,20 @@ export function executePrompt(
   priorContext?: string,
   subtasks: Subtask[] = [],
   draft?: { text: string; wsPath?: string },
+  continuation?: Continuation,
 ): Built {
   const canWrite = tools.includes('write_file');
   const draftBlock = draft?.text
     ? `\n## Bản trước của hạng mục này${draft.wsPath && c.filesAccessible ? ` (đầy đủ: \`${draft.wsPath}\`)` : ''}\nĐây là bản đã làm ở lần chạy trước${canWrite ? ' (chỉ ở dạng văn bản, CHƯA áp dụng vào workspace)' : ''}. Tận dụng nội dung đúng, ${canWrite ? 'áp dụng thật vào repo, kiểm chứng bằng lệnh' : 'hoàn thiện'} và sửa chỗ sai — không viết lại từ đầu nếu không cần.\n${truncate(draft.text, c.filesAccessible ? 6000 : 14000)}\n`
+    : '';
+  const contBlock = continuation
+    ? `\n## ↻ CHẠY TIẾP (lần ${continuation.n}/${continuation.max}) — hạng mục chưa xong ở lần trước
+Lần chạy trước hết lượt/ngân sách công cụ khi CHƯA XONG. Đây là ngữ cảnh mới: KHÔNG khảo sát lại từ đầu — dựa vào bàn giao dở dang và trạng thái workspace dưới đây, đọc đúng các tệp cần sửa và làm nốt phần còn lại, rồi chạy kiểm chứng.
+### Bàn giao dở dang của lần trước
+${truncate(continuation.previous, 7000)}
+### Thay đổi hiện có trong workspace (so với điểm xuất phát)
+${continuation.changes ? '```\n' + truncate(continuation.changes, 3000) + '\n```' : '(chưa có thay đổi nào được ghi)'}
+`
     : '';
   return {
     context: `${header(c, 'execute')}
@@ -344,7 +362,7 @@ ${st.deliverable ? `Sản phẩm bàn giao: ${st.deliverable}` : ''}
 
 ## Đầu vào từ các hạng mục trước
 ${depsText(c, deps, c.filesAccessible ? 6000 : 16000)}
-${draftBlock}${toolNote(c, tools, 'execute')}${
+${draftBlock}${contBlock}${toolNote(c, tools, 'execute')}${
       canWrite
         ? ''
         : `\n## Cách làm\nBạn trả lời bằng văn bản. Nếu cần tạo file, đưa nội dung đầy đủ trong khối code và ghi rõ tên file ngay phía trên khối đó.\n`

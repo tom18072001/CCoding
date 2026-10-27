@@ -105,6 +105,8 @@ export interface Config {
     toolTurns: Partial<Record<Phase, number>>;
     /** Trần token đầu vào cộng dồn của vòng lặp công cụ theo pha — chạm trần thì model phải viết câu trả lời cuối. */
     toolInputBudget: Partial<Record<Phase, number>>;
+    /** Số lần cho hạng mục chạy tiếp (ngữ cảnh mới) khi vòng công cụ chạm trần mà chưa xong; 0 = tắt. */
+    maxContinuations?: number;
   };
   /** Công cụ workspace cho agent (đọc/ghi file, chạy lệnh) — xem docs/TOOLS.md. */
   tools: {
@@ -204,6 +206,7 @@ const BUILTIN: Omit<Config, 'root'> = {
     maxTokens: { route: 800, plan: 8000, discuss: 700, finalize: 8000, execute: 32000, review: 6000, revise: 32000, synthesize: 10000 },
     toolTurns: { plan: 8, finalize: 4, execute: 30, review: 8, revise: 12, synthesize: 4 },
     toolInputBudget: { plan: 100000, finalize: 50000, execute: 400000, review: 160000, revise: 150000, synthesize: 60000 },
+    maxContinuations: 2,
   },
   tools: {
     defaultAccess: 'write',
