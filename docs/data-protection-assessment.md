@@ -222,3 +222,13 @@ Phản hồi ──► data/runs/<task>/{outputs, calls.jsonl (che + băm chuỗ
 - **KPI sub-agent:** tính lại từ log sẵn có (`calls.jsonl`, `task.json`, `transcript.jsonl`), lưu `kpi.json` trong thư mục nhiệm vụ; chỉ chứa số liệu và đoạn trích ≤ 140 ký tự lời nhận xét review (đã che bí mật/PII khi ghi hội thoại). Không gửi ra ngoài.
 - **`cacheControl` (tùy chọn):** chỉ thêm trường đánh dấu cache vào yêu cầu gửi gateway, không đổi nội dung gửi đi; nhà cung cấp giữ bản cache ngắn hạn theo điều khoản của họ — với dự án có ràng buộc, không bật cho runtime bên ngoài.
 - **Ghi sổ lượt gọi bị mất (`call.lost`):** chỉ số token ước lượng và thời gian, không ghi thêm nội dung (DET-01, phục vụ đối soát chi phí).
+
+### Bổ sung: nhánh xuất phát, tệp chép sang worktree và lệnh cấm cấu hình trên giao diện (27/10/2026)
+
+Thay đổi: dự án có thêm `baseRef` (worktree tách từ vd. `origin/main` thay vì HEAD đang đứng; CCoding `git fetch` nhánh đó trước), và form **Dự án** trên giao diện cho đặt `worktreeCopy` (ghi «không» = không chép tệp nào) cùng `denyCommands` riêng.
+
+- **PRE-06 (tối thiểu hóa) / PRE-03:** với repo mà thư mục gốc chứa `.env` của môi trường thật (vd. clone `workhub` chứa ND57 đang vận hành), đặt `worktreeCopy: []` để **không chép bí mật/kết nối DB thật** sang worktree — agent không có cách chạm DB thật dù được `run_command`. Đây là cấu hình bắt buộc cho dự án `nd57`.
+- **PRE-05 (đặc quyền tối thiểu):** `denyCommands` của dự án chặn docker, cổng container/DB đang chạy (4000/4100/4200/5434–5436/55432), `prisma db push`, `migrate dev|deploy|reset`, các script seed/backfill — chỉ cho `prisma validate|format|generate|migrate diff --script` (không cần DB). Regex được kiểm tra hợp lệ khi lưu.
+- **`baseRef`:** chỉ nhận tên ref an toàn (không bắt đầu bằng `-`, không `..`) ⇒ không chèn được tham số git. `git fetch` đi tới remote đã cấu hình sẵn của repo (GitHub của chủ dự án), không thêm đích mới.
+- **GOV-02 (phân loại):** dự án `nd57` gắn nhãn **Nội bộ** (văn bản triển khai, danh mục nhiệm vụ, tên đơn vị TW Đoàn đã có sẵn trong repo; không đưa dữ liệu báo cáo thật). Nội dung mật của nghị định (gói 4 trong đề xuất) **không** được đưa vào repo hay prompt; nếu sau này có, phải chuyển nhãn *Bảo mật/Hạn chế* và chỉ dùng runtime cục bộ.
+- **Rủi ro còn lại:** agent đọc được các tệp .docx/.pdf văn bản TW Đoàn đã commit trong repo ND57 và nội dung đó có thể vào prompt gửi runtime đám mây (9router → Claude/Codex) — chấp nhận ở nhãn Nội bộ; chủ dự án cân nhắc đưa các văn bản gốc ra khỏi git nếu chúng không còn là tài liệu công khai.
