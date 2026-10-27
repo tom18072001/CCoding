@@ -691,7 +691,8 @@
       .join('');
     const canCancel = t.status === 'running' || t.status === 'queued' || t.status === 'paused';
     const canPause = t.status === 'running';
-    const canResume = ['paused', 'failed', 'cancelled'].includes(t.status) && (t.runs || []).length > 0;
+    const unfinished = (t.runs || []).some((r) => r.subtasks.some((x) => !x.splitTo && (x.status === 'failed' || x.status === 'skipped')));
+    const canResume = (['paused', 'failed', 'cancelled'].includes(t.status) || (t.status === 'done' && unfinished)) && (t.runs || []).length > 0;
     const used = total(t.usage);
     const budget = t.options?.budgetTokens || 0;
     const pct = budget ? Math.round((used / budget) * 100) : 0;

@@ -203,6 +203,8 @@ export interface Subtask {
   splitTo?: string;
   /** Số lần chạy tiếp (ngữ cảnh mới) sau khi chạm trần công cụ khi chưa xong. */
   continuations?: number;
+  /** Lần chạy gần nhất dừng giữa chừng (đã ghi một phần vào workspace) — lần sau làm tiếp từ bàn giao dở dang thay vì làm lại. */
+  incomplete?: boolean;
 }
 
 export interface ReviewIssue { subtask: string; severity: 'blocker' | 'major' | 'minor'; comment: string }

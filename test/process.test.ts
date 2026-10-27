@@ -477,3 +477,77 @@ test('hạng mục chạm trần công cụ khi chưa xong → chạy tiếp v�
     fs.rmSync(ws, { recursive: true, force: true });
   }
 });
+
+test('hạng mục vẫn chưa xong sau các lần chạy tiếp → nhiệm vụ "lỗi" (không báo hoàn thành); Tiếp tục thì làm tiếp từ bàn giao dở dang', async () => {
+  let finish = false;
+  const prompts: string[] = [];
+  const srv = http.createServer(async (req, res) => {
+    if (req.url === '/v1/models') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ data: [{ id: 'm-ok' }] }));
+    }
+    let raw = '';
+    for await (const c of req) raw += c;
+    const body = JSON.parse(raw);
+    const text = (m: { content: unknown }) => (typeof m.content === 'string' ? m.content : '');
+    const user = body.messages.filter((m: { role: string }) => m.role === 'user').map(text).join('\n');
+    const sys = body.messages.filter((m: { role: string }) => m.role === 'system').map(text).join('\n');
+    const who = /\(@([a-z-]+)\)/.exec(sys)?.[1] ?? '?';
+    const last = body.messages[body.messages.length - 1];
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    const send = (o: unknown) => res.write(`data: ${JSON.stringify(o)}\n\n`);
+    const say = (s: string) => send({ model: 'm-ok', choices: [{ delta: { content: s }, finish_reason: 'stop' }] });
+    if (user.includes('LẬP KẾ HOẠCH'))
+      say(`\`\`\`json\n${JSON.stringify({ summary: 'API rồi UI', subtasks: [
+        { id: 'S1', title: 'API', assignee: 'backend-dev', description: 'Viết API', dependsOn: [] },
+        { id: 'S2', title: 'UI', assignee: 'frontend-dev', description: 'Viết UI', dependsOn: ['S1'] },
+      ] })}\n\`\`\``);
+    else if (user.includes('REVIEW CHẤT LƯỢNG')) say('```json\n{"approved": true, "summary": "Ổn", "issues": []}\n```');
+    else if (user.includes('## Hạng mục của bạn') && who === 'backend-dev') {
+      if (last.role === 'user') prompts.push(user);
+      if (finish) say('## Tóm tắt\nĐã xong API.');
+      else if (last.role === 'user' && String(last.content).includes('KHÔNG gọi thêm công cụ')) say('TRẠNG THÁI: CHƯA XONG — còn route POST\n## Tóm tắt\nĐã viết model, còn route.');
+      else send({ model: 'm-ok', choices: [{ delta: { tool_calls: [{ index: 0, id: 'c1', type: 'function', function: { name: 'list_files', arguments: '{}' } }] }, finish_reason: 'tool_calls' }] });
+    } else say('## Tóm tắt\nXong.');
+    send({ choices: [], usage: { prompt_tokens: 400, completion_tokens: 30 } });
+    res.end('data: [DONE]\n\n');
+  });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-inc-'));
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-inc-ws-'));
+  const base = loadConfig();
+  const app = createApp({
+    dataDir,
+    workspacesDir: path.join(dataDir, 'workspaces'),
+    runner: 'process',
+    runtime: { ...base.runtime, default: 'auto', order: ['fake'] },
+    runtimes: { fake: { type: 'openai-api', baseUrl: `http://127.0.0.1:${(srv.address() as AddressInfo).port}/v1`, tags: 'none', local: false } },
+    models: { fake: { opus: ['m-ok'], sonnet: ['m-ok'], haiku: ['m-ok'] } },
+    phases: { ...base.phases, toolTurns: { ...base.phases.toolTurns, execute: 2 }, maxContinuations: 1 },
+    herdr: { ...base.herdr, notify: false, agentPanes: false },
+  });
+  try {
+    app.store.saveProject({ id: 'repo', name: 'Repo', department: 'dev', workspace: ws, classification: 'internal', toolAccess: 'write', createdAt: new Date().toISOString() });
+    const t = app.orchestrator.submit({ brief: 'API + UI', projectId: 'repo', options: { discussionRounds: 0, maxRevisions: 0 } });
+    const first = await app.orchestrator.waitFor(t.id);
+    assert.equal(first.status, 'failed', 'không báo hoàn thành khi còn hạng mục dở');
+    assert.match(first.error ?? '', /S1 \(dừng giữa chừng\).*S2 \(bỏ qua vì phụ thuộc\)/);
+    const s1 = first.runs[0].subtasks.find((s) => s.id === 'S1')!;
+    assert.equal(s1.incomplete, true);
+    assert.equal(s1.continuations, 1);
+    assert.ok(app.orchestrator.alerts.some((a) => a.kind === 'task.unfinished'));
+    finish = true;
+    prompts.length = 0;
+    app.orchestrator.resume(t.id, { budgetMode: 'complete' });
+    const second = await app.orchestrator.waitFor(t.id);
+    assert.equal(second.status, 'done', second.error);
+    assert.match(prompts[0] ?? '', /Nhiệm vụ vừa được tiếp tục/);
+    assert.match(prompts[0] ?? '', /Đã viết model, còn route/, 'mang theo bàn giao dở dang');
+    assert.equal(second.runs[0].subtasks.find((s) => s.id === 'S1')!.incomplete, undefined);
+    assert.equal(second.runs[0].subtasks.find((s) => s.id === 'S2')!.status, 'done');
+  } finally {
+    srv.close();
+    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(ws, { recursive: true, force: true });
+  }
+});

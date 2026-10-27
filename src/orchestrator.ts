@@ -703,10 +703,19 @@ export class Orchestrator {
       }
       this.finishWorkspace(task);
       this.writeFinal(task);
-      task.status = 'done';
       task.phase = undefined;
-      logs.write({ level: 'info', kind: 'task.done', msg: `Hoàn thành ${task.id} — ${fmtNum(totalTokens(task.usage))} token`, taskId: task.id, projectId: task.projectId, data: { usage: task.usage } });
-      void this.d.herdr?.notify(`CCoding: xong ${task.id}`, task.title);
+      // còn hạng mục lỗi/bị bỏ qua → nhiệm vụ CHƯA xong (giữ để "Tiếp tục" chạy lại phần còn thiếu), không báo "Hoàn thành"
+      const unfinished = task.runs.flatMap((r) => r.subtasks.filter((s) => !s.splitTo && (s.status === 'failed' || s.status === 'skipped')));
+      if (unfinished.length) {
+        task.status = 'failed';
+        task.error = `Còn ${unfinished.length} hạng mục chưa xong: ${unfinished.map((s) => `${s.id} (${s.status === 'skipped' ? 'bỏ qua vì phụ thuộc' : s.incomplete ? 'dừng giữa chừng' : 'lỗi'})`).join(', ')} — bấm "Tiếp tục" để làm tiếp`;
+        logs.write({ level: 'warn', kind: 'task.failed', msg: `${task.id}: ${task.error}`, taskId: task.id, projectId: task.projectId, data: { usage: task.usage } });
+        this.alert({ level: 'warn', kind: 'task.unfinished', title: 'Nhiệm vụ chưa xong hết', msg: `${task.title}: ${task.error}`, taskId: task.id });
+      } else {
+        task.status = 'done';
+        logs.write({ level: 'info', kind: 'task.done', msg: `Hoàn thành ${task.id} — ${fmtNum(totalTokens(task.usage))} token`, taskId: task.id, projectId: task.projectId, data: { usage: task.usage } });
+        void this.d.herdr?.notify(`CCoding: xong ${task.id}`, task.title);
+      }
     } catch (e) {
       if (e instanceof PauseSignal && !ctrl.signal.aborted) {
         task.status = 'paused';
@@ -1064,7 +1073,9 @@ export class Orchestrator {
       .map((s) => this.depInput(task, s));
     const draft = st.draft ? { text: (this.d.store.readRunFile(task.id, st.draft) ?? '').replace(/^<!--[\s\S]*?-->\s*/, ''), wsPath: `.ccoding/${safeName(task.id)}/${st.draft}` } : undefined;
     const maxCont = Math.max(0, this.d.config.phases?.maxContinuations ?? 2);
-    let cont: P.Continuation | undefined;
+    // lần trước dừng giữa chừng (vd. nhiệm vụ lỗi rồi được tiếp tục): làm tiếp từ bàn giao dở dang + thay đổi đã có trong workspace
+    let cont: P.Continuation | undefined =
+      (st.incomplete || (st.continuations ?? 0) > 0) && !st.draft && st.output ? { n: 1, max: maxCont + 1, previous: this.readOutput(task, st), changes: this.workspaceChanges(task), resumed: true } : undefined;
     let conts = 0; // tính riêng cho lần chạy này (chạy lại hạng mục khi tiếp tục nhiệm vụ thì đếm lại)
     for (let attempt = 1; attempt <= 2; attempt++) {
       this.noteAttempt(task, run, st);
@@ -1081,7 +1092,7 @@ export class Orchestrator {
         this.writeOutput(task, run, st, agent, res);
         if (n <= maxCont) {
           st.continuations = (st.continuations ?? 0) + 1;
-          cont = { n, max: maxCont, previous: res.text, changes: this.workspaceChanges(task) };
+          cont = { n: cont?.resumed ? n + 1 : n, max: cont?.resumed ? maxCont + 1 : maxCont, previous: res.text, changes: this.workspaceChanges(task) };
           const why = res.capped === 'input' ? 'hết trần token công cụ' : 'hết lượt công cụ';
           this.d.logs.write({ level: 'warn', kind: 'subtask.continue', msg: `${st.id} ${why} khi chưa xong — chạy tiếp lần ${n}/${maxCont}`, taskId: task.id, agentId: agent.id, department: run.department, subtaskId: st.id });
           this.message(task, run.department, 'system', 'system', `↻ ${st.id} (@${st.assignee}) ${why} khi chưa xong — chạy tiếp lần ${n}/${maxCont} với ngữ cảnh mới (giữ bàn giao dở dang + thay đổi đã ghi).`, { subtaskId: st.id });
@@ -1089,6 +1100,7 @@ export class Orchestrator {
           continue;
         }
         st.status = 'failed';
+        st.incomplete = true;
         st.error = `Chưa xong sau ${maxCont} lần chạy tiếp (vòng công cụ chạm trần) — tách nhỏ hạng mục hoặc tăng phases.toolInputBudget.execute`;
         st.finishedAt = nowIso();
         this.alert({ level: 'warn', kind: 'subtask.incomplete', title: `${st.id} chưa xong`, msg: `${task.title}: ${st.error}`, taskId: task.id });
@@ -1100,6 +1112,7 @@ export class Orchestrator {
         st.status = 'done';
         st.error = undefined;
         st.draft = undefined;
+        st.incomplete = undefined;
         st.finishedAt = nowIso();
         const next = run.subtasks.filter((s) => s.dependsOn.includes(st.id)).map((s) => `@${s.assignee}`);
         const tools = res.toolCalls?.length ? ` · ${res.toolCalls.length} thao tác công cụ` : '';

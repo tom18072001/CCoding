@@ -324,6 +324,8 @@ export interface Continuation {
   max: number;
   previous: string;
   changes: string;
+  /** Nhiệm vụ được tiếp tục sau khi hạng mục dừng giữa chừng ở lượt chạy trước. */
+  resumed?: boolean;
 }
 
 export function executePrompt(
@@ -345,7 +347,7 @@ export function executePrompt(
     : '';
   const contBlock = continuation
     ? `\n## ↻ CHẠY TIẾP (lần ${continuation.n}/${continuation.max}) — hạng mục chưa xong ở lần trước
-Lần chạy trước hết lượt/ngân sách công cụ khi CHƯA XONG. Đây là ngữ cảnh mới: KHÔNG khảo sát lại từ đầu — dựa vào bàn giao dở dang và trạng thái workspace dưới đây, đọc đúng các tệp cần sửa và làm nốt phần còn lại, rồi chạy kiểm chứng.
+${continuation.resumed ? 'Nhiệm vụ vừa được tiếp tục; lượt chạy trước của hạng mục này dừng giữa chừng (phần đã ghi vẫn còn trong workspace).' : 'Lần chạy trước hết lượt/ngân sách công cụ khi CHƯA XONG.'} Đây là ngữ cảnh mới: KHÔNG khảo sát lại từ đầu — dựa vào bàn giao dở dang và trạng thái workspace dưới đây, đọc đúng các tệp cần sửa và làm nốt phần còn lại, rồi chạy kiểm chứng.
 ### Bàn giao dở dang của lần trước
 ${truncate(continuation.previous, 7000)}
 ### Thay đổi hiện có trong workspace (so với điểm xuất phát)
