@@ -116,6 +116,8 @@ export interface Config {
     projectAccess: ToolAccess;
     commandTimeoutSec: number;
     maxOutputChars: number;
+    /** Hạn mức ký tự cho một lần read_file (lớn hơn đầu ra lệnh để đọc trọn schema/file nguồn cỡ vừa, tránh đọc lại từng đoạn). */
+    maxReadChars?: number;
     denyCommands: string[];
     /** File chưa track chép vào worktree mặc định (nếu có). */
     worktreeCopy: string[];
@@ -204,8 +206,8 @@ const BUILTIN: Omit<Config, 'root'> = {
   phases: {
     models: { route: 'haiku', discuss: 'haiku' },
     maxTokens: { route: 800, plan: 8000, discuss: 700, finalize: 8000, execute: 32000, review: 6000, revise: 32000, synthesize: 10000 },
-    toolTurns: { plan: 8, finalize: 4, execute: 30, review: 8, revise: 12, synthesize: 4 },
-    toolInputBudget: { plan: 100000, finalize: 50000, execute: 400000, review: 160000, revise: 150000, synthesize: 60000 },
+    toolTurns: { plan: 8, finalize: 4, execute: 40, review: 10, revise: 16, synthesize: 4 },
+    toolInputBudget: { plan: 100000, finalize: 50000, execute: 800000, review: 200000, revise: 300000, synthesize: 60000 },
     maxContinuations: 2,
   },
   tools: {
@@ -213,6 +215,7 @@ const BUILTIN: Omit<Config, 'root'> = {
     projectAccess: 'exec',
     commandTimeoutSec: 600,
     maxOutputChars: 12000,
+    maxReadChars: 30000,
     denyCommands: [],
     worktreeCopy: ['.env', '.env.local', '.env.development', '.env.development.local', '.env.test', '.env.test.local'],
     web: true,

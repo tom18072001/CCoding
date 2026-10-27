@@ -389,6 +389,10 @@ test('read_file dừng ở ranh giới dòng theo hạn mức ký tự và chỉ
     assert.match(r1.output, /chưa đọc vì đã hết hạn mức ký tự.*b\.txt/);
     const r2 = await executeTool('read_file', { path: 'schema.prisma', offset: next }, policy as never);
     assert.match(r2.output, new RegExp(`\\b${next}\\| model M${next} `));
+    // hạn mức riêng cho read_file: đọc trọn file cỡ vừa trong một lần
+    const r3 = await executeTool('read_file', { path: 'schema.prisma', limit: 2000 }, { ...policy, maxReadChars: 40000 } as never);
+    assert.match(r3.output, /\b420\| model M420 /);
+    assert.doesNotMatch(r3.output, /offset=/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

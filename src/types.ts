@@ -95,6 +95,8 @@ export interface ToolPolicy {
   maxInputTokens?: number;
   commandTimeoutSec: number;
   maxOutputChars: number;
+  /** Hạn mức ký tự riêng cho read_file (đọc trọn file mã nguồn cỡ vừa trong một lần); mặc định = maxOutputChars. */
+  maxReadChars?: number;
   /** Mẫu regex lệnh bị cấm (bổ sung cho danh sách mặc định). */
   denyCommands: string[];
   /** Cho phép git commit (chỉ khi làm trên nhánh/worktree riêng). */

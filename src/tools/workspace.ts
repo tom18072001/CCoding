@@ -432,7 +432,8 @@ export async function executeTool(name: string, rawArgs: unknown, policy: ToolPo
         const parts: string[] = [];
         // ngân sách ký tự dùng chung cho các file trong lần đọc: dừng ở ranh giới dòng và chỉ offset đọc tiếp
         // (không để clip() cắt mất phần giữa file — agent sẽ đọc lại mãi cùng một đoạn)
-        let room = Math.max(4000, max - 400);
+        const readMax = Math.max(max, policy.maxReadChars ?? max);
+        let room = Math.max(4000, readMax - 400);
         const skipped: string[] = [];
         for (const rel of list) {
           if (room < 1500) {
@@ -467,7 +468,7 @@ export async function executeTool(name: string, rawArgs: unknown, policy: ToolPo
           }
         }
         if (skipped.length) parts.push(`(chưa đọc vì đã hết hạn mức ký tự của lần đọc này: ${skipped.join(', ')} — đọc ở lượt sau)`);
-        return done(!parts.every((p) => p.includes('\nLỖI: ')), parts.join('\n\n'), `read ${list.join(', ')}`.slice(0, 160));
+        return { ok: !parts.every((p) => p.includes('\nLỖI: ')), output: clip(parts.join('\n\n'), readMax), ms: Date.now() - t0, summary: `read ${list.join(', ')}`.slice(0, 160) };
       }
       case 'search': {
         const pattern = str(args.pattern);

@@ -1362,6 +1362,7 @@ export class Orchestrator {
                 maxInputTokens: config.phases?.toolInputBudget?.[phase],
                 commandTimeoutSec: config.tools.commandTimeoutSec,
                 maxOutputChars: config.tools.maxOutputChars,
+                maxReadChars: config.tools.maxReadChars,
                 denyCommands: [...config.tools.denyCommands, ...(ctx.project?.denyCommands ?? [])],
                 allowGitCommit: !!task.branch,
               }
