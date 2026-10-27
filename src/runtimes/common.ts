@@ -24,11 +24,12 @@ export function withTimeout(signal: AbortSignal | undefined, ms: number): AbortS
 }
 
 /** Đọc luồng Server-Sent Events từ fetch Response, trả về từng payload `data:`. */
-export async function* sseData(res: Response): AsyncGenerator<string> {
+export async function* sseData(res: Response, onChunk?: () => void): AsyncGenerator<string> {
   if (!res.body) return;
   const decoder = new TextDecoder();
   let buf = '';
   for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) {
+    onChunk?.();
     buf += decoder.decode(chunk, { stream: true });
     let i: number;
     while ((i = buf.indexOf('\n')) >= 0) {

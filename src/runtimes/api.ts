@@ -242,6 +242,17 @@ export class OpenAiApiRuntime implements Runtime {
   /** Một lượt chat/completions (stream) — trả về văn bản, lời gọi công cụ, usage. */
   private async turn(req: RunRequest, hooks: RunHooks, model: string, messages: ChatMsg[], tools: unknown[] | undefined): Promise<StreamTurn> {
     const payload = wantsCacheControl(this.cfg, model) ? withCacheMarks(messages, req, this.cfg.promptStyle === 'combined') : messages;
+    // luồng treo (không byte nào, kể cả keepalive) quá idleTimeoutMs → hủy lượt này thay vì chờ hết timeoutMs (30 phút)
+    const idleMs = this.cfg.idleTimeoutMs ?? 300_000;
+    const idle = new AbortController();
+    let idleTimer: ReturnType<typeof setTimeout> | undefined;
+    const kick = () => {
+      if (!idleMs) return;
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => idle.abort(), idleMs);
+    };
+    const stalled = () => new RuntimeError(`${this.base()}: luồng trả lời không có dữ liệu trong ${Math.round(idleMs / 1000)} giây (treo)`, 'timeout');
+    kick();
     let res: Response;
     try {
       res = await fetch(`${this.base()}/chat/completions`, {
@@ -255,20 +266,23 @@ export class OpenAiApiRuntime implements Runtime {
           messages: payload,
           ...(tools?.length ? { tools, tool_choice: 'auto' } : {}),
         }),
-        signal: withTimeout(hooks.signal, req.timeoutMs),
+        signal: AbortSignal.any([withTimeout(hooks.signal, req.timeoutMs), idle.signal]),
       });
     } catch (e) {
+      if (idleTimer) clearTimeout(idleTimer);
       if (hooks.signal?.aborted) throw e;
+      if (idle.signal.aborted) throw stalled();
       throw toRuntimeError(e);
     }
     if (!res.ok) {
+      if (idleTimer) clearTimeout(idleTimer);
       const body = (await res.text()).slice(0, 600);
       throw new RuntimeError(`${this.base()} ${res.status}: ${body}`, classifyError(res.status, body), res.status, parseRetryAt(res.headers, body));
     }
     const t: StreamTurn = { text: '', toolCalls: [], input: 0, output: 0, cached: 0, cacheWrite: 0, events: 0 };
     const calls = new Map<number, { id: string; name: string; args: string }>();
     try {
-      for await (const data of sseData(res)) {
+      for await (const data of sseData(res, kick)) {
         if (data === '[DONE]') break;
         let ev: Record<string, any>;
         try {
@@ -306,7 +320,10 @@ export class OpenAiApiRuntime implements Runtime {
       }
     } catch (e) {
       if (hooks.signal?.aborted || e instanceof RuntimeError) throw e;
+      if (idle.signal.aborted) throw stalled();
       throw toRuntimeError(e);
+    } finally {
+      if (idleTimer) clearTimeout(idleTimer);
     }
     t.toolCalls = [...calls.values()].filter((c) => c.name).map((c, i) => ({ ...c, id: c.id || `call_${Date.now()}_${i}` }));
     return t;

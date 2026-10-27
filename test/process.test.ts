@@ -667,3 +667,28 @@ test('lỗi giữa vòng công cụ sau khi đã ghi workspace (vd. 429) → l�
     fs.rmSync(ws, { recursive: true, force: true });
   }
 });
+
+test('luồng trả lời treo (không byte nào trong idleTimeoutMs) → lỗi "timeout" ngay, không chờ hết 30 phút', async () => {
+  const srv = http.createServer(async (req, res) => {
+    for await (const _ of req) void _;
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    res.write(`data: ${JSON.stringify({ model: 'm', choices: [{ delta: { content: 'Bắt đầu…' } }] })}\n\n`);
+    // rồi im lặng — không đóng kết nối
+  });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+  try {
+    const { OpenAiApiRuntime } = await import('../src/runtimes/api.js');
+    const { parseAgent } = await import('../src/registry.js');
+    const rt = new OpenAiApiRuntime({ baseUrl: `http://127.0.0.1:${(srv.address() as AddressInfo).port}/v1`, tags: 'none', idleTimeoutMs: 400 }, {}, 'idle');
+    const agent = parseAgent('a.md', '---\nid: backend-dev\nname: Backend\ndepartment: dev\nrole: member\n---\nbody');
+    const t0 = Date.now();
+    await assert.rejects(
+      rt.run({ agent, phase: 'execute', system: 's', prompt: 'p', model: 'm', cwd: os.tmpdir(), tools: [], allowTools: false, timeoutMs: 60_000, meta: { taskId: 'T-x', department: 'dev', callId: 'c1' } }, {}),
+      (e: { kind?: string; message?: string }) => e.kind === 'timeout' && /treo/.test(e.message ?? ''),
+    );
+    assert.ok(Date.now() - t0 < 5000, `${Date.now() - t0} ms`);
+  } finally {
+    srv.closeAllConnections?.();
+    srv.close();
+  }
+});

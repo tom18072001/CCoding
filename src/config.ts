@@ -26,6 +26,8 @@ export interface RuntimeConfig {
   promptStyle?: 'split' | 'combined';
   /** Thời gian chờ khi kiểm tra runtime sẵn sàng (ms). */
   probeTimeoutMs?: number;
+  /** Luồng trả lời không có byte nào trong khoảng này (ms) → coi là treo, hủy lượt (lỗi "timeout" để thử lại/chuyển runtime). Mặc định 300000; 0 = tắt. */
+  idleTimeoutMs?: number;
   command?: string;
   extraArgs?: string[];
   permissionMode?: string;

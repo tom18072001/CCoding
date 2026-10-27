@@ -130,3 +130,7 @@ Runtime không báo chi phí ⇒ có thể khai báo `pricing` (USD / 1 triệu 
 ### Chuyển runtime giữa chừng khi đã sửa workspace
 
 Lượt gọi có công cụ bị lỗi ở giữa vòng lặp (vd. Claude Max trả 429 ở lượt cuối) sau khi đã ghi tệp/chạy lệnh/commit: lần thử trên runtime kế tiếp nhận thêm mục **"Lần thử trước bị ngắt giữa chừng"** liệt kê các thao tác đã làm (tối đa 40) và yêu cầu kiểm `git status/log/diff` rồi làm tiếp — không làm lại từ đầu (ND57 27/10: S2 đã sửa + commit trên Sonnet, 429 ở lượt cuối, Codex làm lại ~10 phút).
+
+### Luồng trả lời treo
+
+Mỗi lượt gọi API dạng stream có **`idleTimeoutMs`** (mặc định 300000 = 5 phút, đặt theo runtime; 0 = tắt): không nhận được byte nào (kể cả keepalive) trong khoảng đó thì hủy lượt với lỗi `timeout` — giữa vòng công cụ thì thử lại lượt đó một lần, không được thì chuyển runtime (kèm danh sách thao tác đã làm). Trước đây một lượt treo phải chờ hết `timeoutMs` 30 phút (ND57 27/10: Codex treo >25 phút ở lần thử thứ hai của S2).
