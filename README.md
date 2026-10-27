@@ -90,6 +90,7 @@ ccoding show <taskId>     # chi tiết, file đầu ra, báo cáo
 ccoding cancel <taskId>
 ccoding pause <taskId>                        # tạm dừng, giữ tiến độ
 ccoding resume <taskId> --budget-mode complete # chạy tiếp tới khi xong (hoặc --add 500000)
+ccoding split <taskId> [--only S1,S2]         # tách hạng mục chưa xong thành nhiệm vụ riêng (mỗi nhiệm vụ một gói việc)
 ```
 
 Tùy chọn: `--rounds 0-3` (số vòng họp), `--parallel 1-8`, `--no-review`, `--runtime <id>`, `--budget <token>`, `--budget-mode complete|pause`.
@@ -129,6 +130,7 @@ ccoding usage                       # tổng + theo phòng + theo agent + theo t
 ccoding usage --by model --dept dev
 ccoding usage --task <taskId> --json
 ccoding usage --watch               # bảng token tự làm mới
+ccoding kpi --days 7                # KPI từng sub-agent (chất lượng, hiệu quả, tin cậy, tuân thủ) + việc cần sửa
 ccoding logs -f --agent data-engineer
 ccoding logs verify                 # kiểm tra toàn vẹn chuỗi băm
 ```

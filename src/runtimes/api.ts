@@ -182,6 +182,7 @@ interface StreamTurn {
   input: number;
   output: number;
   cached: number;
+  cacheWrite: number;
   model?: string;
   events: number;
 }
@@ -240,6 +241,7 @@ export class OpenAiApiRuntime implements Runtime {
 
   /** Một lượt chat/completions (stream) — trả về văn bản, lời gọi công cụ, usage. */
   private async turn(req: RunRequest, hooks: RunHooks, model: string, messages: ChatMsg[], tools: unknown[] | undefined): Promise<StreamTurn> {
+    const payload = wantsCacheControl(this.cfg, model) ? withCacheMarks(messages, req, this.cfg.promptStyle === 'combined') : messages;
     let res: Response;
     try {
       res = await fetch(`${this.base()}/chat/completions`, {
@@ -250,7 +252,7 @@ export class OpenAiApiRuntime implements Runtime {
           max_tokens: req.maxTokens ?? this.cfg.maxTokens ?? 8000,
           stream: true,
           stream_options: { include_usage: true },
-          messages,
+          messages: payload,
           ...(tools?.length ? { tools, tool_choice: 'auto' } : {}),
         }),
         signal: withTimeout(hooks.signal, req.timeoutMs),
@@ -263,7 +265,7 @@ export class OpenAiApiRuntime implements Runtime {
       const body = (await res.text()).slice(0, 600);
       throw new RuntimeError(`${this.base()} ${res.status}: ${body}`, classifyError(res.status, body), res.status, parseRetryAt(res.headers, body));
     }
-    const t: StreamTurn = { text: '', toolCalls: [], input: 0, output: 0, cached: 0, events: 0 };
+    const t: StreamTurn = { text: '', toolCalls: [], input: 0, output: 0, cached: 0, cacheWrite: 0, events: 0 };
     const calls = new Map<number, { id: string; name: string; args: string }>();
     try {
       for await (const data of sseData(res)) {
@@ -298,7 +300,8 @@ export class OpenAiApiRuntime implements Runtime {
         if (ev.usage) {
           t.input = ev.usage.prompt_tokens ?? t.input;
           t.output = ev.usage.completion_tokens ?? t.output;
-          t.cached = ev.usage.prompt_tokens_details?.cached_tokens ?? ev.usage.cache_read_input_tokens ?? t.cached;
+          t.cached = ev.usage.prompt_tokens_details?.cached_tokens ?? ev.usage.cache_read_input_tokens ?? ev.usage.cache_read_tokens ?? t.cached;
+          t.cacheWrite = ev.usage.cache_creation_input_tokens ?? ev.usage.prompt_tokens_details?.cache_creation_tokens ?? t.cacheWrite;
         }
       }
     } catch (e) {
@@ -323,7 +326,7 @@ export class OpenAiApiRuntime implements Runtime {
             { role: 'system', content: req.system },
             { role: 'user', content: userPrompt(req) },
           ];
-    const usage = { input: 0, output: 0, cached: 0 };
+    const usage = { input: 0, output: 0, cached: 0, cacheWrite: 0 };
     let usedModel = model;
     let finish: string | undefined;
     let finalText = '';
@@ -364,6 +367,7 @@ export class OpenAiApiRuntime implements Runtime {
       usage.input += t.input;
       usage.output += t.output;
       usage.cached += t.cached;
+      usage.cacheWrite += t.cacheWrite;
       if (t.model) usedModel = t.model;
       finish = t.finish;
       if (t.toolCalls.length && useTools && turns <= maxTurns && !finalAsked) {
@@ -421,7 +425,7 @@ export class OpenAiApiRuntime implements Runtime {
         input: estimated ? estimateTokens(combinedPrompt(req)) : Math.max(0, usage.input - usage.cached),
         output: estimated ? estimateTokens(text) : usage.output,
         cacheRead: usage.cached,
-        cacheWrite: 0,
+        cacheWrite: usage.cacheWrite,
         costUsd: 0,
       },
       estimated,
@@ -438,28 +442,77 @@ export class OpenAiApiRuntime implements Runtime {
 }
 
 /**
- * Giữ lịch sử hội thoại công cụ gọn: kết quả công cụ cũ (trừ 6 kết quả gần nhất) rút còn 600 ký tự —
- * mỗi lượt gửi lại toàn bộ lịch sử nên phần này quyết định chi phí token của vòng lặp.
+ * Giữ lịch sử hội thoại công cụ gọn: kết quả công cụ cũ (trừ `keep` kết quả gần nhất) rút còn `max` ký tự, tham số write_file/edit_file cũ
+ * (nội dung file đã nằm trên đĩa) cũng rút gọn. Mỗi lượt gửi lại toàn bộ lịch sử nên phần này quyết định chi phí token của vòng lặp.
+ * Rút gọn THEO ĐỢT: chỉ khi phần cũ chưa rút gọn vượt `threshold` ký tự — giữa hai đợt, tiền tố hội thoại giữ nguyên nên
+ * cache prompt của nhà cung cấp (tự động như OpenAI/Codex, hoặc cache_control với Claude) vẫn trúng.
+ * Trả về true nếu đã rút gọn.
  */
-export function compactHistory(messages: ChatMsg[], keep = 4, max = 500): void {
+export function compactHistory(messages: ChatMsg[], keep = 3, max = 400, threshold = 40_000): boolean {
   const toolIdx = messages.map((m, i) => (m.role === 'tool' ? i : -1)).filter((i) => i >= 0);
-  for (const i of toolIdx.slice(0, Math.max(0, toolIdx.length - keep))) {
+  const older = toolIdx.slice(0, Math.max(0, toolIdx.length - keep)).filter((i) => String(messages[i].content ?? '').length > max + 80);
+  const calls = (i: number) => (messages[i].tool_calls as Array<{ function: { name: string; arguments: string } }> | undefined) ?? [];
+  const asst = messages.map((x, i) => (x.role === 'assistant' && Array.isArray(x.tool_calls) ? i : -1)).filter((i) => i >= 0);
+  const bigArgs = asst.slice(0, Math.max(0, asst.length - 2)).filter((i) => calls(i).some((tc) => tc.function.arguments.length > 2000));
+  const pending =
+    older.reduce((n, i) => n + String(messages[i].content ?? '').length, 0) + bigArgs.reduce((n, i) => n + calls(i).reduce((k, tc) => k + tc.function.arguments.length, 0), 0);
+  if (pending < threshold) return false;
+  for (const i of older) {
     const c = String(messages[i].content ?? '');
-    if (c.length > max) messages[i].content = `${c.slice(0, max)}\n… [kết quả cũ đã lược bớt — gọi lại công cụ nếu cần]`;
+    messages[i].content = `${c.slice(0, max)}\n… [kết quả cũ đã lược bớt — gọi lại công cụ nếu cần]`;
   }
-  // tham số write_file cũ (nội dung file) cũng rút gọn — file đã nằm trên đĩa
-  const asst = messages.map((m, i) => (m.role === 'assistant' && Array.isArray(m.tool_calls) ? i : -1)).filter((i) => i >= 0);
-  for (const i of asst.slice(0, Math.max(0, asst.length - 2))) {
-    for (const tc of messages[i].tool_calls as Array<{ function: { name: string; arguments: string } }>) {
-      if (tc.function.arguments.length > 2000) {
-        try {
-          const a = JSON.parse(tc.function.arguments) as Record<string, unknown>;
-          for (const k of ['content', 'new_string', 'old_string']) if (typeof a[k] === 'string' && (a[k] as string).length > 400) a[k] = `${(a[k] as string).slice(0, 400)}… [đã ghi ra file]`;
-          tc.function.arguments = JSON.stringify(a);
-        } catch {
-          tc.function.arguments = tc.function.arguments.slice(0, 2000);
-        }
+  for (const i of bigArgs) {
+    for (const tc of calls(i)) {
+      if (tc.function.arguments.length <= 2000) continue;
+      try {
+        const a = JSON.parse(tc.function.arguments) as Record<string, unknown>;
+        for (const k of ['content', 'new_string', 'old_string']) if (typeof a[k] === 'string' && (a[k] as string).length > 400) a[k] = `${(a[k] as string).slice(0, 400)}… [đã ghi ra file]`;
+        tc.function.arguments = JSON.stringify(a);
+      } catch {
+        tc.function.arguments = tc.function.arguments.slice(0, 2000);
       }
     }
   }
+  return true;
+}
+
+/** Model này có được gắn cache_control (cache prompt kiểu Anthropic) không. */
+export function wantsCacheControl(cfg: RuntimeConfig, model: string): boolean {
+  const c = cfg.cacheControl;
+  if (!c) return false;
+  if (c === true) return /claude/i.test(model);
+  try {
+    return new RegExp(String(c), 'i').test(model);
+  } catch {
+    return false;
+  }
+}
+
+const EPHEMERAL = { type: 'ephemeral' } as const;
+const part = (text: string, cache = false) => (cache ? { type: 'text', text, cache_control: EPHEMERAL } : { type: 'text', text });
+
+/**
+ * Bản sao tin nhắn kèm điểm cache (tối đa 3): hồ sơ vị trí (system), bối cảnh nhiệm vụ (đầu tin nhắn user đầu tiên)
+ * và tin nhắn cuối cùng (kết quả công cụ mới nhất) — lượt sau đọc lại toàn bộ lịch sử từ cache thay vì tính đủ giá.
+ */
+export function withCacheMarks(messages: ChatMsg[], req: Pick<RunRequest, 'context' | 'prompt'>, combined: boolean): ChatMsg[] {
+  const out = messages.map((x) => ({ ...x }));
+  const first = out.findIndex((x) => x.role === 'user');
+  for (let i = 0; i < out.length; i++) {
+    const msg = out[i];
+    if (typeof msg.content !== 'string' || !msg.content) continue;
+    const text = msg.content;
+    if (msg.role === 'system') msg.content = [part(text, true)];
+    else if (i === first) {
+      // phần tĩnh (bối cảnh, + hồ sơ với kiểu "combined") có điểm cache riêng; phần việc của lượt gọi đi sau
+      const staticLen = combined ? (text.endsWith(req.prompt) ? text.length - req.prompt.length : 0) : req.context && text.startsWith(req.context) ? req.context.length : 0;
+      msg.content = staticLen > 1000 && staticLen < text.length ? [part(text.slice(0, staticLen), true), part(text.slice(staticLen))] : [part(text, i === out.length - 1)];
+    }
+  }
+  // điểm cache di động ở tin nhắn cuối (sau tin nhắn user đầu tiên)
+  const last = out.length - 1;
+  if (last > first && (out[last].role === 'tool' || out[last].role === 'user') && typeof out[last].content === 'string' && out[last].content) {
+    out[last].content = [part(String(out[last].content), true)];
+  }
+  return out;
 }

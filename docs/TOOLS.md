@@ -27,7 +27,11 @@ Quyền = giao của (1) `tools:` trong hồ sơ agent, (2) quyền của dự �
 | Review | đọc + `run_command` (chạy test để xác nhận) |
 | Thực thi, sửa theo review | theo quyền dự án |
 
-Quyền dự án (`toolAccess`): `none` · `read` · `write` (đọc/ghi file) · `exec` (đọc/ghi + chạy lệnh). Mặc định: dự án → `tools.projectAccess` (`exec`); nhiệm vụ không thuộc dự án → `tools.defaultAccess` (`none` — không có gì thật để đọc ngoài chính sản phẩm đã nằm trong prompt, bật công cụ chỉ tốn token).
+Quyền dự án (`toolAccess`): `none` · `read` · `write` (đọc/ghi file) · `exec` (đọc/ghi + chạy lệnh). Mặc định: dự án → `tools.projectAccess` (`exec`); nhiệm vụ không thuộc dự án → `tools.defaultAccess` (`write`): **thư mục làm việc riêng** `workspaces/<task>` (không phải repo) để kiểm kê tài liệu đầu vào và **lưu sản phẩm thành tệp** (bảng/CSV số liệu, danh mục nguồn, giao thức…), không chạy lệnh. Tệp agent tạo được liệt kê trong báo cáo nhiệm vụ.
+
+**Chạy lệnh lần lượt**: repo dự án quyền `exec` dùng chung một worktree giữa các hạng mục ⇒ hạng mục của agent có quyền chạy lệnh (cài dependency, test, migration, git) làm **lần lượt**; hạng mục chỉ viết tài liệu (kiến trúc, BA…) vẫn song song. Tắt bằng `tools.serializeWriters: false`.
+
+**Review dựa trên bằng chứng**: reviewer có quyền chạy lệnh phải chạy test/typecheck liên quan và ghi `checks` (lệnh + exit code); lệnh thật sự chạy qua công cụ được ghi kèm kết luận, review không chạy lệnh nào bị gắn cờ "chưa có bằng chứng chạy thật" (log `review.unverified`).
 
 Giới hạn theo pha (mỗi lượt công cụ gửi lại toàn bộ hội thoại, nên chi phí tăng theo số lượt):
 - `phases.toolTurns` — số lượt tối đa: thực thi 30, sửa 12, review 8, lập kế hoạch 8, tổng hợp 4, chốt 4.

@@ -11,6 +11,7 @@ import type { Registry } from './registry.js';
 import { classifyError, RuntimeError, shouldFailover, toRuntimeError } from './runtimes/errors.js';
 import type { Candidate, RuntimeManager } from './runtimes/index.js';
 import type { Store } from './store.js';
+import { kpiMarkdown, kpiReport } from './kpi.js';
 import { toolsFor } from './tools/workspace.js';
 import type { Uploads } from './uploads.js';
 import type { UsageLedger } from './usage.js';
@@ -142,6 +143,14 @@ export interface PackageOptions extends ResumeOptions {
   resume?: boolean;
 }
 
+export interface SplitOptions {
+  /** Hạng mục cần tách (mặc định: mọi hạng mục chưa xong). */
+  subtasks?: string[];
+  /** Ngân sách mỗi nhiệm vụ mới (mặc định: ước lượng cho hạng mục × 1,5, tối thiểu 400k). */
+  budgetTokens?: number;
+  budgetMode?: BudgetMode;
+}
+
 export function extractSummary(text: string, max = 320): string {
   const m = /##\s*Tóm tắt[^\n]*\n+([\s\S]*?)(?:\n##\s|$)/i.exec(text);
   const body = (m ? m[1] : text.replace(/^#.*$/gm, '')).replace(/\s+/g, ' ').trim();
@@ -189,6 +198,10 @@ export class Orchestrator {
   // ── API công khai ─────────────────────────────────────────────────────────
 
   submit(input: NewTaskInput): Task {
+    return this.createTask(input);
+  }
+
+  private createTask(input: NewTaskInput, extra: { after?: string[]; splitFrom?: Task['splitFrom']; prepareInputs?: (inputsDir: string, task: Task) => void } = {}): Task {
     const brief = (input.brief ?? '').trim();
     if (!brief) throw new Error('Thiếu nội dung nhiệm vụ (brief)');
     const { config, registry, store } = this.d;
@@ -221,7 +234,10 @@ export class Orchestrator {
         budgetTokens: Math.max(1000, o.budgetTokens ?? project?.budgetTokens ?? config.defaults.budgetTokens),
         budgetMode,
         runtime: o.runtime || undefined,
+        subtaskBudgetTokens: o.subtaskBudgetTokens && o.subtaskBudgetTokens > 0 ? Math.floor(o.subtaskBudgetTokens) : undefined,
       },
+      after: extra.after?.length ? extra.after : undefined,
+      splitFrom: extra.splitFrom,
       usage: emptyUsage(),
       createdAt: now,
       updatedAt: now,
@@ -245,6 +261,7 @@ export class Orchestrator {
         this.d.uploads.remove(meta.id);
       }
     }
+    extra.prepareInputs?.(inputsDir, task);
     store.put(task, true);
     this.d.logs.write({
       level: 'info',
@@ -309,7 +326,7 @@ export class Orchestrator {
     const { store, logs } = this.d;
     const t = store.get(id);
     if (!t) throw new Error('Không có nhiệm vụ');
-    const hasFailed = t.runs.some((r) => r.subtasks.some((x) => x.status === 'failed' || x.status === 'skipped'));
+    const hasFailed = t.runs.some((r) => r.subtasks.some((x) => !x.splitTo && (x.status === 'failed' || x.status === 'skipped')));
     const hasRerun = o.rerun === 'all' || (Array.isArray(o.rerun) && o.rerun.length > 0) || !!o.from || hasFailed;
     if (!['paused', 'failed', 'cancelled'].includes(t.status) && !(t.status === 'done' && hasRerun))
       throw new Error(`Nhiệm vụ đang ở trạng thái "${t.status}" — chỉ tiếp tục được khi tạm dừng, lỗi hoặc đã hủy (nhiệm vụ đã xong: chọn hạng mục cần chạy lại)`);
@@ -336,7 +353,7 @@ export class Orchestrator {
         logs.write({ level: 'info', kind: 'task.rerun', msg: `${t.id}: chạy lại ${again.map((s) => s.id).join(', ')}`, taskId: t.id, department: r.department });
       }
       // còn hạng mục lỗi/bỏ qua → làm lại thực thi các hạng mục đó rồi review/tổng hợp lại
-      if (r.subtasks.some((x) => x.status === 'failed' || x.status === 'skipped')) {
+      if (r.subtasks.some((x) => !x.splitTo && (x.status === 'failed' || x.status === 'skipped'))) {
         r.stage ??= inferStage(r);
         if (r.stage && STAGES.indexOf(r.stage) > STAGES.indexOf('finalized')) {
           r.stage = 'finalized';
@@ -355,12 +372,14 @@ export class Orchestrator {
       }
       if (r.status !== 'done') r.status = 'pending';
       for (const s of r.subtasks)
-        if (s.status === 'failed' || s.status === 'skipped' || s.status === 'running') {
+        if (!s.splitTo && (s.status === 'failed' || s.status === 'skipped' || s.status === 'running')) {
           s.status = 'pending';
           s.error = undefined;
         }
     }
     const prev = t.pause?.reason ?? t.status;
+    // người dùng chủ động tiếp tục: bỏ điều kiện chờ các nhiệm vụ trước đã lỗi/hủy/không còn
+    if (t.after?.some((a) => ['failed', 'cancelled', undefined].includes(store.get(a)?.status))) t.after = undefined;
     t.status = 'queued';
     t.pause = undefined;
     t.error = undefined;
@@ -466,10 +485,28 @@ export class Orchestrator {
   // ── Hàng đợi ──────────────────────────────────────────────────────────────
 
   private pump(): void {
-    while (this.active.size < this.d.config.maxConcurrentTasks && this.queue.length) {
-      const id = this.queue.shift()!;
+    let i = 0;
+    while (this.active.size < this.d.config.maxConcurrentTasks && i < this.queue.length) {
+      const id = this.queue[i];
       const t = this.d.store.get(id);
-      if (!t || t.status !== 'queued') continue;
+      if (!t || t.status !== 'queued') {
+        this.queue.splice(i, 1);
+        continue;
+      }
+      // nhiệm vụ tách ra theo thứ tự phụ thuộc: chờ nhiệm vụ trước xong
+      const wait = this.waitingOn(t);
+      if (wait === 'wait') {
+        i++;
+        continue;
+      }
+      this.queue.splice(i, 1);
+      if (wait === 'blocked') {
+        t.status = 'paused';
+        t.pause = { reason: 'manual', detail: `Chờ nhiệm vụ trước (${t.after!.join(', ')}) nhưng nhiệm vụ đó lỗi/đã hủy — bấm "Tiếp tục" để vẫn chạy`, at: nowIso() };
+        this.d.logs.write({ level: 'warn', kind: 'task.blocked', msg: `${t.id}: ${t.pause.detail}`, taskId: t.id });
+        this.save(t, true);
+        continue;
+      }
       this.active.add(id);
       void this.runTask(t).finally(() => {
         this.active.delete(id);
@@ -478,6 +515,129 @@ export class Orchestrator {
         this.pump();
       });
     }
+  }
+
+  /** Trạng thái chờ của nhiệm vụ có điều kiện "after": chạy được / còn chờ / bị chặn (nhiệm vụ trước lỗi, hủy, không còn). */
+  private waitingOn(t: Task): undefined | 'wait' | 'blocked' {
+    if (!t.after?.length) return undefined;
+    const st = t.after.map((a) => this.d.store.get(a)?.status);
+    if (st.every((s) => s === 'done')) return undefined;
+    if (st.some((s) => s === undefined || s === 'failed' || s === 'cancelled')) return 'blocked';
+    return 'wait';
+  }
+
+  /**
+   * Tách hạng mục chưa xong thành các nhiệm vụ riêng ("mỗi nhiệm vụ một gói việc"): mỗi nhiệm vụ mới có yêu cầu riêng
+   * (mô tả hạng mục + bối cảnh gốc + kết quả đã có), ngân sách riêng, cùng dự án/phòng; thứ tự phụ thuộc giữ bằng "after".
+   */
+  splitTask(id: string, o: SplitOptions = {}): { task: Task; created: Task[] } {
+    const { store, logs } = this.d;
+    const t = store.get(id);
+    if (!t) throw new Error('Không có nhiệm vụ');
+    if (t.status === 'running' || t.status === 'queued') throw new Error('Hãy tạm dừng nhiệm vụ trước khi tách');
+    const want = o.subtasks?.length ? new Set(o.subtasks.map(String)) : undefined;
+    const picks: Array<{ run: DeptRun; st: Subtask }> = [];
+    for (const run of t.runs) for (const st of run.subtasks) if (!st.splitTo && (want ? want.has(st.id) : st.status !== 'done')) picks.push({ run, st });
+    if (!picks.length) throw new Error(t.runs.some((r) => r.subtasks.length) ? 'Không còn hạng mục nào để tách (đã xong hoặc đã tách)' : 'Nhiệm vụ chưa có kế hoạch để tách');
+    // tạo theo thứ tự phụ thuộc để biết id nhiệm vụ đi trước
+    const ordered: typeof picks = [];
+    const left = [...picks];
+    while (left.length) {
+      const k = left.findIndex((p) => p.st.dependsOn.every((d) => !left.some((q) => q.run === p.run && q.st.id === d)));
+      ordered.push(...left.splice(k >= 0 ? k : 0, 1));
+    }
+    const project = t.projectId ? store.project(t.projectId) : undefined;
+    const runDir = store.runDir(t.id);
+    const created: Task[] = [];
+    const newIds = new Map<Subtask, string>();
+    for (const { run, st } of ordered) {
+      const done = run.subtasks.filter((s) => s.status === 'done' && s.output);
+      const deps = done.filter((s) => st.dependsOn.includes(s.id));
+      const rest = done.filter((s) => !st.dependsOn.includes(s.id));
+      const fromDir = `inputs/tu-${safeName(t.id)}`;
+      const line = (s: Subtask) => `- **${s.id} — ${s.title}** (@${s.assignee}): ${s.summary ?? ''} — tệp: \`${fromDir}/${path.basename(s.output!)}\``;
+      const brief = [
+        `${st.title}`,
+        '',
+        `Nhiệm vụ này được tách từ hạng mục ${st.id} của nhiệm vụ ${t.id} ("${t.title}") để làm trọn một gói việc với ngân sách riêng.`,
+        '',
+        '## Việc cần làm',
+        st.description,
+        st.deliverable ? `\nSản phẩm bàn giao: ${st.deliverable}` : '',
+        st.draft || st.output ? `\nĐã có bản làm dở/bản trước của hạng mục này: \`${fromDir}/${path.basename((st.output ?? st.draft)!)}\` — tận dụng phần đúng, không làm lại từ đầu.` : '',
+        '',
+        '## Bối cảnh — yêu cầu gốc (rút gọn)',
+        t.brief.length > 6000 ? `${t.brief.slice(0, 6000)}…\n\n_(bản đầy đủ: \`inputs/YEU-CAU-GOC.md\`)_` : t.brief,
+        deps.length ? `\n## Kết quả các hạng mục đi trước (đầu vào trực tiếp)\n${deps.map(line).join('\n')}` : '',
+        rest.length ? `\n## Các hạng mục khác đã xong trong nhiệm vụ gốc (tham khảo)\n${rest.map(line).join('\n')}` : '',
+      ]
+        .filter((x) => x !== '')
+        .join('\n');
+      const after = st.dependsOn.map((d) => [...newIds.entries()].find(([s]) => s.id === d && run.subtasks.includes(s))?.[1]).filter((x): x is string => !!x);
+      const est = this.estimatePlan(t, { ...run, subtasks: [{ ...st, status: 'pending' }] }, project);
+      const nt = this.createTask(
+        {
+          brief,
+          title: `${st.title}`.slice(0, 90),
+          mode: project ? 'project' : 'department',
+          department: project ? undefined : run.department,
+          projectId: project?.id,
+          options: {
+            discussionRounds: t.options.discussionRounds,
+            review: t.options.review,
+            maxParallel: t.options.maxParallel,
+            maxRevisions: t.options.maxRevisions,
+            runtime: t.options.runtime,
+            budgetTokens: o.budgetTokens && o.budgetTokens > 0 ? o.budgetTokens : Math.max(400_000, Math.round(est * 1.5)),
+            budgetMode: o.budgetMode ?? t.options.budgetMode,
+          },
+        },
+        {
+          after,
+          splitFrom: { taskId: t.id, subtaskId: st.id },
+          prepareInputs: (inputsDir, nt) => {
+            // tài liệu gốc + sản phẩm đã có (bản sao trong inputs/ của nhiệm vụ mới)
+            writeText(path.join(inputsDir, 'YEU-CAU-GOC.md'), t.brief);
+            const src = path.join(runDir, 'inputs');
+            if (fs.existsSync(src))
+              for (const f of fs.readdirSync(src)) if (f !== 'BRIEF.md' && fs.statSync(path.join(src, f)).isFile()) fs.copyFileSync(path.join(src, f), path.join(inputsDir, f));
+            if (t.attachments?.length) nt.attachments = t.attachments.map((a) => ({ ...a }));
+            const to = path.join(inputsDir, `tu-${safeName(t.id)}`);
+            for (const s of [...deps, ...rest, st]) {
+              const rel = s === st ? (st.output ?? st.draft) : s.output;
+              if (!rel) continue;
+              const text = store.readRunFile(t.id, rel);
+              if (text !== undefined) writeText(path.join(to, path.basename(rel)), text.replace(/^<!--[\s\S]*?-->\s*/, ''));
+            }
+          },
+        },
+      );
+      newIds.set(st, nt.id);
+      created.push(nt);
+      st.splitTo = nt.id;
+      if (st.status !== 'done') {
+        st.status = 'skipped';
+        st.error = `Đã tách thành nhiệm vụ ${nt.id}`;
+      }
+    }
+    t.splitInto = [...(t.splitInto ?? []), ...created.map((c) => c.id)];
+    this.clearResumeTimer(t.id);
+    if (t.status === 'paused' || t.status === 'failed') {
+      t.status = 'cancelled';
+      t.pause = undefined;
+      t.error = `Đã tách thành ${created.length} nhiệm vụ riêng`;
+      t.finishedAt = nowIso();
+    }
+    logs.write({ level: 'info', kind: 'task.split', msg: `${t.id}: tách ${created.length} hạng mục → ${created.map((c) => c.id).join(', ')}`, taskId: t.id, projectId: t.projectId });
+    this.message(
+      t,
+      'office',
+      'system',
+      'system',
+      `✂ Đã tách thành ${created.length} nhiệm vụ riêng (mỗi nhiệm vụ một gói việc, ngân sách riêng):\n${ordered.map(({ st }) => `- ${st.id} ${st.title} → ${st.splitTo}${created.find((c) => c.id === st.splitTo)?.after?.length ? ` (chờ ${created.find((c) => c.id === st.splitTo)!.after!.join(', ')})` : ''}`).join('\n')}`,
+    );
+    this.save(t, true);
+    return { task: t, created };
   }
 
   private scheduleResume(t: Task): void {
@@ -620,7 +780,19 @@ export class Orchestrator {
       text: a.textPath ? (this.d.store.readRunFile(task.id, a.textPath) ?? '') : '',
       wsPath: a.textPath ? `${ccDir}/${a.textPath}` : undefined,
     }));
-    return { task, dept, project, cwd: task.workspace ?? this.workspaceFor(task, project), roster, attachments, filesAccessible: access !== 'none', ccDir, branch: task.branch };
+    return {
+      task,
+      dept,
+      project,
+      cwd: task.workspace ?? this.workspaceFor(task, project),
+      roster,
+      attachments,
+      filesAccessible: access !== 'none',
+      ccDir,
+      branch: task.branch,
+      scratch: !project?.workspace,
+      serialWriters: this.exclusiveWrites(task, project),
+    };
   }
 
   private async runDepartment(task: Task, run: DeptRun, project: ProjectDef | undefined, prior?: string): Promise<string> {
@@ -696,6 +868,8 @@ export class Orchestrator {
       }
       run.stage = 'finalized';
       this.save(task);
+      // kế hoạch quá lớn so với ngân sách → cảnh báo (chế độ "pause": dừng để quyết định tách/tăng ngân sách)
+      this.checkEstimate(task, run, project);
     }
 
     // 3) Thực thi
@@ -715,27 +889,47 @@ export class Orchestrator {
           this.setPhase(task, run, 'review');
           const items = done().map((st) => this.depInput(task, st));
           const changes = this.workspaceChanges(task);
-          const res = await this.call(reviewer, 'review', (tools) => P.reviewPrompt(pctx, items, tools, changes), {
-            ...base,
-            hints: { brief: task.brief, subtasks: items.map((i) => stHint(i.st)), attempt },
-          });
+          let reviewTools: ToolName[] = [];
+          const res = await this.call(
+            reviewer,
+            'review',
+            (tools) => {
+              reviewTools = tools;
+              return P.reviewPrompt(pctx, items, tools, changes);
+            },
+            { ...base, hints: { brief: task.brief, subtasks: items.map((i) => stHint(i.st)), attempt } },
+          );
           // review lỗi KHÔNG được coi là "duyệt"
           if (res.error && !res.text) throw new Error(`Không review được: ${res.error}`);
           const review = parseReview(res.text, items.map((i) => i.st.id));
-          run.review = { approved: review.approved, summary: review.summary, issues: review.issues };
+          // bằng chứng: lệnh reviewer thực sự chạy qua công cụ (không chỉ lời khai trong JSON)
+          const ran = (res.toolCalls ?? []).filter((tc) => tc.name === 'run_command');
+          const checks = [
+            ...ran.map((tc) => ({ command: tc.args.replace(/^command=/, '').slice(0, 300), ok: tc.ok, note: tc.ok ? 'chạy qua công cụ' : `lỗi: ${(tc.error ?? '').slice(0, 160)}` })),
+            ...review.checks.filter((c) => !ran.some((tc) => tc.args.includes(c.command.slice(0, 40)))),
+          ];
+          const verified = reviewTools.includes('run_command') ? ran.length > 0 : undefined;
+          run.review = { approved: review.approved, summary: review.summary, issues: review.issues, checks, verified };
+          const evidence =
+            verified === false
+              ? '\n⚠️ Reviewer có quyền chạy lệnh nhưng KHÔNG chạy lệnh kiểm tra nào — kết luận chưa có bằng chứng chạy thật.'
+              : ran.length
+                ? `\nĐã chạy: ${ran.map((tc) => `\`${tc.args.replace(/^command=/, '').slice(0, 80)}\` ${tc.ok ? '✓' : '✗'}`).join(', ')}`
+                : '';
+          if (verified === false) this.d.logs.write({ level: 'warn', kind: 'review.unverified', msg: `${dept.short}: reviewer không chạy lệnh kiểm tra nào`, taskId: task.id, agentId: reviewer.id, department: dept.id });
           this.message(
             task,
             dept.id,
             reviewer.id,
             'review',
-            `${review.approved ? '✅ Duyệt' : '⚠️ Cần sửa'} — ${review.summary}${review.issues.length ? `\n${review.issues.map((i) => `- [${i.severity}] ${i.subtask}: ${i.comment}`).join('\n')}` : ''}`,
+            `${review.approved ? '✅ Duyệt' : '⚠️ Cần sửa'} — ${review.summary}${review.issues.length ? `\n${review.issues.map((i) => `- [${i.severity}] ${i.subtask}: ${i.comment}`).join('\n')}` : ''}${evidence}`,
           );
           const targets = run.subtasks.filter((s) => s.status === 'done' && review.issues.some((i) => i.subtask === s.id && i.severity !== 'minor'));
           if (review.approved || !targets.length || attempt === task.options.maxRevisions) break;
           this.setPhase(task, run, 'revise');
-          const results = await Promise.allSettled(
-            targets.map(async (st) => {
+          const reviseOne = async (st: Subtask) => {
               const agent = registry.agent(st.assignee);
+              this.noteAttempt(task, run, st);
               const issues = review.issues.filter((i) => i.subtask === st.id).map((i) => `- [${i.severity}] ${i.comment}`).join('\n');
               const prev = this.depInput(task, st);
               const r = await this.call(agent, 'revise', (tools) => P.revisePrompt(pctx, st, prev.text, issues, tools, prev.wsPath), {
@@ -749,8 +943,16 @@ export class Orchestrator {
                 this.writeOutput(task, run, st, agent, r);
                 this.message(task, dept.id, agent.id, 'handoff', `Đã sửa ${st.id} theo review: ${extractSummary(r.text, 200)}`, { subtaskId: st.id });
               }
-            }),
-          );
+          };
+          // workspace dự án dùng chung: hạng mục chạy lệnh làm lần lượt, hạng mục chỉ viết tài liệu vẫn song song
+          const serial = pctx.serialWriters ? targets.filter((st) => this.isWriter(registry.agent(st.assignee), task, project)) : [];
+          const parallel = targets.filter((st) => !serial.includes(st));
+          const results = await Promise.allSettled([
+            ...parallel.map(reviseOne),
+            (async () => {
+              for (const st of serial) await reviseOne(st);
+            })(),
+          ]);
           const stop = results.find((x): x is PromiseRejectedResult => x.status === 'rejected');
           if (stop) throw stop.reason;
         }
@@ -763,7 +965,9 @@ export class Orchestrator {
     this.checkAbort(task);
     this.setPhase(task, run, 'synthesize');
     const items = done().map((st) => this.depInput(task, st));
-    const reviewText = run.review ? `${run.review.approved ? 'Đã duyệt' : 'Chưa duyệt hoàn toàn'}: ${run.review.summary}` : '';
+    const reviewText = run.review
+      ? `${run.review.approved ? 'Đã duyệt' : 'Chưa duyệt hoàn toàn'}: ${run.review.summary}${run.review.verified === false ? '\n(Reviewer KHÔNG chạy lệnh kiểm tra nào — kết luận chưa có bằng chứng chạy thật; nêu rõ trong báo cáo.)' : run.review.checks?.length ? `\nLệnh kiểm tra reviewer đã chạy: ${run.review.checks.map((c) => `${c.command}${c.ok === false ? ' (lỗi)' : c.ok ? ' (đạt)' : ''}`).join('; ')}` : ''}`
+      : '';
     const changes = this.workspaceChanges(task);
     const fin = await this.call(lead, 'synthesize', (tools) => P.synthesizePrompt(pctx, run.planSummary ?? '', run.decisions ?? '', items, reviewText, prior, changes, tools), {
       ...base,
@@ -786,6 +990,10 @@ export class Orchestrator {
   private async executeAll(task: Task, run: DeptRun, pctx: P.Ctx, base: CallCtx, prior?: string): Promise<void> {
     const busy = new Set<string>();
     const inflight = new Map<string, Promise<void>>();
+    /** Hạng mục đang chạy có quyền chạy lệnh trong workspace dùng chung (tối đa 1). */
+    const writing = new Set<string>();
+    const writer = (st: Subtask) => !!pctx.serialWriters && this.isWriter(this.d.registry.agent(st.assignee), task, pctx.project);
+    let toldSerial = false;
     let stop: unknown;
     for (;;) {
       if (!stop) {
@@ -801,10 +1009,22 @@ export class Orchestrator {
           st.error = 'Phụ thuộc thất bại';
         }
         const slots = task.options.maxParallel - inflight.size;
-        const ready = slots > 0 ? readySubtasks(run.subtasks, busy).slice(0, slots) : [];
+        const ready: Subtask[] = [];
+        for (const st of slots > 0 ? readySubtasks(run.subtasks, busy) : []) {
+          if (ready.length >= slots) break;
+          if (writer(st) && (writing.size || ready.some(writer))) {
+            if (!toldSerial) {
+              toldSerial = true;
+              this.message(task, run.department, 'system', 'system', `🔒 Các hạng mục chạy lệnh trong repo dự án (cài đặt, test, migration, git) làm lần lượt vì dùng chung một worktree; hạng mục chỉ viết tài liệu vẫn chạy song song.`);
+            }
+            continue;
+          }
+          ready.push(st);
+        }
         for (const st of ready) {
           st.status = 'running';
           busy.add(st.assignee);
+          if (writer(st)) writing.add(st.id);
           const p = this.runSubtask(task, run, st, pctx, base, prior)
             .catch((e) => {
               stop ??= e;
@@ -813,6 +1033,7 @@ export class Orchestrator {
             .finally(() => {
               busy.delete(st.assignee);
               inflight.delete(st.id);
+              writing.delete(st.id);
             });
           inflight.set(st.id, p);
         }
@@ -841,6 +1062,7 @@ export class Orchestrator {
       .map((s) => this.depInput(task, s));
     const draft = st.draft ? { text: (this.d.store.readRunFile(task.id, st.draft) ?? '').replace(/^<!--[\s\S]*?-->\s*/, ''), wsPath: `.ccoding/${safeName(task.id)}/${st.draft}` } : undefined;
     for (let attempt = 1; attempt <= 2; attempt++) {
+      this.noteAttempt(task, run, st);
       const res = await this.call(agent, 'execute', (tools) => P.executePrompt(pctx, agent, st, run.planSummary ?? '', run.decisions ?? '', deps, tools, prior, run.subtasks, draft), {
         ...base,
         subtask: st,
@@ -907,11 +1129,90 @@ export class Orchestrator {
     if (pct >= 100 && mode === 'pause') throw new PauseSignal('budget', `Đã dùng ${fmtNum(used)}/${fmtNum(budget)} token (chạm trần ngân sách)`);
   }
 
+  /** Phần ngân sách của một hạng mục (cộng dồn mọi lần chạy/sửa): cố định theo tùy chọn, hoặc 2 × ngân sách / số hạng mục. */
+  subtaskBudget(task: Task, run: DeptRun): number {
+    const fixed = task.options.subtaskBudgetTokens ?? this.d.config.defaults.subtaskBudgetTokens ?? 0;
+    if (fixed > 0) return fixed;
+    return Math.max(100_000, Math.round((2 * task.options.budgetTokens) / Math.max(1, run.subtasks.length)));
+  }
+
+  /** Hạng mục vượt phần ngân sách của nó: cảnh báo ở mỗi mốc 100%; chế độ "pause" thì dừng (một lần mỗi mốc). */
+  private checkSubtaskBudget(task: Task, run: DeptRun, st: Subtask): void {
+    const cap = this.subtaskBudget(task, run);
+    const used = totalTokens(st.usage);
+    if (used < cap) return;
+    const level = Math.floor(used / cap) * 100;
+    if (level <= (st.budgetAlerted ?? 0)) return;
+    st.budgetAlerted = level;
+    const mode = task.options.budgetMode ?? this.d.config.defaults.budgetMode ?? 'complete';
+    const msg = `${st.id} (${st.title}) đã dùng ${fmtNum(used)}/${fmtNum(cap)} token — vượt phần ngân sách của hạng mục${level > 100 ? ` (${level}%)` : ''}`;
+    this.message(task, run.department, 'system', 'system', `💸 ${msg}. Cân nhắc tách hạng mục thành nhiệm vụ riêng.`, { subtaskId: st.id });
+    this.alert({ level: 'warn', kind: 'budget.subtask', title: `Hạng mục ${st.id} vượt phần ngân sách`, msg: `${task.title}: ${msg}${mode === 'complete' ? ' — vẫn chạy tiếp' : ''}`, taskId: task.id });
+    if (mode === 'pause') throw new PauseSignal('budget', msg);
+  }
+
+  /** Cảnh báo khi một hạng mục sắp chạy lần thứ 3, 5, 7… (thực thi + sửa): vòng sửa có thể không tiến triển. */
+  private noteAttempt(task: Task, run: DeptRun, st: Subtask): void {
+    const n = st.attempts + 1;
+    if (n < 3 || n % 2 === 0 || (st.attemptAlerted ?? 0) >= n) return;
+    st.attemptAlerted = n;
+    const msg = `${st.id} (${st.title}) chạy lần thứ ${n} — đã dùng ${fmtNum(totalTokens(st.usage))} token`;
+    this.d.logs.write({ level: 'warn', kind: 'subtask.attempts', msg, taskId: task.id, department: run.department, subtaskId: st.id });
+    this.alert({ level: 'warn', kind: 'subtask.attempts', title: `${st.id} chạy lần thứ ${n}`, msg: `${task.title}: ${msg}. Kiểm tra vòng sửa có tiến triển không, hoặc tách thành nhiệm vụ riêng.`, taskId: task.id });
+  }
+
+  /** Ước lượng token cho phần còn lại của kế hoạch (theo quyền công cụ của từng hạng mục). */
+  estimatePlan(task: Task, run: DeptRun, project?: ProjectDef): number {
+    const e = this.d.config.estimate;
+    const access = this.toolAccess(task, project);
+    const cls = task.classification;
+    const web = this.d.config.tools.web !== false && (cls === 'public' || cls === 'internal');
+    let total = e.base + (task.options.review ? e.perReview * (1 + task.options.maxRevisions) : 0);
+    for (const st of run.subtasks) {
+      if (st.status === 'done') continue;
+      const agent = this.d.registry.agents.get(st.assignee);
+      const tools = agent ? toolsFor(agent.tools, access, 'execute', web) : [];
+      const lvl: ToolAccess = tools.includes('run_command') ? 'exec' : tools.includes('write_file') || tools.includes('edit_file') ? 'write' : tools.includes('read_file') ? 'read' : 'none';
+      total += e.perSubtask[lvl] ?? e.perSubtask.none;
+      if (tools.some((t) => t === 'search_papers' || t === 'web_search' || t === 'fetch_url')) total += e.web;
+    }
+    return total;
+  }
+
+  /** Kế hoạch vừa chốt: ước lượng ≫ phần ngân sách còn lại → nhắn + cảnh báo; chế độ "pause" thì dừng chờ quyết định. */
+  private checkEstimate(task: Task, run: DeptRun, project?: ProjectDef): void {
+    const est = this.estimatePlan(task, run, project);
+    const remaining = Math.max(0, task.options.budgetTokens - totalTokens(task.usage));
+    run.estimate = { tokens: est, budget: remaining, at: nowIso() };
+    this.save(task);
+    if (est <= remaining * (this.d.config.estimate.warnRatio || 1)) return;
+    const mode = task.options.budgetMode ?? this.d.config.defaults.budgetMode ?? 'complete';
+    const msg = `Kế hoạch ${run.subtasks.length} hạng mục ước tính ~${fmtNum(est)} token, ${remaining ? `gấp ${(est / remaining).toFixed(1).replace('.', ',')} lần phần ngân sách còn lại (${fmtNum(remaining)})` : 'trong khi ngân sách đã hết'}. Nên tách mỗi gói việc thành một nhiệm vụ riêng (nút "Tách thành nhiệm vụ") hoặc tăng ngân sách.`;
+    this.d.logs.write({ level: 'warn', kind: 'budget.estimate', msg, taskId: task.id, department: run.department, data: { estimate: est, remaining } });
+    this.message(task, run.department, 'system', 'system', `📏 ${msg}`);
+    this.alert({ level: 'warn', kind: 'budget.estimate', title: 'Nhiệm vụ có thể quá lớn so với ngân sách', msg: `${task.title}: ${msg}`, taskId: task.id });
+    if (mode === 'pause') throw new PauseSignal('budget', msg);
+  }
+
   // ── Workspace, công cụ, git ─────────────────────────────────────────────
 
   private toolAccess(task: Task, project?: ProjectDef): ToolAccess {
     const t = this.d.config.tools;
     return project ? (project.toolAccess ?? t.projectAccess) : t.defaultAccess;
+  }
+
+  /**
+   * Workspace dự án thật (repo của người dùng) dùng chung giữa các hạng mục, có quyền chạy lệnh → hạng mục chạy lệnh
+   * (cài dependency, test, migration, git) làm LẦN LƯỢT để không giẫm chân nhau; hạng mục chỉ sửa tài liệu vẫn song song.
+   */
+  private exclusiveWrites(task: Task, project?: ProjectDef): boolean {
+    if (this.d.config.tools.serializeWriters === false || !project?.workspace) return false;
+    return this.toolAccess(task, project) === 'exec';
+  }
+
+  /** Agent có công cụ chạy lệnh ở pha thực thi với quyền hiện tại của nhiệm vụ. */
+  private isWriter(agent: AgentDef, task: Task, project?: ProjectDef): boolean {
+    return toolsFor(agent.tools, this.toolAccess(task, project), 'execute', false).includes('run_command');
   }
 
   /** Chuẩn bị thư mục làm việc: worktree git riêng (nếu dự án là repo) + .ccoding/<task>/inputs cho agent đọc. */
@@ -986,16 +1287,19 @@ export class Orchestrator {
     let result: RunResult | undefined;
     let req: RunRequest | undefined;
     let cand: Candidate | undefined;
-    const attempts: Array<{ runtime: string; model: string; kind: ErrorKind; error: string }> = [];
+    const attempts: Array<{ runtime: string; model: string; kind: ErrorKind; error: string; ms: number }> = [];
+    let failedMs = 0;
     try {
       this.checkAbort(task);
       if (this.pauseRequests.has(task.id)) throw new PauseSignal('manual', 'Tạm dừng theo yêu cầu');
       this.checkBudget(task);
+      if (ctx.subtask && ctx.run) this.checkSubtaskBudget(task, ctx.run, ctx.subtask);
       const cls = task.classification;
       const want = ctx.project?.models?.[agent.id] ?? config.phases?.models?.[phase] ?? agent.model;
       const prefs = [task.options.runtime, ctx.project?.runtime, agent.runtime, config.runtime.default];
-      const { list, notes, skipped } = await runtimes.candidates(prefs, cls, want);
+      const { list, notes, skipped, deferred } = await runtimes.candidates(prefs, cls, want);
       if (notes.length) logs.write({ level: 'warn', kind: 'runtime.fallback', msg: `${notes.join('; ')}${list[0] ? ` → dùng ${list[0].label}` : ''}`, taskId: task.id, agentId: agent.id, department: deptId });
+      if (deferred?.length) logs.write({ level: 'info', kind: 'runtime.deferred', msg: `Xếp sau (vừa bị giới hạn tốc độ): ${deferred.join(', ')} → dùng ${list[0]?.label ?? '?'}`, taskId: task.id, agentId: agent.id, department: deptId });
       if (!list.length) {
         const at = runtimes.earliestRecovery();
         throw new PauseSignal('quota', `Không còn runtime/model khả dụng${skipped.length ? `: ${skipped.join('; ')}` : ' (chưa cấu hình hoặc không kết nối được)'}`, at ?? Date.now() + 5 * 60_000);
@@ -1079,6 +1383,7 @@ export class Orchestrator {
           },
           onText: (chunk: string) => this.d.bus.publish({ type: 'output', taskId: task.id, agentId: agent.id, chunk: chunk.slice(0, 600) }),
         };
+        const t0 = Date.now();
         try {
           let r: RunResult;
           if (this.runner === 'herdr' && this.d.herdr && config.herdr.agentPanes) {
@@ -1107,7 +1412,9 @@ export class Orchestrator {
         } catch (e) {
           if (signal?.aborted) throw new CancelledError('Đã hủy');
           const re = toRuntimeError(e);
-          attempts.push({ runtime: rt.id, model: cand.model, kind: re.kind, error: re.message.slice(0, 300) });
+          const ms = Date.now() - t0;
+          failedMs += ms;
+          attempts.push({ runtime: rt.id, model: cand.model, kind: re.kind, error: re.message.slice(0, 300), ms });
           const h = runtimes.markFailure(rt.id, cand.model, re.kind, re.message, re.retryAt);
           logs.write({
             level: 'warn',
@@ -1118,7 +1425,7 @@ export class Orchestrator {
             department: deptId,
             subtaskId: ctx.subtask?.id,
             phase,
-            data: { callId, kind: re.kind, status: re.status, until: h.until ? new Date(h.until).toISOString() : undefined },
+            data: { callId, kind: re.kind, status: re.status, ms, until: h.until ? new Date(h.until).toISOString() : undefined },
           });
           if (re.kind === 'quota' || re.kind === 'auth')
             this.alert({
@@ -1137,7 +1444,7 @@ export class Orchestrator {
             estimated: false,
             model: pu?.model ?? cand.model,
             runtime: pu ? rt.id : 'n/a',
-            durationMs: 0,
+            durationMs: failedMs,
             error: re.message,
             errorKind: re.kind,
             turns: pu?.turns,
@@ -1151,6 +1458,16 @@ export class Orchestrator {
             if (ctx.subtask) addUsage(ctx.subtask.usage, { ...partialRec, calls: 1 });
             for (const tc of pu.toolCalls ?? []) logs.write({ level: tc.ok ? 'info' : 'warn', kind: 'tool.call', msg: `${agent.name} · ${tc.name} ${tc.args.slice(0, 160)} ${tc.ok ? '✓' : '✗'} (${tc.ms} ms)`, taskId: task.id, agentId: agent.id, department: deptId, subtaskId: ctx.subtask?.id, phase, data: { callId, ...tc } });
             result = { ...result, runtime: 'n/a' }; // đã ghi sổ ở trên — tránh ghi lần hai bên dưới
+          } else if (ms >= 60_000 && !rt.local && req) {
+            // lượt gọi chạy lâu rồi mới lỗi (vd. 502 sau nhiều phút) mà nhà cung cấp không báo usage: ghi sổ ƯỚC LƯỢNG phần đầu vào
+            // đã gửi đi để chi phí/hạn mức không "biến mất" khỏi thống kê
+            const est = estimateTokens(req.system + (req.context ?? '') + req.prompt);
+            const lostRec = { ts: nowIso(), callId: `${callId}-lost${i}`, taskId: task.id, subtaskId: ctx.subtask?.id, projectId: task.projectId, department: deptId, agentId: agent.id, phase, runtime: rt.id, model: cand.model, requestedModel: cand.model, input: est, output: 0, cacheRead: 0, cacheWrite: 0, costUsd: 0, durationMs: ms, estimated: true, error: re.message.slice(0, 300) };
+            usage.record(lostRec);
+            addUsage(task.usage, { ...lostRec, calls: 1 });
+            if (ctx.run) addUsage(ctx.run.usage, { ...lostRec, calls: 1 });
+            if (ctx.subtask) addUsage(ctx.subtask.usage, { ...lostRec, calls: 1 });
+            logs.write({ level: 'warn', kind: 'call.lost', msg: `${agent.name} · ${cand.label}: lỗi sau ${Math.round(ms / 1000)} giây, không có usage — ghi sổ ước lượng ${fmtNum(est)} token đầu vào`, taskId: task.id, agentId: agent.id, department: deptId, subtaskId: ctx.subtask?.id, phase, data: { callId, ms, estInput: est } });
           }
           if (!shouldFailover(re.kind)) break;
           if (this.pauseRequests.has(task.id)) throw new PauseSignal('manual', 'Tạm dừng theo yêu cầu');
@@ -1394,7 +1711,19 @@ export class Orchestrator {
     const git = task.branch
       ? `\n### Thay đổi trong repo\n- Worktree: \`${task.workspace}\` · nhánh: \`${task.branch}\`${task.commit ? ` · commit: ${task.commit}` : ''}\n- Xem thay đổi: \`git diff ${task.baseRef ? task.baseRef.slice(0, 10) : 'main'}..${task.branch}\` · gộp sau khi review: \`git merge ${task.branch}\` · dọn worktree: \`git worktree remove "${task.workspace}"\`\n${task.changes ? `\n\`\`\`\n${task.changes.slice(0, 3000)}\n\`\`\`\n` : ''}`
       : '';
-    const appendix = `\n\n---\n\n## Phụ lục: token & sản phẩm (CCoding)\n\n- Nhiệm vụ: \`${task.id}\` · chế độ: ${task.mode} · phòng: ${task.departments.join(' → ')} · phân loại dữ liệu: ${task.classification}${paused ? ' · **đang tạm dừng**' : ''}\n- Tổng: **${fmtNum(task.usage.input)} in / ${fmtNum(task.usage.output)} out**, cache đọc ${fmtNum(task.usage.cacheRead)}, ${task.usage.calls} lượt gọi${task.usage.estimatedCalls ? ` (${task.usage.estimatedCalls} lượt ước lượng)` : ''} · ngân sách ${fmtNum(task.options.budgetTokens)} (${task.options.budgetMode === 'pause' ? 'dừng khi chạm trần' : 'chạy tới khi hoàn thành'})\n\n| Agent | Phòng | Input | Output | Cache đọc | Lượt |\n|---|---|---:|---:|---:|---:|\n${rows}\n\n### File đầu ra\n${outputs.join('\n') || '(không có)'}\n${git}`;
+    const project = task.projectId ? store.project(task.projectId) : undefined;
+    const files = !task.branch && task.workspace && !project?.workspace ? listWorkspaceFiles(task.workspace, 200) : [];
+    const scratch = files.length ? `\n### Tệp trong thư mục làm việc của nhiệm vụ\n\`${task.workspace}\`\n${files.map((f) => `- \`${f.path}\` (${fmtNum(f.size)} byte)`).join('\n')}\n` : '';
+    // KPI từng agent trong nhiệm vụ (chấm từ log) — lưu thêm kpi.json để theo dõi theo thời gian
+    let kpi = '';
+    try {
+      const rep = kpiReport({ store, registry, config: this.d.config }, { tasks: [task.id] });
+      writeJsonAtomic(path.join(store.runDir(task.id), 'kpi.json'), rep);
+      if (rep.agents.some((a) => a.calls)) kpi = `\n### KPI agent trong nhiệm vụ\n${kpiMarkdown(rep, { findings: true })}\n`;
+    } catch (e) {
+      this.d.logs.write({ level: 'warn', kind: 'kpi.error', msg: `Không tính được KPI: ${(e as Error).message}`, taskId: task.id });
+    }
+    const appendix = `\n\n---\n\n## Phụ lục: token & sản phẩm (CCoding)\n\n- Nhiệm vụ: \`${task.id}\` · chế độ: ${task.mode} · phòng: ${task.departments.join(' → ')} · phân loại dữ liệu: ${task.classification}${paused ? ' · **đang tạm dừng**' : ''}\n- Tổng: **${fmtNum(task.usage.input)} in / ${fmtNum(task.usage.output)} out**, cache đọc ${fmtNum(task.usage.cacheRead)}, ${task.usage.calls} lượt gọi${task.usage.estimatedCalls ? ` (${task.usage.estimatedCalls} lượt ước lượng)` : ''} · ngân sách ${fmtNum(task.options.budgetTokens)} (${task.options.budgetMode === 'pause' ? 'dừng khi chạm trần' : 'chạy tới khi hoàn thành'})\n\n| Agent | Phòng | Input | Output | Cache đọc | Lượt |\n|---|---|---:|---:|---:|---:|\n${rows}\n\n### File đầu ra\n${outputs.join('\n') || '(không có)'}\n${scratch}${git}${kpi}`;
     writeText(path.join(store.runDir(task.id), 'FINAL.md'), (task.runs.length > 1 ? `# Báo cáo liên phòng — ${task.title}\n\n` : '') + parts.join('\n\n---\n\n') + appendix);
     task.finalPath = 'FINAL.md';
   }
@@ -1422,6 +1751,30 @@ function cliTools(agentTools: string[], access: ToolAccess, phase: Phase): strin
   if (access === 'write') list = list.filter((t) => t !== 'Bash');
   if (phase === 'execute' || phase === 'revise') return list;
   return list.filter((t) => READ_ONLY_TOOLS.has(t));
+}
+
+/** Tệp agent đã tạo trong thư mục làm việc riêng của nhiệm vụ (bỏ .ccoding, node_modules, .git). */
+export function listWorkspaceFiles(root: string, max: number): Array<{ path: string; size: number }> {
+  const out: Array<{ path: string; size: number }> = [];
+  const skip = new Set(['.ccoding', 'node_modules', '.git', '.venv', '__pycache__']);
+  const walk = (dir: string, rel: string, depth: number) => {
+    if (out.length >= max || depth > 6) return;
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      if (out.length >= max) return;
+      if (skip.has(e.name)) continue;
+      const r = rel ? `${rel}/${e.name}` : e.name;
+      if (e.isDirectory()) walk(path.join(dir, e.name), r, depth + 1);
+      else if (e.isFile()) out.push({ path: r, size: fs.statSync(path.join(dir, e.name)).size });
+    }
+  };
+  walk(root, '', 0);
+  return out;
 }
 
 /** .ccoding/ trong workspace luôn bị git bỏ qua (chứa tài liệu đầu vào & sản phẩm trung gian). */

@@ -9,7 +9,8 @@
     "default": "auto",
     "order": ["claude-cli", "bifrost", "anthropic-api", "openai-api", "codex-cli", "kimi-cli", "ollama", "mock"],
     "quotaCooldownMs": 1800000,
-    "maxFailover": 6
+    "maxFailover": 6,
+    "rateBackoffMs": 1200000
   },
   "runner": "auto",
   "maxConcurrentTasks": 2,
@@ -21,6 +22,7 @@
     "maxRevisions": 1,
     "budgetTokens": 1500000,
     "budgetMode": "complete",
+    "subtaskBudgetTokens": 0,
     "timeoutMs": 1800000
   },
 
@@ -32,13 +34,22 @@
   },
 
   "tools": {
-    "defaultAccess": "none",
+    "defaultAccess": "write",
     "projectAccess": "exec",
     "commandTimeoutSec": 600,
     "maxOutputChars": 12000,
     "denyCommands": [],
     "worktreeCopy": [".env", ".env.local", ".env.development", ".env.development.local", ".env.test", ".env.test.local"],
-    "web": true
+    "web": true,
+    "serializeWriters": true
+  },
+
+  "estimate": {
+    "base": 150000,
+    "perReview": 120000,
+    "perSubtask": { "none": 60000, "read": 120000, "write": 200000, "exec": 300000 },
+    "web": 100000,
+    "warnRatio": 1.2
   },
 
   "herdr": {

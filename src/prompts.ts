@@ -52,6 +52,10 @@ export interface Ctx {
   /** Thư mục .ccoding/<task> (tương đối workspace) chứa inputs/ và outputs/. */
   ccDir?: string;
   branch?: string;
+  /** Thư mục làm việc riêng của nhiệm vụ do CCoding tạo (không phải repo của dự án) — dùng để lưu sản phẩm thành tệp. */
+  scratch?: boolean;
+  /** Các hạng mục chạy lệnh trong repo dự án làm lần lượt (không ai chạy lệnh song song với mình). */
+  serialWriters?: boolean;
 }
 
 /** Trích các mục của hồ sơ — pha họp chỉ cần sứ mệnh + chuyên môn. */
@@ -126,7 +130,7 @@ function header(c: Ctx, phase: Phase): string {
 ${briefFor(c, phase)}
 ${p ? `\n## Dự án: ${p.name} (${p.id})\n${p.description ?? ''}\nPhân loại dữ liệu: ${p.classification}.\n` : ''}${attachmentsFor(c, phase)}
 ## Thư mục làm việc
-${c.cwd}${c.branch ? ` (git worktree riêng, nhánh \`${c.branch}\`)` : ''}`;
+${c.cwd}${c.branch ? ` (git worktree riêng, nhánh \`${c.branch}\`)` : c.scratch && c.filesAccessible ? ' (thư mục riêng của nhiệm vụ — lưu sản phẩm thành tệp tại đây)' : ''}`;
 }
 
 export function rosterLines(roster: AgentDef[]): string {
@@ -199,13 +203,23 @@ function fileToolNote(c: Ctx, tools: ToolName[], phase: Phase): string {
   if (phase === 'plan' || phase === 'finalize' || phase === 'synthesize')
     return `\n## Công cụ\nBạn có thể dùng ${read.join(', ')} để khảo sát nhanh workspace (quy tắc repo như CLAUDE.md/AGENTS.md, cấu trúc, README, cấu hình, tài liệu đính kèm) trước khi trả lời — chỉ đọc những gì cần cho bước này, gộp nhiều file trong một lần read_file.\n`;
   if (phase === 'review')
-    return `\n## Công cụ\nBạn có ${tools.join(', ')} để kiểm chứng sản phẩm thật trong workspace (xem code đã thay đổi${tools.includes('run_command') ? ', chạy test/typecheck để xác nhận' : ''}). Nội dung các báo cáo ĐÃ có ở trên — KHÔNG đọc lại file báo cáo trong .ccoding; chỉ dùng công cụ cho điều chưa có (code, test). Tối đa vài lượt, gộp nhiều file một lần. Nhận xét dựa trên bằng chứng.\n`;
+    return `\n## Công cụ & bằng chứng\nBạn có ${tools.join(', ')} để kiểm chứng sản phẩm THẬT trong workspace — nhận xét dựa trên bằng chứng, không dựa trên lời tự khai trong báo cáo.
+${tools.includes('run_command') ? '- BẮT BUỘC chạy các lệnh kiểm tra chính liên quan tới thay đổi (test, typecheck, lint, build — đúng lệnh của repo) bằng run_command trước khi kết luận; ghi từng lệnh và exit code vào "checks". Lệnh không chạy được thì ghi lý do — không suy đoán kết quả.\n' : ''}- Báo cáo nào có ghi chú "đã cắt" thì đọc phần còn lại bằng read_file (offset) khi cần để kết luận; phần đã có ở trên thì không đọc lại.
+${c.scratch ? '- Kiểm tra các tệp sản phẩm đã thực sự được lưu trong thư mục làm việc (list_files) — sản phẩm chỉ nằm trong báo cáo mà không có tệp thì ghi rõ.\n' : '- Xem code/tệp đã thay đổi (git diff ở trên, read_file) thay vì tin mô tả.\n'}- Gộp nhiều file trong một lần read_file; tối đa vài lượt.\n`;
+  if (c.scratch)
+    return `\n## Công cụ & cách làm
+Bạn có công cụ: ${tools.join(', ')} trong thư mục làm việc riêng của nhiệm vụ \`${c.cwd}\` (không phải repo).
+- Đầu vào: \`${c.ccDir ?? '.ccoding'}/inputs/\` (yêu cầu đầy đủ, tài liệu đính kèm) · sản phẩm các hạng mục khác: \`${c.ccDir ?? '.ccoding'}/outputs/\`. Kiểm kê bằng list_files trước khi làm; đọc có mục tiêu, gộp nhiều file một lần — mỗi lượt công cụ gửi lại cả hội thoại.
+- LƯU sản phẩm thành tệp thật bằng write_file (vd. bảng/CSV số liệu, danh mục nguồn .bib/.md, giao thức, bản thảo) với tên rõ nghĩa, theo thư mục con hợp lý; sửa tệp có sẵn bằng edit_file. Không dán toàn bộ nội dung tệp vào câu trả lời cuối — chỉ liệt kê tệp và điểm chính.
+- Không đưa dữ liệu thật, bí mật hay dữ liệu cá nhân vào tệp.
+Câu trả lời cuối cùng là báo cáo bàn giao theo ĐÚNG các mục trong "Mẫu đầu ra" của bạn (giữ nguyên tên mục, mở đầu "## Tóm tắt"); mục nào không áp dụng thì ghi "Không áp dụng" thay vì bỏ. Bắt buộc liệt kê tệp đã tạo/sửa (đường dẫn).
+`;
   return `\n## Công cụ & cách làm
-Bạn có công cụ: ${tools.join(', ')} — làm việc THẬT trong workspace \`${c.cwd}\`${c.branch ? ` (nhánh git riêng \`${c.branch}\`, không ảnh hưởng nhánh chính)` : ''}.
+Bạn có công cụ: ${tools.join(', ')} — làm việc THẬT trong workspace \`${c.cwd}\`${c.branch ? ` (nhánh git riêng \`${c.branch}\`, không ảnh hưởng nhánh chính)` : ''}${c.serialWriters && tools.includes('run_command') ? '; các hạng mục chạy lệnh khác làm lần lượt nên không ai cài đặt/chạy test song song với bạn' : ''}.
 - Đọc quy tắc của repo trước (CLAUDE.md, AGENTS.md, README, CONTRIBUTING nếu có) và tuân thủ tuyệt đối; khảo sát repo trước khi sửa (list_files, search, read_file — gộp nhiều file một lần); giữ đúng cấu trúc, phong cách và stack sẵn có. Mỗi lượt công cụ gửi lại toàn bộ hội thoại nên tốn token: đọc có mục tiêu, không đọc lại nội dung đã có trong prompt hoặc đã đọc.
 - Tạo/sửa file thật bằng write_file/edit_file; không dán toàn bộ code vào câu trả lời cuối — chỉ liệt kê file và điểm chính.
 ${tools.includes('run_command') ? '- Chạy kiểm tra thật bằng run_command (cài dependency nếu thiếu, typecheck, test, lint, migration trên DB dev) và báo kết quả THẬT: lệnh, exit code, tóm tắt lỗi. Lệnh nào không chạy được thì ghi rõ lý do — không bịa kết quả.\n' : '- Không có quyền chạy lệnh: ghi rõ lệnh kiểm tra cần chạy để người khác thực hiện.\n'}${c.ccDir ? `- Tài liệu đầu vào: \`${c.ccDir}/inputs/\` · sản phẩm các hạng mục khác: \`${c.ccDir}/outputs/\`.\n` : ''}- Làm và commit (nếu cần) ngay trên nhánh hiện tại của worktree — KHÔNG tạo/chuyển/xóa nhánh (các đồng nghiệp đang làm song song trong cùng worktree); cần hợp nhất nhánh khác thì \`git merge <nhánh>\` vào nhánh hiện tại. Không push, không xóa hàng loạt; không đưa dữ liệu thật hay bí mật vào code, seed, test, fixture.
-Câu trả lời cuối cùng là báo cáo bàn giao theo "Mẫu đầu ra" của bạn, mở đầu "## Tóm tắt", có thêm "## File đã thay đổi" và "## Kiểm tra đã chạy".
+Câu trả lời cuối cùng là báo cáo bàn giao theo ĐÚNG các mục trong "Mẫu đầu ra" của bạn (giữ nguyên tên mục, mở đầu "## Tóm tắt"); mục nào không áp dụng thì ghi "Không áp dụng" thay vì bỏ. Bắt buộc có: tệp đã tạo/sửa (đường dẫn) và lệnh kiểm chứng đã chạy (lệnh → exit code/kết quả thật, hoặc lý do chưa chạy).
 `;
 }
 
@@ -339,18 +353,24 @@ Câu trả lời CUỐI CÙNG phải là sản phẩm bàn giao hoàn chỉnh th
 }
 
 export function reviewPrompt(c: Ctx, items: DepInput[], tools: ToolName[] = [], changes = ''): Built {
-  const per = Math.max(2500, Math.floor((c.filesAccessible ? 24000 : 40000) / Math.max(1, items.length)));
+  const canRead = tools.includes('read_file');
+  const per = Math.max(4000, Math.floor(60000 / Math.max(1, items.length)));
+  const body = (i: DepInput) => {
+    if (i.text.length <= per) return i.text;
+    const rest = (i.text.length - per).toLocaleString('vi-VN');
+    return `${i.text.slice(0, per)}\n\n> ✂ ĐÃ CẮT — còn ${rest} ký tự${i.wsPath && canRead ? `; đọc tiếp: read_file \`${i.wsPath}\` (offset theo dòng)` : ' (không đọc được phần còn lại — chỉ kết luận trên phần hiển thị và ghi rõ)'}`;
+  };
   return {
     context: header(c, 'review'),
     prompt: `## Các sản phẩm cần review
-${items.map((i) => `### ${i.st.id} — ${i.st.title} (@${i.st.assignee})${i.wsPath && c.filesAccessible ? ` — bản đầy đủ: \`${i.wsPath}\`` : ''}\nTiêu chí: ${i.st.description}\n\n${truncate(i.text, per)}`).join('\n\n---\n\n')}
+${items.map((i) => `### ${i.st.id} — ${i.st.title} (@${i.st.assignee})${i.wsPath && c.filesAccessible ? ` — bản đầy đủ: \`${i.wsPath}\`` : ''}\nTiêu chí: ${i.st.description}\n\n${body(i)}`).join('\n\n---\n\n')}
 ${changes ? `\n## Thay đổi trong workspace (git)\n\`\`\`\n${truncate(changes, 4000)}\n\`\`\`\n` : ''}${toolNote(c, tools, 'review')}
 ## Việc của bạn: REVIEW CHẤT LƯỢNG
 Đánh giá từng hạng mục theo tiêu chí review trong hồ sơ của bạn, tương xứng với quy mô và yêu cầu của nhiệm vụ. Mức độ: "blocker" (sai/thiếu nghiêm trọng, không thể bàn giao), "major" (cần sửa trước khi bàn giao), "minor" (góp ý thêm). Chỉ đặt "approved": false khi có blocker/major.
 
-Trả lời bằng một khối JSON:
+Trả lời bằng một khối JSON${tools.includes('run_command') ? ' ("checks" là các lệnh bạn ĐÃ chạy thật)' : ''}:
 \`\`\`json
-{ "approved": true, "summary": "nhận xét chung", "issues": [ { "subtask": "S1", "severity": "major", "comment": "vấn đề + cách sửa" } ] }
+{ "approved": true, "summary": "nhận xét chung", "issues": [ { "subtask": "S1", "severity": "major", "comment": "vấn đề + cách sửa" } ]${tools.includes('run_command') ? ', "checks": [ { "command": "npm test", "exitCode": 0, "note": "148/148 đạt" } ]' : ''} }
 \`\`\``,
   };
 }

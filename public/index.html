@@ -60,6 +60,7 @@
         <button role="tab" data-tab="tasks">Nhiệm vụ <em id="badge-tasks"></em></button>
         <button role="tab" data-tab="people">Nhân sự</button>
         <button role="tab" data-tab="tokens">Token</button>
+        <button role="tab" data-tab="kpi">KPI</button>
         <button role="tab" data-tab="logs">Nhật ký</button>
       </nav>
 
@@ -164,6 +165,15 @@
       <!-- Token -->
       <div class="tab-body" data-body="tokens">
         <div id="tokens"></div>
+      </div>
+
+      <!-- KPI sub-agent -->
+      <div class="tab-body" data-body="kpi">
+        <div class="log-filters">
+          <select id="kpi-days"><option value="">Mọi nhiệm vụ</option><option value="1">24 giờ</option><option value="7" selected>7 ngày</option><option value="30">30 ngày</option></select>
+          <select id="kpi-dept"><option value="">Mọi phòng</option></select>
+        </div>
+        <div id="kpi"></div>
       </div>
 
       <!-- Nhật ký -->

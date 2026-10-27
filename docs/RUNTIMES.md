@@ -34,6 +34,10 @@ Mỗi lượt gọi, CCoding dựng danh sách tài nguyên = (runtime ưu tiên
 
 Lỗi trong lúc gọi ⇒ ghi `runtime.error`, đánh dấu nghỉ, **thử ngay tài nguyên kế tiếp** (`runtime.failover`, tối đa `runtime.maxFailover` lần). Hết hạn mức/lỗi xác thực ⇒ cảnh báo trên giao diện (chuông + thông báo nổi), log và thông báo herdr. Không còn tài nguyên nào ⇒ nhiệm vụ **tạm dừng** (không lỗi) và tự tiếp tục khi tài nguyên sớm nhất mở lại. Trạng thái từng runtime/model (đang nghỉ tới mấy giờ, token hôm nay/hạn mức) hiện ở thẻ *Runtime*.
 
+Model vừa báo **giới hạn tốc độ (429)** — sau thời gian nghỉ ngắn — vẫn bị **xếp sau** các model khác trong `runtime.rateBackoffMs` (mặc định 20 phút) cho tới khi gọi thành công lại (log `runtime.deferred`), để lượt nào cũng không phải thử lại rồi mới chuyển.
+
+Lượt gọi lỗi sau ≥ 60 giây mà nhà cung cấp không báo usage (vd. 502 sau nhiều phút) được ghi sổ **ước lượng** phần đầu vào đã gửi (`call.lost`), thời gian từng lần thử nằm trong `attempts[].ms` của `calls.jsonl`.
+
 Pha nhẹ dùng model rẻ hơn: `phases.models` (mặc định định tuyến và họp dùng `haiku`). Giới hạn token đầu ra theo pha: `phases.maxTokens` (thực thi 32k; đầu ra bị cắt được tự viết tiếp tối đa 2 lần).
 
 Máy của Tom (9router): Claude Max (`cc/`) đứng đầu chuỗi, Codex `cx/gpt-6-sol` dự phòng. Model `cu/` (Cursor) qua 9router trả phản hồi rỗng và `cx/gpt-5.5` không hỗ trợ với tài khoản ChatGPT — không đưa vào chuỗi. Có tài nguyên miễn phí muốn dùng trước ⇒ đặt ở đầu chuỗi kèm `dailyTokenLimit`.
@@ -87,6 +91,8 @@ Runtime API tương thích OpenAI có `supportsTools` (mặc định bật; Olla
 2. Đặt khóa của dịch vụ phía sau (ví dụ 9router — lấy ở dashboard 9router): `setx NINEROUTER_API_KEY "<khóa>"`.
 3. `scripts\bifrost.ps1` (hoặc để `herdr up` chạy trong tab **Dịch vụ**) — lần đầu tạo `data\bifrost\config.json` từ [`docs/bifrost.config.example.json`](bifrost.config.example.json): provider tùy biến `ninerouter` (OpenAI-compatible → `http://127.0.0.1:20128`), 3 key ảo theo phòng, **không lưu nội dung prompt** (`disable_content_logging`), bắt buộc key khi suy luận (`enforce_auth_on_inference`).
 4. Bảng điều khiển Bifrost (http://127.0.0.1:8080) bị khóa cho tới khi tạo tài khoản quản trị: `setx BIFROST_SETUP_TOKEN "<chuỗi bí mật tự đặt>"`, khởi động lại Bifrost, mở trang và nhập token để tạo admin. Việc định tuyến/tag vẫn chạy bình thường khi chưa mở bảng điều khiển.
+
+`cacheControl: true` (hoặc regex tên model): gắn điểm cache kiểu Anthropic (`cache_control: ephemeral`) vào hồ sơ vị trí, bối cảnh nhiệm vụ và kết quả công cụ mới nhất khi gửi qua gateway tương thích OpenAI — vòng lặp công cụ dài đọc lại lịch sử từ cache. `true` chỉ áp cho model có "claude" trong tên. Gateway không hỗ trợ thì thường bỏ qua; kiểm tra bằng cột *Cache* trong tab Token (Bifrost/9router có thể không trả số token cache).
 
 `promptStyle: "combined"`: gửi hồ sơ vị trí và công việc trong một tin nhắn — cần khi upstream tự chèn system prompt (9router với model `cc/…` của gói Claude Code), nếu không agent có thể tự nhận là "Claude Code" thay vì vai trò trong agent.md.
 

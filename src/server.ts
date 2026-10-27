@@ -6,6 +6,7 @@ import type { BusEvent } from './events.js';
 import { nowIso } from './util/ids.js';
 import { readJsonl } from './util/fsx.js';
 import { MAX_UPLOAD_BYTES } from './uploads.js';
+import { kpiReport } from './kpi.js';
 import type { BudgetMode, Classification, ProjectDef, TaskMode, ToolAccess } from './types.js';
 import type { UsageDim } from './usage.js';
 
@@ -241,6 +242,21 @@ export function createServer(app: App): http.Server {
         throw new HttpError(409, (e as Error).message);
       }
     }
+    if ((mm = m(/^\/api\/tasks\/([^/]+)\/split$/)) && req.method === 'POST') {
+      const b = await readBody(req);
+      try {
+        const o = budgetOpts(b);
+        const r = orchestrator.splitTask(mm[1], {
+          subtasks: Array.isArray(b.subtasks) ? b.subtasks.map(String).slice(0, 50) : undefined,
+          budgetTokens: o.budgetTokens || undefined,
+          budgetMode: o.budgetMode,
+        });
+        return send(res, 200, r);
+      } catch (e) {
+        if (e instanceof HttpError) throw e;
+        throw new HttpError(409, (e as Error).message);
+      }
+    }
     if ((mm = m(/^\/api\/tasks\/([^/]+)\/calls$/))) {
       if (!store.get(mm[1])) throw new HttpError(404, 'Không có nhiệm vụ');
       const limit = Math.min(500, Number(q('limit') ?? 200));
@@ -274,6 +290,11 @@ export function createServer(app: App): http.Server {
       }
     }
     if (p === '/api/alerts') return send(res, 200, orchestrator.alerts.slice(-100));
+    if (p === '/api/kpi') {
+      const tasks = q('task')?.split(',').map((s) => s.trim()).filter(Boolean);
+      const days = Number(q('days') ?? 0) || undefined;
+      return send(res, 200, kpiReport(app, { tasks, days, department: q('dept') || undefined, project: q('project') || undefined }));
+    }
 
     if (p === '/api/agents') return send(res, 200, snapshot(app).agents);
     if ((mm = m(/^\/api\/agents\/([^/]+)$/))) {

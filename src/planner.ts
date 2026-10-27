@@ -1,5 +1,5 @@
 import { extractJson } from './util/json-extract.js';
-import { emptyUsage, type AgentDef, type ReviewIssue, type Subtask } from './types.js';
+import { emptyUsage, type AgentDef, type ReviewCheck, type ReviewIssue, type Subtask } from './types.js';
 
 export interface PlanResult {
   summary: string;
@@ -115,12 +115,15 @@ export interface ReviewResult {
   approved: boolean;
   summary: string;
   issues: ReviewIssue[];
+  /** Lệnh kiểm tra reviewer khai báo đã chạy ("checks" trong JSON). */
+  checks: ReviewCheck[];
   parsed: boolean;
 }
 
 export function parseReview(text: string, subtaskIds: string[]): ReviewResult {
-  const raw = extractJson<{ approved?: unknown; summary?: unknown; issues?: unknown }>(text);
-  if (!raw) return { approved: true, summary: text.slice(0, 600) || 'Không đọc được kết quả review — mặc định chấp nhận.', issues: [], parsed: false };
+  const raw = extractJson<{ approved?: unknown; summary?: unknown; issues?: unknown; checks?: unknown }>(text);
+  // không đọc được kết luận → KHÔNG coi là đã duyệt (trước đây mặc định chấp nhận khiến review hỏng thành "Duyệt" giả)
+  if (!raw) return { approved: false, summary: `Không đọc được kết luận review dạng JSON — chưa coi là đã duyệt.${text.trim() ? ` Nội dung: ${text.trim().slice(0, 500)}` : ''}`, issues: [], checks: [], parsed: false };
   const issues: ReviewIssue[] = (Array.isArray(raw.issues) ? raw.issues : [])
     .map((i: any) => ({
       subtask: String(i?.subtask ?? i?.subtaskId ?? ''),
@@ -130,7 +133,19 @@ export function parseReview(text: string, subtaskIds: string[]): ReviewResult {
     .filter((i) => i.comment);
   const blocking = issues.some((i) => i.severity !== 'minor' && subtaskIds.includes(i.subtask));
   const approved = raw.approved === undefined ? !blocking : Boolean(raw.approved) && !blocking;
-  return { approved, summary: String(raw.summary ?? ''), issues, parsed: true };
+  const checks: ReviewCheck[] = (Array.isArray(raw.checks) ? raw.checks : [])
+    .map((c: any) => {
+      const code = Number(c?.exitCode ?? c?.exit_code ?? c?.exit);
+      return {
+        command: String(c?.command ?? c?.cmd ?? '').slice(0, 300),
+        exitCode: Number.isFinite(code) ? code : undefined,
+        ok: typeof c?.ok === 'boolean' ? c.ok : Number.isFinite(code) ? code === 0 : undefined,
+        note: c?.note || c?.result ? String(c.note ?? c.result).slice(0, 300) : undefined,
+      };
+    })
+    .filter((c) => c.command)
+    .slice(0, 20);
+  return { approved, summary: String(raw.summary ?? ''), issues, checks, parsed: true };
 }
 
 export interface RouteResult {

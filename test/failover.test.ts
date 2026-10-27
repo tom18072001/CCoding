@@ -84,13 +84,19 @@ test('hết hạn mức → tự chuyển sang model kế tiếp trong chuỗi, 
     assert.equal(calls[0].attempts[0].kind, 'quota');
     assert.ok(calls.some((c) => c.tools?.length));
     assert.ok(fs.existsSync(path.join(done.workspace!, '.ccoding', '.gitignore')));
-    // nhiệm vụ không thuộc dự án: không cấp công cụ workspace (tránh tốn token đọc lại chính sản phẩm của mình); chỉ công cụ tra cứu
+    // nhiệm vụ không thuộc dự án: thư mục làm việc riêng với quyền đọc/ghi (lưu sản phẩm thành tệp, kiểm kê) — KHÔNG chạy lệnh; + công cụ tra cứu
     const before = gw.seen.length;
     const t2 = app.orchestrator.submit({ brief: 'Viết đề cương ngắn', mode: 'department', department: 'research', options: { discussionRounds: 0, review: false } });
     const d2 = await app.orchestrator.waitFor(t2.id);
     assert.equal(d2.status, 'done');
-    assert.ok(gw.seen.slice(before).every((x) => x.names.every((n) => ['search_papers', 'web_search', 'fetch_url'].includes(n))));
+    const allowed = ['list_files', 'read_file', 'search', 'write_file', 'edit_file', 'search_papers', 'web_search', 'fetch_url'];
+    assert.ok(gw.seen.slice(before).every((x) => x.names.every((n) => allowed.includes(n))), 'không có run_command');
     assert.ok(gw.seen.slice(before).some((x) => x.names.includes('search_papers')), 'phòng nghiên cứu có công cụ tra cứu');
+    assert.ok(gw.seen.slice(before).some((x) => x.names.includes('write_file')), 'được ghi tệp vào thư mục riêng');
+    assert.ok(d2.workspace && !d2.branch);
+    assert.equal(fs.readFileSync(path.join(d2.workspace!, 'tu-agent.txt'), 'utf8'), 'xin chào từ agent');
+    const final2 = app.store.readRunFile(t2.id, 'FINAL.md') ?? '';
+    assert.match(final2, /Tệp trong thư mục làm việc của nhiệm vụ[\s\S]*tu-agent\.txt/);
     fs.rmSync(ws, { recursive: true, force: true });
   } finally {
     gw.srv.close();

@@ -12,6 +12,7 @@ import { toRuntimeError } from './runtimes/errors.js';
 import { createServer } from './server.js';
 import { Store } from './store.js';
 import { UsageLedger, type UsageDim, type UsageRow } from './usage.js';
+import { kpiReport } from './kpi.js';
 import { c, fmtDuration, fmtNum, fmtUsd, hexColor, table } from './util/format.js';
 import { readJsonFile, readJsonl, writeJsonAtomic } from './util/fsx.js';
 import { totalTokens, type ChatMessage, type LogEntry, type RunRequest, type RunResult, type Task, type TaskMode } from './types.js';
@@ -37,6 +38,8 @@ ${c.bold('Giao việc')}
   pause <taskId>                             Tạm dừng (giữ tiến độ)
   resume <taskId> [--add <token>] [--budget-mode pause|complete] [--from review|synthesize] [--rerun S1,S2|all]
                                              Tiếp tục từ checkpoint / làm lại từ review / chạy lại hạng mục
+  split <taskId> [--only S1,S2] [--budget <token>] [--budget-mode pause|complete]
+                                             Tách hạng mục chưa xong thành nhiệm vụ riêng (mỗi nhiệm vụ một gói việc)
   status                                     Danh sách nhiệm vụ & trạng thái agent
   show <taskId>                              Chi tiết một nhiệm vụ
 
@@ -44,6 +47,7 @@ ${c.bold('Log & token')}
   logs [-f] [--agent id] [--dept id] [--task id] [-n 50]   Xem / theo dõi log
   logs verify                               Kiểm tra chuỗi băm (log có bị sửa không)
   usage [--by agent|department|task|project|model|runtime|day|phase] [--task id] [--dept id] [--watch] [--json]
+  kpi [--task id,id] [--days 7] [--dept id] [--project id] [--json]   KPI từng sub-agent (chất lượng, hiệu quả, tin cậy, tuân thủ) + việc cần sửa
 
 ${c.bold('Nhân sự & dự án')}
   agents [--dept id]                         Danh sách agent theo phòng ban
@@ -380,6 +384,35 @@ async function cmdUsage(args: string[]): Promise<void> {
   }
 }
 
+function cmdKpi(args: string[]): void {
+  const { values } = parseArgs({ args, options: { task: { type: 'string' }, days: { type: 'string' }, dept: { type: 'string' }, project: { type: 'string' }, json: { type: 'boolean' } } });
+  const logs = new LogStore(config.dataDir, { redactSecrets: true, redactPii: true, hashChain: true });
+  const store = new Store(config.dataDir, logs);
+  const registry = new Registry(config.agentsDir, config.departmentsDir);
+  const rep = kpiReport({ store, registry, config }, { tasks: values.task?.split(','), days: values.days ? Number(values.days) : undefined, department: values.dept, project: values.project });
+  if (values.json) {
+    console.log(JSON.stringify(rep, null, 2));
+    return;
+  }
+  console.log(`${c.bold('📊 KPI sub-agent')} · ${rep.tasks.length} nhiệm vụ · ${c.gray(new Date().toLocaleString('vi-VN'))}\n`);
+  for (const d of rep.departments) console.log(`${c.bold(d.id)}: điểm ${d.score} (theo token) · ${d.agents} agent · ${fmtNum(d.tokens)} token · ${d.calls} lượt`);
+  console.log('');
+  const grade = (g: string) => (g === 'A' ? c.green(g) : g === 'B' ? c.cyan(g) : g === 'C' ? c.yellow(g) : c.red(g));
+  console.log(
+    table(
+      ['Agent', 'Phòng', 'Điểm', 'CL', 'HQ', 'TC', 'TT', 'Hạng mục', 'Lần chạy', 'Token', 'Công cụ lỗi'],
+      rep.agents
+        .filter((k) => k.calls || k.subtasks)
+        .map((k) => [k.agentId, k.department, `${k.score} ${grade(k.grade)}`, String(k.scores.quality ?? '—'), String(k.scores.efficiency ?? '—'), String(k.scores.reliability ?? '—'), String(k.scores.compliance ?? '—'), String(k.subtasks), String(k.attemptsAvg || '—'), fmtNum(k.tokens.total), k.tools.calls ? `${k.tools.failed}/${k.tools.calls}` : '—']),
+    ),
+  );
+  console.log(c.gray('CL = chất lượng · HQ = hiệu quả · TC = tin cậy · TT = tuân thủ mẫu đầu ra/bằng chứng\n'));
+  for (const k of rep.agents.filter((x) => x.findings.length)) {
+    console.log(`${c.bold(k.agentId)} (${k.score} ${grade(k.grade)})`);
+    for (const f of k.findings) console.log(`  - ${f}`);
+  }
+}
+
 function cmdAgents(args: string[]): void {
   const { values } = parseArgs({ args, options: { dept: { type: 'string' } } });
   const registry = new Registry(config.agentsDir, config.departmentsDir);
@@ -561,6 +594,16 @@ async function cmdResume(args: string[]): Promise<void> {
   console.log(`${c.green('✓')} Tiếp tục ${t.id} — ngân sách ${fmtNum(t.options.budgetTokens)} · ${t.options.budgetMode === 'complete' ? 'chạy tới khi hoàn thành' : 'dừng khi chạm trần'}`);
 }
 
+async function cmdSplit(args: string[]): Promise<void> {
+  const { values, positionals } = parseArgs({ args, allowPositionals: true, options: { only: { type: 'string' }, budget: { type: 'string' }, 'budget-mode': { type: 'string' } } });
+  if (!positionals[0]) throw new Error('Cần taskId');
+  if (!(await serverUp())) throw new Error('Server không chạy');
+  const body = { subtasks: values.only ? values.only.split(',') : undefined, budgetTokens: values.budget ? Number(values.budget) : undefined, budgetMode: values['budget-mode'] };
+  const r = await api<{ task: Task; created: Task[] }>(`/api/tasks/${positionals[0]}/split`, { method: 'POST', body: JSON.stringify(body) });
+  console.log(`${c.green('✓')} Đã tách ${r.created.length} nhiệm vụ từ ${r.task.id}:`);
+  for (const t of r.created) console.log(`  ${t.id}  ${t.title}  · ngân sách ${fmtNum(t.options.budgetTokens)}${t.after?.length ? c.dim(` · chờ ${t.after.join(', ')}`) : ''}`);
+}
+
 async function cmdCancel(args: string[]): Promise<void> {
   if (!args[0]) throw new Error('Cần taskId');
   if (!(await serverUp())) throw new Error('Server không chạy');
@@ -587,6 +630,8 @@ async function main(): Promise<void> {
     case 'usage':
     case 'tokens':
       return cmdUsage(rest);
+    case 'kpi':
+      return cmdKpi(rest);
     case 'agents':
       return cmdAgents(rest);
     case 'projects':
@@ -605,6 +650,8 @@ async function main(): Promise<void> {
       return cmdPause(rest);
     case 'resume':
       return cmdResume(rest);
+    case 'split':
+      return cmdSplit(rest);
     case undefined:
     case 'help':
     case '--help':

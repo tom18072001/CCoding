@@ -41,6 +41,12 @@ export interface RuntimeConfig {
   dailyTokenLimit?: number;
   /** Runtime API có hỗ trợ gọi công cụ (tool calling) hay không — mặc định true với kiểu openai-api. */
   supportsTools?: boolean;
+  /**
+   * Gắn điểm cache prompt kiểu Anthropic (cache_control) vào hồ sơ vị trí, bối cảnh nhiệm vụ và cuối lịch sử vòng lặp công cụ
+   * khi gửi qua gateway tương thích OpenAI (Bifrost, LiteLLM, OpenRouter…). true = với model có "claude" trong tên;
+   * chuỗi = regex tên model. Gateway không hỗ trợ thì thường bỏ qua trường này.
+   */
+  cacheControl?: boolean | string;
   [k: string]: unknown;
 }
 
@@ -86,6 +92,8 @@ export interface Config {
     quotaCooldownMs: number;
     /** Số lần chuyển runtime/model tối đa trong một lượt gọi. */
     maxFailover: number;
+    /** Model vừa báo giới hạn tốc độ (429) bị xếp sau các model khác trong khoảng này (ms) — tránh lượt nào cũng thử lại rồi mới chuyển. */
+    rateBackoffMs: number;
   };
   runner: 'auto' | 'process' | 'herdr';
   maxConcurrentTasks: number;
@@ -111,6 +119,21 @@ export interface Config {
     worktreeCopy: string[];
     /** Cho agent có WebSearch/WebFetch tra cứu nguồn (OpenAlex, web, đọc URL) với dữ liệu Công khai/Nội bộ. */
     web: boolean;
+    /** Hạng mục có quyền chạy lệnh trong workspace dự án dùng chung làm LẦN LƯỢT (hạng mục chỉ viết tài liệu vẫn song song). */
+    serializeWriters: boolean;
+  };
+  /** Ước lượng token của kế hoạch — cảnh báo khi nhiệm vụ quá lớn so với ngân sách (đo từ các lượt chạy thật). */
+  estimate: {
+    /** Định tuyến, lập kế hoạch, họp, tổng hợp. */
+    base: number;
+    /** Mỗi vòng review (+ sửa). */
+    perReview: number;
+    /** Mỗi hạng mục theo quyền công cụ (vòng lặp công cụ tốn hơn nhiều so với trả lời văn bản). */
+    perSubtask: Record<ToolAccess, number>;
+    /** Cộng thêm cho hạng mục có công cụ tra cứu web. */
+    web: number;
+    /** Cảnh báo khi ước lượng > ngân sách × hệ số này. */
+    warnRatio: number;
   };
   herdr: {
     session: string;
@@ -171,10 +194,11 @@ const BUILTIN: Omit<Config, 'root'> = {
     order: ['claude-cli', 'bifrost', 'anthropic-api', 'openai-api', 'codex-cli', 'kimi-cli', 'ollama', 'mock'],
     quotaCooldownMs: 30 * 60_000,
     maxFailover: 6,
+    rateBackoffMs: 20 * 60_000,
   },
   runner: 'auto',
   maxConcurrentTasks: 2,
-  defaults: { discussionRounds: 1, review: true, maxParallel: 3, maxRevisions: 1, budgetTokens: 1500000, budgetMode: 'complete', timeoutMs: 1800000 },
+  defaults: { discussionRounds: 1, review: true, maxParallel: 3, maxRevisions: 1, budgetTokens: 1500000, budgetMode: 'complete', subtaskBudgetTokens: 0, timeoutMs: 1800000 },
   phases: {
     models: { route: 'haiku', discuss: 'haiku' },
     maxTokens: { route: 800, plan: 8000, discuss: 700, finalize: 8000, execute: 32000, review: 6000, revise: 32000, synthesize: 10000 },
@@ -182,13 +206,21 @@ const BUILTIN: Omit<Config, 'root'> = {
     toolInputBudget: { plan: 100000, finalize: 50000, execute: 400000, review: 120000, revise: 150000, synthesize: 60000 },
   },
   tools: {
-    defaultAccess: 'none',
+    defaultAccess: 'write',
     projectAccess: 'exec',
     commandTimeoutSec: 600,
     maxOutputChars: 12000,
     denyCommands: [],
     worktreeCopy: ['.env', '.env.local', '.env.development', '.env.development.local', '.env.test', '.env.test.local'],
     web: true,
+    serializeWriters: true,
+  },
+  estimate: {
+    base: 150000,
+    perReview: 120000,
+    perSubtask: { none: 60000, read: 120000, write: 200000, exec: 300000 },
+    web: 100000,
+    warnRatio: 1.2,
   },
   herdr: { session: 'ccoding', workspaceLabel: 'CCoding Office', agentPanes: true, closeAgentPanes: false, notify: true, services: [] },
   runtimes: {},

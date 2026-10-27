@@ -212,3 +212,13 @@ Phản hồi ──► data/runs/<task>/{outputs, calls.jsonl (che + băm chuỗ
 - **PRE-07/PRE-05:** `fetch_url` chỉ http/https, phân giải DNS và **chặn địa chỉ nội bộ** (127.0.0.0/8, 10/8, 172.16/12, 192.168/16, 169.254/16, 100.64/10, ::1, fc00::/7, fe80::/10) ở mọi lần chuyển hướng — agent không gọi được Bifrost/9router/CCoding hay thiết bị LAN.
 - **DET-01:** mỗi truy vấn/URL được ghi log `tool.call` (truy vấn, URL — không ghi nội dung trang).
 - **Rủi ro còn lại:** nội dung trang web là dữ liệu không tin cậy (có thể chứa chỉ dẫn độc hại nhắm vào model) — agent chỉ dùng làm nguồn tham khảo; công cụ ghi file/chạy lệnh vẫn bị giới hạn bởi quyền dự án và danh sách lệnh cấm.
+
+### Bổ sung: thư mục làm việc cho nhiệm vụ không thuộc dự án, tách nhiệm vụ, KPI (27/10/2026)
+
+Đánh giá theo Data Protection Gate cho các thay đổi sau đợt đánh giá performance:
+
+- **Thư mục làm việc riêng (`workspaces/<task>`, quyền `write`):** sản phẩm của agent nay được lưu thành tệp ngay trên máy (cùng ổ với `data/`). Không có luồng dữ liệu mới ra ngoài — nội dung tệp vốn đã nằm trong prompt/đầu ra gửi tới runtime. Không cấp `run_command` cho loại nhiệm vụ này. Áp dụng cùng khuyến nghị **BitLocker** và lịch xóa theo `retentionDays` như `data/runs` (GOV-03/PRE-03). Nhãn *Bảo mật/Hạn chế*: chỉ runtime cục bộ như trước.
+- **Tách nhiệm vụ:** nhiệm vụ mới nhận bản sao yêu cầu gốc, tệp đính kèm và sản phẩm đã có của nhiệm vụ gốc vào `data/runs/<task mới>/inputs/` — tăng số bản sao trên máy (PRE-06 tối thiểu hóa): khi dọn nhiệm vụ gốc cần dọn cả nhiệm vụ đã tách. Nhãn phân loại được kế thừa từ dự án/cấu hình như nhiệm vụ gốc.
+- **KPI sub-agent:** tính lại từ log sẵn có (`calls.jsonl`, `task.json`, `transcript.jsonl`), lưu `kpi.json` trong thư mục nhiệm vụ; chỉ chứa số liệu và đoạn trích ≤ 140 ký tự lời nhận xét review (đã che bí mật/PII khi ghi hội thoại). Không gửi ra ngoài.
+- **`cacheControl` (tùy chọn):** chỉ thêm trường đánh dấu cache vào yêu cầu gửi gateway, không đổi nội dung gửi đi; nhà cung cấp giữ bản cache ngắn hạn theo điều khoản của họ — với dự án có ràng buộc, không bật cho runtime bên ngoài.
+- **Ghi sổ lượt gọi bị mất (`call.lost`):** chỉ số token ước lượng và thời gian, không ghi thêm nội dung (DET-01, phục vụ đối soát chi phí).

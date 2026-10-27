@@ -75,3 +75,20 @@ Xuyên suốt:
 - **Nhiều agent dùng chung một worktree và tự tạo/chuyển nhánh** theo quy ước của repo (`kepper/p0-…`, `kepper/p2-auth`, `kepper/p3-…`) ⇒ các agent khác làm nhầm nhánh, phải dừng để tránh đè thay đổi của nhau. Đã sửa: agent không được tạo/chuyển/xóa nhánh hay worktree (vẫn được `git merge` nhánh khác vào nhánh hiện tại).
 - **Mất kết nối giữa vòng lặp công cụ dài** làm mất cả lượt (14 phút) và token không được ghi sổ. Đã sửa: thử lại lượt bị rớt; lỗi giữa chừng vẫn ghi sổ token và thao tác công cụ đã làm.
 - **Phòng Nghiên cứu không có nguồn để làm tổng quan** ⇒ thêm công cụ tra cứu `search_papers` (OpenAlex), `web_search`, `fetch_url`.
+
+## 6. Sau đợt đánh giá performance (27/10/2026)
+
+Đánh giá hai nhiệm vụ 26/10 (8,42M token cho ngân sách 1,2M; 86% token ở các lượt chạy lại; 88% token đầu vào trong vòng lặp công cụ; 9 lần can thiệp tay) dẫn tới các thay đổi:
+
+| Vấn đề | Thay đổi |
+|---|---|
+| Một nhiệm vụ gói cả bản phát hành (brief 5.761 ký tự, ngân sách 600k) | Sau khi chốt kế hoạch: **ước lượng token** (`estimate` trong cấu hình) và cảnh báo khi vượt ngân sách × 1,2 (chế độ `pause` thì dừng). Nút **"Tách hạng mục thành nhiệm vụ riêng"** / `ccoding split <task>`: mỗi hạng mục thành một nhiệm vụ có yêu cầu, bối cảnh gốc, sản phẩm đã có và ngân sách riêng; thứ tự phụ thuộc giữ bằng `after` |
+| Nhiệm vụ nghiên cứu không có workspace → không kiểm kê, không lưu tệp (blocker lặp ở 6/7 review) | Nhiệm vụ không thuộc dự án có **thư mục riêng** `workspaces/<task>` với quyền `write` (đọc/ghi tệp, không chạy lệnh); tệp tạo ra được liệt kê trong báo cáo |
+| Nhiều agent chạy lệnh song song trong cùng worktree | Repo dự án quyền `exec`: hạng mục **chạy lệnh** làm lần lượt (`tools.serializeWriters`), hạng mục chỉ viết tài liệu vẫn song song |
+| Review chỉ đọc bản báo cáo bị cắt, QA không chạy test | Review đọc tới 60k ký tự, phần bị cắt có đường dẫn để đọc tiếp; QA có quyền chạy lệnh **bắt buộc** chạy test và ghi `checks`; review không chạy lệnh nào bị gắn cờ "chưa có bằng chứng"; review không đọc được JSON **không còn** được coi là duyệt |
+| Hạng mục chạy 2–6 lần không ai để ý | Ngân sách **theo hạng mục** (mặc định 2 × ngân sách / số hạng mục) + cảnh báo khi hạng mục chạy lần thứ 3, 5… |
+| Lượt gọi 12 phút mất do 502 không vào sổ | Lượt lỗi sau ≥ 60 giây không có usage được ghi sổ **ước lượng** (`call.lost`); thời gian mỗi lần thử được ghi |
+| Claude Max báo 429 liên tục, lượt nào cũng thử lại rồi mới chuyển | Model vừa bị 429 **xếp sau** model khác trong `runtime.rateBackoffMs` (20 phút) cho tới khi gọi thành công lại |
+| Vòng lặp công cụ: mỗi lượt rút gọn lịch sử làm hỏng cache tiền tố | Rút gọn **theo đợt** (khi phần cũ > 40k ký tự) để tiền tố ổn định → cache của Codex/OpenAI trúng nhiều hơn; tùy chọn `cacheControl` gắn điểm cache kiểu Anthropic qua gateway |
+
+**KPI sub-agent**: mỗi agent được chấm như nhân sự một phòng ban (Chất lượng 40 · Hiệu quả 25 · Tin cậy 20 · Tuân thủ 15) từ log — tab **KPI**, `ccoding kpi`, bảng KPI trong mỗi báo cáo nhiệm vụ, kèm "việc cần sửa" sinh tự động.

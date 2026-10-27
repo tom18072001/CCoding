@@ -403,6 +403,7 @@
     if (tab === 'tasks') S.selectedTask ? renderTaskDetail(true) : renderTaskList();
     if (tab === 'people') S.selectedAgent ? renderAgentDetail(false) : renderPeople();
     if (tab === 'tokens') renderTokens();
+    if (tab === 'kpi') loadKpi();
     if (tab === 'logs') loadLogs();
   }
 
@@ -661,8 +662,8 @@
           .map(
             (s) => `<div class="st-row">
               <div class="st-top"><code>${esc(s.id)}</code><span class="st-title" title="${esc(s.description)}">${esc(s.title)}</span><span class="status ${s.status}">${TASK_VI[s.status] || s.status}</span></div>
-              <div class="st-meta"><span class="who">${av(s.assignee)}${esc(agentName(s.assignee))}</span>${s.dependsOn.length ? `<span>sau ${esc(s.dependsOn.join(', '))}</span>` : ''}<span class="mono">${fmt(s.usage.input)} in / ${fmt(s.usage.output)} out</span>${s.attempts > 1 ? `<span>${s.attempts} lần</span>` : ''}${s.output ? `<a data-file="${esc(s.output)}">xem sản phẩm →</a>` : ''}</div>
-              ${s.error ? `<div class="st-err">${esc(s.error)}</div>` : ''}
+              <div class="st-meta"><span class="who">${av(s.assignee)}${esc(agentName(s.assignee))}</span>${s.dependsOn.length ? `<span>sau ${esc(s.dependsOn.join(', '))}</span>` : ''}<span class="mono">${fmt(s.usage.input)} in / ${fmt(s.usage.output)} out</span>${s.attempts > 1 ? `<span${s.attempts >= 3 ? ' style="color:var(--warn)" title="Chạy nhiều lần — kiểm tra vòng sửa có tiến triển"' : ''}>${s.attempts} lần</span>` : ''}${s.output ? `<a data-file="${esc(s.output)}">xem sản phẩm →</a>` : ''}${s.splitTo ? `<a data-task="${esc(s.splitTo)}">✂ đã tách → ${esc(s.splitTo)}</a>` : ''}</div>
+              ${s.error && !s.splitTo ? `<div class="st-err">${esc(s.error)}</div>` : ''}
             </div>`,
           )
           .join('');
@@ -670,8 +671,15 @@
           <h3><span class="dot" style="background:${deptColor(r.department)}"></span>${esc(deptName(r.department))}<span class="status ${r.status}">${TASK_VI[r.status] || r.status}</span><small style="margin-left:auto;font-family:var(--mono)">${fmt(total(r.usage))} token</small></h3>
           <div class="phases">${phases}</div>
           ${r.planSummary ? `<div class="md" style="color:var(--muted);margin-bottom:6px">${md(r.planSummary)}</div>` : ''}
+          ${r.estimate ? `<p style="font-size:12px;margin:0 0 6px;color:${r.estimate.tokens > r.estimate.budget * 1.2 ? 'var(--warn)' : 'var(--muted)'}">📏 Ước tính kế hoạch ~${fmt(r.estimate.tokens)} token · ngân sách còn ${fmt(r.estimate.budget)}${r.estimate.tokens > r.estimate.budget * 1.2 ? ' — nên tách thành nhiệm vụ riêng' : ''}</p>` : ''}
           ${rows ? `<div class="subtasks">${rows}</div>` : ''}
-          ${r.review ? `<p style="font-size:12.5px;margin:6px 0 0">🔍 Review: ${r.review.approved ? '<b style="color:var(--ok)">duyệt</b>' : '<b style="color:var(--warn)">cần sửa</b>'} — ${esc(r.review.summary)}</p>` : ''}
+          ${r.review ? `<p style="font-size:12.5px;margin:6px 0 0">🔍 Review: ${r.review.approved ? '<b style="color:var(--ok)">duyệt</b>' : '<b style="color:var(--warn)">cần sửa</b>'} — ${esc(r.review.summary)}</p>${
+            r.review.verified === false
+              ? '<p style="font-size:12px;margin:2px 0 0;color:var(--warn)">⚠️ Reviewer không chạy lệnh kiểm tra nào — kết luận chưa có bằng chứng chạy thật</p>'
+              : (r.review.checks || []).length
+                ? `<p style="font-size:12px;margin:2px 0 0;color:var(--muted)">🧪 ${r.review.checks.map((c) => `<code>${esc(c.command.slice(0, 80))}</code> ${c.ok === false ? '✗' : c.ok ? '✓' : ''}`).join(' · ')}</p>`
+                : ''
+          }` : ''}
         </div>`;
       })
       .join('');
@@ -686,6 +694,14 @@
       ? `<div class="budget ${pct >= 100 ? 'over' : pct >= 80 ? 'warn' : ''}" title="Ngân sách token của nhiệm vụ"><div class="bm-bar"><i style="width:${Math.min(100, pct)}%"></i></div><span>${fmt(used)} / ${fmt(budget)} token (${pct}%) · ${bmode === 'complete' ? 'chạy tới khi hoàn thành' : 'dừng khi chạm trần'}</span>${t.status === 'running' || t.status === 'queued' ? `<button class="btn ghost sm" data-budget="add">+50%</button>${bmode === 'pause' ? '<button class="btn ghost sm" data-budget="complete">Chạy tới khi xong</button>' : ''}` : ''}</div>`
       : '';
     const doneSubs = (t.runs || []).flatMap((r) => r.subtasks.filter((x) => x.status === 'done'));
+    const splittable = t.status !== 'running' && t.status !== 'queued' ? (t.runs || []).flatMap((r) => r.subtasks.filter((x) => x.status !== 'done' && !x.splitTo)) : [];
+    const splitForm = splittable.length
+      ? `<details class="split"><summary>✂ Tách hạng mục thành nhiệm vụ riêng (mỗi nhiệm vụ một gói việc)…</summary>
+          <p style="font-size:12px;color:var(--muted);margin:4px 0">Mỗi hạng mục được chọn thành một nhiệm vụ mới: yêu cầu riêng + bối cảnh gốc + sản phẩm đã có, ngân sách riêng; hạng mục phụ thuộc chỉ chạy khi nhiệm vụ trước xong.</p>
+          ${splittable.map((x) => `<label class="check"><input type="checkbox" value="${esc(x.id)}" checked /> <code>${esc(x.id)}</code> ${esc(x.title)} <small>@${esc(x.assignee)}</small></label>`).join('')}
+          <div class="pb-actions"><label style="font-size:12px">Ngân sách mỗi nhiệm vụ <input name="split-budget" type="number" min="100000" step="100000" placeholder="tự ước lượng" style="width:130px" /></label>
+          <button class="btn primary sm" data-act="split">✂ Tách</button></div></details>`
+      : '';
     const banner = canResume
       ? `<div class="pause-box ${t.status}">
           <div><b>${t.status === 'paused' ? `⏸ Tạm dừng — ${esc(PAUSE_VI[t.pause?.reason] || t.pause?.reason || '')}` : t.status === 'failed' ? '⚠️ Nhiệm vụ lỗi — có thể chạy tiếp phần chưa xong' : '⏹ Đã hủy — có thể chạy tiếp'}</b>
@@ -732,8 +748,11 @@
         ${meter}${git}${atts}
         ${t.routing ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">🧭 ${esc(t.routing.reason)}</p>` : ''}
         ${t.error && !canResume ? `<p style="font-size:12.5px;color:var(--bad);margin:0 0 8px">${esc(t.error)}</p>` : ''}
+        ${t.splitFrom ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">✂ Tách từ <a data-task="${esc(t.splitFrom.taskId)}">${esc(t.splitFrom.taskId)}</a> · hạng mục ${esc(t.splitFrom.subtaskId)}</p>` : ''}
+        ${(t.splitInto || []).length ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">✂ Đã tách thành: ${t.splitInto.map((x) => `<a data-task="${esc(x)}">${esc(x)}</a>`).join(', ')}</p>` : ''}
+        ${(t.after || []).length && t.status === 'queued' ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">⏳ Chờ nhiệm vụ trước xong: ${t.after.map((x) => `<a data-task="${esc(x)}">${esc(x)}</a>`).join(', ')}</p>` : ''}
       </div>
-      ${banner}${redo}
+      ${banner}${redo}${splitForm}
       <details class="doc" style="margin-bottom:10px"><summary style="cursor:pointer;color:var(--muted);font-size:12.5px">Yêu cầu gốc</summary><div class="md">${md(t.brief)}</div></details>
       ${blocks || '<div class="empty">Đang định tuyến…</div>'}
       <div class="subtabs">
@@ -765,6 +784,20 @@
         if (b.dataset.act === 'resume-complete') act(`/api/tasks/${t.id}/resume`, { budgetMode: 'complete', rerun: rerun() }, 'Tiếp tục — chạy tới khi hoàn thành');
         if (b.dataset.act === 'resume-add') act(`/api/tasks/${t.id}/resume`, { addBudget: Math.max(100000, Math.round(budget * 0.5)), rerun: rerun() }, 'Đã tăng ngân sách & tiếp tục');
         if (b.dataset.act === 'package') $('#pkg-form').hidden = !$('#pkg-form').hidden;
+        if (b.dataset.act === 'split') {
+          const ids = [...el.querySelectorAll('.split input[type=checkbox]:checked')].map((x) => x.value);
+          if (!ids.length) return toast({ level: 'info', title: 'Chọn hạng mục cần tách', msg: t.title });
+          const bud = Number(el.querySelector('.split input[name=split-budget]').value) || undefined;
+          if (!confirm(`Tách ${ids.length} hạng mục thành ${ids.length} nhiệm vụ riêng?`)) return;
+          act(`/api/tasks/${t.id}/split`, { subtasks: ids, budgetTokens: bud }, `Đã tách ${ids.length} nhiệm vụ`);
+        }
+      }),
+    );
+    el.querySelectorAll('[data-task]').forEach((a) =>
+      a.addEventListener('click', () => {
+        S.selectedTask = a.dataset.task;
+        S.taskDetail = null;
+        renderTaskDetail(true);
       }),
     );
     el.querySelectorAll('[data-redo]').forEach((b) =>
@@ -978,6 +1011,7 @@
         <div class="stat"><span>Lượt gọi</span><b>${fmt(u.calls)}</b></div>
       </div>
       <p style="font-size:13px">${esc(a.summary)}</p>
+      <div id="ad-kpi"></div>
       <div class="tags">${a.skills.map((s) => `<span>${esc(s)}</span>`).join('')}</div>
       <div class="tags">${(a.tools || []).map((s) => `<span style="color:#93c5fd">${esc(s)}</span>`).join('') || '<span>không dùng công cụ</span>'}</div>
       <h3 style="font-size:13px;margin:12px 0 6px">Đầu ra trực tiếp</h3>
@@ -987,6 +1021,15 @@
       ${d.byTask?.length ? `<h3 style="font-size:13px;margin:12px 0 6px">Token theo nhiệm vụ</h3>${usageTable(d.byTask, 'Nhiệm vụ', (k) => esc(S.tasks.get(k)?.title?.slice(0, 30) || k))}` : ''}
       <details class="doc" style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">Hồ sơ vị trí (agent.md)</summary><div class="md">${md(a.body)}</div>
       ${a.sources?.length ? `<h3>Nguồn tham khảo</h3><ul>${a.sources.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>` : ''}</details>`;
+    // KPI 30 ngày của vị trí này (chấm từ log)
+    api('/api/kpi?days=30')
+      .then((r) => {
+        const k = (r.agents || []).find((x) => x.agentId === id);
+        const box = $('#ad-kpi');
+        if (!k || !box || S.selectedAgent !== id) return;
+        box.innerHTML = `<div class="card" style="margin:8px 0"><h2>KPI 30 ngày: <b class="grade ${k.grade === 'A' ? 'ok' : k.grade === 'B' ? 'info' : k.grade === 'C' ? 'warn' : 'bad'}">${k.score} ${k.grade}</b> <small style="color:var(--muted);font-weight:400">· ${k.tasks} nhiệm vụ · ${k.subtasks} hạng mục · chất lượng ${k.scores.quality ?? '—'} · hiệu quả ${k.scores.efficiency ?? '—'} · tin cậy ${k.scores.reliability ?? '—'} · tuân thủ ${k.scores.compliance ?? '—'}</small></h2>${k.findings.length ? `<ul class="kpi-f">${k.findings.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : '<p style="font-size:12.5px;color:var(--muted)">Không có phát hiện vượt ngưỡng.</p>'}</div>`;
+      })
+      .catch(() => {});
     $('#ad-back').onclick = () => {
       S.selectedAgent = null;
       S.agentDetail = null;
@@ -1038,6 +1081,51 @@
       <p style="font-size:12px;color:var(--muted)">Số liệu lấy từ sổ cái <code>data/usage/ledger.jsonl</code>. Lượt "ước lượng" là khi runtime không báo usage (ví dụ một số CLI) — token được ước tính theo độ dài văn bản. Xem trong terminal: <code>ccoding usage --watch</code>.</p>`;
     $$('#tokens [data-ag]').forEach((r) => r.addEventListener('click', () => openAgent(r.dataset.ag)));
     $$('#tokens [data-tk]').forEach((r) => r.addEventListener('click', () => openTask(r.dataset.tk)));
+  }
+
+  // ── KPI sub-agent ────────────────────────────────────────────────────────
+  async function loadKpi() {
+    const sel = $('#kpi-dept');
+    if (sel && sel.options.length <= 1) {
+      for (const d of S.departments || []) sel.insertAdjacentHTML('beforeend', `<option value="${esc(d.id)}">${esc(d.name)}</option>`);
+      sel.onchange = loadKpi;
+      $('#kpi-days').onchange = loadKpi;
+    }
+    const q = new URLSearchParams();
+    if ($('#kpi-days').value) q.set('days', $('#kpi-days').value);
+    if (sel.value) q.set('dept', sel.value);
+    $('#kpi').innerHTML = '<div class="empty">Đang chấm KPI từ log…</div>';
+    try {
+      renderKpi(await api(`/api/kpi?${q}`));
+    } catch (e) {
+      $('#kpi').innerHTML = `<div class="empty">Không tải được KPI: ${esc(e.message)}</div>`;
+    }
+  }
+
+  function renderKpi(r) {
+    const agents = (r.agents || []).filter((k) => k.calls || k.subtasks);
+    if (!agents.length) return ($('#kpi').innerHTML = '<div class="empty">Chưa có nhiệm vụ nào trong khoảng này.</div>');
+    const gcls = (g) => (g === 'A' ? 'ok' : g === 'B' ? 'info' : g === 'C' ? 'warn' : 'bad');
+    const cell = (v) => (v === undefined || v === null ? '<span style="color:var(--faint)">—</span>' : `<span class="kpi-v" style="--v:${v}">${v}</span>`);
+    $('#kpi').innerHTML = `
+      <div class="stats" style="grid-template-columns:repeat(${Math.min(4, (r.departments || []).length + 1)},1fr)">
+        <div class="stat"><span>Nhiệm vụ đã chấm</span><b>${(r.tasks || []).length}</b></div>
+        ${(r.departments || []).map((d) => `<div class="stat"><span>${esc(deptName(d.id))} · ${d.agents} agent</span><b>${d.score}<small style="font-size:12px;color:var(--muted)"> /100 · ${fmt(d.tokens)} token</small></b></div>`).join('')}
+      </div>
+      <div class="card"><h2>Bảng KPI</h2>
+        <table class="tbl kpi"><thead><tr><th>Agent</th><th>Điểm</th><th title="Qua review lần đầu, ít blocker">Chất lượng</th><th title="Token/hạng mục so với đồng nghiệp, số lần làm lại">Hiệu quả</th><th title="Lượt gọi hỏng, công cụ lỗi, chạm trần">Tin cậy</th><th title="Đủ mục trong Mẫu đầu ra + bằng chứng">Tuân thủ</th><th>Hạng mục</th><th>Lần chạy TB</th><th>Token</th><th>Công cụ lỗi</th></tr></thead><tbody>
+        ${agents
+          .map(
+            (k) => `<tr class="click" data-ag="${esc(k.agentId)}"><td><span class="who">${av(k.agentId)}${esc(agentName(k.agentId))}</span></td><td><b class="grade ${gcls(k.grade)}">${k.score} ${k.grade}</b></td><td>${cell(k.scores.quality)}</td><td>${cell(k.scores.efficiency)}</td><td>${cell(k.scores.reliability)}</td><td>${cell(k.scores.compliance)}</td><td>${k.subtasks}</td><td>${k.attemptsAvg || '—'}</td><td>${fmt(k.tokens.total)}</td><td>${k.tools.calls ? `${k.tools.failed}/${k.tools.calls}` : '—'}</td></tr>`,
+          )
+          .join('')}
+        </tbody></table></div>
+      ${agents.filter((k) => k.findings.length).length ? `<div class="card"><h2>Việc cần sửa theo agent</h2>${agents
+        .filter((k) => k.findings.length)
+        .map((k) => `<div class="kpi-f"><b>${esc(agentName(k.agentId))}</b> <small>${k.score} ${k.grade}</small><ul>${k.findings.map((f) => `<li>${esc(f)}</li>`).join('')}</ul></div>`)
+        .join('')}</div>` : ''}
+      <p style="font-size:12px;color:var(--muted)">${esc(r.method || '')} Xem trong terminal: <code>ccoding kpi --days 7</code>. Mỗi báo cáo nhiệm vụ (FINAL.md) cũng có bảng KPI riêng.</p>`;
+    $$('#kpi [data-ag]').forEach((row) => row.addEventListener('click', () => openAgent(row.dataset.ag)));
   }
 
   // ── Nhật ký ──────────────────────────────────────────────────────────────

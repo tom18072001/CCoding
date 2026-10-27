@@ -189,9 +189,18 @@ export interface Subtask {
   finishedAt?: string;
   usage: Usage;
   error?: string;
+  /** Mốc cảnh báo ngân sách riêng của hạng mục đã phát (100, 200, … % phần ngân sách của hạng mục). */
+  budgetAlerted?: number;
+  /** Lần chạy đã cảnh báo (≥ 3: vòng sửa có thể không tiến triển). */
+  attemptAlerted?: number;
+  /** Nhiệm vụ mới được tách ra từ hạng mục này. */
+  splitTo?: string;
 }
 
 export interface ReviewIssue { subtask: string; severity: 'blocker' | 'major' | 'minor'; comment: string }
+
+/** Lệnh kiểm tra reviewer đã chạy (bằng chứng cho kết luận review). */
+export interface ReviewCheck { command: string; exitCode?: number; ok?: boolean; note?: string }
 
 /** Mốc đã hoàn thành của một phòng — dùng để tiếp tục từ checkpoint. */
 export type RunStage = 'planned' | 'finalized' | 'executed' | 'reviewed' | 'done';
@@ -204,7 +213,17 @@ export interface DeptRun {
   planSummary?: string;
   decisions?: string;
   subtasks: Subtask[];
-  review?: { approved: boolean; summary: string; issues: ReviewIssue[] };
+  review?: {
+    approved: boolean;
+    summary: string;
+    issues: ReviewIssue[];
+    /** Lệnh kiểm tra reviewer khai báo + lệnh thực sự chạy qua công cụ. */
+    checks?: ReviewCheck[];
+    /** false: reviewer có quyền chạy lệnh nhưng không chạy lệnh nào → kết luận chưa có bằng chứng chạy thật. */
+    verified?: boolean;
+  };
+  /** Ước lượng token của kế hoạch (sau khi lập/chốt) để cảnh báo nhiệm vụ quá lớn. */
+  estimate?: { tokens: number; budget: number; at: string };
   finalPath?: string;
   usage: Usage;
   startedAt?: string;
@@ -219,6 +238,8 @@ export interface TaskOptions {
   budgetTokens: number;
   budgetMode: BudgetMode;
   runtime?: string;
+  /** Trần token của MỖI hạng mục (cộng dồn mọi lần chạy/sửa); 0 hoặc bỏ trống = tự tính (2 × ngân sách / số hạng mục). */
+  subtaskBudgetTokens?: number;
 }
 
 export interface Attachment {
@@ -282,6 +303,11 @@ export interface Task {
   changes?: string;
   commit?: string;
   resumes?: number;
+  /** Nhiệm vụ gốc (khi được tách ra từ một hạng mục) và các nhiệm vụ đã tách ra từ nhiệm vụ này. */
+  splitFrom?: { taskId: string; subtaskId: string };
+  splitInto?: string[];
+  /** Chỉ bắt đầu khi các nhiệm vụ này đã xong (thứ tự phụ thuộc giữa các nhiệm vụ đã tách). */
+  after?: string[];
   createdAt: string;
   updatedAt: string;
   startedAt?: string;

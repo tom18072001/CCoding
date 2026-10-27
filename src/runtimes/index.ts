@@ -260,7 +260,7 @@ export class RuntimeManager {
    * rồi tới thứ tự runtime.order; trong mỗi runtime là chuỗi model dự phòng. Bỏ qua runtime bị chặn với phân loại dữ liệu,
    * chưa sẵn sàng, đang nghỉ (hết quota/lỗi) hoặc đã chạm hạn mức ngày.
    */
-  async candidates(prefs: Array<string | undefined>, cls: Classification, want: string): Promise<{ list: Candidate[]; notes: string[]; skipped: string[] }> {
+  async candidates(prefs: Array<string | undefined>, cls: Classification, want: string): Promise<{ list: Candidate[]; notes: string[]; skipped: string[]; deferred?: string[] }> {
     const notes: string[] = [];
     const skipped: string[] = [];
     const ids: string[] = [];
@@ -298,7 +298,27 @@ export class RuntimeManager {
         list.push({ runtime: rt, model: e.model, key: `${id}::${e.model}`, label: `${id}/${e.label ?? e.model}` });
       }
     }
-    return { list, notes, skipped };
+    // model vừa bị giới hạn tốc độ (đã hết thời gian nghỉ ngắn) xếp sau các model khác cho tới khi gọi thành công lại
+    const backoff = this.config.runtime.rateBackoffMs ?? 0;
+    let deferred: string[] | undefined;
+    if (backoff > 0 && list.length > 1) {
+      const recent = (c: Candidate) => this.recentlyRateLimited(c.key, backoff);
+      const fresh = list.filter((c) => !recent(c));
+      if (fresh.length && fresh.length < list.length) {
+        const later = list.filter(recent);
+        deferred = later.map((c) => c.label);
+        list.splice(0, list.length, ...fresh, ...later);
+      }
+    }
+    return { list, notes, skipped, deferred };
+  }
+
+  /** Tài nguyên báo 429 trong khoảng `windowMs` gần đây và chưa gọi thành công lại kể từ đó. */
+  recentlyRateLimited(key: string, windowMs: number): boolean {
+    const h = this.health.get(key);
+    if (!h || h.kind !== 'rate' || !h.lastErrorAt) return false;
+    if (h.lastOkAt && h.lastOkAt > h.lastErrorAt) return false;
+    return Date.now() - h.lastErrorAt < windowMs;
   }
 
   /** Tương thích ngược: chọn runtime đầu tiên khả dụng. */
