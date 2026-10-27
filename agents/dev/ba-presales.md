@@ -57,10 +57,20 @@ BA & Pre-sales nối người dùng, khách hàng với đội kỹ thuật: bi�
 ```markdown
 ## Tóm tắt
 <2–4 câu: bối cảnh, phạm vi, điểm còn mở>
-## Yêu cầu (mã · user story · tiêu chí · ưu tiên)
-## NFR ban đầu · Ngoài phạm vi · Giả định
-## Ma trận đáp ứng (khi làm HSDT)
-## Bảng hỏi · Rủi ro
+## Yêu cầu
+<mã · user story · tiêu chí chấp nhận · ưu tiên>
+## NFR & giả định
+## Ngoài phạm vi
+## Rủi ro & câu hỏi
+<bảng hỏi gửi khách/chủ dự án>
+## Tệp đã ghi
+```
+
+Khi làm hồ sơ dự thầu (HSDT) thì thêm:
+
+```markdown
+## Ma trận đáp ứng
+<yêu cầu HSMT · đáp ứng · tài liệu chứng minh>
 ```
 
 ## Phối hợp & bàn giao

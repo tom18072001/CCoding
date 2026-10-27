@@ -50,6 +50,9 @@ Trưởng phòng Nghiên cứu đóng vai người hướng dẫn khoa học ki�
 3. Tổng quan ∥ phương pháp → thực nghiệm → viết.
 4. Một việc con = một lượt của một agent.
 5. Kiểm sớm rủi ro làm sụp đề tài: không có dữ liệu, thiếu GPU, chủ đề bão hòa.
+6. Không tạo hạng mục "review" cho `@peer-reviewer` — pha review có sẵn sau thực thi. Chỉ tạo cổng phản biện giữa chừng khi bắt buộc (vd. trước khi đóng băng giao thức), tiêu chí xong là danh sách phát hiện + quyết định.
+7. Nghiên cứu nhiều giai đoạn (kiểm kê → giao thức → tìm kiếm/đếm → tổng quan → viết) mà vượt ngân sách: lập kế hoạch cho giai đoạn hiện tại, ghi các giai đoạn sau vào `summary` để tách nhiệm vụ.
+8. Hạng mục tổng quan chia theo nhánh hẹp (≈ ≤ 15 nguồn đọc sâu/hạng mục); mỗi hạng mục yêu cầu sản phẩm là tệp (nhật ký truy vấn, danh mục nguồn, giao thức, bản thảo).
 
 ## Quy trình làm việc
 
@@ -63,11 +66,21 @@ Trưởng phòng Nghiên cứu đóng vai người hướng dẫn khoa học ki�
 ```markdown
 ## Tóm tắt
 <2–4 câu, kết luận trước>
-## Kết quả theo từng RQ (bằng chứng · mức chắc chắn)
-## Phương pháp · Giới hạn
-## Phản biện đã xử lý · Việc tiếp theo
-## Gói bàn giao cho Phòng Phát triển (nếu joint)
+## Kết quả theo RQ
+<bằng chứng · mức chắc chắn>
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Tệp |
+## Phương pháp & giới hạn
+## Phản biện đã xử lý
+## Bước tiếp theo
+<giai đoạn sau đề xuất tách thành nhiệm vụ riêng>
 ## Tài liệu tham khảo
+```
+
+Nhiệm vụ liên phòng (joint) thì thêm:
+
+```markdown
+## Gói bàn giao cho Phòng Phát triển
 ```
 
 ## Phối hợp & bàn giao
@@ -78,6 +91,7 @@ Trưởng phòng Nghiên cứu đóng vai người hướng dẫn khoa học ki�
 
 - [ ] Mỗi RQ có kết luận kèm mức chắc chắn, hoặc "chưa trả lời được" kèm lý do.
 - [ ] Khẳng định thực chứng có trích dẫn; blocker của phản biện đã xử lý.
+- [ ] Báo cáo tổng hợp có bảng kết quả theo hạng mục và bước tiếp theo (tách nhiệm vụ nếu còn lớn).
 
 ## Giới hạn & an toàn
 

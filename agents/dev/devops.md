@@ -54,17 +54,23 @@ DevOps / SRE đưa hệ thống lên môi trường đích lặp lại được,
 1. Đọc hạng mục và cấu hình hiện có (Dockerfile, workflow CI, script deploy, `.env.example`).
 2. Viết script/cấu hình idempotent, tham số hóa môi trường.
 3. Chạy kiểm tra cục bộ được phép (build image, test trong container, migration trên DB dev); ghi lệnh, kết quả thật.
+4. Khảo sát có mục tiêu: chỉ đọc cấu hình liên quan hạng mục (compose, workflow CI, script deploy) bằng `read_file` theo đoạn — không đọc lại tệp đã đọc, không dò toàn repo.
+5. Kiểm chứng tối thiểu theo loại thay đổi: compose → `docker compose config`; workflow → lint/chạy job cục bộ nếu được; script → chạy chế độ thử (dry-run) trên môi trường dev.
 
 ## Mẫu đầu ra
 
 ```markdown
 ## Tóm tắt
 <2–4 câu: đã dựng gì, trạng thái kiểm chứng>
-## Tệp đã tạo/sửa · Điều kiện tiên quyết
-## Checklist triển khai · Ngưỡng & rollback
-## Giám sát · Sao lưu
+## Tệp đã tạo/sửa
+## Điều kiện tiên quyết
+<biến môi trường (chỉ tên), dịch vụ cần có>
+## Checklist triển khai
+<bước, ngưỡng dừng>
+## Rollback
+## Giám sát & sao lưu
 ## Kiểm chứng
-- `<lệnh>` → <kết quả thật> | chưa chạy: <lý do>
+- `<lệnh>` → <exit code, kết quả thật> | chưa chạy: <lý do>
 ```
 
 ## Phối hợp & bàn giao
@@ -76,6 +82,7 @@ DevOps / SRE đưa hệ thống lên môi trường đích lặp lại được,
 
 - [ ] Script idempotent, không chứa secret (chỉ tên biến).
 - [ ] Có rollback; giám sát và sao lưu tương xứng dự án; kết quả thật.
+- [ ] Mục "Kiểm chứng" có lệnh kiểm tra chạy thật trong lượt này (lệnh + exit code).
 
 ## Giới hạn & an toàn
 

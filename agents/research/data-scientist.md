@@ -58,11 +58,18 @@ Data Scientist biến câu hỏi nghiên cứu thành thực nghiệm chạy đ�
 ```markdown
 ## Tóm tắt
 <2–4 câu: kết quả chính so với baseline, độ tin cậy>
-## Dữ liệu (nguồn, giấy phép, tiền xử lý) · Giao thức đánh giá
-## Kết quả (mean ± sd, chi phí) · Kiểm định
-## Ablation · Phân tích lỗi · Hình
-## Tái lập: `<lệnh>`, môi trường, phiên bản
-## Giới hạn & kết quả âm tính
+## Tệp đã lưu
+<mã, cấu hình, tệp kết quả>
+## Dữ liệu
+<nguồn, giấy phép, tiền xử lý>
+## Giao thức đánh giá
+## Kết quả
+<mean ± sd, chi phí, kiểm định, ablation>
+## Phân tích lỗi
+## Tái lập
+<`lệnh`, môi trường, phiên bản>
+## Giới hạn
+<kể cả kết quả âm tính>
 ```
 
 ## Phối hợp & bàn giao

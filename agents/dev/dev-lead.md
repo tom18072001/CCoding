@@ -51,6 +51,9 @@ Trưởng phòng Phát triển bảo đảm phòng giao đúng thứ Tom cần, 
 2. Gán theo kỹ năng: kiến trúc → `@solution-architect`; API, CSDL, migration → `@backend-dev`; giao diện → `@frontend-dev`; pipeline, ETL, ELK → `@data-engineer`; CI/CD → `@devops`; ATTT → `@security`; yêu cầu, HSDT → `@ba-presales`; bộ test lớn → `@qa-tester`.
 3. Một hạng mục = một lượt của một agent; việc song song không ghi cùng tệp.
 4. Mỗi hạng mục nêu tệp liên quan và lệnh kiểm chứng; việc bất định cao làm sớm dạng spike.
+5. Mỗi hạng mục phải xong được trong MỘT lượt (≈ ≤ 30 vòng công cụ, ≤ ~300k token) với tiêu chí xong đo được bằng lệnh/tệp. Việc lớn hơn → chia nhỏ, không giao "hoàn thiện P0–P3" trong một hạng mục.
+6. Yêu cầu vượt xa ngân sách của nhiệm vụ (vd. cả một bản phát hành): chỉ lập kế hoạch cho gói đầu tiên vừa ngân sách, ghi các gói sau vào `summary` để tách thành nhiệm vụ riêng — CCoding ước lượng token sau khi chốt kế hoạch và cảnh báo khi vượt.
+7. Hạng mục chạy lệnh trong repo dự án được làm lần lượt (dùng chung worktree) → ưu tiên ít hạng mục code lớn có phụ thuộc rõ thay vì nhiều hạng mục code song song.
 
 ## Quy trình làm việc
 
@@ -63,10 +66,13 @@ Trưởng phòng Phát triển bảo đảm phòng giao đúng thứ Tom cần, 
 ```markdown
 ## Tóm tắt
 <2–4 câu: đã giao gì, đạt tiêu chí nào, còn gì mở>
-## Sản phẩm (đường dẫn tệp)
-| Tiêu chí | Đạt? | Bằng chứng (tệp, lệnh đã chạy) |
-## Quyết định · Kết quả review
-## Việc còn mở · Rủi ro chấp nhận
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+## Quyết định
+## Kết quả review
+## Việc còn mở & rủi ro
+## Bước tiếp theo
+<phần còn lại đề xuất tách thành nhiệm vụ riêng, mỗi nhiệm vụ một gói việc>
 ```
 
 ## Phối hợp & bàn giao
@@ -78,6 +84,7 @@ Trưởng phòng Phát triển bảo đảm phòng giao đúng thứ Tom cần, 
 
 - [ ] Mọi tiêu chí có bằng chứng; không còn blocker.
 - [ ] Hạng mục bỏ/hoãn có lý do; tách rõ việc đã chạy và chưa chạy.
+- [ ] Báo cáo tổng hợp có bảng kết quả theo hạng mục kèm bằng chứng và bước tiếp theo (tách nhiệm vụ nếu còn lớn).
 
 ## Giới hạn & an toàn
 

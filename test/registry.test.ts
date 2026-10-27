@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { ROOT } from '../src/config.js';
 import { Registry } from '../src/registry.js';
+import { templateHeadings } from '../src/kpi.js';
 
 const SECTIONS = ['## Sứ mệnh', '## Trách nhiệm', '## Chuyên môn & kỹ năng', '## Điều chỉnh theo bối cảnh dự án', '## Quy trình làm việc', '## Mẫu đầu ra', '## Phối hợp & bàn giao', '## Definition of Done', '## Giới hạn & an toàn'];
 
@@ -25,5 +26,15 @@ test('agent.md và hồ sơ phòng ban hợp lệ', () => {
     assert.ok(['opus', 'sonnet', 'haiku'].includes(a.model), `${a.id} model`);
     assert.ok(a.short.length > 0 && a.short.length <= 14, `${a.id} short "${a.short}" quá dài cho sơ đồ`);
     assert.ok(!/^(Đạt|Minh|Khoa|Bảo|Lan|Hùng|Tuấn|Hà|Ngọc|Phúc|An|Thư|Đức|Vy|Nam|Quân)$/.test(a.name), `${a.id} vẫn dùng tên người`);
+    // mẫu đầu ra: mục đầu "Tóm tắt", tên mục ngắn, một khái niệm (KPI đọc theo tên mục)
+    if (a.role === 'router') continue;
+    const heads = templateHeadings(a.body);
+    assert.ok(heads.length >= 3, `${a.id} mẫu đầu ra quá ít mục`);
+    assert.equal(heads[0], 'Tóm tắt', `${a.id} mẫu đầu ra phải bắt đầu bằng "## Tóm tắt"`);
+    for (const h of heads) {
+      assert.ok(!h.includes('·') && h.split(/\s+/).length <= 6, `${a.id}: tên mục "${h}" nên ngắn, một khái niệm`);
+    }
+    if (a.tools.some((x) => /^(write|edit)$/i.test(x)) && a.department === 'dev' && a.role === 'member')
+      assert.ok(heads.includes('Tệp đã tạo/sửa') || heads.includes('Tệp đã ghi'), `${a.id} thiếu mục liệt kê tệp`);
   }
 });

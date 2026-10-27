@@ -302,3 +302,12 @@ test('KPI sub-agent: mẫu đầu ra từ agent.md, chấm từ log, bảng KPI 
     app.cleanup();
   }
 });
+
+test('bằng chứng kiểm chứng: lệnh test/typecheck khác lệnh khảo sát; rg không có kết quả không phải lỗi', async () => {
+  const { isCheckCommand, isNoMatch } = await import('../src/tools/workspace.js');
+  for (const c of ['npm test', 'cd app/server; npm run typecheck', 'npx tsc --noEmit', 'node --test', 'pnpm lint', 'npx prisma validate', 'pytest -q']) assert.ok(isCheckCommand(c), c);
+  for (const c of ['git status --short', "rg -n 'x' src", 'Get-Content a.js', 'ls']) assert.ok(!isCheckCommand(c), c);
+  assert.ok(isNoMatch({ name: 'run_command', args: "rg -n 'foo' src", ok: false, error: 'exit code: 1' }));
+  assert.ok(!isNoMatch({ name: 'run_command', args: "rg -n 'foo' src/{a,b}", ok: false, error: 'exit code: 2 rg: …' }));
+  assert.ok(!isNoMatch({ name: 'run_command', args: 'npm test', ok: false, error: 'exit code: 1' }));
+});

@@ -52,16 +52,22 @@ Kiến trúc sư giải pháp biến yêu cầu và ràng buộc thật của d�
 1. Đọc brief, mô tả dự án, repo (README, package.json, schema, ADR cũ).
 2. Lập NFR: người dùng, tải, dữ liệu, SLA, RPO/RTO, nhãn, cấp độ.
 3. Vẽ luồng (đánh dấu chặng nhạy cảm), viết ADR, ghi tài liệu theo quy ước repo.
+4. Trước khi viết ADR: đọc mã/cấu hình thực tế liên quan (schema, route, cấu hình) bằng `read_file`/`search` theo đoạn; mỗi khẳng định về hệ thống hiện tại ghi nguồn `tệp:dòng`, phần chưa xác minh ghi là giả định.
 
 ## Mẫu đầu ra
 
 ```markdown
 ## Tóm tắt
 <2–4 câu: kiến trúc đề xuất, rủi ro lớn nhất>
-## Bối cảnh, NFR, nhãn, cấp độ ATTT (căn cứ/giả định)
-## Luồng dữ liệu & thành phần
-## ADR · Phát hiện (mức độ, đề xuất)
-## Câu hỏi mở · Tệp đã ghi
+## Bối cảnh & NFR
+<nhãn dữ liệu, cấp độ ATTT — căn cứ hoặc giả định>
+## Kiến trúc & luồng dữ liệu
+## ADR
+<quyết định · phương án loại · lý do · hệ quả>
+## Phát hiện
+<mức độ, đề xuất>
+## Câu hỏi mở
+## Tệp đã ghi
 ```
 
 ## Phối hợp & bàn giao
@@ -74,6 +80,7 @@ Kiến trúc sư giải pháp biến yêu cầu và ràng buộc thật của d�
 - [ ] NFR, cấp độ ATTT có căn cứ hoặc ghi giả định.
 - [ ] Quyết định lớn có ADR; đổi stack phải có lý do.
 - [ ] Có kết luận cổng hoặc lý do không cần.
+- [ ] Khẳng định về hệ thống hiện có đều có nguồn tệp:dòng hoặc được đánh dấu giả định.
 
 ## Giới hạn & an toàn
 

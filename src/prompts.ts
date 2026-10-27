@@ -217,6 +217,7 @@ Câu trả lời cuối cùng là báo cáo bàn giao theo ĐÚNG các mục tro
   return `\n## Công cụ & cách làm
 Bạn có công cụ: ${tools.join(', ')} — làm việc THẬT trong workspace \`${c.cwd}\`${c.branch ? ` (nhánh git riêng \`${c.branch}\`, không ảnh hưởng nhánh chính)` : ''}${c.serialWriters && tools.includes('run_command') ? '; các hạng mục chạy lệnh khác làm lần lượt nên không ai cài đặt/chạy test song song với bạn' : ''}.
 - Đọc quy tắc của repo trước (CLAUDE.md, AGENTS.md, README, CONTRIBUTING nếu có) và tuân thủ tuyệt đối; khảo sát repo trước khi sửa (list_files, search, read_file — gộp nhiều file một lần); giữ đúng cấu trúc, phong cách và stack sẵn có. Mỗi lượt công cụ gửi lại toàn bộ hội thoại nên tốn token: đọc có mục tiêu, không đọc lại nội dung đã có trong prompt hoặc đã đọc.
+- Đọc/tìm code bằng read_file/search/list_files — KHÔNG dùng Get-Content/cat/rg/grep qua run_command (lỗi cú pháp shell, sai mã hóa, tốn lượt). run_command chỉ để cài đặt, build, typecheck, test, migration, git.${tools.includes('run_command') && process.platform === 'win32' ? ' Shell là PowerShell: không có {a,b}, dấu * trong đường dẫn không tự mở rộng.' : ''}
 - Tạo/sửa file thật bằng write_file/edit_file; không dán toàn bộ code vào câu trả lời cuối — chỉ liệt kê file và điểm chính.
 ${tools.includes('run_command') ? '- Chạy kiểm tra thật bằng run_command (cài dependency nếu thiếu, typecheck, test, lint, migration trên DB dev) và báo kết quả THẬT: lệnh, exit code, tóm tắt lỗi. Lệnh nào không chạy được thì ghi rõ lý do — không bịa kết quả.\n' : '- Không có quyền chạy lệnh: ghi rõ lệnh kiểm tra cần chạy để người khác thực hiện.\n'}${c.ccDir ? `- Tài liệu đầu vào: \`${c.ccDir}/inputs/\` · sản phẩm các hạng mục khác: \`${c.ccDir}/outputs/\`.\n` : ''}- Làm và commit (nếu cần) ngay trên nhánh hiện tại của worktree — KHÔNG tạo/chuyển/xóa nhánh (các đồng nghiệp đang làm song song trong cùng worktree); cần hợp nhất nhánh khác thì \`git merge <nhánh>\` vào nhánh hiện tại. Không push, không xóa hàng loạt; không đưa dữ liệu thật hay bí mật vào code, seed, test, fixture.
 Câu trả lời cuối cùng là báo cáo bàn giao theo ĐÚNG các mục trong "Mẫu đầu ra" của bạn (giữ nguyên tên mục, mở đầu "## Tóm tắt"); mục nào không áp dụng thì ghi "Không áp dụng" thay vì bỏ. Bắt buộc có: tệp đã tạo/sửa (đường dẫn) và lệnh kiểm chứng đã chạy (lệnh → exit code/kết quả thật, hoặc lý do chưa chạy).
@@ -416,13 +417,10 @@ ${changes ? `\n## Thay đổi trong workspace (git)\n\`\`\`\n${truncate(changes,
 ${review || '(không review)'}
 ${toolNote(c, tools, 'synthesize')}
 ## Việc của bạn (Trưởng phòng): BÁO CÁO TỔNG HỢP
-Viết báo cáo cuối cùng gửi Tom bằng Markdown với các mục:
-# <tiêu đề>
-## Tóm tắt điều hành
-## Kết quả theo hạng mục (bảng: mã, hạng mục, phụ trách, kết quả, file)
-## Quyết định & thảo luận chính
-## Rủi ro, giả định & việc còn mở
-## Bước tiếp theo đề xuất
+Viết báo cáo cuối cùng gửi Tom bằng Markdown: dòng đầu "# <tiêu đề>", sau đó ĐÚNG các mục trong "Mẫu đầu ra" của bạn (giữ nguyên tên mục, bắt đầu "## Tóm tắt" — kết luận trước). Bên trong các mục đó bắt buộc có:
+- bảng kết quả theo hạng mục: mã · hạng mục · phụ trách · kết quả (đạt/chưa đạt theo review, kèm bằng chứng) · tệp;
+- quyết định chính, rủi ro/giả định, việc còn mở;
+- bước tiếp theo đề xuất — phần còn lớn so với một nhiệm vụ thì đề xuất tách thành các nhiệm vụ riêng (mỗi nhiệm vụ một gói việc, có tiêu chí xong).
 Không lặp nguyên văn sản phẩm; tóm lược và dẫn tới file đầu ra${changes ? '; nêu rõ nhánh git và cách review/merge thay đổi' : ''}.`,
   };
 }

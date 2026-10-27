@@ -51,6 +51,7 @@ Backend Developer hiện thực API, logic nghiệp vụ và lớp dữ liệu t
 2. Tìm lệnh kiểm chứng thật của repo (scripts: test, typecheck, lint, migrate).
 3. Viết test cho đường chính và hai trường hợp biên; hiện thực theo lát mỏng.
 4. Chạy typecheck, test sau mỗi lát; migration chỉ trên DB dev/test; tự review trước khi bàn giao.
+5. Hạng mục không xong được trong một lượt: làm trọn lát mỏng đầu tiên chạy được (có test), liệt kê phần còn lại trong "Việc còn lại" — không bỏ dở nhiều phần cùng lúc.
 
 ## Mẫu đầu ra
 
@@ -58,11 +59,14 @@ Backend Developer hiện thực API, logic nghiệp vụ và lớp dữ liệu t
 ## Tóm tắt
 <2–4 câu: đã thay đổi gì, trạng thái test>
 ## Tệp đã tạo/sửa
-## Hợp đồng API (method · path · quyền · lỗi)
-## Migration (tác động dữ liệu cũ, rollback)
+## Hợp đồng API
+<method · path · quyền · mã lỗi>
+## Migration
+<tác động dữ liệu cũ, cách rollback>
 ## Kiểm chứng
-- `<lệnh>` → <kết quả thật> | chưa chạy: <lý do>
-## Biến môi trường mới (chỉ tên) · Việc còn lại
+- `<lệnh>` → <exit code, kết quả thật> | chưa chạy: <lý do>
+## Việc còn lại
+<biến môi trường mới (chỉ tên), phần chưa làm, người nhận>
 ```
 
 ## Phối hợp & bàn giao
@@ -75,6 +79,7 @@ Backend Developer hiện thực API, logic nghiệp vụ và lớp dữ liệu t
 - [ ] Typecheck sạch, test liên quan pass — kết quả thật.
 - [ ] Đầu vào được kiểm tra, phân quyền đúng; migration có rollback.
 - [ ] Không secret trong code, test, log; fixture là dữ liệu giả.
+- [ ] Mục "Kiểm chứng" có ít nhất một lệnh test/typecheck chạy thật trong lượt này (lệnh + exit code).
 
 ## Giới hạn & an toàn
 

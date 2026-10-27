@@ -51,7 +51,7 @@ Hồ sơ phải nói rõ cách dùng công cụ: đọc repo trước khi đề 
 ## Chuyên môn & kỹ năng             (≤ 8 gạch đầu dòng, đứng độc lập)
 ## Điều chỉnh theo bối cảnh dự án   (vai trò co giãn thế nào theo loại dự án, quy mô, nhãn, cấp độ ATTT)
 ## Quy trình làm việc
-## Mẫu đầu ra                       (bắt đầu bằng "## Tóm tắt" 2–4 câu)
+## Mẫu đầu ra                       (khối ```markdown; mục đầu là "## Tóm tắt" 2–4 câu)
 ## Phối hợp & bàn giao
 ## Definition of Done
 ## Giới hạn & an toàn
@@ -61,7 +61,15 @@ Trưởng phòng thêm `## Cách phân rã nhiệm vụ`; reviewer thêm `## Ti�
 
 Ở pha họp, hệ thống có thể chỉ gửi `## Sứ mệnh` và `## Chuyên môn & kỹ năng` để tiết kiệm token — hai mục này phải hiểu được khi đứng riêng và nên đặt trước mọi khối code.
 
-**Độ dài:** 450–700 từ mỗi agent (điều phối ≤ 600), hồ sơ phòng ban ≤ 400 (đếm bằng `wc -w`, tính cả frontmatter). Không lặp lại quy tắc chung mà `systemFor()` đã chèn (tiếng Việt, không bịa, nhãn dữ liệu, không lệnh phá hủy) hay giới hạn 120 từ của pha họp.
+**Độ dài:** 450–900 từ mỗi agent (điều phối ≤ 600), hồ sơ phòng ban ≤ 400 (đếm bằng `wc -w`, tính cả frontmatter). Phần thân được gửi ở MỌI lượt gọi (cả từng vòng công cụ) nên không lặp lại quy tắc chung mà `systemFor()` và prompt từng pha đã chèn (tiếng Việt, không bịa, nhãn dữ liệu, không lệnh phá hủy, dùng `read_file`/`search` thay lệnh shell để đọc code, giữ tên mục của mẫu đầu ra) hay giới hạn 120 từ của pha họp.
+
+**Mẫu đầu ra — quy tắc (KPI đọc theo tên mục):**
+- Mỗi mục `## …` một khái niệm, tên ngắn (≤ 5 từ), không ghép bằng "·"; mô tả nội dung đặt ở dòng `<…>` ngay dưới tên mục.
+- Mục đầu luôn là `## Tóm tắt`. Agent sửa code có `## Tệp đã tạo/sửa` và `## Kiểm chứng` (lệnh → exit code thật); agent nghiên cứu tạo tệp có `## Tệp đã lưu`.
+- Khối ```` ```markdown ```` đầu tiên là mẫu mặc định; phần chỉ dùng trong trường hợp riêng (HSDT, đánh giá đầy đủ Data Protection Gate, nhiệm vụ liên phòng) đặt ở khối thứ hai kèm một câu "Khi … thì thêm:" — KPI chỉ chấm theo khối đầu.
+- `## Definition of Done` phải kiểm được bằng lệnh/tệp (vd. "có ít nhất một lệnh test chạy thật trong lượt này"), không viết chung chung.
+
+**Đánh giá KPI:** sau mỗi nhiệm vụ, `ccoding kpi` / tab KPI chấm từng agent (Chất lượng · Hiệu quả · Tin cậy · Tuân thủ) và sinh "việc cần sửa" — dùng để biết hồ sơ nào cần làm rõ (mục mẫu hay bị bỏ, hạng mục phải làm lại nhiều lần, công cụ lỗi, không kiểm chứng).
 
 **Không** khai báo định dạng JSON máy đọc trong agent.md — bộ điều phối tự thêm yêu cầu định dạng cho từng pha (kế hoạch, review, định tuyến).
 

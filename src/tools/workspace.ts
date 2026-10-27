@@ -80,7 +80,7 @@ const DEFS: Record<ToolName, { description: string; parameters: Record<string, u
     },
   },
   search: {
-    description: 'Tìm chuỗi/regex trong các file (trả về path:dòng: nội dung).',
+    description: 'Tìm chuỗi/regex trong các file (trả về path:dòng: nội dung) — dùng thay cho rg/grep/Select-String qua run_command.',
     parameters: {
       type: 'object',
       properties: {
@@ -138,7 +138,11 @@ const DEFS: Record<ToolName, { description: string; parameters: Record<string, u
   },
   run_command: {
     description:
-      `Chạy lệnh shell trong thư mục gốc workspace (${isWin ? 'PowerShell' : 'bash'}), ví dụ cài dependency, typecheck, test, migration trên DB dev. ` +
+      `Chạy lệnh shell trong thư mục gốc workspace (${isWin ? 'PowerShell' : 'bash'}) — dùng cho cài dependency, typecheck, test, build, migration trên DB dev, git. ` +
+      'Đọc/tìm trong code thì dùng read_file/search/list_files (đa nền tảng, UTF-8), không dùng cat/Get-Content/rg qua lệnh. ' +
+      (isWin
+        ? 'PowerShell: không có brace expansion {a,b}; dấu * trong đường dẫn không tự mở rộng cho chương trình ngoài; nối lệnh bằng ";" (lệnh sau vẫn chạy khi lệnh trước lỗi); Get-Content cần -Encoding utf8. '
+        : '') +
       'Không push, không lệnh phá hủy, không in khóa/bí mật. Trả về mã thoát + stdout/stderr (đã cắt bớt).',
     parameters: {
       type: 'object',
@@ -561,4 +565,14 @@ export function argsSummary(name: string, rawArgs: unknown): string {
     default:
       return JSON.stringify(a).slice(0, 300);
   }
+}
+
+/** Lệnh kiểm chứng thật (test, typecheck, lint, build, migration…) — khác lệnh khảo sát như git status, rg, ls. */
+export function isCheckCommand(cmd: string): boolean {
+  return /\b(npm|pnpm|yarn|bun)\s+(run\s+)?(test|typecheck|type-check|lint|build|check|e2e|verify|ci)\b|\bnpx\s+(tsc|vitest|jest|playwright|eslint|prisma\s+(validate|migrate))|\bnode\s+--test\b|\btsc\b|\bpytest\b|python3?\s+-m\s+(pytest|unittest)|\bgo\s+(test|vet|build)\b|\bcargo\s+(test|build|check|clippy)\b|\bmvn\b|\bgradlew?\b|\bdotnet\s+(test|build)\b|\bprisma\s+(validate|migrate)|\bmake\s+(test|check)\b|docker\s+compose\s+config/i.test(cmd);
+}
+
+/** Lệnh tìm kiếm trả mã 1 vì không có kết quả (rg/grep/findstr/Select-String) — không phải lỗi thật. */
+export function isNoMatch(tc: { name: string; args: string; ok: boolean; error?: string }): boolean {
+  return !tc.ok && tc.name === 'run_command' && /^\s*(rg|grep|findstr|git\s+grep)\b|Select-String/i.test(tc.args) && /exit code:\s*1\b/.test(tc.error ?? '');
 }

@@ -2,6 +2,7 @@ import type { Config } from './config.js';
 import type { Registry } from './registry.js';
 import type { Store } from './store.js';
 import type { AgentDef, ChatMessage, ProjectDef, Task, ToolAccess, ToolCallRecord } from './types.js';
+import { isCheckCommand, isNoMatch } from './tools/workspace.js';
 import { readJsonl } from './util/fsx.js';
 
 /**
@@ -76,7 +77,8 @@ export interface AgentKpi {
   compliance: { outputs: number; templateCoverage?: number; missing: Array<{ heading: string; count: number }>; summaryOk: number };
   evidence: { execEligible: number; execWithCommands: number; doi: number; urls: number; unverified: number; webCalls: number };
   reviewer?: { reviews: number; issuesRaised: number; verified: number; checkable: number };
-  lead?: { plans: number; planFallback: number; syntheses: number };
+  /** Trưởng phòng: chịu trách nhiệm kết quả của phòng — budgetRatio = token thực tế / ngân sách các lượt phòng mình phụ trách. */
+  lead?: { plans: number; planFallback: number; syntheses: number; budget?: number; used?: number; budgetRatio?: number };
   scores: { quality?: number; efficiency?: number; reliability?: number; compliance?: number };
   score: number;
   grade: 'A' | 'B' | 'C' | 'D';
@@ -209,7 +211,15 @@ export function computeKpi(src: KpiSource): KpiReport {
   };
 
   const taskRows: KpiReport['tasks'] = [];
+  /** Ngân sách và token thực tế theo phòng (để chấm trưởng phòng: kế hoạch có vừa ngân sách không). */
+  const deptBudget = new Map<string, { budget: number; used: number }>();
   for (const task of src.tasks) {
+    for (const run of task.runs) {
+      const b = deptBudget.get(run.department) ?? { budget: 0, used: 0 };
+      b.budget += task.options.budgetTokens / Math.max(1, task.runs.length);
+      b.used += run.usage.input + run.usage.output + run.usage.cacheRead + (run.usage.cacheWrite ?? 0);
+      deptBudget.set(run.department, b);
+    }
     const calls = src.calls(task.id);
     const transcript = src.transcript(task.id);
     const exec = src.access(task) === 'exec';
@@ -241,14 +251,14 @@ export function computeKpi(src: KpiSource): KpiReport {
         k.tools.calls++;
         const b = (k.tools.byName[tc.name] ??= { n: 0, failed: 0 });
         b.n++;
-        if (!tc.ok) {
+        if (!tc.ok && !isNoMatch(tc)) {
           k.tools.failed++;
           b.failed++;
         }
         if (tc.name === 'search_papers' || tc.name === 'web_search' || tc.name === 'fetch_url') k.evidence.webCalls++;
       }
-      // sản phẩm (thực thi/sửa) — tuân thủ mẫu đầu ra & bằng chứng
-      if ((r.phase === 'execute' || r.phase === 'revise') && r.text) {
+      // sản phẩm (thực thi/sửa; báo cáo tổng hợp của trưởng phòng) — tuân thủ mẫu đầu ra & bằng chứng
+      if ((r.phase === 'execute' || r.phase === 'revise' || r.phase === 'synthesize') && r.text) {
         a.outputs++;
         const def = src.agent(r.agentId);
         const heads = def ? templateHeadings(def.body) : [];
@@ -262,7 +272,7 @@ export function computeKpi(src: KpiSource): KpiReport {
         const canRun = exec && (def?.tools ?? []).some((t) => t.toLowerCase() === 'bash');
         if (canRun && r.phase === 'execute') {
           k.evidence.execEligible++;
-          if ((r.tools ?? []).some((tc) => tc.name === 'run_command')) k.evidence.execWithCommands++;
+          if ((r.tools ?? []).some((tc) => tc.name === 'run_command' && isCheckCommand(tc.args))) k.evidence.execWithCommands++;
         }
       }
       if (r.phase === 'review' && r.text) {
@@ -273,7 +283,7 @@ export function computeKpi(src: KpiSource): KpiReport {
         const canRun = exec && (def?.tools ?? []).some((t) => t.toLowerCase() === 'bash');
         const used = r.tools ?? [];
         if (canRun || used.length) rv.checkable++;
-        if (canRun ? used.some((tc) => tc.name === 'run_command') : used.some((tc) => ['fetch_url', 'search_papers', 'web_search', 'read_file', 'list_files', 'search'].includes(tc.name))) rv.verified++;
+        if (canRun ? used.some((tc) => tc.name === 'run_command' && isCheckCommand(tc.args)) : used.some((tc) => ['fetch_url', 'search_papers', 'web_search', 'read_file', 'list_files', 'search'].includes(tc.name))) rv.verified++;
       }
       if (r.phase === 'plan') (k.lead ??= { plans: 0, planFallback: 0, syntheses: 0 }).plans++;
       if (r.phase === 'synthesize' && r.text) (k.lead ??= { plans: 0, planFallback: 0, syntheses: 0 }).syntheses++;
@@ -352,7 +362,20 @@ export function computeKpi(src: KpiSource): KpiReport {
   for (const a of list) {
     const k = a.k;
     const s = k.scores;
-    if (k.quality.reviewed) s.quality = clamp((50 * k.quality.firstPassOk + 50 * k.quality.finalClean) / k.quality.reviewed);
+    if (k.role === 'lead') {
+      // trưởng phòng chịu trách nhiệm kết quả của phòng: chất lượng = kết quả review của các hạng mục trong phòng; hiệu quả = kế hoạch có vừa ngân sách
+      const team = list.filter((x) => x.k.department === k.department && x.k.role !== 'lead').map((x) => x.k.quality);
+      const reviewed = team.reduce((n, q) => n + q.reviewed, 0);
+      if (reviewed) s.quality = clamp((50 * team.reduce((n, q) => n + q.firstPassOk, 0) + 50 * team.reduce((n, q) => n + q.finalClean, 0)) / reviewed);
+      const b = deptBudget.get(k.department);
+      if (b?.budget && b.used) {
+        const lead = (k.lead ??= { plans: 0, planFallback: 0, syntheses: 0 });
+        lead.budget = Math.round(b.budget);
+        lead.used = Math.round(b.used);
+        lead.budgetRatio = Math.round((b.used / b.budget) * 10) / 10;
+        s.efficiency = clamp(100 * Math.min(1, b.budget / b.used));
+      }
+    } else if (k.quality.reviewed) s.quality = clamp((50 * k.quality.firstPassOk + 50 * k.quality.finalClean) / k.quality.reviewed);
     if (k.subtasks) {
       const med = medByDept.get(k.department) || k.tokens.perSubtask;
       const ratio = k.tokens.perSubtask ? med / k.tokens.perSubtask : 1;
@@ -462,7 +485,11 @@ function findings(k: AgentKpi, med: number): string[] {
   if (k.compliance.outputs && k.compliance.summaryOk < k.compliance.outputs)
     f.push(`${k.compliance.outputs - k.compliance.summaryOk}/${k.compliance.outputs} sản phẩm không mở đầu bằng "## Tóm tắt".`);
   if (k.evidence.execEligible >= 1 && k.evidence.execWithCommands / k.evidence.execEligible < 0.5)
-    f.push(`Có quyền chạy lệnh nhưng ít kiểm chứng (${k.evidence.execWithCommands}/${k.evidence.execEligible} lượt thực thi có chạy lệnh) — Definition of Done phải bắt buộc lệnh + exit code thật.`);
+    f.push(`Có quyền chạy lệnh nhưng ít kiểm chứng (${k.evidence.execWithCommands}/${k.evidence.execEligible} lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.`);
+  const shellReads = Object.entries(k.tools.byName).find(([n]) => n === 'run_command')?.[1].n ?? 0;
+  const fileTools = ['read_file', 'search', 'list_files'].reduce((s, n) => s + (k.tools.byName[n]?.n ?? 0), 0);
+  if (shellReads >= 10 && shellReads > 2 * fileTools)
+    f.push(`Dùng run_command cho cả việc đọc/tìm code (${shellReads} lệnh so với ${fileTools} lần read_file/search/list_files) — dễ lỗi cú pháp PowerShell, sai mã hóa và tốn lượt; đọc/tìm bằng công cụ file.`);
   if (k.department === 'research' && k.compliance.outputs >= 1 && k.evidence.webCalls === 0 && k.evidence.doi + k.evidence.urls === 0 && k.role !== 'lead')
     f.push('Không có nguồn kiểm chứng được (DOI/URL) và không dùng công cụ tra cứu.');
   if (k.quality.reviewed >= 1 && (k.quality.firstPassOk / k.quality.reviewed < 0.5 || k.quality.finalClean < k.quality.reviewed))
@@ -474,6 +501,8 @@ function findings(k: AgentKpi, med: number): string[] {
   if (k.reviewer && k.reviewer.reviews && k.reviewer.checkable && k.reviewer.verified < k.reviewer.checkable)
     f.push(`Review không kiểm chứng bằng công cụ ${k.reviewer.checkable - k.reviewer.verified}/${k.reviewer.checkable} lần — kết luận dựa trên lời tự khai trong báo cáo.`);
   if (k.lead?.planFallback) f.push(`${k.lead.planFallback} lần kế hoạch không đúng định dạng JSON (phải dùng kế hoạch dự phòng).`);
+  if (k.lead?.budgetRatio && k.lead.budgetRatio > 1.5)
+    f.push(`Phòng dùng ${k.lead.budgetRatio.toString().replace('.', ',')} lần ngân sách (${fmtK(k.lead.used ?? 0)}/${fmtK(k.lead.budget ?? 0)}) — kế hoạch ôm quá nhiều việc cho một nhiệm vụ: chia theo gói/giai đoạn, mỗi hạng mục có tiêu chí xong đo được trong một lượt.`);
   if (!k.subtasks && !k.reviewer && !k.lead && (k.phases.discuss ?? 0) > 0 && Object.keys(k.phases).length === 1) f.push('Chỉ tham gia họp, không nhận hạng mục — cân nhắc không mời họp khi không có việc liên quan.');
   return f;
 }

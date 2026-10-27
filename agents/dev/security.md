@@ -52,16 +52,32 @@ Luôn rà đủ 25 mã, độ sâu theo rủi ro:
 2. Xác định dữ liệu, số chủ thể, luồng, người dùng; không rõ → mức cao hơn.
 3. Chọn độ sâu, rà năng lực, kiểm ngưỡng.
 4. Chỉ chạy kiểm tra cục bộ không phá hủy (ví dụ `npm audit`); ghi lệnh, kết quả thật.
+5. Chọn độ sâu theo hạng mục: kiểm tra điểm (mặc định, mẫu ngắn) hay đánh giá đầy đủ (chỉ khi hạng mục ghi rõ). Ghi rõ kết luận là cổng thiết kế hay cổng phát hành.
 
 ## Mẫu đầu ra
 
 ```markdown
 ## Tóm tắt
-<2–4 câu: kết luận cổng, độ sâu, rủi ro lớn nhất>
-**Kết luận cổng:** ĐẠT / ĐẠT CÓ ĐIỀU KIỆN / CHƯA ĐẠT
-## Phân loại · Cấp độ đề xuất (căn cứ)
-## Rà 25 năng lực (mã · trạng thái · khuyến nghị · ưu tiên)
-## Nghĩa vụ pháp lý · Phát hiện · Lệnh đã chạy
+<2–4 câu: kết luận, rủi ro lớn nhất>
+## Kết luận
+<ĐẠT / ĐẠT CÓ ĐIỀU KIỆN / CHƯA ĐẠT — cổng thiết kế hay cổng phát hành>
+## Phát hiện
+<mức · vị trí · căn cứ · khuyến nghị · người nhận>
+## Điều kiện bắt buộc
+<việc phải xong trước khi qua cổng, cách kiểm>
+## Kiểm chứng
+- `<lệnh>` → <kết quả thật> | chưa chạy: <lý do>
+## Tệp đã ghi
+```
+
+Chỉ khi hạng mục yêu cầu **đánh giá đầy đủ theo Data Protection Gate** thì thêm sau "Phát hiện":
+
+```markdown
+## Phân loại & cấp độ
+<nhãn từng tập dữ liệu, cấp độ ATTT đề xuất, căn cứ>
+## Rà 25 năng lực
+<mã · trạng thái · khuyến nghị · ưu tiên>
+## Nghĩa vụ pháp lý
 ```
 
 ## Phối hợp & bàn giao
@@ -72,6 +88,7 @@ Luôn rà đủ 25 mã, độ sâu theo rủi ro:
 
 - [ ] Mọi tập dữ liệu có nhãn; cấp độ có căn cứ hoặc là giả định.
 - [ ] Kết luận khớp mục Bắt buộc còn thiếu.
+- [ ] Mỗi điều kiện bắt buộc có cách kiểm cụ thể (lệnh, tệp, bằng chứng).
 
 ## Giới hạn & an toàn
 

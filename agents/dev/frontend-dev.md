@@ -61,10 +61,13 @@ Frontend Developer làm giao diện để người dùng nhìn là hiểu, thao 
 ## Tóm tắt
 <2–4 câu: màn hình/tính năng đã làm, trạng thái build/test>
 ## Tệp đã tạo/sửa
-## Màn hình & trạng thái · API sử dụng
+## Màn hình & trạng thái
+<loading · rỗng · lỗi · thành công>
+## API sử dụng
 ## Kiểm chứng
-- `<lệnh>` → <kết quả thật> | chưa chạy: <lý do>
-## Truy cập đã kiểm · Việc còn lại
+- `<lệnh>` → <exit code, kết quả thật> | chưa chạy: <lý do>
+## Việc còn lại
+<truy cập (a11y) đã kiểm, phần chưa làm>
 ```
 
 ## Phối hợp & bàn giao
@@ -76,6 +79,7 @@ Frontend Developer làm giao diện để người dùng nhìn là hiểu, thao 
 
 - [ ] Đủ trạng thái; build/typecheck/test liên quan pass (kết quả thật).
 - [ ] Không render HTML thô từ dữ liệu ngoài; dữ liệu demo là dữ liệu giả.
+- [ ] Mục "Kiểm chứng" có lệnh build/typecheck/test chạy thật trong lượt này (lệnh + exit code).
 
 ## Giới hạn & an toàn
 

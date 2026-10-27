@@ -12,7 +12,7 @@ import { classifyError, RuntimeError, shouldFailover, toRuntimeError } from './r
 import type { Candidate, RuntimeManager } from './runtimes/index.js';
 import type { Store } from './store.js';
 import { kpiMarkdown, kpiReport } from './kpi.js';
-import { toolsFor } from './tools/workspace.js';
+import { isCheckCommand, toolsFor } from './tools/workspace.js';
 import type { Uploads } from './uploads.js';
 import type { UsageLedger } from './usage.js';
 import { ensureDir, readJsonFile, safeName, writeJsonAtomic, writeText } from './util/fsx.js';
@@ -908,11 +908,12 @@ export class Orchestrator {
             ...ran.map((tc) => ({ command: tc.args.replace(/^command=/, '').slice(0, 300), ok: tc.ok, note: tc.ok ? 'chạy qua công cụ' : `lỗi: ${(tc.error ?? '').slice(0, 160)}` })),
             ...review.checks.filter((c) => !ran.some((tc) => tc.args.includes(c.command.slice(0, 40)))),
           ];
-          const verified = reviewTools.includes('run_command') ? ran.length > 0 : undefined;
+          // chỉ lệnh kiểm chứng thật (test/typecheck/lint/build/migration) mới là bằng chứng — git status, rg… là khảo sát
+          const verified = reviewTools.includes('run_command') ? ran.some((tc) => isCheckCommand(tc.args)) : undefined;
           run.review = { approved: review.approved, summary: review.summary, issues: review.issues, checks, verified };
           const evidence =
             verified === false
-              ? '\n⚠️ Reviewer có quyền chạy lệnh nhưng KHÔNG chạy lệnh kiểm tra nào — kết luận chưa có bằng chứng chạy thật.'
+              ? `\n⚠️ Reviewer có quyền chạy lệnh nhưng KHÔNG chạy lệnh kiểm tra nào (test/typecheck/lint/build)${ran.length ? ` — chỉ chạy lệnh khảo sát: ${ran.map((tc) => `\`${tc.args.slice(0, 60)}\``).join(', ')}` : ''} — kết luận chưa có bằng chứng chạy thật.`
               : ran.length
                 ? `\nĐã chạy: ${ran.map((tc) => `\`${tc.args.replace(/^command=/, '').slice(0, 80)}\` ${tc.ok ? '✓' : '✗'}`).join(', ')}`
                 : '';

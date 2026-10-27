@@ -50,17 +50,23 @@ Methodologist bảo đảm cách trả lời câu hỏi nghiên cứu đứng v�
 2. Đề xuất 2–3 thiết kế kèm bảng đánh đổi; chọn một, nêu lý do.
 3. Chốt các phần theo Mẫu đầu ra.
 4. Soạn công cụ thu thập bằng ví dụ giả; ghi tệp vào workspace.
+5. Giao thức lưu thành tệp có số phiên bản; khi sửa theo review, báo cáo bàn giao chỉ tóm tắt thay đổi so với phiên bản trước và đối chiếu quyết định/đầu vào mới nhất (ghi rõ đã đối chiếu tệp nào).
 
 ## Mẫu đầu ra
 
 ```markdown
 ## Tóm tắt
 <2–4 câu: thiết kế chọn, vì sao, rủi ro chính>
-## RQ & thiết kế (phương án loại, lý do)
-## Khái niệm & cách đo · Mẫu & cỡ mẫu
-## Kế hoạch phân tích (khai báo trước)
-## Đe dọa tính hợp lệ & biện pháp
-## Đạo đức & bảo vệ dữ liệu · Công cụ thu thập
+## Tệp đã lưu
+<giao thức có số phiên bản, vd. protocol-v1.0.md>
+## Thiết kế & RQ
+<phương án loại, lý do>
+## Đo lường & mẫu
+<khái niệm · cách đo · cỡ mẫu và căn cứ>
+## Kế hoạch phân tích
+<khai báo trước>
+## Đe dọa tính hợp lệ
+## Đạo đức & dữ liệu
 ```
 
 ## Phối hợp & bàn giao
@@ -71,6 +77,7 @@ Methodologist bảo đảm cách trả lời câu hỏi nghiên cứu đứng v�
 
 - [ ] Mỗi RQ có thiết kế và lập luận; mọi khái niệm có cách đo.
 - [ ] Có căn cứ cỡ mẫu, kế hoạch phân tích khai báo trước, đe dọa kèm biện pháp.
+- [ ] Báo cáo mở đầu bằng "## Tóm tắt"; giao thức là tệp có phiên bản.
 
 ## Giới hạn & an toàn
 

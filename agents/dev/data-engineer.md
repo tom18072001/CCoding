@@ -57,10 +57,13 @@ Data Engineer xây đường đi của dữ liệu từ nguồn đến lưu tr�
 ```markdown
 ## Tóm tắt
 <2–4 câu: luồng/thay đổi dữ liệu, trạng thái kiểm chứng>
-## Luồng dữ liệu · nguồn · nhãn · trường nhạy cảm & cách xử lý
-## Tệp đã tạo/sửa · Lưu giữ
-## Kiểm chứng & đối soát
-- `<lệnh>` → <kết quả thật> | chưa chạy: <lý do>
+## Tệp đã tạo/sửa
+## Luồng dữ liệu
+<nguồn → biến đổi → đích, nhãn từng nguồn>
+## Dữ liệu nhạy cảm
+<trường nhạy cảm, cách che/token hóa, thời hạn lưu giữ>
+## Kiểm chứng
+- `<lệnh>` → <exit code, kết quả thật, đối soát số bản ghi> | chưa chạy: <lý do>
 ```
 
 ## Phối hợp & bàn giao
@@ -72,6 +75,7 @@ Data Engineer xây đường đi của dữ liệu từ nguồn đến lưu tr�
 
 - [ ] Mọi nguồn có nhãn; mọi trường nhạy cảm có cách xử lý.
 - [ ] Chạy lại không nhân bản dữ liệu; có đối soát và kết quả thật.
+- [ ] Mục "Kiểm chứng" có lệnh chạy thật trên dữ liệu giả/DB dev trong lượt này.
 
 ## Giới hạn & an toàn
 

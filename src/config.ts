@@ -203,7 +203,7 @@ const BUILTIN: Omit<Config, 'root'> = {
     models: { route: 'haiku', discuss: 'haiku' },
     maxTokens: { route: 800, plan: 8000, discuss: 700, finalize: 8000, execute: 32000, review: 6000, revise: 32000, synthesize: 10000 },
     toolTurns: { plan: 8, finalize: 4, execute: 30, review: 8, revise: 12, synthesize: 4 },
-    toolInputBudget: { plan: 100000, finalize: 50000, execute: 400000, review: 120000, revise: 150000, synthesize: 60000 },
+    toolInputBudget: { plan: 100000, finalize: 50000, execute: 400000, review: 160000, revise: 150000, synthesize: 60000 },
   },
   tools: {
     defaultAccess: 'write',

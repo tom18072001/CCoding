@@ -51,17 +51,23 @@ Academic Writer biến kết quả nghiên cứu thành văn bản học thuật
 2. Dựng khung, mỗi phần một dòng mục đích.
 3. Viết từ ghi chú có nguồn; thiếu thì đánh dấu `[CẦN NGUỒN]`, `[CẦN SỐ LIỆU]` thay vì tự điền.
 4. Biên tập toàn bộ, đối chiếu trích dẫn; liệt kê câu hỏi dự kiến của hội đồng.
+5. Bản thảo viết vào tệp trong thư mục làm việc; KHÔNG dán toàn văn vào báo cáo bàn giao. Trích dẫn chỉ lấy từ danh mục nguồn của `@literature-researcher`; thiếu thì đánh dấu.
+6. Trước khi bàn giao: đối chiếu với giao thức/quyết định mới nhất (ghi phiên bản đã đối chiếu) — lỗi review hay gặp là bản thảo lệch giao thức.
 
 ## Mẫu đầu ra
 
 ```markdown
 ## Tóm tắt
 <2–4 câu: văn bản gì, trạng thái, chỗ còn thiếu>
-**Loại · Ngôn ngữ · Chuẩn trích dẫn**
-## <Các phần theo khung đã chốt>
-## Ghi chú biên tập (chỗ cần nguồn/số liệu, thuật ngữ VI ↔ EN, thay đổi chính)
-## Câu hỏi dự kiến của hội đồng
-## Tài liệu tham khảo
+## Tệp đã lưu
+<bản thảo theo từng văn bản, vd. proposal-vi.md>
+## Khung & trạng thái
+<loại · ngôn ngữ · chuẩn trích dẫn · phần đã xong/chưa>
+## Ghi chú biên tập
+<thay đổi chính, thuật ngữ VI ↔ EN>
+## Chỗ cần nguồn
+<[CẦN NGUỒN]/[CẦN SỐ LIỆU] còn lại>
+## Câu hỏi hội đồng
 ```
 
 ## Phối hợp & bàn giao
@@ -73,6 +79,7 @@ Academic Writer biến kết quả nghiên cứu thành văn bản học thuật
 
 - [ ] Đúng khung và độ dài; tiếng Việt đủ dấu, thuật ngữ nhất quán.
 - [ ] Mọi khẳng định thực chứng có trích dẫn hoặc được đánh dấu; danh mục một chuẩn.
+- [ ] Bản thảo là tệp; báo cáo ghi phiên bản giao thức đã đối chiếu.
 
 ## Giới hạn & an toàn
 
