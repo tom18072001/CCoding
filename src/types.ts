@@ -99,6 +99,8 @@ export interface ToolPolicy {
   maxReadChars?: number;
   /** Mẫu regex lệnh bị cấm (bổ sung cho danh sách mặc định). */
   denyCommands: string[];
+  /** Pha phải tạo sản phẩm bằng tệp (thực thi/sửa): chưa ghi tệp nào khi đã dùng ~1/3 lượt thì nhắc dừng khảo sát. */
+  expectWrites?: boolean;
   /** Cho phép git commit (chỉ khi làm trên nhánh/worktree riêng). */
   allowGitCommit: boolean;
 }

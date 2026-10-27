@@ -1378,6 +1378,7 @@ export class Orchestrator {
                 maxReadChars: config.tools.maxReadChars,
                 denyCommands: [...config.tools.denyCommands, ...(ctx.project?.denyCommands ?? [])],
                 allowGitCommit: !!task.branch,
+                expectWrites: (phase === 'execute' || phase === 'revise') && allow.some((t) => t === 'write_file' || t === 'edit_file'),
               }
             : undefined,
           redact: rt.local ? undefined : { secrets: config.dataProtection.redactSecrets, pii: piiOut },

@@ -237,7 +237,7 @@ ${toolNote(c, tools, 'plan')}
 Phân rã yêu cầu thành 2–7 hạng mục rõ ràng, giao cho đúng người theo kỹ năng, quy mô tương xứng với yêu cầu (việc nhỏ thì ít hạng mục). Quy tắc:
 - \`assignee\` phải là một id trong danh sách trên (không có dấu @). Hạn chế tự giao cho bản thân; người review sẽ kiểm tra ở bước sau nên không cần tạo hạng mục "review".
 - \`dependsOn\` chỉ trỏ tới id hạng mục khác; tối đa hóa phần chạy song song.
-- Mỗi hạng mục phải có tiêu chí hoàn thành kiểm chứng được${c.filesAccessible ? '; với dự án có repo, ghi rõ phần code/thư mục liên quan và lệnh kiểm tra (test/typecheck/migration) cần chạy' : ''}.
+- Mỗi hạng mục phải có tiêu chí hoàn thành kiểm chứng được${c.filesAccessible ? '; với dự án có repo, ghi rõ phần code/thư mục liên quan và lệnh kiểm tra (test/typecheck/migration) cần chạy' : ''}.${c.filesAccessible ? '\n- Cỡ hạng mục: một người phải làm xong trong MỘT lượt (~30 thao tác công cụ). Repo có tệp nguồn lớn (hàng nghìn dòng như server.js) thì mỗi hạng mục chỉ sửa ít tệp lớn — tách theo nhóm endpoint/màn hình/bảng (vd. "module + route mới" riêng, "lọc danh sách A, B" riêng, "test" riêng) thay vì gộp "toàn bộ API".' : ''}
 
 Trả lời bằng một khối JSON theo mẫu:
 ${PLAN_SCHEMA}`,
@@ -347,7 +347,7 @@ export function executePrompt(
     : '';
   const contBlock = continuation
     ? `\n## ↻ CHẠY TIẾP (lần ${continuation.n}/${continuation.max}) — hạng mục chưa xong ở lần trước
-${continuation.resumed ? 'Nhiệm vụ vừa được tiếp tục; lượt chạy trước của hạng mục này dừng giữa chừng (phần đã ghi vẫn còn trong workspace).' : 'Lần chạy trước hết lượt/ngân sách công cụ khi CHƯA XONG.'} Đây là ngữ cảnh mới: KHÔNG khảo sát lại từ đầu — dựa vào bàn giao dở dang và trạng thái workspace dưới đây, đọc đúng các tệp cần sửa và làm nốt phần còn lại, rồi chạy kiểm chứng.
+${continuation.resumed ? 'Nhiệm vụ vừa được tiếp tục; lượt chạy trước của hạng mục này dừng giữa chừng (phần đã ghi vẫn còn trong workspace).' : 'Lần chạy trước hết lượt/ngân sách công cụ khi CHƯA XONG.'} Đây là ngữ cảnh mới: KHÔNG khảo sát lại từ đầu — dựa vào bàn giao dở dang và trạng thái workspace dưới đây, đọc đúng đoạn cần sửa và GHI TỆP trong ~5 lượt đầu (tạo module/tệp mới trước, rồi nối vào tệp lớn bằng edit_file nhỏ), làm nốt phần còn lại, rồi chạy kiểm chứng.
 ### Bàn giao dở dang của lần trước
 ${truncate(continuation.previous, 7000)}
 ### Thay đổi hiện có trong workspace (so với điểm xuất phát)

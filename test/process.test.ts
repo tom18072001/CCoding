@@ -551,3 +551,50 @@ test('hạng mục vẫn chưa xong sau các lần chạy tiếp → nhiệm v�
     fs.rmSync(ws, { recursive: true, force: true });
   }
 });
+
+test('vòng công cụ: đọc trùng không gửi lại nội dung; chưa ghi tệp khi đã dùng ~35%/65% lượt thì bị nhắc dừng khảo sát', async () => {
+  const nudges: number[] = [];
+  const toolOutputs: string[] = [];
+  let calls = 0;
+  const srv = http.createServer(async (req, res) => {
+    let raw = '';
+    for await (const c of req) raw += c;
+    const body = JSON.parse(raw);
+    calls++;
+    const msgs = body.messages as Array<{ role: string; content: unknown }>;
+    const last = msgs[msgs.length - 1];
+    if (last.role === 'tool') toolOutputs.push(String(last.content));
+    if (last.role === 'user' && /CHƯA ghi tệp nào|chưa ghi tệp nào/.test(String(last.content))) nudges.push(calls);
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    const send = (o: unknown) => res.write(`data: ${JSON.stringify(o)}\n\n`);
+    if (last.role === 'user' && String(last.content).includes('KHÔNG gọi thêm công cụ')) send({ choices: [{ delta: { content: 'TRẠNG THÁI: CHƯA XONG — chưa ghi\n## Tóm tắt\nx' }, finish_reason: 'stop' }] });
+    else send({ choices: [{ delta: { tool_calls: [{ index: 0, id: `c${calls}`, function: { name: 'read_file', arguments: JSON.stringify({ path: 'a.txt' }) } }] }, finish_reason: 'tool_calls' }] });
+    send({ choices: [], usage: { prompt_tokens: 100, completion_tokens: 10 } });
+    res.end('data: [DONE]\n\n');
+  });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-nudge-'));
+  fs.writeFileSync(path.join(root, 'a.txt'), 'nội dung A');
+  try {
+    const { OpenAiApiRuntime } = await import('../src/runtimes/api.js');
+    const { parseAgent } = await import('../src/registry.js');
+    const rt = new OpenAiApiRuntime({ baseUrl: `http://127.0.0.1:${(srv.address() as AddressInfo).port}/v1`, tags: 'none' }, {}, 'nudge');
+    const agent = parseAgent('a.md', '---\nid: backend-dev\nname: Backend\ndepartment: dev\nrole: member\n---\nbody');
+    const r = await rt.run(
+      {
+        agent, phase: 'execute', system: 's', prompt: 'p', model: 'm', cwd: root, tools: [], allowTools: true, timeoutMs: 10000,
+        toolPolicy: { root, allow: ['read_file', 'write_file'], maxTurns: 10, commandTimeoutSec: 10, maxOutputChars: 2000, denyCommands: [], allowGitCommit: false, expectWrites: true },
+        meta: { taskId: 'T-x', department: 'dev', callId: 'c1' },
+      },
+      {},
+    );
+    assert.equal(r.capped, 'turns');
+    assert.match(toolOutputs[0], /nội dung A/);
+    assert.ok(toolOutputs.slice(1).every((o) => /Đã đọc đúng nội dung này ở lượt 1/.test(o)), 'các lần đọc lại trả ghi chú ngắn');
+    assert.equal(nudges.length, 2, 'nhắc hai lần (≈35% và ≈65%)');
+    assert.match(r.diag ?? '', /nhắc ghi tệp lần 1 ở lượt 4.*nhắc ghi tệp lần 2 ở lượt 7/);
+  } finally {
+    srv.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

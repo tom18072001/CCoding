@@ -339,6 +339,11 @@ export class OpenAiApiRuntime implements Runtime {
     let finalAsked = false;
     let capped: 'turns' | 'input' | undefined;
     let turns = 0;
+    // chống "khảo sát mãi không ghi": đếm tệp đã ghi, nhắc khi đã dùng ~35% / ~65% lượt hoặc trần token mà chưa ghi gì
+    let wrote = 0;
+    let writeNudges = 0;
+    // đọc trùng: cùng tham số read_file, nội dung cũ còn nguyên trong lịch sử và chưa ghi gì từ đó → không gửi lại lần nữa
+    const reads = new Map<string, { msg: ChatMsg; turn: number; wroteAt: number }>();
     for (;;) {
       turns++;
       let t: StreamTurn;
@@ -382,15 +387,37 @@ export class OpenAiApiRuntime implements Runtime {
           } catch (e) {
             parseErr = `Tham số JSON không hợp lệ (${(e as Error).message}) — có thể do đầu ra bị cắt; hãy gửi lại với nội dung ngắn hơn hoặc chia nhỏ file.`;
           }
+          const readKey = c.name === 'read_file' && !parseErr ? JSON.stringify(args) : '';
+          const prevRead = readKey ? reads.get(readKey) : undefined;
+          const dup = prevRead && prevRead.wroteAt === wrote && !String(prevRead.msg.content ?? '').includes(COMPACTED_MARK);
           const out = parseErr
             ? { ok: false, output: `LỖI: ${parseErr}`, ms: 0, summary: `${c.name} ✗ JSON lỗi` }
-            : await executeTool(c.name, args, policy!, hooks.signal);
+            : dup
+              ? { ok: true, output: `(Đã đọc đúng nội dung này ở lượt ${prevRead!.turn} — vẫn còn nguyên ở trên và tệp chưa đổi; dùng lại, không đọc lại.)`, ms: 0, summary: `${c.name} (trùng lượt ${prevRead!.turn})` }
+              : await executeTool(c.name, args, policy!, hooks.signal);
+          if ((c.name === 'write_file' || c.name === 'edit_file') && out.ok) wrote++;
           hooks.onActivity?.(out.summary);
           records.push({ name: c.name, args: argsSummary(c.name, args), ok: out.ok, ms: out.ms, outputChars: out.output.length, error: out.ok ? undefined : out.output.slice(0, 300) });
           // nội dung file/đầu ra lệnh đi ra nhà cung cấp bên ngoài → che bí mật (và PII với dữ liệu Bảo mật/Hạn chế)
-          messages.push({ role: 'tool', tool_call_id: c.id, content: req.redact ? redact(out.output, req.redact) : out.output });
+          const toolMsg: ChatMsg = { role: 'tool', tool_call_id: c.id, content: req.redact ? redact(out.output, req.redact) : out.output };
+          messages.push(toolMsg);
+          if (readKey && !dup && out.ok) reads.set(readKey, { msg: toolMsg, turn: turns, wroteAt: wrote });
         }
         compactHistory(messages);
+        if (policy!.expectWrites && !wrote && writeNudges < 2) {
+          const frac = Math.max(turns / maxTurns, inputCap > 0 ? usage.input / inputCap : 0);
+          if (frac >= (writeNudges === 0 ? 0.35 : 0.65)) {
+            writeNudges++;
+            diag.push(`nhắc ghi tệp lần ${writeNudges} ở lượt ${turns} (chưa ghi tệp nào)`);
+            messages.push({
+              role: 'user',
+              content:
+                writeNudges === 1
+                  ? `⚠️ Đã dùng ${Math.round(frac * 100)}% ngân sách công cụ của bước này mà CHƯA ghi tệp nào. Dừng khảo sát rộng: dựa trên những gì đã đọc, bắt đầu tạo/sửa tệp ngay ở lượt tới (write_file/edit_file), làm từng phần nhỏ; chỉ đọc thêm đúng đoạn cần để sửa.`
+                  : `⛔ Đã dùng ${Math.round(frac * 100)}% ngân sách công cụ và vẫn chưa ghi tệp nào — nếu hết lượt mà không có thay đổi thì hạng mục thất bại. Ghi ngay phần đã đủ thông tin (vd. tạo module/tệp mới trước, nối vào tệp lớn sau).`,
+            });
+          }
+        }
         const overBudget = inputCap > 0 && usage.input >= inputCap;
         if (turns >= maxTurns || overBudget) {
           finalAsked = true;
@@ -462,6 +489,8 @@ export function cappedDone(text: string): boolean {
  * cache prompt của nhà cung cấp (tự động như OpenAI/Codex, hoặc cache_control với Claude) vẫn trúng.
  * Trả về true nếu đã rút gọn.
  */
+const COMPACTED_MARK = 'kết quả cũ đã lược bớt';
+
 export function compactHistory(messages: ChatMsg[], keep = 3, max = 400, threshold = 40_000): boolean {
   const toolIdx = messages.map((m, i) => (m.role === 'tool' ? i : -1)).filter((i) => i >= 0);
   const older = toolIdx.slice(0, Math.max(0, toolIdx.length - keep)).filter((i) => String(messages[i].content ?? '').length > max + 80);
@@ -473,7 +502,7 @@ export function compactHistory(messages: ChatMsg[], keep = 3, max = 400, thresho
   if (pending < threshold) return false;
   for (const i of older) {
     const c = String(messages[i].content ?? '');
-    messages[i].content = `${c.slice(0, max)}\n… [kết quả cũ đã lược bớt — gọi lại công cụ nếu cần]`;
+    messages[i].content = `${c.slice(0, max)}\n… [${COMPACTED_MARK} — gọi lại công cụ nếu cần]`;
   }
   for (const i of bigArgs) {
     for (const tc of calls(i)) {
