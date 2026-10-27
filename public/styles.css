@@ -392,7 +392,7 @@ a[data-task] { color: #93c5fd; cursor: pointer; text-decoration: none; }
 /* KPI sub-agent */
 .tbl.kpi td, .tbl.kpi th { text-align: right; }
 .tbl.kpi td:first-child, .tbl.kpi th:first-child { text-align: left; }
-.kpi-v { display: inline-block; min-width: 34px; padding: 1px 6px; border-radius: 6px; font-family: var(--mono); background: color-mix(in srgb, var(--ok) calc(var(--v) * 1%), var(--bad)); color: #0b1020; font-weight: 600; opacity: 0.85; }
+.kpi-v { --c: color-mix(in srgb, var(--ok) calc(var(--v) * 1%), var(--bad)); display: inline-block; min-width: 34px; padding: 1px 6px; border-radius: 6px; font-family: var(--mono); font-weight: 700; color: var(--c); background: color-mix(in srgb, var(--c) 16%, transparent); border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); }
 .grade { font-family: var(--mono); }
 .grade.ok { color: var(--ok); } .grade.info { color: #93c5fd; } .grade.warn { color: var(--warn); } .grade.bad { color: var(--bad); }
 .kpi-f { margin: 8px 0; font-size: 12.5px; }
