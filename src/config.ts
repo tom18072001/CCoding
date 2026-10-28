@@ -299,10 +299,13 @@ const BUILTIN: Omit<Config, 'root'> = {
  * Nạp cấu hình theo thứ tự ưu tiên tăng dần:
  * mặc định dựng sẵn → ccoding.config.json → ccoding.local.json → biến môi trường.
  */
-export function loadConfig(opts: { root?: string; configFile?: string } = {}): Config {
+export function loadConfig(opts: { root?: string; configFile?: string; local?: boolean } = {}): Config {
   const root = opts.root ?? process.env.CCODING_ROOT ?? ROOT;
   let cfg = deepMerge(BUILTIN, readJson(path.join(root, 'ccoding.config.json')));
-  cfg = deepMerge(cfg, readJson(path.join(root, 'ccoding.local.json')));
+  // ccoding.local.json là cấu hình riêng của máy (runtime tắt/bật, khóa…): bỏ qua khi chạy test (node --test đặt
+  // NODE_TEST_CONTEXT) để bộ test không phụ thuộc máy — 28/10 máy Tom đỏ 12/100 test chỉ vì cấu hình local.
+  const skipLocal = opts.local === false || process.env.CCODING_NO_LOCAL === '1' || (!!process.env.NODE_TEST_CONTEXT && process.env.CCODING_TEST_LOCAL !== '1');
+  if (!skipLocal) cfg = deepMerge(cfg, readJson(path.join(root, 'ccoding.local.json')));
   const extra = opts.configFile ?? process.env.CCODING_CONFIG;
   if (extra) {
     if (!fs.existsSync(path.resolve(extra))) throw new Error(`Không thấy file cấu hình ${extra} (CCODING_CONFIG)`);

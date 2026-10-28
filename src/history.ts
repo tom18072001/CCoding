@@ -38,6 +38,8 @@ export function selectHistory(all: Task[], current: Task, limit = 3): Task[] {
   return all
     .filter((t) => t.id !== current.id && t.projectId === current.projectId && ['done', 'failed', 'cancelled'].includes(t.status))
     .filter((t) => (RANK[t.classification] ?? 3) <= (RANK[current.classification] ?? 3))
+    // nhiệm vụ hủy khi chưa có hạng mục nào xong (vd. giao nhầm rồi giao lại) không chiếm chỗ của lịch sử có ích
+    .filter((t) => t.status !== 'cancelled' || t.runs.some((r) => r.subtasks.some((s) => s.status === 'done')))
     .sort((a, b) => (b.finishedAt ?? b.updatedAt).localeCompare(a.finishedAt ?? a.updatedAt))
     .slice(0, limit);
 }
