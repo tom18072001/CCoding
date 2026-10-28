@@ -17,6 +17,35 @@ interface HerdrState {
   panes: Record<string, string>; // agent -> pane id
   serviceTabId?: string;
   servicePanes?: Record<string, string>; // nhãn dịch vụ -> pane id
+  /** Các space log riêng (mỗi space là một workspace herdr trên cột space). */
+  logSpaces?: Record<string, LogSpace>;
+}
+
+interface LogSpace {
+  workspaceId: string;
+  label: string;
+  tabs: Record<string, string>; // khóa tab -> tab id
+  panes: Record<string, string>; // khóa pane (vd. "all", "dev/backend-dev") -> pane id
+}
+
+/** Nhóm agent theo phòng ban để dựng space "Log · Agent" (gồm cả văn phòng điều phối). */
+export interface LogGroup {
+  id: string;
+  short: string;
+  agents: AgentDef[];
+}
+
+interface LogPaneSpec {
+  key: string;
+  label: string;
+  command: string;
+}
+
+interface LogSpaceSpec {
+  key: string;
+  label: string;
+  cwd: string;
+  tabs: Array<{ key: string; label: string; panes: LogPaneSpec[] }>;
 }
 
 /**
@@ -201,6 +230,136 @@ export class Herdr {
     return tabId;
   }
 
+  /**
+   * Chia một pane thành n ô gần đều (chia đôi đệ quy, xen kẽ phải/xuống) — tránh các cột hẹp
+   * khi split liên tiếp cùng một hướng. Trả về pane id theo thứ tự cột.
+   */
+  private async tile(root: string, n: number, cwd: string, depth = 0): Promise<string[]> {
+    if (n <= 1) return [root];
+    const first = Math.ceil(n / 2);
+    const sp = await this.exec(['pane', 'split', root, '--direction', depth % 2 === 0 ? 'right' : 'down', '--cwd', cwd, '--no-focus']);
+    const other = sp.result.pane.pane_id as string;
+    return [...(await this.tile(root, first, cwd, depth + 1)), ...(await this.tile(other, n - first, cwd, depth + 1))];
+  }
+
+  /** Bố cục các space log (không gọi herdr — để kiểm thử và để `herdr status` hiển thị). */
+  logSpaceSpecs(groups: LogGroup[]): LogSpaceSpec[] {
+    const d = this.config.dataDir;
+    const logs = path.join(d, 'logs');
+    const specs: LogSpaceSpec[] = [
+      {
+        key: 'system',
+        label: 'Log · Hệ thống',
+        cwd: logs,
+        tabs: [
+          {
+            key: 'main',
+            label: 'Hệ thống',
+            panes: [
+              { key: 'all', label: 'toàn hệ thống', command: this.cli('logs -f -n 80') },
+              { key: 'warn', label: 'cảnh báo · lỗi', command: this.cli('logs -f --level warn+ -n 40') },
+              { key: 'files', label: 'thư mục log', command: this.cli('logs ls') },
+            ],
+          },
+        ],
+      },
+      {
+        key: 'tasks',
+        label: 'Log · Nhiệm vụ',
+        cwd: path.join(d, 'runs'),
+        tabs: [
+          {
+            key: 'main',
+            label: 'Nhiệm vụ',
+            panes: [
+              { key: 'latest', label: 'nhiệm vụ mới nhất', command: this.cli('logs -f --task latest -n 60') },
+              { key: 'list', label: 'danh sách', command: this.cli('status --watch') },
+              { key: 'tokens', label: 'token nhiệm vụ', command: this.cli('usage --watch --task latest') },
+            ],
+          },
+        ],
+      },
+      {
+        key: 'departments',
+        label: 'Log · Phòng ban',
+        cwd: path.join(logs, 'departments'),
+        tabs: [{ key: 'main', label: 'Phòng ban', panes: groups.map((g) => ({ key: g.id, label: g.short, command: this.cli(`logs -f --dept ${g.id} -n 40`) })) }],
+      },
+    ];
+    if (this.config.herdr.logSpaces?.agents !== false)
+      specs.push({
+        key: 'agents',
+        label: 'Log · Agent',
+        cwd: path.join(logs, 'agents'),
+        tabs: groups
+          .filter((g) => g.agents.length)
+          .map((g) => ({ key: g.id, label: g.short, panes: g.agents.map((a) => ({ key: `${g.id}/${a.id}`, label: a.short || a.id, command: this.cli(`logs -f --agent ${a.id} -n 30`) })) })),
+      });
+    return specs.filter((s) => s.tabs.some((t) => t.panes.length));
+  }
+
+  /**
+   * Dựng các space log trên cột space của herdr: Log · Hệ thống / Nhiệm vụ / Phòng ban / Agent.
+   * Idempotent: space còn sống thì giữ nguyên; `rebuild` đóng và dựng lại (khi thêm agent/phòng ban).
+   */
+  async upLogSpaces(groups: LogGroup[], opts: { rebuild?: boolean } = {}): Promise<string[]> {
+    const notes: string[] = [];
+    if (this.config.herdr.logSpaces?.enabled === false) return notes;
+    this.reload();
+    await this.ensureServer();
+    const spaces = (this.state.logSpaces ??= {});
+    for (const spec of this.logSpaceSpecs(groups)) {
+      const have = spaces[spec.key];
+      if (have && !opts.rebuild && (await this.alive(Object.values(have.panes)[0]))) {
+        notes.push(`${spec.label}: đã có (workspace ${have.workspaceId})`);
+        continue;
+      }
+      if (have) await this.exec(['workspace', 'close', have.workspaceId]).catch(() => undefined);
+      fs.mkdirSync(spec.cwd, { recursive: true });
+      const tabs = spec.tabs.filter((t) => t.panes.length);
+      const ws = await this.exec(['workspace', 'create', '--label', spec.label, '--cwd', spec.cwd, '--no-focus']);
+      const rec: LogSpace = { workspaceId: ws.result.workspace.workspace_id, label: spec.label, tabs: {}, panes: {} };
+      spaces[spec.key] = rec;
+      for (const [i, t] of tabs.entries()) {
+        let tabId: string;
+        let root: string;
+        if (i === 0) {
+          tabId = ws.result.tab.tab_id;
+          root = ws.result.root_pane.pane_id;
+          await this.exec(['tab', 'rename', tabId, t.label]);
+        } else {
+          const tc = await this.exec(['tab', 'create', '--workspace', rec.workspaceId, '--label', t.label, '--cwd', spec.cwd, '--no-focus']);
+          tabId = tc.result.tab.tab_id;
+          root = tc.result.root_pane.pane_id;
+        }
+        rec.tabs[t.key] = tabId;
+        const ids = await this.tile(root, t.panes.length, spec.cwd);
+        for (const [j, p] of t.panes.entries()) {
+          rec.panes[p.key] = ids[j];
+          await this.exec(['pane', 'rename', ids[j], p.label]);
+          await this.exec(['pane', 'run', ids[j], p.command]);
+        }
+      }
+      this.save();
+      const paneCount = Object.keys(rec.panes).length;
+      notes.push(`${spec.label}: ${tabs.length > 1 ? `${tabs.length} tab · ` : ''}${paneCount} pane (workspace ${rec.workspaceId})`);
+    }
+    this.save();
+    return notes;
+  }
+
+  async downLogSpaces(): Promise<number> {
+    this.reload();
+    let n = 0;
+    for (const s of Object.values(this.state.logSpaces ?? {})) {
+      await this.exec(['workspace', 'close', s.workspaceId]).catch(() => undefined);
+      n++;
+    }
+    this.state.logSpaces = {};
+    this.save();
+    return n;
+  }
+
   /** Mỗi agent một pane trong tab phòng ban của mình (tạo khi cần). */
   async ensureAgentPane(agent: AgentDef, dept: DepartmentDef): Promise<string> {
     this.reload();
@@ -264,6 +423,7 @@ export class Herdr {
   }
 
   async down(): Promise<void> {
+    await this.downLogSpaces();
     if (this.state.workspaceId) await this.exec(['workspace', 'close', this.state.workspaceId]).catch(() => undefined);
     this.state = { session: this.state.session, tabs: {}, tabPanes: {}, panes: {} };
     this.save();

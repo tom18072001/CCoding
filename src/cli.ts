@@ -4,7 +4,7 @@ import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { createApp } from './app.js';
 import { loadConfig, type Config } from './config.js';
-import { Herdr } from './herdr.js';
+import { Herdr, type LogGroup } from './herdr.js';
 import { LogStore, verifyChain } from './logger.js';
 import { Registry } from './registry.js';
 import { RuntimeManager } from './runtimes/index.js';
@@ -13,6 +13,7 @@ import { createServer } from './server.js';
 import { Store } from './store.js';
 import { UsageLedger, type UsageDim, type UsageRow } from './usage.js';
 import { kpiReport } from './kpi.js';
+import { levelFilter, logFiles, pickLatestTask, recentTasks } from './logview.js';
 import { c, fmtDuration, fmtNum, fmtUsd, hexColor, table } from './util/format.js';
 import { readJsonFile, readJsonl, writeJsonAtomic } from './util/fsx.js';
 import { totalTokens, type ChatMessage, type LogEntry, type RunRequest, type RunResult, type Task, type TaskMode } from './types.js';
@@ -25,6 +26,7 @@ ${c.bold('Sử dụng:')} ccoding <lệnh> [tùy chọn]
 ${c.bold('Server & giao diện')}
   serve [--port 7420] [--runtime <id>]     Chạy bộ điều phối + giao diện web (http://127.0.0.1:7420)
   herdr up                                  Dựng workspace "CCoding Office" trong herdr và chạy server nền
+  herdr logs [--rebuild|--close]            Các space log trên cột space của herdr (hệ thống, nhiệm vụ, phòng ban, agent)
   herdr status | herdr down                 Xem / gỡ bố cục herdr
 
 ${c.bold('Giao việc')}
@@ -40,11 +42,12 @@ ${c.bold('Giao việc')}
                                              Tiếp tục từ checkpoint / làm lại từ review / chạy lại hạng mục
   split <taskId> [--only S1,S2] [--budget <token>] [--budget-mode pause|complete]
                                              Tách hạng mục chưa xong thành nhiệm vụ riêng (mỗi nhiệm vụ một gói việc)
-  status                                     Danh sách nhiệm vụ & trạng thái agent
+  status [--watch]                           Danh sách nhiệm vụ & trạng thái agent
   show <taskId>                              Chi tiết một nhiệm vụ
 
 ${c.bold('Log & token')}
-  logs [-f] [--agent id] [--dept id] [--task id] [-n 50]   Xem / theo dõi log
+  logs [-f] [--agent id] [--dept id] [--task id|latest] [--level warn+] [-n 50]   Xem / theo dõi log
+  logs ls                                   Danh sách tệp log (hệ thống, phòng ban, agent, nhiệm vụ gần nhất)
   logs verify                               Kiểm tra chuỗi băm (log có bị sửa không)
   usage [--by agent|department|task|project|model|runtime|day|phase] [--task id] [--dept id] [--watch] [--json]
   kpi [--task id,id] [--days 7] [--dept id] [--project id] [--json]   KPI từng sub-agent (chất lượng, hiệu quả, tin cậy, tuân thủ) + việc cần sửa
@@ -218,7 +221,24 @@ function finishTask(t: Task, runDir: string): void {
   if (t.status !== 'done') process.exitCode = 1;
 }
 
-async function cmdStatus(): Promise<void> {
+async function cmdStatus(args: string[] = []): Promise<void> {
+  if (args.includes('--watch') || args.includes('-w')) {
+    for (;;) {
+      const lines: string[] = [];
+      const orig = console.log;
+      console.log = (...a: unknown[]) => void lines.push(a.map(String).join(' '));
+      try {
+        await cmdStatus([]);
+      } catch (e) {
+        lines.push(c.red(`✗ ${(e as Error).message}`));
+      } finally {
+        console.log = orig;
+      }
+      process.stdout.write('\x1b[2J\x1b[H');
+      console.log(`${c.gray(new Date().toLocaleString('vi-VN'))}\n${lines.join('\n')}`);
+      await sleep(3000);
+    }
+  }
   if (await serverUp()) {
     const s = await api('/api/state');
     console.log(c.bold(`Nhiệm vụ (runner: ${s.runner})`));
@@ -270,23 +290,82 @@ function fmtLog(e: LogEntry): string {
   return `${c.gray(localTime(e.ts, true))} ${lv} ${c.cyan(scope.padEnd(24).slice(0, 24))} ${e.msg}${e.taskId ? c.gray(` ${e.taskId}`) : ''}`;
 }
 
+function fmtBytes(n: number): string {
+  return n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : n >= 1024 ? `${Math.round(n / 1024)} KB` : `${n} B`;
+}
+
+/** `ccoding logs ls` — các "thư mục" log: hệ thống, phòng ban, agent, nhiệm vụ gần nhất. */
+function cmdLogLs(): void {
+  const scopeName = { system: 'Hệ thống', department: 'Phòng ban', agent: 'Agent', task: 'Nhiệm vụ' } as const;
+  const opt = { system: '', department: '--dept ', agent: '--agent ', task: '--task ' } as const;
+  const titles = new Map(recentTasks(config.dataDir, 15).map((t) => [t.id, `${t.title.slice(0, 36)} · ${t.status}`]));
+  console.log(`${c.bold('🗂  Log của văn phòng')} ${c.gray(`(${path.join(config.dataDir, 'logs')} · ${path.join(config.dataDir, 'runs')})`)}`);
+  let last = '';
+  for (const f of logFiles(config.dataDir)) {
+    if (f.scope !== last) console.log(`\n${c.bold(scopeName[f.scope])}`);
+    last = f.scope;
+    const cmd = `ccoding logs -f ${f.scope === 'system' ? '' : opt[f.scope] + f.id}`.trim();
+    const extra = f.scope === 'task' ? c.gray(` ${titles.get(f.id) ?? ''}`) : '';
+    console.log(`  ${c.cyan(f.id.padEnd(28))} ${fmtBytes(f.bytes).padStart(8)}  ${c.gray(localTime(new Date(f.modifiedAt).toISOString(), true))}  ${c.dim(cmd)}${extra}`);
+  }
+  console.log(c.gray('\nLọc mức: --level warn+ (warn và error) · nhiệm vụ đang chạy: --task latest'));
+}
+
 async function cmdLogs(args: string[]): Promise<void> {
   if (args[0] === 'verify') return cmdVerify();
+  if (args[0] === 'ls' || args[0] === 'list') return cmdLogLs();
   const { values } = parseArgs({
     args,
     options: { follow: { type: 'boolean', short: 'f' }, agent: { type: 'string' }, dept: { type: 'string' }, task: { type: 'string' }, n: { type: 'string', short: 'n' }, level: { type: 'string' } },
   });
   const logs = new LogStore(config.dataDir, { redactSecrets: true, redactPii: true, hashChain: true });
-  const file = values.task ? logs.fileFor('task', values.task) : values.agent ? logs.fileFor('agent', values.agent) : values.dept ? logs.fileFor('department', values.dept) : logs.fileFor('system');
-  const label = values.task ?? values.agent ?? values.dept ?? 'toàn hệ thống';
-  console.log(c.bold(`📜 Log ${label}`) + c.gray(` — ${file}`));
-  const keep = (e: LogEntry) => !values.level || e.level === values.level;
-  for (const e of readJsonl<LogEntry>(file, Number(values.n ?? 40))) if (keep(e)) console.log(fmtLog(e));
+  const keep = levelFilter(values.level);
+  const n = Number(values.n ?? 40);
+  const latest = values.task === 'latest';
+  let cur = latest ? pickLatestTask(config.dataDir) : undefined;
+  const fileOf = () =>
+    values.task
+      ? logs.fileFor('task', latest ? (cur?.id ?? '_chua-co') : values.task)
+      : values.agent
+        ? logs.fileFor('agent', values.agent)
+        : values.dept
+          ? logs.fileFor('department', values.dept)
+          : logs.fileFor('system');
+  let file = fileOf();
+  const header = () => {
+    if (latest) {
+      if (!cur) console.log(c.bold('📜 Nhiệm vụ mới nhất') + c.gray(' — chưa có nhiệm vụ, đang chờ…'));
+      else console.log(`${c.bold(`📜 ${cur.id}`)} ${cur.title} ${c.gray(`(${cur.status}) — ${file}`)}`);
+      return;
+    }
+    const label = values.task ?? values.agent ?? values.dept ?? 'toàn hệ thống';
+    console.log(c.bold(`📜 Log ${label}`) + c.gray(` — ${file}${values.level ? ` · mức ${values.level}` : ''}`));
+  };
+  const backlog = () => {
+    // có lọc mức → đọc rộng hơn rồi lấy n dòng cuối khớp
+    const rows = readJsonl<LogEntry>(file, values.level ? n * 20 : n).filter(keep);
+    for (const e of rows.slice(-n)) console.log(fmtLog(e));
+  };
+  header();
+  backlog();
   if (!values.follow) return;
   let size = fs.existsSync(file) ? fs.statSync(file).size : 0;
   let rest = '';
-  for (;;) {
+  for (let tick = 1; ; tick++) {
     await sleep(700);
+    if (latest && tick % 4 === 0) {
+      const next = pickLatestTask(config.dataDir, cur?.id);
+      if (next && next.id !== cur?.id) {
+        cur = next;
+        file = fileOf();
+        console.log(c.gray(`\n${'─'.repeat(20)} chuyển sang nhiệm vụ mới ${'─'.repeat(20)}`));
+        header();
+        backlog();
+        size = fs.existsSync(file) ? fs.statSync(file).size : 0;
+        rest = '';
+        continue;
+      }
+    }
     if (!fs.existsSync(file)) continue;
     const st = fs.statSync(file);
     if (st.size < size) size = 0;
@@ -355,23 +434,25 @@ async function cmdUsage(args: string[]): Promise<void> {
   });
   const registry = new Registry(config.agentsDir, config.departmentsDir);
   const names = new Map([...registry.agents.values()].map((a) => [a.id, a.name]));
+  let latestTask: string | undefined;
   const render = () => {
     const ledger = new UsageLedger(config.dataDir);
-    const filter = { task: values.task, department: values.dept, agent: values.agent, project: values.project };
+    if (values.task === 'latest') latestTask = pickLatestTask(config.dataDir, latestTask)?.id ?? '_chua-co';
+    const filter = { task: values.task === 'latest' ? latestTask : values.task, department: values.dept, agent: values.agent, project: values.project };
     if (values.json) {
       console.log(JSON.stringify({ total: ledger.total(filter), rows: ledger.summary((values.by ?? 'agent') as UsageDim, filter) }, null, 2));
       return;
     }
     const t = ledger.total(filter);
     const out: string[] = [];
-    out.push(`${c.bold('🔢 Bộ đếm token')} ${c.gray(new Date().toLocaleString('vi-VN'))}${values.task ? ` · task ${values.task}` : ''}${values.dept ? ` · phòng ${values.dept}` : ''}`);
+    out.push(`${c.bold('🔢 Bộ đếm token')} ${c.gray(new Date().toLocaleString('vi-VN'))}${filter.task ? ` · task ${filter.task}${values.task === 'latest' ? c.gray(' (mới nhất)') : ''}` : ''}${values.dept ? ` · phòng ${values.dept}` : ''}`);
     out.push(`Tổng: in ${c.bold(fmtNum(t.input))} · out ${c.bold(fmtNum(t.output))} · cache đọc ${fmtNum(t.cacheRead)} · ghi ${fmtNum(t.cacheWrite)} · ${t.calls} lượt${t.estimatedCalls ? c.gray(` (${t.estimatedCalls} ước lượng)`) : ''}${t.costUsd ? ` · ${fmtUsd(t.costUsd)}` : ''}\n`);
     if (values.by) {
       out.push(usageTable(ledger.summary(values.by as UsageDim, filter), values.by, values.by === 'agent' ? names : undefined));
     } else {
       out.push(c.bold('Theo phòng ban'), usageTable(ledger.summary('department', filter), 'Phòng'), '');
       out.push(c.bold('Theo agent'), usageTable(ledger.summary('agent', filter).slice(0, 20), 'Agent', names), '');
-      if (!values.task) out.push(c.bold('Theo nhiệm vụ (10 gần nhất theo khối lượng)'), usageTable(ledger.summary('task', filter).slice(0, 10), 'Task'));
+      if (!filter.task) out.push(c.bold('Theo nhiệm vụ (10 gần nhất theo khối lượng)'), usageTable(ledger.summary('task', filter).slice(0, 10), 'Task'));
     }
     if (values.watch) process.stdout.write('\x1b[2J\x1b[H');
     console.log(out.join('\n'));
@@ -492,6 +573,15 @@ async function cmdDoctor(): Promise<void> {
   }
 }
 
+/** Nhóm agent cho space "Log · Agent": văn phòng điều phối (router) + từng phòng ban. */
+function logGroups(registry: Registry): LogGroup[] {
+  const groups: LogGroup[] = [];
+  const router = registry.router();
+  if (router) groups.push({ id: router.department || 'office', short: 'Điều phối', agents: [router] });
+  for (const d of registry.departments.values()) groups.push({ id: d.id, short: d.short, agents: registry.members(d.id) });
+  return groups;
+}
+
 async function cmdHerdr(args: string[]): Promise<void> {
   const h = new Herdr(config);
   const sub = args[0] ?? 'status';
@@ -502,6 +592,7 @@ async function cmdHerdr(args: string[]): Promise<void> {
     const running = await serverUp();
     const notes = await h.up([...registry.departments.values()], { startServer: !running });
     for (const n of notes) console.log(`${c.green('✓')} ${n}`);
+    for (const n of await h.upLogSpaces(logGroups(registry)).catch((e: Error) => [c.yellow(`Không dựng được space log: ${e.message}`)])) console.log(`${c.green('✓')} ${n}`);
     if (running) console.log(c.gray('Server CCoding đang chạy — giữ nguyên.'));
     else if (h.state.serverPaneId && !notes.some((n) => n.startsWith('Tạo workspace'))) {
       await h.exec(['pane', 'run', h.state.serverPaneId, `node "${path.join(config.root, 'dist', 'cli.js')}" serve`]).catch(() => undefined);
@@ -512,9 +603,21 @@ async function cmdHerdr(args: string[]): Promise<void> {
     console.log(`Vào văn phòng trong terminal: ${c.bold(`herdr --session ${config.herdr.session}`)}  ·  thoát nhưng vẫn chạy nền: ${c.bold('ctrl+b q')}`);
     return;
   }
+  if (sub === 'logs') {
+    const flags = new Set(args.slice(1));
+    if (flags.has('--close')) {
+      console.log(`${c.green('✓')} Đã đóng ${await h.downLogSpaces()} space log`);
+      return;
+    }
+    if (!fs.existsSync(path.join(config.root, 'dist', 'cli.js'))) throw new Error('Chưa build — chạy `npm run build` trước');
+    const registry = new Registry(config.agentsDir, config.departmentsDir);
+    for (const n of await h.upLogSpaces(logGroups(registry), { rebuild: flags.has('--rebuild') })) console.log(`${c.green('✓')} ${n}`);
+    console.log(c.gray(`Xem trên cột space của herdr: ${c.bold(`herdr --session ${config.herdr.session}`)} · dựng lại khi thêm agent: ccoding herdr logs --rebuild`));
+    return;
+  }
   if (sub === 'down') {
     await h.down();
-    console.log(`${c.green('✓')} Đã đóng workspace CCoding trong herdr`);
+    console.log(`${c.green('✓')} Đã đóng workspace CCoding và các space log trong herdr`);
     return;
   }
   console.log(`herdr ${await h.version()} · phiên ${config.herdr.session} · server ${(await h.serverRunning()) ? c.green('đang chạy') : c.gray('tắt')}`);
@@ -621,7 +724,7 @@ async function main(): Promise<void> {
       return cmdTask(rest);
     case 'status':
     case 'tasks':
-      return cmdStatus();
+      return cmdStatus(rest);
     case 'show':
       return cmdShow(rest);
     case 'logs':

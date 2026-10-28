@@ -28,6 +28,22 @@ Lệnh này (idempotent — chạy lại chỉ bổ sung phần thiếu):
 3. Server chạy trong herdr ⇒ runner tự là `herdr`: lần đầu agent nhận việc, một pane mang tên agent (ví dụ `Hùng · data-engineer`) được tạo trong tab phòng của họ. Mỗi lượt làm việc chạy `ccoding agent-exec --job …` trong pane đó — bạn thấy agent đang viết gì theo thời gian thực.
 4. Agent báo trạng thái lên herdr (`pane report-agent … --state working|idle`) và token (`pane report-metadata --token in=… --token out=…`), herdr hiện trên sidebar; khi xong nhiệm vụ có thông báo.
 
+## Space log (cột space bên trái)
+
+`herdr up` dựng thêm 4 space chỉ để xem log (hoặc chạy riêng `node dist/cli.js herdr logs`):
+
+| Space | Tab · pane | Lệnh |
+|---|---|---|
+| **Log · Hệ thống** (cwd `data/logs`) | `toàn hệ thống`, `cảnh báo · lỗi`, `thư mục log` | `logs -f -n 80`, `logs -f --level warn+`, `logs ls` |
+| **Log · Nhiệm vụ** (cwd `data/runs`) | `nhiệm vụ mới nhất`, `danh sách`, `token nhiệm vụ` | `logs -f --task latest`, `status --watch`, `usage --watch --task latest` |
+| **Log · Phòng ban** (cwd `data/logs/departments`) | một pane mỗi phòng (Điều phối, Phát triển, Nghiên cứu) | `logs -f --dept <id>` |
+| **Log · Agent** (cwd `data/logs/agents`) | một tab mỗi phòng, một pane mỗi agent | `logs -f --agent <id>` |
+
+- `--task latest` tự chuyển sang nhiệm vụ mới khi có nhiệm vụ được giao; nhiệm vụ đang theo chưa xong thì không nhảy sang nhiệm vụ khác chạy song song.
+- `--level warn+` = warn và error (cũng nhận `info`, `error`, `info,error`).
+- Thêm agent/phòng ban mới: `node dist/cli.js herdr logs --rebuild`; gỡ các space log: `node dist/cli.js herdr logs --close` (`herdr down` gỡ cả văn phòng lẫn space log).
+- Mỗi pane là một tiến trình `node` nhỏ (~40 MB). Không cần space agent: đặt `"herdr": { "logSpaces": { "agents": false } }`; tắt hẳn: `"logSpaces": { "enabled": false }`.
+
 ```powershell
 herdr --session ccoding          # vào văn phòng
 # ctrl+b q                        # rời đi, mọi thứ vẫn chạy
@@ -46,6 +62,7 @@ herdr --session ccoding server stop   # dừng hẳn server herdr (dừng cả c
 | `agentPanes` | `true` | chạy mỗi lượt agent trong pane riêng (tắt → chạy tiến trình con trực tiếp) |
 | `notify` | `true` | thông báo herdr khi xong nhiệm vụ |
 | `bin` | (tự tìm) | đường dẫn `herdr.exe` nếu không có trong PATH |
+| `logSpaces` | `{ "enabled": true, "agents": true }` | các space log trên cột space (xem trên) |
 | `services` | `[]` | dịch vụ chạy kèm trong tab **Dịch vụ**, ví dụ `[{ "label": "bifrost", "command": "npx -y @maximhq/bifrost" }]` — khởi động trước server CCoding |
 
 `runner`: `auto` (herdr nếu server chạy trong pane herdr), `process` hoặc `herdr` (biến môi trường `CCODING_RUNNER`).

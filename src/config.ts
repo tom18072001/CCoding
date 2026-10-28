@@ -175,6 +175,8 @@ export interface Config {
     bin?: string;
     /** Dịch vụ chạy kèm trong tab "Dịch vụ" (ví dụ Bifrost, Ollama). */
     services?: Array<{ label: string; command: string; cwd?: string; enabled?: boolean }>;
+    /** Các space log riêng trên cột space của herdr (Log · Hệ thống / Nhiệm vụ / Phòng ban / Agent). */
+    logSpaces?: { enabled?: boolean; agents?: boolean };
   };
   runtimes: Record<string, RuntimeConfig>;
   models: Record<string, Record<string, ModelSpec>>;
@@ -261,7 +263,7 @@ const BUILTIN: Omit<Config, 'root'> = {
     historyDays: 30,
     minSamples: 2,
   },
-  herdr: { session: 'ccoding', workspaceLabel: 'CCoding Office', agentPanes: true, closeAgentPanes: false, notify: true, services: [] },
+  herdr: { session: 'ccoding', workspaceLabel: 'CCoding Office', agentPanes: true, closeAgentPanes: false, notify: true, services: [], logSpaces: { enabled: true, agents: true } },
   runtimes: {},
   models: {},
   pricing: {},
