@@ -1293,7 +1293,11 @@
     }
   }
 
-  init().catch((e) => {
-    document.body.insertAdjacentHTML('afterbegin', `<div style="background:#7f1d1d;color:#fff;padding:10px 16px">Không tải được trạng thái: ${esc(e.message)}</div>`);
-  });
+  // chạy sau khi mọi script (director.js, drive.js, chat.js) đã nạp — tránh tranh chấp khi /api/state trả về trước
+  const start = () =>
+    init().catch((e) => {
+      document.body.insertAdjacentHTML('afterbegin', `<div style="background:#7f1d1d;color:#fff;padding:10px 16px">Không tải được trạng thái: ${esc(e.message)}</div>`);
+    });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+  else start();
 })();
