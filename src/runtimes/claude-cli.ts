@@ -1,4 +1,7 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { quickRun, runProcess } from './spawn.js';
+import { scrubEnv } from '../tools/workspace.js';
 import { estimateTokens } from '../util/tokens.js';
 import { combinedPrompt } from './common.js';
 import type { RuntimeConfig } from '../config.js';
@@ -97,11 +100,28 @@ export class ClaudeCliRuntime implements Runtime {
     const started = Date.now();
     const model = this.models[req.model] ?? req.model;
     const args = ['-p', '--output-format', 'stream-json', '--verbose', '--model', model, '--no-session-persistence'];
+    const env: NodeJS.ProcessEnv = {};
     if (req.allowTools && req.tools.length) {
       args.push('--tools', req.tools.join(','), '--permission-mode', this.cfg.permissionMode ?? 'acceptEdits');
+      // Hook PreToolUse áp cùng chính sách với vòng công cụ của CCoding (lệnh cấm mặc định + denyCommands
+      // của dự án + chặn tạo/chuyển nhánh) và giữ mọi thao tác tệp trong thư mục làm việc của nhiệm vụ.
+      const policy = req.toolPolicy;
+      const guard = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'tools', 'claude-guard.js').replace(/\\/g, '/');
+      const settings = { hooks: { PreToolUse: [{ matcher: '.*', hooks: [{ type: 'command', command: `node "${guard}"`, timeout: 15 }] }] } };
+      args.push('--settings', JSON.stringify(settings));
+      env.CCODING_GUARD = JSON.stringify({
+        root: policy?.root ?? req.cwd,
+        deny: policy?.denyCommands ?? [],
+        allowGitCommit: policy?.allowGitCommit ?? false,
+      });
+      // công cụ đã được CCoding cấp theo quyền dự án/pha → chạy không hỏi (chế độ -p không hỏi được); hook vẫn chặn trước
+      args.push('--allowedTools', req.tools.join(','));
     } else {
       args.push('--tools', '');
     }
+    // Không nạp MCP/plugin/hook cấu hình cấp người dùng: mỗi lượt gọi bớt ~85k token ngữ cảnh (đo 28/10: 93k → 7,6k)
+    // và agent không chạm công cụ ngoài chính sách của CCoding. Đặt userSettings: true để nạp lại.
+    if (!this.cfg.userSettings) args.push('--strict-mcp-config', '--setting-sources', 'project,local');
     args.push(...(this.cfg.extraArgs ?? []));
 
     const prompt = combinedPrompt(req);
@@ -110,6 +130,10 @@ export class ClaudeCliRuntime implements Runtime {
       cmd: this.cfg.command ?? 'claude',
       args,
       cwd: req.cwd,
+      // Dùng phiên đăng nhập claude.ai của máy (gói đăng ký), KHÔNG dùng ANTHROPIC_API_KEY/BASE_URL hay khóa khác
+      // (scrubEnv bỏ mọi biến khóa/token) — trừ khi cấu hình useApiKey.
+      env: { ...(this.cfg.useApiKey ? process.env : scrubEnv(process.env)), ...env },
+      replaceEnv: true,
       stdin: prompt,
       timeoutMs: req.timeoutMs,
       signal: hooks.signal,

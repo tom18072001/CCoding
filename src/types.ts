@@ -309,6 +309,8 @@ export interface PauseInfo {
   at: string;
   /** Tự tiếp tục lúc này (khi hết thời gian chờ quota). */
   resumeAt?: string;
+  /** Số lần tạm dừng liên tiếp cùng lý do "không còn runtime" — để giãn thời gian tự tiếp tục rồi dừng hẳn. */
+  streak?: number;
 }
 
 export interface Task {
@@ -320,6 +322,8 @@ export interface Task {
   projectId?: string;
   /** Chế độ "agent": agent nhận việc riêng. */
   agentId?: string;
+  /** Số lần liên tiếp tạm dừng vì "không còn runtime" (tự tiếp tục giãn dần, quá 5 lần thì dừng hẳn). */
+  noRuntimeStreak?: number;
   /** Chỉ dẫn bổ sung người dùng gửi trong lúc nhiệm vụ chạy — đưa vào bối cảnh các lượt gọi sau. */
   notes?: Array<{ id: string; at: string; text: string }>;
   /** Nhiệm vụ này tiếp nối nhiệm vụ trước (giao việc tiếp nối từ màn hình nhiệm vụ). */

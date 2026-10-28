@@ -53,6 +53,8 @@ export interface ProcOptions {
   cwd: string;
   stdin?: string;
   env?: NodeJS.ProcessEnv;
+  /** true: dùng đúng `env` (không trộn process.env) — để bỏ được biến khóa/token. */
+  replaceEnv?: boolean;
   timeoutMs: number;
   signal?: AbortSignal;
   onLine?: (line: string) => void;
@@ -93,7 +95,7 @@ export function runProcess(o: ProcOptions): Promise<ProcResult> {
   return new Promise((resolve, reject) => {
     const child = spawn(file, args, {
       cwd: o.cwd,
-      env: { ...process.env, ...o.env },
+      env: o.replaceEnv ? { ...o.env } : { ...process.env, ...o.env },
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
       windowsVerbatimArguments: resolved.viaShell,

@@ -33,6 +33,10 @@ export interface RuntimeConfig {
   command?: string;
   extraArgs?: string[];
   permissionMode?: string;
+  /** claude-cli: true = để Claude Code dùng ANTHROPIC_API_KEY/BASE_URL của môi trường; mặc định false = chỉ phiên đăng nhập claude.ai. */
+  useApiKey?: boolean;
+  /** claude-cli: true = nạp cả cấu hình cấp người dùng (~/.claude: plugin, MCP, hook); mặc định false — gọn ngữ cảnh, đúng chính sách CCoding. */
+  userSettings?: boolean;
   sandbox?: string;
   baseUrl?: string;
   apiKeyEnv?: string;

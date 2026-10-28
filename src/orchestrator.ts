@@ -73,6 +73,10 @@ export class PauseSignal extends Error {
 }
 class CancelledError extends Error {}
 
+const NO_RUNTIME_PREFIX = 'Không còn runtime/model khả dụng';
+/** Số lần tự tiếp tục khi liên tiếp "không còn runtime" (5+10+20+40+60 phút ≈ 2 giờ 15) rồi dừng hẳn chờ người. */
+const NO_RUNTIME_MAX_RETRIES = 5;
+
 const READ_ONLY_TOOLS = new Set(['Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch', 'LS']);
 const STAGES: RunStage[] = ['planned', 'finalized', 'executed', 'reviewed', 'done'];
 const CONTINUE_PHASES = new Set<Phase>(['execute', 'revise', 'synthesize']);
@@ -138,6 +142,8 @@ export interface ResumeOptions {
   rerun?: string[] | 'all';
   /** Làm lại từ pha review (review → sửa → tổng hợp) hoặc chỉ báo cáo tổng hợp. */
   from?: 'review' | 'synthesize';
+  /** Tự tiếp tục theo hẹn (không phải người bấm) — giữ bộ đếm "không còn runtime". */
+  auto?: boolean;
 }
 
 export interface PackageOptions extends ResumeOptions {
@@ -429,6 +435,8 @@ export class Orchestrator {
     if (t.after?.some((a) => ['failed', 'cancelled', undefined].includes(store.get(a)?.status))) t.after = undefined;
     t.status = 'queued';
     t.pause = undefined;
+    // người bấm Tiếp tục → đếm lại; tự tiếp tục sau "không còn runtime" thì giữ để giãn/dừng hẳn
+    if (!o.auto) t.noRuntimeStreak = undefined;
     t.error = undefined;
     t.attention = undefined;
     t.finishedAt = undefined;
@@ -788,7 +796,7 @@ export class Orchestrator {
       const cur = this.d.store.get(t.id);
       if (cur?.status !== 'paused' || cur.pause?.reason !== 'quota') return;
       try {
-        this.resume(cur.id);
+        this.resume(cur.id, { auto: true });
       } catch (e) {
         this.d.logs.write({ level: 'warn', kind: 'task.autoresume', msg: `${cur.id}: không tự tiếp tục được — ${(e as Error).message}`, taskId: cur.id });
       }
@@ -859,7 +867,19 @@ export class Orchestrator {
     } catch (e) {
       if (e instanceof PauseSignal && !ctrl.signal.aborted) {
         task.status = 'paused';
-        task.pause = { reason: e.reason, detail: e.message, at: nowIso(), resumeAt: e.resumeAt ? new Date(e.resumeAt).toISOString() : undefined };
+        // "Không còn runtime" lặp lại (vd. runtime cục bộ tắt, chưa có khóa) → giãn 5/10/20/40/60 phút rồi dừng hẳn,
+        // thay vì tự tiếp tục mỗi 5 phút vô hạn (gói 2 ND57: 55 lần liên tiếp không làm gì).
+        const noRuntime = e.reason === 'quota' && e.message.startsWith(NO_RUNTIME_PREFIX);
+        const streak = noRuntime ? (task.noRuntimeStreak ?? 0) + 1 : undefined;
+        task.noRuntimeStreak = streak;
+        let resumeAt = e.resumeAt;
+        if (streak) {
+          if (streak > NO_RUNTIME_MAX_RETRIES) resumeAt = undefined;
+          else resumeAt = Math.max(resumeAt ?? 0, Date.now() + Math.min(60, 5 * 2 ** (streak - 1)) * 60_000);
+        }
+        task.pause = { reason: e.reason, detail: e.message, at: nowIso(), resumeAt: resumeAt ? new Date(resumeAt).toISOString() : undefined, streak };
+        if (streak && !resumeAt)
+          this.alert({ level: 'error', kind: 'task.paused.no-runtime', title: 'Không có runtime cho nhãn dữ liệu này — đã dừng tự tiếp tục', msg: `${task.title}: ${streak - 1} lần liên tiếp không có runtime/model nào được phép cho nhãn "${task.classification}". Bật runtime (vd. mở Ollama, đặt khóa API) rồi bấm "Tiếp tục".`, taskId: task.id });
         for (const r of task.runs) if (r.status === 'running' || r.status === 'pending') r.status = r.subtasks.length || r.status === 'running' ? 'paused' : r.status;
         for (const r of task.runs) for (const s of r.subtasks) if (s.status === 'running') s.status = 'pending';
         logs.write({ level: 'warn', kind: 'task.paused', msg: `${task.id} tạm dừng (${e.reason}): ${e.message}`, taskId: task.id, projectId: task.projectId, data: { resumeAt: task.pause.resumeAt } });
@@ -1709,9 +1729,10 @@ export class Orchestrator {
       const { list, notes, skipped, deferred } = await runtimes.candidates(prefs, cls, want);
       if (notes.length) logs.write({ level: 'warn', kind: 'runtime.fallback', msg: `${notes.join('; ')}${list[0] ? ` → dùng ${list[0].label}` : ''}`, taskId: task.id, agentId: agent.id, department: deptId });
       if (deferred?.length) logs.write({ level: 'info', kind: 'runtime.deferred', msg: `Xếp sau (vừa bị giới hạn tốc độ): ${deferred.join(', ')} → dùng ${list[0]?.label ?? '?'}`, taskId: task.id, agentId: agent.id, department: deptId });
+      if (list.length && task.noRuntimeStreak) task.noRuntimeStreak = undefined;
       if (!list.length) {
         const at = runtimes.earliestRecovery();
-        throw new PauseSignal('quota', `Không còn runtime/model khả dụng${skipped.length ? `: ${skipped.join('; ')}` : ' (chưa cấu hình hoặc không kết nối được)'}`, at ?? Date.now() + 5 * 60_000);
+        throw new PauseSignal('quota', `${NO_RUNTIME_PREFIX}${skipped.length ? `: ${skipped.join('; ')}` : ' (chưa cấu hình hoặc không kết nối được)'}`, at ?? Date.now() + 5 * 60_000);
       }
       // pha nặng: model nhanh trước model chậm (kể cả khi model nhanh vừa bị 429 và đang bị xếp sau); nếu model nhanh chỉ tạm nghỉ
       // vì quota/giới hạn tốc độ và sắp mở lại thì tạm dừng chờ thay vì chạy bằng model chậm (P6)
