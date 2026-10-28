@@ -254,3 +254,9 @@ Thay đổi: dự án có thêm `baseRef` (worktree tách từ vd. `origin/main`
 ### Bổ sung: tắt runtime 9router (28/10/2026, trưa)
 
 Theo yêu cầu chủ dự án, CCoding **không dùng** các tài khoản Claude/Codex đặt trong 9router: `runtimes.bifrost.disabled = true`, `runtimes["openai-api"].disabled = true`, `runtime.order = ["ollama"]` (cấu hình máy). Runtime tắt không được thăm dò hay gọi, kể cả khi nhiệm vụ/dự án/agent chỉ định (GOV-01, PRE-05). Phương án thay thế phải qua cổng này trước khi bật: model miễn phí qua API bên ngoài thường **dùng nội dung để cải thiện sản phẩm** (vd. Gemini API gói miễn phí) ⇒ chỉ cho dữ liệu *Công khai*; dữ liệu *Nội bộ* trở lên dùng runtime cục bộ (Ollama) hoặc gói trả phí có cam kết không huấn luyện.
+
+### Bổ sung: Ollama cục bộ và API miễn phí (28/10/2026, chiều)
+
+- **Ollama 0.40.12** cài từ bộ cài chính thức (kiểm SHA256 theo `sha256sum.txt` của bản phát hành và chữ ký Authenticode *Ollama Inc.*), model `qwen3:8b` từ registry chính thức; chạy tại `127.0.0.1:11434` (không mở ra mạng) ⇒ runtime cục bộ duy nhất được phép cho dữ liệu *Bảo mật/Hạn chế* (PRE-01, GOV-05 không phát sinh chuyển xuyên biên giới).
+- **API miễn phí** (khóa do chủ dự án tự tạo, lưu biến môi trường người dùng; CCoding chỉ đọc tên biến, không ghi log khóa): `allowedRuntimes` theo nhãn — *Công khai*: mọi runtime; *Nội bộ*: cục bộ, Cerebras, Groq (không huấn luyện/không lưu mặc định theo điều khoản nhà cung cấp — chủ dự án xác nhận lại trong bảng điều khiển); NVIDIA NIM gói miễn phí ghi log ⇒ **chỉ Công khai**. Mọi lượt gọi API ngoài vẫn là chuyển dữ liệu ra nước ngoài (Mỹ) ⇒ vẫn áp nghĩa vụ đánh giá tác động khi có DLCN.
+- Thử nghiệm chỉ dùng văn bản tổng hợp.

@@ -51,6 +51,8 @@ export interface RuntimeConfig {
    * chuỗi = regex tên model. Gateway không hỗ trợ thì thường bỏ qua trường này.
    */
   cacheControl?: boolean | string;
+  /** Trường thêm vào thân yêu cầu chat/completions, vd. { "reasoning_effort": "none" } để tắt chế độ suy nghĩ của qwen3 qua Ollama. Không ghi đè model/messages/tools/stream. */
+  extraBody?: Record<string, unknown>;
   /** Tắt hẳn runtime: không thăm dò, không gọi, kể cả khi nhiệm vụ/dự án/agent chỉ định (vd. không dùng tài khoản Claude/Codex sau 9router). */
   disabled?: boolean;
   [k: string]: unknown;

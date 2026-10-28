@@ -259,6 +259,7 @@ export class OpenAiApiRuntime implements Runtime {
         method: 'POST',
         headers: this.headers(gatewayHeaders(this.cfg, req)),
         body: JSON.stringify({
+          ...(this.cfg.extraBody && typeof this.cfg.extraBody === 'object' ? this.cfg.extraBody : {}),
           model,
           max_tokens: req.maxTokens ?? this.cfg.maxTokens ?? 8000,
           stream: true,

@@ -129,7 +129,19 @@ Lưu ý đường Claude gốc của 9router: tên công cụ trả về có h�
 `requireEnv` trong cấu hình runtime: runtime chỉ được coi là sẵn sàng khi các biến đó đã đặt (trên Windows CCoding đọc cả biến vừa `setx` mà không cần mở lại terminal).
 
 ### `ollama` — mô hình cục bộ
-- Runtime tùy biến `openai-api` tại `http://localhost:11434/v1`, `"local": true` ⇒ **được phép** xử lý dự án *Bảo mật*/*Hạn chế*. Cần `ollama pull <model>` trước; đặt `models.ollama` (ví dụ `"sonnet": "qwen3:8b"`).
+- Runtime tùy biến `openai-api` tại `http://127.0.0.1:11434/v1`, `"local": true` ⇒ **được phép** xử lý dự án *Bảo mật*/*Hạn chế*. Cần `ollama pull <model>` trước; đặt `models.ollama`.
+- Ngữ cảnh mặc định của Ollama nhỏ (prompt CCoding 10–30k token bị cắt): tạo biến thể có `num_ctx` lớn, vd. `Modelfile` = `FROM qwen3:8b` + `PARAMETER num_ctx 32768` → `ollama create ccoding-qwen3-8b -f Modelfile`.
+- `extraBody: { "reasoning_effort": "none" }` tắt chế độ suy nghĩ của qwen3 (đo 28/10: câu ngắn 3,3 giây thay vì 29 giây).
+- Máy Tom (RTX 3050 4 GB, RAM 32 GB, 28/10/2026): `ccoding-qwen3-8b` chiếm ~10 GB (58% CPU / 42% GPU); nạp model lần đầu ~110 giây; nạp ngữ cảnh ~620 token/giây; sinh chữ ~4–10 token/giây; gọi công cụ được. ⇒ dự phòng cho việc nhỏ và dữ liệu nhạy cảm, không đủ nhanh cho gói lớn kiểu ND57.
+
+### Model miễn phí qua API (máy Tom, 28/10/2026)
+| Runtime | Model | Đo nhanh | Dữ liệu được phép |
+|---|---|---|---|
+| `cerebras` (`CEREBRAS_API_KEY`) | `qwen-3.8-27b` | chưa đo (chưa có khóa) | Công khai, Nội bộ (không huấn luyện trên dữ liệu) |
+| `nvidia` (`NVDIA_API_KEY`) | `z-ai/glm-5.3`, `z-ai/glm-5.3-flash` | gọi công cụ được, ~45 giây/câu ngắn; `kimi-k2.6` 404 | **Chỉ Công khai** (gói miễn phí ghi log) |
+| `groq` (`GROQ_API_KEY`) | `openai/gpt-oss-120b`, `qwen/qwen3.8-27b` | ~0,5 giây, gọi công cụ được, nhưng **trần 8.000 token/phút** — prompt 13k bị 413 | Công khai, Nội bộ — không nằm trong `runtime.order` |
+
+Thứ tự trên máy: `cerebras → nvidia → ollama`; `dataProtection.allowedRuntimes.internal = ["local", "cerebras", "groq"]` nên dữ liệu Nội bộ bỏ qua NVIDIA; Bảo mật/Hạn chế chỉ Ollama. `slowModels: ["ccoding-qwen3"]` — pha nặng chờ Cerebras (≤ 30 phút) khi bị 429 trước khi chuyển sang Ollama.
 
 ### Tắt một runtime
 `"disabled": true` trong cấu hình runtime (vd. `runtimes.bifrost`, `runtimes["openai-api"]`): CCoding không thăm dò, không gọi runtime đó kể cả khi nhiệm vụ/dự án/agent chỉ định. Máy Tom từ 28/10/2026: tắt `bifrost` và `openai-api` (9router) — **không dùng tài khoản Claude/Codex đặt trong 9router**; chỉ cân nhắc model miễn phí.

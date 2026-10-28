@@ -58,7 +58,7 @@ test('runtime tùy biến "bifrost" gọi API tương thích OpenAI, gửi heade
     const rm = new RuntimeManager({
       ...base,
       // không phụ thuộc ccoding.local.json của máy chạy test (chuỗi model, requireEnv, promptStyle riêng)
-      runtimes: { ...base.runtimes, bifrost: { ...base.runtimes.bifrost, baseUrl: `http://127.0.0.1:${port}/v1`, virtualKeys: { dev: 'sk-bf-dev-key' }, requireEnv: [], promptStyle: undefined } },
+      runtimes: { ...base.runtimes, bifrost: { ...base.runtimes.bifrost, baseUrl: `http://127.0.0.1:${port}/v1`, virtualKeys: { dev: 'sk-bf-dev-key' }, requireEnv: [], promptStyle: undefined, extraBody: { reasoning_effort: 'none', model: 'không-được-ghi-đè' } } },
       models: { ...base.models, bifrost: {} },
     });
     const rt = rm.get('bifrost')!;
@@ -69,6 +69,7 @@ test('runtime tùy biến "bifrost" gọi API tương thích OpenAI, gửi heade
     const r = await rt.run({ agent, phase: 'execute', system: 'sys', prompt: 'p', model: 'sonnet', cwd: '.', tools: [], allowTools: false, timeoutMs: 5000, meta }, {});
     assert.equal(r.text, '## Tóm tắt\nXong.');
     assert.equal(body.model, 'ollama/qwen3:8b');
+    assert.equal(body.reasoning_effort, 'none', 'extraBody được gửi kèm');
     assert.deepEqual([r.usage.input, r.usage.output, r.usage.cacheRead, r.estimated], [100, 9, 20, false]);
     assert.equal(seen['x-bf-vk'], 'sk-bf-dev-key');
     assert.equal(seen['x-bf-dim-agent'], 'data-engineer');
