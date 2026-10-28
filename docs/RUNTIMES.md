@@ -131,7 +131,7 @@ Lưu ý đường Claude gốc của 9router: tên công cụ trả về có h�
 ### `ollama` — mô hình cục bộ
 - Runtime tùy biến `openai-api` tại `http://127.0.0.1:11434/v1`, `"local": true` ⇒ **được phép** xử lý dự án *Bảo mật*/*Hạn chế*. Cần `ollama pull <model>` trước; đặt `models.ollama`.
 - Ngữ cảnh mặc định của Ollama nhỏ (prompt CCoding 10–30k token bị cắt): tạo biến thể có `num_ctx` lớn, vd. `Modelfile` = `FROM qwen3:8b` + `PARAMETER num_ctx 32768` → `ollama create ccoding-qwen3-8b -f Modelfile`.
-- `extraBody: { "reasoning_effort": "none" }` tắt chế độ suy nghĩ của qwen3 (đo 28/10: câu ngắn 3,3 giây thay vì 29 giây).
+- `extraBody: { "reasoning_effort": "none" }` tắt chế độ suy nghĩ của qwen3 (đo 28/10: câu ngắn 3,3 giây thay vì 29 giây) — nhưng khi tắt, qwen3:8b ở pha thực thi **trả lời "đã tạo tệp" mà không gọi `write_file`** (phát lại prompt thật: tắt → 0 lời gọi công cụ, bật → gọi `write_file`). Máy Tom: tắt ở pha nhẹ, bật lại ở pha có công cụ bằng `extraBodyByPhase: { "plan": {}, "execute": {}, "revise": {}, "review": {} }` (mục theo pha **thay** `extraBody`). Ngoài ra vòng công cụ tự nhắc một lần khi câu trả lời báo đã tạo/sửa tệp mà chưa ghi gì (`claimsWrites`).
 - Máy Tom (RTX 3050 4 GB, RAM 32 GB, 28/10/2026): `ccoding-qwen3-8b` chiếm ~10 GB (58% CPU / 42% GPU); nạp model lần đầu ~110 giây; nạp ngữ cảnh ~620 token/giây; sinh chữ ~4–10 token/giây; gọi công cụ được. ⇒ dự phòng cho việc nhỏ và dữ liệu nhạy cảm, không đủ nhanh cho gói lớn kiểu ND57.
 
 ### Model miễn phí qua API (máy Tom, 28/10/2026)

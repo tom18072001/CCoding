@@ -53,6 +53,8 @@ export interface RuntimeConfig {
   cacheControl?: boolean | string;
   /** Trường thêm vào thân yêu cầu chat/completions, vd. { "reasoning_effort": "none" } để tắt chế độ suy nghĩ của qwen3 qua Ollama. Không ghi đè model/messages/tools/stream. */
   extraBody?: Record<string, unknown>;
+  /** extraBody theo pha (có mục cho pha thì THAY extraBody), vd. { "execute": {} } để bật lại suy nghĩ ở pha có công cụ — model nhỏ tắt suy nghĩ thường "báo xong" mà không gọi công cụ. */
+  extraBodyByPhase?: Record<string, Record<string, unknown>>;
   /** Tắt hẳn runtime: không thăm dò, không gọi, kể cả khi nhiệm vụ/dự án/agent chỉ định (vd. không dùng tài khoản Claude/Codex sau 9router). */
   disabled?: boolean;
   [k: string]: unknown;

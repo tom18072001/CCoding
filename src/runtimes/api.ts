@@ -259,7 +259,7 @@ export class OpenAiApiRuntime implements Runtime {
         method: 'POST',
         headers: this.headers(gatewayHeaders(this.cfg, req)),
         body: JSON.stringify({
-          ...(this.cfg.extraBody && typeof this.cfg.extraBody === 'object' ? this.cfg.extraBody : {}),
+          ...extraBodyFor(this.cfg, req.phase),
           model,
           max_tokens: req.maxTokens ?? this.cfg.maxTokens ?? 8000,
           stream: true,
@@ -361,6 +361,7 @@ export class OpenAiApiRuntime implements Runtime {
     const capUsed = () => usage.input - usage.cached + usage.cached * cachedW;
     let nudged = false;
     let finalAsked = false;
+    let claimNudged = false;
     let capped: 'turns' | 'input' | undefined;
     let turns = 0;
     // chống "khảo sát mãi không ghi": đếm tệp đã ghi, nhắc khi đã dùng ~35% / ~65% lượt hoặc trần token mà chưa ghi gì
@@ -482,6 +483,17 @@ export class OpenAiApiRuntime implements Runtime {
           continue;
         }
       }
+      // "báo đã tạo/sửa tệp" mà chưa gọi công cụ ghi nào (hay gặp ở model nhỏ) → nhắc một lần để ghi thật
+      if (useTools && policy!.expectWrites && !wrote && !claimNudged && !finalAsked && turns < maxTurns && claimsWrites(t.text)) {
+        claimNudged = true;
+        diag.push(`lượt ${turns}: báo đã tạo/sửa tệp nhưng chưa gọi công cụ ghi — nhắc ghi thật`);
+        messages.push({ role: 'assistant', content: t.text });
+        messages.push({
+          role: 'user',
+          content: '⚠️ Bạn vừa báo đã tạo/sửa tệp nhưng CHƯA gọi write_file/edit_file lần nào — workspace chưa có thay đổi. Hãy gọi công cụ để ghi thật (đường dẫn tương đối trong workspace) rồi mới viết câu trả lời cuối. Nếu hạng mục không cần tệp, viết lại câu trả lời cuối và bỏ câu "đã tạo/sửa tệp".',
+        });
+        continue;
+      }
       finalText = t.text;
       if (t.toolCalls.length && useTools && finalAsked) diag.push('đã yêu cầu viết câu trả lời cuối nhưng model vẫn gọi công cụ (bỏ qua)');
       if (!t.text.trim()) diag.push(`lượt cuối rỗng (finish=${t.finish ?? '?'}, ${t.events} sự kiện stream)`);
@@ -527,6 +539,21 @@ export function toolName(name: string, allow: readonly string[]): string {
   if (base !== name && allow.includes(base)) return base;
   const ci = allow.find((a) => a.toLowerCase() === base.toLowerCase());
   return ci ?? name;
+}
+
+/** Trường thêm vào thân yêu cầu theo runtime + pha (đặt trước model/messages/tools/stream nên không ghi đè được các trường đó). */
+export function extraBodyFor(cfg: RuntimeConfig, phase: string): Record<string, unknown> {
+  const base = cfg.extraBody && typeof cfg.extraBody === 'object' ? cfg.extraBody : {};
+  const byPhase = cfg.extraBodyByPhase && typeof cfg.extraBodyByPhase === 'object' ? (cfg.extraBodyByPhase as Record<string, Record<string, unknown>>)[phase] : undefined;
+  // có mục cho pha thì THAY extraBody (vd. execute: {} = bỏ reasoning_effort ở pha có công cụ)
+  return byPhase && typeof byPhase === 'object' ? byPhase : base;
+}
+
+/** Câu trả lời tự nhận đã tạo/sửa tệp (có tên tệp) — dùng để bắt trường hợp "báo xong" mà chưa gọi công cụ ghi. */
+export function claimsWrites(text: string): boolean {
+  const t = text.normalize('NFC');
+  if (!/(đã|Đã|ĐÃ)\s+(hoàn thành|tạo|viết|ghi|cập nhật|sửa|thêm|bổ sung)|\b(created|wrote|updated|added)\b/u.test(t)) return false;
+  return /`[^`\s]+\.[A-Za-z0-9]{1,8}`|\b[\w./-]+\.(md|js|mjs|cjs|ts|tsx|json|py|sql|prisma|csv|txt|html|css|ya?ml|ps1|sh)\b/.test(t);
 }
 
 /** Chờ `ms` mili giây, dừng sớm (ném lỗi) nếu lượt gọi bị hủy. */

@@ -306,3 +306,46 @@ test('mất kết nối giữa vòng lặp công cụ: thử lại lượt đó;
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('model "báo đã tạo tệp" mà chưa gọi công cụ ghi → nhắc một lần rồi ghi thật; extraBody theo pha', async () => {
+  const bodies: Array<Record<string, unknown>> = [];
+  const srv = http.createServer(async (req, res) => {
+    let raw = '';
+    for await (const c of req) raw += c;
+    const body = JSON.parse(raw);
+    bodies.push(body);
+    const last = body.messages[body.messages.length - 1];
+    const tools = body.messages.filter((m: { role: string }) => m.role === 'tool').length;
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    const send = (o: unknown) => res.write(`data: ${JSON.stringify(o)}\n\n`);
+    if (tools === 0 && !String(last.content).includes('CHƯA gọi write_file')) send({ choices: [{ delta: { content: '## Tóm tắt\nĐã tạo tệp `ghi-chu.md` gồm 3 quy ước.' }, finish_reason: 'stop' }] });
+    else if (tools === 0) send({ choices: [{ delta: { tool_calls: [{ index: 0, id: 'w1', function: { name: 'write_file', arguments: JSON.stringify({ path: 'ghi-chu.md', content: '# Quy ước\n' }) } }] }, finish_reason: 'tool_calls' }] });
+    else send({ choices: [{ delta: { content: '## Tóm tắt\nĐã ghi `ghi-chu.md`.' }, finish_reason: 'stop' }] });
+    send({ choices: [], usage: { prompt_tokens: 100, completion_tokens: 5 } });
+    res.end('data: [DONE]\n\n');
+  });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-claim-'));
+  try {
+    const { OpenAiApiRuntime, claimsWrites } = await import('../src/runtimes/api.js');
+    const { parseAgent } = await import('../src/registry.js');
+    const rt = new OpenAiApiRuntime({ baseUrl: `http://127.0.0.1:${(srv.address() as AddressInfo).port}/v1`, tags: 'none', extraBody: { reasoning_effort: 'none' }, extraBodyByPhase: { execute: {} } }, {}, 'claim');
+    const agent = parseAgent('a.md', '---\nid: backend-dev\nname: Backend\ndepartment: dev\nrole: member\n---\nbody');
+    const r = await rt.run(
+      {
+        agent, phase: 'execute', system: 's', prompt: 'p', model: 'm', cwd: root, tools: [], allowTools: true, timeoutMs: 10000,
+        toolPolicy: { root, allow: ['write_file'], maxTurns: 10, commandTimeoutSec: 10, maxOutputChars: 2000, denyCommands: [], allowGitCommit: false, expectWrites: true },
+        meta: { taskId: 'T-x', department: 'dev', callId: 'c1' },
+      },
+      {},
+    );
+    assert.ok(fs.existsSync(path.join(root, 'ghi-chu.md')), 'đã ghi thật sau lời nhắc');
+    assert.match(r.diag ?? '', /báo đã tạo\/sửa tệp nhưng chưa gọi công cụ ghi/);
+    assert.equal(bodies[0].reasoning_effort, undefined, 'pha execute dùng extraBodyByPhase.execute (rỗng) thay extraBody');
+    assert.equal(claimsWrites('Đã hoàn thành việc viết tệp `quy-uoc-nhanh.md`'), true);
+    assert.equal(claimsWrites('## Tóm tắt\nPhân tích xong, không cần tệp.'), false);
+  } finally {
+    srv.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
