@@ -129,6 +129,8 @@ export interface Config {
     maxOutputChars: number;
     /** Hạn mức ký tự cho một lần read_file (lớn hơn đầu ra lệnh để đọc trọn schema/file nguồn cỡ vừa, tránh đọc lại từng đoạn). */
     maxReadChars?: number;
+    /** Trọng số token đọc từ cache khi tính trần token vòng công cụ (phases.toolInputBudget). Mặc định 0,1; 1 = tính như đầu vào thường. */
+    cachedInputWeight?: number;
     /** Tạo bản đồ repo `.ccoding/<task>/repo-map.md` cho dự án có workspace (mặc định bật). */
     repoMap?: boolean;
     denyCommands: string[];
@@ -236,6 +238,7 @@ const BUILTIN: Omit<Config, 'root'> = {
     commandTimeoutSec: 600,
     maxOutputChars: 12000,
     maxReadChars: 30000,
+    cachedInputWeight: 0.1,
     denyCommands: [],
     worktreeCopy: ['.env', '.env.local', '.env.development', '.env.development.local', '.env.test', '.env.test.local'],
     web: true,

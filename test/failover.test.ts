@@ -146,6 +146,47 @@ test('vòng lặp công cụ dừng khi chạm trần token đầu vào và bu�
   }
 });
 
+test('trần token vòng công cụ: phần đọc từ cache tính theo trọng số; cache ghi không bị đếm hai lần', async () => {
+  let calls = 0;
+  const srv = http.createServer(async (req, res) => {
+    let raw = '';
+    for await (const c of req) raw += c;
+    const body = JSON.parse(raw);
+    calls++;
+    const last = body.messages[body.messages.length - 1];
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    const send = (o: unknown) => res.write(`data: ${JSON.stringify(o)}\n\n`);
+    if (last.role === 'user' && String(last.content).includes('KHÔNG gọi thêm công cụ')) send({ choices: [{ delta: { content: '## Tóm tắt\nXong.' }, finish_reason: 'stop' }] });
+    else send({ choices: [{ delta: { tool_calls: [{ index: 0, id: `c${calls}`, function: { name: 'list_files', arguments: '{}' } }] }, finish_reason: 'tool_calls' }] });
+    // kiểu Bifrost → Claude: prompt_tokens gồm cả phần đọc và ghi cache
+    send({ choices: [], usage: { prompt_tokens: 60000, completion_tokens: 10, prompt_tokens_details: { cached_tokens: 55000, cache_write_tokens: 4000 } } });
+    res.end('data: [DONE]\n\n');
+  });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-capc-'));
+  try {
+    const { OpenAiApiRuntime } = await import('../src/runtimes/api.js');
+    const { parseAgent } = await import('../src/registry.js');
+    const rt = new OpenAiApiRuntime({ baseUrl: `http://127.0.0.1:${(srv.address() as AddressInfo).port}/v1`, tags: 'none' }, {}, 'capc');
+    const agent = parseAgent('a.md', '---\nid: backend-dev\nname: Backend\ndepartment: dev\nrole: member\n---\nbody');
+    const r = await rt.run(
+      {
+        agent, phase: 'review', system: 's', prompt: 'p', model: 'm', cwd: root, tools: [], allowTools: true, timeoutMs: 10000,
+        toolPolicy: { root, allow: ['list_files'], maxTurns: 20, maxInputTokens: 100000, commandTimeoutSec: 10, maxOutputChars: 2000, denyCommands: [], allowGitCommit: false },
+        meta: { taskId: 'T-x', department: 'dev', callId: 'c1' },
+      },
+      {},
+    );
+    // mỗi lượt tính 5.000 + 55.000 × 0,1 = 10.500 → 10 lượt mới chạm 100k (không trọng số: 2 lượt)
+    assert.equal(calls, 11, '10 lượt công cụ rồi 1 lượt viết câu trả lời cuối');
+    assert.equal(r.capped, 'input');
+    assert.deepEqual([r.usage.input, r.usage.cacheRead, r.usage.cacheWrite], [11 * 1000, 11 * 55000, 11 * 4000], 'input không gồm phần đọc/ghi cache');
+  } finally {
+    srv.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('mọi tài nguyên hết hạn mức → tạm dừng nhiệm vụ (không rơi về mock) và hẹn tự tiếp tục', async () => {
   const gw = await fakeGateway();
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-fo2-'));

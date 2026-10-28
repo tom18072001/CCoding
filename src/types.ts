@@ -97,6 +97,8 @@ export interface ToolPolicy {
   maxTurns: number;
   /** Trần token đầu vào cộng dồn của cả vòng lặp công cụ trong một lượt gọi (mỗi lượt gửi lại toàn bộ lịch sử). */
   maxInputTokens?: number;
+  /** Trọng số token đọc từ cache khi so với maxInputTokens (mặc định 0,1 — cache đọc tính giá ~10% đầu vào thường). */
+  cachedInputWeight?: number;
   commandTimeoutSec: number;
   maxOutputChars: number;
   /** Hạn mức ký tự riêng cho read_file (đọc trọn file mã nguồn cỡ vừa trong một lần); mặc định = maxOutputChars. */

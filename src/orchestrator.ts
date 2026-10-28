@@ -1540,6 +1540,7 @@ export class Orchestrator {
                 commandTimeoutSec: config.tools.commandTimeoutSec,
                 maxOutputChars: config.tools.maxOutputChars,
                 maxReadChars: config.tools.maxReadChars,
+                cachedInputWeight: config.tools.cachedInputWeight,
                 denyCommands: [...config.tools.denyCommands, ...(ctx.project?.denyCommands ?? [])],
                 allowGitCommit: !!task.branch,
                 expectWrites: (phase === 'execute' || phase === 'revise') && allow.some((t) => t === 'write_file' || t === 'edit_file'),

@@ -354,6 +354,10 @@ export class OpenAiApiRuntime implements Runtime {
     const diag: string[] = [];
     const maxTurns = useTools ? Math.max(1, policy!.maxTurns) : 1;
     const inputCap = useTools ? (policy!.maxInputTokens ?? 0) : 0;
+    // trần token vòng công cụ tính theo chi phí: phần đọc từ cache chỉ tính theo trọng số (mặc định 10%) — có cache thì vòng lặp
+    // đi được nhiều lượt hơn trước khi phải "chạy tiếp" với ngữ cảnh mới (chạy tiếp mất cache và phải đọc lại tệp)
+    const cachedW = Math.min(1, Math.max(0, policy?.cachedInputWeight ?? 0.1));
+    const capUsed = () => usage.input - usage.cached + usage.cached * cachedW;
     let nudged = false;
     let finalAsked = false;
     let capped: 'turns' | 'input' | undefined;
@@ -384,7 +388,7 @@ export class OpenAiApiRuntime implements Runtime {
           }
         }
         if (!retried) {
-          if (turns > 1) re.partial = { input: Math.max(0, usage.input - usage.cached), output: usage.output, cacheRead: usage.cached, turns: turns - 1, toolCalls: records.length ? records : undefined, model: usedModel };
+          if (turns > 1) re.partial = { input: Math.max(0, usage.input - usage.cached - usage.cacheWrite), output: usage.output, cacheRead: usage.cached, turns: turns - 1, toolCalls: records.length ? records : undefined, model: usedModel };
           throw re;
         }
         t = retried;
@@ -425,7 +429,7 @@ export class OpenAiApiRuntime implements Runtime {
         }
         compactHistory(messages);
         if (policy!.expectWrites && !wrote && writeNudges < 2) {
-          const frac = Math.max(turns / maxTurns, inputCap > 0 ? usage.input / inputCap : 0);
+          const frac = Math.max(turns / maxTurns, inputCap > 0 ? capUsed() / inputCap : 0);
           if (frac >= (writeNudges === 0 ? 0.35 : 0.65)) {
             writeNudges++;
             diag.push(`nhắc ghi tệp lần ${writeNudges} ở lượt ${turns} (chưa ghi tệp nào)`);
@@ -438,11 +442,11 @@ export class OpenAiApiRuntime implements Runtime {
             });
           }
         }
-        const overBudget = inputCap > 0 && usage.input >= inputCap;
+        const overBudget = inputCap > 0 && capUsed() >= inputCap;
         if (turns >= maxTurns || overBudget) {
           finalAsked = true;
           capped = overBudget ? 'input' : 'turns';
-          diag.push(overBudget ? `chạm trần ${inputCap} token đầu vào của vòng lặp công cụ sau ${turns} lượt` : `hết ${maxTurns} lượt công cụ`);
+          diag.push(overBudget ? `chạm trần ${inputCap} token đầu vào của vòng lặp công cụ sau ${turns} lượt (${Math.round(usage.input)} token vào, ${usage.cached} từ cache tính ${cachedW * 100}%)` : `hết ${maxTurns} lượt công cụ`);
           messages.push({ role: 'user', content: `${overBudget ? 'Đã dùng hết ngân sách token cho công cụ ở bước này.' : 'Đã dùng hết số lượt công cụ cho bước này.'} KHÔNG gọi thêm công cụ — hãy viết ngay câu trả lời cuối cùng (sản phẩm bàn giao) theo đúng mẫu. ${CAP_STATUS_RULE}` });
         }
         continue;
@@ -471,7 +475,8 @@ export class OpenAiApiRuntime implements Runtime {
     return {
       text,
       usage: {
-        input: estimated ? estimateTokens(combinedPrompt(req)) : Math.max(0, usage.input - usage.cached),
+        // prompt_tokens kiểu OpenAI gồm cả phần đọc/ghi cache → tách ra để khớp cách tính của Anthropic (input + cacheRead + cacheWrite)
+        input: estimated ? estimateTokens(combinedPrompt(req)) : Math.max(0, usage.input - usage.cached - usage.cacheWrite),
         output: estimated ? estimateTokens(text) : usage.output,
         cacheRead: usage.cached,
         cacheWrite: usage.cacheWrite,

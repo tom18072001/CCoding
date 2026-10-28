@@ -646,7 +646,7 @@ const READ_VERBS = /^(get-content|gc|cat|type|more|less|head|tail|select-string|
  * Lọc ĐẦU RA của lệnh khác (`npm test 2>&1 | Select-String …`) vẫn được phép.
  */
 export function shellReadReason(cmd: string): string | undefined {
-  if (/\[(System\.)?IO\.File\]::ReadAll(Text|Lines|Bytes)\b/i.test(cmd)) return 'đọc tệp bằng [IO.File]::ReadAll… — dùng read_file (có số dòng, offset)';
+  if (/\[(System\.)?IO\.File\]::ReadAll(Text|Lines|Bytes)\b/i.test(cmd)) return 'đọc tệp bằng [IO.File]::ReadAll… — đọc thì dùng read_file (có số dòng, offset); sửa/ghi thì dùng edit_file (thay đoạn chính xác) hoặc write_file';
   for (const stmt of cmd.split(/;|&&|\|\||\r?\n/)) {
     const first = stmt
       .split('|')[0]
@@ -655,9 +655,9 @@ export function shellReadReason(cmd: string): string | undefined {
       .replace(/^[(@&]+\s*/, '');
     const verb = (first.split(/\s+/)[0] ?? '').replace(/^["']|["']$/g, '');
     if (verb && READ_VERBS.test(verb))
-      return `đọc/tìm trong tệp bằng \`${verb}\` — dùng read_file (có số dòng, offset) hoặc search (regex, nhiều tệp); run_command chỉ để cài đặt, build, test, migration, git`;
+      return `đọc/tìm trong tệp bằng \`${verb}\` — dùng read_file (có số dòng, offset) hoặc search (regex, nhiều tệp); sửa/ghi tệp dùng edit_file/write_file; run_command chỉ để cài đặt, build, test, migration, git`;
   }
   if (/(^|[\s;({=])(Get-Content)\s+[^|;]*\S/i.test(cmd) || /\bSelect-String\b[^|;]*\s-Path\b/i.test(cmd))
-    return 'đọc/tìm trong tệp bằng Get-Content/Select-String — dùng read_file (có số dòng, offset) hoặc search (regex, nhiều tệp)';
+    return 'đọc/tìm trong tệp bằng Get-Content/Select-String — dùng read_file (có số dòng, offset) hoặc search (regex, nhiều tệp); sửa/ghi tệp (kể cả nối thêm) dùng edit_file/write_file';
   return undefined;
 }
