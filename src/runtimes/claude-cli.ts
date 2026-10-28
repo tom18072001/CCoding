@@ -5,7 +5,23 @@ import { scrubEnv } from '../tools/workspace.js';
 import { estimateTokens } from '../util/tokens.js';
 import { combinedPrompt } from './common.js';
 import type { RuntimeConfig } from '../config.js';
-import type { RunHooks, RunRequest, RunResult, Runtime, RuntimeAvailability } from '../types.js';
+import type { RunHooks, RunRequest, RunResult, Runtime, RuntimeAvailability, ToolCallRecord } from '../types.js';
+
+/** Tên công cụ Claude Code → tên công cụ CCoding (KPI nhận "đã chạy test" qua run_command, đọc/ghi qua read_file/edit_file…). */
+const CLAUDE_TOOL_NAMES: Record<string, string> = {
+  Bash: 'run_command',
+  PowerShell: 'run_command',
+  Read: 'read_file',
+  Write: 'write_file',
+  Edit: 'edit_file',
+  MultiEdit: 'edit_file',
+  NotebookEdit: 'edit_file',
+  Grep: 'search',
+  Glob: 'list_files',
+  LS: 'list_files',
+  WebFetch: 'fetch_url',
+  WebSearch: 'web_search',
+};
 
 interface ClaudeUsage {
   input_tokens?: number;
@@ -25,6 +41,9 @@ export class ClaudeStreamParser {
   isError = false;
   errorText = '';
   sawResult = false;
+  /** Lượt gọi công cụ của Claude Code, quy về tên công cụ của CCoding — để log tool.call và KPI (kiểm chứng, đọc/ghi) tính được. */
+  toolCalls: ToolCallRecord[] = [];
+  private pending = new Map<string, { rec: ToolCallRecord; t0: number }>();
 
   constructor(private hooks: RunHooks = {}) {}
 
@@ -50,6 +69,9 @@ export class ClaudeStreamParser {
             const inp = block.input ?? {};
             const detail = inp.command ?? inp.file_path ?? inp.pattern ?? inp.url ?? inp.query ?? '';
             this.hooks.onActivity?.(`${block.name}${detail ? `: ${String(detail).slice(0, 60)}` : ''}`);
+            const rec: ToolCallRecord = { name: CLAUDE_TOOL_NAMES[block.name] ?? String(block.name), args: String(detail).slice(0, 400), ok: true, ms: 0, outputChars: 0 };
+            this.toolCalls.push(rec);
+            if (block.id) this.pending.set(String(block.id), { rec, t0: Date.now() });
           }
         }
         const u = msg.usage as ClaudeUsage | undefined;
@@ -57,6 +79,23 @@ export class ClaudeStreamParser {
           // cộng dồn theo từng lượt — dự phòng khi không có sự kiện result
           for (const k of Object.keys(u) as Array<keyof ClaudeUsage>) {
             if (typeof u[k] === 'number') this.turnUsage[k] = (this.turnUsage[k] ?? 0) + (u[k] as number);
+          }
+        }
+        break;
+      }
+      case 'user': {
+        // kết quả công cụ (tool_result) — thời gian, độ dài đầu ra, lỗi (kể cả bị hook CCoding chặn)
+        for (const block of ev.message?.content ?? []) {
+          if (block?.type !== 'tool_result') continue;
+          const p = this.pending.get(String(block.tool_use_id));
+          if (!p) continue;
+          this.pending.delete(String(block.tool_use_id));
+          const out = typeof block.content === 'string' ? block.content : JSON.stringify(block.content ?? '');
+          p.rec.ms = Date.now() - p.t0;
+          p.rec.outputChars = out.length;
+          if (block.is_error) {
+            p.rec.ok = false;
+            p.rec.error = out.slice(0, 200);
           }
         }
         break;
@@ -161,6 +200,7 @@ export class ClaudeCliRuntime implements Runtime {
       runtime: this.id,
       durationMs: Date.now() - started,
       error,
+      toolCalls: parser.toolCalls.length ? parser.toolCalls : undefined,
     };
   }
 }
