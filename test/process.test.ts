@@ -1051,3 +1051,78 @@ test('lệnh kiểm tra của dự án: phần cuối đầu ra lưu lại đã 
     fs.rmSync(ws, { recursive: true, force: true });
   }
 });
+
+test('tạm dừng giữa vòng sửa rồi tiếp tục: sửa tiếp theo review đã có (không review lại), vẫn chạy lệnh kiểm tra sau sửa, không vượt maxRevisions', async () => {
+  const prompts = { review: 0, revise: 0 };
+  let limitedOnce = false;
+  const srv = http.createServer(async (req, res) => {
+    if (req.url === '/v1/models') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ data: [{ id: 'm-ok' }] }));
+    }
+    let raw = '';
+    for await (const c of req) raw += c;
+    const body = JSON.parse(raw);
+    const text = (m: { content: unknown }) => (typeof m.content === 'string' ? m.content : '');
+    const user = body.messages.filter((m: { role: string }) => m.role === 'user').map(text).join('\n');
+    const toolMsgs = body.messages.filter((m: { role: string }) => m.role === 'tool').length;
+    if (user.includes('SỬA THEO REVIEW') && toolMsgs === 1 && !limitedOnce) {
+      limitedOnce = true;
+      res.writeHead(429, { 'content-type': 'application/json', 'retry-after': '1' });
+      return res.end(JSON.stringify({ error: { type: 'rate_limit_error', message: 'rate limited' } }));
+    }
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    const send = (o: unknown) => res.write(`data: ${JSON.stringify(o)}\n\n`);
+    const say = (s: string) => send({ model: 'm-ok', choices: [{ delta: { content: s }, finish_reason: 'stop' }] });
+    const write = (content: string) => send({ model: 'm-ok', choices: [{ delta: { tool_calls: [{ index: 0, id: `w${toolMsgs}`, type: 'function', function: { name: 'write_file', arguments: JSON.stringify({ path: 'broken.flag', content }) } }] }, finish_reason: 'tool_calls' }] });
+    if (user.includes('LẬP KẾ HOẠCH')) say(`\`\`\`json\n${JSON.stringify({ summary: 'Một việc', subtasks: [{ id: 'S1', title: 'API', assignee: 'backend-dev', description: 'Viết API', dependsOn: [] }] })}\n\`\`\``);
+    else if (user.includes('REVIEW CHẤT LƯỢNG')) {
+      prompts.review++;
+      say(`\`\`\`json\n${JSON.stringify({ approved: false, summary: 'Chưa đạt', issues: [{ subtask: 'S1', severity: 'major', comment: 'thiếu test' }] })}\n\`\`\``);
+    } else if (user.includes('SỬA THEO REVIEW')) {
+      if (toolMsgs === 0) prompts.revise++;
+      if (toolMsgs === 0) write(limitedOnce ? 'fixed' : 'broken');
+      else say('## Tóm tắt\nĐã sửa.');
+    } else if (user.includes('## Hạng mục của bạn')) {
+      if (toolMsgs === 0) write('ok');
+      else say('## Tóm tắt\nXong API.');
+    } else say('## Tóm tắt\nXong.');
+    send({ choices: [], usage: { prompt_tokens: 300, completion_tokens: 20 } });
+    res.end('data: [DONE]\n\n');
+  });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-rv-'));
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-rv-ws-'));
+  fs.writeFileSync(path.join(ws, 'check.js'), "const fs=require('fs');const f='broken.flag';if(fs.existsSync(f)&&fs.readFileSync(f,'utf8')==='broken'){console.log('tests 3 pass 2 fail 1');process.exit(1)}console.log('tests 3 pass 3 fail 0')");
+  const base = loadConfig();
+  const app = createApp({
+    dataDir,
+    workspacesDir: path.join(dataDir, 'workspaces'),
+    runner: 'process',
+    runtime: { ...base.runtime, default: 'auto', order: ['fake'] },
+    runtimes: { fake: { type: 'openai-api', baseUrl: `http://127.0.0.1:${(srv.address() as AddressInfo).port}/v1`, tags: 'none', local: false, rateWaitMs: 0 } },
+    models: { fake: { opus: ['m-ok'], sonnet: ['m-ok'], haiku: ['m-ok'] } },
+    herdr: { ...base.herdr, notify: false, agentPanes: false },
+  });
+  try {
+    app.store.saveProject({ id: 'repo', name: 'Repo', department: 'dev', workspace: ws, classification: 'internal', toolAccess: 'exec', checkCommands: ['node check.js'], createdAt: new Date().toISOString() });
+    const t = app.orchestrator.submit({ brief: 'API', projectId: 'repo', options: { discussionRounds: 0, maxRevisions: 1 } });
+    const paused = await app.orchestrator.waitFor(t.id);
+    assert.equal(paused.status, 'paused', paused.error);
+    assert.deepEqual(paused.runs[0].revising, ['S1'], 'giữ danh sách hạng mục đang sửa');
+    assert.equal(prompts.review, 1);
+    app.runtimes.markOk('fake::m-ok');
+    app.orchestrator.resume(t.id);
+    const done = await app.orchestrator.waitFor(t.id);
+    assert.equal(done.status, 'done', done.error);
+    assert.equal(prompts.review, 2, 'không review lại trước khi sửa tiếp; chỉ review vòng cuối');
+    assert.equal(prompts.revise, 2, 'lượt sửa bị ngắt + lượt sửa tiếp');
+    assert.equal(done.projectChecks?.latestAfter, 'revise');
+    assert.equal(done.projectChecks?.latest?.[0].ok, true, 'lệnh kiểm tra chạy lại sau khi sửa xong');
+    assert.equal(done.runs[0].revising, undefined);
+  } finally {
+    srv.close();
+    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(ws, { recursive: true, force: true });
+  }
+});

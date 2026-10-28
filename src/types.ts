@@ -242,6 +242,10 @@ export interface DeptRun {
     /** false: reviewer có quyền chạy lệnh nhưng không chạy lệnh nào → kết luận chưa có bằng chứng chạy thật. */
     verified?: boolean;
   };
+  /** Vòng review hiện tại (0 = review đầu) — giữ qua tạm dừng/tiếp tục để không vượt maxRevisions. */
+  reviewRound?: number;
+  /** Hạng mục còn phải sửa trong vòng hiện tại — tiếp tục sau tạm dừng thì sửa tiếp theo review đã có, không review lại. */
+  revising?: string[];
   /** Ước lượng token của kế hoạch (sau khi lập/chốt) để cảnh báo nhiệm vụ quá lớn. */
   estimate?: { tokens: number; budget: number; at: string; basis?: string };
   finalPath?: string;
@@ -361,6 +365,8 @@ export interface ProjectChecks {
   latest?: CheckResult[];
   latestAt?: string;
   latestAfter?: 'execute' | 'revise';
+  /** Workspace có thể đã đổi sau lần kiểm tra gần nhất (bắt đầu một lượt sửa) — review sau đó phải chạy lại lệnh kiểm tra. */
+  staleAt?: string;
 }
 
 export interface ChatMessage {

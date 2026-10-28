@@ -354,6 +354,8 @@ export class Orchestrator {
         r.stage ??= inferStage(r);
         if (r.stage && STAGES.indexOf(r.stage) > STAGES.indexOf('finalized')) r.stage = 'finalized';
         r.review = undefined;
+        r.reviewRound = undefined;
+        r.revising = undefined;
         r.finalPath = undefined;
         r.status = 'pending';
         logs.write({ level: 'info', kind: 'task.rerun', msg: `${t.id}: chạy lại ${again.map((s) => s.id).join(', ')}`, taskId: t.id, department: r.department });
@@ -364,6 +366,8 @@ export class Orchestrator {
         if (r.stage && STAGES.indexOf(r.stage) > STAGES.indexOf('finalized')) {
           r.stage = 'finalized';
           r.review = undefined;
+          r.reviewRound = undefined;
+          r.revising = undefined;
           r.finalPath = undefined;
         }
       }
@@ -371,7 +375,11 @@ export class Orchestrator {
         const back: RunStage = o.from === 'review' ? 'executed' : 'reviewed';
         r.stage ??= inferStage(r);
         if (!r.stage || STAGES.indexOf(r.stage) > STAGES.indexOf(back)) r.stage = back;
-        if (o.from === 'review') r.review = undefined;
+        if (o.from === 'review') {
+          r.review = undefined;
+          r.reviewRound = undefined;
+          r.revising = undefined;
+        }
         r.finalPath = undefined;
         r.status = 'pending';
         logs.write({ level: 'info', kind: 'task.rerun', msg: `${t.id}: làm lại từ ${o.from === 'review' ? 'review' : 'báo cáo tổng hợp'} (${r.department})`, taskId: t.id, department: r.department });
@@ -906,8 +914,21 @@ export class Orchestrator {
     const done = () => run.subtasks.filter((s) => s.status === 'done' && s.output);
     if (!reached(run, 'reviewed')) {
       if (task.options.review && reviewer && done().length) {
-        for (let attempt = 0; attempt <= task.options.maxRevisions; attempt++) {
+        for (let attempt = Math.min(run.reviewRound ?? 0, task.options.maxRevisions); attempt <= task.options.maxRevisions; attempt++) {
           this.checkAbort(task);
+          run.reviewRound = attempt;
+          // tạm dừng giữa vòng sửa rồi tiếp tục: sửa tiếp các hạng mục còn lại theo review đã có, không review lại từ đầu
+          const pending = run.revising?.length && run.review && !run.review.approved ? run.subtasks.filter((s) => run.revising!.includes(s.id) && s.status === 'done') : [];
+          let review: ReturnType<typeof parseReview>;
+          let targets: Subtask[];
+          if (pending.length) {
+            review = { approved: false, summary: run.review!.summary, issues: run.review!.issues, checks: [], parsed: true };
+            targets = pending;
+            this.message(task, dept.id, 'system', 'system', `↻ Tiếp tục vòng sửa ${attempt + 1}: ${pending.map((s) => s.id).join(', ')} (theo review đã có)`);
+          } else {
+          // lần sửa trước (có thể dở dang do tạm dừng) đã đổi workspace sau lần kiểm tra gần nhất → chạy lại lệnh kiểm tra trước review
+          const pcs = task.projectChecks;
+          if (this.projectCheckable(task, project) && pcs?.staleAt && (!pcs.latestAt || pcs.latestAt < pcs.staleAt)) await this.runProjectChecks(task, project, dept.id, 'revise');
           this.setPhase(task, run, 'review');
           const items = done().map((st) => this.depInput(task, st));
           const changes = this.workspaceChanges(task);
@@ -923,7 +944,7 @@ export class Orchestrator {
           );
           // review lỗi KHÔNG được coi là "duyệt"
           if (res.error && !res.text) throw new Error(`Không review được: ${res.error}`);
-          const review = parseReview(res.text, items.map((i) => i.st.id));
+          review = parseReview(res.text, items.map((i) => i.st.id));
           // lệnh kiểm tra của dự án đạt trước khi sửa mà hỏng sau khi sửa → không duyệt, dù reviewer nói gì
           const regressed = this.checkRegressions(task);
           if (regressed.length) {
@@ -960,12 +981,17 @@ export class Orchestrator {
             'review',
             `${review.approved ? '✅ Duyệt' : '⚠️ Cần sửa'} — ${review.summary}${review.issues.length ? `\n${review.issues.map((i) => `- [${i.severity}] ${i.subtask}: ${i.comment}`).join('\n')}` : ''}${evidence}`,
           );
-          const targets = run.subtasks.filter((s) => s.status === 'done' && review.issues.some((i) => i.subtask === s.id && i.severity !== 'minor'));
+          targets = run.subtasks.filter((s) => s.status === 'done' && review.issues.some((i) => i.subtask === s.id && i.severity !== 'minor'));
           if (review.approved || !targets.length || attempt === task.options.maxRevisions) break;
+          }
+          run.revising = targets.map((s) => s.id);
+          this.save(task);
           this.setPhase(task, run, 'revise');
           const reviseOne = async (st: Subtask) => {
               const agent = registry.agent(st.assignee);
               this.noteAttempt(task, run, st);
+              // từ đây workspace có thể đổi (kể cả khi lượt sửa bị ngắt) → kết quả kiểm tra trước đó không còn đại diện
+              if (task.projectChecks) task.projectChecks.staleAt = nowIso();
               const issues = review.issues.filter((i) => i.subtask === st.id).map((i) => `- [${i.severity}] ${i.comment}`).join('\n');
               const prev = this.depInput(task, st);
               const r = await this.call(agent, 'revise', (tools) => P.revisePrompt(pctx, st, prev.text, issues, tools, prev.wsPath), {
@@ -979,6 +1005,7 @@ export class Orchestrator {
                 this.writeOutput(task, run, st, agent, r);
                 this.message(task, dept.id, agent.id, 'handoff', `Đã sửa ${st.id} theo review: ${extractSummary(r.text, 200)}`, { subtaskId: st.id });
               }
+              run.revising = run.revising?.filter((id) => id !== st.id);
           };
           // workspace dự án dùng chung: hạng mục chạy lệnh làm lần lượt, hạng mục chỉ viết tài liệu vẫn song song
           const serial = pctx.serialWriters ? targets.filter((st) => this.isWriter(registry.agent(st.assignee), task, project)) : [];
@@ -991,9 +1018,11 @@ export class Orchestrator {
           ]);
           const stop = results.find((x): x is PromiseRejectedResult => x.status === 'rejected');
           if (stop) throw stop.reason;
+          run.revising = undefined;
           if (this.projectCheckable(task, project)) await this.runProjectChecks(task, project, dept.id, 'revise');
         }
       }
+      run.revising = undefined;
       run.stage = 'reviewed';
       // review cuối chưa duyệt / lệnh kiểm tra còn hỏng → nhiệm vụ vẫn chạy xong nhưng gắn cờ "cần xem"
       if (run.review && !run.review.approved) task.attention = { reason: 'review', detail: `${dept.short}: ${run.review.summary.slice(0, 280)}`, at: nowIso() };
