@@ -284,10 +284,11 @@ async function cmdShow(args: string[]): Promise<void> {
   if (t.finalPath) console.log(`\nBáo cáo: ${c.cyan(path.join(runDir, t.finalPath))}`);
 }
 
-function fmtLog(e: LogEntry): string {
+/** `scope`: 'full' = phòng/agent; 'agent' = chỉ agent (log một phòng); 'none' = bỏ cột (log một agent — pane hẹp). */
+function fmtLog(e: LogEntry, scope: 'full' | 'agent' | 'none' = 'full'): string {
   const lv = { info: c.blue('INF'), warn: c.yellow('WRN'), error: c.red('ERR'), debug: c.gray('DBG') }[e.level] ?? e.level;
-  const scope = [e.department, e.agentId].filter(Boolean).join('/');
-  return `${c.gray(localTime(e.ts, true))} ${lv} ${c.cyan(scope.padEnd(24).slice(0, 24))} ${e.msg}${e.taskId ? c.gray(` ${e.taskId}`) : ''}`;
+  const who = scope === 'full' ? [e.department, e.agentId].filter(Boolean).join('/').padEnd(24).slice(0, 24) : scope === 'agent' ? (e.agentId ?? '').padEnd(16).slice(0, 16) : '';
+  return `${c.gray(localTime(e.ts, true))} ${lv} ${who ? `${c.cyan(who)} ` : ''}${e.msg}${e.taskId ? c.gray(` ${e.taskId}`) : ''}`;
 }
 
 function fmtBytes(n: number): string {
@@ -320,6 +321,8 @@ async function cmdLogs(args: string[]): Promise<void> {
   });
   const logs = new LogStore(config.dataDir, { redactSecrets: true, redactPii: true, hashChain: true });
   const keep = levelFilter(values.level);
+  const scope = values.agent ? 'none' : values.dept ? 'agent' : 'full';
+  const show = (e: LogEntry) => console.log(fmtLog(e, scope));
   const n = Number(values.n ?? 40);
   const latest = values.task === 'latest';
   let cur = latest ? pickLatestTask(config.dataDir) : undefined;
@@ -344,7 +347,7 @@ async function cmdLogs(args: string[]): Promise<void> {
   const backlog = () => {
     // có lọc mức → đọc rộng hơn rồi lấy n dòng cuối khớp
     const rows = readJsonl<LogEntry>(file, values.level ? n * 20 : n).filter(keep);
-    for (const e of rows.slice(-n)) console.log(fmtLog(e));
+    for (const e of rows.slice(-n)) show(e);
   };
   header();
   backlog();
@@ -381,7 +384,7 @@ async function cmdLogs(args: string[]): Promise<void> {
     for (const l of lines) {
       try {
         const e = JSON.parse(l) as LogEntry;
-        if (keep(e)) console.log(fmtLog(e));
+        if (keep(e)) show(e);
       } catch {
         /* bỏ qua */
       }
