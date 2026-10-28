@@ -19,7 +19,8 @@ const SECRET_PATTERNS: Array<[RegExp, string]> = [
 const PII_PATTERNS: Array<[RegExp, string]> = [
   [/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, '[EMAIL]'],
   // Số CCCD 12 chữ số
-  [/(?<![\d.])\d{12}(?![\d.])/g, '[CCCD]'],
+  // (mã tỉnh 001–096 nên luôn bắt đầu bằng 0 — không che nhầm mốc thời gian YYYYMMDDhhmm như tên migration 202610290001_…)
+  [/(?<![\d.])0\d{11}(?![\d.])/g, '[CCCD]'],
   // Số điện thoại Việt Nam
   [/(?<![\d])(?:\+84|0)(?:3|5|7|8|9)\d{8}(?![\d])/g, '[PHONE]'],
 ];
