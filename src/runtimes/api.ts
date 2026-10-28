@@ -185,6 +185,8 @@ interface StreamTurn {
   cacheWrite: number;
   model?: string;
   events: number;
+  /** Số ký tự "suy nghĩ" (delta.reasoning / reasoning_content) — model suy nghĩ mà không trả lời thì nhắc viết câu trả lời. */
+  reasoning: number;
 }
 
 type ChatMsg = Record<string, unknown> & { role: string };
@@ -280,7 +282,7 @@ export class OpenAiApiRuntime implements Runtime {
       const body = (await res.text()).slice(0, 600);
       throw new RuntimeError(`${this.base()} ${res.status}: ${body}`, classifyError(res.status, body), res.status, parseRetryAt(res.headers, body));
     }
-    const t: StreamTurn = { text: '', toolCalls: [], input: 0, output: 0, cached: 0, cacheWrite: 0, events: 0 };
+    const t: StreamTurn = { text: '', toolCalls: [], input: 0, output: 0, cached: 0, cacheWrite: 0, events: 0, reasoning: 0 };
     const calls = new Map<number, { id: string; name: string; args: string }>();
     try {
       for await (const data of sseData(res, kick)) {
@@ -303,6 +305,8 @@ export class OpenAiApiRuntime implements Runtime {
           t.text += delta;
           hooks.onText?.(delta);
         }
+        const think = ch?.delta?.reasoning ?? ch?.delta?.reasoning_content;
+        if (typeof think === 'string') t.reasoning += think.length;
         for (const tc of ch?.delta?.tool_calls ?? []) {
           const k = typeof tc.index === 'number' ? tc.index : calls.size;
           const cur = calls.get(k) ?? { id: '', name: '', args: '' };
@@ -362,6 +366,7 @@ export class OpenAiApiRuntime implements Runtime {
     let nudged = false;
     let finalAsked = false;
     let claimNudged = false;
+    let thinkNudged = false;
     let capped: 'turns' | 'input' | undefined;
     let turns = 0;
     // chống "khảo sát mãi không ghi": đếm tệp đã ghi, nhắc khi đã dùng ~35% / ~65% lượt hoặc trần token mà chưa ghi gì
@@ -482,6 +487,13 @@ export class OpenAiApiRuntime implements Runtime {
           messages.push({ role: 'user', content: 'Bạn KHÔNG có công cụ nào ở bước này. Hãy viết toàn bộ câu trả lời trực tiếp bằng văn bản (nếu cần tạo file, đặt nội dung trong khối code kèm tên file).' });
           continue;
         }
+      }
+      // chỉ suy nghĩ mà không trả lời (qwen3 qua Ollama đôi khi dồn cả câu trả lời vào phần suy nghĩ) → nhắc viết câu trả lời một lần
+      if (!t.text.trim() && !t.toolCalls.length && t.reasoning > 0 && !thinkNudged) {
+        thinkNudged = true;
+        diag.push(`lượt ${turns}: chỉ có phần suy nghĩ (${t.reasoning} ký tự), không có câu trả lời — nhắc viết câu trả lời`);
+        messages.push({ role: 'user', content: 'Bạn mới suy nghĩ mà CHƯA đưa ra câu trả lời. Viết ngay câu trả lời cuối theo đúng yêu cầu và mẫu (hoặc gọi công cụ nếu thật sự cần).' });
+        continue;
       }
       // "báo đã tạo/sửa tệp" mà chưa gọi công cụ ghi nào (hay gặp ở model nhỏ) → nhắc một lần để ghi thật
       if (useTools && policy!.expectWrites && !wrote && !claimNudged && !finalAsked && turns < maxTurns && claimsWrites(t.text)) {

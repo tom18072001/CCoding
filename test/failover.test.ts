@@ -349,3 +349,30 @@ test('model "báo đã tạo tệp" mà chưa gọi công cụ ghi → nhắc m�
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('model chỉ "suy nghĩ" mà không trả lời → nhắc một lần, lấy câu trả lời ở lượt sau', async () => {
+  let calls = 0;
+  const srv = http.createServer(async (req, res) => {
+    for await (const _ of req) void _;
+    calls++;
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    const send = (o: unknown) => res.write(`data: ${JSON.stringify(o)}\n\n`);
+    if (calls === 1) send({ choices: [{ delta: { reasoning: 'Mình cần lập kế hoạch JSON với một hạng mục…' }, finish_reason: 'stop' }] });
+    else send({ choices: [{ delta: { content: '## Tóm tắt\nKế hoạch xong.' }, finish_reason: 'stop' }] });
+    send({ choices: [], usage: { prompt_tokens: 100, completion_tokens: 5 } });
+    res.end('data: [DONE]\n\n');
+  });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+  try {
+    const { OpenAiApiRuntime } = await import('../src/runtimes/api.js');
+    const { parseAgent } = await import('../src/registry.js');
+    const rt = new OpenAiApiRuntime({ baseUrl: `http://127.0.0.1:${(srv.address() as AddressInfo).port}/v1`, tags: 'none' }, {}, 'think');
+    const agent = parseAgent('a.md', '---\nid: dev-lead\nname: Lead\ndepartment: dev\nrole: lead\n---\nbody');
+    const r = await rt.run({ agent, phase: 'plan', system: 's', prompt: 'p', model: 'm', cwd: '.', tools: [], allowTools: false, timeoutMs: 10000, meta: { taskId: 'T-x', department: 'dev', callId: 'c1' } }, {});
+    assert.equal(r.text, '## Tóm tắt\nKế hoạch xong.');
+    assert.equal(calls, 2);
+    assert.match(r.diag ?? '', /chỉ có phần suy nghĩ/);
+  } finally {
+    srv.close();
+  }
+});
