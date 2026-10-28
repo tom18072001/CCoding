@@ -170,8 +170,17 @@
   D.interact = (target, pos) => {
     if (!C) return;
     if (target.type === 'agent') return agentMenu(target.id, pos);
+    if (target.id === 'pantry:table') return pantryTime();
     return spotMenu(target, pos);
   };
+
+  /** Bàn ăn pantry: giờ nghỉ giải lao cho vui — agent rảnh ra pantry rồi tự về, không đụng công việc. */
+  function pantryTime() {
+    const o = office();
+    const r = o.pantryTime(30000);
+    if (!r.n && r.left) return C.toast({ level: 'info', title: `🍱 Pantry time đang diễn ra — còn ${r.left} giây`, msg: '' });
+    C.toast({ level: 'info', title: '🍱 Pantry time!', msg: r.n ? `${r.n} người đang rảnh ra pantry nghỉ 30 giây — việc đang chạy không bị ảnh hưởng.` : 'Mọi người đang bận cả — pantry để dành lát nữa nhé.' });
+  }
 
   function agentMenu(id, pos) {
     const a = C.S.agents.get(id);
@@ -230,6 +239,24 @@
       'boss:screen': () => [
         { icon: '📊', label: 'Bảng điều khiển', run: () => D.dashboard() },
         { icon: '🔢', label: 'Hạn mức token còn lại', run: () => C.setTab('quota') },
+      ],
+      'pantry:water': () => [
+        { icon: '💧', label: 'Uống cốc nước', fun: true, run: () => (o.spotEffect('pantry:water', 'hearts'), o.playerSay('Uống nước đều đặn nào 💧', 3000)) },
+        { icon: '🍱', label: 'Pantry time (mời mọi người rảnh nghỉ 30 giây)', fun: true, run: () => pantryTime() },
+      ],
+      'office:tv': () => [
+        { icon: '🧭', label: 'Giao việc tự động (điều phối viên chọn phòng)', run: () => C.prefillAssign({ mode: 'auto' }) },
+        { icon: '📋', label: `Nhiệm vụ đang chạy (${running.length})`, run: () => C.setTab('tasks') },
+        { icon: '📺', label: 'Đổi kênh', fun: true, run: () => (o.spotEffect('office:tv', 'stars'), o.playerSay(pick(FACTS), 6000)) },
+      ],
+      'meeting:board': () => meetingItems(),
+      'dev:board': () => [
+        ...deptItems('dev').slice(0, 2),
+        { icon: '✏️', label: 'Vẽ sơ đồ kiến trúc lên bảng', fun: true, run: () => o.spotEffect('dev:board', 'stars') },
+      ],
+      'research:shelf': () => [
+        ...deptItems('research').slice(0, 2),
+        { icon: '📖', label: 'Rút một cuốn sách', fun: true, run: () => (o.spotEffect('research:shelf', 'stars'), o.playerSay(pick(FACTS), 7000)) },
       ],
       'boss:arcade': () => [{ icon: '🕹', label: 'Chơi "Bắt bug" 15 giây', fun: true, run: () => D.bugGame() }],
       'boss:piano': () => [{ icon: '🎹', label: 'Chơi một đoạn nhạc', fun: true, run: () => playTune() }],

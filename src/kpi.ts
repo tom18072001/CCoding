@@ -82,8 +82,38 @@ export interface AgentKpi {
   scores: { quality?: number; efficiency?: number; reliability?: number; compliance?: number };
   score: number;
   grade: 'A' | 'B' | 'C' | 'D';
+  /** "Việc cần sửa" còn hiệu lực (đã bỏ các mục đã sửa — đánh dấu tay hoặc tự hết). */
   findings: string[];
+  /** Khóa ổn định của từng mục trong findings (cùng thứ tự) — để đánh dấu đã sửa / nhắc agent. */
+  findingKeys: string[];
+  /** Khóa các mục đã đánh dấu sửa nhưng tái diễn ở nhiệm vụ sau mốc đánh dấu. */
+  recurred?: string[];
+  /** Mục đã sửa: đánh dấu tay (manual) hoặc tự hết vì các nhiệm vụ gần nhất của agent không còn (auto). */
+  resolved?: Array<{ key: string; text: string; how: 'manual' | 'auto'; at?: string; note?: string; detail?: string }>;
 }
+
+/** Mục "việc cần sửa" đã đánh dấu sửa: agentId → khóa → mốc. */
+export type KpiResolutions = Record<string, Record<string, { at: string; note?: string }>>;
+
+export const FINDING_LABELS: Record<string, string> = {
+  'tools-fail': 'Thao tác công cụ lỗi nhiều',
+  'cap-hits': 'Hay chạm trần vòng công cụ',
+  attempts: 'Hạng mục phải chạy nhiều lần',
+  template: 'Đầu ra thiếu mục trong "Mẫu đầu ra"',
+  summary: 'Sản phẩm không mở đầu bằng "## Tóm tắt"',
+  'exec-evidence': 'Có quyền chạy lệnh nhưng ít kiểm chứng',
+  'shell-reads': 'Dùng run_command để đọc/tìm code',
+  'no-sources': 'Không có nguồn kiểm chứng được',
+  'review-quality': 'Chưa qua review / còn blocker',
+  'failed-calls': 'Lượt gọi hỏng do đầu ra',
+  infra: 'Lượt hỏng do hạ tầng',
+  truncated: 'Đầu ra chạm giới hạn độ dài',
+  tokens: 'Tốn token so với trung vị phòng',
+  'reviewer-unverified': 'Review không kiểm chứng bằng công cụ',
+  'plan-fallback': 'Kế hoạch không đúng định dạng JSON',
+  budget: 'Phòng dùng quá ngân sách',
+  'meeting-only': 'Chỉ tham gia họp',
+};
 
 export interface KpiReport {
   generatedAt: string;
@@ -196,6 +226,7 @@ export function computeKpi(src: KpiSource): KpiReport {
           score: 0,
           grade: 'C',
           findings: [],
+          findingKeys: [],
         },
         taskIds: new Set(),
         turns: [],
@@ -224,6 +255,7 @@ export function computeKpi(src: KpiSource): KpiReport {
     const transcript = src.transcript(task.id);
     const exec = src.access(task) === 'exec';
     let tokens = 0;
+    const outs = new Map<string, { agentId: string; department: string; text: string; executed: boolean; ranCheck: boolean }>();
     // ── lượt gọi ──
     for (const r of calls) {
       if (!r.agentId) continue;
@@ -257,23 +289,15 @@ export function computeKpi(src: KpiSource): KpiReport {
         }
         if (tc.name === 'search_papers' || tc.name === 'web_search' || tc.name === 'fetch_url') k.evidence.webCalls++;
       }
-      // sản phẩm (thực thi/sửa; báo cáo tổng hợp của trưởng phòng) — tuân thủ mẫu đầu ra & bằng chứng
+      // sản phẩm (thực thi/sửa; báo cáo tổng hợp của trưởng phòng) — tuân thủ mẫu đầu ra & bằng chứng chấm trên BẢN CUỐI
+      // của mỗi hạng mục: thiếu mục / chưa chạy lệnh kiểm chứng ở lần đầu nhưng đã sửa ở vòng sau thì không còn bị tính
       if ((r.phase === 'execute' || r.phase === 'revise' || r.phase === 'synthesize') && r.text) {
-        a.outputs++;
-        const def = src.agent(r.agentId);
-        const heads = def ? templateHeadings(def.body) : [];
-        const cov = templateCoverage(r.text, heads);
-        a.coverage.push(cov.coverage);
-        for (const m of cov.missing) a.missing.set(m, (a.missing.get(m) ?? 0) + 1);
-        if (/^#{1,3}\s*Tóm tắt/im.test(r.text)) k.compliance.summaryOk++;
-        k.evidence.doi += new Set(r.text.match(DOI_RE) ?? []).size;
-        k.evidence.urls += new Set(r.text.match(URL_RE) ?? []).size;
-        k.evidence.unverified += (r.text.match(UNVERIFIED_RE) ?? []).length;
-        const canRun = exec && (def?.tools ?? []).some((t) => t.toLowerCase() === 'bash');
-        if (canRun && r.phase === 'execute') {
-          k.evidence.execEligible++;
-          if ((r.tools ?? []).some((tc) => tc.name === 'run_command' && isCheckCommand(tc.args))) k.evidence.execWithCommands++;
-        }
+        const key = `${r.agentId}|${r.phase === 'synthesize' ? 'synth' : r.subtaskId || r.callId}`;
+        const o = outs.get(key) ?? { agentId: r.agentId, department: r.department, text: '', executed: false, ranCheck: false };
+        o.text = r.text;
+        if (r.phase === 'execute') o.executed = true;
+        if ((r.tools ?? []).some((tc) => tc.name === 'run_command' && isCheckCommand(tc.args))) o.ranCheck = true;
+        outs.set(key, o);
       }
       if (r.phase === 'review' && r.text) {
         const rv = (k.reviewer ??= { reviews: 0, issuesRaised: 0, verified: 0, checkable: 0 });
@@ -287,6 +311,25 @@ export function computeKpi(src: KpiSource): KpiReport {
       }
       if (r.phase === 'plan') (k.lead ??= { plans: 0, planFallback: 0, syntheses: 0 }).plans++;
       if (r.phase === 'synthesize' && r.text) (k.lead ??= { plans: 0, planFallback: 0, syntheses: 0 }).syntheses++;
+    }
+    for (const o of outs.values()) {
+      const a = get(o.agentId, o.department);
+      const k = a.k;
+      a.outputs++;
+      const def = src.agent(o.agentId);
+      const heads = def ? templateHeadings(def.body) : [];
+      const cov = templateCoverage(o.text, heads);
+      a.coverage.push(cov.coverage);
+      for (const m of cov.missing) a.missing.set(m, (a.missing.get(m) ?? 0) + 1);
+      if (/^#{1,3}\s*Tóm tắt/im.test(o.text)) k.compliance.summaryOk++;
+      k.evidence.doi += new Set(o.text.match(DOI_RE) ?? []).size;
+      k.evidence.urls += new Set(o.text.match(URL_RE) ?? []).size;
+      k.evidence.unverified += (o.text.match(UNVERIFIED_RE) ?? []).length;
+      const canRun = exec && (def?.tools ?? []).some((t) => t.toLowerCase() === 'bash');
+      if (canRun && o.executed) {
+        k.evidence.execEligible++;
+        if (o.ranCheck) k.evidence.execWithCommands++;
+      }
     }
     taskRows.push({ id: task.id, title: task.title, status: task.status, tokens });
 
@@ -406,7 +449,9 @@ export function computeKpi(src: KpiSource): KpiReport {
     }
     k.score = w ? Math.round(sum / w) : 0;
     k.grade = k.score >= 80 ? 'A' : k.score >= 65 ? 'B' : k.score >= 50 ? 'C' : 'D';
-    k.findings = findings(k, medByDept.get(k.department) ?? 0);
+    const fx = findings(k, medByDept.get(k.department) ?? 0);
+    k.findings = fx.map((x) => x.text);
+    k.findingKeys = fx.map((x) => x.key);
   }
   list.sort((x, y) => x.k.department.localeCompare(y.k.department) || y.k.tokens.total - x.k.tokens.total);
   const departments = [...new Set(list.map((a) => a.k.department))].map((id) => {
@@ -438,29 +483,106 @@ export interface KpiFilter {
   project?: string;
 }
 
+/** Số nhiệm vụ gần nhất (sau lần cuối gặp lỗi) của agent không còn lỗi thì coi là "tự hết". */
+const AUTO_CLEAR_AFTER = 2;
+
+/**
+ * Bỏ khỏi "việc cần sửa" các mục đã sửa:
+ * - đánh dấu tay (resolutions): ẩn, trừ khi các nhiệm vụ tạo SAU mốc đánh dấu vẫn sinh lại đúng mục đó (→ "tái diễn");
+ * - tự hết: mục từng xuất hiện ở một nhiệm vụ, nhưng ≥ 2 nhiệm vụ sau đó của agent không còn.
+ * Mục chỉ vượt ngưỡng khi cộng dồn nhiều nhiệm vụ (không nhiệm vụ nào tự vượt) giữ nguyên.
+ */
+export function applyResolutions(rep: KpiReport, src: KpiSource, resolutions: KpiResolutions): KpiReport {
+  const byTime = new Map<string, KpiReport>();
+  const after = (at: string) => {
+    let r = byTime.get(at);
+    if (!r) byTime.set(at, (r = computeKpi({ ...src, tasks: src.tasks.filter((t) => t.createdAt > at) })));
+    return r;
+  };
+  const perTask = new Map<string, KpiReport>();
+  const one = (t: Task) => {
+    let r = perTask.get(t.id);
+    if (!r) perTask.set(t.id, (r = computeKpi({ ...src, tasks: [t] })));
+    return r;
+  };
+  const ordered = [...src.tasks].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  for (const k of rep.agents) {
+    if (!k.findingKeys.length) continue;
+    const keep: Array<[string, string]> = [];
+    const mine = resolutions[k.agentId] ?? {};
+    // nhiệm vụ agent có tham gia, theo thời gian
+    const tasks = ordered.filter((t) => one(t).agents.some((x) => x.agentId === k.agentId && (x.calls || x.subtasks)));
+    k.findingKeys.forEach((key, i) => {
+      const text = k.findings[i];
+      const m = mine[key];
+      if (m) {
+        const again = after(m.at).agents.find((x) => x.agentId === k.agentId);
+        if (again?.findingKeys.includes(key)) {
+          (k.recurred ??= []).push(key);
+          keep.push([key, `↻ Tái diễn sau khi đánh dấu đã sửa (${m.at.slice(0, 10)}): ${again.findings[again.findingKeys.indexOf(key)]}`]);
+        } else (k.resolved ??= []).push({ key, text, how: 'manual', at: m.at, note: m.note });
+        return;
+      }
+      if (key === 'infra') return void keep.push([key, text]);
+      let last = -1;
+      tasks.forEach((t, j) => {
+        if (one(t).agents.find((x) => x.agentId === k.agentId)?.findingKeys.includes(key)) last = j;
+      });
+      const clean = last >= 0 ? tasks.length - 1 - last : 0;
+      if (last >= 0 && clean >= AUTO_CLEAR_AFTER) (k.resolved ??= []).push({ key, text, how: 'auto', detail: `${clean} nhiệm vụ gần nhất không còn (lần cuối: ${tasks[last].id})` });
+      else keep.push([key, text]);
+    });
+    k.findingKeys = keep.map((x) => x[0]);
+    k.findings = keep.map((x) => x[1]);
+  }
+  return rep;
+}
+
 /** KPI từ dữ liệu thật của CCoding (data/runs/<task>/calls.jsonl, task.json, transcript.jsonl). */
-export function kpiReport(d: { store: Store; registry: Registry; config: Config }, f: KpiFilter = {}): KpiReport {
+export function kpiReport(d: { store: Store; registry: Registry; config: Config }, f: KpiFilter & { resolve?: boolean } = {}): KpiReport {
   const since = f.days ? Date.now() - f.days * 86_400_000 : 0;
   const tasks = d.store
     .list()
     .filter((t) => (!f.tasks?.length || f.tasks.includes(t.id)) && (!since || Date.parse(t.createdAt) >= since) && (!f.project || t.projectId === f.project))
     .filter((t) => t.status !== 'queued');
-  const rep = computeKpi({
+  // đọc mỗi tệp một lần (chấm theo từng nhiệm vụ / theo mốc dùng lại)
+  const callCache = new Map<string, CallRow[]>();
+  const trCache = new Map<string, ChatMessage[]>();
+  const src: KpiSource = {
     tasks,
-    calls: (id) => readJsonl<CallRow>(d.store.callsFile(id)),
-    transcript: (id) => d.store.transcript(id),
+    calls: (id) => callCache.get(id) ?? callCache.set(id, readJsonl<CallRow>(d.store.callsFile(id))).get(id)!,
+    transcript: (id) => trCache.get(id) ?? trCache.set(id, d.store.transcript(id)).get(id)!,
     project: (id) => d.store.project(id),
     agent: (id) => d.registry.agents.get(id),
     access: (t) => {
       const p = t.projectId ? d.store.project(t.projectId) : undefined;
       return p ? (p.toolAccess ?? d.config.tools.projectAccess) : d.config.tools.defaultAccess;
     },
-  });
+  };
+  const rep = computeKpi(src);
+  if (f.resolve) applyResolutions(rep, src, d.store.kpiResolutions());
   if (f.department) {
     rep.agents = rep.agents.filter((a) => a.department === f.department);
     rep.departments = rep.departments.filter((x) => x.id === f.department);
   }
   return rep;
+}
+
+/**
+ * Góp ý tạo từ "việc cần sửa" (AgentFeedback.finding) mà mục đó đã sửa — đánh dấu tay hoặc tự hết, hay không còn trong
+ * 30 ngày gần đây — thì xóa: khỏi tốn chỗ trong hồ sơ (system prompt) của agent ở các lượt sau.
+ */
+export function clearFixedFeedback(d: { store: Store; registry: Registry; config: Config }, agentIds?: string[]): Array<{ agentId: string; id: string; finding: string }> {
+  const ids = (agentIds ?? [...d.registry.agents.keys()]).filter((id) => d.store.feedback(id).some((f) => f.finding));
+  if (!ids.length) return [];
+  const rep = kpiReport(d, { days: 30, resolve: true });
+  const removed: Array<{ agentId: string; id: string; finding: string }> = [];
+  for (const id of ids) {
+    const live = new Set(rep.agents.find((a) => a.agentId === id)?.findingKeys ?? []);
+    for (const f of d.store.feedback(id))
+      if (f.finding && !live.has(f.finding) && d.store.removeFeedback(id, f.id)) removed.push({ agentId: id, id: f.id, finding: f.finding });
+  }
+  return removed;
 }
 
 const pct = (a: number, b: number) => (b ? Math.round((100 * a) / b) : 0);
@@ -472,39 +594,40 @@ function isInfra(r: CallRow): boolean {
 }
 
 /** "Việc cần sửa" sinh tự động theo ngưỡng — gợi ý hướng sửa agent.md / cách giao việc. */
-function findings(k: AgentKpi, med: number): string[] {
-  const f: string[] = [];
+function findings(k: AgentKpi, med: number): Array<{ key: string; text: string }> {
+  const out: Array<{ key: string; text: string }> = [];
+  const f = { push: (key: string, text: string) => out.push({ key, text }) };
   const topTool = Object.entries(k.tools.byName).sort((a, b) => b[1].failed - a[1].failed)[0];
   if (k.tools.calls >= 5 && k.tools.failed / k.tools.calls >= 0.2)
-    f.push(`Thao tác công cụ lỗi nhiều (${k.tools.failed}/${k.tools.calls}, ${pct(k.tools.failed, k.tools.calls)}%${topTool ? `; nhiều nhất ở ${topTool[0]} ${topTool[1].failed}/${topTool[1].n}` : ''}) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).`);
+    f.push('tools-fail', `Thao tác công cụ lỗi nhiều (${k.tools.failed}/${k.tools.calls}, ${pct(k.tools.failed, k.tools.calls)}%${topTool ? `; nhiều nhất ở ${topTool[0]} ${topTool[1].failed}/${topTool[1].n}` : ''}) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).`);
   if (k.tools.capHits >= 1 && k.tools.capHits / k.calls >= 0.3)
-    f.push(`Hay chạm trần vòng công cụ (${k.tools.capHits}/${k.calls} lượt, TB ${k.tools.avgTurns} vòng, tối đa ${k.tools.maxTurns}) — đọc quá rộng: agent.md cần quy tắc khảo sát có mục tiêu (đọc theo đoạn, không đọc lại phần đã có, ghi kết quả ra tệp sớm).`);
-  if (k.attemptsAvg >= 3) f.push(`Hạng mục phải chạy nhiều lần (TB ${k.attemptsAvg}, tối đa ${k.attemptsMax}) — tiêu chí xong chưa đo được hoặc hạng mục quá lớn: tách nhỏ, ghi Definition of Done kiểm chứng được.`);
+    f.push('cap-hits', `Hay chạm trần vòng công cụ (${k.tools.capHits}/${k.calls} lượt, TB ${k.tools.avgTurns} vòng, tối đa ${k.tools.maxTurns}) — đọc quá rộng: agent.md cần quy tắc khảo sát có mục tiêu (đọc theo đoạn, không đọc lại phần đã có, ghi kết quả ra tệp sớm).`);
+  if (k.attemptsAvg >= 3) f.push('attempts', `Hạng mục phải chạy nhiều lần (TB ${k.attemptsAvg}, tối đa ${k.attemptsMax}) — tiêu chí xong chưa đo được hoặc hạng mục quá lớn: tách nhỏ, ghi Definition of Done kiểm chứng được.`);
   if (k.compliance.templateCoverage !== undefined && k.compliance.templateCoverage < 70 && k.compliance.outputs)
-    f.push(`Đầu ra thiếu mục trong "Mẫu đầu ra" (đủ ${k.compliance.templateCoverage}%; hay thiếu: ${k.compliance.missing.slice(0, 3).map((m) => `"${m.heading.slice(0, 40)}"`).join(', ')}) — rút gọn mẫu về các mục thật sự dùng, hoặc ghi rõ mục nào bắt buộc.`);
+    f.push('template', `Đầu ra thiếu mục trong "Mẫu đầu ra" (đủ ${k.compliance.templateCoverage}%; hay thiếu: ${k.compliance.missing.slice(0, 3).map((m) => `"${m.heading.slice(0, 40)}"`).join(', ')}) — rút gọn mẫu về các mục thật sự dùng, hoặc ghi rõ mục nào bắt buộc.`);
   if (k.compliance.outputs && k.compliance.summaryOk < k.compliance.outputs)
-    f.push(`${k.compliance.outputs - k.compliance.summaryOk}/${k.compliance.outputs} sản phẩm không mở đầu bằng "## Tóm tắt".`);
+    f.push('summary', `${k.compliance.outputs - k.compliance.summaryOk}/${k.compliance.outputs} sản phẩm không mở đầu bằng "## Tóm tắt".`);
   if (k.evidence.execEligible >= 1 && k.evidence.execWithCommands / k.evidence.execEligible < 0.5)
-    f.push(`Có quyền chạy lệnh nhưng ít kiểm chứng (${k.evidence.execWithCommands}/${k.evidence.execEligible} lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.`);
+    f.push('exec-evidence', `Có quyền chạy lệnh nhưng ít kiểm chứng (${k.evidence.execWithCommands}/${k.evidence.execEligible} lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.`);
   const shellReads = Object.entries(k.tools.byName).find(([n]) => n === 'run_command')?.[1].n ?? 0;
   const fileTools = ['read_file', 'search', 'list_files'].reduce((s, n) => s + (k.tools.byName[n]?.n ?? 0), 0);
   if (shellReads >= 10 && shellReads > 2 * fileTools)
-    f.push(`Dùng run_command cho cả việc đọc/tìm code (${shellReads} lệnh so với ${fileTools} lần read_file/search/list_files) — dễ lỗi cú pháp PowerShell, sai mã hóa và tốn lượt; đọc/tìm bằng công cụ file.`);
+    f.push('shell-reads', `Dùng run_command cho cả việc đọc/tìm code (${shellReads} lệnh so với ${fileTools} lần read_file/search/list_files) — dễ lỗi cú pháp PowerShell, sai mã hóa và tốn lượt; đọc/tìm bằng công cụ file.`);
   if (k.department === 'research' && k.compliance.outputs >= 1 && k.evidence.webCalls === 0 && k.evidence.doi + k.evidence.urls === 0 && k.role !== 'lead')
-    f.push('Không có nguồn kiểm chứng được (DOI/URL) và không dùng công cụ tra cứu.');
+    f.push('no-sources', 'Không có nguồn kiểm chứng được (DOI/URL) và không dùng công cụ tra cứu.');
   if (k.quality.reviewed >= 1 && (k.quality.firstPassOk / k.quality.reviewed < 0.5 || k.quality.finalClean < k.quality.reviewed))
-    f.push(`Qua review lần đầu ${k.quality.firstPassOk}/${k.quality.reviewed} hạng mục, còn blocker ở review cuối ${k.quality.reviewed - k.quality.finalClean}/${k.quality.reviewed} (bị nêu qua các vòng: ${k.quality.blocker} blocker, ${k.quality.major} major). Lỗi ở review cuối: ${k.quality.topIssues.slice(0, 2).join(' | ') || '—'}`);
-  if (k.failedCalls >= 2) f.push(`${k.failedCalls}/${k.calls} lượt gọi hỏng do đầu ra (rỗng/quá ngữ cảnh/lỗi khác) — kiểm tra model gán cho agent và độ dài prompt.`);
-  if (k.infraFailedCalls) f.push(`(Hạ tầng, không tính điểm) ${k.infraFailedCalls} lượt hỏng do hạn mức/đăng nhập/mạng.`);
-  if (k.truncated) f.push(`${k.truncated} lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp.`);
-  if (med && k.subtasks && k.tokens.perSubtask > 2 * med) f.push(`Tốn token gấp ${Math.round((k.tokens.perSubtask / med) * 10) / 10} lần trung vị phòng cho mỗi hạng mục (${Math.round(k.tokens.perSubtask / 1000)}k so với ${Math.round(med / 1000)}k).`);
+    f.push('review-quality', `Qua review lần đầu ${k.quality.firstPassOk}/${k.quality.reviewed} hạng mục, còn blocker ở review cuối ${k.quality.reviewed - k.quality.finalClean}/${k.quality.reviewed} (bị nêu qua các vòng: ${k.quality.blocker} blocker, ${k.quality.major} major). Lỗi ở review cuối: ${k.quality.topIssues.slice(0, 2).join(' | ') || '—'}`);
+  if (k.failedCalls >= 2) f.push('failed-calls', `${k.failedCalls}/${k.calls} lượt gọi hỏng do đầu ra (rỗng/quá ngữ cảnh/lỗi khác) — kiểm tra model gán cho agent và độ dài prompt.`);
+  if (k.infraFailedCalls) f.push('infra', `(Hạ tầng, không tính điểm) ${k.infraFailedCalls} lượt hỏng do hạn mức/đăng nhập/mạng.`);
+  if (k.truncated) f.push('truncated', `${k.truncated} lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp.`);
+  if (med && k.subtasks && k.tokens.perSubtask > 2 * med) f.push('tokens', `Tốn token gấp ${Math.round((k.tokens.perSubtask / med) * 10) / 10} lần trung vị phòng cho mỗi hạng mục (${Math.round(k.tokens.perSubtask / 1000)}k so với ${Math.round(med / 1000)}k).`);
   if (k.reviewer && k.reviewer.reviews && k.reviewer.checkable && k.reviewer.verified < k.reviewer.checkable)
-    f.push(`Review không kiểm chứng bằng công cụ ${k.reviewer.checkable - k.reviewer.verified}/${k.reviewer.checkable} lần — kết luận dựa trên lời tự khai trong báo cáo.`);
-  if (k.lead?.planFallback) f.push(`${k.lead.planFallback} lần kế hoạch không đúng định dạng JSON (phải dùng kế hoạch dự phòng).`);
+    f.push('reviewer-unverified', `Review không kiểm chứng bằng công cụ ${k.reviewer.checkable - k.reviewer.verified}/${k.reviewer.checkable} lần — kết luận dựa trên lời tự khai trong báo cáo.`);
+  if (k.lead?.planFallback) f.push('plan-fallback', `${k.lead.planFallback} lần kế hoạch không đúng định dạng JSON (phải dùng kế hoạch dự phòng).`);
   if (k.lead?.budgetRatio && k.lead.budgetRatio > 1.5)
-    f.push(`Phòng dùng ${k.lead.budgetRatio.toString().replace('.', ',')} lần ngân sách (${fmtK(k.lead.used ?? 0)}/${fmtK(k.lead.budget ?? 0)}) — kế hoạch ôm quá nhiều việc cho một nhiệm vụ: chia theo gói/giai đoạn, mỗi hạng mục có tiêu chí xong đo được trong một lượt.`);
-  if (!k.subtasks && !k.reviewer && !k.lead && (k.phases.discuss ?? 0) > 0 && Object.keys(k.phases).length === 1) f.push('Chỉ tham gia họp, không nhận hạng mục — cân nhắc không mời họp khi không có việc liên quan.');
-  return f;
+    f.push('budget', `Phòng dùng ${k.lead.budgetRatio.toString().replace('.', ',')} lần ngân sách (${fmtK(k.lead.used ?? 0)}/${fmtK(k.lead.budget ?? 0)}) — kế hoạch ôm quá nhiều việc cho một nhiệm vụ: chia theo gói/giai đoạn, mỗi hạng mục có tiêu chí xong đo được trong một lượt.`);
+  if (!k.subtasks && !k.reviewer && !k.lead && (k.phases.discuss ?? 0) > 0 && Object.keys(k.phases).length === 1) f.push('meeting-only', 'Chỉ tham gia họp, không nhận hạng mục — cân nhắc không mời họp khi không có việc liên quan.');
+  return out;
 }
 
 const fmtK = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(2)}M` : n >= 1000 ? `${Math.round(n / 1000)}k` : String(n));

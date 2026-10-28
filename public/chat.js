@@ -205,7 +205,68 @@
     const ava = t.mode === 'agent' && t.agentId ? C.av(t.agentId, 'av cv-aav') : '<span class="cv-bava" aria-hidden="true"><i></i><i></i><i></i><i></i></span>';
     return `<div class="cv-row bot">${ava}<div class="cv-bbody">${head ? `<div class="cv-bname">${esc(botName(t))}</div>` : ''}${parts.join('')}</div></div>`;
   }
-  function segment(t, i) {
+  // ── Quyết định của giám đốc: duyệt / yêu cầu sửa (dùng chung cho hội thoại và trang nhiệm vụ) ──
+  function reviewBox(t) {
+    if (!t || live(t)) return '';
+    const runs = (t.runs || []).filter((r) => (r.subtasks || []).some((s) => s.status === 'done' && s.output));
+    if (!runs.length) return '';
+    const open = runs.filter((r) => r.review && !r.review.approved);
+    const pending = open.length > 0 || !!t.attention;
+    const subs = runs.flatMap((r) =>
+      r.subtasks
+        .filter((s) => s.status === 'done' && s.output && !s.splitTo)
+        .map((s) => ({ r, s, flagged: !!(r.review && !r.review.approved && r.review.issues.some((x) => x.subtask === s.id && x.severity !== 'minor')) })),
+    );
+    const anyFlag = subs.some((x) => x.flagged);
+    const byDir = runs.some((r) => r.review?.by === 'director' && r.review.approved);
+    const why = t.attention?.detail || open[0]?.review.summary || '';
+    return `<div class="rv-box${pending ? ' pending' : ''}" data-rv="${esc(t.id)}">
+      <div class="rv-head"><b>${pending ? '⚖ Cần giám đốc quyết' : '⚖ Quyết định của giám đốc'}</b><span>${pending ? esc(why) : byDir ? 'Đã duyệt bằng tay.' : 'Kết quả đã qua review — vẫn có thể yêu cầu sửa.'}</span></div>
+      <div class="rv-acts">${pending ? '<button type="button" class="btn primary sm" data-rv-ok>✅ Duyệt kết quả</button>' : ''}<button type="button" class="btn ghost sm" data-rv-no>✋ Yêu cầu sửa…</button></div>
+      <form class="rv-form" hidden>
+        <textarea rows="2" placeholder="Cần sửa gì? (vd. thêm test cho trường hợp rỗng, thông báo lỗi bằng tiếng Việt)…" aria-label="Yêu cầu sửa"></textarea>
+        <div class="rv-subs">${subs.map(({ r, s, flagged }) => `<label class="check"><input type="checkbox" value="${esc(s.id)}" data-dept="${esc(r.department)}"${flagged || !anyFlag ? ' checked' : ''} /> <code>${esc(s.id)}</code> ${esc(s.title)} <small>@${esc(s.assignee)}${flagged ? ' · reviewer còn nêu lỗi' : ''}</small></label>`).join('')}</div>
+        <div class="pb-actions"><button type="submit" class="btn primary sm">Gửi yêu cầu sửa</button><small>Một vòng sửa theo yêu cầu → reviewer duyệt lại → viết lại báo cáo.</small></div>
+      </form></div>`;
+  }
+  function bindReview(root, after) {
+    $$('[data-rv]', root).forEach((box) => {
+      const id = box.dataset.rv;
+      const form = $('.rv-form', box);
+      const ta = $('textarea', form);
+      const post = async (body, ok) => {
+        try {
+          const r = await C.api(`/api/tasks/${id}/review`, { method: 'POST', body: JSON.stringify(body) });
+          if (r?.id) C.S.tasks.set(r.id, r);
+          ta.value = '';
+          form.hidden = true;
+          C.toast({ level: 'info', title: ok, msg: r?.title || '' });
+          after?.();
+        } catch (e) {
+          C.toast({ level: 'error', title: 'Không thực hiện được', msg: e.message });
+        }
+      };
+      $('[data-rv-ok]', box)?.addEventListener('click', () => post({ decision: 'approve' }, 'Đã duyệt kết quả'));
+      $('[data-rv-no]', box).onclick = () => {
+        form.hidden = !form.hidden;
+        if (!form.hidden) ta.focus();
+      };
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        const note = ta.value.trim();
+        if (!note) return ta.focus();
+        if (window.Director?.hasSecret?.(note)) return C.toast({ level: 'error', title: 'Có vẻ chứa khóa/mật khẩu', msg: 'Xóa bí mật khỏi yêu cầu sửa trước khi gửi.' });
+        const boxes = $$('input:checked', form);
+        if (!boxes.length) return C.toast({ level: 'info', title: 'Chọn ít nhất một hạng mục cần sửa', msg: '' });
+        const depts = [...new Set(boxes.map((b) => b.dataset.dept))];
+        post({ decision: 'reject', note, subtasks: boxes.map((b) => b.value), department: depts.length === 1 ? depts[0] : undefined }, 'Đã gửi yêu cầu sửa — văn phòng làm một vòng sửa');
+      };
+    });
+  }
+  K.reviewBox = reviewBox;
+  K.bindReview = bindReview;
+
+  function segment(t, i, isLast) {
     const d = V.data.get(t.id);
     const tr = d?.transcript || [];
     const rows = [userRow(t, i)];
@@ -260,6 +321,7 @@
         ${outs.length ? `<div class="cv-facts">${outs.slice(0, 10).map((f) => `<button class="cv-chip" data-pv="outputs/${esc(f)}" data-tid="${esc(t.id)}">📄 ${esc(f)}</button>`).join('')}${outs.length > 10 ? `<button class="cv-chip" data-act="detail" data-tid="${esc(t.id)}">… ${outs.length - 10} tệp nữa</button>` : ''}</div>` : ''}
         <div class="cv-tools">${fin ? `<button class="btn ghost sm" data-pv="${esc(t.finalPath)}" data-tid="${esc(t.id)}" title="Mở báo cáo ở khung bên phải">📄 Mở bên phải</button><button class="btn ghost sm" data-copy="${esc(t.id)}">⧉ Chép</button>` : ''}<button class="btn ghost sm" data-act="again" data-tid="${esc(t.id)}">↻ Giao lại tương tự</button><button class="btn ghost sm" data-act="detail" data-tid="${esc(t.id)}">📋 Chi tiết</button>${t.attention ? `<span class="cv-attn">⚠ ${esc(t.attention.detail)}</span>` : ''}</div></div>`);
     }
+    if (isLast) parts.push(reviewBox(t));
     rows.push(botRow(t, parts, head));
     return `<section class="cv-seg" data-seg="${esc(t.id)}">${rows.join('')}</section>`;
   }
@@ -348,8 +410,11 @@
     const box = $('#cv-thread');
     const prev = box.scrollTop;
     const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 160;
-    box.innerHTML = `<div class="cv-col">${c.list.map((t, i) => segment(C.S.tasks.get(t.id) || t, i)).join('')}</div>`;
+    // đang gõ yêu cầu sửa → để vẽ lại sau
+    if (document.activeElement?.closest?.('#cv-thread .rv-form') || $$('#cv-thread .rv-form').some((f) => !f.hidden && $('textarea', f).value.trim())) return later('thread', () => paint(false), 1500);
+    box.innerHTML = `<div class="cv-col">${c.list.map((t, i) => segment(C.S.tasks.get(t.id) || t, i, i === c.list.length - 1)).join('')}</div>`;
     bindThread(box);
+    bindReview(box, () => paint(true));
     renderDock(c);
     box.scrollTop = V.stick || nearBottom ? box.scrollHeight : prev;
     V.stick = false;

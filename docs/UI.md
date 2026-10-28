@@ -21,17 +21,36 @@ Giao diện web (http://127.0.0.1:7420) chỉ phục vụ máy cục bộ, khôn
   - Nội dung có dạng khóa API/private key/mật khẩu bị **chặn ngay trên trình duyệt** (cả ô soạn cuộc mới); server vẫn che bí mật trước khi lưu/gửi.
 - Trong màn Prompt, bấm nhiệm vụ ở cây bên trái hoặc dòng sự kiện ở ô phụ sẽ mở dạng hội thoại; ở nơi khác thì mở trang nhiệm vụ.
 
+## Giám đốc duyệt / yêu cầu sửa bằng tay
+
+Khi nhiệm vụ không chạy và có hạng mục đã xong, cuối hội thoại (và đầu trang nhiệm vụ) có khối **⚖ Quyết định của giám đốc**:
+
+- **✅ Duyệt kết quả** (hiện khi reviewer chưa duyệt / nhiệm vụ "⚠ cần xem"): coi kết quả là đạt, bỏ cờ cần xem, không gọi model.
+- **✋ Yêu cầu sửa…**: ghi cần sửa gì + chọn hạng mục (mặc định: hạng mục reviewer còn nêu lỗi, không có thì mọi hạng mục) → yêu cầu thành lỗi `[major]` gửi cho người phụ trách → **một vòng sửa** → reviewer **duyệt lại** → viết lại báo cáo tổng hợp. Phòng không có reviewer riêng (vd. việc giao riêng cho chính reviewer) thì sửa xong chờ giám đốc xem.
+- Hội thoại ghi lại quyết định (tin nhắn của giám đốc); API `POST /api/tasks/<id>/review` `{ "decision": "approve" | "reject", "note": "…", "subtasks": ["S1"], "department": "dev" }`.
+
+## Việc cần sửa theo agent (tab KPI) — sửa rồi thì xóa
+
+- Mỗi mục có khóa ổn định (vd. `tools-fail`, `template`, `exec-evidence`, `review-quality`…). Bấm **✓ Đã sửa** khi đã sửa nguyên nhân (agent.md, cách giao việc, cấu hình): mục **ẩn ngay** và chỉ hiện lại (gắn "↻ Tái diễn") nếu các nhiệm vụ tạo **sau** mốc đánh dấu vẫn sinh lại đúng mục đó. Lưu ở `data/kpi-resolved.json`; **Bỏ đánh dấu** trong khối "Đã sửa / tự hết".
+- **Tự hết**: mục từng xuất hiện ở một nhiệm vụ nhưng **2 nhiệm vụ gần nhất** của agent sau đó không còn → tự chuyển sang "Đã sửa / tự hết". Mục chỉ vượt ngưỡng khi cộng dồn nhiều nhiệm vụ thì giữ nguyên.
+- Mẫu đầu ra / "## Tóm tắt" / lệnh kiểm chứng chấm trên **bản cuối của mỗi hạng mục**: thiếu ở lần đầu nhưng đã sửa ở vòng sửa thì không còn bị tính.
+- **💬 Nhắc agent**: thêm mục thành góp ý trong hồ sơ agent (đi vào system prompt các lượt sau); góp ý này **tự xóa** khi mục đã sửa (đánh dấu tay, tự hết, hoặc không còn trong 30 ngày) — kiểm tra lại sau mỗi nhiệm vụ xong.
+- `ccoding kpi` hiện khóa từng mục và số mục đã ẩn; API `POST /api/kpi/resolve { agentId, key, note?, undo? }`, `GET /api/kpi?raw=1` để xem bản chưa lọc.
+
 ## Phòng giám đốc
 
-Trong ô phụ 🏢 Văn phòng, bên phải sơ đồ là **Phòng Giám đốc**; nhân vật cà vạt đỏ là bạn.
+Sơ đồ: hàng trên **Phát triển | Giám đốc | Nghiên cứu**, hàng dưới **Phòng họp | Điều phối | Pantry | Góc giải trí**, hành lang chạy suốt giữa. Nhân vật cà vạt đỏ trong phòng Giám đốc là bạn.
 
 | Thao tác | Phím / chuột |
 |---|---|
 | Đi | `W` `A` `S` `D` (mọi lúc trừ khi đang gõ); phím mũi tên khi trỏ chuột/focus ở văn phòng; nhấp đúp lên sàn để đi tới |
 | Tương tác với người/phòng gần nhất | `E` → menu, chọn bằng `1`–`9` hoặc ↑/↓ + Enter, `Esc` đóng |
 | Mở hồ sơ agent | nhấp vào agent (như trước) |
+| Tương tác với đồ vật / phòng **không cần đi tới** | trỏ chuột (viền vàng + nhãn) rồi nhấp — cùng menu như bấm `E` |
 
 Menu khi đứng cạnh **agent**: 📝 Giao việc riêng · 💬 Góp ý / đánh giá · 💰 Tăng ngân sách việc đang làm · 👀 Xem hồ sơ · và các mục *vui* (☕ mời cà phê, 🙌 đập tay, 😂 kể chuyện cười, 🌟 khen) — mục *vui* chỉ đổi hình ảnh trên sơ đồ (bong bóng, hiệu ứng; agent rảnh có thể đi pantry rồi tự về), **không** chạm vào nhiệm vụ, token hay log.
+
+**Nhấp thẳng vào đồ vật**: 🍱 **bàn ăn pantry → Pantry time** (mọi agent đang rảnh ra pantry nghỉ 30 giây, bảng "PANTRY TIME" đếm ngược, rồi tự về chỗ; agent đang làm không bị gọi), 💧 cây nước, 📺 TV điều phối, bảng phòng họp, 📋 bảng trắng phòng Phát triển, 📚 giá sách phòng Nghiên cứu, cửa các phòng, đàn/máy giải trí, bàn/màn hình/sofa phòng giám đốc.
 
 Menu khi đứng cạnh **phòng/đồ vật**: cửa phòng Phát triển/Nghiên cứu (giao việc cho phòng, xem nhân sự, cổ vũ) · phòng họp (xem cuộc họp đang diễn ra) · điều phối (giao việc tự động) · pantry (pha cà phê, mời cả văn phòng) · bàn giám đốc (📊 bảng điều khiển, giao việc mới, thư viện prompt, hạn mức, trợ giúp) · màn hình trên tường · góc giải trí (🎹 đàn, 🕹 trò "Bắt bug" 15 giây).
 

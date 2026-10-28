@@ -130,6 +130,25 @@ export class Store {
   }
 
   // ── Góp ý cho agent (data/feedback/<agent>.json) ─────────────────────
+  // ── "Việc cần sửa" (KPI) đã đánh dấu sửa: data/kpi-resolved.json ──
+  private resolvedFile(): string {
+    return path.join(this.dataDir, 'kpi-resolved.json');
+  }
+
+  kpiResolutions(): Record<string, Record<string, { at: string; note?: string }>> {
+    return readJsonFile(this.resolvedFile(), {});
+  }
+
+  /** Đánh dấu / bỏ đánh dấu một mục "việc cần sửa" của agent là đã sửa (mốc = bây giờ). */
+  setFindingResolved(agentId: string, key: string, on: boolean, note?: string): void {
+    const all = this.kpiResolutions();
+    const mine = (all[agentId] ??= {});
+    if (on) mine[key] = { at: new Date().toISOString(), note: note || undefined };
+    else delete mine[key];
+    if (!Object.keys(mine).length) delete all[agentId];
+    writeJsonAtomic(this.resolvedFile(), all);
+  }
+
   private feedbackFile(agentId: string): string {
     return path.join(this.dataDir, 'feedback', `${safeName(agentId)}.json`);
   }
@@ -138,9 +157,9 @@ export class Store {
     return readJsonFile<AgentFeedback[]>(this.feedbackFile(agentId), []);
   }
 
-  addFeedback(agentId: string, f: { text: string; rating?: 'up' | 'down'; taskId?: string }): AgentFeedback {
+  addFeedback(agentId: string, f: { text: string; rating?: 'up' | 'down'; taskId?: string; finding?: string }): AgentFeedback {
     const list = this.feedback(agentId);
-    const item: AgentFeedback = { id: `F${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, agentId, text: f.text, rating: f.rating, taskId: f.taskId, active: true, at: new Date().toISOString() };
+    const item: AgentFeedback = { id: `F${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, agentId, text: f.text, rating: f.rating, taskId: f.taskId, active: true, at: new Date().toISOString(), finding: f.finding };
     list.push(item);
     ensureDir(path.dirname(this.feedbackFile(agentId)));
     writeJsonAtomic(this.feedbackFile(agentId), list.slice(-200));

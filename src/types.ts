@@ -253,6 +253,8 @@ export interface DeptRun {
     checks?: ReviewCheck[];
     /** false: reviewer có quyền chạy lệnh nhưng không chạy lệnh nào → kết luận chưa có bằng chứng chạy thật. */
     verified?: boolean;
+    /** 'director': kết luận do giám đốc (người dùng) quyết bằng tay — duyệt, hoặc yêu cầu sửa (chạy một vòng sửa + review lại). */
+    by?: 'director';
   };
   /** Vòng review hiện tại (0 = review đầu) — giữ qua tạm dừng/tiếp tục để không vượt maxRevisions. */
   reviewRound?: number;
@@ -458,6 +460,8 @@ export interface AgentFeedback {
   taskId?: string;
   active: boolean;
   at: string;
+  /** Tạo từ một mục "việc cần sửa" của KPI (khóa mục) — tự xóa khi mục đó đã sửa (đánh dấu tay hoặc tự hết). */
+  finding?: string;
 }
 
 /** Prompt mẫu trong thư viện (data/prompts.json). */

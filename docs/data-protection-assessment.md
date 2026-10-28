@@ -295,3 +295,14 @@ Theo yêu cầu chủ dự án, CCoding **không dùng** các tài khoản Claud
 | Chặn nhầm bí mật trước khi gửi | PRE-02 | Ô soạn cuộc mới và ô trả lời **từ chối gửi** khi nội dung có dạng khóa API (`sk-`, `gsk_`, `csk-`, `nvapi-`, `AKIA…`), private key hay `mật khẩu: …`; đây là lớp phòng ngừa thêm — server vẫn che bí mật trước khi lưu/gửi |
 
 **Kết luận: ĐẠT**, không thêm điều kiện. Khuyến nghị giữ nguyên: không dán dữ liệu thật/bí mật vào chỉ dẫn hay yêu cầu tiếp nối.
+
+### Bổ sung: giám đốc duyệt/yêu cầu sửa, "việc cần sửa" tự dọn, sơ đồ văn phòng (28/10/2026, tối)
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| Duyệt / yêu cầu sửa bằng tay (`POST /api/tasks/<id>/review`) | PRE-05, DET-01 | Ghi chú của giám đốc che bí mật trước khi lưu (`redact`) và trên trình duyệt bị chặn gửi nếu có dạng khóa/mật khẩu; đi vào prompt sửa **dưới nhãn dữ liệu của chính nhiệm vụ** (cùng tập runtime được phép). Log `review.director` chỉ ghi quyết định, hạng mục và độ dài ghi chú |
+| Đánh dấu "việc cần sửa" đã sửa (`data/kpi-resolved.json`) | GOV-03 | Chỉ lưu agent, khóa mục, thời điểm, ghi chú ngắn (≤ 300 ký tự) — không chứa nội dung nhiệm vụ; KPI vẫn chấm từ log gốc (không sửa log/chuỗi băm), chỉ lọc phần hiển thị |
+| Góp ý tạo từ mục KPI tự xóa khi đã sửa | PRE-06 | Giảm nội dung lặp lại gửi kèm hồ sơ agent tới runtime (tối thiểu hóa); log `agent.feedback.cleared` chỉ ghi agent/khóa mục |
+| Sơ đồ văn phòng (phòng Giám đốc ở giữa, pantry time, nhấp đồ vật) | — | Chỉ đổi hình ảnh trên canvas ở trình duyệt; không gọi API ghi, không tác động nhiệm vụ/log |
+
+**Kết luận: ĐẠT**, không thêm điều kiện.

@@ -2,7 +2,7 @@
 // Toàn bộ hình vẽ là pixel-art tự dựng (không dùng tài nguyên bên ngoài).
 (function () {
   const T = 16; // pixel cơ sở / ô
-  const MAIN_W = 44; // tòa văn phòng chính (x < 44); phòng giám đốc nằm bên phải
+  // Hàng trên: Phát triển (x 1–24) | Giám đốc (x 26–32) | Nghiên cứu (x 34–50); hàng dưới: họp | điều phối | pantry | góc giải trí
   const W = 52;
   const H = 28;
 
@@ -14,25 +14,25 @@
   // ── Bố cục ───────────────────────────────────────────────────────────────
   const ROOMS = {
     dev: { x0: 1, x1: 25, y0: 2, y1: 16, door: { x: 12, y: 16.5 }, aisleY: 15.25, lanes: [2.2, 8.75, 16.25, 23.6] },
-    research: { x0: 26, x1: 43, y0: 2, y1: 16, door: { x: 34, y: 16.5 }, aisleY: 15.25, lanes: [27.2, 33.5, 39.9] },
+    research: { x0: 34, x1: 51, y0: 2, y1: 16, door: { x: 42, y: 16.5 }, aisleY: 15.25, lanes: [35.2, 41.5, 47.9] },
     meeting: { x0: 1, x1: 17, y0: 20, y1: 27, door: { x: 8, y: 19.5 }, aisleY: 20.9, lanes: [2.0, 15.7], direct: (q) => q.y < 22.6 },
     director: { x0: 18, x1: 28, y0: 20, y1: 27, door: { x: 22, y: 19.5 }, aisleY: 20.9, lanes: [19.2, 26.8] },
     pantry: { x0: 29, x1: 43, y0: 20, y1: 27, door: { x: 35, y: 19.5 }, aisleY: 20.9, lanes: [], direct: () => true },
-    boss: { x0: 44, x1: 51, y0: 2, y1: 27, door: { x: 45.2, y: 18 }, aisleY: 18, lanes: [], direct: () => true },
+    boss: { x0: 26, x1: 33, y0: 2, y1: 16, door: { x: 29.5, y: 16.5 }, aisleY: 15.4, lanes: [], direct: () => true },
+    fun: { x0: 44, x1: 51, y0: 20, y1: 27, door: { x: 45.15, y: 19.5 }, aisleY: 20.9, lanes: [], direct: () => true },
   };
   const CORRIDOR_Y = 18;
 
   function roomAt(x, y) {
-    if (x >= MAIN_W - 1) return x < MAIN_W && y > 16.9 && y < 19.1 ? 'corridor' : 'boss';
-    if (y < 16.4) return x < 25.5 ? 'dev' : 'research';
+    if (y < 16.4) return x < 25.5 ? 'dev' : x < 33.5 ? 'boss' : 'research';
     if (y < 19.6) return 'corridor';
-    return x < 17.5 ? 'meeting' : x < 28.5 ? 'director' : 'pantry';
+    return x < 17.5 ? 'meeting' : x < 28.5 ? 'director' : x < 43.5 ? 'pantry' : 'fun';
   }
 
   const DEV_SEATS = [];
   for (const y of [6.0, 10.1, 14.2]) for (const x of [5, 12.5, 20]) DEV_SEATS.push({ x, y, face: 'up' });
   const RESEARCH_SEATS = [];
-  for (const y of [6.0, 10.1, 14.2]) for (const x of [30, 37]) RESEARCH_SEATS.push({ x, y, face: 'up' });
+  for (const y of [6.0, 10.1, 14.2]) for (const x of [38, 45]) RESEARCH_SEATS.push({ x, y, face: 'up' });
   const DIRECTOR_SEAT = { x: 22.5, y: 24.4, face: 'up' };
   const MEETING_SEATS = [
     { x: 3.1, y: 23.9, face: 'right' },
@@ -41,22 +41,28 @@
     { x: 14.5, y: 23.9, face: 'left' },
   ];
   // Phòng giám đốc (người dùng điều khiển nhân vật của mình bằng WASD / phím mũi tên)
-  const BOSS_SEAT = { x: 47.6, y: 7.6, face: 'down' };
+  const BOSS_SEAT = { x: 29.6, y: 7.6, face: 'down' };
   const BOSS_SPOTS = {
-    desk: { x: 47.6, y: 6.2, r: 1.9, label: 'Bàn giám đốc', icon: '🗂' },
-    screen: { x: 47.6, y: 2.6, r: 1.8, label: 'Bảng điều khiển', icon: '📊' },
+    desk: { x: 29.6, y: 6.2, r: 1.9, label: 'Bàn giám đốc', icon: '🗂' },
+    screen: { x: 29.6, y: 2.6, r: 1.8, label: 'Bảng điều khiển', icon: '📊' },
     arcade: { x: 49.4, y: 24.2, r: 1.6, label: 'Máy giải trí', icon: '🕹' },
     piano: { x: 45.6, y: 24.2, r: 1.6, label: 'Đàn', icon: '🎹' },
-    sofa: { x: 47.6, y: 14.6, r: 1.8, label: 'Ghế tiếp khách', icon: '🛋' },
+    sofa: { x: 29.6, y: 14.6, r: 1.8, label: 'Ghế tiếp khách', icon: '🛋' },
   };
   const SPOTS = [
     { id: 'room:dev', x: 12, y: 16.6, r: 1.8, label: 'Phòng Phát triển', icon: '💻', dept: 'dev' },
-    { id: 'room:research', x: 34, y: 16.6, r: 1.8, label: 'Phòng Nghiên cứu', icon: '📚', dept: 'research' },
+    { id: 'room:research', x: 42, y: 16.6, r: 1.8, label: 'Phòng Nghiên cứu', icon: '📚', dept: 'research' },
     { id: 'room:meeting', x: 8, y: 19.4, r: 1.6, label: 'Phòng họp', icon: '🗣' },
     { id: 'room:meeting-table', x: 8.8, y: 23.2, r: 3.2, label: 'Bàn họp', icon: '🗣' },
     { id: 'room:office', x: 22, y: 19.4, r: 1.6, label: 'Phòng điều phối', icon: '🧭' },
     { id: 'room:pantry', x: 40.3, y: 21.8, r: 1.8, label: 'Máy pha cà phê', icon: '☕' },
     { id: 'room:pantry-sofa', x: 32.2, y: 24.0, r: 2.0, label: 'Sofa pantry', icon: '🛋' },
+    { id: 'pantry:table', x: 37.3, y: 23.5, r: 1.7, label: 'Bàn ăn pantry — Pantry time', icon: '🍱' },
+    { id: 'pantry:water', x: 30.6, y: 20.9, r: 1.1, label: 'Cây nước', icon: '💧' },
+    { id: 'office:tv', x: 25.7, y: 20.8, r: 1.5, label: 'TV điều phối', icon: '📺' },
+    { id: 'meeting:board', x: 13.1, y: 20.7, r: 1.8, label: 'Bảng phòng họp', icon: '🗣' },
+    { id: 'dev:board', x: 4.7, y: 2.6, r: 1.6, label: 'Bảng trắng phòng Phát triển', icon: '📋', dept: 'dev' },
+    { id: 'research:shelf', x: 50.0, y: 7.6, r: 2.6, label: 'Giá sách phòng Nghiên cứu', icon: '📚', dept: 'research' },
     ...Object.entries(BOSS_SPOTS).map(([k, v]) => ({ id: `boss:${k}`, ...v })),
   ];
   // vật cản cho nhân vật người dùng (ô; [x, y, w, h])
@@ -66,7 +72,14 @@
   const PANTRY_SPOTS = [
     { x: 40.3, y: 21.7, face: 'up' }, { x: 30.6, y: 21.7, face: 'up' }, { x: 36.0, y: 25.3, face: 'up' },
     { x: 38.6, y: 25.3, face: 'up' }, { x: 33.0, y: 23.2, face: 'right' }, { x: 41.2, y: 24.0, face: 'left' },
+    // quanh bàn ăn và sofa (giờ pantry)
+    { x: 35.5, y: 23.7, face: 'right' }, { x: 39.1, y: 23.7, face: 'left' }, { x: 36.7, y: 22.4, face: 'down' },
+    { x: 37.9, y: 22.4, face: 'down' }, { x: 31.0, y: 25.6, face: 'up' }, { x: 32.6, y: 25.6, face: 'up' }, { x: 41.8, y: 22.4, face: 'left' },
   ];
+
+  // cửa ra hành lang: [x0, x1] trên tường y = 16 (phòng trên) và y = 19 (phòng dưới)
+  const DOORS_TOP = [[11, 13], [28.5, 30.5], [41, 43]];
+  const DOORS_BOTTOM = [[7, 9], [21, 23], [34, 36], [44.3, 46.0]];
 
   (function buildSolids() {
     const add = (x, y, w, h) => SOLIDS.push([x, y, w, h]);
@@ -75,38 +88,38 @@
     add(0, 0, 1, H);
     add(W - 1, 0, 1, H);
     add(0, H - 1, W, 1);
-    add(25, 0, 1, 16.4);
+    add(25, 0, 1, 16.4); // Phát triển | Giám đốc
+    add(33, 0, 1, 16.4); // Giám đốc | Nghiên cứu
     const hwall = (y, gaps) => {
       let x = 1;
       for (const [g0, g1] of gaps) {
         add(x, y, g0 - x, 1);
         x = g1;
       }
-      add(x, y, MAIN_W - 1 - x, 1);
+      add(x, y, W - 1 - x, 1);
     };
-    hwall(16, [[11, 13], [33, 35]]);
-    hwall(19, [[7, 9], [21, 23], [34, 36]]);
+    hwall(16, DOORS_TOP);
+    hwall(19, DOORS_BOTTOM);
     add(17, 19, 1, 8);
     add(28, 19, 1, 8);
-    add(MAIN_W - 1, 0, 1, 17); // tường giữa tòa chính và phòng giám đốc, cửa ở hành lang
-    add(MAIN_W - 1, 19, 1, H - 19);
+    add(43, 19, 1, 8); // pantry | góc giải trí
     // bàn làm việc
     for (const s of [...DEV_SEATS, ...RESEARCH_SEATS, DIRECTOR_SEAT]) add(s.x - 1.6, s.y - 2.4, 3.2, 1.35);
     add(BOSS_SEAT.x - 2.2, BOSS_SEAT.y - 2.6, 4.4, 1.6); // bàn giám đốc
     // đồ đạc
     add(4.0, 22.2, 9.6, 1.95); // bàn họp
-    add(41.2, 2.6, 1.6, 10.2); // giá sách nghiên cứu
+    add(49.2, 2.6, 1.6, 10.2); // giá sách nghiên cứu
     add(18.3, 20.2, 1.6, 1.85);
     add(30.0, 24.6, 4.4, 1.4); // sofa pantry
     add(36.0, 22.7, 2.6, 1.6);
     add(39.7, 20.0, 1.3, 1.3);
     add(30.2, 20.0, 0.8, 1.3);
     add(31.5, 22.4, 1.6, 0.9);
-    add(45.6, 13.6, 4.0, 1.2); // sofa giám đốc
-    add(46.7, 11.4, 1.8, 1.0); // bàn trà
+    add(27.6, 13.6, 4.0, 1.2); // sofa giám đốc
+    add(28.7, 11.4, 1.8, 1.0); // bàn trà
     add(48.9, 23.0, 1.3, 1.6); // máy giải trí
     add(44.9, 23.2, 1.5, 1.2); // đàn
-    add(49.6, 2.6, 1.4, 4.0); // giá sách giám đốc
+    add(31.6, 2.6, 1.3, 4.0); // giá sách giám đốc
   })();
 
   function solidAt(x, y) {
@@ -285,12 +298,16 @@
       canvas.addEventListener('mousemove', (e) => this.onMove(e));
       canvas.addEventListener('mouseleave', () => {
         this.hover = null;
+        this.hoverSpot = null;
         this.pointerIn = false;
         this.opts.onHover?.(null);
       });
       canvas.addEventListener('mouseenter', () => (this.pointerIn = true));
       canvas.addEventListener('click', () => {
-        if (this.hover) this.opts.onSelect?.(this.hover);
+        if (this.hover) return this.opts.onSelect?.(this.hover);
+        // nhấp thẳng vào đồ vật / phòng: tương tác như khi đứng cạnh và bấm E (không cần đi nhân vật tới)
+        const sp = this.hoverSpot;
+        if (sp) this.opts.onInteract?.({ type: 'spot', id: sp.id, label: sp.label, icon: sp.icon, dept: sp.dept, x: sp.x, y: sp.y, via: 'click' }, this.screenPos(sp.x, sp.y));
       });
       // nhân vật người dùng: WASD (mọi lúc trừ khi đang gõ), phím mũi tên (khi trỏ chuột/focus ở văn phòng), E để tương tác
       canvas.tabIndex = 0;
@@ -316,7 +333,7 @@
         });
       };
       assign(order(byDept.dev ?? [], deptOf('dev')), DEV_SEATS, 3, 18);
-      assign(order(byDept.research ?? [], deptOf('research')), RESEARCH_SEATS, 27, 18);
+      assign(order(byDept.research ?? [], deptOf('research')), RESEARCH_SEATS, 35, 18);
       const office = [...(byDept.office ?? []), ...Object.entries(byDept).filter(([k]) => !['dev', 'research', 'office'].includes(k)).flatMap(([, v]) => v)];
       office.forEach((a, i) => this.seats.set(a.id, i === 0 ? DIRECTOR_SEAT : { x: 19.5 + i * 1.5, y: 26.2, face: 'up' }));
       for (const a of agents) {
@@ -424,7 +441,7 @@
     }
 
     walkPlayerTo(e) {
-      if (!this.player || this.hover) return;
+      if (!this.player || this.hover || this.hoverSpot) return;
       const q = this.tileAt(e);
       if (q.x < 1 || q.y < 2 || q.x > W - 1 || q.y > H - 1 || !this.free(q.x, q.y)) return;
       this.walkTo(this.player, { x: q.x, y: q.y, face: 'down' });
@@ -566,6 +583,27 @@
       lines.forEach((l, i) => p.text(l, bx + 0.3, by + 0.36 + i * 0.42, 5.6, hint ? '#fef3c7' : '#422006', 'left', 600));
     }
 
+    /** Viền + nhãn cho đồ vật đang trỏ chuột (nhấp để tương tác). */
+    drawSpotHint(p, sp) {
+      const c = p.c;
+      const r = Math.min(sp.r, 1.6);
+      c.save();
+      c.setLineDash([3 * p.s, 2 * p.s]);
+      c.strokeStyle = '#fbbf24';
+      c.lineWidth = Math.max(1, p.s);
+      c.beginPath();
+      c.ellipse(p.X(sp.x), p.Y(sp.y), r * T * p.s, r * 0.7 * T * p.s, 0, 0, Math.PI * 2);
+      c.stroke();
+      c.restore();
+      const text = `${sp.icon || ''} ${sp.label} · nhấp`;
+      c.font = `600 ${Math.max(7, 5.6 * p.s)}px "Be Vietnam Pro", system-ui, sans-serif`;
+      const w = c.measureText(text).width / (T * p.s) + 0.6;
+      const bx = Math.max(1.1, Math.min(W - 1.1 - w, sp.x - w / 2));
+      const by = Math.max(2.1, sp.y - r * 0.7 - 0.9);
+      p.round(bx, by, w, 0.62, 4, 'rgba(120,53,15,0.94)', '#fbbf24');
+      p.text(text, bx + w / 2, by + 0.32, 5.6, '#fef3c7');
+    }
+
     drawEffects(p, now) {
       const c = p.c;
       this.effects = this.effects.filter((f) => now - f.t < 1600);
@@ -601,14 +639,47 @@
       this.walkTo(a, seat);
     }
 
-    goPantry(a) {
+    goPantry(a, until) {
+      if (a.target === 'pantry') {
+        if (until) a.returnAt = Math.max(a.returnAt, until + Math.random() * 3000);
+        return true;
+      }
       const used = new Set([...this.agents.values()].filter((o) => o.target === 'pantry').map((o) => o.spot));
       const spot = PANTRY_SPOTS.find((s) => !used.has(s));
-      if (!spot) return;
+      if (!spot) return false;
       a.target = 'pantry';
       a.spot = spot;
-      a.returnAt = performance.now() + 7000 + Math.random() * 7000;
+      a.returnAt = until ? until + Math.random() * 3000 : performance.now() + 7000 + Math.random() * 7000;
       this.walkTo(a, spot);
+      return true;
+    }
+
+    /** Giờ pantry (cho vui): agent đang rảnh ra pantry nghỉ giải lao rồi tự về — việc đang chạy không bị ảnh hưởng. */
+    pantryTime(ms = 30000) {
+      const now = performance.now();
+      if (this.pantryUntil > now) return { n: 0, left: Math.ceil((this.pantryUntil - now) / 1000) };
+      this.pantryUntil = now + ms;
+      const lines = ['Pantry time! 🍱', 'Bánh mì ai ăn không?', 'Cho em ly trà đá 🧊', 'Nghỉ 5 phút nạp năng lượng ⚡', 'Hôm nay có bánh kem à? 🍰', 'Cà phê sữa đá nhé ☕'];
+      let n = 0;
+      for (const a of this.agents.values()) {
+        if ((a.state?.status ?? 'idle') !== 'idle' || a.def.role === 'router' || a.target === 'meeting') continue;
+        if (this.goPantry(a, this.pantryUntil)) {
+          if (n < 4) setTimeout(() => this.say(a.def.id, lines[(n + Math.floor(now)) % lines.length], 5000), 400 + n * 500);
+          n++;
+        }
+      }
+      if (!n) {
+        this.pantryUntil = 0;
+        return { n, left: 0 };
+      }
+      this.effect('confetti', 37.3, 23.5);
+      return { n, left: Math.round(ms / 1000) };
+    }
+
+    /** Hiệu ứng tại một đồ vật (khi nhấp trực tiếp, không cần nhân vật giám đốc đứng cạnh). */
+    spotEffect(id, kind) {
+      const sp = SPOTS.find((x) => x.id === id);
+      if (sp) this.effect(kind, sp.x, sp.y + 1);
     }
 
     walkTo(a, dest) {
@@ -745,6 +816,7 @@
           else if (r === 'meeting') col = (x + y) % 2 ? '#2d5a60' : '#2a555a';
           else if (r === 'director') col = y % 2 ? '#6e4631' : '#754b35';
           else if (r === 'boss') col = (x + y) % 2 ? '#e7e1d3' : '#ddd6c6';
+          else if (r === 'fun') col = (x + y) % 2 ? '#d8d0ee' : '#cfc6e8';
           else col = (x + y) % 2 ? '#d6d0c2' : '#cdc6b6';
           p.rect(x, y, 1, 1, col);
           if (r === 'dev' && (x + (y % 2) * 3) % 6 === 0) p.rect(x, y, 0.06, 1, '#a9824e');
@@ -762,7 +834,7 @@
       p.rect(0, 0, W, 0.35, WALL_TOP);
       p.rect(0, 1.82, W, 0.18, '#252c40');
       // cửa sổ
-      for (const wx of [2.5, 6.5, 17.5, 21.0, 28.5, 39.5, 44.6]) {
+      for (const wx of [2.5, 6.5, 17.5, 21.0, 35.4, 47.6]) {
         p.rect(wx, 0.55, 2.4, 1.05, '#1e293b');
         p.rect(wx + 0.12, 0.65, 2.16, 0.85, '#7dd3fc');
         p.rect(wx + 0.12, 0.65, 2.16, 0.25, '#bae6fd');
@@ -774,18 +846,14 @@
         p.text(label, x + w / 2, y + 0.42, 6.2, '#e7eaf2');
       };
       sign(9.3, 0.6, 7.2, 'PHÒNG PHÁT TRIỂN DỰ ÁN', '#2563eb');
-      sign(31.2, 0.6, 6.6, 'PHÒNG NGHIÊN CỨU', '#7c3aed');
-      sign(47.4, 0.6, 3.9, 'GIÁM ĐỐC', '#ca8a04');
+      sign(39.2, 0.6, 6.6, 'PHÒNG NGHIÊN CỨU', '#7c3aed');
+      sign(27.4, 0.6, 4.4, 'GIÁM ĐỐC', '#ca8a04');
       // tường bao
       p.rect(0, 0, 1, H, WALL);
       p.rect(W - 1, 0, 1, H, WALL);
       p.rect(0, H - 1, W, 1, WALL);
       p.rect(25, 0, 1, 16.4, WALL);
-      // tường giữa tòa chính và phòng giám đốc (cửa ở hành lang)
-      p.rect(MAIN_W - 1, 2, 1, 15, WALL);
-      p.rect(MAIN_W - 1, 19, 1, H - 19, WALL);
-      p.rect(MAIN_W - 1.12, 16.9, 0.12, 2.2, '#64748b');
-      p.rect(MAIN_W, 16.9, 0.12, 2.2, '#64748b');
+      p.rect(33, 0, 1, 16.4, WALL);
       // tường giữa phòng trên & hành lang (có cửa)
       const hwall = (y, h, gaps) => {
         let x = 1;
@@ -796,13 +864,14 @@
           p.rect(g1, y - 0.1, 0.12, h + 0.2, '#64748b');
           x = g1;
         }
-        p.rect(x, y, MAIN_W - 1 - x, h, WALL);
-        p.rect(x, y, MAIN_W - 1 - x, 0.2, WALL_TOP);
+        p.rect(x, y, W - 1 - x, h, WALL);
+        p.rect(x, y, W - 1 - x, 0.2, WALL_TOP);
       };
-      hwall(16, 1, [[11, 13], [33, 35]]);
-      hwall(19, 1, [[7, 9], [21, 23], [34, 36]]);
+      hwall(16, 1, DOORS_TOP);
+      hwall(19, 1, DOORS_BOTTOM);
       p.rect(17, 19, 1, 8, WALL);
       p.rect(28, 19, 1, 8, WALL);
+      p.rect(43, 19, 1, 8, WALL);
       sign(2.0, 19.1, 4.4, 'PHÒNG HỌP', '#0d9488');
       sign(23.6, 19.1, 4.0, 'ĐIỀU PHỐI', '#b91c1c');
       sign(37.2, 19.1, 3.6, 'PANTRY', '#d97706');
@@ -845,9 +914,9 @@
           for (let b = 0; b < 6; b++) p.rect(x + 0.12 + b * 0.24, y + 0.18 + r * 0.9 + (b % 3) * 0.05, 0.18, 0.55 - (b % 3) * 0.05, cols[(b + r * 2) % cols.length]);
         }
       };
-      shelf(41.2, 2.6, 4.6);
-      shelf(41.2, 8.2, 4.6);
-      shelf(26.2, 2.4, 0.95);
+      shelf(49.2, 2.6, 4.6);
+      shelf(49.2, 8.2, 4.6);
+      shelf(34.2, 2.4, 0.95);
       shelf(18.3, 20.2, 1.85);
       // cây xanh
       const plant = (x, y, big) => {
@@ -861,7 +930,7 @@
       plant(1.7, 3.2, true);
       plant(24.2, 3.2, true);
       plant(24.2, 15.4);
-      plant(26.8, 15.4);
+      plant(34.8, 15.4);
       plant(16.2, 26.6);
       plant(42.3, 26.6, true);
       plant(29.6, 26.6);
@@ -891,10 +960,10 @@
       p.rect(23.9, 20.15, 3.6, 1.25, '#0f172a');
 
       // ── Phòng giám đốc ──
-      p.rect(44.4, 3.2, 6.4, 0.08, '#cbb89a'); // phào tường
-      p.rect(45.0, 2.15, 5.2, 1.35, '#0f172a'); // màn hình bảng điều khiển (vẽ nội dung động)
-      p.rect(45.1, 9.0, 5.0, 3.2, '#9f1239'); // thảm
-      p.rect(45.3, 9.2, 4.6, 2.8, '#be123c');
+      p.rect(26.2, 3.2, 6.6, 0.08, '#cbb89a'); // phào tường
+      p.rect(27.0, 2.15, 5.2, 1.35, '#0f172a'); // màn hình bảng điều khiển (vẽ nội dung động)
+      p.rect(27.1, 9.0, 5.0, 3.2, '#9f1239'); // thảm
+      p.rect(27.3, 9.2, 4.6, 2.8, '#be123c');
       // bàn giám đốc chữ U
       p.rect(BOSS_SEAT.x - 2.2, BOSS_SEAT.y - 2.5, 4.4, 1.0, '#5b3a22');
       p.rect(BOSS_SEAT.x - 2.2, BOSS_SEAT.y - 2.5, 4.4, 0.14, '#7c5233');
@@ -906,13 +975,13 @@
       p.rect(BOSS_SEAT.x - 1.6, BOSS_SEAT.y - 2.75, 0.5, 0.35, '#16a34a'); // cây nhỏ
       // ghế giám đốc (lưng ghế vẽ theo lớp z)
       // giá sách
-      p.rect(49.6, 2.6, 1.4, 4.0, '#5b3a22');
-      for (let r = 0; r < 4; r++) for (let b = 0; b < 5; b++) p.rect(49.7 + b * 0.25, 2.75 + r * 0.95, 0.18, 0.62, ['#f59e0b', '#0ea5e9', '#a855f7', '#ef4444', '#22c55e'][(b + r) % 5]);
+      p.rect(31.6, 2.6, 1.3, 4.0, '#5b3a22');
+      for (let r = 0; r < 4; r++) for (let b = 0; b < 4; b++) p.rect(31.7 + b * 0.27, 2.75 + r * 0.95, 0.18, 0.62, ['#f59e0b', '#0ea5e9', '#a855f7', '#ef4444', '#22c55e'][(b + r) % 5]);
       // sofa + bàn trà tiếp khách
-      p.rect(45.6, 13.6, 4.0, 1.2, '#334155');
-      p.rect(45.6, 13.6, 4.0, 0.4, '#1e293b');
-      p.round(46.7, 11.4, 1.8, 1.0, 6, '#a16207');
-      p.rect(47.4, 11.6, 0.3, 0.3, '#f8fafc');
+      p.rect(27.6, 13.6, 4.0, 1.2, '#334155');
+      p.rect(27.6, 13.6, 4.0, 0.4, '#1e293b');
+      p.round(28.7, 11.4, 1.8, 1.0, 6, '#a16207');
+      p.rect(29.4, 11.6, 0.3, 0.3, '#f8fafc');
       // góc giải trí: đàn + máy chơi game
       p.rect(44.9, 23.2, 1.5, 1.2, '#111827');
       for (let k = 0; k < 6; k++) p.rect(45.0 + k * 0.22, 23.3, 0.17, 0.5, '#f8fafc');
@@ -920,9 +989,10 @@
       p.rect(49.05, 23.15, 1.0, 0.65, '#0f172a');
       p.rect(49.2, 24.0, 0.2, 0.2, '#ef4444');
       p.rect(49.6, 24.0, 0.2, 0.2, '#22c55e');
-      plant(44.7, 27 - 0.4, true);
-      plant(50.6, 15.4);
-      sign(45.0, 21.5, 5.2, 'GÓC GIẢI TRÍ', '#7c3aed');
+      plant(50.4, 27 - 0.4, true);
+      plant(32.4, 15.4);
+      plant(26.6, 15.4);
+      sign(46.1, 19.1, 4.8, 'GÓC GIẢI TRÍ', '#7c3aed');
       this.bg = off;
     }
 
@@ -960,10 +1030,16 @@
       p.text(this.runningCount ? `${this.runningCount} việc đang chạy` : 'Sẵn sàng', 25.7, 20.62, 5.2, this.runningCount ? '#5eead4' : '#94a3b8');
       p.text(new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }), 25.7, 21.02, 5, '#64748b', 'center', 500);
       // bảng điều khiển phòng giám đốc
-      p.rect(45.1, 2.25, 5.0, 1.15, '#0b1220');
+      p.rect(27.1, 2.25, 5.0, 1.15, '#0b1220');
       const dash = this.dashboard || {};
-      p.text(dash.line1 || 'Bảng điều khiển', 47.6, 2.62, 5, '#fbbf24');
-      p.text(dash.line2 || `${this.runningCount} việc đang chạy`, 47.6, 3.05, 4.6, '#94a3b8', 'center', 500);
+      p.text(dash.line1 || 'Bảng điều khiển', 29.6, 2.62, 5, '#fbbf24');
+      p.text(dash.line2 || `${this.runningCount} việc đang chạy`, 29.6, 3.05, 4.6, '#94a3b8', 'center', 500);
+      // giờ pantry
+      if (this.pantryUntil > now) {
+        const left = Math.ceil((this.pantryUntil - now) / 1000);
+        p.round(31.4, 20.1, 6.4, 0.9, 4, 'rgba(146,64,14,0.95)', '#fbbf24');
+        p.text(`🍱 PANTRY TIME · ${left}s`, 34.6, 20.56, 5.6, '#fef3c7', 'center', 700);
+      }
       // bảng trắng phòng họp
       p.rect(9.8, 20.15, 6.6, 1.0, '#f8fafc');
       p.rect(9.8, 21.1, 6.6, 0.08, '#94a3b8');
@@ -1060,6 +1136,7 @@
       }
       items.sort((a, b) => a.y - b.y).forEach((i) => i.draw());
       for (const a of this.agents.values()) this.drawTag(p, a, now);
+      if (this.hoverSpot) this.drawSpotHint(p, this.hoverSpot);
       if (this.player) this.drawPlayer(p, now);
       this.drawEffects(p, now);
       for (const pop of this.pops) {
@@ -1085,9 +1162,23 @@
           }
         }
       }
-      if (best !== this.hover) {
+      // không trỏ vào agent → đồ vật / phòng có thể nhấp để tương tác
+      let spot = null;
+      if (!best) {
+        let sd = 1e9;
+        for (const sp of SPOTS) {
+          const d = Math.hypot(sp.x - mx, (sp.y - my) * 1.3);
+          if (d < Math.min(sp.r, 1.6) && d < sd) {
+            sd = d;
+            spot = sp;
+          }
+        }
+      }
+      this.hoverSpot = spot;
+      if (best !== this.hover || !!spot !== !!this.hoverSpotOn) {
         this.hover = best;
-        this.canvas.style.cursor = best ? 'pointer' : 'default';
+        this.hoverSpotOn = !!spot;
+        this.canvas.style.cursor = best || spot ? 'pointer' : 'default';
       }
       this.opts.onHover?.(best, e.clientX - r.left, e.clientY - r.top);
     }

@@ -460,6 +460,13 @@
     if (back) back.insertAdjacentHTML('afterend', `${t.projectId ? ` <button class="btn ghost sm back" data-openproj>📁 ${esc(projName(t.projectId))}</button>` : ''} <button class="btn ghost sm back" data-openchat title="Xem nhiệm vụ (và các lượt tiếp nối) dạng hội thoại, trả lời ngay bên dưới">💬 Dạng hội thoại</button>`);
     $('[data-openproj]', el)?.addEventListener('click', () => openProject(t.projectId));
     $('[data-openchat]', el)?.addEventListener('click', () => window.Chat?.open(t.id));
+    // giám đốc duyệt / yêu cầu sửa bằng tay
+    $('.rv-box', el)?.remove();
+    const rv = window.Chat?.reviewBox?.(t);
+    if (rv) {
+      $('.td-head', el)?.insertAdjacentHTML('afterend', rv);
+      window.Chat.bindReview(el, () => C.renderTaskDetail(true));
+    }
     const live = ['running', 'queued', 'paused'].includes(t.status);
     const old = $('.dock', el);
     const keep = old ? $('textarea', old).value : '';

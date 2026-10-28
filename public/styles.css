@@ -904,3 +904,28 @@ kbd { display: inline-block; min-width: 18px; padding: 0 5px; border: 1px solid 
   .cv-thread, .cv-new { padding: 14px 12px 8px; }
   .cv-dock { padding: 6px 12px 12px; }
 }
+
+/* quyết định của giám đốc: duyệt / yêu cầu sửa */
+.rv-box { border: 1px solid var(--line-2); border-radius: 10px; padding: 9px 12px; background: var(--panel-2); display: flex; flex-direction: column; gap: 7px; margin: 0 0 10px; }
+.rv-box.pending { border-color: #f59e0b88; background: #f59e0b10; }
+.rv-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; font-size: 13px; }
+.rv-head span { color: var(--muted); font-size: 12.5px; }
+.rv-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.rv-form { display: flex; flex-direction: column; gap: 6px; }
+.rv-form textarea { width: 100%; border: 1px solid var(--line-2); border-radius: 8px; background: var(--panel); color: var(--text); font: inherit; font-size: 13px; padding: 7px 9px; resize: vertical; }
+.rv-subs { display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; }
+.rv-subs code { font-size: 11px; color: var(--faint); }
+.rv-subs small { color: var(--faint); }
+.rv-form .pb-actions small { color: var(--muted); font-size: 12px; }
+.cv-bbody .rv-box { margin: 2px 0 0; }
+
+/* việc cần sửa theo agent */
+.kpi-f li { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; padding: 3px 0; }
+.kpi-f li > span:first-child { flex: 1; min-width: 0; }
+.kpi-f li.again > span:first-child { color: #fbbf24; }
+.fx-acts { display: inline-flex; gap: 4px; flex: none; }
+.fx-acts .btn { padding: 2px 8px; font-size: 11.5px; }
+.fx-done { margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+.fx-done summary { cursor: pointer; }
+.fx-done li { padding: 2px 0; }
+.fx-done small { color: var(--faint); }

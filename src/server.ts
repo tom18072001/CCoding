@@ -6,7 +6,7 @@ import type { BusEvent } from './events.js';
 import { nowIso } from './util/ids.js';
 import { readJsonl } from './util/fsx.js';
 import { MAX_UPLOAD_BYTES } from './uploads.js';
-import { kpiReport } from './kpi.js';
+import { clearFixedFeedback, FINDING_LABELS, kpiReport } from './kpi.js';
 import { isSafeRef } from './git.js';
 import { deniedReason } from './tools/workspace.js';
 import type { BudgetMode, Classification, ProjectDef, TaskMode, ToolAccess } from './types.js';
@@ -216,6 +216,23 @@ export function createServer(app: App): http.Server {
     if ((mm = m(/^\/api\/tasks\/([^/]+)\/pause$/)) && req.method === 'POST') {
       return send(res, orchestrator.pause(mm[1]) ? 200 : 409, { ok: true });
     }
+    if ((mm = m(/^\/api\/tasks\/([^/]+)\/review$/)) && req.method === 'POST') {
+      const b = await readBody(req);
+      try {
+        return send(
+          res,
+          200,
+          orchestrator.reviewDecision(mm[1], {
+            decision: b.decision === 'approve' ? 'approve' : b.decision === 'reject' ? 'reject' : (String(b.decision ?? '') as 'approve'),
+            note: b.note ? String(b.note) : undefined,
+            subtasks: Array.isArray(b.subtasks) ? b.subtasks.map(String) : undefined,
+            department: b.department ? String(b.department) : undefined,
+          }),
+        );
+      } catch (e) {
+        throw new HttpError(409, (e as Error).message);
+      }
+    }
     if ((mm = m(/^\/api\/tasks\/([^/]+)\/resume$/)) && req.method === 'POST') {
       const b = await readBody(req);
       try {
@@ -303,10 +320,22 @@ export function createServer(app: App): http.Server {
       }
     }
     if (p === '/api/alerts') return send(res, 200, orchestrator.alerts.slice(-100));
+    if (p === '/api/kpi/resolve' && req.method === 'POST') {
+      const b = await readBody(req);
+      const agentId = String(b.agentId ?? '');
+      const key = String(b.key ?? '');
+      if (!registry.agents.has(agentId)) throw new HttpError(400, 'Agent không hợp lệ');
+      if (!FINDING_LABELS[key]) throw new HttpError(400, 'Mục "việc cần sửa" không hợp lệ');
+      const on = b.undo !== true;
+      store.setFindingResolved(agentId, key, on, b.note ? String(b.note).trim().slice(0, 300) : undefined);
+      const removed = clearFixedFeedback(app, [agentId]);
+      logs.write({ level: 'info', kind: 'kpi.finding', msg: `${on ? 'Đánh dấu đã sửa' : 'Bỏ đánh dấu đã sửa'}: ${agentId} · ${FINDING_LABELS[key]}${removed.length ? ` — xóa ${removed.length} góp ý liên quan` : ''}`, agentId, data: { key, on, removedFeedback: removed.length } });
+      return send(res, 200, { ok: true, removedFeedback: removed });
+    }
     if (p === '/api/kpi') {
       const tasks = q('task')?.split(',').map((s) => s.trim()).filter(Boolean);
       const days = Number(q('days') ?? 0) || undefined;
-      return send(res, 200, kpiReport(app, { tasks, days, department: q('dept') || undefined, project: q('project') || undefined }));
+      return send(res, 200, kpiReport(app, { tasks, days, department: q('dept') || undefined, project: q('project') || undefined, resolve: q('raw') !== '1' }));
     }
 
     if (p === '/api/agents') return send(res, 200, snapshot(app).agents);
@@ -334,7 +363,9 @@ export function createServer(app: App): http.Server {
         const rating = b.rating === 'up' || b.rating === 'down' ? b.rating : undefined;
         if (!text && !rating) throw new HttpError(400, 'Cần nội dung góp ý hoặc đánh giá 👍/👎');
         if (b.taskId && !store.get(String(b.taskId))) throw new HttpError(400, 'Nhiệm vụ không tồn tại');
-        const f = store.addFeedback(a.id, { text: text || (rating === 'up' ? 'Làm tốt, giữ cách làm này.' : 'Chưa đạt kỳ vọng — cẩn thận hơn ở lần sau.'), rating, taskId: b.taskId ? String(b.taskId) : undefined });
+        const finding = b.finding && FINDING_LABELS[String(b.finding)] ? String(b.finding) : undefined;
+        if (finding) store.feedback(a.id).filter((x) => x.finding === finding).forEach((x) => store.removeFeedback(a.id, x.id)); // một góp ý cho mỗi mục
+        const f = store.addFeedback(a.id, { text: text || (rating === 'up' ? 'Làm tốt, giữ cách làm này.' : 'Chưa đạt kỳ vọng — cẩn thận hơn ở lần sau.'), rating, taskId: b.taskId ? String(b.taskId) : undefined, finding });
         logs.write({ level: 'info', kind: 'agent.feedback', msg: `Góp ý cho ${a.name}${rating ? ` (${rating === 'up' ? '👍' : '👎'})` : ''} — ${f.text.length} ký tự`, agentId: a.id, department: a.department, taskId: f.taskId, data: { id: f.id } });
         return send(res, 201, f);
       }

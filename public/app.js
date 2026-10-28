@@ -1247,12 +1247,59 @@
           )
           .join('')}
         </tbody></table></div>
-      ${agents.filter((k) => k.findings.length).length ? `<div class="card"><h2>Việc cần sửa theo agent</h2>${agents
-        .filter((k) => k.findings.length)
-        .map((k) => `<div class="kpi-f"><b>${esc(agentName(k.agentId))}</b> <small>${k.score} ${k.grade}</small><ul>${k.findings.map((f) => `<li>${esc(f)}</li>`).join('')}</ul></div>`)
-        .join('')}</div>` : ''}
+      ${fixCard(agents)}
       <p style="font-size:12px;color:var(--muted)">${esc(r.method || '')} Xem trong terminal: <code>ccoding kpi --days 7</code>. Mỗi báo cáo nhiệm vụ (FINAL.md) cũng có bảng KPI riêng.</p>`;
     $$('#kpi [data-ag]').forEach((row) => row.addEventListener('click', () => openAgent(row.dataset.ag)));
+    bindFixes($('#kpi'), agents);
+  }
+
+  // "Việc cần sửa theo agent": sửa rồi thì bỏ khỏi danh sách (đánh dấu tay; tự hết khi 2 nhiệm vụ gần nhất không còn)
+  function fixCard(agents) {
+    const open = agents.filter((k) => k.findings.length);
+    const done = agents.flatMap((k) => (k.resolved || []).map((r) => ({ ...r, agentId: k.agentId })));
+    if (!open.length && !done.length) return '';
+    return `<div class="card"><h2>Việc cần sửa theo agent <small style="font-weight:400;color:var(--muted)">· ${open.reduce((n, k) => n + k.findings.length, 0)} mục còn mở</small></h2>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 8px">Sửa xong (agent.md, cách giao việc, cấu hình) thì bấm <b>✓ Đã sửa</b> — mục được ẩn và chỉ hiện lại nếu tái diễn ở nhiệm vụ sau. Mục cũng <b>tự hết</b> khi 2 nhiệm vụ gần nhất của agent không còn lỗi đó. <b>💬 Nhắc agent</b> thêm mục thành góp ý trong hồ sơ agent; góp ý này tự xóa khi mục đã sửa.</p>
+      ${open
+        .map(
+          (k) => `<div class="kpi-f"><b>${esc(agentName(k.agentId))}</b> <small>${k.score} ${k.grade}</small><ul>${k.findings
+            .map((f, i) => {
+              const key = k.findingKeys?.[i];
+              const again = (k.recurred || []).includes(key);
+              return `<li class="${again ? 'again' : ''}"><span>${esc(f)}</span>${key && key !== 'infra' ? `<span class="fx-acts"><button class="btn ghost sm" data-fix="${esc(key)}" data-agent="${esc(k.agentId)}" title="Đã sửa nguyên nhân — ẩn mục này">✓ Đã sửa</button><button class="btn ghost sm" data-remind="${esc(key)}" data-agent="${esc(k.agentId)}" data-i="${i}" title="Thêm thành góp ý trong hồ sơ agent (tự xóa khi đã sửa)">💬 Nhắc agent</button></span>` : ''}</li>`;
+            })
+            .join('')}</ul></div>`,
+        )
+        .join('') || '<p style="font-size:12.5px;color:var(--muted)">Không còn mục nào cần sửa.</p>'}
+      ${done.length ? `<details class="fx-done"><summary>✓ Đã sửa / tự hết (${done.length})</summary><ul>${done.map((r) => `<li><b>${esc(agentName(r.agentId))}</b> · ${esc(r.text.slice(0, 160))}${r.text.length > 160 ? '…' : ''} <small>${r.how === 'manual' ? `đánh dấu ${esc(dateTime(r.at))}` : `tự hết — ${esc(r.detail || '')}`}</small>${r.how === 'manual' ? ` <button class="btn ghost sm" data-unfix="${esc(r.key)}" data-agent="${esc(r.agentId)}">Bỏ đánh dấu</button>` : ''}</li>`).join('')}</ul></details>` : ''}</div>`;
+  }
+  function bindFixes(root, agents) {
+    const post = async (body, ok) => {
+      try {
+        const r = await api('/api/kpi/resolve', { method: 'POST', body: JSON.stringify(body) });
+        toast({ level: 'info', title: ok, msg: r.removedFeedback?.length ? `Đã xóa ${r.removedFeedback.length} góp ý liên quan khỏi hồ sơ agent` : '' });
+        loadKpi();
+      } catch (e) {
+        toast({ level: 'error', title: 'Không thực hiện được', msg: e.message });
+      }
+    };
+    $$('[data-fix]', root).forEach((b) => (b.onclick = (e) => (e.stopPropagation(), post({ agentId: b.dataset.agent, key: b.dataset.fix }, 'Đã đánh dấu đã sửa'))));
+    $$('[data-unfix]', root).forEach((b) => (b.onclick = () => post({ agentId: b.dataset.agent, key: b.dataset.unfix, undo: true }, 'Đã bỏ đánh dấu')));
+    $$('[data-remind]', root).forEach(
+      (b) =>
+        (b.onclick = async () => {
+          const k = agents.find((x) => x.agentId === b.dataset.agent);
+          const text = `Việc cần sửa (KPI): ${String(k?.findings[Number(b.dataset.i)] || '').replace(/^↻ Tái diễn[^:]*: /, '').slice(0, 900)}`;
+          try {
+            await api(`/api/agents/${encodeURIComponent(b.dataset.agent)}/feedback`, { method: 'POST', body: JSON.stringify({ text, finding: b.dataset.remind }) });
+            toast({ level: 'info', title: `Đã nhắc ${agentName(b.dataset.agent)}`, msg: 'Góp ý vào hồ sơ agent từ lượt gọi sau; tự xóa khi mục đã sửa.' });
+            b.disabled = true;
+            b.textContent = '💬 Đã nhắc';
+          } catch (e) {
+            toast({ level: 'error', title: 'Không nhắc được', msg: e.message });
+          }
+        }),
+    );
   }
 
   // ── Nhật ký ──────────────────────────────────────────────────────────────

@@ -473,7 +473,7 @@ function cmdKpi(args: string[]): void {
   const logs = new LogStore(config.dataDir, { redactSecrets: true, redactPii: true, hashChain: true });
   const store = new Store(config.dataDir, logs);
   const registry = new Registry(config.agentsDir, config.departmentsDir);
-  const rep = kpiReport({ store, registry, config }, { tasks: values.task?.split(','), days: values.days ? Number(values.days) : undefined, department: values.dept, project: values.project });
+  const rep = kpiReport({ store, registry, config }, { tasks: values.task?.split(','), days: values.days ? Number(values.days) : undefined, department: values.dept, project: values.project, resolve: true });
   if (values.json) {
     console.log(JSON.stringify(rep, null, 2));
     return;
@@ -493,8 +493,10 @@ function cmdKpi(args: string[]): void {
   console.log(c.gray('CL = chất lượng · HQ = hiệu quả · TC = tin cậy · TT = tuân thủ mẫu đầu ra/bằng chứng\n'));
   for (const k of rep.agents.filter((x) => x.findings.length)) {
     console.log(`${c.bold(k.agentId)} (${k.score} ${grade(k.grade)})`);
-    for (const f of k.findings) console.log(`  - ${f}`);
+    k.findings.forEach((f, i) => console.log(`  - ${c.gray(`[${k.findingKeys[i]}]`)} ${f}`));
   }
+  const done = rep.agents.reduce((n, k) => n + (k.resolved?.length ?? 0), 0);
+  if (done) console.log(c.gray(`\n✓ ${done} mục đã sửa được ẩn (đánh dấu trên tab KPI hoặc tự hết khi ${2} nhiệm vụ gần nhất của agent không còn lỗi).`));
 }
 
 function cmdAgents(args: string[]): void {

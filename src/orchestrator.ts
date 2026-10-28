@@ -12,7 +12,7 @@ import type { Registry } from './registry.js';
 import { classifyError, RuntimeError, shouldFailover, toRuntimeError } from './runtimes/errors.js';
 import type { Candidate, RuntimeManager } from './runtimes/index.js';
 import type { Store } from './store.js';
-import { kpiMarkdown, kpiReport } from './kpi.js';
+import { clearFixedFeedback, kpiMarkdown, kpiReport } from './kpi.js';
 import { subtaskHistory, type AgentHistory } from './estimate.js';
 import { buildRepoMap } from './repomap.js';
 import { cappedDone } from './runtimes/api.js';
@@ -435,6 +435,79 @@ export class Orchestrator {
     t.resumes = (t.resumes ?? 0) + 1;
     logs.write({ level: 'info', kind: 'task.resumed', msg: `Tiếp tục ${t.id} từ checkpoint (trước đó: ${prev}) — ngân sách ${fmtNum(t.options.budgetTokens)} · ${t.options.budgetMode === 'complete' ? 'chạy tới khi hoàn thành' : 'dừng khi chạm trần'}`, taskId: t.id, projectId: t.projectId });
     this.message(t, 'office', 'system', 'system', `▶ Tiếp tục nhiệm vụ từ checkpoint (lần ${t.resumes}) — các phần đã xong được giữ nguyên.`);
+    this.save(t, true);
+    this.queue.push(t.id);
+    this.pump();
+    return t;
+  }
+
+  /**
+   * Giám đốc (người dùng) quyết review bằng tay khi nhiệm vụ không chạy:
+   * - approve: coi kết quả là đạt (bỏ cờ "cần xem"), không gọi model;
+   * - reject: ghi yêu cầu sửa thành lỗi [major] cho các hạng mục chọn (mặc định: hạng mục reviewer còn nêu lỗi, hoặc mọi hạng mục
+   *   đã xong) → một vòng sửa theo yêu cầu → reviewer duyệt lại (nếu phòng có reviewer) → viết lại báo cáo tổng hợp.
+   */
+  reviewDecision(id: string, o: { decision: 'approve' | 'reject'; note?: string; subtasks?: string[]; department?: string }): Task {
+    const { store, logs } = this.d;
+    const t = store.get(id);
+    if (!t) throw new Error('Không có nhiệm vụ');
+    if (t.status === 'running' || t.status === 'queued') throw new Error('Nhiệm vụ đang chạy — chờ xong (hoặc tạm dừng) rồi duyệt / yêu cầu sửa');
+    if (o.decision !== 'approve' && o.decision !== 'reject') throw new Error('Quyết định phải là "approve" hoặc "reject"');
+    const note = redact((o.note ?? '').trim().slice(0, 4000), { secrets: true, pii: false });
+    const runs = t.runs.filter((r) => r.subtasks.some((s) => s.status === 'done') && (!o.department || r.department === o.department));
+    if (!runs.length) throw new Error('Chưa có hạng mục nào xong để duyệt');
+    const dept = runs[0].department;
+    if (o.decision === 'approve') {
+      for (const r of runs) {
+        if (!r.review) r.review = { approved: true, summary: `Giám đốc duyệt${note ? `: ${note.slice(0, 300)}` : ''}`, issues: [], by: 'director' };
+        else if (!r.review.approved) {
+          r.review.approved = true;
+          r.review.by = 'director';
+          r.review.summary = `Giám đốc duyệt${note ? `: ${note.slice(0, 300)}` : ''} (reviewer: ${r.review.summary.slice(0, 200)})`;
+        }
+      }
+      t.attention = undefined;
+      this.message(t, dept, 'director', 'decision', `✅ Giám đốc duyệt kết quả${note ? `: ${note}` : ''}`);
+      logs.write({ level: 'info', kind: 'review.director', msg: `${t.id}: giám đốc duyệt kết quả`, taskId: t.id, department: dept, data: { decision: 'approve', noteChars: note.length } });
+      this.save(t, true);
+      return t;
+    }
+    if (!note) throw new Error('Ghi rõ cần sửa gì');
+    const want = o.subtasks?.length ? new Set(o.subtasks.map(String)) : undefined;
+    const picked: string[] = [];
+    for (const r of runs) {
+      const flagged = r.review && !r.review.approved ? r.review.issues.filter((i) => i.severity !== 'minor').map((i) => i.subtask) : [];
+      const done = r.subtasks.filter((s) => s.status === 'done' && s.output && !s.splitTo);
+      const targets = done.filter((s) => (want ? want.has(s.id) : flagged.length ? flagged.includes(s.id) : true));
+      if (!targets.length) continue;
+      const keep = r.review && !r.review.approved ? r.review.issues.filter((i) => targets.some((s) => s.id === i.subtask)) : [];
+      r.review = {
+        approved: false,
+        summary: `Giám đốc yêu cầu sửa: ${note.slice(0, 300)}`,
+        issues: [...targets.map((s) => ({ subtask: s.id, severity: 'major' as const, comment: `[Giám đốc] ${note}` })), ...keep],
+        checks: r.review?.checks,
+        verified: r.review?.verified,
+        by: 'director',
+      };
+      r.revising = targets.map((s) => s.id);
+      // một vòng sửa theo yêu cầu + một lần review lại (không cộng dồn vào số vòng của reviewer)
+      t.options.maxRevisions = Math.max(1, t.options.maxRevisions);
+      r.reviewRound = t.options.maxRevisions - 1;
+      r.stage = 'executed';
+      r.finalPath = undefined;
+      r.status = 'pending';
+      picked.push(...targets.map((s) => (runs.length > 1 ? `${r.department}:${s.id}` : s.id)));
+    }
+    if (!picked.length) throw new Error(want ? 'Hạng mục chọn chưa xong hoặc không tồn tại' : 'Không có hạng mục đã xong để sửa');
+    t.status = 'queued';
+    t.pause = undefined;
+    t.error = undefined;
+    t.attention = undefined;
+    t.finishedAt = undefined;
+    t.options.budgetMode = t.options.budgetMode ?? this.d.config.defaults.budgetMode;
+    this.clearResumeTimer(id);
+    this.message(t, dept, 'director', 'decision', `✋ Giám đốc yêu cầu sửa ${picked.join(', ')}: ${note}`);
+    logs.write({ level: 'info', kind: 'review.director', msg: `${t.id}: giám đốc yêu cầu sửa ${picked.join(', ')}`, taskId: t.id, department: dept, data: { decision: 'reject', subtasks: picked, noteChars: note.length } });
     this.save(t, true);
     this.queue.push(t.id);
     this.pump();
@@ -976,7 +1049,10 @@ export class Orchestrator {
     // 4) Review & sửa
     const done = () => run.subtasks.filter((s) => s.status === 'done' && s.output);
     if (!reached(run, 'reviewed')) {
-      if (task.options.review && reviewer && done().length && reviewer.id !== solo?.id) {
+      const canReview = !!(task.options.review && reviewer && reviewer.id !== solo?.id);
+      // giám đốc yêu cầu sửa: chạy vòng sửa kể cả khi phòng không bật review / không có reviewer riêng
+      const directorRedo = !!run.revising?.length && run.review?.by === 'director' && !run.review.approved;
+      if ((canReview && done().length) || directorRedo) {
         for (let attempt = Math.min(run.reviewRound ?? 0, task.options.maxRevisions); attempt <= task.options.maxRevisions; attempt++) {
           this.checkAbort(task);
           run.reviewRound = attempt;
@@ -987,8 +1063,14 @@ export class Orchestrator {
           if (pending.length) {
             review = { approved: false, summary: run.review!.summary, issues: run.review!.issues, checks: [], parsed: true };
             targets = pending;
-            this.message(task, dept.id, 'system', 'system', `↻ Tiếp tục vòng sửa ${attempt + 1}: ${pending.map((s) => s.id).join(', ')} (theo review đã có)`);
+            this.message(task, dept.id, 'system', 'system', run.review!.by === 'director' ? `✋ Sửa theo yêu cầu của giám đốc: ${pending.map((s) => s.id).join(', ')}` : `↻ Tiếp tục vòng sửa ${attempt + 1}: ${pending.map((s) => s.id).join(', ')} (theo review đã có)`);
           } else {
+          if (!canReview || !reviewer) {
+            // đã sửa theo yêu cầu của giám đốc nhưng không có reviewer để duyệt lại → giám đốc xem rồi duyệt / yêu cầu sửa tiếp
+            run.review = { approved: false, summary: 'Đã sửa theo yêu cầu của giám đốc — không có reviewer duyệt lại, chờ giám đốc xem', issues: [], by: 'director' };
+            this.message(task, dept.id, 'system', 'system', '✋ Đã sửa theo yêu cầu của giám đốc — phòng không có reviewer duyệt lại; giám đốc xem rồi bấm Duyệt hoặc Yêu cầu sửa tiếp.');
+            break;
+          }
           // lần sửa trước (có thể dở dang do tạm dừng) đã đổi workspace sau lần kiểm tra gần nhất → chạy lại lệnh kiểm tra trước review
           const pcs = task.projectChecks;
           if (this.projectCheckable(task, project) && pcs?.staleAt && (!pcs.latestAt || pcs.latestAt < pcs.staleAt)) await this.runProjectChecks(task, project, dept.id, 'revise');
@@ -2079,6 +2161,9 @@ export class Orchestrator {
       const rep = kpiReport({ store, registry, config: this.d.config }, { tasks: [task.id] });
       writeJsonAtomic(path.join(store.runDir(task.id), 'kpi.json'), rep);
       if (rep.agents.some((a) => a.calls)) kpi = `\n### KPI agent trong nhiệm vụ\n${kpiMarkdown(rep, { findings: true })}\n`;
+      // góp ý tạo từ "việc cần sửa" mà mục đó nay đã sửa → xóa khỏi hồ sơ agent
+      const cleared = clearFixedFeedback({ store, registry, config: this.d.config }, rep.agents.map((a) => a.agentId));
+      if (cleared.length) this.d.logs.write({ level: 'info', kind: 'agent.feedback.cleared', msg: `Xóa ${cleared.length} góp ý đã sửa xong: ${cleared.map((x) => `${x.agentId}/${x.finding}`).join(', ')}`, taskId: task.id });
     } catch (e) {
       this.d.logs.write({ level: 'warn', kind: 'kpi.error', msg: `Không tính được KPI: ${(e as Error).message}`, taskId: task.id });
     }
