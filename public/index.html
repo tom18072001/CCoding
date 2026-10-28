@@ -79,7 +79,7 @@
           <summary class="card-head"><h2>⚙ Quản lý & cấu hình dự án</h2><button type="button" class="btn ghost sm" id="btn-new-project">+ Dự án</button></summary>
           <form id="project-form" class="form" hidden>
             <div class="grid2">
-              <label>Mã<input name="id" required pattern="[a-z0-9][a-z0-9-]{1,40}" placeholder="vd: elk-iis" /></label>
+              <label>Mã<input name="id" required pattern="[a-z0-9][a-z0-9\-]{1,40}" placeholder="vd: elk-iis" /></label>
               <label>Tên<input name="name" required placeholder="Tên dự án" /></label>
               <label>Phòng mặc định<select name="department" id="sel-proj-dept"></select></label>
               <label>Phân loại dữ liệu<select name="classification">
@@ -102,7 +102,7 @@
               </select></label>
             </div>
             <label>Thư mục làm việc <small>(để trống: workspaces/&lt;mã&gt;)</small><input name="workspace" placeholder="C:\Users\...\du-an hoặc đường dẫn tương đối" /></label>
-            <label>Nhánh xuất phát <small>(worktree tách từ đây; để trống: HEAD hiện tại)</small><input name="baseRef" pattern="[\w][\w./-]{0,119}" placeholder="vd: origin/main" /></label>
+            <label>Nhánh xuất phát <small>(worktree tách từ đây; để trống: HEAD hiện tại)</small><input name="baseRef" pattern="[\w][\w.\/\-]{0,119}" placeholder="vd: origin/main" /></label>
             <label>Tệp chưa track chép sang worktree <small>(để trống: mặc định .env, .env.local…; ghi «không» nếu thư mục chứa .env của môi trường thật)</small><input name="worktreeCopy" placeholder=".env.test, .env.local — hoặc: không" /></label>
             <label>Lệnh chuẩn bị <small>(CCoding chạy một lần mỗi worktree trước lệnh kiểm tra, mỗi dòng một lệnh — vd. cài dependency)</small><textarea name="setupCommands" rows="2" placeholder="cd app/server; npm ci"></textarea></label>
             <label>Lệnh kiểm tra <small>(CCoding tự chạy trước khi sửa, sau thực thi/sửa và đưa cho reviewer — mỗi dòng một lệnh)</small><textarea name="checkCommands" rows="2" placeholder="cd app/server; npm test&#10;cd app/server; npm run check"></textarea></label>
