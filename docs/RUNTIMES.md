@@ -143,6 +143,15 @@ Lưu ý đường Claude gốc của 9router: tên công cụ trả về có h�
 
 Thứ tự trên máy: `cerebras → nvidia → ollama`; `dataProtection.allowedRuntimes.internal = ["local", "cerebras", "groq"]` nên dữ liệu Nội bộ bỏ qua NVIDIA; Bảo mật/Hạn chế chỉ Ollama. `slowModels: ["ccoding-qwen3"]` — pha nặng chờ Cerebras (≤ 30 phút) khi bị 429 trước khi chuyển sang Ollama.
 
+### Ngân sách ngữ cảnh vòng công cụ (`toolContextTokens`, `contextWindow`)
+Mỗi lượt của vòng công cụ gửi lại **toàn bộ** hội thoại (hồ sơ + bối cảnh + đề bài + lịch sử). Gói 2 ND57: mỗi lượt thực thi 25–61 lượt công cụ, 1,4–3,0M token đầu vào/lượt gọi — với Claude có cache thì rẻ, với API miễn phí thì một hạng mục đã vượt hạn mức cả ngày.
+- `toolContextTokens`: trần token mỗi lượt. Vượt thì rút gọn ngay kết quả công cụ cũ (giữ 2 kết quả gần nhất, rồi 1; cuối cùng cắt kết quả quá lớn kèm ghi chú "đọc đoạn nhỏ hơn"), và một lần `read_file` không quá ~40% ngân sách. Ký tự/token hiệu chỉnh theo `prompt_tokens` thật của lượt trước.
+- `contextWindow`: cửa sổ của model (vd. `num_ctx` của Ollama). Vòng công cụ không gửi quá *cửa sổ − min(max_tokens, cửa sổ/4) − 1.024* — Ollama vượt `num_ctx` thì **cắt mất phần đầu prompt** (hồ sơ, đề bài) mà không báo lỗi.
+- Không đặt cả hai (Claude/OpenAI có cache): giữ cách rút gọn theo đợt (ngưỡng 40k ký tự) để tiền tố hội thoại ổn định, cache trúng.
+- Mô phỏng trên dữ liệu gói 2 (29 lượt thực thi/sửa, 32,4M token): trần 20–28k token −20–22%; cộng phần nền thực thi gọn hơn (đề bài ≤ 3.000 ký tự, kế hoạch một dòng/hạng mục kèm `PLAN.md`, đầu vào hạng mục trước ≤ 3.500 ký tự) khoảng −35%. Chưa tính số lần đọc lại do rút gọn mạnh hơn.
+
+Máy Tom: `cerebras` `{ "toolContextTokens": 20000, "contextWindow": 65536 }` (mốc miễn phí theo tài liệu tổng hợp 21/09/2026: 5 yêu cầu/phút, 30k token chưa cache/phút, 1M token/ngày, ngữ cảnh 64k — một prompt 35k token đã bị 429); `nvidia` `{ "toolContextTokens": 24000 }`; `ollama` `{ "toolContextTokens": 20000, "contextWindow": 32768 }`. Với 1M token/ngày, Cerebras miễn phí đủ cho khoảng 50 lượt công cụ cỡ 20k token — một vài hạng mục vừa, **không đủ** cho gói lớn kiểu ND57.
+
 ### Tắt một runtime
 `"disabled": true` trong cấu hình runtime (vd. `runtimes.bifrost`, `runtimes["openai-api"]`): CCoding không thăm dò, không gọi runtime đó kể cả khi nhiệm vụ/dự án/agent chỉ định. Máy Tom từ 28/10/2026: tắt `bifrost` và `openai-api` (9router) — **không dùng tài khoản Claude/Codex đặt trong 9router**; chỉ cân nhắc model miễn phí.
 

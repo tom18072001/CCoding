@@ -6,6 +6,7 @@ import { addWorktree, changeSummary, commitAll, copyUntracked, currentBranch, he
 import type { Herdr } from './herdr.js';
 import type { LogStore } from './logger.js';
 import { blockedSubtasks, keywordRoute, orderJoint, parsePlan, parseReview, parseRoute, readySubtasks } from './planner.js';
+import { historyText, selectHistory } from './history.js';
 import * as P from './prompts.js';
 import type { Registry } from './registry.js';
 import { classifyError, RuntimeError, shouldFailover, toRuntimeError } from './runtimes/errors.js';
@@ -841,6 +842,7 @@ export class Orchestrator {
     let plan: ReturnType<typeof parsePlan> | undefined;
     if (!reached(run, 'planned')) {
       this.setPhase(task, run, 'plan');
+      pctx.projectHistory = this.projectHistory(task, pctx);
       const planRes = await this.call(lead, 'plan', (tools) => P.planPrompt(pctx, prior, tools), { ...base, hints: { brief: task.brief, roster: rosterHints, department: dept.name } });
       // lượt gọi lỗi → dừng (tiếp tục được) thay vì làm theo kế hoạch dự phòng đoán mò
       if (planRes.error && !planRes.text) throw new Error(`Trưởng phòng không lập được kế hoạch: ${planRes.error}`);
@@ -1126,6 +1128,7 @@ export class Orchestrator {
     const agent = registry.agent(st.assignee);
     st.startedAt = nowIso();
     if (pctx.project?.workspace && pctx.filesAccessible) this.writeRepoMap(task);
+    if (pctx.filesAccessible && task.workspace) this.writePlanFile(task, run);
     const deps = st.dependsOn
       .map((id) => run.subtasks.find((s) => s.id === id))
       .filter((s): s is Subtask => !!s && !!s.output)
@@ -1378,6 +1381,41 @@ export class Orchestrator {
     if (project?.workspace) this.writeRepoMap(task);
   }
 
+  /**
+   * P8 — các nhiệm vụ gần nhất của cùng dự án cho pha lập kế hoạch (tóm tắt, nhánh, kiểm tra sau cùng, việc còn mở);
+   * bản chi tiết hơn ghi vào `.ccoding/<task>/inputs/PROJECT-HISTORY.md` khi agent đọc được tệp.
+   */
+  private projectHistory(task: Task, pctx: P.Ctx): P.Ctx['projectHistory'] {
+    const limit = this.d.config.phases?.projectHistory ?? 3;
+    if (!task.projectId || limit <= 0) return undefined;
+    const items = selectHistory(this.d.store.list(), task, limit).map((t) => ({ task: t, final: t.finalPath ? this.d.store.readRunFile(t.id, t.finalPath) : undefined }));
+    if (!items.length) return undefined;
+    let rel: string | undefined;
+    if (pctx.filesAccessible && task.workspace && pctx.ccDir) {
+      try {
+        const file = path.join(task.workspace, pctx.ccDir, 'inputs', 'PROJECT-HISTORY.md');
+        ensureDir(path.dirname(file));
+        writeText(file, `# Nhiệm vụ trước của dự án ${task.projectId}\n\n${historyText(items, 6000)}\n`);
+        rel = `${pctx.ccDir}/inputs/PROJECT-HISTORY.md`;
+      } catch {
+        /* không ghi được thì chỉ dùng bản rút gọn trong prompt */
+      }
+    }
+    this.d.logs.write({ level: 'info', kind: 'plan.history', msg: `Lập kế hoạch kèm ${items.length} nhiệm vụ trước của dự án ${task.projectId}: ${items.map((x) => x.task.id).join(', ')}`, taskId: task.id, projectId: task.projectId });
+    return { text: historyText(items, 1200).slice(0, 4500), rel };
+  }
+
+  /** Kế hoạch đầy đủ `.ccoding/<task>/PLAN.md` — prompt thực thi chỉ gửi mỗi hạng mục một dòng (phần nền gửi lại ở mọi lượt công cụ). */
+  private writePlanFile(task: Task, run: DeptRun): void {
+    try {
+      const dir = path.join(task.workspace!, '.ccoding', safeName(task.id));
+      ensureDir(dir);
+      writeText(path.join(dir, 'PLAN.md'), P.planFile(run.planSummary ?? '', run.decisions ?? '', run.subtasks));
+    } catch {
+      /* không ghi được thì agent vẫn có danh sách hạng mục trong prompt */
+    }
+  }
+
   /** Bản đồ repo `.ccoding/<task>/repo-map.md` (tệp, số dòng, route, model, hàm) — tạo lại trước mỗi hạng mục vì số dòng đổi sau khi sửa. */
   private writeRepoMap(task: Task): void {
     if (!task.workspace || this.d.config.tools.repoMap === false) return;
@@ -1575,6 +1613,7 @@ export class Orchestrator {
                 denyCommands: [...config.tools.denyCommands, ...(ctx.project?.denyCommands ?? [])],
                 allowGitCommit: !!task.branch,
                 expectWrites: (phase === 'execute' || phase === 'revise') && allow.some((t) => t === 'write_file' || t === 'edit_file'),
+                readsBeforeWrite: config.tools.readsBeforeWrite,
               }
             : undefined,
           redact: rt.local ? undefined : { secrets: config.dataProtection.redactSecrets, pii: piiOut },

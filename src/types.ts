@@ -107,6 +107,8 @@ export interface ToolPolicy {
   denyCommands: string[];
   /** Pha phải tạo sản phẩm bằng tệp (thực thi/sửa): chưa ghi tệp nào khi đã dùng ~1/3 lượt thì nhắc dừng khảo sát. */
   expectWrites?: boolean;
+  /** Số lần đọc/tìm liên tiếp không ghi tệp: tới N thì nhắc ghi, tới 2N thì từ chối đọc thêm cho tới khi ghi (0 = tắt). */
+  readsBeforeWrite?: number;
   /** Cho phép git commit (chỉ khi làm trên nhánh/worktree riêng). */
   allowGitCommit: boolean;
 }

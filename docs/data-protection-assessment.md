@@ -264,3 +264,11 @@ Theo yêu cầu chủ dự án, CCoding **không dùng** các tài khoản Claud
 ### Bổ sung: space log trên herdr (28/10/2026, chiều)
 
 `ccoding herdr logs` dựng 4 workspace herdr (Log · Hệ thống / Nhiệm vụ / Phòng ban / Agent) — mỗi pane chỉ chạy `ccoding logs -f …`, `logs ls`, `status --watch`, `usage --watch` để **hiển thị** các tệp log sẵn có trong `data/` (đã che bí mật/PII khi ghi qua `LogStore`). Không tạo kho log mới, không ghi thêm, không đổi chuỗi băm hay thời hạn lưu (DET-01, DET-03); không có luồng dữ liệu ra ngoài máy. Herdr chạy cục bộ trên máy chủ dự án, nên ai vào được phiên herdr cũng xem được các log này — giữ quyền truy cập máy như hiện tại (GOV-04). **Kết luận: ĐẠT**, không thêm điều kiện.
+
+### Bổ sung: tối ưu ngữ cảnh và lịch sử dự án (28/10/2026, tối)
+
+- **Lịch sử dự án (P8)**: pha lập kế hoạch nhận tóm tắt ≤ 3 nhiệm vụ trước **của cùng dự án**, chỉ nhiệm vụ có phân loại dữ liệu **≤** nhiệm vụ hiện tại (không đưa nội dung Bảo mật vào nhiệm vụ Nội bộ chạy runtime ngoài). Nguồn là `FINAL.md`/`task.json` đã có trong `data/runs`, đi ra runtime qua cùng bước che bí mật/PII như mọi prompt (GOV-03, PRE-05). Bản chi tiết `.ccoding/<task>/inputs/PROJECT-HISTORY.md` và `PLAN.md` nằm trong thư mục `.ccoding` đã `.gitignore` của worktree — không vào git.
+- **Ngân sách ngữ cảnh / giới hạn khảo sát**: chỉ bớt nội dung gửi đi (ít token, ít lần gửi lại nội dung tệp ra nhà cung cấp) — giảm phơi nhiễm dữ liệu (PRE-06). Không đổi log, sổ cái token hay chuỗi băm.
+- Số liệu đo lấy từ `calls.jsonl` chỉ gồm số đếm (tên công cụ, cỡ đầu ra, số lượt), không có nội dung; tệp trung gian nằm ngoài repo.
+
+**Kết luận: ĐẠT**, không thêm điều kiện.

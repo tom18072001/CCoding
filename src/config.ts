@@ -57,6 +57,14 @@ export interface RuntimeConfig {
   extraBodyByPhase?: Record<string, Record<string, unknown>>;
   /** Tắt hẳn runtime: không thăm dò, không gọi, kể cả khi nhiệm vụ/dự án/agent chỉ định (vd. không dùng tài khoản Claude/Codex sau 9router). */
   disabled?: boolean;
+  /**
+   * Trần token mỗi lượt của vòng công cụ (hồ sơ + đề bài + lịch sử). Vượt thì rút gọn kết quả công cụ cũ ngay (giữ 2 kết quả gần nhất).
+   * Không đặt = rút gọn theo đợt để giữ cache prompt (Claude/OpenAI). Nên đặt cho runtime KHÔNG có cache (API miễn phí, Ollama):
+   * mỗi token gửi lại đều tính vào hạn mức/tốc độ.
+   */
+  toolContextTokens?: number;
+  /** Cửa sổ ngữ cảnh của model (token), vd. 32768 = num_ctx của Ollama — vòng công cụ không gửi quá (cửa sổ − max_tokens − 1.024), tránh bị cắt mất phần đầu prompt. */
+  contextWindow?: number;
   [k: string]: unknown;
 }
 
@@ -126,6 +134,8 @@ export interface Config {
     toolInputBudget: Partial<Record<Phase, number>>;
     /** Số lần cho hạng mục chạy tiếp (ngữ cảnh mới) khi vòng công cụ chạm trần mà chưa xong; 0 = tắt. */
     maxContinuations?: number;
+    /** P8: số nhiệm vụ trước của cùng dự án đưa vào pha lập kế hoạch (tóm tắt, nhánh, kiểm tra, việc còn mở). Mặc định 3; 0 = tắt. */
+    projectHistory?: number;
   };
   /** Công cụ workspace cho agent (đọc/ghi file, chạy lệnh) — xem docs/TOOLS.md. */
   tools: {
@@ -141,6 +151,8 @@ export interface Config {
     cachedInputWeight?: number;
     /** Tạo bản đồ repo `.ccoding/<task>/repo-map.md` cho dự án có workspace (mặc định bật). */
     repoMap?: boolean;
+    /** Pha thực thi/sửa: đọc/tìm liên tiếp N lần mà không ghi tệp thì nhắc ghi; 2N lần thì từ chối đọc thêm tới khi ghi. Mặc định 16; 0 = tắt. */
+    readsBeforeWrite?: number;
     denyCommands: string[];
     /** File chưa track chép vào worktree mặc định (nếu có). */
     worktreeCopy: string[];
@@ -249,6 +261,7 @@ const BUILTIN: Omit<Config, 'root'> = {
     maxOutputChars: 12000,
     maxReadChars: 30000,
     cachedInputWeight: 0.1,
+    readsBeforeWrite: 16,
     denyCommands: [],
     worktreeCopy: ['.env', '.env.local', '.env.development', '.env.development.local', '.env.test', '.env.test.local'],
     web: true,

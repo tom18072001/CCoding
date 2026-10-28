@@ -126,3 +126,23 @@ Sửa trong lúc chạy (đã đẩy lên `main`): trần token vòng công cụ
 Còn tốn: hạng mục ADR của kiến trúc sư ~2,5M token (88 lần đọc/tìm); backend vẫn thường 14–26 lượt mới ghi tệp đầu tiên và quen đọc/sửa tệp qua PowerShell (bị chặn, mất lượt); hạng mục "áp quyền cho cả nhóm route" quá lớn (S3: 353 thao tác, 6 lần chạy).
 
 Từ 28/10 trưa: **tắt** `bifrost` và `openai-api` (9router) theo yêu cầu chủ dự án — không dùng tài khoản Claude/Codex trong 9router.
+
+## 9. Tối ưu cho runtime miễn phí / cục bộ (28/10/2026, tối)
+
+Sau khi tắt 9router, CCoding chạy trên Cerebras/NVIDIA miễn phí và Ollama cục bộ — **không có cache** kiểu Claude (hoặc có nhưng hạn mức tính theo phút/ngày), nên mọi token gửi lại đều tính. Đo lại gói 2 (chỉ số đếm, không nội dung):
+
+| Chỉ số (29 lượt thực thi/sửa) | Gói 2 |
+|---|---|
+| Lượt công cụ mỗi lượt gọi | 12–102 (thực thi thường 25–61) |
+| Đầu vào mỗi lượt gọi | 0,3–3,0M token (trung bình ~1,1M) |
+| Phần nền gửi lại mỗi lượt (hồ sơ + bối cảnh + đề bài) | 30–36k ký tự ≈ 13–17k token |
+| Đọc trước lần ghi đầu | tới 70 (QA), 65 (frontend), 48 (backend S4) |
+| Đọc trùng (cùng tham số) | 40–66% số lần đọc — phần lớn do rút gọn lịch sử rồi đọc lại |
+
+Thay đổi:
+1. **Ngân sách ngữ cảnh theo runtime** (`toolContextTokens`, `contextWindow` — `docs/RUNTIMES.md`): rút gọn ngay khi vượt, hiệu chỉnh ký tự/token theo usage thật, không bao giờ vượt `num_ctx` của Ollama.
+2. **Phần nền thực thi gọn**: đề bài ≤ 3.000 ký tự (bản đầy đủ `inputs/BRIEF.md`), tài liệu đính kèm ≤ 2.500, đầu vào hạng mục trước ≤ 3.500, kế hoạch chung mỗi hạng mục một dòng + `PLAN.md`.
+3. **Giới hạn khảo sát** `tools.readsBeforeWrite` (16): nhắc ở 16 lần đọc liên tiếp, từ chối đọc ở 32 cho tới khi ghi.
+4. **P8 — lịch sử dự án** cho pha lập kế hoạch (`inputs/PROJECT-HISTORY.md`).
+
+Mô phỏng trên dữ liệu gói 2: (1) −20–22%, (1)+(2) ≈ −35% token đầu vào; (3) giảm số lượt (chưa đo được trước khi chạy thật). P7 (CSDL kiểm thử dùng chung) để sau: cần DB riêng cho dự án, không dùng các container đang vận hành.

@@ -64,6 +64,15 @@ Khai báo trong dự án (form *Dự án* → **Sửa**, hoặc `projects.json`)
 
 Agent đã có `read_file`/`search` thì `run_command` **chặn** lệnh chỉ để đọc/tìm tệp (`Get-Content`, `cat`, `type`, `head/tail`, `Select-String -Path`, `rg`/`grep` trên tệp, `[IO.File]::ReadAll…`) và trả lời hướng dẫn dùng `read_file`/`search` (đọc theo `offset`, có số dòng, được tính hạn mức, không trùng lặp). Lọc đầu ra của lệnh khác (vd. `npm test | Select-String fail`) vẫn được. Lý do: lượt ND57 27/10 có 62/196 thao tác là đọc tệp qua shell — mỗi lần trả tối đa 12k ký tự không số dòng và đọc lại nhiều lần.
 
+## Khảo sát mãi không ghi (`tools.readsBeforeWrite`)
+
+Pha thực thi/sửa có công cụ ghi: đếm lần `read_file`/`search`/`list_files` **liên tiếp** kể từ lần ghi gần nhất. Tới N (mặc định 16) thì nhắc ghi một lần; tới 2N thì công cụ đọc **từ chối** ("ghi xong sẽ được đọc tiếp") cho tới khi agent `write_file`/`edit_file` thành công — đọc lại nội dung còn nguyên trong lịch sử không bị tính. Lý do: gói 2 ND57 có hạng mục đọc 48–70 lần trước lần ghi đầu (QA 70, frontend 65, backend 48), 40–66% là đọc lại. `0` = tắt.
+
+## Kế hoạch và lịch sử dự án trong `.ccoding/<task>/`
+
+- `PLAN.md`: kế hoạch đầy đủ (mô tả mọi hạng mục). Prompt thực thi chỉ gửi mỗi hạng mục một dòng (mã, tên, người làm, phụ thuộc) + mô tả đầy đủ hạng mục của chính agent — phần nền này đi kèm mọi lượt công cụ.
+- `inputs/PROJECT-HISTORY.md` (P8): các nhiệm vụ trước của cùng dự án (mới nhất trước) — tóm tắt, nhánh/commit, kết quả lệnh kiểm tra sau cùng, cờ "cần xem", việc còn mở. Bản rút gọn (≤ 4.500 ký tự, 3 nhiệm vụ — `phases.projectHistory`, `0` = tắt) vào prompt **lập kế hoạch**; chỉ lấy nhiệm vụ có phân loại dữ liệu ≤ nhiệm vụ hiện tại.
+
 ## Bản đồ repo
 
 Mỗi nhiệm vụ trên repo, CCoding dựng `.ccoding/<task>/repo-map.md` (làm mới trước mỗi hạng mục; tắt bằng `tools.repoMap: false`): cây thư mục (≤ 80 thư mục, bỏ `node_modules`, `dist`, `.git`…), **tệp lớn** (≥ 800 dòng — phải đọc theo đoạn), route Express (`router.get('/x')` kèm `tệp:dòng`), model Prisma, định nghĩa hàm/lớp cấp trên kèm số dòng. Bản đồ được đưa vào prompt lập kế hoạch và thực thi ⇒ agent nhảy thẳng tới `read_file path offset` thay vì `list_files`/`search` rộng; lập kế hoạch thấy tệp lớn nên phải tách hạng mục theo nhóm endpoint/màn hình.

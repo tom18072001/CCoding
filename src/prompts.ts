@@ -58,6 +58,8 @@ export interface Ctx {
   serialWriters?: boolean;
   /** Bản đồ repo do CCoding tạo (đường dẫn tương đối workspace) + các tệp nguồn lớn. */
   repoMap?: { rel: string; large: string[] };
+  /** P8: các nhiệm vụ trước của cùng dự án (pha lập kế hoạch) + tệp chi tiết. */
+  projectHistory?: { text: string; rel?: string };
 }
 
 /** Trích các mục của hồ sơ — pha họp chỉ cần sứ mệnh + chuyên môn. */
@@ -94,9 +96,10 @@ ${profile}
 
 const BRIEF_MAX: Record<Phase, number> = { route: 6000, plan: 40000, finalize: 12000, discuss: 3000, execute: 24000, revise: 6000, review: 6000, synthesize: 6000 };
 /** Khi agent đọc được file: chỉ gửi phần đầu, phần còn lại đọc từ workspace. */
-const BRIEF_MAX_FILES: Record<Phase, number> = { ...BRIEF_MAX, execute: 8000 };
+// thực thi: mỗi lượt vòng công cụ gửi lại phần nền — giữ ngắn, bản đầy đủ nằm trong .ccoding/<task>/inputs/BRIEF.md
+const BRIEF_MAX_FILES: Record<Phase, number> = { ...BRIEF_MAX, execute: 3000, revise: 3000 };
 const ATTACH_MAX: Record<Phase, number> = { route: 1500, plan: 30000, finalize: 6000, discuss: 0, execute: 20000, revise: 4000, review: 4000, synthesize: 2000 };
-const ATTACH_MAX_FILES: Record<Phase, number> = { ...ATTACH_MAX, execute: 6000, plan: 20000 };
+const ATTACH_MAX_FILES: Record<Phase, number> = { ...ATTACH_MAX, execute: 2500, revise: 2000, plan: 20000 };
 
 function briefFor(c: Ctx, phase: Phase): string {
   const max = (c.filesAccessible ? BRIEF_MAX_FILES : BRIEF_MAX)[phase];
@@ -229,7 +232,11 @@ Câu trả lời cuối cùng là báo cáo bàn giao theo ĐÚNG các mục tro
 export function planPrompt(c: Ctx, priorContext: string | undefined, tools: ToolName[] = []): Built {
   return {
     context: header(c, 'plan'),
-    prompt: `${priorContext ? `## Kết quả từ phòng trước (liên phòng)\n${truncate(priorContext, 12000)}\n\n` : ''}## Điều lệ phòng
+    prompt: `${priorContext ? `## Kết quả từ phòng trước (liên phòng)\n${truncate(priorContext, 12000)}\n\n` : ''}${
+      c.projectHistory
+        ? `## Nhiệm vụ trước của dự án (mới nhất trước)${c.projectHistory.rel ? ` — chi tiết: \`${c.projectHistory.rel}\`` : ''}\n${c.projectHistory.text}\nDùng để nối tiếp: không lập lại việc đã xong, đưa việc còn mở/lỗi còn lại vào kế hoạch khi liên quan tới yêu cầu, dùng nhánh/kết quả đã có thay vì khảo sát lại.\n\n`
+        : ''
+    }## Điều lệ phòng
 ${truncate(c.dept.body, 3000)}
 
 ## Nhân sự có thể giao việc
@@ -296,10 +303,21 @@ ${PLAN_SCHEMA.replace('"summary": "1–2 câu: cách tiếp cận tổng thể",
   };
 }
 
-function planBlock(planSummary: string, decisions: string, subtasks: Subtask[]): string {
-  return `## Kế hoạch chung đã chốt
+function planBlock(planSummary: string, decisions: string, subtasks: Subtask[], fullAt?: string): string {
+  // fullAt: agent đọc được tệp → mỗi hạng mục một dòng (mô tả đầy đủ trong tệp); phần này gửi lại ở mọi lượt công cụ
+  return `## Kế hoạch chung đã chốt${fullAt ? ` (mô tả đầy đủ: \`${fullAt}\`)` : ''}
 ${planSummary}
-${decisions ? `Quyết định chính: ${decisions}\n` : ''}${planText(subtasks)}`;
+${decisions ? `Quyết định chính: ${decisions}\n` : ''}${fullAt ? planLines(subtasks) : planText(subtasks)}`;
+}
+
+/** Mỗi hạng mục một dòng: mã, tên, người làm, phụ thuộc. */
+export function planLines(subtasks: Subtask[]): string {
+  return subtasks.map((s) => `- **${s.id}** ${s.title} → @${s.assignee}${s.dependsOn.length ? ` (sau ${s.dependsOn.join(', ')})` : ''}`).join('\n');
+}
+
+/** Nội dung `.ccoding/<task>/PLAN.md` — kế hoạch đầy đủ cho agent đọc khi cần. */
+export function planFile(planSummary: string, decisions: string, subtasks: Subtask[]): string {
+  return `# Kế hoạch chung\n\n${planSummary}\n${decisions ? `\nQuyết định chính: ${decisions}\n` : ''}\n${planText(subtasks)}\n`;
 }
 
 export interface DepInput {
@@ -359,13 +377,13 @@ ${continuation.changes ? '```\n' + truncate(continuation.changes, 3000) + '\n```
   return {
     context: `${header(c, 'execute')}
 ${priorContext ? `\n## Kết quả từ phòng trước (liên phòng)\n${truncate(priorContext, 8000)}\n` : ''}
-${planBlock(planSummary, decisions, subtasks)}`,
+${planBlock(planSummary, decisions, subtasks, c.filesAccessible && c.ccDir ? `${c.ccDir}/PLAN.md` : undefined)}`,
     prompt: `## Hạng mục của bạn: ${st.id} — ${st.title}
 ${st.description}
 ${st.deliverable ? `Sản phẩm bàn giao: ${st.deliverable}` : ''}
 
 ## Đầu vào từ các hạng mục trước
-${depsText(c, deps, c.filesAccessible ? 6000 : 16000)}
+${depsText(c, deps, c.filesAccessible ? 3500 : 16000)}
 ${draftBlock}${contBlock}${checksBlock(c.task, 'execute')}${toolNote(c, tools, 'execute')}${
       canWrite
         ? ''

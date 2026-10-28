@@ -376,3 +376,138 @@ test('model chỉ "suy nghĩ" mà không trả lời → nhắc một lần, l�
     srv.close();
   }
 });
+
+test('ngân sách ngữ cảnh vòng công cụ: toolContextTokens/contextWindow, rút gọn kết quả cũ, cắt kết quả quá lớn', async () => {
+  const { fitContext, toolContextBudget, historyChars } = await import('../src/runtimes/api.js');
+  assert.equal(toolContextBudget({}, 8000), 0, 'không đặt → giữ cách rút gọn theo đợt (cache)');
+  assert.equal(toolContextBudget({ contextWindow: 32768 }, 8000), 32768 - 8000 - 1024);
+  assert.equal(toolContextBudget({ contextWindow: 32768, toolContextTokens: 20000 }, 8000), 20000);
+  const msgs: any[] = [
+    { role: 'system', content: 's'.repeat(1000) },
+    { role: 'user', content: 'u'.repeat(1000) },
+  ];
+  for (let i = 0; i < 4; i++) {
+    msgs.push({ role: 'assistant', content: null, tool_calls: [{ id: `c${i}`, type: 'function', function: { name: 'read_file', arguments: `{"path":"f${i}"}` } }] });
+    msgs.push({ role: 'tool', tool_call_id: `c${i}`, content: String(i).repeat(5000) });
+  }
+  assert.equal(fitContext(msgs, 100_000), null, 'dưới ngân sách thì không đụng');
+  const r = fitContext(msgs, 12_000)!;
+  assert.ok(historyChars(msgs) <= 12_000, `còn ${historyChars(msgs)} ký tự`);
+  assert.equal(r.over, false);
+  assert.equal(msgs.at(-1).content, '3'.repeat(5000), 'kết quả mới nhất giữ nguyên');
+  assert.match(msgs[3].content, /đã lược bớt/);
+  // kết quả mới nhất quá lớn → bị cắt để vừa, kèm ghi chú đọc đoạn nhỏ hơn
+  msgs.push({ role: 'assistant', content: null, tool_calls: [{ id: 'big', type: 'function', function: { name: 'read_file', arguments: '{"path":"big"}' } }] });
+  msgs.push({ role: 'tool', tool_call_id: 'big', content: 'b'.repeat(30_000) });
+  fitContext(msgs, 12_000);
+  assert.ok(historyChars(msgs) <= 12_100);
+  assert.match(msgs.at(-1).content, /cắt để vừa ngữ cảnh model/);
+
+  // vòng lặp thật: mỗi lượt đọc một tệp 6.000 ký tự; model báo prompt_tokens = ký tự / 2,5
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-ctx-'));
+  for (let i = 0; i < 8; i++) fs.writeFileSync(path.join(root, `f${i}.txt`), `${'dòng dữ liệu mẫu '.repeat(20)}\n`.repeat(18));
+  const sizes: number[] = [];
+  let calls = 0;
+  const srv = http.createServer(async (req, res) => {
+    let raw = '';
+    for await (const c of req) raw += c;
+    const body = JSON.parse(raw);
+    calls++;
+    const chars = body.messages.reduce((n: number, m: any) => n + (typeof m.content === 'string' ? m.content.length : 0) + (m.tool_calls ?? []).reduce((k: number, tc: any) => k + tc.function.arguments.length + 40, 0), 0);
+    sizes.push(chars);
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    const send = (o: unknown) => res.write(`data: ${JSON.stringify(o)}\n\n`);
+    if (calls <= 8) send({ choices: [{ delta: { tool_calls: [{ index: 0, id: `c${calls}`, function: { name: 'read_file', arguments: JSON.stringify({ path: `f${calls - 1}.txt` }) } }] }, finish_reason: 'tool_calls' }] });
+    else send({ choices: [{ delta: { content: '## Tóm tắt\nXong.' }, finish_reason: 'stop' }] });
+    send({ choices: [], usage: { prompt_tokens: Math.round(chars / 2.5), completion_tokens: 10 } });
+    res.end('data: [DONE]\n\n');
+  });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+  try {
+    const { OpenAiApiRuntime } = await import('../src/runtimes/api.js');
+    const { parseAgent } = await import('../src/registry.js');
+    const rt = new OpenAiApiRuntime({ baseUrl: `http://127.0.0.1:${(srv.address() as AddressInfo).port}/v1`, tags: 'none', toolContextTokens: 6000 }, {}, 'ctx');
+    const agent = parseAgent('a.md', '---\nid: backend-dev\nname: Backend\ndepartment: dev\nrole: member\n---\nbody');
+    const r = await rt.run(
+      {
+        agent, phase: 'execute', system: 's'.repeat(2000), prompt: 'p'.repeat(2000), model: 'm', cwd: root, tools: [], allowTools: true, timeoutMs: 10000,
+        toolPolicy: { root, allow: ['read_file'], maxTurns: 20, maxInputTokens: 10_000_000, commandTimeoutSec: 10, maxOutputChars: 30000, denyCommands: [], allowGitCommit: false },
+        meta: { taskId: 'T-x', department: 'dev', callId: 'c1' },
+      },
+      {},
+    );
+    assert.equal(r.text, '## Tóm tắt\nXong.');
+    assert.equal(calls, 9);
+    // ngân sách 6.000 token × 2,5 ký tự/token = 15.000 ký tự (+ tối đa một kết quả công cụ mới của lượt cuối)
+    assert.ok(Math.max(...sizes) <= 15_000 + 200, `lượt lớn nhất ${Math.max(...sizes)} ký tự`);
+    assert.match(r.diag ?? '', /ngữ cảnh vượt 6000 token/);
+    // không đặt ngân sách: lịch sử lớn dần tới ngưỡng rút gọn theo đợt (40.000 ký tự)
+    sizes.length = 0;
+    calls = 0;
+    const rt2 = new OpenAiApiRuntime({ baseUrl: `http://127.0.0.1:${(srv.address() as AddressInfo).port}/v1`, tags: 'none' }, {}, 'ctx2');
+    await rt2.run(
+      {
+        agent, phase: 'execute', system: 's'.repeat(2000), prompt: 'p'.repeat(2000), model: 'm', cwd: root, tools: [], allowTools: true, timeoutMs: 10000,
+        toolPolicy: { root, allow: ['read_file'], maxTurns: 20, maxInputTokens: 10_000_000, commandTimeoutSec: 10, maxOutputChars: 30000, denyCommands: [], allowGitCommit: false },
+        meta: { taskId: 'T-x', department: 'dev', callId: 'c2' },
+      },
+      {},
+    );
+    assert.ok(Math.max(...sizes) > 30_000, `không ngân sách: lượt lớn nhất ${Math.max(...sizes)}`);
+  } finally {
+    srv.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('khảo sát mãi không ghi: đọc liên tiếp N lần → nhắc; 2N lần → từ chối đọc tới khi ghi tệp', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-streak-'));
+  for (let i = 0; i < 12; i++) fs.writeFileSync(path.join(root, `f${i}.txt`), `nội dung ${i}\n`);
+  let calls = 0;
+  const seenTool: string[] = [];
+  const nudges: string[] = [];
+  const srv = http.createServer(async (req, res) => {
+    let raw = '';
+    for await (const c of req) raw += c;
+    const body = JSON.parse(raw);
+    calls++;
+    const lastTool = [...body.messages].reverse().find((m: any) => m.role === 'tool');
+    if (lastTool) seenTool.push(String(lastTool.content).slice(0, 160));
+    for (const m of body.messages) if (m.role === 'user' && String(m.content).includes('liên tiếp mà chưa ghi') && !nudges.includes(m.content)) nudges.push(m.content);
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    const send = (o: unknown) => res.write(`data: ${JSON.stringify(o)}\n\n`);
+    const call = (name: string, args: unknown) => send({ choices: [{ delta: { tool_calls: [{ index: 0, id: `c${calls}`, function: { name, arguments: JSON.stringify(args) } }] }, finish_reason: 'tool_calls' }] });
+    if (calls <= 6) call('read_file', { path: `f${calls - 1}.txt` }); // 6 lần đọc khác nhau (N = 3 → chặn từ lần thứ 7)
+    else if (calls === 7) call('read_file', { path: 'f9.txt' }); // bị từ chối
+    else if (calls === 8) call('write_file', { path: 'out.md', content: 'bản nháp' });
+    else if (calls === 9) call('read_file', { path: 'f10.txt' }); // ghi xong → đọc lại được
+    else send({ choices: [{ delta: { content: '## Tóm tắt\nXong.' }, finish_reason: 'stop' }] });
+    send({ choices: [], usage: { prompt_tokens: 1000, completion_tokens: 10 } });
+    res.end('data: [DONE]\n\n');
+  });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+  try {
+    const { OpenAiApiRuntime } = await import('../src/runtimes/api.js');
+    const { parseAgent } = await import('../src/registry.js');
+    const rt = new OpenAiApiRuntime({ baseUrl: `http://127.0.0.1:${(srv.address() as AddressInfo).port}/v1`, tags: 'none' }, {}, 'streak');
+    const agent = parseAgent('a.md', '---\nid: backend-dev\nname: Backend\ndepartment: dev\nrole: member\n---\nbody');
+    const r = await rt.run(
+      {
+        agent, phase: 'execute', system: 's', prompt: 'p', model: 'm', cwd: root, tools: [], allowTools: true, timeoutMs: 10000,
+        toolPolicy: { root, allow: ['read_file', 'write_file'], maxTurns: 30, maxInputTokens: 10_000_000, commandTimeoutSec: 10, maxOutputChars: 30000, denyCommands: [], allowGitCommit: false, expectWrites: true, readsBeforeWrite: 3 },
+        meta: { taskId: 'T-x', department: 'dev', callId: 'c1' },
+      },
+      {},
+    );
+    assert.equal(r.text, '## Tóm tắt\nXong.');
+    assert.equal(nudges.length, 1, 'nhắc một lần ở lần đọc thứ 3');
+    assert.match(seenTool[6], /^⛔ Từ chối: đã đọc\/tìm 6 lần/);
+    assert.ok(fs.existsSync(path.join(root, 'out.md')));
+    assert.match(seenTool[8], /nội dung 10/, 'sau khi ghi thì đọc tiếp được');
+    assert.equal(r.toolCalls?.filter((x) => !x.ok).length, 1);
+    assert.match(r.diag ?? '', /từ chối 1 lần đọc/);
+  } finally {
+    srv.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
