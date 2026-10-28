@@ -492,7 +492,20 @@ export class Orchestrator {
       r.review = {
         approved: false,
         summary: `Giám đốc yêu cầu sửa: ${note.slice(0, 300)}`,
-        issues: [...targets.map((s) => ({ subtask: s.id, severity: 'major' as const, comment: `[Giám đốc] ${note}` })), ...keep],
+        // Ghi chú ngắn/chung chung (vd. "sửa các bước đã tick" — 28/10 agent không biết "bước" nào nên không sửa gì):
+        // nói rõ hạng mục được CHỌN trên giao diện và việc phải làm mặc định.
+        issues: [
+          ...targets.map((s) => ({
+            subtask: s.id,
+            severity: 'major' as const,
+            comment:
+              `[Giám đốc] Hạng mục ${s.id} được giám đốc chọn để sửa. Ghi chú: ${note || '(không có)'}` +
+              (note.trim().length < 80
+                ? ` — Ghi chú ngắn nên hiểu là: rà lại ${s.id} theo tiêu chí xong trong kế hoạch, sửa mọi lỗi của lệnh kiểm tra dự án (test/typecheck/lint) và các lỗi review trước liên quan tới ${s.id}, xem thêm chỉ dẫn bổ sung của chủ dự án; không hỏi lại. Nếu đã đạt hết thì ghi rõ bằng chứng (lệnh đã chạy + kết quả).`
+                : ''),
+          })),
+          ...keep,
+        ],
         checks: r.review?.checks,
         verified: r.review?.verified,
         by: 'director',

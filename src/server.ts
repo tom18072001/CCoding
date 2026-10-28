@@ -175,6 +175,9 @@ export function createServer(app: App): http.Server {
     if (p === '/api/tasks' && req.method === 'POST') {
       const b = await readBody(req);
       if (b.mode && !MODES.includes(b.mode)) throw new HttpError(400, 'Chế độ không hợp lệ');
+      // String({...}) = "[object Object]" — 28/10 một nhiệm vụ mất trọn đề bài vì client gửi brief dạng đối tượng
+      if (typeof b.brief !== 'string' || !b.brief.trim()) throw new HttpError(400, 'brief phải là chuỗi văn bản, không rỗng');
+      if (b.title !== undefined && typeof b.title !== 'string') throw new HttpError(400, 'title phải là chuỗi');
       try {
         const t = orchestrator.submit({
           brief: String(b.brief ?? ''),
