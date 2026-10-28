@@ -161,6 +161,10 @@ Runtime không báo chi phí ⇒ có thể khai báo `pricing` (USD / 1 triệu 
 
 Lượt gọi có công cụ bị lỗi ở giữa vòng lặp (vd. Claude Max trả 429 ở lượt cuối) sau khi đã ghi tệp/chạy lệnh/commit: lần thử trên runtime kế tiếp nhận thêm mục **"Lần thử trước bị ngắt giữa chừng"** liệt kê các thao tác đã làm (tối đa 40) và yêu cầu kiểm `git status/log/diff` rồi làm tiếp — không làm lại từ đầu (ND57 27/10: S2 đã sửa + commit trên Sonnet, 429 ở lượt cuối, Codex làm lại ~10 phút).
 
+### Giới hạn tốc độ giữa vòng công cụ
+
+Lượt thứ 2 trở đi của vòng công cụ gặp **429** (vd. Claude Max): CCoding chờ theo `Retry-After` (không có thì 20, 40, 60… giây) rồi thử lại **chính lượt đó** — giữ nguyên lịch sử hội thoại và cache — tối đa `rateWaitMs` (mặc định 240000 = 4 phút, đặt theo runtime; 0 = tắt). Chỉ khi mở lại xa hơn mới chuyển tài nguyên / tạm dừng chờ model nhanh. Lý do: ND57 gói 2 (28/10) Claude Max 429 trong ~4 phút làm nhiệm vụ tạm dừng–tiếp tục 6 lần, mỗi lần hạng mục đang làm mất toàn bộ ngữ cảnh và chạy lại từ đầu.
+
 ### Luồng trả lời treo
 
 Mỗi lượt gọi API dạng stream có **`idleTimeoutMs`** (mặc định 300000 = 5 phút, đặt theo runtime; 0 = tắt): không nhận được byte nào (kể cả keepalive) trong khoảng đó thì hủy lượt với lỗi `timeout` — giữa vòng công cụ thì thử lại lượt đó một lần, không được thì chuyển runtime (kèm danh sách thao tác đã làm). Trước đây một lượt treo phải chờ hết `timeoutMs` 30 phút (ND57 27/10: Codex treo >25 phút ở lần thử thứ hai của S2).

@@ -374,10 +374,30 @@ export class OpenAiApiRuntime implements Runtime {
         t = await this.turn(req, hooks, model, messages, tools);
       } catch (e) {
         if (hooks.signal?.aborted) throw e;
-        const re = toRuntimeError(e);
+        let re = toRuntimeError(e);
         // giữa vòng lặp công cụ dài: thử lại lượt này một lần (mất kết nối thoáng qua) thay vì bỏ cả công việc đã làm
         let retried: StreamTurn | undefined;
-        if (turns > 1 && (re.kind === 'transient' || re.kind === 'timeout' || re.kind === 'empty')) {
+        if (turns > 1 && re.kind === 'rate') {
+          // 429 giữa vòng công cụ (vd. Claude Max): chờ ngắn rồi thử lại CHÍNH lượt này — giữ nguyên ngữ cảnh và cache, không phải
+          // bỏ cả vòng lặp rồi chạy lại hạng mục từ đầu (ND57 gói 2: 6 lần tạm dừng/tiếp tục trong 4 phút, mỗi lần mất ngữ cảnh)
+          const maxWait = Math.max(0, Number(this.cfg.rateWaitMs ?? 240_000));
+          let waited = 0;
+          for (let k = 1; !retried && re.kind === 'rate' && waited < maxWait; k++) {
+            const hint = re.retryAt && re.retryAt > Date.now() ? re.retryAt - Date.now() + 1000 : 20_000 * k;
+            if (hint > maxWait - waited) break; // mở lại quá xa (vd. hết hạn mức) → để điều phối chuyển tài nguyên / tạm dừng
+            hooks.onActivity?.(`⏳ giới hạn tốc độ ở lượt ${turns} — chờ ${Math.round(hint / 1000)} giây rồi thử lại`);
+            diag.push(`lượt ${turns}: giới hạn tốc độ — chờ ${Math.round(hint / 1000)} giây rồi thử lại (giữ ngữ cảnh)`);
+            await sleepFor(hint, hooks.signal);
+            waited += hint;
+            try {
+              retried = await this.turn(req, hooks, model, messages, tools);
+            } catch (e2) {
+              if (hooks.signal?.aborted) throw e2;
+              re = toRuntimeError(e2);
+            }
+          }
+        }
+        if (!retried && turns > 1 && (re.kind === 'transient' || re.kind === 'timeout' || re.kind === 'empty')) {
           hooks.onActivity?.(`↻ thử lại lượt ${turns} sau lỗi: ${re.message.slice(0, 80)}`);
           diag.push(`lượt ${turns} lỗi (${re.kind}) — đã thử lại`);
           await new Promise((r) => setTimeout(r, 3000));
@@ -506,6 +526,22 @@ export function toolName(name: string, allow: readonly string[]): string {
   if (base !== name && allow.includes(base)) return base;
   const ci = allow.find((a) => a.toLowerCase() === base.toLowerCase());
   return ci ?? name;
+}
+
+/** Chờ `ms` mili giây, dừng sớm (ném lỗi) nếu lượt gọi bị hủy. */
+function sleepFor(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(new Error('Đã hủy'));
+    const t = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(t);
+      reject(new Error('Đã hủy'));
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
 }
 
 /** Yêu cầu dòng trạng thái khi vòng công cụ bị dừng giữa chừng — điều phối viên dựa vào đây để cho chạy tiếp. */

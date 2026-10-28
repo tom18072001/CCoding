@@ -28,6 +28,8 @@ export interface RuntimeConfig {
   probeTimeoutMs?: number;
   /** Luồng trả lời không có byte nào trong khoảng này (ms) → coi là treo, hủy lượt (lỗi "timeout" để thử lại/chuyển runtime). Mặc định 300000; 0 = tắt. */
   idleTimeoutMs?: number;
+  /** Giữa vòng công cụ gặp giới hạn tốc độ (429): chờ tối đa bao lâu (ms) rồi thử lại CHÍNH lượt đó, giữ ngữ cảnh + cache (mặc định 240000; 0 = không chờ). */
+  rateWaitMs?: number;
   command?: string;
   extraArgs?: string[];
   permissionMode?: string;

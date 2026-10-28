@@ -677,7 +677,7 @@ test('lỗi giữa vòng công cụ sau khi đã ghi workspace (vd. 429) → l�
     workspacesDir: path.join(dataDir, 'workspaces'),
     runner: 'process',
     runtime: { ...base.runtime, default: 'auto', order: ['a', 'b'] },
-    runtimes: { a: { type: 'openai-api', baseUrl: url(sa), tags: 'none', local: false }, b: { type: 'openai-api', baseUrl: url(sb), tags: 'none', local: false } },
+    runtimes: { a: { type: 'openai-api', baseUrl: url(sa), tags: 'none', local: false, rateWaitMs: 0 }, b: { type: 'openai-api', baseUrl: url(sb), tags: 'none', local: false } },
     models: { a: { opus: ['m-a'], sonnet: ['m-a'], haiku: ['m-a'] }, b: { opus: ['m-b'], sonnet: ['m-b'], haiku: ['m-b'] } },
     herdr: { ...base.herdr, notify: false, agentPanes: false },
   });
@@ -979,7 +979,7 @@ test('pha nặng: model nhanh bị 429 và sắp mở lại → tạm dừng ch�
     workspacesDir: path.join(dataDir, 'workspaces'),
     runner: 'process',
     runtime: { ...base.runtime, default: 'auto', order: ['a', 'b'], slowModels: ['^m-b$'], waitForFastMs: 30 * 60_000 },
-    runtimes: { a: { type: 'openai-api', baseUrl: url(sa), tags: 'none', local: false }, b: { type: 'openai-api', baseUrl: url(sb), tags: 'none', local: false } },
+    runtimes: { a: { type: 'openai-api', baseUrl: url(sa), tags: 'none', local: false, rateWaitMs: 0 }, b: { type: 'openai-api', baseUrl: url(sb), tags: 'none', local: false } },
     models: { a: { opus: ['m-a'], sonnet: ['m-a'], haiku: ['m-a'] }, b: { opus: ['m-b'], sonnet: ['m-b'], haiku: ['m-b'] } },
     herdr: { ...base.herdr, notify: false, agentPanes: false },
   });

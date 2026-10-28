@@ -187,6 +187,51 @@ test('trần token vòng công cụ: phần đọc từ cache tính theo trọng
   }
 });
 
+test('429 giữa vòng công cụ: chờ ngắn rồi thử lại chính lượt đó, giữ ngữ cảnh (không bỏ vòng lặp)', async () => {
+  let calls = 0;
+  let limited = 0;
+  const srv = http.createServer(async (req, res) => {
+    let raw = '';
+    for await (const c of req) raw += c;
+    const body = JSON.parse(raw);
+    calls++;
+    const tools = body.messages.filter((m: { role: string }) => m.role === 'tool').length;
+    if (tools === 1 && limited === 0) {
+      limited++;
+      res.writeHead(429, { 'content-type': 'application/json', 'retry-after': '1' });
+      return res.end(JSON.stringify({ error: { type: 'rate_limit_error', message: 'rate limited' } }));
+    }
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    const send = (o: unknown) => res.write(`data: ${JSON.stringify(o)}\n\n`);
+    if (tools === 0) send({ choices: [{ delta: { tool_calls: [{ index: 0, id: 'c1', function: { name: 'list_files', arguments: '{}' } }] }, finish_reason: 'tool_calls' }] });
+    else send({ choices: [{ delta: { content: `## Tóm tắt\nXong sau ${tools} kết quả công cụ.` }, finish_reason: 'stop' }] });
+    send({ choices: [], usage: { prompt_tokens: 100, completion_tokens: 5 } });
+    res.end('data: [DONE]\n\n');
+  });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-rw-'));
+  try {
+    const { OpenAiApiRuntime } = await import('../src/runtimes/api.js');
+    const { parseAgent } = await import('../src/registry.js');
+    const rt = new OpenAiApiRuntime({ baseUrl: `http://127.0.0.1:${(srv.address() as AddressInfo).port}/v1`, tags: 'none', rateWaitMs: 10_000 }, {}, 'rw');
+    const agent = parseAgent('a.md', '---\nid: backend-dev\nname: Backend\ndepartment: dev\nrole: member\n---\nbody');
+    const r = await rt.run(
+      {
+        agent, phase: 'execute', system: 's', prompt: 'p', model: 'm', cwd: root, tools: [], allowTools: true, timeoutMs: 20000,
+        toolPolicy: { root, allow: ['list_files'], maxTurns: 10, commandTimeoutSec: 10, maxOutputChars: 2000, denyCommands: [], allowGitCommit: false },
+        meta: { taskId: 'T-x', department: 'dev', callId: 'c1' },
+      },
+      {},
+    );
+    assert.equal(r.text, '## Tóm tắt\nXong sau 1 kết quả công cụ.', 'lượt thử lại vẫn có lịch sử công cụ');
+    assert.equal(calls, 3);
+    assert.match(r.diag ?? '', /giới hạn tốc độ — chờ \d+ giây rồi thử lại/);
+  } finally {
+    srv.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('mọi tài nguyên hết hạn mức → tạm dừng nhiệm vụ (không rơi về mock) và hẹn tự tiếp tục', async () => {
   const gw = await fakeGateway();
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-fo2-'));
