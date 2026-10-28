@@ -523,7 +523,6 @@ export function applyResolutions(rep: KpiReport, src: KpiSource, resolutions: Kp
         } else (k.resolved ??= []).push({ key, text, how: 'manual', at: m.at, note: m.note });
         return;
       }
-      if (key === 'infra') return void keep.push([key, text]);
       let last = -1;
       tasks.forEach((t, j) => {
         if (one(t).agents.find((x) => x.agentId === k.agentId)?.findingKeys.includes(key)) last = j;

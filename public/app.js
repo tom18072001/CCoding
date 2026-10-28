@@ -1266,7 +1266,7 @@
             .map((f, i) => {
               const key = k.findingKeys?.[i];
               const again = (k.recurred || []).includes(key);
-              return `<li class="${again ? 'again' : ''}"><span>${esc(f)}</span>${key && key !== 'infra' ? `<span class="fx-acts"><button class="btn ghost sm" data-fix="${esc(key)}" data-agent="${esc(k.agentId)}" title="Đã sửa nguyên nhân — ẩn mục này">✓ Đã sửa</button><button class="btn ghost sm" data-remind="${esc(key)}" data-agent="${esc(k.agentId)}" data-i="${i}" title="Thêm thành góp ý trong hồ sơ agent (tự xóa khi đã sửa)">💬 Nhắc agent</button></span>` : ''}</li>`;
+              return `<li class="${again ? 'again' : ''}"><span>${esc(f)}</span>${key ? `<span class="fx-acts"><button class="btn ghost sm" data-fix="${esc(key)}" data-agent="${esc(k.agentId)}" title="Đã sửa nguyên nhân — ẩn mục này">✓ Đã sửa</button>${key === 'infra' ? '' : `<button class="btn ghost sm" data-remind="${esc(key)}" data-agent="${esc(k.agentId)}" data-i="${i}" title="Thêm thành góp ý trong hồ sơ agent (tự xóa khi đã sửa)">💬 Nhắc agent</button>`}</span>` : ''}</li>`;
             })
             .join('')}</ul></div>`,
         )
