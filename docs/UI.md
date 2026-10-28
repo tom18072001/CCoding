@@ -39,7 +39,7 @@ Khi nhiệm vụ không chạy và có hạng mục đã xong, cuối hội tho�
 
 ## Phòng giám đốc
 
-Sơ đồ: hàng trên **Phát triển | Giám đốc | Nghiên cứu**, hàng dưới **Phòng họp | Điều phối | Pantry | Góc giải trí**, hành lang chạy suốt giữa. Nhân vật cà vạt đỏ trong phòng Giám đốc là bạn.
+Sơ đồ: hàng trên **Phát triển | Giám đốc | Nghiên cứu**, hàng dưới **Phòng họp | Điều phối | Pantry | Góc giải trí**, hành lang chạy suốt giữa. Hai vách ngăn của phòng Giám đốc có **cửa tắt** sang thẳng phòng Phát triển và phòng Nghiên cứu (đi WASD hoặc nhấp đúp — đường đi tự chọn cửa tắt; nhấp vào cửa mở menu của phòng bên kia). Nhân vật cà vạt đỏ trong phòng Giám đốc là bạn.
 
 | Thao tác | Phím / chuột |
 |---|---|

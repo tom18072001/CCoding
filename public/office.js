@@ -52,6 +52,8 @@
   const SPOTS = [
     { id: 'room:dev', x: 12, y: 16.6, r: 1.8, label: 'Phòng Phát triển', icon: '💻', dept: 'dev' },
     { id: 'room:research', x: 42, y: 16.6, r: 1.8, label: 'Phòng Nghiên cứu', icon: '📚', dept: 'research' },
+    { id: 'room:dev', x: 25.5, y: 10.4, r: 1.2, label: 'Cửa tắt sang phòng Phát triển', icon: '🚪', dept: 'dev' },
+    { id: 'room:research', x: 33.5, y: 10.4, r: 1.2, label: 'Cửa tắt sang phòng Nghiên cứu', icon: '🚪', dept: 'research' },
     { id: 'room:meeting', x: 8, y: 19.4, r: 1.6, label: 'Phòng họp', icon: '🗣' },
     { id: 'room:meeting-table', x: 8.8, y: 23.2, r: 3.2, label: 'Bàn họp', icon: '🗣' },
     { id: 'room:office', x: 22, y: 19.4, r: 1.6, label: 'Phòng điều phối', icon: '🧭' },
@@ -79,6 +81,10 @@
 
   // cửa ra hành lang: [x0, x1] trên tường y = 16 (phòng trên) và y = 19 (phòng dưới)
   const DOORS_TOP = [[11, 13], [28.5, 30.5], [41, 43]];
+  // vách ngăn hai bên phòng Giám đốc có cửa tắt sang Phát triển / Nghiên cứu (y từ 9.2 đến 11.2)
+  const SIDE_DOOR = [9.2, 11.2];
+  const SIDE_Y = (SIDE_DOOR[0] + SIDE_DOOR[1]) / 2;
+  const SIDE_DOORS = { dev: { wall: 25, inside: 23.6 }, research: { wall: 33, inside: 35.2 } };
   const DOORS_BOTTOM = [[7, 9], [21, 23], [34, 36], [44.3, 46.0]];
 
   (function buildSolids() {
@@ -88,8 +94,11 @@
     add(0, 0, 1, H);
     add(W - 1, 0, 1, H);
     add(0, H - 1, W, 1);
-    add(25, 0, 1, 16.4); // Phát triển | Giám đốc
-    add(33, 0, 1, 16.4); // Giám đốc | Nghiên cứu
+    // vách Phát triển | Giám đốc | Nghiên cứu, chừa cửa tắt
+    for (const x of [25, 33]) {
+      add(x, 0, 1, SIDE_DOOR[0]);
+      add(x, SIDE_DOOR[1], 1, 16.4 - SIDE_DOOR[1]);
+    }
     const hwall = (y, gaps) => {
       let x = 1;
       for (const [g0, g1] of gaps) {
@@ -713,6 +722,22 @@
         return out;
       };
       const enter = (rid, pt) => leave(rid, pt).reverse();
+      const within = (rid, a, b) => {
+        const r = ROOMS[rid];
+        if (r.direct && r.direct(a) && r.direct(b)) return [{ x: a.x, y: r.aisleY }, { x: b.x, y: r.aisleY }, b];
+        const la = nearestLane(r, a.x);
+        const lb = nearestLane(r, b.x);
+        return [{ x: la, y: a.y }, { x: la, y: r.aisleY }, { x: lb, y: r.aisleY }, { x: lb, y: b.y }, b];
+      };
+      // phòng Giám đốc ↔ Phát triển / Nghiên cứu: đi cửa tắt ở vách ngăn
+      const side = ra === 'boss' && SIDE_DOORS[rb] ? rb : rb === 'boss' && SIDE_DOORS[ra] ? ra : null;
+      if (side) {
+        const d = SIDE_DOORS[side];
+        const door = { x: d.inside, y: SIDE_Y };
+        const gate = [{ x: d.wall + (d.wall === 25 ? 1.2 : -0.2), y: SIDE_Y }, { x: d.wall + (d.wall === 25 ? -0.2 : 1.2), y: SIDE_Y }];
+        if (ra === 'boss') return [{ x: p.x, y: SIDE_Y }, ...gate, door, ...within(side, door, q)];
+        return [...within(side, p, door).slice(0, -1), door, ...gate.reverse(), { x: q.x, y: SIDE_Y }, q];
+      }
       if (ra === rb && ra !== 'corridor') {
         const r = ROOMS[ra];
         if (r.direct && r.direct(p) && r.direct(q)) return [{ x: p.x, y: r.aisleY }, { x: q.x, y: r.aisleY }, q];
@@ -852,8 +877,14 @@
       p.rect(0, 0, 1, H, WALL);
       p.rect(W - 1, 0, 1, H, WALL);
       p.rect(0, H - 1, W, 1, WALL);
-      p.rect(25, 0, 1, 16.4, WALL);
-      p.rect(33, 0, 1, 16.4, WALL);
+      for (const x of [25, 33]) {
+        p.rect(x, 0, 1, SIDE_DOOR[0], WALL);
+        p.rect(x, SIDE_DOOR[1], 1, 16.4 - SIDE_DOOR[1], WALL);
+        // khung cửa tắt + thảm chân
+        p.rect(x - 0.1, SIDE_DOOR[0] - 0.12, 1.2, 0.12, '#64748b');
+        p.rect(x - 0.1, SIDE_DOOR[1], 1.2, 0.12, '#64748b');
+        p.rect(x + 0.1, SIDE_DOOR[0] + 0.25, 0.8, SIDE_DOOR[1] - SIDE_DOOR[0] - 0.5, 'rgba(202,138,4,0.35)');
+      }
       // tường giữa phòng trên & hành lang (có cửa)
       const hwall = (y, h, gaps) => {
         let x = 1;
