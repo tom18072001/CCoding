@@ -73,6 +73,10 @@ export interface ProjectDef {
   worktreeCopy?: string[];
   /** Mẫu regex lệnh bị cấm riêng cho dự án (vd. container/cổng DB của môi trường đang chạy). */
   denyCommands?: string[];
+  /** Lệnh chuẩn bị chạy một lần mỗi worktree trước lệnh kiểm tra (vd. cài dependency). */
+  setupCommands?: string[];
+  /** Lệnh kiểm tra CCoding tự chạy trước khi sửa, sau thực thi/sửa và đưa cho reviewer (vd. test, typecheck). */
+  checkCommands?: string[];
   createdAt: string;
 }
 
@@ -320,10 +324,39 @@ export interface Task {
   splitInto?: string[];
   /** Chỉ bắt đầu khi các nhiệm vụ này đã xong (thứ tự phụ thuộc giữa các nhiệm vụ đã tách). */
   after?: string[];
+  /** Lệnh kiểm tra của dự án do CCoding tự chạy: trước khi sửa (baseline) và sau thực thi/sửa (latest). */
+  projectChecks?: ProjectChecks;
+  /** Nhiệm vụ đã chạy xong nhưng cần người xem lại (vd. review cuối chưa duyệt). */
+  attention?: { reason: 'review' | 'checks'; detail: string; at: string };
   createdAt: string;
   updatedAt: string;
   startedAt?: string;
   finishedAt?: string;
+}
+
+/** Kết quả một lệnh kiểm tra của dự án (CCoding tự chạy, không qua agent). */
+export interface CheckResult {
+  command: string;
+  code: number | null;
+  ok: boolean;
+  timedOut?: boolean;
+  ms: number;
+  /** Dòng tổng kết (số test pass/fail, lỗi…) trích từ đầu ra. */
+  summary: string;
+  /** Phần cuối đầu ra (đã cắt) để reviewer xem lỗi. */
+  tail: string;
+  /** Lệnh bị chặn theo chính sách an toàn (không chạy). */
+  denied?: string;
+}
+
+export interface ProjectChecks {
+  setupDone?: boolean;
+  setup?: CheckResult[];
+  baseline?: CheckResult[];
+  baselineAt?: string;
+  latest?: CheckResult[];
+  latestAt?: string;
+  latestAfter?: 'execute' | 'revise';
 }
 
 export interface ChatMessage {

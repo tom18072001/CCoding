@@ -13,7 +13,7 @@ import type { Candidate, RuntimeManager } from './runtimes/index.js';
 import type { Store } from './store.js';
 import { kpiMarkdown, kpiReport } from './kpi.js';
 import { cappedDone } from './runtimes/api.js';
-import { isCheckCommand, toolsFor } from './tools/workspace.js';
+import { isCheckCommand, runCheckCommand, toolsFor } from './tools/workspace.js';
 import type { Uploads } from './uploads.js';
 import type { UsageLedger } from './usage.js';
 import { ensureDir, readJsonFile, safeName, writeJsonAtomic, writeText } from './util/fsx.js';
@@ -32,6 +32,7 @@ import {
   type Attachment,
   type BudgetMode,
   type ChatMessage,
+  type CheckResult,
   type Classification,
   type DepartmentDef,
   type DeptRun,
@@ -384,6 +385,7 @@ export class Orchestrator {
     t.status = 'queued';
     t.pause = undefined;
     t.error = undefined;
+    t.attention = undefined;
     t.finishedAt = undefined;
     t.resumes = (t.resumes ?? 0) + 1;
     logs.write({ level: 'info', kind: 'task.resumed', msg: `Tiếp tục ${t.id} từ checkpoint (trước đó: ${prev}) — ngân sách ${fmtNum(t.options.budgetTokens)} · ${t.options.budgetMode === 'complete' ? 'chạy tới khi hoàn thành' : 'dừng khi chạm trần'}`, taskId: t.id, projectId: t.projectId });
@@ -713,8 +715,10 @@ export class Orchestrator {
         this.alert({ level: 'warn', kind: 'task.unfinished', title: 'Nhiệm vụ chưa xong hết', msg: `${task.title}: ${task.error}`, taskId: task.id });
       } else {
         task.status = 'done';
-        logs.write({ level: 'info', kind: 'task.done', msg: `Hoàn thành ${task.id} — ${fmtNum(totalTokens(task.usage))} token`, taskId: task.id, projectId: task.projectId, data: { usage: task.usage } });
-        void this.d.herdr?.notify(`CCoding: xong ${task.id}`, task.title);
+        logs.write({ level: 'info', kind: 'task.done', msg: `Hoàn thành ${task.id} — ${fmtNum(totalTokens(task.usage))} token${task.attention ? ` · cần xem: ${task.attention.detail}` : ''}`, taskId: task.id, projectId: task.projectId, data: { usage: task.usage } });
+        if (task.attention)
+          this.alert({ level: 'warn', kind: 'task.attention', title: task.attention.reason === 'review' ? 'Xong nhưng review chưa duyệt' : 'Xong nhưng lệnh kiểm tra còn lỗi', msg: `${task.title}: ${task.attention.detail} — xem báo cáo, "Làm lại từ review" hoặc tách việc còn lại`, taskId: task.id });
+        void this.d.herdr?.notify(`CCoding: xong ${task.id}${task.attention ? ' (cần xem)' : ''}`, task.title);
       }
     } catch (e) {
       if (e instanceof PauseSignal && !ctrl.signal.aborted) {
@@ -882,11 +886,14 @@ export class Orchestrator {
       this.checkEstimate(task, run, project);
     }
 
-    // 3) Thực thi
+    // 3) Thực thi — CCoding tự chạy lệnh kiểm tra của dự án trước khi sửa (baseline) và sau khi làm xong
     if (!reached(run, 'executed')) {
       this.setPhase(task, run, 'execute');
+      const checkable = this.projectCheckable(task, project);
+      if (checkable && !task.projectChecks?.baseline && !run.subtasks.some((s) => s.attempts > 0 || s.status === 'done')) await this.runProjectChecks(task, project, dept.id, 'baseline');
       await this.executeAll(task, run, pctx, base, prior);
       run.stage = 'executed';
+      if (checkable && run.subtasks.some((s) => s.status === 'done')) await this.runProjectChecks(task, project, dept.id, 'execute');
       this.save(task);
     }
 
@@ -912,21 +919,34 @@ export class Orchestrator {
           // review lỗi KHÔNG được coi là "duyệt"
           if (res.error && !res.text) throw new Error(`Không review được: ${res.error}`);
           const review = parseReview(res.text, items.map((i) => i.st.id));
+          // lệnh kiểm tra của dự án đạt trước khi sửa mà hỏng sau khi sửa → không duyệt, dù reviewer nói gì
+          const regressed = this.checkRegressions(task);
+          if (regressed.length) {
+            if (review.approved) review.summary = `${review.summary} (CCoding: lệnh kiểm tra hỏng sau khi sửa → không duyệt)`;
+            review.approved = false;
+            if (!review.issues.some((i) => i.severity !== 'minor')) {
+              const target = [...done()].reverse().find((s) => this.isWriter(registry.agent(s.assignee), task, project)) ?? done().at(-1);
+              if (target) review.issues.push({ subtask: target.id, severity: 'blocker', comment: `Lệnh ${regressed.map((c) => `\`${c}\``).join(', ')} đạt trước khi sửa nhưng lỗi sau khi sửa — sửa cho đạt lại (đầu ra ở mục "Lệnh kiểm tra của dự án").` });
+            }
+          }
           // bằng chứng: lệnh reviewer thực sự chạy qua công cụ (không chỉ lời khai trong JSON)
           const ran = (res.toolCalls ?? []).filter((tc) => tc.name === 'run_command');
+          const sys = task.projectChecks?.latest ?? [];
           const checks = [
+            ...sys.map((r) => ({ command: r.command, exitCode: r.code ?? undefined, ok: r.ok, note: `CCoding tự chạy${r.summary ? ` — ${r.summary.slice(0, 120)}` : ''}` })),
             ...ran.map((tc) => ({ command: tc.args.replace(/^command=/, '').slice(0, 300), ok: tc.ok, note: tc.ok ? 'chạy qua công cụ' : `lỗi: ${(tc.error ?? '').slice(0, 160)}` })),
             ...review.checks.filter((c) => !ran.some((tc) => tc.args.includes(c.command.slice(0, 40)))),
           ];
           // chỉ lệnh kiểm chứng thật (test/typecheck/lint/build/migration) mới là bằng chứng — git status, rg… là khảo sát
-          const verified = reviewTools.includes('run_command') ? ran.some((tc) => isCheckCommand(tc.args)) : undefined;
+          // bằng chứng có sẵn khi CCoding đã tự chạy lệnh kiểm tra của dự án (không phụ thuộc reviewer/model)
+          const verified = sys.length ? true : reviewTools.includes('run_command') ? ran.some((tc) => isCheckCommand(tc.args)) : undefined;
           run.review = { approved: review.approved, summary: review.summary, issues: review.issues, checks, verified };
           const evidence =
             verified === false
               ? `\n⚠️ Reviewer có quyền chạy lệnh nhưng KHÔNG chạy lệnh kiểm tra nào (test/typecheck/lint/build)${ran.length ? ` — chỉ chạy lệnh khảo sát: ${ran.map((tc) => `\`${tc.args.slice(0, 60)}\``).join(', ')}` : ''} — kết luận chưa có bằng chứng chạy thật.`
-              : ran.length
-                ? `\nĐã chạy: ${ran.map((tc) => `\`${tc.args.replace(/^command=/, '').slice(0, 80)}\` ${tc.ok ? '✓' : '✗'}`).join(', ')}`
-                : '';
+              : `${sys.length ? `\n🧪 Lệnh kiểm tra (CCoding tự chạy): ${sys.map((r) => `\`${r.command.slice(0, 80)}\` ${r.ok ? '✓' : '✗'}`).join(', ')}${regressed.length ? ' — có lệnh hỏng sau khi sửa' : ''}` : ''}${
+                  ran.length ? `\nReviewer đã chạy: ${ran.map((tc) => `\`${tc.args.replace(/^command=/, '').slice(0, 80)}\` ${tc.ok ? '✓' : '✗'}`).join(', ')}` : ''
+                }`;
           if (verified === false) this.d.logs.write({ level: 'warn', kind: 'review.unverified', msg: `${dept.short}: reviewer không chạy lệnh kiểm tra nào`, taskId: task.id, agentId: reviewer.id, department: dept.id });
           this.message(
             task,
@@ -966,9 +986,13 @@ export class Orchestrator {
           ]);
           const stop = results.find((x): x is PromiseRejectedResult => x.status === 'rejected');
           if (stop) throw stop.reason;
+          if (this.projectCheckable(task, project)) await this.runProjectChecks(task, project, dept.id, 'revise');
         }
       }
       run.stage = 'reviewed';
+      // review cuối chưa duyệt / lệnh kiểm tra còn hỏng → nhiệm vụ vẫn chạy xong nhưng gắn cờ "cần xem"
+      if (run.review && !run.review.approved) task.attention = { reason: 'review', detail: `${dept.short}: ${run.review.summary.slice(0, 280)}`, at: nowIso() };
+      else if (task.projectChecks?.latest?.some((r) => !r.ok)) task.attention = { reason: 'checks', detail: `Lệnh kiểm tra còn lỗi: ${task.projectChecks.latest.filter((r) => !r.ok).map((r) => r.command).join(', ')}`, at: nowIso() };
       this.save(task);
     }
 
@@ -1286,6 +1310,66 @@ export class Orchestrator {
     if (fs.existsSync(src)) fs.cpSync(src, path.join(cc, 'inputs'), { recursive: true });
     const outs = path.join(this.d.store.runDir(task.id), 'outputs');
     if (fs.existsSync(outs)) fs.cpSync(outs, path.join(cc, 'outputs'), { recursive: true });
+  }
+
+  /** Dự án có lệnh kiểm tra và nhiệm vụ được chạy lệnh trong workspace (quyền exec). */
+  private projectCheckable(task: Task, project?: ProjectDef): project is ProjectDef {
+    return !!project?.workspace && !!project.checkCommands?.length && this.toolAccess(task, project) === 'exec' && !!task.workspace && fs.existsSync(task.workspace);
+  }
+
+  /** CCoding tự chạy lệnh chuẩn bị (một lần mỗi worktree) rồi lệnh kiểm tra của dự án — bằng chứng không phụ thuộc agent/model. */
+  private async runProjectChecks(task: Task, project: ProjectDef, dept: string, when: 'baseline' | 'execute' | 'revise'): Promise<CheckResult[]> {
+    const { config, logs } = this.d;
+    const signal = this.controllers.get(task.id)?.signal;
+    const opts = { denyCommands: [...config.tools.denyCommands, ...(project.denyCommands ?? [])], timeoutSec: config.tools.commandTimeoutSec, maxChars: config.tools.maxOutputChars, signal };
+    const pc = (task.projectChecks ??= {});
+    const cwd = task.workspace!;
+    const mark = (r: CheckResult) => (r.ok ? '✓' : r.denied ? '⛔' : '✗');
+    if (!pc.setupDone && project.setupCommands?.length) {
+      pc.setup = [];
+      for (const cmd of project.setupCommands) {
+        this.checkAbort(task);
+        pc.setup.push(await runCheckCommand(cmd, cwd, opts));
+      }
+      pc.setupDone = pc.setup.every((r) => r.ok);
+      this.message(task, dept, 'system', 'system', `🔧 Lệnh chuẩn bị của dự án:\n${pc.setup.map((r) => `- \`${r.command}\` ${mark(r)} ${r.summary}`).join('\n')}`);
+      if (!pc.setupDone) this.alert({ level: 'warn', kind: 'checks.setup', title: 'Lệnh chuẩn bị của dự án lỗi', msg: `${task.title}: ${pc.setup.filter((r) => !r.ok).map((r) => r.command).join(', ')}`, taskId: task.id });
+    }
+    const results: CheckResult[] = [];
+    for (const cmd of project.checkCommands ?? []) {
+      this.checkAbort(task);
+      results.push(await runCheckCommand(cmd, cwd, opts));
+    }
+    if (when === 'baseline') {
+      pc.baseline = results;
+      pc.baselineAt = nowIso();
+    } else {
+      pc.latest = results;
+      pc.latestAt = nowIso();
+      pc.latestAfter = when;
+    }
+    const label = when === 'baseline' ? 'trước khi sửa' : when === 'execute' ? 'sau thực thi' : 'sau vòng sửa';
+    this.message(task, dept, 'system', 'system', `🧪 Lệnh kiểm tra của dự án (${label}):\n${results.map((r) => `- \`${r.command}\` ${mark(r)} ${r.summary}`).join('\n')}`);
+    logs.write({
+      level: results.every((r) => r.ok) ? 'info' : 'warn',
+      kind: 'checks.run',
+      msg: `${task.id} ${label}: ${results.map((r) => `${r.command} → ${r.denied ? 'bị chặn' : r.timedOut ? 'timeout' : r.code}`).join('; ')}`,
+      taskId: task.id,
+      projectId: project.id,
+      department: dept,
+      data: { when, results: results.map((r) => ({ command: r.command, code: r.code, ok: r.ok, ms: r.ms, summary: r.summary, denied: r.denied })) },
+    });
+    const regressed = when === 'baseline' ? [] : this.checkRegressions(task);
+    if (regressed.length) this.alert({ level: 'warn', kind: 'checks.regression', title: 'Lệnh kiểm tra hỏng sau khi sửa', msg: `${task.title}: ${regressed.join(', ')} đạt trước khi sửa nhưng lỗi sau khi sửa`, taskId: task.id });
+    this.save(task);
+    return results;
+  }
+
+  /** Lệnh kiểm tra đạt ở baseline nhưng lỗi ở lần chạy gần nhất (do thay đổi của nhiệm vụ này). */
+  private checkRegressions(task: Task): string[] {
+    const pc = task.projectChecks;
+    if (!pc?.latest) return [];
+    return pc.latest.filter((r) => !r.ok && !r.denied && pc.baseline?.find((b) => b.command === r.command)?.ok === true).map((r) => r.command);
   }
 
   private workspaceChanges(task: Task): string {
@@ -1768,7 +1852,14 @@ export class Orchestrator {
     } catch (e) {
       this.d.logs.write({ level: 'warn', kind: 'kpi.error', msg: `Không tính được KPI: ${(e as Error).message}`, taskId: task.id });
     }
-    const appendix = `\n\n---\n\n## Phụ lục: token & sản phẩm (CCoding)\n\n- Nhiệm vụ: \`${task.id}\` · chế độ: ${task.mode} · phòng: ${task.departments.join(' → ')} · phân loại dữ liệu: ${task.classification}${paused ? ' · **đang tạm dừng**' : ''}\n- Tổng: **${fmtNum(task.usage.input)} in / ${fmtNum(task.usage.output)} out**, cache đọc ${fmtNum(task.usage.cacheRead)}, ${task.usage.calls} lượt gọi${task.usage.estimatedCalls ? ` (${task.usage.estimatedCalls} lượt ước lượng)` : ''} · ngân sách ${fmtNum(task.options.budgetTokens)} (${task.options.budgetMode === 'pause' ? 'dừng khi chạm trần' : 'chạy tới khi hoàn thành'})\n\n| Agent | Phòng | Input | Output | Cache đọc | Lượt |\n|---|---|---:|---:|---:|---:|\n${rows}\n\n### File đầu ra\n${outputs.join('\n') || '(không có)'}\n${scratch}${git}${kpi}`;
+    const pc = task.projectChecks;
+    const ckRow = (when: string, r: CheckResult) => `| ${when} | \`${r.command.replace(/\|/g, '\\|')}\` | ${r.denied ? 'bị chặn' : r.timedOut ? 'timeout' : r.code} | ${r.summary.replace(/\|/g, '/').slice(0, 160)} |`;
+    const checks =
+      pc?.baseline?.length || pc?.latest?.length
+        ? `\n### Lệnh kiểm tra của dự án (CCoding tự chạy)\n| Lúc | Lệnh | Exit | Tổng kết |\n|---|---|---|---|\n${[...(pc.baseline ?? []).map((r) => ckRow('trước khi sửa', r)), ...(pc.latest ?? []).map((r) => ckRow(pc.latestAfter === 'revise' ? 'sau vòng sửa' : 'sau thực thi', r))].join('\n')}\n`
+        : '';
+    const attention = task.attention ? `\n> ⚠ **Cần xem lại:** ${task.attention.detail}\n` : '';
+    const appendix = `\n\n---\n${attention}\n## Phụ lục: token & sản phẩm (CCoding)\n\n- Nhiệm vụ: \`${task.id}\` · chế độ: ${task.mode} · phòng: ${task.departments.join(' → ')} · phân loại dữ liệu: ${task.classification}${paused ? ' · **đang tạm dừng**' : ''}\n- Tổng: **${fmtNum(task.usage.input)} in / ${fmtNum(task.usage.output)} out**, cache đọc ${fmtNum(task.usage.cacheRead)}, ${task.usage.calls} lượt gọi${task.usage.estimatedCalls ? ` (${task.usage.estimatedCalls} lượt ước lượng)` : ''} · ngân sách ${fmtNum(task.options.budgetTokens)} (${task.options.budgetMode === 'pause' ? 'dừng khi chạm trần' : 'chạy tới khi hoàn thành'})\n\n| Agent | Phòng | Input | Output | Cache đọc | Lượt |\n|---|---|---:|---:|---:|---:|\n${rows}\n\n### File đầu ra\n${outputs.join('\n') || '(không có)'}\n${scratch}${git}${checks}${kpi}`;
     writeText(path.join(store.runDir(task.id), 'FINAL.md'), (task.runs.length > 1 ? `# Báo cáo liên phòng — ${task.title}\n\n` : '') + parts.join('\n\n---\n\n') + appendix);
     task.finalPath = 'FINAL.md';
   }

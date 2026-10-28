@@ -365,6 +365,12 @@ test('API dự án: lưu baseRef, worktreeCopy rỗng, lệnh cấm; từ chối
     assert.deepEqual(again.worktreeCopy, []);
     assert.equal((await post({ id: 'nd-bad', name: 'x', baseRef: '--upload-pack=x' })).status, 400);
     assert.equal((await post({ id: 'nd-bad', name: 'x', denyCommands: ['(unclosed'] })).status, 400);
+    // lệnh chuẩn bị/kiểm tra: lưu được; lệnh bị chặn bởi danh sách cấm (chung hoặc của dự án) → 400
+    const ck = await (await post({ id: 'nd-test', name: 'Thử', setupCommands: ['cd app/server; npm ci'], checkCommands: ['cd app/server; npm test', ' '] })).json();
+    assert.deepEqual(ck.checkCommands, ['cd app/server; npm test']);
+    assert.deepEqual(ck.setupCommands, ['cd app/server; npm ci']);
+    assert.equal((await post({ id: 'nd-test', name: 'Thử', checkCommands: ['docker compose up'] })).status, 400, 'docker bị cấm ở dự án');
+    assert.equal((await post({ id: 'nd-test', name: 'Thử', checkCommands: ['git push origin main'] })).status, 400, 'git push bị cấm mặc định');
   } finally {
     srv.close();
   }
@@ -690,5 +696,118 @@ test('luồng trả lời treo (không byte nào trong idleTimeoutMs) → lỗi 
   } finally {
     srv.closeAllConnections?.();
     srv.close();
+  }
+});
+
+/** Gateway giả cho kiểm thử lệnh kiểm tra của dự án: S1 ghi broken.flag="broken", vòng sửa ghi "fixed". */
+async function checksGateway(approve: boolean) {
+  const prompts: { review: string[]; revise: string[]; execute: string[] } = { review: [], revise: [], execute: [] };
+  const srv = http.createServer(async (req, res) => {
+    if (req.url === '/v1/models') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ data: [{ id: 'm-ok' }] }));
+    }
+    let raw = '';
+    for await (const c of req) raw += c;
+    const body = JSON.parse(raw);
+    const text = (m: { content: unknown }) => (typeof m.content === 'string' ? m.content : '');
+    const user = body.messages.filter((m: { role: string }) => m.role === 'user').map(text).join('\n');
+    const toolMsgs = body.messages.filter((m: { role: string }) => m.role === 'tool').length;
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    const send = (o: unknown) => res.write(`data: ${JSON.stringify(o)}\n\n`);
+    const say = (s: string) => send({ model: 'm-ok', choices: [{ delta: { content: s }, finish_reason: 'stop' }] });
+    const write = (content: string) => send({ model: 'm-ok', choices: [{ delta: { tool_calls: [{ index: 0, id: `w${toolMsgs}`, type: 'function', function: { name: 'write_file', arguments: JSON.stringify({ path: 'broken.flag', content }) } }] }, finish_reason: 'tool_calls' }] });
+    if (user.includes('LẬP KẾ HOẠCH')) say(`\`\`\`json\n${JSON.stringify({ summary: 'Một việc', subtasks: [{ id: 'S1', title: 'API', assignee: 'backend-dev', description: 'Viết API', dependsOn: [] }] })}\n\`\`\``);
+    else if (user.includes('REVIEW CHẤT LƯỢNG')) {
+      prompts.review.push(user);
+      say(`\`\`\`json\n${JSON.stringify({ approved: approve, summary: approve ? 'Ổn' : 'Chưa đạt', issues: approve ? [] : [{ subtask: 'S1', severity: 'major', comment: 'thiếu test' }] })}\n\`\`\``);
+    } else if (user.includes('SỬA THEO REVIEW')) {
+      if (toolMsgs === 0) prompts.revise.push(user);
+      if (toolMsgs === 0) write('fixed');
+      else say('## Tóm tắt\nĐã sửa.');
+    } else if (user.includes('## Hạng mục của bạn')) {
+      if (toolMsgs === 0) prompts.execute.push(user);
+      if (toolMsgs === 0) write('broken');
+      else say('## Tóm tắt\nXong API.');
+    } else say('## Tóm tắt\nXong.');
+    send({ choices: [], usage: { prompt_tokens: 300, completion_tokens: 20 } });
+    res.end('data: [DONE]\n\n');
+  });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+  return { srv, prompts, url: `http://127.0.0.1:${(srv.address() as AddressInfo).port}/v1` };
+}
+
+function checksApp(url: string, dataDir: string) {
+  const base = loadConfig();
+  return createApp({
+    dataDir,
+    workspacesDir: path.join(dataDir, 'workspaces'),
+    runner: 'process',
+    runtime: { ...base.runtime, default: 'auto', order: ['fake'] },
+    runtimes: { fake: { type: 'openai-api', baseUrl: url, tags: 'none', local: false } },
+    models: { fake: { opus: ['m-ok'], sonnet: ['m-ok'], haiku: ['m-ok'] } },
+    herdr: { ...base.herdr, notify: false, agentPanes: false },
+  });
+}
+
+test('CCoding tự chạy lệnh chuẩn bị + kiểm tra của dự án: baseline, sau thực thi, sau sửa; hỏng sau khi sửa → không duyệt dù reviewer duyệt', async () => {
+  const gw = await checksGateway(true);
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-chk-'));
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-chk-ws-'));
+  fs.writeFileSync(path.join(ws, 'check.js'), "const fs=require('fs');const f='broken.flag';if(fs.existsSync(f)&&fs.readFileSync(f,'utf8')==='broken'){console.log('tests 3 pass 2 fail 1');process.exit(1)}console.log('tests 3 pass 3 fail 0')");
+  const app = checksApp(gw.url, dataDir);
+  try {
+    app.store.saveProject({ id: 'repo', name: 'Repo', department: 'dev', workspace: ws, classification: 'internal', toolAccess: 'exec', setupCommands: ["node -e \"require('fs').writeFileSync('setup.ok','1')\""], checkCommands: ['node check.js'], createdAt: new Date().toISOString() });
+    const t = app.orchestrator.submit({ brief: 'API', projectId: 'repo', options: { discussionRounds: 0, maxRevisions: 1 } });
+    const done = await app.orchestrator.waitFor(t.id);
+    assert.equal(done.status, 'done', done.error);
+    assert.ok(fs.existsSync(path.join(ws, 'setup.ok')), 'lệnh chuẩn bị đã chạy');
+    const pc = done.projectChecks!;
+    assert.equal(pc.setupDone, true);
+    assert.equal(pc.baseline?.[0].ok, true);
+    assert.match(pc.baseline?.[0].summary ?? '', /fail 0/);
+    assert.equal(pc.latestAfter, 'revise');
+    assert.equal(pc.latest?.[0].ok, true, 'sau vòng sửa lệnh kiểm tra đạt lại');
+    // agent thấy baseline đo sẵn; reviewer thấy lệnh hỏng sau thực thi
+    assert.match(gw.prompts.execute[0], /Lệnh kiểm tra của dự án \(CCoding tự chạy/);
+    assert.match(gw.prompts.execute[0], /KHÔNG đo lại baseline/);
+    assert.match(gw.prompts.review[0], /node check\.js` → exit 1 — tests 3 pass 2 fail 1/);
+    // reviewer "duyệt" nhưng lệnh hỏng sau khi sửa → CCoding không duyệt, giao sửa cho S1
+    assert.equal(gw.prompts.revise.length, 1);
+    assert.match(gw.prompts.revise[0], /đạt trước khi sửa nhưng lỗi sau khi sửa/);
+    assert.ok(app.orchestrator.alerts.some((a) => a.kind === 'checks.regression'));
+    assert.equal(done.runs[0].review?.approved, true, 'review lần 2 duyệt sau khi đạt lại');
+    assert.equal(done.runs[0].review?.verified, true, 'có bằng chứng do CCoding chạy');
+    assert.equal(done.attention, undefined);
+    const fin = app.store.readRunFile(t.id, 'FINAL.md') ?? '';
+    assert.match(fin, /Lệnh kiểm tra của dự án \(CCoding tự chạy\)/);
+    assert.match(app.store.transcript(t.id).map((m) => m.text).join('\n'), /🧪 Lệnh kiểm tra của dự án \(trước khi sửa\)/);
+  } finally {
+    gw.srv.close();
+    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(ws, { recursive: true, force: true });
+  }
+});
+
+test('review cuối chưa duyệt → nhiệm vụ xong nhưng gắn cờ "cần xem" + cảnh báo; lệnh kiểm tra bị chặn thì không chạy', async () => {
+  const gw = await checksGateway(false);
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-att-'));
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-att-ws-'));
+  fs.writeFileSync(path.join(ws, 'check.js'), "console.log('tests 1 pass 1 fail 0')");
+  const app = checksApp(gw.url, dataDir);
+  try {
+    app.store.saveProject({ id: 'repo', name: 'Repo', department: 'dev', workspace: ws, classification: 'internal', toolAccess: 'exec', denyCommands: ['\\bdocker\\b'], checkCommands: ['node check.js', 'docker ps'], createdAt: new Date().toISOString() });
+    const t = app.orchestrator.submit({ brief: 'API', projectId: 'repo', options: { discussionRounds: 0, maxRevisions: 0 } });
+    const done = await app.orchestrator.waitFor(t.id);
+    assert.equal(done.status, 'done', done.error);
+    assert.equal(done.attention?.reason, 'review');
+    assert.ok(app.orchestrator.alerts.some((a) => a.kind === 'task.attention'));
+    const docker = done.projectChecks?.baseline?.find((r) => r.command === 'docker ps');
+    assert.ok(docker?.denied, 'lệnh bị chặn theo danh sách cấm của dự án');
+    assert.match(app.store.readRunFile(t.id, 'FINAL.md') ?? '', /Cần xem lại/);
+  } finally {
+    gw.srv.close();
+    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(ws, { recursive: true, force: true });
   }
 });

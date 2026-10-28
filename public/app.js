@@ -544,11 +544,13 @@
     ul.innerHTML = S.projects
       .map(
         (p) => `<li><span class="dot" style="background:${deptColor(p.department === 'auto' || p.department === 'joint' ? 'office' : p.department)}"></span>
-        <div class="grow"><b>${esc(p.name)}</b> <small>${esc(p.id)} · ${esc(p.department === 'auto' ? 'tự động' : p.department === 'joint' ? 'liên phòng' : deptShort(p.department))}${p.runtime ? ' · ' + esc(p.runtime) : ''} · ${esc(p.workspace || 'workspaces/' + p.id)} · 🛠 ${esc(ACCESS_VI[p.toolAccess || S.toolsDefault || 'exec'])}${p.workspace && (p.isolation || 'worktree') === 'worktree' ? ' · 🌿 worktree' + (p.baseRef ? ' từ ' + esc(p.baseRef) : '') + (p.worktreeCopy && !p.worktreeCopy.length ? ' · không chép .env' : '') : ''}${(p.denyCommands || []).length ? ` · ⛔ ${p.denyCommands.length} lệnh cấm` : ''}</small></div>
+        <div class="grow"><b>${esc(p.name)}</b> <small>${esc(p.id)} · ${esc(p.department === 'auto' ? 'tự động' : p.department === 'joint' ? 'liên phòng' : deptShort(p.department))}${p.runtime ? ' · ' + esc(p.runtime) : ''} · ${esc(p.workspace || 'workspaces/' + p.id)} · 🛠 ${esc(ACCESS_VI[p.toolAccess || S.toolsDefault || 'exec'])}${p.workspace && (p.isolation || 'worktree') === 'worktree' ? ' · 🌿 worktree' + (p.baseRef ? ' từ ' + esc(p.baseRef) : '') + (p.worktreeCopy && !p.worktreeCopy.length ? ' · không chép .env' : '') : ''}${(p.denyCommands || []).length ? ` · ⛔ ${p.denyCommands.length} lệnh cấm` : ''}${(p.checkCommands || []).length ? ` · 🧪 ${p.checkCommands.length} lệnh kiểm tra` : ''}</small></div>
         <span class="cls ${esc(p.classification)}">${esc(CLS_VI[p.classification] || p.classification)}</span>
+        <button class="btn ghost sm" data-edit="${esc(p.id)}" title="Sửa cấu hình dự án">Sửa</button>
         <button class="btn ghost sm" data-del="${esc(p.id)}" title="Xóa dự án">×</button></li>`,
       )
       .join('');
+    ul.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => editProject(b.dataset.edit)));
     ul.querySelectorAll('[data-del]').forEach((b) =>
       b.addEventListener('click', async () => {
         if (!confirm(`Xóa dự án ${b.dataset.del}? (không xóa file trong workspace)`)) return;
@@ -558,6 +560,35 @@
         renderAssign();
       }),
     );
+  }
+
+  /** Điền form dự án từ cấu hình đang có để sửa (lưu lại với cùng mã = cập nhật). */
+  function editProject(id) {
+    const p = S.projects.find((x) => x.id === id);
+    const f = $('#project-form');
+    if (!p || !f) return;
+    f.reset();
+    const set = (name, v) => {
+      const el = f.querySelector(`[name=${name}]`);
+      if (el) el.value = v ?? '';
+    };
+    set('id', p.id);
+    set('name', p.name);
+    set('department', p.department || 'auto');
+    set('classification', p.classification || 'internal');
+    set('runtime', p.runtime || '');
+    set('budgetTokens', p.budgetTokens || '');
+    set('toolAccess', p.toolAccess || S.toolsDefault || 'exec');
+    set('isolation', p.isolation || 'worktree');
+    set('workspace', p.workspace || '');
+    set('baseRef', p.baseRef || '');
+    set('worktreeCopy', Array.isArray(p.worktreeCopy) ? (p.worktreeCopy.length ? p.worktreeCopy.join(', ') : 'không') : '');
+    set('denyCommands', (p.denyCommands || []).join('\n'));
+    set('setupCommands', (p.setupCommands || []).join('\n'));
+    set('checkCommands', (p.checkCommands || []).join('\n'));
+    set('description', p.description || '');
+    f.hidden = false;
+    f.querySelector('[name=name]').focus();
   }
 
   async function saveProject(e) {
@@ -571,6 +602,11 @@
     const dc = String(body.denyCommands || '').split('\n').map((x) => x.trim()).filter(Boolean);
     if (dc.length) body.denyCommands = dc;
     else delete body.denyCommands;
+    for (const k of ['setupCommands', 'checkCommands']) {
+      const v = String(body[k] || '').split('\n').map((x) => x.trim()).filter(Boolean);
+      if (v.length) body[k] = v;
+      else delete body[k];
+    }
     try {
       const p = await api('/api/projects', { method: 'POST', body: JSON.stringify(body) });
       S.projects = S.projects.filter((x) => x.id !== p.id).concat(p);
@@ -627,7 +663,7 @@
       .map((t) => {
         const depts = (t.departments.length ? t.departments : t.department ? [t.department] : []).map((d) => `<span style="color:${deptColor(d)}">${esc(deptShort(d))}</span>`).join(' → ');
         return `<button class="task" data-id="${esc(t.id)}">
-          <div class="t-top"><span class="status ${t.status}">${TASK_VI[t.status] || t.status}</span><span class="t-title">${esc(t.title)}</span></div>
+          <div class="t-top"><span class="status ${t.status}">${TASK_VI[t.status] || t.status}</span>${t.attention ? `<span class="status attention" title="${esc(t.attention.detail)}">⚠ cần xem</span>` : ''}<span class="t-title">${esc(t.title)}</span></div>
           <div class="t-meta"><span>${esc(t.id)}</span><span>${esc(MODE_VI[t.mode] || t.mode)}</span>${depts ? `<span>${depts}</span>` : ''}${t.phase ? `<span>pha: ${esc(t.phase)}</span>` : ''}<span>token <b>${fmt(total(t.usage))}</b></span><span>${dateTime(t.createdAt)}</span></div>
         </button>`;
       })
@@ -748,13 +784,14 @@
     const git = t.branch ? `<div class="t-git">🌿 nhánh <code>${esc(t.branch)}</code> · worktree <code>${esc(t.workspace)}</code>${t.commit ? ` · ${esc(t.commit)}` : ''}</div>` : t.workspace ? `<div class="t-git">📁 <code>${esc(t.workspace)}</code></div>` : '';
     el.innerHTML = `<button class="btn ghost sm back" id="td-back">← Danh sách</button>
       <div class="td-head"><h2>${esc(t.title)}</h2>
-        <div class="t-meta"><span class="status ${t.status}">${TASK_VI[t.status] || t.status}</span><span>${esc(t.id)}</span><span>${esc(MODE_VI[t.mode] || t.mode)}</span>
+        <div class="t-meta"><span class="status ${t.status}">${TASK_VI[t.status] || t.status}</span>${t.attention ? `<span class="status attention" title="${esc(t.attention.detail)}">⚠ cần xem</span>` : ''}<span>${esc(t.id)}</span><span>${esc(MODE_VI[t.mode] || t.mode)}</span>
         <span class="cls ${esc(t.classification)}">${esc(CLS_VI[t.classification] || t.classification)}</span>
         ${t.projectId ? `<span>dự án: ${esc(t.projectId)}</span>` : ''}<span>token <b style="font-family:var(--mono);color:var(--text)">${fmt(t.usage.input)} in / ${fmt(t.usage.output)} out</b></span>
         ${canPause ? '<button class="btn ghost sm" id="td-pause">⏸ Tạm dừng</button>' : ''}${canCancel ? '<button class="btn ghost sm danger" id="td-cancel">Hủy</button>' : ''}</div>
         ${meter}${git}${atts}
         ${t.routing ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">🧭 ${esc(t.routing.reason)}</p>` : ''}
         ${t.error && !canResume ? `<p style="font-size:12.5px;color:var(--bad);margin:0 0 8px">${esc(t.error)}</p>` : ''}
+        ${t.attention ? `<p style="font-size:12.5px;color:var(--warn);margin:0 0 8px">⚠ Cần xem lại: ${esc(t.attention.detail)} — xem báo cáo, "Làm lại từ review" hoặc tách việc còn lại.</p>` : ''}
         ${t.splitFrom ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">✂ Tách từ <a data-task="${esc(t.splitFrom.taskId)}">${esc(t.splitFrom.taskId)}</a> · hạng mục ${esc(t.splitFrom.subtaskId)}</p>` : ''}
         ${(t.splitInto || []).length ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">✂ Đã tách thành: ${t.splitInto.map((x) => `<a data-task="${esc(x)}">${esc(x)}</a>`).join(', ')}</p>` : ''}
         ${(t.after || []).length && t.status === 'queued' ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">⏳ Chờ nhiệm vụ trước xong: ${t.after.map((x) => `<a data-task="${esc(x)}">${esc(x)}</a>`).join(', ')}</p>` : ''}

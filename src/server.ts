@@ -8,6 +8,7 @@ import { readJsonl } from './util/fsx.js';
 import { MAX_UPLOAD_BYTES } from './uploads.js';
 import { kpiReport } from './kpi.js';
 import { isSafeRef } from './git.js';
+import { deniedReason } from './tools/workspace.js';
 import type { BudgetMode, Classification, ProjectDef, TaskMode, ToolAccess } from './types.js';
 import type { UsageDim } from './usage.js';
 
@@ -335,6 +336,13 @@ export function createServer(app: App): http.Server {
       if (b.toolAccess && !ACCESS.includes(b.toolAccess)) throw new HttpError(400, 'Quyền công cụ không hợp lệ');
       if (b.budgetMode && !BUDGET_MODES.includes(b.budgetMode)) throw new HttpError(400, 'Chế độ ngân sách không hợp lệ');
       if (b.baseRef && !isSafeRef(String(b.baseRef))) throw new HttpError(400, 'Nhánh xuất phát không hợp lệ');
+      const cmdList = (v: unknown) => (Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean).slice(0, 20) : undefined);
+      const setupCommands = cmdList(b.setupCommands);
+      const checkCommands = cmdList(b.checkCommands);
+      for (const cmd of [...(setupCommands ?? []), ...(checkCommands ?? [])]) {
+        const why = deniedReason(cmd, [...config.tools.denyCommands, ...(Array.isArray(b.denyCommands) ? b.denyCommands.map(String) : (store.project(id)?.denyCommands ?? []))], false);
+        if (why) throw new HttpError(400, `Lệnh "${cmd.slice(0, 80)}" bị chặn theo chính sách an toàn: ${why}`);
+      }
       if (Array.isArray(b.denyCommands))
         for (const re of b.denyCommands) {
           try {
@@ -361,6 +369,8 @@ export function createServer(app: App): http.Server {
         baseRef: b.baseRef !== undefined ? String(b.baseRef).trim() || undefined : existing?.baseRef,
         worktreeCopy: Array.isArray(b.worktreeCopy) ? b.worktreeCopy.map(String).filter((x: string) => /^[\w.-]+$/.test(x)) : existing?.worktreeCopy,
         denyCommands: Array.isArray(b.denyCommands) ? b.denyCommands.map(String).slice(0, 50) : existing?.denyCommands,
+        setupCommands: setupCommands ?? existing?.setupCommands,
+        checkCommands: checkCommands ?? existing?.checkCommands,
         createdAt: existing?.createdAt ?? nowIso(),
       };
       store.saveProject(proj);

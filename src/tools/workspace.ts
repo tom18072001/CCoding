@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { killTree } from '../runtimes/spawn.js';
 import { fetchUrl, searchPapers, WebError, webSearch } from './web.js';
-import type { Phase, ToolAccess, ToolName, ToolPolicy } from '../types.js';
+import type { CheckResult, Phase, ToolAccess, ToolName, ToolPolicy } from '../types.js';
 
 /**
  * Công cụ workspace cho agent (đọc/liệt kê/tìm file, ghi/sửa file, chạy lệnh) — giới hạn trong thư mục gốc.
@@ -594,4 +594,42 @@ export function isCheckCommand(cmd: string): boolean {
 /** Lệnh tìm kiếm trả mã 1 vì không có kết quả (rg/grep/findstr/Select-String) — không phải lỗi thật. */
 export function isNoMatch(tc: { name: string; args: string; ok: boolean; error?: string }): boolean {
   return !tc.ok && tc.name === 'run_command' && /^\s*(rg|grep|findstr|git\s+grep)\b|Select-String/i.test(tc.args) && /exit code:\s*1\b/.test(tc.error ?? '');
+}
+
+/** Dòng tổng kết của đầu ra lệnh kiểm tra (số test pass/fail, lỗi biên dịch…) — tối đa 6 dòng cuối khớp. */
+export function checkSummary(out: string): string {
+  const lines = out.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const hit = lines.filter((l) => /\b(tests?|suites?|pass(ed|ing)?|fail(ed|ing|ures?)?|errors?|warnings?|skipped|todo)\b\s*[:=]?\s*\d+|\d+\s+(tests?|passed|failed|errors?|warnings?)\b|found \d+ errors?|exit code/i.test(l));
+  return (hit.length ? hit.slice(-6) : lines.slice(-2)).join(' · ').slice(0, 400);
+}
+
+/**
+ * Chạy MỘT lệnh kiểm tra/chuẩn bị của dự án do CCoding tự chạy (không qua agent): cùng danh sách lệnh cấm,
+ * cùng khóa workspace và shell như run_command. Không ném lỗi — lệnh bị chặn trả `denied`.
+ */
+export async function runCheckCommand(
+  command: string,
+  root: string,
+  o: { denyCommands: string[]; timeoutSec: number; maxChars: number; signal?: AbortSignal },
+): Promise<CheckResult> {
+  const t0 = Date.now();
+  const why = deniedReason(command, o.denyCommands, false);
+  if (why) return { command, code: null, ok: false, ms: 0, summary: `bị chặn: ${why}`, tail: '', denied: why };
+  const real = fs.realpathSync(root);
+  const unlock = await lockWorkspace(real, o.timeoutSec, o.signal);
+  try {
+    const r = await runShell(command, real, o.timeoutSec, o.maxChars, o.signal);
+    const out = r.out.trim();
+    return {
+      command,
+      code: r.code,
+      ok: !r.timedOut && r.code === 0,
+      timedOut: r.timedOut || undefined,
+      ms: Date.now() - t0,
+      summary: r.timedOut ? `hết thời gian ${o.timeoutSec}s` : checkSummary(out) || `exit code ${r.code}`,
+      tail: out.length > 4000 ? `…${out.slice(-4000)}` : out,
+    };
+  } finally {
+    unlock();
+  }
 }

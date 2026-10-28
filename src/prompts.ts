@@ -1,5 +1,5 @@
 import { truncate } from './util/fsx.js';
-import type { AgentDef, ChatMessage, Classification, DepartmentDef, Phase, ProjectDef, Subtask, Task, ToolCallRecord, ToolName } from './types.js';
+import type { AgentDef, ChatMessage, CheckResult, Classification, DepartmentDef, Phase, ProjectDef, Subtask, Task, ToolCallRecord, ToolName } from './types.js';
 
 /**
  * Prompt cho từng pha. Mỗi lượt gọi gồm 3 phần:
@@ -364,7 +364,7 @@ ${st.deliverable ? `Sản phẩm bàn giao: ${st.deliverable}` : ''}
 
 ## Đầu vào từ các hạng mục trước
 ${depsText(c, deps, c.filesAccessible ? 6000 : 16000)}
-${draftBlock}${contBlock}${toolNote(c, tools, 'execute')}${
+${draftBlock}${contBlock}${checksBlock(c.task, 'execute')}${toolNote(c, tools, 'execute')}${
       canWrite
         ? ''
         : `\n## Cách làm\nBạn trả lời bằng văn bản. Nếu cần tạo file, đưa nội dung đầy đủ trong khối code và ghi rõ tên file ngay phía trên khối đó.\n`
@@ -385,7 +385,7 @@ export function reviewPrompt(c: Ctx, items: DepInput[], tools: ToolName[] = [], 
     context: header(c, 'review'),
     prompt: `## Các sản phẩm cần review
 ${items.map((i) => `### ${i.st.id} — ${i.st.title} (@${i.st.assignee})${i.wsPath && c.filesAccessible ? ` — bản đầy đủ: \`${i.wsPath}\`` : ''}\nTiêu chí: ${i.st.description}\n\n${body(i)}`).join('\n\n---\n\n')}
-${changes ? `\n## Thay đổi trong workspace (git)\n\`\`\`\n${truncate(changes, 4000)}\n\`\`\`\n` : ''}${toolNote(c, tools, 'review')}
+${changes ? `\n## Thay đổi trong workspace (git)\n\`\`\`\n${truncate(changes, 4000)}\n\`\`\`\n` : ''}${checksBlock(c.task, 'review')}${toolNote(c, tools, 'review')}
 ## Việc của bạn: REVIEW CHẤT LƯỢNG
 Đánh giá từng hạng mục theo tiêu chí review trong hồ sơ của bạn, tương xứng với quy mô và yêu cầu của nhiệm vụ. Mức độ: "blocker" (sai/thiếu nghiêm trọng, không thể bàn giao), "major" (cần sửa trước khi bàn giao), "minor" (góp ý thêm). Chỉ đặt "approved": false khi có blocker/major.
 
@@ -435,7 +435,7 @@ ${items.map((i) => `### ${i.st.id} — ${i.st.title} (@${i.st.assignee})${i.wsPa
 ${changes ? `\n## Thay đổi trong workspace (git)\n\`\`\`\n${truncate(changes, 4000)}\n\`\`\`\n` : ''}
 ## Kết luận review
 ${review || '(không review)'}
-${toolNote(c, tools, 'synthesize')}
+${checksBlock(c.task, 'synthesize')}${toolNote(c, tools, 'synthesize')}
 ## Việc của bạn (Trưởng phòng): BÁO CÁO TỔNG HỢP
 Viết báo cáo cuối cùng gửi Tom bằng Markdown: dòng đầu "# <tiêu đề>", sau đó ĐÚNG các mục trong "Mẫu đầu ra" của bạn (giữ nguyên tên mục, bắt đầu "## Tóm tắt" — kết luận trước). Bên trong các mục đó bắt buộc có:
 - bảng kết quả theo hạng mục: mã · hạng mục · phụ trách · kết quả (đạt/chưa đạt theo review, kèm bằng chứng) · tệp;
@@ -462,4 +462,26 @@ export function handoverNote(label: string, kind: string, calls: ToolCallRecord[
   return `## ⚠️ Lần thử trước bị ngắt giữa chừng (${label}: ${kind})
 Lần thử trước đã thực hiện các thao tác dưới đây TRONG WORKSPACE trước khi lỗi — thay đổi (và commit, nếu có) vẫn còn. Kiểm tra \`git status\`/\`git log -3\`/\`git diff\` trước, rồi làm TIẾP phần còn thiếu và chạy kiểm chứng — KHÔNG làm lại, không sửa chồng.
 ${lines.join('\n')}${calls.length > 40 ? `\n- … (${calls.length - 40} thao tác trước đó)` : ''}`;
+}
+
+const checkLine = (r: CheckResult) =>
+  `- \`${r.command}\` → ${r.denied ? `bị chặn (${r.denied})` : r.timedOut ? 'hết thời gian' : `exit ${r.code}`}${r.summary && !r.denied ? ` — ${r.summary}` : ''}`;
+
+/** Kết quả lệnh kiểm tra của dự án do CCoding tự chạy — bằng chứng không phụ thuộc agent/model. */
+export function checksBlock(task: Task, phase: 'execute' | 'review' | 'synthesize'): string {
+  const pc = task.projectChecks;
+  if (!pc?.baseline?.length && !pc?.latest?.length) return '';
+  const parts = ['\n## Lệnh kiểm tra của dự án (CCoding tự chạy, không qua agent)'];
+  if (pc.baseline?.length) parts.push(`Trước khi sửa (baseline):\n${pc.baseline.map(checkLine).join('\n')}`);
+  if (phase !== 'execute' && pc.latest?.length) {
+    parts.push(`Sau ${pc.latestAfter === 'revise' ? 'vòng sửa gần nhất' : 'thực thi'}:\n${pc.latest.map(checkLine).join('\n')}`);
+    if (phase === 'review')
+      for (const r of pc.latest.filter((x) => !x.ok && x.tail)) parts.push(`Đầu ra của \`${r.command}\` (phần cuối):\n\`\`\`\n${r.tail.slice(-2500)}\n\`\`\``);
+  }
+  if (phase === 'execute')
+    parts.push('Đây là kết quả đo sẵn trước khi sửa — KHÔNG đo lại baseline. Lỗi đã có ở baseline không phải việc của hạng mục này trừ khi yêu cầu nói rõ. Sau khi sửa, chạy lại đúng các lệnh trên để kiểm chứng phần của mình; CCoding sẽ tự chạy lại chúng trước review.');
+  if (phase === 'review')
+    parts.push('Đây là bằng chứng chạy thật: kết luận dựa trên nó. Lệnh đạt ở baseline mà lỗi sau khi sửa = lỗi do thay đổi lần này → không duyệt. Không cần chạy lại các lệnh trên; chỉ chạy lệnh khác khi cần kiểm một điểm cụ thể.');
+  if (phase === 'synthesize') parts.push('Ghi kết quả các lệnh này (trước/sau) vào báo cáo như bằng chứng kiểm chứng.');
+  return `${parts.join('\n')}\n`;
 }
