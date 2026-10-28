@@ -250,3 +250,7 @@ Thay đổi: dự án có thêm `baseRef` (worktree tách từ vd. `origin/main`
 1. [Bắt buộc] `checkCommands` chỉ chạy test/kiểm tra **không cần DB/dịch vụ thật** (vd. `npm test`, `npm run check` của ND57); lệnh cần DB phải trỏ DB kiểm thử riêng (P7, chưa làm) — không bao giờ dùng `.env` của môi trường vận hành.
 2. [Bắt buộc] Không bật `cacheControl`/provider mới cho dự án *Bảo mật/Hạn chế* (vốn chỉ chạy runtime cục bộ).
 3. [Khuyến nghị] Sau khi chuyển Claude sang provider kiểu *anthropic*, kiểm tra trên bảng điều khiển Bifrost rằng log vẫn không lưu nội dung (`disable_content_logging`) và key ảo của 3 phòng đều được cấp provider mới.
+
+### Bổ sung: tắt runtime 9router (28/10/2026, trưa)
+
+Theo yêu cầu chủ dự án, CCoding **không dùng** các tài khoản Claude/Codex đặt trong 9router: `runtimes.bifrost.disabled = true`, `runtimes["openai-api"].disabled = true`, `runtime.order = ["ollama"]` (cấu hình máy). Runtime tắt không được thăm dò hay gọi, kể cả khi nhiệm vụ/dự án/agent chỉ định (GOV-01, PRE-05). Phương án thay thế phải qua cổng này trước khi bật: model miễn phí qua API bên ngoài thường **dùng nội dung để cải thiện sản phẩm** (vd. Gemini API gói miễn phí) ⇒ chỉ cho dữ liệu *Công khai*; dữ liệu *Nội bộ* trở lên dùng runtime cục bộ (Ollama) hoặc gói trả phí có cam kết không huấn luyện.

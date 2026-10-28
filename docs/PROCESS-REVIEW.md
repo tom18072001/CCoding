@@ -107,3 +107,22 @@ Lượt gói 1 (`nd57/da-nghi-dinh-goi-1`): 29 lượt Claude + Codex, ~14,1 tri
 | P2 | Không có prompt cache với Claude qua 9router | Đo 28/10: đường chat của 9router bỏ system và không cache; đường `/v1/messages` cache được (lần 2 đọc ~99,9% từ cache). Cách bật mà vẫn qua Bifrost: provider kiểu *anthropic* + `cacheControl` (`docs/RUNTIMES.md`); CCoding đặt điểm cache trên kết quả công cụ mới nhất, đọc `cache_write_tokens` của Bifrost, sửa tên công cụ `_ide` |
 
 Chưa làm (đợt 3, sau khi đo lại trên gói 2): P7 CSDL kiểm thử dùng chung cho dự án, P8 ghi chú ngữ cảnh giữa các nhiệm vụ.
+
+## 8. Lượt đo gói 2 ND57 (28/10/2026) và các sửa trong lúc chạy
+
+Nhiệm vụ `T-20261028-085918-6fa` "Phân quyền Người · Nghị định · Đơn vị" (7 hạng mục), nhánh `nd57/da-nghi-dinh-goi-2` trên ND57.
+
+| | Gói 1 (27/10) + nhiệm vụ sửa lỗi | Gói 2 (28/10) |
+|---|---|---|
+| Lượt gọi | 32 + 6 | 42 (11 trên Codex khi Claude Max hết hạn mức) |
+| Đầu vào không cache | 14,52M + 0,64M | 1,68M |
+| Đọc / ghi cache | 0 / 0 (+0,26M Codex) | 29,76M / 4,05M (84% đầu vào đọc từ cache) |
+| Đầu vào quy đổi theo giá (đọc ×0,1, ghi ×1,25) | 15,19M | 9,71M (−36%) |
+| Test | 249/249 | 324/326 (baseline 255) — 2 test mới đỏ: bảng ADR lệch `ROLE_TEMPLATES`; giám sát/quản trị vẫn xem hàng chờ duyệt và duyệt được báo cáo |
+| Thời gian | 73 + 52 phút | 166 phút, trong đó ~75 phút chờ Claude Max hết 429 |
+
+Sửa trong lúc chạy (đã đẩy lên `main`): trần token vòng công cụ tính phần đọc cache 10% (`tools.cachedInputWeight`), input kiểu OpenAI không đếm lại phần ghi cache, 429 giữa vòng công cụ chờ rồi thử lại chính lượt đó (`rateWaitMs`), thực thi 60 lượt / sửa 24 lượt (cấu hình máy), chờ model nhanh tối đa 30 phút tính từ lần lỗi đầu (`HealthInfo.since`), review giữ vòng và danh sách hạng mục đang sửa qua tạm dừng (`reviewRound`, `revising`) và chạy lại lệnh kiểm tra khi workspace đổi sau lần đo gần nhất (`staleAt`) — lượt này review vòng cuối dựa trên kết quả kiểm tra cũ (317/317) trong khi workspace đã có 2 test đỏ.
+
+Còn tốn: hạng mục ADR của kiến trúc sư ~2,5M token (88 lần đọc/tìm); backend vẫn thường 14–26 lượt mới ghi tệp đầu tiên và quen đọc/sửa tệp qua PowerShell (bị chặn, mất lượt); hạng mục "áp quyền cho cả nhóm route" quá lớn (S3: 353 thao tác, 6 lần chạy).
+
+Từ 28/10 trưa: **tắt** `bifrost` và `openai-api` (9router) theo yêu cầu chủ dự án — không dùng tài khoản Claude/Codex trong 9router.
