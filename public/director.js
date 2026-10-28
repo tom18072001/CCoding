@@ -361,7 +361,7 @@
         const f = $('#ag-form', el);
         attachPromptTools($('[data-mini]', el), f.brief, true);
         attachChecker(f.brief, $('[data-check]', el), () => (f.projectId.value ? 'project' : 'scratch'));
-        const route = () => renderRoute($('[data-route]', el), classificationFor(f.projectId.value));
+        const route = () => renderRoute($('[data-route]', el), classificationFor(f.projectId.value), '');
         f.projectId.onchange = route;
         route();
         $('[data-full]', el).onclick = () => {
@@ -633,9 +633,11 @@
     const p = projectId ? C.S.projects.find((x) => x.id === projectId) : null;
     return p ? p.classification : C.S.defaultClassification || 'internal';
   }
-  function renderRoute(el, cls) {
+  function renderRoute(el, cls, runtime) {
     if (!el) return;
-    const rts = (C.S.runtimes || []).filter((r) => r.id !== 'mock' && r.allowed && r.allowed[cls]);
+    // runtime chỉ định trong form → chỉ runtime đó; không thì các runtime trong thứ tự chạy (runtime.order)
+    const sel = runtime ?? $('#task-form [name=runtime]')?.value;
+    const rts = (C.S.runtimes || []).filter((r) => r.id !== 'mock' && r.allowed && r.allowed[cls] && (sel ? r.id === sel : r.inOrder !== false));
     const ok = rts.filter((r) => r.ok);
     el.innerHTML = `🔐 Dữ liệu <span class="cls ${esc(cls)}">${esc(C.CLS_VI[cls] || cls)}</span> ${
       ok.length
@@ -928,7 +930,7 @@
       return f.mode.value === 'project' || (f.mode.value === 'agent' && f.agentProject.value) ? 'project' : 'scratch';
     });
     $('#task-form').addEventListener('change', (e) => {
-      if (['projectId', 'agentProject', 'mode'].includes(e.target.name)) D.formChanged();
+      if (['projectId', 'agentProject', 'mode', 'runtime'].includes(e.target.name)) D.formChanged();
     });
     D.formChanged();
     $('#btn-help').onclick = () => D.help();

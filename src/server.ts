@@ -452,7 +452,7 @@ export function createServer(app: App): http.Server {
 
     if (p === '/api/runtimes') {
       const list = await runtimes.status(q('refresh') === '1');
-      return send(res, 200, list.map((r) => ({ ...r, allowed: Object.fromEntries(CLASSES.map((c) => [c, runtimes.allowed(r.id, c)])) })));
+      return send(res, 200, list.map((r) => ({ ...r, inOrder: config.runtime.order.includes(r.id), allowed: Object.fromEntries(CLASSES.map((c) => [c, runtimes.allowed(r.id, c)])) })));
     }
 
     if (p === '/api/reload' && req.method === 'POST') {
