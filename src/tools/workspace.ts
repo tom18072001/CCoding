@@ -548,6 +548,9 @@ export async function executeTool(name: string, rawArgs: unknown, policy: ToolPo
         if (!command) throw new ToolError('Thiếu command');
         const why = deniedReason(command, policy.denyCommands, policy.allowGitCommit);
         if (why) throw new ToolError(`Lệnh bị chặn theo chính sách an toàn: ${why}. Hãy dùng cách khác hoặc ghi vào báo cáo để người dùng tự chạy.`);
+        // đọc/tìm code qua shell (Get-Content, cat, rg…) tốn lượt, sai mã hóa, đọc thiếu — có công cụ chuyên dụng thì dùng nó
+        const reader = policy.allow.includes('read_file') ? shellReadReason(command) : undefined;
+        if (reader) throw new ToolError(`Không dùng run_command để ${reader}.`);
         const timeout = Math.min(policy.commandTimeoutSec, Math.max(5, Number(args.timeout_sec) || 300));
         // một lệnh tại một thời điểm trong cùng workspace (agent song song có thể ở các tiến trình/pane khác nhau)
         const unlock = await lockWorkspace(fs.realpathSync(root), timeout, signal);
@@ -632,4 +635,27 @@ export async function runCheckCommand(
   } finally {
     unlock();
   }
+}
+
+const READ_VERBS = /^(get-content|gc|cat|type|more|less|head|tail|select-string|sls|findstr|rg|grep|ag|ack|awk|sed|nl|wc)$/i;
+
+/**
+ * Lệnh đọc/tìm trong tệp bằng shell (đầu pipeline: `Get-Content x`, `cat x`, `rg …`, `$l = Get-Content …`, `[IO.File]::ReadAllText`).
+ * Lọc ĐẦU RA của lệnh khác (`npm test 2>&1 | Select-String …`) vẫn được phép.
+ */
+export function shellReadReason(cmd: string): string | undefined {
+  if (/\[(System\.)?IO\.File\]::ReadAll(Text|Lines|Bytes)\b/i.test(cmd)) return 'đọc tệp bằng [IO.File]::ReadAll… — dùng read_file (có số dòng, offset)';
+  for (const stmt of cmd.split(/;|&&|\|\||\r?\n/)) {
+    const first = stmt
+      .split('|')[0]
+      .trim()
+      .replace(/^\$[\w:]+\s*=\s*/, '')
+      .replace(/^[(@&]+\s*/, '');
+    const verb = (first.split(/\s+/)[0] ?? '').replace(/^["']|["']$/g, '');
+    if (verb && READ_VERBS.test(verb))
+      return `đọc/tìm trong tệp bằng \`${verb}\` — dùng read_file (có số dòng, offset) hoặc search (regex, nhiều tệp); run_command chỉ để cài đặt, build, test, migration, git`;
+  }
+  if (/(^|[\s;({=])(Get-Content)\s+[^|;]*\S/i.test(cmd) || /\bSelect-String\b[^|;]*\s-Path\b/i.test(cmd))
+    return 'đọc/tìm trong tệp bằng Get-Content/Select-String — dùng read_file (có số dòng, offset) hoặc search (regex, nhiều tệp)';
+  return undefined;
 }

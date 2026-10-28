@@ -811,3 +811,40 @@ test('review cuối chưa duyệt → nhiệm vụ xong nhưng gắn cờ "cần
     fs.rmSync(ws, { recursive: true, force: true });
   }
 });
+
+test('chặn đọc/tìm tệp qua shell khi đã có read_file/search; lọc đầu ra của lệnh test vẫn được', async () => {
+  const { shellReadReason, executeTool } = await import('../src/tools/workspace.js');
+  for (const c of [
+    'Get-Content app/server/prisma/schema.prisma -Encoding utf8 | Select-Object -First 230',
+    'cd app/server; $l = Get-Content server.js -Encoding utf8; $l[39..110]',
+    '(Get-Content a.js).Length',
+    'cat src/server.js',
+    "rg -n 'decree' app/server/src",
+    'Select-String -Path src/permissions.js -Pattern ALL_UNITS',
+    "foreach($x in $f){ $i=0; Get-Content $x -Encoding utf8 | ForEach-Object { $i++ } }",
+    '$t=[IO.File]::ReadAllText((Resolve-Path $f))',
+  ])
+    assert.ok(shellReadReason(c), c);
+  for (const c of [
+    'cd app/server; npm test 2>&1 | Select-String -Pattern "^ℹ (tests|pass|fail)"',
+    'npm ci 2>&1 | Select-Object -Last 8',
+    'git status --short; git log --oneline -3',
+    'git grep -n decree',
+    'npx prisma validate',
+    'node --test src/decree.test.js',
+    '$o = npm test 2>&1 | Out-String; $o | Select-String "fail"',
+  ])
+    assert.equal(shellReadReason(c), undefined, c);
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-shellread-'));
+  try {
+    const base = { root, maxOutputChars: 2000, commandTimeoutSec: 10, denyCommands: [], allowGitCommit: false, maxTurns: 5 };
+    const r = await executeTool('run_command', { command: 'cat a.txt' }, { ...base, allow: ['read_file', 'run_command'] } as never);
+    assert.equal(r.ok, false);
+    assert.match(r.output, /dùng read_file/);
+    // không có read_file (vd. runtime chỉ chạy lệnh) thì không chặn
+    const r2 = await executeTool('run_command', { command: 'cat missing.txt' }, { ...base, allow: ['run_command'] } as never);
+    assert.doesNotMatch(r2.output, /dùng read_file/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
