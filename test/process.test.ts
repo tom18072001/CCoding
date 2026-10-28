@@ -8,7 +8,7 @@ import type { AddressInfo } from 'node:net';
 import { createApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
 import { parseReview } from '../src/planner.js';
-import { compactHistory, wantsCacheControl, withCacheMarks } from '../src/runtimes/api.js';
+import { compactHistory, toolName, wantsCacheControl, withCacheMarks } from '../src/runtimes/api.js';
 import { testApp } from './helpers.js';
 
 // Các cải tiến quy trình sau đợt đánh giá performance 26/10: chạy lệnh lần lượt trong repo dùng chung, review có bằng chứng,
@@ -253,6 +253,30 @@ test('vòng lặp công cụ: rút gọn lịch sử theo đợt (giữ tiền t
   assert.ok(parts(1)[0].cache_control && !parts(1)[1].cache_control);
   assert.equal(parts(1)[0].text, context);
   assert.ok(parts(3)[0].cache_control, 'điểm cache di động ở kết quả công cụ mới nhất');
+  // sau kết quả công cụ còn lời nhắc user (nhắc ghi tệp / hết lượt): điểm cache vẫn ở kết quả công cụ mới nhất, tổng ≤ 3 điểm
+  const nudged = withCacheMarks(
+    [
+      { role: 'system', content: 'hồ sơ vị trí' },
+      { role: 'user', content: `${context}\n\nviệc riêng` },
+      { role: 'assistant', content: null, tool_calls: [] },
+      { role: 'tool', tool_call_id: 'c1', content: 'kết quả 1' },
+      { role: 'assistant', content: null, tool_calls: [] },
+      { role: 'tool', tool_call_id: 'c2', content: 'kết quả 2' },
+      { role: 'user', content: '⚠️ nhắc ghi tệp' },
+    ],
+    { context, prompt: 'việc riêng' },
+    false,
+  );
+  assert.equal(nudged[3].content, 'kết quả 1');
+  assert.ok((nudged[5].content as Array<{ cache_control?: unknown }>)[0].cache_control);
+  assert.equal(nudged[6].content, '⚠️ nhắc ghi tệp');
+  const marks = JSON.stringify(nudged).split('cache_control').length - 1;
+  assert.ok(marks <= 3, `${marks} điểm cache`);
+  // 9router (đường Claude gốc) trả tên công cụ kèm hậu tố _ide
+  assert.equal(toolName('read_file_ide', ['read_file', 'write_file']), 'read_file');
+  assert.equal(toolName('read_file', ['read_file']), 'read_file');
+  assert.equal(toolName('Run_Command', ['run_command']), 'run_command');
+  assert.equal(toolName('khong_co', ['read_file']), 'khong_co');
 });
 
 test('KPI sub-agent: mẫu đầu ra từ agent.md, chấm từ log, bảng KPI trong báo cáo nhiệm vụ', async () => {
@@ -908,5 +932,106 @@ test('bản đồ repo: thư mục, tệp lớn, route Express, model Prisma, h�
     assert.ok(small.text.length < 1400, `${small.text.length}`);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('pha nặng: model nhanh bị 429 và sắp mở lại → tạm dừng chờ (giữ bàn giao) thay vì chạy bằng model chậm; Tiếp tục thì làm tiếp trên model nhanh', async () => {
+  const seen: Array<{ name: string; user: string }> = [];
+  let fastLimited = true;
+  const mk = (name: 'a' | 'b') =>
+    http.createServer(async (req, res) => {
+      if (req.url === '/v1/models') {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        return res.end(JSON.stringify({ data: [{ id: `m-${name}` }] }));
+      }
+      let raw = '';
+      for await (const c of req) raw += c;
+      const body = JSON.parse(raw);
+      const text = (m: { content: unknown }) => (typeof m.content === 'string' ? m.content : '');
+      const user = body.messages.filter((m: { role: string }) => m.role === 'user').map(text).join('\n');
+      const toolMsgs = body.messages.filter((m: { role: string }) => m.role === 'tool').length;
+      const executing = user.includes('## Hạng mục của bạn');
+      if (executing) seen.push({ name, user });
+      if (name === 'a' && executing && toolMsgs >= 1 && fastLimited) {
+        res.writeHead(429, { 'content-type': 'application/json' });
+        return res.end(JSON.stringify({ error: { type: 'rate_limit_error', message: 'rate limited' } }));
+      }
+      res.writeHead(200, { 'content-type': 'text/event-stream' });
+      const send = (o: unknown) => res.write(`data: ${JSON.stringify(o)}\n\n`);
+      const say = (s: string) => send({ model: `m-${name}`, choices: [{ delta: { content: s }, finish_reason: 'stop' }] });
+      if (user.includes('LẬP KẾ HOẠCH')) say(`\`\`\`json\n${JSON.stringify({ summary: 'Một việc', subtasks: [{ id: 'S1', title: 'API', assignee: 'backend-dev', description: 'Viết API', dependsOn: [] }] })}\n\`\`\``);
+      else if (user.includes('REVIEW CHẤT LƯỢNG')) say('```json\n{"approved": true, "summary": "Ổn", "issues": []}\n```');
+      else if (executing && name === 'a' && fastLimited) send({ model: 'm-a', choices: [{ delta: { tool_calls: [{ index: 0, id: 'w1', type: 'function', function: { name: 'write_file', arguments: JSON.stringify({ path: 'api.js', content: 'module.exports = 1;' }) } }] }, finish_reason: 'tool_calls' }] });
+      else say('## Tóm tắt\nXong.');
+      send({ choices: [], usage: { prompt_tokens: 300, completion_tokens: 20 } });
+      res.end('data: [DONE]\n\n');
+    });
+  const sa = mk('a');
+  const sb = mk('b');
+  await new Promise<void>((r) => sa.listen(0, '127.0.0.1', r));
+  await new Promise<void>((r) => sb.listen(0, '127.0.0.1', r));
+  const url = (s: http.Server) => `http://127.0.0.1:${(s.address() as AddressInfo).port}/v1`;
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-wait-'));
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-wait-ws-'));
+  const base = loadConfig();
+  const app = createApp({
+    dataDir,
+    workspacesDir: path.join(dataDir, 'workspaces'),
+    runner: 'process',
+    runtime: { ...base.runtime, default: 'auto', order: ['a', 'b'], slowModels: ['^m-b$'], waitForFastMs: 30 * 60_000 },
+    runtimes: { a: { type: 'openai-api', baseUrl: url(sa), tags: 'none', local: false }, b: { type: 'openai-api', baseUrl: url(sb), tags: 'none', local: false } },
+    models: { a: { opus: ['m-a'], sonnet: ['m-a'], haiku: ['m-a'] }, b: { opus: ['m-b'], sonnet: ['m-b'], haiku: ['m-b'] } },
+    herdr: { ...base.herdr, notify: false, agentPanes: false },
+  });
+  try {
+    app.store.saveProject({ id: 'repo', name: 'Repo', department: 'dev', workspace: ws, classification: 'internal', toolAccess: 'write', createdAt: new Date().toISOString() });
+    const t = app.orchestrator.submit({ brief: 'API', projectId: 'repo', options: { discussionRounds: 0, maxRevisions: 0 } });
+    const paused = await app.orchestrator.waitFor(t.id);
+    assert.equal(paused.status, 'paused', paused.error);
+    assert.equal(paused.pause?.reason, 'quota');
+    assert.match(paused.pause?.detail ?? '', /Chờ model nhanh a\/m-a .*model chậm b\/m-b/);
+    assert.ok(paused.pause?.resumeAt && Date.parse(paused.pause.resumeAt) > Date.now(), 'hẹn tự tiếp tục khi model nhanh mở lại');
+    assert.ok(!seen.some((s) => s.name === 'b'), 'không chạy thực thi bằng model chậm');
+    const st = paused.runs.flatMap((r) => r.subtasks).find((s) => s.id === 'S1')!;
+    assert.equal(st.status, 'pending');
+    assert.match(st.handover ?? '', /write_file .*api\.js/, 'giữ bàn giao trên hạng mục');
+    // model nhanh mở lại → tiếp tục: làm tiếp từ bàn giao trên model nhanh
+    fastLimited = false;
+    app.runtimes.markOk('a::m-a');
+    seen.length = 0;
+    app.orchestrator.resume(t.id);
+    const done = await app.orchestrator.waitFor(t.id);
+    assert.equal(done.status, 'done', done.error);
+    const ex = seen.filter((s) => s.user.includes('## Hạng mục của bạn'));
+    assert.ok(ex.length >= 1 && ex.every((s) => s.name === 'a'));
+    assert.match(ex[0].user, /Lần thử trước bị ngắt giữa chừng/);
+    assert.equal(done.runs.flatMap((r) => r.subtasks).find((s) => s.id === 'S1')?.handover, undefined, 'xong thì xóa bàn giao');
+    // model nhanh nghỉ lâu hơn waitForFastMs, hoặc lỗi không phải quota/429 → không chờ
+    app.runtimes.markFailure('a', 'm-a', 'quota', 'hết hạn mức', Date.now() + 5 * 3_600_000);
+    const fr = await app.runtimes.fastRecovery([], 'internal', 'sonnet');
+    assert.ok(fr && fr.until - Date.now() > 30 * 60_000, 'mở lại sau 5 giờ → vượt waitForFastMs, sẽ dùng model chậm');
+    app.runtimes.markOk('a::m-a');
+    app.runtimes.markFailure('a', 'm-a', 'model', 'model không tồn tại');
+    assert.equal(await app.runtimes.fastRecovery([], 'internal', 'sonnet'), undefined, 'lỗi model → chờ vô ích');
+    assert.ok(app.runtimes.isSlow({ model: 'm-b' }) && !app.runtimes.isSlow({ model: 'm-a' }));
+  } finally {
+    sa.close();
+    sb.close();
+    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(ws, { recursive: true, force: true });
+  }
+});
+
+test('lệnh kiểm tra của dự án: phần cuối đầu ra lưu lại đã che bí mật', async () => {
+  const { runCheckCommand } = await import('../src/tools/workspace.js');
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-chk-'));
+  try {
+    fs.writeFileSync(path.join(ws, 't.js'), "console.log('DATABASE password=hunter2secret'); console.log('key sk-ant-abcdefghijklmnopqrstuvwxyz012345'); console.log('tests 2 pass 2 fail 0')");
+    const r = await runCheckCommand('node t.js', ws, { denyCommands: [], timeoutSec: 30, maxChars: 4000 });
+    assert.ok(r.ok, r.tail);
+    assert.match(r.summary, /pass 2/);
+    assert.doesNotMatch(r.tail, /hunter2secret|sk-ant-abcdef/);
+  } finally {
+    fs.rmSync(ws, { recursive: true, force: true });
   }
 });

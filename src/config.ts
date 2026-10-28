@@ -96,6 +96,15 @@ export interface Config {
     maxFailover: number;
     /** Model vừa báo giới hạn tốc độ (429) bị xếp sau các model khác trong khoảng này (ms) — tránh lượt nào cũng thử lại rồi mới chuyển. */
     rateBackoffMs: number;
+    /**
+     * Model "chậm" (regex, khớp model id hoặc nhãn), vd. ["gpt-6-sol"]. Ở các pha nặng (waitPhases), nếu model nhanh chỉ đang
+     * nghỉ vì quota/giới hạn tốc độ và sẽ mở lại trong waitForFastMs thì CCoding tạm dừng rồi tự tiếp tục thay vì chạy bằng model chậm.
+     */
+    slowModels?: string[];
+    /** Chờ model nhanh tối đa bao lâu (ms) trước khi chấp nhận model chậm (mặc định 30 phút; 0 = không chờ). */
+    waitForFastMs?: number;
+    /** Pha áp dụng chờ model nhanh (mặc định execute, revise, review). */
+    waitPhases?: string[];
   };
   runner: 'auto' | 'process' | 'herdr';
   maxConcurrentTasks: number;
@@ -207,6 +216,9 @@ const BUILTIN: Omit<Config, 'root'> = {
     quotaCooldownMs: 30 * 60_000,
     maxFailover: 6,
     rateBackoffMs: 20 * 60_000,
+    slowModels: [],
+    waitForFastMs: 30 * 60_000,
+    waitPhases: ['execute', 'revise', 'review'],
   },
   runner: 'auto',
   maxConcurrentTasks: 2,

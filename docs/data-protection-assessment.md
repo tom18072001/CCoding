@@ -232,3 +232,21 @@ Thay đổi: dự án có thêm `baseRef` (worktree tách từ vd. `origin/main`
 - **`baseRef`:** chỉ nhận tên ref an toàn (không bắt đầu bằng `-`, không `..`) ⇒ không chèn được tham số git. `git fetch` đi tới remote đã cấu hình sẵn của repo (GitHub của chủ dự án), không thêm đích mới.
 - **GOV-02 (phân loại):** dự án `nd57` gắn nhãn **Nội bộ** (văn bản triển khai, danh mục nhiệm vụ, tên đơn vị TW Đoàn đã có sẵn trong repo; không đưa dữ liệu báo cáo thật). Nội dung mật của nghị định (gói 4 trong đề xuất) **không** được đưa vào repo hay prompt; nếu sau này có, phải chuyển nhãn *Bảo mật/Hạn chế* và chỉ dùng runtime cục bộ.
 - **Rủi ro còn lại:** agent đọc được các tệp .docx/.pdf văn bản TW Đoàn đã commit trong repo ND57 và nội dung đó có thể vào prompt gửi runtime đám mây (9router → Claude/Codex) — chấp nhận ở nhãn Nội bộ; chủ dự án cân nhắc đưa các văn bản gốc ra khỏi git nếu chúng không còn là tài liệu công khai.
+
+### Bổ sung: lệnh kiểm tra do CCoding tự chạy, chặn đọc tệp qua shell, bản đồ repo, chờ model nhanh, cache Claude qua Bifrost (28/10/2026)
+
+Đánh giá theo Data Protection Gate cho đợt cải thiện P1–P6 (xem `docs/PROCESS-REVIEW.md` mục 7). **Kết luận: ĐẠT CÓ ĐIỀU KIỆN** (giữ các điều kiện cũ; điều kiện mới ở mục cuối).
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| `setupCommands`/`checkCommands` của dự án (CCoding chạy trong worktree ở baseline/sau thực thi/sau sửa) | PRE-05, PRE-07, DET-01 | Lệnh do chủ dự án khai báo, kiểm tra với danh sách lệnh cấm (toàn cục + dự án) **khi lưu** (API trả 400) và **khi chạy**; cùng sandbox với `run_command` (không biến môi trường chứa khóa, giới hạn thời gian, khóa workspace). Không có luồng dữ liệu mới ra ngoài. Phần cuối đầu ra (≤ 4.000 ký tự) lưu trong `task.json` và vào prompt review **đã che bí mật + PII**; log `checks.run` chỉ ghi lệnh, exit code, dòng tóm tắt. Dự án `nd57`: `worktreeCopy: []` nên `npm test` chạy không có `.env` thật, không chạm DB đang vận hành |
+| Chặn đọc/tìm tệp qua shell khi có `read_file`/`search` | PRE-05, PRE-06 | Giảm lượng nội dung tệp đi ra runtime (đọc theo đoạn, không trùng lặp) và đưa mọi lần đọc qua công cụ có kiểm soát đường dẫn (chặn `.env*`, khóa, `.git/`) — trước đây `Get-Content .env` chỉ bị chặn bởi quy tắc riêng |
+| Bản đồ repo `.ccoding/<task>/repo-map.md` | PRE-06, GOV-03 | Chỉ chứa cấu trúc (đường dẫn, số dòng, tên route/model/hàm) — không chứa nội dung tệp, giá trị cấu hình hay dữ liệu; nằm trong thư mục `.ccoding` đã `.gitignore`. Đi vào prompt như các bối cảnh khác (cùng chính sách nhãn) |
+| Ước tính theo lịch sử (`estimate.historyDays`) | — | Đọc số token trong `task.json` sẵn có, không lưu thêm |
+| Chờ model nhanh (`runtime.slowModels`), ghi chú bàn giao trên hạng mục (`subtask.handover`) | RES-01, DET-01 | Bàn giao chỉ gồm tên công cụ + tham số tóm tắt (≤ 160 ký tự/thao tác, ≤ 12.000 ký tự), lưu trong `task.json` cùng chỗ với lịch sử nhiệm vụ; không đổi runtime/nhãn được phép |
+| Cache Claude: provider kiểu *anthropic* trong Bifrost → 9router `/v1/messages`, `cacheControl` | PRE-01, GOV-05 (xuyên biên giới) | Cùng đích (9router → gói Claude Max) và cùng nội dung như trước, **không thêm bên nhận mới**; nhà cung cấp giữ bản cache ngắn hạn (5 phút–1 giờ) theo điều khoản của họ. Bifrost vẫn áp key ảo, `disable_content_logging`, `enforce_auth_on_inference`. Đo thử chỉ dùng văn bản tổng hợp (không có dữ liệu thật); Bifrost thử nghiệm chạy tạm ở cổng 8091 rồi tắt |
+
+**Điều kiện mới:**
+1. [Bắt buộc] `checkCommands` chỉ chạy test/kiểm tra **không cần DB/dịch vụ thật** (vd. `npm test`, `npm run check` của ND57); lệnh cần DB phải trỏ DB kiểm thử riêng (P7, chưa làm) — không bao giờ dùng `.env` của môi trường vận hành.
+2. [Bắt buộc] Không bật `cacheControl`/provider mới cho dự án *Bảo mật/Hạn chế* (vốn chỉ chạy runtime cục bộ).
+3. [Khuyến nghị] Sau khi chuyển Claude sang provider kiểu *anthropic*, kiểm tra trên bảng điều khiển Bifrost rằng log vẫn không lưu nội dung (`disable_content_logging`) và key ảo của 3 phòng đều được cấp provider mới.

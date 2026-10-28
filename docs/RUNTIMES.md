@@ -36,6 +36,8 @@ Lỗi trong lúc gọi ⇒ ghi `runtime.error`, đánh dấu nghỉ, **thử nga
 
 Model vừa báo **giới hạn tốc độ (429)** — sau thời gian nghỉ ngắn — vẫn bị **xếp sau** các model khác trong `runtime.rateBackoffMs` (mặc định 20 phút) cho tới khi gọi thành công lại (log `runtime.deferred`), để lượt nào cũng không phải thử lại rồi mới chuyển.
 
+**Chờ model nhanh thay vì chạy pha nặng bằng model chậm** (`runtime.slowModels`, `waitForFastMs`, `waitPhases`): khai báo model chậm, vd. `"slowModels": ["gpt-6-sol"]` (regex, khớp model id hoặc nhãn). Ở các pha `waitPhases` (mặc định thực thi, sửa, review) model nhanh luôn được thử trước model chậm; khi tới lượt model chậm mà model nhanh chỉ đang nghỉ vì **quota/429** và sẽ mở lại trong `waitForFastMs` (mặc định 30 phút), nhiệm vụ **tạm dừng** (`runtime.wait`, cảnh báo "Chờ model nhanh") và tự tiếp tục khi model nhanh mở lại (+15 giây). Lượt đang dở được giữ ghi chú bàn giao trên hạng mục (`subtask.handover`) để lần chạy sau làm tiếp, không làm lại. Model nhanh nghỉ lâu hơn (vd. hết hạn mức 5 giờ), chạm hạn mức ngày hoặc lỗi xác thực/model ⇒ dùng model chậm như cũ. Lý do: ND57 27/10, Codex làm S2 mất ~10 phút/lượt và treo >25 phút trong khi Claude Max mở lại sau ~15 phút. Mặc định `slowModels: []` (tắt).
+
 Lượt gọi lỗi sau ≥ 60 giây mà nhà cung cấp không báo usage (vd. 502 sau nhiều phút) được ghi sổ **ước lượng** phần đầu vào đã gửi (`call.lost`), thời gian từng lần thử nằm trong `attempts[].ms` của `calls.jsonl`.
 
 Pha nhẹ dùng model rẻ hơn: `phases.models` (mặc định định tuyến và họp dùng `haiku`). Giới hạn token đầu ra theo pha: `phases.maxTokens` (thực thi 32k; đầu ra bị cắt được tự viết tiếp tối đa 2 lần).
@@ -92,7 +94,35 @@ Runtime API tương thích OpenAI có `supportsTools` (mặc định bật; Olla
 3. `scripts\bifrost.ps1` (hoặc để `herdr up` chạy trong tab **Dịch vụ**) — lần đầu tạo `data\bifrost\config.json` từ [`docs/bifrost.config.example.json`](bifrost.config.example.json): provider tùy biến `ninerouter` (OpenAI-compatible → `http://127.0.0.1:20128`), 3 key ảo theo phòng, **không lưu nội dung prompt** (`disable_content_logging`), bắt buộc key khi suy luận (`enforce_auth_on_inference`).
 4. Bảng điều khiển Bifrost (http://127.0.0.1:8080) bị khóa cho tới khi tạo tài khoản quản trị: `setx BIFROST_SETUP_TOKEN "<chuỗi bí mật tự đặt>"`, khởi động lại Bifrost, mở trang và nhập token để tạo admin. Việc định tuyến/tag vẫn chạy bình thường khi chưa mở bảng điều khiển.
 
-`cacheControl: true` (hoặc regex tên model): gắn điểm cache kiểu Anthropic (`cache_control: ephemeral`) vào hồ sơ vị trí, bối cảnh nhiệm vụ và kết quả công cụ mới nhất khi gửi qua gateway tương thích OpenAI — vòng lặp công cụ dài đọc lại lịch sử từ cache. `true` chỉ áp cho model có "claude" trong tên. Gateway không hỗ trợ thì thường bỏ qua; kiểm tra bằng cột *Cache* trong tab Token. Đã thử 27/10/2026 qua Bifrost → 9router (`cc/claude-haiku`, prompt 15k token, gọi 2 lần): cache đọc/ghi vẫn báo 0 cả khi bật ⇒ máy hiện tại để tắt; Codex (`cx/`) vẫn tự cache tiền tố và được lợi từ việc rút gọn lịch sử theo đợt.
+`cacheControl: true` (hoặc regex tên model): gắn điểm cache kiểu Anthropic (`cache_control: ephemeral`, tối đa 3 điểm) vào hồ sơ vị trí (system), bối cảnh nhiệm vụ và **kết quả công cụ mới nhất** (kể cả khi sau nó còn lời nhắc của CCoding) khi gửi qua gateway tương thích OpenAI — vòng lặp công cụ dài đọc lại lịch sử từ cache. `true` chỉ áp cho model có "claude" trong tên. Kiểm tra bằng cột *Cache* trong tab Token.
+
+**Đo 28/10/2026 trên máy Tom** (dữ liệu tổng hợp, `cc/claude-haiku`, gọi lặp 2 lần):
+
+| Đường đi | system giữ? | Cache lần 2 |
+|---|---|---|
+| Bifrost → provider `ninerouter` (kiểu *openai*) → 9router `/v1/chat/completions` | **mất** (9router bỏ tin nhắn system — lý do phải dùng `promptStyle: "combined"`) | 0 (sổ cái 26–27/10: 77 lượt Claude, 16,2 triệu token vào, cache đọc/ghi 0) |
+| 9router `/v1/messages` (Anthropic gốc) | giữ | **14.122 / 14.142 token đọc từ cache** (TTL 1 giờ) |
+| Bifrost → provider kiểu **anthropic** → 9router `/v1/messages` | giữ | system: 15.322/15.342; vòng công cụ 2 lượt: **8.384/8.409** đọc từ cache. Điểm cache trên tin nhắn *user* bị bỏ qua, trên *system* và *tool* thì giữ |
+| Codex `cx/gpt-6-sol` (mọi đường) | — | tự cache tiền tố: 61% token vào (4,27/6,99 triệu) đọc từ cache (không cần cấu hình) |
+
+⇒ Muốn có cache với Claude Max mà vẫn qua Bifrost (key ảo, log): thêm provider tùy biến **kiểu anthropic** trỏ 9router rồi chuyển chuỗi model `cc/` sang provider đó, bật `cacheControl`:
+
+```json
+// data/bifrost/config.json → providers (cũng thêm "ninerouter-claude" vào provider_configs của từng key ảo)
+"ninerouter-claude": {
+  "keys": [{ "name": "ninerouter-key", "value": "env.NINEROUTER_API_KEY", "models": ["*"], "weight": 1 }],
+  "network_config": { "base_url": "http://127.0.0.1:20128", "allow_private_network": true, "default_request_timeout_in_seconds": 900, "stream_idle_timeout_in_seconds": 600 },
+  "custom_provider_config": { "base_provider_type": "anthropic", "allowed_requests": { "list_models": true, "chat_completion": true, "chat_completion_stream": true } }
+}
+```
+
+```json
+// ccoding.local.json
+"runtimes": { "bifrost": { "cacheControl": true } },
+"models": { "bifrost": { "sonnet": [ { "model": "ninerouter-claude/cc/claude-sonnet-5-5", "label": "Claude Max · Sonnet" }, { "model": "ninerouter/cx/gpt-6-sol", "label": "Codex · GPT-6 Sol" } ] } }
+```
+
+Lưu ý đường Claude gốc của 9router: tên công cụ trả về có hậu tố `_ide` (`read_file_ide`) — CCoding tự đổi về tên đã khai báo; chỉ hỗ trợ **stream** (lượt không stream bị ngắt kết nối — CCoding luôn stream). Bifrost báo cache ghi ở `prompt_tokens_details.cache_write_tokens` — CCoding đọc cả trường này.
 
 `promptStyle: "combined"`: gửi hồ sơ vị trí và công việc trong một tin nhắn — cần khi upstream tự chèn system prompt (9router với model `cc/…` của gói Claude Code), nếu không agent có thể tự nhận là "Claude Code" thay vì vai trò trong agent.md.
 

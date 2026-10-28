@@ -255,14 +255,8 @@ export class RuntimeManager {
     return rules.some((x) => x === '*' || x === id || (x === 'local' && r.local));
   }
 
-  /**
-   * Danh sách tài nguyên (runtime + model) theo thứ tự thử: runtime được chỉ định (task → dự án → agent → mặc định)
-   * rồi tới thứ tự runtime.order; trong mỗi runtime là chuỗi model dự phòng. Bỏ qua runtime bị chặn với phân loại dữ liệu,
-   * chưa sẵn sàng, đang nghỉ (hết quota/lỗi) hoặc đã chạm hạn mức ngày.
-   */
-  async candidates(prefs: Array<string | undefined>, cls: Classification, want: string): Promise<{ list: Candidate[]; notes: string[]; skipped: string[]; deferred?: string[] }> {
-    const notes: string[] = [];
-    const skipped: string[] = [];
+  /** Thứ tự runtime để thử: runtime được chỉ định đầu tiên hợp lệ (task → dự án → agent → mặc định) rồi runtime.order. */
+  private orderedIds(prefs: Array<string | undefined>, cls: Classification, notes: string[]): string[] {
     const ids: string[] = [];
     for (const p of prefs) {
       if (!p || p === 'inherit') continue;
@@ -279,6 +273,59 @@ export class RuntimeManager {
       break;
     }
     for (const id of this.config.runtime.order) if (!ids.includes(id)) ids.push(id);
+    return ids;
+  }
+
+  /** Model thuộc nhóm "chậm" theo runtime.slowModels (regex không phân biệt hoa thường; regex lỗi → so chuỗi con). */
+  isSlow(c: { model: string; label?: string }): boolean {
+    const pats = this.config.runtime.slowModels ?? [];
+    return pats.some((p) => {
+      try {
+        const re = new RegExp(p, 'i');
+        return re.test(c.model) || (!!c.label && re.test(c.label));
+      } catch {
+        const q = p.toLowerCase();
+        return c.model.toLowerCase().includes(q) || !!c.label?.toLowerCase().includes(q);
+      }
+    });
+  }
+
+  /**
+   * Model nhanh (không thuộc slowModels) dùng được cho yêu cầu này nhưng đang nghỉ vì quota/giới hạn tốc độ:
+   * thời điểm mở lại sớm nhất — để quyết định chờ nó thay vì chạy pha nặng bằng model chậm.
+   * Model chạm hạn mức token ngày không tính (chờ cũng không mở lại).
+   */
+  async fastRecovery(prefs: Array<string | undefined>, cls: Classification, want: string): Promise<{ until: number; label: string; reason?: string } | undefined> {
+    const now = Date.now();
+    let best: { until: number; label: string; reason?: string } | undefined;
+    for (const id of this.orderedIds(prefs, cls, [])) {
+      if (!this.runtimes.has(id) || !this.allowed(id, cls)) continue;
+      if (!(await this.availability(id)).ok) continue;
+      const rl = Number(this.config.runtimes[id]?.dailyTokenLimit ?? 0);
+      if (rl > 0 && this.usageToday(id) >= rl) continue;
+      for (const e of this.chainFor(id, want)) {
+        const label = `${id}/${e.label ?? e.model}`;
+        if (this.isSlow({ model: e.model, label })) continue;
+        if (e.dailyTokenLimit && this.usageToday(id, e.model) >= e.dailyTokenLimit) continue;
+        const holds = [this.health.get(`${id}::${e.model}`), this.health.get(id)].filter((h): h is HealthInfo => !!h?.until && h.until > now);
+        // chỉ chờ khi mọi lý do chặn đều là quota/giới hạn tốc độ (lỗi xác thực, model không tồn tại… thì chờ vô ích)
+        if (!holds.length || holds.some((h) => h.kind !== 'rate' && h.kind !== 'quota')) continue;
+        const until = Math.max(...holds.map((h) => h.until as number));
+        if (!best || until < best.until) best = { until, label, reason: holds[0].reason };
+      }
+    }
+    return best;
+  }
+
+  /**
+   * Danh sách tài nguyên (runtime + model) theo thứ tự thử: runtime được chỉ định (task → dự án → agent → mặc định)
+   * rồi tới thứ tự runtime.order; trong mỗi runtime là chuỗi model dự phòng. Bỏ qua runtime bị chặn với phân loại dữ liệu,
+   * chưa sẵn sàng, đang nghỉ (hết quota/lỗi) hoặc đã chạm hạn mức ngày.
+   */
+  async candidates(prefs: Array<string | undefined>, cls: Classification, want: string): Promise<{ list: Candidate[]; notes: string[]; skipped: string[]; deferred?: string[] }> {
+    const notes: string[] = [];
+    const skipped: string[] = [];
+    const ids = this.orderedIds(prefs, cls, notes);
     const list: Candidate[] = [];
     for (const id of ids) {
       const rt = this.runtimes.get(id);

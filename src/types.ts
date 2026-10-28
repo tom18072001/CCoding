@@ -211,6 +211,8 @@ export interface Subtask {
   continuations?: number;
   /** Lần chạy gần nhất dừng giữa chừng (đã ghi một phần vào workspace) — lần sau làm tiếp từ bàn giao dở dang thay vì làm lại. */
   incomplete?: boolean;
+  /** Ghi chú bàn giao khi lượt gọi bị ngắt giữa vòng công cụ rồi nhiệm vụ tạm dừng (vd. chờ model nhanh) — lần chạy sau làm tiếp, không làm lại. */
+  handover?: string;
 }
 
 export interface ReviewIssue { subtask: string; severity: 'blocker' | 'major' | 'minor'; comment: string }

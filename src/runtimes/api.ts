@@ -315,7 +315,9 @@ export class OpenAiApiRuntime implements Runtime {
           t.input = ev.usage.prompt_tokens ?? t.input;
           t.output = ev.usage.completion_tokens ?? t.output;
           t.cached = ev.usage.prompt_tokens_details?.cached_tokens ?? ev.usage.cache_read_input_tokens ?? ev.usage.cache_read_tokens ?? t.cached;
-          t.cacheWrite = ev.usage.cache_creation_input_tokens ?? ev.usage.prompt_tokens_details?.cache_creation_tokens ?? t.cacheWrite;
+          const pd = ev.usage.prompt_tokens_details ?? {};
+          // Bifrost (provider kiểu anthropic) báo cache_write_tokens / cached_write_tokens; Anthropic gốc báo cache_creation_input_tokens
+          t.cacheWrite = ev.usage.cache_creation_input_tokens ?? pd.cache_creation_tokens ?? pd.cache_write_tokens ?? pd.cached_write_tokens ?? t.cacheWrite;
         }
       }
     } catch (e) {
@@ -395,6 +397,7 @@ export class OpenAiApiRuntime implements Runtime {
       finish = t.finish;
       if (t.toolCalls.length && useTools && turns <= maxTurns && !finalAsked) {
         if (t.text.trim()) narration += `${t.text.trim()}\n`;
+        for (const c of t.toolCalls) c.name = toolName(c.name, policy!.allow);
         messages.push({ role: 'assistant', content: t.text || null, tool_calls: t.toolCalls.map((c) => ({ id: c.id, type: 'function', function: { name: c.name, arguments: c.args || '{}' } })) });
         for (const c of t.toolCalls) {
           let args: unknown = {};
@@ -488,6 +491,18 @@ export class OpenAiApiRuntime implements Runtime {
   }
 }
 
+/**
+ * Tên công cụ model trả về → tên đã khai báo. 9router (đường Claude gốc /v1/messages, vd. qua Bifrost provider kiểu anthropic)
+ * đổi tên công cụ thành "<tên>_ide" và không đổi lại trong câu trả lời.
+ */
+export function toolName(name: string, allow: readonly string[]): string {
+  if (allow.includes(name)) return name;
+  const base = name.replace(/_ide$/i, '');
+  if (base !== name && allow.includes(base)) return base;
+  const ci = allow.find((a) => a.toLowerCase() === base.toLowerCase());
+  return ci ?? name;
+}
+
 /** Yêu cầu dòng trạng thái khi vòng công cụ bị dừng giữa chừng — điều phối viên dựa vào đây để cho chạy tiếp. */
 export const CAP_STATUS_RULE =
   'Dòng ĐẦU TIÊN của câu trả lời phải là đúng một trong hai: "TRẠNG THÁI: XONG" (mọi tiêu chí hoàn thành của hạng mục đã đạt và đã ghi vào workspace) hoặc "TRẠNG THÁI: CHƯA XONG — <việc còn lại>". Sau đó ghi rõ đã làm gì (tệp đã sửa), việc còn dang dở và bước tiếp theo cụ thể để lần chạy sau làm tiếp mà không phải khảo sát lại.';
@@ -569,10 +584,14 @@ export function withCacheMarks(messages: ChatMsg[], req: Pick<RunRequest, 'conte
       msg.content = staticLen > 1000 && staticLen < text.length ? [part(text.slice(0, staticLen), true), part(text.slice(staticLen))] : [part(text, i === out.length - 1)];
     }
   }
-  // điểm cache di động ở tin nhắn cuối (sau tin nhắn user đầu tiên)
-  const last = out.length - 1;
-  if (last > first && (out[last].role === 'tool' || out[last].role === 'user') && typeof out[last].content === 'string' && out[last].content) {
-    out[last].content = [part(String(out[last].content), true)];
+  // điểm cache di động: kết quả công cụ mới nhất (kể cả khi sau nó còn lời nhắc user — qua Bifrost → Claude, điểm cache trên tin
+  // nhắn user bị bỏ qua, trên tin nhắn tool thì giữ); chưa có kết quả công cụ thì đặt ở tin nhắn cuối. Tổng ≤ 3 điểm (Anthropic cho tối đa 4).
+  let mv = -1;
+  for (let i = out.length - 1; i > first; i--) if (out[i].role === 'tool') {
+    mv = i;
+    break;
   }
+  if (mv < 0 && out.length - 1 > first && out[out.length - 1].role === 'user') mv = out.length - 1;
+  if (mv > first && typeof out[mv].content === 'string' && out[mv].content) out[mv].content = [part(String(out[mv].content), true)];
   return out;
 }

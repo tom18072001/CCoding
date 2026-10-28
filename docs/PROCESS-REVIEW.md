@@ -92,3 +92,18 @@ Xuyên suốt:
 | Vòng lặp công cụ: mỗi lượt rút gọn lịch sử làm hỏng cache tiền tố | Rút gọn **theo đợt** (khi phần cũ > 40k ký tự) để tiền tố ổn định → cache của Codex/OpenAI trúng nhiều hơn; tùy chọn `cacheControl` gắn điểm cache kiểu Anthropic qua gateway |
 
 **KPI sub-agent**: mỗi agent được chấm như nhân sự một phòng ban (Chất lượng 40 · Hiệu quả 25 · Tin cậy 20 · Tuân thủ 15) từ log — tab **KPI**, `ccoding kpi`, bảng KPI trong mỗi báo cáo nhiệm vụ, kèm "việc cần sửa" sinh tự động.
+
+## 7. Sau lượt chạy ND57 gói 1 (27/10/2026) — đợt cải thiện 28/10
+
+Lượt gói 1 (`nd57/da-nghi-dinh-goi-1`): 29 lượt Claude + Codex, ~14,1 triệu token vào ở Sonnet riêng một nhiệm vụ, cache Claude = 0, 62/196 thao tác là đọc tệp qua shell, review trên Codex không chạy test, nhiệm vụ báo "xong" dù còn hạng mục lỗi. Thay đổi:
+
+| # | Vấn đề | Thay đổi |
+|---|---|---|
+| P1/P9 | Review không chạy test, không có bằng chứng độc lập | Dự án khai báo `setupCommands`/`checkCommands`; CCoding **tự chạy** ở baseline, sau thực thi, sau mỗi vòng sửa; hồi quy ⇒ không duyệt; review chưa duyệt ⇒ cờ **⚠ cần xem** (`docs/TOOLS.md`) |
+| P5 | Đọc tệp qua `Get-Content`/`cat`/`rg` (không số dòng, đọc lại nhiều lần) | `run_command` chặn lệnh chỉ để đọc/tìm khi đã có `read_file`/`search` |
+| P4 | Ước tính token theo hằng số, lệch xa thực tế | Ước tính hạng mục theo **trung vị token thực tế** của agent trong `estimate.historyDays` (30 ngày), đủ `estimate.minSamples` (2) mẫu; UI ghi rõ cơ sở ước tính |
+| P3 | Agent khảo sát rộng repo lớn mỗi hạng mục | **Bản đồ repo** `.ccoding/<task>/repo-map.md` (tệp lớn, route, model, hàm kèm số dòng) trong prompt lập kế hoạch/thực thi |
+| P6 | Claude Max 429 → pha nặng rơi xuống Codex chậm (~10 phút/lượt, treo >25 phút) | `runtime.slowModels` + `waitForFastMs`: model nhanh sắp mở lại thì **tạm dừng chờ** và tự tiếp tục, giữ bàn giao (`docs/RUNTIMES.md`) |
+| P2 | Không có prompt cache với Claude qua 9router | Đo 28/10: đường chat của 9router bỏ system và không cache; đường `/v1/messages` cache được (lần 2 đọc ~99,9% từ cache). Cách bật mà vẫn qua Bifrost: provider kiểu *anthropic* + `cacheControl` (`docs/RUNTIMES.md`); CCoding đặt điểm cache trên kết quả công cụ mới nhất, đọc `cache_write_tokens` của Bifrost, sửa tên công cụ `_ide` |
+
+Chưa làm (đợt 3, sau khi đo lại trên gói 2): P7 CSDL kiểm thử dùng chung cho dự án, P8 ghi chú ngữ cảnh giữa các nhiệm vụ.

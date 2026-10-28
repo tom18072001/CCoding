@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { killTree } from '../runtimes/spawn.js';
+import { redact } from '../util/redact.js';
 import { fetchUrl, searchPapers, WebError, webSearch } from './web.js';
 import type { CheckResult, Phase, ToolAccess, ToolName, ToolPolicy } from '../types.js';
 
@@ -630,7 +631,8 @@ export async function runCheckCommand(
       timedOut: r.timedOut || undefined,
       ms: Date.now() - t0,
       summary: r.timedOut ? `hết thời gian ${o.timeoutSec}s` : checkSummary(out) || `exit code ${r.code}`,
-      tail: out.length > 4000 ? `…${out.slice(-4000)}` : out,
+      // phần cuối đầu ra được lưu trong task.json và đưa vào prompt review → che bí mật/PII trước (vd. test in chuỗi kết nối, dữ liệu mẫu)
+      tail: redact(out.length > 4000 ? `…${out.slice(-4000)}` : out, { secrets: true, pii: true }),
     };
   } finally {
     unlock();

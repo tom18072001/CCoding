@@ -66,7 +66,7 @@ export interface OrchestratorDeps {
 
 /** Dừng nhiệm vụ nhưng giữ nguyên tiến độ để tiếp tục sau (chạm trần ngân sách, hết tài nguyên, yêu cầu thủ công). */
 export class PauseSignal extends Error {
-  constructor(public reason: PauseInfo['reason'], message: string, public resumeAt?: number) {
+  constructor(public reason: PauseInfo['reason'], message: string, public resumeAt?: number, public title?: string) {
     super(message);
   }
 }
@@ -98,6 +98,8 @@ const ACTIVITY_BY_PHASE: Record<Phase, string> = {
   revise: 'Sửa theo review',
   synthesize: 'Viết báo cáo tổng hợp',
 };
+
+const WAIT_PHASE_LABEL: Partial<Record<Phase, string>> = { execute: 'thực thi', revise: 'sửa theo review', review: 'review' };
 
 const OFFICE: DepartmentDef = {
   id: 'office',
@@ -733,7 +735,7 @@ export class Orchestrator {
         this.alert({
           level: e.reason === 'manual' ? 'info' : 'warn',
           kind: `task.paused.${e.reason}`,
-          title: e.reason === 'budget' ? 'Chạm trần ngân sách — đã tạm dừng' : e.reason === 'quota' ? 'Hết tài nguyên token — đã tạm dừng' : 'Đã tạm dừng',
+          title: e.title ?? (e.reason === 'budget' ? 'Chạm trần ngân sách — đã tạm dừng' : e.reason === 'quota' ? 'Hết tài nguyên token — đã tạm dừng' : 'Đã tạm dừng'),
           msg: `${task.title}: ${e.message}`,
           taskId: task.id,
         });
@@ -1464,7 +1466,11 @@ export class Orchestrator {
     let req: RunRequest | undefined;
     let cand: Candidate | undefined;
     /** Lần thử trước đã sửa workspace rồi mới lỗi (vd. 429 ở lượt cuối) → lần thử sau phải làm tiếp, không làm lại từ đầu. */
-    let handover = '';
+    let handover = ctx.subtask?.handover ?? '';
+    /** Giữ ghi chú bàn giao trên hạng mục khi tạm dừng — lần chạy sau (sau khi tiếp tục) làm tiếp thay vì làm lại. */
+    const keepHandover = () => {
+      if (ctx.subtask && handover) ctx.subtask.handover = handover.slice(0, 12_000);
+    };
     const attempts: Array<{ runtime: string; model: string; kind: ErrorKind; error: string; ms: number }> = [];
     let failedMs = 0;
     try {
@@ -1482,11 +1488,28 @@ export class Orchestrator {
         const at = runtimes.earliestRecovery();
         throw new PauseSignal('quota', `Không còn runtime/model khả dụng${skipped.length ? `: ${skipped.join('; ')}` : ' (chưa cấu hình hoặc không kết nối được)'}`, at ?? Date.now() + 5 * 60_000);
       }
+      // pha nặng: model nhanh trước model chậm (kể cả khi model nhanh vừa bị 429 và đang bị xếp sau); nếu model nhanh chỉ tạm nghỉ
+      // vì quota/giới hạn tốc độ và sắp mở lại thì tạm dừng chờ thay vì chạy bằng model chậm (P6)
+      const waitMs = Math.max(0, config.runtime.waitForFastMs ?? 30 * 60_000);
+      const waitFast = waitMs > 0 && !!config.runtime.slowModels?.length && (config.runtime.waitPhases ?? ['execute', 'revise', 'review']).includes(phase);
+      if (waitFast) {
+        const fast = list.filter((c) => !runtimes.isSlow(c));
+        if (fast.length && fast.length < list.length) list.splice(0, list.length, ...fast, ...list.filter((c) => runtimes.isSlow(c)));
+      }
       const maxTry = Math.min(list.length, Math.max(1, config.runtime.maxFailover));
       const access = this.toolAccess(task, ctx.project);
       for (let i = 0; i < maxTry; i++) {
         cand = list[i];
         const rt = cand.runtime;
+        if (waitFast && runtimes.isSlow(cand)) {
+          const fr = await runtimes.fastRecovery(prefs, cls, want);
+          if (fr && fr.until - Date.now() <= waitMs) {
+            keepHandover();
+            const at = new Date(fr.until).toLocaleTimeString('vi-VN');
+            logs.write({ level: 'info', kind: 'runtime.wait', msg: `${agent.name}: chờ ${fr.label} (${fr.reason ?? 'tạm nghỉ'}) mở lại lúc ${at} thay vì chạy ${phase} bằng ${cand.label}`, taskId: task.id, agentId: agent.id, department: deptId, subtaskId: ctx.subtask?.id, phase, data: { callId, until: new Date(fr.until).toISOString(), slow: cand.label, fast: fr.label } });
+            throw new PauseSignal('quota', `Chờ model nhanh ${fr.label} (${fr.reason ?? 'tạm nghỉ'}) mở lại lúc ${at} thay vì chạy bước ${WAIT_PHASE_LABEL[phase] ?? ACTIVITY_BY_PHASE[phase].toLowerCase()}${ctx.subtask ? ` ${ctx.subtask.id}` : ''} bằng model chậm ${cand.label}`, fr.until + 15_000, 'Chờ model nhanh — đã tạm dừng');
+          }
+        }
         // tra cứu web chỉ với dữ liệu Công khai/Nội bộ (truy vấn đi ra máy tìm kiếm bên ngoài)
         const web = config.tools.web !== false && (cls === 'public' || cls === 'internal');
         const allow = rt.supportsTools && rt.id !== 'mock' ? toolsFor(agent.tools, access, phase, web) : [];
@@ -1589,6 +1612,7 @@ export class Orchestrator {
           if (r.truncated && r.text && CONTINUE_PHASES.has(phase)) r = await this.continueTruncated(rt, req, r, hooks, task, agent);
           result = runtimes.applyPricing(r);
           runtimes.markOk(cand.key);
+          if (ctx.subtask?.handover) ctx.subtask.handover = undefined;
           break;
         } catch (e) {
           if (signal?.aborted) throw new CancelledError('Đã hủy');
@@ -1619,7 +1643,8 @@ export class Orchestrator {
             });
           // phần token đã tiêu trước khi lỗi vẫn ghi sổ (runtime thật), kèm các thao tác công cụ đã làm
           const pu = re.partial;
-          if (pu?.toolCalls?.some((tc) => tc.ok && ['write_file', 'edit_file', 'run_command'].includes(tc.name))) handover = P.handoverNote(cand.label, re.kind, pu.toolCalls);
+          if (pu?.toolCalls?.some((tc) => tc.ok && ['write_file', 'edit_file', 'run_command'].includes(tc.name)))
+            handover = `${P.handoverNote(cand.label, re.kind, pu.toolCalls)}${handover ? `\n\n${handover.replace(/^## /, '### Trước đó — ')}` : ''}`.slice(0, 12_000);
           result = {
             text: '',
             usage: { input: pu?.input ?? 0, output: pu?.output ?? 0, cacheRead: pu?.cacheRead ?? 0, cacheWrite: 0, costUsd: 0 },
@@ -1652,7 +1677,10 @@ export class Orchestrator {
             logs.write({ level: 'warn', kind: 'call.lost', msg: `${agent.name} · ${cand.label}: lỗi sau ${Math.round(ms / 1000)} giây, không có usage — ghi sổ ước lượng ${fmtNum(est)} token đầu vào`, taskId: task.id, agentId: agent.id, department: deptId, subtaskId: ctx.subtask?.id, phase, data: { callId, ms, estInput: est } });
           }
           if (!shouldFailover(re.kind)) break;
-          if (this.pauseRequests.has(task.id)) throw new PauseSignal('manual', 'Tạm dừng theo yêu cầu');
+          if (this.pauseRequests.has(task.id)) {
+            keepHandover();
+            throw new PauseSignal('manual', 'Tạm dừng theo yêu cầu');
+          }
           if (i + 1 < maxTry) logs.write({ level: 'warn', kind: 'runtime.failover', msg: `${agent.name}: chuyển ${cand.label} → ${list[i + 1].label}`, taskId: task.id, agentId: agent.id, department: deptId });
         }
       }
@@ -1660,6 +1688,7 @@ export class Orchestrator {
       if (result?.error && !result.text && attempts.length && attempts.every((a) => CAPACITY_KINDS.has(a.kind))) {
         const onlyNet = attempts.every((a) => a.kind === 'transient' || a.kind === 'timeout' || a.kind === 'empty');
         const at = onlyNet ? Date.now() + 2 * 60_000 : (runtimes.earliestRecovery() ?? Date.now() + config.runtime.quotaCooldownMs);
+        keepHandover();
         throw new PauseSignal('quota', `Tất cả tài nguyên đã thử đều lỗi/hết hạn mức (${attempts.map((a) => `${a.runtime}/${a.model}: ${a.kind}`).join('; ')})`, at);
       }
     } catch (e) {
