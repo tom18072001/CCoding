@@ -713,7 +713,7 @@
           <h3><span class="dot" style="background:${deptColor(r.department)}"></span>${esc(deptName(r.department))}<span class="status ${r.status}">${TASK_VI[r.status] || r.status}</span><small style="margin-left:auto;font-family:var(--mono)">${fmt(total(r.usage))} token</small></h3>
           <div class="phases">${phases}</div>
           ${r.planSummary ? `<div class="md" style="color:var(--muted);margin-bottom:6px">${md(r.planSummary)}</div>` : ''}
-          ${r.estimate ? `<p style="font-size:12px;margin:0 0 6px;color:${r.estimate.tokens > r.estimate.budget * 1.2 ? 'var(--warn)' : 'var(--muted)'}">📏 Ước tính kế hoạch ~${fmt(r.estimate.tokens)} token · ngân sách còn ${fmt(r.estimate.budget)}${r.estimate.tokens > r.estimate.budget * 1.2 ? ' — nên tách thành nhiệm vụ riêng' : ''}</p>` : ''}
+          ${r.estimate ? `<p style="font-size:12px;margin:0 0 6px;color:${r.estimate.tokens > r.estimate.budget * 1.2 ? 'var(--warn)' : 'var(--muted)'}">📏 Ước tính kế hoạch ~${fmt(r.estimate.tokens)} token${r.estimate.basis ? ` (${esc(r.estimate.basis)})` : ''} · ngân sách còn ${fmt(r.estimate.budget)}${r.estimate.tokens > r.estimate.budget * 1.2 ? ' — nên tách thành nhiệm vụ riêng' : ''}</p>` : ''}
           ${rows ? `<div class="subtasks">${rows}</div>` : ''}
           ${r.review ? `<p style="font-size:12.5px;margin:6px 0 0">🔍 Review: ${r.review.approved ? '<b style="color:var(--ok)">duyệt</b>' : '<b style="color:var(--warn)">cần sửa</b>'} — ${esc(r.review.summary)}</p>${
             r.review.verified === false

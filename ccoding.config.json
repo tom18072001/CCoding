@@ -51,7 +51,9 @@
     "perReview": 120000,
     "perSubtask": { "none": 60000, "read": 120000, "write": 200000, "exec": 300000 },
     "web": 100000,
-    "warnRatio": 1.2
+    "warnRatio": 1.2,
+    "historyDays": 30,
+    "minSamples": 2
   },
 
   "herdr": {

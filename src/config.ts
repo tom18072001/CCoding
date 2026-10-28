@@ -120,6 +120,8 @@ export interface Config {
     maxOutputChars: number;
     /** Hạn mức ký tự cho một lần read_file (lớn hơn đầu ra lệnh để đọc trọn schema/file nguồn cỡ vừa, tránh đọc lại từng đoạn). */
     maxReadChars?: number;
+    /** Tạo bản đồ repo `.ccoding/<task>/repo-map.md` cho dự án có workspace (mặc định bật). */
+    repoMap?: boolean;
     denyCommands: string[];
     /** File chưa track chép vào worktree mặc định (nếu có). */
     worktreeCopy: string[];
@@ -140,6 +142,10 @@ export interface Config {
     web: number;
     /** Cảnh báo khi ước lượng > ngân sách × hệ số này. */
     warnRatio: number;
+    /** Ước tính theo token thực tế của các hạng mục gần nhất của từng agent (số ngày lịch sử; 0 = chỉ dùng hằng số). */
+    historyDays?: number;
+    /** Số hạng mục tối thiểu của một agent để dùng lịch sử thay hằng số. */
+    minSamples?: number;
   };
   herdr: {
     session: string;
@@ -229,6 +235,8 @@ const BUILTIN: Omit<Config, 'root'> = {
     perSubtask: { none: 60000, read: 120000, write: 200000, exec: 300000 },
     web: 100000,
     warnRatio: 1.2,
+    historyDays: 30,
+    minSamples: 2,
   },
   herdr: { session: 'ccoding', workspaceLabel: 'CCoding Office', agentPanes: true, closeAgentPanes: false, notify: true, services: [] },
   runtimes: {},

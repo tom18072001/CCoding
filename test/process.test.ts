@@ -782,6 +782,9 @@ test('CCoding tự chạy lệnh chuẩn bị + kiểm tra của dự án: basel
     const fin = app.store.readRunFile(t.id, 'FINAL.md') ?? '';
     assert.match(fin, /Lệnh kiểm tra của dự án \(CCoding tự chạy\)/);
     assert.match(app.store.transcript(t.id).map((m) => m.text).join('\n'), /🧪 Lệnh kiểm tra của dự án \(trước khi sửa\)/);
+    // bản đồ repo được tạo trong workspace và giới thiệu cho agent
+    assert.match(fs.readFileSync(path.join(ws, '.ccoding', t.id, 'repo-map.md'), 'utf8'), /check\.js/);
+    assert.match(gw.prompts.execute[0], /BẢN ĐỒ REPO: `\.ccoding\/[^`]+\/repo-map\.md`/);
   } finally {
     gw.srv.close();
     fs.rmSync(dataDir, { recursive: true, force: true });
@@ -844,6 +847,65 @@ test('chặn đọc/tìm tệp qua shell khi đã có read_file/search; lọc đ
     // không có read_file (vd. runtime chỉ chạy lệnh) thì không chặn
     const r2 = await executeTool('run_command', { command: 'cat missing.txt' }, { ...base, allow: ['run_command'] } as never);
     assert.doesNotMatch(r2.output, /dùng read_file/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('ước tính hạng mục theo token thực tế gần nhất của agent (trung vị), chưa đủ mẫu thì dùng hằng số', async () => {
+  const { subtaskHistory } = await import('../src/estimate.js');
+  const now = Date.parse('2026-10-28T00:00:00Z');
+  const st = (id: string, assignee: string, tokens: number, at: string, status = 'done') => ({ id, title: id, description: '', assignee, dependsOn: [], status, attempts: 1, finishedAt: at, usage: { input: tokens, output: 0, cacheRead: 0, cacheWrite: 0, costUsd: 0, calls: 1, estimatedCalls: 0 } });
+  const task = (subs: unknown[]) => ({ id: 'T', createdAt: '2026-10-27T00:00:00Z', updatedAt: '2026-10-27T00:00:00Z', runs: [{ department: 'dev', status: 'done', subtasks: subs, usage: {} }] });
+  const tasks = [
+    task([st('S1', 'backend-dev', 3_000_000, '2026-10-27T02:00:00Z'), st('S2', 'backend-dev', 5_000_000, '2026-10-27T02:30:00Z'), st('S3', 'qa-tester', 900_000, '2026-10-27T02:40:00Z')]),
+    task([st('S1', 'backend-dev', 300_000, '2026-10-27T03:10:00Z'), st('S9', 'backend-dev', 9_000_000, '2026-08-01T00:00:00Z'), st('S8', 'devops', 1, '2026-10-27T03:00:00Z', 'failed')]),
+  ];
+  const h = subtaskHistory(tasks as never, { now, days: 30 });
+  assert.deepEqual(h.get('backend-dev'), { median: 3_000_000, samples: 3 }, 'bỏ mẫu quá 30 ngày; trung vị của 3 mẫu');
+  assert.equal(h.get('qa-tester')?.samples, 1);
+  assert.equal(h.has('devops'), false, 'hạng mục lỗi không tính');
+  assert.equal(subtaskHistory(tasks as never, { now, days: 30, maxSamples: 2 }).get('backend-dev')?.median, 2_650_000, 'chỉ lấy các mẫu gần nhất');
+
+  // ước tính kế hoạch dùng lịch sử khi đủ mẫu
+  const app = testApp();
+  try {
+    for (const t of tasks) app.store.put({ ...(t as object), id: `T-hist-${Math.random().toString(36).slice(2, 7)}`, title: 'x', brief: 'x', mode: 'department', classification: 'internal', status: 'done', departments: ['dev'], options: { discussionRounds: 0, review: true, maxParallel: 1, maxRevisions: 0, budgetTokens: 1_000_000 }, usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, costUsd: 0, calls: 0, estimatedCalls: 0 } } as never, true);
+    const fresh = { department: 'dev', status: 'pending', subtasks: [st('A', 'backend-dev', 0, '', 'pending'), st('B', 'qa-tester', 0, '', 'pending')], usage: {} };
+    const tk = { classification: 'internal', options: { review: false, maxRevisions: 0 } };
+    const est = app.orchestrator.estimatePlan(tk as never, fresh as never);
+    const cfg = app.config.estimate;
+    // backend-dev: lịch sử (3 mẫu, trung vị 3M — các mẫu thật đều trong 30 ngày tính tới hôm nay?) — kiểm theo kết quả history thực
+    const real = subtaskHistory(app.store.list(), { days: cfg.historyDays ?? 30 }).get('backend-dev');
+    const backend = real && real.samples >= (cfg.minSamples ?? 2) ? real.median : cfg.perSubtask.write;
+    assert.ok(est >= cfg.base + backend, `${est}`);
+  } finally {
+    app.close?.();
+  }
+});
+
+test('bản đồ repo: thư mục, tệp lớn, route Express, model Prisma, hàm kèm số dòng; bỏ node_modules', async () => {
+  const { buildRepoMap } = await import('../src/repomap.js');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-map-'));
+  try {
+    fs.mkdirSync(path.join(root, 'app/server/src'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'app/server/prisma'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'node_modules/x'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'node_modules/x/index.js'), 'function hidden() {}');
+    const server = ["const express = require('express');", 'const app = express();', ...Array.from({ length: 900 }, (_, i) => `// dòng ${i}`), "app.get('/api/tasks', auth, async (req, res) => {", '});', "app.post('/api/decrees', auth, h);", 'async function ensureCurrentMonth() {}', 'module.exports = { app, ensureCurrentMonth };'].join('\n');
+    fs.writeFileSync(path.join(root, 'app/server/src/server.js'), server);
+    fs.writeFileSync(path.join(root, 'app/server/prisma/schema.prisma'), 'model Task {\n  id Int @id\n}\n\nenum ReportCycle {\n  MONTHLY\n}\n');
+    fs.writeFileSync(path.join(root, 'app/server/src/decree.ts'), 'export interface Decree { id: string }\nexport const resolveDecreeId = async (db, v) => v;\nexport class DecreeStore {}\n');
+    const map = buildRepoMap(root, { now: new Date('2026-10-28T01:00:00Z') });
+    assert.equal(map.large[0].path, 'app/server/src/server.js');
+    assert.match(map.text, /## Tệp nguồn lớn \(≥ 800 dòng\)\n- app\/server\/src\/server\.js — 907 dòng/);
+    assert.match(map.text, /route: GET \/api\/tasks :903 · POST \/api\/decrees :905/);
+    assert.match(map.text, /schema: model Task :1 · enum ReportCycle :5/);
+    assert.match(map.text, /định nghĩa: type Decree :1 · resolveDecreeId :2 · class DecreeStore :3/);
+    assert.match(map.text, /ensureCurrentMonth :906/);
+    assert.doesNotMatch(map.text, /node_modules|hidden/);
+    const small = buildRepoMap(root, { maxChars: 900 });
+    assert.ok(small.text.length < 1400, `${small.text.length}`);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

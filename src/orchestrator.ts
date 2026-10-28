@@ -12,6 +12,8 @@ import { classifyError, RuntimeError, shouldFailover, toRuntimeError } from './r
 import type { Candidate, RuntimeManager } from './runtimes/index.js';
 import type { Store } from './store.js';
 import { kpiMarkdown, kpiReport } from './kpi.js';
+import { subtaskHistory, type AgentHistory } from './estimate.js';
+import { buildRepoMap } from './repomap.js';
 import { cappedDone } from './runtimes/api.js';
 import { isCheckCommand, runCheckCommand, toolsFor } from './tools/workspace.js';
 import type { Uploads } from './uploads.js';
@@ -806,6 +808,7 @@ export class Orchestrator {
       branch: task.branch,
       scratch: !project?.workspace,
       serialWriters: this.exclusiveWrites(task, project),
+      repoMap: this.repoMaps.get(task.id),
     };
   }
 
@@ -1091,6 +1094,7 @@ export class Orchestrator {
     const { registry } = this.d;
     const agent = registry.agent(st.assignee);
     st.startedAt = nowIso();
+    if (pctx.project?.workspace && pctx.filesAccessible) this.writeRepoMap(task);
     const deps = st.dependsOn
       .map((id) => run.subtasks.find((s) => s.id === id))
       .filter((s): s is Subtask => !!s && !!s.output)
@@ -1224,8 +1228,31 @@ export class Orchestrator {
   }
 
   /** Ước lượng token cho phần còn lại của kế hoạch (theo quyền công cụ của từng hạng mục). */
+  private histCache?: { at: number; map: Map<string, AgentHistory> };
+  private readonly repoMaps = new Map<string, { rel: string; large: string[] }>();
+  private readonly repoMapLogged = new Set<string>();
+  /** Token thực tế mỗi hạng mục theo agent (trung vị các hạng mục gần nhất) — làm mới mỗi 10 phút. */
+  private history(): Map<string, AgentHistory> {
+    const days = this.d.config.estimate.historyDays ?? 30;
+    if (!days) return new Map();
+    if (!this.histCache || Date.now() - this.histCache.at > 10 * 60_000) this.histCache = { at: Date.now(), map: subtaskHistory(this.d.store.list(), { days }) };
+    return this.histCache.map;
+  }
+
+  /** Cơ sở ước tính: agent nào dùng lịch sử thật (trung vị/hạng mục, số mẫu). */
+  private estimateBasis(run: DeptRun): string {
+    const min = this.d.config.estimate.minSamples ?? 2;
+    const hist = this.history();
+    const used = [...new Set(run.subtasks.filter((s) => s.status !== 'done').map((s) => s.assignee))]
+      .map((a) => [a, hist.get(a)] as const)
+      .filter((x): x is readonly [string, AgentHistory] => !!x[1] && x[1].samples >= min);
+    return used.length ? `theo lịch sử: ${used.map(([a, h]) => `@${a} ~${fmtNum(h.median)}/hạng mục (${h.samples} mẫu)`).join(', ')}` : 'theo hằng số cấu hình (chưa đủ lịch sử)';
+  }
+
   estimatePlan(task: Task, run: DeptRun, project?: ProjectDef): number {
     const e = this.d.config.estimate;
+    const hist = this.history();
+    const min = e.minSamples ?? 2;
     const access = this.toolAccess(task, project);
     const cls = task.classification;
     const web = this.d.config.tools.web !== false && (cls === 'public' || cls === 'internal');
@@ -1235,6 +1262,12 @@ export class Orchestrator {
       const agent = this.d.registry.agents.get(st.assignee);
       const tools = agent ? toolsFor(agent.tools, access, 'execute', web) : [];
       const lvl: ToolAccess = tools.includes('run_command') ? 'exec' : tools.includes('write_file') || tools.includes('edit_file') ? 'write' : tools.includes('read_file') ? 'read' : 'none';
+      // có đủ lịch sử của agent → dùng token thực tế (đã gồm tra cứu web, sửa theo review); chưa có → hằng số theo quyền công cụ
+      const h = hist.get(st.assignee);
+      if (h && h.samples >= min) {
+        total += h.median;
+        continue;
+      }
       total += e.perSubtask[lvl] ?? e.perSubtask.none;
       if (tools.some((t) => t === 'search_papers' || t === 'web_search' || t === 'fetch_url')) total += e.web;
     }
@@ -1245,11 +1278,12 @@ export class Orchestrator {
   private checkEstimate(task: Task, run: DeptRun, project?: ProjectDef): void {
     const est = this.estimatePlan(task, run, project);
     const remaining = Math.max(0, task.options.budgetTokens - totalTokens(task.usage));
-    run.estimate = { tokens: est, budget: remaining, at: nowIso() };
+    const basis = this.estimateBasis(run);
+    run.estimate = { tokens: est, budget: remaining, at: nowIso(), basis };
     this.save(task);
     if (est <= remaining * (this.d.config.estimate.warnRatio || 1)) return;
     const mode = task.options.budgetMode ?? this.d.config.defaults.budgetMode ?? 'complete';
-    const msg = `Kế hoạch ${run.subtasks.length} hạng mục ước tính ~${fmtNum(est)} token, ${remaining ? `gấp ${(est / remaining).toFixed(1).replace('.', ',')} lần phần ngân sách còn lại (${fmtNum(remaining)})` : 'trong khi ngân sách đã hết'}. Nên tách mỗi gói việc thành một nhiệm vụ riêng (nút "Tách thành nhiệm vụ") hoặc tăng ngân sách.`;
+    const msg = `Kế hoạch ${run.subtasks.length} hạng mục ước tính ~${fmtNum(est)} token (${basis}), ${remaining ? `gấp ${(est / remaining).toFixed(1).replace('.', ',')} lần phần ngân sách còn lại (${fmtNum(remaining)})` : 'trong khi ngân sách đã hết'}. Nên tách mỗi gói việc thành một nhiệm vụ riêng (nút "Tách thành nhiệm vụ") hoặc tăng ngân sách.`;
     this.d.logs.write({ level: 'warn', kind: 'budget.estimate', msg, taskId: task.id, department: run.department, data: { estimate: est, remaining } });
     this.message(task, run.department, 'system', 'system', `📏 ${msg}`);
     this.alert({ level: 'warn', kind: 'budget.estimate', title: 'Nhiệm vụ có thể quá lớn so với ngân sách', msg: `${task.title}: ${msg}`, taskId: task.id });
@@ -1310,6 +1344,25 @@ export class Orchestrator {
     if (fs.existsSync(src)) fs.cpSync(src, path.join(cc, 'inputs'), { recursive: true });
     const outs = path.join(this.d.store.runDir(task.id), 'outputs');
     if (fs.existsSync(outs)) fs.cpSync(outs, path.join(cc, 'outputs'), { recursive: true });
+    if (project?.workspace) this.writeRepoMap(task);
+  }
+
+  /** Bản đồ repo `.ccoding/<task>/repo-map.md` (tệp, số dòng, route, model, hàm) — tạo lại trước mỗi hạng mục vì số dòng đổi sau khi sửa. */
+  private writeRepoMap(task: Task): void {
+    if (!task.workspace || this.d.config.tools.repoMap === false) return;
+    try {
+      const t0 = Date.now();
+      const map = buildRepoMap(task.workspace);
+      const rel = `.ccoding/${safeName(task.id)}/repo-map.md`;
+      writeText(path.join(task.workspace, rel), map.text);
+      this.repoMaps.set(task.id, { rel, large: map.large.slice(0, 12).map((f) => `${f.path} (${f.lines.toLocaleString('vi-VN')} dòng)`) });
+      if (!this.repoMapLogged.has(task.id)) {
+        this.repoMapLogged.add(task.id);
+        this.d.logs.write({ level: 'info', kind: 'workspace.repomap', msg: `Bản đồ repo ${rel}: ${map.files} tệp, ${map.large.length} tệp lớn, ${map.text.length} ký tự (${Date.now() - t0} ms)`, taskId: task.id });
+      }
+    } catch (e) {
+      this.d.logs.write({ level: 'warn', kind: 'workspace.repomap', msg: `Không tạo được bản đồ repo: ${(e as Error).message}`, taskId: task.id });
+    }
   }
 
   /** Dự án có lệnh kiểm tra và nhiệm vụ được chạy lệnh trong workspace (quyền exec). */

@@ -239,7 +239,7 @@ export interface DeptRun {
     verified?: boolean;
   };
   /** Ước lượng token của kế hoạch (sau khi lập/chốt) để cảnh báo nhiệm vụ quá lớn. */
-  estimate?: { tokens: number; budget: number; at: string };
+  estimate?: { tokens: number; budget: number; at: string; basis?: string };
   finalPath?: string;
   usage: Usage;
   startedAt?: string;
