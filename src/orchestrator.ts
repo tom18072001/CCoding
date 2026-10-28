@@ -167,6 +167,11 @@ export function extractSummary(text: string, max = 320): string {
 const reached = (run: DeptRun, s: RunStage) => !!run.stage && STAGES.indexOf(run.stage) >= STAGES.indexOf(s);
 
 /** Suy ra mốc đã xong cho nhiệm vụ cũ (trước khi có trường stage). */
+const CLASS_RANK: Record<Classification, number> = { public: 0, internal: 1, confidential: 2, restricted: 3 };
+function maxClass(a: Classification, b?: Classification): Classification {
+  return b && CLASS_RANK[b] > CLASS_RANK[a] ? b : a;
+}
+
 function inferStage(run: DeptRun): RunStage | undefined {
   if (!run.subtasks.length) return undefined;
   if (run.finalPath && run.status === 'done') return 'done';
@@ -212,6 +217,13 @@ export class Orchestrator {
     const brief = (input.brief ?? '').trim();
     if (!brief) throw new Error('Thiếu nội dung nhiệm vụ (brief)');
     const { config, registry, store } = this.d;
+    // giao việc tiếp nối: kế thừa chế độ / dự án / phòng / agent của nhiệm vụ trước (khi không chỉ định khác)
+    const prev = input.followUp ? store.get(input.followUp) : undefined;
+    if (input.followUp && !prev) throw new Error(`Không có nhiệm vụ "${input.followUp}" để tiếp nối`);
+    if (prev) {
+      input = { ...input, mode: input.mode ?? prev.mode, projectId: input.projectId ?? prev.projectId, agentId: input.agentId ?? prev.agentId, department: input.department ?? prev.department };
+      if (input.mode === 'joint' || input.mode === 'auto') input = { ...input, department: undefined };
+    }
     const project = input.projectId ? store.project(input.projectId) : undefined;
     if (input.projectId && !project) throw new Error(`Không có dự án "${input.projectId}"`);
     let mode = input.mode ?? (input.agentId ? 'agent' : project ? 'project' : input.department ? 'department' : 'auto');
@@ -238,7 +250,9 @@ export class Orchestrator {
       department,
       projectId: project?.id,
       agentId: mode === 'agent' ? input.agentId : undefined,
-      classification: (project?.classification ?? config.dataProtection.defaultClassification) as Classification,
+      followUpOf: prev?.id,
+      // tiếp nối: không hạ nhãn dữ liệu so với nhiệm vụ trước
+      classification: maxClass((project?.classification ?? config.dataProtection.defaultClassification) as Classification, prev?.classification),
       status: 'queued',
       departments: [],
       runs: [],
@@ -276,6 +290,15 @@ export class Orchestrator {
         // tệp đã thuộc về nhiệm vụ → xóa bản tạm (tối thiểu hóa số bản sao)
         this.d.uploads.remove(meta.id);
       }
+    }
+    if (prev) {
+      const final = prev.finalPath ? store.readRunFile(prev.id, prev.finalPath) : undefined;
+      writeText(
+        path.join(inputsDir, 'NHIEM-VU-TRUOC.md'),
+        `# Nhiệm vụ trước: ${prev.id} — ${prev.title}\n\nTrạng thái: ${prev.status}${prev.branch ? ` · nhánh \`${prev.branch}\`` : ''}\n\n## Yêu cầu trước\n${prev.brief}\n\n## Báo cáo của nhiệm vụ trước\n${final ?? '(chưa có báo cáo)'}\n`,
+      );
+      task.brief = `${brief}\n\n---\nTiếp nối nhiệm vụ ${prev.id} ("${prev.title}", ${prev.status}) — yêu cầu và báo cáo trước: \`inputs/NHIEM-VU-TRUOC.md\`. Làm tiếp trên kết quả đã có, không làm lại phần đã xong.`;
+      writeText(path.join(inputsDir, 'BRIEF.md'), task.brief);
     }
     extra.prepareInputs?.(inputsDir, task);
     store.put(task, true);
@@ -555,6 +578,24 @@ export class Orchestrator {
    * Tách hạng mục chưa xong thành các nhiệm vụ riêng ("mỗi nhiệm vụ một gói việc"): mỗi nhiệm vụ mới có yêu cầu riêng
    * (mô tả hạng mục + bối cảnh gốc + kết quả đã có), ngân sách riêng, cùng dự án/phòng; thứ tự phụ thuộc giữ bằng "after".
    */
+  /**
+   * Chỉ dẫn bổ sung cho nhiệm vụ đang chạy/chờ/tạm dừng: lưu vào task.notes, hiện trong hội thoại và được đưa vào
+   * bối cảnh (header) của mọi lượt gọi sau — lượt đang chạy làm nốt theo prompt cũ.
+   */
+  addNote(id: string, text: string): Task {
+    const t = this.d.store.get(id);
+    if (!t) throw new Error('Không có nhiệm vụ');
+    const body = text.trim().slice(0, 4000);
+    if (!body) throw new Error('Chỉ dẫn trống');
+    if (!['running', 'queued', 'paused'].includes(t.status)) throw new Error('Nhiệm vụ đã kết thúc — dùng "Giao việc tiếp nối" để giao tiếp');
+    t.notes ??= [];
+    if (t.notes.length >= 30) throw new Error('Đã có 30 chỉ dẫn — hãy giao việc tiếp nối thay vì thêm nữa');
+    t.notes.push({ id: shortId('n'), at: nowIso(), text: redact(body, { secrets: true, pii: false }) });
+    this.message(t, t.departments[0] ?? 'office', 'director', 'note', body);
+    this.save(t, true);
+    return t;
+  }
+
   splitTask(id: string, o: SplitOptions = {}): { task: Task; created: Task[] } {
     const { store, logs } = this.d;
     const t = store.get(id);

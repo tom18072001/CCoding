@@ -26,6 +26,7 @@
       <div class="kpi"><span>Đang chạy</span><b id="k-running">0</b></div>
     </div>
     <div class="meta">
+      <button class="bell" id="btn-side-toggle" title="Hiện/ẩn ô Văn phòng bên phải (V)" aria-label="Văn phòng"><span aria-hidden="true">🏢</span></button>
       <button class="bell" id="btn-help" title="Trợ giúp & phím tắt (?)" aria-label="Trợ giúp"><span aria-hidden="true">❓</span></button>
       <button class="bell" id="bell" title="Cảnh báo (hết token, ngân sách, lỗi runtime)" aria-label="Cảnh báo"><span aria-hidden="true">🔔</span><em id="bell-n"></em></button>
       <span class="chip" id="m-runner" title="Cách chạy agent">runner: —</span>
@@ -37,94 +38,45 @@
   <div class="alerts-panel" id="alerts-panel" hidden></div>
   <div class="toasts" id="toasts" aria-live="assertive"></div>
 
-  <main class="layout">
-    <section class="stage">
-      <div class="stage-inner" id="stage">
-        <canvas id="office" aria-label="Sơ đồ văn phòng với các agent"></canvas>
-        <div class="tooltip" id="tooltip" hidden></div>
-        <div class="legend">
-          <span><i style="--c:var(--st-idle)"></i>rảnh</span>
-          <span><i style="--c:var(--st-thinking)"></i>suy nghĩ</span>
-          <span><i style="--c:var(--st-working)"></i>đang làm</span>
-          <span><i style="--c:var(--st-discussing)"></i>họp</span>
-          <span><i style="--c:var(--st-reviewing)"></i>review</span>
-          <span><i style="--c:var(--st-error)"></i>lỗi</span>
-          <label class="toggle"><input type="checkbox" id="lively" checked /> sinh động</label>
-          <span class="keys-hint" title="Bạn là nhân vật cà vạt đỏ trong phòng Giám đốc">🎮 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> đi · <kbd>E</kbd> tương tác · nhấp đúp để đi tới</span>
+  <main class="app" id="app">
+    <nav class="sidenav" id="sidenav" aria-label="Điều hướng">
+      <div class="nav-top"><div class="new-wrap">
+        <button class="new-btn" id="btn-new" aria-haspopup="menu" title="Tạo mới (N)"><span>＋</span> Mới</button>
+        <div class="new-menu" id="new-menu" role="menu" hidden>
+          <button data-new="task">📝 Nhiệm vụ mới <kbd>N</kbd></button>
+          <button data-new="agent">📌 Giao riêng cho một agent</button>
+          <button data-new="project">📁 Dự án mới</button>
+          <button data-new="prompt">📚 Prompt mới</button>
+          <button data-new="upload">📎 Tải tệp lên & giao việc</button>
         </div>
-        <div class="imenu" id="imenu" hidden></div>
+      </div><button class="nav-mini-btn" id="btn-nav-mini" title="Thu gọn / mở rộng cột trái" aria-label="Thu gọn cột trái">«</button></div>
+      <button class="nav" data-tab="home">🏠 <span>Tổng quan</span></button>
+      <button class="nav" data-tab="assign">💬 <span>Prompt</span></button>
+      <button class="nav" data-tab="projects">📁 <span>Dự án</span><em id="badge-projects"></em></button>
+      <button class="nav" data-tab="tasks" data-filter="all">📋 <span>Nhiệm vụ</span><em id="badge-tasks"></em></button>
+      <button class="nav" data-tab="tasks" data-filter="attention">⚠️ <span>Cần xem</span><em id="badge-att" class="warn"></em></button>
+      <button class="nav" data-tab="tasks" data-filter="starred">⭐ <span>Gắn sao</span></button>
+      <div class="nav-sep">Làm việc</div>
+      <button class="nav" data-tab="people">👥 <span>Nhân sự</span></button>
+      <button class="nav" data-tab="prompts">📚 <span>Thư viện prompt</span></button>
+      <div class="nav-sep">Theo dõi</div>
+      <button class="nav" data-tab="tokens">🔢 <span>Token</span></button>
+      <button class="nav" data-tab="quota">⛽ <span>Hạn mức</span></button>
+      <button class="nav" data-tab="kpi">📈 <span>KPI</span></button>
+      <button class="nav" data-tab="logs">🧾 <span>Nhật ký</span></button>
+      <div class="nav-meter" id="nav-meter"></div>
+    </nav>
+
+    <section class="main" id="main">
+      <div class="main-bar">
+        <div class="crumbs" id="crumbs"></div>
+        <div class="gsearch"><input type="search" id="gsearch" placeholder="Tìm nhiệm vụ, dự án, agent…  ( / )" autocomplete="off" aria-label="Tìm kiếm" /><div class="gs-results" id="gs-results" hidden></div></div>
       </div>
-      <div class="ticker" id="ticker" aria-live="polite"></div>
-    </section>
 
-    <aside class="panel">
-      <nav class="tabs" role="tablist">
-        <button role="tab" data-tab="assign" class="active">Giao việc</button>
-        <button role="tab" data-tab="tasks">Nhiệm vụ <em id="badge-tasks"></em></button>
-        <button role="tab" data-tab="people">Nhân sự</button>
-        <button role="tab" data-tab="tokens">Token</button>
-        <button role="tab" data-tab="quota">Hạn mức</button>
-        <button role="tab" data-tab="kpi">KPI</button>
-        <button role="tab" data-tab="logs">Nhật ký</button>
-      </nav>
-
-      <!-- Giao việc -->
-      <div class="tab-body active" data-body="assign">
-        <form id="task-form" class="card form">
-          <h2>Giao nhiệm vụ mới</h2>
-          <fieldset class="modes">
-            <legend>Chế độ xử lý</legend>
-            <label><input type="radio" name="mode" value="auto" checked /><span><b>Tự động</b><small>Điều phối viên tự chọn phòng</small></span></label>
-            <label><input type="radio" name="mode" value="department" /><span><b>Theo phòng ban</b><small>Chỉ định phòng xử lý</small></span></label>
-            <label><input type="radio" name="mode" value="project" /><span><b>Theo dự án</b><small>Dùng cấu hình & workspace dự án</small></span></label>
-            <label><input type="radio" name="mode" value="joint" /><span><b>Liên phòng</b><small>Nghiên cứu → Phát triển</small></span></label>
-            <label><input type="radio" name="mode" value="agent" /><span><b>Giao riêng</b><small>Một agent làm, bỏ qua lập kế hoạch</small></span></label>
-          </fieldset>
-          <div class="row grid2" id="row-agent" hidden>
-            <label>Agent nhận việc<select name="agentId" id="sel-agent"></select></label>
-            <label>Trong dự án <small>(tùy chọn)</small><select name="agentProject" id="sel-agent-project"></select></label>
-          </div>
-          <div class="row" id="row-dept" hidden>
-            <label>Phòng ban<select name="department" id="sel-dept"></select></label>
-          </div>
-          <div class="row" id="row-project" hidden>
-            <label>Dự án<select name="projectId" id="sel-project"></select></label>
-          </div>
-          <label>Tiêu đề <small>(tùy chọn)</small><input name="title" maxlength="90" placeholder="Để trống: tự đặt tiêu đề" /></label>
-          <div class="prompt-tools" id="prompt-tools"></div>
-          <label>Yêu cầu<textarea name="brief" rows="6" required placeholder="Ví dụ: Thiết kế pipeline Logstash thu thập log IIS từ 50 máy chủ Windows, chuẩn hóa ECS, cảnh báo lỗi 5xx tăng đột biến."></textarea></label>
-          <div class="prompt-check" id="prompt-check" aria-live="polite"></div>
-          <div class="drop" id="drop">
-            <input type="file" id="files" multiple hidden />
-            <button type="button" class="btn ghost sm" id="btn-files">📎 Đính kèm tệp</button>
-            <small>PDF, DOCX, XLSX, PPTX, MD, TXT, CSV, JSON, code… (≤ 30 MB/tệp) — hoặc kéo thả vào đây</small>
-            <ul class="att-list" id="att-list"></ul>
-          </div>
-          <div class="grid2">
-            <label>Ngân sách token<input type="number" name="budgetTokens" min="1000" step="1000" /></label>
-            <label>Khi chạm trần<select name="budgetMode">
-              <option value="complete">Chạy tới khi hoàn thành (chỉ cảnh báo)</option>
-              <option value="pause">Tạm dừng chờ quyết định</option>
-            </select></label>
-          </div>
-          <details class="adv">
-            <summary>Tùy chọn nâng cao</summary>
-            <div class="grid2">
-              <label>Vòng thảo luận<input type="number" name="discussionRounds" min="0" max="3" /></label>
-              <label>Song song tối đa<input type="number" name="maxParallel" min="1" max="8" /></label>
-              <label>Runtime<select name="runtime" id="sel-runtime"><option value="">Mặc định</option></select></label>
-            </div>
-            <label class="check"><input type="checkbox" name="review" checked /> Review chất lượng & cho phép sửa</label>
-          </details>
-          <div class="data-route" id="data-route"></div>
-          <div class="actions">
-            <button type="submit" class="btn primary">Giao việc</button>
-            <span class="form-msg" id="form-msg"></span>
-          </div>
-        </form>
-
-        <div class="card">
-          <div class="card-head"><h2>Dự án</h2><button class="btn ghost sm" id="btn-new-project">+ Dự án</button></div>
+      <div class="tab-body" data-body="home"><div id="home"></div></div>
+      <div class="tab-body" data-body="projects"><div id="projects-view"></div>
+        <details class="card proj-admin" id="proj-admin">
+          <summary class="card-head"><h2>⚙ Quản lý & cấu hình dự án</h2><button type="button" class="btn ghost sm" id="btn-new-project">+ Dự án</button></summary>
           <form id="project-form" class="form" hidden>
             <div class="grid2">
               <label>Mã<input name="id" required pattern="[a-z0-9][a-z0-9-]{1,40}" placeholder="vd: elk-iis" /></label>
@@ -159,12 +111,74 @@
             <div class="actions"><button class="btn primary sm" type="submit">Lưu dự án</button><button class="btn ghost sm" type="button" id="btn-cancel-project">Hủy</button></div>
           </form>
           <ul class="projects" id="projects"></ul>
-        </div>
+        </details>
 
-        <div class="card">
-          <div class="card-head"><h2>Runtime</h2><button class="btn ghost sm" id="btn-refresh-rt">Kiểm tra lại</button></div>
-          <ul class="runtimes" id="runtimes"></ul>
+      </div>
+      <div class="tab-body" data-body="project"><div id="project-view"></div></div>
+      <div class="tab-body" data-body="prompts"><div id="prompts-view"></div></div>
+
+      <!-- Prompt (kiểu ứng dụng chat): danh sách hội thoại | cuộc mới (ô soạn đầy đủ) hoặc luồng hội thoại + ô trả lời -->
+      <div class="tab-body" data-body="assign">
+       <div class="chat-shell" id="chat-shell">
+        <aside class="cv-list" id="cv-list" aria-label="Hội thoại"></aside>
+        <section class="cv-main">
+        <div class="cv-new" id="cv-new">
+        <div class="compose-page">
+          <div class="compose-hero" id="compose-hero"></div>
+          <form id="task-form" class="form compose">
+            <div class="compose-box" id="compose-box">
+              <input name="title" class="c-title" maxlength="90" placeholder="Tiêu đề (tùy chọn — để trống thì tự đặt)" aria-label="Tiêu đề" />
+              <textarea name="brief" rows="6" required aria-label="Yêu cầu" placeholder="Mô tả việc cần làm: mục tiêu, phạm vi, tiêu chí hoàn thành, đầu ra…   (Ctrl+Enter để giao)"></textarea>
+              <ul class="att-list" id="att-list"></ul>
+              <div class="compose-bar">
+                <input type="file" id="files" multiple hidden />
+                <button type="button" class="btn ghost sm icon" id="btn-files" title="Đính kèm tệp (PDF, DOCX, XLSX, PPTX, MD, CSV, code… ≤ 30 MB/tệp)">📎</button>
+                <div class="prompt-tools" id="prompt-tools"></div>
+                <span class="grow"></span>
+                <label class="c-sel" title="Chế độ xử lý">Chế độ<select name="mode" id="sel-mode">
+                  <option value="auto">Tự động (điều phối chọn phòng)</option>
+                  <option value="department">Theo phòng ban</option>
+                  <option value="project">Theo dự án</option>
+                  <option value="joint">Liên phòng (Nghiên cứu → Phát triển)</option>
+                  <option value="agent">Giao riêng cho một agent</option>
+                </select></label>
+                <label class="c-sel" id="row-dept" hidden>Phòng<select name="department" id="sel-dept"></select></label>
+                <label class="c-sel" id="row-project" hidden>Dự án<select name="projectId" id="sel-project"></select></label>
+                <span id="row-agent" class="c-pair" hidden>
+                  <label class="c-sel">Agent<select name="agentId" id="sel-agent"></select></label>
+                  <label class="c-sel">Trong dự án<select name="agentProject" id="sel-agent-project"></select></label>
+                </span>
+                <button type="submit" class="btn primary send" title="Giao việc (Ctrl+Enter)">Giao việc ➤</button>
+              </div>
+            </div>
+            <div class="prompt-check" id="prompt-check" aria-live="polite"></div>
+            <div class="data-route" id="data-route"></div>
+            <div class="drop" id="drop"><small>📎 Kéo thả tệp vào đây hoặc vào ô soạn</small></div>
+            <details class="adv">
+              <summary>⚙ Tùy chọn: ngân sách, thảo luận, song song, runtime, review</summary>
+              <div class="grid3">
+                <label>Ngân sách token<input type="number" name="budgetTokens" min="1000" step="1000" /></label>
+                <label>Khi chạm trần<select name="budgetMode">
+                  <option value="complete">Chạy tới khi hoàn thành (chỉ cảnh báo)</option>
+                  <option value="pause">Tạm dừng chờ quyết định</option>
+                </select></label>
+                <label>Runtime<select name="runtime" id="sel-runtime"><option value="">Mặc định</option></select></label>
+                <label>Vòng thảo luận<input type="number" name="discussionRounds" min="0" max="3" /></label>
+                <label>Song song tối đa<input type="number" name="maxParallel" min="1" max="8" /></label>
+                <label class="check"><input type="checkbox" name="review" checked /> Review chất lượng & cho phép sửa</label>
+              </div>
+            </details>
+            <span class="form-msg" id="form-msg"></span>
+          </form>
         </div>
+        </div>
+        <div class="cv-conv" id="cv-conv" hidden>
+          <header class="cv-top" id="cv-top"></header>
+          <div class="cv-thread" id="cv-thread" aria-live="polite"></div>
+          <div class="cv-dock" id="cv-dock"></div>
+        </div>
+        </section>
+       </div>
       </div>
 
       <!-- Nhiệm vụ -->
@@ -187,6 +201,10 @@
       <!-- Hạn mức -->
       <div class="tab-body" data-body="quota">
         <div id="quota"></div>
+        <div class="card">
+          <div class="card-head"><h2>Runtime</h2><button class="btn ghost sm" id="btn-refresh-rt">Kiểm tra lại</button></div>
+          <ul class="runtimes" id="runtimes"></ul>
+        </div>
       </div>
 
       <!-- KPI sub-agent -->
@@ -208,6 +226,31 @@
         </div>
         <ol class="logs" id="logs"></ol>
       </div>
+    </section>
+
+    <aside class="side" id="side" aria-label="Văn phòng">
+      <div class="side-head"><div class="side-tabs" role="tablist"><button data-side="office" class="on" role="tab">🏢 Văn phòng</button><button data-side="preview" id="side-tab-preview" role="tab" hidden>📄 Xem trước</button></div><small id="side-sub">WASD đi · E tương tác</small><span class="grow"></span>
+        <button class="btn ghost sm" id="btn-side-wide" title="Phóng to / thu nhỏ ô văn phòng">⤢</button>
+        <button class="btn ghost sm" id="btn-side-hide" title="Ẩn ô văn phòng (V)">✕</button></div>
+    <section class="stage">
+      <div class="stage-inner" id="stage">
+        <canvas id="office" aria-label="Sơ đồ văn phòng với các agent"></canvas>
+        <div class="tooltip" id="tooltip" hidden></div>
+        <div class="legend">
+          <span><i style="--c:var(--st-idle)"></i>rảnh</span>
+          <span><i style="--c:var(--st-thinking)"></i>suy nghĩ</span>
+          <span><i style="--c:var(--st-working)"></i>đang làm</span>
+          <span><i style="--c:var(--st-discussing)"></i>họp</span>
+          <span><i style="--c:var(--st-reviewing)"></i>review</span>
+          <span><i style="--c:var(--st-error)"></i>lỗi</span>
+          <label class="toggle"><input type="checkbox" id="lively" checked /> sinh động</label>
+          <span class="keys-hint" title="Bạn là nhân vật cà vạt đỏ trong phòng Giám đốc">🎮 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> đi · <kbd>E</kbd> tương tác · nhấp đúp để đi tới</span>
+        </div>
+        <div class="imenu" id="imenu" hidden></div>
+      </div>
+      <div class="ticker" id="ticker" aria-live="polite"></div>
+    </section>
+    <section class="side-preview" id="side-preview" hidden></section>
     </aside>
   </main>
 
@@ -215,5 +258,7 @@
   <script src="office.js"></script>
   <script src="app.js"></script>
   <script src="director.js"></script>
+  <script src="drive.js"></script>
+  <script src="chat.js"></script>
 </body>
 </html>

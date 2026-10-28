@@ -102,8 +102,8 @@ function statusColor(s: string): string {
 }
 
 function printMessage(m: ChatMessage, names: Map<string, string>): void {
-  const who = m.from === 'system' ? 'hệ thống' : `${names.get(m.from) ?? m.from} (@${m.from})`;
-  const tag = { plan: '📋', discussion: '💬', decision: '✅', handoff: '📦', review: '🔍', final: '🏁', system: 'ℹ️ ' }[m.kind] ?? '•';
+  const who = m.from === 'system' ? 'hệ thống' : m.from === 'director' ? 'Giám đốc' : `${names.get(m.from) ?? m.from} (@${m.from})`;
+  const tag = ({ plan: '📋', discussion: '💬', decision: '✅', handoff: '📦', review: '🔍', final: '🏁', system: 'ℹ️ ', note: '🗒' } as Record<string, string>)[m.kind] ?? '•';
   console.log(`${c.gray(localTime(m.ts))} ${tag} ${c.bold(who)} ${c.gray(`[${m.department}]`)}\n   ${m.text.split('\n').join('\n   ')}`);
 }
 

@@ -335,11 +335,11 @@
   };
 
   // ── Giao việc riêng cho một agent ────────────────────────────────────────
-  D.assignAgent = (id) => {
+  D.assignAgent = (id, opts = {}) => {
     const a = C.S.agents.get(id);
     if (!a) return;
     const S = C.S;
-    const projOpts = `<option value="">— không (thư mục riêng của nhiệm vụ) —</option>${S.projects.map((p) => `<option value="${esc(p.id)}">${esc(p.name)} (${esc(C.CLS_VI[p.classification] || p.classification)})</option>`).join('')}`;
+    const projOpts = `<option value="">— không (thư mục riêng của nhiệm vụ) —</option>${S.projects.map((p) => `<option value="${esc(p.id)}" ${opts.projectId === p.id ? 'selected' : ''}>${esc(p.name)} (${esc(C.CLS_VI[p.classification] || p.classification)})</option>`).join('')}`;
     modal({
       title: `📝 Giao việc riêng cho ${esc(a.name)}`,
       wide: true,
@@ -701,6 +701,14 @@
     if (save) save.onclick = () => D.editPrompt({ body: textarea.value, title: $('#task-form').title.value || '' });
   }
 
+  D.builtins = BUILTIN;
+  /** Chặn nhầm bí mật (khóa API, private key, mật khẩu) trước khi gửi yêu cầu / chỉ dẫn. */
+  D.hasSecret = (s) => SECRET.test(String(s || ''));
+  D.attachTools = (box, textarea, out, kind) => {
+    attachPromptTools(box, textarea, true);
+    attachChecker(textarea, out, () => kind);
+  };
+
   D.promptBuilder = (textarea) => {
     modal({
       title: '🧱 Soạn yêu cầu theo khung',
@@ -779,12 +787,10 @@
     const item = (p) => `<li data-p="${esc(p.id)}"><div class="pl-top"><b>${esc(p.title)}</b>${p.builtin ? '<span class="cls">mẫu có sẵn</span>' : `<small>dùng ${p.uses || 0} lần</small>`}${(p.tags || []).map((t) => `<span class="tag">${esc(t)}</span>`).join('')}${p.mode ? `<span class="tag">${esc(C.MODE_VI[p.mode] || p.mode)}${p.agentId ? ` · ${esc(C.agentName(p.agentId))}` : ''}</span>` : ''}</div>
         <pre class="pl-body">${esc(p.body.slice(0, 260))}${p.body.length > 260 ? '…' : ''}</pre>
         <div class="pb-actions"><button class="btn primary sm" data-a="use">Chèn</button><button class="btn ghost sm" data-a="append">Thêm vào cuối</button><button class="btn ghost sm" data-a="edit">${p.builtin ? 'Nhân bản & sửa' : 'Sửa'}</button>${p.builtin ? '' : '<button class="btn ghost sm" data-a="copy">Nhân bản</button><button class="btn ghost sm danger" data-a="del">Xóa</button>'}</div></li>`;
-    modal({
-      title: '📚 Thư viện prompt',
-      wide: true,
-      body: `<div class="pl-bar"><input type="search" id="pl-q" placeholder="Tìm theo tiêu đề, nhãn, nội dung…" /><button class="btn primary sm" id="pl-new">＋ Prompt mới</button></div>
-        <ul class="pl-list" id="pl-list"></ul>`,
-      onMount: (el, close) => {
+    const libBody = `<div class="pl-bar"><input type="search" id="pl-q" placeholder="Tìm theo tiêu đề, nhãn, nội dung…" /><button class="btn primary sm" id="pl-new">＋ Prompt mới</button></div>
+        <ul class="pl-list" id="pl-list"></ul>`;
+    const page = opts.container;
+    const mount = (el, close) => {
         const render = () => {
           const q = $('#pl-q', el).value.trim().toLowerCase();
           const list = all().filter((p) => !q || `${p.title} ${(p.tags || []).join(' ')} ${p.body}`.toLowerCase().includes(q));
@@ -796,6 +802,7 @@
                 (b.onclick = async () => {
                   const a = b.dataset.a;
                   if (a === 'use' || a === 'append') {
+                    if (page) C.prefillAssign({});
                     insertText(textarea, p.body, a);
                     if (!p.builtin) C.api(`/api/prompts/${p.id}/use`, { method: 'POST', body: '{}' }).catch(() => {});
                     if (p.mode && textarea.closest('#task-form')) C.prefillAssign({ mode: p.mode, agentId: p.agentId, department: p.department, projectId: p.projectId });
@@ -820,8 +827,12 @@
         $('#pl-q', el).oninput = render;
         $('#pl-new', el).onclick = () => D.editPrompt({ body: '' }, reload);
         render();
-      },
-    });
+    };
+    if (page) {
+      page.innerHTML = `<div class="dv-head"><h1>📚 Thư viện prompt</h1></div><p class="muted-p">Prompt đã lưu và mẫu có sẵn. <b>Chèn</b> đưa nội dung vào ô soạn của màn Prompt (kèm chế độ/agent nếu prompt có lưu). Lưu prompt mới từ ô soạn bằng 💾.</p>${libBody}`;
+      return mount(page, () => {});
+    }
+    modal({ title: '📚 Thư viện prompt', wide: true, body: libBody, onMount: mount });
   };
 
   // ── Trợ giúp, hướng dẫn lần đầu, phím tắt ────────────────────────────────
@@ -831,14 +842,18 @@
       wide: true,
       body: `<div class="help">
         <section><h3>CCoding là gì?</h3><p>Một văn phòng AI chạy trên máy bạn: bạn giao việc, <b>Điều phối viên</b> chọn phòng, <b>trưởng phòng</b> chia hạng mục cho các agent, họ làm thật trong thư mục/repo (có worktree riêng), <b>reviewer</b> duyệt, rồi trưởng phòng viết báo cáo. Mọi lượt gọi model đều được đếm token và ghi log (đã che bí mật/PII).</p></section>
-        <section><h3>Bắt đầu trong 3 bước</h3><ol><li>Tab <b>Giao việc</b>: viết yêu cầu (dùng 📚 Thư viện hoặc 🧱 Soạn theo khung), chọn chế độ.</li><li>Bấm <b>Giao việc</b> → theo dõi ở tab <b>Nhiệm vụ</b> (hội thoại, sản phẩm, token).</li><li>Xong thì đọc <b>🏁 Báo cáo</b>; cần sửa thì "Làm lại từ review" hoặc "↻ Giao lại tương tự".</li></ol></section>
+        <section><h3>Bắt đầu trong 3 bước</h3><ol><li><b>💬 Prompt</b> (hoặc <b>＋ Mới → Nhiệm vụ mới</b>, phím N): viết yêu cầu trong ô soạn (📚 Thư viện, 🧱 Soạn theo khung), chọn chế độ ở thanh dưới ô soạn, <kbd>Ctrl</kbd>+<kbd>Enter</kbd> để giao.</li><li>Màn Prompt chuyển sang <b>hội thoại</b>: yêu cầu của bạn bên phải, trao đổi của văn phòng (gom gọn, bấm để mở), tiến độ từng phòng và báo cáo cuối. Cột trái liệt kê các hội thoại (lọc theo dự án); <b>📋 Quản lý</b> mở trang nhiệm vụ đầy đủ (sản phẩm, token, nhật ký, lượt gọi).</li><li>Trả lời ở ô dưới cùng: việc <b>đang chạy</b> → chỉ dẫn bổ sung; việc <b>đã xong</b> → giao nhiệm vụ tiếp nối trong cùng hội thoại (kế thừa dự án/chế độ/agent). Tệp sản phẩm mở ở khung <b>📄 Xem trước</b> bên phải.</li></ol></section>
         <section><h3>Các chế độ giao việc</h3><ul><li><b>Tự động</b> — điều phối viên chọn phòng.</li><li><b>Theo phòng</b> — chỉ định Phát triển hoặc Nghiên cứu.</li><li><b>Theo dự án</b> — làm trong repo/thư mục của dự án, theo cấu hình dự án (lệnh kiểm tra, quyền công cụ).</li><li><b>Liên phòng</b> — Nghiên cứu làm trước, Phát triển dựng tiếp.</li><li><b>Giao riêng</b> — một agent làm luôn (bỏ lập kế hoạch/họp, vẫn có review) — nhanh và rẻ cho việc nhỏ.</li></ul></section>
         <section><h3>Phòng giám đốc (bạn)</h3><p>Nhân vật cà vạt đỏ là bạn. <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> để đi (phím mũi tên khi trỏ chuột trên văn phòng), nhấp đúp lên sàn để đi tới, <kbd>E</kbd> cạnh một người/phòng để tương tác: giao việc riêng, góp ý, tăng ngân sách, xem hồ sơ… Các mục có nhãn <em class="fun-tag">vui</em> chỉ để giải trí — không ảnh hưởng công việc đang chạy.</p></section>
         <section><h3>Nhãn dữ liệu & nơi xử lý</h3><p><b>Công khai/Nội bộ</b> có thể gửi tới runtime bên ngoài được phép (đã che bí mật/PII); <b>Bảo mật/Hạn chế</b> chỉ chạy runtime cục bộ (Ollama). Dòng 🔐 dưới form cho biết dữ liệu sẽ đi tới đâu trước khi bạn giao.</p></section>
         <section><h3>Phím tắt</h3><table class="tbl keys"><tbody>
           <tr><td><kbd>?</kbd> hoặc <kbd>H</kbd></td><td>Mở trợ giúp</td></tr>
           <tr><td><kbd>N</kbd></td><td>Giao việc mới (đưa con trỏ vào ô Yêu cầu)</td></tr>
-          <tr><td><kbd>1</kbd>–<kbd>7</kbd></td><td>Chuyển tab: Giao việc · Nhiệm vụ · Nhân sự · Token · Hạn mức · KPI · Nhật ký</td></tr>
+          <tr><td><kbd>/</kbd></td><td>Tìm nhanh nhiệm vụ, dự án, agent</td></tr>
+          <tr><td><kbd>V</kbd></td><td>Ẩn/hiện ô Văn phòng bên phải</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td><td>Giao việc trong ô soạn lớn (cuộc mới, trang dự án, trang nhiệm vụ)</td></tr>
+          <tr><td><kbd>Enter</kbd> / <kbd>Shift</kbd>+<kbd>Enter</kbd></td><td>Gửi / xuống dòng trong ô trả lời của hội thoại</td></tr>
+          <tr><td><kbd>1</kbd>–<kbd>7</kbd></td><td>Tổng quan · Dự án · Nhiệm vụ · Prompt · Nhân sự · Hạn mức · Nhật ký</td></tr>
           <tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / <kbd>E</kbd></td><td>Đi / tương tác trong văn phòng</td></tr>
           <tr><td><kbd>Esc</kbd></td><td>Đóng hộp thoại, menu</td></tr></tbody></table></section>
         <section><h3>Thuật ngữ</h3><ul><li><b>Runtime</b> — nơi chạy model (Cerebras, NVIDIA, Ollama…). Tab <b>Hạn mức</b> cho biết token còn lại.</li><li><b>Ngân sách token</b> — trần token của một nhiệm vụ; "chạy tới khi hoàn thành" chỉ cảnh báo, "tạm dừng" dừng để bạn quyết.</li><li><b>Worktree</b> — bản sao làm việc riêng của repo trên nhánh riêng, không đụng nhánh chính.</li><li><b>Review</b> — reviewer của phòng kiểm tra bằng chứng (test chạy thật) và yêu cầu sửa.</li></ul></section>
@@ -853,11 +868,12 @@
   };
 
   const TOUR = [
-    { sel: '#stage', title: 'Văn phòng của bạn', text: 'Các agent làm việc ở đây theo trạng thái thật. Bạn là nhân vật cà vạt đỏ ở phòng Giám đốc bên phải: WASD để đi, E để tương tác.' },
-    { sel: '#task-form', title: 'Giao việc', text: 'Viết yêu cầu, chọn chế độ (Giao riêng = một agent làm luôn). 📚 Thư viện và 🧱 Soạn theo khung giúp viết yêu cầu rõ ràng.' },
-    { sel: '.tabs', title: 'Theo dõi', text: 'Nhiệm vụ: tiến độ, hội thoại, sản phẩm. Nhân sự: từng agent. Token & Hạn mức: đã dùng và còn lại. KPI: chấm điểm từng agent.' },
+    { sel: '#sidenav', title: 'Điều hướng', text: '＋ Mới để giao việc, tạo dự án, prompt. Bên dưới là cây Dự án → Nhiệm vụ (như thư mục) và các nhiệm vụ gần đây; ⛽ ở cuối là token hôm nay.' },
+    { sel: '#main', title: 'Quản lý nhiệm vụ', text: 'Tổng quan, dự án dạng thư mục, danh sách nhiệm vụ (lọc, sắp xếp, chuột phải để thao tác). Mở một nhiệm vụ để xem kế hoạch, sản phẩm, token và gửi chỉ dẫn bổ sung ở ô soạn phía dưới.' },
+    { sel: '#sidenav [data-tab=assign]', title: '💬 Prompt', text: 'Màn soạn & hội thoại kiểu ứng dụng chat: cột hội thoại theo dự án, luồng trao đổi với văn phòng, ô trả lời ở dưới (đang chạy = chỉ dẫn bổ sung, đã xong = giao tiếp nối). Tệp mở ở khung Xem trước bên phải.' },
+    { sel: '#side', title: 'Văn phòng (ô phụ)', text: 'Các agent làm việc theo trạng thái thật. Bạn là nhân vật cà vạt đỏ: WASD để đi, E để tương tác. Phím V hoặc 🏢 để ẩn/hiện ô này.' },
     { sel: '#bell', title: 'Cảnh báo', text: 'Hết token, chạm ngân sách, review chưa duyệt… đều hiện ở đây và thành thông báo góc màn hình.' },
-    { sel: '#btn-help', title: 'Cần trợ giúp?', text: 'Bấm ❓ hoặc phím ? bất cứ lúc nào để xem hướng dẫn, chế độ giao việc và phím tắt.' },
+    { sel: '#btn-help', title: 'Cần trợ giúp?', text: 'Bấm ❓ hoặc phím ? bất cứ lúc nào. Phím / để tìm nhanh, N để giao việc mới.' },
   ];
   D.tour = (force) => {
     if (!force && store.get('tourDone', false)) return;
@@ -913,7 +929,7 @@
       e.preventDefault();
       return C.prefillAssign({});
     }
-    const tabs = ['assign', 'tasks', 'people', 'tokens', 'quota', 'kpi', 'logs'];
+    const tabs = ['home', 'projects', 'tasks', 'assign', 'people', 'quota', 'logs'];
     if (/^[1-7]$/.test(e.key)) {
       e.preventDefault();
       C.setTab(tabs[Number(e.key) - 1]);

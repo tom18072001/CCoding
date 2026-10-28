@@ -138,8 +138,16 @@ function header(c: Ctx, phase: Phase): string {
 ## Yêu cầu gốc
 ${briefFor(c, phase)}
 ${p ? `\n## Dự án: ${p.name} (${p.id})\n${p.description ?? ''}\nPhân loại dữ liệu: ${p.classification}.\n` : ''}${attachmentsFor(c, phase)}
-## Thư mục làm việc
+${notesFor(c)}## Thư mục làm việc
 ${c.cwd}${c.branch ? ` (git worktree riêng, nhánh \`${c.branch}\`)` : c.scratch && c.filesAccessible ? ' (thư mục riêng của nhiệm vụ — lưu sản phẩm thành tệp tại đây)' : ''}`;
+}
+
+/** Chỉ dẫn bổ sung của người dùng gửi trong lúc nhiệm vụ chạy (mới nhất sau cùng). */
+function notesFor(c: Ctx): string {
+  const notes = c.task.notes ?? [];
+  if (!notes.length) return '';
+  const lines = notes.slice(-10).map((n) => `- (${new Date(n.at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}) ${truncate(n.text.replace(/\s+/g, ' ').trim(), 800)}`);
+  return `\n## Chỉ dẫn bổ sung của giám đốc (gửi trong lúc chạy — ưu tiên áp dụng, mới nhất sau cùng)\n${lines.join('\n')}\n\n`;
 }
 
 export function rosterLines(roster: AgentDef[]): string {

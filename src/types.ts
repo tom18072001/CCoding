@@ -318,6 +318,10 @@ export interface Task {
   projectId?: string;
   /** Chế độ "agent": agent nhận việc riêng. */
   agentId?: string;
+  /** Chỉ dẫn bổ sung người dùng gửi trong lúc nhiệm vụ chạy — đưa vào bối cảnh các lượt gọi sau. */
+  notes?: Array<{ id: string; at: string; text: string }>;
+  /** Nhiệm vụ này tiếp nối nhiệm vụ trước (giao việc tiếp nối từ màn hình nhiệm vụ). */
+  followUpOf?: string;
   classification: Classification;
   status: TaskStatus;
   phase?: Phase;
@@ -389,7 +393,7 @@ export interface ChatMessage {
   taskId: string;
   department: string;
   from: string;
-  kind: 'plan' | 'discussion' | 'decision' | 'handoff' | 'review' | 'final' | 'system';
+  kind: 'plan' | 'discussion' | 'decision' | 'handoff' | 'review' | 'final' | 'system' | 'note';
   text: string;
   round?: number;
   subtaskId?: string;
@@ -480,6 +484,8 @@ export interface NewTaskInput {
   projectId?: string;
   /** Chế độ "agent": id agent nhận việc riêng. */
   agentId?: string;
+  /** Giao việc tiếp nối nhiệm vụ này: kế thừa chế độ/dự án/agent, báo cáo trước vào inputs/NHIEM-VU-TRUOC.md. */
+  followUp?: string;
   options?: Partial<TaskOptions>;
   /** id các file đã tải lên (POST /api/uploads). */
   attachments?: string[];

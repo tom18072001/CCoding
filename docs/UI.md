@@ -1,10 +1,29 @@
-# Giao diện: phòng giám đốc, giao việc riêng, prompt, hạn mức
+# Giao diện: quản lý nhiệm vụ, màn Prompt, phòng giám đốc, hạn mức
 
-Giao diện web (http://127.0.0.1:7420) chỉ phục vụ máy cục bộ, không đăng nhập. Lần đầu mở có **hướng dẫn nhanh 5 bước**; bấm ❓ (hoặc phím `?`) để xem lại trợ giúp, các chế độ giao việc, nhãn dữ liệu, phím tắt và thuật ngữ.
+Giao diện web (http://127.0.0.1:7420) chỉ phục vụ máy cục bộ, không đăng nhập. Lần đầu mở có **hướng dẫn nhanh**; bấm ❓ (hoặc phím `?`) để xem lại trợ giúp, các chế độ giao việc, nhãn dữ liệu, phím tắt và thuật ngữ.
+
+## Bố cục
+
+| Cột | Nội dung |
+|---|---|
+| **Trái — điều hướng** | **＋ Mới** (nhiệm vụ, giao riêng, dự án, prompt, tải tệp), các mục chính, cây **Dự án → Nhiệm vụ** (như thư mục), gắn sao, gần đây ngoài dự án, ⛽ token hôm nay. Nút `«`/`»` thu gọn thành dải biểu tượng (mặc định thu gọn ở màn Prompt, nhớ riêng cho từng màn). |
+| **Giữa — màn chính** | Kiểu Drive: *Tổng quan* (việc đang chạy, cần quyết định, dự án, gần đây), *Dự án* dạng thư mục (chuột phải/⋮ để thao tác), trang dự án có ô soạn + nhân sự, *Nhiệm vụ* (lọc, sắp xếp, danh sách/lưới, gắn sao, menu chuột phải), trang nhiệm vụ đầy đủ (kế hoạch, sản phẩm, token, nhật ký, lượt gọi, ô soạn cuối trang). Ô tìm `/` tìm nhiệm vụ, dự án, agent. |
+| **Phải — ô phụ** | Thẻ **🏢 Văn phòng** (sơ đồ pixel + dòng sự kiện mới nhất ở trên) và **📄 Xem trước** (báo cáo/tệp sản phẩm mở từ hội thoại, chép nội dung). `⤢` phóng to, `✕`/phím `V` ẩn hiện. |
+
+## Màn 💬 Prompt (kiểu ứng dụng chat)
+
+- **Cột hội thoại**: mỗi hội thoại là một chuỗi nhiệm vụ nối nhau bằng *giao tiếp nối* (`followUpOf`); nhóm *Đang chạy* / Hôm nay / Hôm qua / 7 ngày…; tìm theo tiêu đề/nội dung; lọc theo dự án hoặc *Ngoài dự án*; `↪n` = số lượt tiếp nối. Vùng giữa hẹp (< 820 px) thì cột này thành ngăn kéo (nút ☰).
+- **Cuộc mới**: ô soạn đầy đủ ở giữa (mẫu prompt, 📚 thư viện, 🧱 soạn theo khung, đính kèm, chế độ/phòng/dự án/agent, 🔐 luồng dữ liệu, tùy chọn ngân sách…). Giao xong là chuyển sang hội thoại.
+- **Hội thoại**: yêu cầu của bạn (bong bóng bên phải, kèm tệp đính kèm) → trả lời của văn phòng: lý do định tuyến, **khối "n tin trao đổi"** (gom gọn kế hoạch/thảo luận/bàn giao/review — bấm để mở; khối cuối tự mở khi việc đang chạy), tiến độ từng phòng (thanh pha, hạng mục, người làm, "sản phẩm"), trạng thái đang chạy (⏸ tạm dừng, hủy), hộp tạm dừng/lỗi (▶ chạy tiếp, +50% ngân sách) và **báo cáo cuối** hiển thị trọn, tệp sản phẩm dạng chip (mở ở 📄 Xem trước), ⧉ chép, ↻ giao lại tương tự. **📋 Quản lý** mở trang nhiệm vụ đầy đủ; trang nhiệm vụ có nút **💬 Dạng hội thoại**.
+- **Ô trả lời** (dưới cùng, `Enter` gửi · `Shift+Enter` xuống dòng):
+  - việc **đang chạy/chờ/tạm dừng** → **chỉ dẫn bổ sung** (`POST /api/tasks/<id>/notes`): hiện trong hội thoại như tin nhắn của bạn và được đưa vào phần đầu prompt của các lượt gọi sau (lượt đang chạy làm nốt theo yêu cầu cũ); tối đa 30 chỉ dẫn/nhiệm vụ, 4.000 ký tự/chỉ dẫn;
+  - việc **đã kết thúc** → **giao tiếp nối** (`POST /api/tasks` với `followUp`): kế thừa chế độ/dự án/phòng/agent (đổi được người nhận ở "Giao cho"), báo cáo trước đưa vào `inputs/NHIEM-VU-TRUOC.md`, nhãn dữ liệu không thấp hơn nhiệm vụ trước; cho phép đính kèm tệp.
+  - Nội dung có dạng khóa API/private key/mật khẩu bị **chặn ngay trên trình duyệt** (cả ô soạn cuộc mới); server vẫn che bí mật trước khi lưu/gửi.
+- Trong màn Prompt, bấm nhiệm vụ ở cây bên trái hoặc dòng sự kiện ở ô phụ sẽ mở dạng hội thoại; ở nơi khác thì mở trang nhiệm vụ.
 
 ## Phòng giám đốc
 
-Bên phải sơ đồ văn phòng là **Phòng Giám đốc**; nhân vật cà vạt đỏ là bạn.
+Trong ô phụ 🏢 Văn phòng, bên phải sơ đồ là **Phòng Giám đốc**; nhân vật cà vạt đỏ là bạn.
 
 | Thao tác | Phím / chuột |
 |---|---|
@@ -52,7 +71,11 @@ Góp ý (kèm 👍/👎, gắn nhiệm vụ tùy chọn) lưu ở `data/feedback
 |---|---|
 | `?` / `H` | Trợ giúp |
 | `N` | Giao việc mới (con trỏ vào ô Yêu cầu) |
-| `1`–`7` | Giao việc · Nhiệm vụ · Nhân sự · Token · Hạn mức · KPI · Nhật ký |
+| `/` | Tìm nhanh nhiệm vụ, dự án, agent |
+| `V` | Ẩn/hiện ô phụ bên phải |
+| `1`–`7` | Tổng quan · Dự án · Nhiệm vụ · Prompt · Nhân sự · Hạn mức · Nhật ký |
+| `Ctrl`+`Enter` | Giao việc ở ô soạn lớn (cuộc mới, trang dự án, trang nhiệm vụ) |
+| `Enter` / `Shift`+`Enter` | Gửi / xuống dòng ở ô trả lời của hội thoại |
 | `W` `A` `S` `D` / `E` | Đi / tương tác |
 | `Esc` | Đóng hộp thoại, menu, hướng dẫn |
 
@@ -60,7 +83,7 @@ Phím tắt không chạy khi đang gõ trong ô nhập hoặc có hộp thoại
 
 ## Gợi ý tiếp theo (chưa làm)
 
-- Gửi chỉ dẫn bổ sung cho nhiệm vụ **đang chạy** (đưa vào prompt các hạng mục kế tiếp) và tự duyệt/từ chối review bằng tay.
+- Tự duyệt/từ chối review bằng tay ngay trong hội thoại.
 - Xem diff tệp đã sửa ngay trong nhiệm vụ; tải gói sản phẩm (.zip).
 - Thông báo trình duyệt khi nhiệm vụ xong/tạm dừng; ước tính token trước khi giao.
 - Bảng điều khiển trên điện thoại: phím ảo cho phòng giám đốc, thanh trên gọn hơn.

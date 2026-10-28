@@ -284,3 +284,14 @@ Theo yêu cầu chủ dự án, CCoding **không dùng** các tài khoản Claud
 | Trò vui trong văn phòng | — | Chỉ đổi hình ảnh trên canvas ở trình duyệt; không gọi API ghi, không tác động nhiệm vụ/log |
 
 **Kết luận: ĐẠT**, không thêm điều kiện. Khuyến nghị: không dán dữ liệu thật/bí mật vào góp ý và prompt mẫu (chúng được gửi kèm hồ sơ agent tới runtime theo nhãn của nhiệm vụ).
+
+### Bổ sung: chỉ dẫn bổ sung, giao tiếp nối, màn quản lý kiểu Drive và màn Prompt kiểu chat (28/10/2026, tối)
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| Chỉ dẫn bổ sung cho việc đang chạy (`POST /api/tasks/<id>/notes`) | PRE-05, PRE-06, DET-01 | Nội dung do chủ dự án viết; lưu `task.notes` **đã che bí mật** (≤ 30 mục, ≤ 4.000 ký tự) và tin nhắn hội thoại qua `message()` (che bí mật + PII theo cấu hình); log qua `LogStore`. Đưa vào phần đầu prompt các lượt sau **dưới nhãn dữ liệu của chính nhiệm vụ** ⇒ đi tới cùng tập runtime được phép, không mở luồng mới |
+| Giao tiếp nối (`followUp`) | GOV-03, PRE-01 | Kế thừa dự án/chế độ/agent; báo cáo trước chép vào `inputs/NHIEM-VU-TRUOC.md` trong thư mục `.ccoding` của nhiệm vụ (không vào git). Nhãn dữ liệu = **mức cao hơn** giữa dự án/mặc định và nhiệm vụ trước (`maxClass`) ⇒ nội dung Bảo mật không thể theo nhánh tiếp nối sang runtime ngoài |
+| Màn Drive + màn Prompt (chỉ trình duyệt) | PRE-06 | Hiển thị lại dữ liệu đã có từ API cục bộ (`/api/tasks`, `/file`, `/notes`); xem trước tệp dùng cùng route `/api/tasks/<id>/file` (đã chặn đường dẫn ra ngoài thư mục nhiệm vụ). Trạng thái giao diện (gắn sao, hội thoại đang mở, bộ lọc) chỉ ở `localStorage` của trình duyệt trên máy — không chứa nội dung nhiệm vụ |
+| Chặn nhầm bí mật trước khi gửi | PRE-02 | Ô soạn cuộc mới và ô trả lời **từ chối gửi** khi nội dung có dạng khóa API (`sk-`, `gsk_`, `csk-`, `nvapi-`, `AKIA…`), private key hay `mật khẩu: …`; đây là lớp phòng ngừa thêm — server vẫn che bí mật trước khi lưu/gửi |
+
+**Kết luận: ĐẠT**, không thêm điều kiện. Khuyến nghị giữ nguyên: không dán dữ liệu thật/bí mật vào chỉ dẫn hay yêu cầu tiếp nối.

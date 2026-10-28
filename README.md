@@ -20,7 +20,7 @@
 - **Bộ đếm token** cho từng lượt gọi: input, output, cache đọc/ghi, chi phí — tổng hợp theo agent / phòng / task / dự án / model / ngày (UI, CLI `ccoding usage --watch`, và hiển thị trên sidebar herdr).
 - **Nhiều runtime**: Claude Code CLI, Codex CLI, Kimi Code CLI, Anthropic API, API tương thích OpenAI (9router, Ollama, OpenRouter…), và `mock` để chạy thử offline.
 - **Data Protection Gate tích hợp**: nhãn dữ liệu theo dự án quyết định runtime nào được nhận dữ liệu; tự che khóa bí mật/PII trước khi ghi log hay gửi ra ngoài.
-- **Giao diện văn phòng pixel** (thời gian thực qua SSE) + **CLI** đầy đủ.
+- **Giao diện quản lý kiểu Drive** (dự án dạng thư mục → nhiệm vụ, lọc/sắp xếp/gắn sao, menu chuột phải), **màn 💬 Prompt kiểu ứng dụng chat** (cột hội thoại theo dự án, luồng trao đổi gom gọn, ô trả lời: chỉ dẫn bổ sung khi việc đang chạy / giao tiếp nối khi đã xong, xem trước tệp ở khung phải) và **văn phòng pixel** ở ô phụ bên phải (thời gian thực qua SSE) + **CLI** đầy đủ.
 
 - **Phòng giám đốc**: bạn điều khiển nhân vật của mình bằng WASD, bấm E cạnh agent/phòng để giao việc riêng, góp ý (agent nhớ ở các lượt sau), tăng ngân sách, xem cuộc họp, hoặc vài trò vui không ảnh hưởng công việc; **thư viện & khung soạn prompt**, kiểm tra yêu cầu khi gõ, **tab Hạn mức** (token còn lại theo runtime/model), trợ giúp và phím tắt — xem [docs/UI.md](docs/UI.md).
 
@@ -79,7 +79,7 @@ Khi server chạy **bên trong herdr**, runner tự chuyển sang `herdr`: mỗi
 
 ## Giao việc
 
-**Giao diện web** → tab *Giao việc*: chọn chế độ, phòng ban hoặc dự án, nhập yêu cầu. Theo dõi trong tab *Nhiệm vụ* (hội thoại, sản phẩm, báo cáo, token), *Nhân sự* (hồ sơ agent.md, log vị trí, đầu ra trực tiếp), *Token*, *Nhật ký*. Bấm vào nhân vật trên bản đồ để xem chi tiết.
+**Giao diện web** → *💬 Prompt*: chọn chế độ, phòng ban hoặc dự án, nhập yêu cầu; theo dõi và trả lời ngay trong hội thoại. Quản lý trong *Tổng quan*, *Dự án*, *Nhiệm vụ* (sản phẩm, báo cáo, token, nhật ký, lượt gọi), *Nhân sự* (hồ sơ agent.md, log vị trí, đầu ra trực tiếp), *Token*, *Hạn mức*, *Nhật ký*. Bấm vào nhân vật trên bản đồ để xem chi tiết. Xem [docs/UI.md](docs/UI.md).
 
 **CLI**:
 

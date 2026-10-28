@@ -102,3 +102,34 @@ test('header giới hạn của nhà cung cấp: chỉ giữ x-ratelimit-* / ret
   const h = new Headers({ 'x-ratelimit-remaining-tokens-day': '812345', 'x-ratelimit-limit-requests': '30', 'retry-after': '12', authorization: 'Bearer secret-value', 'set-cookie': 'a=b' });
   assert.deepEqual(pickRateHeaders(h), { 'retry-after': '12', 'x-ratelimit-limit-requests': '30', 'x-ratelimit-remaining-tokens-day': '812345' });
 });
+
+test('chỉ dẫn bổ sung cho nhiệm vụ đang chạy (vào bối cảnh các lượt sau) và giao việc tiếp nối', async () => {
+  const { planPrompt } = await import('../src/prompts.js');
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const app = testApp();
+  try {
+    const t = app.orchestrator.submit({ brief: 'Viết tài liệu hướng dẫn cài đặt', agentId: 'devops' });
+    const noted = app.orchestrator.addNote(t.id, 'Nhớ thêm mục gỡ cài đặt');
+    assert.equal(noted.notes?.length, 1);
+    assert.throws(() => app.orchestrator.addNote(t.id, '   '), /trống/);
+    const done = await app.orchestrator.waitFor(t.id);
+    assert.equal(done.status, 'done');
+    assert.ok(app.store.transcript(t.id).some((m) => m.kind === 'note' && m.from === 'director' && m.text.includes('gỡ cài đặt')));
+    assert.throws(() => app.orchestrator.addNote(t.id, 'muộn rồi'), /Giao việc tiếp nối/);
+    const ctx = { task: done, dept: app.registry.department('dev'), cwd: '/w', roster: app.registry.members('dev') };
+    assert.match(planPrompt(ctx).context, /## Chỉ dẫn bổ sung của giám đốc[^\n]*\n- \([^)]+\) Nhớ thêm mục gỡ cài đặt/);
+    // tiếp nối: kế thừa chế độ + agent, báo cáo trước vào inputs
+    const f = app.orchestrator.submit({ brief: 'Bổ sung phần cấu hình proxy', followUp: t.id });
+    assert.equal(f.mode, 'agent');
+    assert.equal(f.agentId, 'devops');
+    assert.equal(f.followUpOf, t.id);
+    assert.match(f.brief, new RegExp(`Tiếp nối nhiệm vụ ${t.id}`));
+    const prev = fs.readFileSync(path.join(app.store.runDir(f.id), 'inputs', 'NHIEM-VU-TRUOC.md'), 'utf8');
+    assert.match(prev, /## Báo cáo của nhiệm vụ trước\n> Việc giao riêng/);
+    assert.equal((await app.orchestrator.waitFor(f.id)).status, 'done');
+    assert.throws(() => app.orchestrator.submit({ brief: 'x', followUp: 'T-khong-co' }), /để tiếp nối/);
+  } finally {
+    app.cleanup();
+  }
+});

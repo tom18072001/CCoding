@@ -183,6 +183,7 @@ export function createServer(app: App): http.Server {
           department: b.department || undefined,
           projectId: b.projectId || undefined,
           agentId: b.agentId ? String(b.agentId) : undefined,
+          followUp: b.followUp ? String(b.followUp) : undefined,
           options: b.options ?? {},
           attachments: Array.isArray(b.attachments) ? b.attachments.map(String) : undefined,
         });
@@ -200,6 +201,14 @@ export function createServer(app: App): http.Server {
       const text = store.readRunFile(mm[1], q('path') ?? 'FINAL.md');
       if (text === undefined) throw new HttpError(404, 'Không có file');
       return send(res, 200, text);
+    }
+    if ((mm = m(/^\/api\/tasks\/([^/]+)\/notes$/)) && req.method === 'POST') {
+      const b = await readBody(req);
+      try {
+        return send(res, 200, orchestrator.addNote(mm[1], String(b.text ?? '')));
+      } catch (e) {
+        throw new HttpError(409, (e as Error).message);
+      }
     }
     if ((mm = m(/^\/api\/tasks\/([^/]+)\/cancel$/)) && req.method === 'POST') {
       return send(res, orchestrator.cancel(mm[1]) ? 200 : 409, { ok: true });

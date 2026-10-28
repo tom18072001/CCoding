@@ -32,7 +32,7 @@
     agentDetail: null,
     logs: [],
     live: new Map(),
-    tab: 'assign',
+    tab: 'home',
     alerts: [],
     alertsSeen: 0,
     pending: [], // tệp đã tải lên chờ giao việc
@@ -48,7 +48,7 @@
   const ACCESS_VI = { none: 'không công cụ', read: 'chỉ đọc', write: 'đọc/ghi file', exec: 'đọc/ghi + chạy lệnh' };
   const size = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n >= 1024 ? Math.round(n / 1024) + ' KB' : n + ' B');
   const MODE_VI = { auto: 'Tự động', department: 'Theo phòng', project: 'Theo dự án', joint: 'Liên phòng', agent: 'Giao riêng' };
-  const KIND_VI = { plan: 'kế hoạch', discussion: 'thảo luận', decision: 'quyết định', handoff: 'bàn giao', review: 'review', final: 'báo cáo', system: 'hệ thống' };
+  const KIND_VI = { plan: 'kế hoạch', discussion: 'thảo luận', decision: 'quyết định', handoff: 'bàn giao', review: 'review', final: 'báo cáo', system: 'hệ thống', note: 'chỉ dẫn của bạn' };
   const CLS_VI = { public: 'Công khai', internal: 'Nội bộ', confidential: 'Bảo mật', restricted: 'Hạn chế' };
 
   const fmt = (n) => {
@@ -64,7 +64,7 @@
   const deptName = (id) => (id === 'office' ? 'Điều phối' : S.departments.find((d) => d.id === id)?.name ?? id);
   const deptShort = (id) => (id === 'office' ? 'Điều phối' : S.departments.find((d) => d.id === id)?.short ?? id);
   const deptColor = (id) => (id === 'office' ? '#b91c1c' : S.departments.find((d) => d.id === id)?.color ?? '#64748b');
-  const agentName = (id) => S.agents.get(id)?.name ?? (id === 'system' ? 'Hệ thống' : id);
+  const agentName = (id) => S.agents.get(id)?.name ?? (id === 'system' ? 'Hệ thống' : id === 'director' ? 'Bạn (giám đốc)' : id);
 
   async function api(path, opts = {}) {
     const headers = { 'content-type': 'application/json', ...(opts.headers || {}) };
@@ -125,8 +125,11 @@
     $('#lively').addEventListener('change', (e) => (office.lively = e.target.checked));
     bindUi();
     // cầu nối cho director.js (phòng giám đốc, prompt, hạn mức, trợ giúp)
-    window.CC = { S, api, esc, md, fmt, total, toast, openAgent, openTask, setTab, avatarUrl, agentName, deptName, deptShort, CLS_VI, TASK_VI, STATUS_VI, MODE_VI, prefillAssign, office: () => office, renderTaskDetail };
+    window.CC = { S, api, esc, md, fmt, total, toast, openAgent, openTask, setTab, avatarUrl, av, agentName, deptName, deptShort, deptColor, dateTime, time, CLS_VI, TASK_VI, STATUS_VI, MODE_VI, PAUSE_VI, PHASES, PHASE_INDEX, KIND_VI, prefillAssign, office: () => office, renderTaskDetail, renderTaskList, editProject, newProject, uploadFiles, renderPending };
     window.Director?.init();
+    window.Drive?.init();
+    window.Chat?.init();
+    setTab(S.tab);
     renderAll();
     loadRuntimes(false);
     preloadTicker();
@@ -197,6 +200,8 @@
   function onTask(t) {
     S.tasks.set(t.id, t);
     updateRunning();
+    throttle('drive', () => window.Drive?.changed(), 600);
+    window.Chat?.onTask(t);
     if (S.tab === 'tasks') {
       if (S.selectedTask === t.id) throttle('td', () => renderTaskDetail(false), 300);
       else if (!S.selectedTask) throttle('tl', renderTaskList, 300);
@@ -214,6 +219,7 @@
 
   function onMessage(m) {
     addTicker(m);
+    window.Chat?.onMessage(m);
     if (m.from && S.agents.has(m.from)) office.say(m.from, plain(m.text.split('\n')[0]), m.kind === 'discussion' ? 9000 : 6000);
     if (S.taskDetail && S.taskDetail.task.id === m.taskId) {
       S.taskDetail.transcript.push(m);
@@ -354,6 +360,7 @@
         renderPending();
       }),
     );
+    window.Chat?.pendingChanged();
   }
 
   // ── Ticker & tooltip ─────────────────────────────────────────────────────
@@ -363,10 +370,10 @@
     const color = deptColor(m.department);
     el.innerHTML = `<time>${time(m.ts)}</time><b style="color:${color}">${esc(agentName(m.from))}</b><span>${esc(KIND_VI[m.kind] || m.kind)} · ${esc(plain(m.text).slice(0, 220))}</span>`;
     el.style.cursor = 'pointer';
-    el.onclick = () => openTask(m.taskId);
+    el.onclick = () => (S.tab === 'assign' && window.Chat ? window.Chat.open(m.taskId) : openTask(m.taskId));
     const tk = $('#ticker');
     tk.prepend(el);
-    while (tk.children.length > 12) tk.lastChild.remove();
+    while (tk.children.length > 40) tk.lastChild.remove();
   }
 
   async function preloadTicker() {
@@ -405,8 +412,8 @@
   // ── Khung & tab ──────────────────────────────────────────────────────────
   function setTab(tab) {
     S.tab = tab;
-    $$('.tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
     $$('.tab-body').forEach((b) => b.classList.toggle('active', b.dataset.body === tab));
+    window.Drive?.onTab(tab);
     if (tab === 'tasks') S.selectedTask ? renderTaskDetail(true) : renderTaskList();
     if (tab === 'people') S.selectedAgent ? renderAgentDetail(false) : renderPeople();
     if (tab === 'tokens') renderTokens();
@@ -416,15 +423,20 @@
   }
 
   function bindUi() {
-    $$('.tabs button').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
     const form = $('#task-form');
+    form.brief.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    });
     form.addEventListener('change', (e) => {
       if (e.target.name === 'mode') syncMode();
     });
     form.addEventListener('submit', submitTask);
-    $('#btn-new-project').onclick = () => {
-      $('#project-form').hidden = false;
-      $('#project-form [name=id]').focus();
+    $('#btn-new-project').onclick = (e) => {
+      e.preventDefault();
+      newProject();
     };
     $('#btn-cancel-project').onclick = () => ($('#project-form').hidden = true);
     $('#project-form').addEventListener('submit', saveProject);
@@ -504,11 +516,9 @@
 
   /** Điền sẵn form giao việc (giao lại tương tự, giao việc từ phòng giám đốc, chèn prompt). */
   function prefillAssign(o = {}) {
+    window.Chat?.reset();
     const f = $('#task-form');
-    if (o.mode) {
-      const r = f.querySelector(`input[name=mode][value="${o.mode}"]`);
-      if (r) r.checked = true;
-    }
+    if (o.mode) f.mode.value = o.mode;
     if (o.department) f.department.value = o.department;
     if (o.projectId && o.mode === 'project') f.projectId.value = o.projectId;
     if (o.agentId) f.agentId.value = o.agentId;
@@ -539,6 +549,11 @@
       msg.textContent = 'Đang tải tệp lên — chờ một chút';
       return;
     }
+    if (window.Director?.hasSecret?.(f.brief.value) || window.Director?.hasSecret?.(f.title.value)) {
+      msg.className = 'form-msg err';
+      msg.textContent = '⛔ Yêu cầu có vẻ chứa khóa/mật khẩu — xóa bí mật trước khi giao';
+      return;
+    }
     const attachments = S.pending.filter((a) => a.status === 'ok').map((a) => a.id);
     const body = { brief: f.brief.value, title: f.title.value || undefined, mode, options: opt, attachments };
     if (mode === 'department') body.department = f.department.value;
@@ -563,9 +578,10 @@
       msg.textContent = `Đã giao ${t.id}`;
       f.brief.value = '';
       f.title.value = '';
-      S.pending = [];
+      S.pending.length = 0;
       renderPending();
-      openTask(t.id);
+      if (window.Chat) window.Chat.open(t.id);
+      else openTask(t.id);
     } catch (err) {
       msg.className = 'form-msg err';
       msg.textContent = err.message;
@@ -590,6 +606,7 @@
       )
       .join('');
     ul.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => editProject(b.dataset.edit)));
+    window.Drive?.changed();
     ul.querySelectorAll('[data-del]').forEach((b) =>
       b.addEventListener('click', async () => {
         if (!confirm(`Xóa dự án ${b.dataset.del}? (không xóa file trong workspace)`)) return;
@@ -601,8 +618,21 @@
     );
   }
 
+  /** Mở form tạo dự án mới (trong mục Dự án). */
+  function newProject() {
+    setTab('projects');
+    const f = $('#project-form');
+    f.reset();
+    f.hidden = false;
+    $('#proj-admin').open = true;
+    $('#proj-admin').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    f.querySelector('[name=id]').focus();
+  }
+
   /** Điền form dự án từ cấu hình đang có để sửa (lưu lại với cùng mã = cập nhật). */
   function editProject(id) {
+    if (S.tab !== 'projects') setTab('projects');
+    if ($('#proj-admin')) $('#proj-admin').open = true;
     const p = S.projects.find((x) => x.id === id);
     const f = $('#project-form');
     if (!p || !f) return;
@@ -627,6 +657,7 @@
     set('checkCommands', (p.checkCommands || []).join('\n'));
     set('description', p.description || '');
     f.hidden = false;
+    $('#proj-admin')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     f.querySelector('[name=name]').focus();
   }
 
@@ -691,6 +722,11 @@
 
   // ── Nhiệm vụ ─────────────────────────────────────────────────────────────
   function renderTaskList() {
+    if (window.Drive?.renderTasks) {
+      $('#task-detail').hidden = true;
+      $('#task-list').hidden = false;
+      return window.Drive.renderTasks($('#task-list'));
+    }
     $('#task-detail').hidden = true;
     const el = $('#task-list');
     el.hidden = false;
@@ -931,6 +967,7 @@
       }),
     );
     renderTaskBody();
+    window.Drive?.taskRendered(t);
   }
 
   async function renderTaskBody() {

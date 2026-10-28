@@ -395,6 +395,7 @@
 
     onKey(e, down) {
       if (!this.player) return;
+      if (this.disabled) return this.keys.clear();
       if (down && (this.inputLocked || this.typing(e) || e.ctrlKey || e.metaKey || e.altKey)) return;
       const k = (e.key || '').toLowerCase();
       const dir = { w: 'up', s: 'down', a: 'left', d: 'right', arrowup: 'up', arrowdown: 'down', arrowleft: 'left', arrowright: 'right' }[k];
