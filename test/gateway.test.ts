@@ -57,7 +57,9 @@ test('runtime tùy biến "bifrost" gọi API tương thích OpenAI, gửi heade
     const port = (srv.address() as AddressInfo).port;
     const rm = new RuntimeManager({
       ...base,
-      runtimes: { ...base.runtimes, bifrost: { ...base.runtimes.bifrost, baseUrl: `http://127.0.0.1:${port}/v1`, virtualKeys: { dev: 'sk-bf-dev-key' } } },
+      // không phụ thuộc ccoding.local.json của máy chạy test (chuỗi model, requireEnv, promptStyle riêng)
+      runtimes: { ...base.runtimes, bifrost: { ...base.runtimes.bifrost, baseUrl: `http://127.0.0.1:${port}/v1`, virtualKeys: { dev: 'sk-bf-dev-key' }, requireEnv: [], promptStyle: undefined } },
+      models: { ...base.models, bifrost: {} },
     });
     const rt = rm.get('bifrost')!;
     assert.ok(rt, 'runtime bifrost được đăng ký từ cấu hình');
