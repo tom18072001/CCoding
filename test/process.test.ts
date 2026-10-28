@@ -1013,6 +1013,16 @@ test('pha nặng: model nhanh bị 429 và sắp mở lại → tạm dừng ch�
     app.runtimes.markOk('a::m-a');
     app.runtimes.markFailure('a', 'm-a', 'model', 'model không tồn tại');
     assert.equal(await app.runtimes.fastRecovery([], 'internal', 'sonnet'), undefined, 'lỗi model → chờ vô ích');
+    // 429 lặp liên tục: fastRecovery báo thời điểm bắt đầu chuỗi lỗi để điều phối thôi chờ sau waitForFastMs
+    app.runtimes.markOk('a::m-a');
+    app.runtimes.markFailure('a', 'm-a', 'rate', '429');
+    const h = app.runtimes.health.get('a::m-a')!;
+    h.since = Date.now() - 40 * 60_000;
+    app.runtimes.markFailure('a', 'm-a', 'rate', '429');
+    const fr2 = await app.runtimes.fastRecovery([], 'internal', 'sonnet');
+    assert.ok(fr2 && Date.now() - (fr2.since ?? Date.now()) > 30 * 60_000, 'chuỗi 429 đã kéo dài > 30 phút');
+    app.runtimes.markOk('a::m-a');
+    assert.equal(app.runtimes.health.get('a::m-a')?.since, undefined);
     assert.ok(app.runtimes.isSlow({ model: 'm-b' }) && !app.runtimes.isSlow({ model: 'm-a' }));
   } finally {
     sa.close();

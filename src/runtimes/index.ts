@@ -11,6 +11,8 @@ export interface HealthInfo {
   kind?: ErrorKind;
   reason?: string;
   failures: number;
+  /** Bắt đầu chuỗi lỗi liên tiếp hiện tại (ms epoch) — xóa khi gọi thành công lại. */
+  since?: number;
   lastError?: string;
   lastErrorAt?: number;
   lastOkAt?: number;
@@ -153,6 +155,7 @@ export class RuntimeManager {
     if (!h) return;
     h.failures = 0;
     h.until = undefined;
+    h.since = undefined;
     h.lastOkAt = Date.now();
     const rt = key.split('::')[0];
     if (rt !== key) {
@@ -160,6 +163,7 @@ export class RuntimeManager {
       if (rh) {
         rh.failures = 0;
         rh.until = undefined;
+        rh.since = undefined;
         rh.lastOkAt = Date.now();
       }
     }
@@ -177,6 +181,7 @@ export class RuntimeManager {
     // lỗi quota/model gắn với model cụ thể; lỗi mạng/xác thực gắn với cả runtime
     const key = scopeModel && model ? `${runtimeId}::${model}` : runtimeId;
     const h = this.health.get(key) ?? { failures: 0 };
+    if (!h.failures || !h.since) h.since = now;
     h.failures++;
     h.kind = kind;
     h.lastError = message.slice(0, 300);
@@ -295,9 +300,9 @@ export class RuntimeManager {
    * thời điểm mở lại sớm nhất — để quyết định chờ nó thay vì chạy pha nặng bằng model chậm.
    * Model chạm hạn mức token ngày không tính (chờ cũng không mở lại).
    */
-  async fastRecovery(prefs: Array<string | undefined>, cls: Classification, want: string): Promise<{ until: number; label: string; reason?: string } | undefined> {
+  async fastRecovery(prefs: Array<string | undefined>, cls: Classification, want: string): Promise<{ until: number; label: string; reason?: string; since?: number } | undefined> {
     const now = Date.now();
-    let best: { until: number; label: string; reason?: string } | undefined;
+    let best: { until: number; label: string; reason?: string; since?: number } | undefined;
     for (const id of this.orderedIds(prefs, cls, [])) {
       if (!this.runtimes.has(id) || !this.allowed(id, cls)) continue;
       if (!(await this.availability(id)).ok) continue;
@@ -311,7 +316,8 @@ export class RuntimeManager {
         // chỉ chờ khi mọi lý do chặn đều là quota/giới hạn tốc độ (lỗi xác thực, model không tồn tại… thì chờ vô ích)
         if (!holds.length || holds.some((h) => h.kind !== 'rate' && h.kind !== 'quota')) continue;
         const until = Math.max(...holds.map((h) => h.until as number));
-        if (!best || until < best.until) best = { until, label, reason: holds[0].reason };
+        const since = Math.min(...holds.map((h) => h.since ?? now));
+        if (!best || until < best.until) best = { until, label, reason: holds[0].reason, since };
       }
     }
     return best;

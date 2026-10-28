@@ -1503,7 +1503,9 @@ export class Orchestrator {
         const rt = cand.runtime;
         if (waitFast && runtimes.isSlow(cand)) {
           const fr = await runtimes.fastRecovery(prefs, cls, want);
-          if (fr && fr.until - Date.now() <= waitMs) {
+          // chờ tối đa waitForFastMs TÍNH TỪ lần lỗi đầu của chuỗi: 429 lặp mãi (vd. hết hạn mức 5 giờ của gói Claude Max mà không báo
+          // giờ mở lại) thì sau đó dùng model chậm thay vì tạm dừng/tiếp tục vô hạn
+          if (fr && fr.until - Date.now() <= waitMs && (!fr.since || Date.now() - fr.since < waitMs)) {
             keepHandover();
             const at = new Date(fr.until).toLocaleTimeString('vi-VN');
             logs.write({ level: 'info', kind: 'runtime.wait', msg: `${agent.name}: chờ ${fr.label} (${fr.reason ?? 'tạm nghỉ'}) mở lại lúc ${at} thay vì chạy ${phase} bằng ${cand.label}`, taskId: task.id, agentId: agent.id, department: deptId, subtaskId: ctx.subtask?.id, phase, data: { callId, until: new Date(fr.until).toISOString(), slow: cand.label, fast: fr.label } });
