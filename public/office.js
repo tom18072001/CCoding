@@ -2,7 +2,8 @@
 // Toàn bộ hình vẽ là pixel-art tự dựng (không dùng tài nguyên bên ngoài).
 (function () {
   const T = 16; // pixel cơ sở / ô
-  const W = 44;
+  const MAIN_W = 44; // tòa văn phòng chính (x < 44); phòng giám đốc nằm bên phải
+  const W = 52;
   const H = 28;
 
   const STATUS_COLOR = {
@@ -17,10 +18,12 @@
     meeting: { x0: 1, x1: 17, y0: 20, y1: 27, door: { x: 8, y: 19.5 }, aisleY: 20.9, lanes: [2.0, 15.7], direct: (q) => q.y < 22.6 },
     director: { x0: 18, x1: 28, y0: 20, y1: 27, door: { x: 22, y: 19.5 }, aisleY: 20.9, lanes: [19.2, 26.8] },
     pantry: { x0: 29, x1: 43, y0: 20, y1: 27, door: { x: 35, y: 19.5 }, aisleY: 20.9, lanes: [], direct: () => true },
+    boss: { x0: 44, x1: 51, y0: 2, y1: 27, door: { x: 45.2, y: 18 }, aisleY: 18, lanes: [], direct: () => true },
   };
   const CORRIDOR_Y = 18;
 
   function roomAt(x, y) {
+    if (x >= MAIN_W - 1) return x < MAIN_W && y > 16.9 && y < 19.1 ? 'corridor' : 'boss';
     if (y < 16.4) return x < 25.5 ? 'dev' : 'research';
     if (y < 19.6) return 'corridor';
     return x < 17.5 ? 'meeting' : x < 28.5 ? 'director' : 'pantry';
@@ -37,10 +40,79 @@
     ...[5, 7, 9, 11, 12.9].map((x) => ({ x, y: 25.15, face: 'up' })),
     { x: 14.5, y: 23.9, face: 'left' },
   ];
+  // Phòng giám đốc (người dùng điều khiển nhân vật của mình bằng WASD / phím mũi tên)
+  const BOSS_SEAT = { x: 47.6, y: 7.6, face: 'down' };
+  const BOSS_SPOTS = {
+    desk: { x: 47.6, y: 6.2, r: 1.9, label: 'Bàn giám đốc', icon: '🗂' },
+    screen: { x: 47.6, y: 2.6, r: 1.8, label: 'Bảng điều khiển', icon: '📊' },
+    arcade: { x: 49.4, y: 24.2, r: 1.6, label: 'Máy giải trí', icon: '🕹' },
+    piano: { x: 45.6, y: 24.2, r: 1.6, label: 'Đàn', icon: '🎹' },
+    sofa: { x: 47.6, y: 14.6, r: 1.8, label: 'Ghế tiếp khách', icon: '🛋' },
+  };
+  const SPOTS = [
+    { id: 'room:dev', x: 12, y: 16.6, r: 1.8, label: 'Phòng Phát triển', icon: '💻', dept: 'dev' },
+    { id: 'room:research', x: 34, y: 16.6, r: 1.8, label: 'Phòng Nghiên cứu', icon: '📚', dept: 'research' },
+    { id: 'room:meeting', x: 8, y: 19.4, r: 1.6, label: 'Phòng họp', icon: '🗣' },
+    { id: 'room:meeting-table', x: 8.8, y: 23.2, r: 3.2, label: 'Bàn họp', icon: '🗣' },
+    { id: 'room:office', x: 22, y: 19.4, r: 1.6, label: 'Phòng điều phối', icon: '🧭' },
+    { id: 'room:pantry', x: 40.3, y: 21.8, r: 1.8, label: 'Máy pha cà phê', icon: '☕' },
+    { id: 'room:pantry-sofa', x: 32.2, y: 24.0, r: 2.0, label: 'Sofa pantry', icon: '🛋' },
+    ...Object.entries(BOSS_SPOTS).map(([k, v]) => ({ id: `boss:${k}`, ...v })),
+  ];
+  // vật cản cho nhân vật người dùng (ô; [x, y, w, h])
+  const SOLIDS = [];
+  const PLAYER_LOOK = { skin: '#f1c27d', hair: '#1f1408', shirt: '#1f2a44' };
+
   const PANTRY_SPOTS = [
     { x: 40.3, y: 21.7, face: 'up' }, { x: 30.6, y: 21.7, face: 'up' }, { x: 36.0, y: 25.3, face: 'up' },
     { x: 38.6, y: 25.3, face: 'up' }, { x: 33.0, y: 23.2, face: 'right' }, { x: 41.2, y: 24.0, face: 'left' },
   ];
+
+  (function buildSolids() {
+    const add = (x, y, w, h) => SOLIDS.push([x, y, w, h]);
+    // tường
+    add(0, 0, W, 2); // mặt tiền + tường trên
+    add(0, 0, 1, H);
+    add(W - 1, 0, 1, H);
+    add(0, H - 1, W, 1);
+    add(25, 0, 1, 16.4);
+    const hwall = (y, gaps) => {
+      let x = 1;
+      for (const [g0, g1] of gaps) {
+        add(x, y, g0 - x, 1);
+        x = g1;
+      }
+      add(x, y, MAIN_W - 1 - x, 1);
+    };
+    hwall(16, [[11, 13], [33, 35]]);
+    hwall(19, [[7, 9], [21, 23], [34, 36]]);
+    add(17, 19, 1, 8);
+    add(28, 19, 1, 8);
+    add(MAIN_W - 1, 0, 1, 17); // tường giữa tòa chính và phòng giám đốc, cửa ở hành lang
+    add(MAIN_W - 1, 19, 1, H - 19);
+    // bàn làm việc
+    for (const s of [...DEV_SEATS, ...RESEARCH_SEATS, DIRECTOR_SEAT]) add(s.x - 1.6, s.y - 2.4, 3.2, 1.35);
+    add(BOSS_SEAT.x - 2.2, BOSS_SEAT.y - 2.6, 4.4, 1.6); // bàn giám đốc
+    // đồ đạc
+    add(4.0, 22.2, 9.6, 1.95); // bàn họp
+    add(41.2, 2.6, 1.6, 10.2); // giá sách nghiên cứu
+    add(18.3, 20.2, 1.6, 1.85);
+    add(30.0, 24.6, 4.4, 1.4); // sofa pantry
+    add(36.0, 22.7, 2.6, 1.6);
+    add(39.7, 20.0, 1.3, 1.3);
+    add(30.2, 20.0, 0.8, 1.3);
+    add(31.5, 22.4, 1.6, 0.9);
+    add(45.6, 13.6, 4.0, 1.2); // sofa giám đốc
+    add(46.7, 11.4, 1.8, 1.0); // bàn trà
+    add(48.9, 23.0, 1.3, 1.6); // máy giải trí
+    add(44.9, 23.2, 1.5, 1.2); // đàn
+    add(49.6, 2.6, 1.4, 4.0); // giá sách giám đốc
+  })();
+
+  function solidAt(x, y) {
+    for (const [sx, sy, sw, sh] of SOLIDS) if (x >= sx && x < sx + sw && y >= sy && y < sy + sh) return true;
+    return false;
+  }
 
   // ── Tiện ích vẽ ──────────────────────────────────────────────────────────
   function hash(s) {
@@ -159,6 +231,10 @@
       }
       p.px(x, y, -1, -12, 2, 1, shade(skin, -0.18));
     }
+    if (opts.tie && face !== 'up') {
+      p.px(x, y, -1, -10, 2, 1, '#f8fafc');
+      p.px(x, y, -0.5, -9, 1, 4, opts.tie);
+    }
     if (opts.glow) p.px(x, y, -4, -17, 8, 7, 'rgba(56,189,248,0.18)');
   }
 
@@ -194,6 +270,13 @@
       this.meetingTitle = '';
       this.runningCount = 0;
       this.pops = [];
+      this.effects = [];
+      this.player = null;
+      this.keys = new Set();
+      this.near = null;
+      this.inputLocked = false;
+      this.pointerIn = false;
+      this.dashboard = null;
       this.bg = null;
       this.t0 = performance.now();
       this.last = this.t0;
@@ -202,11 +285,19 @@
       canvas.addEventListener('mousemove', (e) => this.onMove(e));
       canvas.addEventListener('mouseleave', () => {
         this.hover = null;
+        this.pointerIn = false;
         this.opts.onHover?.(null);
       });
+      canvas.addEventListener('mouseenter', () => (this.pointerIn = true));
       canvas.addEventListener('click', () => {
         if (this.hover) this.opts.onSelect?.(this.hover);
       });
+      // nhân vật người dùng: WASD (mọi lúc trừ khi đang gõ), phím mũi tên (khi trỏ chuột/focus ở văn phòng), E để tương tác
+      canvas.tabIndex = 0;
+      window.addEventListener('keydown', (e) => this.onKey(e, true));
+      window.addEventListener('keyup', (e) => this.onKey(e, false));
+      window.addEventListener('blur', () => this.keys.clear());
+      canvas.addEventListener('dblclick', (e) => this.walkPlayerTo(e));
       requestAnimationFrame((t) => this.loop(t));
     }
 
@@ -286,6 +377,207 @@
 
     select(id) {
       this.selected = id;
+    }
+
+    // ── Nhân vật người dùng (giám đốc) ───────────────────────────────────
+    enablePlayer(opts = {}) {
+      this.player = { x: BOSS_SEAT.x, y: BOSS_SEAT.y, face: 'down', step: 0, path: [], name: opts.name || 'Bạn', look: { ...PLAYER_LOOK, ...(opts.look || {}) }, bubble: null };
+    }
+
+    setDashboard(line1, line2) {
+      this.dashboard = { line1, line2 };
+    }
+
+    typing(e) {
+      const el = e.target;
+      return !!el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName || ''));
+    }
+
+    onKey(e, down) {
+      if (!this.player) return;
+      if (down && (this.inputLocked || this.typing(e) || e.ctrlKey || e.metaKey || e.altKey)) return;
+      const k = (e.key || '').toLowerCase();
+      const dir = { w: 'up', s: 'down', a: 'left', d: 'right', arrowup: 'up', arrowdown: 'down', arrowleft: 'left', arrowright: 'right' }[k];
+      if (dir) {
+        const arrow = k.startsWith('arrow');
+        if (arrow && !(this.pointerIn || document.activeElement === this.canvas)) return;
+        if (down) this.keys.add(dir);
+        else this.keys.delete(dir);
+        if (arrow) e.preventDefault();
+        if (down) this.player.path = [];
+        return;
+      }
+      if (down && k === 'e' && this.near) {
+        e.preventDefault();
+        this.opts.onInteract?.(this.near, this.screenPos(this.near.x, this.near.y));
+      }
+    }
+
+    free(x, y) {
+      return !(solidAt(x - 0.3, y) || solidAt(x + 0.3, y) || solidAt(x - 0.3, y - 0.35) || solidAt(x + 0.3, y - 0.35));
+    }
+
+    tileAt(e) {
+      const r = this.canvas.getBoundingClientRect();
+      return { x: ((e.clientX - r.left) * this.dpr - this.ox) / (T * this.s), y: ((e.clientY - r.top) * this.dpr - this.oy) / (T * this.s) };
+    }
+
+    walkPlayerTo(e) {
+      if (!this.player || this.hover) return;
+      const q = this.tileAt(e);
+      if (q.x < 1 || q.y < 2 || q.x > W - 1 || q.y > H - 1 || !this.free(q.x, q.y)) return;
+      this.walkTo(this.player, { x: q.x, y: q.y, face: 'down' });
+    }
+
+    /** Vị trí trên màn hình (px CSS, tương đối canvas) của một điểm trên sơ đồ. */
+    screenPos(x, y) {
+      return { left: (this.ox + x * T * this.s) / this.dpr, top: (this.oy + y * T * this.s) / this.dpr };
+    }
+
+    findNear() {
+      const pl = this.player;
+      let best = null;
+      let bd = 1e9;
+      for (const a of this.agents.values()) {
+        const d = Math.hypot(a.x - pl.x, (a.y - pl.y) * 1.2);
+        if (d < 1.7 && d < bd) {
+          bd = d;
+          best = { type: 'agent', id: a.def.id, label: a.def.name, x: a.x, y: a.y - 1.2 };
+        }
+      }
+      for (const sp of SPOTS) {
+        const d = Math.hypot(sp.x - pl.x, sp.y - pl.y);
+        if (d < sp.r && d + 0.4 < bd) {
+          bd = d + 0.4;
+          best = { type: 'spot', id: sp.id, label: sp.label, icon: sp.icon, dept: sp.dept, x: sp.x, y: sp.y };
+        }
+      }
+      return best;
+    }
+
+    tickPlayer(dt) {
+      const pl = this.player;
+      let dx = 0;
+      let dy = 0;
+      if (this.keys.has('left')) dx -= 1;
+      if (this.keys.has('right')) dx += 1;
+      if (this.keys.has('up')) dy -= 1;
+      if (this.keys.has('down')) dy += 1;
+      if (dx || dy) {
+        const n = Math.hypot(dx, dy);
+        const step = 5.5 * dt;
+        const nx = pl.x + (dx / n) * step;
+        const ny = pl.y + (dy / n) * step;
+        if (this.free(nx, pl.y)) pl.x = nx;
+        if (this.free(pl.x, ny)) pl.y = ny;
+        pl.face = Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up';
+        pl.step += dt * 14;
+      } else if (pl.path.length) {
+        const tgt = pl.path[0];
+        const ddx = tgt.x - pl.x;
+        const ddy = tgt.y - pl.y;
+        const d = Math.hypot(ddx, ddy);
+        const stepLen = 5.5 * dt;
+        if (d <= stepLen) {
+          pl.x = tgt.x;
+          pl.y = tgt.y;
+          pl.path.shift();
+        } else {
+          pl.x += (ddx / d) * stepLen;
+          pl.y += (ddy / d) * stepLen;
+        }
+        pl.face = Math.abs(ddx) > Math.abs(ddy) ? (ddx > 0 ? 'right' : 'left') : ddy > 0 ? 'down' : 'up';
+        pl.step += dt * 14;
+      } else pl.step = 0;
+      const near = this.findNear();
+      if ((near && near.id) !== (this.near && this.near.id)) this.opts.onNear?.(near);
+      this.near = near;
+    }
+
+    playerSay(text, ms = 4000) {
+      if (this.player) this.player.bubble = { text, until: performance.now() + ms };
+    }
+
+    /** Hiệu ứng cho vui (không tác động tới công việc): hearts | stars | confetti | notes | coffee | laugh. */
+    effect(kind, x, y) {
+      const icons = { hearts: ['❤', '💖', '❤'], stars: ['⭐', '✨', '🌟'], confetti: ['🎉', '🎊', '✨'], notes: ['🎵', '🎶', '🎵'], coffee: ['☕', '♨'], laugh: ['😂', '🤣', '😆'], wave: ['👋', '🙌'] }[kind] || ['✨'];
+      const now = performance.now();
+      for (let i = 0; i < 6; i++) this.effects.push({ x: x + (Math.random() - 0.5) * 1.6, y: y - 1.6 - Math.random() * 0.6, icon: icons[i % icons.length], t: now + i * 90, vx: (Math.random() - 0.5) * 0.6 });
+    }
+
+    /** Trò vui với một agent — chỉ đổi hình ảnh trên sơ đồ. */
+    funWith(id, kind, text) {
+      const a = this.agents.get(id);
+      if (!a) return;
+      const busy = (a.state?.status ?? 'idle') !== 'idle';
+      if (kind === 'coffee') {
+        if (!busy && a.def.role !== 'router') {
+          this.goPantry(a);
+          this.say(id, text || 'Cảm ơn sếp! Em đi pha cà phê ☕', 5000);
+        } else this.say(id, text || 'Em đang dở việc, lát nữa em uống nhé sếp! ☕', 5000);
+        this.effect('coffee', a.x, a.y);
+        return;
+      }
+      if (text) this.say(id, text, kind === 'joke' ? 9000 : 5000);
+      this.effect({ highfive: 'wave', praise: 'stars', joke: 'laugh', cheer: 'confetti' }[kind] || 'hearts', a.x, a.y);
+    }
+
+    /** Mời mọi agent đang rảnh đi uống cà phê (cho vui). */
+    coffeeParty() {
+      let n = 0;
+      for (const a of this.agents.values()) {
+        if ((a.state?.status ?? 'idle') === 'idle' && a.def.role !== 'router' && a.target === 'desk') {
+          this.goPantry(a);
+          if (n++ < 3) this.say(a.def.id, ['Tuyệt quá sếp ơi!', 'Cà phê sữa đá nhé!', 'Em xin một ly trà đào 🍑'][n - 1], 4000);
+        }
+      }
+      return n;
+    }
+
+    musicAround(x, y) {
+      this.effect('notes', x, y);
+      for (const a of this.agents.values()) if (Math.hypot(a.x - x, a.y - y) < 9 && Math.random() < 0.5) this.effect('notes', a.x, a.y);
+    }
+
+    drawPlayer(p, now) {
+      const pl = this.player;
+      const c = p.c;
+      const y = pl.y - 1.62;
+      c.font = `700 ${Math.max(7, 6 * p.s)}px "Be Vietnam Pro", system-ui, sans-serif`;
+      const name = pl.name;
+      const wpx = c.measureText(name).width / (T * p.s) + 0.75;
+      p.round(pl.x - wpx / 2, y - 0.3, wpx, 0.58, 3, 'rgba(66,32,6,0.9)', '#fbbf24');
+      p.text(name, pl.x, y, 6, '#fde68a', 'center', 700);
+      let text = pl.bubble && now < pl.bubble.until ? pl.bubble.text : null;
+      let hint = false;
+      if (!text && this.near) {
+        text = `E · ${this.near.icon ? this.near.icon + ' ' : ''}${this.near.label}`;
+        hint = true;
+      }
+      if (!text) return;
+      c.font = `600 ${Math.max(7, 5.6 * p.s)}px "Be Vietnam Pro", system-ui, sans-serif`;
+      const lines = wrap(text, 30);
+      const lw = Math.max(...lines.map((l) => c.measureText(l).width)) / (T * p.s) + 0.6;
+      const bh = lines.length * 0.42 + 0.3;
+      const bx = Math.max(1.1, Math.min(W - 1.1 - lw, pl.x - lw / 2));
+      const by = y - 0.42 - bh;
+      p.round(bx, by, lw, bh, 4, hint ? 'rgba(120,53,15,0.92)' : 'rgba(255,251,235,0.97)', hint ? '#fbbf24' : '#fcd34d');
+      lines.forEach((l, i) => p.text(l, bx + 0.3, by + 0.36 + i * 0.42, 5.6, hint ? '#fef3c7' : '#422006', 'left', 600));
+    }
+
+    drawEffects(p, now) {
+      const c = p.c;
+      this.effects = this.effects.filter((f) => now - f.t < 1600);
+      for (const f of this.effects) {
+        const k = (now - f.t) / 1600;
+        if (k < 0) continue;
+        c.globalAlpha = Math.max(0, 1 - k);
+        c.font = `${Math.max(9, 9 * p.s)}px system-ui, "Segoe UI Emoji", sans-serif`;
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText(f.icon, p.X(f.x + f.vx * k), p.Y(f.y - k * 1.4));
+      }
+      c.globalAlpha = 1;
     }
 
     // ── Di chuyển ─────────────────────────────────────────────────────────
@@ -406,6 +698,7 @@
         }
       }
       this.pops = this.pops.filter((p) => now - p.t < 1800);
+      if (this.player) this.tickPlayer(dt);
     }
 
     // ── Vẽ ────────────────────────────────────────────────────────────────
@@ -450,6 +743,7 @@
           else if (r === 'corridor') col = (x + y) % 2 ? '#8a93a3' : '#939cac';
           else if (r === 'meeting') col = (x + y) % 2 ? '#2d5a60' : '#2a555a';
           else if (r === 'director') col = y % 2 ? '#6e4631' : '#754b35';
+          else if (r === 'boss') col = (x + y) % 2 ? '#e7e1d3' : '#ddd6c6';
           else col = (x + y) % 2 ? '#d6d0c2' : '#cdc6b6';
           p.rect(x, y, 1, 1, col);
           if (r === 'dev' && (x + (y % 2) * 3) % 6 === 0) p.rect(x, y, 0.06, 1, '#a9824e');
@@ -467,7 +761,7 @@
       p.rect(0, 0, W, 0.35, WALL_TOP);
       p.rect(0, 1.82, W, 0.18, '#252c40');
       // cửa sổ
-      for (const wx of [2.5, 6.5, 17.5, 21.0, 28.5, 39.5]) {
+      for (const wx of [2.5, 6.5, 17.5, 21.0, 28.5, 39.5, 44.6]) {
         p.rect(wx, 0.55, 2.4, 1.05, '#1e293b');
         p.rect(wx + 0.12, 0.65, 2.16, 0.85, '#7dd3fc');
         p.rect(wx + 0.12, 0.65, 2.16, 0.25, '#bae6fd');
@@ -480,11 +774,17 @@
       };
       sign(9.3, 0.6, 7.2, 'PHÒNG PHÁT TRIỂN DỰ ÁN', '#2563eb');
       sign(31.2, 0.6, 6.6, 'PHÒNG NGHIÊN CỨU', '#7c3aed');
+      sign(47.4, 0.6, 3.9, 'GIÁM ĐỐC', '#ca8a04');
       // tường bao
       p.rect(0, 0, 1, H, WALL);
       p.rect(W - 1, 0, 1, H, WALL);
       p.rect(0, H - 1, W, 1, WALL);
       p.rect(25, 0, 1, 16.4, WALL);
+      // tường giữa tòa chính và phòng giám đốc (cửa ở hành lang)
+      p.rect(MAIN_W - 1, 2, 1, 15, WALL);
+      p.rect(MAIN_W - 1, 19, 1, H - 19, WALL);
+      p.rect(MAIN_W - 1.12, 16.9, 0.12, 2.2, '#64748b');
+      p.rect(MAIN_W, 16.9, 0.12, 2.2, '#64748b');
       // tường giữa phòng trên & hành lang (có cửa)
       const hwall = (y, h, gaps) => {
         let x = 1;
@@ -495,8 +795,8 @@
           p.rect(g1, y - 0.1, 0.12, h + 0.2, '#64748b');
           x = g1;
         }
-        p.rect(x, y, W - 1 - x, h, WALL);
-        p.rect(x, y, W - 1 - x, 0.2, WALL_TOP);
+        p.rect(x, y, MAIN_W - 1 - x, h, WALL);
+        p.rect(x, y, MAIN_W - 1 - x, 0.2, WALL_TOP);
       };
       hwall(16, 1, [[11, 13], [33, 35]]);
       hwall(19, 1, [[7, 9], [21, 23], [34, 36]]);
@@ -588,6 +888,40 @@
       p.rect(31.5, 22.4, 1.6, 0.9, '#78350f'); // bàn nhỏ
       // TV phòng điều phối
       p.rect(23.9, 20.15, 3.6, 1.25, '#0f172a');
+
+      // ── Phòng giám đốc ──
+      p.rect(44.4, 3.2, 6.4, 0.08, '#cbb89a'); // phào tường
+      p.rect(45.0, 2.15, 5.2, 1.35, '#0f172a'); // màn hình bảng điều khiển (vẽ nội dung động)
+      p.rect(45.1, 9.0, 5.0, 3.2, '#9f1239'); // thảm
+      p.rect(45.3, 9.2, 4.6, 2.8, '#be123c');
+      // bàn giám đốc chữ U
+      p.rect(BOSS_SEAT.x - 2.2, BOSS_SEAT.y - 2.5, 4.4, 1.0, '#5b3a22');
+      p.rect(BOSS_SEAT.x - 2.2, BOSS_SEAT.y - 2.5, 4.4, 0.14, '#7c5233');
+      p.rect(BOSS_SEAT.x - 2.2, BOSS_SEAT.y - 1.5, 4.4, 0.35, '#3f2716');
+      p.rect(BOSS_SEAT.x - 0.8, BOSS_SEAT.y - 2.9, 1.6, 0.7, '#111827'); // laptop
+      p.rect(BOSS_SEAT.x - 0.7, BOSS_SEAT.y - 2.82, 1.4, 0.5, '#1e3a8a');
+      p.rect(BOSS_SEAT.x + 1.2, BOSS_SEAT.y - 2.4, 0.45, 0.3, '#fef3c7'); // giấy tờ
+      p.rect(BOSS_SEAT.x - 1.9, BOSS_SEAT.y - 2.45, 0.32, 0.36, '#f8fafc'); // cốc
+      p.rect(BOSS_SEAT.x - 1.6, BOSS_SEAT.y - 2.75, 0.5, 0.35, '#16a34a'); // cây nhỏ
+      // ghế giám đốc (lưng ghế vẽ theo lớp z)
+      // giá sách
+      p.rect(49.6, 2.6, 1.4, 4.0, '#5b3a22');
+      for (let r = 0; r < 4; r++) for (let b = 0; b < 5; b++) p.rect(49.7 + b * 0.25, 2.75 + r * 0.95, 0.18, 0.62, ['#f59e0b', '#0ea5e9', '#a855f7', '#ef4444', '#22c55e'][(b + r) % 5]);
+      // sofa + bàn trà tiếp khách
+      p.rect(45.6, 13.6, 4.0, 1.2, '#334155');
+      p.rect(45.6, 13.6, 4.0, 0.4, '#1e293b');
+      p.round(46.7, 11.4, 1.8, 1.0, 6, '#a16207');
+      p.rect(47.4, 11.6, 0.3, 0.3, '#f8fafc');
+      // góc giải trí: đàn + máy chơi game
+      p.rect(44.9, 23.2, 1.5, 1.2, '#111827');
+      for (let k = 0; k < 6; k++) p.rect(45.0 + k * 0.22, 23.3, 0.17, 0.5, '#f8fafc');
+      p.rect(48.9, 23.0, 1.3, 1.6, '#7c3aed');
+      p.rect(49.05, 23.15, 1.0, 0.65, '#0f172a');
+      p.rect(49.2, 24.0, 0.2, 0.2, '#ef4444');
+      p.rect(49.6, 24.0, 0.2, 0.2, '#22c55e');
+      plant(44.7, 27 - 0.4, true);
+      plant(50.6, 15.4);
+      sign(45.0, 21.5, 5.2, 'GÓC GIẢI TRÍ', '#7c3aed');
       this.bg = off;
     }
 
@@ -624,6 +958,11 @@
       p.rect(24.0, 20.25, 3.4, 1.05, '#0b1220');
       p.text(this.runningCount ? `${this.runningCount} việc đang chạy` : 'Sẵn sàng', 25.7, 20.62, 5.2, this.runningCount ? '#5eead4' : '#94a3b8');
       p.text(new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }), 25.7, 21.02, 5, '#64748b', 'center', 500);
+      // bảng điều khiển phòng giám đốc
+      p.rect(45.1, 2.25, 5.0, 1.15, '#0b1220');
+      const dash = this.dashboard || {};
+      p.text(dash.line1 || 'Bảng điều khiển', 47.6, 2.62, 5, '#fbbf24');
+      p.text(dash.line2 || `${this.runningCount} việc đang chạy`, 47.6, 3.05, 4.6, '#94a3b8', 'center', 500);
       // bảng trắng phòng họp
       p.rect(9.8, 20.15, 6.6, 1.0, '#f8fafc');
       p.rect(9.8, 21.1, 6.6, 0.08, '#94a3b8');
@@ -713,8 +1052,15 @@
         const seat = this.seats.get(a.def.id);
         if (seat && seat.face === 'up') items.push({ y: seat.y + 0.12, draw: () => p.rect(seat.x - 0.5, seat.y - 0.18, 1.0, 0.34, '#3f4a5f') });
       }
+      if (this.player) {
+        const pl = this.player;
+        items.push({ y: pl.y, draw: () => drawCharacter(p, pl.x, pl.y, pl.look, pl.face, pl.step, { ring: '#fbbf24', tie: '#dc2626', blink: false }) });
+        items.push({ y: BOSS_SEAT.y - 0.9, draw: () => { p.rect(BOSS_SEAT.x - 0.6, BOSS_SEAT.y - 1.0, 1.2, 0.5, '#1f2937'); p.rect(BOSS_SEAT.x - 0.6, BOSS_SEAT.y - 1.0, 1.2, 0.12, '#374151'); } });
+      }
       items.sort((a, b) => a.y - b.y).forEach((i) => i.draw());
       for (const a of this.agents.values()) this.drawTag(p, a, now);
+      if (this.player) this.drawPlayer(p, now);
+      this.drawEffects(p, now);
       for (const pop of this.pops) {
         const k = (now - pop.t) / 1800;
         ctx.globalAlpha = 1 - k;

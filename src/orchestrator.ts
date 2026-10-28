@@ -5,7 +5,7 @@ import type { EventBus } from './events.js';
 import { addWorktree, changeSummary, commitAll, copyUntracked, currentBranch, headCommit, isGitRepo } from './git.js';
 import type { Herdr } from './herdr.js';
 import type { LogStore } from './logger.js';
-import { blockedSubtasks, keywordRoute, orderJoint, parsePlan, parseReview, parseRoute, readySubtasks } from './planner.js';
+import { blockedSubtasks, keywordRoute, newSubtask, orderJoint, parsePlan, parseReview, parseRoute, readySubtasks } from './planner.js';
 import { historyText, selectHistory } from './history.js';
 import * as P from './prompts.js';
 import type { Registry } from './registry.js';
@@ -214,10 +214,18 @@ export class Orchestrator {
     const { config, registry, store } = this.d;
     const project = input.projectId ? store.project(input.projectId) : undefined;
     if (input.projectId && !project) throw new Error(`Không có dự án "${input.projectId}"`);
-    let mode = input.mode ?? (project ? 'project' : input.department ? 'department' : 'auto');
+    let mode = input.mode ?? (input.agentId ? 'agent' : project ? 'project' : input.department ? 'department' : 'auto');
     if (mode === 'project' && !project) mode = 'auto';
     if (mode === 'department') {
       if (!input.department || !registry.departments.has(input.department)) throw new Error(`Phòng ban không hợp lệ: ${input.department ?? '(trống)'}`);
+    }
+    let department = input.department;
+    if (mode === 'agent') {
+      const a = input.agentId ? registry.agents.get(input.agentId) : undefined;
+      if (!a) throw new Error(`Agent không hợp lệ: ${input.agentId ?? '(trống)'}`);
+      if (!registry.departments.has(a.department)) throw new Error(`${a.name} không thuộc phòng ban nào nhận việc (điều phối viên chỉ định tuyến)`);
+      if (project?.agents?.length && !project.agents.includes(a.id)) throw new Error(`${a.name} không nằm trong nhân sự của dự án ${project.name}`);
+      department = a.department;
     }
     const o = input.options ?? {};
     const now = nowIso();
@@ -227,8 +235,9 @@ export class Orchestrator {
       title: (input.title ?? '').trim() || firstSentence(brief, 90),
       brief,
       mode,
-      department: input.department,
+      department,
       projectId: project?.id,
+      agentId: mode === 'agent' ? input.agentId : undefined,
       classification: (project?.classification ?? config.dataProtection.defaultClassification) as Classification,
       status: 'queued',
       departments: [],
@@ -696,7 +705,7 @@ export class Orchestrator {
       this.prepareWorkspace(task, project);
       if (!task.runs.length) {
         let depts: string[];
-        if (task.mode === 'department') depts = [task.department!];
+        if (task.mode === 'department' || task.mode === 'agent') depts = [task.department!];
         else if (task.mode === 'joint') depts = orderJoint([...registry.departments.keys()].filter((k) => k === 'research' || k === 'dev'));
         else if (task.mode === 'project' && project?.department && project.department !== 'auto') {
           depts = project.department === 'joint' ? orderJoint(['research', 'dev']) : [project.department];
@@ -838,6 +847,17 @@ export class Orchestrator {
     run.stage ??= inferStage(run);
     if (run.stage && task.resumes) this.d.logs.write({ level: 'info', kind: 'checkpoint', msg: `${dept.short}: tiếp tục sau mốc "${run.stage}"`, taskId: task.id, department: dept.id });
 
+    // 0) Việc giao riêng cho một agent: một hạng mục, không lập kế hoạch/họp
+    const solo = task.mode === 'agent' && task.agentId ? registry.agents.get(task.agentId) : undefined;
+    if (solo && !reached(run, 'planned')) {
+      run.subtasks = [newSubtask({ id: 'S1', title: task.title, assignee: solo.id, description: task.brief, deliverable: 'Sản phẩm theo yêu cầu, báo cáo bàn giao theo mẫu đầu ra' })];
+      run.planSummary = `Việc giao riêng cho ${solo.name} (@${solo.id})`;
+      run.decisions = '';
+      run.stage = 'finalized';
+      this.message(task, dept.id, 'system', 'system', `📌 Việc giao riêng cho ${solo.name} — bỏ qua lập kế hoạch và họp.${task.options.review && reviewer && reviewer.id !== solo.id ? ` ${reviewer.name} sẽ review.` : ''}`);
+      this.save(task);
+    }
+
     // 1) Lập kế hoạch
     let plan: ReturnType<typeof parsePlan> | undefined;
     if (!reached(run, 'planned')) {
@@ -915,7 +935,7 @@ export class Orchestrator {
     // 4) Review & sửa
     const done = () => run.subtasks.filter((s) => s.status === 'done' && s.output);
     if (!reached(run, 'reviewed')) {
-      if (task.options.review && reviewer && done().length) {
+      if (task.options.review && reviewer && done().length && reviewer.id !== solo?.id) {
         for (let attempt = Math.min(run.reviewRound ?? 0, task.options.maxRevisions); attempt <= task.options.maxRevisions; attempt++) {
           this.checkAbort(task);
           run.reviewRound = attempt;
@@ -1032,8 +1052,23 @@ export class Orchestrator {
       this.save(task);
     }
 
-    // 5) Báo cáo tổng hợp
+    // 5) Báo cáo tổng hợp (việc giao riêng: dùng luôn bàn giao của agent, không tốn thêm lượt gọi trưởng phòng)
     this.checkAbort(task);
+    if (solo) {
+      const st = run.subtasks[0];
+      const body = st?.output ? (this.d.store.readRunFile(task.id, st.output) ?? '').replace(/^<!--[\s\S]*?-->\s*/, '') : '';
+      const rv = run.review ? `\n\n## Review\n${run.review.approved ? '✅ Đã duyệt' : '⚠️ Chưa duyệt hoàn toàn'}: ${run.review.summary}${run.review.issues.length ? `\n${run.review.issues.map((i) => `- [${i.severity}] ${i.comment}`).join('\n')}` : ''}` : '';
+      const finalText = `> Việc giao riêng cho ${solo.name} (@${solo.id})${st?.status === 'done' ? '' : ` — hạng mục ${st?.status ?? 'chưa chạy'}`}\n\n${body || '(chưa có bàn giao)'}${rv}\n`;
+      const rel = `${safeName(dept.id)}-FINAL.md`;
+      writeText(path.join(this.d.store.runDir(task.id), rel), finalText);
+      run.finalPath = rel;
+      run.status = run.subtasks.some((s) => s.status === 'failed') ? 'failed' : 'done';
+      run.stage = 'done';
+      run.finishedAt = nowIso();
+      run.phase = undefined;
+      this.save(task);
+      return finalText;
+    }
     this.setPhase(task, run, 'synthesize');
     const items = done().map((st) => this.depInput(task, st));
     const reviewText = run.review
@@ -1584,7 +1619,8 @@ export class Orchestrator {
         const allow = rt.supportsTools && rt.id !== 'mock' ? toolsFor(agent.tools, access, phase, web) : [];
         const built = build(allow);
         if (handover && allow.length) built.prompt = `${built.prompt}\n\n${handover}`;
-        const system = P.systemFor(agent, ctx.dept, cls, phase);
+        const fb = this.d.store.activeFeedback(agent.id).map((f) => `${f.rating === 'up' ? '👍 ' : f.rating === 'down' ? '👎 ' : ''}${f.text}`);
+        const system = P.systemFor(agent, ctx.dept, cls, phase, fb);
         const piiOut = cls === 'confidential' || cls === 'restricted';
         const outbound = (s: string) => (rt.local ? s : redact(s, { secrets: config.dataProtection.redactSecrets, pii: piiOut }));
         ensureDir(ctx.cwd);

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ensureDir, readJsonFile, readJsonl, safeName, writeJsonAtomic } from './util/fsx.js';
 import type { LogStore } from './logger.js';
-import type { ChatMessage, ProjectDef, Task } from './types.js';
+import type { AgentFeedback, ChatMessage, ProjectDef, PromptDef, Task } from './types.js';
 
 /**
  * Lưu trạng thái nhiệm vụ (data/runs/<id>/task.json), hội thoại (transcript.jsonl)
@@ -127,5 +127,81 @@ export class Store {
     const next = list.filter((p) => p.id !== id);
     writeJsonAtomic(this.projectsFile(), next);
     return next.length !== list.length;
+  }
+
+  // ── Góp ý cho agent (data/feedback/<agent>.json) ─────────────────────
+  private feedbackFile(agentId: string): string {
+    return path.join(this.dataDir, 'feedback', `${safeName(agentId)}.json`);
+  }
+
+  feedback(agentId: string): AgentFeedback[] {
+    return readJsonFile<AgentFeedback[]>(this.feedbackFile(agentId), []);
+  }
+
+  addFeedback(agentId: string, f: { text: string; rating?: 'up' | 'down'; taskId?: string }): AgentFeedback {
+    const list = this.feedback(agentId);
+    const item: AgentFeedback = { id: `F${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, agentId, text: f.text, rating: f.rating, taskId: f.taskId, active: true, at: new Date().toISOString() };
+    list.push(item);
+    ensureDir(path.dirname(this.feedbackFile(agentId)));
+    writeJsonAtomic(this.feedbackFile(agentId), list.slice(-200));
+    return item;
+  }
+
+  updateFeedback(agentId: string, id: string, patch: { active?: boolean }): AgentFeedback | undefined {
+    const list = this.feedback(agentId);
+    const item = list.find((x) => x.id === id);
+    if (!item) return undefined;
+    if (patch.active !== undefined) item.active = patch.active;
+    writeJsonAtomic(this.feedbackFile(agentId), list);
+    return item;
+  }
+
+  removeFeedback(agentId: string, id: string): boolean {
+    const list = this.feedback(agentId);
+    const next = list.filter((x) => x.id !== id);
+    if (next.length === list.length) return false;
+    writeJsonAtomic(this.feedbackFile(agentId), next);
+    return true;
+  }
+
+  /** Góp ý đang bật (mới nhất trước, tối đa `limit`) — đưa vào hồ sơ agent khi gọi model. */
+  activeFeedback(agentId: string, limit = 5): AgentFeedback[] {
+    return this.feedback(agentId)
+      .filter((x) => x.active && x.text.trim())
+      .slice(-limit)
+      .reverse();
+  }
+
+  // ── Thư viện prompt (data/prompts.json) ──────────────────────────────
+  private promptsFile(): string {
+    return path.join(this.dataDir, 'prompts.json');
+  }
+
+  prompts(): PromptDef[] {
+    return readJsonFile<PromptDef[]>(this.promptsFile(), []);
+  }
+
+  savePrompt(p: PromptDef): PromptDef {
+    const list = this.prompts().filter((x) => x.id !== p.id);
+    list.push(p);
+    list.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    writeJsonAtomic(this.promptsFile(), list.slice(0, 500));
+    return p;
+  }
+
+  removePrompt(id: string): boolean {
+    const list = this.prompts();
+    const next = list.filter((x) => x.id !== id);
+    writeJsonAtomic(this.promptsFile(), next);
+    return next.length !== list.length;
+  }
+
+  usePrompt(id: string): PromptDef | undefined {
+    const list = this.prompts();
+    const p = list.find((x) => x.id === id);
+    if (!p) return undefined;
+    p.uses = (p.uses ?? 0) + 1;
+    writeJsonAtomic(this.promptsFile(), list);
+    return p;
   }
 }

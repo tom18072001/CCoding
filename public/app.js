@@ -47,7 +47,7 @@
   const PAUSE_VI = { budget: 'chạm trần ngân sách', quota: 'hết tài nguyên token', interrupted: 'server khởi động lại', manual: 'tạm dừng thủ công' };
   const ACCESS_VI = { none: 'không công cụ', read: 'chỉ đọc', write: 'đọc/ghi file', exec: 'đọc/ghi + chạy lệnh' };
   const size = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n >= 1024 ? Math.round(n / 1024) + ' KB' : n + ' B');
-  const MODE_VI = { auto: 'Tự động', department: 'Theo phòng', project: 'Theo dự án', joint: 'Liên phòng' };
+  const MODE_VI = { auto: 'Tự động', department: 'Theo phòng', project: 'Theo dự án', joint: 'Liên phòng', agent: 'Giao riêng' };
   const KIND_VI = { plan: 'kế hoạch', discussion: 'thảo luận', decision: 'quyết định', handoff: 'bàn giao', review: 'review', final: 'báo cáo', system: 'hệ thống' };
   const CLS_VI = { public: 'Công khai', internal: 'Nội bộ', confidential: 'Bảo mật', restricted: 'Hạn chế' };
 
@@ -99,6 +99,7 @@
     S.projects = st.projects;
     S.usage = st.usage;
     S.defaults = st.defaults;
+    S.defaultClassification = st.defaultClassification;
     S.toolsDefault = st.tools?.projectAccess;
     if (st.alerts) {
       S.alerts = st.alerts;
@@ -116,10 +117,16 @@
     office = new window.Office($('#office'), {
       onSelect: (id) => openAgent(id),
       onHover: (id, x, y) => showTooltip(id, x, y),
+      onInteract: (target, pos) => window.Director?.interact(target, pos),
+      onNear: (target) => window.Director?.near(target),
     });
     office.setData(S.departments, [...S.agents.values()]);
+    office.enablePlayer({ name: 'Bạn · Giám đốc' });
     $('#lively').addEventListener('change', (e) => (office.lively = e.target.checked));
     bindUi();
+    // cầu nối cho director.js (phòng giám đốc, prompt, hạn mức, trợ giúp)
+    window.CC = { S, api, esc, md, fmt, total, toast, openAgent, openTask, setTab, avatarUrl, agentName, deptName, deptShort, CLS_VI, TASK_VI, STATUS_VI, MODE_VI, prefillAssign, office: () => office, renderTaskDetail };
+    window.Director?.init();
     renderAll();
     loadRuntimes(false);
     preloadTicker();
@@ -405,6 +412,7 @@
     if (tab === 'tokens') renderTokens();
     if (tab === 'kpi') loadKpi();
     if (tab === 'logs') loadLogs();
+    if (tab === 'quota') window.Director?.renderQuota();
   }
 
   function bindUi() {
@@ -471,6 +479,11 @@
     $('#sel-project').innerHTML = S.projects.length
       ? S.projects.map((p) => `<option value="${esc(p.id)}">${esc(p.name)} (${esc(CLS_VI[p.classification] || p.classification)})</option>`).join('')
       : '<option value="">— chưa có dự án —</option>';
+    const workers = [...S.agents.values()].filter((a) => S.departments.some((d) => d.id === a.department));
+    $('#sel-agent').innerHTML = S.departments
+      .map((d) => `<optgroup label="${esc(d.name)}">${workers.filter((a) => a.department === d.id).map((a) => `<option value="${esc(a.id)}">${esc(a.name)} — ${esc(a.title.slice(0, 40))}</option>`).join('')}</optgroup>`)
+      .join('');
+    $('#sel-agent-project').innerHTML = `<option value="">— không (thư mục riêng của nhiệm vụ) —</option>${S.projects.map((p) => `<option value="${esc(p.id)}">${esc(p.name)} (${esc(CLS_VI[p.classification] || p.classification)})</option>`).join('')}`;
     const f = $('#task-form');
     f.discussionRounds.placeholder = S.defaults.discussionRounds ?? 1;
     f.maxParallel.placeholder = S.defaults.maxParallel ?? 3;
@@ -485,6 +498,28 @@
     const mode = $('#task-form').mode.value;
     $('#row-dept').hidden = mode !== 'department';
     $('#row-project').hidden = mode !== 'project';
+    $('#row-agent').hidden = mode !== 'agent';
+    window.Director?.formChanged();
+  }
+
+  /** Điền sẵn form giao việc (giao lại tương tự, giao việc từ phòng giám đốc, chèn prompt). */
+  function prefillAssign(o = {}) {
+    const f = $('#task-form');
+    if (o.mode) {
+      const r = f.querySelector(`input[name=mode][value="${o.mode}"]`);
+      if (r) r.checked = true;
+    }
+    if (o.department) f.department.value = o.department;
+    if (o.projectId && o.mode === 'project') f.projectId.value = o.projectId;
+    if (o.agentId) f.agentId.value = o.agentId;
+    if (o.mode === 'agent') f.agentProject.value = o.projectId || '';
+    if (o.title !== undefined) f.title.value = o.title;
+    if (o.brief !== undefined) f.brief.value = o.brief;
+    if (o.budgetTokens) f.budgetTokens.value = o.budgetTokens;
+    syncMode();
+    setTab('assign');
+    f.brief.dispatchEvent(new Event('input'));
+    f.brief.focus();
   }
 
   async function submitTask(e) {
@@ -507,6 +542,10 @@
     const attachments = S.pending.filter((a) => a.status === 'ok').map((a) => a.id);
     const body = { brief: f.brief.value, title: f.title.value || undefined, mode, options: opt, attachments };
     if (mode === 'department') body.department = f.department.value;
+    if (mode === 'agent') {
+      body.agentId = f.agentId.value;
+      if (f.agentProject.value) body.projectId = f.agentProject.value;
+    }
     if (mode === 'project') {
       if (!f.projectId.value) {
         msg.className = 'form-msg err';
@@ -647,6 +686,7 @@
     const opts = '<option value="">Mặc định</option>' + S.runtimes.map((r) => `<option value="${esc(r.id)}">${esc(r.id)}${r.ok ? '' : ' (chưa sẵn sàng)'}</option>`).join('');
     $('#sel-runtime').innerHTML = opts;
     $('#sel-proj-runtime').innerHTML = opts;
+    window.Director?.formChanged();
   }
 
   // ── Nhiệm vụ ─────────────────────────────────────────────────────────────
@@ -787,7 +827,8 @@
         <div class="t-meta"><span class="status ${t.status}">${TASK_VI[t.status] || t.status}</span>${t.attention ? `<span class="status attention" title="${esc(t.attention.detail)}">⚠ cần xem</span>` : ''}<span>${esc(t.id)}</span><span>${esc(MODE_VI[t.mode] || t.mode)}</span>
         <span class="cls ${esc(t.classification)}">${esc(CLS_VI[t.classification] || t.classification)}</span>
         ${t.projectId ? `<span>dự án: ${esc(t.projectId)}</span>` : ''}<span>token <b style="font-family:var(--mono);color:var(--text)">${fmt(t.usage.input)} in / ${fmt(t.usage.output)} out</b></span>
-        ${canPause ? '<button class="btn ghost sm" id="td-pause">⏸ Tạm dừng</button>' : ''}${canCancel ? '<button class="btn ghost sm danger" id="td-cancel">Hủy</button>' : ''}</div>
+        ${t.agentId ? `<span>giao riêng: ${esc(agentName(t.agentId))}</span>` : ''}
+        ${canPause ? '<button class="btn ghost sm" id="td-pause">⏸ Tạm dừng</button>' : ''}${canCancel ? '<button class="btn ghost sm danger" id="td-cancel">Hủy</button>' : ''}<button class="btn ghost sm" id="td-again" title="Mở form giao việc với yêu cầu, chế độ và phòng/dự án/agent như nhiệm vụ này">↻ Giao lại tương tự</button></div>
         ${meter}${git}${atts}
         ${t.routing ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">🧭 ${esc(t.routing.reason)}</p>` : ''}
         ${t.error && !canResume ? `<p style="font-size:12.5px;color:var(--bad);margin:0 0 8px">${esc(t.error)}</p>` : ''}
@@ -867,6 +908,7 @@
         act(`/api/tasks/${t.id}/package`, b, 'Đã đóng gói vào dự án').then(() => loadProjectsQuiet());
       });
     if (canPause) $('#td-pause').onclick = () => act(`/api/tasks/${t.id}/pause`, {}, 'Đã yêu cầu tạm dừng (các lượt đang chạy sẽ làm nốt)');
+    $('#td-again').onclick = () => prefillAssign({ mode: t.mode, department: t.department, projectId: t.projectId, agentId: t.agentId, title: t.title, brief: t.brief });
     $('#td-back').onclick = () => {
       S.selectedTask = null;
       S.taskDetail = null;
@@ -1048,6 +1090,7 @@
         <div><h2 style="font-size:16px">${esc(a.title)} <small>@${esc(a.id)}</small></h2>
         <div style="color:var(--muted);font-size:12.5px"><span style="color:${deptColor(a.department)}">${esc(deptName(a.department))}</span> · vai trò ${esc(a.role)} · model ${esc(a.model)}</div>
         <div class="st" style="font-size:12.5px;margin-top:3px"><span class="dot" style="background:${window.STATUS_COLOR[st.status]}"></span> ${esc(STATUS_VI[st.status] || st.status)}${st.activity ? ` · ${esc(st.activity)}` : ''}${st.runtime ? ` · <code>${esc(st.runtime)}</code>` : ''}</div></div></div>
+      ${S.departments.some((x) => x.id === a.department) ? `<div class="pb-actions" style="margin:8px 0"><button class="btn primary sm" id="ad-assign">📝 Giao việc riêng</button><button class="btn ghost sm" id="ad-feedback">💬 Góp ý</button>${st.taskId ? '<button class="btn ghost sm" id="ad-budget">💰 Tăng ngân sách việc đang làm</button>' : ''}</div>` : ''}
       <div class="stats">
         <div class="stat"><span>Input</span><b>${fmt(u.input)}</b></div>
         <div class="stat"><span>Output</span><b>${fmt(u.output)}</b></div>
@@ -1080,6 +1123,9 @@
       office.select(null);
       renderPeople();
     };
+    if ($('#ad-assign')) $('#ad-assign').onclick = () => window.Director?.assignAgent(id);
+    if ($('#ad-feedback')) $('#ad-feedback').onclick = () => window.Director?.feedback(id);
+    if ($('#ad-budget')) $('#ad-budget').onclick = () => window.Director?.raiseBudget(id);
   }
 
   // ── Token ────────────────────────────────────────────────────────────────

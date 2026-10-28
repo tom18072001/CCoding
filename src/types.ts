@@ -2,7 +2,8 @@
 
 export type Role = 'lead' | 'member' | 'reviewer' | 'router';
 export type Classification = 'public' | 'internal' | 'confidential' | 'restricted';
-export type TaskMode = 'auto' | 'department' | 'project' | 'joint';
+/** agent: giao việc riêng cho MỘT agent (bỏ định tuyến/lập kế hoạch/họp; vẫn review nếu bật). */
+export type TaskMode = 'auto' | 'department' | 'project' | 'joint' | 'agent';
 export type Phase = 'route' | 'plan' | 'discuss' | 'finalize' | 'execute' | 'review' | 'revise' | 'synthesize';
 export type TaskStatus = 'queued' | 'running' | 'paused' | 'done' | 'failed' | 'cancelled';
 /** pause: chạm trần thì tạm dừng chờ quyết định · complete: chạy tới khi hoàn thành (chấp nhận vượt trần, chỉ cảnh báo). */
@@ -186,6 +187,15 @@ export interface Runtime {
   supportsTools: boolean;
   available(): Promise<RuntimeAvailability>;
   run(req: RunRequest, hooks: RunHooks): Promise<RunResult>;
+  /** Header giới hạn tốc độ/hạn mức nhà cung cấp trả về ở lượt gọi gần nhất, theo model (không chứa khóa). */
+  rateLimits?: Map<string, RateLimitInfo>;
+}
+
+export interface RateLimitInfo {
+  at: string;
+  status: number;
+  /** Header x-ratelimit-* / ratelimit-* / retry-after nguyên văn. */
+  headers: Record<string, string>;
 }
 
 export interface Subtask {
@@ -306,6 +316,8 @@ export interface Task {
   mode: TaskMode;
   department?: string;
   projectId?: string;
+  /** Chế độ "agent": agent nhận việc riêng. */
+  agentId?: string;
   classification: Classification;
   status: TaskStatus;
   phase?: Phase;
@@ -433,12 +445,41 @@ export interface LogEntry {
   data?: Record<string, unknown>;
 }
 
+/** Góp ý của người dùng (giám đốc) cho một agent — các góp ý đang bật được đưa vào hồ sơ của agent ở các lượt sau. */
+export interface AgentFeedback {
+  id: string;
+  agentId: string;
+  text: string;
+  rating?: 'up' | 'down';
+  taskId?: string;
+  active: boolean;
+  at: string;
+}
+
+/** Prompt mẫu trong thư viện (data/prompts.json). */
+export interface PromptDef {
+  id: string;
+  title: string;
+  body: string;
+  tags?: string[];
+  /** Gợi ý cách giao khi chèn: chế độ / phòng / dự án / agent. */
+  mode?: TaskMode;
+  department?: string;
+  projectId?: string;
+  agentId?: string;
+  uses: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface NewTaskInput {
   brief: string;
   title?: string;
   mode?: TaskMode;
   department?: string;
   projectId?: string;
+  /** Chế độ "agent": id agent nhận việc riêng. */
+  agentId?: string;
   options?: Partial<TaskOptions>;
   /** id các file đã tải lên (POST /api/uploads). */
   attachments?: string[];

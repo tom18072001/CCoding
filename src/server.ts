@@ -23,7 +23,7 @@ const MIME: Record<string, string> = {
 };
 
 const CLASSES: Classification[] = ['public', 'internal', 'confidential', 'restricted'];
-const MODES: TaskMode[] = ['auto', 'department', 'project', 'joint'];
+const MODES: TaskMode[] = ['auto', 'department', 'project', 'joint', 'agent'];
 const DIMS: UsageDim[] = ['agent', 'department', 'task', 'project', 'model', 'runtime', 'day', 'phase'];
 const ACCESS: ToolAccess[] = ['none', 'read', 'write', 'exec'];
 const BUDGET_MODES: BudgetMode[] = ['pause', 'complete'];
@@ -98,6 +98,7 @@ export function snapshot(app: App) {
     herdr: { session: config.herdr.session, inside: app.herdr.insideHerdr() },
     defaults: config.defaults,
     defaultRuntime: config.runtime.default,
+    defaultClassification: config.dataProtection.defaultClassification,
     classifications: CLASSES,
     departments: [...registry.departments.values()].map(({ body, file, ...d }) => ({ ...d, charter: body })),
     agents: [...registry.agents.values()].map(({ body, file, ...a }) => ({ ...a, state: states.get(a.id), usage: byAgent.get(a.id) ?? null })),
@@ -181,6 +182,7 @@ export function createServer(app: App): http.Server {
           mode: b.mode,
           department: b.department || undefined,
           projectId: b.projectId || undefined,
+          agentId: b.agentId ? String(b.agentId) : undefined,
           options: b.options ?? {},
           attachments: Array.isArray(b.attachments) ? b.attachments.map(String) : undefined,
         });
@@ -310,6 +312,73 @@ export function createServer(app: App): http.Server {
         byPhase: usage.summary('phase', { agent: a.id }),
         logs: logs.query({ agent: a.id, limit: Number(q('limit') ?? 80) }),
       });
+    }
+
+    // ── Góp ý cho agent (đưa vào hồ sơ của agent ở các lượt sau) ──
+    if ((mm = m(/^\/api\/agents\/([^/]+)\/feedback$/))) {
+      const a = registry.agents.get(mm[1]);
+      if (!a) throw new HttpError(404, 'Không có agent');
+      if (req.method === 'GET') return send(res, 200, store.feedback(a.id).slice().reverse());
+      if (req.method === 'POST') {
+        const b = await readBody(req);
+        const text = String(b.text ?? '').trim().slice(0, 1000);
+        const rating = b.rating === 'up' || b.rating === 'down' ? b.rating : undefined;
+        if (!text && !rating) throw new HttpError(400, 'Cần nội dung góp ý hoặc đánh giá 👍/👎');
+        if (b.taskId && !store.get(String(b.taskId))) throw new HttpError(400, 'Nhiệm vụ không tồn tại');
+        const f = store.addFeedback(a.id, { text: text || (rating === 'up' ? 'Làm tốt, giữ cách làm này.' : 'Chưa đạt kỳ vọng — cẩn thận hơn ở lần sau.'), rating, taskId: b.taskId ? String(b.taskId) : undefined });
+        logs.write({ level: 'info', kind: 'agent.feedback', msg: `Góp ý cho ${a.name}${rating ? ` (${rating === 'up' ? '👍' : '👎'})` : ''} — ${f.text.length} ký tự`, agentId: a.id, department: a.department, taskId: f.taskId, data: { id: f.id } });
+        return send(res, 201, f);
+      }
+    }
+    if ((mm = m(/^\/api\/agents\/([^/]+)\/feedback\/([^/]+)$/))) {
+      if (req.method === 'DELETE') return send(res, store.removeFeedback(mm[1], mm[2]) ? 200 : 404, { ok: true });
+      if (req.method === 'POST') {
+        const b = await readBody(req);
+        const f = store.updateFeedback(mm[1], mm[2], { active: b.active === undefined ? undefined : !!b.active });
+        if (!f) throw new HttpError(404, 'Không có góp ý');
+        return send(res, 200, f);
+      }
+    }
+
+    // ── Thư viện prompt ──
+    if (p === '/api/prompts' && req.method === 'GET') return send(res, 200, store.prompts());
+    if (p === '/api/prompts' && req.method === 'POST') {
+      const b = await readBody(req);
+      const title = String(b.title ?? '').trim().slice(0, 120);
+      const body = String(b.body ?? '').trim().slice(0, 20000);
+      if (!title || !body) throw new HttpError(400, 'Prompt cần tiêu đề và nội dung');
+      if (b.mode && !MODES.includes(b.mode)) throw new HttpError(400, 'Chế độ không hợp lệ');
+      if (b.agentId && !registry.agents.has(String(b.agentId))) throw new HttpError(400, 'Agent không tồn tại');
+      const id = b.id && /^[\w-]{1,40}$/.test(String(b.id)) ? String(b.id) : `P${Date.now().toString(36)}`;
+      const old = store.prompts().find((x) => x.id === id);
+      const now = nowIso();
+      const saved = store.savePrompt({
+        id,
+        title,
+        body,
+        tags: Array.isArray(b.tags) ? b.tags.map((t: unknown) => String(t).trim().slice(0, 30)).filter(Boolean).slice(0, 10) : old?.tags,
+        mode: b.mode || undefined,
+        department: b.department ? String(b.department) : undefined,
+        projectId: b.projectId ? String(b.projectId) : undefined,
+        agentId: b.agentId ? String(b.agentId) : undefined,
+        uses: old?.uses ?? 0,
+        createdAt: old?.createdAt ?? now,
+        updatedAt: now,
+      });
+      return send(res, old ? 200 : 201, saved);
+    }
+    if ((mm = m(/^\/api\/prompts\/([^/]+)$/)) && req.method === 'DELETE') return send(res, store.removePrompt(mm[1]) ? 200 : 404, { ok: true });
+    if ((mm = m(/^\/api\/prompts\/([^/]+)\/use$/)) && req.method === 'POST') {
+      const pr = store.usePrompt(mm[1]);
+      if (!pr) throw new HttpError(404, 'Không có prompt');
+      return send(res, 200, pr);
+    }
+
+    // ── Hạn mức & token còn lại theo runtime/model ──
+    if (p === '/api/quota') {
+      const day = new Date();
+      day.setHours(0, 0, 0, 0);
+      return send(res, 200, { at: nowIso(), order: config.runtime.order, runtimes: runtimes.quota(), today: usage.total({ since: day.toISOString() }) });
     }
 
     if (p === '/api/usage') {

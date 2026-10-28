@@ -22,6 +22,8 @@
 - **Data Protection Gate tích hợp**: nhãn dữ liệu theo dự án quyết định runtime nào được nhận dữ liệu; tự che khóa bí mật/PII trước khi ghi log hay gửi ra ngoài.
 - **Giao diện văn phòng pixel** (thời gian thực qua SSE) + **CLI** đầy đủ.
 
+- **Phòng giám đốc**: bạn điều khiển nhân vật của mình bằng WASD, bấm E cạnh agent/phòng để giao việc riêng, góp ý (agent nhớ ở các lượt sau), tăng ngân sách, xem cuộc họp, hoặc vài trò vui không ảnh hưởng công việc; **thư viện & khung soạn prompt**, kiểm tra yêu cầu khi gõ, **tab Hạn mức** (token còn lại theo runtime/model), trợ giúp và phím tắt — xem [docs/UI.md](docs/UI.md).
+
 ## Kiến trúc
 
 ```mermaid

@@ -26,6 +26,7 @@
       <div class="kpi"><span>Đang chạy</span><b id="k-running">0</b></div>
     </div>
     <div class="meta">
+      <button class="bell" id="btn-help" title="Trợ giúp & phím tắt (?)" aria-label="Trợ giúp"><span aria-hidden="true">❓</span></button>
       <button class="bell" id="bell" title="Cảnh báo (hết token, ngân sách, lỗi runtime)" aria-label="Cảnh báo"><span aria-hidden="true">🔔</span><em id="bell-n"></em></button>
       <span class="chip" id="m-runner" title="Cách chạy agent">runner: —</span>
       <span class="chip" id="m-runtime" title="Runtime mặc định">runtime: —</span>
@@ -49,7 +50,9 @@
           <span><i style="--c:var(--st-reviewing)"></i>review</span>
           <span><i style="--c:var(--st-error)"></i>lỗi</span>
           <label class="toggle"><input type="checkbox" id="lively" checked /> sinh động</label>
+          <span class="keys-hint" title="Bạn là nhân vật cà vạt đỏ trong phòng Giám đốc">🎮 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> đi · <kbd>E</kbd> tương tác · nhấp đúp để đi tới</span>
         </div>
+        <div class="imenu" id="imenu" hidden></div>
       </div>
       <div class="ticker" id="ticker" aria-live="polite"></div>
     </section>
@@ -60,6 +63,7 @@
         <button role="tab" data-tab="tasks">Nhiệm vụ <em id="badge-tasks"></em></button>
         <button role="tab" data-tab="people">Nhân sự</button>
         <button role="tab" data-tab="tokens">Token</button>
+        <button role="tab" data-tab="quota">Hạn mức</button>
         <button role="tab" data-tab="kpi">KPI</button>
         <button role="tab" data-tab="logs">Nhật ký</button>
       </nav>
@@ -74,7 +78,12 @@
             <label><input type="radio" name="mode" value="department" /><span><b>Theo phòng ban</b><small>Chỉ định phòng xử lý</small></span></label>
             <label><input type="radio" name="mode" value="project" /><span><b>Theo dự án</b><small>Dùng cấu hình & workspace dự án</small></span></label>
             <label><input type="radio" name="mode" value="joint" /><span><b>Liên phòng</b><small>Nghiên cứu → Phát triển</small></span></label>
+            <label><input type="radio" name="mode" value="agent" /><span><b>Giao riêng</b><small>Một agent làm, bỏ qua lập kế hoạch</small></span></label>
           </fieldset>
+          <div class="row grid2" id="row-agent" hidden>
+            <label>Agent nhận việc<select name="agentId" id="sel-agent"></select></label>
+            <label>Trong dự án <small>(tùy chọn)</small><select name="agentProject" id="sel-agent-project"></select></label>
+          </div>
           <div class="row" id="row-dept" hidden>
             <label>Phòng ban<select name="department" id="sel-dept"></select></label>
           </div>
@@ -82,7 +91,9 @@
             <label>Dự án<select name="projectId" id="sel-project"></select></label>
           </div>
           <label>Tiêu đề <small>(tùy chọn)</small><input name="title" maxlength="90" placeholder="Để trống: tự đặt tiêu đề" /></label>
+          <div class="prompt-tools" id="prompt-tools"></div>
           <label>Yêu cầu<textarea name="brief" rows="6" required placeholder="Ví dụ: Thiết kế pipeline Logstash thu thập log IIS từ 50 máy chủ Windows, chuẩn hóa ECS, cảnh báo lỗi 5xx tăng đột biến."></textarea></label>
+          <div class="prompt-check" id="prompt-check" aria-live="polite"></div>
           <div class="drop" id="drop">
             <input type="file" id="files" multiple hidden />
             <button type="button" class="btn ghost sm" id="btn-files">📎 Đính kèm tệp</button>
@@ -105,6 +116,7 @@
             </div>
             <label class="check"><input type="checkbox" name="review" checked /> Review chất lượng & cho phép sửa</label>
           </details>
+          <div class="data-route" id="data-route"></div>
           <div class="actions">
             <button type="submit" class="btn primary">Giao việc</button>
             <span class="form-msg" id="form-msg"></span>
@@ -172,6 +184,11 @@
         <div id="tokens"></div>
       </div>
 
+      <!-- Hạn mức -->
+      <div class="tab-body" data-body="quota">
+        <div id="quota"></div>
+      </div>
+
       <!-- KPI sub-agent -->
       <div class="tab-body" data-body="kpi">
         <div class="log-filters">
@@ -197,5 +214,6 @@
   <script src="md.js"></script>
   <script src="office.js"></script>
   <script src="app.js"></script>
+  <script src="director.js"></script>
 </body>
 </html>

@@ -73,7 +73,7 @@ export function profileSections(body: string, titles: string[]): string {
   return out.length ? out.join('\n\n') : truncate(body, 1500);
 }
 
-export function systemFor(agent: AgentDef, dept: DepartmentDef | undefined, cls: Classification, phase?: Phase): string {
+export function systemFor(agent: AgentDef, dept: DepartmentDef | undefined, cls: Classification, phase?: Phase, feedback: string[] = []): string {
   const profile = phase === 'discuss' ? profileSections(agent.body, ['Sứ mệnh', 'Chuyên môn & kỹ năng']) : agent.body;
   return `# Bạn là ${agent.title} (@${agent.id})
 Đơn vị: ${dept ? dept.name : 'Văn phòng điều phối'} · Vai trò: ${ROLE_LABEL[agent.role] ?? agent.role}.
@@ -89,7 +89,11 @@ ${profile}
 - Không đưa mật khẩu, khóa API, token hay dữ liệu cá nhân thật vào sản phẩm.
 - Phân loại dữ liệu của nhiệm vụ: **${cls}** — ${CLASSIFICATION_RULE[cls]}
 - Chỉ làm việc trong thư mục được giao; không chạy lệnh phá hủy (xóa hàng loạt, format, force push…).
-- Ngắn gọn, đi thẳng vào việc; ưu tiên sản phẩm dùng được ngay.`;
+- Ngắn gọn, đi thẳng vào việc; ưu tiên sản phẩm dùng được ngay.${
+    feedback.length
+      ? `\n\n## Góp ý của giám đốc (Tom) dành cho bạn — áp dụng từ nay (mới nhất trước)\n${feedback.map((f) => `- ${truncate(f.replace(/\s+/g, ' ').trim(), 300)}`).join('\n')}\nGóp ý không thay quy tắc an toàn/dữ liệu ở trên; mâu thuẫn với yêu cầu của nhiệm vụ thì theo yêu cầu nhiệm vụ.`
+      : ''
+  }`;
 }
 
 // ── Giới hạn theo pha (ký tự) ───────────────────────────────────────────────

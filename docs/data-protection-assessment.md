@@ -272,3 +272,15 @@ Theo yêu cầu chủ dự án, CCoding **không dùng** các tài khoản Claud
 - Số liệu đo lấy từ `calls.jsonl` chỉ gồm số đếm (tên công cụ, cỡ đầu ra, số lượt), không có nội dung; tệp trung gian nằm ngoài repo.
 
 **Kết luận: ĐẠT**, không thêm điều kiện.
+
+### Bổ sung: phòng giám đốc, giao việc riêng, góp ý, thư viện prompt, hạn mức (28/10/2026, tối)
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| Giao việc riêng (`mode: "agent"`) | GOV-03, PRE-05 | Cùng luồng như nhiệm vụ thường: nhãn dữ liệu theo dự án/mặc định, `allowedRuntimes`, worktree, lệnh cấm, review, log + sổ cái token; ít lượt gọi hơn (bỏ định tuyến/lập kế hoạch/họp/tổng hợp) ⇒ ít dữ liệu đi ra ngoài hơn |
+| Góp ý cho agent (`data/feedback/<agent>.json`) | PRE-06, DET-01 | Nội dung do chủ dự án viết, lưu cục bộ trong `data/`; ≤ 5 góp ý đang bật đi vào system prompt **qua cùng bước che bí mật/PII** như mọi prompt gửi runtime ngoài. Log `agent.feedback` chỉ ghi agent, có/không đánh giá và độ dài — không ghi nội dung. Không lưu dữ liệu cá nhân của người khác; chủ dự án tự xóa/tắt được |
+| Thư viện prompt (`data/prompts.json`) | GOV-03 | Cục bộ, không gửi đi khi chưa dùng; khi chèn vào yêu cầu thì đi theo luồng nhiệm vụ (nhãn của nhiệm vụ). Kiểm tra khi gõ chạy **trong trình duyệt** (không gọi model) và cảnh báo khi yêu cầu có dạng khóa API/private key/mật khẩu |
+| Tab Hạn mức (`/api/quota`) | PRE-01 | Chỉ trả **tên** biến môi trường chứa khóa và đã đặt hay chưa — không trả giá trị; header giới hạn của nhà cung cấp chỉ giữ `x-ratelimit-*`/`retry-after` (lọc bỏ mọi header khác), lưu trong bộ nhớ tiến trình, không ghi đĩa |
+| Trò vui trong văn phòng | — | Chỉ đổi hình ảnh trên canvas ở trình duyệt; không gọi API ghi, không tác động nhiệm vụ/log |
+
+**Kết luận: ĐẠT**, không thêm điều kiện. Khuyến nghị: không dán dữ liệu thật/bí mật vào góp ý và prompt mẫu (chúng được gửi kèm hồ sơ agent tới runtime theo nhãn của nhiệm vụ).

@@ -1,5 +1,5 @@
 import { firstModels, modelChain, type Config, type ModelEntry } from '../config.js';
-import type { Classification, ErrorKind, RunResult, Runtime, RuntimeAvailability } from '../types.js';
+import type { Classification, ErrorKind, RateLimitInfo, RunResult, Runtime, RuntimeAvailability } from '../types.js';
 import { AnthropicApiRuntime, OpenAiApiRuntime } from './api.js';
 import { ClaudeCliRuntime } from './claude-cli.js';
 import { CodexCliRuntime, KimiCliRuntime } from './cli-agents.js';
@@ -16,6 +16,23 @@ export interface HealthInfo {
   lastError?: string;
   lastErrorAt?: number;
   lastOkAt?: number;
+}
+
+export interface QuotaRow {
+  id: string;
+  label: string;
+  local: boolean;
+  disabled: boolean;
+  inOrder: boolean;
+  /** Runtime API đọc được header giới hạn của nhà cung cấp (runtime CLI thì không). */
+  tracksLimits: boolean;
+  keyEnv?: string;
+  keySet?: boolean;
+  usedToday: number;
+  dailyTokenLimit?: number;
+  remaining?: number;
+  health?: HealthInfo;
+  models: Array<{ model: string; alias?: string; usedToday: number; dailyTokenLimit?: number; remaining?: number; health?: HealthInfo; rateLimit?: RateLimitInfo }>;
 }
 
 export interface RuntimeStatus extends RuntimeAvailability {
@@ -109,6 +126,44 @@ export class RuntimeManager {
     }
     this.cache.set(id, { at: Date.now(), res });
     return res;
+  }
+
+  /**
+   * Hạn mức & token còn lại theo runtime/model: dùng hôm nay (sổ cái CCoding) so với `dailyTokenLimit`, cộng header
+   * giới hạn của nhà cung cấp ở lượt gọi gần nhất. Không trả khóa — chỉ tên biến môi trường và đã đặt hay chưa.
+   */
+  quota(): QuotaRow[] {
+    return [...this.runtimes.values()].map((r) => {
+      const cfg = this.config.runtimes[r.id] ?? {};
+      const keyEnv = cfg.apiKeyEnv ? String(cfg.apiKeyEnv) : undefined;
+      const limit = Number(cfg.dailyTokenLimit ?? 0) || undefined;
+      const used = this.usageToday(r.id);
+      const seen = new Set<string>();
+      const models: QuotaRow['models'] = [];
+      for (const [alias, spec] of Object.entries(this.config.models[r.id] ?? {}))
+        for (const e of modelChain(spec)) {
+          if (seen.has(e.model)) continue;
+          seen.add(e.model);
+          const u = this.usageToday(r.id, e.model);
+          models.push({ model: e.model, alias, usedToday: u, dailyTokenLimit: e.dailyTokenLimit, remaining: e.dailyTokenLimit ? Math.max(0, e.dailyTokenLimit - u) : undefined, health: this.health.get(`${r.id}::${e.model}`), rateLimit: r.rateLimits?.get(e.model) });
+        }
+      for (const [m, info] of r.rateLimits ?? []) if (!seen.has(m)) models.push({ model: m, usedToday: this.usageToday(r.id, m), rateLimit: info });
+      return {
+        id: r.id,
+        label: r.label,
+        local: r.local,
+        disabled: cfg.disabled === true,
+        inOrder: this.config.runtime.order.includes(r.id),
+        tracksLimits: !!r.rateLimits,
+        keyEnv,
+        keySet: keyEnv ? !!process.env[keyEnv] : undefined,
+        usedToday: used,
+        dailyTokenLimit: limit,
+        remaining: limit ? Math.max(0, limit - used) : undefined,
+        health: this.health.get(r.id),
+        models,
+      };
+    });
   }
 
   /** Chuỗi model (theo thứ tự ưu tiên) của một runtime cho bí danh/model đã yêu cầu. */

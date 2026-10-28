@@ -5,7 +5,7 @@ import { combinedPrompt, sseData, userPrompt, withTimeout } from './common.js';
 import { classifyError, looksLikeLimitMessage, parseRetryAt, RuntimeError, toRuntimeError } from './errors.js';
 import { argsSummary, executeTool, toolDefinitions } from '../tools/workspace.js';
 import type { RuntimeConfig } from '../config.js';
-import type { RunHooks, RunRequest, RunResult, Runtime, RuntimeAvailability, ToolCallRecord } from '../types.js';
+import type { RateLimitInfo, RunHooks, RunRequest, RunResult, Runtime, RuntimeAvailability, ToolCallRecord } from '../types.js';
 
 function apiKey(cfg: RuntimeConfig, fallbackEnv: string): string | undefined {
   return readEnv(cfg.apiKeyEnv ?? fallbackEnv);
@@ -191,7 +191,23 @@ interface StreamTurn {
 
 type ChatMsg = Record<string, unknown> & { role: string };
 
+/** Giữ lại header giới hạn tốc độ/hạn mức (Cerebras, Groq, OpenRouter, OpenAI… đều dùng x-ratelimit-*). */
+export function pickRateHeaders(h: Headers): Record<string, string> {
+  const out: Record<string, string> = {};
+  h.forEach((v, k) => {
+    if (/^(x-)?ratelimit|^retry-after$|^x-request-limit/i.test(k)) out[k.toLowerCase()] = v.slice(0, 120);
+  });
+  return out;
+}
+
 export class OpenAiApiRuntime implements Runtime {
+  readonly rateLimits = new Map<string, RateLimitInfo>();
+
+  private noteLimits(model: string, res: Response): void {
+    const headers = pickRateHeaders(res.headers);
+    if (Object.keys(headers).length) this.rateLimits.set(model, { at: new Date().toISOString(), status: res.status, headers });
+  }
+
   id: string;
   label: string;
   local: boolean;
@@ -277,6 +293,7 @@ export class OpenAiApiRuntime implements Runtime {
       if (idle.signal.aborted) throw stalled();
       throw toRuntimeError(e);
     }
+    this.noteLimits(model, res);
     if (!res.ok) {
       if (idleTimer) clearTimeout(idleTimer);
       const body = (await res.text()).slice(0, 600);
