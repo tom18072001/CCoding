@@ -1023,6 +1023,12 @@ test('pha nặng: model nhanh bị 429 và sắp mở lại → tạm dừng ch�
     assert.ok(fr2 && Date.now() - (fr2.since ?? Date.now()) > 30 * 60_000, 'chuỗi 429 đã kéo dài > 30 phút');
     app.runtimes.markOk('a::m-a');
     assert.equal(app.runtimes.health.get('a::m-a')?.since, undefined);
+    // runtime tắt trong cấu hình: không thăm dò, không có trong danh sách kể cả khi được chỉ định
+    (app.config.runtimes.b as Record<string, unknown>).disabled = true;
+    const av = await app.runtimes.availability('b', true);
+    assert.equal(av.ok, false);
+    const c2 = await app.runtimes.candidates(['b'], 'internal', 'sonnet');
+    assert.ok(c2.list.every((x) => x.runtime.id !== 'b'), 'runtime đã tắt không được dùng');
     assert.ok(app.runtimes.isSlow({ model: 'm-b' }) && !app.runtimes.isSlow({ model: 'm-a' }));
   } finally {
     sa.close();

@@ -98,6 +98,7 @@ export class RuntimeManager {
   async availability(id: string, force = false): Promise<RuntimeAvailability> {
     const r = this.runtimes.get(id);
     if (!r) return { ok: false, detail: 'runtime không tồn tại' };
+    if (this.config.runtimes[id]?.disabled === true) return { ok: false, detail: 'đã tắt trong cấu hình (disabled)' };
     const hit = this.cache.get(id);
     if (!force && hit && Date.now() - hit.at < 60_000) return hit.res;
     let res: RuntimeAvailability;

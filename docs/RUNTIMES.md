@@ -131,6 +131,9 @@ Lưu ý đường Claude gốc của 9router: tên công cụ trả về có h�
 ### `ollama` — mô hình cục bộ
 - Runtime tùy biến `openai-api` tại `http://localhost:11434/v1`, `"local": true` ⇒ **được phép** xử lý dự án *Bảo mật*/*Hạn chế*. Cần `ollama pull <model>` trước; đặt `models.ollama` (ví dụ `"sonnet": "qwen3:8b"`).
 
+### Tắt một runtime
+`"disabled": true` trong cấu hình runtime (vd. `runtimes.bifrost`, `runtimes["openai-api"]`): CCoding không thăm dò, không gọi runtime đó kể cả khi nhiệm vụ/dự án/agent chỉ định. Máy Tom từ 28/10/2026: tắt `bifrost` và `openai-api` (9router) — **không dùng tài khoản Claude/Codex đặt trong 9router**; chỉ cân nhắc model miễn phí.
+
 ### Thêm runtime tùy biến
 Bất kỳ khóa mới trong `runtimes` có `"type": "openai-api"` sẽ thành một runtime riêng (ví dụ `litellm`, `openrouter`, `vllm`), dùng được trong `runtime.order`, dự án và agent.md.
 
