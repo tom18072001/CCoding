@@ -366,7 +366,18 @@ export class Herdr {
     const cur = this.state.panes[agent.id];
     if (cur && (await this.alive(cur))) return cur;
     await this.ensureDeptTab(dept);
-    const panes = (this.state.tabPanes[dept.id] ??= []);
+    // bỏ pane đã đóng khỏi danh sách (pane agent bị đóng/khởi động lại herdr) — trước đây split vào pane chết
+    // ⇒ "pane_not_found" và mọi lượt gọi rơi về chạy trực tiếp ngoài herdr (29/10)
+    const known = this.state.tabPanes[dept.id] ?? [];
+    let panes: string[] = [];
+    for (const p of known) if (await this.alive(p)) panes.push(p);
+    this.state.tabPanes[dept.id] = panes;
+    for (const [id, p] of Object.entries(this.state.panes)) if (known.includes(p) && !panes.includes(p)) delete this.state.panes[id];
+    if (!panes.length) {
+      delete this.state.tabs[dept.id];
+      await this.ensureDeptTab(dept);
+      panes = this.state.tabPanes[dept.id] ??= [];
+    }
     const target = panes[panes.length - 1];
     const direction = panes.length % 2 === 1 ? 'right' : 'down';
     const sp = await this.exec(['pane', 'split', target, '--direction', direction, '--cwd', this.config.root, '--no-focus']);
