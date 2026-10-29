@@ -7,7 +7,7 @@
 
   "runtime": {
     "default": "auto",
-    "order": ["claude-cli", "bifrost", "anthropic-api", "openai-api", "codex-cli", "kimi-cli", "ollama", "mock"],
+    "order": ["claude-cli", "anthropic-api", "codex-cli", "kimi-cli", "ollama", "mock"],
     "quotaCooldownMs": 1800000,
     "maxFailover": 6,
     "rateBackoffMs": 1200000
@@ -70,10 +70,11 @@
     "codex-cli": { "command": "codex", "sandbox": "workspace-write", "extraArgs": [] },
     "kimi-cli": { "command": "kimi", "extraArgs": [] },
     "anthropic-api": { "baseUrl": "https://api.anthropic.com", "apiKeyEnv": "ANTHROPIC_API_KEY", "maxTokens": 8000 },
-    "openai-api": { "baseUrl": "http://localhost:20128/v1", "apiKeyEnv": "OPENAI_API_KEY", "maxTokens": 8000, "local": false, "defaultModel": "" },
+    "openai-api": { "disabled": true, "baseUrl": "", "apiKeyEnv": "OPENAI_API_KEY", "maxTokens": 8000, "local": false, "defaultModel": "" },
     "bifrost": {
       "type": "openai-api",
       "label": "Bifrost gateway",
+      "disabled": true,
       "baseUrl": "http://localhost:8080/v1",
       "apiKeyEnv": "BIFROST_API_KEY",
       "tags": "bifrost",

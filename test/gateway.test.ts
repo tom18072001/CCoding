@@ -58,7 +58,7 @@ test('runtime tùy biến "bifrost" gọi API tương thích OpenAI, gửi heade
     const rm = new RuntimeManager({
       ...base,
       // không phụ thuộc ccoding.local.json của máy chạy test (chuỗi model, requireEnv, promptStyle riêng)
-      runtimes: { ...base.runtimes, bifrost: { ...base.runtimes.bifrost, baseUrl: `http://127.0.0.1:${port}/v1`, virtualKeys: { dev: 'sk-bf-dev-key' }, requireEnv: [], promptStyle: undefined, extraBody: { reasoning_effort: 'none', model: 'không-được-ghi-đè' } } },
+      runtimes: { ...base.runtimes, bifrost: { ...base.runtimes.bifrost, disabled: false, baseUrl: `http://127.0.0.1:${port}/v1`, virtualKeys: { dev: 'sk-bf-dev-key' }, requireEnv: [], promptStyle: undefined, extraBody: { reasoning_effort: 'none', model: 'không-được-ghi-đè' } } },
       models: { ...base.models, bifrost: {} },
     });
     const rt = rm.get('bifrost')!;
@@ -85,7 +85,7 @@ test('runtime tùy biến "bifrost" gọi API tương thích OpenAI, gửi heade
 test('requireEnv: runtime chưa sẵn sàng khi thiếu biến môi trường', async () => {
   const base = loadConfig();
   delete process.env.CCODING_TEST_MISSING;
-  const rm = new RuntimeManager({ ...base, runtimes: { ...base.runtimes, bifrost: { ...base.runtimes.bifrost, requireEnv: ['CCODING_TEST_MISSING'] } } });
+  const rm = new RuntimeManager({ ...base, runtimes: { ...base.runtimes, bifrost: { ...base.runtimes.bifrost, disabled: false, requireEnv: ['CCODING_TEST_MISSING'] } } });
   const a = await rm.availability('bifrost', true);
   assert.equal(a.ok, false);
   assert.match(a.detail, /CCODING_TEST_MISSING/);
