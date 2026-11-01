@@ -140,23 +140,32 @@ export function gitReadArgsReason(argv: string[]): string | undefined {
 }
 
 /** Bộ lọc đầu ra được phép sau `|` trong lệnh git chỉ đọc qua shell. */
-const PIPE_FILTER = /^(head|tail|grep|egrep|wc|sort|uniq|cut|Select-Object|select|Select-String|sls|Measure-Object)\b[^$`<>]*$/i;
+const PIPE_FILTER = /^(head|tail|grep|egrep|wc|sort|uniq|cut|nl|tr|od|Select-Object|select|Select-String|sls|Measure-Object)\b[^$`<>]*$/i;
+
+/**
+ * Lệnh chỉ ĐỌC tệp được phép kèm git chỉ đọc (vai trò không có quyền chạy lệnh vẫn có Read/Grep/Glob — các lệnh này không cho thêm quyền,
+ * chỉ bớt lượt bị chặn khi agent quen tay `cat`/`ls`/`sed -n`). Loại tùy chọn chạy chương trình hay ghi tệp (find -exec/-delete/-fprint, rg --pre…).
+ */
+const READ_CMD = /^(cat|head|tail|ls|wc|grep|egrep|nl|tree|stat|file|od|sort|uniq|cut|diff|cmp|find|rg|Get-Content|gc|Select-String|sls|Get-ChildItem|gci)\b/i;
+const READ_CMD_FORBIDDEN = /\s-(exec|execdir|ok|okdir|delete|fprint0?|fprintf|fls)\b|\s--pre(-glob)?\b|\s-Path\s+\S+\s+-Value\b/i;
+const SED_PRINT = /^sed\s+-n\s+(['"]?)\d+(,(\d+|\$))?p\1(\s|$)/;
 
 /**
  * Lệnh shell (Bash/PowerShell của Claude Code) cho vai trò chỉ có "git chỉ đọc": cho phép `[cd <thư mục trong workspace> &&] git <lệnh đọc> [| head …]`.
  * Trả lý do chặn hoặc undefined.
  */
 export function gitReadCommandReason(command: string, root: string): string | undefined {
-  return gitReadShapeReason(command) ?? outsidePathReason(command, root);
+  return gitReadShapeReason(command, true) ?? outsidePathReason(command, root);
 }
 
 /** Lệnh shell có đúng dạng "git chỉ đọc" (bỏ qua kiểm tra thư mục) — dùng để ghi log/KPI lượt Bash của Claude Code là `git_read`. */
 export function isGitReadCommand(command: string): boolean {
-  return !gitReadShapeReason(command);
+  return !gitReadShapeReason(command, false);
 }
 
-function gitReadShapeReason(command: string): string | undefined {
-  const deny = 'bạn chỉ được chạy git chỉ đọc (git log/show/diff/blame/status/grep/ls-files…, nối nhiều lệnh git đọc bằng `&&`, lọc được qua `| head`/`| grep`) — không có quyền chạy test, build, cài đặt hay lệnh khác; lệnh cần chạy thì ghi rõ trong bàn giao để người có quyền chạy';
+/** `fileReads`: chấp nhận thêm lệnh chỉ đọc tệp (cat/head/ls/grep/sed -n 'a,bp'…) — chế độ shell chỉ đọc của hook. */
+function gitReadShapeReason(command: string, fileReads: boolean): string | undefined {
+  const deny = 'bạn chỉ được chạy lệnh CHỈ ĐỌC: git (log/show/diff/blame/status/grep/ls-files…) và đọc tệp (cat/head/tail/ls/grep/sed -n …), nối bằng `&&`, lọc qua `| head`/`| grep` — không có quyền chạy test, build, cài đặt, ghi tệp qua shell hay lệnh khác; lệnh cần chạy thì ghi rõ trong bàn giao để người có quyền chạy';
   const cleaned = command.replace(/\s2>&1\b/g, ' ').replace(/\s2>\s*\/dev\/null\b/g, ' ').trim();
   if (/\$\(|`|[<>]|\r|\n|\|\|/.test(cleaned)) return deny;
   const stmts = cleaned.split(/&&|;/).map((s) => s.trim()).filter(Boolean);
@@ -166,11 +175,13 @@ function gitReadShapeReason(command: string): string | undefined {
   for (const stmt of stmts) {
     if (/^(cd|Set-Location|sl)\s+/i.test(stmt)) continue;
     const [head, ...pipes] = stmt.split('|').map((s) => s.trim());
-    const argv = splitArgs(head);
-    if (!argv || argv[0] !== 'git') return deny;
-    const why = gitReadArgsReason(argv.slice(1));
-    if (why) return `${why}. Lưu ý: ${deny}`;
     if (pipes.some((p) => !PIPE_FILTER.test(p))) return deny;
+    const argv = splitArgs(head);
+    if (!argv) return deny;
+    if (argv[0] === 'git') {
+      const why = gitReadArgsReason(argv.slice(1));
+      if (why) return `${why}. Lưu ý: ${deny}`;
+    } else if (!fileReads || shellWrites(head) || !((READ_CMD.test(head) && !READ_CMD_FORBIDDEN.test(` ${head}`)) || SED_PRINT.test(head))) return deny;
     gitSeen = true;
   }
   if (!gitSeen) return deny;

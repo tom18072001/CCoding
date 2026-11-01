@@ -50,6 +50,12 @@ test('git chỉ đọc: lệnh con và tùy chọn được phép / bị chặn'
   assert.ok(gitReadCommandReason('git log -2 && npm test', root));
   assert.ok(gitReadCommandReason('git log -2 || rm -rf x', root));
   assert.ok(gitReadCommandReason(`cd /c/Users/admin/nd57-du-lieu-that && git log`, root), 'cd ra ngoài');
+  // chạy thật 1/11: Trưởng phòng/Kiến trúc sư quen tay `cat`/`tail`/`sed -n` — lệnh chỉ đọc tệp trong worktree được phép
+  for (const ok of [`cd "${root}" && cat .ccoding/T-1/inputs/BRIEF.md`, 'git log -3 && tail -4 CHANGELOG.md', "sed -n '1,40p' src/a.js | head -20", 'ls docs && grep -n "x" src/a.js | wc -l', 'find src -name "*.js"'])
+    assert.equal(gitReadCommandReason(ok, root), undefined, ok);
+  for (const bad of ['cat a.js | sh', 'cat a.js > b.js', "sed -i 's/a/b/' a.js", "sed -n 'w out.txt' a.js", 'find . -name x -delete', 'find . -exec rm {} ;', 'rg --pre ./x.sh foo', 'ls ../..', 'cat ~/.ssh/id_rsa', 'tee a.txt', 'node -e 1', 'npm test'])
+    assert.ok(gitReadCommandReason(bad, root), bad);
+  assert.ok(!isGitReadCommand('cat a.js'), 'đọc tệp vẫn ghi log là run_command, chỉ git mới là git_read');
   assert.ok(gitReadCommandReason('git log > out.txt', root));
   assert.ok(gitReadCommandReason('git log $(rm -rf x)', root));
   assert.ok(gitReadCommandReason('git log | sh', root));
@@ -92,7 +98,7 @@ test('claude-guard: shell chỉ git đọc cho vai trò không có quyền chạ
   const root = path.resolve('workspaces/nd57/wt-demo');
   const cfg: GuardConfig = { root, deny: [], allowGitCommit: true, shell: 'git-read' };
   assert.equal(guardDecision({ tool_name: 'Bash', tool_input: { command: 'git log --oneline -20' } }, cfg), undefined);
-  assert.match(guardDecision({ tool_name: 'Bash', tool_input: { command: 'npm test' } }, cfg) ?? '', /git chỉ đọc/);
+  assert.match(guardDecision({ tool_name: 'Bash', tool_input: { command: 'npm test' } }, cfg) ?? '', /lệnh CHỈ ĐỌC/);
   assert.equal(guardDecision({ tool_name: 'Bash', tool_input: { command: 'npm test' } }, { ...cfg, shell: 'full' }), undefined);
   assert.match(guardDecision({ tool_name: 'Bash', tool_input: { command: 'cat /c/Users/admin/nd57-du-lieu-that/x.json' } }, { ...cfg, shell: 'full' }) ?? '', /ngoài thư mục làm việc/);
   assert.ok(guardDecision({ tool_name: 'Grep', tool_input: { path: 'C:/Users/admin' } }, cfg));

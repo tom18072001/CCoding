@@ -14,7 +14,7 @@ export interface GuardConfig {
   root: string;
   deny: string[];
   allowGitCommit: boolean;
-  /** 'git-read': công cụ shell chỉ cho git chỉ đọc (vai trò không có quyền chạy lệnh). */
+  /** 'git-read': công cụ shell chỉ cho lệnh chỉ đọc — git đọc + đọc tệp (vai trò không có quyền chạy lệnh). */
   shell?: 'full' | 'git-read';
   /** Số lần đọc/tìm liên tiếp chưa ghi tệp: N → nhắc một lần, 2N → chặn đọc cho tới khi ghi (0/không đặt = tắt). */
   readsBeforeWrite?: number;
