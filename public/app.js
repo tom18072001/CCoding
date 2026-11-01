@@ -44,7 +44,7 @@
   const PHASE_INDEX = { route: -1, plan: 0, discuss: 1, finalize: 1, execute: 2, review: 3, revise: 3, synthesize: 4 };
   const STATUS_VI = { idle: 'rảnh', thinking: 'suy nghĩ', working: 'đang làm', discussing: 'đang họp', reviewing: 'review', waiting: 'chờ', error: 'lỗi' };
   const TASK_VI = { queued: 'chờ', running: 'đang chạy', paused: 'tạm dừng', done: 'xong', failed: 'lỗi', cancelled: 'đã hủy', pending: 'chờ', skipped: 'bỏ qua' };
-  const PAUSE_VI = { budget: 'chạm trần ngân sách', quota: 'hết tài nguyên token', interrupted: 'server khởi động lại', manual: 'tạm dừng thủ công' };
+  const PAUSE_VI = { budget: 'chạm trần ngân sách', quota: 'hết tài nguyên token', interrupted: 'server khởi động lại', manual: 'tạm dừng thủ công', plan: 'chờ duyệt kế hoạch' };
   const ACCESS_VI = { none: 'không công cụ', read: 'chỉ đọc', write: 'đọc/ghi file', exec: 'đọc/ghi + chạy lệnh' };
   const size = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n >= 1024 ? Math.round(n / 1024) + ' KB' : n + ' B');
   const MODE_VI = { auto: 'Tự động', department: 'Theo phòng', project: 'Theo dự án', joint: 'Liên phòng', agent: 'Giao riêng' };
@@ -130,6 +130,7 @@
     window.Drive?.init();
     window.Chat?.init();
     window.UX?.init();
+    window.Flow?.init();
     setTab(S.tab);
     renderAll();
     window.Router?.init();
@@ -551,6 +552,7 @@
     if (f.runtime.value) opt.runtime = f.runtime.value;
     opt.budgetMode = f.budgetMode.value;
     opt.review = f.review.checked;
+    if (f.planApproval.checked) opt.planApproval = true;
     if (S.pending.some((a) => a.status === 'uploading')) {
       msg.className = 'form-msg err';
       msg.textContent = 'Đang tải tệp lên — chờ một chút';
@@ -662,6 +664,7 @@
     set('denyCommands', (p.denyCommands || []).join('\n'));
     set('setupCommands', (p.setupCommands || []).join('\n'));
     set('checkCommands', (p.checkCommands || []).join('\n'));
+    set('planApproval', p.planApproval ? 'true' : 'false');
     set('description', p.description || '');
     f.hidden = false;
     $('#proj-admin')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -684,6 +687,7 @@
       if (v.length) body[k] = v;
       else delete body[k];
     }
+    body.planApproval = body.planApproval === 'true';
     try {
       const p = await api('/api/projects', { method: 'POST', body: JSON.stringify(body) });
       S.projects = S.projects.filter((x) => x.id !== p.id).concat(p);
@@ -778,6 +782,8 @@
     S.taskDetail.task = t;
     if (S.taskView === 'diff' && !window.UX?.hasDiff(t)) S.taskView = 'chat';
     window.Router?.sync();
+    // đang sửa kế hoạch / thao tác bảng gộp → hoãn vẽ lại (giữ con trỏ và nội dung đang gõ)
+    if (!fetchData && window.Flow?.busy($('#task-detail'))) return throttle('td-busy', () => renderTaskDetail(false), 1500);
     $('#task-list').hidden = true;
     const el = $('#task-detail');
     el.hidden = false;
@@ -832,7 +838,10 @@
           <div class="pb-actions"><label style="font-size:12px">Ngân sách mỗi nhiệm vụ <input name="split-budget" type="number" min="100000" step="100000" placeholder="tự ước lượng" style="width:130px" /></label>
           <button class="btn primary sm" data-act="split">✂ Tách</button></div></details>`
       : '';
-    const banner = canResume
+    const planWait = !!window.Flow?.planPaused(t);
+    const banner = planWait
+      ? window.Flow.planHtml(t)
+      : canResume
       ? `<div class="pause-box ${t.status}">
           <div><b>${t.status === 'paused' ? `⏸ Tạm dừng — ${esc(PAUSE_VI[t.pause?.reason] || t.pause?.reason || '')}` : t.status === 'failed' ? '⚠️ Nhiệm vụ lỗi — có thể chạy tiếp phần chưa xong' : '⏹ Đã hủy — có thể chạy tiếp'}</b>
           <p>${esc(t.pause?.detail || t.error || '')}${t.pause?.resumeAt ? ` · tự tiếp tục lúc ${esc(dateTime(t.pause.resumeAt))}` : ''}</p></div>
@@ -876,7 +885,7 @@
         ${t.projectId ? `<span>dự án: ${esc(t.projectId)}</span>` : ''}<span>token <b style="font-family:var(--mono);color:var(--text)">${fmt(t.usage.input)} in / ${fmt(t.usage.output)} out</b></span>
         ${t.agentId ? `<span>giao riêng: ${esc(agentName(t.agentId))}</span>` : ''}
         ${canPause ? '<button class="btn ghost sm" id="td-pause">⏸ Tạm dừng</button>' : ''}${canCancel ? '<button class="btn ghost sm danger" id="td-cancel">Hủy</button>' : ''}<button class="btn ghost sm" id="td-again" title="Mở form giao việc với yêu cầu, chế độ và phòng/dự án/agent như nhiệm vụ này">↻ Giao lại tương tự</button></div>
-        ${meter}${git}${atts}${window.UX?.checksHtml(t) || ''}
+        ${meter}${git}${atts}${window.Flow?.summaryHtml(t) || ''}${window.UX?.checksHtml(t) || ''}${window.Flow?.shipHtml(t) || ''}
         ${t.routing ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">🧭 ${esc(t.routing.reason)}</p>` : ''}
         ${t.error && !canResume ? `<p style="font-size:12.5px;color:var(--bad);margin:0 0 8px">${esc(t.error)}</p>` : ''}
         ${t.attention ? `<p style="font-size:12.5px;color:var(--warn);margin:0 0 8px">⚠ Cần xem lại: ${esc(t.attention.detail)} — xem báo cáo, "Làm lại từ review" hoặc tách việc còn lại.</p>` : ''}
@@ -979,6 +988,8 @@
         renderTaskBody();
       }),
     );
+    window.Flow?.bind(el, () => renderTaskDetail(true));
+    window.UX?.fillStats(el);
     renderTaskBody();
     window.Drive?.taskRendered(t);
   }

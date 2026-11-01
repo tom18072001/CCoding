@@ -118,8 +118,8 @@
   }
 
   // ── Thông báo trình duyệt ────────────────────────────────────────────────
-  const KINDS = { done: '✅ Nhiệm vụ xong', attention: '⚠ Xong — cần bạn xem lại', paused: '⏸ Tạm dừng — chờ bạn quyết', failed: '❌ Nhiệm vụ lỗi' };
-  const DEF = { on: false, when: 'hidden', sound: false, hideTitle: false, kinds: { done: true, attention: true, paused: true, failed: true } };
+  const KINDS = { done: '✅ Nhiệm vụ xong', attention: '⚠ Xong — cần bạn xem lại', plan: '📝 Kế hoạch chờ duyệt', paused: '⏸ Tạm dừng — chờ bạn quyết', failed: '❌ Nhiệm vụ lỗi' };
+  const DEF = { on: false, when: 'hidden', sound: false, hideTitle: false, kinds: { done: true, attention: true, plan: true, paused: true, failed: true } };
   const cfg = () => {
     try {
       const v = JSON.parse(localStorage.getItem('ccoding.notify') || 'null');
@@ -139,7 +139,7 @@
     if (!prev) return null;
     if (t.status === 'done' && activeSt(prev.status)) return t.attention ? 'attention' : 'done';
     if (t.status === 'done' && t.attention && !prev.att) return 'attention';
-    if (t.status === 'paused' && prev.status !== 'paused') return 'paused';
+    if (t.status === 'paused' && prev.status !== 'paused') return t.pause?.reason === 'plan' ? 'plan' : 'paused';
     if (t.status === 'failed' && prev.status !== 'failed') return 'failed';
     return null;
   }

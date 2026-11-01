@@ -283,3 +283,39 @@ export function fileDiff(src: Source, file: string, commit?: string): FileDiff {
   if (truncated) text = text.slice(0, MAX_TEXT);
   return { ...base, text: redact(text, { secrets: true, pii: false }), truncated: truncated || undefined };
 }
+
+/**
+ * Hạng mục nào đã đụng tới từng tệp (để bình luận trên diff gửi đúng người sửa):
+ * 1) commit trên nhánh có tên hạng mục — "CCoding <task> S2: …" (worktree con), "CCoding <task>: gộp S2 — …" (gộp, so với cha thứ nhất),
+ *    "… hoàn tất gộp … (S2)"; bỏ "phần đã làm trước khi gộp S2" (là việc của hạng mục khác);
+ * 2) lệnh ghi/sửa tệp trong nhật ký (`tool.call` write_file/edit_file kèm subtaskId) — đường dẫn tuyệt đối khớp theo đuôi.
+ */
+export function ownersOf(src: Source, taskId: string, files: string[], tools: Array<{ subtaskId?: string; name?: string; args?: string }> = []): Record<string, string[]> {
+  const out: Record<string, Set<string>> = {};
+  const add = (file: string, sub: string) => (out[file] ??= new Set()).add(sub);
+  const want = new Set(files);
+  const esc = taskId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const reSub = new RegExp(`^CCoding ${esc} (S\\d+):`, 'i');
+  const reMerge = new RegExp(`^CCoding ${esc}: gộp (S\\d+)\\b`, 'i');
+  const reDone = /hoàn tất gộp .*\((S\d+)\)\s*$/i;
+  for (const c of commits(src)) {
+    const m = reSub.exec(c.subject) ?? reMerge.exec(c.subject) ?? reDone.exec(c.subject);
+    if (!m) continue;
+    const r = g(src.dir, ['diff', '--name-only', '-z', '--no-renames', `${c.sha}^1`, c.sha, '--'], 30_000);
+    if (!r.ok) continue;
+    for (const f of r.out.split('\0')) if (f && want.has(f)) add(f, m[1].toUpperCase());
+  }
+  const norm = (p: string) => p.replace(/\\/g, '/').replace(/^\.\//, '');
+  const wtDir = new RegExp(`/wt-${esc}(?:--[\\w-]+)?/(.+)$`, 'i');
+  for (const t of tools) {
+    if (!t.subtaskId || (t.name !== 'write_file' && t.name !== 'edit_file')) continue;
+    // write_file/edit_file: "<đường dẫn tương đối> (…)"; claude-cli: đường dẫn tuyệt đối trong worktree (con) của nhiệm vụ
+    let p = norm(String(t.args ?? '').replace(/\s+\([^)]*\)\s*$/, '').trim());
+    if (!p) continue;
+    const abs = /^([a-z]:)?\//i.test(p);
+    const inWt = wtDir.exec(p);
+    if (inWt) p = inWt[1];
+    for (const f of want) if (p === f || (abs && !inWt && p.endsWith(`/${f}`))) add(f, t.subtaskId);
+  }
+  return Object.fromEntries(Object.entries(out).map(([f, s]) => [f, [...s].sort()]));
+}

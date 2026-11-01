@@ -181,14 +181,17 @@
   // ── Diff thay đổi (A1) ────────────────────────────────────────────────────
   const ST = { A: 'thêm', M: 'sửa', D: 'xóa', R: 'đổi tên', C: 'chép', T: 'đổi kiểu', '?': 'mới · chưa commit' };
   U.hasDiff = (t) => !!(t?.branch && t?.baseRef);
+  /** Bản đã tải còn dùng được: việc đang chạy → tối đa 20 giây; việc đã dừng → chỉ khi tải SAU lần cập nhật cuối của nhiệm vụ. */
+  const fresh = (t, c) => !!c && (live(t) ? Date.now() - c.at < 20000 : c.at >= Date.parse(t.finishedAt || t.updatedAt || 0));
+  U.fresh = fresh;
   async function summary(t, commit, force) {
     const k = `${t.id}|${commit || ''}`;
     const c = U.sum.get(k);
-    if (c && !force && (!live(t) || Date.now() - c.at < 20000)) return c.data;
+    if (c && !force && fresh(t, c)) return c.data;
     const data = await C.api(`/api/tasks/${encodeURIComponent(t.id)}/diff${commit ? `?commit=${encodeURIComponent(commit)}` : ''}`);
+    // nội dung tệp có thể đã đổi → bỏ bản diff từng tệp đã tải trước đó
+    if (c) for (const key of [...U.files.keys()]) if (key.startsWith(`${t.id}|${commit || ''}|`)) U.files.delete(key);
     U.sum.set(k, { at: Date.now(), data });
-    // nội dung tệp có thể đã đổi → bỏ bản cũ của nhiệm vụ đang chạy
-    if (force || live(t)) for (const key of [...U.files.keys()]) if (key.startsWith(`${t.id}|${commit || ''}|`)) U.files.delete(key);
     return data;
   }
   /** Điền "+a −d · n tệp" vào các phần tử [data-dstat] (hội thoại). */
@@ -200,7 +203,7 @@
       if (!t) continue;
       const c = U.sum.get(`${t.id}|`);
       if (c) el.innerHTML = statHtml(c.data);
-      if ((c && !(live(t) && Date.now() - c.at > 20000)) || pending.has(t.id)) continue;
+      if (fresh(t, c) || pending.has(t.id)) continue;
       pending.add(t.id);
       summary(t, '', !!c)
         .then((d) => $$(`[data-dstat="${CSS.escape(t.id)}"]`).forEach((x) => (x.innerHTML = statHtml(d))))
@@ -208,10 +211,28 @@
         .finally(() => pending.delete(t.id));
     }
   };
-  function lineHtml(text) {
+  // ── Bình luận theo dòng trên diff (A3): lưu nháp trong trình duyệt theo nhiệm vụ, gửi một lần thành yêu cầu sửa ──
+  const cmKey = (tid) => `ccoding.dfc.${tid}`;
+  const cmGet = (tid) => {
+    try {
+      return JSON.parse(localStorage.getItem(cmKey(tid)) || '[]');
+    } catch {
+      return [];
+    }
+  };
+  const cmSet = (tid, list) => {
+    try {
+      if (list.length) localStorage.setItem(cmKey(tid), JSON.stringify(list));
+      else localStorage.removeItem(cmKey(tid));
+    } catch {}
+  };
+  U.comments = cmGet;
+  const cmHtml = (c) => `<div class="dc" data-dc="${esc(c.id)}"><span class="dc-who">💬</span><div class="dc-t">${C.md(c.text)}</div><button type="button" class="dc-x" data-dc-del="${esc(c.id)}" title="Xóa bình luận" aria-label="Xóa bình luận">✕</button></div>`;
+  function lineHtml(text, cms = []) {
     const out = [];
     let o = 0;
     let n = 0;
+    const at = (side, num) => cms.filter((c) => c.side === side && c.line === num).map(cmHtml).join('');
     const lines = text.split('\n');
     const MAX = 4000;
     for (let i = 0; i < lines.length && out.length < MAX; i++) {
@@ -228,19 +249,27 @@
         out.push(`<div class="dl hunk"><i></i><i></i><code>${esc(l)}</code></div>`);
         continue;
       }
-      if (l.startsWith('+')) out.push(`<div class="dl add"><i></i><i>${n++}</i><code>${esc(l)}</code></div>`);
-      else if (l.startsWith('-')) out.push(`<div class="dl del"><i>${o++}</i><i></i><code>${esc(l)}</code></div>`);
-      else if (l.startsWith('\\')) out.push(`<div class="dl meta"><i></i><i></i><code>${esc(l)}</code></div>`);
-      else if (l || i < lines.length - 1) out.push(`<div class="dl"><i>${o++}</i><i>${n++}</i><code>${esc(l)}</code></div>`);
+      if (l.startsWith('+')) {
+        out.push(`<div class="dl add" data-side="n" data-line="${n}"><i></i><i class="dl-c" title="Bình luận dòng này">${n}</i><code>${esc(l)}</code></div>${at('n', n)}`);
+        n++;
+      } else if (l.startsWith('-')) {
+        out.push(`<div class="dl del" data-side="o" data-line="${o}"><i class="dl-c" title="Bình luận dòng này">${o}</i><i></i><code>${esc(l)}</code></div>${at('o', o)}`);
+        o++;
+      } else if (l.startsWith('\\')) out.push(`<div class="dl meta"><i></i><i></i><code>${esc(l)}</code></div>`);
+      else if (l || i < lines.length - 1) {
+        out.push(`<div class="dl" data-side="n" data-line="${n}"><i>${o}</i><i class="dl-c" title="Bình luận dòng này">${n}</i><code>${esc(l)}</code></div>${at('n', n)}`);
+        o++;
+        n++;
+      }
     }
     const more = lines.length > MAX ? `<p class="df-note">… còn ${C.fmt(lines.length - MAX)} dòng — xem đầy đủ bằng git trong worktree.</p>` : '';
     return out.join('') + more;
   }
-  function fileBody(f, d) {
+  function fileBody(f, d, cms = []) {
     if (d.hidden || f.hidden) return '<p class="df-note">🔒 Tệp nhạy cảm (.env, khóa, chứng chỉ) — chỉ hiện tên, không hiện nội dung.</p>';
     if (d.binary || f.binary) return '<p class="df-note">Tệp nhị phân — không hiện nội dung.</p>';
     if (!d.text) return '<p class="df-note">Không có thay đổi nội dung (chỉ đổi tên/quyền) hoặc tệp quá lớn.</p>';
-    return `<div class="df-lines">${lineHtml(d.text)}</div>${d.truncated ? '<p class="df-note">Diff quá dài — đã cắt bớt.</p>' : ''}`;
+    return `<div class="df-lines">${lineHtml(d.text, cms)}</div>${d.truncated ? '<p class="df-note">Diff quá dài — đã cắt bớt.</p>' : ''}`;
   }
   async function openFile(box, t, commit, path) {
     const key = `${t.id}|${commit || ''}|${path}`;
@@ -257,7 +286,116 @@
         return;
       }
     }
-    if (box.open) body.innerHTML = fileBody(f, d);
+    if (box.open) body.innerHTML = fileBody(f, d, cmGet(t.id).filter((c) => c.path === path && (c.commit || '') === (commit || '')));
+  }
+  const canSend = (t) => !!t && !['running', 'queued'].includes(t.status) && !(t.status === 'paused' && t.pause?.reason === 'plan') && (t.runs || []).some((r) => r.subtasks.some((s) => s.status === 'done' && s.output));
+  function barHtml(t) {
+    const n = cmGet(t.id).length;
+    if (!n) return '<span class="dc-tip">💬 Bấm số dòng bên trái để bình luận — gom lại gửi một lần thành yêu cầu sửa.</span>';
+    return `<b>💬 ${n} bình luận chưa gửi</b><span class="grow"></span>${canSend(t) ? '<button type="button" class="btn primary sm" data-dc-send>Gửi thành yêu cầu sửa…</button>' : '<small>Gửi được khi nhiệm vụ không chạy</small>'}<button type="button" class="btn ghost sm" data-dc-clear>Xóa hết</button>`;
+  }
+  /** Bảng gửi: mỗi bình luận chọn hạng mục nhận sửa (gợi ý theo commit/nhật ký ghi tệp), ghi chú chung, gửi /review. */
+  async function sendPanel(box, t) {
+    const panel = box.querySelector('[data-dc-panel]');
+    const list = cmGet(t.id);
+    panel.hidden = false;
+    panel.innerHTML = '<p class="df-note">Đang tìm hạng mục đã sửa từng tệp…</p>';
+    let owners = {};
+    try {
+      owners = (await C.api(`/api/tasks/${encodeURIComponent(t.id)}/diff?owners=1`)).owners || {};
+    } catch {}
+    const multi = (t.runs || []).length > 1;
+    const subs = t.runs.flatMap((r) => r.subtasks.filter((s) => s.status === 'done' && s.output && !s.splitTo).map((s) => ({ r, s, v: `${r.department}|${s.id}` })));
+    const opt = (c) => {
+      const own = owners[c.path] || [];
+      const pick = subs.find((x) => own.includes(x.s.id))?.v || (subs.length === 1 ? subs[0].v : '');
+      return `<select data-dc-sub="${esc(c.id)}" aria-label="Hạng mục nhận sửa"><option value="">— chọn hạng mục —</option>${subs
+        .map((x) => `<option value="${esc(x.v)}"${x.v === pick ? ' selected' : ''}>${multi ? `${esc(C.deptName(x.r.department))} · ` : ''}${esc(x.s.id)} · ${esc(C.agentName(x.s.assignee))}${own.includes(x.s.id) ? ' ✓ đã sửa tệp này' : ''}</option>`)
+        .join('')}</select>`;
+    };
+    panel.innerHTML = `<div class="dc-sendbox"><b>Gửi ${list.length} bình luận thành yêu cầu sửa</b>
+      <ol class="dc-list">${list.map((c) => `<li><code>${esc(c.path)}:${c.line}${c.side === 'o' ? ' (dòng cũ)' : ''}</code> ${opt(c)}<div class="dc-t">${C.md(c.text)}</div></li>`).join('')}</ol>
+      <textarea data-dc-note rows="2" placeholder="Ghi chú chung (tùy chọn) — vd. sửa xong chạy lại npm test" aria-label="Ghi chú chung"></textarea>
+      <div class="pb-actions"><button type="button" class="btn primary sm" data-dc-go>✋ Gửi yêu cầu sửa</button><button type="button" class="btn ghost sm" data-dc-back>Thôi</button><small>Mỗi bình luận thành một lỗi cho hạng mục đã chọn → một vòng sửa → reviewer duyệt lại → viết lại báo cáo.</small></div></div>`;
+    panel.querySelector('[data-dc-back]').onclick = () => (panel.hidden = true);
+    panel.querySelector('[data-dc-go]').onclick = async () => {
+      const note = panel.querySelector('[data-dc-note]').value.trim();
+      const issues = [];
+      for (const c of list) {
+        const v = panel.querySelector(`[data-dc-sub="${CSS.escape(c.id)}"]`)?.value;
+        if (!v) return C.toast({ level: 'info', title: 'Chọn hạng mục cho mọi bình luận', msg: `${c.path}:${c.line}` });
+        const [department, subtask] = v.split('|');
+        const ref = `\`${c.path}:${c.line}\`${c.side === 'o' ? ' (dòng đã xóa)' : ''}${c.commit ? ` trong commit ${c.commit.slice(0, 10)}` : ''}`;
+        issues.push({ subtask, department: multi ? department : undefined, comment: `${ref} — ${c.text}${c.code ? `\n> ${c.code.slice(0, 300)}` : ''}` });
+      }
+      if ([note, ...list.map((c) => c.text)].some((x) => window.Director?.hasSecret?.(x))) return C.toast({ level: 'error', title: 'Có vẻ chứa khóa/mật khẩu', msg: 'Xóa bí mật khỏi bình luận trước khi gửi.' });
+      try {
+        const r = await C.api(`/api/tasks/${encodeURIComponent(t.id)}/review`, { method: 'POST', body: JSON.stringify({ decision: 'reject', note: note || undefined, issues }) });
+        if (r?.id) C.S.tasks.set(r.id, r);
+        cmSet(t.id, []);
+        C.toast({ level: 'info', title: `Đã gửi ${issues.length} bình luận — văn phòng làm một vòng sửa`, msg: t.title });
+        panel.hidden = true;
+        box.querySelector('[data-dc-bar]').innerHTML = barHtml(C.S.tasks.get(t.id) || t);
+        box.querySelectorAll('.dc').forEach((x) => x.remove());
+      } catch (e) {
+        C.toast({ level: 'error', title: 'Không gửi được', msg: e.message });
+      }
+    };
+  }
+  function bindComments(box) {
+    // nhiệm vụ / phạm vi commit đọc lúc bấm (ô diff được vẽ lại khi đổi commit, đổi nhiệm vụ)
+    let t;
+    let commit;
+    const refresh = (path) => {
+      const det = [...box.querySelectorAll('.df-f')].find((x) => x.dataset.p === path);
+      if (det?.open) openFile(det, t, commit, path);
+      box.querySelector('[data-dc-bar]').innerHTML = barHtml(C.S.tasks.get(t.id) || t);
+    };
+    box.addEventListener('click', (e) => {
+      t = C.S.tasks.get(box.dataset.dcTask);
+      commit = box.dataset.dcCommit || '';
+      if (!t || !e.target.closest('.df')) return;
+      const g = e.target.closest('.dl-c');
+      if (g) {
+        const row = g.closest('.dl');
+        if (row.nextElementSibling?.classList.contains('dc-new')) return row.nextElementSibling.querySelector('textarea').focus();
+        const path = row.closest('.df-f').dataset.p;
+        row.insertAdjacentHTML('afterend', `<div class="dc-new"><textarea rows="2" placeholder="Cần sửa gì ở dòng ${row.dataset.line}? (Ctrl+Enter lưu)" aria-label="Bình luận dòng ${row.dataset.line}"></textarea><div class="pb-actions"><button type="button" class="btn primary sm" data-dc-save>Lưu bình luận</button><button type="button" class="btn ghost sm" data-dc-cancel>Hủy</button></div></div>`);
+        const ed = row.nextElementSibling;
+        const ta = ed.querySelector('textarea');
+        ta.focus();
+        const save = () => {
+          const text = ta.value.trim();
+          if (!text) return ta.focus();
+          const code = row.querySelector('code')?.textContent.replace(/^[+\- ]/, '').trim() || '';
+          const list = cmGet(t.id);
+          list.push({ id: Math.random().toString(36).slice(2, 10), path, side: row.dataset.side, line: Number(row.dataset.line), code, text: text.slice(0, 2000), commit: commit || '', at: new Date().toISOString() });
+          cmSet(t.id, list.slice(-100));
+          ed.remove();
+          refresh(path);
+        };
+        ed.querySelector('[data-dc-save]').onclick = save;
+        ed.querySelector('[data-dc-cancel]').onclick = () => ed.remove();
+        ta.onkeydown = (ev) => ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey) && (ev.preventDefault(), save());
+        return;
+      }
+      const del = e.target.closest('[data-dc-del]');
+      if (del) {
+        const list = cmGet(t.id);
+        const c = list.find((x) => x.id === del.dataset.dcDel);
+        cmSet(t.id, list.filter((x) => x.id !== del.dataset.dcDel));
+        if (c) refresh(c.path);
+        return;
+      }
+      if (e.target.closest('[data-dc-clear]')) {
+        if (!confirm('Xóa hết bình luận chưa gửi?')) return;
+        cmSet(t.id, []);
+        box.querySelectorAll('.dc').forEach((x) => x.remove());
+        box.querySelector('[data-dc-bar]').innerHTML = barHtml(t);
+        return;
+      }
+      if (e.target.closest('[data-dc-send]')) sendPanel(box, C.S.tasks.get(t.id) || t);
+    });
   }
   /** Tab "🧬 Thay đổi" của trang nhiệm vụ. */
   U.diffView = async (box, t, opts = {}) => {
@@ -276,6 +414,7 @@
       .join('')}</select>`;
     const where = s.source === 'worktree' ? `worktree <code>${esc(t.workspace || '')}</code>` : 'nhánh trong repo (worktree đã gỡ)';
     box.innerHTML = `<div class="df">
+      <div class="dc-bar" data-dc-bar>${barHtml(t)}</div><div data-dc-panel hidden></div>
       <div class="df-head"><span>🌿 <code>${esc(s.branch || '')}</code> · từ <code>${esc(short(s.base))}</code>${s.head ? ` → <code>${esc(short(s.head))}</code>` : ''} · ${where}</span>${!s.commit && s.uncommitted ? `<span class="warn">${s.uncommitted} tệp chưa commit</span>` : ''}</div>
       <div class="df-bar">${sel}<span class="df-tot"><b>${s.totals.files} tệp</b> <span class="add">+${C.fmt(s.totals.add)}</span> <span class="del">−${C.fmt(s.totals.del)}</span>${s.truncated ? ' · danh sách đã cắt' : ''}</span><span class="grow"></span><button type="button" class="btn ghost sm" data-df-all>Mở tất cả</button><button type="button" class="btn ghost sm" data-df-refresh title="Đọc lại từ git">↻</button></div>
       ${
@@ -288,6 +427,12 @@
               .join('')
           : `<div class="empty">${s.commit ? 'Commit này không đổi tệp nào.' : 'Chưa có thay đổi so với commit gốc.'}</div>`
       }</div>`;
+    box.dataset.dcTask = t.id;
+    box.dataset.dcCommit = s.commit || '';
+    if (!box.dataset.dcBound) {
+      box.dataset.dcBound = '1';
+      bindComments(box);
+    }
     box.querySelector('[data-df-commit]').onchange = (e) => {
       U.commit.set(t.id, e.target.value);
       U.diffView(box, t);

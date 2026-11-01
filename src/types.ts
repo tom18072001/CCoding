@@ -74,6 +74,8 @@ export interface ProjectDef {
   worktreeCopy?: string[];
   /** Hạng mục chạy lệnh làm song song, mỗi hạng mục một worktree con (mặc định theo tools.parallelWorktrees); false = lần lượt. */
   parallelWorktrees?: boolean;
+  /** Mọi nhiệm vụ của dự án chờ giám đốc duyệt kế hoạch trước khi thực thi (nhiệm vụ có thể ghi đè bằng options.planApproval). */
+  planApproval?: boolean;
   /** Mẫu regex lệnh bị cấm riêng cho dự án (vd. container/cổng DB của môi trường đang chạy). */
   denyCommands?: string[];
   /** Lệnh chuẩn bị chạy một lần mỗi worktree trước lệnh kiểm tra (vd. cài dependency). */
@@ -283,6 +285,14 @@ export interface DeptRun {
   revising?: string[];
   /** Ước lượng token của kế hoạch (sau khi lập/chốt) để cảnh báo nhiệm vụ quá lớn. */
   estimate?: { tokens: number; budget: number; at: string; basis?: string };
+  /** Duyệt kế hoạch trước khi thực thi: nhân sự được chọn (kèm năng lực công cụ) lúc chờ duyệt, ai/khi nào duyệt. */
+  planReview?: {
+    at: string;
+    roster: Array<{ id: string; name: string; cap: string }>;
+    approvedAt?: string;
+    by?: 'director' | 'timeout';
+    edits?: number;
+  };
   finalPath?: string;
   usage: Usage;
   startedAt?: string;
@@ -299,6 +309,8 @@ export interface TaskOptions {
   runtime?: string;
   /** Trần token của MỖI hạng mục (cộng dồn mọi lần chạy/sửa); 0 hoặc bỏ trống = tự tính (2 × ngân sách / số hạng mục). */
   subtaskBudgetTokens?: number;
+  /** Dừng sau khi chốt kế hoạch, chờ giám đốc duyệt (sửa người làm/phụ thuộc/bỏ hạng mục) rồi mới thực thi. */
+  planApproval?: boolean;
 }
 
 export interface Attachment {
@@ -325,7 +337,8 @@ export interface Alert {
 }
 
 export interface PauseInfo {
-  reason: 'budget' | 'quota' | 'interrupted' | 'manual';
+  /** plan: kế hoạch đã chốt, chờ giám đốc duyệt trước khi thực thi (tùy chọn planApproval). */
+  reason: 'budget' | 'quota' | 'interrupted' | 'manual' | 'plan';
   detail: string;
   at: string;
   /** Tự tiếp tục lúc này (khi hết thời gian chờ quota). */
@@ -368,6 +381,10 @@ export interface Task {
   branch?: string;
   /** Commit gốc khi tạo worktree — để thống kê thay đổi của agent. */
   baseRef?: string;
+  /** Worktree tách từ ref này thay cho nhánh xuất phát của dự án (việc nối làm tiếp trên nhánh của nhiệm vụ trước). */
+  startFrom?: string;
+  /** Lần đẩy nhánh gần nhất do giám đốc bấm (đẩy nhánh / đẩy vào nhánh xuất phát). */
+  shipped?: Array<{ at: string; action: 'push' | 'ff'; ref: string; head: string }>;
   /** Tóm tắt thay đổi git (diff --stat) và kết quả commit trên nhánh nhiệm vụ. */
   changes?: string;
   commit?: string;
@@ -517,6 +534,8 @@ export interface NewTaskInput {
   agentId?: string;
   /** Giao việc tiếp nối nhiệm vụ này: kế thừa chế độ/dự án/agent, báo cáo trước vào inputs/NHIEM-VU-TRUOC.md. */
   followUp?: string;
+  /** Việc nối: worktree mới tách từ NHÁNH của nhiệm vụ trước (làm tiếp trên kết quả chưa gộp) thay vì nhánh xuất phát của dự án. Mặc định: có khi nhánh trước còn. */
+  continueBranch?: boolean;
   options?: Partial<TaskOptions>;
   /** id các file đã tải lên (POST /api/uploads). */
   attachments?: string[];
