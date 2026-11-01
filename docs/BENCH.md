@@ -47,8 +47,9 @@
 - `accept`: lệnh nghiệm thu chạy trong worktree của nhiệm vụ sau khi xong (do người soạn spec viết, coi là tin cậy) — vd. chép **test ẩn** (test của lời giải thật, agent không thấy) vào repo rồi chạy. Exit 0 = đạt.
 - `idle.quietSec`: chỉ bắt đầu một lượt khi **không có nhiệm vụ thật nào** đang chạy/chờ trong ngần ấy giây liên tục; chờ quá `maxWaitMin` thì dừng (chạy tiếp bằng `resume`). Nhiệm vụ thật chen vào giữa một lượt → lượt đó ghi "chạy chồng" và không tính thời gian.
 - `runTimeoutMin`: lượt quá thời gian bị hủy, ghi hỏng.
+- `isolate` (mặc định bật): xong lượt (sau nghiệm thu) thì lưu nhánh nhiệm vụ thành `<lượt>.bundle` (`gốc..nhánh`) + `<lượt>.patch` trong thư mục bench rồi **gỡ worktree + nhánh** khỏi repo dự án — lượt sau không thấy lời giải của lượt trước qua `git log --all`/`git branch`. Xem lại: `git fetch <tệp .bundle> <nhánh>` trong repo dự án, hoặc đọc patch.
 
-Dự án bench nên là **bản sao** repo (clone cục bộ, không `.env`, `baseRef` ghim vào một commit cố định) với cùng `setupCommands`/`checkCommands`/`denyCommands` như dự án thật — để lượt bench không đụng repo làm việc và mọi lượt cùng điểm xuất phát. Đề bài tốt: một gói đã làm thật (có lời giải để rút test ẩn), cỡ 3–5 hạng mục, ~10 phút.
+Dự án bench nên là **bản sao** repo (clone cục bộ, không `.env`, không remote, chỉ giữ lịch sử tới commit gốc — xóa nhánh/tag khác rồi `git gc --prune=now` để agent không tìm thấy lời giải thật; `baseRef` ghim vào commit đó) với cùng `setupCommands`/`checkCommands`/`denyCommands` như dự án thật — để lượt bench không đụng repo làm việc và mọi lượt cùng điểm xuất phát. Đề bài tốt: một gói đã làm thật (có lời giải để rút test ẩn), cỡ 3–5 hạng mục, ~10 phút.
 
 ## Lệnh
 

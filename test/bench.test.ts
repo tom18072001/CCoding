@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createBench, parseSpec, reportMarkdown, runBench, runInput, runMetrics, schedule, summarize, weighted, type BenchClient, type BenchState } from '../src/bench.js';
+import { archiveRun, createBench, parseSpec, reportMarkdown, runBench, runInput, runMetrics, schedule, summarize, weighted, type BenchClient, type BenchState } from '../src/bench.js';
 import type { CallRow } from '../src/kpi.js';
 import { variantOptions } from '../src/orchestrator.js';
 import { selectHistory } from '../src/history.js';
@@ -11,6 +11,7 @@ import { buildRepoMap } from '../src/repomap.js';
 import { ClaudeCliRuntime } from '../src/runtimes/claude-cli.js';
 import type { AgentDef, Task } from '../src/types.js';
 import { readJsonl } from '../src/util/fsx.js';
+import { git } from '../src/git.js';
 import { testApp } from './helpers.js';
 
 const baseSpec = {
@@ -272,5 +273,41 @@ test('claude-cli: bashMaxOutput của nhiệm vụ → BASH_MAX_OUTPUT_LENGTH; k
     assert.deepEqual(readJsonl<{ bash: string | null }>(path.join(dir, 'env.jsonl')), [{ bash: '12000' }, { bash: null }]);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('bench cách ly lượt: lưu nhánh thành bundle + patch rồi gỡ worktree + nhánh (lượt sau không thấy lời giải qua git)', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-bench-git-'));
+  try {
+    const repo = path.join(root, 'repo');
+    fs.mkdirSync(repo);
+    const g = (cwd: string, ...a: string[]) => {
+      const r = git(cwd, a);
+      assert.ok(r.ok, `${a.join(' ')}: ${r.out}`);
+      return r.out;
+    };
+    g(repo, 'init', '-q', '-b', 'main');
+    g(repo, 'config', 'user.email', 'b@x');
+    g(repo, 'config', 'user.name', 'b');
+    fs.writeFileSync(path.join(repo, 'a.js'), 'module.exports = 1;\n');
+    g(repo, 'add', '.');
+    g(repo, 'commit', '-qm', 'gốc');
+    const base = g(repo, 'rev-parse', 'HEAD').trim();
+    const wt = path.join(root, 'wt-T1');
+    g(repo, 'worktree', 'add', '-q', '-b', 'ccoding/t1', wt, base);
+    fs.writeFileSync(path.join(wt, 'a.js'), 'module.exports = 2; // lời giải\n');
+    g(wt, 'commit', '-qam', 'lời giải lượt 1');
+    const out = path.join(root, 'bench');
+    fs.mkdirSync(out);
+    const a = archiveRun(out, { key: 'V1#1' }, { workspace: wt, branch: 'ccoding/t1', baseRef: base });
+    assert.deepEqual(a, { bundle: 'V1_1.bundle', patch: 'V1_1.patch' });
+    assert.match(fs.readFileSync(path.join(out, 'V1_1.patch'), 'utf8'), /\+module\.exports = 2; \/\/ lời giải/);
+    assert.ok(!fs.existsSync(wt), 'đã gỡ worktree');
+    assert.doesNotMatch(g(repo, 'branch', '--list', '--all'), /ccoding\/t1/);
+    assert.doesNotMatch(g(repo, 'log', '--all', '--format=%s'), /lời giải/);
+    g(repo, 'bundle', 'verify', path.join(out, 'V1_1.bundle'));
+    assert.deepEqual(archiveRun(out, { key: 'x' }, { workspace: wt, branch: 'ccoding/t1' }), { note: 'không có worktree/nhánh để lưu' });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });

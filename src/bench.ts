@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { git } from './git.js';
 import type { CallRow } from './kpi.js';
 import { shellReadsOnly, shellWrites } from './tools/shell-policy.js';
 import type { NewTaskInput, Task, TaskMode, TaskOptions, TaskStatus } from './types.js';
@@ -37,6 +38,11 @@ export interface BenchSpec {
   runTimeoutMin?: number;
   /** Nghỉ giữa hai lượt (giây) — vd. > 300 để cache prompt của lượt trước hết hạn. */
   gapSec?: number;
+  /**
+   * Cách ly lượt (mặc định bật): xong lượt thì lưu nhánh nhiệm vụ thành bundle + patch trong thư mục bench rồi gỡ worktree + nhánh khỏi
+   * repo dự án — lượt sau không thấy lời giải của lượt trước qua `git log --all`/`git branch`.
+   */
+  isolate?: boolean;
 }
 
 export type BenchRunStatus = 'pending' | 'running' | 'done' | 'failed';
@@ -83,6 +89,8 @@ export interface BenchRun {
   note?: string;
   accept?: Array<{ command: string; code: number | null; ms: number; tail: string }>;
   metrics?: RunMetrics;
+  /** Kết quả lượt đã lưu ra thư mục bench (khi cách ly): tệp bundle/patch tương đối thư mục bench, ghi chú nếu gỡ chưa hết. */
+  archived?: { bundle?: string; patch?: string; note?: string };
 }
 
 export interface BenchState {
@@ -161,6 +169,7 @@ export function parseSpec(raw: unknown): BenchSpec {
     idle: { quietSec: num(idle.quietSec, 120, 0, 3600), pollSec: num(idle.pollSec, 15, 1, 600), maxWaitMin: num(idle.maxWaitMin, 720, 1, 10_080) },
     runTimeoutMin: num(r.runTimeoutMin, 60, 1, 600),
     gapSec: num(r.gapSec, 0, 0, 3600),
+    isolate: r.isolate !== false,
   };
 }
 
@@ -287,6 +296,45 @@ function defaultRunCommand(cwd: string, command: string, timeoutMs: number): { c
   return { code: r.error ? null : r.status, ms: Date.now() - t0, tail: out.slice(-600) };
 }
 
+/**
+ * Lưu nhánh của lượt (`base..nhánh` thành bundle + patch) vào thư mục bench rồi gỡ worktree và nhánh khỏi repo dự án.
+ * Xem lại: `git bundle unbundle <tệp>` hoặc `git fetch <tệp> <nhánh>` trong repo dự án; patch đọc trực tiếp.
+ */
+export function archiveRun(benchDir: string, run: Pick<BenchRun, 'key'>, task: Pick<Task, 'workspace' | 'branch' | 'baseRef'>): NonNullable<BenchRun['archived']> {
+  const wt = task.workspace;
+  if (!wt || !task.branch || !fs.existsSync(wt)) return { note: 'không có worktree/nhánh để lưu' };
+  const common = git(wt, ['rev-parse', '--path-format=absolute', '--git-common-dir'], 30_000);
+  if (!common.ok) return { note: `không đọc được repo: ${common.out.slice(0, 200)}` };
+  const gitDir = common.out.trim().split('\n').pop()!.trim();
+  const repo = path.basename(gitDir) === '.git' ? path.dirname(gitDir) : gitDir;
+  const safe = run.key.replace(/[^\w.-]/g, '_');
+  const out: NonNullable<BenchRun['archived']> = {};
+  const notes: string[] = [];
+  const range = task.baseRef ? `${task.baseRef}..${task.branch}` : task.branch;
+  const bundle = path.join(benchDir, `${safe}.bundle`);
+  const b = git(repo, ['bundle', 'create', bundle, range], 120_000);
+  if (b.ok) out.bundle = path.basename(bundle);
+  else notes.push(`bundle lỗi: ${b.out.slice(0, 160)}`);
+  if (task.baseRef) {
+    const patch = path.join(benchDir, `${safe}.patch`);
+    const d = git(repo, ['diff', '--no-color', '--no-ext-diff', `--output=${patch}`, task.baseRef, task.branch], 120_000);
+    if (d.ok) out.patch = path.basename(patch);
+    else notes.push(`patch lỗi: ${d.out.slice(0, 160)}`);
+  }
+  // chỉ gỡ khi đã lưu được — không làm mất kết quả của lượt
+  if (out.bundle) {
+    const rm = git(repo, ['worktree', 'remove', '--force', wt], 120_000);
+    if (!rm.ok) notes.push(`gỡ worktree chưa được: ${rm.out.slice(0, 160)}`);
+    else {
+      const br = git(repo, ['branch', '-D', task.branch], 30_000);
+      if (!br.ok) notes.push(`xóa nhánh chưa được: ${br.out.slice(0, 160)}`);
+    }
+    git(repo, ['worktree', 'prune'], 30_000);
+  }
+  if (notes.length) out.note = notes.join('; ');
+  return out;
+}
+
 export function stateFile(dir: string): string {
   return path.join(dir, 'state.json');
 }
@@ -396,6 +444,10 @@ export async function runBench(dir: string, client: BenchClient, deps: BenchDeps
         run.accept = spec.accept.map((command) => ({ command, ...exec(task!.workspace!, command, 10 * 60_000) }));
       run.metrics = runMetrics(task, client.calls(task.id), run.accept);
       run.status = task.status === 'done' && !run.note ? 'done' : 'failed';
+      if (spec.isolate !== false && task.branch) {
+        run.archived = archiveRun(dir, run, task);
+        if (run.archived.note) deps.log(`⚠ ${run.key}: ${run.archived.note}`);
+      }
       run.finishedAt = new Date(deps.now()).toISOString();
       const m = run.metrics;
       deps.log(`${run.status === 'done' ? '✓' : '✗'} ${run.key}: ${task.status} · ${m.wallSec}s · ${m.tokens.weighted.toLocaleString('vi-VN')} token quy đổi · ${m.tools.total} công cụ${run.overlap.length ? ` · chạy chồng ${run.overlap.join(', ')}` : ''}`);
@@ -557,7 +609,7 @@ export function reportMarkdown(st: BenchState): string {
   L.push('|---|---|---|---|---|---|---|---|---|---|');
   for (const r of st.runs) {
     const m = r.metrics;
-    const note = [r.note, r.overlap.length ? `chạy chồng ${r.overlap.join(', ')}` : '', r.paused ? 'có tạm dừng' : '', m?.quality.attention ? `cần xem (${m.quality.attention})` : '', r.accept?.some((a) => a.code !== 0) ? `nghiệm thu lỗi: ${r.accept.filter((a) => a.code !== 0).map((a) => `\`${a.command}\``).join(', ')}` : '']
+    const note = [r.note, r.archived?.note ? `lưu/gỡ: ${r.archived.note}` : '', r.overlap.length ? `chạy chồng ${r.overlap.join(', ')}` : '', r.paused ? 'có tạm dừng' : '', m?.quality.attention ? `cần xem (${m.quality.attention})` : '', r.accept?.some((a) => a.code !== 0) ? `nghiệm thu lỗi: ${r.accept.filter((a) => a.code !== 0).map((a) => `\`${a.command}\``).join(', ')}` : '']
       .filter(Boolean)
       .join('; ');
     L.push(
