@@ -129,8 +129,10 @@
     window.Director?.init();
     window.Drive?.init();
     window.Chat?.init();
+    window.UX?.init();
     setTab(S.tab);
     renderAll();
+    window.Router?.init();
     loadRuntimes(false);
     preloadTicker();
     connect();
@@ -193,12 +195,14 @@
     const a = S.agents.get(st.id);
     if (!a) return;
     a.state = st;
+    window.UX?.onAgent(st);
     office.updateAgent(st);
     if (S.tab === 'people') throttle('people', renderPeople);
   }
 
   function onTask(t) {
     S.tasks.set(t.id, t);
+    window.Router?.onTask(t);
     updateRunning();
     throttle('drive', () => window.Drive?.changed(), 600);
     window.Chat?.onTask(t);
@@ -269,6 +273,7 @@
   }
 
   function onOutput(o) {
+    window.UX?.onOutput(o);
     const cur = (S.live.get(o.agentId) || '') + o.chunk + '\n';
     S.live.set(o.agentId, cur.slice(-5000));
     if (S.selectedAgent === o.agentId) {
@@ -313,12 +318,13 @@
   function renderAlerts() {
     const box = $('#alerts-panel');
     const list = [...S.alerts].reverse();
-    box.innerHTML = `<div class="ap-head"><b>Cảnh báo</b><button class="btn ghost sm" id="ap-close">Đóng</button></div>${
+    box.innerHTML = `<div class="ap-head"><b>Cảnh báo</b><button class="btn ghost sm" id="ap-close">Đóng</button></div>${window.Router?.settingsHtml() || ''}${
       list.length
         ? list.map((a) => `<div class="ap-row ${esc(a.level)}" ${a.taskId ? `data-task="${esc(a.taskId)}"` : ''}><time>${dateTime(a.ts)}</time><div><b>${esc(a.title)}</b><p>${esc(a.msg)}</p></div></div>`).join('')
         : '<div class="empty">Chưa có cảnh báo.</div>'
     }`;
     $('#ap-close').onclick = () => (box.hidden = true);
+    window.Router?.bindSettings(box);
     box.querySelectorAll('[data-task]').forEach((r) => (r.onclick = () => {
       box.hidden = true;
       openTask(r.dataset.task);
@@ -420,6 +426,7 @@
     if (tab === 'kpi') loadKpi();
     if (tab === 'logs') loadLogs();
     if (tab === 'quota') window.Director?.renderQuota();
+    window.Router?.sync();
   }
 
   function bindUi() {
@@ -722,6 +729,7 @@
 
   // ── Nhiệm vụ ─────────────────────────────────────────────────────────────
   function renderTaskList() {
+    window.Router?.sync();
     if (window.Drive?.renderTasks) {
       $('#task-detail').hidden = true;
       $('#task-list').hidden = false;
@@ -747,9 +755,9 @@
     el.querySelectorAll('.task').forEach((b) => b.addEventListener('click', () => openTask(b.dataset.id)));
   }
 
-  async function openTask(id) {
+  async function openTask(id, view) {
     S.selectedTask = id;
-    S.taskView = S.taskView || 'chat';
+    S.taskView = view || S.taskView || 'chat';
     S.taskFile = null;
     if (S.tab !== 'tasks') setTab('tasks');
     else renderTaskDetail(true);
@@ -768,6 +776,8 @@
     }
     const t = S.tasks.get(id) || S.taskDetail.task;
     S.taskDetail.task = t;
+    if (S.taskView === 'diff' && !window.UX?.hasDiff(t)) S.taskView = 'chat';
+    window.Router?.sync();
     $('#task-list').hidden = true;
     const el = $('#task-detail');
     el.hidden = false;
@@ -780,8 +790,9 @@
           .map(
             (s) => `<div class="st-row">
               <div class="st-top"><code>${esc(s.id)}</code><span class="st-title" title="${esc(s.description)}">${esc(s.title)}</span><span class="status ${s.status}">${TASK_VI[s.status] || s.status}</span></div>
-              <div class="st-meta"><span class="who">${av(s.assignee)}${esc(agentName(s.assignee))}</span>${s.dependsOn.length ? `<span>sau ${esc(s.dependsOn.join(', '))}</span>` : ''}<span class="mono">${fmt(s.usage.input)} in / ${fmt(s.usage.output)} out</span>${s.attempts > 1 ? `<span${s.attempts >= 3 ? ' style="color:var(--warn)" title="Chạy nhiều lần — kiểm tra vòng sửa có tiến triển"' : ''}>${s.attempts} lần</span>` : ''}${s.continuations ? `<span style="color:var(--warn)" title="Vòng công cụ chạm trần khi chưa xong — đã cho chạy tiếp với ngữ cảnh mới">↻ chạy tiếp ${s.continuations}</span>` : ''}${s.output ? `<a data-file="${esc(s.output)}">xem sản phẩm →</a>` : ''}${s.splitTo ? `<a data-task="${esc(s.splitTo)}">✂ đã tách → ${esc(s.splitTo)}</a>` : ''}</div>
+              <div class="st-meta"><span class="who">${av(s.assignee)}${esc(agentName(s.assignee))}</span>${s.dependsOn.length ? `<span>sau ${esc(s.dependsOn.join(', '))}</span>` : ''}<span class="mono">${fmt(s.usage.input)} in / ${fmt(s.usage.output)} out</span>${s.attempts > 1 ? `<span${s.attempts >= 3 ? ' style="color:var(--warn)" title="Chạy nhiều lần — kiểm tra vòng sửa có tiến triển"' : ''}>${s.attempts} lần</span>` : ''}${s.continuations ? `<span style="color:var(--warn)" title="Vòng công cụ chạm trần khi chưa xong — đã cho chạy tiếp với ngữ cảnh mới">↻ chạy tiếp ${s.continuations}</span>` : ''}${window.UX ? UX.histLink(t, s) : ''}${s.output ? `<a data-file="${esc(s.output)}">xem sản phẩm →</a>` : ''}${s.splitTo ? `<a data-task="${esc(s.splitTo)}">✂ đã tách → ${esc(s.splitTo)}</a>` : ''}</div>
               ${s.error && !s.splitTo ? `<div class="st-err">${esc(s.error)}</div>` : ''}
+              ${window.UX ? UX.liveHtml(t, s) + UX.histHtml(t, s) : ''}
             </div>`,
           )
           .join('');
@@ -865,7 +876,7 @@
         ${t.projectId ? `<span>dự án: ${esc(t.projectId)}</span>` : ''}<span>token <b style="font-family:var(--mono);color:var(--text)">${fmt(t.usage.input)} in / ${fmt(t.usage.output)} out</b></span>
         ${t.agentId ? `<span>giao riêng: ${esc(agentName(t.agentId))}</span>` : ''}
         ${canPause ? '<button class="btn ghost sm" id="td-pause">⏸ Tạm dừng</button>' : ''}${canCancel ? '<button class="btn ghost sm danger" id="td-cancel">Hủy</button>' : ''}<button class="btn ghost sm" id="td-again" title="Mở form giao việc với yêu cầu, chế độ và phòng/dự án/agent như nhiệm vụ này">↻ Giao lại tương tự</button></div>
-        ${meter}${git}${atts}
+        ${meter}${git}${atts}${window.UX?.checksHtml(t) || ''}
         ${t.routing ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">🧭 ${esc(t.routing.reason)}</p>` : ''}
         ${t.error && !canResume ? `<p style="font-size:12.5px;color:var(--bad);margin:0 0 8px">${esc(t.error)}</p>` : ''}
         ${t.attention ? `<p style="font-size:12.5px;color:var(--warn);margin:0 0 8px">⚠ Cần xem lại: ${esc(t.attention.detail)} — xem báo cáo, "Làm lại từ review" hoặc tách việc còn lại.</p>` : ''}
@@ -880,6 +891,7 @@
         <button data-v="chat" class="${S.taskView === 'chat' ? 'active' : ''}">💬 Hội thoại (${S.taskDetail.transcript.length})</button>
         <button data-v="final" class="${S.taskView === 'final' ? 'active' : ''}" ${t.finalPath ? '' : 'disabled'}>🏁 Báo cáo</button>
         <button data-v="files" class="${S.taskView === 'files' ? 'active' : ''}">📦 Sản phẩm</button>
+        ${window.UX?.hasDiff(t) ? `<button data-v="diff" class="${S.taskView === 'diff' ? 'active' : ''}" title="Thay đổi trong repo so với commit gốc của nhiệm vụ">🧬 Thay đổi</button>` : ''}
         <button data-v="tokens" class="${S.taskView === 'tokens' ? 'active' : ''}">🔢 Token</button>
         <button data-v="events" class="${S.taskView === 'events' ? 'active' : ''}">🧾 Nhật ký</button>
         <button data-v="calls" class="${S.taskView === 'calls' ? 'active' : ''}">📡 Lượt gọi</button>
@@ -955,6 +967,7 @@
       b.addEventListener('click', () => {
         S.taskView = b.dataset.v;
         S.taskFile = null;
+        window.Router?.sync();
         el.querySelectorAll('.subtabs button').forEach((x) => x.classList.toggle('active', x === b));
         renderTaskBody();
       }),
@@ -984,6 +997,7 @@
         : '<div class="empty">Chưa có trao đổi.</div>';
       return;
     }
+    if (S.taskView === 'diff') return window.UX?.diffView(box, t);
     if (S.taskView === 'final' || (S.taskView === 'files' && S.taskFile)) {
       const path = S.taskView === 'final' ? t.finalPath || 'FINAL.md' : S.taskFile;
       box.innerHTML = '<div class="empty">Đang tải…</div>';
@@ -1076,6 +1090,7 @@
 
   function renderPeople() {
     if (S.selectedAgent) return;
+    window.Router?.sync();
     $('#agent-detail').hidden = true;
     const el = $('#people');
     el.hidden = false;
@@ -1106,6 +1121,7 @@
   async function renderAgentDetail(fetchData = true) {
     const id = S.selectedAgent;
     if (!id) return renderPeople();
+    window.Router?.sync();
     if (fetchData || !S.agentDetail || S.agentDetail.agent.id !== id) {
       try {
         S.agentDetail = await api(`/api/agents/${id}`);

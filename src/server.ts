@@ -8,6 +8,7 @@ import { readJsonl } from './util/fsx.js';
 import { MAX_UPLOAD_BYTES } from './uploads.js';
 import { clearFixedFeedback, FINDING_LABELS, kpiReport } from './kpi.js';
 import { isSafeRef } from './git.js';
+import { DiffError, diffSummary, fileDiff, isSha, locate as locateDiff, repoDirFor } from './diff.js';
 import { deniedReason } from './tools/workspace.js';
 import type { BudgetMode, Classification, ProjectDef, TaskMode, ToolAccess } from './types.js';
 import type { UsageDim } from './usage.js';
@@ -300,7 +301,28 @@ export function createServer(app: App): http.Server {
       return send(res, 200, full ? rows.filter((r) => r.callId === full) : rows);
     }
     if ((mm = m(/^\/api\/tasks\/([^/]+)\/events$/))) {
-      return send(res, 200, logs.query({ task: mm[1], limit: Math.min(2000, Number(q('limit') ?? 500)) }));
+      const limit = Math.min(2000, Number(q('limit') ?? 500));
+      const kind = q('kind');
+      const sub = q('subtask');
+      if (!kind && !sub) return send(res, 200, logs.query({ task: mm[1], limit }));
+      // lọc theo loại / hạng mục (vd. kind=tool.call&subtask=S2 cho luồng hoạt động của một hạng mục) — đọc rộng hơn rồi lọc
+      const rows = logs.query({ task: mm[1], limit: 4000 }).filter((r) => (!kind || r.kind === kind) && (!sub || r.subtaskId === sub));
+      return send(res, 200, rows.slice(-limit));
+    }
+    if ((mm = m(/^\/api\/tasks\/([^/]+)\/diff$/))) {
+      const t = store.get(mm[1]);
+      if (!t) throw new HttpError(404, 'Không có nhiệm vụ');
+      const src = locateDiff(t, repoDirFor(t.projectId ? store.project(t.projectId) : undefined, config.root));
+      if (!src) throw new HttpError(404, 'Nhiệm vụ này không làm trên nhánh git riêng (hoặc nhánh đã bị xóa) — không có diff');
+      const commit = q('commit');
+      if (commit && !isSha(commit)) throw new HttpError(400, 'Mã commit không hợp lệ');
+      const file = q('file');
+      try {
+        return send(res, 200, file !== undefined ? fileDiff(src, file, commit) : diffSummary(src, commit));
+      } catch (e) {
+        if (e instanceof DiffError) throw new HttpError(e.status, e.message);
+        throw e;
+      }
     }
 
     if (p === '/api/uploads' && req.method === 'POST') {

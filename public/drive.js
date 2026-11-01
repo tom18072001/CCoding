@@ -701,7 +701,7 @@
   };
 
   // dùng chung cho chat.js
-  Object.assign(D, { setSide, sideMode, phaseLabel, progress, taskMenu, crumbs, openProject, applyNav });
+  Object.assign(D, { setSide, sideMode, phaseLabel, progress, taskMenu, crumbs, openProject, applyNav, goTasks, filter: () => V.filter, projectId: () => V.projectId });
 
   D.init = () => {
     C = window.CC;

@@ -317,3 +317,16 @@ Theo yêu cầu chủ dự án, CCoding **không dùng** các tài khoản Claud
 | Roster ghi năng lực công cụ trong prompt lập kế hoạch | — | Chỉ là mô tả quyền (chạy lệnh / đọc-ghi / chỉ đọc) — không chứa đường dẫn hay dữ liệu |
 
 **Kết luận: ĐẠT**, không thêm điều kiện. Khuyến nghị: tiếp tục để thư mục dữ liệu thật (vd. `nd57-du-lieu-that`) ngoài các thư mục `workspaces/`; nhiệm vụ đụng dữ liệu thật phải gắn nhãn Bảo mật/Hạn chế (chỉ runtime cục bộ).
+
+### Bổ sung: UX-1 — diff thay đổi, kết quả lệnh kiểm tra, luồng hoạt động trực tiếp, URL riêng, thông báo trình duyệt (1/11/2026)
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| `GET /api/tasks/<id>/diff` (danh sách tệp, từng tệp, theo commit) | PRE-01, PRE-02, PRE-05 | Chỉ đọc git (`--no-optional-locks`, `--literal-pathspecs`, không diff driver/textconv của repo: `--no-ext-diff --no-textconv`), không ghi index/worktree. Phạm vi = commit gốc của nhiệm vụ → nhánh/worktree của chính nhiệm vụ; commit phải thuộc nhánh; tệp phải nằm trong danh sách thay đổi (không đọc được tệp tùy ý của repo); tệp mới chưa track đọc bằng `lstat` (không theo symlink ra ngoài), ≤ 1 MB. **Ẩn nội dung** `.env*`, `.npmrc`, `.netrc`, khóa/chứng chỉ (`*.pem`, `*.key`, `id_rsa`…) — chỉ hiện tên; nội dung còn lại che bí mật (`redact`) trước khi trả về. Không che PII trong mã nguồn (hiển thị cục bộ cho chủ dự án, không ghi log, không gửi runtime) — vì vậy không đưa dữ liệu thật vào repo vẫn là điều kiện như trước. API chỉ phục vụ `127.0.0.1` (hoặc cần `CCODING_TOKEN`) |
+| Lọc nhật ký theo loại/hạng mục (`/events?kind=tool.call&subtask=S2`) | DET-01 | Đọc lại log đã che bí mật/PII của chính nhiệm vụ; không thêm dữ liệu mới |
+| Kết quả lệnh kiểm tra trước/sau trên giao diện | — | Hiện `task.projectChecks` đã có (tổng kết + đuôi đầu ra đã che khi lưu) |
+| Luồng hoạt động trực tiếp | — | Hiện sự kiện `output` SSE đã có (≤ 160 dòng/agent, chỉ trong bộ nhớ trình duyệt, mất khi tải lại trang) |
+| URL riêng (`#/task/<id>`, `#/chat/<id>`…) | PRE-06 | URL chỉ chứa mã nhiệm vụ/dự án/agent — không chứa nội dung; token truy cập vẫn đọc từ `#token=` rồi xóa khỏi thanh địa chỉ như trước |
+| Thông báo trình duyệt (tắt mặc định, người dùng tự bật) | PRE-06 | Chỉ tiêu đề nhiệm vụ + trạng thái (+ lý do tạm dừng), **không** nội dung báo cáo/lỗi. Nhiệm vụ nhãn **Bảo mật/Hạn chế** — hoặc khi bật "chỉ hiện mã nhiệm vụ" — chỉ hiện mã nhiệm vụ (tránh lộ trên màn khóa/chia sẻ màn hình). Cài đặt lưu `localStorage`; không gửi ra ngoài máy (Notification API của trình duyệt) |
+
+**Kết luận: ĐẠT**, không thêm điều kiện. Khuyến nghị: khi chia sẻ màn hình, bật "chỉ hiện mã nhiệm vụ"; tệp nhạy cảm có tên khác mẫu trên (vd. `config/secrets.json`) vẫn hiện nội dung đã che theo mẫu khóa — đặt tên theo quy ước `.env*` hoặc thêm vào `.gitignore`.

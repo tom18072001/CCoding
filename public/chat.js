@@ -184,7 +184,7 @@
     return `<div class="cv-run"><div class="cv-run-h"><span class="dot" style="background:${C.deptColor(r.department)}"></span><b>${esc(C.deptName(r.department))}</b><span class="cv-steps">${steps}</span><small>${esc(phase)}</small><span class="grow"></span><small class="mono">${C.fmt(C.total(r.usage))} token</small></div>
       ${(r.subtasks || [])
         .map(
-          (s) => `<div class="cv-sub">${dot(s.status, false, C.TASK_VI[s.status] || s.status)}<code>${esc(s.id)}</code><span class="cv-st" title="${esc(s.description || s.title)}">${esc(s.title)}</span><span class="cv-who">${C.av(s.assignee, 'av xs')}<small>${esc(C.agentName(s.assignee))}</small></span>${s.output ? `<button class="cv-link" data-pv="${esc(s.output)}" data-tid="${esc(t.id)}">sản phẩm</button>` : '<span></span>'}</div>${s.error && !s.splitTo ? `<div class="cv-err">${esc(String(s.error).slice(0, 300))}</div>` : ''}`,
+          (s) => `<div class="cv-sub">${dot(s.status, false, C.TASK_VI[s.status] || s.status)}<code>${esc(s.id)}</code><span class="cv-st" title="${esc(s.description || s.title)}">${esc(s.title)}</span><span class="cv-who">${C.av(s.assignee, 'av xs')}<small>${esc(C.agentName(s.assignee))}</small></span>${s.output ? `<button class="cv-link" data-pv="${esc(s.output)}" data-tid="${esc(t.id)}">sản phẩm</button>` : '<span></span>'}</div>${s.error && !s.splitTo ? `<div class="cv-err">${esc(String(s.error).slice(0, 300))}</div>` : ''}${window.UX?.liveHtml(t, s) || ''}`,
         )
         .join('')}
       ${r.review ? `<div class="cv-rev">🔍 ${r.review.approved ? '<b class="ok">duyệt</b>' : '<b class="warn">cần sửa</b>'} — ${esc(r.review.summary)}</div>` : ''}</div>`;
@@ -308,17 +308,18 @@
     if (!d) parts.push('<div class="cv-live"><span class="cv-spin"></span>Đang tải…</div>');
     else if (active(t)) {
       const ph = window.Drive?.phaseLabel?.(t) || C.TASK_VI[t.status];
-      parts.push(`<div class="cv-live"><span class="cv-spin"></span><span>${esc(ph)}…</span><small>${C.fmt(C.total(t.usage))} token${t.options?.budgetTokens ? ` / ${C.fmt(t.options.budgetTokens)}` : ''}</small><span class="grow"></span>${t.status === 'running' ? `<button class="btn ghost sm" data-act="pause" data-tid="${esc(t.id)}">⏸ Tạm dừng</button>` : ''}<button class="btn ghost sm danger" data-act="cancel" data-tid="${esc(t.id)}">Hủy</button></div>`);
+      parts.push(`<div class="cv-live"><span class="cv-spin"></span><span>${esc(ph)}…</span><small>${C.fmt(C.total(t.usage))} token${t.options?.budgetTokens ? ` / ${C.fmt(t.options.budgetTokens)}` : ''}</small><span class="grow"></span>${window.UX?.hasDiff(t) ? `<button class="btn ghost sm" data-act="diff" data-tid="${esc(t.id)}" title="Xem thay đổi trong repo (cả phần chưa commit)">🧬<span data-dstat="${esc(t.id)}"></span></button>` : ''}${t.status === 'running' ? `<button class="btn ghost sm" data-act="pause" data-tid="${esc(t.id)}">⏸ Tạm dừng</button>` : ''}<button class="btn ghost sm danger" data-act="cancel" data-tid="${esc(t.id)}">Hủy</button></div>`);
     } else if (['paused', 'failed', 'cancelled'].includes(t.status)) {
       const title = t.status === 'paused' ? `⏸ Tạm dừng — ${C.PAUSE_VI[t.pause?.reason] || t.pause?.reason || ''}` : t.status === 'failed' ? '⚠️ Nhiệm vụ lỗi — có thể chạy tiếp phần chưa xong' : '⏹ Đã hủy';
       const can = runs.length > 0;
-      parts.push(`<div class="pause-box ${esc(t.status)}"><div><b>${esc(title)}</b><p>${esc(t.pause?.detail || t.error || '')}</p></div><div class="pb-actions">${can ? `<button class="btn primary sm" data-act="resume" data-tid="${esc(t.id)}">▶ Chạy tiếp tới khi xong</button><button class="btn ghost sm" data-act="resume-add" data-tid="${esc(t.id)}">+50% ngân sách & tiếp tục</button>` : ''}<button class="btn ghost sm" data-act="detail" data-tid="${esc(t.id)}">📋 Mở chi tiết</button></div></div>`);
+      parts.push(`<div class="pause-box ${esc(t.status)}"><div><b>${esc(title)}</b><p>${esc(t.pause?.detail || t.error || '')}</p></div><div class="pb-actions">${can ? `<button class="btn primary sm" data-act="resume" data-tid="${esc(t.id)}">▶ Chạy tiếp tới khi xong</button><button class="btn ghost sm" data-act="resume-add" data-tid="${esc(t.id)}">+50% ngân sách & tiếp tục</button>` : ''}<button class="btn ghost sm" data-act="detail" data-tid="${esc(t.id)}">📋 Mở chi tiết</button>${window.UX?.hasDiff(t) ? `<button class="btn ghost sm" data-act="diff" data-tid="${esc(t.id)}">🧬 Thay đổi<span data-dstat="${esc(t.id)}"></span></button>` : ''}${window.UX?.checksChip(t) || ''}</div></div>`);
     }
     if (t.status === 'done') {
       const fin = V.finals.get(t.id);
       const outs = d?.outputs || [];
       parts.push(`<div class="cv-final">${fin ? `<div class="md">${C.md(fin)}</div>` : '<p class="muted-p">✓ Đã xong.</p>'}
         ${outs.length ? `<div class="cv-facts">${outs.slice(0, 10).map((f) => `<button class="cv-chip" data-pv="outputs/${esc(f)}" data-tid="${esc(t.id)}">📄 ${esc(f)}</button>`).join('')}${outs.length > 10 ? `<button class="cv-chip" data-act="detail" data-tid="${esc(t.id)}">… ${outs.length - 10} tệp nữa</button>` : ''}</div>` : ''}
+        ${window.UX?.hasDiff(t) || t.projectChecks ? `<div class="cv-facts">${window.UX?.hasDiff(t) ? `<button class="cv-chip df-chip" data-act="diff" data-tid="${esc(t.id)}" title="Mở diff thay đổi trong repo">🧬 Thay đổi<span data-dstat="${esc(t.id)}"></span></button>` : ''}${window.UX?.checksChip(t) || ''}</div>` : ''}
         <div class="cv-tools">${fin ? `<button class="btn ghost sm" data-pv="${esc(t.finalPath)}" data-tid="${esc(t.id)}" title="Mở báo cáo ở khung bên phải">📄 Mở bên phải</button><button class="btn ghost sm" data-copy="${esc(t.id)}">⧉ Chép</button>` : ''}<button class="btn ghost sm" data-act="again" data-tid="${esc(t.id)}">↻ Giao lại tương tự</button><button class="btn ghost sm" data-act="detail" data-tid="${esc(t.id)}">📋 Chi tiết</button>${t.attention ? `<span class="cv-attn">⚠ ${esc(t.attention.detail)}</span>` : ''}</div></div>`);
     }
     if (isLast) parts.push(reviewBox(t));
@@ -386,7 +387,8 @@
               C.toast({ level: 'error', title: 'Không thực hiện được', msg: e.message });
             }
           };
-          if (k === 'detail') return C.openTask(t.id);
+          if (k === 'detail' || k === 'checks') return C.openTask(t.id, 'chat');
+          if (k === 'diff') return C.openTask(t.id, 'diff');
           if (k === 'again') return C.prefillAssign({ mode: t.mode, department: t.department, projectId: t.projectId, agentId: t.agentId, title: t.title, brief: t.brief });
           if (k === 'pause') return post(`/api/tasks/${t.id}/pause`, {}, 'Đã yêu cầu tạm dừng (lượt đang chạy làm nốt)');
           if (k === 'cancel') return confirm(`Hủy "${t.title}"?`) && post(`/api/tasks/${t.id}/cancel`, {}, 'Đã gửi lệnh hủy');
@@ -414,6 +416,7 @@
     if (document.activeElement?.closest?.('#cv-thread .rv-form') || $$('#cv-thread .rv-form').some((f) => !f.hidden && $('textarea', f).value.trim())) return later('thread', () => paint(false), 1500);
     box.innerHTML = `<div class="cv-col">${c.list.map((t, i) => segment(C.S.tasks.get(t.id) || t, i, i === c.list.length - 1)).join('')}</div>`;
     bindThread(box);
+    window.UX?.fillStats(box);
     bindReview(box, () => paint(true));
     renderDock(c);
     box.scrollTop = V.stick || nearBottom ? box.scrollHeight : prev;
@@ -550,6 +553,7 @@
 
   // ── API cho app.js / drive.js ────────────────────────────────────────────
   K.current = () => convOf(V.conv);
+  K.convId = () => (V.conv && convOf(V.conv) ? V.conv : null);
   K.inConv = (id) => !!V.conv && !!convOf(V.conv)?.list.some((t) => t.id === id);
   /** Mở hội thoại chứa nhiệm vụ id. */
   K.open = (id) => {
@@ -578,6 +582,7 @@
     $('#cv-conv').hidden = isNew;
     renderList();
     window.Drive?.crumbs?.();
+    window.Router?.sync();
     if (!isNew) paint(true);
   };
   K.changed = () => {

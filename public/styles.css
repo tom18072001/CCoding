@@ -929,3 +929,80 @@ kbd { display: inline-block; min-width: 18px; padding: 0 5px; border: 1px solid 
 .fx-done summary { cursor: pointer; }
 .fx-done li { padding: 2px 0; }
 .fx-done small { color: var(--faint); }
+
+/* ── UX-1: luồng hoạt động trực tiếp, lịch sử công cụ, lệnh kiểm tra, diff, thông báo ── */
+.lv { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 4px 0 2px 18px; font-size: 12px; color: var(--muted); min-width: 0; }
+.st-row .lv { margin-left: 0; }
+.lv-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--st-working); box-shadow: 0 0 0 0 #22d3ee88; animation: lv-pulse 1.6s ease-out infinite; flex: none; }
+@keyframes lv-pulse { 0% { box-shadow: 0 0 0 0 #22d3ee88; } 70% { box-shadow: 0 0 0 6px #22d3ee00; } 100% { box-shadow: 0 0 0 0 #22d3ee00; } }
+.lv-act { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 11.5px; color: var(--text); }
+.lv-n { font-size: 11px; color: var(--faint); }
+.lv-btn { background: none; border: 1px solid var(--line-2); color: #93c5fd; border-radius: 6px; padding: 1px 8px; font: inherit; font-size: 11.5px; cursor: pointer; }
+.lv-pre { flex-basis: 100%; max-height: 260px; overflow: auto; margin: 2px 0 0; padding: 8px 10px; background: #0b0e15; border: 1px solid var(--line); border-radius: 8px; font-size: 11.5px; line-height: 1.45; color: #cbd5e1; white-space: pre-wrap; overflow-wrap: anywhere; }
+.st-meta a[data-hist] { margin-left: auto; }
+.st-meta a[data-hist] + a { margin-left: 0; }
+.hist { margin-top: 6px; }
+.hist-l { list-style: none; margin: 0; padding: 6px 8px; max-height: 240px; overflow: auto; background: #0b0e15; border: 1px solid var(--line); border-radius: 8px; font-family: var(--mono); font-size: 11.5px; }
+.hist-l li { display: flex; gap: 8px; padding: 1px 0; color: #cbd5e1; }
+.hist-l li time { color: var(--faint); flex: none; }
+.hist-l li.bad span { color: #fca5a5; }
+.hist-e { font-size: 12px; color: var(--muted); margin: 0; }
+
+.ck { margin: 0 0 8px; font-size: 12.5px; }
+.ck > summary { cursor: pointer; color: var(--muted); display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.ck > summary small { color: var(--faint); font-size: 11px; }
+.ck b.bad, .ck em.bad, .ck-t td.bad b { color: var(--bad); }
+.ck em.ok, .ck-t td.ok b { color: var(--ok); }
+.ck em { font-style: normal; font-size: 11px; font-weight: 600; }
+.ck-t { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12px; }
+.ck-t th { text-align: left; font-weight: 600; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.ck-t th small { font-weight: 400; color: var(--faint); }
+.ck-t td { padding: 4px 6px; border-bottom: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+.ck-t td small { color: var(--faint); margin-left: 4px; }
+.ck-t td.ck-na { color: var(--faint); }
+.ck-t tr.reg td { background: #ef444414; }
+.ck-t tr.ck-tail td { border-bottom: 1px solid var(--line); }
+.ck-t tr.ck-tail pre { max-height: 220px; overflow: auto; margin: 4px 0 0; padding: 8px; background: #0b0e15; border-radius: 6px; font-size: 11.5px; white-space: pre-wrap; }
+.ck-chip.ok { border-color: #22c55e55; }
+.ck-chip.bad { border-color: #ef444477; color: #fca5a5; }
+
+.add { color: #4ade80; font-family: var(--mono); font-size: 11.5px; }
+.del { color: #f87171; font-family: var(--mono); font-size: 11.5px; }
+.df-head { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 6px; overflow-wrap: anywhere; }
+.df-head .warn { color: var(--warn); }
+.df-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+.df-bar select { max-width: 520px; min-width: 0; flex: 1 1 260px; background: var(--bg-2); color: var(--text); border: 1px solid var(--line-2); border-radius: 8px; padding: 4px 8px; font: inherit; font-size: 12.5px; }
+.df-bar .grow { flex: 1; }
+.df-tot { font-size: 12.5px; display: inline-flex; gap: 6px; align-items: baseline; }
+.df-f { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 6px; background: var(--bg-2); }
+.df-f > summary { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 10px; cursor: pointer; font-size: 12.5px; list-style: none; }
+.df-f > summary::-webkit-details-marker { display: none; }
+.df-f[open] > summary { border-bottom: 1px solid var(--line); }
+.df-p { font-family: var(--mono); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.df-p small { color: var(--faint); }
+.df-n { display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.df-st { font-size: 10.5px; font-weight: 700; border-radius: 5px; padding: 1px 6px; background: #64748b33; color: #cbd5e1; }
+.df-st.st-A, .df-st.st-u { background: #22c55e22; color: #4ade80; }
+.df-st.st-D { background: #ef444422; color: #f87171; }
+.df-st.st-M { background: #f59e0b22; color: #fbbf24; }
+.df-st.st-R, .df-st.st-C { background: #60a5fa22; color: #93c5fd; }
+.df-body { overflow-x: auto; }
+.df-lines { font-family: var(--mono); font-size: 11.5px; line-height: 1.5; min-width: max-content; }
+.dl { display: grid; grid-template-columns: 44px 44px auto; }
+.dl i { font-style: normal; color: var(--faint); text-align: right; padding-right: 8px; user-select: none; }
+.dl code { white-space: pre; padding-right: 12px; color: #cbd5e1; }
+.dl.add { background: #22c55e14; } .dl.add code { color: #bbf7d0; }
+.dl.del { background: #ef444414; } .dl.del code { color: #fecaca; }
+.dl.hunk { background: #60a5fa12; } .dl.hunk code { color: #93c5fd; }
+.dl.meta code { color: var(--faint); }
+.df-note { font-size: 12px; color: var(--muted); padding: 8px 10px; margin: 0; }
+.df-note.bad { color: var(--bad); }
+
+.nt-set { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 0 0 8px; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }
+.nt-set small { color: var(--muted); }
+.nt-set small.bad { color: var(--bad); }
+.nt-kinds, .nt-row { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+.nt-set .check { display: inline-flex; gap: 6px; align-items: center; }
+.nt-set select { background: var(--bg-2); color: var(--text); border: 1px solid var(--line-2); border-radius: 6px; padding: 2px 6px; font: inherit; font-size: 12px; margin-left: 4px; }
+@media (prefers-reduced-motion: reduce) { .lv-dot { animation: none; } }
+@media (max-width: 640px) { .dl { grid-template-columns: 34px 34px auto; } .ck-t th:first-child, .ck-t td:first-child { max-width: 120px; } }

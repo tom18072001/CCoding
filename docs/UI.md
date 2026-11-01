@@ -7,7 +7,7 @@ Giao diện web (http://127.0.0.1:7420) chỉ phục vụ máy cục bộ, khôn
 | Cột | Nội dung |
 |---|---|
 | **Trái — điều hướng** | **＋ Mới** (nhiệm vụ, giao riêng, dự án, prompt, tải tệp), các mục chính, cây **Dự án → Nhiệm vụ** (như thư mục), gắn sao, gần đây ngoài dự án, ⛽ token hôm nay. Nút `«`/`»` thu gọn thành dải biểu tượng (mặc định thu gọn ở màn Prompt, nhớ riêng cho từng màn). |
-| **Giữa — màn chính** | Kiểu Drive: *Tổng quan* (việc đang chạy, cần quyết định, dự án, gần đây), *Dự án* dạng thư mục (chuột phải/⋮ để thao tác), trang dự án có ô soạn + nhân sự, *Nhiệm vụ* (lọc, sắp xếp, danh sách/lưới, gắn sao, menu chuột phải), trang nhiệm vụ đầy đủ (kế hoạch, sản phẩm, token, nhật ký, lượt gọi, ô soạn cuối trang). Ô tìm `/` tìm nhiệm vụ, dự án, agent. |
+| **Giữa — màn chính** | Kiểu Drive: *Tổng quan* (việc đang chạy, cần quyết định, dự án, gần đây), *Dự án* dạng thư mục (chuột phải/⋮ để thao tác), trang dự án có ô soạn + nhân sự, *Nhiệm vụ* (lọc, sắp xếp, danh sách/lưới, gắn sao, menu chuột phải), trang nhiệm vụ đầy đủ (kế hoạch, lệnh kiểm tra, sản phẩm, 🧬 thay đổi, token, nhật ký, lượt gọi, ô soạn cuối trang). Ô tìm `/` tìm nhiệm vụ, dự án, agent. Mỗi màn có URL riêng (Back/Forward dùng được). |
 | **Phải — ô phụ** | Thẻ **🏢 Văn phòng** (sơ đồ pixel + dòng sự kiện mới nhất ở trên) và **📄 Xem trước** (báo cáo/tệp sản phẩm mở từ hội thoại, chép nội dung). `⤢` phóng to, `✕`/phím `V` ẩn hiện. |
 
 ## Màn 💬 Prompt (kiểu ứng dụng chat)
@@ -100,10 +100,19 @@ Góp ý (kèm 👍/👎, gắn nhiệm vụ tùy chọn) lưu ở `data/feedback
 
 Phím tắt không chạy khi đang gõ trong ô nhập hoặc có hộp thoại mở.
 
+## Thấy được việc agent làm (UX-1, 1/11/2026)
+
+- **URL riêng cho từng màn** — nút Back/Forward của trình duyệt, mở tab mới, gửi link (chỉ chứa mã, không chứa nội dung): `#/chat/<nhiệm vụ>` · `#/task/<nhiệm vụ>[/diff|final|files|tokens|events|calls]` · `#/tasks[/attention|starred…]` · `#/project/<mã>` · `#/agent/<id>` · `#/home`, `#/kpi`, `#/logs`… Mở thẳng URL của nhiệm vụ vừa giao (SSE chưa tới) hoặc cũ ngoài 100 việc gần nhất vẫn được — giao diện tải nhiệm vụ rồi mở.
+- **🧬 Thay đổi** (tab trong trang nhiệm vụ; chip "🧬 Thay đổi +a −d · n tệp" ở cuối hội thoại, trên dòng đang chạy và hộp tạm dừng/lỗi): diff so với commit gốc của nhiệm vụ. Worktree còn → gồm cả phần **chưa commit** và tệp mới (agent đang làm); worktree đã gỡ → lấy từ nhánh trong repo. Chọn **từng commit** (commit gộp `--no-ff` của hạng mục khi chạy song song ⇒ xem riêng phần hạng mục mang vào). Bấm tệp để mở diff (số dòng cũ/mới), **Mở tất cả**, ↻ đọc lại. Tệp `.env*`, khóa, chứng chỉ chỉ hiện tên; nội dung đã che bí mật. `GET /api/tasks/<id>/diff[?commit=<sha>][&file=<đường dẫn>]`.
+- **🧪 Lệnh kiểm tra** (đầu trang nhiệm vụ; chip trong hội thoại): bảng lệnh × *trước khi sửa* (baseline) → *sau thực thi / sau vòng sửa*, dòng tổng kết, thời gian; lệnh **đạt → hỏng** tô đỏ "hồi quy", hỏng → đạt ghi "đã sửa"; "Đuôi đầu ra" của lệnh hỏng. Tự mở khi có lệnh hỏng.
+- **Luồng hoạt động trực tiếp**: dưới mỗi hạng mục đang chạy (hội thoại và trang nhiệm vụ) có dòng việc agent đang làm (lệnh, tệp đang đọc/ghi — cập nhật theo sự kiện) và **Xem luồng** (≤ 160 dòng gần nhất). Tải lại trang giữa chừng → luồng lấy các công cụ đã dùng từ nhật ký. **📜 hoạt động** ở mỗi hạng mục (trang nhiệm vụ) liệt kê lệnh/công cụ đã dùng (`GET /api/tasks/<id>/events?kind=tool.call&subtask=S2`).
+- **Tín hiệu "chờ bạn"**: tiêu đề tab `(n) ▶ CCoding Office` — *n* = việc cần bạn (tạm dừng, lỗi, "cần xem"), ▶ = có việc đang chạy; favicon có chấm đỏ khi *n* > 0.
+- **Thông báo trình duyệt** (🔔 → đầu bảng Cảnh báo; tắt mặc định): chọn loại — ✅ xong, ⚠ xong nhưng cần xem, ⏸ tạm dừng, ❌ lỗi; *khi không xem CCoding* hoặc *luôn luôn*; âm báo; **chỉ hiện mã nhiệm vụ** (nhãn Bảo mật/Hạn chế luôn chỉ hiện mã). Thông báo chỉ có tiêu đề + trạng thái; bấm vào mở đúng hội thoại. Cần mở CCoding qua `http://127.0.0.1`/`localhost` (trình duyệt chặn thông báo ở địa chỉ không an toàn khác).
+
 ## Gợi ý tiếp theo (chưa làm)
 
-- Tự duyệt/từ chối review bằng tay ngay trong hội thoại.
-- Xem diff tệp đã sửa ngay trong nhiệm vụ; tải gói sản phẩm (.zip).
-- Thông báo trình duyệt khi nhiệm vụ xong/tạm dừng; ước tính token trước khi giao.
-- Bảng điều khiển trên điện thoại: phím ảo cho phòng giám đốc, thanh trên gọn hơn.
-- Chủ đề sáng/tối và cỡ chữ; lịch sử yêu cầu đã giao để tìm lại.
+Lộ trình UX-2/UX-3 (rà soát 1/11/2026, so với Devin, Codex, Copilot, Cursor, Conductor, LangSmith, Linear…):
+
+- **UX-2 · Duyệt và gộp**: tùy chọn duyệt kế hoạch trước khi thực thi (sửa người làm/phụ thuộc, xem ước tính token); bình luận theo dòng trên diff → gom thành một lần yêu cầu sửa; thẻ "sẵn sàng gộp" + đẩy nhánh / dùng làm `baseRef` cho việc nối / tạo PR; thẻ tóm tắt hoàn tất.
+- **UX-3 · Theo dõi song song và điều hướng**: dòng thời gian (Gantt) các hạng mục và worktree con; hộp "Cần bạn" duyệt bằng phím; bảng lệnh `Ctrl+K`; biểu đồ xu hướng token/KPI; chạy bản thử ứng dụng trong worktree.
+- Khác: tải gói sản phẩm (.zip); bảng điều khiển trên điện thoại; chủ đề sáng/tối và cỡ chữ; dấu "!" trên nhân vật văn phòng khi việc cần bạn.
