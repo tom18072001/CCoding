@@ -419,7 +419,7 @@ export function reviewPrompt(c: Ctx, items: DepInput[], tools: ToolName[] = [], 
 ${items.map((i) => `### ${i.st.id} — ${i.st.title} (@${i.st.assignee})${i.wsPath && c.filesAccessible ? ` — bản đầy đủ: \`${i.wsPath}\`` : ''}\nTiêu chí: ${i.st.description}\n\n${body(i)}`).join('\n\n---\n\n')}
 ${changes ? `\n## Thay đổi trong workspace (git)\n\`\`\`\n${truncate(changes, 4000)}\n\`\`\`\n` : ''}${checksBlock(c.task, 'review')}${toolNote(c, tools, 'review')}
 ## Việc của bạn: REVIEW CHẤT LƯỢNG
-Đánh giá từng hạng mục theo tiêu chí review trong hồ sơ của bạn, tương xứng với quy mô và yêu cầu của nhiệm vụ. Mức độ: "blocker" (sai/thiếu nghiêm trọng, không thể bàn giao), "major" (cần sửa trước khi bàn giao), "minor" (góp ý thêm). Chỉ đặt "approved": false khi có blocker/major.
+Đánh giá từng hạng mục theo tiêu chí review trong hồ sơ của bạn, tương xứng với quy mô và yêu cầu của nhiệm vụ.${c.task.branch ? ` Thay đổi CHƯA COMMIT không phải lỗi: khi nhiệm vụ kết thúc CCoding tự commit toàn bộ workspace lên nhánh \`${c.task.branch}\` — đánh giá nội dung thay đổi (git diff, tệp), không nêu lỗi "chưa commit" và không yêu cầu agent không có công cụ git tự commit.` : ''} Mức độ: "blocker" (sai/thiếu nghiêm trọng, không thể bàn giao), "major" (cần sửa trước khi bàn giao), "minor" (góp ý thêm). Chỉ đặt "approved": false khi có blocker/major.
 
 Trả lời bằng một khối JSON${tools.includes('run_command') ? ' ("checks" là các lệnh bạn ĐÃ chạy thật)' : ''}:
 \`\`\`json
