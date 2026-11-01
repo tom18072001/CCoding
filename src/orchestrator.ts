@@ -993,7 +993,25 @@ export class Orchestrator {
       serialWriters: this.exclusiveWrites(task, project),
       parallelWriters: this.parallelWorktrees(task, project),
       repoMap: this.repoMaps.get(task.id),
+      caps: access === 'none' ? undefined : this.capabilities(roster, access, this.gitReadable(task, project)),
     };
+  }
+
+  /** Năng lực công cụ ở pha thực thi của từng người (với quyền của nhiệm vụ) — trưởng phòng giao việc theo đó. */
+  private capabilities(roster: AgentDef[], access: ToolAccess, gitRead: boolean): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const a of roster) {
+      const t = toolsFor(a.tools, access, 'execute', false, gitRead);
+      const git = t.includes('git_read') ? ', xem lịch sử git (chỉ đọc)' : '';
+      out[a.id] = t.includes('run_command')
+        ? 'chạy lệnh (test, build, migration, git) + đọc/ghi tệp'
+        : t.includes('write_file') || t.includes('edit_file')
+          ? `đọc/ghi tệp${git} — KHÔNG chạy test/build/lệnh`
+          : t.includes('read_file')
+            ? `chỉ đọc tệp${git}`
+            : 'không dùng công cụ';
+    }
+    return out;
   }
 
   private async runDepartment(task: Task, run: DeptRun, project: ProjectDef | undefined, prior?: string): Promise<string> {
@@ -1022,68 +1040,97 @@ export class Orchestrator {
       this.save(task);
     }
 
-    // 1) Lập kế hoạch
-    let plan: ReturnType<typeof parsePlan> | undefined;
-    if (!reached(run, 'planned')) {
-      this.setPhase(task, run, 'plan');
-      pctx.projectHistory = this.projectHistory(task, pctx);
-      const planRes = await this.call(lead, 'plan', (tools) => P.planPrompt(pctx, prior, tools), { ...base, hints: { brief: task.brief, roster: rosterHints, department: dept.name } });
-      // lượt gọi lỗi → dừng (tiếp tục được) thay vì làm theo kế hoạch dự phòng đoán mò
-      if (planRes.error && !planRes.text) throw new Error(`Trưởng phòng không lập được kế hoạch: ${planRes.error}`);
-      plan = parsePlan(planRes.text, roster, lead, task.brief);
-      run.subtasks = plan.subtasks;
-      run.planSummary = plan.summary;
-      run.stage = 'planned';
-      this.message(task, dept.id, lead.id, 'plan', `${plan.summary || 'Kế hoạch dự thảo'}\n${P.planText(plan.subtasks)}${plan.parsed ? '' : '\n(_kế hoạch dự phòng — trả lời của trưởng phòng không đúng định dạng_)'}`);
-      this.save(task);
+    // 0b) Lệnh chuẩn bị + kiểm tra baseline chạy SONG SONG với lập kế hoạch/họp (các pha đó chỉ đọc repo) — trước đây chạy sau khi
+    // chốt kế hoạch, nằm trên đường găng ~0,5–1 phút mỗi nhiệm vụ
+    let early: Promise<unknown> | undefined;
+    if (
+      this.d.config.tools.earlyBaseline !== false &&
+      !reached(run, 'finalized') &&
+      this.projectCheckable(task, project) &&
+      !task.projectChecks?.baseline &&
+      !run.subtasks.some((s) => s.attempts > 0 || s.status === 'done')
+    ) {
+      early = this.runProjectChecks(task, project, dept.id, 'baseline').then(
+        () => undefined,
+        (e: unknown) => e ?? new Error('Lệnh kiểm tra baseline lỗi'),
+      );
     }
-
-    // 2) Họp thảo luận + chốt (tự bỏ qua khi kế hoạch nhỏ)
-    if (!reached(run, 'finalized')) {
-      const rounds = task.options.discussionRounds;
-      const assignees = [...new Set(run.subtasks.map((s) => s.assignee))].filter((x) => x !== lead.id);
-      const participantIds = [...new Set([...assignees, task.options.review ? reviewer?.id : undefined].filter((x): x is string => !!x && x !== lead.id))].slice(0, 5);
-      const small = run.subtasks.length <= 2 || participantIds.length < 2;
-      if (rounds > 0 && !small) {
-        this.setPhase(task, run, 'discuss');
-        const participants = participantIds.map((id) => registry.agent(id));
-        const meeting = [lead, ...participants];
-        for (const a of meeting) this.hold(a.id, { status: 'discussing', activity: 'Đang họp phòng', taskId: task.id, phase: 'discuss' });
-        try {
-          for (let r = 1; r <= rounds; r++) {
-            for (const a of participants) {
-              this.checkAbort(task);
-              const transcript = P.transcriptText(this.d.store.transcript(task.id).filter((m) => m.department === dept.id && m.kind !== 'final'), names, 6000);
-              const res = await this.call(a, 'discuss', () => P.discussPrompt(pctx, a, run.planSummary ?? '', run.subtasks, transcript, r, rounds), { ...base, hints: { brief: task.brief } });
-              if (res.text) this.message(task, dept.id, a.id, 'discussion', res.text.slice(0, 1500), { round: r });
-            }
-          }
-          this.setPhase(task, run, 'finalize');
-          const transcript = P.transcriptText(this.d.store.transcript(task.id).filter((m) => m.department === dept.id), names, 8000);
-          const fin = await this.call(lead, 'finalize', () => P.finalizePrompt(pctx, run.planSummary ?? '', run.subtasks, transcript), {
-            ...base,
-            hints: { brief: task.brief, planSummary: run.planSummary, subtasks: run.subtasks.map(stHint) },
-          });
-          const revised = parsePlan(fin.text, roster, lead, task.brief);
-          if (revised.parsed) {
-            plan = revised;
-            run.subtasks = revised.subtasks;
-            run.planSummary = revised.summary || run.planSummary;
-          }
-          run.decisions = (plan?.decisions ?? []).join('; ');
-          this.message(task, dept.id, lead.id, 'decision', `Chốt kế hoạch${plan?.decisions.length ? `:\n${plan.decisions.map((x) => `- ${x}`).join('\n')}` : '.'}\n${P.planText(run.subtasks)}`);
-        } finally {
-          for (const a of meeting) this.release(a.id, task.id);
-        }
-      } else if (rounds > 0) {
-        this.message(task, dept.id, 'system', 'system', `Bỏ qua họp: kế hoạch nhỏ (${run.subtasks.length} hạng mục, ${participantIds.length} người) — vào thực thi luôn để tiết kiệm token.`);
-        run.decisions ??= '';
+    const settleEarly = async (): Promise<void> => {
+      if (!early) return;
+      const e = await early;
+      early = undefined;
+      if (e) throw e;
+    };
+    try {
+      // 1) Lập kế hoạch
+      let plan: ReturnType<typeof parsePlan> | undefined;
+      if (!reached(run, 'planned')) {
+        this.setPhase(task, run, 'plan');
+        pctx.projectHistory = this.projectHistory(task, pctx);
+        const planRes = await this.call(lead, 'plan', (tools) => P.planPrompt(pctx, prior, tools), { ...base, hints: { brief: task.brief, roster: rosterHints, department: dept.name } });
+        // lượt gọi lỗi → dừng (tiếp tục được) thay vì làm theo kế hoạch dự phòng đoán mò
+        if (planRes.error && !planRes.text) throw new Error(`Trưởng phòng không lập được kế hoạch: ${planRes.error}`);
+        plan = parsePlan(planRes.text, roster, lead, task.brief);
+        run.subtasks = plan.subtasks;
+        run.planSummary = plan.summary;
+        run.stage = 'planned';
+        this.message(task, dept.id, lead.id, 'plan', `${plan.summary || 'Kế hoạch dự thảo'}\n${P.planText(plan.subtasks)}${plan.parsed ? '' : '\n(_kế hoạch dự phòng — trả lời của trưởng phòng không đúng định dạng_)'}`);
+        this.save(task);
       }
-      run.stage = 'finalized';
-      this.save(task);
-      // kế hoạch quá lớn so với ngân sách → cảnh báo (chế độ "pause": dừng để quyết định tách/tăng ngân sách)
-      this.checkEstimate(task, run, project);
+
+      // 2) Họp thảo luận + chốt (tự bỏ qua khi kế hoạch nhỏ)
+      if (!reached(run, 'finalized')) {
+        const rounds = task.options.discussionRounds;
+        const assignees = [...new Set(run.subtasks.map((s) => s.assignee))].filter((x) => x !== lead.id);
+        const participantIds = [...new Set([...assignees, task.options.review ? reviewer?.id : undefined].filter((x): x is string => !!x && x !== lead.id))].slice(0, 5);
+        const small = run.subtasks.length <= 2 || participantIds.length < 2;
+        if (rounds > 0 && !small) {
+          this.setPhase(task, run, 'discuss');
+          const participants = participantIds.map((id) => registry.agent(id));
+          const meeting = [lead, ...participants];
+          for (const a of meeting) this.hold(a.id, { status: 'discussing', activity: 'Đang họp phòng', taskId: task.id, phase: 'discuss' });
+          try {
+            for (let r = 1; r <= rounds; r++) {
+              for (const a of participants) {
+                this.checkAbort(task);
+                const transcript = P.transcriptText(this.d.store.transcript(task.id).filter((m) => m.department === dept.id && m.kind !== 'final'), names, 6000);
+                const res = await this.call(a, 'discuss', () => P.discussPrompt(pctx, a, run.planSummary ?? '', run.subtasks, transcript, r, rounds), { ...base, hints: { brief: task.brief } });
+                if (res.text) this.message(task, dept.id, a.id, 'discussion', res.text.slice(0, 1500), { round: r });
+              }
+            }
+            this.setPhase(task, run, 'finalize');
+            const transcript = P.transcriptText(this.d.store.transcript(task.id).filter((m) => m.department === dept.id), names, 8000);
+            const fin = await this.call(lead, 'finalize', () => P.finalizePrompt(pctx, run.planSummary ?? '', run.subtasks, transcript), {
+              ...base,
+              hints: { brief: task.brief, planSummary: run.planSummary, subtasks: run.subtasks.map(stHint) },
+            });
+            const revised = parsePlan(fin.text, roster, lead, task.brief);
+            if (revised.parsed) {
+              plan = revised;
+              run.subtasks = revised.subtasks;
+              run.planSummary = revised.summary || run.planSummary;
+            }
+            run.decisions = (plan?.decisions ?? []).join('; ');
+            this.message(task, dept.id, lead.id, 'decision', `Chốt kế hoạch${plan?.decisions.length ? `:\n${plan.decisions.map((x) => `- ${x}`).join('\n')}` : '.'}\n${P.planText(run.subtasks)}`);
+          } finally {
+            for (const a of meeting) this.release(a.id, task.id);
+          }
+        } else if (rounds > 0) {
+          this.message(task, dept.id, 'system', 'system', `Bỏ qua họp: kế hoạch nhỏ (${run.subtasks.length} hạng mục, ${participantIds.length} người) — vào thực thi luôn để tiết kiệm token.`);
+          run.decisions ??= '';
+        }
+        run.stage = 'finalized';
+        this.save(task);
+        // kế hoạch quá lớn so với ngân sách → cảnh báo (chế độ "pause": dừng để quyết định tách/tăng ngân sách)
+        this.checkEstimate(task, run, project);
+      }
+
+    } catch (e) {
+      // lập kế hoạch/họp dừng (tạm dừng, hủy, lỗi): chờ lệnh chuẩn bị/baseline đang chạy kết thúc để không bỏ tiến trình mồ côi
+      if (early) await early;
+      throw e;
     }
+    await settleEarly();
 
     // 3) Thực thi — CCoding tự chạy lệnh kiểm tra của dự án trước khi sửa (baseline) và sau khi làm xong
     if (!reached(run, 'executed')) {
@@ -1490,21 +1537,26 @@ export class Orchestrator {
   }
 
   /** Ước lượng token cho phần còn lại của kế hoạch (theo quyền công cụ của từng hạng mục). */
-  private histCache?: { at: number; map: Map<string, AgentHistory> };
+  private histCache = new Map<string, { at: number; map: Map<string, AgentHistory> }>();
   private readonly repoMaps = new Map<string, { rel: string; large: string[] }>();
   private readonly repoMapLogged = new Set<string>();
   /** Token thực tế mỗi hạng mục theo agent (trung vị các hạng mục gần nhất) — làm mới mỗi 10 phút. */
-  private history(): Map<string, AgentHistory> {
+  /** Lịch sử token/hạng mục theo agent, chỉ từ nhiệm vụ chạy CÙNG runtime với nhiệm vụ đang ước tính (vd. claude-cli). */
+  private history(task?: Task): Map<string, AgentHistory> {
     const days = this.d.config.estimate.historyDays ?? 30;
     if (!days) return new Map();
-    if (!this.histCache || Date.now() - this.histCache.at > 10 * 60_000) this.histCache = { at: Date.now(), map: subtaskHistory(this.d.store.list(), { days }) };
-    return this.histCache.map;
+    const runtime = task?.options.runtime ?? '';
+    const hit = this.histCache.get(runtime);
+    if (hit && Date.now() - hit.at <= 10 * 60_000) return hit.map;
+    const map = subtaskHistory(this.d.store.list(), { days, runtime });
+    this.histCache.set(runtime, { at: Date.now(), map });
+    return map;
   }
 
   /** Cơ sở ước tính: agent nào dùng lịch sử thật (trung vị/hạng mục, số mẫu). */
-  private estimateBasis(run: DeptRun): string {
+  private estimateBasis(run: DeptRun, task?: Task): string {
     const min = this.d.config.estimate.minSamples ?? 2;
-    const hist = this.history();
+    const hist = this.history(task);
     const used = [...new Set(run.subtasks.filter((s) => s.status !== 'done').map((s) => s.assignee))]
       .map((a) => [a, hist.get(a)] as const)
       .filter((x): x is readonly [string, AgentHistory] => !!x[1] && x[1].samples >= min);
@@ -1513,7 +1565,7 @@ export class Orchestrator {
 
   estimatePlan(task: Task, run: DeptRun, project?: ProjectDef): number {
     const e = this.d.config.estimate;
-    const hist = this.history();
+    const hist = this.history(task);
     const min = e.minSamples ?? 2;
     const access = this.toolAccess(task, project);
     const cls = task.classification;
@@ -1540,7 +1592,7 @@ export class Orchestrator {
   private checkEstimate(task: Task, run: DeptRun, project?: ProjectDef): void {
     const est = this.estimatePlan(task, run, project);
     const remaining = Math.max(0, task.options.budgetTokens - totalTokens(task.usage));
-    const basis = this.estimateBasis(run);
+    const basis = this.estimateBasis(run, task);
     run.estimate = { tokens: est, budget: remaining, at: nowIso(), basis };
     this.save(task);
     if (est <= remaining * (this.d.config.estimate.warnRatio || 1)) return;
@@ -1571,6 +1623,14 @@ export class Orchestrator {
   /** Agent có công cụ chạy lệnh ở pha thực thi với quyền hiện tại của nhiệm vụ. */
   private isWriter(agent: AgentDef, task: Task, project?: ProjectDef): boolean {
     return toolsFor(agent.tools, this.toolAccess(task, project), 'execute', false).includes('run_command');
+  }
+
+  /** Workspace là repo git của dự án → vai trò không có quyền chạy lệnh vẫn được xem lịch sử git chỉ đọc (`git_read`). */
+  private gitReadable(task: Task, project: ProjectDef | undefined, cwd?: string): boolean {
+    if (this.d.config.tools.gitRead === false || !project?.workspace) return false;
+    if (task.branch) return true;
+    const dir = cwd ?? task.workspace;
+    return !!dir && fs.existsSync(path.join(dir, '.git'));
   }
 
   /**
@@ -2084,7 +2144,8 @@ export class Orchestrator {
         }
         // tra cứu web chỉ với dữ liệu Công khai/Nội bộ (truy vấn đi ra máy tìm kiếm bên ngoài)
         const web = config.tools.web !== false && (cls === 'public' || cls === 'internal');
-        const allow = rt.supportsTools && rt.id !== 'mock' ? toolsFor(agent.tools, access, phase, web) : [];
+        const gitRead = this.gitReadable(task, ctx.project, ctx.cwd);
+        const allow = rt.supportsTools && rt.id !== 'mock' ? toolsFor(agent.tools, access, phase, web, gitRead) : [];
         const built = build(allow);
         if (handover && allow.length) built.prompt = `${built.prompt}\n\n${handover}`;
         const fb = this.d.store.activeFeedback(agent.id).map((f) => `${f.rating === 'up' ? '👍 ' : f.rating === 'down' ? '👎 ' : ''}${f.text}`);
@@ -2100,8 +2161,8 @@ export class Orchestrator {
           prompt: outbound(built.prompt),
           model: cand.model,
           cwd: ctx.cwd,
-          tools: cliTools(agent.tools, access, phase),
-          allowTools: allow.length > 0 || (rt.supportsTools && cliTools(agent.tools, access, phase).length > 0),
+          tools: cliTools(agent.tools, access, phase, gitRead),
+          allowTools: allow.length > 0 || (rt.supportsTools && cliTools(agent.tools, access, phase, gitRead).length > 0),
           timeoutMs: config.defaults.timeoutMs,
           maxTokens: config.phases?.maxTokens?.[phase],
           toolPolicy: allow.length
@@ -2118,6 +2179,8 @@ export class Orchestrator {
                 allowGitCommit: !!task.branch,
                 expectWrites: (phase === 'execute' || phase === 'revise') && allow.some((t) => t === 'write_file' || t === 'edit_file'),
                 readsBeforeWrite: config.tools.readsBeforeWrite,
+                gitReadOnly: allow.includes('git_read') && !allow.includes('run_command'),
+                guardState: path.join(store.runDir(task.id), 'guard', `${safeName(callId)}${i ? `-r${i}` : ''}.json`),
               }
             : undefined,
           redact: rt.local ? undefined : { secrets: config.dataProtection.redactSecrets, pii: piiOut },
@@ -2549,14 +2612,17 @@ export class Orchestrator {
  * Tên công cụ kiểu Claude Code cho runtime CLI (claude/codex/kimi) theo pha và quyền dự án — cùng quy tắc với `toolsFor`:
  * review được chạy lệnh (test/typecheck để có bằng chứng) nhưng không ghi tệp; lập kế hoạch/tổng hợp chỉ đọc.
  */
-export function cliTools(agentTools: string[], access: ToolAccess, phase: Phase): string[] {
+export function cliTools(agentTools: string[], access: ToolAccess, phase: Phase, gitRead = false): string[] {
   if (access === 'none' || phase === 'route' || phase === 'discuss') return [];
   let list = agentTools;
   if (access === 'read') list = list.filter((t) => READ_ONLY_TOOLS.has(t));
   if (access === 'write') list = list.filter((t) => t !== 'Bash' && t !== 'PowerShell');
-  if (phase === 'execute' || phase === 'revise') return list;
-  if (phase === 'review') return list.filter((t) => READ_ONLY_TOOLS.has(t) || t === 'Bash' || t === 'PowerShell');
-  return list.filter((t) => READ_ONLY_TOOLS.has(t));
+  if (phase === 'execute' || phase === 'revise') list = [...list];
+  else if (phase === 'review') list = list.filter((t) => READ_ONLY_TOOLS.has(t) || t === 'Bash' || t === 'PowerShell');
+  else list = list.filter((t) => READ_ONLY_TOOLS.has(t));
+  // git chỉ đọc (như git_read của toolsFor): thêm Bash, hook claude-guard chỉ cho chạy git log/show/diff…
+  if (gitRead && list.includes('Read') && !list.includes('Bash') && !list.includes('PowerShell')) list.push('Bash');
+  return list;
 }
 
 /** Tệp agent đã tạo trong thư mục làm việc riêng của nhiệm vụ (bỏ .ccoding, node_modules, .git). */

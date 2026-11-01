@@ -11,11 +11,16 @@ export interface AgentHistory {
  * Token thực tế mỗi hạng mục theo agent, lấy từ các nhiệm vụ đã chạy (hạng mục xong, đã chạy ít nhất một lần).
  * Dùng trung vị của `maxSamples` hạng mục GẦN NHẤT để ước tính theo kiểu làm việc hiện tại (sau các bản vá, số liệu cũ phai dần).
  */
-export function subtaskHistory(tasks: Task[], o: { days?: number; maxSamples?: number; now?: number; projectId?: string } = {}): Map<string, AgentHistory> {
+export function subtaskHistory(
+  tasks: Task[],
+  o: { days?: number; maxSamples?: number; now?: number; projectId?: string; runtime?: string } = {},
+): Map<string, AgentHistory> {
   const since = (o.now ?? Date.now()) - (o.days ?? 30) * 864e5;
   const per = new Map<string, Array<{ at: number; tokens: number }>>();
   for (const t of tasks) {
     if (o.projectId && t.projectId !== o.projectId) continue;
+    // chỉ so với nhiệm vụ chạy cùng runtime: token của claude-cli (đọc cache nhiều) khác hẳn runtime không cache/model cục bộ
+    if (o.runtime !== undefined && (t.options?.runtime ?? '') !== o.runtime) continue;
     for (const r of t.runs ?? [])
       for (const s of r.subtasks ?? []) {
         if (s.status !== 'done' || !s.attempts || s.splitTo) continue;

@@ -10,7 +10,7 @@ export type TaskStatus = 'queued' | 'running' | 'paused' | 'done' | 'failed' | '
 export type BudgetMode = 'pause' | 'complete';
 /** Quyền công cụ của agent trong thư mục làm việc: không · chỉ đọc · đọc/ghi file · đọc/ghi + chạy lệnh. */
 export type ToolAccess = 'none' | 'read' | 'write' | 'exec';
-export type ToolName = 'list_files' | 'read_file' | 'search' | 'write_file' | 'edit_file' | 'run_command' | 'search_papers' | 'web_search' | 'fetch_url';
+export type ToolName = 'list_files' | 'read_file' | 'search' | 'write_file' | 'edit_file' | 'run_command' | 'git_read' | 'search_papers' | 'web_search' | 'fetch_url';
 /** Nhóm lỗi runtime — quyết định có chuyển sang tài nguyên khác hay không. */
 export type ErrorKind = 'quota' | 'rate' | 'auth' | 'transient' | 'timeout' | 'model' | 'context' | 'empty' | 'fatal';
 export type SubtaskStatus = 'pending' | 'running' | 'done' | 'failed' | 'skipped';
@@ -114,6 +114,10 @@ export interface ToolPolicy {
   readsBeforeWrite?: number;
   /** Cho phép git commit (chỉ khi làm trên nhánh/worktree riêng). */
   allowGitCommit: boolean;
+  /** Runtime CLI (claude-cli): công cụ shell chỉ để chạy git chỉ đọc — vai trò không có quyền chạy lệnh (tương ứng `git_read`). */
+  gitReadOnly?: boolean;
+  /** Tệp trạng thái của hook claude-guard trong lượt gọi này (đếm số lần đọc liên tiếp chưa ghi) — nằm trong data/runs/<task>/guard. */
+  guardState?: string;
 }
 
 export interface ToolCallRecord {

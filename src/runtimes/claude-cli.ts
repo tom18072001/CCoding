@@ -1,7 +1,9 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { quickRun, runProcess } from './spawn.js';
 import { scrubEnv } from '../tools/workspace.js';
+import { isGitReadCommand } from '../tools/shell-policy.js';
 import { estimateTokens } from '../util/tokens.js';
 import { combinedPrompt } from './common.js';
 import type { RuntimeConfig } from '../config.js';
@@ -69,7 +71,9 @@ export class ClaudeStreamParser {
             const inp = block.input ?? {};
             const detail = inp.command ?? inp.file_path ?? inp.pattern ?? inp.url ?? inp.query ?? '';
             this.hooks.onActivity?.(`${block.name}${detail ? `: ${String(detail).slice(0, 60)}` : ''}`);
-            const rec: ToolCallRecord = { name: CLAUDE_TOOL_NAMES[block.name] ?? String(block.name), args: String(detail).slice(0, 400), ok: true, ms: 0, outputChars: 0 };
+            // lệnh shell chỉ xem lịch sử git (log/show/diff…) ghi là git_read — không tính là "chạy lệnh"/"đọc code qua shell" trong KPI
+            const gitRead = (block.name === 'Bash' || block.name === 'PowerShell') && isGitReadCommand(String(inp.command ?? ''));
+            const rec: ToolCallRecord = { name: gitRead ? 'git_read' : (CLAUDE_TOOL_NAMES[block.name] ?? String(block.name)), args: String(detail).slice(0, 400), ok: true, ms: 0, outputChars: 0 };
             this.toolCalls.push(rec);
             if (block.id) this.pending.set(String(block.id), { rec, t0: Date.now() });
           }
@@ -152,6 +156,11 @@ export class ClaudeCliRuntime implements Runtime {
         root: policy?.root ?? req.cwd,
         deny: policy?.denyCommands ?? [],
         allowGitCommit: policy?.allowGitCommit ?? false,
+        // vai trò không có quyền chạy lệnh: Bash chỉ để xem lịch sử git (tương ứng git_read của vòng công cụ CCoding)
+        shell: policy?.gitReadOnly ? 'git-read' : 'full',
+        // giới hạn khảo sát như vòng công cụ của CCoding: chỉ ở pha phải tạo sản phẩm bằng tệp (thực thi/sửa)
+        readsBeforeWrite: policy?.expectWrites && policy.guardState ? policy.readsBeforeWrite ?? 0 : 0,
+        state: policy?.guardState,
       });
       // công cụ đã được CCoding cấp theo quyền dự án/pha → chạy không hỏi (chế độ -p không hỏi được); hook vẫn chặn trước
       args.push('--allowedTools', req.tools.join(','));
@@ -178,6 +187,7 @@ export class ClaudeCliRuntime implements Runtime {
       signal: hooks.signal,
       onLine: (l) => parser.feed(l),
     });
+    if (req.toolPolicy?.guardState) fs.rmSync(req.toolPolicy.guardState, { force: true });
     const text = (parser.resultText ?? parser.text).trim();
     const u = parser.finalUsage();
     const estimated = !u.input_tokens && !u.output_tokens;

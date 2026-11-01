@@ -306,3 +306,14 @@ Theo yêu cầu chủ dự án, CCoding **không dùng** các tài khoản Claud
 | Sơ đồ văn phòng (phòng Giám đốc ở giữa, pantry time, nhấp đồ vật) | — | Chỉ đổi hình ảnh trên canvas ở trình duyệt; không gọi API ghi, không tác động nhiệm vụ/log |
 
 **Kết luận: ĐẠT**, không thêm điều kiện.
+
+### Bổ sung: quản lý sub-agent — git chỉ đọc, giữ lệnh shell trong worktree, giới hạn khảo sát cho claude-cli (1/11/2026)
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| Lệnh shell bị giữ trong thư mục làm việc (hook `claude-guard` của claude-cli + `run_command`) | PRE-01, PRE-05 | **Đóng một khoảng hở**: trước đây Bash của Claude Code đọc được tệp ngoài worktree bằng đường dẫn tuyệt đối (`cat /c/Users/…/<thư mục khác>`) dù `Read` đã bị giới hạn — trên máy có thư mục dữ liệu thật của ND57 (nhãn cao hơn dữ liệu giả trong repo) mà runtime claude-cli gửi tới Anthropic. Nay chặn đường dẫn ổ đĩa, MSYS `/c/…`, UNC, `~`, `$HOME`, `$env:USERPROFILE` và `../` vượt gốc; chỉ cho thư mục tạm và thư mục cài đặt hệ thống/Node. Đây là kiểm tra theo mẫu chuỗi (không phải sandbox hệ điều hành): lệnh tự dựng đường dẫn (biến, nối chuỗi trong script) vẫn có thể lọt — giữ khuyến nghị cũ: dữ liệu thật để ngoài máy chạy agent hoặc dưới tài khoản agent không đọc được |
+| `git_read` cho vai trò không có quyền chạy lệnh | PRE-01, DET-01 | Chạy `git` trực tiếp (không qua shell), chỉ lệnh con đọc; chặn `--output`, `--no-index`, `--contents`, `-O`, `--ext-diff`, `--textconv`, `-c`, `--git-dir/--work-tree` và mọi tham số trỏ tới `.env`; môi trường đã bỏ biến chứa khóa. Nội dung lịch sử git thuộc chính repo mà agent vốn đọc được — không mở thêm loại dữ liệu mới. Mỗi lần gọi ghi `tool.call` (tham số tóm tắt) |
+| Giới hạn khảo sát trong hook (`data/runs/<task>/guard/*.json`) | GOV-03 | Tệp chỉ chứa 2 số đếm (số lần đọc liên tiếp, đã nhắc hay chưa), xóa khi lượt gọi xong; không chứa nội dung/tham số |
+| Roster ghi năng lực công cụ trong prompt lập kế hoạch | — | Chỉ là mô tả quyền (chạy lệnh / đọc-ghi / chỉ đọc) — không chứa đường dẫn hay dữ liệu |
+
+**Kết luận: ĐẠT**, không thêm điều kiện. Khuyến nghị: tiếp tục để thư mục dữ liệu thật (vd. `nd57-du-lieu-that`) ngoài các thư mục `workspaces/`; nhiệm vụ đụng dữ liệu thật phải gắn nhãn Bảo mật/Hạn chế (chỉ runtime cục bộ).

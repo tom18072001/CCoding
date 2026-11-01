@@ -64,6 +64,8 @@ export interface Ctx {
   repoMap?: { rel: string; large: string[] };
   /** P8: các nhiệm vụ trước của cùng dự án (pha lập kế hoạch) + tệp chi tiết. */
   projectHistory?: { text: string; rel?: string };
+  /** Năng lực công cụ của từng agent ở pha thực thi với quyền của nhiệm vụ này (id → mô tả ngắn) — để giao việc đúng người. */
+  caps?: Record<string, string>;
 }
 
 /** Trích các mục của hồ sơ — pha họp chỉ cần sứ mệnh + chuyên môn. */
@@ -154,8 +156,16 @@ function notesFor(c: Ctx): string {
   return `\n## Chỉ dẫn bổ sung của giám đốc (gửi trong lúc chạy — ưu tiên áp dụng, mới nhất sau cùng)\n${lines.join('\n')}\n\n`;
 }
 
-export function rosterLines(roster: AgentDef[]): string {
-  return roster.map((a) => `- @${a.id} — ${a.title} — vai trò: ${a.role} — kỹ năng: ${a.skills.join(', ')}${a.summary ? ` — ${a.summary}` : ''}`).join('\n');
+export function rosterLines(roster: AgentDef[], caps?: Record<string, string>): string {
+  return roster
+    .map((a) => `- @${a.id} — ${a.title} — vai trò: ${a.role} — kỹ năng: ${a.skills.join(', ')}${caps?.[a.id] ? ` — công cụ: ${caps[a.id]}` : ''}${a.summary ? ` — ${a.summary}` : ''}`)
+    .join('\n');
+}
+
+/** Quy tắc giao việc theo năng lực công cụ (lập kế hoạch + chốt kế hoạch). */
+function capsRule(c: Ctx): string {
+  if (!c.caps || !Object.values(c.caps).some((x) => /chạy lệnh/.test(x))) return '';
+  return '\n- Giao theo NĂNG LỰC CÔNG CỤ ở danh sách trên: hạng mục phải chạy test/build/migration/đo hiệu năng/script chỉ giao cho người "chạy lệnh"; người chỉ đọc/ghi tệp không chạy được lệnh (họ vẫn xem được lịch sử git nếu ghi "xem lịch sử git"). Tài liệu cần số liệu đo/kết quả test thì hoặc giao người chạy lệnh, hoặc đặt phụ thuộc vào hạng mục đã đo và ghi rõ lấy số liệu từ bàn giao đó.';
 }
 
 const PLAN_SCHEMA = `\`\`\`json
@@ -219,10 +229,13 @@ function toolNote(c: Ctx, tools: ToolName[], phase: Phase): string {
   return fileToolNote(c, tools, phase) + wn;
 }
 
+const GIT_READ_NOTE =
+  'Xem lịch sử git (hash commit, nội dung commit, diff, blame) bằng git_read — nếu công cụ của bạn là Bash/PowerShell của Claude Code thì chỉ chạy được `git log/show/diff/blame/status/grep/ls-files…` (lọc qua `| head`/`| grep`), không nối lệnh khác.';
+
 function fileToolNote(c: Ctx, tools: ToolName[], phase: Phase): string {
   const read = tools.filter((t) => ['list_files', 'read_file', 'search'].includes(t));
   if (phase === 'plan' || phase === 'finalize' || phase === 'synthesize')
-    return `\n## Công cụ\nBạn có thể dùng ${read.join(', ')} để khảo sát nhanh workspace (quy tắc repo như CLAUDE.md/AGENTS.md, cấu trúc, README, cấu hình, tài liệu đính kèm) trước khi trả lời — chỉ đọc những gì cần cho bước này, gộp nhiều file trong một lần read_file.${c.repoMap ? ` Bản đồ repo \`${c.repoMap.rel}\` (tệp, số dòng, route, model, hàm) có sẵn — đọc nó thay vì duyệt từng thư mục.` : ''}\n${phase === 'plan' && c.repoMap?.large.length ? `\n## Tệp nguồn lớn trong repo\n${c.repoMap.large.map((f) => `- ${f}`).join('\n')}\nHạng mục phải sửa nhiều tệp lớn trong danh sách này thì tách nhỏ theo nhóm route/chức năng (mỗi hạng mục vừa một lượt ~30 thao tác công cụ).\n` : ''}`;
+    return `\n## Công cụ\nBạn có thể dùng ${read.join(', ')} để khảo sát nhanh workspace (quy tắc repo như CLAUDE.md/AGENTS.md, cấu trúc, README, cấu hình, tài liệu đính kèm) trước khi trả lời — chỉ đọc những gì cần cho bước này, gộp nhiều file trong một lần read_file.${tools.includes('git_read') ? ` ${GIT_READ_NOTE}` : ''}${c.repoMap ? ` Bản đồ repo \`${c.repoMap.rel}\` (tệp, số dòng, route, model, hàm) có sẵn — đọc nó thay vì duyệt từng thư mục.` : ''}\n${phase === 'plan' && c.repoMap?.large.length ? `\n## Tệp nguồn lớn trong repo\n${c.repoMap.large.map((f) => `- ${f}`).join('\n')}\nHạng mục phải sửa nhiều tệp lớn trong danh sách này thì tách nhỏ theo nhóm route/chức năng (mỗi hạng mục vừa một lượt ~30 thao tác công cụ).\n` : ''}`;
   if (phase === 'review')
     return `\n## Công cụ & bằng chứng\nBạn có ${tools.join(', ')} để kiểm chứng sản phẩm THẬT trong workspace — nhận xét dựa trên bằng chứng, không dựa trên lời tự khai trong báo cáo.
 ${tools.includes('run_command') ? '- BẮT BUỘC chạy các lệnh kiểm tra chính liên quan tới thay đổi (test, typecheck, lint, build — đúng lệnh của repo) bằng run_command trước khi kết luận; ghi từng lệnh và exit code vào "checks". Lệnh không chạy được thì ghi lý do — không suy đoán kết quả.\n' : ''}- Báo cáo nào có ghi chú "đã cắt" thì đọc phần còn lại bằng read_file (offset) khi cần để kết luận; phần đã có ở trên thì không đọc lại.
@@ -246,7 +259,7 @@ Bạn có công cụ: ${tools.join(', ')} — làm việc THẬT trong workspace
 - Đọc quy tắc của repo trước (CLAUDE.md, AGENTS.md, README, CONTRIBUTING nếu có) và tuân thủ tuyệt đối; khảo sát repo trước khi sửa (list_files, search, read_file — gộp nhiều file một lần); giữ đúng cấu trúc, phong cách và stack sẵn có. Mỗi lượt công cụ gửi lại toàn bộ hội thoại nên tốn token: đọc có mục tiêu, không đọc lại nội dung đã có trong prompt hoặc đã đọc.
 ${c.repoMap ? `- BẢN ĐỒ REPO: \`${c.repoMap.rel}\` liệt kê tệp + số dòng, route, model, hàm kèm số dòng — đọc nó ĐẦU TIÊN để định vị, rồi read_file đúng đoạn (offset theo số dòng, limit vừa đủ); không đọc cả tệp lớn.\n` : ''}- Đọc/tìm code bằng read_file/search/list_files — KHÔNG dùng Get-Content/cat/rg/grep qua run_command (lỗi cú pháp shell, sai mã hóa, tốn lượt). run_command chỉ để cài đặt, build, typecheck, test, migration, git.${tools.includes('run_command') && process.platform === 'win32' ? ' Shell là PowerShell: không có {a,b}, dấu * trong đường dẫn không tự mở rộng.' : ''}
 - Tạo/sửa file thật bằng write_file/edit_file; không dán toàn bộ code vào câu trả lời cuối — chỉ liệt kê file và điểm chính. GHI SỚM: đọc đủ đoạn cần sửa là sửa ngay; khảo sát không dùng quá ~1/3 số lượt công cụ — hết lượt mà chưa ghi gì là hạng mục thất bại.
-${tools.includes('run_command') ? '- Test/typecheck đã ĐỎ TRƯỚC khi bạn sửa (baseline): chỉ MỘT lệnh để ghi nhận tên test lỗi rồi làm tiếp — KHÔNG đọc file/chạy lệnh để điều tra hay sửa lỗi có sẵn ngoài phạm vi hạng mục (kể cả khi nghi do môi trường); tiêu chí là không phát sinh lỗi MỚI so với baseline (so sánh danh sách test lỗi trước/sau). Bàn giao trước đã ghi baseline thì dùng luôn, không đo lại.\n' : ''}${tools.includes('run_command') ? '- Chạy kiểm tra thật bằng run_command (cài dependency nếu thiếu, typecheck, test, lint, migration trên DB dev) và báo kết quả THẬT: lệnh, exit code, tóm tắt lỗi. Lệnh nào không chạy được thì ghi rõ lý do — không bịa kết quả.\n' : '- Không có quyền chạy lệnh: ghi rõ lệnh kiểm tra cần chạy để người khác thực hiện.\n'}${c.ccDir ? `- Tài liệu đầu vào: \`${c.ccDir}/inputs/\` · sản phẩm các hạng mục khác: \`${c.ccDir}/outputs/\`.\n` : ''}- Làm và commit (nếu cần) ngay trên nhánh hiện tại của worktree — KHÔNG tạo/chuyển/xóa nhánh (các đồng nghiệp đang làm song song trong cùng worktree); cần hợp nhất nhánh khác thì \`git merge <nhánh>\` vào nhánh hiện tại. Không push, không xóa hàng loạt; không đưa dữ liệu thật hay bí mật vào code, seed, test, fixture.
+${tools.includes('run_command') ? '- Test/typecheck đã ĐỎ TRƯỚC khi bạn sửa (baseline): chỉ MỘT lệnh để ghi nhận tên test lỗi rồi làm tiếp — KHÔNG đọc file/chạy lệnh để điều tra hay sửa lỗi có sẵn ngoài phạm vi hạng mục (kể cả khi nghi do môi trường); tiêu chí là không phát sinh lỗi MỚI so với baseline (so sánh danh sách test lỗi trước/sau). Bàn giao trước đã ghi baseline thì dùng luôn, không đo lại.\n' : ''}${tools.includes('run_command') ? '- Chạy kiểm tra thật bằng run_command (cài dependency nếu thiếu, typecheck, test, lint, migration trên DB dev) và báo kết quả THẬT: lệnh, exit code, tóm tắt lỗi. Lệnh nào không chạy được thì ghi rõ lý do — không bịa kết quả.\n' : `- Không có quyền chạy lệnh: ghi rõ lệnh kiểm tra cần chạy để người khác thực hiện.${tools.includes('git_read') ? ` ${GIT_READ_NOTE}` : ''}\n`}${c.ccDir ? `- Tài liệu đầu vào: \`${c.ccDir}/inputs/\` · sản phẩm các hạng mục khác: \`${c.ccDir}/outputs/\`.\n` : ''}- Làm và commit (nếu cần) ngay trên nhánh hiện tại của worktree — KHÔNG tạo/chuyển/xóa nhánh (các đồng nghiệp đang làm song song trong cùng worktree); cần hợp nhất nhánh khác thì \`git merge <nhánh>\` vào nhánh hiện tại. Không push, không xóa hàng loạt; không đưa dữ liệu thật hay bí mật vào code, seed, test, fixture.
 Câu trả lời cuối cùng là báo cáo bàn giao theo ĐÚNG các mục trong "Mẫu đầu ra" của bạn (giữ nguyên tên mục, mở đầu "## Tóm tắt"); mục nào không áp dụng thì ghi "Không áp dụng" thay vì bỏ. Bắt buộc có: tệp đã tạo/sửa (đường dẫn) và lệnh kiểm chứng đã chạy (lệnh → exit code/kết quả thật, hoặc lý do chưa chạy).
 `;
 }
@@ -262,11 +275,11 @@ export function planPrompt(c: Ctx, priorContext: string | undefined, tools: Tool
 ${truncate(c.dept.body, 3000)}
 
 ## Nhân sự có thể giao việc
-${rosterLines(c.roster)}
+${rosterLines(c.roster, c.caps)}
 ${toolNote(c, tools, 'plan')}
 ## Việc của bạn (Trưởng phòng): LẬP KẾ HOẠCH
 Phân rã yêu cầu thành 2–7 hạng mục rõ ràng, giao cho đúng người theo kỹ năng, quy mô tương xứng với yêu cầu (việc nhỏ thì ít hạng mục). Quy tắc:
-- \`assignee\` phải là một id trong danh sách trên (không có dấu @). Hạn chế tự giao cho bản thân; người review sẽ kiểm tra ở bước sau nên không cần tạo hạng mục "review".
+- \`assignee\` phải là một id trong danh sách trên (không có dấu @). Hạn chế tự giao cho bản thân; người review sẽ kiểm tra ở bước sau nên không cần tạo hạng mục "review".${capsRule(c)}
 - \`dependsOn\` chỉ trỏ tới id hạng mục khác; tối đa hóa phần chạy song song.${
         c.parallelWriters
           ? ' Hạng mục chạy lệnh (code, test, migration) CŨNG chạy song song — mỗi hạng mục một worktree con, xong thì CCoding gộp vào nhánh nhiệm vụ; chỉ đặt phụ thuộc khi hạng mục sau cần kết quả của hạng mục trước hoặc hai hạng mục sửa cùng một đoạn của cùng tệp (tránh xung đột khi gộp). Mỗi người chỉ làm một hạng mục một lúc nên muốn song song thì giao cho người khác nhau.'
@@ -321,10 +334,14 @@ ${planText(subtasks)}
 ${transcript}
 
 ## Nhân sự
-${rosterLines(c.roster)}
+${rosterLines(c.roster, c.caps)}
 
 ## Việc của bạn (Trưởng phòng): CHỐT KẾ HOẠCH SAU HỌP
-Cân nhắc các góp ý hợp lý, điều chỉnh hạng mục/phân công/phụ thuộc nếu cần, ghi các quyết định chính. Trả lời bằng một khối JSON cùng mẫu kế hoạch, thêm trường "decisions":
+Cân nhắc các góp ý hợp lý, điều chỉnh hạng mục/phân công/phụ thuộc nếu cần, ghi các quyết định chính.${
+      c.parallelWriters
+        ? ' Các hạng mục (kể cả chạy lệnh) chạy SONG SONG trong worktree con: chỉ THÊM phụ thuộc khi hạng mục sau thật sự cần kết quả/hợp đồng của hạng mục trước hoặc hai hạng mục sửa cùng một đoạn của cùng tệp — thống nhất giao diện/hợp đồng thì ghi vào "decisions" thay vì xếp nối tiếp; mỗi phụ thuộc thừa làm nhiệm vụ chạy chậm hơn.'
+        : ''
+    }${capsRule(c)} Trả lời bằng một khối JSON cùng mẫu kế hoạch, thêm trường "decisions":
 ${PLAN_SCHEMA.replace('"summary": "1–2 câu: cách tiếp cận tổng thể",', '"summary": "1–2 câu: cách tiếp cận tổng thể",\n  "decisions": ["Quyết định 1", "Quyết định 2"],')}`,
   };
 }

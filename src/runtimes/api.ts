@@ -659,7 +659,7 @@ export function cappedDone(text: string): boolean {
  * Trả về true nếu đã rút gọn.
  */
 const COMPACTED_MARK = 'kết quả cũ đã lược bớt';
-const READ_TOOL_NAMES = new Set(['list_files', 'read_file', 'search']);
+const READ_TOOL_NAMES = new Set(['list_files', 'read_file', 'search', 'git_read']);
 
 export function compactHistory(messages: ChatMsg[], keep = 3, max = 400, threshold = 40_000): boolean {
   const toolIdx = messages.map((m, i) => (m.role === 'tool' ? i : -1)).filter((i) => i >= 0);

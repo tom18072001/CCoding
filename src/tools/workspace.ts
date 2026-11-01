@@ -4,6 +4,7 @@ import path from 'node:path';
 import { killTree } from '../runtimes/spawn.js';
 import { redact } from '../util/redact.js';
 import { fetchUrl, searchPapers, WebError, webSearch } from './web.js';
+import { gitReadArgsReason, outsidePathReason, splitArgs } from './shell-policy.js';
 import type { CheckResult, Phase, ToolAccess, ToolName, ToolPolicy } from '../types.js';
 
 /**
@@ -41,8 +42,12 @@ const LEVEL: Record<ToolAccess, ToolName[]> = {
   exec: [...READ_TOOLS, ...WRITE_TOOLS, 'run_command'],
 };
 
-/** Công cụ một agent được dùng ở một pha, theo hồ sơ (tools:) và quyền của dự án. */
-export function toolsFor(agentTools: string[], access: ToolAccess, phase: Phase, web = false): ToolName[] {
+/**
+ * Công cụ một agent được dùng ở một pha, theo hồ sơ (tools:) và quyền của dự án.
+ * `gitRead`: workspace là repo git → vai trò KHÔNG có quyền chạy lệnh vẫn được `git_read` (log/show/diff/blame… chỉ đọc)
+ * để tra lịch sử commit — không cần giao việc "khảo cổ" cho người có shell.
+ */
+export function toolsFor(agentTools: string[], access: ToolAccess, phase: Phase, web = false, gitRead = false): ToolName[] {
   if (phase === 'route' || phase === 'discuss') return [];
   const fromAgent = new Set(agentTools.flatMap((t) => AGENT_TOOL_MAP[t.toLowerCase()] ?? []));
   const webAllowed = web && WEB_PHASES.has(phase) ? WEB_TOOLS.filter((t) => fromAgent.has(t)) : [];
@@ -52,6 +57,7 @@ export function toolsFor(agentTools: string[], access: ToolAccess, phase: Phase,
   // review: được chạy test/typecheck để xác nhận (không ghi file); lập kế hoạch/tổng hợp: chỉ đọc
   if (phase === 'review') allowed = allowed.filter((t) => READ_TOOLS.includes(t) || t === 'run_command');
   else if (phase !== 'execute' && phase !== 'revise') allowed = allowed.filter((t) => READ_TOOLS.includes(t));
+  if (gitRead && allowed.includes('read_file') && !allowed.includes('run_command')) allowed.push('git_read');
   return [...allowed, ...webAllowed];
 }
 
@@ -136,6 +142,16 @@ const DEFS: Record<ToolName, { description: string; parameters: Record<string, u
   fetch_url: {
     description: 'Đọc nội dung một trang web hoặc PDF công khai thành chữ (đọc tiếp bằng offset). Không truy cập được địa chỉ nội bộ.',
     parameters: { type: 'object', properties: { url: { type: 'string' }, offset: { type: 'integer', description: 'Vị trí ký tự bắt đầu' } }, required: ['url'] },
+  },
+  git_read: {
+    description:
+      'Xem lịch sử/khác biệt git CHỈ ĐỌC trong repo: log, show, diff, blame, status, grep, ls-files, shortlog, describe, rev-parse, branch/tag (liệt kê)… ' +
+      'Dùng khi cần hash commit, ai/khi nào/vì sao đổi một đoạn code, nội dung một commit. Không chạy được test/build/lệnh khác.',
+    parameters: {
+      type: 'object',
+      properties: { args: { type: 'string', description: 'Phần sau "git", vd. "log --oneline -30 -- app/server/src", "show --stat ea72058", "blame -L 40,80 src/a.js"' } },
+      required: ['args'],
+    },
   },
   run_command: {
     description:
@@ -349,8 +365,21 @@ async function runShell(command: string, cwd: string, timeoutSec: number, maxCha
         ],
       ]
     : [fs.existsSync('/bin/bash') ? '/bin/bash' : '/bin/sh', ['-c', command]];
+  return runProc(file, args as string[], cwd, timeoutSec, maxChars, signal);
+}
+
+/** Chạy một chương trình (không qua shell khi gọi trực tiếp) — gộp stdout/stderr, cắt đầu ra, hết giờ/hủy thì dừng cả cây tiến trình. */
+async function runProc(
+  file: string,
+  args: string[],
+  cwd: string,
+  timeoutSec: number,
+  maxChars: number,
+  signal?: AbortSignal,
+  extraEnv: Record<string, string> = {},
+): Promise<{ code: number | null; out: string; timedOut: boolean }> {
   return new Promise((resolve) => {
-    const child = spawn(file, args, { cwd, env: scrubEnv(process.env), windowsHide: true, detached: !isWin, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(file, args, { cwd, env: { ...scrubEnv(process.env), ...extraEnv }, windowsHide: true, detached: !isWin, stdio: ['ignore', 'pipe', 'pipe'] });
     let out = '';
     let dropped = 0;
     const add = (b: Buffer) => {
@@ -552,6 +581,8 @@ export async function executeTool(name: string, rawArgs: unknown, policy: ToolPo
         // đọc/tìm code qua shell (Get-Content, cat, rg…) tốn lượt, sai mã hóa, đọc thiếu — có công cụ chuyên dụng thì dùng nó
         const reader = policy.allow.includes('read_file') ? shellReadReason(command) : undefined;
         if (reader) throw new ToolError(`Không dùng run_command để ${reader}.`);
+        const away = outsidePathReason(command, fs.realpathSync(root));
+        if (away) throw new ToolError(`Lệnh bị chặn: ${away}.`);
         const timeout = Math.min(policy.commandTimeoutSec, Math.max(5, Number(args.timeout_sec) || 300));
         // một lệnh tại một thời điểm trong cùng workspace (agent song song có thể ở các tiến trình/pane khác nhau)
         const unlock = await lockWorkspace(fs.realpathSync(root), timeout, signal);
@@ -563,6 +594,25 @@ export async function executeTool(name: string, rawArgs: unknown, policy: ToolPo
         }
         const head = r.timedOut ? `⏱ Hết thời gian ${timeout}s — đã dừng tiến trình` : `exit code: ${r.code}`;
         return done(!r.timedOut && r.code === 0, `${head}\n${r.out.trim() || '(không có đầu ra)'}`, `$ ${command.slice(0, 120)} → ${r.timedOut ? 'timeout' : r.code}`);
+      }
+      case 'git_read': {
+        const raw = str(args.args).trim().replace(/^git\s+/, '');
+        const argv = splitArgs(raw);
+        if (!argv?.length) throw new ToolError('Thiếu args (vd. "log --oneline -30 -- app/server")');
+        const why = gitReadArgsReason(argv);
+        if (why) throw new ToolError(`git_read bị chặn: ${why}.`);
+        const real = fs.realpathSync(root);
+        const away = argv.map((a) => outsidePathReason(a, real)).find(Boolean);
+        if (away) throw new ToolError(`git_read bị chặn: ${away}.`);
+        const timeout = Math.min(policy.commandTimeoutSec, 120);
+        const r = await runProc('git', ['--no-pager', ...(argv[0] === '--no-pager' ? argv.slice(1) : argv)], real, timeout, max, signal, {
+          GIT_PAGER: 'cat',
+          PAGER: 'cat',
+          GIT_TERMINAL_PROMPT: '0',
+          GIT_OPTIONAL_LOCKS: '0',
+        });
+        const head = r.timedOut ? `⏱ Hết thời gian ${timeout}s` : `exit code: ${r.code}`;
+        return done(!r.timedOut && r.code === 0, `${head}\n${r.out.trim() || '(không có đầu ra)'}`, `git ${raw.slice(0, 120)} → ${r.timedOut ? 'timeout' : r.code}`);
       }
       default:
         throw new ToolError(`Không có công cụ "${name}"`);
@@ -583,6 +633,8 @@ export function argsSummary(name: string, rawArgs: unknown): string {
       return `${str(a.path)} (−${str(a.old_string).length} +${str(a.new_string).length})`;
     case 'run_command':
       return str(a.command).slice(0, 300);
+    case 'git_read':
+      return `git ${str(a.args)}`.slice(0, 300);
     case 'read_file':
       return (Array.isArray(a.paths) ? a.paths.map(str) : [str(a.path)]).filter(Boolean).join(', ').slice(0, 300);
     default:
@@ -597,7 +649,7 @@ export function isCheckCommand(cmd: string): boolean {
 
 /** Lệnh tìm kiếm trả mã 1 vì không có kết quả (rg/grep/findstr/Select-String) — không phải lỗi thật. */
 export function isNoMatch(tc: { name: string; args: string; ok: boolean; error?: string }): boolean {
-  return !tc.ok && tc.name === 'run_command' && /^\s*(rg|grep|findstr|git\s+grep)\b|Select-String/i.test(tc.args) && /exit code:\s*1\b/.test(tc.error ?? '');
+  return !tc.ok && (tc.name === 'run_command' || tc.name === 'git_read') && /^\s*(cd\s+[^&;]+(&&|;)\s*)?(rg|grep|findstr|git\s+grep)\b|Select-String/i.test(tc.args) && /exit code:\s*1\b/.test(tc.error ?? '');
 }
 
 /** Dòng tổng kết của đầu ra lệnh kiểm tra (số test pass/fail, lỗi biên dịch…) — tối đa 6 dòng cuối khớp. */

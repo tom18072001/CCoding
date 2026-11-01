@@ -10,6 +10,7 @@ Với runtime API có tool calling (Bifrost, 9router, OpenAI-compatible), CCodin
 | `write_file` | Write | Tạo/ghi đè file |
 | `edit_file` | Edit / MultiEdit | Thay một đoạn chính xác (chịu được CRLF) |
 | `run_command` | Bash | Chạy lệnh (PowerShell trên Windows, bash trên Linux) trong gốc workspace: cài dependency, typecheck, test, migration DB dev… |
+| `git_read` | *(tự cấp)* | Git **chỉ đọc** (`log`, `show`, `diff`, `blame`, `status`, `grep`, `ls-files`, `branch`/`tag` liệt kê…) cho vai trò **không có** `Bash` khi workspace là repo git — chạy `git` trực tiếp (không qua shell), chặn tùy chọn ghi tệp/đọc ngoài repo (`--output`, `--no-index`, `--contents`, `-O`…) và tệp `.env`. Tắt bằng `tools.gitRead: false` |
 | `search_papers` | WebSearch | Tìm bài báo trên **OpenAlex** (chỉ mục học thuật mở, không cần khóa): tiêu đề, năm, venue, số trích dẫn, tác giả, DOI, tóm tắt; lọc `year_from/year_to/venue`, sắp theo trích dẫn |
 | `web_search` | WebSearch | Tìm kiếm web chung qua **SearXNG tự dựng** (`CCODING_SEARXNG_URL`) hoặc **Brave Search API** (`BRAVE_API_KEY`, có gói miễn phí); không cấu hình thì thử DuckDuckGo (thường chặn truy vấn tự động) rồi dự phòng Wikipedia + gợi ý nguồn chính thức để `fetch_url` |
 | `fetch_url` | WebFetch | Đọc trang web/PDF công khai thành chữ (đọc tiếp bằng `offset`); **chặn localhost/LAN/link-local**, tối đa 5 lần chuyển hướng |
@@ -26,6 +27,10 @@ Quyền = giao của (1) `tools:` trong hồ sơ agent, (2) quyền của dự �
 | Lập kế hoạch, chốt, tổng hợp | chỉ đọc (`list_files`, `read_file`, `search`) |
 | Review | đọc + `run_command` (chạy test để xác nhận) |
 | Thực thi, sửa theo review | theo quyền dự án |
+
+Repo git: vai trò không có quyền chạy lệnh (Kiến trúc sư, BA, Trưởng phòng…) có thêm `git_read` ở mọi pha có công cụ đọc — để tra hash commit, lịch sử một tính năng, blame mà không cần giao việc "khảo cổ" cho người có shell (gói 4 ND57: giao "khảo cổ commit" cho Kiến trúc sư không có Bash → 57 lần đọc trước lần ghi đầu, 4,0M token, review không duyệt).
+
+**Giao việc theo năng lực công cụ.** Prompt lập kế hoạch và chốt kế hoạch liệt kê với mỗi người: *chạy lệnh (test, build, migration, git)* / *đọc/ghi tệp, xem lịch sử git (chỉ đọc) — KHÔNG chạy test/build* / *chỉ đọc tệp*, kèm quy tắc: hạng mục phải chạy test/build/migration/đo hiệu năng chỉ giao cho người "chạy lệnh"; tài liệu cần số liệu đo thì giao người chạy lệnh hoặc phụ thuộc vào hạng mục đã đo.
 
 Quyền dự án (`toolAccess`): `none` · `read` · `write` (đọc/ghi file) · `exec` (đọc/ghi + chạy lệnh). Mặc định: dự án → `tools.projectAccess` (`exec`); nhiệm vụ không thuộc dự án → `tools.defaultAccess` (`write`): **thư mục làm việc riêng** `workspaces/<task>` (không phải repo) để kiểm kê tài liệu đầu vào và **lưu sản phẩm thành tệp** (bảng/CSV số liệu, danh mục nguồn, giao thức…), không chạy lệnh. Tệp agent tạo được liệt kê trong báo cáo nhiệm vụ.
 
@@ -56,7 +61,7 @@ Khai báo trong dự án (form *Dự án* → **Sửa**, hoặc `projects.json`)
 ```
 
 - **Chuẩn bị** (`setupCommands`, ≤ 20 lệnh) chạy một lần cho mỗi worktree trước thực thi; lỗi ⇒ cảnh báo `checks.setup`.
-- **Kiểm tra** (`checkCommands`, ≤ 20 lệnh) chạy **3 thời điểm**: *baseline* (trước khi agent sửa), *sau thực thi*, *sau mỗi vòng sửa theo review*. Mỗi kết quả lưu `task.projectChecks` (exit code, thời gian, dòng tóm tắt kiểu `tests 12 pass 12 fail 0`, phần cuối đầu ra) và log `checks.run`.
+- **Kiểm tra** (`checkCommands`, ≤ 20 lệnh) chạy **3 thời điểm**: *baseline* (trước khi agent sửa), *sau thực thi*, *sau mỗi vòng sửa theo review*. Lệnh chuẩn bị + baseline của worktree nhiệm vụ chạy **song song với lập kế hoạch/họp** (các pha đó chỉ đọc repo) thay vì sau khi chốt kế hoạch — bớt ~0,5–1 phút trên đường găng mỗi nhiệm vụ; tắt bằng `tools.earlyBaseline: false`. Mỗi kết quả lưu `task.projectChecks` (exit code, thời gian, dòng tóm tắt kiểu `tests 12 pass 12 fail 0`, phần cuối đầu ra) và log `checks.run`.
 - Chạy bằng CCoding (không qua agent/model) trong worktree, cùng sandbox với `run_command`: lệnh cấm (`tools.denyCommands` + `denyCommands` của dự án) bị chặn từ lúc lưu dự án (API trả 400) và lúc chạy (`⛔`), biến môi trường chứa khóa bị loại, giới hạn `tools.commandTimeoutSec`.
 - Review nhận bảng kết quả làm **bằng chứng độc lập**: lệnh *đạt ở baseline nhưng lỗi sau khi sửa* (hồi quy) ⇒ review **không được duyệt** dù reviewer ghi duyệt (thêm vấn đề `blocker`), cảnh báo `checks.regression`. Lỗi đã có từ baseline không tính cho nhiệm vụ.
 - Review cuối chưa duyệt / còn hồi quy ⇒ nhiệm vụ vẫn *Hoàn thành* nhưng gắn cờ **⚠ cần xem** (`task.attention`) và cảnh báo `task.attention`; báo cáo có bảng "Lệnh kiểm tra" và mục "Cần xem lại".
@@ -107,3 +112,10 @@ Tài liệu đầu vào (yêu cầu đầy đủ, chữ trích từ tệp đính
 ## Runtime CLI (claude/codex/kimi)
 
 Các CLI agent tự có công cụ riêng; CCoding truyền danh sách công cụ kiểu Claude Code (`Read`, `Write`, `Bash`…) đã lọc theo pha và quyền dự án, và chạy CLI trong cùng thư mục làm việc.
+
+**claude-cli — hook `claude-guard` (PreToolUse)** áp cùng chính sách với vòng công cụ của CCoding:
+- lệnh cấm mặc định + `denyCommands` của dự án; không tạo/chuyển nhánh, rebase, reset --hard, push; không `.env` (kể cả `git show HEAD:…/.env`);
+- `Read/Edit/Write/Grep/Glob` chỉ trong thư mục làm việc của lượt gọi (worktree hoặc worktree con);
+- **lệnh shell cũng bị giữ trong thư mục làm việc** (từ 1/11/2026): đường dẫn ổ đĩa `C:\…`/`C:/…`, MSYS `/c/…`, UNC, `~/`, `$HOME`, `$env:USERPROFILE` và `../` vượt gốc (tính theo `cd` trong lệnh) đều bị chặn — trừ thư mục tạm và thư mục cài đặt hệ thống/Node. Trước đây `cat /c/Users/admin/<thư mục khác>/…` qua Bash không bị chặn dù `Read` thì có. Cùng quy tắc áp cho `run_command` của CCoding;
+- vai trò chỉ có **git chỉ đọc**: CCoding thêm `Bash` vào `--tools`, hook chỉ cho `[cd <trong worktree> &&] git <lệnh đọc> [| head/grep/wc…]` — test/build/lệnh khác bị chặn kèm hướng dẫn ghi lệnh vào bàn giao. Lệnh Bash chỉ xem git được ghi log/KPI là `git_read` (không tính "chạy lệnh");
+- **giới hạn khảo sát** (`tools.readsBeforeWrite`, pha thực thi/sửa): đếm `Read/Grep/Glob` và lệnh shell chỉ đọc (`cat`, `sed -n`, `grep`, `ls`, `git log`…) liên tiếp; ghi tệp hoặc chạy lệnh khác (test, build) đặt lại bộ đếm. Ở N lần: chặn đúng lần đọc đó với lời nhắc ghi dần (lần sau được đọc); từ 2N: chặn đọc cho tới khi ghi. Bộ đếm nằm ở `data/runs/<task>/guard/<lượt gọi>.json`, xóa khi lượt gọi xong. Trước đây giới hạn này chỉ có trong vòng công cụ của CCoding.

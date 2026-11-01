@@ -157,6 +157,10 @@ export interface Config {
     repoMap?: boolean;
     /** Pha thực thi/sửa: đọc/tìm liên tiếp N lần mà không ghi tệp thì nhắc ghi; 2N lần thì từ chối đọc thêm tới khi ghi. Mặc định 16; 0 = tắt. */
     readsBeforeWrite?: number;
+    /** Workspace là repo git: vai trò không có quyền chạy lệnh được `git_read` (log/show/diff/blame… chỉ đọc). Mặc định bật; false = tắt. */
+    gitRead?: boolean;
+    /** Chạy lệnh chuẩn bị + kiểm tra baseline SONG SONG với pha lập kế hoạch/họp (mặc định bật; false = chạy khi bắt đầu thực thi). */
+    earlyBaseline?: boolean;
     denyCommands: string[];
     /** File chưa track chép vào worktree mặc định (nếu có). */
     worktreeCopy: string[];

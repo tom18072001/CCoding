@@ -2,6 +2,7 @@ import type { Config } from './config.js';
 import type { Registry } from './registry.js';
 import type { Store } from './store.js';
 import type { AgentDef, ChatMessage, ProjectDef, Task, ToolAccess, ToolCallRecord } from './types.js';
+import { shellReadsOnly } from './tools/shell-policy.js';
 import { isCheckCommand, isNoMatch } from './tools/workspace.js';
 import { readJsonl } from './util/fsx.js';
 
@@ -70,7 +71,8 @@ export interface AgentKpi {
   tokens: { input: number; cache: number; output: number; total: number; subtaskWork: number; perSubtask: number };
   durationSec: number;
   outTokPerSec?: number;
-  tools: { calls: number; failed: number; byName: Record<string, { n: number; failed: number }>; capHits: number; avgTurns: number; maxTurns: number };
+  /** shellReads: lệnh shell chỉ để đọc/tìm/liệt kê tệp (cat, grep, sed -n, ls…) — không tính test/build/git. */
+  tools: { calls: number; failed: number; byName: Record<string, { n: number; failed: number }>; capHits: number; avgTurns: number; maxTurns: number; shellReads?: number };
   truncated: number;
   /** reviewed: hạng mục được review; firstPassOk: không bị blocker/major ở lần review đầu; finalClean: không còn blocker ở lần review cuối; blocker/major/minor: số lần bị nêu qua mọi vòng. */
   quality: { reviewed: number; firstPassOk: number; finalClean: number; blocker: number; major: number; minor: number; topIssues: string[] };
@@ -217,7 +219,7 @@ export function computeKpi(src: KpiSource): KpiReport {
           attemptsMax: 0,
           tokens: { input: 0, cache: 0, output: 0, total: 0, subtaskWork: 0, perSubtask: 0 },
           durationSec: 0,
-          tools: { calls: 0, failed: 0, byName: {}, capHits: 0, avgTurns: 0, maxTurns: 0 },
+          tools: { calls: 0, failed: 0, byName: {}, capHits: 0, avgTurns: 0, maxTurns: 0, shellReads: 0 },
           truncated: 0,
           quality: { reviewed: 0, firstPassOk: 0, finalClean: 0, blocker: 0, major: 0, minor: 0, topIssues: [] },
           compliance: { outputs: 0, missing: [], summaryOk: 0 },
@@ -283,6 +285,7 @@ export function computeKpi(src: KpiSource): KpiReport {
         k.tools.calls++;
         const b = (k.tools.byName[tc.name] ??= { n: 0, failed: 0 });
         b.n++;
+        if (tc.name === 'run_command' && shellReadsOnly(tc.args)) k.tools.shellReads = (k.tools.shellReads ?? 0) + 1;
         if (!tc.ok && !isNoMatch(tc)) {
           k.tools.failed++;
           b.failed++;
@@ -608,10 +611,11 @@ function findings(k: AgentKpi, med: number): Array<{ key: string; text: string }
     f.push('summary', `${k.compliance.outputs - k.compliance.summaryOk}/${k.compliance.outputs} sản phẩm không mở đầu bằng "## Tóm tắt".`);
   if (k.evidence.execEligible >= 1 && k.evidence.execWithCommands / k.evidence.execEligible < 0.5)
     f.push('exec-evidence', `Có quyền chạy lệnh nhưng ít kiểm chứng (${k.evidence.execWithCommands}/${k.evidence.execEligible} lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.`);
-  const shellReads = Object.entries(k.tools.byName).find(([n]) => n === 'run_command')?.[1].n ?? 0;
+  // chỉ đếm lệnh shell THẬT SỰ để đọc/tìm (cat, grep, sed -n, ls…) — trước đây đếm cả test/build/git nên báo nhầm cho agent chạy test nhiều
+  const shellReads = k.tools.shellReads ?? 0;
   const fileTools = ['read_file', 'search', 'list_files'].reduce((s, n) => s + (k.tools.byName[n]?.n ?? 0), 0);
   if (shellReads >= 10 && shellReads > 2 * fileTools)
-    f.push('shell-reads', `Dùng run_command cho cả việc đọc/tìm code (${shellReads} lệnh so với ${fileTools} lần read_file/search/list_files) — dễ lỗi cú pháp PowerShell, sai mã hóa và tốn lượt; đọc/tìm bằng công cụ file.`);
+    f.push('shell-reads', `Đọc/tìm code bằng lệnh shell (${shellReads} lệnh cat/grep/sed… so với ${fileTools} lần read_file/search/list_files) — không có số dòng, không tính vào giới hạn khảo sát, dễ sai mã hóa và tốn lượt; đọc/tìm bằng công cụ file.`);
   if (k.department === 'research' && k.compliance.outputs >= 1 && k.evidence.webCalls === 0 && k.evidence.doi + k.evidence.urls === 0 && k.role !== 'lead')
     f.push('no-sources', 'Không có nguồn kiểm chứng được (DOI/URL) và không dùng công cụ tra cứu.');
   if (k.quality.reviewed >= 1 && (k.quality.firstPassOk / k.quality.reviewed < 0.5 || k.quality.finalClean < k.quality.reviewed))

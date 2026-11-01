@@ -146,3 +146,45 @@ Thay đổi:
 4. **P8 — lịch sử dự án** cho pha lập kế hoạch (`inputs/PROJECT-HISTORY.md`).
 
 Mô phỏng trên dữ liệu gói 2: (1) −20–22%, (1)+(2) ≈ −35% token đầu vào; (3) giảm số lượt (chưa đo được trước khi chạy thật). P7 (CSDL kiểm thử dùng chung) để sau: cần DB riêng cho dự án, không dùng các container đang vận hành.
+
+## 10. Quản lý sub-agent sau 7 gói ND57 chạy bằng claude-cli (1/11/2026)
+
+Đo từ `data/runs/<task>/events.jsonl`, `calls.jsonl`, `kpi.json` (chỉ số đếm, không nội dung) — gói 2b → 4b, cùng runtime claude-cli:
+
+| Gói | Hạng mục | Thời gian | Tổng thời lượng lượt thực thi | Token | Song song tối đa | Vòng sửa | Kết quả review |
+|---|---:|---:|---:|---:|---:|---:|---|
+| 2b | 3 | 14,0′ | 6,3′ | 2,18M | 1 | 1 | duyệt |
+| 3 | 7 | 38,2′ | 29,5′ | 12,55M | 2 | 1 | đạt có điều kiện (⚠ cần xem) |
+| 3b | 4 | 20,1′ | 10,7′ | 3,87M | 1 | 1 | duyệt |
+| 3c | 4 | 14,8′ | 12,0′ | 4,20M | 2 | 0 | duyệt |
+| 3d | 3 | 10,5′ | 5,0′ | 1,80M | 1 | 1 | duyệt |
+| 4 | 7 | 44,0′ | 32,5′ | 14,75M | 2 | 1 | chưa duyệt (⚠ cần xem) |
+| 4b | 5 | 8,6′ | 10,3′ | 2,49M | **3** (worktree con) | 0 | duyệt |
+
+Nhận xét:
+- Thực thi chiếm 70–85% thời gian. Gói 3 và 4 gần như là **một chuỗi phụ thuộc** (gói 4: S1→S2→…→S7) nên dù có worktree con cũng không song song được; 4b (kế hoạch có ý thức song song, không họp) chạy 3 lượt cùng lúc.
+- **Họp đổi kế hoạch 6/6 lần nhưng gần như chỉ để THÊM phụ thuộc** (gói 3b: S1, S2, S3 độc lập → S1→S2→S3; gói 3d: ADR phụ thuộc cả S1, S2) — vừa tốn 1–1,6 phút vừa kéo dài đường găng.
+- **Giao sai năng lực công cụ**: gói 4 giao "khảo cổ commit" cho Kiến trúc sư (hồ sơ không có `Bash`) — không chạy được `git log` → 57 lần đọc trước lần ghi đầu, 4,02M token (gấp 2,6 trung vị phòng), review không duyệt hai vòng (review đã gợi ý "người có shell"), phải làm lại ở gói 4b. Trưởng phòng lập kế hoạch không thấy ai có quyền gì.
+- **Giới hạn khảo sát `readsBeforeWrite` không áp cho claude-cli** — chỉ có trong vòng công cụ của CCoding; Kiến trúc sư gói 3 (S7: 2,18M + sửa 2,74M) và gói 4 (S1) đọc dài trước khi ghi.
+- **Lệnh shell của claude-cli đọc được tệp ngoài worktree** (hook chỉ giữ `Read/Write/Grep/Glob`); có agent ghi tệp tạm ra `/tmp`, và trên máy có thư mục dữ liệu thật của ND57.
+- Lệnh chuẩn bị + baseline chạy **sau** khi chốt kế hoạch: ~35–70 giây trên đường găng mỗi gói (4b: 68 giây giữa kế hoạch xong và lượt thực thi đầu).
+- Ước tính token lấy cả mẫu thời qwen/9router: gói 2b báo ~8,73M (Backend ~4,07M/hạng mục) trong khi thực tế 2,18M → cảnh báo "nhiệm vụ quá lớn" giả.
+- KPI "đọc code bằng run_command — lỗi PowerShell" đếm **mọi** lệnh shell (kể cả test/build) và áp cả cho claude-cli (Git Bash) → "việc cần sửa" giả cho Backend/Data/Frontend.
+
+Thay đổi (`main`, 1/11):
+
+| # | Thay đổi | Tệp |
+|---|---|---|
+| M1 | Roster trong prompt **lập kế hoạch và chốt kế hoạch** ghi năng lực công cụ từng người (*chạy lệnh* / *đọc/ghi tệp, xem lịch sử git — KHÔNG chạy test/build* / *chỉ đọc*) + quy tắc giao việc theo năng lực | `prompts.ts`, `orchestrator.ts` (`capabilities`) |
+| M2 | **`git_read`**: repo git ⇒ vai trò không có `Bash` được git chỉ đọc (log/show/diff/blame/status/grep…) — vòng công cụ CCoding chạy `git` không qua shell; claude-cli thêm `Bash` nhưng hook chỉ cho git đọc. Lệnh Bash chỉ xem git ghi log/KPI là `git_read` | `tools/shell-policy.ts`, `tools/workspace.ts`, `tools/claude-guard.ts`, `runtimes/claude-cli.ts` |
+| M3 | **Giới hạn khảo sát cho claude-cli** trong hook (nhắc ở 16 lần đọc liên tiếp, chặn đọc từ 32 tới khi ghi; chạy test/ghi đặt lại) | `tools/claude-guard.ts` |
+| M4 | **Lệnh shell bị giữ trong thư mục làm việc** (claude-cli và `run_command`): chặn `C:\…`, `/c/…`, UNC, `~/`, `$HOME`, `../` vượt gốc; cho thư mục tạm/cài đặt hệ thống | `tools/shell-policy.ts` |
+| M5 | **Chuẩn bị + baseline song song với lập kế hoạch/họp** (`tools.earlyBaseline`, mặc định bật) | `orchestrator.ts` |
+| M6 | Chốt kế hoạch khi chạy song song: chỉ thêm phụ thuộc khi thật sự cần kết quả/hợp đồng hoặc sửa cùng đoạn tệp; thống nhất giao diện thì ghi vào `decisions` | `prompts.ts` |
+| M7 | Ước tính token chỉ lấy lịch sử nhiệm vụ **cùng runtime** | `estimate.ts`, `orchestrator.ts` |
+| M8 | KPI "đọc code qua shell" chỉ đếm lệnh thật sự đọc/tìm (cat, grep, sed -n, ls…) | `kpi.ts` |
+
+Chưa làm (đề xuất tiếp, cần số liệu thêm sau vài gói):
+- **"Ghế" cho mỗi vai trò** (một agent làm ≤ 2 hạng mục song song khi mỗi hạng mục có worktree con, mỗi ghế một pane herdr): lợi ích hiện bị chuỗi phụ thuộc che khuất — đo lại sau M6.
+- **Review theo từng hạng mục ngay khi gộp xong** (review cuối chỉ kiểm tích hợp + lệnh kiểm tra) để vòng sửa bắt đầu sớm; 5/7 gói cần một vòng sửa, mất 0,5–8 phút ở cuối.
+- **Tạo sẵn việc nối từ lỗi review còn mở** khi nhiệm vụ "⚠ cần xem" (gói 3 → 3b, 4 → 4b đều do chủ dự án tự viết đề bài).
