@@ -141,6 +141,10 @@ export interface Config {
     maxContinuations?: number;
     /** P8: số nhiệm vụ trước của cùng dự án đưa vào pha lập kế hoạch (tóm tắt, nhánh, kiểm tra, việc còn mở). Mặc định 3; 0 = tắt. */
     projectHistory?: number;
+    /** Họp chỉ khi kế hoạch có ít nhất ngần này hạng mục (và ≥ 2 người tham gia). Mặc định 3. */
+    meetingMinSubtasks?: number;
+    /** Các thành viên phát biểu song song trong một vòng họp (mặc định true; false = lần lượt như trước). */
+    parallelDiscuss?: boolean;
   };
   /** Công cụ workspace cho agent (đọc/ghi file, chạy lệnh) — xem docs/TOOLS.md. */
   tools: {

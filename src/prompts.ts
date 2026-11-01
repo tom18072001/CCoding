@@ -284,7 +284,8 @@ ${truncate(c.dept.body, 3000)}
 ${rosterLines(c.roster, c.caps)}
 ${toolNote(c, tools, 'plan')}
 ## Việc của bạn (Trưởng phòng): LẬP KẾ HOẠCH
-Phân rã yêu cầu thành 2–7 hạng mục rõ ràng, giao cho đúng người theo kỹ năng, quy mô tương xứng với yêu cầu (việc nhỏ thì ít hạng mục). Quy tắc:
+Phân rã yêu cầu thành 1–7 hạng mục rõ ràng, giao cho đúng người theo kỹ năng, quy mô tương xứng với yêu cầu. Quy tắc:
+- **Việc nhỏ** (một người làm xong trong MỘT lượt ~30 thao tác công cụ — vd. một module/tệp theo đặc tả, sửa vài lỗi, tối ưu một hàm): giao **1 hạng mục** cho một người, người đó tự viết test cho phần mình. Chỉ tách nhiều hạng mục khi các phần đủ lớn và độc lập (tệp khác nhau, làm song song được): mỗi hạng mục thêm tốn một lượt đọc lại repo, một lần gộp, và hạng mục "chỉ viết test" tách khỏi người viết code thường phải chờ hoặc làm lại phần đọc hiểu (benchtest 1/11: tách 2–3 hạng mục cho việc một tệp làm nhiệm vụ chậm gấp 2–3 lần mà không đúng hơn).
 - \`assignee\` phải là một id trong danh sách trên (không có dấu @). Hạn chế tự giao cho bản thân; người review sẽ kiểm tra ở bước sau nên không cần tạo hạng mục "review".${capsRule(c)}
 - \`dependsOn\` chỉ trỏ tới id hạng mục khác; tối đa hóa phần chạy song song.${
         c.parallelWriters
@@ -312,7 +313,7 @@ export function planText(subtasks: Subtask[]): string {
     .join('\n');
 }
 
-export function discussPrompt(c: Ctx, agent: AgentDef, planSummary: string, subtasks: Subtask[], transcript: string, round: number, rounds: number): Built {
+export function discussPrompt(c: Ctx, agent: AgentDef, planSummary: string, subtasks: Subtask[], transcript: string, round: number, rounds: number, parallel = false): Built {
   const mine = subtasks.filter((s) => s.assignee === agent.id).map((s) => `${s.id} ${s.title}`);
   return {
     context: `${header(c, 'discuss')}
@@ -325,7 +326,7 @@ ${transcript}
 
 ## Việc của bạn: PHÁT BIỂU TRONG CUỘC HỌP (vòng ${round}/${rounds})
 ${mine.length ? `Phần việc dự kiến của bạn: ${mine.join('; ')}.` : 'Bạn chưa được giao hạng mục nào — góp ý từ góc nhìn chuyên môn của mình.'}
-Phát biểu ngắn (≤ 100 từ) như trong một cuộc họp thật: đồng ý/không đồng ý, rủi ro, đề xuất chỉnh phân công hoặc phụ thuộc, câu hỏi cần làm rõ. Có thể @nhắc đồng nghiệp. Không lặp lại ý người khác đã nói. Chỉ trả về lời phát biểu, không tiêu đề.`,
+Phát biểu ngắn (≤ 100 từ) như trong một cuộc họp thật: đồng ý/không đồng ý, rủi ro, đề xuất chỉnh phân công hoặc phụ thuộc, câu hỏi cần làm rõ. Có thể @nhắc đồng nghiệp. Không lặp lại ý người khác đã nói.${parallel ? ' Các thành viên khác phát biểu cùng lúc với bạn trong vòng này — bạn chỉ thấy biên bản tới đầu vòng; câu hỏi cho đồng nghiệp sẽ do trưởng phòng trả lời khi chốt kế hoạch.' : ''} Chỉ trả về lời phát biểu, không tiêu đề.`,
   };
 }
 

@@ -1131,17 +1131,34 @@ export class Orchestrator {
         const rounds = task.options.discussionRounds;
         const assignees = [...new Set(run.subtasks.map((s) => s.assignee))].filter((x) => x !== lead.id);
         const participantIds = [...new Set([...assignees, task.options.review ? reviewer?.id : undefined].filter((x): x is string => !!x && x !== lead.id))].slice(0, 5);
-        const small = run.subtasks.length <= 2 || participantIds.length < 2;
+        // kế hoạch nhỏ → bỏ họp: ít hơn phases.meetingMinSubtasks hạng mục (mặc định 3) hoặc chưa tới 2 người tham gia
+        const minSubtasks = Math.max(1, this.d.config.phases.meetingMinSubtasks ?? 3);
+        const small = run.subtasks.length < minSubtasks || participantIds.length < 2;
         if (rounds > 0 && !small) {
           this.setPhase(task, run, 'discuss');
           const participants = participantIds.map((id) => registry.agent(id));
           const meeting = [lead, ...participants];
           for (const a of meeting) this.hold(a.id, { status: 'discussing', activity: 'Đang họp phòng', taskId: task.id, phase: 'discuss' });
           try {
+            // Họp song song trong một vòng (phases.parallelDiscuss, mặc định bật): mọi người cùng phát biểu dựa trên biên bản tới đầu vòng —
+            // đo trên benchtest 1/11: 3 lượt phát biểu nối tiếp ~20–31 giây trên đường găng mỗi nhiệm vụ; vòng sau vẫn thấy ý kiến vòng trước
+            const parallel = this.d.config.phases.parallelDiscuss !== false;
+            const transcriptNow = () => P.transcriptText(this.d.store.transcript(task.id).filter((m) => m.department === dept.id && m.kind !== 'final'), names, 6000);
             for (let r = 1; r <= rounds; r++) {
+              if (parallel) {
+                this.checkAbort(task);
+                const transcript = transcriptNow();
+                const said = await Promise.all(
+                  participants.map((a) =>
+                    this.call(a, 'discuss', () => P.discussPrompt(pctx, a, run.planSummary ?? '', run.subtasks, transcript, r, rounds, true), { ...base, hints: { brief: task.brief } }).then((res) => ({ a, res })),
+                  ),
+                );
+                for (const { a, res } of said) if (res.text) this.message(task, dept.id, a.id, 'discussion', res.text.slice(0, 1500), { round: r });
+                continue;
+              }
               for (const a of participants) {
                 this.checkAbort(task);
-                const transcript = P.transcriptText(this.d.store.transcript(task.id).filter((m) => m.department === dept.id && m.kind !== 'final'), names, 6000);
+                const transcript = transcriptNow();
                 const res = await this.call(a, 'discuss', () => P.discussPrompt(pctx, a, run.planSummary ?? '', run.subtasks, transcript, r, rounds), { ...base, hints: { brief: task.brief } });
                 if (res.text) this.message(task, dept.id, a.id, 'discussion', res.text.slice(0, 1500), { round: r });
               }
