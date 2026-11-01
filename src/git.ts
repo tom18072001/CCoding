@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -159,4 +160,28 @@ export function removeWorktree(repo: string, wtPath: string): boolean {
   }
   git(repo, ['worktree', 'prune'], 30_000);
   return !fs.existsSync(wtPath);
+}
+
+/** Tệp khai báo phụ thuộc/sinh mã (package.json, lockfile, requirements, go.mod, schema.prisma…) — đổi thì cần chạy lại lệnh chuẩn bị. */
+export const DEPENDENCY_MANIFEST =
+  /(^|\/)(package(-lock)?\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|requirements[^/]*\.txt|pyproject\.toml|poetry\.lock|Pipfile(\.lock)?|uv\.lock|go\.(mod|sum)|Cargo\.(toml|lock)|Gemfile(\.lock)?|composer\.(json|lock)|[^/]+\.csproj|packages\.lock\.json|schema\.prisma)$/i;
+
+/** Dấu vân tay nội dung các tệp khai báo phụ thuộc trong worktree (đã track + chưa track, bỏ tệp bị .gitignore): tệp → sha1. */
+export function manifestFingerprint(wt: string): Record<string, string> | undefined {
+  const r = git(wt, ['ls-files', '--cached', '--others', '--exclude-standard'], 60_000);
+  if (!r.ok) return undefined;
+  const out: Record<string, string> = {};
+  for (const f of r.out.split('\n').map((s) => s.trim().replace(/\\/g, '/')).filter((f) => f && DEPENDENCY_MANIFEST.test(f))) {
+    try {
+      out[f] = crypto.createHash('sha1').update(fs.readFileSync(path.join(wt, f))).digest('hex');
+    } catch {
+      out[f] = 'đã xóa';
+    }
+  }
+  return out;
+}
+
+/** Tệp khai báo phụ thuộc khác nhau giữa hai dấu vân tay (thêm, xóa, đổi nội dung). */
+export function manifestDiff(a: Record<string, string>, b: Record<string, string>): string[] {
+  return [...new Set([...Object.keys(a), ...Object.keys(b)])].filter((f) => a[f] !== b[f]).sort();
 }

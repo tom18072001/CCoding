@@ -188,3 +188,26 @@ Chưa làm (đề xuất tiếp, cần số liệu thêm sau vài gói):
 - **"Ghế" cho mỗi vai trò** (một agent làm ≤ 2 hạng mục song song khi mỗi hạng mục có worktree con, mỗi ghế một pane herdr): lợi ích hiện bị chuỗi phụ thuộc che khuất — đo lại sau M6.
 - **Review theo từng hạng mục ngay khi gộp xong** (review cuối chỉ kiểm tích hợp + lệnh kiểm tra) để vòng sửa bắt đầu sớm; 5/7 gói cần một vòng sửa, mất 0,5–8 phút ở cuối.
 - **Tạo sẵn việc nối từ lỗi review còn mở** khi nhiệm vụ "⚠ cần xem" (gói 3 → 3b, 4 → 4b đều do chủ dự án tự viết đề bài).
+
+## 11. Kiểm tra chạy song song bằng lượt chạy thật (1/11/2026)
+
+Repo nháp `C:\Users\admin\ccoding-partest` (không dữ liệu, nhãn Công khai), dự án `partest` (`setupCommands: npm ci`, `checkCommands: npm test`), claude-cli, `T-20261101-154016-5fe`: 5 hạng mục — S1 Backend, S2 Data, S3 DevOps chạy lệnh độc lập; S4 Frontend phụ thuộc S1; S5 Kiến trúc sư ghi ADR từ lịch sử git; S1 và S2 cố ý cùng thêm dòng cuối `CHANGELOG.md`.
+
+| Tính năng | Kết quả |
+|---|---|
+| Baseline song song với lập kế hoạch | ✓ baseline xong ở giây 3, kế hoạch xong giây 38 |
+| Worktree con + lệnh chuẩn bị riêng | ✓ S1–S3 tách ở giây 38–39, `npm ci` 2 giây mỗi worktree, 4 lượt gọi đồng thời (S1–S3 + S5) |
+| Gộp | ✓ S2 gộp sạch; S3, S4 gộp sạch |
+| Xung đột khi gộp | ✓ S1 xung đột `CHANGELOG.md` → làm lại trong worktree chính, agent tự `git merge` và giữ cả hai dòng (13 giây) |
+| Chờ phụ thuộc gộp xong | ✓ S4 tách worktree sau khi S1 gộp xong (giây 73) |
+| Dọn dẹp | ✓ không còn worktree con / nhánh tạm; chỉ còn worktree + nhánh nhiệm vụ |
+| Kiểm tra sau thực thi, review | ✓ `npm test` đạt, QA chạy lệnh, duyệt; không "cần xem" |
+| git chỉ đọc qua hook | ✓ Kiến trúc sư/Trưởng phòng đọc được `git log/show/ls-files`, nhưng **lần đầu mỗi lượt bị chặn** vì agent nối `cd … && git … && git …` |
+
+Lỗi/thiếu sót tìm được và đã sửa:
+1. **Hạng mục tài liệu làm trong worktree chính** trong khi các worktree con gộp vào đó → CCoding commit dở tệp ADR của Kiến trúc sư ("phần đã làm trước khi gộp S3"), có thể đụng tệp đang gộp. Nay hạng mục chỉ ghi tệp cũng có worktree con (không chạy `setupCommands`).
+2. **Phụ thuộc mới không được cài lại ở worktree nhiệm vụ**: hạng mục thêm thư viện cài trong worktree con, sau khi gộp, lệnh kiểm tra chạy ở worktree nhiệm vụ với `node_modules` cũ → hồi quy giả, review không duyệt. Nay so dấu vân tay tệp khai báo phụ thuộc với lúc chuẩn bị, khác thì chạy lại lệnh chuẩn bị (có test hồi quy — test đỏ với code cũ).
+3. **Báo cáo ghi "commit: không có thay đổi"** khi mọi thay đổi vào nhánh qua gộp → nay ghi HEAD + số commit trên nhánh.
+4. **git chỉ đọc không cho nối lệnh** → mất một lượt mỗi agent; nay cho nối nhiều lệnh git đọc bằng `&&` (vẫn chặn `||`, lệnh khác, chuyển hướng, `$(…)`).
+
+Còn để ý: hạng mục làm lại sau xung đột giữ khóa worktree chính suốt lượt làm lại — S3 xong ở giây 58 nhưng phải chờ tới giây 72 mới gộp được. Với code thật lượt làm lại có thể vài phút; hướng sửa: làm lại trong một worktree con mới tách từ HEAD nhánh nhiệm vụ (agent gộp nhánh cũ ở đó) rồi CCoding gộp lại như hạng mục thường.

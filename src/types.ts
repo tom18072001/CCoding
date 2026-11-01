@@ -397,6 +397,8 @@ export interface CheckResult {
 
 export interface ProjectChecks {
   setupDone?: boolean;
+  /** Dấu vân tay tệp khai báo phụ thuộc (package.json, lockfile…) lúc chạy lệnh chuẩn bị — đổi sau đó thì chạy lại lệnh chuẩn bị. */
+  setupManifests?: Record<string, string>;
   setup?: CheckResult[];
   baseline?: CheckResult[];
   baselineAt?: string;

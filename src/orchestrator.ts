@@ -16,6 +16,8 @@ import {
   isWorktreeOf,
   mergeBranch,
   mergeInProgress,
+  manifestDiff,
+  manifestFingerprint,
   removeWorktree,
   unmergedFiles,
 } from './git.js';
@@ -1322,6 +1324,11 @@ export class Orchestrator {
     const unmerged = new Set<string>();
     const par = !!pctx.parallelWriters;
     const writer = (st: Subtask) => !!pctx.serialWriters && this.isWriter(this.d.registry.agent(st.assignee), task, pctx.project);
+    /**
+     * Làm trong worktree con: hạng mục chạy lệnh VÀ hạng mục chỉ ghi tệp (tài liệu, ADR…). Chạy thật 1/11: hạng mục tài liệu làm thẳng trong
+     * worktree chính bị CCoding commit dở ("phần đã làm trước khi gộp S3") mỗi lần gộp hạng mục khác, và sửa tệp trùng với lúc đang gộp.
+     */
+    const isolated = (st: Subtask) => par && (writer(st) || this.writesFiles(this.d.registry.agent(st.assignee), task, pctx.project));
     /** Cần độc quyền worktree chính: chế độ lần lượt, hoặc làm lại sau khi gộp worktree con bị xung đột. */
     const exclusive = (st: Subtask) => writer(st) && (!par || !!st.mainOnly);
     // worktree con còn sót từ lần chạy trước (CCoding khởi động lại khi đang gộp…) → commit + gộp trước khi lập lịch tiếp
@@ -1363,7 +1370,7 @@ export class Orchestrator {
           busy.add(st.assignee);
           if (exclusive(st)) writing.add(st.id);
           const job =
-            par && writer(st)
+            isolated(st)
               ? st.mainOnly
                 ? this.runInMainWorktree(task, run, st, pctx, base, prior)
                 : this.runInSubWorktree(task, run, st, pctx, base, prior, unmerged)
@@ -1625,6 +1632,11 @@ export class Orchestrator {
     return toolsFor(agent.tools, this.toolAccess(task, project), 'execute', false).includes('run_command');
   }
 
+  /** Agent ghi được tệp ở pha thực thi (write_file/edit_file) với quyền hiện tại của nhiệm vụ. */
+  private writesFiles(agent: AgentDef, task: Task, project?: ProjectDef): boolean {
+    return toolsFor(agent.tools, this.toolAccess(task, project), 'execute', false).some((t) => t === 'write_file' || t === 'edit_file');
+  }
+
   /** Workspace là repo git của dự án → vai trò không có quyền chạy lệnh vẫn được xem lịch sử git chỉ đọc (`git_read`). */
   private gitReadable(task: Task, project: ProjectDef | undefined, cwd?: string): boolean {
     if (this.d.config.tools.gitRead === false || !project?.workspace) return false;
@@ -1678,7 +1690,8 @@ export class Orchestrator {
       }
       try {
         this.checkStop(task);
-        await this.runSubSetup(task, run, st, project, wt);
+        // lệnh chuẩn bị (cài dependency) chỉ cần cho người chạy được lệnh — hạng mục chỉ ghi tài liệu tách worktree ngay
+        if (this.isWriter(this.d.registry.agent(st.assignee), task, project)) await this.runSubSetup(task, run, st, project, wt);
         const spctx: P.Ctx = { ...pctx, cwd: wt.path, branch: wt.branch, subWorktree: { taskBranch: task.branch } };
         await this.runSubtask(task, run, st, spctx, { ...base, cwd: wt.path }, prior, wt);
       } finally {
@@ -2005,6 +2018,17 @@ export class Orchestrator {
     const pc = (task.projectChecks ??= {});
     const cwd = task.workspace!;
     const mark = (r: CheckResult) => (r.ok ? '✓' : r.denied ? '⛔' : '✗');
+    // chạy song song bằng worktree con: phụ thuộc mới (package.json/lockfile…) được cài trong worktree con rồi GỘP vào đây —
+    // node_modules… của worktree nhiệm vụ vẫn là bản cài lúc đầu → chạy lại lệnh chuẩn bị trước khi kiểm tra, nếu không test báo
+    // "Cannot find module" giả và review không duyệt
+    if (pc.setupDone && pc.setupManifests && when !== 'baseline' && project.setupCommands?.length) {
+      const now = manifestFingerprint(cwd);
+      const changed = now ? manifestDiff(pc.setupManifests, now) : [];
+      if (changed.length) {
+        pc.setupDone = false;
+        this.message(task, dept, 'system', 'system', `🔧 Tệp khai báo phụ thuộc đã đổi sau lần chuẩn bị (${changed.slice(0, 6).map((f) => `\`${f}\``).join(', ')}) — chạy lại lệnh chuẩn bị trước khi kiểm tra.`);
+      }
+    }
     if (!pc.setupDone && project.setupCommands?.length) {
       pc.setup = [];
       for (const cmd of project.setupCommands) {
@@ -2012,6 +2036,8 @@ export class Orchestrator {
         pc.setup.push(await runCheckCommand(cmd, cwd, opts));
       }
       pc.setupDone = pc.setup.every((r) => r.ok);
+      // sau lệnh chuẩn bị (npm install có thể sửa lockfile) — mốc so sánh cho lần kiểm tra sau
+      pc.setupManifests = manifestFingerprint(cwd);
       this.message(task, dept, 'system', 'system', `🔧 Lệnh chuẩn bị của dự án:\n${pc.setup.map((r) => `- \`${r.command}\` ${mark(r)} ${r.summary}`).join('\n')}`);
       if (!pc.setupDone) this.alert({ level: 'warn', kind: 'checks.setup', title: 'Lệnh chuẩn bị của dự án lỗi', msg: `${task.title}: ${pc.setup.filter((r) => !r.ok).map((r) => r.command).join(', ')}`, taskId: task.id });
     }
@@ -2074,6 +2100,13 @@ export class Orchestrator {
     task.changes = this.workspaceChanges(task);
     const r = commitAll(task.workspace, `CCoding ${task.id}: ${task.title}`.slice(0, 200));
     task.commit = r.ok ? (r.out.split('\n')[0] ?? 'ok').slice(0, 200) : `chưa commit: ${r.out.slice(0, 200)}`;
+    // chạy song song: mọi thay đổi đã vào nhánh qua commit + gộp của worktree con → lần commit cuối "không có thay đổi" nhưng nhánh vẫn có việc
+    if (r.ok && r.out === 'không có thay đổi' && task.baseRef) {
+      const head = headCommit(task.workspace);
+      const n = git(task.workspace, ['rev-list', '--count', `${task.baseRef}..HEAD`], 15_000);
+      const count = n.ok ? Number(n.out.trim()) || 0 : 0;
+      if (head && count) task.commit = `${head.slice(0, 10)} — ${count} commit trên nhánh từ ${task.baseRef.slice(0, 10)} (gồm gộp worktree con)`;
+    }
     this.d.logs.write({ level: r.ok ? 'info' : 'warn', kind: 'workspace.commit', msg: `${task.branch}: ${task.commit}`, taskId: task.id, projectId: task.projectId });
     // nhánh tạm của worktree con còn sót (xung đột chưa gộp, không gộp được…) → báo để người dùng đối chiếu
     const left = git(task.workspace, ['branch', '--list', `ccoding/${task.id.toLowerCase()}--*`, '--format=%(refname:short)'], 15_000);

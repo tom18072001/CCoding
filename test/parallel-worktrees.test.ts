@@ -264,3 +264,93 @@ test('isWorktreeOf: thư mục con của repo khác (worktree gỡ dở) không 
     fs.rmSync(repo, { recursive: true, force: true });
   }
 });
+
+test('phụ thuộc mới cài trong worktree con rồi gộp → chạy lại lệnh chuẩn bị ở worktree nhiệm vụ trước khi kiểm tra; báo cáo ghi đúng commit', async () => {
+  const plan: Plan = [
+    { id: 'S1', title: 'Thêm thư viện', assignee: 'backend-dev', dependsOn: [] },
+    { id: 'S2', title: 'CI', assignee: 'devops', dependsOn: [] },
+  ];
+  const gw = await gateway(plan, (who) =>
+    who === 'backend-dev'
+      ? [{ name: 'write_file', args: { path: 'package.json', content: '{ "name": "x", "dependencies": { "moi": "1.0.0" } }\n' } }]
+      : who === 'devops'
+        ? [{ name: 'write_file', args: { path: 'b.txt', content: 'tu devops\n' } }]
+        : [],
+  );
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-par-'));
+  const repo = initRepo();
+  fs.writeFileSync(path.join(repo, 'package.json'), '{ "name": "x" }\n');
+  fs.writeFileSync(path.join(repo, '.gitignore'), '.installed.json\n');
+  gitc(repo, 'add', '-A');
+  gitc(repo, 'commit', '-q', '-m', 'package.json');
+  const a = app(gw.url, dataDir);
+  try {
+    // "cài đặt" = chép package.json thành .installed.json (không track); kiểm tra = bản cài khớp package.json hiện tại
+    a.store.saveProject({
+      id: 'repo',
+      name: 'Repo',
+      department: 'dev',
+      workspace: repo,
+      classification: 'internal',
+      toolAccess: 'exec',
+      setupCommands: ["node -e \"require('fs').copyFileSync('package.json','.installed.json')\""],
+      checkCommands: ["node -e \"const f=require('fs');process.exit(f.readFileSync('package.json','utf8')===f.readFileSync('.installed.json','utf8')?0:1)\""],
+      createdAt: new Date().toISOString(),
+    });
+    const t = a.orchestrator.submit({ brief: 'Thêm thư viện', projectId: 'repo', options: { discussionRounds: 0, maxParallel: 3, maxRevisions: 0 } });
+    const done = await a.orchestrator.waitFor(t.id);
+    assert.equal(done.status, 'done', done.error);
+    const msgs = a.store.transcript(t.id).map((m) => m.text).join('\n');
+    assert.match(msgs, /Tệp khai báo phụ thuộc đã đổi sau lần chuẩn bị \(`package\.json`\)/);
+    assert.equal(done.projectChecks?.latest?.[0].ok, true, 'kiểm tra sau thực thi chạy trên bản cài mới');
+    assert.equal(done.attention, undefined, 'không có hồi quy giả');
+    assert.match(gitc(repo, 'show', `${done.branch}:package.json`), /"moi"/);
+    // mọi thay đổi vào nhánh qua gộp worktree con → báo cáo ghi commit HEAD + số commit, không phải "không có thay đổi"
+    assert.match(done.commit ?? '', /^[0-9a-f]{10} — \d+ commit trên nhánh từ [0-9a-f]{10}/);
+    assert.match(a.store.readRunFile(t.id, 'FINAL.md') ?? '', /commit: [0-9a-f]{10} — \d+ commit/);
+  } finally {
+    gw.srv.close();
+    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test('hạng mục chỉ ghi tài liệu cũng làm trong worktree con (không bị commit dở khi gộp hạng mục khác), không chạy lệnh chuẩn bị', async () => {
+  const plan: Plan = [
+    { id: 'S1', title: 'API', assignee: 'backend-dev', dependsOn: [] },
+    { id: 'S2', title: 'ADR', assignee: 'solution-architect', dependsOn: [] },
+  ];
+  const gw = await gateway(plan, (who) =>
+    who === 'backend-dev'
+      ? [{ name: 'write_file', args: { path: 'a.txt', content: 'tu backend\n' } }]
+      : who === 'solution-architect'
+        ? [
+            { name: 'write_file', args: { path: 'docs/adr.md', content: 'nhap\n' } },
+            { name: 'list_files', args: { path: '.' } },
+            { name: 'list_files', args: { path: 'docs' } },
+            { name: 'edit_file', args: { path: 'docs/adr.md', old_string: 'nhap', new_string: 'ban cuoi' } },
+          ]
+        : [],
+  );
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-par-'));
+  const repo = initRepo();
+  const a = app(gw.url, dataDir);
+  try {
+    a.store.saveProject({ id: 'repo', name: 'Repo', department: 'dev', workspace: repo, classification: 'internal', toolAccess: 'exec', setupCommands: ["node -e \"require('fs').appendFileSync('setup.log','x')\""], createdAt: new Date().toISOString() });
+    const t = a.orchestrator.submit({ brief: 'API + ADR', projectId: 'repo', options: { discussionRounds: 0, maxParallel: 3, maxRevisions: 0 } });
+    const done = await a.orchestrator.waitFor(t.id);
+    assert.equal(done.status, 'done', done.error);
+    assert.equal(gw.stats.subPrompts, 2, 'cả hai hạng mục làm trong worktree con');
+    assert.equal(gitc(repo, 'show', `${done.branch}:docs/adr.md`), 'ban cuoi');
+    const log = gitc(repo, 'log', '--format=%s', done.branch);
+    assert.doesNotMatch(log, /phần đã làm trước khi gộp/, log);
+    assert.match(log, /gộp S2/);
+    const setups = fs.readFileSync(path.join(dataDir, 'runs', t.id, 'events.jsonl'), 'utf8').split('\n').filter((l) => l.includes('"checks.setup"'));
+    assert.equal(setups.length, 1, 'lệnh chuẩn bị chỉ chạy cho hạng mục chạy lệnh');
+    assert.match(setups[0], /S1 worktree con/);
+  } finally {
+    gw.srv.close();
+    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(repo, { recursive: true, force: true });
+  }
+});

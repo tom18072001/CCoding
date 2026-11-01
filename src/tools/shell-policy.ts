@@ -156,17 +156,15 @@ export function isGitReadCommand(command: string): boolean {
 }
 
 function gitReadShapeReason(command: string): string | undefined {
-  const deny = 'bạn chỉ được chạy git chỉ đọc (git log/show/diff/blame/status/grep/ls-files…, lọc được qua `| head`/`| grep`) — không có quyền chạy test, build, cài đặt hay lệnh khác; lệnh cần chạy thì ghi rõ trong bàn giao để người có quyền chạy';
+  const deny = 'bạn chỉ được chạy git chỉ đọc (git log/show/diff/blame/status/grep/ls-files…, nối nhiều lệnh git đọc bằng `&&`, lọc được qua `| head`/`| grep`) — không có quyền chạy test, build, cài đặt hay lệnh khác; lệnh cần chạy thì ghi rõ trong bàn giao để người có quyền chạy';
   const cleaned = command.replace(/\s2>&1\b/g, ' ').replace(/\s2>\s*\/dev\/null\b/g, ' ').trim();
-  if (/\$\(|`|[<>]|\r|\n/.test(cleaned)) return deny;
+  if (/\$\(|`|[<>]|\r|\n|\|\|/.test(cleaned)) return deny;
   const stmts = cleaned.split(/&&|;/).map((s) => s.trim()).filter(Boolean);
   let gitSeen = false;
+  // chạy thật 1/11: agent hay gộp `cd <worktree> && git branch --show-current && git log -2 && git ls-files` thành một lệnh —
+  // cho mọi câu lệnh là `cd` (thư mục do outsidePathReason kiểm) hoặc git chỉ đọc
   for (const stmt of stmts) {
-    if (/^(cd|Set-Location|sl)\s+/i.test(stmt)) {
-      if (gitSeen) return deny;
-      continue; // thư mục: outsidePathReason kiểm riêng
-    }
-    if (gitSeen || stmt.includes('||')) return deny;
+    if (/^(cd|Set-Location|sl)\s+/i.test(stmt)) continue;
     const [head, ...pipes] = stmt.split('|').map((s) => s.trim());
     const argv = splitArgs(head);
     if (!argv || argv[0] !== 'git') return deny;

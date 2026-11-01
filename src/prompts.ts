@@ -230,7 +230,7 @@ function toolNote(c: Ctx, tools: ToolName[], phase: Phase): string {
 }
 
 const GIT_READ_NOTE =
-  'Xem lịch sử git (hash commit, nội dung commit, diff, blame) bằng git_read — nếu công cụ của bạn là Bash/PowerShell của Claude Code thì chỉ chạy được `git log/show/diff/blame/status/grep/ls-files…` (lọc qua `| head`/`| grep`), không nối lệnh khác.';
+  'Xem lịch sử git (hash commit, nội dung commit, diff, blame) bằng git_read — nếu công cụ của bạn là Bash/PowerShell của Claude Code thì chỉ chạy được `git log/show/diff/blame/status/grep/ls-files…` (nối nhiều lệnh git đọc bằng `&&`, lọc qua `| head`/`| grep`), không chạy lệnh khác.';
 
 function fileToolNote(c: Ctx, tools: ToolName[], phase: Phase): string {
   const read = tools.filter((t) => ['list_files', 'read_file', 'search'].includes(t));

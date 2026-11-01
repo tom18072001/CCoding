@@ -45,6 +45,11 @@ test('git chỉ đọc: lệnh con và tùy chọn được phép / bị chặn'
   assert.equal(gitReadCommandReason(`cd ${root} && git show --stat HEAD`, root), undefined);
   assert.ok(gitReadCommandReason('npm test', root));
   assert.ok(gitReadCommandReason('git log; npm test', root));
+  // nối nhiều lệnh git đọc (cách agent hay làm khi chạy thật) vẫn được; có lệnh khác trong chuỗi thì không
+  assert.equal(gitReadCommandReason(`cd "${root}" && git branch --show-current && git log --oneline -2 && git ls-files`, root), undefined);
+  assert.ok(gitReadCommandReason('git log -2 && npm test', root));
+  assert.ok(gitReadCommandReason('git log -2 || rm -rf x', root));
+  assert.ok(gitReadCommandReason(`cd /c/Users/admin/nd57-du-lieu-that && git log`, root), 'cd ra ngoài');
   assert.ok(gitReadCommandReason('git log > out.txt', root));
   assert.ok(gitReadCommandReason('git log $(rm -rf x)', root));
   assert.ok(gitReadCommandReason('git log | sh', root));
