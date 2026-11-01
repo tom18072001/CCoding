@@ -271,10 +271,12 @@ export function createServer(app: App): http.Server {
       try {
         if (req.method === 'POST') {
           const b = await readBody(req);
-          if (b.action !== 'push' && b.action !== 'ff') throw new HttpError(400, 'action phải là "push" hoặc "ff"');
-          return send(res, 200, orchestrator.ship(mm[1], b.action, { override: b.override === true }));
+          // "check": hỏi remote (fetch nhánh xuất phát, ls-remote) — có tác dụng phụ nên chỉ qua POST (đã kiểm Origin)
+          if (b.action === 'check') return send(res, 200, await orchestrator.shipStatus(mm[1], { fetch: true }));
+          if (b.action !== 'push' && b.action !== 'ff') throw new HttpError(400, 'action phải là "check", "push" hoặc "ff"');
+          return send(res, 200, await orchestrator.ship(mm[1], b.action, { override: b.override === true, allowSecrets: b.allowSecrets === true }));
         }
-        return send(res, 200, orchestrator.shipStatus(mm[1], { fetch: q('fetch') === '1' }));
+        return send(res, 200, await orchestrator.shipStatus(mm[1]));
       } catch (e) {
         if (e instanceof ShipError) throw new HttpError(e.status, e.message);
         throw e;
@@ -366,7 +368,7 @@ export function createServer(app: App): http.Server {
           const tools = logs
             .query({ task: t.id, limit: 4000 })
             .filter((r) => r.kind === 'tool.call' && r.subtaskId)
-            .map((r) => ({ subtaskId: r.subtaskId, name: String((r.data as { name?: string } | undefined)?.name ?? ''), args: String((r.data as { args?: string } | undefined)?.args ?? '') }));
+            .map((r) => ({ subtaskId: r.subtaskId, department: t.runs.length > 1 ? r.department : undefined, name: String((r.data as { name?: string } | undefined)?.name ?? ''), args: String((r.data as { args?: string } | undefined)?.args ?? '') }));
           return send(res, 200, { owners: ownersOf(src, t.id, sum.files.map((f) => f.path), tools) });
         }
         return send(res, 200, file !== undefined ? fileDiff(src, file, commit) : diffSummary(src, commit));

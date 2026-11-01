@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
+import { StringDecoder } from 'node:string_decoder';
 import path from 'node:path';
 import { killTree } from '../runtimes/spawn.js';
 import { redact } from '../util/redact.js';
@@ -387,8 +388,16 @@ async function runProc(
     let head = '';
     let tail = '';
     let dropped = 0;
-    const add = (b: Buffer) => {
-      let s = b.toString('utf8');
+    // giải mã theo luồng: ký tự nhiều byte (tiếng Việt) bị cắt giữa hai đoạn dữ liệu không thành "�"
+    const decoders = new Map<NodeJS.ReadableStream, StringDecoder>();
+    const feed = (stream: NodeJS.ReadableStream) => (b: Buffer) => {
+      let d = decoders.get(stream);
+      if (!d) decoders.set(stream, (d = new StringDecoder('utf8')));
+      add(d.write(b));
+    };
+    const add = (chunk: string) => {
+      let s = chunk;
+      if (!s) return;
       if (head.length < headMax) {
         const take = s.slice(0, headMax - head.length);
         head += take;
@@ -401,8 +410,8 @@ async function runProc(
         tail = tail.slice(-tailMax);
       }
     };
-    child.stdout.on('data', add);
-    child.stderr.on('data', add);
+    child.stdout.on('data', feed(child.stdout));
+    child.stderr.on('data', feed(child.stderr));
     let timedOut = false;
     const timer = setTimeout(() => {
       timedOut = true;
@@ -413,6 +422,7 @@ async function runProc(
     const done = (code: number | null) => {
       clearTimeout(timer);
       signal?.removeEventListener('abort', onAbort);
+      for (const d of decoders.values()) add(d.end());
       if (tail.length > tailMax) {
         dropped += tail.length - tailMax;
         tail = tail.slice(-tailMax);

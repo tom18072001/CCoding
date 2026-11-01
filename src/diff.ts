@@ -290,7 +290,7 @@ export function fileDiff(src: Source, file: string, commit?: string): FileDiff {
  *    "… hoàn tất gộp … (S2)"; bỏ "phần đã làm trước khi gộp S2" (là việc của hạng mục khác);
  * 2) lệnh ghi/sửa tệp trong nhật ký (`tool.call` write_file/edit_file kèm subtaskId) — đường dẫn tuyệt đối khớp theo đuôi.
  */
-export function ownersOf(src: Source, taskId: string, files: string[], tools: Array<{ subtaskId?: string; name?: string; args?: string }> = []): Record<string, string[]> {
+export function ownersOf(src: Source, taskId: string, files: string[], tools: Array<{ subtaskId?: string; name?: string; args?: string; department?: string }> = []): Record<string, string[]> {
   const out: Record<string, Set<string>> = {};
   const add = (file: string, sub: string) => (out[file] ??= new Set()).add(sub);
   const want = new Set(files);
@@ -315,7 +315,8 @@ export function ownersOf(src: Source, taskId: string, files: string[], tools: Ar
     const abs = /^([a-z]:)?\//i.test(p);
     const inWt = wtDir.exec(p);
     if (inWt) p = inWt[1];
-    for (const f of want) if (p === f || (abs && !inWt && p.endsWith(`/${f}`))) add(f, t.subtaskId);
+    // nhật ký biết phòng của hạng mục → "phòng|S2" (nhiệm vụ liên phòng có S2 ở cả hai phòng); commit chỉ biết "S2"
+    for (const f of want) if (p === f || (abs && !inWt && p.endsWith(`/${f}`))) add(f, t.department ? `${t.department}|${t.subtaskId}` : t.subtaskId);
   }
   return Object.fromEntries(Object.entries(out).map(([f, s]) => [f, [...s].sort()]));
 }

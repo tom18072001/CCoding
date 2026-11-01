@@ -1073,3 +1073,5 @@ kbd { display: inline-block; min-width: 18px; padding: 0 5px; border: 1px solid 
 .dc-list select { margin-left: 6px; background: var(--panel); color: var(--text); border: 1px solid var(--line-2); border-radius: 6px; padding: 2px 6px; font: inherit; font-size: 12px; max-width: 100%; }
 .c-chk { display: inline-flex; gap: 5px; align-items: center; font-size: 12px; color: var(--muted); white-space: nowrap; }
 @media (max-width: 640px) { .dc, .dc-new { margin-left: 8px; } }
+.pl-est b.warn { color: var(--warn); font-weight: 600; }
+.sh-list a[data-task-link] { color: #93c5fd; cursor: pointer; }

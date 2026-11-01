@@ -838,9 +838,10 @@
           <div class="pb-actions"><label style="font-size:12px">Ngân sách mỗi nhiệm vụ <input name="split-budget" type="number" min="100000" step="100000" placeholder="tự ước lượng" style="width:130px" /></label>
           <button class="btn primary sm" data-act="split">✂ Tách</button></div></details>`
       : '';
-    const planWait = !!window.Flow?.planPaused(t);
-    const banner = planWait
-      ? window.Flow.planHtml(t)
+    // kế hoạch chờ duyệt → hộp duyệt; không dựng được hộp (dữ liệu lạ) → vẫn có hộp tạm dừng thường để Tiếp tục/tăng ngân sách
+    const planBox = window.Flow?.planHtml(t) || '';
+    const banner = planBox
+      ? planBox
       : canResume
       ? `<div class="pause-box ${t.status}">
           <div><b>${t.status === 'paused' ? `⏸ Tạm dừng — ${esc(PAUSE_VI[t.pause?.reason] || t.pause?.reason || '')}` : t.status === 'failed' ? '⚠️ Nhiệm vụ lỗi — có thể chạy tiếp phần chưa xong' : '⏹ Đã hủy — có thể chạy tiếp'}</b>

@@ -169,7 +169,7 @@ test('ownersOf: tệp → hạng mục theo commit (S/gộp) và lệnh ghi tệ
   }
 });
 
-test('sẵn sàng gộp: đẩy nhánh, fast-forward vào nhánh xuất phát, chặn khi không ff / có bí mật / chưa commit; link PR GitHub', () => {
+test('sẵn sàng gộp: đẩy nhánh, fast-forward vào nhánh xuất phát, chặn khi không ff / có bí mật / chưa commit; link PR GitHub', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-ship-'));
   try {
     const remote = path.join(root, 'remote.git');
@@ -190,7 +190,7 @@ test('sẵn sàng gộp: đẩy nhánh, fast-forward vào nhánh xuất phát, c
     fs.writeFileSync(path.join(wt, 'a.txt'), '2\n');
     gitc(wt, 'commit', '-qam', 'CCoding T-1: sửa a');
     const task = { id: 'T-1', status: 'done', branch: 'ccoding/t-1', baseRef: base, workspace: wt, runs: [{ department: 'dev', subtasks: [{ id: 'S1', status: 'done' }], review: { approved: true, summary: '', issues: [] } }], projectChecks: { baseline: [{ command: 'npm test', ok: true }], latest: [{ command: 'npm test', ok: true }] } } as unknown as Task;
-    let st = shipStatus(task, repo, 'origin/main', { fetch: true });
+    let st = await shipStatus(task, repo, 'origin/main', { fetch: true });
     assert.equal(st.remote, 'origin');
     assert.equal(st.baseBranch, 'main');
     assert.equal(st.ahead, 1);
@@ -201,20 +201,20 @@ test('sẵn sàng gộp: đẩy nhánh, fast-forward vào nhánh xuất phát, c
     assert.deepEqual(st.blockers, []);
     // phần chưa commit chặn đẩy
     fs.writeFileSync(path.join(wt, 'tmp.txt'), 'x\n');
-    assert.ok(shipStatus(task, repo, 'origin/main').blockers.some((b) => b.includes('chưa commit')));
-    assert.throws(() => shipPush(task, repo, 'origin/main', 'push'), (e: unknown) => e instanceof ShipError && e.status === 409);
+    assert.ok((await shipStatus(task, repo, 'origin/main')).blockers.some((b) => b.includes('chưa commit')));
+    await assert.rejects(shipPush(task, repo, 'origin/main', 'push'), (e: unknown) => e instanceof ShipError && e.status === 409);
     fs.rmSync(path.join(wt, 'tmp.txt'));
     // đẩy nhánh
-    const p = shipPush(task, repo, 'origin/main', 'push');
+    const p = await shipPush(task, repo, 'origin/main', 'push');
     assert.equal(p.ref, 'ccoding/t-1');
     assert.equal(gitc(remote, 'rev-parse', 'refs/heads/ccoding/t-1'), p.head);
-    assert.equal(shipStatus(task, repo, 'origin/main', { fetch: true }).pushed, true);
+    assert.equal((await shipStatus(task, repo, 'origin/main', { fetch: true })).pushed, true);
     // review chưa duyệt → ff cần xác nhận
     (task as { attention?: unknown }).attention = { reason: 'review', detail: 'x', at: '' };
-    assert.throws(() => shipPush(task, repo, 'origin/main', 'ff'), /vẫn đẩy/);
+    await assert.rejects(shipPush(task, repo, 'origin/main', 'ff'), /vẫn đẩy/);
     (task as { attention?: unknown }).attention = undefined;
     // fast-forward vào main
-    const ff = shipPush(task, repo, 'origin/main', 'ff');
+    const ff = await shipPush(task, repo, 'origin/main', 'ff');
     assert.equal(ff.ref, 'main');
     assert.equal(gitc(remote, 'rev-parse', 'refs/heads/main'), ff.head);
     // main có commit mới từ nơi khác → không ff, báo xung đột
@@ -224,18 +224,29 @@ test('sẵn sàng gộp: đẩy nhánh, fast-forward vào nhánh xuất phát, c
     gitc(seed, 'push', '-q', 'origin', 'HEAD:main');
     fs.writeFileSync(path.join(wt, 'a.txt'), '4\n');
     gitc(wt, 'commit', '-qam', 'CCoding T-1: sửa tiếp');
-    st = shipStatus(task, repo, 'origin/main', { fetch: true });
+    st = await shipStatus(task, repo, 'origin/main', { fetch: true });
     assert.equal(st.ff, false);
     assert.equal(st.behind, 1);
     assert.deepEqual(st.conflicts, ['a.txt']);
-    assert.throws(() => shipPush(task, repo, 'origin/main', 'ff'), /không fast-forward/);
+    await assert.rejects(shipPush(task, repo, 'origin/main', 'ff'), /không fast-forward/);
     // bí mật trong dòng thêm mới → chặn cả đẩy nhánh
     fs.writeFileSync(path.join(wt, 'cfg.js'), "const key = 'sk-abcdefghijklmnopqrstuvwxyz0123456789';\n");
     gitc(wt, 'add', '-A');
     gitc(wt, 'commit', '-qm', 'cfg');
-    st = shipStatus(task, repo, 'origin/main');
-    assert.deepEqual(st.secrets, ['cfg.js']);
-    assert.throws(() => shipPush(task, repo, 'origin/main', 'push'), /khóa\/mật khẩu/);
+    st = await shipStatus(task, repo, 'origin/main');
+    assert.deepEqual(st.secrets, ['cfg.js:1']);
+    await assert.rejects(shipPush(task, repo, 'origin/main', 'push'), /khóa\/mật khẩu/);
+    // xác nhận là dữ liệu thử → đẩy nhánh được
+    assert.equal((await shipPush(task, repo, 'origin/main', 'push', { allowSecrets: true })).ref, 'ccoding/t-1');
+    // origin/HEAD không phải nhánh → không có nhánh xuất phát để fast-forward (không tạo refs/heads/HEAD)
+    const sh = await shipStatus(task, repo, 'origin/HEAD', { fetch: true });
+    assert.equal(sh.baseBranch, undefined);
+    await assert.rejects(shipPush(task, repo, 'origin/HEAD', 'ff', { override: true, allowSecrets: true }), /không phải nhánh remote/);
+    assert.equal(spawnSync('git', ['-C', remote, 'rev-parse', '--verify', '-q', 'refs/heads/HEAD']).status, 1);
+    // nhánh xuất phát không có trên remote → không ff
+    await assert.rejects(shipPush(task, repo, 'origin/khong-co', 'ff', { override: true, allowSecrets: true }), /Không có nhánh|không fast-forward|không có commit mới|Không hỏi được/);
+    // nhiệm vụ chưa xong → cảnh báo
+    assert.ok((await shipStatus({ ...task, status: 'failed' } as Task, repo, 'origin/main')).warnings.some((w) => w.includes('chưa xong')));
     // URL
     assert.equal(cleanUrl('https://u:ghp_x@github.com/a/b.git'), 'https://github.com/a/b.git');
     assert.equal(compareUrl('git@github.com:tom/ND57.git', 'ND57-da-nv', 'ccoding/t-1'), 'https://github.com/tom/ND57/compare/ND57-da-nv...ccoding/t-1?expand=1');
@@ -287,11 +298,98 @@ test('đầu ra lệnh dài: giữ phần cuối (dòng tổng kết test) thay 
     const script = path.join(dir, 'gen.cjs');
     fs.writeFileSync(script, "for (let i = 0; i < 3000; i++) console.log('✔ test số ' + i + ' chạy đúng (1.2ms)'); console.log('ℹ tests 592'); console.log('ℹ pass 592'); console.log('ℹ fail 0');\n");
     const r = await runCheckCommand(`node "${script}"`, dir, { denyCommands: [], timeoutSec: 60, maxChars: 2000 });
+    assert.ok(!r.tail.includes('\uFFFD'), 'không vỡ ký tự tiếng Việt giữa hai đoạn dữ liệu');
     assert.equal(r.ok, true);
     assert.match(r.summary, /tests 592/);
     assert.match(r.summary, /fail 0/);
     assert.match(r.tail, /ℹ fail 0/);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('cổng duyệt kế hoạch: hủy rồi tiếp tục vẫn phải duyệt; không yêu cầu sửa khi kế hoạch chờ duyệt; cảnh báo ngân sách sau khi duyệt', async () => {
+  const app = testApp();
+  try {
+    const t = app.orchestrator.submit({ brief: 'Thiết kế API quản lý hồ sơ, có phân quyền, log kiểm toán, test và tài liệu', mode: 'department', department: 'dev', options: { planApproval: true, discussionRounds: 0, budgetMode: 'pause', budgetTokens: 200000 } });
+    assert.equal((await app.orchestrator.waitFor(t.id)).pause?.reason, 'plan');
+    assert.throws(() => app.orchestrator.reviewDecision(t.id, { decision: 'reject', note: 'sửa đi' }), /chờ duyệt/);
+    // hủy khi đang chờ duyệt rồi tiếp tục → dừng lại ở bước duyệt, chưa thực thi gì
+    assert.ok(app.orchestrator.cancel(t.id));
+    app.orchestrator.resume(t.id, {});
+    const again = await app.orchestrator.waitFor(t.id);
+    assert.equal(again.status, 'paused');
+    assert.equal(again.pause?.reason, 'plan');
+    assert.ok(again.runs[0].subtasks.every((s) => s.attempts === 0), 'chưa hạng mục nào chạy');
+    // duyệt → ước tính (~1,4M) vượt ngân sách 200k ở chế độ "pause" → dừng vì ngân sách MỘT lần
+    app.orchestrator.updatePlan(t.id, { approve: true });
+    const b = await app.orchestrator.waitFor(t.id);
+    assert.equal(b.status, 'paused');
+    assert.equal(b.pause?.reason, 'budget');
+    assert.ok(b.runs[0].planReview?.approvedAt);
+    assert.ok(app.store.transcript(t.id).some((m) => m.text.startsWith('📏')));
+    app.orchestrator.resume(t.id, { budgetMode: 'complete' });
+    assert.equal((await app.orchestrator.waitFor(t.id)).status, 'done');
+    // phòng chỉ định không chờ duyệt → từ chối
+    assert.throws(() => app.orchestrator.updatePlan(t.id, { department: 'dev', approve: true }), /không ở bước chờ duyệt/);
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('việc nối: quét bí mật và đếm cả commit kế thừa từ nhiệm vụ trước', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-inh-'));
+  try {
+    const remote = path.join(root, 'remote.git');
+    gitc(root, 'init', '-q', '--bare', '-b', 'main', remote);
+    const repo = path.join(root, 'repo');
+    gitc(root, 'clone', '-q', remote, repo);
+    ident(repo);
+    fs.writeFileSync(path.join(repo, 'a.txt'), '1\n');
+    gitc(repo, 'add', '-A');
+    gitc(repo, 'commit', '-qm', 'init');
+    gitc(repo, 'push', '-q', 'origin', 'HEAD:main');
+    gitc(repo, 'fetch', '-q', 'origin');
+    // nhiệm vụ trước: commit có khóa
+    gitc(repo, 'branch', 'ccoding/t-1', 'origin/main');
+    const w1 = path.join(root, 'w1');
+    gitc(repo, 'worktree', 'add', '-q', w1, 'ccoding/t-1');
+    fs.writeFileSync(path.join(w1, 'cfg.js'), "const k = 'sk-abcdefghijklmnopqrstuvwxyz0123456789';\n");
+    gitc(w1, 'add', '-A');
+    gitc(w1, 'commit', '-qm', 'T-1');
+    const prevHead = gitc(w1, 'rev-parse', 'HEAD');
+    // việc nối tách từ nhánh trước, chỉ sửa a.txt
+    const w2 = path.join(root, 'w2');
+    gitc(repo, 'worktree', 'add', '-q', '-b', 'ccoding/t-2', w2, 'ccoding/t-1');
+    fs.writeFileSync(path.join(w2, 'a.txt'), '2\n');
+    gitc(w2, 'commit', '-qam', 'T-2');
+    const task = { id: 'T-2', status: 'done', branch: 'ccoding/t-2', baseRef: prevHead, startFrom: 'ccoding/t-1', followUpOf: 'T-1', workspace: w2, runs: [{ department: 'dev', subtasks: [{ id: 'S1', status: 'done' }], review: { approved: true, summary: '', issues: [] } }] } as unknown as Task;
+    const st = await shipStatus(task, repo, 'origin/main', { fetch: true }, { inheritedFrom: { taskId: 'T-1', head: prevHead, reviewOk: false } });
+    assert.equal(st.ahead, 2);
+    assert.deepEqual(st.secrets, ['cfg.js:1'], 'quét cả commit của nhiệm vụ trước');
+    assert.deepEqual(st.inherited, { taskId: 'T-1', commits: 1, reviewOk: false });
+    assert.ok(st.warnings.some((w) => w.includes('nhiệm vụ trước T-1')));
+    await assert.rejects(shipPush(task, repo, 'origin/main', 'ff', { allowSecrets: true }), /vẫn đẩy/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('liên phòng: bình luận gắn phòng chỉ nhắm hạng mục của phòng đó', async () => {
+  const app = testApp();
+  try {
+    const t = app.orchestrator.submit({ brief: 'Tổng quan tài liệu về kiểm soát truy cập rồi hiện thực API kiểm quyền', mode: 'joint', options: { discussionRounds: 0 } });
+    const d = await app.orchestrator.waitFor(t.id);
+    assert.equal(d.status, 'done', d.error);
+    assert.equal(d.runs.length, 2);
+    const dev = d.runs.find((r) => r.department === 'dev')!;
+    const res = d.runs.find((r) => r.department === 'research')!;
+    assert.ok(dev.subtasks.some((s) => s.id === 'S1') && res.subtasks.some((s) => s.id === 'S1'));
+    const r = app.orchestrator.reviewDecision(t.id, { decision: 'reject', issues: [{ subtask: 'S1', department: 'dev', comment: '`src/acl.js:3` — thiếu kiểm quyền' }] });
+    assert.deepEqual(r.runs.find((x) => x.department === 'dev')!.revising, ['S1']);
+    assert.equal(r.runs.find((x) => x.department === 'research')!.revising, undefined, 'phòng Nghiên cứu không bị sửa');
+    await app.orchestrator.waitFor(t.id);
+  } finally {
+    app.cleanup();
   }
 });

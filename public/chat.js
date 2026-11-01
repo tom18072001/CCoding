@@ -309,7 +309,7 @@
     else if (active(t)) {
       const ph = window.Drive?.phaseLabel?.(t) || C.TASK_VI[t.status];
       parts.push(`<div class="cv-live"><span class="cv-spin"></span><span>${esc(ph)}…</span><small>${C.fmt(C.total(t.usage))} token${t.options?.budgetTokens ? ` / ${C.fmt(t.options.budgetTokens)}` : ''}</small><span class="grow"></span>${window.UX?.hasDiff(t) ? `<button class="btn ghost sm" data-act="diff" data-tid="${esc(t.id)}" title="Xem thay đổi trong repo (cả phần chưa commit)">🧬<span data-dstat="${esc(t.id)}"></span></button>` : ''}${t.status === 'running' ? `<button class="btn ghost sm" data-act="pause" data-tid="${esc(t.id)}">⏸ Tạm dừng</button>` : ''}<button class="btn ghost sm danger" data-act="cancel" data-tid="${esc(t.id)}">Hủy</button></div>`);
-    } else if (window.Flow?.planPaused(t)) {
+    } else if (window.Flow?.planHtml(t)) {
       parts.push(window.Flow.planHtml(t));
     } else if (['paused', 'failed', 'cancelled'].includes(t.status)) {
       const title = t.status === 'paused' ? `⏸ Tạm dừng — ${C.PAUSE_VI[t.pause?.reason] || t.pause?.reason || ''}` : t.status === 'failed' ? '⚠️ Nhiệm vụ lỗi — có thể chạy tiếp phần chưa xong' : '⏹ Đã hủy';

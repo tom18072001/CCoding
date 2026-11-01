@@ -45,7 +45,8 @@
         </div>`;
       })
       .join('');
-    const est = run.estimate ? `📏 Ước tính ≈ ${C.fmt(run.estimate.tokens)} token${run.estimate.basis ? ` (${esc(run.estimate.basis)})` : ''} · ngân sách còn ${C.fmt(run.estimate.budget)}` : '';
+    const over = run.estimate && run.estimate.tokens > run.estimate.budget * 1.2;
+    const est = run.estimate ? `📏 Ước tính ≈ ${C.fmt(run.estimate.tokens)} token${run.estimate.basis ? ` (${esc(run.estimate.basis)})` : ''} · ngân sách còn ${C.fmt(run.estimate.budget)}${over ? ' — <b class="warn">vượt ngân sách: nên bỏ bớt hạng mục, tách nhiệm vụ hoặc tăng ngân sách</b>' : ''}` : '';
     const auto = t.pause?.resumeAt ? ` · tự duyệt lúc ${esc(C.dateTime(t.pause.resumeAt))}` : '';
     const dirty = Object.keys(d.subs).length > 0;
     return `<div class="pl-box" data-pl="${esc(t.id)}" data-dept="${esc(run.department)}">
@@ -197,18 +198,20 @@
         row(d.review === 'approved' ? true : d.review === 'none' ? undefined : false, d.review === 'approved' ? 'Review đã duyệt' : d.review === 'none' ? 'Không có review' : 'Review chưa duyệt / "cần xem"'),
         row(!d.regressions.length && !d.failing.length, d.regressions.length ? `Lệnh kiểm tra hồi quy: ${d.regressions.map(esc).join(' · ')}` : d.failing.length ? `Lệnh kiểm tra hỏng: ${d.failing.map(esc).join(' · ')}` : 'Lệnh kiểm tra đạt'),
         row(!d.uncommitted, d.uncommitted ? `${d.uncommitted} tệp chưa commit trong worktree` : 'Không còn thay đổi chưa commit'),
-        row(!d.secrets.length, d.secrets.length ? `Dòng trông như khóa/mật khẩu ở: ${d.secrets.map((x) => `<code>${esc(x)}</code>`).join(', ')}` : 'Không thấy khóa/mật khẩu trong phần thêm mới'),
+        row(!d.secrets.length, d.secrets.length ? `Dòng trông như khóa/mật khẩu ở: ${d.secrets.slice(0, 12).map((x) => `<code>${esc(x)}</code>`).join(', ')}${d.secrets.length > 12 ? ` và ${d.secrets.length - 12} chỗ khác` : ''} — đẩy phải xác nhận là dữ liệu thử` : 'Không thấy khóa/mật khẩu trong phần sẽ đẩy'),
         d.baseBranch ? row(d.ff === true ? true : d.ahead ? false : undefined, d.ff ? `Fast-forward được vào ${base} (${d.ahead} commit)` : d.ahead ? `${base} có ${d.behind} commit mới chưa có trong nhánh${d.conflicts?.length ? ` · xung đột ${d.conflicts.length} tệp: ${d.conflicts.slice(0, 6).map((x) => `<code>${esc(x)}</code>`).join(', ')}` : d.conflicts ? ' · gộp không xung đột' : ''}` : `Nhánh không có commit mới so với ${base}`) : row(undefined, 'Dự án không đặt nhánh xuất phát dạng <code>origin/&lt;nhánh&gt;</code> — chỉ đẩy nhánh / mở PR'),
         row(d.pushed ? true : undefined, d.pushed ? `Nhánh đã có trên ${esc(d.remote || 'remote')}` : `Nhánh chưa đẩy lên ${esc(d.remote || 'remote')}`, d.pushed ? 'ok' : 'muted'),
+        d.inherited ? row(d.inherited.reviewOk ? undefined : false, `Gồm ${d.inherited.commits} commit của nhiệm vụ trước <a data-task-link="${esc(d.inherited.taskId)}">${esc(d.inherited.taskId)}</a>${d.inherited.reviewOk ? '' : ' — review của nhiệm vụ đó chưa duyệt'}`) : '',
+        d.fetched === false ? row(undefined, 'Không hỏi được remote (mạng/đăng nhập) — trạng thái theo ref cục bộ, có thể cũ') : '',
       ].join('');
-      const blocked = d.blockers.length > 0;
+      const blocked = d.blockers.length > 0 || !!s.busy;
       body = `<ul class="sh-list">${items}</ul>
         ${d.blockers.length ? `<p class="bad">⛔ ${d.blockers.map(esc).join(' · ')}</p>` : ''}
         <div class="pb-actions">
           <button type="button" class="btn ghost sm" data-sh-act="push"${blocked || d.pushed ? ' disabled' : ''} title="git push ${esc(d.remote || '')} ${esc(d.branch)} (không --force)">⬆ Đẩy nhánh</button>
-          ${d.baseBranch ? `<button type="button" class="btn ${d.ff && !d.warnings.length ? 'primary' : 'ghost'} sm" data-sh-act="ff"${blocked || !d.ff ? ' disabled' : ''} title="Đẩy commit ${esc((d.head || '').slice(0, 10))} vào ${esc(d.baseRef)} — chỉ khi fast-forward, không --force">⏩ Đẩy vào ${esc(d.baseBranch)}</button>` : ''}
+          ${d.baseBranch ? `<button type="button" class="btn ${d.ff && !d.warnings.length && !d.secrets.length ? 'primary' : 'ghost'} sm" data-sh-act="ff"${blocked || !d.ff || d.fetched !== true || d.baseExists !== true ? ' disabled' : ''} title="Đẩy commit ${esc((d.head || '').slice(0, 10))} vào ${esc(d.baseRef)} — chỉ khi fast-forward, không --force">⏩ Đẩy vào ${esc(d.baseBranch)}</button>` : ''}
           ${d.compareUrl ? `<a class="btn ghost sm" href="${esc(d.compareUrl)}" target="_blank" rel="noopener noreferrer"${d.pushed ? '' : ' aria-disabled="true" title="Đẩy nhánh trước rồi mở PR"'}>↗ Mở PR trên GitHub</a>` : ''}
-          <span class="grow"></span><button type="button" class="btn ghost sm" data-sh-refresh title="Kiểm lại (hỏi remote)">↻</button><button type="button" class="btn ghost sm" data-sh-close>Đóng</button>
+          <span class="grow"></span><button type="button" class="btn ghost sm" data-sh-refresh title="Kiểm lại (hỏi remote)"${s.busy ? ' disabled' : ''}>↻</button><button type="button" class="btn ghost sm" data-sh-close>Đóng</button>
         </div>
         <p class="pl-hint">Nhánh <code>${esc(d.branch)}</code> @ <code>${esc((d.head || '').slice(0, 10))}</code>${d.remoteUrl ? ` · ${esc(d.remoteUrl)}` : ''}. CCoding không bao giờ đẩy --force; việc tiếp nối trong cùng dự án tự làm tiếp trên nhánh này.</p>`;
     }
@@ -219,29 +222,44 @@
     F.ship.set(id, { ...s, open: true, busy: true, err: '' });
     rerender();
     try {
-      const data = await C.api(`/api/tasks/${encodeURIComponent(id)}/ship${fetch ? '?fetch=1' : ''}`);
+      const data = fetch ? await C.api(`/api/tasks/${encodeURIComponent(id)}/ship`, { method: 'POST', body: JSON.stringify({ action: 'check' }) }) : await C.api(`/api/tasks/${encodeURIComponent(id)}/ship`);
       F.ship.set(id, { open: true, busy: false, data, at: Date.now() });
     } catch (e) {
       F.ship.set(id, { open: true, busy: false, err: e.message });
     }
     rerender();
   }
-  async function act(id, action, rerender, override = false) {
+  async function act(id, action, rerender, again) {
     const t = C.S.tasks.get(id);
-    const d = F.ship.get(id)?.data;
-    if (!t || !d) return;
-    const what = action === 'ff' ? `Đẩy ${d.ahead} commit của "${t.title}" vào ${d.baseRef} (fast-forward, không --force)?` : `Đẩy nhánh ${d.branch} lên ${d.remote}?`;
-    if (!override && !confirm(what)) return;
-    F.ship.set(id, { ...F.ship.get(id), busy: true });
+    const s0 = F.ship.get(id);
+    const d = s0?.data;
+    if (!t || !d || s0.busy) return;
+    let override = !!again?.override;
+    let allowSecrets = !!again?.allowSecrets;
+    if (!again) {
+      const what = action === 'ff' ? `Đẩy ${d.ahead} commit vào ${d.baseRef} (fast-forward, không --force)?${d.inherited ? `\n(gồm ${d.inherited.commits} commit của nhiệm vụ trước ${d.inherited.taskId})` : ''}` : `Đẩy nhánh ${d.branch} lên ${d.remote}?`;
+      if (!confirm(what)) return;
+      if (d.secrets.length) {
+        if (!confirm(`Có dòng trông như khóa/mật khẩu:\n${d.secrets.slice(0, 15).join('\n')}\n\nChỉ đẩy nếu đó là dữ liệu thử (vd. test của bộ che bí mật), không phải khóa thật. Vẫn đẩy?`)) return;
+        allowSecrets = true;
+      }
+      if (action === 'ff' && d.warnings.length) {
+        if (!confirm(`Còn cảnh báo:\n- ${d.warnings.join('\n- ')}\n\nVẫn đẩy vào ${d.baseRef}?`)) return;
+        override = true;
+      }
+    }
+    F.ship.set(id, { ...s0, busy: true });
     rerender();
     try {
-      const r = await C.api(`/api/tasks/${encodeURIComponent(id)}/ship`, { method: 'POST', body: JSON.stringify({ action, override }) });
+      const r = await C.api(`/api/tasks/${encodeURIComponent(id)}/ship`, { method: 'POST', body: JSON.stringify({ action, override, allowSecrets }) });
       if (r?.task) C.S.tasks.set(r.task.id, r.task);
       F.ship.set(id, { open: true, busy: false, data: r.status, at: Date.now() });
       C.toast({ level: 'info', title: action === 'ff' ? `Đã đẩy vào ${d.baseBranch}` : 'Đã đẩy nhánh', msg: t.title });
     } catch (e) {
       F.ship.set(id, { ...F.ship.get(id), busy: false });
-      if (!override && /vẫn đẩy/.test(e.message) && confirm(`${e.message}\n\nVẫn đẩy?`)) return act(id, action, rerender, true);
+      // trạng thái đổi giữa lúc xem và lúc bấm (cảnh báo / dòng giống khóa mới) → hỏi lại một lần
+      if (!override && /vẫn đẩy/.test(e.message) && confirm(`${e.message}\n\nVẫn đẩy?`)) return act(id, action, rerender, { override: true, allowSecrets });
+      if (!allowSecrets && /dữ liệu thử/.test(e.message) && confirm(`${e.message}\n\nVẫn đẩy?`)) return act(id, action, rerender, { override, allowSecrets: true });
       C.toast({ level: 'error', title: 'Không đẩy được', msg: e.message });
     }
     rerender();
@@ -263,6 +281,7 @@
         re();
       });
       box.querySelectorAll('[data-sh-act]').forEach((b) => b.addEventListener('click', () => act(id, b.dataset.shAct, re)));
+      box.querySelector('[data-task-link]')?.addEventListener('click', (e) => C.openTask(e.currentTarget.dataset.taskLink));
       box.querySelector('a[aria-disabled]')?.addEventListener('click', (e) => {
         e.preventDefault();
         C.toast({ level: 'info', title: 'Đẩy nhánh trước', msg: 'GitHub chỉ mở được PR khi nhánh đã có trên remote.' });

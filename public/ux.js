@@ -308,9 +308,11 @@
     const subs = t.runs.flatMap((r) => r.subtasks.filter((s) => s.status === 'done' && s.output && !s.splitTo).map((s) => ({ r, s, v: `${r.department}|${s.id}` })));
     const opt = (c) => {
       const own = owners[c.path] || [];
-      const pick = subs.find((x) => own.includes(x.s.id))?.v || (subs.length === 1 ? subs[0].v : '');
+      // "phòng|S2" từ nhật ký khớp đúng phòng; "S2" từ commit → ưu tiên phòng chạy SAU (liên phòng: Phát triển sửa repo)
+      const hit = (x) => own.includes(x.v) || own.includes(x.s.id);
+      const pick = subs.find((x) => own.includes(x.v))?.v || [...subs].reverse().find((x) => own.includes(x.s.id))?.v || (subs.length === 1 ? subs[0].v : '');
       return `<select data-dc-sub="${esc(c.id)}" aria-label="Hạng mục nhận sửa"><option value="">— chọn hạng mục —</option>${subs
-        .map((x) => `<option value="${esc(x.v)}"${x.v === pick ? ' selected' : ''}>${multi ? `${esc(C.deptName(x.r.department))} · ` : ''}${esc(x.s.id)} · ${esc(C.agentName(x.s.assignee))}${own.includes(x.s.id) ? ' ✓ đã sửa tệp này' : ''}</option>`)
+        .map((x) => `<option value="${esc(x.v)}"${x.v === pick ? ' selected' : ''}>${multi ? `${esc(C.deptName(x.r.department))} · ` : ''}${esc(x.s.id)} · ${esc(C.agentName(x.s.assignee))}${hit(x) ? ' ✓ đã sửa tệp này' : ''}</option>`)
         .join('')}</select>`;
     };
     panel.innerHTML = `<div class="dc-sendbox"><b>Gửi ${list.length} bình luận thành yêu cầu sửa</b>

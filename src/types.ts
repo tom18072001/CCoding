@@ -294,6 +294,8 @@ export interface DeptRun {
     approvedAt?: string;
     by?: 'director' | 'timeout';
     edits?: number;
+    /** Đã cảnh báo ước tính so với ngân sách sau khi duyệt (chỉ một lần). */
+    estimateChecked?: boolean;
   };
   finalPath?: string;
   usage: Usage;
