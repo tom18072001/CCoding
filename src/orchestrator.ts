@@ -70,6 +70,7 @@ import {
   type RunStage,
   type Subtask,
   type Task,
+  type TaskOptions,
   type ToolAccess,
   type ToolName,
 } from './types.js';
@@ -292,6 +293,7 @@ export class Orchestrator {
         budgetMode,
         runtime: o.runtime || undefined,
         subtaskBudgetTokens: o.subtaskBudgetTokens && o.subtaskBudgetTokens > 0 ? Math.floor(o.subtaskBudgetTokens) : undefined,
+        ...variantOptions(o),
       },
       after: extra.after?.length ? extra.after : undefined,
       splitFrom: extra.splitFrom,
@@ -1548,7 +1550,7 @@ export class Orchestrator {
 
   /** Ước lượng token cho phần còn lại của kế hoạch (theo quyền công cụ của từng hạng mục). */
   private histCache = new Map<string, { at: number; map: Map<string, AgentHistory> }>();
-  private readonly repoMaps = new Map<string, { rel: string; large: string[] }>();
+  private readonly repoMaps = new Map<string, { rel: string; index?: string; large: string[] }>();
   private readonly repoMapLogged = new Set<string>();
   /** Token thực tế mỗi hạng mục theo agent (trung vị các hạng mục gần nhất) — làm mới mỗi 10 phút. */
   /** Lịch sử token/hạng mục theo agent, chỉ từ nhiệm vụ chạy CÙNG runtime với nhiệm vụ đang ước tính (vd. claude-cli). */
@@ -2068,7 +2070,8 @@ export class Orchestrator {
    */
   private projectHistory(task: Task, pctx: P.Ctx): P.Ctx['projectHistory'] {
     const limit = this.d.config.phases?.projectHistory ?? 3;
-    if (!task.projectId || limit <= 0) return undefined;
+    // nhiệm vụ benchtest: mọi lượt phải cùng đầu vào — không thấy lịch sử dự án (kể cả lượt bench trước)
+    if (!task.projectId || limit <= 0 || task.options.variant) return undefined;
     const items = selectHistory(this.d.store.list(), task, limit).map((t) => ({ task: t, final: t.finalPath ? this.d.store.readRunFile(t.id, t.finalPath) : undefined }));
     if (!items.length) return undefined;
     let rel: string | undefined;
@@ -2102,13 +2105,17 @@ export class Orchestrator {
     if (!ws || this.d.config.tools.repoMap === false) return;
     try {
       const t0 = Date.now();
-      const map = buildRepoMap(ws);
-      const rel = `.ccoding/${safeName(task.id)}/repo-map.md`;
+      const mode = task.options.repoMapMode ?? this.d.config.tools.repoMapMode ?? 'full';
+      const dir = `.ccoding/${safeName(task.id)}`;
+      const rel = `${dir}/repo-map.md`;
+      const indexRel = `${dir}/repo-index.md`;
+      const map = buildRepoMap(ws, { mode, indexRel });
       writeText(path.join(ws, rel), map.text);
-      this.repoMaps.set(task.id, { rel, large: map.large.slice(0, 12).map((f) => `${f.path} (${f.lines.toLocaleString('vi-VN')} dòng)`) });
+      if (mode === 'compact') writeText(path.join(ws, indexRel), map.index);
+      this.repoMaps.set(task.id, { rel, index: mode === 'compact' ? indexRel : undefined, large: map.large.slice(0, 12).map((f) => `${f.path} (${f.lines.toLocaleString('vi-VN')} dòng)`) });
       if (!this.repoMapLogged.has(task.id)) {
         this.repoMapLogged.add(task.id);
-        this.d.logs.write({ level: 'info', kind: 'workspace.repomap', msg: `Bản đồ repo ${rel}: ${map.files} tệp, ${map.large.length} tệp lớn, ${map.text.length} ký tự (${Date.now() - t0} ms)`, taskId: task.id });
+        this.d.logs.write({ level: 'info', kind: 'workspace.repomap', msg: `Bản đồ repo ${rel} (${mode === 'compact' ? 'gọn' : 'đầy đủ'}): ${map.files} tệp, ${map.large.length} tệp lớn, ${map.text.length} ký tự${mode === 'compact' ? ` + chỉ mục ${map.index.length} ký tự` : ''} (${Date.now() - t0} ms)`, taskId: task.id, data: { mode, chars: map.text.length, indexChars: mode === 'compact' ? map.index.length : 0 } });
       }
     } catch (e) {
       this.d.logs.write({ level: 'warn', kind: 'workspace.repomap', msg: `Không tạo được bản đồ repo: ${(e as Error).message}`, taskId: task.id });
@@ -2251,7 +2258,7 @@ export class Orchestrator {
       this.checkBudget(task);
       if (ctx.subtask && ctx.run) this.checkSubtaskBudget(task, ctx.run, ctx.subtask);
       const cls = task.classification;
-      const want = ctx.project?.models?.[agent.id] ?? config.phases?.models?.[phase] ?? agent.model;
+      const want = task.options.phaseModels?.[phase] ?? ctx.project?.models?.[agent.id] ?? config.phases?.models?.[phase] ?? agent.model;
       const prefs = [task.options.runtime, ctx.project?.runtime, agent.runtime, config.runtime.default];
       const { list, notes, skipped, deferred } = await runtimes.candidates(prefs, cls, want);
       if (notes.length) logs.write({ level: 'warn', kind: 'runtime.fallback', msg: `${notes.join('; ')}${list[0] ? ` → dùng ${list[0].label}` : ''}`, taskId: task.id, agentId: agent.id, department: deptId });
@@ -2323,6 +2330,7 @@ export class Orchestrator {
                 expectWrites: (phase === 'execute' || phase === 'revise') && allow.some((t) => t === 'write_file' || t === 'edit_file'),
                 readsBeforeWrite: config.tools.readsBeforeWrite,
                 gitReadOnly: allow.includes('git_read') && !allow.includes('run_command'),
+                bashMaxOutput: task.options.bashMaxOutput ?? config.tools.bashMaxOutput,
                 guardState: path.join(store.runDir(task.id), 'guard', `${safeName(callId)}${i ? `-r${i}` : ''}.json`),
               }
             : undefined,
@@ -2729,7 +2737,8 @@ export class Orchestrator {
       writeJsonAtomic(path.join(store.runDir(task.id), 'kpi.json'), rep);
       if (rep.agents.some((a) => a.calls)) kpi = `\n### KPI agent trong nhiệm vụ\n${kpiMarkdown(rep, { findings: true })}\n`;
       // góp ý tạo từ "việc cần sửa" mà mục đó nay đã sửa → xóa khỏi hồ sơ agent
-      const cleared = clearFixedFeedback({ store, registry, config: this.d.config }, rep.agents.map((a) => a.agentId));
+      // benchtest không được đổi hồ sơ agent giữa các lượt (đầu vào phải như nhau)
+      const cleared = task.options.variant ? [] : clearFixedFeedback({ store, registry, config: this.d.config }, rep.agents.map((a) => a.agentId));
       if (cleared.length) this.d.logs.write({ level: 'info', kind: 'agent.feedback.cleared', msg: `Xóa ${cleared.length} góp ý đã sửa xong: ${cleared.map((x) => `${x.agentId}/${x.finding}`).join(', ')}`, taskId: task.id });
     } catch (e) {
       this.d.logs.write({ level: 'warn', kind: 'kpi.error', msg: `Không tính được KPI: ${(e as Error).message}`, taskId: task.id });
@@ -2784,6 +2793,21 @@ export function cliTools(agentTools: string[], access: ToolAccess, phase: Phase,
   return list;
 }
 
+const VARIANT_PHASES = new Set(['route', 'plan', 'discuss', 'finalize', 'execute', 'review', 'revise', 'synthesize']);
+
+/** Tùy chọn biến thể (benchtest) hợp lệ từ yêu cầu giao việc — chỉ nhận đúng kiểu, bỏ phần lạ. */
+export function variantOptions(o: Partial<TaskOptions>): Partial<TaskOptions> {
+  const out: Partial<TaskOptions> = {};
+  if (typeof o.bashMaxOutput === 'number' && o.bashMaxOutput > 0) out.bashMaxOutput = Math.min(200_000, Math.max(2000, Math.floor(o.bashMaxOutput)));
+  if (o.repoMapMode === 'full' || o.repoMapMode === 'compact') out.repoMapMode = o.repoMapMode;
+  if (o.phaseModels && typeof o.phaseModels === 'object') {
+    const pm = Object.fromEntries(Object.entries(o.phaseModels).filter(([k, v]) => VARIANT_PHASES.has(k) && typeof v === 'string' && /^[\w.:/-]{1,80}$/.test(v)));
+    if (Object.keys(pm).length) out.phaseModels = pm as TaskOptions['phaseModels'];
+  }
+  if (typeof o.variant === 'string' && o.variant.trim()) out.variant = o.variant.trim().slice(0, 60);
+  return out;
+}
+
 /** Mặc định `tools.resolveRounds`: số vòng xung đột giải quyết trong worktree con mới; vượt quá thì làm lại lần lượt trong worktree chính. */
 const MAX_RESOLVE_ROUNDS = 2;
 
@@ -2832,7 +2856,7 @@ function syncCcoding(from: string, to: string, rel: string): number {
         walk(p);
         continue;
       }
-      if (!e.isFile() || (dir === src && (e.name === 'PLAN.md' || e.name === 'repo-map.md'))) continue;
+      if (!e.isFile() || (dir === src && (e.name === 'PLAN.md' || e.name === 'repo-map.md' || e.name === 'repo-index.md'))) continue;
       const dst = path.join(to, rel, path.relative(src, p));
       if (fs.existsSync(dst) && fs.statSync(dst).mtimeMs >= fs.statSync(p).mtimeMs) continue;
       fs.mkdirSync(path.dirname(dst), { recursive: true });

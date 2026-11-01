@@ -37,6 +37,8 @@ export function selectHistory(all: Task[], current: Task, limit = 3): Task[] {
   if (!current.projectId) return [];
   return all
     .filter((t) => t.id !== current.id && t.projectId === current.projectId && ['done', 'failed', 'cancelled'].includes(t.status))
+    // lượt benchtest (`options.variant`) là đo đạc, không phải tiến độ của dự án
+    .filter((t) => !t.options?.variant)
     .filter((t) => (RANK[t.classification] ?? 3) <= (RANK[current.classification] ?? 3))
     // nhiệm vụ hủy khi chưa có hạng mục nào xong (vd. giao nhầm rồi giao lại) không chiếm chỗ của lịch sử có ích
     .filter((t) => t.status !== 'cancelled' || t.runs.some((r) => r.subtasks.some((s) => s.status === 'done')))

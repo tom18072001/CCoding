@@ -89,6 +89,8 @@ Pha thực thi/sửa có công cụ ghi: đếm lần `read_file`/`search`/`list
 
 Mỗi nhiệm vụ trên repo, CCoding dựng `.ccoding/<task>/repo-map.md` (làm mới trước mỗi hạng mục; tắt bằng `tools.repoMap: false`): cây thư mục (≤ 80 thư mục, bỏ `node_modules`, `dist`, `.git`…), **tệp lớn** (≥ 800 dòng — phải đọc theo đoạn), route Express (`router.get('/x')` kèm `tệp:dòng`), model Prisma, định nghĩa hàm/lớp cấp trên kèm số dòng. Bản đồ được đưa vào prompt lập kế hoạch và thực thi ⇒ agent nhảy thẳng tới `read_file path offset` thay vì `list_files`/`search` rộng; lập kế hoạch thấy tệp lớn nên phải tách hạng mục theo nhóm endpoint/màn hình.
 
+Bản **gọn** (`tools.repoMapMode: "compact"` hoặc tùy chọn nhiệm vụ `repoMapMode`; mặc định vẫn bản đầy đủ cho tới khi benchtest chứng minh — xem [BENCH.md](BENCH.md)): bản đồ ≤ 6k ký tự (thư mục xếp theo số dòng, tệp lớn, tệp có route/schema) + chỉ mục `.ccoding/<task>/repo-index.md` một ký hiệu một dòng `tệp:dòng  loại  tên` (route, schema, hàm của tệp lớn trước) — agent tra bằng `search` thay vì đọc cả bản đồ, nên phần bị gửi lại ở các lượt sau nhỏ hơn.
+
 ## Cách ly bằng git worktree
 
 > **Ranh giới package:** CCoding là gói ESM (`"type": "module"`). Worktree/thư mục làm việc nằm dưới `workspaces/` nên CCoding tự đặt `workspaces/package.json` trung tính — nếu không, thư mục nào của dự án không có package.json riêng (vd. `app/web/*.js` dạng UMD của ND57) bị Node nạp thành ESM, mất `module.exports`, và test của dự án đỏ dù trên máy dự án vẫn xanh (lỗi "baseline đỏ" giả ở lượt chạy ND57 27/10).

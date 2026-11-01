@@ -330,3 +330,15 @@ Theo yêu cầu chủ dự án, CCoding **không dùng** các tài khoản Claud
 | Thông báo trình duyệt (tắt mặc định, người dùng tự bật) | PRE-06 | Chỉ tiêu đề nhiệm vụ + trạng thái (+ lý do tạm dừng), **không** nội dung báo cáo/lỗi. Nhiệm vụ nhãn **Bảo mật/Hạn chế** — hoặc khi bật "chỉ hiện mã nhiệm vụ" — chỉ hiện mã nhiệm vụ (tránh lộ trên màn khóa/chia sẻ màn hình). Cài đặt lưu `localStorage`; không gửi ra ngoài máy (Notification API của trình duyệt) |
 
 **Kết luận: ĐẠT**, không thêm điều kiện. Khuyến nghị: khi chia sẻ màn hình, bật "chỉ hiện mã nhiệm vụ"; tệp nhạy cảm có tên khác mẫu trên (vd. `config/secrets.json`) vẫn hiện nội dung đã che theo mẫu khóa — đặt tên theo quy ước `.env*` hoặc thêm vào `.gitignore`.
+
+### Bổ sung: benchtest biến thể tối ưu token (`ccoding bench`, 1/11/2026)
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| Lượt bench chạy trên dự án bản sao (`bench-nd57`: clone cục bộ repo ND57, ghim commit, không `.env`) | PRE-01, PRE-02 | Repo chỉ chứa mã + dữ liệu giả như dự án gốc (nhãn **Nội bộ**, cùng tập runtime được phép); không chép `.env`, không chạm thư mục dữ liệu thật; cùng `denyCommands` (không docker/DB thật/`db push`/`migrate`) |
+| `data/bench/<id>/` (spec, state, báo cáo) | GOV-03, DET-01 | Chỉ số đo (token, thời gian, số thao tác, kết quả kiểm tra) + mã nhiệm vụ + đề bài do người vận hành soạn; không chứa nội dung tệp/kết quả công cụ. Số liệu gốc vẫn ở `data/runs/<task>/calls.jsonl` (đã che bí mật/PII, chuỗi băm) |
+| Lệnh nghiệm thu `accept` | PRE-05 | Do người soạn spec viết (tin cậy như `checkCommands` của dự án), chạy trong worktree của lượt bench sau khi nhiệm vụ xong; đầu ra chỉ giữ 600 ký tự cuối trong state |
+| Tùy chọn `bashMaxOutput`, `repoMapMode: compact`, `phaseModels` | PRE-06 | Giảm lượng dữ liệu repo gửi lại runtime (tối thiểu hóa); `repo-index.md` chỉ chứa đường dẫn/số dòng/tên ký hiệu như bản đồ cũ, nằm trong `.ccoding` đã `.gitignore`. `phaseModels` chỉ chọn model trong runtime đã được phép theo nhãn |
+| Lượt bench không nhận/không góp lịch sử dự án, không xóa góp ý hồ sơ agent | GOV-03 | Tránh rò nội dung giữa lượt đo và nhiệm vụ thật; KPI vẫn chấm từ log gốc |
+
+**Kết luận: ĐẠT**, không thêm điều kiện. Khuyến nghị: chạy bench khi máy rảnh (harness tự chờ), không dùng repo làm việc thật làm dự án bench.

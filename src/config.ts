@@ -164,6 +164,10 @@ export interface Config {
      * thì làm lại lần lượt trong worktree chính (giữ khóa worktree chính suốt lượt làm lại). 0 = luôn làm lại trong worktree chính.
      */
     resolveRounds?: number;
+    /** claude-cli: cắt đầu ra lệnh shell ở N ký tự (BASH_MAX_OUTPUT_LENGTH); bỏ trống/0 = mặc định của Claude Code (30.000). */
+    bashMaxOutput?: number;
+    /** Bản đồ repo: 'full' (mặc định hiện tại) hay 'compact' (gọn + chỉ mục `repo-index.md`). */
+    repoMapMode?: 'full' | 'compact';
     /** Chạy lệnh chuẩn bị + kiểm tra baseline SONG SONG với pha lập kế hoạch/họp (mặc định bật; false = chạy khi bắt đầu thực thi). */
     earlyBaseline?: boolean;
     denyCommands: string[];

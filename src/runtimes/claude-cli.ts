@@ -162,6 +162,8 @@ export class ClaudeCliRuntime implements Runtime {
         readsBeforeWrite: policy?.expectWrites && policy.guardState ? policy.readsBeforeWrite ?? 0 : 0,
         state: policy?.guardState,
       });
+      // cắt đầu ra lệnh shell (kết quả công cụ bị gửi lại ở mọi lượt sau) — chỉ khi nhiệm vụ/cấu hình đặt (benchtest trước khi đổi mặc định)
+      if (policy?.bashMaxOutput && policy.bashMaxOutput > 0) env.BASH_MAX_OUTPUT_LENGTH = String(Math.floor(policy.bashMaxOutput));
       // công cụ đã được CCoding cấp theo quyền dự án/pha → chạy không hỏi (chế độ -p không hỏi được); hook vẫn chặn trước
       args.push('--allowedTools', req.tools.join(','));
     } else {

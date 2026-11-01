@@ -118,6 +118,8 @@ export interface ToolPolicy {
   gitReadOnly?: boolean;
   /** Tệp trạng thái của hook claude-guard trong lượt gọi này (đếm số lần đọc liên tiếp chưa ghi) — nằm trong data/runs/<task>/guard. */
   guardState?: string;
+  /** Runtime CLI (claude-cli): cắt đầu ra lệnh shell ở N ký tự (biến BASH_MAX_OUTPUT_LENGTH của Claude Code); bỏ trống = mặc định của CLI. */
+  bashMaxOutput?: number;
 }
 
 export interface ToolCallRecord {
@@ -299,6 +301,20 @@ export interface TaskOptions {
   runtime?: string;
   /** Trần token của MỖI hạng mục (cộng dồn mọi lần chạy/sửa); 0 hoặc bỏ trống = tự tính (2 × ngân sách / số hạng mục). */
   subtaskBudgetTokens?: number;
+  /**
+   * Biến thể tối ưu token chỉ cho nhiệm vụ này (benchtest — `ccoding bench`); bỏ trống = theo cấu hình. Đổi mặc định chỉ khi bench chứng minh.
+   * `bashMaxOutput`: cắt đầu ra lệnh shell của claude-cli ở N ký tự (Claude Code mặc định 30.000; 0 = không đặt).
+   * `repoMapMode`: bản đồ repo 'full' (cũ, ≤ 28k ký tự) hay 'compact' (≤ 6k + chỉ mục `repo-index.md` để tra).
+   * `phaseModels`: model theo pha cho riêng nhiệm vụ, vd. `{ "synthesize": "sonnet" }` (ưu tiên hơn model theo agent của dự án).
+   */
+  bashMaxOutput?: number;
+  repoMapMode?: 'full' | 'compact';
+  phaseModels?: Partial<Record<Phase, string>>;
+  /**
+   * Nhãn lượt benchtest (`<bench>/<biến thể>#<lần>`). Đặt nhãn = nhiệm vụ đo đạc: không nhận lịch sử dự án, không vào lịch sử của
+   * nhiệm vụ khác, không tự xóa góp ý trong hồ sơ agent — để mọi lượt cùng đầu vào.
+   */
+  variant?: string;
 }
 
 export interface Attachment {

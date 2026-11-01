@@ -12,7 +12,8 @@ import { toRuntimeError } from './runtimes/errors.js';
 import { createServer } from './server.js';
 import { Store } from './store.js';
 import { UsageLedger, type UsageDim, type UsageRow } from './usage.js';
-import { kpiReport } from './kpi.js';
+import { kpiReport, type CallRow } from './kpi.js';
+import { createBench, loadState, parseSpec, reportMarkdown, runBench, runInput, schedule, summarize, writeReport, type BenchClient } from './bench.js';
 import { levelFilter, logFiles, pickLatestTask, recentTasks } from './logview.js';
 import { c, fmtDuration, fmtNum, fmtUsd, hexColor, table } from './util/format.js';
 import { readJsonFile, readJsonl, writeJsonAtomic } from './util/fsx.js';
@@ -51,6 +52,12 @@ ${c.bold('Log & token')}
   logs verify                               Kiểm tra chuỗi băm (log có bị sửa không)
   usage [--by agent|department|task|project|model|runtime|day|phase] [--task id] [--dept id] [--watch] [--json]
   kpi [--task id,id] [--days 7] [--dept id] [--project id] [--json]   KPI từng sub-agent (chất lượng, hiệu quả, tin cậy, tuân thủ) + việc cần sửa
+
+${c.bold('Benchtest (đo trước khi đổi mặc định)')}
+  bench run <spec.json> [--dry-run]         Chạy cùng đề bài với từng biến thể tùy chọn, xen kẽ, lặp; chỉ chạy khi máy rảnh
+  bench resume <thư mục|id>                 Chạy tiếp benchtest đã dừng
+  bench report <thư mục|id> [--json]        Báo cáo so sánh (thời gian, token quy đổi, công cụ, chất lượng)
+  bench ls                                  Danh sách benchtest (data/bench)
 
 ${c.bold('Nhân sự & dự án')}
   agents [--dept id]                         Danh sách agent theo phòng ban
@@ -719,6 +726,92 @@ async function cmdCancel(args: string[]): Promise<void> {
   console.log(`${c.green('✓')} Đã gửi lệnh hủy ${args[0]}`);
 }
 
+function benchDir(): string {
+  return path.join(config.dataDir, 'bench');
+}
+
+function resolveBench(ref?: string): string {
+  if (!ref) throw new Error('Cần thư mục hoặc id benchtest (xem: ccoding bench ls)');
+  const dir = fs.existsSync(path.join(ref, 'state.json')) ? ref : path.join(benchDir(), ref);
+  if (!fs.existsSync(path.join(dir, 'state.json'))) throw new Error(`Không có benchtest ${ref}`);
+  return dir;
+}
+
+function benchClient(): BenchClient {
+  return {
+    list: () => api<Task[]>('/api/tasks'),
+    get: async (id) => {
+      try {
+        return (await api<{ task: Task }>(`/api/tasks/${id}`)).task;
+      } catch {
+        return undefined;
+      }
+    },
+    submit: (input) => api<Task>('/api/tasks', { method: 'POST', body: JSON.stringify(input) }),
+    cancel: async (id) => {
+      await api(`/api/tasks/${id}/cancel`, { method: 'POST', body: '{}' });
+    },
+    calls: (id) => readJsonl<CallRow>(path.join(config.dataDir, 'runs', id, 'calls.jsonl')),
+  };
+}
+
+async function benchLoop(dir: string): Promise<void> {
+  if (!(await serverUp())) throw new Error('Server không chạy — benchtest giao việc qua server (ccoding serve)');
+  const ac = new AbortController();
+  process.once('SIGINT', () => {
+    console.log(c.yellow('\n⏸ Dừng sau bước hiện tại (nhiệm vụ đang chạy vẫn chạy tiếp; resume sẽ theo dõi tiếp)…'));
+    ac.abort();
+  });
+  const st = await runBench(dir, benchClient(), { sleep: async (ms) => void (await sleep(ms)), now: Date.now, log: (m) => console.log(`${localTime(new Date().toISOString())} ${m}`), signal: ac.signal });
+  if (st.status === 'done') console.log(`${c.green('✓')} Xong benchtest ${st.id} — báo cáo: ${path.join(dir, 'report.md')}`);
+  else console.log(`${c.yellow('⏸')} Benchtest ${st.id} ${st.status} — chạy tiếp: ccoding bench resume ${st.id}`);
+}
+
+async function cmdBench(args: string[]): Promise<void> {
+  const { values, positionals } = parseArgs({ args, allowPositionals: true, options: { 'dry-run': { type: 'boolean' }, json: { type: 'boolean' } } });
+  const [sub, ref] = positionals;
+  if (sub === 'run') {
+    if (!ref) throw new Error('Cần tệp spec JSON. Mẫu: docs/BENCH.md');
+    const spec = parseSpec(JSON.parse(fs.readFileSync(ref, 'utf8')));
+    if (values['dry-run']) {
+      const st = { spec, runs: schedule(spec) };
+      console.log(`${c.bold(`Benchtest ${spec.name}`)} · dự án ${spec.projectId} · ${st.runs.length} lượt (thứ tự xen kẽ):`);
+      for (const r of st.runs) console.log(`  ${r.key.padEnd(10)} ${JSON.stringify(runInput(spec, r).options)}`);
+      return;
+    }
+    if (!(await serverUp())) throw new Error('Server không chạy — benchtest giao việc qua server (ccoding serve)');
+    const projects = await api<Array<{ id: string }>>('/api/projects');
+    if (!projects.some((p) => p.id === spec.projectId)) throw new Error(`Server không có dự án "${spec.projectId}"`);
+    const { dir, state } = createBench(benchDir(), spec);
+    console.log(`${c.bold('🧪 Benchtest')} ${state.id} · ${state.runs.length} lượt · thư mục ${dir}`);
+    return benchLoop(dir);
+  }
+  if (sub === 'resume') return benchLoop(resolveBench(ref));
+  if (sub === 'report') {
+    const dir = resolveBench(ref);
+    const st = loadState(dir);
+    if (values.json) {
+      console.log(JSON.stringify({ id: st.id, status: st.status, variants: summarize(st), runs: st.runs }, null, 2));
+      return;
+    }
+    writeReport(dir, st);
+    console.log(reportMarkdown(st));
+    return;
+  }
+  if (sub === 'ls' || !sub) {
+    const root = benchDir();
+    const ids = fs.existsSync(root) ? fs.readdirSync(root).filter((d) => fs.existsSync(path.join(root, d, 'state.json'))).sort() : [];
+    if (!ids.length) return console.log(c.gray('Chưa có benchtest nào (ccoding bench run <spec.json>)'));
+    for (const id of ids) {
+      const st = loadState(path.join(root, id));
+      const done = st.runs.filter((r) => r.status === 'done' || r.status === 'failed').length;
+      console.log(`${id}  ${statusColor(st.status === 'stopped' ? 'paused' : st.status)}  ${done}/${st.runs.length} lượt · ${st.spec.variants.map((v) => v.id).join(', ')}`);
+    }
+    return;
+  }
+  throw new Error(`Lệnh bench không rõ: ${sub} (run | resume | report | ls)`);
+}
+
 async function main(): Promise<void> {
   const [cmd, ...rest] = process.argv.slice(2);
   switch (cmd) {
@@ -760,6 +853,8 @@ async function main(): Promise<void> {
       return cmdResume(rest);
     case 'split':
       return cmdSplit(rest);
+    case 'bench':
+      return cmdBench(rest);
     case undefined:
     case 'help':
     case '--help':

@@ -13,21 +13,30 @@ const TEXT = /\.(json|ya?ml|toml|md|html?|css|scss|env\.example)$/i;
 const SKIP_FILES = /(^|\/)(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|.*\.min\.(js|css))$/i;
 
 export interface RepoMap {
+  /** Bản đồ GỌN (thư mục, tệp lớn, tệp có route/schema) — agent đọc trọn để định vị; ngắn vì bị gửi lại ở mọi lượt công cụ sau đó. */
   text: string;
+  /** Chỉ mục ký hiệu chi tiết, mỗi dòng `tệp:dòng  loại  tên` — để tra bằng search/Grep, không đọc trọn. */
+  index: string;
   files: number;
   large: Array<{ path: string; lines: number }>;
+}
+
+interface Sym {
+  line: number;
+  name: string;
 }
 
 interface FileInfo {
   rel: string;
   lines: number;
-  symbols: { routes: string[]; models: string[]; defs: string[] };
+  symbols: { routes: Sym[]; models: Sym[]; defs: Sym[] };
 }
 
 function symbolsOf(rel: string, body: string): FileInfo['symbols'] {
-  const routes: string[] = [];
-  const models: string[] = [];
-  const defs: string[] = [];
+  const routes: Sym[] = [];
+  const models: Sym[] = [];
+  const defs: Sym[] = [];
+  const add = (list: Sym[], name: string, line: number) => list.push({ name, line });
   const lines = body.split(/\r?\n/);
   const isPrisma = rel.endsWith('.prisma');
   const isPy = rel.endsWith('.py');
@@ -36,25 +45,25 @@ function symbolsOf(rel: string, body: string): FileInfo['symbols'] {
     const n = i + 1;
     let m: RegExpExecArray | null;
     if (isPrisma) {
-      if ((m = /^(model|enum|view)\s+(\w+)/.exec(l))) models.push(`${m[1]} ${m[2]} :${n}`);
+      if ((m = /^(model|enum|view)\s+(\w+)/.exec(l))) add(models, `${m[1]} ${m[2]}`, n);
       return;
     }
     if (isSql) {
-      if ((m = /^\s*(CREATE|ALTER)\s+(TABLE|INDEX|UNIQUE INDEX|TYPE)\s+(IF NOT EXISTS\s+)?("?[\w.]+"?)/i.exec(l))) models.push(`${m[1].toUpperCase()} ${m[2].toUpperCase()} ${m[4]} :${n}`);
+      if ((m = /^\s*(CREATE|ALTER)\s+(TABLE|INDEX|UNIQUE INDEX|TYPE)\s+(IF NOT EXISTS\s+)?("?[\w.]+"?)/i.exec(l))) add(models, `${m[1].toUpperCase()} ${m[2].toUpperCase()} ${m[4]}`, n);
       return;
     }
-    if ((m = /\b(?:app|router|api|server|r)\.(get|post|put|patch|delete|all)\(\s*['"`]([^'"`]+)['"`]/.exec(l))) routes.push(`${m[1].toUpperCase()} ${m[2]} :${n}`);
-    else if (isPy && (m = /^@\w+\.(get|post|put|patch|delete|route)\(\s*['"]([^'"]+)['"]/.exec(l))) routes.push(`${m[1].toUpperCase()} ${m[2]} :${n}`);
+    if ((m = /\b(?:app|router|api|server|r)\.(get|post|put|patch|delete|all)\(\s*['"`]([^'"`]+)['"`]/.exec(l))) add(routes, `${m[1].toUpperCase()} ${m[2]}`, n);
+    else if (isPy && (m = /^@\w+\.(get|post|put|patch|delete|route)\(\s*['"]([^'"]+)['"]/.exec(l))) add(routes, `${m[1].toUpperCase()} ${m[2]}`, n);
     if (isPy) {
-      if ((m = /^(def|class|async def)\s+(\w+)/.exec(l))) defs.push(`${m[2]} :${n}`);
+      if ((m = /^(def|class|async def)\s+(\w+)/.exec(l))) add(defs, `${m[2]}`, n);
       return;
     }
     // hàm khai báo ở cấp cao hoặc trong một lớp bọc (IIFE của giao diện JS thuần): thụt lề tối đa 4 dấu cách
-    if ((m = /^ {0,4}(?:export\s+(?:default\s+)?)?(?:async\s+)?function\s*\*?\s*(\w+)/.exec(l))) defs.push(`${m[1]} :${n}`);
-    else if ((m = /^ {0,2}(?:export\s+)?(?:const|let)\s+(\w+)\s*=\s*(?:async\s+)?(?:\([^)]*\)|\w+)\s*=>/.exec(l))) defs.push(`${m[1]} :${n}`);
-    else if ((m = /^(?:export\s+)?(?:default\s+)?(?:abstract\s+)?class\s+(\w+)/.exec(l))) defs.push(`class ${m[1]} :${n}`);
-    else if ((m = /^module\.exports\s*=\s*\{([^}]*)\}?/.exec(l))) defs.push(`exports {${m[1].replace(/\s+/g, ' ').trim().slice(0, 160)}} :${n}`);
-    else if ((m = /^(?:export\s+)?(?:interface|type)\s+(\w+)/.exec(l))) defs.push(`type ${m[1]} :${n}`);
+    if ((m = /^ {0,4}(?:export\s+(?:default\s+)?)?(?:async\s+)?function\s*\*?\s*(\w+)/.exec(l))) add(defs, `${m[1]}`, n);
+    else if ((m = /^ {0,2}(?:export\s+)?(?:const|let)\s+(\w+)\s*=\s*(?:async\s+)?(?:\([^)]*\)|\w+)\s*=>/.exec(l))) add(defs, `${m[1]}`, n);
+    else if ((m = /^(?:export\s+)?(?:default\s+)?(?:abstract\s+)?class\s+(\w+)/.exec(l))) add(defs, `class ${m[1]}`, n);
+    else if ((m = /^module\.exports\s*=\s*\{([^}]*)\}?/.exec(l))) add(defs, `exports {${m[1].replace(/\s+/g, ' ').trim().slice(0, 160)}}`, n);
+    else if ((m = /^(?:export\s+)?(?:interface|type)\s+(\w+)/.exec(l))) add(defs, `type ${m[1]}`, n);
   });
   return { routes, models, defs };
 }
@@ -83,9 +92,17 @@ function walk(root: string, dir: string, out: string[], limit: number): void {
 
 const fmt = (n: number) => n.toLocaleString('vi-VN');
 
-export function buildRepoMap(root: string, o: { maxFiles?: number; maxChars?: number; largeLines?: number; now?: Date } = {}): RepoMap {
-  const maxChars = o.maxChars ?? 28_000;
+export function buildRepoMap(
+  root: string,
+  o: { mode?: 'full' | 'compact'; maxFiles?: number; maxChars?: number; maxIndexChars?: number; largeLines?: number; now?: Date; indexRel?: string } = {},
+): RepoMap {
+  // 'compact': đo 7 gói ND57 (1/11) — bản đầy đủ 18,5k ký tự được đọc trọn rồi gửi lại ở mọi lượt sau (tệp .ccoding: 3,5M ký tự gửi lại);
+  // bản gọn ≤ 6k + chỉ mục để tra. Mặc định vẫn 'full' cho tới khi benchtest chứng minh.
+  const mode = o.mode ?? 'full';
+  const maxChars = o.maxChars ?? (mode === 'full' ? 28_000 : 6_000);
+  const maxIndex = o.maxIndexChars ?? 60_000;
   const largeAt = o.largeLines ?? 800;
+  const indexRel = o.indexRel ?? 'repo-index.md';
   const rels: string[] = [];
   walk(root, root, rels, o.maxFiles ?? 5000);
   const files: FileInfo[] = [];
@@ -111,48 +128,114 @@ export function buildRepoMap(root: string, o: { maxFiles?: number; maxChars?: nu
     dirs.set(d, cur);
   }
   const large = files.filter((f) => SOURCE.test(f.rel) && f.lines >= largeAt).sort((a, b) => b.lines - a.lines).map((f) => ({ path: f.rel, lines: f.lines }));
-  const head = [
-    `# Bản đồ repo (CCoding tạo lúc ${(o.now ?? new Date()).toISOString().slice(0, 16).replace('T', ' ')} UTC · ${fmt(files.length)} tệp)`,
-    'Dùng để ĐỊNH VỊ trước khi đọc: đọc đúng đoạn bằng `read_file` (path + offset theo số dòng `:N` dưới đây), không đọc cả tệp lớn. Số dòng có thể lệch sau khi sửa — tìm lại bằng `search`.',
-    '',
-    '## Thư mục (tệp · dòng)',
-    ...[...dirs.entries()]
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .slice(0, 80)
-      .map(([d, v]) => `- ${d} — ${fmt(v.files)} tệp · ${fmt(v.lines)} dòng`),
-    ...(dirs.size > 80 ? [`- … (+${fmt(dirs.size - 80)} thư mục)`] : []),
-    '',
-    `## Tệp nguồn lớn (≥ ${fmt(largeAt)} dòng)`,
-    ...(large.length ? large.map((f) => `- ${f.path} — ${fmt(f.lines)} dòng`) : ['- (không có)']),
-    '',
-    '## Tệp nguồn và ký hiệu',
-  ];
-  const body: string[] = [];
-  let used = head.join('\n').length;
-  // route + model trước (định vị API/schema), rồi hàm; tệp có ký hiệu trước tệp không có
-  const src = files.filter((f) => SOURCE.test(f.rel));
-  for (const pass of ['full', 'short'] as const) {
-    body.length = 0;
-    used = head.join('\n').length;
-    let cut = 0;
-    for (const f of src) {
-      const s = f.symbols;
-      const parts = [`### ${f.rel} (${fmt(f.lines)} dòng)`];
-      if (s.models.length) parts.push(`- schema: ${s.models.join(' · ')}`);
-      if (s.routes.length) parts.push(`- route: ${s.routes.join(' · ')}`);
-      if (s.defs.length && (pass === 'full' || f.lines >= largeAt)) parts.push(`- định nghĩa: ${s.defs.slice(0, pass === 'full' ? 40 : 25).join(' · ')}${s.defs.length > 40 ? ` · … (+${s.defs.length - 40})` : ''}`);
-      const block = parts.length > 1 ? parts.join('\n') : `- ${f.rel} (${fmt(f.lines)} dòng)`;
-      if (used + block.length + 1 > maxChars) {
-        cut++;
-        continue;
+  const stamp = (o.now ?? new Date()).toISOString().slice(0, 16).replace('T', ' ');
+
+  if (mode === 'full') {
+    const fullMax = maxChars;
+    const sym = (x: Sym) => `${x.name} :${x.line}`;
+    const src = files.filter((f) => SOURCE.test(f.rel));
+    const fullHead = [
+      `# Bản đồ repo (CCoding tạo lúc ${stamp} UTC · ${fmt(files.length)} tệp)`,
+      'Dùng để ĐỊNH VỊ trước khi đọc: đọc đúng đoạn bằng `read_file` (path + offset theo số dòng `:N` dưới đây), không đọc cả tệp lớn. Số dòng có thể lệch sau khi sửa — tìm lại bằng `search`.',
+      '',
+      '## Thư mục (tệp · dòng)',
+      ...[...dirs.entries()]
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .slice(0, 80)
+        .map(([d, v]) => `- ${d} — ${fmt(v.files)} tệp · ${fmt(v.lines)} dòng`),
+      ...(dirs.size > 80 ? [`- … (+${fmt(dirs.size - 80)} thư mục)`] : []),
+      '',
+      `## Tệp nguồn lớn (≥ ${fmt(largeAt)} dòng)`,
+      ...(large.length ? large.map((f) => `- ${f.path} — ${fmt(f.lines)} dòng`) : ['- (không có)']),
+      '',
+      '## Tệp nguồn và ký hiệu',
+    ];
+    const fullBody: string[] = [];
+    let fullUsed = fullHead.join('\n').length;
+    // route + model trước (định vị API/schema), rồi hàm; tệp có ký hiệu trước tệp không có
+    for (const pass of ['full', 'short'] as const) {
+      fullBody.length = 0;
+      fullUsed = fullHead.join('\n').length;
+      let cut = 0;
+      for (const f of src) {
+        const s = f.symbols;
+        const parts = [`### ${f.rel} (${fmt(f.lines)} dòng)`];
+        if (s.models.length) parts.push(`- schema: ${s.models.map(sym).join(' · ')}`);
+        if (s.routes.length) parts.push(`- route: ${s.routes.map(sym).join(' · ')}`);
+        if (s.defs.length && (pass === 'full' || f.lines >= largeAt)) parts.push(`- định nghĩa: ${s.defs.slice(0, pass === 'full' ? 40 : 25).map(sym).join(' · ')}${s.defs.length > 40 ? ` · … (+${s.defs.length - 40})` : ''}`);
+        const block = parts.length > 1 ? parts.join('\n') : `- ${f.rel} (${fmt(f.lines)} dòng)`;
+        if (fullUsed + block.length + 1 > fullMax) {
+          cut++;
+          continue;
+        }
+        fullBody.push(block);
+        fullUsed += block.length + 1;
       }
-      body.push(block);
-      used += block.length + 1;
+      if (!cut || pass === 'short') {
+        if (cut) fullBody.push(`\n… (${fmt(cut)} tệp không đủ chỗ — dùng list_files/search)`);
+        break;
+      }
     }
-    if (!cut || pass === 'short') {
-      if (cut) body.push(`\n… (${fmt(cut)} tệp không đủ chỗ — dùng list_files/search)`);
-      break;
-    }
+    return { text: `${fullHead.join('\n')}\n${fullBody.join('\n')}\n`, index: '', files: files.length, large };
   }
-  return { text: `${head.join('\n')}\n${body.join('\n')}\n`, files: files.length, large };
+
+  // ── chỉ mục chi tiết: một ký hiệu một dòng → search "tên" trả đúng tệp:dòng
+  const idx: string[] = [`# Chỉ mục ký hiệu repo (CCoding tạo lúc ${stamp} UTC) — mỗi dòng \`tệp:dòng  loại  tên\`. Tra bằng search/Grep, KHÔNG đọc cả tệp này.`];
+  let idxUsed = idx[0].length;
+  let idxCut = 0;
+  const src = files.filter((f) => SOURCE.test(f.rel));
+  // route + schema trước (định vị API/dữ liệu), rồi định nghĩa của tệp lớn, rồi của tệp còn lại
+  const rows: string[] = [];
+  for (const f of src) for (const r of f.symbols.routes) rows.push(`${f.rel}:${r.line}  route  ${r.name}`);
+  for (const f of src) for (const m of f.symbols.models) rows.push(`${f.rel}:${m.line}  schema  ${m.name}`);
+  for (const f of src.filter((x) => x.lines >= largeAt)) for (const d of f.symbols.defs) rows.push(`${f.rel}:${d.line}  def  ${d.name}`);
+  for (const f of src.filter((x) => x.lines < largeAt)) for (const d of f.symbols.defs) rows.push(`${f.rel}:${d.line}  def  ${d.name}`);
+  for (const r of rows) {
+    if (idxUsed + r.length + 1 > maxIndex) {
+      idxCut++;
+      continue;
+    }
+    idx.push(r);
+    idxUsed += r.length + 1;
+  }
+  if (idxCut) idx.push(`… (${fmt(idxCut)} ký hiệu không đủ chỗ — dùng search trực tiếp trong mã nguồn)`);
+
+  // ── bản đồ gọn
+  const head = [
+    `# Bản đồ repo (CCoding tạo lúc ${stamp} UTC · ${fmt(files.length)} tệp)`,
+    `Dùng để ĐỊNH VỊ. Tra hàm/route/model cụ thể: search từ khóa trong \`${indexRel}\` (mỗi dòng \`tệp:dòng loại tên\`) — không đọc cả tệp chỉ mục; rồi read_file đúng đoạn (offset theo số dòng, limit vừa đủ), không đọc cả tệp lớn. Số dòng có thể lệch sau khi sửa — tìm lại bằng search.`,
+  ];
+  const largeSec = ['', `## Tệp nguồn lớn (≥ ${fmt(largeAt)} dòng — đọc theo đoạn)`, ...(large.length ? large.map((f) => `- ${f.path} — ${fmt(f.lines)} dòng`) : ['- (không có)'])];
+  const dirRows = [...dirs.entries()].sort((a, b) => b[1].lines - a[1].lines).map(([d, v]) => `- ${d} — ${fmt(v.files)} tệp · ${fmt(v.lines)} dòng`);
+  const apiRows = src
+    .filter((f) => f.symbols.routes.length || f.symbols.models.length)
+    .sort((a, b) => b.symbols.routes.length + b.symbols.models.length - (a.symbols.routes.length + a.symbols.models.length))
+    .map((f) => `- ${f.rel} (${fmt(f.lines)} dòng)${f.symbols.routes.length ? ` — ${f.symbols.routes.length} route` : ''}${f.symbols.models.length ? ` — ${f.symbols.models.length} schema` : ''}`);
+  // chia chỗ còn lại cho thư mục (nhiều dòng code trước) và tệp có route/schema
+  const fixed = [...head, ...largeSec].join('\n').length;
+  const take = (list: string[], budget: number) => {
+    const out: string[] = [];
+    let used = 0;
+    for (const r of list) {
+      if (used + r.length + 1 > budget) break;
+      out.push(r);
+      used += r.length + 1;
+    }
+    if (out.length < list.length) out.push(`- … (+${fmt(list.length - out.length)})`);
+    return out;
+  };
+  const room = Math.max(400, maxChars - fixed - 120);
+  const dirPart = take(dirRows, Math.floor(room * 0.45));
+  const apiPart = take(apiRows, room - dirPart.join('\n').length);
+  const text = [
+    ...head,
+    '',
+    '## Thư mục (tệp · dòng — nhiều code trước)',
+    ...dirPart,
+    ...largeSec,
+    '',
+    '## Tệp có route / schema',
+    ...(apiPart.length ? apiPart : ['- (không có)']),
+  ].join('\n');
+  return { text: `${text}\n`, index: `${idx.join('\n')}\n`, files: files.length, large };
 }
