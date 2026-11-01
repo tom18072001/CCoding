@@ -180,11 +180,8 @@ test('gộp worktree con bị xung đột → hạng mục làm lại lần lư�
     assert.ok(run.subtasks.every((s) => s.status === 'done'), JSON.stringify(run.subtasks.map((s) => [s.id, s.status, s.error])));
     const msgs = a.store.transcript(t.id).map((m) => m.text).join('\n');
     assert.match(msgs, /xung đột khi gộp/);
-    assert.match(msgs, /đã gộp xong nhánh/);
-    const redo = run.subtasks.filter((s) => s.mainOnly);
-    assert.equal(redo.length, 1, 'đúng một hạng mục phải làm lại');
-    assert.equal(redo[0].conflict, undefined, 'nhánh cũ đã được gộp');
-    assert.equal(redo[0].handover, undefined, 'hướng dẫn gộp đã dùng xong');
+    assert.equal(msgs.match(/đã gộp xong nhánh/g)?.length, 1, 'đúng một hạng mục phải làm lại và đã tự gộp');
+    assert.ok(run.subtasks.every((s) => !s.mainOnly && !s.conflict && !s.handover && !s.worktree), 'trạng thái làm lại đã dọn');
     // agent nhận kết quả merge có xung đột rồi tự giải quyết
     assert.ok(gw.stats.toolResults.some((r) => /CONFLICT/.test(r.text)));
     assert.equal(gitc(repo, 'show', `${done.branch}:shared.txt`), 'tu backend-dev\ntu devops');
@@ -193,6 +190,77 @@ test('gộp worktree con bị xung đột → hạng mục làm lại lần lư�
   } finally {
     gw.srv.close();
     fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test('làm lại sau xung đột mà agent không gộp nhánh cũ → hạng mục KHÔNG coi là xong, nhánh cũ giữ lại', async () => {
+  const plan: Plan = [
+    { id: 'S1', title: 'Sửa phần A', assignee: 'backend-dev', dependsOn: [] },
+    { id: 'S2', title: 'Sửa phần B', assignee: 'devops', dependsOn: [] },
+  ];
+  // lần làm lại chỉ ghi đè tệp, bỏ qua bước git merge trong hướng dẫn
+  const gw = await gateway(plan, (who) => [{ name: 'write_file', args: { path: 'shared.txt', content: `tu ${who}\n` } }]);
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-par-'));
+  const repo = initRepo();
+  const a = app(gw.url, dataDir);
+  try {
+    project(a, repo);
+    const t = a.orchestrator.submit({ brief: 'Sửa tệp chung', projectId: 'repo', options: { discussionRounds: 0, maxParallel: 3, maxRevisions: 0 } });
+    const done = await a.orchestrator.waitFor(t.id);
+    const run = done.runs[0];
+    const redo = run.subtasks.find((s) => s.conflict);
+    assert.ok(redo, 'có hạng mục xung đột');
+    assert.equal(redo.status, 'failed');
+    assert.match(redo.error ?? '', /chưa được gộp/);
+    assert.match(redo.handover ?? '', /git merge --no-ff --no-edit/, 'tiếp tục thì vẫn nhận hướng dẫn gộp');
+    assert.match(gitc(repo, 'branch', '--list'), new RegExp(redo.conflict.branch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), 'nhánh cũ còn để gộp');
+    assert.notEqual(done.status, 'done');
+  } finally {
+    gw.srv.close();
+    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test('hook commit của repo không chặn CCoding commit/gộp worktree con', async () => {
+  const plan: Plan = [
+    { id: 'S1', title: 'API', assignee: 'backend-dev', dependsOn: [] },
+    { id: 'S2', title: 'CI', assignee: 'devops', dependsOn: [] },
+  ];
+  const files: Record<string, string> = { 'backend-dev': 'a.txt', devops: 'b.txt' };
+  const gw = await gateway(plan, (who) => (files[who] ? [{ name: 'write_file', args: { path: files[who], content: `tu ${who}\n` } }] : []));
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-par-'));
+  const repo = initRepo();
+  for (const h of ['pre-commit', 'commit-msg']) fs.writeFileSync(path.join(repo, '.git', 'hooks', h), '#!/bin/sh\necho "hook chan" >&2\nexit 1\n', { mode: 0o755 });
+  const a = app(gw.url, dataDir);
+  try {
+    project(a, repo);
+    const t = a.orchestrator.submit({ brief: 'Xây tính năng', projectId: 'repo', options: { discussionRounds: 0, maxParallel: 3, maxRevisions: 0 } });
+    const done = await a.orchestrator.waitFor(t.id);
+    assert.equal(done.status, 'done', done.error);
+    for (const f of Object.values(files)) assert.match(gitc(repo, 'show', `${done.branch}:${f}`), /^tu /);
+  } finally {
+    gw.srv.close();
+    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test('isWorktreeOf: thư mục con của repo khác (worktree gỡ dở) không được coi là worktree con', async () => {
+  const { isWorktreeOf } = await import('../src/git.js');
+  const repo = initRepo();
+  const wt = `${repo}-wt`;
+  try {
+    gitc(repo, 'worktree', 'add', '-q', '-b', 'nhanh-con', wt);
+    assert.ok(isWorktreeOf(wt, repo));
+    fs.mkdirSync(path.join(repo, 'workspaces', 'wt-x'), { recursive: true });
+    assert.equal(isWorktreeOf(path.join(repo, 'workspaces', 'wt-x'), repo), false, 'thư mục thường trong repo');
+    const other = initRepo();
+    assert.equal(isWorktreeOf(other, repo), false, 'repo khác');
+    fs.rmSync(other, { recursive: true, force: true });
+  } finally {
+    fs.rmSync(wt, { recursive: true, force: true });
     fs.rmSync(repo, { recursive: true, force: true });
   }
 });

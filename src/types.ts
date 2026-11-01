@@ -235,6 +235,8 @@ export interface Subtask {
   mainOnly?: boolean;
   /** Lần gộp bị xung đột: nhánh của lần làm trước + tệp xung đột. */
   conflict?: { branch: string; files: string[] };
+  /** Đã làm xong nhưng CCoding chưa commit/gộp được worktree con (hook, khóa index…) — gộp được ở lần sau thì coi là xong, không làm lại. */
+  mergePending?: boolean;
 }
 
 export interface ReviewIssue { subtask: string; severity: 'blocker' | 'major' | 'minor'; comment: string }

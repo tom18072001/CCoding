@@ -81,7 +81,41 @@ export function commitAll(wt: string, message: string): GitResult {
   git(wt, ['add', '-A'], 60_000);
   const st = git(wt, ['status', '--porcelain'], 30_000);
   if (st.ok && !st.out) return { ok: true, out: 'không có thay đổi' };
-  return git(wt, [...identity(wt), 'commit', '-m', message], 300_000);
+  // --no-verify: hook của repo (husky, lint-staged, commitlint…) thường không chạy được trong worktree của CCoding và agent không sửa được
+  return git(wt, [...identity(wt), 'commit', '--no-verify', '-m', message], 300_000);
+}
+
+/** Đang dở một lần merge (còn MERGE_HEAD). */
+export function mergeInProgress(wt: string): boolean {
+  return git(wt, ['rev-parse', '-q', '--verify', 'MERGE_HEAD'], 15_000).ok;
+}
+
+/** Tệp còn ở trạng thái xung đột (chưa `git add`). */
+export function unmergedFiles(wt: string): string[] {
+  const u = git(wt, ['diff', '--name-only', '--diff-filter=U'], 30_000);
+  return u.ok ? u.out.split('\n').map((s) => s.trim()).filter(Boolean) : [];
+}
+
+const samePath = (a: string, b: string) => {
+  const n = (p: string) => path.resolve(p).replace(/[\\/]+$/, '');
+  return process.platform === 'win32' ? n(a).toLowerCase() === n(b).toLowerCase() : n(a) === n(b);
+};
+
+/**
+ * `dir` đúng là một worktree (gốc của chính nó, không phải thư mục con của repo khác) thuộc cùng repo với `peer`.
+ * Tránh trường hợp worktree đã gỡ dở (mất tệp .git) khiến git rơi về repo cha chứa thư mục workspaces.
+ */
+export function isWorktreeOf(dir: string, peer: string): boolean {
+  if (!fs.existsSync(dir)) return false;
+  const top = git(dir, ['rev-parse', '--show-toplevel'], 15_000);
+  if (!top.ok || !samePath(top.out.trim(), dir)) return false;
+  const common = (d: string) => {
+    const r = git(d, ['rev-parse', '--git-common-dir'], 15_000);
+    return r.ok ? path.resolve(d, r.out.trim()) : undefined;
+  };
+  const a = common(dir);
+  const b = common(peer);
+  return !!a && !!b && samePath(a, b);
 }
 
 /** Repo chưa cấu hình người commit → dùng danh tính CCoding cho riêng lệnh này. */
@@ -106,11 +140,10 @@ export function isMerged(wt: string, ref: string): boolean {
  * trước) và trả danh sách tệp xung đột để người gọi xử lý.
  */
 export function mergeBranch(wt: string, branch: string, message: string): GitResult & { conflicts: string[] } {
-  const r = git(wt, [...identity(wt), 'merge', '--no-ff', '--no-edit', '-m', message, branch], 300_000);
+  const r = git(wt, [...identity(wt), 'merge', '--no-ff', '--no-edit', '--no-verify', '-m', message, branch], 300_000);
   if (r.ok) return { ...r, conflicts: [] };
-  const u = git(wt, ['diff', '--name-only', '--diff-filter=U'], 30_000);
-  const conflicts = u.ok ? u.out.split('\n').map((s) => s.trim()).filter(Boolean) : [];
-  git(wt, ['merge', '--abort'], 60_000);
+  const conflicts = unmergedFiles(wt);
+  if (mergeInProgress(wt) || conflicts.length) git(wt, ['merge', '--abort'], 60_000);
   return { ...r, conflicts };
 }
 
