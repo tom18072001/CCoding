@@ -17,3 +17,14 @@ test('ClaudeStreamParser: ghi lượt gọi công cụ theo tên CCoding, kèm l
   assert.equal(p.toolCalls[0].outputChars, 'ℹ pass 417'.length);
   assert.match(p.toolCalls[1].error ?? '', /CCoding chặn/);
 });
+
+test('cliTools: review qua CLI được chạy lệnh (như toolsFor) nhưng không ghi tệp; lập kế hoạch chỉ đọc', async () => {
+  const { cliTools } = await import('../src/orchestrator.js');
+  const qa = ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash'];
+  assert.deepEqual(cliTools(qa, 'exec', 'review'), ['Read', 'Glob', 'Grep', 'Bash']);
+  assert.deepEqual(cliTools(qa, 'write', 'review'), ['Read', 'Glob', 'Grep'], 'dự án không cho chạy lệnh thì review cũng không');
+  assert.deepEqual(cliTools(qa, 'exec', 'plan'), ['Read', 'Glob', 'Grep']);
+  assert.deepEqual(cliTools(qa, 'exec', 'execute'), qa);
+  assert.deepEqual(cliTools(qa, 'read', 'execute'), ['Read', 'Glob', 'Grep']);
+  assert.deepEqual(cliTools(qa, 'none', 'review'), []);
+});

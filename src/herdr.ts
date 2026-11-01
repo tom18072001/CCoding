@@ -137,12 +137,17 @@ export class Herdr {
   }
 
   private async alive(paneId?: string): Promise<boolean> {
-    if (!paneId) return false;
+    return !!(await this.paneInfo(paneId));
+  }
+
+  /** Thông tin pane (nhãn, tab) — undefined nếu pane đã đóng. */
+  private async paneInfo(paneId?: string): Promise<{ label?: string; tab_id?: string } | undefined> {
+    if (!paneId) return undefined;
     try {
-      await this.exec(['pane', 'get', paneId], 8000);
-      return true;
+      const r = await this.exec(['pane', 'get', paneId], 8000);
+      return (r?.result?.pane ?? {}) as { label?: string; tab_id?: string };
     } catch {
-      return false;
+      return undefined;
     }
   }
 
@@ -363,8 +368,13 @@ export class Herdr {
   /** Mỗi agent một pane trong tab phòng ban của mình (tạo khi cần). */
   async ensureAgentPane(agent: AgentDef, dept: DepartmentDef): Promise<string> {
     this.reload();
+    const label = agent.short || agent.id;
     const cur = this.state.panes[agent.id];
-    if (cur && (await this.alive(cur))) return cur;
+    const info = await this.paneInfo(cur);
+    // herdr dùng lại id pane sau khi pane cũ đóng → id ghi trong state có thể đang là pane của agent khác (vd. điều phối và
+    // Backend cùng trỏ w1:p8, 01/11): chỉ dùng khi nhãn pane đúng là của agent này
+    if (cur && info && (!info.label || info.label === label)) return cur;
+    if (cur) delete this.state.panes[agent.id];
     await this.ensureDeptTab(dept);
     // bỏ pane đã đóng khỏi danh sách (pane agent bị đóng/khởi động lại herdr) — trước đây split vào pane chết
     // ⇒ "pane_not_found" và mọi lượt gọi rơi về chạy trực tiếp ngoài herdr (29/10)
@@ -382,9 +392,12 @@ export class Herdr {
     const direction = panes.length % 2 === 1 ? 'right' : 'down';
     const sp = await this.exec(['pane', 'split', target, '--direction', direction, '--cwd', this.config.root, '--no-focus']);
     const paneId = sp.result.pane.pane_id as string;
+    // id mới có thể trùng id của pane cũ đã đóng mà state còn giữ ở agent/tab khác → gỡ các tham chiếu cũ đó
+    for (const [id, p] of Object.entries(this.state.panes)) if (p === paneId && id !== agent.id) delete this.state.panes[id];
+    for (const [d, list] of Object.entries(this.state.tabPanes)) if (d !== dept.id) this.state.tabPanes[d] = list.filter((p) => p !== paneId);
     panes.push(paneId);
     this.state.panes[agent.id] = paneId;
-    await this.exec(['pane', 'rename', paneId, agent.short || agent.id]);
+    await this.exec(['pane', 'rename', paneId, label]);
     this.save();
     return paneId;
   }

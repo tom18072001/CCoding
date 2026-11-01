@@ -2545,13 +2545,17 @@ export class Orchestrator {
   }
 }
 
-/** Tên công cụ kiểu Claude Code cho runtime CLI (claude/codex/kimi) theo pha và quyền dự án. */
-function cliTools(agentTools: string[], access: ToolAccess, phase: Phase): string[] {
+/**
+ * Tên công cụ kiểu Claude Code cho runtime CLI (claude/codex/kimi) theo pha và quyền dự án — cùng quy tắc với `toolsFor`:
+ * review được chạy lệnh (test/typecheck để có bằng chứng) nhưng không ghi tệp; lập kế hoạch/tổng hợp chỉ đọc.
+ */
+export function cliTools(agentTools: string[], access: ToolAccess, phase: Phase): string[] {
   if (access === 'none' || phase === 'route' || phase === 'discuss') return [];
   let list = agentTools;
   if (access === 'read') list = list.filter((t) => READ_ONLY_TOOLS.has(t));
-  if (access === 'write') list = list.filter((t) => t !== 'Bash');
+  if (access === 'write') list = list.filter((t) => t !== 'Bash' && t !== 'PowerShell');
   if (phase === 'execute' || phase === 'revise') return list;
+  if (phase === 'review') return list.filter((t) => READ_ONLY_TOOLS.has(t) || t === 'Bash' || t === 'PowerShell');
   return list.filter((t) => READ_ONLY_TOOLS.has(t));
 }
 
