@@ -380,12 +380,26 @@ async function runProc(
 ): Promise<{ code: number | null; out: string; timedOut: boolean }> {
   return new Promise((resolve) => {
     const child = spawn(file, args, { cwd, env: { ...scrubEnv(process.env), ...extraEnv }, windowsHide: true, detached: !isWin, stdio: ['ignore', 'pipe', 'pipe'] });
-    let out = '';
+    // giữ phần ĐẦU (≤ maxChars) và phần CUỐI (≤ 3 × maxChars), bỏ đoạn giữa: dòng tổng kết test/lỗi build nằm ở cuối đầu ra
+    // (trước đây giữ phần đầu, bỏ phần cuối → "npm test" 592 test chỉ còn dòng "> pkg test", mất "ℹ tests 592 · pass 592")
+    const headMax = maxChars;
+    const tailMax = maxChars * 3;
+    let head = '';
+    let tail = '';
     let dropped = 0;
     const add = (b: Buffer) => {
-      const s = b.toString('utf8');
-      if (out.length < maxChars * 4) out += s;
-      else dropped += s.length;
+      let s = b.toString('utf8');
+      if (head.length < headMax) {
+        const take = s.slice(0, headMax - head.length);
+        head += take;
+        s = s.slice(take.length);
+      }
+      if (!s) return;
+      tail += s;
+      if (tail.length > tailMax * 2) {
+        dropped += tail.length - tailMax;
+        tail = tail.slice(-tailMax);
+      }
     };
     child.stdout.on('data', add);
     child.stderr.on('data', add);
@@ -399,10 +413,14 @@ async function runProc(
     const done = (code: number | null) => {
       clearTimeout(timer);
       signal?.removeEventListener('abort', onAbort);
-      resolve({ code, out: dropped ? `${out}\n… [bỏ ${dropped} ký tự đầu ra]` : out, timedOut });
+      if (tail.length > tailMax) {
+        dropped += tail.length - tailMax;
+        tail = tail.slice(-tailMax);
+      }
+      resolve({ code, out: dropped ? `${head}\n… [bỏ ${dropped} ký tự ở giữa đầu ra]\n${tail}` : head + tail, timedOut });
     };
     child.on('error', (e) => {
-      out += `\n${e.message}`;
+      tail += `\n${e.message}`;
       done(-1);
     });
     child.on('close', (code) => done(code));

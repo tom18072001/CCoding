@@ -309,6 +309,8 @@
     else if (active(t)) {
       const ph = window.Drive?.phaseLabel?.(t) || C.TASK_VI[t.status];
       parts.push(`<div class="cv-live"><span class="cv-spin"></span><span>${esc(ph)}…</span><small>${C.fmt(C.total(t.usage))} token${t.options?.budgetTokens ? ` / ${C.fmt(t.options.budgetTokens)}` : ''}</small><span class="grow"></span>${window.UX?.hasDiff(t) ? `<button class="btn ghost sm" data-act="diff" data-tid="${esc(t.id)}" title="Xem thay đổi trong repo (cả phần chưa commit)">🧬<span data-dstat="${esc(t.id)}"></span></button>` : ''}${t.status === 'running' ? `<button class="btn ghost sm" data-act="pause" data-tid="${esc(t.id)}">⏸ Tạm dừng</button>` : ''}<button class="btn ghost sm danger" data-act="cancel" data-tid="${esc(t.id)}">Hủy</button></div>`);
+    } else if (window.Flow?.planPaused(t)) {
+      parts.push(window.Flow.planHtml(t));
     } else if (['paused', 'failed', 'cancelled'].includes(t.status)) {
       const title = t.status === 'paused' ? `⏸ Tạm dừng — ${C.PAUSE_VI[t.pause?.reason] || t.pause?.reason || ''}` : t.status === 'failed' ? '⚠️ Nhiệm vụ lỗi — có thể chạy tiếp phần chưa xong' : '⏹ Đã hủy';
       const can = runs.length > 0;
@@ -317,9 +319,10 @@
     if (t.status === 'done') {
       const fin = V.finals.get(t.id);
       const outs = d?.outputs || [];
-      parts.push(`<div class="cv-final">${fin ? `<div class="md">${C.md(fin)}</div>` : '<p class="muted-p">✓ Đã xong.</p>'}
+      parts.push(`<div class="cv-final">${window.Flow?.summaryHtml(t) || ''}${fin ? `<div class="md">${C.md(fin)}</div>` : '<p class="muted-p">✓ Đã xong.</p>'}
         ${outs.length ? `<div class="cv-facts">${outs.slice(0, 10).map((f) => `<button class="cv-chip" data-pv="outputs/${esc(f)}" data-tid="${esc(t.id)}">📄 ${esc(f)}</button>`).join('')}${outs.length > 10 ? `<button class="cv-chip" data-act="detail" data-tid="${esc(t.id)}">… ${outs.length - 10} tệp nữa</button>` : ''}</div>` : ''}
         ${window.UX?.hasDiff(t) || t.projectChecks ? `<div class="cv-facts">${window.UX?.hasDiff(t) ? `<button class="cv-chip df-chip" data-act="diff" data-tid="${esc(t.id)}" title="Mở diff thay đổi trong repo">🧬 Thay đổi<span data-dstat="${esc(t.id)}"></span></button>` : ''}${window.UX?.checksChip(t) || ''}</div>` : ''}
+        ${isLast ? window.Flow?.shipHtml(t) || '' : ''}
         <div class="cv-tools">${fin ? `<button class="btn ghost sm" data-pv="${esc(t.finalPath)}" data-tid="${esc(t.id)}" title="Mở báo cáo ở khung bên phải">📄 Mở bên phải</button><button class="btn ghost sm" data-copy="${esc(t.id)}">⧉ Chép</button>` : ''}<button class="btn ghost sm" data-act="again" data-tid="${esc(t.id)}">↻ Giao lại tương tự</button><button class="btn ghost sm" data-act="detail" data-tid="${esc(t.id)}">📋 Chi tiết</button>${t.attention ? `<span class="cv-attn">⚠ ${esc(t.attention.detail)}</span>` : ''}</div></div>`);
     }
     if (isLast) parts.push(reviewBox(t));
@@ -413,9 +416,10 @@
     const prev = box.scrollTop;
     const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 160;
     // đang gõ yêu cầu sửa → để vẽ lại sau
-    if (document.activeElement?.closest?.('#cv-thread .rv-form') || $$('#cv-thread .rv-form').some((f) => !f.hidden && $('textarea', f).value.trim())) return later('thread', () => paint(false), 1500);
+    if (document.activeElement?.closest?.('#cv-thread .rv-form') || $$('#cv-thread .rv-form').some((f) => !f.hidden && $('textarea', f).value.trim()) || window.Flow?.busy($('#cv-thread'))) return later('thread', () => paint(false), 1500);
     box.innerHTML = `<div class="cv-col">${c.list.map((t, i) => segment(C.S.tasks.get(t.id) || t, i, i === c.list.length - 1)).join('')}</div>`;
     bindThread(box);
+    window.Flow?.bind(box, () => paint(true));
     window.UX?.fillStats(box);
     bindReview(box, () => paint(true));
     renderDock(c);
@@ -439,6 +443,7 @@
         <textarea rows="1" aria-label="Trả lời" placeholder="${mode === 'note' ? 'Nhắn thêm chỉ dẫn cho việc đang chạy…' : 'Trả lời để giao việc tiếp nối…'}"></textarea>
         <div class="compose-bar">
           ${mode === 'follow' ? '<button type="button" class="btn ghost sm icon" data-attach title="Đính kèm tệp (PDF, DOCX, XLSX, MD, CSV, code… ≤ 30 MB/tệp)">📎</button><div class="prompt-tools" id="cv-tools"></div>' : ''}
+          ${mode === 'follow' && t.branch && t.projectId ? `<label class="check c-chk" title="Worktree của việc mới tách từ nhánh ${esc(t.branch)} (giữ thay đổi chưa gộp của việc trước). Bỏ chọn: tách từ nhánh xuất phát của dự án."><input type="checkbox" data-cont checked /> 🌿 nối tiếp nhánh</label>` : ''}
           ${mode === 'follow' ? `<label class="c-sel" title="Người nhận nhiệm vụ tiếp nối">Giao cho<select data-who><option value="">Như trước — ${esc(who(t))}</option>${workers.map((a) => `<option value="${esc(a.id)}">📌 ${esc(a.name)}</option>`).join('')}</select></label>` : ''}
           <span class="grow"></span>
           <small class="cv-hint">${mode === 'note' ? '📝 chỉ dẫn bổ sung — áp dụng từ lượt làm việc sau' : `↪ tiếp nối ${esc(t.id)} — kế thừa dự án/chế độ`} · <kbd>Enter</kbd> gửi · <kbd>Shift</kbd>+<kbd>Enter</kbd> xuống dòng</small>
@@ -472,6 +477,8 @@
           const body = { brief: text, followUp: cur.id, attachments: C.S.pending.filter((a) => a.status === 'ok').map((a) => a.id) };
           const w = $('[data-who]', dock)?.value;
           if (w) Object.assign(body, { mode: 'agent', agentId: w });
+          const cont = $('[data-cont]', dock);
+          if (cont) body.continueBranch = cont.checked;
           const nt = await C.api('/api/tasks', { method: 'POST', body: JSON.stringify(body) });
           C.S.tasks.set(nt.id, nt);
           C.S.pending.length = 0;
@@ -481,6 +488,7 @@
           V.conv = nt.id;
           store.set('chat.conv', V.conv);
           renderList();
+          window.Router?.sync();
           await paint(true);
         }
       } catch (e) {

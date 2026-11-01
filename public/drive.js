@@ -475,7 +475,7 @@
       'beforeend',
       `<div class="dock"><div class="compose-box">
         <textarea rows="2" placeholder="${live ? 'Gửi chỉ dẫn bổ sung — agent áp dụng từ lượt làm việc tiếp theo (vd. "nhớ viết test cho trường hợp rỗng")…' : 'Giao việc tiếp nối nhiệm vụ này — kế thừa dự án/chế độ/agent, báo cáo trước được đưa vào làm đầu vào…'}   (Ctrl+Enter)"></textarea>
-        <div class="compose-bar"><small>${live ? '📝 Chỉ dẫn hiện trong hội thoại và vào bối cảnh các lượt gọi sau; lượt đang chạy làm nốt theo yêu cầu cũ.' : `↪ Tạo nhiệm vụ mới tiếp nối ${esc(t.id)}`}</small><span class="grow"></span>
+        <div class="compose-bar"><small>${live ? '📝 Chỉ dẫn hiện trong hội thoại và vào bối cảnh các lượt gọi sau; lượt đang chạy làm nốt theo yêu cầu cũ.' : `↪ Tạo nhiệm vụ mới tiếp nối ${esc(t.id)}`}</small>${!live && t.branch && t.projectId ? `<label class="check c-chk" title="Worktree của việc mới tách từ nhánh ${esc(t.branch)}; bỏ chọn: tách từ nhánh xuất phát của dự án"><input type="checkbox" data-cont checked /> 🌿 nối tiếp nhánh</label>` : ''}<span class="grow"></span>
         <button class="btn primary send" data-dock>${live ? 'Gửi chỉ dẫn' : 'Giao tiếp nối ➤'}</button></div></div></div>`,
     );
     const dock = $('.dock', el);
@@ -489,7 +489,8 @@
         if (r) ta.value = '';
       } else {
         try {
-          const nt = await C.api('/api/tasks', { method: 'POST', body: JSON.stringify({ brief: text, followUp: t.id }) });
+          const cont = $('[data-cont]', dock);
+          const nt = await C.api('/api/tasks', { method: 'POST', body: JSON.stringify({ brief: text, followUp: t.id, ...(cont ? { continueBranch: cont.checked } : {}) }) });
           C.S.tasks.set(nt.id, nt);
           ta.value = '';
           C.toast({ level: 'info', title: `Đã giao tiếp nối ${nt.id}`, msg: nt.title, taskId: nt.id });

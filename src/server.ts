@@ -8,7 +8,8 @@ import { readJsonl } from './util/fsx.js';
 import { MAX_UPLOAD_BYTES } from './uploads.js';
 import { clearFixedFeedback, FINDING_LABELS, kpiReport } from './kpi.js';
 import { isSafeRef } from './git.js';
-import { DiffError, diffSummary, fileDiff, isSha, locate as locateDiff, repoDirFor } from './diff.js';
+import { DiffError, diffSummary, fileDiff, isSha, locate as locateDiff, ownersOf, repoDirFor } from './diff.js';
+import { ShipError } from './ship.js';
 import { deniedReason } from './tools/workspace.js';
 import type { BudgetMode, Classification, ProjectDef, TaskMode, ToolAccess } from './types.js';
 import type { UsageDim } from './usage.js';
@@ -188,6 +189,7 @@ export function createServer(app: App): http.Server {
           projectId: b.projectId || undefined,
           agentId: b.agentId ? String(b.agentId) : undefined,
           followUp: b.followUp ? String(b.followUp) : undefined,
+          continueBranch: typeof b.continueBranch === 'boolean' ? b.continueBranch : undefined,
           options: b.options ?? {},
           attachments: Array.isArray(b.attachments) ? b.attachments.map(String) : undefined,
         });
@@ -231,10 +233,51 @@ export function createServer(app: App): http.Server {
             note: b.note ? String(b.note) : undefined,
             subtasks: Array.isArray(b.subtasks) ? b.subtasks.map(String) : undefined,
             department: b.department ? String(b.department) : undefined,
+            issues: Array.isArray(b.issues)
+              ? b.issues.slice(0, 100).map((i: any) => ({ subtask: String(i?.subtask ?? ''), comment: String(i?.comment ?? ''), department: i?.department ? String(i.department) : undefined }))
+              : undefined,
           }),
         );
       } catch (e) {
         throw new HttpError(409, (e as Error).message);
+      }
+    }
+    if ((mm = m(/^\/api\/tasks\/([^/]+)\/plan$/)) && req.method === 'POST') {
+      const b = await readBody(req);
+      if (b.subtasks !== undefined && !Array.isArray(b.subtasks)) throw new HttpError(400, 'subtasks phải là mảng');
+      try {
+        return send(
+          res,
+          200,
+          orchestrator.updatePlan(mm[1], {
+            department: b.department ? String(b.department) : undefined,
+            subtasks: (b.subtasks ?? []).map((x: any) => ({
+              id: String(x?.id ?? ''),
+              assignee: x?.assignee !== undefined ? String(x.assignee) : undefined,
+              dependsOn: Array.isArray(x?.dependsOn) ? x.dependsOn.map(String) : undefined,
+              title: typeof x?.title === 'string' ? x.title : undefined,
+              description: typeof x?.description === 'string' ? x.description : undefined,
+              remove: x?.remove === true,
+            })),
+            approve: b.approve === true,
+            note: typeof b.note === 'string' ? b.note : undefined,
+          }),
+        );
+      } catch (e) {
+        throw new HttpError(409, (e as Error).message);
+      }
+    }
+    if ((mm = m(/^\/api\/tasks\/([^/]+)\/ship$/))) {
+      try {
+        if (req.method === 'POST') {
+          const b = await readBody(req);
+          if (b.action !== 'push' && b.action !== 'ff') throw new HttpError(400, 'action phải là "push" hoặc "ff"');
+          return send(res, 200, orchestrator.ship(mm[1], b.action, { override: b.override === true }));
+        }
+        return send(res, 200, orchestrator.shipStatus(mm[1], { fetch: q('fetch') === '1' }));
+      } catch (e) {
+        if (e instanceof ShipError) throw new HttpError(e.status, e.message);
+        throw e;
       }
     }
     if ((mm = m(/^\/api\/tasks\/([^/]+)\/resume$/)) && req.method === 'POST') {
@@ -318,6 +361,14 @@ export function createServer(app: App): http.Server {
       if (commit && !isSha(commit)) throw new HttpError(400, 'Mã commit không hợp lệ');
       const file = q('file');
       try {
+        if (q('owners') === '1') {
+          const sum = diffSummary(src, commit);
+          const tools = logs
+            .query({ task: t.id, limit: 4000 })
+            .filter((r) => r.kind === 'tool.call' && r.subtaskId)
+            .map((r) => ({ subtaskId: r.subtaskId, name: String((r.data as { name?: string } | undefined)?.name ?? ''), args: String((r.data as { args?: string } | undefined)?.args ?? '') }));
+          return send(res, 200, { owners: ownersOf(src, t.id, sum.files.map((f) => f.path), tools) });
+        }
         return send(res, 200, file !== undefined ? fileDiff(src, file, commit) : diffSummary(src, commit));
       } catch (e) {
         if (e instanceof DiffError) throw new HttpError(e.status, e.message);
@@ -505,6 +556,8 @@ export function createServer(app: App): http.Server {
         denyCommands: Array.isArray(b.denyCommands) ? b.denyCommands.map(String).slice(0, 50) : existing?.denyCommands,
         setupCommands: setupCommands ?? existing?.setupCommands,
         checkCommands: checkCommands ?? existing?.checkCommands,
+        parallelWorktrees: typeof b.parallelWorktrees === 'boolean' ? b.parallelWorktrees : existing?.parallelWorktrees,
+        planApproval: typeof b.planApproval === 'boolean' ? b.planApproval || undefined : existing?.planApproval,
         createdAt: existing?.createdAt ?? nowIso(),
       };
       store.saveProject(proj);

@@ -128,7 +128,8 @@ export interface Config {
   };
   runner: 'auto' | 'process' | 'herdr';
   maxConcurrentTasks: number;
-  defaults: TaskOptions & { timeoutMs: number };
+  /** planApprovalMinutes: kế hoạch chờ duyệt quá số phút này thì tự duyệt (0 = chờ giám đốc, không tự duyệt). */
+  defaults: TaskOptions & { timeoutMs: number; planApprovalMinutes?: number };
   /** Tinh chỉnh theo pha: model rẻ hơn cho pha nhẹ, giới hạn token đầu ra, số lượt công cụ. */
   phases: {
     models: Partial<Record<Phase, string>>;
@@ -269,7 +270,7 @@ const BUILTIN: Omit<Config, 'root'> = {
   },
   runner: 'auto',
   maxConcurrentTasks: 2,
-  defaults: { discussionRounds: 1, review: true, maxParallel: 3, maxRevisions: 1, budgetTokens: 1500000, budgetMode: 'complete', subtaskBudgetTokens: 0, timeoutMs: 1800000 },
+  defaults: { discussionRounds: 1, review: true, maxParallel: 3, maxRevisions: 1, budgetTokens: 1500000, budgetMode: 'complete', subtaskBudgetTokens: 0, timeoutMs: 1800000, planApprovalMinutes: 0 },
   phases: {
     models: { route: 'haiku', discuss: 'haiku' },
     maxTokens: { route: 800, plan: 8000, discuss: 700, finalize: 8000, execute: 32000, review: 6000, revise: 32000, synthesize: 10000 },

@@ -13,6 +13,7 @@ import {
   headCommit,
   isGitRepo,
   isMerged,
+  isSafeRef,
   isWorktreeOf,
   mergeBranch,
   mergeInProgress,
@@ -25,6 +26,7 @@ import {
   unmergedFiles,
 } from './git.js';
 import type { Herdr } from './herdr.js';
+import { shipPush, shipStatus, ShipError, type ShipStatus } from './ship.js';
 import type { LogStore } from './logger.js';
 import { blockedSubtasks, keywordRoute, newSubtask, orderJoint, parsePlan, parseReview, parseRoute, readySubtasks } from './planner.js';
 import { historyText, selectHistory } from './history.js';
@@ -294,6 +296,7 @@ export class Orchestrator {
         runtime: o.runtime || undefined,
         subtaskBudgetTokens: o.subtaskBudgetTokens && o.subtaskBudgetTokens > 0 ? Math.floor(o.subtaskBudgetTokens) : undefined,
         ...variantOptions(o),
+        planApproval: (o.planApproval ?? project?.planApproval ?? config.defaults.planApproval) ? true : undefined,
       },
       after: extra.after?.length ? extra.after : undefined,
       splitFrom: extra.splitFrom,
@@ -320,13 +323,15 @@ export class Orchestrator {
         this.d.uploads.remove(meta.id);
       }
     }
+    // việc nối trong cùng dự án repo: mặc định làm tiếp trên NHÁNH của nhiệm vụ trước (chưa gộp vào nhánh xuất phát)
+    if (prev?.branch && project && prev.projectId === project.id && input.continueBranch !== false && this.branchExists(project, prev.branch)) task.startFrom = prev.branch;
     if (prev) {
       const final = prev.finalPath ? store.readRunFile(prev.id, prev.finalPath) : undefined;
       writeText(
         path.join(inputsDir, 'NHIEM-VU-TRUOC.md'),
         `# Nhiệm vụ trước: ${prev.id} — ${prev.title}\n\nTrạng thái: ${prev.status}${prev.branch ? ` · nhánh \`${prev.branch}\`` : ''}\n\n## Yêu cầu trước\n${prev.brief}\n\n## Báo cáo của nhiệm vụ trước\n${final ?? '(chưa có báo cáo)'}\n`,
       );
-      task.brief = `${brief}\n\n---\nTiếp nối nhiệm vụ ${prev.id} ("${prev.title}", ${prev.status}) — yêu cầu và báo cáo trước: \`inputs/NHIEM-VU-TRUOC.md\`. Làm tiếp trên kết quả đã có, không làm lại phần đã xong.`;
+      task.brief = `${brief}\n\n---\nTiếp nối nhiệm vụ ${prev.id} ("${prev.title}", ${prev.status}) — yêu cầu và báo cáo trước: \`inputs/NHIEM-VU-TRUOC.md\`. Làm tiếp trên kết quả đã có, không làm lại phần đã xong.${task.startFrom ? ` Worktree của nhiệm vụ này tách từ nhánh \`${task.startFrom}\` của nhiệm vụ trước — thay đổi của nhiệm vụ đó đã có sẵn trong thư mục làm việc.` : ''}`;
       writeText(path.join(inputsDir, 'BRIEF.md'), task.brief);
     }
     extra.prepareInputs?.(inputsDir, task);
@@ -454,6 +459,14 @@ export class Orchestrator {
         }
     }
     const prev = t.pause?.reason ?? t.status;
+    // tiếp tục khi đang chờ duyệt kế hoạch = duyệt (bấm Tiếp tục) hoặc tự duyệt khi hết thời gian chờ
+    if (t.pause?.reason === 'plan')
+      for (const r of t.runs)
+        if (r.planReview && !r.planReview.approvedAt) {
+          r.planReview.approvedAt = nowIso();
+          r.planReview.by = o.auto ? 'timeout' : 'director';
+          if (o.auto) this.message(t, r.department, 'system', 'system', `⏱ Hết thời gian chờ duyệt — tự duyệt kế hoạch (${r.subtasks.length} hạng mục).`);
+        }
     // người dùng chủ động tiếp tục: bỏ điều kiện chờ các nhiệm vụ trước đã lỗi/hủy/không còn
     if (t.after?.some((a) => ['failed', 'cancelled', undefined].includes(store.get(a)?.status))) t.after = undefined;
     t.status = 'queued';
@@ -478,7 +491,10 @@ export class Orchestrator {
    * - reject: ghi yêu cầu sửa thành lỗi [major] cho các hạng mục chọn (mặc định: hạng mục reviewer còn nêu lỗi, hoặc mọi hạng mục
    *   đã xong) → một vòng sửa theo yêu cầu → reviewer duyệt lại (nếu phòng có reviewer) → viết lại báo cáo tổng hợp.
    */
-  reviewDecision(id: string, o: { decision: 'approve' | 'reject'; note?: string; subtasks?: string[]; department?: string }): Task {
+  reviewDecision(
+    id: string,
+    o: { decision: 'approve' | 'reject'; note?: string; subtasks?: string[]; department?: string; issues?: Array<{ subtask: string; comment: string; department?: string }> },
+  ): Task {
     const { store, logs } = this.d;
     const t = store.get(id);
     if (!t) throw new Error('Không có nhiệm vụ');
@@ -503,30 +519,47 @@ export class Orchestrator {
       this.save(t, true);
       return t;
     }
-    if (!note) throw new Error('Ghi rõ cần sửa gì');
-    const want = o.subtasks?.length ? new Set(o.subtasks.map(String)) : undefined;
+    // bình luận theo dòng trên diff → lỗi riêng cho từng hạng mục (tệp:dòng + nội dung), che bí mật
+    const lineIssues = (o.issues ?? [])
+      .slice(0, 100)
+      .map((i) => ({ subtask: String(i.subtask ?? ''), department: i.department ? String(i.department) : undefined, comment: redact(String(i.comment ?? '').trim().slice(0, 2000), { secrets: true, pii: false }) }))
+      .filter((i) => i.subtask && i.comment);
+    if (!note && !lineIssues.length) throw new Error('Ghi rõ cần sửa gì');
+    const want = o.subtasks?.length || lineIssues.length ? new Set([...(o.subtasks ?? []).map(String), ...lineIssues.map((i) => i.subtask)]) : undefined;
     const picked: string[] = [];
     for (const r of runs) {
       const flagged = r.review && !r.review.approved ? r.review.issues.filter((i) => i.severity !== 'minor').map((i) => i.subtask) : [];
       const done = r.subtasks.filter((s) => s.status === 'done' && s.output && !s.splitTo);
+      const mine = (s: Subtask) => lineIssues.filter((i) => i.subtask === s.id && (!i.department || i.department === r.department));
       const targets = done.filter((s) => (want ? want.has(s.id) : flagged.length ? flagged.includes(s.id) : true));
       if (!targets.length) continue;
       const keep = r.review && !r.review.approved ? r.review.issues.filter((i) => targets.some((s) => s.id === i.subtask)) : [];
       r.review = {
         approved: false,
-        summary: `Giám đốc yêu cầu sửa: ${note.slice(0, 300)}`,
+        summary: `Giám đốc yêu cầu sửa: ${(note || `${lineIssues.length} bình luận trên diff`).slice(0, 300)}`,
         // Ghi chú ngắn/chung chung (vd. "sửa các bước đã tick" — 28/10 agent không biết "bước" nào nên không sửa gì):
-        // nói rõ hạng mục được CHỌN trên giao diện và việc phải làm mặc định.
+        // nói rõ hạng mục được CHỌN trên giao diện và việc phải làm mặc định. Bình luận theo dòng: mỗi bình luận một lỗi.
         issues: [
-          ...targets.map((s) => ({
-            subtask: s.id,
-            severity: 'major' as const,
-            comment:
-              `[Giám đốc] Hạng mục ${s.id} được giám đốc chọn để sửa. Ghi chú: ${note || '(không có)'}` +
-              (note.trim().length < 80
-                ? ` — Ghi chú ngắn nên hiểu là: rà lại ${s.id} theo tiêu chí xong trong kế hoạch, sửa mọi lỗi của lệnh kiểm tra dự án (test/typecheck/lint) và các lỗi review trước liên quan tới ${s.id}, xem thêm chỉ dẫn bổ sung của chủ dự án; không hỏi lại. Nếu đã đạt hết thì ghi rõ bằng chứng (lệnh đã chạy + kết quả).`
-                : ''),
-          })),
+          ...targets.flatMap((s) => {
+            const lines = mine(s);
+            if (lines.length)
+              return lines.map((i) => ({
+                subtask: s.id,
+                severity: 'major' as const,
+                comment: `[Giám đốc · bình luận trên diff] ${i.comment}${note ? ` — Ghi chú chung: ${note}` : ''} — sửa đúng chỗ được nêu (tệp:dòng), giữ nguyên phần khác; nếu thấy bình luận sai thì giải thích kèm bằng chứng.`,
+              }));
+            return [
+              {
+                subtask: s.id,
+                severity: 'major' as const,
+                comment:
+                  `[Giám đốc] Hạng mục ${s.id} được giám đốc chọn để sửa. Ghi chú: ${note || '(không có)'}` +
+                  (note.trim().length < 80
+                    ? ` — Ghi chú ngắn nên hiểu là: rà lại ${s.id} theo tiêu chí xong trong kế hoạch, sửa mọi lỗi của lệnh kiểm tra dự án (test/typecheck/lint) và các lỗi review trước liên quan tới ${s.id}, xem thêm chỉ dẫn bổ sung của chủ dự án; không hỏi lại. Nếu đã đạt hết thì ghi rõ bằng chứng (lệnh đã chạy + kết quả).`
+                    : ''),
+              },
+            ];
+          }),
           ...keep,
         ],
         checks: r.review?.checks,
@@ -550,8 +583,9 @@ export class Orchestrator {
     t.finishedAt = undefined;
     t.options.budgetMode = t.options.budgetMode ?? this.d.config.defaults.budgetMode;
     this.clearResumeTimer(id);
-    this.message(t, dept, 'director', 'decision', `✋ Giám đốc yêu cầu sửa ${picked.join(', ')}: ${note}`);
-    logs.write({ level: 'info', kind: 'review.director', msg: `${t.id}: giám đốc yêu cầu sửa ${picked.join(', ')}`, taskId: t.id, department: dept, data: { decision: 'reject', subtasks: picked, noteChars: note.length } });
+    const lineText = lineIssues.length ? `\n${lineIssues.map((i) => `- **${i.subtask}** ${i.comment}`).join('\n')}` : '';
+    this.message(t, dept, 'director', 'decision', `✋ Giám đốc yêu cầu sửa ${picked.join(', ')}${note ? `: ${note}` : ` (${lineIssues.length} bình luận trên diff)`}${lineText}`);
+    logs.write({ level: 'info', kind: 'review.director', msg: `${t.id}: giám đốc yêu cầu sửa ${picked.join(', ')}`, taskId: t.id, department: dept, data: { decision: 'reject', subtasks: picked, noteChars: note.length, lineComments: lineIssues.length } });
     this.save(t, true);
     this.queue.push(t.id);
     this.pump();
@@ -830,7 +864,7 @@ export class Orchestrator {
     const timer = setTimeout(() => {
       this.resumeTimers.delete(t.id);
       const cur = this.d.store.get(t.id);
-      if (cur?.status !== 'paused' || cur.pause?.reason !== 'quota') return;
+      if (cur?.status !== 'paused' || (cur.pause?.reason !== 'quota' && cur.pause?.reason !== 'plan')) return;
       try {
         this.resume(cur.id, { auto: true });
       } catch (e) {
@@ -1128,6 +1162,11 @@ export class Orchestrator {
         }
         run.stage = 'finalized';
         this.save(task);
+        // giám đốc duyệt kế hoạch trước khi thực thi → dừng ở đây; ước tính vẫn tính để hiện trên màn duyệt (không dừng vì ngân sách)
+        if (task.options.planApproval && !solo) {
+          this.checkEstimate(task, run, project, false);
+          this.awaitPlanApproval(task, run, dept, roster, project);
+        }
         // kế hoạch quá lớn so với ngân sách → cảnh báo (chế độ "pause": dừng để quyết định tách/tăng ngân sách)
         this.checkEstimate(task, run, project);
       }
@@ -1600,14 +1639,164 @@ export class Orchestrator {
     return total;
   }
 
+  /**
+   * Kế hoạch đã chốt + tùy chọn duyệt kế hoạch → tạm dừng (lý do "plan") chờ giám đốc duyệt / sửa người làm, phụ thuộc, bỏ hạng mục.
+   * Tiếp tục (duyệt) thì vào thực thi luôn vì mốc "finalized" đã đạt. planApprovalMinutes > 0 → tự duyệt khi hết thời gian chờ.
+   */
+  private awaitPlanApproval(task: Task, run: DeptRun, dept: DepartmentDef, roster: AgentDef[], project?: ProjectDef): void {
+    const access = this.toolAccess(task, project);
+    const caps = this.capabilities(roster, access, this.gitReadable(task, project));
+    run.planReview = { at: nowIso(), roster: roster.map((a) => ({ id: a.id, name: a.name, cap: caps[a.id] ?? '' })) };
+    this.save(task);
+    const mins = Math.max(0, Number(this.d.config.defaults.planApprovalMinutes) || 0);
+    const est = run.estimate ? ` · ước tính ~${fmtNum(run.estimate.tokens)} token` : '';
+    const msg = `Kế hoạch ${dept.short} (${run.subtasks.length} hạng mục${est}) chờ giám đốc duyệt — sửa người làm/phụ thuộc hoặc bỏ hạng mục rồi bấm "Duyệt & thực thi"${mins ? `; tự duyệt sau ${mins} phút` : ''}.`;
+    throw new PauseSignal('plan', msg, mins ? Date.now() + mins * 60_000 : undefined, 'Kế hoạch chờ duyệt');
+  }
+
+  /**
+   * Giám đốc sửa kế hoạch đang chờ duyệt (người làm, phụ thuộc, tiêu đề/mô tả, bỏ hạng mục) và/hoặc duyệt để thực thi.
+   * Chỉ khi nhiệm vụ đang tạm dừng với lý do "plan"; người làm phải thuộc nhân sự của phòng (và dự án); phụ thuộc không tạo vòng.
+   */
+  updatePlan(
+    id: string,
+    o: { department?: string; subtasks?: Array<{ id: string; assignee?: string; dependsOn?: string[]; title?: string; description?: string; remove?: boolean }>; approve?: boolean; note?: string },
+  ): Task {
+    const { store, registry, logs } = this.d;
+    const t = store.get(id);
+    if (!t) throw new Error('Không có nhiệm vụ');
+    if (t.status !== 'paused' || t.pause?.reason !== 'plan') throw new Error('Nhiệm vụ không ở bước chờ duyệt kế hoạch');
+    const run = t.runs.find((r) => (o.department ? r.department === o.department : r.planReview && !r.planReview.approvedAt));
+    if (!run || !run.planReview) throw new Error('Không có kế hoạch nào đang chờ duyệt');
+    const project = t.projectId ? store.project(t.projectId) : undefined;
+    const allowed = new Set(registry.members(run.department, project?.agents).map((a) => a.id));
+    const edits = (o.subtasks ?? []).slice(0, 100);
+    const byId = new Map(run.subtasks.map((s) => [s.id, s]));
+    const changes: string[] = [];
+    for (const e of edits) {
+      const st = byId.get(String(e.id));
+      if (!st) throw new Error(`Không có hạng mục ${e.id}`);
+      if (st.status === 'done') throw new Error(`${st.id} đã xong — không sửa được`);
+      if (e.remove) continue;
+      if (e.assignee !== undefined && e.assignee !== st.assignee) {
+        if (!allowed.has(String(e.assignee))) throw new Error(`${e.assignee} không thuộc nhân sự phòng ${registry.department(run.department).short}${project?.agents?.length ? ' của dự án' : ''}`);
+      }
+      if (e.dependsOn !== undefined) {
+        for (const d of e.dependsOn.map(String)) {
+          if (d === st.id) throw new Error(`${st.id} không thể phụ thuộc chính nó`);
+          if (!byId.has(d)) throw new Error(`${st.id}: phụ thuộc ${d} không tồn tại`);
+        }
+      }
+    }
+    const removed = new Set(edits.filter((e) => e.remove).map((e) => String(e.id)));
+    if (removed.size >= run.subtasks.length) throw new Error('Phải giữ ít nhất một hạng mục (muốn bỏ hết thì hủy nhiệm vụ)');
+    // áp thay đổi trên bản sao để kiểm vòng phụ thuộc trước khi ghi
+    const next = run.subtasks
+      .filter((s) => !removed.has(s.id))
+      .map((s) => {
+        const e = edits.find((x) => String(x.id) === s.id);
+        const deps = (e?.dependsOn !== undefined ? e.dependsOn.map(String) : s.dependsOn).filter((d) => !removed.has(d));
+        return { s, e, deps: [...new Set(deps)] };
+      });
+    const depMap = new Map(next.map((x) => [x.s.id, x.deps]));
+    const seen = new Map<string, number>();
+    const visit = (n: string, trail: string[]): void => {
+      if (seen.get(n) === 2) return;
+      if (seen.get(n) === 1) throw new Error(`Phụ thuộc vòng: ${[...trail, n].join(' → ')}`);
+      seen.set(n, 1);
+      for (const d of depMap.get(n) ?? []) visit(d, [...trail, n]);
+      seen.set(n, 2);
+    };
+    for (const n of depMap.keys()) visit(n, []);
+    for (const id of removed) changes.push(`bỏ ${id}`);
+    for (const { s, e, deps } of next) {
+      if (e?.assignee !== undefined && e.assignee !== s.assignee) {
+        changes.push(`${s.id}: ${registry.agents.get(s.assignee)?.name ?? s.assignee} → ${registry.agents.get(e.assignee)?.name ?? e.assignee}`);
+        s.assignee = String(e.assignee);
+      }
+      if (deps.join(',') !== s.dependsOn.join(',')) {
+        changes.push(`${s.id}: phụ thuộc ${deps.length ? deps.join(', ') : '(không)'}`);
+        s.dependsOn = deps;
+      }
+      if (e?.title !== undefined && e.title.trim() && e.title.trim() !== s.title) {
+        s.title = redact(e.title.trim().slice(0, 200), { secrets: true, pii: false });
+        changes.push(`${s.id}: đổi tiêu đề`);
+      }
+      if (e?.description !== undefined && e.description.trim() !== s.description) {
+        s.description = redact(e.description.trim().slice(0, 4000), { secrets: true, pii: false });
+        changes.push(`${s.id}: sửa mô tả`);
+      }
+    }
+    run.subtasks = next.map((x) => x.s);
+    const note = redact((o.note ?? '').trim().slice(0, 4000), { secrets: true, pii: false });
+    if (changes.length) {
+      run.planReview.edits = (run.planReview.edits ?? 0) + changes.length;
+      this.writePlanFile(t, run);
+      const e = this.estimatePlan(t, run, project);
+      run.estimate = { tokens: e, budget: Math.max(0, t.options.budgetTokens - totalTokens(t.usage)), at: nowIso(), basis: this.estimateBasis(run, t) };
+      this.message(t, run.department, 'director', 'decision', `📝 Giám đốc sửa kế hoạch: ${changes.join('; ')}\n${P.planText(run.subtasks)}`);
+      logs.write({ level: 'info', kind: 'plan.edited', msg: `${t.id}: giám đốc sửa kế hoạch (${changes.length} thay đổi)`, taskId: t.id, department: run.department, data: { changes: changes.length, removed: [...removed] } });
+    }
+    if (!o.approve) {
+      this.save(t, true);
+      return t;
+    }
+    if (note) this.addNote(id, note);
+    run.planReview.approvedAt = nowIso();
+    run.planReview.by = 'director';
+    this.message(t, run.department, 'director', 'decision', `✅ Giám đốc duyệt kế hoạch (${run.subtasks.length} hạng mục) — vào thực thi.`);
+    logs.write({ level: 'info', kind: 'plan.approved', msg: `${t.id}: giám đốc duyệt kế hoạch ${run.department}`, taskId: t.id, department: run.department, data: { subtasks: run.subtasks.length, noteChars: note.length } });
+    this.save(t, true);
+    return this.resume(id, {});
+  }
+
+  /** Repo của dự án (nơi chạy git cho diff/đẩy nhánh) — undefined khi nhiệm vụ không làm trên repo. */
+  repoDir(task: Task): string | undefined {
+    const p = task.projectId ? this.d.store.project(task.projectId) : undefined;
+    if (!p?.workspace) return undefined;
+    return path.isAbsolute(p.workspace) ? p.workspace : path.join(this.d.config.root, p.workspace);
+  }
+
+  /** Trạng thái "sẵn sàng gộp" của nhiệm vụ (fetch = hỏi remote: nhánh xuất phát mới nhất, nhánh đã đẩy chưa). */
+  shipStatus(id: string, o: { fetch?: boolean } = {}): ShipStatus {
+    const t = this.d.store.get(id);
+    if (!t) throw new ShipError(404, 'Không có nhiệm vụ');
+    const repo = this.repoDir(t);
+    if (!repo || !t.branch) throw new ShipError(404, 'Nhiệm vụ không làm trên nhánh git riêng');
+    return shipStatus(t, repo, this.d.store.project(t.projectId!)?.baseRef, o);
+  }
+
+  /** Giám đốc bấm đẩy nhánh / đẩy vào nhánh xuất phát (fast-forward). Ghi log + tin nhắn hội thoại; không --force. */
+  ship(id: string, action: 'push' | 'ff', o: { override?: boolean } = {}): { task: Task; status: ShipStatus } {
+    const { store, logs } = this.d;
+    const t = store.get(id);
+    if (!t) throw new ShipError(404, 'Không có nhiệm vụ');
+    if (t.status === 'running' || t.status === 'queued') throw new ShipError(409, 'Nhiệm vụ đang chạy — chờ xong rồi đẩy');
+    const repo = this.repoDir(t);
+    if (!repo || !t.branch) throw new ShipError(404, 'Nhiệm vụ không làm trên nhánh git riêng');
+    const baseRef = store.project(t.projectId!)?.baseRef;
+    try {
+      const r = shipPush(t, repo, baseRef, action, o);
+      t.shipped = [...(t.shipped ?? []), { at: nowIso(), action, ref: r.ref, head: r.head }].slice(-20);
+      const what = action === 'ff' ? `đẩy ${r.st.ahead} commit vào \`${r.st.remote}/${r.ref}\` (fast-forward)` : `đẩy nhánh \`${r.ref}\` lên \`${r.st.remote}\``;
+      this.message(t, 'office', 'director', 'decision', `🚀 Giám đốc ${what} — commit \`${r.head.slice(0, 10)}\`${o.override ? ' (xác nhận vẫn đẩy dù còn cảnh báo)' : ''}.`);
+      logs.write({ level: 'info', kind: 'ship.push', msg: `${t.id}: ${what} @ ${r.head.slice(0, 10)}`, taskId: t.id, projectId: t.projectId, data: { action, ref: r.ref, head: r.head, remote: r.st.remote, override: !!o.override, warnings: r.st.warnings } });
+      this.save(t, true);
+      return { task: t, status: shipStatus(t, repo, baseRef) };
+    } catch (e) {
+      logs.write({ level: 'warn', kind: 'ship.push', msg: `${t.id}: không đẩy được (${action}): ${(e as Error).message.slice(0, 300)}`, taskId: t.id, projectId: t.projectId });
+      throw e;
+    }
+  }
+
   /** Kế hoạch vừa chốt: ước lượng ≫ phần ngân sách còn lại → nhắn + cảnh báo; chế độ "pause" thì dừng chờ quyết định. */
-  private checkEstimate(task: Task, run: DeptRun, project?: ProjectDef): void {
+  private checkEstimate(task: Task, run: DeptRun, project?: ProjectDef, warn = true): void {
     const est = this.estimatePlan(task, run, project);
     const remaining = Math.max(0, task.options.budgetTokens - totalTokens(task.usage));
     const basis = this.estimateBasis(run, task);
     run.estimate = { tokens: est, budget: remaining, at: nowIso(), basis };
     this.save(task);
-    if (est <= remaining * (this.d.config.estimate.warnRatio || 1)) return;
+    if (!warn || est <= remaining * (this.d.config.estimate.warnRatio || 1)) return;
     const mode = task.options.budgetMode ?? this.d.config.defaults.budgetMode ?? 'complete';
     const msg = `Kế hoạch ${run.subtasks.length} hạng mục ước tính ~${fmtNum(est)} token (${basis}), ${remaining ? `gấp ${(est / remaining).toFixed(1).replace('.', ',')} lần phần ngân sách còn lại (${fmtNum(remaining)})` : 'trong khi ngân sách đã hết'}. Nên tách mỗi gói việc thành một nhiệm vụ riêng (nút "Tách thành nhiệm vụ") hoặc tăng ngân sách.`;
     this.d.logs.write({ level: 'warn', kind: 'budget.estimate', msg, taskId: task.id, department: run.department, data: { estimate: est, remaining } });
@@ -2038,14 +2227,26 @@ export class Orchestrator {
       if (project?.workspace && (project.isolation ?? 'worktree') === 'worktree' && isGitRepo(base)) {
         const wt = path.join(config.workspacesDir, safeName(project.id), `wt-${safeName(task.id)}`);
         const branch = `ccoding/${task.id.toLowerCase()}`;
-        const r = addWorktree(base, wt, branch, project.baseRef || 'HEAD');
+        // việc nối: tách từ nhánh của nhiệm vụ trước; nhánh đó đã bị xóa → quay về nhánh xuất phát của dự án
+        if (task.startFrom && !this.branchExists(project, task.startFrom)) {
+          this.message(task, 'office', 'system', 'system', `🌿 Nhánh \`${task.startFrom}\` của nhiệm vụ trước không còn — worktree tách từ nhánh xuất phát của dự án.`);
+          task.startFrom = undefined;
+        }
+        const from = task.startFrom || project.baseRef || 'HEAD';
+        const r = addWorktree(base, wt, branch, from);
         if (r.ok) {
           const copied = copyUntracked(base, wt, project.worktreeCopy ?? config.tools.worktreeCopy);
           task.workspace = wt;
           task.branch = branch;
           task.baseRef = headCommit(wt);
-          logs.write({ level: 'info', kind: 'workspace.worktree', msg: `Worktree ${wt} (nhánh ${branch} từ ${project.baseRef || 'HEAD'})${copied.length ? ` · chép ${copied.join(', ')}` : ''}`, taskId: task.id, projectId: project.id });
-          this.message(task, 'office', 'system', 'system', `🌿 Làm việc trên git worktree riêng \`${wt}\` (nhánh \`${branch}\`${project.baseRef ? ` tách từ \`${project.baseRef}\`` : ''}) — nhánh chính của repo không bị đụng tới.`);
+          logs.write({ level: 'info', kind: 'workspace.worktree', msg: `Worktree ${wt} (nhánh ${branch} từ ${from})${copied.length ? ` · chép ${copied.join(', ')}` : ''}`, taskId: task.id, projectId: project.id });
+          this.message(
+            task,
+            'office',
+            'system',
+            'system',
+            `🌿 Làm việc trên git worktree riêng \`${wt}\` (nhánh \`${branch}\`${task.startFrom ? ` tách từ nhánh của nhiệm vụ trước \`${task.startFrom}\`` : project.baseRef ? ` tách từ \`${project.baseRef}\`` : ''}) — nhánh chính của repo không bị đụng tới.`,
+          );
         } else {
           logs.write({ level: 'warn', kind: 'workspace.worktree', msg: `Không tạo được worktree: ${r.out.slice(0, 300)} — làm trực tiếp trong ${base}`, taskId: task.id, projectId: project.id });
           this.alert({ level: 'warn', kind: 'workspace', title: 'Không tạo được git worktree', msg: `${r.out.slice(0, 200)} — agent làm trực tiếp trong ${base} (không commit)`, taskId: task.id });
@@ -2664,6 +2865,13 @@ export class Orchestrator {
     this.d.store.addMessage(msg);
     this.d.bus.publish({ type: 'message', message: msg });
     this.d.logs.write({ level: 'info', kind: `msg.${kind}`, msg: `${from}: ${text.slice(0, 200)}`, taskId: task.id, agentId: from !== 'system' ? from : undefined, department });
+  }
+
+  /** Nhánh cục bộ tồn tại trong repo của dự án (nhánh của nhiệm vụ trước cho việc nối). */
+  private branchExists(project: ProjectDef, branch: string): boolean {
+    if (!project.workspace || (project.isolation ?? 'worktree') !== 'worktree' || !isSafeRef(branch)) return false;
+    const dir = path.isAbsolute(project.workspace) ? project.workspace : path.join(this.d.config.root, project.workspace);
+    return fs.existsSync(dir) && git(dir, ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`], 15_000).ok;
   }
 
   private workspaceFor(task: Task, project?: ProjectDef): string {
