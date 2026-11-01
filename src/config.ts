@@ -159,6 +159,11 @@ export interface Config {
     readsBeforeWrite?: number;
     /** Workspace là repo git: vai trò không có quyền chạy lệnh được `git_read` (log/show/diff/blame… chỉ đọc). Mặc định bật; false = tắt. */
     gitRead?: boolean;
+    /**
+     * Số vòng xung đột khi gộp worktree con được giải quyết trong worktree con MỚI (CCoding gộp sẵn nhánh cũ) — mặc định 2; vượt quá
+     * thì làm lại lần lượt trong worktree chính (giữ khóa worktree chính suốt lượt làm lại). 0 = luôn làm lại trong worktree chính.
+     */
+    resolveRounds?: number;
     /** Chạy lệnh chuẩn bị + kiểm tra baseline SONG SONG với pha lập kế hoạch/họp (mặc định bật; false = chạy khi bắt đầu thực thi). */
     earlyBaseline?: boolean;
     denyCommands: string[];

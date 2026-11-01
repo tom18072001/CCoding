@@ -82,7 +82,7 @@ async function gateway(plan: Plan, script: (who: string, user: string) => Call[]
   return { srv, stats, url: `http://127.0.0.1:${(srv.address() as AddressInfo).port}/v1` };
 }
 
-function app(url: string, dataDir: string, parallelWorktrees = true) {
+function app(url: string, dataDir: string, parallelWorktrees = true, resolveRounds?: number) {
   const base = loadConfig();
   return createApp({
     dataDir,
@@ -91,7 +91,7 @@ function app(url: string, dataDir: string, parallelWorktrees = true) {
     runtime: { ...base.runtime, default: 'auto', order: ['fake'] },
     runtimes: { fake: { type: 'openai-api', baseUrl: url, tags: 'none', local: false } },
     models: { fake: { opus: ['m-ok'], sonnet: ['m-ok'], haiku: ['m-ok'] } },
-    tools: { ...base.tools, serializeWriters: true, parallelWorktrees, repoMap: false },
+    tools: { ...base.tools, serializeWriters: true, parallelWorktrees, repoMap: false, ...(resolveRounds !== undefined ? { resolveRounds } : {}) },
     herdr: { ...base.herdr, notify: false, agentPanes: false },
   });
 }
@@ -152,7 +152,149 @@ test('repo git: hạng mục chạy lệnh chạy song song trong worktree con r
   }
 });
 
-test('gộp worktree con bị xung đột → hạng mục làm lại lần lượt trong worktree chính, agent tự merge nhánh cũ', async () => {
+test('gộp worktree con bị xung đột → giải quyết trong worktree con MỚI (CCoding gộp sẵn nhánh cũ), agent chỉ sửa dấu xung đột', async () => {
+  const plan: Plan = [
+    { id: 'S1', title: 'Sửa phần A', assignee: 'backend-dev', dependsOn: [] },
+    { id: 'S2', title: 'Sửa phần B', assignee: 'devops', dependsOn: [] },
+  ];
+  const gw = await gateway(plan, (who, user) =>
+    user.includes('GỘP DỞ')
+      ? [
+          { name: 'read_file', args: { path: 'shared.txt' } },
+          { name: 'write_file', args: { path: 'shared.txt', content: 'tu backend-dev\ntu devops\n' } },
+        ]
+      : [{ name: 'write_file', args: { path: 'shared.txt', content: `tu ${who}\n` } }],
+  );
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-par-'));
+  const repo = initRepo();
+  const a = app(gw.url, dataDir);
+  try {
+    project(a, repo);
+    const t = a.orchestrator.submit({ brief: 'Sửa tệp chung', projectId: 'repo', options: { discussionRounds: 0, maxParallel: 3, maxRevisions: 0 } });
+    const done = await a.orchestrator.waitFor(t.id);
+    assert.equal(done.status, 'done', done.error);
+    const run = done.runs[0];
+    assert.ok(run.subtasks.every((s) => s.status === 'done'), JSON.stringify(run.subtasks.map((s) => [s.id, s.status, s.error])));
+    const msgs = a.store.transcript(t.id).map((m) => m.text).join('\n');
+    assert.match(msgs, /xung đột khi gộp/);
+    assert.match(msgs, /giải quyết trong worktree con MỚI/);
+    assert.doesNotMatch(msgs, /LẦN LƯỢT trong worktree chính/);
+    assert.equal(msgs.match(/đã gộp xong nhánh/g)?.length, 1, 'đúng một hạng mục phải làm lại và đã gộp');
+    assert.equal(gw.stats.subPrompts, 3, 'lượt giải quyết xung đột cũng chạy trong worktree con');
+    assert.ok(run.subtasks.every((s) => !s.mainOnly && !s.conflict && !s.handover && !s.worktree), 'trạng thái làm lại đã dọn');
+    // agent thấy tệp đang gộp dở (có dấu xung đột) — không phải tự chạy git merge
+    assert.ok(gw.stats.toolResults.some((r) => /<<<<<<</.test(r.text)), 'agent đọc thấy dấu xung đột');
+    assert.equal(gitc(repo, 'show', `${done.branch}:shared.txt`), 'tu backend-dev\ntu devops');
+    // báo cáo bàn giao gốc của hạng mục làm lại được giữ, phần gộp lại nối vào sau
+    const redo = run.subtasks.find((s) => s.attempts > 1)!;
+    assert.match(a.store.readRunFile(t.id, redo.output!) ?? '', /## Gộp lại sau xung đột/);
+    assert.doesNotMatch(gitc(repo, 'branch', '--list'), /--s\d/i);
+    assert.doesNotMatch(gitc(repo, 'worktree', 'list'), /--s\d/i);
+  } finally {
+    gw.srv.close();
+    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test('trong lúc một hạng mục giải quyết xung đột, hạng mục khác vẫn gộp được (không chờ khóa worktree chính)', async () => {
+  const plan: Plan = [
+    { id: 'S1', title: 'Sửa phần A', assignee: 'backend-dev', dependsOn: [] },
+    { id: 'S2', title: 'Sửa phần B', assignee: 'devops', dependsOn: [] },
+    { id: 'S3', title: 'Giao diện', assignee: 'frontend-dev', dependsOn: [] },
+  ];
+  const look = (n: number) => Array.from({ length: n }, () => ({ name: 'list_files', args: { path: '.' } }));
+  const gw = await gateway(plan, (who, user) =>
+    user.includes('GỘP DỞ')
+      ? [...look(8), { name: 'write_file', args: { path: 'shared.txt', content: 'tu backend-dev\ntu devops\n' } }]
+      : who === 'frontend-dev'
+        ? [{ name: 'write_file', args: { path: 'c.txt', content: 'tu frontend\n' } }, ...look(3)]
+        : [{ name: 'write_file', args: { path: 'shared.txt', content: `tu ${who}\n` } }],
+  );
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-par-'));
+  const repo = initRepo();
+  const a = app(gw.url, dataDir);
+  try {
+    project(a, repo);
+    const t = a.orchestrator.submit({ brief: 'Sửa tệp chung', projectId: 'repo', options: { discussionRounds: 0, maxParallel: 3, maxRevisions: 0 } });
+    const done = await a.orchestrator.waitFor(t.id);
+    assert.equal(done.status, 'done', done.error);
+    const msgs = a.store.transcript(t.id).map((m) => m.text);
+    const resolveStart = msgs.findIndex((m) => /giải quyết xung đột trong worktree con mới/.test(m));
+    const s3Merged = msgs.findIndex((m) => /Đã gộp S3/.test(m));
+    const resolved = msgs.findIndex((m) => /đã gộp xong nhánh/.test(m));
+    assert.ok(resolveStart >= 0 && s3Merged > resolveStart && s3Merged < resolved, `S3 gộp trong lúc giải quyết xung đột (${resolveStart} < ${s3Merged} < ${resolved})`);
+    assert.equal(gitc(repo, 'show', `${done.branch}:c.txt`), 'tu frontend');
+    assert.equal(gitc(repo, 'show', `${done.branch}:shared.txt`), 'tu backend-dev\ntu devops');
+  } finally {
+    gw.srv.close();
+    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test('vai trò không có quyền chạy lệnh (Kiến trúc sư) vẫn giải quyết được xung đột — CCoding gộp sẵn và tự hoàn tất merge', async () => {
+  const plan: Plan = [
+    { id: 'S1', title: 'Sửa phần A', assignee: 'backend-dev', dependsOn: [] },
+    { id: 'S2', title: 'Ghi tài liệu', assignee: 'solution-architect', dependsOn: [] },
+  ];
+  const gw = await gateway(plan, (who, user) =>
+    user.includes('GỘP DỞ')
+      ? [{ name: 'write_file', args: { path: 'shared.txt', content: 'tu backend-dev\ntu solution-architect\n' } }]
+      : who === 'solution-architect'
+        ? [{ name: 'list_files', args: { path: '.' } }, { name: 'list_files', args: { path: '.' } }, { name: 'write_file', args: { path: 'shared.txt', content: 'tu solution-architect\n' } }]
+        : [{ name: 'write_file', args: { path: 'shared.txt', content: `tu ${who}\n` } }],
+  );
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-par-'));
+  const repo = initRepo();
+  const a = app(gw.url, dataDir);
+  try {
+    project(a, repo);
+    const t = a.orchestrator.submit({ brief: 'Code + tài liệu', projectId: 'repo', options: { discussionRounds: 0, maxParallel: 3, maxRevisions: 0 } });
+    const done = await a.orchestrator.waitFor(t.id);
+    assert.equal(done.status, 'done', done.error);
+    assert.equal(done.runs[0].subtasks.find((s) => s.id === 'S2')?.attempts, 2, 'Kiến trúc sư gộp sau nên là người giải quyết xung đột');
+    assert.equal(gitc(repo, 'show', `${done.branch}:shared.txt`), 'tu backend-dev\ntu solution-architect');
+    assert.match(gitc(repo, 'log', '--format=%s', done.branch), /gộp lại ccoding\/[^ ]+-xd1 \(S2\)/, 'CCoding tự hoàn tất merge');
+  } finally {
+    gw.srv.close();
+    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test('lượt giải quyết xung đột để lại dấu xung đột → KHÔNG commit dấu, hạng mục KHÔNG coi là xong, nhánh phần việc gốc giữ lại', async () => {
+  const plan: Plan = [
+    { id: 'S1', title: 'Sửa phần A', assignee: 'backend-dev', dependsOn: [] },
+    { id: 'S2', title: 'Sửa phần B', assignee: 'devops', dependsOn: [] },
+  ];
+  // lần làm lại không sửa gì (bỏ qua hướng dẫn giải quyết xung đột)
+  const gw = await gateway(plan, (who, user) => (user.includes('GỘP DỞ') ? [] : [{ name: 'write_file', args: { path: 'shared.txt', content: `tu ${who}\n` } }]));
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-par-'));
+  const repo = initRepo();
+  const a = app(gw.url, dataDir);
+  try {
+    project(a, repo);
+    const t = a.orchestrator.submit({ brief: 'Sửa tệp chung', projectId: 'repo', options: { discussionRounds: 0, maxParallel: 3, maxRevisions: 0 } });
+    const done = await a.orchestrator.waitFor(t.id);
+    const run = done.runs[0];
+    const redo = run.subtasks.find((s) => s.conflict);
+    assert.ok(redo, 'có hạng mục xung đột');
+    assert.equal(redo.status, 'failed');
+    assert.match(redo.error ?? '', /còn dấu xung đột/);
+    assert.match(redo.conflict.branch, /-xd1$/);
+    assert.match(gitc(repo, 'branch', '--list'), new RegExp(redo.conflict.branch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), 'nhánh phần việc gốc còn để giải quyết lại');
+    assert.doesNotMatch(gitc(repo, 'show', `${done.branch}:shared.txt`), /<<<<<<<|>>>>>>>/, 'không commit dấu xung đột vào nhánh nhiệm vụ');
+    assert.doesNotMatch(gitc(repo, 'worktree', 'list'), /--s\d/i, 'worktree của lượt giải quyết đã gỡ');
+    assert.notEqual(done.status, 'done');
+  } finally {
+    gw.srv.close();
+    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test('đường dự phòng (resolveRounds: 0): làm lại lần lượt trong worktree chính, agent tự merge nhánh cũ', async () => {
   const plan: Plan = [
     { id: 'S1', title: 'Sửa phần A', assignee: 'backend-dev', dependsOn: [] },
     { id: 'S2', title: 'Sửa phần B', assignee: 'devops', dependsOn: [] },
@@ -170,7 +312,7 @@ test('gộp worktree con bị xung đột → hạng mục làm lại lần lư�
   });
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-par-'));
   const repo = initRepo();
-  const a = app(gw.url, dataDir);
+  const a = app(gw.url, dataDir, true, 0);
   try {
     project(a, repo);
     const t = a.orchestrator.submit({ brief: 'Sửa tệp chung', projectId: 'repo', options: { discussionRounds: 0, maxParallel: 3, maxRevisions: 0 } });
@@ -179,43 +321,12 @@ test('gộp worktree con bị xung đột → hạng mục làm lại lần lư�
     const run = done.runs[0];
     assert.ok(run.subtasks.every((s) => s.status === 'done'), JSON.stringify(run.subtasks.map((s) => [s.id, s.status, s.error])));
     const msgs = a.store.transcript(t.id).map((m) => m.text).join('\n');
-    assert.match(msgs, /xung đột khi gộp/);
-    assert.equal(msgs.match(/đã gộp xong nhánh/g)?.length, 1, 'đúng một hạng mục phải làm lại và đã tự gộp');
+    assert.match(msgs, /LẦN LƯỢT trong worktree chính/);
+    assert.equal(msgs.match(/đã gộp xong nhánh/g)?.length, 1);
     assert.ok(run.subtasks.every((s) => !s.mainOnly && !s.conflict && !s.handover && !s.worktree), 'trạng thái làm lại đã dọn');
-    // agent nhận kết quả merge có xung đột rồi tự giải quyết
     assert.ok(gw.stats.toolResults.some((r) => /CONFLICT/.test(r.text)));
     assert.equal(gitc(repo, 'show', `${done.branch}:shared.txt`), 'tu backend-dev\ntu devops');
     assert.doesNotMatch(gitc(repo, 'branch', '--list'), /--s\d/i);
-    assert.doesNotMatch(gitc(repo, 'worktree', 'list'), /--s\d/i);
-  } finally {
-    gw.srv.close();
-    fs.rmSync(dataDir, { recursive: true, force: true });
-    fs.rmSync(repo, { recursive: true, force: true });
-  }
-});
-
-test('làm lại sau xung đột mà agent không gộp nhánh cũ → hạng mục KHÔNG coi là xong, nhánh cũ giữ lại', async () => {
-  const plan: Plan = [
-    { id: 'S1', title: 'Sửa phần A', assignee: 'backend-dev', dependsOn: [] },
-    { id: 'S2', title: 'Sửa phần B', assignee: 'devops', dependsOn: [] },
-  ];
-  // lần làm lại chỉ ghi đè tệp, bỏ qua bước git merge trong hướng dẫn
-  const gw = await gateway(plan, (who) => [{ name: 'write_file', args: { path: 'shared.txt', content: `tu ${who}\n` } }]);
-  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-par-'));
-  const repo = initRepo();
-  const a = app(gw.url, dataDir);
-  try {
-    project(a, repo);
-    const t = a.orchestrator.submit({ brief: 'Sửa tệp chung', projectId: 'repo', options: { discussionRounds: 0, maxParallel: 3, maxRevisions: 0 } });
-    const done = await a.orchestrator.waitFor(t.id);
-    const run = done.runs[0];
-    const redo = run.subtasks.find((s) => s.conflict);
-    assert.ok(redo, 'có hạng mục xung đột');
-    assert.equal(redo.status, 'failed');
-    assert.match(redo.error ?? '', /chưa được gộp/);
-    assert.match(redo.handover ?? '', /git merge --no-ff --no-edit/, 'tiếp tục thì vẫn nhận hướng dẫn gộp');
-    assert.match(gitc(repo, 'branch', '--list'), new RegExp(redo.conflict.branch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), 'nhánh cũ còn để gộp');
-    assert.notEqual(done.status, 'done');
   } finally {
     gw.srv.close();
     fs.rmSync(dataDir, { recursive: true, force: true });

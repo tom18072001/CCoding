@@ -234,11 +234,18 @@ export interface Subtask {
   /** Ghi chú bàn giao khi lượt gọi bị ngắt giữa vòng công cụ rồi nhiệm vụ tạm dừng (vd. chờ model nhanh) — lần chạy sau làm tiếp, không làm lại. */
   handover?: string;
   /** Chạy song song: worktree con riêng của hạng mục (tách từ nhánh nhiệm vụ) — CCoding commit rồi gộp vào nhánh nhiệm vụ khi xong. */
-  worktree?: { path: string; branch: string; base?: string; setup?: boolean };
-  /** Gộp worktree con bị xung đột → làm lại trong worktree CHÍNH của nhiệm vụ, lần lượt (nhánh cũ giữ lại để agent tự merge). */
+  /** `resolve`: worktree con này để GIẢI QUYẾT xung đột — CCoding đã `git merge <resolve>` (nhánh của lần làm trước) vào đây khi tách. */
+  worktree?: { path: string; branch: string; base?: string; setup?: boolean; resolve?: string };
+  /**
+   * Làm lại trong worktree CHÍNH của nhiệm vụ, lần lượt (nhánh cũ giữ lại để agent tự merge) — chỉ còn là đường dự phòng: xung đột lặp
+   * quá `tools.resolveRounds` lần, hoặc không tách/gộp được worktree con để giải quyết.
+   */
   mainOnly?: boolean;
-  /** Lần gộp bị xung đột: nhánh của lần làm trước + tệp xung đột. */
-  conflict?: { branch: string; files: string[] };
+  /**
+   * Lần gộp bị xung đột: nhánh của lần làm trước + tệp xung đột. `rounds`: số lần xung đột; `done`: lần trước đã làm xong (chỉ còn gộp);
+   * `handover`: bàn giao dở dang của lần trước (nếu chưa xong) — ghép vào hướng dẫn giải quyết xung đột.
+   */
+  conflict?: { branch: string; files: string[]; rounds?: number; done?: boolean; handover?: string };
   /** Đã làm xong nhưng CCoding chưa commit/gộp được worktree con (hook, khóa index…) — gộp được ở lần sau thì coi là xong, không làm lại. */
   mergePending?: boolean;
 }

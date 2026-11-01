@@ -148,6 +148,29 @@ export function mergeBranch(wt: string, branch: string, message: string): GitRes
   return { ...r, conflicts };
 }
 
+/**
+ * Gộp `branch` vào HEAD của `wt` nhưng KHÔNG hủy khi xung đột: worktree ở trạng thái gộp dở (MERGE_HEAD + dấu xung đột) để agent
+ * giải quyết. Lỗi không do xung đột (ref sai, khóa index…) thì hủy merge dở và trả `ok: false`, `conflicts: []`.
+ */
+export function mergeStart(wt: string, branch: string, message: string): GitResult & { conflicts: string[] } {
+  const r = git(wt, [...identity(wt), 'merge', '--no-ff', '--no-edit', '--no-verify', '-m', message, branch], 300_000);
+  if (r.ok) return { ...r, conflicts: [] };
+  const conflicts = unmergedFiles(wt);
+  if (!conflicts.length && mergeInProgress(wt)) git(wt, ['merge', '--abort'], 60_000);
+  return { ...r, conflicts };
+}
+
+/** Hoàn tất một lần gộp dở (đã hết xung đột): stage mọi thay đổi rồi tạo merge commit (kể cả khi cây trùng HEAD). */
+export function completeMerge(wt: string, message: string): GitResult {
+  git(wt, ['add', '-A'], 60_000);
+  return git(wt, [...identity(wt), 'commit', '--no-verify', '--no-edit', '-m', message], 300_000);
+}
+
+/** `ancestor` đã nằm trong lịch sử của `ref` (cùng repo). */
+export function isAncestor(wt: string, ancestor: string, ref: string): boolean {
+  return git(wt, ['merge-base', '--is-ancestor', ancestor, ref], 30_000).ok;
+}
+
 /** Gỡ worktree (kể cả tệp chưa track như node_modules) rồi dọn sổ worktree của repo; nhánh giữ nguyên. */
 export function removeWorktree(repo: string, wtPath: string): boolean {
   const r = git(repo, ['worktree', 'remove', '--force', wtPath], 300_000);

@@ -18,6 +18,9 @@ import {
   mergeInProgress,
   manifestDiff,
   manifestFingerprint,
+  completeMerge,
+  isAncestor,
+  mergeStart,
   removeWorktree,
   unmergedFiles,
 } from './git.js';
@@ -1690,10 +1693,21 @@ export class Orchestrator {
       }
       try {
         this.checkStop(task);
+        // lượt giải quyết xung đột mà gộp lại đã sạch (nhánh nhiệm vụ đổi từ lần trước) và lần trước đã xong → không cần gọi agent
+        if (wt.resolve && st.conflict?.done && !mergeInProgress(wt.path)) {
+          st.status = 'done';
+          st.error = undefined;
+          st.finishedAt = nowIso();
+          this.message(task, run.department, 'system', 'system', `🔀 ${st.id}: gộp lại nhánh \`${wt.resolve}\` vào nhánh nhiệm vụ mới nhất không còn xung đột — không cần làm lại.`, { subtaskId: st.id });
+          return;
+        }
         // lệnh chuẩn bị (cài dependency) chỉ cần cho người chạy được lệnh — hạng mục chỉ ghi tài liệu tách worktree ngay
         if (this.isWriter(this.d.registry.agent(st.assignee), task, project)) await this.runSubSetup(task, run, st, project, wt);
         const spctx: P.Ctx = { ...pctx, cwd: wt.path, branch: wt.branch, subWorktree: { taskBranch: task.branch } };
+        // giải quyết xung đột cho hạng mục đã xong: giữ báo cáo bàn giao gốc, nối phần "gộp lại" vào sau (review vẫn thấy việc chính)
+        const original = wt.resolve && st.conflict?.done && st.output ? this.readOutput(task, st) : '';
         await this.runSubtask(task, run, st, spctx, { ...base, cwd: wt.path }, prior, wt);
+        if (original && st.status === 'done') this.appendOutput(task, st, original, 'Gộp lại sau xung đột');
       } finally {
         await this.withWtLock(task.id, () => this.closeSubWorktree(task, run, st));
       }
@@ -1804,6 +1818,30 @@ export class Orchestrator {
     const cc = path.join(main, '.ccoding');
     if (fs.existsSync(cc)) fs.cpSync(cc, path.join(wtPath, '.ccoding'), { recursive: true, preserveTimestamps: true });
     st.worktree = { path: wtPath, branch, base: headCommit(wtPath) };
+    // làm lại sau xung đột: CCoding gộp sẵn nhánh của lần trước vào worktree con mới (tách từ nhánh nhiệm vụ mới nhất) — agent chỉ sửa
+    // dấu xung đột (kể cả vai trò không có quyền chạy lệnh), không giữ khóa worktree chính suốt lượt làm lại như trước
+    const c = st.conflict;
+    if (c && !st.mainOnly) {
+      const m = mergeStart(wtPath, c.branch, `CCoding ${task.id}: gộp lại ${c.branch} (${st.id})`.slice(0, 200));
+      if (!m.ok && !m.conflicts.length) {
+        logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: không gộp sẵn được ${c.branch} vào worktree con (${m.out.slice(0, 200)}) — làm lại trong worktree chính`, taskId: task.id, projectId: project.id, subtaskId: st.id });
+        removeWorktree(main, wtPath);
+        if (git(main, ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`], 15_000).ok) git(main, ['branch', '-D', branch], 30_000);
+        st.worktree = undefined;
+        st.mainOnly = true;
+        st.handover = `${P.mergeConflictNote(c.branch, c.files, !!c.done, st.output ? `.ccoding/${safeName(task.id)}/${st.output}` : undefined)}${c.handover ? `\n\n${c.handover}` : ''}`.slice(0, 12_000);
+        this.save(task);
+        return undefined;
+      }
+      st.worktree.resolve = c.branch;
+      c.files = m.conflicts.length ? m.conflicts.slice(0, 30) : c.files;
+      st.handover = m.conflicts.length
+        ? `${P.mergeResolveNote(c.branch, m.conflicts, !!c.done, st.output ? `.ccoding/${safeName(task.id)}/${st.output}` : undefined)}${c.handover ? `\n\n${c.handover}` : ''}`.slice(0, 12_000)
+        : c.handover;
+      logs.write({ level: 'info', kind: 'workspace.merge', msg: `${st.id}: gộp sẵn ${c.branch} vào worktree con mới — ${m.conflicts.length ? `xung đột ở ${m.conflicts.join(', ')}` : 'không còn xung đột'}`, taskId: task.id, projectId: project.id, subtaskId: st.id });
+      if (m.conflicts.length)
+        this.message(task, run.department, 'system', 'system', `🧩 ${st.id} (@${st.assignee}) giải quyết xung đột trong worktree con mới \`${wtPath}\`: CCoding đã gộp sẵn nhánh \`${c.branch}\`, xung đột ở ${m.conflicts.slice(0, 8).map((f) => `\`${f}\``).join(', ')} — các hạng mục khác vẫn tách/gộp bình thường.`, { subtaskId: st.id });
+    }
     this.save(task);
     logs.write({ level: 'info', kind: 'workspace.subworktree', msg: `${st.id}: worktree con ${wtPath} (nhánh ${branch} từ ${task.branch})`, taskId: task.id, projectId: project.id, subtaskId: st.id });
     this.message(task, run.department, 'system', 'system', `🌿 ${st.id} (@${st.assignee}) làm song song trong worktree con \`${wtPath}\` (nhánh \`${branch}\` tách từ \`${task.branch}\`) — xong thì CCoding gộp vào nhánh nhiệm vụ.`, { subtaskId: st.id });
@@ -1829,13 +1867,16 @@ export class Orchestrator {
 
   /**
    * Kết thúc worktree con: chép sản phẩm trung gian về, commit, gộp `--no-ff` vào nhánh nhiệm vụ rồi gỡ worktree + nhánh tạm.
-   * Xung đột → hủy gộp, giữ nhánh; hạng mục đã xong thì chạy lại LẦN LƯỢT trong worktree chính với hướng dẫn tự `git merge`.
+   * Xung đột → hủy gộp, giữ phần đã làm ở nhánh `…--<s>-xd<n>`; hạng mục làm lại trong worktree con MỚI tách từ nhánh nhiệm vụ mới nhất,
+   * CCoding gộp sẵn nhánh đó vào để agent chỉ giải quyết xung đột (không giữ khóa worktree chính). Xung đột lặp quá `tools.resolveRounds`
+   * (mặc định 2) lần → làm lại LẦN LƯỢT trong worktree chính (đường dự phòng cũ, agent tự `git merge`).
    */
   private closeSubWorktree(task: Task, run: DeptRun, st: Subtask): void {
     const wt = st.worktree;
     const main = task.workspace;
     if (!wt || !main) return;
     const { logs } = this.d;
+    const exists = (b: string) => git(main, ['rev-parse', '--verify', '--quiet', `refs/heads/${b}`], 15_000).ok;
     /** Không gộp được (không phải do xung đột): giữ worktree con + nhánh, hạng mục KHÔNG coi là xong; lần chạy sau CCoding gộp lại. */
     const hold = (why: string) => {
       if (st.status === 'done') {
@@ -1848,11 +1889,58 @@ export class Orchestrator {
       this.message(task, run.department, 'system', 'system', `⚠️ ${st.id}: ${st.error}.`, { subtaskId: st.id });
       this.save(task);
     };
+    /**
+     * Lượt giải quyết xung đột chưa đạt (còn dấu xung đột, agent hủy merge…): bỏ worktree con của lượt này — phần việc gốc vẫn ở nhánh
+     * xung đột; commit agent thêm ngoài phần đó (nếu có) giữ ở nhánh riêng để đối chiếu. Hạng mục KHÔNG coi là xong.
+     */
+    const unresolved = (why: string) => {
+      if (mergeInProgress(wt.path)) git(wt.path, ['merge', '--abort'], 60_000);
+      removeWorktree(main, wt.path);
+      if (exists(wt.branch)) {
+        const extra = git(main, ['rev-list', '--count', wt.branch, `^${wt.resolve}`, ...(wt.base ? [`^${wt.base}`] : [])], 30_000);
+        if (extra.ok && Number(extra.out.trim()) > 0) {
+          const keep = `${wt.branch}-lam-lai-${Date.now()}`;
+          git(main, ['branch', '-m', wt.branch, keep], 30_000);
+          logs.write({ level: 'warn', kind: 'workspace.worktree', msg: `${st.id}: lượt giải quyết xung đột có commit riêng — giữ ở nhánh ${keep}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+        } else git(main, ['branch', '-D', wt.branch], 30_000);
+      }
+      st.worktree = undefined;
+      if (st.status === 'done') {
+        st.status = 'failed';
+        st.finishedAt = nowIso();
+      }
+      st.error = `${why} — giữ nhánh \`${wt.resolve}\`; bấm Tiếp tục để giải quyết lại trong worktree con mới`;
+      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: ${why}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+      this.message(task, run.department, 'system', 'system', `⚠️ ${st.id}: ${st.error}.`, { subtaskId: st.id });
+      this.save(task);
+    };
     try {
       // chỉ commit khi đúng là worktree con của repo này — worktree gỡ dở (mất .git) sẽ khiến git rơi về repo cha chứa workspaces/
       const valid = fs.existsSync(wt.path) && isWorktreeOf(wt.path, main);
       let head: string | undefined;
       if (valid) {
+        // gộp còn dở (lượt giải quyết xung đột, hoặc agent tự merge): hết dấu xung đột → CCoding hoàn tất; còn dấu → hủy, KHÔNG commit dấu
+        if (mergeInProgress(wt.path)) {
+          const suspects = [...new Set([...unmergedFiles(wt.path), ...(wt.resolve ? (st.conflict?.files ?? []) : [])])];
+          const marked = suspects.filter((f) => hasConflictMarkers(path.join(wt.path, f)));
+          if (marked.length) {
+            if (wt.resolve) return unresolved(`còn dấu xung đột chưa giải quyết ở ${marked.slice(0, 8).join(', ')}`);
+            git(wt.path, ['merge', '--abort'], 60_000);
+            logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: merge dở còn dấu xung đột trong worktree con — đã hủy merge`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+          } else {
+            const r = completeMerge(wt.path, `CCoding ${task.id}: ${wt.resolve ? `gộp lại ${wt.resolve}` : 'hoàn tất merge'} (${st.id})`.slice(0, 200));
+            if (!r.ok) {
+              if (wt.resolve) return unresolved(`không hoàn tất được merge (${r.out.slice(0, 160)})`);
+              git(wt.path, ['merge', '--abort'], 60_000);
+            }
+          }
+        }
+        if (wt.resolve) {
+          // agent có thể đã tự commit kèm dấu xung đột, hoặc hủy merge rồi làm lại khác — phải còn đúng phần việc gốc và không còn dấu
+          const marked = (st.conflict?.files ?? []).filter((f) => hasConflictMarkers(path.join(wt.path, f)));
+          if (marked.length) return unresolved(`còn dấu xung đột ở ${marked.slice(0, 8).join(', ')}`);
+          if (!isAncestor(wt.path, wt.resolve, 'HEAD')) return unresolved(`nhánh \`${wt.resolve}\` chưa được gộp (merge đã bị hủy?)`);
+        }
         syncCcoding(wt.path, main, path.join('.ccoding', safeName(task.id)));
         const c = commitAll(wt.path, `CCoding ${task.id} ${st.id}: ${st.title}`.slice(0, 200));
         if (!c.ok) return hold(`không commit được worktree con (${c.out.slice(0, 160)})`);
@@ -1873,23 +1961,36 @@ export class Orchestrator {
         if (!m.ok && !m.conflicts.length) return hold(`không gộp được vào nhánh nhiệm vụ (${m.out.slice(0, 160)})`);
         if (!m.ok) {
           if (valid) removeWorktree(main, wt.path);
-          // nhánh giữ lại cho agent tự merge phải trỏ đúng commit đã làm
-          if (head) git(main, ['branch', '-f', wt.branch, head], 30_000);
+          // phần đã làm giữ ở nhánh riêng theo vòng xung đột (tên nhánh tạm `…--<s>` dùng lại cho worktree con giải quyết xung đột)
+          const prev = st.conflict;
+          const round = (prev?.rounds ?? 0) + 1;
+          const keep = `${this.subBranch(task, st)}-xd${round}`;
+          git(main, ['branch', '-f', keep, head ?? wt.branch], 30_000);
+          if (wt.branch !== keep && exists(wt.branch)) git(main, ['branch', '-D', wt.branch], 30_000);
+          // nhánh xung đột của vòng trước đã nằm trong nhánh vừa giữ → xóa
+          if (prev?.branch && prev.branch !== keep && exists(prev.branch) && isAncestor(main, prev.branch, keep)) git(main, ['branch', '-D', prev.branch], 30_000);
           st.worktree = undefined;
-          st.conflict = { branch: wt.branch, files: m.conflicts.slice(0, 30) };
-          st.mainOnly = true;
-          const files = m.conflicts.length ? m.conflicts.slice(0, 8).map((f) => `\`${f}\``).join(', ') : m.out.slice(0, 200);
-          logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: gộp ${wt.branch} vào ${task.branch} bị xung đột: ${m.conflicts.join(', ') || m.out.slice(0, 300)}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
           const done = st.status === 'done' || !!st.mergePending;
           st.mergePending = undefined;
-          const note = P.mergeConflictNote(wt.branch, m.conflicts, done, st.output ? `.ccoding/${safeName(task.id)}/${st.output}` : undefined);
-          // lần chạy sau (làm lại / tiếp tục) nhận hướng dẫn gộp kèm bàn giao dở dang nếu có
-          st.handover = `${note}${st.handover ? `\n\n${st.handover}` : ''}`.slice(0, 12_000);
+          const fallback = round > Math.max(0, this.d.config.tools.resolveRounds ?? MAX_RESOLVE_ROUNDS);
+          // bàn giao dở dang (hạng mục chưa xong) đi kèm hướng dẫn giải quyết xung đột ở lần chạy sau
+          // (vòng xung đột sau: lấy bàn giao dở dang đã cất ở vòng trước — st.handover lúc này là hướng dẫn gộp của vòng trước)
+          const partial = prev ? prev.handover : done || st.handover?.startsWith('## ⚠️ Gộp') ? undefined : st.handover;
+          st.conflict = { branch: keep, files: m.conflicts.slice(0, 30), rounds: round, done, handover: partial };
+          st.mainOnly = fallback || undefined;
+          st.handover = fallback
+            ? `${P.mergeConflictNote(keep, m.conflicts, done, st.output ? `.ccoding/${safeName(task.id)}/${st.output}` : undefined)}${partial ? `\n\n${partial}` : ''}`.slice(0, 12_000)
+            : undefined;
+          const files = m.conflicts.length ? m.conflicts.slice(0, 8).map((f) => `\`${f}\``).join(', ') : m.out.slice(0, 200);
+          logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: gộp ${wt.branch} vào ${task.branch} bị xung đột (lần ${round}): ${m.conflicts.join(', ') || m.out.slice(0, 300)}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+          const how = fallback
+            ? `làm lại LẦN LƯỢT trong worktree chính (xung đột lần ${round}): @${st.assignee} tự \`git merge ${keep}\` rồi giải quyết xung đột`
+            : `giải quyết trong worktree con MỚI tách từ nhánh nhiệm vụ mới nhất — CCoding gộp sẵn nhánh \`${keep}\`, @${st.assignee} chỉ sửa dấu xung đột; các hạng mục khác vẫn chạy/gộp bình thường`;
           if (done) {
             st.status = 'pending';
-            this.message(task, run.department, 'system', 'system', `⚠️ ${st.id} xung đột khi gộp vào nhánh nhiệm vụ (${files}) — làm lại LẦN LƯỢT trong worktree chính: @${st.assignee} tự \`git merge ${wt.branch}\` rồi giải quyết xung đột.`, { subtaskId: st.id });
+            this.message(task, run.department, 'system', 'system', `⚠️ ${st.id} xung đột khi gộp vào nhánh nhiệm vụ (${files}) — ${how}.`, { subtaskId: st.id });
           } else {
-            this.message(task, run.department, 'system', 'system', `⚠️ ${st.id} chưa xong và phần đã làm xung đột khi gộp (${files}) — giữ nhánh \`${wt.branch}\`; lần chạy sau làm trong worktree chính.`, { subtaskId: st.id });
+            this.message(task, run.department, 'system', 'system', `⚠️ ${st.id} chưa xong và phần đã làm xung đột khi gộp (${files}) — giữ nhánh \`${keep}\`; lần chạy sau ${fallback ? 'làm trong worktree chính' : 'giải quyết trong worktree con mới rồi làm tiếp'}.`, { subtaskId: st.id });
           }
           this.save(task);
           return;
@@ -1899,11 +2000,20 @@ export class Orchestrator {
       }
       if (valid && !removeWorktree(main, wt.path)) logs.write({ level: 'warn', kind: 'workspace.worktree', msg: `${st.id}: chưa gỡ hết thư mục worktree con ${wt.path} (tệp đang bị khóa?)`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
       // chỉ xóa nhánh tạm của CCoding và chỉ khi mọi commit của nó đã nằm trong nhánh nhiệm vụ
-      if (wt.branch === this.subBranch(task, st) && git(main, ['rev-parse', '--verify', '--quiet', `refs/heads/${wt.branch}`], 15_000).ok) {
+      if (wt.branch === this.subBranch(task, st) && exists(wt.branch)) {
         if (isMerged(main, wt.branch)) git(main, ['branch', '-D', wt.branch], 30_000);
         else logs.write({ level: 'warn', kind: 'workspace.worktree', msg: `${st.id}: giữ nhánh ${wt.branch} vì còn commit chưa gộp`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
       }
       st.worktree = undefined;
+      // lượt giải quyết xung đột đã gộp vào nhánh nhiệm vụ → xóa nhánh xung đột (đã nằm trong nhánh nhiệm vụ), dọn trạng thái
+      const c = st.conflict;
+      if (wt.resolve && c && isMerged(main, c.branch)) {
+        if (exists(c.branch)) git(main, ['branch', '-D', c.branch], 30_000);
+        st.conflict = undefined;
+        st.mainOnly = undefined;
+        st.handover = undefined;
+        this.message(task, run.department, 'system', 'system', `🔀 ${st.id}: đã gộp xong nhánh \`${c.branch}\` sau xung đột (đã xóa nhánh tạm).`, { subtaskId: st.id });
+      }
       if (st.mergePending) {
         // lần trước làm xong nhưng chưa gộp được — nay đã gộp: coi là xong, không làm lại
         st.mergePending = undefined;
@@ -2570,6 +2680,22 @@ export class Orchestrator {
     }
   }
 
+  /** Nối thêm một mục vào báo cáo bàn giao hiện có (vd. lượt giải quyết xung đột) — giữ phần bàn giao gốc ở đầu, tóm tắt theo bản gốc. */
+  private appendOutput(task: Task, st: Subtask, original: string, title: string): void {
+    if (!st.output) return;
+    const raw = this.d.store.readRunFile(task.id, st.output) ?? '';
+    const head = /^<!--[\s\S]*?-->\s*/.exec(raw)?.[0] ?? '';
+    const text = `${original.trim()}\n\n## ${title}\n${raw.slice(head.length).replace(/^#+\s*Tóm tắt\s*\n/i, '').trim()}\n`;
+    writeText(path.join(this.d.store.runDir(task.id), st.output), head + text);
+    st.summary = extractSummary(original);
+    if (task.workspace)
+      try {
+        writeText(path.join(task.workspace, '.ccoding', safeName(task.id), st.output), text);
+      } catch {
+        /* workspace chỉ đọc: bỏ qua */
+      }
+  }
+
   private readOutput(task: Task, st: Subtask): string {
     if (!st.output) return '';
     const t = this.d.store.readRunFile(task.id, st.output) ?? '';
@@ -2657,6 +2783,9 @@ export function cliTools(agentTools: string[], access: ToolAccess, phase: Phase,
   if (gitRead && list.includes('Read') && !list.includes('Bash') && !list.includes('PowerShell')) list.push('Bash');
   return list;
 }
+
+/** Mặc định `tools.resolveRounds`: số vòng xung đột giải quyết trong worktree con mới; vượt quá thì làm lại lần lượt trong worktree chính. */
+const MAX_RESOLVE_ROUNDS = 2;
 
 /** Tệp agent đã tạo trong thư mục làm việc riêng của nhiệm vụ (bỏ .ccoding, node_modules, .git). */
 export function listWorkspaceFiles(root: string, max: number): Array<{ path: string; size: number }> {

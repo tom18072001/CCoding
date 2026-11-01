@@ -540,6 +540,21 @@ Việc cần làm:
 Không tạo/chuyển nhánh, không rebase, không làm lại từ đầu những gì nhánh trên đã có.${previous ? `\nBàn giao lần trước của bạn: \`${previous}\`.` : ''}`;
 }
 
+/**
+ * Hướng dẫn cho lượt GIẢI QUYẾT xung đột trong worktree con mới: CCoding đã tách worktree từ nhánh nhiệm vụ hiện tại và chạy
+ * `git merge <nhánh cũ>` — worktree đang gộp dở; agent chỉ cần sửa dấu xung đột (kể cả vai trò không có quyền chạy lệnh).
+ */
+export function mergeResolveNote(branch: string, files: string[], done: boolean, previous?: string): string {
+  const list = files.length ? files.slice(0, 20).map((f) => `\`${f}\``).join(', ') : '(xem `git status`)';
+  return `## ⚠️ Gộp vào nhánh nhiệm vụ bị xung đột — giải quyết xung đột
+${done ? 'Bạn đã làm xong hạng mục này' : 'Bạn đã làm một phần hạng mục này'} trên nhánh \`${branch}\`, nhưng khi CCoding gộp vào nhánh nhiệm vụ thì xung đột với phần các hạng mục khác đã gộp trước. CCoding đã tạo worktree con MỚI (worktree hiện tại) từ nhánh nhiệm vụ mới nhất và đã chạy \`git merge ${branch}\` — worktree đang ở trạng thái GỘP DỞ, xung đột ở: ${list}.
+Việc cần làm:
+1. Mở từng tệp trên, giải quyết xung đột: giữ thay đổi của CẢ HAI phía (không xóa phần của hạng mục khác), xóa hết dấu \`<<<<<<<\`/\`=======\`/\`>>>>>>>\`.
+2. KHÔNG chạy \`git merge --abort\`, reset hay checkout lại tệp. Không cần tự commit — xong lượt này CCoding kiểm tra không còn dấu xung đột rồi tự hoàn tất merge (có quyền git thì \`git add\` + \`git commit --no-edit\` cũng được).
+3. ${done ? 'Chạy lại kiểm chứng liên quan nếu có quyền chạy lệnh; bàn giao ngắn: tệp nào xung đột, đã giữ phần nào của mỗi phía.' : 'Làm TIẾP phần còn thiếu của hạng mục, chạy kiểm chứng rồi bàn giao.'}
+Không tạo/chuyển nhánh, không làm lại từ đầu những gì nhánh trên đã có.${previous ? `\nBàn giao lần trước của bạn: \`${previous}\`.` : ''}`;
+}
+
 const checkLine = (r: CheckResult) =>
   `- \`${r.command}\` → ${r.denied ? `bị chặn (${r.denied})` : r.timedOut ? 'hết thời gian' : `exit ${r.code}`}${r.summary && !r.denied ? ` — ${r.summary}` : ''}`;
 
