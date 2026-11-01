@@ -54,7 +54,7 @@
       <button class="nav" data-tab="assign">💬 <span>Prompt</span></button>
       <button class="nav" data-tab="projects">📁 <span>Dự án</span><em id="badge-projects"></em></button>
       <button class="nav" data-tab="tasks" data-filter="all">📋 <span>Nhiệm vụ</span><em id="badge-tasks"></em></button>
-      <button class="nav" data-tab="tasks" data-filter="attention">⚠️ <span>Cần xem</span><em id="badge-att" class="warn"></em></button>
+      <button class="nav" data-tab="inbox" title="Cần bạn (I) — duyệt bằng phím">📥 <span>Cần bạn</span><em id="badge-att" class="warn"></em></button>
       <button class="nav" data-tab="tasks" data-filter="starred">⭐ <span>Gắn sao</span></button>
       <div class="nav-sep">Làm việc</div>
       <button class="nav" data-tab="people">👥 <span>Nhân sự</span></button>
@@ -70,7 +70,7 @@
     <section class="main" id="main">
       <div class="main-bar">
         <div class="crumbs" id="crumbs"></div>
-        <div class="gsearch"><input type="search" id="gsearch" placeholder="Tìm nhiệm vụ, dự án, agent…  ( / )" autocomplete="off" aria-label="Tìm kiếm" /><div class="gs-results" id="gs-results" hidden></div></div>
+        <div class="gsearch"><input type="search" id="gsearch" placeholder="Tìm nhiệm vụ, dự án, agent…  ( / ) · Ctrl+K: bảng lệnh" autocomplete="off" aria-label="Tìm kiếm" /><div class="gs-results" id="gs-results" hidden></div></div>
       </div>
 
       <div class="tab-body" data-body="home"><div id="home"></div></div>
@@ -119,6 +119,7 @@
 
       </div>
       <div class="tab-body" data-body="project"><div id="project-view"></div></div>
+      <div class="tab-body" data-body="inbox"><div id="inbox"></div></div>
       <div class="tab-body" data-body="prompts"><div id="prompts-view"></div></div>
 
       <!-- Prompt (kiểu ứng dụng chat): danh sách hội thoại | cuộc mới (ô soạn đầy đủ) hoặc luồng hội thoại + ô trả lời -->
@@ -263,6 +264,9 @@
   <script src="office.js"></script>
   <script src="ux.js"></script>
   <script src="flow.js"></script>
+  <script src="timeline.js"></script>
+  <script src="inbox.js"></script>
+  <script src="palette.js"></script>
   <script src="app.js"></script>
   <script src="director.js"></script>
   <script src="drive.js"></script>

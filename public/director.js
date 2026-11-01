@@ -876,6 +876,8 @@
         <section><h3>Phím tắt</h3><table class="tbl keys"><tbody>
           <tr><td><kbd>?</kbd> hoặc <kbd>H</kbd></td><td>Mở trợ giúp</td></tr>
           <tr><td><kbd>N</kbd></td><td>Giao việc mới (đưa con trỏ vào ô Yêu cầu)</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>K</kbd></td><td>Bảng lệnh: đi tới màn/nhiệm vụ/dự án/agent và thao tác (tạm dừng, duyệt, mở diff, dòng thời gian…) — gõ không dấu cũng được</td></tr>
+          <tr><td><kbd>I</kbd></td><td>Hộp 📥 Cần bạn — trong hộp: <kbd>J</kbd>/<kbd>K</kbd> chọn · <kbd>Enter</kbd> mở hội thoại · <kbd>O</kbd> trang nhiệm vụ · <kbd>1</kbd> hành động chính · <kbd>2</kbd> hành động phụ · <kbd>H</kbd> hoãn 4 giờ · <kbd>X</kbd> hủy · <kbd>Z</kbd> hoàn tác (hành động chờ 4 giây mới gửi)</td></tr>
           <tr><td><kbd>/</kbd></td><td>Tìm nhanh nhiệm vụ, dự án, agent</td></tr>
           <tr><td><kbd>V</kbd></td><td>Ẩn/hiện ô Văn phòng bên phải</td></tr>
           <tr><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td><td>Giao việc trong ô soạn lớn (cuộc mới, trang dự án, trang nhiệm vụ)</td></tr>
@@ -955,6 +957,10 @@
     if (e.key.toLowerCase() === 'n') {
       e.preventDefault();
       return C.prefillAssign({});
+    }
+    if (e.key.toLowerCase() === 'i') {
+      e.preventDefault();
+      return C.setTab('inbox');
     }
     const tabs = ['home', 'projects', 'tasks', 'assign', 'people', 'quota', 'logs'];
     if (/^[1-7]$/.test(e.key)) {

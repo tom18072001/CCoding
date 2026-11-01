@@ -131,6 +131,9 @@
     window.Chat?.init();
     window.UX?.init();
     window.Flow?.init();
+    window.TL?.init();
+    window.Inbox?.init();
+    window.Palette?.init();
     setTab(S.tab);
     renderAll();
     window.Router?.init();
@@ -204,6 +207,7 @@
   function onTask(t) {
     S.tasks.set(t.id, t);
     window.Router?.onTask(t);
+    if (S.tab === 'inbox') throttle('inbox', () => window.Inbox?.changed(), 500);
     updateRunning();
     throttle('drive', () => window.Drive?.changed(), 600);
     window.Chat?.onTask(t);
@@ -427,6 +431,7 @@
     if (tab === 'kpi') loadKpi();
     if (tab === 'logs') loadLogs();
     if (tab === 'quota') window.Director?.renderQuota();
+    if (tab === 'inbox') window.Inbox?.render(true);
     window.Router?.sync();
   }
 
@@ -902,6 +907,7 @@
         <button data-v="final" class="${S.taskView === 'final' ? 'active' : ''}" ${t.finalPath ? '' : 'disabled'}>🏁 Báo cáo</button>
         <button data-v="files" class="${S.taskView === 'files' ? 'active' : ''}">📦 Sản phẩm</button>
         ${window.UX?.hasDiff(t) ? `<button data-v="diff" class="${S.taskView === 'diff' ? 'active' : ''}" title="Thay đổi trong repo so với commit gốc của nhiệm vụ">🧬 Thay đổi</button>` : ''}
+        ${(t.runs || []).length ? `<button data-v="timeline" class="${S.taskView === 'timeline' ? 'active' : ''}" title="Dòng thời gian các hạng mục, lượt gọi, đường găng">⏱ Dòng thời gian</button>` : ''}
         <button data-v="tokens" class="${S.taskView === 'tokens' ? 'active' : ''}">🔢 Token</button>
         <button data-v="events" class="${S.taskView === 'events' ? 'active' : ''}">🧾 Nhật ký</button>
         <button data-v="calls" class="${S.taskView === 'calls' ? 'active' : ''}">📡 Lượt gọi</button>
@@ -1010,6 +1016,7 @@
       return;
     }
     if (S.taskView === 'diff') return window.UX?.diffView(box, t);
+    if (S.taskView === 'timeline') return window.TL?.view(box, t);
     if (S.taskView === 'final' || (S.taskView === 'files' && S.taskFile)) {
       const path = S.taskView === 'final' ? t.finalPath || 'FINAL.md' : S.taskFile;
       box.innerHTML = '<div class="empty">Đang tải…</div>';

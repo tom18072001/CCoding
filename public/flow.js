@@ -289,6 +289,23 @@
     });
   }
 
+  /** Duyệt kế hoạch đang chờ (kèm bản nháp sửa + chỉ dẫn nếu có) — dùng cho hộp "Cần bạn" (phím 1). */
+  F.approvePlan = async (id) => {
+    const t = C.S.tasks.get(id);
+    if (!planPaused(t)) throw new Error('Nhiệm vụ không còn chờ duyệt kế hoạch');
+    const run = pendingRun(t);
+    const d = draftOf(id);
+    const body = { department: run?.department, subtasks: collect(t), approve: true };
+    if (d.note.trim()) {
+      if (window.Director?.hasSecret?.(d.note)) throw new Error('Chỉ dẫn có vẻ chứa khóa/mật khẩu');
+      body.note = d.note.trim();
+    }
+    const r = await C.api(`/api/tasks/${encodeURIComponent(id)}/plan`, { method: 'POST', body: JSON.stringify(body) });
+    if (r?.id) C.S.tasks.set(r.id, r);
+    F.draft.delete(id);
+    return r;
+  };
+
   /** Gắn sự kiện cho các khối của UX-2 trong root (sau mỗi lần vẽ). */
   F.bind = (root, after) => {
     bindPlan(root, after);

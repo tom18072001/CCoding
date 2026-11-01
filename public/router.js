@@ -7,8 +7,8 @@
   let applying = false;
   let hold = ''; // URL đang chờ tải dữ liệu (vd. hội thoại của nhiệm vụ vừa giao) — chưa ghi đè
   const R = {};
-  const TABS = ['home', 'assign', 'projects', 'tasks', 'people', 'prompts', 'tokens', 'quota', 'kpi', 'logs'];
-  const VIEWS = ['chat', 'final', 'files', 'tokens', 'events', 'calls', 'diff'];
+  const TABS = ['home', 'assign', 'inbox', 'projects', 'tasks', 'people', 'prompts', 'tokens', 'quota', 'kpi', 'logs'];
+  const VIEWS = ['chat', 'final', 'files', 'tokens', 'events', 'calls', 'diff', 'timeline'];
   const enc = encodeURIComponent;
   const needsYou = (t) => !!t.attention || t.status === 'paused' || t.status === 'failed';
   const activeSt = (s) => s === 'running' || s === 'queued';
@@ -35,7 +35,13 @@
   }
   /** Gọi sau mỗi lần đổi màn: ghi URL mới vào lịch sử trình duyệt (không ghi trùng). */
   R.sync = () => {
-    if (!ready || applying || !C) return;
+    if (!ready || !C) return;
+    // mục "xem gần đây" của bảng lệnh Ctrl+K
+    const S = C.S;
+    if (S.tab === 'tasks' && S.selectedTask) window.Palette?.visit('task', S.selectedTask);
+    else if (S.tab === 'assign') window.Palette?.visit('task', window.Chat?.convId?.());
+    else if (S.tab === 'project') window.Palette?.visit('project', window.Drive?.projectId?.());
+    if (applying) return;
     if (hold && location.hash === hold) return;
     hold = '';
     const h = current();

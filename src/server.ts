@@ -10,8 +10,9 @@ import { clearFixedFeedback, FINDING_LABELS, kpiReport } from './kpi.js';
 import { isSafeRef } from './git.js';
 import { DiffError, diffSummary, fileDiff, isSha, locate as locateDiff, ownersOf, repoDirFor } from './diff.js';
 import { ShipError } from './ship.js';
+import { buildTimeline } from './timeline.js';
 import { deniedReason } from './tools/workspace.js';
-import type { BudgetMode, Classification, ProjectDef, TaskMode, ToolAccess } from './types.js';
+import type { BudgetMode, Classification, Phase, ProjectDef, TaskMode, ToolAccess } from './types.js';
 import type { UsageDim } from './usage.js';
 
 const MIME: Record<string, string> = {
@@ -353,6 +354,24 @@ export function createServer(app: App): http.Server {
       // lọc theo loại / hạng mục (vd. kind=tool.call&subtask=S2 cho luồng hoạt động của một hạng mục) — đọc rộng hơn rồi lọc
       const rows = logs.query({ task: mm[1], limit: 4000 }).filter((r) => (!kind || r.kind === kind) && (!sub || r.subtaskId === sub));
       return send(res, 200, rows.slice(-limit));
+    }
+    if ((mm = m(/^\/api\/tasks\/([^/]+)\/timeline$/))) {
+      const t = store.get(mm[1]);
+      if (!t) throw new HttpError(404, 'Không có nhiệm vụ');
+      // calls.jsonl có phản hồi thô (tới 200k ký tự/lượt) — chỉ lấy các trường thời gian
+      const calls = readJsonl<Record<string, unknown>>(store.callsFile(t.id)).map((c) => ({
+        ts: String(c.ts ?? ''),
+        callId: c.callId as string | undefined,
+        subtaskId: c.subtaskId as string | undefined,
+        department: c.department as string | undefined,
+        agentId: c.agentId as string | undefined,
+        phase: c.phase as Phase | undefined,
+        durationMs: Number(c.durationMs) || 0,
+        error: c.error ? 'lỗi' : undefined,
+      }));
+      const kinds = new Set(['call.start', 'phase', 'checks.run', 'checks.setup', 'task.paused', 'task.resumed', 'task.start', 'task.done', 'task.failed', 'task.cancelled', 'workspace.merge']);
+      const events = logs.query({ task: t.id, limit: 20000 }).filter((e) => kinds.has(e.kind));
+      return send(res, 200, buildTimeline(t, calls, events));
     }
     if ((mm = m(/^\/api\/tasks\/([^/]+)\/diff$/))) {
       const t = store.get(mm[1]);

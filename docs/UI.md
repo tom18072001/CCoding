@@ -93,6 +93,8 @@ Góp ý (kèm 👍/👎, gắn nhiệm vụ tùy chọn) lưu ở `data/feedback
 | `/` | Tìm nhanh nhiệm vụ, dự án, agent |
 | `V` | Ẩn/hiện ô phụ bên phải |
 | `1`–`7` | Tổng quan · Dự án · Nhiệm vụ · Prompt · Nhân sự · Hạn mức · Nhật ký |
+| `Ctrl`+`K` / `⌘K` | Bảng lệnh |
+| `I` | Hộp 📥 Cần bạn (trong hộp: `J`/`K`, `Enter`, `O`, `1`, `2`, `H`, `X`, `Z`) |
 | `Ctrl`+`Enter` | Giao việc ở ô soạn lớn (cuộc mới, trang dự án, trang nhiệm vụ) |
 | `Enter` / `Shift`+`Enter` | Gửi / xuống dòng ở ô trả lời của hội thoại |
 | `W` `A` `S` `D` / `E` | Đi / tương tác |
@@ -118,9 +120,15 @@ Phím tắt không chạy khi đang gõ trong ô nhập hoặc có hộp thoại
 - **Việc nối làm tiếp trên nhánh của việc trước**: giao tiếp nối trong cùng dự án repo → worktree mới tách từ **nhánh của nhiệm vụ trước** (thay đổi chưa gộp đã có sẵn; diff của việc mới chỉ gồm phần mới). Bỏ tích **🌿 nối tiếp nhánh** ở ô trả lời để tách từ nhánh xuất phát của dự án (`continueBranch: false`). Nhánh trước đã bị xóa → tự quay về nhánh xuất phát.
 - Lệnh kiểm tra / `run_command` có đầu ra dài: giữ **phần đầu và phần cuối**, bỏ đoạn giữa (trước đây giữ phần đầu ⇒ `npm test` 592 test chỉ còn dòng `> pkg test`, mất dòng tổng kết).
 
+## Theo dõi song song và điều hướng (UX-3, 1/11/2026)
+
+- **⏱ Dòng thời gian** (tab trong trang nhiệm vụ, `#/task/<id>/timeline`; bảng lệnh → "Dòng thời gian các hạng mục"): mỗi hạng mục một làn, **mỗi lượt gọi agent một thanh theo thời lượng thật** (màu theo pha: lập kế hoạch, họp, thực thi, review, sửa theo review, tổng hợp; lệnh chuẩn bị / lệnh kiểm tra), làn "Lập kế hoạch · họp · review · tổng hợp" của mỗi phòng, khoảng **tạm dừng** (sọc xám), mốc **◆ gộp worktree con**, đoạn **chờ** (hạng mục đã sẵn sàng vì phụ thuộc xong mà chưa bắt đầu — thiếu "ghế"/agent bận), thanh **đang chạy** (sọc chuyển động) và **lỗi / bị ngắt** (viền đỏ). Thanh đầu: tổng thời gian, thời gian tạm dừng, thời gian thực thi (% thời gian chạy), **song song tối đa**, **đường găng** (chuỗi phụ thuộc quyết định thời gian xong, vd. S1 → S2 → S4 · 9 phút — các làn găng có vạch đỏ). Thu phóng 1×/2×/4×; việc đang chạy tự làm mới mỗi 5 giây. Dữ liệu từ `calls.jsonl` + nhật ký nhiệm vụ: `GET /api/tasks/<id>/timeline`. (Thay cho kịch bản phân tích chạy tay `analyze-runs.cjs` khi chỉ cần xem đường găng.)
+- **📥 Cần bạn** (cột trái, phím `I`, `#/inbox`): mọi việc chờ bạn quyết — 📝 kế hoạch chờ duyệt, ⏸ tạm dừng (ngân sách, hết tài nguyên, thủ công, server khởi động lại), ❌ lỗi, ⚠ xong nhưng cần xem; danh sách bên trái, xem trước bên phải (hộp duyệt kế hoạch / tóm tắt + lệnh kiểm tra + ⚖ duyệt/yêu cầu sửa / hộp tạm dừng). Phím: `J`/`K` (↓/↑) chọn · `Enter` mở hội thoại · `O` trang nhiệm vụ · `1` hành động chính (duyệt kế hoạch kèm bản nháp sửa / duyệt kết quả / chạy tiếp) · `2` hành động phụ (sửa kế hoạch / yêu cầu sửa / +50% ngân sách) · `H` hoãn 4 giờ (bấm lại để bỏ hoãn; lưu trong trình duyệt) · `X` hủy (hỏi xác nhận) · `Z` hoàn tác. **Hành động `1`/`2` chờ 4 giây rồi mới gửi** (thanh "⏳ Sẽ … — Hoàn tác (Z)") — duyệt nhầm không tốn token; bấm việc khác trong lúc chờ thì hành động trước được gửi ngay. Tổng quan → "⚠ Cần bạn quyết định" có lối tắt sang hộp này.
+- **Bảng lệnh `Ctrl`+`K`** (`⌘K` trên Mac, dùng được cả khi đang gõ): gõ không dấu cũng được ("duyet ke hoach", chữ cái đầu "dtg" → "Dòng thời gian"). Nhóm: **Nhiệm vụ đang mở** (mở hội thoại / trang nhiệm vụ / dòng thời gian / thay đổi / báo cáo / lượt gọi, tạm dừng, chạy tiếp, hủy, duyệt kế hoạch, duyệt kết quả, sẵn sàng gộp, giao lại tương tự, chép mã), **Xem gần đây**, **Đi tới** (mọi màn), **Tạo & thao tác** (nhiệm vụ mới, giao riêng, dự án, prompt, tải tệp, ẩn/hiện văn phòng, thông báo, trợ giúp), **Nhiệm vụ / Dự án / Agent** (khi gõ). `↑`/`↓` chọn · `Enter` chạy · `Esc` đóng.
+
 ## Gợi ý tiếp theo (chưa làm)
 
 Lộ trình UX-2/UX-3 (rà soát 1/11/2026, so với Devin, Codex, Copilot, Cursor, Conductor, LangSmith, Linear…):
 
-- **UX-3 · Theo dõi song song và điều hướng**: dòng thời gian (Gantt) các hạng mục và worktree con; hộp "Cần bạn" duyệt bằng phím; bảng lệnh `Ctrl+K`; biểu đồ xu hướng token/KPI; chạy bản thử ứng dụng trong worktree.
+- Tiếp theo: biểu đồ xu hướng token/KPI; chạy bản thử ứng dụng trong worktree (`previewCommand`); "ghế" song song theo vai trò (dòng thời gian cho thấy đoạn *chờ*).
 - Khác: tải gói sản phẩm (.zip); bảng điều khiển trên điện thoại; chủ đề sáng/tối và cỡ chữ; dấu "!" trên nhân vật văn phòng khi việc cần bạn.

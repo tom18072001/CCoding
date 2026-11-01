@@ -355,3 +355,13 @@ Theo yêu cầu chủ dự án, CCoding **không dùng** các tài khoản Claud
 | Giữ phần cuối đầu ra lệnh | PRE-02 | Phần đuôi đầu ra vẫn che bí mật/PII trước khi lưu `projectChecks` / đưa vào prompt như trước |
 
 **Kết luận: ĐẠT CÓ ĐIỀU KIỆN** — điều kiện: (1) chỉ bấm đẩy với repo mà remote là nơi chủ dự án được phép lưu mã đó (repo ND57/workhub chứa mã nguồn + dữ liệu giả, không chứa dữ liệu thật); (2) không tắt kiểm tra bí mật bằng cách đổi tên khóa thành dạng không khớp mẫu — khóa thật đặt trong `.env` (đã bỏ qua khỏi git). Khuyến nghị: bật branch protection trên GitHub cho nhánh xuất phát (vd. `ND57-da-nv`) nếu muốn mọi thay đổi đi qua PR — khi đó nút ⏩ sẽ bị GitHub từ chối và chỉ dùng ⬆ + ↗ PR.
+
+### Bổ sung: UX-3 — dòng thời gian, hộp "Cần bạn", bảng lệnh Ctrl+K (1/11/2026)
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| `GET /api/tasks/<id>/timeline` | PRE-06 | Chỉ đọc **trường thời gian** của `calls.jsonl` (ts, thời lượng, pha, hạng mục, agent, có lỗi hay không) — không trả nội dung phản hồi/prompt; sự kiện nhật ký chỉ lấy loại liên quan thời gian. Nhật ký `checks.run` thêm `setupMs` + thời lượng từng lệnh (không thêm nội dung) |
+| Hộp "Cần bạn" (phím tắt duyệt/chạy tiếp/hủy) | PRE-05, DET-01 | Gọi lại đúng các API đã có (`/plan`, `/review`, `/resume`, `/cancel`) với cùng kiểm tra phía server và cùng nhật ký; hành động chờ 4 giây để hoàn tác; hủy luôn hỏi xác nhận. "Hoãn" chỉ lưu `localStorage` trình duyệt (mã nhiệm vụ + thời điểm) |
+| Bảng lệnh Ctrl+K, "xem gần đây" | — | Dựng từ dữ liệu đã có trong trình duyệt; mục gần đây chỉ lưu mã nhiệm vụ/dự án (≤ 12) trong `localStorage` |
+
+**Kết luận: ĐẠT**, không thêm điều kiện.

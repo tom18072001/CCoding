@@ -2093,7 +2093,7 @@ export class Orchestrator {
     }
     wt.setup = results.every((r) => r.ok);
     this.save(task);
-    this.d.logs.write({ level: wt.setup ? 'info' : 'warn', kind: 'checks.setup', msg: `${st.id} worktree con: ${results.map((r) => `${r.command} → ${r.denied ? 'bị chặn' : r.timedOut ? 'timeout' : r.code} (${Math.round(r.ms / 1000)} s)`).join('; ')}`, taskId: task.id, projectId: project.id, subtaskId: st.id });
+    this.d.logs.write({ level: wt.setup ? 'info' : 'warn', kind: 'checks.setup', msg: `${st.id} worktree con: ${results.map((r) => `${r.command} → ${r.denied ? 'bị chặn' : r.timedOut ? 'timeout' : r.code} (${Math.round(r.ms / 1000)} s)`).join('; ')}`, taskId: task.id, projectId: project.id, department: run.department, subtaskId: st.id, data: { results: results.map((r) => ({ command: r.command, ok: r.ok, ms: r.ms })) } });
     if (!wt.setup) this.message(task, run.department, 'system', 'system', `🔧 Lệnh chuẩn bị trong worktree con của ${st.id} lỗi:\n${results.filter((r) => !r.ok).map((r) => `- \`${r.command}\` ✗ ${r.summary}`).join('\n')}`, { subtaskId: st.id });
   }
 
@@ -2391,6 +2391,7 @@ export class Orchestrator {
         this.message(task, dept, 'system', 'system', `🔧 Tệp khai báo phụ thuộc đã đổi sau lần chuẩn bị (${changed.slice(0, 6).map((f) => `\`${f}\``).join(', ')}) — chạy lại lệnh chuẩn bị trước khi kiểm tra.`);
       }
     }
+    let setupMs = 0;
     if (!pc.setupDone && project.setupCommands?.length) {
       pc.setup = [];
       for (const cmd of project.setupCommands) {
@@ -2398,6 +2399,7 @@ export class Orchestrator {
         pc.setup.push(await runCheckCommand(cmd, cwd, opts));
       }
       pc.setupDone = pc.setup.every((r) => r.ok);
+      setupMs = pc.setup.reduce((n, r) => n + (r.ms || 0), 0);
       // sau lệnh chuẩn bị (npm install có thể sửa lockfile) — mốc so sánh cho lần kiểm tra sau
       pc.setupManifests = manifestFingerprint(cwd);
       this.message(task, dept, 'system', 'system', `🔧 Lệnh chuẩn bị của dự án:\n${pc.setup.map((r) => `- \`${r.command}\` ${mark(r)} ${r.summary}`).join('\n')}`);
@@ -2425,7 +2427,7 @@ export class Orchestrator {
       taskId: task.id,
       projectId: project.id,
       department: dept,
-      data: { when, results: results.map((r) => ({ command: r.command, code: r.code, ok: r.ok, ms: r.ms, summary: r.summary, denied: r.denied })) },
+      data: { when, setupMs: setupMs || undefined, results: results.map((r) => ({ command: r.command, code: r.code, ok: r.ok, ms: r.ms, summary: r.summary, denied: r.denied })) },
     });
     const regressed = when === 'baseline' ? [] : this.checkRegressions(task);
     if (regressed.length) this.alert({ level: 'warn', kind: 'checks.regression', title: 'Lệnh kiểm tra hỏng sau khi sửa', msg: `${task.title}: ${regressed.join(', ')} đạt trước khi sửa nhưng lỗi sau khi sửa`, taskId: task.id });

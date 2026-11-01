@@ -325,7 +325,7 @@
         <div class="stat"><span>Cần xem</span><b>${all.filter(needsAttention).length}</b></div>
         <div class="stat"><span>Xong 7 ngày</span><b>${week}</b></div>
         <div class="stat"><span>Token hôm nay</span><b>${q ? C.fmt(C.total(q.today)) : '—'}</b></div></div>
-      ${att.length ? `<section><div class="sec-head"><h2>⚠ Cần bạn quyết định</h2><a data-go="attention">Xem tất cả →</a></div>${taskTable(att)}</section>` : ''}
+      ${att.length ? `<section><div class="sec-head"><h2>⚠ Cần bạn quyết định</h2><a data-go="inbox" title="Duyệt bằng phím (I)">📥 Mở hộp Cần bạn →</a></div>${taskTable(att)}</section>` : ''}
       <section><div class="sec-head"><h2>⚡ Đang chạy</h2><a data-go="running">Xem tất cả →</a></div>${taskTable(run.slice(0, 6), { empty: 'Không có việc đang chạy.' })}</section>
       <section><div class="sec-head"><h2>📁 Dự án</h2><a data-go="projects">Tất cả dự án →</a></div>${folders(8)}</section>
       <section><div class="sec-head"><h2>🕘 Gần đây</h2><a data-go="all">Tất cả nhiệm vụ →</a></div>${taskTable(recent, { empty: 'Chưa có nhiệm vụ nào.' })}</section></div>`;
@@ -339,7 +339,7 @@
           if (k === 'prompts') C.setTab('prompts');
         }),
     );
-    $$('[data-go]', el).forEach((a) => (a.onclick = () => (a.dataset.go === 'projects' ? C.setTab('projects') : goTasks(a.dataset.go))));
+    $$('[data-go]', el).forEach((a) => (a.onclick = () => (a.dataset.go === 'projects' || a.dataset.go === 'inbox' ? C.setTab(a.dataset.go) : goTasks(a.dataset.go))));
     bindItems(el);
     bindFolders(el);
   }
@@ -566,7 +566,7 @@
   }
 
   // ── Thanh trên vùng chính: đường dẫn + tìm kiếm ─────────────────────────
-  const TAB_VI = { home: '🏠 Tổng quan', projects: '📁 Dự án', tasks: '📋 Nhiệm vụ', assign: '💬 Prompt', people: '👥 Nhân sự', prompts: '📚 Thư viện prompt', tokens: '🔢 Token', quota: '⛽ Hạn mức', kpi: '📈 KPI', logs: '🧾 Nhật ký' };
+  const TAB_VI = { home: '🏠 Tổng quan', inbox: '📥 Cần bạn', projects: '📁 Dự án', tasks: '📋 Nhiệm vụ', assign: '💬 Prompt', people: '👥 Nhân sự', prompts: '📚 Thư viện prompt', tokens: '🔢 Token', quota: '⛽ Hạn mức', kpi: '📈 KPI', logs: '🧾 Nhật ký' };
   function crumbs() {
     const el = $('#crumbs');
     if (!el || !C) return;
