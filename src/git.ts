@@ -81,7 +81,49 @@ export function commitAll(wt: string, message: string): GitResult {
   git(wt, ['add', '-A'], 60_000);
   const st = git(wt, ['status', '--porcelain'], 30_000);
   if (st.ok && !st.out) return { ok: true, out: 'không có thay đổi' };
+  return git(wt, [...identity(wt), 'commit', '-m', message], 300_000);
+}
+
+/** Repo chưa cấu hình người commit → dùng danh tính CCoding cho riêng lệnh này. */
+function identity(wt: string): string[] {
   const hasIdentity = git(wt, ['config', 'user.email'], 10_000).out.includes('@');
-  const ident = hasIdentity ? [] : ['-c', 'user.name=CCoding Office', '-c', 'user.email=ccoding@localhost'];
-  return git(wt, [...ident, 'commit', '-m', message], 300_000);
+  return hasIdentity ? [] : ['-c', 'user.name=CCoding Office', '-c', 'user.email=ccoding@localhost'];
+}
+
+/** Số commit của `ref` chưa có trong HEAD của `wt` (undefined nếu ref không tồn tại). */
+export function commitsAhead(wt: string, ref: string): number | undefined {
+  const r = git(wt, ['rev-list', '--count', `HEAD..${ref}`], 30_000);
+  return r.ok ? Number(r.out.trim().split('\n')[0]) || 0 : undefined;
+}
+
+/** `ref` đã nằm trong lịch sử HEAD của `wt` (đã gộp). */
+export function isMerged(wt: string, ref: string): boolean {
+  return git(wt, ['merge-base', '--is-ancestor', ref, 'HEAD'], 30_000).ok;
+}
+
+/**
+ * Gộp nhánh vào nhánh hiện tại của worktree (`--no-ff`, giữ dấu vết từng hạng mục). Xung đột → hủy merge (worktree trở lại như
+ * trước) và trả danh sách tệp xung đột để người gọi xử lý.
+ */
+export function mergeBranch(wt: string, branch: string, message: string): GitResult & { conflicts: string[] } {
+  const r = git(wt, [...identity(wt), 'merge', '--no-ff', '--no-edit', '-m', message, branch], 300_000);
+  if (r.ok) return { ...r, conflicts: [] };
+  const u = git(wt, ['diff', '--name-only', '--diff-filter=U'], 30_000);
+  const conflicts = u.ok ? u.out.split('\n').map((s) => s.trim()).filter(Boolean) : [];
+  git(wt, ['merge', '--abort'], 60_000);
+  return { ...r, conflicts };
+}
+
+/** Gỡ worktree (kể cả tệp chưa track như node_modules) rồi dọn sổ worktree của repo; nhánh giữ nguyên. */
+export function removeWorktree(repo: string, wtPath: string): boolean {
+  const r = git(repo, ['worktree', 'remove', '--force', wtPath], 300_000);
+  if (!r.ok && fs.existsSync(wtPath)) {
+    try {
+      fs.rmSync(wtPath, { recursive: true, force: true, maxRetries: 3 });
+    } catch {
+      /* tệp đang bị khóa (Windows) — để lần dọn sau */
+    }
+  }
+  git(repo, ['worktree', 'prune'], 30_000);
+  return !fs.existsSync(wtPath);
 }

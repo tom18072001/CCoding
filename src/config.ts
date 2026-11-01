@@ -164,6 +164,12 @@ export interface Config {
     web: boolean;
     /** Hạng mục có quyền chạy lệnh trong workspace dự án dùng chung làm LẦN LƯỢT (hạng mục chỉ viết tài liệu vẫn song song). */
     serializeWriters: boolean;
+    /**
+     * Repo dự án là git worktree: hạng mục chạy lệnh vẫn chạy SONG SONG, mỗi hạng mục một worktree con tách từ nhánh nhiệm vụ
+     * (lệnh chuẩn bị chạy riêng trong đó), xong thì CCoding commit và gộp vào nhánh nhiệm vụ; xung đột thì làm lại lần lượt.
+     * Mặc định bật; false = chạy lần lượt trong một worktree như trước.
+     */
+    parallelWorktrees?: boolean;
   };
   /** Ước lượng token của kế hoạch — cảnh báo khi nhiệm vụ quá lớn so với ngân sách (đo từ các lượt chạy thật). */
   estimate: {
@@ -270,6 +276,7 @@ const BUILTIN: Omit<Config, 'root'> = {
     worktreeCopy: ['.env', '.env.local', '.env.development', '.env.development.local', '.env.test', '.env.test.local'],
     web: true,
     serializeWriters: true,
+    parallelWorktrees: true,
   },
   estimate: {
     base: 150000,

@@ -43,7 +43,8 @@
     "denyCommands": [],
     "worktreeCopy": [".env", ".env.local", ".env.development", ".env.development.local", ".env.test", ".env.test.local"],
     "web": true,
-    "serializeWriters": true
+    "serializeWriters": true,
+    "parallelWorktrees": true
   },
 
   "estimate": {

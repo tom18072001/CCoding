@@ -56,6 +56,10 @@ export interface Ctx {
   scratch?: boolean;
   /** Các hạng mục chạy lệnh trong repo dự án làm lần lượt (không ai chạy lệnh song song với mình). */
   serialWriters?: boolean;
+  /** Hạng mục chạy lệnh chạy song song, mỗi hạng mục một worktree con (CCoding gộp lại vào nhánh nhiệm vụ). */
+  parallelWriters?: boolean;
+  /** Lượt này chạy trong worktree con của hạng mục: nhánh nhiệm vụ mà CCoding sẽ gộp vào. */
+  subWorktree?: { taskBranch?: string };
   /** Bản đồ repo do CCoding tạo (đường dẫn tương đối workspace) + các tệp nguồn lớn. */
   repoMap?: { rel: string; large: string[] };
   /** P8: các nhiệm vụ trước của cùng dự án (pha lập kế hoạch) + tệp chi tiết. */
@@ -232,7 +236,13 @@ Bạn có công cụ: ${tools.join(', ')} trong thư mục làm việc riêng c�
 Câu trả lời cuối cùng là báo cáo bàn giao theo ĐÚNG các mục trong "Mẫu đầu ra" của bạn (giữ nguyên tên mục, mở đầu "## Tóm tắt"); mục nào không áp dụng thì ghi "Không áp dụng" thay vì bỏ. Bắt buộc liệt kê tệp đã tạo/sửa (đường dẫn).
 `;
   return `\n## Công cụ & cách làm
-Bạn có công cụ: ${tools.join(', ')} — làm việc THẬT trong workspace \`${c.cwd}\`${c.branch ? ` (nhánh git riêng \`${c.branch}\`, không ảnh hưởng nhánh chính)` : ''}${c.serialWriters && tools.includes('run_command') ? '; các hạng mục chạy lệnh khác làm lần lượt nên không ai cài đặt/chạy test song song với bạn' : ''}.
+Bạn có công cụ: ${tools.join(', ')} — làm việc THẬT trong workspace \`${c.cwd}\`${c.branch ? ` (nhánh git riêng \`${c.branch}\`, không ảnh hưởng nhánh chính)` : ''}${
+    c.subWorktree
+      ? `; đây là worktree CON riêng của hạng mục này, tách từ nhánh nhiệm vụ${c.subWorktree.taskBranch ? ` \`${c.subWorktree.taskBranch}\`` : ''} — các hạng mục chạy lệnh khác làm song song trong worktree con của họ (DB/cổng dùng chung thì đặt tên riêng theo hạng mục). Xong việc CCoding tự commit và gộp vào nhánh nhiệm vụ: KHÔNG tự merge/rebase, chỉ sửa đúng phạm vi hạng mục để không xung đột khi gộp`
+      : c.serialWriters && !c.parallelWriters && tools.includes('run_command')
+        ? '; các hạng mục chạy lệnh khác làm lần lượt nên không ai cài đặt/chạy test song song với bạn'
+        : ''
+  }.
 - Đọc quy tắc của repo trước (CLAUDE.md, AGENTS.md, README, CONTRIBUTING nếu có) và tuân thủ tuyệt đối; khảo sát repo trước khi sửa (list_files, search, read_file — gộp nhiều file một lần); giữ đúng cấu trúc, phong cách và stack sẵn có. Mỗi lượt công cụ gửi lại toàn bộ hội thoại nên tốn token: đọc có mục tiêu, không đọc lại nội dung đã có trong prompt hoặc đã đọc.
 ${c.repoMap ? `- BẢN ĐỒ REPO: \`${c.repoMap.rel}\` liệt kê tệp + số dòng, route, model, hàm kèm số dòng — đọc nó ĐẦU TIÊN để định vị, rồi read_file đúng đoạn (offset theo số dòng, limit vừa đủ); không đọc cả tệp lớn.\n` : ''}- Đọc/tìm code bằng read_file/search/list_files — KHÔNG dùng Get-Content/cat/rg/grep qua run_command (lỗi cú pháp shell, sai mã hóa, tốn lượt). run_command chỉ để cài đặt, build, typecheck, test, migration, git.${tools.includes('run_command') && process.platform === 'win32' ? ' Shell là PowerShell: không có {a,b}, dấu * trong đường dẫn không tự mở rộng.' : ''}
 - Tạo/sửa file thật bằng write_file/edit_file; không dán toàn bộ code vào câu trả lời cuối — chỉ liệt kê file và điểm chính. GHI SỚM: đọc đủ đoạn cần sửa là sửa ngay; khảo sát không dùng quá ~1/3 số lượt công cụ — hết lượt mà chưa ghi gì là hạng mục thất bại.
@@ -257,7 +267,11 @@ ${toolNote(c, tools, 'plan')}
 ## Việc của bạn (Trưởng phòng): LẬP KẾ HOẠCH
 Phân rã yêu cầu thành 2–7 hạng mục rõ ràng, giao cho đúng người theo kỹ năng, quy mô tương xứng với yêu cầu (việc nhỏ thì ít hạng mục). Quy tắc:
 - \`assignee\` phải là một id trong danh sách trên (không có dấu @). Hạn chế tự giao cho bản thân; người review sẽ kiểm tra ở bước sau nên không cần tạo hạng mục "review".
-- \`dependsOn\` chỉ trỏ tới id hạng mục khác; tối đa hóa phần chạy song song.
+- \`dependsOn\` chỉ trỏ tới id hạng mục khác; tối đa hóa phần chạy song song.${
+        c.parallelWriters
+          ? ' Hạng mục chạy lệnh (code, test, migration) CŨNG chạy song song — mỗi hạng mục một worktree con, xong thì CCoding gộp vào nhánh nhiệm vụ; chỉ đặt phụ thuộc khi hạng mục sau cần kết quả của hạng mục trước hoặc hai hạng mục sửa cùng một đoạn của cùng tệp (tránh xung đột khi gộp). Mỗi người chỉ làm một hạng mục một lúc nên muốn song song thì giao cho người khác nhau.'
+          : ''
+      }
 - Mỗi hạng mục phải có tiêu chí hoàn thành kiểm chứng được${c.filesAccessible ? '; với dự án có repo, ghi rõ phần code/thư mục liên quan và lệnh kiểm tra (test/typecheck/migration) cần chạy' : ''}.${c.filesAccessible ? '\n- Cỡ hạng mục: một người phải làm xong trong MỘT lượt (~30 thao tác công cụ). Repo có tệp nguồn lớn (hàng nghìn dòng như server.js) thì mỗi hạng mục chỉ sửa ít tệp lớn — tách theo nhóm endpoint/màn hình/bảng (vd. "module + route mới" riêng, "lọc danh sách A, B" riêng, "test" riêng) thay vì gộp "toàn bộ API".' : ''}
 
 Trả lời bằng một khối JSON theo mẫu:
@@ -494,6 +508,19 @@ export function handoverNote(label: string, kind: string, calls: ToolCallRecord[
   return `## ⚠️ Lần thử trước bị ngắt giữa chừng (${label}: ${kind})
 Lần thử trước đã thực hiện các thao tác dưới đây TRONG WORKSPACE trước khi lỗi — thay đổi (và commit, nếu có) vẫn còn. Kiểm tra \`git status\`/\`git log -3\`/\`git diff\` trước, rồi làm TIẾP phần còn thiếu và chạy kiểm chứng — KHÔNG làm lại, không sửa chồng.
 ${lines.join('\n')}${calls.length > 40 ? `\n- … (${calls.length - 40} thao tác trước đó)` : ''}`;
+}
+
+/** Hạng mục làm song song trong worktree con, gộp vào nhánh nhiệm vụ bị xung đột → lần chạy lại (trong worktree chính) tự gộp. */
+export function mergeConflictNote(branch: string, files: string[], done: boolean, previous?: string): string {
+  const list = files.length ? files.slice(0, 20).map((f) => `\`${f}\``).join(', ') : '(git không liệt kê được tệp — xem kết quả lệnh merge)';
+  return `## ⚠️ Gộp vào nhánh nhiệm vụ bị xung đột
+${done ? 'Bạn đã làm xong hạng mục này' : 'Bạn đã làm một phần hạng mục này'} trong worktree con, trên nhánh \`${branch}\`, nhưng khi CCoding gộp vào nhánh nhiệm vụ thì xung đột với phần các hạng mục khác đã gộp trước, ở: ${list}. Lần này bạn làm trong worktree CHÍNH của nhiệm vụ (đã có phần của các hạng mục khác).
+Việc cần làm:
+1. \`git merge --no-ff --no-edit ${branch}\` ngay trong worktree hiện tại.
+2. Giải quyết xung đột trong các tệp trên: giữ thay đổi của CẢ HAI phía (không xóa phần của hạng mục khác), xóa hết dấu \`<<<<<<<\`/\`=======\`/\`>>>>>>>\`.
+3. \`git add\` các tệp đã giải quyết rồi \`git commit --no-edit\` để hoàn tất merge.
+4. ${done ? 'Chạy lại kiểm chứng liên quan (test/typecheck) và bàn giao như bình thường.' : 'Làm TIẾP phần còn thiếu của hạng mục, chạy kiểm chứng rồi bàn giao.'}
+Không tạo/chuyển nhánh, không rebase, không làm lại từ đầu những gì nhánh trên đã có.${previous ? `\nBàn giao lần trước của bạn: \`${previous}\`.` : ''}`;
 }
 
 const checkLine = (r: CheckResult) =>

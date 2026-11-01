@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Config } from './config.js';
 import type { EventBus } from './events.js';
-import { addWorktree, changeSummary, commitAll, copyUntracked, currentBranch, headCommit, isGitRepo } from './git.js';
+import { addWorktree, changeSummary, commitAll, commitsAhead, copyUntracked, currentBranch, git, headCommit, isGitRepo, isMerged, mergeBranch, removeWorktree } from './git.js';
 import type { Herdr } from './herdr.js';
 import type { LogStore } from './logger.js';
 import { blockedSubtasks, keywordRoute, newSubtask, orderJoint, parsePlan, parseReview, parseRoute, readySubtasks } from './planner.js';
@@ -975,6 +975,7 @@ export class Orchestrator {
       branch: task.branch,
       scratch: !project?.workspace,
       serialWriters: this.exclusiveWrites(task, project),
+      parallelWriters: this.parallelWorktrees(task, project),
       repoMap: this.repoMaps.get(task.id),
     };
   }
@@ -1252,9 +1253,14 @@ export class Orchestrator {
   private async executeAll(task: Task, run: DeptRun, pctx: P.Ctx, base: CallCtx, prior?: string): Promise<void> {
     const busy = new Set<string>();
     const inflight = new Map<string, Promise<void>>();
-    /** Hạng mục đang chạy có quyền chạy lệnh trong workspace dùng chung (tối đa 1). */
+    /** Hạng mục đang chạy lệnh trong worktree CHÍNH của nhiệm vụ (tối đa 1). */
     const writing = new Set<string>();
+    /** Hạng mục làm trong worktree con chưa gộp xong vào nhánh nhiệm vụ — hạng mục phụ thuộc phải chờ gộp. */
+    const unmerged = new Set<string>();
+    const par = !!pctx.parallelWriters;
     const writer = (st: Subtask) => !!pctx.serialWriters && this.isWriter(this.d.registry.agent(st.assignee), task, pctx.project);
+    /** Cần độc quyền worktree chính: chế độ lần lượt, hoặc làm lại sau khi gộp worktree con bị xung đột. */
+    const exclusive = (st: Subtask) => writer(st) && (!par || !!st.mainOnly);
     let toldSerial = false;
     let stop: unknown;
     for (;;) {
@@ -1274,8 +1280,9 @@ export class Orchestrator {
         const ready: Subtask[] = [];
         for (const st of slots > 0 ? readySubtasks(run.subtasks, busy) : []) {
           if (ready.length >= slots) break;
-          if (writer(st) && (writing.size || ready.some(writer))) {
-            if (!toldSerial) {
+          if (st.dependsOn.some((d) => unmerged.has(d))) continue;
+          if (exclusive(st) && (writing.size || ready.some(exclusive))) {
+            if (!toldSerial && !par) {
               toldSerial = true;
               this.message(task, run.department, 'system', 'system', `🔒 Các hạng mục chạy lệnh trong repo dự án (cài đặt, test, migration, git) làm lần lượt vì dùng chung một worktree; hạng mục chỉ viết tài liệu vẫn chạy song song.`);
             }
@@ -1286,8 +1293,14 @@ export class Orchestrator {
         for (const st of ready) {
           st.status = 'running';
           busy.add(st.assignee);
-          if (writer(st)) writing.add(st.id);
-          const p = this.runSubtask(task, run, st, pctx, base, prior)
+          if (exclusive(st)) writing.add(st.id);
+          const job =
+            par && writer(st)
+              ? st.mainOnly
+                ? this.runInMainWorktree(task, run, st, pctx, base, prior)
+                : this.runInSubWorktree(task, run, st, pctx, base, prior, unmerged)
+              : this.runSubtask(task, run, st, pctx, base, prior);
+          const p = job
             .catch((e) => {
               stop ??= e;
               if (st.status === 'running') st.status = 'pending';
@@ -1314,12 +1327,14 @@ export class Orchestrator {
     return { st, text: this.readOutput(task, st), wsPath: ws };
   }
 
-  private async runSubtask(task: Task, run: DeptRun, st: Subtask, pctx: P.Ctx, base: CallCtx, prior?: string): Promise<void> {
+  /** `wt`: worktree con của hạng mục (chạy song song) — bản đồ repo, kế hoạch và thống kê thay đổi lấy từ đó thay vì worktree chính. */
+  private async runSubtask(task: Task, run: DeptRun, st: Subtask, pctx: P.Ctx, base: CallCtx, prior?: string, wt?: { path: string; base?: string }): Promise<void> {
     const { registry } = this.d;
     const agent = registry.agent(st.assignee);
     st.startedAt = nowIso();
-    if (pctx.project?.workspace && pctx.filesAccessible) this.writeRepoMap(task);
-    if (pctx.filesAccessible && task.workspace) this.writePlanFile(task, run);
+    if (pctx.project?.workspace && pctx.filesAccessible) this.writeRepoMap(task, wt?.path);
+    if (pctx.filesAccessible && task.workspace) this.writePlanFile(task, run, wt?.path);
+    const changes = () => (wt ? changesIn(wt.path, wt.base) : this.workspaceChanges(task));
     const deps = st.dependsOn
       .map((id) => run.subtasks.find((s) => s.id === id))
       .filter((s): s is Subtask => !!s && !!s.output)
@@ -1328,7 +1343,7 @@ export class Orchestrator {
     const maxCont = Math.max(0, this.d.config.phases?.maxContinuations ?? 2);
     // lần trước dừng giữa chừng (vd. nhiệm vụ lỗi rồi được tiếp tục): làm tiếp từ bàn giao dở dang + thay đổi đã có trong workspace
     let cont: P.Continuation | undefined =
-      (st.incomplete || (st.continuations ?? 0) > 0) && !st.draft && st.output ? { n: 1, max: maxCont + 1, previous: this.readOutput(task, st), changes: this.workspaceChanges(task), resumed: true } : undefined;
+      (st.incomplete || (st.continuations ?? 0) > 0) && !st.draft && st.output ? { n: 1, max: maxCont + 1, previous: this.readOutput(task, st), changes: changes(), resumed: true } : undefined;
     let conts = 0; // tính riêng cho lần chạy này (chạy lại hạng mục khi tiếp tục nhiệm vụ thì đếm lại)
     for (let attempt = 1; attempt <= 2; attempt++) {
       this.noteAttempt(task, run, st);
@@ -1345,7 +1360,7 @@ export class Orchestrator {
         this.writeOutput(task, run, st, agent, res);
         if (n <= maxCont) {
           st.continuations = (st.continuations ?? 0) + 1;
-          cont = { n: cont?.resumed ? n + 1 : n, max: cont?.resumed ? maxCont + 1 : maxCont, previous: res.text, changes: this.workspaceChanges(task) };
+          cont = { n: cont?.resumed ? n + 1 : n, max: cont?.resumed ? maxCont + 1 : maxCont, previous: res.text, changes: changes() };
           const why = res.capped === 'input' ? 'hết trần token công cụ' : 'hết lượt công cụ';
           this.d.logs.write({ level: 'warn', kind: 'subtask.continue', msg: `${st.id} ${why} khi chưa xong — chạy tiếp lần ${n}/${maxCont}`, taskId: task.id, agentId: agent.id, department: run.department, subtaskId: st.id });
           this.message(task, run.department, 'system', 'system', `↻ ${st.id} (@${st.assignee}) ${why} khi chưa xong — chạy tiếp lần ${n}/${maxCont} với ngữ cảnh mới (giữ bàn giao dở dang + thay đổi đã ghi).`, { subtaskId: st.id });
@@ -1536,6 +1551,178 @@ export class Orchestrator {
     return toolsFor(agent.tools, this.toolAccess(task, project), 'execute', false).includes('run_command');
   }
 
+  /**
+   * Hạng mục chạy lệnh làm SONG SONG: nhiệm vụ có worktree + nhánh riêng → mỗi hạng mục một worktree con tách từ nhánh nhiệm vụ,
+   * xong thì CCoding commit và gộp vào nhánh nhiệm vụ (thay vì xếp hàng trong một worktree dùng chung).
+   */
+  private parallelWorktrees(task: Task, project?: ProjectDef): boolean {
+    if (!this.exclusiveWrites(task, project)) return false;
+    if ((project?.parallelWorktrees ?? this.d.config.tools.parallelWorktrees) === false) return false;
+    return !!task.branch && !!task.workspace && fs.existsSync(task.workspace) && (project?.isolation ?? 'worktree') === 'worktree';
+  }
+
+  /** Khóa thao tác git trên worktree chính của nhiệm vụ (tách/gộp worktree con, hạng mục làm lại sau xung đột). */
+  private readonly wtLocks = new Map<string, Promise<void>>();
+  private async withWtLock<T>(key: string, fn: () => Promise<T> | T): Promise<T> {
+    const prev = this.wtLocks.get(key) ?? Promise.resolve();
+    let release!: () => void;
+    const mine = new Promise<void>((r) => (release = r));
+    const chain = prev.then(() => mine);
+    this.wtLocks.set(key, chain);
+    await prev;
+    try {
+      return await fn();
+    } finally {
+      release();
+      if (this.wtLocks.get(key) === chain) this.wtLocks.delete(key);
+    }
+  }
+
+  /** Hạng mục chạy lệnh trong worktree con riêng: tách → lệnh chuẩn bị → làm → commit + gộp vào nhánh nhiệm vụ. */
+  private async runInSubWorktree(task: Task, run: DeptRun, st: Subtask, pctx: P.Ctx, base: CallCtx, prior: string | undefined, unmerged: Set<string>): Promise<void> {
+    const project = pctx.project!;
+    unmerged.add(st.id);
+    try {
+      const wt = await this.withWtLock(task.id, () => this.openSubWorktree(task, run, st, project));
+      if (!wt) {
+        // không tách được worktree con → làm trong worktree chính, độc quyền như chế độ lần lượt
+        await this.withWtLock(task.id, () => this.runSubtask(task, run, st, pctx, base, prior));
+        return;
+      }
+      try {
+        await this.runSubSetup(task, run, st, project, wt);
+        const spctx: P.Ctx = { ...pctx, cwd: wt.path, branch: wt.branch, subWorktree: { taskBranch: task.branch } };
+        await this.runSubtask(task, run, st, spctx, { ...base, cwd: wt.path }, prior, wt);
+      } finally {
+        await this.withWtLock(task.id, () => this.closeSubWorktree(task, run, st));
+      }
+    } finally {
+      unmerged.delete(st.id);
+    }
+  }
+
+  /** Hạng mục làm lại trong worktree chính sau khi gộp bị xung đột (độc quyền: không tách/gộp worktree con nào trong lúc đó). */
+  private async runInMainWorktree(task: Task, run: DeptRun, st: Subtask, pctx: P.Ctx, base: CallCtx, prior: string | undefined): Promise<void> {
+    await this.withWtLock(task.id, async () => {
+      await this.runSubtask(task, run, st, pctx, base, prior);
+      const c = st.conflict;
+      if (!c || !task.workspace || st.status !== 'done') return;
+      if (isMerged(task.workspace, c.branch)) {
+        git(task.workspace, ['branch', '-D', c.branch], 30_000);
+        st.conflict = undefined;
+        this.message(task, run.department, 'system', 'system', `🔀 ${st.id}: đã gộp xong nhánh \`${c.branch}\` sau xung đột (đã xóa nhánh tạm).`, { subtaskId: st.id });
+      } else {
+        this.d.logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: nhánh ${c.branch} chưa được gộp sau khi làm lại`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+        this.message(task, run.department, 'system', 'system', `⚠️ ${st.id}: làm lại xong nhưng nhánh \`${c.branch}\` chưa được gộp — giữ nhánh để đối chiếu (\`git diff ${task.branch}...${c.branch}\`).`, { subtaskId: st.id });
+      }
+      this.save(task);
+    });
+  }
+
+  /** Tách worktree con cho hạng mục từ HEAD nhánh nhiệm vụ (commit phần đã làm trước đó để hạng mục thấy), hoặc dùng lại worktree con còn sót. */
+  private openSubWorktree(task: Task, run: DeptRun, st: Subtask, project: ProjectDef): NonNullable<Subtask['worktree']> | undefined {
+    const { config, logs } = this.d;
+    const main = task.workspace!;
+    const wtPath = path.join(config.workspacesDir, safeName(project.id), `wt-${safeName(task.id)}--${safeName(st.id)}`);
+    const branch = `ccoding/${task.id.toLowerCase()}--${st.id.toLowerCase()}`;
+    // còn worktree con từ lần chạy trước (vd. tạm dừng/khởi động lại giữa chừng) → làm tiếp trên đó, không xóa công sức
+    if (fs.existsSync(wtPath) && isGitRepo(wtPath)) {
+      st.worktree = { path: wtPath, branch: currentBranch(wtPath) ?? branch, base: st.worktree?.base ?? headCommit(wtPath), setup: st.worktree?.setup };
+      this.save(task);
+      return st.worktree;
+    }
+    if (fs.existsSync(wtPath)) removeWorktree(main, wtPath);
+    const pre = commitAll(main, `CCoding ${task.id}: phần đã làm trước khi tách ${st.id}`.slice(0, 200));
+    if (!pre.ok) logs.write({ level: 'warn', kind: 'workspace.commit', msg: `Không commit được worktree chính trước khi tách ${st.id}: ${pre.out.slice(0, 300)}`, taskId: task.id, projectId: project.id });
+    const r = addWorktree(main, wtPath, branch, 'HEAD');
+    if (!r.ok) {
+      logs.write({ level: 'warn', kind: 'workspace.worktree', msg: `Không tạo được worktree con cho ${st.id}: ${r.out.slice(0, 300)} — làm lần lượt trong worktree chính`, taskId: task.id, projectId: project.id, subtaskId: st.id });
+      this.message(task, run.department, 'system', 'system', `🔒 ${st.id}: không tách được worktree con (${r.out.slice(0, 160)}) — làm lần lượt trong worktree chính.`, { subtaskId: st.id });
+      return undefined;
+    }
+    copyUntracked(main, wtPath, project.worktreeCopy ?? config.tools.worktreeCopy);
+    const cc = path.join(main, '.ccoding');
+    if (fs.existsSync(cc)) fs.cpSync(cc, path.join(wtPath, '.ccoding'), { recursive: true, preserveTimestamps: true });
+    st.worktree = { path: wtPath, branch, base: headCommit(wtPath) };
+    this.save(task);
+    logs.write({ level: 'info', kind: 'workspace.subworktree', msg: `${st.id}: worktree con ${wtPath} (nhánh ${branch} từ ${task.branch})`, taskId: task.id, projectId: project.id, subtaskId: st.id });
+    this.message(task, run.department, 'system', 'system', `🌿 ${st.id} (@${st.assignee}) làm song song trong worktree con \`${wtPath}\` (nhánh \`${branch}\` tách từ \`${task.branch}\`) — xong thì CCoding gộp vào nhánh nhiệm vụ.`, { subtaskId: st.id });
+    return st.worktree;
+  }
+
+  /** Lệnh chuẩn bị của dự án (vd. cài dependency) chạy một lần trong worktree con — mỗi worktree có node_modules… riêng. */
+  private async runSubSetup(task: Task, run: DeptRun, st: Subtask, project: ProjectDef, wt: NonNullable<Subtask['worktree']>): Promise<void> {
+    if (!project.setupCommands?.length || wt.setup) return;
+    const { config } = this.d;
+    const signal = this.controllers.get(task.id)?.signal;
+    const opts = { denyCommands: [...config.tools.denyCommands, ...(project.denyCommands ?? [])], timeoutSec: config.tools.commandTimeoutSec, maxChars: config.tools.maxOutputChars, signal };
+    const results: CheckResult[] = [];
+    for (const cmd of project.setupCommands) {
+      this.checkAbort(task);
+      results.push(await runCheckCommand(cmd, wt.path, opts));
+    }
+    wt.setup = results.every((r) => r.ok);
+    this.save(task);
+    this.d.logs.write({ level: wt.setup ? 'info' : 'warn', kind: 'checks.setup', msg: `${st.id} worktree con: ${results.map((r) => `${r.command} → ${r.denied ? 'bị chặn' : r.timedOut ? 'timeout' : r.code} (${Math.round(r.ms / 1000)} s)`).join('; ')}`, taskId: task.id, projectId: project.id, subtaskId: st.id });
+    if (!wt.setup) this.message(task, run.department, 'system', 'system', `🔧 Lệnh chuẩn bị trong worktree con của ${st.id} lỗi:\n${results.filter((r) => !r.ok).map((r) => `- \`${r.command}\` ✗ ${r.summary}`).join('\n')}`, { subtaskId: st.id });
+  }
+
+  /**
+   * Kết thúc worktree con: chép sản phẩm trung gian về, commit, gộp `--no-ff` vào nhánh nhiệm vụ rồi gỡ worktree + nhánh tạm.
+   * Xung đột → hủy gộp, giữ nhánh; hạng mục đã xong thì chạy lại LẦN LƯỢT trong worktree chính với hướng dẫn tự `git merge`.
+   */
+  private closeSubWorktree(task: Task, run: DeptRun, st: Subtask): void {
+    const wt = st.worktree;
+    const main = task.workspace;
+    if (!wt || !main) return;
+    const { logs } = this.d;
+    try {
+      if (fs.existsSync(wt.path)) {
+        syncCcoding(wt.path, main, path.join('.ccoding', safeName(task.id)));
+        const c = commitAll(wt.path, `CCoding ${task.id} ${st.id}: ${st.title}`.slice(0, 200));
+        if (!c.ok) {
+          // giữ worktree con để lần chạy sau làm tiếp / người dùng xem
+          logs.write({ level: 'warn', kind: 'workspace.commit', msg: `${st.id}: không commit được worktree con ${wt.path}: ${c.out.slice(0, 300)}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+          this.message(task, run.department, 'system', 'system', `⚠️ ${st.id}: không commit được worktree con \`${wt.path}\` (${c.out.slice(0, 160)}) — giữ nguyên để làm tiếp.`, { subtaskId: st.id });
+          return;
+        }
+      }
+      const ahead = commitsAhead(main, wt.branch);
+      if (ahead) {
+        commitAll(main, `CCoding ${task.id}: phần đã làm trước khi gộp ${st.id}`.slice(0, 200));
+        const m = mergeBranch(main, wt.branch, `CCoding ${task.id}: gộp ${st.id} — ${st.title}`.slice(0, 200));
+        if (!m.ok) {
+          removeWorktree(main, wt.path);
+          st.worktree = undefined;
+          st.conflict = { branch: wt.branch, files: m.conflicts.slice(0, 30) };
+          st.mainOnly = true;
+          const files = m.conflicts.length ? m.conflicts.slice(0, 8).map((f) => `\`${f}\``).join(', ') : m.out.slice(0, 200);
+          logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: gộp ${wt.branch} vào ${task.branch} bị xung đột: ${m.conflicts.join(', ') || m.out.slice(0, 300)}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+          const done = st.status === 'done';
+          const note = P.mergeConflictNote(wt.branch, m.conflicts, done, st.output ? `.ccoding/${safeName(task.id)}/${st.output}` : undefined);
+          // lần chạy sau (làm lại / tiếp tục) nhận hướng dẫn gộp kèm bàn giao dở dang nếu có
+          st.handover = `${note}${st.handover ? `\n\n${st.handover}` : ''}`.slice(0, 12_000);
+          if (done) {
+            st.status = 'pending';
+            this.message(task, run.department, 'system', 'system', `⚠️ ${st.id} xung đột khi gộp vào nhánh nhiệm vụ (${files}) — làm lại LẦN LƯỢT trong worktree chính: @${st.assignee} tự \`git merge ${wt.branch}\` rồi giải quyết xung đột.`, { subtaskId: st.id });
+          } else {
+            this.message(task, run.department, 'system', 'system', `⚠️ ${st.id} chưa xong và phần đã làm xung đột khi gộp (${files}) — giữ nhánh \`${wt.branch}\`; lần chạy sau làm trong worktree chính.`, { subtaskId: st.id });
+          }
+          this.save(task);
+          return;
+        }
+        this.message(task, run.department, 'system', 'system', `🔀 Đã gộp ${st.id} (${ahead} commit, nhánh \`${wt.branch}\`) vào \`${task.branch}\`.`, { subtaskId: st.id });
+        logs.write({ level: 'info', kind: 'workspace.merge', msg: `${st.id}: gộp ${wt.branch} vào ${task.branch}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+      }
+      if (!removeWorktree(main, wt.path)) logs.write({ level: 'warn', kind: 'workspace.worktree', msg: `${st.id}: chưa gỡ hết thư mục worktree con ${wt.path} (tệp đang bị khóa?)`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+      if (ahead !== undefined) git(main, ['branch', '-D', wt.branch], 30_000);
+      st.worktree = undefined;
+      this.save(task);
+    } catch (e) {
+      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: lỗi khi gộp worktree con: ${(e as Error).message}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+    }
+  }
+
   /** Chuẩn bị thư mục làm việc: worktree git riêng (nếu dự án là repo) + .ccoding/<task>/inputs cho agent đọc. */
   private prepareWorkspace(task: Task, project?: ProjectDef): void {
     const { config, logs } = this.d;
@@ -1597,9 +1784,9 @@ export class Orchestrator {
   }
 
   /** Kế hoạch đầy đủ `.ccoding/<task>/PLAN.md` — prompt thực thi chỉ gửi mỗi hạng mục một dòng (phần nền gửi lại ở mọi lượt công cụ). */
-  private writePlanFile(task: Task, run: DeptRun): void {
+  private writePlanFile(task: Task, run: DeptRun, ws = task.workspace): void {
     try {
-      const dir = path.join(task.workspace!, '.ccoding', safeName(task.id));
+      const dir = path.join(ws!, '.ccoding', safeName(task.id));
       ensureDir(dir);
       writeText(path.join(dir, 'PLAN.md'), P.planFile(run.planSummary ?? '', run.decisions ?? '', run.subtasks));
     } catch {
@@ -1608,13 +1795,13 @@ export class Orchestrator {
   }
 
   /** Bản đồ repo `.ccoding/<task>/repo-map.md` (tệp, số dòng, route, model, hàm) — tạo lại trước mỗi hạng mục vì số dòng đổi sau khi sửa. */
-  private writeRepoMap(task: Task): void {
-    if (!task.workspace || this.d.config.tools.repoMap === false) return;
+  private writeRepoMap(task: Task, ws = task.workspace): void {
+    if (!ws || this.d.config.tools.repoMap === false) return;
     try {
       const t0 = Date.now();
-      const map = buildRepoMap(task.workspace);
+      const map = buildRepoMap(ws);
       const rel = `.ccoding/${safeName(task.id)}/repo-map.md`;
-      writeText(path.join(task.workspace, rel), map.text);
+      writeText(path.join(ws, rel), map.text);
       this.repoMaps.set(task.id, { rel, large: map.large.slice(0, 12).map((f) => `${f.path} (${f.lines.toLocaleString('vi-VN')} dòng)`) });
       if (!this.repoMapLogged.has(task.id)) {
         this.repoMapLogged.add(task.id);
@@ -2260,6 +2447,39 @@ export function listWorkspaceFiles(root: string, max: number): Array<{ path: str
   };
   walk(root, '', 0);
   return out;
+}
+
+/** Thống kê thay đổi của một worktree so với commit gốc (lỗi git thì rỗng). */
+function changesIn(wt: string, base?: string): string {
+  try {
+    return changeSummary(wt, base);
+  } catch {
+    return '';
+  }
+}
+
+/** Chép tệp agent tạo/sửa trong `.ccoding/<task>` của worktree con về worktree chính (chỉ tệp mới hoặc mới hơn; bỏ tệp CCoding tự sinh). */
+function syncCcoding(from: string, to: string, rel: string): number {
+  const src = path.join(from, rel);
+  if (!fs.existsSync(src)) return 0;
+  let n = 0;
+  const walk = (dir: string): void => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        walk(p);
+        continue;
+      }
+      if (!e.isFile() || (dir === src && (e.name === 'PLAN.md' || e.name === 'repo-map.md'))) continue;
+      const dst = path.join(to, rel, path.relative(src, p));
+      if (fs.existsSync(dst) && fs.statSync(dst).mtimeMs >= fs.statSync(p).mtimeMs) continue;
+      fs.mkdirSync(path.dirname(dst), { recursive: true });
+      fs.copyFileSync(p, dst);
+      n++;
+    }
+  };
+  walk(src);
+  return n;
 }
 
 /** .ccoding/ trong workspace luôn bị git bỏ qua (chứa tài liệu đầu vào & sản phẩm trung gian). */

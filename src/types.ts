@@ -72,6 +72,8 @@ export interface ProjectDef {
   baseRef?: string;
   /** File chưa track (vd. .env) cần chép vào worktree để chạy test/migration ([] = không chép gì). */
   worktreeCopy?: string[];
+  /** Hạng mục chạy lệnh làm song song, mỗi hạng mục một worktree con (mặc định theo tools.parallelWorktrees); false = lần lượt. */
+  parallelWorktrees?: boolean;
   /** Mẫu regex lệnh bị cấm riêng cho dự án (vd. container/cổng DB của môi trường đang chạy). */
   denyCommands?: string[];
   /** Lệnh chuẩn bị chạy một lần mỗi worktree trước lệnh kiểm tra (vd. cài dependency). */
@@ -227,6 +229,12 @@ export interface Subtask {
   incomplete?: boolean;
   /** Ghi chú bàn giao khi lượt gọi bị ngắt giữa vòng công cụ rồi nhiệm vụ tạm dừng (vd. chờ model nhanh) — lần chạy sau làm tiếp, không làm lại. */
   handover?: string;
+  /** Chạy song song: worktree con riêng của hạng mục (tách từ nhánh nhiệm vụ) — CCoding commit rồi gộp vào nhánh nhiệm vụ khi xong. */
+  worktree?: { path: string; branch: string; base?: string; setup?: boolean };
+  /** Gộp worktree con bị xung đột → làm lại trong worktree CHÍNH của nhiệm vụ, lần lượt (nhánh cũ giữ lại để agent tự merge). */
+  mainOnly?: boolean;
+  /** Lần gộp bị xung đột: nhánh của lần làm trước + tệp xung đột. */
+  conflict?: { branch: string; files: string[] };
 }
 
 export interface ReviewIssue { subtask: string; severity: 'blocker' | 'major' | 'minor'; comment: string }
