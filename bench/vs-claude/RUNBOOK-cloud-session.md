@@ -90,3 +90,25 @@ COMMON="--runtime claude-cli --ccoding-url http://127.0.0.1:7424 --ccoding-data 
    - A0-sonnet đã đủ khóa thì runner bỏ qua, nên lệnh chỉ chạy B7. Nếu còn ngân sách, chạy thêm 2 lượt A0-sonnet làm neo cùng cửa sổ: `--repeats 11`.
 3. **Làn nhanh B6**, để so mô tả (không phải giả thuyết xác nhận): `--arms A0-sonnet,B6 --tasks t1-duration,t2-orders,t3-api,t4-perf,t5-logq --repeats 9`, dùng server 7425.
 4. **Chỉ phân tích khi đã đủ số lượt** (§4 của đăng ký trước). Trên các bài chạm trần, B-01 chỉ dùng thời gian và token (§2.7).
+
+## Bước 3c. Đo lại làn đơn sau B-11 (B7′) — chỉ chạy khi giám đốc đã duyệt
+
+Đặc tả, điều kiện chạy, số lượt, điểm dừng và kết quả dự kiến nằm ở `docs/research/improvement-backlog.md` B-11.5. Phân tích phương sai nằm ở `docs/research/analysis/variance-decomposition.md`. Thứ tự ưu tiên khi thiếu thời gian cũng ghi ở đó.
+
+1. **Dựng lại server nhánh (cổng 7425)** từ commit `2179f07` trở về sau. Commit này có công tắc `lanes.single.slim`. Ghi hash vào RUNLOG.
+2. **Chỉ chạy các arm đã được duyệt:**
+
+   | Arm | Thành phần | Cần duyệt |
+   |---|---|---|
+   | `B7c` | gọn prompt | không |
+   | `B7cb` | `B7c` + mẫu đầu ra gọn | giám đốc duyệt (b) |
+   | `B7cab` | `B7cb` + nghiệm thu CTO dạng bảng ngắn (a-brief) | giám đốc duyệt (a-brief) và (b) |
+
+   Lệnh, chạy xen kẽ với A0-sonnet **cùng cửa sổ, cùng server**:
+   ```bash
+   node bench/vs-claude/run.mjs --arms A0-sonnet,<arm> --tasks t1-duration,t2-orders,t3-api,t4-perf,t5-logq --repeats 10 --timeout 20 $B7 --out bench/vs-claude/results/b7prime
+   ```
+3. **Điểm dừng** theo B-11.5, tính sau 20 lượt đầu của mỗi arm (10 B7′ + 10 A0).
+   - Dừng và commit nếu thời gian tới 5/11 14:59 không đủ cho phần còn lại.
+   - Không xem điểm, chỉ xem R̂ theo quy tắc dừng đã đăng ký.
+4. **Commit và push sau mỗi lệnh.** Phòng Nghiên cứu phân tích khi đủ số lượt.
