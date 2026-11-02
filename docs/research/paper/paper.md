@@ -1,8 +1,8 @@
 # Hệ thống multi-agent CCoding cho lập trình: thiết kế, giới hạn sub-agent và đo chi phí–thời gian–cache so với một coding agent đơn
 
 > **Bản thảo v0.2 (2/11/2026) — Phòng Nghiên cứu, hạng mục S6 (đã sửa theo review: đưa C6 vào, nêu nhiễu mô hình ở Tóm tắt).** Chuẩn trích dẫn APA 7, dạng (Tác giả, năm). Phân loại dữ liệu: nội bộ; dự án ứng dụng thật được ẩn danh.
-> **Bản đã đối chiếu:** `docs/research/BRIEF.md`; `performance/token-analysis.md` (S2, bảng T-0…T-f; **chưa có C6** tại thời điểm đối chiếu); `challenges.md` (S3, C-01…C-49, L1–L15; bản có sửa C-13/P-01); `self-improvement/design.md` v1.0 (S4); `related-work.md` (S1 + S5, 31 nguồn, mục "Kết luận điểm mới"); `bench/vs-claude/results/runs.csv` tại commit `5866cda` (chỉ cho C6).
-> **Quy ước số liệu:** mọi số hiệu năng của C1–C5 (thời gian, chi phí, token, cache, tỉ lệ) lấy nguyên từ bảng T-a…T-f của `token-analysis.md`; mỗi bảng ghi tên bảng nguồn và lệnh tái lập. **Ngoại lệ duy nhất: C6** — `token-analysis.md` chưa có C6 nên Bảng 3b lấy thẳng 8 dòng C6 của `runs.csv` ở `5866cda` và tính trung bình bằng tay (không qua script S2, chưa qua `--check`); khi S2 cập nhật thì thay bằng bảng T-x tương ứng. Số đếm thách thức và tham số cấu hình lấy từ `challenges.md` và được ghi rõ.
+> **Bản đã đối chiếu:** `docs/research/BRIEF.md`; `performance/token-analysis.md` (S2, bảng T-0…T-g; **đã có C6** ở T-a, T-b, T-c, T-d, T-f, T-g; C7 thuộc việc của S4); `challenges.md` (S3, C-01…C-49, L1–L15; bản có sửa C-13/P-01); `self-improvement/design.md` v1.0 (S4); `related-work.md` (S1 + S5, 31 nguồn, mục "Kết luận điểm mới"); `bench/vs-claude/results/runs.csv` tại commit `5866cda` (chỉ cho C6).
+> **Quy ước số liệu:** mọi số hiệu năng của C1–C6 (thời gian, chi phí, token, cache, tỉ lệ) lấy nguyên từ bảng T-a…T-g của `token-analysis.md`; mỗi bảng ghi tên bảng nguồn và lệnh tái lập. Dữ liệu C6 trong `token-analysis.md` đọc từ `results/c6-extract/` (trích nguyên văn từ `5866cda`); Bảng 3b trích T-a, T-b, T-f, T-g. Số đếm thách thức và tham số cấu hình lấy từ `challenges.md` và được ghi rõ.
 > **Nhãn nguồn:** hầu hết nguồn mới chỉ đọc ở mức tóm tắt (xem mục 9); khẳng định về nguồn đó chỉ ở mức tóm tắt.
 
 ---
@@ -81,34 +81,34 @@ Vòng đời một nhiệm vụ (đầy đủ — "làn đầy"):
 **Chiến lược điều phối chính.**
 
 1. *Kế hoạch theo năng lực công cụ.* Trưởng phòng thấy roster ghi quyền công cụ của từng người và quy tắc giao theo năng lực, sau sự cố giao việc cần shell cho người chỉ có công cụ đọc (thách thức C-04 trong `challenges.md`).
-2. *Worktree con song song + tự gộp + giải xung đột.* Mỗi hạng mục có worktree con riêng tách từ nhánh nhiệm vụ; CCoding tự gộp `--no-ff`; xung đột được giải trong một worktree con mới (`tools.resolveRounds` = 2, rồi dự phòng tuần tự); phụ thuộc thư viện được cài lại khi tệp khai báo đổi (C-16 – C-19). Ý tưởng worktree-per-engineer đã có ở CAID (Geng & Neubig, 2026); chúng tôi cài đặt độc lập.
-3. *Review độc lập + đo của hệ thống.* Reviewer không phải người làm; CCoding tự chạy `setupCommands`/`checkCommands` ở baseline, sau thực thi và sau mỗi vòng sửa; hồi quy so với baseline thì không duyệt dù reviewer ghi duyệt; chạy lại khi workspace đổi sau lần đo gần nhất (C-27, C-28).
-4. *Làn nhanh và làn đầy.* Việc nhỏ đi làn nhanh: bỏ họp, kế hoạch được định hình lại (`shapeFastPlan`), `maxParallel` nâng bằng số hạng mục độc lập (tối đa 4) (C-12); lead dùng Sonnet thay vì Opus (T-e0, T-e). Việc lớn đi làn đầy.
+2. *Worktree con song song + tự gộp + giải xung đột.* Mỗi hạng mục có ghi tệp hoặc chạy lệnh có worktree con riêng tách từ nhánh nhiệm vụ (hạng mục chỉ đọc chạy trong worktree chính; `tools.parallelWorktrees`); CCoding tự gộp `--no-ff` (kèm `--no-verify`, nên hook git của repo không chạy khi gộp); xung đột được giải trong một worktree con mới (`tools.resolveRounds` = 2, rồi dự phòng tuần tự); phụ thuộc thư viện được cài lại khi tệp khai báo đổi (C-16 – C-19). Ý tưởng worktree-per-engineer đã có ở CAID (Geng & Neubig, 2026); chúng tôi cài đặt độc lập.
+3. *Review độc lập + đo của hệ thống.* Reviewer là một vai trò riêng của phòng (`dept.reviewer`); ở làn nhanh, hạng mục giao cho reviewer được chuyển thành trọng tâm review, còn ở làn đầy hệ thống chưa cấm cơ học việc giao hạng mục cho reviewer; CCoding tự chạy `setupCommands`/`checkCommands` ở baseline, sau thực thi và sau mỗi vòng sửa; hồi quy so với baseline thì không duyệt dù reviewer ghi duyệt; chạy lại khi workspace đổi sau lần đo gần nhất (C-27, C-28).
+4. *Làn nhanh và làn đầy.* Việc nhỏ đi làn nhanh: bỏ họp, kế hoạch được định hình lại (`shapeFastPlan`), `maxParallel` nâng bằng số hạng mục độc lập (tối đa 4) (C-12); làn nhanh lập kế hoạch bằng Sonnet (thay Opus của hồ sơ trưởng phòng), bỏ họp và chốt (không có discuss, finalize), và dựng báo cáo cuối từ mẫu mà không gọi LLM (T-e0, T-e). Việc lớn đi làn đầy.
 5. *Chuẩn bị song song.* Lệnh chuẩn bị + baseline chạy song song với lập kế hoạch (C-10).
 
 ### 4.2 Cơ chế giới hạn sub-agent (RQ2)
 
-Chủ dự án giới hạn sub-agent theo bốn chiều: *cái gì được làm* (quyền), *bao nhiêu* (ngân sách, số hạng mục, vòng sửa), *ở đâu* (thư mục làm việc, nhánh, nhãn dữ liệu) và *khi nào dừng* (giới hạn khảo sát, thời gian). Bảng 1 tóm tắt 15 cơ chế (L1–L15 trong `challenges.md` §2, nơi có chi tiết và nguồn); cột cuối chỉ nêu bằng chứng hiệu quả đã có hay "chưa đo".
+Chủ dự án giới hạn sub-agent theo bốn chiều: *cái gì được làm* (quyền), *bao nhiêu* (ngân sách, số hạng mục, vòng sửa), *ở đâu* (thư mục làm việc, nhánh, nhãn dữ liệu) và *khi nào dừng* (giới hạn khảo sát, thời gian). Bảng 1 tóm tắt 15 cơ chế (L1–L15 trong `challenges.md` §2, nơi có chi tiết và nguồn); cột "Áp cho runtime" nói giới hạn có hiệu lực với runtime nào (kiểm theo mã, `dev-review/technical-check.md`), và cột cuối chỉ nêu bằng chứng hiệu quả đã có hay "chưa đo". **Lưu ý cho đọc kết quả benchtest:** toàn bộ benchtest chạy trên runtime `claude-cli`; trần vòng công cụ (`toolTurns`), ngân sách đầu vào công cụ (`toolInputBudget`), nhắc ghi ở 35%/65%, hủy khi treo (`idleTimeoutMs`) và chạy tiếp `maxContinuations` **không áp cho `claude-cli`** (chỉ vòng công cụ của runtime API đọc chúng; `claude-cli` không truyền `--max-turns` và không báo chạm trần). Với `claude-cli`, mỗi lượt gọi chỉ chịu `timeoutMs`, hook `claude-guard`, danh sách công cụ và kiểm ngân sách token cấp nhiệm vụ/hạng mục trước lượt gọi; KPI `capHits` luôn bằng 0.
 
-**Bảng 1.** Cơ chế giới hạn sub-agent. Nguồn: `challenges.md` §2 (không phải bảng S2); tham số theo `src/config.ts` mặc định, có thể bị cấu hình cục bộ ghi đè.
+**Bảng 1.** Cơ chế giới hạn sub-agent. Nguồn: `challenges.md` §2 (không phải bảng S2), đối chiếu `technical-check.md`; tham số theo `src/config.ts` mặc định, có thể bị cấu hình cục bộ ghi đè.
 
-| # | Cơ chế | Giới hạn cụ thể | Bằng chứng hiệu quả |
-|---|---|---|---|
-| L1 | Quyền công cụ 4 mức | `none · read · write · exec` = giao của hồ sơ agent, quyền dự án và pha | Gián tiếp; chưa có đối chứng trước/sau |
-| L2 | Hook `claude-guard` — lệnh | Chặn lệnh cấm, `git push`, `reset --hard`, đổi nhánh, rebase, `.env` | Một lượt thử chặn đúng một lần; số chặn đúng/nhầm toàn bộ: chưa đo |
-| L3 | Hook — đường dẫn | Công cụ tệp chỉ trong thư mục làm việc; lệnh shell chặn đường dẫn tuyệt đối/`../` vượt gốc | Kiểm theo mẫu chuỗi, **không phải sandbox hệ điều hành**; chưa kiểm thử đối kháng |
-| L4 | Hook — nhánh/worktree | Không tạo/chuyển/xóa nhánh; chỉ `git merge` vào nhánh hiện tại | Sự cố nhầm nhánh không ghi lại sau khi sửa; thống kê đầy đủ: chưa đo |
-| L5 | Hook — stdin | Bọc lệnh Bash với `</dev/null` | Trước: một lượt treo 579 s (T-a, C5 t3 lượt 1); sau: không tái diễn ở hai bài tiếp (n nhỏ — minh họa) |
-| L6 | Giới hạn khảo sát | `readsBeforeWrite` = 16 (nhắc), chặn từ 32; nhắc ở 35%/65% ngân sách công cụ | Nền: 48–70 lần đọc trước lần ghi đầu; hiệu quả sau: chưa đo |
-| L7 | Ngân sách token | `budgetTokens` 1.500.000; theo hạng mục none 60k · read 120k · write 200k · exec 300k; theo vòng công cụ | Không có đối chứng; gói dài vẫn tốn nhiều token |
-| L8 | Ngân sách thời gian/lượt | `timeoutMs` 30 phút; `toolTurns` 40/16/10; hủy khi treo 5 phút | Từng sự cố có bằng chứng riêng; tỉ lệ chạm trần: chưa đo |
-| L9 | Số hạng mục / lần chạy | `maxContinuations` 2; cảnh báo hạng mục chạy lần 3, 5… | Chưa có thống kê |
-| L10 | Vòng sửa | `maxRevisions` 1 | Dự án ứng dụng: 5/7 gói cần đúng 1 vòng (định tính) |
-| L11 | `maxParallel` | Mặc định 3; làn nhanh tối đa 4; mỗi agent một hạng mục một lúc | Sau sửa (`d7600f6`, C6, n = 2 mỗi ô): thời gian TB CCoding / Claude Code = 0,76 (t3), 0,67 (t5); 87/87 và 146/146 test ẩn mọi lượt; chi phí +5,6% / +21,1% (Bảng 3b; hai hệ chạy cùng lúc, mô hình khác nhau; chưa có đối chứng trước/sau cùng bài) |
-| L12 | Cách ly cấu hình người dùng | `--strict-mcp-config --setting-sources project,local`; bỏ biến khóa khỏi môi trường | Ngữ cảnh mỗi lượt 93k → 7,6k token (số đo đơn lẻ, chưa lặp lại) |
-| L13 | Data Protection Gate | Nhãn dữ liệu quyết định runtime được phép; che PII/bí mật trong log; nhật ký chuỗi băm | Cấu hình có thật; số lần chặn đúng: chưa đo |
-| L14 | KPI | 4 nhóm (Chất lượng 40 · Hiệu quả 25 · Tin cậy 20 · Tuân thủ 15); "việc cần sửa" tự sinh | Phát hiện lỗi đo KPI → sửa; tác động lên hành vi lượt sau: chưa đo |
-| L15 | Review độc lập + lệnh kiểm tra tự chạy | Hồi quy ⇒ không duyệt; cờ "cần xem" khi reviewer không chạy lệnh | Bắt lỗi thật ở một dự án (định tính); tỉ lệ bắt/dương tính giả: chưa đo |
+| # | Cơ chế | Giới hạn cụ thể | Áp cho runtime | Bằng chứng hiệu quả |
+|---|---|---|---|---|
+| L1 | Quyền công cụ 4 mức | `none · read · write · exec` = giao của hồ sơ agent, quyền dự án và pha | Mọi runtime (qua `cliTools`; `claude-cli` có `--allowedTools`) | Gián tiếp; chưa có đối chứng trước/sau |
+| L2 | Hook `claude-guard` — lệnh | Chặn lệnh cấm (30 mẫu), `git push`, `reset --hard`, đổi nhánh, rebase, `.env` | `claude-cli` (hook) | Một lượt thử chặn đúng một lần; số chặn đúng/nhầm toàn bộ: chưa đo |
+| L3 | Hook — đường dẫn | Công cụ tệp chỉ trong thư mục làm việc; lệnh shell chặn đường dẫn tuyệt đối ngoài thư mục làm việc **trừ thư mục tạm và thư mục cài đặt hệ thống**, và `../` vượt gốc | `claude-cli` (hook) | Kiểm theo mẫu chuỗi, **không phải sandbox hệ điều hành**; chưa kiểm thử đối kháng |
+| L4 | Hook — nhánh/worktree | Không tạo/chuyển/xóa nhánh; chỉ `git merge` vào nhánh hiện tại | `claude-cli` (hook) | Sự cố nhầm nhánh không ghi lại sau khi sửa; thống kê đầy đủ: chưa đo |
+| L5 | Hook — stdin | Bọc lệnh Bash với `</dev/null` | Chỉ `claude-cli` | Trước: một lượt treo 579 s (T-a, C5 t3 lượt 1); sau: không tái diễn ở hai bài tiếp (n nhỏ — minh họa) |
+| L6 | Giới hạn khảo sát | `readsBeforeWrite` = 16 (nhắc), chặn từ 32, chỉ ở pha thực thi/sửa; nhắc ghi ở 35%/65% ngân sách công cụ | `readsBeforeWrite`: `claude-cli` (hook); nhắc 35%/65%: **chỉ runtime API, không áp cho `claude-cli`** | Nền: 48–70 lần đọc trước lần ghi đầu; hiệu quả sau: chưa đo |
+| L7 | Ngân sách token | `budgetTokens` 1.500.000 (kiểm trước mỗi lượt gọi); ngân sách hạng mục mặc định max(100k; 2 × ngân sách nhiệm vụ / số hạng mục), cảnh báo khi vượt và dừng nếu ở chế độ `pause`; ngân sách đầu vào theo vòng công cụ (`toolInputBudget`) thực thi 800k · sửa 300k · review 200k · kế hoạch 100k. Các hằng số 60k/120k/200k/300k theo mức quyền (none/read/write/exec) chỉ dùng để **ước lượng** token của kế hoạch (`estimate.perSubtask`), không phải ngân sách | Ngân sách nhiệm vụ/hạng mục: mọi runtime; `toolInputBudget`: **chỉ runtime API, không áp cho `claude-cli`** | Không có đối chứng; gói dài vẫn tốn nhiều token |
+| L8 | Ngân sách thời gian/lượt | `timeoutMs` 30 phút; `toolTurns` 40/16/10; hủy khi treo 5 phút (`idleTimeoutMs`) | `timeoutMs`: mọi runtime (với `claude-cli` là trần tiến trình); `toolTurns`, `idleTimeoutMs`: **chỉ runtime API, không áp cho `claude-cli`** | Từng sự cố có bằng chứng riêng; tỉ lệ chạm trần: chưa đo (với `claude-cli` không đo được vì không có trần) |
+| L9 | Số hạng mục / lần chạy | `maxContinuations` 2 (chạy tiếp khi runtime báo chạm trần vòng công cụ); cảnh báo hạng mục chạy lần 3, 5…; prompt làn nhanh *yêu cầu* 2–4 hạng mục độc lập (ràng buộc mềm, mã không cưỡng chế) | `maxContinuations`: **chỉ runtime API; với `claude-cli` cơ chế không kích hoạt** | Chưa có thống kê |
+| L10 | Vòng sửa | `maxRevisions` 1 | Mọi runtime | Dự án ứng dụng: 5/7 gói cần đúng 1 vòng (định tính) |
+| L11 | `maxParallel` | Mặc định 3; làn nhanh tối đa 4; mỗi agent một hạng mục một lúc | Mọi runtime (điều phối) | Sau sửa (`d7600f6`, C6, n = 2 mỗi ô): thời gian TB CCoding / Claude Code = 0,76 (t3), 0,67 (t5); 87/87 và 146/146 test ẩn mọi lượt; chi phí +5,6% / +21,1% (Bảng 3b; hai hệ chạy cùng lúc, mô hình khác nhau; chưa có đối chứng trước/sau cùng bài) |
+| L12 | Cách ly cấu hình người dùng | `--strict-mcp-config --setting-sources project,local`; `--no-session-persistence`; bỏ biến khóa khỏi môi trường | Chỉ `claude-cli` | Ngữ cảnh mỗi lượt 93k → 7,6k token (ghi chú của nhà phát triển trong mã, số đo đơn lẻ, chưa lặp lại) |
+| L13 | Data Protection Gate | Nhãn dữ liệu quyết định runtime được phép (mặc định: Công khai/Nội bộ mọi runtime; Bảo mật/Hạn chế chỉ `local`); che PII/bí mật trong log; nhật ký chuỗi băm | Mọi runtime | Cấu hình có thật; số lần chặn đúng: chưa đo |
+| L14 | KPI | 4 nhóm (Chất lượng 40 · Hiệu quả 25 · Tin cậy 20 · Tuân thủ 15); "việc cần sửa" tự sinh | Mọi runtime (`capHits` chỉ có nghĩa với runtime API) | Phát hiện lỗi đo KPI → sửa; tác động lên hành vi lượt sau: chưa đo |
+| L15 | Review độc lập + lệnh kiểm tra tự chạy | Hồi quy ⇒ không duyệt; reviewer có quyền chạy lệnh mà không chạy lệnh kiểm tra nào thì bị ghi log `review.unverified` và cảnh báo trong báo cáo (cờ "cần xem" chỉ bật khi review chưa duyệt hoặc lệnh kiểm tra còn lỗi) | Mọi runtime | Bắt lỗi thật ở một dự án (định tính); tỉ lệ bắt/dương tính giả: chưa đo |
 
 **Nhận xét.** Phần lớn cơ chế được thêm *sau* một sự cố cụ thể (cột "Thách thức liên quan" trong `challenges.md`); với đa số, chúng tôi chưa có phép đo trước/sau có đối chứng. Vì vậy mục này mô tả cơ chế và bằng chứng sự cố, **không khẳng định hiệu quả định lượng**. Hai giới hạn nên nói thẳng: hook chỉ kiểm theo mẫu chuỗi (không thay sandbox HĐH), và ngân sách token không ngăn được chi phí cao khi chuỗi phụ thuộc dài.
 
@@ -120,7 +120,7 @@ Chủ dự án giới hạn sub-agent theo bốn chiều: *cái gì được là
 
 **Bộ bài (5 bài, 461 test ẩn).** `t1-duration` (module theo đặc tả dày quy tắc, 149 test), `t2-orders` (sửa 6 lỗi khách báo, 60), `t3-api` (4 tính năng trên API sẵn có, 87), `t4-perf` (tối ưu hiệu năng, kết quả giống từng byte, 19), `t5-logq` (công cụ nhiều module từ đặc tả, 146). Test ẩn được chấm tự động bằng `node --test` và cả hai hệ không thấy; thời gian trung bình mỗi lượt chạy từ 91 đến 446 s (T-a), tức **không có bài nào dài hơn 15 phút**.
 
-**Các vòng.** C1–C2 = mốc ban đầu (họp, tổng hợp bằng Opus); C3–C4 = bước trung gian; C5 = làn nhanh; **C6 = kiểm chứng sửa `maxParallel` (`d7600f6`: làn nhanh chạy cùng lúc tối đa 4 hạng mục độc lập), chỉ t3 và t5, 2 lượt mỗi hệ; như C5, hai tiến trình (một mỗi hệ) chạy cùng lúc, mỗi hệ tuần tự trong tiến trình của mình** (cùng chịu tải nhà cung cấp, nhưng có thể tranh tài nguyên máy; theo `docs/PROCESS-REVIEW.md` §13 ở `5866cda`). Hệ Claude chỉ có đối chứng cùng vòng ở C1, C2, C5, C6. C6 chưa nằm trong `token-analysis.md`.
+**Các vòng.** C1–C2 = mốc ban đầu (họp, tổng hợp bằng Opus); C3–C4 = bước trung gian; C5 = làn nhanh; **C6 = kiểm chứng sửa `maxParallel` (`d7600f6`: làn nhanh chạy cùng lúc tối đa 4 hạng mục độc lập), chỉ t3 và t5, 2 lượt mỗi hệ; như C5, hai tiến trình (một mỗi hệ) chạy cùng lúc, mỗi hệ tuần tự trong tiến trình của mình** (cùng chịu tải nhà cung cấp, nhưng có thể tranh tài nguyên máy; theo `docs/PROCESS-REVIEW.md` §13 ở `5866cda`). Hệ Claude chỉ có đối chứng cùng vòng ở C1, C2, C5, C6. C6 có trong `token-analysis.md` (T-a, T-b, T-c, T-d, T-f, T-g).
 
 **Số đo.** Thời gian tường, chi phí quy đổi theo giá niêm yết do Claude Code báo, token vào/ra, đọc/ghi cache (tổng cả lượt chạy — `runs.csv`, nguồn chuẩn), số test ẩn đạt. Với CCoding còn có số liệu theo từng lượt gọi agent và pha (`calls.csv`, `phases.csv`); với Claude Code, theo từng lượt mô hình (`claude_turns.csv`, ghi cache TTL 1 giờ/5 phút). Hai tệp này khác độ mịn nên chỉ so ở mức lượt chạy (T-0). Đối chiếu tổng: 29/29 lượt CCoding và 20/20 lượt Claude khớp (T-0).
 
@@ -157,7 +157,7 @@ node docs/research/performance/scripts/token-analysis.mjs --check docs/research/
 | C5 | t4-perf | 153 / 203 | 0.574 / 0.627 | 38/38 / 38/38 |
 | C5 | t5-logq | 175 / 259 | 1.077 / 1.015 | 292/292 / 292/292 |
 
-*Ghi chú:* C6 không nằm trong T-a (chưa cập nhật); xem Bảng 3b. Ở C5, trung bình t3 của CCoding (400 s) gồm một lượt 579 s do lỗi treo stdin và một lượt 221 s. Ở C2, hai biến thể t1 của CCoding (n = 1 mỗi biến thể) không có đối chứng Claude cùng vòng nên không đưa vào bảng. C3 và C4 không có đối chứng Claude cùng vòng (T-a, T-f).
+*Ghi chú:* T-a có thêm hai hàng C6 (t3, t5; 2 lượt mỗi ô; trích ở Bảng 3b). Ở C5, trung bình t3 của CCoding (400 s) gồm một lượt 579 s do lỗi treo stdin và một lượt 221 s. Ở C2, hai biến thể t1 của CCoding (n = 1 mỗi biến thể) không có đối chứng Claude cùng vòng nên không đưa vào bảng. C3 và C4 không có đối chứng Claude cùng vòng (T-a, T-f).
 
 **Chất lượng.** Cả hai hệ gần như đạt trọn test ẩn ở mọi vòng; mỗi hệ rớt đúng một test ở một số lượt (Claude 297/298 ở `t1` C1 và C5; CCoding 59/60 ở `t2` C4) (T-a). **Chất lượng không phải lợi thế đo được trong 5 bài này**, nên so sánh quy về thời gian và chi phí.
 
@@ -175,19 +175,21 @@ node docs/research/performance/scripts/token-analysis.mjs --check docs/research/
 | C5 | tất cả lượt | Chi phí (USD) | 5 bài; 10 / 10 | 0.144 | [0.077; 0.210] | 21.8% [11.5; 32.1] | CC > Claude |
 | C5 | loại t3 lượt 1 (treo stdin, 579 s) — độ nhạy | Thời gian (s) | 5 bài; 9 / 10 | -14.7 | [-26.7; -2.5] | -8.8% [-15.7; -1.5] | CC < Claude |
 | C5 | loại t3 lượt 1 — độ nhạy | Chi phí (USD) | 5 bài; 9 / 10 | 0.156 | [0.093; 0.220] | 23.7% [14.0; 33.7] | CC > Claude |
+| C6 | tất cả lượt | Thời gian (s) | 2 bài; 4 CC / 4 Claude | -72.8 | [-105.3; -40.3] | -28.4% [-40.0; -15.9] | CC < Claude; **p hoán vị = 0,0556** (chính xác, 36 tổ hợp; không đạt 0,05) |
+| C6 | tất cả lượt | Chi phí (USD) | 2 bài; 4 CC / 4 Claude | 0.136 | [-0.016; 0.287] | 13.2% [-1.4; 30.2] | CI chứa 0; p hoán vị = 0,3889 |
 
-*C6 chưa có trong T-f; không có CI bootstrap cho C6 (xem Bảng 3b, chỉ mô tả).*
+*C6 nằm trong T-f (hai dòng cuối). Với 2 lượt mỗi ô, kiểm định hoán vị chính xác có p nhỏ nhất đạt được là 2/36 = 0,0556, nên thời gian C6 tách hoàn toàn giữa hai hệ nhưng không đạt 0,05 dù CI bootstrap không chứa 0; cả hai chỉ là minh họa (p hoán vị: `dev-review/stats-report.md`, `dev-review.md` §2).*
 
 **Đọc kết quả C1–C5.** (i) Ở C1 và C2 — thiết kế ban đầu — CCoding chậm hơn và đắt hơn ở mọi bài có đối chứng, và khoảng tin cậy không chứa 0 theo hướng đó (Bảng 2, 3). (ii) Ở C5 (làn nhanh), chênh lệch thời gian là +21,1 s với CI chứa 0, tức không phân biệt được với bằng nhau. Dòng loại ngoại lệ đổi hướng (−14,7 s) nhưng đó là **phân tích độ nhạy chọn sau khi thấy dữ liệu**, nên kết luận về thời gian ở C5 nhạy với một lượt chạy. (iii) Chi phí C5 vẫn cao hơn +21,8%; chỉ một ô (`t4`) thấp hơn Claude (0,574 so với 0,627 USD, Bảng 2). (iv) Ở C5, CCoding nhanh hơn ở t1, t4, t5 nhưng chậm hơn ở t2 (106 so với 91 s) và t3 (400 so với 158 s). **Với bài nhỏ, CCoding không có lợi thế chi phí, và lợi thế thời gian chưa được chứng minh.** Hai hệ còn khác cấu hình mô hình (Claude Code: Opus; CCoding ở C5: Sonnet), nên so sánh là của cả hệ thống, không tách hiệu ứng multi-agent khỏi hiệu ứng mô hình (`token-analysis.md` §5).
 
-**Bảng 3b. C6 — kiểm chứng sửa `maxParallel` (`d7600f6`).** **Ngoài bảng của S2:** lấy 8 dòng C6 của `bench/vs-claude/results/runs.csv` ở commit `5866cda`, trung bình 2 lượt tính bằng tay (chưa qua script, chưa `--check`). Lệnh xem dữ liệu gốc: `git show 5866cda:bench/vs-claude/results/runs.csv | grep "^C6"`. **Hai hệ chạy cùng lúc (như C5); Claude Code dùng Opus, CCoding làn nhanh dùng Sonnet; n = 2 mỗi ô; không có CI.**
+**Bảng 3b. C6 — kiểm chứng sửa `maxParallel` (`d7600f6`).** Nguồn: **T-a** (thời gian, chi phí, test ẩn), **T-b** (ghi cache), **T-f** (CI, p hoán vị) và **T-g** (tỉ lệ). Lệnh tái lập: `node docs/research/performance/scripts/token-analysis.mjs --table T-a` (tương tự `--table T-b`, `T-f`, `T-g`); dữ liệu gốc: `git show 5866cda:bench/vs-claude/results/runs.csv | grep "^C6"`. **Hai hệ chạy cùng lúc (như C5); Claude Code dùng Opus, CCoding làn nhanh dùng Sonnet; n = 2 mỗi ô; CI và p hoán vị ở Bảng 3 chỉ là minh họa.**
 
 | Bài | Thời gian Claude Code (s): từng lượt → TB | Thời gian CCoding làn nhanh (s) → TB | Tỉ lệ thời gian | Chi phí Claude / CCoding (USD, TB) | Tỉ lệ chi phí | Ghi cache TB Claude / CCoding | Test ẩn đạt (mọi lượt) |
 |---|---|---|--:|---|--:|---|---|
 | t3-api | 246, 258 → 252 | 211, 173 → 192 | 0,76 | 1,044 / 1,103 | 1,06 | 42 120 / 129 942 (3,1×) | 87/87 cả hai hệ |
 | t5-logq | 283, 236 → 259,5 | 134, 214 → 174 | 0,67 | 1,009 / 1,222 | 1,21 | 40 615 / 148 805 (3,7×) | 146/146 cả hai hệ |
 
-**Đọc C6.** (i) Chất lượng không đổi (100% test ẩn, 8/8 lượt). (ii) Thời gian: CCoding nhanh hơn ở cả hai bài (TB 0,76 và 0,67), và khoảng min–max của hai hệ không chồng nhau (t3: CCoding 173–211 s, Claude Code 246–258 s; t5: CCoding 134–214 s, Claude Code 236–283 s), nhưng với n = 2 mỗi ô đó chỉ là dấu hiệu, không phải kiểm định. Hướng này khớp giả thuyết rằng bài **nhiều module có hạng mục độc lập** hưởng lợi từ làn nhanh chạy cùng lúc tối đa 4 hạng mục. (iii) **Chi phí không theo hướng đó**: CCoding đắt hơn ở TB (+5,6% t3, +21,1% t5), và ghi cache vẫn gấp 3,1–3,7 lần Claude Code, cùng cỡ với C5 (3,34×, Bảng 5). Ở t3 lượt 2, CCoding rẻ hơn Claude Code (0,946 so với 1,104 USD), nên không có hướng chi phí nhất quán trong 2 lượt. (iv) **Không chứng minh được sửa `maxParallel` là nguyên nhân**: C6 không có nhánh đối chứng "trước sửa" chạy cùng thời điểm (C5 chạy trước, ở thời điểm khác và có lượt treo stdin), và hai hệ khác mô hình. Chúng tôi chỉ ghi nhận rằng sau sửa, hai bài có nhiều hạng mục độc lập không còn lượt chậm như C5 t3 (400 s TB). Bản ghi PROCESS-REVIEW §13 còn báo tỉ lệ gộp C5 + C6 (bỏ lượt treo stdin) với t3 ≈ 0,99 — nghĩa là ở t3, lợi thế thời gian khi gộp mẫu nhỏ hơn con số C6 riêng lẻ; số này chưa được đối chiếu với script.
+**Đọc C6.** (i) Chất lượng không đổi (100% test ẩn, 8/8 lượt). (ii) Thời gian: CCoding nhanh hơn ở cả hai bài (TB 0,76 và 0,67), và khoảng min–max của hai hệ không chồng nhau (t3: CCoding 173–211 s, Claude Code 246–258 s; t5: CCoding 134–214 s, Claude Code 236–283 s), nhưng với n = 2 mỗi ô đó chỉ là dấu hiệu, không phải kiểm định. Hướng này khớp giả thuyết rằng bài **nhiều module có hạng mục độc lập** hưởng lợi từ làn nhanh chạy cùng lúc tối đa 4 hạng mục. (iii) **Chi phí không theo hướng đó**: CCoding đắt hơn ở TB (+5,6% t3, +21,1% t5), và ghi cache vẫn gấp 3,1–3,7 lần Claude Code, cùng cỡ với C5 (3,34×, Bảng 5). Ở t3 lượt 2, CCoding rẻ hơn Claude Code (0,946 so với 1,104 USD), nên không có hướng chi phí nhất quán trong 2 lượt. (iv) **Không chứng minh được sửa `maxParallel` là nguyên nhân**: C6 không có nhánh đối chứng "trước sửa" chạy cùng thời điểm (C5 chạy trước, ở thời điểm khác và có lượt treo stdin), và hai hệ khác mô hình. Chúng tôi chỉ ghi nhận rằng sau sửa, hai bài có nhiều hạng mục độc lập không còn lượt chậm như C5 t3 (400 s TB). Bản ghi PROCESS-REVIEW §13 còn báo tỉ lệ gộp C5 + C6 (bỏ lượt treo stdin) với t3 ≈ 0,99 — nghĩa là ở t3, lợi thế thời gian khi gộp mẫu nhỏ hơn con số C6 riêng lẻ; T-g xác nhận 0,98 khi bỏ lượt treo (giá trị thực 0,985) và 1,45 khi giữ lượt treo. Với C6 riêng, chênh lệch thời gian −72,8 s, CI bootstrap [−105,3; −40,3] nhưng p hoán vị = 0,0556 (T-f, Bảng 3).
 
 ### 6.3 Song song hóa: có tác dụng nhưng chỉ ở pha execute
 
@@ -200,10 +202,11 @@ node docs/research/performance/scripts/token-analysis.mjs --check docs/research/
 | C3 | 2 | 190 | 169 | 169 | 0 | 20 | 0.0 |
 | C4 | 5 | 195 | 247 | 183 | 64 | 12 | 25.0 |
 | C5 | 10 | 188 | 265 | 187 | 78 | 1 | 30.5 |
+| C6 | 4 | 183 | 318 | 181 | 137 | 2 | 42.9 |
 
-*C6 chưa có trong T-d nên không có cột đường găng; chỉ có thời gian tường ở Bảng 3b.*
+*C6 có trong T-d (4 lượt chạy CCoding): pha `execute` có hệ số song song 2,26 và đường găng 108,4 s, dài hơn `review` (34,0 s).*
 
-Theo pha (T-d phần 1), chỉ `execute` có song song; hệ số tăng từ 1.27 (C1) lên 2.02 (C5) khi làn nhanh chạy cùng lúc các hạng mục độc lập. Sau khi song song hóa, `review` (81.3 s) trở thành pha dài nhất ở C5, lớn hơn đường găng của `execute` (76.9 s). C3 chỉ có một hạng mục nên không có song song. Đây là mô tả. Về sửa `maxParallel`, C6 (Bảng 3b) cho thời gian tường TB của CCoding thấp hơn Claude Code ở cả hai bài nhiều module (0,76 và 0,67), nhưng không có phân rã theo pha và không có đối chứng "trước sửa" cùng thời điểm, nên **chưa quy được cải thiện cho riêng `maxParallel`**.
+Theo pha (T-d phần 1), chỉ `execute` có song song; hệ số tăng từ 1.27 (C1) lên 2.02 (C5) khi làn nhanh chạy cùng lúc các hạng mục độc lập. Sau khi song song hóa, `review` (81.3 s) trở thành pha dài nhất ở C5, lớn hơn đường găng của `execute` (76.9 s). C3 chỉ có một hạng mục nên không có song song. Đây là mô tả. Về sửa `maxParallel`, C6 (Bảng 3b) cho thời gian tường TB của CCoding thấp hơn Claude Code ở cả hai bài nhiều module (0,76 và 0,67), và T-d cho thấy `execute` (đường găng 108,4 s) thay `review` làm pha dài nhất, nhưng không có đối chứng "trước sửa" cùng thời điểm, nên **chưa quy được cải thiện cho riêng `maxParallel`**.
 
 *Khi nào multi-agent nhanh hơn?* Trên dữ liệu có (n nhỏ, một mô hình lead, 5 bài vài trăm giây), chỉ khi chia được hạng mục độc lập để chạy song song. C6 (t3, t5; Bảng 3b) nhất quán với điều này về thời gian (0,76 và 0,67) nhưng không về chi phí; với n = 2 và hai hệ khác mô hình, đây vẫn là *giả thuyết cần thí nghiệm*, chưa phải kết quả. Chưa loại trừ lợi ích với bài dài hơn (nhiều hạng mục, > 15 phút), vì dữ liệu hiện tại không có bài như vậy (`token-analysis.md` §4).
 
@@ -216,10 +219,11 @@ Theo pha (T-d phần 1), chỉ `execute` có song song; hệ số tăng từ 1.2
 | C1 (gộp 4 bài) | ccoding | 132 163 | 28 033 | 4.71 | 1.85 | 2.58 | 1.97 | 6.3 |
 | C2 (gộp 1 bài) | ccoding | 249 170 | 40 951 | 6.08 | 2.10 | 2.71 | 2.07 | 12.5 |
 | C5 (gộp 5 bài) | ccoding-fastlane | 98 282 | 29 423 | 3.34 | 1.92 | 1.81 | 1.22 | 5.0 |
+| C6 (gộp 2 bài) | ccoding-fastlane | 139 374 | 41 367 | 3.37 | 1.35 | 1.83 | 1.13 | 6.3 |
 
-*C6 chưa có trong T-b; tỉ lệ ghi cache tính tay từ `runs.csv` là 3,1× (t3) và 3,7× (t5), Bảng 3b.*
+*C6 theo bài (T-b): t3 3,09×, t5 3,66× (Bảng 3b).*
 
-Theo từng ô có đối chứng, tỉ lệ ghi cache nằm trong 2.76–6.08 và 5/10 ô trong khoảng 2,8–4 (T-b). Với thiết kế hiện hành (C5), con số khớp (3.34×); với thiết kế ban đầu thì lệch (4.71× ở C1, 6.08× ở C2). Ghi cache của Claude Code đều là TTL 1 giờ (T-0). Cơ chế quan sát được: Claude chạy một tiến trình, còn CCoding chạy 5.0–6.3 lượt gọi mỗi lượt chạy với 19 656–21 146 token ghi cache mỗi lượt gọi (T-b), nên tổng tăng theo **số lượt gọi nhân với nội dung mỗi lượt gọi tự ghi**. Đây là liên hệ mô tả, không phải bằng chứng nhân quả.
+Theo từng ô có đối chứng, tỉ lệ ghi cache nằm trong 2.76–6.08 và 7/12 ô trong khoảng 2,8–4 (T-b). Với thiết kế hiện hành (C5, C6), con số khớp (3.34× và 3.37×); với thiết kế ban đầu thì lệch (4.71× ở C1, 6.08× ở C2). Ghi cache của Claude Code đều là TTL 1 giờ (T-0). Cơ chế quan sát được: Claude chạy một tiến trình, còn CCoding chạy 5.0–6.3 lượt gọi mỗi lượt chạy với 19 656–21 146 token ghi cache mỗi lượt gọi (T-b), nên tổng tăng theo **số lượt gọi nhân với nội dung mỗi lượt gọi tự ghi**. Đây là liên hệ mô tả, không phải bằng chứng nhân quả.
 
 **Bảng 6.** Tỷ trọng ghi cache theo pha (CCoding). Nguồn: **T-c**. Lệnh tái lập: `node docs/research/performance/scripts/token-analysis.mjs --table T-c`.
 
@@ -238,14 +242,14 @@ Theo từng ô có đối chứng, tỉ lệ ghi cache nằm trong 2.76–6.08 v
 
 | Mã | Đề xuất | Tiết kiệm ước tính / lượt chạy (USD) | % chi phí CCoding |
 |---|---|---:|---:|
-| O1 | Tiền tố prompt ổn định dùng chung cache | 0.041 | 5.1 (trần trên) |
+| O1 | Tiền tố prompt ổn định dùng chung cache | 0.038 | 4.7 (trần trên) |
 | O2 | Tái dùng phiên execute → revise | 0.006 | 0.7 (trần trên; chỉ 1 lượt revise) |
 | O3 | Rút gọn ngữ cảnh 30% | 0.002 | 0.2 |
 | O4 | Reviewer chỉ nhận diff + kết quả lệnh kiểm tra | 0.022 | 2.8 |
 | O5 | Giới hạn đầu ra (plan/review/synthesize) | 0.014 | 1.7 |
 | O6 | Mô hình theo pha: opus → sonnet ở lượt gọi lead | 0.257 | 20.7 (nền C1, không phải C5) |
 
-Nền C5: 10 lượt chạy CCoding, chi phí Σ calls.csv = 8.042 USD; theo giá hiệu dụng, đầu ra = 38.1%, ghi cache = 49.4%, đọc cache = 10.2%. O1–O5 tính trên nền C5, O6 trên nền C1; **mỗi dòng độc lập, không cộng gộp** (O3 và O4 chồng lấn). Đây là mô hình giả định, chưa chạy lại hệ thống, và không ước lượng được tác động lên thời gian. Hàm ý: (a) O6 lớn nhất nhưng **đã được hiện thực** trong làn nhanh (C5 dùng Sonnet ở mọi pha), và chất lượng của thay đổi này chưa được đo riêng; (b) O1–O5 mỗi cái ≤ 5.1% chi phí, nên tinh chỉnh tiền tố không phải đòn bẩy chính; (c) O3 gần như vô ích vì `context_chars` nhỏ (khoảng 1 200 ký tự ở C5); (d) đòn bẩy thực nằm ở giảm số tiến trình và lượng tệp/công cụ đọc lặp. Điểm (d) là diễn giải của chúng tôi từ T-c và T-e, chưa được kiểm thử.
+Nền C5: 10 lượt chạy CCoding, chi phí Σ calls.csv = 8.042 USD; theo giá hiệu dụng, đầu ra = 38.3%, ghi cache = 49.6%, đọc cache = 9.9%. O1–O5 tính trên nền C5, O6 trên nền C1; **mỗi dòng độc lập, không cộng gộp** (O3 và O4 chồng lấn). Đây là mô hình giả định, chưa chạy lại hệ thống, và không ước lượng được tác động lên thời gian. Hàm ý: (a) O6 lớn nhất nhưng **đã được hiện thực** trong làn nhanh (C5 dùng Sonnet ở mọi pha), và chất lượng của thay đổi này chưa được đo riêng; (b) O1–O5 mỗi cái ≤ 4.7% chi phí, nên tinh chỉnh tiền tố không phải đòn bẩy chính; (c) O3 gần như vô ích vì `context_chars` nhỏ (khoảng 1 200 ký tự ở C5); (d) đòn bẩy thực nằm ở giảm số tiến trình và lượng tệp/công cụ đọc lặp. Điểm (d) là diễn giải của chúng tôi từ T-c và T-e, chưa được kiểm thử.
 
 ---
 
@@ -284,7 +288,7 @@ Số này là số sự cố *được ghi lại*, không phải tần suất; n
 
 **Cổng A/B** (`design.md` §5): so sánh có cặp A = prompt hiện hành, B = A + một bản vá; chỉ số chính là token quy đổi mỗi lượt chạy và số test ẩn đạt; pha thăm dò 5 bài × 3 lượt × 2 nhánh (chỉ để loại), pha xác nhận 5 bài × 6 lượt × 2 nhánh; kiểm định hoán vị phân tầng hoặc mô hình hỗn hợp theo bài, Holm cho ba chỉ số chính; ngưỡng khai báo trước; **bộ bài giữ lại** (≥ 3 bài mới, dùng một lần) để chống overfit vì sự cố được rút ra từ chính t1–t5. Số lượt là kế hoạch cần xác nhận, chưa tính công suất.
 
-**Bốn bản vá mẫu** (nhắm `src/prompts.ts`): P1 giới hạn độ dài báo cáo bàn giao (O5; C-02, C-13), P2 dừng khảo sát sau khoảng 8 lần đọc chưa ghi (O3; C-20), P3 reviewer chỉ đọc diff và tệp nêu tên (O4; C-27, C-28), P4 lượt sửa ghi ≤ 3 dòng nhật ký sự cố (thu dữ liệu). **P1–P3 là giả thuyết tối ưu, chưa có số đo; P4 là bản vá thu dữ liệu. Chưa có bản vá nào được áp dụng hay đo.** Chưa chạy kiểm tra áp dụng (`git apply --check`), nên cần người có quyền chạy lệnh xác nhận.
+**Bốn bản vá mẫu** (nhắm `src/prompts.ts`): P1 giới hạn độ dài báo cáo bàn giao (O5; C-02, C-13), P2 dừng khảo sát sau khoảng 8 lần đọc chưa ghi (O3; C-20), P3 reviewer chỉ đọc diff và tệp nêu tên (O4; C-27, C-28), P4 lượt sửa ghi ≤ 3 dòng nhật ký sự cố (thu dữ liệu). **P1–P3 là giả thuyết tối ưu, chưa có số đo; P4 là bản vá thu dữ liệu. Chưa có bản vá nào được áp dụng hay đo.** Chưa chạy kiểm tra áp dụng (`git apply --check --unidiff-zero --ignore-whitespace`; lệnh `git apply --check` trần luôn lỗi với các bản vá này), nên cần người có quyền chạy lệnh xác nhận.
 
 **An toàn.** Mặc định tắt; không tự áp khi chưa duyệt; agent không ghi vào `agents/`, `src/` hay cấu hình, chỉ phát đề xuất dạng văn bản, coi là dữ liệu không đáng tin; bản vá không được nới quy tắc dữ liệu/an toàn hay tăng quyền công cụ; reviewer không đánh giá bản vá của chính mình.
 
@@ -392,3 +396,5 @@ Zhang, G., Yue, Y., et al. (2025). Cut the crap: An economical communication pip
 ## Khai báo sử dụng AI
 
 Bản thảo này được soạn với sự hỗ trợ của một trợ lý AI (mô hình Claude của Anthropic, chạy qua hệ CCoding — chính đối tượng được mô tả trong bài): AI tổng hợp bản nháp từ các tệp đầu vào do các hạng mục trước tạo ra (tổng quan tài liệu, báo cáo phân tích số liệu, bảng thách thức, thiết kế tự cải thiện), và chép số liệu từ các bảng đó. Tổng quan tài liệu cũng do AI thực hiện với công cụ tìm kiếm web; phần lớn nguồn chỉ được đọc ở mức tóm tắt. AI **không** chạy benchmark mới và không tự chạy lại script phân tích trong hạng mục này. Tác giả (Tom) chịu trách nhiệm về nội dung: cần tự kiểm lại trích dẫn với bản gốc, đối chiếu số liệu với dữ liệu và mã, và đọc quy định liêm chính học thuật cũng như chính sách khai báo dùng AI của trường/hội nghị nơi nộp trước khi gửi. Đây là bản nháp, không phải bản công bố.
+
+<!-- R1 đã sửa (S3, T-20261102-121636-dd9): R1-01 (quy ước số liệu, C6 vào T-a…T-g); R1-02 (hai dòng C6 ở Bảng 3, p hoán vị 0,0556 và 0,3889); R1-03 (hàng C6 ở Bảng 4/T-d); R1-04 (hàng C6 ở Bảng 5/T-b); R1-05 (7/12 ô); R1-06 (38,3/49,6/9,9 % theo T-e); R1-07 (Bảng 3b trích T-a/T-b/T-f/T-g); R1-08 K34 và R1-10 (Bảng 1: cột "Áp cho runtime", đoạn dẫn nêu trần vòng công cụ, toolInputBudget, nhắc 35/65 %, idleTimeoutMs, maxContinuations không áp cho claude-cli); R1-11 (K23 §4.1 mục 4, K10 và K13 §4.1, K19/L15, K28/L3, K40/L9; K12 giữ nguyên vì đúng); R1-16 (O1 0,038 USD, 4,7 %); R1-19 (git apply --check kèm --unidiff-zero --ignore-whitespace ở §8). CHƯA sửa, thuộc S4: Tóm tắt, §6.3 đoạn "Khi nào multi-agent nhanh hơn?", §7–§9 (gồm câu P-07 "chưa vào script S2" ở §7 và đoạn kết §9 còn viết "đưa vào script S2"), danh mục tài liệu tham khảo. Xóa ghi chú này khi S6 chốt. -->

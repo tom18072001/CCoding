@@ -98,7 +98,7 @@ Bốn bản vá mẫu (đều nhắm `src/prompts.ts`, áp bằng `git apply --u
 | `P3-review-diff-only.diff` | O4; C-27, C-28 | Reviewer chỉ đọc diff + tệp nêu tên → ít token review, recall không giảm |
 | `P4-incident-log-on-revise.diff` | C-14 (FM-3) | Lượt sửa ghi ≤ 3 dòng nhật ký sự cố → có tín hiệu cho bước 2–3 |
 
-Lưu ý quan trọng: P1–P3 là **giả thuyết tối ưu**, chưa có số đo; chưa nên kết luận hiệu quả trước khi qua cổng §5. P4 là bản vá thu thập dữ liệu. Chưa chạy `git apply --check` (hook chỉ cho lệnh đọc) — người có quyền chạy lệnh cần kiểm (§8).
+Lưu ý quan trọng: P1–P3 là **giả thuyết tối ưu**, chưa có số đo; chưa nên kết luận hiệu quả trước khi qua cổng §5. P4 là bản vá thu thập dữ liệu. Chưa chạy `git apply --check --unidiff-zero --ignore-whitespace` (lệnh `git apply --check` trần luôn lỗi với các bản vá này; hook chỉ cho lệnh đọc) — người có quyền chạy lệnh cần kiểm (§8).
 
 ### Bước 5 — Cổng A/B: xem §5.
 
@@ -118,11 +118,11 @@ CCoding tạo "phiếu đề xuất" gồm: tóm tắt sự cố (số lượng,
 |---|---|---|
 | Thu sự cố từ review | `src/orchestrator.ts` sau `parseReview`/`checkRegressions` (~1356–1366) | Phát `incident.*` cho mỗi issue blocker/major và hồi quy |
 | Thu sự cố `review.unverified` | ~1385 (đã có `logs.write`) | Gắn thêm `incident` có `challengeId: C-27` |
-| Parse mục "## Nhật ký sự cố" | sau `revisePrompt` trong vòng sửa (~1399–1410) | Regex trích tối đa 3 dòng → `agentProposal` (dùng chung kiểu `ISSUE_RE` của `src/kpi.ts`) |
+| Parse mục "## Nhật ký sự cố" | sau `revisePrompt` trong vòng sửa (~1399–1410) | Regex trích tối đa 3 dòng → `agentProposal` (dùng chung kiểu `ISSUE_RE` của `src/kpi.ts:129`; hiện **chưa export**, cần export `ISSUE_RE` để dùng chung) |
 | Tổng hợp theo cụm | module mới `src/selfimprove.ts` (đề xuất) — hàm `clusterIncidents`, `proposalTicket` | Đọc `LogStore`, không đọc tệp ngoài `data/` |
 | Nguồn KPI | `src/kpi.ts` `computeKpi` → `findingKeys`, `recurred` | Dùng làm `source: kpi.finding` |
-| Chèn bản vá thử | `src/prompts.ts` `systemFor` / `executePrompt`… | Chọn phiên bản theo cờ cấu hình `selfImprove.variant` (A/B) — mặc định tắt |
-| Chạy A/B | `src/bench.ts` `COMMON_KEYS` + `bench/vs-claude/harness/run.mjs` | Thêm khóa biến thể prompt; ghi `variant` vào `runs.csv` (cần kiểm cú pháp `ccoding bench`) |
+| Chèn bản vá thử | `src/prompts.ts` `systemFor` / `executePrompt`… | Chọn phiên bản bằng `TaskOptions.variant` sẵn có (`orchestrator.ts:3165`, qua `variantOptions`) thay vì tạo khóa cấu hình `selfImprove.variant` mới (A/B) — mặc định tắt |
+| Chạy A/B | `src/bench.ts` `COMMON_KEYS` (`bench.ts:125`, 11 khóa, chưa có `variant`/`lane`) + `bench/vs-claude/harness/run.mjs` | Thêm `variant` vào `COMMON_KEYS`;  ghi `variant` vào `runs.csv` (cần kiểm cú pháp `ccoding bench`) |
 | Kênh duyệt | `src/server.ts` (tuyến feedback ~437) + `public/` | Màn hình "Đề xuất cải thiện": Duyệt/Từ chối |
 | Lưu phiên bản | `src/ship.ts`/`src/git.ts` | Commit riêng, thẻ `prompts-vN` |
 
@@ -205,6 +205,7 @@ Số lượt đề xuất là **kế hoạch, cần giám đốc/`@data-scientis
 
 ## 9. Ghi chú trung thực
 
-- Chưa có số đo C6 và chưa có `token-analysis.md` của S2: mọi ngưỡng dựa trên số liệu ở trên là đề xuất, không rút ra từ dữ liệu.
+- Đã có số đo C6 và `docs/research/performance/token-analysis.md` (S2), nhưng các số của thiết kế này (ngưỡng cụm sự cố, mốc cổng §5) không rút ra từ chúng: mọi ngưỡng ở trên là đề xuất, không rút ra từ dữ liệu.
+- Ràng buộc từ `dev-review/technical-check.md` §4: với runtime `claude-cli`, `tools.capHits` và `truncated` theo diag luôn bằng 0 (chỉ runtime API sinh sự cố "chạm trần"), nên không dùng làm tín hiệu sự cố cho benchtest; sự cố nên thu chủ yếu từ review, hồi quy và chặn của hook (hook chặn hiện chưa được log riêng thành sự kiện — điểm móc nên thêm).
 - Hiệu quả của P1–P4 hoàn toàn là giả thuyết. Không có khẳng định nào trong tệp này về mức tiết kiệm.
 - Chưa đối chiếu công trình đã công bố về tự cải thiện prompt/agent; phần so sánh thuộc nhóm B của S5 (tổng quan). Không dùng nguồn nào trong tệp này.
