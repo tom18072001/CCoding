@@ -718,6 +718,33 @@ export interface AcceptInput {
 }
 
 /**
+ * B-11(a): nghiệm thu rút gọn cho làn đơn. CTO chỉ nhận đề bài, diff (cắt ngắn) và kết quả lệnh kiểm tra — không có báo cáo phòng —
+ * và trả bảng tiêu chí đạt/không đạt (mỗi tiêu chí một dòng, bằng chứng ≤ 1 câu, tổng ≤ 600 token) kèm khối JSON mà parseAcceptance đọc.
+ */
+export function acceptBriefPrompt(task: Task, opts: { changes?: string; tools?: ToolName[]; projectName?: string } = {}): Built {
+  const brief = task.brief.length > BRIEF_MAX.accept ? `${task.brief.slice(0, BRIEF_MAX.accept)}…\n_(Đã rút gọn từ ${task.brief.length.toLocaleString('vi-VN')} ký tự)_` : task.brief;
+  const tools = opts.tools ?? [];
+  return {
+    context: `# Nhiệm vụ: ${task.title}\nChế độ: ${task.mode}${opts.projectName ? ` · dự án: ${opts.projectName}` : ''} · nhãn dữ liệu: ${task.classification}\n\n## Đề bài của giám đốc\n${brief}`,
+    prompt: `## Thay đổi trong workspace (git diff)
+${opts.changes ? `\`\`\`\n${truncate(opts.changes, 3000)}\n\`\`\`` : '(không có diff)'}
+${checksBlock(task, 'synthesize').replace('Ghi kết quả các lệnh này (trước/sau) vào báo cáo như bằng chứng kiểm chứng.', 'Đây là bằng chứng chạy thật có độ tin cậy cao nhất.')}
+${tools.length ? `\nCông cụ chỉ đọc (${tools.join(', ')}): chỉ dùng khi cần kiểm một tiêu chí cụ thể.\n` : ''}
+## Việc của bạn (CTO): NGHIỆM THU RÚT GỌN
+Rút 3–6 tiêu chí kiểm được từ đề bài, kết luận từng tiêu chí đạt/không đạt (thiếu bằng chứng = "unknown"). Chỉ trả đúng bảng sau, mỗi tiêu chí MỘT dòng, bằng chứng tối đa 1 câu (trỏ tới lệnh hoặc tệp), TỔNG đầu ra ≤ 600 token, không viết thêm đoạn giải thích:
+
+| Tiêu chí | Kết quả | Bằng chứng |
+|---|---|---|
+
+Rồi thêm đúng một khối (JSON ngắn, cùng nội dung bảng):
+\`\`\`json
+{"accepted": true, "summary": "<1 câu>", "criteria": [{"name": "<tiêu chí>", "result": "pass|fail|unknown", "evidence": "<≤ 1 câu>"}], "risks": [], "followUps": []}
+\`\`\`
+"accepted" chỉ true khi mọi tiêu chí là "pass".`,
+  };
+}
+
+/**
  * Pha nghiệm thu (UX-4c): CTO đối chiếu đề bài với báo cáo tổng hợp, kết luận review và lệnh kiểm tra CCoding tự chạy,
  * kết luận từng tiêu chí Đạt/Không/Chưa kiểm được kèm bằng chứng. Chỉ đọc (công cụ đọc tệp trong worktree nếu có).
  */
