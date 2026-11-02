@@ -1,0 +1,11 @@
+Mình đã xây xong logq theo SPEC.md: `src/parse.js`, `src/query.js`, `src/agg.js` và CLI `bin/logq.js`, không dùng thư viện ngoài. `npm test` xanh, 20/20 test pass. Mình chưa chạy bộ nghiệm thu ẩn nên chưa biết nó có bắt lỗi nào không.
+
+Test mới nằm trong `test/parse.test.js`, `test/query.test.js`, `test/agg.test.js` và `test/cli.test.js` (CLI chạy thật qua tiến trình con). Tôi chưa commit gì.
+
+Một số chỗ đặc tả không nói rõ, tôi tự chọn như sau, phòng khi bộ ẩn chọn khác:
+- **Thời gian:** `@t` chỉ được thêm khi chuỗi có dạng `YYYY-MM-DDTHH:MM…` (bắt buộc chữ `T`). Ngày trần như `2024-01-01` không có `@t`.
+- **`msg` bị `null`:** truy vấn tìm từ khóa sẽ coi như không có `msg` và chuyển sang `message`.
+- **Giá trị trong ngoặc kép:** `field:"…"` so khớp chính xác nhưng vẫn không phân biệt hoa/thường.
+- **Bucket:** số `1` và chuỗi `"1"` là hai bucket riêng trong `count by`.
+- **Thứ tự kiểm tra của CLI:** tùy chọn sai, truy vấn sai và spec tổng hợp sai bị bắt trước khi đọc tệp, nên các lỗi này cho mã 2 ngay cả khi tệp không tồn tại.
+- **Đếm dòng lỗi:** dòng rỗng tính vào `malformed` trong `--stats`, vì `parseLine` trả `ok: false` cho dòng rỗng.
