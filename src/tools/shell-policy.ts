@@ -391,3 +391,34 @@ export function toolKind(name: string, input: Record<string, unknown> = {}): 're
   }
   return 'other';
 }
+
+// ── Chẩn đoán chặn (B-06) ─────────────────────────────────────────────────────
+
+const RULE_TEXT: Record<string, string> = {
+  'not-read-only': 'không phải lệnh chỉ đọc — đọc/tìm bằng Read/Grep/Glob; lệnh test/build thì ghi vào bàn giao',
+  redirect: 'chuyển hướng ghi tệp — ghi bằng Write/Edit',
+  subst: 'thay thế lệnh $(…)/backtick — viết lệnh tường minh, từng bước',
+  heredoc: 'heredoc — ghi tệp bằng Write/Edit',
+  loop: 'vòng lặp/cấu trúc điều khiển — dùng Grep/Glob thay cho for/while',
+  interpreter: 'không phải lệnh chỉ đọc (chạy mã) — đọc/tìm bằng Read/Grep/Glob; vai trò này không chạy python/node…',
+  'env-file': 'tệp .env là bí mật — không đọc/ghi',
+  'outside-root': 'ngoài thư mục làm việc — chỉ thao tác trong workspace của nhiệm vụ',
+  'deny-list': 'khớp danh sách lệnh cấm của dự án',
+  'git-branch': 'không được tạo/chuyển nhánh, rebase, reset --hard hay push',
+};
+
+/** Chỉ giữ tên lệnh hoặc toán tử (không chép tham số/bí mật): tên an toàn tối đa 24 ký tự, không giống khóa/token; ngoài ra thay bằng `?`. */
+export function safeCmdName(cmd: string): string {
+  const c = cmd.trim();
+  if (!c) return '';
+  if (/^(&&|\|\||;|\||>|>>|<|<<|&|\$\(|`)$/.test(c)) return c;
+  if (!/^[A-Za-z][A-Za-z0-9_.-]{0,23}$/.test(c)) return '?';
+  return /^(sk|gh[pousr]|github_pat|AKIA|AIza|xox[abprs])[-_A-Za-z0-9]{12,}/.test(c) ? '?' : c;
+}
+
+/** Thông báo chặn theo câu lệnh con: "CCoding chặn câu N: `cmd` <quy tắc> — <gợi ý>", tối đa 300 ký tự, không chứa nội dung lệnh ngoài tên lệnh/toán tử. */
+export function blockMessage(v: { clause: number; rule: string; cmd: string }): string {
+  const cmd = safeCmdName(v.cmd);
+  const msg = `CCoding chặn câu ${v.clause}:${cmd ? ` \`${cmd}\`` : ''} ${RULE_TEXT[v.rule] ?? v.rule}`;
+  return msg.length <= 300 ? msg : `${msg.slice(0, 299)}…`;
+}
