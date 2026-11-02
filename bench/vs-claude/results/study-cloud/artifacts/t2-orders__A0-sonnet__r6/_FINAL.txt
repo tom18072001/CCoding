@@ -1,0 +1,8 @@
+Cả 6 lỗi trong ISSUES.md đã được sửa, và `npm test` xanh (14 test, 0 lỗi). Các test hồi quy mới nằm trong `test/regression.test.js`, mỗi lỗi một test. Tôi không đổi API công khai nào.
+
+1. **Làm tròn 1 xu:** `toCents` trong `src/money.js` nhân `amount * 100` bằng số thực nhị phân, nên `1.005` ra `100.4999…`. Tôi đổi sang dịch số mũ thập phân trên chuỗi, làm tròn half away from zero, nên `1.005` → 101, `-1.005` → -101, `2.675` → 268. `src/checkout.js` cũng tự làm tròn mã giảm cố định bằng `Math.round(amount*100)`; tôi đổi sang `toCents`.
+2. **Tổng giảm hụt:** `allocate` chỉ lấy phần nguyên (floor) và bỏ phần dư. Giờ nó chia phần dư theo phần lẻ lớn nhất, bằng nhau thì phần đứng trước được trước. Tổng các phần luôn bằng đúng `total`.
+3. **Mua X tặng Y:** `freeUnits` trong `src/promotions.js` chia theo `buy` thay vì `buy + free`. Giờ là `floor(qty / (buy + free)) * free`. Với mua 2 tặng 1: 2 hộp → 0, 3 → 1, 5 → 1, 6 → 2.
+4. **Mã hết hạn sớm:** `endsAt` dạng `YYYY-MM-DD` được hiểu là đầu ngày. Giờ mã dùng được tới hết ngày đó (UTC) và bị từ chối từ `2026-12-01T00:00:00Z`.
+5. **Kho:** `updateQty` giữ chỗ lại toàn bộ số lượng mới thay vì phần chênh, còn `removeItem` không trả hàng về kho. Giờ giữ chỗ hoặc nhả đúng phần chênh, và xóa món thì nhả hết.
+6. **Thuế:** thuế tính trên `gross` thay vì `net`. Giờ `src/checkout.js` tính trên `net`. Tôi cũng đổi phép nhân thuế trong `src/tax.js` sang số nguyên (10%, 5%) để tránh sai số thực khi làm tròn.
