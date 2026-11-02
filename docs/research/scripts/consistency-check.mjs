@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // B-05 — kiểm nhất quán số liệu nghiên cứu.
 // Dùng: node docs/research/scripts/consistency-check.mjs [thư-mục-gốc] [--json] [--facts <tệp>]
-// Quét docs/research/** và docs/PROCESS-REVIEW.md (chỉ .md), bỏ qua CHANGELOG.md và context/.
+// Quét docs/research/** và docs/PROCESS-REVIEW.md (chỉ .md), bỏ qua CHANGELOG.md, context/ và BRIEF*.md (đề bài lịch sử — đầu vào đã giao, không sửa lại).
 // Đọc docs/research/facts.json:
 //   stale:   [{id, pattern, reason, files?, exceptions?}]  — cụm đã lỗi thời, khớp là lỗi.
 //   numbers: [{id, value, pattern, files, exceptions}]     — nhóm bắt đầu tiên của pattern (hoặc cả khớp)
@@ -46,7 +46,7 @@ function walk(dir, out) {
     if (e.isDirectory()) {
       if (e.name === 'context' || e.name === 'node_modules') continue;
       walk(full, out);
-    } else if (/\.md$/i.test(e.name) && e.name.toLowerCase() !== 'changelog.md') out.push(full);
+    } else if (/\.md$/i.test(e.name) && e.name.toLowerCase() !== 'changelog.md' && !/^BRIEF/i.test(e.name)) out.push(full);
   }
 }
 
