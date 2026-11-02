@@ -417,3 +417,14 @@ Chỉ thay giao diện ô Văn phòng (bỏ canvas, nhân vật giám đốc, đ
 | Đầu vào API: body `null`, agent ngoài phòng ban, `limit` sai, mã việc định kỳ không có, `routines.json` sai dạng làm hỏng mọi lệnh CLI | GOV-03 | Báo lỗi 400/404 bằng tiếng Việt; tệp sai dạng bị bỏ qua |
 
 Kết luận giữ nguyên: **ĐẠT CÓ ĐIỀU KIỆN** (điều kiện sao lưu WORM `data/logs/`). Lỗi hạ nhãn dữ liệu đã đóng trước khi phát hành — chưa từng chạy trên máy thật.
+
+### Bổ sung: cập nhật tài liệu sau UX-4, CLI dùng mã ngắn (2/11/2026)
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| CLI `status`/`show`/`task`/`resume`/`split` hiện và nhận mã `CC-n`; `show` tìm nhiệm vụ theo số thứ tự trong `data/runs/*/task.json` | GOV-03 | Chỉ đọc dữ liệu đã có trong `data/` trên máy; không ghi, không gửi ra ngoài. `show` hiện thêm dòng kết luận nghiệm thu (đã có trong `task.json`) |
+| `ccoding.config.json` ghi rõ `taskPrefix`, `defaults.acceptance`, `planApprovalMinutes`, giới hạn pha `accept` | GOV-02 | Giá trị trùng mặc định trong mã — không đổi hành vi |
+| Ảnh `docs/screenshot.png` mới | PRE-04 | Chụp từ server thử với runtime `mock` và dữ liệu mẫu (dự án "Dự án mẫu", nhiệm vụ mẫu) — **không** chụp từ máy thật, không có tên dự án/khách hàng/dữ liệu thật |
+| README, `docs/ARCHITECTURE.md`, `docs/UI.md`, `docs/TOOLS.md`, `docs/RUNTIMES.md`, `docs/HERDR.md` | — | Tài liệu, không đụng dữ liệu |
+
+**Kết luận: ĐẠT.**

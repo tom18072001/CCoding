@@ -37,14 +37,14 @@ ${c.bold('Giao việc')}
       --project <id>                         Gắn vào dự án (chế độ project)
       --title "<tiêu đề>"   --rounds 0-3   --parallel 1-8   --no-review
       --runtime <id>        --budget <token>   --budget-mode pause|complete   --wait
-  cancel <taskId>                            Hủy nhiệm vụ đang chạy
-  pause <taskId>                             Tạm dừng (giữ tiến độ)
-  resume <taskId> [--add <token>] [--budget-mode pause|complete] [--from review|synthesize] [--rerun S1,S2|all]
-                                             Tiếp tục từ checkpoint / làm lại từ review / chạy lại hạng mục
-  split <taskId> [--only S1,S2] [--budget <token>] [--budget-mode pause|complete]
+  cancel <mã>                                Hủy nhiệm vụ đang chạy (mã CC-12 hoặc id đầy đủ T-…)
+  pause <mã>                                 Tạm dừng (giữ tiến độ)
+  resume <mã> [--add <token>] [--budget-mode pause|complete] [--from review|synthesize|accept] [--rerun S1,S2|all]
+                                             Tiếp tục từ checkpoint / làm lại từ review / nghiệm thu lại / chạy lại hạng mục
+  split <mã> [--only S1,S2] [--budget <token>] [--budget-mode pause|complete]
                                              Tách hạng mục chưa xong thành nhiệm vụ riêng (mỗi nhiệm vụ một gói việc)
   status [--watch]                           Danh sách nhiệm vụ & trạng thái agent
-  show <taskId>                              Chi tiết một nhiệm vụ
+  show <mã>                                  Chi tiết một nhiệm vụ (hạng mục, review, CTO nghiệm thu)
 
 ${c.bold('Log & token')}
   logs [-f] [--agent id] [--dept id] [--task id|latest] [--level warn+] [-n 50]   Xem / theo dõi log
@@ -114,8 +114,13 @@ function printMessage(m: ChatMessage, names: Map<string, string>): void {
   console.log(`${c.gray(localTime(m.ts))} ${tag} ${c.bold(who)} ${c.gray(`[${m.department}]`)}\n   ${m.text.split('\n').join('\n   ')}`);
 }
 
+/** Mã ngắn "CC-12" (UX-4a); nhiệm vụ chưa có số thì dùng id đầy đủ. */
+function taskCode(t: Pick<Task, 'id' | 'seq'>): string {
+  return t.seq ? `${config.taskPrefix}-${t.seq}` : t.id;
+}
+
 function taskRow(t: Task): string[] {
-  return [t.id, statusColor(t.status), t.phase ?? '', t.mode, t.departments.join('→') || t.department || '', fmtNum(totalTokens(t.usage)), t.title.slice(0, 50)];
+  return [taskCode(t), statusColor(t.status), t.phase ?? '', t.mode, t.departments.join('→') || t.department || '', fmtNum(totalTokens(t.usage)), t.title.slice(0, 50)];
 }
 
 // ── Lệnh ────────────────────────────────────────────────────────────────────
@@ -195,7 +200,7 @@ async function cmdTask(args: string[]): Promise<void> {
 
   if (!values.local && (await serverUp())) {
     const t = await api<Task>('/api/tasks', { method: 'POST', body: JSON.stringify(input) });
-    console.log(`${c.green('✓')} Đã giao ${c.bold(t.id)} — theo dõi tại ${c.cyan(base)}`);
+    console.log(`${c.green('✓')} Đã giao ${c.bold(taskCode(t))} — theo dõi tại ${c.cyan(`${base}/#/task/${taskCode(t)}`)}`);
     if (!values.wait) return;
     const state = await api('/api/state');
     const names = new Map<string, string>(state.agents.map((a: { id: string; name: string }) => [a.id, a.name]));
@@ -219,14 +224,14 @@ async function cmdTask(args: string[]): Promise<void> {
   });
   console.log(c.gray('(server chưa chạy — thực thi trực tiếp trong terminal này)'));
   const t = app.orchestrator.submit(input);
-  console.log(`${c.green('✓')} ${c.bold(t.id)}: ${t.title}`);
+  console.log(`${c.green('✓')} ${c.bold(taskCode(t))}: ${t.title}`);
   const done = await app.orchestrator.waitFor(t.id);
   app.store.flush();
   finishTask(done, app.store.runDir(t.id));
 }
 
 function finishTask(t: Task, runDir: string): void {
-  console.log(`\n${c.bold('Kết thúc')} ${t.id}: ${statusColor(t.status)}${t.error ? c.red(` — ${t.error}`) : ''}${t.pause ? c.yellow(` — ${t.pause.detail} (tiếp tục: ccoding resume ${t.id})`) : ''}`);
+  console.log(`\n${c.bold('Kết thúc')} ${taskCode(t)}: ${statusColor(t.status)}${t.error ? c.red(` — ${t.error}`) : ''}${t.pause ? c.yellow(` — ${t.pause.detail} (tiếp tục: ccoding resume ${taskCode(t)})`) : ''}`);
   console.log(`Token: in ${fmtNum(t.usage.input)} · out ${fmtNum(t.usage.output)} · cache ${fmtNum(t.usage.cacheRead)} · ${t.usage.calls} lượt${t.usage.costUsd ? ` · ${fmtUsd(t.usage.costUsd)}` : ''}`);
   if (t.finalPath) console.log(`Báo cáo: ${c.cyan(path.join(runDir, t.finalPath))}`);
   if (t.status !== 'done') process.exitCode = 1;
@@ -253,7 +258,7 @@ async function cmdStatus(args: string[] = []): Promise<void> {
   if (await serverUp()) {
     const s = await api('/api/state');
     console.log(c.bold(`Nhiệm vụ (runner: ${s.runner})`));
-    console.log(table(['ID', 'Trạng thái', 'Pha', 'Chế độ', 'Phòng', 'Token', 'Tiêu đề'], s.tasks.slice(0, 15).map(taskRow), ['l', 'l', 'l', 'l', 'l', 'r']));
+    console.log(table(['Mã', 'Trạng thái', 'Pha', 'Chế độ', 'Phòng', 'Token', 'Tiêu đề'], s.tasks.slice(0, 15).map(taskRow), ['l', 'l', 'l', 'l', 'l', 'r']));
     console.log(`\n${c.bold('Nhân sự')}`);
     const rows = s.agents.map((a: any) => [
       hexColor(a.look.shirt, '■') + ' ' + a.name,
@@ -270,16 +275,34 @@ async function cmdStatus(args: string[] = []): Promise<void> {
   const logs = new LogStore(config.dataDir, { redactSecrets: true, redactPii: true, hashChain: true });
   const store = new Store(config.dataDir, logs);
   console.log(c.gray('(server không chạy — đọc từ đĩa)'));
-  console.log(table(['ID', 'Trạng thái', 'Pha', 'Chế độ', 'Phòng', 'Token', 'Tiêu đề'], store.list().slice(0, 15).map(taskRow), ['l', 'l', 'l', 'l', 'l', 'r']));
+  console.log(table(['Mã', 'Trạng thái', 'Pha', 'Chế độ', 'Phòng', 'Token', 'Tiêu đề'], store.list().slice(0, 15).map(taskRow), ['l', 'l', 'l', 'l', 'l', 'r']));
+}
+
+/** Đọc nhiệm vụ từ đĩa theo id đầy đủ hoặc mã ngắn (CC-12). */
+function findTaskOnDisk(ref: string): Task | null {
+  const runs = path.join(config.dataDir, 'runs');
+  if (/^[\w.-]+$/.test(ref)) {
+    const t = readJsonFile<Task | null>(path.join(runs, ref, 'task.json'), null);
+    if (t) return t;
+  }
+  const m = /^[A-Za-z][A-Za-z0-9]{0,7}-(\d{1,9})$/.exec(ref.trim());
+  if (!m || !fs.existsSync(runs)) return null;
+  const n = Number(m[1]);
+  for (const d of fs.readdirSync(runs, { withFileTypes: true })) {
+    if (!d.isDirectory()) continue;
+    const t = readJsonFile<Task | null>(path.join(runs, d.name, 'task.json'), null);
+    if (t?.seq === n) return t;
+  }
+  return null;
 }
 
 async function cmdShow(args: string[]): Promise<void> {
-  const id = args[0];
-  if (!id) throw new Error('Cần taskId');
-  const runDir = path.join(config.dataDir, 'runs', id);
-  const t = readJsonFile<Task | null>(path.join(runDir, 'task.json'), null);
-  if (!t) throw new Error(`Không có nhiệm vụ ${id}`);
-  console.log(`${c.bold(t.id)} — ${t.title}\n${statusColor(t.status)} · ${t.mode} · ${t.departments.join(' → ')} · dữ liệu: ${t.classification}`);
+  const ref = args[0];
+  if (!ref) throw new Error('Cần mã nhiệm vụ (CC-12) hoặc taskId');
+  const t = findTaskOnDisk(ref);
+  if (!t) throw new Error(`Không có nhiệm vụ ${ref}`);
+  const runDir = path.join(config.dataDir, 'runs', t.id);
+  console.log(`${c.bold(taskCode(t))}${t.seq ? c.gray(` (${t.id})`) : ''} — ${t.title}\n${statusColor(t.status)} · ${t.mode} · ${t.departments.join(' → ')} · dữ liệu: ${t.classification}`);
   if (t.routing) console.log(c.gray(`Định tuyến: ${t.routing.reason} (bởi ${t.routing.by})`));
   for (const r of t.runs) {
     console.log(`\n${c.bold(r.department)} — ${statusColor(r.status)} · ${fmtNum(totalTokens(r.usage))} token`);
@@ -292,6 +315,7 @@ async function cmdShow(args: string[]): Promise<void> {
     );
     if (r.review) console.log(`Review: ${r.review.approved ? c.green('duyệt') : c.yellow('cần sửa')} — ${r.review.summary}`);
   }
+  if (t.acceptance) console.log(`\nCTO nghiệm thu: ${t.acceptance.accepted ? c.green('đạt') : c.yellow(t.acceptance.error ? `chưa nghiệm thu được — ${t.acceptance.error}` : 'chưa đạt')}${t.acceptance.criteria?.length ? ` · ${t.acceptance.criteria.filter((x) => x.result === 'pass').length}/${t.acceptance.criteria.length} tiêu chí` : ''}`);
   if (t.finalPath) console.log(`\nBáo cáo: ${c.cyan(path.join(runDir, t.finalPath))}`);
 }
 
@@ -711,7 +735,7 @@ async function cmdResume(args: string[]): Promise<void> {
     rerun: values.rerun ? (values.rerun === 'all' ? 'all' : values.rerun.split(',')) : undefined,
   };
   const t = await api<Task>(`/api/tasks/${positionals[0]}/resume`, { method: 'POST', body: JSON.stringify(body) });
-  console.log(`${c.green('✓')} Tiếp tục ${t.id} — ngân sách ${fmtNum(t.options.budgetTokens)} · ${t.options.budgetMode === 'complete' ? 'chạy tới khi hoàn thành' : 'dừng khi chạm trần'}`);
+  console.log(`${c.green('✓')} Tiếp tục ${taskCode(t)} — ngân sách ${fmtNum(t.options.budgetTokens)} · ${t.options.budgetMode === 'complete' ? 'chạy tới khi hoàn thành' : 'dừng khi chạm trần'}`);
 }
 
 async function cmdSplit(args: string[]): Promise<void> {
@@ -720,8 +744,8 @@ async function cmdSplit(args: string[]): Promise<void> {
   if (!(await serverUp())) throw new Error('Server không chạy');
   const body = { subtasks: values.only ? values.only.split(',') : undefined, budgetTokens: values.budget ? Number(values.budget) : undefined, budgetMode: values['budget-mode'] };
   const r = await api<{ task: Task; created: Task[] }>(`/api/tasks/${positionals[0]}/split`, { method: 'POST', body: JSON.stringify(body) });
-  console.log(`${c.green('✓')} Đã tách ${r.created.length} nhiệm vụ từ ${r.task.id}:`);
-  for (const t of r.created) console.log(`  ${t.id}  ${t.title}  · ngân sách ${fmtNum(t.options.budgetTokens)}${t.after?.length ? c.dim(` · chờ ${t.after.join(', ')}`) : ''}`);
+  console.log(`${c.green('✓')} Đã tách ${r.created.length} nhiệm vụ từ ${taskCode(r.task)}:`);
+  for (const t of r.created) console.log(`  ${taskCode(t)}  ${t.title}  · ngân sách ${fmtNum(t.options.budgetTokens)}${t.after?.length ? c.dim(` · chờ ${t.after.join(', ')}`) : ''}`);
 }
 
 async function cmdCancel(args: string[]): Promise<void> {

@@ -10,8 +10,9 @@
   - 🔵 **Phòng Phát triển Dự án** (công việc): Trưởng phòng, Kiến trúc sư giải pháp, Senior Software Engineer, Backend, Frontend, Data Engineer (ELK), DevOps/SRE, ATTT & Bảo vệ dữ liệu, Business Analyst, Pre-sales & HSDT, Technical Writer, QA.
   - 🟣 **Phòng Nghiên cứu** (học thuật): Trưởng phòng (PI), Literature Researcher, Data Scientist, Methodologist, Academic Writer, Peer Reviewer.
   - 🔴 **Điều phối viên** định tuyến nhiệm vụ; **CTO** nghiệm thu kết quả theo tiêu chí (Đạt/Không kèm bằng chứng) trước khi giao cho giám đốc.
-- **4 chế độ xử lý**: *Tự động* (điều phối viên chọn phòng) · *Theo phòng ban* · *Theo dự án* (workspace, runtime, phân loại dữ liệu, ngân sách riêng) · *Liên phòng* (Nghiên cứu → Phát triển).
-- **Quy trình như một phòng ban thật**: lập kế hoạch → họp thảo luận (agent đi vào phòng họp, phát biểu, @nhắc nhau; tự bỏ họp khi việc nhỏ) → chốt → thực thi song song theo phụ thuộc → review & sửa → báo cáo tổng hợp. Mỗi mốc là một **checkpoint**: tạm dừng / tiếp tục / chạy lại hạng mục mà không mất tiến độ.
+- **5 chế độ xử lý**: *Tự động* (điều phối viên chọn phòng) · *Theo phòng ban* · *Theo dự án* (workspace, runtime, phân loại dữ liệu, ngân sách riêng) · *Liên phòng* (Nghiên cứu → Phát triển) · *Giao riêng* một agent.
+- **Quy trình như một phòng ban thật**: lập kế hoạch → họp thảo luận (phát biểu, @nhắc nhau; tự bỏ họp khi việc nhỏ) → chốt → *(tùy chọn)* **giám đốc duyệt kế hoạch** → thực thi song song theo phụ thuộc → review & sửa → báo cáo tổng hợp → **CTO nghiệm thu**. Mỗi mốc là một **checkpoint**: tạm dừng / tiếp tục / làm lại từ review / nghiệm thu lại / chạy lại hạng mục mà không mất tiến độ.
+- **Mã nhiệm vụ ngắn `CC-12`** (tiền tố `taskPrefix`) ở giao diện, URL, CLI, API; nhắc mã trong tin nhắn thành liên kết. Danh sách nhiệm vụ **dạng cây**: nhiệm vụ → hạng mục → việc nối/việc tách, nhãn đang chạy cộng dồn.
 - **Agent làm việc thật trên repo**: đọc/ghi file, chạy test, typecheck, migration DB dev trong **git worktree + nhánh riêng** cho từng nhiệm vụ (không đụng nhánh chính, không push) — xem [docs/TOOLS.md](docs/TOOLS.md).
 - **Đính kèm tệp** (PDF, DOCX, XLSX, PPTX, MD, CSV, JSON, code…): trích chữ tại chỗ, đưa vào bối cảnh nhiệm vụ.
 - **Ngân sách token 2 chế độ**: *chạy tới khi hoàn thành* (chỉ cảnh báo 80%/100%) hoặc *tạm dừng khi chạm trần* — kèm nút tăng ngân sách, chạy tiếp, đóng gói vào dự án.
@@ -20,9 +21,10 @@
 - **Bộ đếm token** cho từng lượt gọi: input, output, cache đọc/ghi, chi phí — tổng hợp theo agent / phòng / task / dự án / model / ngày (UI, CLI `ccoding usage --watch`, và hiển thị trên sidebar herdr).
 - **Nhiều runtime**: Claude Code CLI, Codex CLI, Kimi Code CLI, Anthropic API, API tương thích OpenAI (9router, Ollama, OpenRouter…), và `mock` để chạy thử offline.
 - **Data Protection Gate tích hợp**: nhãn dữ liệu theo dự án quyết định runtime nào được nhận dữ liệu; tự che khóa bí mật/PII trước khi ghi log hay gửi ra ngoài.
-- **Giao diện quản lý kiểu Drive** (dự án dạng thư mục → nhiệm vụ, lọc/sắp xếp/gắn sao, menu chuột phải), **màn 💬 Prompt kiểu ứng dụng chat** (cột hội thoại theo dự án, luồng trao đổi gom gọn, ô trả lời: chỉ dẫn bổ sung khi việc đang chạy / giao tiếp nối khi đã xong, xem trước tệp ở khung phải) và **văn phòng pixel** ở ô phụ bên phải (thời gian thực qua SSE) + **CLI** đầy đủ.
-
-- **Phòng giám đốc**: bạn điều khiển nhân vật của mình bằng WASD, bấm E cạnh agent/phòng để giao việc riêng, góp ý (agent nhớ ở các lượt sau), tăng ngân sách, xem cuộc họp, hoặc vài trò vui không ảnh hưởng công việc; **thư viện & khung soạn prompt**, kiểm tra yêu cầu khi gõ, **tab Hạn mức** (token còn lại theo runtime/model), trợ giúp và phím tắt — xem [docs/UI.md](docs/UI.md).
+- **Xem và gộp thay đổi**: tab 🧬 **Thay đổi** (diff theo worktree hoặc từng commit, bình luận theo dòng → gửi thành yêu cầu sửa), 🧪 **lệnh kiểm tra trước/sau** (báo hồi quy), 🚀 **Sẵn sàng gộp** (kiểm review, lệnh kiểm tra, dòng giống khóa bí mật, fast-forward; đẩy nhánh / đẩy vào nhánh xuất phát / mở PR — không bao giờ `--force`).
+- **Theo dõi khi chạy**: luồng hoạt động trực tiếp từng hạng mục, ⏱ **dòng thời gian** (mỗi lượt gọi một thanh, đường găng, song song tối đa), 📥 **Cần bạn** (duyệt bằng phím, có hoàn tác), bảng lệnh **Ctrl+K**, URL riêng cho từng màn, thông báo trình duyệt.
+- **Giao diện quản lý**: cột trái theo nhóm *Làm việc* (Nhiệm vụ, Dự án dạng cây, 🔁 Việc định kỳ, 📦 Sản phẩm, 💬 Prompt, Gắn sao, Thư viện prompt) và *Tổ chức* (Nhân sự, 🧩 Kỹ năng & Kết nối, 🛡 Kiểm toán, Token, Hạn mức, KPI, Nhật ký); **màn 💬 Prompt kiểu ứng dụng chat** (hội thoại theo dự án, chỉ dẫn bổ sung khi việc đang chạy, giao tiếp nối khi đã xong); **thư viện & khung soạn prompt**, kiểm tra yêu cầu khi gõ; **văn phòng** ở ô phụ bên phải chia theo phòng ban (mỗi agent một bàn, vòng màu trạng thái, bong bóng việc đang làm; bấm agent → giao việc riêng, góp ý, mở việc đang làm, tăng ngân sách) + **CLI** đầy đủ — xem [docs/UI.md](docs/UI.md).
+- **🔁 Việc định kỳ**: giao lại một nhiệm vụ mẫu hằng ngày / theo thứ / mỗi N giờ (không chạy chồng, chạy bù khi lỡ lịch ≤ 6 giờ, giữ dự án và nhãn dữ liệu). **📦 Sản phẩm**: mọi báo cáo, sản phẩm hạng mục, kết luận nghiệm thu, thay đổi mã. **🛡 Kiểm toán**: ai làm gì lúc nào (giao/hủy/duyệt, đẩy nhánh, cấu hình, lệnh bị chặn…) từ nhật ký có chuỗi băm, kiểm toàn vẹn bằng một nút.
 
 ## Kiến trúc
 
@@ -30,10 +32,13 @@
 flowchart LR
   U[Tom<br/>UI web · CLI] --> S[Server 127.0.0.1:7420<br/>REST + SSE]
   S --> O[Orchestrator]
+  SC[Việc định kỳ<br/>bộ lập lịch] --> O
   O -->|định tuyến| R[Điều phối viên]
   O --> D1[Phòng Phát triển]
   O --> D2[Phòng Nghiên cứu]
   D1 & D2 -->|plan → họp → chốt → làm → review → báo cáo| RT{Runtime}
+  O -->|nghiệm thu| CT[CTO]
+  CT --> RT
   RT --> C[claude / codex / kimi CLI]
   RT --> A[Anthropic / OpenAI-compatible API]
   RT --> M[mock · Ollama cục bộ]
@@ -79,7 +84,7 @@ Khi server chạy **bên trong herdr**, runner tự chuyển sang `herdr`: mỗi
 
 ## Giao việc
 
-**Giao diện web** → *💬 Prompt*: chọn chế độ, phòng ban hoặc dự án, nhập yêu cầu; theo dõi và trả lời ngay trong hội thoại. Quản lý trong *Tổng quan*, *Dự án*, *Nhiệm vụ* (sản phẩm, báo cáo, token, nhật ký, lượt gọi), *Nhân sự* (hồ sơ agent.md, log vị trí, đầu ra trực tiếp), *Token*, *Hạn mức*, *Nhật ký*. Bấm vào nhân vật trên bản đồ để xem chi tiết. Xem [docs/UI.md](docs/UI.md).
+**Giao diện web** → *＋ Mới* hoặc *💬 Prompt*: chọn chế độ, phòng ban, dự án hoặc một agent, nhập yêu cầu; theo dõi và trả lời ngay trong hội thoại. Quản lý trong *Tổng quan*, *📥 Cần bạn*, *Dự án*, *Nhiệm vụ* (trang nhiệm vụ: kế hoạch, lệnh kiểm tra, 🧬 thay đổi, ⏱ dòng thời gian, sản phẩm, báo cáo, CTO nghiệm thu, token, nhật ký, lượt gọi), *Việc định kỳ*, *Sản phẩm*, *Nhân sự* (hồ sơ agent.md, log vị trí, góp ý), *Kỹ năng & Kết nối*, *Kiểm toán*, *Token*, *Hạn mức*, *KPI*, *Nhật ký*. Bấm một agent trong văn phòng để giao việc riêng hoặc xem hồ sơ. Xem [docs/UI.md](docs/UI.md).
 
 **CLI**:
 
@@ -87,13 +92,16 @@ Khi server chạy **bên trong herdr**, runner tự chuyển sang `herdr`: mỗi
 ccoding task "Tổng quan tài liệu về data lineage cho đề cương luận văn" --dept research
 ccoding task "Rà soát kiến trúc theo 10 nhóm phản biện" --project traceguard --rounds 2
 ccoding task "Nghiên cứu phát hiện bất thường log rồi dựng prototype" --mode joint --wait
-ccoding status            # nhiệm vụ & trạng thái agent
-ccoding show <taskId>     # chi tiết, file đầu ra, báo cáo
-ccoding cancel <taskId>
-ccoding pause <taskId>                        # tạm dừng, giữ tiến độ
-ccoding resume <taskId> --budget-mode complete # chạy tiếp tới khi xong (hoặc --add 500000)
-ccoding split <taskId> [--only S1,S2]         # tách hạng mục chưa xong thành nhiệm vụ riêng (mỗi nhiệm vụ một gói việc)
+ccoding status            # nhiệm vụ (mã CC-n) & trạng thái agent
+ccoding show CC-12        # chi tiết, hạng mục, review, CTO nghiệm thu, báo cáo
+ccoding cancel CC-12
+ccoding pause CC-12                           # tạm dừng, giữ tiến độ
+ccoding resume CC-12 --budget-mode complete   # chạy tiếp tới khi xong (hoặc --add 500000)
+ccoding resume CC-12 --from accept            # chỉ chạy lại bước CTO nghiệm thu
+ccoding split CC-12 [--only S1,S2]            # tách hạng mục chưa xong thành nhiệm vụ riêng (mỗi nhiệm vụ một gói việc)
 ```
+
+Mọi lệnh nhận mã ngắn `CC-12` hoặc id đầy đủ `T-…`.
 
 Tùy chọn: `--rounds 0-3` (số vòng họp), `--parallel 1-8`, `--no-review`, `--runtime <id>`, `--budget <token>`, `--budget-mode complete|pause`.
 
@@ -118,13 +126,15 @@ Mặc định `runtime: auto` chọn runtime đầu tiên **sẵn sàng và đư
 
 ```
 data/
-├─ logs/system.jsonl              # toàn hệ thống
+├─ logs/system.jsonl              # toàn hệ thống (nguồn của trang 🛡 Kiểm toán)
 ├─ logs/agents/<agentId>.jsonl    # log riêng từng vị trí
 ├─ logs/departments/<dept>.jsonl  # log từng phòng ban
 ├─ usage/ledger.jsonl             # sổ cái token: mỗi lượt gọi LLM một dòng
+├─ projects.json  prompts.json  routines.json  seq.json   # dự án, thư viện prompt, việc định kỳ, bộ đếm mã CC-n
+├─ feedback/<agentId>.json  kpi-resolved.json  uploads/  bench/
 └─ runs/<taskId>/
-   ├─ task.json  transcript.jsonl  events.jsonl
-   ├─ prompts/   outputs/   <dept>-FINAL.md   FINAL.md
+   ├─ task.json  transcript.jsonl  events.jsonl  calls.jsonl
+   ├─ inputs/  prompts/  outputs/   <dept>-FINAL.md   FINAL.md   ACCEPTANCE.md
 ```
 
 ```bash
@@ -180,10 +190,10 @@ Trong CCoding, nhãn dữ liệu của **dự án** quyết định runtime: m�
 ## Cấu trúc thư mục
 
 ```
-agents/            hồ sơ vị trí (agent.md) — orchestrator + dev/ + research/
+agents/            hồ sơ vị trí (agent.md) — orchestrator, cto + dev/ + research/
 departments/       điều lệ phòng ban (thành viên, trưởng phòng, reviewer, từ khóa định tuyến)
 src/               mã nguồn TypeScript (orchestrator, runtimes, server, CLI, herdr)
-public/            giao diện web (canvas pixel-art, không phụ thuộc framework)
+public/            giao diện web JS thuần (không build, không framework; chân dung agent vẽ pixel bằng canvas)
 docs/              kiến trúc, herdr, runtime, hướng dẫn agent, đánh giá bảo vệ dữ liệu
 test/              kiểm thử (node:test) — chạy `npm test`
 ccoding.config.json  cấu hình mặc định (ghi đè bằng ccoding.local.json)
@@ -193,6 +203,6 @@ ccoding.config.json  cấu hình mặc định (ghi đè bằng ccoding.local.js
 
 ```bash
 npm run dev        # server + tự build lại khi sửa src/
-npm test           # 21 bài kiểm thử: planner, parser runtime, bảo mật, e2e, API
+npm test           # 166 bài kiểm thử (node:test): planner, runtime, bảo mật, e2e, API, giao diện dữ liệu (UX-1→4)
 npm run typecheck
 ```

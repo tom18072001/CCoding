@@ -36,7 +36,7 @@ Lệnh này (idempotent — chạy lại chỉ bổ sung phần thiếu):
 |---|---|---|
 | **Log · Hệ thống** (cwd `data/logs`) | `toàn hệ thống`, `cảnh báo · lỗi`, `thư mục log` | `logs -f -n 80`, `logs -f --level warn+`, `logs ls` |
 | **Log · Nhiệm vụ** (cwd `data/runs`) | `nhiệm vụ mới nhất`, `danh sách`, `token nhiệm vụ` | `logs -f --task latest`, `status --watch`, `usage --watch --task latest` |
-| **Log · Phòng ban** (cwd `data/logs/departments`) | một pane mỗi phòng (Điều phối, Phát triển, Nghiên cứu) | `logs -f --dept <id>` |
+| **Log · Phòng ban** (cwd `data/logs/departments`) | một pane mỗi phòng (Điều phối — gồm điều phối viên và CTO, Phát triển, Nghiên cứu) | `logs -f --dept <id>` |
 | **Log · Agent** (cwd `data/logs/agents`) | một tab mỗi phòng, một pane mỗi agent | `logs -f --agent <id>` |
 
 - `--task latest` tự chuyển sang nhiệm vụ mới khi có nhiệm vụ được giao; nhiệm vụ đang theo chưa xong thì không nhảy sang nhiệm vụ khác chạy song song.

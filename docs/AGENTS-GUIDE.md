@@ -17,7 +17,7 @@ runtime: inherit                # hoặc claude-cli | codex-cli | kimi-cli | ant
 tools: [Read, Write, Edit, Glob, Grep, Bash]   # công cụ workspace được dùng (xem bảng dưới)
 skills: [nodejs, typescript, rest-api, database, orm-migration]   # ≥ 5 thẻ — trưởng phòng dựa vào đây để giao việc
 summary: "Một câu mô tả vai trò (hiện trong danh sách nhân sự của trưởng phòng)."
-look: { hair: "#2b1d0e", shirt: "#2563eb", skin: "#f1c27d" }  # màu nhân vật pixel
+look: { hair: "#2b1d0e", shirt: "#2563eb", skin: "#f1c27d" }  # màu chân dung pixel ở văn phòng
 sources:
   - "Tom skill: phan-bien-giai-phap-he-thong"
   - "community: VoltAgent/awesome-claude-code-subagents (backend-developer) — paraphrased"
