@@ -276,7 +276,8 @@ const BUILTIN: Omit<Config, 'root'> = {
   maxConcurrentTasks: 2,
   defaults: { discussionRounds: 1, review: true, maxParallel: 3, maxRevisions: 1, budgetTokens: 1500000, budgetMode: 'complete', subtaskBudgetTokens: 0, timeoutMs: 1800000, planApprovalMinutes: 0 },
   phases: {
-    models: { route: 'haiku', discuss: 'haiku' },
+    // tổng hợp báo cáo bằng Sonnet: pha cuối nằm trên đường găng (Opus 31–52 giây, $0,15–0,25 mỗi nhiệm vụ — benchtest 1/11)
+    models: { route: 'haiku', discuss: 'haiku', synthesize: 'sonnet' },
     maxTokens: { route: 800, plan: 8000, discuss: 700, finalize: 8000, execute: 32000, review: 6000, revise: 32000, synthesize: 10000 },
     toolTurns: { plan: 8, finalize: 4, execute: 40, review: 10, revise: 16, synthesize: 4 },
     toolInputBudget: { plan: 100000, finalize: 50000, execute: 800000, review: 200000, revise: 300000, synthesize: 60000 },
