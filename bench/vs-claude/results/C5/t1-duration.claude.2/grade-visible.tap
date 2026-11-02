@@ -1,0 +1,100 @@
+TAP version 13
+# Subtest: parse cơ bản
+ok 1 - parse cơ bản
+  ---
+  duration_ms: 1.238403
+  type: 'test'
+  ...
+# Subtest: format cơ bản
+ok 2 - format cơ bản
+  ---
+  duration_ms: 0.243253
+  type: 'test'
+  ...
+# Subtest: lỗi
+ok 3 - lỗi
+  ---
+  duration_ms: 0.366847
+  type: 'test'
+  ...
+# Subtest: parse: đầu vào number
+ok 4 - parse: đầu vào number
+  ---
+  duration_ms: 1.474747
+  type: 'test'
+  ...
+# Subtest: parse: kiểu không hợp lệ và thông điệp lỗi
+ok 5 - parse: kiểu không hợp lệ và thông điệp lỗi
+  ---
+  duration_ms: 0.955293
+  type: 'test'
+  ...
+# Subtest: parse: số thuần
+ok 6 - parse: số thuần
+  ---
+  duration_ms: 2.064685
+  type: 'test'
+  ...
+# Subtest: parse: dạng đơn vị và bí danh
+ok 7 - parse: dạng đơn vị và bí danh
+  ---
+  duration_ms: 0.619454
+  type: 'test'
+  ...
+# Subtest: parse: dạng đơn vị không hợp lệ
+ok 8 - parse: dạng đơn vị không hợp lệ
+  ---
+  duration_ms: 0.369428
+  type: 'test'
+  ...
+# Subtest: parse: ISO 8601
+ok 9 - parse: ISO 8601
+  ---
+  duration_ms: 1.030383
+  type: 'test'
+  ...
+# Subtest: format: cơ bản
+ok 10 - format: cơ bản
+  ---
+  duration_ms: 0.545446
+  type: 'test'
+  ...
+# Subtest: format: làm tròn và dấu
+ok 11 - format: làm tròn và dấu
+  ---
+  duration_ms: 0.156069
+  type: 'test'
+  ...
+# Subtest: format: lỗi
+ok 12 - format: lỗi
+  ---
+  duration_ms: 0.516955
+  type: 'test'
+  ...
+# Subtest: format: largest
+ok 13 - format: largest
+  ---
+  duration_ms: 0.505505
+  type: 'test'
+  ...
+# Subtest: tính chất: parse(format(x)) === parse(x)
+ok 14 - tính chất: parse(format(x)) === parse(x)
+  ---
+  duration_ms: 36.282055
+  type: 'test'
+  ...
+# Subtest: format: số rất lớn không dùng ký hiệu mũ
+ok 15 - format: số rất lớn không dùng ký hiệu mũ
+  ---
+  duration_ms: 0.213425
+  type: 'test'
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 15
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 175.511658

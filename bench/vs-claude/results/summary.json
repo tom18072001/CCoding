@@ -1,0 +1,492 @@
+{
+ "labels": {
+  "C1": "cloud 1/11 tối · CCoding gốc (14e2ec6) · chạy theo cặp",
+  "C2": "cloud 2/11 sáng · bài 5 (CCoding gốc + Claude) và biến thể fast/sonlead 1/11 trước khi chạm hạn mức",
+  "C3": "cloud 2/11 · CCoding cải tiến bước 1 (họp song song, 1 hạng mục cho việc nhỏ, tổng hợp Sonnet)",
+  "C4": "cloud 2/11 · làn nhanh lần 1 — 2 nhiệm vụ CCoding cùng lúc (tranh agent, số đo thời gian nhiễu)",
+  "C5": "cloud 2/11 · làn nhanh + điều phối song song (+ hook stdin từ giữa vòng) vs Claude, mỗi hệ tuần tự · t3 lượt 1 của CCoding bị lỗi treo stdin (579 s)"
+ },
+ "summary": {
+  "C1": {
+   "t1-duration": {
+    "ccoding": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 330,
+     "wall_min_s": 314,
+     "wall_max_s": 346,
+     "cost_mean_usd": 1.142,
+     "tokens_mean": {
+      "input": 41,
+      "output": 34215,
+      "cache_read": 612320,
+      "cache_write": 130285
+     }
+    },
+    "claude": {
+     "n": 2,
+     "hidden_pct": 99.66,
+     "full_pass": 1,
+     "wall_mean_s": 132,
+     "wall_min_s": 129,
+     "wall_max_s": 135,
+     "cost_mean_usd": 0.51,
+     "tokens_mean": {
+      "input": 10,
+      "output": 13866,
+      "cache_read": 226944,
+      "cache_write": 23438
+     }
+    }
+   },
+   "t2-orders": {
+    "ccoding": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 142.5,
+     "wall_min_s": 139,
+     "wall_max_s": 146,
+     "cost_mean_usd": 0.783,
+     "tokens_mean": {
+      "input": 39,
+      "output": 21917,
+      "cache_read": 528400,
+      "cache_write": 79340
+     }
+    },
+    "claude": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 93.5,
+     "wall_min_s": 86,
+     "wall_max_s": 101,
+     "cost_mean_usd": 0.417,
+     "tokens_mean": {
+      "input": 12,
+      "output": 9550,
+      "cache_read": 272944,
+      "cache_write": 21417
+     }
+    }
+   },
+   "t3-api": {
+    "ccoding": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 445.5,
+     "wall_min_s": 412,
+     "wall_max_s": 479,
+     "cost_mean_usd": 1.808,
+     "tokens_mean": {
+      "input": 74,
+      "output": 64316,
+      "cache_read": 1406480,
+      "cache_write": 189044
+     }
+    },
+    "claude": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 211.5,
+     "wall_min_s": 197,
+     "wall_max_s": 226,
+     "cost_mean_usd": 0.874,
+     "tokens_mean": {
+      "input": 27,
+      "output": 21064,
+      "cache_read": 765491,
+      "cache_write": 37418
+     }
+    }
+   },
+   "t4-perf": {
+    "ccoding": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 446,
+     "wall_min_s": 323,
+     "wall_max_s": 569,
+     "cost_mean_usd": 1.233,
+     "tokens_mean": {
+      "input": 55,
+      "output": 42306,
+      "cache_read": 807823,
+      "cache_write": 129981
+     }
+    },
+    "claude": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 249.5,
+     "wall_min_s": 171,
+     "wall_max_s": 328,
+     "cost_mean_usd": 0.724,
+     "tokens_mean": {
+      "input": 21,
+      "output": 18722,
+      "cache_read": 550346,
+      "cache_write": 29860
+     }
+    }
+   }
+  },
+  "C2": {
+   "t1-duration": {
+    "ccoding-fast": {
+     "n": 1,
+     "hidden_pct": 100.0,
+     "full_pass": 1,
+     "wall_mean_s": 265,
+     "wall_min_s": 265,
+     "wall_max_s": 265,
+     "cost_mean_usd": 0.597,
+     "tokens_mean": {
+      "input": 9751,
+      "output": 22617,
+      "cache_read": 334470,
+      "cache_write": 53902
+     }
+    },
+    "ccoding-sonlead": {
+     "n": 1,
+     "hidden_pct": 100.0,
+     "full_pass": 1,
+     "wall_mean_s": 266,
+     "wall_min_s": 266,
+     "wall_max_s": 266,
+     "cost_mean_usd": 0.483,
+     "tokens_mean": {
+      "input": 8835,
+      "output": 22294,
+      "cache_read": 281718,
+      "cache_write": 57505
+     }
+    }
+   },
+   "t5-logq": {
+    "ccoding": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 413,
+     "wall_min_s": 405,
+     "wall_max_s": 421,
+     "cost_mean_usd": 2.077,
+     "tokens_mean": {
+      "input": 88,
+      "output": 74466,
+      "cache_read": 1334896,
+      "cache_write": 249170
+     }
+    },
+    "claude": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 244.5,
+     "wall_min_s": 244,
+     "wall_max_s": 245,
+     "cost_mean_usd": 1.005,
+     "tokens_mean": {
+      "input": 23,
+      "output": 27496,
+      "cache_read": 636528,
+      "cache_write": 40951
+     }
+    }
+   }
+  },
+  "C3": {
+   "t1-duration": {
+    "ccoding-new": {
+     "n": 1,
+     "hidden_pct": 100.0,
+     "full_pass": 1,
+     "wall_mean_s": 258,
+     "wall_min_s": 258,
+     "wall_max_s": 258,
+     "cost_mean_usd": 0.772,
+     "tokens_mean": {
+      "input": 38,
+      "output": 29936,
+      "cache_read": 654301,
+      "cache_write": 75338
+     }
+    }
+   },
+   "t2-orders": {
+    "ccoding-new": {
+     "n": 1,
+     "hidden_pct": 100.0,
+     "full_pass": 1,
+     "wall_mean_s": 121,
+     "wall_min_s": 121,
+     "wall_max_s": 121,
+     "cost_mean_usd": 0.843,
+     "tokens_mean": {
+      "input": 28,
+      "output": 16630,
+      "cache_read": 320271,
+      "cache_write": 118285
+     }
+    }
+   }
+  },
+  "C4": {
+   "t1-duration": {
+    "ccoding-fastlane": {
+     "n": 1,
+     "hidden_pct": 100.0,
+     "full_pass": 1,
+     "wall_mean_s": 170,
+     "wall_min_s": 170,
+     "wall_max_s": 170,
+     "cost_mean_usd": 0.808,
+     "tokens_mean": {
+      "input": 36,
+      "output": 37459,
+      "cache_read": 484668,
+      "cache_write": 95107
+     }
+    }
+   },
+   "t2-orders": {
+    "ccoding-fastlane": {
+     "n": 1,
+     "hidden_pct": 98.33,
+     "full_pass": 0,
+     "wall_mean_s": 127,
+     "wall_min_s": 127,
+     "wall_max_s": 127,
+     "cost_mean_usd": 0.552,
+     "tokens_mean": {
+      "input": 40,
+      "output": 19338,
+      "cache_read": 527184,
+      "cache_write": 75377
+     }
+    }
+   },
+   "t3-api": {
+    "ccoding-fastlane": {
+     "n": 1,
+     "hidden_pct": 100.0,
+     "full_pass": 1,
+     "wall_mean_s": 247,
+     "wall_min_s": 247,
+     "wall_max_s": 247,
+     "cost_mean_usd": 1.404,
+     "tokens_mean": {
+      "input": 92,
+      "output": 54083,
+      "cache_read": 1578632,
+      "cache_write": 174592
+     }
+    }
+   },
+   "t4-perf": {
+    "ccoding-fastlane": {
+     "n": 1,
+     "hidden_pct": 100.0,
+     "full_pass": 1,
+     "wall_mean_s": 124,
+     "wall_min_s": 124,
+     "wall_max_s": 124,
+     "cost_mean_usd": 0.553,
+     "tokens_mean": {
+      "input": 42,
+      "output": 21086,
+      "cache_read": 621347,
+      "cache_write": 69043
+     }
+    }
+   },
+   "t5-logq": {
+    "ccoding-fastlane": {
+     "n": 1,
+     "hidden_pct": 100.0,
+     "full_pass": 1,
+     "wall_mean_s": 307,
+     "wall_min_s": 307,
+     "wall_max_s": 307,
+     "cost_mean_usd": 1.145,
+     "tokens_mean": {
+      "input": 78,
+      "output": 49576,
+      "cache_read": 1247352,
+      "cache_write": 129741
+     }
+    }
+   }
+  },
+  "C5": {
+   "t1-duration": {
+    "ccoding-fastlane": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 107,
+     "wall_min_s": 98,
+     "wall_max_s": 116,
+     "cost_mean_usd": 0.542,
+     "tokens_mean": {
+      "input": 27,
+      "output": 22477,
+      "cache_read": 360565,
+      "cache_write": 69381
+     }
+    },
+    "claude": {
+     "n": 2,
+     "hidden_pct": 99.66,
+     "full_pass": 1,
+     "wall_mean_s": 125.5,
+     "wall_min_s": 117,
+     "wall_max_s": 134,
+     "cost_mean_usd": 0.513,
+     "tokens_mean": {
+      "input": 12,
+      "output": 13490,
+      "cache_read": 284984,
+      "cache_write": 23202
+     }
+    }
+   },
+   "t2-orders": {
+    "ccoding-fastlane": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 106,
+     "wall_min_s": 78,
+     "wall_max_s": 134,
+     "cost_mean_usd": 0.69,
+     "tokens_mean": {
+      "input": 53,
+      "output": 23684,
+      "cache_read": 716938,
+      "cache_write": 94044
+     }
+    },
+    "claude": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 91,
+     "wall_min_s": 89,
+     "wall_max_s": 93,
+     "cost_mean_usd": 0.436,
+     "tokens_mean": {
+      "input": 12,
+      "output": 9626,
+      "cache_read": 271612,
+      "cache_write": 23584
+     }
+    }
+   },
+   "t3-api": {
+    "ccoding-fastlane": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 400,
+     "wall_min_s": 221,
+     "wall_max_s": 579,
+     "cost_mean_usd": 1.139,
+     "tokens_mean": {
+      "input": 65,
+      "output": 41731,
+      "cache_read": 1090418,
+      "cache_write": 129267
+     }
+    },
+    "claude": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 157.5,
+     "wall_min_s": 155,
+     "wall_max_s": 160,
+     "cost_mean_usd": 0.713,
+     "tokens_mean": {
+      "input": 15,
+      "output": 18442,
+      "cache_read": 384891,
+      "cache_write": 33307
+     }
+    }
+   },
+   "t4-perf": {
+    "ccoding-fastlane": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 153,
+     "wall_min_s": 134,
+     "wall_max_s": 172,
+     "cost_mean_usd": 0.574,
+     "tokens_mean": {
+      "input": 37,
+      "output": 22354,
+      "cache_read": 556459,
+      "cache_write": 72709
+     }
+    },
+    "claude": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 202.5,
+     "wall_min_s": 186,
+     "wall_max_s": 219,
+     "cost_mean_usd": 0.627,
+     "tokens_mean": {
+      "input": 18,
+      "output": 16314,
+      "cache_read": 446164,
+      "cache_write": 26333
+     }
+    }
+   },
+   "t5-logq": {
+    "ccoding-fastlane": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 174.5,
+     "wall_min_s": 161,
+     "wall_max_s": 188,
+     "cost_mean_usd": 1.077,
+     "tokens_mean": {
+      "input": 59,
+      "output": 47254,
+      "cache_read": 948520,
+      "cache_write": 126006
+     }
+    },
+    "claude": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 258.5,
+     "wall_min_s": 247,
+     "wall_max_s": 270,
+     "cost_mean_usd": 1.015,
+     "tokens_mean": {
+      "input": 20,
+      "output": 29166,
+      "cache_read": 528954,
+      "cache_write": 40692
+     }
+    }
+   }
+  }
+ }
+}

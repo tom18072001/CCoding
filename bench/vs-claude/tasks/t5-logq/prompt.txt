@@ -1,0 +1,1 @@
+Xây dựng công cụ logq theo đúng đặc tả trong SPEC.md: thư viện (src/parse.js, src/query.js, src/agg.js) và CLI bin/logq.js. Đặc tả có nhiều quy tắc chi tiết (cú pháp truy vấn, vị trí lỗi, thứ tự bucket, mã thoát CLI) — bộ nghiệm thu ẩn kiểm tra từng quy tắc qua API và qua CLI thật. Viết test cho các module, đảm bảo `npm test` xanh. Không thêm thư viện ngoài.

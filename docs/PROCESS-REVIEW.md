@@ -217,3 +217,54 @@ Chạy lại sau khi sửa (`T-20261101-154738-c08`, 163 giây, 563k token): Ki�
 ## 12. Tối ưu token — đo bằng benchtest trước khi đổi mặc định (1/11/2026)
 
 Đối chiếu tài liệu tham khảo về tối ưu prompt/cache với số đo 7 gói ND57 (claude-cli): chi phí quy đổi = đầu ra 38 % · ghi cache 34 % · đọc cache 28 %; kết quả công cụ bị gửi lại ~9,3 triệu token; tệp `.ccoding/` (bản đồ repo…) gửi lại 3,5 triệu ký tự; pha họp ghi cache nhiều mà ít đọc lại. Bốn ý đề xuất — cắt đầu ra lệnh shell (`bashMaxOutput`), bản đồ repo gọn + chỉ mục (`repoMapMode`), bỏ họp với nhiệm vụ trên repo (`discussionRounds: 0`), tổng hợp bằng Sonnet (`phaseModels.synthesize`) — đều có thể làm agent đọc lại nhiều hơn hoặc kém đi, nên **thành tùy chọn theo nhiệm vụ, mặc định giữ nguyên**, kèm `ccoding bench` ([BENCH.md](BENCH.md)) để chạy cùng đề bài với từng biến thể (xen kẽ, lặp, chỉ khi máy rảnh, lượt bench cách ly khỏi lịch sử dự án/hồ sơ agent) và so token quy đổi, thời gian, công cụ, chất lượng (review, lệnh kiểm tra, test ẩn). Chỉ đổi mặc định khi tốt hơn rõ mà chất lượng không kém.
+
+## 13. Benchtest CCoding vs Claude Code thuần — làn nhanh cho việc nhỏ (1–2/11/2026)
+
+Mục tiêu chủ dự án: **việc nhỏ (dưới 15 phút) CCoding phải xong nhanh hơn Claude Code thuần**; người điều phối phải tự chia việc và
+cho chạy song song. Bộ đo `bench/vs-claude` ([README](../bench/vs-claude/README.md)): 5 bài (module theo đặc tả, sửa 6 lỗi khách báo,
+4 tính năng API, tối ưu hiệu năng giữ nguyên kết quả từng byte, công cụ nhiều module), **461 test ẩn** mà cả hai hệ không thấy, cùng
+đề bài, cùng repo xuất phát; Claude Code `claude -p --model opus`; CCoding runtime claude-cli, dự án mới mỗi lượt; chạy trên cloud,
+mỗi hệ tuần tự. Kết quả đầy đủ (từng lượt, từng pha, từng lượt gọi agent, từng lượt mô hình của Claude Code):
+`bench/vs-claude/results/` (`REPORT.md`, `runs.csv`, `phases.csv`, `calls.csv`, `claude_turns.csv`).
+
+**Mốc ban đầu (C1 + C2, CCoding `14e2ec6`)**: chất lượng ngang (test ẩn 100 % vs 99,8 %) nhưng CCoding **chậm 1,5–2,5 lần và đắt
+1,7–2,2 lần** trên cả 5 bài (vd. t1 330 s vs 132 s; t5 413 s vs 245 s). Thời gian dồn ở lập kế hoạch bằng Opus (30–46 s), họp
+tuần tự, review + revise, tổng hợp bằng Opus; token ghi cache gấp 3–5 lần (mỗi lượt gọi agent là một phiên `claude -p` mới).
+
+Thay đổi trên nhánh `perf/vs-claude-loop`:
+1. `d767806` — họp song song trong một vòng, ngưỡng họp cấu hình được (`phases.meetingMinSubtasks`), cho phép kế hoạch 1 hạng mục.
+2. `e9147d8` — tổng hợp FINAL.md bằng Sonnet theo mặc định.
+3. `aa6aa3a` — **làn nhanh**: tự chọn khi đề bài ngắn (≤ 4000 ký tự) và repo nhỏ (≤ 300 tệp, ≤ 1,5 MB) hoặc `options.lane: "fast"`;
+   lập kế hoạch bằng Sonnet, 2–4 hạng mục độc lập chạy song song (mỗi người tệp riêng, hợp đồng ghi trong mô tả), không họp, FINAL.md
+   theo mẫu (không gọi LLM).
+4. `9589c2f` — **điều phối**: hạng mục song song trùng người → chia cho người cùng năng lực còn rảnh; hạng mục kiểm thử giao cho
+   người review → bỏ khỏi thực thi, chuyển thành trọng tâm review (người review không phải làm hai lần, không chặn đường găng).
+5. `0e82b82` — lệnh Bash của agent chạy với stdin = `/dev/null` qua hook: lệnh vô tình đọc stdin (`cat` không đối số) treo tới hết
+   giờ — lượt t3 đầu tiên của C5 mất thêm > 7 phút vì lỗi này.
+
+**Kết quả C5** (2/11, cloud; Claude Code và CCoding làn nhanh chạy hai tiến trình song song, mỗi hệ tuần tự; 2 lượt mỗi bài):
+
+| Bài | Claude Code: thời gian TB (min–max) · chi phí | CCoding làn nhanh: thời gian TB (min–max) · chi phí | Tỉ lệ thời gian | Test ẩn (Claude / CCoding) |
+|---|---|---|--:|---|
+| t1-duration | 126 s (117–134) · $0,51 | **107 s** (98–116) · $0,54 | **0,85** | 99,7 % / 100 % |
+| t2-orders | 91 s (89–93) · $0,44 | 106 s (78–134) · $0,69 | 1,16 | 100 % / 100 % |
+| t3-api | 158 s (155–160) · $0,71 | 400 s (221–579) · $1,14 | 2,53 (lượt sạch: 1,40) | 100 % / 100 % |
+| t4-perf | 203 s (186–219) · $0,63 | **153 s** (134–172) · $0,57 | **0,75** | 100 % / 100 % |
+| t5-logq | 259 s (247–270) · $1,02 | **175 s** (161–188) · $1,08 | **0,68** | 100 % / 100 % |
+
+So với mốc ban đầu, CCoding làn nhanh nhanh hơn 2,4–3,1 lần trên t1/t4/t5 và rẻ hơn 48–53 %; nhanh hơn Claude Code thuần ở t1, t4, t5
+và một trong hai lượt t2 (78 s — lượt kia review bắt được lỗi thật, thêm một vòng sửa ~50 s). Chất lượng không giảm (100 % test ẩn
+mọi lượt). t4: kết quả tối ưu của CCoding chậm hơn (298–310 ms so với 141–249 ms) nhưng đều dưới ngưỡng 1 s.
+
+Ba nguyên nhân còn chậm, đọc từ `events.jsonl`:
+- **t3 lượt 1 (579 s)**: reviewer chạy lệnh có `cat` đọc stdin → treo > 7 phút (đã sửa ở `0e82b82`, có hiệu lực từ lượt t4).
+- **t3 lượt 2 (221 s) và t5 lượt 1**: kế hoạch 4 hạng mục độc lập nhưng `maxParallel` mặc định 3 → S4 chờ 30–50 giây mới bắt đầu, lại
+  là hạng mục lớn nhất (nối route vào `server.js`, 126 s, 23 lượt công cụ) → nằm trên đường găng. Sửa ở `d7600f6`: làn nhanh nâng
+  `maxParallel` lên bằng số hạng mục độc lập (tối đa `fastLane.maxParallel` = 4). Đo lại ở C6 (dưới).
+- **t2 lượt 1**: review yêu cầu sửa (lỗi thật) → +1 vòng revise + review lại. Đánh đổi chất lượng/thời gian, giữ nguyên.
+
+Token: CCoding làn nhanh vẫn **ghi cache gấp 2,8–4,0 lần** Claude Code (vd. t5: 126k so với 41k mỗi lượt) vì mỗi lượt gọi agent là một
+phiên `claude -p` mới, ghi lại tiền tố system prompt + định nghĩa công cụ; Claude Code ghi cache TTL 1 giờ (`ephemeral_1h` trong
+transcript). Phân tích sâu giao cho Phòng Nghiên cứu (`docs/research/BRIEF.md`).
+
+<!-- C6-TABLE -->

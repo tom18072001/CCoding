@@ -1,0 +1,85 @@
+{
+ "run": {
+  "exitCode": 0,
+  "status": "done",
+  "wallSec": 101,
+  "costUsd": 0.4585573,
+  "turns": 7,
+  "tokens": {
+   "input": 14,
+   "output": 10302,
+   "cacheRead": 324861,
+   "cacheWrite": 23417
+  },
+  "models": [
+   "claude-haiku-5-5",
+   "claude-opus-5-5"
+  ],
+  "modelUsage": {
+   "claude-haiku-5-5": {
+    "inputTokens": 1351,
+    "outputTokens": 36,
+    "cacheReadInputTokens": 0,
+    "cacheCreationInputTokens": 0,
+    "webSearchRequests": 0,
+    "costUSD": 0.0001531,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 64000,
+    "thinkingTokens": 0,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 0,
+    "canonicalModel": "claude-haiku-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   },
+   "claude-opus-5-5": {
+    "inputTokens": 14,
+    "outputTokens": 10302,
+    "cacheReadInputTokens": 324861,
+    "cacheCreationInputTokens": 23417,
+    "webSearchRequests": 0,
+    "costUSD": 0.4584042,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000,
+    "thinkingTokens": 1923,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 23417,
+    "canonicalModel": "claude-opus-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   }
+  },
+  "finalText": "Đã sửa xong cả 6 lỗi trong ISSUES.md. `npm test` xanh: 22/22 test pass, gồm 6 test cũ và 16 test hồi quy mới trong `test/regressions.test.js`. Tôi cũng chạy bộ test mới trên code cũ: 16 test đó đều fail, nghĩa là chúng bắt được đúng các lỗi đã báo. API công khai giữ nguyên (tên hàm/lớp, tham số, dạng kết quả).\n\n| # | Nguyên nhân gốc | Cách sửa |\n|---|---|---|\n| 1 | `toCents` làm `Math.round(amount * 100)`, nhưng `1.005 * 100` ra `100.49999…` nên bị làm tròn xuống. Ngoài ra `Math.round` làm tròn số âm về phía +∞, chứ không làm tròn ra xa số 0. Mã giảm cố định còn tự đổi tiền bằng `Math.round(promo.amount * 100)` thay vì gọi `toCents`. | `src/money.js`: đưa giá trị về 15 chữ số có nghĩa rồi làm tròn trên giá trị tuyệt đối, sau đó gắn lại dấu. Kết quả `1.005 → 101`, `-1.005 → -101`, `2.675 → 268`, và không trả về `-0`. `src/checkout.js`: mã giảm cố định giờ dùng `toCents`. `minSubtotal` vốn đã dùng `toCents` nên được sửa theo luôn. |\n| 2 | `allocate` chỉ lấy phần nguyên của mỗi phần rồi bỏ luôn số xu còn dư (1000 chia 3 dòng thành 333×3 = 999). | Cài đúng phương pháp phần dư lớn nhất như chú thích mô tả: số xu dư chia cho các phần có phần lẻ lớn nhất, bằng nhau thì phần đứng trước được trước. Kết quả 1000 chia 3 thành `[334, 333, 333]`. Tổng giảm cho số tiền âm cũng vẫn đúng. |\n| 3 | `freeUnits` tính `floor(qty / buy) * free`, nên mua 2 hộp đã được tặng 1. | Đổi thành `floor(qty / (buy + free)) * free`, áp dụng cho mọi cấu hình mua X tặng Y. |\n| 4 | Hệ thống so `now < 2026-11-30T00:00Z`, tức coi mã hết hạn ngay từ đầu ngày `endsAt`. | `src/promotions.js`: cộng thêm `DAY_MS`, nên mã dùng được tới hết ngày `endsAt` (UTC) và bị từ chối từ `2026-12-01T00:00:00Z`. |\n| 5 | `updateQty` giữ chỗ thêm cả số lượng mới thay vì phần chênh lệch (2 rồi sửa thành 3 thì giữ chỗ 5). `removeItem` không trả lại chỗ đã giữ. | `src/cart.js`: `updateQty` chỉ giữ chỗ thêm hoặc trả lại phần chênh lệch, và khi hết hàng thì giỏ không bị thay đổi. `removeItem` (kể cả khi sửa số lượng về 0) trả lại chỗ đã giữ. |\n| 6 | `computeTotals` gọi `lineTax(l.gross, …)`. | Đổi thành `lineTax(l.net, …)`. |\n\nMỗi lỗi có test hồi quy riêng. Các hành vi đang đúng cũng có test, ví dụ mã giảm cố định lớn hơn giỏ thì không làm giỏ âm, kiểm tra `startsAt`, mã chưa đạt giá trị tối thiểu, và lượng giữ chỗ luôn bằng tổng số lượng trong các giỏ qua một loạt thao tác thêm/sửa/xóa.\n\nLỗi 3 có một chỗ ISSUES.md không nói rõ: khi khách chưa mua đủ một nhóm. Tôi chọn cách chỉ tặng khi có đủ `buy + free` món, khớp với ví dụ \"5 hộp → 1 miễn phí\". Như vậy với cấu hình mua 2 tặng 2, mua 3 món thì không được tặng món nào. Nếu ý của CSKH là món thứ 3 được tặng, cần chỉnh lại công thức.\n\nTôi chưa commit; các thay đổi đang nằm trong working tree.",
+  "workdir": "/tmp/bw/C1-t2-orders.claude.1-p416kt/repo"
+ },
+ "task": "t2-orders",
+ "system": "claude",
+ "rep": 1,
+ "key": "t2-orders.claude.1",
+ "env": "cloud",
+ "startedAt": "2026-11-01T11:01:23.557Z",
+ "finishedAt": "2026-11-01T11:03:05.377Z",
+ "grade": {
+  "hidden": {
+   "pass": 60,
+   "fail": 0,
+   "total": 60,
+   "failed": [],
+   "ms": 191,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 22,
+   "fail": 0,
+   "total": 22
+  },
+  "changed": [
+   "~src/cart.js",
+   "~src/checkout.js",
+   "~src/money.js",
+   "~src/promotions.js",
+   "+test/regressions.test.js"
+  ]
+ },
+ "audit": []
+}

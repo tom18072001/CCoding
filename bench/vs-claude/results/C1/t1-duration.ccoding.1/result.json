@@ -1,0 +1,57 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261101-175907-15e",
+  "wallSec": 314,
+  "wallSecHarness": 316,
+  "costUsd": 1.4117504,
+  "tokens": {
+   "input": 48,
+   "output": 40334,
+   "cacheRead": 746213,
+   "cacheWrite": 173996
+  },
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "Hiện thực parseDuration và formatDuration theo SPEC.md"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "Bộ test biên theo SPEC.md"
+   }
+  ],
+  "workdir": "/home/claude/tom18072001/ccoding/workspaces/b-c1-t1-1/wt-T-20261101-175907-15e",
+  "branch": "ccoding/t-20261101-175907-15e"
+ },
+ "task": "t1-duration",
+ "system": "ccoding",
+ "rep": 1,
+ "key": "t1-duration.ccoding.1",
+ "env": "cloud",
+ "startedAt": "2026-11-01T10:59:07.809Z",
+ "finishedAt": "2026-11-01T11:04:24.063Z",
+ "grade": {
+  "hidden": {
+   "pass": 149,
+   "fail": 0,
+   "total": 149,
+   "failed": [],
+   "ms": 249,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 16,
+   "fail": 0,
+   "total": 16
+  },
+  "changed": [
+   "~src/duration.js",
+   "+test/duration.edge.test.js"
+  ]
+ },
+ "audit": []
+}

@@ -1,0 +1,100 @@
+TAP version 13
+# Subtest: nhật ký ghi create/update/delete, mới nhất trước
+ok 1 - nhật ký ghi create/update/delete, mới nhất trước
+  ---
+  duration_ms: 73.79562
+  type: 'test'
+  ...
+# Subtest: GET /audit: chỉ admin, tham số lạ → 400
+ok 2 - GET /audit: chỉ admin, tham số lạ → 400
+  ---
+  duration_ms: 18.966701
+  type: 'test'
+  ...
+# Subtest: 401 khi thiếu hoặc sai X-User, trên mọi route
+ok 3 - 401 khi thiếu hoặc sai X-User, trên mọi route
+  ---
+  duration_ms: 95.445851
+  type: 'test'
+  ...
+# Subtest: member: chỉ thấy nhóm mình, 404 với nhóm khác
+ok 4 - member: chỉ thấy nhóm mình, 404 với nhóm khác
+  ---
+  duration_ms: 28.361977
+  type: 'test'
+  ...
+# Subtest: member: không tạo/xóa; chỉ sửa status của nhiệm vụ giao cho mình
+ok 5 - member: không tạo/xóa; chỉ sửa status của nhiệm vụ giao cho mình
+  ---
+  duration_ms: 22.133924
+  type: 'test'
+  ...
+# Subtest: manager: đọc mọi nhóm, tạo/sửa trong nhóm mình, không xóa
+ok 6 - manager: đọc mọi nhóm, tạo/sửa trong nhóm mình, không xóa
+  ---
+  duration_ms: 29.07922
+  type: 'test'
+  ...
+# Subtest: xuất CSV: header, BOM, escape, chống chèn công thức
+ok 7 - xuất CSV: header, BOM, escape, chống chèn công thức
+  ---
+  duration_ms: 55.573762
+  type: 'test'
+  ...
+# Subtest: xuất CSV: quyền member và cấm phân trang
+ok 8 - xuất CSV: quyền member và cấm phân trang
+  ---
+  duration_ms: 21.270991
+  type: 'test'
+  ...
+# Subtest: dạng kết quả và phân trang
+ok 9 - dạng kết quả và phân trang
+  ---
+  duration_ms: 56.457833
+  type: 'test'
+  ...
+# Subtest: lọc status, assignee, team, dueBefore
+ok 10 - lọc status, assignee, team, dueBefore
+  ---
+  duration_ms: 22.526115
+  type: 'test'
+  ...
+# Subtest: tìm q không phân biệt hoa thường và dấu
+ok 11 - tìm q không phân biệt hoa thường và dấu
+  ---
+  duration_ms: 9.483603
+  type: 'test'
+  ...
+# Subtest: sắp xếp
+ok 12 - sắp xếp
+  ---
+  duration_ms: 18.566036
+  type: 'test'
+  ...
+# Subtest: tham số không hợp lệ → 400 INVALID_QUERY
+ok 13 - tham số không hợp lệ → 400 INVALID_QUERY
+  ---
+  duration_ms: 27.22728
+  type: 'test'
+  ...
+# Subtest: CRUD cơ bản
+ok 14 - CRUD cơ bản
+  ---
+  duration_ms: 67.339566
+  type: 'test'
+  ...
+# Subtest: validate
+ok 15 - validate
+  ---
+  duration_ms: 11.831868
+  type: 'test'
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 15
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 999.403509

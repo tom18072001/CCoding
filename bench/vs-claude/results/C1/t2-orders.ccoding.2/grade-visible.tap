@@ -1,0 +1,136 @@
+TAP version 13
+# Subtest: tính tiền không mã giảm giá
+ok 1 - tính tiền không mã giảm giá
+  ---
+  duration_ms: 1.33472
+  type: 'test'
+  ...
+# Subtest: giữ chỗ tồn kho khi thêm
+ok 2 - giữ chỗ tồn kho khi thêm
+  ---
+  duration_ms: 0.213746
+  type: 'test'
+  ...
+# Subtest: mã không tồn tại
+ok 3 - mã không tồn tại
+  ---
+  duration_ms: 0.486866
+  type: 'test'
+  ...
+# Subtest: \#1 toCents làm tròn half away from zero
+ok 4 - \#1 toCents làm tròn half away from zero
+  ---
+  duration_ms: 1.08434
+  type: 'test'
+  ...
+# Subtest: \#1 giá 1.005 qua Catalog -> 101 xu
+ok 5 - \#1 giá 1.005 qua Catalog -> 101 xu
+  ---
+  duration_ms: 0.252542
+  type: 'test'
+  ...
+# Subtest: \#2 allocate phần dư lớn nhất
+ok 6 - \#2 allocate phần dư lớn nhất
+  ---
+  duration_ms: 2.01861
+  type: 'test'
+  ...
+# Subtest: \#2 mã fixed: tổng discount = Σ discount dòng
+ok 7 - \#2 mã fixed: tổng discount = Σ discount dòng
+  ---
+  duration_ms: 0.782923
+  type: 'test'
+  ...
+# Subtest: \#2 mã percent: tổng discount đúng
+ok 8 - \#2 mã percent: tổng discount đúng
+  ---
+  duration_ms: 0.237144
+  type: 'test'
+  ...
+# Subtest: \#2 mã fixed lớn hơn subtotal -> discount = subtotal
+ok 9 - \#2 mã fixed lớn hơn subtotal -> discount = subtotal
+  ---
+  duration_ms: 0.219931
+  type: 'test'
+  ...
+# Subtest: \#6 thuế tính trên net khi có mã
+ok 10 - \#6 thuế tính trên net khi có mã
+  ---
+  duration_ms: 0.387088
+  type: 'test'
+  ...
+# Subtest: toCents cơ bản
+ok 11 - toCents cơ bản
+  ---
+  duration_ms: 1.123915
+  type: 'test'
+  ...
+# Subtest: formatMoney
+ok 12 - formatMoney
+  ---
+  duration_ms: 0.272888
+  type: 'test'
+  ...
+# Subtest: allocate chia đều
+ok 13 - allocate chia đều
+  ---
+  duration_ms: 0.791748
+  type: 'test'
+  ...
+# Subtest: \#3 freeUnits buy=2 free=1
+ok 14 - \#3 freeUnits buy=2 free=1
+  ---
+  duration_ms: 1.376773
+  type: 'test'
+  ...
+# Subtest: \#3 freeUnits buy=3 free=2
+ok 15 - \#3 freeUnits buy=3 free=2
+  ---
+  duration_ms: 0.229892
+  type: 'test'
+  ...
+# Subtest: \#3 bxgy qua computeTotals
+ok 16 - \#3 bxgy qua computeTotals
+  ---
+  duration_ms: 2.012178
+  type: 'test'
+  ...
+# Subtest: \#4 endsAt hiệu lực tới hết ngày, startsAt giữ nguyên
+ok 17 - \#4 endsAt hiệu lực tới hết ngày, startsAt giữ nguyên
+  ---
+  duration_ms: 0.710934
+  type: 'test'
+  ...
+# Subtest: \#5 sửa số lượng giữ/nhả đúng chênh lệch
+ok 18 - \#5 sửa số lượng giữ/nhả đúng chênh lệch
+  ---
+  duration_ms: 0.470962
+  type: 'test'
+  ...
+# Subtest: \#5 xóa món nhả kho
+ok 19 - \#5 xóa món nhả kho
+  ---
+  duration_ms: 0.239794
+  type: 'test'
+  ...
+# Subtest: \#5 updateQty vượt kho giữ nguyên trạng thái
+ok 20 - \#5 updateQty vượt kho giữ nguyên trạng thái
+  ---
+  duration_ms: 0.24183
+  type: 'test'
+  ...
+# Subtest: \#5 reserved = tổng qty các giỏ
+ok 21 - \#5 reserved = tổng qty các giỏ
+  ---
+  duration_ms: 0.221221
+  type: 'test'
+  ...
+1..21
+# tests 21
+# suites 0
+# pass 21
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 240.25542

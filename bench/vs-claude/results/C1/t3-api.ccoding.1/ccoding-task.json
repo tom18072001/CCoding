@@ -1,0 +1,214 @@
+{
+ "id": "T-20261101-180536-5f2",
+ "title": "[bench C1] t3-api #1",
+ "brief": "Hiện thực đầy đủ 4 tính năng trong FEATURES.md cho API quản lý nhiệm vụ này (xác thực & phân quyền, lọc/tìm/sắp xếp/phân trang, xuất CSV, nhật ký thao tác). Bám sát từng quy tắc của đặc tả (mã lỗi, thứ tự kiểm tra, định dạng CSV) — bộ nghiệm thu ẩn sẽ gọi API thật qua HTTP để kiểm tra. Cập nhật test có sẵn cho hợp với dạng kết quả mới, thêm test cho từng tính năng, đảm bảo `npm test` xanh. Không thêm thư viện ngoài.",
+ "mode": "project",
+ "projectId": "b-c1-t3-1",
+ "classification": "internal",
+ "status": "done",
+ "departments": [
+  "dev"
+ ],
+ "runs": [
+  {
+   "department": "dev",
+   "status": "done",
+   "subtasks": [
+    {
+     "description": "Đặc tả: FEATURES.md mục 1 và 4, dòng thứ tự kiểm tra ở đầu tệp, cùng các quyết định D1, D2, D3, D4, D8. Không thêm thư viện.\nTệp được sửa: src/server.js, src/store.js, src/handlers/tasks.js (CHỈ các route GET /tasks/:id, POST, PATCH, DELETE; route GET /tasks danh sách giữ nguyên logic và mảng trả về), test/tasks.test.js (chỉ thêm header X-User: u1). Tệp mới: src/auth.js, src/query-guard.js, src/handlers/audit.js, test/auth.test.js, test/audit.test.js.\n1) src/auth.js export authenticate(req, store): đọc header x-user, tra store.user(id); thiếu hoặc không tồn tại → throw HttpError(401,'UNAUTHENTICATED',...). server.js gọi hàm này trước router.match cho '/tasks', '/tasks/*' và '/audit', rồi gắn ctx.user (D3).\n2) src/query-guard.js export assertQuery(searchParams, allowed = []): duyệt theo thứ tự URL; gặp tên không thuộc allowed hoặc tên xuất hiện lần thứ hai → 400 INVALID_QUERY {field: tên đó} (D1). Áp: GET/PATCH/DELETE /tasks/:id và POST /tasks dùng allowed [], GET /audit dùng ['taskId']. Gọi ngay đầu handler, trước tra tồn tại.\n3) Quyền theo thứ tự D4:\n- admin làm mọi việc.\n- manager: GET /:id được đọc mọi nhóm. POST có body.team khác nhóm mình → 403. PATCH nhiệm vụ nhóm khác → 403; body.team khác nhóm mình → 403. DELETE: không tồn tại → 404, tồn tại → 403.\n- member: GET/PATCH/DELETE nhiệm vụ không tồn tại hoặc thuộc nhóm khác → 404 NOT_FOUND. POST → 403. DELETE nhiệm vụ nhóm mình → 403. PATCH nhiệm vụ assignee !== mình → 403; body có khóa khác 'status' → 403; body {} hoặc chỉ có status thì cho qua để validate.\n4) Nhật ký: chỉ ghi khi thành công, mục ghi {seq, at, userId, action, taskId, changes} theo D8. GET /audit: 401 (server) → assertQuery(['taskId']) → không phải admin → 403 FORBIDDEN → trả {items} sắp seq giảm dần, lọc taskId nếu có. Đăng ký route trong src/handlers/audit.js, gọi register từ server.js.\n5) Test qua HTTP (test/helpers.js start/call), mỗi quy tắc ít nhất một ca:\n- 401 khi thiếu header và khi id lạ, trên cả /tasks, /tasks/:id và /audit; 401 trước 400 (không header + ?x=1); 401 trước 405 (PUT /tasks không header).\n- member + tham số lạ trên /tasks/t-khác-nhóm → 400 chứ không 404; manager DELETE id không tồn tại → 404; manager POST team:'C' → 403; member PATCH {status, title trùng giá trị cũ} → 403; member PATCH nhiệm vụ không giao cho mình → 403; member PATCH {} → 200.\n- Nhật ký: seq bắt đầu từ 1; at theo đồng hồ tiêm qua createServer({now}); changes đúng cho create/update/update-không-đổi/delete; thao tác lỗi không ghi; lọc taskId; /audit?taskId=a&taskId=b → 400; /audit?x=1 → 400; manager → 403.\nTiêu chí xong: `npm test` xanh; `git diff --stat` cùng `git status` chỉ chứa các tệp nêu trên; GET /tasks vẫn trả mảng như cũ, chỉ thêm 401.",
+     "dependsOn": [],
+     "status": "done",
+     "attempts": 1,
+     "usage": {
+      "input": 20,
+      "output": 18318,
+      "cacheRead": 399729,
+      "cacheWrite": 37985,
+      "costUsd": 0.3761395,
+      "calls": 1,
+      "estimatedCalls": 0
+     },
+     "id": "S1",
+     "title": "Xác thực X-User, phân quyền theo vai trò, nhật ký thao tác và GET /audit",
+     "assignee": "backend-dev",
+     "deliverable": "src/auth.js, src/query-guard.js, src/handlers/audit.js, các thay đổi trong src/server.js, src/store.js, src/handlers/tasks.js và test/tasks.test.js (chỉ header), test/auth.test.js, test/audit.test.js; output `npm test` và `git diff --stat` thật; tóm tắt chữ ký authenticate/assertQuery/ctx.user để S3 dùng.",
+     "startedAt": "2026-11-01T11:09:03.926Z",
+     "output": "outputs/dev-S1-backend-dev.md",
+     "summary": "Tôi đã làm xong S1: xác thực `X-User`, phân quyền theo vai trò theo thứ tự D4, nhật ký thao tác và `GET /audit`. `npm test` xanh, 14/14 test pass (baseline là 2). `GET /tasks` (danh sách) vẫn trả mảng như cũ, chỉ thêm 401. Chưa commit, đúng quy định (CCoding sẽ commit và gộp).",
+     "finishedAt": "2026-11-01T11:10:46.233Z"
+    },
+    {
+     "description": "Đặc tả: FEATURES.md mục 2 và 3, cùng D1, D2, D5. CHỈ tạo 4 tệp mới: src/list-query.js, src/csv.js, test/list-query.test.js, test/csv.test.js. Không sửa tệp có sẵn, không thêm thư viện. HttpError lấy từ src/http.js (extra {field} đã có sẵn).\nsrc/list-query.js export:\n- parseListQuery(searchParams, { allowPaging }) → { status?: string[], assignee?: string|null, team?, q?, dueBefore?, sort: {field, dir}, page, pageSize }. Duyệt MỘT lượt theo thứ tự URL; tại mỗi tham số lần lượt xét tên lạ (page/pageSize là tên lạ khi allowPaging=false), rồi xét trùng tên, rồi xét giá trị; lỗi đầu tiên → throw HttpError 400 INVALID_QUERY {field} (D1).\n- Quy tắc giá trị: status tách theo dấu phẩy, mỗi phần ∈ todo|doing|done, phần rỗng là lỗi; team ∈ A|B; assignee: 'none' → null, chuỗi khác giữ nguyên, không lỗi; q rỗng → không lọc; dueBefore khớp /^\\d{4}-\\d{2}-\\d{2}$/ và là ngày có thật (kiểm bằng Date.UTC rồi đối chiếu lại năm/tháng/ngày); sort ∈ [-](createdAt|dueDate|priority|title); page /^\\d+$/ và ≥1; pageSize /^\\d+$/ và trong 1..100; mặc định sort createdAt tăng, page 1, pageSize 20; giá trị rỗng xử lý theo D5.\n- normalize(s): NFD → bỏ \\p{M} → thay đ/Đ bằng d → toLowerCase.\n- applyListQuery(tasks, parsed, { forceTeam } = {}): lọc theo status, assignee (null khớp assignee null), team, forceTeam, q (normalize(title).includes(normalize(q))), dueBefore (dueDate khác null và dueDate <= ngày). Sắp: priority so số, createdAt và dueDate so chuỗi, title dùng localeCompare(b,'vi'); dueDate null luôn ở cuối dù tăng hay giảm; hòa thì so Number(id.slice(1)) TĂNG dần bất kể chiều. Không làm biến đổi mảng đầu vào.\n- paginate(items, page, pageSize) → {items, total, page, pageSize}; page vượt số trang → items [] và total vẫn đúng.\nsrc/csv.js export toCsv(tasks): nội dung bắt đầu bằng '\\uFEFF', dòng header id,title,status,priority,assignee,team,dueDate,createdAt; mỗi dòng kết thúc bằng '\\r\\n', kể cả dòng cuối; null/undefined → ô trống; số giữ nguyên; chuỗi bắt đầu bằng = + - @ \\t \\r → thêm ' ở đầu TRƯỚC khi bọc; bọc \"…\" khi chứa , \" \\r \\n, dấu \" bên trong nhân đôi.\nTest node:test dùng data/seed.json, bắt buộc có các ca: t7 (công thức, ngoặc kép, dấu phẩy), t8 (xuống dòng), t11 (dấu '-'), danh sách rỗng chỉ còn BOM + header + \\r\\n, q='dac ta' khớp t4 và t12, q='' không lọc, sort dueDate cả hai chiều với t3/t10 ở cuối, hòa t2/t10 theo số, sort -title, lỗi đầu tiên theo thứ tự URL (vd. ?sort=x&team=Z → field sort), tham số trùng, 2026-02-30 và 2026-13-01 lỗi, 2028-02-29 hợp lệ, 2027-02-29 lỗi, page/pageSize '1.5', '0', 'abc', '101', '', và page khi allowPaging=false → 400.\nTiêu chí xong: `npm test` xanh; `git status` chỉ có 4 tệp mới.",
+     "dependsOn": [],
+     "status": "done",
+     "attempts": 1,
+     "usage": {
+      "input": 14,
+      "output": 13617,
+      "cacheRead": 245852,
+      "cacheWrite": 29296,
+      "costUsd": 0.2789683,
+      "calls": 1,
+      "estimatedCalls": 0
+     },
+     "id": "S2",
+     "title": "Module thuần cho tham số danh sách (parse, lọc, tìm, sắp, phân trang) và ghi CSV",
+     "assignee": "data-engineer",
+     "deliverable": "src/list-query.js, src/csv.js, test/list-query.test.js, test/csv.test.js; output `npm test` và `git status` thật; ghi chú chữ ký 4 hàm export để S3 dùng.",
+     "startedAt": "2026-11-01T11:09:03.930Z",
+     "output": "outputs/dev-S2-data-engineer.md",
+     "summary": "Tôi đã tạo 4 tệp mới: `src/list-query.js` và `src/csv.js` (hai module thuần), cùng `test/list-query.test.js` và `test/csv.test.js`. `npm test` ra exit 0 với 24 test pass, 0 fail (baseline là 2 test). `git status` chỉ có đúng 4 tệp mới. Không sửa tệp có sẵn, không thêm thư viện.",
+     "finishedAt": "2026-11-01T11:10:23.160Z"
+    },
+    {
+     "description": "Làm trên nhánh đã gộp S1 và S2; dùng ctx.user (D3) và các hàm của S2 theo bàn giao. Tệp được sửa: src/handlers/tasks.js (route GET /tasks và route mới export.csv), test/tasks.test.js; tệp mới test/list-export.test.js; được THÊM hàm callRaw vào test/helpers.js nhưng không đổi call() (D6). Không thêm thư viện.\n1) GET /tasks: parseListQuery(ctx.query, {allowPaging:true}) → applyListQuery(store.listTasks(), parsed, {forceTeam: user.role==='member' ? user.team : undefined}) → paginate → 200 {items,total,page,pageSize}.\n2) GET /tasks/export.csv đăng ký TRƯỚC '/tasks/:id'. Dùng cùng bộ lọc, sắp xếp và quyền như danh sách nhưng allowPaging:false. Gọi send(res, 200, toCsv(items), {'content-type':'text/csv; charset=utf-8','content-disposition':'attachment; filename=\"tasks.csv\"'}) (D7).\n3) Sửa test/tasks.test.js theo dạng kết quả mới (total === 12, items.length === 12).\n4) Tạo test/list-export.test.js gọi HTTP thật, gồm các ca: u4 chỉ thấy team B; u4 truyền team=A → 200 và rỗng; u3 export chỉ có team A; page=2&pageSize=5 (đúng id, total 12); page vượt số trang; pageSize mặc định 20; mỗi tham số một ca 400 INVALID_QUERY kèm field đúng, có ca nhiều lỗi báo tham số đầu tiên và ca tham số trùng; 401 trước 400 trên cả /tasks và export.csv; export.csv không có X-User → 401; export.csv?page=1 → 400 field page; header HTTP của CSV; CSV byte-exact (đọc byte thô theo D6) trên bộ lọc nhỏ chứa t7, t8, t11, kiểm BOM EF BB BF và \\r\\n cuối; GET /tasks/export.csv không bị '/tasks/:id' bắt nhầm.\n5) Lập bảng đối chiếu: mỗi gạch đầu dòng của FEATURES.md mục 1–4 cùng dòng thứ tự kiểm tra → tên test (tính cả test của S1 và S2). Quy tắc nào chưa có test thì ghi rõ. Với 5 quy tắc thứ tự rủi ro nhất (401 trước 400, 400 trước 404 cho member, 404 trước 403 khi manager DELETE, 403 trước 400 body khi manager POST team:'C', thứ tự route export.csv), tạm làm hỏng code để chứng minh test đỏ, ghi lại, rồi hoàn nguyên; xác nhận bằng `git diff` sạch phần hoàn nguyên.\nTiêu chí xong: `npm test` xanh (dán output thật). Chạy `node src/main.js` và curl ít nhất 3 lệnh, dán kết quả: GET /tasks?sort=-dueDate với X-User: u1; GET /tasks/export.csv với X-User: u3 (dùng -i để thấy header); GET /audit với X-User: u2 → 403. Tắt server sau khi kiểm tra.",
+     "dependsOn": [
+      "S1",
+      "S2"
+     ],
+     "status": "done",
+     "attempts": 1,
+     "usage": {
+      "input": 24,
+      "output": 14010,
+      "cacheRead": 535357,
+      "cacheWrite": 40451,
+      "costUsd": 0.35668400000000006,
+      "calls": 1,
+      "estimatedCalls": 0
+     },
+     "id": "S3",
+     "title": "Nối GET /tasks (phân trang) và GET /tasks/export.csv, cập nhật test cũ, nghiệm thu HTTP và đối chiếu đặc tả",
+     "assignee": "backend-dev",
+     "deliverable": "src/handlers/tasks.js đã nối đủ, test/tasks.test.js cập nhật, test/list-export.test.js (và callRaw trong test/helpers.js nếu có), bảng đối chiếu quy tắc → test kèm kết quả phá cố ý, output `npm test` và curl thật.",
+     "startedAt": "2026-11-01T11:10:46.540Z",
+     "output": "outputs/dev-S3-backend-dev.md",
+     "summary": "Tôi đã nối `GET /tasks` (trả `{items,total,page,pageSize}`) và `GET /tasks/export.csv` bằng các hàm của S2, dùng `ctx.user` của S1. Tôi đã cập nhật `test/tasks.test.js`, thêm `callRaw` vào helpers và tạo `test/list-export.test.js` (16 ca). `npm test` ra exit 0 với 50/50 pass, baseline là 2. Cả 5 lần phá cố ý đều làm te…",
+     "finishedAt": "2026-11-01T11:12:33.798Z"
+    }
+   ],
+   "usage": {
+    "input": 88,
+    "output": 71900,
+    "cacheRead": 1581155,
+    "cacheWrite": 237007,
+    "costUsd": 2.12966083,
+    "calls": 10,
+    "estimatedCalls": 0
+   },
+   "startedAt": "2026-11-01T11:05:36.312Z",
+   "stage": "done",
+   "planSummary": "Giữ 3 hạng mục. S1 (xác thực, phân quyền, nhật ký thao tác) và S2 (module thuần cho tham số truy vấn và CSV, chỉ tạo tệp mới) chạy song song; S3 nối S2 vào GET /tasks và /tasks/export.csv rồi nghiệm thu qua HTTP thật. S3 phụ thuộc thật vào cả S1 lẫn S2, vì cùng sửa src/handlers/tasks.js và test/tasks.test.js, lại dùng hợp đồng của cả hai. Hợp đồng giữa các bên đã chốt sẵn ở phần quyết định nên S1 và S2 không phải chờ nhau.",
+   "decisions": "D1 – HttpError: tôi đã đọc src/http.js. constructor(status, code, message, extra = {}) đã có sẵn, sendError trải ...extra vào error. Lỗi tham số thống nhất là new HttpError(400, 'INVALID_QUERY', `Tham số truy vấn không hợp lệ: ${field}`, { field }). Không ai sửa src/http.js.; D2 – Một nguồn kiểm tra cho mỗi route, trả lời câu hỏi của @data-engineer và @qa-tester. Route danh sách và export.csv chỉ dùng parseListQuery (S2 sở hữu). Các route khác (GET/PATCH/DELETE /tasks/:id, POST /tasks, GET /audit) chỉ dùng assertQuery(searchParams, allowedNames) trong src/query-guard.js (S1 sở hữu). Không route nào chạy cả hai. Hai bên dùng chung thông báo và dạng lỗi ở D1. Lý do không gộp làm một hàm: parseListQuery phải xét lỗi tên tham số, lỗi trùng và lỗi giá trị trong CÙNG một lượt duyệt theo thứ tự URL, còn assertQuery chỉ cần xét tên và trùng.; D3 – Vị trí xác thực: S1 export authenticate(req, store) từ src/auth.js; hàm trả user hoặc throw 401 UNAUTHENTICATED. src/server.js gọi hàm này TRƯỚC router.match khi pathname === '/tasks', bắt đầu bằng '/tasks/', hoặc === '/audit'. Như vậy 401 đứng trước cả 404/405 của router. Kết quả gắn vào ctx.user để handler, kể cả của S3, dùng lại mà không xác thực lần nữa.; D4 – Sửa giả định A2 cho đúng thứ tự 404 → 403 → body. Bước 1: kiểm tra mọi quyền không cần body trước, gồm member POST → 403, manager DELETE → 403, member PATCH nhiệm vụ không giao cho mình → 403, manager PATCH nhiệm vụ nhóm khác → 403. Bước 2: readJson, lỗi INVALID_JSON → 400. Bước 3: kiểm tra quyền cần body, gồm manager POST/PATCH có body.team khác nhóm mình → 403 (kể cả team:'C'), member PATCH có khóa khác 'status' → 403 (kể cả khóa lạ như foo). Bước 4: validate(). Như vậy member PATCH nhiệm vụ không giao cho mình, dù body lỗi JSON, vẫn ra 403.; D5 – Quy ước biên của tham số danh sách: 'status=', 'team=', 'sort=', 'dueBefore=', 'page=', 'pageSize=' → 400 kèm field tương ứng. 'q=' → không lọc. 'assignee=' (chuỗi rỗng) và id không tồn tại → không lỗi, kết quả rỗng (A3). URLSearchParams giữ thứ tự xuất hiện và giải mã '+' thành khoảng trắng; dùng trực tiếp ctx.query.; D6 – Test CSV byte-exact: fetch().text() trong test/helpers.js dùng TextDecoder nên LẶNG LẼ BỎ BOM. S3 phải đọc byte thô (fetch + arrayBuffer, hoặc thêm hàm callRaw mới vào helpers.js mà không đổi call()) để kiểm tra BOM EF BB BF và \\r\\n cuối.; D7 – send() không tự đặt content-type cho body chuỗi. S3 tự truyền 'content-type': 'text/csv; charset=utf-8' và 'content-disposition': 'attachment; filename=\"tasks.csv\"'.; D8 – Nhật ký: S1 thêm vào Store mảng audit, seq và hàm ghi nhận. Trường at lấy từ đồng hồ tiêm vào createServer (store.now() hoặc hàm tương đương đang có trong store.js). Giá trị changes theo đặc tả: create lấy các khóa trong body; update lấy các khóa có giá trị mới !== giá trị cũ; delete là []; tất cả sắp a→z.; D9 – Thứ tự gộp: S1 và S2 làm trong worktree con riêng. S3 bắt đầu trên nhánh đã gộp cả S1 và S2. Không push, không force, không commit vào main.; D10 – Theo yêu cầu của QA, mỗi quy tắc trong FEATURES.md có ít nhất một ca test, và mỗi route có ca kiểm thứ tự lỗi riêng. S3 lập bảng đối chiếu quy tắc → test. Với 5 quy tắc thứ tự rủi ro nhất, S3 tạm làm hỏng code để chứng minh test đỏ, ghi kết quả rồi hoàn nguyên. @qa-tester review cuối dựa trên bảng này.",
+   "estimate": {
+    "tokens": 1290000,
+    "budget": 1191365,
+    "at": "2026-11-01T11:09:03.847Z",
+    "basis": "theo hằng số cấu hình (chưa đủ lịch sử)"
+   },
+   "reviewRound": 0,
+   "review": {
+    "approved": true,
+    "summary": "Cả 4 tính năng đều đúng đặc tả, tôi không thấy blocker hay major. Tôi đã đọc toàn bộ code nguồn (auth, query-guard, server, handlers, store, list-query, csv). Thứ tự kiểm tra 401 → 400 query → 404 → 403 → 400 body đúng ở từng route. Member nhận 404 với nhiệm vụ nhóm khác và 400 đứng trước 404. Manager DELETE id không tồn tại ra 404, tồn tại ra 403. Manager POST team khác nhóm mình ra 403 trước bước validate. `/tasks/export.csv` được đăng ký trước `/tasks/:id`. Parser duyệt một lượt theo thứ tự URL nên lỗi đầu tiên được báo đúng. CSV có BOM, `\r\n`, chống chèn công thức bằng tiền tố `'` và bọc RFC 4180. Nhật ký chỉ ghi khi thao tác thành công. Tôi chạy thử server thật và `readJson` trả 400 INVALID_JSON cho body `null`, `[]` và `5`, không bị 500. Còn hai điểm minor.",
+    "issues": [
+     {
+      "subtask": "S1",
+      "severity": "minor",
+      "comment": "src/auth.js: `needsAuth` dùng `startsWith('/tasks/')`, nên `/tasks/` và các đường dẫn con lạ cũng đòi X-User trước khi ra 404. Điều này hợp lý và khớp D3, chỉ nêu để biết."
+     },
+     {
+      "subtask": "S2",
+      "severity": "minor",
+      "comment": "src/list-query.js: `assignee=` (rỗng) lọc theo id '' và trả về rỗng, không báo lỗi. Tôi không đọc được D5 nên chưa xác nhận điểm này. Nếu D5 quy định `assignee=` là không lọc thì cần sửa. Test của S2 được báo là có ca D5, nên có thể đã đúng; hãy đối chiếu với D5."
+     }
+    ],
+    "checks": [
+     {
+      "command": "npm test",
+      "exitCode": 0,
+      "ok": true,
+      "note": "CCoding tự chạy — # tests 50 · # suites 0 · # pass 50 · # fail 0 · # skipped 0 · # todo 0"
+     },
+     {
+      "command": "npm test 2>&1 | tail -12; echo EXIT=${PIPESTATUS[0]}; git status --short; cat FEATURES.md",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "cat src/auth.js src/query-guard.js src/server.js src/handlers/tasks.js src/handlers/audit.js src/store.js src/list-query.js src/csv.js; cat data/seed.json | head -60",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "cat src/http.js | head -40; P=3951; PORT=$P node src/main.js & sleep 1; curl -s -XPOST localhost:3951/tasks -H 'X-User: u1' -H 'content-type: application/json' -d 'null' -w ' %{http_code}\\n'; curl -s -XPATCH localhost:3951/tasks/t1 -H 'X-User: u1' -d '[]' -w ' %{http_code}\\n'; curl -s -XPOST localho",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "PORT=3951 node src/main.js + curl POST/PATCH body null, [], 5 và GET /tasks?assignee=&pageSize=2",
+      "exitCode": 0,
+      "ok": true,
+      "note": "Body sai ra 400 INVALID_JSON, không có 500. assignee= trả items rỗng, 200. Đã tắt server."
+     }
+    ],
+    "verified": true
+   },
+   "finalPath": "dev-FINAL.md",
+   "finishedAt": "2026-11-01T11:13:34.818Z"
+  }
+ ],
+ "options": {
+  "discussionRounds": 1,
+  "review": true,
+  "maxParallel": 3,
+  "maxRevisions": 1,
+  "budgetTokens": 1500000,
+  "budgetMode": "complete"
+ },
+ "usage": {
+  "input": 88,
+  "output": 71900,
+  "cacheRead": 1581155,
+  "cacheWrite": 237007,
+  "costUsd": 2.12966083,
+  "calls": 10,
+  "estimatedCalls": 0
+ },
+ "createdAt": "2026-11-01T11:05:36.279Z",
+ "updatedAt": "2026-11-01T11:13:34.867Z",
+ "autoTitle": false,
+ "startedAt": "2026-11-01T11:05:36.280Z",
+ "workspace": "/home/claude/tom18072001/ccoding/workspaces/b-c1-t3-1/wt-T-20261101-180536-5f2",
+ "branch": "ccoding/t-20261101-180536-5f2",
+ "baseRef": "c695e73d180564a54d3d7ad826676de5676f23a7",
+ "projectChecks": {
+  "baseline": [
+   {
+    "command": "npm test",
+    "code": 0,
+    "ok": true,
+    "ms": 468,
+    "summary": "# tests 2 · # suites 0 · # pass 2 · # fail 0 · # skipped 0 · # todo 0",
+    "tail": "> task-tracker-api@0.3.0 test\n> node --test \"test/**/*.test.js\"\n\nTAP version 13\n# Subtest: CRUD cơ bản\nok 1 - CRUD cơ bản\n  ---\n  duration_ms: 77.913408\n  type: 'test'\n  ...\n# Subtest: validate\nok 2 - validate\n  ---\n  duration_ms: 23.630462\n  type: 'test'\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 241.680712"
+   }
+  ],
+  "baselineAt": "2026-11-01T11:05:36.780Z",
+  "latest": [
+   {
+    "command": "npm test",
+    "code": 0,
+    "ok": true,
+    "ms": 1500,
+    "summary": "# tests 50 · # suites 0 · # pass 50 · # fail 0 · # skipped 0 · # todo 0",
+    "tail": "…ize mặc định 20, page mặc định 1\n  ---\n  duration_ms: 17.454243\n  type: 'test'\n  ...\n# Subtest: lọc/tìm/sắp xếp qua HTTP\nok 24 - lọc/tìm/sắp xếp qua HTTP\n  ---\n  duration_ms: 42.071421\n  type: 'test'\n  ...\n# Subtest: mỗi tham số một ca 400 INVALID_QUERY kèm field đúng\nok 25 - mỗi tham số một ca 400 INVALID_QUERY kèm field đúng\n  ---\n  duration_ms: 36.681038\n  type: 'test'\n  ...\n# Subtest: nhiều lỗi báo tham số đầu tiên theo URL; tham số trùng → 400\nok 26 - nhiều lỗi báo tham số đầu tiên theo URL; tham số trùng → 400\n  ---\n  duration_ms: 7.836634\n  type: 'test'\n  ...\n# Subtest: biên D5: q= không lọc; assignee= và id lạ → rỗng, không lỗi\nok 27 - biên D5: q= không lọc; assignee= và id lạ → rỗng, không lỗi\n  ---\n  duration_ms: 17.075755\n  type: 'test'\n  ...\n# Subtest: 401 đứng trước 400 trên /tasks và export.csv\nok 28 - 401 đứng trước 400 trên /tasks và export.csv\n  ---\n  duration_ms: 19.407552\n  type: 'test'\n  ...\n# Subtest: export.csv không X-User → 401; page/pageSize → 400\nok 29 - export.csv không X-User → 401; page/pageSize → 400\n  ---\n  duration_ms: 7.349208\n  type: 'test'\n  ...\n# Subtest: export.csv: header HTTP\nok 30 - export.csv: header HTTP\n  ---\n  duration_ms: 6.408894\n  type: 'test'\n  ...\n# Subtest: export.csv byte-exact (t7, t8, t11): BOM EF BB BF và \\\\r\\\\n cuối\nok 31 - export.csv byte-exact (t7, t8, t11): BOM EF BB BF và \\\\r\\\\n cuối\n  ---\n  duration_ms: 8.544118\n  type: 'test'\n  ...\n# Subtest: GET /tasks/export.csv không bị /tasks/:id bắt nhầm (không 404)\nok 32 - GET /tasks/export.csv không bị /tasks/:id bắt nhầm (không 404)\n  ---\n  duration_ms: 6.686418\n  type: 'test'\n  ...\n# Subtest: mặc định\nok 33 - mặc định\n  ---\n  duration_ms: 1.722539\n  type: 'test'\n  ...\n# Subtest: parse các giá trị hợp lệ\nok 34 - parse các giá trị hợp lệ\n  ---\n  duration_ms: 1.841112\n  type: 'test'\n  ...\n# Subtest: lỗi đầu tiên theo thứ tự URL\nok 35 - lỗi đầu tiên theo thứ tự URL\n  ---\n  duration_ms: 0.643434\n  type: 'test'\n  ...\n# Subtest: tham số trùng và tham số lạ\nok 36 - tham số trùng và tham số lạ\n  ---\n  duration_ms: 0.431858\n  type: 'test'\n  ...\n# Subtest: ngày hợp lệ / không hợp lệ\nok 37 - ngày hợp lệ / không hợp lệ\n  ---\n  duration_ms: 0.375881\n  type: 'test'\n  ...\n# Subtest: page/pageSize không hợp lệ\nok 38 - page/pageSize không hợp lệ\n  ---\n  duration_ms: 0.319478\n  type: 'test'\n  ...\n# Subtest: page/pageSize khi allowPaging=false → 400\nok 39 - page/pageSize khi allowPaging=false → 400\n  ---\n  duration_ms: 0.301498\n  type: 'test'\n  ...\n# Subtest: giá trị rỗng (D5)\nok 40 - giá trị rỗng (D5)\n  ---\n  duration_ms: 0.437502\n  type: 'test'\n  ...\n# Subtest: normalize\nok 41 - normalize\n  ---\n  duration_ms: 0.92838\n  type: 'test'\n  ...\n# Subtest: q='dac ta' khớp t4 và t12; q rỗng không lọc\nok 42 - q='dac ta' khớp t4 và t12; q rỗng không lọc\n  ---\n  duration_ms: 0.837669\n  type: 'test'\n  ...\n# Subtest: lọc status, assignee, team, dueBefore, forceTeam\nok 43 - lọc status, assignee, team, dueBefore, forceTeam\n  ---\n  duration_ms: 0.354939\n  type: 'test'\n  ...\n# Subtest: sort dueDate: null luôn cuối cả hai chiều\nok 44 - sort dueDate: null luôn cuối cả hai chiều\n  ---\n  duration_ms: 0.221512\n  type: 'test'\n  ...\n# Subtest: hòa theo số id tăng dần bất kể chiều (t2 < t10)\nok 45 - hòa theo số id tăng dần bất kể chiều (t2 < t10)\n  ---\n  duration_ms: 0.24933\n  type: 'test'\n  ...\n# Subtest: sort title / -title (locale vi)\nok 46 - sort title / -title (locale vi)\n  ---\n  duration_ms: 7.521918\n  type: 'test'\n  ...\n# Subtest: sort -createdAt và không làm biến đổi mảng đầu vào\nok 47 - sort -createdAt và không làm biến đổi mảng đầu vào\n  ---\n  duration_ms: 0.207997\n  type: 'test'\n  ...\n# Subtest: paginate\nok 48 - paginate\n  ---\n  duration_ms: 1.231493\n  type: 'test'\n  ...\n# Subtest: CRUD cơ bản\nok 49 - CRUD cơ bản\n  ---\n  duration_ms: 66.782102\n  type: 'test'\n  ...\n# Subtest: validate\nok 50 - validate\n  ---\n  duration_ms: 17.726338\n  type: 'test'\n  ...\n1..50\n# tests 50\n# suites 0\n# pass 50\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 1301.446085"
+   }
+  ],
+  "latestAt": "2026-11-01T11:12:35.586Z",
+  "latestAfter": "execute"
+ },
+ "budgetAlerted": 100,
+ "changes": "src/auth.js              |  17 +++++\n src/csv.js               |  20 ++++++\n src/handlers/audit.js    |  16 +++++\n src/handlers/tasks.js    |  69 ++++++++++++++----\n src/list-query.js        | 132 ++++++++++++++++++++++++++++++++++\n src/query-guard.js       |  14 ++++\n src/server.js            |   6 +-\n src/store.js             |   9 +++\n test/audit.test.js       |  89 +++++++++++++++++++++++\n test/auth.test.js        | 121 ++++++++++++++++++++++++++++++++\n test/csv.test.js         |  51 ++++++++++++++\n test/helpers.js          |   7 +-\n test/list-export.test.js | 179 +++++++++++++++++++++++++++++++++++++++++++++++\n test/list-query.test.js  | 142 +++++++++++++++++++++++++++++++++++++\n test/tasks.test.js       |  17 +++--\n 15 files changed, 866 insertions(+), 23 deletions(-)",
+ "commit": "42d53ffc84 — 6 commit trên nhánh từ c695e73d18 (gồm gộp worktree con)",
+ "finalPath": "FINAL.md",
+ "finishedAt": "2026-11-01T11:13:34.867Z"
+}
