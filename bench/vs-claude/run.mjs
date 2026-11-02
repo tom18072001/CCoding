@@ -143,6 +143,7 @@ async function runArm(arm, task, key) {
     const dir = freshWorkspace(task, key);
     const projectId = `vb-${crypto.createHash('sha1').update(key + cfg.workRoot).digest('hex').slice(0, 12)}`;
     const r = await runCcoding({ baseUrl: cfg.ccodingUrl, dataDir: cfg.ccodingData, runtime: cfg.runtime, projectId, workdir: dir, brief, title: `[vs-claude ${key}] ${task.title}`.slice(0, 120), taskOptions: spec.options ?? {}, agentId: spec.agentId, variant: `vs-claude/${key}`, timeoutMin: cfg.timeoutMin });
+    if (r.infra || !r.taskId) return { dir, ...r, infra: r.infra ?? 'error' }; // chưa tạo được task: lỗi hạ tầng, không chấm
     let leak = false;
     const callsFile = path.join(cfg.ccodingData, 'runs', r.taskId, 'calls.jsonl');
     if (fs.existsSync(callsFile)) leak = leakCheck(fs.readFileSync(callsFile, 'utf8').split('\n'));
