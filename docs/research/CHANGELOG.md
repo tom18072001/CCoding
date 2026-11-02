@@ -5,6 +5,11 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Gói 2c (T-20261102-190653-75b, 2/11/2026)
+
+- **S1 (@methodologist):** `preregistration.md` v2.1 và `suite-review.md`: sửa major H6 chạm trần (tập bài khai báo l1-modules, l2-chain, t1–t5; loại bài mà mọi lượt cả hai arm của cặp đều ≥ 0,99 (sửa ở vòng review 2 từ 1,00; một cặp NA ⇒ p(H6) = NA; p = NA vẫn phán quyết theo CI), giữ bài chạm trần một phía; Δ\* suy biến ⇒ p = NA, "Không kết luận (trần/suy biến)"; < 3 bài ⇒ ước lượng kèm CI 90 %, họ Holm còn H3), H3 chuyển sang hoán vị hai mẫu chính xác C(20, 10) = 184 756 (p_min 1/184 756), cột "Phép kiểm" H3/H6 ghi họ Holm K = 2 nếu SR-26 xong, SR-25 test 9 bỏ câu so sánh T\* − margin; §9 mục 6.
+- **S2 (@data-scientist):** `performance/token-analysis.md` và `scripts/token-analysis.mjs`: nhãn "C7" viết cứng đổi thành hằng `SONNET_RD` (= `CONFIG.sonnetRound`), SR-27 mới trong `suite-review.md`; sinh lại T-d (3), T-h, T-i; viết lại §1, "Đọc T-h", "Đọc T-i" và kết luận §6–§7 theo bản có C9. `run-plan.md`: sửa dòng "`pilot*` không tồn tại" (`results/pilot1/` có, chỉ chứa `config.json`), thêm bước kiểm "rep chạy lại ≠ rep đã loại" vào checklist cho tới khi SR-01(d) được gộp.
+
 ## 0. Kết luận RQ3: v1 → v2
 
 - **v1:** làn nhanh "không nhanh hơn rõ rệt" so với Claude Code (Opus); C6 ghi "chưa có".
