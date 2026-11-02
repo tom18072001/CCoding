@@ -50,6 +50,9 @@ const CONFIG = {
   phaseTableRounds: [dirRounds[0], ...pairedFast], // vòng đầu (CCoding gốc) + các vòng làn nhanh có cặp
   costBasisRound: 'C5', // vòng làm nền cho T-e (thiết kế hiện hành)
 };
+// Nhãn vòng Sonnet đơn trong lời văn của T-d, T-h, T-i = vòng mới nhất có `claude-sonnet` (CONFIG.sonnetRound), không viết cứng.
+// Căn cứ: SR-27 (docs/research/suite-review.md): nhãn "C7" viết cứng là lỗi khi thêm C9; mọi nhãn phải sinh từ dữ liệu.
+const SONNET_RD = CONFIG.sonnetRound;
 
 // ---------- đọc dữ liệu ----------
 function parseCsv(text) {
@@ -270,11 +273,11 @@ const unionLen = (iv) => { const s = [...iv].sort((a, b) => a[0] - b[0]); let to
   const dC7 = mkSet(CONFIG.sonnetRound + ' (cùng thời điểm với Sonnet đơn)', [CONFIG.sonnetRound]);
   const dAll = mkSet(CONFIG.fastRounds[0] + '–' + CONFIG.fastRounds[CONFIG.fastRounds.length - 1] + ' (bỏ lượt treo)', CONFIG.fastRounds);
   const part3 = [
-    '**(3) Chi phí cố định của điều phối (làn nhanh) so với thời gian Sonnet đơn cần cho cả bài** — chia thời gian tường của làn nhanh thành: lập kế hoạch = Σ đường găng pha route/plan/discuss/finalize; review = pha review + revise; gộp + ngoài LLM = thời gian tường − (kế hoạch + review + execute), gồm pha tổng hợp, tạo/gộp worktree, chạy kiểm tra dự án, chờ (là phần dư, có thể gồm nhiễu); execute = đường găng pha execute. "Cố định" = kế hoạch + review + gộp/ngoài LLM, tức phần một agent đơn không phải trả. Mẫu số = TB thời gian tường của claude-sonnet ở C7 (n ghi trong ngoặc). Lượt treo C5 t3 lượt 1 bị bỏ khỏi tập gộp.',
+    '**(3) Chi phí cố định của điều phối (làn nhanh) so với thời gian Sonnet đơn cần cho cả bài** — chia thời gian tường của làn nhanh thành: lập kế hoạch = Σ đường găng pha route/plan/discuss/finalize; review = pha review + revise; gộp + ngoài LLM = thời gian tường − (kế hoạch + review + execute), gồm pha tổng hợp, tạo/gộp worktree, chạy kiểm tra dự án, chờ (là phần dư, có thể gồm nhiễu); execute = đường găng pha execute. "Cố định" = kế hoạch + review + gộp/ngoài LLM, tức phần một agent đơn không phải trả. Mẫu số = TB thời gian tường của claude-sonnet ở ' + SONNET_RD + ' (n ghi trong ngoặc). Lượt treo C5 t3 lượt 1 bị bỏ khỏi tập gộp.',
     '',
     md(['Tập', 'Bài', 'n làn nhanh', 'Kế hoạch (s)', 'Review (s)', 'Gộp + ngoài LLM (s)', 'Cố định (s)', 'Execute (s)', 'Thời gian tường (s)', 'Sonnet đơn TB (s)', 'Cố định / Sonnet đơn (%)', 'Execute / Sonnet đơn (%)'], rowsO),
     '',
-    `Đọc: ở C7 (cùng thời điểm) phần cố định bằng ${f1((100 * dC7.S('ovh')) / dC7.S('sw'))}% tổng thời gian Sonnet đơn cần cho 5 bài; gộp C5–C7 là ${f1((100 * dAll.S('ovh')) / dAll.S('sw'))}%. Ở C7, riêng phần execute của làn nhanh đã dài hơn cả bài Sonnet đơn ở: ${dC7.parts.filter((x) => x.exe > x.sw).map((x) => x.t.split('-')[0]).join(', ') || 'không bài nào'} (cột "Execute / Sonnet đơn" > 100%); làn nhanh chỉ có thể thắng khi execute song song + phần cố định < thời gian một agent.`,
+    `Đọc: ở ${SONNET_RD} (cùng thời điểm) phần cố định bằng ${f1((100 * dC7.S('ovh')) / dC7.S('sw'))}% tổng thời gian Sonnet đơn cần cho 5 bài; gộp ${CONFIG.fastRounds[0]}–${CONFIG.fastRounds.at(-1)} là ${f1((100 * dAll.S('ovh')) / dAll.S('sw'))}%. Ở ${SONNET_RD}, riêng phần execute của làn nhanh đã dài hơn cả bài Sonnet đơn ở: ${dC7.parts.filter((x) => x.exe > x.sw).map((x) => x.t.split('-')[0]).join(', ') || 'không bài nào'} (cột "Execute / Sonnet đơn" > 100%); làn nhanh chỉ có thể thắng khi execute song song + phần cố định < thời gian một agent.`,
   ];
   T['T-d'] = [
     '**(1) Theo pha** — "tuần tự" = Σ thời gian các lượt gọi trong pha; "đường găng pha" = độ dài hợp các khoảng [ts − duration_s, ts] (thời gian thực khi các lượt chạy song song); hệ số = tuần tự / găng.',
@@ -531,25 +534,25 @@ const cell3 = (k, t) => runs.filter((r) => SYS3[k](r) && r.task === t);
   const tr = tasks3.map((t) => mean(cell3('fast', t).map((r) => r.wall)) / mean(cell3('sonnet', t).map((r) => r.wall)));
   const tr7 = tasks3.map((t) => mean(cell3('fastC7', t).map((r) => r.wall)) / mean(cell3('sonnet', t).map((r) => r.wall)));
   T['T-h'] = [
-    'Trung bình thời gian tường, chi phí và test ẩn theo bài cho ba hệ; mỗi hàng ghi n (số lượt). Hai cột cuối = tỉ lệ so với Sonnet đơn (C7) của cùng bài; > 1 nghĩa là chậm hơn / đắt hơn Sonnet đơn. Opus = hệ `claude` (Claude Code mặc định) ở C5–C6; Sonnet = hệ `claude-sonnet` ở C7 (cùng lúc với làn nhanh C7); làn nhanh = hệ `ccoding-fastlane`. **Mẫu rất nhỏ (n = 1–5 mỗi ô, C7 chỉ 2 lượt Sonnet mỗi bài): minh họa.**',
+    'Trung bình thời gian tường, chi phí và test ẩn theo bài cho ba hệ; mỗi hàng ghi n (số lượt). Hai cột cuối = tỉ lệ so với Sonnet đơn (' + SONNET_RD + ') của cùng bài; > 1 nghĩa là chậm hơn / đắt hơn Sonnet đơn. Opus = hệ `claude` (Claude Code mặc định) ở C5–C6; Sonnet = hệ `claude-sonnet` ở ' + SONNET_RD + ' (cùng lúc với làn nhanh ' + SONNET_RD + '); làn nhanh = hệ `ccoding-fastlane`. **Mẫu rất nhỏ (n = 1–5 mỗi ô, số lượt mỗi ô xem cột n): minh họa.**',
     '',
     md(['Bài', 'Hệ (vòng)', 'n', 'Thời gian TB (s)', 'Chi phí TB (USD)', 'Test ẩn đạt/tổng', 'Đạt trọn', 'Thời gian / Sonnet đơn', 'Chi phí / Sonnet đơn'], rows),
     '',
-    `Lượt bị bỏ khỏi "làn nhanh (C5–C7)": ${hungRuns.length ? hungRuns.map((r) => `${r.run} ${r.task} lượt ${r.rep} (${r.wall} s, task ${r.task_id}) — treo stdin của harness; lượt còn lại cùng ô chạy ${runs.filter((x) => x.run === r.run && x.task === r.task && isCC(x.system) && x !== r).map((x) => x.wall).join(', ')} s`).join('; ') : 'không có'}. Không lượt nào khác bị bỏ.`,
+    `Lượt bị bỏ khỏi "làn nhanh (${rangeLbl})": ${hungRuns.length ? hungRuns.map((r) => `${r.run} ${r.task} lượt ${r.rep} (${r.wall} s, task ${r.task_id}) — treo stdin của harness; lượt còn lại cùng ô chạy ${runs.filter((x) => x.run === r.run && x.task === r.task && isCC(x.system) && x !== r).map((x) => x.wall).join(', ')} s`).join('; ') : 'không có'}. Không lượt nào khác bị bỏ.`,
     '',
     `Đối chiếu số thời gian trong BRIEF-2 (Opus/Sonnet/làn nhanh, làm tròn s): ${brief.join(' · ')}.`,
     '',
-    `Tỉ lệ làn nhanh (C5–C7, bỏ lượt treo) / Sonnet đơn: thời gian ${tasks3.map((t, i) => `${t.split('-')[0]} ${f2(tr[i])}`).join(' · ')}; chi phí ${tasks3.map((t, i) => `${t.split('-')[0]} ${f2(cr[i])}`).join(' · ')} (BRIEF-2: chi phí ${CONFIG.briefCostRatio.join('–')}×: ${Math.min(...cr) >= CONFIG.briefCostRatio[0] - 0.05 && Math.max(...cr) <= CONFIG.briefCostRatio[1] + 0.05 ? 'khớp' : 'LỆCH'}). Chỉ dùng lượt C7 của làn nhanh (cùng thời điểm): thời gian ${tasks3.map((t, i) => `${t.split('-')[0]} ${f2(tr7[i])}`).join(' · ')}.`,
+    `Tỉ lệ làn nhanh (${rangeLbl}, bỏ lượt treo) / Sonnet đơn: thời gian ${tasks3.map((t, i) => `${t.split('-')[0]} ${f2(tr[i])}`).join(' · ')}; chi phí ${tasks3.map((t, i) => `${t.split('-')[0]} ${f2(cr[i])}`).join(' · ')} (BRIEF-2: chi phí ${CONFIG.briefCostRatio.join('–')}×: ${Math.min(...cr) >= CONFIG.briefCostRatio[0] - 0.05 && Math.max(...cr) <= CONFIG.briefCostRatio[1] + 0.05 ? 'khớp' : 'LỆCH'}). Chỉ dùng lượt ${SONNET_RD} của làn nhanh (cùng thời điểm): thời gian ${tasks3.map((t, i) => `${t.split('-')[0]} ${f2(tr7[i])}`).join(' · ')}.`,
   ].join('\n');
 }
 
 // ---------- T-i: chênh lệch kèm CI bootstrap và p hoán vị ----------
 {
   const pairs = [
-    ['Làn nhanh − Sonnet đơn', 'C7, cùng thời điểm', 'fastC7', 'sonnet'],
+    ['Làn nhanh − Sonnet đơn', SONNET_RD + ', cùng thời điểm', 'fastC7', 'sonnet'],
     ['Làn nhanh − Opus', `${CONFIG.opusRounds.join('–')}, bỏ lượt treo`, null, 'opus', CONFIG.opusRounds],
     ['Làn nhanh − Opus', `làn nhanh ${rangeLbl} (bỏ lượt treo) so với Opus ${CONFIG.opusRounds.join('–')} (như T-h)`, 'fast', 'opus'],
-    ['Sonnet đơn − Opus', `C7 so với ${CONFIG.opusRounds.join('–')} (khác thời điểm; tách phần do mô hình)`, 'sonnet', 'opus'],
+    ['Sonnet đơn − Opus', `${SONNET_RD} so với ${CONFIG.opusRounds.join('–')} (khác thời điểm; tách phần do mô hình)`, 'sonnet', 'opus'],
   ];
   const rows = [];
   for (const [name, set, ka, kb, rounds] of pairs) {
@@ -564,7 +567,7 @@ const cell3 = (k, t) => runs.filter((r) => SYS3[k](r) && r.task === t);
     }
   }
   T['T-i'] = [
-    `> **MINH HỌA, n nhỏ.** Thống kê = TB 5 bài của (TB hệ A − TB hệ B); bootstrap phân tầng theo bài (B = ${CONFIG.bootstrapB}, seed = ${CONFIG.seed}, phân vị 2,5/97,5); p hoán vị hai phía bằng cách hoán nhãn hệ trong từng bài (liệt kê đủ mọi hoán vị; số hoán vị trong ngoặc, nên p nhỏ nhất bị chặn bởi số này: vd. dòng C7 có 3^5 = 243 hoán vị ⇒ p ≥ 1/243). **Cảnh báo:** ở dòng C7 ô làn nhanh chỉ có 1 lượt, ô Sonnet 2 lượt, nên bootstrap gần như chỉ lấy lại mẫu 2 giá trị Sonnet và CI hẹp một cách giả tạo; dùng p hoán vị và chênh lệch theo bài (T-h) thay vì CI. Cột "n mỗi ô" ghi số lượt A/B theo từng bài. Không hiệu chỉnh so sánh bội (4 cặp × 2 chỉ số); CI chỉ mô phỏng nhiễu trong ô nên hẹp hơn thực tế.`,
+    `> **MINH HỌA, n nhỏ.** Thống kê = TB 5 bài của (TB hệ A − TB hệ B); bootstrap phân tầng theo bài (B = ${CONFIG.bootstrapB}, seed = ${CONFIG.seed}, phân vị 2,5/97,5); p hoán vị hai phía bằng cách hoán nhãn hệ trong từng bài (liệt kê đủ mọi hoán vị; số hoán vị trong ngoặc, nên p nhỏ nhất bị chặn bởi số này: dòng có ô nhỏ có ít hoán vị nên p nhỏ nhất lớn). **Cảnh báo:** khi ô chỉ có 1–3 lượt (cột "n mỗi ô"), bootstrap chỉ lấy lại mẫu vài giá trị và CI hẹp một cách giả tạo; dùng p hoán vị và chênh lệch theo bài (T-h) thay vì CI. Cột "n mỗi ô" ghi số lượt A/B theo từng bài. Không hiệu chỉnh so sánh bội (4 cặp × 2 chỉ số); CI chỉ mô phỏng nhiễu trong ô nên hẹp hơn thực tế.`,
     '',
     md(['Cặp (A − B)', 'Tập', 'Chỉ số', 'n mỗi ô (A/B)', 'Chênh lệch', 'CI 95% (bootstrap)', 'Tương đối so với B [CI]', 'p hoán vị hai phía (số hoán vị)', 'Nhận xét'], rows),
     '',

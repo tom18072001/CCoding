@@ -251,6 +251,7 @@ Mức: **P0** = chặn khóa đăng ký trước (S4 đánh dấu "khóa có đi
 | **SR-22** | P2 | Điểm trung bình "Overall" tính theo lượt nên coding (5/13 bài) có trọng số lớn; thêm trung bình theo loại có trọng số bằng nhau | `analyze.mjs:133` |
 | **SR-23** | P2 | Cân bằng thứ tự arm: dùng bảng Latin thật cho k arm | `run.mjs:47-53` |
 | **SR-24** | P2 | Selftest cần thêm arm "lời giải sai điển hình" (một đáp án gần đúng cho mỗi bài) để kiểm grader có phạt | `arms.json`, `run.mjs:103-109` |
+| **SR-27** | P2 | Nhãn vòng Sonnet đơn trong `token-analysis.mjs` (bảng T-d (3), T-h, T-i) phải sinh từ dữ liệu, không viết cứng "C7": dùng hằng `SONNET_RD` = `CONFIG.sonnetRound` (vòng mới nhất có `claude-sonnet`, nay C9). Lý do: khi thêm C9, các nhãn "C7" vẫn in ra dù số liệu là C9 (gói 2b), làm bảng và lời văn lệch nhau. Test: thêm vòng giả có `claude-sonnet` (`--results <bản sao>`) và kiểm `--table T-i` in nhãn của vòng mới, không còn "C7" viết cứng; `--check` vẫn khớp. Tình trạng: đã làm ở gói 2c (S2), chưa có test tự động | `docs/research/performance/scripts/token-analysis.mjs` (`SONNET_RD`) |
 
 ### Ánh xạ bốn điểm bắt buộc sang đề xuất
 
