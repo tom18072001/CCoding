@@ -1,0 +1,82 @@
+# Báo cáo T-20261102-115945-512: lọc, sắp xếp và cursor pagination cho `GET /tickets`
+
+## Tóm tắt
+Đã xong và đạt các tiêu chí trong đề bài. `GET /tickets` nay nhận `status`, `assignee`, `sort`, `limit` và `cursor`. Khi gọi không tham số, kết quả vẫn là mảng trần sắp theo id như cũ. `npm test` do CCoding tự chạy trước khi sửa ra 1/1 pass, sau khi sửa ra 15/15 pass, exit 0. Còn mở ba việc: chưa có test cho `invalid_assignee`, cách xử lý `assignee=none` khi kết hợp với tên chưa được mô tả trong tài liệu, và thay đổi **chưa được commit**.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Thêm lọc, sắp xếp và keyset cursor pagination cho `GET /tickets` | @backend-dev | Đạt | Sửa `src/handler.js` (thêm `listTickets()`). Không sửa `src/data.js` và test có sẵn, không thêm dependency. Báo cáo: `.ccoding/T-20261102-115945-512/outputs/dev-S1-backend-dev.md` |
+| S2 | Bộ test cho lọc, sắp xếp, phân trang và validation | @qa-tester | Đạt | Tạo `test/tickets-query.test.js` với 14 test. `npm test` cho 15/15 pass. Thử làm hỏng handler trên một bản sao, mỗi lỗi cố ý làm đúng 1 test đỏ. Báo cáo: `.ccoding/T-20261102-115945-512/outputs/dev-S2-qa-tester.md` |
+
+Kiểm chứng do CCoding tự chạy, không qua agent:
+- Trước khi sửa: `npm test` → exit 0, tests 1, pass 1, fail 0
+- Sau khi sửa: `npm test` → exit 0, tests 15, pass 15, fail 0
+
+## Quyết định
+- **Phạm vi:** đây là tính năng nhỏ trong một tệp nên chỉ chia 2 hạng mục chạy lần lượt (hiện thực rồi test). Không cần kiến trúc, BA hay cổng bảo vệ dữ liệu vì dữ liệu nằm trong bộ nhớ, không có schema hay migration.
+- **Cursor theo kiểu keyset:** cursor là base64url của JSON `{s, a, o, k, i}`. `k` là giá trị khóa sort và `i` là id của phần tử cuối trang. `s`, `a`, `o` là `status`, `assignee` và `sort` đã chuẩn hóa. Nếu một trong ba giá trị này khác với request hiện tại thì trả `invalid_cursor`.
+- **Chuẩn hóa ngữ cảnh** (S1 tự quyết, trưởng phòng chấp nhận): danh sách `status`/`assignee` được sắp xếp và bỏ trùng trước khi gắn vào cursor. Nhờ vậy `status=open,closed` và `status=closed,open` dùng chung được một cursor.
+- **Thứ tự kiểm tra:** status → assignee → sort → limit → cursor. Mỗi lần chỉ trả lỗi đầu tiên gặp phải.
+- **Giá trị rỗng không hợp lệ:** `status=` và `open,` trả `invalid_status`, phần tử rỗng trong `assignee` trả `invalid_assignee`. So khớp phân biệt hoa thường, nên `OPEN` và `ID` đều bị từ chối.
+- **`limit`** phải khớp `^[0-9]+$` và nằm trong khoảng 1..100. Vì vậy `1.5`, `-1`, `abc`, chuỗi rỗng, `0` và `101` đều trả `invalid_limit`.
+
+## Kết quả review
+- @qa-tester (review cuối) kết luận **Đạt**. Reviewer đã đọc `src/handler.js` và chạy lại `npm test`. Kết quả: handler khớp đề bài, gọi không tham số vẫn tương thích ngược, thứ tự phụ là id tăng dần ở cả hai chiều, cursor gắn đúng ngữ cảnh.
+- Không có blocker hay major. Reviewer nói có "hai điểm minor không chặn bàn giao" nhưng không ghi cụ thể là gì. Hai điểm minor dưới đây là do trưởng phòng tự đọc mã và tìm thấy:
+  1. Bộ test chưa có ca nào cho `invalid_assignee`. Tôi tìm `invalid_assignee` trong `test/tickets-query.test.js` và không thấy kết quả. Phần kiểm tra này có trong handler nhưng chưa được test bảo vệ.
+  2. Nếu tham số bị lặp và đến dưới dạng mảng, handler dùng `String(...)` nên mảng sẽ bị nối bằng dấu phẩy. Đề bài nói mọi giá trị là chuỗi, nên đây chỉ là rủi ro nếu tầng HTTP thật thay đổi cách parse query.
+- Bước kiểm bộ kiểm (làm hỏng handler rồi xem test có đỏ không) do S2 tự báo. Reviewer ghi rõ là chưa tự làm lại bước này.
+
+## Việc còn mở & rủi ro
+- **Chưa commit.** `git status` cho thấy ` M src/handler.js` và `?? test/tickets-query.test.js`. Theo quy tắc, trưởng phòng không duyệt commit vào main. Tom cần tạo nhánh và commit, hoặc giao việc này cho người có quyền.
+- **Giả định:** `createdAt` luôn ở dạng ISO-8601 cùng định dạng, vì handler so sánh chuỗi để sắp xếp và để so với cursor. Seed hiện tại thỏa điều kiện này. Nếu dữ liệu thật có múi giờ hoặc định dạng khác thì thứ tự sẽ sai.
+- **Giả định:** cursor không được ký hoặc mã hóa, client có thể tự tạo cursor. Việc này chấp nhận được vì cursor chỉ chứa giá trị khóa sort và id, không mở thêm quyền truy cập. Nếu sau này có phân quyền theo ticket thì cần xem lại.
+- Dữ liệu chỉ nằm trong bộ nhớ, nên nếu dữ liệu thay đổi giữa hai trang thì keyset vẫn không bị trùng hay bỏ sót (đây là ưu điểm so với offset). Tuy vậy, hành vi này chưa có test.
+
+## Bước tiếp theo
+1. **Tom commit thay đổi lên một nhánh riêng, không commit thẳng vào main.** Xong khi có commit chứa `src/handler.js` và `test/tickets-query.test.js`, và `npm test` cho 15/15 pass.
+2. **Nhiệm vụ nhỏ (S), giao @qa-tester:** thêm test cho `invalid_assignee` (`assignee=`, `assignee=an,`). Có thể thêm một test để khẳng định cursor vẫn đúng khi danh sách ticket thay đổi giữa hai trang. Xong khi `npm test` pass và `grep invalid_assignee test/` có kết quả.
+3. **Tùy chọn (S), giao @tech-writer:** ghi hợp đồng API (các tham số, mã lỗi, việc cursor không trong suốt và gắn với ngữ cảnh) vào README hoặc tài liệu API cho đội mobile và web. Xong khi có mục tài liệu được dẫn từ README.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-115945-512` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **42 in / 20.9k out**, cache đọc 296.8k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| QA Engineer (@qa-tester) | dev | 18 | 10417 | 151966 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 16 | 6670 | 108027 | 2 |
+| Backend Developer (@backend-dev) | dev | 6 | 3420 | 34522 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 349 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Thêm lọc, sắp xếp và cursor pagination cho GET /tickets (@backend-dev)
+- `outputs/dev-S2-qa-tester.md` — S2 Bộ test cho lọc, sắp xếp, phân trang và validation (@qa-tester)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 1 · # suites 0 · # pass 1 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 15 · # suites 0 · # pass 15 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| QA Engineer (@qa-tester) | dev | **87** A | 100 | 64 | 82 | 100 | 1 | 1 | 162k | 2/9 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **95** A | 100 | 100 | 73 | 100 | 0 | — | 115k | 2/6 |
+| Backend Developer (@backend-dev) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 38k | 0/3 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **QA Engineer** (@qa-tester, 87 A):
+  - Thao tác công cụ lỗi nhiều (2/9, 22%; nhiều nhất ở run_command 2/7) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+- **Trưởng phòng Phát triển** (@dev-lead, 95 A):
+  - Thao tác công cụ lỗi nhiều (2/6, 33%; nhiều nhất ở run_command 2/5) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+- **Backend Developer** (@backend-dev, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._
