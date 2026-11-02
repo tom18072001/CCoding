@@ -70,6 +70,21 @@
     "options": {},
     "label": "CCoding single agent (senior-swe) - scaffolding without the office"
   },
+  "B6": {
+    "kind": "ccoding",
+    "options": {
+      "lane": "fast"
+    },
+    "label": "CCoding làn nhanh"
+  },
+  "B7": {
+    "kind": "ccoding",
+    "options": {
+      "lane": "single"
+    },
+    "pending": "B-01",
+    "label": "CCoding làn đơn (chờ B-01)"
+  },
   "oracle": {
     "kind": "oracle",
     "label": "Reference solution (grader self-test)"

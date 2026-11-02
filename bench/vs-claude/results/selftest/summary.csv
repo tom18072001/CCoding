@@ -12,6 +12,11 @@ null,l4-startup-order,logic,2,1,0,0,0,0,0,0,0
 null,r1-elk-design,design,4,1,0,0,0,0,0,0,0
 null,re1-lit-synthesis,research,3,1,0,0,0,0,0,0,0
 null,s1-sec-review,review,3,1,0,0,0,0,0,0,0
+null,t1-duration,coding,2,1,0,0,0,0,0,0,0
+null,t2-orders,coding,6,1,0.5333,0,0,0,0,0,0
+null,t3-api,coding,4,1,0.1264,0,0,0,0,0,0
+null,t4-perf,coding,1,1,0,0,0,0,0,0,0
+null,t5-logq,coding,4,1,0.0068,0,0,0,0,0,0
 oracle,a1-ambiguous-spec,requirements,3,1,1,0,1,0,0,0,0
 oracle,c1-iis-ecs,coding,2,1,1,0,1,0,0,0,0
 oracle,c2-burst-alert,coding,2,1,1,0,1,0,0,0,0
@@ -25,3 +30,8 @@ oracle,l4-startup-order,logic,2,1,1,0,1,0,0,0,0
 oracle,r1-elk-design,design,4,1,1,0,1,0,0,0,0
 oracle,re1-lit-synthesis,research,3,1,1,0,1,0,0,0,0
 oracle,s1-sec-review,review,3,1,1,0,1,0,0,0,0
+oracle,t1-duration,coding,2,1,1,0,1,0,0,0,0
+oracle,t2-orders,coding,6,1,1,0,1,0,0,0,0
+oracle,t3-api,coding,4,1,1,0,1,0,0,0,0
+oracle,t4-perf,coding,1,1,1,0,1,0,0,0,0
+oracle,t5-logq,coding,4,1,1,0,1,0,0,0,0

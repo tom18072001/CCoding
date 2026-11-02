@@ -7,7 +7,10 @@ import path from 'node:path';
 const dir = path.resolve(process.argv[2] ?? '.');
 const argv = process.argv.slice(3);
 const flag = (k, d) => { const i = argv.indexOf(`--${k}`); return i < 0 ? d : argv[i + 1]; };
-const rows = fs.readFileSync(path.join(dir, 'runs.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
+const allRows = fs.readFileSync(path.join(dir, 'runs.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
+const infraRows = allRows.filter((r) => r.status === 'infra'); // hạn mức / lỗi hạ tầng, không phải kết quả của arm
+const rows = allRows.filter((r) => r.status !== 'infra');
+if (infraRows.length) console.log(`Đã loại ${infraRows.length} dòng infra (hạn mức/lỗi hạ tầng) khỏi phân tích.`);
 const leaks = rows.filter((r) => r.leak);
 const R = rows.filter((r) => !r.leak);
 const arms = [...new Set(R.map((r) => r.arm))];
@@ -134,7 +137,7 @@ for (const a of arms) {
 }
 const md = `# CCoding vs single Claude - results
 
-Folder: \`${dir}\` - ${rows.length} runs (${leaks.length} excluded for touching hidden files), arms: ${arms.join(', ')}. Baseline **${BASE}**, treatment **${TREAT}**. Scores are 0-1 per run; deltas in percentage points, 95% two-level bootstrap CI over tasks, p from a paired sign-flip permutation test.
+Folder: \`${dir}\` - ${rows.length} runs (${leaks.length} excluded for touching hidden files, ${infraRows.length} infra rows dropped), arms: ${arms.join(', ')}. Baseline **${BASE}**, treatment **${TREAT}**. Scores are 0-1 per run; deltas in percentage points, 95% two-level bootstrap CI over tasks, p from a paired sign-flip permutation test.
 
 ## Hypotheses
 
