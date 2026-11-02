@@ -284,3 +284,27 @@ Còn chậm ở đâu (từ `events.jsonl` của C6):
   Cần kế hoạch cân tải: tách phần nối theo tính năng hoặc để người giữ tệp chung làm phần nhỏ nhất.
 - **Gộp xong mà lệnh kiểm tra đỏ** (t5 lượt 2: `npm test → 1` sau thực thi) → review (27 s) chỉ để yêu cầu sửa, rồi sửa + review lại
   (+86 s). Đề xuất: lệnh kiểm tra đỏ sau gộp → vào thẳng vòng sửa với đầu ra lệnh, bỏ lượt review đầu.
+
+**Kết quả C7 — tách hiệu ứng mô hình** (2/11, 11:48–12:02). Phòng Nghiên cứu chỉ ra C5/C6 so Claude Code chạy **Opus** với CCoding mà
+mọi thành viên chạy **Sonnet**. C7 chạy Claude Code một mình bằng Sonnet (`claude-sonnet`, 2 lượt mỗi bài) cùng lúc với làn nhanh (1 lượt).
+Gộp làn nhanh C5–C7 (bỏ lượt treo stdin), Claude Code Opus C5–C6, Claude Code Sonnet C7:
+
+| Bài | Claude Code Opus | Claude Code Sonnet | CCoding làn nhanh | Làn nhanh / Opus | Làn nhanh / Sonnet | Chi phí làn nhanh / Sonnet |
+|---|--:|--:|--:|--:|--:|--:|
+| t1-duration | 126 s | **66 s** | 108 s | 0,86 | 1,64 | 2,5× |
+| t2-orders | 91 s | **42 s** | 94 s | 1,04 | 2,27 | 3,8× |
+| t3-api | 205 s | **108 s** | 199 s | 0,97 | 1,85 | 3,3× |
+| t4-perf | 203 s | **49 s** | 142 s | 0,70 | 2,90 | 3,7× |
+| t5-logq | 259 s | 166 s | **165 s** | 0,64 | 1,00 | 2,6× |
+
+Claude Code Sonnet đạt 100 % test ẩn mọi lượt; làn nhanh có một lượt t2 ở C7 chỉ đạt 52/60 (sai quy tắc "mua X tặng Y" và hạn mã theo
+UTC — review không bắt được). **Kết luận đổi:** lợi thế thời gian của làn nhanh so với Claude Code Opus chủ yếu đến từ mô hình Sonnet
+nhanh hơn, không phải từ multi-agent. Cùng mô hình, một agent nhanh hơn 1,6–2,9 lần và rẻ hơn 2,5–3,8 lần ở 4/5 bài; chỉ t5 (công cụ
+nhiều module độc lập, việc dài nhất) làn nhanh ngang (lượt cùng lúc ở C7: 127 s so với 159–172 s). Phần cố định của điều phối (lập kế
+hoạch ~25 s + review 28–81 s + gộp) lớn hơn phần tiết kiệm nhờ song song khi một agent chỉ cần 40–110 s — khớp CAID (Geng & Neubig,
+2026: song song không giảm thời gian), "Towards a Science of Scaling Agent Systems" (Kim et al., 2025: chỉ việc song song hóa được mới có
+lợi) và bài 10/2026 của Anthropic về gộp subagent vào một vòng agent.
+
+Hệ quả cho mục tiêu "việc nhỏ dưới 15 phút nhanh hơn Claude Code": cần **làn đơn** — việc nhỏ giao thẳng một agent (Sonnet) với lệnh
+kiểm tra làm cổng chất lượng, bỏ lập kế hoạch/review LLM; chia việc song song chỉ khi kế hoạch có ≥ 3 phần độc lập đủ lớn (ước lượng:
+mỗi phần ≥ ~60 s làm một mình). Chưa làm — cần đo trên bài > 15 phút trước khi đặt ngưỡng.

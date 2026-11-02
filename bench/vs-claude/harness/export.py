@@ -21,6 +21,7 @@ LABEL = {
     'C4': 'cloud 2/11 · làn nhanh lần 1 — 2 nhiệm vụ CCoding cùng lúc (tranh agent, số đo thời gian nhiễu)',
     'C5': 'cloud 2/11 · làn nhanh + điều phối song song (+ hook stdin từ giữa vòng) vs Claude, mỗi hệ tuần tự · t3 lượt 1 của CCoding bị lỗi treo stdin (579 s)',
     'C6': 'cloud 2/11 · kiểm chứng d7600f6: làn nhanh chạy cùng lúc tối đa 4 hạng mục độc lập (t3, t5)',
+    'C7': 'cloud 2/11 · tách hiệu ứng mô hình: Claude Code một mình bằng Sonnet (claude-sonnet) cùng lúc với làn nhanh (thành viên Sonnet)',
 }
 
 ledger_rows = {}
@@ -92,7 +93,7 @@ for run in runs:
             'audit_hits': len(r.get('audit') or []), 'started': r.get('startedAt'),
         }
         rows.append(row)
-        if r['system'] == 'claude':
+        if r['system'] == 'claude' or r['system'].startswith('claude-'):
             for t in claude_turns(os.path.dirname(f)):
                 cturns.append({'run': run, 'task': r['task'], 'rep': r['rep'], **t})
         tid = r['run'].get('taskId')

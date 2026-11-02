@@ -1,0 +1,127 @@
+TAP version 13
+# \# thời gian tốt nhất: 288 ms
+# \# thời gian tốt nhất: 287 ms
+# \# thời gian tốt nhất: 293 ms
+# Subtest: tương đương bản cũ: seed 1, mặc định
+ok 1 - tương đương bản cũ: seed 1, mặc định
+  ---
+  duration_ms: 59.297968
+  type: 'test'
+  ...
+# Subtest: tương đương bản cũ: seed 2, topN 5
+ok 2 - tương đương bản cũ: seed 2, topN 5
+  ---
+  duration_ms: 32.092145
+  type: 'test'
+  ...
+# Subtest: tương đương bản cũ: seed 3, topN 1
+ok 3 - tương đương bản cũ: seed 3, topN 1
+  ---
+  duration_ms: 35.361787
+  type: 'test'
+  ...
+# Subtest: tương đương bản cũ: seed 4, from/to
+ok 4 - tương đương bản cũ: seed 4, from/to
+  ---
+  duration_ms: 14.754239
+  type: 'test'
+  ...
+# Subtest: tương đương bản cũ: seed 5, chỉ from
+ok 5 - tương đương bản cũ: seed 5, chỉ from
+  ---
+  duration_ms: 8.289103
+  type: 'test'
+  ...
+# Subtest: tương đương bản cũ: seed 6, chỉ to (gồm tháng 2024-12 do múi giờ)
+ok 6 - tương đương bản cũ: seed 6, chỉ to (gồm tháng 2024-12 do múi giờ)
+  ---
+  duration_ms: 7.554343
+  type: 'test'
+  ...
+# Subtest: tương đương bản cũ: seed 7, ít khách (nhiều dòng trùng đơn)
+ok 7 - tương đương bản cũ: seed 7, ít khách (nhiều dòng trùng đơn)
+  ---
+  duration_ms: 37.019951
+  type: 'test'
+  ...
+# Subtest: tương đương bản cũ: seed 8, topN 0
+ok 8 - tương đương bản cũ: seed 8, topN 0
+  ---
+  duration_ms: 7.684685
+  type: 'test'
+  ...
+# Subtest: tương đương: danh sách rỗng
+ok 9 - tương đương: danh sách rỗng
+  ---
+  duration_ms: 0.440352
+  type: 'test'
+  ...
+# Subtest: tương đương: toàn bộ đơn bị hủy
+ok 10 - tương đương: toàn bộ đơn bị hủy
+  ---
+  duration_ms: 1.463633
+  type: 'test'
+  ...
+# Subtest: tương đương: hoàn tiền lớn hơn doanh thu (tổng âm, sản phẩm doanh thu ≤ 0 bị loại)
+ok 11 - tương đương: hoàn tiền lớn hơn doanh thu (tổng âm, sản phẩm doanh thu ≤ 0 bị loại)
+  ---
+  duration_ms: 11.862812
+  type: 'test'
+  ...
+# Subtest: tương đương: SKU trùng trong danh mục sản phẩm (lấy bản đầu tiên)
+ok 12 - tương đương: SKU trùng trong danh mục sản phẩm (lấy bản đầu tiên)
+  ---
+  duration_ms: 16.946716
+  type: 'test'
+  ...
+# Subtest: tương đương: ngày sát ranh giới tháng theo múi giờ
+ok 13 - tương đương: ngày sát ranh giới tháng theo múi giờ
+  ---
+  duration_ms: 0.401079
+  type: 'test'
+  ...
+# Subtest: không sửa dữ liệu đầu vào
+ok 14 - không sửa dữ liệu đầu vào
+  ---
+  duration_ms: 26.823938
+  type: 'test'
+  ...
+# Subtest: gọi nhiều lần cho cùng kết quả (không giữ trạng thái giữa các lần gọi)
+ok 15 - gọi nhiều lần cho cùng kết quả (không giữ trạng thái giữa các lần gọi)
+  ---
+  duration_ms: 25.228765
+  type: 'test'
+  ...
+# Subtest: 200k dòng: kết quả giống hệt bản cũ (băm)
+ok 16 - 200k dòng: kết quả giống hệt bản cũ (băm)
+  ---
+  duration_ms: 704.466875
+  type: 'test'
+  ...
+# Subtest: 200k dòng: dưới 3000 ms (tốt nhất trong 3 lần)
+ok 17 - 200k dòng: dưới 3000 ms (tốt nhất trong 3 lần)
+  ---
+  duration_ms: 902.696107
+  type: 'test'
+  ...
+# Subtest: 200k dòng: dưới 1500 ms (tốt nhất trong 3 lần)
+ok 18 - 200k dòng: dưới 1500 ms (tốt nhất trong 3 lần)
+  ---
+  duration_ms: 932.360627
+  type: 'test'
+  ...
+# Subtest: 200k dòng: dưới 1000 ms (tốt nhất trong 3 lần)
+ok 19 - 200k dòng: dưới 1000 ms (tốt nhất trong 3 lần)
+  ---
+  duration_ms: 884.623937
+  type: 'test'
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 19
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3910.288849

@@ -67,7 +67,9 @@ function prepareRepo(task, dir) {
 
 // ── hệ 1: Claude Code thuần
 async function runClaude(job, repo, prompt, outDir) {
-  const a = ['-p', '--model', cfg.baselineModel ?? 'opus', '--output-format', 'stream-json', '--verbose', '--no-session-persistence',
+  // hệ 'claude' = Claude Code một mình với cfg.baselineModel; 'claude-<model>' (vd. claude-sonnet) = cùng cách chạy, mô hình <model>
+  const model = job.system.startsWith('claude-') ? job.system.slice('claude-'.length) : (cfg.baselineModel ?? 'opus');
+  const a = ['-p', '--model', model, '--output-format', 'stream-json', '--verbose', '--no-session-persistence',
     '--permission-mode', 'acceptEdits', '--allowedTools', (cfg.baselineTools ?? ['Bash', 'Read', 'Edit', 'Write', 'Grep', 'Glob', 'TodoWrite', 'Task', 'Agent', 'NotebookEdit']).join(','),
     '--strict-mcp-config', '--setting-sources', 'project,local'];
   const t0 = Date.now();
@@ -283,7 +285,7 @@ async function runJob(job) {
   const startedAt = now();
   let run;
   try {
-    run = job.system === 'claude' ? await runClaude(job, repo, prompt, outDir) : await runCcoding(job, repo, prompt, outDir, (cfg.variants ?? {})[job.system] ?? {});
+    run = job.system === 'claude' || job.system.startsWith('claude-') ? await runClaude(job, repo, prompt, outDir) : await runCcoding(job, repo, prompt, outDir, (cfg.variants ?? {})[job.system] ?? {});
   } catch (e) {
     run = { status: 'error', error: String(e.message ?? e), costUsd: 0 };
   }
