@@ -14,6 +14,7 @@ Theo `bench/vs-claude/RUNBOOK-cloud-session.md`, Nhánh 1 (`docs/research/run-pl
 | W2b | A0-sonnet, B6 (server nhánh 7425, chặn web) | T5 = t1-duration, t2-orders, t3-api, t4-perf, t5-logq | r1–3 (30) | 2026-11-02T15:06:56Z | 2026-11-02T16:19:44Z | xong 30/30 |
 | W2c | A0-sonnet, B0 (server main 7424, chặn web) | s1-sec-review | r4–10 (14) | 2026-11-02T16:21:21Z | 2026-11-02T16:40:11Z | xong 14/14 |
 | B7a | A0-sonnet, B7 (server nhánh 7425, chặn web) | T5 | B7 r1–9, A0-sonnet r4–9 (75) | 2026-11-02T16:41:22Z | 2026-11-02T19:12:11Z | xong 75/75 |
+| B7b | A0-sonnet, B7 (server nhánh 7425, chặn web) | `all` = 18 bài có `task.json` | r1–3, mới 39 lượt B7 | 2026-11-02T19:13:32Z | 2026-11-02T20:21:00Z | xong 39/39 |
 
 ## Bảng cửa sổ (`run-plan.md` §3.0)
 
@@ -83,3 +84,5 @@ B6 chạy đúng làn nhanh: các pha trong `calls.jsonl` chỉ có route → pl
 Chuỗi pha trong `calls.jsonl` của 45 lượt B7: 31 lượt chỉ `execute:senior-swe → accept:cto`; 14 lượt sau lượt execute đầu thì nâng lên `plan:dev-lead` rồi execute thêm (6 lượt thêm 1 agent, 5 lượt thêm 2, 3 lượt thêm 3) trước accept. Không có lượt gọi WebFetch/WebSearch.
 Trình theo dõi (watcher/tự commit) bị dừng ở giới hạn 2 giờ của tác vụ nền lúc 18:41Z và được khởi động lại; `run.mjs` không bị gián đoạn.
 Ghi chú tuân thủ: khi xem đuôi log vận hành lúc 18:41Z, người chạy thấy điểm của 2 lượt t1-duration r8 (dòng log có in `score`); các lần xem sau đã lọc bỏ cột điểm.
+
+**B7b** (A0-sonnet + B7 × `--tasks all` × r1–3): `all` gồm 18 bài; `l1-modules` và `l2-chain` chưa có `task.json` nên runner không xếp (hàng đợi 108 = 18 × 2 × 3). A0-sonnet đã đủ khóa, B7 trên T5 đã có từ B7a, nên lệnh chỉ chạy 39 lượt B7 trên 13 bài còn lại: 39/39 `done`, 0 lỗi hạ tầng, 0 leak, không gặp hạn mức. Token có trọng số 4,20 M, wall-sum 1,12 h, lượt dài nhất 430 s.
