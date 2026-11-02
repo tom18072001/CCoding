@@ -1,0 +1,162 @@
+{
+  "users": [
+    {
+      "id": "u1",
+      "name": "Quản trị viên",
+      "role": "admin",
+      "team": null
+    },
+    {
+      "id": "u2",
+      "name": "Trưởng nhóm A",
+      "role": "manager",
+      "team": "A"
+    },
+    {
+      "id": "u3",
+      "name": "Thành viên A1",
+      "role": "member",
+      "team": "A"
+    },
+    {
+      "id": "u4",
+      "name": "Thành viên B1",
+      "role": "member",
+      "team": "B"
+    },
+    {
+      "id": "u5",
+      "name": "Trưởng nhóm B",
+      "role": "manager",
+      "team": "B"
+    },
+    {
+      "id": "u6",
+      "name": "Thành viên A2",
+      "role": "member",
+      "team": "A"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "t1",
+      "title": "Thiết kế cơ sở dữ liệu",
+      "status": "done",
+      "priority": 1,
+      "assignee": "u3",
+      "team": "A",
+      "dueDate": "2026-11-05",
+      "createdAt": "2026-10-01T08:00:00.000Z"
+    },
+    {
+      "id": "t2",
+      "title": "Viết API đăng nhập",
+      "status": "doing",
+      "priority": 1,
+      "assignee": "u3",
+      "team": "A",
+      "dueDate": "2026-11-10",
+      "createdAt": "2026-10-02T08:00:00.000Z"
+    },
+    {
+      "id": "t3",
+      "title": "Kiểm thử tải hệ thống",
+      "status": "todo",
+      "priority": 2,
+      "assignee": "u6",
+      "team": "A",
+      "dueDate": null,
+      "createdAt": "2026-10-03T08:00:00.000Z"
+    },
+    {
+      "id": "t4",
+      "title": "Gửi đặc tả cho khách",
+      "status": "todo",
+      "priority": 3,
+      "assignee": "u4",
+      "team": "B",
+      "dueDate": "2026-11-20",
+      "createdAt": "2026-10-04T08:00:00.000Z"
+    },
+    {
+      "id": "t5",
+      "title": "Hợp nhất dữ liệu",
+      "status": "doing",
+      "priority": 2,
+      "assignee": "u4",
+      "team": "B",
+      "dueDate": "2026-11-08",
+      "createdAt": "2026-10-05T08:00:00.000Z"
+    },
+    {
+      "id": "t6",
+      "title": "Rà soát quyền truy cập",
+      "status": "todo",
+      "priority": 1,
+      "assignee": null,
+      "team": "B",
+      "dueDate": "2026-11-08",
+      "createdAt": "2026-10-06T08:00:00.000Z"
+    },
+    {
+      "id": "t7",
+      "title": "=SUM(A1:A9) xuất \"Excel\", có dấu phẩy",
+      "status": "todo",
+      "priority": 3,
+      "assignee": "u6",
+      "team": "A",
+      "dueDate": "2026-12-01",
+      "createdAt": "2026-10-07T08:00:00.000Z"
+    },
+    {
+      "id": "t8",
+      "title": "Hướng dẫn sử dụng\nphiên bản 2",
+      "status": "done",
+      "priority": 2,
+      "assignee": "u3",
+      "team": "A",
+      "dueDate": "2026-10-30",
+      "createdAt": "2026-10-08T08:00:00.000Z"
+    },
+    {
+      "id": "t9",
+      "title": "Triển khai bản thử nghiệm",
+      "status": "doing",
+      "priority": 1,
+      "assignee": "u3",
+      "team": "A",
+      "dueDate": "2026-11-05",
+      "createdAt": "2026-10-09T08:00:00.000Z"
+    },
+    {
+      "id": "t10",
+      "title": "Đào tạo người dùng mới",
+      "status": "todo",
+      "priority": 2,
+      "assignee": "u4",
+      "team": "B",
+      "dueDate": null,
+      "createdAt": "2026-10-10T08:00:00.000Z"
+    },
+    {
+      "id": "t11",
+      "title": "-Ghi chú nội bộ",
+      "status": "todo",
+      "priority": 3,
+      "assignee": null,
+      "team": "A",
+      "dueDate": "2026-11-15",
+      "createdAt": "2026-10-11T08:00:00.000Z"
+    },
+    {
+      "id": "t12",
+      "title": "Cập nhật tài liệu ĐẶC TẢ",
+      "status": "done",
+      "priority": 2,
+      "assignee": "u4",
+      "team": "B",
+      "dueDate": "2026-11-01",
+      "createdAt": "2026-10-12T08:00:00.000Z"
+    }
+  ]
+}

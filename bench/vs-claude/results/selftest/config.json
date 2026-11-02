@@ -5,11 +5,11 @@
     "--repeats",
     "1",
     "--out",
-    "results/selftest"
+    "bench/vs-claude/results/selftest"
   ],
   "cfg": {
     "ccodingUrl": "http://127.0.0.1:7420",
-    "ccodingData": "/home/claude/CCoding/data",
+    "ccodingData": "C:\\Users\\admin\\CCoding\\workspaces\\ccoding-dev\\wt-T-20261102-175855-1e6--S2\\data",
     "runtime": "claude-cli",
     "timeoutMin": 60,
     "claudeBin": "claude",
@@ -18,7 +18,7 @@
       "model": "opus"
     },
     "seed": "ccvb",
-    "workRoot": "/tmp/ccvb-301e47"
+    "workRoot": "C:\\Users\\admin\\AppData\\Local\\Temp\\ccvb-89877a"
   },
   "armIds": [
     "oracle",
@@ -37,8 +37,13 @@
     "l4-startup-order",
     "r1-elk-design",
     "re1-lit-synthesis",
-    "s1-sec-review"
+    "s1-sec-review",
+    "t1-duration",
+    "t2-orders",
+    "t3-api",
+    "t4-perf",
+    "t5-logq"
   ],
   "repeats": 1,
-  "startedAt": "2026-11-02T07:05:19.042Z"
+  "startedAt": "2026-11-02T11:27:02.071Z"
 }
