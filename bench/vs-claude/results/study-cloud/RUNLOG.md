@@ -9,4 +9,26 @@ Theo `bench/vs-claude/RUNBOOK-cloud-session.md`, Nhánh 1 (`docs/research/run-pl
 
 | Lệnh | Arm | Bài | Lượt | Bắt đầu (UTC) | Kết thúc (UTC) | Ghi chú |
 |---|---|---|---|---|---|---|
-| W1 | A0-sonnet, B0 | R9 | r1–3 (54) | 2026-11-02T11:41:23Z | | đang chạy |
+| W1 | A0-sonnet, B0 | R9 | r1–3 (54) | 2026-11-02T11:41:23Z | 2026-11-02T13:15:35Z | xong 54/54 |
+
+## Bảng cửa sổ (`run-plan.md` §3.0)
+
+| CS | Hash CCoding (server) | `git status --short` (server) | Bắt đầu (UTC) | Kết thúc (UTC) | Arm | Lượt lỗi hạ tầng / bị loại | Anchor B0 |
+|---|---|---|---|---|---|---|---|
+| W1 | `e0bd2f401905c8d1765e70b067f4f9855d4a453e` (origin/main) | sạch (chỉ có `ccoding.local.json`, đã gitignore) | 2026-11-02T11:41:23Z | 2026-11-02T13:15:35Z | A0-sonnet, B0 | 0 / 0 | không cần |
+
+## W1: số liệu vận hành (không xem điểm)
+
+| Arm | Lượt | done | khác done | leak | Token có trọng số | Wall-sum |
+|---|---|---|---|---|---|---|
+| A0-sonnet | 27 | 27 | 0 | 0 | 1,06 M | 0,16 h |
+| B0 | 27 | 27 | 0 | 0 | 5,85 M | 1,41 h |
+
+Tổng 6,91 M token có trọng số, 1,57 h wall-sum (mô hình §1.3 dự kiến 17,8 M và 3,6 h cho W1).
+Không lượt nào gặp hạn mức; không cần quarantine (§5.0).
+
+**Công cụ web ở arm B.** Rà soát cho thấy runtime claude-cli của CCoding cấp WebSearch/WebFetch cho 7 agent, trong khi arm A cấm.
+Đã kiểm `calls.jsonl` của cả 27 lượt B0 ở W1: không có lượt gọi web nào (chỉ `run_command`, `read_file`, `write_file`, `edit_file`, `search`, `git_read`, `list_files`).
+Từ W2, server chặn web qua `extraArgs: ["--disallowedTools", "WebFetch,WebSearch"]` trong `ccoding.local.json`.
+
+**Đổi server sau W1.** Nhánh đã gộp `main` trong lúc W1 chạy; theo yêu cầu chủ dự án, W1 chạy xong trên server `origin/main`, các cửa sổ sau dùng server dựng từ `perf/vs-claude-loop` và ghi vào `--out` mới (`run-plan.md` §6.4).
