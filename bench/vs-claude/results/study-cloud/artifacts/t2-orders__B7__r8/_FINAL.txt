@@ -1,0 +1,85 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t2-orders__B7__r8] Sửa 6 lỗi trong thư viện tính tiền giỏ hàng
+
+_Làn đơn: một agent làm trọn đề bài; báo cáo dựng tự động từ bàn giao và kết quả cổng chất lượng (không gọi model)._
+
+## Tóm tắt
+
+Làn đơn: Senior Software Engineer (@senior-swe) làm trọn đề bài trong worktree nhiệm vụ
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — [vs-claude t2-orders__B7__r8] Sửa 6 lỗi trong thư viện tính tiền giỏ hàng (@senior-swe, done)
+
+## Tóm tắt
+Đã sửa cả 6 lỗi trong ISSUES.md ở nguyên nhân gốc và thêm test hồi quy `test/regression.test.js`. `npm test` cho 14 test pass, 0 fail (baseline là 6 test). API công khai không đổi. Chưa có rủi ro nào còn mở ngoài các điểm ghi ở cuối.
+
+## Tệp đã tạo/sửa
+- `src/money.js`
+  - `toCents` đổi tiền sang xu bằng chữ số thập phân thay vì `amount*100`, nên `1.005` → 101 và `-1.005` → -101.
+  - `allocate` chia theo phần dư lớn nhất, cùng phần dư thì phần đứng trước được trước.
+- `src/checkout.js`
+  - Mã giảm cố định dùng `toCents(promo.amount)` thay vì `Math.round(amount*100)`.
+  - Thuế tính trên `l.net` thay vì `l.gross`.
+- `src/promotions.js`
+  - `endsAt` dạng `YYYY-MM-DD` được tính tới hết ngày UTC, tức là hết hạn từ 00:00 UTC ngày hôm sau.
+  - `freeUnits` đổi thành `floor(qty/(buy+free))*free`.
+- `src/cart.js`
+  - `updateQty` chỉ giữ chỗ phần chênh lệch và trả lại kho khi giảm số lượng.
+  - `removeItem` trả lại toàn bộ số lượng đang giữ.
+- `src/tax.js`: tính thuế bằng số nguyên (basis points) để tránh sai số dấu phẩy động.
+- `test/regression.test.js` (mới): 8 test, mỗi lỗi từ #1 đến #6 có ít nhất một test.
+
+## Kiểm chứng
+- `npm test` → exit 0 (suy ra từ `fail 0`; tôi không in mã thoát riêng). Kết quả: tests 14, pass 14, fail 0, skipped 0.
+- Tôi không chạy test hồi quy trên mã chưa sửa để xem nó đỏ trước, nên chưa có bằng chứng đỏ → xanh.
+- Không có typecheck hay lint trong `package.json`, nên chưa chạy.
+
+## Quyết định thiết kế
+- Lỗi 1 liên quan nhiều chỗ: giá sản phẩm, mã giảm cố định và `minSubtotal` đều đi qua `toCents`.
+- Lỗi 5 có hai nguyên nhân: `updateQty` giữ chỗ lại toàn bộ số lượng mới, và `removeItem` không trả kho.
+- Thuế vẫn làm tròn half up theo từng dòng.
+- `endsAt` có kèm giờ thì giữ nguyên so sánh như cũ; chỉ giá trị chỉ có ngày mới được cộng thêm 1 ngày.
+- Lần chạy đầu bị hook chặn vì đường dẫn `../src` trong heredoc. Tôi tách file test ra ghi bằng Write; các sửa đổi `src` đã áp dụng đúng một lần.
+
+## Rủi ro & việc còn mở
+- `allocate` với tổng âm trả về các phần âm theo cùng quy tắc. Đề bài không nói trường hợp này nên đó là giả định của tôi.
+- Mã giảm theo `percent` và `category` vẫn dùng `Math.round(x*percent/100)`. Với percent nguyên thì chính xác, còn percent lẻ thì chưa kiểm.
+
+Bản đầy đủ: `.ccoding/T-20261102-185210-870/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng (làn đơn): lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-185210-870` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **12 in / 8,548 out**, cache đọc 99.5k, 1 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 12 | 8548 | 99468 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude t2-orders__B7__r8] Sửa 6 lỗi trong thư viện tính tiền giỏ hàng (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 6 · # suites 0 · # pass 6 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 14 · # suites 0 · # pass 14 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **96** A | — | 100 | 87 | 100 | 1 | 1 | 108k | 1/6 |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._
