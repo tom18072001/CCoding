@@ -57,6 +57,9 @@ const DISCUSS: Record<string, string[]> = {
     'Bắt buộc chạy Data Protection Gate: phân loại dữ liệu, IAM/RBAC, mã hóa in-transit, log bất biến. Không đưa dữ liệu thật vào DEV/UAT.',
     'Mình sẽ xác định cấp độ ATTT tương xứng dự án rồi đối chiếu: xác thực cho quản trị, nhật ký truy xuất, sao lưu định kỳ.',
   ],
+  'business-analyst': ['Mình lập bảng gap hiện trạng → mục tiêu rồi viết story kèm tiêu chí nghiệm thu đo được để QA và CTO đối chiếu.'],
+  'tech-writer': ['Mình sẽ viết lại tài liệu cho người đọc đích: mỗi mục mở bằng đoạn văn, ký hiệu nội bộ chuyển xuống phụ lục.'],
+  'senior-swe': ['Phần tích hợp và xử lý lặp để mình nhận: viết test tái hiện trước rồi sửa, đảm bảo idempotent.'],
   'ba-presales': ['Mình viết user story và tiêu chí nghiệm thu để cả nhóm bám theo; đồng thời chuẩn bị phần thuyết minh nếu cần đưa vào hồ sơ đề xuất.'],
   'qa-tester': ['Mình sẽ review theo checklist: đúng yêu cầu, có test, xử lý lỗi, không lộ bí mật. Đề nghị mỗi hạng mục ghi rõ cách kiểm chứng.'],
   'research-lead': ['Câu hỏi nghiên cứu cần hẹp và đo được. Mình đề nghị chốt phạm vi tài liệu (5 năm gần đây) và tiêu chí đánh giá trước khi viết.'],
@@ -152,6 +155,20 @@ export class MockRuntime implements Runtime {
       }
       case 'synthesize':
         return this.final(brief, (h.subtasks as SubtaskHint[]) ?? [], String(h.departmentName ?? ''));
+      case 'accept': {
+        const subs = ((h.subtasks as SubtaskHint[]) ?? []).slice(0, 5);
+        // acceptRejectRate (thử nghiệm): tỉ lệ CTO không nghiệm thu — tiêu chí đầu "Không"
+        const rejectAll = rnd() < Number(this.cfg.acceptRejectRate ?? 0);
+        const criteria = subs.map((s, i) => ({ name: `${s.id} — ${s.title ?? 'hạng mục'} có sản phẩm và kiểm chứng`, result: rejectAll && i === 0 ? 'fail' : 'pass', evidence: `Báo cáo tổng hợp, mục ${s.id}` }));
+        if (!criteria.length) criteria.push({ name: 'Có báo cáo tổng hợp trả lời đúng đề bài', result: 'pass', evidence: 'Báo cáo tổng hợp' });
+        return `## Tóm tắt\nNghiệm thu: các tiêu chí rút từ đề bài đều đạt theo báo cáo tổng hợp và kết luận review.\n\n## Tiêu chí nghiệm thu\n| Tiêu chí | Kết quả | Bằng chứng |\n|---|---|---|\n${criteria
+          .map((c) => `| ${c.name} | ${c.result === 'pass' ? 'Đạt' : 'Không'} | ${c.evidence} |`)
+          .join('\n')}\n\n## Rủi ro & việc còn mở\n- Chưa kiểm thử với dữ liệu thật (mô phỏng).\n\n## Việc tiếp theo\n- Kiểm thử chấp nhận với người dùng.\n\n\`\`\`json\n${JSON.stringify(
+          { accepted: !rejectAll, summary: rejectAll ? 'Còn tiêu chí chưa đạt (mô phỏng).' : 'Các tiêu chí đều đạt (mô phỏng).', criteria, risks: ['Chưa kiểm thử với dữ liệu thật (mô phỏng).'], followUps: [{ title: 'Kiểm thử chấp nhận', brief: 'Chạy kiểm thử chấp nhận với người dùng theo các tiêu chí đã nghiệm thu.', department: 'dev' }] },
+          null,
+          2,
+        )}\n\`\`\``;
+      }
       default:
         return this.deliverable(req, h.subtask as SubtaskHint | undefined, brief, rnd);
     }

@@ -29,7 +29,7 @@ import {
 import type { Herdr } from './herdr.js';
 import { shipPush, shipStatus, ShipError, type ShipContext, type ShipStatus } from './ship.js';
 import type { LogStore } from './logger.js';
-import { assignStrayIssues, blockedSubtasks, keywordRoute, newSubtask, orderJoint, parsePlan, parseReview, parseRoute, readySubtasks } from './planner.js';
+import { assignStrayIssues, blockedSubtasks, keywordRoute, newSubtask, orderJoint, parseAcceptance, parsePlan, parseReview, parseRoute, readySubtasks } from './planner.js';
 import { historyText, selectHistory } from './history.js';
 import * as P from './prompts.js';
 import type { Registry } from './registry.js';
@@ -116,6 +116,7 @@ const STATUS_BY_PHASE: Record<Phase, AgentStatus> = {
   review: 'reviewing',
   revise: 'working',
   synthesize: 'thinking',
+  accept: 'reviewing',
 };
 
 const ACTIVITY_BY_PHASE: Record<Phase, string> = {
@@ -127,6 +128,7 @@ const ACTIVITY_BY_PHASE: Record<Phase, string> = {
   review: 'Review sản phẩm',
   revise: 'Sửa theo review',
   synthesize: 'Viết báo cáo tổng hợp',
+  accept: 'Nghiệm thu kết quả',
 };
 
 const WAIT_PHASE_LABEL: Partial<Record<Phase, string>> = { execute: 'thực thi', revise: 'sửa theo review', review: 'review' };
@@ -166,7 +168,8 @@ export interface ResumeOptions {
   /** Chạy lại các hạng mục đã xong (vd. để áp dụng thật vào repo sau khi có workspace): id hoặc "all". */
   rerun?: string[] | 'all';
   /** Làm lại từ pha review (review → sửa → tổng hợp) hoặc chỉ báo cáo tổng hợp. */
-  from?: 'review' | 'synthesize';
+  /** accept: chỉ chạy lại bước CTO nghiệm thu (báo cáo giữ nguyên). */
+  from?: 'review' | 'synthesize' | 'accept';
   /** Tự tiếp tục theo hẹn (không phải người bấm) — giữ bộ đếm "không còn runtime". */
   auto?: boolean;
 }
@@ -284,6 +287,7 @@ export class Orchestrator {
       projectId: project?.id,
       agentId: mode === 'agent' ? input.agentId : undefined,
       followUpOf: prev?.id,
+      routineId: input.routineId,
       // tiếp nối: không hạ nhãn dữ liệu so với nhiệm vụ trước
       classification: maxClass((project?.classification ?? config.dataProtection.defaultClassification) as Classification, prev?.classification),
       status: 'queued',
@@ -300,6 +304,8 @@ export class Orchestrator {
         subtaskBudgetTokens: o.subtaskBudgetTokens && o.subtaskBudgetTokens > 0 ? Math.floor(o.subtaskBudgetTokens) : undefined,
         ...variantOptions(o),
         planApproval: (o.planApproval ?? project?.planApproval ?? config.defaults.planApproval) ? true : undefined,
+        // "false" dạng chuỗi (form/CLI) cũng là tắt
+        acceptance: ![o.acceptance ?? config.defaults.acceptance ?? true].some((v) => v === false || String(v) === 'false'),
       },
       after: extra.after?.length ? extra.after : undefined,
       splitFrom: extra.splitFrom,
@@ -338,6 +344,8 @@ export class Orchestrator {
       writeText(path.join(inputsDir, 'BRIEF.md'), task.brief);
     }
     extra.prepareInputs?.(inputsDir, task);
+    // cấp số thứ tự sau mọi bước có thể báo lỗi (tệp đính kèm…) để giao việc lỗi không làm nhảy số
+    task.seq = store.nextSeq();
     store.put(task, true);
     this.d.logs.write({
       level: 'info',
@@ -345,7 +353,7 @@ export class Orchestrator {
       msg: `Nhận nhiệm vụ: ${task.title}`,
       taskId: task.id,
       projectId: task.projectId,
-      data: { mode, department: input.department, budgetTokens: task.options.budgetTokens, budgetMode, attachments: task.attachments?.map((a) => ({ name: a.name, kind: a.kind, chars: a.chars })) },
+      data: { mode, department: input.department, budgetTokens: task.options.budgetTokens, budgetMode, attachments: task.attachments?.map((a) => ({ name: a.name, kind: a.kind, chars: a.chars })), routineId: input.routineId, routineManual: input.routineId ? !!input.routineManual : undefined },
     });
     this.emitTask(task);
     this.queue.push(task.id);
@@ -441,7 +449,7 @@ export class Orchestrator {
           r.finalPath = undefined;
         }
       }
-      if (o.from && r.subtasks.length) {
+      if (o.from && o.from !== 'accept' && r.subtasks.length) {
         const back: RunStage = o.from === 'review' ? 'executed' : 'reviewed';
         r.stage ??= inferStage(r);
         if (!r.stage || STAGES.indexOf(r.stage) > STAGES.indexOf(back)) r.stage = back;
@@ -460,6 +468,12 @@ export class Orchestrator {
           s.status = 'pending';
           s.error = undefined;
         }
+    }
+    if (o.from === 'accept') {
+      // nghiệm thu lại (lần trước lỗi, hết ngân sách, không đọc được kết luận…) — báo cáo không viết lại
+      t.acceptance = undefined;
+      if (t.attention?.reason === 'acceptance') t.attention = undefined;
+      logs.write({ level: 'info', kind: 'task.rerun', msg: `${t.id}: làm lại bước CTO nghiệm thu`, taskId: t.id });
     }
     const prev = t.pause?.reason ?? t.status;
     // tiếp tục khi đang chờ duyệt kế hoạch = duyệt (bấm Tiếp tục) hoặc tự duyệt khi hết thời gian chờ
@@ -480,7 +494,7 @@ export class Orchestrator {
     t.attention = undefined;
     t.finishedAt = undefined;
     t.resumes = (t.resumes ?? 0) + 1;
-    logs.write({ level: 'info', kind: 'task.resumed', msg: `Tiếp tục ${t.id} từ checkpoint (trước đó: ${prev}) — ngân sách ${fmtNum(t.options.budgetTokens)} · ${t.options.budgetMode === 'complete' ? 'chạy tới khi hoàn thành' : 'dừng khi chạm trần'}`, taskId: t.id, projectId: t.projectId });
+    logs.write({ level: 'info', kind: 'task.resumed', msg: `Tiếp tục ${t.id} từ checkpoint (trước đó: ${prev}) — ngân sách ${fmtNum(t.options.budgetTokens)} · ${t.options.budgetMode === 'complete' ? 'chạy tới khi hoàn thành' : 'dừng khi chạm trần'}`, taskId: t.id, projectId: t.projectId, data: { auto: !!o.auto } });
     this.message(t, 'office', 'system', 'system', `▶ Tiếp tục nhiệm vụ từ checkpoint (lần ${t.resumes}) — các phần đã xong được giữ nguyên.`);
     this.save(t, true);
     this.queue.push(t.id);
@@ -936,10 +950,13 @@ export class Orchestrator {
         logs.write({ level: 'warn', kind: 'task.failed', msg: `${task.id}: ${task.error}`, taskId: task.id, projectId: task.projectId, data: { usage: task.usage } });
         this.alert({ level: 'warn', kind: 'task.unfinished', title: 'Nhiệm vụ chưa xong hết', msg: `${task.title}: ${task.error}`, taskId: task.id });
       } else {
+        // CTO nghiệm thu (tạm dừng/hủy giữa chừng thì ném lên như mọi lượt gọi khác)
+        await this.accept(task, project);
+        task.phase = undefined;
         task.status = 'done';
         logs.write({ level: 'info', kind: 'task.done', msg: `Hoàn thành ${task.id} — ${fmtNum(totalTokens(task.usage))} token${task.attention ? ` · cần xem: ${task.attention.detail}` : ''}`, taskId: task.id, projectId: task.projectId, data: { usage: task.usage } });
         if (task.attention)
-          this.alert({ level: 'warn', kind: 'task.attention', title: task.attention.reason === 'review' ? 'Xong nhưng review chưa duyệt' : 'Xong nhưng lệnh kiểm tra còn lỗi', msg: `${task.title}: ${task.attention.detail} — xem báo cáo, "Làm lại từ review" hoặc tách việc còn lại`, taskId: task.id });
+          this.alert({ level: 'warn', kind: 'task.attention', title: task.attention.reason === 'review' ? 'Xong nhưng review chưa duyệt' : task.attention.reason === 'acceptance' ? 'Xong nhưng CTO chưa nghiệm thu' : 'Xong nhưng lệnh kiểm tra còn lỗi', msg: `${task.title}: ${task.attention.detail} — xem báo cáo, "Làm lại từ review" hoặc tách việc còn lại`, taskId: task.id });
         void this.d.herdr?.notify(`CCoding: xong ${task.id}${task.attention ? ' (cần xem)' : ''}`, task.title);
       }
     } catch (e) {
@@ -990,6 +1007,69 @@ export class Orchestrator {
       for (const [id, h] of this.holds) if (h.taskId === task.id) this.holds.delete(id);
       this.save(task, true);
     }
+  }
+
+  /**
+   * Pha nghiệm thu (UX-4c): sau khi mọi phòng tổng hợp xong, CTO đối chiếu đề bài với báo cáo, kết luận review và lệnh kiểm tra,
+   * kết luận từng tiêu chí. Chưa đạt → "cần xem" (hộp Cần bạn). Báo cáo không đổi (cùng dấu vân tay) thì không nghiệm thu lại.
+   * Lỗi gọi model không làm hỏng nhiệm vụ (ghi nhận và bỏ qua); tạm dừng/hủy thì ném lên như mọi lượt gọi.
+   */
+  private async accept(task: Task, project?: ProjectDef): Promise<void> {
+    const { registry, store, logs } = this.d;
+    const cto = registry.cto();
+    if (!cto || task.mode === 'agent' || task.options.acceptance === false || !task.runs.length) return;
+    const sig = task.runs.map((r) => `${r.department}:${r.finishedAt ?? ''}:${r.finalPath ?? ''}`).join('|');
+    if (task.acceptance?.sig === sig) return;
+    // báo cáo đã viết lại → kết luận nghiệm thu cũ hết hiệu lực
+    if (task.attention?.reason === 'acceptance') task.attention = undefined;
+    task.phase = 'accept';
+    this.save(task);
+    // mốc pha cho dòng thời gian (khép pha tổng hợp của phòng cuối)
+    logs.write({ level: 'info', kind: 'phase', msg: `CTO: ${ACTIVITY_BY_PHASE.accept}`, taskId: task.id, department: 'office', agentId: cto.id, phase: 'accept' });
+    const items: P.AcceptInput[] = task.runs.map((r) => ({
+      department: registry.departments.get(r.department)?.name ?? r.department,
+      final: r.finalPath ? (store.readRunFile(task.id, r.finalPath) ?? '') : '',
+      review: r.review ? `${r.review.approved ? 'Đã duyệt' : 'Chưa duyệt'} — ${r.review.summary}${r.review.issues.length ? ` (${r.review.issues.length} góp ý)` : ''}` : undefined,
+    }));
+    const base = { by: cto.id, at: nowIso(), sig, criteria: [], risks: [], followUps: [] };
+    let text = '';
+    try {
+      const res = await this.call(cto, 'accept', (tools) => P.acceptPrompt(task, items, { changes: task.changes, tools, projectName: project?.name }), {
+        task,
+        project,
+        cwd: task.workspace ?? this.workspaceFor(task, project),
+        activity: ACTIVITY_BY_PHASE.accept,
+        hints: { brief: task.brief, subtasks: task.runs.flatMap((r) => r.subtasks.map(stHint)) },
+      });
+      if (!res.text) throw new Error(res.error || 'không có nội dung');
+      text = res.text;
+    } catch (e) {
+      // chạm trần ngân sách (chế độ "tạm dừng") ở bước nghiệm thu: báo cáo đã xong — giao kết quả, ghi chưa nghiệm thu thay vì tạm dừng cả nhiệm vụ
+      const budget = e instanceof PauseSignal && e.reason === 'budget';
+      if (!budget && (e instanceof PauseSignal || e instanceof CancelledError)) throw e;
+      const msg = budget ? 'hết ngân sách nhiệm vụ — tăng ngân sách rồi bấm "↻ Nghiệm thu lại"' : (e as Error).message.slice(0, 300);
+      task.acceptance = { ...base, accepted: false, parsed: false, summary: '', error: msg };
+      logs.write({ level: 'warn', kind: 'accept.error', msg: `${task.id}: CTO chưa nghiệm thu được — ${msg}`, taskId: task.id, projectId: task.projectId, agentId: cto.id });
+      this.message(task, 'office', 'system', 'system', `⚠️ CTO chưa nghiệm thu được (${msg}) — kết quả vẫn được giao; xem báo cáo và tự đối chiếu.`);
+      this.save(task);
+      return;
+    }
+    const r = parseAcceptance(text);
+    // phần hiển thị: bỏ đúng khối JSON kết luận (khối cuối có accepted/criteria), giữ JSON CTO trích dẫn làm bằng chứng
+    const body = r.body || text.trim();
+    const rel = 'ACCEPTANCE.md';
+    writeText(path.join(store.runDir(task.id), rel), `${body}\n`);
+    task.acceptance = { ...base, accepted: r.accepted, parsed: r.parsed, summary: r.summary || extractSummary(body, 240), criteria: r.criteria, risks: r.risks, followUps: r.followUps, path: rel };
+    const fails = r.criteria.filter((c) => c.result !== 'pass').length;
+    logs.write({ level: r.accepted ? 'info' : 'warn', kind: 'accept.done', msg: `${task.id}: CTO ${r.accepted ? 'nghiệm thu' : r.parsed ? `chưa nghiệm thu (${fails}/${r.criteria.length} tiêu chí chưa đạt)` : 'không ghi kết luận đọc được'}`, taskId: task.id, projectId: task.projectId, agentId: cto.id, data: { accepted: r.accepted, parsed: r.parsed, criteria: r.criteria.length, fails } });
+    this.message(task, 'office', cto.id, 'acceptance', body);
+    const why = `CTO chưa nghiệm thu: ${fails ? `${fails}/${r.criteria.length} tiêu chí chưa đạt hoặc chưa kiểm được` : 'chưa có tiêu chí đạt'}`;
+    if (r.parsed && !r.accepted) {
+      if (!task.attention) task.attention = { reason: 'acceptance', detail: why, at: nowIso() };
+      // đã "cần xem" vì review/lệnh kiểm tra → ghi thêm kết luận của CTO để cảnh báo và hộp Cần bạn nói đủ
+      else if (!task.attention.detail.includes('CTO chưa nghiệm thu')) task.attention.detail = `${task.attention.detail} · ${why}`;
+    }
+    this.save(task);
   }
 
   private async route(task: Task, project?: ProjectDef): Promise<string[]> {
@@ -2103,7 +2183,7 @@ export class Orchestrator {
       }
       st.error = error;
       if (c) st.handover = P.mergeConflictNote(c.branch, c.files, true, st.output ? `.ccoding/${safeName(task.id)}/${st.output}` : undefined);
-      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: ${error}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: ${error}`, taskId: task.id, projectId: task.projectId, department: run.department, subtaskId: st.id });
       this.message(task, run.department, 'system', 'system', `⚠️ ${st.id}: ${error}`, { subtaskId: st.id });
     };
     try {
@@ -2131,7 +2211,7 @@ export class Orchestrator {
         }
       }
     } catch (e) {
-      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: lỗi khi kiểm tra merge: ${(e as Error).message}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: lỗi khi kiểm tra merge: ${(e as Error).message}`, taskId: task.id, projectId: task.projectId, department: run.department, subtaskId: st.id });
     }
     this.save(task);
   }
@@ -2184,7 +2264,7 @@ export class Orchestrator {
     if (c && !st.mainOnly) {
       const m = mergeStart(wtPath, c.branch, `CCoding ${task.id}: gộp lại ${c.branch} (${st.id})`.slice(0, 200));
       if (!m.ok && !m.conflicts.length) {
-        logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: không gộp sẵn được ${c.branch} vào worktree con (${m.out.slice(0, 200)}) — làm lại trong worktree chính`, taskId: task.id, projectId: project.id, subtaskId: st.id });
+        logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: không gộp sẵn được ${c.branch} vào worktree con (${m.out.slice(0, 200)}) — làm lại trong worktree chính`, taskId: task.id, projectId: project.id, department: run.department, subtaskId: st.id });
         removeWorktree(main, wtPath);
         if (git(main, ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`], 15_000).ok) git(main, ['branch', '-D', branch], 30_000);
         st.worktree = undefined;
@@ -2198,7 +2278,7 @@ export class Orchestrator {
       st.handover = m.conflicts.length
         ? `${P.mergeResolveNote(c.branch, m.conflicts, !!c.done, st.output ? `.ccoding/${safeName(task.id)}/${st.output}` : undefined)}${c.handover ? `\n\n${c.handover}` : ''}`.slice(0, 12_000)
         : c.handover;
-      logs.write({ level: 'info', kind: 'workspace.merge', msg: `${st.id}: gộp sẵn ${c.branch} vào worktree con mới — ${m.conflicts.length ? `xung đột ở ${m.conflicts.join(', ')}` : 'không còn xung đột'}`, taskId: task.id, projectId: project.id, subtaskId: st.id });
+      logs.write({ level: 'info', kind: 'workspace.merge', msg: `${st.id}: gộp sẵn ${c.branch} vào worktree con mới — ${m.conflicts.length ? `xung đột ở ${m.conflicts.join(', ')}` : 'không còn xung đột'}`, taskId: task.id, projectId: project.id, department: run.department, subtaskId: st.id });
       if (m.conflicts.length)
         this.message(task, run.department, 'system', 'system', `🧩 ${st.id} (@${st.assignee}) giải quyết xung đột trong worktree con mới \`${wtPath}\`: CCoding đã gộp sẵn nhánh \`${c.branch}\`, xung đột ở ${m.conflicts.slice(0, 8).map((f) => `\`${f}\``).join(', ')} — các hạng mục khác vẫn tách/gộp bình thường.`, { subtaskId: st.id });
     }
@@ -2221,7 +2301,7 @@ export class Orchestrator {
     }
     wt.setup = results.every((r) => r.ok);
     this.save(task);
-    this.d.logs.write({ level: wt.setup ? 'info' : 'warn', kind: 'checks.setup', msg: `${st.id} worktree con: ${results.map((r) => `${r.command} → ${r.denied ? 'bị chặn' : r.timedOut ? 'timeout' : r.code} (${Math.round(r.ms / 1000)} s)`).join('; ')}`, taskId: task.id, projectId: project.id, subtaskId: st.id });
+    this.d.logs.write({ level: wt.setup ? 'info' : 'warn', kind: 'checks.setup', msg: `${st.id} worktree con: ${results.map((r) => `${r.command} → ${r.denied ? 'bị chặn' : r.timedOut ? 'timeout' : r.code} (${Math.round(r.ms / 1000)} s)`).join('; ')}`, taskId: task.id, projectId: project.id, department: run.department, subtaskId: st.id, data: { results: results.map((r) => ({ command: r.command, ok: r.ok, ms: r.ms })) } });
     if (!wt.setup) this.message(task, run.department, 'system', 'system', `🔧 Lệnh chuẩn bị trong worktree con của ${st.id} lỗi:\n${results.filter((r) => !r.ok).map((r) => `- \`${r.command}\` ✗ ${r.summary}`).join('\n')}`, { subtaskId: st.id });
   }
 
@@ -2245,7 +2325,7 @@ export class Orchestrator {
         st.mergePending = true;
       }
       st.error = `${why} — giữ worktree con \`${wt.path}\`, bấm Tiếp tục để CCoding gộp lại`;
-      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: ${why}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: ${why}`, taskId: task.id, projectId: task.projectId, department: run.department, subtaskId: st.id });
       this.message(task, run.department, 'system', 'system', `⚠️ ${st.id}: ${st.error}.`, { subtaskId: st.id });
       this.save(task);
     };
@@ -2270,7 +2350,7 @@ export class Orchestrator {
         st.finishedAt = nowIso();
       }
       st.error = `${why} — giữ nhánh \`${wt.resolve}\`; bấm Tiếp tục để giải quyết lại trong worktree con mới`;
-      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: ${why}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: ${why}`, taskId: task.id, projectId: task.projectId, department: run.department, subtaskId: st.id });
       this.message(task, run.department, 'system', 'system', `⚠️ ${st.id}: ${st.error}.`, { subtaskId: st.id });
       this.save(task);
     };
@@ -2286,7 +2366,7 @@ export class Orchestrator {
           if (marked.length) {
             if (wt.resolve) return unresolved(`còn dấu xung đột chưa giải quyết ở ${marked.slice(0, 8).join(', ')}`);
             git(wt.path, ['merge', '--abort'], 60_000);
-            logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: merge dở còn dấu xung đột trong worktree con — đã hủy merge`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+            logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: merge dở còn dấu xung đột trong worktree con — đã hủy merge`, taskId: task.id, projectId: task.projectId, department: run.department, subtaskId: st.id });
           } else {
             const r = completeMerge(wt.path, `CCoding ${task.id}: ${wt.resolve ? `gộp lại ${wt.resolve}` : 'hoàn tất merge'} (${st.id})`.slice(0, 200));
             if (!r.ok) {
@@ -2342,7 +2422,7 @@ export class Orchestrator {
             ? `${P.mergeConflictNote(keep, m.conflicts, done, st.output ? `.ccoding/${safeName(task.id)}/${st.output}` : undefined)}${partial ? `\n\n${partial}` : ''}`.slice(0, 12_000)
             : undefined;
           const files = m.conflicts.length ? m.conflicts.slice(0, 8).map((f) => `\`${f}\``).join(', ') : m.out.slice(0, 200);
-          logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: gộp ${wt.branch} vào ${task.branch} bị xung đột (lần ${round}): ${m.conflicts.join(', ') || m.out.slice(0, 300)}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+          logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: gộp ${wt.branch} vào ${task.branch} bị xung đột (lần ${round}): ${m.conflicts.join(', ') || m.out.slice(0, 300)}`, taskId: task.id, projectId: task.projectId, department: run.department, subtaskId: st.id });
           const how = fallback
             ? `làm lại LẦN LƯỢT trong worktree chính (xung đột lần ${round}): @${st.assignee} tự \`git merge ${keep}\` rồi giải quyết xung đột`
             : `giải quyết trong worktree con MỚI tách từ nhánh nhiệm vụ mới nhất — CCoding gộp sẵn nhánh \`${keep}\`, @${st.assignee} chỉ sửa dấu xung đột; các hạng mục khác vẫn chạy/gộp bình thường`;
@@ -2356,7 +2436,7 @@ export class Orchestrator {
           return;
         }
         this.message(task, run.department, 'system', 'system', `🔀 Đã gộp ${st.id} (${ahead} commit, nhánh \`${wt.branch}\`) vào \`${task.branch}\`.`, { subtaskId: st.id });
-        logs.write({ level: 'info', kind: 'workspace.merge', msg: `${st.id}: gộp ${wt.branch} vào ${task.branch}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+        logs.write({ level: 'info', kind: 'workspace.merge', msg: `${st.id}: gộp ${wt.branch} vào ${task.branch}`, taskId: task.id, projectId: task.projectId, department: run.department, subtaskId: st.id });
       }
       if (valid && !removeWorktree(main, wt.path)) logs.write({ level: 'warn', kind: 'workspace.worktree', msg: `${st.id}: chưa gỡ hết thư mục worktree con ${wt.path} (tệp đang bị khóa?)`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
       // chỉ xóa nhánh tạm của CCoding và chỉ khi mọi commit của nó đã nằm trong nhánh nhiệm vụ
@@ -2382,7 +2462,7 @@ export class Orchestrator {
       }
       this.save(task);
     } catch (e) {
-      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: lỗi khi gộp worktree con: ${(e as Error).message}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: lỗi khi gộp worktree con: ${(e as Error).message}`, taskId: task.id, projectId: task.projectId, department: run.department, subtaskId: st.id });
     }
   }
 
@@ -2519,6 +2599,7 @@ export class Orchestrator {
         this.message(task, dept, 'system', 'system', `🔧 Tệp khai báo phụ thuộc đã đổi sau lần chuẩn bị (${changed.slice(0, 6).map((f) => `\`${f}\``).join(', ')}) — chạy lại lệnh chuẩn bị trước khi kiểm tra.`);
       }
     }
+    let setupMs = 0;
     if (!pc.setupDone && project.setupCommands?.length) {
       pc.setup = [];
       for (const cmd of project.setupCommands) {
@@ -2526,6 +2607,7 @@ export class Orchestrator {
         pc.setup.push(await runCheckCommand(cmd, cwd, opts));
       }
       pc.setupDone = pc.setup.every((r) => r.ok);
+      setupMs = pc.setup.reduce((n, r) => n + (r.ms || 0), 0);
       // sau lệnh chuẩn bị (npm install có thể sửa lockfile) — mốc so sánh cho lần kiểm tra sau
       pc.setupManifests = manifestFingerprint(cwd);
       this.message(task, dept, 'system', 'system', `🔧 Lệnh chuẩn bị của dự án:\n${pc.setup.map((r) => `- \`${r.command}\` ${mark(r)} ${r.summary}`).join('\n')}`);
@@ -2553,7 +2635,7 @@ export class Orchestrator {
       taskId: task.id,
       projectId: project.id,
       department: dept,
-      data: { when, results: results.map((r) => ({ command: r.command, code: r.code, ok: r.ok, ms: r.ms, summary: r.summary, denied: r.denied })) },
+      data: { when, setupMs: setupMs || undefined, results: results.map((r) => ({ command: r.command, code: r.code, ok: r.ok, ms: r.ms, summary: r.summary, denied: r.denied })) },
     });
     const regressed = when === 'baseline' ? [] : this.checkRegressions(task);
     if (regressed.length) this.alert({ level: 'warn', kind: 'checks.regression', title: 'Lệnh kiểm tra hỏng sau khi sửa', msg: `${task.title}: ${regressed.join(', ')} đạt trước khi sửa nhưng lỗi sau khi sửa`, taskId: task.id });
@@ -3173,7 +3255,7 @@ export function cliTools(agentTools: string[], access: ToolAccess, phase: Phase,
   return list;
 }
 
-const VARIANT_PHASES = new Set(['route', 'plan', 'discuss', 'finalize', 'execute', 'review', 'revise', 'synthesize']);
+const VARIANT_PHASES = new Set(['route', 'plan', 'discuss', 'finalize', 'execute', 'review', 'revise', 'synthesize', 'accept']);
 
 /** Tùy chọn biến thể (benchtest) hợp lệ từ yêu cầu giao việc — chỉ nhận đúng kiểu, bỏ phần lạ. */
 export function variantOptions(o: Partial<TaskOptions>): Partial<TaskOptions> {

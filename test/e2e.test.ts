@@ -101,7 +101,8 @@ test('ngân sách: chế độ "pause" tạm dừng khi chạm trần, tiếp t�
     const r4 = await app.orchestrator.waitFor(t.id);
     assert.equal(r4.status, 'done');
     assert.equal(app.usage.all({ task: t.id }).filter((x) => x.phase === 'execute').length, execBefore);
-    assert.ok(app.usage.all({ task: t.id }).slice(-1)[0].phase === 'synthesize');
+    // báo cáo viết lại → CTO nghiệm thu lại (lượt cuối)
+    assert.deepEqual(app.usage.all({ task: t.id }).slice(-2).map((x) => x.phase), ['synthesize', 'accept']);
 
     // nhiệm vụ "xong" nhưng còn hạng mục lỗi → tiếp tục sẽ chạy lại hạng mục đó rồi review/tổng hợp lại
     const fs0 = app.store.get(t.id)!;
@@ -141,7 +142,7 @@ test('server khởi động lại giữa chừng → nhiệm vụ chuyển "tạ
     const done = await again.orchestrator.waitFor(t.id);
     assert.equal(done.status, 'done');
     const phases = again.usage.all({ task: t.id }).slice(calls).map((r) => r.phase);
-    assert.deepEqual([...new Set(phases)], ['synthesize'], 'chỉ chạy phần còn thiếu');
+    assert.deepEqual([...new Set(phases)], ['synthesize', 'accept'], 'chỉ chạy phần còn thiếu (báo cáo viết lại thì nghiệm thu lại)');
   } finally {
     app.cleanup();
   }
@@ -160,7 +161,7 @@ test('API: trạng thái, chống CSRF/DNS rebinding, giao việc', async () => 
   const base = `http://127.0.0.1:${port}`;
   try {
     const st = await (await fetch(`${base}/api/state`)).json();
-    assert.equal(st.agents.length, 16);
+    assert.equal(st.agents.length, 20);
     assert.equal((await fetch(`${base}/api/tasks`, { method: 'POST', body: '{"brief":"x"}' })).status, 415);
     assert.equal((await fetch(`${base}/api/tasks`, { method: 'POST', headers: { 'content-type': 'application/json', origin: 'http://evil.example' }, body: '{"brief":"x"}' })).status, 403);
     const res = await fetch(`${base}/api/tasks`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ brief: 'Viết tổng quan tài liệu', mode: 'department', department: 'research' }) });

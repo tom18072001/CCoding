@@ -5,15 +5,16 @@ Compares CCoding's multi-agent office with a single Claude agent on the same bri
 ## Layout
 
 ```
-arms.json          systems under test (A0-opus, A0-sonnet, A1, A2, B0-B5, oracle, null)
+arms.json          systems under test (A0-opus, A0-sonnet, A1, A2, B0-B7, oracle, null)
 run.mjs            runs arms × tasks × repeats (interleaved, resumable), grades, snapshots deliverables
 analyze.mjs        hypotheses H1–H10, per-category scores, cost-quality frontier -> report.md, summary.csv, pareto.csv
 pairwise.mjs       blinded pairwise LLM judge (both orders) for design / requirements / research deliverables
+lib/queue.mjs      lượt đã xong, lane được hỗ trợ, kiểm arm trước khi chạy (hàm thuần, có test)
 lib/               claude.mjs (single-agent arm) · ccoding.mjs (REST arm) · grade.mjs · judge.mjs
 tasks/<id>/        task.json (brief, category, size, grader) · repo/ (starting workspace) · hidden/ (tests, answers, references — never copied)
 ```
 
-## Tasks (13)
+## Tasks (13 + t1–t5)
 
 | Id | Category | Parts | Grader |
 | --- | --- | --- | --- |
@@ -31,6 +32,16 @@ tasks/<id>/        task.json (brief, category, size, grader) · repo/ (starting 
 | r1-elk-design | design | 4 | 8-item checklist (regex or `--judge`), license trap |
 | re1-lit-synthesis | research | 3 | answers, citation validity, correct refusal |
 
+### Bài t1–t5 (từ harness cũ) và `repoDir`/`solutionDir`
+
+`tasks/t1-duration` … `t5-logq` giữ nguyên cấu trúc cũ (`starter/`, `prompt.txt`, `hidden/`, `ref/`) và có thêm `task.json` (`category: "coding"`, `size` + `sizeReason`, `brief` lấy từ `prompt.txt`, grader dùng `hidden/` có sẵn). Hai trường tùy chọn cho phép runner dùng thư mục không theo quy ước mới:
+
+- `repoDir`: workspace khởi đầu (mặc định `repo/`; t1–t5 dùng `"starter"`). Thiếu thư mục thì runner tạo workspace rỗng, không lỗi ENOENT.
+- `nullMax` (tùy chọn): ngưỡng null riêng của bài khi tự kiểm, mặc định 0,25; chỉ dùng cho ngoại lệ có `nullMaxReason` (hiện chỉ t2-orders).
+- `solutionDir`: lời giải cho arm `oracle` (t1–t5 dùng `"ref"`), chép đè lên workspace trước khi chấm.
+
+Grader code chép mọi tệp cấp 1 của `hidden/` (helper như `_helpers.js`) nhưng chỉ chạy `*.test.js`.
+
 ## Run
 
 ```bash
@@ -44,18 +55,48 @@ node dist/cli.js serve
 node bench/vs-claude/run.mjs --arms A0-sonnet,B0 --repeats 1 --out bench/vs-claude/results/pilot
 
 # 3. Full study (resumable — re-run the same command after an interruption)
-node bench/vs-claude/run.mjs --arms A0-opus,A0-sonnet,A1,A2,B0,B1,B2 --repeats 3 --judge --out bench/vs-claude/results/full
+node bench/vs-claude/run.mjs --arms A0-opus,A0-sonnet,A1,A2,B0,B1,B2,B6 --repeats 3 --judge --out bench/vs-claude/results/full
 
 # 4. Analyse
 node bench/vs-claude/analyze.mjs bench/vs-claude/results/full --baseline A0-sonnet --treatment B0
 node bench/vs-claude/pairwise.mjs bench/vs-claude/results/full --x A0-opus --y B0
 ```
 
-Options: `--tasks all|<id>,<prefix>,<category>` · `--repeats N` · `--timeout <min>` · `--runtime claude-cli` · `--ccoding-url` · `--ccoding-data <CCoding data dir>` (for `calls.jsonl` token detail; default `../../data`) · `--judge --judge-model opus` · `--claude-bin <path>` · `--work <dir>` (workspaces; default OS temp) · `--dry-run`.
+Options: `--tasks all|<id>,<prefix>,<category>` · `--repeats N` · `--timeout <min>` · `--runtime claude-cli` · `--ccoding-url` · `--ccoding-data <CCoding data dir>` (for `calls.jsonl` token detail; default `../../data`) · `--judge --judge-model opus` · `--claude-bin <path>` · `--work <dir>` (workspaces; default OS temp) · `--dry-run`. Test đơn vị: `node --test "bench/vs-claude/test/*.test.mjs"` (Node 24 không nhận tên thư mục).
+
+## Arm B6 và B7
+
+- **B6** — CCoding làn nhanh (`options.lane: "fast"`).
+- **B7** — CCoding làn đơn (`options.lane: "single"`), **chờ B-01** (`docs/research/improvement-backlog.md`). Trước khi gửi task, runner đọc union `lane` trong `src/types.ts` (hoặc `dist/types.d.ts`). Nếu chưa có `'single'`, runner thoát mã 2 với "Arm B7 cần lane 'single' (B-01) — CCoding hiện chưa hỗ trợ" và không chạy sang làn khác. `--dry-run` vẫn liệt kê lượt B7.
+
+## Hạn mức tài khoản và chạy tiếp
+
+Nếu một lượt gặp hạn mức (HTTP 429 `usage_limit_reached`, "You've hit your 5-hour limit · resets 4:50pm"), runner:
+
+1. ghi dòng `status: "infra"`, `infra: "rate-limit"`, `resetsAt` (chuỗi thô từ thông báo, không đổi múi giờ) vào `runs.jsonl`, không chấm điểm;
+2. in giờ mở lại;
+3. dừng hàng đợi, **mã thoát 3**.
+
+Lỗi hạ tầng khác (`infra: "error"`: không spawn được `claude`, không gửi được task, mất kết nối server) cũng ghi dòng infra nhưng hàng đợi đi tiếp. Dòng infra không tính là xong: chạy lại **đúng lệnh cũ** sau giờ mở lại thì các lượt đó được chạy lại. `analyze.mjs` loại các dòng infra và in số dòng đã loại. Chữ "rate limit" đứng một mình (trong mã/log của agent) không bị coi là hạn mức; cần tín hiệu mạnh (429, `usage_limit_reached`, "hit your … limit").
+
+## So cờ `claude`: arm A0, harness cũ, CCoding
+
+| Cờ | lib/claude.mjs | harness cũ | CCoding (`claude-cli.ts`) | Quyết định | Lý do |
+|---|---|---|---|---|---|
+| `--strict-mcp-config` | có | có | có, trừ khi `userSettings` | giữ | khớp |
+| `--setting-sources` | không có (trước) | `project,local` | `project,local` | thêm `project,local` | không nạp MCP, hook, cài đặt cấp người dùng; trước đây A0 khác điều kiện |
+| `--no-session-persistence` | có | có | có | giữ | khớp |
+| `--permission-mode` | `acceptEdits` | `acceptEdits` | `acceptEdits` (`cfg.permissionMode`) | giữ | khớp |
+| model | `--model <model>` | `--model <model>` | `--model` theo ánh xạ model của runtime | giữ | do arm truyền vào |
+| công cụ cho phép | `--allowedTools Read,Write,Edit,Bash,Grep,Glob` | `Bash,Read,Edit,Write,Grep,Glob,TodoWrite,Task,Agent,NotebookEdit` | `--tools` theo vai trò, cộng `--allowedTools` | giữ khác (cố ý) | A0 là "một agent làm việc"; `Task` bị cấm để không sinh sub-agent. Harness cũ cho phép `Task` và `Agent` vì đo baseline mạnh. |
+| `--disallowedTools` | `WebFetch,WebSearch,Task` | không có | không có (`--tools` đã giới hạn) | giữ khác (cố ý) | tắt web, giữ A0 đơn thuần |
+| `--settings` hook `claude-guard` | không có | không có | có | giữ khác (cố ý) | chính sách riêng của CCoding, thuộc điều kiện của arm B |
+
+`--allowedTools` chỉ cấp quyền chạy không hỏi, không giới hạn công cụ có sẵn: `TodoWrite` và `NotebookEdit` vẫn dùng được trong A0, còn CCoding dùng `--tools` để giới hạn thật. Chưa đổi sang `--tools` vì sẽ lệch định nghĩa của giám đốc; để Phòng Nghiên cứu quyết.
 
 ## Verified
 
-- 2026-11-02: grader self-test - oracle 1.00 on all 13 tasks, null 0-0.22 (`results/selftest/`).
+- 2026-11-02: grader self-test - oracle 1.00 on all 18 tasks, null ≤ 0.25 on 17; ngoại lệ có chủ đích **t2-orders** null = 0.533 (`results/selftest/`). Test ẩn cũ của t2 cũng chấm hành vi `starter/` đã đúng; không sửa `hidden/` vì harness cũ còn dùng. `task.json` của t2 khai `nullMax: 0.6` kèm `nullMaxReason`. Khi so arm trên t2, trừ/đối chiếu điểm nền 0.533; kết quả t2 không nên đọc riêng lẻ.
 - 2026-11-02: CCoding arm end-to-end against `node dist/cli.js serve` with `--runtime mock` (B0 and B5): project registration, task submission, polling, FINAL.md, calls.jsonl token accounting and phase breakdown (route ... accept) all work. Single-Claude arms tested with a stub `claude` binary.
 
 ## Fairness rules
@@ -75,5 +116,5 @@ Options: `--tasks all|<id>,<prefix>,<category>` · `--repeats N` · `--timeout <
 ## Older harness on this branch (`harness/`, tasks t1–t5, rounds C1–C9)
 
 Before this suite, the `perf/vs-claude-loop` branch measured the same question with `harness/run.mjs` on five coding tasks
-(`tasks/t1-duration` … `tasks/t5-logq`: `starter/`, `prompt.txt`, `hidden/`, `ref/`; no `task.json`, so `run.mjs` above skips them).
+(`tasks/t1-duration` … `tasks/t5-logq`: `starter/`, `prompt.txt`, `hidden/`, `ref/`; nay có `task.json` riêng nên `run.mjs` ở trên chạy được chúng; cấu trúc thư mục cũ không đổi). `harness/` chỉ dùng module của node, không import `lib/`, nên thay đổi ở `lib/` không ảnh hưởng nó. Hai harness cùng tồn tại: harness cũ cho vòng C1–C9 (so được với kết quả cũ), bộ này là hệ đánh giá chính.
 Docs: [`harness/README.md`](harness/README.md); results: `results/C1` … `results/C9`, `results/runs.csv`; analysis: `docs/PROCESS-REVIEW.md` §13 and `docs/research/`.

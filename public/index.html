@@ -50,16 +50,22 @@
           <button data-new="upload">📎 Tải tệp lên & giao việc</button>
         </div>
       </div><button class="nav-mini-btn" id="btn-nav-mini" title="Thu gọn / mở rộng cột trái" aria-label="Thu gọn cột trái">«</button></div>
-      <button class="nav" data-tab="home">🏠 <span>Tổng quan</span></button>
-      <button class="nav" data-tab="assign">💬 <span>Prompt</span></button>
-      <button class="nav" data-tab="projects">📁 <span>Dự án</span><em id="badge-projects"></em></button>
-      <button class="nav" data-tab="tasks" data-filter="all">📋 <span>Nhiệm vụ</span><em id="badge-tasks"></em></button>
-      <button class="nav" data-tab="tasks" data-filter="attention">⚠️ <span>Cần xem</span><em id="badge-att" class="warn"></em></button>
-      <button class="nav" data-tab="tasks" data-filter="starred">⭐ <span>Gắn sao</span></button>
+      <button class="nav" data-act="search" title="Tìm nhiệm vụ, dự án, agent, lệnh (Ctrl+K)">🔎 <span>Tìm</span><kbd class="nav-kbd">Ctrl K</kbd></button>
+      <button class="nav" data-tab="home" title="Tổng quan — số nhiệm vụ đang chạy">🏠 <span>Tổng quan</span><em id="badge-tasks" class="live" title="nhiệm vụ đang chạy"></em></button>
+      <button class="nav" data-tab="inbox" title="Cần bạn (I) — duyệt bằng phím">📥 <span>Cần bạn</span><em id="badge-att" class="warn"></em></button>
       <div class="nav-sep">Làm việc</div>
-      <button class="nav" data-tab="people">👥 <span>Nhân sự</span></button>
+      <button class="nav" data-tab="tasks" data-filter="all">📋 <span>Nhiệm vụ</span></button>
+      <button class="nav" data-tab="projects">📁 <span>Dự án</span><em id="badge-projects"></em></button>
+      <div class="nav-sub" id="nav-projects"></div>
+      <button class="nav" data-tab="routines" title="Giao lại một nhiệm vụ mẫu theo lịch">🔁 <span>Việc định kỳ</span></button>
+      <button class="nav" data-tab="artifacts" title="Báo cáo, sản phẩm hạng mục, nghiệm thu, thay đổi mã">📦 <span>Sản phẩm</span></button>
+      <button class="nav" data-tab="assign" title="Giao việc và trao đổi theo hội thoại">💬 <span>Prompt</span></button>
+      <button class="nav" data-tab="tasks" data-filter="starred">⭐ <span>Gắn sao</span></button>
       <button class="nav" data-tab="prompts">📚 <span>Thư viện prompt</span></button>
-      <div class="nav-sep">Theo dõi</div>
+      <div class="nav-sep">Tổ chức</div>
+      <button class="nav" data-tab="people">👥 <span>Nhân sự</span></button>
+      <button class="nav" data-tab="skills" title="Kỹ năng của agent, công cụ, runtime và các kết nối">🧩 <span>Kỹ năng & Kết nối</span></button>
+      <button class="nav" data-tab="audit" title="Ai làm gì lúc nào — nhật ký có chuỗi băm">🛡 <span>Kiểm toán</span></button>
       <button class="nav" data-tab="tokens">🔢 <span>Token</span></button>
       <button class="nav" data-tab="quota">⛽ <span>Hạn mức</span></button>
       <button class="nav" data-tab="kpi">📈 <span>KPI</span></button>
@@ -70,7 +76,7 @@
     <section class="main" id="main">
       <div class="main-bar">
         <div class="crumbs" id="crumbs"></div>
-        <div class="gsearch"><input type="search" id="gsearch" placeholder="Tìm nhiệm vụ, dự án, agent…  ( / )" autocomplete="off" aria-label="Tìm kiếm" /><div class="gs-results" id="gs-results" hidden></div></div>
+        <div class="gsearch"><input type="search" id="gsearch" placeholder="Tìm nhiệm vụ, dự án, agent…  ( / ) · Ctrl+K: bảng lệnh" autocomplete="off" aria-label="Tìm kiếm" /><div class="gs-results" id="gs-results" hidden></div></div>
       </div>
 
       <div class="tab-body" data-body="home"><div id="home"></div></div>
@@ -119,6 +125,7 @@
 
       </div>
       <div class="tab-body" data-body="project"><div id="project-view"></div></div>
+      <div class="tab-body" data-body="inbox"><div id="inbox"></div></div>
       <div class="tab-body" data-body="prompts"><div id="prompts-view"></div></div>
 
       <!-- Prompt (kiểu ứng dụng chat): danh sách hội thoại | cuộc mới (ô soạn đầy đủ) hoặc luồng hội thoại + ô trả lời -->
@@ -171,6 +178,7 @@
                 <label>Song song tối đa<input type="number" name="maxParallel" min="1" max="8" /></label>
                 <label class="check"><input type="checkbox" name="review" checked /> Review chất lượng & cho phép sửa</label>
                 <label class="check" title="Sau khi chốt kế hoạch, văn phòng dừng để bạn xem/sửa người làm, phụ thuộc, bỏ hạng mục rồi mới thực thi"><input type="checkbox" name="planApproval" /> Duyệt kế hoạch trước khi thực thi</label>
+                <label class="check" title="Sau khi các phòng tổng hợp xong, CTO đối chiếu đề bài với báo cáo, review và lệnh kiểm tra, kết luận từng tiêu chí Đạt/Không (thêm một lượt gọi model; việc giao riêng một agent thì bỏ qua)"><input type="checkbox" name="acceptance" checked /> CTO nghiệm thu khi xong</label>
               </div>
             </details>
             <span class="form-msg" id="form-msg"></span>
@@ -222,6 +230,10 @@
       </div>
 
       <!-- Nhật ký -->
+      <div class="tab-body" data-body="audit"><div id="audit-view" class="pg"></div></div>
+      <div class="tab-body" data-body="artifacts"><div id="artifacts-view" class="pg"></div></div>
+      <div class="tab-body" data-body="skills"><div id="skills-view" class="pg"></div></div>
+      <div class="tab-body" data-body="routines"><div id="routines-view" class="pg"></div></div>
       <div class="tab-body" data-body="logs">
         <div class="log-filters">
           <select id="log-dept"><option value="">Mọi phòng</option></select>
@@ -234,35 +246,33 @@
     </section>
 
     <aside class="side" id="side" aria-label="Văn phòng">
-      <div class="side-head"><div class="side-tabs" role="tablist"><button data-side="office" class="on" role="tab">🏢 Văn phòng</button><button data-side="preview" id="side-tab-preview" role="tab" hidden>📄 Xem trước</button></div><small id="side-sub">WASD đi · E tương tác</small><span class="grow"></span>
+      <div class="side-head"><div class="side-tabs" role="tablist"><button data-side="office" class="on" role="tab">🏢 Văn phòng</button><button data-side="preview" id="side-tab-preview" role="tab" hidden>📄 Xem trước</button></div><small id="side-sub">theo phòng ban · bấm vào agent để thao tác</small><span class="grow"></span>
         <button class="btn ghost sm" id="btn-side-wide" title="Phóng to / thu nhỏ ô văn phòng">⤢</button>
         <button class="btn ghost sm" id="btn-side-hide" title="Ẩn ô văn phòng (V)">✕</button></div>
     <section class="stage">
       <div class="stage-inner" id="stage">
-        <canvas id="office" aria-label="Sơ đồ văn phòng với các agent"></canvas>
-        <div class="tooltip" id="tooltip" hidden></div>
-        <div class="legend">
-          <span><i style="--c:var(--st-idle)"></i>rảnh</span>
-          <span><i style="--c:var(--st-thinking)"></i>suy nghĩ</span>
-          <span><i style="--c:var(--st-working)"></i>đang làm</span>
-          <span><i style="--c:var(--st-discussing)"></i>họp</span>
-          <span><i style="--c:var(--st-reviewing)"></i>review</span>
-          <span><i style="--c:var(--st-error)"></i>lỗi</span>
-          <label class="toggle"><input type="checkbox" id="lively" checked /> sinh động</label>
-          <span class="keys-hint" title="Bạn là nhân vật cà vạt đỏ trong phòng Giám đốc">🎮 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> đi · <kbd>E</kbd> tương tác · nhấp đúp để đi tới</span>
-        </div>
+        <div class="ofc" id="office" role="region" aria-label="Văn phòng: các agent theo phòng ban"></div>
         <div class="imenu" id="imenu" hidden></div>
       </div>
-      <div class="ticker" id="ticker" aria-live="polite"></div>
+      <div class="ofc-feed">
+        <div class="ofc-tabs" id="ofc-tabs" role="tablist" aria-label="Lọc hoạt động theo agent"></div>
+        <div class="ticker" id="ticker" aria-live="polite"></div>
+      </div>
+      <div class="ofc-bar" id="ofc-bar" aria-label="Agent đang bận"></div>
     </section>
     <section class="side-preview" id="side-preview" hidden></section>
     </aside>
   </main>
 
   <script src="md.js"></script>
+  <script src="avatar.js"></script>
   <script src="office.js"></script>
   <script src="ux.js"></script>
   <script src="flow.js"></script>
+  <script src="timeline.js"></script>
+  <script src="inbox.js"></script>
+  <script src="palette.js"></script>
+  <script src="pages.js"></script>
   <script src="app.js"></script>
   <script src="director.js"></script>
   <script src="drive.js"></script>

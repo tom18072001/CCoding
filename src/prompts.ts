@@ -108,11 +108,11 @@ ${profile}
 
 // ── Giới hạn theo pha (ký tự) ───────────────────────────────────────────────
 
-const BRIEF_MAX: Record<Phase, number> = { route: 6000, plan: 40000, finalize: 12000, discuss: 3000, execute: 24000, revise: 6000, review: 6000, synthesize: 6000 };
+const BRIEF_MAX: Record<Phase, number> = { route: 6000, plan: 40000, finalize: 12000, discuss: 3000, execute: 24000, revise: 6000, review: 6000, synthesize: 6000, accept: 8000 };
 /** Khi agent đọc được file: chỉ gửi phần đầu, phần còn lại đọc từ workspace. */
 // thực thi: mỗi lượt vòng công cụ gửi lại phần nền — giữ ngắn, bản đầy đủ nằm trong .ccoding/<task>/inputs/BRIEF.md
 const BRIEF_MAX_FILES: Record<Phase, number> = { ...BRIEF_MAX, execute: 3000, revise: 3000 };
-const ATTACH_MAX: Record<Phase, number> = { route: 1500, plan: 30000, finalize: 6000, discuss: 0, execute: 20000, revise: 4000, review: 4000, synthesize: 2000 };
+const ATTACH_MAX: Record<Phase, number> = { route: 1500, plan: 30000, finalize: 6000, discuss: 0, execute: 20000, revise: 4000, review: 4000, synthesize: 2000, accept: 2000 };
 const ATTACH_MAX_FILES: Record<Phase, number> = { ...ATTACH_MAX, execute: 2500, revise: 2000, plan: 20000 };
 
 function briefFor(c: Ctx, phase: Phase): string {
@@ -624,4 +624,36 @@ export function checksBlock(task: Task, phase: 'execute' | 'review' | 'synthesiz
     parts.push('Đây là bằng chứng chạy thật: kết luận dựa trên nó. Lệnh đạt ở baseline mà lỗi sau khi sửa = lỗi do thay đổi lần này → không duyệt. Không cần chạy lại các lệnh trên; chỉ chạy lệnh khác khi cần kiểm một điểm cụ thể.');
   if (phase === 'synthesize') parts.push('Ghi kết quả các lệnh này (trước/sau) vào báo cáo như bằng chứng kiểm chứng.');
   return `${parts.join('\n')}\n`;
+}
+
+/** Phần một phòng đưa CTO nghiệm thu: báo cáo tổng hợp + kết luận review. */
+export interface AcceptInput {
+  department: string;
+  final: string;
+  review?: string;
+}
+
+/**
+ * Pha nghiệm thu (UX-4c): CTO đối chiếu đề bài với báo cáo tổng hợp, kết luận review và lệnh kiểm tra CCoding tự chạy,
+ * kết luận từng tiêu chí Đạt/Không/Chưa kiểm được kèm bằng chứng. Chỉ đọc (công cụ đọc tệp trong worktree nếu có).
+ */
+export function acceptPrompt(task: Task, items: AcceptInput[], opts: { changes?: string; tools?: ToolName[]; projectName?: string } = {}): Built {
+  const per = Math.max(2500, Math.floor(24000 / Math.max(1, items.length)));
+  const brief = task.brief.length > BRIEF_MAX.accept ? `${task.brief.slice(0, BRIEF_MAX.accept)}…\n_(Đã rút gọn từ ${task.brief.length.toLocaleString('vi-VN')} ký tự)_` : task.brief;
+  const tools = opts.tools ?? [];
+  return {
+    context: `# Nhiệm vụ: ${task.title}\nChế độ: ${task.mode}${opts.projectName ? ` · dự án: ${opts.projectName}` : ''} · nhãn dữ liệu: ${task.classification}\n\n## Đề bài của giám đốc\n${brief}`,
+    prompt: `## Báo cáo tổng hợp của các phòng
+${items.map((i) => `### ${i.department}\n${truncate(i.final || '(không có báo cáo)', per)}\n\n**Kết luận review:** ${i.review || '(không review)'}`).join('\n\n')}
+${opts.changes ? `\n## Thay đổi trong workspace (git)\n\`\`\`\n${truncate(opts.changes, 3000)}\n\`\`\`\n` : ''}${checksBlock(task, 'synthesize').replace('Ghi kết quả các lệnh này (trước/sau) vào báo cáo như bằng chứng kiểm chứng.', 'Đây là bằng chứng chạy thật có độ tin cậy cao nhất.')}
+${tools.length ? `\nBạn có công cụ chỉ đọc (${tools.join(', ')}) trong worktree của nhiệm vụ — đọc tệp khi cần kiểm một tiêu chí cụ thể, không đọc tràn lan.\n` : ''}
+## Việc của bạn (CTO): NGHIỆM THU
+Rút 3–8 tiêu chí kiểm được từ đề bài (và tiêu chí của BA nếu có), kết luận từng tiêu chí: Đạt / Không / Chưa kiểm được, kèm bằng chứng trỏ tới lệnh, tệp hoặc mục báo cáo cụ thể. Thiếu bằng chứng thì là "Chưa kiểm được", không phải Đạt. Viết Markdown theo đúng "Mẫu đầu ra" của bạn (bắt đầu "## Tóm tắt"; mục "## Tiêu chí nghiệm thu" là bảng | Tiêu chí | Kết quả | Bằng chứng |). Việc tiếp theo chỉ đề xuất, không tự giao.
+
+Cuối câu trả lời thêm đúng một khối:
+\`\`\`json
+{"accepted": true, "summary": "<1–2 câu>", "criteria": [{"name": "<tiêu chí>", "result": "pass|fail|unknown", "evidence": "<bằng chứng>"}], "risks": ["<rủi ro/việc còn mở>"], "followUps": [{"title": "<tiêu đề ngắn>", "brief": "<đề bài đủ để giao ngay>", "department": "dev|research"}]}
+\`\`\`
+"accepted" chỉ true khi mọi tiêu chí là "pass".`,
+  };
 }

@@ -1,5 +1,6 @@
 // Single-Claude arm: one headless `claude -p` session in the run's workspace.
 import { spawn } from 'node:child_process';
+import { detectRateLimit } from './infra.mjs';
 
 export const TOOLS = 'Read,Write,Edit,Bash,Grep,Glob';
 
@@ -17,13 +18,15 @@ export function weighted(u) {
 }
 
 /**
- * Run claude -p. Returns { status, wallSec, tokens, costUsd, turns, finalText, transcript }.
+ * Run claude -p. Returns { status, wallSec, tokens, costUsd, turns, finalText, transcript, infra, resetsAt }.
+ * infra: 'rate-limit' | 'error' | undefined; resetsAt: chuỗi thô từ thông báo (vd. '4:50pm').
+ * Cờ: giữ --setting-sources project,local như CCoding và harness cũ (không nạp cài đặt/MCP/hook cấp người dùng).
  * `bin` lets you point at a wrapper; `extraArgs` are appended verbatim.
  */
 export function runClaude({ cwd, prompt, model, timeoutMin = 45, bin = 'claude', extraArgs = [] }) {
   const args = ['-p', prompt, '--output-format', 'stream-json', '--verbose', '--model', model,
     '--permission-mode', 'acceptEdits', '--allowedTools', TOOLS, '--disallowedTools', 'WebFetch,WebSearch,Task',
-    '--no-session-persistence', '--strict-mcp-config', ...extraArgs];
+    '--no-session-persistence', '--strict-mcp-config', '--setting-sources', 'project,local', ...extraArgs];
   const t0 = Date.now();
   return new Promise((resolve) => {
     const child = spawn(bin, args, { cwd, env: { ...process.env, CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1' }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -40,8 +43,18 @@ export function runClaude({ cwd, prompt, model, timeoutMin = 45, bin = 'claude',
       }
     });
     child.stderr.on('data', (d) => { err += d; });
+    let spawnErr = null;
+    child.on('error', (e) => { spawnErr = e; });
     child.on('close', (code) => {
       clearTimeout(timer);
+      let infra, resetsAt;
+      if (spawnErr) infra = 'error';
+      else if (!(result && !result.is_error && code === 0)) {
+        const tail = transcript.slice(-5).join('\n');
+        const rl = detectRateLimit([result?.is_error || !result ? result?.result : '', err, tail].join('\n'));
+        if (rl.rateLimited) { infra = 'rate-limit'; resetsAt = rl.resetsAt; }
+        else if (!result && code !== 0 && !transcript.length) infra = 'error';
+      }
       const u = result?.usage ?? {};
       const tokens = { input: u.input_tokens ?? 0, output: u.output_tokens ?? 0, cacheRead: u.cache_read_input_tokens ?? 0, cacheWrite: u.cache_creation_input_tokens ?? 0 };
       tokens.total = tokens.input + tokens.output + tokens.cacheRead + tokens.cacheWrite;
@@ -50,7 +63,8 @@ export function runClaude({ cwd, prompt, model, timeoutMin = 45, bin = 'claude',
         status: result && !result.is_error && code === 0 ? 'done' : 'failed',
         wallSec: (Date.now() - t0) / 1000,
         tokens, costUsd: result?.total_cost_usd ?? 0, turns: result?.num_turns ?? 0,
-        finalText: result?.result ?? '', transcript, stderr: err.slice(-4000),
+        finalText: result?.result ?? '', transcript, stderr: (spawnErr ? `${spawnErr.message}\n` : '') + err.slice(-4000),
+        infra, ...(resetsAt ? { resetsAt } : {}),
       });
     });
   });

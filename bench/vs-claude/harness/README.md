@@ -24,6 +24,8 @@ Kiểm lại bộ bài: `bash harness/validate.sh <bài>`.
 
 ## Cách chạy
 
+> Lưu ý: `run.mjs` đọc cấu hình ngay khi nạp, kể cả với `--help`. Bản clone sạch chỉ có `config.example.json`; hãy chép thành `config.json` (điền `benchRoot`, `workRoot`) trước, nếu không sẽ báo ENOENT. Với config hợp lệ, `node harness/run.mjs --help` in danh sách lệnh (`run | regrade | cost`) và thoát 0.
+
 ```bash
 # server CCoding (runtime claude-cli), vd. cổng 7420; config: harness/config.example.json (benchRoot, workRoot, ccodingUrl, variants)
 node harness/run.mjs run --config config.json --run R1 --tasks t1-duration,t2-orders --systems claude --repeats 2 --concurrency 1

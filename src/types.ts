@@ -1,10 +1,11 @@
 // Kiểu dữ liệu dùng chung cho toàn bộ CCoding.
 
-export type Role = 'lead' | 'member' | 'reviewer' | 'router';
+/** cto: nghiệm thu kết quả của các phòng sau khi tổng hợp (pha `accept`), không thuộc phòng ban làm việc nào. */
+export type Role = 'lead' | 'member' | 'reviewer' | 'router' | 'cto';
 export type Classification = 'public' | 'internal' | 'confidential' | 'restricted';
 /** agent: giao việc riêng cho MỘT agent (bỏ định tuyến/lập kế hoạch/họp; vẫn review nếu bật). */
 export type TaskMode = 'auto' | 'department' | 'project' | 'joint' | 'agent';
-export type Phase = 'route' | 'plan' | 'discuss' | 'finalize' | 'execute' | 'review' | 'revise' | 'synthesize';
+export type Phase = 'route' | 'plan' | 'discuss' | 'finalize' | 'execute' | 'review' | 'revise' | 'synthesize' | 'accept';
 export type TaskStatus = 'queued' | 'running' | 'paused' | 'done' | 'failed' | 'cancelled';
 /** pause: chạm trần thì tạm dừng chờ quyết định · complete: chạy tới khi hoàn thành (chấp nhận vượt trần, chỉ cảnh báo). */
 export type BudgetMode = 'pause' | 'complete';
@@ -336,6 +337,32 @@ export interface TaskOptions {
    * mẫu (không gọi model); 'full' — quy trình đầy đủ; 'auto' (mặc định) — tự chọn theo cỡ đề bài và repo (cấu hình `fastLane`).
    */
   lane?: 'auto' | 'fast' | 'full';
+  /** CTO nghiệm thu sau khi các phòng tổng hợp xong (mặc định theo cấu hình; việc giao riêng một agent thì bỏ qua). */
+  acceptance?: boolean;
+}
+
+export interface AcceptanceCriterion {
+  name: string;
+  result: 'pass' | 'fail' | 'unknown';
+  evidence: string;
+}
+
+export interface Acceptance {
+  at: string;
+  by: string;
+  /** Mọi tiêu chí đạt (đọc được kết luận). */
+  accepted: boolean;
+  /** Đọc được khối JSON kết luận của CTO. */
+  parsed: boolean;
+  summary: string;
+  criteria: AcceptanceCriterion[];
+  risks: string[];
+  followUps: Array<{ title: string; brief: string; department?: string }>;
+  /** Tệp ACCEPTANCE.md trong thư mục chạy của nhiệm vụ. */
+  path?: string;
+  /** Dấu vân tay báo cáo tổng hợp lúc nghiệm thu — báo cáo viết lại thì nghiệm thu lại. */
+  sig: string;
+  error?: string;
 }
 
 export interface Attachment {
@@ -374,6 +401,8 @@ export interface PauseInfo {
 
 export interface Task {
   id: string;
+  /** Số thứ tự nhiệm vụ (mã ngắn hiển thị `<tiền tố>-<seq>`, vd. CC-94) — gán lúc tạo, nhiệm vụ cũ được đánh số bù theo lúc tạo. */
+  seq?: number;
   title: string;
   brief: string;
   mode: TaskMode;
@@ -387,6 +416,8 @@ export interface Task {
   notes?: Array<{ id: string; at: string; text: string }>;
   /** Nhiệm vụ này tiếp nối nhiệm vụ trước (giao việc tiếp nối từ màn hình nhiệm vụ). */
   followUpOf?: string;
+  /** Do việc định kỳ này tạo (UX-4d). */
+  routineId?: string;
   classification: Classification;
   status: TaskStatus;
   phase?: Phase;
@@ -419,12 +450,14 @@ export interface Task {
   splitInto?: string[];
   /** Chỉ bắt đầu khi các nhiệm vụ này đã xong (thứ tự phụ thuộc giữa các nhiệm vụ đã tách). */
   after?: string[];
-  /** Lệnh kiểm tra của dự án do CCoding tự chạy: trước khi sửa (baseline) và sau thực thi/sửa (latest). */
   /** Làn đã chọn khi bắt đầu chạy (xem TaskOptions.lane). */
   lane?: 'fast' | 'full';
+  /** Lệnh kiểm tra của dự án do CCoding tự chạy: trước khi sửa (baseline) và sau thực thi/sửa (latest). */
   projectChecks?: ProjectChecks;
   /** Nhiệm vụ đã chạy xong nhưng cần người xem lại (vd. review cuối chưa duyệt). */
-  attention?: { reason: 'review' | 'checks'; detail: string; at: string };
+  attention?: { reason: 'review' | 'checks' | 'acceptance'; detail: string; at: string };
+  /** Kết luận nghiệm thu của CTO sau khi các phòng tổng hợp xong (UX-4c). */
+  acceptance?: Acceptance;
   createdAt: string;
   updatedAt: string;
   startedAt?: string;
@@ -466,7 +499,7 @@ export interface ChatMessage {
   taskId: string;
   department: string;
   from: string;
-  kind: 'plan' | 'discussion' | 'decision' | 'handoff' | 'review' | 'final' | 'system' | 'note';
+  kind: 'plan' | 'discussion' | 'decision' | 'handoff' | 'review' | 'final' | 'system' | 'note' | 'acceptance';
   text: string;
   round?: number;
   subtaskId?: string;
@@ -566,6 +599,37 @@ export interface NewTaskInput {
   options?: Partial<TaskOptions>;
   /** id các file đã tải lên (POST /api/uploads). */
   attachments?: string[];
+  /** Tạo bởi việc định kỳ này (UX-4d) — chỉ bộ lập lịch đặt, API giao việc bỏ qua. */
+  routineId?: string;
+  /** Việc định kỳ do giám đốc bấm "Chạy ngay" (không phải tới lịch) — để trang Kiểm toán ghi đúng người thao tác. */
+  routineManual?: boolean;
+}
+
+/** Lịch của việc định kỳ — giờ theo đồng hồ máy chạy server. */
+export interface RoutineSchedule {
+  kind: 'daily' | 'weekly' | 'interval';
+  /** HH:MM (daily, weekly). */
+  time?: string;
+  /** Thứ trong tuần (0 = Chủ nhật … 6 = Thứ bảy) — weekly. */
+  days?: number[];
+  /** Mỗi N giờ (1–168) — interval. */
+  everyHours?: number;
+}
+
+/** Việc định kỳ: giao lại một nhiệm vụ mẫu theo lịch (UX-4d). */
+export interface Routine {
+  id: string;
+  name: string;
+  enabled: boolean;
+  schedule: RoutineSchedule;
+  template: Pick<NewTaskInput, 'brief' | 'title' | 'mode' | 'department' | 'projectId' | 'agentId' | 'options'>;
+  createdAt: string;
+  updatedAt: string;
+  nextRunAt?: string;
+  lastRunAt?: string;
+  lastTaskId?: string;
+  /** Lần bỏ qua gần nhất (lần chạy trước chưa xong, lỡ lịch quá lâu, lỗi giao việc). */
+  lastSkip?: { at: string; reason: string };
 }
 
 export function emptyUsage(): Usage {

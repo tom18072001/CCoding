@@ -1,4 +1,4 @@
-# Giao diện: quản lý nhiệm vụ, màn Prompt, phòng giám đốc, hạn mức
+# Giao diện: quản lý nhiệm vụ, màn Prompt, văn phòng, hạn mức
 
 Giao diện web (http://127.0.0.1:7420) chỉ phục vụ máy cục bộ, không đăng nhập. Lần đầu mở có **hướng dẫn nhanh**; bấm ❓ (hoặc phím `?`) để xem lại trợ giúp, các chế độ giao việc, nhãn dữ liệu, phím tắt và thuật ngữ.
 
@@ -6,9 +6,9 @@ Giao diện web (http://127.0.0.1:7420) chỉ phục vụ máy cục bộ, khôn
 
 | Cột | Nội dung |
 |---|---|
-| **Trái — điều hướng** | **＋ Mới** (nhiệm vụ, giao riêng, dự án, prompt, tải tệp), các mục chính, cây **Dự án → Nhiệm vụ** (như thư mục), gắn sao, gần đây ngoài dự án, ⛽ token hôm nay. Nút `«`/`»` thu gọn thành dải biểu tượng (mặc định thu gọn ở màn Prompt, nhớ riêng cho từng màn). |
-| **Giữa — màn chính** | Kiểu Drive: *Tổng quan* (việc đang chạy, cần quyết định, dự án, gần đây), *Dự án* dạng thư mục (chuột phải/⋮ để thao tác), trang dự án có ô soạn + nhân sự, *Nhiệm vụ* (lọc, sắp xếp, danh sách/lưới, gắn sao, menu chuột phải), trang nhiệm vụ đầy đủ (kế hoạch, lệnh kiểm tra, sản phẩm, 🧬 thay đổi, token, nhật ký, lượt gọi, ô soạn cuối trang). Ô tìm `/` tìm nhiệm vụ, dự án, agent. Mỗi màn có URL riêng (Back/Forward dùng được). |
-| **Phải — ô phụ** | Thẻ **🏢 Văn phòng** (sơ đồ pixel + dòng sự kiện mới nhất ở trên) và **📄 Xem trước** (báo cáo/tệp sản phẩm mở từ hội thoại, chép nội dung). `⤢` phóng to, `✕`/phím `V` ẩn hiện. |
+| **Trái — điều hướng** | **＋ Mới** (nhiệm vụ, giao riêng, dự án, prompt, tải tệp), 🔎 Tìm (Ctrl+K), 🏠 Tổng quan, 📥 Cần bạn; nhóm **Làm việc** (Nhiệm vụ, Dự án + các dự án bên dưới, 🔁 Việc định kỳ, 📦 Sản phẩm, 💬 Prompt, Gắn sao, Thư viện prompt) và **Tổ chức** (Nhân sự, 🧩 Kỹ năng & Kết nối, 🛡 Kiểm toán, Token, Hạn mức, KPI, Nhật ký); agent đang làm; nhiệm vụ gần đây; ⛽ token hôm nay. Nút `«`/`»` thu gọn thành dải biểu tượng (mặc định thu gọn ở màn Prompt, nhớ riêng cho từng màn). Chi tiết ở mục UX-4a, UX-4d bên dưới. |
+| **Giữa — màn chính** | *Tổng quan* (việc đang chạy, cần quyết định, dự án, gần đây), *Dự án* (chuột phải/⋮ để thao tác), trang dự án có ô soạn + nhân sự, *Nhiệm vụ* dạng **cây** (hoặc bảng/lưới; lọc, sắp xếp, gắn sao, menu chuột phải), trang nhiệm vụ đầy đủ (kế hoạch, lệnh kiểm tra, CTO nghiệm thu, sản phẩm, 🧬 thay đổi, ⏱ dòng thời gian, token, nhật ký, lượt gọi, ô soạn cuối trang) và các trang Việc định kỳ, Sản phẩm, Kỹ năng & Kết nối, Kiểm toán. Mã nhiệm vụ ngắn `CC-n` ở mọi nơi. Ô tìm `/` tìm nhiệm vụ, dự án, agent. Mỗi màn có URL riêng (Back/Forward dùng được). |
+| **Phải — ô phụ** | Thẻ **🏢 Văn phòng** (mỗi phòng ban một phòng, mỗi agent một bàn; luồng hoạt động theo agent; thanh trạng thái — xem mục *Văn phòng* bên dưới) và **📄 Xem trước** (báo cáo/tệp sản phẩm mở từ hội thoại, chép nội dung). `⤢` phóng to, `✕`/phím `V` ẩn hiện; màn hẹp thì ô này ẩn mặc định. |
 
 ## Màn 💬 Prompt (kiểu ứng dụng chat)
 
@@ -37,24 +37,26 @@ Khi nhiệm vụ không chạy và có hạng mục đã xong, cuối hội tho�
 - **💬 Nhắc agent**: thêm mục thành góp ý trong hồ sơ agent (đi vào system prompt các lượt sau); góp ý này **tự xóa** khi mục đã sửa (đánh dấu tay, tự hết, hoặc không còn trong 30 ngày) — kiểm tra lại sau mỗi nhiệm vụ xong.
 - `ccoding kpi` hiện khóa từng mục và số mục đã ẩn; API `POST /api/kpi/resolve { agentId, key, note?, undo? }`, `GET /api/kpi?raw=1` để xem bản chưa lọc.
 
-## Phòng giám đốc
+## Trang mới trên cột trái (UX-4d)
 
-Sơ đồ: hàng trên **Phát triển | Giám đốc | Nghiên cứu**, hàng dưới **Phòng họp | Điều phối | Pantry | Góc giải trí**, hành lang chạy suốt giữa. Hai vách ngăn của phòng Giám đốc có **cửa tắt** sang thẳng phòng Phát triển và phòng Nghiên cứu (đi WASD hoặc nhấp đúp — đường đi tự chọn cửa tắt; nhấp vào cửa mở menu của phòng bên kia). Nhân vật cà vạt đỏ trong phòng Giám đốc là bạn.
+- **🔁 Việc định kỳ** (`#/routines`, mục Làm việc): giao lại một nhiệm vụ mẫu theo lịch — **hằng ngày HH:MM**, **các thứ trong tuần lúc HH:MM**, hoặc **mỗi N giờ** (1–168), theo đồng hồ máy chạy CCoding. Mẫu gồm chế độ giao việc (tự động/phòng ban/dự án/liên phòng/giao riêng), **dự án (ở mọi chế độ — nhiệm vụ tạo ra mang nhãn dữ liệu, runtime được phép, ngân sách, worktree của dự án như giao tay)**, tiêu đề, nội dung, ngân sách, vòng họp, review, CTO nghiệm thu. Mỗi lần chạy là một nhiệm vụ bình thường (mang `routineId`). Lần trước chưa xong (chờ/đang chạy, hoặc tạm dừng chờ xử lý: hết ngân sách, chờ duyệt kế hoạch, chờ hạn mức…) → bỏ qua lần này, dòng ⚠ ghi "cần xử lý"; lần trước **bị gián đoạn** do server khởi động lại thì không chặn; server tắt lỡ lịch **≤ 6 giờ** thì chạy bù một lần, lâu hơn thì bỏ qua tới lịch kế tiếp (lý do hiện ở dòng ⚠). Bật/tắt (tắt luôn được, kể cả khi dự án/phòng ban/agent của mẫu đã bị xóa; bật lại thì phải sửa mẫu), ▶ Chạy ngay, ✎ Sửa, 🗑 Xóa; chuột phải một nhiệm vụ → **Lặp lại định kỳ…** để soạn sẵn từ nhiệm vụ đó. Bộ lập lịch chỉ chạy trong `ccoding serve` (nhịp 30 giây). Lưu ở `data/routines.json`. API: `GET/POST /api/routines`, `POST /api/routines/<id>` (sửa), `POST /api/routines/<id>/run`, `DELETE /api/routines/<id>`.
+- **📦 Sản phẩm** (`#/artifacts`): mọi thứ agent làm ra — 📄 báo cáo tổng hợp, 🧩 sản phẩm từng hạng mục, ✅ kết luận nghiệm thu, 🧬 thay đổi mã trên nhánh. Lọc theo loại, dự án, agent, từ khóa; bấm để xem trước (Markdown), ⬇ tải xuống, mở trang nhiệm vụ hoặc diff. API `GET /api/artifacts?kind=&project=&agent=&q=`.
+- **🧩 Kỹ năng & Kết nối** (`#/skills`, mục Tổ chức): kỹ năng khai báo trong hồ sơ agent (lọc theo kỹ năng hoặc tên agent; bấm ảnh để mở hồ sơ), công cụ từng agent được dùng và chính sách quyền (mặc định, trong dự án, tra cứu web), kết nối: runtime (đang chạy được không, có trong thứ tự chạy, được xử lý nhãn dữ liệu nào), dự án git, herdr. API `GET /api/skills`.
+- **🛡 Kiểm toán** (`#/audit`, mục Tổ chức): ai làm gì lúc nào — giao/hủy/tiếp tục nhiệm vụ, duyệt/sửa kế hoạch, quyết định review, đổi ngân sách, CTO nghiệm thu, đẩy nhánh, lưu/xóa dự án, kiểm tra hồi quy, góp ý agent, việc định kỳ, tải tệp, lệnh bị chặn, khởi động/dừng server; người làm là 👤 Giám đốc (kể cả "▶ Chạy ngay" việc định kỳ), ⚙ Hệ thống (tự tiếp tục, việc định kỳ tới lịch), agent, hoặc ❔ Không rõ (nhật ký cũ thiếu dữ liệu). Lọc theo nhóm và nội dung, "Xem thêm" để lùi về trước (phân trang theo số thứ tự dòng nhật ký); **🔗 Kiểm chuỗi băm** đọc lại toàn bộ `data/logs/system.jsonl` và báo dòng đầu tiên bị sửa (nếu có). API `GET /api/audit?cat=&q=&beforeSeq=`, `GET /api/audit/verify` (đọc luồng, không chặn server).
 
-| Thao tác | Phím / chuột |
-|---|---|
-| Đi | `W` `A` `S` `D` (mọi lúc trừ khi đang gõ); phím mũi tên khi trỏ chuột/focus ở văn phòng; nhấp đúp lên sàn để đi tới |
-| Tương tác với người/phòng gần nhất | `E` → menu, chọn bằng `1`–`9` hoặc ↑/↓ + Enter, `Esc` đóng |
-| Mở hồ sơ agent | nhấp vào agent (như trước) |
-| Tương tác với đồ vật / phòng **không cần đi tới** | trỏ chuột (viền vàng + nhãn) rồi nhấp — cùng menu như bấm `E` |
+## Nghiệm thu của CTO và nhân sự mới (UX-4c)
 
-Menu khi đứng cạnh **agent**: 📝 Giao việc riêng · 💬 Góp ý / đánh giá · 💰 Tăng ngân sách việc đang làm · 👀 Xem hồ sơ · và các mục *vui* (☕ mời cà phê, 🙌 đập tay, 😂 kể chuyện cười, 🌟 khen) — mục *vui* chỉ đổi hình ảnh trên sơ đồ (bong bóng, hiệu ứng; agent rảnh có thể đi pantry rồi tự về), **không** chạm vào nhiệm vụ, token hay log.
+- **CTO nghiệm thu**: sau khi mọi phòng tổng hợp xong, agent `cto` đối chiếu đề bài với báo cáo tổng hợp, kết luận review và lệnh kiểm tra CCoding tự chạy (đọc thêm tệp trong worktree khi cần), kết luận từng tiêu chí **Đạt / Không / Chưa kiểm được** kèm bằng chứng, nêu rủi ro, việc còn mở và đề xuất việc tiếp theo. Kết quả: tin "nghiệm thu" trong hội thoại, tệp `ACCEPTANCE.md`, khung **✅ CTO nghiệm thu / ✋ CTO chưa nghiệm thu** ở trang nhiệm vụ, hội thoại và hộp Cần bạn (bảng tiêu chí; bấm một việc tiếp theo để **soạn sẵn** việc tiếp nối — sửa rồi mới giao, CTO không tự giao). Chưa nghiệm thu → nhiệm vụ "cần xem" (Cần bạn, cảnh báo); giám đốc **Duyệt** thì bỏ "cần xem". Báo cáo tổng hợp viết lại (làm lại từ review/tổng hợp, yêu cầu sửa) thì nghiệm thu lại; không đổi thì không gọi lại. Bỏ qua với việc giao riêng một agent; tắt ở ô **CTO nghiệm thu khi xong** trong form giao việc, `options.acceptance: false` hoặc `defaults.acceptance: false`. Dòng thời gian có pha **Nghiệm thu (CTO)**.
+- **Nhân sự mới phòng Phát triển**: **Business Analyst** (`business-analyst` — yêu cầu, bảng gap, tiêu chí nghiệm thu, ma trận truy vết), **Technical Writer** (`tech-writer` — viết lại tài liệu cho người đọc đích), **Senior Software Engineer** (`senior-swe` — tích hợp, idempotent, lỗi gốc, refactor, rà mã). `ba-presales` thu hẹp thành **Pre-sales & HSDT** (giữ mã cũ để dữ liệu cũ không đổi). Trưởng phòng Phát triển giao việc theo các vai trò mới.
 
-**Nhấp thẳng vào đồ vật**: 🍱 **bàn ăn pantry → Pantry time** (mọi agent đang rảnh ra pantry nghỉ 30 giây, bảng "PANTRY TIME" đếm ngược, rồi tự về chỗ; agent đang làm không bị gọi), 💧 cây nước, 📺 TV điều phối, bảng phòng họp, 📋 bảng trắng phòng Phát triển, 📚 giá sách phòng Nghiên cứu, cửa các phòng, đàn/máy giải trí, bàn/màn hình/sofa phòng giám đốc.
+## Văn phòng (ô bên phải, tối giản từ UX-4b)
 
-Menu khi đứng cạnh **phòng/đồ vật**: cửa phòng Phát triển/Nghiên cứu (giao việc cho phòng, xem nhân sự, cổ vũ) · phòng họp (xem cuộc họp đang diễn ra) · điều phối (giao việc tự động) · pantry (pha cà phê, mời cả văn phòng) · bàn giám đốc (📊 bảng điều khiển, giao việc mới, thư viện prompt, hạn mức, trợ giúp) · màn hình trên tường · góc giải trí (🎹 đàn, 🕹 trò "Bắt bug" 15 giây).
+Ô **🏢 Văn phòng** chia theo phòng ban: phòng **Điều phối · CTO** ở trên (agent không thuộc phòng ban làm việc nào), bên dưới mỗi phòng ban một phòng (Phát triển, Nghiên cứu…; ô phóng to `⤢` xếp hai cột). Mỗi agent một bàn: chân dung pixel, **vòng màu trạng thái** (rảnh · nghĩ · làm · họp · review · chờ · lỗi), màn hình trên bàn sáng khi đang làm, **bong bóng** việc đang làm hoặc câu vừa nói. Dòng đầu: số nhiệm vụ đang chạy và cuộc họp đang diễn ra.
 
-**Bảng điều khiển**: token hôm nay, việc đang chạy, agent đang bận, việc cần bạn quyết định (tạm dừng, lỗi, "cần xem"), tài nguyên theo thứ tự chạy (đã dùng, còn lại, chưa đặt khóa, đang tạm ngừng). Màn hình trên tường phòng giám đốc hiện tóm tắt (làm mới 30 giây).
+- **Bấm vào một agent** → menu: 📝 Giao việc riêng · 💬 Góp ý / đánh giá · 📋 Mở việc đang làm (mã CC-n) · 💰 Tăng ngân sách việc đang làm · 👀 Xem hồ sơ; chọn bằng `1`–`9` hoặc ↑/↓ + `Enter`, `Esc` đóng. **Nhấp đúp** → mở hồ sơ.
+- **Luồng hoạt động** bên dưới: tab **Tất cả** + các agent vừa có hoạt động (bấm để lọc), mỗi dòng có mã nhiệm vụ; bấm dòng để mở nhiệm vụ.
+- **Thanh trạng thái** dưới cùng: các agent đang bận và việc họ đang làm (bấm → hồ sơ).
+- Đã bỏ: nhân vật giám đốc và đi lại `W` `A` `S` `D` / `E`, phòng họp, pantry, góc giải trí, các mục "vui" (cà phê, đập tay, chuyện cười, nhạc, trò "Bắt bug"), bảng điều khiển bàn giám đốc (thông tin đó có ở 🏠 Tổng quan và ⛽ Hạn mức). Chân dung pixel tách sang `public/avatar.js`.
 
 ## Giao việc riêng cho một agent
 
@@ -93,9 +95,11 @@ Góp ý (kèm 👍/👎, gắn nhiệm vụ tùy chọn) lưu ở `data/feedback
 | `/` | Tìm nhanh nhiệm vụ, dự án, agent |
 | `V` | Ẩn/hiện ô phụ bên phải |
 | `1`–`7` | Tổng quan · Dự án · Nhiệm vụ · Prompt · Nhân sự · Hạn mức · Nhật ký |
+| `Ctrl`+`K` / `⌘K` | Bảng lệnh |
+| `I` | Hộp 📥 Cần bạn (trong hộp: `J`/`K`, `Enter`, `O`, `1`, `2`, `H`, `X`, `Z`) |
 | `Ctrl`+`Enter` | Giao việc ở ô soạn lớn (cuộc mới, trang dự án, trang nhiệm vụ) |
 | `Enter` / `Shift`+`Enter` | Gửi / xuống dòng ở ô trả lời của hội thoại |
-| `W` `A` `S` `D` / `E` | Đi / tương tác |
+| `1`–`9`, `↑`/`↓`, `Enter` | Trong menu một agent ở văn phòng: chọn mục (`Esc`/`E` đóng) |
 | `Esc` | Đóng hộp thoại, menu, hướng dẫn |
 
 Phím tắt không chạy khi đang gõ trong ô nhập hoặc có hộp thoại mở.
@@ -118,9 +122,22 @@ Phím tắt không chạy khi đang gõ trong ô nhập hoặc có hộp thoại
 - **Việc nối làm tiếp trên nhánh của việc trước**: giao tiếp nối trong cùng dự án repo → worktree mới tách từ **nhánh của nhiệm vụ trước** (thay đổi chưa gộp đã có sẵn; diff của việc mới chỉ gồm phần mới). Bỏ tích **🌿 nối tiếp nhánh** ở ô trả lời để tách từ nhánh xuất phát của dự án (`continueBranch: false`). Nhánh trước đã bị xóa → tự quay về nhánh xuất phát.
 - Lệnh kiểm tra / `run_command` có đầu ra dài: giữ **phần đầu và phần cuối**, bỏ đoạn giữa (trước đây giữ phần đầu ⇒ `npm test` 592 test chỉ còn dòng `> pkg test`, mất dòng tổng kết).
 
+## Theo dõi song song và điều hướng (UX-3, 1/11/2026)
+
+- **⏱ Dòng thời gian** (tab trong trang nhiệm vụ, `#/task/<id>/timeline`; bảng lệnh → "Dòng thời gian các hạng mục"): mỗi hạng mục một làn, **mỗi lượt gọi agent một thanh theo thời lượng thật** (màu theo pha: lập kế hoạch, họp, thực thi, review, sửa theo review, tổng hợp; lệnh chuẩn bị / lệnh kiểm tra), làn "Lập kế hoạch · họp · review · tổng hợp" của mỗi phòng, khoảng **tạm dừng** (sọc xám), mốc **◆ gộp worktree con**, đoạn **chờ** (hạng mục đã sẵn sàng vì phụ thuộc xong mà chưa bắt đầu — thiếu "ghế"/agent bận), thanh **đang chạy** (sọc chuyển động) và **lỗi / bị ngắt** (viền đỏ). Thanh đầu: tổng thời gian, thời gian tạm dừng, thời gian thực thi (% thời gian chạy), **song song tối đa**, **đường găng** (chuỗi phụ thuộc quyết định thời gian xong, vd. S1 → S2 → S4 · 9 phút — các làn găng có vạch đỏ). Thu phóng 1×/2×/4× (khi một vạch chia dưới 1 phút thì nhãn trục có giây). Khoảng **tạm dừng** gồm cả thời gian chờ sau khi nhiệm vụ lỗi/xong rồi được chạy tiếp, và thời gian server bị khởi động lại giữa chừng (lượt gọi dở lúc đó hiện là **bị ngắt**, không phải "đang chạy"). Đường găng và mốc "sẵn sàng" chỉ tính lượt **thực thi** (lượt sửa theo review chạy sau, không tính). Trang tự làm mới mỗi 5 giây khi việc đang chạy và tab còn mở (vẽ lại theo sự kiện dùng dữ liệu đệm, không gọi lại API); server đọc `calls.jsonl` theo dòng và chỉ đọc phần mới ghi thêm. Dữ liệu từ `calls.jsonl` + nhật ký nhiệm vụ: `GET /api/tasks/<id>/timeline`. (Thay cho kịch bản phân tích chạy tay `analyze-runs.cjs` khi chỉ cần xem đường găng.)
+- **📥 Cần bạn** (cột trái, phím `I`, `#/inbox`): mọi việc chờ bạn quyết — 📝 kế hoạch chờ duyệt, ⏸ tạm dừng (ngân sách, hết tài nguyên, thủ công, server khởi động lại), ❌ lỗi, ⚠ xong nhưng cần xem; danh sách bên trái, xem trước bên phải (hộp duyệt kế hoạch / tóm tắt + lệnh kiểm tra + ⚖ duyệt/yêu cầu sửa / hộp tạm dừng). Phím: `J`/`K` (↓/↑) chọn · `Enter` mở hội thoại · `O` trang nhiệm vụ · `1` hành động chính (duyệt kế hoạch kèm bản nháp sửa / duyệt kết quả / chạy tiếp) · `2` hành động phụ (sửa kế hoạch / yêu cầu sửa / +50% ngân sách) · `H` hoãn 4 giờ (bấm lại để bỏ hoãn; lưu trong trình duyệt) · `X` hủy (hỏi xác nhận; chỉ với kế hoạch chờ duyệt / tạm dừng — việc lỗi hay đã xong không cần hủy) · `Z` / `Esc` hoàn tác (chỉ khi có hành động đang chờ). Phím không bị bắt khi đang gõ, khi `Enter` trên một nút đang chọn, khi menu agent của văn phòng hay bảng lệnh đang mở. **Hành động `1`/`2` chờ 4 giây rồi mới gửi** (thanh "⏳ Sẽ … — Hoàn tác (Z)") — duyệt nhầm không tốn token; bấm việc khác trong lúc chờ thì hành động trước được gửi ngay; bấm lại cùng hành động trên cùng việc thì không gửi lần hai. Tổng quan → "⚠ Cần bạn quyết định" có lối tắt sang hộp này.
+- **Bảng lệnh `Ctrl`+`K`** (`⌘K` trên Mac, dùng được cả khi đang gõ): gõ không dấu cũng được ("duyet ke hoach", chữ cái đầu "dtg" → "Dòng thời gian"). Nhóm: **Nhiệm vụ đang mở** (mở hội thoại / trang nhiệm vụ / dòng thời gian / thay đổi / báo cáo / lượt gọi, tạm dừng, chạy tiếp, hủy, duyệt kế hoạch, duyệt kết quả, sẵn sàng gộp, giao lại tương tự, chép mã), **Xem gần đây**, **Đi tới** (mọi màn), **Tạo & thao tác** (nhiệm vụ mới, giao riêng, dự án, prompt, tải tệp, ẩn/hiện văn phòng, thông báo, trợ giúp), **Nhiệm vụ / Dự án / Agent** (khi gõ). `↑`/`↓` chọn · `Enter` chạy · `Esc` đóng.
+
+## Mã ngắn, cây nhiệm vụ, cột trái theo nhóm (UX-4a, 2/11/2026)
+
+- **Mã nhiệm vụ ngắn `CC-94`**: mỗi nhiệm vụ có số thứ tự (`seq` trong `task.json`), nhiệm vụ cũ được đánh số bù theo lúc tạo khi server khởi động. Tiền tố đặt bằng `taskPrefix` trong `ccoding.config.json` (1–8 chữ in hoa/số, vd. `"ICS"`; mặc định `CC`). Mã hiện ở danh sách, trang nhiệm vụ, hộp Cần bạn, bảng lệnh (chép mã), tìm kiếm; URL dùng mã (`#/task/CC-94`, `#/chat/CC-94`); gõ `CC-94` (hoặc mã đầy đủ `T-…`) trong tin nhắn/báo cáo → thành liên kết mở nhiệm vụ (trong khối `code` và trong liên kết ngoài thì giữ nguyên). `GET /api/tasks/CC-94` cũng nhận mã ngắn.
+- **Danh sách dạng cây** (mặc định ở 📋 Nhiệm vụ và trang dự án; nút 🌳 / ☰ bảng / ▦ lưới): nhiệm vụ gốc → **hạng mục** (S1, S2… kèm người làm) → **nhiệm vụ con** (việc nối tiếp, việc tách từ hạng mục), lồng nhiều tầng. Mỗi dòng: biểu tượng trạng thái (○ chờ · ◔ đang chạy · ✓ xong · ✕ lỗi · ‖ tạm dừng · − hủy/bỏ qua · ! cần xem), mã, nhãn **● đang chạy**, **↳ n đang chạy** (cộng dồn việc đang chạy bên dưới), chờ duyệt kế hoạch / cần xem, tên, dự án, người làm, thời gian tương đối (vừa xong · 7 phút · 2 giờ · 3 ngày). Xếp theo "Mới cập nhật" thì có vạch **Cũ hơn một ngày**. Nhánh đang chạy hoặc còn việc con chưa xong tự mở; bấm ▸/▾ (hoặc ←/→) để mở/đóng — trình duyệt nhớ 300 lần gần nhất; ↑/↓ chuyển dòng, `Enter` mở. Tổng quan dùng dòng gọn (không lồng).
+- **Cột trái xếp theo nhóm** (giống các ứng dụng quản lý việc): 🔎 Tìm (mở bảng lệnh Ctrl+K) · 🏠 Tổng quan **● n** (nhiệm vụ đang chạy thật, không tính việc chờ) · 📥 Cần bạn — **Làm việc**: Nhiệm vụ, Dự án (các dự án hiện ngay bên dưới, theo hoạt động gần nhất, kèm số việc đang chạy), 🔁 Việc định kỳ, 📦 Sản phẩm, 💬 Prompt, Gắn sao, Thư viện prompt — **Tổ chức**: Nhân sự, 🧩 Kỹ năng & Kết nối, 🛡 Kiểm toán, Token, Hạn mức, KPI, Nhật ký — **Agent đang làm** (ảnh, tên, số việc; bấm mở hồ sơ) — **Gần đây** (6 nhiệm vụ cập nhật gần nhất, chấm xanh = đang chạy) — đồng hồ token. (Bốn trang Việc định kỳ, Sản phẩm, Kỹ năng & Kết nối, Kiểm toán thêm ở UX-4d.)
+
 ## Gợi ý tiếp theo (chưa làm)
 
-Lộ trình UX-2/UX-3 (rà soát 1/11/2026, so với Devin, Codex, Copilot, Cursor, Conductor, LangSmith, Linear…):
+Lộ trình UX (rà soát 1/11/2026, so với Devin, Codex, Copilot, Cursor, Conductor, LangSmith, Linear…; hướng UI theo ảnh "issue tracker" 2/11/2026):
 
-- **UX-3 · Theo dõi song song và điều hướng**: dòng thời gian (Gantt) các hạng mục và worktree con; hộp "Cần bạn" duyệt bằng phím; bảng lệnh `Ctrl+K`; biểu đồ xu hướng token/KPI; chạy bản thử ứng dụng trong worktree.
-- Khác: tải gói sản phẩm (.zip); bảng điều khiển trên điện thoại; chủ đề sáng/tối và cỡ chữ; dấu "!" trên nhân vật văn phòng khi việc cần bạn.
+- Tiếp theo: agent tự tạo việc con và quan hệ "bị chặn bởi"; chọn agent/model ngay ô soạn, 👍/👎 từng tin; tab Ngân sách của dự án; văn phòng theo đội của từng dự án.
+- Sau đó: biểu đồ xu hướng token/KPI; chạy bản thử ứng dụng trong worktree (`previewCommand`); "ghế" song song theo vai trò (dòng thời gian cho thấy đoạn *chờ*).
+- Khác: tải gói sản phẩm (.zip); bảng điều khiển trên điện thoại; chủ đề sáng/tối và cỡ chữ; dấu "!" trên bàn agent khi việc cần bạn.

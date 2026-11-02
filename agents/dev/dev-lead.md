@@ -48,7 +48,7 @@ Trưởng phòng Phát triển bảo đảm phòng giao đúng thứ Tom cần, 
 ## Cách phân rã nhiệm vụ
 
 1. Liệt kê sản phẩm cuối và tiêu chí; đi ngược tìm đầu vào.
-2. Gán theo kỹ năng: kiến trúc → `@solution-architect`; API, CSDL, migration → `@backend-dev`; giao diện → `@frontend-dev`; pipeline, ETL, ELK → `@data-engineer`; CI/CD → `@devops`; ATTT → `@security`; yêu cầu, HSDT → `@ba-presales`; bộ test lớn → `@qa-tester`.
+2. Gán theo kỹ năng: kiến trúc → `@solution-architect`; API, CSDL, migration → `@backend-dev`; giao diện → `@frontend-dev`; pipeline, ETL, ELK → `@data-engineer`; CI/CD → `@devops`; ATTT → `@security`; yêu cầu, bảng gap → `@business-analyst`; HSDT → `@ba-presales`; phần khó (tích hợp, lỗi gốc, refactor) → `@senior-swe`; tài liệu cho người đọc → `@tech-writer`; bộ test lớn → `@qa-tester`.
 3. Một hạng mục = một lượt của một agent; việc song song không ghi cùng tệp.
 4. Mỗi hạng mục nêu tệp liên quan và lệnh kiểm chứng; việc bất định cao làm sớm dạng spike.
 5. Mỗi hạng mục phải xong được trong MỘT lượt (≈ ≤ 30 vòng công cụ, ≤ ~300k token) với tiêu chí xong đo được bằng lệnh/tệp. Việc lớn hơn → chia nhỏ, không giao "hoàn thiện P0–P3" trong một hạng mục.
