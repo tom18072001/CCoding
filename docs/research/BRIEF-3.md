@@ -9,6 +9,16 @@
 
 Gói này tạo nền cho vòng đó. Gói nhỏ: **tối đa 4 hạng mục, mỗi hạng mục một tệp sản phẩm**. Ngân sách 6M token.
 
+**Quyết định của giám đốc (2/11, 13:42):**
+- Việc nhỏ dùng **agent đơn** ("làn đơn"); việc lớn mới dùng multi-agent.
+- Nhiệm vụ của hệ thống:
+  - **tối ưu chi phí**;
+  - **có các cổng kiểm thử chất lượng (quality gate)**;
+  - **đi đúng cách đánh giá (KPI) và mẫu đầu ra (template)** của giám đốc.
+- Hai mục bắt buộc ở đầu backlog (R3):
+  - **B-01 làn đơn**;
+  - **B-02 cổng chất lượng**.
+
 ## Bối cảnh
 - Phản biện vòng 2: mỗi ô chỉ có 1–2 lượt, nên p hoán vị không thể nhỏ. Cần thí nghiệm sâu hơn, có giả thuyết đăng ký trước.
 - **Vòng C9 đang chạy trên cloud** (máy 2 nhân, cùng thời điểm):
@@ -63,7 +73,33 @@ Gói này tạo nền cho vòng đó. Gói nhỏ: **tối đa 4 hạng mục, m�
   - rủi ro và bảo vệ dữ liệu;
   - ưu tiên theo hiệu quả trên công sức;
   - mục đó có cần giám đốc duyệt để triển khai lên bản chính (main) hay không.
-- Kiểm các nhận định N1–N5 trong `context/kpi-research-2026-11-02.md` bằng chính tệp CSV (đếm, phân loại lại nếu sai) và xếp hạng các bản sửa ứng viên G1–G7, "làn đơn", D-01–D-03, P1–P4.
+- Kiểm các nhận định N1–N5 trong `context/kpi-research-2026-11-02.md` bằng chính tệp CSV (đếm, phân loại lại nếu sai) và xếp hạng các bản sửa ứng viên G1–G7, D-01–D-03, P1–P4.
+
+**B-01 làn đơn và B-02 cổng chất lượng phải là đặc tả mà Phòng Dev làm được ngay.** Các phần cần có:
+
+- **Tiêu chí nhỏ/lớn, chọn tự động**
+  - Dựa trên dữ liệu đã có: chi phí cố định của điều phối, và thời gian một agent cần cho t1–t5.
+  - Nêu các tín hiệu dùng được trước khi chạy: độ dài đề bài, số tệp hoặc module bị đụng, số phần độc lập ước lượng, cỡ repo.
+  - Nêu ngưỡng ban đầu. Ghi rõ ngưỡng sẽ hiệu chỉnh bằng C9 và hai bài `l1-modules`/`l2-chain`, theo giả thuyết nào.
+  - Người dùng hoặc dự án ép làn được.
+- **Luồng làn đơn**
+  - Một agent đúng vai, chạy pha thực thi trong worktree.
+  - Không có pha họp, lập kế hoạch nhiều bên hay tổng hợp bằng LLM. Báo cáo cuối theo mẫu.
+- **Cổng chất lượng (đi theo KPI và mẫu đầu ra hiện có)**
+  - Lệnh kiểm tra của dự án chạy trước khi sửa (baseline) và sau khi sửa. Đỏ hoặc hồi quy thì tự vào vòng sửa, giới hạn N vòng.
+  - Đầu ra phải có đủ mục "Mẫu đầu ra" của vai trò. Thiếu thì sửa, dùng đúng phép kiểm tuân thủ của `src/kpi.ts`.
+  - Mọi lượt gọi vẫn đi qua `Orchestrator.call()` và được chấm KPI như các làn khác.
+  - Khi nào cần review của reviewer: ví dụ không có lệnh kiểm tra, hoặc thay đổi đụng bảo mật hay dữ liệu.
+- **Nâng lên multi-agent**
+  - Điều kiện: còn đỏ sau N vòng sửa, phạm vi phát sinh vượt ngưỡng, hoặc agent tự báo việc lớn.
+  - Cách chuyển: giữ worktree và bàn giao dở dang.
+- **Chỉ tiêu**
+  - Thời gian và chi phí so với Claude Code đơn cùng mô hình (ví dụ trong khoảng ±15 %).
+  - Tỉ lệ test ẩn không kém hơn.
+  - KPI của agent không giảm.
+  - Kiểm bằng vòng benchtest nào.
+- **Bảo vệ dữ liệu**
+  - Giữ nguyên Data Protection Gate, nhãn dữ liệu, hook và ghi log.
 
 **R4 — peer-reviewer: review**
 - Mỗi giả thuyết ở R1 có bác bỏ được bằng dữ liệu không?
