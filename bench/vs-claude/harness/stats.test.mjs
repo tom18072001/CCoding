@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCsv, filterRuns, bootstrap, permutationTest, cliffsDelta, requiredRuns, zInv, simulateRequiredRuns } from './stats.mjs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { parseCsv, filterRuns, bootstrap, permutationTest, cliffsDelta, requiredRuns, zInv, simulateRequiredRuns, loadRuns, groupOf, parseDelta, analyse, renderMd } from './stats.mjs';
 
 const csv = `run,run_note,task,system,rep,status,wall_s,cost_usd,task_id
 C5,"ghi chú, có dấu phẩy",t3-api,ccoding-fastlane,1,done,579,1.0,T-hung
@@ -63,4 +66,60 @@ test('simulateRequiredRuns trả số nguyên hợp lý và tái lập', () => {
   const n = simulateRequiredRuns(o);
   assert.ok(Number.isInteger(n) && n >= 2 && n <= 10);
   assert.equal(simulateRequiredRuns(o), n);
+});
+
+const csv7 = `run,task,system,rep,wall_s,cost_usd,task_id
+C7,t1,ccoding-fastlane,1,109,0.40,T-1
+C7,t1,claude-sonnet,1,69,0.22,S-1
+C7,t1,claude-sonnet,2,62,0.18,S-2
+C7,t2,ccoding-fastlane,1,71,0.40,T-2
+C7,t2,claude-sonnet,1,41,0.16,S-3
+C7,t2,claude-sonnet,2,42,0.16,S-4
+C7,t2,claude,1,90,0.45,O-1
+`;
+const tmpCsv = (text) => { const d = mkdtempSync(join(tmpdir(), 'stats-')); const p = join(d, 'runs.csv'); writeFileSync(p, text); return p; };
+
+test('--baseline: groupOf chọn hệ đối chứng, hệ Claude khác bị bỏ', () => {
+  assert.equal(groupOf('claude'), 'claude');
+  assert.equal(groupOf('claude-sonnet'), 'other');
+  assert.equal(groupOf('claude-sonnet', 'claude-sonnet'), 'claude');
+  assert.equal(groupOf('claude', 'claude-sonnet'), 'other');
+  assert.equal(groupOf('ccoding-fastlane', 'claude-sonnet'), 'cc');
+});
+
+test('--baseline claude-sonnet: chỉ dùng claude-sonnet làm đối chứng, đúng số học', () => {
+  const p = tmpCsv(csv7);
+  const runs = filterRuns(loadRuns([p], 'claude-sonnet'), { rounds: ['C7'] });
+  assert.equal(runs.length, 6); // bỏ dòng hệ claude (Opus)
+  const res = analyse(runs, { B: 500, baseline: 'claude-sonnet' });
+  assert.equal(res.baseline, 'claude-sonnet');
+  const w = res.metrics.wall.pooled;
+  assert.equal(w.nCC, 2); assert.equal(w.nClaude, 4);
+  // TB bài: t1 109 − 65.5 = 43.5; t2 71 − 41.5 = 29.5 ⇒ 36.5
+  assert.ok(Math.abs(w.diff - 36.5) < 1e-9);
+  assert.equal(w.perm.method, 'exact');
+  assert.equal(w.perm.combos, 9); // 3 × 3 hoán vị
+  assert.ok(/đối chứng = claude-sonnet/.test(renderMd(res)));
+  // mặc định (claude) dùng Opus: chỉ t2 có đối chứng
+  const opus = analyse(filterRuns(loadRuns([p]), {}), { B: 200 });
+  assert.deepEqual(opus.tasksUsed, ['t2']);
+  assert.ok(Math.abs(opus.metrics.wall.pooled.diff - (71 - 90)) < 1e-9);
+});
+
+test('loadRuns bỏ dòng trùng khi nạp hai tệp chồng nhau', () => {
+  const p = tmpCsv(csv7), q = tmpCsv(csv7);
+  assert.equal(loadRuns([p, q], 'claude-sonnet').length, 7);
+});
+
+test('--delta: parseDelta và áp vào số lượt cần', () => {
+  assert.deepEqual(parseDelta('wall=30,cost=0.1'), { wall: 30, cost: 0.1 });
+  assert.throws(() => parseDelta('foo=3'));
+  assert.throws(() => parseDelta('wall=-1'));
+  const p = tmpCsv(['run,task,system,rep,wall_s,cost_usd,task_id', 'C7,t1,ccoding-fastlane,1,100,1,a', 'C7,t1,ccoding-fastlane,2,120,1,b', 'C7,t1,claude-sonnet,1,60,1,c', 'C7,t1,claude-sonnet,2,70,1,d'].join(String.fromCharCode(10)) + String.fromCharCode(10));
+  const runs = filterRuns(loadRuns([p], 'claude-sonnet'), {});
+  const dflt = analyse(runs, { B: 100, requiredRuns: true, baseline: 'claude-sonnet' }).metrics.wall.required.t1;
+  const big = analyse(runs, { B: 100, requiredRuns: true, delta: { wall: 1000 }, baseline: 'claude-sonnet' }).metrics.wall.required.t1;
+  assert.equal(big.delta, 1000);
+  assert.equal(big.n, 2); // Δ rất lớn so với σ ⇒ n tối thiểu
+  assert.ok(dflt.delta > 0 && dflt.delta < 1000 && dflt.n >= big.n);
 });
