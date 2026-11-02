@@ -214,25 +214,72 @@
       ${n ? `<table class="ac-tbl"><thead><tr><th>Tiêu chí</th><th>Kết quả</th><th>Bằng chứng</th></tr></thead><tbody>${rows}</tbody></table>` : ''}
       ${a.risks?.length ? `<div class="ac-sec"><b>Rủi ro / việc còn mở</b><ul>${a.risks.map((r) => `<li>${esc(r)}</li>`).join('')}</ul></div>` : ''}
       ${fus ? `<div class="ac-sec"><b>Việc tiếp theo CTO đề xuất</b> <small>bấm để soạn sẵn việc tiếp nối, sửa rồi mới giao</small><ul class="ac-fu">${fus}</ul></div>` : ''}
+      ${a.accepted ? '' : '<div class="pb-actions ac-redo"><button type="button" class="btn ghost sm" data-ac-redo title="Chạy lại riêng bước CTO nghiệm thu (báo cáo giữ nguyên) — vd. sau khi tăng ngân sách hoặc khi lần trước không đọc được kết luận">↻ Nghiệm thu lại</button></div>'}
     </details>`;
   };
-  /** Soạn sẵn việc tiếp nối vào ô trả lời (hội thoại) hoặc ô giao tiếp nối (trang nhiệm vụ) — không tự giao. */
+  /**
+   * Việc tiếp theo CTO đề xuất → hộp thoại soạn sẵn (sửa được) rồi giao thành việc TIẾP NỐI đúng nhiệm vụ được nghiệm thu
+   * (không phụ thuộc ô soạn đang mở ở đâu — hội thoại, trang nhiệm vụ hay hộp Cần bạn). CTO không tự giao.
+   */
+  function followUpDialog(t, f) {
+    const cont = t.branch && t.projectId;
+    window.Director.modal({
+      title: `＋ Giao tiếp nối ${esc(C.code(t))}`,
+      wide: true,
+      body: `<form class="form">
+        <p class="muted-p">Việc tiếp theo CTO đề xuất sau khi nghiệm thu <b>${esc(C.code(t))} · ${esc(t.title)}</b>. Sửa nếu cần rồi giao — việc mới kế thừa dự án/chế độ/agent, báo cáo trước được đưa vào làm đầu vào.</p>
+        <label>Tiêu đề<input name="title" maxlength="120" value="${esc(f.title)}" /></label>
+        <label>Nội dung<textarea name="brief" rows="7">${esc(f.brief)}</textarea></label>
+        ${cont ? `<label class="check"><input type="checkbox" name="cont" checked /> 🌿 nối tiếp nhánh <code>${esc(t.branch)}</code></label>` : ''}
+        <p class="form-msg" data-msg></p>
+        <div class="pb-actions"><button type="submit" class="btn primary sm">Giao tiếp nối ➤</button><button type="button" class="btn ghost sm" data-x>Hủy</button></div></form>`,
+      onMount: (el, close) => {
+        const form = el.querySelector('form');
+        form.querySelector('[data-x]').onclick = close;
+        form.onsubmit = async (e) => {
+          e.preventDefault();
+          const brief = form.brief.value.trim();
+          if (!brief) return (form.querySelector('[data-msg]').textContent = 'Nội dung không được để trống');
+          try {
+            const nt = await C.api('/api/tasks', { method: 'POST', body: JSON.stringify({ title: form.title.value.trim() || undefined, brief, followUp: t.id, ...(cont ? { continueBranch: form.cont.checked } : {}) }) });
+            C.S.tasks.set(nt.id, nt);
+            close();
+            C.toast({ level: 'info', title: `Đã giao tiếp nối ${C.code(nt)}`, msg: nt.title, taskId: nt.id });
+            if (C.S.tab === 'assign' && window.Chat) window.Chat.open(nt.id);
+          } catch (err) {
+            const m = form.querySelector('[data-msg]');
+            m.textContent = err.message;
+            m.className = 'form-msg err';
+          }
+        };
+      },
+    });
+  }
   function bindAccept(root) {
-    root?.querySelectorAll('.ac-box [data-ac-fu]').forEach(
-      (b) =>
-        (b.onclick = () => {
-          const box = b.closest('[data-ac]');
-          const t = C.S.tasks.get(box.dataset.ac);
-          const f = t?.acceptance?.followUps?.[Number(b.dataset.acFu)];
-          if (!f) return;
-          const ta = document.querySelector(C.S.tab === 'assign' ? '#cv-dock textarea' : '#task-detail .dock textarea');
-          if (!ta) return C.toast({ level: 'info', title: 'Chưa mở được ô giao tiếp nối', msg: 'Mở hội thoại hoặc trang của nhiệm vụ này rồi bấm lại.' });
-          ta.value = `${f.title}\n\n${f.brief}`;
-          ta.dispatchEvent(new Event('input'));
-          ta.focus();
-          ta.scrollIntoView({ block: 'nearest' });
-        }),
-    );
+    root?.querySelectorAll('.ac-box').forEach((box) => {
+      const t = C.S.tasks.get(box.dataset.ac);
+      if (!t) return;
+      box.querySelectorAll('[data-ac-fu]').forEach(
+        (b) =>
+          (b.onclick = () => {
+            const f = t.acceptance?.followUps?.[Number(b.dataset.acFu)];
+            if (f) followUpDialog(t, f);
+          }),
+      );
+      const re = box.querySelector('[data-ac-redo]');
+      if (re)
+        re.onclick = async () => {
+          re.disabled = true;
+          try {
+            const r = await C.api(`/api/tasks/${encodeURIComponent(t.id)}/resume`, { method: 'POST', body: JSON.stringify({ from: 'accept' }) });
+            if (r?.id) C.S.tasks.set(r.id, r);
+            C.toast({ level: 'info', title: 'CTO nghiệm thu lại', msg: t.title });
+          } catch (e) {
+            re.disabled = false;
+            C.toast({ level: 'error', title: 'Không nghiệm thu lại được', msg: e.message });
+          }
+        };
+    });
   }
 
   // ── Sẵn sàng gộp (A4) ────────────────────────────────────────────────────

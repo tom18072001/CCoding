@@ -155,12 +155,33 @@ export interface AcceptResult {
   criteria: Array<{ name: string; result: 'pass' | 'fail' | 'unknown'; evidence: string }>;
   risks: string[];
   followUps: Array<{ title: string; brief: string; department?: string }>;
+  /** Phần hiển thị: câu trả lời bỏ khối JSON kết luận. */
+  body: string;
 }
 
 /** Đọc kết luận nghiệm thu của CTO (khối JSON cuối). Không đọc được → chưa coi là nghiệm thu, parsed=false. */
 export function parseAcceptance(text: string): AcceptResult {
-  const raw = extractJson<{ accepted?: unknown; summary?: unknown; criteria?: unknown; risks?: unknown; followUps?: unknown; follow_ups?: unknown }>(text);
-  if (!raw) return { accepted: false, parsed: false, summary: '', criteria: [], risks: [], followUps: [] };
+  type Raw = { accepted?: unknown; summary?: unknown; criteria?: unknown; risks?: unknown; followUps?: unknown; follow_ups?: unknown };
+  // khối kết luận là khối ```json CUỐI có "accepted"/"criteria" — CTO có thể trích JSON khác (package.json…) làm bằng chứng phía trước
+  let raw: Raw | undefined;
+  let body = text.trim();
+  const fences = [...text.matchAll(/```json\s*\n([\s\S]*?)```/gi)];
+  for (let i = fences.length - 1; i >= 0 && !raw; i--) {
+    try {
+      const o = JSON.parse(fences[i][1]) as Raw;
+      if (o && typeof o === 'object' && ('accepted' in o || 'criteria' in o)) {
+        raw = o;
+        body = (text.slice(0, fences[i].index) + text.slice(fences[i].index! + fences[i][0].length)).trim();
+      }
+    } catch {
+      /* khối khác / hỏng: thử khối trước */
+    }
+  }
+  if (!raw) {
+    const any = extractJson<Raw>(text);
+    if (any && ('accepted' in any || 'criteria' in any)) raw = any;
+  }
+  if (!raw) return { accepted: false, parsed: false, summary: '', criteria: [], risks: [], followUps: [], body };
   const res = (v: unknown): 'pass' | 'fail' | 'unknown' => {
     const t = String(v ?? '').toLowerCase();
     return /^(pass|đạt|dat|ok|yes|true)$/.test(t) ? 'pass' : /^(fail|không|khong|không đạt|no|false)$/.test(t) ? 'fail' : 'unknown';
@@ -177,7 +198,7 @@ export function parseAcceptance(text: string): AcceptResult {
     .slice(0, 5);
   // kết luận chung phải khớp bảng: còn tiêu chí không đạt / chưa kiểm được thì chưa nghiệm thu
   const accepted = Boolean(raw.accepted) && criteria.length > 0 && criteria.every((c) => c.result === 'pass');
-  return { accepted, parsed: true, summary: String(raw.summary ?? '').slice(0, 600), criteria, risks, followUps };
+  return { accepted, parsed: true, summary: String(raw.summary ?? '').slice(0, 600), criteria, risks, followUps, body };
 }
 
 export interface RouteResult {

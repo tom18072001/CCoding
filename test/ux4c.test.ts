@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseAcceptance } from '../src/planner.js';
+import { PauseSignal } from '../src/orchestrator.js';
 import { testApp } from './helpers.js';
 
 // UX-4c: CTO nghiệm thu sau khi các phòng tổng hợp xong; BA, Technical Writer, Senior SE trong phòng Phát triển.
@@ -82,6 +83,64 @@ test('CTO chưa nghiệm thu → "cần xem"; tắt nghiệm thu hoặc giao ri�
     const s = await app.orchestrator.waitFor(solo.id);
     assert.equal(s.status, 'done', s.error);
     assert.ok(!s.acceptance, 'việc giao riêng một agent không qua CTO');
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('kết luận nghiệm thu: lấy khối JSON CUỐI có accepted/criteria; JSON trích dẫn làm bằng chứng không làm hỏng báo cáo', () => {
+  const text = `## Tóm tắt\nĐạt.\n\n## Tiêu chí nghiệm thu\n| A | Đạt | scripts trong package.json |\n\n\`\`\`json\n{"scripts": {"test": "node --test"}}\n\`\`\`\n\n## Rủi ro & việc còn mở\n- Rủi ro X\n\n\`\`\`json\n${JSON.stringify({ accepted: true, criteria: [{ name: 'A', result: 'pass', evidence: 'npm test' }] })}\n\`\`\``;
+  const r = parseAcceptance(text);
+  assert.equal(r.parsed, true);
+  assert.equal(r.accepted, true);
+  assert.equal(r.criteria.length, 1);
+  assert.ok(r.body.includes('Rủi ro X'), 'giữ phần sau khối JSON trích dẫn');
+  assert.ok(r.body.includes('"scripts"'), 'giữ JSON trích dẫn làm bằng chứng');
+  assert.ok(!r.body.includes('"accepted"'), 'bỏ khối kết luận máy đọc');
+});
+
+test('nghiệm thu: chạm trần ngân sách (tạm dừng) → vẫn xong, ghi chưa nghiệm thu; "Nghiệm thu lại" chỉ chạy bước CTO; "false" dạng chuỗi tắt nghiệm thu; pha accept trên dòng thời gian', async () => {
+  const app = testApp();
+  try {
+    const t = app.orchestrator.submit({ brief: 'Viết đề cương nghiên cứu về phát hiện bất thường', mode: 'department', department: 'research', options: { discussionRounds: 0 } });
+    const d = await app.orchestrator.waitFor(t.id);
+    assert.equal(d.status, 'done', d.error);
+    assert.ok(app.logs.query({ task: t.id, limit: 2000 }).some((e) => e.kind === 'phase' && e.phase === 'accept'), 'có mốc pha nghiệm thu');
+    // chạm trần ngân sách (chế độ tạm dừng) đúng lúc nghiệm thu → không tạm dừng cả nhiệm vụ đã có báo cáo
+    const orch = app.orchestrator as unknown as { checkBudget: (t: unknown) => void };
+    const real = orch.checkBudget;
+    orch.checkBudget = () => {
+      throw new PauseSignal('budget', 'Đã dùng hết ngân sách (thử)');
+    };
+    const n = app.usage.all({ task: t.id }).length;
+    app.orchestrator.resume(t.id, { from: 'accept' });
+    const r = await app.orchestrator.waitFor(t.id);
+    orch.checkBudget = real;
+    assert.equal(r.status, 'done', r.pause?.detail ?? r.error);
+    assert.match(r.acceptance?.error ?? '', /ngân sách/);
+    assert.equal(app.usage.all({ task: t.id }).length, n, 'không gọi model khi đã hết ngân sách');
+    // tăng ngân sách → nghiệm thu lại chỉ chạy bước CTO
+    app.orchestrator.resume(t.id, { from: 'accept' });
+    const r2 = await app.orchestrator.waitFor(t.id);
+    assert.equal(r2.status, 'done');
+    assert.equal(r2.acceptance?.accepted, true);
+    assert.deepEqual(app.usage.all({ task: t.id }).slice(n).map((x) => x.phase), ['accept']);
+    const off = app.orchestrator.submit({ brief: 'Viết đề cương', mode: 'department', department: 'research', options: { discussionRounds: 0, acceptance: 'false' as unknown as boolean } });
+    assert.equal(off.options.acceptance, false);
+    await app.orchestrator.waitFor(off.id);
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('review chưa duyệt + CTO chưa nghiệm thu → "cần xem" nêu cả hai', async () => {
+  const app = testApp({ reviewRejectRate: 1, acceptRejectRate: 1 });
+  try {
+    const t = app.orchestrator.submit({ brief: 'Thiết kế API quản lý hồ sơ có phân quyền', mode: 'department', department: 'dev', options: { discussionRounds: 0, maxRevisions: 0 } });
+    const d = await app.orchestrator.waitFor(t.id);
+    assert.equal(d.status, 'done', d.error);
+    assert.equal(d.attention?.reason, 'review');
+    assert.match(d.attention!.detail, /CTO chưa nghiệm thu/);
   } finally {
     app.cleanup();
   }

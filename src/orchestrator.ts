@@ -167,7 +167,8 @@ export interface ResumeOptions {
   /** Chạy lại các hạng mục đã xong (vd. để áp dụng thật vào repo sau khi có workspace): id hoặc "all". */
   rerun?: string[] | 'all';
   /** Làm lại từ pha review (review → sửa → tổng hợp) hoặc chỉ báo cáo tổng hợp. */
-  from?: 'review' | 'synthesize';
+  /** accept: chỉ chạy lại bước CTO nghiệm thu (báo cáo giữ nguyên). */
+  from?: 'review' | 'synthesize' | 'accept';
   /** Tự tiếp tục theo hẹn (không phải người bấm) — giữ bộ đếm "không còn runtime". */
   auto?: boolean;
 }
@@ -302,7 +303,8 @@ export class Orchestrator {
         subtaskBudgetTokens: o.subtaskBudgetTokens && o.subtaskBudgetTokens > 0 ? Math.floor(o.subtaskBudgetTokens) : undefined,
         ...variantOptions(o),
         planApproval: (o.planApproval ?? project?.planApproval ?? config.defaults.planApproval) ? true : undefined,
-        acceptance: (o.acceptance ?? config.defaults.acceptance ?? true) !== false,
+        // "false" dạng chuỗi (form/CLI) cũng là tắt
+        acceptance: ![o.acceptance ?? config.defaults.acceptance ?? true].some((v) => v === false || String(v) === 'false'),
       },
       after: extra.after?.length ? extra.after : undefined,
       splitFrom: extra.splitFrom,
@@ -446,7 +448,7 @@ export class Orchestrator {
           r.finalPath = undefined;
         }
       }
-      if (o.from && r.subtasks.length) {
+      if (o.from && o.from !== 'accept' && r.subtasks.length) {
         const back: RunStage = o.from === 'review' ? 'executed' : 'reviewed';
         r.stage ??= inferStage(r);
         if (!r.stage || STAGES.indexOf(r.stage) > STAGES.indexOf(back)) r.stage = back;
@@ -465,6 +467,12 @@ export class Orchestrator {
           s.status = 'pending';
           s.error = undefined;
         }
+    }
+    if (o.from === 'accept') {
+      // nghiệm thu lại (lần trước lỗi, hết ngân sách, không đọc được kết luận…) — báo cáo không viết lại
+      t.acceptance = undefined;
+      if (t.attention?.reason === 'acceptance') t.attention = undefined;
+      logs.write({ level: 'info', kind: 'task.rerun', msg: `${t.id}: làm lại bước CTO nghiệm thu`, taskId: t.id });
     }
     const prev = t.pause?.reason ?? t.status;
     // tiếp tục khi đang chờ duyệt kế hoạch = duyệt (bấm Tiếp tục) hoặc tự duyệt khi hết thời gian chờ
@@ -1015,6 +1023,8 @@ export class Orchestrator {
     if (task.attention?.reason === 'acceptance') task.attention = undefined;
     task.phase = 'accept';
     this.save(task);
+    // mốc pha cho dòng thời gian (khép pha tổng hợp của phòng cuối)
+    logs.write({ level: 'info', kind: 'phase', msg: `CTO: ${ACTIVITY_BY_PHASE.accept}`, taskId: task.id, department: 'office', agentId: cto.id, phase: 'accept' });
     const items: P.AcceptInput[] = task.runs.map((r) => ({
       department: registry.departments.get(r.department)?.name ?? r.department,
       final: r.finalPath ? (store.readRunFile(task.id, r.finalPath) ?? '') : '',
@@ -1033,8 +1043,10 @@ export class Orchestrator {
       if (!res.text) throw new Error(res.error || 'không có nội dung');
       text = res.text;
     } catch (e) {
-      if (e instanceof PauseSignal || e instanceof CancelledError) throw e;
-      const msg = (e as Error).message.slice(0, 300);
+      // chạm trần ngân sách (chế độ "tạm dừng") ở bước nghiệm thu: báo cáo đã xong — giao kết quả, ghi chưa nghiệm thu thay vì tạm dừng cả nhiệm vụ
+      const budget = e instanceof PauseSignal && e.reason === 'budget';
+      if (!budget && (e instanceof PauseSignal || e instanceof CancelledError)) throw e;
+      const msg = budget ? 'hết ngân sách nhiệm vụ — tăng ngân sách rồi bấm "↻ Nghiệm thu lại"' : (e as Error).message.slice(0, 300);
       task.acceptance = { ...base, accepted: false, parsed: false, summary: '', error: msg };
       logs.write({ level: 'warn', kind: 'accept.error', msg: `${task.id}: CTO chưa nghiệm thu được — ${msg}`, taskId: task.id, projectId: task.projectId, agentId: cto.id });
       this.message(task, 'office', 'system', 'system', `⚠️ CTO chưa nghiệm thu được (${msg}) — kết quả vẫn được giao; xem báo cáo và tự đối chiếu.`);
@@ -1042,16 +1054,20 @@ export class Orchestrator {
       return;
     }
     const r = parseAcceptance(text);
-    // phần hiển thị: bỏ khối JSON máy đọc ở cuối
-    const body = text.replace(/```json[\s\S]*?```\s*$/i, '').trim() || text.trim();
+    // phần hiển thị: bỏ đúng khối JSON kết luận (khối cuối có accepted/criteria), giữ JSON CTO trích dẫn làm bằng chứng
+    const body = r.body || text.trim();
     const rel = 'ACCEPTANCE.md';
     writeText(path.join(store.runDir(task.id), rel), `${body}\n`);
     task.acceptance = { ...base, accepted: r.accepted, parsed: r.parsed, summary: r.summary || extractSummary(body, 240), criteria: r.criteria, risks: r.risks, followUps: r.followUps, path: rel };
     const fails = r.criteria.filter((c) => c.result !== 'pass').length;
     logs.write({ level: r.accepted ? 'info' : 'warn', kind: 'accept.done', msg: `${task.id}: CTO ${r.accepted ? 'nghiệm thu' : r.parsed ? `chưa nghiệm thu (${fails}/${r.criteria.length} tiêu chí chưa đạt)` : 'không ghi kết luận đọc được'}`, taskId: task.id, projectId: task.projectId, agentId: cto.id, data: { accepted: r.accepted, parsed: r.parsed, criteria: r.criteria.length, fails } });
     this.message(task, 'office', cto.id, 'acceptance', body);
-    if (r.parsed && !r.accepted && !task.attention)
-      task.attention = { reason: 'acceptance', detail: `CTO chưa nghiệm thu: ${fails ? `${fails}/${r.criteria.length} tiêu chí chưa đạt hoặc chưa kiểm được` : 'chưa có tiêu chí đạt'}`, at: nowIso() };
+    const why = `CTO chưa nghiệm thu: ${fails ? `${fails}/${r.criteria.length} tiêu chí chưa đạt hoặc chưa kiểm được` : 'chưa có tiêu chí đạt'}`;
+    if (r.parsed && !r.accepted) {
+      if (!task.attention) task.attention = { reason: 'acceptance', detail: why, at: nowIso() };
+      // đã "cần xem" vì review/lệnh kiểm tra → ghi thêm kết luận của CTO để cảnh báo và hộp Cần bạn nói đủ
+      else if (!task.attention.detail.includes('CTO chưa nghiệm thu')) task.attention.detail = `${task.attention.detail} · ${why}`;
+    }
     this.save(task);
   }
 

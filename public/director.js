@@ -90,10 +90,17 @@
       )
       .join('')}<div class="im-foot"><kbd>1</kbd>–<kbd>${list.length}</kbd> chọn · <kbd>Esc</kbd> đóng</div>`;
     m.hidden = false;
-    const stage = $('#stage').getBoundingClientRect();
+    // menu nằm trong khung văn phòng có thể cuộn: kẹp trong phần đang nhìn thấy (tọa độ đã gồm độ cuộn)
+    const host = $('#stage');
+    const vw = host.clientWidth;
+    const vh = host.clientHeight;
+    const sx = host.scrollLeft;
+    const sy = host.scrollTop;
     const w = 270;
-    const left = Math.max(8, Math.min(stage.width - w - 8, (pos?.left ?? stage.width / 2) - w / 2));
-    const top = Math.max(8, Math.min(stage.height - m.offsetHeight - 8, (pos?.top ?? stage.height / 2) - m.offsetHeight - 26));
+    const left = Math.max(sx + 8, Math.min(sx + vw - w - 8, (pos?.left ?? sx + vw / 2) - w / 2));
+    const want = (pos?.top ?? sy + vh / 2) - m.offsetHeight - 26;
+    // không đủ chỗ phía trên bàn → đặt ngay dưới bàn
+    const top = Math.max(sy + 8, Math.min(sy + vh - m.offsetHeight - 8, want < sy + 8 && pos ? pos.top + 56 : want));
     m.style.left = `${left}px`;
     m.style.top = `${top}px`;
     lock(true);
