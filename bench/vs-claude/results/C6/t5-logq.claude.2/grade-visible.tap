@@ -1,0 +1,208 @@
+TAP version 13
+# Subtest: count
+ok 1 - count
+  ---
+  duration_ms: 1.899081
+  type: 'test'
+  ...
+# Subtest: count by: kiểu key, bỏ thiếu/null, thứ tự
+ok 2 - count by: kiểu key, bỏ thiếu/null, thứ tự
+  ---
+  duration_ms: 0.398892
+  type: 'test'
+  ...
+# Subtest: top n
+ok 3 - top n
+  ---
+  duration_ms: 0.381859
+  type: 'test'
+  ...
+# Subtest: sum/avg/min/max
+ok 4 - sum/avg/min/max
+  ---
+  duration_ms: 0.488362
+  type: 'test'
+  ...
+# Subtest: percentile nearest-rank
+ok 5 - percentile nearest-rank
+  ---
+  duration_ms: 0.255272
+  type: 'test'
+  ...
+# Subtest: histogram: mốc, điền trống, sắp tăng
+ok 6 - histogram: mốc, điền trống, sắp tăng
+  ---
+  duration_ms: 1.46162
+  type: 'test'
+  ...
+# Subtest: spec không hợp lệ
+ok 7 - spec không hợp lệ
+  ---
+  duration_ms: 0.781237
+  type: 'test'
+  ...
+# Subtest: in bản ghi khớp không có @t, theo thứ tự
+ok 8 - in bản ghi khớp không có @t, theo thứ tự
+  ---
+  duration_ms: 38.862615
+  type: 'test'
+  ...
+# Subtest: stdin, tùy chọn sau tệp, --stats
+ok 9 - stdin, tùy chọn sau tệp, --stats
+  ---
+  duration_ms: 93.538707
+  type: 'test'
+  ...
+# Subtest: không khớp gì → mã 0, stdout rỗng
+ok 10 - không khớp gì → mã 0, stdout rỗng
+  ---
+  duration_ms: 29.972361
+  type: 'test'
+  ...
+# Subtest: --agg json và table
+ok 11 - --agg json và table
+  ---
+  duration_ms: 303.711024
+  type: 'test'
+  ...
+# Subtest: mã thoát 2: lỗi truy vấn, spec, dùng sai
+ok 12 - mã thoát 2: lỗi truy vấn, spec, dùng sai
+  ---
+  duration_ms: 303.886053
+  type: 'test'
+  ...
+# Subtest: mã thoát 1: không đọc được tệp
+ok 13 - mã thoát 1: không đọc được tệp
+  ---
+  duration_ms: 63.59773
+  type: 'test'
+  ...
+# Subtest: CRLF và dòng cuối không có \\n
+ok 14 - CRLF và dòng cuối không có \\n
+  ---
+  duration_ms: 29.289758
+  type: 'test'
+  ...
+# Subtest: dòng rỗng / khoảng trắng / \\r
+ok 15 - dòng rỗng / khoảng trắng / \\r
+  ---
+  duration_ms: 2.128836
+  type: 'test'
+  ...
+# Subtest: JSON: làm phẳng, giữ mảng, bỏ đối tượng rỗng lồng
+ok 16 - JSON: làm phẳng, giữ mảng, bỏ đối tượng rỗng lồng
+  ---
+  duration_ms: 0.47993
+  type: 'test'
+  ...
+# Subtest: JSON lỗi → ok:false
+ok 17 - JSON lỗi → ok:false
+  ---
+  duration_ms: 0.205382
+  type: 'test'
+  ...
+# Subtest: logfmt: kiểu giá trị trần
+ok 18 - logfmt: kiểu giá trị trần
+  ---
+  duration_ms: 0.307219
+  type: 'test'
+  ...
+# Subtest: logfmt: nhiều khoảng trắng, tab, key trùng
+ok 19 - logfmt: nhiều khoảng trắng, tab, key trùng
+  ---
+  duration_ms: 0.213765
+  type: 'test'
+  ...
+# Subtest: logfmt: ngoặc kép và thoát
+ok 20 - logfmt: ngoặc kép và thoát
+  ---
+  duration_ms: 0.179408
+  type: 'test'
+  ...
+# Subtest: logfmt: dạng sai → cả dòng ok:false
+ok 21 - logfmt: dạng sai → cả dòng ok:false
+  ---
+  duration_ms: 0.292062
+  type: 'test'
+  ...
+# Subtest: thời gian: @timestamp > ts > time, trường đầu tiên có mặt
+ok 22 - thời gian: @timestamp > ts > time, trường đầu tiên có mặt
+  ---
+  duration_ms: 0.463358
+  type: 'test'
+  ...
+# Subtest: truy vấn rỗng khớp mọi thứ
+ok 23 - truy vấn rỗng khớp mọi thứ
+  ---
+  duration_ms: 1.202854
+  type: 'test'
+  ...
+# Subtest: field:value không phân biệt hoa thường, khớp toàn bộ, ký tự đại diện
+ok 24 - field:value không phân biệt hoa thường, khớp toàn bộ, ký tự đại diện
+  ---
+  duration_ms: 1.328504
+  type: 'test'
+  ...
+# Subtest: field:"quoted" so khớp chính xác, không đại diện
+ok 25 - field:"quoted" so khớp chính xác, không đại diện
+  ---
+  duration_ms: 0.262496
+  type: 'test'
+  ...
+# Subtest: so sánh số
+ok 26 - so sánh số
+  ---
+  duration_ms: 1.408692
+  type: 'test'
+  ...
+# Subtest: _exists_
+ok 27 - _exists_
+  ---
+  duration_ms: 0.246204
+  type: 'test'
+  ...
+# Subtest: tìm kiếm tự do trong msg/message
+ok 28 - tìm kiếm tự do trong msg/message
+  ---
+  duration_ms: 0.375157
+  type: 'test'
+  ...
+# Subtest: toán tử logic và ưu tiên
+ok 29 - toán tử logic và ưu tiên
+  ---
+  duration_ms: 0.433536
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp và vị trí
+ok 30 - lỗi cú pháp và vị trí
+  ---
+  duration_ms: 1.073219
+  type: 'test'
+  ...
+# Subtest: parse JSON và logfmt
+ok 31 - parse JSON và logfmt
+  ---
+  duration_ms: 1.547387
+  type: 'test'
+  ...
+# Subtest: truy vấn cơ bản
+ok 32 - truy vấn cơ bản
+  ---
+  duration_ms: 0.965684
+  type: 'test'
+  ...
+# Subtest: tổng hợp count by
+ok 33 - tổng hợp count by
+  ---
+  duration_ms: 0.434421
+  type: 'test'
+  ...
+1..33
+# tests 33
+# suites 0
+# pass 33
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1155.663254

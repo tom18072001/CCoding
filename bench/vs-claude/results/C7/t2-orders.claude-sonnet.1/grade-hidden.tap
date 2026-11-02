@@ -1,0 +1,370 @@
+TAP version 13
+# Subtest: \#1 toCents(1.005) = 101
+ok 1 - \#1 toCents(1.005) = 101
+  ---
+  duration_ms: 1.682604
+  type: 'test'
+  ...
+# Subtest: \#1 toCents(-1.005) = -101
+ok 2 - \#1 toCents(-1.005) = -101
+  ---
+  duration_ms: 0.326911
+  type: 'test'
+  ...
+# Subtest: \#1 toCents(2.675) = 268
+ok 3 - \#1 toCents(2.675) = 268
+  ---
+  duration_ms: 0.143835
+  type: 'test'
+  ...
+# Subtest: \#1 toCents(8.345) = 835
+ok 4 - \#1 toCents(8.345) = 835
+  ---
+  duration_ms: 0.153252
+  type: 'test'
+  ...
+# Subtest: \#1 toCents(1.255) = 126
+ok 5 - \#1 toCents(1.255) = 126
+  ---
+  duration_ms: 0.193285
+  type: 'test'
+  ...
+# Subtest: \#1 toCents(0.29) = 29
+ok 6 - \#1 toCents(0.29) = 29
+  ---
+  duration_ms: 0.160162
+  type: 'test'
+  ...
+# Subtest: \#1 toCents(12.34) = 1234
+ok 7 - \#1 toCents(12.34) = 1234
+  ---
+  duration_ms: 0.165568
+  type: 'test'
+  ...
+# Subtest: \#1 toCents(19.999) = 2000
+ok 8 - \#1 toCents(19.999) = 2000
+  ---
+  duration_ms: 0.073216
+  type: 'test'
+  ...
+# Subtest: \#1 toCents(0.30000000000000004) = 30
+ok 9 - \#1 toCents(0.30000000000000004) = 30
+  ---
+  duration_ms: 0.271451
+  type: 'test'
+  ...
+# Subtest: \#1 toCents(123456.785) = 12345679
+ok 10 - \#1 toCents(123456.785) = 12345679
+  ---
+  duration_ms: 0.428801
+  type: 'test'
+  ...
+# Subtest: \#1 toCents(0.005) = 1
+ok 11 - \#1 toCents(0.005) = 1
+  ---
+  duration_ms: 0.117762
+  type: 'test'
+  ...
+# Subtest: \#1 toCents(5) = 500
+ok 12 - \#1 toCents(5) = 500
+  ---
+  duration_ms: 0.053219
+  type: 'test'
+  ...
+# Subtest: \#1 toCents kiểu sai vẫn ném TypeError
+ok 13 - \#1 toCents kiểu sai vẫn ném TypeError
+  ---
+  duration_ms: 0.426962
+  type: 'test'
+  ...
+# Subtest: \#1 giá sản phẩm 1.005 lưu thành 101 xu
+ok 14 - \#1 giá sản phẩm 1.005 lưu thành 101 xu
+  ---
+  duration_ms: 0.170746
+  type: 'test'
+  ...
+# Subtest: \#1 mã giảm cố định 1.005 → giảm 101 xu
+ok 15 - \#1 mã giảm cố định 1.005 → giảm 101 xu
+  ---
+  duration_ms: 0.722605
+  type: 'test'
+  ...
+# Subtest: \#1 giá trị tối thiểu 10.005 so bằng xu đã làm tròn
+ok 16 - \#1 giá trị tối thiểu 10.005 so bằng xu đã làm tròn
+  ---
+  duration_ms: 0.337564
+  type: 'test'
+  ...
+# Subtest: \#2 allocate(1000, [1,1,1]) = [334,333,333]
+ok 17 - \#2 allocate(1000, [1,1,1]) = [334,333,333]
+  ---
+  duration_ms: 0.653052
+  type: 'test'
+  ...
+# Subtest: \#2 allocate(5, [3,3,3,1]) = [2,2,1,0]
+ok 18 - \#2 allocate(5, [3,3,3,1]) = [2,2,1,0]
+  ---
+  duration_ms: 0.086821
+  type: 'test'
+  ...
+# Subtest: \#2 allocate(10, [2,1]) = [7,3]
+ok 19 - \#2 allocate(10, [2,1]) = [7,3]
+  ---
+  duration_ms: 0.055464
+  type: 'test'
+  ...
+# Subtest: \#2 allocate(7, [0,0]) = [0,0]
+ok 20 - \#2 allocate(7, [0,0]) = [0,0]
+  ---
+  duration_ms: 0.048621
+  type: 'test'
+  ...
+# Subtest: \#2 allocate(0, [5,5]) = [0,0]
+ok 21 - \#2 allocate(0, [5,5]) = [0,0]
+  ---
+  duration_ms: 0.117764
+  type: 'test'
+  ...
+# Subtest: \#2 allocate(100, [1,1]) = [50,50]
+ok 22 - \#2 allocate(100, [1,1]) = [50,50]
+  ---
+  duration_ms: 0.049056
+  type: 'test'
+  ...
+# Subtest: \#2 allocate(1, [1,1,1]) = [1,0,0]
+ok 23 - \#2 allocate(1, [1,1,1]) = [1,0,0]
+  ---
+  duration_ms: 0.041545
+  type: 'test'
+  ...
+# Subtest: \#2 allocate(11, [1,2,3,4]) = [1,2,3,5]
+ok 24 - \#2 allocate(11, [1,2,3,4]) = [1,2,3,5]
+  ---
+  duration_ms: 0.049252
+  type: 'test'
+  ...
+# Subtest: \#2 allocate(255, [1000,1250,303]) = [100,125,30]
+ok 25 - \#2 allocate(255, [1000,1250,303]) = [100,125,30]
+  ---
+  duration_ms: 0.0966
+  type: 'test'
+  ...
+# Subtest: \#2 allocate: tổng luôn bằng total
+ok 26 - \#2 allocate: tổng luôn bằng total
+  ---
+  duration_ms: 1.869767
+  type: 'test'
+  ...
+# Subtest: \#2 mã cố định 10.00 trên 3 món: tổng giảm đúng 1000
+ok 27 - \#2 mã cố định 10.00 trên 3 món: tổng giảm đúng 1000
+  ---
+  duration_ms: 0.322568
+  type: 'test'
+  ...
+# Subtest: \#2 mã % : tổng giảm của các dòng bằng giảm của mã
+ok 28 - \#2 mã % : tổng giảm của các dòng bằng giảm của mã
+  ---
+  duration_ms: 0.349156
+  type: 'test'
+  ...
+# Subtest: \#2 mã cố định lớn hơn giỏ: không âm
+ok 29 - \#2 mã cố định lớn hơn giỏ: không âm
+  ---
+  duration_ms: 0.214051
+  type: 'test'
+  ...
+# Subtest: \#3 mua 2 tặng 1, 1 món → 0 miễn phí
+ok 30 - \#3 mua 2 tặng 1, 1 món → 0 miễn phí
+  ---
+  duration_ms: 0.213105
+  type: 'test'
+  ...
+# Subtest: \#3 mua 2 tặng 1, 2 món → 0 miễn phí
+ok 31 - \#3 mua 2 tặng 1, 2 món → 0 miễn phí
+  ---
+  duration_ms: 0.096528
+  type: 'test'
+  ...
+# Subtest: \#3 mua 2 tặng 1, 3 món → 1 miễn phí
+ok 32 - \#3 mua 2 tặng 1, 3 món → 1 miễn phí
+  ---
+  duration_ms: 0.22533
+  type: 'test'
+  ...
+# Subtest: \#3 mua 2 tặng 1, 5 món → 1 miễn phí
+ok 33 - \#3 mua 2 tặng 1, 5 món → 1 miễn phí
+  ---
+  duration_ms: 0.108407
+  type: 'test'
+  ...
+# Subtest: \#3 mua 2 tặng 1, 6 món → 2 miễn phí
+ok 34 - \#3 mua 2 tặng 1, 6 món → 2 miễn phí
+  ---
+  duration_ms: 0.06266
+  type: 'test'
+  ...
+# Subtest: \#3 mua 3 tặng 2, 4 món → 0 miễn phí
+ok 35 - \#3 mua 3 tặng 2, 4 món → 0 miễn phí
+  ---
+  duration_ms: 0.10955
+  type: 'test'
+  ...
+# Subtest: \#3 mua 3 tặng 2, 5 món → 2 miễn phí
+ok 36 - \#3 mua 3 tặng 2, 5 món → 2 miễn phí
+  ---
+  duration_ms: 0.095779
+  type: 'test'
+  ...
+# Subtest: \#3 mua 3 tặng 2, 10 món → 4 miễn phí
+ok 37 - \#3 mua 3 tặng 2, 10 món → 4 miễn phí
+  ---
+  duration_ms: 0.067459
+  type: 'test'
+  ...
+# Subtest: \#3 mua 1 tặng 1, 7 món → 3 miễn phí
+ok 38 - \#3 mua 1 tặng 1, 7 món → 3 miễn phí
+  ---
+  duration_ms: 0.071062
+  type: 'test'
+  ...
+# Subtest: \#3 bxgy không áp cho sản phẩm khác
+ok 39 - \#3 bxgy không áp cho sản phẩm khác
+  ---
+  duration_ms: 0.138148
+  type: 'test'
+  ...
+# Subtest: \#4 mã NOV lúc 2026-11-30T10:00:00Z → nhận
+ok 40 - \#4 mã NOV lúc 2026-11-30T10:00:00Z → nhận
+  ---
+  duration_ms: 0.277997
+  type: 'test'
+  ...
+# Subtest: \#4 mã NOV lúc 2026-11-30T23:59:59.999Z → nhận
+ok 41 - \#4 mã NOV lúc 2026-11-30T23:59:59.999Z → nhận
+  ---
+  duration_ms: 0.092791
+  type: 'test'
+  ...
+# Subtest: \#4 mã NOV lúc 2026-12-01T00:00:00Z → từ chối
+ok 42 - \#4 mã NOV lúc 2026-12-01T00:00:00Z → từ chối
+  ---
+  duration_ms: 0.152361
+  type: 'test'
+  ...
+# Subtest: \#4 mã NOV lúc 2026-12-05T00:00:00Z → từ chối
+ok 43 - \#4 mã NOV lúc 2026-12-05T00:00:00Z → từ chối
+  ---
+  duration_ms: 0.116586
+  type: 'test'
+  ...
+# Subtest: \#4 mã NOV lúc 2026-11-01T00:00:00Z → nhận
+ok 44 - \#4 mã NOV lúc 2026-11-01T00:00:00Z → nhận
+  ---
+  duration_ms: 0.490576
+  type: 'test'
+  ...
+# Subtest: \#4 mã NOV lúc 2026-10-31T23:59:59.999Z → từ chối
+ok 45 - \#4 mã NOV lúc 2026-10-31T23:59:59.999Z → từ chối
+  ---
+  duration_ms: 0.152076
+  type: 'test'
+  ...
+# Subtest: \#4 mã NOV lúc 2026-11-15T08:00:00Z → nhận
+ok 46 - \#4 mã NOV lúc 2026-11-15T08:00:00Z → nhận
+  ---
+  duration_ms: 0.082832
+  type: 'test'
+  ...
+# Subtest: \#5 sửa số lượng 2 → 3 khi kho còn 4
+ok 47 - \#5 sửa số lượng 2 → 3 khi kho còn 4
+  ---
+  duration_ms: 0.230343
+  type: 'test'
+  ...
+# Subtest: \#5 giảm số lượng trả lại kho
+ok 48 - \#5 giảm số lượng trả lại kho
+  ---
+  duration_ms: 0.13864
+  type: 'test'
+  ...
+# Subtest: \#5 xóa món trả lại kho
+ok 49 - \#5 xóa món trả lại kho
+  ---
+  duration_ms: 0.182789
+  type: 'test'
+  ...
+# Subtest: \#5 updateQty 0 = xóa và trả kho
+ok 50 - \#5 updateQty 0 = xóa và trả kho
+  ---
+  duration_ms: 0.114093
+  type: 'test'
+  ...
+# Subtest: \#5 hai giỏ dùng chung kho: đang giữ = tổng số lượng các giỏ
+ok 51 - \#5 hai giỏ dùng chung kho: đang giữ = tổng số lượng các giỏ
+  ---
+  duration_ms: 0.252452
+  type: 'test'
+  ...
+# Subtest: \#5 tăng vượt kho: báo lỗi và không đổi giỏ/kho
+ok 52 - \#5 tăng vượt kho: báo lỗi và không đổi giỏ/kho
+  ---
+  duration_ms: 0.131308
+  type: 'test'
+  ...
+# Subtest: \#5 thêm vượt kho vẫn báo OutOfStockError có số còn lại
+ok 53 - \#5 thêm vượt kho vẫn báo OutOfStockError có số còn lại
+  ---
+  duration_ms: 0.18045
+  type: 'test'
+  ...
+# Subtest: \#6 thuế tính trên net
+ok 54 - \#6 thuế tính trên net
+  ---
+  duration_ms: 0.21248
+  type: 'test'
+  ...
+# Subtest: \#6 thuế trên net với giảm theo danh mục
+ok 55 - \#6 thuế trên net với giảm theo danh mục
+  ---
+  duration_ms: 0.173459
+  type: 'test'
+  ...
+# Subtest: hồi quy: không mã
+ok 56 - hồi quy: không mã
+  ---
+  duration_ms: 0.10237
+  type: 'test'
+  ...
+# Subtest: hồi quy: formatMoney / fromCents
+ok 57 - hồi quy: formatMoney / fromCents
+  ---
+  duration_ms: 0.203863
+  type: 'test'
+  ...
+# Subtest: hồi quy: mã không phân biệt hoa thường, removeCoupon
+ok 58 - hồi quy: mã không phân biệt hoa thường, removeCoupon
+  ---
+  duration_ms: 0.111921
+  type: 'test'
+  ...
+# Subtest: hồi quy: addItem cộng dồn số lượng
+ok 59 - hồi quy: addItem cộng dồn số lượng
+  ---
+  duration_ms: 0.078724
+  type: 'test'
+  ...
+# Subtest: hồi quy: tham số sai
+ok 60 - hồi quy: tham số sai
+  ---
+  duration_ms: 0.196955
+  type: 'test'
+  ...
+1..60
+# tests 60
+# suites 0
+# pass 60
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 125.745651

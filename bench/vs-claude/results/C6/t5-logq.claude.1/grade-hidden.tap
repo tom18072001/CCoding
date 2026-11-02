@@ -1,0 +1,886 @@
+TAP version 13
+# Subtest: parse ok: "{\\"level\\":\\"error\\",\\"msg\\":\\"boom\\"}"
+ok 1 - parse ok: "{\\"level\\":\\"error\\",\\"msg\\":\\"boom\\"}"
+  ---
+  duration_ms: 3.555311
+  type: 'test'
+  ...
+# Subtest: parse ok: "  {\\"a\\":1}\\r"
+ok 2 - parse ok: "  {\\"a\\":1}\\r"
+  ---
+  duration_ms: 0.281887
+  type: 'test'
+  ...
+# Subtest: parse ok: "{\\"http\\":{\\"status\\":500,\\"req\\":{\\"m\\":\\"GET\\"}},\\"tags\\":[\\"x\\",\\"y\\"]}"
+ok 3 - parse ok: "{\\"http\\":{\\"status\\":500,\\"req\\":{\\"m\\":\\"GET\\"}},\\"tags\\":[\\"x\\",\\"y\\"]}"
+  ---
+  duration_ms: 0.34412
+  type: 'test'
+  ...
+# Subtest: parse ok: "{\\"a\\":{},\\"b\\":null,\\"c\\":{\\"d\\":{}}}"
+ok 4 - parse ok: "{\\"a\\":{},\\"b\\":null,\\"c\\":{\\"d\\":{}}}"
+  ---
+  duration_ms: 0.296617
+  type: 'test'
+  ...
+# Subtest: parse ok: "{}"
+ok 5 - parse ok: "{}"
+  ---
+  duration_ms: 0.188885
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "{\\"a\\":"
+ok 6 - parse lỗi: "{\\"a\\":"
+  ---
+  duration_ms: 1.135528
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "{oops}"
+ok 7 - parse lỗi: "{oops}"
+  ---
+  duration_ms: 0.281839
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "   "
+ok 8 - parse lỗi: "   "
+  ---
+  duration_ms: 0.113194
+  type: 'test'
+  ...
+# Subtest: parse lỗi: ""
+ok 9 - parse lỗi: ""
+  ---
+  duration_ms: 0.543131
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "\\r"
+ok 10 - parse lỗi: "\\r"
+  ---
+  duration_ms: 0.569631
+  type: 'test'
+  ...
+# Subtest: parse ok: "level=info status=200"
+ok 11 - parse ok: "level=info status=200"
+  ---
+  duration_ms: 0.623094
+  type: 'test'
+  ...
+# Subtest: parse ok: "a=1 b=-2.5 c=1.0.0 d=true e=false f=null g= h=01"
+ok 12 - parse ok: "a=1 b=-2.5 c=1.0.0 d=true e=false f=null g= h=01"
+  ---
+  duration_ms: 0.263695
+  type: 'test'
+  ...
+# Subtest: parse ok: "msg=\\"hello world\\" n=\\"42\\""
+ok 13 - parse ok: "msg=\\"hello world\\" n=\\"42\\""
+  ---
+  duration_ms: 0.10536
+  type: 'test'
+  ...
+# Subtest: parse ok: "m=\\"say \\\\\\"hi\\\\\\"\\" p=\\"C:\\\\\\\\tmp\\" q=\\"a\\\\nb\\\\tc\\" r=\\"x\\\\yz\\""
+ok 14 - parse ok: "m=\\"say \\\\\\"hi\\\\\\"\\" p=\\"C:\\\\\\\\tmp\\" q=\\"a\\\\nb\\\\tc\\" r=\\"x\\\\yz\\""
+  ---
+  duration_ms: 0.088927
+  type: 'test'
+  ...
+# Subtest: parse ok: "a=1\\t\\tb=2   c=3"
+ok 15 - parse ok: "a=1\\t\\tb=2   c=3"
+  ---
+  duration_ms: 0.147925
+  type: 'test'
+  ...
+# Subtest: parse ok: "a=1 a=2"
+ok 16 - parse ok: "a=1 a=2"
+  ---
+  duration_ms: 0.076783
+  type: 'test'
+  ...
+# Subtest: parse ok: "k.sub-x=1 _u=2"
+ok 17 - parse ok: "k.sub-x=1 _u=2"
+  ---
+  duration_ms: 0.505252
+  type: 'test'
+  ...
+# Subtest: parse ok: "url=http://x/y?a=b"
+ok 18 - parse ok: "url=http://x/y?a=b"
+  ---
+  duration_ms: 0.126178
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "just some text"
+ok 19 - parse lỗi: "just some text"
+  ---
+  duration_ms: 0.078844
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "a=1 broken"
+ok 20 - parse lỗi: "a=1 broken"
+  ---
+  duration_ms: 0.074828
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "1a=2"
+ok 21 - parse lỗi: "1a=2"
+  ---
+  duration_ms: 0.062699
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "a=\\"unterminated"
+ok 22 - parse lỗi: "a=\\"unterminated"
+  ---
+  duration_ms: 0.065522
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "a=\\"x\\"b=1"
+ok 23 - parse lỗi: "a=\\"x\\"b=1"
+  ---
+  duration_ms: 0.059465
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "a=x\\"y"
+ok 24 - parse lỗi: "a=x\\"y"
+  ---
+  duration_ms: 0.304007
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "=1"
+ok 25 - parse lỗi: "=1"
+  ---
+  duration_ms: 0.083928
+  type: 'test'
+  ...
+# Subtest: parse: @t từ @timestamp / ts / time theo thứ tự
+ok 26 - parse: @t từ @timestamp / ts / time theo thứ tự
+  ---
+  duration_ms: 0.361188
+  type: 'test'
+  ...
+# Subtest: parse: không có @t khi trường đầu tiên không phải thời gian
+ok 27 - parse: không có @t khi trường đầu tiên không phải thời gian
+  ---
+  duration_ms: 0.166873
+  type: 'test'
+  ...
+# Subtest: truy vấn: (rỗng)
+ok 28 - truy vấn: (rỗng)
+  ---
+  duration_ms: 0.446243
+  type: 'test'
+  ...
+# Subtest: truy vấn:    
+ok 29 - truy vấn:    
+  ---
+  duration_ms: 0.202981
+  type: 'test'
+  ...
+# Subtest: truy vấn: level:error
+ok 30 - truy vấn: level:error
+  ---
+  duration_ms: 1.222031
+  type: 'test'
+  ...
+# Subtest: truy vấn: level:ERR*
+ok 31 - truy vấn: level:ERR*
+  ---
+  duration_ms: 0.724309
+  type: 'test'
+  ...
+# Subtest: truy vấn: level:e?ror
+ok 32 - truy vấn: level:e?ror
+  ---
+  duration_ms: 0.6513
+  type: 'test'
+  ...
+# Subtest: truy vấn: level:err
+ok 33 - truy vấn: level:err
+  ---
+  duration_ms: 0.167712
+  type: 'test'
+  ...
+# Subtest: truy vấn: status:500
+ok 34 - truy vấn: status:500
+  ---
+  duration_ms: 0.150141
+  type: 'test'
+  ...
+# Subtest: truy vấn: status:503
+ok 35 - truy vấn: status:503
+  ---
+  duration_ms: 0.200832
+  type: 'test'
+  ...
+# Subtest: truy vấn: status:404
+ok 36 - truy vấn: status:404
+  ---
+  duration_ms: 0.258519
+  type: 'test'
+  ...
+# Subtest: truy vấn: status:5*
+ok 37 - truy vấn: status:5*
+  ---
+  duration_ms: 0.365208
+  type: 'test'
+  ...
+# Subtest: truy vấn: http.status:500
+ok 38 - truy vấn: http.status:500
+  ---
+  duration_ms: 0.126055
+  type: 'test'
+  ...
+# Subtest: truy vấn: path:/api/*
+ok 39 - truy vấn: path:/api/*
+  ---
+  duration_ms: 0.439843
+  type: 'test'
+  ...
+# Subtest: truy vấn: path:/api*
+ok 40 - truy vấn: path:/api*
+  ---
+  duration_ms: 0.35465
+  type: 'test'
+  ...
+# Subtest: truy vấn: path:"/api/*"
+ok 41 - truy vấn: path:"/api/*"
+  ---
+  duration_ms: 0.360087
+  type: 'test'
+  ...
+# Subtest: truy vấn: msg:"not found"
+ok 42 - truy vấn: msg:"not found"
+  ---
+  duration_ms: 0.196133
+  type: 'test'
+  ...
+# Subtest: truy vấn: msg:"Not"
+ok 43 - truy vấn: msg:"Not"
+  ---
+  duration_ms: 0.143336
+  type: 'test'
+  ...
+# Subtest: truy vấn: flag:true
+ok 44 - truy vấn: flag:true
+  ---
+  duration_ms: 0.135835
+  type: 'test'
+  ...
+# Subtest: truy vấn: status>=500
+ok 45 - truy vấn: status>=500
+  ---
+  duration_ms: 0.236893
+  type: 'test'
+  ...
+# Subtest: truy vấn: status>=404
+ok 46 - truy vấn: status>=404
+  ---
+  duration_ms: 0.189864
+  type: 'test'
+  ...
+# Subtest: truy vấn: status<300
+ok 47 - truy vấn: status<300
+  ---
+  duration_ms: 0.173627
+  type: 'test'
+  ...
+# Subtest: truy vấn: latency_ms>100
+ok 48 - truy vấn: latency_ms>100
+  ---
+  duration_ms: 0.138258
+  type: 'test'
+  ...
+# Subtest: truy vấn: latency_ms<=35
+ok 49 - truy vấn: latency_ms<=35
+  ---
+  duration_ms: 0.129839
+  type: 'test'
+  ...
+# Subtest: truy vấn: latency_ms>-1
+ok 50 - truy vấn: latency_ms>-1
+  ---
+  duration_ms: 0.096647
+  type: 'test'
+  ...
+# Subtest: truy vấn: status>=400 status<500
+ok 51 - truy vấn: status>=400 status<500
+  ---
+  duration_ms: 0.169288
+  type: 'test'
+  ...
+# Subtest: truy vấn: _exists_:user
+ok 52 - truy vấn: _exists_:user
+  ---
+  duration_ms: 0.185473
+  type: 'test'
+  ...
+# Subtest: truy vấn: _exists_:message
+ok 53 - truy vấn: _exists_:message
+  ---
+  duration_ms: 0.100627
+  type: 'test'
+  ...
+# Subtest: truy vấn: NOT _exists_:status
+ok 54 - truy vấn: NOT _exists_:status
+  ---
+  duration_ms: 0.157518
+  type: 'test'
+  ...
+# Subtest: truy vấn: reset
+ok 55 - truy vấn: reset
+  ---
+  duration_ms: 0.171062
+  type: 'test'
+  ...
+# Subtest: truy vấn: RESET
+ok 56 - truy vấn: RESET
+  ---
+  duration_ms: 0.110926
+  type: 'test'
+  ...
+# Subtest: truy vấn: health
+ok 57 - truy vấn: health
+  ---
+  duration_ms: 0.089271
+  type: 'test'
+  ...
+# Subtest: truy vấn: "by peer"
+ok 58 - truy vấn: "by peer"
+  ---
+  duration_ms: 0.139922
+  type: 'test'
+  ...
+# Subtest: truy vấn: "rate limited AND retried"
+ok 59 - truy vấn: "rate limited AND retried"
+  ---
+  duration_ms: 0.129516
+  type: 'test'
+  ...
+# Subtest: truy vấn: and
+ok 60 - truy vấn: and
+  ---
+  duration_ms: 0.086375
+  type: 'test'
+  ...
+# Subtest: truy vấn: level:error OR level:warn
+ok 61 - truy vấn: level:error OR level:warn
+  ---
+  duration_ms: 0.378053
+  type: 'test'
+  ...
+# Subtest: truy vấn: level:error AND status>=500 OR level:warn
+ok 62 - truy vấn: level:error AND status>=500 OR level:warn
+  ---
+  duration_ms: 0.304411
+  type: 'test'
+  ...
+# Subtest: truy vấn: level:error AND (status>=500 OR level:warn)
+ok 63 - truy vấn: level:error AND (status>=500 OR level:warn)
+  ---
+  duration_ms: 0.278013
+  type: 'test'
+  ...
+# Subtest: truy vấn: NOT level:error AND service:api
+ok 64 - truy vấn: NOT level:error AND service:api
+  ---
+  duration_ms: 0.255121
+  type: 'test'
+  ...
+# Subtest: truy vấn: NOT (level:error AND service:api)
+ok 65 - truy vấn: NOT (level:error AND service:api)
+  ---
+  duration_ms: 1.196531
+  type: 'test'
+  ...
+# Subtest: truy vấn: NOT NOT level:info
+ok 66 - truy vấn: NOT NOT level:info
+  ---
+  duration_ms: 0.270989
+  type: 'test'
+  ...
+# Subtest: truy vấn: service:web OR service:worker NOT msg:"cache miss"
+ok 67 - truy vấn: service:web OR service:worker NOT msg:"cache miss"
+  ---
+  duration_ms: 0.336672
+  type: 'test'
+  ...
+# Subtest: truy vấn: (service:web OR service:worker) NOT msg:"cache miss"
+ok 68 - truy vấn: (service:web OR service:worker) NOT msg:"cache miss"
+  ---
+  duration_ms: 0.22279
+  type: 'test'
+  ...
+# Subtest: truy vấn: service:api level:error status>=500
+ok 69 - truy vấn: service:api level:error status>=500
+  ---
+  duration_ms: 0.269036
+  type: 'test'
+  ...
+# Subtest: truy vấn: ((level:info))
+ok 70 - truy vấn: ((level:info))
+  ---
+  duration_ms: 0.132165
+  type: 'test'
+  ...
+# Subtest: truy vấn: level:error OR (service:worker AND _exists_:flag)
+ok 71 - truy vấn: level:error OR (service:worker AND _exists_:flag)
+  ---
+  duration_ms: 0.21819
+  type: 'test'
+  ...
+# Subtest: truy vấn: trường thiếu → false, không ném lỗi
+ok 72 - truy vấn: trường thiếu → false, không ném lỗi
+  ---
+  duration_ms: 0.288109
+  type: 'test'
+  ...
+# Subtest: truy vấn: ký tự đặc biệt của regex trong giá trị trần
+ok 73 - truy vấn: ký tự đặc biệt của regex trong giá trị trần
+  ---
+  duration_ms: 0.332758
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 12: (level:error
+ok 74 - lỗi cú pháp tại 12: (level:error
+  ---
+  duration_ms: 0.403845
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 11: level:error)
+ok 75 - lỗi cú pháp tại 11: level:error)
+  ---
+  duration_ms: 0.071875
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 8: (a OR b))
+ok 76 - lỗi cú pháp tại 8: (a OR b))
+  ---
+  duration_ms: 0.048284
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 1: ()
+ok 77 - lỗi cú pháp tại 1: ()
+  ---
+  duration_ms: 0.038858
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 5: a AND
+ok 78 - lỗi cú pháp tại 5: a AND
+  ---
+  duration_ms: 0.035341
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 4: a OR
+ok 79 - lỗi cú pháp tại 4: a OR
+  ---
+  duration_ms: 2.047944
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 3: NOT
+ok 80 - lỗi cú pháp tại 3: NOT
+  ---
+  duration_ms: 0.118184
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 9: a AND NOT
+ok 81 - lỗi cú pháp tại 9: a AND NOT
+  ---
+  duration_ms: 0.062356
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 0: AND a
+ok 82 - lỗi cú pháp tại 0: AND a
+  ---
+  duration_ms: 0.113816
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 0: OR a
+ok 83 - lỗi cú pháp tại 0: OR a
+  ---
+  duration_ms: 0.05276
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 1: (OR a)
+ok 84 - lỗi cú pháp tại 1: (OR a)
+  ---
+  duration_ms: 0.036565
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 6: a AND OR b
+ok 85 - lỗi cú pháp tại 6: a AND OR b
+  ---
+  duration_ms: 0.03367
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 4: NOT AND a
+ok 86 - lỗi cú pháp tại 4: NOT AND a
+  ---
+  duration_ms: 0.034702
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 8: status>=abc
+ok 87 - lỗi cú pháp tại 8: status>=abc
+  ---
+  duration_ms: 0.0524
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 8: status>=
+ok 88 - lỗi cú pháp tại 8: status>=
+  ---
+  duration_ms: 0.037116
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 2: x<y
+ok 89 - lỗi cú pháp tại 2: x<y
+  ---
+  duration_ms: 0.036417
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 6: level:
+ok 90 - lỗi cú pháp tại 6: level:
+  ---
+  duration_ms: 0.034201
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 6: level: error
+ok 91 - lỗi cú pháp tại 6: level: error
+  ---
+  duration_ms: 0.031383
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 4: msg:"abc
+ok 92 - lỗi cú pháp tại 4: msg:"abc
+  ---
+  duration_ms: 0.032426
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 0: "abc
+ok 93 - lỗi cú pháp tại 0: "abc
+  ---
+  duration_ms: 0.033651
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 3: a ("b
+ok 94 - lỗi cú pháp tại 3: a ("b
+  ---
+  duration_ms: 0.041082
+  type: 'test'
+  ...
+# Subtest: tổng hợp: count
+ok 95 - tổng hợp: count
+  ---
+  duration_ms: 0.338826
+  type: 'test'
+  ...
+# Subtest: tổng hợp:   count  
+ok 96 - tổng hợp:   count  
+  ---
+  duration_ms: 0.072956
+  type: 'test'
+  ...
+# Subtest: tổng hợp: count by s
+ok 97 - tổng hợp: count by s
+  ---
+  duration_ms: 0.194412
+  type: 'test'
+  ...
+# Subtest: tổng hợp: count by code
+ok 98 - tổng hợp: count by code
+  ---
+  duration_ms: 0.145829
+  type: 'test'
+  ...
+# Subtest: tổng hợp: count by missing
+ok 99 - tổng hợp: count by missing
+  ---
+  duration_ms: 0.05502
+  type: 'test'
+  ...
+# Subtest: tổng hợp: top 2 s
+ok 100 - tổng hợp: top 2 s
+  ---
+  duration_ms: 0.079569
+  type: 'test'
+  ...
+# Subtest: tổng hợp: top 10 code
+ok 101 - tổng hợp: top 10 code
+  ---
+  duration_ms: 0.06288
+  type: 'test'
+  ...
+# Subtest: tổng hợp: sum n
+ok 102 - tổng hợp: sum n
+  ---
+  duration_ms: 0.129037
+  type: 'test'
+  ...
+# Subtest: tổng hợp: avg n
+ok 103 - tổng hợp: avg n
+  ---
+  duration_ms: 0.079964
+  type: 'test'
+  ...
+# Subtest: tổng hợp: min n
+ok 104 - tổng hợp: min n
+  ---
+  duration_ms: 0.061306
+  type: 'test'
+  ...
+# Subtest: tổng hợp: max n
+ok 105 - tổng hợp: max n
+  ---
+  duration_ms: 0.051141
+  type: 'test'
+  ...
+# Subtest: tổng hợp: p50 n
+ok 106 - tổng hợp: p50 n
+  ---
+  duration_ms: 0.051819
+  type: 'test'
+  ...
+# Subtest: tổng hợp: p90 n
+ok 107 - tổng hợp: p90 n
+  ---
+  duration_ms: 0.038758
+  type: 'test'
+  ...
+# Subtest: tổng hợp: p99 n
+ok 108 - tổng hợp: p99 n
+  ---
+  duration_ms: 0.118482
+  type: 'test'
+  ...
+# Subtest: tổng hợp: avg nothing
+ok 109 - tổng hợp: avg nothing
+  ---
+  duration_ms: 0.052271
+  type: 'test'
+  ...
+# Subtest: tổng hợp: p95 nothing
+ok 110 - tổng hợp: p95 nothing
+  ---
+  duration_ms: 0.060631
+  type: 'test'
+  ...
+# Subtest: tổng hợp: histogram 1m
+ok 111 - tổng hợp: histogram 1m
+  ---
+  duration_ms: 0.481789
+  type: 'test'
+  ...
+# Subtest: tổng hợp: histogram 2m
+ok 112 - tổng hợp: histogram 2m
+  ---
+  duration_ms: 0.204912
+  type: 'test'
+  ...
+# Subtest: tổng hợp: histogram 30s
+ok 113 - tổng hợp: histogram 30s
+  ---
+  duration_ms: 0.075731
+  type: 'test'
+  ...
+# Subtest: tổng hợp: histogram 1d
+ok 114 - tổng hợp: histogram 1d
+  ---
+  duration_ms: 0.03944
+  type: 'test'
+  ...
+# Subtest: tổng hợp: percentile nearest-rank
+ok 115 - tổng hợp: percentile nearest-rank
+  ---
+  duration_ms: 0.118755
+  type: 'test'
+  ...
+# Subtest: tổng hợp: avg làm tròn 4 chữ số
+ok 116 - tổng hợp: avg làm tròn 4 chữ số
+  ---
+  duration_ms: 0.054174
+  type: 'test'
+  ...
+# Subtest: tổng hợp: histogram rỗng
+ok 117 - tổng hợp: histogram rỗng
+  ---
+  duration_ms: 0.048586
+  type: 'test'
+  ...
+# Subtest: tổng hợp sai: ""
+ok 118 - tổng hợp sai: ""
+  ---
+  duration_ms: 0.098705
+  type: 'test'
+  ...
+# Subtest: tổng hợp sai: "counts"
+ok 119 - tổng hợp sai: "counts"
+  ---
+  duration_ms: 0.077708
+  type: 'test'
+  ...
+# Subtest: tổng hợp sai: "count by"
+ok 120 - tổng hợp sai: "count by"
+  ---
+  duration_ms: 4.031695
+  type: 'test'
+  ...
+# Subtest: tổng hợp sai: "count s"
+ok 121 - tổng hợp sai: "count s"
+  ---
+  duration_ms: 0.082057
+  type: 'test'
+  ...
+# Subtest: tổng hợp sai: "top s"
+ok 122 - tổng hợp sai: "top s"
+  ---
+  duration_ms: 0.046659
+  type: 'test'
+  ...
+# Subtest: tổng hợp sai: "top 0 s"
+ok 123 - tổng hợp sai: "top 0 s"
+  ---
+  duration_ms: 0.047117
+  type: 'test'
+  ...
+# Subtest: tổng hợp sai: "top x s"
+ok 124 - tổng hợp sai: "top x s"
+  ---
+  duration_ms: 0.03772
+  type: 'test'
+  ...
+# Subtest: tổng hợp sai: "median n"
+ok 125 - tổng hợp sai: "median n"
+  ---
+  duration_ms: 0.036297
+  type: 'test'
+  ...
+# Subtest: tổng hợp sai: "avg"
+ok 126 - tổng hợp sai: "avg"
+  ---
+  duration_ms: 0.038739
+  type: 'test'
+  ...
+# Subtest: tổng hợp sai: "histogram"
+ok 127 - tổng hợp sai: "histogram"
+  ---
+  duration_ms: 0.039317
+  type: 'test'
+  ...
+# Subtest: tổng hợp sai: "histogram 0m"
+ok 128 - tổng hợp sai: "histogram 0m"
+  ---
+  duration_ms: 0.038165
+  type: 'test'
+  ...
+# Subtest: tổng hợp sai: "histogram 1w"
+ok 129 - tổng hợp sai: "histogram 1w"
+  ---
+  duration_ms: 0.036998
+  type: 'test'
+  ...
+# Subtest: tổng hợp sai: "histogram m"
+ok 130 - tổng hợp sai: "histogram m"
+  ---
+  duration_ms: 0.036768
+  type: 'test'
+  ...
+# Subtest: tổng hợp sai: "sum a b"
+ok 131 - tổng hợp sai: "sum a b"
+  ---
+  duration_ms: 0.071724
+  type: 'test'
+  ...
+# Subtest: CLI: in bản ghi khớp dạng JSON, bỏ @t, theo thứ tự đọc
+ok 132 - CLI: in bản ghi khớp dạng JSON, bỏ @t, theo thứ tự đọc
+  ---
+  duration_ms: 32.462313
+  type: 'test'
+  ...
+# Subtest: CLI: không truy vấn = mọi dòng hợp lệ; tùy chọn đứng sau tệp
+ok 133 - CLI: không truy vấn = mọi dòng hợp lệ; tùy chọn đứng sau tệp
+  ---
+  duration_ms: 34.255397
+  type: 'test'
+  ...
+# Subtest: CLI: --stats ra stderr
+ok 134 - CLI: --stats ra stderr
+  ---
+  duration_ms: 29.272608
+  type: 'test'
+  ...
+# Subtest: CLI: đọc stdin khi không có tệp và khi tệp là -
+ok 135 - CLI: đọc stdin khi không có tệp và khi tệp là -
+  ---
+  duration_ms: 82.379285
+  type: 'test'
+  ...
+# Subtest: CLI: --agg json
+ok 136 - CLI: --agg json
+  ---
+  duration_ms: 43.440328
+  type: 'test'
+  ...
+# Subtest: CLI: --agg kết hợp --query
+ok 137 - CLI: --agg kết hợp --query
+  ---
+  duration_ms: 40.584971
+  type: 'test'
+  ...
+# Subtest: CLI: --format table cho bucket (căn cột, hai dấu cách)
+ok 138 - CLI: --format table cho bucket (căn cột, hai dấu cách)
+  ---
+  duration_ms: 34.462484
+  type: 'test'
+  ...
+# Subtest: CLI: --format table cho histogram
+ok 139 - CLI: --format table cho histogram
+  ---
+  duration_ms: 41.739277
+  type: 'test'
+  ...
+# Subtest: CLI: --format table cho giá trị đơn
+ok 140 - CLI: --format table cho giá trị đơn
+  ---
+  duration_ms: 85.581195
+  type: 'test'
+  ...
+# Subtest: CLI: không khớp gì vẫn thoát 0
+ok 141 - CLI: không khớp gì vẫn thoát 0
+  ---
+  duration_ms: 35.691068
+  type: 'test'
+  ...
+# Subtest: CLI: lỗi cú pháp truy vấn → mã 2, stderr có vị trí, stdout rỗng
+ok 142 - CLI: lỗi cú pháp truy vấn → mã 2, stderr có vị trí, stdout rỗng
+  ---
+  duration_ms: 30.4075
+  type: 'test'
+  ...
+# Subtest: CLI: spec tổng hợp sai → mã 2
+ok 143 - CLI: spec tổng hợp sai → mã 2
+  ---
+  duration_ms: 32.916366
+  type: 'test'
+  ...
+# Subtest: CLI: table không có --agg → mã 2
+ok 144 - CLI: table không có --agg → mã 2
+  ---
+  duration_ms: 33.302273
+  type: 'test'
+  ...
+# Subtest: CLI: tùy chọn lạ / format lạ → mã 2
+ok 145 - CLI: tùy chọn lạ / format lạ → mã 2
+  ---
+  duration_ms: 63.7654
+  type: 'test'
+  ...
+# Subtest: CLI: tệp không đọc được → mã 1, stdout rỗng
+ok 146 - CLI: tệp không đọc được → mã 1, stdout rỗng
+  ---
+  duration_ms: 33.938947
+  type: 'test'
+  ...
+1..146
+# tests 146
+# suites 0
+# pass 146
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 870.046957

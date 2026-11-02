@@ -1,0 +1,79 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261102-112212-a80",
+  "wallSec": 211,
+  "wallSecHarness": 225,
+  "costUsd": 1.2594808,
+  "tokens": {
+   "input": 74,
+   "output": 53024,
+   "cacheRead": 1324663,
+   "cacheWrite": 147661
+  },
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "Module lọc/tìm/sắp xếp/phân trang (src/query.js)"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "Module xuất CSV (src/csv.js)"
+   },
+   {
+    "id": "S3",
+    "status": "done",
+    "title": "Module xác thực/phân quyền và nhật ký (src/auth.js, src/audit.js)"
+   },
+   {
+    "id": "S4",
+    "status": "done",
+    "title": "Nối route, /audit, cập nhật test cũ và test HTTP"
+   }
+  ],
+  "workdir": "/home/claude/ccoding-dev/workspaces/b-c6-t3-fastla-1/wt-T-20261102-112212-a80",
+  "branch": "ccoding/t-20261102-112212-a80"
+ },
+ "task": "t3-api",
+ "system": "ccoding-fastlane",
+ "rep": 1,
+ "key": "t3-api.ccoding-fastlane.1",
+ "env": "cloud",
+ "startedAt": "2026-11-02T04:22:12.297Z",
+ "finishedAt": "2026-11-02T04:25:58.921Z",
+ "grade": {
+  "hidden": {
+   "pass": 87,
+   "fail": 0,
+   "total": 87,
+   "failed": [],
+   "ms": 476,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 38,
+   "fail": 0,
+   "total": 38
+  },
+  "changed": [
+   "+src/audit.js",
+   "+src/auth.js",
+   "+src/csv.js",
+   "+src/handlers/audit.js",
+   "~src/handlers/tasks.js",
+   "+src/query.js",
+   "~src/server.js",
+   "+test/api.test.js",
+   "+test/audit.test.js",
+   "+test/auth.test.js",
+   "+test/csv.test.js",
+   "~test/helpers.js",
+   "+test/query.test.js",
+   "~test/tasks.test.js"
+  ]
+ },
+ "audit": []
+}

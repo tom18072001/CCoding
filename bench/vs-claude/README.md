@@ -53,14 +53,16 @@ Phân tích và các thay đổi rút ra: `docs/PROCESS-REVIEW.md` mục 13.
 
 ## `stats.mjs` — khoảng tin cậy và kiểm định
 
-`harness/stats.mjs` (Node ≥ 22, không phụ thuộc gói ngoài) đọc `results/runs.csv` (và `docs/research/performance/c6-extract/C6-runs.csv` nếu có) rồi tính, theo từng bài và gộp (phân tầng theo bài): chênh lệch TB và tỉ lệ CC/Claude của thời gian và chi phí kèm CI bootstrap percentile 95% (10 000 lần, seed mặc định 20261102, được in ra đầu ra), kiểm định hoán vị hai phía (chính xác khi ≤ 200 000 tổ hợp, nếu không thì Monte Carlo 10 000 lần) và Cliff's delta. "CC" = mọi hệ `ccoding*`.
+`harness/stats.mjs` (Node ≥ 22, không phụ thuộc gói ngoài) đọc `results/runs.csv` (đã có C1–C7; không còn đọc `c6-extract/`; dòng trùng vòng/bài/hệ/lượt được bỏ) rồi tính, theo từng bài và gộp (phân tầng theo bài): chênh lệch TB và tỉ lệ CC/Claude của thời gian và chi phí kèm CI bootstrap percentile 95% (10 000 lần, seed mặc định 20261102, được in ra đầu ra), kiểm định hoán vị hai phía (chính xác khi ≤ 200 000 tổ hợp, nếu không thì Monte Carlo 10 000 lần) và Cliff's delta. "CC" = mọi hệ `ccoding*`.
 
 ```bash
 node bench/vs-claude/harness/stats.mjs --rounds C6
 node bench/vs-claude/harness/stats.mjs --rounds C5,C6 --exclude-run T-20261102-105231-9e5   # bỏ lượt C5 t3 treo stdin 579 s
 node bench/vs-claude/harness/stats.mjs --rounds C5,C6 --tasks t3-api,t5-logq --format json
 node bench/vs-claude/harness/stats.mjs --required-runs --sim --alpha 0.05 --power 0.8      # số lượt cần mỗi ô
+node bench/vs-claude/harness/stats.mjs --rounds C7 --baseline claude-sonnet               # làn nhanh so với Claude Code Sonnet (cùng thời điểm)
+node bench/vs-claude/harness/stats.mjs --rounds C7 --baseline claude-sonnet --required-runs --delta wall=30,cost=0.1   # n cần để phát hiện Δ cho trước
 node --test bench/vs-claude/harness/stats.test.mjs
 ```
 
-Tùy chọn: `--runs a.csv,b.csv`, `--rounds`, `--tasks`, `--exclude-run <task_id|vòng/bài/hệ/lượt>`, `--seed`, `--resamples`, `--format md|json`. Với 2 lượt mỗi ô, p hoán vị nhỏ nhất chỉ là 1/3 (một bài) hoặc 2/36 (hai bài), nên chỉ dùng như minh họa. Kết quả mẫu và đối chiếu: `docs/research/dev-review/stats-report.md`.
+Tùy chọn: `--runs a.csv,b.csv`, `--rounds`, `--tasks`, `--exclude-run <task_id|vòng/bài/hệ/lượt>`, `--baseline <hệ>` (mặc định `claude` = Opus; `claude-sonnet` cho C7), `--delta wall=<giây>,cost=<USD>` (chênh lệch cần phát hiện, dùng với `--required-runs`), `--seed`, `--resamples`, `--format md|json`. Với 2 lượt mỗi ô, p hoán vị nhỏ nhất chỉ là 1/3 (một bài) hoặc 2/36 (hai bài), nên chỉ dùng như minh họa. Kết quả mẫu và đối chiếu: `docs/research/dev-review/stats-report.md`.
