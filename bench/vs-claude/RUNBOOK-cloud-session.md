@@ -69,3 +69,24 @@ COMMON="--runtime claude-cli --ccoding-url http://127.0.0.1:7424 --ccoding-data 
 ## Ghi chú
 - **Credit và hạn mức.** Credit trừ trước cho cloud session. Hết credit thì hạn mức thường của gói áp dụng; khi đó dừng và báo.
 - **Ghi lại phiên bản và thời gian.** Mỗi kết quả phải kèm hash commit CCoding của server (`git rev-parse HEAD` trong thư mục server) và giờ chạy, theo `run-plan.md` §6.4.
+
+## Bước 3b. Arm làn đơn B7 (sau commit `630e2b7`: B-01, B-02, B-10 đã gộp)
+
+Đăng ký trước gọi arm này là `SL`; trong `arms.json`, Phòng Dev đặt tên là **B7**. Giả thuyết B-01 (`docs/research/preregistration.md` §3.2) dùng ba phép TOST ±15 % so với A0-sonnet, đo token có trọng số, thời gian và điểm; mỗi bài chạy 9 lượt.
+
+1. **Hai server, để không trộn phiên bản.** Arm B0 và B5 tiếp tục chạy trên server dựng từ `origin/main` (cổng 7424, như W1). Arm B6 và B7 chạy trên server thứ hai, dựng từ chính nhánh này (cổng 7425):
+   ```bash
+   git pull && git worktree add ../ccoding-branch HEAD && cd ../ccoding-branch && npm ci --no-audit --no-fund && npm run build
+   # ccoding.local.json như ở Bước 2 nhưng "server": { "port": 7425 }; rồi chạy nền: node dist/cli.js serve
+   git -C ../ccoding-branch rev-parse HEAD   # ghi hash này vào bảng cửa sổ (run-plan §6.4)
+   ```
+2. **Chạy làn đơn** (thay `<thư mục server>` bằng thư mục của server 7425):
+   ```bash
+   B7="--runtime claude-cli --ccoding-url http://127.0.0.1:7425 --ccoding-data <thư mục server 7425>/data --work /tmp/vb --out $OUT"
+   node bench/vs-claude/run.mjs --arms A0-sonnet,B7 --tasks t1-duration,t2-orders,t3-api,t4-perf,t5-logq --repeats 9 --timeout 20 $B7
+   node bench/vs-claude/run.mjs --arms A0-sonnet,B7 --tasks all --repeats 3 --timeout 20 $B7
+   ```
+   - Lệnh đầu cho B-01 trên t1–t5 (9 lượt mỗi bài). Lệnh sau cho bộ 13 bài, kèm `l1-modules` và `l2-chain` nếu đã có `task.json`.
+   - A0-sonnet đã đủ khóa thì runner bỏ qua, nên lệnh chỉ chạy B7. Nếu còn ngân sách, chạy thêm 2 lượt A0-sonnet làm neo cùng cửa sổ: `--repeats 11`.
+3. **Làn nhanh B6**, để so mô tả (không phải giả thuyết xác nhận): `--arms A0-sonnet,B6 --tasks t1-duration,t2-orders,t3-api,t4-perf,t5-logq --repeats 9`, dùng server 7425.
+4. **Chỉ phân tích khi đã đủ số lượt** (§4 của đăng ký trước). Trên các bài chạm trần, B-01 chỉ dùng thời gian và token (§2.7).
