@@ -41,7 +41,7 @@ import { clearFixedFeedback, kpiMarkdown, kpiReport, templateHeadings } from './
 import { changedFiles, classifyChecks, reviewerReasons, templateGate, type ClassifiedCheck, type QualityGateOptions, type QualityGateResult } from './quality-gate.js';
 import { subtaskHistory, type AgentHistory } from './estimate.js';
 import { buildRepoMap } from './repomap.js';
-import { chooseLane, laneSignals, type LaneSignals } from './lane.js';
+import { chooseLane, forcedLane, laneSignals, type LaneSignals } from './lane.js';
 import { cappedDone } from './runtimes/api.js';
 import { isCheckCommand, runCheckCommand, toolsFor } from './tools/workspace.js';
 import type { Uploads } from './uploads.js';
@@ -1081,7 +1081,7 @@ export class Orchestrator {
     const { registry } = this.d;
     const depts = [...registry.departments.values()];
     // B-01: ép làn đơn → định tuyến bằng từ khóa, không gọi LLM (làn đơn không có lượt route)
-    const router = task.options.lane === 'single' ? undefined : registry.router();
+    const router = forcedLane(task.options.lane, project?.lane) === 'single' ? undefined : registry.router();
     task.phase = 'route';
     this.save(task);
     let result = undefined as ReturnType<typeof parseRoute>;
@@ -1200,8 +1200,7 @@ export class Orchestrator {
    * Ghi signals, lane, why vào log 'lane.pick'. Làn đơn chạy bằng runSingleLane.
    */
   private pickLane(task: Task, project: ProjectDef | undefined, pctx: P.Ctx): { lane: 'single' | 'fast' | 'full'; why: string } {
-    const want = task.options.lane ?? 'auto';
-    const forced = want === 'auto' ? undefined : want;
+    const forced = forcedLane(task.options.lane, project?.lane);
     const cfg = this.d.config;
     const fl = cfg.fastLane;
     let signals: LaneSignals | undefined;
