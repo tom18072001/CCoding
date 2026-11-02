@@ -1,0 +1,15 @@
+`logq` đã được xây xong theo SPEC.md và `npm test` xanh (10 test, 0 lỗi). Bộ nghiệm thu ẩn thì tôi chưa chạy được.
+
+Tôi đã chạy thử CLI thật với tệp, stdin, `--stats`, bảng `table`, mã thoát 1 và 2. Tôi cũng thử một loạt truy vấn lỗi để kiểm tra vị trí lỗi.
+
+Các tệp đã thêm hoặc sửa:
+- `src/parse.js`, `src/query.js`, `src/agg.js`
+- `bin/logq.js`
+- `test/logq.test.js`: test mới, cạnh `test/smoke.test.js` có sẵn
+
+Những chỗ đặc tả chưa nói rõ, tôi tự quyết như sau:
+- **Lỗi truy vấn:** tôi báo lỗi đầu tiên theo thứ tự trái sang phải. Ví dụ `) "abc` báo vị trí của `)` chứ không phải của dấu `"` chưa đóng.
+- **Toán hạng trống:** `(a AND)` báo lỗi tại vị trí của `)`.
+- **Thứ tự kiểm tra trong CLI:** dùng sai tùy chọn, truy vấn sai và spec sai được kiểm tra trước khi đọc tệp. Vì vậy vừa có truy vấn sai vừa có tệp không đọc được thì thoát mã 2, không phải mã 1.
+- **Cú pháp `--opt=value`:** CLI chấp nhận thêm dạng này và `--` để kết thúc danh sách tùy chọn.
+- **Key trong logfmt:** theo đặc tả, key không được bắt đầu bằng `@`, nên `@timestamp=...` ở dạng logfmt là dòng lỗi. Trường này chỉ dùng được trong JSON.
