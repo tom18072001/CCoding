@@ -1,0 +1,16 @@
+I wrote `findings.json` in the repo root with seven findings, and I did not modify `src/server.js`. I haven't run the server or tested any of these; they come from reading the code.
+
+| Line | Type | Severity | Issue |
+|---|---|---|---|
+| 11 | `hardcoded-secret` | high | The JWT secret is hardcoded in the source. |
+| 30 | `sqli` | critical | The search query is interpolated straight into the SQL string. |
+| 42 | `path-traversal` | high | The report name from the URL goes into `path.join` with no check that the result stays inside the reports directory. |
+| 58 | `weak-crypto` | high | Passwords are hashed with unsalted MD5. |
+| 65 | `ssrf` | high | The server fetches any URL the caller supplies. |
+| 70 | `missing-authz` | high | Any logged-in user can delete any ticket. |
+| 84 | `command-injection` | critical | The `format` value is placed into a shell command passed to `exec`. |
+
+I left a few things out because they aren't clearly exploitable:
+- **`verifyJwt` (line 18):** it is never imported or defined. That's a bug that would crash requests, not an exploitable hole.
+- **Ping endpoint (line 78):** the host check allows a leading `-`, which could allow argument injection into `ping`. It is admin-only and uses `execFile`, so I didn't report it.
+- **Status and attachment endpoints:** the table name is a server-side constant, and the attachment download uses `path.basename`, an extension allow-list and an owner check, so those look safe.
