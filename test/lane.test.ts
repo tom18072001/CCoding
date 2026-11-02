@@ -37,7 +37,7 @@ function pick(id: string, forced?: 'single' | 'fast' | 'full') {
 }
 
 test('lanes.single có giá trị mặc định theo backlog §3.1', () => {
-  assert.deepEqual(base.lanes.single, { enabled: true, maxParts: 5, maxFilesTouched: 6 });
+  assert.deepEqual(base.lanes.single, { enabled: true, maxParts: 5, maxFilesTouched: 6, slim: { accept: 'full', compactTemplate: false, promptDiet: true } });
 });
 
 for (const id of ['t1-duration', 't2-orders', 't3-api', 't4-perf', 't5-logq']) {

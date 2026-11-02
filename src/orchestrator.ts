@@ -38,7 +38,7 @@ import { classifyError, RuntimeError, shouldFailover, toRuntimeError } from './r
 import type { Candidate, RuntimeManager } from './runtimes/index.js';
 import type { Store } from './store.js';
 import { clearFixedFeedback, kpiMarkdown, kpiReport, templateHeadings } from './kpi.js';
-import { changedFiles, classifyChecks, reviewerReasons, templateGate, type ClassifiedCheck, type QualityGateOptions, type QualityGateResult } from './quality-gate.js';
+import { changedFiles, classifyChecks, reviewerReasons, sensitivePaths, templateGate, type ClassifiedCheck, type QualityGateOptions, type QualityGateResult } from './quality-gate.js';
 import { subtaskHistory, type AgentHistory } from './estimate.js';
 import { buildRepoMap } from './repomap.js';
 import { chooseLane, forcedLane, laneSignals, type LaneSignals } from './lane.js';
@@ -51,6 +51,10 @@ import { newTaskId, nowIso, shortId } from './util/ids.js';
 import { redact } from './util/redact.js';
 import { estimateTokens } from './util/tokens.js';
 import { fmtNum } from './util/format.js';
+import { resolveSlim, sanitizeSlim, type AcceptMode } from './slim.js';
+
+/** B-11(c): repo có ≤ ngần này tệp (git ls-files, không tính `.ccoding/`) thì làn đơn dùng danh sách tệp gọn thay bản đồ repo. */
+const SMALL_REPO_FILES = 300;
 import {
   addUsage,
   emptyUsage,
@@ -161,6 +165,8 @@ interface CallCtx {
   activity?: string;
   /** B-02: lượt chỉ viết văn bản (sửa định dạng) — không cấp công cụ dù agent/quyền cho phép. */
   noTools?: boolean;
+  /** B-11(a): trần token đầu ra riêng cho lượt này (ưu tiên hơn config.phases.maxTokens). */
+  maxTokens?: number;
 }
 
 type Builder = (tools: ToolName[]) => P.Built;
@@ -206,6 +212,12 @@ export function extractSummary(text: string, max = 320): string {
 const reached = (run: DeptRun, s: RunStage) => !!run.stage && STAGES.indexOf(run.stage) >= STAGES.indexOf(s);
 
 /** Suy ra mốc đã xong cho nhiệm vụ cũ (trước khi có trường stage). */
+/**
+ * B-11(a): trần token đầu ra của lượt `accept` ở chế độ brief. CTO được yêu cầu ≤ 600 token (bảng tiêu chí + khối JSON);
+ * dư ~50 % cho khối JSON kết luận và dao động độ dài, để khối JSON mà parseAcceptance đọc không bị cắt cụt.
+ */
+export const ACCEPT_BRIEF_MAX_TOKENS = 950;
+
 const CLASS_RANK: Record<Classification, number> = { public: 0, internal: 1, confidential: 2, restricted: 3 };
 function maxClass(a: Classification, b?: Classification): Classification {
   return b && CLASS_RANK[b] > CLASS_RANK[a] ? b : a;
@@ -1036,15 +1048,37 @@ export class Orchestrator {
       final: r.finalPath ? (store.readRunFile(task.id, r.finalPath) ?? '') : '',
       review: r.review ? `${r.review.approved ? 'Đã duyệt' : 'Chưa duyệt'} — ${r.review.summary}${r.review.issues.length ? ` (${r.review.issues.length} góp ý)` : ''}` : undefined,
     }));
-    const base = { by: cto.id, at: nowIso(), sig, criteria: [], risks: [], followUps: [] };
+    // B-11(a): chế độ nghiệm thu chỉ áp ở làn đơn chưa nâng làn; mọi trường hợp khác giữ full
+    const mode = this.acceptMode(task, project);
+    const base = { by: cto.id, at: nowIso(), sig, criteria: [], risks: [], followUps: [], mode: mode.kind };
+    if (mode.kind === 'skip') {
+      const checks = task.projectChecks?.latest ?? [];
+      const body = `## Tóm tắt\nBỏ qua nghiệm thu CTO (B-11, chế độ skip): mọi lệnh kiểm tra đạt, diff không chạm vùng bảo mật/dữ liệu, nhãn dữ liệu ${mode.classification}.\n\n## Tiêu chí nghiệm thu\n${checks.map((c) => `- \`${c.command}\` → đạt`).join('\n')}`;
+      const rel = 'ACCEPTANCE.md';
+      writeText(path.join(store.runDir(task.id), rel), `${body}\n`);
+      task.acceptance = {
+        ...base,
+        accepted: true,
+        parsed: true,
+        summary: `Bỏ qua nghiệm thu CTO: ${checks.length} lệnh kiểm tra đều đạt, diff không chạm vùng nhạy cảm, nhãn ${mode.classification}.`,
+        criteria: checks.map((c) => ({ name: `Lệnh \`${c.command}\` đạt`, result: 'pass' as const, evidence: c.summary || `exit ${c.code ?? 0}` })),
+        path: rel,
+      };
+      logs.write({ level: 'info', kind: 'accept.skipped', msg: `${task.id}: bỏ qua nghiệm thu CTO (làn đơn, cổng xanh)`, taskId: task.id, projectId: task.projectId, agentId: cto.id, data: { gateGreen: true, sensitiveHit: false, classification: mode.classification, checks: checks.map((c) => ({ cmd: c.command, ok: c.ok })) } });
+      this.message(task, 'office', cto.id, 'acceptance', body);
+      this.save(task);
+      return;
+    }
+    if (mode.kind === 'brief') logs.write({ level: 'info', kind: 'accept.brief', msg: `${task.id}: nghiệm thu CTO rút gọn (${mode.reason})`, taskId: task.id, projectId: task.projectId, agentId: cto.id, data: { reason: mode.reason } });
     let text = '';
     try {
-      const res = await this.call(cto, 'accept', (tools) => P.acceptPrompt(task, items, { changes: task.changes, tools, projectName: project?.name }), {
+      const res = await this.call(cto, 'accept', (tools) => (mode.kind === 'brief' ? P.acceptBriefPrompt(task, { changes: task.changes, tools, projectName: project?.name }) : P.acceptPrompt(task, items, { changes: task.changes, tools, projectName: project?.name })), {
         task,
         project,
         cwd: task.workspace ?? this.workspaceFor(task, project),
         activity: ACTIVITY_BY_PHASE.accept,
         hints: { brief: task.brief, subtasks: task.runs.flatMap((r) => r.subtasks.map(stHint)) },
+        ...(mode.kind === 'brief' ? { maxTokens: ACCEPT_BRIEF_MAX_TOKENS } : {}),
       });
       if (!res.text) throw new Error(res.error || 'không có nội dung');
       text = res.text;
@@ -1075,6 +1109,24 @@ export class Orchestrator {
       else if (!task.attention.detail.includes('CTO chưa nghiệm thu')) task.attention.detail = `${task.attention.detail} · ${why}`;
     }
     this.save(task);
+  }
+
+  /**
+   * B-11(a): chọn chế độ nghiệm thu. Chỉ làn đơn chưa nâng làn mới theo `slim.accept`; còn lại luôn full.
+   * skip cần đủ ba điều kiện (mọi lệnh kiểm tra xanh, diff không chạm vùng nhạy cảm, nhãn dữ liệu < Bảo mật); thiếu điều kiện nào thì lùi về brief.
+   */
+  private acceptMode(task: Task, project?: ProjectDef): { kind: 'full' } | { kind: 'brief'; reason: string } | { kind: 'skip'; classification: Classification } {
+    if (task.lane !== 'single' || task.runs.some((r) => r.escalatedFrom === 'single')) return { kind: 'full' };
+    const want: AcceptMode = resolveSlim(this.d.config, project, task.options).accept;
+    if (want === 'full') return { kind: 'full' };
+    if (want === 'brief') return { kind: 'brief', reason: 'configured' };
+    const latest = task.projectChecks?.latest ?? [];
+    const classification = maxClass((project?.classification ?? task.classification) as Classification, task.classification);
+    const missing: string[] = [];
+    if (!latest.length || latest.some((c) => !c.ok)) missing.push('cổng lệnh kiểm tra chưa xanh');
+    if (sensitivePaths(changedFiles(task.workspace, task.baseRef).filter((f) => !f.startsWith('.ccoding/'))).length) missing.push('diff chạm vùng bảo mật/dữ liệu');
+    if (CLASS_RANK[classification] >= CLASS_RANK.confidential) missing.push(`nhãn dữ liệu ${classification}`);
+    return missing.length ? { kind: 'brief', reason: `fallback:${missing.join('; ')}` } : { kind: 'skip', classification };
   }
 
   private async route(task: Task, project?: ProjectDef): Promise<string[]> {
@@ -1266,6 +1318,14 @@ export class Orchestrator {
     run.startedAt ??= nowIso();
     const checkable = this.projectCheckable(task, project);
 
+    // B-11 (b)(c): làm gọn prompt thực thi làn đơn — chưa nâng làn; nâng làn thì xóa (prompt đầy đủ trở lại)
+    const slim = resolveSlim(config, project, task.options);
+    if (run.escalatedFrom !== 'single' && (slim.promptDiet || slim.compactTemplate)) {
+      const files = slim.promptDiet ? this.smallRepoFiles(pctx.cwd) : undefined;
+      pctx.singleSlim = { diet: slim.promptDiet, compact: slim.compactTemplate, files };
+      logs.write({ level: 'info', kind: 'slim.prompt', msg: `${task.id}: làm gọn prompt làn đơn (promptDiet=${slim.promptDiet}, compactTemplate=${slim.compactTemplate}${files ? `, danh sách ${files.length} tệp thay bản đồ repo` : ''})`, taskId: task.id, department: dept.id, data: { promptDiet: slim.promptDiet, compactTemplate: slim.compactTemplate, fileList: files?.length } });
+    } else pctx.singleSlim = undefined;
+
     // 1) baseline lệnh kiểm tra của dự án
     if (checkable && !task.projectChecks?.baseline && !run.subtasks.some((s) => s.attempts > 0 || s.status === 'done')) {
       this.setPhase(task, run, 'execute');
@@ -1334,6 +1394,7 @@ export class Orchestrator {
       logs.write({ level: 'warn', kind: 'lane.escalate', msg: `${task.id}: nâng cấp làn đơn → ${target} (${reason})`, taskId: task.id, projectId: task.projectId, department: dept.id, agentId: agent.id, data: { from: 'single', to: target, trigger, reason, fixRounds: config.gate?.maxFixRounds } });
       this.message(task, dept.id, 'system', 'system', `⬆️ Nâng cấp làn đơn → làn ${target === 'fast' ? 'nhanh' : 'đầy'} (${reason}). Worktree được giữ; phần làm dở của @${agent.id} chuyển cho trưởng phòng lập kế hoạch.`);
       task.lane = target;
+      pctx.singleSlim = undefined;
       run.escalatedFrom = 'single'; // LANE-HANDOVER.md đã ghi TRƯỚC this.save() bên dưới → resume nạp lại được
       if (target === 'fast' && !task.options.phaseModels?.plan && config.fastLane.planModel) task.options.phaseModels = { ...task.options.phaseModels, plan: config.fastLane.planModel };
       run.subtasks = [];
@@ -1467,7 +1528,8 @@ export class Orchestrator {
       const r = await this.runSingleLane(task, run, project, dept, roster, lead, reviewer, pctx, base, prior);
       if (r.final !== undefined) return r.final;
       prior = r.prior;
-      pctx.lane = task.lane === 'single' ? 'fast' : task.lane;
+      pctx.singleSlim = undefined;
+      pctx.lane =task.lane === 'single' ? 'fast' : task.lane;
     }
     // tiếp tục sau tạm dừng giữa lúc nâng làn (plan/execute chưa xong): `prior` của lần nâng đã mất → nạp lại bàn giao dở dang
     if (run.escalatedFrom === 'single' && task.lane !== 'single' && !reached(run, 'executed') && !prior?.includes('# Bàn giao dở dang từ làn đơn')) {
@@ -2903,6 +2965,15 @@ export class Orchestrator {
     }
   }
 
+  /** B-11(c): repo nhỏ (≤ SMALL_REPO_FILES tệp theo `git ls-files`, không tính `.ccoding/`) → danh sách tệp gọn; lớn/không phải repo git → undefined (giữ bản đồ repo). */
+  private smallRepoFiles(cwd: string | undefined): string[] | undefined {
+    if (!cwd) return undefined;
+    const ls = spawnSync('git', ['ls-files', '-z'], { cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, windowsHide: true });
+    if (ls.status !== 0 || typeof ls.stdout !== 'string') return undefined;
+    const files = ls.stdout.split('\0').filter((f) => f && !f.startsWith('.ccoding/'));
+    return files.length > 0 && files.length <= SMALL_REPO_FILES ? files : undefined;
+  }
+
   /** Dự án có lệnh kiểm tra và nhiệm vụ được chạy lệnh trong workspace (quyền exec). */
   private projectCheckable(task: Task, project?: ProjectDef): project is ProjectDef {
     return !!project?.workspace && !!project.checkCommands?.length && this.toolAccess(task, project) === 'exec' && !!task.workspace && fs.existsSync(task.workspace);
@@ -3216,7 +3287,7 @@ export class Orchestrator {
           tools: ctx.noTools ? [] : cliTools(agent.tools, access, phase, gitRead),
           allowTools: allow.length > 0 || (rt.supportsTools && !ctx.noTools && cliTools(agent.tools, access, phase, gitRead).length > 0),
           timeoutMs: config.defaults.timeoutMs,
-          maxTokens: config.phases?.maxTokens?.[phase],
+          maxTokens: ctx.maxTokens ?? config.phases?.maxTokens?.[phase],
           toolPolicy: allow.length
             ? {
                 root: ctx.cwd,
@@ -3715,6 +3786,8 @@ export function variantOptions(o: Partial<TaskOptions>): Partial<TaskOptions> {
   }
   if (typeof o.variant === 'string' && o.variant.trim()) out.variant = o.variant.trim().slice(0, 60);
   if (o.lane === 'auto' || o.lane === 'single' || o.lane === 'fast' || o.lane === 'full') out.lane = o.lane;
+  const slim = sanitizeSlim(o.slim);
+  if (Object.keys(slim).length) out.slim = slim;
   return out;
 }
 

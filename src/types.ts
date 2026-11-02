@@ -1,4 +1,6 @@
 // Kiểu dữ liệu dùng chung cho toàn bộ CCoding.
+import type { AcceptMode, Slim } from './slim.js';
+export type { AcceptMode, Slim } from './slim.js';
 
 /** cto: nghiệm thu kết quả của các phòng sau khi tổng hợp (pha `accept`), không thuộc phòng ban làm việc nào. */
 export type Role = 'lead' | 'member' | 'reviewer' | 'router' | 'cto';
@@ -71,6 +73,8 @@ export interface ProjectDef {
   isolation?: 'none' | 'worktree';
   /** Ép làn xử lý cho mọi nhiệm vụ của dự án (B-02): 'auto' hoặc bỏ trống = không ép; options.lane của nhiệm vụ ưu tiên hơn. */
   lane?: 'auto' | 'single' | 'fast' | 'full';
+  /** B-11: ghi đè công tắc làm gọn làn đơn cho dự án (thấp hơn options.slim của nhiệm vụ). */
+  slim?: Partial<Slim>;
   /** Điểm xuất phát của nhánh worktree (vd. origin/main); mặc định HEAD hiện tại của repo. */
   baseRef?: string;
   /** File chưa track (vd. .env) cần chép vào worktree để chạy test/migration ([] = không chép gì). */
@@ -347,6 +351,8 @@ export interface TaskOptions {
   lane?: 'auto' | 'single' | 'fast' | 'full';
   /** CTO nghiệm thu sau khi các phòng tổng hợp xong (mặc định theo cấu hình; việc giao riêng một agent thì bỏ qua). */
   acceptance?: boolean;
+  /** B-11: ghi đè công tắc làm gọn làn đơn cho riêng nhiệm vụ (ưu tiên cao nhất, xem src/slim.ts). */
+  slim?: Partial<Slim>;
 }
 
 export interface AcceptanceCriterion {
@@ -362,6 +368,8 @@ export interface Acceptance {
   accepted: boolean;
   /** Đọc được khối JSON kết luận của CTO. */
   parsed: boolean;
+  /** B-11: chế độ nghiệm thu đã dùng ở làn đơn (bỏ trống = full). */
+  mode?: AcceptMode;
   summary: string;
   criteria: AcceptanceCriterion[];
   risks: string[];

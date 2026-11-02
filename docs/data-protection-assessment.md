@@ -479,3 +479,18 @@ Ba thay đổi này chỉ thêm logic điều phối và kiểm tra. Chúng khô
 **Rủi ro còn lại:** (1) hook tiến trình riêng và `LogStore` mới mở mỗi lần chặn, mỗi tiến trình có chuỗi băm riêng, nên có thể rẽ nhánh chuỗi khi nhiều hook chạy song song (log chẩn đoán, không phải chứng cứ); (2) hook dùng `dist/` cũ đến khi build và cài lại.
 
 **Kết luận: ĐẠT CÓ ĐIỀU KIỆN.** Điều kiện: build và cài lại `dist/` trước khi đo, và đặt chính sách lưu nhật ký ≥ 12 tháng cho `data/logs`.
+
+### Bổ sung: làm gọn làn đơn (B-11, 3/11/2026)
+
+**Loại cổng:** cổng thiết kế, bản gọn. **Nhãn dữ liệu:** Nội bộ. Thay đổi chỉ bớt nội dung gửi runtime ở làn đơn và thêm số đo. Không có nguồn dữ liệu hay bên nhận mới.
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| `accept = skip` (công tắc `lanes.single.slim`, mặc định `full`) | PRE-05, GOV-03 | Chỉ áp khi đủ ba điều kiện: cổng B-02 xanh, diff không chạm `sensitivePaths` (backlog 4.3), và nhãn cao hơn giữa dự án và nhiệm vụ nhỏ hơn Bảo mật. Thiếu điều kiện nào thì lùi về `brief`. `confidential` và `restricted` không bao giờ được `skip`. Nâng làn thì nghiệm thu quay về `full` |
+| `accept = brief` | PRE-06 | Giảm dữ liệu gửi đi: prompt không có báo cáo các phòng, diff cắt 3.000 ký tự, trần `maxTokens` 950. Vẫn đi qua `Orchestrator.call()` nên giữ chính sách nhãn và che bí mật/PII |
+| Sự kiện `accept.skipped`, `accept.brief` | DET-01, DET-04 | Ghi qua `LogStore` (che bí mật/PII, chuỗi băm). Payload chỉ có cờ, nhãn và tên lệnh kiểm tra, không có diff hay nội dung prompt |
+| `promptDiet` (bật mặc định) | PRE-06 | Bỏ khối kế hoạch chung, mục đầu vào rỗng, câu về đồng nghiệp song song. Không lược quy tắc dữ liệu/bảo mật, nhãn phân loại, chỉ dẫn `CLAUDE.md`/`AGENTS.md`, quy tắc công cụ và quy tắc không đổi nhánh/không push. Test kiểm từng chuỗi này còn trong prompt |
+| `compactTemplate` | — | Chỉ đổi độ dài báo cáo bằng chỉ dẫn trong prompt; không đổi `src/kpi.ts` hay cổng mẫu |
+| Trường nghiên cứu mới trong `runs.jsonl` | PRE-04, GOV-03 | Chỉ là số đo và cờ: thời gian và token theo pha, `promptChars`, `lane`, `gate`, `fixRounds`, `acceptMode`. Không chứa nội dung prompt, đường dẫn hay PII. Test khẳng định nội dung lượt gọi không lọt vào kết quả. Tệp `runs.jsonl` nghiên cứu cũ không bị ghi đè |
+
+**Kết luận: ĐẠT CÓ ĐIỀU KIỆN.** Điều kiện: (1) `accept` khác `full` và `compactTemplate = true` chỉ bật sau khi giám đốc duyệt; (2) dự án nhãn Bảo mật/Hạn chế không dựa vào `skip`, chỉ dùng `full` hoặc `brief`. **Rủi ro còn lại:** `gate = green` trong `runs.jsonl` phản ánh lệnh kiểm tra ở lần chạy gần nhất, không phải cờ cuối của cổng B-02; `skip` chặn cả khi chỉ có lệnh đỏ không liên quan đề bài (đọc chặt, an toàn hơn nhưng giữ lại nhiều lượt CTO).

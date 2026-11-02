@@ -34,6 +34,42 @@ export function callErrors(callsText) {
   return out;
 }
 
+/**
+ * B-11: số đo cho nghiên cứu, rút từ calls.jsonl + task.json. Chỉ số đo — không chép nội dung prompt hay đường dẫn.
+ * Thời gian theo pha: nguồn chuẩn là calls.jsonl (durationMs; thiếu thì hiệu ts giữa hai dòng liên tiếp); byPhaseSecSource ghi nguồn.
+ */
+export function researchFields(callsText, task) {
+  const byPhaseSec = {}, byPhaseTokens = {}, promptChars = {};
+  let withDur = 0, withoutDur = 0, prevTs = null;
+  for (const l of String(callsText ?? '').split(/\r?\n/)) {
+    if (!l.trim()) continue;
+    let c; try { c = JSON.parse(l); } catch { continue; }
+    const ph = c.phase ?? '?';
+    const ts = Date.parse(c.ts);
+    let sec = 0;
+    if (typeof c.durationMs === 'number' && c.durationMs > 0) { sec = c.durationMs / 1000; withDur++; }
+    else { if (prevTs != null && Number.isFinite(ts)) sec = Math.max(0, (ts - prevTs) / 1000); withoutDur++; }
+    if (Number.isFinite(ts)) prevTs = ts;
+    byPhaseSec[ph] = +((byPhaseSec[ph] ?? 0) + sec).toFixed(3);
+    const t = (byPhaseTokens[ph] ??= { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 });
+    t.input += c.input ?? 0; t.output += c.output ?? 0; t.cacheRead += c.cacheRead ?? 0; t.cacheWrite += c.cacheWrite ?? 0;
+    if (c.sizes) {
+      const p = (promptChars[ph] ??= { system: 0, context: 0, prompt: 0, calls: 0 });
+      p.system += c.sizes.system ?? 0; p.context += c.sizes.context ?? 0; p.prompt += c.sizes.prompt ?? 0; p.calls++;
+    }
+  }
+  const latest = task?.projectChecks?.latest ?? [];
+  const gate = !latest.length ? 'none' : latest.every((r) => r.ok) ? 'green' : 'red';
+  const runs = task?.runs ?? [];
+  return {
+    byPhaseSec, byPhaseSecSource: withDur ? (withoutDur ? 'calls.durationMs+ts' : 'calls.durationMs') : withoutDur ? 'calls.ts' : 'none',
+    byPhaseTokens, promptChars,
+    lane: task?.lane ?? null, escalatedFrom: runs.some((r) => r.escalatedFrom === 'single') ? 'single' : null,
+    gate, fixRounds: runs.reduce((n, r) => n + (r.gateFixRoundsUsed ?? 0), 0),
+    acceptMode: task?.acceptance?.mode ?? 'full',
+  };
+}
+
 export async function runCcoding(opts) {
   const api = client(opts.baseUrl);
   const t0 = Date.now();
@@ -99,13 +135,18 @@ export async function runCcoding(opts) {
       byAgent[row.key] = weighted(row);
     }
   }
+  let research;
+  try {
+    const callsText = opts.dataDir && fs.existsSync(callsFile) ? fs.readFileSync(callsFile, 'utf8') : '';
+    research = researchFields(callsText, (await api(`/api/tasks/${task.id}`)).task ?? t);
+  } catch { research = researchFields('', t); }
   tokens.total = tokens.input + tokens.output + tokens.cacheRead + tokens.cacheWrite;
   tokens.weighted = weighted(tokens);
   return {
     status: t.status === 'done' ? 'done' : 'failed', wallSec, tokens, costUsd, turns, calls,
     finalText, taskId: task.id, byPhase, agentsUsed: Object.keys(byAgent).length, byAgent,
     department: t.department, attention: t.attention,
-    infra, ...(resetsAt ? { resetsAt } : {}),
+    research, infra, ...(resetsAt ? { resetsAt } : {}),
   };
 }
 
