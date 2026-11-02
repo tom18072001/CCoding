@@ -412,6 +412,12 @@ Mọi dòng dưới ghi **sau** khi dữ liệu W1–B7a đã có trong `runs.js
 
 Phần khác của `run-plan.md` đã đối chiếu nhưng không tìm thấy lệch: `--timeout 20` (khớp), s1 `--repeats 10` (khớp về tổng, tách thành W1 + W2c), N4 `--judge` r1–3 (khớp), T5 r1–3 trên làn nhanh (khớp). Chưa đối chiếu được: thứ tự xen kẽ thực (SR-23), `config.json` W1 là bản khôi phục từ commit `d0375f9` (RL:44).
 
+### Sai lệch vòng 4 gói 1 (đề xuất chỉ tiêu B-01 mới; ghi 3/11/2026)
+
+| Mã | Đăng ký nói gì (§) | Thực tế / đề xuất | Phép bị ảnh hưởng | Cách xử lý |
+|---|---|---|---|---|
+| V4-01 | §3.2 B-01 và `improvement-backlog.md` §3.4: chi phí (token có trọng số) và thời gian trong ±15 % của A0-sonnet (R ∈ [0,85; 1,15], TOST bootstrap 90 %) | **ĐỀ XUẤT, chờ giám đốc duyệt:** chỉ tiêu chặng sau B-11 là R ≤ 1,3 (token có trọng số và thời gian); ±15 % giữ làm mục tiêu dài hạn. **Nhãn: post-hoc — sửa sau khi đã thấy dữ liệu B7** (B7/A0 = ×2,498 token, ×2,566 thời gian, bác bỏ B-01 theo `results-round3.md` §5). Lý do: phân rã `b7-cost-decomposition.md` cho thấy cần cắt ≥ 80,1 % chênh lệch để đạt ×1,3 và ≥ 90,1 % để đạt ±15 % (T-7, tính ở `improvement-backlog.md` §5 B-11.3 và B-11.4), trong khi phần chi phí cố định của một lượt gọi và của phần thực thi không thể bỏ nhưng chưa đo được (T-6, §Giới hạn) | B-01 (a), (b) cho **dữ liệu B7′** (§5 B-11.5). Không áp lại cho dữ liệu vòng 3 | Phán quyết vòng 3 "bác bỏ ±15 %" giữ nguyên, không đổi lại. Chỉ tiêu ×1,3 chỉ có hiệu lực cho lượt chạy B7′ sau khi (i) giám đốc duyệt và (ii) kế hoạch B7′ được commit (khóa) trước lượt đầu; kết quả B7′ gọi là "B-01′ (post-hoc target)", không gọi là xác nhận B-01. Tác giả đề xuất đã xem dữ liệu B7 (nguồn S1), nên không đáp ứng điều kiện trước-khi-xem của §2.4 cho chính con số 1,3 |
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.
