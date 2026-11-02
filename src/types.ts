@@ -286,6 +286,10 @@ export interface DeptRun {
   };
   /** Vòng review hiện tại (0 = review đầu) — giữ qua tạm dừng/tiếp tục để không vượt maxRevisions. */
   reviewRound?: number;
+  /** B-02: số vòng sửa của cổng chất lượng đã dùng (gồm sửa định dạng) — gate.maxFixRounds là ngân sách cho cả nhiệm vụ, lưu trước mỗi vòng. */
+  gateFixRoundsUsed?: number;
+  /** B-02: run đã nâng từ làn đơn lên fast/full — tiếp tục sau tạm dừng thì nạp lại LANE-HANDOVER.md vào `prior`. */
+  escalatedFrom?: 'single';
   /** B-10: kết quả cổng phủ kế hoạch (sau parsePlan, trước execute). */
   planGate?: { uncovered: string[]; reasons: string[]; rules: ('A' | 'B')[]; replanned?: boolean };
   /** Hạng mục còn phải sửa trong vòng hiện tại — tiếp tục sau tạm dừng thì sửa tiếp theo review đã có, không review lại. */
