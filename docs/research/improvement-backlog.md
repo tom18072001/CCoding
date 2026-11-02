@@ -1,8 +1,10 @@
-# Backlog nâng cấp dựa trên bằng chứng — vòng 3, gói 1 (R3)
+# Backlog nâng cấp dựa trên bằng chứng — vòng 3, gói 1 (R3) · cập nhật gói 2 (R8)
 
 > Phòng Nghiên cứu · hạng mục S3 (@data-scientist) · 2/11/2026 · phân loại dữ liệu: nội bộ.
-> Nguyên tắc của giám đốc: mọi nâng cấp phải dựa vào nghiên cứu; mỗi thay đổi của Phòng Dev ghi mã `B-xx`; benchtest chạy theo `preregistration.md` (R1, hạng mục S2) để kiểm lại.
-> Số từ `token-analysis.md` dẫn theo **mã bảng** (T-0, T-d…), không chép lại bản S1 đang làm mới. Mã giả thuyết H1–H8 theo bản nháp trong đề bài; mã chính thức do `preregistration.md` quyết định.
+> Cập nhật R8 (T-20261102-175854-65c, S3, @research-lead, 2/11/2026): thêm **B-10** (cổng phủ kế hoạch, §5), sửa B-02 §4.1 bước 2 (lệnh đỏ mà đề bài yêu cầu xanh ⇒ bắt buộc vòng sửa), cập nhật §0 và §6, đổi mã giả thuyết. Bằng chứng mới: ca `t5-logq.ccoding-fastlane.2` của C9 (`docs/research/context/c9-partial-2026-11-02.md` §2).
+> Nguyên tắc của giám đốc: mọi nâng cấp phải dựa vào nghiên cứu; mỗi thay đổi của Phòng Dev ghi mã `B-xx`; benchtest chạy theo `preregistration.md` để kiểm lại.
+> Số từ `token-analysis.md` dẫn theo **mã bảng** (T-0, T-d…), không chép lại bản S1 đang làm mới.
+> **Mã giả thuyết (từ R8):** hệ chính là **H1–H10 của bộ đo giám đốc** (`bench/vs-claude/analyze.mjs:61-115`), viết `H_i` trong tệp này. Giả thuyết H1–H9 của `preregistration.md` bản 1 đổi mã theo quy ước H_i → P_i (bản 2, hạng mục S4). **Trùng mã:** P1–P4 ở cột "Gộp ứng viên", B-02, B-03, B-09 là **bản vá prompt** trong `self-improvement/prompt-patches/`; vì vậy trong tệp này giả thuyết bản 1 ghi là **ĐK-P_i** (= P_i của `preregistration.md` bản 2). Đề nghị S4 ghi chú trùng mã này trong bảng ánh xạ P↔H.
 > Phạm vi: chỉ viết tài liệu. Không sửa `src/`. Các số "kỳ vọng" là **giả thuyết cần kiểm**, không phải kết quả.
 
 ## 0. Tóm tắt xếp hạng
@@ -10,18 +12,19 @@
 | Hạng | Mã | Nâng cấp | Gộp ứng viên | Hiệu quả (1–5) | Công sức (1–5) | Ưu tiên = H/E | Giám đốc duyệt lên main |
 |---:|---|---|---|---:|---:|---:|---|
 | 1 | **B-01** | Làn đơn cho việc nhỏ | "làn đơn" | 5 | 3 | 1,7 | Có |
-| 2 | **B-02** | Cổng chất lượng (kiểm → sửa → mẫu đầu ra → reviewer có điều kiện) | lệnh đỏ vào vòng sửa; P3; D-02; G5 (loại) | 4 | 3 | 1,3 | Có |
-| 3 | B-03 | Nhật ký sự cố khi sửa | P4 | 2 | 1 | 2,0 | Có |
-| 4 | B-04 | Bộ phân tích lệnh shell của hook (nháy, lệnh đọc) | G1, G2 | 3 | 2 | 1,5 | Có (biên bảo mật) |
-| 5 | B-05 | Script kiểm nhất quán số liệu | G7 | 3 | 2 | 1,5 | Không |
-| 6 | B-06 | Chẩn đoán chặn của hook | G6, D-03 | 2 | 2 | 1,0 | Có |
-| 7 | B-07 | Trần lượt cho `claude-cli` | D-01 | 2 | 2 | 1,0 | Có |
-| 8 | B-08 | `cwd` của hook và Read tệp tool-results | G3, G4 | 2 | 3 | 0,7 | Có (biên bảo mật) |
-| 9 | B-09 | Giới hạn đầu ra / tín hiệu dừng khảo sát (hoãn) | P1, P2 | 1 | 1 | 1,0 | Có |
+| 2 | **B-02** | Cổng chất lượng (kiểm → sửa → mẫu đầu ra → reviewer có điều kiện) | lệnh đỏ vào vòng sửa (đề bài đòi xanh ⇒ bắt buộc, R8); P3; D-02; G5 (loại) | 4 | 3 | 1,3 | Có |
+| 3 | **B-10** | Cổng phủ kế hoạch (phần việc không ai nhận ⇒ chặn; kế hoạch đọc dở ⇒ không chạy) | ca t5 C9 (R8) | 4 | 2 | 2,0 | Có |
+| 4 | B-03 | Nhật ký sự cố khi sửa | P4 | 2 | 1 | 2,0 | Có |
+| 5 | B-04 | Bộ phân tích lệnh shell của hook (nháy, lệnh đọc) | G1, G2 | 3 | 2 | 1,5 | Có (biên bảo mật) |
+| 6 | B-05 | Script kiểm nhất quán số liệu | G7 | 3 | 2 | 1,5 | Không |
+| 7 | B-06 | Chẩn đoán chặn của hook | G6, D-03 | 2 | 2 | 1,0 | Có |
+| 8 | B-07 | Trần lượt cho `claude-cli` | D-01 | 2 | 2 | 1,0 | Có |
+| 9 | B-08 | `cwd` của hook và Read tệp tool-results | G3, G4 | 2 | 3 | 0,7 | Có (biên bảo mật) |
+| 10 | B-09 | Giới hạn đầu ra / tín hiệu dừng khảo sát (hoãn) | P1, P2 | 1 | 1 | 1,0 | Có |
 
-B-01 và B-02 đứng đầu theo quyết định của giám đốc (2/11, 13:42), không phải theo điểm. Thang điểm 1–5 là đánh giá chuyên gia; chỉ B-01/B-02 có số đo hỗ trợ trực tiếp (§3).
+B-01 và B-02 đứng đầu theo quyết định của giám đốc (2/11, 13:42), không phải theo điểm. **B-10 đứng thứ ba** (R8): cùng điểm ưu tiên 2,0 với B-03, nhưng là mục duy nhất ngoài B-01/B-02 có số đo chất lượng trực tiếp (t5: 95/146 test ẩn, §5 B-10), chặn một loại lỗi mà reviewer LLM đã bỏ lọt, và nên triển khai cùng B-02 (chung bước "trước thực thi/sau thực thi" của pipeline). Thang điểm 1–5 là đánh giá chuyên gia; chỉ B-01/B-02/B-10 có số đo hỗ trợ trực tiếp (§3, §5 B-10).
 
-**Phủ ứng viên:** G1→B-04 · G2→B-04 · G3→B-08 · G4→B-08 · G5→loại, ghi ở B-02 · G6→B-06 · G7→B-05 · D-01→B-07 · D-02→B-02 · D-03→B-06 · P1→B-09 · P2→B-09 · P3→B-02 · P4→B-03.
+**Phủ ứng viên:** G1→B-04 · G2→B-04 · G3→B-08 · G4→B-08 · G5→loại, ghi ở B-02 · G6→B-06 · G7→B-05 · D-01→B-07 · D-02→B-02 · D-03→B-06 · P1→B-09 · P2→B-09 · P3→B-02 · P4→B-03 · ca t5 C9 (kế hoạch bỏ sót `agg.js`)→B-10 · ca t5 C9 (`npm test` đỏ mà review duyệt)→B-02 §4.1.
 
 ---
 
@@ -80,10 +83,11 @@ Chạy: `node docs/research/context/lane-threshold.mjs` (đọc `bench/vs-claude
 - **Cơ sở của các tỉ lệ:** 1,44 và 2,72 là tỉ lệ **tổng thô, chỉ C7** (Σ làn nhanh / Σ Sonnet đơn, 5 bài, đơn vị gốc). Các tỉ lệ của S1 trong `token-analysis.md` (1,545 và 2,947) là **C7+C8 phân tầng theo bài**; hai bộ số khác cơ sở chứ không mâu thuẫn. Backlog dùng bộ C7 vì C8 không có Sonnet đơn (D1). Nếu hai bộ cần so, dẫn theo mã bảng của S1.
 - Tổng thời gian khớp bảng **T-d (3)** (`token-analysis.md:292`: 429,0 s và 619,0 s). Phần cố định của điều phối (kế hoạch + review + gộp) = **239,5 s = 55,8 %** thời gian Sonnet đơn (C7; `token-analysis.md:292`, đọc ở `:300`); gộp C5–C7 là 72,8 % (`:298`). C8 chỉ có 3 lượt làn nhanh trên t2 và không có Sonnet đơn (quyết định D1) nên không làm đổi 55,8 %.
 - Cố định trung bình mỗi bài ở C7: 239,5 / 5 ≈ **48 s** (khoảng 38,5–58,6 s; `token-analysis.md:287-291`).
-- Hồi quy thô (5 điểm, mỗi điểm 1 lượt làn nhanh): TG làn nhanh = **87,1 + 0,428 × TG đơn**; giao điểm T* = a/(1−b) = **152 s**. Dưới T*, làn nhanh chậm hơn; trên T*, nhanh hơn. Đây là **khám phá n=5**, không có CI; chính thức hóa bằng H4 (hệ số chặn, độ dốc) ở C9.
+- Hồi quy thô (5 điểm, mỗi điểm 1 lượt làn nhanh): TG làn nhanh = **87,1 + 0,428 × TG đơn**; giao điểm T* = a/(1−b) = **152 s**. Dưới T*, làn nhanh chậm hơn; trên T*, nhanh hơn. Đây là **khám phá n=5**, không có CI; chính thức hóa bằng ĐK-P4 (hệ số chặn, độ dốc) ở C9.
 - Bài duy nhất làn nhanh thắng về thời gian là t5 (165,5 s đơn). Về **chi phí** làn nhanh đắt hơn ở cả 5 bài (1,99–3,56 lần).
 - Độ dài đề bài của t1–t5 là 372–542 ký tự (`bench/vs-claude/tasks/t*/prompt.txt`) và repo nhỏ, nên quy tắc làn tự chọn hiện có (`config.ts:294`: `maxBriefChars` 4000, `maxRepoFiles` 300; `orchestrator.ts:1115-1136`) chọn làn nhanh cho **cả 5 bài**, trong khi 4/5 bài chậm hơn Sonnet đơn. Tín hiệu hiện có không phân biệt được.
 - t2 làn nhanh C7: 52/60 test ẩn, Sonnet đơn 60/60 (`runs.csv`, C7, t2). C8 (sau `c55a249`): 3/3 lượt 60/60 (166, 102, 120 s; $1,22, $0,55, $0,61). n quá nhỏ để kết luận; nhưng chứng minh test ẩn có thể tụt, cổng chất lượng là cần thiết.
+- **(R8) C9, t5 làn nhanh lượt 2:** 95/146 test ẩn trong khi `npm test` vẫn đỏ và review vẫn duyệt (chi tiết và dòng dẫn ở §4.1 bước 2 và §5 B-10). Đây là ca thứ hai sau t2 C7 cho thấy test ẩn tụt ở làn nhanh, lần này do **kế hoạch bỏ sót phần việc**, không do lỗi cài đặt.
 
 ---
 
@@ -96,7 +100,7 @@ Chạy: `node docs/research/context/lane-threshold.mjs` (đọc `bench/vs-claude
 | **3. Nguyên nhân gốc** | **Đã kiểm một phần:** phần cố định = kế hoạch (115,6 s) + review (116,8 s) + gộp (7,1 s) trên 5 bài (T-d (3)); mỗi lượt gọi agent là một phiên `claude -p` mới ghi lại tiền tố cache (`PROCESS-REVIEW.md:266`). **Giả thuyết:** execute song song không bù được (execute/Sonnet đơn 48–132 %, `token-analysis.md:287-291`) vì phần việc nhỏ không chia song song được. |
 | **4. Thay đổi đề xuất** | Thêm `lane: 'single'` bên cạnh `'fast'`/`'full'`; chọn tự động theo §3.1; mặc định cho việc nhỏ. Luồng ở §3.2. |
 | **5. Hiệu quả kỳ vọng** | Trên t1–t5: thời gian và chi phí trong **±15 %** Claude Code đơn cùng mô hình (từ 1,44× và 2,72× hiện nay). Kỳ vọng thời gian −30 % và chi phí −60 % so với làn nhanh (C7). **Giả thuyết**. |
-| **6. Cách kiểm lại** | H1 (thời gian làn nhanh/Claude Code ≥ 1,3 ⇒ lý do tồn tại B-01), H2 (chi phí làn nhanh > Claude Code), H3 (test ẩn không kém hơn, biên 2 điểm %), H4 (hiệu chỉnh ngưỡng), H5 (l1-modules), H6 (l2-chain). **Đề nghị S2 thêm H9:** tương đương ±15 % thời gian và chi phí của làn đơn so với Claude Code đơn (TOST, bài t1–t5, C9 hoặc vòng kế). Vòng benchtest: C9 cho H1–H3 (sau `c55a249`; làn đơn chưa tồn tại ở C9 nên C9 chỉ cho baseline); vòng sau B-01 cho H9; t6–t8 giữ lại cho H7. |
+| **6. Cách kiểm lại** | **Hệ chính (bộ đo giám đốc):** H5 (tỉ lệ chi phí token có trọng số và thời gian, `analyze.mjs:80-85`), H1/H2 (việc chia được / việc gắn chặt, `:61-68`), H10 (lợi thế tăng theo `size`, `:108-115`), H6 (agent đơn cùng lượng tính toán, `:86-91`); giả thuyết B-01 mới của bản 2 (TOST ±15 % so với A0-sonnet trên token có trọng số, thời gian thực, điểm — S4). **Bộ cũ t1–t5:** ĐK-P1 (thời gian làn nhanh/Claude Code ≥ 1,3 ⇒ lý do tồn tại B-01), ĐK-P2 (chi phí làn nhanh > Claude Code), ĐK-P3 (test ẩn không kém hơn, biên 2 điểm %), ĐK-P4 (hiệu chỉnh ngưỡng), ĐK-P5 (l1-modules), ĐK-P6 (l2-chain), ĐK-P9 (tương đương ±15 %, nay ánh xạ sang giả thuyết B-01 mới). Vòng benchtest: C9 cho ĐK-P1–P3 (sau `c55a249`; làn đơn chưa tồn tại ở C9 nên C9 chỉ cho baseline); vòng sau B-01 cho giả thuyết B-01; t6–t8 giữ lại cho ĐK-P7. |
 | **7. Rủi ro và bảo vệ dữ liệu** | Rủi ro: (a) chọn sai làn ⇒ việc lớn chạy đơn chậm — giảm bằng §3.3 nâng cấp; (b) mất reviewer ⇒ chất lượng — giảm bằng B-02. Dữ liệu: làn đơn chạy trong worktree, qua `Orchestrator.call()`, `LogStore`, hook, nhãn dữ liệu và Data Protection Gate như làn khác; không thêm đường ghi ngoài `data/`. |
 | **8. Ưu tiên** | Hiệu quả 5 / công sức 3 = 1,7. Bắt buộc đứng đầu. |
 | **9. Giám đốc duyệt** | **Có** — thay đổi mặc định chọn làn của hệ thống. |
@@ -113,23 +117,23 @@ Chạy: `node docs/research/context/lane-threshold.mjs` (đọc `bench/vs-claude
 | `repoFiles`, `repoBytes` | `git ls-files` (đã có, `:1122-1135`) | nhỏ | Chặn trên |
 | `forced` | `options.lane` hoặc cấu hình dự án | — | Người dùng/dự án ép làn (đã có `'fast'/'full'`, `:1116-1118`) |
 
-**Công thức (theo D7):** dùng làn đơn khi `T̂_đơn < k × a`. Chỉ **một** định nghĩa của `a`: **hệ số chặn của hồi quy `TG_làn-nhanh = a + b × TG_đơn`** (đúng biến của H4, `preregistration.md` §7); `k = 1/(1−b)`, nên `k × a` chính là giao điểm T* mà dưới đó đa-agent chậm hơn.
+**Công thức (theo D7):** dùng làn đơn khi `T̂_đơn < k × a`. Chỉ **một** định nghĩa của `a`: **hệ số chặn của hồi quy `TG_làn-nhanh = a + b × TG_đơn`** (đúng biến của ĐK-P4, `preregistration.md` §7); `k = 1/(1−b)`, nên `k × a` chính là giao điểm T* mà dưới đó đa-agent chậm hơn.
 
-- Giá trị khởi đầu (hồi quy thô C7, n=5, §2): `a₀ = 87,1 s`, `b₀ = 0,428` ⇒ `k₀ = 1/(1−0,428) = 1,75` ⇒ `k₀ × a₀ ≈ 152 s`. Đây là **thăm dò trên chính C7**, không dùng làm bằng chứng cho H1–H3.
+- Giá trị khởi đầu (hồi quy thô C7, n=5, §2): `a₀ = 87,1 s`, `b₀ = 0,428` ⇒ `k₀ = 1/(1−0,428) = 1,75` ⇒ `k₀ × a₀ ≈ 152 s`. Đây là **thăm dò trên chính C7**, không dùng làm bằng chứng cho ĐK-P1–P3.
 - Con số 48 s (cố định trung bình mỗi bài, §2) là **đại lượng mô tả** các pha plan+review+gộp, **không** phải `a` và không vào công thức. (Bản trước trộn hai định nghĩa: 1,75 × 87,1 ≈ 152 ≈ 3 × 48; đã bỏ `k₀ = 3`.)
 - **Bản đầu quyết định bằng quy tắc thứ tự 1–4 dưới đây; `k × a` chưa dùng để quyết định ở bản đầu.** Lý do: chưa có nguồn `T̂_đơn` đáng tin (5 điểm, `briefChars` không phân biệt).
   1. `forced` ⇒ theo ép.
   2. `briefChars > fastLane.maxBriefChars` hoặc repo vượt ngưỡng hiện có ⇒ **lớn**.
-  3. `parts ≥ 5` hoặc `filesTouched ≥ 6` ⇒ **lớn** (ngưỡng đặt tại cỡ l1-modules; hiệu chỉnh theo H5).
+  3. `parts ≥ 5` hoặc `filesTouched ≥ 6` ⇒ **lớn** (ngưỡng đặt tại cỡ l1-modules; hiệu chỉnh theo ĐK-P5).
   4. Ngược lại ⇒ **nhỏ ⇒ làn đơn**.
-- **Nguồn `T̂_đơn` cho giai đoạn 2** (bật khi dự án có ≥ 3 nhiệm vụ làn đơn đã xong): `T̂_đơn` = trung vị `wall` của các nhiệm vụ làn đơn trước đó **cùng dự án** có cùng `parts` (làm tròn lên bậc 1–2, 3–4, ≥ 5); thiếu lịch sử thì dùng quy tắc 1–4. Khi có `T̂_đơn`, thêm điều 5: `T̂_đơn ≥ k × a` ⇒ lớn. Hành vi hệ thống do đó **chỉ đổi theo `k`, `a` ở giai đoạn 2**; ở giai đoạn 1 C9/H4 chỉ hiệu chỉnh ngưỡng `parts`/`filesTouched` (cùng H5, H6).
-- **Mâu thuẫn đã biết, chấp nhận có chủ ý:** t5 (165,5 s đơn) lớn hơn `k₀ × a₀ = 152 s`, nhưng quy tắc 1–4 đưa t5 vào làn đơn (4 phần). Làn đơn trên t5 dự kiến ≈ Claude Code (không thua về thời gian so với Claude Code; chậm hơn làn nhanh C7 127 s) nhưng rẻ hơn nhiều (làn nhanh đắt 2,36× ở t5); mục tiêu giám đốc là tối ưu chi phí. Kiểm bằng H9 trên t5. Nếu C9 cho thấy giai đoạn 2 xếp t5 vào làn lớn mà đo được lợi, chuyển bằng điều 5.
+- **Nguồn `T̂_đơn` cho giai đoạn 2** (bật khi dự án có ≥ 3 nhiệm vụ làn đơn đã xong): `T̂_đơn` = trung vị `wall` của các nhiệm vụ làn đơn trước đó **cùng dự án** có cùng `parts` (làm tròn lên bậc 1–2, 3–4, ≥ 5); thiếu lịch sử thì dùng quy tắc 1–4. Khi có `T̂_đơn`, thêm điều 5: `T̂_đơn ≥ k × a` ⇒ lớn. Hành vi hệ thống do đó **chỉ đổi theo `k`, `a` ở giai đoạn 2**; ở giai đoạn 1 C9/ĐK-P4 chỉ hiệu chỉnh ngưỡng `parts`/`filesTouched` (cùng ĐK-P5, ĐK-P6).
+- **Mâu thuẫn đã biết, chấp nhận có chủ ý:** t5 (165,5 s đơn) lớn hơn `k₀ × a₀ = 152 s`, nhưng quy tắc 1–4 đưa t5 vào làn đơn (4 phần). Làn đơn trên t5 dự kiến ≈ Claude Code (không thua về thời gian so với Claude Code; chậm hơn làn nhanh C7 127 s) nhưng rẻ hơn nhiều (làn nhanh đắt 2,36× ở t5); mục tiêu giám đốc là tối ưu chi phí. Kiểm bằng giả thuyết B-01 (ĐK-P9) trên t5. Nếu C9 cho thấy giai đoạn 2 xếp t5 vào làn lớn mà đo được lợi, chuyển bằng điều 5. (R8: ca t5 C9 lượt 2 — kế hoạch đa-agent bỏ sót `agg.js`, §5 B-10 — là thêm một lý do giữ t5 ở làn đơn: một agent không có bước chia việc nên không thể "bỏ sót hạng mục".)
 - Nhật ký bắt buộc ghi `signals`, `lane`, `why` (như `⚡ Làn nhanh (${pick.why})`, `orchestrator.ts:1169`) để hiệu chỉnh sau.
 
 **Kế hoạch hiệu chỉnh** (S2 viết quy tắc cập nhật chính thức trong `preregistration.md`; phần S3 đề xuất để thống nhất):
-- Với dữ liệu C9 (t1–t5) và l1-modules, l2-chain: hồi quy `TG_đa-agent = a + b × TG_đơn` (đó là H4) cho `a` và `b`, từ đó `k = 1/(1−b)`; cập nhật `a₀, k₀` (§3.1) và chỉ có hiệu lực lên quyết định từ giai đoạn 2. Nhầm sang việc lớn rẻ hơn nhầm sang việc nhỏ về chi phí (làn nhanh đắt 2,72× ở C7), nên khi `b` ước lượng có CI rộng, lấy cận trên của `k`.
-- Ngưỡng `parts` và `filesTouched`: chỉnh theo H5 (l1-modules: CCoding nhanh hơn?) và H6 (l2-chain: CCoding không nhanh hơn và tốn hơn ⇒ chuỗi phụ thuộc không nên vào đa-agent dù có nhiều tầng; ⇒ thêm tín hiệu `phụ thuộc tuần tự` giữ làn đơn).
-- Không chỉnh ngưỡng bằng t6–t8 (bài giữ lại, chỉ để xác nhận, H7).
+- Với dữ liệu C9 (t1–t5) và l1-modules, l2-chain: hồi quy `TG_đa-agent = a + b × TG_đơn` (đó là ĐK-P4) cho `a` và `b`, từ đó `k = 1/(1−b)`; cập nhật `a₀, k₀` (§3.1) và chỉ có hiệu lực lên quyết định từ giai đoạn 2. Nhầm sang việc lớn rẻ hơn nhầm sang việc nhỏ về chi phí (làn nhanh đắt 2,72× ở C7), nên khi `b` ước lượng có CI rộng, lấy cận trên của `k`.
+- Ngưỡng `parts` và `filesTouched`: chỉnh theo ĐK-P5 (l1-modules: CCoding nhanh hơn?) và ĐK-P6 (l2-chain: CCoding không nhanh hơn và tốn hơn ⇒ chuỗi phụ thuộc không nên vào đa-agent dù có nhiều tầng; ⇒ thêm tín hiệu `phụ thuộc tuần tự` giữ làn đơn). Trên bộ đo giám đốc, ngưỡng tương ứng được kiểm bằng H10 (`analyze.mjs:108-115`, biến `size`) — xem thẩm định `size` của S1 (`suite-review.md`).
+- Không chỉnh ngưỡng bằng t6–t8 (bài giữ lại, chỉ để xác nhận, ĐK-P7).
 
 ### 3.2 Luồng làn đơn
 
@@ -142,17 +146,19 @@ Chạy: `node docs/research/context/lane-threshold.mjs` (đọc `bench/vs-claude
 
 ### 3.3 Nâng lên multi-agent
 
-Điều kiện (một trong): (a) còn đỏ sau N vòng sửa của B-02; (b) phạm vi phát sinh vượt ngưỡng: `filesTouched` thực tế (từ diff) > 6 hoặc > 2 × ước lượng ban đầu, hoặc agent phát hiện `parts ≥ 5`; (c) agent đơn tự báo việc lớn (dòng `ESCALATE:` kèm danh sách phần độc lập trong đầu ra). **Giữ worktree** và bàn giao dở dang: diff hiện tại, kết quả `checkCommands` (`pc.baseline`, `pc.latest`), ghi chú của agent; làn đầy/nhanh nhận lại worktree thay vì làm lại từ đầu (cơ chế lưu trạng thái: `this.save(task)`, `run.revising`, `orchestrator.ts:1343-1350`). Sự kiện nâng cấp ghi vào log và vào `Sai lệch`/KPI vì đó là chi phí đã trả.
+Điều kiện (một trong): (a) còn đỏ sau N vòng sửa của B-02; (b) phạm vi phát sinh vượt ngưỡng: `filesTouched` thực tế (từ diff) > 6 hoặc > 2 × ước lượng ban đầu, hoặc agent phát hiện `parts ≥ 5`; (c) agent đơn tự báo việc lớn (dòng `ESCALATE:` kèm danh sách phần độc lập trong đầu ra). **Giữ worktree** và bàn giao dở dang: diff hiện tại, kết quả `checkCommands` (`pc.baseline`, `pc.latest`), ghi chú của agent; làn đầy/nhanh nhận lại worktree thay vì làm lại từ đầu (cơ chế lưu trạng thái: `this.save(task)`, `run.revising`, `orchestrator.ts:1343-1350`). Sự kiện nâng cấp ghi vào log và vào `Sai lệch`/KPI vì đó là chi phí đã trả. Kế hoạch đa-agent sau nâng cấp phải qua cổng phủ kế hoạch B-10.
 
 ### 3.4 Chỉ tiêu nghiệm thu B-01
 
 | Chỉ tiêu | Ngưỡng | Cách đo | Vòng |
 |---|---|---|---|
-| Thời gian so với Claude Code đơn cùng mô hình | trong ±15 % (tỉ lệ ∈ [0,85; 1,15]) | `runs.csv` `wall_s`, CI bootstrap 95 % | vòng sau B-01, t1–t5 (H9 đề nghị) |
+| Thời gian so với Claude Code đơn cùng mô hình | trong ±15 % (tỉ lệ ∈ [0,85; 1,15]) | `runs.csv` `wall_s`, CI bootstrap 95 % | vòng sau B-01, t1–t5 (giả thuyết B-01 của bản 2, ĐK-P9) |
 | Chi phí | trong ±15 % | `runs.csv` `cost_usd` | như trên |
-| Test ẩn | không kém hơn, biên 2 điểm % | `hidden_pass/hidden_total` (H3) | như trên + t6–t8 giữ lại (H7) |
+| Test ẩn | không kém hơn, biên 2 điểm % | `hidden_pass/hidden_total` (ĐK-P3) | như trên + t6–t8 giữ lại (ĐK-P7) |
 | KPI | không giảm so với baseline | `GET /api/kpi?task=…` trước/sau | mỗi vòng |
-| Chọn đúng làn | l1-modules → đa-agent nhanh hơn (H5); l2-chain → không đa-agent (H6) | `lane` trong log + `runs.csv` | sau C9 |
+| Chọn đúng làn | l1-modules → đa-agent nhanh hơn (ĐK-P5); l2-chain → không đa-agent (ĐK-P6) | `lane` trong log + `runs.csv` | sau C9 |
+
+(Cách đo trên bộ đo giám đốc — token có trọng số, A0-sonnet làm đối chứng, TOST ba đại lượng — do S4 chốt trong `preregistration.md` bản 2; bảng này giữ chỉ tiêu cho bộ cũ t1–t5.)
 
 ---
 
@@ -160,12 +166,12 @@ Chạy: `node docs/research/context/lane-threshold.mjs` (đọc `bench/vs-claude
 
 | Trường | Nội dung |
 |---|---|
-| **1. Vấn đề** | Bỏ điều phối thì mất lớp kiểm. Hiện nay lệnh đỏ chỉ ép "không duyệt" **sau khi reviewer đã chạy** (một lượt LLM đắt): reviewer được gọi trước (`orchestrator.ts:1365`), rồi mới ghi đè bằng `checkRegressions` (`:1380-1388`). Chỉ regression (đạt ở baseline, hỏng sau) mới bị ép; lệnh đỏ từ baseline thì không. Reviewer không có `checkCommands` hay không chạy lệnh (`verified === false`, `:1399-1407`) chỉ cảnh báo. Nội dung đầu ra không được kiểm tuân thủ "Mẫu đầu ra" trước khi nhận (KPI chỉ chấm sau: `kpi.ts:324-327`). t2 làn nhanh C7 chỉ 52/60 test ẩn. |
-| **2. Bằng chứng** | `orchestrator.ts:1326, 1360, 1365, 1380-1388, 1399-1407, 2504-2568`; `kpi.ts:144, 168, 324-327, 608-611`; §1.2 N3c; §2 (52/60). Review là pha dài nhất ở C5 (`kpi-research…md:62`); review + revise = 116,8 s trên 5 bài ở C7 (T-d (3), `token-analysis.md:292`). |
-| **3. Nguyên nhân gốc** | Đã kiểm bằng đọc mã: thứ tự gọi reviewer → kiểm tra regression. **Giả thuyết:** reviewer gọi khi mã đã đỏ là lãng phí; chưa đo tỉ lệ lượt rơi vào trường hợp này. |
+| **1. Vấn đề** | Bỏ điều phối thì mất lớp kiểm. Hiện nay lệnh đỏ chỉ ép "không duyệt" **sau khi reviewer đã chạy** (một lượt LLM đắt): reviewer được gọi trước (`orchestrator.ts:1365`), rồi mới ghi đè bằng `checkRegressions` (`:1380-1388`). Chỉ regression (đạt ở baseline, hỏng sau) mới bị ép; lệnh đỏ từ baseline thì không. Reviewer không có `checkCommands` hay không chạy lệnh (`verified === false`, `:1399-1407`) chỉ cảnh báo. Nội dung đầu ra không được kiểm tuân thủ "Mẫu đầu ra" trước khi nhận (KPI chỉ chấm sau: `kpi.ts:324-327`). t2 làn nhanh C7 chỉ 52/60 test ẩn. **(R8)** C9 t5 làn nhanh lượt 2: đề bài đòi `npm test` xanh, lệnh đỏ từ baseline đến sau thực thi, reviewer LLM vẫn duyệt, 95/146 test ẩn (§4.1 bước 2). |
+| **2. Bằng chứng** | `orchestrator.ts:1326, 1360, 1365, 1380-1388, 1399-1407, 2504-2568`; `kpi.ts:144, 168, 324-327, 608-611`; §1.2 N3c; §2 (52/60). Review là pha dài nhất ở C5 (`kpi-research…md:62`); review + revise = 116,8 s trên 5 bài ở C7 (T-d (3), `token-analysis.md:292`). **(R8)** `bench/vs-claude/results/C9/t5-logq.ccoding-fastlane.2/ccoding-task.json:4, 83, 85-86, 104-109, 173-201`; `…/result.json:14, 39-42`. |
+| **3. Nguyên nhân gốc** | Đã kiểm bằng đọc mã: thứ tự gọi reviewer → kiểm tra regression. **(R8) Đã kiểm trên ca t5:** lệnh "đỏ kéo dài" (0/3 → 22/23) không phải regression nên không bị ép; quyết định duyệt rơi vào reviewer LLM, và reviewer duyệt dù chính nhận xét của nó ghi `npm test` exit 1 và `agg.js` còn stub. **Giả thuyết:** reviewer gọi khi mã đã đỏ là lãng phí; chưa đo tỉ lệ lượt rơi vào trường hợp này. |
 | **4. Thay đổi đề xuất** | §4.1–4.4. |
-| **5. Hiệu quả kỳ vọng** | (a) Bỏ 1 lượt review khi mã đỏ: tiết kiệm tối đa phần review của lượt đó (≈ 23 s trung bình mỗi bài ở C7: 116,8/5); (b) làn đơn không reviewer mặc định: bỏ phần review (cùng nguồn) trừ khi điều kiện §4.3 thỏa; (c) P3 (reviewer chỉ nhận diff + kết quả lệnh) trần −2,8 % chi phí CCoding (`dev-review.md:181`, O4 ở bảng T-e) — dưới nhiễu ±15 %, không tách được. (d) Chất lượng: test ẩn không thấp hơn Claude Code đơn (H3), 0 đầu ra thiếu mục mẫu. **Giả thuyết.** |
-| **6. Cách kiểm lại** | H3 (test ẩn không kém hơn); KPI: `compliance.templateCoverage` = 100 % cho lượt làn đơn, Chất lượng của reviewer (N3b) khi reviewer còn chạy; đếm `checks.run` đỏ → số reviewer bị bỏ qua. Vòng: cùng vòng với B-01 (H9) và C9 làm baseline; t6–t8 (H7). |
+| **5. Hiệu quả kỳ vọng** | (a) Bỏ 1 lượt review khi mã đỏ: tiết kiệm tối đa phần review của lượt đó (≈ 23 s trung bình mỗi bài ở C7: 116,8/5); (b) làn đơn không reviewer mặc định: bỏ phần review (cùng nguồn) trừ khi điều kiện §4.3 thỏa; (c) P3 (reviewer chỉ nhận diff + kết quả lệnh) trần −2,8 % chi phí CCoding (`dev-review.md:181`, O4 ở bảng T-e) — dưới nhiễu ±15 %, không tách được. (d) Chất lượng: test ẩn không thấp hơn Claude Code đơn (ĐK-P3), 0 đầu ra thiếu mục mẫu, **0 lượt "duyệt" khi lệnh đề bài đòi xanh còn đỏ** (R8). **Giả thuyết.** |
+| **6. Cách kiểm lại** | **Hệ chính:** H8 (`analyze.mjs:96-100`, lỗi phối hợp: thiếu sản phẩm / bỏ yêu cầu; xem giới hạn ở B-10 trường 6), H3 (review tăng recall, `:69-75` — reviewer có đáng gọi không), H7 (độ ổn định, `:92-95`); giả thuyết B-02 mới của bản 2 (cổng chặn ca "đỏ kéo dài + bỏ sót phần việc" — S4). **Bộ cũ:** ĐK-P3 (test ẩn không kém hơn); KPI: `compliance.templateCoverage` = 100 % cho lượt làn đơn, Chất lượng của reviewer (N3b) khi reviewer còn chạy; đếm `checks.run` đỏ → số reviewer bị bỏ qua. Phát lại offline: quy tắc §4.1 bước 2 trên `results/C9/*/ccoding-task.json` phải đẩy `t5-logq.ccoding-fastlane.2` vào vòng sửa. Vòng: cùng vòng với B-01 và C9 làm baseline; t6–t8 (ĐK-P7). |
 | **7. Rủi ro và bảo vệ dữ liệu** | Rủi ro: (a) vòng sửa kéo dài ⇒ giới hạn N; (b) `checkCommands` chạy mã của dự án ⇒ chỉ chạy với quyền `exec` và qua `denyCommands` như `orchestrator.ts:2507`; (c) mẫu đầu ra kiểm cứng ⇒ agent "đệm" tiêu đề rỗng: chỉ chấp nhận tiêu đề có nội dung (xem 4.2). Dữ liệu: không đổi nhãn, hook, `LogStore`; kết quả kiểm (stdout) đi qua `LogStore` che bí mật; không đưa vào đầu vào reviewer những tệp `.env`. Gate dữ liệu: thay đổi chạm bảo mật hay dữ liệu ⇒ bắt buộc reviewer (§4.3). |
 | **8. Ưu tiên** | Hiệu quả 4 / công sức 3 = 1,3. Bắt buộc đứng thứ hai. |
 | **9. Giám đốc duyệt** | **Có** — đổi cách duyệt/ép sửa. |
@@ -175,9 +181,18 @@ Chạy: `node docs/research/context/lane-threshold.mjs` (đọc `bench/vs-claude
 1. `checkCommands` chạy ở **baseline** (đã có) và **sau thực thi** và **sau mỗi vòng sửa** (đã có `runProjectChecks(…, 'baseline' | 'execute' | 'revise')`, `orchestrator.ts:2504`).
 2. Phân loại từng lệnh sau thực thi (`baseline` → `sau`):
    - **Hồi quy** (xanh → đỏ, `checkRegressions`, `:2564-2568`) hoặc **đỏ mới** (không có baseline, ví dụ lệnh mới): vào vòng sửa **ngay**, không gọi reviewer.
-   - **Đỏ kéo dài** (đỏ → đỏ): nếu đề bài nhắc tên lệnh hoặc mục tiêu là làm xanh nó (như `--check` ở R2 nhiệm vụ này) thì **vào vòng sửa**; nếu không thì không chặn nhưng **bắt buộc gọi reviewer** (§4.3) và ghi chú, vì cổng không xác nhận được gì về lệnh đó.
+   - **Đỏ kéo dài mà đề bài yêu cầu lệnh xanh** (đỏ → đỏ; đề bài nêu tên lệnh, hoặc nêu mục tiêu làm xanh nó như "đảm bảo `npm test` xanh", hay `--check` ở R2): **bắt buộc vào vòng sửa**, không gọi reviewer, và **reviewer LLM không có quyền quyết định duyệt** cho lệnh này: `approved` bị ép `false` chừng nào lệnh còn đỏ, bất kể reviewer viết gì. Hết N vòng mà còn đỏ ⇒ nâng cấp (bước 5), không bao giờ kết thúc `done` + `approved`. Nhận biết "đề bài yêu cầu" bằng so khớp chuỗi, không gọi LLM: tên lệnh trong `checkCommands` xuất hiện trong `task.brief` (kể cả trong dấu `` ` ``). Prompt vòng sửa kèm danh sách tệp/module chưa có hạng mục nhận (từ B-10) nếu có.
+   - **Đỏ kéo dài không liên quan đề bài** (đỏ → đỏ, đề bài không nhắc lệnh): không chặn nhưng **bắt buộc gọi reviewer** (§4.3) và ghi chú, vì cổng không xác nhận được gì về lệnh đó.
    - **Xanh** (xanh → xanh, hoặc đỏ → xanh): qua.
-   (Ba trạng thái rời nhau; bản trước định nghĩa "đỏ" và "hồi quy" gần trùng.)
+   (Bốn nhánh rời nhau; bản trước định nghĩa "đỏ" và "hồi quy" gần trùng. R8 tách "đỏ kéo dài" thành hai nhánh theo đề bài và bỏ quyền duyệt của reviewer ở nhánh đầu.)
+
+   **Bằng chứng review duyệt nhầm — C9, `t5-logq.ccoding-fastlane.2` (nhiệm vụ T-20261102-140019-8c2).** Mọi đường dẫn dưới đây tương đối với `bench/vs-claude/results/C9/t5-logq.ccoding-fastlane.2/`:
+   - Đề bài: "… Viết test cho các module, đảm bảo `npm test` xanh." (`ccoding-task.json:4`).
+   - Baseline: `npm test` exit 1, 0/3 (`ccoding-task.json:174-180`). Sau thực thi: exit 1, 22/23, test hỏng `tổng hợp count by` với lỗi `aggregate is not a function` (`ccoding-task.json:185-196`). Hệ thống có bắt được: `attention.reason = "checks"`, "Lệnh kiểm tra còn lỗi: npm test" (`ccoding-task.json:198-201`) — nhưng chỉ là cảnh báo.
+   - Review: `approved: true` (`ccoding-task.json:85`), chỉ 3 issue `minor` (`:87-103`); bản thân tóm tắt review ghi "`npm test` vẫn exit 1 vì `src/agg.js` còn là stub … `bin/logq.js` và `agg.js` chưa được review" (`:86`), và danh sách `checks` của review có `npm test` exit 1 (`:104-109`). Tức reviewer **thấy** lệnh đỏ và phần việc thiếu nhưng vẫn duyệt vì coi đó là "ngoài phạm vi review".
+   - Không có vòng sửa: `reviewRound: 0` (`:83`), `maxRevisions: 1` (`:149`); nhiệm vụ kết thúc `status: "done"` (`:8`), `result.json:14` `approved: true`.
+   - Hậu quả: 95/146 test ẩn (`result.json:39-42`).
+   - Với quy tắc mới: `npm test` có trong đề bài và đỏ → đỏ ⇒ nhánh "đỏ kéo dài mà đề bài yêu cầu" ⇒ vòng sửa thay cho lượt review, `approved` không thể `true`. Phần việc bị bỏ sót (`agg.js`, CLI) còn được B-10 chặn **trước** thực thi.
 3. Prompt vòng sửa nhận: đúng đầu ra của lệnh đỏ (đã cắt theo `maxOutputChars`), không phải toàn bộ lịch sử.
 4. **N ban đầu = 2** vòng sửa theo kiểm tra (`config.defaults.maxRevisions` hiện 1, `config.ts:285`, kẹp tối đa 3 ở `orchestrator.ts:296`; tách tham số mới `gate.maxFixRounds = 2` để không đổi hành vi review). Lý do: một vòng sửa ≈ 50 s (C5 t2, `PROCESS-REVIEW.md:256`), hai vòng giữ chi phí xấu nhất trong +100 s, dưới giao điểm T* ≈ 152 s (§3.1). Hiệu chỉnh lại khi có số vòng sửa thực tế ở C9.
 5. Còn đỏ sau N vòng ⇒ nâng lên multi-agent (§3.3).
@@ -197,7 +212,7 @@ Dùng nguyên hàm của `src/kpi.ts` để cổng và KPI cho cùng một kết
 Reviewer (LLM) chỉ được gọi khi một trong:
 - **Không có `checkCommands`** của dự án (cổng không có bằng chứng máy; kiểu `verified` không xác định ở `:1399`). Bản vá **D-02** (`attention` khi không kiểm chứng) gộp vào đây: dùng `attention = true` nếu reviewer cũng không chạy lệnh.
 - **Thay đổi đụng bảo mật hoặc dữ liệu:** diff chạm đường dẫn khớp danh sách (đề xuất ban đầu): `src/tools/**` (hook, chính sách), `src/runtimes/**`, `src/kpi.ts`, `src/store.ts`/`LogStore`, `.env*`, `data/`, `agents/**` (định dạng `agent.md`), `config`, hoặc dự án có nhãn dữ liệu ≥ Bảo mật. Phù hợp quy tắc repo: đổi định dạng `agent.md` ⇒ cập nhật tài liệu/test; Data Protection Gate bắt buộc.
-- **Đỏ kéo dài** không liên quan đề bài (§4.1 bước 2).
+- **Đỏ kéo dài** không liên quan đề bài (§4.1 bước 2). Đỏ kéo dài mà đề bài yêu cầu xanh thì **không** gọi reviewer mà vào vòng sửa (R8).
 - Cổng định dạng thất bại sau N vòng, hoặc đỏ sau N vòng (trước khi nâng cấp lên multi-agent).
 
 Reviewer khi được gọi nhận **diff + kết quả lệnh kiểm** thay vì toàn bộ đầu ra (P3, gộp vào B-02). Đây là phần P3, độ lớn trần −2,8 % (O4); coi như bổ sung rẻ chứ không phải lý do.
@@ -212,9 +227,10 @@ Mọi lượt (execute, vòng sửa, sửa định dạng, reviewer) đi qua `Or
 
 | Chỉ tiêu | Ngưỡng | Cách đo |
 |---|---|---|
-| Test ẩn | không kém hơn Claude Code đơn, biên 2 điểm % (H3) | `runs.csv` |
+| Test ẩn | không kém hơn Claude Code đơn, biên 2 điểm % (ĐK-P3) | `runs.csv` |
 | `compliance.templateCoverage` | 100 % (lượt làn đơn) | `GET /api/kpi` |
 | Lượt reviewer bị bỏ khi mã đỏ | = số sự kiện `checks.run` đỏ (không còn `review` sau đỏ) | `logs` kind `checks.run` + `phases.csv` |
+| **(R8)** Lượt `approved` khi lệnh đề bài đòi xanh còn đỏ | **0** | `ccoding-task.json`: `review.approved` và `projectChecks.latest[].ok` của lệnh có tên trong `brief`; phát lại trên C9 phải bắt `t5-logq.ccoding-fastlane.2` |
 | Số vòng sửa | ≤ N=2; lượt vượt N ⇒ có sự kiện nâng cấp | log |
 | KPI phòng | không thấp hơn baseline (82 điểm cho 2 nhiệm vụ 2/11; 68 trong 7 ngày: `kpi-research…md:15`) | `GET /api/kpi` |
 | Hiệu quả | thời gian, chi phí trong ±15 % (như B-01) | `runs.csv` |
@@ -321,15 +337,44 @@ Mọi lượt (execute, vòng sửa, sửa định dạng, reviewer) đi qua `Or
 | **8. Ưu tiên** | 1 / 1 = 1,0, hoãn. |
 | **9. Giám đốc duyệt** | Có (đổi prompt) nếu làm. |
 
+### B-10 — Cổng phủ kế hoạch (R8, ca t5 C9)
+
+Mọi đường dẫn tệp kết quả dưới đây tương đối với `bench/vs-claude/results/C9/t5-logq.ccoding-fastlane.2/` (nhiệm vụ T-20261102-140019-8c2), trừ khi ghi khác.
+
+| Trường | Nội dung |
+|---|---|
+| **1. Vấn đề** | Kế hoạch đa-agent có thể bỏ sót phần việc mà không bước nào phát hiện: không có phép kiểm **độ phủ** của danh sách hạng mục so với đề bài và so với chính tóm tắt kế hoạch; kế hoạch đọc được một phần vẫn được chạy như kế hoạch đủ. Ở t5 C9, 2/4 phần việc không ai làm, review vẫn duyệt (B-02), 95/146 test ẩn. |
+| **2. Bằng chứng** | (a) Đề bài nêu 4 đích: "thư viện (`src/parse.js`, `src/query.js`, `src/agg.js`) và CLI `bin/logq.js`" (`ccoding-task.json:4`). (b) Tóm tắt kế hoạch: "Bốn hạng mục độc lập … parse.js, query.js, agg.js và CLI" (`ccoding-task.json:75`). (c) Danh sách hạng mục thực tế chỉ có **2**: S1 "Hiện thực src/parse.js + test" (`:31-32`), S2 "Hiện thực src/query.js + test" (`:54-55`); `result.json:16-27` cùng 2 mục. (d) S2 hỏng một phần: mô tả là văn bản lạc "Chỉ giao cho backend-dev nếu S1 có người khác làm … (Assignee thực tế: data-engineer …)" (`:41`), trong khi `assignee` là `frontend-dev` (`:56`) và `deliverable` là "(không dùng)" (`:57`). (e) Thay đổi chỉ chạm `parse.js`, `query.js` và 2 tệp test (`result.json:104-109`; `ccoding-task.json:203`). (f) 51 test ẩn hỏng (`result.json:39-94`): **37** nhóm "tổng hợp…" (`:44-80`, tức toàn bộ nhóm; `grade-hidden.tap` không có dòng `ok` nào của nhóm này) và **14** nhóm "CLI…" (`:81-94`; nhóm CLI chỉ đạt 1 test, `grade-hidden.tap:1615`). (Đính chính `context/c9-partial-2026-11-02.md` §2 ghi "toàn bộ 51 test hỏng thuộc nhóm tổng hợp": thực tế 37 tổng hợp + 14 CLI, đúng với hai đích không ai nhận.) (g) Chính dev và reviewer đều ghi nhận phần thiếu nhưng không ai có quyền/nhiệm vụ xử lý: tóm tắt S2 "`parse.js` và `agg.js` chưa được hiện thực" (`:60`); review "`bin/logq.js` và `agg.js` chưa được review. Hai phần này cần hoàn thành …" (`:86`). |
+| **3. Nguyên nhân gốc** | **Đã kiểm (từ tạo phẩm):** không hạng mục nào nhận `src/agg.js` và `bin/logq.js`; số hạng mục (2) khác số tóm tắt kế hoạch tự khai (4); hạng mục S2 có trường mâu thuẫn nhau. **Giả thuyết, chưa kiểm:** đầu ra pha plan hỏng một phần và `parsePlan` chỉ lấy được 2 mục (mô tả S2 giống phần chú thích lọt vào trường `description`). Kiểm cần `data/runs/T-20261102-140019-8c2/calls.jsonl` trên server cloud (cổng 7422) — **không có trong repo**, chưa đọc được. Dù nguyên nhân là LLM lập kế hoạch thiếu hay bộ phân tích cắt mất, cổng phủ dưới đây bắt được cả hai vì nó so **kết quả đã phân tích** với đề bài và tóm tắt. |
+| **4. Thay đổi đề xuất** | Thêm một bước kiểm tất định (không gọi LLM) **sau `parsePlan`, trước pha execute**, áp cho làn nhanh và làn đầy (và cho kế hoạch sau nâng cấp ở §3.3). **Quy tắc A — phần việc không ai nhận ⇒ chặn trước khi thực thi.** Tập đích `D` = các đường dẫn tệp/module nêu trong `task.brief` hoặc `planSummary` (so khớp mẫu đường dẫn có đuôi tệp hoặc tên khớp `git ls-files`, kể cả tên rút gọn như `agg.js` ↔ `src/agg.js`). Một đích được **phủ** khi xuất hiện trong `title`, `description` hoặc `deliverable` của ít nhất một hạng mục, hoặc trong danh sách `outOfScope` mà kế hoạch khai kèm lý do (vd. `src/index.js` "đã có sẵn nên không ai sửa", `:75`). `D` còn đích chưa phủ ⇒ không chạy execute; một lượt "sửa kế hoạch" (qua `Orchestrator.call()`) nhận đúng danh sách đích thiếu; vẫn thiếu ⇒ dừng, `attention = "plan-coverage"`, không chạy kế hoạch thiếu. **Quy tắc B — kế hoạch không đọc được đầy đủ ⇒ không chạy kế hoạch dở.** Kế hoạch bị coi là đọc dở khi một trong: (i) số hạng mục phân tích được khác số hạng mục tóm tắt kế hoạch tự khai (số đếm bằng chữ hoặc số: "Bốn hạng mục" ⇒ 4, ở t5 phân tích ra 2); (ii) hạng mục có `deliverable` rỗng hoặc giữ chỗ ("(không dùng)", "—"); (iii) trường mâu thuẫn trong cùng hạng mục (tên vai trong `description` khác `assignee`, như `:41` so với `:56`); (iv) bộ phân tích báo cắt cụt/JSON không đóng. Khi đó: gọi lại pha plan **một** lần; vẫn dở ⇒ dừng với `attention = "plan-unreadable"`. Không bao giờ chạy tập con hạng mục đã đọc được. |
+| **5. Hiệu quả kỳ vọng** | Ca t5 C9 lượt 2 bị chặn bởi cả A (`src/agg.js`, `bin/logq.js` chưa phủ) và B (i: 4 ≠ 2; ii: `(không dùng)`; iii: `data-engineer`/`frontend-dev`). Không chặn nhầm t1 C9 lượt 3: đề bài nêu `src/duration.js` (`results/C9/t1-duration.ccoding-fastlane.3/ccoding-task.json:4`), tóm tắt kế hoạch nêu `src/parse.js`, `src/format.js`, `src/duration.js` (`…/ccoding-task.json:75`), hai hạng mục nhận đủ (`…:32, :55`); lượt đó 148/149 test ẩn với một lỗi cài đặt riêng lẻ (`…/result.json:39-44`), `npm test` cuối xanh (`…/ccoding-task.json:172`) — tức **không** cùng nguyên nhân với t5. Chi phí: phép kiểm không gọi LLM; chỉ tốn một lượt plan khi bị chặn. Độ lớn về chất lượng trên bộ đo chưa biết: n = 1 ca. **Giả thuyết.** |
+| **6. Cách kiểm lại** | **(a) Phát lại offline** (không cần LLM, không tốn hạn mức): chạy hàm cổng trên mọi `bench/vs-claude/results/C*/*/ccoding-task.json` (`brief`, `runs[].planSummary`, `runs[].subtasks`). **(b) Nơi đo trên bộ đo giám đốc: H8** "Coordination failures (deliverable missing / requirements dropped)" (`bench/vs-claude/analyze.mjs:96-100`). Tên H8 mô tả **đúng loại lỗi này** ("requirements dropped" = phần việc của đề bài không ai làm), nên H8 là giả thuyết chính để kiểm B-10. **Giới hạn đã kiểm bằng đọc mã:** phán quyết H8 chỉ dựa vào tỉ lệ `formatMiss` (`analyze.mjs:97`, `:99` `verdict(fm(TREAT) > fm(BASE), false)`); grader coding `gradeCode` không trả `formatMiss` (`bench/vs-claude/lib/grade.mjs:26-41`), nên với bài coding `fm` luôn 0 và **ca kiểu t5 không làm đổi phán quyết H8**; nó chỉ hiện ở chỉ số mô tả "failed hidden-test share" (`analyze.mjs:98`), vốn không phân biệt "bỏ sót phần việc" với "lỗi cài đặt rải rác". Ngoài ra đối số `unknown` luôn `false` (`:99`) nên H8 không bao giờ báo "insufficient data". Đề nghị (không sửa mã; chuyển S1 ghi vào `suite-review.md` và S4 quyết định có khóa có điều kiện hay không): thêm chỉ số "bỏ yêu cầu" = tỉ lệ lượt coding có **một nhóm test ẩn hỏng toàn bộ** (nhóm = tiền tố trước `:` của tên test; t5: "tổng hợp" 37/37), và đưa chỉ số này vào phán quyết H8. **(c)** t1–t5 chưa có `task.json` trong bộ đo mới (Phòng Dev đang thêm), nên H8 trên t5 chỉ đo được sau khi Phòng Dev merge (nhánh 2 của `run-plan.md`). |
+| **7. Rủi ro / dữ liệu** | (a) Chặn nhầm khi đề bài nhắc tệp chỉ để tham khảo ⇒ cơ chế `outOfScope` có lý do, và đo tỉ lệ chặn nhầm ở phát lại (a). (b) Bỏ lọt khi đề bài nêu phần việc không bằng đường dẫn ("thêm CLI") ⇒ quy tắc B (i) vẫn bắt nếu tóm tắt tự khai số phần; đích không có tên tệp nằm ngoài phạm vi bản đầu. (c) Vòng plan lặp ⇒ tối đa 1 lượt lại cho mỗi quy tắc. Dữ liệu: chỉ đọc `brief`, `planSummary`, `subtasks` đã có trong trạng thái nhiệm vụ; sự kiện chặn ghi qua `LogStore`; không thêm đường ghi ngoài `data/`, không đổi nhãn dữ liệu. |
+| **8. Ưu tiên** | Hiệu quả 4 / công sức 2 = 2,0. Hạng 3 (§0): ngay sau B-01/B-02, triển khai cùng B-02. |
+| **9. Giám đốc duyệt** | **Có** — thêm điểm chặn vào pipeline kế hoạch. |
+
+**Chỉ tiêu nghiệm thu B-10**
+
+| Chỉ tiêu | Ngưỡng | Cách đo |
+|---|---|---|
+| Bắt ca đã biết | `t5-logq.ccoding-fastlane.2` bị chặn bởi **cả** quy tắc A và B | phát lại (a) trên `results/C9/` |
+| Chặn nhầm | ≤ 1 lượt bị chặn ngoài ca t5 trong toàn bộ lượt CCoding có `ccoding-task.json` ở `results/C*/`; mỗi lượt chặn có giải thích; `t1-duration.ccoding-fastlane.3` **không** bị chặn | phát lại (a) |
+| Không chạy kế hoạch dở | 0 lượt có số hạng mục đã chạy < số hạng mục tóm tắt tự khai | `ccoding-task.json` (`runs[].subtasks` so với `planSummary`) |
+| Lỗi phối hợp trên bộ đo | arm CCoding sau B-10: tỉ lệ "bỏ yêu cầu" (nhóm test ẩn hỏng toàn bộ, đề nghị ở trường 6) không lớn hơn A0-sonnet trên bài coding; phán quyết H8 không "SUPPORTED" theo chiều CCoding tệ hơn | H8, `analyze.mjs:96-100` (sau khi bổ sung chỉ số); trước đó đọc "failed hidden-test share" `:98` |
+| Chi phí | 0 lượt LLM thêm khi kế hoạch đạt; ≤ 1 lượt plan khi bị chặn | log `plan` |
+
 ---
 
 ## 6. Quan hệ với đăng ký trước và các giới hạn
 
-| Mục | Giả thuyết kiểm | Ghi chú |
-|---|---|---|
-| B-01 | H1, H2, H3, H4, H5, H6; đề nghị H9 (tương đương ±15 %) | H9 do S2 quyết định; S3 chỉ đề nghị. Ngưỡng `k₀ × a₀` (= T* ≈ 152 s) lấy từ C7 nên **không** dùng C7 để "xác nhận" chính nó |
-| B-02 | H3, H7; KPI | H7 (bài giữ lại t6–t8) là xác nhận |
-| B-03…B-09 | KPI, đếm log, test đơn vị | Không cần benchtest, trừ B-03/B-07 (F1) và B-09 |
+**Quy ước mã (R8):** cột "Bộ đo giám đốc" dùng H1–H10 của `bench/vs-claude/analyze.mjs` (hệ chính). Cột "Bản 1" dùng P1–P9 (= H1–H9 của `preregistration.md` bản 1, đổi mã theo H_i → P_i; trong tệp này ghi ĐK-P_i để khỏi lẫn với bản vá prompt P1–P4). Ánh xạ chính thức P↔H và giả thuyết B-01/B-02 mới do S4 chốt trong `preregistration.md` bản 2; bảng dưới chỉ là đề nghị từ phía backlog.
+
+| Mục | Bộ đo giám đốc (hệ chính) | Bản 1 (ĐK-P_i) | Ghi chú |
+|---|---|---|---|
+| B-01 | H5 (`analyze.mjs:80-85`), H1, H2 (`:61-68`), H6 (`:86-91`), H10 (`:108-115`); **giả thuyết B-01 mới** (TOST ±15 % so với A0-sonnet: token có trọng số, thời gian thực, điểm; S4) | ĐK-P1–P6; ĐK-P9 (tương đương ±15 %) ánh xạ sang giả thuyết B-01 mới | Ngưỡng `k₀ × a₀` (= T* ≈ 152 s) lấy từ C7 nên **không** dùng C7 để "xác nhận" chính nó. H10 dùng `size` làm biến giải thích: xem thẩm định của S1 trước khi dùng H10 để hiệu chỉnh ngưỡng `parts` |
+| B-02 | H8 (`:96-100`), H3 (`:69-75`), H7 (`:92-95`); **giả thuyết B-02 mới** (cổng chặn ca "đỏ kéo dài + bỏ sót phần việc"; S4) | ĐK-P3, ĐK-P7 (bài giữ lại t6–t8, xác nhận); KPI | Ca chuẩn để phát lại: `t5-logq.ccoding-fastlane.2` (§4.1 bước 2). Giả thuyết B-02 mới dùng quy tắc "lệnh đề bài đòi xanh còn đỏ ⇒ vòng sửa" (§4.1) và quy tắc phủ B-10 |
+| **B-10** | **H8** (`analyze.mjs:96-100`) — đúng loại lỗi "requirements dropped"; phán quyết hiện chỉ dựa `formatMiss` nên chưa bắt được ca coding kiểu t5 (§5 B-10 trường 6) | ĐK-P3 (test ẩn không kém hơn) | Phát lại offline trên `results/C*/` không tốn hạn mức 5 giờ; nên chạy trước mọi vòng LLM. Chung giả thuyết B-02 mới |
+| B-03…B-09 | — | — | KPI, đếm log, test đơn vị. Không cần benchtest, trừ B-03/B-07 (F1) và B-09 |
 
 **Giới hạn và kết quả âm tính**
 - N3b, N5 **không kiểm được** từ CSV; N4 kiểm gián tiếp. Phép kiểm cần dữ liệu từ API `kpi`.
@@ -337,9 +382,11 @@ Mọi lượt (execute, vòng sửa, sửa định dạng, reviewer) đi qua `Or
 - `tail -c` (N1c) **sai**; N2 chỉ chứng minh chắc 1/10 lượt chặn nhầm.
 - Hồi quy thô ở §2 chỉ có 5 điểm, mỗi điểm 1 lượt làn nhanh; không có CI. `a₀, k₀` ước lượng trên chính C7. C8 không có Sonnet đơn (D1) nên không dùng được cho `a`.
 - t2 52/60 là 1 lượt; C8 3/3 sau `c55a249` không kết luận được.
-- Số "hiệu quả kỳ vọng" ở B-02…B-09 là giả thuyết; chỉ B-01 có số đo nền.
+- **(R8)** B-10 và sửa §4.1 dựa trên **1 ca** (t5 C9 lượt 2). Nguyên nhân "plan hỏng một phần / `parsePlan` cắt" chưa kiểm vì `calls.jsonl` nằm trên server cloud, không có trong repo. C9 dừng giữa chừng do hạn mức (`context/c9-partial-2026-11-02.md` §1), nên tần suất của loại lỗi này chưa ước lượng được.
+- **(R8)** `context/c9-partial-2026-11-02.md` §2 ghi 51 test hỏng đều thuộc nhóm tổng hợp; tạo phẩm cho thấy 37 tổng hợp + 14 CLI (§5 B-10 trường 2f). Kết luận không đổi (cả hai là đích không ai nhận).
+- Số "hiệu quả kỳ vọng" ở B-02…B-10 là giả thuyết; chỉ B-01 có số đo nền, B-02/B-10 có thêm 1 ca chất lượng.
 - Nếu S1 đổi số ở T-d (3) (D2), peer-reviewer sửa tại chỗ; script `lane-threshold.mjs` đọc thẳng `runs.csv`, không phụ thuộc `token-analysis.md`.
-- Bảo vệ dữ liệu: tài liệu này nội bộ, không chứa DLCN hay bí mật; CSV đã thay đường dẫn bằng `<ws>/<home>/<proj>`. Không cần đánh giá bảo vệ dữ liệu riêng; các mục B-04, B-08 chạm biên bảo mật nên cần giám đốc duyệt và bộ test ác ý.
+- Bảo vệ dữ liệu: tài liệu này nội bộ, không chứa DLCN hay bí mật; CSV đã thay đường dẫn bằng `<ws>/<home>/<proj>`. Đường dẫn máy cloud trong tạo phẩm C9 (`/home/claude/…`) không được chép vào tệp này. Không cần đánh giá bảo vệ dữ liệu riêng; các mục B-04, B-08 chạm biên bảo mật nên cần giám đốc duyệt và bộ test ác ý.
 
 ## 7. Tái lập
 
@@ -350,3 +397,5 @@ node docs/research/context/failures-count.mjs --ro-other           # lượt ch�
 node docs/research/context/lane-threshold.mjs                      # §2: C7 Sonnet đơn so với làn nhanh, hồi quy thô, k
 ```
 Môi trường: Node ≥ 22, không phụ thuộc ngoài. Hai script nằm ở `docs/research/context/` (thêm mới, không sửa tệp thuộc S1).
+
+Bằng chứng R8 (B-10, §4.1 bước 2) đọc trực tiếp bằng Read/Grep, không cần script: `bench/vs-claude/results/C9/t5-logq.ccoding-fastlane.2/{ccoding-task.json,result.json,grade-hidden.tap}`, `bench/vs-claude/results/C9/t1-duration.ccoding-fastlane.3/{ccoding-task.json,result.json}`, `bench/vs-claude/analyze.mjs:96-100`, `bench/vs-claude/lib/grade.mjs:26-41`.
