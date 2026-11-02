@@ -105,7 +105,7 @@ keywords: [api, web app, migration, triển khai, elk, …]   # ≥ 20; định 
 
 Bộ định tuyến chỉ thấy 25 từ khóa đầu và dòng đầu tiên của `## Sứ mệnh` — đặt từ khóa tiêu biểu nhất lên trước, câu đầu tiên mô tả đủ phạm vi phòng. Tránh từ khóa quá ngắn dễ khớp nhầm chuỗi con.
 
-Agent khai báo `department: <id>` tự động thuộc phòng đó kể cả khi không có trong `members`. Giao diện xếp tối đa 9 bàn cho `dev` và 6 bàn cho `research`; người thêm vào sau đứng ở hành lang.
+Agent khai báo `department: <id>` tự động thuộc phòng đó kể cả khi không có trong `members`. Ô Văn phòng xếp mỗi agent một bàn trong phòng của phòng ban mình (không giới hạn số bàn); agent không thuộc phòng ban làm việc nào (điều phối, CTO) ngồi ở phòng Điều phối · CTO.
 
 ## Nguồn tham khảo của bộ hồ sơ hiện tại
 

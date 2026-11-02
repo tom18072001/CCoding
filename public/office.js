@@ -36,13 +36,18 @@
         const d = e.target.closest('[data-desk]');
         if (!d) return;
         const r = d.getBoundingClientRect();
-        const host = (this.opts.menuHost || el).getBoundingClientRect();
+        const hostEl = this.opts.menuHost || el;
+        const host = hostEl.getBoundingClientRect();
         this.select(d.dataset.desk);
-        this.opts.onInteract?.({ type: 'agent', id: d.dataset.desk }, { left: r.left - host.left + r.width / 2, top: r.top - host.top + 8 });
+        // tọa độ trong vùng cuộn của khung chứa menu (menu nằm trong khung đó, khung có thể đang cuộn)
+        this.opts.onInteract?.({ type: 'agent', id: d.dataset.desk }, { left: r.left - host.left + hostEl.scrollLeft + r.width / 2, top: r.top - host.top + hostEl.scrollTop + 8 });
       });
       el.addEventListener('dblclick', (e) => {
         const d = e.target.closest('[data-desk]');
-        if (d) this.opts.onSelect?.(d.dataset.desk);
+        if (!d) return;
+        // lần bấm đầu đã mở menu → đóng trước khi mở hồ sơ
+        window.Director?.closeMenu?.();
+        this.opts.onSelect?.(d.dataset.desk);
       });
       opts.tabs?.addEventListener('click', (e) => {
         const b = e.target.closest('[data-fa]');
@@ -120,49 +125,94 @@
       });
     }
 
-    desk(a) {
+    /** Trạng thái hiển thị của một bàn (dùng cho cả dựng lần đầu và cập nhật tại chỗ). */
+    view(a) {
       const st = a.state || { status: 'idle' };
       const say = this.saying.get(a.id);
-      const bubble = say ? say.text : busy(st) ? clip(st.activity || STATUS_VI[st.status] || st.status, 46) : '';
-      const label = a.short || a.name;
-      const what = `${a.name} — ${STATUS_VI[st.status] || st.status}${st.activity ? `: ${st.activity}` : ''}`;
-      return `<button type="button" class="ofc-desk st-${esc(st.status || 'idle')}${this.selected === a.id ? ' sel' : ''}" data-desk="${esc(a.id)}" title="${esc(what)}" aria-label="${esc(what)}">
-        ${bubble ? `<span class="ofc-bub${say ? ' say' : ''}">${esc(bubble)}</span>` : ''}
+      return {
+        cls: `ofc-desk st-${st.status || 'idle'}${this.selected === a.id ? ' sel' : ''}`,
+        bubble: say ? say.text : busy(st) ? clip(st.activity || STATUS_VI[st.status] || st.status, 46) : '',
+        say: !!say,
+        what: `${a.name} — ${STATUS_VI[st.status] || st.status}${st.activity ? `: ${st.activity}` : ''}`,
+      };
+    }
+    desk(a) {
+      const v = this.view(a);
+      return `<button type="button" class="${esc(v.cls)}" data-desk="${esc(a.id)}" title="${esc(v.what)}" aria-label="${esc(v.what)}">
+        <span class="ofc-bub${v.say ? ' say' : ''}"${v.bubble ? '' : ' hidden'}>${esc(v.bubble)}</span>
         <img class="ofc-av" src="${esc(this.opts.avatar ? this.opts.avatar(a.id) : '')}" alt="" draggable="false">
         <i class="ofc-table" aria-hidden="true"><i></i></i>
-        <small class="ofc-name">${esc(clip(label, 22))}</small></button>`;
+        <small class="ofc-name">${esc(clip(a.short || a.name, 22))}</small></button>`;
     }
-
-    room(title, list, cls = '', color = '') {
+    count(list) {
       const n = list.filter((a) => busy(a.state)).length;
-      return `<section class="ofc-room ${cls}"${color ? ` style="--dc:${esc(color)}"` : ''} aria-label="${esc(title)}">
-        <header><b>${esc(title)}</b><small>${n ? `${n}/${list.length} đang làm` : `${list.length} người`}</small></header>
+      return n ? `${n}/${list.length} đang làm` : `${list.length} người`;
+    }
+    room(key, title, list, cls = '', color = '') {
+      return `<section class="ofc-room ${cls}" data-room="${esc(key)}"${color ? ` style="--dc:${esc(color)}"` : ''} aria-label="${esc(title)}">
+        <header><b>${esc(title)}</b><small data-count>${this.count(list)}</small></header>
         <div class="ofc-desks">${list.map((a) => this.desk(a)).join('') || '<small class="ofc-empty">chưa có ai</small>'}</div></section>`;
     }
-
-    render() {
+    groups() {
       const all = [...this.agents.values()];
       const deptIds = new Set(this.depts.map((d) => d.id));
-      // phòng trên: điều phối + CTO (agent không thuộc phòng ban làm việc nào)
-      const top = all.filter((a) => !deptIds.has(a.department));
       const order = (d) => {
         const m = Array.isArray(d.members) ? d.members : [];
         return all.filter((a) => a.department === d.id).sort((x, y) => (x.id === d.lead ? -1 : y.id === d.lead ? 1 : 0) || (m.indexOf(x.id) + 1 || 999) - (m.indexOf(y.id) + 1 || 999));
       };
+      // phòng trên: điều phối + CTO (agent không thuộc phòng ban làm việc nào)
+      const top = all.filter((a) => !deptIds.has(a.department));
+      return { all, top, rooms: this.depts.map((d) => ({ d, list: order(d) })) };
+    }
+
+    /**
+     * Dựng khung các phòng một lần (khi danh sách phòng/agent đổi), sau đó chỉ cập nhật tại chỗ từng bàn — không thay phần tử
+     * nên bấm chuột và con trỏ bàn phím không bị mất khi trạng thái agent đổi liên tục.
+     */
+    render() {
+      const { all, top, rooms } = this.groups();
       const head = `${this.running ? `<span class="ofc-run">● ${this.running} nhiệm vụ đang chạy</span>` : '<span class="ofc-run idle">Không có nhiệm vụ đang chạy</span>'}${this.meeting ? `<span class="ofc-meet" title="${esc(this.meeting)}">🗣 Đang họp: ${esc(clip(this.meeting, 48))}</span>` : ''}`;
-      this.el.innerHTML = `<div class="ofc-head">${head}</div>${top.length ? this.room('Điều phối · CTO', top, 'ofc-top', '#b91c1c') : ''}<div class="ofc-rooms">${this.depts
-        .map((d) => this.room(d.name || d.id, order(d), '', this.opts.deptColor ? this.opts.deptColor(d.id) : ''))
-        .join('')}</div>`;
+      const sig = `${top.map((a) => `${a.id}:${a.short || a.name}`).join(',')}|${rooms.map(({ d, list }) => `${d.id}:${d.name}:${list.map((a) => `${a.id}:${a.short || a.name}`).join(',')}`).join('|')}`;
+      if (sig !== this._sig || !this.el.querySelector('.ofc-head')) {
+        this._sig = sig;
+        this.el.innerHTML = `<div class="ofc-head">${head}</div>${top.length ? this.room('_top', 'Điều phối · CTO', top, 'ofc-top', '#b91c1c') : ''}<div class="ofc-rooms">${rooms
+          .map(({ d, list }) => this.room(d.id, d.name || d.id, list, '', this.opts.deptColor ? this.opts.deptColor(d.id) : ''))
+          .join('')}</div>`;
+      } else {
+        const h = this.el.querySelector('.ofc-head');
+        if (h.innerHTML !== head) h.innerHTML = head;
+        for (const a of all) {
+          const el = this.el.querySelector(`[data-desk="${CSS.escape(a.id)}"]`);
+          if (!el) continue;
+          const v = this.view(a);
+          if (el.className !== v.cls) el.className = v.cls;
+          if (el.title !== v.what) {
+            el.title = v.what;
+            el.setAttribute('aria-label', v.what);
+          }
+          const b = el.querySelector('.ofc-bub');
+          if (b.textContent !== v.bubble) b.textContent = v.bubble;
+          b.hidden = !v.bubble;
+          b.classList.toggle('say', v.say);
+        }
+        const setCount = (key, list) => {
+          const c = this.el.querySelector(`[data-room="${CSS.escape(key)}"] [data-count]`);
+          const t = this.count(list);
+          if (c && c.textContent !== t) c.textContent = t;
+        };
+        if (top.length) setCount('_top', top);
+        for (const { d, list } of rooms) setCount(d.id, list);
+      }
       this.renderBar(all);
       this.renderFeedTabs();
     }
 
-    /** Thanh trạng thái dưới cùng: các agent đang bận. */
+    /** Thanh trạng thái dưới cùng: các agent đang bận (chỉ vẽ lại khi nội dung đổi). */
     renderBar(all) {
       const bar = this.opts.bar;
       if (!bar) return;
       const list = all.filter((a) => busy(a.state));
-      bar.innerHTML = list.length
+      const html = list.length
         ? list
             .map((a) => {
               const st = a.state;
@@ -170,6 +220,10 @@
             })
             .join('')
         : '<small class="ofc-quiet">Cả văn phòng đang rảnh</small>';
+      if (html !== this._bar) {
+        this._bar = html;
+        bar.innerHTML = html;
+      }
     }
 
     /** Luồng hoạt động: tab "Tất cả" + các agent vừa có hoạt động; chọn tab để lọc. */
@@ -193,9 +247,13 @@
         const a = this.agents.get(id);
         return a ? a.short || a.name : id;
       };
-      tabs.innerHTML = [['', 'Tất cả'], ...seen.map((id) => [id, name(id)])]
+      const html = [['', 'Tất cả'], ...seen.map((id) => [id, name(id)])]
         .map(([id, l]) => `<button type="button" role="tab" data-fa="${esc(id)}" aria-selected="${this.feedAgent === id}" class="${this.feedAgent === id ? 'on' : ''}">${esc(clip(l, 18))}</button>`)
         .join('');
+      if (html !== this._tabs) {
+        this._tabs = html;
+        tabs.innerHTML = html;
+      }
     }
     filterFeed() {
       const feed = this.opts.feed;
