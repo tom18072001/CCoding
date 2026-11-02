@@ -14,7 +14,7 @@ import { buildTimeline } from './timeline.js';
 import { AUDIT_CATS, auditOf, type AuditRow } from './audit.js';
 import { listArtifacts } from './artifacts.js';
 import { describeSchedule, RoutineError } from './routines.js';
-import { verifyChain } from './logger.js';
+import { verifyChainStream } from './logger.js';
 import { deniedReason } from './tools/workspace.js';
 import type { BudgetMode, Classification, LogEntry, Phase, ProjectDef, TaskMode, ToolAccess } from './types.js';
 import type { UsageDim } from './usage.js';
@@ -607,7 +607,10 @@ export function createServer(app: App): http.Server {
       return send(res, 201, proj);
     }
     if ((mm = m(/^\/api\/projects\/([^/]+)$/)) && req.method === 'DELETE') {
-      return send(res, store.removeProject(mm[1]) ? 200 : 404, { ok: true });
+      const gone = store.project(mm[1]);
+      if (!gone || !store.removeProject(mm[1])) throw new HttpError(404, 'Không có dự án này');
+      logs.write({ level: 'info', kind: 'project.deleted', msg: `Xóa dự án ${gone.id} (${gone.classification})`, projectId: gone.id });
+      return send(res, 200, { ok: true });
     }
 
     if (p === '/api/runtimes') {
@@ -617,23 +620,24 @@ export function createServer(app: App): http.Server {
 
     // ── UX-4d: Kiểm toán, Sản phẩm, Kỹ năng & Kết nối, Việc định kỳ ──────────────────────────────
     if (p === '/api/audit/verify') {
-      // kiểm chuỗi băm của nhật ký hệ thống (đọc toàn tệp — chỉ chạy khi bấm)
+      // kiểm chuỗi băm của nhật ký hệ thống (đọc luồng toàn tệp — chỉ chạy khi bấm, không chặn server)
       const file = logs.fileFor('system');
-      return send(res, 200, { file: path.join('data', path.relative(config.dataDir, file)).replace(/\\/g, '/'), ...verifyChain(file) });
+      return send(res, 200, { file: path.join('data', path.relative(config.dataDir, file)).replace(/\\/g, '/'), ...(await verifyChainStream(file)) });
     }
     if (p === '/api/audit') {
       const rows = scanJsonl(logs.fileFor('system'), (e) => auditOf(e) ?? undefined, auditCache);
       const cat = q('cat');
       const needle = (q('q') ?? '').trim().toLowerCase();
       const task = q('task');
-      const before = q('before');
-      const limit = Math.max(1, Math.min(2000, Number(q('limit') ?? 300)));
+      // trang tiếp theo theo số thứ tự dòng nhật ký (seq duy nhất, tăng dần) — nhiều sự kiện cùng mốc thời gian không bị rơi
+      const beforeSeq = q('beforeSeq') ? Number(q('beforeSeq')) : undefined;
+      const limit = Math.max(1, Math.min(2000, Number(q('limit')) || 300));
       const out: AuditRow[] = [];
       for (let i = rows.length - 1; i >= 0 && out.length < limit; i--) {
         const r = rows[i];
         if (cat && r.cat !== cat) continue;
         if (task && r.taskId !== task) continue;
-        if (before && !(r.ts < before)) continue;
+        if (beforeSeq !== undefined && !(typeof r.seq === 'number' && r.seq < beforeSeq)) continue;
         if (needle && !`${r.label} ${r.msg} ${r.actor} ${r.taskId ?? ''} ${r.projectId ?? ''}`.toLowerCase().includes(needle)) continue;
         out.push(r);
       }
@@ -642,7 +646,7 @@ export function createServer(app: App): http.Server {
       return send(res, 200, { cats: AUDIT_CATS, counts, total: rows.length, rows: out });
     }
     if (p === '/api/artifacts') {
-      return send(res, 200, listArtifacts(store, { kind: q('kind'), project: q('project'), agent: q('agent'), q: q('q'), limit: Number(q('limit') ?? 300) }));
+      return send(res, 200, listArtifacts(store, { kind: q('kind'), project: q('project'), agent: q('agent'), q: q('q'), limit: Number(q('limit')) || 300 }));
     }
     if (p === '/api/skills') {
       const agents = [...registry.agents.values()];
@@ -673,6 +677,7 @@ export function createServer(app: App): http.Server {
       }
     }
     if ((mm = m(/^\/api\/routines\/([^/]+)\/run$/)) && req.method === 'POST') {
+      if (!app.routines.get(mm[1])) throw new HttpError(404, 'Không có việc định kỳ này');
       try {
         return send(res, 201, app.routines.run(mm[1], { manual: true }));
       } catch (e) {
@@ -681,7 +686,10 @@ export function createServer(app: App): http.Server {
       }
     }
     if ((mm = m(/^\/api\/routines\/([^/]+)$/))) {
-      if (req.method === 'DELETE') return send(res, app.routines.remove(mm[1]) ? 200 : 404, { ok: true });
+      if (req.method === 'DELETE') {
+        if (!app.routines.remove(mm[1])) throw new HttpError(404, 'Không có việc định kỳ này');
+        return send(res, 200, { ok: true });
+      }
       if (req.method === 'POST') {
         const b = await readBody(req);
         try {

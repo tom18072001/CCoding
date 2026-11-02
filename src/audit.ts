@@ -22,16 +22,19 @@ const KINDS: Record<string, { cat: AuditCat; label: string; actor?: 'director' |
   'task.cancelled': { cat: 'task', label: 'Hủy nhiệm vụ', actor: 'director' },
   'task.resumed': { cat: 'task', label: 'Tiếp tục nhiệm vụ', actor: 'director' },
   'task.pause.requested': { cat: 'task', label: 'Yêu cầu tạm dừng', actor: 'director' },
-  'task.autoresume': { cat: 'task', label: 'Tự tiếp tục', actor: 'system' },
+  // chỉ ghi khi tự tiếp tục THẤT BẠI (lần tự tiếp tục thành công là task.resumed có data.auto)
+  'task.autoresume': { cat: 'task', label: 'Tự tiếp tục thất bại', actor: 'system' },
   'task.split': { cat: 'decision', label: 'Tách nhiệm vụ', actor: 'director' },
   'task.rerun': { cat: 'decision', label: 'Chạy lại hạng mục', actor: 'director' },
   'plan.approved': { cat: 'decision', label: 'Duyệt kế hoạch', actor: 'director' },
   'plan.edited': { cat: 'decision', label: 'Sửa kế hoạch', actor: 'director' },
   'review.director': { cat: 'decision', label: 'Quyết định review', actor: 'director' },
+  'budget.update': { cat: 'decision', label: 'Đổi ngân sách', actor: 'director' },
   'accept.done': { cat: 'decision', label: 'CTO nghiệm thu' },
   'accept.error': { cat: 'decision', label: 'CTO chưa nghiệm thu được' },
   'ship.push': { cat: 'ship', label: 'Đẩy nhánh / gộp', actor: 'director' },
   'project.saved': { cat: 'config', label: 'Lưu dự án', actor: 'director' },
+  'project.deleted': { cat: 'config', label: 'Xóa dự án', actor: 'director' },
   'agent.feedback': { cat: 'config', label: 'Góp ý agent', actor: 'director' },
   'agent.feedback.cleared': { cat: 'config', label: 'Xóa góp ý agent' },
   'kpi.finding': { cat: 'config', label: 'Đánh dấu mục KPI', actor: 'director' },
@@ -42,7 +45,8 @@ const KINDS: Record<string, { cat: AuditCat; label: string; actor?: 'director' |
   'routine.error': { cat: 'task', label: 'Việc định kỳ lỗi', actor: 'system' },
   upload: { cat: 'data', label: 'Tải tệp lên', actor: 'director' },
   'upload.purge': { cat: 'data', label: 'Xóa tệp tải lên cũ', actor: 'system' },
-  'checks.regression': { cat: 'security', label: 'Lệnh kiểm tra hồi quy', actor: 'system' },
+  // ghi qua Orchestrator.alert() → loại "alert.<kind>"
+  'alert.checks.regression': { cat: 'security', label: 'Lệnh kiểm tra hồi quy', actor: 'system' },
   'review.unverified': { cat: 'security', label: 'Review không chạy kiểm tra', actor: 'system' },
   'server.start': { cat: 'system', label: 'Khởi động server', actor: 'system' },
   'server.stop': { cat: 'system', label: 'Dừng server', actor: 'system' },
@@ -64,20 +68,29 @@ export interface AuditRow {
   agentId?: string;
 }
 
-/** Một dòng nhật ký có thuộc trang Kiểm toán không (null nếu không). Lệnh bị chặn lấy từ tool.call lỗi "bị chặn". */
+/** Lỗi công cụ do chính sách chặn: sandbox CCoding ("bị chặn"), hook Claude Code ("CCoding chặn lệnh: …"), runtime từ chối. */
+const BLOCKED = /chặn|denied|không được phép|not allowed|blocked/i;
+
+/**
+ * Một dòng nhật ký có thuộc trang Kiểm toán không (null nếu không). Lệnh bị chặn lấy từ tool.call lỗi do chính sách.
+ * actor "unknown": nhật ký cũ không đủ dữ liệu để biết ai thao tác (vd. task.resumed trước UX-4d không có data.auto).
+ */
 export function auditOf(e: Record<string, unknown>): AuditRow | null {
   const kind = String(e.kind ?? '');
   let k = KINDS[kind];
   if (!k && kind === 'tool.call') {
     const err = String((e.data as Record<string, unknown> | undefined)?.error ?? '');
-    if (e.level === 'warn' && /bị chặn|denied|không được phép/i.test(err)) k = { cat: 'security', label: 'Lệnh bị chặn' };
+    if (e.level === 'warn' && BLOCKED.test(err)) k = { cat: 'security', label: 'Lệnh bị chặn' };
   }
   if (!k && /^alert\.task\.paused/.test(kind)) k = { cat: 'task', label: 'Tạm dừng', actor: 'system' };
   if (!k) return null;
   const agentId = e.agentId ? String(e.agentId) : undefined;
   const data = (e.data ?? {}) as Record<string, unknown>;
-  // tự tiếp tục / giao bởi việc định kỳ không phải giám đốc bấm
-  const actor = kind === 'task.resumed' && data.auto ? 'system' : kind === 'task.created' && data.routineId ? 'system' : (k.actor ?? agentId ?? 'system');
+  // tự tiếp tục / việc định kỳ tới lịch: hệ thống; "▶ Chạy ngay": giám đốc
+  let actor: string = k.actor ?? agentId ?? 'system';
+  if (kind === 'task.resumed') actor = data.auto === undefined ? 'unknown' : data.auto ? 'system' : 'director';
+  else if (kind === 'task.created' && data.routineId) actor = data.routineManual ? 'director' : 'system';
+  else if (kind === 'routine.run') actor = data.manual ? 'director' : 'system';
   return {
     ts: String(e.ts ?? ''),
     seq: typeof e.seq === 'number' ? e.seq : undefined,

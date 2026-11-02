@@ -3,7 +3,7 @@ import type { LogStore } from './logger.js';
 import type { Orchestrator } from './orchestrator.js';
 import type { Registry } from './registry.js';
 import type { Store } from './store.js';
-import type { Routine, RoutineSchedule, TaskMode } from './types.js';
+import type { Routine, RoutineSchedule, Task, TaskMode } from './types.js';
 import { readJsonFile, writeJsonAtomic } from './util/fsx.js';
 import { nowIso, shortId } from './util/ids.js';
 
@@ -11,13 +11,25 @@ import { nowIso, shortId } from './util/ids.js';
  * Việc định kỳ (UX-4d): giao lại một nhiệm vụ mẫu theo lịch (hằng ngày HH:MM, các thứ trong tuần, mỗi N giờ). Lưu ở
  * data/routines.json; bộ lập lịch chỉ chạy trong tiến trình server (`ccoding serve`). Nhiệm vụ tạo ra đi qua đúng đường
  * giao việc thường (Orchestrator.submit → mọi lượt gọi model qua Orchestrator.call) và mang routineId.
- * - Lần chạy trước chưa xong (chờ/đang chạy/tạm dừng) → bỏ qua lần này, ghi "routine.skip".
+ * - Lần chạy trước chưa xong (chờ/đang chạy/tạm dừng chờ giám đốc hoặc chờ hạn mức) → bỏ qua lần này, ghi "routine.skip".
+ *   Riêng lần trước bị GIÁN ĐOẠN do server khởi động lại thì không chặn: lần mới vẫn giao, lần cũ để nguyên (tạm dừng).
  * - Server tắt lỡ lịch: trễ ≤ 6 giờ thì chạy bù một lần; trễ hơn thì bỏ qua tới lịch kế tiếp.
+ * - Nhiệm vụ mẫu giữ dự án ở MỌI chế độ giao việc → nhiệm vụ tạo ra mang nhãn dữ liệu, runtime được phép, ngân sách và
+ *   worktree của dự án như giao tay (không hạ nhãn dữ liệu qua đường việc định kỳ).
  */
 
 export const CATCH_UP_MS = 6 * 3600e3;
 const MODES: TaskMode[] = ['auto', 'department', 'project', 'joint', 'agent'];
-const ACTIVE = new Set(['queued', 'running', 'paused']);
+const PAUSE_VI: Record<string, string> = { budget: 'hết ngân sách', quota: 'chờ hạn mức', manual: 'tạm dừng tay', plan: 'chờ duyệt kế hoạch', interrupted: 'bị gián đoạn' };
+
+/** Lần chạy trước còn "chiếm chỗ" không: đang chờ/chạy, hoặc tạm dừng mà vẫn chờ (giám đốc xử lý, hạn mức mở lại). */
+function blocking(t: Task | undefined): string | undefined {
+  if (!t) return undefined;
+  if (t.status === 'queued' || t.status === 'running') return `lần chạy trước (${t.id}) chưa xong`;
+  if (t.status === 'paused' && t.pause?.reason !== 'interrupted')
+    return `lần chạy trước (${t.id}) đang tạm dừng (${PAUSE_VI[t.pause?.reason ?? ''] ?? 'tạm dừng'}) — cần xử lý: tiếp tục hoặc hủy nhiệm vụ đó`;
+  return undefined;
+}
 
 const hm = (t?: string) => {
   const m = /^(\d{1,2}):(\d{2})$/.exec(t ?? '');
@@ -33,9 +45,11 @@ export function nextRun(s: RoutineSchedule, from: Date, lastRunAt?: string): Dat
     const h = Number(s.everyHours);
     if (!(h >= 1 && h <= 168)) return undefined;
     const last = lastRunAt ? Date.parse(lastRunAt) : NaN;
-    let t = Number.isFinite(last) ? last + h * 3600e3 : from.getTime() + h * 3600e3;
+    const step = h * 3600e3;
+    // lần chạy trước "ở tương lai" (đồng hồ máy bị chỉnh lùi) → không đợi quá một chu kỳ
+    let t = Number.isFinite(last) ? Math.min(last + step, from.getTime() + step) : from.getTime() + step;
     // lỡ nhiều chu kỳ → lấy chu kỳ đầu tiên sau `from`
-    while (t <= from.getTime()) t += h * 3600e3;
+    if (t <= from.getTime()) t += Math.ceil((from.getTime() - t + 1) / step) * step;
     return new Date(t);
   }
   const at = hm(s.time);
@@ -70,7 +84,9 @@ export class Routines {
     private dataDir: string,
     private d: { store: Store; registry: Registry; logs: LogStore; orchestrator: Orchestrator },
   ) {
-    this.list = readJsonFile<Routine[]>(this.file(), []).filter((r) => r && r.id && r.schedule && r.template);
+    const raw = readJsonFile<unknown>(this.file(), []);
+    // tệp hỏng / sai dạng không được làm hỏng mọi lệnh CLI (createApp nạp lớp này)
+    this.list = (Array.isArray(raw) ? raw : []).filter((r): r is Routine => !!r && typeof r === 'object' && !!r.id && !!r.schedule && !!r.template);
   }
 
   private file(): string {
@@ -119,8 +135,13 @@ export class Routines {
     const projectId = tIn.projectId ? String(tIn.projectId) : undefined;
     const agentId = tIn.agentId ? String(tIn.agentId) : undefined;
     if (mode === 'department' && (!department || !this.d.registry.departments.has(department))) throw new RoutineError('Chọn phòng ban nhận việc');
-    if (mode === 'project' && (!projectId || !this.d.store.project(projectId))) throw new RoutineError('Chọn dự án');
-    if (mode === 'agent' && (!agentId || !this.d.registry.agents.has(agentId))) throw new RoutineError('Chọn agent nhận việc');
+    if (mode === 'project' && !projectId) throw new RoutineError('Chọn dự án');
+    if (projectId && !this.d.store.project(projectId)) throw new RoutineError(`Dự án "${projectId}" không còn — chọn dự án khác hoặc bỏ gắn dự án`);
+    if (mode === 'agent') {
+      const a = agentId ? this.d.registry.agents.get(agentId) : undefined;
+      // chỉ agent thuộc một phòng ban mới nhận việc riêng được (điều phối, CTO… thì không)
+      if (!a || !this.d.registry.departments.has(a.department)) throw new RoutineError('Chọn agent nhận việc (thuộc một phòng ban)');
+    }
     const o = (tIn.options ?? {}) as Record<string, unknown>;
     const options: Routine['template']['options'] = {};
     if (Number(o.budgetTokens) >= 1000) options.budgetTokens = Math.floor(Number(o.budgetTokens));
@@ -133,7 +154,8 @@ export class Routines {
       name,
       enabled: typeof b.enabled === 'boolean' ? b.enabled : (existing?.enabled ?? true),
       schedule,
-      template: { brief, title, mode, department: mode === 'department' ? department : undefined, projectId: mode === 'project' || (mode === 'agent' && projectId) ? projectId : undefined, agentId: mode === 'agent' ? agentId : undefined, options },
+      // dự án giữ ở mọi chế độ: nhãn dữ liệu, runtime được phép, ngân sách, worktree theo dự án
+      template: { brief, title, mode, department: mode === 'department' ? department : undefined, projectId, agentId: mode === 'agent' ? agentId : undefined, options },
       lastRunAt: existing?.lastRunAt,
       lastTaskId: existing?.lastTaskId,
       lastSkip: existing?.lastSkip,
@@ -141,8 +163,18 @@ export class Routines {
   }
 
   upsert(b: Record<string, unknown>, id?: string, now = new Date()): Routine {
+    if (!b || typeof b !== 'object' || Array.isArray(b)) throw new RoutineError('Dữ liệu việc định kỳ không hợp lệ');
     const existing = id ? this.get(id) : undefined;
     if (id && !existing) throw new RoutineError('Không có việc định kỳ này');
+    // chỉ TẮT: luôn được, kể cả khi dự án/phòng ban/agent của mẫu đã bị xóa (nếu không sẽ lỗi mãi mỗi lần tới lịch)
+    if (existing && b.enabled === false && Object.keys(b).every((k) => k === 'enabled')) {
+      existing.enabled = false;
+      existing.nextRunAt = undefined;
+      existing.updatedAt = nowIso();
+      this.save();
+      this.d.logs.write({ level: 'info', kind: 'routine.saved', msg: `Tắt việc định kỳ "${existing.name}"`, projectId: existing.template.projectId, data: { id: existing.id, enabled: false } });
+      return existing;
+    }
     const n = this.normalize(b, existing);
     const r: Routine = { ...n, id: existing?.id ?? shortId('r'), createdAt: existing?.createdAt ?? nowIso(), updatedAt: nowIso() };
     r.nextRunAt = r.enabled ? nextRun(r.schedule, now, r.lastRunAt)?.toISOString() : undefined;
@@ -167,9 +199,10 @@ export class Routines {
     const r = this.get(id);
     if (!r) throw new RoutineError('Không có việc định kỳ này');
     const prev = r.lastTaskId ? this.d.store.get(r.lastTaskId) : undefined;
-    if (prev && ACTIVE.has(prev.status)) throw new RoutineError(`Lần chạy trước (${prev.id}) chưa xong — đợi xong hoặc hủy rồi chạy lại`);
+    const busy = blocking(prev);
+    if (busy) throw new RoutineError(`${busy[0].toUpperCase()}${busy.slice(1)}${prev!.status === 'paused' ? '' : ' — đợi xong hoặc hủy rồi chạy lại'}`);
     const now = opts.now ?? new Date();
-    const t = this.d.orchestrator.submit({ ...r.template, title: r.template.title || r.name, routineId: r.id });
+    const t = this.d.orchestrator.submit({ ...r.template, title: r.template.title || r.name, routineId: r.id, routineManual: !!opts.manual });
     r.lastRunAt = now.toISOString();
     r.lastTaskId = t.id;
     r.nextRunAt = r.enabled ? nextRun(r.schedule, now, r.lastRunAt)?.toISOString() : undefined;
@@ -205,9 +238,9 @@ export class Routines {
           this.skip(r, `lỡ lịch ${new Date(due).toLocaleString('vi-VN')} quá 6 giờ (server tắt)`, now);
           continue;
         }
-        const prev = r.lastTaskId ? this.d.store.get(r.lastTaskId) : undefined;
-        if (prev && ACTIVE.has(prev.status)) {
-          this.skip(r, `lần chạy trước (${prev.id}) chưa xong`, now);
+        const busy = blocking(r.lastTaskId ? this.d.store.get(r.lastTaskId) : undefined);
+        if (busy) {
+          this.skip(r, busy, now);
           continue;
         }
         try {

@@ -592,6 +592,8 @@ export interface NewTaskInput {
   attachments?: string[];
   /** Tạo bởi việc định kỳ này (UX-4d) — chỉ bộ lập lịch đặt, API giao việc bỏ qua. */
   routineId?: string;
+  /** Việc định kỳ do giám đốc bấm "Chạy ngay" (không phải tới lịch) — để trang Kiểm toán ghi đúng người thao tác. */
+  routineManual?: boolean;
 }
 
 /** Lịch của việc định kỳ — giờ theo đồng hồ máy chạy server. */

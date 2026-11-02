@@ -31,7 +31,14 @@
     const code = t ? C.code(t) : seq ? `${C.S.prefix || 'CC'}-${seq}` : id;
     return `<a class="tref" href="#/task/${esc(code)}" data-task="${esc(id)}"${t ? ` title="${esc(t.title)}"` : ''}>${esc(code)}</a>`;
   };
-  const who = (actor) => (actor === 'director' ? '<span class="pg-who">👤 Giám đốc</span>' : actor === 'system' ? '<span class="pg-who sys">⚙ Hệ thống</span>' : `<span class="pg-who">${C.av(actor, 'av xs')} ${esc(C.agentName(actor))}</span>`);
+  const who = (actor) =>
+    actor === 'director'
+      ? '<span class="pg-who">👤 Giám đốc</span>'
+      : actor === 'system'
+        ? '<span class="pg-who sys">⚙ Hệ thống</span>'
+        : actor === 'unknown'
+          ? '<span class="pg-who sys" title="Nhật ký cũ không ghi ai thao tác (giám đốc hay hệ thống tự tiếp tục)">❔ Không rõ</span>'
+          : `<span class="pg-who">${C.av(actor, 'av xs')} ${esc(C.agentName(actor))}</span>`;
   const size = (n) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : n >= 1024 ? `${Math.round(n / 1024)} KB` : `${n || 0} B`);
   const box = (tab) => $(`#${tab}-view`);
   const loading = (el) => (el.innerHTML = '<div class="empty">Đang tải…</div>');
@@ -47,7 +54,7 @@
       const q = new URLSearchParams({ limit: '200' });
       if (st.cat) q.set('cat', st.cat);
       if (st.q) q.set('q', st.q);
-      if (append && st.rows.length) q.set('before', st.rows.at(-1).ts);
+      if (append && st.rows.length) q.set('beforeSeq', String(st.rows.at(-1).seq));
       const d = await C.api(`/api/audit?${q}`);
       st.rows = append ? [...st.rows, ...d.rows] : d.rows;
       st.more = d.rows.length >= 200;
@@ -98,6 +105,8 @@
 
   // ── 📦 Sản phẩm ────────────────────────────────────────────────────────────
   const KIND = { report: ['📄', 'Báo cáo'], output: ['🧩', 'Sản phẩm hạng mục'], acceptance: ['✅', 'Nghiệm thu'], code: ['🧬', 'Thay đổi mã'] };
+  // khóa ổn định của một mục (danh sách đổi thứ tự khi có nhiệm vụ mới — không giữ lựa chọn theo vị trí)
+  const artKey = (a) => `${a.taskId}|${a.kind}|${a.path || a.branch || ''}`;
   async function renderArtifacts() {
     const el = box('artifacts');
     if (!el) return;
@@ -112,6 +121,7 @@
       return fail(el, e);
     }
     st.items = d.items;
+    const selIdx = st.sel == null ? -1 : d.items.findIndex((a) => artKey(a) === st.sel);
     const agents = [...C.S.agents.values()].sort((a, b) => a.name.localeCompare(b.name, 'vi'));
     el.innerHTML = `<div class="dv-head"><h1>📦 Sản phẩm</h1><small class="pg-n">${d.total} mục</small></div>
       <p class="pg-sub">Mọi thứ agent làm ra: báo cáo tổng hợp, sản phẩm từng hạng mục, kết luận nghiệm thu của CTO, thay đổi mã trên nhánh git.</p>
@@ -126,11 +136,11 @@
           ? d.items
               .map((a, i) => {
                 const [ic, kl] = KIND[a.kind] || ['•', a.kind];
-                return `<button type="button" class="art-card${st.sel === i ? ' on' : ''}" data-i="${i}" role="listitem"><span class="art-ic" title="${esc(kl)}">${ic}</span><span class="art-m"><b>${esc(a.name)}</b><small>${esc(a.seq ? `${C.S.prefix || 'CC'}-${a.seq}` : a.taskId)} · ${esc(a.task)}</small><small>${a.agent ? `${esc(C.agentName(a.agent))} · ` : ''}${a.size != null ? `${size(a.size)} · ` : ''}${esc(rel(a.at))}</small></span></button>`;
+                return `<button type="button" class="art-card${st.sel === artKey(a) ? ' on' : ''}" data-i="${i}" role="listitem"><span class="art-ic" title="${esc(kl)}">${ic}</span><span class="art-m"><b>${esc(a.name)}</b><small>${esc(a.seq ? `${C.S.prefix || 'CC'}-${a.seq}` : a.taskId)} · ${esc(a.task)}</small><small>${a.agent ? `${esc(C.agentName(a.agent))} · ` : ''}${a.size != null ? `${size(a.size)} · ` : ''}${esc(rel(a.at))}</small></span></button>`;
               })
               .join('')
           : '<div class="empty">Chưa có sản phẩm nào khớp.</div>'
-      }</div><section class="art-pv" aria-label="Xem trước">${st.sel != null && d.items[st.sel] ? '' : '<div class="empty">Chọn một mục để xem trước.</div>'}</section></div>`;
+      }</div><section class="art-pv" aria-label="Xem trước">${selIdx >= 0 ? '' : '<div class="empty">Chọn một mục để xem trước.</div>'}</section></div>`;
     $$('[data-kind]', el).forEach((b) => (b.onclick = () => ((st.kind = b.dataset.kind), (st.sel = null), renderArtifacts())));
     $('[data-proj]', el).onchange = (e) => ((st.project = e.target.value), (st.sel = null), renderArtifacts());
     $('[data-agent]', el).onchange = (e) => ((st.agent = e.target.value), (st.sel = null), renderArtifacts());
@@ -138,13 +148,14 @@
     q.onkeydown = (e) => e.key === 'Enter' && ((st.q = q.value.trim()), (st.sel = null), renderArtifacts());
     q.onsearch = () => ((st.q = q.value.trim()), (st.sel = null), renderArtifacts());
     $$('.art-card', el).forEach((b) => (b.onclick = () => preview(el, Number(b.dataset.i))));
-    if (st.sel != null && d.items[st.sel]) preview(el, st.sel);
+    if (selIdx >= 0) preview(el, selIdx);
   }
   async function preview(el, i) {
     const st = P.art;
     const a = st.items[i];
     if (!a) return;
-    st.sel = i;
+    const key = artKey(a);
+    st.sel = key;
     $$('.art-card', el).forEach((b) => b.classList.toggle('on', Number(b.dataset.i) === i));
     const pv = $('.art-pv', el);
     const head = `<div class="art-pvh"><div><b>${esc(a.name)}</b><small>${taskLink(a.taskId, a.seq)} · ${esc(a.task)}${a.projectId ? ` · 📁 ${esc(a.projectId)}` : ''}</small></div><div class="pb-actions">${
@@ -156,7 +167,7 @@
       pv.innerHTML = `${head}<div class="empty">Đang tải…</div>`;
       try {
         const text = await C.api(`/api/tasks/${encodeURIComponent(a.taskId)}/file?path=${encodeURIComponent(a.path)}`);
-        if (st.sel !== i) return;
+        if (st.sel !== key) return;
         a.text = typeof text === 'string' ? text : JSON.stringify(text, null, 2);
         pv.innerHTML = `${head}<div class="md art-md">${C.md(a.text.replace(/^<!--[\s\S]*?-->\s*/, ''))}</div>`;
       } catch (e) {
@@ -206,13 +217,18 @@
       return fail(el, e);
     }
     const st = P.skills;
+    st.data = d;
     const avs = (ids, max = 8) => `<span class="pg-avs">${ids.slice(0, max).map((id) => `<button type="button" class="pg-av" data-agent="${esc(id)}" title="${esc(C.agentName(id))}">${C.av(id, 'av xs')}</button>`).join('')}${ids.length > max ? `<small>+${ids.length - max}</small>` : ''}</span>`;
-    const skills = d.skills.filter((s) => !st.q || s.name.includes(st.q.toLowerCase()) || s.agents.some((id) => C.agentName(id).toLowerCase().includes(st.q.toLowerCase())));
+    const grid = () => {
+      const n = st.q.toLowerCase();
+      const skills = d.skills.filter((s) => !n || s.name.toLowerCase().includes(n) || s.agents.some((id) => C.agentName(id).toLowerCase().includes(n)));
+      return skills.map((s) => `<div class="sk-item"><code>${esc(s.name)}</code>${avs(s.agents, 6)}</div>`).join('') || '<div class="empty">Không có kỹ năng nào khớp.</div>';
+    };
     const CLS = Object.entries(C.CLS_VI);
     el.innerHTML = `<div class="dv-head"><h1>🧩 Kỹ năng & Kết nối</h1></div>
       <p class="pg-sub">Kỹ năng khai báo trong hồ sơ từng agent (trưởng phòng dựa vào đây để giao việc), công cụ agent được dùng, và các kết nối của văn phòng: runtime chạy model, dự án git, herdr.</p>
       <section class="pg-sec"><div class="sec-head"><h2>Kỹ năng <small>${d.skills.length}</small></h2><input type="search" class="pg-q" data-q placeholder="Lọc kỹ năng hoặc agent…" value="${esc(st.q)}" aria-label="Lọc kỹ năng" /></div>
-        <div class="sk-grid">${skills.map((s) => `<div class="sk-item"><code>${esc(s.name)}</code>${avs(s.agents, 6)}</div>`).join('') || '<div class="empty">Không có kỹ năng nào khớp.</div>'}</div></section>
+        <div class="sk-grid">${grid()}</div></section>
       <section class="pg-sec"><div class="sec-head"><h2>Công cụ của agent</h2></div>
         <p class="pg-sub">Quyền mặc định: <b>${esc(ACCESS_VI[d.access.default] || d.access.default)}</b> · trong dự án: <b>${esc(ACCESS_VI[d.access.project] || d.access.project)}</b> · tra cứu web: <b>${d.access.web ? 'bật (chỉ dữ liệu Công khai/Nội bộ)' : 'tắt'}</b>${d.access.deny ? ` · ${d.access.deny} mẫu lệnh cấm thêm` : ''}. Pha lập kế hoạch/review/tổng hợp/nghiệm thu chỉ có công cụ đọc.</p>
         <table class="pg-tbl"><thead><tr><th>Công cụ</th><th>Loại</th><th>Agent được dùng</th></tr></thead><tbody>${d.tools
@@ -228,13 +244,16 @@
             .map((p) => `<div class="cn-card"><div class="cn-h"><b>📁 ${esc(p.name)}</b>${p.workspace ? '<span class="pg-cat">git</span>' : ''}</div><small>${p.baseRef ? `nhánh xuất phát <code>${esc(p.baseRef)}</code> · ` : ''}${p.checks} lệnh kiểm tra${p.access ? ` · quyền ${esc(ACCESS_VI[p.access] || p.access)}` : ''}</small></div>`)
             .join('')}
           <div class="cn-card${d.herdr.inside ? '' : ' off'}"><div class="cn-h"><b>${d.herdr.inside ? '●' : '○'} herdr</b></div><small>phiên <code>${esc(d.herdr.session)}</code>${d.herdr.inside ? ' · server đang chạy trong herdr' : ' · không chạy trong herdr'}</small></div></div></section>`;
+    const bindAv = (root) => $$('[data-agent]', root).forEach((b) => (b.onclick = () => C.openAgent(b.dataset.agent)));
     const q = $('[data-q]', el);
+    // lọc tại chỗ trên dữ liệu đã tải: chỉ vẽ lại lưới kỹ năng, ô nhập giữ nguyên (con trỏ, chữ đang gõ)
     q.oninput = () => {
       st.q = q.value.trim();
-      clearTimeout(P.skT);
-      P.skT = setTimeout(() => renderSkills().then(() => $('[data-q]', box('skills'))?.focus()), 250);
+      const g = $('.sk-grid', el);
+      g.innerHTML = grid();
+      bindAv(g);
     };
-    $$('[data-agent]', el).forEach((b) => (b.onclick = () => C.openAgent(b.dataset.agent)));
+    bindAv(el);
     $('[data-quota]', el).onclick = () => C.setTab('quota');
   }
 
@@ -261,10 +280,9 @@
     P.routines = list;
     const mode = (r) => {
       const t = r.template;
-      if (t.mode === 'department') return `Phòng ${C.deptShort(t.department)}`;
-      if (t.mode === 'project') return `📁 ${(C.S.projects.find((p) => p.id === t.projectId) || {}).name || t.projectId}`;
-      if (t.mode === 'agent') return `📌 ${C.agentName(t.agentId)}`;
-      return C.MODE_VI[t.mode] || t.mode;
+      const proj = t.projectId ? `📁 ${(C.S.projects.find((p) => p.id === t.projectId) || {}).name || t.projectId}` : '';
+      const who = t.mode === 'department' ? `Phòng ${C.deptShort(t.department)}` : t.mode === 'agent' ? `📌 ${C.agentName(t.agentId)}` : t.mode === 'project' ? '' : C.MODE_VI[t.mode] || t.mode;
+      return [who, proj].filter(Boolean).join(' · ');
     };
     el.innerHTML = `<div class="dv-head"><h1>🔁 Việc định kỳ</h1><button type="button" class="btn primary sm" data-rt-new>＋ Việc định kỳ mới</button></div>
       <p class="pg-sub">Giao lại một nhiệm vụ mẫu theo lịch (giờ của máy chạy CCoding). Lần trước chưa xong thì bỏ qua lần này; server tắt lỡ lịch quá 6 giờ thì bỏ qua tới lịch kế tiếp. Mỗi lần chạy là một nhiệm vụ bình thường (token, ngân sách, nhãn dữ liệu, nghiệm thu như giao tay).</p>
@@ -315,6 +333,8 @@
       return true;
     } catch (e) {
       C.toast({ level: 'error', title: 'Không lưu được', msg: e.message });
+      // vẽ lại để công tắc về đúng trạng thái trên server
+      if (C.S.tab === 'routines') renderRoutines();
       return false;
     }
   }
@@ -338,7 +358,7 @@
         <fieldset class="rt-days" data-k="weekly"><legend>Các thứ</legend>${DAYS.map(([v, l]) => `<label class="check"><input type="checkbox" name="day" value="${v}"${(s.days || []).includes(v) ? ' checked' : ''} /> ${l}</label>`).join('')}</fieldset>
         <div class="grid2"><label>Giao cho<select name="mode">${['auto', 'department', 'project', 'joint', 'agent'].map((m) => `<option value="${m}"${sel(t.mode || 'auto', m)}>${esc(C.MODE_VI[m] || m)}</option>`).join('')}</select></label>
           <label data-m="department">Phòng ban<select name="department">${depts}</select></label>
-          <label data-m="project">Dự án<select name="projectId"><option value="">— Không gắn dự án —</option>${projs}</select></label>
+          <label data-m="project">Dự án <small data-proj-hint>(nhãn dữ liệu, runtime, ngân sách theo dự án)</small><select name="projectId"><option value="">— Không gắn dự án —</option>${projs}</select></label>
           <label data-m="agent">Agent<select name="agentId">${workers}</select></label></div>
         <label>Tiêu đề nhiệm vụ <small>(để trống: dùng tên)</small><input name="title" maxlength="120" value="${esc(t.title || '')}" /></label>
         <label>Nội dung nhiệm vụ mẫu<textarea name="brief" rows="5" required placeholder="Mục tiêu, phạm vi, tiêu chí hoàn thành — giao lại y nguyên mỗi lần chạy">${esc(t.brief || '')}</textarea></label>
@@ -354,7 +374,12 @@
           $('[data-k="time"]', f).hidden = k === 'interval';
           $('[data-k="interval"]', f).hidden = k !== 'interval';
           $('[data-k="weekly"]', f).hidden = k !== 'weekly';
-          for (const m of ['department', 'project', 'agent']) $(`[data-m="${m}"]`, f).hidden = f.mode.value !== m && !(m === 'project' && f.mode.value === 'agent');
+          // dự án: hiện ở mọi chế độ (nhiệm vụ giao tay trong dự án nào thì việc định kỳ cũng mang dự án đó)
+          for (const m of ['department', 'agent']) $(`[data-m="${m}"]`, f).hidden = f.mode.value !== m;
+          $('[data-m="project"]', f).hidden = false;
+          f.projectId.required = f.mode.value === 'project';
+          // ô đang ẩn không được chặn nút Lưu bằng kiểm tra của trình duyệt (vd. "Mỗi (giờ)" = 2,5 rồi đổi sang Hằng ngày)
+          for (const x of $$('[data-k] input, [data-m] select', f)) x.disabled = !!x.closest('[hidden]');
         };
         f.kind.onchange = sync;
         f.mode.onchange = sync;
@@ -390,7 +415,7 @@
   P.routineFromTask = (t) =>
     P.editRoutine({
       name: t.title,
-      template: { brief: (t.brief || '').split('\n\n---\nTiếp nối nhiệm vụ')[0], title: t.title, mode: t.mode === 'joint' || t.mode === 'auto' ? t.mode : t.mode, department: t.department, projectId: t.projectId, agentId: t.agentId, options: { review: t.options?.review, acceptance: t.options?.acceptance } },
+      template: { brief: (t.brief || '').split('\n\n---\nTiếp nối nhiệm vụ')[0], title: t.title, mode: t.mode, department: t.department, projectId: t.projectId, agentId: t.agentId, options: { review: t.options?.review, acceptance: t.options?.acceptance } },
     });
 
   P.render = (tab) => {

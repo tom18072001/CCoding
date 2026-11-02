@@ -402,3 +402,18 @@ Chỉ thay giao diện ô Văn phòng (bỏ canvas, nhân vật giám đốc, đ
 | Kiểm toán (`GET /api/audit`, `/api/audit/verify`) | DET-01, DET-05, RES-03 | Đọc nhật ký hệ thống (đã che bí mật/PII lúc ghi), lọc sự kiện thay đổi trạng thái/an toàn; kiểm chuỗi băm để phát hiện sửa/xóa. Đáp ứng yêu cầu truy xuất nhật ký hệ thống; **khuyến nghị**: sao lưu `data/logs/` sang nơi chỉ ghi thêm (WORM) để giữ ≥ 12 tháng, vì tệp trên máy vẫn có thể bị xóa cả cụm |
 
 **Kết luận: ĐẠT CÓ ĐIỀU KIỆN** — điều kiện: đặt lịch sao lưu `data/logs/` (WORM/ký số) nếu nhật ký dùng làm chứng cứ.
+
+#### Sửa sau review độc lập UX-4d
+
+| Lỗi | Năng lực | Xử lý |
+|---|---|---|
+| Việc định kỳ chỉ giữ dự án ở chế độ "dự án"/"agent" → nhiệm vụ phòng ban/tự động/liên phòng trong dự án "Hạn chế" chạy định kỳ thành "Nội bộ", mất danh sách runtime được phép, ngân sách và worktree của dự án (**hạ nhãn dữ liệu**) | GOV-03, PRE-05 | Giữ dự án ở MỌI chế độ; form hiện ô dự án ở mọi chế độ; dự án không còn → báo lỗi khi lưu. Kiểm thử: nhiệm vụ do việc định kỳ tạo mang `projectId` và nhãn "Hạn chế" như giao tay |
+| Dự án/phòng ban/agent của mẫu bị xóa → không tắt được việc định kỳ, lỗi mãi mỗi lần tới lịch | RES-01 | Tắt luôn được (không kiểm lại mẫu); bật lại thì phải sửa mẫu; công tắc trên giao diện về đúng trạng thái khi lưu lỗi |
+| Lần chạy trước bị gián đoạn (server khởi động lại) chặn mọi lần sau | RES-01 | Không chặn; lần cũ để nguyên (tạm dừng). Tạm dừng chờ giám đốc (hết ngân sách, chờ duyệt…) vẫn chặn, lý do ghi rõ "cần xử lý" |
+| Kiểm toán ghi sai người thao tác ("▶ Chạy ngay" thành Hệ thống; nhật ký cũ không có `data.auto` thành Giám đốc) | DET-01 | Ghi `routineManual`/`manual`; nhật ký cũ thiếu dữ liệu hiển thị "Không rõ" thay vì đoán |
+| Kiểm toán sót sự kiện: kiểm tra hồi quy (`alert.checks.regression`), lệnh bị hook Claude Code chặn ("CCoding chặn lệnh"), đổi ngân sách (`budget.update`), xóa dự án (trước đây không ghi nhật ký) | DET-01, DET-05 | Bổ sung cả bốn; xóa dự án ghi `project.deleted` (có nhãn dữ liệu của dự án) |
+| "Xem thêm cũ hơn" làm rơi sự kiện cùng mốc thời gian | DET-05 | Phân trang theo `seq` của chuỗi băm (duy nhất, tăng dần) |
+| Kiểm chuỗi băm đọc cả tệp vào bộ nhớ một lần (chặn server, lỗi với tệp > ~512 MB) | RES-03 | API đọc luồng từng dòng (`verifyChainStream`); CLI giữ bản đọc một lần |
+| Đầu vào API: body `null`, agent ngoài phòng ban, `limit` sai, mã việc định kỳ không có, `routines.json` sai dạng làm hỏng mọi lệnh CLI | GOV-03 | Báo lỗi 400/404 bằng tiếng Việt; tệp sai dạng bị bỏ qua |
+
+Kết luận giữ nguyên: **ĐẠT CÓ ĐIỀU KIỆN** (điều kiện sao lưu WORM `data/logs/`). Lỗi hạ nhãn dữ liệu đã đóng trước khi phát hành — chưa từng chạy trên máy thật.

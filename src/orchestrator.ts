@@ -352,7 +352,7 @@ export class Orchestrator {
       msg: `Nhận nhiệm vụ: ${task.title}`,
       taskId: task.id,
       projectId: task.projectId,
-      data: { mode, department: input.department, budgetTokens: task.options.budgetTokens, budgetMode, attachments: task.attachments?.map((a) => ({ name: a.name, kind: a.kind, chars: a.chars })), routineId: input.routineId },
+      data: { mode, department: input.department, budgetTokens: task.options.budgetTokens, budgetMode, attachments: task.attachments?.map((a) => ({ name: a.name, kind: a.kind, chars: a.chars })), routineId: input.routineId, routineManual: input.routineId ? !!input.routineManual : undefined },
     });
     this.emitTask(task);
     this.queue.push(task.id);

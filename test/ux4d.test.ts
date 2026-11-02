@@ -31,6 +31,8 @@ test('lịch việc định kỳ: hằng ngày, theo thứ, mỗi N giờ; mô t
   assert.equal(describeSchedule({ kind: 'weekly', time: '09:00', days: [0, 5, 1] }), 'T2, T6, CN lúc 09:00');
   assert.equal(describeSchedule({ kind: 'daily', time: '08:30' }), 'Hằng ngày 08:30');
   assert.equal(describeSchedule({ kind: 'interval', everyHours: 6 }), 'Mỗi 6 giờ');
+  // đồng hồ máy bị chỉnh lùi: lần trước "ở tương lai" → không đợi quá một chu kỳ
+  assert.equal(nextRun({ kind: 'interval', everyHours: 6 }, mon10, new Date(mon10.getTime() + 3 * 86400e3).toISOString())!.getTime(), mon10.getTime() + 6 * 3600e3);
 });
 
 test('việc định kỳ: kiểm dữ liệu, tới giờ thì giao, lần trước chưa xong thì bỏ qua, lỡ lịch lâu thì bỏ qua, lưu ra tệp', async () => {
@@ -96,6 +98,74 @@ test('kiểm toán: phân loại nhật ký; lệnh bị chặn; việc giao b�
   assert.equal(auditOf({ kind: 'tool.call', level: 'warn', msg: 'x', ts: 't', data: { error: 'Lệnh bị chặn theo chính sách' } })?.cat, 'security');
   assert.equal(auditOf({ kind: 'tool.call', level: 'info', msg: 'x', ts: 't', data: {} }), null);
   assert.equal(auditOf({ kind: 'call.end', level: 'info', msg: 'x', ts: 't' }), null);
+  // review UX-4d: đúng người thao tác
+  assert.equal(auditOf({ kind: 'task.created', level: 'info', msg: 'x', ts: 't', data: { routineId: 'r1', routineManual: true } })?.actor, 'director', '"▶ Chạy ngay" là giám đốc');
+  assert.equal(auditOf({ kind: 'routine.run', level: 'info', msg: 'x', ts: 't', data: { manual: true } })?.actor, 'director');
+  assert.equal(auditOf({ kind: 'routine.run', level: 'info', msg: 'x', ts: 't', data: { manual: false } })?.actor, 'system');
+  assert.equal(auditOf({ kind: 'task.resumed', level: 'info', msg: 'x', ts: 't', data: { auto: false } })?.actor, 'director');
+  assert.equal(auditOf({ kind: 'task.resumed', level: 'info', msg: 'x', ts: 't' })?.actor, 'unknown', 'nhật ký cũ không có data.auto → không đoán');
+  assert.equal(auditOf({ kind: 'task.autoresume', level: 'warn', msg: 'x', ts: 't' })?.label, 'Tự tiếp tục thất bại');
+  // sự kiện trước đây bị sót
+  assert.equal(auditOf({ kind: 'alert.checks.regression', level: 'warn', msg: 'x', ts: 't' })?.cat, 'security');
+  assert.equal(auditOf({ kind: 'tool.call', level: 'warn', msg: 'x', ts: 't', data: { error: 'CCoding chặn lệnh: agent không được push' } })?.cat, 'security', 'lệnh bị hook Claude Code chặn');
+  assert.deepEqual([auditOf({ kind: 'budget.update', level: 'info', msg: 'x', ts: 't' })?.cat, auditOf({ kind: 'budget.update', level: 'info', msg: 'x', ts: 't' })?.actor], ['decision', 'director']);
+  assert.equal(auditOf({ kind: 'project.deleted', level: 'info', msg: 'x', ts: 't' })?.cat, 'config');
+});
+
+test('việc định kỳ (review): giữ dự án ở mọi chế độ — không hạ nhãn dữ liệu; tắt được khi dự án đã xóa; lần trước bị gián đoạn không chặn; tạm dừng chờ xử lý thì nêu rõ', async () => {
+  const app = testApp();
+  try {
+    const R = app.routines;
+    app.store.saveProject({ id: 'sec', name: 'Dự án mật', department: 'research', classification: 'restricted', createdAt: new Date().toISOString() } as never);
+    // nhiệm vụ giao tay chế độ phòng ban trong dự án "Hạn chế" → việc định kỳ cũng phải mang dự án đó
+    const r = R.upsert({ name: 'Mật hằng ngày', schedule: { kind: 'daily', time: '08:00' }, template: { brief: 'Viết đề cương', mode: 'department', department: 'research', projectId: 'sec', options: { discussionRounds: 0 } } });
+    assert.equal(r.template.projectId, 'sec');
+    const { taskId } = R.run(r.id, { manual: true });
+    const t = app.store.get(taskId)!;
+    assert.deepEqual([t.projectId, t.classification], ['sec', 'restricted']);
+    app.orchestrator.cancel(taskId);
+    await app.orchestrator.waitFor(taskId);
+    assert.ok(app.logs.query({ limit: 200 }).some((e) => e.kind === 'task.created' && e.taskId === taskId && (e.data as { routineManual?: boolean }).routineManual === true));
+    assert.throws(() => R.upsert({ name: 'A', schedule: { kind: 'daily', time: '08:00' }, template: { brief: 'x', projectId: 'khong-co' } }), /không còn/);
+    // dự án bị xóa: sửa mẫu thì báo lỗi, nhưng TẮT luôn được (không lỗi mãi mỗi lần tới lịch)
+    app.store.removeProject('sec');
+    assert.throws(() => R.upsert({ name: 'Đổi tên' }, r.id), /không còn/);
+    const off = R.upsert({ enabled: false }, r.id);
+    assert.equal(off.enabled, false);
+    assert.equal(R.get(r.id)!.nextRunAt, undefined);
+    assert.equal(R.get(r.id)!.enabled, false);
+    assert.throws(() => R.upsert({ enabled: true }, r.id), /không còn/, 'bật lại thì phải sửa mẫu trước');
+    // dữ liệu vào
+    assert.throws(() => R.upsert(null as never), /không hợp lệ/);
+    assert.throws(() => R.upsert({ name: 'A', schedule: { kind: 'daily', time: '08:00' }, template: { brief: 'x', mode: 'agent', agentId: 'orchestrator' } }), /thuộc một phòng ban/);
+
+    // lần trước bị gián đoạn (server khởi động lại) → không chặn lần mới
+    const r2 = R.upsert({ name: 'B', schedule: { kind: 'interval', everyHours: 1 }, template: { brief: 'Viết đề cương', mode: 'department', department: 'research', options: { discussionRounds: 0 } } });
+    const first = R.run(r2.id);
+    await app.orchestrator.waitFor(first.taskId);
+    const ft = app.store.get(first.taskId)!;
+    ft.status = 'paused';
+    ft.pause = { reason: 'interrupted', detail: 'Bị gián đoạn', at: new Date().toISOString() };
+    app.store.put(ft, true);
+    const second = R.run(r2.id);
+    assert.notEqual(second.taskId, first.taskId);
+    await app.orchestrator.waitFor(second.taskId);
+    // tạm dừng chờ giám đốc (hết ngân sách) → vẫn chặn, lý do nói rõ cần xử lý
+    const st = app.store.get(second.taskId)!;
+    st.status = 'paused';
+    st.pause = { reason: 'budget', detail: 'Hết ngân sách', at: new Date().toISOString() };
+    app.store.put(st, true);
+    assert.throws(() => R.run(r2.id), /hết ngân sách.*cần xử lý/);
+    R.get(r2.id)!.nextRunAt = new Date(Date.now() - 60_000).toISOString();
+    assert.equal(R.tick(), 0);
+    assert.match(R.get(r2.id)!.lastSkip!.reason, /cần xử lý/);
+
+    // routines.json sai dạng không làm hỏng việc tạo app (mọi lệnh CLI)
+    fs.writeFileSync(path.join(app.config.dataDir, 'routines.json'), '{}');
+    assert.equal(new Routines(app.config.dataDir, { store: app.store, registry: app.registry, logs: app.logs, orchestrator: app.orchestrator }).all().length, 0);
+  } finally {
+    app.cleanup();
+  }
 });
 
 test('API: kiểm toán, kiểm chuỗi băm, sản phẩm, kỹ năng & kết nối, việc định kỳ', async () => {
@@ -150,10 +220,34 @@ test('API: kiểm toán, kiểm chuỗi băm, sản phẩm, kỹ năng & kết n
     const { taskId } = (await run.json()) as { taskId: string };
     assert.equal(app.store.get(taskId)?.routineId, routine.id);
     assert.equal((await post(`/api/routines/${routine.id}/run`, {})).status, 409, 'lần trước chưa xong');
+    assert.equal((await post('/api/routines/khong-co/run', {})).status, 404);
+    assert.equal((await fetch(base + '/api/routines', { method: 'POST', headers: { 'content-type': 'application/json' }, body: 'null' })).status, 400);
     await app.orchestrator.waitFor(taskId);
     assert.equal((await post(`/api/routines/${routine.id}`, { enabled: false })).status, 200);
     assert.equal((await post('/api/routines/khong-co', { name: 'z' })).status, 404);
     assert.equal((await fetch(`${base}/api/routines/${routine.id}`, { method: 'DELETE' })).status, 200);
+    assert.equal((await fetch(`${base}/api/routines/${routine.id}`, { method: 'DELETE' })).status, 404);
+    // "Xem thêm cũ hơn": nhiều sự kiện cùng mốc thời gian không bị rơi khi phân trang
+    const ts = new Date().toISOString();
+    for (let i = 0; i < 5; i++) app.logs.write({ ts, level: 'info', kind: 'kpi.finding', msg: `u${i}` });
+    const all = (await (await fetch(`${base}/api/audit?q=u&cat=config&limit=2000`)).json()) as { rows: Array<{ seq: number; msg: string }> };
+    const pages: string[] = [];
+    let cursor: number | undefined;
+    for (let guard = 0; guard < 20; guard++) {
+      const pg = (await (await fetch(`${base}/api/audit?q=u&cat=config&limit=2${cursor !== undefined ? `&beforeSeq=${cursor}` : ''}`)).json()) as { rows: Array<{ seq: number; msg: string }> };
+      if (!pg.rows.length) break;
+      pages.push(...pg.rows.map((x) => x.msg));
+      cursor = pg.rows.at(-1)!.seq;
+    }
+    assert.deepEqual(pages, all.rows.map((x) => x.msg));
+    assert.ok(['u4', 'u3', 'u2', 'u1', 'u0'].every((m) => pages.includes(m)));
+    assert.ok(((await (await fetch(`${base}/api/audit?limit=abc`)).json()) as { rows: unknown[] }).rows.length > 0, 'limit sai → mặc định');
+    assert.ok(((await (await fetch(`${base}/api/artifacts?limit=abc`)).json()) as { items: unknown[] }).items.length > 0);
+    // xóa dự án: có dòng kiểm toán; không có thì 404
+    app.store.saveProject({ id: 'tmpp', name: 'Tạm', department: 'dev', classification: 'internal', createdAt: new Date().toISOString() } as never);
+    assert.equal((await fetch(`${base}/api/projects/tmpp`, { method: 'DELETE' })).status, 200);
+    assert.equal((await fetch(`${base}/api/projects/tmpp`, { method: 'DELETE' })).status, 404);
+    assert.ok(((await (await fetch(`${base}/api/audit?cat=config`)).json()) as { rows: Array<{ kind: string }> }).rows.some((x) => x.kind === 'project.deleted'));
     // routineId không đặt được qua API giao việc
     const r2 = await post('/api/tasks', { brief: 'Viết đề cương', mode: 'department', department: 'research', routineId: 'gia-mao' });
     const t2 = (await r2.json()) as { id: string; routineId?: string };
