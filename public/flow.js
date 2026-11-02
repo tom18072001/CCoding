@@ -165,7 +165,9 @@
     const redo = subs.filter((s) => s.attempts > 1).length;
     const reviewed = t.runs.filter((r) => r.review);
     const open = t.runs.flatMap((r) => (r.review && !r.review.approved ? r.review.issues.filter((i) => i.severity !== 'minor') : []));
-    const rv = !reviewed.length ? ['—', 'không review'] : open.length || t.attention ? ['⚠', `cần xem · ${open.length} lỗi còn mở`] : ['✓', reviewed.some((r) => r.review.by === 'director') ? 'giám đốc duyệt' : 'reviewer duyệt'];
+    const rv = !reviewed.length ? ['—', 'không review'] : open.length || t.attention?.reason === 'review' ? ['⚠', `cần xem · ${open.length} lỗi còn mở`] : ['✓', reviewed.some((r) => r.review.by === 'director') ? 'giám đốc duyệt' : 'reviewer duyệt'];
+    const ac = t.acceptance;
+    const acN = ac ? ac.criteria.filter((c) => c.result === 'pass').length : 0;
     const pc = t.projectChecks;
     const okN = (l) => (l || []).filter((c) => c.ok).length;
     const ck = pc && (pc.latest || pc.baseline) ? `${okN(pc.baseline)}/${(pc.baseline || []).length} → ${okN(pc.latest)}/${(pc.latest || pc.baseline || []).length}` : '';
@@ -178,9 +180,107 @@
       ${window.UX?.hasDiff(t) ? cell('🧬', 'Thay đổi', `<span data-dstat="${esc(t.id)}"></span>`) : ''}
       ${ck ? cell('🧪', 'Kiểm tra trước → sau', esc(ck), okN(pc.latest) < (pc.latest || []).length ? 'warn' : '') : ''}
       ${cell(rv[0], 'Review', esc(rv[1]), rv[0] === '⚠' ? 'warn' : '')}
+      ${ac ? cell(ac.accepted ? '✅' : '✋', 'CTO nghiệm thu', ac.accepted ? `đạt ${acN}/${ac.criteria.length}` : ac.parsed ? `chưa · ${acN}/${ac.criteria.length} đạt` : 'chưa có kết luận', ac.accepted ? '' : 'warn') : ''}
       ${t.branch ? cell('🌿', last ? (last.action === 'ff' ? `Đã đẩy vào ${last.ref}` : 'Đã đẩy nhánh') : 'Nhánh', `<code title="${esc(t.branch)}">${esc(last ? last.head.slice(0, 10) : t.branch)}</code>`) : ''}
     </div>`;
   };
+
+  // ── Nghiệm thu của CTO (UX-4c) ─────────────────────────────────────────────
+  const AC_RES = { pass: ['✓', 'Đạt', 'ok'], fail: ['✗', 'Không', 'bad'], unknown: ['?', 'Chưa kiểm được', 'warn'] };
+  /** Khung kết luận nghiệm thu: tiêu chí Đạt/Không kèm bằng chứng, rủi ro, việc tiếp theo (bấm để soạn sẵn việc tiếp nối). */
+  F.acceptHtml = (t) => {
+    const a = t?.acceptance;
+    if (!a || live(t)) return '';
+    const n = a.criteria.length;
+    const ok = a.criteria.filter((c) => c.result === 'pass').length;
+    const head = a.error
+      ? `⚠ CTO chưa nghiệm thu được — ${esc(a.error)}`
+      : !a.parsed
+        ? '⚠ CTO không ghi kết luận đọc được — xem tin nghiệm thu trong hội thoại'
+        : a.accepted
+          ? `✅ CTO nghiệm thu · ${ok}/${n} tiêu chí đạt`
+          : `✋ CTO chưa nghiệm thu · ${n - ok}/${n} tiêu chí chưa đạt hoặc chưa kiểm được`;
+    const rows = a.criteria
+      .map((c) => {
+        const [ic, l, cls] = AC_RES[c.result] || AC_RES.unknown;
+        return `<tr class="${cls}"><td>${esc(c.name)}</td><td class="ac-r"><b>${ic}</b> ${l}</td><td>${C.md ? C.md(c.evidence).replace(/^<p>|<\/p>$/g, '') : esc(c.evidence)}</td></tr>`;
+      })
+      .join('');
+    const fus = (a.followUps || [])
+      .map((f, i) => `<li><button type="button" class="btn ghost sm" data-ac-fu="${i}" title="${esc(f.brief.slice(0, 300))}">＋ ${esc(f.title)}</button>${f.department ? ` <small>${esc(C.deptShort(f.department))}</small>` : ''}</li>`)
+      .join('');
+    return `<details class="ac-box ${a.accepted ? 'ok' : 'warn'}" data-ac="${esc(t.id)}"${a.accepted ? '' : ' open'}>
+      <summary><b>${head}</b>${a.summary ? `<small>${esc(a.summary)}</small>` : ''}</summary>
+      ${n ? `<table class="ac-tbl"><thead><tr><th>Tiêu chí</th><th>Kết quả</th><th>Bằng chứng</th></tr></thead><tbody>${rows}</tbody></table>` : ''}
+      ${a.risks?.length ? `<div class="ac-sec"><b>Rủi ro / việc còn mở</b><ul>${a.risks.map((r) => `<li>${esc(r)}</li>`).join('')}</ul></div>` : ''}
+      ${fus ? `<div class="ac-sec"><b>Việc tiếp theo CTO đề xuất</b> <small>bấm để soạn sẵn việc tiếp nối, sửa rồi mới giao</small><ul class="ac-fu">${fus}</ul></div>` : ''}
+      ${a.accepted ? '' : '<div class="pb-actions ac-redo"><button type="button" class="btn ghost sm" data-ac-redo title="Chạy lại riêng bước CTO nghiệm thu (báo cáo giữ nguyên) — vd. sau khi tăng ngân sách hoặc khi lần trước không đọc được kết luận">↻ Nghiệm thu lại</button></div>'}
+    </details>`;
+  };
+  /**
+   * Việc tiếp theo CTO đề xuất → hộp thoại soạn sẵn (sửa được) rồi giao thành việc TIẾP NỐI đúng nhiệm vụ được nghiệm thu
+   * (không phụ thuộc ô soạn đang mở ở đâu — hội thoại, trang nhiệm vụ hay hộp Cần bạn). CTO không tự giao.
+   */
+  function followUpDialog(t, f) {
+    const cont = t.branch && t.projectId;
+    window.Director.modal({
+      title: `＋ Giao tiếp nối ${esc(C.code(t))}`,
+      wide: true,
+      body: `<form class="form">
+        <p class="muted-p">Việc tiếp theo CTO đề xuất sau khi nghiệm thu <b>${esc(C.code(t))} · ${esc(t.title)}</b>. Sửa nếu cần rồi giao — việc mới kế thừa dự án/chế độ/agent, báo cáo trước được đưa vào làm đầu vào.</p>
+        <label>Tiêu đề<input name="title" maxlength="120" value="${esc(f.title)}" /></label>
+        <label>Nội dung<textarea name="brief" rows="7">${esc(f.brief)}</textarea></label>
+        ${cont ? `<label class="check"><input type="checkbox" name="cont" checked /> 🌿 nối tiếp nhánh <code>${esc(t.branch)}</code></label>` : ''}
+        <p class="form-msg" data-msg></p>
+        <div class="pb-actions"><button type="submit" class="btn primary sm">Giao tiếp nối ➤</button><button type="button" class="btn ghost sm" data-x>Hủy</button></div></form>`,
+      onMount: (el, close) => {
+        const form = el.querySelector('form');
+        form.querySelector('[data-x]').onclick = close;
+        form.onsubmit = async (e) => {
+          e.preventDefault();
+          const brief = form.brief.value.trim();
+          if (!brief) return (form.querySelector('[data-msg]').textContent = 'Nội dung không được để trống');
+          try {
+            const nt = await C.api('/api/tasks', { method: 'POST', body: JSON.stringify({ title: form.title.value.trim() || undefined, brief, followUp: t.id, ...(cont ? { continueBranch: form.cont.checked } : {}) }) });
+            C.S.tasks.set(nt.id, nt);
+            close();
+            C.toast({ level: 'info', title: `Đã giao tiếp nối ${C.code(nt)}`, msg: nt.title, taskId: nt.id });
+            if (C.S.tab === 'assign' && window.Chat) window.Chat.open(nt.id);
+          } catch (err) {
+            const m = form.querySelector('[data-msg]');
+            m.textContent = err.message;
+            m.className = 'form-msg err';
+          }
+        };
+      },
+    });
+  }
+  function bindAccept(root) {
+    root?.querySelectorAll('.ac-box').forEach((box) => {
+      const t = C.S.tasks.get(box.dataset.ac);
+      if (!t) return;
+      box.querySelectorAll('[data-ac-fu]').forEach(
+        (b) =>
+          (b.onclick = () => {
+            const f = t.acceptance?.followUps?.[Number(b.dataset.acFu)];
+            if (f) followUpDialog(t, f);
+          }),
+      );
+      const re = box.querySelector('[data-ac-redo]');
+      if (re)
+        re.onclick = async () => {
+          re.disabled = true;
+          try {
+            const r = await C.api(`/api/tasks/${encodeURIComponent(t.id)}/resume`, { method: 'POST', body: JSON.stringify({ from: 'accept' }) });
+            if (r?.id) C.S.tasks.set(r.id, r);
+            C.toast({ level: 'info', title: 'CTO nghiệm thu lại', msg: t.title });
+          } catch (e) {
+            re.disabled = false;
+            C.toast({ level: 'error', title: 'Không nghiệm thu lại được', msg: e.message });
+          }
+        };
+    });
+  }
 
   // ── Sẵn sàng gộp (A4) ────────────────────────────────────────────────────
   F.shipHtml = (t) => {
@@ -289,10 +389,28 @@
     });
   }
 
+  /** Duyệt kế hoạch đang chờ (kèm bản nháp sửa + chỉ dẫn nếu có) — dùng cho hộp "Cần bạn" (phím 1). */
+  F.approvePlan = async (id) => {
+    const t = C.S.tasks.get(id);
+    if (!planPaused(t)) throw new Error('Nhiệm vụ không còn chờ duyệt kế hoạch');
+    const run = pendingRun(t);
+    const d = draftOf(id);
+    const body = { department: run?.department, subtasks: collect(t), approve: true };
+    if (d.note.trim()) {
+      if (window.Director?.hasSecret?.(d.note)) throw new Error('Chỉ dẫn có vẻ chứa khóa/mật khẩu');
+      body.note = d.note.trim();
+    }
+    const r = await C.api(`/api/tasks/${encodeURIComponent(id)}/plan`, { method: 'POST', body: JSON.stringify(body) });
+    if (r?.id) C.S.tasks.set(r.id, r);
+    F.draft.delete(id);
+    return r;
+  };
+
   /** Gắn sự kiện cho các khối của UX-2 trong root (sau mỗi lần vẽ). */
   F.bind = (root, after) => {
     bindPlan(root, after);
     bindShip(root, after);
+    bindAccept(root);
   };
   /** Đang sửa kế hoạch / thao tác bảng gộp → nơi gọi nên hoãn vẽ lại. */
   F.busy = (root) => !!document.activeElement?.closest?.('.pl-box, .sh-box') && (!root || root.contains(document.activeElement));

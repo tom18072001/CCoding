@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import readline from 'node:readline';
 import { ensureDir, readJsonl, safeName, tailLines } from './util/fsx.js';
 import { redactDeep } from './util/redact.js';
 import type { EventBus } from './events.js';
@@ -110,29 +111,60 @@ export class LogStore {
   }
 }
 
-/** Kiểm tra chuỗi băm của một file log. Trả về số dòng hợp lệ và vị trí lỗi đầu tiên (nếu có). */
-export function verifyChain(file: string): { ok: boolean; lines: number; brokenAt?: number; reason?: string } {
-  if (!fs.existsSync(file)) return { ok: true, lines: 0 };
-  const lines = fs.readFileSync(file, 'utf8').split('\n').filter((l) => l.trim());
+export interface ChainResult {
+  ok: boolean;
+  lines: number;
+  brokenAt?: number;
+  reason?: string;
+}
+
+/** Bộ kiểm chuỗi băm theo từng dòng (dùng chung cho bản đọc một lần và bản đọc luồng). */
+function chainChecker() {
   let prev = 'genesis';
   let expectedSeq: number | undefined;
-  for (let i = 0; i < lines.length; i++) {
-    let o: Record<string, unknown>;
-    try {
-      o = JSON.parse(lines[i]);
-    } catch {
-      return { ok: false, lines: lines.length, brokenAt: i + 1, reason: 'JSON hỏng' };
-    }
-    const { hash, ...rest } = o;
-    if (typeof hash !== 'string') return { ok: false, lines: lines.length, brokenAt: i + 1, reason: 'thiếu hash' };
-    if (rest.prev !== prev) return { ok: false, lines: lines.length, brokenAt: i + 1, reason: 'prev không khớp dòng trước' };
-    if (expectedSeq !== undefined && rest.seq !== expectedSeq)
-      return { ok: false, lines: lines.length, brokenAt: i + 1, reason: 'seq không liên tục' };
-    const body = JSON.stringify(rest);
-    const h = crypto.createHash('sha256').update(prev).update(body).digest('hex').slice(0, 32);
-    if (h !== hash) return { ok: false, lines: lines.length, brokenAt: i + 1, reason: 'hash sai — nội dung đã bị sửa' };
-    prev = hash;
-    expectedSeq = (rest.seq as number) + 1;
-  }
-  return { ok: true, lines: lines.length };
+  let n = 0;
+  let broken: { brokenAt: number; reason: string } | undefined;
+  return {
+    line(l: string): void {
+      if (!l.trim()) return;
+      n++;
+      if (broken) return; // vẫn đếm tổng số dòng
+      let o: Record<string, unknown>;
+      try {
+        o = JSON.parse(l);
+      } catch {
+        broken = { brokenAt: n, reason: 'JSON hỏng' };
+        return;
+      }
+      const { hash, ...rest } = o;
+      if (typeof hash !== 'string') broken = { brokenAt: n, reason: 'thiếu hash' };
+      else if (rest.prev !== prev) broken = { brokenAt: n, reason: 'prev không khớp dòng trước' };
+      else if (expectedSeq !== undefined && rest.seq !== expectedSeq) broken = { brokenAt: n, reason: 'seq không liên tục' };
+      else if (crypto.createHash('sha256').update(prev).update(JSON.stringify(rest)).digest('hex').slice(0, 32) !== hash) broken = { brokenAt: n, reason: 'hash sai — nội dung đã bị sửa' };
+      else {
+        prev = hash;
+        expectedSeq = (rest.seq as number) + 1;
+      }
+    },
+    result(): ChainResult {
+      return broken ? { ok: false, lines: n, ...broken } : { ok: true, lines: n };
+    },
+  };
+}
+
+/** Kiểm tra chuỗi băm của một file log. Trả về số dòng hợp lệ và vị trí lỗi đầu tiên (nếu có). Đọc cả tệp một lần — dùng cho CLI. */
+export function verifyChain(file: string): ChainResult {
+  if (!fs.existsSync(file)) return { ok: true, lines: 0 };
+  const c = chainChecker();
+  for (const l of fs.readFileSync(file, 'utf8').split('\n')) c.line(l);
+  return c.result();
+}
+
+/** Như verifyChain nhưng đọc theo luồng từng dòng: không giữ cả tệp trong bộ nhớ, không chặn server với nhật ký lớn. */
+export async function verifyChainStream(file: string): Promise<ChainResult> {
+  if (!fs.existsSync(file)) return { ok: true, lines: 0 };
+  const c = chainChecker();
+  const rl = readline.createInterface({ input: fs.createReadStream(file, { encoding: 'utf8' }), crlfDelay: Infinity });
+  for await (const l of rl) c.line(l);
+  return c.result();
 }

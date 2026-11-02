@@ -7,8 +7,8 @@
   let applying = false;
   let hold = ''; // URL đang chờ tải dữ liệu (vd. hội thoại của nhiệm vụ vừa giao) — chưa ghi đè
   const R = {};
-  const TABS = ['home', 'assign', 'projects', 'tasks', 'people', 'prompts', 'tokens', 'quota', 'kpi', 'logs'];
-  const VIEWS = ['chat', 'final', 'files', 'tokens', 'events', 'calls', 'diff'];
+  const TABS = ['home', 'assign', 'inbox', 'projects', 'tasks', 'people', 'prompts', 'tokens', 'quota', 'kpi', 'logs', 'routines', 'artifacts', 'skills', 'audit'];
+  const VIEWS = ['chat', 'final', 'files', 'tokens', 'events', 'calls', 'diff', 'timeline'];
   const enc = encodeURIComponent;
   const needsYou = (t) => !!t.attention || t.status === 'paused' || t.status === 'failed';
   const activeSt = (s) => s === 'running' || s === 'queued';
@@ -17,14 +17,16 @@
   function current() {
     const S = C.S;
     const tab = S.tab;
-    if (tab === 'tasks' && S.selectedTask) return `#/task/${enc(S.selectedTask)}${S.taskView && S.taskView !== 'chat' ? `/${S.taskView}` : ''}`;
+    // URL dùng mã ngắn (#/task/CC-94) khi nhiệm vụ đã có số thứ tự
+    const ref = (id) => C.code?.(S.tasks.get(id)) || id;
+    if (tab === 'tasks' && S.selectedTask) return `#/task/${enc(ref(S.selectedTask))}${S.taskView && S.taskView !== 'chat' ? `/${S.taskView}` : ''}`;
     if (tab === 'tasks') {
       const f = window.Drive?.filter?.();
       return f && f !== 'all' ? `#/tasks/${enc(f)}` : '#/tasks';
     }
     if (tab === 'assign') {
       const id = window.Chat?.convId?.();
-      return id ? `#/chat/${enc(id)}` : '#/chat';
+      return id ? `#/chat/${enc(ref(id))}` : '#/chat';
     }
     if (tab === 'project') {
       const id = window.Drive?.projectId?.();
@@ -35,14 +37,23 @@
   }
   /** Gọi sau mỗi lần đổi màn: ghi URL mới vào lịch sử trình duyệt (không ghi trùng). */
   R.sync = () => {
-    if (!ready || applying || !C) return;
+    if (!ready || !C) return;
+    // mục "xem gần đây" của bảng lệnh Ctrl+K
+    const S = C.S;
+    if (S.tab === 'tasks' && S.selectedTask) window.Palette?.visit('task', S.selectedTask);
+    else if (S.tab === 'assign') window.Palette?.visit('task', window.Chat?.convId?.());
+    else if (S.tab === 'project') window.Palette?.visit('project', window.Drive?.projectId?.());
+    if (applying) return;
     if (hold && location.hash === hold) return;
     hold = '';
     const h = current();
-    if (h !== location.hash) history.pushState(null, '', h);
+    if (h === location.hash) return;
+    // cùng một chỗ, chỉ khác cách viết (mã đầy đủ ↔ mã ngắn, cc-1 ↔ CC-1) → thay URL tại chỗ; ghi thêm lịch sử sẽ làm nút Back kẹt
+    if (canon(h) === canon(location.hash)) history.replaceState(null, '', h);
+    else history.pushState(null, '', h);
   };
-  function apply(hash) {
-    const parts = String(hash || '')
+  function parts(hash) {
+    return String(hash || '')
       .replace(/^#\/?/, '')
       .split('/')
       .filter(Boolean)
@@ -53,13 +64,26 @@
           return x;
         }
       });
-    if (!parts.length) return false;
-    const [k, id, sub] = parts;
+  }
+  /** Dạng chuẩn để so sánh hai URL: mã nhiệm vụ quy về mã đầy đủ, tab mặc định "chat" bỏ đi. */
+  function canon(hash) {
+    const [k = '', id = '', sub = ''] = parts(hash);
+    if ((k === 'task' || k === 'chat') && id) {
+      const t = C.findTask?.(id);
+      return `${k}/${t ? t.id : id}/${sub === 'chat' ? '' : sub}`;
+    }
+    return `${k}/${id}/${sub}`;
+  }
+  function apply(hash) {
+    const p = parts(hash);
+    if (!p.length) return false;
+    const [k, id, sub] = p;
     applying = true;
     try {
       if (k === 'task' && id) C.openTask(id, VIEWS.includes(sub) ? sub : undefined);
       else if (k === 'chat') {
-        if (id && C.S.tasks.has(id)) window.Chat.open(id);
+        const known = id && (C.findTask?.(id) || C.S.tasks.get(id));
+        if (known) window.Chat.open(known.id);
         else if (id) {
           // nhiệm vụ vừa giao (SSE chưa tới) hoặc cũ ngoài 100 việc gần nhất → tải rồi mở
           hold = `#/chat/${enc(id)}`;
@@ -67,7 +91,9 @@
             .then((d) => {
               if (location.hash !== hold) return;
               hold = '';
-              C.S.tasks.set(d.task.id, { ...d.task, ...(C.S.tasks.get(d.task.id) || {}) });
+              const keep = { ...d.task, ...(C.S.tasks.get(d.task.id) || {}) };
+              if (C.keepTask) C.keepTask(keep);
+              else C.S.tasks.set(d.task.id, keep);
               applying = true;
               try {
                 window.Chat.open(d.task.id);
@@ -97,6 +123,9 @@
     } finally {
       applying = false;
     }
+    // đã mở xong (đồng bộ) mà URL gõ vào khác cách viết chuẩn (mã đầy đủ, chữ thường) → thay tại chỗ, không thêm lịch sử
+    const h = current();
+    if (h !== location.hash && canon(h) === canon(location.hash)) history.replaceState(null, '', h);
     return true;
   }
   const onNav = () => location.hash !== current() && apply(location.hash);

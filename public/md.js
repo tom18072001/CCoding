@@ -15,7 +15,30 @@
       .replace(/(^|[\s(])_([^_\s][^_]*)_(?=[\s).,;:!?]|$)/g, '$1<em>$2</em>')
       .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
       .replace(/(^|\s)@([a-z][a-z0-9-]+)/g, '$1<b class="mention">@$2</b>');
+    out = refs(out);
     return out.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${codes[Number(i)]}</code>`);
+  }
+
+  /** Mã nhiệm vụ (CC-94, T-20261101-…) ngoài thẻ <a>/mã code → liên kết; app.js đặt MD.taskRef để tra nhiệm vụ. */
+  function refs(html) {
+    const f = window.MD && window.MD.taskRef;
+    if (!f) return html;
+    let inA = 0;
+    return html
+      .split(/(<[^>]+>)/)
+      .map((part) => {
+        if (part.startsWith('<')) {
+          if (/^<a\b/i.test(part)) inA++;
+          else if (/^<\/a>/i.test(part)) inA = Math.max(0, inA - 1);
+          return part;
+        }
+        if (inA) return part;
+        return part.replace(/\b(T-\d{8}-\d{6}-[a-z0-9]{2,8}|[A-Z][A-Z0-9]{0,7}-\d{1,9})\b/g, (m) => {
+          const r = f(m);
+          return r ? `<a class="tref" href="#/task/${esc(r.code)}" data-task="${esc(r.id)}"${r.title ? ` title="${esc(r.title)}"` : ''}>${esc(r.code)}</a>` : m;
+        });
+      })
+      .join('');
   }
 
   function table(lines) {
@@ -92,5 +115,5 @@
     return out.join('\n');
   }
 
-  window.MD = { render, esc };
+  window.MD = Object.assign(window.MD || {}, { render, esc });
 })();

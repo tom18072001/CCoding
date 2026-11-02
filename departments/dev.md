@@ -5,20 +5,20 @@ short: Phát triển
 purpose: work
 lead: dev-lead
 reviewer: qa-tester
-members: [dev-lead, solution-architect, backend-dev, frontend-dev, data-engineer, devops, security, ba-presales, qa-tester]
+members: [dev-lead, solution-architect, senior-swe, backend-dev, frontend-dev, data-engineer, devops, security, business-analyst, ba-presales, tech-writer, qa-tester]
 color: "#2563eb"
-keywords: [api, backend, frontend, web app, ứng dụng web, quản lý dự án, code, bug, lỗi, sửa lỗi, tính năng, migration, database, cơ sở dữ liệu, kiểm thử, triển khai, deploy, kiến trúc, adr, phản biện giải pháp, an toàn thông tin, bảo vệ dữ liệu, hsdt, presales, react, next.js, nodejs, typescript, postgresql, unit test, typecheck, giao diện, refactor, ci/cd, docker, elk, elasticsearch, logstash, fleet, pipeline, cảnh báo, log, giám sát, iis, dashboard, 3d, digital twin, attt, hồ sơ dự thầu, yêu cầu, sharepoint, power automate]
+keywords: [api, backend, frontend, web app, ứng dụng web, quản lý dự án, code, bug, lỗi, sửa lỗi, tính năng, migration, database, cơ sở dữ liệu, kiểm thử, triển khai, deploy, kiến trúc, adr, phản biện giải pháp, an toàn thông tin, bảo vệ dữ liệu, hsdt, presales, react, next.js, nodejs, typescript, postgresql, unit test, typecheck, giao diện, refactor, ci/cd, docker, elk, elasticsearch, logstash, fleet, pipeline, cảnh báo, log, giám sát, iis, dashboard, 3d, digital twin, attt, hồ sơ dự thầu, yêu cầu, sharepoint, power automate, bảng gap, tài liệu kỹ thuật]
 ---
 
 ## Sứ mệnh
 
-Phòng Phát triển Dự án biến yêu cầu thành sản phẩm dùng được: code, migration, test, cấu hình triển khai, kiến trúc, hồ sơ giải pháp. Giải pháp vừa đủ với bối cảnh thật của dự án (loại hệ thống, quy mô, stack, nhãn dữ liệu); cấp độ ATTT xác định theo phân loại HTTT, không mặc định.
+Phòng biến yêu cầu thành sản phẩm dùng được: code, migration, test, cấu hình triển khai, kiến trúc, hồ sơ giải pháp. Giải pháp vừa đủ với bối cảnh thật (loại hệ thống, quy mô, stack, nhãn dữ liệu); cấp độ ATTT theo phân loại HTTT, không mặc định.
 
 ## Phạm vi nhận việc
 
 - Web app, API, CSDL, migration, giao diện, kiểm thử, sửa lỗi; pipeline dữ liệu và log.
 - Kiến trúc, ADR, đánh giá ATTT và bảo vệ dữ liệu; CI/CD, triển khai, giám sát.
-- Phân tích nghiệp vụ, presales, HSDT, quy trình M365.
+- Phân tích nghiệp vụ, presales, HSDT, quy trình M365, tài liệu kỹ thuật.
 - Không nhận: luận văn, tổng quan học thuật.
 
 ## Quy trình phòng
@@ -27,12 +27,12 @@ Phòng Phát triển Dự án biến yêu cầu thành sản phẩm dùng đư�
 2. **Thảo luận** — thành viên phản biện; trưởng phòng chốt.
 3. **Thực thi** — song song, không ghi chung tệp; chạy lệnh kiểm chứng thật.
 4. **Review** — `@qa-tester` (blocker/major/minor); `@security` khi cổng bắt buộc.
-5. **Tổng hợp** — `@dev-lead` đối chiếu tiêu chí.
+5. **Tổng hợp** — `@dev-lead` đối chiếu tiêu chí; CTO nghiệm thu.
 
 ## Chuẩn chất lượng
 
 - Không blocker khi giao; kết quả test là thật hoặc ghi "chưa chạy".
-- Đánh giá bảo vệ dữ liệu cho thay đổi luồng dữ liệu, độ sâu theo rủi ro.
+- Đánh giá bảo vệ dữ liệu khi luồng dữ liệu đổi, độ sâu theo rủi ro.
 - Không secret hay dữ liệu thật trong code, seed, log; không dữ liệu thật trên DEV/UAT.
 - Over-engineering là phát hiện.
 

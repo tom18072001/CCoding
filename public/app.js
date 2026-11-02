@@ -20,6 +20,8 @@
     departments: [],
     agents: new Map(),
     tasks: new Map(),
+    // nhiệm vụ tải riêng ngoài danh sách /api/state (mở bằng mã ngắn, liên kết cũ)
+    extra: new Map(),
     projects: [],
     usage: { total: {}, byDepartment: [], byAgent: [], byTask: [], byModel: [], byDay: [] },
     runtimes: [],
@@ -48,7 +50,7 @@
   const ACCESS_VI = { none: 'không công cụ', read: 'chỉ đọc', write: 'đọc/ghi file', exec: 'đọc/ghi + chạy lệnh' };
   const size = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n >= 1024 ? Math.round(n / 1024) + ' KB' : n + ' B');
   const MODE_VI = { auto: 'Tự động', department: 'Theo phòng', project: 'Theo dự án', joint: 'Liên phòng', agent: 'Giao riêng' };
-  const KIND_VI = { plan: 'kế hoạch', discussion: 'thảo luận', decision: 'quyết định', handoff: 'bàn giao', review: 'review', final: 'báo cáo', system: 'hệ thống', note: 'chỉ dẫn của bạn' };
+  const KIND_VI = { plan: 'kế hoạch', discussion: 'thảo luận', decision: 'quyết định', handoff: 'bàn giao', review: 'review', final: 'báo cáo', system: 'hệ thống', note: 'chỉ dẫn của bạn', acceptance: 'nghiệm thu' };
   const CLS_VI = { public: 'Công khai', internal: 'Nội bộ', confidential: 'Bảo mật', restricted: 'Hạn chế' };
 
   const fmt = (n) => {
@@ -95,10 +97,17 @@
   function applyState(st) {
     S.departments = st.departments;
     S.agents = new Map(st.agents.map((a) => [a.id, a]));
+    const prev = S.tasks;
     S.tasks = new Map(st.tasks.map((t) => [t.id, t]));
+    // nhiệm vụ cũ (ngoài 100 việc /api/state trả về) đã mở bằng mã/liên kết: giữ lại để mã ngắn và trang đang xem không mất
+    for (const id of [...S.extra.keys()]) {
+      if (S.tasks.has(id)) S.extra.delete(id);
+      else S.tasks.set(id, prev.get(id) || S.extra.get(id));
+    }
     S.projects = st.projects;
     S.usage = st.usage;
     S.defaults = st.defaults;
+    S.prefix = st.taskPrefix || S.prefix || 'CC';
     S.defaultClassification = st.defaultClassification;
     S.toolsDefault = st.tools?.projectAccess;
     if (st.alerts) {
@@ -110,27 +119,92 @@
     if (st.registryErrors?.length) console.warn('registry', st.registryErrors);
   }
 
+  // ── Mã nhiệm vụ ngắn (CC-94) ─────────────────────────────────────────────
+  /** Mã hiển thị của nhiệm vụ: <tiền tố>-<số thứ tự>; nhiệm vụ chưa có số (máy chủ cũ) dùng mã đầy đủ. */
+  const code = (t) => (t && Number.isInteger(t.seq) ? `${S.prefix || 'CC'}-${t.seq}` : t?.id || '');
+  const CODE_RE = /^([A-Za-z][A-Za-z0-9]{0,7})-(\d{1,9})$/;
+  /** Tìm nhiệm vụ đã tải theo mã đầy đủ hoặc mã ngắn. */
+  function findTask(ref) {
+    if (!ref) return undefined;
+    if (S.tasks.has(ref)) return S.tasks.get(ref);
+    const m = CODE_RE.exec(String(ref).trim());
+    if (!m) return undefined;
+    const n = Number(m[2]);
+    for (const t of S.tasks.values()) if (t.seq === n) return t;
+    return undefined;
+  }
+  /** Nhiệm vụ tải riêng (ngoài danh sách /api/state) — giữ qua các lần đồng bộ lại. */
+  function keepTask(t) {
+    S.extra.set(t.id, t);
+    S.tasks.set(t.id, t);
+  }
+  /** Mã ngắn chưa có trong danh sách đã tải (nhiệm vụ cũ ngoài 100 việc gần nhất) → hỏi máy chủ. */
+  async function resolveTask(ref) {
+    const t = findTask(ref);
+    if (t) return t.id;
+    if (!CODE_RE.test(String(ref).trim())) return ref;
+    try {
+      const d = await api(`/api/tasks/${encodeURIComponent(ref)}`);
+      keepTask(d.task);
+      return d.task.id;
+    } catch {
+      return ref;
+    }
+  }
+  // Markdown: mã ngắn đúng tiền tố và mã đầy đủ T-… trong tin nhắn/báo cáo → liên kết tới nhiệm vụ
+  if (window.MD)
+    window.MD.taskRef = (m) => {
+      if (/^T-\d{8}-/.test(m)) {
+        const t = S.tasks.get(m);
+        return t ? { id: t.id, code: code(t), title: t.title } : null;
+      }
+      const c = CODE_RE.exec(m);
+      if (!c || c[1] !== (S.prefix || 'CC')) return null;
+      const t = findTask(m);
+      return { id: t ? t.id : m, code: m, title: t ? t.title : '' };
+    };
+  document.addEventListener('click', async (e) => {
+    const a = e.target.closest?.('a.tref[data-task]');
+    if (!a) return;
+    // Ctrl/⌘/Shift/chuột giữa → để trình duyệt mở liên kết (href #/task/<mã>) ở thẻ mới
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    const id = await resolveTask(a.dataset.task);
+    if (!S.tasks.has(id)) return toast({ level: 'warn', title: 'Không mở được nhiệm vụ', msg: `Không có nhiệm vụ ${a.textContent || a.dataset.task}` });
+    if (S.tab === 'assign' && window.Chat) return window.Chat.open(id);
+    openTask(id);
+  });
+
   let office;
   async function init() {
     const st = await api('/api/state');
     applyState(st);
+    // văn phòng tối giản theo phòng ban (UX-4b): bấm bàn → menu thao tác, nhấp đúp → hồ sơ agent
     office = new window.Office($('#office'), {
+      avatar: (id) => avatarUrl(id),
+      deptColor: (id) => deptColor(id),
       onSelect: (id) => openAgent(id),
-      onHover: (id, x, y) => showTooltip(id, x, y),
       onInteract: (target, pos) => window.Director?.interact(target, pos),
-      onNear: (target) => window.Director?.near(target),
+      menuHost: $('#stage'),
+      feed: $('#ticker'),
+      tabs: $('#ofc-tabs'),
+      bar: $('#ofc-bar'),
     });
     office.setData(S.departments, [...S.agents.values()]);
-    office.enablePlayer({ name: 'Bạn · Giám đốc' });
-    $('#lively').addEventListener('change', (e) => (office.lively = e.target.checked));
     bindUi();
-    // cầu nối cho director.js (phòng giám đốc, prompt, hạn mức, trợ giúp)
-    window.CC = { S, api, esc, md, fmt, total, toast, openAgent, openTask, setTab, avatarUrl, av, agentName, deptName, deptShort, deptColor, dateTime, time, CLS_VI, TASK_VI, STATUS_VI, MODE_VI, PAUSE_VI, PHASES, PHASE_INDEX, KIND_VI, prefillAssign, office: () => office, renderTaskDetail, renderTaskList, editProject, newProject, uploadFiles, renderPending };
+    // ô "CTO nghiệm thu khi xong" theo cấu hình mặc định (defaults.acceptance)
+    if ($('#task-form')?.acceptance) $('#task-form').acceptance.checked = S.defaults?.acceptance !== false;
+    // cầu nối cho director.js (menu agent, prompt, hạn mức, trợ giúp) và các module giao diện
+    window.CC = { S, api, esc, md, code, findTask, resolveTask, keepTask, fmt, total, toast, openAgent, openTask, setTab, avatarUrl, av, agentName, deptName, deptShort, deptColor, dateTime, time, CLS_VI, TASK_VI, STATUS_VI, MODE_VI, PAUSE_VI, PHASES, PHASE_INDEX, KIND_VI, prefillAssign, office: () => office, renderTaskDetail, renderTaskList, editProject, newProject, uploadFiles, renderPending };
     window.Director?.init();
     window.Drive?.init();
     window.Chat?.init();
     window.UX?.init();
     window.Flow?.init();
+    window.TL?.init();
+    window.Inbox?.init();
+    window.Palette?.init();
+    window.Pages?.init();
     setTab(S.tab);
     renderAll();
     window.Router?.init();
@@ -197,6 +271,8 @@
     if (!a) return;
     a.state = st;
     window.UX?.onAgent(st);
+    // cột trái: "Agent đang làm"
+    throttle('nav-agents', () => window.Drive?.renderTree?.(), 1200);
     office.updateAgent(st);
     if (S.tab === 'people') throttle('people', renderPeople);
   }
@@ -204,6 +280,7 @@
   function onTask(t) {
     S.tasks.set(t.id, t);
     window.Router?.onTask(t);
+    if (S.tab === 'inbox') throttle('inbox', () => window.Inbox?.changed(), 500);
     updateRunning();
     throttle('drive', () => window.Drive?.changed(), 600);
     window.Chat?.onTask(t);
@@ -215,7 +292,8 @@
 
   function updateRunning() {
     const running = [...S.tasks.values()].filter((x) => x.status === 'running' || x.status === 'queued');
-    $('#badge-tasks').textContent = running.length || '';
+    // cột trái: "● n" = đang chạy thật (không tính việc đang chờ)
+    $('#badge-tasks').textContent = running.filter((x) => x.status === 'running').length || '';
     $('#k-running').textContent = running.length;
     office.setRunning(running.length);
     const meeting = running.find((x) => x.phase === 'discuss' || x.phase === 'finalize');
@@ -370,17 +448,20 @@
     window.Chat?.pendingChanged();
   }
 
-  // ── Ticker & tooltip ─────────────────────────────────────────────────────
+  // ── Luồng hoạt động (ô Văn phòng) ─────────────────────────────────────────
   function addTicker(m) {
     const el = document.createElement('div');
     el.className = 'tk';
+    if (m.from) el.dataset.agent = m.from;
     const color = deptColor(m.department);
-    el.innerHTML = `<time>${time(m.ts)}</time><b style="color:${color}">${esc(agentName(m.from))}</b><span>${esc(KIND_VI[m.kind] || m.kind)} · ${esc(plain(m.text).slice(0, 220))}</span>`;
+    const t = S.tasks.get(m.taskId);
+    el.innerHTML = `<time>${time(m.ts)}</time><b style="color:${color}">${esc(agentName(m.from))}</b><span>${t ? `<code class="tk-code">${esc(code(t))}</code> ` : ''}${esc(KIND_VI[m.kind] || m.kind)} · ${esc(plain(m.text).slice(0, 220))}</span>`;
     el.style.cursor = 'pointer';
     el.onclick = () => (S.tab === 'assign' && window.Chat ? window.Chat.open(m.taskId) : openTask(m.taskId));
     const tk = $('#ticker');
     tk.prepend(el);
-    while (tk.children.length > 40) tk.lastChild.remove();
+    while (tk.children.length > 60) tk.lastChild.remove();
+    office?.noteFeed?.();
   }
 
   async function preloadTicker() {
@@ -392,29 +473,7 @@
     } catch {}
   }
 
-  function showTooltip(id, x, y) {
-    const tt = $('#tooltip');
-    if (!id) {
-      tt.hidden = true;
-      return;
-    }
-    const a = S.agents.get(id);
-    if (!a) return;
-    const st = a.state || { status: 'idle' };
-    const u = a.usage || {};
-    tt.innerHTML = `<b>${esc(a.title)}</b> <small>@${esc(a.id)}</small><div style="margin-bottom:4px"></div>
-      <div class="tt-row"><span>Phòng</span><span>${esc(deptShort(a.department))}</span></div>
-      <div class="tt-row"><span>Trạng thái</span><span style="color:${window.STATUS_COLOR[st.status]}">${esc(STATUS_VI[st.status] || st.status)}</span></div>
-      ${st.activity ? `<div class="tt-row"><span>Đang</span><span>${esc(st.activity.slice(0, 40))}</span></div>` : ''}
-      <div class="tt-row"><span>Token in/out</span><span>${fmt(u.input)} / ${fmt(u.output)}</span></div>
-      <div class="tt-row"><span>Model</span><span>${esc(a.model)}</span></div>`;
-    tt.hidden = false;
-    const stage = $('#stage').getBoundingClientRect();
-    const left = Math.min(x + 16, stage.width - 290);
-    const top = Math.min(y + 12, stage.height - tt.offsetHeight - 10);
-    tt.style.left = `${Math.max(8, left)}px`;
-    tt.style.top = `${Math.max(8, top)}px`;
-  }
+
 
   // ── Khung & tab ──────────────────────────────────────────────────────────
   function setTab(tab) {
@@ -427,6 +486,8 @@
     if (tab === 'kpi') loadKpi();
     if (tab === 'logs') loadLogs();
     if (tab === 'quota') window.Director?.renderQuota();
+    if (tab === 'inbox') window.Inbox?.render(true);
+    if (window.Pages?.tabs.includes(tab)) window.Pages.render(tab);
     window.Router?.sync();
   }
 
@@ -553,6 +614,7 @@
     opt.budgetMode = f.budgetMode.value;
     opt.review = f.review.checked;
     if (f.planApproval.checked) opt.planApproval = true;
+    if (f.acceptance && !f.acceptance.checked) opt.acceptance = false;
     if (S.pending.some((a) => a.status === 'uploading')) {
       msg.className = 'form-msg err';
       msg.textContent = 'Đang tải tệp lên — chờ một chút';
@@ -752,7 +814,7 @@
         const depts = (t.departments.length ? t.departments : t.department ? [t.department] : []).map((d) => `<span style="color:${deptColor(d)}">${esc(deptShort(d))}</span>`).join(' → ');
         return `<button class="task" data-id="${esc(t.id)}">
           <div class="t-top"><span class="status ${t.status}">${TASK_VI[t.status] || t.status}</span>${t.attention ? `<span class="status attention" title="${esc(t.attention.detail)}">⚠ cần xem</span>` : ''}<span class="t-title">${esc(t.title)}</span></div>
-          <div class="t-meta"><span>${esc(t.id)}</span><span>${esc(MODE_VI[t.mode] || t.mode)}</span>${depts ? `<span>${depts}</span>` : ''}${t.phase ? `<span>pha: ${esc(t.phase)}</span>` : ''}<span>token <b>${fmt(total(t.usage))}</b></span><span>${dateTime(t.createdAt)}</span></div>
+          <div class="t-meta"><span title="${esc(t.id)}">${esc(code(t))}</span><span>${esc(MODE_VI[t.mode] || t.mode)}</span>${depts ? `<span>${depts}</span>` : ''}${t.phase ? `<span>pha: ${esc(t.phase)}</span>` : ''}<span>token <b>${fmt(total(t.usage))}</b></span><span>${dateTime(t.createdAt)}</span></div>
         </button>`;
       })
       .join('');
@@ -760,6 +822,7 @@
   }
 
   async function openTask(id, view) {
+    if (!S.tasks.has(id)) id = findTask(id)?.id || (await resolveTask(id));
     S.selectedTask = id;
     S.taskView = view || S.taskView || 'chat';
     S.taskFile = null;
@@ -772,9 +835,11 @@
     if (!id) return renderTaskList();
     if (fetchData || !S.taskDetail || S.taskDetail.task.id !== id) {
       try {
-        S.taskDetail = await api(`/api/tasks/${id}`);
+        S.taskDetail = await api(`/api/tasks/${encodeURIComponent(id)}`);
+        if (!S.tasks.has(S.taskDetail.task.id)) keepTask(S.taskDetail.task);
       } catch (e) {
         S.selectedTask = null;
+        toast({ level: 'warn', title: 'Không mở được nhiệm vụ', msg: `Không có nhiệm vụ ${id}` });
         return renderTaskList();
       }
     }
@@ -796,7 +861,7 @@
           .map(
             (s) => `<div class="st-row">
               <div class="st-top"><code>${esc(s.id)}</code><span class="st-title" title="${esc(s.description)}">${esc(s.title)}</span><span class="status ${s.status}">${TASK_VI[s.status] || s.status}</span></div>
-              <div class="st-meta"><span class="who">${av(s.assignee)}${esc(agentName(s.assignee))}</span>${s.dependsOn.length ? `<span>sau ${esc(s.dependsOn.join(', '))}</span>` : ''}<span class="mono">${fmt(s.usage.input)} in / ${fmt(s.usage.output)} out</span>${s.attempts > 1 ? `<span${s.attempts >= 3 ? ' style="color:var(--warn)" title="Chạy nhiều lần — kiểm tra vòng sửa có tiến triển"' : ''}>${s.attempts} lần</span>` : ''}${s.continuations ? `<span style="color:var(--warn)" title="Vòng công cụ chạm trần khi chưa xong — đã cho chạy tiếp với ngữ cảnh mới">↻ chạy tiếp ${s.continuations}</span>` : ''}${window.UX ? UX.histLink(t, s) : ''}${s.output ? `<a data-file="${esc(s.output)}">xem sản phẩm →</a>` : ''}${s.splitTo ? `<a data-task="${esc(s.splitTo)}">✂ đã tách → ${esc(s.splitTo)}</a>` : ''}</div>
+              <div class="st-meta"><span class="who">${av(s.assignee)}${esc(agentName(s.assignee))}</span>${s.dependsOn.length ? `<span>sau ${esc(s.dependsOn.join(', '))}</span>` : ''}<span class="mono">${fmt(s.usage.input)} in / ${fmt(s.usage.output)} out</span>${s.attempts > 1 ? `<span${s.attempts >= 3 ? ' style="color:var(--warn)" title="Chạy nhiều lần — kiểm tra vòng sửa có tiến triển"' : ''}>${s.attempts} lần</span>` : ''}${s.continuations ? `<span style="color:var(--warn)" title="Vòng công cụ chạm trần khi chưa xong — đã cho chạy tiếp với ngữ cảnh mới">↻ chạy tiếp ${s.continuations}</span>` : ''}${window.UX ? UX.histLink(t, s) : ''}${s.output ? `<a data-file="${esc(s.output)}">xem sản phẩm →</a>` : ''}${s.splitTo ? `<a data-task="${esc(s.splitTo)}">✂ đã tách → ${esc(code(S.tasks.get(s.splitTo)) || s.splitTo)}</a>` : ''}</div>
               ${s.error && !s.splitTo ? `<div class="st-err">${esc(s.error)}</div>` : ''}
               ${window.UX ? UX.liveHtml(t, s) + UX.histHtml(t, s) : ''}
             </div>`,
@@ -881,12 +946,12 @@
     const git = t.branch ? `<div class="t-git">🌿 nhánh <code>${esc(t.branch)}</code> · worktree <code>${esc(t.workspace)}</code>${t.commit ? ` · ${esc(t.commit)}` : ''}</div>` : t.workspace ? `<div class="t-git">📁 <code>${esc(t.workspace)}</code></div>` : '';
     el.innerHTML = `<button class="btn ghost sm back" id="td-back">← Danh sách</button>
       <div class="td-head"><h2>${esc(t.title)}</h2>
-        <div class="t-meta"><span class="status ${t.status}">${TASK_VI[t.status] || t.status}</span>${t.attention ? `<span class="status attention" title="${esc(t.attention.detail)}">⚠ cần xem</span>` : ''}<span>${esc(t.id)}</span><span>${esc(MODE_VI[t.mode] || t.mode)}</span>
+        <div class="t-meta"><span class="status ${t.status}">${TASK_VI[t.status] || t.status}</span>${t.attention ? `<span class="status attention" title="${esc(t.attention.detail)}">⚠ cần xem</span>` : ''}<span class="tcode" title="${esc(t.id)}">${esc(code(t))}</span><span>${esc(MODE_VI[t.mode] || t.mode)}</span>
         <span class="cls ${esc(t.classification)}">${esc(CLS_VI[t.classification] || t.classification)}</span>
         ${t.projectId ? `<span>dự án: ${esc(t.projectId)}</span>` : ''}<span>token <b style="font-family:var(--mono);color:var(--text)">${fmt(t.usage.input)} in / ${fmt(t.usage.output)} out</b></span>
         ${t.agentId ? `<span>giao riêng: ${esc(agentName(t.agentId))}</span>` : ''}
         ${canPause ? '<button class="btn ghost sm" id="td-pause">⏸ Tạm dừng</button>' : ''}${canCancel ? '<button class="btn ghost sm danger" id="td-cancel">Hủy</button>' : ''}<button class="btn ghost sm" id="td-again" title="Mở form giao việc với yêu cầu, chế độ và phòng/dự án/agent như nhiệm vụ này">↻ Giao lại tương tự</button></div>
-        ${meter}${git}${atts}${window.Flow?.summaryHtml(t) || ''}${window.UX?.checksHtml(t) || ''}${window.Flow?.shipHtml(t) || ''}
+        ${meter}${git}${atts}${window.Flow?.summaryHtml(t) || ''}${window.Flow?.acceptHtml(t) || ''}${window.UX?.checksHtml(t) || ''}${window.Flow?.shipHtml(t) || ''}
         ${t.routing ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">🧭 ${esc(t.routing.reason)}</p>` : ''}
         ${t.error && !canResume ? `<p style="font-size:12.5px;color:var(--bad);margin:0 0 8px">${esc(t.error)}</p>` : ''}
         ${t.attention ? `<p style="font-size:12.5px;color:var(--warn);margin:0 0 8px">⚠ Cần xem lại: ${esc(t.attention.detail)} — xem báo cáo, "Làm lại từ review" hoặc tách việc còn lại.</p>` : ''}
@@ -902,6 +967,7 @@
         <button data-v="final" class="${S.taskView === 'final' ? 'active' : ''}" ${t.finalPath ? '' : 'disabled'}>🏁 Báo cáo</button>
         <button data-v="files" class="${S.taskView === 'files' ? 'active' : ''}">📦 Sản phẩm</button>
         ${window.UX?.hasDiff(t) ? `<button data-v="diff" class="${S.taskView === 'diff' ? 'active' : ''}" title="Thay đổi trong repo so với commit gốc của nhiệm vụ">🧬 Thay đổi</button>` : ''}
+        ${(t.runs || []).length ? `<button data-v="timeline" class="${S.taskView === 'timeline' ? 'active' : ''}" title="Dòng thời gian các hạng mục, lượt gọi, đường găng">⏱ Dòng thời gian</button>` : ''}
         <button data-v="tokens" class="${S.taskView === 'tokens' ? 'active' : ''}">🔢 Token</button>
         <button data-v="events" class="${S.taskView === 'events' ? 'active' : ''}">🧾 Nhật ký</button>
         <button data-v="calls" class="${S.taskView === 'calls' ? 'active' : ''}">📡 Lượt gọi</button>
@@ -1010,6 +1076,7 @@
       return;
     }
     if (S.taskView === 'diff') return window.UX?.diffView(box, t);
+    if (S.taskView === 'timeline') return window.TL?.view(box, t);
     if (S.taskView === 'final' || (S.taskView === 'files' && S.taskFile)) {
       const path = S.taskView === 'final' ? t.finalPath || 'FINAL.md' : S.taskFile;
       box.innerHTML = '<div class="empty">Đang tải…</div>';

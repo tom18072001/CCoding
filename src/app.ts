@@ -4,6 +4,7 @@ import { Herdr } from './herdr.js';
 import { LogStore } from './logger.js';
 import { ensureDataDirs, Orchestrator } from './orchestrator.js';
 import { Registry } from './registry.js';
+import { Routines } from './routines.js';
 import { RuntimeManager } from './runtimes/index.js';
 import { Store } from './store.js';
 import { Uploads } from './uploads.js';
@@ -20,6 +21,8 @@ export interface App {
   herdr: Herdr;
   uploads: Uploads;
   orchestrator: Orchestrator;
+  /** Việc định kỳ (UX-4d) — bộ lập lịch chỉ bật trong `ccoding serve`. */
+  routines: Routines;
 }
 
 /** Lắp ráp toàn bộ thành phần (dùng chung cho server, CLI độc lập và kiểm thử). */
@@ -47,5 +50,6 @@ export function createApp(overrides: Partial<Config> = {}, opts: { root?: string
   }
   const orchestrator = new Orchestrator({ config, registry, runtimes, logs, usage, store, bus, herdr, uploads });
   for (const e of registry.errors) logs.write({ level: 'warn', kind: 'registry', msg: e });
-  return { config, bus, logs, usage, registry, runtimes, store, herdr, uploads, orchestrator };
+  const routines = new Routines(config.dataDir, { store, registry, logs, orchestrator });
+  return { config, bus, logs, usage, registry, runtimes, store, herdr, uploads, orchestrator, routines };
 }

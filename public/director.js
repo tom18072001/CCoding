@@ -1,6 +1,5 @@
-// Phòng giám đốc & các tiện ích thân thiện: nhân vật người dùng tương tác (E), giao việc riêng cho agent, góp ý,
-// tăng ngân sách, trò vui (không ảnh hưởng công việc), bảng điều khiển, hạn mức token, thư viện & khung soạn prompt,
-// trợ giúp, hướng dẫn lần đầu, phím tắt. Dùng cầu nối window.CC do app.js cung cấp.
+// Tiện ích của giám đốc: menu thao tác khi bấm agent trong văn phòng, giao việc riêng cho agent, góp ý, tăng ngân sách,
+// hạn mức token, thư viện & khung soạn prompt, trợ giúp, hướng dẫn lần đầu, phím tắt. Dùng cầu nối window.CC do app.js cung cấp.
 (function () {
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -21,33 +20,8 @@
       } catch {}
     },
   };
-  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const esc = (s) => (C ? C.esc(s) : String(s ?? ''));
   const office = () => C && C.office();
-
-  // ── Nội dung cho vui (tự viết) ───────────────────────────────────────────
-  const JOKES = [
-    'Sếp biết vì sao lập trình viên thích phòng tối không? Vì ánh sáng thu hút… bug 🐛',
-    'Hôm qua em sửa một lỗi, hôm nay nó đẻ ra hai lỗi con. Em gọi đó là "tính năng di truyền".',
-    'Code của em chạy được trên máy em. Giờ chỉ cần gửi máy em cho khách là xong 😄',
-    'Có 10 loại người: người hiểu nhị phân và người không.',
-    'Em không lười đâu sếp, em đang ở chế độ tiết kiệm năng lượng.',
-    'Commit cuối ngày của em: "sửa nốt" — commit sáng hôm sau: "sửa nốt cái sửa nốt".',
-    'Đừng lo sếp, lỗi này chỉ xuất hiện vào thứ Sáu lúc 17h59 thôi.',
-    'Em đặt tên biến là x vì em tin vào sức tưởng tượng của người đọc.',
-    'Review code giống đi khám răng: ai cũng biết cần, không ai muốn đi.',
-    'Cà phê vào, code ra. Hết cà phê thì ra… comment.',
-  ];
-  const HIGHFIVE = ['Đập tay nào sếp! 🙌', 'Yeah! Năng lượng lên 100%!', 'Cảm ơn sếp, có động lực hẳn!', 'Bùm! Hết mệt luôn!'];
-  const PRAISE = ['Dạ em cảm ơn sếp! 😊', 'Được sếp khen là em làm thêm 2 ticket nữa!', 'Hehe, nhờ cả đội đấy sếp.', 'Em sẽ giữ phong độ ạ! ⭐'];
-  const CHEER = ['Cố lên cả phòng! 💪', 'Sắp xong rồi!', 'Team mình đỉnh nhất!', 'Ship thôi anh em!'];
-  const FACTS = [
-    'Tin vui: hôm nay chưa ai làm vỡ build 🎉',
-    'Mẹo: tách việc lớn thành nhiều hạng mục nhỏ giúp agent ghi tệp sớm hơn và tốn ít token hơn.',
-    'Mẹo: góp ý 👍/👎 cho agent sẽ được nhắc lại ở các lượt làm việc sau.',
-    'Mẹo: nhấp đúp lên sàn để đi tới chỗ đó, khỏi giữ phím.',
-    'Mẹo: phím ? mở trợ giúp, N mở form giao việc.',
-  ];
 
   // ── Modal ────────────────────────────────────────────────────────────────
   let openModals = 0;
@@ -95,7 +69,7 @@
   }
   D.modal = modal;
 
-  // ── Menu tương tác (E) ───────────────────────────────────────────────────
+  // ── Menu thao tác khi bấm vào agent trong văn phòng ───────────────────────────────────────────────────
   let menuState = null;
   function closeMenu() {
     const m = $('#imenu');
@@ -116,10 +90,17 @@
       )
       .join('')}<div class="im-foot"><kbd>1</kbd>–<kbd>${list.length}</kbd> chọn · <kbd>Esc</kbd> đóng</div>`;
     m.hidden = false;
-    const stage = $('#stage').getBoundingClientRect();
+    // menu nằm trong khung văn phòng có thể cuộn: kẹp trong phần đang nhìn thấy (tọa độ đã gồm độ cuộn)
+    const host = $('#stage');
+    const vw = host.clientWidth;
+    const vh = host.clientHeight;
+    const sx = host.scrollLeft;
+    const sy = host.scrollTop;
     const w = 270;
-    const left = Math.max(8, Math.min(stage.width - w - 8, (pos?.left ?? stage.width / 2) - w / 2));
-    const top = Math.max(8, Math.min(stage.height - m.offsetHeight - 8, (pos?.top ?? stage.height / 2) - m.offsetHeight - 26));
+    const left = Math.max(sx + 8, Math.min(sx + vw - w - 8, (pos?.left ?? sx + vw / 2) - w / 2));
+    const want = (pos?.top ?? sy + vh / 2) - m.offsetHeight - 26;
+    // không đủ chỗ phía trên bàn → đặt ngay dưới bàn
+    const top = Math.max(sy + 8, Math.min(sy + vh - m.offsetHeight - 8, want < sy + 8 && pos ? pos.top + 56 : want));
     m.style.left = `${left}px`;
     m.style.top = `${top}px`;
     lock(true);
@@ -134,6 +115,8 @@
     };
     btns.forEach((b) => (b.onclick = () => run(Number(b.dataset.i))));
     const onKey = (e) => {
+      // bảng lệnh đang mở / đang gõ ở ô nhập → phím không thuộc menu
+      if (document.querySelector('.pal-wrap:not([hidden])') || e.target?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '')) return;
       if (e.key === 'Escape' || e.key.toLowerCase() === 'e') {
         e.preventDefault();
         e.stopPropagation();
@@ -165,22 +148,11 @@
     }, 0);
   }
 
-  D.near = () => {};
-
+  /** Bấm vào bàn một agent trong văn phòng → menu thao tác. */
   D.interact = (target, pos) => {
-    if (!C) return;
-    if (target.type === 'agent') return agentMenu(target.id, pos);
-    if (target.id === 'pantry:table') return pantryTime();
-    return spotMenu(target, pos);
+    if (!C || target?.type !== 'agent') return;
+    agentMenu(target.id, pos);
   };
-
-  /** Bàn ăn pantry: giờ nghỉ giải lao cho vui — agent rảnh ra pantry rồi tự về, không đụng công việc. */
-  function pantryTime() {
-    const o = office();
-    const r = o.pantryTime(30000);
-    if (!r.n && r.left) return C.toast({ level: 'info', title: `🍱 Pantry time đang diễn ra — còn ${r.left} giây`, msg: '' });
-    C.toast({ level: 'info', title: '🍱 Pantry time!', msg: r.n ? `${r.n} người đang rảnh ra pantry nghỉ 30 giây — việc đang chạy không bị ảnh hưởng.` : 'Mọi người đang bận cả — pantry để dành lát nữa nhé.' });
-  }
 
   function agentMenu(id, pos) {
     const a = C.S.agents.get(id);
@@ -188,7 +160,6 @@
     const st = a.state || { status: 'idle' };
     const worker = C.S.departments.some((d) => d.id === a.department);
     const task = st.taskId ? C.S.tasks.get(st.taskId) : null;
-    const o = office();
     showMenu(
       `<b>${esc(a.name)}</b> <small>${esc(C.STATUS_VI[st.status] || st.status)}${st.activity ? ` · ${esc(st.activity.slice(0, 40))}` : ''}</small>`,
       [
@@ -196,170 +167,13 @@
           ? { icon: '📝', label: 'Giao việc riêng', hint: 'Một nhiệm vụ chỉ agent này làm (bỏ qua lập kế hoạch/họp)', run: () => D.assignAgent(id) }
           : { icon: '🧭', label: 'Giao việc tự động (điều phối)', run: () => C.prefillAssign({ mode: 'auto' }) },
         worker && { icon: '💬', label: 'Góp ý / đánh giá', hint: 'Được nhắc lại trong hồ sơ agent ở các lượt sau', run: () => D.feedback(id) },
+        task && ['running', 'queued', 'paused'].includes(task.status) && { icon: '📋', label: `Mở việc đang làm (${C.code(task)})`, hint: task.title, run: () => C.openTask(task.id) },
         task && ['running', 'queued', 'paused'].includes(task.status) && { icon: '💰', label: 'Tăng ngân sách việc đang làm', hint: task.title, run: () => D.raiseBudget(id) },
         { icon: '👀', label: 'Xem hồ sơ & việc đang làm', run: () => C.openAgent(id) },
-        { icon: '☕', label: 'Mời cà phê', fun: true, run: () => o.funWith(id, 'coffee') },
-        { icon: '🙌', label: 'Đập tay', fun: true, run: () => o.funWith(id, 'highfive', pick(HIGHFIVE)) },
-        { icon: '😂', label: 'Nhờ kể chuyện cười', fun: true, run: () => o.funWith(id, 'joke', pick(JOKES)) },
-        { icon: '🌟', label: 'Khen một câu', fun: true, run: () => o.funWith(id, 'praise', pick(PRAISE)) },
       ],
       pos,
     );
   }
-
-  function spotMenu(t, pos) {
-    const o = office();
-    const S = C.S;
-    const running = [...S.tasks.values()].filter((x) => x.status === 'running' || x.status === 'queued');
-    const meeting = running.find((x) => x.phase === 'discuss' || x.phase === 'finalize');
-    const items = {
-      'room:dev': () => deptItems('dev'),
-      'room:research': () => deptItems('research'),
-      'room:meeting': () => meetingItems(),
-      'room:meeting-table': () => meetingItems(),
-      'room:office': () => [
-        { icon: '🧭', label: 'Giao việc tự động (điều phối viên chọn phòng)', run: () => C.prefillAssign({ mode: 'auto' }) },
-        { icon: '📋', label: `Nhiệm vụ đang chạy (${running.length})`, run: () => C.setTab('tasks') },
-      ],
-      'room:pantry': () => [
-        { icon: '☕', label: 'Pha một ly cho mình', fun: true, run: () => (o.playerSay('Một ly cà phê đen không đường ☕'), o.effect('coffee', o.player.x, o.player.y)) },
-        { icon: '🎉', label: 'Mời cả văn phòng cà phê', fun: true, hint: 'Chỉ agent đang rảnh mới đi', run: () => { const n = o.coffeeParty(); o.playerSay(n ? `Mời ${n} người cà phê!` : 'Mọi người đang bận cả rồi 😅'); } },
-      ],
-      'room:pantry-sofa': () => [
-        { icon: '😴', label: 'Ngả lưng 5 giây', fun: true, run: () => o.playerSay('Zzz… 💤', 5000) },
-        { icon: '📰', label: 'Đọc bảng tin', fun: true, run: () => o.playerSay(pick(FACTS), 7000) },
-      ],
-      'boss:desk': () => [
-        { icon: '📊', label: 'Bảng điều khiển', run: () => D.dashboard() },
-        { icon: '📝', label: 'Giao việc mới', run: () => C.prefillAssign({}) },
-        { icon: '📚', label: 'Thư viện prompt', run: () => D.promptLibrary() },
-        { icon: '🔢', label: 'Hạn mức token còn lại', run: () => C.setTab('quota') },
-        { icon: '❓', label: 'Trợ giúp & phím tắt', run: () => D.help() },
-      ],
-      'boss:screen': () => [
-        { icon: '📊', label: 'Bảng điều khiển', run: () => D.dashboard() },
-        { icon: '🔢', label: 'Hạn mức token còn lại', run: () => C.setTab('quota') },
-      ],
-      'pantry:water': () => [
-        { icon: '💧', label: 'Uống cốc nước', fun: true, run: () => (o.spotEffect('pantry:water', 'hearts'), o.playerSay('Uống nước đều đặn nào 💧', 3000)) },
-        { icon: '🍱', label: 'Pantry time (mời mọi người rảnh nghỉ 30 giây)', fun: true, run: () => pantryTime() },
-      ],
-      'office:tv': () => [
-        { icon: '🧭', label: 'Giao việc tự động (điều phối viên chọn phòng)', run: () => C.prefillAssign({ mode: 'auto' }) },
-        { icon: '📋', label: `Nhiệm vụ đang chạy (${running.length})`, run: () => C.setTab('tasks') },
-        { icon: '📺', label: 'Đổi kênh', fun: true, run: () => (o.spotEffect('office:tv', 'stars'), o.playerSay(pick(FACTS), 6000)) },
-      ],
-      'meeting:board': () => meetingItems(),
-      'dev:board': () => [
-        ...deptItems('dev').slice(0, 2),
-        { icon: '✏️', label: 'Vẽ sơ đồ kiến trúc lên bảng', fun: true, run: () => o.spotEffect('dev:board', 'stars') },
-      ],
-      'research:shelf': () => [
-        ...deptItems('research').slice(0, 2),
-        { icon: '📖', label: 'Rút một cuốn sách', fun: true, run: () => (o.spotEffect('research:shelf', 'stars'), o.playerSay(pick(FACTS), 7000)) },
-      ],
-      'boss:arcade': () => [{ icon: '🕹', label: 'Chơi "Bắt bug" 15 giây', fun: true, run: () => D.bugGame() }],
-      'boss:piano': () => [{ icon: '🎹', label: 'Chơi một đoạn nhạc', fun: true, run: () => playTune() }],
-      'boss:sofa': () => [
-        { icon: '🍵', label: 'Pha trà tiếp khách', fun: true, run: () => (o.playerSay('Mời cả nhà dùng trà 🍵'), o.effect('hearts', o.player.x, o.player.y)) },
-        { icon: '📰', label: 'Đọc bảng tin', fun: true, run: () => o.playerSay(pick(FACTS), 7000) },
-      ],
-    };
-    function deptItems(id) {
-      const d = S.departments.find((x) => x.id === id);
-      const members = [...S.agents.values()].filter((a) => a.department === id);
-      const busy = members.filter((a) => a.state && a.state.status !== 'idle').length;
-      return [
-        { icon: '📝', label: `Giao việc cho ${d ? d.short : id}`, run: () => C.prefillAssign({ mode: 'department', department: id }) },
-        { icon: '👥', label: `Nhân sự phòng (${busy}/${members.length} đang bận)`, run: () => C.setTab('people') },
-        { icon: '🎉', label: 'Cổ vũ cả phòng', fun: true, run: () => members.forEach((a, i) => setTimeout(() => o.funWith(a.id, 'cheer', i % 3 === 0 ? pick(CHEER) : undefined), i * 120)) },
-      ];
-    }
-    function meetingItems() {
-      return [
-        meeting
-          ? { icon: '🗣', label: `Xem cuộc họp: ${meeting.title.slice(0, 40)}`, run: () => C.openTask(meeting.id) }
-          : { icon: '🗣', label: 'Phòng họp đang trống', disabled: true, run: () => {} },
-        { icon: '📋', label: 'Danh sách nhiệm vụ', run: () => C.setTab('tasks') },
-      ];
-    }
-    const list = (items[t.id] || (() => []))();
-    if (!list.length) return;
-    showMenu(`<b>${t.icon || ''} ${esc(t.label)}</b>`, list, pos);
-  }
-
-  // ── Âm nhạc (cho vui) ────────────────────────────────────────────────────
-  function playTune() {
-    const o = office();
-    o.musicAround(o.player.x, o.player.y);
-    o.playerSay('🎵 tình tang tính…', 3000);
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const notes = [523.25, 659.25, 783.99, 1046.5, 783.99, 880, 783.99, 659.25];
-      notes.forEach((f, i) => {
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        osc.type = 'square';
-        osc.frequency.value = f;
-        g.gain.setValueAtTime(0.035, ctx.currentTime + i * 0.16);
-        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + i * 0.16 + 0.15);
-        osc.connect(g).connect(ctx.destination);
-        osc.start(ctx.currentTime + i * 0.16);
-        osc.stop(ctx.currentTime + i * 0.16 + 0.16);
-      });
-      setTimeout(() => ctx.close(), 2000);
-    } catch {}
-  }
-
-  // ── Trò "Bắt bug" (cho vui) ──────────────────────────────────────────────
-  D.bugGame = () => {
-    let score = 0;
-    let left = 15;
-    let timer;
-    let mover;
-    const best = store.get('bugBest', 0);
-    modal({
-      title: '🕹 Bắt bug',
-      body: `<p class="muted-p">Bấm vào con bug càng nhanh càng tốt trong 15 giây. Chỉ để giải trí — không ảnh hưởng công việc.</p>
-        <div class="bug-hud"><span>Điểm: <b id="bg-score">0</b></span><span>Còn: <b id="bg-left">15</b> giây</span><span>Kỷ lục: <b>${best}</b></span></div>
-        <div class="bug-arena" id="bg-arena"><button class="bug" id="bg-bug" aria-label="bug">🐞</button></div>`,
-      onMount: (el, close) => {
-        const arena = $('#bg-arena', el);
-        const bug = $('#bg-bug', el);
-        const move = () => {
-          bug.style.left = `${Math.random() * (arena.clientWidth - 40)}px`;
-          bug.style.top = `${Math.random() * (arena.clientHeight - 40)}px`;
-          bug.textContent = pick(['🐞', '🐛', '🪲', '🐜']);
-        };
-        move();
-        bug.onclick = () => {
-          score++;
-          $('#bg-score', el).textContent = score;
-          move();
-        };
-        mover = setInterval(move, 900);
-        timer = setInterval(() => {
-          left--;
-          $('#bg-left', el).textContent = left;
-          if (left <= 0) {
-            clearInterval(timer);
-            clearInterval(mover);
-            bug.disabled = true;
-            const rec = score > best;
-            if (rec) store.set('bugBest', score);
-            arena.insertAdjacentHTML('beforeend', `<div class="bug-end">${rec ? '🏆 Kỷ lục mới!' : 'Hết giờ!'} Bắt được ${score} bug.</div>`);
-            const o = office();
-            o.playerSay(rec ? `Kỷ lục mới: ${score} bug! 🏆` : `Bắt được ${score} bug 🐞`);
-            o.effect(rec ? 'confetti' : 'stars', o.player.x, o.player.y);
-          }
-        }, 1000);
-      },
-      onClose: () => {
-        clearInterval(timer);
-        clearInterval(mover);
-      },
-    });
-  };
 
   // ── Giao việc riêng cho một agent ────────────────────────────────────────
   D.assignAgent = (id, opts = {}) => {
@@ -405,9 +219,7 @@
             C.S.tasks.set(t.id, t);
             close();
             C.toast({ level: 'info', title: `Đã giao ${t.id} cho ${a.name}`, msg: t.title, taskId: t.id });
-            const o = office();
-            o.say(id, 'Dạ, em nhận việc! 💪', 4000);
-            o.effect('stars', o.agents.get(id)?.x ?? 0, o.agents.get(id)?.y ?? 0);
+            office()?.say(id, 'Dạ, em nhận việc! 💪', 4000);
           } catch (err) {
             msg.className = 'form-msg err';
             msg.textContent = err.message;
@@ -433,7 +245,7 @@
         <form class="form" id="fb-form">
           <div class="rate"><label><input type="radio" name="rating" value="up" /> 👍 Làm tốt</label><label><input type="radio" name="rating" value="down" /> 👎 Chưa đạt</label><label><input type="radio" name="rating" value="" checked /> Không đánh giá</label></div>
           <label>Góp ý<textarea name="text" rows="3" maxlength="1000" placeholder="Điều muốn ${esc(a.name)} giữ hoặc thay đổi ở các lần sau…"></textarea></label>
-          ${recent.length ? `<label>Gắn với nhiệm vụ <small>(tùy chọn)</small><select name="taskId"><option value="">—</option>${recent.map((t) => `<option value="${esc(t.id)}">${esc(t.id)} · ${esc(t.title.slice(0, 50))}</option>`).join('')}</select></label>` : ''}
+          ${recent.length ? `<label>Gắn với nhiệm vụ <small>(tùy chọn)</small><select name="taskId"><option value="">—</option>${recent.map((t) => `<option value="${esc(t.id)}">${esc(C.code(t))} · ${esc(t.title.slice(0, 50))}</option>`).join('')}</select></label>` : ''}
           <div class="actions"><button class="btn primary sm" type="submit">Gửi góp ý</button><span class="form-msg" data-msg></span></div>
         </form>
         <h3 class="mh3">Đã góp ý (${list.length})</h3>
@@ -457,9 +269,7 @@
             ul.insertAdjacentHTML('afterbegin', row(item));
             bindList();
             f.text.value = '';
-            const o = office();
-            o.say(id, rating === 'down' ? 'Dạ em ghi nhận, lần sau em làm kỹ hơn ạ.' : 'Dạ em cảm ơn sếp, em ghi nhớ ạ!', 5000);
-            o.effect(rating === 'down' ? 'coffee' : 'hearts', o.agents.get(id)?.x ?? 0, o.agents.get(id)?.y ?? 0);
+            office()?.say(id, rating === 'down' ? 'Dạ em ghi nhận, lần sau em làm kỹ hơn ạ.' : 'Dạ em cảm ơn sếp, em ghi nhớ ạ!', 5000);
             $('[data-msg]', el).className = 'form-msg ok';
             $('[data-msg]', el).textContent = 'Đã lưu — áp dụng từ lượt làm việc sau';
           } catch (err) {
@@ -481,7 +291,7 @@
     const used = C.total(t.usage);
     modal({
       title: '💰 Tăng ngân sách',
-      body: `<p><b>${esc(t.title)}</b> <small>${esc(t.id)}</small></p>
+      body: `<p><b>${esc(t.title)}</b> <small title="${esc(t.id)}">${esc(C.code(t))}</small></p>
         <div class="budget"><div class="bm-bar"><i style="width:${Math.min(100, budget ? Math.round((used / budget) * 100) : 0)}%"></i></div><span>${C.fmt(used)} / ${C.fmt(budget)} token · ${t.options?.budgetMode === 'pause' ? 'dừng khi chạm trần' : 'chạy tới khi hoàn thành'}</span></div>
         <div class="pb-actions" style="margin-top:10px">
           <button class="btn primary sm" data-add="${Math.max(100000, Math.round(budget * 0.5))}">+50% (${C.fmt(Math.max(100000, Math.round(budget * 0.5)))})</button>
@@ -574,63 +384,6 @@
     clearTimeout(quotaTimer);
     quotaTimer = setTimeout(() => C.S.tab === 'quota' && D.renderQuota(), 15000);
   };
-
-  // ── Bảng điều khiển (bàn giám đốc) ───────────────────────────────────────
-  D.dashboard = async () => {
-    let q = null;
-    try {
-      q = await C.api('/api/quota');
-    } catch {}
-    const S = C.S;
-    const tasks = [...S.tasks.values()];
-    const running = tasks.filter((t) => t.status === 'running' || t.status === 'queued');
-    const attention = tasks.filter((t) => t.attention || t.status === 'paused' || t.status === 'failed').slice(0, 8);
-    const busy = [...S.agents.values()].filter((a) => a.state && a.state.status !== 'idle');
-    const tRow = (t) => {
-      const b = t.options?.budgetTokens || 0;
-      const u = C.total(t.usage);
-      return `<li><a data-task="${esc(t.id)}">${esc(t.title.slice(0, 60))}</a><span class="status ${t.status}">${esc(C.TASK_VI[t.status] || t.status)}</span>${t.attention ? '<span class="status attention">⚠ cần xem</span>' : ''}<small>${esc(t.phase || '')} · ${C.fmt(u)}${b ? ` / ${C.fmt(b)}` : ''} token</small></li>`;
-    };
-    const order = q ? q.runtimes.filter((r) => r.inOrder && !r.disabled) : [];
-    modal({
-      title: '📊 Bảng điều khiển của giám đốc',
-      wide: true,
-      body: `<div class="stats" style="grid-template-columns:repeat(4,1fr)">
-          <div class="stat"><span>Token hôm nay</span><b>${q ? C.fmt(C.total(q.today)) : '—'}</b></div>
-          <div class="stat"><span>Đang chạy</span><b>${running.length}</b></div>
-          <div class="stat"><span>Agent đang bận</span><b>${busy.length}/${S.agents.size}</b></div>
-          <div class="stat"><span>Cần xem</span><b>${attention.length}</b></div></div>
-        <h3 class="mh3">Đang chạy</h3><ul class="dash-list">${running.map(tRow).join('') || '<li class="empty">Không có việc đang chạy.</li>'}</ul>
-        <h3 class="mh3">Cần bạn quyết định</h3><ul class="dash-list">${attention.map(tRow).join('') || '<li class="empty">Không có gì cần xem 🎉</li>'}</ul>
-        <h3 class="mh3">Tài nguyên theo thứ tự chạy</h3><ul class="dash-list">${order.map((r) => `<li><b>${esc(r.label || r.id)}</b><small>hôm nay ${C.fmt(r.usedToday)} token${r.dailyTokenLimit ? ` · còn ${C.fmt(r.remaining)}` : ''}${r.keyEnv && !r.keySet ? ' · ⚠️ chưa đặt khóa' : ''}${r.health?.until && new Date(r.health.until) > new Date() ? ` · tạm ngừng tới ${esc(new Date(r.health.until).toLocaleTimeString('vi-VN'))}` : ''}</small></li>`).join('') || '<li class="empty">—</li>'}</ul>
-        <div class="pb-actions"><button class="btn primary sm" data-go="assign">📝 Giao việc mới</button><button class="btn ghost sm" data-go="quota">🔢 Hạn mức chi tiết</button><button class="btn ghost sm" data-go="kpi">📈 KPI</button><button class="btn ghost sm" data-go="prompts">📚 Thư viện prompt</button></div>`,
-      onMount: (el, close) => {
-        $$('[data-task]', el).forEach((a) => (a.onclick = () => (close(), C.openTask(a.dataset.task))));
-        $$('[data-go]', el).forEach(
-          (b) =>
-            (b.onclick = () => {
-              close();
-              if (b.dataset.go === 'prompts') D.promptLibrary();
-              else if (b.dataset.go === 'assign') C.prefillAssign({});
-              else C.setTab(b.dataset.go);
-            }),
-        );
-      },
-    });
-  };
-
-  async function refreshScreen() {
-    const o = office();
-    if (!o || !C) return;
-    const tasks = [...C.S.tasks.values()];
-    const running = tasks.filter((t) => t.status === 'running' || t.status === 'queued').length;
-    const att = tasks.filter((t) => t.attention || t.status === 'paused').length;
-    let today = null;
-    try {
-      today = (await C.api('/api/quota')).today;
-    } catch {}
-    o.setDashboard(today ? `Hôm nay ${C.fmt(C.total(today))} token` : 'Bảng điều khiển', `${running} chạy · ${att} cần xem`);
-  }
 
   // ── Prompt: thư viện, khung soạn, kiểm tra, luồng dữ liệu ───────────────
   const BUILTIN = [
@@ -871,17 +624,18 @@
         <section><h3>CCoding là gì?</h3><p>Một văn phòng AI chạy trên máy bạn: bạn giao việc, <b>Điều phối viên</b> chọn phòng, <b>trưởng phòng</b> chia hạng mục cho các agent, họ làm thật trong thư mục/repo (có worktree riêng), <b>reviewer</b> duyệt, rồi trưởng phòng viết báo cáo. Mọi lượt gọi model đều được đếm token và ghi log (đã che bí mật/PII).</p></section>
         <section><h3>Bắt đầu trong 3 bước</h3><ol><li><b>💬 Prompt</b> (hoặc <b>＋ Mới → Nhiệm vụ mới</b>, phím N): viết yêu cầu trong ô soạn (📚 Thư viện, 🧱 Soạn theo khung), chọn chế độ ở thanh dưới ô soạn, <kbd>Ctrl</kbd>+<kbd>Enter</kbd> để giao.</li><li>Màn Prompt chuyển sang <b>hội thoại</b>: yêu cầu của bạn bên phải, trao đổi của văn phòng (gom gọn, bấm để mở), tiến độ từng phòng và báo cáo cuối. Cột trái liệt kê các hội thoại (lọc theo dự án); <b>📋 Quản lý</b> mở trang nhiệm vụ đầy đủ (sản phẩm, token, nhật ký, lượt gọi).</li><li>Trả lời ở ô dưới cùng: việc <b>đang chạy</b> → chỉ dẫn bổ sung; việc <b>đã xong</b> → giao nhiệm vụ tiếp nối trong cùng hội thoại (kế thừa dự án/chế độ/agent). Tệp sản phẩm mở ở khung <b>📄 Xem trước</b> bên phải.</li></ol></section>
         <section><h3>Các chế độ giao việc</h3><ul><li><b>Tự động</b> — điều phối viên chọn phòng.</li><li><b>Theo phòng</b> — chỉ định Phát triển hoặc Nghiên cứu.</li><li><b>Theo dự án</b> — làm trong repo/thư mục của dự án, theo cấu hình dự án (lệnh kiểm tra, quyền công cụ).</li><li><b>Liên phòng</b> — Nghiên cứu làm trước, Phát triển dựng tiếp.</li><li><b>Giao riêng</b> — một agent làm luôn (bỏ lập kế hoạch/họp, vẫn có review) — nhanh và rẻ cho việc nhỏ.</li></ul></section>
-        <section><h3>Phòng giám đốc (bạn)</h3><p>Nhân vật cà vạt đỏ là bạn. <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> để đi (phím mũi tên khi trỏ chuột trên văn phòng), nhấp đúp lên sàn để đi tới, <kbd>E</kbd> cạnh một người/phòng để tương tác: giao việc riêng, góp ý, tăng ngân sách, xem hồ sơ… Các mục có nhãn <em class="fun-tag">vui</em> chỉ để giải trí — không ảnh hưởng công việc đang chạy.</p></section>
+        <section><h3>Văn phòng (ô bên phải)</h3><p>Phòng <b>Điều phối · CTO</b> ở trên, mỗi phòng ban một phòng bên dưới; mỗi agent một bàn với vòng màu trạng thái và bong bóng việc đang làm. <b>Bấm vào một agent</b> để giao việc riêng, góp ý, mở việc đang làm, tăng ngân sách hoặc xem hồ sơ (nhấp đúp: mở hồ sơ). Bên dưới là luồng hoạt động (lọc theo agent) và thanh các agent đang bận. Phím <kbd>V</kbd> ẩn/hiện ô này.</p></section>
         <section><h3>Nhãn dữ liệu & nơi xử lý</h3><p><b>Công khai/Nội bộ</b> có thể gửi tới runtime bên ngoài được phép (đã che bí mật/PII); <b>Bảo mật/Hạn chế</b> chỉ chạy runtime cục bộ (Ollama). Dòng 🔐 dưới form cho biết dữ liệu sẽ đi tới đâu trước khi bạn giao.</p></section>
         <section><h3>Phím tắt</h3><table class="tbl keys"><tbody>
           <tr><td><kbd>?</kbd> hoặc <kbd>H</kbd></td><td>Mở trợ giúp</td></tr>
           <tr><td><kbd>N</kbd></td><td>Giao việc mới (đưa con trỏ vào ô Yêu cầu)</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>K</kbd></td><td>Bảng lệnh: đi tới màn/nhiệm vụ/dự án/agent và thao tác (tạm dừng, duyệt, mở diff, dòng thời gian…) — gõ không dấu cũng được</td></tr>
+          <tr><td><kbd>I</kbd></td><td>Hộp 📥 Cần bạn — trong hộp: <kbd>J</kbd>/<kbd>K</kbd> chọn · <kbd>Enter</kbd> mở hội thoại · <kbd>O</kbd> trang nhiệm vụ · <kbd>1</kbd> hành động chính · <kbd>2</kbd> hành động phụ · <kbd>H</kbd> hoãn 4 giờ · <kbd>X</kbd> hủy · <kbd>Z</kbd> hoàn tác (hành động chờ 4 giây mới gửi)</td></tr>
           <tr><td><kbd>/</kbd></td><td>Tìm nhanh nhiệm vụ, dự án, agent</td></tr>
           <tr><td><kbd>V</kbd></td><td>Ẩn/hiện ô Văn phòng bên phải</td></tr>
           <tr><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td><td>Giao việc trong ô soạn lớn (cuộc mới, trang dự án, trang nhiệm vụ)</td></tr>
           <tr><td><kbd>Enter</kbd> / <kbd>Shift</kbd>+<kbd>Enter</kbd></td><td>Gửi / xuống dòng trong ô trả lời của hội thoại</td></tr>
           <tr><td><kbd>1</kbd>–<kbd>7</kbd></td><td>Tổng quan · Dự án · Nhiệm vụ · Prompt · Nhân sự · Hạn mức · Nhật ký</td></tr>
-          <tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / <kbd>E</kbd></td><td>Đi / tương tác trong văn phòng</td></tr>
           <tr><td><kbd>Esc</kbd></td><td>Đóng hộp thoại, menu</td></tr></tbody></table></section>
         <section><h3>Thuật ngữ</h3><ul><li><b>Runtime</b> — nơi chạy model (Cerebras, NVIDIA, Ollama…). Tab <b>Hạn mức</b> cho biết token còn lại.</li><li><b>Ngân sách token</b> — trần token của một nhiệm vụ; "chạy tới khi hoàn thành" chỉ cảnh báo, "tạm dừng" dừng để bạn quyết.</li><li><b>Worktree</b> — bản sao làm việc riêng của repo trên nhánh riêng, không đụng nhánh chính.</li><li><b>Review</b> — reviewer của phòng kiểm tra bằng chứng (test chạy thật) và yêu cầu sửa.</li></ul></section>
         <div class="pb-actions"><button class="btn ghost sm" id="help-tour">▶ Xem lại hướng dẫn nhanh</button></div></div>`,
@@ -895,10 +649,10 @@
   };
 
   const TOUR = [
-    { sel: '#sidenav', title: 'Điều hướng', text: '＋ Mới để giao việc, tạo dự án, prompt. Bên dưới là cây Dự án → Nhiệm vụ (như thư mục) và các nhiệm vụ gần đây; ⛽ ở cuối là token hôm nay.' },
+    { sel: '#sidenav', title: 'Điều hướng', text: '＋ Mới để giao việc, tạo dự án, prompt; 🔎 Tìm mở bảng lệnh (Ctrl+K). Các mục xếp theo nhóm Làm việc và Tổ chức; dự án nằm ngay dưới mục Dự án; cuối cột là các agent đang làm, nhiệm vụ gần đây và token hôm nay.' },
     { sel: '#main', title: 'Quản lý nhiệm vụ', text: 'Tổng quan, dự án dạng thư mục, danh sách nhiệm vụ (lọc, sắp xếp, chuột phải để thao tác). Mở một nhiệm vụ để xem kế hoạch, sản phẩm, token và gửi chỉ dẫn bổ sung ở ô soạn phía dưới.' },
     { sel: '#sidenav [data-tab=assign]', title: '💬 Prompt', text: 'Màn soạn & hội thoại kiểu ứng dụng chat: cột hội thoại theo dự án, luồng trao đổi với văn phòng, ô trả lời ở dưới (đang chạy = chỉ dẫn bổ sung, đã xong = giao tiếp nối). Tệp mở ở khung Xem trước bên phải.' },
-    { sel: '#side', title: 'Văn phòng (ô phụ)', text: 'Các agent làm việc theo trạng thái thật. Bạn là nhân vật cà vạt đỏ: WASD để đi, E để tương tác. Phím V hoặc 🏢 để ẩn/hiện ô này.' },
+    { sel: '#side', title: 'Văn phòng (ô phụ)', text: 'Các agent theo phòng ban với trạng thái thật và việc đang làm. Bấm vào một agent để thao tác. Phím V hoặc 🏢 để ẩn/hiện ô này.' },
     { sel: '#bell', title: 'Cảnh báo', text: 'Hết token, chạm ngân sách, review chưa duyệt… đều hiện ở đây và thành thông báo góc màn hình.' },
     { sel: '#btn-help', title: 'Cần trợ giúp?', text: 'Bấm ❓ hoặc phím ? bất cứ lúc nào. Phím / để tìm nhanh, N để giao việc mới.' },
   ];
@@ -956,6 +710,10 @@
       e.preventDefault();
       return C.prefillAssign({});
     }
+    if (e.key.toLowerCase() === 'i') {
+      e.preventDefault();
+      return C.setTab('inbox');
+    }
     const tabs = ['home', 'projects', 'tasks', 'assign', 'people', 'quota', 'logs'];
     if (/^[1-7]$/.test(e.key)) {
       e.preventDefault();
@@ -978,12 +736,11 @@
     D.formChanged();
     $('#btn-help').onclick = () => D.help();
     document.addEventListener('keydown', shortcuts);
-    refreshScreen();
-    setInterval(refreshScreen, 30000);
     // runtime nạp xong sau → cập nhật dòng luồng dữ liệu
     setTimeout(D.formChanged, 2500);
     setTimeout(() => D.tour(false), 1200);
   };
 
+  D.closeMenu = closeMenu;
   window.Director = D;
 })();

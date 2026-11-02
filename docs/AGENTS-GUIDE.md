@@ -11,13 +11,13 @@ name: "Backend Developer"       # tên vị trí (role) — không dùng tên ng
 short: "Backend"                # nhãn ngắn trên sơ đồ văn phòng (≤ 14 ký tự)
 title: "Backend Developer (API, CSDL & migration)"
 department: dev                 # id phòng ban (departments/<id>.md) — "office" cho điều phối viên
-role: member                    # lead | member | reviewer | router
+role: member                    # lead | member | reviewer | router | cto
 model: sonnet                   # opus | sonnet | haiku hoặc id model đầy đủ
 runtime: inherit                # hoặc claude-cli | codex-cli | kimi-cli | anthropic-api | openai-api | mock
 tools: [Read, Write, Edit, Glob, Grep, Bash]   # công cụ workspace được dùng (xem bảng dưới)
 skills: [nodejs, typescript, rest-api, database, orm-migration]   # ≥ 5 thẻ — trưởng phòng dựa vào đây để giao việc
 summary: "Một câu mô tả vai trò (hiện trong danh sách nhân sự của trưởng phòng)."
-look: { hair: "#2b1d0e", shirt: "#2563eb", skin: "#f1c27d" }  # màu nhân vật pixel
+look: { hair: "#2b1d0e", shirt: "#2563eb", skin: "#f1c27d" }  # màu chân dung pixel ở văn phòng
 sources:
   - "Tom skill: phan-bien-giai-phap-he-thong"
   - "community: VoltAgent/awesome-claude-code-subagents (backend-developer) — paraphrased"
@@ -58,6 +58,8 @@ Hồ sơ phải nói rõ cách dùng công cụ: đọc repo trước khi đề 
 ```
 
 Trưởng phòng thêm `## Cách phân rã nhiệm vụ`; reviewer thêm `## Tiêu chí review`; điều phối viên thêm `## Quy tắc định tuyến`.
+
+**Vai trò `cto`** (một agent, `department: office`, không thuộc phòng ban làm việc nào — vd. `agents/cto.md`): chạy pha **nghiệm thu** (`accept`) sau khi mọi phòng tổng hợp xong, chỉ có công cụ đọc. Mẫu đầu ra bắt đầu `## Tóm tắt`, có `## Tiêu chí nghiệm thu` (bảng Tiêu chí · Kết quả · Bằng chứng); bộ điều phối tự thêm khối JSON kết luận. Không có agent `cto` thì bỏ qua nghiệm thu; tắt theo nhiệm vụ bằng `options.acceptance: false` hoặc mặc định `defaults.acceptance: false`.
 
 Ở pha họp, hệ thống có thể chỉ gửi `## Sứ mệnh` và `## Chuyên môn & kỹ năng` để tiết kiệm token — hai mục này phải hiểu được khi đứng riêng và nên đặt trước mọi khối code.
 
@@ -103,7 +105,7 @@ keywords: [api, web app, migration, triển khai, elk, …]   # ≥ 20; định 
 
 Bộ định tuyến chỉ thấy 25 từ khóa đầu và dòng đầu tiên của `## Sứ mệnh` — đặt từ khóa tiêu biểu nhất lên trước, câu đầu tiên mô tả đủ phạm vi phòng. Tránh từ khóa quá ngắn dễ khớp nhầm chuỗi con.
 
-Agent khai báo `department: <id>` tự động thuộc phòng đó kể cả khi không có trong `members`. Giao diện xếp tối đa 9 bàn cho `dev` và 6 bàn cho `research`; người thêm vào sau đứng ở hành lang.
+Agent khai báo `department: <id>` tự động thuộc phòng đó kể cả khi không có trong `members`. Ô Văn phòng xếp mỗi agent một bàn trong phòng của phòng ban mình (không giới hạn số bàn); agent không thuộc phòng ban làm việc nào (điều phối, CTO) ngồi ở phòng Điều phối · CTO.
 
 ## Nguồn tham khảo của bộ hồ sơ hiện tại
 
