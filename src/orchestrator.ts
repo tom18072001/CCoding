@@ -51,7 +51,10 @@ import { newTaskId, nowIso, shortId } from './util/ids.js';
 import { redact } from './util/redact.js';
 import { estimateTokens } from './util/tokens.js';
 import { fmtNum } from './util/format.js';
-import { sanitizeSlim } from './slim.js';
+import { resolveSlim, sanitizeSlim } from './slim.js';
+
+/** B-11(c): repo có ≤ ngần này tệp (git ls-files, không tính `.ccoding/`) thì làn đơn dùng danh sách tệp gọn thay bản đồ repo. */
+const SMALL_REPO_FILES = 300;
 import {
   addUsage,
   emptyUsage,
@@ -1267,6 +1270,14 @@ export class Orchestrator {
     run.startedAt ??= nowIso();
     const checkable = this.projectCheckable(task, project);
 
+    // B-11 (b)(c): làm gọn prompt thực thi làn đơn — chưa nâng làn; nâng làn thì xóa (prompt đầy đủ trở lại)
+    const slim = resolveSlim(config, project, task.options);
+    if (run.escalatedFrom !== 'single' && (slim.promptDiet || slim.compactTemplate)) {
+      const files = slim.promptDiet ? this.smallRepoFiles(pctx.cwd) : undefined;
+      pctx.singleSlim = { diet: slim.promptDiet, compact: slim.compactTemplate, files };
+      logs.write({ level: 'info', kind: 'slim.prompt', msg: `${task.id}: làm gọn prompt làn đơn (promptDiet=${slim.promptDiet}, compactTemplate=${slim.compactTemplate}${files ? `, danh sách ${files.length} tệp thay bản đồ repo` : ''})`, taskId: task.id, department: dept.id, data: { promptDiet: slim.promptDiet, compactTemplate: slim.compactTemplate, fileList: files?.length } });
+    } else pctx.singleSlim = undefined;
+
     // 1) baseline lệnh kiểm tra của dự án
     if (checkable && !task.projectChecks?.baseline && !run.subtasks.some((s) => s.attempts > 0 || s.status === 'done')) {
       this.setPhase(task, run, 'execute');
@@ -1335,6 +1346,7 @@ export class Orchestrator {
       logs.write({ level: 'warn', kind: 'lane.escalate', msg: `${task.id}: nâng cấp làn đơn → ${target} (${reason})`, taskId: task.id, projectId: task.projectId, department: dept.id, agentId: agent.id, data: { from: 'single', to: target, trigger, reason, fixRounds: config.gate?.maxFixRounds } });
       this.message(task, dept.id, 'system', 'system', `⬆️ Nâng cấp làn đơn → làn ${target === 'fast' ? 'nhanh' : 'đầy'} (${reason}). Worktree được giữ; phần làm dở của @${agent.id} chuyển cho trưởng phòng lập kế hoạch.`);
       task.lane = target;
+      pctx.singleSlim = undefined;
       run.escalatedFrom = 'single'; // LANE-HANDOVER.md đã ghi TRƯỚC this.save() bên dưới → resume nạp lại được
       if (target === 'fast' && !task.options.phaseModels?.plan && config.fastLane.planModel) task.options.phaseModels = { ...task.options.phaseModels, plan: config.fastLane.planModel };
       run.subtasks = [];
@@ -1468,7 +1480,8 @@ export class Orchestrator {
       const r = await this.runSingleLane(task, run, project, dept, roster, lead, reviewer, pctx, base, prior);
       if (r.final !== undefined) return r.final;
       prior = r.prior;
-      pctx.lane = task.lane === 'single' ? 'fast' : task.lane;
+      pctx.singleSlim = undefined;
+      pctx.lane =task.lane === 'single' ? 'fast' : task.lane;
     }
     // tiếp tục sau tạm dừng giữa lúc nâng làn (plan/execute chưa xong): `prior` của lần nâng đã mất → nạp lại bàn giao dở dang
     if (run.escalatedFrom === 'single' && task.lane !== 'single' && !reached(run, 'executed') && !prior?.includes('# Bàn giao dở dang từ làn đơn')) {
@@ -2902,6 +2915,15 @@ export class Orchestrator {
     } catch (e) {
       this.d.logs.write({ level: 'warn', kind: 'workspace.repomap', msg: `Không tạo được bản đồ repo: ${(e as Error).message}`, taskId: task.id });
     }
+  }
+
+  /** B-11(c): repo nhỏ (≤ SMALL_REPO_FILES tệp theo `git ls-files`, không tính `.ccoding/`) → danh sách tệp gọn; lớn/không phải repo git → undefined (giữ bản đồ repo). */
+  private smallRepoFiles(cwd: string | undefined): string[] | undefined {
+    if (!cwd) return undefined;
+    const ls = spawnSync('git', ['ls-files', '-z'], { cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, windowsHide: true });
+    if (ls.status !== 0 || typeof ls.stdout !== 'string') return undefined;
+    const files = ls.stdout.split('\0').filter((f) => f && !f.startsWith('.ccoding/'));
+    return files.length > 0 && files.length <= SMALL_REPO_FILES ? files : undefined;
   }
 
   /** Dự án có lệnh kiểm tra và nhiệm vụ được chạy lệnh trong workspace (quyền exec). */
