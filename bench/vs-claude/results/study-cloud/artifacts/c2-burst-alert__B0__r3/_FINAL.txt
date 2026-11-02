@@ -1,0 +1,84 @@
+# Báo cáo tổng hợp T-20261102-130224-c93: cảnh báo 5xx bằng cửa sổ trượt (`detectBursts`)
+
+## Tóm tắt
+Hàm `detectBursts` trong `src/alert.js` đã viết xong và đáp ứng đủ yêu cầu của brief. Ngoài ra có thêm 10 test biên trong `test/edge.test.js`. Trước khi sửa, `npm test` báo exit 1 (0/1 pass). Sau khi sửa, `npm test` báo exit 0, 11/11 pass. Kết quả này do CCoding tự chạy và reviewer chạy lại cũng ra như vậy. Không còn lỗi chặn. Còn một rủi ro nhỏ: nếu `windowMs <= 0` thì hàm có thể lỗi. Brief không quy định trường hợp này.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Viết `detectBursts` | @backend-dev | Đạt | `src/alert.js`; `npm test` 1/1 pass; chi tiết ở `.ccoding/T-20261102-130224-c93/outputs/dev-S1-backend-dev.md` |
+| S2 | Test biên, sửa lỗi gốc nếu phát hiện | @senior-swe | Đạt (test không phát hiện lỗi nên không sửa code) | `test/edge.test.js` có 10 test (a)–(j); `npm test` 11/11 pass; chi tiết ở `.ccoding/T-20261102-130224-c93/outputs/dev-S2-senior-swe.md` |
+
+Kết quả lệnh kiểm chứng do CCoding tự chạy:
+- Trước khi sửa: `npm test` → exit 1, tests 1, pass 0, fail 1
+- Sau khi sửa: `npm test` → exit 0, tests 11, pass 11, fail 0
+
+## Quyết định
+- Việc nhỏ nên chỉ chia 2 hạng mục làm lần lượt, không cần kiến trúc, BA hay cổng bảo vệ dữ liệu, vì không đổi schema hay luồng dữ liệu.
+- **A1:** Dùng JavaScript ES module thuần, không thêm dependency. Giữ nguyên chữ ký `export function detectBursts(events, opts = {})`.
+- **A2:** Giá trị mặc định chỉ dùng khi tham số là `undefined`, nên truyền tường minh `cooldownMs: 0` vẫn hợp lệ. Test (f) đã kiểm tra trường hợp này.
+- Cách làm:
+  - Lọc các status 500–599 rồi nhóm theo host bằng `Map`.
+  - Sort theo `ts` rồi theo chỉ số gốc, để các sự kiện cùng `ts` giữ đúng thứ tự trong input.
+  - Dùng con trỏ trái cho cửa sổ nửa mở `(ts − windowMs, ts]`.
+  - Cảnh báo phát khi `count >= threshold` và `ts >= last + cooldownMs`. Sự kiện rơi vào thời gian cooldown vẫn được đếm.
+  - Kết quả sort theo `ts`, rồi theo host.
+  - Độ phức tạp O(n log n). Hàm không mutate input: các object trung gian là bản mới, mảng gốc không bị sort.
+
+## Kết quả review
+- Reviewer xác nhận `src/alert.js` đáp ứng cả 7 yêu cầu. Reviewer tự tính lại bằng tay các giá trị kỳ vọng của test (a)–(j) và chạy lại `npm test`, được 11/11 pass.
+- S2 từng ghi rằng `test/edge.test.js` thay đổi trên đĩa sau lần chạy cuối. Reviewer đã đọc bản hiện tại và bản này pass, nên việc này đã đóng.
+- Test (b) từng tính sai giá trị kỳ vọng, nhưng đó là lỗi của test và S2 đã sửa ngay trong lượt của mình. Không phải lỗi của hàm.
+- Chưa chạy mutation test, tức là chưa cố ý làm hỏng code để xem test có đỏ không.
+
+## Việc còn mở & rủi ro
+- **Rủi ro nhỏ, ngoài phạm vi brief:** khi `windowMs <= 0`, vòng `while (list[left].ts <= ts - windowMs)` ở `src/alert.js:25` có thể đẩy `left` vượt quá cuối mảng. Khi đó truy cập `list[left].ts` ném `TypeError`. Brief không quy định trường hợp này, nên tôi ghi lại để Tom quyết định.
+- Chưa có test cho `ts` không phải số hoặc `threshold <= 0`. Brief cũng không quy định hai trường hợp này.
+- `cooldownMs` mới được test với 3 giá trị: 0, giá trị mặc định và 50. Chưa test trường hợp `cooldownMs > windowMs`.
+
+## Bước tiếp theo
+Phần chính đã xong. Nếu Tom muốn, có thể tách thành các nhiệm vụ nhỏ riêng:
+1. **Chặn `windowMs` không hợp lệ** (@backend-dev, S): chốt hành vi khi `windowMs <= 0`, ném `RangeError` hoặc trả `[]`, rồi thêm 1 test. Xong khi `npm test` pass và có test cho `windowMs = 0`.
+2. **Mutation test nhẹ** (@qa-tester, S): sửa tay 4–5 chỗ trong code, ví dụ đổi `<=` thành `<` ở dòng 25, đổi `>=` thành `>` ở dòng 27, bỏ chỉ số `i` khỏi phép sort, rồi xác nhận mỗi lần sửa đều làm ít nhất 1 test đỏ. Xong khi có bảng kết quả từng lần sửa.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-130224-c93` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **32 in / 12.0k out**, cache đọc 175.5k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | 12 | 5257 | 69092 | 2 |
+| Senior Software Engineer (@senior-swe) | dev | 8 | 3913 | 52309 | 1 |
+| Backend Developer (@backend-dev) | dev | 6 | 1438 | 32704 | 1 |
+| QA Engineer (@qa-tester) | dev | 4 | 1004 | 19153 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 400 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Viết hàm detectBursts trong src/alert.js (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 Viết test các trường hợp biên và sửa lỗi gốc nếu có (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 1 · # suites 0 · # pass 0 · # fail 1 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 11 · # suites 0 · # pass 11 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | **97** A | 100 | 100 | 84 | 100 | 0 | — | 74k | 1/5 |
+| Senior Software Engineer (@senior-swe) | dev | **89** A | 100 | 80 | 100 | 60 | 1 | 1 | 56k | 0/4 |
+| Backend Developer (@backend-dev) | dev | **100** A | 100 | 100 | 100 | 100 | 1 | 1 | 34k | 0/3 |
+| QA Engineer (@qa-tester) | dev | **100** A | — | — | 100 | 100 | 0 | — | 20k | 0/1 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Trưởng phòng Phát triển** (@dev-lead, 97 A):
+  - Thao tác công cụ lỗi nhiều (1/5, 20%; nhiều nhất ở run_command 1/3) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+- **Senior Software Engineer** (@senior-swe, 89 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._
