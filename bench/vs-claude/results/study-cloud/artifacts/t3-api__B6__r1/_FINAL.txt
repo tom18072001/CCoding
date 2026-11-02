@@ -1,0 +1,180 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t3-api__B6__r1] Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Repo nhỏ (~220 dòng), nên chia thành 3 hạng mục song song, mỗi hạng mục có tệp riêng và viết theo hợp đồng hàm cố định. Hai module thuần (lọc/sắp xếp/phân trang và CSV) làm độc lập; hạng mục thứ ba làm xác thực/phân quyền, nhật ký và nối dây route.
+
+Kết quả: 3/3 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Module truy vấn danh sách: parse, lọc, tìm, sắp xếp, phân trang (@backend-dev, done)
+
+## Tóm tắt
+Đã tạo `src/query.js` (`parseQuery`, `applyQuery`) và `test/query.test.js`, không sửa tệp nào khác. `node --test test/query.test.js` pass 6/6. `npm test` pass 8/8 (2 test cũ và 6 test mới).
+
+## Tệp đã tạo/sửa
+- `src/query.js` (mới)
+- `test/query.test.js` (mới)
+
+Điểm chính:
+- **Kiểu module:** CommonJS, giống phần còn lại của repo. `HttpError` lấy từ `./http`, vì `src/query.js` nằm cùng thư mục `src` với `http.js`.
+- **`parseQuery`:**
+  - Duyệt `entries()` theo thứ tự trên URL. Tham số lạ hoặc lặp báo lỗi ngay tại tham số đó, nên lỗi đầu tiên theo thứ tự URL được báo trước.
+  - Khi `paginate=false`, `page` và `pageSize` bị coi là tham số lạ.
+  - `status=`, phần tử rỗng như `todo,` và giá trị lạ đều ném `INVALID_QUERY` với `field: 'status'`.
+  - `dueBefore` kiểm tra bằng Date UTC round-trip.
+  - `page` và `pageSize` phải khớp `/^\d+$/` và nằm trong miền cho phép.
+  - `q=` rỗng được coi là `null`, tức không lọc.
+- **`applyQuery(tasks, parsed, { teamScope, paginate = true })`:**
+  - Trả `{ items, total }`. `total` tính trước khi cắt trang.
+  - `q` và `title` được chuẩn hóa NFD, bỏ dấu kết hợp, `đ`/`Đ` → `d`, lowercase, rồi khớp chuỗi con.
+  - `assignee=none` khớp assignee null. `dueBefore` loại nhiệm vụ không có `dueDate`.
+  - Hòa thì xếp theo id tăng dần theo số, bất kể chiều sắp.
+  - Với `dueDate`, nhiệm vụ không có `dueDate` luôn nằm cuối. `title` so bằng `localeCompare(b,'vi')`.
+
+Hai chỗ đặc tả không nói rõ, tôi tự quyết:
+- `assignee=` rỗng ném `INVALID_QUERY`.
+- `status` trùng giá trị (vd. `todo,todo`) được gộp lại, không báo lỗi.
+
+## Hợp đồng API
+Không áp dụng: đây là module thuần. S3 sẽ nối vào route.
+- `parseQuery(searchParams, { paginate })` trả `{ status, assignee, team, q, dueBefore, sort:{field,desc}, page, pageSize }`.
+- Khi sai, ném `HttpError(400,'INVALID_QUERY',msg,{field})`.
+- `applyQuery(tasks, parsed, { teamScope, paginate })` trả `{ items, total }`.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `node --test test/query.test.js` → exit 0, tests 6, pass 6, fail 0.
+- `npm test` → exit 0, tests 8, pass 8, fail 0.
+
+## Việc còn lại
+- Không có biến môi trường mới.
+- S3 cần nối `parseQuery` và `applyQuery` vào `GET /tasks` và `export.csv`, truyền `teamScope` cho member và `paginate:false` cho export.
+- Test cũ về dạng kết quả danh sách chưa được sửa, vì thuộc S3.
+
+Bản đầy đủ: `.ccoding/T-20261102-151806-370/outputs/dev-S1-backend-dev.md`
+
+### S2 — Module xuất CSV (RFC 4180 + chống chèn công thức) (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã tạo `src/csv.js` (hàm `toCsv(tasks)`) và `test/csv.test.js` theo đúng hợp đồng S2. 12 test CSV đều xanh và `npm test` thoát với exit 0. Tôi không sửa tệp nào khác và chưa nối `toCsv` vào route nào, vì phần đó thuộc S3.
+
+## Tệp đã tạo/sửa
+- `src/csv.js` · mới: `toCsv`, xuất ra BOM, dòng tiêu đề, rồi mỗi nhiệm vụ một dòng, tất cả kết thúc bằng CRLF.
+- `test/csv.test.js` · mới: 12 test.
+
+## Kiểm chứng
+- `node --test test/csv.test.js` → exit 0, 12 pass, 0 fail.
+- `npm test` → exit 0. Tôi chỉ ghi nhận exit code, không so lại số test với mốc ban đầu (2 test).
+
+## Quyết định thiết kế
+- Thứ tự xử lý mỗi ô: `null`/`undefined` thành ô trống, rồi thêm `'` nếu là chuỗi bắt đầu bằng `=`, `+`, `-`, `@`, tab hoặc `\r`, rồi bọc `"…"` nếu chứa `,` `"` `\r` `\n`, và nhân đôi `"` bên trong.
+- Số (như `priority`) chỉ đổi sang chuỗi, không thêm `'`, nên `-1` vẫn là `-1`.
+- Chuỗi bắt đầu bằng `\r` vừa được thêm `'` vừa bị bọc ngoặc kép.
+- `toCsv(null)` hoặc `toCsv(undefined)` được xử lý như danh sách rỗng.
+- Test dùng `require('../src/csv')` thay vì `path.join(__dirname, '..')`, vì hook của môi trường chặn lệnh có chuỗi `..`. Test chạy bình thường.
+
+## Rủi ro & việc còn mở
+- S3 cần gọi `toCsv` ở route export và đặt header `Content-Type: text/csv; charset=utf-8`.
+- Cột `id` luôn là số nên không bị thêm `'`. Nếu `id` có thể là chuỗi bắt đầu bằng `-` thì sẽ bị thêm `'` theo đúng quy tắc.
+
+Bản đầy đủ: `.ccoding/T-20261102-151806-370/outputs/dev-S2-senior-swe.md`
+
+### S3 — Xác thực/phân quyền, nhật ký thao tác, nối route list/export/audit + cập nhật test cũ (@frontend-dev, done)
+
+## Tóm tắt
+S3 đã xong: xác thực `X-User`, phân quyền admin/manager/member, nối route list/export/audit, và nhật ký thao tác. Các test cũ đã sửa theo dạng `{items,total,page,pageSize}` và header `X-User`. Đã thêm test cho auth, audit, list và export. Sau khi gộp với `src/query.js` và `src/csv.js` của S1/S2, `npm test` cho 30/30 pass.
+
+## Tệp đã tạo/sửa
+- Tạo mới: `src/auth.js`, `src/handlers/audit.js`, `test/auth.test.js`, `test/audit.test.js`.
+- Sửa: `src/server.js`, `src/store.js`, `src/handlers/tasks.js`, `test/tasks.test.js`.
+- `src/http.js`: chỉ thêm hàm `sendText`, không đổi hàm cũ.
+- Không sửa `src/query.js` và `src/csv.js`.
+
+Điểm chính:
+- **401**: `src/server.js` kiểm `X-User` cho mọi đường dẫn `/tasks…` và `/audit`, trước cả bước khớp route. Vì vậy `/tasks/zzz` và `/tasks/a/b` cũng ra 401.
+- **Thứ tự quyền khi sửa/xóa**: 404 (member, nhóm khác) → 403 theo nhiệm vụ (manager nhóm khác, member không được giao) → đọc body → 403 theo body → 400 validate.
+- **PATCH của member**: body có trường lạ trên nhiệm vụ của mình ra 403, không phải 400. Body JSON hỏng vẫn ra 400 `INVALID_JSON` vì cần đọc body mới biết trường.
+- **POST**: member bị 403 trước khi đọc body. Manager có `team` ∈ {A,B} khác nhóm mình thì 403 trước validate. Nếu `team` thiếu hoặc không hợp lệ thì validate trả 400.
+- **DELETE**: member nhóm khác ra 404 trước 403.
+- **`GET /tasks`**: `parseQuery` rồi `applyQuery` với `teamScope` là nhóm của member.
+- **`GET /tasks/export.csv`**: đăng ký trước `/tasks/:id`, parse với `paginate:false`, header đúng đặc tả.
+- **Nhật ký**: `store.audit` và `store.auditSeq` (bắt đầu từ 1, tách khỏi bộ đếm id nhiệm vụ). Chỉ ghi khi thao tác thành công. `changes` sắp a→z và update chỉ gồm trường đổi giá trị.
+- **`GET /audit`**: chỉ admin; query lỗi (400) kiểm trước quyền (403). Chỉ nhận `taskId`, trả `{items}` theo `seq` giảm dần.
+
+## Màn hình & trạng thái
+Không áp dụng — hạng mục này chỉ làm backend/API. Các trạng thái lỗi 401/403/404/400 đều có test HTTP.
+
+## API sử dụng
+- `GET /tasks`
+- `GET /tasks/export.csv`
+- `GET /tasks/:id`
+- `POST /tasks`
+- `PATCH /tasks/:id`
+- `DELETE /tasks/:id`
+- `GET /audit`
+
+## Kiểm chứng
+- `npm test` → exit 0 (tính từ dòng tóm tắt, không lấy exit code trực tiếp): # tests 30 · # pass 30 · # fail 0. Lần chạy đầu có 1 test của tôi fail vì `fetch().text()` tự bỏ BOM; đã sửa test để kiểm BOM trên byte thô, không đổi code nguồn.
+- Baseline là 2 test pass; không phát sinh lỗi mới.
+
+## Việc còn lại
+- Không có phần chưa làm. Chưa commit (không được yêu cầu).
+- Giả định: manager có `team` hợp lệ nhưng khác nhóm mình khi tạo thì 403, còn `team` không hợp lệ (ví dụ `Z`) thì 400.
+- Mục a11y không áp dụng.
+
+Bản đầy đủ: `.ccoding/T-20261102-151806-370/outputs/dev-S3-frontend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-151806-370` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **48 in / 36.0k out**, cache đọc 466.9k, 5 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Frontend Developer (@frontend-dev) | dev | 22 | 16818 | 300604 | 1 |
+| Backend Developer (@backend-dev) | dev | 10 | 9916 | 76993 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 8 | 4254 | 47273 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 6 | 4476 | 39826 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 536 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Module truy vấn danh sách: parse, lọc, tìm, sắp xếp, phân trang (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 Module xuất CSV (RFC 4180 + chống chèn công thức) (@senior-swe)
+- `outputs/dev-S3-frontend-dev.md` — S3 Xác thực/phân quyền, nhật ký thao tác, nối route list/export/audit + cập nhật test cũ (@frontend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 2 · # suites 0 · # pass 2 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 30 · # suites 0 · # pass 30 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Frontend Developer (@frontend-dev) | dev | **67** B | — | 27 | 93 | 100 | 1 | 1 | 317k | 2/22 |
+| Backend Developer (@backend-dev) | dev | **96** A | — | 100 | 87 | 100 | 1 | 1 | 87k | 1/6 |
+| Senior Software Engineer (@senior-swe) | dev | **89** A | — | 100 | 68 | 100 | 1 | 1 | 52k | 2/5 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **82** A | — | 100 | 60 | — | 0 | — | 44k | 1/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Frontend Developer** (@frontend-dev, 67 B):
+  - Tốn token gấp 3.7 lần trung vị phòng cho mỗi hạng mục (317k so với 87k).
+- **Senior Software Engineer** (@senior-swe, 89 A):
+  - Thao tác công cụ lỗi nhiều (2/5, 40%; nhiều nhất ở run_command 2/3) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._
