@@ -20,6 +20,8 @@ export interface GuardConfig {
   readsBeforeWrite?: number;
   /** Tệp JSON giữ bộ đếm giữa các lần hook chạy trong một lượt gọi. */
   state?: string;
+  /** Lệnh Bash chạy với stdin = /dev/null (mặc định bật; false = giữ nguyên lệnh). */
+  closeStdin?: boolean;
 }
 
 export interface HookInput {
@@ -37,6 +39,16 @@ export interface GuardState {
 const SHELL_TOOLS = new Set(['Bash', 'PowerShell']);
 const FILE_TOOLS = new Set(['Read', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Grep', 'Glob']);
 const SECRET_FILE = /(^|[\\/])\.env(\.(?!example$|sample$|template$)[^\\/]+)?$/i;
+
+/**
+ * Lệnh Bash chạy với stdin = /dev/null. Trong `claude -p`, stdin của công cụ Bash không bao giờ đóng: lệnh vô tình đọc stdin
+ * (vd. `cat > tệp` thiếu heredoc, heredoc viết sai) treo tới hết thời gian chờ của công cụ — benchtest 1/11 và 2/11 gặp hai lần,
+ * 120 giây và hơn 7 phút, ngay trên đường găng. Heredoc/pipe trong lệnh vẫn cấp stdin riêng nên không bị ảnh hưởng.
+ * Dùng nhóm `{ …; }` (không phải subshell) để `cd`/biến trong lệnh vẫn giữ như cũ.
+ */
+export function withNullStdin(cmd: string): string {
+  return `{ ${cmd}\n} </dev/null`;
+}
 
 /** Trả lý do chặn, hoặc undefined nếu cho phép (quy tắc tĩnh — không phụ thuộc số lần đọc). */
 export function guardDecision(input: HookInput, cfg: GuardConfig): string | undefined {
@@ -139,6 +151,18 @@ async function main(): Promise<void> {
       process.stderr.write(gate.reason);
       process.exit(2);
     }
+  }
+  const command = input.tool_input?.command;
+  if (input.tool_name === 'Bash' && cfg.closeStdin !== false && typeof command === 'string' && command.trim()) {
+    const out = {
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'allow',
+        permissionDecisionReason: 'CCoding: lệnh hợp lệ, chạy với stdin = /dev/null',
+        updatedInput: { ...input.tool_input, command: withNullStdin(command) },
+      },
+    };
+    process.stdout.write(JSON.stringify(out));
   }
   process.exit(0);
 }

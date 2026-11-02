@@ -161,6 +161,7 @@ export class ClaudeCliRuntime implements Runtime {
         // giới hạn khảo sát như vòng công cụ của CCoding: chỉ ở pha phải tạo sản phẩm bằng tệp (thực thi/sửa)
         readsBeforeWrite: policy?.expectWrites && policy.guardState ? policy.readsBeforeWrite ?? 0 : 0,
         state: policy?.guardState,
+        closeStdin: this.cfg.closeStdin !== false,
       });
       // cắt đầu ra lệnh shell (kết quả công cụ bị gửi lại ở mọi lượt sau) — chỉ khi nhiệm vụ/cấu hình đặt (benchtest trước khi đổi mặc định)
       if (policy?.bashMaxOutput && policy.bashMaxOutput > 0) env.BASH_MAX_OUTPUT_LENGTH = String(Math.floor(policy.bashMaxOutput));

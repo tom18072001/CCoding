@@ -124,3 +124,18 @@ test('điều phối làn nhanh: hạng mục của người review → trọng 
     a.cleanup();
   }
 });
+
+test('hook claude-cli: lệnh Bash chạy với stdin = /dev/null (không treo khi lệnh đọc stdin)', async () => {
+  const { withNullStdin } = await import('../src/tools/claude-guard.js');
+  const wrapped = withNullStdin("cat > x.txt 2>/dev/null || true; echo xong");
+  assert.equal(wrapped, "{ cat > x.txt 2>/dev/null || true; echo xong\n} </dev/null");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-stdin-'));
+  try {
+    // chạy thật bằng bash với stdin là một pipe không bao giờ đóng: không có nhóm </dev/null thì `cat` sẽ treo
+    const out = execFileSync('bash', ['-c', withNullStdin("cd sub 2>/dev/null; cat > x.txt; heredoc=$(cat <<'EOF'\nvẫn đọc được heredoc\nEOF\n); echo \"$heredoc\"; pwd")], { cwd: dir, encoding: 'utf8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] });
+    assert.match(out, /vẫn đọc được heredoc/);
+    assert.equal(fs.readFileSync(path.join(dir, 'x.txt'), 'utf8'), '');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

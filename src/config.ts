@@ -37,6 +37,8 @@ export interface RuntimeConfig {
   useApiKey?: boolean;
   /** claude-cli: true = nạp cả cấu hình cấp người dùng (~/.claude: plugin, MCP, hook); mặc định false — gọn ngữ cảnh, đúng chính sách CCoding. */
   userSettings?: boolean;
+  /** claude-cli: lệnh Bash chạy với stdin = /dev/null qua hook (mặc định bật) — tránh lệnh đọc stdin treo tới hết thời gian chờ. */
+  closeStdin?: boolean;
   sandbox?: string;
   baseUrl?: string;
   apiKeyEnv?: string;
