@@ -1,0 +1,76 @@
+# Báo cáo T-20261102-114437-a37: `detectBursts` (cảnh báo bùng phát lỗi 5xx theo cửa sổ trượt) đã xong
+
+## Tóm tắt
+Hàm `detectBursts` trong `src/alert.js` đã được viết xong và khớp mọi yêu cầu biên của đề. Tôi đã tự đọc lại code để đối chiếu. Bộ test biên `test/edge.test.js` có 10 ca. Trước khi sửa, `npm test` → exit 1 (0/1 pass). Sau khi sửa, `npm test` → exit 0 (11/11 pass); số liệu này do CCoding tự chạy. Còn mở một việc: chưa làm mutation check, tức chưa chứng minh được test sẽ đỏ khi code bị làm hỏng. Thay đổi hiện chưa commit.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Viết `detectBursts` | @senior-swe | Đạt | `src/alert.js` (sửa). `npm test` exit 0. Đã tự kiểm các ca: biên cửa sổ, `ts` bằng nhau, input không sort, cooldown, `cooldownMs=0`, không mutate input, input rỗng. Xem `.ccoding/T-20261102-114437-a37/outputs/dev-S1-senior-swe.md` |
+| S2 | Bộ test biên và chạy hồi quy | @qa-tester | Đạt (riêng mutation check chưa làm) | `test/edge.test.js` (mới, 10 test). `npm test` → 11 pass, 0 fail. Xem `.ccoding/T-20261102-114437-a37/outputs/dev-S2-qa-tester.md` |
+
+Kiểm chứng của dự án (CCoding tự chạy, không qua agent):
+- Trước khi sửa: `npm test` → exit 1, 1 test, 0 pass, 1 fail.
+- Sau khi sửa: `npm test` → exit 0, 11 test, 11 pass, 0 fail.
+
+## Quyết định
+- **Quy mô:** chỉ 2 hạng mục chạy lần lượt, không cần kiến trúc, BA hay cổng bảo vệ dữ liệu. Lý do: đây là hàm thuần, không đổi schema hay luồng dữ liệu, dữ liệu thuộc loại internal.
+- **Thuật toán:** lọc các event 500–599. Sort ổn định theo `ts` rồi theo chỉ số gốc, nên các event cùng `ts` giữ đúng thứ tự input. Mỗi host có một deque riêng, loại các phần tử có `ts <= cur.ts - windowMs` để đúng cửa sổ nửa mở `(ts-windowMs, ts]`. Cooldown được kiểm bằng `cur.ts >= last + cooldownMs`. Tổng độ phức tạp là O(n log n).
+- **Không mutate input:** code làm việc trên bản sao đã map. Mặc định `cooldownMs` lấy theo `windowMs` sau khi đã áp giá trị mặc định.
+- **Sort đầu ra:** theo `ts`, rồi theo `host` bằng so sánh `<`/`>`, không dùng `localeCompare` để thứ tự không phụ thuộc locale.
+
+## Kết quả review
+- Reviewer kết luận **Đạt**, không có blocker hay major.
+- Reviewer chạy thêm 2 ca:
+  - 5000 event, buộc deque phải cắt gọn → ra 2001 alert, khớp với kết quả tính tay.
+  - Ca biên `ts` 0, 0, 1000 với `windowMs` 1000 → chỉ có 1 alert tại `ts` 0, count 2.
+- Góp ý minor: chưa có mutation check.
+- Tôi đã tự đọc lại `src/alert.js`. Logic khớp với mô tả ở trên.
+
+## Việc còn mở & rủi ro
+- **Mutation check chưa làm:** hook đã chặn `rm -r` khi đang dựng bản sao. Rủi ro thấp, vì ca 1, 5 và 6 được đặt đúng tại các biên `<`/`<=`, nhưng vẫn chưa được chứng minh.
+- **Chưa validate kiểu dữ liệu:** code không kiểm tra `ts` hay `status` (ví dụ `ts` là NaN). Đề không yêu cầu, nên tôi tạm giả định input luôn hợp lệ.
+- **Chưa commit:** `src/alert.js` đã sửa và `test/edge.test.js` mới tạo đều chưa commit. Theo quy tắc, tôi không tự commit hay push.
+
+## Bước tiếp theo
+1. **Tom duyệt rồi commit** `src/alert.js` và `test/edge.test.js` lên một nhánh tính năng (không commit thẳng vào main).
+2. **Nhiệm vụ riêng (S, tuỳ chọn): mutation check.** Làm hỏng code ngay trong scratchpad: đổi `<=` thành `<` ở bước loại khỏi deque, `>=` thành `>` ở cooldown và ở so sánh với threshold. Tiêu chí xong: với mỗi lỗi cố tình đưa vào, ít nhất 1 test trong `test/edge.test.js` phải fail. Nếu không có test nào fail thì bổ sung test.
+3. **Nhiệm vụ riêng (S, chỉ làm nếu cần): validate input.** Chỉ làm khi Tom muốn hàm từ chối hoặc bỏ qua event có `ts` hay `status` không hợp lệ. Cần chốt hành vi mong muốn trước khi bắt tay vào làm.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-114437-a37` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **34 in / 15.7k out**, cache đọc 202.0k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| QA Engineer (@qa-tester) | dev | 16 | 7676 | 110848 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 10 | 5140 | 56188 | 2 |
+| Senior Software Engineer (@senior-swe) | dev | 6 | 2479 | 32734 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 398 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Hiện thực detectBursts trong src/alert.js (@senior-swe)
+- `outputs/dev-S2-qa-tester.md` — S2 Bộ test biên cho detectBursts và chạy hồi quy (@qa-tester)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 1 · # suites 0 · # pass 0 · # fail 1 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 11 · # suites 0 · # pass 11 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| QA Engineer (@qa-tester) | dev | **88** A | 100 | 72 | 77 | 100 | 1 | 1 | 119k | 2/7 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | 100 | 100 | 100 | 100 | 0 | — | 61k | 0/3 |
+| Senior Software Engineer (@senior-swe) | dev | **100** A | 100 | 100 | 100 | 100 | 1 | 1 | 35k | 0/3 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **QA Engineer** (@qa-tester, 88 A):
+  - Thao tác công cụ lỗi nhiều (2/7, 29%; nhiều nhất ở run_command 2/6) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._
