@@ -171,6 +171,31 @@ Mức: **P0** = chặn khóa đăng ký trước (S4 đánh dấu "khóa có đi
 | **SR-07** | **P0** | Khóa một chế độ chấm cho cả nghiên cứu: `analyze.mjs` từ chối nếu `details.judge` khác nhau giữa các lượt cùng bài; quy định chạy chính luôn bật `--judge` (regex chỉ là lưới an toàn, báo cả hai điểm khi có thể); ghi rõ model giám khảo | `analyze.mjs` (kiểm đầu vào, sau dòng 12), `run.mjs:36` (cờ), `README.md:47` | H1 (r1), H4, H9 |
 | **SR-08** | **P0** | Giám khảo cặp: đối chiếu người một mẫu ≥ 20 % cặp, thêm giám khảo thứ hai ngoài `A0-opus` model, ghi tỉ lệ đồng thuận; thêm kiểm định dấu/CI nhị thức; chuẩn hóa ngôn ngữ/tệp phụ để tăng mù. Phần mã nhỏ có thể làm sau, nhưng đăng ký trước phải ghi giới hạn mù | `pairwise.mjs:14,19-23,39-41`, `lib/judge.mjs:6-12,38` | Mọi kết luận dùng pairwise; H4, H9 |
 
+### P0 bổ sung cho nhánh sau 5/11 (thêm ở preregistration v2.1)
+
+| Mã | Mức | Nội dung | Tệp:dòng cần sửa | H/giả thuyết bị ảnh hưởng |
+| --- | --- | --- | --- | --- |
+| **SR-25** | **P0** (nhánh sau 5/11; không chặn nhánh trước 5/11) | Thêm phép **hoán vị nhãn arm theo lượt, phân tầng theo bài** cho `compare` (đặc tả bên dưới). Lý do: hoán vị đổi dấu theo bài (`:51`) có p_min = 2¹⁻ⁿ (mã dùng `Math.abs`, hai phía) nên H1, H2 với n ≤ 4 bài không thể qua ngưỡng Holm (`preregistration.md` §2.5). Không sửa mã trong gói này | `analyze.mjs` (hàm mới cạnh `compare` `:38-53`; nối vào H1′/H2′), test mới `analyze.test.mjs` (hoặc `harness/`) | H1′, H2′ (`preregistration.md` §2.6); H1, H2 sau khi khóa |
+
+**Đặc tả SR-25 (Phòng Dev thực hiện).**
+
+- **Hàm:** `permStratified(cells, { alt = 'greater', maxExact = 1e6, M = 10000, seed = 20261102 })`. `cells` = `[{ task, a: number[], b: number[] }, …]` (a = điểm BASE từng lượt, b = điểm TREAT từng lượt; lượt loại theo `preregistration.md` §4.3 đã bị lọc trước). Bài thiếu `a` hoặc `b` bị bỏ và báo trong kết quả.
+- **Thống kê:** T = trung bình theo bài của (mean(b) − mean(a)); mọi bài trọng số bằng nhau.
+- **Gán lại:** trong mỗi bài với r_a + r_b lượt, mọi cách chọn r_b lượt làm TREAT; số cách = ∏_b C(r_a,b + r_b,b ; r_b,b). Chỉ tính các bài có cả hai arm; bài r_a ≠ r_b vẫn hợp lệ.
+- **p:** `alt = 'greater'`: p = #{T* ≥ T_obs − 1e-12} / N (liệt kê đủ nếu N ≤ `maxExact`). `alt = 'less'`: ngược lại. `alt = 'two'`: |T*| ≥ |T_obs| − 1e-12. Nếu N > `maxExact`: lấy mẫu `M` phép gán bằng Fisher-Yates (không dùng `.sort(() => rnd() - 0.5)`, SR-05) với bộ sinh có hạt (SR-20), p = (k + 1)/(M + 1).
+- **Trả về:** `{ n, nPerm, exact, tObs, p, pMin: 1/N (exact) hoặc 1/(M+1), skipped: [task…] }`. `pMin` phải được in kèm p trong báo cáo, và `analyze.mjs` từ chối nhãn "xác nhận" nếu `pMin` > ngưỡng Holm truyền vào.
+- **Hạt:** cùng `seed` → cùng kết quả; không đụng trạng thái `rnd()` chung của `compare` (để không đổi p của H1–H10 hiện có).
+- **Test (input → kỳ vọng):**
+  1. **p_min tính tay.** 2 bài, r = 2 mỗi arm, B0 luôn cao hơn: bài 1 `a=[0,0] b=[1,1]`, bài 2 `a=[0.2,0.3] b=[0.8,0.9]`. N = C(4,2)² = 36; chỉ phép gán nguyên bản cho T* ≥ T_obs ⇒ `p = 1/36 ≈ 0.02778`, `pMin = 1/36`, `exact = true`, `nPerm = 36`.
+  2. **Ca có hòa, tính tay.** Bài 1 `a=[0,0] b=[1,1]`; bài 2 `a=[0.5,1] b=[0.5,1]`. N = 36. Bài 1 cho d₁ ∈ {+1 (1 cách), 0 (4), −1 (1)}; bài 2 cho d₂ ∈ {+0.5 (1), 0 (4), −0.5 (1)}. T_obs = (1 + 0)/2 = 0.5; T* ≥ 0.5 ⇔ d₁ + d₂ ≥ 1 ⇔ d₁ = 1 và d₂ ∈ {0, +0.5}: 1·(4 + 1) = 5 cách ⇒ `p = 5/36 ≈ 0.13889`.
+  3. **Suy biến về đổi dấu.** 3 bài, r = 1 mỗi arm, `a=[0] b=[1]` ở cả ba: N = 2³ = 8, `p = 1/8 = 0.125`, `pMin = 0.125` (khớp p_min hoán vị đổi dấu một phía 2⁻³).
+  4. **Không có hiệu ứng.** Mọi `a`, `b` giống nhau (điểm đều 1.0): `tObs = 0`, `p = 1` (mọi phép gán cho T* = 0 ≥ 0).
+  5. **Hướng.** Ca 1 với `alt='less'`: `p = 1` (chỉ T* ≤ T_obs là mọi phép gán, vì T_obs là cực đại ⇒ #{T* ≤ T_obs} = 36).
+  6. **Bài bị bỏ.** Thêm bài 3 chỉ có `a`: `skipped = ['bài 3']`, p không đổi so với ca 1.
+  7. **Hạt.** N > `maxExact` (ví dụ 8 bài, r = 6, N = 924⁸): hai lần cùng `seed` cho cùng p; `exact = false`; `pMin = 1/(M+1)`.
+  8. **Cổng nhãn.** Gọi với ngưỡng Holm 0,0125 trên ca 3 (`pMin = 0.125`): cờ `confirmable = false`.
+- **Thay số p_min cho kế hoạch** (không phải test): 6 bài r = 1: 1/64 = 0,0156; 6 bài r = 2: 1/46 656; 1 bài r = 3: 1/20 = 0,05; 1 bài r = 5: 1/252 = 0,0040 (`preregistration.md` §2.6).
+
 ### P1
 
 | Mã | Mức | Nội dung | Tệp:dòng | Ảnh hưởng |
