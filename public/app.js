@@ -48,7 +48,7 @@
   const ACCESS_VI = { none: 'không công cụ', read: 'chỉ đọc', write: 'đọc/ghi file', exec: 'đọc/ghi + chạy lệnh' };
   const size = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n >= 1024 ? Math.round(n / 1024) + ' KB' : n + ' B');
   const MODE_VI = { auto: 'Tự động', department: 'Theo phòng', project: 'Theo dự án', joint: 'Liên phòng', agent: 'Giao riêng' };
-  const KIND_VI = { plan: 'kế hoạch', discussion: 'thảo luận', decision: 'quyết định', handoff: 'bàn giao', review: 'review', final: 'báo cáo', system: 'hệ thống', note: 'chỉ dẫn của bạn' };
+  const KIND_VI = { plan: 'kế hoạch', discussion: 'thảo luận', decision: 'quyết định', handoff: 'bàn giao', review: 'review', final: 'báo cáo', system: 'hệ thống', note: 'chỉ dẫn của bạn', acceptance: 'nghiệm thu' };
   const CLS_VI = { public: 'Công khai', internal: 'Nội bộ', confidential: 'Bảo mật', restricted: 'Hạn chế' };
 
   const fmt = (n) => {

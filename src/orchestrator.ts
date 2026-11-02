@@ -28,7 +28,7 @@ import {
 import type { Herdr } from './herdr.js';
 import { shipPush, shipStatus, ShipError, type ShipContext, type ShipStatus } from './ship.js';
 import type { LogStore } from './logger.js';
-import { blockedSubtasks, keywordRoute, newSubtask, orderJoint, parsePlan, parseReview, parseRoute, readySubtasks } from './planner.js';
+import { blockedSubtasks, keywordRoute, newSubtask, orderJoint, parseAcceptance, parsePlan, parseReview, parseRoute, readySubtasks } from './planner.js';
 import { historyText, selectHistory } from './history.js';
 import * as P from './prompts.js';
 import type { Registry } from './registry.js';
@@ -115,6 +115,7 @@ const STATUS_BY_PHASE: Record<Phase, AgentStatus> = {
   review: 'reviewing',
   revise: 'working',
   synthesize: 'thinking',
+  accept: 'reviewing',
 };
 
 const ACTIVITY_BY_PHASE: Record<Phase, string> = {
@@ -126,6 +127,7 @@ const ACTIVITY_BY_PHASE: Record<Phase, string> = {
   review: 'Review sản phẩm',
   revise: 'Sửa theo review',
   synthesize: 'Viết báo cáo tổng hợp',
+  accept: 'Nghiệm thu kết quả',
 };
 
 const WAIT_PHASE_LABEL: Partial<Record<Phase, string>> = { execute: 'thực thi', revise: 'sửa theo review', review: 'review' };
@@ -300,6 +302,7 @@ export class Orchestrator {
         subtaskBudgetTokens: o.subtaskBudgetTokens && o.subtaskBudgetTokens > 0 ? Math.floor(o.subtaskBudgetTokens) : undefined,
         ...variantOptions(o),
         planApproval: (o.planApproval ?? project?.planApproval ?? config.defaults.planApproval) ? true : undefined,
+        acceptance: (o.acceptance ?? config.defaults.acceptance ?? true) !== false,
       },
       after: extra.after?.length ? extra.after : undefined,
       splitFrom: extra.splitFrom,
@@ -936,10 +939,13 @@ export class Orchestrator {
         logs.write({ level: 'warn', kind: 'task.failed', msg: `${task.id}: ${task.error}`, taskId: task.id, projectId: task.projectId, data: { usage: task.usage } });
         this.alert({ level: 'warn', kind: 'task.unfinished', title: 'Nhiệm vụ chưa xong hết', msg: `${task.title}: ${task.error}`, taskId: task.id });
       } else {
+        // CTO nghiệm thu (tạm dừng/hủy giữa chừng thì ném lên như mọi lượt gọi khác)
+        await this.accept(task, project);
+        task.phase = undefined;
         task.status = 'done';
         logs.write({ level: 'info', kind: 'task.done', msg: `Hoàn thành ${task.id} — ${fmtNum(totalTokens(task.usage))} token${task.attention ? ` · cần xem: ${task.attention.detail}` : ''}`, taskId: task.id, projectId: task.projectId, data: { usage: task.usage } });
         if (task.attention)
-          this.alert({ level: 'warn', kind: 'task.attention', title: task.attention.reason === 'review' ? 'Xong nhưng review chưa duyệt' : 'Xong nhưng lệnh kiểm tra còn lỗi', msg: `${task.title}: ${task.attention.detail} — xem báo cáo, "Làm lại từ review" hoặc tách việc còn lại`, taskId: task.id });
+          this.alert({ level: 'warn', kind: 'task.attention', title: task.attention.reason === 'review' ? 'Xong nhưng review chưa duyệt' : task.attention.reason === 'acceptance' ? 'Xong nhưng CTO chưa nghiệm thu' : 'Xong nhưng lệnh kiểm tra còn lỗi', msg: `${task.title}: ${task.attention.detail} — xem báo cáo, "Làm lại từ review" hoặc tách việc còn lại`, taskId: task.id });
         void this.d.herdr?.notify(`CCoding: xong ${task.id}${task.attention ? ' (cần xem)' : ''}`, task.title);
       }
     } catch (e) {
@@ -990,6 +996,61 @@ export class Orchestrator {
       for (const [id, h] of this.holds) if (h.taskId === task.id) this.holds.delete(id);
       this.save(task, true);
     }
+  }
+
+  /**
+   * Pha nghiệm thu (UX-4c): sau khi mọi phòng tổng hợp xong, CTO đối chiếu đề bài với báo cáo, kết luận review và lệnh kiểm tra,
+   * kết luận từng tiêu chí. Chưa đạt → "cần xem" (hộp Cần bạn). Báo cáo không đổi (cùng dấu vân tay) thì không nghiệm thu lại.
+   * Lỗi gọi model không làm hỏng nhiệm vụ (ghi nhận và bỏ qua); tạm dừng/hủy thì ném lên như mọi lượt gọi.
+   */
+  private async accept(task: Task, project?: ProjectDef): Promise<void> {
+    const { registry, store, logs } = this.d;
+    const cto = registry.cto();
+    if (!cto || task.mode === 'agent' || task.options.acceptance === false || !task.runs.length) return;
+    const sig = task.runs.map((r) => `${r.department}:${r.finishedAt ?? ''}:${r.finalPath ?? ''}`).join('|');
+    if (task.acceptance?.sig === sig) return;
+    // báo cáo đã viết lại → kết luận nghiệm thu cũ hết hiệu lực
+    if (task.attention?.reason === 'acceptance') task.attention = undefined;
+    task.phase = 'accept';
+    this.save(task);
+    const items: P.AcceptInput[] = task.runs.map((r) => ({
+      department: registry.departments.get(r.department)?.name ?? r.department,
+      final: r.finalPath ? (store.readRunFile(task.id, r.finalPath) ?? '') : '',
+      review: r.review ? `${r.review.approved ? 'Đã duyệt' : 'Chưa duyệt'} — ${r.review.summary}${r.review.issues.length ? ` (${r.review.issues.length} góp ý)` : ''}` : undefined,
+    }));
+    const base = { by: cto.id, at: nowIso(), sig, criteria: [], risks: [], followUps: [] };
+    let text = '';
+    try {
+      const res = await this.call(cto, 'accept', (tools) => P.acceptPrompt(task, items, { changes: task.changes, tools, projectName: project?.name }), {
+        task,
+        project,
+        cwd: task.workspace ?? this.workspaceFor(task, project),
+        activity: ACTIVITY_BY_PHASE.accept,
+        hints: { brief: task.brief, subtasks: task.runs.flatMap((r) => r.subtasks.map(stHint)) },
+      });
+      if (!res.text) throw new Error(res.error || 'không có nội dung');
+      text = res.text;
+    } catch (e) {
+      if (e instanceof PauseSignal || e instanceof CancelledError) throw e;
+      const msg = (e as Error).message.slice(0, 300);
+      task.acceptance = { ...base, accepted: false, parsed: false, summary: '', error: msg };
+      logs.write({ level: 'warn', kind: 'accept.error', msg: `${task.id}: CTO chưa nghiệm thu được — ${msg}`, taskId: task.id, projectId: task.projectId, agentId: cto.id });
+      this.message(task, 'office', 'system', 'system', `⚠️ CTO chưa nghiệm thu được (${msg}) — kết quả vẫn được giao; xem báo cáo và tự đối chiếu.`);
+      this.save(task);
+      return;
+    }
+    const r = parseAcceptance(text);
+    // phần hiển thị: bỏ khối JSON máy đọc ở cuối
+    const body = text.replace(/```json[\s\S]*?```\s*$/i, '').trim() || text.trim();
+    const rel = 'ACCEPTANCE.md';
+    writeText(path.join(store.runDir(task.id), rel), `${body}\n`);
+    task.acceptance = { ...base, accepted: r.accepted, parsed: r.parsed, summary: r.summary || extractSummary(body, 240), criteria: r.criteria, risks: r.risks, followUps: r.followUps, path: rel };
+    const fails = r.criteria.filter((c) => c.result !== 'pass').length;
+    logs.write({ level: r.accepted ? 'info' : 'warn', kind: 'accept.done', msg: `${task.id}: CTO ${r.accepted ? 'nghiệm thu' : r.parsed ? `chưa nghiệm thu (${fails}/${r.criteria.length} tiêu chí chưa đạt)` : 'không ghi kết luận đọc được'}`, taskId: task.id, projectId: task.projectId, agentId: cto.id, data: { accepted: r.accepted, parsed: r.parsed, criteria: r.criteria.length, fails } });
+    this.message(task, 'office', cto.id, 'acceptance', body);
+    if (r.parsed && !r.accepted && !task.attention)
+      task.attention = { reason: 'acceptance', detail: `CTO chưa nghiệm thu: ${fails ? `${fails}/${r.criteria.length} tiêu chí chưa đạt hoặc chưa kiểm được` : 'chưa có tiêu chí đạt'}`, at: nowIso() };
+    this.save(task);
   }
 
   private async route(task: Task, project?: ProjectDef): Promise<string[]> {
@@ -3048,7 +3109,7 @@ export function cliTools(agentTools: string[], access: ToolAccess, phase: Phase,
   return list;
 }
 
-const VARIANT_PHASES = new Set(['route', 'plan', 'discuss', 'finalize', 'execute', 'review', 'revise', 'synthesize']);
+const VARIANT_PHASES = new Set(['route', 'plan', 'discuss', 'finalize', 'execute', 'review', 'revise', 'synthesize', 'accept']);
 
 /** Tùy chọn biến thể (benchtest) hợp lệ từ yêu cầu giao việc — chỉ nhận đúng kiểu, bỏ phần lạ. */
 export function variantOptions(o: Partial<TaskOptions>): Partial<TaskOptions> {

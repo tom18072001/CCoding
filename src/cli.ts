@@ -511,8 +511,8 @@ function cmdAgents(args: string[]): void {
   const registry = new Registry(config.agentsDir, config.departmentsDir);
   for (const e of registry.errors) console.log(c.yellow(`⚠ ${e}`));
   const groups = [...registry.departments.values()].map((d) => ({ id: d.id, name: d.name, color: d.color, members: registry.members(d.id) }));
-  const router = registry.router();
-  if (router && !values.dept) groups.unshift({ id: 'office', name: 'Văn phòng điều phối', color: '#991b1b', members: [router] });
+  const office = [registry.router(), registry.cto()].filter((a): a is NonNullable<typeof a> => !!a);
+  if (office.length && !values.dept) groups.unshift({ id: 'office', name: 'Văn phòng điều phối', color: '#991b1b', members: office });
   for (const g of groups.filter((x) => !values.dept || x.id === values.dept)) {
     console.log(`\n${hexColor(g.color, '██')} ${c.bold(g.name)} ${c.gray(`(${g.id})`)}`);
     console.log(
@@ -589,7 +589,8 @@ async function cmdDoctor(): Promise<void> {
 function logGroups(registry: Registry): LogGroup[] {
   const groups: LogGroup[] = [];
   const router = registry.router();
-  if (router) groups.push({ id: router.department || 'office', short: 'Điều phối', agents: [router] });
+  const office = [router, registry.cto()].filter((a): a is NonNullable<typeof a> => !!a);
+  if (office.length) groups.push({ id: router?.department || 'office', short: 'Điều phối', agents: office });
   for (const d of registry.departments.values()) groups.push({ id: d.id, short: d.short, agents: registry.members(d.id) });
   return groups;
 }

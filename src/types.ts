@@ -1,10 +1,11 @@
 // Kiểu dữ liệu dùng chung cho toàn bộ CCoding.
 
-export type Role = 'lead' | 'member' | 'reviewer' | 'router';
+/** cto: nghiệm thu kết quả của các phòng sau khi tổng hợp (pha `accept`), không thuộc phòng ban làm việc nào. */
+export type Role = 'lead' | 'member' | 'reviewer' | 'router' | 'cto';
 export type Classification = 'public' | 'internal' | 'confidential' | 'restricted';
 /** agent: giao việc riêng cho MỘT agent (bỏ định tuyến/lập kế hoạch/họp; vẫn review nếu bật). */
 export type TaskMode = 'auto' | 'department' | 'project' | 'joint' | 'agent';
-export type Phase = 'route' | 'plan' | 'discuss' | 'finalize' | 'execute' | 'review' | 'revise' | 'synthesize';
+export type Phase = 'route' | 'plan' | 'discuss' | 'finalize' | 'execute' | 'review' | 'revise' | 'synthesize' | 'accept';
 export type TaskStatus = 'queued' | 'running' | 'paused' | 'done' | 'failed' | 'cancelled';
 /** pause: chạm trần thì tạm dừng chờ quyết định · complete: chạy tới khi hoàn thành (chấp nhận vượt trần, chỉ cảnh báo). */
 export type BudgetMode = 'pause' | 'complete';
@@ -329,6 +330,32 @@ export interface TaskOptions {
   variant?: string;
   /** Dừng sau khi chốt kế hoạch, chờ giám đốc duyệt (sửa người làm/phụ thuộc/bỏ hạng mục) rồi mới thực thi. */
   planApproval?: boolean;
+  /** CTO nghiệm thu sau khi các phòng tổng hợp xong (mặc định theo cấu hình; việc giao riêng một agent thì bỏ qua). */
+  acceptance?: boolean;
+}
+
+export interface AcceptanceCriterion {
+  name: string;
+  result: 'pass' | 'fail' | 'unknown';
+  evidence: string;
+}
+
+export interface Acceptance {
+  at: string;
+  by: string;
+  /** Mọi tiêu chí đạt (đọc được kết luận). */
+  accepted: boolean;
+  /** Đọc được khối JSON kết luận của CTO. */
+  parsed: boolean;
+  summary: string;
+  criteria: AcceptanceCriterion[];
+  risks: string[];
+  followUps: Array<{ title: string; brief: string; department?: string }>;
+  /** Tệp ACCEPTANCE.md trong thư mục chạy của nhiệm vụ. */
+  path?: string;
+  /** Dấu vân tay báo cáo tổng hợp lúc nghiệm thu — báo cáo viết lại thì nghiệm thu lại. */
+  sig: string;
+  error?: string;
 }
 
 export interface Attachment {
@@ -417,7 +444,9 @@ export interface Task {
   /** Lệnh kiểm tra của dự án do CCoding tự chạy: trước khi sửa (baseline) và sau thực thi/sửa (latest). */
   projectChecks?: ProjectChecks;
   /** Nhiệm vụ đã chạy xong nhưng cần người xem lại (vd. review cuối chưa duyệt). */
-  attention?: { reason: 'review' | 'checks'; detail: string; at: string };
+  attention?: { reason: 'review' | 'checks' | 'acceptance'; detail: string; at: string };
+  /** Kết luận nghiệm thu của CTO sau khi các phòng tổng hợp xong (UX-4c). */
+  acceptance?: Acceptance;
   createdAt: string;
   updatedAt: string;
   startedAt?: string;
@@ -459,7 +488,7 @@ export interface ChatMessage {
   taskId: string;
   department: string;
   from: string;
-  kind: 'plan' | 'discussion' | 'decision' | 'handoff' | 'review' | 'final' | 'system' | 'note';
+  kind: 'plan' | 'discussion' | 'decision' | 'handoff' | 'review' | 'final' | 'system' | 'note' | 'acceptance';
   text: string;
   round?: number;
   subtaskId?: string;

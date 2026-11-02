@@ -148,6 +148,38 @@ export function parseReview(text: string, subtaskIds: string[]): ReviewResult {
   return { approved, summary: String(raw.summary ?? ''), issues, checks, parsed: true };
 }
 
+export interface AcceptResult {
+  accepted: boolean;
+  parsed: boolean;
+  summary: string;
+  criteria: Array<{ name: string; result: 'pass' | 'fail' | 'unknown'; evidence: string }>;
+  risks: string[];
+  followUps: Array<{ title: string; brief: string; department?: string }>;
+}
+
+/** Đọc kết luận nghiệm thu của CTO (khối JSON cuối). Không đọc được → chưa coi là nghiệm thu, parsed=false. */
+export function parseAcceptance(text: string): AcceptResult {
+  const raw = extractJson<{ accepted?: unknown; summary?: unknown; criteria?: unknown; risks?: unknown; followUps?: unknown; follow_ups?: unknown }>(text);
+  if (!raw) return { accepted: false, parsed: false, summary: '', criteria: [], risks: [], followUps: [] };
+  const res = (v: unknown): 'pass' | 'fail' | 'unknown' => {
+    const t = String(v ?? '').toLowerCase();
+    return /^(pass|đạt|dat|ok|yes|true)$/.test(t) ? 'pass' : /^(fail|không|khong|không đạt|no|false)$/.test(t) ? 'fail' : 'unknown';
+  };
+  const criteria = (Array.isArray(raw.criteria) ? raw.criteria : [])
+    .map((c: any) => ({ name: String(c?.name ?? c?.criterion ?? '').slice(0, 300), result: res(c?.result ?? c?.status), evidence: String(c?.evidence ?? '').slice(0, 500) }))
+    .filter((c) => c.name)
+    .slice(0, 20);
+  const risks = (Array.isArray(raw.risks) ? raw.risks : []).map((r) => String(r ?? '').slice(0, 400)).filter(Boolean).slice(0, 12);
+  const fu = Array.isArray(raw.followUps) ? raw.followUps : Array.isArray(raw.follow_ups) ? raw.follow_ups : [];
+  const followUps = fu
+    .map((f: any) => ({ title: String(f?.title ?? '').slice(0, 120), brief: String(f?.brief ?? f?.description ?? '').slice(0, 4000), department: ['dev', 'research'].includes(f?.department) ? String(f.department) : undefined }))
+    .filter((f) => f.title && f.brief)
+    .slice(0, 5);
+  // kết luận chung phải khớp bảng: còn tiêu chí không đạt / chưa kiểm được thì chưa nghiệm thu
+  const accepted = Boolean(raw.accepted) && criteria.length > 0 && criteria.every((c) => c.result === 'pass');
+  return { accepted, parsed: true, summary: String(raw.summary ?? '').slice(0, 600), criteria, risks, followUps };
+}
+
 export interface RouteResult {
   departments: string[];
   joint: boolean;
