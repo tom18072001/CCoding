@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Classification, Phase, TaskOptions, ToolAccess } from './types.js';
+import type { Classification, GateConfig, Phase, TaskOptions, ToolAccess } from './types.js';
 
 /** Thư mục gốc của repo (chứa package.json). */
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -161,6 +161,8 @@ export interface Config {
    * Hiện chỉ options.lane ép được làn; chưa có cấu hình ép làn theo dự án.
    */
   lanes: { single: { enabled: boolean; maxParts: number; maxFilesTouched: number } };
+  /** B-02 cổng chất lượng: maxFixRounds = số vòng sửa theo kiểm tra (lệnh đỏ, sai mẫu đầu ra) trước khi nâng cấp/không duyệt. */
+  gate: GateConfig;
   /** Công cụ workspace cho agent (đọc/ghi file, chạy lệnh) — xem docs/TOOLS.md. */
   tools: {
     /** Quyền mặc định khi nhiệm vụ không thuộc dự án (workspace riêng của CCoding). */
@@ -289,6 +291,7 @@ const BUILTIN: Omit<Config, 'root'> = {
     waitPhases: ['execute', 'revise', 'review'],
   },
   runner: 'auto',
+  gate: { maxFixRounds: 2 },
   maxConcurrentTasks: 2,
   defaults: { discussionRounds: 1, review: true, maxParallel: 3, maxRevisions: 1, budgetTokens: 1500000, budgetMode: 'complete', subtaskBudgetTokens: 0, timeoutMs: 1800000, planApprovalMinutes: 0, acceptance: true },
   phases: {

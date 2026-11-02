@@ -37,7 +37,8 @@ import type { Registry } from './registry.js';
 import { classifyError, RuntimeError, shouldFailover, toRuntimeError } from './runtimes/errors.js';
 import type { Candidate, RuntimeManager } from './runtimes/index.js';
 import type { Store } from './store.js';
-import { clearFixedFeedback, kpiMarkdown, kpiReport } from './kpi.js';
+import { clearFixedFeedback, kpiMarkdown, kpiReport, templateHeadings } from './kpi.js';
+import { changedFiles, classifyChecks, reviewerReasons, templateGate, type ClassifiedCheck, type QualityGateOptions, type QualityGateResult } from './quality-gate.js';
 import { subtaskHistory, type AgentHistory } from './estimate.js';
 import { buildRepoMap } from './repomap.js';
 import { chooseLane, laneSignals, type LaneSignals } from './lane.js';
@@ -158,6 +159,8 @@ interface CallCtx {
   cwd: string;
   hints?: Record<string, unknown>;
   activity?: string;
+  /** B-02: lượt chỉ viết văn bản (sửa định dạng) — không cấp công cụ dù agent/quyền cho phép. */
+  noTools?: boolean;
 }
 
 type Builder = (tools: ToolName[]) => P.Built;
@@ -1468,6 +1471,26 @@ export class Orchestrator {
           // lần sửa trước (có thể dở dang do tạm dừng) đã đổi workspace sau lần kiểm tra gần nhất → chạy lại lệnh kiểm tra trước review
           const pcs = task.projectChecks;
           if (this.projectCheckable(task, project) && pcs?.staleAt && (!pcs.latestAt || pcs.latestAt < pcs.staleAt)) await this.runProjectChecks(task, project, dept.id, 'revise');
+          // B-02: cổng chất lượng chạy TRƯỚC reviewer — lệnh đỏ/hồi quy vào vòng sửa theo kiểm tra, sai mẫu vào lượt sửa định dạng
+          const gate = await this.runQualityGate(task, run, project, reviewer, { dept: dept.id, pctx, base });
+          const sysNow = task.projectChecks?.latest ?? [];
+          const gateChecks = sysNow.map((r) => ({ command: r.command, exitCode: r.code ?? undefined, ok: r.ok, note: `CCoding tự chạy${r.summary ? ` — ${r.summary.slice(0, 120)}` : ''}` }));
+          if (gate.forceUnapproved) {
+            // đỏ kéo dài mà đề bài yêu cầu xanh: không gọi reviewer, không bao giờ approved (nâng cấp là việc của luồng gọi)
+            const summary = `Cổng chất lượng: ${gate.stillRed.map((c) => `\`${c}\``).join(', ')} đề bài yêu cầu xanh nhưng còn đỏ sau ${gate.fixRounds} vòng sửa theo kiểm tra — không gọi reviewer, không duyệt.`;
+            run.review = { approved: false, summary, issues: [], checks: gateChecks, verified: true };
+            this.d.logs.write({ level: 'warn', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'forced-unapproved', stillRed: gate.stillRed, fixRounds: gate.fixRounds } });
+            this.message(task, dept.id, 'system', 'system', `⛔ ${summary}`);
+            break;
+          }
+          if (!gate.needReviewer) {
+            const summary = `Cổng chất lượng: lệnh kiểm tra đều xanh${gate.fixRounds ? ` sau ${gate.fixRounds} vòng sửa` : ''}, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.`;
+            run.review = { approved: true, summary, issues: [], checks: gateChecks, verified: true };
+            this.d.logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'skip-reviewer', fixRounds: gate.fixRounds } });
+            this.message(task, dept.id, 'system', 'system', `✅ ${summary}`);
+            break;
+          }
+          this.d.logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: gọi reviewer — ${gate.reasons.join('; ')}`, taskId: task.id, department: dept.id, data: { decision: 'call-reviewer', reasons: gate.reasons } });
           this.setPhase(task, run, 'review');
           const items = done().map((st) => this.depInput(task, st));
           const changes = this.workspaceChanges(task);
@@ -1477,7 +1500,7 @@ export class Orchestrator {
             'review',
             (tools) => {
               reviewTools = tools;
-              return P.reviewPrompt({ ...pctx, reviewFocus: run.reviewFocus }, items, tools, changes);
+              return P.reviewPrompt({ ...pctx, reviewFocus: run.reviewFocus }, items, tools, changes, this.projectCheckable(task, project));
             },
             { ...base, hints: { brief: task.brief, subtasks: items.map((i) => stHint(i.st)), attempt } },
           );
@@ -1487,7 +1510,7 @@ export class Orchestrator {
           const stray = assignStrayIssues(review.issues, done());
           if (stray) review.approved = false;
           // lệnh kiểm tra của dự án đạt trước khi sửa mà hỏng sau khi sửa → không duyệt, dù reviewer nói gì
-          const regressed = this.checkRegressions(task);
+          const regressed = [...new Set([...this.checkRegressions(task), ...gate.classes.filter((c) => c.cls === 'regression-or-new').map((c) => c.command)])];
           if (regressed.length) {
             if (review.approved) review.summary = `${review.summary} (CCoding: lệnh kiểm tra hỏng sau khi sửa → không duyệt)`;
             review.approved = false;
@@ -1568,6 +1591,8 @@ export class Orchestrator {
       // review cuối chưa duyệt / lệnh kiểm tra còn hỏng → nhiệm vụ vẫn chạy xong nhưng gắn cờ "cần xem"
       if (run.review && !run.review.approved) task.attention = { reason: 'review', detail: `${dept.short}: ${run.review.summary.slice(0, 280)}`, at: nowIso() };
       else if (task.projectChecks?.latest?.some((r) => !r.ok)) task.attention = { reason: 'checks', detail: `Lệnh kiểm tra còn lỗi: ${task.projectChecks.latest.filter((r) => !r.ok).map((r) => r.command).join(', ')}`, at: nowIso() };
+      // D-02: duyệt mà không có kiểm chứng máy (CCoding không có lệnh kiểm tra để chạy) và reviewer có quyền chạy lệnh nhưng không chạy → cần người xem
+      else if (run.review?.approved && !run.review.by && run.review.verified === false) task.attention = { reason: 'review', detail: `${dept.short}: duyệt nhưng chưa có kiểm chứng chạy thật (không có lệnh kiểm tra của dự án, reviewer không chạy lệnh) — cần giám đốc xem.`, at: nowIso() };
       this.save(task);
     }
 
@@ -2669,6 +2694,120 @@ export class Orchestrator {
     return !!project?.workspace && !!project.checkCommands?.length && this.toolAccess(task, project) === 'exec' && !!task.workspace && fs.existsSync(task.workspace);
   }
 
+  /**
+   * B-02 cổng chất lượng (backlog §4.1–§4.3). Không gọi reviewer. Chạy: phân loại lệnh kiểm → vòng sửa theo kiểm tra (≤ gate.maxFixRounds,
+   * chung với lượt sửa định dạng) → kiểm "Mẫu đầu ra" → quyết định có cần reviewer. Mọi lượt LLM đi qua `this.call()`.
+   * Dùng cho mọi làn: nhanh/đầy gọi trong vòng review; làn đơn (S4) gọi trực tiếp rồi nâng cấp khi `exhausted`.
+   */
+  async runQualityGate(task: Task, run: DeptRun, project: ProjectDef | undefined, agent: AgentDef, o: QualityGateOptions & { pctx: P.Ctx; base: CallCtx }): Promise<QualityGateResult> {
+    const { config, registry, logs } = this.d;
+    const max = Math.max(0, config.gate?.maxFixRounds ?? 2);
+    const checkable = this.projectCheckable(task, project);
+    const deptId = o.dept;
+    const done = () => run.subtasks.filter((s) => s.status === 'done' && s.output);
+    let fixRounds = 0;
+    let classes: ClassifiedCheck[] = [];
+    const classify = () => {
+      const pc = task.projectChecks;
+      classes = checkable ? classifyChecks(pc?.baseline, pc?.latest, task.brief, project!.checkCommands) : [];
+      if (checkable) logs.write({ level: classes.every((c) => c.cls === 'green') ? 'info' : 'warn', kind: 'gate.classify', msg: `${task.id}: ${classes.map((c) => `${c.command} → ${c.cls}`).join('; ')}`, taskId: task.id, department: deptId, data: { classes, fixRounds } });
+    };
+    const isRed = (c: ClassifiedCheck) => c.cls === 'regression-or-new' || c.cls === 'red-required';
+    const pickTarget = () => {
+      const all = done();
+      return (o.target ? all.find((s) => s.id === o.target) : undefined) ?? [...all].reverse().find((s) => this.isWriter(registry.agent(s.assignee), task, project)) ?? all.at(-1);
+    };
+
+    // 1) vòng sửa theo kiểm tra
+    classify();
+    while (classes.some(isRed) && fixRounds < max) {
+      const st = pickTarget();
+      if (!st) break;
+      this.checkAbort(task);
+      fixRounds++;
+      const red = classes.filter(isRed);
+      const results = (task.projectChecks?.latest ?? []).filter((r) => red.some((c) => c.command === r.command));
+      const fixer = st.assignee ? registry.agent(st.assignee) : agent;
+      this.setPhase(task, run, 'revise');
+      this.message(task, deptId, 'system', 'system', `🔁 Cổng chất lượng — vòng sửa ${fixRounds}/${max}: ${red.map((c) => `\`${c.command}\` (${c.cls === 'red-required' ? 'đề bài yêu cầu xanh' : 'hồi quy/đỏ mới'})`).join(', ')} — không gọi reviewer.`);
+      logs.write({ level: 'warn', kind: 'gate.fix', msg: `${task.id}: vòng sửa ${fixRounds}/${max} ${st.id} — ${red.map((c) => c.command).join(', ')}`, taskId: task.id, agentId: fixer.id, department: deptId, subtaskId: st.id, data: { round: fixRounds, max, commands: red } });
+      this.noteAttempt(task, run, st);
+      if (task.projectChecks) task.projectChecks.staleAt = nowIso();
+      const prev = this.depInput(task, st);
+      const uncovered = (run as { planGate?: { uncovered?: string[] } }).planGate?.uncovered ?? [];
+      const r = await this.call(
+        fixer,
+        'revise',
+        (tools) =>
+          P.gateFixPrompt(
+            o.pctx,
+            st,
+            prev.text,
+            results.map((x) => ({ command: x.command, code: x.code, tail: x.tail || x.summary, required: classes.find((c) => c.command === x.command)?.cls === 'red-required' })),
+            uncovered,
+            tools,
+            fixRounds,
+            config.tools.maxOutputChars,
+          ),
+        { ...o.base, subtask: st, activity: `Sửa ${st.id} theo kiểm tra (${fixRounds}/${max})`, hints: { brief: task.brief, subtask: stHint(st), gateFix: fixRounds } },
+      );
+      if (r.text) {
+        st.attempts++;
+        this.writeOutput(task, run, st, fixer, r);
+        this.message(task, deptId, fixer.id, 'handoff', `Đã sửa ${st.id} theo kiểm tra: ${extractSummary(r.text, 200)}`, { subtaskId: st.id });
+      }
+      if (checkable) await this.runProjectChecks(task, project!, deptId, 'revise');
+      classify();
+    }
+
+    // 2) kiểm "Mẫu đầu ra" (cùng phép kiểm với KPI); lượt sửa định dạng tính vào N
+    let templateOk = true;
+    if (!o.skipTemplate) {
+      for (const st of done()) {
+        const owner = registry.agent(st.assignee);
+        let g = templateGate(this.readOutput(task, st), owner.body);
+        logs.write({ level: g.ok ? 'info' : 'warn', kind: 'gate.template', msg: `${task.id} ${st.id}: coverage ${Math.round(g.coverage * 100)}%${g.missing.length ? `, thiếu: ${g.missing.join('; ')}` : ''}${g.summaryOk ? '' : ', thiếu "Tóm tắt"'}`, taskId: task.id, agentId: owner.id, department: deptId, subtaskId: st.id, data: { ok: g.ok, coverage: g.coverage, missing: g.missing, summaryOk: g.summaryOk, fixRounds } });
+        if (g.ok) continue;
+        if (fixRounds < max) {
+          this.checkAbort(task);
+          fixRounds++;
+          const headings = templateHeadings(owner.body);
+          const prev = this.readOutput(task, st);
+          const miss = g;
+          const r = await this.call(owner, 'revise', () => P.formatFixPrompt(o.pctx, prev, headings, miss.missing, miss.summaryOk), {
+            ...o.base,
+            subtask: st,
+            noTools: true,
+            activity: `Sửa định dạng ${st.id} (${fixRounds}/${max})`,
+            hints: { brief: task.brief, subtask: stHint(st), formatFix: fixRounds },
+          });
+          if (r.text) {
+            // chỉ thay bản cũ khi bản viết lại ĐẠT mẫu — tránh mất nội dung (vd. mục CCoding thêm vào sau xung đột) khi model viết lại kém
+            const fixed = templateGate(r.text, owner.body);
+            if (fixed.ok) {
+              this.writeOutput(task, run, st, owner, r);
+              g = fixed;
+            }
+            logs.write({ level: fixed.ok ? 'info' : 'warn', kind: 'gate.template', msg: `${task.id} ${st.id}: sau sửa định dạng coverage ${Math.round(fixed.coverage * 100)}%${fixed.ok ? '' : ' — giữ bản cũ'}`, taskId: task.id, agentId: owner.id, department: deptId, subtaskId: st.id, data: { ok: fixed.ok, coverage: fixed.coverage, missing: fixed.missing, afterFix: true, fixRounds } });
+          }
+        }
+        if (!g.ok) templateOk = false;
+      }
+    }
+
+    // 3) kết luận: có phải gọi reviewer không
+    const stillRed = classes.filter((c) => c.cls === 'red-required').map((c) => c.command);
+    const exhausted = classes.some(isRed) || !templateOk;
+    const reasons = reviewerReasons({
+      hasCheckCommands: checkable,
+      changedFiles: changedFiles(task.workspace, task.baseRef),
+      classification: task.classification,
+      classes: classes.map((c) => c.cls),
+      failedAfterRounds: exhausted,
+    });
+    return { forceUnapproved: stillRed.length > 0, stillRed, classes, fixRounds, templateOk, needReviewer: reasons.length > 0, reasons, exhausted };
+  }
+
   /** CCoding tự chạy lệnh chuẩn bị (một lần mỗi worktree) rồi lệnh kiểm tra của dự án — bằng chứng không phụ thuộc agent/model. */
   private async runProjectChecks(task: Task, project: ProjectDef, dept: string, when: 'baseline' | 'execute' | 'revise'): Promise<CheckResult[]> {
     const { config, logs } = this.d;
@@ -2839,7 +2978,7 @@ export class Orchestrator {
         // tra cứu web chỉ với dữ liệu Công khai/Nội bộ (truy vấn đi ra máy tìm kiếm bên ngoài)
         const web = config.tools.web !== false && (cls === 'public' || cls === 'internal');
         const gitRead = this.gitReadable(task, ctx.project, ctx.cwd);
-        const allow = rt.supportsTools && rt.id !== 'mock' ? toolsFor(agent.tools, access, phase, web, gitRead) : [];
+        const allow = rt.supportsTools && rt.id !== 'mock' && !ctx.noTools ? toolsFor(agent.tools, access, phase, web, gitRead) : [];
         const built = build(allow);
         if (handover && allow.length) built.prompt = `${built.prompt}\n\n${handover}`;
         const fb = this.d.store.activeFeedback(agent.id).map((f) => `${f.rating === 'up' ? '👍 ' : f.rating === 'down' ? '👎 ' : ''}${f.text}`);
@@ -2855,8 +2994,8 @@ export class Orchestrator {
           prompt: outbound(built.prompt),
           model: cand.model,
           cwd: ctx.cwd,
-          tools: cliTools(agent.tools, access, phase, gitRead),
-          allowTools: allow.length > 0 || (rt.supportsTools && cliTools(agent.tools, access, phase, gitRead).length > 0),
+          tools: ctx.noTools ? [] : cliTools(agent.tools, access, phase, gitRead),
+          allowTools: allow.length > 0 || (rt.supportsTools && !ctx.noTools && cliTools(agent.tools, access, phase, gitRead).length > 0),
           timeoutMs: config.defaults.timeoutMs,
           maxTokens: config.phases?.maxTokens?.[phase],
           toolPolicy: allow.length

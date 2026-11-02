@@ -467,6 +467,11 @@ export interface Task {
 }
 
 /** Kết quả một lệnh kiểm tra của dự án (CCoding tự chạy, không qua agent). */
+/** B-02: cổng chất lượng — số vòng sửa theo kiểm tra tối đa (tách khỏi maxRevisions của review). */
+export interface GateConfig {
+  maxFixRounds: number;
+}
+
 export interface CheckResult {
   command: string;
   code: number | null;
