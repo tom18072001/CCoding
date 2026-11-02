@@ -51,6 +51,7 @@ import { newTaskId, nowIso, shortId } from './util/ids.js';
 import { redact } from './util/redact.js';
 import { estimateTokens } from './util/tokens.js';
 import { fmtNum } from './util/format.js';
+import { sanitizeSlim } from './slim.js';
 import {
   addUsage,
   emptyUsage,
@@ -3715,6 +3716,8 @@ export function variantOptions(o: Partial<TaskOptions>): Partial<TaskOptions> {
   }
   if (typeof o.variant === 'string' && o.variant.trim()) out.variant = o.variant.trim().slice(0, 60);
   if (o.lane === 'auto' || o.lane === 'single' || o.lane === 'fast' || o.lane === 'full') out.lane = o.lane;
+  const slim = sanitizeSlim(o.slim);
+  if (Object.keys(slim).length) out.slim = slim;
   return out;
 }
 
