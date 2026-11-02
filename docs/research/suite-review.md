@@ -11,7 +11,7 @@ Bộ đo đủ dùng làm hệ đánh giá chính, nhưng có 8 lỗi/khoảng t
 - H1, H2, H3, H4, H9 chỉ dựa trên 4, 4, 1, 1, 1 bài; với 3 lượt mỗi ô thì H3, H4, H9 gần như không kiểm định được. Các phép kiểm "không kém hơn/tương đương" (H2, H6) dùng ước lượng điểm, không dùng khoảng tin cậy.
 - H10 lấy `size` làm biến giải thích nhưng `size` không có định nghĩa, gán không nhất quán, và lẫn với loại bài. Slope âm −3,4 pp ngay trong selftest cho thấy phép kiểm nhạy với mức null ≠ 0.
 - Giám khảo LLM: mù một phần (ngôn ngữ tiếng Việt của arm B lộ danh tính), giám khảo mặc định `opus` trùng model của `A0-opus`, không có đối chiếu người.
-- Ba grader regex (a1, r1) đo chữ khóa nhiều hơn ý (ví dụ `sign` khớp "design"); nên chạy toàn nghiên cứu với `--judge`.
+- Hai grader regex (a1, r1) đo chữ khóa nhiều hơn ý (ví dụ `sign` khớp "design"); nên chạy toàn nghiên cứu với `--judge`.
 
 Mọi con số điểm oracle/null lấy từ `results/selftest/summary.csv` (n = 1 lượt, chạy trên máy khác: đường dẫn `/home/claude/...`). Tôi **không chạy lại** selftest (chỉ có quyền đọc). Chỗ nào là suy luận của tôi chứ không phải kết quả chạy thì ghi "suy luận"/"cần kiểm".
 
@@ -87,7 +87,7 @@ Quy ước: **Trong** = đủ để phát hiện hiệu ứng nếu hiệu ứng
 | **H7** | Ổn định giữa các lượt: SD(B0)/SD(A0) ≤ 0,7 | tỉ số theo bài `:93`, trung vị ≤ 0,7 và ≥ 3 bài (`:94`) | **Không**. SD với 3 lượt có 2 bậc tự do; tỉ số hai SD rất nhiễu. Bài mà `sd(A0) = 0` bị loại khi `sd(B0) > 0` (NaN, `:93`), thiên lệch chọn: chỉ còn các bài mà A0 dao động | Điểm rời rạc (logic) nên SD theo bước. Chạm trần làm SD = 0 ở cả hai arm (tỉ số 1 do `b === 0 ? 1`) |
 | **H8** | Thất bại điều phối: tỉ lệ thiếu sản phẩm, việc bị bỏ sót | `fm(arm)` = tỉ lệ `formatMiss` trên **mọi** lượt (`:97`); `fail(arm)` = tỉ lệ test ẩn trượt trên coding (`:98`); phán quyết = `fm(TREAT) > fm(BASE)` (`:99`) | **Không**. Không có kiểm định, chỉ so hai tỉ lệ; `formatMiss` không bao giờ đặt cho bài coding (`gradeCode` trả không có `formatMiss`, `grade.mjs:40`) | **Chỉ số lệch khỏi khái niệm**: `formatMiss` = JSON không nằm ở tệp mà phải bóc từ báo cáo cuối (`grade.mjs:9-17`). FINAL của B bằng tiếng Việt (README) nên khả năng bóc thất bại cao hơn vì ngôn ngữ, không phải vì điều phối. Ca t5 của C9 (kế hoạch bỏ sót `agg.js`, test đỏ mà review vẫn duyệt) **không được chỉ số này bắt**. Chỉ số trộn mọi bài và không cặp theo bài |
 | **H9** | Bám nguồn: citation precision và từ chối đúng B0 hơn ≥ 10 pp | `dP >= 0.1 && dR >= 0.1` (`:104-106`); lọc `research` (`:102`) | **Không**. 1 bài (re1), 3 lượt/arm; `correctRefusal` nhị phân nên mỗi arm chỉ 3 quan sát (bước 33 pp). `citationPrecision` thường chạm 1,0 | `citationPrecision` chỉ kiểm id hợp lệ, không kiểm đúng bài (mục 1). Chênh ≥ 10 pp trên cả hai đồng thời là điều kiện giao (AND) rất chặt trên 3 quan sát |
-| **H10** | Lợi thế tăng theo kích thước bài | độ dốc OLS của delta theo `size` trên 13 bài `:109-111`; hoán vị 5000 lần `:112-113`; SUPPORTED nếu `b > 0 && p < 0,05` (`:114`) | **Có thể, mong manh**. 13 điểm, `size` chỉ nhận 5 giá trị (1-5), delta nhiễu (trung bình 3 lượt). Công suất thấp với hiệu ứng nhỏ | `size` lẫn loại bài, chạm trần ở bài nhỏ, `size` chưa định nghĩa (mục 4.3). Xáo trộn `.sort(() => rnd() - 0.5)` (`:113`) không đều (xem SR-12) |
+| **H10** | Lợi thế tăng theo kích thước bài | độ dốc OLS của delta theo `size` trên 13 bài `:109-111`; hoán vị 5000 lần `:112-113`; SUPPORTED nếu `b > 0 && p < 0,05` (`:114`) | **Có thể, mong manh**. 13 điểm, `size` chỉ nhận 5 giá trị (1-5), delta nhiễu (trung bình 3 lượt). Công suất thấp với hiệu ứng nhỏ | `size` lẫn loại bài, chạm trần ở bài nhỏ, `size` chưa định nghĩa (mục 4.3). Xáo trộn `.sort(() => rnd() - 0.5)` (`:113`) không đều (xem SR-05) |
 
 **Nguy cơ chung về hiệu lực (áp cho cả bảng):**
 
@@ -162,14 +162,15 @@ Mức: **P0** = chặn khóa đăng ký trước (S4 đánh dấu "khóa có đi
 
 | Mã | Mức | Nội dung | Tệp:dòng cần sửa | H/giả thuyết bị ảnh hưởng |
 | --- | --- | --- | --- | --- |
-| **SR-01** | **P0** | (a) `done` chỉ gồm khóa có `status === 'done'`; lượt `failed`/`error` được chạy lại ở lần sau hoặc được gắn nhãn nguyên nhân (`quota`, `timeout`, `error`); (b) thêm trường `excluded` (lý do) vào dòng kết quả; (c) `analyze.mjs` loại các lượt `excluded` theo tiêu chí loại của bản 1 (hạn mức, rò rỉ, timeout) và báo số lượt loại theo arm | `run.mjs:64` (tập `done`), `run.mjs:169-176` (dòng kết quả), `analyze.mjs:11-12` | Tất cả H1-H10, B-01, B-02 |
+| **SR-01** | **P0** | (a) `done` chỉ gồm khóa có `status === 'done'`; lượt `failed`/`error` được chạy lại ở lần sau hoặc được gắn nhãn nguyên nhân (`quota`, `timeout`, `error`); (b) thêm trường `excluded` (lý do) vào dòng kết quả; (c) `analyze.mjs` loại các lượt `excluded` theo tiêu chí loại của bản 1 (hạn mức, rò rỉ, timeout) và báo số lượt loại theo arm; (d) khóa lượt bị loại vẫn tính là đã xong và lượt thay lấy `rep` mới (cùng khóa arm × bài; `preregistration.md` §4.1, `run-plan.md` §5.0) | `run.mjs:64` (tập `done`), `run.mjs:169-176` (dòng kết quả), `analyze.mjs:11-12` | Tất cả H1-H10, B-01, B-02 |
 | **SR-02** | **P0** | Cộng `costUsd` cho nhánh `calls.jsonl` (nhân giá theo model của từng dòng với bảng giá có phiên bản), lưu `model` mỗi cuộc gọi; báo `weighted` và USD ước lượng cạnh nhau | `lib/ccoding.mjs:46-62`, `analyze.mjs:122,126` | H5, TOST B-01 (độ nhạy USD), đường biên chi phí |
 | **SR-03** | **P0** | Ghi vào **mỗi dòng kết quả**: hash commit CCoding đang chạy, phiên bản `claude` CLI, model thực của từng phase B, cửa sổ hạn mức (`window` đánh số) và trạng thái hạn mức; `analyze.mjs` cảnh báo (hoặc từ chối) khi một arm có nhiều hơn một hash | `run.mjs:169-176`, `run.mjs:62` (`config.json`) | Mọi H (đặc biệt khi Phòng Dev gộp `main` giữa các cửa sổ) |
 | **SR-04** | **P0** | Thêm phép tương đương (TOST) dùng chung: bootstrap 90 % CI trên log-tỉ số, biên khai báo trước; áp cho H2, H6 và giả thuyết làn đơn B-01 (token có trọng số, thời gian, điểm tương đối). Thay phán quyết `est <= 0.05` và `|est| <= 0.05` bằng điều kiện CI nằm trong biên | `analyze.mjs:66-68` (H2), `:87-91` (H6), thêm hàm cạnh `compare` (`:38-53`) | H2, H6, B-01 |
 | **SR-05** | **P0** | Định nghĩa `size` bằng văn bản và quy tắc đếm, thêm trường `sizeBasis` vào `task.json`; gán lại 13 bài theo quy tắc; trong `analyze.mjs` H10 báo cáo (i) độ dốc có điều chỉnh loại bài hoặc chỉ trong coding, (ii) khoảng tin cậy độ dốc, (iii) Fisher-Yates thay `.sort(() => rnd() - 0.5)`. Nếu chưa gán lại kịp, S4 ghi H10 là thăm dò | `README.md:16-32`, `tasks/*/task.json`, `analyze.mjs:109-114` | H10, H1 (ngưỡng `size >= 3`) |
 | **SR-06** | **P0** | Sửa lỗi lệch chỉ số: lọc `tr` và `wr` cùng nhau để chỉ số khớp theo bài, và loại bài NaN trước khi đếm | `analyze.mjs:81-83` | H5 |
 | **SR-07** | **P0** | Khóa một chế độ chấm cho cả nghiên cứu: `analyze.mjs` từ chối nếu `details.judge` khác nhau giữa các lượt cùng bài; quy định chạy chính luôn bật `--judge` (regex chỉ là lưới an toàn, báo cả hai điểm khi có thể); ghi rõ model giám khảo | `analyze.mjs` (kiểm đầu vào, sau dòng 12), `run.mjs:36` (cờ), `README.md:47` | H1 (r1), H4, H9 |
-| **SR-08** | **P0** | Giám khảo cặp: đối chiếu người một mẫu ≥ 20 % cặp, thêm giám khảo thứ hai ngoài `A0-opus` model, ghi tỉ lệ đồng thuận; thêm kiểm định dấu/CI nhị thức; chuẩn hóa ngôn ngữ/tệp phụ để tăng mù. Phần mã nhỏ có thể làm sau, nhưng đăng ký trước phải ghi giới hạn mù | `pairwise.mjs:14,19-23,39-41`, `lib/judge.mjs:6-12,38` | Mọi kết luận dùng pairwise; H4, H9 |
+| **SR-08a** | **P0** | Giám khảo cặp, phần chặn khóa: đối chiếu người một mẫu ≥ 20 % cặp, thêm giám khảo thứ hai ngoài `A0-opus` model, ghi tỉ lệ đồng thuận; đăng ký trước phải ghi giới hạn mù | `pairwise.mjs:14,19-23`, `lib/judge.mjs:6-12,38` | Mọi kết luận dùng pairwise; H4, H9 |
+| **SR-08b** | P1 | Giám khảo cặp, phần mã làm sau: thêm kiểm định dấu/CI nhị thức; chuẩn hóa ngôn ngữ/tệp phụ để tăng mù. Không chặn khóa | `pairwise.mjs:39-41`, `lib/judge.mjs:6-12` | Mọi kết luận dùng pairwise (độ chính xác của CI) |
 
 ### P0 bổ sung cho nhánh sau 5/11 (thêm ở preregistration v2.1)
 
@@ -229,7 +230,7 @@ Mức: **P0** = chặn khóa đăng ký trước (S4 đánh dấu "khóa có đi
 | Trọng số `5 × output` | SR-02 (USD cạnh weighted), SR-03; ghi trong 4.1 |
 | `weighted` khác USD, hệ quả TOST B-01 | SR-02, SR-04 (và ghi trong đăng ký trước: USD chỉ là độ nhạy, chưa kiểm được trước SR-02) |
 | H10 và `size` | SR-05, SR-15 |
-| Giám khảo LLM chấm sản phẩm LLM | SR-07, SR-08, SR-09 |
+| Giám khảo LLM chấm sản phẩm LLM | SR-07, SR-08a, SR-08b, SR-09 |
 
 ## Việc chưa làm được (ghi rõ)
 

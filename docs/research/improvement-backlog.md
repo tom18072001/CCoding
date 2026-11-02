@@ -4,7 +4,7 @@
 > Cập nhật R8 (T-20261102-175854-65c, S3, @research-lead, 2/11/2026): thêm **B-10** (cổng phủ kế hoạch, §5), sửa B-02 §4.1 bước 2 (lệnh đỏ mà đề bài yêu cầu xanh ⇒ bắt buộc vòng sửa), cập nhật §0 và §6, đổi mã giả thuyết. Bằng chứng mới: ca `t5-logq.ccoding-fastlane.2` của C9 (`docs/research/context/c9-partial-2026-11-02.md` §2).
 > Nguyên tắc của giám đốc: mọi nâng cấp phải dựa vào nghiên cứu; mỗi thay đổi của Phòng Dev ghi mã `B-xx`; benchtest chạy theo `preregistration.md` để kiểm lại.
 > Số từ `token-analysis.md` dẫn theo **mã bảng** (T-0, T-d…), không chép lại bản S1 đang làm mới.
-> **Mã giả thuyết (từ R8):** hệ chính là **H1–H10 của bộ đo giám đốc** (`bench/vs-claude/analyze.mjs:61-115`), viết `H_i` trong tệp này. Giả thuyết H1–H9 của `preregistration.md` bản 1 đổi mã theo quy ước H_i → P_i (bản 2, hạng mục S4). **Trùng mã:** P1–P4 ở cột "Gộp ứng viên", B-02, B-03, B-09 là **bản vá prompt** trong `self-improvement/prompt-patches/`; vì vậy trong tệp này giả thuyết bản 1 ghi là **ĐK-P_i** (= P_i của `preregistration.md` bản 2). Đề nghị S4 ghi chú trùng mã này trong bảng ánh xạ P↔H.
+> **Mã giả thuyết (từ R8):** hệ chính là **H1–H10 của bộ đo giám đốc** (`bench/vs-claude/analyze.mjs:61-115`), viết `H_i` trong tệp này. Giả thuyết H1–H9 của `preregistration.md` bản 1 đổi mã theo quy ước H_i → ĐK-P_i (bản 2, hạng mục S4; cùng quy ước với `preregistration.md` §3.3, thống nhất ở v2.1). **Trùng mã:** P1–P4 ở cột "Gộp ứng viên", B-02, B-03, B-09 là **bản vá prompt** trong `self-improvement/prompt-patches/`; vì vậy trong tệp này giả thuyết bản 1 ghi là **ĐK-P_i** (= P_i của `preregistration.md` bản 2). Đề nghị S4 ghi chú trùng mã này trong bảng ánh xạ P↔H.
 > Phạm vi: chỉ viết tài liệu. Không sửa `src/`. Các số "kỳ vọng" là **giả thuyết cần kiểm**, không phải kết quả.
 
 ## 0. Tóm tắt xếp hạng
@@ -367,7 +367,7 @@ Mọi đường dẫn tệp kết quả dưới đây tương đối với `benc
 
 ## 6. Quan hệ với đăng ký trước và các giới hạn
 
-**Quy ước mã (R8):** cột "Bộ đo giám đốc" dùng H1–H10 của `bench/vs-claude/analyze.mjs` (hệ chính). Cột "Bản 1" dùng P1–P9 (= H1–H9 của `preregistration.md` bản 1, đổi mã theo H_i → P_i; trong tệp này ghi ĐK-P_i để khỏi lẫn với bản vá prompt P1–P4). Ánh xạ chính thức P↔H và giả thuyết B-01/B-02 mới do S4 chốt trong `preregistration.md` bản 2; bảng dưới chỉ là đề nghị từ phía backlog.
+**Quy ước mã (R8):** cột "Bộ đo giám đốc" dùng H1–H10 của `bench/vs-claude/analyze.mjs` (hệ chính). Cột "Bản 1" dùng ĐK-P1–P9 (= H1–H9 của `preregistration.md` bản 1, đổi mã theo H_i → ĐK-P_i; **một quy ước duy nhất `ĐK-P_i` ở cả hai tệp**, để khỏi lẫn với bản vá prompt P1–P4 và mức ưu tiên SR P0/P1/P2). Ánh xạ chính thức ĐK-P↔H và giả thuyết B-01/B-02 mới do S4 chốt trong `preregistration.md` bản 2; bảng dưới chỉ là đề nghị từ phía backlog.
 
 | Mục | Bộ đo giám đốc (hệ chính) | Bản 1 (ĐK-P_i) | Ghi chú |
 |---|---|---|---|

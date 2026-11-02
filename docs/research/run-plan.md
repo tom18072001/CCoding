@@ -255,7 +255,9 @@ Bước 2 — người chưa xem `score` của các dòng đó đọc danh sách
 node /tmp/classify.cjs bench/vs-claude/results/s2 20 apply    # chuyển dòng hạ tầng sang excluded.jsonl
 ```
 
-Sau bước 2, các lượt đã chuyển chạy lại cùng khóa khi lặp đúng lệnh cũ (E1/E3/E4: thay lượt tối đa 2 mỗi ô, `preregistration.md` §4.1). Số lượt `T-giữ` và `N1-giữ` theo arm được ghi vào sổ để báo cáo. Phòng Dev đang thêm nhận biết hạn mức vào `run.mjs`; khi có, bước này có thể thay bằng cờ đó (tên cờ chưa biết). Lưu ý: `/tmp/classify.cjs` là script vận hành nằm ngoài repo (hạng mục giới hạn một tệp); chưa chạy trên dữ liệu thật vì chưa có `results/s2`.
+**Chạy lại sau khi loại lượt (giống hệt `preregistration.md` §4.1).** Chạy lại bằng `rep` MỚI, cùng khóa arm × bài; lượt bị loại vẫn giữ trong log kèm lý do, không ghi đè. Quy tắc áp dụng từ v2.1, không hồi tố cho 4 lượt C9 đã loại (`context/c9-partial-2026-11-02.md`); nếu C9 chạy tiếp thì theo quy tắc này. Thay lượt tối đa 2 mỗi ô (E1/E3/E4).
+
+Lưu ý cơ chế (cần kiểm): `run.mjs:64` chỉ bỏ qua khóa còn dòng trong `runs.jsonl`, nên khóa `rN` đã chuyển sang `excluded.jsonl` sẽ bị chạy lại với **cùng `rN`**, trái quy tắc trên. Cho tới khi SR-01 xong (trường `excluded`, khóa bị loại vẫn tính là đã xong, `suite-review.md` §5), vận hành viên phải gán `rep` mới bằng tay và ghi vào sổ; chưa có lệnh đã thử cho việc này. Số lượt `T-giữ` và `N1-giữ` theo arm được ghi vào sổ để báo cáo. Phòng Dev đang thêm nhận biết hạn mức vào `run.mjs`; khi có, bước này có thể thay bằng cờ đó (tên cờ chưa biết). Lưu ý: `/tmp/classify.cjs` là script vận hành nằm ngoài repo (hạng mục giới hạn một tệp); chưa chạy trên dữ liệu thật vì chưa có `results/s2`.
 
 ### 5.1 Nhánh 1
 
