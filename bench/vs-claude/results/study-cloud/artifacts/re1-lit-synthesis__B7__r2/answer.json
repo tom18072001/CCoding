@@ -1,0 +1,6 @@
+{
+  "q1": { "paper": "P4", "f1": 0.962, "citations": ["P4", "P1", "P3", "P2", "P6"] },
+  "q2": { "paper": "P5", "dataset": "BGL-X", "citations": ["P5"] },
+  "q3": { "answer": "Not reported in the corpus. P4 gives only inference latency (3.1 ms per session on one A100 GPU) and does not report energy consumption.", "not_in_corpus": true, "citations": ["P4"] },
+  "q4": { "papers": ["P1", "P3"], "citations": ["P1", "P3"] }
+}
