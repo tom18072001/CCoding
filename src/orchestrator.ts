@@ -1214,7 +1214,7 @@ export class Orchestrator {
     } else {
       const ls = spawnSync('git', ['ls-files', '-z'], { cwd: pctx.cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, windowsHide: true });
       if (ls.status === 0) {
-        const files = ls.stdout.split(' ').filter(Boolean);
+        const files = ls.stdout.split('\0').filter(Boolean);
         let bytes = 0;
         for (const f of files) {
           try {
