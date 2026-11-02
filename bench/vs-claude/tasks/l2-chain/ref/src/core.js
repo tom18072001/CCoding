@@ -117,7 +117,7 @@ export function buildModel(program) {
   const evalEntry = (e, stack) => {
     if (e.kind === 'object') {
       const o = {};
-      for (const [k, v] of e.map) o[k] = evalEntry(v, stack);
+      for (const [k, v] of e.map) Object.defineProperty(o, k, { value: evalEntry(v, stack), writable: true, enumerable: true, configurable: true });
       return o;
     }
     return evalNode(e.node, e.file, stack);
