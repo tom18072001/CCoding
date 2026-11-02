@@ -44,19 +44,54 @@ export class Store {
     this.backfillSeq();
   }
 
-  /** Nhiệm vụ tạo trước khi có mã ngắn: đánh số bù theo lúc tạo (sau số lớn nhất đã có) và ghi lại task.json. */
-  private backfillSeq(): void {
-    for (const t of this.tasks.values()) if (Number.isInteger(t.seq) && t.seq! > this.maxSeq) this.maxSeq = t.seq!;
-    const missing = [...this.tasks.values()].filter((t) => !Number.isInteger(t.seq) || t.seq! < 1).sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
-    for (const t of missing) {
-      t.seq = ++this.maxSeq;
-      writeJsonAtomic(path.join(this.runDir(t.id), 'task.json'), t);
-    }
+  /** Tệp đếm số thứ tự dùng chung giữa các tiến trình (server, CLI) trên cùng thư mục dữ liệu. */
+  private seqFile(): string {
+    return path.join(this.dataDir, 'seq.json');
+  }
+  private readCounter(): number {
+    const v = readJsonFile<{ last?: number }>(this.seqFile(), {}).last;
+    return Number.isInteger(v) && v! > 0 ? v! : 0;
+  }
+  /**
+   * Chỉ ghi trường seq vào task.json trên đĩa (đọc lại từ đĩa) — không ghi trạng thái đã đổi trong bộ nhớ lúc nạp
+   * (vd. "đang chạy" → "tạm dừng" khi CLI đọc dữ liệu trong lúc server cũ còn chạy).
+   */
+  private persistSeq(t: Task): void {
+    const file = path.join(this.runDir(t.id), 'task.json');
+    const disk = readJsonFile<Task | null>(file, null);
+    writeJsonAtomic(file, disk ? { ...disk, seq: t.seq } : t);
   }
 
-  /** Số thứ tự cho nhiệm vụ mới. */
+  /**
+   * Nhiệm vụ tạo trước khi có mã ngắn: đánh số bù theo lúc tạo (sau số lớn nhất đã có). Hai tiến trình lỡ cấp trùng số → giữ số
+   * cho nhiệm vụ tạo trước, cấp số mới cho nhiệm vụ tạo sau. Chỉ ghi lại trường seq.
+   */
+  private backfillSeq(): void {
+    this.maxSeq = Math.max(this.maxSeq, this.readCounter());
+    const byCreated = [...this.tasks.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+    const seen = new Set<number>();
+    const fix: Task[] = [];
+    for (const t of byCreated) {
+      if (Number.isInteger(t.seq) && t.seq! >= 1 && !seen.has(t.seq!)) {
+        seen.add(t.seq!);
+        if (t.seq! > this.maxSeq) this.maxSeq = t.seq!;
+      } else fix.push(t);
+    }
+    for (const t of fix) {
+      t.seq = ++this.maxSeq;
+      this.persistSeq(t);
+    }
+    if (fix.length) this.writeCounter();
+  }
+  private writeCounter(): void {
+    writeJsonAtomic(this.seqFile(), { last: this.maxSeq });
+  }
+
+  /** Số thứ tự cho nhiệm vụ mới — đọc lại tệp đếm để không trùng với số tiến trình khác vừa cấp. */
   nextSeq(): number {
-    return ++this.maxSeq;
+    this.maxSeq = Math.max(this.maxSeq, this.readCounter()) + 1;
+    this.writeCounter();
+    return this.maxSeq;
   }
 
   /** Tìm nhiệm vụ theo mã đầy đủ hoặc mã ngắn (CC-94, cc-94 — tiền tố bất kỳ). */

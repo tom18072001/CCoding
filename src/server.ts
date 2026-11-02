@@ -161,7 +161,14 @@ export function createServer(app: App): http.Server {
   };
 
   const api = async (req: http.IncomingMessage, res: http.ServerResponse, url: URL) => {
-    const p = url.pathname;
+    let p = url.pathname;
+    // mọi API của nhiệm vụ nhận cả mã ngắn (CC-94): quy về mã đầy đủ trước khi khớp route (giao diện, CLI, liên kết dán)
+    const tm = /^\/api\/tasks\/([^/]+)(\/.*)?$/.exec(p);
+    if (tm && !store.get(tm[1])) {
+      const t = store.resolve(tm[1]);
+      if (t) p = `/api/tasks/${t.id}${tm[2] ?? ''}`;
+    }
+
     const q = (k: string) => url.searchParams.get(k) ?? undefined;
     const m = (re: RegExp) => re.exec(p);
     let mm: RegExpExecArray | null;

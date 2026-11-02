@@ -278,7 +278,6 @@ export class Orchestrator {
     const budgetMode: BudgetMode = o.budgetMode === 'pause' || o.budgetMode === 'complete' ? o.budgetMode : (project?.budgetMode ?? config.defaults.budgetMode ?? 'complete');
     const task: Task = {
       id: newTaskId(),
-      seq: this.d.store.nextSeq(),
       title: (input.title ?? '').trim() || firstSentence(brief, 90),
       brief,
       mode,
@@ -341,6 +340,8 @@ export class Orchestrator {
       writeText(path.join(inputsDir, 'BRIEF.md'), task.brief);
     }
     extra.prepareInputs?.(inputsDir, task);
+    // cấp số thứ tự sau mọi bước có thể báo lỗi (tệp đính kèm…) để giao việc lỗi không làm nhảy số
+    task.seq = store.nextSeq();
     store.put(task, true);
     this.d.logs.write({
       level: 'info',

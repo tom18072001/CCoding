@@ -642,7 +642,7 @@
   };
 
   const TOUR = [
-    { sel: '#sidenav', title: 'Điều hướng', text: '＋ Mới để giao việc, tạo dự án, prompt. Bên dưới là cây Dự án → Nhiệm vụ (như thư mục) và các nhiệm vụ gần đây; ⛽ ở cuối là token hôm nay.' },
+    { sel: '#sidenav', title: 'Điều hướng', text: '＋ Mới để giao việc, tạo dự án, prompt; 🔎 Tìm mở bảng lệnh (Ctrl+K). Các mục xếp theo nhóm Làm việc và Tổ chức; dự án nằm ngay dưới mục Dự án; cuối cột là các agent đang làm, nhiệm vụ gần đây và token hôm nay.' },
     { sel: '#main', title: 'Quản lý nhiệm vụ', text: 'Tổng quan, dự án dạng thư mục, danh sách nhiệm vụ (lọc, sắp xếp, chuột phải để thao tác). Mở một nhiệm vụ để xem kế hoạch, sản phẩm, token và gửi chỉ dẫn bổ sung ở ô soạn phía dưới.' },
     { sel: '#sidenav [data-tab=assign]', title: '💬 Prompt', text: 'Màn soạn & hội thoại kiểu ứng dụng chat: cột hội thoại theo dự án, luồng trao đổi với văn phòng, ô trả lời ở dưới (đang chạy = chỉ dẫn bổ sung, đã xong = giao tiếp nối). Tệp mở ở khung Xem trước bên phải.' },
     { sel: '#side', title: 'Văn phòng (ô phụ)', text: 'Các agent theo phòng ban với trạng thái thật và việc đang làm. Bấm vào một agent để thao tác. Phím V hoặc 🏢 để ẩn/hiện ô này.' },

@@ -100,7 +100,7 @@
     if (V.mode && t.mode !== V.mode) return false;
     if (V.query) {
       const q = V.query.toLowerCase();
-      if (!`${t.title} ${t.id} ${t.brief || ''} ${t.projectId || ''} ${t.agentId || ''}`.toLowerCase().includes(q)) return false;
+      if (!`${t.title} ${t.id} ${C.code(t)} ${t.brief || ''} ${t.projectId || ''} ${t.agentId || ''}`.toLowerCase().includes(q)) return false;
     }
     return true;
   }
@@ -135,13 +135,34 @@
     return `<span class="si si-${esc(status)}${opts.att ? ' att' : ''}" role="img" aria-label="${esc(label)}" title="${esc(label)}"></span>`;
   }
   const subsOf = (t) => (t.runs || []).flatMap((r) => r.subtasks.filter((x) => !x.splitTo).map((x) => ({ r, s: x })));
-  /** Số việc đang chạy bên dưới một nhiệm vụ: hạng mục đang làm + nhiệm vụ con đang chạy (cộng dồn cả cây). */
-  function liveBelow(t, kids, seen = new Set()) {
+  /**
+   * Số việc đang chạy ngay bên dưới một dòng (mỗi việc đếm một lần): hạng mục đang làm của chính nhiệm vụ này + nhiệm vụ con đang
+   * chạy ở mọi tầng (hạng mục của nhiệm vụ con được đếm ở dòng của nhiệm vụ con, không cộng lên dòng cha).
+   */
+  function liveBelow(t, kids) {
+    const own = isLive(t) ? subsOf(t).filter((x) => x.s.status === 'running').length : 0;
+    return own + liveTasksBelow(t, kids);
+  }
+  function liveTasksBelow(t, kids, seen = new Set()) {
     if (seen.has(t.id)) return 0;
     seen.add(t.id);
-    let n = isLive(t) ? subsOf(t).filter((x) => x.s.status === 'running').length : 0;
-    for (const k of kids.get(t.id) || []) n += (isLive(k) ? 1 : 0) + liveBelow(k, kids, seen);
+    let n = 0;
+    for (const k of kids.get(t.id) || []) n += (isLive(k) ? 1 : 0) + liveTasksBelow(k, kids, seen);
     return n;
+  }
+  /** Lần cập nhật mới nhất trong cả nhánh (nhiệm vụ + mọi nhiệm vụ con) — để xếp gốc và đặt vạch "Cũ hơn một ngày". */
+  function latestIn(t, kids, memo, seen = new Set()) {
+    if (memo.has(t.id)) return memo.get(t.id);
+    let v = updated(t);
+    if (!seen.has(t.id)) {
+      seen.add(t.id);
+      for (const k of kids.get(t.id) || []) {
+        const x = latestIn(k, kids, memo, seen);
+        if (x > v) v = x;
+      }
+    }
+    memo.set(t.id, v);
+    return v;
   }
   /** Còn nhiệm vụ con chưa xong (đang chạy, chờ chạy, tạm dừng) ở bất kỳ tầng nào bên dưới. */
   function pendingBelow(t, kids, seen = new Set()) {
@@ -155,7 +176,8 @@
     const below = liveBelow(t, ctx.kids);
     const has = kids.length + subs.length > 0;
     // tự mở: nhiệm vụ đang chạy hoặc còn việc con chưa xong; người dùng đã mở/đóng thì theo lựa chọn đó
-    const open = has && (V.tree[t.id] ?? (!ctx.collapsed && (isLive(t) || below > 0 || pendingBelow(t, ctx.kids))));
+    const recent = kids.length && Date.now() - Date.parse(latestIn(t, ctx.kids, ctx.memo)) < DAY;
+    const open = has && (V.tree[t.id] ?? (!ctx.collapsed && (isLive(t) || below > 0 || pendingBelow(t, ctx.kids) || recent || (ctx.searching && kids.length > 0))));
     const multi = (t.runs || []).length > 1;
     const p = parentOf(t);
     const orphan = p && !ctx.inList.has(p) ? C.S.tasks.get(p) : null;
@@ -192,12 +214,14 @@
     // nhiệm vụ con xếp theo thứ tự tạo (số thứ tự), gốc theo cách sắp xếp đang chọn
     for (const arr of kids.values()) arr.sort((a, b) => (a.seq || 0) - (b.seq || 0) || a.createdAt.localeCompare(b.createdAt));
     const roots = list.filter((t) => opts.flat || !parentOf(t) || !inList.has(parentOf(t)) || parentOf(t) === t.id);
-    const ctx = { kids, inList, flat: !!opts.flat, collapsed: !!opts.flat, noProject: !!opts.noProject };
+    const ctx = { kids, inList, memo: new Map(), flat: !!opts.flat, collapsed: !!opts.flat, noProject: !!opts.noProject, searching: !!V.query || V.filter !== 'all' || !!V.mode };
+    // gốc xếp theo lần cập nhật mới nhất của cả nhánh: việc nối vừa chạy kéo nhiệm vụ gốc cũ lên đầu
+    if (!opts.flat && V.sort === 'updated') roots.sort((a, b) => latestIn(b, kids, ctx.memo).localeCompare(latestIn(a, kids, ctx.memo)));
     let old = false;
     const rows = roots
       .map((t) => {
         let sep = '';
-        if (!old && !opts.flat && V.sort === 'updated' && Date.now() - Date.parse(updated(t)) > DAY) {
+        if (!old && !opts.flat && V.sort === 'updated' && Date.now() - Date.parse(latestIn(t, kids, ctx.memo)) > DAY) {
           old = true;
           sep = '<div class="tsep" role="presentation"><span>Cũ hơn một ngày</span></div>';
         }
@@ -256,7 +280,7 @@
         t.status === 'running' && { icon: '⏸', label: 'Tạm dừng', run: () => act(`/api/tasks/${t.id}/pause`, {}, 'Đã yêu cầu tạm dừng') },
         ['paused', 'failed', 'cancelled'].includes(t.status) && (t.runs || []).length && { icon: '▶', label: 'Tiếp tục (chạy tới khi xong)', run: () => act(`/api/tasks/${t.id}/resume`, { budgetMode: 'complete' }, 'Đã tiếp tục') },
         ['running', 'queued', 'paused'].includes(t.status) && { icon: '✕', label: 'Hủy nhiệm vụ', danger: true, run: () => confirm(`Hủy "${t.title}"?`) && act(`/api/tasks/${t.id}/cancel`, {}, 'Đã gửi lệnh hủy') },
-        { icon: '📋', label: 'Sao chép mã nhiệm vụ', run: () => navigator.clipboard?.writeText(t.id).then(() => C.toast({ level: 'info', title: `Đã chép ${t.id}`, msg: '' })) },
+        { icon: '📋', label: `Sao chép mã nhiệm vụ (${C.code(t)})`, run: () => navigator.clipboard?.writeText(C.code(t)).then(() => C.toast({ level: 'info', title: `Đã chép ${C.code(t)}`, msg: t.title })) },
       ],
       x,
       y,
@@ -340,7 +364,22 @@
     });
   }
   /** Mở/đóng một nhánh cây rồi vẽ lại màn đang xem, giữ con trỏ trên dòng đó. */
+  /**
+   * Vẽ lại một vùng mà không làm mất con trỏ bàn phím: nhớ dòng đang được focus (theo nhiệm vụ + hạng mục) trong vùng đó rồi
+   * focus lại dòng tương ứng sau khi vẽ (sự kiện SSE vẽ lại danh sách liên tục khi có việc đang chạy).
+   */
+  function keepFocus(el, render) {
+    const a = document.activeElement;
+    const row = el && a && el.contains(a) ? a.closest('[data-id]') : null;
+    const id = row?.dataset.id;
+    const sub = row?.dataset.sub;
+    render();
+    if (!id) return;
+    const sel = `[data-id="${CSS.escape(id)}"]${sub ? `[data-sub="${CSS.escape(sub)}"]` : ':not([data-sub])'}`;
+    $(sel, el)?.focus({ preventScroll: true });
+  }
   function toggle(row) {
+    const box = row.closest('.tab-body') || document;
     const id = row.dataset.id;
     delete V.tree[id];
     V.tree[id] = row.getAttribute('aria-expanded') !== 'true';
@@ -349,7 +388,7 @@
     for (const k of keys.slice(0, Math.max(0, keys.length - 300))) delete V.tree[k];
     store.set('treeOpen', V.tree);
     D.changed();
-    $(`.trow[data-id="${CSS.escape(id)}"]:not(.sub)`)?.focus();
+    $(`.trow[data-id="${CSS.escape(id)}"]:not(.sub)`, box)?.focus({ preventScroll: true });
   }
   function taskTable(list, opts = {}) {
     if (!list.length) return `<div class="empty">${opts.empty || 'Không có nhiệm vụ nào khớp.'}</div>`;
@@ -379,7 +418,9 @@
   }
 
   /** Thay renderTaskList của app.js: danh sách nhiệm vụ kiểu Drive. */
-  D.renderTasks = (el) => {
+  // mọi nơi vẽ lại danh sách (SSE nhiệm vụ trong app.js, đồng bộ 20 giây, D.changed) đều giữ con trỏ bàn phím
+  D.renderTasks = (el) => keepFocus(el, () => renderTaskListInto(el));
+  function renderTaskListInto(el) {
     const list = sortList(tasks().filter((t) => matches(t)));
     const title = FILTERS.find(([k]) => k === V.filter)?.[1] || 'Nhiệm vụ';
     el.innerHTML = `<div class="dv-head"><h1>${V.filter === 'all' ? '📋 Nhiệm vụ' : `📋 Nhiệm vụ · ${esc(title)}`}</h1><button class="btn primary sm" data-newtask>＋ Nhiệm vụ mới</button></div>${toolbar()}${taskTable(list, { empty: tasks().length ? 'Không có nhiệm vụ nào khớp bộ lọc.' : 'Chưa có nhiệm vụ nào — bấm <b>＋ Mới</b> để giao việc đầu tiên.' })}`;
@@ -387,7 +428,7 @@
     bindItems(el);
     $$('[data-newtask]', el).forEach((b) => (b.onclick = () => C.prefillAssign({})));
     crumbs();
-  };
+  }
 
   // ── Tổng quan ────────────────────────────────────────────────────────────
   function folderHtml(p, list) {
@@ -853,9 +894,9 @@
     syncNav();
     renderTree();
     const tab = C.S.tab;
-    if (tab === 'home') renderHome();
+    if (tab === 'home') keepFocus($('#home'), renderHome);
     if (tab === 'projects') renderProjects();
-    if (tab === 'project' && !document.activeElement?.closest?.('#project-view .p-compose')) renderProject();
+    if (tab === 'project' && !document.activeElement?.closest?.('#project-view .p-compose')) keepFocus($('#project-view'), renderProject);
     if (tab === 'tasks' && !C.S.selectedTask) D.renderTasks($('#task-list'));
     if (tab === 'assign') window.Chat?.changed();
   };

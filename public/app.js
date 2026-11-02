@@ -20,6 +20,8 @@
     departments: [],
     agents: new Map(),
     tasks: new Map(),
+    // nhiệm vụ tải riêng ngoài danh sách /api/state (mở bằng mã ngắn, liên kết cũ)
+    extra: new Map(),
     projects: [],
     usage: { total: {}, byDepartment: [], byAgent: [], byTask: [], byModel: [], byDay: [] },
     runtimes: [],
@@ -95,7 +97,13 @@
   function applyState(st) {
     S.departments = st.departments;
     S.agents = new Map(st.agents.map((a) => [a.id, a]));
+    const prev = S.tasks;
     S.tasks = new Map(st.tasks.map((t) => [t.id, t]));
+    // nhiệm vụ cũ (ngoài 100 việc /api/state trả về) đã mở bằng mã/liên kết: giữ lại để mã ngắn và trang đang xem không mất
+    for (const id of [...S.extra.keys()]) {
+      if (S.tasks.has(id)) S.extra.delete(id);
+      else S.tasks.set(id, prev.get(id) || S.extra.get(id));
+    }
     S.projects = st.projects;
     S.usage = st.usage;
     S.defaults = st.defaults;
@@ -125,6 +133,11 @@
     for (const t of S.tasks.values()) if (t.seq === n) return t;
     return undefined;
   }
+  /** Nhiệm vụ tải riêng (ngoài danh sách /api/state) — giữ qua các lần đồng bộ lại. */
+  function keepTask(t) {
+    S.extra.set(t.id, t);
+    S.tasks.set(t.id, t);
+  }
   /** Mã ngắn chưa có trong danh sách đã tải (nhiệm vụ cũ ngoài 100 việc gần nhất) → hỏi máy chủ. */
   async function resolveTask(ref) {
     const t = findTask(ref);
@@ -132,7 +145,7 @@
     if (!CODE_RE.test(String(ref).trim())) return ref;
     try {
       const d = await api(`/api/tasks/${encodeURIComponent(ref)}`);
-      S.tasks.set(d.task.id, d.task);
+      keepTask(d.task);
       return d.task.id;
     } catch {
       return ref;
@@ -153,9 +166,12 @@
   document.addEventListener('click', async (e) => {
     const a = e.target.closest?.('a.tref[data-task]');
     if (!a) return;
+    // Ctrl/⌘/Shift/chuột giữa → để trình duyệt mở liên kết (href #/task/<mã>) ở thẻ mới
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
     const id = await resolveTask(a.dataset.task);
-    if (S.tab === 'assign' && window.Chat && S.tasks.has(id)) return window.Chat.open(id);
+    if (!S.tasks.has(id)) return toast({ level: 'warn', title: 'Không mở được nhiệm vụ', msg: `Không có nhiệm vụ ${a.textContent || a.dataset.task}` });
+    if (S.tab === 'assign' && window.Chat) return window.Chat.open(id);
     openTask(id);
   });
 
@@ -177,7 +193,7 @@
     office.setData(S.departments, [...S.agents.values()]);
     bindUi();
     // cầu nối cho director.js (menu agent, prompt, hạn mức, trợ giúp) và các module giao diện
-    window.CC = { S, api, esc, md, code, findTask, resolveTask, fmt, total, toast, openAgent, openTask, setTab, avatarUrl, av, agentName, deptName, deptShort, deptColor, dateTime, time, CLS_VI, TASK_VI, STATUS_VI, MODE_VI, PAUSE_VI, PHASES, PHASE_INDEX, KIND_VI, prefillAssign, office: () => office, renderTaskDetail, renderTaskList, editProject, newProject, uploadFiles, renderPending };
+    window.CC = { S, api, esc, md, code, findTask, resolveTask, keepTask, fmt, total, toast, openAgent, openTask, setTab, avatarUrl, av, agentName, deptName, deptShort, deptColor, dateTime, time, CLS_VI, TASK_VI, STATUS_VI, MODE_VI, PAUSE_VI, PHASES, PHASE_INDEX, KIND_VI, prefillAssign, office: () => office, renderTaskDetail, renderTaskList, editProject, newProject, uploadFiles, renderPending };
     window.Director?.init();
     window.Drive?.init();
     window.Chat?.init();
@@ -814,9 +830,11 @@
     if (!id) return renderTaskList();
     if (fetchData || !S.taskDetail || S.taskDetail.task.id !== id) {
       try {
-        S.taskDetail = await api(`/api/tasks/${id}`);
+        S.taskDetail = await api(`/api/tasks/${encodeURIComponent(id)}`);
+        if (!S.tasks.has(S.taskDetail.task.id)) keepTask(S.taskDetail.task);
       } catch (e) {
         S.selectedTask = null;
+        toast({ level: 'warn', title: 'Không mở được nhiệm vụ', msg: `Không có nhiệm vụ ${id}` });
         return renderTaskList();
       }
     }

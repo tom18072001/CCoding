@@ -44,8 +44,21 @@ test('mã ngắn: đánh số bù theo lúc tạo, ghi lại task.json, số m�
     oldTask(dir, 'T-20260901-080000-zzz', '2026-09-01T08:00:00.000Z');
     const again = new Store(dir, logs);
     assert.equal(again.resolve('T-20261001-080000-aaa')?.seq, 1);
-    assert.equal(again.resolve('T-20260901-080000-zzz')?.seq, 4, 'không đánh số lại các nhiệm vụ đã có số');
-    assert.equal(again.nextSeq(), 5);
+    assert.equal(again.resolve('T-20260901-080000-zzz')?.seq, 5, 'không đánh số lại các nhiệm vụ đã có số; số 4 đã cấp thì không dùng lại');
+    assert.equal(again.nextSeq(), 6);
+    // hai tiến trình lỡ cấp trùng số → nhiệm vụ tạo sau nhận số mới; chỉ ghi trường seq (không ghi trạng thái đã đổi trong bộ nhớ)
+    oldTask(dir, 'T-20261003-080000-dup', '2026-10-03T08:00:00.000Z', { seq: 1, status: 'running' } as Partial<Task>);
+    const third = new Store(dir, logs);
+    assert.equal(third.resolve('T-20261001-080000-aaa')?.seq, 1, 'nhiệm vụ tạo trước giữ số');
+    assert.equal(third.resolve('T-20261003-080000-dup')?.seq, 7);
+    assert.equal(third.resolve('CC-1')?.id, 'T-20261001-080000-aaa');
+    const dup = JSON.parse(fs.readFileSync(path.join(dir, 'runs', 'T-20261003-080000-dup', 'task.json'), 'utf8'));
+    assert.equal(dup.seq, 7);
+    assert.equal(dup.status, 'running', 'trạng thái trên đĩa không bị ghi đè bằng "tạm dừng" của lúc nạp');
+    assert.equal(third.resolve('T-20261003-080000-dup')?.status, 'paused');
+    // tệp đếm dùng chung: tiến trình khác thấy số đã cấp
+    assert.equal(new Store(dir, logs).nextSeq(), 8);
+    assert.equal(third.nextSeq(), 9, 'đọc lại tệp đếm trước khi cấp');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -89,6 +102,9 @@ test('mã ngắn: nhiệm vụ mới nhận số tăng dần; API nhận mã ng�
     assert.equal(r.status, 200);
     assert.equal(((await r.json()) as { task: Task }).task.id, b.id);
     assert.equal((await fetch(`http://127.0.0.1:${port}/api/tasks/CC-77`)).status, 404);
+    // mọi API của nhiệm vụ nhận mã ngắn (CLI, liên kết dán)
+    assert.equal((await fetch(`http://127.0.0.1:${port}/api/tasks/cc-1/timeline`)).status, 200);
+    assert.equal((await fetch(`http://127.0.0.1:${port}/api/tasks/CC-1/events?limit=5`)).status, 200);
     assert.equal(snapshot(app).taskPrefix, 'CC');
   } finally {
     srv.close();

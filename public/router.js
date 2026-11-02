@@ -47,10 +47,13 @@
     if (hold && location.hash === hold) return;
     hold = '';
     const h = current();
-    if (h !== location.hash) history.pushState(null, '', h);
+    if (h === location.hash) return;
+    // cùng một chỗ, chỉ khác cách viết (mã đầy đủ ↔ mã ngắn, cc-1 ↔ CC-1) → thay URL tại chỗ; ghi thêm lịch sử sẽ làm nút Back kẹt
+    if (canon(h) === canon(location.hash)) history.replaceState(null, '', h);
+    else history.pushState(null, '', h);
   };
-  function apply(hash) {
-    const parts = String(hash || '')
+  function parts(hash) {
+    return String(hash || '')
       .replace(/^#\/?/, '')
       .split('/')
       .filter(Boolean)
@@ -61,8 +64,20 @@
           return x;
         }
       });
-    if (!parts.length) return false;
-    const [k, id, sub] = parts;
+  }
+  /** Dạng chuẩn để so sánh hai URL: mã nhiệm vụ quy về mã đầy đủ, tab mặc định "chat" bỏ đi. */
+  function canon(hash) {
+    const [k = '', id = '', sub = ''] = parts(hash);
+    if ((k === 'task' || k === 'chat') && id) {
+      const t = C.findTask?.(id);
+      return `${k}/${t ? t.id : id}/${sub === 'chat' ? '' : sub}`;
+    }
+    return `${k}/${id}/${sub}`;
+  }
+  function apply(hash) {
+    const p = parts(hash);
+    if (!p.length) return false;
+    const [k, id, sub] = p;
     applying = true;
     try {
       if (k === 'task' && id) C.openTask(id, VIEWS.includes(sub) ? sub : undefined);
@@ -76,7 +91,9 @@
             .then((d) => {
               if (location.hash !== hold) return;
               hold = '';
-              C.S.tasks.set(d.task.id, { ...d.task, ...(C.S.tasks.get(d.task.id) || {}) });
+              const keep = { ...d.task, ...(C.S.tasks.get(d.task.id) || {}) };
+              if (C.keepTask) C.keepTask(keep);
+              else C.S.tasks.set(d.task.id, keep);
               applying = true;
               try {
                 window.Chat.open(d.task.id);
@@ -106,6 +123,9 @@
     } finally {
       applying = false;
     }
+    // đã mở xong (đồng bộ) mà URL gõ vào khác cách viết chuẩn (mã đầy đủ, chữ thường) → thay tại chỗ, không thêm lịch sử
+    const h = current();
+    if (h !== location.hash && canon(h) === canon(location.hash)) history.replaceState(null, '', h);
     return true;
   }
   const onNav = () => location.hash !== current() && apply(location.hash);
