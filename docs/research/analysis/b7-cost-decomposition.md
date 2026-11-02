@@ -19,6 +19,8 @@
 
 Nguồn: `bench/vs-claude/results/study-cloud/runs.jsonl` (chỉ đọc), hash ở T-0. Lấy lượt `status = done` của `A0-sonnet` và `B7`. Bộ **t1–t5**: 5 bài, B7 r1–9 (cửa sổ B7a) và A0 r1–9 (r1–3 từ W2b, r4–9 từ B7a; cùng server nhánh 7425). Bộ **B7b**: 13 bài còn lại, B7 r1–2 (s1-sec-review và c2-burst-alert chỉ r1), A0 lấy từ các cửa sổ trước (W1, W2a, W2c; server main 7424, 11:41–16:40 UTC 2/11), **không cùng cửa sổ/server với B7** (B7b chạy khoảng 19:00 UTC theo trường `at`). Schema: dòng B7 có `tokens{input,output,cacheRead,cacheWrite,total,weighted}`, `wallSec`, `calls`, `byPhase{execute,accept,plan,review: weighted}`; dòng A0 có `turns` thay `calls` và không có `byPhase`. `tokens.weighted` khớp `weighted(tokens)` ở mọi lượt, và tổng `byPhase` = weighted lượt (T-0, T-2). Không dùng dữ liệu cá nhân.
 
+**Ghi chú vòng 4, gói 1b (S2):** `runs.jsonl` đã có thêm dòng (B7b r3, B6b) sau lần phân tích đầu nên `--check` lệch. Script nay **ghim `PIN_LINES = 221`** dòng đầu (phần dữ liệu đã phân tích; hash ở T-0 không đổi: sha256 `c0169eba…7dda`). Kiểm lại: mọi bảng T-0…T-7 trùng đầu ra, nên **các số 47,7 %, 46,8 %, ×2,51 giữ nguyên**. Dữ liệu B7b mới (r3) không nằm trong tệp này.
+
 ### T-0. Nhận dạng dữ liệu và schema
 
 | Mục | Giá trị |
