@@ -1,0 +1,10 @@
+Cả 6 lỗi trong ISSUES.md đã được sửa, và `npm test` xanh (14 test đều pass). Test hồi quy mới nằm ở `test/regression.test.js`, mỗi lỗi có ít nhất một test. Tôi không đổi API công khai nào.
+
+1. **Làm tròn 1 xu:** nguyên nhân là `toCents` tính `amount * 100` bằng số thực, nên `1.005 * 100` ra `100.49999…`. Tôi sửa để làm tròn trên chuỗi thập phân (`1.005` → 101, `-1.005` → -101, `2.675` → 268). Mã giảm cố định cũng dùng `toCents` thay cho `Math.round(amount * 100)` trong `src/checkout.js`. Giá trị đơn tối thiểu vốn đã gọi `toCents`, nên được sửa theo.
+2. **Tổng giảm bị hụt:** `allocate` chỉ lấy phần nguyên và bỏ phần dư, nên tổng các dòng nhỏ hơn số tiền giảm. Tôi viết lại theo phương pháp phần dư lớn nhất, hòa thì dòng đứng trước được trước. Tổng các phần giờ luôn bằng `total`.
+3. **Mua X tặng Y:** `freeUnits` chia theo `buy` thay vì cả nhóm. Công thức đúng là `floor(qty / (buy + free)) * free`: 2 hộp → 0, 3 hộp → 1, 5 hộp → 1, 6 hộp → 2.
+4. **Hạn dùng mã:** `endsAt` dạng `YYYY-MM-DD` được hiểu là 00:00 UTC của ngày đó. Giờ mã dùng được đến hết ngày đó và bị từ chối từ 00:00 UTC ngày hôm sau.
+5. **Kho:** `updateQty` giữ chỗ toàn bộ số lượng mới thay vì chỉ phần chênh lệch, và `removeItem` không trả hàng về kho. Giờ cả hai chỉ giữ hoặc trả đúng phần chênh lệch; đặt số lượng về 0 cũng trả hết.
+6. **Thuế:** `checkout.js` tính thuế trên `gross`, giờ tính trên `net`.
+
+Ngoài danh sách khách báo, tôi làm thêm một thay đổi trong `src/tax.js`. `lineTax` giờ tính bằng số nguyên thay vì nhân với `0.1` hoặc `0.05`, để các trường hợp đúng nửa xu không bị lệch do sai số số thực. Kết quả với các mức thuế hiện có không đổi.
