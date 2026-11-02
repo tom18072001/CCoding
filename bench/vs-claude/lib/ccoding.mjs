@@ -19,20 +19,36 @@ export function client(baseUrl) {
  * opts: { baseUrl, dataDir (CCoding data dir, for calls.jsonl), runtime, projectId, workdir, brief, title, taskOptions, timeoutMin }
  * Returns the same shape as runClaude() (gồm infra: 'rate-limit' | 'error' | undefined và resetsAt).
  */
+/**
+ * Chỉ các trường lỗi của từng dòng calls.jsonl (error, errorKind, attempts) — KHÔNG gồm `text` hay tham số công cụ,
+ * vì nội dung bài (vd. log HTTP "status=429" của t5-logq) sẽ bị nhận nhầm thành hạn mức.
+ */
+export function callErrors(callsText) {
+  const out = [];
+  for (const l of String(callsText).split('\n')) {
+    if (!l.trim()) continue;
+    let c; try { c = JSON.parse(l); } catch { continue; }
+    const e = { error: c.error, errorKind: c.errorKind, attempts: c.attempts };
+    if (c.error || c.errorKind || (Array.isArray(c.attempts) && c.attempts.length)) out.push(e);
+  }
+  return out;
+}
+
 export async function runCcoding(opts) {
   const api = client(opts.baseUrl);
+  const t0 = Date.now();
+  let task;
+  try {
   await api('/api/projects', { method: 'POST', body: JSON.stringify({
     id: opts.projectId, name: `bench ${opts.projectId}`, workspace: opts.workdir, department: 'auto',
     classification: 'internal', runtime: opts.runtime, toolAccess: 'exec', isolation: 'none', budgetMode: 'complete', planApproval: false,
     checkCommands: fs.existsSync(path.join(opts.workdir, 'package.json')) ? ['npm test'] : [],
   }) });
-  const t0 = Date.now();
-  let task;
-  try {
   task = await api('/api/tasks', { method: 'POST', body: JSON.stringify({
     brief: opts.brief, title: opts.title, mode: opts.agentId ? 'agent' : 'project', projectId: opts.projectId, agentId: opts.agentId,
     options: { budgetMode: 'complete', planApproval: false, ...opts.taskOptions, variant: opts.variant },
   }) });
+  if (!task?.id) throw new Error(`POST /api/tasks không trả id: ${JSON.stringify(task).slice(0, 300)}`);
   } catch (e) {
     const rl = detectRateLimit(String(e.message));
     return { status: 'failed', wallSec: (Date.now() - t0) / 1000, tokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, weighted: 0 }, costUsd: 0, turns: 0, calls: 0, finalText: '', byPhase: {}, agentsUsed: 0, byAgent: {}, infra: rl.rateLimited ? 'rate-limit' : 'error', ...(rl.resetsAt ? { resetsAt: rl.resetsAt } : {}), error: String(e.message) };
@@ -42,7 +58,7 @@ export async function runCcoding(opts) {
   const callsPath = path.join(opts.dataDir ?? '', 'runs', task.id, 'calls.jsonl');
   const scan = () => {
     const texts = [t.attention, t.error];
-    try { if (opts.dataDir && fs.existsSync(callsPath)) texts.push(fs.readFileSync(callsPath, 'utf8').split('\n').filter((l) => /error|"ok":\s*false/i.test(l)).slice(-5)); } catch { /* bỏ qua */ }
+    try { if (opts.dataDir && fs.existsSync(callsPath)) texts.push(callErrors(fs.readFileSync(callsPath, 'utf8')).slice(-5)); } catch { /* bỏ qua */ }
     return detectRateLimit(texts);
   };
   while (!['done', 'failed', 'cancelled'].includes(t.status)) {

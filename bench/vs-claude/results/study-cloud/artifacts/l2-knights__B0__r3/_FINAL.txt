@@ -1,0 +1,73 @@
+# Báo cáo: Knights and knaves, 5 server A–E
+
+## Tóm tắt
+Đã ghi `answer.json` ở thư mục gốc repo: B, C healthy; A, D, E compromised; `unique: true`. S2 đã duyệt đủ 32 cách gán và ra đúng 1 nghiệm, khớp lời giải tay. Tôi đã đọc lại tệp và kiểm lại bằng lập luận theo từng trường hợp, kết quả trùng. Còn hai điểm lệch quy trình. S1 không bàn giao được vì hook chặn ghi. Reviewer không tự chạy lệnh nào. Tệp chưa được commit.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Duyệt 32 cách gán bằng script tạm | @senior-swe | **Chưa đạt**, nhưng mục tiêu đã được S2 thực hiện thay | Hook `claude-guard` chặn ghi script vào scratchpad, nên không có script và không có stdout. Xem `.ccoding/T-20261102-144011-be7/outputs/dev-S1-senior-swe.md` |
+| S2 | Ghi `answer.json` và kiểm tra định dạng | @backend-dev | **Đạt** | Chạy `python3 -I -c` duyệt 32 cách gán, in ra `[(False, True, True, False, False)]`, tức 1 nghiệm. Lệnh kiểm tra JSON trả exit 0. Xem `.ccoding/T-20261102-144011-be7/outputs/dev-S2-backend-dev.md` |
+| Trưởng phòng | Đối chiếu cuối | @dev-lead | Đạt | `cat answer.json` cho ra `{"healthy": ["B", "C"], "compromised": ["A", "D", "E"], "unique": true}`. `git status --short` chỉ có `?? answer.json`. Đã kiểm lại uniqueness bằng tay, xem mục Quyết định |
+
+## Quyết định
+- **Nhận kết quả duyệt inline của S2 thay cho S1.** Lệnh `python3 -c` không ghi tệp nào ra ngoài thư mục làm việc, nên không lách hook. Kết quả của nó tương đương với mục tiêu của S1. Vì vậy tôi đóng S1, không mở lại.
+- **Đối chiếu độc lập** (suy luận tay, không chạy lệnh):
+  - Nếu A healthy: B compromised, rồi E compromised (vì A≠E), rồi D healthy, rồi C compromised. Khi đó có B, C, E bị compromised, tức đúng 3 server, nghĩa là phát biểu của C đúng. Điều này mâu thuẫn với việc C compromised. **Loại.**
+  - Nếu A compromised: B healthy, E compromised, D ↔ ¬C.
+    - C compromised kéo theo D healthy. Khi đó có A, C, E compromised, đúng 3 server, nên C phải đúng. **Mâu thuẫn.**
+    - C healthy kéo theo D compromised. Khi đó có A, D, E compromised, đúng 3 server. **Nhất quán.**
+  - Kết luận: chỉ có đúng một nghiệm, nên `unique: true` là đúng.
+- Không cần kiến trúc, BA hay cổng bảo vệ dữ liệu, vì đây là việc nhỏ trong một repo trống.
+
+## Kết quả review
+- Reviewer kết luận **Đã duyệt**, nhưng ghi rõ là *không chạy lệnh kiểm tra nào*. Bằng chứng chạy thật chỉ có từ S2, cộng thêm lệnh đọc `cat` và `git status` của tôi.
+- Minor: S2 tự làm phần việc của S1, lệch phân công. Tôi chấp nhận vì không vi phạm phạm vi ghi và kết quả đã được đối chiếu chéo.
+- Không có blocker.
+
+## Việc còn mở & rủi ro
+- `answer.json` **chưa commit**. Brief không yêu cầu commit, nên tôi để Tom quyết định.
+- Không còn script duyệt 32 cách gán nào được lưu lại. Muốn tái lập thì phải chạy lại lệnh inline mô tả trong báo cáo S2.
+- Hook chặn ghi vào scratchpad sẽ còn cản các nhiệm vụ sau nếu cần script tạm.
+
+## Bước tiếp theo
+- Không còn việc nào trong phạm vi nhiệm vụ này.
+- Đề xuất một nhiệm vụ riêng, nếu Tom muốn: rà cấu hình `claude-guard` để cho phép ghi vào scratchpad của phiên. Tiêu chí xong là sub-agent ghi và chạy được một script tạm trong scratchpad mà không bị chặn, đồng thời vẫn bị chặn khi ghi ra ngoài phạm vi.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-144011-be7` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **24 in / 9,520 out**, cache đọc 110.2k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | 8 | 4797 | 38465 | 2 |
+| Backend Developer (@backend-dev) | dev | 6 | 1225 | 33031 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 4 | 1553 | 18473 | 1 |
+| QA Engineer (@qa-tester) | dev | 4 | 1486 | 17977 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 459 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Duyệt toàn bộ 32 cách gán và tìm các nghiệm thỏa mãn (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Ghi answer.json ở thư mục gốc repo và kiểm tra định dạng (@backend-dev)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | 100 | 100 | 100 | 100 | 0 | — | 43k | 0/2 |
+| Backend Developer (@backend-dev) | dev | **89** A | 100 | 79 | 100 | 60 | 1 | 1 | 34k | 0/2 |
+| Senior Software Engineer (@senior-swe) | dev | **86** A | 100 | 100 | 60 | 60 | 1 | 1 | 20k | 1/2 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 19k | 0/1 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Backend Developer** (@backend-dev, 89 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **Senior Software Engineer** (@senior-swe, 86 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

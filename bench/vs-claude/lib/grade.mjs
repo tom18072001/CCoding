@@ -23,6 +23,27 @@ export function readTextDeliverable(workdir, file, finalText = '') {
   return { text: String(finalText ?? ''), formatMiss: true };
 }
 
+export const GRADE_TEST_TIMEOUT_MS = 600000; // áp cho cả tệp test (mỗi tệp là một tiến trình con): starter t4 cần ~190 s
+export const GRADE_PROCESS_TIMEOUT_MS = 900000;
+
+/**
+ * Điểm từ đầu ra TAP của node:test. Lấy dòng tổng kết CUỐI CÙNG (stdout của mã được chấm có thể in "# pass 50" trước đó).
+ * Không có dòng tổng kết (tiến trình bị giết): đếm từng dòng ok/not ok của test lá; phần chưa chạy không được tính là đạt.
+ */
+export function tapScore(out) {
+  const last = (k) => { const all = [...out.matchAll(new RegExp(`^# ${k} (\\d+)\\s*$`, 'gm'))]; return all.length ? Number(all.at(-1)[1]) : undefined; };
+  const failed = [...out.matchAll(/^\s*not ok \d+ - (.+)$/gm)].map((m) => m[1].trim()).filter((n) => !n.startsWith('hidden/'));
+  let pass = last('pass'), fail;
+  const summary = pass !== undefined;
+  if (summary) fail = (last('fail') ?? 0) + (last('cancelled') ?? 0);
+  else {
+    pass = [...out.matchAll(/^\s*ok \d+ - (.+)$/gm)].filter((m) => !m[1].trim().startsWith('hidden/')).length;
+    fail = failed.length;
+  }
+  const total = pass + fail;
+  return { score: total ? pass / total : 0, pass: summary && total > 0 && fail === 0, details: { passed: pass, total, failed, ...(summary ? {} : { noSummary: true }) } };
+}
+
 /** Coding: copy workdir to a scratch dir, drop hidden tests in, run node:test, score = passed / total hidden tests. */
 export function gradeCode({ workdir, hiddenDir }) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ccvb-grade-'));
@@ -32,14 +53,11 @@ export function gradeCode({ workdir, hiddenDir }) {
   const files = fs.readdirSync(hiddenDir, { withFileTypes: true }).filter((e) => e.isFile()).map((e) => e.name);
   for (const f of files) fs.copyFileSync(path.join(hiddenDir, f), path.join(tmp, 'hidden', f));
   const tests = files.filter((f) => f.endsWith('.test.js'));
-  const r = spawnSync(process.execPath, ['--test', '--test-reporter=tap', ...tests.map((f) => `hidden/${f}`)], { cwd: tmp, encoding: 'utf8', timeout: 120000, env: { ...process.env, NODE_TEST_CONTEXT: undefined } }); // NODE_TEST_CONTEXT: do not inherit when run under `node --test`
-  const out = `${r.stdout}\n${r.stderr}`;
-  const num = (k) => Number(out.match(new RegExp(`^# ${k} (\\d+)`, 'm'))?.[1] ?? 0);
-  const pass = num('pass'), fail = num('fail') + num('cancelled');
-  const failed = [...out.matchAll(/^\s*not ok \d+ - (.+)$/gm)].map((m) => m[1]).filter((n) => !n.startsWith('hidden/'));
+  // Hạn mỗi tệp test (--test-timeout) ngắn hơn hạn cả tiến trình, nên tệp quá hạn bị tính trượt mà vẫn có dòng tổng kết;
+  // --test-force-exit: handle còn mở (setInterval, server) trong mã được chấm không làm treo bộ chấm.
+  const r = spawnSync(process.execPath, ['--test', '--test-force-exit', `--test-timeout=${GRADE_TEST_TIMEOUT_MS}`, '--test-reporter=tap', ...tests.map((f) => `hidden/${f}`)], { cwd: tmp, encoding: 'utf8', timeout: GRADE_PROCESS_TIMEOUT_MS, maxBuffer: 64 << 20, env: { ...process.env, NODE_TEST_CONTEXT: undefined } }); // NODE_TEST_CONTEXT: do not inherit when run under `node --test`
   fs.rmSync(tmp, { recursive: true, force: true });
-  const total = pass + fail;
-  return { score: total ? pass / total : 0, pass: total > 0 && fail === 0, details: { passed: pass, total, failed } };
+  return { ...tapScore(`${r.stdout}\n${r.stderr}`), ...(r.error ? { gradeError: String(r.error.code ?? r.error.message) } : {}) };
 }
 
 const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);

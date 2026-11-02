@@ -1,0 +1,13 @@
+I wrote the specification to `SPEC.md` at the repository root. It includes the `## Open questions and assumptions` section, with 15 questions, each paired with the assumption the build would use until the customer answers.
+
+The request contradicts itself in several places, so I picked a default for each. The defaults lean toward data protection:
+
+- **Full data vs. masked data.** The default is a masked export for the self-service button: usernames become stable pseudonyms and IPs are truncated to /24. Full IPs and usernames sit in a separate unmasked flow. That flow needs a recorded justification and a second approver, and it is built only after the customer confirms it is allowed (Q1).
+- **Keep forever vs. delete after 12 months.** The audit record of each export is kept forever, since it holds no raw personal data. Exported files are deleted at 12 months, and a deletion record is written.
+- **"Everything they can see" vs. team, last month.** The scope is the intersection of what the user may view, their own team, and the previous calendar month in Vietnam time. The server derives the scope from the session, so the client cannot widen it.
+- **5-second limit vs. unknown volume.** I assumed a 50,000-row cap for synchronous exports. Larger exports run asynchronously and are never truncated.
+- **"Like the old system."** No sample was provided, so I assumed a 7-column CSV format. The spec also adds protection against spreadsheet formula injection.
+
+The spec also covers the audit trail, security and retention rules, a compliance note, and 9 acceptance criteria.
+
+The assumed values in the spec (the 50,000-row cap, the 7 columns, the 35-day backup expiry) are my own guesses, not figures from the customer. The Vietnamese legal references (Decree 13/2023 and the 2026 data protection law) need the bank's legal team to confirm them. They also need to confirm whether any minimum log-retention rule overrides the 12-month deletion.
