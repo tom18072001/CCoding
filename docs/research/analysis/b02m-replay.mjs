@@ -56,9 +56,15 @@ for (const c of fs.readdirSync(root).filter((x) => /^C\d+$/.test(x)).sort((a, b)
   }
 
 const rows = [];
+const fin = { withPath: 0, fileExists: 0 }; // đọc finalPath (báo cáo cuối của lượt); fallback = trường cũ review.approved
 for (const { c, d, f } of files) {
   const t = JSON.parse(fs.readFileSync(f, 'utf8'));
   const run = t.runs?.[t.runs.length - 1];
+  const fpath = run?.finalPath ?? t.finalPath;
+  if (fpath) {
+    fin.withPath++;
+    if (fs.existsSync(path.join(path.dirname(f), fpath))) fin.fileExists++; // báo cáo không được lưu cùng kết quả bench
+  }
   const approved = run?.review?.approved;
   const pc = t.projectChecks;
   const miss = [];
@@ -100,6 +106,8 @@ const t5 = rows.find((r) => r.turn === 'C9/t5-logq.ccoding-fastlane.2');
 const out = [];
 const P = (s = '') => out.push(s);
 P(`<!-- sinh bởi docs/research/analysis/b02m-replay.mjs; Node ${process.version}; src/quality-gate.ts @ ${git('log', '-1', '--format=%h', '--', 'src/quality-gate.ts')} -->`);
+P(`- finalPath: ${fin.withPath}/${files.length} lượt có trường finalPath (${fin.fileExists} có tệp đọc được cạnh ccoding-task.json); approved vẫn lấy từ review.approved (fallback trường cũ).`);
+P();
 P('## Bảng từng lượt');
 P();
 P('| Lượt | làn | approved | baseline | sau (latest) | phân loại cổng | thật: duyệt khi còn đỏ | cổng chặn |');

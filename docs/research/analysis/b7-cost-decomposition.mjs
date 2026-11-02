@@ -34,7 +34,10 @@ const BRIEF = { A0: { out: 8000, cacheRead: 124000, cacheWrite: 15000, weighted:
 const COMP = ['output', 'cacheRead', 'cacheWrite', 'input'];
 const COMP_VI = { output: 'out', cacheRead: 'cacheRead', cacheWrite: 'cacheWrite', input: 'input' };
 
-const runsBuf = fs.readFileSync(RUNS);
+// GHIM (vòng 4, gói 1b): runs.jsonl đã có thêm dòng B7b/B6b sau lần phân tích đầu. Chỉ đọc PIN_LINES dòng đầu
+// (phần dữ liệu đã được backlog trích); hash ở T-0 là hash phần đã ghim. Dòng nối thêm (append-only) không làm lệch --check.
+const PIN_LINES = 221;
+const runsBuf = Buffer.from(fs.readFileSync(RUNS, 'utf8').split('\n').slice(0, PIN_LINES).join('\n') + '\n');
 const rows = runsBuf.toString('utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l));
 const done = rows.filter((r) => r.status === 'done');
 const A0 = done.filter((r) => r.arm === 'A0-sonnet'), B7 = done.filter((r) => r.arm === 'B7');
