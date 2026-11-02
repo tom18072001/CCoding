@@ -1,0 +1,13 @@
+{
+  "id": "l3-reconcile",
+  "category": "logic",
+  "size": 2,
+  "title": "Revenue reconciliation with traps",
+  "hypotheses": [
+    "H2",
+    "H4"
+  ],
+  "deliverable": "answer.json",
+  "brief": "`transactions.csv` is a raw payment export. Compute the net revenue for October 2026 for the finance team in Ho Chi Minh City.\n\nBusiness rules:\n- \"October 2026\" means the calendar month in Vietnam local time (UTC+7). `created_at` is UTC.\n- Count rows with status `paid` (positive amounts) and `refunded` (negative amounts, linked to the original via `ref_txn`). A refund counts in the month the refund row was created, regardless of when the original was paid. Ignore `void` and `pending`.\n- The export sometimes contains exact duplicate rows; each `txn_id` counts once.\n- Convert USD to VND at a fixed 25,400 VND per USD. Sum exactly and round half-up to whole dong only at the end.\n\nWrite `answer.json` in the repository root: `{ \"net_revenue_vnd\": <integer>, \"paid_count\": <integer>, \"refund_count\": <integer>, \"duplicate_rows_ignored\": <integer> }` where the counts are distinct October paid transactions, distinct October refund transactions, and the number of duplicate rows in the whole file. Also write a short `NOTES.md` explaining your method.",
+  "grader": "exact"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "c3-shop-bugs",
+  "category": "coding",
+  "size": 3,
+  "title": "Multi-file bug hunt in a cart module",
+  "hypotheses": [
+    "H1",
+    "H3",
+    "H10"
+  ],
+  "deliverable": "src/",
+  "brief": "Customers of this small shop module report three problems: (1) cart totals are wrong when a coupon is used, sometimes by a lot and sometimes with fractional dong; (2) stock can go negative; (3) customers cannot buy exactly the maximum allowed quantity on one line. Find and fix the root causes across `src/`. Keep every exported function name and signature. Amounts are integer VND; percentage discounts round half-up to the nearest dong and the coupon applies once to the subtotal. Add regression tests. `npm test` runs the tests.",
+  "grader": "code"
+}

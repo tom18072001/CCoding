@@ -1,0 +1,44 @@
+{
+  "argv": [
+    "--arms",
+    "oracle,null",
+    "--repeats",
+    "1",
+    "--out",
+    "results/selftest"
+  ],
+  "cfg": {
+    "ccodingUrl": "http://127.0.0.1:7420",
+    "ccodingData": "/home/claude/CCoding/data",
+    "runtime": "claude-cli",
+    "timeoutMin": 60,
+    "claudeBin": "claude",
+    "judge": {
+      "enabled": false,
+      "model": "opus"
+    },
+    "seed": "ccvb",
+    "workRoot": "/tmp/ccvb-301e47"
+  },
+  "armIds": [
+    "oracle",
+    "null"
+  ],
+  "taskIds": [
+    "a1-ambiguous-spec",
+    "c1-iis-ecs",
+    "c2-burst-alert",
+    "c3-shop-bugs",
+    "c4-audit-chain",
+    "c5-tickets-api",
+    "l1-oncall",
+    "l2-knights",
+    "l3-reconcile",
+    "l4-startup-order",
+    "r1-elk-design",
+    "re1-lit-synthesis",
+    "s1-sec-review"
+  ],
+  "repeats": 1,
+  "startedAt": "2026-11-02T07:05:19.042Z"
+}

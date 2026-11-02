@@ -1,0 +1,12 @@
+{
+  "items": [
+    { "id": "daily-volume", "question": "Does the document compute daily raw volume of about 1.38 TB/day (equivalently about 1.26 TiB/day; accept 1.2-1.5 TB)?", "regex": ["1[.,](2[5-9]|3\\d|4\\d)\\d* ?(TB|TiB|T)"] },
+    { "id": "yearly-volume", "question": "Does the document compute yearly raw volume of about 500 TB (accept 450-520 TB, or about 460 TiB)?", "regex": ["(4[5-9]\\d|50\\d|51\\d|520)(\\.\\d+)? ?(TB|TiB)"] },
+    { "id": "replicas", "question": "Does the hot-tier storage estimate explicitly include replica copies (e.g. x2 for one replica)?", "regex": ["replica"] },
+    { "id": "license-conflict", "question": "Does the document point out that searchable snapshots (cold/frozen tier) require a paid Enterprise license and therefore conflict with the Basic-only constraint, proposing an alternative (e.g. snapshot + restore on request)?", "regex": ["(searchable snapshot).{0,400}(enterprise|platinum|paid|licen[cs]e|subscription)|(enterprise|platinum|paid|licen[cs]e|subscription).{0,400}(searchable snapshot)"] },
+    { "id": "integrity", "question": "Does the design guarantee integrity with a concrete mechanism (hash chain or signing of events/batches AND write-once storage such as S3 Object Lock/WORM snapshots)?", "regex": ["(hash|sha-?256|sign).{0,400}(WORM|object lock|immutable|write-once)|(WORM|object lock|immutable|write-once).{0,400}(hash|sha-?256|sign)"] },
+    { "id": "masking", "question": "Does the design mask usernames/e-mails/phones in the ingest pipeline (Logstash or ingest node processors) before indexing?", "regex": ["(mask|redact|pseudonym|anonymi|hash).{0,300}(ingest|logstash|pipeline|processor)|(ingest|logstash|pipeline|processor).{0,300}(mask|redact|pseudonym|anonymi)"] },
+    { "id": "ilm", "question": "Does the document define an ILM policy with rollover and phase transitions matching 30 days hot and 12 months total retention?", "regex": ["ILM|index lifecycle"] },
+    { "id": "ingest-throughput", "question": "Does the document size the ingest layer for 20k EPS (number of Logstash/ingest nodes or bulk throughput per node with justification)?", "regex": ["(20[ ,.]?000|20k).{0,300}(logstash|ingest node|bulk|EPS per)"] }
+  ]
+}

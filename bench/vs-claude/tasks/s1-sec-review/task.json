@@ -1,0 +1,12 @@
+{
+  "id": "s1-sec-review",
+  "category": "review",
+  "size": 3,
+  "title": "Security review with seeded vulnerabilities and decoys",
+  "hypotheses": [
+    "H3"
+  ],
+  "deliverable": "findings.json",
+  "brief": "Perform a security code review of `src/server.js` (an Express API in front of PostgreSQL; `db.query(sql, params)` uses PostgreSQL positional parameters). Do not modify the source.\n\nWrite `findings.json` in the repository root: an array of `{ \"line\": <1-based line number>, \"type\": \"<type>\", \"severity\": \"low|medium|high|critical\", \"fix\": \"<one sentence>\" }`. Use one of these types: `sqli`, `xss`, `path-traversal`, `command-injection`, `ssrf`, `hardcoded-secret`, `weak-crypto`, `missing-authz`, `missing-authn`, `csrf`, `info-leak`, `other`. Report only real, exploitable issues; false positives are penalised. One finding per issue.",
+  "grader": "security"
+}

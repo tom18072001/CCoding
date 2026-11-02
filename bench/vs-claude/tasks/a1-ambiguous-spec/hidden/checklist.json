@@ -1,0 +1,10 @@
+{
+  "items": [
+    { "id": "pii-contradiction", "question": "Does the spec flag the contradiction between exporting full client IPs/usernames and the rule that no personal data may leave the platform unmasked (IPs and usernames being personal data)?", "regex": ["(contradict|conflict|tension|incompatib|mâu thuẫn).{0,300}(IP|username|personal data|PII)|(IP|username|personal data|PII).{0,300}(contradict|conflict|tension|incompatib)"] },
+    { "id": "last-month", "question": "Does the spec ask whether 'last month' means the previous calendar month or a rolling 30 days (and/or which timezone)?", "regex": ["(calendar month|rolling|30 days|previous month).{0,200}", "time ?zone|UTC\\+7"] },
+    { "id": "perf-vs-volume", "question": "Does the spec question the feasibility of 'export everything' within 5 seconds (volume/size limits, async export, pagination)?", "regex": ["5 ?(s|sec|seconds).{0,300}(volume|size|large|async|feasib|limit|cap)|(volume|size|large|async|feasib|limit|cap).{0,300}5 ?(s|sec|seconds)"] },
+    { "id": "team-definition", "question": "Does the spec ask how a manager's 'team' is defined or where team membership comes from (HR system, AD groups, branch)?", "regex": ["team.{0,200}(defin|membership|source|AD|Active Directory|HR|org chart|branch)"] },
+    { "id": "retention-conflict", "question": "Does the spec flag the conflict between keeping exported files forever and deleting personal data older than 12 months?", "regex": ["(forever|indefinite).{0,300}(12 months|deletion|delete)|(12 months|deletion|delete).{0,300}(forever|indefinite)"] },
+    { "id": "old-format", "question": "Does the spec ask for the exact CSV format/columns of 'the old system' (or state an assumption about it)?", "regex": ["old system.{0,200}(format|column|schema|sample|layout)|(format|column|schema|sample|layout).{0,200}old system"] }
+  ]
+}

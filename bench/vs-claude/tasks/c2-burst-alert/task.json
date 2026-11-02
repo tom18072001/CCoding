@@ -1,0 +1,14 @@
+{
+  "id": "c2-burst-alert",
+  "category": "coding",
+  "size": 2,
+  "title": "Sliding-window 5xx burst alerting",
+  "hypotheses": [
+    "H1",
+    "H2",
+    "H10"
+  ],
+  "deliverable": "src/alert.js",
+  "brief": "Implement `detectBursts(events, opts)` in `src/alert.js`.\n\n`events` is an array of `{ ts, host, status }` where `ts` is epoch milliseconds (not guaranteed sorted), `host` a string and `status` an HTTP status number. `opts` = `{ windowMs = 60000, threshold = 5, cooldownMs = windowMs }`.\n\nFor each host independently, consider only 5xx events (500-599). An alert fires at the moment an event arrives such that the number of that host's 5xx events with `ts` in the half-open interval `(event.ts - windowMs, event.ts]` is >= `threshold`. After an alert for a host, no further alert for that host may fire for any event with `ts < alert.ts + cooldownMs`; events during cooldown still count toward later windows. Events with equal `ts` for the same host are processed in input order, and each counts toward the window as it is processed.\n\nReturn alerts as `{ host, ts, count }` (`ts` = triggering event time, `count` = events in the window at that moment), sorted by `ts`, then by `host` ascending. Do not mutate the input. Use the ES module export already in the file; `npm test` runs the visible tests.",
+  "grader": "code"
+}

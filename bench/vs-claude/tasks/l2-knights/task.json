@@ -1,0 +1,12 @@
+{
+  "id": "l2-knights",
+  "category": "logic",
+  "size": 1,
+  "title": "Knights and knaves",
+  "hypotheses": [
+    "H2"
+  ],
+  "deliverable": "answer.json",
+  "brief": "Five servers, A to E, answer health probes. A healthy server (\"knight\") always reports the truth; a compromised server (\"knave\") always reports a falsehood. Each sends one statement:\n\n- A: \"B is compromised.\"\n- B: \"A and E are in the same state.\"\n- C: \"Exactly three of us five are compromised.\"\n- D: \"E is healthy, or C is compromised.\"\n- E: \"A is healthy and D is compromised.\"\n\nDetermine the state of each server. Write `answer.json` in the repository root: `{ \"healthy\": [\"...\"], \"compromised\": [\"...\"], \"unique\": true|false }` with letters sorted alphabetically. `unique` says whether exactly one assignment is consistent.",
+  "grader": "exact"
+}

@@ -221,7 +221,7 @@ Chạy lại sau khi sửa (`T-20261101-154738-c08`, 163 giây, 563k token): Ki�
 ## 13. Benchtest CCoding vs Claude Code thuần — làn nhanh cho việc nhỏ (1–2/11/2026)
 
 Mục tiêu chủ dự án: **việc nhỏ (dưới 15 phút) CCoding phải xong nhanh hơn Claude Code thuần**; người điều phối phải tự chia việc và
-cho chạy song song. Bộ đo `bench/vs-claude` ([README](../bench/vs-claude/README.md)): 5 bài (module theo đặc tả, sửa 6 lỗi khách báo,
+cho chạy song song. Bộ đo `bench/vs-claude` ([README](../bench/vs-claude/harness/README.md)): 5 bài (module theo đặc tả, sửa 6 lỗi khách báo,
 4 tính năng API, tối ưu hiệu năng giữ nguyên kết quả từng byte, công cụ nhiều module), **461 test ẩn** mà cả hai hệ không thấy, cùng
 đề bài, cùng repo xuất phát; Claude Code `claude -p --model opus`; CCoding runtime claude-cli, dự án mới mỗi lượt; chạy trên cloud,
 mỗi hệ tuần tự. Kết quả đầy đủ (từng lượt, từng pha, từng lượt gọi agent, từng lượt mô hình của Claude Code):

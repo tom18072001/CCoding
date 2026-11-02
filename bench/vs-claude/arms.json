@@ -1,0 +1,81 @@
+{
+  "A0-opus": {
+    "kind": "claude",
+    "model": "opus",
+    "label": "Single Claude (Opus)"
+  },
+  "A0-sonnet": {
+    "kind": "claude",
+    "model": "sonnet",
+    "label": "Single Claude (Sonnet)"
+  },
+  "A1": {
+    "kind": "claude",
+    "model": "sonnet",
+    "process": true,
+    "label": "Single Claude + plan/self-review prompt"
+  },
+  "A2": {
+    "kind": "best-of-n",
+    "model": "sonnet",
+    "n": 3,
+    "label": "Single Claude best-of-N (compute-matched)"
+  },
+  "B0": {
+    "kind": "ccoding",
+    "options": {},
+    "label": "CCoding default"
+  },
+  "B1": {
+    "kind": "ccoding",
+    "options": {
+      "discussionRounds": 0
+    },
+    "label": "CCoding, no meeting"
+  },
+  "B2": {
+    "kind": "ccoding",
+    "options": {
+      "review": false
+    },
+    "label": "CCoding, no review"
+  },
+  "B3": {
+    "kind": "ccoding",
+    "options": {
+      "phaseModels": {
+        "route": "opus",
+        "plan": "opus",
+        "discuss": "opus",
+        "finalize": "opus",
+        "execute": "opus",
+        "review": "opus",
+        "revise": "opus",
+        "synthesize": "opus",
+        "accept": "opus"
+      }
+    },
+    "label": "CCoding, all Opus (optional)"
+  },
+  "B4": {
+    "kind": "ccoding",
+    "options": {
+      "acceptance": false
+    },
+    "label": "CCoding, no CTO acceptance"
+  },
+  "B5": {
+    "kind": "ccoding",
+    "agentId": "senior-swe",
+    "options": {},
+    "label": "CCoding single agent (senior-swe) - scaffolding without the office"
+  },
+  "oracle": {
+    "kind": "oracle",
+    "label": "Reference solution (grader self-test)"
+  },
+  "null": {
+    "kind": "null",
+    "label": "Does nothing (grader self-test)"
+  }
+}

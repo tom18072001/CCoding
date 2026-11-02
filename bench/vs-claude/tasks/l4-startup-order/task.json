@@ -1,0 +1,12 @@
+{
+  "id": "l4-startup-order",
+  "category": "logic",
+  "size": 2,
+  "title": "Service startup order with a hidden cycle",
+  "hypotheses": [
+    "H2"
+  ],
+  "deliverable": "answer.json",
+  "brief": "`services.txt` lists each service and the services that must already be running before it can start. A service can start only when all of its dependencies have started.\n\nWrite `answer.json` in the repository root with:\n- `startup_order`: every service that can eventually start, in a valid start order; when several services could start next, pick the alphabetically smallest first (so the answer is unique).\n- `blocked`: alphabetically sorted list of services that can never start.\n- `cycle_members`: alphabetically sorted list of services that lie on a dependency cycle.\n\nShape: `{ \"startup_order\": [...], \"blocked\": [...], \"cycle_members\": [...] }`.",
+  "grader": "exact"
+}

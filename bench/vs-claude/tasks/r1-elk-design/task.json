@@ -1,0 +1,14 @@
+{
+  "id": "r1-elk-design",
+  "category": "design",
+  "size": 4,
+  "title": "ELK audit platform sizing and design",
+  "hypotheses": [
+    "H1",
+    "H4",
+    "H10"
+  ],
+  "deliverable": "DESIGN.md",
+  "brief": "Write `DESIGN.md` at the repository root: an architecture and sizing proposal for an Elastic Stack audit-log platform.\n\nInputs from the customer:\n- Sustained ingest of 20,000 events per second, average raw event size 800 bytes, 24/7.\n- Retention 12 months. The most recent 30 days must be searchable interactively; older data must be searchable within 24 hours of a request.\n- Logs are used as legal evidence: they must be provably unaltered.\n- Usernames, e-mails and phone numbers must be masked before data is indexed.\n- Budget constraint: Elastic Basic (free) license only.\n- Customer suggestion: \"use searchable snapshots for the cold/frozen tier to save storage\".\n\nThe document must show the capacity arithmetic (daily and yearly raw volume, the storage per tier including replicas, and your compression assumption), the node layout per tier, the ingest pipeline, ILM policy, how integrity is guaranteed, and any risks or conflicts in the inputs.",
+  "grader": "checklist"
+}

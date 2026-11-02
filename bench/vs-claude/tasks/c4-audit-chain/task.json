@@ -1,0 +1,14 @@
+{
+  "id": "c4-audit-chain",
+  "category": "coding",
+  "size": 4,
+  "title": "Hash-chained audit log with PII redaction",
+  "hypotheses": [
+    "H1",
+    "H8",
+    "H10"
+  ],
+  "deliverable": "src/index.js",
+  "brief": "Implement a tamper-evident audit log in `src/index.js` (ES module, Node built-ins only).\n\n1. `canonicalize(value)` returns a deterministic JSON string: object keys sorted by Unicode code point at every depth, arrays keep order, no whitespace, `undefined` object properties omitted, otherwise identical to `JSON.stringify`.\n2. `redact(entry)` returns a deep copy where every string value (at any depth, including inside arrays) has e-mail addresses replaced by `[EMAIL]` and Vietnamese mobile numbers replaced by `[PHONE]`. A Vietnamese mobile number is `0` or `+84` followed by 9 digits whose first digit is 3, 5, 7, 8 or 9, not preceded or followed by another digit. Keys are not changed. The input must not be mutated.\n3. `append(chain, entry)` redacts the entry, then pushes and returns a record `{ seq, prev, entry, hash }` onto the array `chain`: `seq` starts at 0, `prev` is the previous record's `hash` or 64 zeros for the first, `entry` is the redacted entry, `hash` = lowercase hex SHA-256 of `canonicalize({ seq, prev, entry })`.\n4. `verify(chain)` returns `{ ok: true }` if every record is consistent (seq order, prev linkage, recomputed hash) or `{ ok: false, index }` with the index of the first bad record.\n\nThe log is used as legal evidence, so PII must never reach the hash input. Add tests; `npm test` runs them.",
+  "grader": "code"
+}
