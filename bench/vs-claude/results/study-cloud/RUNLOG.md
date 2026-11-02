@@ -12,6 +12,7 @@ Theo `bench/vs-claude/RUNBOOK-cloud-session.md`, Nhánh 1 (`docs/research/run-pl
 | W1 | A0-sonnet, B0 | R9 | r1–3 (54) | 2026-11-02T11:41:23Z | 2026-11-02T13:15:35Z | xong 54/54 |
 | W2a | A0-sonnet, B0 (server main 7424, chặn web) | N4 = a1, l1-oncall, l2-knights, r1 `--judge` | r1–3 (24) | 2026-11-02T13:35:19Z | 2026-11-02T15:05Z | xong 24/24 |
 | W2b | A0-sonnet, B6 (server nhánh 7425, chặn web) | T5 = t1-duration, t2-orders, t3-api, t4-perf, t5-logq | r1–3 (30) | 2026-11-02T15:06:56Z | 2026-11-02T16:19:44Z | xong 30/30 |
+| W2c | A0-sonnet, B0 (server main 7424, chặn web) | s1-sec-review | r4–10 (14) | 2026-11-02T16:21:21Z | 2026-11-02T16:40:11Z | xong 14/14 |
 
 ## Bảng cửa sổ (`run-plan.md` §3.0)
 
@@ -59,3 +60,12 @@ Công cụ trong `calls.jsonl` của 12 lượt B0: `run_command`, `edit_file`, 
 
 B6 chạy đúng làn nhanh: các pha trong `calls.jsonl` chỉ có route → plan → execute → accept (không có review/synthesize).
 `calls.jsonl` của 15 lượt B6 trên server 7425 không có WebFetch/WebSearch. Bài t5-logq (log có `status=429`) không còn bị nhận nhầm là hạn mức.
+
+**W2c** (A0-sonnet + B0 × s1 × r4–10, server 7424; bổ sung s1 lên N = 10): 14/14 `done`, 0 lỗi hạ tầng, 0 leak.
+
+| Arm | Lượt | Token có trọng số | Wall-sum | Wall dài nhất |
+|---|---|---|---|---|
+| A0-sonnet | 7 | 0,13 M | 0,02 h | 14 s |
+| B0 | 7 | 1,29 M | 0,29 h | 200 s |
+
+`calls.jsonl` của 7 lượt B0 không có WebFetch/WebSearch.
