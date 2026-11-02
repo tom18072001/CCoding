@@ -737,6 +737,168 @@
      }
     }
    }
+  },
+  "C9": {
+   "t1-duration": {
+    "ccoding-fastlane": {
+     "n": 3,
+     "hidden_pct": 99.78,
+     "full_pass": 2,
+     "wall_mean_s": 183.7,
+     "wall_min_s": 104,
+     "wall_max_s": 256,
+     "cost_mean_usd": 0.767,
+     "tokens_mean": {
+      "input": 48,
+      "output": 29221,
+      "cache_read": 678138,
+      "cache_write": 100425
+     }
+    },
+    "claude-sonnet": {
+     "n": 6,
+     "hidden_pct": 100.0,
+     "full_pass": 6,
+     "wall_mean_s": 67,
+     "wall_min_s": 57,
+     "wall_max_s": 76,
+     "cost_mean_usd": 0.186,
+     "tokens_mean": {
+      "input": 10,
+      "output": 8950,
+      "cache_read": 216452,
+      "cache_write": 18706
+     }
+    }
+   },
+   "t2-orders": {
+    "ccoding-fastlane": {
+     "n": 3,
+     "hidden_pct": 100.0,
+     "full_pass": 3,
+     "wall_mean_s": 147,
+     "wall_min_s": 111,
+     "wall_max_s": 177,
+     "cost_mean_usd": 0.829,
+     "tokens_mean": {
+      "input": 63,
+      "output": 27536,
+      "cache_read": 864556,
+      "cache_write": 115094
+     }
+    },
+    "claude-sonnet": {
+     "n": 5,
+     "hidden_pct": 100.0,
+     "full_pass": 5,
+     "wall_mean_s": 47.6,
+     "wall_min_s": 38,
+     "wall_max_s": 60,
+     "cost_mean_usd": 0.152,
+     "tokens_mean": {
+      "input": 10,
+      "output": 5784,
+      "cache_read": 218510,
+      "cache_write": 17955
+     }
+    }
+   },
+   "t3-api": {
+    "ccoding-fastlane": {
+     "n": 3,
+     "hidden_pct": 100.0,
+     "full_pass": 3,
+     "wall_mean_s": 238.3,
+     "wall_min_s": 156,
+     "wall_max_s": 333,
+     "cost_mean_usd": 1.176,
+     "tokens_mean": {
+      "input": 75,
+      "output": 47439,
+      "cache_read": 1223785,
+      "cache_write": 143134
+     }
+    },
+    "claude-sonnet": {
+     "n": 5,
+     "hidden_pct": 100.0,
+     "full_pass": 5,
+     "wall_mean_s": 111.6,
+     "wall_min_s": 89,
+     "wall_max_s": 136,
+     "cost_mean_usd": 0.313,
+     "tokens_mean": {
+      "input": 20,
+      "output": 14270,
+      "cache_read": 525152,
+      "cache_write": 29387
+     }
+    }
+   },
+   "t4-perf": {
+    "ccoding-fastlane": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 134.5,
+     "wall_min_s": 126,
+     "wall_max_s": 143,
+     "cost_mean_usd": 0.568,
+     "tokens_mean": {
+      "input": 33,
+      "output": 23279,
+      "cache_read": 471045,
+      "cache_write": 71050
+     }
+    },
+    "claude-sonnet": {
+     "n": 5,
+     "hidden_pct": 100.0,
+     "full_pass": 5,
+     "wall_mean_s": 69.8,
+     "wall_min_s": 58,
+     "wall_max_s": 81,
+     "cost_mean_usd": 0.159,
+     "tokens_mean": {
+      "input": 8,
+      "output": 7358,
+      "cache_read": 175477,
+      "cache_write": 16925
+     }
+    }
+   },
+   "t5-logq": {
+    "ccoding-fastlane": {
+     "n": 2,
+     "hidden_pct": 82.53,
+     "full_pass": 1,
+     "wall_mean_s": 161,
+     "wall_min_s": 145,
+     "wall_max_s": 177,
+     "cost_mean_usd": 0.919,
+     "tokens_mean": {
+      "input": 49,
+      "output": 41296,
+      "cache_read": 745974,
+      "cache_write": 106733
+     }
+    },
+    "claude-sonnet": {
+     "n": 5,
+     "hidden_pct": 100.0,
+     "full_pass": 5,
+     "wall_mean_s": 164,
+     "wall_min_s": 133,
+     "wall_max_s": 187,
+     "cost_mean_usd": 0.412,
+     "tokens_mean": {
+      "input": 14,
+      "output": 23516,
+      "cache_read": 354703,
+      "cache_write": 35198
+     }
+    }
+   }
   }
  }
 }

@@ -1,0 +1,172 @@
+TAP version 13
+# Subtest: AuditLog: seq, at, thứ tự, lọc
+ok 1 - AuditLog: seq, at, thứ tự, lọc
+  ---
+  duration_ms: 2.570912
+  type: 'test'
+  ...
+# Subtest: GET /audit: 401, 400 trước 403, 403, 200
+ok 2 - GET /audit: 401, 400 trước 403, 403, 200
+  ---
+  duration_ms: 91.358783
+  type: 'test'
+  ...
+# Subtest: 401: thiếu hoặc sai X-User, trước mọi kiểm tra khác
+ok 3 - 401: thiếu hoặc sai X-User, trước mọi kiểm tra khác
+  ---
+  duration_ms: 103.979763
+  type: 'test'
+  ...
+# Subtest: admin làm mọi việc
+ok 4 - admin làm mọi việc
+  ---
+  duration_ms: 39.365888
+  type: 'test'
+  ...
+# Subtest: manager: đọc mọi nhóm, ghi nhóm mình, không xóa
+ok 5 - manager: đọc mọi nhóm, ghi nhóm mình, không xóa
+  ---
+  duration_ms: 34.131506
+  type: 'test'
+  ...
+# Subtest: member: thấy nhóm mình, 404 nhóm khác, chỉ sửa status của việc được giao
+ok 6 - member: thấy nhóm mình, 404 nhóm khác, chỉ sửa status của việc được giao
+  ---
+  duration_ms: 33.31226
+  type: 'test'
+  ...
+# Subtest: thứ tự 401 → 400 query → 404 → 403 → 400 body
+ok 7 - thứ tự 401 → 400 query → 404 → 403 → 400 body
+  ---
+  duration_ms: 11.318941
+  type: 'test'
+  ...
+# Subtest: rỗng: BOM + tiêu đề + CRLF
+ok 8 - rỗng: BOM + tiêu đề + CRLF
+  ---
+  duration_ms: 1.070788
+  type: 'test'
+  ...
+# Subtest: một dòng, null/undefined → ô trống, CRLF cuối
+ok 9 - một dòng, null/undefined → ô trống, CRLF cuối
+  ---
+  duration_ms: 0.61771
+  type: 'test'
+  ...
+# Subtest: dấu phẩy, ngoặc kép, xuống dòng
+ok 10 - dấu phẩy, ngoặc kép, xuống dòng
+  ---
+  duration_ms: 0.538732
+  type: 'test'
+  ...
+# Subtest: chống chèn công thức từng ký tự
+ok 11 - chống chèn công thức từng ký tự
+  ---
+  duration_ms: 0.383289
+  type: 'test'
+  ...
+# Subtest: công thức + bọc ngoặc kép
+ok 12 - công thức + bọc ngoặc kép
+  ---
+  duration_ms: 0.166732
+  type: 'test'
+  ...
+# Subtest: số giữ nguyên kể cả âm
+ok 13 - số giữ nguyên kể cả âm
+  ---
+  duration_ms: 0.173358
+  type: 'test'
+  ...
+# Subtest: tiêu đề tiếng Việt
+ok 14 - tiêu đề tiếng Việt
+  ---
+  duration_ms: 1.656805
+  type: 'test'
+  ...
+# Subtest: parse: mặc định
+ok 15 - parse: mặc định
+  ---
+  duration_ms: 1.622758
+  type: 'test'
+  ...
+# Subtest: parse: khóa lạ, trùng lặp, page khi không paging
+ok 16 - parse: khóa lạ, trùng lặp, page khi không paging
+  ---
+  duration_ms: 0.37013
+  type: 'test'
+  ...
+# Subtest: parse: lỗi đầu tiên theo thứ tự URL
+ok 17 - parse: lỗi đầu tiên theo thứ tự URL
+  ---
+  duration_ms: 0.424309
+  type: 'test'
+  ...
+# Subtest: parse: validate giá trị
+ok 18 - parse: validate giá trị
+  ---
+  duration_ms: 1.797383
+  type: 'test'
+  ...
+# Subtest: lọc: status, assignee=none, team, dueBefore
+ok 19 - lọc: status, assignee=none, team, dueBefore
+  ---
+  duration_ms: 0.689964
+  type: 'test'
+  ...
+# Subtest: tìm q: không phân biệt hoa thường và dấu, đ→d
+ok 20 - tìm q: không phân biệt hoa thường và dấu, đ→d
+  ---
+  duration_ms: 0.560176
+  type: 'test'
+  ...
+# Subtest: sắp xếp: hòa theo id số, dueDate null cuối, đảo chiều
+ok 21 - sắp xếp: hòa theo id số, dueDate null cuối, đảo chiều
+  ---
+  duration_ms: 7.772034
+  type: 'test'
+  ...
+# Subtest: phân trang
+ok 22 - phân trang
+  ---
+  duration_ms: 0.26272
+  type: 'test'
+  ...
+# Subtest: CRUD cơ bản
+ok 23 - CRUD cơ bản
+  ---
+  duration_ms: 74.148858
+  type: 'test'
+  ...
+# Subtest: validate
+ok 24 - validate
+  ---
+  duration_ms: 28.017566
+  type: 'test'
+  ...
+# Subtest: GET /tasks: member chỉ thấy nhóm mình, team khác → rỗng
+ok 25 - GET /tasks: member chỉ thấy nhóm mình, team khác → rỗng
+  ---
+  duration_ms: 20.163689
+  type: 'test'
+  ...
+# Subtest: GET /tasks/export.csv: header, định tuyến trước :id, không phân trang
+ok 26 - GET /tasks/export.csv: header, định tuyến trước :id, không phân trang
+  ---
+  duration_ms: 25.682777
+  type: 'test'
+  ...
+# Subtest: Ghi nhật ký sau thao tác thành công
+ok 27 - Ghi nhật ký sau thao tác thành công
+  ---
+  duration_ms: 40.406056
+  type: 'test'
+  ...
+1..27
+# tests 27
+# suites 0
+# pass 27
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 966.895423

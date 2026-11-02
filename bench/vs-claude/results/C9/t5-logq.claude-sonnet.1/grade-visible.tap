@@ -1,0 +1,118 @@
+TAP version 13
+# Subtest: count / count by / top
+ok 1 - count / count by / top
+  ---
+  duration_ms: 1.953903
+  type: 'test'
+  ...
+# Subtest: số học và percentile
+ok 2 - số học và percentile
+  ---
+  duration_ms: 0.591493
+  type: 'test'
+  ...
+# Subtest: histogram
+ok 3 - histogram
+  ---
+  duration_ms: 0.485821
+  type: 'test'
+  ...
+# Subtest: spec sai
+ok 4 - spec sai
+  ---
+  duration_ms: 0.736168
+  type: 'test'
+  ...
+# Subtest: lọc, bỏ @t, stats
+ok 5 - lọc, bỏ @t, stats
+  ---
+  duration_ms: 39.664422
+  type: 'test'
+  ...
+# Subtest: stdin và -
+ok 6 - stdin và -
+  ---
+  duration_ms: 60.521738
+  type: 'test'
+  ...
+# Subtest: table
+ok 7 - table
+  ---
+  duration_ms: 126.187041
+  type: 'test'
+  ...
+# Subtest: mã thoát
+ok 8 - mã thoát
+  ---
+  duration_ms: 248.316119
+  type: 'test'
+  ...
+# Subtest: dòng rỗng / lỗi
+ok 9 - dòng rỗng / lỗi
+  ---
+  duration_ms: 1.641099
+  type: 'test'
+  ...
+# Subtest: JSON làm phẳng
+ok 10 - JSON làm phẳng
+  ---
+  duration_ms: 0.386256
+  type: 'test'
+  ...
+# Subtest: logfmt
+ok 11 - logfmt
+  ---
+  duration_ms: 0.374804
+  type: 'test'
+  ...
+# Subtest: @t
+ok 12 - @t
+  ---
+  duration_ms: 0.25419
+  type: 'test'
+  ...
+# Subtest: ngữ nghĩa
+ok 13 - ngữ nghĩa
+  ---
+  duration_ms: 2.208373
+  type: 'test'
+  ...
+# Subtest: toán tử và ưu tiên
+ok 14 - toán tử và ưu tiên
+  ---
+  duration_ms: 0.447928
+  type: 'test'
+  ...
+# Subtest: vị trí lỗi
+ok 15 - vị trí lỗi
+  ---
+  duration_ms: 3.349433
+  type: 'test'
+  ...
+# Subtest: parse JSON và logfmt
+ok 16 - parse JSON và logfmt
+  ---
+  duration_ms: 1.684036
+  type: 'test'
+  ...
+# Subtest: truy vấn cơ bản
+ok 17 - truy vấn cơ bản
+  ---
+  duration_ms: 0.996841
+  type: 'test'
+  ...
+# Subtest: tổng hợp count by
+ok 18 - tổng hợp count by
+  ---
+  duration_ms: 0.604951
+  type: 'test'
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 728.165197

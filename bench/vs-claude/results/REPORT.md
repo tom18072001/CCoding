@@ -87,6 +87,21 @@ chi phí = giá niêm yết quy đổi do Claude Code báo (gói Max không tr�
 |---|---|--:|--:|--:|--:|--:|--:|--:|--:|
 | t2-orders | ccoding-fastlane | 3 | 100.0% | 3/3 | 129 (102–166) s | $0.79 | 23k | 684k | 122k |
 
+## C9 — 
+
+| Bài | Hệ | n | Test ẩn | Đạt trọn | Thời gian TB (min–max) | Chi phí TB | Đầu ra | Đọc cache | Ghi cache |
+|---|---|--:|--:|--:|--:|--:|--:|--:|--:|
+| t1-duration | ccoding-fastlane | 3 | 99.78% | 2/3 | 184 (104–256) s | $0.77 | 29k | 678k | 100k |
+| t1-duration | claude-sonnet | 6 | 100.0% | 6/6 | 67 (57–76) s | $0.19 | 9k | 216k | 19k |
+| t2-orders | ccoding-fastlane | 3 | 100.0% | 3/3 | 147 (111–177) s | $0.83 | 28k | 865k | 115k |
+| t2-orders | claude-sonnet | 5 | 100.0% | 5/5 | 48 (38–60) s | $0.15 | 6k | 219k | 18k |
+| t3-api | ccoding-fastlane | 3 | 100.0% | 3/3 | 238 (156–333) s | $1.18 | 47k | 1224k | 143k |
+| t3-api | claude-sonnet | 5 | 100.0% | 5/5 | 112 (89–136) s | $0.31 | 14k | 525k | 29k |
+| t4-perf | ccoding-fastlane | 2 | 100.0% | 2/2 | 134 (126–143) s | $0.57 | 23k | 471k | 71k |
+| t4-perf | claude-sonnet | 5 | 100.0% | 5/5 | 70 (58–81) s | $0.16 | 7k | 175k | 17k |
+| t5-logq | ccoding-fastlane | 2 | 82.53% | 1/2 | 161 (145–177) s | $0.92 | 41k | 746k | 107k |
+| t5-logq | claude-sonnet | 5 | 100.0% | 5/5 | 164 (133–187) s | $0.41 | 24k | 355k | 35k |
+
 ## Từng lượt
 
 | Vòng | Bài | Hệ | Lượt | Trạng thái | Thời gian | Chi phí | Test ẩn | perf (ms) | Nhiệm vụ CCoding |
@@ -166,3 +181,42 @@ chi phí = giá niêm yết quy đổi do Claude Code báo (gói Max không tr�
 | C8 | t2-orders | ccoding-fastlane | 1 | done | 166 s | $1.22 | 60/60 |  | T-20261102-130250-6be |
 | C8 | t2-orders | ccoding-fastlane | 2 | done | 102 s | $0.55 | 60/60 |  | T-20261102-130551-d47 |
 | C8 | t2-orders | ccoding-fastlane | 3 | done | 120 s | $0.61 | 60/60 |  | T-20261102-130736-d0a |
+| C9 | t1-duration | ccoding-fastlane | 1 | done | 104 s | $0.52 | 149/149 |  | T-20261102-133429-a8b |
+| C9 | t1-duration | ccoding-fastlane | 2 | done | 191 s | $0.95 | 149/149 |  | T-20261102-134940-9cb |
+| C9 | t1-duration | ccoding-fastlane | 3 | done | 256 s | $0.83 | 148/149 |  | T-20261102-140320-3a1 |
+| C9 | t1-duration | claude-sonnet | 1 | done | 57 s | $0.17 | 149/149 |  |  |
+| C9 | t1-duration | claude-sonnet | 2 | done | 65 s | $0.19 | 149/149 |  |  |
+| C9 | t1-duration | claude-sonnet | 3 | done | 65 s | $0.18 | 149/149 |  |  |
+| C9 | t1-duration | claude-sonnet | 4 | done | 65 s | $0.20 | 149/149 |  |  |
+| C9 | t1-duration | claude-sonnet | 5 | done | 74 s | $0.18 | 149/149 |  |  |
+| C9 | t1-duration | claude-sonnet | 6 | done | 76 s | $0.20 | 149/149 |  |  |
+| C9 | t2-orders | ccoding-fastlane | 1 | done | 153 s | $0.97 | 60/60 |  | T-20261102-133615-700 |
+| C9 | t2-orders | ccoding-fastlane | 2 | done | 111 s | $0.77 | 60/60 |  | T-20261102-135256-229 |
+| C9 | t2-orders | ccoding-fastlane | 3 | done | 177 s | $0.75 | 60/60 |  | T-20261102-140751-cd2 |
+| C9 | t2-orders | claude-sonnet | 1 | done | 42 s | $0.14 | 60/60 |  |  |
+| C9 | t2-orders | claude-sonnet | 2 | done | 60 s | $0.17 | 60/60 |  |  |
+| C9 | t2-orders | claude-sonnet | 3 | done | 38 s | $0.14 | 60/60 |  |  |
+| C9 | t2-orders | claude-sonnet | 4 | done | 43 s | $0.15 | 60/60 |  |  |
+| C9 | t2-orders | claude-sonnet | 5 | done | 55 s | $0.15 | 60/60 |  |  |
+| C9 | t3-api | ccoding-fastlane | 1 | done | 333 s | $1.48 | 87/87 |  | T-20261102-133901-471 |
+| C9 | t3-api | ccoding-fastlane | 2 | done | 156 s | $0.91 | 87/87 |  | T-20261102-135457-2d5 |
+| C9 | t3-api | ccoding-fastlane | 3 | done | 226 s | $1.14 | 87/87 |  | T-20261102-141052-c72 |
+| C9 | t3-api | claude-sonnet | 1 | done | 104 s | $0.32 | 87/87 |  |  |
+| C9 | t3-api | claude-sonnet | 2 | done | 124 s | $0.30 | 87/87 |  |  |
+| C9 | t3-api | claude-sonnet | 3 | done | 105 s | $0.33 | 87/87 |  |  |
+| C9 | t3-api | claude-sonnet | 4 | done | 89 s | $0.27 | 87/87 |  |  |
+| C9 | t3-api | claude-sonnet | 5 | done | 136 s | $0.34 | 87/87 |  |  |
+| C9 | t4-perf | ccoding-fastlane | 1 | done | 126 s | $0.50 | 19/19 | 317 | T-20261102-134447-258 |
+| C9 | t4-perf | ccoding-fastlane | 2 | done | 143 s | $0.64 | 19/19 | 325 | T-20261102-135744-09f |
+| C9 | t4-perf | claude-sonnet | 1 | done | 71 s | $0.16 | 19/19 | 487 |  |
+| C9 | t4-perf | claude-sonnet | 2 | done | 81 s | $0.17 | 19/19 | 128 |  |
+| C9 | t4-perf | claude-sonnet | 3 | done | 68 s | $0.16 | 19/19 | 167 |  |
+| C9 | t4-perf | claude-sonnet | 4 | done | 71 s | $0.15 | 19/19 | 158 |  |
+| C9 | t4-perf | claude-sonnet | 5 | done | 58 s | $0.15 | 19/19 | 150 |  |
+| C9 | t5-logq | ccoding-fastlane | 1 | done | 145 s | $1.12 | 146/146 |  | T-20261102-134708-672 |
+| C9 | t5-logq | ccoding-fastlane | 2 | done | 177 s | $0.72 | 95/146 |  | T-20261102-140019-8c2 |
+| C9 | t5-logq | claude-sonnet | 1 | done | 158 s | $0.41 | 146/146 |  |  |
+| C9 | t5-logq | claude-sonnet | 2 | done | 187 s | $0.46 | 146/146 |  |  |
+| C9 | t5-logq | claude-sonnet | 3 | done | 165 s | $0.40 | 146/146 |  |  |
+| C9 | t5-logq | claude-sonnet | 4 | done | 133 s | $0.35 | 146/146 |  |  |
+| C9 | t5-logq | claude-sonnet | 5 | done | 177 s | $0.44 | 146/146 |  |  |

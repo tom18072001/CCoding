@@ -1,0 +1,1758 @@
+TAP version 13
+# Subtest: parse ok: "{\\"level\\":\\"error\\",\\"msg\\":\\"boom\\"}"
+ok 1 - parse ok: "{\\"level\\":\\"error\\",\\"msg\\":\\"boom\\"}"
+  ---
+  duration_ms: 2.187917
+  type: 'test'
+  ...
+# Subtest: parse ok: "  {\\"a\\":1}\\r"
+ok 2 - parse ok: "  {\\"a\\":1}\\r"
+  ---
+  duration_ms: 0.19783
+  type: 'test'
+  ...
+# Subtest: parse ok: "{\\"http\\":{\\"status\\":500,\\"req\\":{\\"m\\":\\"GET\\"}},\\"tags\\":[\\"x\\",\\"y\\"]}"
+ok 3 - parse ok: "{\\"http\\":{\\"status\\":500,\\"req\\":{\\"m\\":\\"GET\\"}},\\"tags\\":[\\"x\\",\\"y\\"]}"
+  ---
+  duration_ms: 0.236441
+  type: 'test'
+  ...
+# Subtest: parse ok: "{\\"a\\":{},\\"b\\":null,\\"c\\":{\\"d\\":{}}}"
+ok 4 - parse ok: "{\\"a\\":{},\\"b\\":null,\\"c\\":{\\"d\\":{}}}"
+  ---
+  duration_ms: 0.170766
+  type: 'test'
+  ...
+# Subtest: parse ok: "{}"
+ok 5 - parse ok: "{}"
+  ---
+  duration_ms: 0.0968
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "{\\"a\\":"
+ok 6 - parse lỗi: "{\\"a\\":"
+  ---
+  duration_ms: 0.811311
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "{oops}"
+ok 7 - parse lỗi: "{oops}"
+  ---
+  duration_ms: 0.165929
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "   "
+ok 8 - parse lỗi: "   "
+  ---
+  duration_ms: 0.064357
+  type: 'test'
+  ...
+# Subtest: parse lỗi: ""
+ok 9 - parse lỗi: ""
+  ---
+  duration_ms: 0.297139
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "\\r"
+ok 10 - parse lỗi: "\\r"
+  ---
+  duration_ms: 0.279263
+  type: 'test'
+  ...
+# Subtest: parse ok: "level=info status=200"
+ok 11 - parse ok: "level=info status=200"
+  ---
+  duration_ms: 0.347133
+  type: 'test'
+  ...
+# Subtest: parse ok: "a=1 b=-2.5 c=1.0.0 d=true e=false f=null g= h=01"
+ok 12 - parse ok: "a=1 b=-2.5 c=1.0.0 d=true e=false f=null g= h=01"
+  ---
+  duration_ms: 0.175341
+  type: 'test'
+  ...
+# Subtest: parse ok: "msg=\\"hello world\\" n=\\"42\\""
+ok 13 - parse ok: "msg=\\"hello world\\" n=\\"42\\""
+  ---
+  duration_ms: 0.059178
+  type: 'test'
+  ...
+# Subtest: parse ok: "m=\\"say \\\\\\"hi\\\\\\"\\" p=\\"C:\\\\\\\\tmp\\" q=\\"a\\\\nb\\\\tc\\" r=\\"x\\\\yz\\""
+ok 14 - parse ok: "m=\\"say \\\\\\"hi\\\\\\"\\" p=\\"C:\\\\\\\\tmp\\" q=\\"a\\\\nb\\\\tc\\" r=\\"x\\\\yz\\""
+  ---
+  duration_ms: 0.043622
+  type: 'test'
+  ...
+# Subtest: parse ok: "a=1\\t\\tb=2   c=3"
+ok 15 - parse ok: "a=1\\t\\tb=2   c=3"
+  ---
+  duration_ms: 0.042666
+  type: 'test'
+  ...
+# Subtest: parse ok: "a=1 a=2"
+ok 16 - parse ok: "a=1 a=2"
+  ---
+  duration_ms: 0.034877
+  type: 'test'
+  ...
+# Subtest: parse ok: "k.sub-x=1 _u=2"
+ok 17 - parse ok: "k.sub-x=1 _u=2"
+  ---
+  duration_ms: 0.307168
+  type: 'test'
+  ...
+# Subtest: parse ok: "url=http://x/y?a=b"
+ok 18 - parse ok: "url=http://x/y?a=b"
+  ---
+  duration_ms: 0.198971
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "just some text"
+ok 19 - parse lỗi: "just some text"
+  ---
+  duration_ms: 0.09278
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "a=1 broken"
+ok 20 - parse lỗi: "a=1 broken"
+  ---
+  duration_ms: 0.043387
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "1a=2"
+ok 21 - parse lỗi: "1a=2"
+  ---
+  duration_ms: 0.033283
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "a=\\"unterminated"
+ok 22 - parse lỗi: "a=\\"unterminated"
+  ---
+  duration_ms: 0.037136
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "a=\\"x\\"b=1"
+ok 23 - parse lỗi: "a=\\"x\\"b=1"
+  ---
+  duration_ms: 0.083346
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "a=x\\"y"
+ok 24 - parse lỗi: "a=x\\"y"
+  ---
+  duration_ms: 0.11862
+  type: 'test'
+  ...
+# Subtest: parse lỗi: "=1"
+ok 25 - parse lỗi: "=1"
+  ---
+  duration_ms: 0.036792
+  type: 'test'
+  ...
+# Subtest: parse: @t từ @timestamp / ts / time theo thứ tự
+ok 26 - parse: @t từ @timestamp / ts / time theo thứ tự
+  ---
+  duration_ms: 0.256579
+  type: 'test'
+  ...
+# Subtest: parse: không có @t khi trường đầu tiên không phải thời gian
+ok 27 - parse: không có @t khi trường đầu tiên không phải thời gian
+  ---
+  duration_ms: 0.117737
+  type: 'test'
+  ...
+# Subtest: truy vấn: (rỗng)
+ok 28 - truy vấn: (rỗng)
+  ---
+  duration_ms: 0.320019
+  type: 'test'
+  ...
+# Subtest: truy vấn:    
+ok 29 - truy vấn:    
+  ---
+  duration_ms: 0.108402
+  type: 'test'
+  ...
+# Subtest: truy vấn: level:error
+ok 30 - truy vấn: level:error
+  ---
+  duration_ms: 0.669904
+  type: 'test'
+  ...
+# Subtest: truy vấn: level:ERR*
+ok 31 - truy vấn: level:ERR*
+  ---
+  duration_ms: 0.442876
+  type: 'test'
+  ...
+# Subtest: truy vấn: level:e?ror
+ok 32 - truy vấn: level:e?ror
+  ---
+  duration_ms: 0.300272
+  type: 'test'
+  ...
+# Subtest: truy vấn: level:err
+ok 33 - truy vấn: level:err
+  ---
+  duration_ms: 0.087368
+  type: 'test'
+  ...
+# Subtest: truy vấn: status:500
+ok 34 - truy vấn: status:500
+  ---
+  duration_ms: 0.144248
+  type: 'test'
+  ...
+# Subtest: truy vấn: status:503
+ok 35 - truy vấn: status:503
+  ---
+  duration_ms: 0.074095
+  type: 'test'
+  ...
+# Subtest: truy vấn: status:404
+ok 36 - truy vấn: status:404
+  ---
+  duration_ms: 0.115081
+  type: 'test'
+  ...
+# Subtest: truy vấn: status:5*
+ok 37 - truy vấn: status:5*
+  ---
+  duration_ms: 0.196655
+  type: 'test'
+  ...
+# Subtest: truy vấn: http.status:500
+ok 38 - truy vấn: http.status:500
+  ---
+  duration_ms: 0.065108
+  type: 'test'
+  ...
+# Subtest: truy vấn: path:/api/*
+ok 39 - truy vấn: path:/api/*
+  ---
+  duration_ms: 0.207024
+  type: 'test'
+  ...
+# Subtest: truy vấn: path:/api*
+ok 40 - truy vấn: path:/api*
+  ---
+  duration_ms: 0.286088
+  type: 'test'
+  ...
+# Subtest: truy vấn: path:"/api/*"
+ok 41 - truy vấn: path:"/api/*"
+  ---
+  duration_ms: 0.235563
+  type: 'test'
+  ...
+# Subtest: truy vấn: msg:"not found"
+ok 42 - truy vấn: msg:"not found"
+  ---
+  duration_ms: 0.076464
+  type: 'test'
+  ...
+# Subtest: truy vấn: msg:"Not"
+ok 43 - truy vấn: msg:"Not"
+  ---
+  duration_ms: 0.053918
+  type: 'test'
+  ...
+# Subtest: truy vấn: flag:true
+ok 44 - truy vấn: flag:true
+  ---
+  duration_ms: 0.090069
+  type: 'test'
+  ...
+# Subtest: truy vấn: status>=500
+ok 45 - truy vấn: status>=500
+  ---
+  duration_ms: 0.203164
+  type: 'test'
+  ...
+# Subtest: truy vấn: status>=404
+ok 46 - truy vấn: status>=404
+  ---
+  duration_ms: 0.101809
+  type: 'test'
+  ...
+# Subtest: truy vấn: status<300
+ok 47 - truy vấn: status<300
+  ---
+  duration_ms: 0.10167
+  type: 'test'
+  ...
+# Subtest: truy vấn: latency_ms>100
+ok 48 - truy vấn: latency_ms>100
+  ---
+  duration_ms: 0.089004
+  type: 'test'
+  ...
+# Subtest: truy vấn: latency_ms<=35
+ok 49 - truy vấn: latency_ms<=35
+  ---
+  duration_ms: 0.064265
+  type: 'test'
+  ...
+# Subtest: truy vấn: latency_ms>-1
+ok 50 - truy vấn: latency_ms>-1
+  ---
+  duration_ms: 0.053657
+  type: 'test'
+  ...
+# Subtest: truy vấn: status>=400 status<500
+ok 51 - truy vấn: status>=400 status<500
+  ---
+  duration_ms: 0.1235
+  type: 'test'
+  ...
+# Subtest: truy vấn: _exists_:user
+ok 52 - truy vấn: _exists_:user
+  ---
+  duration_ms: 0.066108
+  type: 'test'
+  ...
+# Subtest: truy vấn: _exists_:message
+ok 53 - truy vấn: _exists_:message
+  ---
+  duration_ms: 0.054793
+  type: 'test'
+  ...
+# Subtest: truy vấn: NOT _exists_:status
+ok 54 - truy vấn: NOT _exists_:status
+  ---
+  duration_ms: 0.065824
+  type: 'test'
+  ...
+# Subtest: truy vấn: reset
+ok 55 - truy vấn: reset
+  ---
+  duration_ms: 0.099412
+  type: 'test'
+  ...
+# Subtest: truy vấn: RESET
+ok 56 - truy vấn: RESET
+  ---
+  duration_ms: 0.051418
+  type: 'test'
+  ...
+# Subtest: truy vấn: health
+ok 57 - truy vấn: health
+  ---
+  duration_ms: 0.093832
+  type: 'test'
+  ...
+# Subtest: truy vấn: "by peer"
+ok 58 - truy vấn: "by peer"
+  ---
+  duration_ms: 0.084222
+  type: 'test'
+  ...
+# Subtest: truy vấn: "rate limited AND retried"
+ok 59 - truy vấn: "rate limited AND retried"
+  ---
+  duration_ms: 0.063752
+  type: 'test'
+  ...
+# Subtest: truy vấn: and
+ok 60 - truy vấn: and
+  ---
+  duration_ms: 0.05059
+  type: 'test'
+  ...
+# Subtest: truy vấn: level:error OR level:warn
+ok 61 - truy vấn: level:error OR level:warn
+  ---
+  duration_ms: 0.251737
+  type: 'test'
+  ...
+# Subtest: truy vấn: level:error AND status>=500 OR level:warn
+ok 62 - truy vấn: level:error AND status>=500 OR level:warn
+  ---
+  duration_ms: 0.146655
+  type: 'test'
+  ...
+# Subtest: truy vấn: level:error AND (status>=500 OR level:warn)
+ok 63 - truy vấn: level:error AND (status>=500 OR level:warn)
+  ---
+  duration_ms: 0.129271
+  type: 'test'
+  ...
+# Subtest: truy vấn: NOT level:error AND service:api
+ok 64 - truy vấn: NOT level:error AND service:api
+  ---
+  duration_ms: 0.905146
+  type: 'test'
+  ...
+# Subtest: truy vấn: NOT (level:error AND service:api)
+ok 65 - truy vấn: NOT (level:error AND service:api)
+  ---
+  duration_ms: 0.114958
+  type: 'test'
+  ...
+# Subtest: truy vấn: NOT NOT level:info
+ok 66 - truy vấn: NOT NOT level:info
+  ---
+  duration_ms: 0.146539
+  type: 'test'
+  ...
+# Subtest: truy vấn: service:web OR service:worker NOT msg:"cache miss"
+ok 67 - truy vấn: service:web OR service:worker NOT msg:"cache miss"
+  ---
+  duration_ms: 0.177149
+  type: 'test'
+  ...
+# Subtest: truy vấn: (service:web OR service:worker) NOT msg:"cache miss"
+ok 68 - truy vấn: (service:web OR service:worker) NOT msg:"cache miss"
+  ---
+  duration_ms: 0.088027
+  type: 'test'
+  ...
+# Subtest: truy vấn: service:api level:error status>=500
+ok 69 - truy vấn: service:api level:error status>=500
+  ---
+  duration_ms: 0.07837
+  type: 'test'
+  ...
+# Subtest: truy vấn: ((level:info))
+ok 70 - truy vấn: ((level:info))
+  ---
+  duration_ms: 0.061466
+  type: 'test'
+  ...
+# Subtest: truy vấn: level:error OR (service:worker AND _exists_:flag)
+ok 71 - truy vấn: level:error OR (service:worker AND _exists_:flag)
+  ---
+  duration_ms: 0.083855
+  type: 'test'
+  ...
+# Subtest: truy vấn: trường thiếu → false, không ném lỗi
+ok 72 - truy vấn: trường thiếu → false, không ném lỗi
+  ---
+  duration_ms: 0.09358
+  type: 'test'
+  ...
+# Subtest: truy vấn: ký tự đặc biệt của regex trong giá trị trần
+ok 73 - truy vấn: ký tự đặc biệt của regex trong giá trị trần
+  ---
+  duration_ms: 0.10577
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 12: (level:error
+ok 74 - lỗi cú pháp tại 12: (level:error
+  ---
+  duration_ms: 0.398619
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 11: level:error)
+ok 75 - lỗi cú pháp tại 11: level:error)
+  ---
+  duration_ms: 0.074824
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 8: (a OR b))
+ok 76 - lỗi cú pháp tại 8: (a OR b))
+  ---
+  duration_ms: 0.051305
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 1: ()
+ok 77 - lỗi cú pháp tại 1: ()
+  ---
+  duration_ms: 0.040732
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 5: a AND
+ok 78 - lỗi cú pháp tại 5: a AND
+  ---
+  duration_ms: 0.051141
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 4: a OR
+ok 79 - lỗi cú pháp tại 4: a OR
+  ---
+  duration_ms: 0.089026
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 3: NOT
+ok 80 - lỗi cú pháp tại 3: NOT
+  ---
+  duration_ms: 0.049323
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 9: a AND NOT
+ok 81 - lỗi cú pháp tại 9: a AND NOT
+  ---
+  duration_ms: 0.042735
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 0: AND a
+ok 82 - lỗi cú pháp tại 0: AND a
+  ---
+  duration_ms: 0.11906
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 0: OR a
+ok 83 - lỗi cú pháp tại 0: OR a
+  ---
+  duration_ms: 0.057088
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 1: (OR a)
+ok 84 - lỗi cú pháp tại 1: (OR a)
+  ---
+  duration_ms: 0.067049
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 6: a AND OR b
+ok 85 - lỗi cú pháp tại 6: a AND OR b
+  ---
+  duration_ms: 0.050458
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 4: NOT AND a
+ok 86 - lỗi cú pháp tại 4: NOT AND a
+  ---
+  duration_ms: 0.041462
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 8: status>=abc
+ok 87 - lỗi cú pháp tại 8: status>=abc
+  ---
+  duration_ms: 0.043485
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 8: status>=
+ok 88 - lỗi cú pháp tại 8: status>=
+  ---
+  duration_ms: 0.040839
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 2: x<y
+ok 89 - lỗi cú pháp tại 2: x<y
+  ---
+  duration_ms: 0.038912
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 6: level:
+ok 90 - lỗi cú pháp tại 6: level:
+  ---
+  duration_ms: 0.042812
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 6: level: error
+ok 91 - lỗi cú pháp tại 6: level: error
+  ---
+  duration_ms: 0.059171
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 4: msg:"abc
+ok 92 - lỗi cú pháp tại 4: msg:"abc
+  ---
+  duration_ms: 0.087858
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 0: "abc
+ok 93 - lỗi cú pháp tại 0: "abc
+  ---
+  duration_ms: 0.04818
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp tại 3: a ("b
+ok 94 - lỗi cú pháp tại 3: a ("b
+  ---
+  duration_ms: 0.087291
+  type: 'test'
+  ...
+# Subtest: tổng hợp: count
+not ok 95 - tổng hợp: count
+  ---
+  duration_ms: 0.151972
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:3'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:58)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp:   count  
+not ok 96 - tổng hợp:   count  
+  ---
+  duration_ms: 0.073095
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:3'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:58)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: count by s
+not ok 97 - tổng hợp: count by s
+  ---
+  duration_ms: 0.050191
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:3'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:58)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: count by code
+not ok 98 - tổng hợp: count by code
+  ---
+  duration_ms: 0.045696
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:3'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:58)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: count by missing
+not ok 99 - tổng hợp: count by missing
+  ---
+  duration_ms: 0.042364
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:3'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:58)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: top 2 s
+not ok 100 - tổng hợp: top 2 s
+  ---
+  duration_ms: 0.047387
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:3'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:58)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: top 10 code
+not ok 101 - tổng hợp: top 10 code
+  ---
+  duration_ms: 0.054396
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:3'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:58)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: sum n
+not ok 102 - tổng hợp: sum n
+  ---
+  duration_ms: 0.042842
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:3'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:58)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: avg n
+not ok 103 - tổng hợp: avg n
+  ---
+  duration_ms: 0.092307
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:3'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:58)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: min n
+not ok 104 - tổng hợp: min n
+  ---
+  duration_ms: 0.054364
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:3'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:58)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: max n
+not ok 105 - tổng hợp: max n
+  ---
+  duration_ms: 0.044051
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:3'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:58)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: p50 n
+not ok 106 - tổng hợp: p50 n
+  ---
+  duration_ms: 0.041278
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:3'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:58)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: p90 n
+not ok 107 - tổng hợp: p90 n
+  ---
+  duration_ms: 0.038585
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:3'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:58)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: p99 n
+not ok 108 - tổng hợp: p99 n
+  ---
+  duration_ms: 0.040537
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:3'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:58)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: avg nothing
+not ok 109 - tổng hợp: avg nothing
+  ---
+  duration_ms: 0.069559
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:3'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:58)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: p95 nothing
+not ok 110 - tổng hợp: p95 nothing
+  ---
+  duration_ms: 0.048609
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:3'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:58)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: histogram 1m
+not ok 111 - tổng hợp: histogram 1m
+  ---
+  duration_ms: 0.043188
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:3'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:58)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: histogram 2m
+not ok 112 - tổng hợp: histogram 2m
+  ---
+  duration_ms: 0.078052
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:3'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:58)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: histogram 30s
+not ok 113 - tổng hợp: histogram 30s
+  ---
+  duration_ms: 0.051096
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:3'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:58)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: histogram 1d
+not ok 114 - tổng hợp: histogram 1d
+  ---
+  duration_ms: 0.045774
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:3'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:193:58)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: percentile nearest-rank
+not ok 115 - tổng hợp: percentile nearest-rank
+  ---
+  duration_ms: 0.109525
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:195:1'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:197:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: avg làm tròn 4 chữ số
+not ok 116 - tổng hợp: avg làm tròn 4 chữ số
+  ---
+  duration_ms: 0.067962
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:202:1'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:203:16)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp: histogram rỗng
+not ok 117 - tổng hợp: histogram rỗng
+  ---
+  duration_ms: 0.057538
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:205:1'
+  failureType: 'testCodeFailure'
+  error: 'aggregate is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:206:26)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp sai: ""
+not ok 118 - tổng hợp sai: ""
+  ---
+  duration_ms: 0.476875
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+    
+    Caught error:
+    
+    TypeError: aggregate is not a function
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:62)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp sai: "counts"
+not ok 119 - tổng hợp sai: "counts"
+  ---
+  duration_ms: 0.122434
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+    
+    Caught error:
+    
+    TypeError: aggregate is not a function
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:62)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp sai: "count by"
+not ok 120 - tổng hợp sai: "count by"
+  ---
+  duration_ms: 0.086191
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+    
+    Caught error:
+    
+    TypeError: aggregate is not a function
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:62)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp sai: "count s"
+not ok 121 - tổng hợp sai: "count s"
+  ---
+  duration_ms: 0.080691
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+    
+    Caught error:
+    
+    TypeError: aggregate is not a function
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:62)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp sai: "top s"
+not ok 122 - tổng hợp sai: "top s"
+  ---
+  duration_ms: 0.095098
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+    
+    Caught error:
+    
+    TypeError: aggregate is not a function
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:62)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp sai: "top 0 s"
+not ok 123 - tổng hợp sai: "top 0 s"
+  ---
+  duration_ms: 0.077827
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+    
+    Caught error:
+    
+    TypeError: aggregate is not a function
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:62)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp sai: "top x s"
+not ok 124 - tổng hợp sai: "top x s"
+  ---
+  duration_ms: 0.072917
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+    
+    Caught error:
+    
+    TypeError: aggregate is not a function
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:62)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp sai: "median n"
+not ok 125 - tổng hợp sai: "median n"
+  ---
+  duration_ms: 0.073816
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+    
+    Caught error:
+    
+    TypeError: aggregate is not a function
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:62)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp sai: "avg"
+not ok 126 - tổng hợp sai: "avg"
+  ---
+  duration_ms: 0.237506
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+    
+    Caught error:
+    
+    TypeError: aggregate is not a function
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:62)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp sai: "histogram"
+not ok 127 - tổng hợp sai: "histogram"
+  ---
+  duration_ms: 0.120135
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+    
+    Caught error:
+    
+    TypeError: aggregate is not a function
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:62)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp sai: "histogram 0m"
+not ok 128 - tổng hợp sai: "histogram 0m"
+  ---
+  duration_ms: 0.081668
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+    
+    Caught error:
+    
+    TypeError: aggregate is not a function
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:62)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp sai: "histogram 1w"
+not ok 129 - tổng hợp sai: "histogram 1w"
+  ---
+  duration_ms: 0.090918
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+    
+    Caught error:
+    
+    TypeError: aggregate is not a function
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:62)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp sai: "histogram m"
+not ok 130 - tổng hợp sai: "histogram m"
+  ---
+  duration_ms: 0.113732
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+    
+    Caught error:
+    
+    TypeError: aggregate is not a function
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:62)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: tổng hợp sai: "sum a b"
+not ok 131 - tổng hợp sai: "sum a b"
+  ---
+  duration_ms: 0.102034
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+    
+    Caught error:
+    
+    TypeError: aggregate is not a function
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:209:62)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CLI: in bản ghi khớp dạng JSON, bỏ @t, theo thứ tự đọc
+not ok 132 - CLI: in bản ghi khớp dạng JSON, bỏ @t, theo thứ tự đọc
+  ---
+  duration_ms: 28.230297
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:230:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + ''
+    - '{"ts":"2026-11-01T10:00:05Z","level":"error","service":"api","status":503,"msg":"upstream timeout"}\n' +
+    -   '{"ts":"2026-11-01T10:02:10Z","level":"error","service":"api","status":500,"msg":"db down","latency_ms":900}\n' +
+    -   '{"level":"error","service":"worker","status":500}\n'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: |-
+    {"ts":"2026-11-01T10:00:05Z","level":"error","service":"api","status":503,"msg":"upstream timeout"}
+    {"ts":"2026-11-01T10:02:10Z","level":"error","service":"api","status":500,"msg":"db down","latency_ms":900}
+    {"level":"error","service":"worker","status":500}
+    
+  actual: ''
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:233:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CLI: không truy vấn = mọi dòng hợp lệ; tùy chọn đứng sau tệp
+not ok 133 - CLI: không truy vấn = mọi dòng hợp lệ; tùy chọn đứng sau tệp
+  ---
+  duration_ms: 21.822638
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:240:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:243:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CLI: --stats ra stderr
+not ok 134 - CLI: --stats ra stderr
+  ---
+  duration_ms: 23.637648
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:245:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + ''
+    - 'lines=7 matched=3 malformed=2'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'lines=7 matched=3 malformed=2'
+  actual: ''
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:248:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CLI: đọc stdin khi không có tệp và khi tệp là -
+not ok 135 - CLI: đọc stdin khi không có tệp và khi tệp là -
+  ---
+  duration_ms: 26.091571
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:251:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + ''
+    - '{"a":1,"msg":"hi"}\n'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: |-
+    {"a":1,"msg":"hi"}
+    
+  actual: ''
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:253:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CLI: --agg json
+not ok 136 - CLI: --agg json
+  ---
+  duration_ms: 31.941073
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:256:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + ''
+    - '{"type":"count_by","field":"service","buckets":[{"key":"api","count":2},{"key":"web","count":2},{"key":"worker","count":1}]}\n'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: |-
+    {"type":"count_by","field":"service","buckets":[{"key":"api","count":2},{"key":"web","count":2},{"key":"worker","count":1}]}
+    
+  actual: ''
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:259:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CLI: --agg kết hợp --query
+not ok 137 - CLI: --agg kết hợp --query
+  ---
+  duration_ms: 26.09808
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:261:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + ''
+    - '{"type":"max","field":"latency_ms","value":900}\n'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: |-
+    {"type":"max","field":"latency_ms","value":900}
+    
+  actual: ''
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:263:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CLI: --format table cho bucket (căn cột, hai dấu cách)
+not ok 138 - CLI: --format table cho bucket (căn cột, hai dấu cách)
+  ---
+  duration_ms: 23.111219
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:265:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + ''
+    - 'key     count\napi     2\nweb     2\nworker  1\n'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: |-
+    key     count
+    api     2
+    web     2
+    worker  1
+    
+  actual: ''
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:268:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CLI: --format table cho histogram
+not ok 139 - CLI: --format table cho histogram
+  ---
+  duration_ms: 29.896573
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:270:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + ''
+    - 'key                       count\n' +
+    -   '2026-11-01T10:00:00.000Z  2\n' +
+    -   '2026-11-01T10:01:00.000Z  0\n' +
+    -   '2026-11-01T10:02:00.000Z  1\n'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: |-
+    key                       count
+    2026-11-01T10:00:00.000Z  2
+    2026-11-01T10:01:00.000Z  0
+    2026-11-01T10:02:00.000Z  1
+    
+  actual: ''
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:272:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CLI: --format table cho giá trị đơn
+not ok 140 - CLI: --format table cho giá trị đơn
+  ---
+  duration_ms: 24.401137
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:274:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    '' !== '5\n'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: |-
+    5
+    
+  actual: ''
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:275:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CLI: không khớp gì vẫn thoát 0
+ok 141 - CLI: không khớp gì vẫn thoát 0
+  ---
+  duration_ms: 21.3622
+  type: 'test'
+  ...
+# Subtest: CLI: lỗi cú pháp truy vấn → mã 2, stderr có vị trí, stdout rỗng
+not ok 142 - CLI: lỗi cú pháp truy vấn → mã 2, stderr có vị trí, stdout rỗng
+  ---
+  duration_ms: 22.582981
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:283:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:285:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CLI: spec tổng hợp sai → mã 2
+not ok 143 - CLI: spec tổng hợp sai → mã 2
+  ---
+  duration_ms: 26.405852
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:289:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:291:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CLI: table không có --agg → mã 2
+not ok 144 - CLI: table không có --agg → mã 2
+  ---
+  duration_ms: 20.687559
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:295:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:296:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CLI: tùy chọn lạ / format lạ → mã 2
+not ok 145 - CLI: tùy chọn lạ / format lạ → mã 2
+  ---
+  duration_ms: 23.34407
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:298:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:299:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: CLI: tệp không đọc được → mã 1, stdout rỗng
+not ok 146 - CLI: tệp không đọc được → mã 1, stdout rỗng
+  ---
+  duration_ms: 22.799973
+  type: 'test'
+  location: '/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:302:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (/tmp/bw/grade-C9-t5-logq.ccoding-fastlane.2-1793602999963/test-hidden/logq.hidden.test.js:305:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..146
+# tests 146
+# suites 0
+# pass 95
+# fail 51
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 556.334041

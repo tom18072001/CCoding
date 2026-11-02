@@ -1,0 +1,82 @@
+TAP version 13
+# Subtest: tính tiền không mã giảm giá
+ok 1 - tính tiền không mã giảm giá
+  ---
+  duration_ms: 1.249537
+  type: 'test'
+  ...
+# Subtest: giữ chỗ tồn kho khi thêm
+ok 2 - giữ chỗ tồn kho khi thêm
+  ---
+  duration_ms: 0.229398
+  type: 'test'
+  ...
+# Subtest: mã không tồn tại
+ok 3 - mã không tồn tại
+  ---
+  duration_ms: 0.502236
+  type: 'test'
+  ...
+# Subtest: toCents cơ bản
+ok 4 - toCents cơ bản
+  ---
+  duration_ms: 1.064262
+  type: 'test'
+  ...
+# Subtest: formatMoney
+ok 5 - formatMoney
+  ---
+  duration_ms: 0.259375
+  type: 'test'
+  ...
+# Subtest: allocate chia đều
+ok 6 - allocate chia đều
+  ---
+  duration_ms: 0.673703
+  type: 'test'
+  ...
+# Subtest: \#1 toCents half away from zero
+ok 7 - \#1 toCents half away from zero
+  ---
+  duration_ms: 1.968729
+  type: 'test'
+  ...
+# Subtest: \#2 allocate largest remainder & tổng giảm khớp
+ok 8 - \#2 allocate largest remainder & tổng giảm khớp
+  ---
+  duration_ms: 2.009824
+  type: 'test'
+  ...
+# Subtest: \#3 mua X tặng Y
+ok 9 - \#3 mua X tặng Y
+  ---
+  duration_ms: 0.184436
+  type: 'test'
+  ...
+# Subtest: \#4 endsAt tới hết ngày UTC
+ok 10 - \#4 endsAt tới hết ngày UTC
+  ---
+  duration_ms: 0.332816
+  type: 'test'
+  ...
+# Subtest: \#5 giữ chỗ tồn kho khớp giỏ
+ok 11 - \#5 giữ chỗ tồn kho khớp giỏ
+  ---
+  duration_ms: 0.302668
+  type: 'test'
+  ...
+# Subtest: \#6 thuế tính trên net
+ok 12 - \#6 thuế tính trên net
+  ---
+  duration_ms: 0.259833
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 164.134723
