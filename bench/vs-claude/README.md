@@ -37,6 +37,7 @@ tasks/<id>/        task.json (brief, category, size, grader) · repo/ (starting 
 `tasks/t1-duration` … `t5-logq` giữ nguyên cấu trúc cũ (`starter/`, `prompt.txt`, `hidden/`, `ref/`) và có thêm `task.json` (`category: "coding"`, `size` + `sizeReason`, `brief` lấy từ `prompt.txt`, grader dùng `hidden/` có sẵn). Hai trường tùy chọn cho phép runner dùng thư mục không theo quy ước mới:
 
 - `repoDir`: workspace khởi đầu (mặc định `repo/`; t1–t5 dùng `"starter"`). Thiếu thư mục thì runner tạo workspace rỗng, không lỗi ENOENT.
+- `nullMax` (tùy chọn): ngưỡng null riêng của bài khi tự kiểm, mặc định 0,25; chỉ dùng cho ngoại lệ có `nullMaxReason` (hiện chỉ t2-orders).
 - `solutionDir`: lời giải cho arm `oracle` (t1–t5 dùng `"ref"`), chép đè lên workspace trước khi chấm.
 
 Grader code chép mọi tệp cấp 1 của `hidden/` (helper như `_helpers.js`) nhưng chỉ chạy `*.test.js`.
@@ -95,7 +96,7 @@ Lỗi hạ tầng khác (`infra: "error"`: không spawn được `claude`, khôn
 
 ## Verified
 
-- 2026-11-02: grader self-test - oracle 1.00 on all 13 tasks, null 0-0.22 (`results/selftest/`).
+- 2026-11-02: grader self-test - oracle 1.00 on all 18 tasks, null ≤ 0.25 on 17; ngoại lệ có chủ đích **t2-orders** null = 0.533 (`results/selftest/`). Test ẩn cũ của t2 cũng chấm hành vi `starter/` đã đúng; không sửa `hidden/` vì harness cũ còn dùng. `task.json` của t2 khai `nullMax: 0.6` kèm `nullMaxReason`. Khi so arm trên t2, trừ/đối chiếu điểm nền 0.533; kết quả t2 không nên đọc riêng lẻ.
 - 2026-11-02: CCoding arm end-to-end against `node dist/cli.js serve` with `--runtime mock` (B0 and B5): project registration, task submission, polling, FINAL.md, calls.jsonl token accounting and phase breakdown (route ... accept) all work. Single-Claude arms tested with a stub `claude` binary.
 
 ## Fairness rules

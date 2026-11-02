@@ -12,6 +12,8 @@
   "deliverable": "src/",
   "brief": "Sửa toàn bộ các lỗi khách hàng báo trong ISSUES.md của thư viện tính tiền giỏ hàng này. Với mỗi lỗi: tìm nguyên nhân gốc, sửa, và thêm test hồi quy vào test/. Không đổi API công khai (tên hàm/lớp, tham số, dạng kết quả). Bộ nghiệm thu ẩn sẽ kiểm tra từng lỗi và cả các hành vi đang đúng. Đảm bảo `npm test` xanh.",
   "grader": "code",
+  "nullMax": 0.6,
+  "nullMaxReason": "Ngoại lệ có chủ đích: test ẩn cũ của t2 cũng chấm các hành vi mà starter/ đã làm đúng, nên bản không làm gì đạt 0,533 (đo 2026-11-02). Không sửa hidden/ vì harness cũ C1–C9 còn dùng; khi so arm trên t2 phải đối chiếu với điểm nền này.",
   "repoDir": "starter",
   "solutionDir": "ref"
 }
