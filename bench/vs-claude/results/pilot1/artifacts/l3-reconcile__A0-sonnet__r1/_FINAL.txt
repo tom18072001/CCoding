@@ -1,0 +1,11 @@
+I wrote `answer.json` and `NOTES.md` in the repository root. October 2026 net revenue is 97,306,916 VND.
+
+```json
+{ "net_revenue_vnd": 97306916, "paid_count": 32, "refund_count": 2, "duplicate_rows_ignored": 5 }
+```
+
+- **Counts:** 32 distinct paid transactions and 2 distinct refunds (T0075 and T0076) fall in October in Vietnam time. The file has 5 duplicate rows in total, none of which differed from the first copy of its `txn_id`.
+- **Refunds:** Four other refunds are excluded because their refund rows fall outside October. For example, T0079 and T0078 are 1 November in Vietnam time (they are 13:40Z and 11:09Z on 1 November).
+- **Rounding:** The exact sum was already a whole number of dong, so the half-up rounding changed nothing.
+
+`NOTES.md` explains the method.
