@@ -15,6 +15,7 @@ Theo `bench/vs-claude/RUNBOOK-cloud-session.md`, Nhánh 1 (`docs/research/run-pl
 | W2c | A0-sonnet, B0 (server main 7424, chặn web) | s1-sec-review | r4–10 (14) | 2026-11-02T16:21:21Z | 2026-11-02T16:40:11Z | xong 14/14 |
 | B7a | A0-sonnet, B7 (server nhánh 7425, chặn web) | T5 | B7 r1–9, A0-sonnet r4–9 (75) | 2026-11-02T16:41:22Z | 2026-11-02T19:12:11Z | xong 75/75 |
 | B7b | A0-sonnet, B7 (server nhánh 7425, chặn web) | `all` = 18 bài có `task.json` | r1–3, mới 39 lượt B7 | 2026-11-02T19:13:32Z | 2026-11-02T20:21:00Z | xong 39/39 |
+| B6b | A0-sonnet, B6 (server nhánh 7425, chặn web) | T5 | B6 r4–9 (30) | 2026-11-02T20:22:20Z | 2026-11-02T22:27:23Z | xong 30/30 |
 
 ## Bảng cửa sổ (`run-plan.md` §3.0)
 
@@ -86,3 +87,8 @@ Trình theo dõi (watcher/tự commit) bị dừng ở giới hạn 2 giờ củ
 Ghi chú tuân thủ: khi xem đuôi log vận hành lúc 18:41Z, người chạy thấy điểm của 2 lượt t1-duration r8 (dòng log có in `score`); các lần xem sau đã lọc bỏ cột điểm.
 
 **B7b** (A0-sonnet + B7 × `--tasks all` × r1–3): `all` gồm 18 bài; `l1-modules` và `l2-chain` chưa có `task.json` nên runner không xếp (hàng đợi 108 = 18 × 2 × 3). A0-sonnet đã đủ khóa, B7 trên T5 đã có từ B7a, nên lệnh chỉ chạy 39 lượt B7 trên 13 bài còn lại: 39/39 `done`, 0 lỗi hạ tầng, 0 leak, không gặp hạn mức. Token có trọng số 4,20 M, wall-sum 1,12 h, lượt dài nhất 430 s.
+
+## Bước 3 (RUNBOOK 3b.3): làn nhanh B6 lên 9 lượt, để so mô tả
+
+**B6b** (A0-sonnet + B6 × T5 × r1–9; A0-sonnet đã đủ r1–9, B6 đã có r1–3 từ W2b): chỉ chạy 30 lượt B6 r4–9: 30/30 `done`, 0 lỗi hạ tầng, 0 leak, không gặp hạn mức, không gọi WebFetch/WebSearch. Token có trọng số 9,60 M, wall-sum 2,07 h, lượt dài nhất 420 s.
+Trình theo dõi lại bị dừng ở giới hạn 2 giờ lúc 22:22Z và được khởi động lại; `run.mjs` không bị gián đoạn.
