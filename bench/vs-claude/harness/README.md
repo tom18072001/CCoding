@@ -15,6 +15,8 @@ token (đầu vào, đầu ra, đọc/ghi cache) và chi phí quy đổi theo gi
 | `t3-api` | 4 tính năng trên API Node có sẵn | 87 | xác thực/phân quyền, lọc-tìm-sắp-phân trang, CSV RFC 4180, nhật ký |
 | `t4-perf` | tối ưu hiệu năng, kết quả phải giống từng byte | 19 | 15 s → < 1 s với 200k dòng; so với bản cũ (oracle) + băm |
 | `t5-logq` | công cụ nhiều module từ đặc tả | 146 | parser JSON/logfmt, ngôn ngữ truy vấn + vị trí lỗi, tổng hợp, CLI |
+| `l1-modules` | 5 module độc lập từ đặc tả | 192 | money 37, calendar 37, csvcheck 38, slug 40, ratelimit 40; ước lượng 15–25 phút với một agent mạnh (ước lượng, chưa đo) |
+| `l2-chain` | 4 tầng phụ thuộc tuần tự | 149 | lexer/parser 32, check 34, evaluate 30, diff 30, đầu cuối 23; ước lượng 15–25 phút với một agent mạnh (ước lượng, chưa đo) |
 
 Mỗi bài: `starter/` (repo xuất phát, có `SPEC.md`/`ISSUES.md`/`FEATURES.md`/`PERF.md` và vài test thấy được), `prompt.txt`
 (đề giao cho cả hai hệ, giống hệt nhau), `hidden/` (test ẩn), `ref/` (lời giải tham chiếu — đạt 100% test ẩn; khởi điểm đạt rất ít).
