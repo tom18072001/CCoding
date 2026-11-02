@@ -3,9 +3,9 @@
     "--arms",
     "A0-sonnet,B7",
     "--tasks",
-    "t1-duration,t2-orders,t3-api,t4-perf,t5-logq",
+    "all",
     "--repeats",
-    "9",
+    "3",
     "--timeout",
     "20",
     "--runtime",
@@ -37,12 +37,25 @@
     "B7"
   ],
   "taskIds": [
+    "a1-ambiguous-spec",
+    "c1-iis-ecs",
+    "c2-burst-alert",
+    "c3-shop-bugs",
+    "c4-audit-chain",
+    "c5-tickets-api",
+    "l1-oncall",
+    "l2-knights",
+    "l3-reconcile",
+    "l4-startup-order",
+    "r1-elk-design",
+    "re1-lit-synthesis",
+    "s1-sec-review",
     "t1-duration",
     "t2-orders",
     "t3-api",
     "t4-perf",
     "t5-logq"
   ],
-  "repeats": 9,
-  "startedAt": "2026-11-02T16:41:19.064Z"
+  "repeats": 3,
+  "startedAt": "2026-11-02T19:13:29.818Z"
 }
