@@ -13,6 +13,7 @@ Theo `bench/vs-claude/RUNBOOK-cloud-session.md`, Nhánh 1 (`docs/research/run-pl
 | W2a | A0-sonnet, B0 (server main 7424, chặn web) | N4 = a1, l1-oncall, l2-knights, r1 `--judge` | r1–3 (24) | 2026-11-02T13:35:19Z | 2026-11-02T15:05Z | xong 24/24 |
 | W2b | A0-sonnet, B6 (server nhánh 7425, chặn web) | T5 = t1-duration, t2-orders, t3-api, t4-perf, t5-logq | r1–3 (30) | 2026-11-02T15:06:56Z | 2026-11-02T16:19:44Z | xong 30/30 |
 | W2c | A0-sonnet, B0 (server main 7424, chặn web) | s1-sec-review | r4–10 (14) | 2026-11-02T16:21:21Z | 2026-11-02T16:40:11Z | xong 14/14 |
+| B7a | A0-sonnet, B7 (server nhánh 7425, chặn web) | T5 | B7 r1–9, A0-sonnet r4–9 (75) | 2026-11-02T16:41:22Z | 2026-11-02T19:12:11Z | xong 75/75 |
 
 ## Bảng cửa sổ (`run-plan.md` §3.0)
 
@@ -69,3 +70,16 @@ B6 chạy đúng làn nhanh: các pha trong `calls.jsonl` chỉ có route → pl
 | B0 | 7 | 1,29 M | 0,29 h | 200 s |
 
 `calls.jsonl` của 7 lượt B0 không có WebFetch/WebSearch.
+
+## Bước 3b: arm làn đơn B7 (SL), server 7425 `7fb18bab45c39e1cbba16bf9d4abec45cf2a379c`
+
+**B7a** (A0-sonnet + B7 × T5 × r1–9; A0-sonnet đã có r1–3 từ W2b): 75/75 `done`, 0 lỗi hạ tầng, 0 leak, không gặp hạn mức.
+
+| Arm | Lượt mới | Token có trọng số | Wall-sum | Wall dài nhất |
+|---|---|---|---|---|
+| A0-sonnet | 30 | 2,54 M | 0,53 h | 124 s |
+| B7 | 45 | 9,36 M | 1,97 h | 380 s |
+
+Chuỗi pha trong `calls.jsonl` của 45 lượt B7: 31 lượt chỉ `execute:senior-swe → accept:cto`; 14 lượt sau lượt execute đầu thì nâng lên `plan:dev-lead` rồi execute thêm (6 lượt thêm 1 agent, 5 lượt thêm 2, 3 lượt thêm 3) trước accept. Không có lượt gọi WebFetch/WebSearch.
+Trình theo dõi (watcher/tự commit) bị dừng ở giới hạn 2 giờ của tác vụ nền lúc 18:41Z và được khởi động lại; `run.mjs` không bị gián đoạn.
+Ghi chú tuân thủ: khi xem đuôi log vận hành lúc 18:41Z, người chạy thấy điểm của 2 lượt t1-duration r8 (dòng log có in `score`); các lần xem sau đã lọc bỏ cột điểm.
