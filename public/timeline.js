@@ -15,6 +15,7 @@
     review: 'Review',
     revise: 'Sửa theo review',
     synthesize: 'Tổng hợp',
+    accept: 'Nghiệm thu (CTO)',
     checks: 'Lệnh kiểm tra',
     setup: 'Lệnh chuẩn bị',
   };
@@ -49,7 +50,7 @@
       <span>${st.calls} lượt gọi</span><span class="grow"></span>
       <span class="tl-zoom" role="group" aria-label="Thu phóng">${[1, 2, 4].map((z) => `<button type="button" data-z="${z}" class="${TL.zoom === z ? 'on' : ''}">${z}×</button>`).join('')}</span>
       ${d.live ? '<span class="tl-livebadge">● trực tiếp</span>' : ''}</div>`;
-    const legend = `<div class="tl-legend">${['plan', 'discuss', 'execute', 'review', 'revise', 'synthesize', 'checks', 'setup'].map((p) => `<span><i class="tl-b ph-${p}"></i>${PH[p]}</span>`).join('')}<span><i class="tl-b open"></i>đang chạy</span><span><i class="tl-b err"></i>lỗi / bị ngắt</span><span><i class="tl-wait"></i>chờ (đã sẵn sàng)</span><span><i class="tl-pz-k"></i>tạm dừng</span><span>◆ gộp worktree con</span></div>`;
+    const legend = `<div class="tl-legend">${['plan', 'discuss', 'execute', 'review', 'revise', 'synthesize', 'accept', 'checks', 'setup'].map((p) => `<span><i class="tl-b ph-${p}"></i>${PH[p]}</span>`).join('')}<span><i class="tl-b open"></i>đang chạy</span><span><i class="tl-b err"></i>lỗi / bị ngắt</span><span><i class="tl-wait"></i>chờ (đã sẵn sàng)</span><span><i class="tl-pz-k"></i>tạm dừng</span><span>◆ gộp worktree con</span></div>`;
     const deptName = (dep) => (dep === '_' ? 'Điều phối' : C.deptName(dep));
     const multi = new Set(d.lanes.map((l) => l.department)).size > 1;
     let lastDept = '';

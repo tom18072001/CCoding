@@ -381,3 +381,13 @@ Sửa sau review độc lập (2/11/2026): dòng thời gian đọc `calls.jsonl
 ### Bổ sung: UX-4b — văn phòng tối giản theo phòng ban (2/11/2026)
 
 Chỉ thay giao diện ô Văn phòng (bỏ canvas, nhân vật giám đốc, đi lại, phòng họp/pantry/giải trí, mục "vui", bảng điều khiển bàn giám đốc; chân dung pixel tách sang `public/avatar.js`). Dữ liệu hiển thị lấy từ trạng thái agent và hội thoại đã có trong trình duyệt; không thêm API, không lưu thêm gì. **Kết luận: ĐẠT.**
+
+### Bổ sung: UX-4c — CTO nghiệm thu, nhân sự mới (2/11/2026)
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| Pha nghiệm thu (`accept`) của CTO | PRE-02, PRE-05, DET-01 | Một lượt gọi model qua `Orchestrator.call()` (đếm token, nhật ký, chính sách nhãn dữ liệu: Bảo mật/Hạn chế chỉ runtime cục bộ, che bí mật/PII khi ra ngoài). Đầu vào là đề bài + báo cáo tổng hợp + kết luận review + kết quả lệnh kiểm tra — cùng loại dữ liệu pha tổng hợp đã gửi, không thêm nguồn mới. CTO chỉ có công cụ đọc. Kết quả lưu `data/runs/<id>/ACCEPTANCE.md` và `task.json`; nhật ký `accept.done`/`accept.error` qua `LogStore` |
+| Agent mới: Business Analyst, Technical Writer, Senior SE | PRI-01 | Hồ sơ yêu cầu dùng dữ liệu giả trong ví dụ, không chép DLCN thật vào tài liệu; Senior SE không đưa khóa sandbox thật vào code/test |
+| Đề xuất việc tiếp theo | — | Chỉ soạn sẵn vào ô giao việc trong trình duyệt; không tự tạo nhiệm vụ |
+
+**Kết luận: ĐẠT**, không thêm điều kiện. Tắt nghiệm thu nếu muốn giảm số lượt gửi dữ liệu ra runtime bên ngoài với nhiệm vụ nhãn Nội bộ.

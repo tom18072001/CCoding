@@ -184,7 +184,8 @@
       const seen = [];
       for (const el of feed.children) {
         const id = el.dataset.agent;
-        if (id && !seen.includes(id)) seen.push(id);
+        // chỉ agent thật (bỏ "system", "director")
+        if (id && this.agents.has(id) && !seen.includes(id)) seen.push(id);
         if (seen.length >= 6) break;
       }
       if (this.feedAgent && !seen.includes(this.feedAgent)) seen.push(this.feedAgent);

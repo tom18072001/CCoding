@@ -192,6 +192,8 @@
     });
     office.setData(S.departments, [...S.agents.values()]);
     bindUi();
+    // ô "CTO nghiệm thu khi xong" theo cấu hình mặc định (defaults.acceptance)
+    if ($('#task-form')?.acceptance) $('#task-form').acceptance.checked = S.defaults?.acceptance !== false;
     // cầu nối cho director.js (menu agent, prompt, hạn mức, trợ giúp) và các module giao diện
     window.CC = { S, api, esc, md, code, findTask, resolveTask, keepTask, fmt, total, toast, openAgent, openTask, setTab, avatarUrl, av, agentName, deptName, deptShort, deptColor, dateTime, time, CLS_VI, TASK_VI, STATUS_VI, MODE_VI, PAUSE_VI, PHASES, PHASE_INDEX, KIND_VI, prefillAssign, office: () => office, renderTaskDetail, renderTaskList, editProject, newProject, uploadFiles, renderPending };
     window.Director?.init();
@@ -610,6 +612,7 @@
     opt.budgetMode = f.budgetMode.value;
     opt.review = f.review.checked;
     if (f.planApproval.checked) opt.planApproval = true;
+    if (f.acceptance && !f.acceptance.checked) opt.acceptance = false;
     if (S.pending.some((a) => a.status === 'uploading')) {
       msg.className = 'form-msg err';
       msg.textContent = 'Đang tải tệp lên — chờ một chút';
@@ -946,7 +949,7 @@
         ${t.projectId ? `<span>dự án: ${esc(t.projectId)}</span>` : ''}<span>token <b style="font-family:var(--mono);color:var(--text)">${fmt(t.usage.input)} in / ${fmt(t.usage.output)} out</b></span>
         ${t.agentId ? `<span>giao riêng: ${esc(agentName(t.agentId))}</span>` : ''}
         ${canPause ? '<button class="btn ghost sm" id="td-pause">⏸ Tạm dừng</button>' : ''}${canCancel ? '<button class="btn ghost sm danger" id="td-cancel">Hủy</button>' : ''}<button class="btn ghost sm" id="td-again" title="Mở form giao việc với yêu cầu, chế độ và phòng/dự án/agent như nhiệm vụ này">↻ Giao lại tương tự</button></div>
-        ${meter}${git}${atts}${window.Flow?.summaryHtml(t) || ''}${window.UX?.checksHtml(t) || ''}${window.Flow?.shipHtml(t) || ''}
+        ${meter}${git}${atts}${window.Flow?.summaryHtml(t) || ''}${window.Flow?.acceptHtml(t) || ''}${window.UX?.checksHtml(t) || ''}${window.Flow?.shipHtml(t) || ''}
         ${t.routing ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">🧭 ${esc(t.routing.reason)}</p>` : ''}
         ${t.error && !canResume ? `<p style="font-size:12.5px;color:var(--bad);margin:0 0 8px">${esc(t.error)}</p>` : ''}
         ${t.attention ? `<p style="font-size:12.5px;color:var(--warn);margin:0 0 8px">⚠ Cần xem lại: ${esc(t.attention.detail)} — xem báo cáo, "Làm lại từ review" hoặc tách việc còn lại.</p>` : ''}

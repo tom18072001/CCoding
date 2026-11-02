@@ -78,7 +78,7 @@
     if (t.status === 'paused') return `Tạm dừng${t.pause?.reason ? ` · ${C.PAUSE_VI[t.pause.reason] || t.pause.reason}` : ''}`;
     if (t.status === 'failed') return 'Lỗi — có thể tiếp tục';
     if (t.status === 'cancelled') return 'Đã hủy';
-    const ph = C.PHASES.find(([k]) => k === t.phase) || (t.phase === 'finalize' ? ['', 'Thảo luận'] : t.phase === 'revise' ? ['', 'Sửa theo review'] : t.phase === 'route' ? ['', 'Định tuyến'] : null);
+    const ph = C.PHASES.find(([k]) => k === t.phase) || (t.phase === 'finalize' ? ['', 'Thảo luận'] : t.phase === 'revise' ? ['', 'Sửa theo review'] : t.phase === 'route' ? ['', 'Định tuyến'] : t.phase === 'accept' ? ['', 'CTO nghiệm thu'] : null);
     return ph ? ph[1] : t.status === 'queued' ? 'Chờ chạy' : 'Đang chạy';
   }
   const who = (t) => (t.mode === 'agent' && t.agentId ? `📌 ${C.agentName(t.agentId)}` : C.MODE_VI[t.mode] || t.mode);

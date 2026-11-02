@@ -11,7 +11,7 @@ name: "Backend Developer"       # tên vị trí (role) — không dùng tên ng
 short: "Backend"                # nhãn ngắn trên sơ đồ văn phòng (≤ 14 ký tự)
 title: "Backend Developer (API, CSDL & migration)"
 department: dev                 # id phòng ban (departments/<id>.md) — "office" cho điều phối viên
-role: member                    # lead | member | reviewer | router
+role: member                    # lead | member | reviewer | router | cto
 model: sonnet                   # opus | sonnet | haiku hoặc id model đầy đủ
 runtime: inherit                # hoặc claude-cli | codex-cli | kimi-cli | anthropic-api | openai-api | mock
 tools: [Read, Write, Edit, Glob, Grep, Bash]   # công cụ workspace được dùng (xem bảng dưới)
@@ -58,6 +58,8 @@ Hồ sơ phải nói rõ cách dùng công cụ: đọc repo trước khi đề 
 ```
 
 Trưởng phòng thêm `## Cách phân rã nhiệm vụ`; reviewer thêm `## Tiêu chí review`; điều phối viên thêm `## Quy tắc định tuyến`.
+
+**Vai trò `cto`** (một agent, `department: office`, không thuộc phòng ban làm việc nào — vd. `agents/cto.md`): chạy pha **nghiệm thu** (`accept`) sau khi mọi phòng tổng hợp xong, chỉ có công cụ đọc. Mẫu đầu ra bắt đầu `## Tóm tắt`, có `## Tiêu chí nghiệm thu` (bảng Tiêu chí · Kết quả · Bằng chứng); bộ điều phối tự thêm khối JSON kết luận. Không có agent `cto` thì bỏ qua nghiệm thu; tắt theo nhiệm vụ bằng `options.acceptance: false` hoặc mặc định `defaults.acceptance: false`.
 
 Ở pha họp, hệ thống có thể chỉ gửi `## Sứ mệnh` và `## Chuyên môn & kỹ năng` để tiết kiệm token — hai mục này phải hiểu được khi đứng riêng và nên đặt trước mọi khối code.
 

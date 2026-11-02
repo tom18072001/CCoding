@@ -165,7 +165,9 @@
     const redo = subs.filter((s) => s.attempts > 1).length;
     const reviewed = t.runs.filter((r) => r.review);
     const open = t.runs.flatMap((r) => (r.review && !r.review.approved ? r.review.issues.filter((i) => i.severity !== 'minor') : []));
-    const rv = !reviewed.length ? ['—', 'không review'] : open.length || t.attention ? ['⚠', `cần xem · ${open.length} lỗi còn mở`] : ['✓', reviewed.some((r) => r.review.by === 'director') ? 'giám đốc duyệt' : 'reviewer duyệt'];
+    const rv = !reviewed.length ? ['—', 'không review'] : open.length || t.attention?.reason === 'review' ? ['⚠', `cần xem · ${open.length} lỗi còn mở`] : ['✓', reviewed.some((r) => r.review.by === 'director') ? 'giám đốc duyệt' : 'reviewer duyệt'];
+    const ac = t.acceptance;
+    const acN = ac ? ac.criteria.filter((c) => c.result === 'pass').length : 0;
     const pc = t.projectChecks;
     const okN = (l) => (l || []).filter((c) => c.ok).length;
     const ck = pc && (pc.latest || pc.baseline) ? `${okN(pc.baseline)}/${(pc.baseline || []).length} → ${okN(pc.latest)}/${(pc.latest || pc.baseline || []).length}` : '';
@@ -178,9 +180,60 @@
       ${window.UX?.hasDiff(t) ? cell('🧬', 'Thay đổi', `<span data-dstat="${esc(t.id)}"></span>`) : ''}
       ${ck ? cell('🧪', 'Kiểm tra trước → sau', esc(ck), okN(pc.latest) < (pc.latest || []).length ? 'warn' : '') : ''}
       ${cell(rv[0], 'Review', esc(rv[1]), rv[0] === '⚠' ? 'warn' : '')}
+      ${ac ? cell(ac.accepted ? '✅' : '✋', 'CTO nghiệm thu', ac.accepted ? `đạt ${acN}/${ac.criteria.length}` : ac.parsed ? `chưa · ${acN}/${ac.criteria.length} đạt` : 'chưa có kết luận', ac.accepted ? '' : 'warn') : ''}
       ${t.branch ? cell('🌿', last ? (last.action === 'ff' ? `Đã đẩy vào ${last.ref}` : 'Đã đẩy nhánh') : 'Nhánh', `<code title="${esc(t.branch)}">${esc(last ? last.head.slice(0, 10) : t.branch)}</code>`) : ''}
     </div>`;
   };
+
+  // ── Nghiệm thu của CTO (UX-4c) ─────────────────────────────────────────────
+  const AC_RES = { pass: ['✓', 'Đạt', 'ok'], fail: ['✗', 'Không', 'bad'], unknown: ['?', 'Chưa kiểm được', 'warn'] };
+  /** Khung kết luận nghiệm thu: tiêu chí Đạt/Không kèm bằng chứng, rủi ro, việc tiếp theo (bấm để soạn sẵn việc tiếp nối). */
+  F.acceptHtml = (t) => {
+    const a = t?.acceptance;
+    if (!a || live(t)) return '';
+    const n = a.criteria.length;
+    const ok = a.criteria.filter((c) => c.result === 'pass').length;
+    const head = a.error
+      ? `⚠ CTO chưa nghiệm thu được — ${esc(a.error)}`
+      : !a.parsed
+        ? '⚠ CTO không ghi kết luận đọc được — xem tin nghiệm thu trong hội thoại'
+        : a.accepted
+          ? `✅ CTO nghiệm thu · ${ok}/${n} tiêu chí đạt`
+          : `✋ CTO chưa nghiệm thu · ${n - ok}/${n} tiêu chí chưa đạt hoặc chưa kiểm được`;
+    const rows = a.criteria
+      .map((c) => {
+        const [ic, l, cls] = AC_RES[c.result] || AC_RES.unknown;
+        return `<tr class="${cls}"><td>${esc(c.name)}</td><td class="ac-r"><b>${ic}</b> ${l}</td><td>${C.md ? C.md(c.evidence).replace(/^<p>|<\/p>$/g, '') : esc(c.evidence)}</td></tr>`;
+      })
+      .join('');
+    const fus = (a.followUps || [])
+      .map((f, i) => `<li><button type="button" class="btn ghost sm" data-ac-fu="${i}" title="${esc(f.brief.slice(0, 300))}">＋ ${esc(f.title)}</button>${f.department ? ` <small>${esc(C.deptShort(f.department))}</small>` : ''}</li>`)
+      .join('');
+    return `<details class="ac-box ${a.accepted ? 'ok' : 'warn'}" data-ac="${esc(t.id)}"${a.accepted ? '' : ' open'}>
+      <summary><b>${head}</b>${a.summary ? `<small>${esc(a.summary)}</small>` : ''}</summary>
+      ${n ? `<table class="ac-tbl"><thead><tr><th>Tiêu chí</th><th>Kết quả</th><th>Bằng chứng</th></tr></thead><tbody>${rows}</tbody></table>` : ''}
+      ${a.risks?.length ? `<div class="ac-sec"><b>Rủi ro / việc còn mở</b><ul>${a.risks.map((r) => `<li>${esc(r)}</li>`).join('')}</ul></div>` : ''}
+      ${fus ? `<div class="ac-sec"><b>Việc tiếp theo CTO đề xuất</b> <small>bấm để soạn sẵn việc tiếp nối, sửa rồi mới giao</small><ul class="ac-fu">${fus}</ul></div>` : ''}
+    </details>`;
+  };
+  /** Soạn sẵn việc tiếp nối vào ô trả lời (hội thoại) hoặc ô giao tiếp nối (trang nhiệm vụ) — không tự giao. */
+  function bindAccept(root) {
+    root?.querySelectorAll('.ac-box [data-ac-fu]').forEach(
+      (b) =>
+        (b.onclick = () => {
+          const box = b.closest('[data-ac]');
+          const t = C.S.tasks.get(box.dataset.ac);
+          const f = t?.acceptance?.followUps?.[Number(b.dataset.acFu)];
+          if (!f) return;
+          const ta = document.querySelector(C.S.tab === 'assign' ? '#cv-dock textarea' : '#task-detail .dock textarea');
+          if (!ta) return C.toast({ level: 'info', title: 'Chưa mở được ô giao tiếp nối', msg: 'Mở hội thoại hoặc trang của nhiệm vụ này rồi bấm lại.' });
+          ta.value = `${f.title}\n\n${f.brief}`;
+          ta.dispatchEvent(new Event('input'));
+          ta.focus();
+          ta.scrollIntoView({ block: 'nearest' });
+        }),
+    );
+  }
 
   // ── Sẵn sàng gộp (A4) ────────────────────────────────────────────────────
   F.shipHtml = (t) => {
@@ -310,6 +363,7 @@
   F.bind = (root, after) => {
     bindPlan(root, after);
     bindShip(root, after);
+    bindAccept(root);
   };
   /** Đang sửa kế hoạch / thao tác bảng gộp → nơi gọi nên hoãn vẽ lại. */
   F.busy = (root) => !!document.activeElement?.closest?.('.pl-box, .sh-box') && (!root || root.contains(document.activeElement));

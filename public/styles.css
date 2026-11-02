@@ -1306,3 +1306,26 @@ a.tref:hover { border-bottom-style: solid; }
 .ofc-chip span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
 .ofc-chip.st-thinking { --ring: var(--st-thinking); } .ofc-chip.st-discussing { --ring: var(--st-discussing); } .ofc-chip.st-reviewing { --ring: var(--st-reviewing); } .ofc-chip.st-waiting { --ring: var(--st-waiting); } .ofc-chip.st-error { --ring: var(--st-error); }
 .ofc-quiet { color: var(--faint); font-size: 11.5px; }
+
+/* ── UX-4c: nghiệm thu của CTO ─────────────────────────────────────────────── */
+.ph-accept { background: #f472b6; }
+.ac-box { margin: 10px 0; border: 1px solid var(--line-2); border-left: 3px solid var(--ok); border-radius: 10px; background: var(--panel-2); padding: 8px 12px; }
+.ac-box.warn { border-left-color: var(--warn); }
+.ac-box > summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; list-style: none; }
+.ac-box > summary::-webkit-details-marker { display: none; }
+.ac-box > summary::before { content: '▸'; color: var(--faint); font-size: 11px; }
+.ac-box[open] > summary::before { content: '▾'; }
+.ac-box > summary small { color: var(--muted); flex-basis: 100%; padding-left: 16px; }
+.ac-tbl { width: 100%; border-collapse: collapse; margin: 8px 0 4px; font-size: 12.5px; }
+.ac-tbl th, .ac-tbl td { border-top: 1px solid var(--line); padding: 5px 6px; text-align: left; vertical-align: top; }
+.ac-tbl th { color: var(--faint); font-weight: 500; font-size: 11.5px; }
+.ac-tbl .ac-r { white-space: nowrap; }
+.ac-tbl tr.ok .ac-r { color: var(--ok); }
+.ac-tbl tr.bad .ac-r { color: var(--bad); }
+.ac-tbl tr.warn .ac-r { color: #fbbf24; }
+.ac-tbl code { font-size: 11.5px; }
+.ac-sec { margin-top: 8px; font-size: 12.5px; }
+.ac-sec small { color: var(--faint); margin-left: 6px; }
+.ac-sec ul { margin: 4px 0 0; padding-left: 18px; }
+.ac-fu { list-style: none; padding-left: 0 !important; display: flex; flex-wrap: wrap; gap: 6px; }
+.ac-fu li small { color: var(--faint); }

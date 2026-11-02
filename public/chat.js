@@ -319,7 +319,7 @@
     if (t.status === 'done') {
       const fin = V.finals.get(t.id);
       const outs = d?.outputs || [];
-      parts.push(`<div class="cv-final">${window.Flow?.summaryHtml(t) || ''}${fin ? `<div class="md">${C.md(fin)}</div>` : '<p class="muted-p">✓ Đã xong.</p>'}
+      parts.push(`<div class="cv-final">${window.Flow?.summaryHtml(t) || ''}${window.Flow?.acceptHtml(t) || ''}${fin ? `<div class="md">${C.md(fin)}</div>` : '<p class="muted-p">✓ Đã xong.</p>'}
         ${outs.length ? `<div class="cv-facts">${outs.slice(0, 10).map((f) => `<button class="cv-chip" data-pv="outputs/${esc(f)}" data-tid="${esc(t.id)}">📄 ${esc(f)}</button>`).join('')}${outs.length > 10 ? `<button class="cv-chip" data-act="detail" data-tid="${esc(t.id)}">… ${outs.length - 10} tệp nữa</button>` : ''}</div>` : ''}
         ${window.UX?.hasDiff(t) || t.projectChecks ? `<div class="cv-facts">${window.UX?.hasDiff(t) ? `<button class="cv-chip df-chip" data-act="diff" data-tid="${esc(t.id)}" title="Mở diff thay đổi trong repo">🧬 Thay đổi<span data-dstat="${esc(t.id)}"></span></button>` : ''}${window.UX?.checksChip(t) || ''}</div>` : ''}
         ${isLast ? window.Flow?.shipHtml(t) || '' : ''}

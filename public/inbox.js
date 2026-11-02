@@ -105,7 +105,7 @@
     const proj = t.projectId ? C.S.projects.find((p) => p.id === t.projectId)?.name || t.projectId : 'ngoài dự án';
     let body = '';
     if (x.k === 'plan') body = window.Flow?.planHtml(t) || '';
-    else if (x.k === 'attention') body = `${window.Flow?.summaryHtml(t) || ''}${window.UX?.checksHtml(t) || ''}${window.Chat?.reviewBox?.(t) || ''}`;
+    else if (x.k === 'attention') body = `${window.Flow?.summaryHtml(t) || ''}${window.Flow?.acceptHtml(t) || ''}${window.UX?.checksHtml(t) || ''}${window.Chat?.reviewBox?.(t) || ''}`;
     else
       body = `${window.Flow?.summaryHtml(t) || ''}<div class="pause-box ${esc(t.status)}"><div><b>${esc(k.icon)} ${esc(k.label)}</b><p>${esc(t.pause?.detail || t.error || '')}${t.pause?.resumeAt ? ` · tự tiếp tục lúc ${esc(C.dateTime(t.pause.resumeAt))}` : ''}</p></div>
         <div class="pb-actions"><button type="button" class="btn primary sm" data-ib-act="1">${esc(k.p)} (1)</button>${x.k === 'paused' ? `<button type="button" class="btn ghost sm" data-ib-act="2">${esc(k.s)} (2)</button>` : ''}${k.cancel ? '<button type="button" class="btn ghost sm danger" data-ib-act="x">Hủy (X)</button>' : ''}</div></div>`;

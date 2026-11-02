@@ -6,10 +6,10 @@
 
 ## Tính năng
 
-- **2 phòng ban, 16 nhân sự** (mỗi người một `agent.md` riêng, viết dựa trên skill của Tom + kinh nghiệm cộng đồng):
-  - 🔵 **Phòng Phát triển Dự án** (công việc): Trưởng phòng, Kiến trúc sư giải pháp, Backend, Frontend, Data Engineer (ELK), DevOps/SRE, ATTT & Bảo vệ dữ liệu, BA & Pre-sales, QA.
+- **2 phòng ban, 20 nhân sự** (mỗi người một `agent.md` riêng, viết dựa trên skill của Tom + kinh nghiệm cộng đồng):
+  - 🔵 **Phòng Phát triển Dự án** (công việc): Trưởng phòng, Kiến trúc sư giải pháp, Senior Software Engineer, Backend, Frontend, Data Engineer (ELK), DevOps/SRE, ATTT & Bảo vệ dữ liệu, Business Analyst, Pre-sales & HSDT, Technical Writer, QA.
   - 🟣 **Phòng Nghiên cứu** (học thuật): Trưởng phòng (PI), Literature Researcher, Data Scientist, Methodologist, Academic Writer, Peer Reviewer.
-  - 🔴 **Điều phối viên** định tuyến nhiệm vụ.
+  - 🔴 **Điều phối viên** định tuyến nhiệm vụ; **CTO** nghiệm thu kết quả theo tiêu chí (Đạt/Không kèm bằng chứng) trước khi giao cho giám đốc.
 - **4 chế độ xử lý**: *Tự động* (điều phối viên chọn phòng) · *Theo phòng ban* · *Theo dự án* (workspace, runtime, phân loại dữ liệu, ngân sách riêng) · *Liên phòng* (Nghiên cứu → Phát triển).
 - **Quy trình như một phòng ban thật**: lập kế hoạch → họp thảo luận (agent đi vào phòng họp, phát biểu, @nhắc nhau; tự bỏ họp khi việc nhỏ) → chốt → thực thi song song theo phụ thuộc → review & sửa → báo cáo tổng hợp. Mỗi mốc là một **checkpoint**: tạm dừng / tiếp tục / chạy lại hạng mục mà không mất tiến độ.
 - **Agent làm việc thật trên repo**: đọc/ghi file, chạy test, typecheck, migration DB dev trong **git worktree + nhánh riêng** cho từng nhiệm vụ (không đụng nhánh chính, không push) — xem [docs/TOOLS.md](docs/TOOLS.md).
@@ -142,14 +142,18 @@ ccoding logs verify                 # kiểm tra toàn vẹn chuỗi băm
 | Phòng | ID | Vị trí (nhãn trên sơ đồ) | Model |
 |---|---|---|---|
 | Điều phối | `orchestrator` | Điều phối viên (Điều phối) | sonnet |
+| | `cto` | CTO — điều phối kỹ thuật và nghiệm thu (CTO) | sonnet |
 | Phát triển | `dev-lead` ★ | Trưởng phòng Phát triển (TP Phát triển) | opus |
 | | `solution-architect` | Kiến trúc sư giải pháp (Kiến trúc sư) | opus |
+| | `senior-swe` | Senior Software Engineer — phần khó, rà mã, sửa lỗi gốc (Senior SE) | sonnet |
 | | `backend-dev` | Backend Developer — Node.js/TypeScript (Backend) | sonnet |
 | | `frontend-dev` | Frontend Developer — Vanilla JS/3D dashboard (Frontend) | sonnet |
 | | `data-engineer` | Data Engineer — ELK & pipelines (Data Eng) | sonnet |
 | | `devops` | DevOps / SRE — Windows & Linux (DevOps) | sonnet |
 | | `security` | Chuyên viên ATTT & Bảo vệ dữ liệu (ATTT) | sonnet |
-| | `ba-presales` | BA & Pre-sales (BA/Presales) | sonnet |
+| | `business-analyst` | Business Analyst — yêu cầu, bảng gap, tiêu chí nghiệm thu (BA) | sonnet |
+| | `ba-presales` | Pre-sales & HSDT (Pre-sales) | sonnet |
+| | `tech-writer` | Technical Writer — tài liệu kỹ thuật, README (Tech Writer) | sonnet |
 | | `qa-tester` | QA Engineer & Reviewer (QA) | sonnet |
 | Nghiên cứu | `research-lead` ★ | Trưởng phòng Nghiên cứu — PI (TP Nghiên cứu) | opus |
 | | `literature-researcher` | Literature Researcher (Literature) | sonnet |

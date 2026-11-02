@@ -157,12 +157,14 @@ export class MockRuntime implements Runtime {
         return this.final(brief, (h.subtasks as SubtaskHint[]) ?? [], String(h.departmentName ?? ''));
       case 'accept': {
         const subs = ((h.subtasks as SubtaskHint[]) ?? []).slice(0, 5);
-        const criteria = subs.map((s) => ({ name: `${s.id} — ${s.title ?? 'hạng mục'} có sản phẩm và kiểm chứng`, result: 'pass', evidence: `Báo cáo tổng hợp, mục ${s.id}` }));
+        // acceptRejectRate (thử nghiệm): tỉ lệ CTO không nghiệm thu — tiêu chí đầu "Không"
+        const rejectAll = rnd() < Number(this.cfg.acceptRejectRate ?? 0);
+        const criteria = subs.map((s, i) => ({ name: `${s.id} — ${s.title ?? 'hạng mục'} có sản phẩm và kiểm chứng`, result: rejectAll && i === 0 ? 'fail' : 'pass', evidence: `Báo cáo tổng hợp, mục ${s.id}` }));
         if (!criteria.length) criteria.push({ name: 'Có báo cáo tổng hợp trả lời đúng đề bài', result: 'pass', evidence: 'Báo cáo tổng hợp' });
         return `## Tóm tắt\nNghiệm thu: các tiêu chí rút từ đề bài đều đạt theo báo cáo tổng hợp và kết luận review.\n\n## Tiêu chí nghiệm thu\n| Tiêu chí | Kết quả | Bằng chứng |\n|---|---|---|\n${criteria
-          .map((c) => `| ${c.name} | Đạt | ${c.evidence} |`)
+          .map((c) => `| ${c.name} | ${c.result === 'pass' ? 'Đạt' : 'Không'} | ${c.evidence} |`)
           .join('\n')}\n\n## Rủi ro & việc còn mở\n- Chưa kiểm thử với dữ liệu thật (mô phỏng).\n\n## Việc tiếp theo\n- Kiểm thử chấp nhận với người dùng.\n\n\`\`\`json\n${JSON.stringify(
-          { accepted: true, summary: 'Các tiêu chí đều đạt (mô phỏng).', criteria, risks: ['Chưa kiểm thử với dữ liệu thật (mô phỏng).'], followUps: [{ title: 'Kiểm thử chấp nhận', brief: 'Chạy kiểm thử chấp nhận với người dùng theo các tiêu chí đã nghiệm thu.', department: 'dev' }] },
+          { accepted: !rejectAll, summary: rejectAll ? 'Còn tiêu chí chưa đạt (mô phỏng).' : 'Các tiêu chí đều đạt (mô phỏng).', criteria, risks: ['Chưa kiểm thử với dữ liệu thật (mô phỏng).'], followUps: [{ title: 'Kiểm thử chấp nhận', brief: 'Chạy kiểm thử chấp nhận với người dùng theo các tiêu chí đã nghiệm thu.', department: 'dev' }] },
           null,
           2,
         )}\n\`\`\``;
