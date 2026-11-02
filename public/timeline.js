@@ -3,7 +3,9 @@
 (function () {
   let C = null;
   const esc = (s) => C.esc(s);
-  const TL = { zoom: 1, cache: new Map() };
+  const TL = { zoom: 1, cache: new Map(), inflight: new Set(), box: null };
+  // khoảng chờ giữa hai lần chạy: tạm dừng (lý do theo C.PAUSE_VI) hoặc sau khi xong/lỗi/hủy rồi được chạy tiếp
+  const GAP_VI = { done: 'đã xong, chờ chạy tiếp', failed: 'lỗi, chờ chạy lại', cancelled: 'đã hủy, chờ chạy tiếp' };
   const PH = {
     route: 'Định tuyến',
     plan: 'Lập kế hoạch',
@@ -23,7 +25,7 @@
     const m = Math.round(s / 60);
     return m < 60 ? `${m} phút` : `${Math.floor(m / 60)} giờ ${m % 60} phút`;
   };
-  const clock = (ms) => new Date(ms).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: undefined });
+  const clock = (ms, sec) => new Date(ms).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', ...(sec ? { second: '2-digit' } : {}) });
   const STEPS = [10e3, 30e3, 60e3, 2 * 60e3, 5 * 60e3, 10 * 60e3, 15 * 60e3, 30 * 60e3, 3600e3, 2 * 3600e3, 6 * 3600e3, 24 * 3600e3];
 
   function render(box, d) {
@@ -34,7 +36,7 @@
     const step = STEPS.find((s) => span / s <= 10 * TL.zoom) || STEPS.at(-1);
     const ticks = [];
     for (let k = Math.ceil(T0 / step) * step; k <= d.end; k += step) ticks.push(k);
-    const pz = d.pauses.map((p) => `<i class="tl-pz" style="left:${x(p.start)};width:${w(p.start, p.end)}" title="Tạm dừng${p.reason ? ` (${esc(C.PAUSE_VI?.[p.reason] || p.reason)})` : ''}: ${dur(p.end - p.start)}"></i>`).join('');
+    const pz = d.pauses.map((p) => `<i class="tl-pz" style="left:${x(p.start)};width:${w(p.start, p.end)}" title="Tạm dừng${p.reason ? ` (${esc(C.PAUSE_VI?.[p.reason] || GAP_VI[p.reason] || p.reason)})` : ''}: ${dur(p.end - p.start)}"></i>`).join('');
     const nowLine = d.live ? `<i class="tl-now" style="left:${x(d.now)}" title="Bây giờ"></i>` : '';
     const crit = d.critical.lanes.map((k) => k.split('|')[1]).filter((s) => s && s !== '_');
     const st = d.stats;
@@ -75,7 +77,7 @@
         return `${sep}<div class="tl-row${l.critical ? ' crit' : ''}${l.subtask ? '' : ' coord'}"><div class="tl-lab">${lab}</div><div class="tl-track">${pz}${wait}${bars}${merges}${nowLine}</div></div>`;
       })
       .join('');
-    const axis = `<div class="tl-row tl-axis"><div class="tl-lab"><small>${new Date(T0).toLocaleDateString('vi-VN')}</small></div><div class="tl-track">${ticks.map((k) => `<span class="tl-tick" style="left:${x(k)}">${clock(k)}</span>`).join('')}</div></div>`;
+    const axis = `<div class="tl-row tl-axis"><div class="tl-lab"><small>${new Date(T0).toLocaleDateString('vi-VN')}</small></div><div class="tl-track">${ticks.map((k) => `<span class="tl-tick" style="left:${x(k)}">${clock(k, step < 60e3)}</span>`).join('')}</div></div>`;
     const empty = !d.lanes.some((l) => l.bars.length);
     box.innerHTML = `<div class="tl">${head}${legend}${
       empty ? '<div class="empty">Chưa có lượt gọi nào được ghi lại cho nhiệm vụ này.</div>' : `<div class="tl-scroll"><div class="tl-grid" style="--z:${TL.zoom}">${axis}${rows}</div></div>`
@@ -89,24 +91,34 @@
     );
   }
 
-  /** Tab "⏱ Dòng thời gian" của trang nhiệm vụ; nhiệm vụ đang chạy tự làm mới mỗi 5 giây khi tab còn mở. */
+  /**
+   * Tab "⏱ Dòng thời gian" của trang nhiệm vụ. Trang nhiệm vụ vẽ lại theo mỗi sự kiện → vẽ từ bộ nhớ đệm, chỉ gọi API khi dữ
+   * liệu đã cũ hơn ≈5 giây / trạng thái nhiệm vụ đổi và không có lượt gọi nào đang chờ; nhiệm vụ đang chạy tự làm mới mỗi 5 giây
+   * khi tab nhiệm vụ + tab dòng thời gian còn mở.
+   */
   TL.view = async (box, t) => {
+    TL.box = box;
     const c = TL.cache.get(t.id);
-    if (c) render(box, c);
+    if (c) render(box, c.d);
     else box.innerHTML = '<div class="empty">Đang dựng dòng thời gian…</div>';
-    try {
-      const d = await C.api(`/api/tasks/${encodeURIComponent(t.id)}/timeline`);
-      TL.cache.set(t.id, d);
-      if (!box.isConnected) return;
-      render(box, d);
-      if (d.live) {
-        clearTimeout(TL.timer);
-        TL.timer = setTimeout(() => {
-          if (box.isConnected && C.S.taskView === 'timeline' && C.S.selectedTask === t.id && document.visibilityState === 'visible') TL.view(box, C.S.tasks.get(t.id) || t);
-        }, 5000);
+    const showing = () => TL.box && TL.box.isConnected && C.S.tab === 'tasks' && C.S.taskView === 'timeline' && C.S.selectedTask === t.id;
+    if (!(c && Date.now() - c.at < 4500 && c.status === t.status) && !TL.inflight.has(t.id)) {
+      TL.inflight.add(t.id);
+      try {
+        const d = await C.api(`/api/tasks/${encodeURIComponent(t.id)}/timeline`);
+        TL.cache.set(t.id, { d, at: Date.now(), status: t.status });
+        if (showing()) render(TL.box, d);
+      } catch (e) {
+        if (!c && showing()) TL.box.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+      } finally {
+        TL.inflight.delete(t.id);
       }
-    } catch (e) {
-      if (!c) box.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+    }
+    if (TL.cache.get(t.id)?.d.live) {
+      clearTimeout(TL.timer);
+      TL.timer = setTimeout(() => {
+        if (showing() && document.visibilityState === 'visible') TL.view(TL.box, C.S.tasks.get(t.id) || t);
+      }, 5000);
     }
   };
   TL.init = () => {

@@ -365,3 +365,5 @@ Theo yêu cầu chủ dự án, CCoding **không dùng** các tài khoản Claud
 | Bảng lệnh Ctrl+K, "xem gần đây" | — | Dựng từ dữ liệu đã có trong trình duyệt; mục gần đây chỉ lưu mã nhiệm vụ/dự án (≤ 12) trong `localStorage` |
 
 **Kết luận: ĐẠT**, không thêm điều kiện.
+
+Sửa sau review độc lập (2/11/2026): dòng thời gian đọc `calls.jsonl` / `events.jsonl` **theo dòng, chỉ giữ trường thời gian** và nhớ đệm trong bộ nhớ tiến trình (tối đa 64 file, không ghi ra đĩa) — không thêm dữ liệu nào ra ngoài `data/`; nhật ký `workspace.merge` thêm trường `department` (mã phòng, không phải dữ liệu cá nhân). Hộp "Cần bạn" chặn gửi trùng một hành động trong 15 giây và không còn gọi `/cancel` cho việc đã dừng. **Kết luận giữ nguyên: ĐẠT.**

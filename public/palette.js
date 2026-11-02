@@ -192,6 +192,8 @@
     ul.querySelector('.pal-it.on')?.scrollIntoView({ block: 'nearest' });
   }
   P.show = () => {
+    // menu tương tác của văn phòng (E) bắt phím ở pha capture — đóng trước để gõ vào bảng lệnh không chạy mục menu
+    window.Director?.closeMenu?.();
     if (!C) return;
     let wrap = document.querySelector('.pal-wrap');
     if (!wrap) {

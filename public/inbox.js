@@ -33,8 +33,9 @@
     return null;
   }
   const KIND = {
-    plan: { icon: '📝', label: 'Kế hoạch chờ duyệt', p: 'Duyệt kế hoạch', s: 'Sửa kế hoạch', order: 0 },
-    paused: { icon: '⏸', label: 'Tạm dừng', p: 'Chạy tiếp tới khi xong', s: '+50% ngân sách & tiếp tục', order: 1 },
+    plan: { icon: '📝', label: 'Kế hoạch chờ duyệt', p: 'Duyệt kế hoạch', s: 'Sửa kế hoạch', order: 0, cancel: true },
+    paused: { icon: '⏸', label: 'Tạm dừng', p: 'Chạy tiếp tới khi xong', s: '+50% ngân sách & tiếp tục', order: 1, cancel: true },
+    // lỗi / xong: nhiệm vụ đã dừng, server không cho hủy (409) → không có "Hủy"
     failed: { icon: '❌', label: 'Lỗi', p: 'Chạy tiếp phần chưa xong', s: 'Mở trang nhiệm vụ', order: 2 },
     attention: { icon: '⚠', label: 'Xong — cần xem', p: 'Duyệt kết quả', s: 'Yêu cầu sửa…', order: 3 },
   };
@@ -82,7 +83,7 @@
     el.innerHTML = `<div class="ib">
       <div class="dv-head"><h1>📥 Cần bạn</h1><span class="ib-n">${list.length ? `${list.length} việc` : ''}</span><span class="grow"></span>
         ${snoozedN ? `<label class="check c-chk"><input type="checkbox" data-ib-snz${IB.showSnoozed ? ' checked' : ''} /> hiện ${snoozedN} việc đã hoãn</label>` : ''}</div>
-      <div class="ib-keys" aria-hidden="true"><span><kbd>J</kbd>/<kbd>K</kbd> chọn</span><span><kbd>Enter</kbd> mở hội thoại</span><span><kbd>O</kbd> trang nhiệm vụ</span>${k ? `<span><kbd>1</kbd> ${esc(k.p)}</span><span><kbd>2</kbd> ${esc(k.s)}</span>` : ''}<span><kbd>H</kbd> hoãn 4 giờ</span><span><kbd>X</kbd> hủy</span><span><kbd>Z</kbd> hoàn tác</span></div>
+      <div class="ib-keys" aria-hidden="true"><span><kbd>J</kbd>/<kbd>K</kbd> chọn</span><span><kbd>Enter</kbd> mở hội thoại</span><span><kbd>O</kbd> trang nhiệm vụ</span>${k ? `<span><kbd>1</kbd> ${esc(k.p)}</span><span><kbd>2</kbd> ${esc(k.s)}</span>` : ''}<span><kbd>H</kbd> hoãn 4 giờ</span>${k?.cancel ? '<span><kbd>X</kbd> hủy</span>' : ''}<span><kbd>Z</kbd> hoàn tác</span></div>
       <div class="ib-undo" ${IB.pending ? '' : 'hidden'} role="status" aria-live="polite">${IB.pending ? `⏳ Sẽ <b>${esc(IB.pending.label)}</b> — “${esc(IB.pending.title)}” <button type="button" class="btn ghost sm" data-ib-undo>Hoàn tác (Z)</button>` : ''}</div>
       ${
         list.length
@@ -107,7 +108,7 @@
     else if (x.k === 'attention') body = `${window.Flow?.summaryHtml(t) || ''}${window.UX?.checksHtml(t) || ''}${window.Chat?.reviewBox?.(t) || ''}`;
     else
       body = `${window.Flow?.summaryHtml(t) || ''}<div class="pause-box ${esc(t.status)}"><div><b>${esc(k.icon)} ${esc(k.label)}</b><p>${esc(t.pause?.detail || t.error || '')}${t.pause?.resumeAt ? ` · tự tiếp tục lúc ${esc(C.dateTime(t.pause.resumeAt))}` : ''}</p></div>
-        <div class="pb-actions"><button type="button" class="btn primary sm" data-ib-act="1">${esc(k.p)} (1)</button>${x.k === 'paused' ? `<button type="button" class="btn ghost sm" data-ib-act="2">${esc(k.s)} (2)</button>` : ''}<button type="button" class="btn ghost sm danger" data-ib-act="x">Hủy (X)</button></div></div>`;
+        <div class="pb-actions"><button type="button" class="btn primary sm" data-ib-act="1">${esc(k.p)} (1)</button>${x.k === 'paused' ? `<button type="button" class="btn ghost sm" data-ib-act="2">${esc(k.s)} (2)</button>` : ''}${k.cancel ? '<button type="button" class="btn ghost sm danger" data-ib-act="x">Hủy (X)</button>' : ''}</div></div>`;
     return `<div class="ib-pvh"><div><h2>${esc(t.title)}</h2><small>${esc(t.id)} · 📁 ${esc(proj)} · ${esc(C.MODE_VI[t.mode] || t.mode)} · ${esc(ago(t.updatedAt || t.createdAt))}</small></div>
         <div class="ib-go"><button type="button" class="btn ghost sm" data-ib-open="chat">💬 Hội thoại (Enter)</button><button type="button" class="btn ghost sm" data-ib-open="task">📋 Trang nhiệm vụ (O)</button></div></div>
       ${x.k === 'attention' ? `<div class="pb-actions ib-qa"><button type="button" class="btn primary sm" data-ib-act="1">✅ Duyệt kết quả (1)</button><button type="button" class="btn ghost sm" data-ib-act="2">✋ Yêu cầu sửa… (2)</button>${window.UX?.hasDiff(t) ? '<button type="button" class="btn ghost sm" data-ib-open="diff">🧬 Thay đổi</button>' : ''}</div>` : ''}
@@ -142,12 +143,23 @@
 
   // ── Hành động (chờ 4 giây, Z hoàn tác) ─────────────────────────────────────
   const post = (id, path, body) => C.api(`/api/tasks/${encodeURIComponent(id)}/${path}`, { method: 'POST', body: JSON.stringify(body || {}) });
+  /** Hành động vừa gửi (id|nhãn → lúc gửi): bấm lại khi danh sách chưa kịp cập nhật thì không gửi lần hai. */
+  const sent = new Map();
+  const SENT_MS = 15000;
   function schedule(t, label, run) {
-    flush();
+    const key = `${t.id}|${label}`;
+    if (IB.pending?.id === t.id && IB.pending.label === label) return; // đang chờ đúng hành động này
+    if (Date.now() - (sent.get(key) || 0) < SENT_MS) return C.toast({ level: 'info', title: `Đã gửi "${label}"`, msg: `${t.title} — đang chờ máy chủ cập nhật` });
+    // đổi ý trên cùng một việc → bỏ hành động cũ (chưa gửi); việc khác → gửi luôn hành động cũ
+    if (IB.pending?.id === t.id) {
+      clearTimeout(IB.pending.timer);
+      IB.pending = null;
+    } else flush();
     const p = { id: t.id, title: t.title, label, run };
     p.timer = setTimeout(async () => {
       if (IB.pending !== p) return;
       IB.pending = null;
+      sent.set(key, Date.now());
       try {
         const r = await run();
         if (r?.id) C.S.tasks.set(r.id, r);
@@ -170,6 +182,7 @@
     if (!p) return;
     clearTimeout(p.timer);
     IB.pending = null;
+    sent.set(`${p.id}|${p.label}`, Date.now());
     p.run()
       .then((r) => r?.id && C.S.tasks.set(r.id, r))
       .catch((e) => C.toast({ level: 'error', title: `Không ${p.label} được`, msg: e.message }));
@@ -189,7 +202,8 @@
     const t = x.t;
     const budget = t.options?.budgetTokens || 0;
     if (key === 'x') {
-      if (t.status === 'done') return C.toast({ level: 'info', title: 'Việc đã xong — không hủy được', msg: 'Dùng "Yêu cầu sửa" hoặc hoãn (H).' });
+      if (!KIND[x.k].cancel)
+        return C.toast({ level: 'info', title: t.status === 'done' ? 'Việc đã xong — không hủy được' : 'Nhiệm vụ lỗi đã dừng — không cần hủy', msg: t.status === 'done' ? 'Dùng "Yêu cầu sửa" hoặc hoãn (H).' : 'Hoãn (H) nếu muốn tạm ẩn khỏi danh sách.' });
       if (!confirm(`Hủy "${t.title}"?`)) return;
       return post(t.id, 'cancel').then(() => IB.render(true), (e) => C.toast({ level: 'error', title: 'Không hủy được', msg: e.message }));
     }
@@ -219,22 +233,32 @@
   function snooze() {
     const id = IB.sel;
     if (!id) return;
+    // việc kế tiếp phải tính trước khi việc này rời danh sách (nếu không sẽ nhảy quá một việc)
+    const list = items();
+    const i = list.findIndex((x) => x.t.id === id);
+    const next = (list[i + 1] || list[i - 1] || {}).t?.id ?? null;
     const s = snz.get();
     if (s[id] > Date.now()) delete s[id];
     else s[id] = Date.now() + SNOOZE_MS;
     snz.set(s);
     const on = !!s[id];
-    if (on) move(1);
+    if (on && !IB.showSnoozed) IB.sel = next;
     C.toast({ level: 'info', title: on ? 'Đã hoãn 4 giờ' : 'Bỏ hoãn', msg: C.S.tasks.get(id)?.title || id });
     IB.render(true);
   }
   // phím: bắt ở pha capture để 1/2/H không bị phím tắt chung (đổi màn, trợ giúp) lấy mất khi đang ở hộp Cần bạn
   function onKey(e) {
     if (!C || C.S.tab !== 'inbox') return;
-    if (e.ctrlKey || e.metaKey || e.altKey || document.querySelector('.modal-wrap, .tour, .pal-wrap:not([hidden])')) return;
+    if (e.ctrlKey || e.metaKey || e.altKey || document.querySelector('.modal-wrap, .tour, .pal-wrap:not([hidden]), #imenu:not([hidden])')) return;
     const el = e.target;
     if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName || ''))) return;
+    // phím trong văn phòng (canvas, menu E) thuộc về văn phòng
+    if (el?.closest?.('#imenu, canvas')) return;
     const k = e.key.toLowerCase();
+    // Enter/Space trên nút, liên kết đang được chọn → để nút đó tự xử lý
+    if ((k === 'enter' || k === ' ') && el?.closest?.('button, a[href], [role="button"], summary, label')) return;
+    // Esc/Z chỉ khi có hành động đang chờ để hoàn tác
+    if ((k === 'escape' || k === 'z') && !IB.pending) return;
     const map = { j: () => move(1), arrowdown: () => move(1), k: () => move(-1), arrowup: () => move(-1), enter: () => IB.sel && open(IB.sel, 'chat'), o: () => IB.sel && open(IB.sel, 'task'), 1: () => act('1'), 2: () => act('2'), h: snooze, x: () => act('x'), z: undo, escape: undo };
     if (!map[k]) return;
     e.preventDefault();

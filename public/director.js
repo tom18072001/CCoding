@@ -134,6 +134,8 @@
     };
     btns.forEach((b) => (b.onclick = () => run(Number(b.dataset.i))));
     const onKey = (e) => {
+      // bảng lệnh đang mở / đang gõ ở ô nhập → phím không thuộc menu
+      if (document.querySelector('.pal-wrap:not([hidden])') || e.target?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '')) return;
       if (e.key === 'Escape' || e.key.toLowerCase() === 'e') {
         e.preventDefault();
         e.stopPropagation();
@@ -991,5 +993,6 @@
     setTimeout(() => D.tour(false), 1200);
   };
 
+  D.closeMenu = closeMenu;
   window.Director = D;
 })();

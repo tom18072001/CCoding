@@ -4,7 +4,7 @@ import path from 'node:path';
 import type { App } from './app.js';
 import type { BusEvent } from './events.js';
 import { nowIso } from './util/ids.js';
-import { readJsonl } from './util/fsx.js';
+import { readJsonl, scanJsonl, type JsonlCache } from './util/fsx.js';
 import { MAX_UPLOAD_BYTES } from './uploads.js';
 import { clearFixedFeedback, FINDING_LABELS, kpiReport } from './kpi.js';
 import { isSafeRef } from './git.js';
@@ -12,7 +12,7 @@ import { DiffError, diffSummary, fileDiff, isSha, locate as locateDiff, ownersOf
 import { ShipError } from './ship.js';
 import { buildTimeline } from './timeline.js';
 import { deniedReason } from './tools/workspace.js';
-import type { BudgetMode, Classification, Phase, ProjectDef, TaskMode, ToolAccess } from './types.js';
+import type { BudgetMode, Classification, LogEntry, Phase, ProjectDef, TaskMode, ToolAccess } from './types.js';
 import type { UsageDim } from './usage.js';
 
 const MIME: Record<string, string> = {
@@ -121,7 +121,13 @@ export function snapshot(app: App) {
   };
 }
 
+/** Loại sự kiện nhật ký mà dòng thời gian cần. */
+const TL_KINDS = new Set(['call.start', 'phase', 'checks.run', 'checks.setup', 'task.paused', 'task.resumed', 'task.start', 'task.done', 'task.failed', 'task.cancelled', 'workspace.merge']);
+
 export function createServer(app: App): http.Server {
+  // dòng thời gian: nhớ đệm phần đã đọc của calls.jsonl / events.jsonl theo nhiệm vụ (chỉ trường thời gian, tối đa 64 file)
+  const tlCalls: JsonlCache<{ ts: string; callId?: string; subtaskId?: string; department?: string; agentId?: string; phase?: Phase; durationMs: number; error?: string }> = new Map();
+  const tlEvents: JsonlCache<LogEntry> = new Map();
   const { config, orchestrator, registry, store, usage, logs, runtimes, bus } = app;
   const publicDir = path.join(config.root, 'public');
   const allowedHosts = new Set([`127.0.0.1:${config.server.port}`, `localhost:${config.server.port}`, `[::1]:${config.server.port}`]);
@@ -358,8 +364,9 @@ export function createServer(app: App): http.Server {
     if ((mm = m(/^\/api\/tasks\/([^/]+)\/timeline$/))) {
       const t = store.get(mm[1]);
       if (!t) throw new HttpError(404, 'Không có nhiệm vụ');
-      // calls.jsonl có phản hồi thô (tới 200k ký tự/lượt) — chỉ lấy các trường thời gian
-      const calls = readJsonl<Record<string, unknown>>(store.callsFile(t.id)).map((c) => ({
+      // calls.jsonl có phản hồi thô (tới 200k ký tự/lượt): đọc theo dòng, chỉ giữ các trường thời gian, nhớ đệm theo kích thước
+      // file (lần sau chỉ đọc phần ghi thêm). Nhật ký nhiệm vụ đọc đủ (không giới hạn 4 MB) để không rơi mất pha/tạm dừng đầu.
+      const calls = scanJsonl(store.callsFile(t.id), (c) => ({
         ts: String(c.ts ?? ''),
         callId: c.callId as string | undefined,
         subtaskId: c.subtaskId as string | undefined,
@@ -368,9 +375,8 @@ export function createServer(app: App): http.Server {
         phase: c.phase as Phase | undefined,
         durationMs: Number(c.durationMs) || 0,
         error: c.error ? 'lỗi' : undefined,
-      }));
-      const kinds = new Set(['call.start', 'phase', 'checks.run', 'checks.setup', 'task.paused', 'task.resumed', 'task.start', 'task.done', 'task.failed', 'task.cancelled', 'workspace.merge']);
-      const events = logs.query({ task: t.id, limit: 20000 }).filter((e) => kinds.has(e.kind));
+      }), tlCalls);
+      const events = scanJsonl(logs.fileFor('task', t.id), (e) => (TL_KINDS.has(e.kind as string) ? (e as unknown as LogEntry) : undefined), tlEvents);
       return send(res, 200, buildTimeline(t, calls, events));
     }
     if ((mm = m(/^\/api\/tasks\/([^/]+)\/diff$/))) {

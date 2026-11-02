@@ -1975,7 +1975,7 @@ export class Orchestrator {
       }
       st.error = error;
       if (c) st.handover = P.mergeConflictNote(c.branch, c.files, true, st.output ? `.ccoding/${safeName(task.id)}/${st.output}` : undefined);
-      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: ${error}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: ${error}`, taskId: task.id, projectId: task.projectId, department: run.department, subtaskId: st.id });
       this.message(task, run.department, 'system', 'system', `⚠️ ${st.id}: ${error}`, { subtaskId: st.id });
     };
     try {
@@ -2003,7 +2003,7 @@ export class Orchestrator {
         }
       }
     } catch (e) {
-      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: lỗi khi kiểm tra merge: ${(e as Error).message}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: lỗi khi kiểm tra merge: ${(e as Error).message}`, taskId: task.id, projectId: task.projectId, department: run.department, subtaskId: st.id });
     }
     this.save(task);
   }
@@ -2056,7 +2056,7 @@ export class Orchestrator {
     if (c && !st.mainOnly) {
       const m = mergeStart(wtPath, c.branch, `CCoding ${task.id}: gộp lại ${c.branch} (${st.id})`.slice(0, 200));
       if (!m.ok && !m.conflicts.length) {
-        logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: không gộp sẵn được ${c.branch} vào worktree con (${m.out.slice(0, 200)}) — làm lại trong worktree chính`, taskId: task.id, projectId: project.id, subtaskId: st.id });
+        logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: không gộp sẵn được ${c.branch} vào worktree con (${m.out.slice(0, 200)}) — làm lại trong worktree chính`, taskId: task.id, projectId: project.id, department: run.department, subtaskId: st.id });
         removeWorktree(main, wtPath);
         if (git(main, ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`], 15_000).ok) git(main, ['branch', '-D', branch], 30_000);
         st.worktree = undefined;
@@ -2070,7 +2070,7 @@ export class Orchestrator {
       st.handover = m.conflicts.length
         ? `${P.mergeResolveNote(c.branch, m.conflicts, !!c.done, st.output ? `.ccoding/${safeName(task.id)}/${st.output}` : undefined)}${c.handover ? `\n\n${c.handover}` : ''}`.slice(0, 12_000)
         : c.handover;
-      logs.write({ level: 'info', kind: 'workspace.merge', msg: `${st.id}: gộp sẵn ${c.branch} vào worktree con mới — ${m.conflicts.length ? `xung đột ở ${m.conflicts.join(', ')}` : 'không còn xung đột'}`, taskId: task.id, projectId: project.id, subtaskId: st.id });
+      logs.write({ level: 'info', kind: 'workspace.merge', msg: `${st.id}: gộp sẵn ${c.branch} vào worktree con mới — ${m.conflicts.length ? `xung đột ở ${m.conflicts.join(', ')}` : 'không còn xung đột'}`, taskId: task.id, projectId: project.id, department: run.department, subtaskId: st.id });
       if (m.conflicts.length)
         this.message(task, run.department, 'system', 'system', `🧩 ${st.id} (@${st.assignee}) giải quyết xung đột trong worktree con mới \`${wtPath}\`: CCoding đã gộp sẵn nhánh \`${c.branch}\`, xung đột ở ${m.conflicts.slice(0, 8).map((f) => `\`${f}\``).join(', ')} — các hạng mục khác vẫn tách/gộp bình thường.`, { subtaskId: st.id });
     }
@@ -2117,7 +2117,7 @@ export class Orchestrator {
         st.mergePending = true;
       }
       st.error = `${why} — giữ worktree con \`${wt.path}\`, bấm Tiếp tục để CCoding gộp lại`;
-      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: ${why}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: ${why}`, taskId: task.id, projectId: task.projectId, department: run.department, subtaskId: st.id });
       this.message(task, run.department, 'system', 'system', `⚠️ ${st.id}: ${st.error}.`, { subtaskId: st.id });
       this.save(task);
     };
@@ -2142,7 +2142,7 @@ export class Orchestrator {
         st.finishedAt = nowIso();
       }
       st.error = `${why} — giữ nhánh \`${wt.resolve}\`; bấm Tiếp tục để giải quyết lại trong worktree con mới`;
-      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: ${why}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: ${why}`, taskId: task.id, projectId: task.projectId, department: run.department, subtaskId: st.id });
       this.message(task, run.department, 'system', 'system', `⚠️ ${st.id}: ${st.error}.`, { subtaskId: st.id });
       this.save(task);
     };
@@ -2158,7 +2158,7 @@ export class Orchestrator {
           if (marked.length) {
             if (wt.resolve) return unresolved(`còn dấu xung đột chưa giải quyết ở ${marked.slice(0, 8).join(', ')}`);
             git(wt.path, ['merge', '--abort'], 60_000);
-            logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: merge dở còn dấu xung đột trong worktree con — đã hủy merge`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+            logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: merge dở còn dấu xung đột trong worktree con — đã hủy merge`, taskId: task.id, projectId: task.projectId, department: run.department, subtaskId: st.id });
           } else {
             const r = completeMerge(wt.path, `CCoding ${task.id}: ${wt.resolve ? `gộp lại ${wt.resolve}` : 'hoàn tất merge'} (${st.id})`.slice(0, 200));
             if (!r.ok) {
@@ -2214,7 +2214,7 @@ export class Orchestrator {
             ? `${P.mergeConflictNote(keep, m.conflicts, done, st.output ? `.ccoding/${safeName(task.id)}/${st.output}` : undefined)}${partial ? `\n\n${partial}` : ''}`.slice(0, 12_000)
             : undefined;
           const files = m.conflicts.length ? m.conflicts.slice(0, 8).map((f) => `\`${f}\``).join(', ') : m.out.slice(0, 200);
-          logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: gộp ${wt.branch} vào ${task.branch} bị xung đột (lần ${round}): ${m.conflicts.join(', ') || m.out.slice(0, 300)}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+          logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: gộp ${wt.branch} vào ${task.branch} bị xung đột (lần ${round}): ${m.conflicts.join(', ') || m.out.slice(0, 300)}`, taskId: task.id, projectId: task.projectId, department: run.department, subtaskId: st.id });
           const how = fallback
             ? `làm lại LẦN LƯỢT trong worktree chính (xung đột lần ${round}): @${st.assignee} tự \`git merge ${keep}\` rồi giải quyết xung đột`
             : `giải quyết trong worktree con MỚI tách từ nhánh nhiệm vụ mới nhất — CCoding gộp sẵn nhánh \`${keep}\`, @${st.assignee} chỉ sửa dấu xung đột; các hạng mục khác vẫn chạy/gộp bình thường`;
@@ -2228,7 +2228,7 @@ export class Orchestrator {
           return;
         }
         this.message(task, run.department, 'system', 'system', `🔀 Đã gộp ${st.id} (${ahead} commit, nhánh \`${wt.branch}\`) vào \`${task.branch}\`.`, { subtaskId: st.id });
-        logs.write({ level: 'info', kind: 'workspace.merge', msg: `${st.id}: gộp ${wt.branch} vào ${task.branch}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+        logs.write({ level: 'info', kind: 'workspace.merge', msg: `${st.id}: gộp ${wt.branch} vào ${task.branch}`, taskId: task.id, projectId: task.projectId, department: run.department, subtaskId: st.id });
       }
       if (valid && !removeWorktree(main, wt.path)) logs.write({ level: 'warn', kind: 'workspace.worktree', msg: `${st.id}: chưa gỡ hết thư mục worktree con ${wt.path} (tệp đang bị khóa?)`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
       // chỉ xóa nhánh tạm của CCoding và chỉ khi mọi commit của nó đã nằm trong nhánh nhiệm vụ
@@ -2254,7 +2254,7 @@ export class Orchestrator {
       }
       this.save(task);
     } catch (e) {
-      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: lỗi khi gộp worktree con: ${(e as Error).message}`, taskId: task.id, projectId: task.projectId, subtaskId: st.id });
+      logs.write({ level: 'warn', kind: 'workspace.merge', msg: `${st.id}: lỗi khi gộp worktree con: ${(e as Error).message}`, taskId: task.id, projectId: task.projectId, department: run.department, subtaskId: st.id });
     }
   }
 

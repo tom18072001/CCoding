@@ -3,9 +3,10 @@ import type { LogEntry, Phase, Task } from './types.js';
 /**
  * Dòng thời gian (Gantt) của một nhiệm vụ — dựng từ dữ liệu đã có, không gọi model:
  * - calls.jsonl: mỗi lượt gọi agent (ts = lúc xong, durationMs) → một thanh trên làn của hạng mục (hoặc làn "điều phối" của phòng);
- * - nhật ký nhiệm vụ: call.start chưa có bản ghi xong → thanh đang chạy; phase → các pha của phòng; checks.run/checks.setup → lệnh
- *   kiểm tra/chuẩn bị; task.paused/task.resumed → khoảng tạm dừng; workspace.merge → mốc gộp worktree con;
- * - đường găng: từ hạng mục xong muộn nhất lần ngược theo phụ thuộc xong muộn nhất.
+ * - nhật ký nhiệm vụ: call.start chưa có bản ghi xong → thanh đang chạy (đợt hiện tại) hoặc bị ngắt; phase → các pha của phòng;
+ *   checks.run/checks.setup → lệnh kiểm tra/chuẩn bị; task.paused/done/failed → task.start/resumed (và lúc server bị dừng giữa chừng)
+ *   → khoảng tạm dừng; workspace.merge → mốc gộp worktree con;
+ * - đường găng (theo lượt thực thi): từ hạng mục xong muộn nhất lần ngược theo phụ thuộc xong muộn nhất.
  */
 
 export interface TimelineBar {
@@ -101,30 +102,79 @@ export function buildTimeline(task: Task, calls: CallRow[], events: LogEntry[], 
     return lanes.get(key);
   };
 
-  // 1) lượt gọi đã xong
+  // 1) lượt gọi đã xong (bản ghi thử lại "-p2", bản ghi bù khi lỗi chậm "-lost1" cũng tính là xong lượt gốc)
   const done = new Set<string>();
+  const callEnds: number[] = [];
   for (const c of calls) {
     const end = t(c.ts);
     if (!ok(end)) continue;
-    if (c.callId) done.add(c.callId.replace(/-p\d+$/, ''));
+    if (c.callId) done.add(c.callId.replace(/-(?:p|lost)\d+$/, ''));
+    callEnds.push(end);
     const start = end - Math.max(0, Number(c.durationMs) || 0);
     const lane = laneFor(c.department, c.subtaskId);
     lane?.bars.push({ start, end, phase: c.phase ?? 'execute', agentId: c.agentId, error: !!c.error || undefined });
   }
-  // 2) nhật ký: lượt đang chạy, pha, lệnh kiểm tra, tạm dừng, gộp
+  callEnds.sort((x, y) => x - y);
+  // 2) nhật ký, chia theo "đợt chạy" (task.start → task.paused/done/failed/cancelled). Đợt không có sự kiện kết thúc mà gặp
+  //    task.start/task.resumed mới (hoặc nhiệm vụ không còn chạy) = server bị dừng giữa chừng: đợt kết thúc ở hoạt động cuối cùng,
+  //    lượt gọi dở của đợt đó là "bị ngắt", khoảng tới lần chạy sau tính là tạm dừng.
   const phases: Timeline['phases'] = [];
   const pauses: Timeline['pauses'] = [];
   const openPhase = new Map<string, { phase: Phase; start: number }>();
-  let pauseStart: { at: number; reason?: string } | undefined;
-  const starts = new Map<string, { at: number; e: LogEntry }>();
+  const closePhases = (at: number, except?: string) => {
+    for (const [d, p] of openPhase) {
+      if (d === except) continue;
+      phases.push({ department: d, phase: p.phase, start: p.start, end: Math.max(p.start, at) });
+      openPhase.delete(d);
+    }
+  };
+  type Start = { at: number; e: LogEntry; epoch: number };
+  const starts = new Map<string, Start>();
+  const epochEnd = new Map<number, number>();
+  let epoch = 0;
+  let active = false;
+  let epochFrom = -Infinity;
+  let lastSeen = -Infinity;
+  let gap: { at: number; reason?: string } | undefined;
+  /** Hoạt động cuối cùng của đợt hiện tại (sự kiện hoặc lượt gọi xong) trước mốc `before`. */
+  const lastActivity = (before: number) => {
+    let m = lastSeen;
+    for (let i = callEnds.length - 1; i >= 0; i--)
+      if (callEnds[i] < before) {
+        if (callEnds[i] > epochFrom) m = Math.max(m, callEnds[i]);
+        break;
+      }
+    return Number.isFinite(m) ? m : epochFrom;
+  };
+  const endEpoch = (at: number, reason?: string) => {
+    closePhases(at);
+    epochEnd.set(epoch, at);
+    active = false;
+    gap = { at, reason };
+  };
   for (const e of events) {
     const at = t(e.ts);
     if (!ok(at)) continue;
     const data = (e.data ?? {}) as Record<string, unknown>;
-    if (e.kind === 'call.start' && typeof data.callId === 'string') starts.set(data.callId, { at, e });
+    if (e.kind === 'task.start' || e.kind === 'task.resumed') {
+      if (active) endEpoch(lastActivity(at), 'interrupted');
+      if (gap) {
+        if (at > gap.at) pauses.push({ start: gap.at, end: at, reason: gap.reason });
+        gap = undefined;
+      }
+      if (e.kind === 'task.start') {
+        epoch += 1;
+        active = true;
+        epochFrom = at;
+      }
+    } else if (e.kind === 'task.paused' || e.kind === 'task.done' || e.kind === 'task.failed' || e.kind === 'task.cancelled') {
+      const reason = e.kind === 'task.paused' ? /\((\w+)\)/.exec(e.msg)?.[1] : e.kind.slice(5);
+      if (active) endEpoch(at, reason);
+      else gap = { at: gap?.at ?? at, reason };
+    } else if (e.kind === 'call.start' && typeof data.callId === 'string') starts.set(data.callId, { at, e, epoch });
     else if (e.kind === 'phase' && e.department && e.phase) {
-      const prev = openPhase.get(e.department);
-      if (prev) phases.push({ department: e.department, phase: prev.phase, start: prev.start, end: at });
+      // các phòng chạy lần lượt: pha mới của một phòng cũng khép pha còn mở của phòng trước
+      closePhases(at);
       openPhase.set(e.department, { phase: e.phase as Phase, start: at });
     } else if ((e.kind === 'checks.run' || e.kind === 'checks.setup') && Array.isArray(data.results)) {
       // lệnh chạy lần lượt → thời lượng = tổng; lệnh chuẩn bị của dự án (nếu vừa chạy) nằm ngay trước lệnh kiểm tra
@@ -136,34 +186,36 @@ export function buildTimeline(task: Task, calls: CallRow[], events: LogEntry[], 
       const label = e.kind === 'checks.setup' ? 'chuẩn bị worktree con' : when === 'baseline' ? 'kiểm tra trước khi sửa' : when === 'execute' ? 'kiểm tra sau thực thi' : 'kiểm tra sau vòng sửa';
       if (setupMs) lane?.bars.push({ start: at - ms - setupMs, end: at - ms, phase: 'setup', label: 'lệnh chuẩn bị' });
       lane?.bars.push({ start: at - ms, end: at, phase: e.kind === 'checks.setup' ? 'setup' : 'checks', label, error: res.some((r) => r.ok === false) || undefined });
-    } else if (e.kind === 'task.paused') pauseStart = { at, reason: /\((\w+)\)/.exec(e.msg)?.[1] };
-    else if ((e.kind === 'task.resumed' || e.kind === 'task.start') && pauseStart) {
-      pauses.push({ start: pauseStart.at, end: at, reason: pauseStart.reason });
-      pauseStart = undefined;
     } else if (e.kind === 'workspace.merge' && e.subtaskId && e.level === 'info') laneFor(e.department, e.subtaskId)?.merges.push(at);
-    // pha kết thúc khi nhiệm vụ dừng/xong
-    if (e.kind === 'task.paused' || e.kind === 'task.done' || e.kind === 'task.failed' || e.kind === 'task.cancelled') {
-      for (const [d, p] of openPhase) phases.push({ department: d, phase: p.phase, start: p.start, end: at });
-      openPhase.clear();
-    }
+    if (active) lastSeen = Math.max(lastSeen, at);
   }
-  if (pauseStart) pauses.push({ start: pauseStart.at, end: live ? pauseStart.at : now, reason: pauseStart.reason });
+  // nhiệm vụ không còn chạy mà đợt cuối chưa có sự kiện kết thúc = server khởi động lại giữa chừng (store đánh dấu tạm dừng)
+  if (active && !live) endEpoch(lastActivity(Infinity), task.pause?.reason ?? 'interrupted');
+  // đang tạm dừng: khoảng dừng kéo tới bây giờ (nhiệm vụ đã xong/lỗi/hủy thì không tính phần sau)
+  if (gap && task.status === 'paused') pauses.push({ start: gap.at, end: Math.max(gap.at, now), reason: gap.reason ?? task.pause?.reason });
   for (const [d, p] of openPhase) phases.push({ department: d, phase: p.phase, start: p.start, end: live ? now : p.start });
-  // lượt gọi đã bắt đầu mà chưa có bản ghi xong: đang chạy (nhiệm vụ đang chạy) hoặc bị ngắt (đã dừng)
-  for (const [callId, { at, e }] of starts) {
+  // lượt gọi đã bắt đầu mà chưa có bản ghi xong: đang chạy (chỉ ở đợt đang chạy) hoặc bị ngắt (đợt trước / nhiệm vụ đã dừng)
+  for (const [callId, { at, e, epoch: ep }] of starts) {
     if (done.has(callId)) continue;
     const lane = laneFor(e.department, e.subtaskId);
-    lane?.bars.push({ start: at, end: live ? now : at, phase: (e.phase as Phase) ?? 'execute', agentId: e.agentId, open: live || undefined, error: !live || undefined });
+    const running = live && active && ep === epoch;
+    const end = running ? now : Math.max(at, epochEnd.get(ep) ?? at);
+    lane?.bars.push({ start: at, end, phase: (e.phase as Phase) ?? 'execute', agentId: e.agentId, open: running || undefined, error: !running || undefined });
   }
 
   for (const l of lanes.values()) l.bars.sort((a, b) => a.start - b.start);
   const all = [...lanes.values()].flatMap((l) => l.bars.map((b) => [b.start, b.end] as [number, number]));
   const start = Math.min(t(task.startedAt ?? task.createdAt), ...all.map((x) => x[0]), ...phases.map((p) => p.start));
-  const endCands = [...all.map((x) => x[1]), ...phases.map((p) => p.end), t(task.finishedAt)].filter(ok);
+  const endCands = [...all.map((x) => x[1]), ...phases.map((p) => p.end), ...pauses.map((p) => p.end), t(task.finishedAt)].filter(ok);
   const end = live ? Math.max(now, ...endCands) : Math.max(start, ...endCands);
 
   // 3) sẵn sàng lúc nào + đường găng theo từng phòng
-  const endOf = (l?: TimelineLane) => (l?.bars.length ? Math.max(...l.bars.map((b) => b.end)) : NaN);
+  // chỉ tính lượt thực thi: lượt sửa theo review chạy sau, không làm hạng mục phụ thuộc phải chờ
+  const execOf = (l?: TimelineLane) => (l ? l.bars.filter((b) => b.phase === 'execute') : []);
+  const endOf = (l?: TimelineLane) => {
+    const b = execOf(l);
+    return b.length ? Math.max(...b.map((x) => x.end)) : NaN;
+  };
   const critical: string[] = [];
   let critMs = 0;
   for (const r of task.runs) {
@@ -186,7 +238,7 @@ export function buildTimeline(task: Task, calls: CallRow[], events: LogEntry[], 
     if (chain.length) {
       for (const l of chain) l.critical = true;
       critical.push(...chain.map((l) => l.key));
-      const first = Math.min(...chain[0].bars.map((b) => b.start));
+      const first = Math.min(...execOf(chain[0]).map((b) => b.start));
       critMs += endOf(chain.at(-1)) - first;
     }
   }
