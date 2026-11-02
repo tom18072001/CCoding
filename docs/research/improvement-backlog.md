@@ -77,6 +77,7 @@ Chạy: `node docs/research/context/lane-threshold.mjs` (đọc `bench/vs-claude
 | t5-logq | 165,5 (n=2) | 127,0 (n=1) | 0,77 | 0,439 | 1,038 | 2,36 | 146/146 |
 | Σ | 429,0 | 619,0 | **1,44** | 1,286 | 3,492 | **2,72** | |
 
+- **Cơ sở của các tỉ lệ:** 1,44 và 2,72 là tỉ lệ **tổng thô, chỉ C7** (Σ làn nhanh / Σ Sonnet đơn, 5 bài, đơn vị gốc). Các tỉ lệ của S1 trong `token-analysis.md` (1,545 và 2,947) là **C7+C8 phân tầng theo bài**; hai bộ số khác cơ sở chứ không mâu thuẫn. Backlog dùng bộ C7 vì C8 không có Sonnet đơn (D1). Nếu hai bộ cần so, dẫn theo mã bảng của S1.
 - Tổng thời gian khớp bảng **T-d (3)** (`token-analysis.md:292`: 429,0 s và 619,0 s). Phần cố định của điều phối (kế hoạch + review + gộp) = **239,5 s = 55,8 %** thời gian Sonnet đơn (C7; `token-analysis.md:292`, đọc ở `:300`); gộp C5–C7 là 72,8 % (`:298`). C8 chỉ có 3 lượt làn nhanh trên t2 và không có Sonnet đơn (quyết định D1) nên không làm đổi 55,8 %.
 - Cố định trung bình mỗi bài ở C7: 239,5 / 5 ≈ **48 s** (khoảng 38,5–58,6 s; `token-analysis.md:287-291`).
 - Hồi quy thô (5 điểm, mỗi điểm 1 lượt làn nhanh): TG làn nhanh = **87,1 + 0,428 × TG đơn**; giao điểm T* = a/(1−b) = **152 s**. Dưới T*, làn nhanh chậm hơn; trên T*, nhanh hơn. Đây là **khám phá n=5**, không có CI; chính thức hóa bằng H4 (hệ số chặn, độ dốc) ở C9.
@@ -112,20 +113,21 @@ Chạy: `node docs/research/context/lane-threshold.mjs` (đọc `bench/vs-claude
 | `repoFiles`, `repoBytes` | `git ls-files` (đã có, `:1122-1135`) | nhỏ | Chặn trên |
 | `forced` | `options.lane` hoặc cấu hình dự án | — | Người dùng/dự án ép làn (đã có `'fast'/'full'`, `:1116-1118`) |
 
-**Công thức (theo D7):** dùng làn đơn khi `T_đơn_ước < k × a`, với `a` = hệ số chặn (chi phí cố định của điều phối) và `k` hệ số ngưỡng.
+**Công thức (theo D7):** dùng làn đơn khi `T̂_đơn < k × a`. Chỉ **một** định nghĩa của `a`: **hệ số chặn của hồi quy `TG_làn-nhanh = a + b × TG_đơn`** (đúng biến của H4, `preregistration.md` §7); `k = 1/(1−b)`, nên `k × a` chính là giao điểm T* mà dưới đó đa-agent chậm hơn.
 
-- `a₀ = 48 s` (trung bình cố định mỗi bài ở C7, §2).
-- `k₀ = 3` ⇒ ngưỡng ban đầu `3 × 48 ≈ 144 s`. Lý do chọn: ngưỡng này nằm giữa t3 (107,5 s, làn nhanh thua) và t5 (165,5 s, làn nhanh thắng) và gần giao điểm hồi quy thô T* = 152 s (§2). **Đây là điều chỉnh theo chính dữ liệu C7, nên là thăm dò**; không dùng làm bằng chứng cho H1–H3.
-- `T_đơn_ước` lấy từ tín hiệu: **chưa có công thức hồi quy** vì chỉ có 5 điểm và `briefChars` không phân biệt được. Bản đầu dùng quy tắc thứ tự, không giả vờ chính xác:
+- Giá trị khởi đầu (hồi quy thô C7, n=5, §2): `a₀ = 87,1 s`, `b₀ = 0,428` ⇒ `k₀ = 1/(1−0,428) = 1,75` ⇒ `k₀ × a₀ ≈ 152 s`. Đây là **thăm dò trên chính C7**, không dùng làm bằng chứng cho H1–H3.
+- Con số 48 s (cố định trung bình mỗi bài, §2) là **đại lượng mô tả** các pha plan+review+gộp, **không** phải `a` và không vào công thức. (Bản trước trộn hai định nghĩa: 1,75 × 87,1 ≈ 152 ≈ 3 × 48; đã bỏ `k₀ = 3`.)
+- **Bản đầu quyết định bằng quy tắc thứ tự 1–4 dưới đây; `k × a` chưa dùng để quyết định ở bản đầu.** Lý do: chưa có nguồn `T̂_đơn` đáng tin (5 điểm, `briefChars` không phân biệt).
   1. `forced` ⇒ theo ép.
   2. `briefChars > fastLane.maxBriefChars` hoặc repo vượt ngưỡng hiện có ⇒ **lớn**.
   3. `parts ≥ 5` hoặc `filesTouched ≥ 6` ⇒ **lớn** (ngưỡng đặt tại cỡ l1-modules; hiệu chỉnh theo H5).
   4. Ngược lại ⇒ **nhỏ ⇒ làn đơn**.
-  Theo quy tắc này cả t1–t5 (≤ 4 phần) vào làn đơn, khớp với dữ liệu: chi phí làn nhanh đắt hơn ở 5/5 bài, thời gian chậm hơn ở 4/5 bài.
+- **Nguồn `T̂_đơn` cho giai đoạn 2** (bật khi dự án có ≥ 3 nhiệm vụ làn đơn đã xong): `T̂_đơn` = trung vị `wall` của các nhiệm vụ làn đơn trước đó **cùng dự án** có cùng `parts` (làm tròn lên bậc 1–2, 3–4, ≥ 5); thiếu lịch sử thì dùng quy tắc 1–4. Khi có `T̂_đơn`, thêm điều 5: `T̂_đơn ≥ k × a` ⇒ lớn. Hành vi hệ thống do đó **chỉ đổi theo `k`, `a` ở giai đoạn 2**; ở giai đoạn 1 C9/H4 chỉ hiệu chỉnh ngưỡng `parts`/`filesTouched` (cùng H5, H6).
+- **Mâu thuẫn đã biết, chấp nhận có chủ ý:** t5 (165,5 s đơn) lớn hơn `k₀ × a₀ = 152 s`, nhưng quy tắc 1–4 đưa t5 vào làn đơn (4 phần). Làn đơn trên t5 dự kiến ≈ Claude Code (không thua về thời gian so với Claude Code; chậm hơn làn nhanh C7 127 s) nhưng rẻ hơn nhiều (làn nhanh đắt 2,36× ở t5); mục tiêu giám đốc là tối ưu chi phí. Kiểm bằng H9 trên t5. Nếu C9 cho thấy giai đoạn 2 xếp t5 vào làn lớn mà đo được lợi, chuyển bằng điều 5.
 - Nhật ký bắt buộc ghi `signals`, `lane`, `why` (như `⚡ Làn nhanh (${pick.why})`, `orchestrator.ts:1169`) để hiệu chỉnh sau.
 
 **Kế hoạch hiệu chỉnh** (S2 viết quy tắc cập nhật chính thức trong `preregistration.md`; phần S3 đề xuất để thống nhất):
-- Với dữ liệu C9 (t1–t5) và l1-modules, l2-chain: hồi quy `TG_đa-agent = a + b × TG_đơn` (đó là H4). Hệ số chặn `a` thay `a₀`; **`k = 1/(1−b)`** (giao điểm `T* = a/(1−b)`, nên `T*/a = k`). Hiện thô: b = 0,428 ⇒ k = 1,75; chọn `k₀ = 3` cao hơn có chủ ý, vì nhầm sang việc lớn rẻ hơn nhầm sang việc nhỏ (chi phí làn nhanh đắt 2,72 lần).
+- Với dữ liệu C9 (t1–t5) và l1-modules, l2-chain: hồi quy `TG_đa-agent = a + b × TG_đơn` (đó là H4) cho `a` và `b`, từ đó `k = 1/(1−b)`; cập nhật `a₀, k₀` (§3.1) và chỉ có hiệu lực lên quyết định từ giai đoạn 2. Nhầm sang việc lớn rẻ hơn nhầm sang việc nhỏ về chi phí (làn nhanh đắt 2,72× ở C7), nên khi `b` ước lượng có CI rộng, lấy cận trên của `k`.
 - Ngưỡng `parts` và `filesTouched`: chỉnh theo H5 (l1-modules: CCoding nhanh hơn?) và H6 (l2-chain: CCoding không nhanh hơn và tốn hơn ⇒ chuỗi phụ thuộc không nên vào đa-agent dù có nhiều tầng; ⇒ thêm tín hiệu `phụ thuộc tuần tự` giữ làn đơn).
 - Không chỉnh ngưỡng bằng t6–t8 (bài giữ lại, chỉ để xác nhận, H7).
 
@@ -171,9 +173,13 @@ Chạy: `node docs/research/context/lane-threshold.mjs` (đọc `bench/vs-claude
 ### 4.1 Vòng kiểm → sửa
 
 1. `checkCommands` chạy ở **baseline** (đã có) và **sau thực thi** và **sau mỗi vòng sửa** (đã có `runProjectChecks(…, 'baseline' | 'execute' | 'revise')`, `orchestrator.ts:2504`).
-2. Đỏ hoặc hồi quy ⇒ vào vòng sửa **ngay**, **không gọi reviewer**. Đỏ = lệnh có `ok=false` mà không phải do baseline đã đỏ; hồi quy = `checkRegressions` (`:2564-2568`). Lệnh đã đỏ từ baseline (như `--check` ở nhiệm vụ này) không chặn, chỉ được ghi chú (đúng yêu cầu: "lỗi đã có ở baseline không phải việc của hạng mục").
+2. Phân loại từng lệnh sau thực thi (`baseline` → `sau`):
+   - **Hồi quy** (xanh → đỏ, `checkRegressions`, `:2564-2568`) hoặc **đỏ mới** (không có baseline, ví dụ lệnh mới): vào vòng sửa **ngay**, không gọi reviewer.
+   - **Đỏ kéo dài** (đỏ → đỏ): nếu đề bài nhắc tên lệnh hoặc mục tiêu là làm xanh nó (như `--check` ở R2 nhiệm vụ này) thì **vào vòng sửa**; nếu không thì không chặn nhưng **bắt buộc gọi reviewer** (§4.3) và ghi chú, vì cổng không xác nhận được gì về lệnh đó.
+   - **Xanh** (xanh → xanh, hoặc đỏ → xanh): qua.
+   (Ba trạng thái rời nhau; bản trước định nghĩa "đỏ" và "hồi quy" gần trùng.)
 3. Prompt vòng sửa nhận: đúng đầu ra của lệnh đỏ (đã cắt theo `maxOutputChars`), không phải toàn bộ lịch sử.
-4. **N ban đầu = 2** vòng sửa theo kiểm tra (`config.defaults.maxRevisions` hiện 1, `config.ts:285`, kẹp tối đa 3 ở `orchestrator.ts:296`; tách tham số mới `gate.maxFixRounds = 2` để không đổi hành vi review). Lý do: một vòng sửa ≈ 50 s (C5 t2, `PROCESS-REVIEW.md:256`), hai vòng giữ chi phí xấu nhất trong +100 s, dưới ngưỡng t* (§3.1). Hiệu chỉnh lại khi có số vòng sửa thực tế ở C9.
+4. **N ban đầu = 2** vòng sửa theo kiểm tra (`config.defaults.maxRevisions` hiện 1, `config.ts:285`, kẹp tối đa 3 ở `orchestrator.ts:296`; tách tham số mới `gate.maxFixRounds = 2` để không đổi hành vi review). Lý do: một vòng sửa ≈ 50 s (C5 t2, `PROCESS-REVIEW.md:256`), hai vòng giữ chi phí xấu nhất trong +100 s, dưới giao điểm T* ≈ 152 s (§3.1). Hiệu chỉnh lại khi có số vòng sửa thực tế ở C9.
 5. Còn đỏ sau N vòng ⇒ nâng lên multi-agent (§3.3).
 
 ### 4.2 Kiểm "Mẫu đầu ra" bằng đúng phép kiểm của KPI
@@ -191,6 +197,7 @@ Dùng nguyên hàm của `src/kpi.ts` để cổng và KPI cho cùng một kết
 Reviewer (LLM) chỉ được gọi khi một trong:
 - **Không có `checkCommands`** của dự án (cổng không có bằng chứng máy; kiểu `verified` không xác định ở `:1399`). Bản vá **D-02** (`attention` khi không kiểm chứng) gộp vào đây: dùng `attention = true` nếu reviewer cũng không chạy lệnh.
 - **Thay đổi đụng bảo mật hoặc dữ liệu:** diff chạm đường dẫn khớp danh sách (đề xuất ban đầu): `src/tools/**` (hook, chính sách), `src/runtimes/**`, `src/kpi.ts`, `src/store.ts`/`LogStore`, `.env*`, `data/`, `agents/**` (định dạng `agent.md`), `config`, hoặc dự án có nhãn dữ liệu ≥ Bảo mật. Phù hợp quy tắc repo: đổi định dạng `agent.md` ⇒ cập nhật tài liệu/test; Data Protection Gate bắt buộc.
+- **Đỏ kéo dài** không liên quan đề bài (§4.1 bước 2).
 - Cổng định dạng thất bại sau N vòng, hoặc đỏ sau N vòng (trước khi nâng cấp lên multi-agent).
 
 Reviewer khi được gọi nhận **diff + kết quả lệnh kiểm** thay vì toàn bộ đầu ra (P3, gộp vào B-02). Đây là phần P3, độ lớn trần −2,8 % (O4); coi như bổ sung rẻ chứ không phải lý do.
@@ -320,7 +327,7 @@ Mọi lượt (execute, vòng sửa, sửa định dạng, reviewer) đi qua `Or
 
 | Mục | Giả thuyết kiểm | Ghi chú |
 |---|---|---|
-| B-01 | H1, H2, H3, H4, H5, H6; đề nghị H9 (tương đương ±15 %) | H9 do S2 quyết định; S3 chỉ đề nghị. Ngưỡng `k₀=3` lấy từ C7 nên **không** dùng C7 để "xác nhận" chính nó |
+| B-01 | H1, H2, H3, H4, H5, H6; đề nghị H9 (tương đương ±15 %) | H9 do S2 quyết định; S3 chỉ đề nghị. Ngưỡng `k₀ × a₀` (= T* ≈ 152 s) lấy từ C7 nên **không** dùng C7 để "xác nhận" chính nó |
 | B-02 | H3, H7; KPI | H7 (bài giữ lại t6–t8) là xác nhận |
 | B-03…B-09 | KPI, đếm log, test đơn vị | Không cần benchtest, trừ B-03/B-07 (F1) và B-09 |
 
@@ -328,7 +335,7 @@ Mọi lượt (execute, vòng sửa, sửa định dạng, reviewer) đi qua `Or
 - N3b, N5 **không kiểm được** từ CSV; N4 kiểm gián tiếp. Phép kiểm cần dữ liệu từ API `kpi`.
 - N1 là phân loại tĩnh theo văn bản lệnh (CSV có thể cắt lệnh dài; 1 lượt không giải thích được). Chưa phát lại qua hook thật.
 - `tail -c` (N1c) **sai**; N2 chỉ chứng minh chắc 1/10 lượt chặn nhầm.
-- Hồi quy thô ở §2 chỉ có 5 điểm, mỗi điểm 1 lượt làn nhanh; không có CI. `k₀=3` chọn trên chính C7. C8 không có Sonnet đơn (D1) nên không dùng được cho `a`.
+- Hồi quy thô ở §2 chỉ có 5 điểm, mỗi điểm 1 lượt làn nhanh; không có CI. `a₀, k₀` ước lượng trên chính C7. C8 không có Sonnet đơn (D1) nên không dùng được cho `a`.
 - t2 52/60 là 1 lượt; C8 3/3 sau `c55a249` không kết luận được.
 - Số "hiệu quả kỳ vọng" ở B-02…B-09 là giả thuyết; chỉ B-01 có số đo nền.
 - Nếu S1 đổi số ở T-d (3) (D2), peer-reviewer sửa tại chỗ; script `lane-threshold.mjs` đọc thẳng `runs.csv`, không phụ thuộc `token-analysis.md`.
