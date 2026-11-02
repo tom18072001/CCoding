@@ -119,18 +119,21 @@ Thứ tự theo ưu tiên của đề bài: A0-sonnet, B0, B5, làn nhanh; rồi
 
 - **Trước khi chạy:** `node dist/cli.js serve` đang chạy nếu có arm B*/FL (`run.mjs:66`; chưa kiểm `dist/` trong worktree này). Máy rảnh. Luôn có `--timeout 20` (mặc định 60 phút, `run.mjs:34`: một lượt treo ăn 1/5 cửa sổ).
 - **Điểm dừng an toàn:** dừng (Ctrl-C) bất cứ lúc nào **giữa hai lượt**. Dòng kết quả chỉ ghi sau khi chấm xong (`run.mjs:175`), nên lượt đang chạy bị bỏ và chạy lại từ đầu khi tiếp tục (mất tối đa 1 lượt, ≤ ~1M). Chạy tiếp = **đúng lệnh cũ**, cùng `--out`. Lịch xen kẽ phụ thuộc `--seed`, số lượt và thứ tự `--arms` (`run.mjs:42-52`); giữ nguyên. Tăng `--repeats` (3 → 5) giữ khóa cũ vì thứ tự mỗi lượt sinh từ `${seed}/${r}`.
-- **Khi gặp 429:** làm §5.0 **trước** khi chạy lại, nếu không các lượt hỏng bị coi là đã xong.
-- **Sau mỗi cửa sổ (không gọi LLM):** §5.0; chạy `analyze.mjs` (§5); ghi M và giờ thực dùng; thay hệ số §1.2 bằng số đo nếu lệch > 30 %; ghi hash commit (§6.4).
+- **Khi gặp 429:** làm §5.0 (phân loại **rồi** chuyển) **trước** khi chạy lại, nếu không các lượt hỏng bị coi là đã xong.
+- **Không nhìn trộm (`preregistration.md` §4.4a).** Giữa các cửa sổ **không** chạy `analyze.mjs` hay `pairwise.mjs` và không đọc `score`, chênh lệch, CI, p giữa các arm. Chỉ xem thống kê vận hành theo arm: số lượt, `status`, `wallSec`, `tokens.weighted`, số lượt loại/`leak`/T. Dùng:
+  `node -e "const r=require('fs').readFileSync('bench/vs-claude/results/s2/runs.jsonl','utf8').split('\n').filter(Boolean).map(JSON.parse),g={};for(const x of r){const a=g[x.arm]??={n:0,done:0,leak:0,w:0,s:0};a.n++;a.done+=x.status==='done';a.leak+=!!x.leak;a.w+=x.tokens?.weighted??0;a.s+=x.wallSec??0}console.table(g)"`
+  (không đọc cột `score`). `analyze.mjs`/`pairwise.mjs` chỉ chạy khi đã đủ N theo §4 của giả thuyết đó, và các lệnh ở §5.3 chỉ dùng khi đó. Cắt hay đổi thứ tự arm giữa chừng chỉ được dựa trên chi phí/hạn mức, không dựa trên kết quả.
+- **Sau mỗi cửa sổ (không gọi LLM):** §5.0; ghi M và giờ thực dùng từ bảng vận hành ở trên; thay hệ số §1.2 bằng số đo nếu lệch > 30 %; ghi hash commit (§6.4).
 - **Dừng cả lô** nếu ≥ 25 % lượt của một ô bị lỗi hạ tầng (`preregistration.md` §4.3c).
 
 ### 3.1 Nhánh 1 — chưa có thay đổi của Phòng Dev (9 bài chạy được)
 
 Bốn bài `a1,l1,l2,r1` lỗi ENOENT ở `freshWorkspace` (`run.mjs:72`) cho **mọi** arm (xảy ra trước khi gọi LLM, nên không tốn hạn mức), nên bị bỏ khỏi `--tasks`. Không có arm FL, không có t1–t5, không có cờ nhận hạn mức.
 
-| CS | Lượt chạy (theo thứ tự) | Lượt | M | h | Kết luận có được sau cửa sổ |
+| CS | Lượt chạy (theo thứ tự) | Lượt | M | h | Giả thuyết đủ N sau cửa sổ (chỉ phân tích khi đủ N, §3.0) |
 |---|---|---|---|---|---|
-| **W1** (2/11 từ 16:50) | A0-sonnet + B0 × R9 × r1–3 (xen kẽ); `pairwise` re1 | 54 | 17,8 | 3,6 | **H5** (kết luận); H1 (3 bài), H2 (2 bài), H3, H7, H9, H10 chỉ **sơ bộ** |
-| **W2** | B5 × R9 × r1–3 → A1 × R9 × r1–3 → s1 bổ sung A0-sonnet + B0 đến r10 | 68 | 15,4 | 3,5 | **H3** (n = 10/arm); H6 phần A1; H1, H2 (đã đủ từ W1) |
+| **W1** (2/11 từ 16:50) | A0-sonnet + B0 × R9 × r1–3 (xen kẽ); `pairwise` re1 | 54 | 17,8 | 3,6 | **H5** đủ N; H1, H2, H3, H7, H9, H10 chưa đủ N (không xem điểm) |
+| **W2** | B5 × R9 × r1–3 → A1 × R9 × r1–3 → s1 bổ sung A0-sonnet + B0 đến r10 | 68 | 15,4 | 3,5 | **H3** (n = 10/arm); H1, H2 đủ N từ W1; H6 phần A1 chưa đủ N (phân tích khi đủ N) |
 | **W3** | A2 × R9 × r1–3 → A0-sonnet + B0 × R9 bổ sung r4 | 45 | 15,4 | 3,3 | **H6** (A1 và A2) |
 | **W4** | A0-sonnet + B0 × R9 bổ sung r5 → A0-opus × R9 × r1–3 | 45 | 16,8 | 2,6 | **H7** (r5) |
 | **W5** (tùy chọn) | B3 × R9 × r1 | 9 | 12,3 | 1,2 | B3 chỉ mô tả (r1, không kiểm) |
@@ -141,12 +144,12 @@ Tổng Nhánh 1: 77,7 triệu, 5 cửa sổ.
 
 Chuyển sang Nhánh 2 **ở ranh giới cửa sổ đầu tiên sau khi merge**; W1 giống Nhánh 1. Dùng cùng `--out` nên không mất lượt đã chạy. Nếu merge xảy ra sau W2, dịch các dòng dưới đi một cửa sổ và áp dụng cột "không đạt" cho các ô vượt W5.
 
-| CS | Lượt chạy (theo thứ tự) | Lượt | M | h | Kết luận có được sau cửa sổ |
+| CS | Lượt chạy (theo thứ tự) | Lượt | M | h | Giả thuyết đủ N sau cửa sổ (chỉ phân tích khi đủ N, §3.0) |
 |---|---|---|---|---|---|
 | **W1** | giống Nhánh 1 | 54 | 17,8 | 3,6 | **H5** |
-| **W2** | A0-sonnet + B0 × N4 × r1–3 `--judge` → A0-sonnet + FL × T5 × r1–3 → s1 bổ sung đến r10 | 68 | 16,3 | 3,3 | **H1** (4 bài), **H2** (4 bài), **H3**, H4 sơ bộ (r3), B-01 xem lần đầu |
-| **W3** | B5 + FL × R13 × r1–3 `--judge` | 78 | 21,9 | 3,4 | so sánh B5/FL với A0-sonnet; H10 sơ bộ (13 bài) |
-| **W4** | A0-sonnet + FL × T5 đến r9 → a1 bổ sung đến r11 `--judge` → A1 × R13 × r1 | 89 | 20,5 | 3,4 | **H4** (n = 11/arm), **B-01 TOST** (FL, 45 lượt/arm) |
+| **W2** | A0-sonnet + B0 × N4 × r1–3 `--judge` → A0-sonnet + FL × T5 × r1–3 → s1 bổ sung đến r10 | 68 | 16,3 | 3,3 | **H1** (4 bài), **H2** (4 bài), **H3** đủ N; H4, B-01 chưa đủ N |
+| **W3** | B5 + FL × R13 × r1–3 `--judge` | 78 | 21,9 | 3,4 | dữ liệu B5/FL cho phân tích sau; chưa phân tích H10 (13 bài) |
+| **W4** | A0-sonnet + FL × T5 đến r9 → a1 bổ sung đến r11 `--judge` → A1 × R13 × r1 | 89 | 20,5 | 3,4 | **H4** (n = 11/arm), **B-01 TOST** (FL, 45 lượt/arm) đủ N |
 | **W5** | A1 r2–3 → A2 × R13 × r1–2 → B0 × T5 × r1 (nối harness cũ) | 57 | 14,4 | 3,4 | **H6** (A1 r3, A2 r2); nối t1–t5 |
 | W6 (dự phòng) | A2 r3 (3,8M) **hoặc** H7 bổ sung r4–5 (14,6M, 3,1 h) | ≤ 66 | ≤ 14,6 | ≤ 3,1 | chỉ khi W6 tồn tại |
 | không xếp | A0-opus × R13 × r3 (13,1M, 1,8 h); B3 × R13 × r1 (15,4M, 1,6 h) | — | 28,5 | 3,4 | không đạt trước 5/11 (hết ngân sách) |
@@ -173,7 +176,7 @@ Phép kiểm và ngưỡng theo `analyze.mjs` (dòng dẫn trong cột 1). "Đ�
 | **H8** lỗi điều phối: tỉ lệ deliverable thiếu TREAT > BASE (`:99`) | mọi bài | ≈ 100+ mỗi arm, ≥ 6 sự kiện (5 % vs 0 %) | **không đạt** | **không đạt** | Phép kiểm "TREAT > BASE" thành SUPPORTED chỉ với 1 sự kiện. Lùi: mô tả + xem transcript từng lượt `formatMiss` / thiếu test. Ca t5/FL (95/146) là sự kiện đầu |
 | **H9** research: độ chính xác trích dẫn và từ chối đúng ≥ +10 pp (`:106`) | re1 × A0-sonnet, B0 | ≥ 35 mỗi arm (σ = 0,15 giả định); từ chối (nhị phân) ≥ 75 mỗi arm | **không đạt** | **không đạt** | 35 lượt re1 mỗi arm ≈ 21 triệu + 6,4 giờ. Lùi: r = 3 mô tả + `pairwise` re1 |
 | **H10** độ dốc Δ theo size, hoán vị p < 0,05 (`:114`) | mọi bài × A0-sonnet, B0 | thêm lượt **không** tăng sức mạnh (biến giữa bài, n = 9–13) | **không đạt** | **không đạt** | Σ(x − x̄)² của size = 16,75 (13 bài) / 8,9 (9 bài); với σ(Δ theo bài) = 0,2 giả định, SE = 0,049 / 0,067 mỗi phần; phát hiện độ dốc 5 pp/phần chỉ ≈ 27 % / ≈ 18 % (α một phía 0,05). size lại trùng với loại bài. Lùi: mô tả, không dùng quyết định |
-| **B-01 làn đơn**: TOST ±15 % với A0-sonnet, trên (a) token có trọng số, (b) thời gian thực, (c) điểm tương đối; bootstrap 90 % CI, α = 0,05 mỗi phía, theo bài | t1–t5 × FL (hoặc arm làn đơn khi có), A0-sonnet | (a) 30/arm (σ log 0,10 và 0,24); **(b) 45/arm** (σ log 0,14 và 0,29); (c) 8–17/arm (σ 0,10–0,15, giả định). **Chọn 45/arm = 9 mỗi bài** | **không đạt** (không có FL, T5) | **đạt** (W4) cho arm FL; làn đơn thật **chỉ nếu arm có mặt trước W4** | C7+C9 đã cho FL/A0-sonnet = token ×4,09, thời gian ×2,20: **FL không tương đương**. Chỉ chạy r4–9 (15,4M) cho arm làn đơn *mới*; nếu chưa có thì dùng 15M đó cho H4 và H3. A0-sonnet có thêm 36 lượt lịch sử C7+C9 để độ nhạy |
+| **B-01 làn đơn**: TOST ±15 % với A0-sonnet, trên (a) token có trọng số, (b) thời gian thực, (c) điểm tương đối; bootstrap 90 % CI, α = 0,05 mỗi phía, theo bài | t1–t5 × FL (hoặc arm làn đơn khi có), A0-sonnet | (a) 30/arm (σ log 0,10 và 0,24); **(b) 45/arm** (σ log 0,14 và 0,29); (c) 8–17/arm (σ 0,10–0,15, giả định). **Chọn 45/arm = 9 mỗi bài** | **không đạt** (không có FL, T5) | **đạt** (W4) cho arm FL; làn đơn thật **chỉ nếu arm có mặt trước W4** | C7+C9 đã cho FL/A0-sonnet = token ×4,09, thời gian ×2,20: **FL không tương đương**. Cỡ mẫu trên là **cận dưới**: tính theo lượt độc lập, trong khi đăng ký trước chọn bootstrap theo bài (5 bài t1–t5), nên dị biệt tỉ số giữa bài không vào công suất; cần mô phỏng bootstrap phân tầng bằng dữ liệu C7+C9 (chưa làm) trước khi coi 45/arm là đủ. Chỉ chạy r4–9 (15,4M) cho arm làn đơn *mới*; nếu chưa có thì dùng 15M đó cho H4 và H3. A0-sonnet có thêm 36 lượt lịch sử C7+C9 để độ nhạy |
 | **B-02** cổng chất lượng: test ẩn không kém A0-sonnet, biên 2 pp, một phía α = 0,05 | t1–t5, c5 × arm có cổng | n ≈ 106/arm (σ = 0,059 từ 40 lượt FL; sd A0 = 0) | **không đạt** | **không đạt** | Lùi: kiểm cơ chế ở dòng dưới |
 | **B-02 cơ chế**: cổng chặn ca "đỏ kéo dài và bỏ sót phần việc" | phát lại ca t5/FL + ca gieo lỗi ở runtime giả (mock) | 3 lượt xác định, không tốn hạn mức LLM | **đạt** nếu cổng đã merge | **đạt** nếu cổng đã merge | Tần suất thật: 4/40 lượt FL < 1,0 test ẩn; ca "đỏ kéo dài" ≈ 1–2/40, quan sát ≥ 3 ca cần ≈ 120 lượt FL: **không đạt** thống kê |
 
@@ -194,21 +197,49 @@ node dist/cli.js serve                           # cửa sổ riêng; chỉ cầ
 
 ### 5.0 Quarantine trước mỗi lần chạy lại và trước mỗi lần phân tích
 
-Lý do (đọc mã): lượt hỏng (429, timeout) vẫn ghi vào `runs.jsonl` với `status: 'failed'` (`lib/claude.mjs:50`, `lib/ccoding.mjs:69`; ghi ở `run.mjs:175`). Khi khởi động, **mọi khóa** có dòng đều vào `done` (`run.mjs:64`) nên bị bỏ qua; `analyze.mjs` chỉ loại `leak` (`analyze.mjs:12`), không loại `status`, nên lượt hỏng điểm 0 làm lệch trung bình. Lệnh sau chuyển lượt không `done` sang `excluded.jsonl` (giữ để lập sổ lượt bị loại theo `preregistration.md` §4.1) để lượt đó chạy lại khi tiếp tục:
+Lý do (đọc mã): lượt hỏng (429, timeout) vẫn ghi vào `runs.jsonl` với `status: 'failed'` (`lib/claude.mjs:50`, `lib/ccoding.mjs:69`; ghi ở `run.mjs:175`). Khi khởi động, **mọi khóa** có dòng đều vào `done` (`run.mjs:64`) nên bị bỏ qua; `analyze.mjs` chỉ loại `leak` (`analyze.mjs:12`), không loại `status`, nên lượt hỏng điểm 0 làm lệch trung bình. **Thứ tự bắt buộc: phân loại trước, chuyển sau. Không chạy `run.mjs` lần nào trước khi bước 2 xong** (nếu chạy, `run.mjs:64` giữ khóa cũ nhưng mọi dòng `failed` còn nằm trong `runs.jsonl` sẽ bị tính; và nếu chuyển hết rồi đưa lại bằng tay thì `runs.jsonl` có hai dòng trùng khóa, `analyze.mjs` đếm cả hai).
+
+Nguyên tắc (`preregistration.md` §4.1, §4.3): chỉ chuyển lượt có **bằng chứng hạ tầng** (Q, E1, E4, T do hạ tầng). Lượt `failed` mà **không** có bằng chứng hạ tầng là kết quả (N1, hoặc T do hệ không xong, tiêu chí T) và **ở nguyên** trong `runs.jsonl`: nếu chuyển đi, lần chạy sau tự chạy lại cùng khóa và arm hay timeout (B0 với `--timeout 20`) được thêm một lần thử, tức thiên lệch có lợi cho nó.
+
+Bước 1 — chỉ liệt kê, không ghi gì. Bằng chứng hạ tầng = `error` hoặc `artifacts/<key>/_FINAL.txt` chứa `429`, `usage_limit`, `rate limit`, `quota`, `overloaded`, `ECONN`, `ENOENT`, `ETIMEDOUT`. Đối số 1 là `--timeout` (phút) của lệnh vừa chạy. Dòng `failed` có `wallSec ≥ 0,98 × timeout × 60` mà không có bằng chứng được nhãn `T-giữ`:
 
 ```bash
-node -e "const fs=require('fs');const d='bench/vs-claude/results/s2/';const L=fs.readFileSync(d+'runs.jsonl','utf8').split('\n').filter(Boolean);const ok=L.filter(l=>JSON.parse(l).status==='done'),bad=L.filter(l=>JSON.parse(l).status!=='done');fs.appendFileSync(d+'excluded.jsonl',bad.map(l=>l+'\n').join(''));fs.writeFileSync(d+'runs.jsonl',ok.map(l=>l+'\n').join(''));console.log('giữ',ok.length,'chuyển',bad.length)"
+cat > /tmp/classify.cjs <<'EOF'
+const fs=require('fs'),path=require('path');
+const [,, dir, timeoutMin, apply]=process.argv;
+const L=fs.readFileSync(path.join(dir,'runs.jsonl'),'utf8').split('\n').filter(Boolean);
+const infra=/429|usage.?limit|rate.?limit|quota|overloaded|ECONN|ENOENT|ETIMEDOUT/i;
+const keep=[],move=[];
+for(const l of L){const r=JSON.parse(l);
+  if(r.status==='done'){keep.push(l);continue}
+  let txt=String(r.error??'');
+  try{txt+=fs.readFileSync(path.join(dir,'artifacts',r.key,'_FINAL.txt'),'utf8')}catch{}
+  const hit=infra.test(txt);
+  const tmo=(r.wallSec??0)>=0.98*timeoutMin*60;
+  console.log(r.key,r.status,hit?'HẠ-TẦNG -> chuyển':(tmo?'T-giữ (hệ không xong)':'N1-giữ (kết quả)'));
+  (hit?move:keep).push(l)}
+console.log('giữ',keep.length,'chuyển',move.length);
+if(apply==='apply'){
+  fs.appendFileSync(path.join(dir,'excluded.jsonl'),move.map(l=>l+'\n').join(''));
+  fs.writeFileSync(path.join(dir,'runs.jsonl'),keep.map(l=>l+'\n').join(''))}
+EOF
+node /tmp/classify.cjs bench/vs-claude/results/s2 20          # bước 1: chỉ in
 ```
 
-Phân loại nguyên nhân từng dòng trong `excluded.jsonl`: tìm `usage_limit_reached` hoặc `429` trong `artifacts/<key>/_FINAL.txt` (E3, loại và chạy lại); timeout (E2) và lỗi sản phẩm (N1) xử lý theo `preregistration.md` §4.2: **chỉ loại E1–E4**, N1–N3 là kết quả. Lượt N1 bị chuyển nhầm phải đưa lại vào `runs.jsonl` bằng tay. Phòng Dev đang thêm nhận biết hạn mức vào `run.mjs`; khi có, bước này có thể thay bằng cờ đó (tên cờ chưa biết).
+Bước 2 — người chưa xem `score` của các dòng đó đọc danh sách ở bước 1, sửa nhãn nếu regex sai (ví dụ nhắc "429" trong nội dung sản phẩm), rồi mới áp dụng:
+
+```bash
+node /tmp/classify.cjs bench/vs-claude/results/s2 20 apply    # chuyển dòng hạ tầng sang excluded.jsonl
+```
+
+Sau bước 2, các lượt đã chuyển chạy lại cùng khóa khi lặp đúng lệnh cũ (E1/E3/E4: thay lượt tối đa 2 mỗi ô, `preregistration.md` §4.1). Số lượt `T-giữ` và `N1-giữ` theo arm được ghi vào sổ để báo cáo. Phòng Dev đang thêm nhận biết hạn mức vào `run.mjs`; khi có, bước này có thể thay bằng cờ đó (tên cờ chưa biết). Lưu ý: `/tmp/classify.cjs` là script vận hành nằm ngoài repo (hạng mục giới hạn một tệp); chưa chạy trên dữ liệu thật vì chưa có `results/s2`.
 
 ### 5.1 Nhánh 1
 
 ```bash
 # W1  (54 lượt)
 node bench/vs-claude/run.mjs --arms A0-sonnet,B0 --tasks $R9 --repeats 3 --timeout 20 --out $OUT
-node bench/vs-claude/analyze.mjs $OUT --baseline A0-sonnet --treatment B0
-node bench/vs-claude/pairwise.mjs $OUT --x A0-sonnet --y B0
+# (không chạy analyze/pairwise ở đây: chỉ xem bảng vận hành §3.0; phân tích ở §5.3 khi đủ N)
 
 # W2  (27 + 27 + 14 lượt)
 node bench/vs-claude/run.mjs --arms A0-sonnet,B5 --tasks $R9 --repeats 3 --timeout 20 --out $OUT
@@ -253,7 +284,9 @@ node bench/vs-claude/run.mjs --arms B0 --tasks $T5 --repeats 1 --timeout 20 --ou
 
 Lệnh `--arms A0-sonnet,B5,FL` ở W3 không sinh thêm lượt A0-sonnet vì A0-sonnet đã đủ r1–3 trên R9 (W1) và N4 (W2); `--judge` chỉ gọi Opus cho a1, r1.
 
-### 5.3 Phân tích (không gọi `run.mjs`)
+### 5.3 Phân tích (không gọi `run.mjs`) — chỉ khi đã đủ N
+
+Chạy sau cửa sổ cuối đóng N của giả thuyết (§4), không chạy giữa chừng (`preregistration.md` §4.4a). Phân tích trên bản sao `runs.jsonl` đã áp sổ lượt loại (§5.0).
 
 ```bash
 # analyze.mjs ghi đè report.md mỗi lần chạy; chuyển hướng ra tệp riêng
