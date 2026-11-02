@@ -150,9 +150,10 @@ export interface Config {
   };
   /**
    * Làn nhanh cho việc nhỏ (options.lane 'auto'): đề bài ≤ maxBriefChars ký tự và repo ≤ maxRepoFiles tệp / maxRepoBytes byte (git ls-files).
-   * planModel: model lập kế hoạch · finalReport: 'template' (báo cáo dựng từ bàn giao, không gọi model) hoặc 'llm'.
+   * planModel: model lập kế hoạch · finalReport: 'template' (báo cáo dựng từ bàn giao, không gọi model) hoặc 'llm' ·
+   * maxParallel: số hạng mục độc lập chạy cùng lúc tối đa (nâng options.maxParallel của nhiệm vụ lên khi kế hoạch có nhiều hạng mục độc lập hơn).
    */
-  fastLane: { enabled: boolean; maxBriefChars: number; maxRepoFiles: number; maxRepoBytes: number; planModel: string; finalReport: 'template' | 'llm' };
+  fastLane: { enabled: boolean; maxBriefChars: number; maxRepoFiles: number; maxRepoBytes: number; planModel: string; finalReport: 'template' | 'llm'; maxParallel?: number };
   /** Công cụ workspace cho agent (đọc/ghi file, chạy lệnh) — xem docs/TOOLS.md. */
   tools: {
     /** Quyền mặc định khi nhiệm vụ không thuộc dự án (workspace riêng của CCoding). */
@@ -290,7 +291,7 @@ const BUILTIN: Omit<Config, 'root'> = {
     toolInputBudget: { plan: 100000, finalize: 50000, execute: 800000, review: 200000, revise: 300000, synthesize: 60000 },
     maxContinuations: 2,
   },
-  fastLane: { enabled: true, maxBriefChars: 4000, maxRepoFiles: 300, maxRepoBytes: 1_500_000, planModel: 'sonnet', finalReport: 'template' },
+  fastLane: { enabled: true, maxBriefChars: 4000, maxRepoFiles: 300, maxRepoBytes: 1_500_000, planModel: 'sonnet', finalReport: 'template', maxParallel: 4 },
   tools: {
     defaultAccess: 'write',
     projectAccess: 'exec',

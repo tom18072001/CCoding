@@ -1078,6 +1078,13 @@ export class Orchestrator {
       s.assignee = alt.id;
       used.add(alt.id);
     }
+    // kế hoạch làn nhanh có tới 4 hạng mục độc lập; maxParallel mặc định 3 → hạng mục thứ 4 phải chờ một chỗ trống (đo 2/11: +30 s đường găng)
+    const roots = run.subtasks.filter((s) => !s.dependsOn?.length).length;
+    const want = Math.min(roots, this.d.config.fastLane.maxParallel ?? 4);
+    if (want > task.options.maxParallel) {
+      notes.push(`chạy cùng lúc ${want} hạng mục (thay vì ${task.options.maxParallel})`);
+      task.options.maxParallel = want;
+    }
     if (notes.length) this.message(task, run.department, 'system', 'system', `⚡ Điều phối làn nhanh: ${notes.join('; ')}.`);
   }
 

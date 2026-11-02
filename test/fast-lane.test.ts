@@ -108,7 +108,7 @@ test('điều phối làn nhanh: hạng mục của người review → trọng 
     const roster = reg.members('dev');
     const mk = (id: string, assignee: string, dependsOn: string[] = []) => ({ id, title: `Việc ${id}`, assignee, description: `Mô tả ${id}`, dependsOn, status: 'pending', attempts: 0 });
     const run = { department: 'dev', status: 'running', subtasks: [mk('S1', 'backend-dev'), mk('S2', 'backend-dev'), mk('S3', reviewer.id), mk('S4', 'backend-dev', ['S3'])] } as never as Parameters<never>[0];
-    const task = { id: 'T-x', options: { review: true }, title: 't' } as never;
+    const task = { id: 'T-x', options: { review: true, maxParallel: 1 }, title: 't' } as never;
     const caps = Object.fromEntries(roster.map((r) => [r.id, 'chạy lệnh']));
     const orch = a.orchestrator as unknown as { shapeFastPlan: (...x: unknown[]) => void; message: (...x: unknown[]) => void };
     orch.message = () => undefined;
@@ -120,6 +120,8 @@ test('điều phối làn nhanh: hạng mục của người review → trọng 
     const owners = r.subtasks.map((s) => s.assignee);
     assert.equal(new Set(owners).size, 3, `mỗi hạng mục độc lập một người: ${owners}`);
     assert.ok(!owners.includes(reviewer.id) && !owners.includes(lead.id));
+    // 3 hạng mục độc lập còn lại → được chạy cùng lúc cả 3 dù nhiệm vụ đặt maxParallel 1
+    assert.equal((task as unknown as { options: { maxParallel: number } }).options.maxParallel, 3);
   } finally {
     a.cleanup();
   }
