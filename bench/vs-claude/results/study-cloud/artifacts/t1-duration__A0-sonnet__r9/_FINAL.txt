@@ -1,0 +1,19 @@
+Mình đã hiện thực `src/duration.js` (`parseDuration` và `formatDuration`) theo SPEC.md, và `npm test` xanh: 10/10 test pass.
+
+- **Parse thập phân:** mình tính bằng BigInt thay vì số thực, nên các trường hợp như `"1.0005s"` làm tròn đúng (1001 ms).
+- **Làm tròn và `-0`:** làm tròn theo kiểu half away from zero, và kết quả `-0` trả về `0`.
+- **Format với `largest`:** phần dư được làm tròn vào đơn vị giữ cuối cùng, và việc +1 có nhớ lên đơn vị lớn hơn (ví dụ `6d 23h 59m 31s` với `largest: 2` ra `1w`).
+- **Dấu trong ISO 8601:** SPEC ghi ISO không có khoảng trắng bên trong. Mình vẫn cho phép khoảng trắng giữa dấu và phần còn lại ở mọi dạng, nên `"- PT1S"` hợp lệ. Nếu bộ nghiệm thu coi đây là lỗi thì chỗ này sẽ lệch.
+- **`options: null`:** `formatDuration` coi `null` như không truyền options. SPEC không nói rõ trường hợp này.
+
+Mình đã thêm vào `test/duration.test.js` các test cho các nhóm sau:
+- làm tròn và dấu;
+- các dạng chuỗi lỗi;
+- bí danh đơn vị;
+- ISO 8601;
+- `largest` có nhớ;
+- format dạng long và số âm;
+- kiểm tra tham số;
+- tính chất round trip.
+
+Mình chưa commit gì.
