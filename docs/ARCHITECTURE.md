@@ -135,7 +135,31 @@ Run của làn đơn có đúng một hạng mục, nên KPI, lịch sử và ng
 
 Khi nâng cấp, CCoding giữ worktree và `projectChecks`, đặt lại `run.subtasks`, `run.stage` và `run.review`, rồi ghi `LANE-HANDOVER.md` (diff, kết quả baseline và mới nhất, ghi chú của agent). `LANE-HANDOVER.md` được ghi vào thư mục run của nhiệm vụ (`store.runDir(task.id)`, nằm trong `data/`), không nằm ở `.ccoding/<task>/`. Run được đánh dấu `escalatedFrom = 'single'`, và tệp được ghi trước lệnh `save()`. Tệp này nối vào `prior` của pha plan, nên kế hoạch mới phải qua cổng phủ kế hoạch. Đích là `fast` nếu `fastLane` bật và đề đủ ngắn, ngược lại là `full`. Sự kiện ghi vào log `lane.escalate` (`from`, `to`, `trigger`, `reason`) cùng một tin hệ thống.
 
-**Nghiệm thu CTO.** Làn đơn không có đường riêng: `runTask` gọi `accept()` sau khi các phòng xong, không phân biệt làn. Run của làn đơn có `finalPath`, `review` và một hạng mục, nên CTO nhận đầu vào như thường và hành vi nghiệm thu không đổi. Đề xuất chưa áp dụng: cho `accept` bỏ qua hoặc dùng prompt gọn khi cổng chất lượng đã xanh và không chạm vùng nhạy cảm, vì nghiệm thu là một lượt LLM thêm. Cần đo bằng B7 thật trước khi quyết.
+**Nghiệm thu CTO.** Làn đơn không có đường riêng: `runTask` gọi `accept()` sau khi các phòng xong, không phân biệt làn. Run của làn đơn có `finalPath`, `review` và một hạng mục, nên CTO nhận đầu vào như thường và hành vi nghiệm thu không đổi theo mặc định. Hai chế độ nghiệm thu gọn hơn nằm sau công tắc `lanes.single.slim.accept`, mô tả ở mục "Làm gọn làn đơn (B-11)" bên dưới.
+
+### Làm gọn làn đơn (B-11)
+
+Nghiệm thu CTO, báo cáo dài và prompt thực thi là ba nguồn chi phí chính của làn đơn so với một agent chạy một mình. Công tắc `lanes.single.slim` cho phép giảm từng nguồn mà không phải sửa mã. Công tắc chỉ có tác dụng ở làn đơn. Khi nhiệm vụ đã nâng làn (`escalatedFrom = 'single'`), prompt trở lại đầy đủ và nghiệm thu quay về `full`.
+
+| Khóa | Mặc định | Ý nghĩa |
+|---|---|---|
+| `accept` | `full` | `full`: như trước. `brief`: CTO chỉ trả bảng tiêu chí đạt/không đạt, mỗi tiêu chí một dòng, bằng chứng một câu, trần `maxTokens` 950 (`ACCEPT_BRIEF_MAX_TOKENS`). `skip`: bỏ lượt CTO khi đủ điều kiện, thiếu thì lùi về `brief` |
+| `compactTemplate` | `false` | Agent vẫn viết đủ mọi tiêu đề của "Mẫu đầu ra", mỗi mục 1–3 dòng, không chép mã hay diff, báo cáo khoảng 800 token. Trần này chỉ nằm trong chỉ dẫn của prompt, `src/kpi.ts` không đổi |
+| `promptDiet` | `true` | Bỏ khỏi prompt thực thi các phần chỉ dành cho đa-agent: khối kế hoạch chung, mục "Đầu vào từ các hạng mục trước" khi rỗng, câu về đồng nghiệp song song và `git merge`. Repo ≤ 300 tệp (`SMALL_REPO_FILES`) nhận danh sách tệp gọn thay bản đồ repo |
+
+**Thứ tự ghi đè.** `resolveSlim` (`src/slim.ts`) gộp theo thứ tự: mặc định `SLIM_DEFAULTS`, rồi `config.lanes.single.slim`, rồi `ProjectDef.slim`, rồi `options.slim` của nhiệm vụ. Cấu hình sau thắng cấu hình trước. Khóa sai kiểu hoặc giá trị lạ bị bỏ qua. Nhờ vậy benchtest bật được từng phần cho từng arm (`B7c`, `B7cb`, `B7cab` trong `bench/vs-claude/arms.json`).
+
+**Trạng thái duyệt.** Giám đốc chưa duyệt `accept` khác `full` và `compactTemplate = true`. Vì vậy hai khóa này mặc định tắt và chỉ bật khi giám đốc đồng ý. `promptDiet` không cần duyệt nên bật mặc định.
+
+**Điều kiện của `skip`.** Cần đủ cả ba điều kiện, thiếu điều kiện nào thì lùi về `brief`:
+
+1. Cổng B-02 xanh: `projectChecks.latest` không rỗng và mọi lệnh đều xanh.
+2. Diff không chạm `sensitivePaths` (`src/quality-gate.ts`, cùng danh sách mục 4.3 của backlog, dùng chung với quyết định gọi reviewer).
+3. Nhãn dữ liệu cao hơn giữa `ProjectDef.classification` và nhãn nhiệm vụ là `public` hoặc `internal`.
+
+**Sự kiện và dữ liệu.** `accept.skipped` (`gateGreen`, `sensitiveHit`, `classification`, `checks[{cmd, ok}]`) và `accept.brief` (`reason`: `configured` hoặc `fallback:<điều kiện thiếu>`) ghi qua `LogStore`. Kết quả nghiệm thu ghi `acceptance.mode`. Mỗi dòng `runs.jsonl` của bộ đo có thêm số đo theo pha: `byPhaseSec` (kèm `byPhaseSecSource`), `byPhaseTokens` đủ bốn thành phần, `promptChars`, `lane`, `escalatedFrom`, `gate`, `fixRounds`, `acceptMode`. Giá trị `gate` phản ánh các lệnh kiểm tra của dự án ở lần chạy gần nhất, không phải trạng thái cuối của cổng B-02.
+
+**Số đo prompt.** Một lượt mock mỗi cấu hình, ở làn đơn: ngữ cảnh giảm từ 742 xuống 530 ký tự, prompt từ 1715 xuống 1669 ký tự, system prompt giữ 3909 ký tự. Số này cho thấy hướng giảm, chưa đại diện cho đề bài thật. Mock chưa kiểm chứng được `accept = brief` và hiệu quả của `compactTemplate`, vì cả ba lượt mock đều nâng làn do cổng đỏ.
 
 **Tiếp tục sau khi tạm dừng giữa lúc nâng cấp.** Khi nhiệm vụ tiếp tục, `runDepartment` kiểm tra run có `escalatedFrom = 'single'`, làn hiện tại không còn là `single`, pha thực thi chưa xong và `prior` chưa chứa tiêu đề bàn giao. Khi đủ điều kiện, nó đọc `LANE-HANDOVER.md` từ thư mục run (`store.readRunFile`) và nạp vào `prior`. Không thấy tệp thì chỉ ghi log cảnh báo `lane.handover`, không dừng nhiệm vụ.
 
