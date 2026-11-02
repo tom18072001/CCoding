@@ -163,17 +163,20 @@
   async function init() {
     const st = await api('/api/state');
     applyState(st);
+    // văn phòng tối giản theo phòng ban (UX-4b): bấm bàn → menu thao tác, nhấp đúp → hồ sơ agent
     office = new window.Office($('#office'), {
+      avatar: (id) => avatarUrl(id),
+      deptColor: (id) => deptColor(id),
       onSelect: (id) => openAgent(id),
-      onHover: (id, x, y) => showTooltip(id, x, y),
       onInteract: (target, pos) => window.Director?.interact(target, pos),
-      onNear: (target) => window.Director?.near(target),
+      menuHost: $('#stage'),
+      feed: $('#ticker'),
+      tabs: $('#ofc-tabs'),
+      bar: $('#ofc-bar'),
     });
     office.setData(S.departments, [...S.agents.values()]);
-    office.enablePlayer({ name: 'Bạn · Giám đốc' });
-    $('#lively').addEventListener('change', (e) => (office.lively = e.target.checked));
     bindUi();
-    // cầu nối cho director.js (phòng giám đốc, prompt, hạn mức, trợ giúp)
+    // cầu nối cho director.js (menu agent, prompt, hạn mức, trợ giúp) và các module giao diện
     window.CC = { S, api, esc, md, code, findTask, resolveTask, fmt, total, toast, openAgent, openTask, setTab, avatarUrl, av, agentName, deptName, deptShort, deptColor, dateTime, time, CLS_VI, TASK_VI, STATUS_VI, MODE_VI, PAUSE_VI, PHASES, PHASE_INDEX, KIND_VI, prefillAssign, office: () => office, renderTaskDetail, renderTaskList, editProject, newProject, uploadFiles, renderPending };
     window.Director?.init();
     window.Drive?.init();
@@ -426,17 +429,20 @@
     window.Chat?.pendingChanged();
   }
 
-  // ── Ticker & tooltip ─────────────────────────────────────────────────────
+  // ── Luồng hoạt động (ô Văn phòng) ─────────────────────────────────────────
   function addTicker(m) {
     const el = document.createElement('div');
     el.className = 'tk';
+    if (m.from) el.dataset.agent = m.from;
     const color = deptColor(m.department);
-    el.innerHTML = `<time>${time(m.ts)}</time><b style="color:${color}">${esc(agentName(m.from))}</b><span>${esc(KIND_VI[m.kind] || m.kind)} · ${esc(plain(m.text).slice(0, 220))}</span>`;
+    const t = S.tasks.get(m.taskId);
+    el.innerHTML = `<time>${time(m.ts)}</time><b style="color:${color}">${esc(agentName(m.from))}</b><span>${t ? `<code class="tk-code">${esc(code(t))}</code> ` : ''}${esc(KIND_VI[m.kind] || m.kind)} · ${esc(plain(m.text).slice(0, 220))}</span>`;
     el.style.cursor = 'pointer';
     el.onclick = () => (S.tab === 'assign' && window.Chat ? window.Chat.open(m.taskId) : openTask(m.taskId));
     const tk = $('#ticker');
     tk.prepend(el);
-    while (tk.children.length > 40) tk.lastChild.remove();
+    while (tk.children.length > 60) tk.lastChild.remove();
+    office?.noteFeed?.();
   }
 
   async function preloadTicker() {
@@ -448,29 +454,7 @@
     } catch {}
   }
 
-  function showTooltip(id, x, y) {
-    const tt = $('#tooltip');
-    if (!id) {
-      tt.hidden = true;
-      return;
-    }
-    const a = S.agents.get(id);
-    if (!a) return;
-    const st = a.state || { status: 'idle' };
-    const u = a.usage || {};
-    tt.innerHTML = `<b>${esc(a.title)}</b> <small>@${esc(a.id)}</small><div style="margin-bottom:4px"></div>
-      <div class="tt-row"><span>Phòng</span><span>${esc(deptShort(a.department))}</span></div>
-      <div class="tt-row"><span>Trạng thái</span><span style="color:${window.STATUS_COLOR[st.status]}">${esc(STATUS_VI[st.status] || st.status)}</span></div>
-      ${st.activity ? `<div class="tt-row"><span>Đang</span><span>${esc(st.activity.slice(0, 40))}</span></div>` : ''}
-      <div class="tt-row"><span>Token in/out</span><span>${fmt(u.input)} / ${fmt(u.output)}</span></div>
-      <div class="tt-row"><span>Model</span><span>${esc(a.model)}</span></div>`;
-    tt.hidden = false;
-    const stage = $('#stage').getBoundingClientRect();
-    const left = Math.min(x + 16, stage.width - 290);
-    const top = Math.min(y + 12, stage.height - tt.offsetHeight - 10);
-    tt.style.left = `${Math.max(8, left)}px`;
-    tt.style.top = `${Math.max(8, top)}px`;
-  }
+
 
   // ── Khung & tab ──────────────────────────────────────────────────────────
   function setTab(tab) {

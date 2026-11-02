@@ -1,4 +1,4 @@
-# Giao diện: quản lý nhiệm vụ, màn Prompt, phòng giám đốc, hạn mức
+# Giao diện: quản lý nhiệm vụ, màn Prompt, văn phòng, hạn mức
 
 Giao diện web (http://127.0.0.1:7420) chỉ phục vụ máy cục bộ, không đăng nhập. Lần đầu mở có **hướng dẫn nhanh**; bấm ❓ (hoặc phím `?`) để xem lại trợ giúp, các chế độ giao việc, nhãn dữ liệu, phím tắt và thuật ngữ.
 
@@ -37,24 +37,14 @@ Khi nhiệm vụ không chạy và có hạng mục đã xong, cuối hội tho�
 - **💬 Nhắc agent**: thêm mục thành góp ý trong hồ sơ agent (đi vào system prompt các lượt sau); góp ý này **tự xóa** khi mục đã sửa (đánh dấu tay, tự hết, hoặc không còn trong 30 ngày) — kiểm tra lại sau mỗi nhiệm vụ xong.
 - `ccoding kpi` hiện khóa từng mục và số mục đã ẩn; API `POST /api/kpi/resolve { agentId, key, note?, undo? }`, `GET /api/kpi?raw=1` để xem bản chưa lọc.
 
-## Phòng giám đốc
+## Văn phòng (ô bên phải, tối giản từ UX-4b)
 
-Sơ đồ: hàng trên **Phát triển | Giám đốc | Nghiên cứu**, hàng dưới **Phòng họp | Điều phối | Pantry | Góc giải trí**, hành lang chạy suốt giữa. Hai vách ngăn của phòng Giám đốc có **cửa tắt** sang thẳng phòng Phát triển và phòng Nghiên cứu (đi WASD hoặc nhấp đúp — đường đi tự chọn cửa tắt; nhấp vào cửa mở menu của phòng bên kia). Nhân vật cà vạt đỏ trong phòng Giám đốc là bạn.
+Ô **🏢 Văn phòng** chia theo phòng ban: phòng **Điều phối · CTO** ở trên (agent không thuộc phòng ban làm việc nào), bên dưới mỗi phòng ban một phòng (Phát triển, Nghiên cứu…; ô phóng to `⤢` xếp hai cột). Mỗi agent một bàn: chân dung pixel, **vòng màu trạng thái** (rảnh · nghĩ · làm · họp · review · chờ · lỗi), màn hình trên bàn sáng khi đang làm, **bong bóng** việc đang làm hoặc câu vừa nói. Dòng đầu: số nhiệm vụ đang chạy và cuộc họp đang diễn ra.
 
-| Thao tác | Phím / chuột |
-|---|---|
-| Đi | `W` `A` `S` `D` (mọi lúc trừ khi đang gõ); phím mũi tên khi trỏ chuột/focus ở văn phòng; nhấp đúp lên sàn để đi tới |
-| Tương tác với người/phòng gần nhất | `E` → menu, chọn bằng `1`–`9` hoặc ↑/↓ + Enter, `Esc` đóng |
-| Mở hồ sơ agent | nhấp vào agent (như trước) |
-| Tương tác với đồ vật / phòng **không cần đi tới** | trỏ chuột (viền vàng + nhãn) rồi nhấp — cùng menu như bấm `E` |
-
-Menu khi đứng cạnh **agent**: 📝 Giao việc riêng · 💬 Góp ý / đánh giá · 💰 Tăng ngân sách việc đang làm · 👀 Xem hồ sơ · và các mục *vui* (☕ mời cà phê, 🙌 đập tay, 😂 kể chuyện cười, 🌟 khen) — mục *vui* chỉ đổi hình ảnh trên sơ đồ (bong bóng, hiệu ứng; agent rảnh có thể đi pantry rồi tự về), **không** chạm vào nhiệm vụ, token hay log.
-
-**Nhấp thẳng vào đồ vật**: 🍱 **bàn ăn pantry → Pantry time** (mọi agent đang rảnh ra pantry nghỉ 30 giây, bảng "PANTRY TIME" đếm ngược, rồi tự về chỗ; agent đang làm không bị gọi), 💧 cây nước, 📺 TV điều phối, bảng phòng họp, 📋 bảng trắng phòng Phát triển, 📚 giá sách phòng Nghiên cứu, cửa các phòng, đàn/máy giải trí, bàn/màn hình/sofa phòng giám đốc.
-
-Menu khi đứng cạnh **phòng/đồ vật**: cửa phòng Phát triển/Nghiên cứu (giao việc cho phòng, xem nhân sự, cổ vũ) · phòng họp (xem cuộc họp đang diễn ra) · điều phối (giao việc tự động) · pantry (pha cà phê, mời cả văn phòng) · bàn giám đốc (📊 bảng điều khiển, giao việc mới, thư viện prompt, hạn mức, trợ giúp) · màn hình trên tường · góc giải trí (🎹 đàn, 🕹 trò "Bắt bug" 15 giây).
-
-**Bảng điều khiển**: token hôm nay, việc đang chạy, agent đang bận, việc cần bạn quyết định (tạm dừng, lỗi, "cần xem"), tài nguyên theo thứ tự chạy (đã dùng, còn lại, chưa đặt khóa, đang tạm ngừng). Màn hình trên tường phòng giám đốc hiện tóm tắt (làm mới 30 giây).
+- **Bấm vào một agent** → menu: 📝 Giao việc riêng · 💬 Góp ý / đánh giá · 📋 Mở việc đang làm (mã CC-n) · 💰 Tăng ngân sách việc đang làm · 👀 Xem hồ sơ; chọn bằng `1`–`9` hoặc ↑/↓ + `Enter`, `Esc` đóng. **Nhấp đúp** → mở hồ sơ.
+- **Luồng hoạt động** bên dưới: tab **Tất cả** + các agent vừa có hoạt động (bấm để lọc), mỗi dòng có mã nhiệm vụ; bấm dòng để mở nhiệm vụ.
+- **Thanh trạng thái** dưới cùng: các agent đang bận và việc họ đang làm (bấm → hồ sơ).
+- Đã bỏ: nhân vật giám đốc và đi lại `W` `A` `S` `D` / `E`, phòng họp, pantry, góc giải trí, các mục "vui" (cà phê, đập tay, chuyện cười, nhạc, trò "Bắt bug"), bảng điều khiển bàn giám đốc (thông tin đó có ở 🏠 Tổng quan và ⛽ Hạn mức). Chân dung pixel tách sang `public/avatar.js`.
 
 ## Giao việc riêng cho một agent
 

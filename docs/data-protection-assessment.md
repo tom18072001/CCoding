@@ -377,3 +377,7 @@ Sửa sau review độc lập (2/11/2026): dòng thời gian đọc `calls.jsonl
 | Liên kết mã trong tin nhắn, cây nhiệm vụ, "Agent đang làm" | — | Dựng hoàn toàn trong trình duyệt từ dữ liệu đã có; trình duyệt chỉ lưu thêm kiểu xem (`view2`) và trạng thái mở/đóng cây (mã nhiệm vụ → đúng/sai, ≤ 300) trong `localStorage` |
 
 **Kết luận: ĐẠT**, không thêm điều kiện.
+
+### Bổ sung: UX-4b — văn phòng tối giản theo phòng ban (2/11/2026)
+
+Chỉ thay giao diện ô Văn phòng (bỏ canvas, nhân vật giám đốc, đi lại, phòng họp/pantry/giải trí, mục "vui", bảng điều khiển bàn giám đốc; chân dung pixel tách sang `public/avatar.js`). Dữ liệu hiển thị lấy từ trạng thái agent và hội thoại đã có trong trình duyệt; không thêm API, không lưu thêm gì. **Kết luận: ĐẠT.**

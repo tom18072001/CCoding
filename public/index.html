@@ -237,32 +237,26 @@
     </section>
 
     <aside class="side" id="side" aria-label="Văn phòng">
-      <div class="side-head"><div class="side-tabs" role="tablist"><button data-side="office" class="on" role="tab">🏢 Văn phòng</button><button data-side="preview" id="side-tab-preview" role="tab" hidden>📄 Xem trước</button></div><small id="side-sub">WASD đi · E tương tác</small><span class="grow"></span>
+      <div class="side-head"><div class="side-tabs" role="tablist"><button data-side="office" class="on" role="tab">🏢 Văn phòng</button><button data-side="preview" id="side-tab-preview" role="tab" hidden>📄 Xem trước</button></div><small id="side-sub">theo phòng ban · bấm vào agent để thao tác</small><span class="grow"></span>
         <button class="btn ghost sm" id="btn-side-wide" title="Phóng to / thu nhỏ ô văn phòng">⤢</button>
         <button class="btn ghost sm" id="btn-side-hide" title="Ẩn ô văn phòng (V)">✕</button></div>
     <section class="stage">
       <div class="stage-inner" id="stage">
-        <canvas id="office" aria-label="Sơ đồ văn phòng với các agent"></canvas>
-        <div class="tooltip" id="tooltip" hidden></div>
-        <div class="legend">
-          <span><i style="--c:var(--st-idle)"></i>rảnh</span>
-          <span><i style="--c:var(--st-thinking)"></i>suy nghĩ</span>
-          <span><i style="--c:var(--st-working)"></i>đang làm</span>
-          <span><i style="--c:var(--st-discussing)"></i>họp</span>
-          <span><i style="--c:var(--st-reviewing)"></i>review</span>
-          <span><i style="--c:var(--st-error)"></i>lỗi</span>
-          <label class="toggle"><input type="checkbox" id="lively" checked /> sinh động</label>
-          <span class="keys-hint" title="Bạn là nhân vật cà vạt đỏ trong phòng Giám đốc">🎮 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> đi · <kbd>E</kbd> tương tác · nhấp đúp để đi tới</span>
-        </div>
+        <div class="ofc" id="office" role="region" aria-label="Văn phòng: các agent theo phòng ban"></div>
         <div class="imenu" id="imenu" hidden></div>
       </div>
-      <div class="ticker" id="ticker" aria-live="polite"></div>
+      <div class="ofc-feed">
+        <div class="ofc-tabs" id="ofc-tabs" role="tablist" aria-label="Lọc hoạt động theo agent"></div>
+        <div class="ticker" id="ticker" aria-live="polite"></div>
+      </div>
+      <div class="ofc-bar" id="ofc-bar" aria-label="Agent đang bận"></div>
     </section>
     <section class="side-preview" id="side-preview" hidden></section>
     </aside>
   </main>
 
   <script src="md.js"></script>
+  <script src="avatar.js"></script>
   <script src="office.js"></script>
   <script src="ux.js"></script>
   <script src="flow.js"></script>
