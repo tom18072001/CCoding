@@ -127,7 +127,8 @@ async function api(method, p, body, base = cfg.ccodingUrl) {
 }
 
 async function runCcoding(job, repo, prompt, outDir, variantCfg = {}) {
-  const { _url: base = cfg.ccodingUrl, ...variantOptions } = variantCfg;
+  // _mode/_agentId: giao thẳng cho một agent (chế độ 'agent' của CCoding — một hạng mục, không lập kế hoạch/họp)
+  const { _url: base = cfg.ccodingUrl, _mode: mode = 'project', _agentId: agentId, ...variantOptions } = variantCfg;
   const call = (m, p, b) => api(m, p, b, base);
   const pid = `b-${job.run}-${job.task.split('-')[0]}-${job.system.replace(/^ccoding-?/, '').slice(0, 6)}-${job.rep}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 40);
   await call('POST', '/api/projects', {
@@ -145,7 +146,8 @@ async function runCcoding(job, repo, prompt, outDir, variantCfg = {}) {
   const t = await call('POST', '/api/tasks', {
     brief: prompt,
     title: `[bench ${job.run}] ${job.task} #${job.rep}`,
-    mode: 'project',
+    mode,
+    ...(agentId ? { agentId } : {}),
     projectId: pid,
     options: { budgetMode: 'complete', ...(cfg.ccodingOptions ?? {}), ...variantOptions },
   });
