@@ -1,0 +1,23 @@
+# service: dependencies (must be running before the service starts)
+gateway: auth, catalog, orders
+auth: db-users, cache
+catalog: db-catalog, search
+orders: db-orders, payments, queue
+payments: db-orders, fraud
+fraud: ml-scorer
+ml-scorer: feature-store
+feature-store: queue, fraud-history
+fraud-history: db-orders
+search: elastic
+elastic:
+db-users:
+db-catalog:
+db-orders:
+cache:
+queue:
+reporting: warehouse
+warehouse: etl
+etl: reporting, db-orders
+notifier: queue, templates
+templates:
+admin-ui: gateway, reporting
