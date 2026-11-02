@@ -5,6 +5,12 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Gói 3 (T-20261103-021358-275, 3/11/2026)
+
+- **S1 (@data-scientist):** `analysis/prereg-tests.mjs` (+ `prereg-tests.test.mjs`, 13 ca), `analysis/round3-tables.md`, `analysis/excluded-round3.csv`, `analysis/analyze-reconcile.md`: loại lượt Q/L/T (0/197), TOST B-01 trên t1–t5, H5 theo cặp cùng cửa sổ, đối chiếu `analyze.mjs`. Commit 1 (script) `f530e89`, commit 2 (kết quả) `3793f95`.
+- **S2 (@methodologist):** `preregistration.md` §8 (ô khóa, hash cửa sổ, hash bộ đo) và §9 (V3-01…V3-12, trạng thái SR); `analysis/validity-round3.md` (8 đe dọa).
+- **S3 (@methodologist):** `results-round3.md` (Holm rỗng K = 0; H3 đủ N nhưng không tính p; H6, H7 chưa đủ N; H5 mô tả; **B-01 bác bỏ** ở bản chính và hai bản độ nhạy, (c) không kết luận do trần; B-02, B-10 không đủ dữ liệu, cần B02-M; khuyến nghị: chưa đưa B-01 lên `main`); `preregistration.md` §8 điền ô hash script (ghi sau khi dữ liệu đã có, V3-01). Chưa có dòng V3-13 cho việc áp trần §2.7 trên dữ liệu xác nhận.
+
 ## Gói 2c (T-20261102-190653-75b, 2/11/2026)
 
 - **S1 (@methodologist):** `preregistration.md` v2.1 và `suite-review.md`: sửa major H6 chạm trần (tập bài khai báo l1-modules, l2-chain, t1–t5; loại bài mà mọi lượt cả hai arm của cặp đều ≥ 0,99 (sửa ở vòng review 2 từ 1,00; một cặp NA ⇒ p(H6) = NA; p = NA vẫn phán quyết theo CI), giữ bài chạm trần một phía; Δ\* suy biến ⇒ p = NA, "Không kết luận (trần/suy biến)"; < 3 bài ⇒ ước lượng kèm CI 90 %, họ Holm còn H3), H3 chuyển sang hoán vị hai mẫu chính xác C(20, 10) = 184 756 (p_min 1/184 756), cột "Phép kiểm" H3/H6 ghi họ Holm K = 2 nếu SR-26 xong, SR-25 test 9 bỏ câu so sánh T\* − margin; §9 mục 6.
