@@ -32,6 +32,7 @@ import type { LogStore } from './logger.js';
 import { assignStrayIssues, blockedSubtasks, keywordRoute, newSubtask, orderJoint, parseAcceptance, parsePlan, parseReview, parseRoute, readySubtasks } from './planner.js';
 import { historyText, selectHistory } from './history.js';
 import * as P from './prompts.js';
+import { planGate } from './plan-gate.js';
 import type { Registry } from './registry.js';
 import { classifyError, RuntimeError, shouldFailover, toRuntimeError } from './runtimes/errors.js';
 import type { Candidate, RuntimeManager } from './runtimes/index.js';
@@ -1382,6 +1383,9 @@ export class Orchestrator {
         }
       }
 
+      // B-10: cổng phủ kế hoạch (làn nhanh và đầy) — chặn kế hoạch bỏ sót đích hoặc đọc dở TRƯỚC khi thực thi
+      if (!solo && !reached(run, 'executed') && !run.planReview?.approvedAt && (!run.planGate || run.planGate.rules.length)) await this.gatePlan(task, run, dept, roster, lead, reviewer, pctx, base, plan);
+
     } catch (e) {
       // lập kế hoạch/họp dừng (tạm dừng, hủy, lỗi): chờ lệnh chuẩn bị/baseline đang chạy kết thúc để không bỏ tiến trình mồ côi
       if (early) await early;
@@ -1865,6 +1869,65 @@ export class Orchestrator {
       if (tools.some((t) => t === 'search_papers' || t === 'web_search' || t === 'fetch_url')) total += e.web;
     }
     return total;
+  }
+
+  /**
+   * B-10 — cổng phủ kế hoạch: chạy sau parsePlan/họp chốt, trước execute (làn nhanh và đầy). Hàm thuần `planGate` không gọi LLM;
+   * trượt A → một lượt "sửa kế hoạch", trượt B → lập lại một lần (cả hai đều qua this.call). Vẫn trượt → dừng với attention,
+   * KHÔNG chạy tập con hạng mục.
+   */
+  private async gatePlan(task: Task, run: DeptRun, dept: DepartmentDef, roster: AgentDef[], lead: AgentDef, reviewer: AgentDef | undefined, pctx: P.Ctx, base: CallCtx, parsed?: { outOfScope?: Array<{ target: string; reason: string }>; truncated?: boolean }): Promise<void> {
+    const { logs, registry } = this.d;
+    const ls = pctx.cwd ? spawnSync('git', ['ls-files', '-z'], { cwd: pctx.cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, windowsHide: true }) : undefined;
+    const repoFiles = ls?.status === 0 ? ls.stdout.split('\0').filter(Boolean) : undefined;
+    const agentIds = [...registry.agents.keys()];
+    const evaluate = (oos = parsed?.outOfScope) => planGate({ brief: task.brief, planSummary: run.planSummary ?? '', subtasks: run.subtasks, outOfScope: oos, truncated, repoFiles, agentIds });
+    let truncated = !!parsed?.truncated;
+    let g = evaluate();
+    const record = (replanned: boolean) => {
+      run.planGate = { uncovered: g.uncovered, reasons: g.reasons, rules: g.rules, ...(replanned ? { replanned: true } : {}) };
+      this.save(task);
+    };
+    if (!g.blocked) {
+      record(!!run.planGate?.replanned);
+      return;
+    }
+    const first = g;
+    // sửa kế hoạch tối đa một lần cho mỗi lượt chạy (resume sau khi đã dừng thì dừng luôn, không đốt thêm lượt plan)
+    if (!run.planGate?.replanned) {
+      logs.write({ level: 'warn', kind: 'plan.gate', msg: `${dept.short}: cổng phủ kế hoạch chặn (${g.rules.join('+')}) — ${g.reasons.join('; ')}`, taskId: task.id, department: dept.id, data: { stage: 'blocked', rules: g.rules, uncovered: g.uncovered, reasons: g.reasons, subtasks: run.subtasks.length } });
+      this.message(task, dept.id, 'system', 'system', `🚧 Cổng phủ kế hoạch chặn trước khi thực thi (quy tắc ${g.rules.join('+')}):\n${g.reasons.map((r) => `- ${r}`).join('\n')}\nYêu cầu trưởng phòng sửa kế hoạch một lần; không chạy kế hoạch dở.`);
+      this.setPhase(task, run, 'plan');
+      const res = await this.call(lead, 'plan', (tools) => P.replanPrompt(pctx, task.brief, run.planSummary ?? '', run.subtasks, g, tools), {
+        ...base,
+        hints: { brief: task.brief, roster: roster.map((a) => ({ id: a.id, name: a.name, title: a.title, role: a.role, skills: a.skills })), department: dept.name, replan: true },
+      });
+      if (res.error && !res.text) throw new Error(`Trưởng phòng không sửa được kế hoạch: ${res.error}`);
+      const revised = parsePlan(res.text, roster, lead, task.brief);
+      let again = g;
+      if (revised.parsed) {
+        run.subtasks = revised.subtasks;
+        run.planSummary = revised.summary || run.planSummary;
+        if (task.lane === 'fast') this.shapeFastPlan(task, run, roster, lead, reviewer, pctx);
+        truncated = !!revised.truncated;
+        again = evaluate(revised.outOfScope);
+      } else truncated = !!revised.truncated;
+      g = revised.parsed ? again : { ...g, blocked: true, reasons: [...g.reasons, 'B (iv) lượt sửa kế hoạch không trả JSON đọc được'], rules: g.rules.includes('B') ? g.rules : [...g.rules, 'B'] };
+      record(true);
+      logs.write({ level: g.blocked ? 'warn' : 'info', kind: 'plan.gate', msg: `${dept.short}: sau khi sửa kế hoạch — ${g.blocked ? `vẫn bị chặn (${g.rules.join('+')})` : 'đạt'}`, taskId: task.id, department: dept.id, data: { stage: 'replanned', blocked: g.blocked, rules: g.rules, uncovered: g.uncovered, reasons: g.reasons, before: first.rules } });
+      if (!g.blocked) {
+        this.message(task, dept.id, lead.id, 'plan', `Kế hoạch đã sửa (cổng phủ kế hoạch đạt):\n${P.planText(run.subtasks)}`);
+        return;
+      }
+    }
+    // vẫn trượt → dừng, không chạy tập con
+    const reason = g.rules.includes('A') ? 'plan-coverage' : 'plan-unreadable';
+    const detail = reason === 'plan-coverage' ? `Kế hoạch ${dept.short} bỏ sót đích: ${g.uncovered.join(', ')} — không ai nhận; chưa chạy hạng mục nào` : `Kế hoạch ${dept.short} đọc dở: ${g.reasons.filter((r) => r.startsWith('B')).join('; ')} — chưa chạy hạng mục nào`;
+    task.attention = { reason, detail, at: nowIso() };
+    run.planGate = { uncovered: g.uncovered, reasons: g.reasons, rules: g.rules, replanned: true };
+    logs.write({ level: 'error', kind: 'plan.gate', msg: detail, taskId: task.id, department: dept.id, data: { stage: 'stopped', attention: reason, rules: g.rules, uncovered: g.uncovered, reasons: g.reasons } });
+    this.save(task);
+    throw new Error(`${detail}. Sửa kế hoạch hoặc đề bài rồi bấm "Tiếp tục".`);
   }
 
   /**
