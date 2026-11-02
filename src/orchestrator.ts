@@ -1047,6 +1047,41 @@ export class Orchestrator {
   }
 
   /**
+   * Điều phối làn nhanh sau khi lập kế hoạch (luật cứng, không gọi model): (1) hạng mục giao cho người review (thường là "viết bộ test riêng")
+   * chuyển thành trọng tâm review — benchtest 2/11: các hạng mục này dài nhất và nằm trên đường găng (95 s so với 52 s phần code); (2) hạng mục
+   * độc lập trùng người làm → chia cho người khác cùng năng lực công cụ để chạy song song (mỗi người chỉ làm một hạng mục một lúc).
+   */
+  private shapeFastPlan(task: Task, run: DeptRun, roster: AgentDef[], lead: AgentDef, reviewer: AgentDef | undefined, pctx: P.Ctx): void {
+    const notes: string[] = [];
+    if (task.options.review && reviewer && run.subtasks.length > 1) {
+      const mine = run.subtasks.filter((s) => s.assignee === reviewer.id);
+      if (mine.length && mine.length < run.subtasks.length) {
+        const ids = new Set(mine.map((s) => s.id));
+        run.subtasks = run.subtasks.filter((s) => !ids.has(s.id));
+        for (const s of run.subtasks) if (s.dependsOn?.length) s.dependsOn = s.dependsOn.filter((d) => !ids.has(d));
+        run.reviewFocus = mine.map((s) => `- ${s.title}: ${s.description.slice(0, 600)}`).join('\n');
+        notes.push(`${[...ids].join(', ')} (@${reviewer.id}) chuyển thành trọng tâm review, không nằm trên đường găng`);
+      }
+    }
+    const used = new Set<string>();
+    const pool = roster.filter((a) => a.id !== lead.id && a.id !== reviewer?.id);
+    for (const s of run.subtasks) {
+      if (!used.has(s.assignee)) {
+        used.add(s.assignee);
+        continue;
+      }
+      if (s.dependsOn?.length) continue;
+      const cap = pctx.caps?.[s.assignee];
+      const alt = pool.find((a) => !used.has(a.id) && pctx.caps?.[a.id] === cap);
+      if (!alt) continue;
+      notes.push(`${s.id} chuyển @${s.assignee} → @${alt.id} để chạy song song`);
+      s.assignee = alt.id;
+      used.add(alt.id);
+    }
+    if (notes.length) this.message(task, run.department, 'system', 'system', `⚡ Điều phối làn nhanh: ${notes.join('; ')}.`);
+  }
+
+  /**
    * Làn xử lý của nhiệm vụ: options.lane 'fast'/'full' ghi đè; 'auto' → làn nhanh khi bật fastLane, nhiệm vụ làm trên repo git,
    * đề bài ngắn và repo nhỏ (git ls-files: số tệp + tổng dung lượng). Mục tiêu làn nhanh: việc nhỏ xong nhanh hơn một agent làm một mình.
    */
@@ -1159,6 +1194,7 @@ export class Orchestrator {
         if (planRes.error && !planRes.text) throw new Error(`Trưởng phòng không lập được kế hoạch: ${planRes.error}`);
         plan = parsePlan(planRes.text, roster, lead, task.brief);
         run.subtasks = plan.subtasks;
+        if (task.lane === 'fast') this.shapeFastPlan(task, run, roster, lead, reviewer, pctx);
         run.planSummary = plan.summary;
         run.stage = 'planned';
         this.message(task, dept.id, lead.id, 'plan', `${plan.summary || 'Kế hoạch dự thảo'}\n${P.planText(plan.subtasks)}${plan.parsed ? '' : '\n(_kế hoạch dự phòng — trả lời của trưởng phòng không đúng định dạng_)'}`);
@@ -1304,7 +1340,7 @@ export class Orchestrator {
             'review',
             (tools) => {
               reviewTools = tools;
-              return P.reviewPrompt(pctx, items, tools, changes);
+              return P.reviewPrompt({ ...pctx, reviewFocus: run.reviewFocus }, items, tools, changes);
             },
             { ...base, hints: { brief: task.brief, subtasks: items.map((i) => stHint(i.st)), attempt } },
           );

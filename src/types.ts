@@ -269,6 +269,8 @@ export interface DeptRun {
   phase?: Phase;
   planSummary?: string;
   decisions?: string;
+  /** Làn nhanh: hạng mục kiểm thử riêng của người review được chuyển thành trọng tâm review (không nằm trên đường găng). */
+  reviewFocus?: string;
   subtasks: Subtask[];
   review?: {
     approved: boolean;

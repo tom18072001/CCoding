@@ -60,6 +60,8 @@ export interface Ctx {
   parallelWriters?: boolean;
   /** Làn nhanh: kế hoạch chia song song tối đa, không họp. */
   lane?: 'fast' | 'full';
+  /** Làn nhanh: trọng tâm kiểm thử độc lập cho người review. */
+  reviewFocus?: string;
   /** Lượt này chạy trong worktree con của hạng mục: nhánh nhiệm vụ mà CCoding sẽ gộp vào. */
   subWorktree?: { taskBranch?: string };
   /** Bản đồ repo do CCoding tạo (đường dẫn tương đối workspace) + các tệp nguồn lớn. */
@@ -377,6 +379,7 @@ export const FAST_LANE_PLAN = `- **LÀN NHANH (việc nhỏ)** — mục tiêu: 
   - Chia **2–4 hạng mục ĐỘC LẬP chạy cùng lúc** (\`dependsOn\` rỗng), giao cho **người khác nhau**, cỡ gần bằng nhau (mỗi phần ~1–2 phút làm, ≤ ~20 thao tác công cụ).
   - Mỗi hạng mục **sở hữu tệp riêng** — không hai hạng mục cùng sửa một tệp (kể cả tệp test: mỗi người tự viết test cho phần mình vào tệp test riêng, vd. \`test/<phần>.test.js\`). Nếu đặc tả buộc một tệp chung (vd. tệp export lại các hàm), giao tệp đó cho MỘT hạng mục và ghi rõ hợp đồng (tên tệp, tên hàm, chữ ký, định dạng lỗi) trong mô tả của mọi hạng mục liên quan để các phần khác viết theo hợp đồng mà không phải chờ nhau.
   - KHÔNG tạo hạng mục "tích hợp", "viết test", "rà soát" chạy sau — CCoding tự gộp các phần, chạy lệnh kiểm tra và review.
+  - KHÔNG giao hạng mục cho người review của phòng — họ kiểm tra độc lập ở bước review (hạng mục giao cho họ sẽ được CCoding chuyển thành trọng tâm review).
   - Chỉ để 1 hạng mục khi việc thật sự không chia được (vd. tối ưu một hàm duy nhất) — khi đó vẫn có thể tách "bộ test đối chiếu/kiểm thử độc lập" thành hạng mục song song thứ hai nếu nó dùng tệp riêng.
   - Lập kế hoạch NHANH: đọc vừa đủ (đặc tả + cấu trúc thư mục + tệp sẽ sửa), không khảo sát sâu; mô tả hạng mục ngắn gọn nhưng đủ hợp đồng.`;
 
@@ -490,7 +493,11 @@ export function reviewPrompt(c: Ctx, items: DepInput[], tools: ToolName[] = [], 
     context: header(c, 'review'),
     prompt: `## Các sản phẩm cần review
 ${items.map((i) => `### ${i.st.id} — ${i.st.title} (@${i.st.assignee})${i.wsPath && c.filesAccessible ? ` — bản đầy đủ: \`${i.wsPath}\`` : ''}\nTiêu chí: ${i.st.description}\n\n${body(i)}`).join('\n\n---\n\n')}
-${changes ? `\n## Thay đổi trong workspace (git)\n\`\`\`\n${truncate(changes, 4000)}\n\`\`\`\n` : ''}${checksBlock(c.task, 'review')}${toolNote(c, tools, 'review')}
+${changes ? `\n## Thay đổi trong workspace (git)\n\`\`\`\n${truncate(changes, 4000)}\n\`\`\`\n` : ''}${checksBlock(c.task, 'review')}${toolNote(c, tools, 'review')}${
+      c.reviewFocus
+        ? `\n## Trọng tâm kiểm thử độc lập (làn nhanh — thay cho hạng mục kiểm thử riêng)\n${c.reviewFocus}\nTự viết và chạy nhanh các ca biên quan trọng nhất theo trọng tâm này (tệp tạm trong \`${c.ccDir ?? '.ccoding'}\` hoặc \`node -e\`), đối chiếu với đặc tả; không cần bộ test đầy đủ.\n`
+        : ''
+    }
 ## Việc của bạn: REVIEW CHẤT LƯỢNG
 Đánh giá từng hạng mục theo tiêu chí review trong hồ sơ của bạn, tương xứng với quy mô và yêu cầu của nhiệm vụ.${c.task.branch ? ` Thay đổi CHƯA COMMIT không phải lỗi: khi nhiệm vụ kết thúc CCoding tự commit toàn bộ workspace lên nhánh \`${c.task.branch}\` — đánh giá nội dung thay đổi (git diff, tệp), không nêu lỗi "chưa commit" và không yêu cầu agent không có công cụ git tự commit.` : ''} Mức độ: "blocker" (sai/thiếu nghiêm trọng, không thể bàn giao), "major" (cần sửa trước khi bàn giao), "minor" (góp ý thêm). Chỉ đặt "approved": false khi có blocker/major.
 

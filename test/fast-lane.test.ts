@@ -97,3 +97,30 @@ test('làn tự chọn: repo nhỏ → làn nhanh; vượt ngưỡng tệp → l
     a.cleanup();
   }
 });
+
+test('điều phối làn nhanh: hạng mục của người review → trọng tâm review; trùng người làm → chia người khác cùng năng lực', () => {
+  const a = app();
+  try {
+    const reg = a.registry;
+    const dept = reg.department('dev');
+    const lead = reg.agent(dept.lead);
+    const reviewer = reg.agent(dept.reviewer!);
+    const roster = reg.members('dev');
+    const mk = (id: string, assignee: string, dependsOn: string[] = []) => ({ id, title: `Việc ${id}`, assignee, description: `Mô tả ${id}`, dependsOn, status: 'pending', attempts: 0 });
+    const run = { department: 'dev', status: 'running', subtasks: [mk('S1', 'backend-dev'), mk('S2', 'backend-dev'), mk('S3', reviewer.id), mk('S4', 'backend-dev', ['S3'])] } as never as Parameters<never>[0];
+    const task = { id: 'T-x', options: { review: true }, title: 't' } as never;
+    const caps = Object.fromEntries(roster.map((r) => [r.id, 'chạy lệnh']));
+    const orch = a.orchestrator as unknown as { shapeFastPlan: (...x: unknown[]) => void; message: (...x: unknown[]) => void };
+    orch.message = () => undefined;
+    orch.shapeFastPlan(task, run, roster, lead, reviewer, { caps });
+    const r = run as unknown as { subtasks: Array<{ id: string; assignee: string; dependsOn: string[] }>; reviewFocus?: string };
+    assert.deepEqual(r.subtasks.map((s) => s.id), ['S1', 'S2', 'S4']);
+    assert.match(r.reviewFocus ?? '', /Việc S3/);
+    assert.deepEqual(r.subtasks.find((s) => s.id === 'S4')!.dependsOn, []);
+    const owners = r.subtasks.map((s) => s.assignee);
+    assert.equal(new Set(owners).size, 3, `mỗi hạng mục độc lập một người: ${owners}`);
+    assert.ok(!owners.includes(reviewer.id) && !owners.includes(lead.id));
+  } finally {
+    a.cleanup();
+  }
+});

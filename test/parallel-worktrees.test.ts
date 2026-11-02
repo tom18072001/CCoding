@@ -117,7 +117,8 @@ test('repo git: hạng mục chạy lệnh chạy song song trong worktree con r
     const a = app(gw.url, dataDir, parallel);
     try {
       project(a, repo);
-      const t = a.orchestrator.submit({ brief: 'Xây tính năng', projectId: 'repo', options: { discussionRounds: 0, maxParallel: 3, maxRevisions: 0 } });
+      // làn đầy đủ: repo thử rất nhỏ nên 'auto' sẽ chọn làn nhanh (chuyển hạng mục của người review thành trọng tâm review)
+      const t = a.orchestrator.submit({ brief: 'Xây tính năng', projectId: 'repo', options: { discussionRounds: 0, maxParallel: 3, maxRevisions: 0, lane: 'full' } });
       const done = await a.orchestrator.waitFor(t.id);
       assert.equal(done.status, 'done', done.error);
       const run = done.runs[0];
