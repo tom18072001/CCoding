@@ -98,7 +98,7 @@ test('claude-guard: shell chỉ git đọc cho vai trò không có quyền chạ
   const root = path.resolve('workspaces/nd57/wt-demo');
   const cfg: GuardConfig = { root, deny: [], allowGitCommit: true, shell: 'git-read' };
   assert.equal(guardDecision({ tool_name: 'Bash', tool_input: { command: 'git log --oneline -20' } }, cfg), undefined);
-  assert.match(guardDecision({ tool_name: 'Bash', tool_input: { command: 'npm test' } }, cfg) ?? '', /lệnh CHỈ ĐỌC/);
+  assert.match(guardDecision({ tool_name: 'Bash', tool_input: { command: 'npm test' } }, cfg) ?? '', /câu 1: `npm` không phải lệnh chỉ đọc/);
   assert.equal(guardDecision({ tool_name: 'Bash', tool_input: { command: 'npm test' } }, { ...cfg, shell: 'full' }), undefined);
   assert.match(guardDecision({ tool_name: 'Bash', tool_input: { command: 'cat /c/Users/admin/nd57-du-lieu-that/x.json' } }, { ...cfg, shell: 'full' }) ?? '', /ngoài thư mục làm việc/);
   assert.ok(guardDecision({ tool_name: 'Grep', tool_input: { path: 'C:/Users/admin' } }, cfg));
