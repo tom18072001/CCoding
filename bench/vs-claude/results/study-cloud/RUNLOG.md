@@ -16,6 +16,7 @@ Theo `bench/vs-claude/RUNBOOK-cloud-session.md`, Nhánh 1 (`docs/research/run-pl
 | B7a | A0-sonnet, B7 (server nhánh 7425, chặn web) | T5 | B7 r1–9, A0-sonnet r4–9 (75) | 2026-11-02T16:41:22Z | 2026-11-02T19:12:11Z | xong 75/75 |
 | B7b | A0-sonnet, B7 (server nhánh 7425, chặn web) | `all` = 18 bài có `task.json` | r1–3, mới 39 lượt B7 | 2026-11-02T19:13:32Z | 2026-11-02T20:21:00Z | xong 39/39 |
 | B6b | A0-sonnet, B6 (server nhánh 7425, chặn web) | T5 | B6 r4–9 (30) | 2026-11-02T20:22:20Z | 2026-11-02T22:27:23Z | xong 30/30 |
+| neo-A0 | A0-sonnet (runner trỏ server nhánh 7425; arm A không dùng server) | T5 | r10–11 (10) | 2026-11-02T22:28:16Z | 2026-11-02T22:38:45Z | xong 10/10 |
 
 ## Bảng cửa sổ (`run-plan.md` §3.0)
 
@@ -92,3 +93,9 @@ Ghi chú tuân thủ: khi xem đuôi log vận hành lúc 18:41Z, người chạ
 
 **B6b** (A0-sonnet + B6 × T5 × r1–9; A0-sonnet đã đủ r1–9, B6 đã có r1–3 từ W2b): chỉ chạy 30 lượt B6 r4–9: 30/30 `done`, 0 lỗi hạ tầng, 0 leak, không gặp hạn mức, không gọi WebFetch/WebSearch. Token có trọng số 9,60 M, wall-sum 2,07 h, lượt dài nhất 420 s.
 Trình theo dõi lại bị dừng ở giới hạn 2 giờ lúc 22:22Z và được khởi động lại; `run.mjs` không bị gián đoạn.
+
+**Neo A0-sonnet** (RUNBOOK 3b.2, tùy chọn: `--arms A0-sonnet --tasks T5 --repeats 11`): 10/10 `done`, 0 lỗi hạ tầng, 0 leak. Token có trọng số 0,83 M, wall-sum 0,17 h, lượt dài nhất 113 s.
+
+## Trạng thái sau RUNBOOK bước 3b
+
+Tổng 276 lượt trong `runs.jsonl`: A0-sonnet 101, B0 46, B6 45, B7 84; không lượt nào lỗi hạ tầng hay gặp hạn mức; chưa chạy `analyze.mjs`/`pairwise.mjs` và chưa xem điểm tổng hợp (RUNBOOK bước 4, `preregistration.md` §4).
