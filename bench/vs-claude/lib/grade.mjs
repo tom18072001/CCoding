@@ -28,9 +28,11 @@ export function gradeCode({ workdir, hiddenDir }) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ccvb-grade-'));
   fs.cpSync(workdir, tmp, { recursive: true, filter: (s) => !s.includes(`${path.sep}.git`) && !s.includes(`${path.sep}node_modules`) });
   fs.mkdirSync(path.join(tmp, 'hidden'), { recursive: true });
-  const tests = fs.readdirSync(hiddenDir).filter((f) => f.endsWith('.test.js'));
-  for (const f of tests) fs.copyFileSync(path.join(hiddenDir, f), path.join(tmp, 'hidden', f));
-  const r = spawnSync(process.execPath, ['--test', '--test-reporter=tap', ...tests.map((f) => `hidden/${f}`)], { cwd: tmp, encoding: 'utf8', timeout: 120000 });
+  // Copy every top-level file (tests plus helpers such as _helpers.js, _gen.js, oracle.js) but run only *.test.js.
+  const files = fs.readdirSync(hiddenDir, { withFileTypes: true }).filter((e) => e.isFile()).map((e) => e.name);
+  for (const f of files) fs.copyFileSync(path.join(hiddenDir, f), path.join(tmp, 'hidden', f));
+  const tests = files.filter((f) => f.endsWith('.test.js'));
+  const r = spawnSync(process.execPath, ['--test', '--test-reporter=tap', ...tests.map((f) => `hidden/${f}`)], { cwd: tmp, encoding: 'utf8', timeout: 120000, env: { ...process.env, NODE_TEST_CONTEXT: undefined } }); // NODE_TEST_CONTEXT: do not inherit when run under `node --test`
   const out = `${r.stdout}\n${r.stderr}`;
   const num = (k) => Number(out.match(new RegExp(`^# ${k} (\\d+)`, 'm'))?.[1] ?? 0);
   const pass = num('pass'), fail = num('fail') + num('cancelled');

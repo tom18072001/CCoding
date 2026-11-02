@@ -13,6 +13,7 @@ import { PROCESS_SUFFIX, runClaude, weighted } from './lib/claude.mjs';
 import { runCcoding, serverUp } from './lib/ccoding.mjs';
 import { GRADERS } from './lib/grade.mjs';
 import { blind } from './lib/judge.mjs';
+import { populateWorkspace, taskDirs } from './lib/workspace.mjs';
 
 const SUITE = path.dirname(fileURLToPath(import.meta.url));
 const argv = process.argv.slice(2);
@@ -69,10 +70,9 @@ if (armIds.some((a) => ARMS[a].kind === 'ccoding') && !(await serverUp(cfg.ccodi
 }
 
 // ---------- helpers ----------
-function freshWorkspace(task, key) {
+function freshWorkspace(task, key) { // task: the parsed task.json
   const dir = path.join(cfg.workRoot, key);
-  fs.rmSync(dir, { recursive: true, force: true });
-  fs.cpSync(path.join(SUITE, 'tasks', task, 'repo'), dir, { recursive: true });
+  populateWorkspace(dir, taskDirs(SUITE, task).repoDir);
   const git = (...a) => spawnSync('git', a, { cwd: dir, encoding: 'utf8' });
   git('init', '-q'); git('add', '-A');
   git('-c', 'user.name=bench', '-c', 'user.email=bench@local', 'commit', '-qm', 'base');
@@ -100,23 +100,24 @@ function visibleTestScore(dir) {
 async function runArm(arm, task, key) {
   const spec = ARMS[arm];
   const brief = briefFor(task);
-  if (spec.kind === 'null') { const dir = freshWorkspace(task.id, key); return { dir, status: 'done', wallSec: 0, tokens: zero(), costUsd: 0, turns: 0, finalText: '' }; }
+  if (spec.kind === 'null') { const dir = freshWorkspace(task, key); return { dir, status: 'done', wallSec: 0, tokens: zero(), costUsd: 0, turns: 0, finalText: '' }; }
   if (spec.kind === 'oracle') {
-    const dir = freshWorkspace(task.id, key); const h = path.join(SUITE, 'tasks', task.id, 'hidden');
+    const dir = freshWorkspace(task, key); const { hiddenDir: h, solutionDir } = taskDirs(SUITE, task);
+    if (solutionDir) fs.cpSync(solutionDir, dir, { recursive: true });
     if (fs.existsSync(path.join(h, 'solution'))) fs.cpSync(path.join(h, 'solution'), dir, { recursive: true });
     if (fs.existsSync(path.join(h, 'answer.json'))) fs.copyFileSync(path.join(h, 'answer.json'), path.join(dir, task.deliverable.endsWith('.json') ? task.deliverable : 'answer.json'));
     if (fs.existsSync(path.join(h, 'reference'))) fs.cpSync(path.join(h, 'reference'), dir, { recursive: true });
     return { dir, status: 'done', wallSec: 0, tokens: zero(), costUsd: 0, turns: 0, finalText: '' };
   }
   if (spec.kind === 'claude') {
-    const dir = freshWorkspace(task.id, key);
+    const dir = freshWorkspace(task, key);
     const r = await runClaude({ cwd: dir, prompt: spec.process ? brief + PROCESS_SUFFIX : brief, model: spec.model, timeoutMin: cfg.timeoutMin, bin: cfg.claudeBin });
     return { dir, ...r, leak: leakCheck(r.transcript), transcript: undefined };
   }
   if (spec.kind === 'best-of-n') {
     const cands = [];
     for (let i = 0; i < spec.n; i++) {
-      const dir = freshWorkspace(task.id, `${key}__c${i}`);
+      const dir = freshWorkspace(task, `${key}__c${i}`);
       const r = await runClaude({ cwd: dir, prompt: brief, model: spec.model, timeoutMin: cfg.timeoutMin, bin: cfg.claudeBin });
       cands.push({ dir, ...r, leak: leakCheck(r.transcript), transcript: undefined });
     }
@@ -135,7 +136,7 @@ async function runArm(arm, task, key) {
     return { ...best, tokens: tok, costUsd: cands.reduce((s, c) => s + c.costUsd, selCost), wallSec: cands.reduce((s, c) => s + c.wallSec, 0), turns: cands.reduce((s, c) => s + c.turns, 0), leak: cands.some((c) => c.leak), picked: pick };
   }
   if (spec.kind === 'ccoding') {
-    const dir = freshWorkspace(task.id, key);
+    const dir = freshWorkspace(task, key);
     const projectId = `vb-${crypto.createHash('sha1').update(key + cfg.workRoot).digest('hex').slice(0, 12)}`;
     const r = await runCcoding({ baseUrl: cfg.ccodingUrl, dataDir: cfg.ccodingData, runtime: cfg.runtime, projectId, workdir: dir, brief, title: `[vs-claude ${key}] ${task.title}`.slice(0, 120), taskOptions: spec.options ?? {}, agentId: spec.agentId, variant: `vs-claude/${key}`, timeoutMin: cfg.timeoutMin });
     let leak = false;
@@ -162,7 +163,7 @@ for (const s of schedule) {
   let r, g, error;
   try {
     r = await runArm(s.arm, task, s.key);
-    g = await GRADERS[task.grader]({ workdir: r.dir, hiddenDir: path.join(SUITE, 'tasks', s.task, 'hidden'), suiteRepoDir: path.join(SUITE, 'tasks', s.task, 'repo'), finalText: r.finalText, task, judge: cfg.judge });
+    g = await GRADERS[task.grader]({ workdir: r.dir, hiddenDir: path.join(SUITE, 'tasks', s.task, 'hidden'), suiteRepoDir: taskDirs(SUITE, task).repoDir, finalText: r.finalText, task, judge: cfg.judge });
     snapshot(r.dir, path.join(out, 'artifacts', s.key));
     fs.writeFileSync(path.join(out, 'artifacts', s.key, '_FINAL.txt'), r.finalText ?? '');
   } catch (e) { error = String(e?.stack ?? e).slice(0, 2000); }
