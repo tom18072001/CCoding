@@ -37,7 +37,7 @@ function repoIn(dir: string): string {
 
 const BRIEF = 'Thiết kế API Node.js/TypeScript ghi log kiểm toán vào Elasticsearch qua Logstash';
 
-test('làn nhanh theo yêu cầu: không họp, kế hoạch bằng model làn nhanh, báo cáo dựng từ bàn giao', async () => {
+test('làn nhanh theo yêu cầu: không họp, kế hoạch bằng model làn nhanh, báo cáo dựng từ bàn giao', { timeout: 120_000 }, async () => {
   const a = app();
   try {
     const t = a.orchestrator.submit({ brief: BRIEF, mode: 'department', department: 'dev', options: { lane: 'fast' } });
@@ -60,7 +60,7 @@ test('làn nhanh theo yêu cầu: không họp, kế hoạch bằng model làn n
   }
 });
 
-test('làn đầy đủ theo yêu cầu vẫn họp và tổng hợp bằng model', async () => {
+test('làn đầy đủ theo yêu cầu vẫn họp và tổng hợp bằng model', { timeout: 120_000 }, async () => {
   const a = app();
   try {
     const t = a.orchestrator.submit({ brief: BRIEF, mode: 'department', department: 'dev', options: { lane: 'full' } });
@@ -74,7 +74,7 @@ test('làn đầy đủ theo yêu cầu vẫn họp và tổng hợp bằng mode
   }
 });
 
-test('làn tự chọn: việc nhỏ trong repo nhỏ → làn đơn (B-01); vượt ngưỡng tệp → làn đầy đủ; không có repo → làn đầy đủ', async () => {
+test('làn tự chọn: việc nhỏ trong repo nhỏ → làn đơn (B-01); vượt ngưỡng tệp → làn đầy đủ; không có repo → làn đầy đủ', { timeout: 120_000 }, async () => {
   for (const [cfg, want] of [[{}, 'single'], [{ maxRepoFiles: 1 }, 'full']] as const) {
     const a = app(cfg);
     try {
@@ -98,7 +98,7 @@ test('làn tự chọn: việc nhỏ trong repo nhỏ → làn đơn (B-01); vư
   }
 });
 
-test('điều phối làn nhanh: hạng mục của người review → trọng tâm review; trùng người làm → chia người khác cùng năng lực', () => {
+test('điều phối làn nhanh: hạng mục của người review → trọng tâm review; trùng người làm → chia người khác cùng năng lực', { timeout: 120_000 }, () => {
   const a = app();
   try {
     const reg = a.registry;
@@ -127,7 +127,7 @@ test('điều phối làn nhanh: hạng mục của người review → trọng 
   }
 });
 
-test('điều phối làn nhanh: hạng mục SỬA MÃ giao nhầm cho người review → giao người khác, không bỏ khỏi thực thi (C7 t2)', () => {
+test('điều phối làn nhanh: hạng mục SỬA MÃ giao nhầm cho người review → giao người khác, không bỏ khỏi thực thi (C7 t2)', { timeout: 120_000 }, () => {
   const a = app();
   try {
     const reg = a.registry;
@@ -160,7 +160,7 @@ test('điều phối làn nhanh: hạng mục SỬA MÃ giao nhầm cho người
   }
 });
 
-test('review: lỗi blocker/major không trỏ đúng mã hạng mục vẫn vào vòng sửa (gán hạng mục gần nhất)', async () => {
+test('review: lỗi blocker/major không trỏ đúng mã hạng mục vẫn vào vòng sửa (gán hạng mục gần nhất)', { timeout: 120_000 }, async () => {
   const { assignStrayIssues } = await import('../src/planner.js');
   const subtasks = [
     { id: 'S1', title: 'Lỗi 1, 2, 6: làm tròn tiền', description: 'Sở hữu src/money.js' },
@@ -179,7 +179,7 @@ test('review: lỗi blocker/major không trỏ đúng mã hạng mục vẫn và
   assert.equal(assignStrayIssues([{ subtask: 'X', severity: 'blocker', comment: 'c' }], []), 0);
 });
 
-test('hook claude-cli: lệnh Bash chạy với stdin = /dev/null (không treo khi lệnh đọc stdin)', async () => {
+test('hook claude-cli: lệnh Bash chạy với stdin = /dev/null (không treo khi lệnh đọc stdin)', { timeout: 120_000 }, async () => {
   const { withNullStdin } = await import('../src/tools/claude-guard.js');
   const wrapped = withNullStdin("cat > x.txt 2>/dev/null || true; echo xong");
   assert.equal(wrapped, "{ cat > x.txt 2>/dev/null || true; echo xong\n} </dev/null");

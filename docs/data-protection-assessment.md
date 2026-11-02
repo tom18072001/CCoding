@@ -441,3 +441,41 @@ Ba thay đổi này chỉ thêm logic điều phối và kiểm tra. Chúng khô
 | Cấu hình `lanes.single`, `gate.maxFixRounds` | GOV-02 | Chỉ là ngưỡng số; mặc định nằm trong `src/config.ts` |
 
 **Kết luận: ĐẠT.** Không phát sinh khuyến nghị mới.
+
+### Bổ sung: bộ phân tích lệnh của hook và chẩn đoán chặn (B-04, B-06, 2/11/2026)
+
+**Loại cổng:** cổng thiết kế, kiểm tra điểm (không phải đánh giá đầy đủ). **Nhãn dữ liệu:** Nội bộ. Dữ liệu xử lý là câu lệnh shell của agent trong workspace nội bộ và nhật ký chặn. Không có PII hay dữ liệu khách hàng.
+
+**B-04 (nới lệnh chỉ đọc):** chỉ nới quyền ĐỌC trong workspace. Quyền ghi và chạy mã không đổi: `> tệp`, `tee`, `sed -i`, heredoc, `$(…)`, backtick, `for`/`while`, `python`/`node` và `awk` có `system`/`getline`/`>`/`|` đều vẫn bị chặn. Hook đang chạy theo `dist/` đã cài, nên quy tắc mới chỉ có hiệu lực sau khi build và cài lại.
+
+| Rủi ro | Kiểm soát | Cách kiểm |
+|---|---|---|
+| Lách nháy: giấu toán tử hoặc chuyển hướng trong nháy, hoặc nháy không đóng, để lệnh ghi lọt qua | Tách lệnh có xét nháy. `$(…)` và backtick bị chặn kể cả trong nháy kép. Nháy không đóng, `&` nền, `<` và `>` ra tệp bị chặn | `test/shell-policy-adversarial.test.ts` (bộ test ác ý) |
+| Đọc `.env` (bí mật) qua lệnh chỉ đọc, kể cả dạng nối nháy `.e""nv` | Mọi tham số của lệnh chỉ đọc đi qua kiểm `.env`. Công cụ tệp cũng chặn `.env` | Cùng bộ test ác ý và `test/claude-guard.test.ts` |
+| Đọc ngoài root workspace | `outsidePathReason` vẫn áp sau khi qua bộ lọc chỉ đọc. Hook không nhớ `cd` giữa các lượt nên không nới lệnh `cd` ra ngoài | `test/claude-guard.test.ts`, `scripts/replay-guard-deny.mjs` |
+| `awk`, `sed` bị lạm dụng để ghi hoặc chạy mã | Danh sách từ khoá và cờ bị cấm (`system`, `getline`, `>`, `\|`, `close`, `ENVIRON`, `fflush`, `-f`, `-i`, `sed -i`) | Bộ test ác ý |
+
+**B-06 (chẩn đoán chặn):** thông báo chặn có dạng `CCoding chặn câu N: \`lệnh\` <quy tắc> — <gợi ý>`, tối đa 300 ký tự, chỉ nêu tên lệnh hoặc toán tử. Mỗi lần chặn ghi một sự kiện `guard.block` qua `LogStore`:
+
+| Nội dung | Giá trị |
+|---|---|
+| Trường `data` | `tool`, `clause` (từ 1), `rule` (`not-read-only`, `redirect`, `subst`, `heredoc`, `loop`, `interpreter`, `env-file`, `outside-root`, và `deny-list`, `git-branch`, `read-limit`), `cmd` (tên lệnh hoặc toán tử) |
+| Không ghi | Lệnh thô, tham số, đường dẫn, nội dung tệp. Tên lệnh dài hơn 24 ký tự, có ký tự lạ hoặc giống khoá/token thì thay bằng `?` |
+| Che bí mật | Qua `LogStore` (che bí mật và PII, chuỗi băm), thêm lớp lọc `safeCmdName` trước đó |
+| Xác định data dir | `dataDir` trong cấu hình hook, rồi biến `CCODING_DATA_DIR`, rồi suy từ đường dẫn bộ đếm `<data>/runs/<task>/guard/<lượt>.json`. Không xác định được thì bỏ qua việc ghi |
+| Nơi ghi | `<data>/logs/system.jsonl` và `<data>/runs/<task>/events.jsonl`. Không ghi ngoài `data/` |
+| Lỗi ghi | Bị nuốt, không đổi quyết định chặn hay cho qua (có test) |
+
+**Rà năng lực liên quan** (các mã còn lại: N/A, không đổi luồng dữ liệu):
+
+| Mã | Trạng thái | Khuyến nghị |
+|---|---|---|
+| GOV-03 | Đạt | Sự kiện mới nằm trong `data/`, cùng nhãn Nội bộ |
+| PRE-04 | Đạt | Không chép lệnh thô. Có test lệnh chứa khoá giả: thông báo và log không chứa chuỗi đó |
+| DET-04 | Đạt | Che bí mật và PII qua `LogStore` trước khi ghi |
+| DET-05 | Đạt | Chuỗi băm theo từng tệp log. Log làm chứng cứ cần WORM và ký số, ngoài phạm vi thay đổi này |
+| RES | Cần theo dõi | Thời gian lưu: nhật ký hệ thống truy xuất `guard.block` giữ ≥ 12 tháng theo khung. Chưa có tác vụ xoá tự động, cần giữ cho đến khi có chính sách lưu trữ |
+
+**Rủi ro còn lại:** (1) hook tiến trình riêng và `LogStore` mới mở mỗi lần chặn, mỗi tiến trình có chuỗi băm riêng, nên có thể rẽ nhánh chuỗi khi nhiều hook chạy song song (log chẩn đoán, không phải chứng cứ); (2) hook dùng `dist/` cũ đến khi build và cài lại.
+
+**Kết luận: ĐẠT CÓ ĐIỀU KIỆN.** Điều kiện: build và cài lại `dist/` trước khi đo, và đặt chính sách lưu nhật ký ≥ 12 tháng cho `data/logs`.

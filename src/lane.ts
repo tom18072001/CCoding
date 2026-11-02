@@ -96,6 +96,15 @@ function isSequential(brief: string): boolean {
   return /nối tiếp|tuần tự|lần lượt|(?:tầng|bước|giai đoạn)\s+sau\s+dùng|(?:đầu ra|kiểu và đầu ra|đầu vào)\s+(?:của\s+)?(?:tầng|bước|giai đoạn)\s+(?:trước|kia)|(?:pipeline|đường ống)\s+(?:đầu cuối|nối tiếp)|phụ thuộc\s+(?:tuần tự|nối tiếp)/i.test(brief);
 }
 
+/** Làn bị ép: options.lane > project.lane > auto. 'auto' hoặc không có = không ép (undefined). */
+export function forcedLane(optionsLane?: string, projectLane?: string): LaneName | undefined {
+  for (const v of [optionsLane, projectLane]) {
+    if (v === 'single' || v === 'fast' || v === 'full') return v;
+    if (v === 'auto') return undefined;
+  }
+  return undefined;
+}
+
 export function laneSignals(brief: string, repoFiles: readonly string[], repoBytes: number, forced?: LaneName): LaneSignals {
   return {
     briefChars: brief.length,

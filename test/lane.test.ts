@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { chooseLane, laneSignals, type LaneConfig } from '../src/lane.js';
+import { chooseLane, forcedLane, laneSignals, type LaneConfig } from '../src/lane.js';
 import { loadConfig } from '../src/config.js';
 
 const TASKS = path.resolve('bench/vs-claude/tasks');
@@ -102,4 +102,28 @@ test('ép làn fast/full/single được tôn trọng, kể cả khi tín hiệu
   }
   const long = laneSignals('x'.repeat(9000), [], 0, 'single');
   assert.equal(chooseLane(long, cfg).lane, 'single');
+});
+
+test('B-02: forcedLane — options.lane > project.lane > auto; "auto" hoặc trống = không ép', () => {
+  assert.equal(forcedLane('fast', 'single'), 'fast');
+  assert.equal(forcedLane(undefined, 'single'), 'single');
+  assert.equal(forcedLane('auto', 'single'), undefined, 'options "auto" nghĩa là không ép, không rơi xuống dự án');
+  assert.equal(forcedLane(undefined, 'auto'), undefined);
+  assert.equal(forcedLane(undefined, undefined), undefined);
+  assert.equal(forcedLane('bậy', 'full'), 'full');
+});
+
+test('B-02: project.lane = single → làn đơn, không có lượt route (không gọi router)', async () => {
+  const { testApp } = await import('./helpers.js');
+  const a = testApp();
+  try {
+    a.store.saveProject({ id: 'p1', name: 'P', department: 'dev', classification: 'internal', lane: 'single', createdAt: new Date().toISOString() });
+    const t = a.orchestrator.submit({ brief: 'Sửa lỗi chính tả trong README', projectId: 'p1' });
+    const done = await a.orchestrator.waitFor(t.id);
+    assert.equal(done.lane, 'single', done.error);
+    const phases = a.usage.all({ task: t.id }).map((c) => c.phase);
+    assert.equal(phases.includes('route' as never), false);
+  } finally {
+    a.cleanup();
+  }
 });

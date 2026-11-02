@@ -69,6 +69,8 @@ export interface ProjectDef {
   toolAccess?: ToolAccess;
   /** "worktree": nếu workspace là repo git, mỗi nhiệm vụ làm trên git worktree + nhánh ccoding/<task> riêng. */
   isolation?: 'none' | 'worktree';
+  /** Ép làn xử lý cho mọi nhiệm vụ của dự án (B-02): 'auto' hoặc bỏ trống = không ép; options.lane của nhiệm vụ ưu tiên hơn. */
+  lane?: 'auto' | 'single' | 'fast' | 'full';
   /** Điểm xuất phát của nhánh worktree (vd. origin/main); mặc định HEAD hiện tại của repo. */
   baseRef?: string;
   /** File chưa track (vd. .env) cần chép vào worktree để chạy test/migration ([] = không chép gì). */
@@ -286,6 +288,10 @@ export interface DeptRun {
   };
   /** Vòng review hiện tại (0 = review đầu) — giữ qua tạm dừng/tiếp tục để không vượt maxRevisions. */
   reviewRound?: number;
+  /** B-02: số vòng sửa của cổng chất lượng đã dùng (gồm sửa định dạng) — gate.maxFixRounds là ngân sách cho cả nhiệm vụ, lưu trước mỗi vòng. */
+  gateFixRoundsUsed?: number;
+  /** B-02: run đã nâng từ làn đơn lên fast/full — tiếp tục sau tạm dừng thì nạp lại LANE-HANDOVER.md vào `prior`. */
+  escalatedFrom?: 'single';
   /** B-10: kết quả cổng phủ kế hoạch (sau parsePlan, trước execute). */
   planGate?: { uncovered: string[]; reasons: string[]; rules: ('A' | 'B')[]; replanned?: boolean };
   /** Hạng mục còn phải sửa trong vòng hiện tại — tiếp tục sau tạm dừng thì sửa tiếp theo review đã có, không review lại. */
