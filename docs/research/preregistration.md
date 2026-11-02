@@ -1,22 +1,22 @@
-# Đăng ký trước giả thuyết — bản 2.0 (khóa có điều kiện)
+# Đăng ký trước giả thuyết — bản 2.1 (khóa có điều kiện)
 
-> Phân loại dữ liệu: **Nội bộ** (benchtest trên bài tổng hợp, không có DLCN). Bản 1.0: @methodologist, nhiệm vụ T-20261102-134405-b2c (S2), 2/11/2026. Bản 2.0: @methodologist, hạng mục S4 (R6) của nhiệm vụ T-20261102-175854-65c, 2/11/2026.
-> Trạng thái: **v2.0, khóa có điều kiện** (xem §8). Có hiệu lực khi (i) commit gộp có hash điền vào §8 và (ii) các SR P0 của `suite-review.md` mà từng giả thuyết đang chờ (cột "Khóa" ở §3.1) được đóng hoặc được ghi vào §9. Sau khóa chỉ sửa bằng bảng §9, không sửa lặng lẽ. Nếu một SR P0 làm đổi phép kiểm hay ngưỡng thì ghi **v2.1** vào `CHANGELOG.md`, không cần một vòng đăng ký mới.
+> Phân loại dữ liệu: **Nội bộ** (benchtest trên bài tổng hợp, không có DLCN). Bản 1.0: @methodologist, nhiệm vụ T-20261102-134405-b2c (S2), 2/11/2026. Bản 2.0: @methodologist, hạng mục S4 (R6) của nhiệm vụ T-20261102-175854-65c, 2/11/2026. Bản 2.1: @methodologist, hạng mục S1 (F1) của nhiệm vụ T-20261102-183435-da7, 2/11/2026 (sửa lỗi major của review gói 2: H1, H2 không kiểm định được).
+> Trạng thái: **v2.1, khóa có điều kiện** (xem §8). Có hiệu lực khi (i) commit gộp có hash điền vào §8 và (ii) các SR P0 của `suite-review.md` mà từng giả thuyết đang chờ (cột "Khóa" ở §3.1) được đóng hoặc được ghi vào §9. Sau khóa chỉ sửa bằng bảng §9, không sửa lặng lẽ. Nếu một SR P0 làm đổi phép kiểm hay ngưỡng thì ghi **v2.1** vào `CHANGELOG.md`, không cần một vòng đăng ký mới.
 
 ## Tóm tắt
 
-Bản 2 đổi hệ chính sang bộ đo của giám đốc (`bench/vs-claude`, commit `1568774`): **H1–H10 của `analyze.mjs` giữ nguyên mã và nguyên nghĩa của giám đốc**. Chín giả thuyết của bản 1 (không phải 8 như đề bài viết) đổi mã theo số thứ tự thành **P1–P9** và chỉ còn là bộ phụ cho t1–t5 (§3.3, bảng ánh xạ P↔H). Thêm hai nhóm giả thuyết mới: **B-01** (làn đơn tương đương ±15 % so với A0-sonnet, ba phép TOST) và **B-02** (cổng chặn ca "đỏ kéo dài và bỏ sót phần việc" như t5, kèm B-10). Tiêu chí loại lượt (hạn mức, `leak`, timeout) áp cho bộ mới ở §4.3.
+Bản 2 đổi hệ chính sang bộ đo của giám đốc (`bench/vs-claude`, commit `1568774`): **H1–H10 của `analyze.mjs` giữ nguyên mã và nguyên nghĩa của giám đốc**. Chín giả thuyết của bản 1 (không phải 8 như đề bài viết) đổi mã theo số thứ tự thành **ĐK-P1–P9** và chỉ còn là bộ phụ cho t1–t5 (§3.3, bảng ánh xạ P↔H). Thêm hai nhóm giả thuyết mới: **B-01** (làn đơn tương đương ±15 % so với A0-sonnet, ba phép TOST) và **B-02** (cổng chặn ca "đỏ kéo dài và bỏ sót phần việc" như t5, kèm B-10). Tiêu chí loại lượt (hạn mức, `leak`, timeout) áp cho bộ mới ở §4.3.
 
 Ba điều cần chủ dự án biết trước khi khóa:
-- **Chỉ 4–5 trong 10 H kiểm được trước 5/11.** Theo `run-plan.md` §4: H1, H2, H3, H5, H6 đạt ở cả hai nhánh; H4 chỉ đạt khi Phòng Dev merge; H7 chỉ đạt ở Nhánh 1; **H8, H9, H10 không đạt** (do thiết kế phép kiểm, không do hạn mức) nên đăng ký là **mô tả/thăm dò**, không ra quyết định. B-02 kiểm chứng thống kê cũng không đạt; chỉ kiểm được cơ chế.
-- **Công suất thấp ở H1, H2:** chỉ 4 bài nên p hoán vị không xuống dưới 0,125 (`suite-review.md` §3); họ Holm không bác bỏ được bằng p này. Phán quyết của giám đốc (`est`/`lo`) vẫn được báo, kèm CI, nhưng đăng ký trước dự báo "Không kết luận" cho p của H1, H2.
-- **Tám SR P0 đang chờ Phòng Dev** (SR-01…SR-08, §9): trong đó SR-01 (lượt hỏng bị coi là đã xong) và SR-03 (không ghi hash CCoding) ảnh hưởng mọi H. Tôi không chờ chúng để viết bản này, nhưng H bị ảnh hưởng đều ghi "khóa có điều kiện: chờ SR-xx".
+- **Chỉ H3 và H6 là giả thuyết xác nhận (Holm, K = 2) trước 5/11, và chỉ khi SR-26 (p bootstrap/tương đương cho H3, H6) xong**; hiện `analyze.mjs` không tạo p nào cho hai giả thuyết này. Nếu SR-26 không xong đến lúc khóa, H3 và H6 hạ xuống ước lượng, họ Holm rỗng (K = 0) và trước 5/11 không có giả thuyết xác nhận bằng Holm (§2.5). H1, H2 **ra khỏi họ Holm** và chỉ là **ước lượng kèm CI** (§2.5): p hoán vị đổi dấu theo bài (`analyze.mjs:51`) có giá trị nhỏ nhất 2^(1−n) (mã hiện hai phía) hay 2^(−n) (một phía) với n bài; n = 2–4 bài thì p ≥ 0,0625, không bao giờ qua ngưỡng Holm nên v2.0 ghi "đạt" là sai. H4, H5, H7 phụ/kiểm riêng như v2.0; **H8, H9, H10 mô tả/thăm dò**. B-02 kiểm chứng thống kê không đạt; chỉ kiểm được cơ chế. Phép kiểm xác nhận cho H1′/H2′ sau 5/11 ở §2.6 (**dự kiến, chưa khóa**).
+- **Trần điểm (pilot n = 1).** Pilot của giám đốc (từ `main` e0bd2f4, 8 bài × 3 arm, chưa `--judge`) cho điểm 1,00 ở mọi lượt có dữ liệu. Quy tắc trần §2.7: bài chạm trần không làm bằng chứng điểm cho H1 và H10; hệ quả là H1 không có bằng chứng điểm ở c3–c5 và H10 không kiểm được về điểm trên 13 bài. Đây là quan sát n = 1, không phải kết luận, và không vào dữ liệu xác nhận.
+- **Chín SR P0 đang chờ Phòng Dev cho nhánh trước 5/11** (SR-01…SR-07, SR-08a và SR-26, §9; SR-08b là P1) và **SR-25 (P0 cho nhánh sau 5/11**, phép hoán vị phân tầng theo lượt cho H1′/H2′, `suite-review.md` §5): trong đó SR-01 (lượt hỏng bị coi là đã xong) và SR-03 (không ghi hash CCoding) ảnh hưởng mọi H. Tôi không chờ chúng để viết bản này, nhưng H bị ảnh hưởng đều ghi "khóa có điều kiện: chờ SR-xx".
 
 ## Tệp đã lưu
 
-- `docs/research/preregistration.md` (tệp này, v2.0, sửa tại chỗ từ v1.0) và dòng v2.0 trong `docs/research/CHANGELOG.md`. Không sửa `src/`, `bench/`.
+- `docs/research/preregistration.md` (tệp này, v2.1, sửa tại chỗ từ v2.0) và mục SR-25 trong `docs/research/suite-review.md` §5. Không sửa `src/`, `bench/`. (Dòng v2.1 trong `CHANGELOG.md` do người điều phối thêm nếu cần; hạng mục này không sửa tệp đó.)
 - Đầu vào đã đối chiếu: `docs/research/suite-review.md` (S1; bảng H1–H10 mục 3, SR-01…SR-24 mục 5); `docs/research/run-plan.md` (S2; §4 số lượt tối thiểu, §6 gộp harness, §3.0 quy tắc cửa sổ); `docs/research/improvement-backlog.md` (S3; B-01 §3, B-02 §4.1 bước 2, B-10 §5, §6 ánh xạ); mã `bench/vs-claude/run.mjs` dòng 33–34, 47–53, 62–64, 87–91, 137–145, 169–176; `lib/ccoding.mjs` dòng 33–40, 68–72; `lib/claude.mjs` dòng 31, 50–53; `analyze.mjs` dòng 11–12, 15–16. Các dòng `analyze.mjs` khác lấy từ `suite-review.md` §3; kiểm lại bằng `grep -n` trước khi khóa.
-- Bản 1.0 đã đối chiếu: nội dung P1–P9 giữ từ v1.0 (đổi mã; rút gọn cách trình bày, giữ phép kiểm, ngưỡng, n, kết quả bác bỏ).
+- Bản 1.0 đã đối chiếu: nội dung ĐK-P1–P9 giữ từ v1.0 (đổi mã; rút gọn cách trình bày, giữ phép kiểm, ngưỡng, n, kết quả bác bỏ).
 
 ## 1. Thiết kế & RQ
 
@@ -28,7 +28,7 @@ Ba điều cần chủ dự án biết trước khi khóa:
 | Phương án | Ưu | Nhược | Quyết định |
 |---|---|---|---|
 | A. Dùng bộ đo giám đốc làm hệ chính, bộ cũ t1–t5 làm hệ phụ (chọn) | Theo chỉ đạo của giám đốc; có arm A1/A2 cùng tính toán; có oracle/null, `leak`, pairwise | Chỉ 1 bài cho H3, H4, H9; 4 bài cho H1, H2; `size` chưa định nghĩa | Chọn |
-| B. Chỉ giữ bản 1 (t1–t5, C9) | Có σ thật | Trái chỉ đạo; chỉ làn nhanh; bài đã dùng để tinh chỉnh | Bộ phụ P1–P9 |
+| B. Chỉ giữ bản 1 (t1–t5, C9) | Có σ thật | Trái chỉ đạo; chỉ làn nhanh; bài đã dùng để tinh chỉnh | Bộ phụ ĐK-P1–P9 |
 | C. Gộp hai bộ trong một họ Holm | Nhiều dữ liệu | Grader, hệ đo token, phiên bản CCoding khác nhau (`run-plan.md` §6.2) | Không gộp |
 
 **Hệ so sánh.** BASE mặc định `A0-sonnet`, TREAT mặc định `B0` (`analyze.mjs:15-16`). Các arm khác: A0-opus, A1 (đơn có lập kế hoạch và tự review), A2 (best-of-N cùng tính toán), B1–B5, làn nhanh `FL`, làn đơn `SL` (tên tạm của arm B-01, dùng đúng tên Phòng Dev đặt trong `arms.json`), oracle, null.
@@ -46,13 +46,13 @@ Ba điều cần chủ dự án biết trước khi khóa:
 | Thời gian thực | `wallSec` | H5, B-01(b) |
 | USD | `costUsd` (**arm B luôn bằng 0 ở nhánh `calls.jsonl`**, `ccoding.mjs:46-62`; chờ SR-02) | chỉ độ nhạy của B-01(a) |
 | Tỉ lệ thiếu sản phẩm | `formatMiss` (`gradeCode` không bao giờ đặt, `grade.mjs:40`) | H8 |
-| Phụ | `tokens.cacheWrite/cacheRead/output`, `turns`, `calls`, `agentsUsed`, `byPhase`, `size`, `category`, `status`, `error`, `leak` | mô tả, P8, §4.3 |
+| Phụ | `tokens.cacheWrite/cacheRead/output`, `turns`, `calls`, `agentsUsed`, `byPhase`, `size`, `category`, `status`, `error`, `leak` | mô tả, ĐK-P8, §4.3 |
 
 **Khóa vào chỉ số chính.** Chỉ số chi phí chính là **token có trọng số đúng như `analyze.mjs`** để khớp hệ đánh giá của giám đốc. **USD ước tính theo bảng giá là phân tích độ nhạy**, chưa chạy được trước SR-02; trước đó, mọi kết luận "tương đương" chỉ nói về token có trọng số, không suy ra tương đương USD (`suite-review.md` §4.2). Trọng số `5 × output` chỉ đúng trong một model (`suite-review.md` §4.1): luôn báo kèm bảng token thô và tỉ lệ `cacheRead/total` mỗi arm.
 
 ### 2.2 Mẫu: số lượt mỗi ô
 
-Mặc định `--repeats 3` (`README.md:47`). Số lượt tối thiểu cho từng giả thuyết lấy từ `run-plan.md` §4; bảng đầy đủ ở §3.1. Nguồn n của bộ cũ (P1–P9) giữ từ bản 1:
+Mặc định `--repeats 3` (`README.md:47`). Số lượt tối thiểu cho từng giả thuyết lấy từ `run-plan.md` §4; bảng đầy đủ ở §3.1. Nguồn n của bộ cũ (ĐK-P1–P9) giữ từ bản 1:
 
 | Nguồn | Lệnh hoặc công thức |
 |---|---|
@@ -60,7 +60,7 @@ Mặc định `--repeats 3` (`README.md:47`). Số lượt tối thiểu cho t�
 | Công thức | n mỗi nhánh = 2·(z₁₋α + z₁₋β)²·σ²/Δ²; SE² nhiều tầng = (1/K²)·Σₜ(σ²ₜ,CC/n_CC + σ²ₜ,Cl/n_Cl) |
 | TOST (`run-plan.md` §4) | n/arm = 2σ²(1,645 + 1,282)²/m², m = ln 1,15 = 0,140; công suất 80 % tại chênh lệch thật bằng 0 |
 
-σ bộ cũ (thời gian, s): t1 88,6; t2 28,1; t3 143,9; t4 162,7; t5 110,7; σ chi phí (USD): 0,297; 0,220; 0,344; 0,340; 0,434 (gộp C1–C8, là cận trên). Giả định CV 25 % cho làn nhanh, 8 % cho Sonnet, 30 % cho cache_write (mỗi con số là giả định, kiểm bằng sd quan sát ở C9). **σ của bộ mới (recall s1 = 0,12; a1 = 0,17; re1 = 0,15; σ log TOST 0,10–0,29) đều là giả định của `run-plan.md`, chưa có `results/pilot*`.**
+σ bộ cũ (thời gian, s): t1 88,6; t2 28,1; t3 143,9; t4 162,7; t5 110,7; σ chi phí (USD): 0,297; 0,220; 0,344; 0,340; 0,434 (gộp C1–C8, là cận trên). Giả định CV 25 % cho làn nhanh, 8 % cho Sonnet, 30 % cho cache_write (mỗi con số là giả định, kiểm bằng sd quan sát ở C9). **σ của bộ mới (recall s1 = 0,12; a1 = 0,17; re1 = 0,15; σ log TOST 0,10–0,29) đều là giả định của `run-plan.md`; pilot (n = 1 lượt/ô) không cho σ và không được dùng thay giả định (§2.7).**
 
 **Quy ước α:** mọi kiểm định xác nhận một phía ở mức 0,025 (CI 95 % hai phía); riêng TOST của B-01 dùng α = 0,05 mỗi phía, tức bootstrap 90 % CI hai phía. Công suất 0,8.
 
@@ -72,23 +72,81 @@ Mặc định `--repeats 3` (`README.md:47`). Số lượt tối thiểu cho t�
 | TOST / CI nằm trong biên | **Không** (chờ SR-04). `analyze.mjs` phán H2 và H6 bằng ước lượng điểm (`:67`, `:89-90`) |
 | Loại lượt hỏng (hạn mức, timeout), ghi hash CCoding | **Không** (SR-01, SR-03) |
 | `stats.mjs` (bộ cũ: `ratioCI`, `--exclude-run`, `--required-runs`) | **Có**, chỉ cho `harness/` (C1–C9) |
-| Kiểm định điểm tỉ lệ (P3), TOST (P9→B-01) cho bộ cũ | **Không** (`prereg-tests.mjs` chưa tồn tại) |
+| Kiểm định điểm tỉ lệ (ĐK-P3), TOST (ĐK-P9→B-01) cho bộ cũ | **Không** (`prereg-tests.mjs` chưa tồn tại) |
 
 **Phương án lùi đã đăng ký (dùng khi SR-01/SR-04 chưa xong khi chạy):** (i) lọc lượt theo §4.3 trên **bản sao** `runs.jsonl` (bản gốc giữ nguyên) trước khi chạy `analyze.mjs`; (ii) tính TOST bằng một script ngoài đọc `runs.jsonl` (bootstrap 90 % CI theo bài trên log-tỉ số, hạt 20261102); script đó phải có test và hash ghi vào §8 trước khi mở dữ liệu chính. Mọi lần dùng phương án lùi ghi vào §9.
 
 ### 2.4 Hợp nhất kết luận (ba trạng thái)
 
-- **Xác nhận:** qua phép kiểm của giả thuyết (mức Holm nếu thuộc họ) **và** CI phía liên quan vượt biên.
+- **Xác nhận:** qua phép kiểm của giả thuyết (mức Holm nếu thuộc họ) **và** CI phía liên quan vượt biên. Chỉ áp cho giả thuyết có **p_min ≤ ngưỡng** (§2.5).
 - **Bác bỏ:** CI nằm hoàn toàn phía bên kia của biên so với hướng kỳ vọng.
-- **Không kết luận:** còn lại. Không gọi là "bằng chứng cho giả thuyết rỗng". Với H nằm cột "Không đạt trước 5/11" ở §3.1, trạng thái tối đa là **"mô tả"** (báo ước lượng và CI, không phán SUPPORTED/REJECTED làm căn cứ quyết định).
+- **Không kết luận:** còn lại. Không gọi là "bằng chứng cho giả thuyết rỗng".
+- **Ước lượng (mới ở v2.1):** dành cho H1, H2 trước 5/11. Báo hiệu điểm theo bài, bootstrap CI 95 % và phán quyết `est`/`lo` của giám đốc (H1: `est ≥ 0,1 && lo > 0`; H2: `est ≤ 0,05`), **không báo p và không nói "xác nhận"/"bác bỏ"**. Phán quyết `est`/`lo` là nhãn mô tả của bộ đo, không phải kết luận suy diễn; không dùng làm căn cứ quyết định một mình.
+- Với H nằm cột "Không đạt trước 5/11" ở §3.1, trạng thái tối đa là **"mô tả"** (báo ước lượng và CI, không phán SUPPORTED/REJECTED làm căn cứ quyết định).
 
 ### 2.5 Họ giả thuyết chính và Holm
 
-- **Họ chính Holm (K = 4):** H1, H2, H3, H6 (phép kiểm có hướng trên điểm, đạt số lượt ở cả hai nhánh, `run-plan.md` §4). Sắp p một phía tăng dần p₍₁₎ ≤ … ≤ p₍₄₎; bác bỏ H0 thứ i nếu p₍ᵢ₎ ≤ 0,025/(4 − i + 1), dừng ở lần đầu thất bại. H3 là hợp giao (recall và precision): p(H3) = max của hai p. H2 và H6 là kiểm định không-vượt/tương đương (SR-04): p của phía có kết quả kém hơn.
-- **Nguồn p.** `analyze.mjs` chỉ in p hoán vị cho `compare` (H1, H2; `suite-review.md` §3). Với H3, H6 chưa có p: dùng phương án lùi của bản 1 là p = tỉ lệ mẫu bootstrap (theo bài) vượt biên.
-- **Không vào họ Holm:** **H5** (tỉ lệ bài đạt ngưỡng, `analyze.mjs:84`; mô tả có ngưỡng, không có suy diễn); **H4** (phụ: chỉ đạt khi Phòng Dev merge; 1 bài); **H7** (kiểm riêng, α = 0,025 một phía; chỉ đạt ở Nhánh 1); **H8, H9, H10** (không đạt: mô tả/thăm dò).
+- **Họ chính Holm trước 5/11 (K = 2, có điều kiện):** **H3, H6** (phép kiểm có hướng trên điểm, đạt số lượt ở cả hai nhánh, `run-plan.md` §4; p_min dưới ngưỡng, bảng dưới). **Điều kiện (review gói 2b): hiện `analyze.mjs` không tạo p nào cho H3 và H6** (H3 `:69-75` chỉ so ước lượng điểm với ngưỡng; H6 `:86-91` chỉ `|est| ≤ 0,05`; `compare` chỉ trả CI và p đổi dấu kiểm H0: Δ = 0, không phải p tương đương). Họ này chỉ có hiệu lực khi **SR-26** (P0, `suite-review.md` §5: p bootstrap một phía cho H3, p tương đương cho H6, có test) đã merge, hoặc có script ngoài tương đương có test và hash ghi ở §8 (§2.3). **Phương án lùi đã đăng ký:** nếu đến lúc khóa không có cái nào, H3 và H6 hạ xuống **ước lượng kèm CI** như H1, H2 (§2.4), **họ Holm trước 5/11 rỗng (K = 0)** và không giả thuyết nào được gọi "xác nhận" bằng Holm; ghi vào §9. Sắp p một phía tăng dần p₍₁₎ ≤ p₍₂₎; bác bỏ H0 thứ i nếu p₍ᵢ₎ ≤ 0,025/(2 − i + 1), tức 0,0125 rồi 0,025, dừng ở lần đầu thất bại. H3 là hợp giao (recall và precision): p(H3) = max của hai p. H6 là kiểm định không-vượt/tương đương (SR-04): p = max trên A1, A2 và hai phía (hợp giao), tức p của phía có kết quả kém hơn.
+- **Nguồn p.** `analyze.mjs` chỉ in p hoán vị đổi dấu cho `compare` (H1, H2; `suite-review.md` §3). **H3, H6: p do SR-26 sinh** (chưa có mã): p = (k + 1)/(B + 1), B = 4000, hạt 20261102, lấy lại lượt trong từng ô. H3: lấy lại lượt trong s1 cho cả hai arm; p_recall = tỉ lệ mẫu có Δrecall* ≤ 0,15, p_precision = tỉ lệ mẫu có (m(BASE) − m(TREAT))* ≥ 0,05; p(H3) = max hai p. H6: với mỗi arm A ∈ {A1, A2}, Δ = trung bình theo bài của (điểm A − điểm B0); p_dưới = P*(Δ* ≤ −0,05), p_trên = P*(Δ* ≥ +0,05); p(A) = max hai p; p(H6) = max p(A1), p(A2). Bootstrap phần trăm là **xấp xỉ**, không chính xác như hoán vị: p_min = 1/(B + 1) chỉ là cận thuộc thiết kế mẫu, không bảo đảm mức sai lầm loại I ở r nhỏ; vì vậy mọi phán quyết H3/H6 vẫn kèm CI và cỡ hiệu ứng.
+- **Kiểm tra p_min từng giả thuyết (mới ở v2.1).** Quy tắc: một giả thuyết chỉ được vào họ xác nhận nếu giá trị p nhỏ nhất mà phép kiểm có thể cho (p_min) ≤ ngưỡng Holm thấp nhất của họ. Phép hoán vị đổi dấu theo bài có 2ⁿ cách gán dấu cho n bài nên p một phía ≥ 2⁻ⁿ; **mã hiện tại lấy |m| (`analyze.mjs:51`), tức hai phía, nên p ≥ 2¹⁻ⁿ**. Cột "p_min" ghi một phía (cận dưới thuận lợi nhất), mã hai phía còn lớn gấp đôi.
+
+| H | Nguồn p | Bài (n) | p_min | Ngưỡng Holm cần đạt | Kết quả |
+|---|---|---|---|---|---|
+| H1 | hoán vị đổi dấu theo bài | B1: 3 (c3, c4, c5) · B2: 4 (+ r1) | 2⁻³ = 0,125 · 2⁻⁴ = 0,0625 (mã hai phía: 0,25 · 0,125) | ≤ 0,0125 | **Không đạt** → ra khỏi họ, thành ước lượng |
+| H2 | hoán vị đổi dấu theo bài | B1: 2 (l3, l4) · B2: 4 (l1–l4) | 2⁻² = 0,25 · 2⁻⁴ = 0,0625 (mã hai phía: 0,5 · 0,125) | như trên | **Không đạt** → ra khỏi họ, thành ước lượng |
+| H3 | bootstrap, (k + 1)/(B + 1) — **SR-26, chưa có mã** | 1 bài (s1), r = 10 mỗi arm | 1/4001 = 0,00025 | ≤ 0,0125 | p_min **đạt**; ở lại họ **chỉ khi SR-26 xong**, ngược lại hạ xuống ước lượng |
+| H6 | bootstrap, (k + 1)/(B + 1), hợp giao A1/A2 — **SR-26, chưa có mã** | B1: 9 · B2: 13 | 1/4001 = 0,00025 (hoán vị đổi dấu nếu dùng: 2⁻⁹ = 0,00195 · 2⁻¹³ = 0,00012) | ≤ 0,0125 | p_min **đạt**; ở lại họ **chỉ khi SR-26 xong**, ngược lại hạ xuống ước lượng |
+
+  p_min chỉ nói phép kiểm **có thể** cho p đủ nhỏ; nó **không** nói công suất đủ. H6 có p_min đạt nhưng TOST ±5 pp không đạt công suất (§3.1 H6), nên "Không kết luận" vẫn được dự báo trước. Với H3, p_min nhỏ vì bootstrap lấy lại lượt trong **một** bài: suy diễn chỉ về s1, và s1 **chưa được xét trần** (không có trong pilot; §2.7 điều khoản dự phòng).
+- **Lập luận chọn hướng cho H1, H2 (đổi sang ước lượng) thay vì ba hướng còn lại:**
+
+| Hướng | Có làm được trước 5/11 không? | Quyết định |
+|---|---|---|
+| Thêm bài (t1–t5, `l1-modules`, `l2-chain`) | **Không.** Kiểm lúc soạn v2.1: `bench/vs-claude/tasks/` ở nhánh này chỉ có 13 `task.json`, không có t1–t5, `l1-modules`, `l2-chain`. `task.json` t1–t5 nằm ở nhánh nhiệm vụ Dev T-20261102-175855-1e6 (commit `30101dd`, gộp `e71bc91`) **chưa gộp vào nhánh này** (`git merge-base --is-ancestor e71bc91 HEAD` thất bại; xem §2.6) | Không chọn; chuyển thành điều kiện khóa của H1′/H2′ |
+| Hoán vị theo lượt, phân tầng theo bài | Về lý thuyết có (p_min qua tích, §2.6) nhưng **`analyze.mjs` chưa có hàm này**; mã chưa merge, chưa test. Tự viết script ngoài ngay trước 5/11 thì thiếu test và hash trước khi mở dữ liệu | Không chọn cho trước 5/11; đặc tả ở SR-25, dùng cho H1′/H2′ |
+| Tách họ Holm | Không giải quyết được: p_min là thuộc tính của n bài, không đổi khi tách họ. Dù H1 đứng một mình (K = 1, ngưỡng 0,025) thì 0,0625 vẫn lớn hơn | Không chọn |
+| **Đổi H1, H2 sang ước lượng kèm CI** | **Có**, dùng đúng đầu ra hiện có của `compare` (`est`, `lo`, `hi`, phán quyết) | **Chọn**: là cách duy nhất trung thực với số bài thật trước 5/11 |
+
+- **Không vào họ Holm:** **H1, H2** (ước lượng, bảng trên); **H5** (tỉ lệ bài đạt ngưỡng, `analyze.mjs:84`; mô tả có ngưỡng, không có suy diễn); **H4** (phụ: chỉ đạt khi Phòng Dev merge; 1 bài); **H7** (kiểm riêng, α = 0,025 một phía; chỉ đạt ở Nhánh 1); **H8, H9, H10** (không đạt: mô tả/thăm dò).
 - **B-01**: họ riêng, hợp giao (IUT) của ba TOST, không hiệu chỉnh thêm. **B-02**: không Holm (cơ chế xác định; chất lượng chỉ mô tả).
 - Mọi phân tích theo từng bài, gộp harness cũ, so với Opus, hay chọn sau khi thấy dữ liệu là **khám phá** (§5).
+
+### 2.6 Họ H1′/H2′ sau 5/11 — **dự kiến, chưa khóa**
+
+Trạng thái: **dự kiến, chưa khóa.** Mục này chưa có hiệu lực xác nhận; chưa giả thuyết nào ở đây được báo "xác nhận" hay "bác bỏ" cho tới khi cả hai điều kiện khóa dưới đây thỏa và ghi vào §8/§9.
+
+- **Giả thuyết (dự kiến).** H1′: điểm B0 > A0-sonnet trên bài **phân rã được**, tập ứng viên `l1-modules` (5 module độc lập) và t1–t5. H2′: điểm B0 **không** hơn A0-sonnet (không-vượt, biên +0,05) trên bài **chuỗi phụ thuộc**, tập ứng viên `l2-chain` (4 tầng phụ thuộc). Vì phép hoán vị mặc định kiểm H0 sắc Δ = 0, **H2′ dùng hoán vị sau khi dịch điểm B0 đi biên**: kiểm H0: Δ ≥ +0,05 với `alt = 'less'` (tham số `margin = 0,05` của SR-25; thống kê T − margin). H1′ dùng `margin = 0`. Gán bài vào H1′ hay H2′ theo mô tả bài (độc lập/chuỗi), **cố định trước khi chạy** và không đổi sau khi thấy dữ liệu; tập cuối cùng sau lọc trần §2.7 chốt khi khóa.
+- **Phép kiểm.** Hoán vị **nhãn arm theo lượt, phân tầng theo bài**: trong từng bài b, 2r_b lượt (r_b mỗi arm) được gán lại nhãn B0/A0 theo mọi cách chọn r_b lượt làm B0; thống kê T = trung bình theo bài của (TB điểm B0 − TB điểm A0); p một phía = tỉ lệ cách gán có T* ≥ T_quan sát (sai số 1e-12). Liệt kê đủ khi ∏_b C(2r_b, r_b) ≤ 10⁶, ngược lại lấy mẫu Monte Carlo 10 000 lần với p = (k + 1)/(M + 1). Hạt 20261102. Đặc tả hàm và test: **SR-25** (`suite-review.md` §5).
+- **p_min = 1 / ∏_b C(2r_b, r_b)** (tích qua các bài, **không** phải C(2r, r) của một bài). C(2r, r) với r = 1…6: 2, 6, 20, 70, 252, 924. Thay số (K = 2: ngưỡng 0,0125 cho p₍₁₎ và 0,025 cho p₍₂₎; để mỗi giả thuyết đều có thể đứng thứ nhất ta đòi p_min ≤ 0,0125):
+
+| Tình huống (giả định r mỗi ô) | ∏ C(2r_b, r_b) | p_min | ≤ 0,0125? |
+|---|---|---|---|
+| H1′, 6 bài (`l1-modules` + t1–t5), r = 1 | 2⁶ = 64 | 0,0156 | **Không** |
+| H1′, 6 bài, r = 2 | 6⁶ = 46 656 | 2,1·10⁻⁵ | Có |
+| H1′ chỉ `l1-modules` (sau lọc trần, nếu t1–t5 bị loại), r = 4 | 70 | 0,0143 | **Không** |
+| H1′ chỉ `l1-modules`, r = 5 | 252 | 0,0040 | Có |
+| H2′, `l2-chain`, r = 3 | 20 | 0,05 | **Không** |
+| H2′, `l2-chain`, r = 5 | 252 | 0,0040 | Có |
+
+  Hệ quả cho kế hoạch: nếu H1′/H2′ rơi về **một bài**, cần **r ≥ 5** mỗi ô; nếu còn đủ 6 bài thì r ≥ 2. Kế hoạch hiện tại của `run-plan.md` §3.2 chỉ xếp B0 × t1–t5 × r = 1 (W5), cho p_min = 0,0156 > 0,0125: **không đủ** cho H1′; số lượt phải nâng ở vòng sau 5/11. Bài có hiệu bằng 0 ở mọi lượt (trần) không đóng góp vào T nhưng vẫn tăng tích, nên p_min chỉ là cận thuận lợi nhất.
+- **Giới hạn suy diễn.** Hoán vị theo lượt cho suy diễn **tác động cố định**: kết luận chỉ cho **các bài đã đo** (và cấu hình, hash CCoding, mô hình đã dùng), **không khái quát sang tổng thể bài** (bài không được rút ngẫu nhiên từ một quần thể). Nói "B0 hơn A0 trên `l1-modules` và t1–t5", không nói "B0 hơn A0 ở việc phân rã được".
+- **Hai điều kiện khóa** (cả hai phải đúng, ghi hash vào §8):
+  1. Phép hoán vị phân tầng theo lượt **đã merge vào `analyze.mjs` và có test** (SR-25).
+  2. Các bài `l1-modules`, `l2-chain`, t1–t5 **đã có `task.json`** trong `bench/vs-claude/tasks/` (nhiệm vụ Dev T-20261102-175855-1e6).
+- **Trạng thái hiện tại của hai điều kiện** (tự kiểm lúc soạn v2.1 bằng đọc tệp và `git log`; nhánh `ccoding/t-20261102-183435-da7--s1`, HEAD `3227da0`):
+  1. **Chưa đạt.** `analyze.mjs` chỉ có hoán vị đổi dấu theo bài (`:51`); tìm "strat", "phân tầng" trong `bench/vs-claude/` chỉ thấy `harness/stats.mjs` (bootstrap phân tầng cho harness cũ, không phải hoán vị, không thuộc `analyze.mjs`). SR-25 chưa có người làm.
+  2. **Chưa đạt ở nhánh này.** `bench/vs-claude/tasks/` có 13 `task.json` (a1, c1–c5, l1-oncall, l2-knights, l3, l4, r1, re1, s1), không có t1–t5, `l1-modules`, `l2-chain`. Nhánh `ccoding/t-20261102-175855-1e6` có commit `30101dd` ("task.json cho t1–t5") và `e71bc91`; `e71bc91` **không** là tổ tiên của HEAD hiện tại. Chưa kiểm trên nhánh đó xem `l1-modules` và `l2-chain` (commit `e0b2da1` đưa vào `harness/`) đã có `task.json` hay chưa: **cần kiểm trước khi khóa**.
+- **Nếu không đủ điều kiện trước khi chạy:** H1′/H2′ giữ ở mức ước lượng như H1, H2; không dùng tên "xác nhận".
+
+### 2.7 Quy tắc trần điểm (thêm ở v2.1)
+
+- **Quy tắc.** Bài mà **mọi arm** đạt điểm ≥ 0,99 ở pilot **không được dùng làm bằng chứng điểm cho H1 và H10**; ở các bài đó chỉ phân tích **thời gian** và **token** (H5, B-01(a)(b), mô tả). Đánh giá trần chỉ bằng pilot, **không** dùng dữ liệu xác nhận.
+- **Dữ liệu căn cứ.** Pilot `pilot1` của giám đốc: server dựng từ `main` (e0bd2f4), **n = 1 lượt mỗi ô**, **chưa dùng `--judge`**, 8 bài × 3 arm (A0-sonnet, B0, B5): c1, c2, c3, c4, c5, l2-knights, l4-startup-order, re1. Cả 24 lượt trong bảng đề bài ghi điểm 1,00 (mọi arm đạt ≥ 0,99 ở cả 8 bài). **Số liệu này là quan sát n = 1, không phải kết luận; không vào dữ liệu xác nhận W1–W5; không dùng làm đầu vào cho p_min hay baseline.** (Đề bài nói "23/39 lượt" nhưng bảng có 24 dòng; chỗ lệch này được đối chiếu ở `context/pilot1-2026-11-02.md` nếu tệp đã có; v2.1 chỉ dẫn định tính, không dẫn tỉ lệ.) 5 bài chưa có dữ liệu pilot (l1-oncall, l3, s1, a1, r1) chưa xét trần.
+- **Hệ quả cho H1.** c3, c4, c5 (ba bài của H1 ở B1) bị loại khỏi bằng chứng điểm; H1 ở B1 **không còn bài nào có bằng chứng điểm**, ở B2 chỉ còn r1 nếu `repo/` sửa và `--judge` không chạm trần. H1 vẫn báo như ước lượng (§2.4), kèm "trần: không có bằng chứng điểm" khi n bài = 0. **Cảnh báo cho H2:** l2-knights, l4 cũng chạm trần ở pilot; Δ = 0 do trần **không** là bằng chứng "B0 không hơn" (trần che mất khác biệt); báo kèm nhãn trần.
+- **Hệ quả cho H10.** Pilot loại 8 trong 13 bài khỏi bằng chứng điểm; còn l1-oncall, l3, s1, a1, r1 (5 bài, `size` chưa định nghĩa, SR-05). Nếu trần kéo dài, **H10 không kiểm được về điểm trên bộ 13 bài**; H10 vẫn ở mức thăm dò (§3.1) và chỉ báo thời gian/token theo `size`.
+- **Hướng xử lý (đề xuất bài cần thêm).** Cần bài khó hơn để điểm không chạm trần: `l1-modules` (192 test ẩn), `l2-chain` (149 test ẩn) và t1–t5; lưu ý t1–t5 từng đạt 1,000 ở 36/36 lượt A0-sonnet (C7–C9), nên có thể chạm trần một phía và bị lọc bởi chính quy tắc này. Đây là lý do H1′/H2′ (§2.6) để dành cho `l1-modules`, `l2-chain` làm bài chính.
+- **Quyết định thích ứng trước khóa.** Quy tắc đặt sau khi xem pilot (tức là sau khi biết kết quả của 8 bài) nên được ghi ở §9 mục 3 như quyết định thích ứng, không giấu; pilot không có `--judge` nên điểm 1,00 có thể do grader regex dễ (SR-07, SR-09) chứ không phải do bài dễ: đây là nguy cơ cần kiểm, không phải kết luận.
+- **Điều khoản dự phòng cho s1/H3 (đăng ký trước khi có dữ liệu s1).** s1 chưa có trong pilot. Nếu pilot đầy đủ của giám đốc cho thấy s1 mọi arm có recall và precision ≥ 0,99 thì recall/precision của H3 suy biến (Δ = 0 do trần): H3 hạ xuống **mô tả** và ra khỏi họ Holm (K giảm một), ghi §9. Đánh giá trần vẫn chỉ bằng pilot, không bằng dữ liệu W1–W5.
 
 ## 3. Kế hoạch phân tích — các giả thuyết
 
@@ -98,20 +156,20 @@ Quy ước chung: `node bench/vs-claude/analyze.mjs <out>` với `--baseline A0-
 
 | H | Câu giả thuyết (giám đốc) | Phép kiểm và ngưỡng (`analyze.mjs`) | Arm × bài | N tối thiểu | Trước 5/11 | Khóa |
 |---|---|---|---|---|---|---|
-| **H1** | Việc phân rã được (coding/design, `size ≥ 3`): B0 hơn A0-sonnet | Lọc `:62`; SUPPORTED nếu `est ≥ 0,1 && lo > 0` (`:63`) | A0-sonnet, B0 × c3, c4, c5 (+ r1 khi `repo/` sửa) | r = 3 mỗi ô: 18 (B1) / 24 (B2) | **B1: đạt (W1); B2: đạt (W2)** | chờ SR-01, SR-03, SR-05 (ngưỡng `size ≥ 3`), SR-07 (r1 `--judge`) |
-| **H2** | Suy luận ràng buộc (logic): B0 *không* tốt hơn A0-sonnet | Lọc logic `:66`; SUPPORTED nếu `est ≤ 0,05` (`:67`). **Đăng ký thêm:** cận trên CI 90 % của Δ ≤ +0,05 (không-vượt) | A0-sonnet, B0 × l3, l4 (+ l1, l2) | r = 3: 12 (B1) / 24 (B2) | **B1: đạt; B2: đạt (W2)** | chờ SR-01, SR-03, SR-04, SR-16 (tính duy nhất l1) |
-| **H3** | Review nâng recall lỗi gieo mà không giảm precision | recall: `m(TREAT) − m(BASE) ≥ 0,15` và precision: `m(BASE) − m(TREAT) ≤ 0,05` (`:70-74`) | A0-sonnet, B0 × s1 | r = 10 mỗi arm: 20 lượt (σ recall = 0,12 giả định) | **B1: đạt (W2); B2: đạt (W2)**, chỉ về s1 | chờ SR-01, SR-03; SR-10 (P1) có thể đổi phép kiểm sang B0 vs B2 → v2.1 |
-| **H4** | Phát hiện mơ hồ gieo sẵn (requirements) | Lọc `requirements` `:77`; `est ≥ 0,2` (`:78`) | A0-sonnet, B0 × a1, `--judge` | r = 11 mỗi arm: 22 lượt (σ = 0,17 giả định) | **B1: không đạt** (a1 lỗi ENOENT); **B2: đạt (W4)** | chờ SR-01, SR-03, SR-07, SR-08 |
+| **H1** | Việc phân rã được (coding/design, `size ≥ 3`): B0 hơn A0-sonnet | Lọc `:62`; phán quyết `est ≥ 0,1 && lo > 0` (`:63`) — **chỉ ước lượng**: hiệu điểm theo bài, bootstrap CI 95 %, không báo p, không Holm (§2.5) | A0-sonnet, B0 × c3, c4, c5 (+ r1 khi `repo/` sửa) | r = 3 mỗi ô: 18 (B1) / 24 (B2) | **Ước lượng, không phải kiểm định xác nhận** (p_min 0,125 B1 / 0,0625 B2 > ngưỡng). Chạy được ở W1 (B1) / W2 (B2). **Điểm: không có bằng chứng** ở c3–c5 vì trần (§2.7), nên chỉ báo thời gian/token ở các bài đó; H1′ xác nhận chờ khóa §2.6 | chờ SR-01, SR-03, SR-05 (ngưỡng `size ≥ 3`), SR-07 (r1 `--judge`) |
+| **H2** | Suy luận ràng buộc (logic): B0 *không* tốt hơn A0-sonnet | Lọc logic `:66`; phán quyết `est ≤ 0,05` (`:67`) — **chỉ ước lượng**: hiệu điểm theo bài, bootstrap CI 95 %, không báo p, không Holm. **Đăng ký thêm:** cận trên CI 90 % của Δ ≤ +0,05 (không-vượt) khi SR-04 xong, vẫn ở mức mô tả | A0-sonnet, B0 × l3, l4 (+ l1, l2) | r = 3: 12 (B1) / 24 (B2) | **Ước lượng, không phải kiểm định xác nhận** (p_min 0,25 B1 / 0,0625 B2). Chạy được ở B1/B2. Báo nhãn trần nếu l2-knights, l4 vẫn 1,00 ở mọi arm (Δ = 0 do trần không phải bằng chứng "không hơn") | chờ SR-01, SR-03, SR-04, SR-16 (tính duy nhất l1) |
+| **H3** | Review nâng recall lỗi gieo mà không giảm precision | recall: `m(TREAT) − m(BASE) ≥ 0,15` và precision: `m(BASE) − m(TREAT) ≤ 0,05` (`:70-74`); **họ Holm K = 2** (p_min 0,00025 ≤ 0,0125) | A0-sonnet, B0 × s1 | r = 10 mỗi arm: 20 lượt (σ recall = 0,12 giả định) | **B1: đạt (W2); B2: đạt (W2)**, chỉ về s1 | chờ SR-01, SR-03, **SR-26** (p bootstrap; thiếu thì hạ xuống ước lượng, §2.5); SR-10 (P1) có thể đổi phép kiểm sang B0 vs B2 → v2.1 |
+| **H4** | Phát hiện mơ hồ gieo sẵn (requirements) | Lọc `requirements` `:77`; `est ≥ 0,2` (`:78`) | A0-sonnet, B0 × a1, `--judge` | r = 11 mỗi arm: 22 lượt (σ = 0,17 giả định) | **B1: không đạt** (a1 lỗi ENOENT); **B2: đạt (W4)** | chờ SR-01, SR-03, SR-07, SR-08a |
 | **H5** | Chi phí B0/A0: token có trọng số ≥ 3× **và** thời gian ≥ 1,5× ở ≥ 80 % bài | tỉ số trung vị theo bài `:81-82`; đếm `x ≥ 3 && wr[i] ≥ 1,5` (`:83`); SUPPORTED nếu ≥ 0,8 (`:84`) | A0-sonnet, B0 × mọi bài | r = 3 (trung vị): 54 (B1) / 78 (B2) | **B1: đạt (W1); B2: đạt (W1–W2)** | chờ SR-01, SR-03, **SR-06 (lỗi lệch chỉ số `:81-83`)** |
-| **H6** | Agent đơn cùng tính toán (A1/A2) ≈ B0 | `|est| ≤ 0,05` với một trong A1/A2 (`:89-90`). **Đăng ký:** báo riêng A1 và A2; kết luận chính = cả hai nằm trong ±0,05 theo CI 90 % (SR-04, SR-12) | A1, A2, B0 × mọi bài | A1 r = 3, A2 r = 2: 45 (B1, W3) / 65 (B2, W5) | **B1: đạt; B2: đạt** | chờ SR-01, SR-03, SR-04; SR-12 (P1) |
+| **H6** | Agent đơn cùng tính toán (A1/A2) ≈ B0 | `|est| ≤ 0,05` với một trong A1/A2 (`:89-90`). **Đăng ký:** báo riêng A1 và A2; kết luận chính = cả hai nằm trong ±0,05 theo CI 90 % (SR-04, SR-12); **họ Holm K = 2** (p_min 0,00025 ≤ 0,0125; công suất vẫn thiếu, xem ghi chú) | A1, A2, B0 × mọi bài | A1 r = 3, A2 r = 2: 45 (B1, W3) / 65 (B2, W5) | **B1: đạt; B2: đạt** (p_min; công suất TOST thiếu) | chờ SR-01, SR-03, SR-04, **SR-26** (p tương đương; thiếu thì hạ xuống ước lượng, §2.5); SR-12 (P1) |
 | **H7** | Ổn định: SD(B0)/SD(A0) ≤ 0,7 | trung vị tỉ số SD theo bài ≤ 0,7 và ≥ 3 bài (`:93-94`) | A0-sonnet, B0 × mọi bài | r = 5 mỗi ô: 90 (B1) / 130 (B2) | **B1: đạt (W4); B2: không đạt** (cần W6, 14,6 triệu) | chờ SR-01, SR-03; SR-14 (P1) |
 | **H8** | Thất bại điều phối (thiếu sản phẩm / bỏ yêu cầu): tỉ lệ `formatMiss` của TREAT > BASE | `fm(TREAT) > fm(BASE)` (`:97-99`); `fail(arm)` coding `:98` | mọi bài | ≈ 100+ mỗi arm (≥ 6 sự kiện) | **Không đạt cả hai nhánh** | chờ SR-01, SR-03, **SR-13 (P1)** |
-| **H9** | Bám nguồn (research): precision trích dẫn và từ chối đúng B0 hơn ≥ 10 pp | `dP ≥ 0,1 && dR ≥ 0,1` (`:104-106`); lọc `research` `:102` | A0-sonnet, B0 × re1 | ≥ 35 mỗi arm (trích dẫn); ≥ 75 mỗi arm (từ chối nhị phân) | **Không đạt cả hai nhánh** | chờ SR-01, SR-03, SR-07, SR-08; SR-18 (P1) |
-| **H10** | Lợi thế tăng theo kích thước bài (`size`) | độ dốc OLS của delta theo `size` (`:109-111`); hoán vị 5000 (`:112-113`); SUPPORTED nếu `b > 0 && p < 0,05` (`:114`) | A0-sonnet, B0 × mọi bài | thêm lượt không tăng công suất (biến giữa bài, n = 9–13) | **Không đạt cả hai nhánh** | chờ SR-01, SR-03, **SR-05 (định nghĩa `size`, điều chỉnh loại bài, Fisher-Yates)** |
+| **H9** | Bám nguồn (research): precision trích dẫn và từ chối đúng B0 hơn ≥ 10 pp | `dP ≥ 0,1 && dR ≥ 0,1` (`:104-106`); lọc `research` `:102` | A0-sonnet, B0 × re1 | ≥ 35 mỗi arm (trích dẫn); ≥ 75 mỗi arm (từ chối nhị phân) | **Không đạt cả hai nhánh** | chờ SR-01, SR-03, SR-07, SR-08a; SR-18 (P1) |
+| **H10** | Lợi thế tăng theo kích thước bài (`size`) | độ dốc OLS của delta theo `size` (`:109-111`); hoán vị 5000 (`:112-113`); SUPPORTED nếu `b > 0 && p < 0,05` (`:114`) | A0-sonnet, B0 × mọi bài | thêm lượt không tăng công suất (biến giữa bài, n = 9–13) | **Không đạt cả hai nhánh**; thêm: nếu trần kéo dài (§2.7) thì **không kiểm được về điểm trên 13 bài** (chỉ còn 5 bài chưa chạm trần ở pilot) | chờ SR-01, SR-03, **SR-05 (định nghĩa `size`, điều chỉnh loại bài, Fisher-Yates)** |
 
 **Ghi chú đăng ký cho từng H** (chỉ những điểm làm đổi cách diễn giải; chi tiết nguy cơ ở `suite-review.md` §3):
 
-- **H1.** Hướng kỳ vọng B0 > A0-sonnet. Với 4 bài, `lo > 0` gần như đòi cả 4 delta cùng dương và p ≥ 0,125. **Trần điểm:** A0-sonnet đạt test ẩn 1,000 trên 36/36 lượt t1–t5 (`run-plan.md` §4 H1), nên Δ ≥ +10 pp có thể không thực hiện được nếu c3–c5 cũng gần trần; kết quả "Không kết luận do trần" được dự báo trước. Ngưỡng `size ≥ 3` được chọn sau khi biết bộ bài (nguy cơ tùy chỉnh theo dữ liệu), nên **đăng ký cố định danh sách bài: c3, c4, c5 và r1**, không đổi sau khi thấy dữ liệu; c1, c2 (gắn H1 trong `task.json` nhưng `size = 2`) ra ngoài H1.
+- **H1.** Hướng kỳ vọng B0 > A0-sonnet. **Từ v2.1 là ước lượng, không phải phép kiểm xác nhận** (§2.5). Với 3–4 bài, `lo > 0` gần như đòi cả 3–4 delta cùng dương; p hoán vị đổi dấu không dưới 0,0625 nên không dùng làm căn cứ. **Trần điểm (pilot, §2.7):** c3, c4, c5 đều 1,00 ở A0-sonnet, B0, B5 trong pilot n = 1, nên bị loại khỏi bằng chứng điểm. Trước đó, bản 2.0 viết: **Trần điểm:** A0-sonnet đạt test ẩn 1,000 trên 36/36 lượt t1–t5 (`run-plan.md` §4 H1), nên Δ ≥ +10 pp có thể không thực hiện được nếu c3–c5 cũng gần trần; kết quả "Không kết luận do trần" được dự báo trước. Ngưỡng `size ≥ 3` được chọn sau khi biết bộ bài (nguy cơ tùy chỉnh theo dữ liệu), nên **đăng ký cố định danh sách bài: c3, c4, c5 và r1**, không đổi sau khi thấy dữ liệu; c1, c2 (gắn H1 trong `task.json` nhưng `size = 2`) ra ngoài H1.
 - **H2.** Hướng "B0 không tốt hơn" trộn với "không kém hơn": `est ≤ 0,05` vẫn SUPPORTED khi B0 kém nhiều. Do đó phán quyết **đăng ký** là hai chiều: (i) phán quyết của giám đốc theo `:67`; (ii) CI 90 % của Δ theo bài nằm trong [−0,05; +0,05] để nói "tương đương", hoặc cận trên ≤ +0,05 để nói "không vượt". l1, l2 dễ chạm trần ở cả hai arm.
 - **H3.** Phép kiểm so B0 với A0-sonnet, **khác nhau ở cả kiến trúc lẫn review**; hiệu ứng review riêng chỉ đo được bằng B0 so với B2 (review tắt, chỉ in ra ở `:72`). Đăng ký trước đúng phép kiểm giám đốc (`:73`) và **diễn giải chỉ ở mức "B0 so với A0-sonnet trên s1"**; chạy B2 × s1 nếu còn ngân sách (mô tả). Recall có bước 1/7 = 14,3 pp. Báo `decoyHits` riêng (SR-17). Precision NaN khi không có finding: lượt đó không vào trung bình precision, ghi số lượt loại.
 - **H4.** Hai điều kiện bắt buộc cho bài này: `--judge` bật cho **mọi** arm của a1 (SR-07) và khóa một chế độ chấm cho cả nghiên cứu. Bước điểm 1/6 = 16,7 pp, ngưỡng 20 pp = 2 mục. `task.json` của l3, r1 gắn H4 nhưng `analyze.mjs` chỉ tính loại `requirements` (= a1): đăng ký theo **mã**, không theo nhãn `hypotheses`.
@@ -126,7 +184,7 @@ Quy ước chung: `node bench/vs-claude/analyze.mjs <out>` với `--baseline A0-
 
 ### 3.2 Giả thuyết mới: B-01 (làn đơn) và B-02 (cổng chất lượng)
 
-#### B-01 — Làn đơn tương đương ±15 % so với A0-sonnet (thay P9 của bản 1)
+#### B-01 — Làn đơn tương đương ±15 % so với A0-sonnet (thay ĐK-P9 của bản 1)
 
 - **Lý do.** Mục tiêu của giám đốc: việc nhỏ dùng agent đơn, tối ưu chi phí (`improvement-backlog.md` §3). Làn nhanh C7 đã chậm 1,44× và đắt 2,72× Sonnet đơn. **Chưa có dữ liệu, chưa thể chạy; chỉ chạy sau khi B-01 triển khai và hash ghi vào §8.**
 - **Arm.** `SL` (làn đơn, sau B-01) so với `A0-sonnet`. `FL` (làn nhanh hiện có) chỉ là **đối chứng mô tả**, không là giả thuyết xác nhận: dữ liệu C7+C9 đã cho FL/A0-sonnet = token ×4,09 và thời gian ×2,20 (`run-plan.md` §4), nên dự báo FL không tương đương ±15 %. Việc dự báo này dựa trên dữ liệu đã thấy, nên không dùng làm xác nhận.
@@ -135,7 +193,7 @@ Quy ước chung: `node bench/vs-claude/analyze.mjs <out>` với `--baseline A0-
   - **(a) token có trọng số** (`tokens.weighted`): R_a = TB(SL)/TB(A0-sonnet). **Độ nhạy: USD ước tính** theo bảng giá có phiên bản theo model (chờ SR-02; không đổi chỉ số chính nếu kết luận khác, báo cả hai).
   - **(b) thời gian thực** (`wallSec`): R_b. Polling 10 giây (`ccoding.mjs:38`) làm tỉ số của bài ngắn nhiễu.
   - **(c) điểm tương đối**: R_c = TB(score SL)/TB(score A0-sonnet).
-- **Ngưỡng.** Mỗi đại lượng: R ∈ [0,85; 1,15]. Tỉ số tính bằng trung bình theo bài của log-tỉ số rồi lấy mũ (thang log, `suite-review.md` §4.2.3). **Cảnh báo (c):** nếu A0-sonnet ≈ 1,00 (như t1–t5), biên ±15 % của điểm rất rộng; báo kèm Δ tuyệt đối (pp). Điều kiện không kém hơn 2 pp của P9 chuyển sang B-02 (chất lượng).
+- **Ngưỡng.** Mỗi đại lượng: R ∈ [0,85; 1,15]. Tỉ số tính bằng trung bình theo bài của log-tỉ số rồi lấy mũ (thang log, `suite-review.md` §4.2.3). **Cảnh báo (c):** nếu A0-sonnet ≈ 1,00 (như t1–t5), biên ±15 % của điểm rất rộng; báo kèm Δ tuyệt đối (pp). Điều kiện không kém hơn 2 pp của ĐK-P9 chuyển sang B-02 (chất lượng).
 - **Phép kiểm.** TOST: bootstrap **90 % CI** (theo bài, lấy lại lượt trong ô) nằm trong [0,85; 1,15]; α = 0,05 mỗi phía; hạt 20261102. Kết luận B-01 = hợp giao (IUT) của (a), (b), (c); không hiệu chỉnh thêm.
 - **N.** `run-plan.md` §4: (a) 30/arm, **(b) 45/arm**, (c) 8–17/arm. Chọn **45/arm = 9 lượt mỗi bài × 5 bài** cho cả SL và A0-sonnet; A0-sonnet có thêm 36 lượt lịch sử C7+C9 chỉ làm độ nhạy.
 - **Trước 5/11.** **B1: không đạt** (không có FL/SL, t1–t5). **B2: đạt (W4) cho FL; cho SL chỉ nếu arm có mặt trước W4.** Nếu SL chưa có thì dành 15,4 triệu cho H4 và H3 (`run-plan.md` §4); B-01 xác nhận chờ vòng sau 5/11.
@@ -156,48 +214,50 @@ Quy ước chung: `node bench/vs-claude/analyze.mjs <out>` với `--baseline A0-
 - **Khóa.** B02-M chờ cổng (B-02 §4.1, B-10) merge và hàm phát lại; B02-G, B02-Q chờ SR-01, SR-03, SR-13. B02-M không phụ thuộc hạn mức nên chạy trước mọi vòng LLM.
 - **Giới hạn đã biết.** B-02 và B-10 dựa trên **1 ca** (t5 C9 lượt 2); nguyên nhân "plan hỏng một phần hay `parsePlan` cắt" chưa kiểm vì `calls.jsonl` ở server cloud, không có trong repo (`improvement-backlog.md` §6). Tần suất loại lỗi này chưa ước lượng được.
 
-### 3.3 Bộ phụ: P1–P9 (giả thuyết bản 1, t1–t5 và `l1-modules`, `l2-chain`, t6–t8)
+### 3.3 Bộ phụ: ĐK-P1–P9 (giả thuyết bản 1, t1–t5 và `l1-modules`, `l2-chain`, t6–t8)
 
-Đổi mã H_i → P_i (i = 1..9) theo thứ tự. Nội dung giữ như v1.0; **P_i không được dùng với nghĩa của H_i trong bộ đo của giám đốc**. Dữ liệu xác nhận là C9 (làn nhanh 6 lượt, Claude Code Sonnet 8 lượt mỗi bài t1–t5, chạy cùng lúc), `l1-modules`/`l2-chain`, t6–t8 (chưa có). C9 dừng giữa chừng do hạn mức (`context/c9-partial-2026-11-02.md`): số lượt thực có ghi vào §9 khi nạp. Phép kiểm chung: (i) p hoán vị phân tầng theo bài (hạt 20261102), (ii) CI bootstrap 95 % phân tầng (10 000 mẫu), (iii) Cliff's delta (báo, không dùng quyết định); lệnh gốc `node bench/vs-claude/harness/stats.mjs --baseline claude-sonnet --rounds C9 --tasks <danh sách> --format md [--exclude-run …]`. Loại lượt: E1–E4 (§4.2).
+Đổi mã H_i → ĐK-P_i (i = 1..9) theo thứ tự. Nội dung giữ như v1.0; **ĐK-P_i không được dùng với nghĩa của H_i trong bộ đo của giám đốc**. **Quy ước tên (thống nhất với `improvement-backlog.md` §6): chỉ viết `ĐK-P_i` (ĐK-P1…ĐK-P9), không viết `P_i` trần.** Lý do: `P0/P1/P2` còn là mức ưu tiên của SR (`suite-review.md` §5) và `P1–P4` là bản vá prompt trong backlog, nên `P_i` trần gây nhầm; tiền tố ĐK khớp tên dùng sẵn ở backlog nên không phải đổi nhiều nơi. Dữ liệu xác nhận là C9 (làn nhanh 6 lượt, Claude Code Sonnet 8 lượt mỗi bài t1–t5, chạy cùng lúc), `l1-modules`/`l2-chain`, t6–t8 (chưa có). C9 dừng giữa chừng do hạn mức (`context/c9-partial-2026-11-02.md`): số lượt thực có ghi vào §9 khi nạp. Phép kiểm chung: (i) p hoán vị phân tầng theo bài (hạt 20261102), (ii) CI bootstrap 95 % phân tầng (10 000 mẫu), (iii) Cliff's delta (báo, không dùng quyết định); lệnh gốc `node bench/vs-claude/harness/stats.mjs --baseline claude-sonnet --rounds C9 --tasks <danh sách> --format md [--exclude-run …]`. Loại lượt: E1–E4 (§4.2).
 
 | Mã | Giả thuyết (bản 1) | Ngưỡng | Phép kiểm | N (mỗi ô) và công suất | Kết quả bác bỏ |
 |---|---|---|---|---|---|
-| **P1** | Thời gian làn nhanh / Claude Code Sonnet trên t1–t5 (C9 only) | R > 1,3 (H0: R ≤ 1,3). Kỳ vọng trước từ C7+C8: R = 1,545, CI [1,452; 1,647]. Δwall = 25,7 s | Hoán vị phân tầng một phía trên wall_CC/1,3; CI bootstrap của R; **Holm bộ cũ** (xem dưới) | 6/8 (C9). Kịch bản σ cũ: công suất 3–11 %; kịch bản CV 25 %/8 %: 79–93 %. Công suất tính lại < 50 % sau C9 ⇒ báo "thiếu công suất" | CI 95 % của R có cận trên ≤ 1,3 |
-| **P2** | Chi phí làn nhanh > Claude Code Sonnet | D > 0; "đáng kể" nếu cận dưới CI ≥ 0,1 USD | Hoán vị một phía; CI bootstrap | 6/8; chênh nhỏ nhất phát hiện ≈ 0,23–0,28 USD; Δ = 0,1 USD không có công suất (z = 1,24) | Cận trên CI của D ≤ 0 |
-| **P3** | Tỉ lệ test ẩn đạt của làn nhanh không kém hơn, biên 2 điểm % | H0: Δ ≥ 0,02 (tỉ lệ test ẩn lỗi CC − Sonnet) | Kiểm định điểm một phía (Miettinen–Nurminen hoặc Newcombe; chưa kiểm nguồn thuật toán); khi 0 lỗi cả hai nhánh: P = (1 − 0,02)^N. **Đơn vị là test ẩn**, không phải lượt (cận trên tỉ lệ lượt lỗi ≈ 11,6 % với 30 lượt) | N test = 2 766 (6 × 461) và 3 688 (8 × 461) ≫ 265. Các test trong một lượt không độc lập (C7 t2: 8/60 lỗi từ hai quy tắc): kết quả theo test lạc quan, bắt buộc báo kèm số lỗi theo lượt | Cận dưới CI 95 % của Δ ≥ 0,02 |
-| **P4** | Chi phí cố định của điều phối gần hằng số (phụ) | a > 30 s trong y = a + b·x (y = `wall_s` làn nhanh; x = TB Sonnet cùng bài cùng vòng) | CI bootstrap 95 % của a; không Holm | C9 + `l1-modules` + `l2-chain` (7 điểm x); không có công thức n riêng (ngoại suy về x = 0) | Cận trên CI của a ≤ 30 s; hoặc b ≈ 1 và a ≈ 0. Kết quả P4 là đầu vào §7 |
-| **P5** | `l1-modules`: CCoding nhanh hơn Claude Code Sonnet | R < 1; cỡ quan tâm R ≤ 0,8 | Hoán vị một phía (H0: R ≥ 1); CI bootstrap | 12/12 (ngân sách); công thức 25–37 mỗi nhánh; công suất ≈ 27–50 % nếu hiệu ứng thật là 20 % ⇒ "Không kết luận" có thể do thiếu công suất | Cận dưới CI của R ≥ 1 |
-| **P6** | `l2-chain`: CCoding không nhanh hơn và tốn hơn (hợp giao P6a, P6b) | P6a: R > 0,85; P6b: D > 0 | P6a hoán vị trên wall_Sonnet·0,85; P6b như P2; p = max | 12/12; P6a có công suất chỉ khi R thật ≥ 1,14–1,20 | CI của R có cận trên ≤ 0,85, hoặc CI của D có cận trên ≤ 0 |
-| **P7** | Bài giữ lại t6–t8: hướng của P1 vẫn giữ | R > 1 (R > 1,3 chỉ mô tả) | Hoán vị phân tầng một phía; α = 0,025; **không Holm** | 6/6 mỗi bài (18 + 18); công suất ≈ 84 % nếu R thật 1,2. **Ràng buộc:** CCoding cùng hash với C9 (§8); không tinh chỉnh bằng t6–t8; mọi lần chạy trước khóa ghi §9; sửa đề chỉ trước lượt đo đầu tiên | CI của R có cận trên ≤ 1 |
-| **P8** | Token ghi cache của CCoding ≥ 2× Claude Code (phụ) | R > 2 (H0: R ≤ 2) | Hoán vị trên cache_write_CC/2; CI; không Holm | 6/8; CV 30 % là giả định; công suất cao nếu R thật 2,8. Cảnh báo: so token, không so tiền | Cận trên CI của R ≤ 2 |
-| **P9** | Làn đơn đạt chỉ tiêu ±15 % so với Claude Code Sonnet (chưa chạy) | R_t, R_c ∈ [0,85; 1,15]; Δ < 0,02 | TOST bootstrap 90 %; hợp giao 3 điều kiện | 8/8 mỗi bài t1–t5 | CI 90 % của R_t hoặc R_c ngoài biên |
+| **ĐK-P1** | Thời gian làn nhanh / Claude Code Sonnet trên t1–t5 (C9 only) | R > 1,3 (H0: R ≤ 1,3). Kỳ vọng trước từ C7+C8: R = 1,545, CI [1,452; 1,647]. Δwall = 25,7 s | Hoán vị phân tầng một phía trên wall_CC/1,3; CI bootstrap của R; **Holm bộ cũ** (xem dưới) | 6/8 (C9). Kịch bản σ cũ: công suất 3–11 %; kịch bản CV 25 %/8 %: 79–93 %. Công suất tính lại < 50 % sau C9 ⇒ báo "thiếu công suất" | CI 95 % của R có cận trên ≤ 1,3 |
+| **ĐK-P2** | Chi phí làn nhanh > Claude Code Sonnet | D > 0; "đáng kể" nếu cận dưới CI ≥ 0,1 USD | Hoán vị một phía; CI bootstrap | 6/8; chênh nhỏ nhất phát hiện ≈ 0,23–0,28 USD; Δ = 0,1 USD không có công suất (z = 1,24) | Cận trên CI của D ≤ 0 |
+| **ĐK-P3** | Tỉ lệ test ẩn đạt của làn nhanh không kém hơn, biên 2 điểm % | H0: Δ ≥ 0,02 (tỉ lệ test ẩn lỗi CC − Sonnet) | Kiểm định điểm một phía (Miettinen–Nurminen hoặc Newcombe; chưa kiểm nguồn thuật toán); khi 0 lỗi cả hai nhánh: P = (1 − 0,02)^N. **Đơn vị là test ẩn**, không phải lượt (cận trên tỉ lệ lượt lỗi ≈ 11,6 % với 30 lượt) | N test = 2 766 (6 × 461) và 3 688 (8 × 461) ≫ 265. Các test trong một lượt không độc lập (C7 t2: 8/60 lỗi từ hai quy tắc): kết quả theo test lạc quan, bắt buộc báo kèm số lỗi theo lượt | Cận dưới CI 95 % của Δ ≥ 0,02 |
+| **ĐK-P4** | Chi phí cố định của điều phối gần hằng số (phụ) | a > 30 s trong y = a + b·x (y = `wall_s` làn nhanh; x = TB Sonnet cùng bài cùng vòng) | CI bootstrap 95 % của a; không Holm | C9 + `l1-modules` + `l2-chain` (7 điểm x); không có công thức n riêng (ngoại suy về x = 0) | Cận trên CI của a ≤ 30 s; hoặc b ≈ 1 và a ≈ 0. Kết quả ĐK-P4 là đầu vào §7 |
+| **ĐK-P5** | `l1-modules`: CCoding nhanh hơn Claude Code Sonnet | R < 1; cỡ quan tâm R ≤ 0,8 | Hoán vị một phía (H0: R ≥ 1); CI bootstrap | 12/12 (ngân sách); công thức 25–37 mỗi nhánh; công suất ≈ 27–50 % nếu hiệu ứng thật là 20 % ⇒ "Không kết luận" có thể do thiếu công suất | Cận dưới CI của R ≥ 1 |
+| **ĐK-P6** | `l2-chain`: CCoding không nhanh hơn và tốn hơn (hợp giao ĐK-P6a, ĐK-P6b) | ĐK-P6a: R > 0,85; ĐK-P6b: D > 0 | ĐK-P6a hoán vị trên wall_Sonnet·0,85; ĐK-P6b như ĐK-P2; p = max | 12/12; ĐK-P6a có công suất chỉ khi R thật ≥ 1,14–1,20 | CI của R có cận trên ≤ 0,85, hoặc CI của D có cận trên ≤ 0 |
+| **ĐK-P7** | Bài giữ lại t6–t8: hướng của ĐK-P1 vẫn giữ | R > 1 (R > 1,3 chỉ mô tả) | Hoán vị phân tầng một phía; α = 0,025; **không Holm** | 6/6 mỗi bài (18 + 18); công suất ≈ 84 % nếu R thật 1,2. **Ràng buộc:** CCoding cùng hash với C9 (§8); không tinh chỉnh bằng t6–t8; mọi lần chạy trước khóa ghi §9; sửa đề chỉ trước lượt đo đầu tiên | CI của R có cận trên ≤ 1 |
+| **ĐK-P8** | Token ghi cache của CCoding ≥ 2× Claude Code (phụ) | R > 2 (H0: R ≤ 2) | Hoán vị trên cache_write_CC/2; CI; không Holm | 6/8; CV 30 % là giả định; công suất cao nếu R thật 2,8. Cảnh báo: so token, không so tiền | Cận trên CI của R ≤ 2 |
+| **ĐK-P9** | Làn đơn đạt chỉ tiêu ±15 % so với Claude Code Sonnet (chưa chạy) | R_t, R_c ∈ [0,85; 1,15]; Δ < 0,02 | TOST bootstrap 90 %; hợp giao 3 điều kiện | 8/8 mỗi bài t1–t5 | CI 90 % của R_t hoặc R_c ngoài biên |
 
-**Holm bộ cũ.** Họ chính của bản 1 giữ nguyên: {P1, P2, P3, P5, P6}, K = 5, ngưỡng 0,025/(5 − i + 1); P6 là IUT. P7 kiểm riêng; P4, P8 phụ; P9 **chuyển sang B-01 ở dưới** (không còn chạy độc lập). Họ này **tách hẳn** với họ Holm của bộ đo giám đốc (§2.5): hai dữ liệu, hai grader, hai hệ đo token, không hiệu chỉnh chéo.
+**Holm bộ cũ.** Họ chính của bản 1 giữ nguyên: {ĐK-P1, ĐK-P2, ĐK-P3, ĐK-P5, ĐK-P6}, K = 5, ngưỡng 0,025/(5 − i + 1); ĐK-P6 là IUT. ĐK-P7 kiểm riêng; ĐK-P4, ĐK-P8 phụ; ĐK-P9 **chuyển sang B-01 ở dưới** (không còn chạy độc lập). Họ này **tách hẳn** với họ Holm của bộ đo giám đốc (§2.5): hai dữ liệu, hai grader, hai hệ đo token, không hiệu chỉnh chéo.
 
 **Bảng ánh xạ P↔H** (một dòng mỗi giả thuyết bản 1; phân loại: **trùng** = cùng câu hỏi và cùng phép kiểm; **bổ sung** = cùng mục đích hay hướng nhưng khác arm/biến/ngưỡng nên kiểm tách riêng; **chỉ bộ cũ** = không có đối ứng trong H1–H10 và chỉ áp cho t1–t5 / `harness/`):
 
 | P (bản 1) | Nội dung bản 1 | Đối ứng trong bộ đo giám đốc | Phân loại | Ghi chú |
 |---|---|---|---|---|
-| P1 (H1 cũ) | Thời gian làn nhanh/Claude Sonnet > 1,3 trên t1–t5 | H5 (thời gian B0/A0 ≥ 1,5×, `analyze.mjs:83`) | **Bổ sung** | H5 so B0 với A0-sonnet trên 13 bài, ngưỡng 1,5× ở ≥ 80 % bài; P1 so làn nhanh, ngưỡng 1,3× gộp theo bài. Cùng hướng, khác arm và bài |
-| P2 (H2 cũ) | Chi phí (USD) làn nhanh > Claude Sonnet | H5 (phần token có trọng số ≥ 3×) và độ nhạy USD của B-01(a) | **Bổ sung** | H5 dùng token có trọng số chứ không phải USD; arm B có `costUsd = 0` (SR-02) nên P2 là hệ duy nhất đo USD cho tới khi SR-02 xong |
-| P3 (H3 cũ) | Test ẩn không kém hơn, biên 2 điểm % | không có H tương ứng; ý nằm ở B02-Q | **Chỉ bộ cũ** (ý chuyển sang B02-Q cho bộ mới) | H3 giám đốc là recall/precision của review (không phải không kém hơn) |
-| P4 (H4 cũ) | Hệ số chặn a > 30 s (chi phí cố định) | H10 (lợi thế tăng theo `size`) | **Bổ sung** | Cùng mục đích hiệu chỉnh ngưỡng nhỏ/lớn của B-01, khác biến giải thích (thời gian Sonnet so với `size` chưa định nghĩa). §7 vẫn dùng P4 |
-| P5 (H5 cũ) | `l1-modules`: CCoding nhanh hơn | gần nhất H1 (việc phân rã được) | **Chỉ bộ cũ** | `l1-modules` không nằm trong 13 bài của bộ mới. Lưu ý: "l1" của bộ mới là `l1-oncall` (logic), khác bài |
-| P6 (H6 cũ) | `l2-chain`: CCoding không nhanh hơn, tốn hơn | gần nhất H2 (logic ràng buộc chặt, B0 không tốt hơn) | **Chỉ bộ cũ** | `l2-chain` (4 tầng phụ thuộc) khác `l2-knights` (logic). Dev đang dựng `l2-chain`; khi vào bộ mới thì đăng ký lại bằng §9 |
-| P7 (H7 cũ) | Bài giữ lại t6–t8, hướng P1 vẫn giữ | **không phải H7** của giám đốc (ổn định SD) | **Chỉ bộ cũ** | Hai "H7" khác nghĩa hoàn toàn; bản 2 chỉ dùng "P7" cho nghĩa cũ |
-| P8 (H8 cũ) | `cache_write` CCoding ≥ 2× | H5 (token có trọng số gồm `1,25·cacheWrite`) | **Bổ sung** | `cacheWrite` có trong `tokens` của `runs.jsonl`, nên P8 tính được trên bộ mới như phụ; H8 của giám đốc là thất bại điều phối, **không** liên quan |
-| P9 (H9 cũ) | Làn đơn B-01 ±15 % | **B-01 mới** (§3.2) | **Trùng ý, đổi đo** | Đổi so với P9: đối chứng A0-sonnet cùng bộ đo; chỉ số chính token có trọng số (USD là độ nhạy); thêm thời gian; điểm tương đối; biên không kém 2 pp chuyển sang B02-Q |
+| ĐK-P1 (H1 cũ) | Thời gian làn nhanh/Claude Sonnet > 1,3 trên t1–t5 | H5 (thời gian B0/A0 ≥ 1,5×, `analyze.mjs:83`) | **Bổ sung** | H5 so B0 với A0-sonnet trên 13 bài, ngưỡng 1,5× ở ≥ 80 % bài; ĐK-P1 so làn nhanh, ngưỡng 1,3× gộp theo bài. Cùng hướng, khác arm và bài |
+| ĐK-P2 (H2 cũ) | Chi phí (USD) làn nhanh > Claude Sonnet | H5 (phần token có trọng số ≥ 3×) và độ nhạy USD của B-01(a) | **Bổ sung** | H5 dùng token có trọng số chứ không phải USD; arm B có `costUsd = 0` (SR-02) nên ĐK-P2 là hệ duy nhất đo USD cho tới khi SR-02 xong |
+| ĐK-P3 (H3 cũ) | Test ẩn không kém hơn, biên 2 điểm % | không có H tương ứng; ý nằm ở B02-Q | **Chỉ bộ cũ** (ý chuyển sang B02-Q cho bộ mới) | H3 giám đốc là recall/precision của review (không phải không kém hơn) |
+| ĐK-P4 (H4 cũ) | Hệ số chặn a > 30 s (chi phí cố định) | H10 (lợi thế tăng theo `size`) | **Bổ sung** | Cùng mục đích hiệu chỉnh ngưỡng nhỏ/lớn của B-01, khác biến giải thích (thời gian Sonnet so với `size` chưa định nghĩa). §7 vẫn dùng ĐK-P4 |
+| ĐK-P5 (H5 cũ) | `l1-modules`: CCoding nhanh hơn | gần nhất H1 (việc phân rã được) | **Chỉ bộ cũ** | `l1-modules` không nằm trong 13 bài của bộ mới. Lưu ý: "l1" của bộ mới là `l1-oncall` (logic), khác bài |
+| ĐK-P6 (H6 cũ) | `l2-chain`: CCoding không nhanh hơn, tốn hơn | gần nhất H2 (logic ràng buộc chặt, B0 không tốt hơn) | **Chỉ bộ cũ** | `l2-chain` (4 tầng phụ thuộc) khác `l2-knights` (logic). Dev đang dựng `l2-chain`; khi vào bộ mới thì đăng ký lại bằng §9 |
+| ĐK-P7 (H7 cũ) | Bài giữ lại t6–t8, hướng ĐK-P1 vẫn giữ | **không phải H7** của giám đốc (ổn định SD) | **Chỉ bộ cũ** | Hai "H7" khác nghĩa hoàn toàn; bản 2 chỉ dùng "ĐK-P7" cho nghĩa cũ |
+| ĐK-P8 (H8 cũ) | `cache_write` CCoding ≥ 2× | H5 (token có trọng số gồm `1,25·cacheWrite`) | **Bổ sung** | `cacheWrite` có trong `tokens` của `runs.jsonl`, nên ĐK-P8 tính được trên bộ mới như phụ; H8 của giám đốc là thất bại điều phối, **không** liên quan |
+| ĐK-P9 (H9 cũ) | Làn đơn B-01 ±15 % | **B-01 mới** (§3.2) | **Trùng ý, đổi đo** | Đổi so với ĐK-P9: đối chứng A0-sonnet cùng bộ đo; chỉ số chính token có trọng số (USD là độ nhạy); thêm thời gian; điểm tương đối; biên không kém 2 pp chuyển sang B02-Q |
 
 ## 4. Dữ liệu loại, kiểm soát lượt và quy tắc dừng
 
 ### 4.1 Nguyên tắc loại (giữ từ bản 1)
 
 - Chỉ loại theo **nguyên nhân kỹ thuật ngoài hệ đang đo**, quyết định bởi người chưa xem `score`, `wallSec`, `tokens` của lượt đó (chỉ xem `status`, `error`, nhật ký). Áp đối xứng cho mọi arm.
+- **Ngoại lệ cho tiêu chí Q và T (§4.3).** Hai tiêu chí này cần `wallSec` và `tokens`, nên không để người quyết định tự đọc hai trường đó. Chúng được tính **tự động** theo ngưỡng cố định đăng ký ở §4.3 (T: `wallSec ≥ 0,98 × timeoutMin × 60`; Q: `tokens.weighted ≈ 0` hoặc `wallSec` ngắn bất thường so với trung vị ô, kèm văn bản báo giới hạn), và người quyết định loại chỉ thấy **cờ đạt/không đạt** của từng tiêu chí, không thấy `wallSec`/`tokens` theo arm. Không được đổi ngưỡng sau khi thấy dữ liệu.
 - Lỗi do sản phẩm (CCoding hay Claude Code) là **kết quả**, không loại.
 - Lượt bị loại **không bị xóa**: ghi vào "sổ lượt bị loại" (khóa `task__arm__rN`, mã, bằng chứng) và loại khỏi **bản sao** `runs.jsonl` dùng cho `analyze.mjs` (§2.3). Thêm lượt thay thế với `rep` mới, tối đa 2 lượt thay mỗi ô; quá mức đó ô bị đánh dấu "thiếu dữ liệu".
+- **Chạy lại sau khi loại lượt.** Chạy lại bằng `rep` MỚI, cùng khóa arm × bài; lượt bị loại vẫn giữ trong log kèm lý do, không ghi đè. Quy tắc áp dụng từ v2.1, không hồi tố cho 4 lượt C9 đã loại (`context/c9-partial-2026-11-02.md`); nếu C9 chạy tiếp thì theo quy tắc này.
 - Mọi giả thuyết chính còn có phân tích **không loại** (độ nhạy, §5).
 
-### 4.2 Bộ phụ P1–P9 (harness cũ, `runs.csv`) — giữ nguyên từ bản 1
+### 4.2 Bộ phụ ĐK-P1–P9 (harness cũ, `runs.csv`) — giữ nguyên từ bản 1
 
 Khóa lượt trong `--exclude-run`: `<vòng>/<bài>/<hệ>/<lượt>` hoặc `task_id`.
 
@@ -233,10 +293,11 @@ Ngoài ba tiêu chí này: lượt `status = 'error'` kèm ENOENT (thiếu `repo
 
 ## 5. Phân tích chính và phân tích khám phá
 
-**Phân tích chính (xác nhận):** họ Holm {H1, H2, H3, H6} (K = 4, §2.5); H7 (riêng, Nhánh 1); B-01 (họ riêng IUT); B02-M (xác định).
-**Phụ, báo kèm CI:** H4, H5 (mô tả có ngưỡng); P1–P9 (họ riêng, §3.3).
-**Mô tả/thăm dò (không ra quyết định):** H8, H9, H10; B02-G, B02-Q, B02-H8b.
-Thứ tự báo cáo: Holm → H7 → H5/H4 → B-01 → B-02 → H8–H10 → P1–P9.
+**Phân tích chính (xác nhận):** họ Holm {H3, H6} (K = 2 nếu SR-26 xong, ngược lại K = 0 và hai giả thuyết thành ước lượng, §2.5); H7 (riêng, Nhánh 1); B-01 (họ riêng IUT); B02-M (xác định).
+**Ước lượng kèm CI (không p, không Holm):** H1, H2 (§2.4, §2.5). Họ xác nhận thay thế H1′/H2′ sau 5/11 là **dự kiến, chưa khóa** (§2.6).
+**Phụ, báo kèm CI:** H4, H5 (mô tả có ngưỡng); ĐK-P1–P9 (họ riêng, §3.3).
+**Mô tả/thăm dò (không ra quyết định):** H8, H9, H10; B02-G, B02-Q, B02-H8b. Bài chạm trần ở pilot chỉ vào phân tích thời gian/token (§2.7).
+Thứ tự báo cáo: Holm {H3, H6} → H1/H2 (ước lượng) → H7 → H5/H4 → B-01 → B-02 → H8–H10 → ĐK-P1–P9 (H1′/H2′ chỉ khi khóa).
 
 **Phân tích khám phá** (gắn nhãn "khám phá"): (1) kết quả theo từng bài và theo loại bài; (2) độ nhạy: không loại lượt nào; chỉ loại Q; loại lượt cực trị; (3) so với A0-opus, B1–B5, B3 (nếu có); (4) USD ước tính sau SR-02; (5) `byPhase` của arm B (phân rã chi phí theo pha), tỉ lệ vòng sửa; (6) giám khảo cặp (`pairwise.mjs`) cho design, requirements, research: **chỉ báo cáo kèm giới hạn mù** (§6); (7) xu hướng theo thứ tự chạy, `window` đánh số; (8) gộp với harness cũ chỉ cho mô tả và độ nhạy (`run-plan.md` §6.2); (9) H10 điều chỉnh loại bài; (10) mọi con số cho `token-analysis.md` dẫn từ `token-analysis.mjs`.
 
@@ -254,40 +315,40 @@ Thứ tự báo cáo: Holm → H7 → H5/H4 → B-01 → B-02 → H8–H10 → P
 | Cấu trúc | **`weighted` khác USD**; `5 × output` đúng trong một model; `0,1 × cacheRead` làm phiên dài rẻ giả; hai hệ đo token khác nhau (A: `result.usage`; B: tổng `calls.jsonl`); `costUsd` của B = 0 | Chỉ số chính `weighted` (khớp giám đốc); báo token thô và `cacheRead/total`; USD chỉ độ nhạy sau SR-02 (§2.1); không suy tương đương USD |
 | Cấu trúc | **`size` không định nghĩa**, gán không nhất quán, lẫn loại bài; nhãn `hypotheses` trong `task.json` không khớp bộ lọc `analyze.mjs` | H10 thăm dò; H1 cố định danh sách bài; đăng ký theo mã H, không theo nhãn (SR-05, SR-15) |
 | Cấu trúc | **Grader regex bắt chữ** (a1, r1: `sign` khớp "design"; `daily-volume` bỏ sót "1,4 TB"); `eq` so khóa theo thứ tự (`l1`); `s1` không phân biệt mồi nhử với FP khác; `citationPrecision` không kiểm đúng bài; null ≠ 0 ở c3 (0,17) và c5 (0,22) | Chạy toàn nghiên cứu `--judge` và khóa một chế độ chấm (SR-07); SR-09/16/17/18 (P1); Δ giữa hai arm triệt tiêu sàn null nhưng H10 thì không |
-| Cấu trúc | **Giám khảo LLM chấm sản phẩm LLM** (`pairwise.mjs`, `lib/judge.mjs`): mù một phần (`blind()` `judge.mjs:6-12`; sản phẩm B thường tiếng Việt, có `REVIEW.md`/`NOTES.md`); giám khảo mặc định `opus` trùng model A0-opus (`pairwise.mjs:14`); không giám khảo ngoài họ Claude, không đối chiếu người; không CI/kiểm định dấu; cắt ở 60 000 ký tự | Chỉ báo pairwise kèm giới hạn; không dùng pairwise để ra quyết định cho họ Holm; SR-08 (≥ 20 % cặp do người chấm, giám khảo thứ hai, CI nhị thức). Tài liệu về thiên lệch tự ưu ái chưa kiểm nguồn trong gói này: coi là rủi ro cần kiểm |
-| Ngoại tại | 13 bài tổng hợp, JS/Node, tác nhân Claude; 6 loại nhưng H3, H4, H9 chỉ 1 bài; t1–t5 đã dùng để tinh chỉnh CCoding (C1–C8) nên lạc quan | Kết luận H3/H4/H9 chỉ về s1/a1/re1; P-bộ phụ có P7 (t6–t8) làm bài giữ lại; không khái quát sang Opus hay việc lớn |
-| Kết luận thống kê | 3 lượt/ô; 4 bài cho H1/H2 (p ≥ 0,125); TOST thiếu công suất ở H6; σ bộ mới đều là giả định; trần điểm (A0-sonnet 1,000 ở t1–t5); `.some()` ở H6; xáo trộn H10 không đều; lỗi lệch chỉ số H5 (`:81-83`) | "Không kết luận" ≠ "không có hiệu ứng"; báo cỡ hiệu ứng và CI; sửa SR-06 trước khi chạy H5 |
+| Cấu trúc | **Giám khảo LLM chấm sản phẩm LLM** (`pairwise.mjs`, `lib/judge.mjs`): mù một phần (`blind()` `judge.mjs:6-12`; sản phẩm B thường tiếng Việt, có `REVIEW.md`/`NOTES.md`); giám khảo mặc định `opus` trùng model A0-opus (`pairwise.mjs:14`); không giám khảo ngoài họ Claude, không đối chiếu người; không CI/kiểm định dấu; cắt ở 60 000 ký tự | Chỉ báo pairwise kèm giới hạn; không dùng pairwise để ra quyết định cho họ Holm; SR-08a (≥ 20 % cặp do người chấm, giám khảo thứ hai) và SR-08b (P1, CI nhị thức). Tài liệu về thiên lệch tự ưu ái chưa kiểm nguồn trong gói này: coi là rủi ro cần kiểm |
+| Ngoại tại | 13 bài tổng hợp, JS/Node, tác nhân Claude; 6 loại nhưng H3, H4, H9 chỉ 1 bài; t1–t5 đã dùng để tinh chỉnh CCoding (C1–C8) nên lạc quan | Kết luận H3/H4/H9 chỉ về s1/a1/re1; bộ phụ có ĐK-P7 (t6–t8) làm bài giữ lại; không khái quát sang Opus hay việc lớn |
+| Kết luận thống kê | 3 lượt/ô; 2–4 bài cho H1/H2 (p hoán vị ≥ 0,0625 nên chỉ báo ước lượng, §2.5); **trần điểm ở pilot** (§2.7; n = 1, chưa `--judge`, có thể do grader regex dễ); H1′/H2′ chưa khóa (§2.6); H3/H6 chưa có p (chờ SR-26, §2.5), s1 chưa xét trần (§2.7); TOST thiếu công suất ở H6; σ bộ mới đều là giả định; trần điểm (A0-sonnet 1,000 ở t1–t5); `.some()` ở H6; xáo trộn H10 không đều; lỗi lệch chỉ số H5 (`:81-83`) | "Không kết luận" ≠ "không có hiệu ứng"; báo cỡ hiệu ứng và CI; sửa SR-06 trước khi chạy H5 |
 | Kết luận thống kê | Chọn ngưỡng sau khi biết bộ bài (`size ≥ 3`, biên 5 pp) | Ngưỡng và danh sách bài của H1–H10 đóng băng ở §3.1 khi khóa |
 | Rò rỉ | Tác giả đã thấy C1–C9 một phần (C9 ca t5) và `selftest` | Ca t5 chỉ dùng để thiết kế B02-M, không dùng làm xác nhận nào khác; §8 |
 | Rò rỉ | `leak` có thể dương tính giả hoặc bỏ lọt (A2 không kiểm ở bước chọn) | §4.3 L; SR-21 (P2) |
 
 ## 7. Hiệu chỉnh ngưỡng nhỏ/lớn của B-01 (giữ từ bản 1, đổi mã)
 
-**Vai trò của P4.** Kết quả P4 (a, b) là đầu vào hiệu chỉnh ngưỡng làn đơn/đa tác tử của B-01. Hệ số chặn a và độ dốc b chỉ được **định cỡ** trên C1–C8 (mô tả) và **xác nhận** trên C9 cùng `l1-modules`, `l2-chain`. **H10 của giám đốc không được dùng để hiệu chỉnh ngưỡng** cho tới khi SR-05 xong (§3.1).
+**Vai trò của ĐK-P4.** Kết quả ĐK-P4 (a, b) là đầu vào hiệu chỉnh ngưỡng làn đơn/đa tác tử của B-01. Hệ số chặn a và độ dốc b chỉ được **định cỡ** trên C1–C8 (mô tả) và **xác nhận** trên C9 cùng `l1-modules`, `l2-chain`. **H10 của giám đốc không được dùng để hiệu chỉnh ngưỡng** cho tới khi SR-05 xong (§3.1).
 
 **Công thức chọn làn** (thống nhất với `improvement-backlog.md` §3.1): làn đơn khi **T̂_đơn < k × a**. Với T_CC = a + b·T_đơn, T* = a/(1 − b), nên k* = **1/(1 − b)**. Quy tắc cập nhật:
-- Chỉ cập nhật k khi **CI 95 % của b nằm hoàn toàn dưới 1** và P4 được xác nhận (a > 30 s); khi đó k_mới = 1/(1 − b̂_trên), dùng cận trên (ưu tiên làn đơn khi chưa chắc).
+- Chỉ cập nhật k khi **CI 95 % của b nằm hoàn toàn dưới 1** và ĐK-P4 được xác nhận (a > 30 s); khi đó k_mới = 1/(1 − b̂_trên), dùng cận trên (ưu tiên làn đơn khi chưa chắc).
 - CI của b chạm 1 (hoặc ≥ 1): không nâng k; ghi "chưa hiệu chỉnh".
-- P4 bị bác bỏ (a ≤ 30 s): k giảm theo độ nhỏ của a.
-- Ngưỡng `parts`/`filesTouched` còn được kiểm bằng P5 (bài độc lập) và P6 (bài chuỗi) như hai điểm đầu mút; nếu P5 và P6 cùng "Không kết luận" thì k giữ nguyên.
+- ĐK-P4 bị bác bỏ (a ≤ 30 s): k giảm theo độ nhỏ của a.
+- Ngưỡng `parts`/`filesTouched` còn được kiểm bằng ĐK-P5 (bài độc lập) và ĐK-P6 (bài chuỗi) như hai điểm đầu mút; nếu ĐK-P5 và ĐK-P6 cùng "Không kết luận" thì k giữ nguyên.
 - Giá trị ban đầu: `a₀ = 87,1 s`, `b₀ = 0,428`, `k₀ ≈ 1,75` (hồi quy thô C7, `improvement-backlog.md` §3.1): thăm dò, không xác nhận.
 
 ## 8. Khóa đăng ký (có điều kiện)
 
 | Mục | Giá trị |
 |---|---|
-| Phiên bản | v2.0 (v1.0 đã commit trước đó, nhiệm vụ T-20261102-134405-b2c) |
+| Phiên bản | v2.1 (v2.0 gộp ở `0320f44`; v1.0 nhiệm vụ T-20261102-134405-b2c). v2.1 soạn trên `3227da0` |
 | Soạn trên | nhánh `ccoding/t-20261102-175854-65c--s4`, sau commit HEAD `efa97a6` (gộp S2 — R7) |
 | Thời điểm khóa | = thời điểm commit gộp của hạng mục S4 vào nhánh nhiệm vụ **và** các điều kiện bên dưới đều thỏa. Điền: ______ (kiểm bằng `git log --format='%H %aI' -- docs/research/preregistration.md`) |
 | Hash commit khóa | điền khi gộp: ______ |
 | **Hash commit merge Phòng Dev** (bộ đo sau sửa tự kiểm, gộp `main`, `task.json` t1–t5, arm làn nhanh, cờ hạn mức, `l2-chain`) | **chưa có: ______.** Chỉ khóa hẳn khi hash này có và các SR P0 bên dưới đã đóng |
-| Điều kiện SR P0 | SR-01 … SR-08 (`suite-review.md` §5): trạng thái từng SR ở §9 |
+| Điều kiện SR P0 | SR-01 … SR-07 và SR-08a (`suite-review.md` §5): trạng thái từng SR ở §9 |
 | Hash CCoding của từng cửa sổ chạy | W1: ______ · W2: ______ · W3: ______ · W4: ______ · W5: ______ (ghi tay bằng `git rev-parse HEAD`; `run.mjs` chưa ghi) |
 | Hash bộ đo | commit `1568774` (bộ của giám đốc) + hash `analyze.mjs`, `pairwise.mjs`, `lib/grade.mjs` thực dùng: ______ |
 | Phiên bản `claude` CLI, model giám khảo | ______ ; giám khảo mặc định `opus` (`pairwise.mjs:14`) |
 | Hash CCoding bộ phụ | C1: `14e2ec6` · C3: sau `d767806`, `e9147d8` · C4: sau `aa6aa3a` · C5: sau `9589c2f` và `0e82b82` · C6: `d7600f6` · C8: `c55a249` · C2, C7: chưa xác định chắc. C9 (cam kết): `c55a249` hoặc con cháu không đổi `src/`; hash thực dùng: ______ |
 | Công cụ phân tích | `analyze.mjs` ở hash trên (hạt 20261102 cho bootstrap/hoán vị do phép kiểm mới; `analyze.mjs` có hạt riêng); script TOST ngoài (nếu dùng phương án lùi §2.3): hash ______ ; `prereg-tests.mjs` (bộ cũ, chưa có): ______ |
-| Cam kết chưa xem dữ liệu bộ mới | `bench/vs-claude/results/` khi soạn: **không có `pilot*` và không có lượt nào của bộ mới** ngoài `selftest/` (n = 1 lượt, oracle/null). Tác giả **chưa xem kết quả A0/B của 13 bài**. Tác giả đã xem C1–C9 một phần, `selftest`, và `context/c9-partial-2026-11-02.md` (ca t5) |
+| Cam kết chưa xem dữ liệu bộ mới | v2.0: `bench/vs-claude/results/` không có `pilot*`. **v2.1: có pilot của giám đốc (`pilot1`, n = 1, `main` e0bd2f4, không `--judge`); tác giả đã xem bảng điểm/thời gian/token của 24 lượt trong đề bài (sai lệch số 3, §9). Pilot không phải dữ liệu xác nhận.** Tác giả **chưa xem kết quả W1–W5 nào**. Tác giả đã xem C1–C9 một phần, `selftest`, và `context/c9-partial-2026-11-02.md` (ca t5) |
 | Nếu có người xem kết quả bộ mới trước khóa | ghi vào §9 (hiện không có) |
 | Lệnh sẽ chạy | `run-plan.md` §5 (W1–W5), §5.3 (phân tích); `analyze.mjs` và `pairwise.mjs` theo §3.1 |
 
@@ -295,7 +356,7 @@ Thứ tự báo cáo: Holm → H7 → H5/H4 → B-01 → B-02 → H8–H10 → P
 
 (Mọi sửa đổi sau thời điểm khóa, mọi lần dùng phương án lùi (§2.3), mọi lượt t6–t8 chạy trước khóa, mọi thay đổi hash, ngân sách hay n phải ghi vào đây trước khi xem kết quả liên quan.)
 
-**Sai lệch của đề bài so với bản 1 (ghi nhận ở v2.0):** brief viết "8 giả thuyết bản 1"; thực tế bản 1 có **9 giả thuyết** (H1–H8 theo đề bài và H9 thêm cho B-01). Bản 2 đổi mã **cả chín** thành P1–P9 và P9 ánh xạ sang B-01 mới (§3.3).
+**Sai lệch của đề bài so với bản 1 (ghi nhận ở v2.0):** brief viết "8 giả thuyết bản 1"; thực tế bản 1 có **9 giả thuyết** (H1–H8 theo đề bài và H9 thêm cho B-01). Bản 2 đổi mã **cả chín** thành ĐK-P1–P9 và ĐK-P9 ánh xạ sang B-01 mới (§3.3).
 
 **SR P0 đang chờ Phòng Dev và ảnh hưởng đến khóa** (từ `suite-review.md` §5; trạng thái: "chờ" cho tới khi có hash merge đóng nó):
 
@@ -308,13 +369,20 @@ Thứ tự báo cáo: Holm → H7 → H5/H4 → B-01 → B-02 → H8–H10 → P
 | SR-05 | Định nghĩa `size`, `sizeBasis`; H10 điều chỉnh loại bài, CI độ dốc, Fisher-Yates | H10, H1 | chờ | H10 thăm dò (đã đăng ký vậy); H1 theo danh sách bài cố định |
 | SR-06 | Sửa lỗi lệch chỉ số `analyze.mjs:81-83` | H5 | chờ | Tính H5 bằng script ngoài hoặc kiểm tay không có bài NaN |
 | SR-07 | Khóa một chế độ chấm; chạy chính luôn `--judge` | H1 (r1), H4, H9 | chờ | Chạy `--judge` cho mọi arm a1, r1, re1; ghi §9 nếu lẫn chế độ |
-| SR-08 | Giám khảo cặp: đối chiếu người, giám khảo thứ hai, CI nhị thức | Mọi kết luận dùng pairwise; H4, H9 | chờ | Không dùng pairwise để quyết định; báo giới hạn mù |
+| SR-08a | Giám khảo cặp: đối chiếu người, giám khảo thứ hai (phần CI nhị thức là SR-08b, P1) | Mọi kết luận dùng pairwise; H4, H9 | chờ | Không dùng pairwise để quyết định; báo giới hạn mù |
+| SR-26 | p bootstrap một phía cho H3, p tương đương (hợp giao hai phía, A1/A2) cho H6, có hạt và test | H3, H6 (họ Holm) | chờ | Script ngoài có test + hash (§2.3); nếu không có: H3, H6 hạ xuống ước lượng, họ Holm rỗng (§2.5) |
 
-Các SR P1 ảnh hưởng phép kiểm (SR-10 cho H3, SR-12 cho H6, SR-13 cho H8, SR-14 cho H7, SR-18 cho H9) **không chặn khóa**; nếu được làm trước khi chạy thì ghi **v2.1** (CHANGELOG) với phép kiểm mới và giữ phép kiểm cũ như độ nhạy.
+**SR-25 (P0, nhánh sau 5/11):** phép hoán vị phân tầng theo lượt cho H1′/H2′ (§2.6; `suite-review.md` §5). Trạng thái: **chờ**. Không chặn khóa nhánh trước 5/11 (H3, H6, H7, B-01, B-02); chặn khóa H1′/H2′.
+
+Các SR P1 ảnh hưởng phép kiểm (SR-10 cho H3, SR-12 cho H6, SR-13 cho H8, SR-14 cho H7, SR-18 cho H9, SR-08b cho pairwise) **không chặn khóa**; nếu được làm trước khi chạy thì ghi **v2.1** (CHANGELOG) với phép kiểm mới và giữ phép kiểm cũ như độ nhạy.
 
 | STT | Ngày | Giả thuyết/mục | Nội dung đã đăng ký | Thực tế | Lý do | Xem kết quả trước khi sửa? | Ảnh hưởng đến diễn giải |
 |---|---|---|---|---|---|---|---|
-| 1 | 2/11/2026 | Tổng quát (mã P) | brief: 8 giả thuyết bản 1 | 9 giả thuyết, đổi mã P1–P9 | Đối chiếu bản 1.0 | Không | Không |
+| 1 | 2/11/2026 | Tổng quát (mã P) | brief: 8 giả thuyết bản 1 | 9 giả thuyết, đổi mã ĐK-P1–P9 | Đối chiếu bản 1.0 | Không | Không |
+| 2 | 2/11/2026 | H1, H2, §2.5 | v2.0: H1, H2 trong họ Holm K = 4, "đạt" | v2.1: H1, H2 là ước lượng kèm CI; họ Holm {H3, H6}, K = 2 | Review gói 2: p_min của hoán vị đổi dấu theo bài = 2⁻ⁿ hoặc 2¹⁻ⁿ (≥ 0,0625 với n ≤ 4) vượt ngưỡng Holm | Không (chưa có dữ liệu bộ mới) | H1, H2 không còn được gọi "xác nhận"; H3, H6 có ngưỡng Holm nới (0,0125 thay 0,00625) |
+| 3 | 2/11/2026 | H1, H10, §2.7 | v2.0: H1 dùng điểm c3–c5; H10 thăm dò trên 13 bài | Quy tắc trần: bài mọi arm ≥ 0,99 ở pilot không làm bằng chứng điểm cho H1, H10 (chỉ thời gian/token) | **Quyết định thích ứng trước khóa, đặt sau khi xem pilot**: pilot `pilot1` (n = 1 lượt/ô, từ `main` e0bd2f4, không `--judge`) cho 1,00 ở mọi arm trên 8 bài (c1–c5, l2-knights, l4-startup-order, re1). Không tính vào dữ liệu xác nhận; không là đầu vào cho p_min hay baseline | **Có**: tác giả đã xem điểm pilot (không phải dữ liệu W1–W5) | H1 không còn bằng chứng điểm ở c3–c5; H10 không kiểm được về điểm trên 13 bài nếu trần kéo dài; nguy cơ trần do grader regex dễ (chưa `--judge`) chưa kiểm |
+| 4 | 2/11/2026 | H1′/H2′, §2.6 | (mới) | Họ H1′/H2′ sau 5/11 ghi "dự kiến, chưa khóa" | Chờ SR-25 và `task.json` của `l1-modules`, `l2-chain`, t1–t5 | Không | Không có hiệu lực xác nhận cho tới khi khóa |
+| 5 | 2/11/2026 | H3, H6, §2.5 | v2.1 (bản soạn đầu): H3, H6 "đạt, ở lại họ" với p bootstrap | Họ {H3, H6} có điều kiện SR-26; thiếu SR-26 thì hạ xuống ước lượng, K = 0. Điều khoản dự phòng trần cho s1 (§2.7) | Review gói 2b: `analyze.mjs` không tạo p nào cho H3 (`:69-75`) và H6 (`:86-91`); phép kiểm xác nhận dựa trên mã chưa có, cùng loại lỗi với H1, H2 | Không (chưa có dữ liệu bộ mới) | Có thể không có giả thuyết xác nhận Holm trước 5/11 |
 | | | | | | | | |
 
 ## 10. Đạo đức & dữ liệu
@@ -326,7 +394,8 @@ Các SR P1 ảnh hưởng phép kiểm (SR-10 cho H3, SR-12 cho H6, SR-13 cho H8
 
 ## Lịch sử bản
 
-- **v2.0 (2/11/2026, S4/R6):** hệ chính đổi sang H1–H10 của bộ đo giám đốc; H1–H9 bản 1 đổi mã P1–P9, bảng ánh xạ P↔H; thêm B-01 (TOST ba đại lượng) và B-02 (B02-M/G/Q/H8b); §4.3 tiêu chí Q/L/T cho bộ mới; §6 đe dọa từ `suite-review.md`; §8 chỗ cho hash commit merge; §9 các SR P0 chờ. Chi tiết: `CHANGELOG.md`.
+- **v2.1 (2/11/2026, S1/F1 của T-20261102-183435-da7):** H1, H2 ra khỏi họ Holm, thành ước lượng kèm CI 95 % (§2.4, §2.5); họ Holm còn {H3, H6}, K = 2, kèm bảng p_min (§2.5); thêm §2.6 họ H1′/H2′ sau 5/11 (hoán vị theo lượt phân tầng theo bài, p_min = 1/∏ C(2r_b, r_b), **dự kiến, chưa khóa**, hai điều kiện khóa, trạng thái hiện tại); thêm §2.7 quy tắc trần từ pilot; cập nhật §1, §3.1, §5, §6, §8, §9; SR-25 và SR-26 ở `suite-review.md` §5. Sửa theo review gói 2b: họ {H3, H6} có điều kiện SR-26 và phương án lùi K = 0 (§2.5, §9 mục 5); H2′ kiểm với biên +0,05 (tham số `margin` của SR-25); điều khoản trần cho s1 (§2.7); sửa tham chiếu §9 mục 3. Bổ sung S3/F2 (cùng v2.1, không tạo bản mới): quy tắc chạy lại bằng `rep` mới ở §4.1 (giống từng chữ với `run-plan.md` §5.0); ngoại lệ tự động hóa Q/T ở §4.1 (người quyết định chỉ thấy cờ); thống nhất tên `ĐK-P_i` (§3.3 và mọi tham chiếu) với `improvement-backlog.md` §6; giám khảo cặp tách thành SR-08a (P0) và SR-08b (P1).
+- **v2.0 (2/11/2026, S4/R6):** hệ chính đổi sang H1–H10 của bộ đo giám đốc; H1–H9 bản 1 đổi mã ĐK-P1–P9, bảng ánh xạ P↔H; thêm B-01 (TOST ba đại lượng) và B-02 (B02-M/G/Q/H8b); §4.3 tiêu chí Q/L/T cho bộ mới; §6 đe dọa từ `suite-review.md`; §8 chỗ cho hash commit merge; §9 các SR P0 chờ. Chi tiết: `CHANGELOG.md`.
 - **v1.0 (2/11/2026, S2/T-20261102-134405-b2c):** 9 giả thuyết (H1–H9 cũ) cho C9 và bộ t1–t5.
 
 ## Lệnh kiểm chứng cần chạy (tôi không có quyền chạy lệnh)

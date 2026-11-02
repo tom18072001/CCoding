@@ -125,6 +125,27 @@ Thứ tự theo ưu tiên của đề bài: A0-sonnet, B0, B5, làn nhanh; rồi
   (không đọc cột `score`). `analyze.mjs`/`pairwise.mjs` chỉ chạy khi đã đủ N theo §4 của giả thuyết đó, và các lệnh ở §5.3 chỉ dùng khi đó. Cắt hay đổi thứ tự arm giữa chừng chỉ được dựa trên chi phí/hạn mức, không dựa trên kết quả.
 - **Sau mỗi cửa sổ (không gọi LLM):** §5.0; ghi M và giờ thực dùng từ bảng vận hành ở trên; thay hệ số §1.2 bằng số đo nếu lệch > 30 %; ghi hash commit (§6.4).
 - **Dừng cả lô** nếu ≥ 25 % lượt của một ô bị lỗi hạ tầng (`preregistration.md` §4.3c).
+- **Các arm chạy ở cửa sổ khác nhau, nên KHÔNG cùng điều kiện với cặp A0-sonnet + B0 (W1).** Chỉ cặp A0-sonnet + B0 của W1 chạy xen kẽ trong cùng một cửa sổ (H1, H2, H5 so trong cặp này). B5, A1, A2, FL, A0-opus, B3 chạy ở W2 trở đi, tức khác thời điểm trong ngày, khác tải của nhà cung cấp, và có thể khác hash CCoding so với B0 của W1. Hệ quả: (i) mọi so sánh **giữa arm không cùng cửa sổ** (ví dụ B5 so với B0, FL so với B0, A2 so với B0) chịu nhiễu cửa sổ và thời điểm, phải ghi là "khác cửa sổ" khi báo cáo; (ii) arm nào có A0-sonnet cùng lệnh (`--arms A0-sonnet,<arm>`, §5) thì so với A0-sonnet **cùng cửa sổ** trước, không so với A0-sonnet của W1; (iii) `wallSec` và `tokens.weighted` không so được thẳng giữa cửa sổ. Quy tắc neo B0 bên dưới chỉ để **đo** độ trôi, không dùng hiệu chỉnh số liệu.
+
+**Bảng cửa sổ (bắt buộc điền ngay sau mỗi cửa sổ, trước khi mở cửa sổ kế tiếp).** Hash lấy bằng `git rev-parse HEAD` và `git status --short` (§6.4); thời điểm lấy từ `started` của lượt đầu và `started + wallSec` của lượt cuối trong `runs.jsonl`, ghi UTC. Chưa chạy cửa sổ nào ⇒ chưa có giá trị; **không điền trước**.
+
+| CS | Hash CCoding (`git rev-parse HEAD`) | `git status --short` | Bắt đầu (UTC) | Kết thúc (UTC) | Arm chạy trong cửa sổ | Lượt lỗi hạ tầng / bị loại | Anchor B0 (token, giây) |
+|---|---|---|---|---|---|---|---|
+| W1 | (chưa chạy) | | | | A0-sonnet, B0 | | không cần (B0 chính nằm ở W1) |
+| W2 | (chưa chạy) | | | | theo nhánh (§3.1/§3.2) | | |
+| W3 | (chưa chạy) | | | | | | |
+| W4 | (chưa chạy) | | | | | | |
+| W5 | (chưa chạy) | | | | | | |
+| W6 (nếu có) | (chưa chạy) | | | | | | |
+
+Hash khác nhau giữa các cửa sổ ⇒ ghi lý do (§6.4: phải dùng `--out` mới, `s2b`). Hash giống nhau mà arm B*/FL khác cửa sổ vẫn là "khác cửa sổ" (thời điểm, không chỉ mã).
+
+- **Neo B0 (chạy nếu còn ngân sách; không thuộc §4 và không vào `analyze.mjs`).**
+  - **k = 2** lượt B0 mỗi cửa sổ W2–W5 (tối đa 8 lượt), bài cố định **`l4-startup-order`** (có trong R9 và R13, chạy được cả hai nhánh, B0 rẻ nhất trong nhóm đủ điều kiện: pilot 222 408 token, 160 s; `context/pilot1-2026-11-02.md`; pilot là n = 1 nên chỉ dùng để ước chi phí).
+  - **Chi phí theo §1.3** (nhóm logic, B0 = 300k token / 201 s mỗi lượt): **0,6 M và ≈ 0,11 h mỗi cửa sổ**, 2,4 M và ≈ 0,45 h cho 4 cửa sổ (≈ 2,6 % của 91 M ở Nhánh 2). Số theo pilot (2 × 222k = 0,44 M, 2 × 160 s) thấp hơn; kế hoạch dùng số §1.3 vì thận trọng hơn.
+  - **Ngưỡng cửa sổ:** Nhánh 1 W2 đã 3,5 h, thêm 0,11 h thành ≈ 3,61 h, chạm trần 3,6 h; nếu W2 sát trần thì giảm k xuống 1 ở W2. Các cửa sổ còn lại đủ chỗ (≤ 3,51 h).
+  - **Tách khóa:** mỗi cửa sổ dùng `--out` riêng (`bench/vs-claude/results/s2-anchor-W2`, `…-W3`, …) và lệnh `node bench/vs-claude/run.mjs --arms B0 --tasks l4 --repeats 2 --timeout 20 --out <thư mục anchor>`; không ghi vào `results/s2`. Lý do: `run.mjs` bỏ qua khóa đã xong, nên cùng `--out` thì cửa sổ sau không chạy lại được, và anchor sẽ lẫn vào N của H1–H10.
+  - **Dùng làm gì:** so token và `wallSec` trung bình của 2 lượt anchor với B0 × `l4` của W1 (r1–r3). Ghi tỉ lệ vào cột "Anchor B0". Lệch > 30 % ⇒ ghi cảnh báo "cửa sổ trôi" cạnh mọi so sánh khác cửa sổ trong báo cáo. Điểm `l4` của B0 không dùng (bài chạm trần ở pilot, không mang tín hiệu chất lượng); anchor chỉ đo thời gian và token. Với k = 2 và một bài, đây là chỉ báo thô, **không phải** hiệu chỉnh và không có khoảng tin cậy.
 
 ### 3.1 Nhánh 1 — chưa có thay đổi của Phòng Dev (9 bài chạy được)
 
@@ -138,7 +159,7 @@ Bốn bài `a1,l1,l2,r1` lỗi ENOENT ở `freshWorkspace` (`run.mjs:72`) cho **
 | **W4** | A0-sonnet + B0 × R9 bổ sung r5 → A0-opus × R9 × r1–3 | 45 | 16,8 | 2,6 | **H7** (r5) |
 | **W5** (tùy chọn) | B3 × R9 × r1 | 9 | 12,3 | 1,2 | B3 chỉ mô tả (r1, không kiểm) |
 
-Tổng Nhánh 1: 77,7 triệu, 5 cửa sổ.
+Tổng Nhánh 1: 77,7 triệu, 5 cửa sổ (chưa tính anchor B0, +0,6 M mỗi cửa sổ W2–W5, §3.0). **Cửa sổ khác nhau:** B5 (W2), A1 (W2), A2 (W3), A0-opus (W4), B3 (W5) chạy khác cửa sổ với B0 của W1; mỗi arm chỉ so cùng cửa sổ với A0-sonnet đi kèm trong lệnh (§3.0).
 
 ### 3.2 Nhánh 2 — Phòng Dev đã merge (N4 chạy được, T5 có `task.json`, có FL, có cờ hạn mức)
 
@@ -154,7 +175,9 @@ Chuyển sang Nhánh 2 **ở ranh giới cửa sổ đầu tiên sau khi merge**
 | W6 (dự phòng) | A2 r3 (3,8M) **hoặc** H7 bổ sung r4–5 (14,6M, 3,1 h) | ≤ 66 | ≤ 14,6 | ≤ 3,1 | chỉ khi W6 tồn tại |
 | không xếp | A0-opus × R13 × r3 (13,1M, 1,8 h); B3 × R13 × r1 (15,4M, 1,6 h) | — | 28,5 | 3,4 | không đạt trước 5/11 (hết ngân sách) |
 
-Tổng W1–W5 ≈ 91 triệu / 17 giờ wall-sum. Nếu số đo thật ở W1 cao hơn mô hình > 20 %, cắt theo thứ tự: B3 → A0-opus → B0 × T5 → A2 r2 → A1 r3.
+**Cửa sổ khác nhau:** FL (W2–W4), B5 (W3), A1/A2 (W4–W5) chạy khác cửa sổ với B0 × R13 của W1/W2; riêng W3 không có A0-sonnet hay B0 trong cùng cửa sổ, nên B5 và FL ở W3 chỉ so được với arm khác cửa sổ, kèm anchor B0 (§3.0) để đo độ trôi.
+
+Tổng W1–W5 ≈ 91 triệu / 17 giờ wall-sum (chưa tính anchor B0, +2,4 M / +0,45 h tổng, §3.0). Nếu số đo thật ở W1 cao hơn mô hình > 20 %, cắt theo thứ tự: B3 → A0-opus → B0 × T5 → A2 r2 → A1 r3.
 
 Điểm dừng an toàn Nhánh 2 giống §3.0; mỗi dòng lệnh §5.2 là một đơn vị chạy tiếp được.
 
@@ -232,7 +255,9 @@ Bước 2 — người chưa xem `score` của các dòng đó đọc danh sách
 node /tmp/classify.cjs bench/vs-claude/results/s2 20 apply    # chuyển dòng hạ tầng sang excluded.jsonl
 ```
 
-Sau bước 2, các lượt đã chuyển chạy lại cùng khóa khi lặp đúng lệnh cũ (E1/E3/E4: thay lượt tối đa 2 mỗi ô, `preregistration.md` §4.1). Số lượt `T-giữ` và `N1-giữ` theo arm được ghi vào sổ để báo cáo. Phòng Dev đang thêm nhận biết hạn mức vào `run.mjs`; khi có, bước này có thể thay bằng cờ đó (tên cờ chưa biết). Lưu ý: `/tmp/classify.cjs` là script vận hành nằm ngoài repo (hạng mục giới hạn một tệp); chưa chạy trên dữ liệu thật vì chưa có `results/s2`.
+**Chạy lại sau khi loại lượt (giống hệt `preregistration.md` §4.1).** Chạy lại bằng `rep` MỚI, cùng khóa arm × bài; lượt bị loại vẫn giữ trong log kèm lý do, không ghi đè. Quy tắc áp dụng từ v2.1, không hồi tố cho 4 lượt C9 đã loại (`context/c9-partial-2026-11-02.md`); nếu C9 chạy tiếp thì theo quy tắc này. Thay lượt tối đa 2 mỗi ô (E1/E3/E4).
+
+Lưu ý cơ chế (cần kiểm): `run.mjs:64` chỉ bỏ qua khóa còn dòng trong `runs.jsonl`, nên khóa `rN` đã chuyển sang `excluded.jsonl` sẽ bị chạy lại với **cùng `rN`**, trái quy tắc trên. Cho tới khi SR-01 xong (trường `excluded`, khóa bị loại vẫn tính là đã xong, `suite-review.md` §5), vận hành viên phải gán `rep` mới bằng tay và ghi vào sổ; chưa có lệnh đã thử cho việc này. Số lượt `T-giữ` và `N1-giữ` theo arm được ghi vào sổ để báo cáo. Phòng Dev đang thêm nhận biết hạn mức vào `run.mjs`; khi có, bước này có thể thay bằng cờ đó (tên cờ chưa biết). Lưu ý: `/tmp/classify.cjs` là script vận hành nằm ngoài repo (hạng mục giới hạn một tệp); chưa chạy trên dữ liệu thật vì chưa có `results/s2`.
 
 ### 5.1 Nhánh 1
 

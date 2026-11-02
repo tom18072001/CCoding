@@ -11,7 +11,7 @@ Bộ đo đủ dùng làm hệ đánh giá chính, nhưng có 8 lỗi/khoảng t
 - H1, H2, H3, H4, H9 chỉ dựa trên 4, 4, 1, 1, 1 bài; với 3 lượt mỗi ô thì H3, H4, H9 gần như không kiểm định được. Các phép kiểm "không kém hơn/tương đương" (H2, H6) dùng ước lượng điểm, không dùng khoảng tin cậy.
 - H10 lấy `size` làm biến giải thích nhưng `size` không có định nghĩa, gán không nhất quán, và lẫn với loại bài. Slope âm −3,4 pp ngay trong selftest cho thấy phép kiểm nhạy với mức null ≠ 0.
 - Giám khảo LLM: mù một phần (ngôn ngữ tiếng Việt của arm B lộ danh tính), giám khảo mặc định `opus` trùng model của `A0-opus`, không có đối chiếu người.
-- Ba grader regex (a1, r1) đo chữ khóa nhiều hơn ý (ví dụ `sign` khớp "design"); nên chạy toàn nghiên cứu với `--judge`.
+- Hai grader regex (a1, r1) đo chữ khóa nhiều hơn ý (ví dụ `sign` khớp "design"); nên chạy toàn nghiên cứu với `--judge`.
 
 Mọi con số điểm oracle/null lấy từ `results/selftest/summary.csv` (n = 1 lượt, chạy trên máy khác: đường dẫn `/home/claude/...`). Tôi **không chạy lại** selftest (chỉ có quyền đọc). Chỗ nào là suy luận của tôi chứ không phải kết quả chạy thì ghi "suy luận"/"cần kiểm".
 
@@ -87,7 +87,7 @@ Quy ước: **Trong** = đủ để phát hiện hiệu ứng nếu hiệu ứng
 | **H7** | Ổn định giữa các lượt: SD(B0)/SD(A0) ≤ 0,7 | tỉ số theo bài `:93`, trung vị ≤ 0,7 và ≥ 3 bài (`:94`) | **Không**. SD với 3 lượt có 2 bậc tự do; tỉ số hai SD rất nhiễu. Bài mà `sd(A0) = 0` bị loại khi `sd(B0) > 0` (NaN, `:93`), thiên lệch chọn: chỉ còn các bài mà A0 dao động | Điểm rời rạc (logic) nên SD theo bước. Chạm trần làm SD = 0 ở cả hai arm (tỉ số 1 do `b === 0 ? 1`) |
 | **H8** | Thất bại điều phối: tỉ lệ thiếu sản phẩm, việc bị bỏ sót | `fm(arm)` = tỉ lệ `formatMiss` trên **mọi** lượt (`:97`); `fail(arm)` = tỉ lệ test ẩn trượt trên coding (`:98`); phán quyết = `fm(TREAT) > fm(BASE)` (`:99`) | **Không**. Không có kiểm định, chỉ so hai tỉ lệ; `formatMiss` không bao giờ đặt cho bài coding (`gradeCode` trả không có `formatMiss`, `grade.mjs:40`) | **Chỉ số lệch khỏi khái niệm**: `formatMiss` = JSON không nằm ở tệp mà phải bóc từ báo cáo cuối (`grade.mjs:9-17`). FINAL của B bằng tiếng Việt (README) nên khả năng bóc thất bại cao hơn vì ngôn ngữ, không phải vì điều phối. Ca t5 của C9 (kế hoạch bỏ sót `agg.js`, test đỏ mà review vẫn duyệt) **không được chỉ số này bắt**. Chỉ số trộn mọi bài và không cặp theo bài |
 | **H9** | Bám nguồn: citation precision và từ chối đúng B0 hơn ≥ 10 pp | `dP >= 0.1 && dR >= 0.1` (`:104-106`); lọc `research` (`:102`) | **Không**. 1 bài (re1), 3 lượt/arm; `correctRefusal` nhị phân nên mỗi arm chỉ 3 quan sát (bước 33 pp). `citationPrecision` thường chạm 1,0 | `citationPrecision` chỉ kiểm id hợp lệ, không kiểm đúng bài (mục 1). Chênh ≥ 10 pp trên cả hai đồng thời là điều kiện giao (AND) rất chặt trên 3 quan sát |
-| **H10** | Lợi thế tăng theo kích thước bài | độ dốc OLS của delta theo `size` trên 13 bài `:109-111`; hoán vị 5000 lần `:112-113`; SUPPORTED nếu `b > 0 && p < 0,05` (`:114`) | **Có thể, mong manh**. 13 điểm, `size` chỉ nhận 5 giá trị (1-5), delta nhiễu (trung bình 3 lượt). Công suất thấp với hiệu ứng nhỏ | `size` lẫn loại bài, chạm trần ở bài nhỏ, `size` chưa định nghĩa (mục 4.3). Xáo trộn `.sort(() => rnd() - 0.5)` (`:113`) không đều (xem SR-12) |
+| **H10** | Lợi thế tăng theo kích thước bài | độ dốc OLS của delta theo `size` trên 13 bài `:109-111`; hoán vị 5000 lần `:112-113`; SUPPORTED nếu `b > 0 && p < 0,05` (`:114`) | **Có thể, mong manh**. 13 điểm, `size` chỉ nhận 5 giá trị (1-5), delta nhiễu (trung bình 3 lượt). Công suất thấp với hiệu ứng nhỏ | `size` lẫn loại bài, chạm trần ở bài nhỏ, `size` chưa định nghĩa (mục 4.3). Xáo trộn `.sort(() => rnd() - 0.5)` (`:113`) không đều (xem SR-05) |
 
 **Nguy cơ chung về hiệu lực (áp cho cả bảng):**
 
@@ -162,14 +162,60 @@ Mức: **P0** = chặn khóa đăng ký trước (S4 đánh dấu "khóa có đi
 
 | Mã | Mức | Nội dung | Tệp:dòng cần sửa | H/giả thuyết bị ảnh hưởng |
 | --- | --- | --- | --- | --- |
-| **SR-01** | **P0** | (a) `done` chỉ gồm khóa có `status === 'done'`; lượt `failed`/`error` được chạy lại ở lần sau hoặc được gắn nhãn nguyên nhân (`quota`, `timeout`, `error`); (b) thêm trường `excluded` (lý do) vào dòng kết quả; (c) `analyze.mjs` loại các lượt `excluded` theo tiêu chí loại của bản 1 (hạn mức, rò rỉ, timeout) và báo số lượt loại theo arm | `run.mjs:64` (tập `done`), `run.mjs:169-176` (dòng kết quả), `analyze.mjs:11-12` | Tất cả H1-H10, B-01, B-02 |
+| **SR-01** | **P0** | (a) `done` chỉ gồm khóa có `status === 'done'`; lượt `failed`/`error` được chạy lại ở lần sau hoặc được gắn nhãn nguyên nhân (`quota`, `timeout`, `error`); (b) thêm trường `excluded` (lý do) vào dòng kết quả; (c) `analyze.mjs` loại các lượt `excluded` theo tiêu chí loại của bản 1 (hạn mức, rò rỉ, timeout) và báo số lượt loại theo arm; (d) khóa lượt bị loại vẫn tính là đã xong và lượt thay lấy `rep` mới (cùng khóa arm × bài; `preregistration.md` §4.1, `run-plan.md` §5.0) | `run.mjs:64` (tập `done`), `run.mjs:169-176` (dòng kết quả), `analyze.mjs:11-12` | Tất cả H1-H10, B-01, B-02 |
 | **SR-02** | **P0** | Cộng `costUsd` cho nhánh `calls.jsonl` (nhân giá theo model của từng dòng với bảng giá có phiên bản), lưu `model` mỗi cuộc gọi; báo `weighted` và USD ước lượng cạnh nhau | `lib/ccoding.mjs:46-62`, `analyze.mjs:122,126` | H5, TOST B-01 (độ nhạy USD), đường biên chi phí |
 | **SR-03** | **P0** | Ghi vào **mỗi dòng kết quả**: hash commit CCoding đang chạy, phiên bản `claude` CLI, model thực của từng phase B, cửa sổ hạn mức (`window` đánh số) và trạng thái hạn mức; `analyze.mjs` cảnh báo (hoặc từ chối) khi một arm có nhiều hơn một hash | `run.mjs:169-176`, `run.mjs:62` (`config.json`) | Mọi H (đặc biệt khi Phòng Dev gộp `main` giữa các cửa sổ) |
 | **SR-04** | **P0** | Thêm phép tương đương (TOST) dùng chung: bootstrap 90 % CI trên log-tỉ số, biên khai báo trước; áp cho H2, H6 và giả thuyết làn đơn B-01 (token có trọng số, thời gian, điểm tương đối). Thay phán quyết `est <= 0.05` và `|est| <= 0.05` bằng điều kiện CI nằm trong biên | `analyze.mjs:66-68` (H2), `:87-91` (H6), thêm hàm cạnh `compare` (`:38-53`) | H2, H6, B-01 |
 | **SR-05** | **P0** | Định nghĩa `size` bằng văn bản và quy tắc đếm, thêm trường `sizeBasis` vào `task.json`; gán lại 13 bài theo quy tắc; trong `analyze.mjs` H10 báo cáo (i) độ dốc có điều chỉnh loại bài hoặc chỉ trong coding, (ii) khoảng tin cậy độ dốc, (iii) Fisher-Yates thay `.sort(() => rnd() - 0.5)`. Nếu chưa gán lại kịp, S4 ghi H10 là thăm dò | `README.md:16-32`, `tasks/*/task.json`, `analyze.mjs:109-114` | H10, H1 (ngưỡng `size >= 3`) |
 | **SR-06** | **P0** | Sửa lỗi lệch chỉ số: lọc `tr` và `wr` cùng nhau để chỉ số khớp theo bài, và loại bài NaN trước khi đếm | `analyze.mjs:81-83` | H5 |
 | **SR-07** | **P0** | Khóa một chế độ chấm cho cả nghiên cứu: `analyze.mjs` từ chối nếu `details.judge` khác nhau giữa các lượt cùng bài; quy định chạy chính luôn bật `--judge` (regex chỉ là lưới an toàn, báo cả hai điểm khi có thể); ghi rõ model giám khảo | `analyze.mjs` (kiểm đầu vào, sau dòng 12), `run.mjs:36` (cờ), `README.md:47` | H1 (r1), H4, H9 |
-| **SR-08** | **P0** | Giám khảo cặp: đối chiếu người một mẫu ≥ 20 % cặp, thêm giám khảo thứ hai ngoài `A0-opus` model, ghi tỉ lệ đồng thuận; thêm kiểm định dấu/CI nhị thức; chuẩn hóa ngôn ngữ/tệp phụ để tăng mù. Phần mã nhỏ có thể làm sau, nhưng đăng ký trước phải ghi giới hạn mù | `pairwise.mjs:14,19-23,39-41`, `lib/judge.mjs:6-12,38` | Mọi kết luận dùng pairwise; H4, H9 |
+| **SR-08a** | **P0** | Giám khảo cặp, phần chặn khóa: đối chiếu người một mẫu ≥ 20 % cặp, thêm giám khảo thứ hai ngoài `A0-opus` model, ghi tỉ lệ đồng thuận; đăng ký trước phải ghi giới hạn mù | `pairwise.mjs:14,19-23`, `lib/judge.mjs:6-12,38` | Mọi kết luận dùng pairwise; H4, H9 |
+| **SR-08b** | P1 | Giám khảo cặp, phần mã làm sau: thêm kiểm định dấu/CI nhị thức; chuẩn hóa ngôn ngữ/tệp phụ để tăng mù. Không chặn khóa | `pairwise.mjs:39-41`, `lib/judge.mjs:6-12` | Mọi kết luận dùng pairwise (độ chính xác của CI) |
+
+### P0 bổ sung cho nhánh trước 5/11 (thêm ở preregistration v2.1, theo review gói 2b)
+
+| Mã | Mức | Nội dung | Tệp:dòng cần sửa | H/giả thuyết bị ảnh hưởng |
+| --- | --- | --- | --- | --- |
+| **SR-26** | **P0** | Thêm p bootstrap một phía cho H3 và p tương đương cho H6 (đặc tả dưới), để họ Holm {H3, H6} có p thật. Hiện H3 (`:69-75`) và H6 (`:86-91`) chỉ so ước lượng điểm với ngưỡng; `compare` chỉ trả CI và p đổi dấu kiểm H0: Δ = 0. Có thể gộp vào cùng PR với SR-04 (TOST) nhưng p phải được trả ra | `analyze.mjs:69-75`, `:86-91`, hàm mới cạnh `compare` (`:38-53`); test mới | H3, H6 |
+
+**Đặc tả SR-26.** Hàm `bootP(cells, { stat, h0, B = 4000, seed = 20261102 })`: lấy lại lượt có hoàn lại **trong từng ô (arm × bài)**, B lần, bộ sinh có hạt tách khỏi `rnd()` chung; `k` = số mẫu thuộc vùng H0; `p = (k + 1)/(B + 1)`; trả `{ p, pMin: 1/(B+1), B, k }` và cờ `confirmable = pMin <= ngưỡng Holm`.
+- **H3:** chỉ s1. `p_recall` = vùng H0 `Δrecall* ≤ 0,15` (Δ = m(TREAT) − m(BASE)); `p_precision` = vùng H0 `(m(BASE) − m(TREAT))* ≥ 0,05`; lượt precision NaN bị bỏ; `p(H3) = max(p_recall, p_precision)`.
+- **H6:** với A ∈ {A1, A2}, Δ = trung bình theo bài của (điểm A − điểm B0), lấy lại lượt trong từng ô rồi trung bình bài; `p_dưới` = vùng `Δ* ≤ −0,05`, `p_trên` = vùng `Δ* ≥ +0,05`; `p(A) = max`; `p(H6) = max(p(A1), p(A2))`.
+- **Test (input → kỳ vọng):**
+  1. **H3, hiệu ứng rõ.** s1: BASE recall = 0,5 ×10, TREAT recall = 0,9 ×10, precision hai arm = 0,8 ×10. Mọi mẫu có Δrecall* = 0,4 > 0,15 và drop* = 0 < 0,05 ⇒ k = 0, `p = 1/4001 ≈ 0.00025` cho cả hai, `p(H3) = 1/4001`, `confirmable = true` với ngưỡng 0,0125.
+  2. **H3, hiệu ứng dưới ngưỡng.** BASE recall = 0,5 ×10, TREAT = 0,6 ×10 (Δ = 0,10 ≤ 0,15 ở mọi mẫu) ⇒ k = B, `p = 1`.
+  3. **H6, tương đương hoàn toàn.** A1 và B0 cùng điểm 0,7 ở 3 bài (r = 3): Δ* = 0 ở mọi mẫu, ngoài hai miền H0 ⇒ `p_dưới = p_trên = 1/4001`; A2 giống A1 ⇒ `p(H6) = 1/4001`.
+  4. **H6, lệch +0,10.** A1 điểm 0,8, B0 điểm 0,7 mọi lượt ⇒ Δ* = +0,10 ≥ +0,05 ở mọi mẫu ⇒ `p_trên = 1`, `p(A1) = 1`, `p(H6) = 1`.
+  5. **Hạt.** Cùng `seed` ⇒ cùng p; khác `seed` có thể khác `k` nhưng với ca 1–4 (không có biến thiên) thì không đổi.
+  6. **Cổng nhãn.** `B = 19` ⇒ `pMin = 0.05`; với ngưỡng 0,0125 ⇒ `confirmable = false`.
+  7. **Không đổi H1–H10 hiện có.** Chạy `analyze.mjs` trên `results/` mẫu trước/sau: p của `compare` không đổi (bộ sinh tách riêng).
+- **Giới hạn:** bootstrap phần trăm là xấp xỉ; ở r = 10 và 1 bài, nó không bảo đảm mức sai lầm loại I. Phòng Dev báo kèm CI; Phòng Nghiên cứu diễn giải ở `preregistration.md` §2.5.
+
+### P0 bổ sung cho nhánh sau 5/11 (thêm ở preregistration v2.1)
+
+| Mã | Mức | Nội dung | Tệp:dòng cần sửa | H/giả thuyết bị ảnh hưởng |
+| --- | --- | --- | --- | --- |
+| **SR-25** | **P0** (nhánh sau 5/11; không chặn nhánh trước 5/11) | Thêm phép **hoán vị nhãn arm theo lượt, phân tầng theo bài** cho `compare` (đặc tả bên dưới). Lý do: hoán vị đổi dấu theo bài (`:51`) có p_min = 2¹⁻ⁿ (mã dùng `Math.abs`, hai phía) nên H1, H2 với n ≤ 4 bài không thể qua ngưỡng Holm (`preregistration.md` §2.5). Không sửa mã trong gói này | `analyze.mjs` (hàm mới cạnh `compare` `:38-53`; nối vào H1′/H2′), test mới `analyze.test.mjs` (hoặc `harness/`) | H1′, H2′ (`preregistration.md` §2.6); H1, H2 sau khi khóa |
+
+**Đặc tả SR-25 (Phòng Dev thực hiện).**
+
+- **Hàm:** `permStratified(cells, { alt = 'greater', margin = 0, maxExact = 1e6, M = 10000, seed = 20261102 })`. `margin` dịch hiệu: thống kê là T − margin, tức kiểm H0: Δ = margin (H2′ dùng `margin = 0.05`, `alt = 'less'`: H0: Δ ≥ +0,05; H1′ dùng `margin = 0`). `cells` = `[{ task, a: number[], b: number[] }, …]` (a = điểm BASE từng lượt, b = điểm TREAT từng lượt; lượt loại theo `preregistration.md` §4.3 đã bị lọc trước). Bài thiếu `a` hoặc `b` bị bỏ và báo trong kết quả.
+- **Thống kê:** T = trung bình theo bài của (mean(b) − mean(a)); mọi bài trọng số bằng nhau.
+- **Gán lại:** trong mỗi bài với r_a + r_b lượt, mọi cách chọn r_b lượt làm TREAT; số cách = ∏_b C(r_a,b + r_b,b ; r_b,b). Chỉ tính các bài có cả hai arm; bài r_a ≠ r_b vẫn hợp lệ.
+- **p:** `alt = 'greater'`: p = #{T* ≥ T_obs − 1e-12} / N (liệt kê đủ nếu N ≤ `maxExact`). `alt = 'less'`: ngược lại. `alt = 'two'`: |T*| ≥ |T_obs| − 1e-12. Nếu N > `maxExact`: lấy mẫu `M` phép gán bằng Fisher-Yates (không dùng `.sort(() => rnd() - 0.5)`, SR-05) với bộ sinh có hạt (SR-20), p = (k + 1)/(M + 1).
+- **Trả về:** `{ n, nPerm, exact, tObs, p, pMin: 1/N (exact) hoặc 1/(M+1), skipped: [task…] }`. `pMin` phải được in kèm p trong báo cáo, và `analyze.mjs` từ chối nhãn "xác nhận" nếu `pMin` > ngưỡng Holm truyền vào.
+- **Hạt:** cùng `seed` → cùng kết quả; không đụng trạng thái `rnd()` chung của `compare` (để không đổi p của H1–H10 hiện có).
+- **Test (input → kỳ vọng):**
+  1. **p_min tính tay.** 2 bài, r = 2 mỗi arm, B0 luôn cao hơn: bài 1 `a=[0,0] b=[1,1]`, bài 2 `a=[0.2,0.3] b=[0.8,0.9]`. N = C(4,2)² = 36; chỉ phép gán nguyên bản cho T* ≥ T_obs ⇒ `p = 1/36 ≈ 0.02778`, `pMin = 1/36`, `exact = true`, `nPerm = 36`.
+  2. **Ca có hòa, tính tay.** Bài 1 `a=[0,0] b=[1,1]`; bài 2 `a=[0.5,1] b=[0.5,1]`. N = 36. Bài 1 cho d₁ ∈ {+1 (1 cách), 0 (4), −1 (1)}; bài 2 cho d₂ ∈ {+0.5 (1), 0 (4), −0.5 (1)}. T_obs = (1 + 0)/2 = 0.5; T* ≥ 0.5 ⇔ d₁ + d₂ ≥ 1 ⇔ d₁ = 1 và d₂ ∈ {0, +0.5}: 1·(4 + 1) = 5 cách ⇒ `p = 5/36 ≈ 0.13889`.
+  3. **Suy biến về đổi dấu.** 3 bài, r = 1 mỗi arm, `a=[0] b=[1]` ở cả ba: N = 2³ = 8, `p = 1/8 = 0.125`, `pMin = 0.125` (khớp p_min hoán vị đổi dấu một phía 2⁻³).
+  4. **Không có hiệu ứng.** Mọi `a`, `b` giống nhau (điểm đều 1.0): `tObs = 0`, `p = 1` (mọi phép gán cho T* = 0 ≥ 0).
+  5. **Hướng.** Ca 1 với `alt='less'`: `p = 1` (chỉ T* ≤ T_obs là mọi phép gán, vì T_obs là cực đại ⇒ #{T* ≤ T_obs} = 36).
+  6. **Bài bị bỏ.** Thêm bài 3 chỉ có `a`: `skipped = ['bài 3']`, p không đổi so với ca 1.
+  7. **Hạt.** N > `maxExact` (ví dụ 8 bài, r = 6, N = 924⁸): hai lần cùng `seed` cho cùng p; `exact = false`; `pMin = 1/(M+1)`.
+  8. **Cổng nhãn.** Gọi với ngưỡng Holm 0,0125 trên ca 3 (`pMin = 0.125`): cờ `confirmable = false`.
+  9. **Biên (H2′).** Quy ước: với `margin`, mỗi phép gán lại tính T* như bình thường và so sánh T* − margin với T_obs − margin theo `alt`; p chỉ khác `margin = 0` khi hoán vị của thống kê dịch, nên kiểm bằng cách **trừ `margin` khỏi điểm TREAT trước khi hoán vị** (tương đương với cài đặt: cells' b = b − margin). Ca tính tay: 1 bài, r = 2, `a=[0.5,0.5] b=[0.55,0.55]`, `alt='less'`, `margin=0.05`: sau dịch b' = [0.5,0.5], mọi phép gán cho T* = 0 = T_obs ⇒ #{T* ≤ T_obs} = 6 trên N = C(4,2) = 6 ⇒ `p = 1`, `pMin = 1/6`. Ca đối chứng: `margin=0.05`, `b=[0.4,0.4]` (b' = [0.35,0.35] < a): T_obs = −0,15 là cực tiểu ⇒ chỉ phép gán nguyên bản (1 cách) cho T* ≤ T_obs ⇒ `p = 1/6 ≈ 0.16667`. Với `alt='less'` đúng hướng "B0 không vượt biên".
+- **Thay số p_min cho kế hoạch** (không phải test): 6 bài r = 1: 1/64 = 0,0156; 6 bài r = 2: 1/46 656; 1 bài r = 3: 1/20 = 0,05; 1 bài r = 5: 1/252 = 0,0040 (`preregistration.md` §2.6).
 
 ### P1
 
@@ -204,7 +250,7 @@ Mức: **P0** = chặn khóa đăng ký trước (S4 đánh dấu "khóa có đi
 | Trọng số `5 × output` | SR-02 (USD cạnh weighted), SR-03; ghi trong 4.1 |
 | `weighted` khác USD, hệ quả TOST B-01 | SR-02, SR-04 (và ghi trong đăng ký trước: USD chỉ là độ nhạy, chưa kiểm được trước SR-02) |
 | H10 và `size` | SR-05, SR-15 |
-| Giám khảo LLM chấm sản phẩm LLM | SR-07, SR-08, SR-09 |
+| Giám khảo LLM chấm sản phẩm LLM | SR-07, SR-08a, SR-08b, SR-09 |
 
 ## Việc chưa làm được (ghi rõ)
 
