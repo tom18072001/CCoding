@@ -53,7 +53,6 @@ const repeats = Number(flag('repeats', '2'));
 const temperature = Number(flag('temperature', '0.2'));
 const timeoutMs = Number(flag('timeout', '600')) * 1000;
 const out = path.resolve(flag('out', path.join(HERE, 'results', new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-'))));
-fs.mkdirSync(out, { recursive: true });
 const rowsFile = path.join(out, 'probes.jsonl');
 const done = new Set(fs.existsSync(rowsFile) ? fs.readFileSync(rowsFile, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l).key) : []);
 if (has('dry-run')) {
@@ -61,6 +60,7 @@ if (has('dry-run')) {
   for (const { a, p } of plan) console.log(`${a.id} · ${p.id}`);
   process.exit(0);
 }
+fs.mkdirSync(out, { recursive: true });
 
 async function chat(model, system, user, maxTokens) {
   const t0 = Date.now();
