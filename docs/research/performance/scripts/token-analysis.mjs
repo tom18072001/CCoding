@@ -2,7 +2,7 @@
 // Phân tích token / cache / thời gian cho benchtest CCoding vs Claude Code thuần (RQ3).
 // Node >= 22, không phụ thuộc ngoài, chạy offline. Chỉ đọc bench/vs-claude/results/, in Markdown ra stdout.
 //
-//   node docs/research/performance/scripts/token-analysis.mjs                 # in toàn bộ bảng T-0 … T-f
+//   node docs/research/performance/scripts/token-analysis.mjs                 # in toàn bộ bảng T-0 … T-g
 //   node docs/research/performance/scripts/token-analysis.mjs --table T-b     # in một bảng
 //   node docs/research/performance/scripts/token-analysis.mjs --check docs/research/performance/token-analysis.md
 //        # kiểm tra mọi bảng trong tệp .md trùng từng ký tự với đầu ra script (exit 1 nếu lệch)
@@ -15,6 +15,8 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const RESULTS = path.resolve(HERE, '../../../../bench/vs-claude/results');
+// C6 chưa có trong results/ của nhánh này: các dòng C6 trích nguyên văn từ commit 5866cda (perf/vs-claude-loop) vào data/.
+const EXTRA = path.resolve(HERE, '../c6-extract');
 
 const CONFIG = {
   seed: 20261102, // seed bootstrap cố định
@@ -24,7 +26,9 @@ const CONFIG = {
   o4PromptCut: 0.5, // O4: reviewer giảm 50% context+prompt+tool_output
   o5OutCut: 0.2, // O5: giảm 20% token đầu ra ở pha plan/review/synthesize
   rounds: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'],
-  phaseTableRounds: ['C1', 'C5'],
+  pooledRounds: ['C5', 'C6'], // gộp độ nhạy: cùng làn nhanh (C6 sau d7600f6: maxParallel 4)
+  hung: (r) => r.run === 'C5' && r.task === 't3-api' && r.rep === 1 && r.system.startsWith('ccoding'), // lượt treo stdin 579 s
+  phaseTableRounds: ['C1', 'C5', 'C6'],
   costBasisRound: 'C5', // vòng làm nền cho T-e (thiết kế hiện hành)
 };
 
@@ -46,7 +50,13 @@ function parseCsv(text) {
   return rows.slice(1).filter((r) => r.length > 1).map((r) => Object.fromEntries(h.map((k, i) => [k, r[i]])));
 }
 const num = (v) => (v === '' || v === undefined ? NaN : Number(v));
-const load = (n) => parseCsv(fs.readFileSync(path.join(RESULTS, n), 'utf8'));
+const load = (n) => {
+  const main = parseCsv(fs.readFileSync(path.join(RESULTS, n), 'utf8'));
+  const have = new Set(main.map((r) => r.run));
+  const ex = path.join(EXTRA, 'C6-' + n); // chỉ bổ sung vòng chưa có trong results/
+  const extra = fs.existsSync(ex) ? parseCsv(fs.readFileSync(ex, 'utf8')).filter((r) => !have.has(r.run)) : [];
+  return [...main, ...extra];
+};
 const runs = load('runs.csv').map((r) => ({ ...r, rep: +r.rep, wall: num(r.wall_s), cost: num(r.cost_usd), hp: num(r.hidden_pass), ht: num(r.hidden_total), inp: num(r.input), out: num(r.output), cr: num(r.cache_read), cw: num(r.cache_write) }));
 const calls = load('calls.csv').map((c) => ({ ...c, rep: +c.rep, t: Date.parse(c.ts), dur: num(c.duration_s) }));
 const phasesCsv = load('phases.csv');
@@ -84,19 +94,23 @@ const T = {}; // tên bảng → Markdown
     ['calls.csv', 'system_chars / context_chars / prompt_chars', `ký tự (không phải token); đổi token bằng charsPerToken = ${CONFIG.charsPerToken} (giả định)`, 'CCoding'],
     ['calls.csv', 'tool_output_chars', 'ký tự kết quả công cụ đưa lại vào hội thoại', 'CCoding'],
     ['calls.csv', 'max_tokens / retries', 'trần đầu ra cấu hình theo pha / số lần thử lại', 'CCoding'],
-    ['claude_turns.csv', 'input / cache_read / cache_write (_1h, _5m)', 'token theo TỪNG lượt mô hình của Claude Code; cache_write = _1h + _5m', 'Claude (chỉ C1, C2, C5)'],
+    ['claude_turns.csv', 'input / cache_read / cache_write (_1h, _5m)', 'token theo TỪNG lượt mô hình của Claude Code; cache_write = _1h + _5m', `Claude (chỉ ${uniq(turns.map((t) => t.run)).sort().join(', ')})`],
     ['claude_turns.csv', 'output_partial', 'token đầu ra từ luồng sự kiện từng phần — KHÔNG dùng (≪ output thật trong runs.csv)', 'Claude'],
   ];
   const ccRuns = runs.filter((x) => isCC(x.system)), clRuns = runs.filter((x) => x.system === 'claude');
   const badCC = ccRuns.filter((r) => { const cs = callsOf(r); return !(cs.length && sum(cs, (c) => num(c.input)) === r.inp && sum(cs, (c) => num(c.output)) === r.out && sum(cs, (c) => num(c.cache_read)) === r.cr && sum(cs, (c) => num(c.cache_write)) === r.cw); }).map(rk);
   const badCl = clRuns.filter((r) => { const ts = turnsOf(r); return !(ts.length && sum(ts, (t) => num(t.cache_read)) === r.cr && sum(ts, (t) => num(t.cache_write)) === r.cw && sum(ts, (t) => num(t.cache_write_1h) + num(t.cache_write_5m)) === r.cw); }).map(rk);
+  // hai hệ có chạy chồng thời gian nhau không (theo started + wall_s)?
+  const ov = (R) => { const rs = runs.filter((r) => r.run === R); const iv = (r) => [Date.parse(r.started), Date.parse(r.started) + r.wall * 1000]; const cc = rs.filter((r) => isCC(r.system)); const cl = rs.filter((r) => r.system === 'claude'); return `${R} ${cc.filter((a) => cl.some((b) => iv(a)[0] < iv(b)[1] && iv(b)[0] < iv(a)[1])).length}/${cc.length}`; };
+  const overlapLine = `Giao thức chạy (kiểm từ started + wall_s): số lượt CCoding có khoảng chạy chồng với ít nhất một lượt Claude cùng vòng — ${['C5', 'C6'].filter(hasRound).map(ov).join('; ')}. Tức ở cả C5 lẫn C6 hai hệ chạy song song nhau (mỗi hệ tuần tự trong chính nó, --concurrency 1); khác biệt C5 → C6 không phải "tuần tự → cùng lúc" mà là mã (C6 sau d7600f6: maxParallel 4) và thời điểm chạy.`;
   const w1h = sum(turns, (t) => num(t.cache_write_1h)), w5 = sum(turns, (t) => num(t.cache_write_5m));
   T['T-0'] = [
     md(['Tệp', 'Cột', 'Đơn vị / ý nghĩa', 'Áp dụng'], schema),
     '',
     `Đối chiếu: ${ccRuns.length - badCC.length}/${ccRuns.length} lượt CCoding có Σ(calls.csv) = runs.csv về input/output/cache_read/cache_write${badCC.length ? ' (lệch: ' + badCC.join('; ') + ')' : ''}; ${clRuns.length - badCl.length}/${clRuns.length} lượt Claude có Σ(claude_turns.csv) = runs.csv về cache_read/cache_write${badCl.length ? ' (lệch: ' + badCl.join('; ') + ')' : ''}.`,
     '',
-    `Quy đổi: runs.csv là nguồn chuẩn cho tổng. calls.csv (CCoding, theo lượt gọi agent = một tiến trình) và claude_turns.csv (Claude, theo lượt mô hình) KHÔNG cùng độ mịn, nên so sánh chỉ ở mức tổng theo lượt chạy hoặc "mỗi lượt gọi agent" (CCoding) với "mỗi lượt chạy" (Claude). claude_turns.csv có ở các vòng: ${uniq(turns.map((t) => t.run)).sort().join(', ')}; không có events.jsonl trong results/C*/.`,
+    `Quy đổi: runs.csv là nguồn chuẩn cho tổng. calls.csv (CCoding, theo lượt gọi agent = một tiến trình) và claude_turns.csv (Claude, theo lượt mô hình) KHÔNG cùng độ mịn, nên so sánh chỉ ở mức tổng theo lượt chạy hoặc "mỗi lượt gọi agent" (CCoding) với "mỗi lượt chạy" (Claude). claude_turns.csv có ở các vòng: ${uniq(turns.map((t) => t.run)).sort().join(', ')}; không có events.jsonl trong results/C*/. Các dòng C6 (runs, phases, calls, claude_turns) đọc từ docs/research/performance/c6-extract/C6-*.csv, trích nguyên văn từ commit 5866cda vì results/ của nhánh này chưa có C6.`,
+    overlapLine,
     '',
     `Ghi cache của Claude theo TTL: 1 giờ = ${f0(w1h)} token, 5 phút = ${f0(w5)} token (${f1((100 * w1h) / (w1h + w5))}% là 1 giờ). calls.csv không tách TTL cho CCoding.`,
     '',
@@ -154,7 +168,7 @@ const T = {}; // tên bảng → Markdown
   T['T-b'] = [
     md(['Vòng', 'Bài', 'Hệ CCoding', 'Ghi cache CC TB', 'Ghi cache Claude TB', 'Tỷ lệ ghi cache CC/Claude', 'Tỷ lệ đọc cache', 'Tỷ lệ output', 'Tỷ lệ chi phí', 'Lượt gọi agent / lượt chạy (CC)', 'Ghi cache / lượt gọi agent (CC)'], rows),
     '',
-    `Kiểm lại "gấp 2,8–4 lần": theo từng ô (vòng × bài × hệ có đối chứng Claude cùng vòng) tỷ lệ ghi cache nằm trong ${f2(Math.min(...cells))}–${f2(Math.max(...cells))}; ${cells.filter((x) => x >= 2.8 && x <= 4).length}/${cells.length} ô trong khoảng 2,8–4. Tỷ lệ gộp: ${pooled.map((p) => `${p.R}/${p.sys} ${f2(p.ratio)}×`).join('; ')}. Kết luận: ${verdict}. C3, C4 không có đối chứng Claude cùng vòng nên không có hàng tỷ lệ; C6: ${NODATA}.`,
+    `Kiểm lại "gấp 2,8–4 lần": theo từng ô (vòng × bài × hệ có đối chứng Claude cùng vòng) tỷ lệ ghi cache nằm trong ${f2(Math.min(...cells))}–${f2(Math.max(...cells))}; ${cells.filter((x) => x >= 2.8 && x <= 4).length}/${cells.length} ô trong khoảng 2,8–4. Tỷ lệ gộp: ${pooled.map((p) => `${p.R}/${p.sys} ${f2(p.ratio)}×`).join('; ')}. Kết luận: ${verdict}. C3, C4 không có đối chứng Claude cùng vòng nên không có hàng tỷ lệ; C6 (2 bài t3, t5) có đối chứng.`,
   ].join('\n');
 }
 
@@ -323,12 +337,18 @@ Hồi quy bình phương tối thiểu: cache_write ≈ F + a·(Σ *_chars / ${C
     const rs = runs.filter((r) => r.run === R);
     const tasks = uniq(rs.map((r) => r.task)).filter((t) => rs.some((r) => r.task === t && r.system === 'claude') && rs.some((r) => r.task === t && r.system === 'ccoding' || r.task === t && r.system === 'ccoding-fastlane')).sort();
     if (!tasks.length) { sets.push({ R, none: 'không có đối chứng Claude cùng vòng' }); continue; }
-    sets.push({ R, label: 'tất cả lượt', tasks, keep: () => true });
-    if (R === 'C5') sets.push({ R, label: 'loại t3 lượt 1 (treo stdin, 579 s) — độ nhạy', tasks, keep: (r) => !(r.task === 't3-api' && r.rep === 1 && isCC(r.system)) });
+    sets.push({ R, rounds: [R], label: 'tất cả lượt', tasks, keep: () => true });
+    if (R === 'C5') sets.push({ R, rounds: [R], label: 'loại t3 lượt 1 (treo stdin, 579 s) — độ nhạy', tasks, keep: (r) => !CONFIG.hung(r) });
+  }
+  if (CONFIG.pooledRounds.every(hasRound)) { // độ nhạy: gộp C5 + C6 trong từng bài (khác thời điểm, khác mã maxParallel)
+    const PR = CONFIG.pooledRounds, rs = runs.filter((r) => PR.includes(r.run));
+    const tasks = uniq(rs.map((r) => r.task)).filter((t) => rs.some((r) => r.task === t && r.system === 'claude') && rs.some((r) => r.task === t && isCC(r.system))).sort();
+    sets.push({ R: PR.join('+'), rounds: PR, label: 'gộp lượt trong bài, bỏ lượt treo — độ nhạy', tasks, keep: (r) => !CONFIG.hung(r) });
+    sets.push({ R: PR.join('+'), rounds: PR, label: 'gộp lượt trong bài, giữ lượt treo — độ nhạy', tasks, keep: () => true });
   }
   for (const s of sets) {
     if (s.none) { rows.push([s.R, '–', s.none, '', '', '', '', '']); continue; }
-    const rs = runs.filter((r) => r.run === s.R && s.tasks.includes(r.task) && s.keep(r));
+    const rs = runs.filter((r) => s.rounds.includes(r.run) && s.tasks.includes(r.task) && s.keep(r));
     const cells = s.tasks.map((t) => ({ cc: rs.filter((r) => r.task === t && r.system !== 'claude'), cl: rs.filter((r) => r.task === t && r.system === 'claude') }));
     for (const [k, name, fm] of [['wall', 'Thời gian (s)', f1], ['cost', 'Chi phí (USD)', f3]]) {
       const rand = rng(CONFIG.seed);
@@ -349,7 +369,34 @@ Hồi quy bình phương tối thiểu: cache_write ≈ F + a·(Σ *_chars / ${C
     '',
     md(['Vòng', 'Tập con', 'Chỉ số', 'Cỡ mẫu', 'Chênh lệch (CC − Claude)', 'CI 95% (bootstrap)', 'Chênh lệch tương đối so với Claude [CI]', 'Nhận xét'], rows),
     '',
-    `C6: ${NODATA}.`,
+    'C6 chỉ có 2 bài (t3, t5), 2 lượt mỗi ô nên CI của dòng C6 càng chỉ là minh họa. Hai dòng "C5+C6" trộn hai thời điểm và hai phiên bản mã (C6 sau d7600f6: maxParallel 4), và được chọn SAU khi thấy dữ liệu: coi là độ nhạy, không phải kết quả chính.',
+  ].join('\n');
+}
+
+// ---------- T-g: tỉ lệ thời gian / chi phí theo bài, C5 vs C6 vs gộp ----------
+{
+  const PR = CONFIG.pooledRounds;
+  const ratio = (rs, key) => { const cc = rs.filter((r) => isCC(r.system)), cl = rs.filter((r) => r.system === 'claude'); return cc.length && cl.length ? mean(cc.map((r) => r[key])) / mean(cl.map((r) => r[key])) : NaN; };
+  const cell = (rs, key) => { const v = ratio(rs, key); return Number.isFinite(v) ? f2(v) : '–'; };
+  const inR = (R) => runs.filter((r) => R.includes(r.run));
+  const tasks = uniq(inR(PR).map((r) => r.task)).sort();
+  const rowsT = [], rowsC = [];
+  for (const t of tasks) {
+    const g = (R, keep = () => true) => inR(R).filter((r) => r.task === t && keep(r));
+    const n = (rs) => `${rs.filter((r) => isCC(r.system)).length}/${rs.filter((r) => r.system === 'claude').length}`;
+    const nh = !g(PR).every((r) => !CONFIG.hung(r));
+    rowsT.push([t, `${cell(g(['C5']), 'wall')} (${n(g(['C5']))})`, hasRound('C6') && g(['C6']).length ? `${cell(g(['C6']), 'wall')} (${n(g(['C6']))})` : '–', `${cell(g(PR, (r) => !CONFIG.hung(r)), 'wall')} (${n(g(PR, (r) => !CONFIG.hung(r)))})`, nh ? `${cell(g(PR), 'wall')} (${n(g(PR))})` : '(như cột trước)']);
+    rowsC.push([t, cell(g(['C5']), 'cost'), g(['C6']).length ? cell(g(['C6']), 'cost') : '–', cell(g(PR, (r) => !CONFIG.hung(r)), 'cost')]);
+  }
+  const all = (keep) => { const per = tasks.map((t) => ratio(inR(PR).filter((r) => r.task === t && keep(r)), 'wall')); return mean(per); };
+  T['T-g'] = [
+    'Tỉ lệ = TB thời gian (CCoding làn nhanh) / TB thời gian (Claude Code) trong cùng ô; < 1 nghĩa là CCoding nhanh hơn. Trong ngoặc: số lượt CCoding/Claude. Cột "C5+C6" gộp mọi lượt của bài trong hai vòng (trộn thời điểm và phiên bản mã; Claude Code t3 chạy 155–160 s ở C5 nhưng 246–258 s ở C6 nên gộp không loại được nhiễu thời điểm).',
+    '',
+    md(['Bài', 'Tỉ lệ thời gian C5 (mọi lượt)', 'C6', 'C5+C6 (bỏ lượt treo)', 'C5+C6 (giữ lượt treo)'], rowsT),
+    '',
+    `TB không trọng số các bài của tỉ lệ C5+C6: ${f2(all((r) => !CONFIG.hung(r)))} (bỏ lượt treo), ${f2(all(() => true))} (giữ lượt treo).`,
+    '',
+    md(['Bài', 'Tỉ lệ chi phí C5', 'C6', 'C5+C6 (bỏ lượt treo)'], rowsC),
   ].join('\n');
 }
 
@@ -364,6 +411,7 @@ const TITLES = {
   'T-e1': 'T-e1. Mô hình ghi cache theo lượt gọi (nền cho O1)',
   'T-e': 'T-e. Ước lượng định lượng cho O1–O6',
   'T-f': 'T-f. Bootstrap CI 95% cho chênh lệch thời gian / chi phí',
+  'T-g': 'T-g. Tỉ lệ thời gian và chi phí làn nhanh / Claude theo bài: C5, C6, gộp C5+C6',
 };
 const render = (k) => `### ${TITLES[k]}\n\n${T[k]}\n`;
 const args = process.argv.slice(2);
@@ -378,6 +426,6 @@ if (ci >= 0) {
   if (!T[k]) { console.error(`Bảng không tồn tại: ${k} (có: ${Object.keys(T).join(', ')})`); process.exit(2); }
   process.stdout.write(render(k));
 } else {
-  console.log(`<!-- sinh bởi token-analysis.mjs; vòng trong summary.json: ${Object.keys(summary.summary || {}).join(', ')}; C6: ${hasRound('C6') ? 'có' : NODATA} -->\n`);
+  console.log(`<!-- sinh bởi token-analysis.mjs; vòng trong summary.json: ${Object.keys(summary.summary || {}).join(', ')}; C6: ${hasRound('C6') ? 'có (c6-extract/C6-*.csv)' : NODATA} -->\n`);
   for (const k of Object.keys(T)) console.log(render(k));
 }
