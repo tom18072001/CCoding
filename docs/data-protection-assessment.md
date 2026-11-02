@@ -428,3 +428,16 @@ Kết luận giữ nguyên: **ĐẠT CÓ ĐIỀU KIỆN** (điều kiện sao l�
 | README, `docs/ARCHITECTURE.md`, `docs/UI.md`, `docs/TOOLS.md`, `docs/RUNTIMES.md`, `docs/HERDR.md` | — | Tài liệu, không đụng dữ liệu |
 
 **Kết luận: ĐẠT.**
+
+### Bổ sung: làn đơn, cổng chất lượng, cổng phủ kế hoạch (B-01, B-02, B-10, 2/11/2026)
+
+Ba thay đổi này chỉ thêm logic điều phối và kiểm tra. Chúng không đổi nhãn dữ liệu, hook, `LogStore` hay đường ghi. Dữ liệu xử lý là đề bài và mã nguồn nội bộ, không có PII mới. Dữ liệu kiểm thử là fixture và runtime `mock`.
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| Làn đơn (`lane.pick`, `lane.escalate`), cổng chất lượng (`gate.classify`, `gate.fix`, `gate.template`, `gate.review`), cổng phủ kế hoạch (`plan.gate`) | GOV-03, DET | Mọi lượt LLM mới (agent làn đơn, vòng sửa, sửa định dạng, sửa kế hoạch) đi qua `Orchestrator.call()`, nên vẫn được ghi log, đếm token và áp chính sách dữ liệu theo nhãn. Sự kiện mới chỉ ghi qua `LogStore` trong `data/`, đã che PII/bí mật và có chuỗi băm. Tín hiệu chọn làn (`signals`) chỉ gồm số và cờ, không chứa nội dung đề |
+| `LANE-HANDOVER.md` khi nâng cấp làn | GOV-03 | Ghi trong thư mục chạy của nhiệm vụ, cùng nhãn với nhiệm vụ; chứa diff và ghi chú của agent |
+| `scripts/replay-plan-gate.mjs` | PRE-04 | Công cụ phát lại chỉ đọc `bench/vs-claude/results` và `agents/**`, in ra stdout, không ghi tệp, không gọi LLM, không gửi ra ngoài |
+| Cấu hình `lanes.single`, `gate.maxFixRounds` | GOV-02 | Chỉ là ngưỡng số; mặc định nằm trong `src/config.ts` |
+
+**Kết luận: ĐẠT.** Không phát sinh khuyến nghị mới.
