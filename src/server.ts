@@ -453,7 +453,7 @@ export function createServer(app: App): http.Server {
     if (p === '/api/kpi') {
       const tasks = q('task')?.split(',').map((s) => s.trim()).filter(Boolean);
       const days = Number(q('days') ?? 0) || undefined;
-      return send(res, 200, kpiReport(app, { tasks, days, department: q('dept') || undefined, project: q('project') || undefined, resolve: q('raw') !== '1' }));
+      return send(res, 200, kpiReport(app, { tasks, days, department: q('dept') || undefined, project: q('project') || undefined, resolve: q('raw') !== '1', by: q('by') === 'model' ? 'model' : 'agent' }));
     }
 
     if (p === '/api/agents') return send(res, 200, snapshot(app).agents);

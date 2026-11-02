@@ -142,7 +142,9 @@ ccoding usage                       # tổng + theo phòng + theo agent + theo t
 ccoding usage --by model --dept dev
 ccoding usage --task <taskId> --json
 ccoding usage --watch               # bảng token tự làm mới
-ccoding kpi --days 7                # KPI từng sub-agent (chất lượng, hiệu quả, tin cậy, tuân thủ) + việc cần sửa
+ccoding kpi --days 7                # KPI v2 từng sub-agent (chất lượng, kết quả thật, trung thực, hiệu quả, tin cậy, tuân thủ) + việc cần sửa — docs/KPI.md
+ccoding kpi --by model              # tách theo agent × model (vd. cùng vị trí chạy Claude và Ollama)
+node bench/agent-probes/probe.mjs --models qwen3:8b   # probe thử thách từng agent.md trên Ollama
 ccoding logs -f --agent data-engineer
 ccoding logs verify                 # kiểm tra toàn vẹn chuỗi băm
 ```
