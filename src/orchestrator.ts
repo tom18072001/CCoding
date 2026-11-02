@@ -39,6 +39,7 @@ import type { Store } from './store.js';
 import { clearFixedFeedback, kpiMarkdown, kpiReport } from './kpi.js';
 import { subtaskHistory, type AgentHistory } from './estimate.js';
 import { buildRepoMap } from './repomap.js';
+import { chooseLane, laneSignals, type LaneSignals } from './lane.js';
 import { cappedDone } from './runtimes/api.js';
 import { isCheckCommand, runCheckCommand, toolsFor } from './tools/workspace.js';
 import type { Uploads } from './uploads.js';
@@ -1189,30 +1190,55 @@ export class Orchestrator {
   }
 
   /**
-   * Làn xử lý của nhiệm vụ: options.lane 'fast'/'full' ghi đè; 'auto' → làn nhanh khi bật fastLane, nhiệm vụ làm trên repo git,
-   * đề bài ngắn và repo nhỏ (git ls-files: số tệp + tổng dung lượng). Mục tiêu làn nhanh: việc nhỏ xong nhanh hơn một agent làm một mình.
+   * Làn xử lý của nhiệm vụ (B-01, backlog §3.1): options.lane 'single'/'fast'/'full' ghi đè; 'auto' → chooseLane (src/lane.ts, quy tắc 1–4,
+   * không gọi LLM) theo tín hiệu briefChars/parts/filesTouched/repoFiles/repoBytes. Việc lớn: làn nhanh khi bật fastLane và repo/đề nằm trong ngưỡng, ngược lại làn đầy.
+   * Ghi signals, lane, why vào log 'lane.pick'. Làn đơn: TODO(S4) chưa có luồng riêng → tạm chạy làn nhanh (fallback='fast' trong log).
    */
-  private pickLane(task: Task, project: ProjectDef | undefined, pctx: P.Ctx): { lane: 'fast' | 'full'; why: string } {
+  private pickLane(task: Task, project: ProjectDef | undefined, pctx: P.Ctx): { lane: 'single' | 'fast' | 'full'; why: string } {
     const want = task.options.lane ?? 'auto';
-    if (want === 'fast') return { lane: 'fast', why: 'theo yêu cầu' };
-    if (want === 'full') return { lane: 'full', why: 'theo yêu cầu' };
-    const fl = this.d.config.fastLane;
-    if (!fl?.enabled || task.mode === 'agent' || task.mode === 'joint' || !project?.workspace || !pctx.filesAccessible) return { lane: 'full', why: '' };
-    if (task.brief.length > fl.maxBriefChars) return { lane: 'full', why: 'đề bài dài' };
-    const ls = spawnSync('git', ['ls-files', '-z'], { cwd: pctx.cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, windowsHide: true });
-    if (ls.status !== 0) return { lane: 'full', why: '' };
-    const files = ls.stdout.split('\0').filter(Boolean);
-    if (files.length > fl.maxRepoFiles) return { lane: 'full', why: 'repo lớn' };
-    let bytes = 0;
-    for (const f of files) {
-      try {
-        bytes += fs.statSync(path.join(pctx.cwd, f)).size;
-      } catch {
-        /* tệp đã xóa trong worktree */
+    const forced = want === 'auto' ? undefined : want;
+    const cfg = this.d.config;
+    const fl = cfg.fastLane;
+    let signals: LaneSignals | undefined;
+    let pick: { lane: 'single' | 'fast' | 'full'; why: string } = { lane: 'full', why: '' };
+    if (forced) {
+      signals = laneSignals(task.brief, [], 0, forced);
+      pick = { lane: forced, why: 'theo yêu cầu' };
+    } else if (!fl?.enabled || task.mode === 'agent' || task.mode === 'joint' || !project?.workspace || !pctx.filesAccessible) {
+      pick = { lane: 'full', why: '' };
+    } else {
+      const ls = spawnSync('git', ['ls-files', '-z'], { cwd: pctx.cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, windowsHide: true });
+      if (ls.status === 0) {
+        const files = ls.stdout.split(' ').filter(Boolean);
+        let bytes = 0;
+        for (const f of files) {
+          try {
+            bytes += fs.statSync(path.join(pctx.cwd, f)).size;
+          } catch {
+            /* tệp đã xóa trong worktree */
+          }
+          if (bytes > fl.maxRepoBytes) break;
+        }
+        signals = laneSignals(task.brief, files, bytes);
+        const ch = chooseLane(signals, cfg);
+        pick = { lane: ch.lane, why: ch.why };
       }
-      if (bytes > fl.maxRepoBytes) return { lane: 'full', why: 'repo lớn' };
     }
-    return { lane: 'fast', why: `việc nhỏ: repo ${files.length} tệp, ${Math.max(1, Math.round(bytes / 1024))} KB` };
+    // TODO(S4): làn đơn chưa có luồng riêng — tạm đi làn nhanh; S4 bỏ fallback này khi runSingleLane có mặt
+    const fallback = pick.lane === 'single' ? 'fast' : undefined;
+    this.d.logs.write({
+      level: 'info',
+      kind: 'lane.pick',
+      msg: `${task.id}: làn ${pick.lane}${fallback ? ` (tạm chạy ${fallback})` : ''}${pick.why ? ` — ${pick.why}` : ''}`,
+      taskId: task.id,
+      projectId: task.projectId,
+      data: { lane: pick.lane, why: pick.why, signals, fallback },
+    });
+    if (signals) {
+      const sg = signals;
+      this.message(task, task.departments?.[0] ?? 'system', 'system', 'system', `🧭 Chọn làn ${pick.lane}${pick.why ? ` (${pick.why})` : ''} — tín hiệu: đề ${sg.briefChars} ký tự, ${sg.parts} phần, ${sg.filesTouched} tệp/thư mục nêu, repo ${sg.repoFiles} tệp / ${Math.round(sg.repoBytes / 1024)} KB${sg.sequential ? ', nối tiếp' : ''}${sg.forced ? `, ép ${sg.forced}` : ''}.`);
+    }
+    return pick;
   }
 
   /** Năng lực công cụ ở pha thực thi của từng người (với quyền của nhiệm vụ) — trưởng phòng giao việc theo đó. */
@@ -1243,14 +1269,14 @@ export class Orchestrator {
     // Làn nhanh (việc nhỏ): điều phối nhanh, chia song song, không họp, báo cáo theo mẫu — chọn một lần, lưu vào nhiệm vụ
     if (!task.lane) {
       const pick = this.pickLane(task, project, pctx);
-      task.lane = pick.lane;
-      if (pick.lane === 'fast') {
+      task.lane = pick.lane === 'single' ? 'fast' : pick.lane; // TODO(S4): giữ 'single' khi có runSingleLane
+      if (task.lane === 'fast') {
         if (!task.options.phaseModels?.plan && this.d.config.fastLane.planModel) task.options.phaseModels = { ...task.options.phaseModels, plan: this.d.config.fastLane.planModel };
         this.message(task, dept.id, 'system', 'system', `⚡ Làn nhanh (${pick.why}): lập kế hoạch nhanh, chia việc song song, không họp${this.d.config.fastLane.finalReport === 'template' ? ', báo cáo dựng từ bàn giao' : ''}.`);
       }
       this.save(task);
     }
-    pctx.lane = task.lane;
+    pctx.lane = task.lane === 'single' ? 'fast' : task.lane; // TODO(S4)
     const names = new Map([...registry.agents.values()].map((a) => [a.id, a.name]));
     const rosterHints = roster.map((a) => ({ id: a.id, name: a.name, title: a.title, role: a.role, skills: a.skills }));
     run.status = 'running';
@@ -3267,7 +3293,7 @@ export function variantOptions(o: Partial<TaskOptions>): Partial<TaskOptions> {
     if (Object.keys(pm).length) out.phaseModels = pm as TaskOptions['phaseModels'];
   }
   if (typeof o.variant === 'string' && o.variant.trim()) out.variant = o.variant.trim().slice(0, 60);
-  if (o.lane === 'auto' || o.lane === 'fast' || o.lane === 'full') out.lane = o.lane;
+  if (o.lane === 'auto' || o.lane === 'single' || o.lane === 'fast' || o.lane === 'full') out.lane = o.lane;
   return out;
 }
 

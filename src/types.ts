@@ -336,7 +336,7 @@ export interface TaskOptions {
    * Làn xử lý: 'fast' — việc nhỏ: điều phối lập kế hoạch nhanh (Sonnet), chia 2–4 phần độc lập chạy SONG SONG, không họp, báo cáo theo
    * mẫu (không gọi model); 'full' — quy trình đầy đủ; 'auto' (mặc định) — tự chọn theo cỡ đề bài và repo (cấu hình `fastLane`).
    */
-  lane?: 'auto' | 'fast' | 'full';
+  lane?: 'auto' | 'single' | 'fast' | 'full';
   /** CTO nghiệm thu sau khi các phòng tổng hợp xong (mặc định theo cấu hình; việc giao riêng một agent thì bỏ qua). */
   acceptance?: boolean;
 }
@@ -451,7 +451,7 @@ export interface Task {
   /** Chỉ bắt đầu khi các nhiệm vụ này đã xong (thứ tự phụ thuộc giữa các nhiệm vụ đã tách). */
   after?: string[];
   /** Làn đã chọn khi bắt đầu chạy (xem TaskOptions.lane). */
-  lane?: 'fast' | 'full';
+  lane?: 'single' | 'fast' | 'full';
   /** Lệnh kiểm tra của dự án do CCoding tự chạy: trước khi sửa (baseline) và sau thực thi/sửa (latest). */
   projectChecks?: ProjectChecks;
   /** Nhiệm vụ đã chạy xong nhưng cần người xem lại (vd. review cuối chưa duyệt). */

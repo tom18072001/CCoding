@@ -20,7 +20,7 @@ function app(fastLane: Record<string, unknown> = {}) {
     tools: { ...base.tools, repoMap: false },
     fastLane: { ...base.fastLane, ...fastLane },
   });
-  return Object.assign(a, { dataDir, cleanup: () => fs.rmSync(dataDir, { recursive: true, force: true }) });
+  return Object.assign(a, { dataDir, cleanup: () => fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) });
 }
 
 function repoIn(dir: string): string {
@@ -190,6 +190,6 @@ test('hook claude-cli: lệnh Bash chạy với stdin = /dev/null (không treo k
     assert.match(out, /vẫn đọc được heredoc/);
     assert.equal(fs.readFileSync(path.join(dir, 'x.txt'), 'utf8'), '');
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
