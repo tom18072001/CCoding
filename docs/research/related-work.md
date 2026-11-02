@@ -303,7 +303,7 @@ Tổng nguồn trong tệp: **15 (nhóm A) + 16 (nhóm B) = 31**. Nguồn 2025�
 
 #### B.3.1 CAID — Effective Strategies for Asynchronous Software Engineering Agents
 - **APA 7:** Geng, J., & Neubig, G. (2026). *Effective strategies for asynchronous software engineering agents* (arXiv:2603.21489). https://arxiv.org/abs/2603.21489 — HTML: https://arxiv.org/html/2603.21489v1 *(nộp 23/3/2026; Carnegie Mellon University.)*
-- **Loại:** preprint. **Mức đọc:** [ĐỌC TRANG — abs + HTML (100.000/134.699 ký tự), công cụ tóm lược].
+- **Loại:** preprint. **Mức đọc:** [ĐỌC TRANG — abs + HTML, công cụ tóm lược; v2: đã đọc đủ 134.699 ký tự, trừ Phụ lục C–D không có trong nội dung lấy được].
 - **Đóng góp:** CAID (Centralized Asynchronous Isolated Delegation): manager lập kế hoạch có phụ thuộc, giao cho các engineer, mỗi engineer **một git worktree**, tích hợp bằng `git commit`/`git merge` và kiểm chứng bằng test. Tóm tắt: +26,7 điểm tuyệt đối trên PaperBench và +14,3 trên Commit0 (v1 HTML); **trang abs hiện ghi +25,6 và +14,7** → hai phiên bản khác nhau, cần ghi phiên bản khi trích. Bảng 2 (PaperBench, Claude Sonnet 4.5, 2 engineer): đơn agent 57,2 điểm / 1803,5 / 3,3; CAID 63,3 / 2080,4 / 9,3 (đơn vị runtime và chi phí không được ghi nhãn trong bảng; văn bản nói runtime tính bằng giây). Commit0-Lite (4 engineer): 53,1 / 692,6 / 1,9 so với 59,1 / 1583,2 / 8,1. Tác giả viết: "multi-agent execution consistently incurs higher API cost than single-agent baselines" và "wall-clock runtime is not substantially reduced despite parallel execution". Cách ly bằng worktree tốt hơn "soft isolation" (PaperBench 63,3 so với 55,5; Commit0-Lite 59,1 so với 56,1).
 - **Giống CCoding (rất gần):** manager + kế hoạch có phụ thuộc + worktree con + tự gộp + kiểm chứng bằng test. **Khác:** CAID dùng PaperBench/Commit0, không so với Claude Code thuần theo từng pha; không thấy cache, không có làn nhanh cho việc nhỏ, không có hook quyền công cụ, không có vòng tự cải thiện sub-agent trong phần đã đọc. **Thứ tự thời gian:** CAID (3/2026) đi trước worktree song song của CCoding (từ 1/11/2026, theo đề bài) → ý tưởng này **không được nhận là mới**.
 
@@ -368,6 +368,21 @@ Tổng nguồn trong tệp: **15 (nhóm A) + 16 (nhóm B) = 31**. Nguồn 2025�
 
 *Phần không phải công bố lại* nằm ở **phép đo và vận hành**, không ở ý tưởng kiến trúc: (a) N1 — đo cache/token/thời gian từng pha so với Claude Code thuần (mức Trung bình); (b) N5 — nhật ký thách thức–cách giải quyết từ một hệ vận hành thật (Trung bình); (c) N3 và N4 ở mức Thấp–Trung bình, cần bổ sung trước khi khẳng định. Kết luận này **chưa thể nâng lên "chưa ai làm"**, vì 24/31 nguồn chỉ đọc tóm tắt (7/31 được mở trang) và không có `search_papers`.
 
+**Cập nhật v2 (S2, 2026-11-02) — "khác gì" CAID và Don't Break the Cache, sau khi đọc toàn văn.** Chỉ nêu khác biệt có bằng chứng; chi tiết, trích đoạn và số mục ở `references-v2.md` §2.
+
+| Câu hỏi | CAID (Geng & Neubig, 2026) | Don't Break the Cache (Lumer và cộng sự, 2026) | CCoding (bản thảo) |
+|---|---|---|---|
+| Đo thời gian theo pha? | **Không**: chỉ tổng thời gian mỗi cấu hình (Bảng 2, Phụ lục B); Hình 4 là Gantt, không có số theo pha | Không (đo TTFT mỗi lệnh gọi) | Có (`phases.csv`, T-d: lập kế hoạch/thực thi/review/gộp) |
+| Đo cache? | **Không** (không có cache/token trong bảng; có cột Cost không nêu đơn vị) | **Có**, đó là chủ đề: giảm chi phí 41–80 %, TTFT 6–31 % trên 500+ phiên | Có (cache read/creation theo `calls.csv`; trần 5,1 % của O1 — T-e) |
+| Cấu hình so sánh | Đơn agent OpenHands vs CAID (2 hoặc 4 engineer), thêm biến thể soft isolation, đơn agent 200 vòng | Bốn chế độ cache trên một agent | Claude Code một mình (Opus C5–C6, Sonnet C7) vs làn nhanh/làn đầy |
+| Mô hình | Claude Sonnet 4.5, MiniMax 2.5, GLM 4.7 | GPT-5.2, Claude Sonnet 4.5, Gemini 2.5 Pro (+GPT-4o) | Opus và Sonnet qua `claude-cli` |
+| Quy mô bài | Commit0-Lite (16 repo) và PaperBench Code-Dev (20 bài); mỗi cấu hình ≈ 12–50 phút | DeepResearch Bench, 40 phiên/điều kiện, **tác vụ web, một agent** | 5 bài tự viết (461 test ẩn), 1–2 lượt/bài, 1–5 phút |
+| Kết quả thời gian | Đa agent **chậm hơn** ở cả 6 hàng Bảng 2 (×1,15–×2,5); chi phí ×1,7–×4,3 | Không áp dụng | Cùng mô hình: một agent nhanh hơn 1,6–2,9× ở 4/5 bài (C7, n nhỏ) |
+
+Hệ quả có bằng chứng: (1) **kết luận "đa agent đắt hơn và không nhanh hơn" đã có ở CAID** trên benchmark công khai — CCoding không được nhận là phát hiện đầu tiên, chỉ là mẫu bổ sung ở quy mô nhỏ, bài ngắn, có tách hiệu ứng mô hình; (2) **thứ CCoding có mà CAID không có** là thời gian theo pha và số cache, nên "chi phí cố định của điều phối" định lượng được ở CCoding mà CAID chỉ suy ra từ tổng; (3) "tiền tố ổn định giữ cache" đã được Lumer và cộng sự đo cho một agent tìm kiếm web; CCoding chỉ khác ở bối cảnh (coding, nhiều agent, runtime `claude-cli`), và Lumer và cộng sự **không** đo sub-agent hay tác vụ lập trình (§2.3 chỉ nêu Claude Code/Cursor làm nền). Phần Phụ lục C (kiểm định ý nghĩa) và D (ca lỗi) của CAID **không** có trong nội dung đã đọc nên chưa nói được CAID có kiểm định hay không.
+
+**Cognition 2026 (Yan, 22/4/2026, "Multi-Agents: What's Actually Working", https://cognition.com/blog/multi-agents-working — đã đọc):** giữ ghi **đơn luồng**, "Our original observations still hold today for parallel-writer swarms"; review ngữ cảnh sạch (Devin Review "catches an average of 2 bugs per PR", ~58 % nghiêm trọng, không có phương pháp đo). Là nhận định thực hành của nhà cung cấp, không phải bằng chứng thực nghiệm có kiểm soát.
+
 **Hệ quả cho định hướng bài (suy luận của S5, không phải phát hiện có trích dẫn):**
 1. Khung bài nên là **"đo chi phí–thời gian–cache của một hệ coding multi-agent so với đơn agent, kèm bài học vận hành"**, đặt cạnh CAID (kết quả tương tự: chi phí cao hơn, thời gian không giảm đáng kể) — hoặc ghi rõ chỗ CCoding khác nếu số liệu của S2 cho kết quả khác. Không được kết luận trước về hướng kết quả.
 2. Bài về tự cải thiện (N4) chỉ nên tách thành đề tài riêng khi có bằng chứng định lượng trước/sau bản vá; hiện chưa có.
@@ -376,6 +391,6 @@ Tổng nguồn trong tệp: **15 (nhóm A) + 16 (nhóm B) = 31**. Nguồn 2025�
 ### K.4 Việc còn thiếu trước khi nộp
 
 - Chạy `search_papers` (OpenAlex) khi có công cụ: đếm trích dẫn, tra xuôi/ngược tới CAID, TeamBench, MAST, Don't Build Multi-Agents; tìm riêng chủ đề routing/adaptive compute (N3) và quản trị dữ liệu trong agent (N6).
-- Đọc toàn văn tối thiểu: CAID (phần chưa đọc 34.699 ký tự cuối), Don't Break the Cache (bảng chi tiết), EvoMAC (cơ chế phản hồi), AgentCoder.
-- Điền đủ tác giả APA cho các mục ghi "et al." và tác giả AgentDojo; xác minh venue của DSPy, ADAS, EvoMAC, Optima, Self-Refine.
-- Mở bài Cognition 2026 từ nguồn gốc (hiện `[CHƯA KIỂM CHỨNG]`).
+- Đọc toàn văn tối thiểu: ~~CAID (phần chưa đọc 34.699 ký tự cuối), Don't Break the Cache~~ **(đã đọc ở v2, `references-v2.md` §2)**; còn lại EvoMAC (cơ chế phản hồi), AgentCoder, TeamBench (mới đọc abstract); CAID Phụ lục C–D.
+- ~~Điền đủ tác giả APA cho các mục ghi "et al." và tác giả AgentDojo; xác minh venue…~~ **Đã làm ở v2 (`references-v2.md`)**; venue gắn nhãn [V-thứ cấp]/[V-BRIEF] cần mở trang chính trước khi nộp.
+- ~~Mở bài Cognition 2026 từ nguồn gốc~~ **Đã đọc ở v2** (`references-v2.md` §3). Mục APA trong các mục §2–B của tệp này vẫn là bản v1 ("et al."); **bản dùng để trích là `references-v2.md`**.
