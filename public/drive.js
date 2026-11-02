@@ -276,6 +276,7 @@
         t.projectId && { icon: '📁', label: `Mở dự án ${projName(t.projectId)}`, run: () => openProject(t.projectId) },
         { icon: V.stars.has(t.id) ? '☆' : '⭐', label: V.stars.has(t.id) ? 'Bỏ gắn sao' : 'Gắn sao', run: () => (star(t.id), D.changed()) },
         { icon: '↻', label: 'Giao lại tương tự', run: () => again(t) },
+        { icon: '🔁', label: 'Lặp lại định kỳ…', run: () => window.Pages?.routineFromTask(t) },
         '-',
         t.status === 'running' && { icon: '⏸', label: 'Tạm dừng', run: () => act(`/api/tasks/${t.id}/pause`, {}, 'Đã yêu cầu tạm dừng') },
         ['paused', 'failed', 'cancelled'].includes(t.status) && (t.runs || []).length && { icon: '▶', label: 'Tiếp tục (chạy tới khi xong)', run: () => act(`/api/tasks/${t.id}/resume`, { budgetMode: 'complete' }, 'Đã tiếp tục') },
@@ -763,7 +764,7 @@
   }
 
   // ── Thanh trên vùng chính: đường dẫn + tìm kiếm ─────────────────────────
-  const TAB_VI = { home: '🏠 Tổng quan', inbox: '📥 Cần bạn', projects: '📁 Dự án', tasks: '📋 Nhiệm vụ', assign: '💬 Prompt', people: '👥 Nhân sự', prompts: '📚 Thư viện prompt', tokens: '🔢 Token', quota: '⛽ Hạn mức', kpi: '📈 KPI', logs: '🧾 Nhật ký' };
+  const TAB_VI = { routines: '🔁 Việc định kỳ', artifacts: '📦 Sản phẩm', skills: '🧩 Kỹ năng & Kết nối', audit: '🛡 Kiểm toán', home: '🏠 Tổng quan', inbox: '📥 Cần bạn', projects: '📁 Dự án', tasks: '📋 Nhiệm vụ', assign: '💬 Prompt', people: '👥 Nhân sự', prompts: '📚 Thư viện prompt', tokens: '🔢 Token', quota: '⛽ Hạn mức', kpi: '📈 KPI', logs: '🧾 Nhật ký' };
   function crumbs() {
     const el = $('#crumbs');
     if (!el || !C) return;

@@ -391,3 +391,14 @@ Chỉ thay giao diện ô Văn phòng (bỏ canvas, nhân vật giám đốc, đ
 | Đề xuất việc tiếp theo | — | Chỉ soạn sẵn vào ô giao việc trong trình duyệt; không tự tạo nhiệm vụ |
 
 **Kết luận: ĐẠT**, không thêm điều kiện. Tắt nghiệm thu nếu muốn giảm số lượt gửi dữ liệu ra runtime bên ngoài với nhiệm vụ nhãn Nội bộ.
+
+### Bổ sung: UX-4d — Việc định kỳ, Sản phẩm, Kỹ năng & Kết nối, Kiểm toán (2/11/2026)
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| Việc định kỳ (`data/routines.json`, bộ lập lịch trong server) | GOV-03, PRE-05, DET-01 | Nhiệm vụ mẫu (đề bài) lưu trong `data/` như nhiệm vụ thường; mỗi lần chạy đi qua đúng đường giao việc (nhãn dữ liệu theo dự án, runtime được phép, che bí mật/PII khi gửi ra ngoài, ngân sách). Tạo/sửa/xóa/chạy/bỏ qua đều ghi nhật ký có chuỗi băm (`routine.*`). Không chạy chồng (lần trước chưa xong thì bỏ qua); lỡ lịch lâu thì không chạy bù hàng loạt. `routineId` không đặt được qua API giao việc |
+| Sản phẩm (`GET /api/artifacts`) | PRE-06 | Chỉ liệt kê siêu dữ liệu (đường dẫn, kích thước, thời gian) từ thư mục chạy; nội dung mở qua API tệp đã có (chặn path traversal). Tải xuống tạo trong trình duyệt từ nội dung đã mở |
+| Kỹ năng & Kết nối (`GET /api/skills`) | GOV-02 | Chỉ đọc hồ sơ agent, chính sách công cụ, trạng thái runtime (không trả khóa API, chỉ trả runtime được xử lý nhãn nào) |
+| Kiểm toán (`GET /api/audit`, `/api/audit/verify`) | DET-01, DET-05, RES-03 | Đọc nhật ký hệ thống (đã che bí mật/PII lúc ghi), lọc sự kiện thay đổi trạng thái/an toàn; kiểm chuỗi băm để phát hiện sửa/xóa. Đáp ứng yêu cầu truy xuất nhật ký hệ thống; **khuyến nghị**: sao lưu `data/logs/` sang nơi chỉ ghi thêm (WORM) để giữ ≥ 12 tháng, vì tệp trên máy vẫn có thể bị xóa cả cụm |
+
+**Kết luận: ĐẠT CÓ ĐIỀU KIỆN** — điều kiện: đặt lịch sao lưu `data/logs/` (WORM/ký số) nếu nhật ký dùng làm chứng cứ.

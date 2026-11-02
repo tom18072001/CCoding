@@ -285,6 +285,7 @@ export class Orchestrator {
       projectId: project?.id,
       agentId: mode === 'agent' ? input.agentId : undefined,
       followUpOf: prev?.id,
+      routineId: input.routineId,
       // tiếp nối: không hạ nhãn dữ liệu so với nhiệm vụ trước
       classification: maxClass((project?.classification ?? config.dataProtection.defaultClassification) as Classification, prev?.classification),
       status: 'queued',
@@ -349,7 +350,7 @@ export class Orchestrator {
       msg: `Nhận nhiệm vụ: ${task.title}`,
       taskId: task.id,
       projectId: task.projectId,
-      data: { mode, department: input.department, budgetTokens: task.options.budgetTokens, budgetMode, attachments: task.attachments?.map((a) => ({ name: a.name, kind: a.kind, chars: a.chars })) },
+      data: { mode, department: input.department, budgetTokens: task.options.budgetTokens, budgetMode, attachments: task.attachments?.map((a) => ({ name: a.name, kind: a.kind, chars: a.chars })), routineId: input.routineId },
     });
     this.emitTask(task);
     this.queue.push(task.id);
@@ -484,7 +485,7 @@ export class Orchestrator {
     t.attention = undefined;
     t.finishedAt = undefined;
     t.resumes = (t.resumes ?? 0) + 1;
-    logs.write({ level: 'info', kind: 'task.resumed', msg: `Tiếp tục ${t.id} từ checkpoint (trước đó: ${prev}) — ngân sách ${fmtNum(t.options.budgetTokens)} · ${t.options.budgetMode === 'complete' ? 'chạy tới khi hoàn thành' : 'dừng khi chạm trần'}`, taskId: t.id, projectId: t.projectId });
+    logs.write({ level: 'info', kind: 'task.resumed', msg: `Tiếp tục ${t.id} từ checkpoint (trước đó: ${prev}) — ngân sách ${fmtNum(t.options.budgetTokens)} · ${t.options.budgetMode === 'complete' ? 'chạy tới khi hoàn thành' : 'dừng khi chạm trần'}`, taskId: t.id, projectId: t.projectId, data: { auto: !!o.auto } });
     this.message(t, 'office', 'system', 'system', `▶ Tiếp tục nhiệm vụ từ checkpoint (lần ${t.resumes}) — các phần đã xong được giữ nguyên.`);
     this.save(t, true);
     this.queue.push(t.id);

@@ -409,6 +409,8 @@ export interface Task {
   notes?: Array<{ id: string; at: string; text: string }>;
   /** Nhiệm vụ này tiếp nối nhiệm vụ trước (giao việc tiếp nối từ màn hình nhiệm vụ). */
   followUpOf?: string;
+  /** Do việc định kỳ này tạo (UX-4d). */
+  routineId?: string;
   classification: Classification;
   status: TaskStatus;
   phase?: Phase;
@@ -588,6 +590,35 @@ export interface NewTaskInput {
   options?: Partial<TaskOptions>;
   /** id các file đã tải lên (POST /api/uploads). */
   attachments?: string[];
+  /** Tạo bởi việc định kỳ này (UX-4d) — chỉ bộ lập lịch đặt, API giao việc bỏ qua. */
+  routineId?: string;
+}
+
+/** Lịch của việc định kỳ — giờ theo đồng hồ máy chạy server. */
+export interface RoutineSchedule {
+  kind: 'daily' | 'weekly' | 'interval';
+  /** HH:MM (daily, weekly). */
+  time?: string;
+  /** Thứ trong tuần (0 = Chủ nhật … 6 = Thứ bảy) — weekly. */
+  days?: number[];
+  /** Mỗi N giờ (1–168) — interval. */
+  everyHours?: number;
+}
+
+/** Việc định kỳ: giao lại một nhiệm vụ mẫu theo lịch (UX-4d). */
+export interface Routine {
+  id: string;
+  name: string;
+  enabled: boolean;
+  schedule: RoutineSchedule;
+  template: Pick<NewTaskInput, 'brief' | 'title' | 'mode' | 'department' | 'projectId' | 'agentId' | 'options'>;
+  createdAt: string;
+  updatedAt: string;
+  nextRunAt?: string;
+  lastRunAt?: string;
+  lastTaskId?: string;
+  /** Lần bỏ qua gần nhất (lần chạy trước chưa xong, lỡ lịch quá lâu, lỗi giao việc). */
+  lastSkip?: { at: string; reason: string };
 }
 
 export function emptyUsage(): Usage {

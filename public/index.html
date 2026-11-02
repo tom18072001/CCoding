@@ -57,11 +57,15 @@
       <button class="nav" data-tab="tasks" data-filter="all">📋 <span>Nhiệm vụ</span></button>
       <button class="nav" data-tab="projects">📁 <span>Dự án</span><em id="badge-projects"></em></button>
       <div class="nav-sub" id="nav-projects"></div>
+      <button class="nav" data-tab="routines" title="Giao lại một nhiệm vụ mẫu theo lịch">🔁 <span>Việc định kỳ</span></button>
+      <button class="nav" data-tab="artifacts" title="Báo cáo, sản phẩm hạng mục, nghiệm thu, thay đổi mã">📦 <span>Sản phẩm</span></button>
       <button class="nav" data-tab="assign" title="Giao việc và trao đổi theo hội thoại">💬 <span>Prompt</span></button>
       <button class="nav" data-tab="tasks" data-filter="starred">⭐ <span>Gắn sao</span></button>
       <button class="nav" data-tab="prompts">📚 <span>Thư viện prompt</span></button>
       <div class="nav-sep">Tổ chức</div>
       <button class="nav" data-tab="people">👥 <span>Nhân sự</span></button>
+      <button class="nav" data-tab="skills" title="Kỹ năng của agent, công cụ, runtime và các kết nối">🧩 <span>Kỹ năng & Kết nối</span></button>
+      <button class="nav" data-tab="audit" title="Ai làm gì lúc nào — nhật ký có chuỗi băm">🛡 <span>Kiểm toán</span></button>
       <button class="nav" data-tab="tokens">🔢 <span>Token</span></button>
       <button class="nav" data-tab="quota">⛽ <span>Hạn mức</span></button>
       <button class="nav" data-tab="kpi">📈 <span>KPI</span></button>
@@ -226,6 +230,10 @@
       </div>
 
       <!-- Nhật ký -->
+      <div class="tab-body" data-body="audit"><div id="audit-view" class="pg"></div></div>
+      <div class="tab-body" data-body="artifacts"><div id="artifacts-view" class="pg"></div></div>
+      <div class="tab-body" data-body="skills"><div id="skills-view" class="pg"></div></div>
+      <div class="tab-body" data-body="routines"><div id="routines-view" class="pg"></div></div>
       <div class="tab-body" data-body="logs">
         <div class="log-filters">
           <select id="log-dept"><option value="">Mọi phòng</option></select>
@@ -264,6 +272,7 @@
   <script src="timeline.js"></script>
   <script src="inbox.js"></script>
   <script src="palette.js"></script>
+  <script src="pages.js"></script>
   <script src="app.js"></script>
   <script src="director.js"></script>
   <script src="drive.js"></script>

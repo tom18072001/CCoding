@@ -7,7 +7,7 @@
   let applying = false;
   let hold = ''; // URL đang chờ tải dữ liệu (vd. hội thoại của nhiệm vụ vừa giao) — chưa ghi đè
   const R = {};
-  const TABS = ['home', 'assign', 'inbox', 'projects', 'tasks', 'people', 'prompts', 'tokens', 'quota', 'kpi', 'logs'];
+  const TABS = ['home', 'assign', 'inbox', 'projects', 'tasks', 'people', 'prompts', 'tokens', 'quota', 'kpi', 'logs', 'routines', 'artifacts', 'skills', 'audit'];
   const VIEWS = ['chat', 'final', 'files', 'tokens', 'events', 'calls', 'diff', 'timeline'];
   const enc = encodeURIComponent;
   const needsYou = (t) => !!t.attention || t.status === 'paused' || t.status === 'failed';

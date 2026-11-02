@@ -134,6 +134,9 @@ async function cmdServe(args: string[]): Promise<void> {
     console.log(`   runner: ${app.orchestrator.runner}${app.herdr.insideHerdr() ? ' (trong herdr)' : ''} · agent: ${app.registry.agents.size} · phòng ban: ${app.registry.departments.size} · dữ liệu: ${app.config.dataDir}`);
     for (const e of app.registry.errors) console.log(c.yellow(`   ⚠ ${e}`));
     app.logs.write({ level: 'info', kind: 'server.start', msg: `Server khởi động tại ${host}:${port} (runner ${app.orchestrator.runner})` });
+    // việc định kỳ: chỉ tiến trình server lập lịch (CLI đọc dữ liệu không giao việc)
+    app.routines.start();
+    if (app.routines.all().length) console.log(`   việc định kỳ: ${app.routines.all().filter((r) => r.enabled).length}/${app.routines.all().length} đang bật`);
     void app.runtimes.status().then((list) => {
       for (const r of list) console.log(`   ${r.ok ? c.green('●') : c.gray('○')} ${r.id.padEnd(14)} ${c.gray(r.detail)}`);
       console.log(`   runtime mặc định: ${app.config.runtime.default}\n`);
@@ -144,6 +147,7 @@ async function cmdServe(args: string[]): Promise<void> {
     process.exit(1);
   });
   const stop = () => {
+    app.routines.stop();
     app.store.flush();
     app.logs.write({ level: 'info', kind: 'server.stop', msg: 'Server dừng' });
     process.exit(0);

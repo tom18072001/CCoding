@@ -204,6 +204,7 @@
     window.TL?.init();
     window.Inbox?.init();
     window.Palette?.init();
+    window.Pages?.init();
     setTab(S.tab);
     renderAll();
     window.Router?.init();
@@ -486,6 +487,7 @@
     if (tab === 'logs') loadLogs();
     if (tab === 'quota') window.Director?.renderQuota();
     if (tab === 'inbox') window.Inbox?.render(true);
+    if (window.Pages?.tabs.includes(tab)) window.Pages.render(tab);
     window.Router?.sync();
   }
 

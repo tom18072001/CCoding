@@ -11,6 +11,10 @@ import { isSafeRef } from './git.js';
 import { DiffError, diffSummary, fileDiff, isSha, locate as locateDiff, ownersOf, repoDirFor } from './diff.js';
 import { ShipError } from './ship.js';
 import { buildTimeline } from './timeline.js';
+import { AUDIT_CATS, auditOf, type AuditRow } from './audit.js';
+import { listArtifacts } from './artifacts.js';
+import { describeSchedule, RoutineError } from './routines.js';
+import { verifyChain } from './logger.js';
 import { deniedReason } from './tools/workspace.js';
 import type { BudgetMode, Classification, LogEntry, Phase, ProjectDef, TaskMode, ToolAccess } from './types.js';
 import type { UsageDim } from './usage.js';
@@ -129,6 +133,8 @@ export function createServer(app: App): http.Server {
   // dòng thời gian: nhớ đệm phần đã đọc của calls.jsonl / events.jsonl theo nhiệm vụ (chỉ trường thời gian, tối đa 64 file)
   const tlCalls: JsonlCache<{ ts: string; callId?: string; subtaskId?: string; department?: string; agentId?: string; phase?: Phase; durationMs: number; error?: string }> = new Map();
   const tlEvents: JsonlCache<LogEntry> = new Map();
+  // trang Kiểm toán: chỉ giữ các dòng nhật ký hệ thống thuộc kiểm toán, đọc thêm phần ghi mới
+  const auditCache: JsonlCache<AuditRow> = new Map();
   const { config, orchestrator, registry, store, usage, logs, runtimes, bus } = app;
   const publicDir = path.join(config.root, 'public');
   const allowedHosts = new Set([`127.0.0.1:${config.server.port}`, `localhost:${config.server.port}`, `[::1]:${config.server.port}`]);
@@ -607,6 +613,84 @@ export function createServer(app: App): http.Server {
     if (p === '/api/runtimes') {
       const list = await runtimes.status(q('refresh') === '1');
       return send(res, 200, list.map((r) => ({ ...r, inOrder: config.runtime.order.includes(r.id), allowed: Object.fromEntries(CLASSES.map((c) => [c, runtimes.allowed(r.id, c)])) })));
+    }
+
+    // ── UX-4d: Kiểm toán, Sản phẩm, Kỹ năng & Kết nối, Việc định kỳ ──────────────────────────────
+    if (p === '/api/audit/verify') {
+      // kiểm chuỗi băm của nhật ký hệ thống (đọc toàn tệp — chỉ chạy khi bấm)
+      const file = logs.fileFor('system');
+      return send(res, 200, { file: path.join('data', path.relative(config.dataDir, file)).replace(/\\/g, '/'), ...verifyChain(file) });
+    }
+    if (p === '/api/audit') {
+      const rows = scanJsonl(logs.fileFor('system'), (e) => auditOf(e) ?? undefined, auditCache);
+      const cat = q('cat');
+      const needle = (q('q') ?? '').trim().toLowerCase();
+      const task = q('task');
+      const before = q('before');
+      const limit = Math.max(1, Math.min(2000, Number(q('limit') ?? 300)));
+      const out: AuditRow[] = [];
+      for (let i = rows.length - 1; i >= 0 && out.length < limit; i--) {
+        const r = rows[i];
+        if (cat && r.cat !== cat) continue;
+        if (task && r.taskId !== task) continue;
+        if (before && !(r.ts < before)) continue;
+        if (needle && !`${r.label} ${r.msg} ${r.actor} ${r.taskId ?? ''} ${r.projectId ?? ''}`.toLowerCase().includes(needle)) continue;
+        out.push(r);
+      }
+      const counts: Record<string, number> = {};
+      for (const r of rows) counts[r.cat] = (counts[r.cat] ?? 0) + 1;
+      return send(res, 200, { cats: AUDIT_CATS, counts, total: rows.length, rows: out });
+    }
+    if (p === '/api/artifacts') {
+      return send(res, 200, listArtifacts(store, { kind: q('kind'), project: q('project'), agent: q('agent'), q: q('q'), limit: Number(q('limit') ?? 300) }));
+    }
+    if (p === '/api/skills') {
+      const agents = [...registry.agents.values()];
+      const skills = new Map<string, string[]>();
+      for (const a of agents) for (const k of a.skills) (skills.get(k) ?? skills.set(k, []).get(k)!).push(a.id);
+      const tools = new Map<string, string[]>();
+      for (const a of agents) for (const t of a.tools) (tools.get(t) ?? tools.set(t, []).get(t)!).push(a.id);
+      const rts = await runtimes.status(false);
+      return send(res, 200, {
+        skills: [...skills].map(([name, ids]) => ({ name, agents: ids })).sort((a, b) => b.agents.length - a.agents.length || a.name.localeCompare(b.name)),
+        tools: [...tools].map(([name, ids]) => ({ name, agents: ids })).sort((a, b) => b.agents.length - a.agents.length),
+        access: { default: config.tools.defaultAccess, project: config.tools.projectAccess, web: config.tools.web !== false, deny: (config.tools.denyCommands ?? []).length },
+        runtimes: rts.map((r) => ({ id: r.id, ok: r.ok, detail: r.detail, inOrder: config.runtime.order.includes(r.id), allowed: Object.fromEntries(CLASSES.map((c) => [c, runtimes.allowed(r.id, c)])) })),
+        projects: store.projects().map((x) => ({ id: x.id, name: x.name, workspace: !!x.workspace, baseRef: x.baseRef ?? null, checks: (x.checkCommands ?? []).length, access: x.toolAccess ?? null })),
+        herdr: { session: config.herdr.session, inside: app.herdr.insideHerdr() },
+      });
+    }
+    if (p === '/api/routines' && req.method === 'GET') {
+      return send(res, 200, app.routines.all().map((r) => ({ ...r, scheduleText: describeSchedule(r.schedule), lastTask: r.lastTaskId ? (({ id, seq, status, title }) => ({ id, seq, status, title }))(store.get(r.lastTaskId) ?? { id: r.lastTaskId, seq: undefined, status: 'unknown', title: '' }) : null })));
+    }
+    if (p === '/api/routines' && req.method === 'POST') {
+      const b = await readBody(req);
+      try {
+        return send(res, 201, app.routines.upsert(b));
+      } catch (e) {
+        if (e instanceof RoutineError) throw new HttpError(400, e.message);
+        throw e;
+      }
+    }
+    if ((mm = m(/^\/api\/routines\/([^/]+)\/run$/)) && req.method === 'POST') {
+      try {
+        return send(res, 201, app.routines.run(mm[1], { manual: true }));
+      } catch (e) {
+        if (e instanceof RoutineError) throw new HttpError(409, e.message);
+        throw new HttpError(400, (e as Error).message);
+      }
+    }
+    if ((mm = m(/^\/api\/routines\/([^/]+)$/))) {
+      if (req.method === 'DELETE') return send(res, app.routines.remove(mm[1]) ? 200 : 404, { ok: true });
+      if (req.method === 'POST') {
+        const b = await readBody(req);
+        try {
+          return send(res, 200, app.routines.upsert(b, mm[1]));
+        } catch (e) {
+          if (e instanceof RoutineError) throw new HttpError(e.message.startsWith('Không có') ? 404 : 400, e.message);
+          throw e;
+        }
+      }
     }
 
     if (p === '/api/reload' && req.method === 'POST') {
