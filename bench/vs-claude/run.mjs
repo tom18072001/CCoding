@@ -13,6 +13,7 @@ import { PROCESS_SUFFIX, runClaude, weighted } from './lib/claude.mjs';
 import { runCcoding, serverUp } from './lib/ccoding.mjs';
 import { GRADERS } from './lib/grade.mjs';
 import { blind } from './lib/judge.mjs';
+import { EXIT_RATE_LIMIT, checkArms, doneKeys, supportedLanes } from './lib/queue.mjs';
 import { populateWorkspace, taskDirs } from './lib/workspace.mjs';
 
 const SUITE = path.dirname(fileURLToPath(import.meta.url));
@@ -62,7 +63,10 @@ if (has('dry-run')) {
 fs.mkdirSync(out, { recursive: true });
 fs.writeFileSync(path.join(out, 'config.json'), JSON.stringify({ argv, cfg, armIds, taskIds, repeats, startedAt: new Date().toISOString() }, null, 2));
 const runsFile = path.join(out, 'runs.jsonl');
-const done = new Set(fs.existsSync(runsFile) ? fs.readFileSync(runsFile, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l).key) : []);
+const done = doneKeys(fs.existsSync(runsFile) ? fs.readFileSync(runsFile, 'utf8') : ''); // dòng infra không tính là xong
+
+const armErrors = checkArms(armIds, ARMS, supportedLanes(path.resolve(SUITE, '../..')));
+if (armErrors.length) { for (const e of armErrors) console.error(e); process.exit(2); }
 
 if (armIds.some((a) => ARMS[a].kind === 'ccoding') && !(await serverUp(cfg.ccodingUrl))) {
   console.error(`CCoding server not reachable at ${cfg.ccodingUrl} - start it with: node dist/cli.js serve`);
@@ -163,10 +167,23 @@ for (const s of schedule) {
   let r, g, error;
   try {
     r = await runArm(s.arm, task, s.key);
-    g = await GRADERS[task.grader]({ workdir: r.dir, hiddenDir: path.join(SUITE, 'tasks', s.task, 'hidden'), suiteRepoDir: taskDirs(SUITE, task).repoDir, finalText: r.finalText, task, judge: cfg.judge });
-    snapshot(r.dir, path.join(out, 'artifacts', s.key));
-    fs.writeFileSync(path.join(out, 'artifacts', s.key, '_FINAL.txt'), r.finalText ?? '');
+    if (!r.infra) { // lỗi hạ tầng: không chấm, không tính là xong
+      g = await GRADERS[task.grader]({ workdir: r.dir, hiddenDir: path.join(SUITE, 'tasks', s.task, 'hidden'), suiteRepoDir: taskDirs(SUITE, task).repoDir, finalText: r.finalText, task, judge: cfg.judge });
+      snapshot(r.dir, path.join(out, 'artifacts', s.key));
+      fs.writeFileSync(path.join(out, 'artifacts', s.key, '_FINAL.txt'), r.finalText ?? '');
+    }
   } catch (e) { error = String(e?.stack ?? e).slice(0, 2000); }
+  if (r?.infra) {
+    const row = { key: s.key, task: s.task, arm: s.arm, rep: s.rep, at: new Date().toISOString(), status: 'infra', infra: r.infra, resetsAt: r.resetsAt, wallSec: r.wallSec };
+    fs.appendFileSync(runsFile, `${JSON.stringify(row)}\n`);
+    if (r.infra === 'rate-limit') {
+      console.log(`HẠN MỨC${r.resetsAt ? ` — mở lại lúc ${r.resetsAt}` : ''}`);
+      console.error(`\nDừng hàng đợi vì hạn mức tài khoản${r.resetsAt ? `; mở lại lúc ${r.resetsAt} (giờ theo thông báo)` : ''}. Chạy lại đúng lệnh này để chạy tiếp, lượt ${s.key} sẽ được chạy lại.`);
+      process.exit(EXIT_RATE_LIMIT);
+    }
+    console.log('LỖI HẠ TẦNG (lượt sẽ chạy lại khi chạy tiếp)');
+    continue;
+  }
   const row = {
     key: s.key, task: s.task, category: task.category, size: task.size, arm: s.arm, rep: s.rep, at: new Date().toISOString(),
     status: error ? 'error' : r.status, error, wallSec: r?.wallSec, tokens: r?.tokens, costUsd: r?.costUsd, turns: r?.turns,
