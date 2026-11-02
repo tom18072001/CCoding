@@ -1,0 +1,10 @@
+`logq` đã xong theo SPEC.md: `src/parse.js`, `src/query.js`, `src/agg.js` và CLI `bin/logq.js`. `npm test` xanh, 10 test pass, 0 fail. Không thêm thư viện ngoài, và tôi chưa commit gì.
+
+Test mới nằm ở `test/logq.test.js`. Chúng kiểm tra từng quy tắc: phân tích JSON và logfmt, `@t`, cú pháp truy vấn và vị trí lỗi, các lệnh tổng hợp, và CLI chạy thật (mã thoát 0, 1, 2, `--stats`, định dạng table).
+
+Những chỗ SPEC chưa nói rõ, tôi tự chọn:
+- **Truy vấn:** một từ có `:` nhưng phần trước không phải `FIELD` hợp lệ (ví dụ `:foo`) bị báo lỗi cú pháp tại đầu từ đó.
+- **`--msg`:** nếu `msg` có mặt nhưng là `null` thì tìm sang `message`.
+- **Tùy chọn CLI:** hỗ trợ cả `--query=x` lẫn `--query x`.
+- **Thứ tự kiểm tra CLI:** tùy chọn, truy vấn và spec tổng hợp được kiểm trước khi đọc tệp. Truy vấn sai kèm tệp không tồn tại cho mã 2, không phải 1.
+- **Interval histogram:** `histogram 05m` được chấp nhận và in ra thành `5m`.
