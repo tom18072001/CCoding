@@ -1,0 +1,16 @@
+PATCH P2 — dừng khảo sát sớm, ghi bản nháp trước
+Mục tiêu : C-20 (agent khảo sát mãi không ghi; 40–66 % là đọc lại) và O3 (rút gọn ngữ cảnh)
+Tệp đích : src/prompts.ts, hàm fileToolNote (dòng 271 ở commit cf3ae6c)
+Giả thuyết: hook claude-guard chỉ nhắc ở 16 lần đọc và chặn ở 32 (tools.readsBeforeWrite); nhắc sớm hơn bằng prompt (8 lần)
+            và cấm đọc lại tệp chưa đổi làm giảm số lượt công cụ và cache ghi do ngữ cảnh phình ít hơn, không làm giảm chất lượng.
+Chỉ số    : (chính) số thao tác đọc/tìm trước lần ghi đầu tiên mỗi hạng mục — tính từ data/runs (tool.call) và cột tool-output trong calls.csv;
+            (chính) token đầu vào quy đổi mỗi lượt chạy — bảng T-e (mã O3) của S2; số lượt vòng công cụ (turns) — bảng T-c của S2;
+            (an toàn) test ẩn đạt / 461; tỉ lệ hạng mục chạm trần vòng công cụ (KPI "cap-hits", src/kpi.ts FINDING_LABELS).
+Cách đo   : A/B theo design.md §5. Chỉ chạy trên runtime claude-cli (hook đếm được) và ghi rõ runtime trong báo cáo.
+Rủi ro    : ghi nháp sớm có thể tạo tệp sai hướng, cần sửa lại → tăng số lần ghi. Theo dõi số edit_file/hạng mục.
+Áp dụng   : git apply --unidiff-zero --ignore-whitespace --check <tệp này>
+--- a/src/prompts.ts
++++ b/src/prompts.ts
+@@ -271 +271 @@
+-- Tạo/sửa file thật bằng write_file/edit_file; không dán toàn bộ code vào câu trả lời cuối — chỉ liệt kê file và điểm chính. GHI SỚM: đọc đủ đoạn cần sửa là sửa ngay; khảo sát không dùng quá ~1/3 số lượt công cụ — hết lượt mà chưa ghi gì là hạng mục thất bại.
++- Tạo/sửa file thật bằng write_file/edit_file; không dán toàn bộ code vào câu trả lời cuối — chỉ liệt kê file và điểm chính. GHI SỚM: đọc đủ đoạn cần sửa là sửa ngay; khảo sát không dùng quá ~1/3 số lượt công cụ — hết lượt mà chưa ghi gì là hạng mục thất bại. Đã đọc/tìm khoảng 8 lần mà chưa ghi gì thì DỪNG đọc: ghi ngay bản nháp phần đã biết (tạo tệp mới trước), rồi mới đọc tiếp; không đọc lại tệp/đoạn đã đọc trừ khi chính bạn vừa sửa nó.

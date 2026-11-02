@@ -1,0 +1,18 @@
+PATCH P3 — reviewer chỉ dựa trên diff + kết quả lệnh kiểm tra do CCoding chạy
+Mục tiêu : O4 (reviewer chỉ nhận diff + kết quả lệnh kiểm tra); liên quan C-27, C-28 (bằng chứng review độc lập), C-32 (chi phí review)
+Tệp đích : src/prompts.ts, hàm checksBlock, nhánh phase === 'review' (dòng 624 ở commit cf3ae6c)
+Giả thuyết: khi CCoding đã chạy lệnh kiểm tra và đã đưa git diff vào prompt, reviewer thường vẫn duyệt lại nhiều tệp ngoài diff;
+            giới hạn phạm vi đọc vào diff + tệp được báo cáo nêu tên làm giảm số lượt công cụ và token đầu vào của pha review,
+            mà không giảm số blocker/major thật bắt được (so với bộ lỗi gieo có chủ đích, xem design.md §5.4).
+Chỉ số    : (chính) token đầu vào + cache ghi của pha review mỗi lượt chạy — bảng T-c (theo pha) và T-e (mã O4) của S2;
+            (chính) thời gian pha review (phases.csv);
+            (an toàn) recall lỗi gieo: tỉ lệ lỗi gieo mà review nêu blocker/major (bộ giữ lại); tỉ lệ dương tính giả;
+            test ẩn đạt / 461 sau vòng sửa; review.verified (src/orchestrator.ts ~1377).
+Cách đo   : A/B theo design.md §5 + phép đo recall trên 'bài có lỗi gieo' (§5.4). Không được tuyên bố thắng nếu recall giảm.
+Rủi ro    : giảm recall lỗi nằm ngoài diff (vd. tệp liên quan không đổi). Đây là rủi ro CHÍNH; ngưỡng dừng ở §5.5.
+Áp dụng   : git apply --unidiff-zero --ignore-whitespace --check <tệp này>
+--- a/src/prompts.ts
++++ b/src/prompts.ts
+@@ -624 +624 @@
+-    parts.push('Đây là bằng chứng chạy thật: kết luận dựa trên nó. Lệnh đạt ở baseline mà lỗi sau khi sửa = lỗi do thay đổi lần này → không duyệt. Không cần chạy lại các lệnh trên; chỉ chạy lệnh khác khi cần kiểm một điểm cụ thể.');
++    parts.push('Đây là bằng chứng chạy thật: kết luận dựa trên nó. Lệnh đạt ở baseline mà lỗi sau khi sửa = lỗi do thay đổi lần này → không duyệt. Không cần chạy lại các lệnh trên; chỉ chạy lệnh khác khi cần kiểm một điểm cụ thể. Phạm vi đọc: chỉ git diff ở trên, tệp có trong diff và tệp mà báo cáo bàn giao nêu tên; chỉ mở thêm tệp khác khi diff cho thấy nó bị ảnh hưởng trực tiếp (vd. nơi gọi hàm đã đổi chữ ký) và ghi lý do trong nhận xét.');

@@ -50,3 +50,17 @@ python3 harness/report.py R1
 
 Sinh lại: `python3 harness/export.py results C1 C2 C3 C4 C5 C6 --ledger <data/ của server CCoding> [--ledger …]`.
 Phân tích và các thay đổi rút ra: `docs/PROCESS-REVIEW.md` mục 13.
+
+## `stats.mjs` — khoảng tin cậy và kiểm định
+
+`harness/stats.mjs` (Node ≥ 22, không phụ thuộc gói ngoài) đọc `results/runs.csv` (và `docs/research/performance/c6-extract/C6-runs.csv` nếu có) rồi tính, theo từng bài và gộp (phân tầng theo bài): chênh lệch TB và tỉ lệ CC/Claude của thời gian và chi phí kèm CI bootstrap percentile 95% (10 000 lần, seed mặc định 20261102, được in ra đầu ra), kiểm định hoán vị hai phía (chính xác khi ≤ 200 000 tổ hợp, nếu không thì Monte Carlo 10 000 lần) và Cliff's delta. "CC" = mọi hệ `ccoding*`.
+
+```bash
+node bench/vs-claude/harness/stats.mjs --rounds C6
+node bench/vs-claude/harness/stats.mjs --rounds C5,C6 --exclude-run T-20261102-105231-9e5   # bỏ lượt C5 t3 treo stdin 579 s
+node bench/vs-claude/harness/stats.mjs --rounds C5,C6 --tasks t3-api,t5-logq --format json
+node bench/vs-claude/harness/stats.mjs --required-runs --sim --alpha 0.05 --power 0.8      # số lượt cần mỗi ô
+node --test bench/vs-claude/harness/stats.test.mjs
+```
+
+Tùy chọn: `--runs a.csv,b.csv`, `--rounds`, `--tasks`, `--exclude-run <task_id|vòng/bài/hệ/lượt>`, `--seed`, `--resamples`, `--format md|json`. Với 2 lượt mỗi ô, p hoán vị nhỏ nhất chỉ là 1/3 (một bài) hoặc 2/36 (hai bài), nên chỉ dùng như minh họa. Kết quả mẫu và đối chiếu: `docs/research/dev-review/stats-report.md`.

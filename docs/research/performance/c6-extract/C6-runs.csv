@@ -1,0 +1,9 @@
+run,run_note,task,system,rep,status,wall_s,cost_usd,hidden_pass,hidden_total,visible_tests,perf_ms,input,output,cache_read,cache_write,task_id,failed_hidden,audit_hits,started
+C6,"cloud 2/11 · kiểm chứng d7600f6: làn nhanh chạy cùng lúc tối đa 4 hạng mục độc lập (t3, t5)",t3-api,ccoding-fastlane,1,done,211,1.2595,87,87,38,,74,53024,1324663,147661,T-20261102-112212-a80,,0,2026-11-02T04:22:12.297Z
+C6,"cloud 2/11 · kiểm chứng d7600f6: làn nhanh chạy cùng lúc tối đa 4 hạng mục độc lập (t3, t5)",t3-api,ccoding-fastlane,2,done,173,0.9457,87,87,37,,56,39915,924007,112223,T-20261102-112816-f3d,,0,2026-11-02T04:28:16.176Z
+C6,"cloud 2/11 · kiểm chứng d7600f6: làn nhanh chạy cùng lúc tối đa 4 hạng mục độc lập (t3, t5)",t3-api,claude,1,done,246,0.9845,87,87,19,,30,24054,879699,40866,,,0,2026-11-02T04:22:12.313Z
+C6,"cloud 2/11 · kiểm chứng d7600f6: làn nhanh chạy cùng lúc tối đa 4 hạng mục độc lập (t3, t5)",t3-api,claude,2,done,258,1.1035,87,87,19,,42,24998,1281052,43373,,,0,2026-11-02T04:31:05.211Z
+C6,"cloud 2/11 · kiểm chứng d7600f6: làn nhanh chạy cùng lúc tối đa 4 hạng mục độc lập (t3, t5)",t5-logq,ccoding-fastlane,1,done,134,1.0801,146,146,37,,58,48738,848052,125614,T-20261102-112559-a65,,0,2026-11-02T04:25:59.052Z
+C6,"cloud 2/11 · kiểm chứng d7600f6: làn nhanh chạy cùng lúc tối đa 4 hạng mục độc lập (t3, t5)",t5-logq,ccoding-fastlane,2,done,214,1.3646,146,146,52,,82,54034,1282965,171996,T-20261102-113118-0ed,,0,2026-11-02T04:31:18.235Z
+C6,"cloud 2/11 · kiểm chứng d7600f6: làn nhanh chạy cùng lúc tối đa 4 hạng mục độc lập (t3, t5)",t5-logq,claude,1,done,283,1.0956,146,146,44,,22,31327,605546,43452,,,0,2026-11-02T04:26:19.826Z
+C6,"cloud 2/11 · kiểm chứng d7600f6: làn nhanh chạy cùng lúc tối đa 4 hạng mục độc lập (t3, t5)",t5-logq,claude,2,done,236,0.9224,146,146,33,,18,26313,468407,37778,,,0,2026-11-02T04:35:25.466Z
