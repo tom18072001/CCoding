@@ -164,3 +164,24 @@ Dữ liệu là log benchmark tổng hợp (nhãn nội bộ), không có dữ l
 - `git grep -nE "chưa có dữ liệu|C[67].{0,40}chưa có" -- docs/research ':!docs/research/dev-review*' ':!docs/research/BRIEF-2.md'` kỳ vọng 0.
 - Chờ Tom: chốt kênh công bố (MSR 2027 Industry 18/12/2026; AGENT'27 13/11/2026 chỉ khi có bản rút gọn); chọn `et al.` hay "và cộng sự".
 - Mở trang chính cho nguồn gắn [V-thứ cấp]/[V-BRIEF] trước khi nộp.
+
+## 2/11/2026 — gói R3-1
+
+Nhiệm vụ T-20261102-134405-b2c, hạng mục S1 (R2, @data-scientist). Nguyên nhân chung: **thêm C8** vào bảng (3 lượt làn nhanh trên t2, không có Sonnet đơn) và **sửa `token-analysis.mjs`** (tự phát hiện vòng; chỉ ảnh hưởng nội dung bảng ở T-0 qua danh sách vòng). Số cũ → mới:
+
+| Bảng | Số cũ → mới | Nguyên nhân |
+|---|---|---|
+| T-0 | 38/38 → 41/41 lượt CCoding khớp; 72 → 75 lượt chạy; 217 → 235 dòng calls.csv; 209 → 226 dòng phases.csv; vòng C1–C7 → C1–C8; nguồn `7fa6305` → `bb7b477` | thêm C8; sửa `sourceCommit` |
+| T-a | thêm dòng C8 t2-orders (n = 3, 180/180, 129 s, 0,793 USD) | thêm C8 |
+| T-d | thêm C8: 4 dòng pha (plan/execute/review/revise) và dòng theo lượt chạy (129 s, tiết kiệm 38,0 %); mục (3) không đổi | thêm C8 |
+| T-e0 | sonnet: 175 → 193 lượt gọi, giá đầu ra 9,80 → 9,81, giá ghi cache 4,06 → 4,05 | thêm C8 (18 lượt gọi) |
+| T-e1 | 217 → 235 lượt gọi; F 2 350 → **3 607** token; a 1,55 → 1,45; b 1,13 → 1,10; R² 0,755 → 0,680 | thêm C8 |
+| T-e | O1: 0,037 → 0,057 USD, 4,6 → **7,1 %** (do F); ghi cache nền C5 49,6 → 49,5 %; O2–O6 không đổi | F đổi ở T-e1; làm tròn |
+| T-f | thêm dòng C8 (không có đối chứng Opus cùng vòng) | thêm C8 |
+| T-b, T-c, T-g, T-h, T-i | không đổi | C8 không có cặp Claude cùng vòng, không thuộc `fastRounds` |
+
+- **Con số 55,8 % (T-d (3), C7) còn nguyên**: C8 không có Sonnet đơn nên không vào mẫu số; C7 vẫn là vòng làm nền. Gộp C5–C7 (72,8 %) cũng không đổi.
+- **Mã:** `CONFIG.rounds`, `opusRounds`, `sonnetRound`, `fastRounds`, `phaseTableRounds` tự phát hiện từ `results/C<n>/<bài>.<hệ>.<lượt>`; `fastRounds` = vòng có làn nhanh và có Claude cùng vòng (nên không gồm C4, C8). `hung`, `pooledRounds`, `costBasisRound` vẫn khai báo tường minh. `--check` thoát mã 1 kèm thông báo "Bảng cũ: results/ có vòng … chưa có trong T-0" khi `results/` có vòng chưa ghi ở bảng; thêm cờ `--results <thư mục>`.
+- **Cảnh báo độ ổn định của F (T-e1):** F tăng 2 350 → 3 607 token (+53 %) chỉ vì thêm 18 lượt gọi, R² giảm 0,755 → 0,680. Ước lượng F và O1 (4,6 → 7,1 %) chưa ổn định, chưa có CI. Không dùng O1 làm căn cứ định lượng cho quyết định cho đến khi có thêm vòng và CI bootstrap.
+- **Đầu ra nguyên văn bước (1):** `performance/required-runs-2026-11-02.md`.
+- **Mới:** `performance/scripts/variance-by-cell.mjs` (sd thời gian, chi phí, tỉ lệ test ẩn theo bài × hệ) làm đầu vào cho đăng ký trước.
