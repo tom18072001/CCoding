@@ -592,6 +592,8 @@ const ti = args.indexOf('--table'), ci = args.indexOf('--check');
 if (ci >= 0) {
   const doc = fs.readFileSync(path.resolve(args[ci + 1]), 'utf8').replace(/\r\n/g, '\n');
   // Vòng có trong results/ (thư mục hoặc runs.csv) mà bảng chưa ghi ở T-0 ⇒ bảng cũ: báo rõ, thoát mã 1 (không crash, không im lặng).
+  // PHỤ THUỘC LỜI VĂN: regex dưới đây đọc đúng câu "vòng có trong runs.csv: …" do dòng 140 sinh ra trong T-0.
+  // Đổi lời văn ở dòng 140 mà không đổi regex này thì --check sẽ báo thiếu mọi vòng.
   const inDoc = (doc.match(/vòng có trong runs\.csv: ([C0-9, ]+)\./) || [, ''])[1].split(',').map((s) => s.trim()).filter(Boolean);
   const newer = uniq([...dirRounds, ...roundsPresent]).filter((R) => !inDoc.includes(R)).sort((a, b) => roundNo(a) - roundNo(b));
   if (newer.length) { console.error(`Bảng cũ: results/ có vòng ${newer.join(', ')} chưa có trong T-0 (${inDoc.join(', ') || 'không đọc được danh sách vòng'}); chạy lại script để sinh bảng`); process.exit(1); }

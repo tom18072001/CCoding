@@ -182,4 +182,6 @@ Nhiệm vụ T-20261102-134405-b2c, hạng mục S1 (R2, @data-scientist). Nguy�
 
 - **Con số 55,8 % (T-d (3), C7) còn nguyên**: C8 không có Sonnet đơn nên không vào mẫu số; C7 vẫn là vòng làm nền. Gộp C5–C7 (72,8 %) cũng không đổi.
 - **Mã:** `CONFIG.rounds`, `opusRounds`, `sonnetRound`, `fastRounds`, `phaseTableRounds` tự phát hiện từ `results/C<n>/<bài>.<hệ>.<lượt>`; `fastRounds` = vòng có làn nhanh và có Claude cùng vòng (nên không gồm C4, C8). `hung`, `pooledRounds`, `costBasisRound` vẫn khai báo tường minh. `--check` thoát mã 1 kèm thông báo "Bảng cũ: results/ có vòng … chưa có trong T-0" khi `results/` có vòng chưa ghi ở bảng; thêm cờ `--results <thư mục>`.
+- **Cảnh báo độ ổn định của F (T-e1):** F tăng 2 350 → 3 607 token (+53 %) chỉ vì thêm 18 lượt gọi, R² giảm 0,755 → 0,680. Ước lượng F và O1 (4,6 → 7,1 %) chưa ổn định, chưa có CI. Không dùng O1 làm căn cứ định lượng cho quyết định cho đến khi có thêm vòng và CI bootstrap.
+- **Đầu ra nguyên văn bước (1):** `performance/required-runs-2026-11-02.md`.
 - **Mới:** `performance/scripts/variance-by-cell.mjs` (sd thời gian, chi phí, tỉ lệ test ẩn theo bài × hệ) làm đầu vào cho đăng ký trước.

@@ -50,12 +50,12 @@ Chưa có công cụ cho phép margin, hồi quy bootstrap và kiểm định đ
 
 C9 (đã lên lịch, không đổi được): **làn nhanh 6, Claude Sonnet 8, mỗi bài t1–t5**. Hai bài lớn và t6–t8: số lượt đăng ký ở từng giả thuyết (§3).
 
-Truy nguồn các con số n:
+Truy nguồn các con số n. Đầu ra nguyên văn của mọi lệnh `stats.mjs` và bảng phương sai nằm trong tệp đã commit `docs/research/performance/required-runs-2026-11-02.md` (mục số trong cột Nguồn); các "dòng" của bàn giao S1 chỉ là tham chiếu phụ, bản gốc nằm ngoài git:
 
 | Nguồn | Lệnh hoặc công thức |
 |---|---|
-| S1, bàn giao dòng 35–43 | `node bench/vs-claude/harness/stats.mjs --baseline claude-sonnet --required-runs --sim --delta wall=30,cost=0.1` |
-| S1, bàn giao dòng 45–63 (H1) | cùng lệnh, `--delta wall=<Δ>` với Δ = 0,3 × TB Sonnet đơn C7 theo bài, kèm `--tasks <bài>`; gộp 5 bài Δ = 25,7 s |
+| `docs/research/performance/required-runs-2026-11-02.md` mục 2 (bàn giao S1 dòng 35–43) | `node bench/vs-claude/harness/stats.mjs --baseline claude-sonnet --required-runs --sim --delta wall=30,cost=0.1` |
+| `docs/research/performance/required-runs-2026-11-02.md` mục 4–5 (H1; bàn giao S1 dòng 45–63) | cùng lệnh, `--delta wall=<Δ>` với Δ = 0,3 × TB Sonnet đơn C7 theo bài, kèm `--tasks <bài>`; gộp 5 bài Δ = 25,7 s |
 | S2, tính tay (đánh dấu **[S2]**) | n mỗi nhánh = 2·(z₁₋α + z₁₋β)²·σ²/Δ²; kiểm lại công thức bằng ô t2 của S1: σ = 28,1; Δ = 30; α hai phía 0,05; công suất 0,8 → 14 (khớp bàn giao dòng 40). Sai số chuẩn nhiều tầng: SE² = (1/K²)·Σₜ(σ²ₜ,CC/n_CC + σ²ₜ,Cl/n_Cl), K = số bài |
 
 σ do S1 báo (thời gian, s): t1 88,6; t2 28,1; t3 143,9; t4 162,7; t5 110,7. σ chi phí (USD): 0,297; 0,220; 0,344; 0,340; 0,434. Các σ này **gộp mọi thiết kế CCoding C1–C8** (bàn giao dòng 16, 120), nên là cận trên cho thiết kế hiện tại. Mỗi ô Sonnet C7 chỉ có n = 2 (sd 0,7–10,6 s) và mỗi ô làn nhanh t1/t3/t4/t5 chỉ n = 1 (bàn giao dòng 73–85). Chỉ t2 C8 có sd thật của thiết kế hiện tại: 33,0 s trên TB 129,3 s, tức hệ số biến thiên CV ≈ 25 %. Dùng làm **giả định CV = 25 % cho làn nhanh** và **CV = 8 % cho Sonnet** (7–10 % trên các ô C7 có sd). Cả hai là giả định, kiểm lại bằng sd quan sát ở C9 (chỉ mô tả).
