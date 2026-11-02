@@ -160,7 +160,7 @@ export function templateHeadings(body: string): string[] {
 }
 
 /** Khóa so khớp một mục mẫu: phần trước "(", "·", ":" hoặc "—". */
-function headingKey(h: string): string {
+export function headingKey(h: string): string {
   return norm(h.split(/[(·:—<]/)[0]).slice(0, 28);
 }
 
