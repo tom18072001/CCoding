@@ -329,6 +329,11 @@ export interface TaskOptions {
   variant?: string;
   /** Dừng sau khi chốt kế hoạch, chờ giám đốc duyệt (sửa người làm/phụ thuộc/bỏ hạng mục) rồi mới thực thi. */
   planApproval?: boolean;
+  /**
+   * Làn xử lý: 'fast' — việc nhỏ: điều phối lập kế hoạch nhanh (Sonnet), chia 2–4 phần độc lập chạy SONG SONG, không họp, báo cáo theo
+   * mẫu (không gọi model); 'full' — quy trình đầy đủ; 'auto' (mặc định) — tự chọn theo cỡ đề bài và repo (cấu hình `fastLane`).
+   */
+  lane?: 'auto' | 'fast' | 'full';
 }
 
 export interface Attachment {
@@ -413,6 +418,8 @@ export interface Task {
   /** Chỉ bắt đầu khi các nhiệm vụ này đã xong (thứ tự phụ thuộc giữa các nhiệm vụ đã tách). */
   after?: string[];
   /** Lệnh kiểm tra của dự án do CCoding tự chạy: trước khi sửa (baseline) và sau thực thi/sửa (latest). */
+  /** Làn đã chọn khi bắt đầu chạy (xem TaskOptions.lane). */
+  lane?: 'fast' | 'full';
   projectChecks?: ProjectChecks;
   /** Nhiệm vụ đã chạy xong nhưng cần người xem lại (vd. review cuối chưa duyệt). */
   attention?: { reason: 'review' | 'checks'; detail: string; at: string };

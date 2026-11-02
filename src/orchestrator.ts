@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Config } from './config.js';
@@ -1045,6 +1046,33 @@ export class Orchestrator {
     };
   }
 
+  /**
+   * Làn xử lý của nhiệm vụ: options.lane 'fast'/'full' ghi đè; 'auto' → làn nhanh khi bật fastLane, nhiệm vụ làm trên repo git,
+   * đề bài ngắn và repo nhỏ (git ls-files: số tệp + tổng dung lượng). Mục tiêu làn nhanh: việc nhỏ xong nhanh hơn một agent làm một mình.
+   */
+  private pickLane(task: Task, project: ProjectDef | undefined, pctx: P.Ctx): { lane: 'fast' | 'full'; why: string } {
+    const want = task.options.lane ?? 'auto';
+    if (want === 'fast') return { lane: 'fast', why: 'theo yêu cầu' };
+    if (want === 'full') return { lane: 'full', why: 'theo yêu cầu' };
+    const fl = this.d.config.fastLane;
+    if (!fl?.enabled || task.mode === 'agent' || task.mode === 'joint' || !project?.workspace || !pctx.filesAccessible) return { lane: 'full', why: '' };
+    if (task.brief.length > fl.maxBriefChars) return { lane: 'full', why: 'đề bài dài' };
+    const ls = spawnSync('git', ['ls-files', '-z'], { cwd: pctx.cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, windowsHide: true });
+    if (ls.status !== 0) return { lane: 'full', why: '' };
+    const files = ls.stdout.split('\0').filter(Boolean);
+    if (files.length > fl.maxRepoFiles) return { lane: 'full', why: 'repo lớn' };
+    let bytes = 0;
+    for (const f of files) {
+      try {
+        bytes += fs.statSync(path.join(pctx.cwd, f)).size;
+      } catch {
+        /* tệp đã xóa trong worktree */
+      }
+      if (bytes > fl.maxRepoBytes) return { lane: 'full', why: 'repo lớn' };
+    }
+    return { lane: 'fast', why: `việc nhỏ: repo ${files.length} tệp, ${Math.max(1, Math.round(bytes / 1024))} KB` };
+  }
+
   /** Năng lực công cụ ở pha thực thi của từng người (với quyền của nhiệm vụ) — trưởng phòng giao việc theo đó. */
   private capabilities(roster: AgentDef[], access: ToolAccess, gitRead: boolean): Record<string, string> {
     const out: Record<string, string> = {};
@@ -1070,6 +1098,17 @@ export class Orchestrator {
     const reviewer = dept.reviewer ? registry.agents.get(dept.reviewer) : undefined;
     const pctx = this.pctx(task, dept, project, roster);
     const base: CallCtx = { task, dept, run, project, cwd: pctx.cwd };
+    // Làn nhanh (việc nhỏ): điều phối nhanh, chia song song, không họp, báo cáo theo mẫu — chọn một lần, lưu vào nhiệm vụ
+    if (!task.lane) {
+      const pick = this.pickLane(task, project, pctx);
+      task.lane = pick.lane;
+      if (pick.lane === 'fast') {
+        if (!task.options.phaseModels?.plan && this.d.config.fastLane.planModel) task.options.phaseModels = { ...task.options.phaseModels, plan: this.d.config.fastLane.planModel };
+        this.message(task, dept.id, 'system', 'system', `⚡ Làn nhanh (${pick.why}): lập kế hoạch nhanh, chia việc song song, không họp${this.d.config.fastLane.finalReport === 'template' ? ', báo cáo dựng từ bàn giao' : ''}.`);
+      }
+      this.save(task);
+    }
+    pctx.lane = task.lane;
     const names = new Map([...registry.agents.values()].map((a) => [a.id, a.name]));
     const rosterHints = roster.map((a) => ({ id: a.id, name: a.name, title: a.title, role: a.role, skills: a.skills }));
     run.status = 'running';
@@ -1134,7 +1173,7 @@ export class Orchestrator {
         // kế hoạch nhỏ → bỏ họp: ít hơn phases.meetingMinSubtasks hạng mục (mặc định 3) hoặc chưa tới 2 người tham gia
         const minSubtasks = Math.max(1, this.d.config.phases.meetingMinSubtasks ?? 3);
         const small = run.subtasks.length < minSubtasks || participantIds.length < 2;
-        if (rounds > 0 && !small) {
+        if (rounds > 0 && !small && task.lane !== 'fast') {
           this.setPhase(task, run, 'discuss');
           const participants = participantIds.map((id) => registry.agent(id));
           const meeting = [lead, ...participants];
@@ -1180,6 +1219,8 @@ export class Orchestrator {
           } finally {
             for (const a of meeting) this.release(a.id, task.id);
           }
+        } else if (rounds > 0 && task.lane === 'fast') {
+          run.decisions ??= '';
         } else if (rounds > 0) {
           this.message(task, dept.id, 'system', 'system', `Bỏ qua họp: kế hoạch nhỏ (${run.subtasks.length} hạng mục, ${participantIds.length} người) — vào thực thi luôn để tiết kiệm token.`);
           run.decisions ??= '';
@@ -1378,12 +1419,17 @@ export class Orchestrator {
       ? `${run.review.approved ? 'Đã duyệt' : 'Chưa duyệt hoàn toàn'}: ${run.review.summary}${run.review.verified === false ? '\n(Reviewer KHÔNG chạy lệnh kiểm tra nào — kết luận chưa có bằng chứng chạy thật; nêu rõ trong báo cáo.)' : run.review.checks?.length ? `\nLệnh kiểm tra reviewer đã chạy: ${run.review.checks.map((c) => `${c.command}${c.ok === false ? ' (lỗi)' : c.ok ? ' (đạt)' : ''}`).join('; ')}` : ''}`
       : '';
     const changes = this.workspaceChanges(task);
-    const fin = await this.call(lead, 'synthesize', (tools) => P.synthesizePrompt(pctx, run.planSummary ?? '', run.decisions ?? '', items, reviewText, prior, changes, tools), {
-      ...base,
-      hints: { brief: task.brief, subtasks: run.subtasks.map(stHint), departmentName: dept.name },
-    });
-    if (!fin.text) throw new Error(`Trưởng phòng không viết được báo cáo tổng hợp${fin.error ? `: ${fin.error}` : ''}`);
-    const finalText = fin.text;
+    let finalText: string;
+    if (task.lane === 'fast' && this.d.config.fastLane.finalReport === 'template') {
+      finalText = P.templateReport(task, dept, run, items, reviewText, changes);
+    } else {
+      const fin = await this.call(lead, 'synthesize', (tools) => P.synthesizePrompt(pctx, run.planSummary ?? '', run.decisions ?? '', items, reviewText, prior, changes, tools), {
+        ...base,
+        hints: { brief: task.brief, subtasks: run.subtasks.map(stHint), departmentName: dept.name },
+      });
+      if (!fin.text) throw new Error(`Trưởng phòng không viết được báo cáo tổng hợp${fin.error ? `: ${fin.error}` : ''}`);
+      finalText = fin.text;
+    }
     const rel = `${safeName(dept.id)}-FINAL.md`;
     writeText(path.join(this.d.store.runDir(task.id), rel), finalText);
     run.finalPath = rel;
@@ -3074,6 +3120,7 @@ export function variantOptions(o: Partial<TaskOptions>): Partial<TaskOptions> {
     if (Object.keys(pm).length) out.phaseModels = pm as TaskOptions['phaseModels'];
   }
   if (typeof o.variant === 'string' && o.variant.trim()) out.variant = o.variant.trim().slice(0, 60);
+  if (o.lane === 'auto' || o.lane === 'fast' || o.lane === 'full') out.lane = o.lane;
   return out;
 }
 

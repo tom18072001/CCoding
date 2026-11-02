@@ -1,5 +1,5 @@
 import { truncate } from './util/fsx.js';
-import type { AgentDef, ChatMessage, CheckResult, Classification, DepartmentDef, Phase, ProjectDef, Subtask, Task, ToolCallRecord, ToolName } from './types.js';
+import type { AgentDef, ChatMessage, CheckResult, Classification, DepartmentDef, DeptRun, Phase, ProjectDef, Subtask, Task, ToolCallRecord, ToolName } from './types.js';
 
 /**
  * Prompt cho từng pha. Mỗi lượt gọi gồm 3 phần:
@@ -58,6 +58,8 @@ export interface Ctx {
   serialWriters?: boolean;
   /** Hạng mục chạy lệnh chạy song song, mỗi hạng mục một worktree con (CCoding gộp lại vào nhánh nhiệm vụ). */
   parallelWriters?: boolean;
+  /** Làn nhanh: kế hoạch chia song song tối đa, không họp. */
+  lane?: 'fast' | 'full';
   /** Lượt này chạy trong worktree con của hạng mục: nhánh nhiệm vụ mà CCoding sẽ gộp vào. */
   subWorktree?: { taskBranch?: string };
   /** Bản đồ repo do CCoding tạo (đường dẫn tương đối workspace) + các tệp nguồn lớn. */
@@ -285,7 +287,7 @@ ${rosterLines(c.roster, c.caps)}
 ${toolNote(c, tools, 'plan')}
 ## Việc của bạn (Trưởng phòng): LẬP KẾ HOẠCH
 Phân rã yêu cầu thành 1–7 hạng mục rõ ràng, giao cho đúng người theo kỹ năng, quy mô tương xứng với yêu cầu. Quy tắc:
-- **Việc nhỏ** (một người làm xong trong MỘT lượt ~30 thao tác công cụ — vd. một module/tệp theo đặc tả, sửa vài lỗi, tối ưu một hàm): giao **1 hạng mục** cho một người, người đó tự viết test cho phần mình. Chỉ tách nhiều hạng mục khi các phần đủ lớn và độc lập (tệp khác nhau, làm song song được): mỗi hạng mục thêm tốn một lượt đọc lại repo, một lần gộp, và hạng mục "chỉ viết test" tách khỏi người viết code thường phải chờ hoặc làm lại phần đọc hiểu (benchtest 1/11: tách 2–3 hạng mục cho việc một tệp làm nhiệm vụ chậm gấp 2–3 lần mà không đúng hơn).
+${c.lane === 'fast' ? FAST_LANE_PLAN : ''}
 - \`assignee\` phải là một id trong danh sách trên (không có dấu @). Hạn chế tự giao cho bản thân; người review sẽ kiểm tra ở bước sau nên không cần tạo hạng mục "review".${capsRule(c)}
 - \`dependsOn\` chỉ trỏ tới id hạng mục khác; tối đa hóa phần chạy song song.${
         c.parallelWriters
@@ -368,6 +370,39 @@ export function planLines(subtasks: Subtask[]): string {
 /** Nội dung `.ccoding/<task>/PLAN.md` — kế hoạch đầy đủ cho agent đọc khi cần. */
 export function planFile(planSummary: string, decisions: string, subtasks: Subtask[]): string {
   return `# Kế hoạch chung\n\n${planSummary}\n${decisions ? `\nQuyết định chính: ${decisions}\n` : ''}\n${planText(subtasks)}\n`;
+}
+
+/** Hướng dẫn lập kế hoạch ở làn nhanh (việc nhỏ): mục tiêu là xong NHANH HƠN một người làm một mình — nhờ chia song song. */
+export const FAST_LANE_PLAN = `- **LÀN NHANH (việc nhỏ)** — mục tiêu: cả nhóm xong NHANH HƠN một lập trình viên giỏi làm một mình. Chỉ đạt được khi chia việc chạy SONG SONG:
+  - Chia **2–4 hạng mục ĐỘC LẬP chạy cùng lúc** (\`dependsOn\` rỗng), giao cho **người khác nhau**, cỡ gần bằng nhau (mỗi phần ~1–2 phút làm, ≤ ~20 thao tác công cụ).
+  - Mỗi hạng mục **sở hữu tệp riêng** — không hai hạng mục cùng sửa một tệp (kể cả tệp test: mỗi người tự viết test cho phần mình vào tệp test riêng, vd. \`test/<phần>.test.js\`). Nếu đặc tả buộc một tệp chung (vd. tệp export lại các hàm), giao tệp đó cho MỘT hạng mục và ghi rõ hợp đồng (tên tệp, tên hàm, chữ ký, định dạng lỗi) trong mô tả của mọi hạng mục liên quan để các phần khác viết theo hợp đồng mà không phải chờ nhau.
+  - KHÔNG tạo hạng mục "tích hợp", "viết test", "rà soát" chạy sau — CCoding tự gộp các phần, chạy lệnh kiểm tra và review.
+  - Chỉ để 1 hạng mục khi việc thật sự không chia được (vd. tối ưu một hàm duy nhất) — khi đó vẫn có thể tách "bộ test đối chiếu/kiểm thử độc lập" thành hạng mục song song thứ hai nếu nó dùng tệp riêng.
+  - Lập kế hoạch NHANH: đọc vừa đủ (đặc tả + cấu trúc thư mục + tệp sẽ sửa), không khảo sát sâu; mô tả hạng mục ngắn gọn nhưng đủ hợp đồng.`;
+
+/** Báo cáo làn nhanh dựng từ kế hoạch, bàn giao từng hạng mục, review và thay đổi — không gọi model (tiết kiệm ~30 giây cuối nhiệm vụ). */
+export function templateReport(task: Task, dept: DepartmentDef, run: DeptRun, items: DepInput[], review: string, changes: string): string {
+  const failed = run.subtasks.filter((s) => s.status === 'failed');
+  const lines = [
+    `# Báo cáo ${dept.name} — ${task.title}`,
+    '',
+    `_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._`,
+    '',
+    '## Tóm tắt',
+    '',
+    run.planSummary?.trim() || '(không có tóm tắt kế hoạch)',
+    '',
+    `Kết quả: ${run.subtasks.length - failed.length}/${run.subtasks.length} hạng mục xong${failed.length ? ` — lỗi: ${failed.map((s) => s.id).join(', ')}` : ''}.`,
+    '',
+    '## Từng hạng mục',
+  ];
+  for (const it of items) {
+    lines.push('', `### ${it.st.id} — ${it.st.title} (@${it.st.assignee}, ${it.st.status})`, '', truncate(it.text.trim() || '(không có bàn giao)', 4000));
+    if (it.wsPath) lines.push('', `Bản đầy đủ: \`${it.wsPath}\``);
+  }
+  if (review) lines.push('', '## Review', '', review);
+  if (changes) lines.push('', '## Thay đổi trong repo', '', truncate(changes, 6000));
+  return lines.join('\n') + '\n';
 }
 
 export interface DepInput {
