@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { weighted } from './claude.mjs';
+import { detectRateLimit } from './infra.mjs';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -16,7 +17,7 @@ export function client(baseUrl) {
 
 /**
  * opts: { baseUrl, dataDir (CCoding data dir, for calls.jsonl), runtime, projectId, workdir, brief, title, taskOptions, timeoutMin }
- * Returns the same shape as runClaude().
+ * Returns the same shape as runClaude() (gồm infra: 'rate-limit' | 'error' | undefined và resetsAt).
  */
 export async function runCcoding(opts) {
   const api = client(opts.baseUrl);
@@ -26,18 +27,37 @@ export async function runCcoding(opts) {
     checkCommands: fs.existsSync(path.join(opts.workdir, 'package.json')) ? ['npm test'] : [],
   }) });
   const t0 = Date.now();
-  const task = await api('/api/tasks', { method: 'POST', body: JSON.stringify({
+  let task;
+  try {
+  task = await api('/api/tasks', { method: 'POST', body: JSON.stringify({
     brief: opts.brief, title: opts.title, mode: opts.agentId ? 'agent' : 'project', projectId: opts.projectId, agentId: opts.agentId,
     options: { budgetMode: 'complete', planApproval: false, ...opts.taskOptions, variant: opts.variant },
   }) });
+  } catch (e) {
+    const rl = detectRateLimit(String(e.message));
+    return { status: 'failed', wallSec: (Date.now() - t0) / 1000, tokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, weighted: 0 }, costUsd: 0, turns: 0, calls: 0, finalText: '', byPhase: {}, agentsUsed: 0, byAgent: {}, infra: rl.rateLimited ? 'rate-limit' : 'error', ...(rl.resetsAt ? { resetsAt: rl.resetsAt } : {}), error: String(e.message) };
+  }
   const deadline = t0 + (opts.timeoutMin ?? 60) * 60000;
-  let t = task;
+  let t = task; let infra, resetsAt;
+  const callsPath = path.join(opts.dataDir ?? '', 'runs', task.id, 'calls.jsonl');
+  const scan = () => {
+    const texts = [t.attention, t.error];
+    try { if (opts.dataDir && fs.existsSync(callsPath)) texts.push(fs.readFileSync(callsPath, 'utf8').split('\n').filter((l) => /error|"ok":\s*false/i.test(l)).slice(-5)); } catch { /* bỏ qua */ }
+    return detectRateLimit(texts);
+  };
   while (!['done', 'failed', 'cancelled'].includes(t.status)) {
     if (Date.now() > deadline) { await api(`/api/tasks/${task.id}/cancel`, { method: 'POST', body: '{}' }).catch(() => {}); t = { ...t, status: 'failed', timedOut: true }; break; }
+    const rl = scan();
+    if (rl.rateLimited) {
+      infra = 'rate-limit'; resetsAt = rl.resetsAt;
+      await api(`/api/tasks/${task.id}/cancel`, { method: 'POST', body: '{}' }).catch(() => {});
+      t = { ...t, status: 'failed' }; break;
+    }
     if (t.status === 'paused') { await api(`/api/tasks/${task.id}/resume`, { method: 'POST', body: JSON.stringify({ budgetMode: 'complete' }) }).catch(() => {}); }
     await sleep(10000);
-    t = (await api(`/api/tasks/${task.id}`)).task;
+    try { t = (await api(`/api/tasks/${task.id}`)).task; } catch (e) { infra = 'error'; t = { ...t, status: 'failed', error: String(e.message) }; break; }
   }
+  if (!infra && t.status !== 'done') { const rl = scan(); if (rl.rateLimited) { infra = 'rate-limit'; resetsAt = rl.resetsAt; } }
   const wallSec = (Date.now() - t0) / 1000;
   let finalText = '';
   try { finalText = String(await api(`/api/tasks/${task.id}/file?path=FINAL.md`)); } catch { /* no report */ }
@@ -69,6 +89,7 @@ export async function runCcoding(opts) {
     status: t.status === 'done' ? 'done' : 'failed', wallSec, tokens, costUsd, turns, calls,
     finalText, taskId: task.id, byPhase, agentsUsed: Object.keys(byAgent).length, byAgent,
     department: t.department, attention: t.attention,
+    infra, ...(resetsAt ? { resetsAt } : {}),
   };
 }
 
