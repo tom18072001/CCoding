@@ -1,0 +1,97 @@
+# Báo cáo tổng hợp T-20261102-122342-ff8: tổng quan tài liệu trên corpus đóng (P1–P6)
+
+## Tóm tắt
+Hai sản phẩm đã xong và đã qua review: `answer.json` và `REVIEW.md` (487 từ, tiếng Anh) nằm ở thư mục gốc repo. Kết luận: q1 là P4 với F1 0.962; q2 là P5 trên BGL-X (0.5% nhãn); q3 không có trong corpus; q4 là P1 và P3. Mức chắc chắn cao vì mỗi câu có trích dẫn nguyên văn từ corpus. Tôi đã tự đối chiếu `answer.json` với `corpus/P1.md`–`P6.md` và mọi giá trị đều khớp. Còn một việc mở: chưa parse JSON bằng máy được, vì hook chặn python.
+
+## Kết quả theo RQ
+| Câu | Kết luận | Bằng chứng | Mức chắc chắn |
+|---|---|---|---|
+| q1 | **P4 (LogGraphT), F1 0.962** trên HDFS-X full split | P4: "0.962, the best result we are aware of on the full split". Hai phương pháp còn lại trên full split thấp hơn: P1 đạt 0.931, P3 đạt 0.948. P2 đạt 0.971 nhưng trên HDFS-X-small, bị loại vì P2 tự nói không chạy full split và P6 cảnh báo tập con này "not comparable… easier test set" | Cao |
+| q2 | **P5, BGL-X** (0.5% nhãn, F1 0.861 so với baseline 0.701) | Trích nguyên văn từ P5 | Cao |
+| q3 | **`not_in_corpus: true`** | P4 chỉ nêu latency 3.1 ms/session trên A100 và ghi "We do not report training cost". Chúng tôi không suy ra năng lượng từ latency | Cao (trả lời là không có dữ liệu) |
+| q4 | **P1 và P3** | P1 viết "parsing… is a necessary first step" (bỏ parser làm F1 giảm 9–14 điểm). P3 viết "Contrary to the common belief that template extraction is required…" | Cao |
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Tệp |
+|---|---|---|---|---|
+| S1 | Trích bằng chứng, viết `answer.json` | `@literature-researcher` | **Đạt.** Reviewer đối chiếu trực tiếp với corpus và thấy cả 4 câu đúng: f1 là số, `not_in_corpus` là boolean, citations nằm trong P1..P6. Tôi đã kiểm lại bằng cách đọc tệp và grep corpus | `answer.json`, `.ccoding/T-20261102-122342-ff8/outputs/research-S1-literature-researcher.md` |
+| S2 | Viết `REVIEW.md` (300–500 từ) | `@academic-writer` | **Đạt.** Bài dài 487 từ không tính tiêu đề, 499 từ nếu tính. Cả 6 bài đều được trích (P1 6 lần, P2 6, P3 5, P4 8, P5 2, P6 5). 16 con số đều khớp corpus | `REVIEW.md`, `.ccoding/T-20261102-122342-ff8/outputs/research-S2-academic-writer.md` |
+
+**Các quyết định chính:**
+- Xếp hạng q1 chỉ dùng kết quả trên full split. Lý do là P6 cảnh báo HDFS-X-small không so sánh được với full split.
+- q3 đánh dấu là không có trong corpus thay vì ước lượng năng lượng từ latency.
+- Citations của q1 có thêm P2 và P6 để giải thích vì sao loại P2.
+
+## Phương pháp & giới hạn
+- Chỉ dùng 6 tệp trong `corpus/`, không dùng web hay kiến thức bên ngoài. Corpus là tài liệu hư cấu (mỗi tệp đều ghi "fictional").
+- **Giả định / việc còn mở:** JSON mới được kiểm cú pháp bằng mắt (tôi và reviewer cùng đọc), chưa parse bằng máy vì hook chặn python. Lệnh cần người có quyền chạy:
+  `python3 -I -c "import json;d=json.load(open('answer.json'));print(type(d['q1']['f1']), type(d['q3']['not_in_corpus']))"`. Kết quả mong đợi là `<class 'float'> <class 'bool'>`.
+- Giới hạn của corpus:
+  - Không có số liệu năng lượng.
+  - Không có chi phí huấn luyện của P4.
+  - P2 không có kết quả trên full split.
+  - P5 không chạy HDFS-X.
+  - P2 và P4 không nêu tỷ lệ nhãn.
+  - Tranh luận P1–P3 chưa phân xử được: P3 chỉ có một phép so sánh trên một benchmark.
+- Độ dài 487 từ nằm gần ngưỡng trên 500. Khi sửa `REVIEW.md` cần đếm lại.
+
+## Phản biện đã xử lý
+- Review không có blocker hay major, chỉ có 3 điểm minor và không điểm nào ảnh hưởng đến tính đúng của kết quả.
+- Hai bẫy được nêu từ khi lập kế hoạch đã được xử lý đúng: con số 0.971 của P2 trên HDFS-X-small, và việc thiếu số liệu năng lượng của P4.
+- Reviewer đã kiểm trực tiếp với corpus, không chỉ dựa vào báo cáo tự khai của thành viên.
+
+## Bước tiếp theo
+1. **Kiểm JSON bằng máy** (5 phút, cần người có quyền chạy python). Xong khi lệnh ở trên in ra float và bool, không lỗi.
+2. *(Tùy chọn, tách thành nhiệm vụ riêng nếu cần)* Commit hai tệp sản phẩm. Xong khi `git status` sạch và commit có đúng attribution. Brief không yêu cầu việc này nên tôi chưa làm.
+3. Không còn giai đoạn nghiên cứu nào cần tách: phạm vi brief đã phủ đủ.
+
+Lưu ý: `REVIEW.md` là bản nháp để Tom sở hữu. Nếu dùng trong học thuật, cần tuân thủ quy định liêm chính và chính sách dùng AI của trường.
+
+## Tài liệu tham khảo
+- [P1] "Template-first log anomaly detection" (fictional, 2025), `corpus/P1.md`
+- [P2] "LogBERT-lite: small transformers for logs" (fictional, 2025), `corpus/P2.md`
+- [P3] "Parsing is optional: raw-token anomaly detection" (fictional, 2026), `corpus/P3.md`
+- [P4] "LogGraphT: graph transformers over session graphs" (fictional, 2026), `corpus/P4.md`
+- [P5] "Few-label anomaly detection with contrastive pretraining" (fictional, 2026), `corpus/P5.md`
+- [P6] "A survey of benchmarks for log anomaly detection" (fictional, 2026), `corpus/P6.md`
+
+Corpus không có tác giả hay DOI, nên báo cáo không bổ sung.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-122342-ff8` · chế độ: project · phòng: research · phân loại dữ liệu: internal
+- Tổng: **44 in / 16.9k out**, cache đọc 311.5k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Academic Writer (@academic-writer) | research | 12 | 4371 | 99681 | 1 |
+| Trưởng phòng Nghiên cứu (@research-lead) | research | 12 | 5280 | 79683 | 2 |
+| Peer Reviewer (@peer-reviewer) | research | 10 | 3476 | 77170 | 1 |
+| Literature Researcher (@literature-researcher) | research | 8 | 3307 | 52722 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 480 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/research-S1-literature-researcher.md` — S1 Extract evidence and write answer.json (@literature-researcher)
+- `outputs/research-S2-academic-writer.md` — S2 Write REVIEW.md: state-of-the-art synthesis (300-500 words) (@academic-writer)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+| Academic Writer (@academic-writer) | research | **88** A | 100 | 77 | 89 | 70 | 1 | 1 | 104k | 1/7 |
+| Trưởng phòng Nghiên cứu (@research-lead) | research | **89** A | 100 | 100 | 68 | 70 | 0 | — | 85k | 2/5 |
+| Peer Reviewer (@peer-reviewer) | research | **91** A | — | — | 85 | 100 | 0 | — | 81k | 2/11 |
+| Literature Researcher (@literature-researcher) | research | **92** A | 100 | 100 | 82 | 70 | 1 | 1 | 56k | 2/9 |
+
+### Việc cần sửa theo agent
+- **Academic Writer** (@academic-writer, 88 A):
+  - Không có nguồn kiểm chứng được (DOI/URL) và không dùng công cụ tra cứu.
+- **Trưởng phòng Nghiên cứu** (@research-lead, 89 A):
+  - Thao tác công cụ lỗi nhiều (2/5, 40%; nhiều nhất ở run_command 2/3) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+- **Literature Researcher** (@literature-researcher, 92 A):
+  - Thao tác công cụ lỗi nhiều (2/9, 22%; nhiều nhất ở run_command 2/2) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+  - Không có nguồn kiểm chứng được (DOI/URL) và không dùng công cụ tra cứu.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

@@ -1,0 +1,90 @@
+Tôi đã đối chiếu xong các tệp bàn giao với dữ liệu gốc. Dưới đây là báo cáo tổng hợp.
+
+# Báo cáo: Doanh thu thuần tháng 10/2026 (giờ Việt Nam) từ `transactions.csv`
+
+## Tóm tắt
+Doanh thu thuần tháng 10/2026 là **97.306.916 VND**, gồm 32 giao dịch paid và 2 refund. Toàn tệp có 5 dòng trùng bị bỏ qua. `answer.json` và `NOTES.md` đã nằm ở thư mục gốc của repo, đúng định dạng đề bài yêu cầu.
+
+S1 tính bằng Python `Decimal`, S2 tính độc lập bằng Node `BigInt`, và hai bên cho cùng 4 con số. Tôi đã tự mở `transactions.csv` và đối chiếu lại các dòng dễ sai: 11 dòng mã T0071–T0080 (T0079 xuất hiện 2 lần) cùng T0030 và T0043. Kết luận của các thành viên khớp với dữ liệu gốc.
+
+Có một điểm còn mở: bước review **không có bằng chứng đã chạy lệnh**. Phần nói "đã tính lại bằng Python" chưa kiểm chứng được, nên tôi không coi đó là lần tính độc lập thứ ba.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Tính doanh thu, ghi `answer.json` và `NOTES.md` | @data-engineer | Đạt | Đầu ra `answer.json` = `{"net_revenue_vnd": 97306916, "paid_count": 32, "refund_count": 2, "duplicate_rows_ignored": 5}`. Script tạm `/tmp/claude-0/-tmp-vb-l3-reconcile--B0--r2/d1e1e9dd-fe0c-5909-9d1d-01fccf35645d/scratchpad/c.py` chạy ra exit 0. Lệnh kiểm tra schema JSON cũng ra exit 0. Báo cáo: `.ccoding/T-20261102-121523-cc0/outputs/dev-S1-data-engineer.md` |
+| S2 | Tính lại độc lập, không ghi vào repo | @senior-swe | Đạt (4/4 số khớp S1) | `node /tmp/claude-0/-tmp-vb-l3-reconcile--B0--r2/d1e1e9dd-fe0c-5909-9d1d-01fccf35645d/scratchpad/r.js` chạy ra exit 0. Báo cáo: `.ccoding/T-20261102-121523-cc0/outputs/dev-S2-senior-swe.md` |
+| Lead | Đối chiếu cuối (chỉ đọc) | @dev-lead | Đạt | Đã đọc `answer.json` và `NOTES.md`. Đã tìm trong `transactions.csv` các dòng sát mốc và các refund. `git status --short` chỉ ra `?? NOTES.md` và `?? answer.json`. Tệp có 86 dòng, tức 1 header và 85 dòng dữ liệu. |
+
+## Quyết định
+- **Cửa sổ thời gian:** tháng 10 giờ Việt Nam tương ứng khoảng UTC `[2026-09-30T17:00Z, 2026-10-31T17:00Z)`, tính cả mốc đầu, không tính mốc cuối. Tôi đã đối chiếu với tệp gốc:
+  - T0071 (`09-30T17:00:00Z`) được tính.
+  - T0072 (`09-30T16:59:59Z`) bị loại.
+  - T0074 (`10-31T16:59Z`) được tính.
+  - T0073 (`10-31T17:00Z`) bị loại.
+  - T0030 (`09-30T20:22Z`, tức 01/10 theo giờ VN) được tính.
+  - T0043 (`09-30T15:27Z`) bị loại.
+- **Refund tính theo tháng của chính dòng refund:**
+  - T0075 và T0076 nằm trong tháng 10 nên được tính, tổng −2.489.500 VND.
+  - T0077, T0078, T0079 và T0080 nằm trong tháng 11 nên bị loại. Riêng T0077 lúc `11-10T17:06Z` đã là 11/11 giờ VN. Các giao dịch gốc của chúng thuộc tháng 10 vẫn được tính là paid.
+- **Dòng trùng:** cả 5 dòng (T0062, T0019, T0057, T0079, T0022) đều giống hệt dòng đã có trước. Không có `txn_id` nào lặp lại với nội dung khác, nên giữ một dòng là không mơ hồ.
+- **Tiền và làm tròn:** cộng chính xác, không dùng float. Tổng USD là 1.536,04 × 25.400 = 39.015.416, ra số nguyên nên không phát sinh làm tròn. Tổng VND là 58.291.500.
+- Không cần kiến trúc, BA hay cổng ATTT. Tác vụ chỉ đọc một tệp, dữ liệu không có thông tin cá nhân, nhãn internal.
+
+## Kết quả review
+- Hai cách tính độc lập (Python `Decimal` và Node `BigInt`) khớp nhau ở cả 4 số.
+- Về review cuối: reviewer viết là đã "tính lại bằng Python", nhưng hệ thống ghi nhận reviewer **không chạy lệnh nào**. Vì vậy tôi coi kết luận review chỉ dựa trên việc đọc báo cáo, không phải lần tính thứ ba. Kết luận cuối dựa trên S1, S2 và phần tôi tự đối chiếu với tệp gốc.
+- Không có lỗi chặn hay lỗi lớn. Hai điểm nhỏ, không ảnh hưởng kết quả:
+  - Đoạn về T0030 trong báo cáo S2 viết kiểu tự hỏi rồi tự trả lời, đọc dễ rối. Kết luận "được tính" là đúng.
+  - Ngày của T0077 được ghi khác nhau: S2 ghi theo giờ UTC (`11-10`), NOTES ghi theo giờ VN (11/11). Cả hai đều đúng.
+
+## Việc còn mở & rủi ro
+- `answer.json` và `NOTES.md` **chưa được commit**, đang ở trạng thái untracked. Theo giới hạn vai trò, tôi không commit thay. Tom quyết định có commit hay không.
+- **Giả định:**
+  - Tỷ giá cố định 25.400 VND/USD.
+  - "Trùng" được hiểu là các dòng giống hệt nhau. Với dữ liệu này, hiểu như vậy cho kết quả giống hệt việc dedupe theo `txn_id`.
+- Script tính toán nằm trong scratchpad, ngoài repo. Muốn chạy lại thì phải dựa vào phần mô tả phương pháp trong `NOTES.md`.
+
+## Bước tiếp theo
+1. Nếu muốn lưu kết quả vào lịch sử: commit `answer.json` và `NOTES.md` trên một nhánh riêng, không commit vào main. Tiêu chí xong: `git status` sạch.
+2. Không bắt buộc, tách thành nhiệm vụ riêng nếu đội tài chính cần đối soát hằng tháng: đưa script vào repo, nhận tháng và tỷ giá làm tham số, kèm test cho các dòng sát mốc. Tiêu chí xong: test tháng 10/2026 ra đúng 97.306.916 / 32 / 2 / 5.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-121523-cc0` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **40 in / 15.9k out**, cache đọc 251.0k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | 18 | 7181 | 123648 | 2 |
+| Data Engineer (@data-engineer) | dev | 8 | 3685 | 53225 | 1 |
+| QA Engineer (@qa-tester) | dev | 6 | 1643 | 37549 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 6 | 2846 | 34285 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 499 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-data-engineer.md` — S1 Tính doanh thu thuần tháng 10/2026 (giờ ICT), ghi answer.json và NOTES.md (@data-engineer)
+- `outputs/dev-S2-senior-swe.md` — S2 Tính lại độc lập để đối chiếu (không ghi vào repo) (@senior-swe)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | **94** A | 100 | 100 | 68 | 100 | 0 | — | 131k | 4/10 |
+| Data Engineer (@data-engineer) | dev | **88** A | 100 | 83 | 100 | 48 | 1 | 1 | 57k | 0/3 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 39k | 0/2 |
+| Senior Software Engineer (@senior-swe) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 37k | 0/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Trưởng phòng Phát triển** (@dev-lead, 94 A):
+  - Thao tác công cụ lỗi nhiều (4/10, 40%; nhiều nhất ở run_command 4/5) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+- **Data Engineer** (@data-engineer, 88 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+- **Senior Software Engineer** (@senior-swe, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._
