@@ -1335,6 +1335,7 @@ export class Orchestrator {
       logs.write({ level: 'warn', kind: 'lane.escalate', msg: `${task.id}: nâng cấp làn đơn → ${target} (${reason})`, taskId: task.id, projectId: task.projectId, department: dept.id, agentId: agent.id, data: { from: 'single', to: target, trigger, reason, fixRounds: config.gate?.maxFixRounds } });
       this.message(task, dept.id, 'system', 'system', `⬆️ Nâng cấp làn đơn → làn ${target === 'fast' ? 'nhanh' : 'đầy'} (${reason}). Worktree được giữ; phần làm dở của @${agent.id} chuyển cho trưởng phòng lập kế hoạch.`);
       task.lane = target;
+      run.escalatedFrom = 'single'; // LANE-HANDOVER.md đã ghi TRƯỚC this.save() bên dưới → resume nạp lại được
       if (target === 'fast' && !task.options.phaseModels?.plan && config.fastLane.planModel) task.options.phaseModels = { ...task.options.phaseModels, plan: config.fastLane.planModel };
       run.subtasks = [];
       run.stage = undefined;
@@ -1381,7 +1382,15 @@ export class Orchestrator {
         run.review = { approved: true, summary, issues: [], checks: gateChecks, verified: true };
         logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'skip-reviewer', fixRounds: gate.fixRounds, lane: 'single' } });
         this.message(task, dept.id, 'system', 'system', `✅ ${summary}`);
-      } else if (canReview && reviewer) {
+      } else if (!canReview || !reviewer) {
+        // cần reviewer mà không có: ghi kiểm chứng theo cổng, KHÔNG tự gắn approved (D-02); không có lệnh kiểm tra nào thì không có gì để ghi
+        if (gateChecks.length) {
+        const summary = `Cổng chất lượng (làn đơn): cần reviewer (${gate.reasons.join('; ')}) nhưng phòng không có/không bật — chờ giám đốc xem.`;
+        run.review = { approved: false, summary, issues: [], checks: gateChecks, verified: gateChecks.length > 0 };
+        logs.write({ level: 'warn', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'no-reviewer', reasons: gate.reasons, lane: 'single' } });
+        this.message(task, dept.id, 'system', 'system', `✋ ${summary}`);
+        }
+      } else {
         logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: gọi reviewer — ${gate.reasons.join('; ')}`, taskId: task.id, department: dept.id, data: { decision: 'call-reviewer', reasons: gate.reasons, lane: 'single' } });
         this.setPhase(task, run, 'review');
         const items = [this.depInput(task, st)];
@@ -1460,6 +1469,12 @@ export class Orchestrator {
       if (r.final !== undefined) return r.final;
       prior = r.prior;
       pctx.lane = task.lane === 'single' ? 'fast' : task.lane;
+    }
+    // tiếp tục sau tạm dừng giữa lúc nâng làn (plan/execute chưa xong): `prior` của lần nâng đã mất → nạp lại bàn giao dở dang
+    if (run.escalatedFrom === 'single' && task.lane !== 'single' && !reached(run, 'executed') && !prior?.includes('# Bàn giao dở dang từ làn đơn')) {
+      const handover = this.d.store.readRunFile(task.id, 'LANE-HANDOVER.md');
+      if (handover) prior = `${prior ? `${prior}\n\n` : ''}${handover}`;
+      else this.d.logs.write({ level: 'warn', kind: 'lane.handover', msg: `${task.id}: tiếp tục sau nâng làn nhưng không thấy LANE-HANDOVER.md`, taskId: task.id, department: dept.id });
     }
     const names = new Map([...registry.agents.values()].map((a) => [a.id, a.name]));
     const rosterHints = roster.map((a) => ({ id: a.id, name: a.name, title: a.title, role: a.role, skills: a.skills }));
@@ -1629,7 +1644,8 @@ export class Orchestrator {
       const canReview = !!(task.options.review && reviewer && reviewer.id !== solo?.id);
       // giám đốc yêu cầu sửa: chạy vòng sửa kể cả khi phòng không bật review / không có reviewer riêng
       const directorRedo = !!run.revising?.length && run.review?.by === 'director' && !run.review.approved;
-      if ((canReview && done().length) || directorRedo) {
+      // B-02: cổng chất lượng chạy ở mọi làn — kể cả khi không có reviewer / review tắt / việc giao riêng
+      if (done().length || directorRedo) {
         for (let attempt = Math.min(run.reviewRound ?? 0, task.options.maxRevisions); attempt <= task.options.maxRevisions; attempt++) {
           this.checkAbort(task);
           run.reviewRound = attempt;
@@ -1642,19 +1658,38 @@ export class Orchestrator {
             targets = pending;
             this.message(task, dept.id, 'system', 'system', run.review!.by === 'director' ? `✋ Sửa theo yêu cầu của giám đốc: ${pending.map((s) => s.id).join(', ')}` : `↻ Tiếp tục vòng sửa ${attempt + 1}: ${pending.map((s) => s.id).join(', ')} (theo review đã có)`);
           } else {
-          if (!canReview || !reviewer) {
-            // đã sửa theo yêu cầu của giám đốc nhưng không có reviewer để duyệt lại → giám đốc xem rồi duyệt / yêu cầu sửa tiếp
-            run.review = { approved: false, summary: 'Đã sửa theo yêu cầu của giám đốc — không có reviewer duyệt lại, chờ giám đốc xem', issues: [], by: 'director' };
-            this.message(task, dept.id, 'system', 'system', '✋ Đã sửa theo yêu cầu của giám đốc — phòng không có reviewer duyệt lại; giám đốc xem rồi bấm Duyệt hoặc Yêu cầu sửa tiếp.');
-            break;
-          }
           // lần sửa trước (có thể dở dang do tạm dừng) đã đổi workspace sau lần kiểm tra gần nhất → chạy lại lệnh kiểm tra trước review
           const pcs = task.projectChecks;
           if (this.projectCheckable(task, project) && pcs?.staleAt && (!pcs.latestAt || pcs.latestAt < pcs.staleAt)) await this.runProjectChecks(task, project, dept.id, 'revise');
           // B-02: cổng chất lượng chạy TRƯỚC reviewer — lệnh đỏ/hồi quy vào vòng sửa theo kiểm tra, sai mẫu vào lượt sửa định dạng
-          const gate = await this.runQualityGate(task, run, project, reviewer, { dept: dept.id, pctx, base });
+          const gate = await this.runQualityGate(task, run, project, reviewer ?? solo ?? lead, { dept: dept.id, pctx, base });
           const sysNow = task.projectChecks?.latest ?? [];
           const gateChecks = sysNow.map((r) => ({ command: r.command, exitCode: r.code ?? undefined, ok: r.ok, note: `CCoding tự chạy${r.summary ? ` — ${r.summary.slice(0, 120)}` : ''}` }));
+          if (!canReview || !reviewer) {
+            // không có reviewer: cổng vẫn quyết định — đỏ mà đề bài đòi xanh thì không bao giờ approved
+            if (gate.forceUnapproved) {
+              const summary = `Cổng chất lượng: ${gate.stillRed.map((c) => `\`${c}\``).join(', ')} đề bài yêu cầu xanh nhưng còn đỏ sau ${gate.fixRounds} vòng sửa theo kiểm tra — không có reviewer, không duyệt.`;
+              run.review = { approved: false, summary, issues: [], checks: gateChecks, verified: true };
+              this.d.logs.write({ level: 'warn', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'forced-unapproved', stillRed: gate.stillRed, fixRounds: gate.fixRounds, reviewer: false } });
+              this.message(task, dept.id, 'system', 'system', `⛔ ${summary}`);
+            } else if (run.review?.by === 'director' || directorRedo) {
+              // đã sửa theo yêu cầu của giám đốc nhưng không có reviewer để duyệt lại → giám đốc xem rồi duyệt / yêu cầu sửa tiếp
+              run.review = { approved: false, summary: 'Đã sửa theo yêu cầu của giám đốc — không có reviewer duyệt lại, chờ giám đốc xem', issues: [], by: 'director', checks: gateChecks, verified: gateChecks.length > 0 || undefined };
+              this.message(task, dept.id, 'system', 'system', '✋ Đã sửa theo yêu cầu của giám đốc — phòng không có reviewer duyệt lại; giám đốc xem rồi bấm Duyệt hoặc Yêu cầu sửa tiếp.');
+            } else if (gate.needReviewer && gateChecks.length) {
+              // cần reviewer mà không có: ghi kiểm chứng theo cổng nhưng KHÔNG tự gắn approved (D-02); không có lệnh kiểm tra nào thì không có gì để ghi (như trước)
+              const summary = `Cổng chất lượng: cần reviewer (${gate.reasons.join('; ')}) nhưng phòng không có/không bật — chờ giám đốc xem.`;
+              run.review = { approved: false, summary, issues: [], checks: gateChecks, verified: gateChecks.length > 0 };
+              this.d.logs.write({ level: 'warn', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'no-reviewer', reasons: gate.reasons, fixRounds: gate.fixRounds } });
+              this.message(task, dept.id, 'system', 'system', `✋ ${summary}`);
+            } else if (gateChecks.length) {
+              const summary = `Cổng chất lượng: lệnh kiểm tra đều xanh${gate.fixRounds ? ` sau ${gate.fixRounds} vòng sửa` : ''}, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.`;
+              run.review = { approved: true, summary, issues: [], checks: gateChecks, verified: true };
+              this.d.logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'skip-reviewer', fixRounds: gate.fixRounds, reviewer: false } });
+              this.message(task, dept.id, 'system', 'system', `✅ ${summary}`);
+            }
+            break;
+          }
           if (gate.forceUnapproved) {
             // đỏ kéo dài mà đề bài yêu cầu xanh: không gọi reviewer, không bao giờ approved (nâng cấp là việc của luồng gọi)
             const summary = `Cổng chất lượng: ${gate.stillRed.map((c) => `\`${c}\``).join(', ')} đề bài yêu cầu xanh nhưng còn đỏ sau ${gate.fixRounds} vòng sửa theo kiểm tra — không gọi reviewer, không duyệt.`;
@@ -2885,7 +2920,8 @@ export class Orchestrator {
     const checkable = this.projectCheckable(task, project);
     const deptId = o.dept;
     const done = () => run.subtasks.filter((s) => s.status === 'done' && s.output);
-    let fixRounds = 0;
+    // gate.maxFixRounds là ngân sách cho CẢ NHIỆM VỤ (qua nhiều lần gọi cổng, nâng làn, tạm dừng/tiếp tục): đếm từ số vòng đã dùng
+    let fixRounds = Math.max(0, run.gateFixRoundsUsed ?? 0);
     let classes: ClassifiedCheck[] = [];
     const classify = () => {
       const pc = task.projectChecks;
@@ -2905,6 +2941,8 @@ export class Orchestrator {
       if (!st) break;
       this.checkAbort(task);
       fixRounds++;
+      run.gateFixRoundsUsed = fixRounds;
+      this.save(task); // lưu TRƯỚC khi gọi LLM: tạm dừng/tiếp tục không cấp lại ngân sách
       const red = classes.filter(isRed);
       const results = (task.projectChecks?.latest ?? []).filter((r) => red.some((c) => c.command === r.command));
       const fixer = st.assignee ? registry.agent(st.assignee) : agent;
@@ -2951,6 +2989,8 @@ export class Orchestrator {
         if (fixRounds < max) {
           this.checkAbort(task);
           fixRounds++;
+          run.gateFixRoundsUsed = fixRounds;
+          this.save(task);
           const headings = templateHeadings(owner.body);
           const prev = this.readOutput(task, st);
           const miss = g;
