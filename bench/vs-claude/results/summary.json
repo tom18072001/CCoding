@@ -4,7 +4,8 @@
   "C2": "cloud 2/11 sáng · bài 5 (CCoding gốc + Claude) và biến thể fast/sonlead 1/11 trước khi chạm hạn mức",
   "C3": "cloud 2/11 · CCoding cải tiến bước 1 (họp song song, 1 hạng mục cho việc nhỏ, tổng hợp Sonnet)",
   "C4": "cloud 2/11 · làn nhanh lần 1 — 2 nhiệm vụ CCoding cùng lúc (tranh agent, số đo thời gian nhiễu)",
-  "C5": "cloud 2/11 · làn nhanh + điều phối song song (+ hook stdin từ giữa vòng) vs Claude, mỗi hệ tuần tự · t3 lượt 1 của CCoding bị lỗi treo stdin (579 s)"
+  "C5": "cloud 2/11 · làn nhanh + điều phối song song (+ hook stdin từ giữa vòng) vs Claude, mỗi hệ tuần tự · t3 lượt 1 của CCoding bị lỗi treo stdin (579 s)",
+  "C6": "cloud 2/11 · kiểm chứng d7600f6: làn nhanh chạy cùng lúc tối đa 4 hạng mục độc lập (t3, t5)"
  },
  "summary": {
   "C1": {
@@ -484,6 +485,72 @@
       "output": 29166,
       "cache_read": 528954,
       "cache_write": 40692
+     }
+    }
+   }
+  },
+  "C6": {
+   "t3-api": {
+    "ccoding-fastlane": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 192,
+     "wall_min_s": 173,
+     "wall_max_s": 211,
+     "cost_mean_usd": 1.103,
+     "tokens_mean": {
+      "input": 65,
+      "output": 46470,
+      "cache_read": 1124335,
+      "cache_write": 129942
+     }
+    },
+    "claude": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 252,
+     "wall_min_s": 246,
+     "wall_max_s": 258,
+     "cost_mean_usd": 1.044,
+     "tokens_mean": {
+      "input": 36,
+      "output": 24526,
+      "cache_read": 1080376,
+      "cache_write": 42120
+     }
+    }
+   },
+   "t5-logq": {
+    "ccoding-fastlane": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 174,
+     "wall_min_s": 134,
+     "wall_max_s": 214,
+     "cost_mean_usd": 1.222,
+     "tokens_mean": {
+      "input": 70,
+      "output": 51386,
+      "cache_read": 1065508,
+      "cache_write": 148805
+     }
+    },
+    "claude": {
+     "n": 2,
+     "hidden_pct": 100.0,
+     "full_pass": 2,
+     "wall_mean_s": 259.5,
+     "wall_min_s": 236,
+     "wall_max_s": 283,
+     "cost_mean_usd": 1.009,
+     "tokens_mean": {
+      "input": 20,
+      "output": 28820,
+      "cache_read": 536976,
+      "cache_write": 40615
      }
     }
    }

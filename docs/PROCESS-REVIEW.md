@@ -267,4 +267,20 @@ Token: CCoding làn nhanh vẫn **ghi cache gấp 2,8–4,0 lần** Claude Code 
 phiên `claude -p` mới, ghi lại tiền tố system prompt + định nghĩa công cụ; Claude Code ghi cache TTL 1 giờ (`ephemeral_1h` trong
 transcript). Phân tích sâu giao cho Phòng Nghiên cứu (`docs/research/BRIEF.md`).
 
-<!-- C6-TABLE -->
+**Kết quả C6** (2/11, sau `d7600f6`; t3 và t5, 2 lượt mỗi hệ, cùng cách chạy như C5): log xác nhận làn nhanh "chạy cùng lúc 4 hạng mục
+(thay vì 3)" — S4 bắt đầu cùng lúc S1–S3 (giây 24–39).
+
+| Bài | Claude Code (C6) | CCoding làn nhanh (C6) | Tỉ lệ | Test ẩn |
+|---|---|---|--:|---|
+| t3-api | 252 s (246–258) · $1,04 | **192 s** (173–211) · $1,11 | **0,76** | 100 % / 100 % |
+| t5-logq | 260 s (236–283) · $1,01 | **174 s** (134–214) · $1,22 | **0,67** | 100 % / 100 % |
+
+Thời gian của Claude Code dao động mạnh theo thời điểm (t3: 155–160 s ở C5, 246–258 s ở C6) → so sánh chỉ có nghĩa khi hai hệ chạy
+cùng lúc; gộp C5 + C6 (bỏ lượt t3 bị treo stdin), tỉ lệ thời gian làn nhanh / Claude Code: **t1 0,85 · t2 1,16 · t3 0,99 · t4 0,76 ·
+t5 0,67**; chi phí 0,9–1,6 lần; test ẩn 100 % mọi lượt (Claude Code 99,7 % ở t1). n = 2–4 lượt mỗi ô — chưa đủ để kiểm định thống kê.
+
+Còn chậm ở đâu (từ `events.jsonl` của C6):
+- **Hạng mục nối chung một tệp là đường găng**: t3 lượt 1, S4 (nối route vào `server.js`) chạy 148 s trong khi S1–S3 xong ở giây 69–93.
+  Cần kế hoạch cân tải: tách phần nối theo tính năng hoặc để người giữ tệp chung làm phần nhỏ nhất.
+- **Gộp xong mà lệnh kiểm tra đỏ** (t5 lượt 2: `npm test → 1` sau thực thi) → review (27 s) chỉ để yêu cầu sửa, rồi sửa + review lại
+  (+86 s). Đề xuất: lệnh kiểm tra đỏ sau gộp → vào thẳng vòng sửa với đầu ra lệnh, bỏ lượt review đầu.

@@ -57,6 +57,15 @@ chi phí = giá niêm yết quy đổi do Claude Code báo (gói Max không tr�
 | t5-logq | claude | 2 | 100.0% | 2/2 | 258 (247–270) s | $1.01 | 29k | 529k | 41k |
 | t5-logq | ccoding-fastlane | 2 | 100.0% | 2/2 | 174 (161–188) s | $1.08 | 47k | 949k | 126k |
 
+## C6 — cloud 2/11 · kiểm chứng d7600f6: làn nhanh chạy cùng lúc tối đa 4 hạng mục độc lập (t3, t5)
+
+| Bài | Hệ | n | Test ẩn | Đạt trọn | Thời gian TB (min–max) | Chi phí TB | Đầu ra | Đọc cache | Ghi cache |
+|---|---|--:|--:|--:|--:|--:|--:|--:|--:|
+| t3-api | claude | 2 | 100.0% | 2/2 | 252 (246–258) s | $1.04 | 25k | 1080k | 42k |
+| t3-api | ccoding-fastlane | 2 | 100.0% | 2/2 | 192 (173–211) s | $1.10 | 46k | 1124k | 130k |
+| t5-logq | claude | 2 | 100.0% | 2/2 | 260 (236–283) s | $1.01 | 29k | 537k | 41k |
+| t5-logq | ccoding-fastlane | 2 | 100.0% | 2/2 | 174 (134–214) s | $1.22 | 51k | 1066k | 149k |
+
 ## Từng lượt
 
 | Vòng | Bài | Hệ | Lượt | Trạng thái | Thời gian | Chi phí | Test ẩn | perf (ms) | Nhiệm vụ CCoding |
@@ -110,3 +119,11 @@ chi phí = giá niêm yết quy đổi do Claude Code báo (gói Max không tr�
 | C5 | t5-logq | ccoding-fastlane | 2 | done | 161 s | $0.98 | 146/146 |  | T-20261102-111805-c7b |
 | C5 | t5-logq | claude | 1 | done | 247 s | $0.97 | 146/146 |  |  |
 | C5 | t5-logq | claude | 2 | done | 270 s | $1.06 | 146/146 |  |  |
+| C6 | t3-api | ccoding-fastlane | 1 | done | 211 s | $1.26 | 87/87 |  | T-20261102-112212-a80 |
+| C6 | t3-api | ccoding-fastlane | 2 | done | 173 s | $0.95 | 87/87 |  | T-20261102-112816-f3d |
+| C6 | t3-api | claude | 1 | done | 246 s | $0.98 | 87/87 |  |  |
+| C6 | t3-api | claude | 2 | done | 258 s | $1.10 | 87/87 |  |  |
+| C6 | t5-logq | ccoding-fastlane | 1 | done | 134 s | $1.08 | 146/146 |  | T-20261102-112559-a65 |
+| C6 | t5-logq | ccoding-fastlane | 2 | done | 214 s | $1.36 | 146/146 |  | T-20261102-113118-0ed |
+| C6 | t5-logq | claude | 1 | done | 283 s | $1.10 | 146/146 |  |  |
+| C6 | t5-logq | claude | 2 | done | 236 s | $0.92 | 146/146 |  |  |
