@@ -1,0 +1,106 @@
+{
+  "stale": [
+    {
+      "id": "C6-no-data",
+      "pattern": "C6 chưa có (dữ liệu|trong)",
+      "reason": "Đã có dữ liệu C6: docs/research/performance/c6-extract/ (C6-runs.csv, C6-calls.csv…); cập nhật bằng số C6 (dev-review.md R1-02..R1-12)",
+      "exceptions": [
+        {
+          "file": "docs/research/dev-review.md",
+          "line": 200,
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng lỗi R1-02..R1-12)"
+        },
+        {
+          "file": "docs/research/dev-review.md",
+          "line": 201,
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng lỗi R1-02..R1-12)"
+        },
+        {
+          "file": "docs/research/dev-review.md",
+          "line": 202,
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng lỗi R1-02..R1-12)"
+        },
+        {
+          "file": "docs/research/dev-review.md",
+          "line": 210,
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng lỗi R1-02..R1-12)"
+        },
+        {
+          "file": "docs/research/dev-review/verification.md",
+          "line": 69,
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng xác minh)"
+        },
+        {
+          "file": "docs/research/dev-review/verification.md",
+          "line": 83,
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng xác minh)"
+        },
+        {
+          "file": "docs/research/dev-review/verification.md",
+          "line": 84,
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng xác minh)"
+        },
+        {
+          "file": "docs/research/dev-review/verification.md",
+          "line": 85,
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng xác minh)"
+        },
+        {
+          "file": "docs/research/improvement-backlog.md",
+          "line": 274,
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (mô tả vấn đề B-05)"
+        }
+      ]
+    },
+    {
+      "id": "agent-deadline-27-11",
+      "pattern": "AGENT[^\\n]{0,120}27/11|27/11[^\\n]{0,120}AGENT",
+      "reason": "Hạn AGENT'27 là 13/11/2026, không phải 27/11 (BRIEF-2.md mục 5; publication-plan.md dòng AGENT'27)",
+      "exceptions": [
+        {
+          "file": "docs/research/BRIEF-2.md",
+          "line": 13,
+          "reason": "Dòng nêu rõ \"không phải ≈ 27/11\", đúng là 13/11/2026"
+        }
+      ]
+    },
+    {
+      "id": "c7t2-review-missed",
+      "pattern": "review không bắt",
+      "reason": "Lượt C7 t2 (52/60): reviewer bắt được, lỗi ở điều phối (hạng mục thứ ba không chạy) — token-analysis.md:489, publication-plan.md:28, PROCESS-REVIEW.md:312",
+      "exceptions": [
+        {
+          "file": "docs/research/performance/token-analysis.md",
+          "line": 489,
+          "reason": "Dòng bác bỏ: BRIEF-2 (\"review không bắt\") không khớp dữ liệu"
+        }
+      ]
+    }
+  ],
+  "numbers": [
+    {
+      "id": "agent-deadline",
+      "value": "13/11/2026",
+      "reason": "Nguồn: publication-plan.md dòng AGENT'27 (kiểm ngày 2/11/2026) và BRIEF-2.md mục 5",
+      "pattern": "AGENT[^\\n]{0,60}?(\\d{1,2}/\\d{1,2}/20\\d\\d)",
+      "files": [
+        "publication-plan.md",
+        "BRIEF-2.md",
+        "paper/paper.md",
+        "presentation-notes.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "c7t2-score",
+      "value": "52/60",
+      "reason": "Nguồn: token-analysis.md T-h (kiểm lượt C7 t2) và PROCESS-REVIEW.md:312",
+      "pattern": "C7 t2[^\\n]{0,40}?\\((\\d+/60)\\)",
+      "files": [
+        "**/*.md",
+        "../PROCESS-REVIEW.md"
+      ],
+      "exceptions": []
+    }
+  ]
+}
