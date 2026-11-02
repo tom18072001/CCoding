@@ -410,15 +410,13 @@ Mọi dòng dưới ghi **sau** khi dữ liệu W1–B7a đã có trong `runs.js
 | V3-11 | §6 hàng "Các arm chạy ở cửa sổ khác nhau"; `run-plan.md` §3.2 chạy t1–t5 ở W2, W4, W5 (B0 × t1–t5 r1 ở W5) | B0 **không chạy** t1–t5 (W5 chưa chạy). Cửa sổ thực: W1, W2a, W2b, W2c, B7a (RL:12–16) khác tên và thứ tự `run-plan.md` §5.2: W2 gồm N4 + FL × T5 + s1 (khớp W2a, W2b, W2c), W4 `FL × T5 r9` (thành B7a, đổi FL → B7), W3 (`B5, FL × R13`) và các lệnh A1, A2, B3 chưa chạy | So B0 với B6/B7 trên t1–t5; H6, H7, H1′/H2′ | Không có so sánh B0 với B7 trên cùng bài. H3, H6, H7 ghi "chưa đủ N" nếu chưa đạt §3.1; không tính p. H1′/H2′ không chạy (SR-25) |
 | V3-12 | `run-plan.md` §3.0: `--timeout 20`; §5.0 quarantine; §4.3 Q/L/T | `--timeout 20` ở cả năm lệnh (`config-*.json`). Lỗi hạ tầng và lượt bị loại: 0 ở mọi cửa sổ (RL:12–16, RL:46, RL:55, RL:65, RL:76); leak: 0. Không có quarantine nào được thực hiện | Lượt loại Q/L/T/E1/E4 | Dự kiến loại 0 lượt theo RUNLOG; S1 vẫn áp quy tắc cơ học lên `runs.jsonl` và ghi `excluded-round3.csv` (kể cả khi rỗng) |
 
-*(Đoạn "Phần khác của `run-plan.md`…" ở dưới bảng V4 thuộc về bảng V3-xx phía trên.)*
+Phần khác của `run-plan.md` đã đối chiếu nhưng không tìm thấy lệch: `--timeout 20` (khớp), s1 `--repeats 10` (khớp về tổng, tách thành W1 + W2c), N4 `--judge` r1–3 (khớp), T5 r1–3 trên làn nhanh (khớp). Chưa đối chiếu được: thứ tự xen kẽ thực (SR-23), `config.json` W1 là bản khôi phục từ commit `d0375f9` (RL:44).
 
 ### Sai lệch vòng 4 gói 1 (đề xuất chỉ tiêu B-01 mới; ghi 3/11/2026)
 
 | Mã | Đăng ký nói gì (§) | Thực tế / đề xuất | Phép bị ảnh hưởng | Cách xử lý |
 |---|---|---|---|---|
 | V4-01 | §3.2 B-01 và `improvement-backlog.md` §3.4: chi phí (token có trọng số) và thời gian trong ±15 % của A0-sonnet (R ∈ [0,85; 1,15], TOST bootstrap 90 %) | **ĐỀ XUẤT, chờ giám đốc duyệt:** chỉ tiêu chặng sau B-11 là R ≤ 1,3 (token có trọng số và thời gian); ±15 % giữ làm mục tiêu dài hạn. **Nhãn: post-hoc — sửa sau khi đã thấy dữ liệu B7** (B7/A0 = ×2,498 token, ×2,566 thời gian, bác bỏ B-01 theo `results-round3.md` §5). Lý do: phân rã `b7-cost-decomposition.md` cho thấy cần cắt ≥ 80,1 % chênh lệch để đạt ×1,3 và ≥ 90,1 % để đạt ±15 % (T-7, tính ở `improvement-backlog.md` §5 B-11.3 và B-11.4), trong khi phần chi phí cố định của một lượt gọi và của phần thực thi không thể bỏ nhưng chưa đo được (T-6, §Giới hạn) | B-01 (a), (b) cho **dữ liệu B7′** (§5 B-11.5). Không áp lại cho dữ liệu vòng 3 | Phán quyết vòng 3 "bác bỏ ±15 %" giữ nguyên, không đổi lại. Chỉ tiêu ×1,3 chỉ có hiệu lực cho lượt chạy B7′ sau khi (i) giám đốc duyệt và (ii) kế hoạch B7′ được commit (khóa) trước lượt đầu; kết quả B7′ gọi là "B-01′ (post-hoc target)", không gọi là xác nhận B-01. Tác giả đề xuất đã xem dữ liệu B7 (nguồn S1), nên không đáp ứng điều kiện trước-khi-xem của §2.4 cho chính con số 1,3 |
-
-Phần khác của `run-plan.md` đã đối chiếu nhưng không tìm thấy lệch: `--timeout 20` (khớp), s1 `--repeats 10` (khớp về tổng, tách thành W1 + W2c), N4 `--judge` r1–3 (khớp), T5 r1–3 trên làn nhanh (khớp). Chưa đối chiếu được: thứ tự xen kẽ thực (SR-23), `config.json` W1 là bản khôi phục từ commit `d0375f9` (RL:44).
 
 ## 10. Đạo đức & dữ liệu
 
