@@ -424,12 +424,12 @@ export const FAST_LANE_PLAN = `- **LÀN NHANH (việc nhỏ)** — mục tiêu: 
   - Lập kế hoạch NHANH: đọc vừa đủ (đặc tả + cấu trúc thư mục + tệp sẽ sửa), không khảo sát sâu; mô tả hạng mục ngắn gọn nhưng đủ hợp đồng.`;
 
 /** Báo cáo làn nhanh dựng từ kế hoạch, bàn giao từng hạng mục, review và thay đổi — không gọi model (tiết kiệm ~30 giây cuối nhiệm vụ). */
-export function templateReport(task: Task, dept: DepartmentDef, run: DeptRun, items: DepInput[], review: string, changes: string): string {
+export function templateReport(task: Task, dept: DepartmentDef, run: DeptRun, items: DepInput[], review: string, changes: string, laneNote = 'Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model).'): string {
   const failed = run.subtasks.filter((s) => s.status === 'failed');
   const lines = [
     `# Báo cáo ${dept.name} — ${task.title}`,
     '',
-    `_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._`,
+    `_${laneNote}_`,
     '',
     '## Tóm tắt',
     '',
