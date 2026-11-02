@@ -18,6 +18,8 @@ Dữ liệu: nội bộ (internal). Không tốn hạn mức LLM. Mọi bảng d
 - Chặn nhầm lượt xanh: **0/53**, khoảng tin cậy 95 % [0 %; 6,7 %].
 - Độ nhạy: **1/1**, [2,5 %; 100 %] — chỉ có **một** ca dương thật trong 54 lượt nên không thể nói gì về độ nhạy ngoài ca này.
 - **Phán quyết B-02 theo §4.5: KHÔNG ĐỦ DỮ LIỆU** (chi tiết dưới).
+- **Cập nhật vòng 4 (gói 1b, đọc `finalPath`):** script giờ đọc `runs[-1].finalPath` (fallback `task.finalPath`, rồi trường cũ `review.approved` cho `approved`). Kết quả: **54/54 lượt có `finalPath`**, nhưng **0/54 có tệp báo cáo đọc được** cạnh `ccoding-task.json` (bench không lưu `FINAL.md`/`dev-FINAL.md`), nên không có thêm bằng chứng nào. **Kết quả không đổi: bắt 1/1, chặn nhầm 0/53**, cùng khoảng tin cậy.
+- Dòng đầu ra mới của script (đứng trước "Bảng từng lượt"): `- finalPath: 54/54 lượt có trường finalPath (0 có tệp đọc được cạnh ccoding-task.json); approved vẫn lấy từ review.approved (fallback trường cũ).`
 
 ## Bảng từng lượt
 
