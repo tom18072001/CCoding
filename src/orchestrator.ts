@@ -276,6 +276,7 @@ export class Orchestrator {
     const budgetMode: BudgetMode = o.budgetMode === 'pause' || o.budgetMode === 'complete' ? o.budgetMode : (project?.budgetMode ?? config.defaults.budgetMode ?? 'complete');
     const task: Task = {
       id: newTaskId(),
+      seq: this.d.store.nextSeq(),
       title: (input.title ?? '').trim() || firstSentence(brief, 90),
       brief,
       mode,

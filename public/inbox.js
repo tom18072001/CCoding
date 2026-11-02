@@ -109,7 +109,7 @@
     else
       body = `${window.Flow?.summaryHtml(t) || ''}<div class="pause-box ${esc(t.status)}"><div><b>${esc(k.icon)} ${esc(k.label)}</b><p>${esc(t.pause?.detail || t.error || '')}${t.pause?.resumeAt ? ` · tự tiếp tục lúc ${esc(C.dateTime(t.pause.resumeAt))}` : ''}</p></div>
         <div class="pb-actions"><button type="button" class="btn primary sm" data-ib-act="1">${esc(k.p)} (1)</button>${x.k === 'paused' ? `<button type="button" class="btn ghost sm" data-ib-act="2">${esc(k.s)} (2)</button>` : ''}${k.cancel ? '<button type="button" class="btn ghost sm danger" data-ib-act="x">Hủy (X)</button>' : ''}</div></div>`;
-    return `<div class="ib-pvh"><div><h2>${esc(t.title)}</h2><small>${esc(t.id)} · 📁 ${esc(proj)} · ${esc(C.MODE_VI[t.mode] || t.mode)} · ${esc(ago(t.updatedAt || t.createdAt))}</small></div>
+    return `<div class="ib-pvh"><div><h2>${esc(t.title)}</h2><small title="${esc(t.id)}">${esc(C.code(t))} · 📁 ${esc(proj)} · ${esc(C.MODE_VI[t.mode] || t.mode)} · ${esc(ago(t.updatedAt || t.createdAt))}</small></div>
         <div class="ib-go"><button type="button" class="btn ghost sm" data-ib-open="chat">💬 Hội thoại (Enter)</button><button type="button" class="btn ghost sm" data-ib-open="task">📋 Trang nhiệm vụ (O)</button></div></div>
       ${x.k === 'attention' ? `<div class="pb-actions ib-qa"><button type="button" class="btn primary sm" data-ib-act="1">✅ Duyệt kết quả (1)</button><button type="button" class="btn ghost sm" data-ib-act="2">✋ Yêu cầu sửa… (2)</button>${window.UX?.hasDiff(t) ? '<button type="button" class="btn ghost sm" data-ib-open="diff">🧬 Thay đổi</button>' : ''}</div>` : ''}
       ${body}`;

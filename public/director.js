@@ -435,7 +435,7 @@
         <form class="form" id="fb-form">
           <div class="rate"><label><input type="radio" name="rating" value="up" /> 👍 Làm tốt</label><label><input type="radio" name="rating" value="down" /> 👎 Chưa đạt</label><label><input type="radio" name="rating" value="" checked /> Không đánh giá</label></div>
           <label>Góp ý<textarea name="text" rows="3" maxlength="1000" placeholder="Điều muốn ${esc(a.name)} giữ hoặc thay đổi ở các lần sau…"></textarea></label>
-          ${recent.length ? `<label>Gắn với nhiệm vụ <small>(tùy chọn)</small><select name="taskId"><option value="">—</option>${recent.map((t) => `<option value="${esc(t.id)}">${esc(t.id)} · ${esc(t.title.slice(0, 50))}</option>`).join('')}</select></label>` : ''}
+          ${recent.length ? `<label>Gắn với nhiệm vụ <small>(tùy chọn)</small><select name="taskId"><option value="">—</option>${recent.map((t) => `<option value="${esc(t.id)}">${esc(C.code(t))} · ${esc(t.title.slice(0, 50))}</option>`).join('')}</select></label>` : ''}
           <div class="actions"><button class="btn primary sm" type="submit">Gửi góp ý</button><span class="form-msg" data-msg></span></div>
         </form>
         <h3 class="mh3">Đã góp ý (${list.length})</h3>
@@ -483,7 +483,7 @@
     const used = C.total(t.usage);
     modal({
       title: '💰 Tăng ngân sách',
-      body: `<p><b>${esc(t.title)}</b> <small>${esc(t.id)}</small></p>
+      body: `<p><b>${esc(t.title)}</b> <small title="${esc(t.id)}">${esc(C.code(t))}</small></p>
         <div class="budget"><div class="bm-bar"><i style="width:${Math.min(100, budget ? Math.round((used / budget) * 100) : 0)}%"></i></div><span>${C.fmt(used)} / ${C.fmt(budget)} token · ${t.options?.budgetMode === 'pause' ? 'dừng khi chạm trần' : 'chạy tới khi hoàn thành'}</span></div>
         <div class="pb-actions" style="margin-top:10px">
           <button class="btn primary sm" data-add="${Math.max(100000, Math.round(budget * 0.5))}">+50% (${C.fmt(Math.max(100000, Math.round(budget * 0.5)))})</button>

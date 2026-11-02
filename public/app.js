@@ -99,6 +99,7 @@
     S.projects = st.projects;
     S.usage = st.usage;
     S.defaults = st.defaults;
+    S.prefix = st.taskPrefix || S.prefix || 'CC';
     S.defaultClassification = st.defaultClassification;
     S.toolsDefault = st.tools?.projectAccess;
     if (st.alerts) {
@@ -109,6 +110,54 @@
     $('#m-runtime').textContent = `runtime: ${st.defaultRuntime}`;
     if (st.registryErrors?.length) console.warn('registry', st.registryErrors);
   }
+
+  // ── Mã nhiệm vụ ngắn (CC-94) ─────────────────────────────────────────────
+  /** Mã hiển thị của nhiệm vụ: <tiền tố>-<số thứ tự>; nhiệm vụ chưa có số (máy chủ cũ) dùng mã đầy đủ. */
+  const code = (t) => (t && Number.isInteger(t.seq) ? `${S.prefix || 'CC'}-${t.seq}` : t?.id || '');
+  const CODE_RE = /^([A-Za-z][A-Za-z0-9]{0,7})-(\d{1,9})$/;
+  /** Tìm nhiệm vụ đã tải theo mã đầy đủ hoặc mã ngắn. */
+  function findTask(ref) {
+    if (!ref) return undefined;
+    if (S.tasks.has(ref)) return S.tasks.get(ref);
+    const m = CODE_RE.exec(String(ref).trim());
+    if (!m) return undefined;
+    const n = Number(m[2]);
+    for (const t of S.tasks.values()) if (t.seq === n) return t;
+    return undefined;
+  }
+  /** Mã ngắn chưa có trong danh sách đã tải (nhiệm vụ cũ ngoài 100 việc gần nhất) → hỏi máy chủ. */
+  async function resolveTask(ref) {
+    const t = findTask(ref);
+    if (t) return t.id;
+    if (!CODE_RE.test(String(ref).trim())) return ref;
+    try {
+      const d = await api(`/api/tasks/${encodeURIComponent(ref)}`);
+      S.tasks.set(d.task.id, d.task);
+      return d.task.id;
+    } catch {
+      return ref;
+    }
+  }
+  // Markdown: mã ngắn đúng tiền tố và mã đầy đủ T-… trong tin nhắn/báo cáo → liên kết tới nhiệm vụ
+  if (window.MD)
+    window.MD.taskRef = (m) => {
+      if (/^T-\d{8}-/.test(m)) {
+        const t = S.tasks.get(m);
+        return t ? { id: t.id, code: code(t), title: t.title } : null;
+      }
+      const c = CODE_RE.exec(m);
+      if (!c || c[1] !== (S.prefix || 'CC')) return null;
+      const t = findTask(m);
+      return { id: t ? t.id : m, code: m, title: t ? t.title : '' };
+    };
+  document.addEventListener('click', async (e) => {
+    const a = e.target.closest?.('a.tref[data-task]');
+    if (!a) return;
+    e.preventDefault();
+    const id = await resolveTask(a.dataset.task);
+    if (S.tab === 'assign' && window.Chat && S.tasks.has(id)) return window.Chat.open(id);
+    openTask(id);
+  });
 
   let office;
   async function init() {
@@ -125,7 +174,7 @@
     $('#lively').addEventListener('change', (e) => (office.lively = e.target.checked));
     bindUi();
     // cầu nối cho director.js (phòng giám đốc, prompt, hạn mức, trợ giúp)
-    window.CC = { S, api, esc, md, fmt, total, toast, openAgent, openTask, setTab, avatarUrl, av, agentName, deptName, deptShort, deptColor, dateTime, time, CLS_VI, TASK_VI, STATUS_VI, MODE_VI, PAUSE_VI, PHASES, PHASE_INDEX, KIND_VI, prefillAssign, office: () => office, renderTaskDetail, renderTaskList, editProject, newProject, uploadFiles, renderPending };
+    window.CC = { S, api, esc, md, code, findTask, resolveTask, fmt, total, toast, openAgent, openTask, setTab, avatarUrl, av, agentName, deptName, deptShort, deptColor, dateTime, time, CLS_VI, TASK_VI, STATUS_VI, MODE_VI, PAUSE_VI, PHASES, PHASE_INDEX, KIND_VI, prefillAssign, office: () => office, renderTaskDetail, renderTaskList, editProject, newProject, uploadFiles, renderPending };
     window.Director?.init();
     window.Drive?.init();
     window.Chat?.init();
@@ -200,6 +249,8 @@
     if (!a) return;
     a.state = st;
     window.UX?.onAgent(st);
+    // cột trái: "Agent đang làm"
+    throttle('nav-agents', () => window.Drive?.renderTree?.(), 1200);
     office.updateAgent(st);
     if (S.tab === 'people') throttle('people', renderPeople);
   }
@@ -219,7 +270,8 @@
 
   function updateRunning() {
     const running = [...S.tasks.values()].filter((x) => x.status === 'running' || x.status === 'queued');
-    $('#badge-tasks').textContent = running.length || '';
+    // cột trái: "● n" = đang chạy thật (không tính việc đang chờ)
+    $('#badge-tasks').textContent = running.filter((x) => x.status === 'running').length || '';
     $('#k-running').textContent = running.length;
     office.setRunning(running.length);
     const meeting = running.find((x) => x.phase === 'discuss' || x.phase === 'finalize');
@@ -757,7 +809,7 @@
         const depts = (t.departments.length ? t.departments : t.department ? [t.department] : []).map((d) => `<span style="color:${deptColor(d)}">${esc(deptShort(d))}</span>`).join(' → ');
         return `<button class="task" data-id="${esc(t.id)}">
           <div class="t-top"><span class="status ${t.status}">${TASK_VI[t.status] || t.status}</span>${t.attention ? `<span class="status attention" title="${esc(t.attention.detail)}">⚠ cần xem</span>` : ''}<span class="t-title">${esc(t.title)}</span></div>
-          <div class="t-meta"><span>${esc(t.id)}</span><span>${esc(MODE_VI[t.mode] || t.mode)}</span>${depts ? `<span>${depts}</span>` : ''}${t.phase ? `<span>pha: ${esc(t.phase)}</span>` : ''}<span>token <b>${fmt(total(t.usage))}</b></span><span>${dateTime(t.createdAt)}</span></div>
+          <div class="t-meta"><span title="${esc(t.id)}">${esc(code(t))}</span><span>${esc(MODE_VI[t.mode] || t.mode)}</span>${depts ? `<span>${depts}</span>` : ''}${t.phase ? `<span>pha: ${esc(t.phase)}</span>` : ''}<span>token <b>${fmt(total(t.usage))}</b></span><span>${dateTime(t.createdAt)}</span></div>
         </button>`;
       })
       .join('');
@@ -765,6 +817,7 @@
   }
 
   async function openTask(id, view) {
+    if (!S.tasks.has(id)) id = findTask(id)?.id || (await resolveTask(id));
     S.selectedTask = id;
     S.taskView = view || S.taskView || 'chat';
     S.taskFile = null;
@@ -801,7 +854,7 @@
           .map(
             (s) => `<div class="st-row">
               <div class="st-top"><code>${esc(s.id)}</code><span class="st-title" title="${esc(s.description)}">${esc(s.title)}</span><span class="status ${s.status}">${TASK_VI[s.status] || s.status}</span></div>
-              <div class="st-meta"><span class="who">${av(s.assignee)}${esc(agentName(s.assignee))}</span>${s.dependsOn.length ? `<span>sau ${esc(s.dependsOn.join(', '))}</span>` : ''}<span class="mono">${fmt(s.usage.input)} in / ${fmt(s.usage.output)} out</span>${s.attempts > 1 ? `<span${s.attempts >= 3 ? ' style="color:var(--warn)" title="Chạy nhiều lần — kiểm tra vòng sửa có tiến triển"' : ''}>${s.attempts} lần</span>` : ''}${s.continuations ? `<span style="color:var(--warn)" title="Vòng công cụ chạm trần khi chưa xong — đã cho chạy tiếp với ngữ cảnh mới">↻ chạy tiếp ${s.continuations}</span>` : ''}${window.UX ? UX.histLink(t, s) : ''}${s.output ? `<a data-file="${esc(s.output)}">xem sản phẩm →</a>` : ''}${s.splitTo ? `<a data-task="${esc(s.splitTo)}">✂ đã tách → ${esc(s.splitTo)}</a>` : ''}</div>
+              <div class="st-meta"><span class="who">${av(s.assignee)}${esc(agentName(s.assignee))}</span>${s.dependsOn.length ? `<span>sau ${esc(s.dependsOn.join(', '))}</span>` : ''}<span class="mono">${fmt(s.usage.input)} in / ${fmt(s.usage.output)} out</span>${s.attempts > 1 ? `<span${s.attempts >= 3 ? ' style="color:var(--warn)" title="Chạy nhiều lần — kiểm tra vòng sửa có tiến triển"' : ''}>${s.attempts} lần</span>` : ''}${s.continuations ? `<span style="color:var(--warn)" title="Vòng công cụ chạm trần khi chưa xong — đã cho chạy tiếp với ngữ cảnh mới">↻ chạy tiếp ${s.continuations}</span>` : ''}${window.UX ? UX.histLink(t, s) : ''}${s.output ? `<a data-file="${esc(s.output)}">xem sản phẩm →</a>` : ''}${s.splitTo ? `<a data-task="${esc(s.splitTo)}">✂ đã tách → ${esc(code(S.tasks.get(s.splitTo)) || s.splitTo)}</a>` : ''}</div>
               ${s.error && !s.splitTo ? `<div class="st-err">${esc(s.error)}</div>` : ''}
               ${window.UX ? UX.liveHtml(t, s) + UX.histHtml(t, s) : ''}
             </div>`,
@@ -886,7 +939,7 @@
     const git = t.branch ? `<div class="t-git">🌿 nhánh <code>${esc(t.branch)}</code> · worktree <code>${esc(t.workspace)}</code>${t.commit ? ` · ${esc(t.commit)}` : ''}</div>` : t.workspace ? `<div class="t-git">📁 <code>${esc(t.workspace)}</code></div>` : '';
     el.innerHTML = `<button class="btn ghost sm back" id="td-back">← Danh sách</button>
       <div class="td-head"><h2>${esc(t.title)}</h2>
-        <div class="t-meta"><span class="status ${t.status}">${TASK_VI[t.status] || t.status}</span>${t.attention ? `<span class="status attention" title="${esc(t.attention.detail)}">⚠ cần xem</span>` : ''}<span>${esc(t.id)}</span><span>${esc(MODE_VI[t.mode] || t.mode)}</span>
+        <div class="t-meta"><span class="status ${t.status}">${TASK_VI[t.status] || t.status}</span>${t.attention ? `<span class="status attention" title="${esc(t.attention.detail)}">⚠ cần xem</span>` : ''}<span class="tcode" title="${esc(t.id)}">${esc(code(t))}</span><span>${esc(MODE_VI[t.mode] || t.mode)}</span>
         <span class="cls ${esc(t.classification)}">${esc(CLS_VI[t.classification] || t.classification)}</span>
         ${t.projectId ? `<span>dự án: ${esc(t.projectId)}</span>` : ''}<span>token <b style="font-family:var(--mono);color:var(--text)">${fmt(t.usage.input)} in / ${fmt(t.usage.output)} out</b></span>
         ${t.agentId ? `<span>giao riêng: ${esc(agentName(t.agentId))}</span>` : ''}

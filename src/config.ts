@@ -103,6 +103,8 @@ export function firstModels(map: Record<string, ModelSpec> | undefined): Record<
 export interface Config {
   root: string;
   server: { host: string; port: number; token?: string };
+  /** Tiền tố mã nhiệm vụ ngắn (vd. "CC" → CC-94): 1–8 chữ in hoa/số, bắt đầu bằng chữ. */
+  taskPrefix: string;
   dataDir: string;
   workspacesDir: string;
   agentsDir: string;
@@ -254,6 +256,7 @@ function readJson(file: string): unknown {
 
 const BUILTIN: Omit<Config, 'root'> = {
   server: { host: '127.0.0.1', port: 7420 },
+  taskPrefix: 'CC',
   dataDir: 'data',
   workspacesDir: 'workspaces',
   agentsDir: 'agents',
@@ -344,8 +347,10 @@ export function loadConfig(opts: { root?: string; configFile?: string; local?: b
   if (env.HERDR_BIN_PATH && !cfg.herdr.bin) cfg.herdr.bin = env.HERDR_BIN_PATH;
 
   const abs = (p: string) => (path.isAbsolute(p) ? p : path.join(root, p));
+  const prefix = String(cfg.taskPrefix ?? '').trim().toUpperCase();
   return {
     ...cfg,
+    taskPrefix: /^[A-Z][A-Z0-9]{0,7}$/.test(prefix) ? prefix : 'CC',
     root,
     dataDir: abs(cfg.dataDir),
     workspacesDir: abs(cfg.workspacesDir),

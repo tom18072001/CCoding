@@ -367,3 +367,13 @@ Theo yêu cầu chủ dự án, CCoding **không dùng** các tài khoản Claud
 **Kết luận: ĐẠT**, không thêm điều kiện.
 
 Sửa sau review độc lập (2/11/2026): dòng thời gian đọc `calls.jsonl` / `events.jsonl` **theo dòng, chỉ giữ trường thời gian** và nhớ đệm trong bộ nhớ tiến trình (tối đa 64 file, không ghi ra đĩa) — không thêm dữ liệu nào ra ngoài `data/`; nhật ký `workspace.merge` thêm trường `department` (mã phòng, không phải dữ liệu cá nhân). Hộp "Cần bạn" chặn gửi trùng một hành động trong 15 giây và không còn gọi `/cancel` cho việc đã dừng. **Kết luận giữ nguyên: ĐẠT.**
+
+### Bổ sung: UX-4a — mã nhiệm vụ ngắn, cây nhiệm vụ, cột trái theo nhóm (2/11/2026)
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| `Task.seq` + đánh số bù khi khởi động | PRE-06 | Chỉ thêm một số nguyên vào `data/runs/<id>/task.json` (tệp trạng thái, không phải nhật ký chứng cứ — chuỗi băm của nhật ký không đổi); không thêm dữ liệu cá nhân |
+| `taskPrefix` trong cấu hình, `GET /api/tasks/<mã ngắn>` | PRE-05 | Tra cứu trong bộ nhớ, cùng quyền truy cập như mã đầy đủ (token server nếu bật) |
+| Liên kết mã trong tin nhắn, cây nhiệm vụ, "Agent đang làm" | — | Dựng hoàn toàn trong trình duyệt từ dữ liệu đã có; trình duyệt chỉ lưu thêm kiểu xem (`view2`) và trạng thái mở/đóng cây (mã nhiệm vụ → đúng/sai, ≤ 300) trong `localStorage` |
+
+**Kết luận: ĐẠT**, không thêm điều kiện.

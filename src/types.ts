@@ -367,6 +367,8 @@ export interface PauseInfo {
 
 export interface Task {
   id: string;
+  /** Số thứ tự nhiệm vụ (mã ngắn hiển thị `<tiền tố>-<seq>`, vd. CC-94) — gán lúc tạo, nhiệm vụ cũ được đánh số bù theo lúc tạo. */
+  seq?: number;
   title: string;
   brief: string;
   mode: TaskMode;

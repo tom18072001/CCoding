@@ -11,6 +11,8 @@ import type { AgentFeedback, ChatMessage, ProjectDef, PromptDef, Task } from './
 export class Store {
   tasks = new Map<string, Task>();
   private saveTimers = new Map<string, NodeJS.Timeout>();
+  /** Số thứ tự lớn nhất đã cấp (mã ngắn CC-n). */
+  private maxSeq = 0;
 
   constructor(private dataDir: string, private logs: LogStore) {
     ensureDir(this.runsDir());
@@ -39,6 +41,33 @@ export class Store {
       }
       this.tasks.set(t.id, t);
     }
+    this.backfillSeq();
+  }
+
+  /** Nhiệm vụ tạo trước khi có mã ngắn: đánh số bù theo lúc tạo (sau số lớn nhất đã có) và ghi lại task.json. */
+  private backfillSeq(): void {
+    for (const t of this.tasks.values()) if (Number.isInteger(t.seq) && t.seq! > this.maxSeq) this.maxSeq = t.seq!;
+    const missing = [...this.tasks.values()].filter((t) => !Number.isInteger(t.seq) || t.seq! < 1).sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+    for (const t of missing) {
+      t.seq = ++this.maxSeq;
+      writeJsonAtomic(path.join(this.runDir(t.id), 'task.json'), t);
+    }
+  }
+
+  /** Số thứ tự cho nhiệm vụ mới. */
+  nextSeq(): number {
+    return ++this.maxSeq;
+  }
+
+  /** Tìm nhiệm vụ theo mã đầy đủ hoặc mã ngắn (CC-94, cc-94 — tiền tố bất kỳ). */
+  resolve(ref: string): Task | undefined {
+    const t = this.tasks.get(ref);
+    if (t) return t;
+    const m = /^[A-Za-z][A-Za-z0-9]{0,7}-(\d{1,9})$/.exec(ref.trim());
+    if (!m) return undefined;
+    const n = Number(m[1]);
+    for (const x of this.tasks.values()) if (x.seq === n) return x;
+    return undefined;
   }
 
   list(): Task[] {

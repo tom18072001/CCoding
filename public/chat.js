@@ -107,7 +107,7 @@
     sc.value = V.scope;
     const q = V.q.toLowerCase();
     let list = convs().filter((c) => (!V.scope ? true : V.scope === NONE ? !c.root.projectId : c.root.projectId === V.scope));
-    if (q) list = list.filter((c) => c.list.some((t) => `${t.title} ${t.brief || ''} ${t.id}`.toLowerCase().includes(q)));
+    if (q) list = list.filter((c) => c.list.some((t) => `${t.title} ${t.brief || ''} ${t.id} ${C.code(t)}`.toLowerCase().includes(q)));
     list.sort((a, b) => b.upd.localeCompare(a.upd));
     const groups = [];
     const run = list.filter((c) => c.list.some(active));
@@ -160,7 +160,7 @@
     const chips = [who(t), t.projectId ? `📁 ${projName(t.projectId)}` : '', C.CLS_VI[t.classification] || ''].filter(Boolean).map(esc).join(' · ');
     const atts = (t.attachments || []).map((a) => `<button class="cv-chip" data-pv="${esc(a.textPath || a.path)}" data-tid="${esc(t.id)}" title="${esc(a.note || a.kind || '')}">📎 ${esc(a.name)}</button>`).join('');
     const long = (t.brief || '').length > 900;
-    return `<div class="cv-row user"><div class="cv-ubub">${i ? `<small class="cv-fu">↪ tiếp nối · ${esc(t.id)}</small>` : ''}<div class="md${long ? ' clip' : ''}">${C.md(t.brief || '')}</div>${atts ? `<div class="cv-atts">${atts}</div>` : ''}<div class="cv-umeta">${chips} · ${esc(C.time(t.createdAt))}</div></div></div>`;
+    return `<div class="cv-row user"><div class="cv-ubub">${i ? `<small class="cv-fu" title="${esc(t.id)}">↪ tiếp nối · ${esc(C.code(t))}</small>` : ''}<div class="md${long ? ' clip' : ''}">${C.md(t.brief || '')}</div>${atts ? `<div class="cv-atts">${atts}</div>` : ''}<div class="cv-umeta">${chips} · ${esc(C.time(t.createdAt))}</div></div></div>`;
   }
   function noteRow(m) {
     return `<div class="cv-row user note"><div class="cv-ubub"><small class="cv-fu">📝 Chỉ dẫn bổ sung · ${esc(C.time(m.ts))}</small><div class="md">${C.md(m.text)}</div></div></div>`;
@@ -446,7 +446,7 @@
           ${mode === 'follow' && t.branch && t.projectId ? `<label class="check c-chk" title="Worktree của việc mới tách từ nhánh ${esc(t.branch)} (giữ thay đổi chưa gộp của việc trước). Bỏ chọn: tách từ nhánh xuất phát của dự án."><input type="checkbox" data-cont checked /> 🌿 nối tiếp nhánh</label>` : ''}
           ${mode === 'follow' ? `<label class="c-sel" title="Người nhận nhiệm vụ tiếp nối">Giao cho<select data-who><option value="">Như trước — ${esc(who(t))}</option>${workers.map((a) => `<option value="${esc(a.id)}">📌 ${esc(a.name)}</option>`).join('')}</select></label>` : ''}
           <span class="grow"></span>
-          <small class="cv-hint">${mode === 'note' ? '📝 chỉ dẫn bổ sung — áp dụng từ lượt làm việc sau' : `↪ tiếp nối ${esc(t.id)} — kế thừa dự án/chế độ`} · <kbd>Enter</kbd> gửi · <kbd>Shift</kbd>+<kbd>Enter</kbd> xuống dòng</small>
+          <small class="cv-hint">${mode === 'note' ? '📝 chỉ dẫn bổ sung — áp dụng từ lượt làm việc sau' : `↪ tiếp nối ${esc(C.code(t))} — kế thừa dự án/chế độ`} · <kbd>Enter</kbd> gửi · <kbd>Shift</kbd>+<kbd>Enter</kbd> xuống dòng</small>
           <button type="button" class="btn primary send cv-send" data-send title="Gửi (Enter)" aria-label="Gửi">↑</button>
         </div></div><div class="prompt-check" id="cv-check"></div>`;
     const ta = $('textarea', dock);

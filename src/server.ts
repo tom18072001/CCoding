@@ -98,6 +98,7 @@ export function snapshot(app: App) {
   return {
     now: nowIso(),
     runner: orchestrator.runner,
+    taskPrefix: config.taskPrefix,
     herdr: { session: config.herdr.session, inside: app.herdr.insideHerdr() },
     defaults: config.defaults,
     defaultRuntime: config.runtime.default,
@@ -206,7 +207,8 @@ export function createServer(app: App): http.Server {
       }
     }
     if ((mm = m(/^\/api\/tasks\/([^/]+)$/)) && req.method === 'GET') {
-      const t = store.get(mm[1]);
+      // nhận cả mã ngắn (CC-94) — dùng cho liên kết dán từ nơi khác
+      const t = store.resolve(mm[1]);
       if (!t) throw new HttpError(404, 'Không có nhiệm vụ');
       return send(res, 200, { task: t, transcript: store.transcript(t.id), outputs: store.outputs(t.id), usage: usage.summary('agent', { task: t.id }) });
     }

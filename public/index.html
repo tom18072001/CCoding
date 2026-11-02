@@ -50,16 +50,18 @@
           <button data-new="upload">📎 Tải tệp lên & giao việc</button>
         </div>
       </div><button class="nav-mini-btn" id="btn-nav-mini" title="Thu gọn / mở rộng cột trái" aria-label="Thu gọn cột trái">«</button></div>
-      <button class="nav" data-tab="home">🏠 <span>Tổng quan</span></button>
-      <button class="nav" data-tab="assign">💬 <span>Prompt</span></button>
-      <button class="nav" data-tab="projects">📁 <span>Dự án</span><em id="badge-projects"></em></button>
-      <button class="nav" data-tab="tasks" data-filter="all">📋 <span>Nhiệm vụ</span><em id="badge-tasks"></em></button>
+      <button class="nav" data-act="search" title="Tìm nhiệm vụ, dự án, agent, lệnh (Ctrl+K)">🔎 <span>Tìm</span><kbd class="nav-kbd">Ctrl K</kbd></button>
+      <button class="nav" data-tab="home" title="Tổng quan — số nhiệm vụ đang chạy">🏠 <span>Tổng quan</span><em id="badge-tasks" class="live" title="nhiệm vụ đang chạy"></em></button>
       <button class="nav" data-tab="inbox" title="Cần bạn (I) — duyệt bằng phím">📥 <span>Cần bạn</span><em id="badge-att" class="warn"></em></button>
-      <button class="nav" data-tab="tasks" data-filter="starred">⭐ <span>Gắn sao</span></button>
       <div class="nav-sep">Làm việc</div>
-      <button class="nav" data-tab="people">👥 <span>Nhân sự</span></button>
+      <button class="nav" data-tab="tasks" data-filter="all">📋 <span>Nhiệm vụ</span></button>
+      <button class="nav" data-tab="projects">📁 <span>Dự án</span><em id="badge-projects"></em></button>
+      <div class="nav-sub" id="nav-projects"></div>
+      <button class="nav" data-tab="assign" title="Giao việc và trao đổi theo hội thoại">💬 <span>Prompt</span></button>
+      <button class="nav" data-tab="tasks" data-filter="starred">⭐ <span>Gắn sao</span></button>
       <button class="nav" data-tab="prompts">📚 <span>Thư viện prompt</span></button>
-      <div class="nav-sep">Theo dõi</div>
+      <div class="nav-sep">Tổ chức</div>
+      <button class="nav" data-tab="people">👥 <span>Nhân sự</span></button>
       <button class="nav" data-tab="tokens">🔢 <span>Token</span></button>
       <button class="nav" data-tab="quota">⛽ <span>Hạn mức</span></button>
       <button class="nav" data-tab="kpi">📈 <span>KPI</span></button>

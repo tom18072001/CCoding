@@ -97,7 +97,7 @@
     if (live || t.status === 'paused') a('⏹', 'Hủy nhiệm vụ', () => confirm(`Hủy "${t.title}"?`) && post(t, 'cancel', {}, 'Đã gửi lệnh hủy')());
     if (t.branch && !live) a('🚀', 'Sẵn sàng gộp / đẩy nhánh', () => C.openTask(t.id, 'chat'), 'mở trang nhiệm vụ → 🚀');
     a('↻', 'Giao lại tương tự', () => C.prefillAssign({ mode: t.mode, department: t.department, projectId: t.projectId, agentId: t.agentId, title: t.title, brief: t.brief }));
-    a('⧉', 'Chép mã nhiệm vụ', () => navigator.clipboard?.writeText(t.id).then(() => C.toast({ level: 'info', title: `Đã chép ${t.id}`, msg: '' })));
+    a('⧉', `Chép mã nhiệm vụ (${C.code(t)})`, () => navigator.clipboard?.writeText(C.code(t)).then(() => C.toast({ level: 'info', title: `Đã chép ${C.code(t)}`, msg: t.title })));
     return out;
   }
   const TAB_ITEMS = [
@@ -123,7 +123,7 @@
     for (const r of recent.get()) {
       if (r.kind === 'task' && S.tasks.has(r.id) && r.id !== cur?.id) {
         const t = S.tasks.get(r.id);
-        items.push({ group: 'Xem gần đây', icon: '🕘', label: t.title, hint: `${t.id} · ${C.TASK_VI[t.status] || t.status}`, run: () => window.Chat?.open(t.id), recent: true });
+        items.push({ group: 'Xem gần đây', icon: '🕘', label: t.title, hint: `${C.code(t)} · ${C.TASK_VI[t.status] || t.status}`, run: () => window.Chat?.open(t.id), recent: true });
       } else if (r.kind === 'project' && S.projects.some((p) => p.id === r.id)) {
         const p = S.projects.find((x) => x.id === r.id);
         items.push({ group: 'Xem gần đây', icon: '📁', label: p.name, hint: p.id, run: () => window.Drive?.openProject(p.id), recent: true });
@@ -148,7 +148,7 @@
     mk('❓', 'Trợ giúp & phím tắt', () => window.Director?.help(), 'phím ?');
     // nhiệm vụ (mới nhất trước), dự án, agent
     const tasks = [...S.tasks.values()].sort((a, b) => String(b.updatedAt || b.createdAt).localeCompare(String(a.updatedAt || a.createdAt)));
-    for (const t of tasks) items.push({ group: 'Nhiệm vụ', icon: { running: '⚡', queued: '⏳', paused: '⏸', failed: '❌', done: '✓', cancelled: '⏹' }[t.status] || '•', label: t.title, hint: `${t.id} · ${C.TASK_VI[t.status] || t.status}${t.projectId ? ` · ${t.projectId}` : ''}`, keys: `${t.id} ${t.projectId || ''}`, run: () => window.Chat?.open(t.id), task: true });
+    for (const t of tasks) items.push({ group: 'Nhiệm vụ', icon: { running: '⚡', queued: '⏳', paused: '⏸', failed: '❌', done: '✓', cancelled: '⏹' }[t.status] || '•', label: t.title, hint: `${C.code(t)} · ${C.TASK_VI[t.status] || t.status}${t.projectId ? ` · ${t.projectId}` : ''}`, keys: `${C.code(t)} ${t.id} ${t.projectId || ''}`, run: () => window.Chat?.open(t.id), task: true });
     for (const p of S.projects) items.push({ group: 'Dự án', icon: '📁', label: p.name, hint: p.id, keys: p.id, run: () => window.Drive?.openProject(p.id) });
     for (const a of S.agents.values()) items.push({ group: 'Agent', icon: '👤', label: a.name, hint: `@${a.id} · ${a.title || ''}`, keys: `${a.id} ${a.title || ''}`, run: () => C.openAgent(a.id) });
     return items;

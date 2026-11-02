@@ -17,14 +17,16 @@
   function current() {
     const S = C.S;
     const tab = S.tab;
-    if (tab === 'tasks' && S.selectedTask) return `#/task/${enc(S.selectedTask)}${S.taskView && S.taskView !== 'chat' ? `/${S.taskView}` : ''}`;
+    // URL dùng mã ngắn (#/task/CC-94) khi nhiệm vụ đã có số thứ tự
+    const ref = (id) => C.code?.(S.tasks.get(id)) || id;
+    if (tab === 'tasks' && S.selectedTask) return `#/task/${enc(ref(S.selectedTask))}${S.taskView && S.taskView !== 'chat' ? `/${S.taskView}` : ''}`;
     if (tab === 'tasks') {
       const f = window.Drive?.filter?.();
       return f && f !== 'all' ? `#/tasks/${enc(f)}` : '#/tasks';
     }
     if (tab === 'assign') {
       const id = window.Chat?.convId?.();
-      return id ? `#/chat/${enc(id)}` : '#/chat';
+      return id ? `#/chat/${enc(ref(id))}` : '#/chat';
     }
     if (tab === 'project') {
       const id = window.Drive?.projectId?.();
@@ -65,7 +67,8 @@
     try {
       if (k === 'task' && id) C.openTask(id, VIEWS.includes(sub) ? sub : undefined);
       else if (k === 'chat') {
-        if (id && C.S.tasks.has(id)) window.Chat.open(id);
+        const known = id && (C.findTask?.(id) || C.S.tasks.get(id));
+        if (known) window.Chat.open(known.id);
         else if (id) {
           // nhiệm vụ vừa giao (SSE chưa tới) hoặc cũ ngoài 100 việc gần nhất → tải rồi mở
           hold = `#/chat/${enc(id)}`;
