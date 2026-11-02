@@ -2,11 +2,12 @@
 // Thống kê cho benchtest CCoding vs Claude Code: bootstrap, hoán vị, Cliff's delta, số lượt cần thiết.
 // Node >= 22, không phụ thuộc gói ngoài. Không đọc export.py / report.py; chỉ đọc runs.csv.
 //
-//   node stats.mjs [--runs a.csv,b.csv] [--rounds C5,C6] [--tasks t3-api,t5-logq]
+//   node stats.mjs [--runs a.csv,b.csv] [--rounds C5,C6] [--tasks t3-api,t5-logq] [--baseline claude-sonnet]
 //                  [--exclude-run <task_id|vòng/bài/hệ/lượt>[,...]] [--seed N] [--resamples N]
-//                  [--format md|json] [--required-runs] [--sim] [--alpha 0.05] [--power 0.8]
+//                  [--format md|json] [--required-runs] [--delta wall=30,cost=0.1] [--sim] [--alpha 0.05] [--power 0.8]
 //
-// Quy ước: "CC" = mọi hệ có tên bắt đầu bằng "ccoding"; "Claude" = hệ "claude". Chênh lệch = CC − Claude.
+// Quy ước: "CC" = mọi hệ có tên bắt đầu bằng "ccoding"; đối chứng ("Claude" trong mã) = hệ --baseline (mặc định "claude",
+// tức Claude Code Opus; C7 có thêm "claude-sonnet"). Chênh lệch = CC − đối chứng. Hệ khác bị bỏ.
 // Thống kê gộp = TB các bài của (TB lượt CC − TB lượt Claude), phân tầng theo bài (giống token-analysis.mjs T-f).
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -32,11 +33,32 @@ export function parseCsv(text) {
   return body.map((r) => Object.fromEntries(head.map((h, i) => [h, r[i] ?? ''])));
 }
 
-export function loadRuns(files) {
-  return files.flatMap((p) => parseCsv(readFileSync(p, 'utf8'))).map((r) => ({
+export function loadRuns(files, baseline = 'claude') {
+  const seen = new Set(); // bỏ dòng trùng (cùng vòng/bài/hệ/lượt) khi nạp nhiều tệp chồng nhau
+  return files.flatMap((p) => parseCsv(readFileSync(p, 'utf8'))).filter((r) => {
+    const k = `${r.run}/${r.task}/${r.system}/${r.rep}`;
+    if (seen.has(k)) return false;
+    seen.add(k); return true;
+  }).map((r) => ({
     ...r, rep: Number(r.rep), wall: Number(r.wall_s), cost: Number(r.cost_usd),
-    group: r.system === 'claude' ? 'claude' : r.system.startsWith('ccoding') ? 'cc' : 'other',
+    group: groupOf(r.system, baseline),
   }));
+}
+
+/** 'cc' cho ccoding*, 'claude' cho hệ đối chứng (baseline), còn lại 'other' (bị bỏ). */
+export function groupOf(system, baseline = 'claude') {
+  return system === baseline ? 'claude' : system.startsWith('ccoding') ? 'cc' : 'other';
+}
+
+/** "wall=30,cost=0.1" → { wall: 30, cost: 0.1 } (chênh lệch cần phát hiện cho --required-runs). */
+export function parseDelta(s) {
+  const o = {};
+  for (const part of s.split(',').map((x) => x.trim()).filter(Boolean)) {
+    const [k, v] = part.split('=');
+    if (!['wall', 'cost'].includes(k) || !(Number(v) > 0)) throw new Error(`--delta không hợp lệ: "${part}" (dạng wall=30,cost=0.1)`);
+    o[k] = Number(v);
+  }
+  return o;
 }
 
 export function filterRuns(runs, { rounds, tasks, exclude = [] } = {}) {
@@ -188,7 +210,7 @@ export function strataOf(runs, task, key) {
 export function analyse(runs, opts = {}) {
   const tasks = [...new Set(runs.map((r) => r.task))].sort();
   const usable = tasks.filter((t) => { const s = strataOf(runs, t, 'wall'); return s.cc.length && s.cl.length; });
-  const out = { seed: opts.seed ?? DEFAULT_SEED, resamples: opts.B ?? DEFAULT_RESAMPLES, tasksUsed: usable, tasksSkipped: tasks.filter((t) => !usable.includes(t)), metrics: {} };
+  const out = { baseline: opts.baseline ?? 'claude', seed: opts.seed ?? DEFAULT_SEED, resamples: opts.B ?? DEFAULT_RESAMPLES, tasksUsed: usable, tasksSkipped: tasks.filter((t) => !usable.includes(t)), metrics: {} };
   for (const [key, label] of [['wall', 'Thời gian (s)'], ['cost', 'Chi phí (USD)']]) {
     const one = (strata) => ({
       nCC: strata.reduce((s, x) => s + x.cc.length, 0), nClaude: strata.reduce((s, x) => s + x.cl.length, 0),
@@ -218,17 +240,17 @@ export function analyse(runs, opts = {}) {
 // ---------- đầu ra ----------
 const fx = (x, d) => (Number.isFinite(x) ? x.toFixed(d).replace('.', ',') : '–');
 const ci = (c, d) => `[${fx(c[0], d)}; ${fx(c[1], d)}]`;
-const verdict = (c) => (c[0] > 0 ? 'CC > Claude' : c[1] < 0 ? 'CC < Claude' : 'CI chứa 0');
+const verdict = (c) => (c[0] > 0 ? 'CC > đối chứng' : c[1] < 0 ? 'CC < đối chứng' : 'CI chứa 0');
 
 export function renderMd(res, meta = {}) {
-  const L = [];
-  L.push(`seed = ${res.seed} · resample/hoán vị MC = ${res.resamples} · CI percentile 95% · hệ CC = ccoding*`);
+  const L = [], base = res.baseline && res.baseline !== 'claude' ? res.baseline : 'Claude';
+  L.push(`seed = ${res.seed} · resample/hoán vị MC = ${res.resamples} · CI percentile 95% · hệ CC = ccoding* · đối chứng = ${res.baseline ?? 'claude'}`);
   if (meta.filters) L.push(`bộ lọc: ${meta.filters}`);
   L.push(`bài dùng được: ${res.tasksUsed.join(', ') || '(không)'}${res.tasksSkipped.length ? ` · bỏ (thiếu một hệ): ${res.tasksSkipped.join(', ')}` : ''}`);
   for (const [key, m] of Object.entries(res.metrics)) {
     const d = key === 'wall' ? 1 : 3, rows = [...Object.entries(m.perTask).map(([t, v]) => [t, v]), ['GỘP (TB các bài)', m.pooled]].filter(([, v]) => v);
     L.push('', `### ${m.label}`, '',
-      '| Phạm vi | n CC / n Claude | Chênh lệch CC − Claude | CI 95% | Tỉ lệ CC/Claude | CI 95% tỉ lệ | p hoán vị (2 phía) | Cách tính p | Cliff δ | Nhận xét |',
+      `| Phạm vi | n CC / n ${base} | Chênh lệch CC − ${base} | CI 95% | Tỉ lệ CC/${base} | CI 95% tỉ lệ | p hoán vị (2 phía) | Cách tính p | Cliff δ | Nhận xét |`,
       '|---|---:|---:|---:|---:|---:|---:|---|---:|---|');
     for (const [name, v] of rows) L.push(`| ${name} | ${v.nCC} / ${v.nClaude} | ${fx(v.diff, d)} | ${ci(v.diffCI, d)} | ${fx(v.ratio, 3)} | ${ci(v.ratioCI, 3)} | ${fx(v.perm.p, 4)} | ${v.perm.method} (${v.perm.combos} tổ hợp) | ${fx(v.cliff, 2)} | ${verdict(v.diffCI)} |`);
     if (m.required) {
@@ -251,6 +273,8 @@ function parseArgs(argv) {
     else if (a === '--exclude-run') o.exclude = [...(o.exclude ?? []), ...list(next())];
     else if (a === '--seed') o.seed = Number(next());
     else if (a === '--resamples') o.B = Number(next());
+    else if (a === '--baseline') o.baseline = next();
+    else if (a === '--delta') o.delta = parseDelta(next());
     else if (a === '--format') o.format = next();
     else if (a === '--required-runs') o.requiredRuns = true;
     else if (a === '--sim') o.sim = true;
@@ -260,18 +284,20 @@ function parseArgs(argv) {
     else throw new Error(`Tham số không hợp lệ: ${a}`);
   }
   if (!['md', 'json'].includes(o.format)) throw new Error('--format phải là md hoặc json');
+  if (o.baseline !== undefined && !/^claude/.test(o.baseline)) throw new Error('--baseline phải là một hệ Claude Code (claude, claude-sonnet…)');
+  if (o.delta && !o.requiredRuns) throw new Error('--delta chỉ có nghĩa cùng --required-runs');
   return o;
 }
 
-const HELP = 'Cách dùng: node stats.mjs [--runs a.csv,b.csv] [--rounds C5,C6] [--tasks t3-api] [--exclude-run <task_id|vòng/bài/hệ/lượt>] [--seed N] [--resamples N] [--format md|json] [--required-runs] [--sim] [--alpha 0.05] [--power 0.8]';
+const HELP = 'Cách dùng: node stats.mjs [--runs a.csv,b.csv] [--rounds C5,C6] [--tasks t3-api] [--exclude-run <task_id|vòng/bài/hệ/lượt>] [--seed N] [--resamples N] [--baseline claude|claude-sonnet] [--format md|json] [--required-runs] [--delta wall=30,cost=0.1] [--sim] [--alpha 0.05] [--power 0.8]';
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const o = parseArgs(process.argv.slice(2));
     if (o.help) { console.log(HELP); process.exit(0); }
     const here = dirname(fileURLToPath(import.meta.url));
-    const files = o.runs ?? [resolve(here, '../results/runs.csv'), resolve(here, '../../../docs/research/performance/c6-extract/C6-runs.csv')];
-    const all = loadRuns(files), runs = filterRuns(all, o);
+    const files = o.runs ?? [resolve(here, '../results/runs.csv')]; // results/ đã có C1–C7; c6-extract/ không còn dùng
+    const all = loadRuns(files, o.baseline ?? 'claude'), runs = filterRuns(all, o);
     if (!runs.length) throw new Error('Không còn lượt chạy nào sau khi lọc.');
     const res = analyse(runs, o);
     const meta = { files, filters: `rounds=${o.rounds?.join(',') ?? '*'} tasks=${o.tasks?.join(',') ?? '*'} exclude=${o.exclude?.join(',') ?? '-'} · ${runs.length}/${all.length} lượt` };
