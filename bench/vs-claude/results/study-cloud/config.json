@@ -1,45 +1,47 @@
 {
   "argv": [
     "--arms",
-    "A0-sonnet,B0",
+    "A0-sonnet",
     "--tasks",
-    "a1",
+    "t1-duration,t2-orders,t3-api,t4-perf,t5-logq",
     "--repeats",
     "11",
-    "--judge",
     "--timeout",
     "20",
     "--runtime",
     "claude-cli",
     "--ccoding-url",
-    "http://127.0.0.1:7424",
+    "http://127.0.0.1:7425",
     "--ccoding-data",
-    "/home/user/ccoding-main/data",
+    "/home/user/ccoding-branch/data",
     "--work",
     "/tmp/vb",
     "--out",
     "bench/vs-claude/results/study-cloud"
   ],
   "cfg": {
-    "ccodingUrl": "http://127.0.0.1:7424",
-    "ccodingData": "/home/user/ccoding-main/data",
+    "ccodingUrl": "http://127.0.0.1:7425",
+    "ccodingData": "/home/user/ccoding-branch/data",
     "runtime": "claude-cli",
     "timeoutMin": 20,
     "claudeBin": "claude",
     "judge": {
-      "enabled": true,
+      "enabled": false,
       "model": "opus"
     },
     "seed": "ccvb",
     "workRoot": "/tmp/vb"
   },
   "armIds": [
-    "A0-sonnet",
-    "B0"
+    "A0-sonnet"
   ],
   "taskIds": [
-    "a1-ambiguous-spec"
+    "t1-duration",
+    "t2-orders",
+    "t3-api",
+    "t4-perf",
+    "t5-logq"
   ],
   "repeats": 11,
-  "startedAt": "2026-11-02T23:51:15.828Z"
+  "startedAt": "2026-11-02T22:28:13.398Z"
 }
