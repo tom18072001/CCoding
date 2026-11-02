@@ -188,7 +188,7 @@ for (const s of schedule) {
   const row = {
     key: s.key, task: s.task, category: task.category, size: task.size, arm: s.arm, rep: s.rep, at: new Date().toISOString(),
     status: error ? 'error' : r.status, error, wallSec: r?.wallSec, tokens: r?.tokens, costUsd: r?.costUsd, turns: r?.turns,
-    calls: r?.calls, agentsUsed: r?.agentsUsed, byPhase: r?.byPhase, picked: r?.picked, leak: !!r?.leak,
+    calls: r?.calls, agentsUsed: r?.agentsUsed, byPhase: r?.byPhase, ...(r?.research ?? {}), picked: r?.picked, leak: !!r?.leak,
     score: g?.score ?? 0, pass: !!g?.pass, formatMiss: !!g?.formatMiss, details: g?.details,
   };
   fs.appendFileSync(runsFile, `${JSON.stringify(row)}\n`);

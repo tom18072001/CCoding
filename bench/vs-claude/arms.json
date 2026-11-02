@@ -84,6 +84,42 @@
     },
     "label": "CCoding làn đơn (B-01)"
   },
+  "B7c": {
+    "kind": "ccoding",
+    "options": {
+      "lane": "single",
+      "slim": {
+        "accept": "full",
+        "compactTemplate": false,
+        "promptDiet": true
+      }
+    },
+    "label": "CCoding làn đơn, B-11(c) promptDiet"
+  },
+  "B7cb": {
+    "kind": "ccoding",
+    "options": {
+      "lane": "single",
+      "slim": {
+        "accept": "full",
+        "compactTemplate": true,
+        "promptDiet": true
+      }
+    },
+    "label": "CCoding làn đơn, B-11(b)+(c) mẫu gọn + promptDiet"
+  },
+  "B7cab": {
+    "kind": "ccoding",
+    "options": {
+      "lane": "single",
+      "slim": {
+        "accept": "brief",
+        "compactTemplate": true,
+        "promptDiet": true
+      }
+    },
+    "label": "CCoding làn đơn, B-11(a)+(b)+(c) nghiệm thu brief + mẫu gọn + promptDiet"
+  },
   "oracle": {
     "kind": "oracle",
     "label": "Reference solution (grader self-test)"
