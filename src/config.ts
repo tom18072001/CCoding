@@ -158,7 +158,7 @@ export interface Config {
   fastLane: { enabled: boolean; maxBriefChars: number; maxRepoFiles: number; maxRepoBytes: number; planModel: string; finalReport: 'template' | 'llm'; maxParallel?: number };
   /**
    * Làn đơn (B-01, options.lane 'auto'): việc có parts < maxParts và filesTouched < maxFilesTouched (hoặc chuỗi tuần tự) chạy một agent, không điều phối.
-   * Hiện chỉ options.lane ép được làn; chưa có cấu hình ép làn theo dự án.
+   * Ép làn: options.lane của nhiệm vụ > ProjectDef.lane của dự án > auto (không ép).
    */
   lanes: { single: { enabled: boolean; maxParts: number; maxFilesTouched: number } };
   /** B-02 cổng chất lượng: maxFixRounds = số vòng sửa theo kiểm tra (lệnh đỏ, sai mẫu đầu ra) trước khi nâng cấp/không duyệt. */
