@@ -35,7 +35,7 @@
 |---|---|---|---|
 | `paper/paper.md` | §6 Bảng 3 | "C6 chưa có CI" → hai dòng C6: −72,8 s (p 0,0556), +0,136 USD (p 0,3889) | R1-02 |
 | | Bảng 4, Bảng 5 | Thêm hàng C6 từ T-d (4 lượt) và T-b (3,37×) | R1-03, R1-04 |
-| | §6 | 7/12 ô; 38,3/49,6/9,9 % (T-e); O1 0,038 USD, 4,7 % | R1-05, R1-06, R1-16 |
+| | §6 | 7/12 ô; 38,4/49,6/9,7 % (T-e); O1 0,037 USD, 4,6 % | R1-05, R1-06, R1-16 |
 | | Bảng 3b | Nguồn T-a, T-b, T-f, T-g | R1-07 |
 | | Bảng 1 | Thêm cột "Áp cho runtime"; trần vòng công cụ, ngân sách đầu vào công cụ, nhắc 35/65 %, `idleTimeoutMs`, `maxContinuations` không áp cho `claude-cli` | R1-10 |
 | | §4.1, §8 | Mặc định phân loại dữ liệu (Công khai/Nội bộ mọi runtime; Bảo mật/Hạn chế chỉ `local`); "450–700 từ" không đơn vị; `git apply --unidiff-zero --ignore-whitespace` | R1-09, R1-13, R1-19 |
