@@ -29,7 +29,7 @@ import {
 import type { Herdr } from './herdr.js';
 import { shipPush, shipStatus, ShipError, type ShipContext, type ShipStatus } from './ship.js';
 import type { LogStore } from './logger.js';
-import { blockedSubtasks, keywordRoute, newSubtask, orderJoint, parsePlan, parseReview, parseRoute, readySubtasks } from './planner.js';
+import { assignStrayIssues, blockedSubtasks, keywordRoute, newSubtask, orderJoint, parsePlan, parseReview, parseRoute, readySubtasks } from './planner.js';
 import { historyText, selectHistory } from './history.js';
 import * as P from './prompts.js';
 import type { Registry } from './registry.js';
@@ -1047,36 +1047,56 @@ export class Orchestrator {
   }
 
   /**
-   * Điều phối làn nhanh sau khi lập kế hoạch (luật cứng, không gọi model): (1) hạng mục giao cho người review (thường là "viết bộ test riêng")
-   * chuyển thành trọng tâm review — benchtest 2/11: các hạng mục này dài nhất và nằm trên đường găng (95 s so với 52 s phần code); (2) hạng mục
-   * độc lập trùng người làm → chia cho người khác cùng năng lực công cụ để chạy song song (mỗi người chỉ làm một hạng mục một lúc).
+   * Điều phối làn nhanh sau khi lập kế hoạch (luật cứng, không gọi model): (1) hạng mục giao cho người review: thuần kiểm thử (mọi tệp nêu
+   * tên là tệp test) → trọng tâm review (benchtest 2/11: các hạng mục này dài nhất, nằm trên đường găng); có sửa mã nguồn → giao người khác
+   * (C7 2/11: bỏ nhầm "sửa lỗi trong src/promotions.js" khiến lỗi không ai sửa); (2) hạng mục độc lập trùng người làm → chia cho người khác
+   * cùng năng lực công cụ để chạy song song (mỗi người chỉ làm một hạng mục một lúc).
    */
   private shapeFastPlan(task: Task, run: DeptRun, roster: AgentDef[], lead: AgentDef, reviewer: AgentDef | undefined, pctx: P.Ctx): void {
     const notes: string[] = [];
+    const pool = roster.filter((a) => a.id !== lead.id && a.id !== reviewer?.id);
+    const used = new Set(run.subtasks.filter((s) => s.assignee !== reviewer?.id).map((s) => s.assignee));
     if (task.options.review && reviewer && run.subtasks.length > 1) {
       const mine = run.subtasks.filter((s) => s.assignee === reviewer.id);
-      if (mine.length && mine.length < run.subtasks.length) {
-        const ids = new Set(mine.map((s) => s.id));
+      // chỉ hạng mục THUẦN kiểm thử (mọi tệp nêu tên là tệp test) mới thành trọng tâm review; hạng mục có sửa mã nguồn giao cho người
+      // khác — benchtest C7 t2 (2/11): "sửa lỗi 3, 4 trong src/promotions.js" giao nhầm cho QA bị bỏ khỏi thực thi → lỗi không ai sửa
+      const testOnly = (s: Subtask) => {
+        const files = `${s.title}\n${s.description}`.match(/[\w./-]+\.(?:[cm]?[jt]sx?|py|go|rs|java|kt|cs|rb|php|sql|json|ya?ml|md)\b/gi) ?? [];
+        const testPath = (f: string) => /(^|[\/._-])(tests?|specs?|__tests__)([\/._-]|$)/i.test(f);
+        if (!/test|kiểm thử/i.test(s.title)) return false;
+        return files.length ? files.every(testPath) : /viết (bộ )?test|bộ test|kiểm thử/i.test(s.title);
+      };
+      const focus = mine.filter(testOnly);
+      if (focus.length && focus.length < run.subtasks.length) {
+        const ids = new Set(focus.map((s) => s.id));
         run.subtasks = run.subtasks.filter((s) => !ids.has(s.id));
         for (const s of run.subtasks) if (s.dependsOn?.length) s.dependsOn = s.dependsOn.filter((d) => !ids.has(d));
-        run.reviewFocus = mine.map((s) => `- ${s.title}: ${s.description.slice(0, 600)}`).join('\n');
+        run.reviewFocus = focus.map((s) => `- ${s.title}: ${s.description.slice(0, 600)}`).join('\n');
         notes.push(`${[...ids].join(', ')} (@${reviewer.id}) chuyển thành trọng tâm review, không nằm trên đường găng`);
       }
+      for (const s of mine.filter((x) => !testOnly(x))) {
+        const cap = pctx.caps?.[reviewer.id];
+        const alt = pool.find((a) => !used.has(a.id) && pctx.caps?.[a.id] === cap) ?? pool.find((a) => !used.has(a.id)) ?? pool.find((a) => pctx.caps?.[a.id] === cap) ?? pool[0];
+        if (!alt) continue;
+        notes.push(`${s.id} chuyển @${reviewer.id} → @${alt.id} (người review không tự làm việc mình sẽ review)`);
+        s.assignee = alt.id;
+        used.add(alt.id);
+      }
     }
-    const used = new Set<string>();
-    const pool = roster.filter((a) => a.id !== lead.id && a.id !== reviewer?.id);
+    const seen = new Set<string>();
     for (const s of run.subtasks) {
-      if (!used.has(s.assignee)) {
-        used.add(s.assignee);
+      if (!seen.has(s.assignee)) {
+        seen.add(s.assignee);
         continue;
       }
       if (s.dependsOn?.length) continue;
       const cap = pctx.caps?.[s.assignee];
-      const alt = pool.find((a) => !used.has(a.id) && pctx.caps?.[a.id] === cap);
+      const alt = pool.find((a) => !used.has(a.id) && !seen.has(a.id) && pctx.caps?.[a.id] === cap);
       if (!alt) continue;
       notes.push(`${s.id} chuyển @${s.assignee} → @${alt.id} để chạy song song`);
       s.assignee = alt.id;
       used.add(alt.id);
+      seen.add(alt.id);
     }
     // kế hoạch làn nhanh có tới 4 hạng mục độc lập; maxParallel mặc định 3 → hạng mục thứ 4 phải chờ một chỗ trống (đo 2/11: +30 s đường găng)
     const roots = run.subtasks.filter((s) => !s.dependsOn?.length).length;
@@ -1354,6 +1374,8 @@ export class Orchestrator {
           // review lỗi KHÔNG được coi là "duyệt"
           if (res.error && !res.text) throw new Error(`Không review được: ${res.error}`);
           review = parseReview(res.text, items.map((i) => i.st.id));
+          const stray = assignStrayIssues(review.issues, done());
+          if (stray) review.approved = false;
           // lệnh kiểm tra của dự án đạt trước khi sửa mà hỏng sau khi sửa → không duyệt, dù reviewer nói gì
           const regressed = this.checkRegressions(task);
           if (regressed.length) {

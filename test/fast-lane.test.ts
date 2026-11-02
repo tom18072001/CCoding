@@ -106,8 +106,8 @@ test('điều phối làn nhanh: hạng mục của người review → trọng 
     const lead = reg.agent(dept.lead);
     const reviewer = reg.agent(dept.reviewer!);
     const roster = reg.members('dev');
-    const mk = (id: string, assignee: string, dependsOn: string[] = []) => ({ id, title: `Việc ${id}`, assignee, description: `Mô tả ${id}`, dependsOn, status: 'pending', attempts: 0 });
-    const run = { department: 'dev', status: 'running', subtasks: [mk('S1', 'backend-dev'), mk('S2', 'backend-dev'), mk('S3', reviewer.id), mk('S4', 'backend-dev', ['S3'])] } as never as Parameters<never>[0];
+    const mk = (id: string, assignee: string, dependsOn: string[] = [], title = `Việc ${id}`, description = `Mô tả ${id}`) => ({ id, title, assignee, description, dependsOn, status: 'pending', attempts: 0 });
+    const run = { department: 'dev', status: 'running', subtasks: [mk('S1', 'backend-dev'), mk('S2', 'backend-dev'), mk('S3', reviewer.id, [], 'Viết bộ test biên S3', 'Chỉ ghi test/edge.test.js'), mk('S4', 'backend-dev', ['S3'])] } as never as Parameters<never>[0];
     const task = { id: 'T-x', options: { review: true, maxParallel: 1 }, title: 't' } as never;
     const caps = Object.fromEntries(roster.map((r) => [r.id, 'chạy lệnh']));
     const orch = a.orchestrator as unknown as { shapeFastPlan: (...x: unknown[]) => void; message: (...x: unknown[]) => void };
@@ -115,7 +115,7 @@ test('điều phối làn nhanh: hạng mục của người review → trọng 
     orch.shapeFastPlan(task, run, roster, lead, reviewer, { caps });
     const r = run as unknown as { subtasks: Array<{ id: string; assignee: string; dependsOn: string[] }>; reviewFocus?: string };
     assert.deepEqual(r.subtasks.map((s) => s.id), ['S1', 'S2', 'S4']);
-    assert.match(r.reviewFocus ?? '', /Việc S3/);
+    assert.match(r.reviewFocus ?? '', /Viết bộ test biên S3/);
     assert.deepEqual(r.subtasks.find((s) => s.id === 'S4')!.dependsOn, []);
     const owners = r.subtasks.map((s) => s.assignee);
     assert.equal(new Set(owners).size, 3, `mỗi hạng mục độc lập một người: ${owners}`);
@@ -125,6 +125,58 @@ test('điều phối làn nhanh: hạng mục của người review → trọng 
   } finally {
     a.cleanup();
   }
+});
+
+test('điều phối làn nhanh: hạng mục SỬA MÃ giao nhầm cho người review → giao người khác, không bỏ khỏi thực thi (C7 t2)', () => {
+  const a = app();
+  try {
+    const reg = a.registry;
+    const dept = reg.department('dev');
+    const lead = reg.agent(dept.lead);
+    const reviewer = reg.agent(dept.reviewer!);
+    const roster = reg.members('dev');
+    const mk = (id: string, assignee: string, title: string, description: string) => ({ id, title, assignee, description, dependsOn: [], status: 'pending', attempts: 0 });
+    const run = {
+      department: 'dev',
+      status: 'running',
+      subtasks: [
+        mk('S1', 'backend-dev', 'Lỗi 1, 2, 6: làm tròn tiền', 'Sở hữu src/money.js và test/money-fixes.test.js'),
+        mk('S2', reviewer.id, 'Lỗi 3, 4: mua X tặng Y và hạn mã', 'Sở hữu src/promotions.js và test/promotions-fixes.test.js'),
+        mk('S3', 'data-engineer', 'Lỗi 5: giữ chỗ tồn kho', 'Sở hữu src/stock.js'),
+      ],
+    } as never as Parameters<never>[0];
+    const task = { id: 'T-y', options: { review: true, maxParallel: 3 }, title: 't' } as never;
+    const caps = Object.fromEntries(roster.map((r) => [r.id, 'chạy lệnh']));
+    const orch = a.orchestrator as unknown as { shapeFastPlan: (...x: unknown[]) => void; message: (...x: unknown[]) => void };
+    orch.message = () => undefined;
+    orch.shapeFastPlan(task, run, roster, lead, reviewer, { caps });
+    const r = run as unknown as { subtasks: Array<{ id: string; assignee: string }>; reviewFocus?: string };
+    assert.deepEqual(r.subtasks.map((s) => s.id), ['S1', 'S2', 'S3'], 'S2 vẫn được thực thi');
+    const s2 = r.subtasks.find((s) => s.id === 'S2')!;
+    assert.ok(![reviewer.id, lead.id, 'backend-dev', 'data-engineer'].includes(s2.assignee), `S2 giao người rảnh khác: ${s2.assignee}`);
+    assert.equal(r.reviewFocus, undefined);
+  } finally {
+    a.cleanup();
+  }
+});
+
+test('review: lỗi blocker/major không trỏ đúng mã hạng mục vẫn vào vòng sửa (gán hạng mục gần nhất)', async () => {
+  const { assignStrayIssues } = await import('../src/planner.js');
+  const subtasks = [
+    { id: 'S1', title: 'Lỗi 1, 2, 6: làm tròn tiền', description: 'Sở hữu src/money.js' },
+    { id: 'S2', title: 'Lỗi 3, 4: khuyến mãi', description: 'Sở hữu src/promotions.js và test/promotions-fixes.test.js' },
+  ];
+  const issues = [
+    { subtask: 'Lỗi 3/4 (src/promotions.js)', severity: 'major' as const, comment: 'promotions.js chưa đổi gì' },
+    { subtask: 'chung', severity: 'minor' as const, comment: 'đặt tên biến' },
+    { subtask: 'S1', severity: 'major' as const, comment: 'toCents sai' },
+  ];
+  assert.equal(assignStrayIssues(issues, subtasks), 1);
+  assert.equal(issues[0].subtask, 'S2');
+  assert.match(issues[0].comment, /^\(Lỗi 3\/4 \(src\/promotions\.js\)\) /);
+  assert.equal(issues[1].subtask, 'chung', 'lỗi minor giữ nguyên');
+  assert.equal(issues[2].subtask, 'S1');
+  assert.equal(assignStrayIssues([{ subtask: 'X', severity: 'blocker', comment: 'c' }], []), 0);
 });
 
 test('hook claude-cli: lệnh Bash chạy với stdin = /dev/null (không treo khi lệnh đọc stdin)', async () => {

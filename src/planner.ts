@@ -120,6 +120,34 @@ export interface ReviewResult {
   parsed: boolean;
 }
 
+/**
+ * Lỗi review không trỏ đúng mã hạng mục (vd. "Lỗi 3/4 (src/promotions.js)") trước đây không vào vòng sửa nào → nhiệm vụ xong mà lỗi
+ * còn nguyên (benchtest C7 t2, 2/11: 52/60 test ẩn). Gán mỗi lỗi blocker/major như vậy cho hạng mục gần nhất theo từ chung (tên tệp,
+ * từ khóa) — hòa thì lấy hạng mục đầu; giữ nhãn gốc trong nội dung. Trả về số lỗi đã gán.
+ */
+export function assignStrayIssues(issues: ReviewIssue[], subtasks: Array<Pick<Subtask, 'id' | 'title' | 'description'>>): number {
+  if (!subtasks.length) return 0;
+  const ids = new Set(subtasks.map((s) => s.id));
+  const words = (t: string) => new Set((t.toLowerCase().match(/[\p{L}\p{N}_./-]{3,}/gu) ?? []).flatMap((w) => [w, ...w.split(/[./-]/).filter((x) => x.length >= 3)]));
+  let n = 0;
+  for (const i of issues) {
+    if (i.severity === 'minor' || ids.has(i.subtask)) continue;
+    const want = words(`${i.subtask} ${i.comment}`);
+    let best = subtasks[0];
+    let bestScore = -1;
+    for (const s of subtasks) {
+      const have = words(`${s.id} ${s.title} ${s.description}`);
+      let score = 0;
+      for (const w of want) if (have.has(w)) score++;
+      if (score > bestScore) [best, bestScore] = [s, score];
+    }
+    i.comment = `(${i.subtask || 'không ghi hạng mục'}) ${i.comment}`;
+    i.subtask = best.id;
+    n++;
+  }
+  return n;
+}
+
 export function parseReview(text: string, subtaskIds: string[]): ReviewResult {
   const raw = extractJson<{ approved?: unknown; summary?: unknown; issues?: unknown; checks?: unknown }>(text);
   // không đọc được kết luận → KHÔNG coi là đã duyệt (trước đây mặc định chấp nhận khiến review hỏng thành "Duyệt" giả)
