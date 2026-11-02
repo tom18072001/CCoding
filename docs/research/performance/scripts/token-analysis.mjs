@@ -14,7 +14,16 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const RESULTS = path.resolve(HERE, '../../../../bench/vs-claude/results');
+const args = process.argv.slice(2);
+const ri = args.indexOf('--results'); // chỉ đường dẫn results/ khác (dùng để thử trên bản sao có vòng giả)
+const RESULTS = ri >= 0 ? path.resolve(args[ri + 1]) : path.resolve(HERE, '../../../../bench/vs-claude/results');
+// Tự phát hiện vòng và hệ từ tên thư mục results/C<n>/<bài>.<hệ>.<lượt> (dữ liệu, không phải lựa chọn của người phân tích).
+const roundNo = (R) => +R.slice(1);
+const scan = Object.fromEntries(fs.readdirSync(RESULTS, { withFileTypes: true }).filter((d) => d.isDirectory() && /^C\d+$/.test(d.name)).map((d) => [d.name, new Set(fs.readdirSync(path.join(RESULTS, d.name)).map((n) => n.replace(/^[^.]+\./, '').replace(/\.\d+$/, '')))]));
+const dirRounds = Object.keys(scan).sort((a, b) => roundNo(a) - roundNo(b));
+const withSys = (test) => dirRounds.filter((R) => [...scan[R]].some(test));
+const isFastSys = (s) => s.startsWith('ccoding-fastlane');
+const pairedFast = withSys(isFastSys).filter((R) => [...scan[R]].some((s) => s.startsWith('claude'))); // làn nhanh có đối chứng Claude cùng vòng
 // c6-extract/ (bản trích C6 từ commit 5866cda) KHÔNG còn dùng làm dữ liệu: results/ đã có C6; T-0 chỉ kiểm đồng nhất từng dòng.
 const EXTRA = path.resolve(HERE, '../c6-extract');
 
@@ -25,18 +34,20 @@ const CONFIG = {
   o3CtxCut: 0.3, // O3: cắt 30% context_chars
   o4PromptCut: 0.5, // O4: reviewer giảm 50% context+prompt+tool_output
   o5OutCut: 0.2, // O5: giảm 20% token đầu ra ở pha plan/review/synthesize
-  sourceCommit: '7fa6305 (thêm C7 vào bench/vs-claude/results/); đọc từ perf/vs-claude-loop HEAD 78edc88',
-  rounds: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'],
-  opusRounds: ['C5', 'C6'], // hệ claude (Opus): đối chứng ở T-h, T-i
-  sonnetRound: 'C7', // hệ claude-sonnet, chạy cùng lúc với làn nhanh
-  fastRounds: ['C5', 'C6', 'C7'], // làn nhanh gộp (bỏ lượt treo)
+  sourceCommit: 'bb7b477 (nhánh nhiệm vụ T-20261102-134405-b2c; results/ gồm C1–C8, C8 thêm ở d7cf900)',
+  // --- tự phát hiện từ results/ (D4): thêm vòng mới thì không phải sửa ở đây ---
+  rounds: dirRounds,
+  opusRounds: pairedFast.filter((R) => scan[R].has('claude')), // hệ claude (Opus) cùng vòng với làn nhanh: đối chứng ở T-h, T-i
+  sonnetRound: withSys((s) => s === 'claude-sonnet').at(-1), // vòng mới nhất có claude-sonnet
+  fastRounds: pairedFast, // làn nhanh có cặp Claude cùng vòng (bỏ lượt treo); vòng chỉ có làn nhanh (C4, C8) không vào đây
+  // --- lựa chọn của người phân tích (khai báo tường minh) ---
   permMaxExact: 3e7, // vượt ngưỡng này thì lấy mẫu Monte Carlo
   permMc: 200000,
   briefTimes: { 't1-duration': [126, 66, 108], 't2-orders': [91, 42, 94], 't3-api': [205, 108, 199], 't4-perf': [203, 49, 142], 't5-logq': [259, 166, 165] }, // BRIEF-2: Opus C5–C6 / Sonnet C7 / làn nhanh C5–C7 bỏ lượt treo (s)
   briefCostRatio: [2.5, 3.8], // BRIEF-2: chi phí làn nhanh / Sonnet đơn
   pooledRounds: ['C5', 'C6'], // gộp độ nhạy: cùng làn nhanh (C6 sau d7600f6: maxParallel 4)
   hung: (r) => r.run === 'C5' && r.task === 't3-api' && r.rep === 1 && r.system.startsWith('ccoding'), // lượt treo stdin 579 s
-  phaseTableRounds: ['C1', 'C5', 'C6', 'C7'],
+  phaseTableRounds: [dirRounds[0], ...pairedFast], // vòng đầu (CCoding gốc) + các vòng làn nhanh có cặp
   costBasisRound: 'C5', // vòng làm nền cho T-e (thiết kế hiện hành)
 };
 
@@ -114,7 +125,7 @@ const T = {}; // tên bảng → Markdown
   const badCl = clRuns.filter((r) => { const ts = turnsOf(r); return !(ts.length && sum(ts, (t) => num(t.cache_read)) === r.cr && sum(ts, (t) => num(t.cache_write)) === r.cw && sum(ts, (t) => num(t.cache_write_1h) + num(t.cache_write_5m)) === r.cw); }).map(rk);
   // hai hệ có chạy chồng thời gian nhau không (theo started + wall_s)?
   const ov = (R) => { const rs = runs.filter((r) => r.run === R); const iv = (r) => [Date.parse(r.started), Date.parse(r.started) + r.wall * 1000]; const cc = rs.filter((r) => isCC(r.system)); const cl = rs.filter((r) => isCL(r.system)); return `${R} ${cc.filter((a) => cl.some((b) => iv(a)[0] < iv(b)[1] && iv(b)[0] < iv(a)[1])).length}/${cc.length}`; };
-  const overlapLine = `Giao thức chạy (kiểm từ started + wall_s): số lượt CCoding có khoảng chạy chồng với ít nhất một lượt Claude cùng vòng — ${['C5', 'C6', 'C7'].filter(hasRound).map(ov).join('; ')}. Tức hai hệ chạy song song nhau (mỗi hệ tuần tự trong chính nó, --concurrency 1); khác biệt C5 → C6 không phải "tuần tự → cùng lúc" mà là mã (C6 sau d7600f6: maxParallel 4) và thời điểm chạy. Ở C7 đối chứng là claude-sonnet (Claude Code một mình bằng Sonnet) chạy cùng lúc với làn nhanh.`;
+  const overlapLine = `Giao thức chạy (kiểm từ started + wall_s): số lượt CCoding có khoảng chạy chồng với ít nhất một lượt Claude cùng vòng — ${CONFIG.fastRounds.filter(hasRound).map(ov).join('; ')}. Tức hai hệ chạy song song nhau (mỗi hệ tuần tự trong chính nó, --concurrency 1); khác biệt C5 → C6 không phải "tuần tự → cùng lúc" mà là mã (C6 sau d7600f6: maxParallel 4) và thời điểm chạy. Ở C7 đối chứng là claude-sonnet (Claude Code một mình bằng Sonnet) chạy cùng lúc với làn nhanh.`;
   const w1h = sum(turns, (t) => num(t.cache_write_1h)), w5 = sum(turns, (t) => num(t.cache_write_5m));
   T['T-0'] = [
     md(['Tệp', 'Cột', 'Đơn vị / ý nghĩa', 'Áp dụng'], schema),
@@ -577,10 +588,13 @@ const TITLES = {
   'T-i': 'T-i. Chênh lệch thời gian / chi phí giữa các hệ: CI bootstrap và p hoán vị',
 };
 const render = (k) => `### ${TITLES[k]}\n\n${T[k]}\n`;
-const args = process.argv.slice(2);
 const ti = args.indexOf('--table'), ci = args.indexOf('--check');
 if (ci >= 0) {
   const doc = fs.readFileSync(path.resolve(args[ci + 1]), 'utf8').replace(/\r\n/g, '\n');
+  // Vòng có trong results/ (thư mục hoặc runs.csv) mà bảng chưa ghi ở T-0 ⇒ bảng cũ: báo rõ, thoát mã 1 (không crash, không im lặng).
+  const inDoc = (doc.match(/vòng có trong runs\.csv: ([C0-9, ]+)\./) || [, ''])[1].split(',').map((s) => s.trim()).filter(Boolean);
+  const newer = uniq([...dirRounds, ...roundsPresent]).filter((R) => !inDoc.includes(R)).sort((a, b) => roundNo(a) - roundNo(b));
+  if (newer.length) { console.error(`Bảng cũ: results/ có vòng ${newer.join(', ')} chưa có trong T-0 (${inDoc.join(', ') || 'không đọc được danh sách vòng'}); chạy lại script để sinh bảng`); process.exit(1); }
   const miss = Object.keys(T).filter((k) => !doc.includes(render(k)));
   if (miss.length) { console.error(`LỆCH: bảng không trùng đầu ra script: ${miss.join(', ')}`); process.exit(1); }
   console.log(`OK: ${Object.keys(T).length} bảng trong ${args[ci + 1]} trùng đầu ra script.`);
