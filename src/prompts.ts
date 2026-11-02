@@ -66,6 +66,11 @@ export interface Ctx {
   subWorktree?: { taskBranch?: string };
   /** Bản đồ repo do CCoding tạo (đường dẫn tương đối workspace) + các tệp nguồn lớn. */
   repoMap?: { rel: string; index?: string; large: string[] };
+  /**
+   * B-11: làm gọn lượt thực thi làn đơn (chỉ đặt khi task.lane==='single' và chưa nâng làn; runSingleLane đặt, nâng làn thì xóa).
+   * diet = bỏ phần chỉ dành cho đa-agent; files = danh sách tệp gọn thay bản đồ repo (repo nhỏ); compact = báo cáo gọn.
+   */
+  singleSlim?: { diet: boolean; compact: boolean; files?: string[] };
   /** P8: các nhiệm vụ trước của cùng dự án (pha lập kế hoạch) + tệp chi tiết. */
   projectHistory?: { text: string; rel?: string };
   /** Năng lực công cụ của từng agent ở pha thực thi với quyền của nhiệm vụ này (id → mô tả ngắn) — để giao việc đúng người. */
@@ -252,6 +257,8 @@ Bạn có công cụ: ${tools.join(', ')} trong thư mục làm việc riêng c�
 - Không đưa dữ liệu thật, bí mật hay dữ liệu cá nhân vào tệp.
 Câu trả lời cuối cùng là báo cáo bàn giao theo ĐÚNG các mục trong "Mẫu đầu ra" của bạn (giữ nguyên tên mục, mở đầu "## Tóm tắt"); mục nào không áp dụng thì ghi "Không áp dụng" thay vì bỏ. Bắt buộc liệt kê tệp đã tạo/sửa (đường dẫn).
 `;
+  const diet = !!c.singleSlim?.diet && phase === 'execute';
+  const dietFiles = diet ? c.singleSlim?.files : undefined;
   return `\n## Công cụ & cách làm
 Bạn có công cụ: ${tools.join(', ')} — làm việc THẬT trong workspace \`${c.cwd}\`${c.branch ? ` (nhánh git riêng \`${c.branch}\`, không ảnh hưởng nhánh chính)` : ''}${
     c.subWorktree
@@ -262,14 +269,20 @@ Bạn có công cụ: ${tools.join(', ')} — làm việc THẬT trong workspace
   }.
 - Đọc quy tắc của repo trước (CLAUDE.md, AGENTS.md, README, CONTRIBUTING nếu có) và tuân thủ tuyệt đối; khảo sát repo trước khi sửa (list_files, search, read_file — gộp nhiều file một lần); giữ đúng cấu trúc, phong cách và stack sẵn có. Mỗi lượt công cụ gửi lại toàn bộ hội thoại nên tốn token: đọc có mục tiêu, không đọc lại nội dung đã có trong prompt hoặc đã đọc.
 ${
-    c.repoMap
+    dietFiles
+      ? `- DANH SÁCH TỆP CỦA REPO (${dietFiles.length} tệp, gọn — không có bản đồ repo; dùng search/read_file đúng đoạn cần):\n${dietFiles.map((f) => `  ${f}`).join('\n')}\n`
+      : c.repoMap
       ? c.repoMap.index
         ? `- BẢN ĐỒ REPO (gọn): \`${c.repoMap.rel}\` — thư mục, tệp lớn, tệp có route/schema; đọc nó ĐẦU TIÊN. Tra hàm/route/model cụ thể bằng search từ khóa trong \`${c.repoMap.index}\` (mỗi dòng \`tệp:dòng loại tên\`) — KHÔNG đọc cả tệp chỉ mục; rồi read_file đúng đoạn (offset theo số dòng, limit vừa đủ); không đọc cả tệp lớn.\n`
         : `- BẢN ĐỒ REPO: \`${c.repoMap.rel}\` liệt kê tệp + số dòng, route, model, hàm kèm số dòng — đọc nó ĐẦU TIÊN để định vị, rồi read_file đúng đoạn (offset theo số dòng, limit vừa đủ); không đọc cả tệp lớn.\n`
       : ''
   }- Đọc/tìm code bằng read_file/search/list_files — KHÔNG dùng Get-Content/cat/rg/grep qua run_command (lỗi cú pháp shell, sai mã hóa, tốn lượt). run_command chỉ để cài đặt, build, typecheck, test, migration, git.${tools.includes('run_command') && process.platform === 'win32' ? ' Shell là PowerShell: không có {a,b}, dấu * trong đường dẫn không tự mở rộng.' : ''}
 - Tạo/sửa file thật bằng write_file/edit_file; không dán toàn bộ code vào câu trả lời cuối — chỉ liệt kê file và điểm chính. GHI SỚM: đọc đủ đoạn cần sửa là sửa ngay; khảo sát không dùng quá ~1/3 số lượt công cụ — hết lượt mà chưa ghi gì là hạng mục thất bại.
-${tools.includes('run_command') ? '- Test/typecheck đã ĐỎ TRƯỚC khi bạn sửa (baseline): chỉ MỘT lệnh để ghi nhận tên test lỗi rồi làm tiếp — KHÔNG đọc file/chạy lệnh để điều tra hay sửa lỗi có sẵn ngoài phạm vi hạng mục (kể cả khi nghi do môi trường); tiêu chí là không phát sinh lỗi MỚI so với baseline (so sánh danh sách test lỗi trước/sau). Bàn giao trước đã ghi baseline thì dùng luôn, không đo lại.\n' : ''}${tools.includes('run_command') ? '- Chạy kiểm tra thật bằng run_command (cài dependency nếu thiếu, typecheck, test, lint, migration trên DB dev) và báo kết quả THẬT: lệnh, exit code, tóm tắt lỗi. Lệnh nào không chạy được thì ghi rõ lý do — không bịa kết quả.\n' : `- Không có quyền chạy lệnh: ghi rõ lệnh kiểm tra cần chạy để người khác thực hiện.${tools.includes('git_read') ? ` ${GIT_READ_NOTE}` : ''}\n`}${c.ccDir ? `- Tài liệu đầu vào: \`${c.ccDir}/inputs/\` · sản phẩm các hạng mục khác: \`${c.ccDir}/outputs/\`.\n` : ''}- Làm và commit (nếu cần) ngay trên nhánh hiện tại của worktree — KHÔNG tạo/chuyển/xóa nhánh (các đồng nghiệp đang làm song song trong cùng worktree); cần hợp nhất nhánh khác thì \`git merge <nhánh>\` vào nhánh hiện tại. Không push, không xóa hàng loạt; không đưa dữ liệu thật hay bí mật vào code, seed, test, fixture.
+${tools.includes('run_command') ? '- Test/typecheck đã ĐỎ TRƯỚC khi bạn sửa (baseline): chỉ MỘT lệnh để ghi nhận tên test lỗi rồi làm tiếp — KHÔNG đọc file/chạy lệnh để điều tra hay sửa lỗi có sẵn ngoài phạm vi hạng mục (kể cả khi nghi do môi trường); tiêu chí là không phát sinh lỗi MỚI so với baseline (so sánh danh sách test lỗi trước/sau). Bàn giao trước đã ghi baseline thì dùng luôn, không đo lại.\n' : ''}${tools.includes('run_command') ? '- Chạy kiểm tra thật bằng run_command (cài dependency nếu thiếu, typecheck, test, lint, migration trên DB dev) và báo kết quả THẬT: lệnh, exit code, tóm tắt lỗi. Lệnh nào không chạy được thì ghi rõ lý do — không bịa kết quả.\n' : `- Không có quyền chạy lệnh: ghi rõ lệnh kiểm tra cần chạy để người khác thực hiện.${tools.includes('git_read') ? ` ${GIT_READ_NOTE}` : ''}\n`}${c.ccDir ? `- Tài liệu đầu vào: \`${c.ccDir}/inputs/\` · sản phẩm các hạng mục khác: \`${c.ccDir}/outputs/\`.\n` : ''}- ${
+    diet
+      ? 'Làm và commit (nếu cần) ngay trên nhánh hiện tại của worktree — KHÔNG tạo/chuyển/xóa nhánh. Không push, không xóa hàng loạt; không đưa dữ liệu thật hay bí mật vào code, seed, test, fixture.'
+      : 'Làm và commit (nếu cần) ngay trên nhánh hiện tại của worktree — KHÔNG tạo/chuyển/xóa nhánh (các đồng nghiệp đang làm song song trong cùng worktree); cần hợp nhất nhánh khác thì `git merge <nhánh>` vào nhánh hiện tại. Không push, không xóa hàng loạt; không đưa dữ liệu thật hay bí mật vào code, seed, test, fixture.'
+  }
 Câu trả lời cuối cùng là báo cáo bàn giao theo ĐÚNG các mục trong "Mẫu đầu ra" của bạn (giữ nguyên tên mục, mở đầu "## Tóm tắt"); mục nào không áp dụng thì ghi "Không áp dụng" thay vì bỏ. Bắt buộc có: tệp đã tạo/sửa (đường dẫn) và lệnh kiểm chứng đã chạy (lệnh → exit code/kết quả thật, hoặc lý do chưa chạy).
 `;
 }
@@ -502,24 +515,30 @@ ${truncate(continuation.previous, 7000)}
 ${continuation.changes ? '```\n' + truncate(continuation.changes, 3000) + '\n```' : '(chưa có thay đổi nào được ghi)'}
 `
     : '';
+  const diet = !!c.singleSlim?.diet;
+  const compactNote = c.singleSlim?.compact ? `\n${COMPACT_REPORT_NOTE}\n` : '';
   return {
     context: `${header(c, 'execute')}
 ${priorContext ? `\n## Kết quả từ phòng trước (liên phòng)\n${truncate(priorContext, 8000)}\n` : ''}
-${planBlock(planSummary, decisions, subtasks, c.filesAccessible && c.ccDir ? `${c.ccDir}/PLAN.md` : undefined)}`,
+${diet ? '' : planBlock(planSummary, decisions, subtasks, c.filesAccessible && c.ccDir ? `${c.ccDir}/PLAN.md` : undefined)}`,
     prompt: `## Hạng mục của bạn: ${st.id} — ${st.title}
 ${st.description}
 ${st.deliverable ? `Sản phẩm bàn giao: ${st.deliverable}` : ''}
-
+${diet && !deps.length ? '' : `
 ## Đầu vào từ các hạng mục trước
 ${depsText(c, deps, c.filesAccessible ? 3500 : 16000)}
-${draftBlock}${contBlock}${checksBlock(c.task, 'execute')}${toolNote(c, tools, 'execute')}${
+`}${draftBlock}${contBlock}${checksBlock(c.task, 'execute')}${toolNote(c, tools, 'execute')}${
       canWrite
         ? ''
         : `\n## Cách làm\nBạn trả lời bằng văn bản. Nếu cần tạo file, đưa nội dung đầy đủ trong khối code và ghi rõ tên file ngay phía trên khối đó.\n`
-    }
+    }${compactNote}
 Câu trả lời CUỐI CÙNG phải là sản phẩm bàn giao hoàn chỉnh theo "Mẫu đầu ra" trong hồ sơ vị trí của bạn, mở đầu bằng mục "## Tóm tắt" (2–4 câu).`,
   };
 }
+
+/** B-11(b): chỉ dẫn báo cáo gọn ở làn đơn — vẫn đủ mọi tiêu đề của "Mẫu đầu ra" (templateCoverage 100 %), trần ~800 token đặt bằng chỉ dẫn. */
+export const COMPACT_REPORT_NOTE = `## Báo cáo gọn (làn đơn)
+Báo cáo cuối vẫn phải có ĐỦ MỌI tiêu đề trong "Mẫu đầu ra" của vai trò (giữ nguyên tên và thứ tự, mục không áp dụng ghi "Không áp dụng"), nhưng mỗi mục chỉ 1–3 dòng. KHÔNG chép lại mã hay diff vào báo cáo — chỉ nêu đường dẫn tệp và điểm chính. Toàn bộ báo cáo tối đa khoảng 800 token.`;
 
 /** compact (P3, B-02): reviewer nhận diff + kết quả lệnh kiểm, mỗi bàn giao chỉ giữ phần đầu thay vì toàn bộ đầu ra. */
 export function reviewPrompt(c: Ctx, items: DepInput[], tools: ToolName[] = [], changes = '', compact = false): Built {
