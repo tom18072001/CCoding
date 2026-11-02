@@ -303,6 +303,46 @@ ${PLAN_SCHEMA}`,
   };
 }
 
+/**
+ * B-10: yêu cầu trưởng phòng SỬA kế hoạch khi cổng phủ kế hoạch chặn. Nêu đúng danh sách đích chưa có hạng mục nhận (quy tắc A)
+ * và/hoặc lý do kế hoạch đọc dở (quy tắc B); đòi kế hoạch ĐẦY ĐỦ, không chỉ phần thiếu.
+ */
+export function replanPrompt(c: Ctx, brief: string, planSummary: string, subtasks: Subtask[], gate: { uncovered: string[]; reasons: string[] }, tools: ToolName[] = []): Built {
+  const missing = gate.uncovered.length
+    ? [
+        '### Đích CHƯA có hạng mục nhận (bắt buộc xử lý)',
+        ...gate.uncovered.map((t) => `- \`${t}\``),
+        'Mỗi đích trên phải xuất hiện trong `title`, `description` hoặc `deliverable` của ít nhất một hạng mục; hoặc ghi vào `outOfScope` kèm lý do (vd. "đã có sẵn, không ai sửa").',
+        '',
+      ].join('\n')
+    : '';
+  const unreadable = gate.reasons.filter((r) => r.startsWith('B'));
+  const partial = unreadable.length ? ['### Kế hoạch bị đọc dở', ...unreadable.map((r) => `- ${r}`), ''].join('\n') : '';
+  const schema = PLAN_SCHEMA.replace('"subtasks": [', '"outOfScope": [{ "target": "đường/dẫn/tệp", "reason": "lý do không làm" }],\n  "subtasks": [');
+  return {
+    context: header(c, 'plan'),
+    prompt: `## Đề bài
+${truncate(brief, 4000)}
+
+## Kế hoạch trước (bị cổng kiểm tra chặn — CHƯA được chạy)
+${planSummary || '(không có tóm tắt)'}
+${planText(subtasks)}
+
+${missing}${partial}
+## Nhân sự có thể giao việc
+${rosterLines(c.roster, c.caps)}
+${toolNote(c, tools, 'plan')}
+## Việc của bạn (Trưởng phòng): SỬA KẾ HOẠCH
+Lập lại kế hoạch ĐẦY ĐỦ (mọi hạng mục, không chỉ phần thiếu) để không đích nào bị bỏ sót. Quy tắc:
+- Số hạng mục trong \`summary\` (nếu nêu) phải bằng số phần tử trong \`subtasks\`.
+- Mỗi hạng mục có \`assignee\` là id trong danh sách (không có dấu @), \`description\` nhất quán với \`assignee\` (không nhắc người khác như người làm), \`deliverable\` là sản phẩm bàn giao cụ thể.
+- Giữ JSON gọn để không bị cắt cụt; đóng đủ khối \`\`\`json.
+
+Trả lời bằng một khối JSON theo mẫu (\`outOfScope\` chỉ dùng khi có đích cố ý không làm):
+${schema}`,
+  };
+}
+
 export function transcriptText(msgs: ChatMessage[], names: Map<string, string>, max = 9000): string {
   const text = msgs
     .filter((m) => m.kind !== 'system')

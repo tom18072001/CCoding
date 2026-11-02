@@ -286,6 +286,8 @@ export interface DeptRun {
   };
   /** Vòng review hiện tại (0 = review đầu) — giữ qua tạm dừng/tiếp tục để không vượt maxRevisions. */
   reviewRound?: number;
+  /** B-10: kết quả cổng phủ kế hoạch (sau parsePlan, trước execute). */
+  planGate?: { uncovered: string[]; reasons: string[]; rules: ('A' | 'B')[]; replanned?: boolean };
   /** Hạng mục còn phải sửa trong vòng hiện tại — tiếp tục sau tạm dừng thì sửa tiếp theo review đã có, không review lại. */
   revising?: string[];
   /** Ước lượng token của kế hoạch (sau khi lập/chốt) để cảnh báo nhiệm vụ quá lớn. */
@@ -455,7 +457,7 @@ export interface Task {
   /** Lệnh kiểm tra của dự án do CCoding tự chạy: trước khi sửa (baseline) và sau thực thi/sửa (latest). */
   projectChecks?: ProjectChecks;
   /** Nhiệm vụ đã chạy xong nhưng cần người xem lại (vd. review cuối chưa duyệt). */
-  attention?: { reason: 'review' | 'checks' | 'acceptance'; detail: string; at: string };
+  attention?: { reason: 'review' | 'checks' | 'acceptance' | 'plan-coverage' | 'plan-unreadable'; detail: string; at: string };
   /** Kết luận nghiệm thu của CTO sau khi các phòng tổng hợp xong (UX-4c). */
   acceptance?: Acceptance;
   createdAt: string;
