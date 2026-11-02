@@ -24,7 +24,9 @@
     filter: 'all',
     query: '',
     mode: '',
-    view: store.get('view', 'list'),
+    // UX-4: mặc định xem dạng cây (khóa mới để người đang dùng "danh sách" cũng chuyển sang cây một lần)
+    view: store.get('view2', 'tree'),
+    tree: store.get('treeOpen', {}),
     sort: store.get('sort', 'updated'),
     projectId: null,
     expanded: store.get('expanded', {}),
@@ -76,7 +78,7 @@
     if (t.status === 'paused') return `Tạm dừng${t.pause?.reason ? ` · ${C.PAUSE_VI[t.pause.reason] || t.pause.reason}` : ''}`;
     if (t.status === 'failed') return 'Lỗi — có thể tiếp tục';
     if (t.status === 'cancelled') return 'Đã hủy';
-    const ph = C.PHASES.find(([k]) => k === t.phase) || (t.phase === 'finalize' ? ['', 'Thảo luận'] : t.phase === 'revise' ? ['', 'Sửa theo review'] : t.phase === 'route' ? ['', 'Định tuyến'] : null);
+    const ph = C.PHASES.find(([k]) => k === t.phase) || (t.phase === 'finalize' ? ['', 'Thảo luận'] : t.phase === 'revise' ? ['', 'Sửa theo review'] : t.phase === 'route' ? ['', 'Định tuyến'] : t.phase === 'accept' ? ['', 'CTO nghiệm thu'] : null);
     return ph ? ph[1] : t.status === 'queued' ? 'Chờ chạy' : 'Đang chạy';
   }
   const who = (t) => (t.mode === 'agent' && t.agentId ? `📌 ${C.agentName(t.agentId)}` : C.MODE_VI[t.mode] || t.mode);
@@ -98,7 +100,7 @@
     if (V.mode && t.mode !== V.mode) return false;
     if (V.query) {
       const q = V.query.toLowerCase();
-      if (!`${t.title} ${t.id} ${t.brief || ''} ${t.projectId || ''} ${t.agentId || ''}`.toLowerCase().includes(q)) return false;
+      if (!`${t.title} ${t.id} ${C.code(t)} ${t.brief || ''} ${t.projectId || ''} ${t.agentId || ''}`.toLowerCase().includes(q)) return false;
     }
     return true;
   }
@@ -108,6 +110,126 @@
     store.set('stars', [...V.stars]);
   }
   const dot = (t) => `<span class="sdot s-${esc(t.status)}${t.attention ? ' att' : ''}" title="${esc(C.TASK_VI[t.status] || t.status)}"></span>`;
+
+  // ── Cây nhiệm vụ kiểu issue tracker (UX-4) ───────────────────────────────
+  // cha của một nhiệm vụ: nhiệm vụ gốc khi được tách ra từ một hạng mục, hoặc nhiệm vụ trước khi là việc nối tiếp
+  const parentOf = (t) => t.splitFrom?.taskId || t.followUpOf || null;
+  const isLive = (t) => t.status === 'running';
+  const DAY = 86400e3;
+  /** Thời gian tương đối ngắn: vừa xong · 7 phút · 3 giờ · 2 ngày. */
+  function rel(iso) {
+    const ms = Date.now() - Date.parse(iso);
+    if (!(ms >= 0)) return '';
+    const m = Math.floor(ms / 60000);
+    if (m < 1) return 'vừa xong';
+    if (m < 60) return `${m} phút`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h} giờ`;
+    const d = Math.floor(h / 24);
+    return d < 30 ? `${d} ngày` : new Date(iso).toLocaleDateString('vi-VN');
+  }
+  const SUB_VI = { pending: 'Chưa làm', running: 'Đang làm', done: 'Xong', failed: 'Lỗi', skipped: 'Bỏ qua' };
+  /** Biểu tượng trạng thái hình tròn (chưa làm ○ · đang chạy ◔ quay · xong ✓ · lỗi ✕ · tạm dừng ‖ · hủy/bỏ qua −). */
+  function si(status, opts = {}) {
+    const label = opts.label || C.TASK_VI[status] || SUB_VI[status] || status;
+    return `<span class="si si-${esc(status)}${opts.att ? ' att' : ''}" role="img" aria-label="${esc(label)}" title="${esc(label)}"></span>`;
+  }
+  const subsOf = (t) => (t.runs || []).flatMap((r) => r.subtasks.filter((x) => !x.splitTo).map((x) => ({ r, s: x })));
+  /**
+   * Số việc đang chạy ngay bên dưới một dòng (mỗi việc đếm một lần): hạng mục đang làm của chính nhiệm vụ này + nhiệm vụ con đang
+   * chạy ở mọi tầng (hạng mục của nhiệm vụ con được đếm ở dòng của nhiệm vụ con, không cộng lên dòng cha).
+   */
+  function liveBelow(t, kids) {
+    const own = isLive(t) ? subsOf(t).filter((x) => x.s.status === 'running').length : 0;
+    return own + liveTasksBelow(t, kids);
+  }
+  function liveTasksBelow(t, kids, seen = new Set()) {
+    if (seen.has(t.id)) return 0;
+    seen.add(t.id);
+    let n = 0;
+    for (const k of kids.get(t.id) || []) n += (isLive(k) ? 1 : 0) + liveTasksBelow(k, kids, seen);
+    return n;
+  }
+  /** Lần cập nhật mới nhất trong cả nhánh (nhiệm vụ + mọi nhiệm vụ con) — để xếp gốc và đặt vạch "Cũ hơn một ngày". */
+  function latestIn(t, kids, memo, seen = new Set()) {
+    if (memo.has(t.id)) return memo.get(t.id);
+    let v = updated(t);
+    if (!seen.has(t.id)) {
+      seen.add(t.id);
+      for (const k of kids.get(t.id) || []) {
+        const x = latestIn(k, kids, memo, seen);
+        if (x > v) v = x;
+      }
+    }
+    memo.set(t.id, v);
+    return v;
+  }
+  /** Còn nhiệm vụ con chưa xong (đang chạy, chờ chạy, tạm dừng) ở bất kỳ tầng nào bên dưới. */
+  function pendingBelow(t, kids, seen = new Set()) {
+    if (seen.has(t.id)) return false;
+    seen.add(t.id);
+    return (kids.get(t.id) || []).some((k) => ['running', 'queued', 'paused'].includes(k.status) || pendingBelow(k, kids, seen));
+  }
+  function treeRow(t, depth, ctx) {
+    const kids = ctx.flat ? [] : ctx.kids.get(t.id) || [];
+    const subs = subsOf(t);
+    const below = liveBelow(t, ctx.kids);
+    const has = kids.length + subs.length > 0;
+    // tự mở: nhiệm vụ đang chạy hoặc còn việc con chưa xong; người dùng đã mở/đóng thì theo lựa chọn đó
+    const recent = kids.length && Date.now() - Date.parse(latestIn(t, ctx.kids, ctx.memo)) < DAY;
+    const open = has && (V.tree[t.id] ?? (!ctx.collapsed && (isLive(t) || below > 0 || pendingBelow(t, ctx.kids) || recent || (ctx.searching && kids.length > 0))));
+    const multi = (t.runs || []).length > 1;
+    const p = parentOf(t);
+    const orphan = p && !ctx.inList.has(p) ? C.S.tasks.get(p) : null;
+    const pills = `${isLive(t) ? '<span class="lp">● đang chạy</span>' : ''}${t.status === 'paused' && t.pause?.reason === 'plan' ? '<span class="lp warn">chờ duyệt kế hoạch</span>' : ''}${t.attention ? `<span class="lp warn" title="${esc(t.attention.detail)}">⚠ cần xem</span>` : ''}${below ? `<span class="lp o" title="${below} việc đang chạy bên dưới (hạng mục, nhiệm vụ con)">↳ ${below} đang chạy</span>` : ''}`;
+    let html = `<div class="trow${C.S.selectedTask === t.id ? ' sel' : ''}" style="--d:${depth}" data-id="${esc(t.id)}" tabindex="0" role="treeitem" aria-level="${depth + 1}"${has ? ` aria-expanded="${open}"` : ''}>
+      ${has ? `<button class="tcar" data-tog aria-label="${open ? 'Thu gọn' : 'Mở rộng'}">${open ? '▾' : '▸'}</button>` : '<span></span>'}
+      ${si(t.status, { att: !!t.attention })}
+      <div class="tmain"><span class="tc" title="${esc(t.id)}">${esc(C.code(t))}</span>${pills}<span class="tt">${esc(t.title)}</span>${
+        orphan ? `<small class="tpar" title="${esc(orphan.title)}">↪ ${esc(C.code(orphan))}</small>` : ''
+      }${ctx.noProject || !t.projectId ? '' : `<small class="tproj">📁 ${esc(projName(t.projectId))}</small>`}</div>
+      <div class="c-people">${assignees(t).slice(0, 3).map((a) => C.av(a, 'av xs')).join('')}</div>
+      <time title="${esc(new Date(updated(t)).toLocaleString('vi-VN'))}">${esc(rel(updated(t)))}</time>
+      <span class="tact"><button class="star${V.stars.has(t.id) ? ' on' : ''}" data-star title="Gắn sao">${V.stars.has(t.id) ? '★' : '☆'}</button><button class="more" data-more title="Thao tác">⋮</button></span></div>`;
+    if (!open) return html;
+    for (const { r, s: x } of subs) {
+      const run = x.status === 'running' && isLive(t);
+      html += `<div class="trow sub" style="--d:${depth + 1}" data-id="${esc(t.id)}" data-sub="${esc(x.id)}" tabindex="-1" role="treeitem" aria-level="${depth + 2}">
+        <span></span>${si(x.status === 'running' && !isLive(t) ? 'pending' : x.status)}
+        <div class="tmain"><span class="tc">${multi ? `${esc(C.deptShort(r.department))}·` : ''}${esc(x.id)}</span>${run ? '<span class="lp">● đang làm</span>' : ''}<span class="tt">${esc(x.title)}</span></div>
+        <div class="c-people">${x.assignee ? `${C.av(x.assignee, 'av xs')}<small>${esc(C.agentName(x.assignee))}</small>` : ''}</div>
+        <time>${x.attempts > 1 ? `${x.attempts} lần` : ''}</time><span></span></div>`;
+    }
+    for (const k of kids) html += treeRow(k, depth + 1, ctx);
+    return html;
+  }
+  /** Danh sách dạng cây: nhiệm vụ gốc → hạng mục + nhiệm vụ con (việc nối, việc tách); "Cũ hơn một ngày" khi xếp theo cập nhật. */
+  function treeHtml(list, opts = {}) {
+    const inList = new Set(list.map((t) => t.id));
+    const kids = new Map();
+    for (const t of list) {
+      const p = parentOf(t);
+      if (!opts.flat && p && inList.has(p) && p !== t.id) (kids.get(p) || kids.set(p, []).get(p)).push(t);
+    }
+    // nhiệm vụ con xếp theo thứ tự tạo (số thứ tự), gốc theo cách sắp xếp đang chọn
+    for (const arr of kids.values()) arr.sort((a, b) => (a.seq || 0) - (b.seq || 0) || a.createdAt.localeCompare(b.createdAt));
+    const roots = list.filter((t) => opts.flat || !parentOf(t) || !inList.has(parentOf(t)) || parentOf(t) === t.id);
+    const ctx = { kids, inList, memo: new Map(), flat: !!opts.flat, collapsed: !!opts.flat, noProject: !!opts.noProject, searching: !!V.query || V.filter !== 'all' || !!V.mode };
+    // gốc xếp theo lần cập nhật mới nhất của cả nhánh: việc nối vừa chạy kéo nhiệm vụ gốc cũ lên đầu
+    if (!opts.flat && V.sort === 'updated') roots.sort((a, b) => latestIn(b, kids, ctx.memo).localeCompare(latestIn(a, kids, ctx.memo)));
+    let old = false;
+    const rows = roots
+      .map((t) => {
+        let sep = '';
+        if (!old && !opts.flat && V.sort === 'updated' && Date.now() - Date.parse(latestIn(t, kids, ctx.memo)) > DAY) {
+          old = true;
+          sep = '<div class="tsep" role="presentation"><span>Cũ hơn một ngày</span></div>';
+        }
+        return sep + treeRow(t, 0, ctx);
+      })
+      .join('');
+    return `<div class="ttree" role="tree" aria-label="Nhiệm vụ">${rows}</div>`;
+  }
 
   // ── Hành động ────────────────────────────────────────────────────────────
   async function act(path, body, ok) {
@@ -154,11 +276,12 @@
         t.projectId && { icon: '📁', label: `Mở dự án ${projName(t.projectId)}`, run: () => openProject(t.projectId) },
         { icon: V.stars.has(t.id) ? '☆' : '⭐', label: V.stars.has(t.id) ? 'Bỏ gắn sao' : 'Gắn sao', run: () => (star(t.id), D.changed()) },
         { icon: '↻', label: 'Giao lại tương tự', run: () => again(t) },
+        { icon: '🔁', label: 'Lặp lại định kỳ…', run: () => window.Pages?.routineFromTask(t) },
         '-',
         t.status === 'running' && { icon: '⏸', label: 'Tạm dừng', run: () => act(`/api/tasks/${t.id}/pause`, {}, 'Đã yêu cầu tạm dừng') },
         ['paused', 'failed', 'cancelled'].includes(t.status) && (t.runs || []).length && { icon: '▶', label: 'Tiếp tục (chạy tới khi xong)', run: () => act(`/api/tasks/${t.id}/resume`, { budgetMode: 'complete' }, 'Đã tiếp tục') },
         ['running', 'queued', 'paused'].includes(t.status) && { icon: '✕', label: 'Hủy nhiệm vụ', danger: true, run: () => confirm(`Hủy "${t.title}"?`) && act(`/api/tasks/${t.id}/cancel`, {}, 'Đã gửi lệnh hủy') },
-        { icon: '📋', label: 'Sao chép mã nhiệm vụ', run: () => navigator.clipboard?.writeText(t.id).then(() => C.toast({ level: 'info', title: `Đã chép ${t.id}`, msg: '' })) },
+        { icon: '📋', label: `Sao chép mã nhiệm vụ (${C.code(t)})`, run: () => navigator.clipboard?.writeText(C.code(t)).then(() => C.toast({ level: 'info', title: `Đã chép ${C.code(t)}`, msg: t.title })) },
       ],
       x,
       y,
@@ -183,7 +306,7 @@
     const pct = progress(t);
     return `<div class="drow${C.S.selectedTask === t.id ? ' sel' : ''}" data-id="${esc(t.id)}" tabindex="0" role="row">
       <button class="star${V.stars.has(t.id) ? ' on' : ''}" data-star title="Gắn sao">${V.stars.has(t.id) ? '★' : '☆'}</button>
-      <div class="c-name">${dot(t)}<div><b>${esc(t.title)}</b><small>${esc(t.id)} · ${esc(who(t))}${t.followUpOf ? ' · ↪ tiếp nối' : ''}</small></div></div>
+      <div class="c-name">${dot(t)}<div><b>${esc(t.title)}</b><small title="${esc(t.id)}">${esc(C.code(t))} · ${esc(who(t))}${t.followUpOf ? ' · ↪ tiếp nối' : ''}</small></div></div>
       ${opts.noProject ? '' : `<div class="c-proj">${t.projectId ? `📁 ${esc(projName(t.projectId))}` : '<span class="muted">—</span>'}</div>`}
       <div class="c-stat"><span class="status ${esc(t.status)}">${esc(C.TASK_VI[t.status] || t.status)}</span>${t.attention ? '<span class="status attention">⚠</span>' : ''}<div class="pbar" title="${esc(phaseLabel(t))} · ${pct}%"><i style="width:${pct}%"></i></div><small>${esc(phaseLabel(t))}</small></div>
       <div class="c-people">${assignees(t).map((a) => C.av(a, 'av xs')).join('')}</div>
@@ -205,6 +328,10 @@
       const t = C.S.tasks.get(row.dataset.id);
       if (!t) return;
       row.addEventListener('click', (e) => {
+        if (e.target.closest('[data-tog]')) {
+          e.stopPropagation();
+          return toggle(row);
+        }
         if (e.target.closest('[data-star]')) {
           e.stopPropagation();
           star(t.id);
@@ -221,12 +348,53 @@
         e.preventDefault();
         taskMenu(t, e.clientX, e.clientY);
       });
-      row.addEventListener('keydown', (e) => e.key === 'Enter' && C.openTask(t.id));
+      row.addEventListener('keydown', (e) => {
+        if (e.target !== row) return;
+        if (e.key === 'Enter') return C.openTask(t.id);
+        // cây: ←/→ thu gọn/mở rộng, ↑/↓ chuyển dòng
+        if (row.classList.contains('trow') && ['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp'].includes(e.key)) {
+          e.preventDefault();
+          const exp = row.getAttribute('aria-expanded');
+          if (e.key === 'ArrowRight' && exp === 'false') return toggle(row);
+          if (e.key === 'ArrowLeft' && exp === 'true') return toggle(row);
+          const rows = $$('.trow:not(.sub)', row.closest('.ttree'));
+          const i = rows.indexOf(row) + (e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0);
+          rows[Math.max(0, Math.min(rows.length - 1, i))]?.focus();
+        }
+      });
     });
+  }
+  /** Mở/đóng một nhánh cây rồi vẽ lại màn đang xem, giữ con trỏ trên dòng đó. */
+  /**
+   * Vẽ lại một vùng mà không làm mất con trỏ bàn phím: nhớ dòng đang được focus (theo nhiệm vụ + hạng mục) trong vùng đó rồi
+   * focus lại dòng tương ứng sau khi vẽ (sự kiện SSE vẽ lại danh sách liên tục khi có việc đang chạy).
+   */
+  function keepFocus(el, render) {
+    const a = document.activeElement;
+    const row = el && a && el.contains(a) ? a.closest('[data-id]') : null;
+    const id = row?.dataset.id;
+    const sub = row?.dataset.sub;
+    render();
+    if (!id) return;
+    const sel = `[data-id="${CSS.escape(id)}"]${sub ? `[data-sub="${CSS.escape(sub)}"]` : ':not([data-sub])'}`;
+    $(sel, el)?.focus({ preventScroll: true });
+  }
+  function toggle(row) {
+    const box = row.closest('.tab-body') || document;
+    const id = row.dataset.id;
+    delete V.tree[id];
+    V.tree[id] = row.getAttribute('aria-expanded') !== 'true';
+    // chỉ nhớ 300 lần mở/đóng gần nhất
+    const keys = Object.keys(V.tree);
+    for (const k of keys.slice(0, Math.max(0, keys.length - 300))) delete V.tree[k];
+    store.set('treeOpen', V.tree);
+    D.changed();
+    $(`.trow[data-id="${CSS.escape(id)}"]:not(.sub)`, box)?.focus({ preventScroll: true });
   }
   function taskTable(list, opts = {}) {
     if (!list.length) return `<div class="empty">${opts.empty || 'Không có nhiệm vụ nào khớp.'}</div>`;
     if (V.view === 'grid') return `<div class="tcards">${list.map(cardHtml).join('')}</div>`;
+    if (V.view === 'tree') return treeHtml(list, opts);
     return `<div class="dtable${opts.noProject ? ' noproj' : ''}" role="table"><div class="dhead" role="row"><span></span><span>Tên</span>${opts.noProject ? '' : '<span>Dự án</span>'}<span>Tiến độ</span><span>Người làm</span><span>Token</span><span>Cập nhật</span><span></span></div>${list.map((t) => rowHtml(t, opts)).join('')}</div>`;
   }
   function toolbar(opts = {}) {
@@ -236,7 +404,7 @@
       ${V.query ? `<button class="chip-q" data-clearq>🔎 “${esc(V.query)}” ✕</button>` : ''}
       <select data-mode title="Chế độ"><option value="">Mọi chế độ</option>${Object.entries(C.MODE_VI).map(([k, v]) => `<option value="${k}" ${V.mode === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>
       <select data-sort title="Sắp xếp">${SORTS.map(([k, v]) => `<option value="${k}" ${V.sort === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
-      <div class="seg"><button data-v="list" class="${V.view === 'list' ? 'on' : ''}" title="Danh sách">☰</button><button data-v="grid" class="${V.view === 'grid' ? 'on' : ''}" title="Lưới">▦</button></div>
+      <div class="seg" role="group" aria-label="Kiểu xem"><button data-v="tree" class="${V.view === 'tree' ? 'on' : ''}" title="Cây: nhiệm vụ → hạng mục, việc nối, việc tách" aria-label="Xem dạng cây">🌳</button><button data-v="list" class="${V.view === 'list' ? 'on' : ''}" title="Bảng" aria-label="Xem dạng bảng">☰</button><button data-v="grid" class="${V.view === 'grid' ? 'on' : ''}" title="Lưới" aria-label="Xem dạng lưới">▦</button></div>
       ${opts.newBtn ? `<button class="btn primary sm" data-newtask>＋ Nhiệm vụ</button>` : ''}</div>`;
   }
   function bindToolbar(el, rerender) {
@@ -245,13 +413,15 @@
     if (m) m.onchange = () => ((V.mode = m.value), rerender());
     const s = $('[data-sort]', el);
     if (s) s.onchange = () => ((V.sort = s.value), store.set('sort', V.sort), rerender());
-    $$('[data-v]', el).forEach((b) => (b.onclick = () => ((V.view = b.dataset.v), store.set('view', V.view), rerender())));
+    $$('[data-v]', el).forEach((b) => (b.onclick = () => ((V.view = b.dataset.v), store.set('view2', V.view), rerender())));
     const q = $('[data-clearq]', el);
     if (q) q.onclick = () => ((V.query = ''), ($('#gsearch').value = ''), rerender());
   }
 
   /** Thay renderTaskList của app.js: danh sách nhiệm vụ kiểu Drive. */
-  D.renderTasks = (el) => {
+  // mọi nơi vẽ lại danh sách (SSE nhiệm vụ trong app.js, đồng bộ 20 giây, D.changed) đều giữ con trỏ bàn phím
+  D.renderTasks = (el) => keepFocus(el, () => renderTaskListInto(el));
+  function renderTaskListInto(el) {
     const list = sortList(tasks().filter((t) => matches(t)));
     const title = FILTERS.find(([k]) => k === V.filter)?.[1] || 'Nhiệm vụ';
     el.innerHTML = `<div class="dv-head"><h1>${V.filter === 'all' ? '📋 Nhiệm vụ' : `📋 Nhiệm vụ · ${esc(title)}`}</h1><button class="btn primary sm" data-newtask>＋ Nhiệm vụ mới</button></div>${toolbar()}${taskTable(list, { empty: tasks().length ? 'Không có nhiệm vụ nào khớp bộ lọc.' : 'Chưa có nhiệm vụ nào — bấm <b>＋ Mới</b> để giao việc đầu tiên.' })}`;
@@ -259,7 +429,7 @@
     bindItems(el);
     $$('[data-newtask]', el).forEach((b) => (b.onclick = () => C.prefillAssign({})));
     crumbs();
-  };
+  }
 
   // ── Tổng quan ────────────────────────────────────────────────────────────
   function folderHtml(p, list) {
@@ -325,10 +495,10 @@
         <div class="stat"><span>Cần xem</span><b>${all.filter(needsAttention).length}</b></div>
         <div class="stat"><span>Xong 7 ngày</span><b>${week}</b></div>
         <div class="stat"><span>Token hôm nay</span><b>${q ? C.fmt(C.total(q.today)) : '—'}</b></div></div>
-      ${att.length ? `<section><div class="sec-head"><h2>⚠ Cần bạn quyết định</h2><a data-go="attention">Xem tất cả →</a></div>${taskTable(att)}</section>` : ''}
-      <section><div class="sec-head"><h2>⚡ Đang chạy</h2><a data-go="running">Xem tất cả →</a></div>${taskTable(run.slice(0, 6), { empty: 'Không có việc đang chạy.' })}</section>
+      ${att.length ? `<section><div class="sec-head"><h2>⚠ Cần bạn quyết định</h2><a data-go="inbox" title="Duyệt bằng phím (I)">📥 Mở hộp Cần bạn →</a></div>${taskTable(att, { flat: true })}</section>` : ''}
+      <section><div class="sec-head"><h2>⚡ Đang chạy</h2><a data-go="running">Xem tất cả →</a></div>${taskTable(run.slice(0, 6), { empty: 'Không có việc đang chạy.', flat: true })}</section>
       <section><div class="sec-head"><h2>📁 Dự án</h2><a data-go="projects">Tất cả dự án →</a></div>${folders(8)}</section>
-      <section><div class="sec-head"><h2>🕘 Gần đây</h2><a data-go="all">Tất cả nhiệm vụ →</a></div>${taskTable(recent, { empty: 'Chưa có nhiệm vụ nào.' })}</section></div>`;
+      <section><div class="sec-head"><h2>🕘 Gần đây</h2><a data-go="all">Tất cả nhiệm vụ →</a></div>${taskTable(recent, { empty: 'Chưa có nhiệm vụ nào.', flat: true })}</section></div>`;
     $$('[data-q]', el).forEach(
       (b) =>
         (b.onclick = () => {
@@ -339,7 +509,7 @@
           if (k === 'prompts') C.setTab('prompts');
         }),
     );
-    $$('[data-go]', el).forEach((a) => (a.onclick = () => (a.dataset.go === 'projects' ? C.setTab('projects') : goTasks(a.dataset.go))));
+    $$('[data-go]', el).forEach((a) => (a.onclick = () => (a.dataset.go === 'projects' || a.dataset.go === 'inbox' ? C.setTab(a.dataset.go) : goTasks(a.dataset.go))));
     bindItems(el);
     bindFolders(el);
   }
@@ -475,7 +645,7 @@
       'beforeend',
       `<div class="dock"><div class="compose-box">
         <textarea rows="2" placeholder="${live ? 'Gửi chỉ dẫn bổ sung — agent áp dụng từ lượt làm việc tiếp theo (vd. "nhớ viết test cho trường hợp rỗng")…' : 'Giao việc tiếp nối nhiệm vụ này — kế thừa dự án/chế độ/agent, báo cáo trước được đưa vào làm đầu vào…'}   (Ctrl+Enter)"></textarea>
-        <div class="compose-bar"><small>${live ? '📝 Chỉ dẫn hiện trong hội thoại và vào bối cảnh các lượt gọi sau; lượt đang chạy làm nốt theo yêu cầu cũ.' : `↪ Tạo nhiệm vụ mới tiếp nối ${esc(t.id)}`}</small>${!live && t.branch && t.projectId ? `<label class="check c-chk" title="Worktree của việc mới tách từ nhánh ${esc(t.branch)}; bỏ chọn: tách từ nhánh xuất phát của dự án"><input type="checkbox" data-cont checked /> 🌿 nối tiếp nhánh</label>` : ''}<span class="grow"></span>
+        <div class="compose-bar"><small>${live ? '📝 Chỉ dẫn hiện trong hội thoại và vào bối cảnh các lượt gọi sau; lượt đang chạy làm nốt theo yêu cầu cũ.' : `↪ Tạo nhiệm vụ mới tiếp nối ${esc(C.code(t))}`}</small>${!live && t.branch && t.projectId ? `<label class="check c-chk" title="Worktree của việc mới tách từ nhánh ${esc(t.branch)}; bỏ chọn: tách từ nhánh xuất phát của dự án"><input type="checkbox" data-cont checked /> 🌿 nối tiếp nhánh</label>` : ''}<span class="grow"></span>
         <button class="btn primary send" data-dock>${live ? 'Gửi chỉ dẫn' : 'Giao tiếp nối ➤'}</button></div></div></div>`,
     );
     const dock = $('.dock', el);
@@ -493,7 +663,7 @@
           const nt = await C.api('/api/tasks', { method: 'POST', body: JSON.stringify({ brief: text, followUp: t.id, ...(cont ? { continueBranch: cont.checked } : {}) }) });
           C.S.tasks.set(nt.id, nt);
           ta.value = '';
-          C.toast({ level: 'info', title: `Đã giao tiếp nối ${nt.id}`, msg: nt.title, taskId: nt.id });
+          C.toast({ level: 'info', title: `Đã giao tiếp nối ${C.code(nt)}`, msg: nt.title, taskId: nt.id });
           C.openTask(nt.id);
         } catch (e) {
           C.toast({ level: 'error', title: 'Không giao được', msg: e.message });
@@ -506,8 +676,20 @@
     renderTree();
   };
 
-  // ── Cột trái: cây dự án → nhiệm vụ, gần đây, đồng hồ token ─────────────
+  // ── Cột trái (UX-4): dự án ngay dưới mục "Dự án", agent đang làm, nhiệm vụ gần đây ─────────────
+  /** Agent đang làm → số việc (hạng mục đang làm trong nhiệm vụ đang chạy; trưởng phòng đang lập kế hoạch/review tính 1). */
+  function agentLive() {
+    const n = new Map();
+    for (const t of tasks())
+      if (isLive(t)) for (const r of t.runs || []) for (const x of r.subtasks) if (x.status === 'running' && x.assignee) n.set(x.assignee, (n.get(x.assignee) || 0) + 1);
+    for (const a of C.S.agents.values()) {
+      const st = a.state;
+      if (st && !['idle', 'error', 'waiting'].includes(st.status) && st.taskId && isLive(C.S.tasks.get(st.taskId) || {}) && !n.has(a.id)) n.set(a.id, 1);
+    }
+    return [...n].sort((x, y) => y[1] - x[1] || C.agentName(x[0]).localeCompare(C.agentName(y[0]), 'vi'));
+  }
   function renderTree() {
+    const projBox = $('#nav-projects');
     let tree = $('#nav-tree');
     if (!tree) {
       tree = document.createElement('div');
@@ -518,28 +700,44 @@
     const all = tasks();
     const byUpd = (a, b) => updated(b).localeCompare(updated(a));
     const inChat = C.S.tab === 'assign';
-    const item = (t) => `<button class="t-task${(C.S.selectedTask === t.id && C.S.tab === 'tasks') || (inChat && window.Chat?.inConv(t.id)) ? ' sel' : ''}" data-t="${esc(t.id)}" title="${esc(t.title)} · ${esc(C.TASK_VI[t.status] || t.status)}">${dot(t)}<span>${esc(t.title)}</span></button>`;
+    // dự án: theo hoạt động gần nhất, kèm số việc đang chạy
     const projs = C.S.projects
       .map((p) => ({ p, list: all.filter((t) => t.projectId === p.id).sort(byUpd) }))
       .sort((a, b) => (b.list[0] ? updated(b.list[0]) : '').localeCompare(a.list[0] ? updated(a.list[0]) : ''));
-    const starred = all.filter((t) => V.stars.has(t.id)).sort(byUpd).slice(0, 8);
-    const loose = all.filter((t) => !t.projectId).sort(byUpd).slice(0, 10);
-    tree.innerHTML = `${starred.length ? `<div class="nav-sep">⭐ Gắn sao</div>${starred.map(item).join('')}` : ''}
-      <div class="nav-sep">Dự án <button class="mini" data-np title="Dự án mới">＋</button></div>
-      ${projs
+    const PMAX = 6;
+    if (projBox)
+      projBox.innerHTML = `${projs
+        .slice(0, PMAX)
         .map(({ p, list }) => {
-          const open = V.expanded[p.id] ?? false;
-          const run = list.filter(active).length;
-          return `<div class="t-proj${C.S.tab === 'project' && V.projectId === p.id ? ' sel' : ''}"><button class="caret" data-x="${esc(p.id)}" aria-label="Mở/đóng">${open ? '▾' : '▸'}</button><button class="t-pname" data-p="${esc(p.id)}">📁 <span>${esc(p.name)}</span>${run ? `<em>${run}</em>` : ''}</button></div>${open ? `<div class="t-kids">${list.slice(0, 8).map(item).join('') || '<small class="t-empty">chưa có nhiệm vụ</small>'}${list.length > 8 ? `<button class="t-more" data-p="${esc(p.id)}">… ${list.length - 8} nhiệm vụ nữa</button>` : ''}</div>` : ''}`;
+          const run = list.filter(isLive).length;
+          return `<button class="nav-p${C.S.tab === 'project' && V.projectId === p.id ? ' sel' : ''}" data-p="${esc(p.id)}" title="${esc(p.name)}${run ? ` · ${run} việc đang chạy` : ''}"><span>${esc(p.name)}</span>${run ? `<em class="live">${run}</em>` : ''}</button>`;
         })
-        .join('') || '<small class="t-empty">chưa có dự án</small>'}
-      <div class="nav-sep">Gần đây · ngoài dự án</div>${loose.map(item).join('') || '<small class="t-empty">—</small>'}`;
+        .join('')}${projs.length > PMAX ? `<button class="nav-p more" data-allp>… ${projs.length - PMAX} dự án nữa</button>` : ''}${projs.length ? '' : '<button class="nav-p more" data-np>＋ Tạo dự án đầu tiên</button>'}`;
+    const ag = agentLive();
+    const AMAX = 6;
+    const item = (t) =>
+      `<button class="t-task${(C.S.selectedTask === t.id && C.S.tab === 'tasks') || (inChat && window.Chat?.inConv(t.id)) ? ' sel' : ''}" data-t="${esc(t.id)}" title="${esc(C.code(t))} · ${esc(t.title)} · ${esc(C.TASK_VI[t.status] || t.status)}">${si(t.status, { att: !!t.attention })}<span>${esc(t.title)}</span>${isLive(t) ? '<em class="live" aria-label="đang chạy"></em>' : ''}</button>`;
+    tree.innerHTML = `<div class="nav-sep">Agent đang làm <button class="mini" data-people title="Xem tất cả nhân sự">Tất cả</button></div>
+      ${
+        ag.length
+          ? ag
+              .slice(0, AMAX)
+              .map(([id, n]) => `<button class="t-task t-agent" data-a="${esc(id)}" title="${esc(C.agentName(id))} · ${n} việc đang làm">${C.av(id, 'av xs')}<span>${esc(C.agentName(id))}</span><em class="live">${n}</em></button>`)
+              .join('') + (ag.length > AMAX ? `<button class="t-more" data-people>… ${ag.length - AMAX} agent nữa</button>` : '')
+          : '<small class="t-empty">Không agent nào đang làm</small>'
+      }
+      <div class="nav-sep">Gần đây</div>${all.sort(byUpd).slice(0, 6).map(item).join('') || '<small class="t-empty">Chưa có nhiệm vụ</small>'}`;
     // đang ở màn Prompt → mở dạng hội thoại; nơi khác → trang quản lý nhiệm vụ
     $$('[data-t]', tree).forEach((b) => (b.onclick = () => (C.S.tab === 'assign' && window.Chat ? window.Chat.open(b.dataset.t) : C.openTask(b.dataset.t))));
-    $$('[data-p]', tree).forEach((b) => (b.onclick = () => openProject(b.dataset.p)));
-    $$('[data-x]', tree).forEach((b) => (b.onclick = () => ((V.expanded[b.dataset.x] = !(V.expanded[b.dataset.x] ?? false)), store.set('expanded', V.expanded), renderTree())));
-    const np = $('[data-np]', tree);
-    if (np) np.onclick = () => C.newProject();
+    $$('[data-a]', tree).forEach((b) => (b.onclick = () => C.openAgent(b.dataset.a)));
+    $$('[data-people]', tree).forEach((b) => (b.onclick = () => ((C.S.selectedAgent = null), C.setTab('people'))));
+    if (projBox) {
+      $$('[data-p]', projBox).forEach((b) => (b.onclick = () => openProject(b.dataset.p)));
+      const more = $('[data-allp]', projBox);
+      if (more) more.onclick = () => C.setTab('projects');
+      const np = $('[data-np]', projBox);
+      if (np) np.onclick = () => C.newProject();
+    }
   }
 
   async function loadQuota(force) {
@@ -566,7 +764,7 @@
   }
 
   // ── Thanh trên vùng chính: đường dẫn + tìm kiếm ─────────────────────────
-  const TAB_VI = { home: '🏠 Tổng quan', projects: '📁 Dự án', tasks: '📋 Nhiệm vụ', assign: '💬 Prompt', people: '👥 Nhân sự', prompts: '📚 Thư viện prompt', tokens: '🔢 Token', quota: '⛽ Hạn mức', kpi: '📈 KPI', logs: '🧾 Nhật ký' };
+  const TAB_VI = { routines: '🔁 Việc định kỳ', artifacts: '📦 Sản phẩm', skills: '🧩 Kỹ năng & Kết nối', audit: '🛡 Kiểm toán', home: '🏠 Tổng quan', inbox: '📥 Cần bạn', projects: '📁 Dự án', tasks: '📋 Nhiệm vụ', assign: '💬 Prompt', people: '👥 Nhân sự', prompts: '📚 Thư viện prompt', tokens: '🔢 Token', quota: '⛽ Hạn mức', kpi: '📈 KPI', logs: '🧾 Nhật ký' };
   function crumbs() {
     const el = $('#crumbs');
     if (!el || !C) return;
@@ -601,11 +799,11 @@
     const render = () => {
       const q = input.value.trim().toLowerCase();
       if (!q) return (box.hidden = true);
-      const ts = tasks().filter((t) => `${t.title} ${t.id} ${t.brief || ''}`.toLowerCase().includes(q)).sort((a, b) => updated(b).localeCompare(updated(a))).slice(0, 6);
+      const ts = tasks().filter((t) => `${t.title} ${t.id} ${C.code(t)} ${t.brief || ''}`.toLowerCase().includes(q)).sort((a, b) => updated(b).localeCompare(updated(a))).slice(0, 6);
       const ps = C.S.projects.filter((p) => `${p.name} ${p.id} ${p.description || ''}`.toLowerCase().includes(q)).slice(0, 4);
       const as = [...C.S.agents.values()].filter((a) => `${a.name} ${a.id} ${a.title} ${(a.skills || []).join(' ')}`.toLowerCase().includes(q)).slice(0, 4);
       box.innerHTML =
-        `${ps.map((p) => `<button data-sp="${esc(p.id)}">📁 <b>${esc(p.name)}</b><small>${esc(p.id)}</small></button>`).join('')}${ts.map((t) => `<button data-st="${esc(t.id)}">${dot(t)}<b>${esc(t.title)}</b><small>${esc(t.id)} · ${esc(C.TASK_VI[t.status] || t.status)}</small></button>`).join('')}${as.map((a) => `<button data-sa="${esc(a.id)}">${C.av(a.id, 'av xs')}<b>${esc(a.name)}</b><small>${esc(a.title.slice(0, 40))}</small></button>`).join('')}` +
+        `${ps.map((p) => `<button data-sp="${esc(p.id)}">📁 <b>${esc(p.name)}</b><small>${esc(p.id)}</small></button>`).join('')}${ts.map((t) => `<button data-st="${esc(t.id)}">${dot(t)}<b>${esc(t.title)}</b><small>${esc(C.code(t))} · ${esc(C.TASK_VI[t.status] || t.status)}</small></button>`).join('')}${as.map((a) => `<button data-sa="${esc(a.id)}">${C.av(a.id, 'av xs')}<b>${esc(a.name)}</b><small>${esc(a.title.slice(0, 40))}</small></button>`).join('')}` +
         `<button data-sall>🔎 Tìm “${esc(input.value.trim())}” trong mọi nhiệm vụ <kbd>Enter</kbd></button>`;
       box.hidden = false;
       $$('[data-sp]', box).forEach((b) => (b.onmousedown = () => openProject(b.dataset.sp)));
@@ -663,11 +861,14 @@
       const on = b.dataset.tab === tab && (tab !== 'tasks' || (b.dataset.filter || 'all') === V.filter);
       b.classList.toggle('active', on);
     });
-    const run = tasks().filter(active).length;
+    const run = tasks().filter(isLive).length;
+    const wait = tasks().filter((t) => t.status === 'queued').length;
     const att = tasks().filter(needsAttention).length;
     $('#badge-att').textContent = att || '';
     $('#badge-projects').textContent = C.S.projects.length || '';
-    $('#badge-tasks').textContent = run || '';
+    const b = $('#badge-tasks');
+    b.textContent = run || '';
+    b.title = `${run} nhiệm vụ đang chạy${wait ? ` · ${wait} đang chờ chạy` : ''}`;
   }
 
   D.onTab = (tab) => {
@@ -694,15 +895,15 @@
     syncNav();
     renderTree();
     const tab = C.S.tab;
-    if (tab === 'home') renderHome();
+    if (tab === 'home') keepFocus($('#home'), renderHome);
     if (tab === 'projects') renderProjects();
-    if (tab === 'project' && !document.activeElement?.closest?.('#project-view .p-compose')) renderProject();
+    if (tab === 'project' && !document.activeElement?.closest?.('#project-view .p-compose')) keepFocus($('#project-view'), renderProject);
     if (tab === 'tasks' && !C.S.selectedTask) D.renderTasks($('#task-list'));
     if (tab === 'assign') window.Chat?.changed();
   };
 
   // dùng chung cho chat.js
-  Object.assign(D, { setSide, sideMode, phaseLabel, progress, taskMenu, crumbs, openProject, applyNav, goTasks, filter: () => V.filter, projectId: () => V.projectId });
+  Object.assign(D, { renderTree, setSide, sideMode, phaseLabel, progress, taskMenu, crumbs, openProject, applyNav, goTasks, filter: () => V.filter, projectId: () => V.projectId });
 
   D.init = () => {
     C = window.CC;
@@ -710,6 +911,7 @@
     $$('#sidenav .nav').forEach(
       (b) =>
         (b.onclick = () => {
+          if (b.dataset.act === 'search') return window.Palette ? window.Palette.show() : $('#gsearch').focus();
           if (b.dataset.tab === 'tasks') {
             V.filter = b.dataset.filter || 'all';
             C.S.selectedTask = null;

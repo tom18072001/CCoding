@@ -104,7 +104,7 @@ test('herdr logs: dựng các space log (hệ thống, nhiệm vụ, phòng ban,
     const config = { ...base, dataDir: d, herdr: { ...base.herdr, bin, logSpaces: { enabled: true, agents: true } } };
     const reg = new Registry(path.join(ROOT, 'agents'), path.join(ROOT, 'departments'));
     const groups: LogGroup[] = [
-      { id: 'office', short: 'Điều phối', agents: [reg.router()!] },
+      { id: 'office', short: 'Điều phối', agents: [reg.router()!, reg.cto()!] },
       ...[...reg.departments.values()].map((x) => ({ id: x.id, short: x.short, agents: reg.members(x.id) })),
     ];
     const h = new Herdr(config);
@@ -116,7 +116,7 @@ test('herdr logs: dựng các space log (hệ thống, nhiệm vụ, phòng ban,
     assert.equal(Object.keys(spaces.departments.panes).length, 3);
     // mỗi phòng một tab, mỗi agent một pane
     assert.deepEqual(Object.keys(spaces.agents.tabs), ['office', 'dev', 'research']);
-    assert.equal(Object.keys(spaces.agents.panes).length, 1 + 9 + 6);
+    assert.equal(Object.keys(spaces.agents.panes).length, 2 + 12 + 6);
     assert.ok(spaces.agents.panes['dev/backend-dev']);
     const st = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
     const runs = st.calls.filter((c: string[]) => c[0] === 'pane' && c[1] === 'run').map((c: string[]) => c[3]);

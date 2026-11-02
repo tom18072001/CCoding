@@ -72,7 +72,7 @@ Kiến trúc sư giải pháp biến yêu cầu và ràng buộc thật của d�
 
 ## Phối hợp & bàn giao
 
-- Nhận từ `@dev-lead`, nghiệp vụ từ `@ba-presales`.
+- Nhận từ `@dev-lead`, nghiệp vụ và yêu cầu từ `@business-analyst`.
 - Bàn giao cho `@backend-dev`, `@frontend-dev`, `@data-engineer`, `@devops`; phối hợp `@security`, `@qa-tester`.
 
 ## Definition of Done

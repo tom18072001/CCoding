@@ -105,6 +105,8 @@ export function firstModels(map: Record<string, ModelSpec> | undefined): Record<
 export interface Config {
   root: string;
   server: { host: string; port: number; token?: string };
+  /** Tiền tố mã nhiệm vụ ngắn (vd. "CC" → CC-94): 1–8 chữ in hoa/số, bắt đầu bằng chữ. */
+  taskPrefix: string;
   dataDir: string;
   workspacesDir: string;
   agentsDir: string;
@@ -266,6 +268,7 @@ function readJson(file: string): unknown {
 
 const BUILTIN: Omit<Config, 'root'> = {
   server: { host: '127.0.0.1', port: 7420 },
+  taskPrefix: 'CC',
   dataDir: 'data',
   workspacesDir: 'workspaces',
   agentsDir: 'agents',
@@ -282,13 +285,13 @@ const BUILTIN: Omit<Config, 'root'> = {
   },
   runner: 'auto',
   maxConcurrentTasks: 2,
-  defaults: { discussionRounds: 1, review: true, maxParallel: 3, maxRevisions: 1, budgetTokens: 1500000, budgetMode: 'complete', subtaskBudgetTokens: 0, timeoutMs: 1800000, planApprovalMinutes: 0 },
+  defaults: { discussionRounds: 1, review: true, maxParallel: 3, maxRevisions: 1, budgetTokens: 1500000, budgetMode: 'complete', subtaskBudgetTokens: 0, timeoutMs: 1800000, planApprovalMinutes: 0, acceptance: true },
   phases: {
     // tổng hợp báo cáo bằng Sonnet: pha cuối nằm trên đường găng (Opus 31–52 giây, $0,15–0,25 mỗi nhiệm vụ — benchtest 1/11)
     models: { route: 'haiku', discuss: 'haiku', synthesize: 'sonnet' },
-    maxTokens: { route: 800, plan: 8000, discuss: 700, finalize: 8000, execute: 32000, review: 6000, revise: 32000, synthesize: 10000 },
-    toolTurns: { plan: 8, finalize: 4, execute: 40, review: 10, revise: 16, synthesize: 4 },
-    toolInputBudget: { plan: 100000, finalize: 50000, execute: 800000, review: 200000, revise: 300000, synthesize: 60000 },
+    maxTokens: { route: 800, plan: 8000, discuss: 700, finalize: 8000, execute: 32000, review: 6000, revise: 32000, synthesize: 10000, accept: 6000 },
+    toolTurns: { plan: 8, finalize: 4, execute: 40, review: 10, revise: 16, synthesize: 4, accept: 6 },
+    toolInputBudget: { plan: 100000, finalize: 50000, execute: 800000, review: 200000, revise: 300000, synthesize: 60000, accept: 120000 },
     maxContinuations: 2,
   },
   fastLane: { enabled: true, maxBriefChars: 4000, maxRepoFiles: 300, maxRepoBytes: 1_500_000, planModel: 'sonnet', finalReport: 'template', maxParallel: 4 },
@@ -358,8 +361,10 @@ export function loadConfig(opts: { root?: string; configFile?: string; local?: b
   if (env.HERDR_BIN_PATH && !cfg.herdr.bin) cfg.herdr.bin = env.HERDR_BIN_PATH;
 
   const abs = (p: string) => (path.isAbsolute(p) ? p : path.join(root, p));
+  const prefix = String(cfg.taskPrefix ?? '').trim().toUpperCase();
   return {
     ...cfg,
+    taskPrefix: /^[A-Z][A-Z0-9]{0,7}$/.test(prefix) ? prefix : 'CC',
     root,
     dataDir: abs(cfg.dataDir),
     workspacesDir: abs(cfg.workspacesDir),

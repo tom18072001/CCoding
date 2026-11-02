@@ -355,3 +355,76 @@ Theo yêu cầu chủ dự án, CCoding **không dùng** các tài khoản Claud
 | Giữ phần cuối đầu ra lệnh | PRE-02 | Phần đuôi đầu ra vẫn che bí mật/PII trước khi lưu `projectChecks` / đưa vào prompt như trước |
 
 **Kết luận: ĐẠT CÓ ĐIỀU KIỆN** — điều kiện: (1) chỉ bấm đẩy với repo mà remote là nơi chủ dự án được phép lưu mã đó (repo ND57/workhub chứa mã nguồn + dữ liệu giả, không chứa dữ liệu thật); (2) không tắt kiểm tra bí mật bằng cách đổi tên khóa thành dạng không khớp mẫu — khóa thật đặt trong `.env` (đã bỏ qua khỏi git). Khuyến nghị: bật branch protection trên GitHub cho nhánh xuất phát (vd. `ND57-da-nv`) nếu muốn mọi thay đổi đi qua PR — khi đó nút ⏩ sẽ bị GitHub từ chối và chỉ dùng ⬆ + ↗ PR.
+
+### Bổ sung: UX-3 — dòng thời gian, hộp "Cần bạn", bảng lệnh Ctrl+K (1/11/2026)
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| `GET /api/tasks/<id>/timeline` | PRE-06 | Chỉ đọc **trường thời gian** của `calls.jsonl` (ts, thời lượng, pha, hạng mục, agent, có lỗi hay không) — không trả nội dung phản hồi/prompt; sự kiện nhật ký chỉ lấy loại liên quan thời gian. Nhật ký `checks.run` thêm `setupMs` + thời lượng từng lệnh (không thêm nội dung) |
+| Hộp "Cần bạn" (phím tắt duyệt/chạy tiếp/hủy) | PRE-05, DET-01 | Gọi lại đúng các API đã có (`/plan`, `/review`, `/resume`, `/cancel`) với cùng kiểm tra phía server và cùng nhật ký; hành động chờ 4 giây để hoàn tác; hủy luôn hỏi xác nhận. "Hoãn" chỉ lưu `localStorage` trình duyệt (mã nhiệm vụ + thời điểm) |
+| Bảng lệnh Ctrl+K, "xem gần đây" | — | Dựng từ dữ liệu đã có trong trình duyệt; mục gần đây chỉ lưu mã nhiệm vụ/dự án (≤ 12) trong `localStorage` |
+
+**Kết luận: ĐẠT**, không thêm điều kiện.
+
+Sửa sau review độc lập (2/11/2026): dòng thời gian đọc `calls.jsonl` / `events.jsonl` **theo dòng, chỉ giữ trường thời gian** và nhớ đệm trong bộ nhớ tiến trình (tối đa 64 file, không ghi ra đĩa) — không thêm dữ liệu nào ra ngoài `data/`; nhật ký `workspace.merge` thêm trường `department` (mã phòng, không phải dữ liệu cá nhân). Hộp "Cần bạn" chặn gửi trùng một hành động trong 15 giây và không còn gọi `/cancel` cho việc đã dừng. **Kết luận giữ nguyên: ĐẠT.**
+
+### Bổ sung: UX-4a — mã nhiệm vụ ngắn, cây nhiệm vụ, cột trái theo nhóm (2/11/2026)
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| `Task.seq` + đánh số bù khi khởi động | PRE-06 | Chỉ thêm một số nguyên vào `data/runs/<id>/task.json` (tệp trạng thái, không phải nhật ký chứng cứ — chuỗi băm của nhật ký không đổi); không thêm dữ liệu cá nhân |
+| `taskPrefix` trong cấu hình, `GET /api/tasks/<mã ngắn>` | PRE-05 | Tra cứu trong bộ nhớ, cùng quyền truy cập như mã đầy đủ (token server nếu bật) |
+| Liên kết mã trong tin nhắn, cây nhiệm vụ, "Agent đang làm" | — | Dựng hoàn toàn trong trình duyệt từ dữ liệu đã có; trình duyệt chỉ lưu thêm kiểu xem (`view2`) và trạng thái mở/đóng cây (mã nhiệm vụ → đúng/sai, ≤ 300) trong `localStorage` |
+
+**Kết luận: ĐẠT**, không thêm điều kiện.
+
+### Bổ sung: UX-4b — văn phòng tối giản theo phòng ban (2/11/2026)
+
+Chỉ thay giao diện ô Văn phòng (bỏ canvas, nhân vật giám đốc, đi lại, phòng họp/pantry/giải trí, mục "vui", bảng điều khiển bàn giám đốc; chân dung pixel tách sang `public/avatar.js`). Dữ liệu hiển thị lấy từ trạng thái agent và hội thoại đã có trong trình duyệt; không thêm API, không lưu thêm gì. **Kết luận: ĐẠT.**
+
+### Bổ sung: UX-4c — CTO nghiệm thu, nhân sự mới (2/11/2026)
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| Pha nghiệm thu (`accept`) của CTO | PRE-02, PRE-05, DET-01 | Một lượt gọi model qua `Orchestrator.call()` (đếm token, nhật ký, chính sách nhãn dữ liệu: Bảo mật/Hạn chế chỉ runtime cục bộ, che bí mật/PII khi ra ngoài). Đầu vào là đề bài + báo cáo tổng hợp + kết luận review + kết quả lệnh kiểm tra — cùng loại dữ liệu pha tổng hợp đã gửi, không thêm nguồn mới. CTO chỉ có công cụ đọc. Kết quả lưu `data/runs/<id>/ACCEPTANCE.md` và `task.json`; nhật ký `accept.done`/`accept.error` qua `LogStore` |
+| Agent mới: Business Analyst, Technical Writer, Senior SE | PRI-01 | Hồ sơ yêu cầu dùng dữ liệu giả trong ví dụ, không chép DLCN thật vào tài liệu; Senior SE không đưa khóa sandbox thật vào code/test |
+| Đề xuất việc tiếp theo | — | Chỉ soạn sẵn vào ô giao việc trong trình duyệt; không tự tạo nhiệm vụ |
+
+**Kết luận: ĐẠT**, không thêm điều kiện. Tắt nghiệm thu nếu muốn giảm số lượt gửi dữ liệu ra runtime bên ngoài với nhiệm vụ nhãn Nội bộ.
+
+### Bổ sung: UX-4d — Việc định kỳ, Sản phẩm, Kỹ năng & Kết nối, Kiểm toán (2/11/2026)
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| Việc định kỳ (`data/routines.json`, bộ lập lịch trong server) | GOV-03, PRE-05, DET-01 | Nhiệm vụ mẫu (đề bài) lưu trong `data/` như nhiệm vụ thường; mỗi lần chạy đi qua đúng đường giao việc (nhãn dữ liệu theo dự án, runtime được phép, che bí mật/PII khi gửi ra ngoài, ngân sách). Tạo/sửa/xóa/chạy/bỏ qua đều ghi nhật ký có chuỗi băm (`routine.*`). Không chạy chồng (lần trước chưa xong thì bỏ qua); lỡ lịch lâu thì không chạy bù hàng loạt. `routineId` không đặt được qua API giao việc |
+| Sản phẩm (`GET /api/artifacts`) | PRE-06 | Chỉ liệt kê siêu dữ liệu (đường dẫn, kích thước, thời gian) từ thư mục chạy; nội dung mở qua API tệp đã có (chặn path traversal). Tải xuống tạo trong trình duyệt từ nội dung đã mở |
+| Kỹ năng & Kết nối (`GET /api/skills`) | GOV-02 | Chỉ đọc hồ sơ agent, chính sách công cụ, trạng thái runtime (không trả khóa API, chỉ trả runtime được xử lý nhãn nào) |
+| Kiểm toán (`GET /api/audit`, `/api/audit/verify`) | DET-01, DET-05, RES-03 | Đọc nhật ký hệ thống (đã che bí mật/PII lúc ghi), lọc sự kiện thay đổi trạng thái/an toàn; kiểm chuỗi băm để phát hiện sửa/xóa. Đáp ứng yêu cầu truy xuất nhật ký hệ thống; **khuyến nghị**: sao lưu `data/logs/` sang nơi chỉ ghi thêm (WORM) để giữ ≥ 12 tháng, vì tệp trên máy vẫn có thể bị xóa cả cụm |
+
+**Kết luận: ĐẠT CÓ ĐIỀU KIỆN** — điều kiện: đặt lịch sao lưu `data/logs/` (WORM/ký số) nếu nhật ký dùng làm chứng cứ.
+
+#### Sửa sau review độc lập UX-4d
+
+| Lỗi | Năng lực | Xử lý |
+|---|---|---|
+| Việc định kỳ chỉ giữ dự án ở chế độ "dự án"/"agent" → nhiệm vụ phòng ban/tự động/liên phòng trong dự án "Hạn chế" chạy định kỳ thành "Nội bộ", mất danh sách runtime được phép, ngân sách và worktree của dự án (**hạ nhãn dữ liệu**) | GOV-03, PRE-05 | Giữ dự án ở MỌI chế độ; form hiện ô dự án ở mọi chế độ; dự án không còn → báo lỗi khi lưu. Kiểm thử: nhiệm vụ do việc định kỳ tạo mang `projectId` và nhãn "Hạn chế" như giao tay |
+| Dự án/phòng ban/agent của mẫu bị xóa → không tắt được việc định kỳ, lỗi mãi mỗi lần tới lịch | RES-01 | Tắt luôn được (không kiểm lại mẫu); bật lại thì phải sửa mẫu; công tắc trên giao diện về đúng trạng thái khi lưu lỗi |
+| Lần chạy trước bị gián đoạn (server khởi động lại) chặn mọi lần sau | RES-01 | Không chặn; lần cũ để nguyên (tạm dừng). Tạm dừng chờ giám đốc (hết ngân sách, chờ duyệt…) vẫn chặn, lý do ghi rõ "cần xử lý" |
+| Kiểm toán ghi sai người thao tác ("▶ Chạy ngay" thành Hệ thống; nhật ký cũ không có `data.auto` thành Giám đốc) | DET-01 | Ghi `routineManual`/`manual`; nhật ký cũ thiếu dữ liệu hiển thị "Không rõ" thay vì đoán |
+| Kiểm toán sót sự kiện: kiểm tra hồi quy (`alert.checks.regression`), lệnh bị hook Claude Code chặn ("CCoding chặn lệnh"), đổi ngân sách (`budget.update`), xóa dự án (trước đây không ghi nhật ký) | DET-01, DET-05 | Bổ sung cả bốn; xóa dự án ghi `project.deleted` (có nhãn dữ liệu của dự án) |
+| "Xem thêm cũ hơn" làm rơi sự kiện cùng mốc thời gian | DET-05 | Phân trang theo `seq` của chuỗi băm (duy nhất, tăng dần) |
+| Kiểm chuỗi băm đọc cả tệp vào bộ nhớ một lần (chặn server, lỗi với tệp > ~512 MB) | RES-03 | API đọc luồng từng dòng (`verifyChainStream`); CLI giữ bản đọc một lần |
+| Đầu vào API: body `null`, agent ngoài phòng ban, `limit` sai, mã việc định kỳ không có, `routines.json` sai dạng làm hỏng mọi lệnh CLI | GOV-03 | Báo lỗi 400/404 bằng tiếng Việt; tệp sai dạng bị bỏ qua |
+
+Kết luận giữ nguyên: **ĐẠT CÓ ĐIỀU KIỆN** (điều kiện sao lưu WORM `data/logs/`). Lỗi hạ nhãn dữ liệu đã đóng trước khi phát hành — chưa từng chạy trên máy thật.
+
+### Bổ sung: cập nhật tài liệu sau UX-4, CLI dùng mã ngắn (2/11/2026)
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| CLI `status`/`show`/`task`/`resume`/`split` hiện và nhận mã `CC-n`; `show` tìm nhiệm vụ theo số thứ tự trong `data/runs/*/task.json` | GOV-03 | Chỉ đọc dữ liệu đã có trong `data/` trên máy; không ghi, không gửi ra ngoài. `show` hiện thêm dòng kết luận nghiệm thu (đã có trong `task.json`) |
+| `ccoding.config.json` ghi rõ `taskPrefix`, `defaults.acceptance`, `planApprovalMinutes`, giới hạn pha `accept` | GOV-02 | Giá trị trùng mặc định trong mã — không đổi hành vi |
+| Ảnh `docs/screenshot.png` mới | PRE-04 | Chụp từ server thử với runtime `mock` và dữ liệu mẫu (dự án "Dự án mẫu", nhiệm vụ mẫu) — **không** chụp từ máy thật, không có tên dự án/khách hàng/dữ liệu thật |
+| README, `docs/ARCHITECTURE.md`, `docs/UI.md`, `docs/TOOLS.md`, `docs/RUNTIMES.md`, `docs/HERDR.md` | — | Tài liệu, không đụng dữ liệu |
+
+**Kết luận: ĐẠT.**

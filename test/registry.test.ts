@@ -11,9 +11,13 @@ test('agent.md và hồ sơ phòng ban hợp lệ', () => {
   const r = new Registry(path.join(ROOT, 'agents'), path.join(ROOT, 'departments'));
   assert.deepEqual(r.errors, []);
   assert.deepEqual([...r.departments.keys()].sort(), ['dev', 'research']);
-  assert.equal(r.department('dev').members.length, 9);
+  assert.equal(r.department('dev').members.length, 12);
   assert.equal(r.department('research').members.length, 6);
   assert.equal(r.router()?.id, 'orchestrator');
+  // UX-4c: CTO nghiệm thu, không thuộc phòng ban làm việc nào; BA, Technical Writer, Senior SE thuộc phòng Phát triển
+  assert.equal(r.cto()?.id, 'cto');
+  assert.ok(!r.departments.has(r.cto()!.department), 'CTO không phải thành viên phòng ban');
+  for (const id of ['business-analyst', 'tech-writer', 'senior-swe']) assert.ok(r.department('dev').members.includes(id), `${id} thuộc phòng Phát triển`);
   for (const d of r.departments.values()) {
     assert.equal(r.agent(d.lead).role, 'lead', `${d.id} lead`);
     assert.equal(r.agent(d.reviewer).role, 'reviewer', `${d.id} reviewer`);

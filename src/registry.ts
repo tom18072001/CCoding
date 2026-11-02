@@ -3,7 +3,7 @@ import path from 'node:path';
 import { parseFrontmatter } from './util/frontmatter.js';
 import type { AgentDef, DepartmentDef, Role } from './types.js';
 
-const ROLES: Role[] = ['lead', 'member', 'reviewer', 'router'];
+const ROLES: Role[] = ['lead', 'member', 'reviewer', 'router', 'cto'];
 
 function walk(dir: string): string[] {
   if (!fs.existsSync(dir)) return [];
@@ -135,5 +135,10 @@ export class Registry {
 
   router(): AgentDef | undefined {
     return [...this.agents.values()].find((a) => a.role === 'router');
+  }
+
+  /** Agent nghiệm thu (vai trò cto) — không có thì bỏ qua pha nghiệm thu. */
+  cto(): AgentDef | undefined {
+    return [...this.agents.values()].find((a) => a.role === 'cto');
   }
 }

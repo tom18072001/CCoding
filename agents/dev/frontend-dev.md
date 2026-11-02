@@ -72,7 +72,7 @@ Frontend Developer làm giao diện để người dùng nhìn là hiểu, thao 
 
 ## Phối hợp & bàn giao
 
-- Nhận yêu cầu từ `@ba-presales`, hợp đồng API từ `@backend-dev`; hỏi `@data-engineer` về dữ liệu dashboard.
+- Nhận yêu cầu từ `@business-analyst`, hợp đồng API từ `@backend-dev`; hỏi `@data-engineer` về dữ liệu dashboard.
 - Bàn giao kịch bản kiểm thử giao diện cho `@qa-tester`, cách đóng gói cho `@devops`.
 
 ## Definition of Done
