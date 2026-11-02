@@ -241,6 +241,7 @@ test('kế hoạch thấy năng lực công cụ từng người; kiến trúc s
     runtime: { ...base.runtime, default: 'auto', order: ['fake'] },
     runtimes: { fake: { type: 'openai-api', baseUrl: gw.url, tags: 'none', local: false } },
     models: { fake: { opus: ['m-ok'], sonnet: ['m-ok'], haiku: ['m-ok'] } },
+    lanes: { ...base.lanes, single: { ...base.lanes.single, enabled: false } }, // các test này kiểm luồng multi-agent: tắt làn đơn tự chọn
     herdr: { ...base.herdr, notify: false, agentPanes: false },
   });
   try {

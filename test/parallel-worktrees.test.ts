@@ -92,6 +92,7 @@ function app(url: string, dataDir: string, parallelWorktrees = true, resolveRoun
     runtimes: { fake: { type: 'openai-api', baseUrl: url, tags: 'none', local: false } },
     models: { fake: { opus: ['m-ok'], sonnet: ['m-ok'], haiku: ['m-ok'] } },
     tools: { ...base.tools, serializeWriters: true, parallelWorktrees, repoMap: false, ...(resolveRounds !== undefined ? { resolveRounds } : {}) },
+    lanes: { ...base.lanes, single: { ...base.lanes.single, enabled: false } }, // các test này kiểm luồng multi-agent: tắt làn đơn tự chọn
     herdr: { ...base.herdr, notify: false, agentPanes: false },
   });
 }

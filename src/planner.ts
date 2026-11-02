@@ -24,7 +24,7 @@ interface RawSubtask {
 
 const MAX_SUBTASKS = 8;
 
-function skillScore(text: string, a: AgentDef): number {
+export function skillScore(text: string, a: AgentDef): number {
   const t = text.toLowerCase();
   return a.skills.reduce((n, s) => (t.includes(s.replace(/-/g, ' ')) || t.includes(s) ? n + 2 : n), 0) + (t.includes(a.id) ? 3 : 0);
 }

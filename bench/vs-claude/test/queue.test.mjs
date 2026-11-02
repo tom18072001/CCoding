@@ -11,10 +11,10 @@ import { checkArms, doneKeys, supportedLanes } from '../lib/queue.mjs';
 const SUITE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ARMS = JSON.parse(fs.readFileSync(path.join(SUITE, 'arms.json'), 'utf8'));
 
-test('arms.json có B6 (lane fast) và B7 (lane single, chờ B-01)', () => {
+test('arms.json có B6 (lane fast) và B7 (lane single, B-01 đã có)', () => {
   assert.equal(ARMS.B6.options.lane, 'fast');
   assert.equal(ARMS.B7.options.lane, 'single');
-  assert.equal(ARMS.B7.pending, 'B-01');
+  assert.equal(ARMS.B7.pending, undefined, 'B-01 đã gộp: arm B7 không còn cờ pending');
 });
 
 test('dòng infra không được tính là xong, lượt đó phải chạy lại', () => {
@@ -30,26 +30,21 @@ test('dòng infra không được tính là xong, lượt đó phải chạy l�
   assert.ok(!done.has('b'));
 });
 
-test('checkArms: B7 báo lỗi rõ khi lane single chưa được hỗ trợ, B6 thì không', () => {
+test('checkArms: B7 chạy được khi lane single được hỗ trợ; thiếu lane thì báo lỗi rõ, không tự lùi sang lane khác', () => {
   const lanes = ['auto', 'fast', 'full'];
   assert.deepEqual(checkArms(['B6', 'B0'], ARMS, lanes), []);
-  assert.deepEqual(checkArms(['B7'], ARMS, lanes), ["Arm B7 cần lane 'single' (B-01) — CCoding hiện chưa hỗ trợ"]);
+  assert.deepEqual(checkArms(['B7'], ARMS, lanes), ["Arm B7 cần lane 'single' — CCoding hiện chưa hỗ trợ"]);
   assert.deepEqual(checkArms(['B7'], ARMS, [...lanes, 'single']), []);
 });
 
-test('supportedLanes đọc union lane từ src/types.ts', () => {
+test('supportedLanes đọc union lane từ src/types.ts: có fast và single (B-01)', () => {
   const lanes = supportedLanes(path.resolve(SUITE, '../..'));
   assert.ok(lanes.includes('fast'));
+  assert.ok(lanes.includes('single'));
 });
 
-test('run.mjs --arms B7 thoát mã ≠ 0 trước khi gửi task (lane single chưa có)', (t) => {
-  if (supportedLanes(path.resolve(SUITE, '../..')).includes('single')) return t.skip("CCoding đã hỗ trợ lane 'single'");
-  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'ccvb-b7-'));
-  const r = spawnSync(process.execPath, [path.join(SUITE, 'run.mjs'), '--arms', 'B7', '--tasks', 't1', '--repeats', '1', '--out', out], { encoding: 'utf8' });
-  assert.notEqual(r.status, 0);
-  assert.match(r.stderr, /Arm B7 cần lane 'single' \(B-01\) — CCoding hiện chưa hỗ trợ/);
-  assert.ok(!fs.existsSync(path.join(out, 'runs.jsonl')));
-  fs.rmSync(out, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+test('arm B7 không bị chặn bởi kiểm arm của run.mjs (lane single có trong src/types.ts)', () => {
+  assert.deepEqual(checkArms(['B7'], ARMS, supportedLanes(path.resolve(SUITE, '../..'))), []);
 });
 
 test('analyze.mjs loại dòng infra và in số dòng đã loại', () => {

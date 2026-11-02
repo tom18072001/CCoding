@@ -74,8 +74,8 @@ test('làn đầy đủ theo yêu cầu vẫn họp và tổng hợp bằng mode
   }
 });
 
-test('làn tự chọn: repo nhỏ → làn nhanh; vượt ngưỡng tệp → làn đầy đủ; không có repo → làn đầy đủ', async () => {
-  for (const [cfg, want] of [[{}, 'fast'], [{ maxRepoFiles: 1 }, 'full']] as const) {
+test('làn tự chọn: việc nhỏ trong repo nhỏ → làn đơn (B-01); vượt ngưỡng tệp → làn đầy đủ; không có repo → làn đầy đủ', async () => {
+  for (const [cfg, want] of [[{}, 'single'], [{ maxRepoFiles: 1 }, 'full']] as const) {
     const a = app(cfg);
     try {
       const repo = repoIn(a.dataDir);
