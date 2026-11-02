@@ -156,6 +156,11 @@ export interface Config {
    * maxParallel: số hạng mục độc lập chạy cùng lúc tối đa (nâng options.maxParallel của nhiệm vụ lên khi kế hoạch có nhiều hạng mục độc lập hơn).
    */
   fastLane: { enabled: boolean; maxBriefChars: number; maxRepoFiles: number; maxRepoBytes: number; planModel: string; finalReport: 'template' | 'llm'; maxParallel?: number };
+  /**
+   * Làn đơn (B-01, options.lane 'auto'): việc có parts < maxParts và filesTouched < maxFilesTouched (hoặc chuỗi tuần tự) chạy một agent, không điều phối.
+   * Hiện chỉ options.lane ép được làn; chưa có cấu hình ép làn theo dự án.
+   */
+  lanes: { single: { enabled: boolean; maxParts: number; maxFilesTouched: number } };
   /** Công cụ workspace cho agent (đọc/ghi file, chạy lệnh) — xem docs/TOOLS.md. */
   tools: {
     /** Quyền mặc định khi nhiệm vụ không thuộc dự án (workspace riêng của CCoding). */
@@ -295,6 +300,7 @@ const BUILTIN: Omit<Config, 'root'> = {
     maxContinuations: 2,
   },
   fastLane: { enabled: true, maxBriefChars: 4000, maxRepoFiles: 300, maxRepoBytes: 1_500_000, planModel: 'sonnet', finalReport: 'template', maxParallel: 4 },
+  lanes: { single: { enabled: true, maxParts: 5, maxFilesTouched: 6 } },
   tools: {
     defaultAccess: 'write',
     projectAccess: 'exec',
