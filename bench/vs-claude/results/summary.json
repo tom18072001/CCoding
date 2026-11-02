@@ -6,7 +6,8 @@
   "C4": "cloud 2/11 · làn nhanh lần 1 — 2 nhiệm vụ CCoding cùng lúc (tranh agent, số đo thời gian nhiễu)",
   "C5": "cloud 2/11 · làn nhanh + điều phối song song (+ hook stdin từ giữa vòng) vs Claude, mỗi hệ tuần tự · t3 lượt 1 của CCoding bị lỗi treo stdin (579 s)",
   "C6": "cloud 2/11 · kiểm chứng d7600f6: làn nhanh chạy cùng lúc tối đa 4 hạng mục độc lập (t3, t5)",
-  "C7": "cloud 2/11 · tách hiệu ứng mô hình: Claude Code một mình bằng Sonnet (claude-sonnet) cùng lúc với làn nhanh (thành viên Sonnet)"
+  "C7": "cloud 2/11 · tách hiệu ứng mô hình: Claude Code một mình bằng Sonnet (claude-sonnet) cùng lúc với làn nhanh (thành viên Sonnet)",
+  "C8": "cloud 2/11 · kiểm chứng c55a249 (hạng mục sửa mã giao nhầm cho reviewer; lỗi review nhãn lạ vào vòng sửa) trên t2"
  },
  "summary": {
   "C1": {
@@ -714,6 +715,25 @@
       "output": 24725,
       "cache_read": 433299,
       "cache_write": 37068
+     }
+    }
+   }
+  },
+  "C8": {
+   "t2-orders": {
+    "ccoding-fastlane": {
+     "n": 3,
+     "hidden_pct": 100.0,
+     "full_pass": 3,
+     "wall_mean_s": 129.3,
+     "wall_min_s": 102,
+     "wall_max_s": 166,
+     "cost_mean_usd": 0.793,
+     "tokens_mean": {
+      "input": 53,
+      "output": 22922,
+      "cache_read": 684317,
+      "cache_write": 122274
      }
     }
    }

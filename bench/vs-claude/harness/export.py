@@ -22,6 +22,7 @@ LABEL = {
     'C5': 'cloud 2/11 · làn nhanh + điều phối song song (+ hook stdin từ giữa vòng) vs Claude, mỗi hệ tuần tự · t3 lượt 1 của CCoding bị lỗi treo stdin (579 s)',
     'C6': 'cloud 2/11 · kiểm chứng d7600f6: làn nhanh chạy cùng lúc tối đa 4 hạng mục độc lập (t3, t5)',
     'C7': 'cloud 2/11 · tách hiệu ứng mô hình: Claude Code một mình bằng Sonnet (claude-sonnet) cùng lúc với làn nhanh (thành viên Sonnet)',
+    'C8': 'cloud 2/11 · kiểm chứng c55a249 (hạng mục sửa mã giao nhầm cho reviewer; lỗi review nhãn lạ vào vòng sửa) trên t2',
 }
 
 ledger_rows = {}

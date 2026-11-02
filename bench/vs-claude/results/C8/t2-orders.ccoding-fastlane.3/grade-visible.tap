@@ -1,0 +1,136 @@
+TAP version 13
+# Subtest: tính tiền không mã giảm giá
+ok 1 - tính tiền không mã giảm giá
+  ---
+  duration_ms: 1.692857
+  type: 'test'
+  ...
+# Subtest: giữ chỗ tồn kho khi thêm
+ok 2 - giữ chỗ tồn kho khi thêm
+  ---
+  duration_ms: 0.226604
+  type: 'test'
+  ...
+# Subtest: mã không tồn tại
+ok 3 - mã không tồn tại
+  ---
+  duration_ms: 0.706798
+  type: 'test'
+  ...
+# Subtest: kho 4: thêm 2 rồi sửa lên 3 được
+ok 4 - kho 4: thêm 2 rồi sửa lên 3 được
+  ---
+  duration_ms: 1.138997
+  type: 'test'
+  ...
+# Subtest: giảm qty nhả giữ chỗ; về 0 nhả hết
+ok 5 - giảm qty nhả giữ chỗ; về 0 nhả hết
+  ---
+  duration_ms: 0.247007
+  type: 'test'
+  ...
+# Subtest: xóa món thì giỏ khác mua được
+ok 6 - xóa món thì giỏ khác mua được
+  ---
+  duration_ms: 0.450799
+  type: 'test'
+  ...
+# Subtest: hai giỏ cùng giữ chỗ
+ok 7 - hai giỏ cùng giữ chỗ
+  ---
+  duration_ms: 1.085066
+  type: 'test'
+  ...
+# Subtest: vượt kho: lỗi và trạng thái không đổi
+ok 8 - vượt kho: lỗi và trạng thái không đổi
+  ---
+  duration_ms: 0.28765
+  type: 'test'
+  ...
+# Subtest: catalog dùng toCents cho giá
+ok 9 - catalog dùng toCents cho giá
+  ---
+  duration_ms: 0.117507
+  type: 'test'
+  ...
+# Subtest: toCents làm tròn half away from zero đúng với số thập phân
+ok 10 - toCents làm tròn half away from zero đúng với số thập phân
+  ---
+  duration_ms: 1.148262
+  type: 'test'
+  ...
+# Subtest: toCents ném TypeError với giá trị không hữu hạn
+ok 11 - toCents ném TypeError với giá trị không hữu hạn
+  ---
+  duration_ms: 0.40156
+  type: 'test'
+  ...
+# Subtest: allocate phần dư lớn nhất
+ok 12 - allocate phần dư lớn nhất
+  ---
+  duration_ms: 0.83017
+  type: 'test'
+  ...
+# Subtest: allocate: trọng số 0, sum 0, total 0, số lớn
+ok 13 - allocate: trọng số 0, sum 0, total 0, số lớn
+  ---
+  duration_ms: 0.245545
+  type: 'test'
+  ...
+# Subtest: toCents cơ bản
+ok 14 - toCents cơ bản
+  ---
+  duration_ms: 0.916817
+  type: 'test'
+  ...
+# Subtest: formatMoney
+ok 15 - formatMoney
+  ---
+  duration_ms: 0.296275
+  type: 'test'
+  ...
+# Subtest: allocate chia đều
+ok 16 - allocate chia đều
+  ---
+  duration_ms: 0.686076
+  type: 'test'
+  ...
+# Subtest: freeUnits mua 2 tặng 1
+ok 17 - freeUnits mua 2 tặng 1
+  ---
+  duration_ms: 1.547506
+  type: 'test'
+  ...
+# Subtest: freeUnits cấu hình khác
+ok 18 - freeUnits cấu hình khác
+  ---
+  duration_ms: 0.24989
+  type: 'test'
+  ...
+# Subtest: hạn mã endsAt tới hết ngày UTC
+ok 19 - hạn mã endsAt tới hết ngày UTC
+  ---
+  duration_ms: 0.846087
+  type: 'test'
+  ...
+# Subtest: thuế tính trên net sau giảm
+ok 20 - thuế tính trên net sau giảm
+  ---
+  duration_ms: 2.151274
+  type: 'test'
+  ...
+# Subtest: mua 2 tặng 1 trong giỏ: 2 hộp không miễn phí, 3 hộp miễn phí 1
+ok 21 - mua 2 tặng 1 trong giỏ: 2 hộp không miễn phí, 3 hộp miễn phí 1
+  ---
+  duration_ms: 0.478748
+  type: 'test'
+  ...
+1..21
+# tests 21
+# suites 0
+# pass 21
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 287.800241

@@ -81,6 +81,12 @@ chi phí = giá niêm yết quy đổi do Claude Code báo (gói Max không tr�
 | t5-logq | ccoding-fastlane | 1 | 100.0% | 1/1 | 127 (127–127) s | $1.04 | 46k | 850k | 122k |
 | t5-logq | claude-sonnet | 2 | 100.0% | 2/2 | 166 (159–172) s | $0.44 | 25k | 433k | 37k |
 
+## C8 — cloud 2/11 · kiểm chứng c55a249 (hạng mục sửa mã giao nhầm cho reviewer; lỗi review nhãn lạ vào vòng sửa) trên t2
+
+| Bài | Hệ | n | Test ẩn | Đạt trọn | Thời gian TB (min–max) | Chi phí TB | Đầu ra | Đọc cache | Ghi cache |
+|---|---|--:|--:|--:|--:|--:|--:|--:|--:|
+| t2-orders | ccoding-fastlane | 3 | 100.0% | 3/3 | 129 (102–166) s | $0.79 | 23k | 684k | 122k |
+
 ## Từng lượt
 
 | Vòng | Bài | Hệ | Lượt | Trạng thái | Thời gian | Chi phí | Test ẩn | perf (ms) | Nhiệm vụ CCoding |
@@ -157,3 +163,6 @@ chi phí = giá niêm yết quy đổi do Claude Code báo (gói Max không tr�
 | C7 | t5-logq | ccoding-fastlane | 1 | done | 127 s | $1.04 | 146/146 |  | T-20261102-115622-a41 |
 | C7 | t5-logq | claude-sonnet | 1 | done | 172 s | $0.45 | 146/146 |  |  |
 | C7 | t5-logq | claude-sonnet | 2 | done | 159 s | $0.43 | 146/146 |  |  |
+| C8 | t2-orders | ccoding-fastlane | 1 | done | 166 s | $1.22 | 60/60 |  | T-20261102-130250-6be |
+| C8 | t2-orders | ccoding-fastlane | 2 | done | 102 s | $0.55 | 60/60 |  | T-20261102-130551-d47 |
+| C8 | t2-orders | ccoding-fastlane | 3 | done | 120 s | $0.61 | 60/60 |  | T-20261102-130736-d0a |

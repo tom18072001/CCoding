@@ -298,7 +298,7 @@ Gộp làn nhanh C5–C7 (bỏ lượt treo stdin), Claude Code Opus C5–C6, Cl
 | t5-logq | 259 s | 166 s | **165 s** | 0,64 | 1,00 | 2,6× |
 
 Claude Code Sonnet đạt 100 % test ẩn mọi lượt; làn nhanh có một lượt t2 ở C7 chỉ đạt 52/60 (sai quy tắc "mua X tặng Y" và hạn mã theo
-UTC — review không bắt được). **Kết luận đổi:** lợi thế thời gian của làn nhanh so với Claude Code Opus chủ yếu đến từ mô hình Sonnet
+UTC; reviewer **đã báo đúng** hai lỗi nhưng không có vòng sửa — lỗi điều phối, xem C8 bên dưới). **Kết luận đổi:** lợi thế thời gian của làn nhanh so với Claude Code Opus chủ yếu đến từ mô hình Sonnet
 nhanh hơn, không phải từ multi-agent. Cùng mô hình, một agent nhanh hơn 1,6–2,9 lần và rẻ hơn 2,5–3,8 lần ở 4/5 bài; chỉ t5 (công cụ
 nhiều module độc lập, việc dài nhất) làn nhanh ngang (lượt cùng lúc ở C7: 127 s so với 159–172 s). Phần cố định của điều phối (lập kế
 hoạch ~25 s + review 28–81 s + gộp) lớn hơn phần tiết kiệm nhờ song song khi một agent chỉ cần 40–110 s — khớp CAID (Geng & Neubig,
@@ -308,3 +308,11 @@ lợi) và bài 10/2026 của Anthropic về gộp subagent vào một vòng age
 Hệ quả cho mục tiêu "việc nhỏ dưới 15 phút nhanh hơn Claude Code": cần **làn đơn** — việc nhỏ giao thẳng một agent (Sonnet) với lệnh
 kiểm tra làm cổng chất lượng, bỏ lập kế hoạch/review LLM; chia việc song song chỉ khi kế hoạch có ≥ 3 phần độc lập đủ lớn (ước lượng:
 mỗi phần ≥ ~60 s làm một mình). Chưa làm — cần đo trên bài > 15 phút trước khi đặt ngưỡng.
+
+**Sửa lỗi điều phối từ C7 t2 (`c55a249`) và C8.** Lượt C7 t2 (52/60) không phải do review bỏ sót: kế hoạch giao "sửa lỗi 3, 4 trong
+`src/promotions.js`" cho QA (người review); `shapeFastPlan` (`9589c2f`) coi mọi hạng mục của người review là "viết test" nên chuyển nó
+thành trọng tâm review → không ai sửa; reviewer báo đúng hai lỗi (major) nhưng ghi nhãn "Lỗi 3/4 (src/promotions.js)" không khớp mã hạng
+mục nên không có vòng sửa. Sửa: chỉ hạng mục thuần kiểm thử (mọi tệp nêu tên là tệp test) mới thành trọng tâm review, hạng mục có mã nguồn
+giao người rảnh; lỗi blocker/major có nhãn lạ được gán hạng mục gần nhất (`assignStrayIssues`) nên vẫn vào vòng sửa. 2 test mới (155/155).
+C8 (t2 làn nhanh × 3 sau sửa): 60/60 cả 3 lượt, 166 / 102 / 120 s (lượt đầu có một vòng sửa theo lỗi thật của review); kế hoạch ở C8 không
+giao việc cho QA nên nhánh sửa được kiểm bằng test đơn vị, chưa gặp lại trong lượt chạy thật.
