@@ -20,7 +20,7 @@ function app(fastLane: Record<string, unknown> = {}) {
     tools: { ...base.tools, repoMap: false },
     fastLane: { ...base.fastLane, ...fastLane },
   });
-  return Object.assign(a, { dataDir, cleanup: () => fs.rmSync(dataDir, { recursive: true, force: true }) });
+  return Object.assign(a, { dataDir, cleanup: () => fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) });
 }
 
 function repoIn(dir: string): string {
@@ -74,8 +74,8 @@ test('làn đầy đủ theo yêu cầu vẫn họp và tổng hợp bằng mode
   }
 });
 
-test('làn tự chọn: repo nhỏ → làn nhanh; vượt ngưỡng tệp → làn đầy đủ; không có repo → làn đầy đủ', async () => {
-  for (const [cfg, want] of [[{}, 'fast'], [{ maxRepoFiles: 1 }, 'full']] as const) {
+test('làn tự chọn: việc nhỏ trong repo nhỏ → làn đơn (B-01); vượt ngưỡng tệp → làn đầy đủ; không có repo → làn đầy đủ', async () => {
+  for (const [cfg, want] of [[{}, 'single'], [{ maxRepoFiles: 1 }, 'full']] as const) {
     const a = app(cfg);
     try {
       const repo = repoIn(a.dataDir);
@@ -190,6 +190,6 @@ test('hook claude-cli: lệnh Bash chạy với stdin = /dev/null (không treo k
     assert.match(out, /vẫn đọc được heredoc/);
     assert.equal(fs.readFileSync(path.join(dir, 'x.txt'), 'utf8'), '');
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

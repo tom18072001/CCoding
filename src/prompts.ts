@@ -303,6 +303,46 @@ ${PLAN_SCHEMA}`,
   };
 }
 
+/**
+ * B-10: yêu cầu trưởng phòng SỬA kế hoạch khi cổng phủ kế hoạch chặn. Nêu đúng danh sách đích chưa có hạng mục nhận (quy tắc A)
+ * và/hoặc lý do kế hoạch đọc dở (quy tắc B); đòi kế hoạch ĐẦY ĐỦ, không chỉ phần thiếu.
+ */
+export function replanPrompt(c: Ctx, brief: string, planSummary: string, subtasks: Subtask[], gate: { uncovered: string[]; reasons: string[] }, tools: ToolName[] = []): Built {
+  const missing = gate.uncovered.length
+    ? [
+        '### Đích CHƯA có hạng mục nhận (bắt buộc xử lý)',
+        ...gate.uncovered.map((t) => `- \`${t}\``),
+        'Mỗi đích trên phải xuất hiện trong `title`, `description` hoặc `deliverable` của ít nhất một hạng mục; hoặc ghi vào `outOfScope` kèm lý do (vd. "đã có sẵn, không ai sửa").',
+        '',
+      ].join('\n')
+    : '';
+  const unreadable = gate.reasons.filter((r) => r.startsWith('B'));
+  const partial = unreadable.length ? ['### Kế hoạch bị đọc dở', ...unreadable.map((r) => `- ${r}`), ''].join('\n') : '';
+  const schema = PLAN_SCHEMA.replace('"subtasks": [', '"outOfScope": [{ "target": "đường/dẫn/tệp", "reason": "lý do không làm" }],\n  "subtasks": [');
+  return {
+    context: header(c, 'plan'),
+    prompt: `## Đề bài
+${truncate(brief, 4000)}
+
+## Kế hoạch trước (bị cổng kiểm tra chặn — CHƯA được chạy)
+${planSummary || '(không có tóm tắt)'}
+${planText(subtasks)}
+
+${missing}${partial}
+## Nhân sự có thể giao việc
+${rosterLines(c.roster, c.caps)}
+${toolNote(c, tools, 'plan')}
+## Việc của bạn (Trưởng phòng): SỬA KẾ HOẠCH
+Lập lại kế hoạch ĐẦY ĐỦ (mọi hạng mục, không chỉ phần thiếu) để không đích nào bị bỏ sót. Quy tắc:
+- Số hạng mục trong \`summary\` (nếu nêu) phải bằng số phần tử trong \`subtasks\`.
+- Mỗi hạng mục có \`assignee\` là id trong danh sách (không có dấu @), \`description\` nhất quán với \`assignee\` (không nhắc người khác như người làm), \`deliverable\` là sản phẩm bàn giao cụ thể.
+- Giữ JSON gọn để không bị cắt cụt; đóng đủ khối \`\`\`json.
+
+Trả lời bằng một khối JSON theo mẫu (\`outOfScope\` chỉ dùng khi có đích cố ý không làm):
+${schema}`,
+  };
+}
+
 export function transcriptText(msgs: ChatMessage[], names: Map<string, string>, max = 9000): string {
   const text = msgs
     .filter((m) => m.kind !== 'system')
@@ -384,12 +424,12 @@ export const FAST_LANE_PLAN = `- **LÀN NHANH (việc nhỏ)** — mục tiêu: 
   - Lập kế hoạch NHANH: đọc vừa đủ (đặc tả + cấu trúc thư mục + tệp sẽ sửa), không khảo sát sâu; mô tả hạng mục ngắn gọn nhưng đủ hợp đồng.`;
 
 /** Báo cáo làn nhanh dựng từ kế hoạch, bàn giao từng hạng mục, review và thay đổi — không gọi model (tiết kiệm ~30 giây cuối nhiệm vụ). */
-export function templateReport(task: Task, dept: DepartmentDef, run: DeptRun, items: DepInput[], review: string, changes: string): string {
+export function templateReport(task: Task, dept: DepartmentDef, run: DeptRun, items: DepInput[], review: string, changes: string, laneNote = 'Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model).'): string {
   const failed = run.subtasks.filter((s) => s.status === 'failed');
   const lines = [
     `# Báo cáo ${dept.name} — ${task.title}`,
     '',
-    `_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._`,
+    `_${laneNote}_`,
     '',
     '## Tóm tắt',
     '',
@@ -481,9 +521,10 @@ Câu trả lời CUỐI CÙNG phải là sản phẩm bàn giao hoàn chỉnh th
   };
 }
 
-export function reviewPrompt(c: Ctx, items: DepInput[], tools: ToolName[] = [], changes = ''): Built {
+/** compact (P3, B-02): reviewer nhận diff + kết quả lệnh kiểm, mỗi bàn giao chỉ giữ phần đầu thay vì toàn bộ đầu ra. */
+export function reviewPrompt(c: Ctx, items: DepInput[], tools: ToolName[] = [], changes = '', compact = false): Built {
   const canRead = tools.includes('read_file');
-  const per = Math.max(4000, Math.floor(60000 / Math.max(1, items.length)));
+  const per = compact ? 1500 : Math.max(4000, Math.floor(60000 / Math.max(1, items.length)));
   const body = (i: DepInput) => {
     if (i.text.length <= per) return i.text;
     const rest = (i.text.length - per).toLocaleString('vi-VN');
@@ -493,7 +534,7 @@ export function reviewPrompt(c: Ctx, items: DepInput[], tools: ToolName[] = [], 
     context: header(c, 'review'),
     prompt: `## Các sản phẩm cần review
 ${items.map((i) => `### ${i.st.id} — ${i.st.title} (@${i.st.assignee})${i.wsPath && c.filesAccessible ? ` — bản đầy đủ: \`${i.wsPath}\`` : ''}\nTiêu chí: ${i.st.description}\n\n${body(i)}`).join('\n\n---\n\n')}
-${changes ? `\n## Thay đổi trong workspace (git)\n\`\`\`\n${truncate(changes, 4000)}\n\`\`\`\n` : ''}${checksBlock(c.task, 'review')}${toolNote(c, tools, 'review')}${
+${changes ? `\n## Thay đổi trong workspace (git)\n\`\`\`\n${truncate(changes, compact ? 8000 : 4000)}\n\`\`\`\n` : ''}${checksBlock(c.task, 'review')}${toolNote(c, tools, 'review')}${
       c.reviewFocus
         ? `\n## Trọng tâm kiểm thử độc lập (làn nhanh — thay cho hạng mục kiểm thử riêng)\n${c.reviewFocus}\nTự viết và chạy nhanh các ca biên quan trọng nhất theo trọng tâm này (tệp tạm trong \`${c.ccDir ?? '.ccoding'}\` hoặc \`node -e\`), đối chiếu với đặc tả; không cần bộ test đầy đủ.\n`
         : ''
@@ -522,6 +563,49 @@ ${issues}
 ${toolNote(c, tools, 'revise')}
 ## Việc của bạn: SỬA THEO REVIEW
 Xử lý triệt để từng góp ý (sửa file thật nếu có công cụ). Trả về BẢN HOÀN CHỈNH MỚI của báo cáo bàn giao (không chỉ phần thay đổi), mở đầu bằng "## Tóm tắt" và thêm mục "## Đã sửa theo review".`,
+  };
+}
+
+/** B-02: vòng sửa theo kiểm tra — nhận đúng đầu ra của lệnh đỏ (đã cắt) + đích chưa có hạng mục nhận (B-10). */
+export function gateFixPrompt(
+  c: Ctx,
+  st: Subtask,
+  previous: string,
+  red: Array<{ command: string; code: number | null; tail: string; required: boolean }>,
+  uncovered: string[] = [],
+  tools: ToolName[] = [],
+  round = 1,
+  maxOutputChars = 8000,
+): Built {
+  const reds = red
+    .map((r) => `### \`${r.command}\` → exit ${r.code}${r.required ? ' — đề bài yêu cầu lệnh này phải xanh' : ' — đạt trước khi sửa hoặc là lệnh mới, nay lỗi'}\n\`\`\`\n${r.tail.slice(-maxOutputChars)}\n\`\`\``)
+    .join('\n\n');
+  return {
+    context: header(c, 'revise'),
+    prompt: `## Hạng mục: ${st.id} — ${st.title}
+${st.description}
+
+## Bản trước của bạn
+${truncate(previous, c.filesAccessible ? 4000 : 12000)}
+
+## Lệnh kiểm tra còn đỏ (CCoding tự chạy; vòng sửa theo kiểm tra ${round})
+${reds}
+${uncovered.length ? `\n## Đích của kế hoạch chưa có hạng mục nhận\n${uncovered.map((u) => `- ${u}`).join('\n')}\nNếu đây là nguyên nhân lệnh đỏ thì làm nốt các phần này.\n` : ''}${toolNote(c, tools, 'revise')}
+## Việc của bạn: SỬA CHO LỆNH XANH
+Sửa mã nguồn thật (không sửa test cho qua, không tắt kiểm tra) rồi chạy lại đúng lệnh trên để xác nhận. Trả về BẢN HOÀN CHỈNH MỚI của báo cáo bàn giao, mở đầu bằng "## Tóm tắt" và thêm mục "## Đã sửa theo kiểm tra".`,
+  };
+}
+
+/** B-02: sửa định dạng — chỉ viết lại văn bản đúng "Mẫu đầu ra", không dùng công cụ. */
+export function formatFixPrompt(c: Ctx, previous: string, headings: string[], missing: string[], summaryOk: boolean): Built {
+  return {
+    context: header(c, 'revise'),
+    prompt: `## Bản bàn giao hiện tại
+${truncate(previous, 16000)}
+
+## Việc của bạn: SỬA ĐỊNH DẠNG (không dùng công cụ, không làm lại việc)
+Bản trên chưa đúng "Mẫu đầu ra" trong hồ sơ của bạn.${missing.length ? ` Mục thiếu hoặc không có nội dung: ${missing.map((m) => `"${m}"`).join(', ')}.` : ''}${summaryOk ? '' : ' Phải mở đầu bằng "## Tóm tắt".'}
+Viết lại ĐÚNG các mục theo thứ tự: ${headings.map((h) => `"## ${h}"`).join(', ')}. Mỗi mục có ít nhất một dòng nội dung thật (ghi "Không áp dụng" nếu không liên quan); giữ nguyên nội dung đã có, không bịa thêm.`,
   };
 }
 

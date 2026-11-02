@@ -286,6 +286,8 @@ export interface DeptRun {
   };
   /** Vòng review hiện tại (0 = review đầu) — giữ qua tạm dừng/tiếp tục để không vượt maxRevisions. */
   reviewRound?: number;
+  /** B-10: kết quả cổng phủ kế hoạch (sau parsePlan, trước execute). */
+  planGate?: { uncovered: string[]; reasons: string[]; rules: ('A' | 'B')[]; replanned?: boolean };
   /** Hạng mục còn phải sửa trong vòng hiện tại — tiếp tục sau tạm dừng thì sửa tiếp theo review đã có, không review lại. */
   revising?: string[];
   /** Ước lượng token của kế hoạch (sau khi lập/chốt) để cảnh báo nhiệm vụ quá lớn. */
@@ -336,7 +338,7 @@ export interface TaskOptions {
    * Làn xử lý: 'fast' — việc nhỏ: điều phối lập kế hoạch nhanh (Sonnet), chia 2–4 phần độc lập chạy SONG SONG, không họp, báo cáo theo
    * mẫu (không gọi model); 'full' — quy trình đầy đủ; 'auto' (mặc định) — tự chọn theo cỡ đề bài và repo (cấu hình `fastLane`).
    */
-  lane?: 'auto' | 'fast' | 'full';
+  lane?: 'auto' | 'single' | 'fast' | 'full';
   /** CTO nghiệm thu sau khi các phòng tổng hợp xong (mặc định theo cấu hình; việc giao riêng một agent thì bỏ qua). */
   acceptance?: boolean;
 }
@@ -451,11 +453,11 @@ export interface Task {
   /** Chỉ bắt đầu khi các nhiệm vụ này đã xong (thứ tự phụ thuộc giữa các nhiệm vụ đã tách). */
   after?: string[];
   /** Làn đã chọn khi bắt đầu chạy (xem TaskOptions.lane). */
-  lane?: 'fast' | 'full';
+  lane?: 'single' | 'fast' | 'full';
   /** Lệnh kiểm tra của dự án do CCoding tự chạy: trước khi sửa (baseline) và sau thực thi/sửa (latest). */
   projectChecks?: ProjectChecks;
   /** Nhiệm vụ đã chạy xong nhưng cần người xem lại (vd. review cuối chưa duyệt). */
-  attention?: { reason: 'review' | 'checks' | 'acceptance'; detail: string; at: string };
+  attention?: { reason: 'review' | 'checks' | 'acceptance' | 'plan-coverage' | 'plan-unreadable'; detail: string; at: string };
   /** Kết luận nghiệm thu của CTO sau khi các phòng tổng hợp xong (UX-4c). */
   acceptance?: Acceptance;
   createdAt: string;
@@ -465,6 +467,11 @@ export interface Task {
 }
 
 /** Kết quả một lệnh kiểm tra của dự án (CCoding tự chạy, không qua agent). */
+/** B-02: cổng chất lượng — số vòng sửa theo kiểm tra tối đa (tách khỏi maxRevisions của review). */
+export interface GateConfig {
+  maxFixRounds: number;
+}
+
 export interface CheckResult {
   command: string;
   code: number | null;

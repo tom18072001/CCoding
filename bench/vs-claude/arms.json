@@ -82,8 +82,7 @@
     "options": {
       "lane": "single"
     },
-    "pending": "B-01",
-    "label": "CCoding làn đơn (chờ B-01)"
+    "label": "CCoding làn đơn (B-01)"
   },
   "oracle": {
     "kind": "oracle",

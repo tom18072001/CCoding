@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Classification, Phase, TaskOptions, ToolAccess } from './types.js';
+import type { Classification, GateConfig, Phase, TaskOptions, ToolAccess } from './types.js';
 
 /** Thư mục gốc của repo (chứa package.json). */
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -156,6 +156,13 @@ export interface Config {
    * maxParallel: số hạng mục độc lập chạy cùng lúc tối đa (nâng options.maxParallel của nhiệm vụ lên khi kế hoạch có nhiều hạng mục độc lập hơn).
    */
   fastLane: { enabled: boolean; maxBriefChars: number; maxRepoFiles: number; maxRepoBytes: number; planModel: string; finalReport: 'template' | 'llm'; maxParallel?: number };
+  /**
+   * Làn đơn (B-01, options.lane 'auto'): việc có parts < maxParts và filesTouched < maxFilesTouched (hoặc chuỗi tuần tự) chạy một agent, không điều phối.
+   * Hiện chỉ options.lane ép được làn; chưa có cấu hình ép làn theo dự án.
+   */
+  lanes: { single: { enabled: boolean; maxParts: number; maxFilesTouched: number } };
+  /** B-02 cổng chất lượng: maxFixRounds = số vòng sửa theo kiểm tra (lệnh đỏ, sai mẫu đầu ra) trước khi nâng cấp/không duyệt. */
+  gate: GateConfig;
   /** Công cụ workspace cho agent (đọc/ghi file, chạy lệnh) — xem docs/TOOLS.md. */
   tools: {
     /** Quyền mặc định khi nhiệm vụ không thuộc dự án (workspace riêng của CCoding). */
@@ -284,6 +291,7 @@ const BUILTIN: Omit<Config, 'root'> = {
     waitPhases: ['execute', 'revise', 'review'],
   },
   runner: 'auto',
+  gate: { maxFixRounds: 2 },
   maxConcurrentTasks: 2,
   defaults: { discussionRounds: 1, review: true, maxParallel: 3, maxRevisions: 1, budgetTokens: 1500000, budgetMode: 'complete', subtaskBudgetTokens: 0, timeoutMs: 1800000, planApprovalMinutes: 0, acceptance: true },
   phases: {
@@ -295,6 +303,7 @@ const BUILTIN: Omit<Config, 'root'> = {
     maxContinuations: 2,
   },
   fastLane: { enabled: true, maxBriefChars: 4000, maxRepoFiles: 300, maxRepoBytes: 1_500_000, planModel: 'sonnet', finalReport: 'template', maxParallel: 4 },
+  lanes: { single: { enabled: true, maxParts: 5, maxFilesTouched: 6 } },
   tools: {
     defaultAccess: 'write',
     projectAccess: 'exec',

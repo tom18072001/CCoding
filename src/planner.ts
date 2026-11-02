@@ -6,6 +6,10 @@ export interface PlanResult {
   decisions: string[];
   subtasks: Subtask[];
   parsed: boolean;
+  /** B-10: JSON kế hoạch bị cắt cụt/không đóng (có "subtasks" nhưng không đọc hết được). */
+  truncated?: boolean;
+  /** B-10: đích kế hoạch khai ngoài phạm vi kèm lý do. */
+  outOfScope?: Array<{ target: string; reason: string }>;
 }
 
 interface RawSubtask {
@@ -20,7 +24,7 @@ interface RawSubtask {
 
 const MAX_SUBTASKS = 8;
 
-function skillScore(text: string, a: AgentDef): number {
+export function skillScore(text: string, a: AgentDef): number {
   const t = text.toLowerCase();
   return a.skills.reduce((n, s) => (t.includes(s.replace(/-/g, ' ')) || t.includes(s) ? n + 2 : n), 0) + (t.includes(a.id) ? 3 : 0);
 }
@@ -89,8 +93,13 @@ export function fallbackPlan(brief: string, roster: AgentDef[], lead: AgentDef):
 }
 
 export function parsePlan(text: string, roster: AgentDef[], lead: AgentDef, brief: string): PlanResult {
-  const raw = extractJson<{ summary?: unknown; decisions?: unknown; subtasks?: RawSubtask[] }>(text);
-  if (!raw || !Array.isArray(raw.subtasks) || raw.subtasks.length === 0) return fallbackPlan(brief, roster, lead);
+  const raw = extractJson<{ summary?: unknown; decisions?: unknown; subtasks?: RawSubtask[]; outOfScope?: unknown; out_of_scope?: unknown }>(text);
+  if (!raw || !Array.isArray(raw.subtasks) || raw.subtasks.length === 0) {
+    const fb = fallbackPlan(brief, roster, lead);
+    return text.includes('"subtasks"') ? { ...fb, truncated: true } : fb;
+  }
+  // còn nhiều "assignee" trong văn bản hơn số hạng mục đọc được → JSON bị cắt giữa chừng
+  const truncated = (text.match(/"assignee"\s*:/g)?.length ?? 0) > raw.subtasks.length;
   const used = new Set<string>();
   const idMap = new Map<string, string>();
   const subtasks: Subtask[] = [];
@@ -108,7 +117,18 @@ export function parsePlan(text: string, roster: AgentDef[], lead: AgentDef, brie
   });
   for (const s of subtasks) s.dependsOn = s.dependsOn.map((d) => idMap.get(d) ?? d);
   const decisions = Array.isArray(raw.decisions) ? raw.decisions.map(String) : typeof raw.decisions === 'string' ? [raw.decisions] : [];
-  return { summary: String(raw.summary ?? '').slice(0, 1000), decisions, subtasks: breakCycles(subtasks), parsed: true };
+  const oosRaw = raw.outOfScope ?? raw.out_of_scope;
+  const outOfScope = (Array.isArray(oosRaw) ? oosRaw : [])
+    .map((o: any) => ({ target: String(typeof o === 'string' ? o.split(/\s+[—–-]\s+|:\s+/)[0] : (o?.target ?? o?.path ?? o?.file ?? '')).trim(), reason: String(typeof o === 'string' ? o.split(/\s+[—–-]\s+|:\s+/).slice(1).join(' — ') : (o?.reason ?? o?.why ?? '')).trim() }))
+    .filter((o) => o.target);
+  return {
+    summary: String(raw.summary ?? '').slice(0, 1000),
+    decisions,
+    subtasks: breakCycles(subtasks),
+    parsed: true,
+    ...(truncated ? { truncated } : {}),
+    ...(outOfScope.length ? { outOfScope } : {}),
+  };
 }
 
 export interface ReviewResult {
