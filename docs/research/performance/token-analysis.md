@@ -1,6 +1,7 @@
 # Phân tích token, cache và thời gian: multi-agent CCoding so với agent đơn (RQ3)
 
 > Hạng mục S2 — Phòng Nghiên cứu · @data-scientist · 2/11/2026 · phân loại dữ liệu: nội bộ. **Cập nhật vòng 2** (nhiệm vụ T-20261102-121636-dd9, hạng mục S1): thêm C7 (Claude Code một mình bằng Sonnet), bảng T-h và T-i, mở rộng T-d (3), cột p hoán vị ở T-f.
+> **Làm mới vòng 3 (gói 2b, nhiệm vụ T-20261102-183435-da7, hạng mục S2, 2/11/2026): thêm C9.** C9 là vòng **dừng giữa chừng do hạn mức** (xem mục "Vòng C9" ở §2 và `docs/research/context/c9-partial-2026-11-02.md`). Các bảng T-0 … T-i được sinh lại bằng chính script; phần diễn giải ở §1 và "Đọc T-*" **chưa viết lại**, vẫn là số của bản C1–C8 (xem cảnh báo ở §2).
 > Mọi bảng dưới đây được **sinh nguyên văn** bởi `docs/research/performance/scripts/token-analysis.mjs`; kiểm tra khớp bằng
 > `node docs/research/performance/scripts/token-analysis.mjs --check docs/research/performance/token-analysis.md`.
 > Số thập phân dùng dấu chấm (đầu ra script); số nguyên nhóm bằng dấu cách. Các con số trong phần diễn giải trích từ các bảng này.
@@ -24,6 +25,10 @@
 **Dữ liệu.** `bench/vs-claude/results/{runs,phases,calls,claude_turns}.csv` và `summary.json`; không có `events.jsonl` trong `results/C*/` (chỉ có `result.json`, `grade-*.tap`, `ccoding-task.json`), nên không dùng. Năm bài (`t1`–`t5`), test ẩn chấm tự động; mỗi hệ chạy tuần tự trong chính nó (`--concurrency 1`, xem `bench/vs-claude/README.md`). Vòng C1–C2 = mốc ban đầu, C3–C4 = bước trung gian, C5 = làn nhanh, C6 = làn nhanh sau `d7600f6` (`maxParallel` = 4; chỉ `t3`, `t5`), C7 = Claude Code một mình bằng Sonnet (hệ `claude-sonnet`, 2 lượt mỗi bài, đủ 5 bài) chạy cùng lúc với làn nhanh (`ccoding-fastlane`, thành viên Sonnet, 1 lượt mỗi bài) — điều kiện D2 để tách hiệu ứng mô hình khỏi hiệu ứng điều phối.
 
 **Nguồn dữ liệu.** `bench/vs-claude/results/` lấy từ nhánh `perf/vs-claude-loop` (`git restore --source=perf/vs-claude-loop -- bench/vs-claude/results`): commit thêm C7 là `7fa6305`, HEAD nhánh lúc lấy là `78edc88`; gồm C1–C7. Gói R3-1 (2/11/2026) làm mới bảng với C1–C8 từ nhánh nhiệm vụ (HEAD `bb7b477`; C8 thêm ở `d7cf900`): C8 chỉ có 3 lượt làn nhanh trên t2, không có Sonnet đơn, nên không vào các phép so sánh cặp (T-f/T-g/T-h/T-i) và con số 55,8 % (C7) không đổi. Vòng được script tự phát hiện từ tên thư mục `results/`. Bản trích `c6-extract/` (commit `5866cda`, dùng ở bản trước vì khi đó `results/` chưa có C6) đã được đối chiếu với các dòng C6 trong `results/`: `runs` 8, `phases` 24, `calls` 25, `claude_turns` 56 dòng, **đều trùng từng ký tự** (T-0 in lại kết quả đối chiếu). Do đó `c6-extract/` bị bỏ khỏi pipeline: script không còn đọc nó làm dữ liệu; thư mục vẫn còn trong repo nhưng thừa.
+
+**Vòng C9 (thêm ở lần làm mới này; dừng giữa chừng do hạn mức).** C9 chạy trên cloud, máy 2 nhân, hai hệ cùng lúc, mỗi hệ tuần tự: Claude Code Sonnet (`claude-sonnet`, dự kiến 12 lượt mỗi bài) và làn nhanh CCoding (`ccoding-fastlane`, dự kiến 6 lượt mỗi bài). Vòng dừng lúc 14:14 vì tài khoản chạm hạn mức 5 giờ (HTTP 429 `usage_limit_reached`, mở lại 16:50). **4 lượt hỏng vì hạn mức đã bị loại** (chuyển ra ngoài `results/`, theo tiêu chí "lỗi hạn mức" của `preregistration.md`) nên **không có trong bảng nào dưới đây**; `context/c9-partial-2026-11-02.md` chỉ ghi số lượt và lý do, không liệt kê tên 4 lượt. Chế độ solo (`ccoding-solo`, `ccoding-solo-review`) chưa chạy lượt nào. Số lượt hiện có: Claude Code Sonnet 5–6 mỗi bài (26 lượt), làn nhanh 2–3 mỗi bài (13 lượt) — thấp hơn dự kiến, nên C9 **không phải vòng hoàn chỉnh**. Hai lượt làn nhanh không đạt trọn test ẩn: `t5-logq` lượt 2 (95/146, thiếu hạng mục `agg.js` trong kế hoạch) và `t1-duration` lượt 3 (148/149). **4 lượt bị loại này không liên quan đến pilot bộ đo của giám đốc** (`results/pilot1/`, ghi ở `context/pilot1-2026-11-02.md`): hai nguồn dữ liệu khác nhau, `token-analysis.mjs` không đọc `pilot1/`.
+
+**Cảnh báo sau khi thêm C9 (chưa xử lý, đề xuất SR cho Phòng Dev).** (i) Script chọn "vòng Sonnet" là vòng mới nhất có `claude-sonnet` (`CONFIG.sonnetRound`) nên mọi bảng so với Sonnet đơn nay dùng **C9**, nhưng hai nhãn viết cứng trong script vẫn ghi "C7": cột "Tập" ở cặp so sánh 1 (hàng 1–2) và cặp 4 (hàng 7–8) của T-i, và câu mô tả "Sonnet đơn (C7)" ở T-h. Đọc các nhãn đó là C9. (ii) Các con số trong §1 (ví dụ "+38.0 s", "+0.441 USD", "55.8%", "1.64 · 2.27 · …") và các đoạn "Đọc T-*" là kết quả của bản C1–C8; chúng **không** khớp bảng mới (T-i hàng 1 nay +80.9 s và +0.607 USD với C9). Chưa viết lại diễn giải vì ngoài phạm vi hạng mục; xem bảng, không xem lời văn, cho đến khi có bản diễn giải mới. (iii) Số lượt C9 không cân (làn nhanh 2–3, Sonnet 5–6 mỗi bài) và hai lượt kém của làn nhanh nằm trong ô nhỏ, nên chênh lệch C9 là quan sát, không phải kết luận.
 
 **Khác biệt giao thức C5 và C6 (đã kiểm, KHÔNG phải "tuần tự → cùng lúc").** Mỗi hệ chạy tuần tự trong chính nó và hai hệ chạy song song nhau ở cả hai vòng: theo `started` + `wall_s`, 9/10 lượt CCoding ở C5 4/4 ở C6 và 5/5 ở C7 (với `claude-sonnet`) có khoảng chạy chồng với một lượt Claude Code (T-0). Khác biệt thật giữa C5 và C6 là (i) mã (`maxParallel` 3 → 4), (ii) thời điểm chạy (Claude Code `t3` chậm hơn ~1.6× ở C6), (iii) chỉ 2 bài. Do đó không gộp thẳng C5 và C6 làm kết quả chính; dòng gộp là độ nhạy riêng (T-f, T-g).
 
@@ -63,17 +68,17 @@ Lệnh tái lập bảng T-0: `node docs/research/performance/scripts/token-anal
 | calls.csv | system_chars / context_chars / prompt_chars | ký tự (không phải token); đổi token bằng charsPerToken = 3.5 (giả định) | CCoding |
 | calls.csv | tool_output_chars | ký tự kết quả công cụ đưa lại vào hội thoại | CCoding |
 | calls.csv | max_tokens / retries | trần đầu ra cấu hình theo pha / số lần thử lại | CCoding |
-| claude_turns.csv | input / cache_read / cache_write (_1h, _5m) | token theo TỪNG lượt mô hình của Claude Code; cache_write = _1h + _5m | Claude (chỉ C1, C2, C5, C6, C7) |
+| claude_turns.csv | input / cache_read / cache_write (_1h, _5m) | token theo TỪNG lượt mô hình của Claude Code; cache_write = _1h + _5m | Claude (chỉ C1, C2, C5, C6, C7, C9) |
 | claude_turns.csv | output_partial | token đầu ra từ luồng sự kiện từng phần — KHÔNG dùng (≪ output thật trong runs.csv) | Claude |
 
-Đối chiếu: 41/41 lượt CCoding có Σ(calls.csv) = runs.csv về input/output/cache_read/cache_write; 34/34 lượt Claude có Σ(claude_turns.csv) = runs.csv về cache_read/cache_write.
+Đối chiếu: 54/54 lượt CCoding có Σ(calls.csv) = runs.csv về input/output/cache_read/cache_write; 60/60 lượt Claude có Σ(claude_turns.csv) = runs.csv về cache_read/cache_write.
 
-Quy đổi: runs.csv là nguồn chuẩn cho tổng. calls.csv (CCoding, theo lượt gọi agent = một tiến trình) và claude_turns.csv (Claude, theo lượt mô hình) KHÔNG cùng độ mịn, nên so sánh chỉ ở mức tổng theo lượt chạy hoặc "mỗi lượt gọi agent" (CCoding) với "mỗi lượt chạy" (Claude). claude_turns.csv có ở các vòng: C1, C2, C5, C6, C7; không có events.jsonl trong results/C*/. Nguồn: bench/vs-claude/results/ ở commit bb7b477 (nhánh nhiệm vụ T-20261102-134405-b2c; results/ gồm C1–C8, C8 thêm ở d7cf900). Đối chiếu bản trích c6-extract/C6-*.csv (commit 5866cda) với các dòng C6 trong results/: runs 8 dòng trùng từng ký tự; phases 24 dòng trùng từng ký tự; calls 25 dòng trùng từng ký tự; claude_turns 56 dòng trùng từng ký tự ⇒ c6-extract/ bị bỏ khỏi pipeline (script không đọc nó làm dữ liệu)..
-Giao thức chạy (kiểm từ started + wall_s): số lượt CCoding có khoảng chạy chồng với ít nhất một lượt Claude cùng vòng — C5 9/10; C6 4/4; C7 5/5. Tức hai hệ chạy song song nhau (mỗi hệ tuần tự trong chính nó, --concurrency 1); khác biệt C5 → C6 không phải "tuần tự → cùng lúc" mà là mã (C6 sau d7600f6: maxParallel 4) và thời điểm chạy. Ở C7 đối chứng là claude-sonnet (Claude Code một mình bằng Sonnet) chạy cùng lúc với làn nhanh.
+Quy đổi: runs.csv là nguồn chuẩn cho tổng. calls.csv (CCoding, theo lượt gọi agent = một tiến trình) và claude_turns.csv (Claude, theo lượt mô hình) KHÔNG cùng độ mịn, nên so sánh chỉ ở mức tổng theo lượt chạy hoặc "mỗi lượt gọi agent" (CCoding) với "mỗi lượt chạy" (Claude). claude_turns.csv có ở các vòng: C1, C2, C5, C6, C7, C9; không có events.jsonl trong results/C*/. Nguồn: bench/vs-claude/results/ ở commit bb7b477 (nhánh nhiệm vụ T-20261102-134405-b2c; results/ gồm C1–C8, C8 thêm ở d7cf900). Đối chiếu bản trích c6-extract/C6-*.csv (commit 5866cda) với các dòng C6 trong results/: runs 8 dòng trùng từng ký tự; phases 24 dòng trùng từng ký tự; calls 25 dòng trùng từng ký tự; claude_turns 56 dòng trùng từng ký tự ⇒ c6-extract/ bị bỏ khỏi pipeline (script không đọc nó làm dữ liệu)..
+Giao thức chạy (kiểm từ started + wall_s): số lượt CCoding có khoảng chạy chồng với ít nhất một lượt Claude cùng vòng — C5 9/10; C6 4/4; C7 5/5; C9 13/13. Tức hai hệ chạy song song nhau (mỗi hệ tuần tự trong chính nó, --concurrency 1); khác biệt C5 → C6 không phải "tuần tự → cùng lúc" mà là mã (C6 sau d7600f6: maxParallel 4) và thời điểm chạy. Ở C7 đối chứng là claude-sonnet (Claude Code một mình bằng Sonnet) chạy cùng lúc với làn nhanh.
 
-Ghi cache của Claude theo TTL: 1 giờ = 1 014 326 token, 5 phút = 0 token (100.0% là 1 giờ). calls.csv không tách TTL cho CCoding.
+Ghi cache của Claude theo TTL: 1 giờ = 1 623 887 token, 5 phút = 0 token (100.0% là 1 giờ). calls.csv không tách TTL cho CCoding.
 
-Dữ liệu có: 75 lượt chạy, 235 dòng calls.csv, 226 dòng phases.csv, 292 dòng claude_turns.csv; vòng có trong runs.csv: C1, C2, C3, C4, C5, C6, C7, C8.
+Dữ liệu có: 114 lượt chạy, 310 dòng calls.csv, 296 dòng phases.csv, 450 dòng claude_turns.csv; vòng có trong runs.csv: C1, C2, C3, C4, C5, C6, C7, C8, C9.
 
 Lệnh tái lập bảng T-a: `node docs/research/performance/scripts/token-analysis.mjs --table T-a`
 
@@ -125,6 +130,16 @@ Lệnh tái lập bảng T-a: `node docs/research/performance/scripts/token-anal
 | C7 | t5-logq | ccoding-fastlane | 1 | 146/146 | 1/1 | 127 | 127 | 127 | 1.038 | 58 | 45 936 | 850 499 | 121 966 |
 | C7 | t5-logq | claude-sonnet | 2 | 292/292 | 2/2 | 166 | 159 | 172 | 0.439 | 16 | 24 725 | 433 299 | 37 068 |
 | C8 | t2-orders | ccoding-fastlane | 3 | 180/180 | 3/3 | 129 | 102 | 166 | 0.793 | 53 | 22 922 | 684 317 | 122 274 |
+| C9 | t1-duration | ccoding-fastlane | 3 | 446/447 | 2/3 | 184 | 104 | 256 | 0.767 | 48 | 29 221 | 678 138 | 100 425 |
+| C9 | t1-duration | claude-sonnet | 6 | 894/894 | 6/6 | 67 | 57 | 76 | 0.186 | 10 | 8 950 | 216 452 | 18 706 |
+| C9 | t2-orders | ccoding-fastlane | 3 | 180/180 | 3/3 | 147 | 111 | 177 | 0.829 | 63 | 27 536 | 864 556 | 115 094 |
+| C9 | t2-orders | claude-sonnet | 5 | 300/300 | 5/5 | 48 | 38 | 60 | 0.152 | 10 | 5 784 | 218 510 | 17 955 |
+| C9 | t3-api | ccoding-fastlane | 3 | 261/261 | 3/3 | 238 | 156 | 333 | 1.176 | 75 | 47 439 | 1 223 785 | 143 134 |
+| C9 | t3-api | claude-sonnet | 5 | 435/435 | 5/5 | 112 | 89 | 136 | 0.313 | 20 | 14 270 | 525 152 | 29 387 |
+| C9 | t4-perf | ccoding-fastlane | 2 | 38/38 | 2/2 | 135 | 126 | 143 | 0.568 | 33 | 23 279 | 471 045 | 71 050 |
+| C9 | t4-perf | claude-sonnet | 5 | 95/95 | 5/5 | 70 | 58 | 81 | 0.159 | 8 | 7 358 | 175 477 | 16 925 |
+| C9 | t5-logq | ccoding-fastlane | 2 | 241/292 | 1/2 | 161 | 145 | 177 | 0.919 | 49 | 41 296 | 745 974 | 106 733 |
+| C9 | t5-logq | claude-sonnet | 5 | 730/730 | 5/5 | 164 | 133 | 187 | 0.412 | 14 | 23 516 | 354 703 | 35 198 |
 
 Đọc T-a: ở C1 và C2 (thiết kế ban đầu) CCoding chậm hơn và đắt hơn ở mọi bài có đối chứng. Ở C5, CCoding nhanh hơn ở `t1`, `t4`, `t5` (107/153/175 s so với 126/203/259 s), chậm hơn ở `t2` (106 so với 91 s) và `t3` (400 so với 158 s; trong đó lượt 579 s là lỗi treo stdin, lượt còn lại 221 s). Chi phí CCoding thấp hơn Claude ở đúng một ô C5 (`t4`, 0.574 so với 0.627 USD). C6: CCoding nhanh hơn ở `t3` (192 so với 252 s) và `t5` (174 so với 260 s), chi phí `t3` 1.103 so với 1.044 USD, `t5` 1.222 so với 1.009 USD; test ẩn 174/174 và 292/292 ở cả hai hệ. Lưu ý Claude Code `t3` chạy 155–160 s ở C5 nhưng 246–258 s ở C6, tức nhiễu giữa hai thời điểm cùng cỡ chênh lệch giữa hai hệ.
 
@@ -221,6 +236,23 @@ Tổng C6: ghi cache 557 494, đọc cache 4 379 687, output 195 711 token. Tỷ
 
 Tổng C7: ghi cache 425 346, đọc cache 3 253 301, output 144 540 token. Tỷ trọng ghi cache theo pha: plan 16.5%, execute 61.0%, review 22.5%.
 
+**C9** — 13 lượt chạy CCoding, 75 lượt gọi agent ("Công cụ" = tool_calls TB; *_chars là ký tự; mọi cột "/ lượt gọi" là trung bình)
+
+| Pha | Agent | Lượt gọi | Công cụ TB | Ghi cache / lượt gọi | Đọc cache / lượt gọi | Output / lượt gọi | system_chars | context_chars | prompt_chars | tool_output_chars | max_tokens | retries (Σ) | Thời gian TB (s) |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| plan | dev-lead | 13 | 1.5 | 14 240 | 62 335 | 3 640 | 4 784 | 676 | 9 125 | 7 257 | 8000 | 0 | 32.9 |
+| execute | backend-dev | 13 | 8.4 | 22 595 | 207 622 | 9 753 | 4 249 | 1 242 | 5 528 | 11 067 | 32000 | 0 | 72.3 |
+| execute | data-engineer | 9 | 6.8 | 18 656 | 160 917 | 8 056 | 4 004 | 1 283 | 5 189 | 6 579 | 32000 | 0 | 59.4 |
+| execute | devops | 4 | 7.3 | 17 731 | 186 652 | 6 947 | 4 372 | 1 317 | 4 873 | 7 639 | 32000 | 0 | 52.9 |
+| execute | frontend-dev | 9 | 6.2 | 19 085 | 159 802 | 8 390 | 4 065 | 1 214 | 4 962 | 6 775 | 32000 | 0 | 58.2 |
+| execute | security | 4 | 6.0 | 21 611 | 171 977 | 5 699 | 4 371 | 1 360 | 5 529 | 7 449 | 32000 | 0 | 46.0 |
+| review | qa-tester | 18 | 3.2 | 21 096 | 117 907 | 2 923 | 4 331 | 671 | 13 673 | 13 850 | 6000 | 0 | 33.2 |
+| revise | backend-dev | 1 | 8.0 | 19 180 | 251 110 | 4 467 | 4 249 | 741 | 9 944 | 13 140 | 32000 | 0 | 68.2 |
+| revise | frontend-dev | 3 | 5.7 | 14 336 | 129 509 | 3 101 | 4 065 | 637 | 7 724 | 6 019 | 32000 | 0 | 35.2 |
+| revise | security | 1 | 4.0 | 13 734 | 141 086 | 2 638 | 4 371 | 640 | 7 197 | 6 903 | 32000 | 0 | 36.3 |
+
+Tổng C9: ghi cache 1 431 527, đọc cache 10 733 476, output 441 737 token. Tỷ trọng ghi cache theo pha: plan 12.9%, execute 55.2%, review 26.5%, revise 5.3%.
+
 Đọc T-c: pha `execute` chiếm 50.1% (C1) và 60.0% (C5) lượng ghi cache; `review` chiếm 16.9% (C1) và 24.0% (C5) dù output của reviewer nhỏ — do `prompt_chars` (12 921 ký tự ở C5) và `tool_output_chars` (17 783) lớn, tức reviewer đọc nhiều. Σ retries = 0 ở mọi pha. Pha `discuss` chỉ có ở C1–C2, không còn ở làn nhanh. C6 (4 lượt chạy) giống C5: `execute` 62.7%, `review` 23.0% lượng ghi cache; `review` vẫn đọc nhiều (`prompt_chars` 17 951, `tool_output_chars` 18 369) và Σ retries = 0.
 
 Lệnh tái lập bảng T-d: `node docs/research/performance/scripts/token-analysis.mjs --table T-d`
@@ -266,6 +298,10 @@ Lệnh tái lập bảng T-d: `node docs/research/performance/scripts/token-anal
 | C8 | execute | 3 | 3.3 | 124.3 | 45.1 | 2.76 |
 | C8 | review | 3 | 1.3 | 45.2 | 45.2 | 1.00 |
 | C8 | revise | 1 | 1.0 | 27.9 | 27.9 | 1.00 |
+| C9 | plan | 13 | 1.0 | 32.9 | 32.9 | 1.00 |
+| C9 | execute | 13 | 3.0 | 184.1 | 80.3 | 2.29 |
+| C9 | review | 13 | 1.4 | 45.9 | 45.9 | 1.00 |
+| C9 | revise | 5 | 1.0 | 42.0 | 42.0 | 1.00 |
 
 **(2) Theo lượt chạy** — đường găng LLM = Σ đường găng các pha (giả định các pha nối tiếp nhau); "ngoài LLM" = thời gian tường − đường găng LLM (chạy kiểm tra, tạo/gộp worktree, chờ, điều phối; có thể âm do làm tròn duration_s).
 
@@ -279,25 +315,26 @@ Lệnh tái lập bảng T-d: `node docs/research/performance/scripts/token-anal
 | C6 | 4 | 183 | 318 | 181 | 137 | 2 | 42.9 |
 | C7 | 5 | 124 | 189 | 122 | 67 | 1 | 28.7 |
 | C8 | 3 | 129 | 207 | 128 | 79 | 1 | 38.0 |
+| C9 | 13 | 177 | 279 | 175 | 104 | 2 | 36.5 |
 
 **(3) Chi phí cố định của điều phối (làn nhanh) so với thời gian Sonnet đơn cần cho cả bài** — chia thời gian tường của làn nhanh thành: lập kế hoạch = Σ đường găng pha route/plan/discuss/finalize; review = pha review + revise; gộp + ngoài LLM = thời gian tường − (kế hoạch + review + execute), gồm pha tổng hợp, tạo/gộp worktree, chạy kiểm tra dự án, chờ (là phần dư, có thể gồm nhiễu); execute = đường găng pha execute. "Cố định" = kế hoạch + review + gộp/ngoài LLM, tức phần một agent đơn không phải trả. Mẫu số = TB thời gian tường của claude-sonnet ở C7 (n ghi trong ngoặc). Lượt treo C5 t3 lượt 1 bị bỏ khỏi tập gộp.
 
 | Tập | Bài | n làn nhanh | Kế hoạch (s) | Review (s) | Gộp + ngoài LLM (s) | Cố định (s) | Execute (s) | Thời gian tường (s) | Sonnet đơn TB (s) | Cố định / Sonnet đơn (%) | Execute / Sonnet đơn (%) |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| C7 (cùng thời điểm với Sonnet đơn) | t1-duration | 1 | 14.9 | 22.9 | 0.7 | 38.5 | 70.5 | 109.0 | 65.5 (n=2) | 58.8 | 107.6 |
-| C7 (cùng thời điểm với Sonnet đơn) | t2-orders | 1 | 15.6 | 22.7 | 1.1 | 39.4 | 31.6 | 71.0 | 41.5 (n=2) | 94.9 | 76.1 |
-| C7 (cùng thời điểm với Sonnet đơn) | t3-api | 1 | 34.3 | 22.4 | 1.9 | 58.6 | 133.4 | 192.0 | 107.5 (n=2) | 54.5 | 124.1 |
-| C7 (cùng thời điểm với Sonnet đơn) | t4-perf | 1 | 23.3 | 30.6 | 1.5 | 55.4 | 64.6 | 120.0 | 49.0 (n=2) | 113.1 | 131.8 |
-| C7 (cùng thời điểm với Sonnet đơn) | t5-logq | 1 | 27.5 | 18.2 | 1.9 | 47.6 | 79.4 | 127.0 | 165.5 (n=2) | 28.8 | 48.0 |
-| C7 (cùng thời điểm với Sonnet đơn) | Σ 5 bài |  | 115.6 | 116.8 | 7.1 | 239.5 | 379.5 | 619.0 | 429.0 | 55.8 | 88.5 |
-| C5–C7 (bỏ lượt treo) | t1-duration | 3 | 18.1 | 30.3 | 0.7 | 49.2 | 58.5 | 107.7 | 65.5 (n=2) | 75.1 | 89.3 |
-| C5–C7 (bỏ lượt treo) | t2-orders | 3 | 21.5 | 37.9 | 1.1 | 60.4 | 33.9 | 94.3 | 41.5 (n=2) | 145.7 | 81.7 |
-| C5–C7 (bỏ lượt treo) | t3-api | 4 | 36.4 | 23.7 | 1.6 | 61.7 | 137.5 | 199.3 | 107.5 (n=2) | 57.4 | 127.9 |
-| C5–C7 (bỏ lượt treo) | t4-perf | 3 | 25.6 | 35.2 | 1.7 | 62.5 | 79.5 | 142.0 | 49.0 (n=2) | 127.6 | 162.2 |
-| C5–C7 (bỏ lượt treo) | t5-logq | 5 | 25.7 | 50.5 | 1.9 | 78.2 | 86.6 | 164.8 | 165.5 (n=2) | 47.3 | 52.3 |
-| C5–C7 (bỏ lượt treo) | Σ 5 bài |  | 127.4 | 177.6 | 7.1 | 312.1 | 396.0 | 708.0 | 429.0 | 72.8 | 92.3 |
+| C9 (cùng thời điểm với Sonnet đơn) | t1-duration | 3 | 31.0 | 85.8 | 1.8 | 118.6 | 65.1 | 183.7 | 67.0 (n=6) | 176.9 | 97.2 |
+| C9 (cùng thời điểm với Sonnet đơn) | t2-orders | 3 | 28.1 | 62.1 | 1.2 | 91.4 | 55.6 | 147.0 | 47.6 (n=5) | 192.0 | 116.8 |
+| C9 (cùng thời điểm với Sonnet đơn) | t3-api | 3 | 44.8 | 68.5 | 1.8 | 115.1 | 123.2 | 238.3 | 111.6 (n=5) | 103.2 | 110.4 |
+| C9 (cùng thời điểm với Sonnet đơn) | t4-perf | 2 | 27.3 | 35.8 | 1.5 | 64.6 | 69.9 | 134.5 | 69.8 (n=5) | 92.6 | 100.1 |
+| C9 (cùng thời điểm với Sonnet đơn) | t5-logq | 2 | 30.4 | 43.2 | 1.2 | 74.8 | 86.2 | 161.0 | 164.0 (n=5) | 45.6 | 52.5 |
+| C9 (cùng thời điểm với Sonnet đơn) | Σ 5 bài |  | 161.7 | 295.4 | 7.4 | 464.5 | 400.0 | 864.5 | 460.0 | 101.0 | 87.0 |
+| C5–C9 (bỏ lượt treo) | t1-duration | 6 | 24.6 | 58.1 | 1.2 | 83.9 | 61.8 | 145.7 | 67.0 (n=6) | 125.2 | 92.2 |
+| C5–C9 (bỏ lượt treo) | t2-orders | 6 | 24.8 | 50.0 | 1.2 | 75.9 | 44.7 | 120.7 | 47.6 (n=5) | 159.5 | 94.0 |
+| C5–C9 (bỏ lượt treo) | t3-api | 7 | 40.0 | 42.9 | 1.7 | 84.6 | 131.4 | 216.0 | 111.6 (n=5) | 75.8 | 117.7 |
+| C5–C9 (bỏ lượt treo) | t4-perf | 5 | 26.3 | 35.4 | 1.6 | 63.4 | 75.6 | 139.0 | 69.8 (n=5) | 90.8 | 108.4 |
+| C5–C9 (bỏ lượt treo) | t5-logq | 7 | 27.1 | 48.4 | 1.7 | 77.3 | 86.5 | 163.7 | 164.0 (n=5) | 47.1 | 52.7 |
+| C5–C9 (bỏ lượt treo) | Σ 5 bài |  | 142.7 | 234.8 | 7.4 | 385.0 | 400.0 | 785.0 | 460.0 | 83.7 | 87.0 |
 
-Đọc: ở C7 (cùng thời điểm) phần cố định bằng 55.8% tổng thời gian Sonnet đơn cần cho 5 bài; gộp C5–C7 là 72.8%. Ở C7, riêng phần execute của làn nhanh đã dài hơn cả bài Sonnet đơn ở: t1, t3, t4 (cột "Execute / Sonnet đơn" > 100%); làn nhanh chỉ có thể thắng khi execute song song + phần cố định < thời gian một agent.
+Đọc: ở C7 (cùng thời điểm) phần cố định bằng 101.0% tổng thời gian Sonnet đơn cần cho 5 bài; gộp C5–C7 là 83.7%. Ở C7, riêng phần execute của làn nhanh đã dài hơn cả bài Sonnet đơn ở: t2, t3, t4 (cột "Execute / Sonnet đơn" > 100%); làn nhanh chỉ có thể thắng khi execute song song + phần cố định < thời gian một agent.
 
 Đọc T-d: chỉ pha `execute` có song song; hệ số tăng từ 1.27 (C1) lên 2.02 (C5) khi làn nhanh chạy cùng lúc các hạng mục độc lập. Tiết kiệm nhờ song song tăng từ 12.9% (C1) lên 30.5% (C5) so với thời gian tuần tự. Sau khi song song hóa, `review` (81.3 s) thành pha dài nhất ở C5, lớn hơn đường găng của `execute` (76.9 s) — đó là chỗ tối ưu tiếp theo (O4). Ở C6 hệ số của `execute` là 2.26 (4 hạng mục chạy cùng lúc thay vì 3) và tiết kiệm nhờ song song 42.9% thời gian tuần tự; `execute` (đường găng 108.4 s) thay `review` (34.0 s) làm pha dài nhất, nhất quán với ghi nhận ở PROCESS-REVIEW rằng một hạng mục nối tệp chung nằm trên đường găng (`n` = 4 lượt; ghi chú đó dựa vào `events.jsonl` mà tôi không có, nên chưa tự kiểm). Thời gian ngoài LLM nhỏ (1 s ở C5, 2 s ở C6) theo cách tính này. C3 chỉ có một hạng mục nên không có song song.
 
@@ -308,7 +345,7 @@ Lệnh tái lập bảng T-e0: `node docs/research/performance/scripts/token-ana
 | Mô hình (requested) | Số lượt gọi | Giá đầu ra (USD/triệu token) | Giá đọc cache | Giá ghi cache | R² |
 |---|---|---:|---:|---:|---:|
 | opus | 27 | 20.08 | 0.205 | 8.02 | 1.000 |
-| sonnet | 193 | 9.81 | 0.107 | 4.05 | 0.978 |
+| sonnet | 268 | 9.84 | 0.105 | 4.06 | 0.982 |
 
 Giá hiệu dụng suy ra bằng bình phương tối thiểu từ calls.csv (cost_usd ~ output + cache_read + cache_write, không hệ số tự do; input bỏ vì ≈ 0). Nhãn mô hình trộn cả lượt haiku phụ, nên đây là giá HIỆU DỤNG chỉ dùng quy đổi tương đối, không phải bảng giá niêm yết.
 
@@ -318,7 +355,7 @@ Lệnh tái lập bảng T-e1: `node docs/research/performance/scripts/token-ana
 
 | Số lượt gọi (mọi vòng) | Hệ số chặn F (token / lượt gọi) | Hệ số theo token ngữ cảnh+công cụ (a) | Hệ số theo token output (b) | R² |
 |---|---|---:|---:|---:|
-| 235 | 3 607 | 1.45 | 1.10 | 0.680 |
+| 310 | 3 323 | 1.49 | 1.08 | 0.699 |
 
 Hồi quy bình phương tối thiểu: cache_write ≈ F + a·(Σ *_chars / 3.5) + b·output, trên mọi dòng calls.csv. F là phần ghi cache cố định mỗi lượt gọi agent (tiền tố mà các lượt gọi không dùng chung được); nếu F nhỏ so với ghi cache TB một lượt gọi thì lượng ghi cache lớn của CCoding đến từ nội dung (đầu ra và kết quả công cụ bị ghi lại ở mỗi tiến trình), không phải từ tiền tố. Tương quan, không phải nhân quả; phụ thuộc giả định charsPerToken.
 
@@ -328,14 +365,14 @@ Lệnh tái lập bảng T-e: `node docs/research/performance/scripts/token-anal
 
 | Mã | Đề xuất | Tiết kiệm ước tính / lượt chạy (USD) | % chi phí CCoding (cùng nền) | Giả định |
 |---|---|---:|---:|---:|
-| O1 | Tiền tố prompt ổn định dùng chung cache | 0.057 | 7.1 | Trần trên: phần ghi cache cố định mỗi lượt gọi F = 3 607 token (T-e1) chuyển thành đọc cache ở mọi lượt gọi sau lượt đầu của mỗi lượt chạy, tính giá sonnet. Phần hệ thống gốc của Claude Code đã được cache chéo tiến trình (claude_turns lượt 1 đọc ~33 nghìn token) nên không tính thêm |
+| O1 | Tiền tố prompt ổn định dùng chung cache | 0.053 | 6.5 | Trần trên: phần ghi cache cố định mỗi lượt gọi F = 3 323 token (T-e1) chuyển thành đọc cache ở mọi lượt gọi sau lượt đầu của mỗi lượt chạy, tính giá sonnet. Phần hệ thống gốc của Claude Code đã được cache chéo tiến trình (claude_turns lượt 1 đọc ~33 nghìn token) nên không tính thêm |
 | O2 | Tái dùng phiên execute → revise | 0.006 | 0.7 | Mỗi lượt revise đọc lại tối đa min(ghi cache revise, ghi cache TB execute cùng agent) thay vì ghi; trần trên (giả định phiên còn trong TTL). Dữ liệu C5 chỉ có 1 lượt revise |
 | O3 | Rút gọn ngữ cảnh 30% | 0.002 | 0.2 | Cắt 30% context_chars ở mọi lượt gọi; mỗi token ngữ cảnh ghi 1 lần + đọc ở (tool_calls) lượt mô hình sau |
 | O4 | Reviewer chỉ nhận diff + kết quả lệnh kiểm tra | 0.022 | 2.8 | Pha review: giảm 50% của (context_chars + prompt_chars + tool_output_chars), giả định reviewer không tự đọc lại tệp; 11 lượt review. Chồng lấn một phần với O3 |
 | O5 | Giới hạn đầu ra (plan/review/synthesize) | 0.014 | 1.7 | Giảm 20% token output ở 21 lượt gọi plan/review/synthesize; execute không đụng vì output là mã cần viết |
 | O6 | Mô hình theo pha: opus → sonnet ở lượt gọi lead | 0.257 | 20.7 | Nền C1 (không phải C5): C1 có 18 lượt gọi opus (plan, synthesize, finalize) tính lại bằng giá hiệu dụng sonnet; C5 đã dùng sonnet ở mọi pha (0 lượt gọi khác sonnet) nên phần còn lại của O6 (sonnet → haiku ở review/plan) KHÔNG định giá được (hồi quy haiku không đáng tin) và chưa đo chất lượng |
 
-Nền: C5, 10 lượt chạy CCoding, chi phí Σ calls.csv = 8.042 USD (TB 0.804 USD / lượt chạy). Theo giá hiệu dụng, đầu ra = 38.4% chi phí, ghi cache = 49.5%, đọc cache = 9.7%. O1–O5 trên nền C5, O6 trên nền C1. Mỗi dòng là ước lượng ĐỘC LẬP (không cộng gộp; O3/O4 chồng lấn). Đây là mô hình giả định trên dữ liệu có sẵn, chưa chạy lại hệ thống; thời gian không được ước lượng. charsPerToken = 3.5 (giả định).
+Nền: C5, 10 lượt chạy CCoding, chi phí Σ calls.csv = 8.042 USD (TB 0.804 USD / lượt chạy). Theo giá hiệu dụng, đầu ra = 38.6% chi phí, ghi cache = 49.6%, đọc cache = 9.6%. O1–O5 trên nền C5, O6 trên nền C1. Mỗi dòng là ước lượng ĐỘC LẬP (không cộng gộp; O3/O4 chồng lấn). Đây là mô hình giả định trên dữ liệu có sẵn, chưa chạy lại hệ thống; thời gian không được ước lượng. charsPerToken = 3.5 (giả định).
 
 Đọc T-e (ước lượng theo mô hình, chưa kiểm chứng bằng chạy lại):
 - **O6** (lead opus → sonnet) lớn nhất trên nền C1, nhưng C5 đã dùng sonnet ở mọi pha nên phần này **đã được hiện thực** và góp phần thu hẹp khoảng cách chi phí C1 → C5. Chất lượng chưa được đo riêng cho thay đổi này.
@@ -365,6 +402,7 @@ Lệnh tái lập bảng T-f: `node docs/research/performance/scripts/token-anal
 | C6 | tất cả lượt | Chi phí (USD) | 2 bài; 4 CC / 4 Claude | 0.136 | [-0.016; 0.287] | 13.2% [-1.4; 30.2] | 0.3889 (36) | CI chứa 0 |
 | C7 | – | không có đối chứng claude (Opus) cùng vòng; đối chứng là claude-sonnet, xem T-i |  |  |  |  |  |  |
 | C8 | – | không có đối chứng claude (Opus) cùng vòng |  |  |  |  |  |  |
+| C9 | – | không có đối chứng claude (Opus) cùng vòng; đối chứng là claude-sonnet, xem T-i |  |  |  |  |  |  |
 | C5+C6 | gộp lượt trong bài, bỏ lượt treo — độ nhạy | Thời gian (s) | 5 bài; 13 CC / 14 Claude | -28.2 | [-44.4; -11.4] | -16.0% [-24.2; -6.8] | 0.0317 (529 200) | CC < Claude |
 | C5+C6 | gộp lượt trong bài, bỏ lượt treo — độ nhạy | Chi phí (USD) | 5 bài; 13 CC / 14 Claude | 0.125 | [0.047; 0.204] | 18.1% [6.5; 30.4] | 0.0310 (529 200) | CC > Claude |
 | C5+C6 | gộp lượt trong bài, giữ lượt treo — độ nhạy | Thời gian (s) | 5 bài; 14 CC / 14 Claude | -9.3 | [-40.2; 30.2] | -5.3% [-22.2; 17.4] | 0.7773 (1 058 400) | CI chứa 0 |
@@ -410,36 +448,36 @@ Trung bình thời gian tường, chi phí và test ẩn theo bài cho ba hệ; 
 
 | Bài | Hệ (vòng) | n | Thời gian TB (s) | Chi phí TB (USD) | Test ẩn đạt/tổng | Đạt trọn | Thời gian / Sonnet đơn | Chi phí / Sonnet đơn |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| t1-duration | Claude Code Opus (C5–C6) | 2 | 126 | 0.513 | 297/298 | 1/2 | 1.92 | 2.57 |
-| t1-duration | Claude Code Sonnet (C7) | 2 | 66 | 0.200 | 298/298 | 2/2 | 1.00 | 1.00 |
-| t1-duration | Làn nhanh (C5–C7, bỏ lượt treo) | 3 | 108 | 0.494 | 447/447 | 3/3 | 1.64 | 2.47 |
-| t1-duration | Làn nhanh (chỉ C7) | 1 | 109 | 0.398 | 149/149 | 1/1 | 1.66 | 1.99 |
-| t2-orders | Claude Code Opus (C5–C6) | 2 | 91 | 0.436 | 120/120 | 2/2 | 2.19 | 2.79 |
-| t2-orders | Claude Code Sonnet (C7) | 2 | 42 | 0.156 | 120/120 | 2/2 | 1.00 | 1.00 |
-| t2-orders | Làn nhanh (C5–C7, bỏ lượt treo) | 3 | 94 | 0.592 | 172/180 | 2/3 | 2.27 | 3.79 |
-| t2-orders | Làn nhanh (chỉ C7) | 1 | 71 | 0.396 | 52/60 | 0/1 | 1.71 | 2.53 |
-| t3-api | Claude Code Opus (C5–C6) | 4 | 205 | 0.878 | 348/348 | 4/4 | 1.90 | 2.58 |
-| t3-api | Claude Code Sonnet (C7) | 2 | 108 | 0.341 | 174/174 | 2/2 | 1.00 | 1.00 |
-| t3-api | Làn nhanh (C5–C7, bỏ lượt treo) | 4 | 199 | 1.133 | 348/348 | 4/4 | 1.85 | 3.32 |
-| t3-api | Làn nhanh (chỉ C7) | 1 | 192 | 1.126 | 87/87 | 1/1 | 1.79 | 3.30 |
-| t4-perf | Claude Code Opus (C5–C6) | 2 | 203 | 0.627 | 38/38 | 2/2 | 4.13 | 4.19 |
-| t4-perf | Claude Code Sonnet (C7) | 2 | 49 | 0.150 | 38/38 | 2/2 | 1.00 | 1.00 |
-| t4-perf | Làn nhanh (C5–C7, bỏ lượt treo) | 3 | 142 | 0.560 | 57/57 | 3/3 | 2.90 | 3.74 |
-| t4-perf | Làn nhanh (chỉ C7) | 1 | 120 | 0.533 | 19/19 | 1/1 | 2.45 | 3.56 |
-| t5-logq | Claude Code Opus (C5–C6) | 4 | 259 | 1.012 | 584/584 | 4/4 | 1.56 | 2.30 |
-| t5-logq | Claude Code Sonnet (C7) | 2 | 166 | 0.439 | 292/292 | 2/2 | 1.00 | 1.00 |
-| t5-logq | Làn nhanh (C5–C7, bỏ lượt treo) | 5 | 165 | 1.127 | 730/730 | 5/5 | 1.00 | 2.57 |
-| t5-logq | Làn nhanh (chỉ C7) | 1 | 127 | 1.038 | 146/146 | 1/1 | 0.77 | 2.36 |
-| TB các bài (không trọng số) | Claude Code Opus (C5–C6) | 14 | 177 | 0.693 |  |  | 2.34 | 2.88 |
-| TB các bài (không trọng số) | Claude Code Sonnet (C7) | 10 | 86 | 0.257 |  |  | 1.00 | 1.00 |
-| TB các bài (không trọng số) | Làn nhanh (C5–C7, bỏ lượt treo) | 18 | 142 | 0.781 |  |  | 1.93 | 3.18 |
-| TB các bài (không trọng số) | Làn nhanh (chỉ C7) | 5 | 124 | 0.698 |  |  | 1.68 | 2.75 |
+| t1-duration | Claude Code Opus (C5–C6) | 2 | 126 | 0.513 | 297/298 | 1/2 | 1.87 | 2.75 |
+| t1-duration | Claude Code Sonnet (C9) | 6 | 67 | 0.186 | 894/894 | 6/6 | 1.00 | 1.00 |
+| t1-duration | Làn nhanh (C5–C9, bỏ lượt treo) | 6 | 146 | 0.631 | 893/894 | 5/6 | 2.17 | 3.39 |
+| t1-duration | Làn nhanh (chỉ C9) | 3 | 184 | 0.767 | 446/447 | 2/3 | 2.74 | 4.12 |
+| t2-orders | Claude Code Opus (C5–C6) | 2 | 91 | 0.436 | 120/120 | 2/2 | 1.91 | 2.87 |
+| t2-orders | Claude Code Sonnet (C9) | 5 | 48 | 0.152 | 300/300 | 5/5 | 1.00 | 1.00 |
+| t2-orders | Làn nhanh (C5–C9, bỏ lượt treo) | 6 | 121 | 0.711 | 352/360 | 5/6 | 2.54 | 4.68 |
+| t2-orders | Làn nhanh (chỉ C9) | 3 | 147 | 0.829 | 180/180 | 3/3 | 3.09 | 5.46 |
+| t3-api | Claude Code Opus (C5–C6) | 4 | 205 | 0.878 | 348/348 | 4/4 | 1.83 | 2.80 |
+| t3-api | Claude Code Sonnet (C9) | 5 | 112 | 0.313 | 435/435 | 5/5 | 1.00 | 1.00 |
+| t3-api | Làn nhanh (C5–C9, bỏ lượt treo) | 7 | 216 | 1.152 | 609/609 | 7/7 | 1.94 | 3.68 |
+| t3-api | Làn nhanh (chỉ C9) | 3 | 238 | 1.176 | 261/261 | 3/3 | 2.14 | 3.75 |
+| t4-perf | Claude Code Opus (C5–C6) | 2 | 203 | 0.627 | 38/38 | 2/2 | 2.90 | 3.94 |
+| t4-perf | Claude Code Sonnet (C9) | 5 | 70 | 0.159 | 95/95 | 5/5 | 1.00 | 1.00 |
+| t4-perf | Làn nhanh (C5–C9, bỏ lượt treo) | 5 | 139 | 0.563 | 95/95 | 5/5 | 1.99 | 3.54 |
+| t4-perf | Làn nhanh (chỉ C9) | 2 | 135 | 0.568 | 38/38 | 2/2 | 1.93 | 3.57 |
+| t5-logq | Claude Code Opus (C5–C6) | 4 | 259 | 1.012 | 584/584 | 4/4 | 1.58 | 2.46 |
+| t5-logq | Claude Code Sonnet (C9) | 5 | 164 | 0.412 | 730/730 | 5/5 | 1.00 | 1.00 |
+| t5-logq | Làn nhanh (C5–C9, bỏ lượt treo) | 7 | 164 | 1.068 | 971/1022 | 6/7 | 1.00 | 2.59 |
+| t5-logq | Làn nhanh (chỉ C9) | 2 | 161 | 0.919 | 241/292 | 1/2 | 0.98 | 2.23 |
+| TB các bài (không trọng số) | Claude Code Opus (C5–C6) | 14 | 177 | 0.693 |  |  | 2.02 | 2.96 |
+| TB các bài (không trọng số) | Claude Code Sonnet (C9) | 26 | 92 | 0.244 |  |  | 1.00 | 1.00 |
+| TB các bài (không trọng số) | Làn nhanh (C5–C9, bỏ lượt treo) | 31 | 157 | 0.825 |  |  | 1.93 | 3.57 |
+| TB các bài (không trọng số) | Làn nhanh (chỉ C9) | 13 | 173 | 0.852 |  |  | 2.17 | 3.83 |
 
 Lượt bị bỏ khỏi "làn nhanh (C5–C7)": C5 t3-api lượt 1 (579 s, task T-20261102-105231-9e5) — treo stdin của harness; lượt còn lại cùng ô chạy 221 s. Không lượt nào khác bị bỏ.
 
-Đối chiếu số thời gian trong BRIEF-2 (Opus/Sonnet/làn nhanh, làm tròn s): t1 126/66/108 khớp · t2 91/42/94 khớp · t3 205/108/199 khớp · t4 203/49/142 khớp · t5 259/166/165 khớp.
+Đối chiếu số thời gian trong BRIEF-2 (Opus/Sonnet/làn nhanh, làm tròn s): t1 126/67/146 LỆCH (BRIEF-2: 126/66/108) · t2 91/48/121 LỆCH (BRIEF-2: 91/42/94) · t3 205/112/216 LỆCH (BRIEF-2: 205/108/199) · t4 203/70/139 LỆCH (BRIEF-2: 203/49/142) · t5 259/164/164 LỆCH (BRIEF-2: 259/166/165).
 
-Tỉ lệ làn nhanh (C5–C7, bỏ lượt treo) / Sonnet đơn: thời gian t1 1.64 · t2 2.27 · t3 1.85 · t4 2.90 · t5 1.00; chi phí t1 2.47 · t2 3.79 · t3 3.32 · t4 3.74 · t5 2.57 (BRIEF-2: chi phí 2.5–3.8×: khớp). Chỉ dùng lượt C7 của làn nhanh (cùng thời điểm): thời gian t1 1.66 · t2 1.71 · t3 1.79 · t4 2.45 · t5 0.77.
+Tỉ lệ làn nhanh (C5–C7, bỏ lượt treo) / Sonnet đơn: thời gian t1 2.17 · t2 2.54 · t3 1.94 · t4 1.99 · t5 1.00; chi phí t1 3.39 · t2 4.68 · t3 3.68 · t4 3.54 · t5 2.59 (BRIEF-2: chi phí 2.5–3.8×: LỆCH). Chỉ dùng lượt C7 của làn nhanh (cùng thời điểm): thời gian t1 2.74 · t2 3.09 · t3 2.14 · t4 1.93 · t5 0.98.
 
 Đọc T-h: (1) Mọi số thời gian trong BRIEF-2 khớp bảng (làm tròn giây), và khoảng chi phí làn nhanh / Sonnet đơn 2.5–3.8× khớp (2.47–3.79× theo bài, gộp C5–C7). (2) "Nhanh hơn 1.6–2.9× ở 4/5 bài" đúng với cột làn nhanh gộp (tỉ lệ làn nhanh / Sonnet đơn là 1.64–2.90 ở `t1`–`t4`); chỉ dùng lượt C7 của làn nhanh thì 1.66–2.45. (3) `t5`: gộp 1.00 (165 s so với 166 s), C7 riêng 127 s so với 159 và 172 s của hai lượt Sonnet (0.77×); với 1 lượt làn nhanh chỉ nói được là hòa hoặc nhanh hơn nhẹ, không phân biệt được. (4) Chất lượng: Sonnet đạt trọn 10/10 lượt; Opus 13/14 (`t1` 297/298 ở một lượt); làn nhanh 17/18 (`t2` 172/180). Không hệ nào có lợi thế chất lượng đo được; đáng chú ý là lượt duy nhất không đạt trọn của làn nhanh C7 (`t2`) mà Sonnet đơn đạt 60/60 cả hai lượt.
 
@@ -460,14 +498,14 @@ Lệnh tái lập bảng T-i: `node docs/research/performance/scripts/token-anal
 
 | Cặp (A − B) | Tập | Chỉ số | n mỗi ô (A/B) | Chênh lệch | CI 95% (bootstrap) | Tương đối so với B [CI] | p hoán vị hai phía (số hoán vị) | Nhận xét |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| Làn nhanh − Sonnet đơn | C7, cùng thời điểm | Thời gian (s) | t1 1/2 · t2 1/2 · t3 1/2 · t4 1/2 · t5 1/2 | 38.0 | [35.0; 41.0] | 44.3% [39.4; 49.5] | 0.0329 (243) | A > B; p < 0.05 |
-| Làn nhanh − Sonnet đơn | C7, cùng thời điểm | Chi phí (USD) | t1 1/2 · t2 1/2 · t3 1/2 · t4 1/2 · t5 1/2 | 0.441 | [0.432; 0.450] | 171.6% [162.4; 181.4] | 0.0041 (243) | A > B; p < 0.05 |
+| Làn nhanh − Sonnet đơn | C7, cùng thời điểm | Thời gian (s) | t1 3/6 · t2 3/5 · t3 3/5 · t4 2/5 · t5 2/5 | 80.9 | [57.8; 104.5] | 87.9% [61.9; 115.5] | < 0.0001* (200 000) | A > B; p < 0.05 |
+| Làn nhanh − Sonnet đơn | C7, cùng thời điểm | Chi phí (USD) | t1 3/6 · t2 3/5 · t3 3/5 · t4 2/5 · t5 2/5 | 0.607 | [0.517; 0.698] | 248.4% [210.1; 287.5] | < 0.0001* (200 000) | A > B; p < 0.05 |
 | Làn nhanh − Opus | C5–C6, bỏ lượt treo | Thời gian (s) | t1 2/2 · t2 2/2 · t3 3/4 · t4 2/2 · t5 4/4 | -28.2 | [-44.4; -11.4] | -16.0% [-24.2; -6.8] | 0.0317 (529 200) | A < B; p < 0.05 |
 | Làn nhanh − Opus | C5–C6, bỏ lượt treo | Chi phí (USD) | t1 2/2 · t2 2/2 · t3 3/4 · t4 2/2 · t5 4/4 | 0.125 | [0.047; 0.204] | 18.1% [6.5; 30.4] | 0.0310 (529 200) | A > B; p < 0.05 |
-| Làn nhanh − Opus | làn nhanh C5–C7 (bỏ lượt treo) so với Opus C5–C6 (như T-h) | Thời gian (s) | t1 3/2 · t2 3/2 · t3 4/4 · t4 3/2 · t5 5/4 | -34.9 | [-50.7; -18.9] | -19.8% [-27.5; -11.2] | 0.0053 (8 820 000) | A < B; p < 0.05 |
-| Làn nhanh − Opus | làn nhanh C5–C7 (bỏ lượt treo) so với Opus C5–C6 (như T-h) | Chi phí (USD) | t1 3/2 · t2 3/2 · t3 4/4 · t4 3/2 · t5 5/4 | 0.088 | [0.018; 0.162] | 12.7% [2.5; 24.2] | 0.0944 (8 820 000) | A > B; p ≥ 0.05 |
-| Sonnet đơn − Opus | C7 so với C5–C6 (khác thời điểm; tách phần do mô hình) | Thời gian (s) | t1 2/2 · t2 2/2 · t3 2/4 · t4 2/2 · t5 2/4 | -90.8 | [-102.5; -79.3] | -51.4% [-54.8; -47.6] | < 0.0001 (48 600) | A < B; p < 0.05 |
-| Sonnet đơn − Opus | C7 so với C5–C6 (khác thời điểm; tách phần do mô hình) | Chi phí (USD) | t1 2/2 · t2 2/2 · t3 2/4 · t4 2/2 · t5 2/4 | -0.436 | [-0.477; -0.396] | -62.9% [-65.3; -60.3] | < 0.0001 (48 600) | A < B; p < 0.05 |
+| Làn nhanh − Opus | làn nhanh C5–C9 (bỏ lượt treo) so với Opus C5–C6 (như T-h) | Thời gian (s) | t1 6/2 · t2 6/2 · t3 7/4 · t4 5/2 · t5 7/4 | -19.5 | [-37.5; -0.5] | -11.1% [-20.4; -0.3] | 0.2196* (200 000) | A < B; p ≥ 0.05 |
+| Làn nhanh − Opus | làn nhanh C5–C9 (bỏ lượt treo) so với Opus C5–C6 (như T-h) | Chi phí (USD) | t1 6/2 · t2 6/2 · t3 7/4 · t4 5/2 · t5 7/4 | 0.132 | [0.060; 0.204] | 19.0% [8.4; 30.3] | 0.0267* (200 000) | A > B; p < 0.05 |
+| Sonnet đơn − Opus | C7 so với C5–C6 (khác thời điểm; tách phần do mô hình) | Thời gian (s) | t1 6/2 · t2 5/2 · t3 5/4 · t4 5/2 · t5 5/4 | -84.6 | [-96.9; -72.3] | -47.9% [-52.0; -43.3] | < 0.0001* (200 000) | A < B; p < 0.05 |
+| Sonnet đơn − Opus | C7 so với C5–C6 (khác thời điểm; tách phần do mô hình) | Chi phí (USD) | t1 6/2 · t2 5/2 · t3 5/4 · t4 5/2 · t5 5/4 | -0.449 | [-0.489; -0.409] | -64.7% [-67.0; -62.3] | < 0.0001* (200 000) | A < B; p < 0.05 |
 
 Hàng 1 là phép so sánh cùng thời điểm, cùng mô hình (Sonnet) nên là kết quả chính cho RQ3; hàng 2–3 trộn hiệu ứng mô hình (Opus so với Sonnet) với hiệu ứng điều phối; hàng 4 đo riêng phần do mô hình (và thời điểm).
 
