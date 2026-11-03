@@ -529,7 +529,7 @@ Nghiên cứu đăng ký trước có hai hàm ý cho cổng A/B, cả hai **ch�
 - **B-13:** ghi `model` và `byPhase` đủ bốn thành phần (input, cacheRead, cacheWrite, output), kèm chỉ số trúng cache trên trang Token. Hiện không tách được out, cacheWrite hay thời gian theo pha (Bảng 11, đoạn (b)).
 - **B-14:** chẩn đoán cache của `claude-cli`: tiền tố có ổn định không, và TTL thật là bao lâu.
 - **B-15:** đo giá trị của họp (arm B1) trước khi đổi cấu hình. Bài lớn đã có `task.json` (`3ff7df3`), nên hạng mục chỉ còn đo arm B1 trên l1/l2.
-- **B-16:** thí điểm "CTO Opus + a-brief", chờ giám đốc duyệt B-11 và mở phép đo B-12. Nếu chỉ đổi riêng accept sang Opus thì USD của pha accept tăng khi token không đổi. Token có trọng số cũng không so trực tiếp được giữa hai model khác giá.
+- **B-16:** thí điểm "CTO Opus + a-brief": arm `B7cabO` đã có (D9); giám đốc đã duyệt (a-brief) để đo (3/11); còn cần đo bằng bộ bài cài lỗi B-12. Nếu chỉ đổi riêng accept sang Opus thì USD của pha accept tăng khi token không đổi. Token có trọng số cũng không so trực tiếp được giữa hai model khác giá.
 - **B-17:** chọn model lập kế hoạch theo độ khó. Hạng mục hoãn tới khi B-13 ghi model theo pha.
 
 **Trạng thái trước khi công bố** (ba nhóm; nguồn đối chiếu: `docs/research/BRIEF-D9.md`, commit `90cd913`):
