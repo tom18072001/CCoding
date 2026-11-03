@@ -32,6 +32,21 @@ tasks/<id>/        task.json (brief, category, size, grader) · repo/ (starting 
 | r1-elk-design | design | 4 | 8-item checklist (regex or `--judge`), license trap |
 | re1-lit-synthesis | research | 3 | answers, citation validity, correct refusal |
 
+### Bộ bài cài lỗi g1–g6 (B-12)
+
+Sáu bài tổng hợp (không dựa trên t1–t5) để đo recall của cổng chất lượng. Chọn bằng `run.mjs --tasks suite:gates` (bảng tên ở `_suites.gates` trong `arms.json`). Cấu trúc như t1–t5 (`starter/`, `hidden/`, `ref/`, `prompt.txt`, `task.json` với `repoDir`/`solutionDir`), grader `code`. Nhãn thật nằm ở `task.json` → `plantedFaults: [{class, where, expectGate}]`; `plantedFaultNote` mô tả cách lỗi lọt qua.
+
+| Id | class | expectGate | Lỗi cài sẵn | Test công khai ở starter |
+| --- | --- | --- | --- | --- |
+| g1-slug-dedupe | red-check | b02 | `slugify` không cắt dấu gạch hai đầu | **đỏ** |
+| g2-cart-coupon | red-check | b02 | `toCents` dùng floor (19.99 → 1998) ở module phụ | **đỏ** |
+| g3-qty-rename | plan-omission | b10 | đổi `qty`→`quantity`; `export.js`, `stock.js` không có test công khai | xanh |
+| g4-gb-unit | plan-omission | b10 | thêm GB; `parse.js`, `validate.js` có danh sách đơn vị riêng | xanh |
+| g5-median-stats | hidden-wrong | cto | `median` sort theo chuỗi, sai khi chẵn, đổi mảng gốc | xanh |
+| g6-range-merge | hidden-wrong | cto | `overlaps` dùng `<=` với khoảng nửa mở | xanh |
+
+Tự kiểm không gọi LLM: `node run.mjs --arms oracle,null --tasks suite:gates --repeats 1` — oracle phải 1,00, null thấp (≤ 0,25 mặc định).
+
 ### Bài t1–t5 (từ harness cũ) và `repoDir`/`solutionDir`
 
 `tasks/t1-duration` … `t5-logq` giữ nguyên cấu trúc cũ (`starter/`, `prompt.txt`, `hidden/`, `ref/`) và có thêm `task.json` (`category: "coding"`, `size` + `sizeReason`, `brief` lấy từ `prompt.txt`, grader dùng `hidden/` có sẵn). Hai trường tùy chọn cho phép runner dùng thư mục không theo quy ước mới:

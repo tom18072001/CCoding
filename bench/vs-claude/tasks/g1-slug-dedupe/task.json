@@ -1,0 +1,24 @@
+{
+  "id": "g1-slug-dedupe",
+  "category": "coding",
+  "size": 2,
+  "sizeReason": "Một module: sửa slugify và thêm uniqueSlugs",
+  "title": "Slug hóa tiêu đề và sinh slug không trùng (lệnh kiểm tra đỏ sẵn)",
+  "hypotheses": [
+    "H1",
+    "B-12"
+  ],
+  "deliverable": "src/slug.js",
+  "brief": "Trong src/slug.js: (1) thêm hàm uniqueSlugs(titles) theo SPEC.md; (2) đảm bảo `npm test` xanh. Bộ nghiệm thu ẩn kiểm tra thêm các trường hợp biên. Không thêm thư viện ngoài.",
+  "grader": "code",
+  "repoDir": "starter",
+  "solutionDir": "ref",
+  "plantedFaults": [
+    {
+      "class": "red-check",
+      "where": "src/slug.js:slugify (thiếu cắt dấu gạch đầu/cuối) → test công khai test/slug.test.js đỏ ngay từ starter",
+      "expectGate": "b02"
+    }
+  ],
+  "plantedFaultNote": "Starter có test công khai đỏ vì slugify không cắt dấu gạch ở hai đầu; agent phải chạy `npm test`, thấy đỏ và sửa nguyên nhân gốc, không được báo xong khi lệnh còn đỏ."
+}
