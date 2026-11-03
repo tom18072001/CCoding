@@ -5,17 +5,19 @@
 Đổi trường `gates` của `runs.jsonl` (B-12) thành tệp CSV `ref,pred,runId,gate,task,arm` để `agreement.mjs` tính recall, chặn nhầm, κ, CI bootstrap theo lượt.
 
 ```
-node docs/research/analysis/gates-pairs.mjs <runs.jsonl…> [--arms-json bench/vs-claude/arms.json] --unit decision|run [--gate b02|b10|cto] [--out file.csv]
+node docs/research/analysis/gates-pairs.mjs <runs.jsonl…> [--arms-json bench/vs-claude/arms.json] --unit decision|run [--gate b02|b10|cto] [--negatives clean|cross] [--out file.csv]
 ```
 
-Không có `--out` thì ghi stdout. stderr in số cặp và số dòng bị bỏ theo cổng (cổng `null`).
+Không có `--out` thì ghi stdout. stderr in số cặp và ba loại dòng bị bỏ, tách riêng: cổng `null` (theo cổng), bài cài lỗi loại khác (theo cổng), dòng không chạy cổng (theo `status`: `infra`, `error`…).
 
 ### Quy ước nhãn
 
-- `ref = '1'` khi tiền tố tên bài khớp kind của cổng trong `arms.json` `_suites.gates.kinds` (`g1-`/`g2-` → b02, `g3-`/`g4-` → b10, `g5-`/`g6-` → cto); ngược lại `'0'`. Bài không thuộc tiền tố nào là bài sạch: `ref = '0'` cho mọi cổng.
+- `ref = '1'` khi tiền tố tên bài khớp kind của cổng trong `arms.json` `_suites.gates.kinds` (`g1-`/`g2-` → b02, `g3-`/`g4-` → b10, `g5-`/`g6-` → cto); ngược lại `'0'` — **nhưng chỉ cho bài sạch** (không khớp tiền tố nào), áp cho mọi cổng.
+- Bài cài lỗi **loại khác** (ví dụ g1/g2 khi xét `--gate cto`) mặc định **bị bỏ khỏi mẫu của cổng đó** (`--negatives clean`), vì cổng chặn đúng ở đó không phải chặn nhầm; giữ với `ref='0'` sẽ làm lệch precision và tỉ lệ chặn nhầm, và điểm dừng 'Có hại' (CD 3.5) dựa trên chặn nhầm ở lượt sạch sẽ sai. `--negatives cross` giữ hành vi cũ (chỉ để so sánh).
 - `pred`: b02, b10 lấy `blocked`; cto lấy `!pass`. Giá trị là chuỗi `'0'`/`'1'`.
 - `runId` = trường `key` của dòng runs.jsonl.
-- Cổng `null` (không có sự kiện `gate.decision`, ví dụ b10 ở làn đơn) hoặc dòng không có `gates` (lượt `infra`) bị bỏ khỏi mẫu của cổng đó.
+- Cổng `null` (không có sự kiện `gate.decision`, ví dụ b10 ở làn đơn) bị bỏ khỏi mẫu của cổng đó, đếm theo cổng.
+- Dòng không có `gates` (lượt `infra`, `error`) bị bỏ khỏi mọi cổng, đếm riêng theo `status` để RUNLOG phân biệt cổng không chạy với lỗi hạ tầng.
 
 ### Đơn vị
 

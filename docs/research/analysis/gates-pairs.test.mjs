@@ -40,7 +40,8 @@ test('(2) b10 null ở làn đơn: không có dòng b10, stderr đếm đúng', 
   const text = [run('a', 'g3-a', { b02: { blocked: false, rounds: 0 }, b10: null, cto: { pass: true } }), run('b', 'g3-b', { b02: null, b10: null, cto: null }), { key: 'c', task: 'g3-c', status: 'infra' }].map((x) => JSON.stringify(x)).join('\n');
   const r = jsonlToPairs(text, kinds, { unit: 'run' });
   assert.equal(r.pairs.filter((p) => p.gate === 'b10').length, 0);
-  assert.deepEqual(r.skipped, { b02: 2, b10: 3, cto: 2 });
+  assert.deepEqual(r.skipped, { b02: 1, b10: 2, cto: 1 });
+  assert.deepEqual(r.unrun, { infra: 1 });
 });
 
 test('(3) CTO không đạt trên g5/g6 → ref=1, pred=1; đạt → pred=0', () => {
@@ -53,7 +54,7 @@ test('(4) lượt sạch → ref=0 cho mọi cổng; cổng khác kind cũng ref
   const ps = rowToPairs(run('k', 't1-a', { b02: { blocked: true, rounds: 1 }, b10: { blocked: false }, cto: { pass: false } }), kinds, { unit: 'run' }).pairs;
   assert.equal(ps.length, 3);
   assert.ok(ps.every((p) => p.ref === '0'));
-  const g = rowToPairs(run('k', 'g3-a', { b02: { blocked: false, rounds: 0 }, b10: { blocked: true } }), kinds, { unit: 'run' }).pairs;
+  const g = rowToPairs(run('k', 'g3-a', { b02: { blocked: false, rounds: 0 }, b10: { blocked: true } }), kinds, { unit: 'run', negatives: 'cross' }).pairs;
   assert.deepEqual(g.map((p) => [p.gate, p.ref]), [['b02', '0'], ['b10', '1']]);
 });
 
@@ -78,7 +79,26 @@ test('(6) --gate lọc đúng; thiếu --unit → mã 2', () => {
   fs.writeFileSync(f, JSON.stringify(run('k', 'g3-a', { b02: { blocked: false, rounds: 0 }, b10: { blocked: true }, cto: { pass: true } }))); fs.writeFileSync(a, JSON.stringify(ARMS));
   let out = ''; main([f, '--arms-json', a, '--unit', 'run', '--gate', 'b10'], { out: (s) => { out += s; }, err: () => {} });
   const rs = parseCsv(out); assert.equal(rs.length, 1); assert.equal(rs[0].gate, 'b10');
-  out = ''; main([f, '--arms-json', a, '--unit', 'run'], { out: (s) => { out += s; }, err: () => {} });
+  out = ''; main([f, '--arms-json', a, '--unit', 'run', '--negatives', 'cross'], { out: (s) => { out += s; }, err: () => {} });
   assert.equal(parseCsv(out).length, 3);
   assert.equal(main([f], { out: () => {}, err: () => {} }), 2);
+});
+
+test('(7) bài g1 với --gate cto: mặc định bỏ khỏi mẫu (không thành chặn nhầm); negatives=cross giữ ref=0', () => {
+  const row = run('k', 'g1-a', { b02: { blocked: true, rounds: 1 }, cto: { pass: false } });
+  const d = jsonlToPairs(JSON.stringify(row), kinds, { unit: 'run', gates: ['cto'] });
+  assert.equal(d.pairs.length, 0); assert.deepEqual(d.cross, { cto: 1 });
+  const c = rowToPairs(row, kinds, { unit: 'run', gates: ['cto'], negatives: 'cross' });
+  assert.deepEqual(c.pairs.map((p) => [p.ref, p.pred]), [['0', '1']]);
+  assert.equal(rowToPairs(run('k', 't1-a', { cto: { pass: false } }), kinds, { gates: ['cto'] }).pairs[0].ref, '0');
+  assert.equal(rowToPairs(run('k', 'g5-a', { cto: { pass: false } }), kinds, { gates: ['cto'] }).pairs[0].ref, '1');
+});
+
+test('(8) stderr tách cổng null, bài loại khác và dòng infra/error theo status; --negatives sai → mã 2', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gp-')), f = path.join(dir, 'runs.jsonl'), a = path.join(dir, 'arms.json');
+  fs.writeFileSync(a, JSON.stringify(ARMS));
+  fs.writeFileSync(f, [run('a', 'g1-a', { cto: { pass: false } }), run('b', 't1-a', { cto: null }), { key: 'c', task: 't1-b', status: 'infra' }, { key: 'd', task: 't1-c', status: 'error' }].map((x) => JSON.stringify(x)).join('\n'));
+  let err = ''; main([f, '--arms-json', a, '--unit', 'run', '--gate', 'cto'], { out: () => {}, err: (s) => { err += s; } });
+  assert.match(err, /cổng null: cto=1/); assert.match(err, /loại khác: cto=1/); assert.match(err, /infra=1 error=1/);
+  assert.equal(main([f, '--arms-json', a, '--unit', 'run', '--negatives', 'x'], { out: () => {}, err: () => {} }), 2);
 });

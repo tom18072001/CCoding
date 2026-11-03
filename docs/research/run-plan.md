@@ -340,7 +340,9 @@ done
 
 **Điểm dừng cứng:**
 - **Trước E2:** chỉ chạy khi §9 đã commit, có công thức chốt N cho E4 (q̂, ρ̂ từ E2 theo tử và mẫu ghi sẵn, rồi tra bảng C-3 của `analysis/agreement.md`). Chưa commit thì dừng sau E1.
+- **Trước lượt local đầu tiên** (E4, hoặc phần cloud chạy tiếp ở local theo §5.4.2): đã chốt server local dựng từ commit nào (§5.4.2, [CẦN XÁC NHẬN]), ghi quyết định vào RUNLOG và commit. Chưa chốt thì không chạy local.
 - **Trước E4:** chỉ bắt đầu khi N đã được chốt bằng đúng công thức §9 `V4-3e-E4`, và giá trị N cùng phép tính đã ghi vào RUNLOG, có commit. Không chọn N sau khi xem điểm.
+- **Trước E6:** đã chốt `--out` của E6 (ghi chú §5.4.3, [CẦN XÁC NHẬN]) **cùng lúc** với mục (9) của §9 `V4-3e-E6` (ghép khóa cũ khác server), ghi vào RUNLOG và commit trước lượt E6 đầu tiên. Chưa chốt thì không chạy E6, vì chọn sai `--out` sẽ trộn hai server trong một thư mục, trái §6.4.
 - **Không xem điểm** giữa các phần (§3.0, `preregistration.md` §4.4a). Giữa các phần chỉ xem bảng vận hành ở §3.0, đổi đường dẫn sang thư mục `--out` của phần đó.
 - **Thiếu credit hoặc thiếu giờ:** thứ tự ưu tiên lấy theo §9. Mục này không chép lại để tránh hai bản lệch nhau.
 
@@ -410,7 +412,7 @@ Phần cloud nào chưa xong khi chuyển vẫn giữ thứ tự E1 → E2 → E
 **Cách nối dữ liệu cloud với local:**
 - Cùng thư mục `--out` cho cùng một phần, nên khóa `task__arm__rN` (`run.mjs:49`) là khóa chung, theo §6.1.
 - Mỗi phần, và mỗi máy trong cùng phần, ghi một dòng RUNLOG gồm hash server, `git status --short`, máy (cloud hoặc local) và `model` theo pha. Khi phân tích, hash hoặc `model` theo pha khác nhau giữa các lượt của cùng phần thì tách ra làm biến độ nhạy, không gộp im lặng (§6.4).
-- Máy local dựng server từ **cùng commit** với cloud: `git worktree add ../ccoding-3e <hash cloud>`, thay cho `HEAD`, rồi kiểm bằng `git -C ../ccoding-3e rev-parse HEAD`. Đây là đề xuất của mục này, chưa có trong RUNBOOK; giám đốc hoặc người điều phối xác nhận trước khi chạy local [CẦN XÁC NHẬN].
+- Máy local dựng server từ **cùng commit** với cloud: `git worktree add ../ccoding-3e <hash cloud>`, thay cho `HEAD`, rồi kiểm bằng `git -C ../ccoding-3e rev-parse HEAD`. Đây là đề xuất của mục này, chưa có trong RUNBOOK; giám đốc hoặc người điều phối xác nhận trước khi chạy local [CẦN XÁC NHẬN]. Đây là điểm dừng "trước lượt local đầu tiên" ở trên.
 
 #### 5.4.3 Bảng local: E4–E6, bằng hạn mức gói
 
@@ -419,14 +421,15 @@ Cùng thiết lập `$S3E`, server riêng cổng 7425 trên máy giám đốc. G
 | Thứ tự | Phần | §9 | Lệnh (cờ chép nguyên từ RUNBOOK 3e bước 6) | Số lượt | USD (Sonnet) | Giờ máy | Điểm commit |
 |---|---|---|---|---|---|---|---|
 | 4 | E4, B-12/B-16 chính | `V4-3e-E4` | `node bench/vs-claude/run.mjs --arms B7cab,B7cabO --tasks suite:gates --repeats <R> --timeout 20 $S3E --out <OUT_E4>` | 50–92 | 23–44 | 2,3–4,2 | sau lệnh, và cuối mỗi cửa sổ 5 giờ |
-| 5 | E5, B-15 chính | `V4-3e-E5` | `node bench/vs-claude/run.mjs --arms B0,B1 --tasks l1-modules,l2-chain --repeats 10 --timeout 40 $S3E --out bench/vs-claude/results/large-pilot` | 40 | ≈ 73 | ≈ 7 | cuối mỗi cửa sổ 5 giờ; trải trên nhiều cửa sổ |
+| 5 | E5, B-15 chính | `V4-3e-E5` | `node bench/vs-claude/run.mjs --arms B0,B1 --tasks l1-modules,l2-chain --repeats 10 --timeout 40 $S3E --out bench/vs-claude/results/b15-main` | 40 | ≈ 73 | ≈ 7 | cuối mỗi cửa sổ 5 giờ; trải trên nhiều cửa sổ |
 | 6 | E6, H6 cho đủ N | `V4-3e-E6` | ba lệnh: `--arms A1 --repeats 3`, `--arms A2 --repeats 2`, `--arms B0 --repeats 3`, mỗi lệnh với `--tasks l1-modules,l2-chain,t1-duration,t2-orders,t3-api,t4-perf,t5-logq` | ≈ 49 | ≈ 32 | ≈ 2,7 | sau mỗi lệnh |
 | | **Cộng local** | | | ≈ 139–181 | ≈ 128–149 | ≈ 12–13,9 | |
 
 Ghi chú:
 - **Giá trị điền cho E4:** `<R>` là số lượt mỗi khóa arm × bài, suy từ N theo §9 `V4-3e-E4`. Mỗi lần tăng `--repeats` thêm 1 sinh 12 khóa (2 arm × 6 bài). N là tổng lượt, lượt mỗi cổng hay lượt mỗi arm: theo định nghĩa của §9. `<OUT_E4>` cũng theo §9. Nếu §9 tính lượt thí điểm vào mẫu chính thì dùng `bench/vs-claude/results/gates-pilot` (runner bỏ qua r1–r2 đã có). Nếu không, dùng thư mục mới `bench/vs-claude/results/gates-main`. Đề xuất của mục này là thư mục mới, để thí điểm chỉ dùng chốt N [CẦN XÁC NHẬN ở §9].
 - **E4 không có B6**, nên b10 ở E4 là `null` với mọi lượt làn đơn. Mẫu b10 chỉ có 4 lượt B6 của E2. Nếu §9 cần b10 trong mẫu chính thì phải thêm lệnh B6. Lệnh đó không có trong RUNBOOK, nên mục này không tự thêm [CẦN XÁC NHẬN].
-- **`--timeout` của E5, E6:** RUNBOOK 3e bước 6 ghi "cùng lệnh" nhưng không ghi timeout cho E5, E6. E5 lấy `--timeout 40` và `--out large-pilot` theo lệnh E3 cùng bài, để B0, B1 của E3 là r1 của E5. E6 cần dùng **cùng `--out` và cùng `--timeout`** với các khóa H6 đã có, để runner bỏ qua khóa đã xong: A1, B0 theo §5.2 là 20; A2 là 40. Thư mục chứa khóa H6 đã có là `results/study-cloud`, theo RUNBOOK Bước 3 và 3d. Server 3e khác commit với server 7424 đã chạy các khóa đó, nên nếu ghi vào cùng `--out` thì trái §6.4. Cách xử lý (cùng thư mục, ghi hash vào RUNLOG, tách hash làm biến độ nhạy; hay thư mục mới, chạy đủ N từ đầu) do §9 `V4-3e-E6` quyết định theo quy tắc H6 v2.1 [CẦN XÁC NHẬN].
+- **`--out` của E5 là thư mục mới `bench/vs-claude/results/b15-main`**, không dùng `large-pilot`. Lý do: §9 `V4-3e-E3` mục (6) ghi dữ liệu E3 "không gộp vào ước lượng của E5", và `V4-3e-E5` mục (4) ghi "Thí điểm E3 (6 lượt) tách riêng, không gộp". Vì runner bỏ qua khóa đã `done`, nếu E5 ghi vào `large-pilot` thì B0, B1 r1 của E3 sẽ bị coi là r1 của E5: mỗi ô chỉ có 9 lượt mới và lượt thí điểm lọt vào mẫu chính. Với thư mục mới, E5 chạy đủ r1–r10 mỗi ô. Nếu E5 dừng giữa chừng, chạy tiếp đúng lệnh trên, cùng `b15-main`.
+- **`--timeout` của E5, E6:** RUNBOOK 3e bước 6 ghi "cùng lệnh" nhưng không ghi timeout cho E5, E6. `--timeout 40` của E5 là **đề xuất** của mục này, lấy theo lệnh E3 cùng bài và cùng arm B0, B1 [CẦN XÁC NHẬN]; chốt trước lượt E5 đầu tiên, sau đó không đổi giữa chừng (§3.0). E6 cần dùng **cùng `--out` và cùng `--timeout`** với các khóa H6 đã có, để runner bỏ qua khóa đã xong: A1, B0 theo §5.2 là 20; A2 là 40. Thư mục chứa khóa H6 đã có là `results/study-cloud`, theo RUNBOOK Bước 3 và 3d. Server 3e khác commit với server 7424 đã chạy các khóa đó, nên nếu ghi vào cùng `--out` thì trái §6.4. Cách xử lý (cùng thư mục, ghi hash vào RUNLOG, tách hash làm biến độ nhạy; hay thư mục mới, chạy đủ N từ đầu) do §9 `V4-3e-E6` quyết định theo quy tắc H6 v2.1 [CẦN XÁC NHẬN]. Điểm này chốt cùng mục (9) của `V4-3e-E6`, trước lượt E6 đầu tiên (điểm dừng "Trước E6" ở trên).
 - **E5:** quy tắc loại "lượt đối chứng phải có pha `discuss`" áp như ở E3 (§9).
 - Dòng "Cộng" cộng từ bảng BRIEF-14. Theo §2 (3,6 giờ wall-sum mỗi cửa sổ, giả định), 12–13,9 giờ cần **ít nhất 4 cửa sổ** 5 giờ.
 
