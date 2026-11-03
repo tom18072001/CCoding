@@ -1,7 +1,7 @@
 {
   "argv": [
     "--arms",
-    "A0-sonnet,B7c",
+    "A0-sonnet,B7cab",
     "--tasks",
     "t1-duration,t2-orders,t3-api,t4-perf,t5-logq",
     "--repeats",
@@ -34,7 +34,7 @@
   },
   "armIds": [
     "A0-sonnet",
-    "B7c"
+    "B7cab"
   ],
   "taskIds": [
     "t1-duration",
@@ -44,5 +44,5 @@
     "t5-logq"
   ],
   "repeats": 2,
-  "startedAt": "2026-11-03T09:23:33.090Z"
+  "startedAt": "2026-11-03T08:43:41.209Z"
 }
