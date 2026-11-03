@@ -48,3 +48,16 @@ export function checkArms(armIds, arms, lanes) {
   }
   return errs;
 }
+
+/** B-19: đếm lượt leak theo nhánh `{ arm, leakRuns, totalRuns }` (bỏ dòng infra). Chỉ trả số đếm, không đụng nội dung lượt chạy. */
+export function leakCounts(rows) {
+  const by = new Map();
+  for (const r of rows) {
+    if (!isDoneRow(r)) continue;
+    const c = by.get(r.arm) ?? { arm: r.arm, leakRuns: 0, totalRuns: 0 };
+    c.totalRuns++;
+    if (r.leak) c.leakRuns++;
+    by.set(r.arm, c);
+  }
+  return [...by.values()];
+}

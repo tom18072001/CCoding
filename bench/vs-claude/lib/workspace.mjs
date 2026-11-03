@@ -20,3 +20,12 @@ export function populateWorkspace(dir, repoDir) {
   if (fs.existsSync(repoDir)) fs.cpSync(repoDir, dir, { recursive: true });
   return dir;
 }
+
+/** B-19: thư mục mã khởi đầu của bài — `starter/` nếu có, không thì `repo/` (10 bài giữ lại chỉ có `repo/`). Không có cả hai → null. */
+export function startDir(taskRoot) {
+  for (const n of ['starter', 'repo']) {
+    const d = path.join(taskRoot, n);
+    if (fs.existsSync(d)) return d;
+  }
+  return null;
+}

@@ -13,7 +13,7 @@ import { PROCESS_SUFFIX, runClaude, weighted } from './lib/claude.mjs';
 import { runCcoding, serverUp } from './lib/ccoding.mjs';
 import { GRADERS } from './lib/grade.mjs';
 import { blind } from './lib/judge.mjs';
-import { EXIT_RATE_LIMIT, checkArms, doneKeys, suiteTaskIds, supportedLanes } from './lib/queue.mjs';
+import { EXIT_RATE_LIMIT, checkArms, doneKeys, leakCounts, suiteTaskIds, supportedLanes } from './lib/queue.mjs';
 import { populateWorkspace, taskDirs } from './lib/workspace.mjs';
 
 const SUITE = path.dirname(fileURLToPath(import.meta.url));
@@ -193,5 +193,10 @@ for (const s of schedule) {
   };
   fs.appendFileSync(runsFile, `${JSON.stringify(row)}\n`);
   console.log(error ? `ERROR ${error.split('\n')[0]}` : `score ${row.score.toFixed(2)} | ${Math.round(row.wallSec ?? 0)}s | ${row.tokens?.weighted ?? 0} wtok${row.leak ? ' | LEAK' : ''}`);
+}
+// B-19: chỉ in số đếm leak theo nhánh (lượt leak=true bị loại ở analyze.mjs), không in nội dung.
+if (fs.existsSync(runsFile)) {
+  const rows = fs.readFileSync(runsFile, 'utf8').split('\n').filter(Boolean).flatMap((l) => { try { return [JSON.parse(l)]; } catch { return []; } });
+  for (const c of leakCounts(rows)) console.log(`leak ${JSON.stringify(c)}`);
 }
 console.log(`\nDone. Results: ${runsFile}\nAnalyse: node ${path.relative(process.cwd(), path.join(SUITE, 'analyze.mjs'))} ${out}`);
