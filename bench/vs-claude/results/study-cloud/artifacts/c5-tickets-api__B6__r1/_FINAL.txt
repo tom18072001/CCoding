@@ -1,0 +1,117 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude c5-tickets-api__B6__r1] Filtering, sorting and cursor pagination for a tickets API
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Việc nhỏ, chỉ sửa một hàm trong một tệp. Tách thành 2 hạng mục song song theo hợp đồng API cố định: phần hiện thực trong src/handler.js và bộ test độc lập trong tệp test riêng.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Hiện thực lọc, sắp xếp và cursor pagination trong GET /tickets (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã hiện thực lọc `status`/`assignee`, `sort` (có tiền tố `-`, tie-break theo id tăng dần) và keyset cursor pagination cho `GET /tickets` trong `src/handler.js`. Khi không có query hợp lệ, hành vi cũ giữ nguyên: mảng trần, sắp xếp theo id, status 200. `npm test` xanh (1/1). Tôi chưa viết test mới trong repo vì phần đó thuộc S2.
+
+## Tệp đã tạo/sửa
+- `src/handler.js`: thêm `parseList`, `decodeCursor`, `parseQuery`, `listTickets`. Handler gọi `listTickets(tickets, req.query)`.
+
+## Hợp đồng API
+- `GET /tickets`, không có phân quyền riêng.
+- Không có `limit` thì body là mảng trần (đã lọc và sắp xếp). Có `limit` thì body là `{items, nextCursor}`.
+- Lỗi 400 `{error:'invalid_<param>'}` với param là `status`, `assignee`, `sort`, `limit` hoặc `cursor`.
+- Khi có nhiều lỗi, thứ tự kiểm tra cố định là status → assignee → sort → limit → cursor (ghi chú trong code).
+- Giá trị rỗng, ví dụ `status=a,` hoặc `assignee=`, là invalid.
+- `status` và `assignee` được chuẩn hóa (loại trùng, sắp xếp) khi tạo chữ ký, nên đổi thứ tự giá trị không làm cursor bị coi là sai.
+- Cursor là base64url của JSON `{k, id, sig}`. Cursor sai cấu trúc, sai kiểu khóa, lệch chữ ký (status/assignee/sort khác) hoặc dùng khi không có `limit` đều trả `invalid_cursor`.
+- Query lạ bị bỏ qua.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0, tests 1, pass 1, fail 0.
+- Script tạm ngoài repo (`/tmp/y.mjs`) duyệt hết các trang với `limit=4`. Tôi chạy 6 kiểu sắp xếp (id, priority, createdAt, mỗi kiểu tăng và giảm) × 3 bộ lọc (không lọc, `status=open,closed`, `assignee=none,an`). Cả 18 tổ hợp ra đúng tập kết quả và đúng thứ tự so với bản không phân trang, không trùng, không sót. Ba ca lỗi (`cursor` không có `limit`, `limit=101`, `status=a`) trả đúng mã lỗi.
+
+## Việc còn lại
+- S2 (`@senior-swe`) viết test chính thức cho filter, sort, pagination và validation.
+- Không có biến môi trường mới.
+
+Bản đầy đủ: `.ccoding/T-20261103-004813-114/outputs/dev-S1-backend-dev.md`
+
+### S2 — Bộ test cho filter, sort, pagination và validation (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã tạo `test/tickets-query.test.js` với 14 test cho filter, sort, pagination và validation. Cả 14 test đều qua với handler hiện tại trong `src/handler.js`, và `npm test` qua cả 15 test (gồm test cũ). Kết quả mong đợi được tính độc lập từ `seed()`, không dùng logic của handler.
+
+## Tệp đã tạo/sửa
+- `test/tickets-query.test.js` · tạo mới. Không sửa tệp nào khác.
+
+## Kiểm chứng
+- `node --test test/tickets-query.test.js` → exit 0, 14 test, 14 pass, 0 fail.
+- `npm test` → 15 test, 15 pass, 0 fail. Tôi chỉ đọc dòng tổng kết nên không lấy được exit code.
+- Lần chạy lệnh đầu bị hook chặn vì chuỗi `../src/handler.js` nằm trong heredoc. Tôi ghi tệp bằng công cụ Write rồi chạy lại, nên không ảnh hưởng kết quả.
+
+## Quyết định thiết kế
+- **Phạm vi phủ:** các test phủ đủ danh sách trong hạng mục S2:
+  - không tham số, query lạ
+  - status, assignee, `none`, kết hợp
+  - 6 kiểu sort
+  - limit lỗi và hợp lệ
+  - duyệt hết trang, trang cuối và tập rỗng
+  - cursor rác, cursor lệch tham số, cursor không kèm limit
+  - dạng body lỗi
+- **Duyệt trang:** chạy 6 sort × 4 bộ filter × 5 giá trị limit (1, 2, 5, 7, 100), so với kết quả không phân trang để bắt trùng và sót.
+- **Tie-break:** dữ liệu seed có `priority` trùng nhau nên test tie-break theo id tăng dần có hiệu lực. `createdAt` trong seed không trùng, nên tie-break chỉ kiểm bằng `priority` và `-priority`.
+
+## Rủi ro & việc còn mở
+- Test bám theo hợp đồng trong đề bài. Một số trường hợp biên đề bài chưa nói rõ, ví dụ `status=''` hay `sort='-'` đều bị coi là lỗi, tôi giả định là lỗi.
+- Test không kiểm tra thứ tự kiểm tra tham số khi có nhiều tham số lỗi cùng lúc.
+
+Bản đầy đủ: `.ccoding/T-20261103-004813-114/outputs/dev-S2-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-004813-114` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **20 in / 14.2k out**, cache đọc 110.5k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 8 | 7933 | 53350 | 1 |
+| Backend Developer (@backend-dev) | dev | 6 | 3774 | 33875 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 2086 | 21075 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 414 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Hiện thực lọc, sắp xếp và cursor pagination trong GET /tickets (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 Bộ test cho filter, sort, pagination và validation (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 1 · # suites 0 · # pass 1 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 15 · # suites 0 · # pass 15 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **85** A | — | 81 | 80 | 100 | 1 | 1 | 61k | 1/4 |
+| Backend Developer (@backend-dev) | dev | **90** A | — | 100 | 100 | 60 | 1 | 1 | 38k | 0/4 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 23k | 0/1 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Backend Developer** (@backend-dev, 90 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._
