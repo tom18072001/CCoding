@@ -179,17 +179,31 @@ test('review: lỗi blocker/major không trỏ đúng mã hạng mục vẫn và
   assert.equal(assignStrayIssues([{ subtask: 'X', severity: 'blocker', comment: 'c' }], []), 0);
 });
 
+function pickBash(): string {
+  if (process.platform !== 'win32') return 'bash';
+  for (const base of [process.env.ProgramFiles, process.env['ProgramFiles(x86)']]) {
+    if (!base) continue;
+    const p = path.join(base, 'Git', 'bin', 'bash.exe');
+    if (fs.existsSync(p)) return p;
+  }
+  return 'bash';
+}
+
 test('hook claude-cli: lệnh Bash chạy với stdin = /dev/null (không treo khi lệnh đọc stdin)', { timeout: 120_000 }, async () => {
   const { withNullStdin } = await import('../src/tools/claude-guard.js');
   const wrapped = withNullStdin("cat > x.txt 2>/dev/null || true; echo xong");
   assert.equal(wrapped, "{ cat > x.txt 2>/dev/null || true; echo xong\n} </dev/null");
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-stdin-'));
   try {
+    // bash tường minh (Git Bash trên Windows), không vớ nhầm System32\bash.exe của WSL; timeout rộng vì spawn bash/MSYS có thể chậm khi cả bộ test chạy song song
+    const bash = pickBash();
+    // ca đối chứng: cùng cách spawn, stdin đóng (input: '') và không có nhóm </dev/null → phân biệt 'chậm' với 'treo'
+    execFileSync(bash, ['-c', 'cat > y.txt; echo ok'], { cwd: dir, encoding: 'utf8', timeout: 30_000, input: '' });
     // chạy thật bằng bash với stdin là một pipe không bao giờ đóng: không có nhóm </dev/null thì `cat` sẽ treo
-    const out = execFileSync('bash', ['-c', withNullStdin("cd sub 2>/dev/null; cat > x.txt; heredoc=$(cat <<'EOF'\nvẫn đọc được heredoc\nEOF\n); echo \"$heredoc\"; pwd")], { cwd: dir, encoding: 'utf8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] });
+    const out = execFileSync(bash, ['-c', withNullStdin("cd sub 2>/dev/null; cat > x.txt; heredoc=$(cat <<'EOF'\nvẫn đọc được heredoc\nEOF\n); echo \"$heredoc\"; pwd")], { cwd: dir, encoding: 'utf8', timeout: 30_000, stdio: ['pipe', 'pipe', 'pipe'] });
     assert.match(out, /vẫn đọc được heredoc/);
     assert.equal(fs.readFileSync(path.join(dir, 'x.txt'), 'utf8'), '');
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch { /* dọn thư mục tạm không làm hỏng kết quả test (EPERM/EBUSY) */ }
   }
 });
