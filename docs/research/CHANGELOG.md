@@ -5,6 +5,14 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 4 (T-20261103-150407-7a3, 3/11/2026): đưa nghiên cứu đăng ký trước W1–W5 vào báo cáo khoa học
+
+- **`paper/paper.md` (S1, S2):** §5.1 và §6.1 mới theo nghiên cứu đăng ký trước W1–W5 (440 khóa giữ ở bảng chi phí, 432 lượt ở phép thử xác nhận, 16 lượt loại; Bảng 8–14; mục giữ chỗ B7′ "đang đo", không có số). Các vòng C1–C8 hạ thành §5.2 và §6.2 "Vòng thăm dò", không thuộc phép thử xác nhận. Viết lại Tóm tắt VI/EN, §7, §8, §9. Kết luận âm tính nêu thẳng: B-01 bị bác bỏ cho B7 (token 2,498, thời gian 2,566) và B6 (3,921; 4,047); họ Holm rỗng (K = 0); H3 suy biến, H6 và H7 chưa đủ N; recall cổng B-02 chưa ước lượng được.
+- **Kiểm số (S3):** đối chiếu thủ công Bảng 8–14 với `study-cloud-final/{final-extra,prereg-tests-448,step4-extra-448}.md` và `analysis/{b7-cost-decomposition,variance-decomposition,cache-sensitivity,agreement}.md`; chạy lại ba script phân tích ở chế độ in (không ghi đè `results/`), đầu ra khớp. **Không sửa số nào trong `paper.md`.** Số 2,498 (`prereg-tests-448.md`, A0 r4–9) và 2,519 (`step4-extra-448.md`, A0 r1–11) là hai phép so khác nhau của cùng cặp B7/A0; thời gian B7b ×3,96 và ×3,965 khác nhau ở làm tròn.
+- **Chưa kiểm lại bằng script:** `final-extra.mjs` lỗi nạp đường dẫn tuyệt đối trên Windows (`ERR_UNSUPPORTED_ESM_URL_SCHEME`), nên Bảng 8 chỉ đối chiếu với `final-extra.md`. `agreement.mjs` không chạy lại vì có đường ghi tệp. Phân rã, tách phương sai, độ nhạy cache và độ khớp chạy trên ảnh chụp 221/240/276 dòng, không phải 448 dòng (đã nêu trong bài).
+- **`facts.json`:** thêm 25 mục `numbers` (tỉ số token và thời gian 6 arm so với A0-sonnet ở Bảng 8; B-01 của B7 và B6; độ nhạy cache ×2,55, ×2,73, ×4,03; κ MAST 0,673; PABAK 0,881; 440 khóa; 432 lượt; 0/50 chặn nhầm) và 1 mục `stale` ("do một người gán", ngoại lệ ở dòng 513 là câu trích để ghi nhận đã sửa). `consistency-check.mjs` đạt.
+- **Ẩn danh:** grep `paper.md` tìm đường dẫn tuyệt đối, `data/`, handle `@`, khóa, mật khẩu, tên người, khách hàng: rỗng. Từ "giám đốc" là chức danh.
+
 ## Vòng 4, gói 2 (T-20261103-101337-870, 3/11/2026) — S5 (@data-scientist): (c) cổng như bộ phát hiện lỗi, κ MAST, phân xử
 
 - **`analysis/agreement.mjs`:** cảnh báo "nghịch lý κ" đa lớp chỉ khi lớp lớn nhất của tham chiếu hoặc dự đoán > 0,9 (theo duyệt thiết kế điểm 3; trước đó áp cả cận dưới 0,1); PABAK đa lớp giữ k cố định khi bootstrap (`kFixed`); thêm `clopperPearson`, `minPositives`, bảng C-0…C-3 (cổng, cỡ mẫu recall) và M-0…M-4 (κ MAST), `--fill`. Bảng A-0…A-3, G-0 không đổi. `agreement.test.mjs`: 12 → 16 test.

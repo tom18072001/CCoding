@@ -75,6 +75,21 @@
           "reason": "Dòng bác bỏ: BRIEF-2 (\"review không bắt\") không khớp dữ liệu"
         }
       ]
+    },
+    {
+      "id": "c1c8-single-labeller",
+      "pattern": "do một người gán",
+      "reason": "Hai bên gán nhãn MAST là hai agent cùng họ mô hình, không phải một người (agreement.md M-1; paper.md §8.1(3))",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": [
+        {
+          "file": "docs/research/paper/paper.md",
+          "line": 513,
+          "reason": "Trích dẫn câu cũ để ghi nhận đã sửa, không phải khẳng định"
+        }
+      ]
     }
   ],
   "numbers": [
@@ -99,6 +114,256 @@
       "files": [
         "**/*.md",
         "../PROCESS-REVIEW.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-token-B0-vs-A0",
+      "value": "6,58",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
+      "pattern": "^\\| B0 \\(đủ phòng\\)[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-time-B0-vs-A0",
+      "value": "9,76",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
+      "pattern": "^\\| B0 \\(đủ phòng\\)[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-token-B5-vs-A0",
+      "value": "1,61",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
+      "pattern": "^\\| B5 \\(một agent[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-time-B5-vs-A0",
+      "value": "2,59",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
+      "pattern": "^\\| B5 \\(một agent[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-token-B6-vs-A0",
+      "value": "4,23",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
+      "pattern": "^\\| B6 \\(làn nhanh\\)[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-time-B6-vs-A0",
+      "value": "6,29",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
+      "pattern": "^\\| B6 \\(làn nhanh\\)[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-token-B7-vs-A0",
+      "value": "2,61",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
+      "pattern": "^\\| B7 \\(làn đơn\\)[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-time-B7-vs-A0",
+      "value": "3,96",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
+      "pattern": "^\\| B7 \\(làn đơn\\)[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-token-A1-vs-A0",
+      "value": "0,96",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
+      "pattern": "^\\| A1 \\(Claude[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-time-A1-vs-A0",
+      "value": "1,28",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
+      "pattern": "^\\| A1 \\(Claude[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-token-A2-vs-A0",
+      "value": "2,23",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
+      "pattern": "^\\| A2 \\(best-of-3\\)[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-time-A2-vs-A0",
+      "value": "2,55",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
+      "pattern": "^\\| A2 \\(best-of-3\\)[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b01-b7-main-token",
+      "value": "2,498",
+      "reason": "bench/vs-claude/results/study-cloud-final/prereg-tests-448.md §2 bảng \"Chính\" (A0 r4–9 so với B7 r1–9); khác 2,519 của step4-extra-448.md §2 (A0 r1–11): hai phép so khác nhau",
+      "pattern": "^\\| B7; \\*\\*chính\\*\\*[^|]*\\|[^|]*\\| (\\d,\\d{3}) \\[",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b01-b7-main-time",
+      "value": "2,566",
+      "reason": "bench/vs-claude/results/study-cloud-final/prereg-tests-448.md §2 bảng \"Chính\"",
+      "pattern": "^\\| B7; \\*\\*chính\\*\\*[^|]*\\|[^|]*\\|[^|]*\\| (\\d,\\d{3}) \\[",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b01-b7-sens3-token",
+      "value": "2,519",
+      "reason": "bench/vs-claude/results/study-cloud-final/step4-extra-448.md §2 (A0 r1–11)",
+      "pattern": "^\\| B7; độ nhạy 3[^|]*\\|[^|]*\\| (\\d,\\d{3}) \\[",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b01-b6-main-token",
+      "value": "3,921",
+      "reason": "bench/vs-claude/results/study-cloud-final/step4-extra-448.md §1 (A0 r1–9 so với B6 r1–9)",
+      "pattern": "^\\| B6; \\*\\*chính\\*\\*[^|]*\\|[^|]*\\| (\\d,\\d{3}) \\[",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b01-b6-main-time",
+      "value": "4,047",
+      "reason": "bench/vs-claude/results/study-cloud-final/step4-extra-448.md §1",
+      "pattern": "^\\| B6; \\*\\*chính\\*\\*[^|]*\\|[^|]*\\|[^|]*\\| (\\d,\\d{3}) \\[",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "cache-sens-b7-t5",
+      "value": "2,55",
+      "reason": "docs/research/analysis/cache-sensitivity.md C-4 (hệ số cacheRead 0,05, ảnh chụp 276 dòng); Bảng 13, hàng T5",
+      "pattern": "^\\| B7/A0, T5 \\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "cache-sens-b7-all",
+      "value": "2,73",
+      "reason": "docs/research/analysis/cache-sensitivity.md C-4; Bảng 13 (18 bài)",
+      "pattern": "^\\| B7/A0, mọi bài[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "cache-sens-b6-all",
+      "value": "4,03",
+      "reason": "docs/research/analysis/cache-sensitivity.md C-4; Bảng 13 (5 bài)",
+      "pattern": "^\\| B6/A0, mọi bài[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "kappa-mast-detail",
+      "value": "0,673",
+      "reason": "docs/research/analysis/agreement.md M-1; giữa hai agent cùng họ mô hình, không phải κ người–người",
+      "pattern": "κ = (0,\\d{3}) \\(mức chi tiết\\)",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "pabak-judge-regex",
+      "value": "0,881",
+      "reason": "docs/research/analysis/agreement.md A-2 (judge so với regex, gộp r1 + a1)",
+      "pattern": "đọc PABAK (0,\\d{3})",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "prereg-keys-kept",
+      "value": "440",
+      "reason": "bench/vs-claude/results/study-cloud-final/final-extra.md đầu tệp (440 khóa giữ); README.md mục \"Dữ liệu\"",
+      "pattern": "giữ (\\d{3}) \\(`SCF/final-extra\\.md`",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "prereg-rows-kept-tests",
+      "value": "432",
+      "reason": "bench/vs-claude/results/study-cloud-final/prereg-tests-448.md §0–§1 (16 lượt loại, 432 giữ)",
+      "pattern": "đọc 448 dòng, giữ (\\d{3})",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "gate-false-block",
+      "value": "0",
+      "reason": "docs/research/analysis/agreement.md C-1 (cổng B-02: 1/1 lượt lỗi thật; 0/50 chặn nhầm)",
+      "pattern": "chặn nhầm (\\d+) trong 50 lượt",
+      "files": [
+        "paper/paper.md"
       ],
       "exceptions": []
     }
