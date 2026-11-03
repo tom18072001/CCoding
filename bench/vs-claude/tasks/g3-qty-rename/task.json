@@ -2,6 +2,8 @@
   "id": "g3-qty-rename",
   "category": "coding",
   "size": 4,
+  "sizeBasis": "files: src/export.js, order.js, report.js, stock.js",
+  "sizeLegacy": 4,
   "sizeReason": "Bốn module độc lập cùng đổi một tên trường",
   "title": "Đổi tên trường qty thành quantity trên toàn bộ module nghiệp vụ",
   "hypotheses": [

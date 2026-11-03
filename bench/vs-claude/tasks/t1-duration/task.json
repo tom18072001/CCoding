@@ -1,7 +1,9 @@
 {
   "id": "t1-duration",
   "category": "coding",
-  "size": 2,
+  "size": 1,
+  "sizeBasis": "files: src/duration.js",
+  "sizeLegacy": 2,
   "sizeReason": "Hai hàm độc lập trong SPEC.md: parseDuration và formatDuration (cùng một module nhỏ, không phụ thuộc nhau)",
   "title": "Duration parse/format theo đặc tả, nhiều trường hợp biên",
   "hypotheses": [

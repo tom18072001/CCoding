@@ -1,7 +1,9 @@
 {
   "id": "c5-tickets-api",
   "category": "coding",
-  "size": 5,
+  "size": 1,
+  "sizeBasis": "functions: GET /tickets trong handler.js (một điểm vào)",
+  "sizeLegacy": 5,
   "title": "Filtering, sorting and cursor pagination for a tickets API",
   "hypotheses": [
     "H1",

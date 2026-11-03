@@ -1,7 +1,9 @@
 {
   "id": "s1-sec-review",
   "category": "review",
-  "size": 3,
+  "size": 1,
+  "sizeBasis": "deliverables: findings.json",
+  "sizeLegacy": 3,
   "title": "Security review with seeded vulnerabilities and decoys",
   "hypotheses": [
     "H3"

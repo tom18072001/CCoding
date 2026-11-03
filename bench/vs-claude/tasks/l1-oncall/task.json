@@ -1,7 +1,9 @@
 {
   "id": "l1-oncall",
   "category": "logic",
-  "size": 1,
+  "size": 3,
+  "sizeBasis": "answers: schedule, count_without_rule_2, most_permissive_rule",
+  "sizeLegacy": 1,
   "title": "On-call rota constraint puzzle",
   "hypotheses": [
     "H2"

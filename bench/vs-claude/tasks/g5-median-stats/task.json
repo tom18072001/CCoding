@@ -1,7 +1,9 @@
 {
   "id": "g5-median-stats",
   "category": "coding",
-  "size": 2,
+  "size": 1,
+  "sizeBasis": "files: src/stats.js",
+  "sizeLegacy": 2,
   "sizeReason": "Một module: thêm summary dựa trên median hiện có",
   "title": "Thống kê tóm tắt dùng median có sẵn (median sai nhưng test công khai xanh)",
   "hypotheses": [

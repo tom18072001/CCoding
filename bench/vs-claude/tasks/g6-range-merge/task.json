@@ -1,7 +1,9 @@
 {
   "id": "g6-range-merge",
   "category": "coding",
-  "size": 2,
+  "size": 1,
+  "sizeBasis": "files: src/range.js",
+  "sizeLegacy": 2,
   "sizeReason": "Một module: thêm mergeRanges dựa trên overlaps hiện có",
   "title": "Gộp khoảng thời gian nửa mở dùng overlaps có sẵn (overlaps tính cả điểm chạm, test công khai vẫn xanh)",
   "hypotheses": [

@@ -1,7 +1,9 @@
 {
   "id": "g1-slug-dedupe",
   "category": "coding",
-  "size": 2,
+  "size": 1,
+  "sizeBasis": "files: src/slug.js",
+  "sizeLegacy": 2,
   "sizeReason": "Một module: sửa slugify và thêm uniqueSlugs",
   "title": "Slug hóa tiêu đề và sinh slug không trùng (lệnh kiểm tra đỏ sẵn)",
   "hypotheses": [

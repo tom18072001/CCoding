@@ -1,7 +1,9 @@
 {
   "id": "a1-ambiguous-spec",
   "category": "requirements",
-  "size": 3,
+  "size": 2,
+  "sizeBasis": "sections: phần thân SPEC.md; mục \"Open questions and assumptions\"",
+  "sizeLegacy": 3,
   "title": "Spec from an ambiguous, self-contradicting brief",
   "hypotheses": [
     "H4",

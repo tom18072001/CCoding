@@ -2,6 +2,8 @@
   "id": "c4-audit-chain",
   "category": "coding",
   "size": 4,
+  "sizeBasis": "functions: canonicalize, redact, append, verify",
+  "sizeLegacy": 4,
   "title": "Hash-chained audit log with PII redaction",
   "hypotheses": [
     "H1",

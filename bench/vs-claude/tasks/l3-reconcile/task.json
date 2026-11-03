@@ -1,7 +1,9 @@
 {
   "id": "l3-reconcile",
   "category": "logic",
-  "size": 2,
+  "size": 4,
+  "sizeBasis": "answers: net_revenue_vnd, paid_count, refund_count, duplicate_rows_ignored",
+  "sizeLegacy": 2,
   "title": "Revenue reconciliation with traps",
   "hypotheses": [
     "H2",

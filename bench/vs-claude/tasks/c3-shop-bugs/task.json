@@ -2,6 +2,8 @@
   "id": "c3-shop-bugs",
   "category": "coding",
   "size": 3,
+  "sizeBasis": "files: src/cart.js, src/money.js, src/stock.js",
+  "sizeLegacy": 3,
   "title": "Multi-file bug hunt in a cart module",
   "hypotheses": [
     "H1",

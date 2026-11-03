@@ -1,7 +1,9 @@
 {
   "id": "l4-startup-order",
   "category": "logic",
-  "size": 2,
+  "size": 3,
+  "sizeBasis": "answers: startup_order, blocked, cycle_members",
+  "sizeLegacy": 2,
   "title": "Service startup order with a hidden cycle",
   "hypotheses": [
     "H2"
