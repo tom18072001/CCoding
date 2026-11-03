@@ -1,0 +1,18 @@
+That change is just the test I appended, so nothing needs reverting.
+
+**Stage 3: Self-review**
+- **Directives and blank lines:** `#Fields:` is re-applied on each occurrence, other directives are ignored, and blank lines are skipped. ✔
+- **Skipped lines:** lines before any `#Fields:` and lines with the wrong column count are skipped. ✔ (the test covers both)
+- **Absent values:** `-` omits the key. The user-agent `-` check runs before the `+` replacement. ✔
+- **Mapping:** every mapped field is implemented with nested output, and unknown fields are ignored. ✔
+- **Timestamp:** it is UTC ISO with milliseconds. ✔
+- **Duration:** `event.duration` is in nanoseconds. ✔
+- **Numbers:** status, port and duration come out as numbers. ✔
+- **Line endings:** CRLF is handled. ✔
+- **Only partly checked:** a `time` value that already has fractional seconds (e.g. `08:15:02.5`) parses fine, but I didn't test it. Empty strings from double spaces count as columns, which matches the "single spaces" rule, so those lines are skipped on a column mismatch.
+- **Not handled:** a `#Fields:` header with duplicate column names would let the later column overwrite the earlier one. That is an unlikely case and I left it alone.
+
+**Stage 4: Fix**
+The review found no defects, so I changed nothing.
+
+**Final report:** `parseIisLog` is implemented in `src/iis.js`, and `npm test` passes both tests (the original and the new one I added in `test/basic.test.js`). My assumptions are that a missing or invalid date/time omits `@timestamp`, and that a non-numeric value in a numeric field omits that key.
