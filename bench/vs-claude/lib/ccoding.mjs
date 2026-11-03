@@ -54,7 +54,7 @@ export function gateDecisions(eventsText) {
   const blocked = (a) => a.some((d) => d.verdict === 'block');
   const { b02, b10, cto } = by;
   return {
-    b02: b02.length ? { blocked: blocked(b02), rounds: Math.max(b02.filter((d) => d.verdict === 'block').length, ...b02.map((d) => (Number.isFinite(d.rounds) ? d.rounds : 0))) } : null,
+    b02: b02.length ? { blocked: blocked(b02), rounds: Math.max(b02.filter((d) => d.verdict === 'block').length, ...b02.map((d) => (Number.isFinite(d.rounds) ? d.rounds : 0))), checksRed: typeof b02[b02.length - 1].checks?.red === 'number' ? b02[b02.length - 1].checks.red : null } : null,
     b10: b10.length ? { blocked: blocked(b10) } : null,
     cto: cto.length ? { pass: cto[cto.length - 1].verdict === 'pass' } : null,
   };

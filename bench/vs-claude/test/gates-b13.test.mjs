@@ -45,10 +45,12 @@ test('B-12: gateDecisions đọc data hoặc ngang hàng, bỏ dòng hỏng và 
     line({ kind: 'gate.decision', data: { gate: 'cto', verdict: 'pass' } }),
     line({ kind: 'gate.decision', data: { gate: 'zzz', verdict: 'block' } }),
   ].join('\n');
-  assert.deepEqual(gateDecisions(ev), { b02: { blocked: true, rounds: 2 }, b10: { blocked: false }, cto: { pass: true } });
+  assert.deepEqual(gateDecisions(ev), { b02: { blocked: true, rounds: 2, checksRed: null }, b10: { blocked: false }, cto: { pass: true } });
 });
 
 test('B-12: thiếu dữ liệu → null từng cổng', () => {
+  const mới = line({ kind: 'gate.decision', data: { gate: 'b02', verdict: 'block', rounds: 1, checks: { red: 2, total: 4 } } });
+  assert.deepEqual(gateDecisions(mới).b02, { blocked: true, rounds: 1, checksRed: 2 });
   assert.deepEqual(gateDecisions(''), { b02: null, b10: null, cto: null });
   assert.deepEqual(gateDecisions(undefined), { b02: null, b10: null, cto: null });
   const only = gateDecisions(line({ kind: 'gate.decision', data: { gate: 'cto', verdict: 'block' } }));
