@@ -10,6 +10,7 @@ import { pathToFileURL } from 'node:url';
 import { deniedReason } from './workspace.js';
 import { blockMessage, gitReadViolation, outsidePathReason, pathInside, safeCmdName, toolKind } from './shell-policy.js';
 import { LogStore } from '../logger.js';
+import { isOwnToolResult, realInsideRoot, resolveFrom } from './guard-paths.js';
 
 export interface GuardConfig {
   root: string;
@@ -25,11 +26,24 @@ export interface GuardConfig {
   closeStdin?: boolean;
   /** Thư mục data/ để ghi sự kiện chẩn đoán `guard.block` (không đặt → CCODING_DATA_DIR, rồi suy từ `state`). */
   dataDir?: string;
+  /** B-08 (G3): dùng `cwd` của sự kiện hook để giải đường dẫn tương đối/`..`, so bằng realpath (mặc định bật; false = hành vi cũ). */
+  useEventCwd?: boolean;
+  /** B-08 (G4): cho Read tệp tool-results của CHÍNH phiên (session_id khớp sự kiện) — mặc định bật. */
+  allowOwnToolResults?: boolean;
+  /** B-14b: bộ công cụ cố định cho cả nhiệm vụ; hook quyết định theo pha (pha chỉ đọc chặn ghi tệp + toàn bộ Bash). Mặc định tắt. */
+  stablePrefix?: boolean;
+  /** B-14b: pha của lượt gọi. Thiếu/sai → coi là pha chỉ đọc (fail-closed). */
+  phase?: string;
+  /** B-14b: công cụ CCoding thực sự cấp cho lượt này (bộ cố định là tập rộng hơn); công cụ ngoài danh sách bị chặn. */
+  callTools?: string[];
 }
 
 export interface HookInput {
   tool_name?: string;
   tool_input?: Record<string, unknown>;
+  /** Thư mục làm việc hiện tại của Claude Code khi gọi công cụ (sự kiện hook). */
+  cwd?: string;
+  session_id?: string;
 }
 
 export interface GuardState {
@@ -41,6 +55,9 @@ export interface GuardState {
 
 const SHELL_TOOLS = new Set(['Bash', 'PowerShell']);
 const FILE_TOOLS = new Set(['Read', 'Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'Grep', 'Glob']);
+/** B-14b: chỉ hai pha này được ghi tệp khi stablePrefix bật; mọi giá trị khác (kể cả thiếu) = chỉ đọc. */
+const WRITE_PHASES = new Set(['execute', 'revise']);
+const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
 const SECRET_FILE = /(^|[\\/])\.env(\.(?!example$|sample$|template$)[^\\/]+)?$/i;
 
 /**
@@ -68,9 +85,16 @@ export interface GuardBlock {
 const blk = (tool: string, rule: string, reason: string, clause = 1, cmd = ''): GuardBlock => ({ tool, clause, rule, cmd, reason });
 
 /** Quyết định chặn có cấu trúc, hoặc undefined nếu cho phép (quy tắc tĩnh — không phụ thuộc số lần đọc). */
-export function guardBlock(input: HookInput, cfg: GuardConfig): GuardBlock | undefined {
+export function guardBlock(input: HookInput, cfg: GuardConfig, env: NodeJS.ProcessEnv = process.env): GuardBlock | undefined {
   const name = input.tool_name ?? '';
   const ti = input.tool_input ?? {};
+  if (cfg.stablePrefix) {
+    // deny-by-default: bộ công cụ không đổi giữa các pha nên quyền do hook quyết định, không lọc Bash bằng regex
+    const readOnly = !WRITE_PHASES.has(String(cfg.phase ?? ''));
+    const granted = cfg.callTools ?? ['Read', 'Glob', 'Grep', 'LS']; // thiếu danh sách → chỉ công cụ đọc (fail-closed)
+    if (!granted.includes(name)) return blk(name, 'tool-not-granted', `CCoding chặn: công cụ ${name} không được cấp cho lượt gọi này`);
+    if (readOnly && (WRITE_TOOLS.has(name) || SHELL_TOOLS.has(name))) return blk(name, 'read-only-phase', `CCoding chặn: pha ${cfg.phase || '(không rõ)'} chỉ đọc — ${name} không được dùng (ghi tệp/chạy lệnh chỉ ở pha thực thi/sửa)`);
+  }
   if (SHELL_TOOLS.has(name)) {
     const cmd = String(ti.command ?? '');
     const why = deniedReason(cmd, cfg.deny, cfg.allowGitCommit);
@@ -88,6 +112,14 @@ export function guardBlock(input: HookInput, cfg: GuardConfig): GuardBlock | und
   if (FILE_TOOLS.has(name)) {
     const p = (ti.file_path ?? ti.notebook_path ?? ti.path) as string | undefined;
     if (p) {
+      if (cfg.useEventCwd !== false) {
+        // B-08: giải theo cwd của sự kiện (nếu có) rồi so realpath với worktree — chặn `../`, symlink, junction, cwd giả
+        const abs = resolveFrom(cfg.root, p, typeof input.cwd === 'string' ? input.cwd : undefined);
+        if (name === 'Read' && cfg.allowOwnToolResults !== false && isOwnToolResult(abs, input.session_id, env)) return undefined;
+        if (!pathInside(cfg.root, abs) || !realInsideRoot(cfg.root, abs)) return blk(name, 'outside-root', `CCoding chặn: ${name} ngoài thư mục làm việc của nhiệm vụ (${cfg.root})`);
+        if (SECRET_FILE.test(abs)) return blk(name, 'env-file', `CCoding chặn: ${name} tệp .env (bí mật)`);
+        return undefined;
+      }
       if (!pathInside(cfg.root, p)) return blk(name, 'outside-root', `CCoding chặn: ${name} ngoài thư mục làm việc của nhiệm vụ (${cfg.root})`);
       if (SECRET_FILE.test(p)) return blk(name, 'env-file', `CCoding chặn: ${name} tệp .env (bí mật)`);
     }
@@ -96,8 +128,8 @@ export function guardBlock(input: HookInput, cfg: GuardConfig): GuardBlock | und
 }
 
 /** Trả lý do chặn, hoặc undefined nếu cho phép. */
-export function guardDecision(input: HookInput, cfg: GuardConfig): string | undefined {
-  return guardBlock(input, cfg)?.reason;
+export function guardDecision(input: HookInput, cfg: GuardConfig, env: NodeJS.ProcessEnv = process.env): string | undefined {
+  return guardBlock(input, cfg, env)?.reason;
 }
 
 /**

@@ -42,6 +42,12 @@ export interface RuntimeConfig {
   closeStdin?: boolean;
   /** B-07 — claude-cli: truyền --max-turns theo phases.toolTurns (mặc định bật; false = không truyền cờ, args như trước). */
   maxTurns?: boolean;
+  /**
+   * B-14b — claude-cli: giữ MỘT bộ --tools/--allowedTools cho cả nhiệm vụ (tiền tố prompt ổn định để cache tái dùng); quyền theo pha do hook
+   * claude-guard quyết định (pha chỉ đọc chặn Write/Edit/MultiEdit/NotebookEdit và toàn bộ Bash); pha không sửa tệp chạy ở thư mục gốc nhiệm vụ.
+   * Mặc định TẮT (xem docs/data-protection-assessment.md §B-08/B-14b).
+   */
+  stablePrefix?: boolean;
   sandbox?: string;
   baseUrl?: string;
   apiKeyEnv?: string;
@@ -209,6 +215,13 @@ export interface Config {
      */
     parallelWorktrees?: boolean;
   };
+  /** B-08 — hook claude-guard (runtime claude-cli). Mỗi công tắc mặc định BẬT; false = hành vi cũ. */
+  guard?: {
+    /** Dùng `cwd` của sự kiện hook để giải đường dẫn tương đối/`..`, so bằng realpath với worktree (G3). */
+    useEventCwd?: boolean;
+    /** Cho Read tệp tool-results của chính phiên (G4); không mở thư mục khác trong .claude/. */
+    allowOwnToolResults?: boolean;
+  };
   /** Ước lượng token của kế hoạch — cảnh báo khi nhiệm vụ quá lớn so với ngân sách (đo từ các lượt chạy thật). */
   estimate: {
     /** Định tuyến, lập kế hoạch, họp, tổng hợp. */
@@ -307,6 +320,7 @@ const BUILTIN: Omit<Config, 'root'> = {
   },
   fastLane: { enabled: true, maxBriefChars: 4000, maxRepoFiles: 300, maxRepoBytes: 1_500_000, planModel: 'sonnet', finalReport: 'template', maxParallel: 4 },
   lanes: { single: { enabled: true, maxParts: 5, maxFilesTouched: 6, slim: { ...SLIM_DEFAULTS } } },
+  guard: { useEventCwd: true, allowOwnToolResults: true }, // B-08
   tools: {
     defaultAccess: 'write',
     projectAccess: 'exec',

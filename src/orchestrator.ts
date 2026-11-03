@@ -3422,7 +3422,9 @@ export class Orchestrator {
         const system = P.systemFor(agent, ctx.dept, cls, phase, fb);
         const piiOut = cls === 'confidential' || cls === 'restricted';
         const outbound = (s: string) => (rt.local ? s : redact(s, { secrets: config.dataProtection.redactSecrets, pii: piiOut }));
-        ensureDir(ctx.cwd);
+        // B-14b: stablePrefix (claude-cli) — pha không sửa tệp chạy ở thư mục gốc nhiệm vụ để cwd (nằm trong tiền tố) không đổi giữa các hạng mục
+        const reqCwd = rt.id === 'claude-cli' && config.runtimes['claude-cli']?.stablePrefix === true && phase !== 'execute' && phase !== 'revise' ? task.workspace ?? this.workspaceFor(task, ctx.project) : ctx.cwd;
+        ensureDir(reqCwd);
         req = {
           agent,
           phase,
@@ -3430,15 +3432,16 @@ export class Orchestrator {
           context: built.context ? outbound(built.context) : undefined,
           prompt: outbound(built.prompt),
           model: cand.model,
-          cwd: ctx.cwd,
+          cwd: reqCwd,
           tools: ctx.noTools ? [] : cliTools(agent.tools, access, phase, gitRead),
           allowTools: allow.length > 0 || (rt.supportsTools && !ctx.noTools && cliTools(agent.tools, access, phase, gitRead).length > 0),
           timeoutMs: config.defaults.timeoutMs,
           maxTokens: ctx.maxTokens ?? config.phases?.maxTokens?.[phase],
           toolPolicy: allow.length
             ? {
-                root: ctx.cwd,
+                root: reqCwd,
                 allow,
+                guard: config.guard, // B-08
                 maxTurns: config.phases?.toolTurns?.[phase] ?? 8,
                 maxInputTokens: config.phases?.toolInputBudget?.[phase],
                 commandTimeoutSec: config.tools.commandTimeoutSec,
