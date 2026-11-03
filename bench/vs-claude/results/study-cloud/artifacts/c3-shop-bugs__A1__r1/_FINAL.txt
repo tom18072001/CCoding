@@ -1,0 +1,25 @@
+**3. SELF-REVIEW**
+
+The on-disk change to `test/cart.test.js` is just the tests I appended.
+
+I checked each requirement against the code, and `npm test` passes all 8 tests (2 existing, 6 new).
+- **Coupon:** it applies once, to the subtotal.
+- **Rounding:** every total is an integer VND amount, rounded half-up. The half-up case (1005 at 10% gives 905) is covered by a test.
+- **Stock:** a reservation larger than the available stock now throws. A failed `addItem` leaves both stock and the cart unchanged, because `reserve` runs before the cart is mutated.
+- **Max quantity:** buying exactly `MAX_QTY_PER_LINE` works, in one add or across several. One more unit throws `QTY_LIMIT`.
+- **API:** all exported names and signatures are unchanged.
+
+**4. FIX**
+
+The review found nothing that needed correcting.
+
+**Final report**
+
+Root causes:
+1. **Coupon and rounding:** `total()` applied the coupon to each line and then again to the subtotal, so discounts were doubled. Because `applyPercent` also did not round, fractional dong appeared. `applyPercent` is now `floor((amount*(100-pct)+50)/100)`, and `total()` applies the coupon once to the subtotal.
+2. **Negative stock:** `reserve` checked `have < 0` instead of `qty > have`. It now throws `INSUFFICIENT_STOCK` when `qty` is invalid or exceeds the stock.
+3. **Max quantity:** `addItem` used `>=` against the limit; it now uses `>`.
+
+Two things I added beyond the three reports: `applyCoupon` now throws `BAD_COUPON` for a percentage outside 0–100 or not a number, and `reserve` rejects a non-integer or non-positive `qty`.
+
+The brief was ambiguous on rounding: I rounded the discounted total half-up, not the discount amount. The two differ only on exact half-dong cases. For example, 1005 at 10% gives a discount of 100.5. Rounding the total gives 905, while rounding the discount up to 101 would give 904.
