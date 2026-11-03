@@ -1,0 +1,16 @@
+{
+  "id": "l2-chain",
+  "category": "coding",
+  "size": 4,
+  "sizeReason": "Bốn tầng phụ thuộc tuần tự trong SPEC.md: lexer/parser, check, evaluate, diff (tầng sau dùng AST và đầu ra của tầng trước), cộng hàm compile ở src/index.js",
+  "title": "Thư viện cfgchain: bốn tầng nối tiếp từ đặc tả",
+  "hypotheses": [
+    "H5",
+    "H6"
+  ],
+  "deliverable": "src/",
+  "brief": "Hiện thực thư viện cfgchain theo đúng đặc tả trong SPEC.md: bốn tầng nối tiếp — bộ tách từ và phân tích cú pháp (src/lexer.js, src/parser.js), kiểm tra ngữ nghĩa (src/check.js), đánh giá thành JSON (src/evaluate.js) và so sánh hai cấu hình (src/diff.js), cùng hàm compile trong src/index.js. Tầng sau dùng đúng kiểu và đầu ra của tầng trước, nên hãy bám sát hình dạng AST, mã lỗi, vị trí lỗi và thứ tự báo lỗi trong đặc tả — bộ nghiệm thu ẩn kiểm tra từng quy tắc của từng tầng và cả đường ống đầu cuối qua API công khai. Viết test cho từng tầng, đảm bảo `npm test` xanh. Không thêm thư viện ngoài.",
+  "grader": "code",
+  "repoDir": "starter",
+  "solutionDir": "ref"
+}
