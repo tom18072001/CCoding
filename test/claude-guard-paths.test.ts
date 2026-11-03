@@ -5,6 +5,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { guardDecision } from '../src/tools/claude-guard.js';
+import { pathImplFor, realInsideRoot, resolveFrom } from '../src/tools/guard-paths.js';
+import { pathInside } from '../src/tools/shell-policy.js';
 
 const base = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-b08-')));
 const root = path.join(base, 'wt');
@@ -118,4 +120,44 @@ test('B-08 G4: junction trong tool-results trỏ ra ngoài bị chặn (realpath
   const why = tryLink(outside, link);
   if (why) return t.skip(why);
   assert.ok(dec('Read', path.join(link, 'bi-mat.txt'), { cwd: root, session_id: SID }));
+});
+
+// B-14 — ngữ nghĩa theo kiểu đường dẫn của root (tiêm path.win32/posix qua root), giống nhau trên Windows và Linux.
+const inside = (r: string, p: string, cwd?: string) => {
+  const P = pathImplFor(r);
+  const abs = resolveFrom(r, p, cwd, P);
+  return pathInside(r, abs) && realInsideRoot(r, abs, P);
+};
+
+test('B-14: root C:/tmp/x + a.ts → trong root; C:/TMP/X/a.ts cũng trong root (không phân biệt hoa thường)', () => {
+  assert.equal(inside('C:/tmp/x', 'a.ts'), true);
+  assert.equal(inside('C:/tmp/x', 'C:/TMP/X/a.ts'), true);
+});
+
+test('B-14: `..\\..\\ngoai\\moi.txt` bị chặn với root win32 và root posix', () => {
+  assert.equal(inside('C:/tmp/x', '..\\..\\ngoai\\moi.txt', 'C:/tmp/x/src'), false);
+  assert.equal(inside('/tmp/x', '..\\..\\ngoai\\moi.txt', '/tmp/x/src'), false);
+  assert.equal(inside('/tmp/x', 'src\\a.ts'), true);
+});
+
+test('B-14: UNC `\\\\server\\share` khi root Windows → chặn', () => {
+  assert.equal(inside('C:\\tmp\\x', '\\\\server\\share\\a.txt'), false);
+  assert.equal(inside('C:\\tmp\\x', '//server/share/a.txt'), false);
+});
+
+test('B-14: `C:/Users/admin` khi root POSIX → chặn', () => {
+  assert.equal(inside('/tmp/x', 'C:/Users/admin'), false);
+  assert.equal(inside('/tmp/x', 'C:\\Users\\admin'), false);
+});
+
+test('B-14: `/etc/passwd` khi root `C:\\…` → chặn; MSYS `/c/…` đổi rồi so', () => {
+  assert.equal(inside('C:\\tmp\\x', '/etc/passwd'), false);
+  assert.equal(inside('C:\\', '/etc/passwd'), false);
+  assert.equal(inside('C:\\tmp\\x', '/c/tmp/x/a.ts'), true);
+  assert.equal(inside('C:\\tmp\\x', '/c/Users/admin'), false);
+});
+
+test('B-14: guardDecision chặn `..\\..` (Write) và Grep ra ngoài trên nền tảng đang chạy', () => {
+  assert.ok(dec('Write', '..\\..\\ngoai\\moi.txt', { cwd: path.join(root, 'src') }));
+  assert.ok(guardDecision({ tool_name: 'Grep', tool_input: { path: outside } }, cfg, env));
 });
