@@ -1,0 +1,13 @@
+Số rota thoả cả 7 luật: 1
+Nghiệm: {"Mon": "Dung", "Tue": "Chi", "Wed": "Binh", "Thu": "An", "Fri": "Em"}
+count_without_rule_2: 10
+Bỏ luật 1: 2
+Bỏ luật 2: 10
+Bỏ luật 3: 4
+Bỏ luật 4: 2
+Bỏ luật 5: 2
+Bỏ luật 6: 2
+Bỏ luật 7: 3
+most_permissive_rule: 2 (max=10)
+
+So khớp answer.json (S1): schedule KHỚP, count_without_rule_2 KHỚP (10), most_permissive_rule KHỚP (2, không hoà).
