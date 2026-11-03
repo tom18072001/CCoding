@@ -1,7 +1,7 @@
 // Test tính tay cho agreement.mjs. Chạy: node --test docs/research/analysis/agreement.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { metrics, bootstrapCI, bootstrapSample, groupByRun, rng, report, parseCsv, toCsv, vn } from './agreement.mjs';
+import { metrics, bootstrapCI, bootstrapSample, groupByRun, rng, report, parseCsv, toCsv, vn, clopperPearson, minPositives } from './agreement.mjs';
 
 const near = (a, b, e = 1e-9) => assert.ok(Math.abs(a - b) < e, `${a} ≠ ${b}`);
 const mk = (ref, pred, runId) => ref.map((r, i) => ({ ref: r, pred: pred[i], ...(runId ? { runId: runId[i] } : {}) }));
@@ -116,4 +116,46 @@ test('report: CI gồm đủ chỉ số và chứa ước lượng điểm của
 test('CSV: vòng khứ hồi với dấu phẩy, ngoặc kép, xuống dòng; bỏ BOM và dòng chú thích', () => {
   const csv = '﻿' + toCsv(['a', 'b'], [['x,y', 'dòng 1\ndòng "2"'], ['', '1']]) + '# ghi chú\n';
   assert.deepEqual(parseCsv(csv), [{ a: 'x,y', b: 'dòng 1\ndòng "2"' }, { a: '', b: '1' }]);
+});
+
+test('đa lớp: cảnh báo nghịch lý chỉ khi lớp lớn nhất > 0,9; lớp nhỏ < 0,1 thì không (preregistration §5.1)', () => {
+  // n = 20: a 12, b 7, c 1 (lớp nhỏ nhất 0,05 < 0,1 nhưng lớp lớn nhất 0,6): khớp hoàn toàn, không cảnh báo
+  const lab = [...Array(12).fill('a'), ...Array(7).fill('b'), 'c'];
+  const m = metrics(mk(lab, lab));
+  assert.equal(m.k, 3); near(m.prevalence, 0.6); near(m.predRate, 0.6); near(m.kappa, 1);
+  assert.equal(m.warnings.length, 0);
+  // n = 22: a 20, b 1, c 1: lớp lớn nhất 20/22 = 0,909 > 0,9 ⇒ cảnh báo, kèm PABAK
+  const lab2 = [...Array(20).fill('a'), 'b', 'c'];
+  const m2 = metrics(mk(lab2, lab2));
+  near(m2.prevalence, 20 / 22);
+  assert.equal(m2.warnings.length, 1); assert.match(m2.warnings[0], /NGHỊCH LÝ κ/); assert.match(m2.warnings[0], /PABAK/);
+  // chỉ phía dự đoán chạm trần cũng cảnh báo: ref a 11, b 10, c 1; pred a 20, b 1, c 1 (n = 22)
+  const ref3 = [...Array(11).fill('a'), ...Array(10).fill('b'), 'c'], pred3 = [...Array(20).fill('a'), 'b', 'c'];
+  const m3 = metrics(mk(ref3, pred3));
+  near(m3.prevalence, 0.5); near(m3.predRate, 20 / 22);
+  assert.equal(m3.warnings.length, 1);
+});
+
+test('PABAK đa lớp dùng k cố định (kFixed) khi lấy lại mẫu có ít lớp hơn mẫu gốc', () => {
+  // mẫu 2 nhãn, ép k = 3: po = 3/4, PABAK = (3·0,75 − 1)/(3 − 1) = 0,625; không kFixed thì k = 2 ⇒ 2·0,75 − 1 = 0,5
+  const ref = ['a', 'a', 'b', 'b'], pred = ['a', 'a', 'b', 'a'];
+  const m = metrics(mk(ref, pred), { kFixed: 3 });
+  near(m.po, 0.75); near(m.pabak, 0.625);
+  near(metrics(mk(ref, pred)).pabak, 0.5);
+});
+
+test('Clopper–Pearson: giá trị tính tay/đã biết', () => {
+  const [l1, h1] = clopperPearson(1, 1); near(l1, 0.025, 1e-6); near(h1, 1);        // 1/1 ⇒ [2,5 %; 100 %] như b02m-replay.md
+  const [l0, h0] = clopperPearson(0, 10); near(l0, 0); near(h0, 1 - Math.pow(0.025, 1 / 10), 1e-6); // 0/10 ⇒ cận trên 1 − 0,025^(1/10)
+  const [l5, h5] = clopperPearson(5, 10); near(l5, 0.1871, 5e-4); near(h5, 0.8129, 5e-4);         // bảng CP chuẩn
+  assert.ok(Number.isNaN(clopperPearson(0, 0)[0]));
+});
+
+test('minPositives: nửa độ rộng CP ≤ 0,15 tại kết quả; recall gần 0,5 cần nhiều dương hơn gần 1', () => {
+  for (const r of [0.6, 0.8, 0.9]) {
+    const n = minPositives(r), [lo, hi] = clopperPearson(Math.round(r * n), n);
+    assert.ok((hi - lo) / 2 <= 0.15, `r=${r}, n=${n}`);
+  }
+  assert.ok(minPositives(0.6) > minPositives(0.8) && minPositives(0.8) > minPositives(0.9));
+  assert.ok(minPositives(0.8) > 20 && minPositives(0.8) < 45); // Wald cho 28; CP chính xác lớn hơn một chút
 });
