@@ -185,7 +185,7 @@
     let html = `<div class="trow${C.S.selectedTask === t.id ? ' sel' : ''}" style="--d:${depth}" data-id="${esc(t.id)}" tabindex="0" role="treeitem" aria-level="${depth + 1}"${has ? ` aria-expanded="${open}"` : ''}>
       ${has ? `<button class="tcar" data-tog aria-label="${open ? 'Thu gọn' : 'Mở rộng'}">${open ? '▾' : '▸'}</button>` : '<span></span>'}
       ${si(t.status, { att: !!t.attention })}
-      <div class="tmain"><span class="tc" title="${esc(t.id)}">${esc(C.code(t))}</span>${pills}<span class="tt">${esc(t.title)}</span>${
+      <div class="tmain"><span class="tc" title="${esc(t.id)}">${esc(C.code(t))}</span>${pills}<span class="tt">${esc(t.title)}</span>${proof(t)}${
         orphan ? `<small class="tpar" title="${esc(orphan.title)}">↪ ${esc(C.code(orphan))}</small>` : ''
       }${ctx.noProject || !t.projectId ? '' : `<small class="tproj">📁 ${esc(projName(t.projectId))}</small>`}</div>
       <div class="c-people">${assignees(t).slice(0, 3).map((a) => C.av(a, 'av xs')).join('')}</div>
@@ -302,11 +302,25 @@
   }
 
   // ── Khung hiển thị nhiệm vụ: danh sách / lưới ───────────────────────────
+  // UI-6: điểm mạnh của CCoding hiện ngay trên dòng — CTO nghiệm thu (có bằng chứng) và nhãn dữ liệu Bảo mật/Hạn chế
+  const SHIELD = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6Z"/><path d="m9 12 2 2 4-4"/></svg>';
+  function proof(t) {
+    let out = '';
+    const a = t.acceptance;
+    if (a && !a.error && a.parsed && (a.criteria || []).length) {
+      const n = a.criteria.length;
+      const ok = a.criteria.filter((c) => c.result === 'pass').length;
+      out += `<span class="proof ${a.accepted ? 'ok' : 'warn'}" title="CTO nghiệm thu: ${ok}/${n} tiêu chí đạt, mỗi tiêu chí kèm bằng chứng">${SHIELD}${ok}/${n}</span>`;
+    }
+    if (t.classification === 'confidential' || t.classification === 'restricted') out += `<span class="cls ${esc(t.classification)}" title="Nhãn dữ liệu">${esc(C.CLS_VI[t.classification])}</span>`;
+    return out;
+  }
+  D.proof = (t) => proof(t);
   function rowHtml(t, opts = {}) {
     const pct = progress(t);
     return `<div class="drow${C.S.selectedTask === t.id ? ' sel' : ''}" data-id="${esc(t.id)}" tabindex="0" role="row">
       <button class="star${V.stars.has(t.id) ? ' on' : ''}" data-star title="Gắn sao">${V.stars.has(t.id) ? '★' : '☆'}</button>
-      <div class="c-name">${dot(t)}<div><b>${esc(t.title)}</b><small title="${esc(t.id)}">${esc(C.code(t))} · ${esc(who(t))}${t.followUpOf ? ' · ↪ tiếp nối' : ''}</small></div></div>
+      <div class="c-name">${dot(t)}<div><b>${esc(t.title)}</b>${proof(t)}<small title="${esc(t.id)}">${esc(C.code(t))} · ${esc(who(t))}${t.followUpOf ? ' · ↪ tiếp nối' : ''}</small></div></div>
       ${opts.noProject ? '' : `<div class="c-proj">${t.projectId ? `📁 ${esc(projName(t.projectId))}` : '<span class="muted">—</span>'}</div>`}
       <div class="c-stat"><span class="status ${esc(t.status)}">${esc(C.TASK_VI[t.status] || t.status)}</span>${t.attention ? '<span class="status attention">⚠</span>' : ''}<div class="pbar" title="${esc(phaseLabel(t))} · ${pct}%"><i style="width:${pct}%"></i></div><small>${esc(phaseLabel(t))}</small></div>
       <div class="c-people">${assignees(t).map((a) => C.av(a, 'av xs')).join('')}</div>
@@ -318,7 +332,7 @@
     const pct = progress(t);
     return `<div class="tcard" data-id="${esc(t.id)}" tabindex="0">
       <div class="tc-top">${dot(t)}<span class="status ${esc(t.status)}">${esc(C.TASK_VI[t.status] || t.status)}</span>${t.attention ? '<span class="status attention">⚠ cần xem</span>' : ''}<button class="star${V.stars.has(t.id) ? ' on' : ''}" data-star>${V.stars.has(t.id) ? '★' : '☆'}</button><button class="more" data-more>⋮</button></div>
-      <b class="tc-title">${esc(t.title)}</b>
+      <b class="tc-title">${esc(t.title)}</b>${proof(t) ? `<div class="tc-proof">${proof(t)}</div>` : ''}
       <small>${esc(who(t))} · ${t.projectId ? `📁 ${esc(projName(t.projectId))}` : 'ngoài dự án'}</small>
       <div class="pbar"><i style="width:${pct}%"></i></div>
       <div class="tc-foot"><span class="c-people">${assignees(t).map((a) => C.av(a, 'av xs')).join('')}</span><small>${C.fmt(C.total(t.usage))} token · ${esc(C.dateTime(updated(t)))}</small></div></div>`;
@@ -572,7 +586,7 @@
       ? recent
           .map(
             (t) =>
-              `<div class="trow" data-id="${esc(t.id)}">${si(t.status, { att: !!t.attention })}<span class="code">${esc(C.code(t))}</span><span class="tt">${esc(t.title)}</span>${assignees(t)
+              `<div class="trow" data-id="${esc(t.id)}">${si(t.status, { att: !!t.attention })}<span class="code">${esc(C.code(t))}</span><span class="tt">${esc(t.title)}</span>${proof(t)}${assignees(t)
                 .slice(0, 3)
                 .map((id) => C.av(id, 'av xs'))
                 .join('')}<span class="tm">${esc(rel(updated(t)))}</span></div>`,
@@ -883,6 +897,8 @@
       } else parts.push(['💬 Prompt'], ['Cuộc mới']);
     } else if (S.tab === 'people' && S.selectedAgent) {
       parts.push(['Agent', () => (C.S.selectedAgent = null, C.setTab('people'))], [C.agentName(S.selectedAgent)]);
+    } else if (AUD_TABS.includes(S.tab) && S.tab !== 'audit') {
+      parts.push(['Kiểm toán', () => C.setTab('audit')], [TAB_VI[S.tab]]);
     } else parts.push([TAB_VI[S.tab] || S.tab]);
     el.innerHTML = parts.map(([l, fn], i) => (fn && i < parts.length - 1 ? `<a data-c="${i}">${esc(l)}</a>` : `<span>${esc(l)}</span>`)).join('<i>›</i>');
     $$('[data-c]', el).forEach((a) => (a.onclick = parts[Number(a.dataset.c)][1]));
@@ -951,10 +967,12 @@
   }
 
   // ── Điều hướng ───────────────────────────────────────────────────────────
+  // UI-6: Token, Hạn mức, KPI, Nhật ký gộp dưới Kiểm toán (dải tab ở đầu trang)
+  const AUD_TABS = ['audit', 'tokens', 'quota', 'kpi', 'logs'];
   function syncNav() {
     const tab = C.S.tab;
     $$('#sidenav .nav').forEach((b) => {
-      const on = b.dataset.tab === tab && (tab !== 'tasks' || (b.dataset.filter || 'all') === V.filter);
+      const on = (b.dataset.tab === tab || (b.dataset.tab === 'audit' && AUD_TABS.includes(tab))) && (tab !== 'tasks' || (b.dataset.filter || 'all') === V.filter);
       b.classList.toggle('active', on);
     });
     const run = tasks().filter(isLive).length;
@@ -1019,9 +1037,11 @@
     );
     const nb = $('#btn-new');
     const nm = $('#new-menu');
+    // UI-6: nút chính mở thẳng hộp soạn nổi (phím C); tạo dự án/prompt vẫn có trong Ctrl+K
     nb.onclick = (e) => {
       e.stopPropagation();
-      nm.hidden = !nm.hidden;
+      nm.hidden = true;
+      window.Compose ? window.Compose.open() : (nm.hidden = !nm.hidden);
     };
     document.addEventListener('mousedown', (e) => !nm.contains(e.target) && e.target !== nb && (nm.hidden = true));
     $$('[data-new]', nm).forEach(
@@ -1029,7 +1049,7 @@
         (b.onclick = () => {
           nm.hidden = true;
           const k = b.dataset.new;
-          if (k === 'task') C.prefillAssign({});
+          if (k === 'task') window.Compose ? window.Compose.open() : C.prefillAssign({});
           if (k === 'agent') C.prefillAssign({ mode: 'agent' });
           if (k === 'project') C.newProject();
           if (k === 'prompt') window.Director?.editPrompt({ body: '' });
@@ -1040,6 +1060,7 @@
         }),
     );
     bindSearch();
+    $$('[data-aud]').forEach((b) => (b.onclick = () => C.setTab(b.dataset.aud)));
     $('#btn-side-toggle').onclick = () => setSide(sideMode() === 'hidden' ? 'open' : 'hidden');
     $('#btn-side-hide').onclick = () => setSide('hidden');
     $('#btn-side-wide').onclick = () => setSide(sideMode() === 'wide' ? 'open' : 'wide');

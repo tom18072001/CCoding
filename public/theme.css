@@ -330,3 +330,46 @@ code, kbd { background: var(--panel-3); border-radius: 4px; }
 .app { --nav-w: 252px; }
 .nav-foot .tools .bell { width: 28px; height: 28px; }
 .card:has(> .tbl), .card:has(> table) { overflow-x: auto; }
+
+/* ── UI-6: hộp soạn nổi, tab Cần bạn, huy hiệu nghiệm thu, dải tab Kiểm toán ── */
+.cmp-wrap { position: fixed; inset: 0; z-index: 80; background: rgba(9, 9, 11, .32); display: flex; align-items: flex-start; justify-content: center; padding: 12vh 16px 16px; }
+.cmp { width: min(640px, 100%); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,.18); padding: 14px 18px 12px; display: flex; flex-direction: column; gap: 8px; }
+.cmp-top { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.cmp-crumb i { font-style: normal; margin: 0 4px; }
+.cmp-x { background: none; border: 0; font-size: 20px; line-height: 1; color: var(--muted); cursor: pointer; }
+.cmp-title { border: 0; outline: 0; background: none; color: var(--text); font-family: inherit; font-size: 18px; font-weight: 600; line-height: 1.3; padding: 4px 0; }
+.cmp-brief { border: 0; outline: 0; background: none; color: var(--text); font-family: inherit; font-size: 14px; line-height: 1.5; resize: vertical; min-height: 110px; padding: 0; }
+.cmp-props { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.cmp-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 4px 2px 10px; font-size: 12px; color: var(--muted); }
+.cmp-chip select { border: 0; background: none; color: var(--text); font: inherit; max-width: 260px; padding: 3px 4px; }
+.cmp-msg { font-size: 12px; color: var(--red-fg); min-height: 0; }
+.cmp-msg:empty { display: none; }
+.cmp-foot { display: flex; align-items: center; gap: 6px; }
+.cmp-foot kbd { font-size: 10.5px; color: var(--muted); }
+.cmp-link { background: none; border: 0; color: var(--muted); font-size: 12px; cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 2px; }
+
+.ib-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: 4px 0 10px; }
+.ib-tabs button, .aud-tabs button { background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted); font-family: inherit; font-size: 13px; font-weight: 500; padding: 7px 10px; margin-bottom: -1px; cursor: pointer; }
+.ib-tabs button.on, .aud-tabs button.on { color: var(--text); border-bottom-color: var(--text); }
+.ib-tabs em { font-style: normal; font-size: 11px; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--panel-2); color: var(--text-2); }
+.ib-list li { grid-template-columns: 14px minmax(0, 1fr) auto auto; align-items: center; }
+.ib-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); justify-self: center; }
+.ib-dot.k-plan { background: var(--info); }
+.ib-dot.k-paused { background: var(--amber-fg); }
+.ib-dot.k-failed { background: var(--bad); }
+.ib-dot.k-attention { background: var(--ok); }
+.ib-m .code { font-family: ui-monospace, monospace; font-size: 11px; }
+.ib-qa-row .btn { padding: 2px 10px; font-size: 12px; opacity: 0; transition: opacity .12s; }
+.ib-list li:hover .ib-qa-row .btn, .ib-list li.on .ib-qa-row .btn, .ib-qa-row .btn:focus-visible { opacity: 1; }
+
+.proof { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 500; padding: 0 6px 0 4px; margin-left: 6px; border-radius: 999px; border: 1px solid var(--line); vertical-align: 1px; color: var(--muted); white-space: nowrap; }
+.proof .ic { width: 12px; height: 12px; }
+.proof.ok { color: var(--green-fg); border-color: color-mix(in srgb, var(--green-fg) 35%, transparent); }
+.proof.warn { color: var(--amber-fg); border-color: color-mix(in srgb, var(--amber-fg) 35%, transparent); }
+.c-name b + .proof, .c-name b ~ .cls, .trow .cls { margin-left: 6px; }
+.tc-proof { display: flex; gap: 4px; margin: 2px 0; }
+.tc-proof .proof { margin-left: 0; }
+
+.aud-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: 0 0 14px; overflow-x: auto; }
+.cmp .grow { flex: 1; }
+.trow .proof, .trow .cls { flex: none; }

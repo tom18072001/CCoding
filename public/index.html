@@ -36,7 +36,7 @@
     <nav class="sidenav" id="sidenav" aria-label="Điều hướng">
       <div class="ws"><span class="ws-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b>CCoding</b></div>
       <div class="nav-top"><div class="new-wrap">
-        <button class="new-btn" id="btn-new" aria-haspopup="menu" title="Tạo mới (N)"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>＋</span>Nhiệm vụ mới</button>
+        <button class="new-btn" id="btn-new" aria-haspopup="menu" title="Nhiệm vụ mới (C)"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>＋</span>Nhiệm vụ mới</button>
         <div class="new-menu" id="new-menu" role="menu" hidden>
           <button data-new="task">📝 Nhiệm vụ mới <kbd>N</kbd></button>
           <button data-new="agent">📌 Giao riêng cho một agent</button>
@@ -60,11 +60,7 @@
       <div class="nav-sep">Tổ chức</div>
       <button class="nav" data-tab="people"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18.5 20a6.5 6.5 0 0 0-2.5-5.1"/></svg><span>Agent</span></button>
       <button class="nav" data-tab="skills" title="Kỹ năng của agent, công cụ, runtime và các kết nối"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3h4v3a2 2 0 1 0 4 0V3h3v7h-3a2 2 0 1 0 0 4h3v7h-7v-3a2 2 0 1 0-4 0v3H3v-7h3a2 2 0 1 0 0-4H3V3Z"/></svg><span>Kỹ năng & Kết nối</span></button>
-      <button class="nav" data-tab="audit" title="Ai làm gì lúc nào — nhật ký có chuỗi băm"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6Z"/></svg><span>Kiểm toán</span></button>
-      <button class="nav" data-tab="tokens"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg><span>Token</span></button>
-      <button class="nav" data-tab="quota"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14 16 9"/><path d="M3.3 17A9 9 0 1 1 20.7 17"/></svg><span>Hạn mức</span></button>
-      <button class="nav" data-tab="kpi"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg><span>KPI</span></button>
-      <button class="nav" data-tab="logs"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/></svg><span>Nhật ký</span></button>
+      <button class="nav" data-tab="audit" title="Hoạt động, token, hạn mức, KPI, nhật ký hệ thống"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6Z"/></svg><span>Kiểm toán</span></button>
       <div class="nav-meter" id="nav-meter"></div>
       <div class="nav-foot">
         <div class="me"><span class="who-av" title="Giám đốc">T</span><b title="Giám đốc">Tom</b>
@@ -212,12 +208,12 @@
       </div>
 
       <!-- Token -->
-      <div class="tab-body" data-body="tokens">
+      <div class="tab-body" data-body="tokens"><nav class="aud-tabs" role="tablist" aria-label="Kiểm toán"><button type="button" role="tab" data-aud="audit">Hoạt động</button><button type="button" role="tab" data-aud="tokens" class="on" aria-selected="true">Token</button><button type="button" role="tab" data-aud="quota">Hạn mức</button><button type="button" role="tab" data-aud="kpi">KPI</button><button type="button" role="tab" data-aud="logs">Nhật ký hệ thống</button></nav>
         <div id="tokens"></div>
       </div>
 
       <!-- Hạn mức -->
-      <div class="tab-body" data-body="quota">
+      <div class="tab-body" data-body="quota"><nav class="aud-tabs" role="tablist" aria-label="Kiểm toán"><button type="button" role="tab" data-aud="audit">Hoạt động</button><button type="button" role="tab" data-aud="tokens">Token</button><button type="button" role="tab" data-aud="quota" class="on" aria-selected="true">Hạn mức</button><button type="button" role="tab" data-aud="kpi">KPI</button><button type="button" role="tab" data-aud="logs">Nhật ký hệ thống</button></nav>
         <div id="quota"></div>
         <div class="card">
           <div class="card-head"><h2>Runtime</h2><button class="btn ghost sm" id="btn-refresh-rt">Kiểm tra lại</button></div>
@@ -226,7 +222,7 @@
       </div>
 
       <!-- KPI sub-agent -->
-      <div class="tab-body" data-body="kpi">
+      <div class="tab-body" data-body="kpi"><nav class="aud-tabs" role="tablist" aria-label="Kiểm toán"><button type="button" role="tab" data-aud="audit">Hoạt động</button><button type="button" role="tab" data-aud="tokens">Token</button><button type="button" role="tab" data-aud="quota">Hạn mức</button><button type="button" role="tab" data-aud="kpi" class="on" aria-selected="true">KPI</button><button type="button" role="tab" data-aud="logs">Nhật ký hệ thống</button></nav>
         <div class="log-filters">
           <select id="kpi-days"><option value="">Mọi nhiệm vụ</option><option value="1">24 giờ</option><option value="7" selected>7 ngày</option><option value="30">30 ngày</option></select>
           <select id="kpi-dept"><option value="">Mọi phòng</option></select>
@@ -235,11 +231,11 @@
       </div>
 
       <!-- Nhật ký -->
-      <div class="tab-body" data-body="audit"><div id="audit-view" class="pg"></div></div>
+      <div class="tab-body" data-body="audit"><nav class="aud-tabs" role="tablist" aria-label="Kiểm toán"><button type="button" role="tab" data-aud="audit" class="on" aria-selected="true">Hoạt động</button><button type="button" role="tab" data-aud="tokens">Token</button><button type="button" role="tab" data-aud="quota">Hạn mức</button><button type="button" role="tab" data-aud="kpi">KPI</button><button type="button" role="tab" data-aud="logs">Nhật ký hệ thống</button></nav><div id="audit-view" class="pg"></div></div>
       <div class="tab-body" data-body="artifacts"><div id="artifacts-view" class="pg"></div></div>
       <div class="tab-body" data-body="skills"><div id="skills-view" class="pg"></div></div>
       <div class="tab-body" data-body="routines"><div id="routines-view" class="pg"></div></div>
-      <div class="tab-body" data-body="logs">
+      <div class="tab-body" data-body="logs"><nav class="aud-tabs" role="tablist" aria-label="Kiểm toán"><button type="button" role="tab" data-aud="audit">Hoạt động</button><button type="button" role="tab" data-aud="tokens">Token</button><button type="button" role="tab" data-aud="quota">Hạn mức</button><button type="button" role="tab" data-aud="kpi">KPI</button><button type="button" role="tab" data-aud="logs" class="on" aria-selected="true">Nhật ký hệ thống</button></nav>
         <div class="log-filters">
           <select id="log-dept"><option value="">Mọi phòng</option></select>
           <select id="log-agent"><option value="">Mọi agent</option></select>
@@ -284,5 +280,6 @@
   <script src="chat.js"></script>
   <script src="router.js"></script>
   <script src="ui5.js"></script>
+  <script src="compose.js"></script>
 </body>
 </html>
