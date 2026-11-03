@@ -1,0 +1,8 @@
+Tôi đã hiện thực `src/duration.js` (`parseDuration` và `formatDuration`) theo SPEC.md, và `npm test` xanh với 9 test, không lỗi.
+
+- **Độ chính xác:** phần thập phân và việc cộng các thành phần được tính bằng số học `BigInt`, nên làm tròn half-away-from-zero không bị lệch do số thực (ví dụ `"1.0005s"` ra đúng 1001). Nhờ vậy `parseDuration(formatDuration(x)) === parseDuration(x)` cũng đúng với số rất lớn như `1e21`.
+- **`largest`:** phần dư được làm tròn vào đơn vị giữ cuối cùng rồi nhớ lên đơn vị lớn hơn. Ví dụ `6d 23h 59m 31s` với `largest` 1, 2 hoặc 3 cho `1w`, còn `largest` 4 giữ nguyên `6d 23h 59m 31s`.
+- **Chỗ SPEC chưa rõ:** tôi cho phép khoảng trắng sau dấu ở cả dạng ISO, nên `"- PT1S"` hợp lệ. Nếu bộ nghiệm thu coi đó là lỗi, chỗ cần sửa là dòng `s = s.slice(1).trimStart()` trong `parseDuration`.
+- **Test bổ sung:** các trường hợp biên mới nằm trong `test/duration.test.js`. Chúng gồm kiểu đầu vào, dấu và `-0`, dạng đơn vị và ISO 8601 (nhiều chuỗi không hợp lệ), tùy chọn và lỗi của `format`, `largest` có nhớ, và roundtrip.
+
+Trong test, tôi sửa hai chỗ do chính tôi viết sai (kỳ vọng `largest: 4` và một dòng `replace` thừa), không phải sửa code. Tôi chưa commit gì.
