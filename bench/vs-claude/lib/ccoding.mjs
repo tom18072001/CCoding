@@ -38,8 +38,32 @@ export function callErrors(callsText) {
  * B-11: số đo cho nghiên cứu, rút từ calls.jsonl + task.json. Chỉ số đo — không chép nội dung prompt hay đường dẫn.
  * Thời gian theo pha: nguồn chuẩn là calls.jsonl (durationMs; thiếu thì hiệu ts giữa hai dòng liên tiếp); byPhaseSecSource ghi nguồn.
  */
-export function researchFields(callsText, task) {
+/**
+ * B-12: đọc sự kiện `gate.decision` (events.jsonl của nhiệm vụ) → gates.b02 {blocked, rounds}, gates.b10 {blocked}, gates.cto {pass}.
+ * Payload { gate: 'b02'|'b10'|'cto', verdict: 'block'|'pass', rounds?, subtaskId? } nằm ở `data` (hoặc ngang hàng). Cổng không có sự kiện → null.
+ */
+export function gateDecisions(eventsText) {
+  const by = { b02: [], b10: [], cto: [] };
+  for (const l of String(eventsText ?? '').split(/\r?\n/)) {
+    if (!l.trim()) continue;
+    let e; try { e = JSON.parse(l); } catch { continue; }
+    if (e?.kind !== 'gate.decision') continue;
+    const d = e.data && typeof e.data === 'object' ? e.data : e;
+    if (by[d.gate] && (d.verdict === 'block' || d.verdict === 'pass')) by[d.gate].push(d);
+  }
+  const blocked = (a) => a.some((d) => d.verdict === 'block');
+  const { b02, b10, cto } = by;
+  return {
+    b02: b02.length ? { blocked: blocked(b02), rounds: Math.max(b02.filter((d) => d.verdict === 'block').length, ...b02.map((d) => (Number.isFinite(d.rounds) ? d.rounds : 0))) } : null,
+    b10: b10.length ? { blocked: blocked(b10) } : null,
+    cto: cto.length ? { pass: cto[cto.length - 1].verdict === 'pass' } : null,
+  };
+}
+
+export function researchFields(callsText, task, eventsText) {
   const byPhaseSec = {}, byPhaseTokens = {}, promptChars = {};
+  // B-13: model theo pha và chi tiết theo pha (byPhase gốc vẫn là số weighted, không đổi).
+  const byPhaseModel = {}, byPhaseDetail = {}, models = new Set();
   let withDur = 0, withoutDur = 0, prevTs = null;
   for (const l of String(callsText ?? '').split(/\r?\n/)) {
     if (!l.trim()) continue;
@@ -53,17 +77,22 @@ export function researchFields(callsText, task) {
     byPhaseSec[ph] = +((byPhaseSec[ph] ?? 0) + sec).toFixed(3);
     const t = (byPhaseTokens[ph] ??= { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 });
     t.input += c.input ?? 0; t.output += c.output ?? 0; t.cacheRead += c.cacheRead ?? 0; t.cacheWrite += c.cacheWrite ?? 0;
+    const d = (byPhaseDetail[ph] ??= { calls: 0, input: 0, cacheRead: 0, cacheWrite: 0, output: 0, ms: 0 });
+    d.calls++; d.input += c.input ?? 0; d.cacheRead += c.cacheRead ?? 0; d.cacheWrite += c.cacheWrite ?? 0; d.output += c.output ?? 0; d.ms += sec * 1000;
+    if (c.model) { models.add(c.model); const m = (byPhaseModel[ph] ??= []); if (!m.includes(c.model)) m.push(c.model); }
     if (c.sizes) {
       const p = (promptChars[ph] ??= { system: 0, context: 0, prompt: 0, calls: 0 });
       p.system += c.sizes.system ?? 0; p.context += c.sizes.context ?? 0; p.prompt += c.sizes.prompt ?? 0; p.calls++;
     }
   }
+  for (const d of Object.values(byPhaseDetail)) d.ms = Math.round(d.ms);
   const latest = task?.projectChecks?.latest ?? [];
   const gate = !latest.length ? 'none' : latest.every((r) => r.ok) ? 'green' : 'red';
   const runs = task?.runs ?? [];
   return {
     byPhaseSec, byPhaseSecSource: withDur ? (withoutDur ? 'calls.durationMs+ts' : 'calls.durationMs') : withoutDur ? 'calls.ts' : 'none',
     byPhaseTokens, promptChars,
+    byPhaseModel, byPhaseDetail, models: [...models], gates: gateDecisions(eventsText),
     lane: task?.lane ?? null, escalatedFrom: runs.some((r) => r.escalatedFrom === 'single') ? 'single' : null,
     gate, fixRounds: runs.reduce((n, r) => n + (r.gateFixRoundsUsed ?? 0), 0),
     acceptMode: task?.acceptance?.mode ?? 'full',
@@ -138,7 +167,9 @@ export async function runCcoding(opts) {
   let research;
   try {
     const callsText = opts.dataDir && fs.existsSync(callsFile) ? fs.readFileSync(callsFile, 'utf8') : '';
-    research = researchFields(callsText, (await api(`/api/tasks/${task.id}`)).task ?? t);
+    const evFile = path.join(opts.dataDir ?? '', 'runs', task.id, 'events.jsonl');
+    const eventsText = opts.dataDir && fs.existsSync(evFile) ? fs.readFileSync(evFile, 'utf8') : '';
+    research = researchFields(callsText, (await api(`/api/tasks/${task.id}`)).task ?? t, eventsText);
   } catch { research = researchFields('', t); }
   tokens.total = tokens.input + tokens.output + tokens.cacheRead + tokens.cacheWrite;
   tokens.weighted = weighted(tokens);

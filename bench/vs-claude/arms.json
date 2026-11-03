@@ -120,6 +120,21 @@
     },
     "label": "CCoding làn đơn, B-11(a)+(b)+(c) nghiệm thu brief + mẫu gọn + promptDiet"
   },
+  "B7cabO": {
+    "kind": "ccoding",
+    "options": {
+      "lane": "single",
+      "slim": {
+        "accept": "brief",
+        "compactTemplate": true,
+        "promptDiet": true
+      },
+      "phaseModels": {
+        "accept": "opus"
+      }
+    },
+    "label": "CCoding làn đơn, B7cab + CTO nghiệm thu bằng Opus (B-16, phaseModels.accept)"
+  },
   "oracle": {
     "kind": "oracle",
     "label": "Reference solution (grader self-test)"
@@ -127,5 +142,18 @@
   "null": {
     "kind": "null",
     "label": "Does nothing (grader self-test)"
+  },
+  "_suites": {
+    "_doc": "Không phải arm. Bộ bài cài lỗi B-12 (g1-*…g6-*, do S6 dựng): chọn bằng run.mjs --tasks suite:gates. Tự kiểm: --arms oracle,null. Đo B-16: --arms B7cab,B7cabO.",
+    "gates": {
+      "label": "B-12 bộ bài cài lỗi để đo recall của cổng chất lượng",
+      "kinds": {
+        "red-check": { "prefixes": ["g1-", "g2-"], "expectGate": "b02" },
+        "plan-omission": { "prefixes": ["g3-", "g4-"], "expectGate": "b10" },
+        "hidden-wrong": { "prefixes": ["g5-", "g6-"], "expectGate": "cto" }
+      },
+      "selfTestArms": ["oracle", "null"],
+      "pilotArms": ["B7cab", "B7cabO"]
+    }
   }
 }

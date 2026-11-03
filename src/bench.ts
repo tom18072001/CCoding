@@ -55,7 +55,23 @@ export interface RunMetrics {
   tokens: { input: number; output: number; cacheRead: number; cacheWrite: number; total: number; weighted: number };
   costUsd: number;
   /** Theo pha: số lượt, giây gọi cộng dồn (lượt song song cộng cả), token quy đổi, token đầu ra. */
-  byPhase: Record<string, { calls: number; sec: number; weighted: number; output: number }>;
+  byPhase: Record<
+    string,
+    {
+      calls: number;
+      sec: number;
+      weighted: number;
+      output: number;
+      /** B-13: đủ bốn thành phần token, thời gian (ms) và model theo pha (số liệu cũ không có: các trường này vắng). */
+      input?: number;
+      cacheRead?: number;
+      cacheWrite?: number;
+      ms?: number;
+      models?: string[];
+    }
+  >;
+  /** B-12: quyết định của ba cổng chất lượng, đọc từ sự kiện `gate.decision`; cổng không có dữ liệu → null. */
+  gates?: GateDecisions;
   /** read: đọc/tìm (kể cả git chỉ đọc, lệnh shell chỉ đọc) · write: ghi/sửa tệp · shell: lệnh khác (test, build…). */
   tools: { total: number; read: number; write: number; shell: number; other: number; failed: number; resultChars: number; resentChars: number };
   turns: number;
@@ -221,8 +237,33 @@ function toolClass(name: string, args: string): 'read' | 'write' | 'shell' | 'ot
   return 'other';
 }
 
-/** Số đo của một lượt từ task.json + calls.jsonl (đã ghi sẵn bởi CCoding). */
-export function runMetrics(task: Task, calls: CallRow[], accept?: BenchRun['accept']): RunMetrics {
+export interface GateDecisions {
+  b02: { blocked: boolean; rounds: number } | null;
+  b10: { blocked: boolean } | null;
+  cto: { pass: boolean } | null;
+}
+
+/**
+ * B-12: gộp sự kiện `gate.decision` { gate: 'b02'|'b10'|'cto', verdict: 'block'|'pass', rounds?, subtaskId? } (nằm ở `data` hoặc ngang hàng)
+ * thành quyết định của từng cổng. Cổng không có sự kiện → null.
+ */
+export function gateDecisions(events: ReadonlyArray<Record<string, unknown>> | undefined): GateDecisions {
+  const by: Record<'b02' | 'b10' | 'cto', Array<{ verdict: string; rounds?: number }>> = { b02: [], b10: [], cto: [] };
+  for (const e of events ?? []) {
+    if (e?.kind !== 'gate.decision') continue;
+    const d = (e.data && typeof e.data === 'object' ? e.data : e) as { gate?: string; verdict?: string; rounds?: number };
+    if ((d.gate === 'b02' || d.gate === 'b10' || d.gate === 'cto') && (d.verdict === 'block' || d.verdict === 'pass')) by[d.gate].push({ verdict: d.verdict, rounds: d.rounds });
+  }
+  const blockN = (a: Array<{ verdict: string }>) => a.filter((d) => d.verdict === 'block').length;
+  return {
+    b02: by.b02.length ? { blocked: blockN(by.b02) > 0, rounds: Math.max(blockN(by.b02), ...by.b02.map((d) => (Number.isFinite(d.rounds) ? (d.rounds as number) : 0))) } : null,
+    b10: by.b10.length ? { blocked: blockN(by.b10) > 0 } : null,
+    cto: by.cto.length ? { pass: by.cto[by.cto.length - 1].verdict === 'pass' } : null,
+  };
+}
+
+/** Số đo của một lượt từ task.json + calls.jsonl (đã ghi sẵn bởi CCoding); `events` (events.jsonl) tùy chọn, để đọc quyết định cổng. */
+export function runMetrics(task: Task, calls: CallRow[], accept?: BenchRun['accept'], events?: ReadonlyArray<Record<string, unknown>>): RunMetrics {
   const t0 = Date.parse(task.startedAt ?? task.createdAt);
   const t1 = Date.parse(task.finishedAt ?? task.updatedAt);
   const tokens = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0, weighted: 0 };
@@ -249,6 +290,11 @@ export function runMetrics(task: Task, calls: CallRow[], accept?: BenchRun['acce
     ph.sec += (c.durationMs ?? 0) / 1000;
     ph.weighted += w;
     ph.output += u.output;
+    ph.input = (ph.input ?? 0) + u.input;
+    ph.cacheRead = (ph.cacheRead ?? 0) + u.cacheRead;
+    ph.cacheWrite = (ph.cacheWrite ?? 0) + u.cacheWrite;
+    ph.ms = (ph.ms ?? 0) + (c.durationMs ?? 0);
+    if (c.model && !(ph.models ??= []).includes(c.model)) ph.models.push(c.model);
     const list = c.tools ?? [];
     list.forEach((tc, i) => {
       tools.total++;
@@ -272,6 +318,7 @@ export function runMetrics(task: Task, calls: CallRow[], accept?: BenchRun['acce
     tokens,
     costUsd: Math.round(cost * 10_000) / 10_000,
     byPhase,
+    ...(events ? { gates: gateDecisions(events) } : {}),
     tools,
     turns,
     quality: {

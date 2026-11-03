@@ -29,6 +29,14 @@ export function supportedLanes(repoRoot) {
   return [];
 }
 
+/** B-12: tên bài của một bộ trong arms.json `_suites` (khớp tiền tố trong kinds), theo thứ tự tên. Bộ lạ → ném lỗi. */
+export function suiteTaskIds(suites, name, allTasks) {
+  const s = suites?.[name];
+  if (!s?.kinds) throw new Error(`Không có bộ bài "${name}". Có: ${Object.keys(suites ?? {}).filter((k) => !k.startsWith('_')).join(', ') || '(không)'}`);
+  const prefixes = Object.values(s.kinds).flatMap((k) => k.prefixes ?? []);
+  return allTasks.filter((t) => prefixes.some((p) => t.startsWith(p)));
+}
+
 /** Trả về danh sách lỗi (rỗng nếu ổn). Không tự lùi sang lane khác. */
 export function checkArms(armIds, arms, lanes) {
   const errs = [];
