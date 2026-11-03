@@ -6,7 +6,7 @@ import type { BusEvent } from './events.js';
 import { nowIso } from './util/ids.js';
 import { readJsonl, scanJsonl, type JsonlCache } from './util/fsx.js';
 import { MAX_UPLOAD_BYTES } from './uploads.js';
-import { clearFixedFeedback, FINDING_LABELS, kpiReport } from './kpi.js';
+import { cacheReport, clearFixedFeedback, FINDING_LABELS, kpiReport, type CallRow } from './kpi.js';
 import { isSafeRef } from './git.js';
 import { DiffError, diffSummary, fileDiff, isSha, locate as locateDiff, ownersOf, repoDirFor } from './diff.js';
 import { ShipError } from './ship.js';
@@ -474,6 +474,19 @@ export function createServer(app: App): http.Server {
       const tasks = q('task')?.split(',').map((s) => s.trim()).filter(Boolean);
       const days = Number(q('days') ?? 0) || undefined;
       return send(res, 200, kpiReport(app, { tasks, days, department: q('dept') || undefined, project: q('project') || undefined, resolve: q('raw') !== '1', by: q('by') === 'model' ? 'model' : 'agent' }));
+    }
+
+    // [B-13] tỉ lệ trúng cache theo lượt gọi / pha / runtime — chỉ số token và tên model, đọc từ calls.jsonl của nhiệm vụ
+    if (p === '/api/cache') {
+      const days = Number(q('days') ?? 0) || undefined;
+      const since = days ? Date.now() - days * 86_400_000 : 0;
+      const ids = q('task')?.split(',').map((x) => x.trim()).filter(Boolean);
+      const calls = store
+        .list()
+        .filter((t) => (!ids?.length || ids.includes(t.id)) && (!since || Date.parse(t.createdAt) >= since) && t.status !== 'queued')
+        .flatMap((t) => readJsonl<CallRow>(store.callsFile(t.id)));
+      const { calls_, ...stats } = cacheReport(calls);
+      return send(res, 200, { ...stats, rows: calls_.slice(-Number(q('limit') ?? 50)).reverse() });
     }
 
     if (p === '/api/agents') return send(res, 200, snapshot(app).agents);
