@@ -4,6 +4,7 @@
 > Cập nhật R8 (T-20261102-175854-65c, S3, @research-lead, 2/11/2026): thêm **B-10** (cổng phủ kế hoạch, §5), sửa B-02 §4.1 bước 2 (lệnh đỏ mà đề bài yêu cầu xanh ⇒ bắt buộc vòng sửa), cập nhật §0 và §6, đổi mã giả thuyết. Bằng chứng mới: ca `t5-logq.ccoding-fastlane.2` của C9 (`docs/research/context/c9-partial-2026-11-02.md` §2).
 > Cập nhật R12 (T-20261103-025758-514, S3, @methodologist, 3/11/2026): thêm **B-11** (làm gọn làn đơn, §5), đề xuất chỉ tiêu B-01′ (×1,3, chờ giám đốc duyệt; `preregistration.md` §9 V4-01, nhãn post-hoc) và kế hoạch đo B7′ (§5 B-11.5). Số lấy từ `analysis/b7-cost-decomposition.md` và `analysis/b02m-replay.md`.
 > Cập nhật R13 (T-20261103-034225-3c7, S1, @methodologist, 3/11/2026): sửa B-11 theo review — (d) **đóng** (trích mã `route()` và cấu hình arm B7); (a) tách (a-skip) bị chặn / (a-brief) cần giám đốc duyệt; B-11.5 viết lại theo arm B7c/B7cb/B7cab (điều kiện chạy, ngân sách lượt trong trần 3,6 giờ, kết quả dự kiến, điểm dừng vô ích sau 20 lượt); CI dự kiến lấy từ `analysis/variance-decomposition.md` (S2, @data-scientist); minor: lịch ≈ 3,5 giờ, V4-01 "chỉ báo thô", T-6 là Δ gộp, `b02m-replay` đã đọc `finalPath`.
+> Cập nhật R14 (T-20261103-115014-174, S3, @research-lead, 3/11/2026): thêm **B-13…B-17** (§5) từ đối chiếu tài liệu "4 hướng tăng tốc" của giám đốc (`analysis/acceleration-crosscheck.md`). Số lấy từ `analysis/cache-sensitivity.md` (C-0…C-5, ảnh chụp `838a5f1`), `analysis/cache-diagnostic-spec.md`, `analysis/b7-cost-decomposition.md` (T-x), `analysis/agreement.md`, `related-work.md` §2.16–2.22. Cả năm mục là **đề xuất, chưa chạy**; không đưa lên `main`.
 > Nguyên tắc của giám đốc: mọi nâng cấp phải dựa vào nghiên cứu; mỗi thay đổi của Phòng Dev ghi mã `B-xx`; benchtest chạy theo `preregistration.md` để kiểm lại.
 > Số từ `token-analysis.md` dẫn theo **mã bảng** (T-0, T-d…), không chép lại bản S1 đang làm mới.
 > **Mã giả thuyết (từ R8):** hệ chính là **H1–H10 của bộ đo giám đốc** (`bench/vs-claude/analyze.mjs:61-115`), viết `H_i` trong tệp này. Giả thuyết H1–H9 của `preregistration.md` bản 1 đổi mã theo quy ước H_i → ĐK-P_i (bản 2, hạng mục S4; cùng quy ước với `preregistration.md` §3.3, thống nhất ở v2.1). **Trùng mã:** P1–P4 ở cột "Gộp ứng viên", B-02, B-03, B-09 là **bản vá prompt** trong `self-improvement/prompt-patches/`; vì vậy trong tệp này giả thuyết bản 1 ghi là **ĐK-P_i** (= P_i của `preregistration.md` bản 2). Đề nghị S4 ghi chú trùng mã này trong bảng ánh xạ P↔H.
@@ -25,10 +26,15 @@
 | 10 | B-09 | Giới hạn đầu ra / tín hiệu dừng khảo sát (hoãn) | P1, P2 | 1 | 1 | 1,0 | Có |
 | — | **B-11** (R12, vòng 4) | Làm gọn làn đơn: (a-skip) bỏ nghiệm thu [**bị chặn**], (a-brief) bảng tiêu chí ngắn [**cần giám đốc duyệt**], (b) mẫu gọn [**cần giám đốc duyệt**], (c) prompt, (d) định tuyến [**đã có, đóng**: `route()` bỏ lượt LLM khi ép làn đơn]; đo theo arm B7c/B7cb/B7cab; đề xuất chỉ tiêu B-01′ ×1,3 (§5 B-11) | S1 `b7-cost-decomposition.md`; S2 `b02m-replay.md` (cho (a)); `variance-decomposition.md` (cỡ mẫu B-11.5) | chưa chấm | chưa chấm | — | Có |
 | — | **B-12** (vòng 4 gói 2, **đề xuất, không chạy**) | Bộ bài cài lỗi để đo recall của cổng chất lượng (B-02, B-10, CTO): lượt có lỗi cài sẵn, nhãn thật biết trước, ghi quyết định cổng từng lần | `analysis/agreement.md` §(c) (C-1…C-3) | 3 | 3 | 1,0 | Có (mở đo mới, tốn hạn mức) |
+| — | **B-13** (R14, **đề xuất**) | Chỉ số trúng cache theo lượt gọi/pha/runtime + ghi `model` và `byPhase` đủ 4 thành phần token | đề xuất 1 của tài liệu "4 hướng"; `cache-sensitivity.md` C-0, C-2; T-2 | 3 | 2 | 1,5 | Có (đổi schema `runs.jsonl` của bench) |
+| — | **B-14** (R14, **đề xuất**) | Chẩn đoán cache claude-cli (≤ 8 lượt), rồi ổn định tiền tố theo kết quả | đề xuất 2 (và câu hỏi TTL của đề xuất 8); `cache-diagnostic-spec.md` Phần 1; C-1, C-3, C-5 | 3 | 2 | 1,5 | Có (gọi `claude -p`; đổi bộ công cụ chạm hook) |
+| — | **B-15** (R14, **đề xuất, bị chặn**) | Đo họp bằng arm B1 (`discussionRounds: 0`) trên bài lớn | đề xuất 3; `cache-diagnostic-spec.md` Phần 2 | chưa chấm | 3 | — | Có (tạo `task.json` bài lớn) |
+| — | **B-16** (R14, **đề xuất**) | Thí điểm "CTO Opus + nghiệm thu brief", đo bằng bộ bài B-12 | đề xuất 4; `cache-diagnostic-spec.md` Phần 3; T-5; C-5; B-11 (a-brief) | chưa chấm | 3 | — | Có (cần duyệt (a-brief) và B-12) |
+| — | **B-17** (R14, **hoãn**) | Model lập kế hoạch theo độ khó 1–3 | đề xuất 6; chờ trường `model` của B-13 | chưa chấm | 3 | — | Có |
 
 B-01 và B-02 đứng đầu theo quyết định của giám đốc (2/11, 13:42), không phải theo điểm. **B-10 đứng thứ ba** (R8): cùng điểm ưu tiên 2,0 với B-03, nhưng là mục duy nhất ngoài B-01/B-02 có số đo chất lượng trực tiếp (t5: 95/146 test ẩn, §5 B-10), chặn một loại lỗi mà reviewer LLM đã bỏ lọt, và nên triển khai cùng B-02 (chung bước "trước thực thi/sau thực thi" của pipeline). Thang điểm 1–5 là đánh giá chuyên gia; chỉ B-01/B-02/B-10 có số đo hỗ trợ trực tiếp (§3, §5 B-10).
 
-**Phủ ứng viên:** G1→B-04 · G2→B-04 · G3→B-08 · G4→B-08 · G5→loại, ghi ở B-02 · G6→B-06 · G7→B-05 · D-01→B-07 · D-02→B-02 · D-03→B-06 · P1→B-09 · P2→B-09 · P3→B-02 · P4→B-03 · ca t5 C9 (kế hoạch bỏ sót `agg.js`)→B-10 · ca t5 C9 (`npm test` đỏ mà review duyệt)→B-02 §4.1.
+**Phủ ứng viên:** G1→B-04 · G2→B-04 · G3→B-08 · G4→B-08 · G5→loại, ghi ở B-02 · G6→B-06 · G7→B-05 · D-01→B-07 · D-02→B-02 · D-03→B-06 · P1→B-09 · P2→B-09 · P3→B-02 · P4→B-03 · ca t5 C9 (kế hoạch bỏ sót `agg.js`)→B-10 · ca t5 C9 (`npm test` đỏ mà review duyệt)→B-02 §4.1. **(R14) Tám đề xuất của tài liệu "4 hướng":** 1→B-13 · 2→B-14 · 3→B-15 · 4→B-16 · 5→đã có — B-01 · 6→B-17 · 7→không mở mã · 8→không mở mã, câu hỏi TTL nằm trong B-14 (`analysis/acceleration-crosscheck.md` §1).
 
 ---
 
@@ -503,6 +509,84 @@ Các ô thứ tự chính của (b), (c) là phần còn lại sau khi accept đ
 | **8. Ưu tiên** | Hiệu quả 3 / công sức 3 = 1,0. **Không xếp hạng**; điều kiện: phán quyết B-02 hiện "không đủ dữ liệu" (`b02m-replay.md`) nên B-12 là con đường để đóng phán quyết đó, nhưng giám đốc quyết có mở đo mới hay không. |
 | **9. Giám đốc duyệt** | **Có** — mở đo mới tốn hạn mức và cần Phòng Dev thêm trường ghi quyết định. |
 
+### B-13 — Chỉ số trúng cache và trường ghi theo pha/model (vòng 4 gói 3; 3/11/2026; @research-lead) — **ĐỀ XUẤT**
+
+> Đề xuất 1 của tài liệu "4 hướng tăng tốc" (`context/acceleration-4-directions-2026-11-03.md` dòng 260–263). Số lấy từ `analysis/cache-sensitivity.md` (C-x, ảnh chụp `838a5f1`) và `analysis/b7-cost-decomposition.md` (T-x). Đối chiếu đầy đủ: `analysis/acceleration-crosscheck.md` §1 dòng 1.
+
+| Trường | Nội dung |
+|---|---|
+| **1. Vấn đề** | Hệ thống chưa có chỉ số tỉ lệ trúng cache `cacheRead / (cacheRead + cacheWrite + input)`. `runs.jsonl` không ghi `model` (C-0), và `byPhase` chỉ có weighted theo pha, không có từng thành phần token (T-2, T-6). Vì vậy không tách được cache theo pha, không tính được USD thật, và mọi thay đổi về cache (B-14) chỉ đo được ở mức cả lượt. |
+| **2. Bằng chứng** | C-2 (tính ngoài luồng): tỉ lệ trúng gộp A0-sonnet 87,0 %, B0 76,5 %, B6 80,5 %, B7 82,2 %. C-0: "không có trường model". C-5: chỉ tính được USD theo hai kịch bản cận, toàn Sonnet 5.5 hoặc toàn Opus 5.5. T-2: `byPhase` chỉ có weighted. Mã: Grep "cacheHit", "trúng cache" trong `src/` và `public/` cho 0 kết quả. |
+| **3. Nguyên nhân gốc** | **Đã kiểm:** chỉ số và trường chưa tồn tại (đọc mã, C-0). Không có giả thuyết nào cần kiểm thêm. |
+| **4. Thay đổi đề xuất** | (a) Tính tỉ lệ trúng cache theo lượt gọi, pha và runtime từ `calls.jsonl` (qua `LogStore`), rồi hiển thị trên trang Token và KPI v2. (b) Trong `runs.jsonl` của bench: ghi `model` cho mỗi lượt gọi, và `byPhase[phase].{input,cacheRead,cacheWrite,output}` (trùng một phần với "Trường cần ghi thêm cho B7′" ở B-11.5). (c) **Chỉ thêm trường sau khi đợt `study-cloud` đang chạy kết thúc**, để không đổi schema giữa đợt. Gói này không sửa `src/` hay `bench/`. |
+| **5. Hiệu quả kỳ vọng** | Không tự giảm chi phí. Đây là điều kiện để đo B-14, B-16, B-17 và để tính USD theo model thật thay cho hai kịch bản cận của C-5. |
+| **6. Cách kiểm lại** | Tính lại offline từ một `calls.jsonl` mới phải cho cùng số với UI (sai số ≤ 0,1 điểm %). Trên lượt bench mới, tái lập được bảng C-2 từ trường mới. Chạy `node docs/research/scripts/consistency-check.mjs`. Thêm test đơn vị cho hàm tính tỉ lệ (mẫu số 0 ⇒ không hiển thị). |
+| **7. Rủi ro / dữ liệu** | Chỉ ghi số token và tên model, không có nội dung lời nhắc. Ghi qua `LogStore`, không thêm đường ghi ngoài `data/`. Đổi schema `runs.jsonl` có thể làm vỡ script phân tích cũ, nên chỉ thêm trường, không đổi tên trường. |
+| **8. Ưu tiên** | Hiệu quả 3 / công sức 2 = 1,5. Đề xuất số 2 cho Phòng Dev (`acceleration-crosscheck.md` §4). |
+| **9. Giám đốc duyệt** | **Có**, vì đổi schema `runs.jsonl` của bench và chọn thời điểm sau đợt `study-cloud`. |
+
+### B-14 — Chẩn đoán cache claude-cli, rồi ổn định tiền tố (vòng 4 gói 3; 3/11/2026; @research-lead) — **ĐỀ XUẤT, CHƯA CHẠY**
+
+> Đề xuất 2 của tài liệu (dòng 265–271), cùng câu hỏi TTL ở đề xuất 8 (dòng 293–295). Đặc tả phép thử: `analysis/cache-diagnostic-spec.md` Phần 1 (S2). Gói này không gọi `claude -p`; Phòng Dev chạy.
+
+| Trường | Nội dung |
+|---|---|
+| **1. Vấn đề** | Mỗi lượt gọi claude-cli ghi một phần tiền tố cache mới. Chưa biết phần ghi đó đến từ bộ công cụ theo pha, `cwd`, hay phần stdin. Tài liệu đặt mục tiêu "ghi cache < 20 % chi phí" nhưng chưa có số đo nguồn gốc. |
+| **2. Bằng chứng** | C-1: 1,25·cacheWrite chiếm 30,1 % (A0-sonnet), 41,7 % (B0), 35,9 % (B6), 34,8 % (B7) token có trọng số. T-4: cacheWrite chiếm 36,8 % phần chênh B7 − A0 trên t1–t5 (C-3 tính lại: 36,5 %). C-3: **không** tái hiện được 68 %, vì không lượt B0/B6/B7 nào đạt mức đó (max theo lượt 53,8–54,2 %). Mã: `claude-cli.ts` truyền `--tools`/`--allowedTools` theo pha (dòng 148, 169, 171) và `cwd` (dòng 183), còn lời nhắc của CCoding đi qua stdin (S2 Phần 1). |
+| **3. Nguyên nhân gốc** | **Giả thuyết (S2):** lời nhắc của CCoding nằm trong tin nhắn người dùng, sau tools và system của Claude Code. Đổi bộ công cụ làm vỡ gần hết tiền tố cache, còn đổi stdin chỉ vỡ phần đuôi. `cwd` chỉ có tác động nếu nó lọt vào lời nhắc hệ thống. Chưa kiểm. **TTL [CHƯA KIỂM CHỨNG]:** C-5 cho thấy Σ `costUsd` của A0-sonnet ($14,43) khớp giá cacheWrite 1 giờ, không khớp giá 5 phút ($12,06). Đây là bằng chứng gián tiếp, chỉ cho A0, và giả định A0 chạy Sonnet 5.5. |
+| **4. Thay đổi đề xuất** | **Bước 1, chẩn đoán:** 3 cặp gọi `claude -p` với đúng cờ của runtime: (a) giống hệt, (b) khác bộ công cụ, (c) khác `cwd` (đối chứng). Tổng ≤ 8 lượt (6 đo, 1 khởi động, 1 dự phòng). Đo `cache_creation_input_tokens`, `cache_read_input_tokens`, `input_tokens` và h của lượt 2 mỗi cặp. Ghi thêm TTL thật nếu trường usage có. Lời nhắc giả không chứa dữ liệu thật. Ngưỡng `MIN_CACHE_TOKENS` = 512 cho Sonnet/Opus 5.5 (S4, `related-work.md` §2.22). **Bước 2, chỉ khi bước 1 xác định được nguồn:** nếu do bộ công cụ thì giữ một bộ công cụ cố định trong cả nhiệm vụ và để hook claude-guard chặn theo pha; nếu do `cwd` thì xét chạy pha không sửa tệp ở thư mục gốc nhiệm vụ; nếu TTL là 1 giờ cho các lượt cách nhau < 5 phút thì xét chuyển sang 5 phút. |
+| **5. Hiệu quả kỳ vọng** | **Cận trên** là toàn bộ phần cacheWrite: 34,8 % token có trọng số ở B7 (C-1). Cắt hết là không khả thi, vì lượt đầu luôn phải ghi. Nếu TTL thật là 1 giờ, tổng USD B7 theo giá Sonnet 5.5 là $31,03 so với $25,37 khi tính 5 phút (C-5) **[CHƯA KIỂM CHỨNG: TTL thật]**. Mục tiêu < 20 % của tài liệu chưa có căn cứ. **Giả thuyết.** |
+| **6. Cách kiểm lại** | Bước 1: bảng quy tắc diễn giải của S2 (so h của (b), (c) với (a), ngưỡng 0,9 / 0,5 / 0,2 / 0,05 do người thiết kế chọn), không dùng p-giá trị (n = 1 mỗi cặp). Bước 2: A/B trên bench, đăng ký `preregistration.md` §9 trước lượt đầu. Thước đo chính là token có trọng số `input + 1,25·cacheWrite + 0,1·cacheRead + 5·out`; USD và hệ số 0,05 chỉ là phân tích phụ, ngoài họ Holm. Thêm tỉ lệ trúng cache (B-13) và test ẩn không kém hơn. |
+| **7. Rủi ro / dữ liệu** | (a) n = 1 mỗi cặp, nên kết quả chỉ là chẩn đoán có/không. (b) Đọc chéo cache giữa các cặp: dùng nonce ở đầu stdin và chờ > 5 phút giữa các cặp (S2). (c) Bước 2 với bộ công cụ cố định chuyển việc chặn sang hook, tức chạm **biên bảo mật** (B-04, B-08), nên cần bộ test lệnh ác ý. Lời nhắc giả không có DLCN hay bí mật. |
+| **8. Ưu tiên** | Hiệu quả 3 / công sức 2 = 1,5. Đề xuất số 1 cho Phòng Dev, bắt buộc theo đề bài (`acceleration-crosscheck.md` §4). |
+| **9. Giám đốc duyệt** | **Có**: bước 1 gọi `claude -p` (tốn hạn mức nhỏ, ≤ 8 lượt); bước 2 đổi cấu hình công cụ và chạm hook. |
+
+### B-15 — Đo họp bằng arm B1 trên bài lớn (vòng 4 gói 3; 3/11/2026; @research-lead) — **ĐỀ XUẤT, BỊ CHẶN**
+
+> Đề xuất 3 của tài liệu (dòng 273–276). Điều kiện đo: `analysis/cache-diagnostic-spec.md` Phần 2 (S2).
+
+| Trường | Nội dung |
+|---|---|
+| **1. Vấn đề** | Chưa có số đo về lợi ích hay chi phí của họp. Tài liệu đề xuất bỏ họp với kế hoạch ≤ 3 hạng mục, hoặc lấy ý kiến vòng đầu song song rồi chốt. |
+| **2. Bằng chứng** | Mã trên nhánh perf: phát biểu trong một vòng **đã song song** (`phases.parallelDiscuss` mặc định bật, `orchestrator.ts:1611-1623`). Họp tự bỏ khi kế hoạch < `meetingMinSubtasks` (3) hạng mục hoặc < 2 người tham gia (`:1602-1604`). Mặc định `discussionRounds: 1` (`config.ts:297`). Arm B1 (`discussionRounds: 0`) có ở `arms.json:29-35`, **chưa chạy**. B7 là làn đơn, không họp (T-2). Tài liệu: Debate or Vote (`related-work.md` §2.16). |
+| **3. Nguyên nhân gốc** | Không áp dụng: chưa có vấn đề đo được. Câu "họp chạy nối tiếp 5 lượt" của tài liệu mô tả `main@9e6079b`, không khớp mã trên nhánh perf. |
+| **4. Thay đổi đề xuất** | Chưa đổi mặc định. Đo B1 so với đối chứng (làn đầy đủ, `discussionRounds: 1`) trên bài lớn. **Tiên quyết:** `l1-modules` và `l2-chain` phải có `task.json`; hiện mới có `starter/`. Việc tạo là quyết định của giám đốc. Kiểm trước: lượt đối chứng phải thật sự có pha `discuss`, nếu không thì kết quả rỗng. |
+| **5. Hiệu quả kỳ vọng / cỡ mẫu** | Bỏ một vòng phát biểu song song và một lượt chốt trên đường găng. Độ lớn chưa biết. Cỡ mẫu tham chiếu: 10 lượt × 2 arm × 2 bài = 40 lượt, cộng 6 lượt thí điểm (S2). Với 2 bài, nửa độ rộng CI sẽ rộng hơn 0,218 của phương án A (V-2); con số chính xác chưa mô phỏng. **Giả thuyết.** |
+| **6. Cách kiểm lại** | Token có trọng số (thước đo chính), thời gian thực, test ẩn, `byPhase.discuss`. Chỉ báo ước lượng điểm kèm CI. Đăng ký `preregistration.md` §9 trước lượt đầu. |
+| **7. Rủi ro / dữ liệu** | Hai bài, nên kết quả khó khái quát. Bài tổng hợp, không có dữ liệu thật. |
+| **8. Ưu tiên** | Chưa chấm; công sức 3. **Bị chặn** đến khi có `task.json` cho bài lớn. Đề xuất 7 của tài liệu (review từng hạng mục) chỉ xét lại sau B-15. |
+| **9. Giám đốc duyệt** | **Có**: tạo `task.json` cho bài lớn và mở đo mới. |
+
+### B-16 — Thí điểm "CTO Opus + nghiệm thu brief" (vòng 4 gói 3; 3/11/2026; @research-lead) — **ĐỀ XUẤT, CHƯA CHẠY**
+
+> Đề xuất 4 của tài liệu (dòng 278–280). Thiết kế đo: `analysis/cache-diagnostic-spec.md` Phần 3 (S2). Phụ thuộc B-11 (a-brief) và B-12.
+
+| Trường | Nội dung |
+|---|---|
+| **1. Vấn đề** | Tài liệu đề xuất cho CTO nghiệm thu bằng Opus và chuyển bước tổng hợp sang Sonnet. Pha accept đã là phần chênh lớn nhất của làn đơn, và chất lượng phán đoán của CTO (recall) chưa được đo. |
+| **2. Bằng chứng** | T-5: pha accept chiếm 47,7 % phần chênh B7 − A0 trên t1–t5, cận dưới độc lập 14,5 %. C-5: giá Opus 5.5 đúng 2× Sonnet 5.5 ở mọi thành phần, nên USD của accept ×2 nếu token không đổi. `agreement.md` §(c) C-1…C-3: recall của cổng/CTO chưa ước lượng được (4 và 7 lượt lỗi < 10). Mã: `phaseModels` có sẵn (`types.ts:335-339`, `orchestrator.ts:3234`, `VARIANT_PHASES` có `accept` ở `:3776`). Chưa có arm nào đặt `accept: opus`. Làn đơn không có pha tổng hợp (B-01), nên phần "tổng hợp → Sonnet" chỉ áp cho làn đầy đủ. |
+| **3. Nguyên nhân gốc** | **Giả thuyết:** Opus giảm tỉ lệ nghiệm thu sai, còn (a-brief) bù chi phí bằng cách rút đầu ra của accept. Chưa kiểm. |
+| **4. Thay đổi đề xuất** | Hai arm làn đơn, cùng (a-brief), chỉ khác `phaseModels.accept` (Sonnet hoặc Opus). Chạy trên bộ bài cài lỗi B-12, có trường ghi quyết định của CTO (B-12 trường 4(c)). **Thí điểm 12 cặp** để ước lượng ρ, q và tỉ lệ bất đồng, rồi mới tính cỡ mẫu chính thức. Phần "tổng hợp → Sonnet" chỉ là cấu hình `phaseModels.synthesize` cho làn đầy đủ, đo sau khi B-15 có bài lớn. |
+| **5. Hiệu quả kỳ vọng / cỡ mẫu** | Chất lượng: tỉ lệ nghiệm thu sai thấp hơn (độ lớn chưa biết). Chi phí: USD của accept tăng tới ×2 nếu (a-brief) không rút được token; (a-brief) có cận trên là toàn bộ phần accept (B-11.2). Cỡ mẫu một arm: 25–46 lượt lỗi cài (`agreement.md` C-3, B-12 trường 5). **Giả thuyết.** |
+| **6. Cách kiểm lại** | Chỉ số chính: tỉ lệ nghiệm thu sai (CTO "đạt" khi lỗi cài còn nguyên), ghép cặp, McNemar và CI Clopper–Pearson. Chỉ số phụ: token có trọng số (thước đo chính về chi phí, nhưng không so trực tiếp giữa hai model khác giá), USD (phân tích phụ, ngoài họ Holm), thời gian, test ẩn. Có 5 điểm dừng khai báo trước (S2 Phần 3, gồm ngưỡng 2× USD và 0,10; đây là lựa chọn thiết kế, chưa suy ra từ dữ liệu). Đăng ký `preregistration.md` §9 trước lượt đầu. |
+| **7. Rủi ro / dữ liệu** | (a) Lỗi cài không đại diện lỗi tự nhiên (B-12 trường 7). (b) Tên pha và cú pháp `phaseModels` cho bench (`bench.ts:125`) chưa được Phòng Dev xác nhận. (c) Tốn hạn mức vì Opus đắt gấp đôi. Bài tổng hợp, không có dữ liệu thật. |
+| **8. Ưu tiên** | Chưa chấm; công sức 3. Đề xuất số 3 cho Phòng Dev, chỉ sau khi giám đốc duyệt (a-brief) và mở đo B-12. |
+| **9. Giám đốc duyệt** | **Có**: duyệt (a-brief) (B-11), mở đo B-12, và chi phí Opus. |
+
+### B-17 — Model lập kế hoạch theo độ khó (vòng 4 gói 3; 3/11/2026; @research-lead) — **HOÃN**
+
+| Trường | Nội dung |
+|---|---|
+| **1. Vấn đề** | Tài liệu đề xuất bước định tuyến chấm độ khó 1–3, mức 1 dùng Sonnet và mức 3 dùng Opus để lập kế hoạch (dòng 286–287). |
+| **2. Bằng chứng** | Đã có một phần: làn nhanh dùng `fastLane.planModel` cho pha plan (`orchestrator.ts:1399`, `:1520`), nhưng không có thang độ khó. Không có dữ liệu benchmark: ảnh chụp không có `model` (C-0), và B7 không có lượt plan (T-2). |
+| **3. Nguyên nhân gốc** | Không áp dụng: chưa có số đo. |
+| **4. Thay đổi đề xuất** | **Không làm trong vòng này.** Xét lại khi B-13 đã ghi `model` theo pha và B-15 có bài lớn để quan sát pha plan. |
+| **5. Hiệu quả kỳ vọng** | Chưa ước lượng được. |
+| **6. Cách kiểm lại** | Khi mở lại: A/B pha plan theo độ khó trên bài lớn; dùng token có trọng số, USD (phụ) và tỉ lệ kế hoạch qua cổng B-10. |
+| **7. Rủi ro / dữ liệu** | Chấm độ khó sai làm kế hoạch yếu ở việc khó. Không đụng dữ liệu. |
+| **8. Ưu tiên** | Hoãn. |
+| **9. Giám đốc duyệt** | Có, nếu làm. |
+
 ---
 
 ## 6. Quan hệ với đăng ký trước và các giới hạn
@@ -515,6 +599,7 @@ Các ô thứ tự chính của (b), (c) là phần còn lại sau khi accept đ
 | B-02 | H8 (`:96-100`), H3 (`:69-75`), H7 (`:92-95`); **giả thuyết B-02 mới** (cổng chặn ca "đỏ kéo dài + bỏ sót phần việc"; S4) | ĐK-P3, ĐK-P7 (bài giữ lại t6–t8, xác nhận); KPI | Ca chuẩn để phát lại: `t5-logq.ccoding-fastlane.2` (§4.1 bước 2). Giả thuyết B-02 mới dùng quy tắc "lệnh đề bài đòi xanh còn đỏ ⇒ vòng sửa" (§4.1) và quy tắc phủ B-10 |
 | **B-10** | **H8** (`analyze.mjs:96-100`) — đúng loại lỗi "requirements dropped"; phán quyết hiện chỉ dựa `formatMiss` nên chưa bắt được ca coding kiểu t5 (§5 B-10 trường 6) | ĐK-P3 (test ẩn không kém hơn) | Phát lại offline trên `results/C*/` không tốn hạn mức 5 giờ; nên chạy trước mọi vòng LLM. Chung giả thuyết B-02 mới |
 | B-03…B-09 | — | — | KPI, đếm log, test đơn vị. Không cần benchtest, trừ B-03/B-07 (F1) và B-09 |
+| **B-13…B-17** (R14) | Không có giả thuyết H_i tương ứng | — | Mọi phép đo mới (B-14 bước 2, B-15, B-16) phải ghi dòng §9 trước lượt đầu. USD và hệ số cacheRead 0,05 chỉ là phân tích phụ, ngoài họ Holm (§9 V4-03) |
 
 **Giới hạn và kết quả âm tính**
 - N3b, N5 **không kiểm được** từ CSV; N4 kiểm gián tiếp. Phép kiểm cần dữ liệu từ API `kpi`.
