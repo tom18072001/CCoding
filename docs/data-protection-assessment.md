@@ -428,3 +428,13 @@ Kết luận giữ nguyên: **ĐẠT CÓ ĐIỀU KIỆN** (điều kiện sao l�
 | README, `docs/ARCHITECTURE.md`, `docs/UI.md`, `docs/TOOLS.md`, `docs/RUNTIMES.md`, `docs/HERDR.md` | — | Tài liệu, không đụng dữ liệu |
 
 **Kết luận: ĐẠT.**
+
+### Bổ sung: sửa KPI v2 và bộ probe sau review (nhánh `feat/kpi-v2`, 3/11/2026)
+
+| Thay đổi định dạng | Năng lực | Đánh giá |
+|---|---|---|
+| `calls.jsonl`: trường `toolsTracked: false` khi runtime không ghi thao tác công cụ (Codex/Kimi CLI) | DET-01 | Cờ boolean, không chứa dữ liệu nghiệp vụ. Bản ghi vẫn đi qua `LogStore.record` (che bí mật/PII, chuỗi băm). Nhãn theo nhiệm vụ (không đổi) |
+| `task.json`: `projectChecks.depts[<phòng>] = { before, latest, at }` — kết quả lệnh kiểm tra theo phòng | GOV-03, DET-01 | Chỉ lệnh, mã thoát, thời gian, dòng tổng kết (đã có sẵn trong `baseline`/`latest`); **bỏ `tail`** (đầu ra lệnh) để không nhân bản đầu ra có thể chứa dữ liệu. Nằm trong `data/runs/<task>/`, nhãn theo nhiệm vụ |
+| `task.json`: `runs[].review.reviewerApproved` — kết luận gốc của reviewer trước khi CCoding ép "không duyệt" | DET-01 | Boolean; giúp truy vết quyết định (ai duyệt gì, CCoding can thiệp ra sao) — phục vụ kiểm toán chất lượng |
+
+Không thêm luồng dữ liệu ra ngoài, không đổi chỗ lưu (vẫn `data/`), không đổi thời hạn lưu.

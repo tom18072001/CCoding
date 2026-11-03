@@ -65,8 +65,12 @@ test('KPI v2: khẳng định không có lệnh kiểm chứng, hồi quy, duy�
         call({ taskId: 'T1', agentId: 'qa-tester', phase: 'review', text: '{"approved":true}', tools: [] }),
       ],
     };
-    const t1 = task('T1', { projectChecks: { baseline: [ok('npm test')], latest: [bad('npm test')] } });
-    const tr = { T1: [{ kind: 'review', from: 'qa-tester', department: 'dev', text: 'Duyệt.' }] };
+    // orchestrator ép approved=false khi lệnh kiểm tra hồi quy — kết luận GỐC của reviewer (duyệt) nằm ở reviewerApproved
+    const t1 = task('T1', {
+      projectChecks: { baseline: [ok('npm test')], latest: [bad('npm test')] },
+      runs: [{ department: 'dev', usage: { input: 0, output: 0, cacheRead: 0 }, subtasks: [{ id: 'S1', assignee: 'backend-dev', attempts: 1, output: 'x' }], review: { approved: false, reviewerApproved: true, summary: 'Ổn (CCoding: lệnh kiểm tra hỏng sau khi sửa → không duyệt)', issues: [] } }],
+    });
+    const tr = { T1: [{ kind: 'review', from: 'qa-tester', department: 'dev', text: '⚠️ Cần sửa — Ổn (CCoding: lệnh kiểm tra hỏng sau khi sửa → không duyệt)' }] };
     const r = computeKpi(source(app, [t1], calls, tr));
     const be = r.agents.find((a) => a.agentId === 'backend-dev')!;
     assert.deepEqual(be.honesty && { claims: be.honesty.claims, unbacked: be.honesty.unbacked }, { claims: 1, unbacked: 1 });
@@ -234,4 +238,122 @@ test('KPI v2 (sửa 1): CLAIM_RE không bắt nhầm cài đặt/câu phủ đ�
   // giữ hành vi cũ
   assert.ok(verificationClaim('Đã chạy `npm test` → 14/14 đạt'));
   assert.equal(verificationClaim('Cần chạy npm test để kiểm tra.'), undefined);
+});
+
+// ───────── sửa theo review KPI v2 — nhóm 2: Kết quả thật và hiệu chỉnh reviewer ─────────
+
+const run = (department: string, subtasks: Array<{ id: string; assignee: string }>, review?: Record<string, unknown>) => ({
+  department,
+  usage: { input: 0, output: 0, cacheRead: 0 },
+  subtasks: subtasks.map((s) => ({ ...s, attempts: 1, output: 'x' })),
+  ...(review ? { review: { summary: '', issues: [], ...review } } : {}),
+});
+
+test('KPI v2 (sửa 2): kết quả lệnh kiểm tra chỉ gán cho người thực thi của phòng chạy lệnh đó, và người đã sửa tệp', () => {
+  const app = testApp();
+  try {
+    const t = task('T1', {
+      runs: [run('research', [{ id: 'S1', assignee: 'data-scientist' }]), run('dev', [{ id: 'S1', assignee: 'backend-dev' }, { id: 'S2', assignee: 'tech-writer' }])],
+      // phòng nghiên cứu chạy trước: kiểm tra vẫn đạt; phòng phát triển làm hỏng
+      projectChecks: {
+        baseline: [ok('npm test')],
+        latest: [bad('npm test')],
+        depts: { research: { before: [ok('npm test')], latest: [ok('npm test')] }, dev: { before: [ok('npm test')], latest: [bad('npm test')] } },
+      },
+    });
+    const calls = {
+      T1: [
+        call({ taskId: 'T1', agentId: 'data-scientist', department: 'research', phase: 'execute', subtaskId: 'S1', text: '## Tóm tắt\nphân tích', tools: [tool('write_file', 'notebooks/a.py')] }),
+        call({ taskId: 'T1', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S1', text: '## Tóm tắt\nsửa API', tools: [tool('edit_file', 'src/api.ts')] }),
+        // chỉ đọc tệp, không sửa gì trong workspace (runtime có ghi công cụ) → không chịu hồi quy của người khác
+        call({ taskId: 'T1', agentId: 'tech-writer', phase: 'execute', subtaskId: 'S2', text: '## Tóm tắt\nghi chú phát hành', tools: [tool('read_file', 'src/api.ts')] }),
+      ],
+    };
+    const r = computeKpi(source(app, [t], calls));
+    const by = (id: string) => r.agents.find((a) => a.agentId === id)!;
+    assert.equal(by('backend-dev').outcome?.checksRegressed, 1);
+    assert.equal(by('backend-dev').scores.outcome, 0);
+    assert.equal(by('data-scientist').outcome?.checksRegressed ?? 0, 0, 'phòng khác không chịu hồi quy');
+    assert.equal(by('data-scientist').scores.outcome, 100);
+    assert.equal(by('tech-writer').outcome?.tasks ?? 0, 0, 'người không sửa tệp không chịu kết quả lệnh kiểm tra');
+    // dữ liệu cũ không có kết quả theo phòng, nhiệm vụ nhiều phòng → không gán được, không đoán
+    const old = task('T2', { runs: t.runs, projectChecks: { baseline: [ok('npm test')], latest: [bad('npm test')] } });
+    const r2 = computeKpi(source(app, [old], { T2: calls.T1.map((c) => ({ ...c, taskId: 'T2' })) }));
+    assert.equal(r2.agents.find((a) => a.agentId === 'data-scientist')!.outcome?.checksRegressed ?? 0, 0);
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('KPI v2 (sửa 2): hiệu chỉnh reviewer dùng kết luận GỐC (reviewerApproved), không dùng approved đã bị ép', () => {
+  const app = testApp();
+  try {
+    const calls = { T1: [call({ taskId: 'T1', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S1', text: '## Tóm tắt\nx', tools: [tool('edit_file', 'a.ts')] }), call({ taskId: 'T1', agentId: 'qa-tester', phase: 'review', text: '{}' })] };
+    const tr = { T1: [{ kind: 'review', from: 'qa-tester', department: 'dev', text: '⚠️ Cần sửa' }] };
+    const checks = { baseline: [ok('npm test')], latest: [bad('npm test')] };
+    const qa = (review: Record<string, unknown>) => computeKpi(source(app, [task('T1', { projectChecks: checks, runs: [run('dev', [{ id: 'S1', assignee: 'backend-dev' }], review)] })], calls, tr)).agents.find((a) => a.agentId === 'qa-tester')!;
+    // reviewer duyệt bản hồi quy, CCoding ép không duyệt → vẫn là duyệt sai
+    assert.deepEqual(qa({ approved: false, reviewerApproved: true }).calibration, { decisions: 1, falseApprovals: 1, falseRejections: 0 });
+    // reviewer tự từ chối → quyết định đúng
+    assert.deepEqual(qa({ approved: false, reviewerApproved: false }).calibration, { decisions: 1, falseApprovals: 0, falseRejections: 0 });
+    // dữ liệu cũ (chưa có reviewerApproved): nhận ra kết luận bị ép qua ghi chú của CCoding trong summary
+    assert.equal(qa({ approved: false, summary: 'Ổn (CCoding: lệnh kiểm tra hỏng sau khi sửa → không duyệt)' }).calibration?.falseApprovals, 1);
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('KPI v2 (sửa 2): lệnh vốn lỗi từ trước (so với baseline) không tính reviewer/CTO duyệt sai; không có baseline thì không tính', () => {
+  const app = testApp();
+  try {
+    const calls = { T1: [call({ taskId: 'T1', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S1', text: '## Tóm tắt\nx', tools: [tool('edit_file', 'a.ts')] }), call({ taskId: 'T1', agentId: 'qa-tester', phase: 'review', text: '{}' }), call({ taskId: 'T1', agentId: 'cto', department: 'coord', phase: 'accept', text: '{}' })] };
+    const tr = { T1: [{ kind: 'review', from: 'qa-tester', department: 'dev', text: '✅ Duyệt' }] };
+    const acceptance = { at: '', by: 'cto', accepted: true, parsed: true, summary: '', criteria: [{ name: 'a', result: 'pass', evidence: '' }], risks: [], followUps: [], sig: '' };
+    const mk = (projectChecks: unknown) => computeKpi(source(app, [task('T1', { projectChecks, acceptance, runs: [run('dev', [{ id: 'S1', assignee: 'backend-dev' }], { approved: true, reviewerApproved: true })] })], calls, tr)).agents;
+    for (const pc of [
+      { baseline: [ok('npm test'), bad('npm run lint')], latest: [ok('npm test'), bad('npm run lint')] }, // lint hỏng sẵn
+      { latest: [ok('npm test'), bad('npm run lint')] }, // không có baseline
+    ]) {
+      const ag = mk(pc);
+      assert.equal(ag.find((a) => a.agentId === 'qa-tester')!.calibration?.falseApprovals ?? 0, 0, JSON.stringify(pc));
+      assert.equal(ag.find((a) => a.agentId === 'cto')!.calibration?.falseApprovals ?? 0, 0, JSON.stringify(pc));
+    }
+    // lint đạt trước, hỏng sau → duyệt sai (cả reviewer lẫn CTO)
+    const ag = mk({ baseline: [ok('npm test'), ok('npm run lint')], latest: [ok('npm test'), bad('npm run lint')] });
+    assert.equal(ag.find((a) => a.agentId === 'qa-tester')!.calibration?.falseApprovals, 1);
+    assert.equal(ag.find((a) => a.agentId === 'cto')!.calibration?.falseApprovals, 1);
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('KPI v2 (sửa 2): tiêu chí nghiệm thu "unknown" không thổi phồng điểm', () => {
+  const app = testApp();
+  try {
+    const calls = { T1: [call({ taskId: 'T1', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S1', text: '## Tóm tắt\nx' })] };
+    const acc = (results: string[]) => ({ at: '', by: 'cto', accepted: false, parsed: true, summary: '', criteria: results.map((result, i) => ({ name: `c${i}`, result, evidence: '' })), risks: [], followUps: [], sig: '' });
+    const be = (results: string[]) => computeKpi(source(app, [task('T1', { acceptance: acc(results) })], calls)).agents.find((a) => a.agentId === 'backend-dev')!;
+    // 1 đạt + 3 không rõ: trước đây 100 — giờ quá nửa không rõ → không đo được
+    const mostlyUnknown = be(['pass', 'unknown', 'unknown', 'unknown']);
+    assert.equal(mostlyUnknown.scores.outcome, undefined);
+    assert.equal(mostlyUnknown.outcome?.acceptUnmeasured, 1);
+    // 2 đạt + 1 không rõ: không rõ tính vào mẫu số như chưa đạt → 67
+    assert.equal(be(['pass', 'pass', 'unknown']).scores.outcome, 67);
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('KPI v2 (sửa 2): nhiệm vụ bị hủy/lỗi không tính Kết quả thật và hiệu chỉnh', () => {
+  const app = testApp();
+  try {
+    const calls = { T1: [call({ taskId: 'T1', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S1', text: '## Tóm tắt\nx', tools: [tool('edit_file', 'a.ts')] })] };
+    for (const status of ['cancelled', 'failed']) {
+      const be = computeKpi(source(app, [task('T1', { status, projectChecks: { baseline: [ok('npm test')], latest: [bad('npm test')] } })], calls)).agents.find((a) => a.agentId === 'backend-dev')!;
+      assert.equal(be.scores.outcome, undefined, status);
+      assert.ok(!be.findingKeys.includes('regression'), status);
+    }
+  } finally {
+    app.cleanup();
+  }
 });

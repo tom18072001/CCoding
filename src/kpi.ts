@@ -105,7 +105,7 @@ export interface AgentKpi {
    * (v2) Kết quả thật, không qua LLM: lệnh kiểm tra của dự án (trước/sau khi agent sửa) và nghiệm thu của CTO.
    * checks*: số nhiệm vụ agent có thực thi mà lệnh kiểm tra sau cùng: hồi quy (trước đạt → sau lỗi) / sửa được (trước lỗi → sau đạt) / vẫn lỗi / đạt.
    */
-  outcome?: { tasks: number; checksPass: number; checksRegressed: number; checksFixed: number; checksStillFailing: number; acceptTasks: number; accepted: number; criteria: number; criteriaFailed: number };
+  outcome?: { tasks: number; checksPass: number; checksRegressed: number; checksFixed: number; checksStillFailing: number; acceptTasks: number; accepted: number; criteria: number; criteriaFailed: number; acceptUnmeasured?: number };
   /** (v2) Trung thực: sản phẩm khẳng định đã kiểm chứng (test/typecheck/build đạt…) — bao nhiêu khẳng định không có lệnh kiểm chứng thật trong lượt đó. */
   honesty?: { claims: number; unbacked: number; examples: string[]; unmeasured?: number };
   /** (v2) Sức chứa ngữ cảnh: lượt có prompt ≥ 85% / ≥ 98% cửa sổ của runtime, độ đầy lớn nhất (%). */
@@ -246,6 +246,10 @@ function writesFiles(tools: ToolCallRecord[] | undefined): boolean {
       ((tc.name === 'run_command' || tc.name === 'Bash' || tc.name === 'PowerShell') && tc.ok && (shellWrites(tc.args) || (!shellReadsOnly(tc.args) && !isCheckCommand(tc.args)))),
   );
 }
+/** Tiêu chí nghiệm thu "unknown" chiếm quá tỉ lệ này → nghiệm thu không đo được (không tính vào Kết quả thật). */
+const MAX_UNKNOWN_SHARE = 0.5;
+/** Ghi chú CCoding thêm vào summary khi ép không duyệt bản reviewer đã duyệt (dữ liệu cũ chưa có `reviewerApproved`). */
+const FORCED_REJECT_RE = /CCoding: lệnh kiểm tra hỏng sau khi sửa → không duyệt/;
 const ISSUE_RE = /^-\s*\[(blocker|major|minor)\]\s*([A-Za-z0-9._-]+)\s*:\s*(.+)$/;
 const DOI_RE = /\b10\.\d{4,9}\/[^\s)\]>,;"']+/g;
 const URL_RE = /https?:\/\/[^\s)\]>"']+/g;
@@ -368,8 +372,10 @@ function toolsTracked(r: CallRow): boolean {
   return r.toolsTracked ?? !UNTRACKED_RUNTIMES.test(r.runtime ?? '');
 }
 
+type ChecksResult = { pass: boolean; regressed: boolean; fixed: boolean; stillFailing: boolean };
+
 /** Kết quả lệnh kiểm tra của dự án trước/sau khi sửa: đạt hết / hồi quy / sửa được / vẫn lỗi; undefined khi chưa chạy. */
-export function checksOutcome(task: Pick<Task, 'projectChecks'>): { pass: boolean; regressed: boolean; fixed: boolean; stillFailing: boolean } | undefined {
+export function checksOutcome(task: Pick<Task, 'projectChecks'>): ChecksResult | undefined {
   const latest = (task.projectChecks?.latest ?? []).filter((c) => !c.denied);
   if (!latest.length) return undefined;
   const base = new Map((task.projectChecks?.baseline ?? []).filter((c) => !c.denied).map((c) => [c.command, c.ok]));
@@ -382,6 +388,26 @@ export function checksOutcome(task: Pick<Task, 'projectChecks'>): { pass: boolea
   }
   const pass = latest.every((c) => c.ok);
   return { pass, regressed, fixed, stillFailing: !pass && !regressed };
+}
+
+/**
+ * Kết quả lệnh kiểm tra theo phòng: `projectChecks.depts` (orchestrator ghi trạng thái trước/sau của từng phòng). Dữ liệu cũ không
+ * có trường này: nhiệm vụ một phòng thì dùng kết quả chung; nhiều phòng thì không gán được (không đoán).
+ */
+export function checksByDept(task: Pick<Task, 'projectChecks' | 'runs'>): Map<string, ChecksResult> {
+  const out = new Map<string, ChecksResult>();
+  const pc = task.projectChecks;
+  if (pc?.depts) {
+    for (const [dept, x] of Object.entries(pc.depts)) {
+      const c = checksOutcome({ projectChecks: { baseline: x.before, latest: x.latest } });
+      if (c) out.set(dept, c);
+    }
+    return out;
+  }
+  const depts = new Set(task.runs.map((r) => r.department));
+  const c = checksOutcome(task);
+  if (c && depts.size === 1) out.set([...depts][0], c);
+  return out;
 }
 
 export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
@@ -412,13 +438,15 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
     const transcript = src.transcript(task.id);
     const exec = src.access(task) === 'exec';
     const checks = checksOutcome(task);
-    const systemChecksOk = !!checks?.pass;
+    const deptChecks = checksByDept(task);
+    /** Nhiệm vụ chạy xong (không hủy/lỗi/dở dang) mới tính Kết quả thật và hiệu chỉnh người duyệt — kết quả giữa chừng không đại diện. */
+    const finished = task.status === 'done';
     let tokens = 0;
     /** model của lượt thực thi/sửa cuối mỗi hạng mục, của lượt review/nghiệm thu cuối mỗi agent (để gán theo agent × model). */
     const subModel = new Map<string, string>();
     const roleModel = new Map<string, string>();
-    /** người thực thi (khóa KPI) của nhiệm vụ — chịu kết quả thật chung. */
-    const executors = new Set<string>();
+    /** người thực thi (khóa KPI) của nhiệm vụ → phòng, có ghi tệp không, có lượt runtime không ghi công cụ không (không biết đã ghi gì). */
+    const executors = new Map<string, { depts: Set<string>; wrote: boolean; untracked: boolean }>();
     const outs = new Map<string, { agentId: string; department: string; model: string; text: string; executed: boolean; ranCheck: boolean; lastRuns: Map<CheckKind | 'any', boolean>; tracked: boolean }>();
     // ── lượt gọi ──
     for (const r of calls) {
@@ -443,7 +471,11 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
         k.tokens.subtaskWork += (r.input ?? 0) + (r.cacheRead ?? 0) + (r.output ?? 0);
         a.workSec += (r.durationMs ?? 0) / 1000;
         subModel.set(`${r.department}:${r.subtaskId}`, r.model);
-        executors.add(keyOf(r.agentId, r.model));
+        const ex = executors.get(keyOf(r.agentId, r.model)) ?? { depts: new Set<string>(), wrote: false, untracked: false };
+        ex.depts.add(r.department);
+        if (writesFiles(r.tools)) ex.wrote = true;
+        if (!toolsTracked(r)) ex.untracked = true;
+        executors.set(keyOf(r.agentId, r.model), ex);
       }
       if (r.phase === 'review' || r.phase === 'accept' || r.phase === 'plan') roleModel.set(`${r.phase}:${r.agentId}`, r.model);
       tokens += (r.input ?? 0) + (r.cacheRead ?? 0) + (r.output ?? 0) + (r.cacheWrite ?? 0);
@@ -529,7 +561,7 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
       const claim = verificationClaim(o.text);
       if (claim) {
         const h = k.honesty!;
-        if (systemChecksOk || claimBacked(claim, o.lastRuns)) h.claims++;
+        if ((deptChecks.get(o.department) ?? checks)?.pass || claimBacked(claim, o.lastRuns)) h.claims++;
         else if (!o.tracked) h.unmeasured = (h.unmeasured ?? 0) + 1;
         else {
           h.claims++;
@@ -600,55 +632,80 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
     const acc0 = task.acceptance;
     const acceptKnown = !!acc0?.parsed;
     if (acc0 && !acc0.parsed && acc0.by) get(acc0.by, 'coord', roleModel.get(`accept:${acc0.by}`)).k.format!.acceptUnparsed++;
-    const crit = acceptKnown ? acc0!.criteria.filter((c) => c.result !== 'unknown') : [];
-    const critFailed = crit.filter((c) => c.result === 'fail').length;
-    const acceptVal = acceptKnown ? (crit.length ? 1 - critFailed / crit.length : acc0!.accepted ? 1 : 0) : undefined;
-    const checkVal = checks ? (checks.regressed ? 0 : checks.pass ? 1 : 0.4) : undefined;
-    const responsible = new Set(executors);
-    // trưởng phòng chịu kết quả nghiệm thu của nhiệm vụ phòng mình chạy
-    for (const run of task.runs)
-      for (const [key, a] of acc) if (a.k.role === 'lead' && a.k.department === run.department && a.taskIds.has(task.id)) responsible.add(key);
-    for (const key of responsible) {
-      const a = acc.get(key);
-      if (!a) continue;
-      const o = (a.k.outcome ??= { tasks: 0, checksPass: 0, checksRegressed: 0, checksFixed: 0, checksStillFailing: 0, acceptTasks: 0, accepted: 0, criteria: 0, criteriaFailed: 0 });
-      const vals: number[] = [];
-      if (checks && executors.has(key)) {
-        o.tasks++;
-        if (checks.pass) o.checksPass++;
-        if (checks.regressed) o.checksRegressed++;
-        if (checks.fixed) o.checksFixed++;
-        if (checks.stillFailing) o.checksStillFailing++;
-        vals.push(checkVal!);
+    if (finished) {
+      const crit = acceptKnown ? acc0!.criteria : [];
+      const critFailed = crit.filter((c) => c.result === 'fail').length;
+      const critUnknown = crit.filter((c) => c.result === 'unknown').length;
+      // "unknown" (CTO không kiểm được) KHÔNG phải đạt: tính vào mẫu số như chưa đạt; quá nửa tiêu chí unknown → không đo được
+      const acceptMeasured = acceptKnown && !(crit.length && critUnknown / crit.length > MAX_UNKNOWN_SHARE);
+      const acceptVal = acceptMeasured ? (crit.length ? (crit.length - critFailed - critUnknown) / crit.length : acc0!.accepted ? 1 : 0) : undefined;
+      const checkVal = (c: ChecksResult) => (c.regressed ? 0 : c.pass ? 1 : 0.4);
+      // lệnh kiểm tra của phòng nào gán cho người thực thi của phòng đó; trong phòng, chỉ người đã sửa tệp (hoặc runtime không ghi
+      // công cụ — không biết) chịu kết quả; không ai như vậy thì cả phòng
+      const checksFor = new Map<string, ChecksResult>();
+      for (const [dept, c] of deptChecks) {
+        const inDept = [...executors].filter(([, ex]) => ex.depts.has(dept));
+        const writers = inDept.filter(([, ex]) => ex.wrote || ex.untracked);
+        for (const [key] of writers.length ? writers : inDept) {
+          const prev = checksFor.get(key);
+          if (!prev || checkVal(c) < checkVal(prev)) checksFor.set(key, c);
+        }
       }
-      if (acceptKnown) {
-        o.acceptTasks++;
-        if (acc0!.accepted) o.accepted++;
-        o.criteria += crit.length;
-        o.criteriaFailed += critFailed;
-        vals.push(acceptVal!);
+      const responsible = new Set(executors.keys());
+      // trưởng phòng chịu kết quả nghiệm thu của nhiệm vụ phòng mình chạy
+      for (const run of task.runs)
+        for (const [key, a] of acc) if (a.k.role === 'lead' && a.k.department === run.department && a.taskIds.has(task.id)) responsible.add(key);
+      for (const key of responsible) {
+        const a = acc.get(key);
+        if (!a) continue;
+        const o = (a.k.outcome ??= { tasks: 0, checksPass: 0, checksRegressed: 0, checksFixed: 0, checksStillFailing: 0, acceptTasks: 0, accepted: 0, criteria: 0, criteriaFailed: 0, acceptUnmeasured: 0 });
+        const vals: number[] = [];
+        const c = checksFor.get(key);
+        if (c) {
+          o.tasks++;
+          if (c.pass) o.checksPass++;
+          if (c.regressed) o.checksRegressed++;
+          if (c.fixed) o.checksFixed++;
+          if (c.stillFailing) o.checksStillFailing++;
+          vals.push(checkVal(c));
+        }
+        if (acceptKnown) {
+          if (acceptVal === undefined) o.acceptUnmeasured = (o.acceptUnmeasured ?? 0) + 1;
+          else {
+            o.acceptTasks++;
+            if (acc0!.accepted) o.accepted++;
+            o.criteria += crit.length;
+            o.criteriaFailed += critFailed;
+            vals.push(acceptVal);
+          }
+        }
+        if (vals.length) a.outcomeVals.push(vals.reduce((s, x) => s + x, 0) / vals.length);
       }
-      if (vals.length) a.outcomeVals.push(vals.reduce((s, x) => s + x, 0) / vals.length);
-    }
-    // người review duyệt mà kết quả thật hỏng = duyệt sai; từ chối mà kết quả thật tốt = từ chối sai (chỉ khi biết đủ)
-    const truthBad = (checks ? !checks.pass : false) || (acceptKnown && !acc0!.accepted);
-    const truthKnown = !!checks || acceptKnown;
-    const truthGood = truthKnown && !truthBad && (!checks || checks.pass);
-    if (truthKnown)
+      // người review: duyệt mà kết quả thật hỏng = duyệt sai; từ chối mà kết quả thật tốt = từ chối sai — chỉ khi đủ căn cứ.
+      // Hỏng = lệnh kiểm tra HỒI QUY so với lúc phòng bắt đầu (lệnh vốn lỗi từ trước / không có baseline không tính) hoặc CTO
+      // ghi tiêu chí không đạt. Kết luận lấy bản GỐC của reviewer (`reviewerApproved`) — `approved` có thể đã bị CCoding ép.
+      const accBad = acceptMeasured && (crit.length ? critFailed > 0 : !acc0!.accepted);
+      const accGood = acceptMeasured && (crit.length ? critFailed === 0 && critUnknown === 0 : acc0!.accepted);
       for (const run of task.runs) {
         if (!run.review || run.review.by === 'director') continue;
         const who = lastReviewer.get(run.department);
         if (!who) continue;
+        const c = deptChecks.get(run.department);
+        const bad = !!c?.regressed || accBad;
+        const good = !bad && (!!c || acceptMeasured) && (!c || c.pass) && (!acceptMeasured || accGood);
+        if (!bad && !good) continue;
         const cal = (get(who, run.department, roleModel.get(`review:${who}`)).k.calibration ??= { decisions: 0, falseApprovals: 0, falseRejections: 0 });
         cal.decisions++;
-        if (run.review.approved && truthBad) cal.falseApprovals++;
-        if (!run.review.approved && truthGood) cal.falseRejections++;
+        const approved = run.review.reviewerApproved ?? (run.review.approved || FORCED_REJECT_RE.test(run.review.summary ?? ''));
+        if (approved && bad) cal.falseApprovals++;
+        if (!approved && good) cal.falseRejections++;
       }
-    // CTO: nghiệm thu đạt nhưng lệnh kiểm tra của dự án vẫn lỗi
-    if (acceptKnown && checks && acc0!.by) {
-      const cal = (get(acc0!.by, 'coord', roleModel.get(`accept:${acc0!.by}`)).k.calibration ??= { decisions: 0, falseApprovals: 0, falseRejections: 0 });
-      cal.decisions++;
-      if (acc0!.accepted && !checks.pass) cal.falseApprovals++;
+      // CTO: nghiệm thu đạt nhưng lệnh kiểm tra của dự án hồi quy so với baseline của nhiệm vụ
+      if (acceptKnown && checks && acc0!.by && (checks.regressed || checks.pass)) {
+        const cal = (get(acc0!.by, 'coord', roleModel.get(`accept:${acc0!.by}`)).k.calibration ??= { decisions: 0, falseApprovals: 0, falseRejections: 0 });
+        cal.decisions++;
+        if (acc0!.accepted && checks.regressed) cal.falseApprovals++;
+      }
     }
   }
 

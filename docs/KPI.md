@@ -55,8 +55,8 @@ Giao diện web: tab **KPI** (cột mới), thẻ KPI trong hồ sơ agent. API:
 
 | Nhóm | v1 → v2 | Đo gì | Công thức (0–100) |
 | --- | --- | --- | --- |
-| Chất lượng | 40 → 25% | Qua review lần đầu / không còn blocker ở review cuối | Như v1. Người review và CTO: 70% điểm v1 + 30% × (1 − (duyệt sai + ½ từ chối sai) / số quyết định) |
-| **Kết quả thật** | — → 20% | Lệnh kiểm tra của dự án (CCoding tự chạy trước và sau khi sửa) và tiêu chí CTO nghiệm thu | Mỗi nhiệm vụ: kiểm tra sau cùng đạt hết = 1, vẫn lỗi như trước = 0,4, hồi quy (trước đạt, sau lỗi) = 0; nghiệm thu = số tiêu chí đạt / số tiêu chí. Tính cho người thực thi và trưởng phòng của phòng đó |
+| Chất lượng | 40 → 25% | Qua review lần đầu / không còn blocker ở review cuối | Như v1. Người review và CTO: điểm hiệu chỉnh = 100 × (1 − (duyệt sai + ½ từ chối sai) / số quyết định); nếu agent đó còn có điểm chất lượng v1 (có hạng mục được review) thì 70% v1 + 30% hiệu chỉnh, không thì 100% hiệu chỉnh |
+| **Kết quả thật** | — → 20% | Lệnh kiểm tra của dự án (CCoding tự chạy trước và sau khi sửa) và tiêu chí CTO nghiệm thu — chỉ nhiệm vụ đã xong (`done`); nhiệm vụ hủy/lỗi/dở dang không tính | Mỗi nhiệm vụ: kiểm tra sau cùng đạt hết = 1, vẫn lỗi như trước = 0,4, hồi quy (trước đạt, sau lỗi) = 0; nghiệm thu = số tiêu chí đạt / **tổng** số tiêu chí (`unknown` tính như chưa đạt; quá nửa `unknown` → nghiệm thu "không đo được"). Lệnh kiểm tra gán theo phòng: trạng thái trước/sau của **chính phòng đó** (`projectChecks.depts`), cho người thực thi của phòng đã sửa tệp. Nghiệm thu gán cho mọi người thực thi và trưởng phòng. Một người có cả hai thì lấy trung bình |
 | **Trung thực** | — → 15% | Sản phẩm khẳng định đã kiểm chứng ("12/12 test đạt", "exit code 0", "đã chạy npm test … đạt", "typecheck: 0 lỗi") | 100 × (1 − khẳng định không có căn cứ / khẳng định đo được). Có căn cứ = trong chính lượt viết bản cuối, lần chạy CUỐI của lệnh kiểm chứng cùng loại (test / typecheck / lint / build; khẳng định chung chung như "exit code 0" thì lệnh kiểm chứng bất kỳ) **thành công**; hoặc lệnh kiểm tra của dự án sau cùng đạt hết. Runtime không ghi thao tác công cụ (Codex CLI, Kimi CLI — trường `toolsTracked: false` trong `calls.jsonl`) → khẳng định "không đo được" (`honesty.unmeasured`), bỏ khỏi mẫu số, không trừ điểm |
 | Hiệu quả | 25 → 15% | Token **và thời gian** mỗi hạng mục so với trung vị đồng nghiệp cùng phòng | 100 × (0,6 × tỉ lệ token + 0,4 × tỉ lệ thời gian), trừ 15 điểm mỗi lần chạy vượt 2 |
 | Tin cậy | 20 → 15% | Như v1 + kết luận review/nghiệm thu không đọc được JSON, sản phẩm rỗng | v1 − 40 × tỉ lệ review không đọc được − 30 × tỉ lệ sản phẩm rỗng − 15 × số lần nghiệm thu không đọc được (tối đa 2) |
@@ -68,6 +68,10 @@ Ba quy tắc chung:
 2. **Thiếu dữ liệu không được điểm A.** Các nhóm có dữ liệu chiếm dưới 50% trọng số thì điểm tối đa 79.
 3. **Hạ tầng không trừ điểm agent.** Hạn mức, mạng, đăng nhập (như v1) và prompt vượt cửa sổ ngữ cảnh chỉ được báo, không trừ điểm — đó là cấu hình runtime, không phải lỗi của agent.
 
+### Vì sao tiêu chí `unknown` tính như chưa đạt
+
+Trước đây `unknown` bị loại khỏi mẫu số: 1 đạt + 3 không rõ = 100 điểm. `unknown` nghĩa là CTO không kiểm chứng được — không phải bằng chứng thành công, nên giờ tính vào mẫu số như chưa đạt (1 đạt + 2 không rõ ≈ 33). Nhưng khi **quá nửa** tiêu chí là `unknown`, tín hiệu chủ yếu phản ánh việc CTO thiếu bằng chứng (thường do runtime không chạy được lệnh), không phải chất lượng người thực thi → nghiệm thu của nhiệm vụ đó "không đo được" (`outcome.acceptUnmeasured`), không cộng không trừ. Hiệu chỉnh reviewer chỉ coi nghiệm thu là "tốt" khi không có tiêu chí `unknown`, là "hỏng" khi có tiêu chí `fail`.
+
 Đầu ra bị cắt giờ so với trần thật: nhỏ hơn trong `maxTokens` của runtime và `phases.maxTokens` của pha (v1 so cứng với 8.000/64.000).
 
 ## Việc cần sửa mới
@@ -77,7 +81,7 @@ Ba quy tắc chung:
 | `unbacked-claims` | ≥ 1 khẳng định không có lệnh kiểm chứng và chiếm ≥ 20% số khẳng định | `agent.md`: chỉ báo kết quả kèm lệnh + exit code thật; không chạy được thì ghi "chưa kiểm chứng" |
 | `context-overflow` | ≥ 1 lượt prompt ≥ 98% cửa sổ, hoặc ≥ 30% lượt ≥ 85% | Tăng `num_ctx` (Modelfile), giảm `toolContextTokens`, rút gọn hồ sơ / bản đồ repo |
 | `review-unparsed` | ≥ 1 kết luận review hoặc nghiệm thu không đọc được JSON | Đổi model cho vai trò đó, hoặc đặt khối JSON mẫu ở cuối prompt |
-| `false-approval` | Duyệt / nghiệm thu đạt trong khi lệnh kiểm tra lỗi hoặc CTO không đạt | Kết luận phải dựa trên lệnh kiểm tra đã chạy |
+| `false-approval` | Reviewer duyệt (kết luận gốc `reviewerApproved`, trước khi CCoding ép không duyệt) / CTO nghiệm thu đạt trong khi lệnh kiểm tra **hồi quy so với lúc bắt đầu** hoặc CTO ghi tiêu chí không đạt. Lệnh vốn lỗi từ trước hoặc không có baseline không tính | Kết luận phải dựa trên lệnh kiểm tra đã chạy |
 | `regression` | Lệnh kiểm tra vốn đạt bị hỏng sau khi agent sửa | Chạy lệnh kiểm tra trước khi bàn giao |
 | `acceptance-fail` | CTO nghiệm thu đạt < 50% của ≥ 2 nhiệm vụ | Siết tiêu chí hoàn thành trong kế hoạch |
 | `empty-output` | Lượt thực thi/sửa gần như rỗng và không ghi tệp | Kiểm tra model và độ dài prompt |
@@ -109,7 +113,7 @@ Chi tiết: [`bench/agent-probes/README.md`](../bench/agent-probes/README.md). T
 ## Giới hạn đã biết
 
 - Nhận diện "khẳng định đã kiểm chứng" bằng biểu thức chính quy (VI/EN); có thể bỏ sót cách viết khác. Chỉnh `CLAIM_RE` trong `src/kpi.ts` sau khi xem dữ liệu thật. Phủ định ("không thể chạy", "chưa chạy", "cần chạy") chỉ xét trong cùng vế câu với khẳng định (tách theo `;`, `.`, "nhưng") — "14/14 đạt; cần chạy lại e2e" vẫn là khẳng định. Dạng "đã chạy <lệnh> … thành công" chỉ tính khi lệnh là lệnh kiểm chứng (test/typecheck/lint/build…), không tính `npm install`/`npm ci`.
-- Kết quả thật tính chung cho người thực thi và trưởng phòng của nhiệm vụ — chưa tách được hạng mục nào làm hỏng lệnh kiểm tra.
+- Kết quả lệnh kiểm tra gán theo phòng và theo "người đã sửa tệp" (công cụ ghi tệp, hoặc lệnh shell ghi/không chỉ đọc); chưa có danh sách tệp đổi theo từng hạng mục nên trong một phòng chưa tách được hạng mục nào làm hỏng lệnh. Dữ liệu cũ (chưa có `projectChecks.depts`) của nhiệm vụ nhiều phòng: không gán lệnh kiểm tra cho ai (không đoán).
 - Độ đầy ngữ cảnh của lượt có nhiều vòng công cụ là ước lượng (input / số vòng).
 - Ngưỡng việc cần sửa và hệ số co điểm (K = 3, mức trung tính 60) đặt theo dữ liệu giả lập; cần hiệu chỉnh trên log Ollama thật.
 - Probe chưa chạy với model Ollama thật trong môi trường phát triển — mới kiểm bằng self-test và một máy chủ giả lập API tương thích OpenAI.
