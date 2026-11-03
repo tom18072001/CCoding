@@ -112,3 +112,26 @@ COMMON="--runtime claude-cli --ccoding-url http://127.0.0.1:7424 --ccoding-data 
    - Dừng và commit nếu thời gian tới 5/11 14:59 không đủ cho phần còn lại.
    - Không xem điểm, chỉ xem R̂ theo quy tắc dừng đã đăng ký.
 4. **Commit và push sau mỗi lệnh.** Phòng Nghiên cứu phân tích khi đủ số lượt.
+
+## Bước 3d. Còn khoảng $50 credit (quyết định của giám đốc, 3/11 10:3x giờ VN)
+
+- **Đã duyệt:** giám đốc duyệt (a-brief) và (b) để đo arm **B7cab**. Việc triển khai lên `main` vẫn cần duyệt riêng.
+- **Thứ tự dùng credit:**
+  1. Chạy hết lệnh W5a đang chạy (A1 r2–3).
+  2. **Không chạy** A2 × R13 và B0 × T5 của W5 trên cloud. Hai lệnh này chuyển sang chạy local.
+  3. Dựng lại server 7425 từ `HEAD` của nhánh, ghi hash vào RUNLOG.
+  4. **GĐ1 (điểm dừng):**
+     ```bash
+     node bench/vs-claude/run.mjs --arms A0-sonnet,B7cab --tasks t1-duration,t2-orders,t3-api,t4-perf,t5-logq --repeats 2 --timeout 20 $B7 --out bench/vs-claude/results/b7prime
+     ```
+     Lệnh này chạy 20 lượt: 10 B7cab và 10 A0. Tính R̂ theo B-11.5 (thống kê của `prereg-tests.mjs`, cho token có trọng số và thời gian thực).
+     - R̂ > 1,6 ở một trong hai đại lượng: dừng, commit, báo "dừng vô ích, chưa phải kết luận".
+     - R̂ ≤ 1,6 ở cả hai: chạy GĐ2.
+     - Không xem điểm.
+  5. **GĐ2:** cùng lệnh, đổi `--repeats 10`. Runner bỏ qua các khóa đã xong.
+  6. Nếu B7cab xong mà vẫn còn credit: chạy `B7c` với cùng hai giai đoạn. A0 đã đủ khóa nên runner chỉ chạy B7c.
+- **Hết credit** (429, "usage_limit_reached", "credit", "hit your … limit"):
+  - Dừng ngay. **Không** chạy tiếp bằng hạn mức thường của gói.
+  - Commit và push phần đã có.
+  - Ghi vào RUNLOG khóa cuối cùng đã `done`.
+  - Phần còn lại chạy local.
