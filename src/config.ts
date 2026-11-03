@@ -470,6 +470,8 @@ export function loadConfig(opts: { root?: string; configFile?: string; local?: b
   const { analyst, author, runner } = si.roles;
   if (analyst === author || analyst === runner || author === runner) throw new Error('selfImprove.roles: ba vai analyst, author, runner phải đôi một khác nhau (tách vai, B-19 §4)');
 
+  if (si.enabled && !cfg.server.token) throw new Error('selfImprove.enabled=true yêu cầu server.token (hoặc CCODING_TOKEN): chỉ giám đốc có token mới được duyệt/áp/hoàn tác bản vá (B-19 §4.1)');
+
   const abs = (p: string) => (path.isAbsolute(p) ? p : path.join(root, p));
   const prefix = String(cfg.taskPrefix ?? '').trim().toUpperCase();
   return {

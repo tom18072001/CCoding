@@ -234,10 +234,13 @@ test('route /api/selfimprove/*: tắt ⇒ 404; bật ⇒ đúng hợp đồng, P
   app.config.server.port = port;
   const srv = createServer(app);
   await new Promise<void>((r) => srv.listen(port, '127.0.0.1', r));
+  const TOKEN = 'tok-gia-cho-test';
+  let useToken = true;
   const call = (p: string, method = 'GET', body?: unknown) =>
-    fetch(`http://127.0.0.1:${port}${p}`, { method, headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
+    fetch(`http://127.0.0.1:${port}${p}`, { method, headers: { 'content-type': 'application/json', ...(useToken ? { authorization: `Bearer ${TOKEN}` } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
   try {
     assert.equal(app.config.selfImprove.enabled, false);
+    app.config.server.token = TOKEN;
     for (const [p, m] of [['/api/selfimprove/proposals', 'GET'], ['/api/selfimprove/proposals/P-1/approve', 'POST'], ['/api/selfimprove/proposals/P-1/rollback-confirm', 'POST'], ['/api/selfimprove/x', 'GET']]) {
       assert.equal((await call(p, m, m === 'POST' ? {} : undefined)).status, 404, `${m} ${p}`);
     }
@@ -257,6 +260,20 @@ test('route /api/selfimprove/*: tắt ⇒ 404; bật ⇒ đúng hợp đồng, P
     assert.equal(byId['P-OK'].ab.result, null);
     assert.equal(byId['P-BAD'].status, 'rejected');
     assert.equal(byId['P-BAD'].screening.ok, false);
+    // không token / sai token ⇒ 401, không ghi sự kiện duyệt
+    useToken = false;
+    assert.equal((await call('/api/selfimprove/proposals/P-OK/approve', 'POST', {})).status, 401);
+    assert.equal((await call('/api/selfimprove/proposals/P-OK/apply', 'POST', {})).status, 401);
+    assert.equal((await call('/api/selfimprove/proposals/P-OK/rollback-confirm', 'POST', {})).status, 401);
+    // Origin lạ dù có token ⇒ 403
+    const bad = await fetch(`http://127.0.0.1:${port}/api/selfimprove/proposals/P-OK/approve`, { method: 'POST', headers: { authorization: `Bearer ${TOKEN}`, origin: 'http://evil.example' }, body: '{}' });
+    assert.equal(bad.status, 403);
+    // token bị gỡ khi đang chạy ⇒ thao tác ghi bị từ chối (fail-closed)
+    app.config.server.token = '';
+    assert.equal((await call('/api/selfimprove/proposals/P-OK/approve', 'POST', {})).status, 403);
+    app.config.server.token = TOKEN;
+    useToken = true;
+    assert.equal(events(app, 'selfimprove.approved').length, 0, 'các lần gọi bị từ chối không ghi sự kiện duyệt');
     // approve
     assert.equal((await call('/api/selfimprove/proposals/P-BAD/approve', 'POST', {})).status, 409, 'đã bị loại tự động');
     assert.equal((await call('/api/selfimprove/proposals/KHONG-CO/approve', 'POST', {})).status, 404);

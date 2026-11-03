@@ -897,6 +897,8 @@ export const MIN_RETENTION_DAYS = 183;
 /**
  * Dọn tệp dưới data/self-improve/ theo retentionDays nhưng không bao giờ xóa tệp trẻ hơn 183 ngày (CT-11).
  * Chỉ xóa tệp thường, không theo liên kết. Trả danh sách tệp đã xóa (tương đối so với data/self-improve/).
+ * Chính sách (chờ giám đốc chốt trước khi bật): dựa vào mtime nên tệp nối thêm như incidents.jsonl không bao giờ hết hạn
+ * (có chủ ý: xóa giữa chừng sẽ làm đứt chuỗi băm của nhật ký làm chứng cứ). Hàm chưa được gọi tự động.
  */
 export function purgeExpired(dataDir: string, retentionDays: number, now = Date.now()): string[] {
   const days = Math.max(MIN_RETENTION_DAYS, Number.isFinite(retentionDays) ? retentionDays : MIN_RETENTION_DAYS);

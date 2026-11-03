@@ -152,6 +152,8 @@ export function createServer(app: App): http.Server {
     if (origin && req.method !== 'GET' && !allowedHosts.has(origin.replace(/^https?:\/\//, ''))) throw new HttpError(403, 'Origin không hợp lệ');
 
     if (p.startsWith('/api/')) {
+      // B-19: thao tác ghi của vòng tự cải thiện (by:'director') bắt buộc có token, kể cả khi cấu hình bị sửa sau lúc khởi động
+      if (req.method !== 'GET' && p.startsWith('/api/selfimprove/') && config.selfImprove.enabled && !config.server.token) throw new HttpError(403, 'Thao tác duyệt/áp/hoàn tác cần server.token');
       if (config.server.token) {
         const auth = req.headers.authorization ?? '';
         const tok = auth.startsWith('Bearer ') ? auth.slice(7) : url.searchParams.get('token');
@@ -709,7 +711,9 @@ export function createServer(app: App): http.Server {
           return send(res, 200, { ok: true, event, rollback: r });
         } catch (e) {
           if (e instanceof HttpError) throw e;
-          throw new HttpError(409, (e as Error).message);
+          // lỗi git/hệ thống có thể chứa đường dẫn cục bộ: chỉ trả dòng đầu, che đường dẫn, cắt ngắn
+          const msg = (e as Error).message.split(/\r?\n/)[0].replace(/(?:[A-Za-z]:)?[\\/][^\s'"]*[\\/][^\s'"]*/g, '<đường dẫn>').slice(0, 200);
+          throw new HttpError(409, msg);
         }
       }
       throw new HttpError(404, 'Không tìm thấy');
