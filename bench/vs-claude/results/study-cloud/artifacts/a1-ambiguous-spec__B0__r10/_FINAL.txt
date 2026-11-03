@@ -1,0 +1,97 @@
+# Báo cáo tổng hợp: SPEC.md cho tính năng "Log Export" (ngân hàng Việt Nam)
+
+## Tóm tắt
+`SPEC.md` đã nằm ở thư mục gốc repo và có mục `## Open questions and assumptions` đúng nguyên văn (dòng 141). Mục này có 16 câu hỏi Q1–Q16 cho khách, câu nào cũng kèm giả định tạm dùng. Spec xử lý từng mâu thuẫn trong yêu cầu:
+- **Xuất IP/username đầy đủ hay che hết:** mặc định file xuất đã che. Đường xuất forensic đủ dữ liệu được xây nhưng để tắt.
+- **Giữ file mãi mãi hay xóa sau 12 tháng:** chỉ bản ghi audit không chứa dữ liệu cá nhân của đối tượng được giữ vô hạn. File xuất có hạn dùng. Log gốc bị xóa sau 12 tháng.
+- **"Mọi thứ" trong 5 giây:** spec đặt giới hạn số dòng và chuyển sang chạy nền khi vượt.
+
+Còn mở: khách và bộ phận pháp chế của khách cần xác nhận, nhất là Q1, Q4, Q10 và Q13–Q15. `SPEC.md` chưa được commit.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Viết SPEC.md: phạm vi, vai trò, user story với tiêu chí Given/When/Then, NFR, retention, câu hỏi mở, ma trận truy vết | @business-analyst | Đạt | `SPEC.md`; báo cáo `.ccoding/T-20261103-025446-ced/outputs/dev-S1-business-analyst.md` |
+| S2 | Rà soát và siết phần dữ liệu cá nhân, bảo mật, tuân thủ ngay trong SPEC.md | @security | Đạt có điều kiện (cổng thiết kế) | `SPEC.md`; báo cáo `.ccoding/T-20261103-025446-ced/outputs/dev-S2-security.md` |
+
+Về kiểm chứng: reviewer kết luận "đã duyệt" nhưng không chạy lệnh nào. Tôi đã tự kiểm tra lại bằng Grep. Tệp có các mục 1–6, mục `## Open questions and assumptions` ở dòng 141, mục 8 (ma trận truy vết) ở dòng 162 và sổ giả định ở dòng 176. Bảng câu hỏi có đủ 16 dòng Q1–Q16. Bài này là tài liệu nên không có test hay build để chạy.
+
+## Quyết định
+1. **Chỉ làm tài liệu.** Đề bài yêu cầu một spec, và repo chỉ có `.gitkeep`. Vì vậy không có hạng mục kiến trúc, code, test hay triển khai, và spec không chọn công nghệ hay API cụ thể.
+2. **Làm lần lượt S1 rồi S2** để không có hai người ghi cùng lúc vào `SPEC.md`.
+3. **Mặc định là xuất đã che, một cú nhấp:**
+   - IP được che theo /24.
+   - Username được thay bằng `user_ref`, là HMAC theo khóa riêng của từng lần xuất. @security bỏ cách hiện 2 ký tự đầu của username vì cách đó lộ danh tính với tên ngắn.
+4. **Đường forensic (DP-02) có kiểm soát riêng:** cần vai trò riêng, người duyệt khác người yêu cầu, ghi lý do, chỉ tải được một lần, file hết hạn sau 7 ngày. Tính năng này tắt cho đến khi pháp chế đồng ý.
+5. **Retention:** chỉ bản ghi audit được giữ vô hạn. File đã che hết hạn sau 30 ngày. Log gốc và bản sao phát sinh (cache, index, sao lưu) bị xóa hoặc ẩn danh sau 12 tháng. Thời hạn xóa là tham số cấu hình được, phòng khi NHNN yêu cầu giữ lâu hơn.
+6. **Không trích điều khoản pháp lý** của NĐ 13/2023 hay quy định NHNN, vì chưa kiểm chứng. Các điểm này được đưa thành câu hỏi Q13–Q15.
+
+## Kết quả review
+- **@security: Đạt có điều kiện.** Có 5 phát hiện mức trung bình, tất cả đã sửa trong spec:
+  - Che username (DP-01).
+  - Server tự tính phạm vi team và có kiểm thử IDOR.
+  - Link tải có chữ ký, hết hạn sau 10 phút.
+  - Chống CSV injection cho mọi cột chữ.
+  - User ID trong bản ghi audit (đưa vào Q14).
+
+  Có 1 phát hiện mức thấp, cũng đã sửa: quy tắc xóa bản sao phát sinh (RET-06).
+- **Review cuối: Đạt.** Còn vài điểm minor, không chặn bàn giao. Không có blocker.
+- **Điểm tôi tự thấy, đều minor:**
+  - Mục câu hỏi không đánh số 7, vì phải giữ tiêu đề đúng nguyên văn theo đề bài.
+  - @security sửa một câu bằng `sed` rồi không đọc lại toàn bộ tệp. Grep cấu trúc của tôi không thấy lỗi, nhưng chưa ai đọc lại toàn văn sau lần sửa đó.
+
+## Việc còn mở & rủi ro
+- **Mâu thuẫn gốc chưa được khách chốt (Q1, Q4).** Nếu khách bắt buộc file xuất mặc định có IP/username đầy đủ, DP-01 và DP-02 phải thiết kế lại.
+- **Mọi con số đều là giả định:** 100.000 dòng, p95 ≤ 5 giây, file hết hạn 30/7 ngày, link 10 phút, sao lưu 35 ngày (A-1…A-18). Chưa có phép đo nào làm căn cứ.
+- **Định dạng "như hệ thống cũ" chưa biết (Q5).** Cần một file mẫu đã ẩn danh từ khách.
+- **Rủi ro tuân thủ:** chưa rõ vai trò controller/processor, cơ sở pháp lý, và việc lưu user ID trong audit có xung đột với quy tắc xóa 12 tháng hay không (Q13–Q15).
+- `SPEC.md` chưa được commit (trạng thái untracked).
+
+## Bước tiếp theo
+1. **Gửi khách bộ câu hỏi Q1–Q16** (do @business-analyst làm). Xong khi có văn bản trả lời từ khách và pháp chế, trong đó Q1, Q4, Q10, Q13–Q15 là bắt buộc. Bản trả lời được lưu vào hồ sơ.
+2. **Cập nhật SPEC.md v1.1 theo câu trả lời** (nhiệm vụ riêng, do @business-analyst làm, @security rà lại). Xong khi mọi giả định A-n đã được xác nhận hoặc thay bằng giá trị chốt, và các câu hỏi còn lại chỉ là câu không chặn việc xây dựng.
+3. **Spike năng lực xử lý** (nhiệm vụ riêng, do @data-engineer làm, sau khi có Q3 và Q7). Xong khi có số đo p95 thời gian tới byte đầu tiên với khối lượng thật của một chi nhánh, đủ để chốt giới hạn số dòng.
+4. **Kiến trúc kèm ADR và cổng bảo vệ dữ liệu bản gọn** (nhiệm vụ riêng, do @solution-architect và @security làm, sau bước 2). Xong khi có ADR cho các phần: lưu và hết hạn file, khóa HMAC, link có chữ ký, job xóa 12 tháng.
+5. **Hiện thực theo từng gói** (mỗi gói là một nhiệm vụ):
+   - (a) Xuất mặc định đã che kèm audit.
+   - (b) Retention và job xóa.
+   - (c) Đường forensic DP-02, chỉ làm khi pháp chế đã đồng ý.
+
+   Mỗi gói phải vượt các bài kiểm thử đã ghi trong spec: quét để chắc không còn IP hay username đầy đủ, kiểm thử IDOR, kiểm thử link hết hạn hoặc bị sửa, fixture CSV injection.
+6. **Commit SPEC.md** lên một nhánh riêng (không commit vào main) khi Tom yêu cầu.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-025446-ced` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **36 in / 27.5k out**, cache đọc 253.5k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Business Analyst (@business-analyst) | dev | 12 | 11139 | 100709 | 1 |
+| Chuyên viên ATTT (@security) | dev | 8 | 7495 | 70553 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 10 | 6092 | 58289 | 2 |
+| QA Engineer (@qa-tester) | dev | 4 | 2019 | 21737 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 737 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-business-analyst.md` — S1 Write SPEC.md for the Log Export feature (@business-analyst)
+- `outputs/dev-S2-security.md` — S2 Data-protection review and personal-data changes in SPEC.md (@security)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Business Analyst (@business-analyst) | dev | **94** A | 100 | 85 | 87 | 100 | 1 | 1 | 112k | 1/6 |
+| Chuyên viên ATTT (@security) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 78k | 0/3 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **95** A | 100 | 100 | 73 | 100 | 0 | — | 64k | 1/3 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 24k | 0/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Chuyên viên ATTT** (@security, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._
