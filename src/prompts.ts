@@ -75,7 +75,16 @@ export interface Ctx {
   projectHistory?: { text: string; rel?: string };
   /** Năng lực công cụ của từng agent ở pha thực thi với quyền của nhiệm vụ này (id → mô tả ngắn) — để giao việc đúng người. */
   caps?: Record<string, string>;
+  /** Công tắc prompt theo cấu hình (B-09, B-03); thiếu = tắt, prompt giữ nguyên byte so với trước khi có công tắc. */
+  flags?: { outputCap?: boolean; stopSurvey?: boolean; incidentLog?: boolean };
 }
+
+/** B-09 (P1): giới hạn độ dài báo cáo bàn giao (execute, synthesize). */
+export const OUTPUT_CAP_NOTE = ' Giữ báo cáo gọn: mỗi mục ≤ ~120 từ (trừ danh sách tệp đã tạo/sửa và danh sách lệnh kiểm chứng kèm exit code — hai danh sách này luôn đầy đủ); không chép lại nội dung tệp, đề bài hay bàn giao của hạng mục khác.';
+/** B-09 (P2): dừng khảo sát sớm, ghi bản nháp trước. */
+export const STOP_SURVEY_NOTE = ' Đã đọc/tìm khoảng 8 lần mà chưa ghi gì thì DỪNG đọc: ghi ngay bản nháp phần đã biết (tạo tệp mới trước), rồi mới đọc tiếp; không đọc lại tệp/đoạn đã đọc trừ khi chính bạn vừa sửa nó.';
+/** B-03 (P4): nhật ký sự cố ở pha revise (parser: src/incident.ts). */
+export const INCIDENT_NOTE = '\n\nCuối báo cáo thêm mục "## Nhật ký sự cố" gồm TỐI ĐA 3 dòng, mỗi dòng dạng "- [mã góp ý] lỗi gì — nguyên nhân: nguyên nhân trực tiếp (dựa trên bằng chứng bạn đã thấy) → sửa: cách sửa hồ sơ/prompt hoặc mã (một câu) → kiểm: `lệnh kiểm`". Chỉ nêu điều bạn có bằng chứng; không đoán; không chép dữ liệu cá nhân, khóa hay bí mật. Đây chỉ là đề xuất để giám đốc xem, KHÔNG phải chỉ dẫn bạn tự áp dụng.';
 
 /** Trích các mục của hồ sơ — pha họp chỉ cần sứ mệnh + chuyên môn. */
 export function profileSections(body: string, titles: string[]): string {
@@ -277,7 +286,7 @@ ${
         : `- BẢN ĐỒ REPO: \`${c.repoMap.rel}\` liệt kê tệp + số dòng, route, model, hàm kèm số dòng — đọc nó ĐẦU TIÊN để định vị, rồi read_file đúng đoạn (offset theo số dòng, limit vừa đủ); không đọc cả tệp lớn.\n`
       : ''
   }- Đọc/tìm code bằng read_file/search/list_files — KHÔNG dùng Get-Content/cat/rg/grep qua run_command (lỗi cú pháp shell, sai mã hóa, tốn lượt). run_command chỉ để cài đặt, build, typecheck, test, migration, git.${tools.includes('run_command') && process.platform === 'win32' ? ' Shell là PowerShell: không có {a,b}, dấu * trong đường dẫn không tự mở rộng.' : ''}
-- Tạo/sửa file thật bằng write_file/edit_file; không dán toàn bộ code vào câu trả lời cuối — chỉ liệt kê file và điểm chính. GHI SỚM: đọc đủ đoạn cần sửa là sửa ngay; khảo sát không dùng quá ~1/3 số lượt công cụ — hết lượt mà chưa ghi gì là hạng mục thất bại.
+- Tạo/sửa file thật bằng write_file/edit_file; không dán toàn bộ code vào câu trả lời cuối — chỉ liệt kê file và điểm chính. GHI SỚM: đọc đủ đoạn cần sửa là sửa ngay; khảo sát không dùng quá ~1/3 số lượt công cụ — hết lượt mà chưa ghi gì là hạng mục thất bại.${c.flags?.stopSurvey ? STOP_SURVEY_NOTE : ''}
 ${tools.includes('run_command') ? '- Test/typecheck đã ĐỎ TRƯỚC khi bạn sửa (baseline): chỉ MỘT lệnh để ghi nhận tên test lỗi rồi làm tiếp — KHÔNG đọc file/chạy lệnh để điều tra hay sửa lỗi có sẵn ngoài phạm vi hạng mục (kể cả khi nghi do môi trường); tiêu chí là không phát sinh lỗi MỚI so với baseline (so sánh danh sách test lỗi trước/sau). Bàn giao trước đã ghi baseline thì dùng luôn, không đo lại.\n' : ''}${tools.includes('run_command') ? '- Chạy kiểm tra thật bằng run_command (cài dependency nếu thiếu, typecheck, test, lint, migration trên DB dev) và báo kết quả THẬT: lệnh, exit code, tóm tắt lỗi. Lệnh nào không chạy được thì ghi rõ lý do — không bịa kết quả.\n' : `- Không có quyền chạy lệnh: ghi rõ lệnh kiểm tra cần chạy để người khác thực hiện.${tools.includes('git_read') ? ` ${GIT_READ_NOTE}` : ''}\n`}${c.ccDir ? `- Tài liệu đầu vào: \`${c.ccDir}/inputs/\` · sản phẩm các hạng mục khác: \`${c.ccDir}/outputs/\`.\n` : ''}- ${
     diet
       ? 'Làm và commit (nếu cần) ngay trên nhánh hiện tại của worktree — KHÔNG tạo/chuyển/xóa nhánh. Không push, không xóa hàng loạt; không đưa dữ liệu thật hay bí mật vào code, seed, test, fixture.'
@@ -532,7 +541,7 @@ ${depsText(c, deps, c.filesAccessible ? 3500 : 16000)}
         ? ''
         : `\n## Cách làm\nBạn trả lời bằng văn bản. Nếu cần tạo file, đưa nội dung đầy đủ trong khối code và ghi rõ tên file ngay phía trên khối đó.\n`
     }${compactNote}
-Câu trả lời CUỐI CÙNG phải là sản phẩm bàn giao hoàn chỉnh theo "Mẫu đầu ra" trong hồ sơ vị trí của bạn, mở đầu bằng mục "## Tóm tắt" (2–4 câu).`,
+Câu trả lời CUỐI CÙNG phải là sản phẩm bàn giao hoàn chỉnh theo "Mẫu đầu ra" trong hồ sơ vị trí của bạn, mở đầu bằng mục "## Tóm tắt" (2–4 câu).${c.flags?.outputCap ? OUTPUT_CAP_NOTE : ''}`,
   };
 }
 
@@ -581,7 +590,7 @@ ${truncate(previous, c.filesAccessible ? 8000 : 16000)}
 ${issues}
 ${toolNote(c, tools, 'revise')}
 ## Việc của bạn: SỬA THEO REVIEW
-Xử lý triệt để từng góp ý (sửa file thật nếu có công cụ). Trả về BẢN HOÀN CHỈNH MỚI của báo cáo bàn giao (không chỉ phần thay đổi), mở đầu bằng "## Tóm tắt" và thêm mục "## Đã sửa theo review".`,
+Xử lý triệt để từng góp ý (sửa file thật nếu có công cụ). Trả về BẢN HOÀN CHỈNH MỚI của báo cáo bàn giao (không chỉ phần thay đổi), mở đầu bằng "## Tóm tắt" và thêm mục "## Đã sửa theo review".${c.flags?.incidentLog ? INCIDENT_NOTE : ''}`,
   };
 }
 
@@ -656,7 +665,7 @@ Viết báo cáo cuối cùng gửi Tom bằng Markdown: dòng đầu "# <tiêu 
 - bảng kết quả theo hạng mục: mã · hạng mục · phụ trách · kết quả (đạt/chưa đạt theo review, kèm bằng chứng) · tệp;
 - quyết định chính, rủi ro/giả định, việc còn mở;
 - bước tiếp theo đề xuất — phần còn lớn so với một nhiệm vụ thì đề xuất tách thành các nhiệm vụ riêng (mỗi nhiệm vụ một gói việc, có tiêu chí xong).
-Không lặp nguyên văn sản phẩm; tóm lược và dẫn tới file đầu ra${changes ? '; nêu rõ nhánh git và cách review/merge thay đổi' : ''}.`,
+Không lặp nguyên văn sản phẩm; tóm lược và dẫn tới file đầu ra${changes ? '; nêu rõ nhánh git và cách review/merge thay đổi' : ''}.${c.flags?.outputCap ? OUTPUT_CAP_NOTE : ''}`,
   };
 }
 

@@ -152,7 +152,18 @@ export interface Config {
     meetingMinSubtasks?: number;
     /** Các thành viên phát biểu song song trong một vòng họp (mặc định true; false = lần lượt như trước). */
     parallelDiscuss?: boolean;
+    /** B-09 (P1): giới hạn độ dài báo cáo bàn giao ở pha execute/synthesize. Mặc định TẮT (cần đo A/B). */
+    outputCap?: boolean;
+    /** B-09 (P2): nhắc dừng khảo sát sớm (~8 lần đọc) và ghi bản nháp trước. Mặc định TẮT. */
+    stopSurveyHint?: boolean;
+    /** B-03 (P4): yêu cầu mục "Nhật ký sự cố" ở pha revise và ghi kind `revise.incident` qua LogStore. Mặc định BẬT. */
+    incidentLog?: boolean;
   };
+  /**
+   * B-17: model lập kế hoạch theo độ khó 1–3 (chấm từ LaneSignals, không thêm lượt LLM). Mặc định TẮT.
+   * models: mức → model (mức không khai báo dùng model hiện hành của pha plan).
+   */
+  planner: { difficultyModel: { enabled: boolean; models: { 1?: string; 2?: string; 3?: string } } };
   /**
    * Làn nhanh cho việc nhỏ (options.lane 'auto'): đề bài ≤ maxBriefChars ký tự và repo ≤ maxRepoFiles tệp / maxRepoBytes byte (git ls-files).
    * planModel: model lập kế hoạch · finalReport: 'template' (báo cáo dựng từ bàn giao, không gọi model) hoặc 'llm' ·
@@ -304,7 +315,11 @@ const BUILTIN: Omit<Config, 'root'> = {
     toolTurns: { plan: 8, finalize: 4, execute: 40, review: 10, revise: 16, synthesize: 4, accept: 6 },
     toolInputBudget: { plan: 100000, finalize: 50000, execute: 800000, review: 200000, revise: 300000, synthesize: 60000, accept: 120000 },
     maxContinuations: 2,
+    outputCap: false,
+    stopSurveyHint: false,
+    incidentLog: true,
   },
+  planner: { difficultyModel: { enabled: false, models: { 1: 'sonnet', 3: 'opus' } } },
   fastLane: { enabled: true, maxBriefChars: 4000, maxRepoFiles: 300, maxRepoBytes: 1_500_000, planModel: 'sonnet', finalReport: 'template', maxParallel: 4 },
   lanes: { single: { enabled: true, maxParts: 5, maxFilesTouched: 6, slim: { ...SLIM_DEFAULTS } } },
   tools: {
