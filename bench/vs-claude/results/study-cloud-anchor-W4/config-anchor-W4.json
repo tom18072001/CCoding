@@ -1,0 +1,43 @@
+{
+  "argv": [
+    "--arms",
+    "B0",
+    "--tasks",
+    "l4",
+    "--repeats",
+    "2",
+    "--timeout",
+    "20",
+    "--runtime",
+    "claude-cli",
+    "--ccoding-url",
+    "http://127.0.0.1:7424",
+    "--ccoding-data",
+    "/home/user/ccoding-main/data",
+    "--work",
+    "/tmp/vb",
+    "--out",
+    "bench/vs-claude/results/study-cloud-anchor-W4"
+  ],
+  "cfg": {
+    "ccodingUrl": "http://127.0.0.1:7424",
+    "ccodingData": "/home/user/ccoding-main/data",
+    "runtime": "claude-cli",
+    "timeoutMin": 20,
+    "claudeBin": "claude",
+    "judge": {
+      "enabled": false,
+      "model": "opus"
+    },
+    "seed": "ccvb",
+    "workRoot": "/tmp/vb"
+  },
+  "armIds": [
+    "B0"
+  ],
+  "taskIds": [
+    "l4-startup-order"
+  ],
+  "repeats": 2,
+  "startedAt": "2026-11-03T03:15:52.001Z"
+}
