@@ -129,6 +129,8 @@ export interface ToolPolicy {
   guardState?: string;
   /** Runtime CLI (claude-cli): cắt đầu ra lệnh shell ở N ký tự (biến BASH_MAX_OUTPUT_LENGTH của Claude Code); bỏ trống = mặc định của CLI. */
   bashMaxOutput?: number;
+  /** B-08: công tắc hook claude-guard (config.guard) — undefined = mặc định bật. */
+  guard?: { useEventCwd?: boolean; allowOwnToolResults?: boolean };
 }
 
 export interface ToolCallRecord {

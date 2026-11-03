@@ -135,12 +135,20 @@ function toolTurnCap(req: RunRequest): number {
   return typeof n === 'number' && n > 0 ? Math.floor(n) : 0;
 }
 
+/**
+ * B-14b: bộ công cụ cố định khi runtimes.claude-cli.stablePrefix bật — hợp của mọi pha để --tools giống nhau cả nhiệm vụ.
+ * Quyền thật theo pha/dự án do hook claude-guard quyết định (phase + callTools), không do danh sách này.
+ */
+export const STABLE_TOOLS = ['Read', 'Glob', 'Grep', 'LS', 'WebSearch', 'WebFetch', 'Edit', 'Write', 'MultiEdit', 'Bash'];
+
 /** Dựng cờ CLI + biến môi trường của `claude -p` (hàm thuần, không spawn) — dùng cho run() và bench/vs-claude/cache-diagnostic.mjs (B-07, B-14a). */
 export function buildClaudeArgs(cfg: RuntimeConfig, req: RunRequest, model: string): { args: string[]; env: NodeJS.ProcessEnv } {
     const args = ['-p', '--output-format', 'stream-json', '--verbose', '--model', model, '--no-session-persistence'];
     const env: NodeJS.ProcessEnv = {};
     if (req.allowTools && req.tools.length) {
-      args.push('--tools', req.tools.join(','), '--permission-mode', cfg.permissionMode ?? 'acceptEdits');
+      const stable = cfg.stablePrefix === true;
+      const toolList = stable ? STABLE_TOOLS : req.tools;
+      args.push('--tools', toolList.join(','), '--permission-mode', cfg.permissionMode ?? 'acceptEdits');
       // B-07: trần lượt mô hình như vòng công cụ của runtime API (phases.toolTurns); tắt bằng runtimes.claude-cli.maxTurns=false
       if (cfg.maxTurns !== false && toolTurnCap(req) > 0) args.push('--max-turns', String(toolTurnCap(req)));
       // Hook PreToolUse áp cùng chính sách với vòng công cụ của CCoding (lệnh cấm mặc định + denyCommands
@@ -159,11 +167,16 @@ export function buildClaudeArgs(cfg: RuntimeConfig, req: RunRequest, model: stri
         readsBeforeWrite: policy?.expectWrites && policy.guardState ? policy.readsBeforeWrite ?? 0 : 0,
         state: policy?.guardState,
         closeStdin: cfg.closeStdin !== false,
+        // B-08: công tắc đọc đường dẫn của hook (undefined → mặc định bật)
+        useEventCwd: policy?.guard?.useEventCwd,
+        allowOwnToolResults: policy?.guard?.allowOwnToolResults,
+        // B-14b: pha + danh sách công cụ thật của lượt này để hook quyết định (thiếu/sai pha → chỉ đọc)
+        ...(stable ? { stablePrefix: true, phase: req.phase, callTools: req.tools } : {}),
       });
       // cắt đầu ra lệnh shell (kết quả công cụ bị gửi lại ở mọi lượt sau) — chỉ khi nhiệm vụ/cấu hình đặt (benchtest trước khi đổi mặc định)
       if (policy?.bashMaxOutput && policy.bashMaxOutput > 0) env.BASH_MAX_OUTPUT_LENGTH = String(Math.floor(policy.bashMaxOutput));
       // công cụ đã được CCoding cấp theo quyền dự án/pha → chạy không hỏi (chế độ -p không hỏi được); hook vẫn chặn trước
-      args.push('--allowedTools', req.tools.join(','));
+      args.push('--allowedTools', toolList.join(','));
     } else {
       args.push('--tools', '');
     }
