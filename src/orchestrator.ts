@@ -359,10 +359,40 @@ export class Orchestrator {
       projectId: task.projectId,
       data: { mode, department: input.department, budgetTokens: task.options.budgetTokens, budgetMode, attachments: task.attachments?.map((a) => ({ name: a.name, kind: a.kind, chars: a.chars })), routineId: input.routineId, routineManual: input.routineId ? !!input.routineManual : undefined },
     });
+    if (input.backlog) {
+      task.status = 'paused';
+      task.pause = { reason: 'backlog', detail: 'Trong backlog — chuyển sang "Chờ chạy" để bắt đầu', at: now };
+      this.save(task, true);
+      return task;
+    }
     this.emitTask(task);
     this.queue.push(task.id);
     this.pump();
     return task;
+  }
+
+  /**
+   * UI-8: đổi giai đoạn bằng tay — chỉ giữa "backlog" và "Chờ chạy" (nhiệm vụ chưa làm gì).
+   * Các giai đoạn khác (đang làm, review, xong, bị chặn) do trạng thái thật quyết định.
+   */
+  setStage(id: string, stage: 'backlog' | 'todo'): Task {
+    const t = this.d.store.get(id);
+    if (!t) throw new Error('Không có nhiệm vụ');
+    const untouched = t.runs.length === 0;
+    if (stage === 'backlog') {
+      if (t.status === 'paused' && t.pause?.reason === 'backlog') return t;
+      if (t.status !== 'queued' || !untouched) throw new Error('Chỉ đưa vào backlog được nhiệm vụ đang chờ chạy và chưa bắt đầu');
+      this.queue = this.queue.filter((q) => q !== id);
+      t.status = 'paused';
+      t.pause = { reason: 'backlog', detail: 'Trong backlog — chuyển sang "Chờ chạy" để bắt đầu', at: nowIso() };
+      this.d.logs.write({ level: 'info', kind: 'task.backlog', msg: `${t.id}: chuyển vào backlog`, taskId: t.id, projectId: t.projectId });
+      this.save(t, true);
+      return t;
+    }
+    if (t.status === 'queued') return t;
+    if (t.status !== 'paused' || t.pause?.reason !== 'backlog') throw new Error('Chỉ chuyển sang "Chờ chạy" được nhiệm vụ đang nằm trong backlog');
+    this.d.logs.write({ level: 'info', kind: 'task.unbacklog', msg: `${t.id}: rời backlog → chờ chạy`, taskId: t.id, projectId: t.projectId });
+    return this.resume(id, {});
   }
 
   cancel(id: string): boolean {
@@ -402,10 +432,55 @@ export class Orchestrator {
 
   /** Đổi ngân sách / chế độ ngân sách khi nhiệm vụ đang chạy hoặc tạm dừng. */
   /** UI-7: sửa thuộc tính hiển thị từ bảng Thuộc tính — tiêu đề, ưu tiên. Không đụng phần đang chạy. */
-  updateProps(id: string, o: { title?: string; priority?: TaskPriority | null }): Task {
+  updateProps(id: string, o: { title?: string; priority?: TaskPriority | null; agentId?: string | null; projectId?: string | null }): Task {
     const t = this.d.store.get(id);
     if (!t) throw new Error('Không có nhiệm vụ');
     const changed: string[] = [];
+    const { registry, store } = this.d;
+    // người phụ trách / dự án chỉ đổi được khi nhiệm vụ chưa bắt đầu (chưa lập kế hoạch, chưa có workspace)
+    const editable = (t.status === 'queued' || t.status === 'paused') && t.runs.length === 0;
+    const lockMsg = (what: string) =>
+      `Chỉ đổi ${what} khi nhiệm vụ chưa bắt đầu (đang chờ chạy hoặc trong backlog)${what === 'dự án' ? ' — nhiệm vụ đã chạy: tạm dừng rồi dùng "Đóng gói vào dự án"' : ' — nhiệm vụ đã chạy: dùng "Giao lại tương tự"'}`;
+    // tính trước, kiểm tra hết rồi mới ghi (lỗi không để lại thay đổi dở)
+    let nextProject = t.projectId ? store.project(t.projectId) : undefined;
+    if (o.projectId !== undefined && (o.projectId || undefined) !== t.projectId) {
+      if (!editable) throw new Error(lockMsg('dự án'));
+      nextProject = o.projectId ? store.project(o.projectId) : undefined;
+      if (o.projectId && !nextProject) throw new Error(`Không có dự án "${o.projectId}"`);
+    }
+    let nextAgent = t.mode === 'agent' ? t.agentId : undefined;
+    if (o.agentId !== undefined && (o.agentId || undefined) !== nextAgent) {
+      if (!editable) throw new Error(lockMsg('người phụ trách'));
+      nextAgent = o.agentId || undefined;
+      if (nextAgent) {
+        const a = registry.agents.get(nextAgent);
+        if (!a) throw new Error(`Agent không hợp lệ: ${nextAgent}`);
+        if (!registry.departments.has(a.department)) throw new Error(`${a.name} không thuộc phòng ban nào nhận việc (điều phối viên chỉ định tuyến)`);
+      }
+    }
+    if (nextAgent && nextProject?.agents?.length && !nextProject.agents.includes(nextAgent))
+      throw new Error(`${registry.agents.get(nextAgent)?.name ?? nextAgent} không nằm trong nhân sự của dự án ${nextProject.name}`);
+    if ((nextProject?.id ?? undefined) !== t.projectId) {
+      changed.push(`dự án ${t.projectId ?? '—'} → ${nextProject?.id ?? '—'}`);
+      t.projectId = nextProject?.id;
+      // không bao giờ hạ nhãn dữ liệu: rời dự án Bảo mật thì giữ nhãn cũ
+      const before = t.classification;
+      t.classification = maxClass((nextProject?.classification ?? this.d.config.dataProtection.defaultClassification) as Classification, before);
+      if (t.classification !== before) changed.push(`nhãn dữ liệu ${before} → ${t.classification}`);
+      if (t.mode === 'project' && !nextProject) t.mode = 'auto';
+    }
+    if (nextAgent !== (t.mode === 'agent' ? t.agentId : undefined)) {
+      changed.push(`người phụ trách ${t.mode === 'agent' ? `@${t.agentId}` : '— (điều phối)'} → ${nextAgent ? `@${nextAgent}` : '— (điều phối)'}`);
+      if (nextAgent) {
+        t.mode = 'agent';
+        t.agentId = nextAgent;
+        t.department = registry.agents.get(nextAgent)!.department;
+      } else {
+        t.mode = nextProject ? 'project' : 'auto';
+        t.agentId = undefined;
+        t.department = undefined;
+      }
+    }
     if (o.title !== undefined) {
       const title = o.title.replace(/\s+/g, ' ').trim();
       if (!title || title.length > 200) throw new Error('Tiêu đề phải có 1–200 ký tự');

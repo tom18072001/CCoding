@@ -213,6 +213,7 @@ export function createServer(app: App): http.Server {
           continueBranch: typeof b.continueBranch === 'boolean' ? b.continueBranch : undefined,
           options: b.options ?? {},
           attachments: Array.isArray(b.attachments) ? b.attachments.map(String) : undefined,
+          backlog: b.backlog === true,
         });
         return send(res, 201, t);
       } catch (e) {
@@ -313,11 +314,21 @@ export function createServer(app: App): http.Server {
         throw new HttpError(409, (e as Error).message);
       }
     }
+    if ((mm = m(/^\/api\/tasks\/([^/]+)\/stage$/)) && req.method === 'POST') {
+      const b = await readBody(req);
+      if (b.stage !== 'backlog' && b.stage !== 'todo') throw new HttpError(400, 'Giai đoạn đặt tay chỉ là backlog hoặc todo');
+      try {
+        return send(res, 200, orchestrator.setStage(mm[1], b.stage));
+      } catch (e) {
+        throw new HttpError(/Không có nhiệm vụ/.test((e as Error).message) ? 404 : 409, (e as Error).message);
+      }
+    }
     if ((mm = m(/^\/api\/tasks\/([^/]+)\/props$/)) && req.method === 'POST') {
       const b = await readBody(req);
       if (b.title !== undefined && typeof b.title !== 'string') throw new HttpError(400, 'title phải là chuỗi');
       try {
-        return send(res, 200, orchestrator.updateProps(mm[1], { title: b.title, priority: b.priority === '' ? null : b.priority }));
+        const opt = (v: unknown) => (v === undefined ? undefined : v === '' || v === null ? null : String(v));
+        return send(res, 200, orchestrator.updateProps(mm[1], { title: b.title, priority: b.priority === '' ? null : b.priority, agentId: opt(b.agentId), projectId: opt(b.projectId) }));
       } catch (e) {
         throw new HttpError(/Không có nhiệm vụ/.test((e as Error).message) ? 404 : 400, (e as Error).message);
       }

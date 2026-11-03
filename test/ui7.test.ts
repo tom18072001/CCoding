@@ -172,3 +172,76 @@ test('UI-7 agent ngoài: tiến trình stdin/stdout JSON, không lộ biến bí
   assert.ok(rm.get('my-agent') instanceof ExternalRuntime);
   assert.ok(rm.get('team') instanceof ExternalRuntime);
 });
+
+test('UI-8 backlog: tạo vào backlog không chạy; chuyển qua lại backlog ↔ chờ chạy; chạy xong bình thường', async () => {
+  const app = testApp();
+  const { srv, json } = await serve(app);
+  try {
+    let r = await json('/api/tasks', { brief: 'Viết hàm nhân hai số kèm test', agentId: 'backend-dev', backlog: true });
+    assert.equal(r.status, 201);
+    const t = await r.json();
+    assert.equal(t.status, 'paused');
+    assert.equal(t.pause.reason, 'backlog');
+    await new Promise((res) => setTimeout(res, 60));
+    assert.equal(app.store.get(t.id)?.runs.length, 0, 'backlog không chạy');
+    assert.equal((await json(`/api/tasks/${t.id}/stage`, { stage: 'done' })).status, 400);
+    r = await json(`/api/tasks/${t.id}/stage`, { stage: 'todo' });
+    assert.equal(r.status, 200);
+    assert.equal((await app.orchestrator.waitFor(t.id)).status, 'done');
+    // nhiệm vụ đã chạy không đưa vào backlog được
+    assert.equal((await json(`/api/tasks/${t.id}/stage`, { stage: 'backlog' })).status, 409);
+    assert.equal((await json('/api/tasks/T-khong-co/stage', { stage: 'todo' })).status, 404);
+  } finally {
+    srv.close();
+    app.cleanup();
+  }
+});
+
+test('UI-8 thuộc tính: đổi người phụ trách và dự án khi chưa bắt đầu; không hạ nhãn dữ liệu; khóa khi đã chạy', async () => {
+  const app = testApp();
+  const { srv, json } = await serve(app);
+  try {
+    const now = new Date().toISOString();
+    app.store.saveProject({ id: 'bao-mat', name: 'Dự án bảo mật', department: 'dev', classification: 'restricted', createdAt: now } as never);
+    app.store.saveProject({ id: 'nho', name: 'Dự án nhỏ', department: 'dev', classification: 'internal', agents: ['frontend-dev'], createdAt: now } as never);
+    const t = app.orchestrator.submit({ brief: 'Viết tài liệu API', backlog: true });
+    assert.equal(t.mode, 'auto');
+    // người phụ trách
+    let r = await json(`/api/tasks/${t.id}/props`, { agentId: 'backend-dev' });
+    assert.equal(r.status, 200);
+    let b = await r.json();
+    assert.equal(b.mode, 'agent');
+    assert.equal(b.agentId, 'backend-dev');
+    assert.equal(b.department, 'dev');
+    assert.equal((await json(`/api/tasks/${t.id}/props`, { agentId: 'orchestrator' })).status, 400, 'điều phối viên không nhận việc');
+    assert.equal((await json(`/api/tasks/${t.id}/props`, { agentId: 'khong-co' })).status, 400);
+    // dự án: agent không thuộc nhân sự dự án → từ chối, không đổi gì
+    assert.equal((await json(`/api/tasks/${t.id}/props`, { projectId: 'nho' })).status, 400);
+    assert.equal(app.store.get(t.id)?.projectId, undefined);
+    // dự án Bảo mật → nhãn lên restricted; bỏ dự án → nhãn giữ nguyên
+    r = await json(`/api/tasks/${t.id}/props`, { projectId: 'bao-mat' });
+    b = await r.json();
+    assert.equal(b.projectId, 'bao-mat');
+    assert.equal(b.classification, 'restricted');
+    r = await json(`/api/tasks/${t.id}/props`, { projectId: '' });
+    b = await r.json();
+    assert.equal(b.projectId, undefined);
+    assert.equal(b.classification, 'restricted', 'không bao giờ hạ nhãn');
+    // bỏ người phụ trách → về điều phối tự động
+    r = await json(`/api/tasks/${t.id}/props`, { agentId: '' });
+    b = await r.json();
+    assert.equal(b.mode, 'auto');
+    assert.equal(b.agentId, undefined);
+    // chạy xong rồi thì khóa
+    const t2 = app.orchestrator.submit({ brief: 'Viết hàm chia hai số kèm test', agentId: 'backend-dev' });
+    await app.orchestrator.waitFor(t2.id);
+    r = await json(`/api/tasks/${t2.id}/props`, { agentId: 'frontend-dev' });
+    assert.equal(r.status, 400);
+    assert.match((await r.json()).error, /chưa bắt đầu/);
+    assert.equal((await json(`/api/tasks/${t2.id}/props`, { projectId: 'nho' })).status, 400);
+    assert.match(fs.readFileSync(`${app.config.dataDir}/logs/system.jsonl`, 'utf8'), /người phụ trách/);
+  } finally {
+    srv.close();
+    app.cleanup();
+  }
+});

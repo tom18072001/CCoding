@@ -20,7 +20,7 @@ import { nowIso, shortId } from './util/ids.js';
 
 export const CATCH_UP_MS = 6 * 3600e3;
 const MODES: TaskMode[] = ['auto', 'department', 'project', 'joint', 'agent'];
-const PAUSE_VI: Record<string, string> = { budget: 'hết ngân sách', quota: 'chờ hạn mức', manual: 'tạm dừng tay', plan: 'chờ duyệt kế hoạch', interrupted: 'bị gián đoạn' };
+const PAUSE_VI: Record<string, string> = { budget: 'hết ngân sách', quota: 'chờ hạn mức', manual: 'tạm dừng tay', plan: 'chờ duyệt kế hoạch', interrupted: 'bị gián đoạn', backlog: 'nằm trong backlog' };
 
 /** Lần chạy trước còn "chiếm chỗ" không: đang chờ/chạy, hoặc tạm dừng mà vẫn chờ (giám đốc xử lý, hạn mức mở lại). */
 function blocking(t: Task | undefined): string | undefined {
