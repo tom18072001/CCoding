@@ -6,7 +6,8 @@
 ## 0. Giới hạn cần đọc trước
 
 - **Công cụ thực tế:** phiên này chỉ có `WebSearch` và `WebFetch`; **không có `search_papers` (OpenAlex)** nên không có số trích dẫn hay DOI từ OpenAlex. DOI/URL bên dưới chép nguyên văn từ kết quả công cụ.
-- **Mức đọc trung thực:** chỉ **4/15** nguồn được mở trang và đọc nội dung qua `WebFetch` (Anthropic, Cognition: trang bài đầy đủ; MAST, AI Agents That Matter: trang tóm tắt arXiv). **11/15** nguồn chỉ thấy **bản tóm lược trong kết quả `WebSearch`** (mô tả tóm tắt, số liệu, nơi đăng) — gắn nhãn `[CHỈ ĐỌC TÓM TẮT]`, **chỉ dùng cho khẳng định ở mức tóm tắt**. Không nguồn nào đọc toàn văn PDF.
+- **Cập nhật 3/11/2026 (S2, gói 2 vòng 4):** MAST (§2.12) đã đọc HTML v3 phần đầu (100.000/160.349 ký tự; phụ lục chưa đọc) và Anthropic (§2.14) đọc lại; xem F5–F10. Dòng dưới là số liệu **vòng 1**.
+- **Mức đọc trung thực (vòng 1):** chỉ **4/15** nguồn được mở trang và đọc nội dung qua `WebFetch` (Anthropic, Cognition: trang bài đầy đủ; MAST, AI Agents That Matter: trang tóm tắt arXiv). **11/15** nguồn chỉ thấy **bản tóm lược trong kết quả `WebSearch`** (mô tả tóm tắt, số liệu, nơi đăng) — gắn nhãn `[CHỈ ĐỌC TÓM TẮT]`, **chỉ dùng cho khẳng định ở mức tóm tắt**. Không nguồn nào đọc toàn văn PDF.
 - **Danh sách tác giả:** công cụ chỉ trả tên tác giả đầu (và số đồng tác giả) cho nhiều bài, nên mục APA ghi *tác giả đầu et al.* kèm ghi chú; **cần mở trang để điền đủ tác giả (APA 7 liệt kê tới 20 tác giả)** trước khi nộp. Không tự điền từ trí nhớ.
 - Số liệu hiệu năng dưới đây là **số tự báo cáo của tác giả**, từ tóm tắt; không so sánh trực tiếp giữa các bài (benchmark, mô hình, năm khác nhau).
 - Truy vấn không chứa tên dự án/cơ quan nội bộ (chỉ tiêu đề bài công khai).
@@ -32,10 +33,17 @@ Công cụ: `WebSearch` (mode standard), 15 truy vấn, ngày 2026-11-02, không
 | Q13 | WebSearch | AI Agents That Matter Kapoor Narayanan arXiv 2407.01502 | không | 2026-11-02 | 1 |
 | Q14 | WebSearch | Anthropic "How we built our multi-agent research system" 2025 | không | 2026-11-02 | 1 |
 | Q15 | WebSearch | Cognition "Don't Build Multi-Agents" Walden Yan 2025 | không | 2026-11-02 | 1 |
-| F1 | WebFetch | https://www.anthropic.com/engineering/built-multi-agent-research-system | — | 2026-11-02 | đọc |
+| F1 | WebFetch | trang Anthropic, vòng 1 mở bằng một URL dạng `…/built-…` (URL cũ, không còn dùng; xem CHANGELOG); vòng 2 đọc lại bằng URL chuẩn, xem F9 | — | 2026-11-02 | đọc |
 | F2 | WebFetch | https://cognition.ai/blog/dont-build-multi-agents → chuyển hướng 301 sang https://cognition.com/blog/dont-build-multi-agents (URL chuyển hướng do máy chủ trả, đã mở lại) | — | 2026-11-02 | đọc |
 | F3 | WebFetch | https://arxiv.org/abs/2503.13657v3 | — | 2026-11-02 | đọc |
 | F4 | WebFetch | https://arxiv.org/abs/2407.01502v1 | — | 2026-11-02 | đọc |
+| Q16 | WebSearch (standard) | "Why Do Multi-Agent LLM Systems Fail" NeurIPS 2025 Datasets and Benchmarks Track Cemri | không | 2026-11-03 | 2 (ML Anthology; slide neurips.cc chỉ thấy, chưa mở) |
+| F5 | WebFetch | https://arxiv.org/abs/2503.13657 (Comments, Journal ref, ngày v1–v3) | — | 2026-11-03 | đọc: không ghi venue |
+| F6 | WebFetch | https://openreview.net/forum?id=fAjbYBmonr | — | 2026-11-03 | **bị chặn** (màn hình xác minh trình duyệt) |
+| F7 | WebFetch | https://mlanthology.org/neurips/2025/cemri2025neurips-multiagent | — | 2026-11-03 | đọc: NeurIPS 2025, 13 tác giả, không volume/track |
+| F8 | WebFetch ×2 | https://arxiv.org/html/2503.13657v3 (mới 100.000/160.349 ký tự đầu) | — | 2026-11-03 | đọc một phần |
+| F9 | WebFetch | https://www.anthropic.com/engineering/multi-agent-research-system | — | 2026-11-03 | đọc |
+| F10 | WebFetch | cùng slug dưới tiền tố `research` (kiểm tiêu đề, tác giả, canonical) | — | 2026-11-03 | mở được; canonical không xác định |
 
 Ghi chú sàng lọc: đây là tổng quan **nhắm đích** (danh sách 15 nguồn do đề bài chỉ định), không phải tổng quan có hệ thống PRISMA; không có bước loại trùng/sàng theo tiêu chí. Mỗi truy vấn chọn bản gốc (arXiv/nhà xuất bản/blog gốc), bỏ bản tổng hợp thứ cấp (aitopics, bohrium, fugumt…). Một số kết quả tìm thấy từ bên thứ ba về bài Cognition (follow-up "Multi-Agents: What's Actually Working", 2026-04-22) **chưa được mở** → chuyển cho S5, ghi `[CHƯA KIỂM CHỨNG]`.
 
@@ -110,10 +118,20 @@ Quy ước "Mức đọc": **[ĐỌC TRANG]** = đã mở trang bằng `WebFetch
 - **Giống:** orchestrator + agent chuyên, tái lập kế hoạch. **Khác:** hướng tác vụ web/tệp tổng quát; CCoding hướng dự án mã với worktree song song và gộp/giải xung đột.
 
 ### 2.12 MAST — Why Do Multi-Agent LLM Systems Fail?
-- **APA 7:** Cemri, M., Pan, M. Z., Yang, S., Agrawal, L. A., Chopra, B., Tiwari, R., Keutzer, K., Parameswaran, A., Klein, D., Ramchandran, K., Zaharia, M., Gonzalez, J. E., & Stoica, I. (2025). *Why do multi-agent LLM systems fail?* (arXiv:2503.13657v3). https://arxiv.org/abs/2503.13657v3
-- **Loại:** preprint (trang arXiv không ghi venue). **Mức đọc:** [ĐỌC TRANG — tóm tắt arXiv]; chưa đọc toàn văn.
-- **Đóng góp:** MAST — 14 kiểu lỗi, 3 nhóm (thiết kế/đặc tả hệ thống, lệch phối hợp giữa agent, kiểm chứng/kết thúc tác vụ), xây từ phân tích 150 vết và xác nhận với người chú thích (κ = 0,88); MAST-Data > 1.600 vết từ 7 khung; quy trình LLM-as-a-Judge. Kết luận: lỗi chủ yếu do thiết kế và lệch phối hợp, không chỉ do mô hình. *Danh sách 14 kiểu lỗi chưa đọc được từ trang — S3 phải mở toàn văn trước khi dán nhãn từng lỗi.* Số khung/vết khác nhau giữa các phiên bản (v1–v3).
-- **Giống:** khung phân loại thách thức của CCoding (FM-1/2/3 + INF) bám MAST. **Khác:** MAST phân tích vết của hệ khác; CCoding là một hệ được vận hành thật, có nhật ký lỗi và vòng sửa.
+- **APA 7:** Cemri, M., Pan, M. Z., Yang, S., Agrawal, L. A., Chopra, B., Tiwari, R., Keutzer, K., Parameswaran, A., Klein, D., Ramchandran, K., Zaharia, M., Gonzalez, J. E., & Stoica, I. (2025). Why do multi-agent LLM systems fail? *Advances in Neural Information Processing Systems (NeurIPS 2025)*. arXiv:2503.13657. https://arxiv.org/abs/2503.13657v3 — OpenReview: https://openreview.net/forum?id=fAjbYBmonr **[V-thứ cấp]**
+- **Loại và nơi xuất bản:** trang arXiv ghi "Comments: ArXiv v3", không có "Journal reference" và không nhắc NeurIPS (F5). NeurIPS 2025 chỉ có từ **nguồn thứ cấp**: danh mục ML Anthology ghi "Advances in Neural Information Processing Systems", 2025, 13 tác giả, và liên kết tới OpenReview (F7); slide `neurips.cc/media/neurips-2025/…` xuất hiện trong kết quả tìm kiếm (Q16, **chưa mở**). Trang OpenReview bị chặn bằng màn hình xác minh trình duyệt nên **không đọc được** track/volume/trạng thái (F6). Vì vậy ghi "NeurIPS 2025", **không ghi số volume và track** `[CHƯA KIỂM CHỨNG]`. Một bản tóm lược tìm kiếm nói đây là bài Datasets and Benchmarks Track: chưa có nguồn chính xác nhận, không dùng.
+- **Mức đọc:** [ĐỌC TOÀN VĂN HTML v3, mới 100.000/160.349 ký tự đầu] (F8). Đã đọc Mục 1–5, Hình 1, Bảng 1–2. **Chưa đọc** phần cuối trang (Phụ lục sau ký tự 100.000), gồm Phụ lục A (định nghĩa chi tiết 14 kiểu lỗi) và Phụ lục H; mọi số dẫn Phụ lục dưới đây là theo lời chỉ dẫn của trang ở thân bài, `[CHƯA KIỂM CHỨNG]` về nội dung phụ lục.
+- **Đóng góp (mỗi số kèm định vị nguồn):**
+  - Taxonomy **14 kiểu lỗi** (FM-1.1…FM-3.3) chia **3 nhóm**: FC1 *System Design Issues* (5 kiểu), FC2 *Inter-Agent Misalignment* (6), FC3 *Task Verification* (3): Mục 4, Hình 1; abstract nêu "14 failure modes", "3 nhóm". Tên và định nghĩa từng kiểu: `analysis/mast-codebook.md` §3. Trang không nêu tỉ lệ cấp nhóm; từng kiểu có tỉ lệ riêng ở Mục 4 (ví dụ FM-1.3 15,7 %, FM-2.6 13,2 %, FM-1.5 12,4 %).
+  - **MAST-Data:** 1.642 vết chú thích từ **7 hệ** (MetaGPT, ChatDev, HyperAgent, AppWorld, AG2, Magentic-One, OpenManus): Bảng 1 và Mục 3; abstract ghi "1600+".
+  - **Quy mô phân tích lý thuyết nền (grounded theory):** 150 vết, 6 chuyên gia (Mục 3.1, "Data Collection with Grounded Theory Analysis"; vị trí câu chứa số 150 và 6 theo bản tóm lược của công cụ, chưa đối chiếu từng câu).
+  - **Đồng thuận người–người:** Cohen's κ trung bình = **0,88 "in the final rounds"**, giữa **3** người chú thích: Mục 3.2 ("Standardizing Failure Labels via Inter-Annotator Agreement"). Đây là κ ở các vòng cuối, không phải κ toàn quá trình.
+  - **LLM-as-a-Judge** (Mục 3.3; **Bảng 2** "Performance of LLM-as-a-judge pipeline"; cột Accuracy, Recall, Precision, F1, Cohen's κ). Hàng *o1*: 0,89 · 0,62 · 0,68 · 0,64 · 0,58. Hàng *o1 (few shot)*: **0,94 · 0,77 · 0,833 · 0,80 · 0,77**. Số o1 few-shot **khớp** số trong đề bài. Bảng chỉ có hai hàng này trong phần đã đọc (không có hàng GPT-4o hay Claude, và hàng "o1" không nhãn zero-shot): không dùng lời "o1 zero-shot".
+  - **Can thiệp trên ChatDev:** **+9,4 %** (Mục 1 và Mục 4/FC1; Phụ lục H) và **+15,6 %** (Mục 4/FC3, benchmark ProgramDev; Mục 5.3 gọi là mức cải thiện tối đa; Phụ lục H.2, Bảng 5 theo chỉ dẫn của trang, `[CHƯA KIỂM CHỨNG]`). **Lệch cần ghi:** Mục 1 gán +9,4 % cho việc đổi quy trình (CEO quyết định cuối), còn Mục 4 gán cho cải thiện đặc tả vai trò; hai mục không đồng nhất về nguyên nhân. Điều kiện nền: cùng prompt người dùng, cùng LLM (GPT-4o) theo Mục 4 (đọc qua bản tóm lược công cụ). Hai mức này là cải thiện thực nghiệm của một can thiệp trên một hệ, không phải hiệu ứng chung của MAS.
+  - Kết luận: lỗi chủ yếu do thiết kế và lệch phối hợp, không chỉ do năng lực mô hình (abstract, Mục 4–5).
+- **Phiên bản:** v1 17/3/2025, v2 22/4/2025, v3 26/10/2025 (F5). Số khung, vết, κ khác nhau giữa các bản: một bản tóm lược tìm kiếm ghi "κ = 0,77" ở slide NeurIPS, trùng với κ **LLM–người** của Bảng 2 chứ không mâu thuẫn κ người–người 0,88. Chỉ dẫn số theo **v3**.
+- **Mẫu cho CCoding:** MAST kiểm bộ chú thích LLM bằng đúng 5 chỉ số (Accuracy, Recall, Precision, F1, κ) so với nhãn người (Bảng 2); κ người–người 0,88 là mức tham chiếu. CCoding dùng cách đo này cho bộ chấm và cổng chất lượng (`analysis/agreement.mjs`).
+- **Giống:** khung phân loại thách thức của CCoding (FM-1/2/3 + INF + NA) bám MAST. **Khác:** MAST phân tích vết của hệ khác; CCoding là một hệ được vận hành thật, có nhật ký lỗi và vòng sửa; INF và NA **không thuộc** 14 kiểu của MAST.
 
 ### 2.13 AI Agents That Matter
 - **APA 7:** Kapoor, S., Stroebl, B., Siegel, Z. S., Nadgir, N., & Narayanan, A. (2024). *AI agents that matter* (arXiv:2407.01502). https://arxiv.org/abs/2407.01502v1 *(Kết quả tìm kiếm thứ cấp nói bài được đăng ở Transactions on Machine Learning Research 2025: https://mlanthology.org/tmlr/2025/kapoor2025tmlr-ai/ — chưa xác minh bản TMLR; trích bản arXiv v1.)*
@@ -122,10 +140,16 @@ Quy ước "Mức đọc": **[ĐỌC TRANG]** = đã mở trang bằng `WebFetch
 - **Giống:** benchtest của CCoding báo cáo token, cache, thời gian cùng với độ đúng (461 test ẩn = holdout). **Khác:** bài đánh giá lý luận; CCoding cung cấp số đo cache vào/ra theo từng lượt gọi.
 
 ### 2.14 Anthropic — hệ nghiên cứu multi-agent
-- **APA 7:** Hadfield, J., Zhang, B., Lien, K., Scholz, F., Fox, J., & Ford, D. (2025, June 13). *How we built our multi-agent research system*. Anthropic Engineering. https://www.anthropic.com/engineering/built-multi-agent-research-system
-- **Loại:** blog / báo cáo kỹ thuật của nhà cung cấp (không bình duyệt, số liệu nội bộ). **Mức đọc:** [ĐỌC TRANG] (qua `WebFetch`, nội dung do công cụ tóm lược).
-- **Đóng góp:** orchestrator–worker (Opus 4 dẫn, Sonnet 4 làm sub-agent); đa agent hơn đơn agent Opus 4 **90,2%** trên đánh giá nghiên cứu **nội bộ**, mạnh nhất ở truy vấn theo chiều rộng; agent dùng ≈4× token của chat, đa agent ≈15×; trên BrowseComp, lượng token giải thích ≈80% phương sai hiệu năng; quy tắc theo mức nỗ lực trong prompt (1 agent/3–10 lệnh gọi; 2–4 sub-agent; >10 sub-agent); gọi song song 3–5 sub-agent cắt thời gian tới 90%; checkpoint/retry; LLM-judge theo rubric (≈20 truy vấn thật khởi đầu). **Giới hạn nêu rõ:** miền cần chung ngữ cảnh/nhiều phụ thuộc, và "hầu hết tác vụ lập trình có ít phần song song hơn nghiên cứu", không hợp.
+- **APA 7:** Hadfield, J., Zhang, B., Lien, K., Scholz, F., Fox, J., & Ford, D. (2025, June 13). *How we built our multi-agent research system*. Anthropic. https://www.anthropic.com/engineering/multi-agent-research-system *(URL chuẩn duy nhất của dự án, chọn vì là bản đã đọc nội dung ở F9: trang ghi nhóm "Engineering", "Published Jun 13, 2025", 6 tác giả khớp. Cùng slug dưới tiền tố `research` (BRIEF-2 từng dùng) cũng mở được ở F10. Công cụ không trả thẻ canonical hay chuỗi chuyển hướng, nên "chuẩn" là quy ước của dự án, không phải kiểm chứng.)*
+- **Loại:** blog / báo cáo kỹ thuật của nhà cung cấp (không bình duyệt, số liệu nội bộ). **Mức đọc:** [ĐỌC TRANG] qua `WebFetch` (F9, F10); nội dung do công cụ tóm lược, các câu trích dưới đây là trích ngắn do công cụ trả, chưa đối chiếu bản gốc từng chữ.
+- **Số liệu đã kiểm lại ở vòng này (cùng mục "Benefits of a multi-agent system"):**
+  - ≈**4×** token: "agents typically use about 4× more tokens than chat interactions"; ≈**15×**: "multi-agent systems use about 15× more tokens than chats". Hai số **khớp** đề bài. Đây là so với **chat**, không phải so với một agent đơn.
+  - Token giải thích **80 % phương sai** (BrowseComp): "token usage by itself explains 80% of the variance". Khớp. Đo trên BrowseComp, một đánh giá duyệt web.
+  - **+90,2 %:** "outperformed single-agent Claude Opus 4 by 90.2% on our internal research eval". Khớp. Đánh giá **nội bộ** của Anthropic, so với *một agent Opus 4*.
+  - Mã: "most coding tasks involve fewer truly parallelizable tasks than research". Khớp.
+- **Đóng góp khác (từ vòng 1, chưa kiểm lại ở vòng này, vị trí mục chưa ghi):** orchestrator–worker (Opus 4 dẫn, Sonnet 4 làm sub-agent); mạnh nhất ở truy vấn theo chiều rộng; quy tắc theo mức nỗ lực trong prompt (1 agent/3–10 lệnh gọi; 2–4 sub-agent; >10 sub-agent); gọi song song 3–5 sub-agent cắt thời gian tới 90 %; checkpoint/retry; LLM-judge theo rubric (≈20 truy vấn thật khởi đầu). `[CHƯA KIỂM LẠI]`. **Giới hạn nêu rõ:** miền cần chung ngữ cảnh/nhiều phụ thuộc không hợp.
 - **Giống:** giới hạn số sub-agent theo độ khó (làn nhanh/làn đầy, `maxParallel`), chọn mô hình theo vai (O6), checkpoint. **Khác:** miền nghiên cứu web, không có worktree/gộp mã; không công bố cache.
+- **Liên hệ hướng với kết quả của CCoding (chỉ so hướng, không so độ lớn).** Ở bài tổng hợp lớn của Anthropic, nhiều agent đắt ≈15× chat và đáng giá khi việc đủ rộng, song song được; với mã, chính bài này nói ít việc song song hơn. Kết quả vòng 3 của ta cùng chiều: **B0/A0-sonnet ×5,68 token** [5,05; 6,58] (W1, 9 bài, `results-round3.md` bảng W1) và **làn đơn B7 ×2,50 token** [2,02; 3,18] so với A0-sonnet trên t1–t5 (`results-round3.md`, B-01), trong khi chất lượng ngang nhau vì mọi bài chạm trần. Căn cứ tài liệu cho quyết định **"việc nhỏ dùng agent đơn, việc lớn mới dùng multi-agent"**: chi phí multi-agent là có thật và lớn, lợi ích nằm ở việc rộng/song song. **Giới hạn:** (i) khác loại bài: Anthropic đo bài nghiên cứu web, ta đo bài mã, phân tích và tổng hợp văn bản nhỏ; (ii) khác cách đo: Anthropic so với *chat* (4×/15×) và so một agent Opus 4 về chất lượng, còn ta so tỉ số token có trọng số giữa hai cấu hình CCoding trên cùng bài, có cache; (iii) Anthropic không công bố cache và tập đánh giá nội bộ; (iv) ×5,68 và ×2,50 là hai phép so khác nhau (B0 so A0-sonnet, B7 so A0-sonnet), không cộng hay đối chiếu số học với 4×/15×; (v) bài ta chạm trần chất lượng nên không bác bỏ được lợi ích ở việc khó hơn. Đây là lập luận hướng, **không** là bằng chứng nhân quả.
 
 ### 2.15 Cognition — Don't Build Multi-Agents
 - **APA 7:** Yan, W. (2025, June 12). *Don't build multi-agents*. Cognition. https://cognition.com/blog/dont-build-multi-agents *(URL cũ cognition.ai chuyển hướng 301 sang URL này.)*
@@ -180,7 +204,7 @@ Ký hiệu: ✔ = nguồn (phần đã đọc) nêu rõ; ✘ = nguồn nêu rõ 
 
 ## 4. Khoảng trống của nhóm A (chuyển cho S5/S6)
 
-- Đọc toàn văn: MAST (danh sách 14 lỗi, tên 7 khung), Agentless (phiên bản số liệu cuối), SWE-agent/OpenHands (cơ chế sandbox, phân quyền).
+- Đọc toàn văn: MAST (danh sách 14 lỗi và tên 7 khung đã có từ 3/11/2026; còn **Phụ lục A và H** chưa đọc), Agentless (phiên bản số liệu cuối), SWE-agent/OpenHands (cơ chế sandbox, phân quyền).
 - Điền đủ tác giả APA 7 cho 9 mục ghi "et al."; lấy DOI cho các bài hội nghị (OpenReview/ACM) nếu có.
 - Bài Cognition 2026 và bình luận phản biện (LangChain…) — `[CHƯA KIỂM CHỨNG]`, chưa mở.
 - Cần tìm bằng `search_papers` (OpenAlex) khi có công cụ: số trích dẫn, bài trích dẫn xuôi/ngược tới MAST và "Don't Build Multi-Agents", các công bố 2025–2026 về cache/token cho coding agent.

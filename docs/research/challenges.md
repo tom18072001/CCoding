@@ -147,7 +147,7 @@ Nhận xét (mức bằng chứng: mô tả, không suy diễn nhân quả): l�
 
 ## 5. Danh mục tài liệu tham khảo (APA 7)
 
-Cemri, M., Pan, M. Z., Yang, S., Agrawal, L. A., Chopra, B., Tiwari, R., Keutzer, K., Parameswaran, A., Klein, D., Ramchandran, K., Zaharia, M., Gonzalez, J. E., & Stoica, I. (2025). *Why do multi-agent LLM systems fail?* arXiv. https://arxiv.org/abs/2503.13657 **[CHỈ ĐỌC TÓM TẮT]** (phiên v3, 26/10/2025; tra cứu 2/11/2026 qua `fetch_url`; chưa qua bình duyệt ở thời điểm tra cứu — trạng thái xuất bản chưa kiểm).
+Cemri, M., Pan, M. Z., Yang, S., Agrawal, L. A., Chopra, B., Tiwari, R., Keutzer, K., Parameswaran, A., Klein, D., Ramchandran, K., Zaharia, M., Gonzalez, J. E., & Stoica, I. (2025). Why do multi-agent LLM systems fail? *Advances in Neural Information Processing Systems (NeurIPS 2025)*. arXiv:2503.13657. https://arxiv.org/abs/2503.13657v3 **[V-thứ cấp: venue theo ML Anthology; trang arXiv không ghi venue]** (phiên v3, 26/10/2025; đã đọc HTML v3 phần đầu, 100.000/160.349 ký tự, ngày 3/11/2026 qua `fetch_url`; phụ lục chưa đọc).
 
 Nguồn nội bộ (không phải tài liệu công bố): `docs/research/context/HISTORY.md`, `docs/PROCESS-REVIEW.md`, `docs/TOOLS.md`, `docs/RUNTIMES.md`, `docs/HERDR.md`, `src/config.ts`, `git log` nhánh `ccoding/t-20261102-112755-181--s3` @ `f1981ff`.
 
