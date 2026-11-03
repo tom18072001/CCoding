@@ -160,6 +160,41 @@ Arm `B7cabO` giữ cấu hình của `B7cab` và thêm `phaseModels: {accept: "o
 - `continueTruncated` (`src/orchestrator.ts`) gọi `rt.run` trực tiếp. Không phải thay đổi mới và nằm trong đường `Orchestrator.call()`.
 - Phần "args không đổi byte" khi tắt công tắc được S8 xác nhận bằng cách đọc test, chưa tự đổi cấu hình để đo lại.
 
+## Sửa sau gộp (D9b · B-08, B-14)
+
+**Nguồn:** bàn giao S1 (`36febd9`/`229c032`) và S2 (`9f31fbb`); số liệu ở dưới do S3 chạy trong lượt này trên Windows.
+
+### 8 test đỏ trên Linux và nguyên nhân
+- Các test: `claude-guard-paths.test.ts:38` (`..\..\ngoai\moi.txt`), `claude-guard.test.ts:29` (Grep `C:/Users/admin`), 5 test B-14b trong `claude-stable-prefix.test.ts` (root `C:/tmp/x`).
+- Nguyên nhân: hook giải đường dẫn bằng `path.resolve`/`path.relative` theo nền tảng đang chạy. Trên Linux, `C:/…` và `..\..` bị coi là đường dẫn tương đối nên không bị chặn (hoặc bị chặn nhầm với root `C:/…`).
+- Số 8 lấy từ báo cáo của người điều phối; S3 **chưa tái hiện** trên Linux (xem "Bằng chứng Linux").
+
+### Cách sửa (S1, D1–D5)
+- `src/tools/guard-paths.ts`: chọn `path.win32` hay `path.posix` theo kiểu đường dẫn của root (`pathImplFor`), không theo `process.platform`. `isWinAbs` được xuất từ đây, `shell-policy.ts` import lại (một định nghĩa duy nhất).
+- Đường dẫn của tool khác kiểu root thì coi là ngoài root (`C:/…` khi root POSIX; `/…` và UNC khi root Windows). Ngoại lệ: MSYS `/c/…` khi root Windows được đổi bằng `msysToWin` rồi so.
+- Dấu `\` luôn đổi thành `/` trước khi resolve theo posix. `realpathSync.native` chỉ gọi khi kiểu đường dẫn khớp nền tảng chạy; root win32 so không phân biệt hoa thường.
+- 6 test B-14 mới tiêm kiểu đường dẫn qua root để chạy ngữ nghĩa Linux ngay trên Windows.
+
+### fast-lane.test.ts:182 (nguồn: bàn giao S2)
+- **Nguyên nhân chưa được chứng minh.** S2 không tái hiện được (20/20 đạt trước khi sửa). Giả thuyết: spawn `bash` vượt timeout 5 s khi máy tải, hoặc `bash` phân giải sang WSL.
+- Cách làm chắc hơn: `pickBash()` chọn Git Bash tường minh, timeout 5 s → 30 s, thêm ca đối chứng `input: ''` để phân biệt chậm với treo, `rmSync` bọc `try/catch`. Test không bị xóa; vẫn kiểm "không treo khi stdin là pipe không đóng".
+- Vì chưa có nguyên nhân chứng minh, không khẳng định đã hết chập chờn; 3 lần chạy dưới chỉ cho thấy không tái phát.
+
+### Số liệu do S3 chạy (Windows)
+| Lệnh | Kết quả |
+|---|---|
+| `npm run build` | exit 0 |
+| `npm run typecheck` | exit 0 |
+| `npm test` lần 1 | exit 0 · tests 331 · pass 328 · fail 0 · skipped 3 |
+| `npm test` lần 2 | exit 0 · tests 331 · pass 328 · fail 0 · skipped 3 |
+| `npm test` lần 3 | exit 0 · tests 331 · pass 328 · fail 0 · skipped 3 |
+
+### Bằng chứng Linux
+`wsl -l -v` chỉ có `docker-desktop`, không có distro chạy Node. Chưa chạy trên Linux; ngữ nghĩa Linux được phủ bằng test tiêm path.posix của S1.
+
+### Rà "không nới chính sách" (D6)
+`git diff 3da8dc5 HEAD` trên `test/claude-guard*.test.ts`, `claude-stable-prefix.test.ts`, `shell-policy.test.ts`: không có dòng nào bị xóa/sửa (chỉ `claude-guard-paths.test.ts` được thêm 42 dòng). Các ca chặn cũ (`../`, symlink, junction, `.claude/` ngoài tool-results, Grep ra ngoài) giữ nguyên kỳ vọng. D3 có test cho cả hai chiều: `C:/…` khi root POSIX và `/etc/passwd`, UNC khi root Windows đều bị chặn.
+
 ## Phụ lục A. Commit
 
 | Mục | Commit | Commit gộp vào nhánh nhiệm vụ |
