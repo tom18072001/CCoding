@@ -1,0 +1,15 @@
+Tôi đã viết lại `buildReport` trong `src/report.js`. `npm run bench` với 200.000 dòng giờ chạy khoảng 243 ms (trước đó khoảng 15 giây). `npm test` xanh, cả 3 test đều qua.
+
+**Cách làm:** thay các vòng lặp lồng nhau bằng một lượt duyệt `orders` duy nhất, dùng `Map`/`Set` để gom theo tháng, danh mục, sản phẩm và khách hàng. Thứ tự cộng dồn và thứ tự phần tử giữ nguyên như bản cũ, nên tổng và các mảng kết quả vẫn y hệt.
+
+**Hành vi lạ của bản cũ vẫn được giữ:**
+- **JSON round-trip:** bản cũ cho mỗi dòng qua `JSON.parse(JSON.stringify(...))`. Hệ quả là số không hữu hạn (NaN, Infinity) bị tính như 0, và `-0` (ví dụ dòng hoàn tiền có `qty` 0) thành `0`. Bản mới làm lại đúng hai điểm này.
+- **Trùng `sku`:** nếu `products` có nhiều mục cùng `sku`, mục đầu tiên được dùng.
+- **Sản phẩm không có trong danh sách:** vẫn rơi vào danh mục `unknown` với tên `(không rõ)`.
+
+**Test so sánh với bản cũ:**
+- **Bản tham chiếu:** tôi sao nguyên bản cũ vào `test/report.reference.js`.
+- **Test mới:** nó được thêm vào `test/report.test.js`. Test chạy 5 seed và 6 bộ tùy chọn (`topN`, `from`, `to`) rồi so bằng `assert.deepEqual` chế độ strict. Chế độ này phân biệt được `-0` với `0`.
+- **Dòng lạ thêm vào:** `qty` 0 hoàn tiền, `sku` không có trong danh sách, giá 0, `sku` trùng. Test cũng thử đầu vào rỗng.
+
+Tôi không thử các giá trị kiểu lạ như `id` là object, và không có bộ dữ liệu nào ngoài bộ sinh bằng `src/gen.js`.
