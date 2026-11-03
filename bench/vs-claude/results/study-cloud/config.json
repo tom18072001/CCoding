@@ -1,7 +1,7 @@
 {
   "argv": [
     "--arms",
-    "A0-sonnet,B5",
+    "A0-sonnet,B6",
     "--tasks",
     "c1,c2,c3,c4,c5,l3,l4,s1,re1,a1,l1,l2,r1",
     "--repeats",
@@ -12,17 +12,17 @@
     "--runtime",
     "claude-cli",
     "--ccoding-url",
-    "http://127.0.0.1:7424",
+    "http://127.0.0.1:7425",
     "--ccoding-data",
-    "/home/user/ccoding-main/data",
+    "/home/user/ccoding-branch/data",
     "--work",
     "/tmp/vb",
     "--out",
     "bench/vs-claude/results/study-cloud"
   ],
   "cfg": {
-    "ccodingUrl": "http://127.0.0.1:7424",
-    "ccodingData": "/home/user/ccoding-main/data",
+    "ccodingUrl": "http://127.0.0.1:7425",
+    "ccodingData": "/home/user/ccoding-branch/data",
     "runtime": "claude-cli",
     "timeoutMin": 20,
     "claudeBin": "claude",
@@ -35,7 +35,7 @@
   },
   "armIds": [
     "A0-sonnet",
-    "B5"
+    "B6"
   ],
   "taskIds": [
     "c1-iis-ecs",
@@ -53,5 +53,5 @@
     "r1-elk-design"
   ],
   "repeats": 3,
-  "startedAt": "2026-11-03T01:14:15.519Z"
+  "startedAt": "2026-11-03T01:18:22.311Z"
 }
