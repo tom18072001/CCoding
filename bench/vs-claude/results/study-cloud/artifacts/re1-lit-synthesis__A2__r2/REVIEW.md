@@ -1,0 +1,13 @@
+# State of the Art: Log Anomaly Detection (from the P1-P6 corpus)
+
+**Headline results.** On the full HDFS-X split, the best reported F1 is LogGraphT at 0.962 [P4]. It builds a session graph and applies a graph transformer. It is followed by RT-AD at 0.948 [P3] and TF-LAD at 0.931 [P1]. On BGL-X, LogGraphT again leads with 0.915 [P4]. LogBERT-lite reaches 0.902 [P2], TF-LAD 0.874 [P1], and CL-LAD 0.861 [P5]. CL-LAD's figure is at a very low label budget, so it is not directly comparable to the others.
+
+**A comparability caveat.** LogBERT-lite reports F1 0.971 on HDFS-X-small, which is numerically the highest HDFS figure in the corpus [P2]. That number should not be ranked against the full-split results. HDFS-X-small is a 10% subset with a different, easier test set, and the authors did not evaluate on the full split [P2]. The benchmark survey explicitly warns that results on the two are not comparable [P6]. It also declines to rank methods [P6]. The ranking above therefore uses full-split results only. P4 calls its result "the best we are aware of", which is a self-assessment rather than an independent comparison [P4].
+
+**Open dispute: is parsing necessary?** P1 argues that template extraction is a necessary first step. Removing the parser cost 9-14 F1 points across three benchmarks [P1]. P3 argues the opposite. A raw-token model matches or beats parser-based systems, and parser errors on evolving logs hurt template-based approaches [P3]. The two papers' own numbers (0.948 vs 0.931 on full HDFS-X) favor the raw-token view on that dataset [P1, P3]. P2 also works on raw log lines and performs strongly, which is consistent with P3 [P2]. The evidence is mixed rather than settled, because the papers use different models and ablations.
+
+**Label efficiency.** P1 and P3 both train with 80% labeled data [P1, P3]. P5 pretrains contrastively on unlabeled logs and uses only 0.5% labels on BGL-X. It reaches F1 0.861 against 0.701 for a supervised baseline at the same budget [P5]. This is the only low-label evidence in the corpus. It was not evaluated on HDFS-X, so its generality is unknown [P5].
+
+**Gaps.** Cost reporting is thin. P4 gives inference latency (3.1 ms per session on an A100) but no training cost, and no energy figures appear anywhere in the corpus [P4]. P2 cites compute limits for skipping the full split [P2]. No paper compares all methods under one protocol, with the same labeled-data budget and the same split.
+
+**Takeaway.** Graph-structured models currently lead on full-split HDFS-X and BGL-X [P4]. Parsing's necessity is contested [P1, P3]. Few-label learning looks promising but is narrowly tested [P5]. Cross-paper comparison needs care because of dataset-variant mismatches [P2, P6].
