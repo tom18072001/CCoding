@@ -42,6 +42,8 @@ import { changedFiles, classifyChecks, reviewerReasons, sensitivePaths, template
 import { subtaskHistory, type AgentHistory } from './estimate.js';
 import { buildRepoMap } from './repomap.js';
 import { chooseLane, forcedLane, laneSignals, type LaneSignals } from './lane.js';
+import { parseIncidentLog } from './incident.js';
+import { modelForDifficulty, scoreDifficulty } from './difficulty.js';
 import { cappedDone } from './runtimes/api.js';
 import { isCheckCommand, runCheckCommand, toolsFor } from './tools/workspace.js';
 import type { Uploads } from './uploads.js';
@@ -256,6 +258,9 @@ export class Orchestrator {
   private shipping = new Set<string>();
   /** Số thứ tự lượt gọi — khởi tạo theo thời gian để không trùng giữa các lần khởi động lại server (tên file job/prompt, callId). */
   private seq = Math.max(0, Math.floor(Date.now() / 1000) - 1_790_000_000);
+
+  /** B-17: tín hiệu làn đã tính ở pickLane (trước pha plan) — chỉ đọc lại, không tính thêm. */
+  private laneSigs = new Map<string, LaneSignals>();
 
   constructor(private d: OrchestratorDeps) {
     for (const a of d.registry.agents.values()) this.agentStates.set(a.id, { id: a.id, status: 'idle', since: nowIso() });
@@ -1210,6 +1215,7 @@ export class Orchestrator {
     task.acceptance = { ...base, accepted: r.accepted, parsed: r.parsed, summary: r.summary || extractSummary(body, 240), criteria: r.criteria, risks: r.risks, followUps: r.followUps, path: rel };
     const fails = r.criteria.filter((c) => c.result !== 'pass').length;
     logs.write({ level: r.accepted ? 'info' : 'warn', kind: 'accept.done', msg: `${task.id}: CTO ${r.accepted ? 'nghiệm thu' : r.parsed ? `chưa nghiệm thu (${fails}/${r.criteria.length} tiêu chí chưa đạt)` : 'không ghi kết luận đọc được'}`, taskId: task.id, projectId: task.projectId, agentId: cto.id, data: { accepted: r.accepted, parsed: r.parsed, criteria: r.criteria.length, fails } });
+    if (r.parsed) logs.write({ level: 'info', kind: 'gate.decision', msg: `${task.id}: cổng CTO ${r.accepted ? 'đạt' : 'chặn'}`, taskId: task.id, projectId: task.projectId, agentId: cto.id, data: { gate: 'cto', verdict: r.accepted ? 'pass' : 'block' } });
     this.message(task, 'office', cto.id, 'acceptance', body);
     const why = `CTO chưa nghiệm thu: ${fails ? `${fails}/${r.criteria.length} tiêu chí chưa đạt hoặc chưa kiểm được` : 'chưa có tiêu chí đạt'}`;
     if (r.parsed && !r.accepted) {
@@ -1290,6 +1296,8 @@ export class Orchestrator {
       parallelWriters: this.parallelWorktrees(task, project),
       repoMap: this.repoMaps.get(task.id),
       caps: access === 'none' ? undefined : this.capabilities(roster, access, this.gitReadable(task, project)),
+      // B-09 (outputCap, stopSurveyHint: mặc định tắt), B-03 (incidentLog: mặc định bật)
+      flags: { outputCap: !!this.d.config.phases.outputCap, stopSurvey: !!this.d.config.phases.stopSurveyHint, incidentLog: this.d.config.phases.incidentLog !== false },
     };
   }
 
@@ -1389,6 +1397,7 @@ export class Orchestrator {
         pick = { lane: ch.lane, why: ch.why };
       }
     }
+    if (signals) this.laneSigs.set(task.id, signals);
     this.d.logs.write({
       level: 'info',
       kind: 'lane.pick',
@@ -1691,6 +1700,7 @@ export class Orchestrator {
       if (!reached(run, 'planned')) {
         this.setPhase(task, run, 'plan');
         pctx.projectHistory = this.projectHistory(task, pctx);
+        this.applyPlanDifficulty(task);
         const planRes = await this.call(lead, 'plan', (tools) => P.planPrompt(pctx, prior, tools), { ...base, hints: { brief: task.brief, roster: rosterHints, department: dept.name } });
         // lượt gọi lỗi → dừng (tiếp tục được) thay vì làm theo kế hoạch dự phòng đoán mò
         if (planRes.error && !planRes.text) throw new Error(`Trưởng phòng không lập được kế hoạch: ${planRes.error}`);
@@ -1955,6 +1965,12 @@ export class Orchestrator {
                 st.attempts++;
                 this.writeOutput(task, run, st, agent, r);
                 this.message(task, dept.id, agent.id, 'handoff', `Đã sửa ${st.id} theo review: ${extractSummary(r.text, 200)}`, { subtaskId: st.id });
+                if (this.d.config.phases.incidentLog !== false) {
+                  // B-03: nhật ký sự cố có cấu trúc → LogStore (che PII/bí mật ở đó); không có mục thì parsed=false, items=[] và không ném lỗi
+                  const inc = parseIncidentLog(r.text);
+                  const rounds = run.gateFixRoundsUsed ?? 0;
+                  this.d.logs.write({ level: 'info', kind: 'revise.incident', msg: `${task.id} ${st.id}: nhật ký sự cố vòng ${attempt + 1} — ${inc.parsed ? `${inc.items.length} mục` : 'không có mục đọc được'}`, taskId: task.id, department: dept.id, agentId: agent.id, subtaskId: st.id, phase: 'revise', data: { taskId: task.id, subtaskId: st.id, round: attempt + 1, items: inc.items, b02: { blocked: rounds > 0, rounds }, parsed: inc.parsed } });
+                }
               }
               run.revising = run.revising?.filter((id) => id !== st.id);
           };
@@ -2338,6 +2354,23 @@ export class Orchestrator {
   }
 
   /**
+   * B-17 (planner.difficultyModel, mặc định tắt): chấm độ khó 1–3 từ LaneSignals đã có (không thêm lượt LLM) rồi chọn model cho pha plan.
+   * Không ghi đè model do người dùng chọn (options.phaseModels.plan); model mặc định của làn nhanh thì được thay. Không có tín hiệu → mức 2.
+   */
+  private applyPlanDifficulty(task: Task): void {
+    const pd = this.d.config.planner?.difficultyModel;
+    if (!pd?.enabled) return;
+    const sig = this.laneSigs.get(task.id);
+    const d = scoreDifficulty(sig);
+    const model = modelForDifficulty(d.level, pd.models);
+    const cur = task.options.phaseModels?.plan;
+    const fastDefault = task.lane === 'fast' ? this.d.config.fastLane.planModel : undefined;
+    const applied = !!model && (!cur || cur === fastDefault);
+    if (applied) task.options.phaseModels = { ...task.options.phaseModels, plan: model };
+    this.d.logs.write({ level: 'info', kind: 'plan.difficulty', msg: `${task.id}: độ khó kế hoạch ${d.level} (${d.reason})${applied ? ` → model ${model}` : ''}`, taskId: task.id, projectId: task.projectId, data: { level: d.level, points: d.points, reason: d.reason, signals: sig ?? null, model: model ?? null, applied, previous: cur ?? null } });
+  }
+
+  /**
    * B-10 — cổng phủ kế hoạch: chạy sau parsePlan/họp chốt, trước execute (làn nhanh và đầy). Hàm thuần `planGate` không gọi LLM;
    * trượt A → một lượt "sửa kế hoạch", trượt B → lập lại một lần (cả hai đều qua this.call). Vẫn trượt → dừng với attention,
    * KHÔNG chạy tập con hạng mục.
@@ -2350,6 +2383,7 @@ export class Orchestrator {
     const evaluate = (oos = parsed?.outOfScope) => planGate({ brief: task.brief, planSummary: run.planSummary ?? '', subtasks: run.subtasks, outOfScope: oos, truncated, repoFiles, agentIds });
     let truncated = !!parsed?.truncated;
     let g = evaluate();
+    if (!run.planGate?.replanned) logs.write({ level: g.blocked ? 'warn' : 'info', kind: 'gate.decision', msg: `${task.id}: cổng phủ kế hoạch ${g.blocked ? 'chặn' : 'đạt'}`, taskId: task.id, department: dept.id, data: { gate: 'b10', verdict: g.blocked ? 'block' : 'pass' } });
     const record = (replanned: boolean) => {
       run.planGate = { uncovered: g.uncovered, reasons: g.reasons, rules: g.rules, ...(replanned ? { replanned: true } : {}) };
       this.save(task);
@@ -3145,6 +3179,7 @@ export class Orchestrator {
 
     // 1) vòng sửa theo kiểm tra
     classify();
+    const initialRed = classes.some(isRed);
     while (classes.some(isRed) && fixRounds < max) {
       const st = pickTarget();
       if (!st) break;
@@ -3234,6 +3269,7 @@ export class Orchestrator {
       classes: classes.map((c) => c.cls),
       failedAfterRounds: exhausted,
     });
+    logs.write({ level: initialRed ? 'warn' : 'info', kind: 'gate.decision', msg: `${task.id}: cổng B-02 ${initialRed ? 'chặn' : 'đạt'} (${fixRounds} vòng sửa)`, taskId: task.id, department: deptId, data: { gate: 'b02', verdict: initialRed ? 'block' : 'pass', rounds: fixRounds } });
     return { forceUnapproved: stillRed.length > 0, stillRed, classes, fixRounds, templateOk, needReviewer: reasons.length > 0, reasons, exhausted };
   }
 
