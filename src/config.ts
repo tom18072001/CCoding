@@ -201,6 +201,21 @@ export interface Config {
    */
   planner: { difficultyModel: { enabled: boolean; models: { 1?: string; 2?: string; 3?: string } } };
   /**
+   * B-19: vòng tự cải thiện RQ5 (docs/research/self-improvement/implementation-spec.md §1). Mặc định TẮT: tắt thì không sự kiện, không lượt LLM, prompt giữ nguyên byte.
+   * ab.tasks không được chứa t1–t5/g1–g6 (D7); ba khóa roles phải đôi một khác nhau (§4 điểm 4). Ngân sách và ngưỡng là giả định do giám đốc chốt.
+   */
+  selfImprove: {
+    enabled: boolean;
+    collect: boolean;
+    cluster: { minIncidents: number; minTasks: number };
+    budgets: { analysisTokens: number; patchTokens: number; abScreenTokens: number; abConfirmTokens: number };
+    holdoutLock: string;
+    ab: { screenRepeats: number; confirmRepeats: number; tasks: string[]; maxConfirmRunsPerLock: number };
+    roles: { analyst: string; author: string; runner: string };
+    monitorTasks: number;
+    baselineTasks: number;
+  };
+  /**
    * Làn nhanh cho việc nhỏ (options.lane 'auto'): đề bài ≤ maxBriefChars ký tự và repo ≤ maxRepoFiles tệp / maxRepoBytes byte (git ls-files).
    * planModel: model lập kế hoạch · finalReport: 'template' (báo cáo dựng từ bàn giao, không gọi model) hoặc 'llm' ·
    * maxParallel: số hạng mục độc lập chạy cùng lúc tối đa (nâng options.maxParallel của nhiệm vụ lên khi kế hoạch có nhiều hạng mục độc lập hơn).
@@ -363,6 +378,22 @@ const BUILTIN: Omit<Config, 'root'> = {
     incidentLog: true,
   },
   planner: { difficultyModel: { enabled: false, models: { 1: 'sonnet', 3: 'opus' } } },
+  selfImprove: {
+    enabled: false,
+    collect: true,
+    cluster: { minIncidents: 3, minTasks: 2 },
+    budgets: { analysisTokens: 300_000, patchTokens: 400_000, abScreenTokens: 14_000_000, abConfirmTokens: 38_000_000 },
+    holdoutLock: 'docs/research/self-improvement/holdout-lock.json',
+    ab: {
+      screenRepeats: 3,
+      confirmRepeats: 8,
+      tasks: ['c1-iis-ecs', 'c2-burst-alert', 'c3-shop-bugs', 'c4-audit-chain', 'c5-tickets-api', 'l1-oncall', 'l2-knights', 'l3-reconcile', 'l4-startup-order', 's1-sec-review'],
+      maxConfirmRunsPerLock: 3,
+    },
+    roles: { analyst: 'methodologist', author: 'research-lead', runner: 'data-scientist' },
+    monitorTasks: 3,
+    baselineTasks: 5,
+  },
   fastLane: { enabled: true, maxBriefChars: 4000, maxRepoFiles: 300, maxRepoBytes: 1_500_000, planModel: 'sonnet', finalReport: 'template', maxParallel: 4 },
   lanes: { single: { enabled: true, maxParts: 5, maxFilesTouched: 6, slim: { ...SLIM_DEFAULTS } } },
   guard: { useEventCwd: true, allowOwnToolResults: true }, // B-08
@@ -432,6 +463,12 @@ export function loadConfig(opts: { root?: string; configFile?: string; local?: b
   if (env.CCODING_RUNNER) cfg.runner = env.CCODING_RUNNER as Config['runner'];
   if (env.CCODING_HERDR_SESSION) cfg.herdr.session = env.CCODING_HERDR_SESSION;
   if (env.HERDR_BIN_PATH && !cfg.herdr.bin) cfg.herdr.bin = env.HERDR_BIN_PATH;
+
+  const si = cfg.selfImprove;
+  const diagnosticOnly = si.ab.tasks.filter((t) => /^(t[1-5]|g[1-6])(?![0-9])/.test(String(t)));
+  if (diagnosticOnly.length) throw new Error(`selfImprove.ab.tasks không được chứa bài chẩn đoán t1–t5/g1–g6 (D7): ${diagnosticOnly.join(', ')}`);
+  const { analyst, author, runner } = si.roles;
+  if (analyst === author || analyst === runner || author === runner) throw new Error('selfImprove.roles: ba vai analyst, author, runner phải đôi một khác nhau (tách vai, B-19 §4)');
 
   const abs = (p: string) => (path.isAbsolute(p) ? p : path.join(root, p));
   const prefix = String(cfg.taskPrefix ?? '').trim().toUpperCase();

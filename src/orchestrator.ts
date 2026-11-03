@@ -43,6 +43,7 @@ import { subtaskHistory, type AgentHistory } from './estimate.js';
 import { buildRepoMap } from './repomap.js';
 import { chooseLane, forcedLane, laneSignals, type LaneSignals } from './lane.js';
 import { parseIncidentLog } from './incident.js';
+import { onLog as selfImproveOnLog } from './selfimprove.js';
 import { modelForDifficulty, scoreDifficulty } from './difficulty.js';
 import { cappedDone } from './runtimes/api.js';
 import { isCheckCommand, runCheckCommand, toolsFor } from './tools/workspace.js';
@@ -1969,7 +1970,8 @@ export class Orchestrator {
                   // B-03: nhật ký sự cố có cấu trúc → LogStore (che PII/bí mật ở đó); không có mục thì parsed=false, items=[] và không ném lỗi
                   const inc = parseIncidentLog(r.text);
                   const rounds = run.gateFixRoundsUsed ?? 0;
-                  this.d.logs.write({ level: 'info', kind: 'revise.incident', msg: `${task.id} ${st.id}: nhật ký sự cố vòng ${attempt + 1} — ${inc.parsed ? `${inc.items.length} mục` : 'không có mục đọc được'}`, taskId: task.id, department: dept.id, agentId: agent.id, subtaskId: st.id, phase: 'revise', data: { taskId: task.id, subtaskId: st.id, round: attempt + 1, items: inc.items, b02: { blocked: rounds > 0, rounds }, parsed: inc.parsed } });
+                  const incEntry = this.d.logs.write({ level: 'info', kind: 'revise.incident', msg: `${task.id} ${st.id}: nhật ký sự cố vòng ${attempt + 1} — ${inc.parsed ? `${inc.items.length} mục` : 'không có mục đọc được'}`, taskId: task.id, department: dept.id, agentId: agent.id, subtaskId: st.id, phase: 'revise', data: { taskId: task.id, subtaskId: st.id, round: attempt + 1, items: inc.items, b02: { blocked: rounds > 0, rounds }, parsed: inc.parsed } });
+                  if (this.d.config.selfImprove?.enabled) selfImproveOnLog(incEntry, task, { cfg: this.d.config.selfImprove, logs: this.d.logs, dataDir: this.d.config.dataDir, root: this.d.config.root }); // B-19 bước 1
                 }
               }
               run.revising = run.revising?.filter((id) => id !== st.id);
