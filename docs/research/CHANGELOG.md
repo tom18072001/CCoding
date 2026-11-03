@@ -5,6 +5,25 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 2 (T-20261103-101337-870, 3/11/2026) — S5 (@data-scientist): (c) cổng như bộ phát hiện lỗi, κ MAST, phân xử
+
+- **`analysis/agreement.mjs`:** cảnh báo "nghịch lý κ" đa lớp chỉ khi lớp lớn nhất của tham chiếu hoặc dự đoán > 0,9 (theo duyệt thiết kế điểm 3; trước đó áp cả cận dưới 0,1); PABAK đa lớp giữ k cố định khi bootstrap (`kFixed`); thêm `clopperPearson`, `minPositives`, bảng C-0…C-3 (cổng, cỡ mẫu recall) và M-0…M-4 (κ MAST), `--fill`. Bảng A-0…A-3, G-0 không đổi. `agreement.test.mjs`: 12 → 16 test.
+- **`analysis/agreement.md`:** hoàn tất §(c) (định nghĩa chốt trước khi tính; kết quả; cỡ mẫu) và §MAST (đối chiếu commit, κ, PABAK, CI theo C-xx, phân xử, giới hạn).
+- **Mới:** `analysis/mast-labels-final.csv` (49 nhãn cuối, 13 chỗ lệch phân xử kèm lý do).
+- **`challenges.md`:** thêm cột "FM chi tiết" (49 dòng, sau cột Mã); cập nhật đoạn "Phân nhóm" (mục 0), ghi chú dưới bảng đếm mục 3, và P-14 (xử lý phần lớn, ghi phần còn lại). Tiêu đề mục 1.1–1.4 và bảng đếm theo tiêu đề **giữ nguyên**.
+- **`improvement-backlog.md`:** thêm **B-12** (đề xuất đo recall của cổng bằng bộ bài cài lỗi; không chạy).
+- **`facts.json`:** ngoại lệ của `improvement-backlog.md` đổi dòng 277 → 278 (hàng B-12 ở §0 làm lệch một dòng); `consistency-check.mjs` đạt lại (37 tệp).
+- **Chưa sửa (ngoài phạm vi, còn nói "một người gán nhãn"):** `paper/paper.md` (bảng giới hạn, ~dòng 377), `publication-plan.md` (B3, D9), `presentation-notes.md`, `self-improvement/design.md`.
+
+## Vòng 4, gói 2 (T-20261103-101337-870, 3/11/2026) — S2 (@literature-researcher): sổ mã MAST và thống nhất trích dẫn
+
+- **Mới:** `analysis/mast-codebook.md`: 14 kiểu lỗi FM-1.1…FM-3.3 (5 + 6 + 3) theo MAST v3 Mục 4/Hình 1, kèm INF, NA, quy tắc chọn một nhãn; **không chứa nhãn C-xx**. Viết trước khi sửa trích dẫn.
+- **`related-work.md`:** §2.12 viết lại sau khi đọc HTML v3 (100.000/160.349 ký tự đầu): mỗi số có mục/bảng. Đã khớp: 14 kiểu/3 nhóm, κ người–người 0,88 (Mục 3.2, "in the final rounds"), o1 few-shot 0,94/0,77/0,833/0,80/0,77 (Bảng 2), ChatDev +9,4 % và +15,6 % (Mục 1/4/5.3; Phụ lục H chưa đọc). **Lệch ghi lại:** Mục 1 gán +9,4 % cho đổi quy trình (CEO quyết định cuối), Mục 4 gán cho đặc tả vai trò; Bảng 2 chỉ có hai hàng (o1, o1 few-shot), không có hàng "zero-shot" riêng. §2.14 Anthropic: đã khớp ≈4×, ≈15× so với chat, 80 % phương sai (BrowseComp), +90,2 % (nội bộ, so Opus 4 đơn), coding ít việc song song (mục "Benefits of a multi-agent system"); thêm đoạn liên hệ hướng với B0/A0-sonnet ×5,68 và làn đơn B7 ×2,50 kèm 5 giới hạn. Thêm nhật ký Q16, F5–F10; sửa dòng F1 và phần "Mức đọc".
+- **Nơi xuất bản MAST:** arXiv không ghi venue; ML Anthology ghi NeurIPS 2025; OpenReview bị chặn nên không kiểm. Thống nhất ở `related-work.md`, `references-v2.md`, `paper.md`, `challenges.md`: "NeurIPS 2025" gắn `[V-thứ cấp]`, **bỏ "vol. 38"** (không nguồn nào đã mở xác nhận) và không ghi track; URL chính là trang arXiv v3.
+- **URL Anthropic:** một URL duy nhất `https://www.anthropic.com/engineering/multi-agent-research-system` ở `related-work.md`, `references-v2.md`, `paper.md`. URL dạng `…/built-…` (vòng 1) và tiền tố `research` (BRIEF-2) bỏ. Công cụ không xác nhận canonical. `publication-plan.md` và `BRIEF-2.md` (ngoài phạm vi S2) vẫn dùng tiền tố `research`.
+- **`paper.md`:** câu "chỉ dùng tên ba nhóm vì chưa đọc toàn văn" (§ Phân tích lỗi) đổi thành dùng tên 14 kiểu theo v3 và sổ mã. Phần nói "một người gán" (dòng bảng giới hạn, §thách thức) **không sửa**: thuộc S5.
+- **Không sửa:** bảng C-xx và cột FM, P-14 (`challenges.md`) — việc của S5.
+
 ## Gói 3 (T-20261103-021358-275, 3/11/2026)
 
 - **S1 (@data-scientist):** `analysis/prereg-tests.mjs` (+ `prereg-tests.test.mjs`, 13 ca), `analysis/round3-tables.md`, `analysis/excluded-round3.csv`, `analysis/analyze-reconcile.md`: loại lượt Q/L/T (0/197), TOST B-01 trên t1–t5, H5 theo cặp cùng cửa sổ, đối chiếu `analyze.mjs`. Commit 1 (script) `f530e89`, commit 2 (kết quả) `3793f95`.

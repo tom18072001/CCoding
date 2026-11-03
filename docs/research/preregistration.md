@@ -1,5 +1,6 @@
-# Đăng ký trước giả thuyết — bản 2.1 (khóa có điều kiện)
+# Đăng ký trước giả thuyết — bản 2.2 (khóa có điều kiện)
 
+> **Bản 2.2 (3/11/2026, @methodologist, hạng mục S3 của T-20261103-101337-870):** chỉ **thêm** §5.1 (phân tích phụ/khám phá ngoài họ Holm cho bộ chấm và cổng chất lượng: (a), (b), (c), κ MAST) và dòng V4-02 ở §9. Không đổi giả thuyết, ngưỡng, họ Holm hay phép kiểm nào của v2.1; các chỗ ghi "v2.1" bên dưới vẫn đúng cho phần đó.
 > Phân loại dữ liệu: **Nội bộ** (benchtest trên bài tổng hợp, không có DLCN). Bản 1.0: @methodologist, nhiệm vụ T-20261102-134405-b2c (S2), 2/11/2026. Bản 2.0: @methodologist, hạng mục S4 (R6) của nhiệm vụ T-20261102-175854-65c, 2/11/2026. Bản 2.1: @methodologist, hạng mục S1 (F1) của nhiệm vụ T-20261102-183435-da7, 2/11/2026 (sửa lỗi major của review gói 2: H1, H2 không kiểm định được).
 > Trạng thái: **v2.1, khóa có điều kiện** (xem §8). Có hiệu lực khi (i) commit gộp có hash điền vào §8 và (ii) các SR P0 của `suite-review.md` mà từng giả thuyết đang chờ (cột "Khóa" ở §3.1) được đóng hoặc được ghi vào §9. Sau khóa chỉ sửa bằng bảng §9, không sửa lặng lẽ. Nếu một SR P0 làm đổi phép kiểm hay ngưỡng thì ghi **v2.1** vào `CHANGELOG.md`, không cần một vòng đăng ký mới.
 
@@ -305,7 +306,28 @@ Ngoài ba tiêu chí này: lượt `status = 'error'` kèm ENOENT (thiếu `repo
 **Mô tả/thăm dò (không ra quyết định):** H8, H9, H10; B02-G, B02-Q, B02-H8b. Bài chạm trần ở pilot chỉ vào phân tích thời gian/token (§2.7).
 Thứ tự báo cáo: Holm {H3, H6} → H1/H2 (ước lượng) → H7 → H5/H4 → B-01 → B-02 → H8–H10 → ĐK-P1–P9 (H1′/H2′ chỉ khi khóa).
 
-**Phân tích khám phá** (gắn nhãn "khám phá"): (1) kết quả theo từng bài và theo loại bài; (2) độ nhạy: không loại lượt nào; chỉ loại Q; loại lượt cực trị; (3) so với A0-opus, B1–B5, B3 (nếu có); (4) USD ước tính sau SR-02; (5) `byPhase` của arm B (phân rã chi phí theo pha), tỉ lệ vòng sửa; (6) giám khảo cặp (`pairwise.mjs`) cho design, requirements, research: **chỉ báo cáo kèm giới hạn mù** (§6); (7) xu hướng theo thứ tự chạy, `window` đánh số; (8) gộp với harness cũ chỉ cho mô tả và độ nhạy (`run-plan.md` §6.2); (9) H10 điều chỉnh loại bài; (10) mọi con số cho `token-analysis.md` dẫn từ `token-analysis.mjs`.
+**Phân tích khám phá** (gắn nhãn "khám phá"): (1) kết quả theo từng bài và theo loại bài; (2) độ nhạy: không loại lượt nào; chỉ loại Q; loại lượt cực trị; (3) so với A0-opus, B1–B5, B3 (nếu có); (4) USD ước tính sau SR-02; (5) `byPhase` của arm B (phân rã chi phí theo pha), tỉ lệ vòng sửa; (6) giám khảo cặp (`pairwise.mjs`) cho design, requirements, research: **chỉ báo cáo kèm giới hạn mù** (§6); (7) xu hướng theo thứ tự chạy, `window` đánh số; (8) gộp với harness cũ chỉ cho mô tả và độ nhạy (`run-plan.md` §6.2); (9) H10 điều chỉnh loại bài; (10) mọi con số cho `token-analysis.md` dẫn từ `token-analysis.mjs`; (11) bốn phân tích đo bộ chấm và cổng ở §5.1 (thêm ở bản 2.2).
+
+### 5.1 Phân tích phụ/khám phá ngoài họ Holm: bộ chấm và cổng chất lượng như bộ phân loại (thêm ở bản 2.2)
+
+**Vị thế.** Bốn phân tích dưới đây là **phụ/khám phá**: không p, không ngưỡng bác bỏ, **không vào họ Holm**, không đổi K của §2.5, không dùng để xác nhận hay bác bỏ giả thuyết nào ở §3. Chúng được **thêm sau khi đã bắt đầu thu dữ liệu**, theo yêu cầu của giám đốc ngày 3/11/2026 (V4-02, §9). Mọi phân tích **gộp mọi arm** và không in điểm theo arm (giữ §4: không phân tích giữa chừng). Nhãn người dùng ở (b) và κ MAST không phải dữ liệu của lượt chạy. Công cụ: `analysis/agreement.mjs` (bản đã duyệt ở `analysis/agreement.md` §Duyệt thiết kế); tính lại bằng `--check`.
+
+**Thước đo chung.** Ma trận nhầm lẫn; Accuracy; Precision, Recall, F1 của lớp dương (nhị phân) hoặc macro-F1 (nhiều lớp); Cohen's κ; prevalence; PABAK. Luôn in **số dương thật và số mẫu**. Công thức ở `agreement.md` §Công cụ.
+
+**Lấy mẫu lại và seed.** CI bootstrap phân vị 95 %, B = 2000, seed **20261103** (hằng `SEED`), B lấy lại **theo `runId`** (lượt chạy), không theo mục: các mục và các lần cổng quyết định trong cùng một lượt tương quan. Ngoại lệ duy nhất: κ MAST lấy lại **theo C-xx** (mỗi C-xx một đơn vị, **không có cấu trúc lượt**). Bản lấy mẫu mà thống kê không xác định (κ khi pe = 1) bị bỏ và số hợp lệ được báo.
+
+**Quy tắc cảnh báo prevalence ("nghịch lý κ").** Nhị phân: khi prevalence của tham chiếu **hoặc** tỉ lệ dương dự đoán > 0,9 hoặc < 0,1 thì in cảnh báo kèm PABAK và khớp thô; **không đọc κ riêng lẻ**, báo PABAK cùng κ. Đa lớp: chỉ cảnh báo khi lớp lớn nhất của tham chiếu hoặc của dự đoán > 0,9 (cận dưới 0,1 không có nghĩa khi có ~16 nhãn). Ngưỡng 0,1/0,9 là quy ước, không phải định lý.
+
+| | Câu hỏi | Dữ liệu và quy tắc | Đơn vị lấy mẫu lại |
+|---|---|---|---|
+| **(a)** | Judge và regex của bộ chấm checklist khớp nhau đến đâu? | Chỉ dòng a1/r1 **đã có judge** trong ảnh chụp 276 dòng (`838a5f1`, sha256 `85db4ddb…`). Chấm lại bằng regex trên artifact đã lưu, **không gọi LLM**. Ref = judge, pred = regex, lớp dương = mục đạt. Báo ở **mức từng mục checklist** và gộp. Báo số dòng bị loại và lý do. Là **độ khớp**, không phải độ đúng | `runId` |
+| **(b)** | Judge và regex đúng đến đâu so với người? | **Chỉ chuẩn bị** (`gold-sheet.csv`, ~60 mục phân tầng bài × mục, ẩn arm). **Không báo κ, Accuracy, Precision, Recall hay F1** cho bộ nhãn vàng khi chưa có nhãn người; nhóm không gán nhãn vàng thay giám đốc. Nếu giám đốc gán: ref = nhãn người, `?` loại và đếm riêng, báo thêm độ nhạy coi `?` là 0 | `runId` (mã lượt L01-L12 của khóa) |
+| **(c)** | Cổng chất lượng phát hiện lượt lỗi tốt đến đâu? | **Dương thật** của một lượt: test ẩn < 100 % **hoặc** lệnh kiểm tra còn đỏ ở trạng thái cuối. **Dự đoán dương**: B-02, B-10 hoặc CTO ghi "không đạt". Lớp dương = lượt lỗi. Gộp mọi arm, chỉ dòng thuộc ảnh chụp 276 dòng (không đọc dữ liệu sau). **Tên trường dùng được chốt và ghi vào `agreement.md` §(c) trước khi mở dữ liệu.** Đơn vị phân tích chính: lần cổng quyết định, mang nhãn thật của lượt; độ nhạy: một cặp mỗi lượt. **Ngưỡng: nếu có < 10 lượt dương thật thì ghi "recall chưa ước lượng được"** (đếm theo lượt, không theo lần quyết định) và không in recall điểm. B-12 chỉ là đề xuất ở backlog, không chạy | `runId` |
+| **κ MAST** | Hai người gán độc lập có cùng nhãn FM cho C-01…C-49 không? | 49 thách thức, nhãn từ `analysis/mast-codebook.md` (14 FM, INF, NA); S3 và S4 gán độc lập (`mast-labels-A.csv`, `mast-labels-B.csv`), phân xử sau. Báo κ trên nhãn chi tiết và, như độ nhạy, trên nhóm (FM-1/2/3, INF, NA). Mẫu 49, nhiều lớp thưa: CI rộng; ghi như vậy | C-xx (không có cấu trúc lượt) |
+
+**Lưu ý hiểu kết quả (c).** Cổng có thể kích hoạt vòng sửa, nên nhãn thật ở **cuối** lượt đã bị cổng can thiệp; precision của (c) là **cận dưới** (cổng đúng nhưng đã chữa lỗi vẫn bị tính dương giả). Recall có thể bị thổi phồng vì cùng lý do. Không suy ra "cổng tốt/xấu" từ một con số.
+
+**Điều gì không làm.** Không dùng (a)-(c) để chọn arm hay sửa bộ chấm; không tạo thêm giả thuyết; không chạy lượt mới; không đọc dữ liệu sau ảnh chụp 276 dòng.
 
 ## 6. Đe dọa tính hợp lệ
 
@@ -418,6 +440,12 @@ Phần khác của `run-plan.md` đã đối chiếu nhưng không tìm thấy l
 |---|---|---|---|---|
 | V4-01 | §3.2 B-01 và `improvement-backlog.md` §3.4: chi phí (token có trọng số) và thời gian trong ±15 % của A0-sonnet (R ∈ [0,85; 1,15], TOST bootstrap 90 %) | **ĐỀ XUẤT, chờ giám đốc duyệt:** chỉ tiêu chặng sau B-11 là R ≤ 1,3 (token có trọng số và thời gian); ±15 % giữ làm mục tiêu dài hạn. **Nhãn: post-hoc — sửa sau khi đã thấy dữ liệu B7** (B7/A0 = ×2,498 token, ×2,566 thời gian, bác bỏ B-01 theo `results-round3.md` §5). Lý do: phân rã `b7-cost-decomposition.md` cho thấy cần cắt ≥ 80,1 % chênh lệch để đạt ×1,3 và ≥ 90,1 % để đạt ±15 % (chỉ báo thô, xem B-11.3; T-7, tính ở `improvement-backlog.md` §5 B-11.3 và B-11.4), trong khi phần chi phí cố định của một lượt gọi và của phần thực thi không thể bỏ nhưng chưa đo được (T-6, §Giới hạn) | B-01 (a), (b) cho **dữ liệu B7′** (§5 B-11.5), xét trên **arm chính** (arm có mức cắt cao nhất đã duyệt trong B7c/B7cb/B7cab); các arm còn lại mô tả. Không áp lại cho dữ liệu vòng 3 | Phán quyết vòng 3 "bác bỏ ±15 %" giữ nguyên, không đổi lại. Chỉ tiêu ×1,3 chỉ có hiệu lực cho lượt chạy B7′ sau khi (i) giám đốc duyệt và (ii) kế hoạch B7′ được commit (khóa) trước lượt đầu; kết quả B7′ gọi là "B-01′ (post-hoc target)", không gọi là xác nhận B-01. Tác giả đề xuất đã xem dữ liệu B7 (nguồn S1), nên không đáp ứng điều kiện trước-khi-xem của §2.4 cho chính con số 1,3 |
 
+### Sai lệch vòng 4 gói 2 (đo bộ chấm và cổng chất lượng; ghi 3/11/2026)
+
+| Mã | Đăng ký nói gì (§) | Thực tế / đề xuất | Phép bị ảnh hưởng | Cách xử lý |
+|---|---|---|---|---|
+| V4-02 | §5 (v2.1): phân tích phụ/khám phá liệt kê (1)-(10); không có phân tích nào đo độ tin cậy của bộ chấm hay cổng | **Thêm sau khi đã bắt đầu thu dữ liệu, theo yêu cầu của giám đốc ngày 3/11/2026:** §5.1 (bản 2.2) gồm (a) judge so với regex, (b) bộ nhãn vàng (chỉ chuẩn bị), (c) cổng chất lượng như bộ phát hiện lỗi, và κ giữa hai người gán nhãn MAST cho C-01…C-49. Nhãn: **không phải tiên nghiệm** (tác giả đã thấy 276 dòng ở bước 4, và đã đọc bảng điểm vòng 3) | Không phép nào của §3 | Phân tích phụ/khám phá, **ngoài họ Holm**, không p, không đổi K; kết quả gọi là "khám phá", không là xác nhận. Gộp mọi arm; seed 20261103; bootstrap theo `runId` (κ MAST theo C-xx); kết luận chỉ mô tả |
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.
@@ -427,6 +455,7 @@ Phần khác của `run-plan.md` đã đối chiếu nhưng không tìm thấy l
 
 ## Lịch sử bản
 
+- **v2.2 (3/11/2026, S3 của T-20261103-101337-870, @methodologist):** thêm §5.1 (bốn phân tích phụ/khám phá ngoài họ Holm cho bộ chấm và cổng: (a), (b), (c), κ MAST; thước đo, đơn vị lấy mẫu lại, seed 20261103, quy tắc cảnh báo prevalence, định nghĩa dương thật/dự đoán dương của (c), ngưỡng "recall chưa ước lượng được" < 10 lượt dương thật) và dòng V4-02 ở §9. Không đổi giả thuyết, ngưỡng hay họ Holm. Duyệt thiết kế `agreement.mjs` ở `analysis/agreement.md`.
 - **v2.1 (bổ sung gói 2c, 2/11/2026, S1 của T-20261102-190653-75b; cùng v2.1, không tạo bản mới):** sửa major H6 chạm trần của review gói 2b: tập bài khai báo, định nghĩa chạm trần cả hai arm theo từng cặp, quy tắc suy biến (p = NA), ngưỡng ≥ 3 bài (§2.5, §2.7, §3.1, §5, §6, §8, §9 mục 6); H3 chuyển sang hoán vị hai mẫu chính xác C(20, 10), p_min 1/184 756; cột "Phép kiểm" H3, H6 ghi họ Holm K = 2 nếu SR-26 xong; `suite-review.md` SR-26 viết lại và SR-25 test 9 bỏ câu so sánh T\* − margin.
 - **v2.1 (2/11/2026, S1/F1 của T-20261102-183435-da7):** H1, H2 ra khỏi họ Holm, thành ước lượng kèm CI 95 % (§2.4, §2.5); họ Holm còn {H3, H6}, K = 2, kèm bảng p_min (§2.5); thêm §2.6 họ H1′/H2′ sau 5/11 (hoán vị theo lượt phân tầng theo bài, p_min = 1/∏ C(2r_b, r_b), **dự kiến, chưa khóa**, hai điều kiện khóa, trạng thái hiện tại); thêm §2.7 quy tắc trần từ pilot; cập nhật §1, §3.1, §5, §6, §8, §9; SR-25 và SR-26 ở `suite-review.md` §5. Sửa theo review gói 2b: họ {H3, H6} có điều kiện SR-26 và phương án lùi K = 0 (§2.5, §9 mục 5); H2′ kiểm với biên +0,05 (tham số `margin` của SR-25); điều khoản trần cho s1 (§2.7); sửa tham chiếu §9 mục 3. Bổ sung S3/F2 (cùng v2.1, không tạo bản mới): quy tắc chạy lại bằng `rep` mới ở §4.1 (giống từng chữ với `run-plan.md` §5.0); ngoại lệ tự động hóa Q/T ở §4.1 (người quyết định chỉ thấy cờ); thống nhất tên `ĐK-P_i` (§3.3 và mọi tham chiếu) với `improvement-backlog.md` §6; giám khảo cặp tách thành SR-08a (P0) và SR-08b (P1).
 - **v2.0 (2/11/2026, S4/R6):** hệ chính đổi sang H1–H10 của bộ đo giám đốc; H1–H9 bản 1 đổi mã ĐK-P1–P9, bảng ánh xạ P↔H; thêm B-01 (TOST ba đại lượng) và B-02 (B02-M/G/Q/H8b); §4.3 tiêu chí Q/L/T cho bộ mới; §6 đe dọa từ `suite-review.md`; §8 chỗ cho hash commit merge; §9 các SR P0 chờ. Chi tiết: `CHANGELOG.md`.
