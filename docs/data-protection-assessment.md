@@ -557,7 +557,7 @@ Khuyến nghị: giữ `stablePrefix` tắt với dự án Bảo mật/Hạn ch�
 | PRE-02 | Một phần | Lệnh agent hiện chạy dưới tài khoản Windows của người dùng; sandbox thu hẹp quyền này. Không dùng tài khoản quản trị cho agent. `srt` Windows tạo tài khoản `srt-sandbox` (S-03) — nếu dùng sau này phải đánh giá lại | Nên có |
 | PRE-03 | Một phần | Bật BitLocker cho ổ chứa `data/`, `workspaces/` (như cũ). Nếu worktree chuyển vào đĩa ảo WSL (ext4.vhdx) thì cũng phải được mã hóa: **cần kiểm** | **Bắt buộc** |
 | PRE-04 | Một phần | Mục tiêu chính: hệ điều hành chặn đọc `.env` kể cả khi regex lớp 1 bị lách (nhóm E1). `sandbox.deny` che bí mật/PII qua `LogStore` | Bắt buộc |
-| PRE-05 | Một phần | Mục tiêu chính: chặn mạng ra ngoài cho lệnh agent (trước đây ghi "Nâng cao"). Mức A: allowlist rỗng; mức B: đúng 3 domain. Rủi ro dư tồn: domain fronting | Nên có |
+| PRE-05 | Một phần | Mục tiêu chính: chặn mạng ra ngoài cho lệnh agent (trước đây ghi "Nâng cao"). Mức A: allowlist rỗng + `network.strictAllowlist: true` bắt buộc (thiếu thì ở `bypassPermissions` host ngoài allowlist vẫn qua — S-01; cần Claude Code ≥ v2.1.219); mức B: đúng 3 domain + `strictAllowlist`. Rủi ro dư tồn: domain fronting | Nên có |
 | PRE-06 | Một phần | Kiểm soát mục đích: ghi chỉ trong worktree + thư mục tạm; `failIfUnavailable: true`; từ chối chạy khi nền tảng không hỗ trợ | Bắt buộc |
 | PRE-07 | N/A | Không thêm API cục bộ | — |
 | DET-01 | Một phần | Thêm sự kiện `sandbox.deny`, `sandbox.unavailable`; trường `data` chỉ `{ tool, rule, backend }` | Nên có |

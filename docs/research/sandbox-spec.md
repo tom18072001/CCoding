@@ -7,7 +7,7 @@ Không sửa `src/`. Mọi con số ngưỡng ở §f là **giả định khai b
 
 ## Tóm tắt quyết định
 
-- **Lớp 1 giữ nguyên** (`claude-guard.ts`, `guard-paths.ts`). **Lớp 2 = sandbox**, khóa `runtimes.claude-cli.sandbox.enabled`, mặc định **`false`** cho tới khi giám đốc duyệt (D4).
+- **Lớp 1 giữ nguyên** (`claude-guard.ts`, `guard-paths.ts`). **Lớp 2 = sandbox**, khóa `runtimes.claude-cli.osSandbox.enabled` (tên `osSandbox` vì `sandbox` đã dùng cho Codex ở `config.ts:51`), mặc định **`false`** cho tới khi giám đốc duyệt (D4).
 - Tài liệu chính thức nói Claude Code **không sandbox lệnh trên Windows native** (S-01, S-02, C2). Vì vậy nếu bật khóa mà nền tảng không có sandbox thì CCoding phải **từ chối chạy** (fail-closed), không để "bật mà không có tác dụng" (C1).
 - Linux (bench cloud): dùng sandbox có sẵn của Claude Code (bubblewrap) qua `--settings` — **mức A**; nếu cần bọc cả hook và công cụ tệp thì **mức B** (`srt claude`/container).
 - Windows 11 Pro của giám đốc: **WSL2 + sandbox có sẵn** là ứng viên chính vì là đường duy nhất tài liệu chính thức hỗ trợ (S-02, C17). **AppContainer/Job Object + ACL** là phương án dự phòng, chỉ làm nếu spike WSL2 không đạt (§c, cổng quyết định G1). Không loại sớm phương án nào (D1).
@@ -53,7 +53,7 @@ Tiêu chí: **W** = chạy được trên Windows 11 Pro qua herdr + claude-cli;
 | **Windows 11 Pro (giám đốc), herdr + claude-cli** | **Ứng viên chính: WSL2 + sandbox có sẵn (mức A).** CCoding trên Windows spawn `wsl.exe … claude …` thay cho `claude` khi khóa bật. **Dự phòng: AppContainer/Job Object + ACL theo worktree**, chỉ triển khai nếu cổng G1 không đạt. Native Windows + `sandbox.enabled` + không có WSL → **từ chối chạy** | Duy nhất đường tài liệu chính thức hỗ trợ (S-02, C17); native không sandbox (S-01). Phương án tự làm cao công, không có allowlist domain nếu thiếu WFP (W2, W3, W10) | **Cổng G1** (spike D10, §d.0): WSL2 phải (i) chạy được `claude -p` đăng nhập sẵn [CCK], (ii) qua bộ đối kháng E1–E4, (iii) không làm `checkCommands` hỏng (R1–R5), (iv) đạt ngưỡng §f. Không đạt (i) hoặc (ii) → chuyển AppContainer; báo giám đốc, không tự đổi |
 | **Windows native — `srt` alpha** | **Chỉ theo dõi**, không mặc định | README Windows alpha, mâu thuẫn S-02, Schannel ảnh hưởng `curl.exe` (S-03) | Xem lại khi S-02 ghi hỗ trợ Windows |
 | **Windows Sandbox** | **Loại** | Một phiên một lúc (W15); không allowlist domain (W16) | — |
-| **Chung** | Hook = lớp 1, luôn chạy. `sandbox.enabled: false` mặc định (D4). Khi bật: `failIfUnavailable: true` bắt buộc | C1: thiếu `failIfUnavailable` thì sandbox lỗi sẽ chạy không sandbox | Bật chỉ khi giám đốc duyệt, ghi lý do ở `ccoding.local.json` |
+| **Chung** | Hook = lớp 1, luôn chạy. `osSandbox.enabled: false` mặc định (D4). Khi bật: `failIfUnavailable: true` bắt buộc | C1: thiếu `failIfUnavailable` thì sandbox lỗi sẽ chạy không sandbox | Bật chỉ khi giám đốc duyệt, ghi lý do ở `ccoding.local.json` |
 
 ### Ngoại lệ mạng duy nhất (D3)
 
@@ -61,7 +61,7 @@ Tiêu chí: **W** = chạy được trên Windows 11 Pro qua herdr + claude-cli;
 |---|---|
 | Ngoại lệ | Chính tiến trình `claude-cli` kết nối tới `api.anthropic.com`, `claude.ai`, `platform.claude.com` |
 | Lý do | CCoding dùng phiên đăng nhập hiện có, **không** khóa API (`runtimes.claude-cli.useApiKey` mặc định false; `scrubEnv` bỏ biến khóa — `claude-cli.ts:215`). Đăng nhập OAuth và làm mới token cần `claude.ai` và `platform.claude.com`; gọi mô hình cần `api.anthropic.com` (C11, S-02) |
-| Cách giới hạn | Mức A: tiến trình `claude` chạy **ngoài** sandbox (C3), nên **không** cần mở domain nào cho lệnh con; `network.allowedDomains` giữ **rỗng** (C9). Mức B (bọc cả tiến trình): `allowedDomains` = đúng ba domain trên, `deniedDomains` ưu tiên, không dùng ký tự đại diện rộng (C10) |
+| Cách giới hạn | Mức A: tiến trình `claude` chạy **ngoài** sandbox (C3), nên **không** cần mở domain nào cho lệnh con; `network.allowedDomains` giữ **rỗng** (C9) **và bắt buộc `network.strictAllowlist: true`**. Lý do: trang chính thức S-01 ghi host ngoài allowlist "are handled by your permission mode… In bypassPermissions mode they are allowed without a prompt"; chỉ khi bật `strictAllowlist` proxy mới "refuses the connection in every permission mode". Mã hiện cho cấu hình `permissionMode` (`claude-cli.ts:151`, mặc định `acceptEdits`), nên thiếu khóa này thì nhóm T3/E3 có thể không bị chặn. Khóa đặt được qua `--settings` và cần Claude Code ≥ v2.1.219 (S-01) — spike G1 phải kiểm phiên bản CLI, thấp hơn thì fail-closed. Mức B (bọc cả tiến trình): `allowedDomains` = đúng ba domain trên, `strictAllowlist: true`, `deniedDomains` ưu tiên, không dùng ký tự đại diện rộng (C10) |
 | Không dùng | 9router, `ANTHROPIC_API_KEY`, bất kỳ khóa ngoài |
 | Rủi ro dư tồn | Proxy không giải mã TLS nên domain fronting có thể ra ngoài allowlist (C12); proxy chặn tên được phép nhưng phân giải về địa chỉ riêng/loopback (C13) |
 | Lưu ý | `WebFetch/WebSearch` (khi dự án bật `web`) không qua sandbox (C4); chúng vẫn dưới chính sách nhãn dữ liệu của CCoding, không thuộc phạm vi B-18 |
@@ -69,7 +69,7 @@ Tiêu chí: **W** = chạy được trên Windows 11 Pro qua herdr + claude-cli;
 ## (d) Điểm móc trong mã (chỉ mô tả — Dev làm ở D10)
 
 ### d.0 Spike 1 ngày trước khi viết mã (cổng G1)
-Trên máy giám đốc và một VM Linux giống image bench: chạy tay `claude -p` trong WSL2 với `--settings` có `sandbox.*`; ghi: đăng nhập dùng lại được không, `--settings` nhận khóa `sandbox` không (S-01 nêu `settings.json`; `--settings` chưa có câu trích riêng `[CCK]`), `denyRead` có nhận mẫu `.env*` hay phải đường dẫn tuyệt đối `[CCK]`, `node dist/tools/claude-guard.js` chạy trong WSL không (đường dẫn `C:/…` → `/mnt/c/…`), và số đo §f. Kết quả ghi vào `docs/research/sandbox-spike.md` (tệp mới).
+Trên máy giám đốc và một VM Linux giống image bench: chạy tay `claude -p` trong WSL2 với `--settings` có `sandbox.*`; ghi: đăng nhập dùng lại được không, `--settings` nhận khóa `sandbox` không (S-01 nêu `settings.json`; `--settings` chưa có câu trích riêng `[CCK]`; S-01 ghi `strictAllowlist` đặt được qua `--settings`, nên phần này đã xác nhận một phần), **phiên bản CLI ≥ v2.1.219** (cần cho `strictAllowlist`; thấp hơn thì không bật được), `denyRead` có nhận mẫu `.env*` hay phải đường dẫn tuyệt đối `[CCK]`, `node dist/tools/claude-guard.js` chạy trong WSL không (đường dẫn `C:/…` → `/mnt/c/…`), và số đo §f. Kết quả ghi vào `docs/research/sandbox-spike.md` (tệp mới).
 
 ### d.1 Danh sách điểm móc
 
@@ -77,10 +77,10 @@ Trên máy giám đốc và một VM Linux giống image bench: chạy tay `clau
 |---|---|
 | `src/config.ts:36–50` (`RuntimeConfig`) | Thêm trường `sandbox?: { enabled?: boolean; platformBackend?: 'auto' \| 'wsl2' \| 'appcontainer'; extraAllowedDomains?: string[]; denyRead?: string[] }`. **Chú ý:** `sandbox?: string` đã có ở dòng 51 cho Codex (`--sandbox`) — dùng tên khác, vd. `osSandbox`, để không đụng. Mặc định `undefined` = tắt |
 | `src/config.ts` (khối mặc định runtimes, gần chỗ `denyCommands: []` ở dòng 347 của `tools`) | Mặc định `osSandbox.enabled = false`; thêm vào bản đồ cấu hình và kiểm tra tệp cấu hình hợp lệ |
-| `src/runtimes/claude-cli.ts:145–188` (`buildClaudeArgs`) | Nếu bật: trộn khóa `sandbox` vào đối tượng `settings` ở dòng 158 (cùng chuỗi `--settings`): `enabled: true`, `failIfUnavailable: true`, `allowUnsandboxedCommands: false`, `filesystem.allowWrite = [root]`, `filesystem.denyRead` cho `.env*`, `network.allowedDomains = []` (C6). Hàm vẫn **thuần**, thêm tham số, không spawn |
+| `src/runtimes/claude-cli.ts:145–188` (`buildClaudeArgs`) | Nếu bật: trộn khóa `sandbox` vào đối tượng `settings` ở dòng 158 (cùng chuỗi `--settings`): `enabled: true`, `failIfUnavailable: true`, `allowUnsandboxedCommands: false`, `filesystem.allowWrite = [root]`, `filesystem.denyRead` cho `.env*`, `network.allowedDomains = []`, `network.strictAllowlist: true` (C6; S-01 — thiếu khóa này thì ở `bypassPermissions` host ngoài allowlist vẫn qua). Hàm vẫn **thuần**, thêm tham số, không spawn |
 | `src/runtimes/claude-cli.ts:203–221` (`run`) | Trước `runProcess`: gọi hàm kiểm `sandboxAvailable()`; nếu bật mà không có (Windows native không WSL2) → trả `error` tiếng Việt, **không** chạy (fail-closed) và ghi `sandbox.unavailable`. Windows + WSL2: đổi `cmd` thành `wsl.exe` và ánh xạ `cwd`/`CCODING_GUARD.root`/đường dẫn hook sang dạng WSL |
 | `src/runtimes/claude-cli.ts:157` (đường dẫn hook `claude-guard.js`) | Khi chạy trong WSL: đổi đường dẫn thành `/mnt/<ổ>/…` hoặc cài bản `dist` trong WSL. Hook phải vẫn chạy (lớp 1) |
-| `src/runtimes/claude-cli.ts:36–126` (`ClaudeStreamParser`, `tool_result` ở dòng 93–95) | Nhận diện kết quả lệnh bị sandbox từ chối (tin nhắn lỗi của Claude Code/hệ điều hành) và ghi sự kiện `sandbox.deny`. Mẫu chuỗi chính xác `[CCK]` — Dev đo ở spike; nếu CLI không báo vi phạm rõ ràng thì ghi `sandbox.deny` theo `exit` lạ kèm `rule` = `unknown` |
+| `src/runtimes/claude-cli.ts:36–126` (`ClaudeStreamParser`, `tool_result` ở dòng 93–95) | Nhận diện kết quả lệnh bị sandbox từ chối (tin nhắn lỗi của Claude Code/hệ điều hành) và ghi sự kiện `sandbox.deny`. Điểm bắt đầu theo S-01: Linux/WSL2 báo `Read-only file system` khi ghi ngoài vùng cho phép; proxy trả HTTP 403 kèm lý do; kết quả lệnh nêu tên host bị chặn. Mẫu chuỗi đầy đủ vẫn `[CCK]` — Dev đo ở spike; nếu CLI không báo vi phạm rõ ràng thì ghi `sandbox.deny` theo `exit` lạ kèm `rule` = `unknown` |
 | `src/tools/claude-guard.ts:159–174` (`logGuardBlock`) làm khuôn | Thêm hàm kiểu `logSandboxDeny` cùng `LogStore(… redactSecrets, redactPii, hashChain)`; trường `data` chỉ `{ tool, rule, backend }` — không lệnh thô, không đường dẫn |
 | `src/runtimes/spawn.ts:87–103` (`runProcess`) | Không đổi hành vi mặc định. Chỉ cần hỗ trợ `cmd = wsl.exe` đi qua `resolveCommand` (đã có xử lý `.exe`) — kiểm tra bằng test |
 | `src/herdr.ts:406–408` (`agent-exec` trong pane) | Không đổi: sandbox bọc ở bước `ClaudeCliRuntime.run` bên trong `agent-exec` (`src/cli.ts:876`), nên mọi đường herdr hay không-herdr đều như nhau. Kiểm: hai pane song song cùng chạy sandbox (WSL2 cho phép nhiều tiến trình, khác Windows Sandbox — W15) |
@@ -116,10 +116,11 @@ Tệp đề xuất: `test/sandbox-adversarial.test.ts`.
 ### E3 — Mạng
 | Ca | Lệnh | Kỳ vọng |
 |---|---|---|
-| E3-1 | `node -e "require('https').get('https://example.com',r=>console.log(r.statusCode)).on('error',e=>console.log('ERR',e.code))"` | In `ERR …`; không có mã HTTP. (Dùng cổng loopback của máy chủ thử do test tự dựng để không gửi gì ra Internet thật) |
+| E3-1 | `node -e "require('http').get('http://127.0.0.1:<cổng máy chủ thử>/',r=>console.log(r.statusCode)).on('error',e=>console.log('ERR',e.code))"` (máy chủ thử do test dựng ngoài sandbox, không gửi gì ra Internet) | In `ERR …`; không có mã HTTP; máy chủ thử không ghi nhận kết nối |
 | E3-2 | `python3 -c "import socket;s=socket.socket();s.settimeout(3);s.connect(('127.0.0.1',<cổng máy chủ thử>))"` (máy chủ thử chạy **ngoài** sandbox) | Thất bại; máy chủ thử không ghi nhận kết nối |
 | E3-3 | `node -e` bỏ biến proxy khỏi môi trường rồi kết nối trực tiếp (`delete process.env.HTTPS_PROXY`) tới máy chủ thử | Thất bại — kết nối trực tiếp không có đường (C10; kiểu thử như C18) |
-| E3-4 | `getent hosts example.com` hoặc `nslookup` | Không phân giải được (hoặc bị proxy chặn); ghi nhận hành vi thực |
+| E3-4 | `getent hosts blocked.invalid` hoặc `nslookup blocked.invalid` (tên miền `.invalid` không ra Internet) | Không phân giải được (hoặc bị proxy chặn); ghi nhận hành vi thực |
+| E3-6 | Lặp E3-1 và E3-2 với `permissionMode = bypassPermissions` (và với mặc định `acceptEdits`), `strictAllowlist: true` | Vẫn thất bại ở cả hai chế độ (S-01: `strictAllowlist` chặn "in every permission mode"). Bản đối chứng **không** có `strictAllowlist` chỉ để ghi nhận hành vi, không tính vào tiêu chí |
 | E3-5 (D3) | Chỉ ở mức B: tiến trình `claude` kết nối được `api.anthropic.com`; `curl` tới domain thứ tư (máy chủ thử, tên bất kỳ) bị chặn | Kết nối API **thành công**; domain khác **thất bại** |
 
 ### E4 — Tiến trình con lách hook
@@ -140,7 +141,7 @@ Tệp đề xuất: `test/sandbox-adversarial.test.ts`.
 | R2 | `npm test` | Exit 0, số test bằng đối chứng |
 | R3 | `node docs/research/performance/scripts/token-analysis.mjs --check docs/research/performance/token-analysis.md` | Exit 0 như baseline |
 | R4 | `node --test bench/vs-claude/harness/stats.test.mjs` | Exit 0, 12 pass như baseline |
-| R5 | `node docs/research/scripts/consistency-check.mjs` | Exit 0, "Đạt: 41 tệp" như baseline |
+| R5 | `node docs/research/scripts/consistency-check.mjs` | Exit 0, số tệp "Đạt: N tệp" **bằng đối chứng chạy cùng máy, sandbox tắt** (không ghi cứng N) |
 | R6 | `claude -p` (prompt tầm thường) với phiên đăng nhập hiện có, mức đang chọn (A hoặc B) | Có kết quả mô hình; không lỗi mạng/xác thực (D3). Nếu mức B: dùng đúng ba domain |
 | R7 | Quy tắc hook vẫn hoạt động khi sandbox bật: chạy lại `test/claude-guard.test.ts` và `test/shell-policy-adversarial.test.ts` | Toàn bộ xanh như trước (lớp 1 không bị thay đổi) |
 | R8 | Khóa tắt (mặc định): `buildClaudeArgs` với `osSandbox` không đặt | Chuỗi `args`/`env` **bằng từng byte** với bản hiện tại (`test/sandbox-args.test.ts` so snapshot) |
@@ -148,7 +149,7 @@ Tệp đề xuất: `test/sandbox-adversarial.test.ts`.
 
 Các lệnh R3–R5 là lệnh kiểm tra của dự án nghiên cứu này; R1–R2 là `checkCommands` của repo CCoding theo `AGENTS.md`. Mọi lệnh ở mục R: so với **đối chứng cùng máy** (không dùng số cố định).
 
-**Tiêu chí đạt:** E1–E4 mỗi nhóm ≥ 5 ca (yêu cầu ≥ 2), 100% ca chế độ S bị chặn (trừ ca đối chứng E2-5, E3-5 phải thành công); R1–R9 đạt; số ca bỏ vì thiếu nền tảng phải được ghi và giải thích. Bộ test không chứng minh "an toàn" — chỉ là mẫu các cách lách đã biết; bằng chứng âm tính hạn chế (xem §g).
+**Tiêu chí đạt:** E1–E4 mỗi nhóm ≥ 5 ca (yêu cầu ≥ 2; E3 nay có 6 ca gồm E3-6), 100% ca chế độ S bị chặn (trừ ca đối chứng E2-5, E3-5 phải thành công); R1–R9 đạt; số ca bỏ vì thiếu nền tảng phải được ghi và giải thích. Bộ test không chứng minh "an toàn" — chỉ là mẫu các cách lách đã biết; bằng chứng âm tính hạn chế (xem §g).
 
 ## (f) Đo thời gian khởi động
 

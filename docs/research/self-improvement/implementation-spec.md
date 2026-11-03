@@ -3,6 +3,7 @@
 > Phòng Nghiên cứu · vòng 4, gói 7, hạng mục S2b (@research-lead) · 3/11/2026 · phân loại dữ liệu: **Nội bộ**.
 > Đầu vào: `design.md` §3–§6 (thiết kế 1.0), `holdout-and-sample-size.md` + `holdout-lock.json` (S2a), B-03 (`src/incident.ts`, `d9-implementation-2026-11-03.md` §3.3).
 > **Chỉ là đặc tả.** Chưa sửa `src/`, `bench/`, `agents/`; chưa chạy benchmark. Số dòng `tệp:dòng` đọc ở commit `2c7573a`; Dev tìm lại bằng tên hàm nếu lệch.
+> Bản sửa theo review S3 (3/11/2026): tách ba vai bằng khóa `roles` và CT-09/CT-18; ghi việc dùng lại bộ giữ lại là đe dọa tính hợp lệ, ngưỡng thay bộ theo số lần xác nhận (CT-19); nêu hệ quả báo giả của luật rollback (CT-20).
 
 ## 0. Tóm tắt cho Dev
 
@@ -24,13 +25,15 @@ selfImprove: {
   cluster: { minIncidents: number; minTasks: number }; // mặc định 3 và 2 (design.md §3 bước 3 — giả định, giám đốc chỉnh được)
   budgets: { analysisTokens: number; patchTokens: number; abScreenTokens: number; abConfirmTokens: number };
   holdoutLock: string;           // 'docs/research/self-improvement/holdout-lock.json'
-  ab: { screenRepeats: 3; confirmRepeats: 8; tasks: string[] }; // tasks phải trùng holdout-lock.json
+  ab: { screenRepeats: 3; confirmRepeats: 8; tasks: string[]; maxConfirmRunsPerLock: number }; // tasks phải trùng holdout-lock.json; maxConfirmRunsPerLock mặc định 3 (§2 điểm 5)
+  roles: { analyst: string; author: string; runner: string }; // mặc định 'methodologist', 'research-lead', 'data-scientist'; phải đôi một khác nhau (§4 điểm 4)
   monitorTasks: number;          // mặc định 3 (design.md §5.5)
   baselineTasks: number;         // mặc định 5 (design.md §5.5)
 }
 ```
 
 - `ab.tasks` không được chứa id có tiền tố `t1`…`t5` hoặc `g1`…`g6`. `loadConfig` phải ném lỗi tiếng Việt nếu vi phạm (test CT-04).
+- Ba khóa `roles` phải khác nhau từng đôi. `loadConfig` ném lỗi tiếng Việt nếu trùng (CT-18).
 - Ngân sách mặc định là **giả định** cần giám đốc chốt: `analysisTokens` 300 000; `patchTokens` 400 000; `abScreenTokens` 14 000 000; `abConfirmTokens` 38 000 000. Hai số A/B là ước SS-7 của S2a (11,8 triệu và 31,4 triệu) cộng khoảng 20 % dự phòng cho lượt hỏng và nạp lại cache.
 - `phases.incidentLog` của B-03 (`src/config.ts:166`, `:333`, mặc định bật) là nguồn dữ liệu cho bước 1. Nó **không** phụ thuộc `selfImprove.enabled`, và vòng này không đổi nó.
 
@@ -52,7 +55,12 @@ selfImprove: {
 2. **Cả hai** pha sàng lọc và xác nhận chạy trên bộ giữ lại.
 3. Kết luận chỉ lấy từ các lượt của pha xác nhận. Không gộp lượt sàng lọc vào.
 4. Thiết kế yêu cầu bộ giữ lại "chưa từng chạy với bất kỳ nhánh nào". Bộ của S2a đã từng chạy ở study-cloud. Phần bù: bộ này chưa từng dùng để chẩn đoán hay viết bản vá, và chưa có lượt nào chạy với prompt đã vá. Mọi sự cố sinh ra trong lượt A/B được gắn `source: ab.run` và **bị loại khỏi bước 2** (§3, bước 1), để bộ giữ lại không thành nguồn bản vá.
-5. Bộ giữ lại dùng lại được cho nhiều bản vá. Lý do là các bài không được dùng để viết bản vá. Đây là điểm nới so với "dùng một lần" của §5.4. Đổi lại, mọi hash phải khớp trước mỗi lần chạy, và cứ sau 5 bản vá đã qua xác nhận thì phải xét thay bộ (đề xuất; giám đốc chốt).
+5. Bộ giữ lại dùng lại được cho nhiều bản vá. Đây là điểm nới so với "dùng một lần" của §5.4, nên phải ghi là **đe dọa tính hợp lệ** trong mọi báo cáo A/B. Các bài không dùng để viết bản vá (điểm 4), nhưng mỗi lần chạy xác nhận thì kết quả trên đúng 10 bài này lại được nhìn thấy. Qua nhiều vòng, việc chọn bản vá nào đi tiếp có thể dần khớp với đặc điểm riêng của bộ (tối ưu thích nghi theo bộ giữ lại), và CI của từng lần không tính tới việc đã chọn nhiều lần. Biện pháp:
+   - Mọi hash phải khớp trước mỗi lần chạy (CT-12).
+   - Ngưỡng xét thay bộ tính theo **số lần chạy xác nhận** trên cùng `lockSha256`, bất kể kết quả `pass` hay `fail`, không chỉ đếm bản vá đã qua. Mặc định `ab.maxConfirmRunsPerLock = 3` (giả định; giám đốc chốt). `buildAbSpec(pid, 'confirm')` đếm sự kiện `selfimprove.ab.started {phase:'confirm', lockSha256}` trong LogStore. Đủ ngưỡng thì từ chối và ghi `selfimprove.holdout.exhausted {lockSha256, confirmRuns}`, cho tới khi có bộ giữ lại mới (lock và hash mới) hoặc sự kiện `selfimprove.holdout.renewed {lockSha256, by:'director', reason}` (CT-19).
+   - Lượt sàng lọc cũng làm lộ kết quả nên được đếm và in ra, nhưng không tính vào ngưỡng.
+   - Phiếu đề xuất (bước 5) ghi số lần sàng lọc và xác nhận đã chạy trên bộ này.
+   - Đề bài nhiệm vụ viết bản vá (bước 3) không chứa `ab-*.json` của các bản vá trước, để kết quả trên bộ giữ lại không chảy ngược vào bản vá mới.
 
 **Hai điều kiện chặn của S2a, Dev phải xử lý trước khi chạy A/B lần đầu** (test CT-12, CT-13):
 - (a) Harness đọc `tasks/<bài>/starter`, nhưng 10 bài giữ lại chỉ có `repo/`. Dev phải xác nhận hoặc sửa harness.
@@ -88,39 +96,39 @@ Luật lọc bắt buộc ở bước 1:
 | Trường | Đặc tả |
 |---|---|
 | Đầu vào | `data/self-improve/incidents.jsonl` (bước 1), chỉ lấy bản ghi `classification ∈ {public, internal}` và `source ≠ ab.run`. Lượt chạy trên t1–t5 và g1–g6 **được dùng ở đây** để chẩn đoán (D7) |
-| Đầu ra | `data/self-improve/clusters/<CL-yyyymmdd-seq>.json`: `{key:(category, challengeId, agentId, phase), incidents[], tasks[], cause:'prompt-missing'\|'prompt-conflict'\|'tool-perm'\|'infra', evidence[], labeledBy}`. Cụm chỉ "mở" khi có ≥ `minIncidents` sự cố (3) trong ≥ `minTasks` nhiệm vụ khác nhau (2). Cụm `tool-perm` hoặc `infra` bị đóng và **không** sinh bản vá: `tool-perm` phải sửa thủ công ở `toolsFor` (`src/tools/workspace.ts:51`), ngoài vòng này |
-| Tệp và module | `src/selfimprove.ts`: `clusterIncidents(incidents, cfg): Cluster[]` (thuần, tất định) và `openAnalysisTask(cluster)`. Hàm sau tạo một nhiệm vụ CCoding giao `@methodologist`, đề bài là bản tổng hợp của cụm (đã che, không có nguyên văn `agentProposal`). Nút "Phân tích cụm" trên màn hình "Đề xuất cải thiện" (`src/server.ts`, tuyến mới `POST /api/selfimprove/clusters/:id/analyze`) |
+| Đầu ra | `data/self-improve/clusters/<CL-yyyymmdd-seq>.json`: `{key:(category, challengeId, agentId, phase), incidents[], tasks[], cause:'prompt-missing'\|'prompt-conflict'\|'tool-perm'\|'infra', evidence[], labeledBy[]}`. Cụm chỉ "mở" khi có ≥ `minIncidents` sự cố (3) trong ≥ `minTasks` nhiệm vụ khác nhau (2). Cụm `tool-perm` hoặc `infra` bị đóng và **không** sinh bản vá: `tool-perm` phải sửa thủ công ở `toolsFor` (`src/tools/workspace.ts:51`), ngoài vòng này |
+| Tệp và module | `src/selfimprove.ts`: `clusterIncidents(incidents, cfg): Cluster[]` (thuần, tất định) và `openAnalysisTask(cluster)`. Hàm sau tạo một nhiệm vụ CCoding giao `selfImprove.roles.analyst` (mặc định `@methodologist`), đề bài là bản tổng hợp của cụm (đã che, không có nguyên văn `agentProposal`). Nút "Phân tích cụm" trên màn hình "Đề xuất cải thiện" (`src/server.ts`, tuyến mới `POST /api/selfimprove/clusters/:id/analyze`) |
 | Công tắc | `selfImprove.enabled`. Nhiệm vụ phân tích chỉ được tạo khi giám đốc bấm nút, không tự tạo |
 | Lượt LLM qua Orchestrator.call() | Gom nhóm không gọi LLM. Phân tích nguyên nhân là một nhiệm vụ CCoding (route, plan, execute, review), nên mọi lượt đi qua `call()`. `budgetTokens = selfImprove.budgets.analysisTokens` (300 000, giả định) và `budgetMode: 'complete'` |
-| Người duyệt | Người gán nhãn `cause` và FM là `@methodologist`. `@peer-reviewer` review ở pha review sẵn có. Một mẫu nhỏ được người thứ hai gán độc lập (design.md §7, P-14) |
+| Người duyệt | Người gán nhãn `cause` và FM là `roles.analyst` (mặc định `@methodologist`), ghi vào `labeledBy[]`. Một mẫu nhỏ được người thứ hai gán độc lập (design.md §7, P-14), ví dụ `@literature-researcher`; người này cũng ghi vào `labeledBy[]` và không được trùng `roles.author` hay `roles.runner`. `@peer-reviewer` review ở pha review sẵn có |
 | Điều kiện rollback | Cụm sai thì giám đốc bấm "Đóng cụm", ghi `selfimprove.cluster.closed {reason}`. Không có gì cần hoàn tác vì bước này không đổi prompt |
-| Sự kiện LogStore | `selfimprove.cluster.opened`, `selfimprove.cluster.analyzed {clusterId, taskId, cause}`, `selfimprove.cluster.closed` |
+| Sự kiện LogStore | `selfimprove.cluster.opened`, `selfimprove.cluster.analyzed {clusterId, taskId, cause, labeledBy}`, `selfimprove.cluster.closed` |
 
 ### Bước 3 — Đề xuất bản vá prompt hoặc hồ sơ agent
 
 | Trường | Đặc tả |
 |---|---|
-| Đầu vào | Một cụm đã phân tích, có `cause ∈ {prompt-missing, prompt-conflict}`. Có thể kèm bản vá mẫu P1–P4 (`docs/research/self-improvement/prompt-patches/`) |
-| Đầu ra | `data/self-improve/proposals/<PID>/patch.diff` (unified diff **một mục tiêu**, chỉ chạm **một** tệp `src/prompts.ts` hoặc `agents/<dept>/<id>.md`) và `meta.json` `{pid, clusterId, target, hypothesis, primaryMetric, kind:'optimize'\|'collect', author, sizeChars}`. `kind` quyết định ngưỡng token: `optimize` dùng 0,95, `collect` (kiểu P4) dùng 1,05 |
-| Tệp và module | `src/selfimprove.ts`: `openPatchTask(cluster)` tạo nhiệm vụ giao `@methodologist` hoặc agent được chỉ định. Agent **chỉ viết** diff dưới dạng văn bản trong báo cáo, rồi CCoding trích ra `patch.diff`, vì agent không có quyền ghi `src/` hay `agents/`. `screenPatch(diff): {ok, violations[]}` chạy danh sách cấm (§4). `git apply --check --unidiff-zero --ignore-whitespace` (design.md §3 bước 4) chạy trên worktree nháp |
+| Đầu vào | Một cụm đã phân tích, có `cause ∈ {prompt-missing, prompt-conflict}`. Có thể kèm bản vá mẫu P1–P4 (`docs/research/self-improvement/prompt-patches/`). **Không** kèm `ab-*.json` của bản vá trước (§2 điểm 5) |
+| Đầu ra | `data/self-improve/proposals/<PID>/patch.diff` (unified diff **một mục tiêu**, chỉ chạm **một** tệp `src/prompts.ts` hoặc `agents/<dept>/<id>.md`) và `meta.json` `{pid, clusterId, target, hypothesis, primaryMetric, kind:'optimize'\|'collect', author, labeledBy[], sizeChars}` (`labeledBy[]` chép từ cụm). `kind` quyết định ngưỡng token: `optimize` dùng 0,95, `collect` (kiểu P4) dùng 1,05 |
+| Tệp và module | `src/selfimprove.ts`: `openPatchTask(cluster)` tạo nhiệm vụ giao `selfImprove.roles.author` (mặc định `@research-lead`) hoặc agent giám đốc chỉ định. Hàm **từ chối** nếu người nhận nằm trong `cluster.labeledBy[]` hoặc trùng `roles.runner` (CT-18). Agent **chỉ viết** diff dưới dạng văn bản trong báo cáo, rồi CCoding trích ra `patch.diff`, vì agent không có quyền ghi `src/` hay `agents/`. `screenPatch(diff): {ok, violations[]}` chạy danh sách cấm (§4). `git apply --check --unidiff-zero --ignore-whitespace` (design.md §3 bước 4) chạy trên worktree nháp |
 | Công tắc | `selfImprove.enabled`. Nhiệm vụ viết bản vá chỉ được tạo khi giám đốc bấm "Đề xuất bản vá" |
 | Lượt LLM qua Orchestrator.call() | Nhiệm vụ CCoding, mọi lượt qua `call()`. `budgetTokens = budgets.patchTokens` (400 000, giả định). `screenPatch` không gọi LLM |
-| Người duyệt | Người viết là `@methodologist` (hoặc agent được giao). Reviewer là `@peer-reviewer` ở pha review sẵn có, và **không** được là người viết. `screenPatch` loại tự động trước khi có người xem |
+| Người duyệt | Người viết là `roles.author` (mặc định `@research-lead`, hoặc agent được giao), khác người gán nhãn cụm ở bước 2 và người chạy A/B ở bước 4. Reviewer là `@peer-reviewer` ở pha review sẵn có, và **không** được là người viết. `screenPatch` loại tự động trước khi có người xem |
 | Điều kiện rollback | Diff vi phạm danh sách cấm, `git apply --check` lỗi, hoặc chạm hơn một tệp: trạng thái `rejected-auto` và không sang bước 4. Chưa có thay đổi nào nên không cần hoàn tác |
-| Sự kiện LogStore | `selfimprove.proposed {pid, clusterId, target, sizeChars, sha256(patch)}` và `selfimprove.rejected {pid, by:'auto', violations[]}` |
+| Sự kiện LogStore | `selfimprove.proposed {pid, clusterId, target, sizeChars, author, sha256(patch)}` và `selfimprove.rejected {pid, by:'auto', violations[]}` |
 
 ### Bước 4 — A/B trên bộ bài giữ lại
 
 | Trường | Đặc tả |
 |---|---|
 | Đầu vào | `proposals/<PID>/patch.diff` đã qua `screenPatch`; `holdout-lock.json`; cấu hình `selfImprove.ab` |
-| Đầu ra | `data/self-improve/proposals/<PID>/ab-screen.json` và `ab-confirm.json`: theo từng chỉ số chính, gồm tỉ số trung vị B/A, CI 95 %, p đã chỉnh Holm, n lượt mỗi nhánh, số lượt bị xóa mỗi nhánh (429, `leak`), τ² ước từ sàng lọc, quyết định `pass`/`fail`/`need-more-tasks`. Kèm `runs.csv` gốc, có cột `variant` |
-| Tệp và module | `src/selfimprove.ts` gồm `verifyHoldout(lock)`, `buildAbSpec(pid, phase)` và `decide(results, kind)`. **Nhánh A** = server CCoding hiện hành. **Nhánh B** = git worktree nháp `selfimprove/<PID>`, áp `patch.diff` rồi build, chạy server riêng với cổng và `dataDir` riêng (`data/self-improve/ab/<PID>/B`). Không commit lên nhánh chính. Harness: `bench/vs-claude/harness/run.mjs` với arm CCoding (`lib/ccoding.mjs` gọi REST theo `baseUrl`), mỗi nhánh một `baseUrl`. `variant` truyền qua `TaskOptions.variant` (`src/types.ts:355`, `variantOptions` ở `src/orchestrator.ts:3970`; `ccoding bench` đã gán `variant` ở `src/bench.ts:224`). Phân tích thống kê dùng `requiredRuns`/`zInv` của `bench/vs-claude/harness/stats.mjs` và bootstrap phân tầng theo bài |
+| Đầu ra | `data/self-improve/proposals/<PID>/ab-screen.json` và `ab-confirm.json`: theo từng chỉ số chính, gồm tỉ số trung vị B/A, CI 95 %, p đã chỉnh Holm, n lượt mỗi nhánh, số lượt bị xóa mỗi nhánh (429, `leak`), τ² ước từ sàng lọc, số lần sàng lọc và xác nhận đã chạy trên `lockSha256` này, quyết định `pass`/`fail`/`need-more-tasks`. Kèm `runs.csv` gốc, có cột `variant` |
+| Tệp và module | `src/selfimprove.ts` gồm `verifyHoldout(lock)`, `buildAbSpec(pid, phase)` và `decide(results, kind)`. **Nhánh A** = server CCoding hiện hành. **Nhánh B** = git worktree nháp `selfimprove/<PID>`, áp `patch.diff` rồi build, chạy server riêng với cổng và `dataDir` riêng (`data/self-improve/ab/<PID>/B`). Không commit lên nhánh chính. Harness: `bench/vs-claude/harness/run.mjs` với arm CCoding (`lib/ccoding.mjs` gọi REST theo `baseUrl`), mỗi nhánh một `baseUrl`. `variant` truyền qua `TaskOptions.variant` (`src/types.ts:355`, `variantOptions` ở `src/orchestrator.ts:3970`; `ccoding bench` đã gán `variant` ở `src/bench.ts:224`). Phân tích thống kê dùng `requiredRuns`/`zInv` của `bench/vs-claude/harness/stats.mjs` và bootstrap phân tầng theo bài. `buildAbSpec` kiểm tách vai (CT-09) và ngưỡng `maxConfirmRunsPerLock` (CT-19) trước khi dựng đặc tả |
 | Công tắc | `selfImprove.enabled`. A/B chỉ chạy khi giám đốc bấm "Chạy sàng lọc", sau đó "Chạy xác nhận" |
 | Lượt LLM qua Orchestrator.call() | Mỗi lượt A/B là một nhiệm vụ của **chính CCoding** (nhánh A hoặc B), nên mọi lượt LLM đi qua `call()` của server tương ứng. Chấm điểm bằng `grader: code/exact` tất định, không có LLM-judge (đó là lý do S2a loại a1/r1/re1). Trần: `abScreenTokens` 14 triệu (ước SS-7: 11,8 triệu, 2,8 giờ) và `abConfirmTokens` 38 triệu (ước 31,4 triệu, 7,5 giờ, chia nhiều cửa sổ 5 giờ). Không chạy khi runtime báo gần hạn mức (design.md §6.5). Chạm trần thì dừng và ghi `selfimprove.ab.aborted` |
-| Người duyệt | Người chạy A/B là `@data-scientist`, khác người viết bản vá. Kết quả đi kèm cảnh báo n nhỏ |
-| Điều kiện rollback | Có sáu điều kiện dừng. (1) `verifyHoldout` lệch hash: dừng, exit 1, không chạy. (2) Sàng lọc thấy B xấu rõ (ngưỡng SS-5): `fail`, dừng. (3) τ² ≥ 0,0005: `need-more-tasks`, không chạy xác nhận trên 10 bài. (4) Xác nhận không đạt cả ba ngưỡng D5 sau Holm: `fail`. (5) Một bài giảm ≥ 10 test đạt ở cả hai lượt (design.md §5.3.1): `fail`. (6) Chạm trần token: `aborted`. Mọi trường hợp đều xóa worktree nháp, còn kết quả và log được giữ |
-| Sự kiện LogStore | `selfimprove.ab.started {pid, phase, lockSha256, tasks, repeats}`, `selfimprove.ab.done {pid, phase, decision, metrics}`, `selfimprove.ab.aborted {pid, reason}` |
+| Người duyệt | Người chạy A/B là `roles.runner` (mặc định `@data-scientist`), khác người viết bản vá và mọi người trong `labeledBy[]` (CT-09). Kết quả đi kèm cảnh báo n nhỏ và số lần đã chạy xác nhận trên bộ giữ lại (§2 điểm 5) |
+| Điều kiện rollback | Có bảy điều kiện dừng. (1) `verifyHoldout` lệch hash: dừng, exit 1, không chạy. (2) Sàng lọc thấy B xấu rõ (ngưỡng SS-5): `fail`, dừng. (3) τ² ≥ 0,0005: `need-more-tasks`, không chạy xác nhận trên 10 bài. (4) Xác nhận không đạt cả ba ngưỡng D5 sau Holm: `fail`. (5) Một bài giảm ≥ 10 test đạt ở cả hai lượt (design.md §5.3.1): `fail`. (6) Chạm trần token: `aborted`. (7) Đã đủ `maxConfirmRunsPerLock` lần xác nhận trên bộ này mà chưa có `holdout.renewed` của giám đốc: không chạy xác nhận. Mọi trường hợp đều xóa worktree nháp, còn kết quả và log được giữ |
+| Sự kiện LogStore | `selfimprove.ab.started {pid, phase, lockSha256, tasks, repeats, runner}`, `selfimprove.ab.done {pid, phase, decision, metrics}`, `selfimprove.ab.aborted {pid, reason}`, `selfimprove.holdout.exhausted {lockSha256, confirmRuns}`, `selfimprove.holdout.renewed {lockSha256, by:'director', reason}` |
 
 Thứ tự chạy: xen kẽ ngẫu nhiên có khối theo bài (A/B/B/A…), chạy tuần tự từng hệ, ghim mô hình và phiên bản CLI, ghi giờ bắt đầu (design.md §7). Seed xáo trộn ghi trong `ab.started`.
 
@@ -129,7 +137,7 @@ Thứ tự chạy: xen kẽ ngẫu nhiên có khối theo bài (A/B/B/A…), ch�
 | Trường | Đặc tả |
 |---|---|
 | Đầu vào | Kết quả bước 4 với `ab-confirm.json.decision = pass`; `meta.json`; tóm tắt cụm |
-| Đầu ra | Phiếu đề xuất `data/self-improve/proposals/<PID>/ticket.json`, gồm: số sự cố và bằng chứng; diff; CI 95 % của ba chỉ số; cảnh báo n nhỏ; kích thước ký tự thêm vào system prompt (ảnh hưởng cache tiền tố, O1); rủi ro. Quyết định là `approved`, `rejected` hoặc `more` (thử thêm) |
+| Đầu ra | Phiếu đề xuất `data/self-improve/proposals/<PID>/ticket.json`, gồm: số sự cố và bằng chứng; diff; CI 95 % của ba chỉ số; cảnh báo n nhỏ; số lần sàng lọc và xác nhận đã chạy trên bộ giữ lại (đe dọa tính hợp lệ, §2 điểm 5); kích thước ký tự thêm vào system prompt (ảnh hưởng cache tiền tố, O1); rủi ro. Quyết định là `approved`, `rejected` hoặc `more` (thử thêm) |
 | Tệp và module | `src/selfimprove.ts` có `proposalTicket(pid)` (thuần). `src/server.ts` thêm tuyến `GET /api/selfimprove/proposals` và `POST /api/selfimprove/proposals/:pid/decision`. Tuyến này chỉ nhận từ phiên giám đốc (cùng cơ chế với tuyến góp ý `src/server.ts:~510–520`). `public/` thêm màn "Đề xuất cải thiện" |
 | Công tắc | `selfImprove.enabled`. **Không có hạn tự duyệt**: khác `defaults.planApprovalMinutes`, khóa này không có giá trị tự duyệt sau X phút |
 | Lượt LLM qua Orchestrator.call() | Không có. Ngân sách bằng 0 |
@@ -155,13 +163,13 @@ Thứ tự chạy: xen kẽ ngẫu nhiên có khối theo bài (A/B/B/A…), ch�
 | Trường | Đặc tả |
 |---|---|
 | Đầu vào | `selfimprove.applied`; KPI của `monitorTasks` = 3 nhiệm vụ thật đầu tiên sau áp dụng, so với `baselineTasks` = 5 nhiệm vụ gần nhất trước đó (design.md §5.5). Chỉ số: tỉ lệ lệnh kiểm tra đạt, `firstPassOk`, số vòng sửa (`src/kpi.ts` `computeKpi`) |
-| Đầu ra | `data/self-improve/proposals/<PID>/monitor.json`. Khi có hồi quy thì sinh phiếu đề nghị rollback |
+| Đầu ra | `data/self-improve/proposals/<PID>/monitor.json`. Khi có hồi quy thì sinh phiếu đề nghị rollback kèm mức `severity` |
 | Tệp và module | `src/selfimprove.ts` có `monitorApplied(pid)`, gọi khi nhiệm vụ kết thúc (listener `task.done` trên EventBus) và `rollback(pid)`. `rollback` chạy `git revert <commit>`, tạo commit mới và thẻ `prompts-vN+1` |
 | Công tắc | `selfImprove.enabled`. Theo dõi tự chạy, không cần LLM. Rollback cần giám đốc bấm |
 | Lượt LLM qua Orchestrator.call() | Không có. Ngân sách bằng 0 |
 | Người duyệt | Giám đốc xác nhận rollback. Hệ thống chỉ **đề xuất**, giống quy tắc "không tự áp" |
-| Điều kiện rollback | Có ba trường hợp đề xuất rollback. (1) Tỉ lệ lệnh kiểm tra đạt, hoặc `firstPassOk`, của 3 nhiệm vụ sau thấp hơn trung bình 5 nhiệm vụ trước. (2) Có `check.regression` mới thuộc agent bị vá. (3) Giám đốc yêu cầu. Ngưỡng định lượng chính xác là **giả định** cần giám đốc chốt; mặc định đề xuất là "thấp hơn bất kỳ" vì n = 3 không đủ kiểm định |
-| Sự kiện LogStore | `selfimprove.monitor {pid, n, metrics}`, `selfimprove.rollback.proposed {pid, reason}`, `selfimprove.rolledback {pid, revertCommit, by:'director'}` |
+| Điều kiện rollback | Có ba trường hợp đề xuất rollback. (1) Tỉ lệ lệnh kiểm tra đạt, hoặc `firstPassOk`, của 3 nhiệm vụ sau thấp hơn trung bình 5 nhiệm vụ trước. (2) Có `check.regression` mới thuộc agent bị vá. (3) Giám đốc yêu cầu. Ngưỡng định lượng chính xác là **giả định** cần giám đốc chốt; mặc định đề xuất là "thấp hơn bất kỳ" vì n = 3 không đủ kiểm định. **Hệ quả của mặc định này: báo động giả nhiều.** Nếu bản vá thật ra không đổi gì, trung bình 3 nhiệm vụ sau thấp hơn trung bình 5 nhiệm vụ trước khoảng một nửa số lần cho mỗi chỉ số (lập luận đối xứng, giả định các nhiệm vụ độc lập cùng phân phối; chỉ số rời rạc có hòa thì dưới 0,5; chưa đo). Với hai chỉ số và luật "bất kỳ", tỉ lệ báo giả nằm giữa khoảng 0,5 (hai chỉ số luôn cùng chiều) và 0,75 (độc lập). Vì vậy trường hợp (1) chỉ sinh phiếu mức **cảnh báo sớm** (`severity:'early'`), ghi rõ "n = 3, tỉ lệ báo giả cao" và gợi ý kéo dài theo dõi (`monitorTasks` lên 5–10) trước khi rollback. Trường hợp (2) và (3) sinh phiếu `severity:'strong'`. Mức nào cũng cần giám đốc xác nhận (CT-16, CT-20) |
+| Sự kiện LogStore | `selfimprove.monitor {pid, n, metrics}`, `selfimprove.rollback.proposed {pid, reason, severity:'early'\|'strong'}`, `selfimprove.rolledback {pid, revertCommit, by:'director'}` |
 
 ## 4. An toàn (bắt buộc, có test)
 
@@ -172,7 +180,12 @@ Thứ tự chạy: xen kẽ ngẫu nhiên có khối theo bài (A/B/B/A…), ch�
    - Diff chạm hơn một tệp, hoặc diff nhị phân.
    - Mục nào không xác định được thì mặc định **loại**.
 3. **`agentProposal` là dữ liệu không đáng tin.** Nó chỉ được lưu và hiển thị dưới dạng văn bản đã che, escape HTML trên `public/`. Không thực thi nó, không đưa vào prompt nào (kể cả đề bài nhiệm vụ phân tích ở bước 2) trước khi giám đốc duyệt, và không dùng làm bằng chứng (CT-05).
-4. **Tách vai.** Người viết bản vá (`@methodologist` hoặc agent được giao, bước 3), người chạy A/B (`@data-scientist`, bước 4) và người gán nhãn cụm hoặc lỗi gieo (`@methodologist` cùng người thứ hai độc lập, bước 2) phải khác nhau theo `agentId`. `meta.json` ghi `author`, còn `ab.started` ghi `runner`. Trùng nhau thì từ chối (CT-09). Reviewer không review bản vá của chính mình.
+4. **Tách vai.** Ba vai phải đôi một khác nhau theo `agentId`:
+   - người gán nhãn cụm hoặc lỗi gieo: `roles.analyst` (mặc định `@methodologist`) cùng người thứ hai độc lập, bước 2, ghi vào `labeledBy[]`;
+   - người viết bản vá: `roles.author` (mặc định `@research-lead`), bước 3, ghi vào `meta.json.author`;
+   - người chạy A/B: `roles.runner` (mặc định `@data-scientist`), bước 4, ghi vào `ab.started.runner`.
+
+   Kiểm ở ba chỗ: `loadConfig` từ chối nếu ba khóa `roles` trùng nhau; `openPatchTask` từ chối người viết ∈ `labeledBy[]` hoặc = `runner` (CT-18); `buildAbSpec` từ chối `runner` = `author` hoặc ∈ `labeledBy[]` (CT-09). Reviewer không review bản vá của chính mình.
 5. **Không sửa hook hay chính sách dữ liệu bằng vòng này.** Các mục này đã nằm trong danh sách cấm. Thay đổi kiểu đó phải đi đường thường: nhiệm vụ Dev cùng đánh giá bảo vệ dữ liệu.
 6. **Mặc định tắt.** Khi `selfImprove.enabled = false`, băm prompt execute, revise và synthesize phải trùng bản trước, và không có sự kiện `incident.*`/`selfimprove.*` (CT-10).
 
@@ -203,7 +216,7 @@ Thứ tự chạy: xen kẽ ngẫu nhiên có khối theo bài (A/B/B/A…), ch�
 | CT-06 | `screenPatch` trên diff chạm `CLASSIFICATION_RULE`, `claude-guard.ts`, `tools:` trong `agents/*.md`, `dataProtection`, hoặc chạm 2 tệp | `ok:false` với `violations` tương ứng; ghi `selfimprove.rejected {by:'auto'}` |
 | CT-07 | `applyApproved(pid)` khi chưa có `selfimprove.approved` | Ném lỗi, không có commit |
 | CT-08 | `applyApproved` khi `sha256(patch)` khác `proposed` | Ném lỗi, không có commit |
-| CT-09 | `author` của bản vá trùng `runner` của A/B | `buildAbSpec` từ chối |
+| CT-09 | `runner` của A/B trùng `author` của bản vá, hoặc nằm trong `labeledBy[]` | `buildAbSpec` từ chối cả hai trường hợp, lỗi tiếng Việt |
 | CT-10 | `selfImprove.enabled = false` | Băm prompt execute, revise, synthesize trùng bản trước; 0 sự kiện `incident.*`/`selfimprove.*` |
 | CT-11 | Dọn log theo `retentionDays` | Không xóa bản ghi `data/self-improve/` dưới 183 ngày |
 | CT-12 | `verifyHoldout` khi đổi 1 byte trong `hidden/` của một bài | Trả lệch, A/B không chạy (tương đương `holdout-sample-size.mjs --size` exit 1) |
@@ -212,13 +225,18 @@ Thứ tự chạy: xen kẽ ngẫu nhiên có khối theo bài (A/B/B/A…), ch�
 | CT-15 | `decide()` nhận lượt sàng lọc trộn vào dữ liệu xác nhận | Chỉ dùng lượt có `phase:'confirm'` (D7) |
 | CT-16 | `rollback(pid)` khi chưa có xác nhận của giám đốc | Chỉ ghi `rollback.proposed`, không revert |
 | CT-17 | Chuỗi băm sau một vòng đủ 7 bước (mock) | Verify LogStore không báo `broken` |
+| CT-18 | (a) `openPatchTask` với người viết ∈ `cluster.labeledBy[]` (ví dụ `methodologist`) hoặc = `roles.runner`; (b) `loadConfig` với hai khóa `roles` trùng nhau | (a) Từ chối, không tạo nhiệm vụ; (b) ném lỗi tiếng Việt. Với mặc định (`methodologist`, `research-lead`, `data-scientist`) thì tạo được |
+| CT-19 | `buildAbSpec(pid, 'confirm')` khi LogStore đã có `maxConfirmRunsPerLock` (3) sự kiện `ab.started {phase:'confirm'}` cùng `lockSha256`, gồm cả lần `fail` | Từ chối, ghi `selfimprove.holdout.exhausted`. Có `holdout.renewed {by:'director'}` sau đó thì chạy được; `renewed` không có `by:'director'` thì vẫn từ chối |
+| CT-20 | `monitorApplied`: 3 nhiệm vụ sau thấp hơn trung bình nhưng không có `check.regression` mới | Ghi `rollback.proposed {severity:'early'}`, không revert. Có `check.regression` mới thuộc agent bị vá thì `severity:'strong'` |
 
 Lệnh kiểm tra trước khi gộp: `npm run typecheck` và `npm test` (theo AGENTS.md).
 
 ## 7. Giới hạn và giả định
 
-- Mọi ngân sách, ngưỡng cụm (3/2), ngưỡng D5 và ngưỡng theo dõi đều là **giả định** do giám đốc chốt, không rút ra từ dữ liệu.
+- Mọi ngân sách, ngưỡng cụm (3/2), ngưỡng D5, ngưỡng theo dõi và `maxConfirmRunsPerLock` (3) đều là **giả định** do giám đốc chốt, không rút ra từ dữ liệu.
 - Cỡ mẫu dựa trên τ² = 0 và σ² của B0 với n = 37 (độ tin cậy thấp, S2a). Ở pha xác nhận phải tính lại khi có τ² thật.
 - Bộ giữ lại gần trần (B0 đạt 1,000 trên 10/10 bài), nên chỉ số an toàn chỉ phát hiện hồi quy, không đo được cải thiện chất lượng.
+- Dùng lại bộ giữ lại cho nhiều bản vá là đe dọa tính hợp lệ (tối ưu thích nghi theo bộ, §2 điểm 5). Ngưỡng 3 lần xác nhận chỉ giới hạn mức lộ, không loại bỏ nó; CI của từng lần A/B không hiệu chỉnh cho việc đã chọn qua nhiều lần.
+- Luật rollback mặc định ở bước 7 có tỉ lệ báo giả ước khoảng 0,5–0,75 khi bản vá không có tác dụng (lập luận đối xứng, chưa đo), nên trường hợp (1) chỉ là cảnh báo sớm.
 - Cơ chế nhánh B dùng server và worktree riêng là đề xuất. Dev cần kiểm harness có hỗ trợ `baseUrl` riêng cho từng arm hay không (`lib/ccoding.mjs` đã nhận `opts.baseUrl`; chưa kiểm cấu hình arm trong `run.mjs`).
 - Số dòng `tệp:dòng` đọc ở commit `2c7573a` và có thể lệch. `design.md` ghi `ISSUE_RE` ở `kpi.ts:129` và `COMMON_KEYS` ở `bench.ts:125`, nhưng hiện chúng ở `src/kpi.ts:302` và `src/bench.ts:141`.
