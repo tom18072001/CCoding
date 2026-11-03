@@ -1,0 +1,79 @@
+> Việc giao riêng cho Senior Software Engineer (@senior-swe)
+
+## Tóm tắt
+Tôi đã sửa `DESIGN.md` theo cả 4 góp ý review. Kết luận chính không đổi: searchable snapshots cần Enterprise nên không dùng được với license Basic, và tài liệu thay bằng snapshot thường cộng restore theo yêu cầu. Hệ số nén 1,0×, thông lượng restore và các tính năng Basic nêu trong tài liệu vẫn là giả định chưa đo, cần PoC.
+
+## Tệp đã tạo/sửa
+- `/tmp/vb/r1-elk-design__B5__r3/DESIGN.md` · sửa §2.3, §3, §4, §5 và §6.2. Tệp chưa được commit.
+
+## Kiểm chứng
+- `python3 -c "print(12.44/.7, 12.44/.7/3, 60/.85)"` → exit 0. Kết quả 17,77 TB; 5,92 TB/broker; 70,59 TB.
+- Script python thay thế văn bản trong `DESIGN.md` → exit 0, mọi chuỗi cần sửa đều tìm thấy.
+- `grep` kiểm tra không còn chỗ nào ghi "6 cold" hay "72 TB" → không còn.
+- Lần tính trước: 16 MB/s; 1,3824 TB/ngày; 504,6 TB/năm.
+- Không có code hay test để chạy, và tài liệu chưa được PoC.
+
+## Đã sửa theo review
+- **[major] Kafka (§3):**
+  - Nhu cầu 12,44 TB chia 3 broker là 4,15 TB/broker, nên mức 4 TB cũ không đủ.
+  - Với hệ số vận hành 70%, cần 17,8 TB tổng, tức khoảng 5,9 TB/broker.
+  - Tôi tăng lên 8 TB/broker (24 TB tổng, dư khoảng 26%) và ghi rõ phép tính trong bảng.
+- **[minor] Codec (§5):**
+  - Hot giờ dùng `best_compression` ngay từ template, nên khớp với hệ số 1,0× ở §2.2 và con số hot 27,6 TB.
+  - Tôi thêm ghi chú: nếu PoC cho thấy thiếu CPU ghi thì đổi hot sang `default` và tính lại hot. Mức tăng khoảng 10–15% là giả định chưa đo.
+- **[minor] Bảng cold (§2.3 và §3):**
+  - Đổi tên cột thành "Dữ liệu primary" và "Tổng gồm replica (cold: 0 replica nên bằng primary)". Dòng cold ghi "60 TB (không replica)".
+  - Cold cần 70,6 TB nên tôi tăng từ 6 lên 8 node × 12 TB = 96 TB, dư khoảng 27%. Câu về thông lượng restore ở §2.4 cũng sửa thành 8 cold nodes. Dải thông lượng 0,5–1,5 GB/s giữ nguyên và vẫn là giả định.
+- **[minor] Ghi raw và alerting (§4, §6.2):**
+  - Việc ghi raw vào WORM do một consumer riêng `raw-archiver` làm. Nó thuộc consumer group độc lập với Logstash, đọc cùng topic `audit-raw`, và chỉ commit offset của nó sau khi ghi object thành công. Logstash chỉ có một output là ES.
+  - Phần Kibana alerting đã gắn nhãn **[cần xác nhận với Elastic]** cho việc rule type và connector nào có trong Basic. Phương án dự phòng chắc chắn là cron script ngoài ES.
+
+## Quyết định thiết kế
+- Hot 7 ngày, warm ngày 8–30, từ ngày 31 chỉ còn snapshot. Cold là vùng restore 0 replica.
+- Mask bằng HMAC token tại Logstash trước khi vào ES, `final_pipeline` làm lưới an toàn thứ hai đưa doc còn sót PII vào index quarantine.
+- Toàn vẹn gồm hash gốc, Merkle theo khối, chữ ký KMS và dấu thời gian RFC 3161, lưu ở kho WORM ngoài ES.
+- Raw chưa mask lưu tách biệt ở WORM bằng consumer riêng, để lỗi ở đường index không làm mất bản gốc.
+
+## Rủi ro & việc còn mở
+- **Hệ số nén:** 1,0× là giả định, lệch ±30% làm lệch toàn bộ dự toán tầng ES.
+- **SLA 24 giờ:** chỉ đạt khi phạm vi restore khoảng 40 TB trở xuống và băng thông ít nhất 0,5 GB/s. Cả hai con số đều chưa đo.
+- **Tính năng Basic:** Watcher, DLS/FLS, ES audit log và Kibana alerting nêu từ kiến thức cá nhân, cần xác nhận với Elastic.
+- **Object Lock:** cần xác nhận khi PoC rằng ES không ghi trực tiếp lên bucket Object Lock.
+- **Pháp chế:** cần xác nhận có được giữ bản gốc chưa mask ngoài ES hay không, và "12 tháng" tính là 365 hay 366 ngày.
+- **Mất object store:** mất bucket đồng nghĩa mất toàn bộ dữ liệu quá 30 ngày, nên cần bản sao thứ hai ở site khác.
+
+## Review
+✅ Đã duyệt: DESIGN.md đạt yêu cầu và cả 4 góp ý review trước đã được sửa đúng. Tôi tính lại các con số chính và chúng khớp tài liệu: 16 MB/s, 1,3824 TB/ngày, 504,6 TB/năm, hot 9,68 TB primary, warm 31,8 TB, cold khoảng 59,4 TB (làm tròn 60), Kafka 12,44 TB và MinIO 12+4 khoảng 673 TB. Kết luận về searchable snapshots (cần Enterprise, không dùng được với Basic) đúng. Phương án thay thế là snapshot thường cộng restore vào cold nodes, và thời gian restore khớp với giả định 0,5–1,5 GB/s. Phần ngân sách và phân bổ node thống nhất giữa §2.3, §2.4 và §3 (cold 8 node, Kafka 8 TB/broker). Hệ số nén, thông lượng restore và danh sách tính năng Basic đều được gắn nhãn giả định hoặc cần xác nhận. Toàn vẹn, masking và các mâu thuẫn của đầu vào được xử lý đầy đủ. Còn hai điểm nhỏ, không chặn bàn giao. Repo không có code hay test để chạy; việc kiểm chứng gồm tính lại số học và đọc toàn bộ tài liệu.
+- [minor] §2.3 chọn cửa sổ cold là 43 ngày (60 TB) mà không giải thích vì sao 43. Nên thêm một câu, ví dụ 'ngày 31–73', hoặc nói rõ đây là kích thước vùng restore tùy chọn.
+- [minor] §5 dùng `min_age` 7d và 30d tính từ rollover, nên 'ngày 0–30' chỉ đúng gần đúng khi rollover theo ngày hoặc 50 GB. Nên ghi chú điều này. Ngoài ra, giả định nén gzip/zstd 6:1 cho kho raw WORM (84 TB) chưa được gắn rõ là cần đo trong PoC; hiện chỉ có nhãn [GĐ] trong bảng.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-011415-718` · chế độ: agent · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **26 in / 23.1k out**, cache đọc 167.4k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 14 | 18176 | 90623 | 2 |
+| QA Engineer (@qa-tester) | dev | 12 | 4889 | 76730 | 2 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude r1-elk-design__B5__r3] ELK audit platform sizing and design (@senior-swe)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **74** B | 50 | 100 | 100 | 60 | 1 | 2 | 109k | 0/5 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 82k | 0/4 |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 74 B):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+  - Qua review lần đầu 0/1 hạng mục, còn blocker ở review cuối 0/1 (bị nêu qua các vòng: 0 blocker, 1 major). Lỗi ở review cuối: —
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 2/2 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._
