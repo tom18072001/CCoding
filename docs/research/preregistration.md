@@ -450,6 +450,111 @@ Phần khác của `run-plan.md` đã đối chiếu nhưng không tìm thấy l
 | V4-03 | §5 (v2.2): thước đo chi phí là token có trọng số `input + 1,25·cacheWrite + 0,1·cacheRead + 5·out`; không có phân tích độ nhạy theo hệ số cacheRead hay theo USD | **Bổ sung 03/11/2026, sau khi đã xem ảnh chụp 838a5f1 (276 dòng):** `analysis/cache-sensitivity.md` gồm cơ cấu chi phí, tỉ lệ trúng cache, tỉ số B7/A0 và B6/A0 với hệ số cacheRead 0,05 (giá đọc cache Sonnet 5.5 và Opus 5.5 = 0,05× giá đầu vào) và USD theo bảng giá. Nhãn: **không phải tiên nghiệm** | Không phép nào của §3 | Phân tích độ nhạy mô tả, **ngoài họ Holm**, không p, không đổi K; hệ số 0,1 vẫn là thước đo chính; kết luận chỉ mô tả |
 | V4-04 | `improvement-backlog.md` B-11.5 (khóa trước khi chạy): B7′ chạy GĐ1 rồi GĐ2; arm B7c, B7cb, B7cab; Claude Code CLI như W1–W5 (2.1.316) | **Ghi sau khi dữ liệu đã có (3/11/2026):** (1) B7′ **dừng ở GĐ1** theo quy tắc dừng vô ích của B-11.5: B7cab so với A0-sonnet, 5 bài T5 × 2 lượt, R̂ token có trọng số 2,04 [1,45; 2,99] và R̂ thời gian thực 2,16 [1,53; 3,21], cả hai > 1,6; bootstrap 4000 vòng, hạt 20261102, CI 90 %; server `1333eef`; không chạy GĐ2. (2) **CLI đổi 2.1.316 → 2.1.317** giữa W1–W5 và B7′. (3) **B7c bị hủy trước khi có dòng nào** (task T-20261103-092333-123), nên B7c và B7cb không có dữ liệu | Không phép nào của §3; B-01′ (×1,3) không được kiểm | **Sai lệch về thực thi**, không đổi giả thuyết, ngưỡng hay họ Holm (K = 0). Dừng vô ích **chưa phải kết luận**, không phải TOST; n = 2 mỗi ô nên CI rất rộng; quy tắc không tiêu alpha. So với B7 (×2,498 / ×2,566) chỉ ở mức mô tả (khác cửa sổ, server, CLI, n); đổi CLI là yếu tố gây nhiễu không tách được |
 
+### Đăng ký trước vòng 4 gói 8: đợt đo 3e (ghi 3/11/2026, trước lượt đầu tiên)
+
+**Vị thế.** Sáu mục V4-3e-E1…E6 đăng ký **trước lượt đầu tiên** của đợt 3e (`bench/vs-claude/RUNBOOK-cloud-session.md` Bước 3e; B-14, B-12, B-16, B-15, H6), theo yêu cầu "mọi phân tích mới ghi §9" của `improvement-backlog.md` (B-12 trường 7(g); B-12, B-14, B-15, B-16 trường 6). Đợt này **chưa được giám đốc duyệt chạy**; mục này chỉ để khi duyệt thì chạy được ngay. Không phép nào vào họ Holm; K của §2.5 không đổi (E6 giữ nguyên quy tắc H6). Không số, ngưỡng nào dưới đây được đặt mới: mọi giá trị chép từ `cache-diagnostic-spec.md` (viết tắt CD), `improvement-backlog.md` (BL), `analysis/agreement.md` (AG) và `preregistration.md`; chỗ không tìm được nguồn ghi [CẦN XÁC NHẬN]. Ước lượng USD và giờ máy của kế hoạch chạy không phải ngưỡng nên không ghi ở đây. Trường (9) mọi mục: **hash server ghi khi chạy** (hash commit gộp D9b của server 7425 vào RUNLOG, kèm `model` theo pha của B-13; việc nối dữ liệu cloud với local theo `run-plan.md` §6.1).
+
+**Quy ước chung cho E2, E4 (B-12, B-16).** Mỗi cổng một tệp CSV và một lần tính: `node docs/research/analysis/gates-pairs.mjs <runs.jsonl…> --arms-json bench/vs-claude/arms.json --unit decision|run --gate b02|b10|cto --out X.csv`, rồi `node docs/research/analysis/agreement.mjs --pairs X.csv --positive 1`. CI = bootstrap **cụm theo `runId`** của `agreement.mjs`, B = 2000, seed 20261103 (§5.1), kèm Clopper–Pearson chính xác; **không trộn b02/b10/cto** trong một tệp. Nhãn tham chiếu `ref` hiện là nhãn **theo bài** (prefix g1-/g2- → b02, g3-/g4- → b10, g5-/g6- → cto; bài không thuộc prefix nào là bài sạch, ref = 0), pred lấy `gates.b02.blocked`, `gates.b10.blocked`, `gates.cto.pass` đảo. Cổng `null` (không có sự kiện `gate.decision`) **không vào mẫu của cổng đó**; số dòng bỏ theo cổng được báo. Giới hạn quy đổi `rounds` thành các cặp của `--unit decision` nêu ở README của `docs/research/analysis/` (do S2 của cùng gói tạo). **[CẦN XÁC NHẬN]** nhãn theo bài khác nhãn **tại thời điểm cổng quyết định** mà B-12 trường 7(b) đòi (lỗi cài có thể đã được agent sửa trước cổng, hoặc vòng sửa chữa xong rồi); nếu chỉ có tóm tắt `runs.jsonl` thì kết quả mang nhãn "nhãn theo bài, chưa phải nhãn tại thời điểm cổng", và cần nhãn từng vòng từ `events.jsonl` mới đạt 7(b).
+
+#### V4-3e-E1 — B-14 chẩn đoán cache
+
+- **(1) Câu hỏi:** phần cacheWrite mỗi lượt claude-cli đến từ bộ công cụ, từ `cwd` hay từ phần stdin? Giả thuyết G1: đổi bộ công cụ làm vỡ gần hết tiền tố cache; đổi `cwd` thì không (CD 1.1, 1.4). TTL thật ghi thêm nếu trường usage có (BL B-14 trường 4). Là **chẩn đoán cơ chế (có/không)**, không ước lượng tham số.
+- **(2) Arm:** không có arm CCoding; chạy thẳng `claude -p` với cờ của runtime (`cache-diagnostic.mjs`), một model (`sonnet`).
+- **(3) Bài:** lời nhắc giả tổng hợp, có `nonce` ở đầu stdin; thư mục `cwd` tạm rỗng, ngoài repo (CD 1.2).
+- **(4) Số lượt:** n = 1 mỗi cặp; 3 cặp: (a) giống hệt, (b) khác bộ công cụ, (c) khác `cwd`; tối đa 8 lượt = 6 đo + 1 khởi động + 1 dự phòng (CD 1.5; BRIEF-14 ghi 7–8).
+- **(5) Thước đo:** chính: h = CR/(CR+CW+IN) của **lượt 2** mỗi cặp. Phụ: CW, CR, IN, out, khoảng giữa hai lượt (giây), h của lượt 1 (CD 1.3, 1.6).
+- **(6) Phép kiểm:** **không p, không CI**; chỉ bảng diễn giải CD 1.4 (h(a) ≥ 0,9; h(a) < 0,5 thì dừng; h(b) ≪ h(a); h(a) − h(c) ≤ 0,05 hay > 0,05). Ngưỡng 0,9/0,5/0,2/0,05 là lựa chọn thiết kế của CD, chép nguyên. Mỗi cặp gán "khớp / không khớp dự kiến", kết luận bằng lời.
+- **(7) Dừng:** tổng > 8 lượt thì dừng, báo giám đốc; cặp (a) h < 0,5 khi tiền tố ≥ ngưỡng thì **dừng, không chạy (b)(c)** (CD 1.4). Chờ > 5 phút giữa các cặp (CD 1.2). Bước 2 của B-14 (đổi cấu hình công cụ, chạm hook) **ngoài đăng ký này**; cần mục §9 riêng trước lượt đầu của nó.
+- **(8) Loại:** lượt khởi động không vào phân tích; lượt 2 có khoảng > 60 s hoặc lỗi mạng thì chạy lại đúng một lượt 2 bằng lượt dự phòng, ghi sự cố; không chạy lại "cho đẹp" (CD 1.5).
+- **(9) Hash server:** ghi khi chạy. E1 **không qua server CCoding** nên ghi hash commit kho và phiên bản `claude` CLI (đổi 2.1.316 → 2.1.317 từng xảy ra, V4-04).
+- **Nguồn:** BL B-14 trường 4, 6, 7; CD Phần 1 (1.2–1.6); RUNBOOK Bước 3e mục 2.
+
+#### V4-3e-E2 — Thí điểm B-12/B-16
+
+- **(1) Câu hỏi:** ước lượng q̂ (tỉ lệ lỗi cài còn nguyên đến cổng), ρ̂ (tương quan nội cụm), tỉ lệ bất đồng và USD mỗi lượt của hai arm, để chốt N của E4 theo khối (a) dưới. Câu hỏi B-16: H-O1 (CTO Opus có tỉ lệ nghiệm thu sai thấp hơn CTO Sonnet) là chính, H-O2 (chi phí không vượt ngưỡng của CD 3.5) là phụ, **tách riêng** (CD 3.2). Thí điểm **không kết luận** về H-O1, H-O2 hay recall.
+- **(2) Arm:** B7cab, B7cabO (chỉ khác `phaseModels.accept`); B6 chỉ để có quyết định b10 vì cổng này chỉ có ở làn có pha plan; B6 **không vào cặp B-16**.
+- **(3) Bài:** `suite:gates` (g1–g6) cho B7cab, B7cabO; g3-qty-rename, g4-gb-unit cho B6. Bài **mới**, không phải t1–t5 (BL B-12 trường 4(d)).
+- **(4) Số lượt:** B7cab, B7cabO × g1–g6 × 2 = 24; B6 × g3, g4 × 2 = 4; tổng 28. Ghép cặp B-16: 12 cặp (6 bài × 2 lượt), đúng "thí điểm 12 cặp" (BL B-16 trường 4).
+- **(5) Thước đo:** chính: tỉ lệ nghiệm thu sai (CTO "đạt" khi lỗi cài còn nguyên), q̂, ρ̂, số dương thật theo lượt. Phụ: token có trọng số `input + 1,25·cacheWrite + 0,1·cacheRead + 5·out` (thước đo chi phí chính, **không so trực tiếp giữa hai model khác giá**), USD (phụ, ngoài họ Holm), thời gian, test ẩn.
+- **(6) Phép kiểm và CI:** mô tả, không p. CI theo quy ước chung ở trên (bootstrap cụm theo `runId`, mỗi cổng một CSV, cờ `--gate`), cộng Clopper–Pearson từng arm. McNemar chỉ ở E4. Hai [CẦN XÁC NHẬN] của quy ước chung (README về `rounds`; nhãn theo bài so với nhãn tại thời điểm cổng, B-12 trường 7(b)) áp ở đây. Đơn vị chính là lần cổng quyết định; độ nhạy: mỗi lượt một cặp (`--unit run`).
+- **(7) Dừng:** đủ 28 lượt, hoặc chạm hạn mức, thì dừng và báo phần đã có (CD 3.5 "Hạn mức"); không thêm lượt. Hai điểm dừng "Vô ích (chi phí)" và "Có hại" của CD 3.5 chỉ **đánh giá được ở mức nào dữ liệu E2 cho phép**: E2 không có lượt sạch nên "Có hại" (cần ≥ 20 lượt sạch) chưa đánh giá được. Điểm "Vô ích": USD/lượt B7cabO > 2 × B7cabS **và** hiệu số nghiệm thu sai < 0,10 (chép CD 3.5).
+- **(8) Loại:** §4.1 và §4.3 (Q, L, T, E1, E4), đối xứng giữa arm; cổng `null` bỏ khỏi mẫu cổng đó (quy ước chung). Lượt có lỗi cài đã được agent tự sửa trước cổng **không loại** (đó là q, BL B-12 trường 7(d)). Không xem điểm trước khi chốt N (khối (a)).
+- **(9) Hash server:** ghi khi chạy.
+- **Nguồn:** BL B-12 trường 4–7, B-16 trường 4–6; CD 3.2–3.5; AG C-3; RUNBOOK Bước 3e mục 3; `arms.json` `_suites.gates`.
+
+#### V4-3e-E3 — Thí điểm bài lớn (B-15)
+
+- **(1) Câu hỏi:** lượt đối chứng B0 có thật sự có pha `discuss` trên `l1-modules` và `l2-chain` không (điều kiện cho B-15 đo được)? Thí điểm kiểm thời gian và hạn mức cho E5; **không suy diễn** về lợi ích của họp.
+- **(2) Arm:** A0-sonnet, B0, B1 (`discussionRounds: 0`).
+- **(3) Bài:** `l1-modules`, `l2-chain`.
+- **(4) Số lượt:** 3 arm × 2 bài × 1 = 6 (BRIEF-14). **[CẦN XÁC NHẬN]** CD 2.3 ghi thí điểm 3 lượt B0 mỗi bài (6 lượt, chỉ B0); BRIEF-14 ghi A0-sonnet, B0, B1 mỗi ô 1 lượt. Chạy theo BRIEF-14; người duyệt xác nhận thay đổi này.
+- **(5) Thước đo:** chính: `byPhase.discuss` của lượt B0 (có/không). Phụ: thời gian thực, token có trọng số, test ẩn, độ dài hạng mục kế hoạch (≥ 3, CD 2.2).
+- **(6) Phép kiểm:** không p, không CI (n = 1 mỗi ô). Dữ liệu E3 ở `results/large-pilot`, **không gộp vào ước lượng của E5**.
+- **(7) Dừng:** đủ 6 lượt hoặc chạm hạn mức (RUNBOOK mục 5: dừng ngay, không chạy tiếp bằng hạn mức gói trên cloud).
+- **(8) Loại:** lượt B0 không có `byPhase.discuss` không loại khỏi E3 nhưng bài đó **không đo được cho B-15**: ghi RUNLOG và báo lại (RUNBOOK mục 4). Còn lại theo §4.1 và §4.3.
+- **(9) Hash server:** ghi khi chạy.
+- **Nguồn:** BL B-15 trường 4, 5; CD 2.2, 2.3; RUNBOOK Bước 3e mục 4.
+
+#### V4-3e-E4 — B-12/B-16 chính
+
+- **(1) Câu hỏi:** recall của từng cổng (b02, b10, cto) trên bộ bài cài lỗi; tỉ lệ chặn nhầm trên lượt sạch; H-O1 và H-O2 của B-16 (CD 3.2). Lớp lỗi cài, không khái quát sang lỗi tự nhiên (BL B-12 trường 7(a)).
+- **(2) Arm:** B7cab, B7cabO.
+- **(3) Bài:** `suite:gates` (g1–g6). Lượt sạch dùng để đo chặn nhầm; mục tiêu n ≥ 72 lượt sạch để cận trên CP ≤ 5 % khi 0 chặn nhầm (BL B-12 trường 4(b)). **[CẦN XÁC NHẬN]** g1–g6 đều có lỗi cài; bài sạch theo `arms.json` là bài không thuộc prefix g1–g6. Chưa rõ bài sạch nào dùng, nên nếu E4 không đạt 72 lượt sạch thì báo n thực và cận trên CP thực, **không tuyên bố ≤ 5 %**.
+- **(4) Số lượt:** N chốt từ E2 theo khối (a); E4 gồm 50–92 lượt tổng (BRIEF-14) = 2 × N_arm.
+- **(5) Thước đo:** chính: recall mỗi cổng (dương thật = lượt/quyết định có lỗi cài còn nguyên, nhãn tại thời điểm cổng) và tỉ lệ nghiệm thu sai của CTO mỗi arm. Phụ: chặn nhầm (lượt sạch), tỉ lệ bất đồng, token có trọng số, USD (ngoài họ Holm), thời gian, test ẩn.
+- **(6) Phép kiểm và CI:** quy ước chung ở trên (bootstrap cụm theo `runId` của `agreement.mjs`, tính riêng từng cổng, mỗi cổng một CSV, cờ `--gate`; kèm CP chính xác). B-16: **McNemar chính xác** trên cặp bất đồng (ghép cặp theo bài) và CP từng arm. Đơn vị phân tích chính là **lần cổng quyết định**, độ nhạy là mỗi lượt một cặp. **Dưới 10 lượt dương thật (đếm theo lượt) thì "recall chưa ước lượng được"**, không in recall điểm (AG; §5.1(c)). Hai [CẦN XÁC NHẬN] của quy ước chung (README về `rounds`; nhãn theo bài so với nhãn tại thời điểm cổng, 7(b)) áp ở đây.
+- **(7) Dừng:** năm điểm dừng của CD 3.5, chép nguyên: **vô ích** (USD/lượt B7cabO > 2 × B7cab **và** hiệu số nghiệm thu sai < 0,10 sau 12 cặp thí điểm); **có hại** (chặn nhầm B7cabO > B7cab + 0,10 sau ≥ 20 lượt sạch); **không đủ dương** (< 10 lượt dương thật sau toàn bộ lượt: "recall chưa ước lượng được"); **hạn mức** (chạm hạn mức 5 giờ hoặc vượt mức giám đốc đặt); **tối đa** (không quá N đã chốt, không thêm lượt cho đủ ý nghĩa). Cộng §4.4(b): không dừng sớm vì kết quả, không tăng n để đuổi p.
+- **(8) Loại:** §4.1, §4.3 (Q, L, T, E1, E4), đối xứng giữa arm; thay lượt tối đa 2 mỗi ô. Cổng `null` không vào mẫu của cổng đó. Lỗi cài còn nguyên hay không ghi **tại thời điểm cổng** (7(b)); không đổi nhãn theo trạng thái cuối lượt.
+- **(9) Hash server:** ghi khi chạy.
+- **Nguồn:** BL B-12 trường 4–7, B-16 trường 4–6; CD 3.3, 3.5; AG C-3, `minPositives`; §5.1(c).
+
+#### V4-3e-E5 — B-15 chính (họp)
+
+- **(1) Câu hỏi:** bỏ họp (`discussionRounds: 0`) đổi chi phí, thời gian và điểm thế nào so với đối chứng (làn đầy đủ, `discussionRounds: 1`) trên bài lớn? Không đặt ngưỡng ý nghĩa trước dữ liệu (CD 2.3); đây là **ước lượng điểm kèm CI**, không phải kiểm định.
+- **(2) Arm:** B0 (đối chứng), B1.
+- **(3) Bài:** `l1-modules`, `l2-chain`.
+- **(4) Số lượt:** 10 lượt × 2 arm × 2 bài = 40 (CD 2.3; BL B-15 trường 5). Thí điểm E3 (6 lượt) tách riêng, không gộp.
+- **(5) Thước đo:** chính: token có trọng số `input + 1,25·cacheWrite + 0,1·cacheRead + 5·out`, R̂ = B1/B0. Phụ: thời gian thực, test ẩn, `byPhase.discuss`; USD (ngoài họ Holm).
+- **(6) Phép kiểm và CI:** R̂ kèm CI bootstrap theo lượt, cách của `variance-decomposition.md` (CD 2.4); **không p**. Nếu CI chứa 1 thì ghi "không phân biệt được". Số bài chỉ 2 nên nửa độ rộng CI lớn hơn 0,218 của phương án A; **chưa mô phỏng**, không tuyên bố độ chính xác 0,218 (CD 2.3). **[CẦN XÁC NHẬN]** mức tin cậy của CI (CD 2.3 dùng CI 90 % cho phương án A); chốt trước lượt đầu nếu khác.
+- **(7) Dừng:** dừng ở n = 10 mỗi ô (§4.4(a)); không dừng sớm vì kết quả (§4.4(b)); hết hạn mức thì dừng, chờ cửa sổ sau (RUNBOOK mục 6).
+- **(8) Loại:** **lượt đối chứng B0 không có pha `discuss` (`byPhase.discuss` vắng) bị loại**, vì họp không xảy ra nên kết quả rỗng, không âm (CD 2.2 mục 2; BL B-15 trường 4); loại cả cặp B0/B1 tương ứng theo quy tắc khai báo trước và **báo số lượt loại**. Cộng §4.1, §4.3; thay lượt tối đa 2 mỗi ô; quá mức thì ô "thiếu dữ liệu". Phân tích độ nhạy không loại lượt nào.
+- **(9) Hash server:** ghi khi chạy.
+- **Nguồn:** BL B-15 trường 4–6; CD Phần 2 (2.2–2.4); RUNBOOK Bước 3e mục 4, 6.
+
+#### V4-3e-E6 — H6 cho đủ N
+
+- **(1) Giả thuyết:** H6 (§3.1): A1, A2 không kém B0 trong biên ±0,05 về điểm, kiểm không-vượt/tương đương, p = max trên A1, A2 và hai phía. **Không đổi** quy tắc, biên, B = 4000, hạt 20261102 (§2.5).
+- **(2) Arm:** A1, A2, B0.
+- **(3) Bài:** tập khai báo `l1-modules`, `l2-chain`, t1–t5 (§2.5 (a)); không bài khác.
+- **(4) Số lượt:** A1 r = 3, A2 r = 2, B0 r = 3 (§4.4(a)) trên 7 bài, **trừ khóa đã có** (runner bỏ khóa đã `done`); BRIEF-14 ước khoảng 49 lượt.
+- **(5) Thước đo:** chính: Δ = trung bình theo bài của (điểm A − điểm B0), mỗi cặp A1/B0 và A2/B0. Phụ: n_A1, n_A2, danh sách bài loại kèm nhãn trần; độ nhạy ngưỡng 1,00 chỉ mô tả (§2.5 (b)).
+- **(6) Phép kiểm và CI:** giữ nguyên quy tắc trần và suy biến v2.1: **(a)** tập 7 bài; **(b)** bài chạm trần (mọi lượt cả hai arm của cặp có `score` ≥ 0,99) bị loại khỏi phép tương đương của cặp đó; **(c)** phương sai Δ\* bằng 0 hoặc mọi Δ\* bằng nhau (dung sai 10⁻¹²) thì p = NA, một cặp NA thì p(H6) = NA, phán quyết theo CI §2.4; **(d)** min(n_A1, n_A2) < 3 thì H6 hạ xuống ước lượng kèm CI 90 %, họ Holm chỉ còn H3 (K = 1). **[CẦN XÁC NHẬN]** nguồn p: SR-26 hoặc script ngoài có test và hash theo §2.3, §2.5; nếu không có thì H6 theo phương án lùi (ước lượng, K = 0). Số lượt A1 r = 3, A2 r = 2 vẫn không đủ công suất TOST ±5 pp (§2.5), nên "Không kết luận" vẫn được dự báo trước.
+- **(7) Dừng:** n đã định §4.4(a); không xem p, CI hay chênh lệch trước khi đủ n; không dừng sớm vì kết quả (§4.4(b)); hết ngân sách hoặc hạn mức thì dừng, báo n thực, ô thiếu bị đánh dấu, **không điều chỉnh phép kiểm** (§4.4(c)(d)).
+- **(8) Loại:** §4.1, §4.3 (Q, L, T, E1, E4) đối xứng giữa arm; thay lượt bằng `rep` mới, tối đa 2 mỗi ô.
+- **(9) Hash server:** ghi khi chạy. **[CẦN XÁC NHẬN]** khóa lượt đã có từ cửa sổ cũ (W1–W5, B7a) chạy trên server khác (V3-02, V3-03): H6 chỉ ghép cặp A và B0 trong cùng cửa sổ và cùng server theo cách V3-02, hoặc ghi chú khác server cho mọi bảng; chốt trước khi mở dữ liệu.
+- **Nguồn:** §2.5 (quy tắc trần và suy biến, (a)–(d)); §2.7; §4.4; §3.1 (H6); RUNBOOK Bước 3e mục 6.
+
+#### Khối (a) — Công thức chốt N cho E4 (ghi trước mọi lượt của E2; không chặn việc soạn tài liệu)
+
+1. **Tử và mẫu (chỉ lấy từ E2, nhãn tại thời điểm cổng):**
+   - q̂ = (số lỗi cài còn nguyên đến thời điểm cổng quyết định) / (số lỗi cài), cộng mọi lượt E2 của B7cab và B7cabO có cổng không `null`; B6 không tính.
+   - m̂ = số lỗi cài trung bình mỗi lượt (tử: tổng lỗi cài; mẫu: số lượt); ρ̂ = tương quan nội cụm của nhãn "quyết định đúng" giữa các lần quyết định cùng lượt. **[CẦN XÁC NHẬN]** ước lượng ρ̂ (ví dụ ICC một chiều) chưa có trong `agreement.md`; chốt phương pháp trước lượt đầu của E2. Nếu m̂ = 1 thì DEFF = 1 và ρ̂ không dùng.
+2. **Công thức (AG C-3):** DEFF = 1 + (m − 1)·ρ; N_arm = ⌈(dương cần × DEFF) / (m·q)⌉ với dương cần = 32 (r = 0,8, nửa độ rộng CP 95 % ≤ 0,15). **[CẦN XÁC NHẬN]** r = 0,8 là giá trị giữa của ba giá trị giả định 0,6/0,8/0,9 ở AG C-3 và BL B-12 trường 5; E2 không ước lượng được recall nên không có r̂.
+3. **Bậc gần nhất:** q̂ làm tròn **xuống** về bậc {1,0; 0,7; 0,5} (q̂ < 0,5: dùng 0,5 và ghi), ρ̂ làm tròn **lên** về bậc {0; 0,3; 0,5} (ρ̂ > 0,5: dùng trần), m theo hàng của AG C-3 (1; 3; 5), để N không thấp hơn nhu cầu. Đối chiếu với ô tương ứng của bảng C-3 (ví dụ r = 0,8, m = 1, q = 0,7 cho 46).
+4. **Chặn:** E4 tổng = 2 × N_arm, chặn trong **[50; 92]**, tức N_arm trong [25; 46]. **[CẦN XÁC NHẬN]** cách chia vào 6 bài × 2 arm: runner chạy `--repeats` đều, nên số lượt thực có thể lệch khỏi N tối đa 11 lượt; ghi số lượt thực, không vượt 92.
+5. **Dưới 10 dương thật trong E2** (đếm theo lượt) hoặc không tính được q̂ vì thiếu nhãn tại thời điểm cổng: ghi "**chưa ước lượng được**" và dùng mức trần 92 (N_arm = 46). **[CẦN XÁC NHẬN]** theo BL B-12 trường 5, nếu spec ghi khác thì theo spec.
+6. **Cấm:** N chỉ tính theo các bước 1–5 từ E2, **ghi vào RUNLOG trước lượt đầu của E4**. Cấm chọn hay đổi N sau khi đã xem điểm, recall, hiệu số nghiệm thu sai hay bất kỳ kết quả nào của E2 hoặc E4; cấm thêm lượt "cho đủ ý nghĩa" (CD 3.5 "Tối đa", §4.4(b)).
+
+#### Khối (b) — Thứ tự ưu tiên khi thiếu credit
+
+**E1 > E2 > E3 > E4 > E5 > E6.** Lý do: E1 rẻ nhất và gỡ nghi vấn cache cho mọi phép đo sau; E2 là điều kiện để chốt N cho E4; E3 là thí điểm bắt buộc trước E5; E4 trước E5 vì đóng được phán quyết "không đủ dữ liệu" của B-02; E6 sau cùng vì chỉ bổ sung n cho H6 đã có dữ liệu một phần. Hết credit: dừng ngay, commit phần đã có, ghi khóa cuối cùng vào RUNLOG, không chạy tiếp bằng hạn mức gói trên cloud (RUNBOOK mục 5). Được đổi thứ tự nếu **ghi lý do vào mục này trước lượt đầu của phần bị đổi**.
+
+#### Khối (c) — Lịch cloud/local
+
+E1–E3 trên cloud trước 5/11 14:59; E4–E6 local bằng hạn mức gói.
+
+Ghi chú: pha chạy Opus thì chi phí cao hơn; `runs.jsonl` ghi `model` theo pha (B-13), nên mọi phần ghi `model` theo pha cùng hash server để nối dữ liệu cloud với local (`run-plan.md` §6.1).
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.
@@ -459,6 +564,7 @@ Phần khác của `run-plan.md` đã đối chiếu nhưng không tìm thấy l
 
 ## Lịch sử bản
 
+- **v2.4 (3/11/2026, S1 của T-20261103-214630-c4e, @methodologist):** chỉ **thêm** ở §9 mục "Đăng ký trước vòng 4 gói 8: đợt đo 3e" gồm V4-3e-E1…E6 (B-14, B-12/B-16 thí điểm và chính, B-15, H6; đủ 9 trường và nguồn), khối (a) công thức chốt N cho E4, (b) thứ tự ưu tiên khi thiếu credit, (c) lịch cloud/local. Chép số từ `cache-diagnostic-spec.md`, `improvement-backlog.md`, `agreement.md` và quy tắc H6 v2.1; không đặt ngưỡng mới, không đổi giả thuyết, họ Holm hay phép kiểm nào của v2.3.
 - **v2.3 (3/11/2026, S2 của T-20261103-163327-d48, @methodologist):** chỉ **thêm** dòng V4-04 ở §9 (B7′ dừng vô ích ở GĐ1, R̂ token 2,04 và thời gian 2,16 > 1,6; CLI 2.1.316 → 2.1.317; B7c bị hủy trước khi có dòng nào). Sai lệch về thực thi; không đổi giả thuyết, ngưỡng, họ Holm hay phép kiểm nào của v2.2.
 - **v2.2 (3/11/2026, S3 của T-20261103-101337-870, @methodologist):** thêm §5.1 (bốn phân tích phụ/khám phá ngoài họ Holm cho bộ chấm và cổng: (a), (b), (c), κ MAST; thước đo, đơn vị lấy mẫu lại, seed 20261103, quy tắc cảnh báo prevalence, định nghĩa dương thật/dự đoán dương của (c), ngưỡng "recall chưa ước lượng được" < 10 lượt dương thật) và dòng V4-02 ở §9. Không đổi giả thuyết, ngưỡng hay họ Holm. Duyệt thiết kế `agreement.mjs` ở `analysis/agreement.md`.
 - **v2.1 (bổ sung gói 2c, 2/11/2026, S1 của T-20261102-190653-75b; cùng v2.1, không tạo bản mới):** sửa major H6 chạm trần của review gói 2b: tập bài khai báo, định nghĩa chạm trần cả hai arm theo từng cặp, quy tắc suy biến (p = NA), ngưỡng ≥ 3 bài (§2.5, §2.7, §3.1, §5, §6, §8, §9 mục 6); H3 chuyển sang hoán vị hai mẫu chính xác C(20, 10), p_min 1/184 756; cột "Phép kiểm" H3, H6 ghi họ Holm K = 2 nếu SR-26 xong; `suite-review.md` SR-26 viết lại và SR-25 test 9 bỏ câu so sánh T\* − margin.
