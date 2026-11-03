@@ -434,6 +434,7 @@ Kết luận giữ nguyên: **ĐẠT CÓ ĐIỀU KIỆN** (điều kiện sao l�
 | Thay đổi định dạng | Năng lực | Đánh giá |
 |---|---|---|
 | `calls.jsonl`: trường `toolsTracked: false` khi runtime không ghi thao tác công cụ (Codex/Kimi CLI) | DET-01 | Cờ boolean, không chứa dữ liệu nghiệp vụ. Bản ghi vẫn đi qua `LogStore.record` (che bí mật/PII, chuỗi băm). Nhãn theo nhiệm vụ (không đổi) |
+| `calls.jsonl`: `maxTokens` = trần đầu ra thực (pha, không có thì runtime); `maxPrompt` = số token prompt lớn nhất trong các vòng công cụ | DET-01 | Chỉ số đếm token, không chứa nội dung prompt. Đi qua `LogStore.record` |
 | `task.json`: `projectChecks.depts[<phòng>] = { before, latest, at }` — kết quả lệnh kiểm tra theo phòng | GOV-03, DET-01 | Chỉ lệnh, mã thoát, thời gian, dòng tổng kết (đã có sẵn trong `baseline`/`latest`); **bỏ `tail`** (đầu ra lệnh) để không nhân bản đầu ra có thể chứa dữ liệu. Nằm trong `data/runs/<task>/`, nhãn theo nhiệm vụ |
 | `task.json`: `runs[].review.reviewerApproved` — kết luận gốc của reviewer trước khi CCoding ép "không duyệt" | DET-01 | Boolean; giúp truy vết quyết định (ai duyệt gì, CCoding can thiệp ra sao) — phục vụ kiểm toán chất lượng |
 

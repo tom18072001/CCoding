@@ -1,6 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { checksOutcome, computeKpi, kpiMarkdown, verificationClaim, type CallRow } from '../src/kpi.js';
+import http from 'node:http';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import type { AddressInfo } from 'node:net';
+import { checksOutcome, computeKpi, kpiMarkdown, runtimeLimits, verificationClaim, type CallRow } from '../src/kpi.js';
 import { testApp } from './helpers.js';
 
 type Src = Parameters<typeof computeKpi>[0];
@@ -353,6 +358,108 @@ test('KPI v2 (sửa 2): nhiệm vụ bị hủy/lỗi không tính Kết quả t
       assert.equal(be.scores.outcome, undefined, status);
       assert.ok(!be.findingKeys.includes('regression'), status);
     }
+  } finally {
+    app.cleanup();
+  }
+});
+
+// ───────── sửa theo review KPI v2 — nhóm 3: Tin cậy và ngữ cảnh ─────────
+
+test('KPI v2 (sửa 3): lỗi hạ tầng lúc nghiệm thu không bị tính "CTO không đọc được JSON"', () => {
+  const app = testApp();
+  try {
+    const calls = { T1: [call({ taskId: 'T1', agentId: 'cto', department: 'coord', phase: 'accept', output: 0, error: 'fetch failed: ECONNREFUSED', errorKind: 'transient' })] };
+    const acceptance = { at: '', by: 'cto', accepted: false, parsed: false, summary: '', criteria: [], risks: [], followUps: [], sig: '', error: 'fetch failed: ECONNREFUSED' };
+    const cto = computeKpi(source(app, [task('T1', { acceptance })], calls)).agents.find((a) => a.agentId === 'cto')!;
+    assert.equal(cto.format?.acceptUnparsed, 0);
+    assert.equal(cto.infraFailedCalls, 1);
+    assert.ok(!cto.findingKeys.includes('review-unparsed'));
+    assert.equal(cto.scores.reliability, 100, 'hạ tầng không trừ điểm');
+    // trả lời có nội dung nhưng không đọc được JSON vẫn bị tính
+    const parsedFail = { ...acceptance, error: undefined };
+    const cto2 = computeKpi(source(app, [task('T1', { acceptance: parsedFail })], { T1: [call({ taskId: 'T1', agentId: 'cto', department: 'coord', phase: 'accept', text: 'ok' })] })).agents.find((a) => a.agentId === 'cto')!;
+    assert.equal(cto2.format?.acceptUnparsed, 1);
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('KPI v2 (sửa 3): trần đầu ra lấy đúng max_tokens thực của lượt gọi (execute 32k), không lấy min với trần runtime', () => {
+  // cấu hình mặc định: runtime 8k, pha execute 32k → lượt execute gửi max_tokens 32k
+  const lim = runtimeLimits({ runtimes: { ollama: { maxTokens: 8000, contextWindow: 32768 } }, phases: { maxTokens: { execute: 32000 } } } as never);
+  assert.equal(lim('ollama', 'execute').maxOut, 32000);
+  assert.equal(lim('ollama', 'discuss').maxOut, 8000, 'pha không đặt trần → trần của runtime');
+  assert.equal(lim('ollama', 'execute').contextWindow, 32768);
+  const app = testApp();
+  try {
+    // 7,9k token đầu ra của execute: không bị cắt (trần 32k ghi trong bản ghi), dù limits() cũ trả 8k
+    const calls = { T1: [call({ taskId: 'T1', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S1', output: 7900, maxTokens: 32000, text: '## Tóm tắt\nx' })] };
+    assert.equal(computeKpi(source(app, [task('T1')], calls, {}, () => ({ maxOut: 8000 }))).agents.find((a) => a.agentId === 'backend-dev')!.truncated, 0);
+    const capped = { T1: [call({ taskId: 'T1', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S1', output: 31900, maxTokens: 32000, text: '## Tóm tắt\nx' })] };
+    assert.equal(computeKpi(source(app, [task('T1')], capped, {}, () => ({ maxOut: 8000 }))).agents.find((a) => a.agentId === 'backend-dev')!.truncated, 1);
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('KPI v2 (sửa 3): độ đầy ngữ cảnh lượt nhiều vòng dùng prompt LỚN NHẤT (maxPrompt), không dùng trung bình', () => {
+  const app = testApp();
+  try {
+    // 4 vòng, tổng 60k (trung bình 15k = 46%) nhưng vòng cuối 32,5k ≥ 98% cửa sổ 32.768 → Ollama đã cắt đầu prompt
+    const calls = { T1: [call({ taskId: 'T1', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S1', input: 60_000, turns: 4, maxPrompt: 32_500, text: '## Tóm tắt\nx', tools: [tool('edit_file', 'a.ts')] })] };
+    const be = computeKpi(source(app, [task('T1')], calls, {}, () => ({ contextWindow: 32_768 }))).agents.find((a) => a.agentId === 'backend-dev')!;
+    assert.equal(be.context?.overLimit, 1);
+    assert.equal(be.context?.maxFillPct, 99);
+    assert.ok(be.findingKeys.includes('context-overflow'));
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('KPI v2 (sửa 3): runtime API ghi prompt lớn nhất trong các vòng công cụ (maxPromptTokens)', async () => {
+  let n = 0;
+  const srv = http.createServer(async (req, res) => {
+    for await (const _ of req);
+    n++;
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    const send = (o: unknown) => res.write(`data: ${JSON.stringify(o)}\n\n`);
+    if (n < 3) send({ choices: [{ delta: { tool_calls: [{ index: 0, id: `c${n}`, function: { name: 'list_files', arguments: '{}' } }] }, finish_reason: 'tool_calls' }] });
+    else send({ choices: [{ delta: { content: '## Tóm tắt\nXong.' }, finish_reason: 'stop' }] });
+    send({ choices: [], usage: { prompt_tokens: [1000, 9000, 5000][n - 1], completion_tokens: 10 } });
+    res.end('data: [DONE]\n\n');
+  });
+  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-maxp-'));
+  try {
+    const { OpenAiApiRuntime } = await import('../src/runtimes/api.js');
+    const { parseAgent } = await import('../src/registry.js');
+    const rt = new OpenAiApiRuntime({ baseUrl: `http://127.0.0.1:${(srv.address() as AddressInfo).port}/v1`, tags: 'none' }, {}, 'maxp');
+    const agent = parseAgent('a.md', '---\nid: backend-dev\nname: Backend\ndepartment: dev\nrole: member\n---\nbody');
+    const r = await rt.run(
+      {
+        agent, phase: 'review', system: 's', prompt: 'p', model: 'm', cwd: root, tools: [], allowTools: true, timeoutMs: 10000,
+        toolPolicy: { root, allow: ['list_files'], maxTurns: 10, commandTimeoutSec: 10, maxOutputChars: 2000, denyCommands: [], allowGitCommit: false },
+        meta: { taskId: 'T-x', department: 'dev', callId: 'c1' },
+      },
+      {},
+    );
+    assert.equal(r.turns, 3);
+    assert.equal(r.maxPromptTokens, 9000);
+  } finally {
+    srv.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('KPI v2 (sửa 3): sửa tệp bằng run_command không bị báo "sản phẩm rỗng"', () => {
+  const app = testApp();
+  try {
+    const mk = (cmd: string) => computeKpi(source(app, [task('T1')], { T1: [call({ taskId: 'T1', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S1', text: 'xong', tools: [tool('run_command', cmd)] })] })).agents.find((a) => a.agentId === 'backend-dev')!.format?.emptyOutputs;
+    assert.equal(mk("sed -i 's/a/b/' src/a.ts"), 0);
+    assert.equal(mk("cat > src/a.ts <<'EOF'\nx\nEOF"), 0);
+    assert.equal(mk('git apply fix.patch'), 0);
+    assert.equal(mk('cat src/a.ts'), 1, 'chỉ đọc thì vẫn là rỗng');
+    assert.equal(mk('npm test'), 1, 'chỉ chạy kiểm tra thì vẫn là rỗng');
   } finally {
     app.cleanup();
   }

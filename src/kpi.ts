@@ -481,14 +481,17 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
       tokens += (r.input ?? 0) + (r.cacheRead ?? 0) + (r.output ?? 0) + (r.cacheWrite ?? 0);
       k.durationSec += (r.durationMs ?? 0) / 1000;
       const lim = src.limits?.(r.runtime, r.phase) ?? {};
-      // đầu ra bị cắt: theo trần thật của runtime/pha khi biết; không biết thì giữ heuristic cũ (8k/64k)
-      const capped = lim.maxOut ? (r.output ?? 0) >= 0.98 * lim.maxOut : (r.output === 8000 || r.output === 64000);
+      // đầu ra bị cắt: theo max_tokens THỰC của lượt (orchestrator ghi trong bản ghi), không có thì theo cấu hình runtime/pha;
+      // không biết thì giữ heuristic cũ (8k/64k)
+      const maxOut = Number(r.maxTokens) || lim.maxOut;
+      const capped = maxOut ? (r.output ?? 0) >= 0.98 * maxOut : (r.output === 8000 || r.output === 64000);
       if (r.truncated || (r.output && capped && !r.tools?.length && r.phase !== 'plan')) k.truncated++;
       if (lim.contextWindow) {
-        // prompt của MỘT lượt model (lượt công cụ cuối gần đúng = input/turns khi nhiều vòng thì đánh giá thấp — dùng max của hai)
+        // prompt của MỘT vòng model: prompt lớn nhất mà runtime ghi (maxPrompt) — Ollama cắt đầu prompt ở vòng vượt cửa sổ, nên
+        // phải xét vòng LỚN NHẤT. Bản ghi cũ không có maxPrompt: lượt một vòng = cả prompt; nhiều vòng = input / số vòng (ước lượng
+        // thấp — vòng cuối thường lớn hơn trung bình)
         const prompt = (r.input ?? 0) + (r.cacheRead ?? 0) + (r.cacheWrite ?? 0);
-        const perTurn = r.turns && r.turns > 1 ? prompt / r.turns : prompt;
-        const fill = Math.max(perTurn, r.turns && r.turns > 1 ? 0 : prompt) / lim.contextWindow;
+        const fill = (Number(r.maxPrompt) || (r.turns && r.turns > 1 ? prompt / r.turns : prompt)) / lim.contextWindow;
         const c = k.context!;
         c.known++;
         c.maxFillPct = Math.max(c.maxFillPct, Math.round(fill * 100));
@@ -508,7 +511,8 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
         }
         if (tc.name === 'search_papers' || tc.name === 'web_search' || tc.name === 'fetch_url') k.evidence.webCalls++;
       }
-      if ((r.phase === 'execute' || r.phase === 'revise') && !r.error && (r.text ?? '').trim().length < 20 && !(r.tools ?? []).some((tc) => tc.name === 'write_file' || tc.name === 'edit_file' || tc.name === 'Write' || tc.name === 'Edit'))
+      // sản phẩm rỗng: lượt thực thi/sửa gần như không có chữ VÀ không ghi tệp (kể cả ghi bằng run_command: sed -i, cat >, git apply…)
+      if ((r.phase === 'execute' || r.phase === 'revise') && !r.error && (r.text ?? '').trim().length < 20 && !writesFiles(r.tools))
         k.format!.emptyOutputs++;
       // sản phẩm (thực thi/sửa; báo cáo tổng hợp của trưởng phòng) — tuân thủ mẫu đầu ra & bằng chứng chấm trên BẢN CUỐI
       // của mỗi hạng mục: thiếu mục / chưa chạy lệnh kiểm chứng ở lần đầu nhưng đã sửa ở vòng sau thì không còn bị tính
@@ -631,7 +635,9 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
     // ── v2: kết quả thật (lệnh kiểm tra của dự án + nghiệm thu CTO) và hiệu chỉnh người duyệt ──
     const acc0 = task.acceptance;
     const acceptKnown = !!acc0?.parsed;
-    if (acc0 && !acc0.parsed && acc0.by) get(acc0.by, 'coord', roleModel.get(`accept:${acc0.by}`)).k.format!.acceptUnparsed++;
+    // lượt nghiệm thu lỗi (không có nội dung: hạ tầng, hết ngân sách…) đã tính ở lượt gọi hỏng (hạ tầng thì không trừ điểm) —
+    // không phải "không đọc được JSON"
+    if (acc0 && !acc0.parsed && !acc0.error && acc0.by) get(acc0.by, 'coord', roleModel.get(`accept:${acc0.by}`)).k.format!.acceptUnparsed++;
     if (finished) {
       const crit = acceptKnown ? acc0!.criteria : [];
       const critFailed = crit.filter((c) => c.result === 'fail').length;
@@ -894,6 +900,20 @@ export function applyResolutions(rep: KpiReport, src: KpiSource, resolutions: Kp
   return rep;
 }
 
+/**
+ * Giới hạn của runtime cho một pha theo cấu hình — dùng khi bản ghi lượt gọi chưa có `maxTokens`. Trần đầu ra THỰC giống runtime API:
+ * `max_tokens` = trần của pha (`phases.maxTokens`) nếu có, không thì trần của runtime (KHÔNG lấy min: execute 32k vẫn là 32k dù runtime
+ * đặt 8k cho các pha khác).
+ */
+export function runtimeLimits(config: Pick<Config, 'runtimes' | 'phases'>): NonNullable<KpiSource['limits']> {
+  return (runtime, phase) => {
+    const rc = config.runtimes?.[runtime];
+    const phaseMax = Number(config.phases?.maxTokens?.[phase as keyof Config['phases']['maxTokens']]) || 0;
+    const maxOut = phaseMax || Number(rc?.maxTokens) || undefined;
+    return { contextWindow: Number(rc?.contextWindow) || undefined, maxOut };
+  };
+}
+
 /** KPI từ dữ liệu thật của CCoding (data/runs/<task>/calls.jsonl, task.json, transcript.jsonl). */
 export function kpiReport(d: { store: Store; registry: Registry; config: Config }, f: KpiFilter & { resolve?: boolean } = {}): KpiReport {
   const since = f.days ? Date.now() - f.days * 86_400_000 : 0;
@@ -914,11 +934,7 @@ export function kpiReport(d: { store: Store; registry: Registry; config: Config 
       const p = t.projectId ? d.store.project(t.projectId) : undefined;
       return p ? (p.toolAccess ?? d.config.tools.projectAccess) : d.config.tools.defaultAccess;
     },
-    limits: (runtime, phase) => {
-      const rc = d.config.runtimes?.[runtime];
-      const caps = [Number(rc?.maxTokens) || 0, Number(d.config.phases?.maxTokens?.[phase as keyof typeof d.config.phases.maxTokens]) || 0].filter((x) => x > 0);
-      return { contextWindow: Number(rc?.contextWindow) || undefined, maxOut: caps.length ? Math.min(...caps) : undefined };
-    },
+    limits: runtimeLimits(d.config),
   };
   const byModel = f.by === 'model';
   const rep = computeKpi(src, { by: byModel ? 'agent-model' : 'agent' });

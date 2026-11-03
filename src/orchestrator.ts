@@ -2890,7 +2890,10 @@ export class Orchestrator {
       ...rec,
       attempts,
       sizes: req ? { system: req.system.length, context: req.context?.length ?? 0, prompt: req.prompt.length } : undefined,
-      maxTokens: req?.maxTokens,
+      // trần đầu ra THỰC của lượt: max_tokens của pha, không có thì của runtime (KPI so "bị cắt" với trần này)
+      maxTokens: req?.maxTokens ?? (Number(config.runtimes?.[result.runtime]?.maxTokens) || undefined),
+      // prompt lớn nhất trong các vòng công cụ (KPI: độ đầy ngữ cảnh theo vòng lớn nhất)
+      maxPrompt: result.maxPromptTokens,
       // runtime không ghi thao tác công cụ (Codex/Kimi CLI) → KPI Trung thực của lượt này "không đo được"
       toolsTracked: result.toolsTracked === false ? false : undefined,
       turns: result.turns,
@@ -2919,7 +2922,7 @@ export class Orchestrator {
       usage.output += r2.usage.output;
       usage.cacheRead += r2.usage.cacheRead;
       usage.cacheWrite += r2.usage.cacheWrite;
-      res = { ...r2, text, usage: { ...usage }, toolCalls: first.toolCalls, turns: (res.turns ?? 1) + (r2.turns ?? 1), capped: first.capped, diag: first.diag };
+      res = { ...r2, text, usage: { ...usage }, toolCalls: first.toolCalls, turns: (res.turns ?? 1) + (r2.turns ?? 1), capped: first.capped, diag: first.diag, maxPromptTokens: Math.max(res.maxPromptTokens ?? 0, r2.maxPromptTokens ?? 0) || undefined };
     }
     return res;
   }
