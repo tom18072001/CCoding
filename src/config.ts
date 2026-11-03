@@ -7,6 +7,31 @@ import { SLIM_DEFAULTS, type Slim } from './slim.js';
 /** Thư mục gốc của repo (chứa package.json). */
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+export interface OsSandboxConfig {
+  enabled?: boolean;
+  platformBackend?: 'auto' | 'wsl2' | 'appcontainer';
+  /** Domain được phép thêm (mặc định rỗng; strictAllowlist luôn bật). */
+  extraAllowedDomains?: string[];
+  /** Mẫu cấm đọc thêm, ngoài `.env*`. */
+  denyRead?: string[];
+}
+
+/** B-18: kiểm kiểu runtimes.claude-cli.osSandbox; sai kiểu → lỗi tiếng Việt (không đoán ý). */
+export function validateOsSandbox(v: unknown): void {
+  if (v === undefined) return;
+  const bad = (msg: string): never => {
+    throw new Error(`Cấu hình runtimes.claude-cli.osSandbox sai: ${msg}`);
+  };
+  if (!v || typeof v !== 'object' || Array.isArray(v)) bad('phải là đối tượng');
+  const o = v as Record<string, unknown>;
+  if (o.enabled !== undefined && typeof o.enabled !== 'boolean') bad('enabled phải là true/false');
+  if (o.platformBackend !== undefined && !['auto', 'wsl2', 'appcontainer'].includes(String(o.platformBackend))) bad('platformBackend phải là auto, wsl2 hoặc appcontainer');
+  for (const k of ['extraAllowedDomains', 'denyRead']) {
+    const a = o[k];
+    if (a !== undefined && (!Array.isArray(a) || a.some((x) => typeof x !== 'string' || !x.trim()))) bad(`${k} phải là mảng chuỗi không rỗng`);
+  }
+}
+
 export interface RuntimeConfig {
   /** Kiểu cho runtime tùy biến: "openai-api". */
   type?: string;
@@ -49,6 +74,11 @@ export interface RuntimeConfig {
    */
   stablePrefix?: boolean;
   sandbox?: string;
+  /**
+   * B-18 — claude-cli: sandbox cấp hệ điều hành (lớp 2, sau hook claude-guard) qua khóa `sandbox` của --settings.
+   * Mặc định TẮT. Bật mà nền tảng không có sandbox (Windows không WSL2) → từ chối chạy (fail-closed). Không liên quan `sandbox` của Codex.
+   */
+  osSandbox?: OsSandboxConfig;
   baseUrl?: string;
   apiKeyEnv?: string;
   maxTokens?: number;
@@ -390,6 +420,8 @@ export function loadConfig(opts: { root?: string; configFile?: string; local?: b
     if (!fs.existsSync(path.resolve(extra))) throw new Error(`Không thấy file cấu hình ${extra} (CCODING_CONFIG)`);
     cfg = deepMerge(cfg, readJson(path.resolve(extra)));
   }
+
+  validateOsSandbox((cfg.runtimes?.['claude-cli'] as RuntimeConfig | undefined)?.osSandbox);
 
   const env = process.env;
   if (env.CCODING_PORT) cfg.server.port = Number(env.CCODING_PORT);
