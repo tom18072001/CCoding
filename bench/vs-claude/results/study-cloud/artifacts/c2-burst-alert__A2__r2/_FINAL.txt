@@ -1,0 +1,5 @@
+I implemented `detectBursts` in `src/alert.js`, and `npm test` passes. That is only one visible test, and I didn't write any tests of my own, so the cooldown and equal-`ts` handling hasn't been checked against a case.
+
+It keeps only 5xx events and sorts them by `ts`. Equal timestamps stay in input order. It then runs a sliding window per host and applies the cooldown as you described. Alerts are sorted by `ts`, then `host` ascending. The input array isn't mutated.
+
+I didn't add any validation of `opts` or of malformed events.
