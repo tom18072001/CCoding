@@ -5,6 +5,16 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 2 (T-20261103-101337-870, 3/11/2026) — S5 (@data-scientist): (c) cổng như bộ phát hiện lỗi, κ MAST, phân xử
+
+- **`analysis/agreement.mjs`:** cảnh báo "nghịch lý κ" đa lớp chỉ khi lớp lớn nhất của tham chiếu hoặc dự đoán > 0,9 (theo duyệt thiết kế điểm 3; trước đó áp cả cận dưới 0,1); PABAK đa lớp giữ k cố định khi bootstrap (`kFixed`); thêm `clopperPearson`, `minPositives`, bảng C-0…C-3 (cổng, cỡ mẫu recall) và M-0…M-4 (κ MAST), `--fill`. Bảng A-0…A-3, G-0 không đổi. `agreement.test.mjs`: 12 → 16 test.
+- **`analysis/agreement.md`:** hoàn tất §(c) (định nghĩa chốt trước khi tính; kết quả; cỡ mẫu) và §MAST (đối chiếu commit, κ, PABAK, CI theo C-xx, phân xử, giới hạn).
+- **Mới:** `analysis/mast-labels-final.csv` (49 nhãn cuối, 13 chỗ lệch phân xử kèm lý do).
+- **`challenges.md`:** thêm cột "FM chi tiết" (49 dòng, sau cột Mã); cập nhật đoạn "Phân nhóm" (mục 0), ghi chú dưới bảng đếm mục 3, và P-14 (xử lý phần lớn, ghi phần còn lại). Tiêu đề mục 1.1–1.4 và bảng đếm theo tiêu đề **giữ nguyên**.
+- **`improvement-backlog.md`:** thêm **B-12** (đề xuất đo recall của cổng bằng bộ bài cài lỗi; không chạy).
+- **`facts.json`:** ngoại lệ của `improvement-backlog.md` đổi dòng 277 → 278 (hàng B-12 ở §0 làm lệch một dòng); `consistency-check.mjs` đạt lại (37 tệp).
+- **Chưa sửa (ngoài phạm vi, còn nói "một người gán nhãn"):** `paper/paper.md` (bảng giới hạn, ~dòng 377), `publication-plan.md` (B3, D9), `presentation-notes.md`, `self-improvement/design.md`.
+
 ## Vòng 4, gói 2 (T-20261103-101337-870, 3/11/2026) — S2 (@literature-researcher): sổ mã MAST và thống nhất trích dẫn
 
 - **Mới:** `analysis/mast-codebook.md`: 14 kiểu lỗi FM-1.1…FM-3.3 (5 + 6 + 3) theo MAST v3 Mục 4/Hình 1, kèm INF, NA, quy tắc chọn một nhãn; **không chứa nhãn C-xx**. Viết trước khi sửa trích dẫn.
