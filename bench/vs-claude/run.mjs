@@ -13,7 +13,7 @@ import { PROCESS_SUFFIX, runClaude, weighted } from './lib/claude.mjs';
 import { runCcoding, serverUp } from './lib/ccoding.mjs';
 import { GRADERS } from './lib/grade.mjs';
 import { blind } from './lib/judge.mjs';
-import { EXIT_RATE_LIMIT, checkArms, doneKeys, supportedLanes } from './lib/queue.mjs';
+import { EXIT_RATE_LIMIT, checkArms, doneKeys, suiteTaskIds, supportedLanes } from './lib/queue.mjs';
 import { populateWorkspace, taskDirs } from './lib/workspace.mjs';
 
 const SUITE = path.dirname(fileURLToPath(import.meta.url));
@@ -21,10 +21,10 @@ const argv = process.argv.slice(2);
 const flag = (k, d) => { const i = argv.indexOf(`--${k}`); return i < 0 ? d : argv[i + 1]; };
 const has = (k) => argv.includes(`--${k}`);
 
-const ARMS = JSON.parse(fs.readFileSync(path.join(SUITE, 'arms.json'), 'utf8'));
+const { _suites: SUITES = {}, ...ARMS } = JSON.parse(fs.readFileSync(path.join(SUITE, 'arms.json'), 'utf8')); // _suites không phải arm (B-12)
 const allTasks = fs.readdirSync(path.join(SUITE, 'tasks')).filter((d) => fs.existsSync(path.join(SUITE, 'tasks', d, 'task.json'))).sort();
 const taskSel = flag('tasks', 'all');
-const taskIds = taskSel === 'all' ? allTasks : taskSel.split(',').flatMap((s) => allTasks.filter((t) => t === s || t.startsWith(`${s}-`) || JSON.parse(fs.readFileSync(path.join(SUITE, 'tasks', t, 'task.json'))).category === s));
+const taskIds = taskSel === 'all' ? allTasks : taskSel.startsWith('suite:') ? suiteTaskIds(SUITES, taskSel.slice(6), allTasks) : taskSel.split(',').flatMap((s) => allTasks.filter((t) => t === s || t.startsWith(`${s}-`) || JSON.parse(fs.readFileSync(path.join(SUITE, 'tasks', t, 'task.json'))).category === s));
 const armIds = flag('arms', 'A0-sonnet,B0').split(',');
 for (const a of armIds) if (!ARMS[a]) throw new Error(`Unknown arm ${a}. Known: ${Object.keys(ARMS).join(', ')}`);
 const repeats = Number(flag('repeats', '3'));
