@@ -112,6 +112,40 @@ Chủ dự án giới hạn sub-agent theo bốn chiều: *cái gì được là
 
 **Nhận xét.** Phần lớn cơ chế được thêm *sau* một sự cố cụ thể (cột "Thách thức liên quan" trong `challenges.md`); với đa số, chúng tôi chưa có phép đo trước/sau có đối chứng. Vì vậy mục này mô tả cơ chế và bằng chứng sự cố, **không khẳng định hiệu quả định lượng**. Hai giới hạn nên nói thẳng: hook chỉ kiểm theo mẫu chuỗi (không thay sandbox HĐH), và ngân sách token không ngăn được chi phí cao khi chuỗi phụ thuộc dài.
 
+### 4.3 Trạng thái hiện hành sau khi gộp `main`
+
+Mục 4.1–4.2 mô tả luồng điều phối và cơ chế giới hạn như các máy chủ đo đã chạy. Mục này mô tả CCoding sau khi nhánh nghiên cứu nhận 16 commit mới của `main` (khoảng `e0bd2f4..9e6079b`) bằng một merge commit `37f88b6`, không rebase, không đẩy lên `main` (`merge-main-2026-11-03.md` §1, Phụ lục A). Mọi ý dưới đây trích về mục của tài liệu đó.
+
+**(a) Phần có trên `main` (mới so với bản mô tả trước).**
+
+1. *KPI v2 và bộ probe* (§3.2, §3.6). KPI v2 thêm `computeKpi`, `verificationClaim`, `checksOutcome`, `checksByDept`, `runtimeLimits`. Chỉ số Trung thực chỉ tính khẳng định có lệnh kiểm chứng thành công; hiệu chỉnh reviewer theo kết luận gốc `run.review.reviewerApproved`; bỏ dòng ma `agent@?` và không đếm trùng bằng chứng. Các hàm này chỉ đọc dữ liệu đã có, không đổi token hay kết quả nhiệm vụ; số KPI từ lần chạy cũ khác khi tính lại bằng v2, nên không so trực tiếp trước và sau gộp. Bộ probe (`bench/agent-probes/`) chạy mã do model sinh trong sandbox trên Ollama, nằm ngoài đường chạy của `bench/vs-claude/`.
+2. *Thứ tự ghi `reviewerApproved`* (§2, §4 mục 6). Nhánh nghiên cứu ép `review.approved=false` khi còn vấn đề lạc hướng; `main` ghi `reviewerApproved` từ kết luận gốc. Merge giữ cả hai phía và đặt `reviewerApproved` trước khối ép, vì nếu đặt sau thì KPI đọc giá trị đã bị ép và chấm sai reviewer.
+3. *Lộ trình REA* (Phụ lục A): KPI cạnh agent, Kanban, ngân sách, agent ngoài. Kèm backlog, kéo thả Kanban và đổi người phụ trách, dự án, ưu tiên, tiêu đề tại chỗ khi nhiệm vụ chưa chạy; không bao giờ hạ nhãn dữ liệu (§3.5).
+4. *Ngân sách và trần token theo dự án/agent* (§3.3). Lớp chính sách cộng dồn nhiều nhiệm vụ trong một kỳ (ngày, tháng, toàn bộ), có ngưỡng mềm (cảnh báo) và trần cứng (tạm dừng, `pause.reason='budget'`), lưu ở `data/budgets.json`, kiểm trước mỗi lượt gọi model. Lớp này tách khỏi ngân sách từng nhiệm vụ (`budgetTokens` mặc định 1.500.000, `toolInputBudget`), vốn không đổi. Mặc định không có chính sách; nếu tệp còn chính sách cũ, lượt đo có thể bị dừng giữa chừng, nên cần xác nhận tệp rỗng trước mỗi lần đo.
+5. *Agent ngoài* (§3.4). Runtime `external` chạy qua tiến trình (stdin/stdout JSON) hoặc HTTP, chỉ được tạo khi cấu hình khai báo; `api.ts` ghi thêm `maxPromptTokens` và `cli-agents.ts` đặt `toolsTracked: false` cho Codex CLI và Kimi CLI. Tác động của sửa đổi trong `api.ts` tới vòng gọi công cụ **chưa rõ** (chưa có lần chạy xác nhận).
+6. *Giao diện v2* (§3.6): Kanban và KPI cạnh agent trong `public/*`, không nằm trên đường chạy của `bench/vs-claude/`.
+
+Theo diff, `main` không sửa pha, model mặc định, prompt, hook và cờ của `claude -p` (§3.1), nên luồng điều phối của 4.1–4.2 giữ nguyên. Đây là kết luận từ diff, chưa có lần đo sau gộp xác nhận (§4, đoạn cuối). Kiểm tra sau gộp, do người gộp báo cáo: `npm run typecheck` và `npm run build` xanh; `npm test` 285/285 trên Linux (lần chạy đầu của người gộp ghi 282 đạt, 0 lỗi, 3 bỏ qua sau khi build lại `dist/`; nguồn: `merge-main-2026-11-03.md` §6 và bàn giao của phòng Phát triển cho số 285/285).
+
+**(b) Phần chỉ có trên nhánh thử nghiệm.** Bảy công tắc dưới đây có trong nhánh nghiên cứu, **chưa triển khai và chờ giám đốc duyệt**; `main` không có chúng. Mặc định sau gộp theo `merge-main-2026-11-03.md` §5 (các tệp nguồn không nằm trong diff của merge nên trùng mặc định trước gộp; không công tắc nào bị đổi hay bật thêm).
+
+**Bảng 1b.** Tách `main` và nhánh thử nghiệm. Nguồn: `merge-main-2026-11-03.md` §3, §5.
+
+| Nhóm | Mã | Nội dung | Mặc định sau gộp |
+|---|---|---|---|
+| Đã có trên `main` | — | KPI v2 và bộ probe; ngân sách dự án/agent; agent ngoài; backlog, Kanban, đổi thuộc tính; giao diện v2 | Ngân sách: không có chính sách; agent ngoài: chỉ tạo khi khai báo |
+| Chỉ trên nhánh | B-01 | Làn đơn `lanes.single` và làn nhanh `fastLane` | `lanes.single = { enabled: true, maxParts: 5, maxFilesTouched: 6 }`, thứ tự `options.lane` > `ProjectDef.lane` > tự động; `fastLane = { enabled: true, maxBriefChars: 4000, maxRepoFiles: 300, maxRepoBytes: 1.500.000, planModel: 'sonnet', finalReport: 'template', maxParallel: 4 }` |
+| Chỉ trên nhánh | B-02 | Vòng sửa của cổng kiểm tra | `gate.maxFixRounds = 2` |
+| Chỉ trên nhánh | B-04 | Bộ tách lệnh shell có xét nháy | Luôn bật |
+| Chỉ trên nhánh | B-05 | — | Không có công tắc cấu hình riêng (giả định: mới grep `config.ts`, `types.ts`, chưa đọc nơi triển khai; chờ người nắm B-05 xác nhận) |
+| Chỉ trên nhánh | B-06 | Chẩn đoán chặn, sự kiện `guard.block` | Luôn bật |
+| Chỉ trên nhánh | B-10 | Cổng phủ kế hoạch `planGate`, không gọi LLM | Chạy khi không ở chế độ solo |
+| Chỉ trên nhánh | B-11 | Làn đơn gọn `lanes.single.slim` | `{ accept: 'full', compactTemplate: false, promptDiet: true }` |
+
+Việc nhánh nghiên cứu có `main` hay không không đổi trạng thái "chưa triển khai" của bảy mã này: chúng chỉ nằm trong mã của nhánh.
+
+**(c) Các số đo W1–W5 và B7′ được đo trước khi gộp.** Mọi số đo của bài chạy trên mã **chưa chứa** 16 commit của `main`: máy chủ 7424 ở `origin/main` `e0bd2f4` (A0-sonnet, B0, B5) và máy chủ 7425 ở nhánh `7fb18ba` (B6, B7) trong W1–W5 (`study-cloud/RUNLOG.md` dòng 5, 56); máy chủ 7425 ở `1333eef` cho B7′ (`b7prime/RUNLOG.md` dòng 5), với Claude Code CLI 2.1.317 thay cho 2.1.316 của W1–W5 (dòng 7). Kiểm bằng `git log`: `9e6079b` không nằm trong lịch sử của `1333eef`, còn `1333eef` và `7fb18ba` đều nằm trong lịch sử của nhánh trước và sau merge `37f88b6`. Cần phân biệt hai nghĩa của "trước": theo *nội dung mã* máy chủ, cả ba đợt đều trước gộp; theo *đồng hồ*, W1–W5 trước merge (cam kết ngày 02/11), còn các lượt B7′ được cam kết kết quả lúc 09:11–09:25 UTC ngày 03/11, sau dấu thời gian của merge (15:12 +07, tức 08:12 UTC), nhưng máy chủ vẫn chạy worktree `1333eef` không có `main`. **Hành vi của CCoding sau gộp chưa được đo**; mục 4.3(a) về việc luồng điều phối không đổi chỉ dựa trên diff.
+
 ---
 
 ## 5. Phương pháp đánh giá
@@ -537,6 +571,7 @@ Nghiên cứu đăng ký trước có hai hàm ý cho cổng A/B, cả hai **ch�
 | Tổng quan tài liệu | **Chỉ CAID, *Don't Break the Cache* và Cognition 2026 đã đọc toàn văn trang lấy được**; đa số nguồn còn lại chỉ đọc tóm tắt, kể cả Debate or Vote | Mọi nhận định về "điểm mới" chỉ ở mức "chưa thấy trong phần đã đọc"; mở lại trang chính các venue trước khi nộp |
 | Bằng chứng nhật ký | Nhiều số trong `challenges.md` lấy từ tài liệu nội bộ, chưa tính lại từ log thô | Không dùng làm bằng chứng nhân quả (P-11) |
 | Ẩn danh | Một số tài liệu nguồn nội bộ còn chuỗi nhận diện | Không trích nguyên văn; rà trước khi công bố (P-13) |
+| Hiệu lực mô tả | **Hệ thống được mô tả ở §4.3 (sau gộp `main`) khác hệ thống đã đo**: W1–W5 và B7′ chạy trên mã `e0bd2f4`, `7fb18ba`, `1333eef`, chưa có 16 commit của `main`; hành vi sau gộp chỉ suy từ diff | Không áp số đo vào hệ thống sau gộp; cần đo lại trước khi khái quát (§4.3(c)) |
 
 ---
 
