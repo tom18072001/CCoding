@@ -5,6 +5,7 @@
 > Cập nhật R12 (T-20261103-025758-514, S3, @methodologist, 3/11/2026): thêm **B-11** (làm gọn làn đơn, §5), đề xuất chỉ tiêu B-01′ (×1,3, chờ giám đốc duyệt; `preregistration.md` §9 V4-01, nhãn post-hoc) và kế hoạch đo B7′ (§5 B-11.5). Số lấy từ `analysis/b7-cost-decomposition.md` và `analysis/b02m-replay.md`.
 > Cập nhật R13 (T-20261103-034225-3c7, S1, @methodologist, 3/11/2026): sửa B-11 theo review — (d) **đóng** (trích mã `route()` và cấu hình arm B7); (a) tách (a-skip) bị chặn / (a-brief) cần giám đốc duyệt; B-11.5 viết lại theo arm B7c/B7cb/B7cab (điều kiện chạy, ngân sách lượt trong trần 3,6 giờ, kết quả dự kiến, điểm dừng vô ích sau 20 lượt); CI dự kiến lấy từ `analysis/variance-decomposition.md` (S2, @data-scientist); minor: lịch ≈ 3,5 giờ, V4-01 "chỉ báo thô", T-6 là Δ gộp, `b02m-replay` đã đọc `finalPath`.
 > Cập nhật R14 (T-20261103-115014-174, S3, @research-lead, 3/11/2026): thêm **B-13…B-17** (§5) từ đối chiếu tài liệu "4 hướng tăng tốc" của giám đốc (`analysis/acceleration-crosscheck.md`). Số lấy từ `analysis/cache-sensitivity.md` (C-0…C-5, ảnh chụp `838a5f1`), `analysis/cache-diagnostic-spec.md`, `analysis/b7-cost-decomposition.md` (T-x), `analysis/agreement.md`, `related-work.md` §2.16–2.22. Cả năm mục là **đề xuất, chưa chạy**; không đưa lên `main`.
+> Cập nhật vòng 4 gói 6 (T-20261103-195822-b03, S2, @research-lead, 3/11/2026): §0 có thêm cột **Trạng thái** (đúng một trong bốn giá trị: `đã làm (<commit>)` / `D9` / `cần đo` / `cần giám đốc duyệt`; riêng B-12, B-14, B-16 ghi `D9 → sau đó cần đo`) và cột **Ghi chú trạng thái** (commit, mục `BRIEF-D9.md`, số lượt cần đo theo đặc tả). Căn cứ: quyết định của giám đốc 3/11 19:56 ("đã là đề tài thì phải fix hết, không để đề xuất sửa") và `BRIEF-D9.md` (`90cd913`). Các nhãn "đề xuất", "hoãn", "bị chặn" ở cột Mã và tiêu đề §5 của B-09, B-12…B-17 được thay bằng trạng thái. Câu "Cả năm mục là **đề xuất, chưa chạy**" ở dòng trên là trạng thái tại R14. Hash đã kiểm bằng `git show --stat`.
 > Nguyên tắc của giám đốc: mọi nâng cấp phải dựa vào nghiên cứu; mỗi thay đổi của Phòng Dev ghi mã `B-xx`; benchtest chạy theo `preregistration.md` để kiểm lại.
 > Số từ `token-analysis.md` dẫn theo **mã bảng** (T-0, T-d…), không chép lại bản S1 đang làm mới.
 > **Mã giả thuyết (từ R8):** hệ chính là **H1–H10 của bộ đo giám đốc** (`bench/vs-claude/analyze.mjs:61-115`), viết `H_i` trong tệp này. Giả thuyết H1–H9 của `preregistration.md` bản 1 đổi mã theo quy ước H_i → ĐK-P_i (bản 2, hạng mục S4; cùng quy ước với `preregistration.md` §3.3, thống nhất ở v2.1). **Trùng mã:** P1–P4 ở cột "Gộp ứng viên", B-02, B-03, B-09 là **bản vá prompt** trong `self-improvement/prompt-patches/`; vì vậy trong tệp này giả thuyết bản 1 ghi là **ĐK-P_i** (= P_i của `preregistration.md` bản 2). Đề nghị S4 ghi chú trùng mã này trong bảng ánh xạ P↔H.
@@ -12,25 +13,25 @@
 
 ## 0. Tóm tắt xếp hạng
 
-| Hạng | Mã | Nâng cấp | Gộp ứng viên | Hiệu quả (1–5) | Công sức (1–5) | Ưu tiên = H/E | Giám đốc duyệt lên main |
-|---:|---|---|---|---:|---:|---:|---|
-| 1 | **B-01** | Làn đơn cho việc nhỏ | "làn đơn" | 5 | 3 | 1,7 | Có |
-| 2 | **B-02** | Cổng chất lượng (kiểm → sửa → mẫu đầu ra → reviewer có điều kiện) | lệnh đỏ vào vòng sửa (đề bài đòi xanh ⇒ bắt buộc, R8); P3; D-02; G5 (loại) | 4 | 3 | 1,3 | Có |
-| 3 | **B-10** | Cổng phủ kế hoạch (phần việc không ai nhận ⇒ chặn; kế hoạch đọc dở ⇒ không chạy) | ca t5 C9 (R8) | 4 | 2 | 2,0 | Có |
-| 4 | B-03 | Nhật ký sự cố khi sửa | P4 | 2 | 1 | 2,0 | Có |
-| 5 | B-04 | Bộ phân tích lệnh shell của hook (nháy, lệnh đọc) | G1, G2 | 3 | 2 | 1,5 | Có (biên bảo mật) |
-| 6 | B-05 | Script kiểm nhất quán số liệu | G7 | 3 | 2 | 1,5 | Không |
-| 7 | B-06 | Chẩn đoán chặn của hook | G6, D-03 | 2 | 2 | 1,0 | Có |
-| 8 | B-07 | Trần lượt cho `claude-cli` | D-01 | 2 | 2 | 1,0 | Có |
-| 9 | B-08 | `cwd` của hook và Read tệp tool-results | G3, G4 | 2 | 3 | 0,7 | Có (biên bảo mật) |
-| 10 | B-09 | Giới hạn đầu ra / tín hiệu dừng khảo sát (hoãn) | P1, P2 | 1 | 1 | 1,0 | Có |
-| — | **B-11** (R12, vòng 4) | Làm gọn làn đơn: (a-skip) bỏ nghiệm thu [**bị chặn**], (a-brief) bảng tiêu chí ngắn [**cần giám đốc duyệt**], (b) mẫu gọn [**cần giám đốc duyệt**], (c) prompt, (d) định tuyến [**đã có, đóng**: `route()` bỏ lượt LLM khi ép làn đơn]; đo theo arm B7c/B7cb/B7cab; đề xuất chỉ tiêu B-01′ ×1,3 (§5 B-11). **Trạng thái 3/11/2026: B7′ GĐ1 đã chạy, dừng vô ích (R̂ token 2,04, thời gian 2,16 > 1,6; n = 2 mỗi ô); chưa phải kết luận; B7c hủy; ba công tắc chưa đủ cho ×1,3 (mô tả); xem B-11.5** | S1 `b7-cost-decomposition.md`; S2 `b02m-replay.md` (cho (a)); `variance-decomposition.md` (cỡ mẫu B-11.5) | chưa chấm | chưa chấm | — | Có |
-| — | **B-12** (vòng 4 gói 2, **đề xuất, không chạy**) | Bộ bài cài lỗi để đo recall của cổng chất lượng (B-02, B-10, CTO): lượt có lỗi cài sẵn, nhãn thật biết trước, ghi quyết định cổng từng lần | `analysis/agreement.md` §(c) (C-1…C-3) | 3 | 3 | 1,0 | Có (mở đo mới, tốn hạn mức) |
-| — | **B-13** (R14, **đề xuất**) | Chỉ số trúng cache theo lượt gọi/pha/runtime + ghi `model` và `byPhase` đủ 4 thành phần token | đề xuất 1 của tài liệu "4 hướng"; `cache-sensitivity.md` C-0, C-2; T-2 | 3 | 2 | 1,5 | Có (đổi schema `runs.jsonl` của bench) |
-| — | **B-14** (R14, **đề xuất**) | Chẩn đoán cache claude-cli (≤ 8 lượt), rồi ổn định tiền tố theo kết quả | đề xuất 2 (và câu hỏi TTL của đề xuất 8); `cache-diagnostic-spec.md` Phần 1; C-1, C-3, C-5 | 3 | 2 | 1,5 | Có (gọi `claude -p`; đổi bộ công cụ chạm hook) |
-| — | **B-15** (R14, **đề xuất, bị chặn**) | Đo họp bằng arm B1 (`discussionRounds: 0`) trên bài lớn | đề xuất 3; `cache-diagnostic-spec.md` Phần 2 | chưa chấm | 3 | — | Có (tạo `task.json` bài lớn) |
-| — | **B-16** (R14, **đề xuất**) | Thí điểm "CTO Opus + nghiệm thu brief", đo bằng bộ bài B-12 | đề xuất 4; `cache-diagnostic-spec.md` Phần 3; T-5; C-5; B-11 (a-brief) | chưa chấm | 3 | — | Có (cần duyệt (a-brief) và B-12) |
-| — | **B-17** (R14, **hoãn**) | Model lập kế hoạch theo độ khó 1–3 | đề xuất 6; chờ trường `model` của B-13 | chưa chấm | 3 | — | Có |
+| Hạng | Mã | Nâng cấp | Gộp ứng viên | Hiệu quả (1–5) | Công sức (1–5) | Ưu tiên = H/E | Giám đốc duyệt lên main | Trạng thái (3/11/2026) | Ghi chú trạng thái |
+|---:|---|---|---|---:|---:|---:|---|---|---|
+| 1 | **B-01** | Làn đơn cho việc nhỏ | "làn đơn" | 5 | 3 | 1,7 | Có | đã làm (`e2a029c`, `994d9c8`) | Bộ chọn làn `e2a029c`, luồng làn đơn `994d9c8`, gộp `630e2b7`. Đo xác nhận đã chạy: TOST bác giả thuyết B-01 (`9b57f5a`); làm gọn tiếp ở B-11 |
+| 2 | **B-02** | Cổng chất lượng (kiểm → sửa → mẫu đầu ra → reviewer có điều kiện) | lệnh đỏ vào vòng sửa (đề bài đòi xanh ⇒ bắt buộc, R8); P3; D-02; G5 (loại) | 4 | 3 | 1,3 | Có | đã làm (`28d041d`) | Gộp `6b84363`; mọi làn `b127308`. `gate.maxFixRounds: 2` (`src/config.ts:295`); P3 `src/prompts.ts:543`; D-02 `src/orchestrator.ts:1981`. Recall của cổng đo qua B-12 |
+| 3 | **B-10** | Cổng phủ kế hoạch (phần việc không ai nhận ⇒ chặn; kế hoạch đọc dở ⇒ không chạy) | ca t5 C9 (R8) | 4 | 2 | 2,0 | Có | đã làm (`08a5f6f`) | Gộp `fd35de9`. Ghi quyết định cổng vào `runs.jsonl` thuộc B-12 (D9) |
+| 4 | B-03 | Nhật ký sự cố khi sửa | P4 | 2 | 1 | 2,0 | Có | D9 | `BRIEF-D9.md` mục 3 |
+| 5 | B-04 | Bộ phân tích lệnh shell của hook (nháy, lệnh đọc) | G1, G2 | 3 | 2 | 1,5 | Có (biên bảo mật) | đã làm (`7760ca7`) | Gộp `21502be` |
+| 6 | B-05 | Script kiểm nhất quán số liệu | G7 | 3 | 2 | 1,5 | Không | đã làm (`c82cdc0`) | Gộp `fb70da6`; bỏ qua BRIEF*.md `34deadd` |
+| 7 | B-06 | Chẩn đoán chặn của hook | G6, D-03 | 2 | 2 | 1,0 | Có | đã làm (`5fd6604`) | Gộp `2b3d439` |
+| 8 | B-07 | Trần lượt cho `claude-cli` | D-01 | 2 | 2 | 1,0 | Có | D9 | `BRIEF-D9.md` mục 1 |
+| 9 | B-08 | `cwd` của hook và Read tệp tool-results | G3, G4 | 2 | 3 | 0,7 | Có (biên bảo mật) | D9 | `BRIEF-D9.md` mục 2 |
+| 10 | B-09 | Giới hạn đầu ra / tín hiệu dừng khảo sát (sau công tắc, mặc định tắt) | P1, P2 | 1 | 1 | 1,0 | Có | D9 | `BRIEF-D9.md` mục 4; trước 3/11 ghi "hoãn" |
+| — | **B-11** (R12, vòng 4) | Làm gọn làn đơn: (a-skip) bỏ nghiệm thu [**bị chặn**], (a-brief) bảng tiêu chí ngắn [**cần giám đốc duyệt**], (b) mẫu gọn [**cần giám đốc duyệt**], (c) prompt, (d) định tuyến [**đã có, đóng**: `route()` bỏ lượt LLM khi ép làn đơn]; đo theo arm B7c/B7cb/B7cab; đề xuất chỉ tiêu B-01′ ×1,3 (§5 B-11). **Trạng thái 3/11/2026: B7′ GĐ1 đã chạy, dừng vô ích (R̂ token 2,04, thời gian 2,16 > 1,6; n = 2 mỗi ô); chưa phải kết luận; B7c hủy; ba công tắc chưa đủ cho ×1,3 (mô tả); xem B-11.5** | S1 `b7-cost-decomposition.md`; S2 `b02m-replay.md` (cho (a)); `variance-decomposition.md` (cỡ mẫu B-11.5) | chưa chấm | chưa chấm | — | Có | cần giám đốc duyệt | Công tắc `lanes.single.slim` đã làm (`5e296af`, mặc định: nghiệm thu `full`, mẫu gọn tắt). Chờ duyệt: bật (a-brief), (b), chỉ tiêu B-01′ (`preregistration.md` §9 V4-01). (a-skip) bị chặn |
+| — | **B-12** (vòng 4 gói 2) | Bộ bài cài lỗi để đo recall của cổng chất lượng (B-02, B-10, CTO): lượt có lỗi cài sẵn, nhãn thật biết trước, ghi quyết định cổng từng lần | `analysis/agreement.md` §(c) (C-1…C-3) | 3 | 3 | 1,0 | Có (mở đo mới, tốn hạn mức) | D9 → sau đó cần đo | `BRIEF-D9.md` mục 7 (≥ 6 bài, oracle 1,00). Chỉ còn đo sau D9: khoảng 25–46 lượt bài cài lỗi (r = 0,8; B-12 trường 5, `agreement.md` C-3, Bảng 14 của paper), cộng lượt sạch để đo chặn nhầm (n ≥ 72 khi 0 chặn nhầm, B-12 trường 4(b)) |
+| — | **B-13** (R14) | Chỉ số trúng cache theo lượt gọi/pha/runtime + ghi `model` và `byPhase` đủ 4 thành phần token | đề xuất 1 của tài liệu "4 hướng"; `cache-sensitivity.md` C-0, C-2; T-2 | 3 | 2 | 1,5 | Có (đổi schema `runs.jsonl` của bench) | D9 | `BRIEF-D9.md` mục 5 |
+| — | **B-14** (R14) | Chẩn đoán cache claude-cli (≤ 8 lượt), rồi ổn định tiền tố theo kết quả | đề xuất 2 (và câu hỏi TTL của đề xuất 8); `cache-diagnostic-spec.md` Phần 1; C-1, C-3, C-5 | 3 | 2 | 1,5 | Có (gọi `claude -p`; đổi bộ công cụ chạm hook) | D9 → sau đó cần đo | `BRIEF-D9.md` mục 6: script chẩn đoán và công tắc `stablePrefix` (mặc định tắt). Chỉ còn đo sau D9: chẩn đoán ≤ 8 lượt `claude -p` (6 đo, 1 khởi động, 1 dự phòng; B-14 trường 4), chạy ngoài hook. Bước 2 (A/B trên bench): chưa có đặc tả số lượt |
+| — | **B-15** (R14) | Đo họp bằng arm B1 (`discussionRounds: 0`) trên bài lớn | đề xuất 3; `cache-diagnostic-spec.md` Phần 2 | chưa chấm | 3 | — | Có (mở đo mới) | cần đo | Chỉ còn đo: arm B1 trên l1-modules/l2-chain, 10 lượt × 2 arm × 2 bài = 40 lượt + 6 lượt thí điểm (B-15 trường 5). Tiên quyết đã xong: `task.json` của hai bài (`3ff7df3`, D8) |
+| — | **B-16** (R14) | Thí điểm "CTO Opus + nghiệm thu brief", đo bằng bộ bài B-12 | đề xuất 4; `cache-diagnostic-spec.md` Phần 3; T-5; C-5; B-11 (a-brief) | chưa chấm | 3 | — | Có (cần duyệt (a-brief) và B-12) | D9 → sau đó cần đo | `BRIEF-D9.md` mục 8: arm `B7cabO`, không đổi mặc định. Chỉ còn đo sau D9: thí điểm 12 cặp (B-16 trường 4), rồi 25–46 lượt lỗi cài mỗi arm (B-16 trường 5); cần bộ bài B-12 |
+| — | **B-17** (R14) | Model lập kế hoạch theo độ khó 1–3 | đề xuất 6; tín hiệu tất định của bộ chọn làn; trường `model` của B-13 | chưa chấm | 3 | — | Có | D9 | `BRIEF-D9.md` mục 9: sau công tắc, mặc định tắt; trước 3/11 ghi "hoãn". Đo A/B: chưa có đặc tả số lượt |
 
 B-01 và B-02 đứng đầu theo quyết định của giám đốc (2/11, 13:42), không phải theo điểm. **B-10 đứng thứ ba** (R8): cùng điểm ưu tiên 2,0 với B-03, nhưng là mục duy nhất ngoài B-01/B-02 có số đo chất lượng trực tiếp (t5: 95/146 test ẩn, §5 B-10), chặn một loại lỗi mà reviewer LLM đã bỏ lọt, và nên triển khai cùng B-02 (chung bước "trước thực thi/sau thực thi" của pipeline). Thang điểm 1–5 là đánh giá chuyên gia; chỉ B-01/B-02/B-10 có số đo hỗ trợ trực tiếp (§3, §5 B-10).
 
@@ -333,7 +334,7 @@ Mọi lượt (execute, vòng sửa, sửa định dạng, reviewer) đi qua `Or
 | **8. Ưu tiên** | 2 / 3 = 0,7. Thấp nhất. |
 | **9. Giám đốc duyệt** | Có (bảo mật). |
 
-### B-09 — Giới hạn đầu ra, tín hiệu dừng khảo sát (P1, P2) — hoãn
+### B-09 — Giới hạn đầu ra, tín hiệu dừng khảo sát (P1, P2) — **D9** (sau công tắc, mặc định tắt; trước 3/11: hoãn)
 
 | Trường | Nội dung |
 |---|---|
@@ -502,7 +503,7 @@ Các ô thứ tự chính của (b), (c) là phần còn lại sau khi accept đ
 **B-11.6 Giới hạn.** Không có `calls.jsonl` của server cloud (S1 §Giới hạn dữ liệu); mọi "tiết kiệm" là cận trên hoặc cận không thông tin, không phải đo. Phán quyết B-02 "không đủ dữ liệu" (S2) dựa trên 1 ca dương trong 54 lượt; không phát biểu khác. **`b02m-replay` đọc `finalPath` (vòng 4 gói 1b, S2):** script đọc `runs[-1].finalPath`; 54/54 lượt có trường `finalPath` nhưng 0/54 có tệp báo cáo đọc được cạnh `ccoding-task.json` (bench không lưu `FINAL.md`), nên không có bằng chứng mới; bắt 1/1 và chặn nhầm 0/53 **không đổi** (`b02m-replay.md`). Muốn phát lại `templateGate` cho (a-brief) và (b), bench phải lưu văn bản đầu ra. Kiểm lại: `node docs/research/scripts/consistency-check.mjs` (xem tệp bàn giao).
 
 
-### B-12 — Đo recall của cổng chất lượng bằng bộ bài cài lỗi (vòng 4 gói 2; 3/11/2026; @data-scientist) — **ĐỀ XUẤT, KHÔNG CHẠY**
+### B-12 — Đo recall của cổng chất lượng bằng bộ bài cài lỗi (vòng 4 gói 2; 3/11/2026; @data-scientist) — **D9 → sau đó cần đo** (trước 3/11: đề xuất, không chạy)
 
 > Theo `preregistration.md` §5.1: B-12 chỉ là đề xuất trong backlog. Không có lượt nào được chạy, không có dữ liệu nào sau ảnh chụp 276 dòng được đọc. Mọi số dưới đây lấy từ `analysis/agreement.md` §(c) (bảng C-0…C-3) hoặc là **giả định** (đánh dấu).
 
@@ -518,7 +519,7 @@ Các ô thứ tự chính của (b), (c) là phần còn lại sau khi accept đ
 | **8. Ưu tiên** | Hiệu quả 3 / công sức 3 = 1,0. **Không xếp hạng**; điều kiện: phán quyết B-02 hiện "không đủ dữ liệu" (`b02m-replay.md`) nên B-12 là con đường để đóng phán quyết đó, nhưng giám đốc quyết có mở đo mới hay không. |
 | **9. Giám đốc duyệt** | **Có** — mở đo mới tốn hạn mức và cần Phòng Dev thêm trường ghi quyết định. |
 
-### B-13 — Chỉ số trúng cache và trường ghi theo pha/model (vòng 4 gói 3; 3/11/2026; @research-lead) — **ĐỀ XUẤT**
+### B-13 — Chỉ số trúng cache và trường ghi theo pha/model (vòng 4 gói 3; 3/11/2026; @research-lead) — **D9** (trước 3/11: đề xuất)
 
 > Đề xuất 1 của tài liệu "4 hướng tăng tốc" (`context/acceleration-4-directions-2026-11-03.md` dòng 260–263). Số lấy từ `analysis/cache-sensitivity.md` (C-x, ảnh chụp `838a5f1`) và `analysis/b7-cost-decomposition.md` (T-x). Đối chiếu đầy đủ: `analysis/acceleration-crosscheck.md` §1 dòng 1.
 
@@ -534,7 +535,7 @@ Các ô thứ tự chính của (b), (c) là phần còn lại sau khi accept đ
 | **8. Ưu tiên** | Hiệu quả 3 / công sức 2 = 1,5. Đề xuất số 2 cho Phòng Dev (`acceleration-crosscheck.md` §4). |
 | **9. Giám đốc duyệt** | **Có**, vì đổi schema `runs.jsonl` của bench và chọn thời điểm sau đợt `study-cloud`. |
 
-### B-14 — Chẩn đoán cache claude-cli, rồi ổn định tiền tố (vòng 4 gói 3; 3/11/2026; @research-lead) — **ĐỀ XUẤT, CHƯA CHẠY**
+### B-14 — Chẩn đoán cache claude-cli, rồi ổn định tiền tố (vòng 4 gói 3; 3/11/2026; @research-lead) — **D9 → sau đó cần đo** (trước 3/11: đề xuất, chưa chạy)
 
 > Đề xuất 2 của tài liệu (dòng 265–271), cùng câu hỏi TTL ở đề xuất 8 (dòng 293–295). Đặc tả phép thử: `analysis/cache-diagnostic-spec.md` Phần 1 (S2). Gói này không gọi `claude -p`; Phòng Dev chạy.
 
@@ -550,7 +551,7 @@ Các ô thứ tự chính của (b), (c) là phần còn lại sau khi accept đ
 | **8. Ưu tiên** | Hiệu quả 3 / công sức 2 = 1,5. Đề xuất số 1 cho Phòng Dev, bắt buộc theo đề bài (`acceleration-crosscheck.md` §4). |
 | **9. Giám đốc duyệt** | **Có**: bước 1 gọi `claude -p` (tốn hạn mức nhỏ, ≤ 8 lượt); bước 2 đổi cấu hình công cụ và chạm hook. |
 
-### B-15 — Đo họp bằng arm B1 trên bài lớn (vòng 4 gói 3; 3/11/2026; @research-lead) — **ĐỀ XUẤT, BỊ CHẶN**
+### B-15 — Đo họp bằng arm B1 trên bài lớn (vòng 4 gói 3; 3/11/2026; @research-lead) — **CẦN ĐO** (tiên quyết `task.json` đã có, `3ff7df3`; trước 3/11: bị chặn)
 
 > Đề xuất 3 của tài liệu (dòng 273–276). Điều kiện đo: `analysis/cache-diagnostic-spec.md` Phần 2 (S2).
 
@@ -559,14 +560,14 @@ Các ô thứ tự chính của (b), (c) là phần còn lại sau khi accept đ
 | **1. Vấn đề** | Chưa có số đo về lợi ích hay chi phí của họp. Tài liệu đề xuất bỏ họp với kế hoạch ≤ 3 hạng mục, hoặc lấy ý kiến vòng đầu song song rồi chốt. |
 | **2. Bằng chứng** | Mã trên nhánh perf: phát biểu trong một vòng **đã song song** (`phases.parallelDiscuss` mặc định bật, `orchestrator.ts:1611-1623`). Họp tự bỏ khi kế hoạch < `meetingMinSubtasks` (3) hạng mục hoặc < 2 người tham gia (`:1602-1604`). Mặc định `discussionRounds: 1` (`config.ts:297`). Arm B1 (`discussionRounds: 0`) có ở `arms.json:29-35`, **chưa chạy**. B7 là làn đơn, không họp (T-2). Tài liệu: Debate or Vote (`related-work.md` §2.16). |
 | **3. Nguyên nhân gốc** | Không áp dụng: chưa có vấn đề đo được. Câu "họp chạy nối tiếp 5 lượt" của tài liệu mô tả `main@9e6079b`, không khớp mã trên nhánh perf. |
-| **4. Thay đổi đề xuất** | Chưa đổi mặc định. Đo B1 so với đối chứng (làn đầy đủ, `discussionRounds: 1`) trên bài lớn. **Tiên quyết:** `l1-modules` và `l2-chain` phải có `task.json`; hiện mới có `starter/`. Việc tạo là quyết định của giám đốc. Kiểm trước: lượt đối chứng phải thật sự có pha `discuss`, nếu không thì kết quả rỗng. |
+| **4. Thay đổi đề xuất** | Chưa đổi mặc định. Đo B1 so với đối chứng (làn đầy đủ, `discussionRounds: 1`) trên bài lớn. **Tiên quyết (đã xong 3/11/2026):** `l1-modules` và `l2-chain` đã có `task.json` (`3ff7df3`, D8; oracle 1,00, null ≤ 0,01). Kiểm trước: lượt đối chứng phải thật sự có pha `discuss`, nếu không thì kết quả rỗng. |
 | **5. Hiệu quả kỳ vọng / cỡ mẫu** | Bỏ một vòng phát biểu song song và một lượt chốt trên đường găng. Độ lớn chưa biết. Cỡ mẫu tham chiếu: 10 lượt × 2 arm × 2 bài = 40 lượt, cộng 6 lượt thí điểm (S2). Với 2 bài, nửa độ rộng CI sẽ rộng hơn 0,218 của phương án A (V-2); con số chính xác chưa mô phỏng. **Giả thuyết.** |
 | **6. Cách kiểm lại** | Token có trọng số (thước đo chính), thời gian thực, test ẩn, `byPhase.discuss`. Chỉ báo ước lượng điểm kèm CI. Đăng ký `preregistration.md` §9 trước lượt đầu. |
 | **7. Rủi ro / dữ liệu** | Hai bài, nên kết quả khó khái quát. Bài tổng hợp, không có dữ liệu thật. |
-| **8. Ưu tiên** | Chưa chấm; công sức 3. **Bị chặn** đến khi có `task.json` cho bài lớn. Đề xuất 7 của tài liệu (review từng hạng mục) chỉ xét lại sau B-15. |
-| **9. Giám đốc duyệt** | **Có**: tạo `task.json` cho bài lớn và mở đo mới. |
+| **8. Ưu tiên** | Chưa chấm; công sức 3. **Chỉ còn đo** (`task.json` đã có, `3ff7df3`): 40 lượt + 6 lượt thí điểm (trường 5). Đề xuất 7 của tài liệu (review từng hạng mục) chỉ xét lại sau B-15. |
+| **9. Giám đốc duyệt** | **Có**: mở đo mới (`task.json` đã tạo ở `3ff7df3`). |
 
-### B-16 — Thí điểm "CTO Opus + nghiệm thu brief" (vòng 4 gói 3; 3/11/2026; @research-lead) — **ĐỀ XUẤT, CHƯA CHẠY**
+### B-16 — Thí điểm "CTO Opus + nghiệm thu brief" (vòng 4 gói 3; 3/11/2026; @research-lead) — **D9 → sau đó cần đo** (trước 3/11: đề xuất, chưa chạy)
 
 > Đề xuất 4 của tài liệu (dòng 278–280). Thiết kế đo: `analysis/cache-diagnostic-spec.md` Phần 3 (S2). Phụ thuộc B-11 (a-brief) và B-12.
 
@@ -582,18 +583,18 @@ Các ô thứ tự chính của (b), (c) là phần còn lại sau khi accept đ
 | **8. Ưu tiên** | Chưa chấm; công sức 3. Đề xuất số 3 cho Phòng Dev, chỉ sau khi giám đốc duyệt (a-brief) và mở đo B-12. |
 | **9. Giám đốc duyệt** | **Có**: duyệt (a-brief) (B-11), mở đo B-12, và chi phí Opus. |
 
-### B-17 — Model lập kế hoạch theo độ khó (vòng 4 gói 3; 3/11/2026; @research-lead) — **HOÃN**
+### B-17 — Model lập kế hoạch theo độ khó (vòng 4 gói 3; 3/11/2026; @research-lead) — **D9** (sau công tắc, mặc định tắt; trước 3/11: hoãn)
 
 | Trường | Nội dung |
 |---|---|
 | **1. Vấn đề** | Tài liệu đề xuất bước định tuyến chấm độ khó 1–3, mức 1 dùng Sonnet và mức 3 dùng Opus để lập kế hoạch (dòng 286–287). |
 | **2. Bằng chứng** | Đã có một phần: làn nhanh dùng `fastLane.planModel` cho pha plan (`orchestrator.ts:1399`, `:1520`), nhưng không có thang độ khó. Không có dữ liệu benchmark: ảnh chụp không có `model` (C-0), và B7 không có lượt plan (T-2). |
 | **3. Nguyên nhân gốc** | Không áp dụng: chưa có số đo. |
-| **4. Thay đổi đề xuất** | **Không làm trong vòng này.** Xét lại khi B-13 đã ghi `model` theo pha và B-15 có bài lớn để quan sát pha plan. |
+| **4. Thay đổi đề xuất** | **D9 (quyết định của giám đốc 3/11):** chọn model lập kế hoạch theo độ khó 1–3 từ tín hiệu tất định của bộ chọn làn, sau công tắc, mặc định tắt (`BRIEF-D9.md` mục 9). Đo hiệu quả khi B-13 đã ghi `model` theo pha và có lượt B-15 trên bài lớn. |
 | **5. Hiệu quả kỳ vọng** | Chưa ước lượng được. |
 | **6. Cách kiểm lại** | Khi mở lại: A/B pha plan theo độ khó trên bài lớn; dùng token có trọng số, USD (phụ) và tỉ lệ kế hoạch qua cổng B-10. |
 | **7. Rủi ro / dữ liệu** | Chấm độ khó sai làm kế hoạch yếu ở việc khó. Không đụng dữ liệu. |
-| **8. Ưu tiên** | Hoãn. |
+| **8. Ưu tiên** | D9 (trước 3/11: hoãn). |
 | **9. Giám đốc duyệt** | Có, nếu làm. |
 
 ---

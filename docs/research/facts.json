@@ -47,8 +47,8 @@
         },
         {
           "file": "docs/research/improvement-backlog.md",
-          "line": 284,
-          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (mô tả vấn đề B-05)"
+          "line": 285,
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (mô tả vấn đề B-05; dòng dời 284 → 285 do chèn dòng cập nhật gói 6)"
         }
       ]
     },
@@ -86,10 +86,39 @@
       "exceptions": [
         {
           "file": "docs/research/paper/paper.md",
-          "line": 547,
-          "reason": "Trích dẫn câu cũ để ghi nhận đã sửa, không phải khẳng định (dòng dời 513 → 547 do chèn §4.3)"
+          "line": 563,
+          "reason": "Trích dẫn câu cũ để ghi nhận đã sửa, không phải khẳng định (dòng dời 513 → 547 do chèn §4.3, → 563 ở gói 6 do viết lại §7.4 và §9)"
         }
       ]
+    },
+    {
+      "id": "l1l2-no-task-json",
+      "pattern": "l[12]-[a-z]+[^|\\n]{0,30}chưa có `task\\.json`",
+      "reason": "l1-modules và l2-chain đã có task.json từ 3/11/2026 (D8, 3ff7df3; oracle 1,00, null ≤ 0,01); còn thiếu là phép đo A1/A2, không phải bài",
+      "files": [
+        "paper/paper.md",
+        "improvement-backlog.md",
+        "challenges.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "mast-abstract-only",
+      "pattern": "MAST mới đọc",
+      "reason": "MAST đã được đọc thân bài bản v3 (related-work.md §2.12, gói 2); chưa đọc phụ lục",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b-open-proposal-label",
+      "pattern": "ĐỀ XUẤT, (BỊ CHẶN|CHƯA CHẠY|KHÔNG CHẠY)|\\*\\*HOÃN\\*\\*",
+      "reason": "B-09, B-12…B-17 đã chuyển sang D9 hoặc cần đo theo quyết định của giám đốc 3/11/2026 (BRIEF-D9.md, 90cd913); không còn nhãn đề xuất/hoãn",
+      "files": [
+        "improvement-backlog.md"
+      ],
+      "exceptions": []
     }
   ],
   "numbers": [
