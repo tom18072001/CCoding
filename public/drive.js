@@ -404,7 +404,7 @@
       ${V.query ? `<button class="chip-q" data-clearq>🔎 “${esc(V.query)}” ✕</button>` : ''}
       <select data-mode title="Chế độ"><option value="">Mọi chế độ</option>${Object.entries(C.MODE_VI).map(([k, v]) => `<option value="${k}" ${V.mode === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>
       <select data-sort title="Sắp xếp">${SORTS.map(([k, v]) => `<option value="${k}" ${V.sort === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
-      <div class="seg" role="group" aria-label="Kiểu xem"><button data-v="tree" class="${V.view === 'tree' ? 'on' : ''}" title="Cây: nhiệm vụ → hạng mục, việc nối, việc tách" aria-label="Xem dạng cây">🌳</button><button data-v="list" class="${V.view === 'list' ? 'on' : ''}" title="Bảng" aria-label="Xem dạng bảng">☰</button><button data-v="grid" class="${V.view === 'grid' ? 'on' : ''}" title="Lưới" aria-label="Xem dạng lưới">▦</button></div>
+      <div class="seg" role="group" aria-label="Kiểu xem"><button data-v="tree" class="${V.view === 'tree' ? 'on' : ''}" title="Cây: nhiệm vụ → hạng mục, việc nối, việc tách" aria-label="Xem dạng cây"><svg class="ic sm" viewBox="0 0 24 24"><path d="M6 3v12"/><path d="M6 9h6a3 3 0 0 1 3 3v0"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="12" r="3"/></svg></button><button data-v="list" class="${V.view === 'list' ? 'on' : ''}" title="Bảng" aria-label="Xem dạng bảng"><svg class="ic sm" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button><button data-v="grid" class="${V.view === 'grid' ? 'on' : ''}" title="Lưới" aria-label="Xem dạng lưới"><svg class="ic sm" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button></div>
       ${opts.newBtn ? `<button class="btn primary sm" data-newtask>＋ Nhiệm vụ</button>` : ''}</div>`;
   }
   function bindToolbar(el, rerender) {
@@ -473,45 +473,140 @@
     return `<div class="folders">${(limit ? items.slice(0, limit) : items).join('')}</div>`;
   }
 
+  // ── Tổng quan kiểu Paperclip (UI-5): agent đang làm · 4 chỉ số · 3 biểu đồ 14 ngày · hoạt động + nhiệm vụ gần đây ──
+  const ICON = {
+    bot: '<svg class="ic" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="2"/><path d="M12 4v4M9 13h.01M15 13h.01"/></svg>',
+    circle: '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>',
+    coins: '<svg class="ic" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>',
+    shield: '<svg class="ic" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6Z"/><path d="m9 12 2 2 4-4"/></svg>',
+  };
+  const homeLogs = { at: 0, rows: [] };
+  async function loadHomeLogs() {
+    if (Date.now() - homeLogs.at < 15000) return;
+    homeLogs.at = Date.now();
+    try {
+      const rows = await C.api('/api/logs?limit=60');
+      homeLogs.rows = (Array.isArray(rows) ? rows : rows.items || []).filter((e) => e.taskId && ACT_VI[e.kind]);
+      if (C.S.tab === 'home') renderHome();
+    } catch {}
+  }
+  const dayKey = (d) => new Date(d).toLocaleDateString('sv-SE');
+  function last14() {
+    const out = [];
+    for (let i = 13; i >= 0; i--) out.push(dayKey(Date.now() - i * DAY));
+    return out;
+  }
+  /** Cột nhỏ cho thẻ biểu đồ: series = [{ key, values: [14 số], color }] xếp chồng theo ngày. */
+  function bars(series, max) {
+    const n = 14;
+    const w = 300;
+    const h = 72;
+    const gap = 4;
+    const bw = (w - gap * (n - 1)) / n;
+    const top = max || Math.max(1, ...Array.from({ length: n }, (_, i) => series.reduce((s, x) => s + (x.values[i] || 0), 0)));
+    let out = '';
+    for (let i = 0; i < n; i++) {
+      let y = h;
+      for (const sr of series) {
+        const v = sr.values[i] || 0;
+        if (!v) continue;
+        const bh = Math.max(2, (v / top) * (h - 4));
+        y -= bh;
+        out += `<rect x="${(i * (bw + gap)).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="2" fill="${sr.color}"><title>${esc(sr.key)}: ${v}</title></rect>`;
+      }
+      if (y === h) out += `<rect x="${(i * (bw + gap)).toFixed(1)}" y="${h - 2}" width="${bw.toFixed(1)}" height="2" rx="1" fill="var(--line)"/>`;
+    }
+    return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">${out}</svg>`;
+  }
+  const ACT_VI = {
+    'task.start': 'bắt đầu',
+    'task.done': 'hoàn thành',
+    'task.failed': 'gặp lỗi ở',
+    'task.paused': 'tạm dừng',
+    'task.resumed': 'tiếp tục',
+    'task.cancelled': 'hủy',
+    'accept.done': 'nghiệm thu',
+  };
+  function actRow(e) {
+    const t = e.taskId ? C.S.tasks.get(e.taskId) : null;
+    const who = e.agentId ? C.agentName(e.agentId) : 'Hệ thống';
+    const short = (C.S.agents.get(e.agentId)?.short || who).split(/\s+/).map((w) => w[0]).join('').slice(0, 2);
+    return `<div class="act"${t ? ` data-id="${esc(t.id)}" style="cursor:pointer"` : ''}><span class="bdg">${esc(short)}</span><div class="tx"><b>${esc(who)}</b> ${esc(ACT_VI[e.kind] || e.kind)}${t ? ` <b>${esc(C.code(t))}</b> ${esc(t.title.slice(0, 60))}` : ''}</div><span class="tm">${esc(rel(e.ts))}</span></div>`;
+  }
   function renderHome() {
     const el = $('#home');
     const all = tasks();
-    const run = sortList(all.filter(active));
-    const att = sortList(all.filter(needsAttention)).slice(0, 6);
+    loadHomeLogs();
+    const agents = [...C.S.agents.values()];
+    const busy = agents.filter((a) => a.state && a.state.status && a.state.status !== 'idle');
+    const errs = agents.filter((a) => a.state?.status === 'error').length;
+    const run = all.filter((t) => t.status === 'running');
+    const queued = all.filter((t) => t.status === 'queued').length;
+    const paused = all.filter((t) => t.status === 'paused');
+    const att = all.filter(needsAttention);
+    const days = last14();
+    const byDay = new Map((C.S.usage.byDay || []).map((d) => [d.key, d]));
+    const today = byDay.get(days.at(-1));
+    const week = days.slice(-7).reduce((s, d) => s + (byDay.get(d) ? C.total(byDay.get(d)) : 0), 0);
+    const created = (st) => days.map((d) => all.filter((t) => dayKey(t.createdAt) === d && st(t)).length);
+    const doneD = created((t) => t.status === 'done');
+    const failD = created((t) => t.status === 'failed' || t.status === 'cancelled');
+    const liveD = created((t) => active(t) || t.status === 'paused');
+    const sum = (xs) => xs.reduce((s, x) => s + x, 0);
+    const finished = sum(doneD) + sum(failD);
+    const rate = finished ? Math.round((100 * sum(doneD)) / finished) : null;
+    const rateD = days.map((_, i) => (doneD.at(i) + failD.at(i) ? Math.round((100 * doneD.at(i)) / (doneD.at(i) + failD.at(i))) : 0));
+    const hold = paused.filter((t) => t.pause && (t.pause.reason === 'budget' || t.pause.reason === 'quota'));
     const recent = sortList(all.slice()).slice(0, 8);
-    const week = all.filter((t) => t.status === 'done' && t.finishedAt && Date.now() - new Date(t.finishedAt).getTime() < 7 * 864e5).length;
-    const q = V.quota;
-    const h = new Date().getHours();
-    el.innerHTML = `<div class="home">
-      <div class="hero"><h1>${h < 11 ? 'Chào buổi sáng' : h < 14 ? 'Chào buổi trưa' : h < 18 ? 'Chào buổi chiều' : 'Chào buổi tối'}, giám đốc 👋</h1><p>Văn phòng có ${C.S.agents.size} agent · ${run.length} việc đang chạy · ${att.length} việc cần bạn xem.</p></div>
-      <div class="quick">
-        <button data-q="task"><span>📝</span><b>Nhiệm vụ mới</b><small>Viết prompt, điều phối viên chọn phòng</small></button>
-        <button data-q="agent"><span>📌</span><b>Giao riêng</b><small>Một agent làm luôn, nhanh và rẻ</small></button>
-        <button data-q="project"><span>📁</span><b>Dự án mới</b><small>Repo/thư mục, lệnh kiểm tra, quyền</small></button>
-        <button data-q="prompts"><span>📚</span><b>Thư viện prompt</b><small>Mẫu có sẵn & prompt đã lưu</small></button>
-      </div>
-      <div class="stats" style="grid-template-columns:repeat(4,1fr)">
-        <div class="stat"><span>Đang chạy</span><b>${run.length}</b></div>
-        <div class="stat"><span>Cần xem</span><b>${all.filter(needsAttention).length}</b></div>
-        <div class="stat"><span>Xong 7 ngày</span><b>${week}</b></div>
-        <div class="stat"><span>Token hôm nay</span><b>${q ? C.fmt(C.total(q.today)) : '—'}</b></div></div>
-      ${att.length ? `<section><div class="sec-head"><h2>⚠ Cần bạn quyết định</h2><a data-go="inbox" title="Duyệt bằng phím (I)">📥 Mở hộp Cần bạn →</a></div>${taskTable(att, { flat: true })}</section>` : ''}
-      <section><div class="sec-head"><h2>⚡ Đang chạy</h2><a data-go="running">Xem tất cả →</a></div>${taskTable(run.slice(0, 6), { empty: 'Không có việc đang chạy.', flat: true })}</section>
-      <section><div class="sec-head"><h2>📁 Dự án</h2><a data-go="projects">Tất cả dự án →</a></div>${folders(8)}</section>
-      <section><div class="sec-head"><h2>🕘 Gần đây</h2><a data-go="all">Tất cả nhiệm vụ →</a></div>${taskTable(recent, { empty: 'Chưa có nhiệm vụ nào.', flat: true })}</section></div>`;
-    $$('[data-q]', el).forEach(
-      (b) =>
-        (b.onclick = () => {
-          const k = b.dataset.q;
-          if (k === 'task') C.prefillAssign({});
-          if (k === 'agent') C.prefillAssign({ mode: 'agent' });
-          if (k === 'project') C.newProject();
-          if (k === 'prompts') C.setTab('prompts');
-        }),
-    );
-    $$('[data-go]', el).forEach((a) => (a.onclick = () => (a.dataset.go === 'projects' || a.dataset.go === 'inbox' ? C.setTab(a.dataset.go) : goTasks(a.dataset.go))));
-    bindItems(el);
-    bindFolders(el);
+    const short = (d) => new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+    const agentRows = busy.length
+      ? busy
+          .slice(0, 8)
+          .map(
+            (a) =>
+              `<div class="ag-row" data-ag="${esc(a.id)}">${C.av(a.id, 'av xs')}<b>${esc(a.name)}</b><small>${esc(a.state?.activity || (a.state?.taskId && C.S.tasks.get(a.state.taskId)?.title) || C.STATUS_VI[a.state?.status] || '')}</small>${a.state?.status === 'error' ? '<span class="pill-live" style="color:var(--red-fg)">Lỗi</span>' : '<span class="pill-live">Đang chạy</span>'}</div>`,
+          )
+          .join('')
+      : '<div class="empty-row">Không agent nào đang chạy.</div>';
+    const taskRows = recent.length
+      ? recent
+          .map(
+            (t) =>
+              `<div class="trow" data-id="${esc(t.id)}">${si(t.status, { att: !!t.attention })}<span class="code">${esc(C.code(t))}</span><span class="tt">${esc(t.title)}</span>${assignees(t)
+                .slice(0, 3)
+                .map((id) => C.av(id, 'av xs'))
+                .join('')}<span class="tm">${esc(rel(updated(t)))}</span></div>`,
+          )
+          .join('')
+      : '<div class="empty-row">Chưa có nhiệm vụ nào. Bấm <b>Nhiệm vụ mới</b> ở cột trái để bắt đầu.</div>';
+    el.innerHTML = `<div class="dash">
+      ${hold.length ? `<div class="banner">⚠ ${hold.length} nhiệm vụ đang tạm dừng vì chạm trần ngân sách hoặc hết hạn mức token.<a data-go="quota">Mở Hạn mức →</a></div>` : ''}
+      <section><h3 class="lbl">Agent đang làm</h3><div class="box agents-live">${agentRows}</div></section>
+      <section class="metrics">
+        <div class="metric" data-go="people">${ICON.bot}<b>${busy.length}</b><span>Agent đang làm</span><small>trên ${agents.length} agent · ${errs} lỗi</small></div>
+        <div class="metric" data-go="running">${ICON.circle}<b>${run.length}</b><span>Nhiệm vụ đang chạy</span><small>${queued} chờ, ${paused.length} tạm dừng</small></div>
+        <div class="metric" data-go="tokens">${ICON.coins}<b>${today ? C.fmt(C.total(today)) : '0'}</b><span>Token hôm nay</span><small>7 ngày: ${C.fmt(week)}${today?.costUsd ? ` · $${today.costUsd.toFixed(2)}` : ''}</small></div>
+        <div class="metric" data-go="inbox">${ICON.shield}<b>${att.length}</b><span>Cần bạn</span><small>${att.length ? 'lỗi, tạm dừng hoặc chờ duyệt' : 'không có việc chờ'}</small></div>
+      </section>
+      <section class="charts">
+        <div class="chart"><h4>Lượt gọi model</h4><span class="sub">14 ngày qua</span>${bars([{ key: 'Lượt gọi', values: days.map((d) => byDay.get(d)?.calls || 0), color: 'var(--text-2)' }])}<div class="foot"><span>${short(days[0])}</span><span>hôm nay</span></div></div>
+        <div class="chart"><h4>Nhiệm vụ theo trạng thái</h4><span class="sub">Theo ngày tạo, 14 ngày qua</span>${bars([
+          { key: 'Xong', values: doneD, color: 'var(--ok)' },
+          { key: 'Đang chạy / tạm dừng', values: liveD, color: 'var(--info)' },
+          { key: 'Lỗi / hủy', values: failD, color: 'var(--bad)' },
+        ])}<div class="legend2"><span><i style="background:var(--ok)"></i>Xong</span><span><i style="background:var(--info)"></i>Đang chạy</span><span><i style="background:var(--bad)"></i>Lỗi / hủy</span></div></div>
+        <div class="chart"><h4>Tỉ lệ hoàn thành</h4><span class="sub">${rate === null ? 'Chưa có nhiệm vụ kết thúc' : `${rate}% nhiệm vụ kết thúc là xong`}</span>${bars([{ key: '% xong', values: rateD, color: 'var(--ok)' }], 100)}<div class="foot"><span>${short(days[0])}</span><span>hôm nay</span></div></div>
+      </section>
+      <section class="cols">
+        <div><h3 class="lbl">Hoạt động gần đây</h3><div class="box">${homeLogs.rows.length ? homeLogs.rows.slice(-10).reverse().map(actRow).join('') : '<div class="empty-row">Chưa có hoạt động.</div>'}</div></div>
+        <div><h3 class="lbl">Nhiệm vụ gần đây</h3><div class="box">${taskRows}</div></div>
+      </section></div>`;
+    $$('[data-go]', el).forEach((a) => {
+      const g = a.dataset.go;
+      a.onclick = () => (['people', 'tokens', 'inbox', 'quota'].includes(g) ? C.setTab(g) : goTasks(g));
+    });
+    $$('[data-ag]', el).forEach((r) => (r.onclick = () => C.openAgent(r.dataset.ag)));
+    $$('[data-id]', el).forEach((r) => (r.onclick = () => C.openTask(r.dataset.id)));
   }
 
   function goTasks(filter) {
@@ -641,7 +736,7 @@
     const old = $('.dock', el);
     const keep = old ? $('textarea', old).value : '';
     old?.remove();
-    el.insertAdjacentHTML(
+    ($('.td-main', el) || el).insertAdjacentHTML(
       'beforeend',
       `<div class="dock"><div class="compose-box">
         <textarea rows="2" placeholder="${live ? 'Gửi chỉ dẫn bổ sung — agent áp dụng từ lượt làm việc tiếp theo (vd. "nhớ viết test cho trường hợp rỗng")…' : 'Giao việc tiếp nối nhiệm vụ này — kế thừa dự án/chế độ/agent, báo cáo trước được đưa vào làm đầu vào…'}   (Ctrl+Enter)"></textarea>
@@ -764,7 +859,7 @@
   }
 
   // ── Thanh trên vùng chính: đường dẫn + tìm kiếm ─────────────────────────
-  const TAB_VI = { routines: '🔁 Việc định kỳ', artifacts: '📦 Sản phẩm', skills: '🧩 Kỹ năng & Kết nối', audit: '🛡 Kiểm toán', home: '🏠 Tổng quan', inbox: '📥 Cần bạn', projects: '📁 Dự án', tasks: '📋 Nhiệm vụ', assign: '💬 Prompt', people: '👥 Nhân sự', prompts: '📚 Thư viện prompt', tokens: '🔢 Token', quota: '⛽ Hạn mức', kpi: '📈 KPI', logs: '🧾 Nhật ký' };
+  const TAB_VI = { routines: 'Việc định kỳ', artifacts: 'Sản phẩm', skills: 'Kỹ năng & Kết nối', audit: 'Kiểm toán', home: 'Tổng quan', inbox: 'Cần bạn', projects: 'Dự án', tasks: 'Nhiệm vụ', assign: 'Prompt', people: 'Agent', prompts: 'Thư viện prompt', tokens: 'Token', quota: 'Hạn mức', kpi: 'KPI', logs: 'Nhật ký' };
   function crumbs() {
     const el = $('#crumbs');
     if (!el || !C) return;
@@ -787,7 +882,7 @@
         parts.push(['💬 Prompt', () => window.Chat.newConv()], [c.root.title]);
       } else parts.push(['💬 Prompt'], ['Cuộc mới']);
     } else if (S.tab === 'people' && S.selectedAgent) {
-      parts.push(['👥 Nhân sự', () => (C.S.selectedAgent = null, C.setTab('people'))], [C.agentName(S.selectedAgent)]);
+      parts.push(['Agent', () => (C.S.selectedAgent = null, C.setTab('people'))], [C.agentName(S.selectedAgent)]);
     } else parts.push([TAB_VI[S.tab] || S.tab]);
     el.innerHTML = parts.map(([l, fn], i) => (fn && i < parts.length - 1 ? `<a data-c="${i}">${esc(l)}</a>` : `<span>${esc(l)}</span>`)).join('<i>›</i>');
     $$('[data-c]', el).forEach((a) => (a.onclick = parts[Number(a.dataset.c)][1]));
@@ -836,10 +931,11 @@
     $('#btn-side-toggle')?.classList.toggle('on', mode !== 'hidden');
   }
   function setSide(mode) {
-    store.set('side', mode);
+    store.set('side2', mode);
     applySide(mode);
   }
-  const sideMode = () => store.get('side', innerWidth < 1250 ? 'hidden' : 'open');
+  // UI-5: Văn phòng là ngăn kéo — mặc định đóng (khóa mới để người dùng cũ cũng chuyển một lần)
+  const sideMode = () => store.get('side2', 'hidden');
 
   // cột trái thu gọn thành dải biểu tượng (mặc định ở màn Prompt để luồng hội thoại rộng hơn)
   const navKey = () => (C.S.tab === 'assign' ? 'navMiniChat' : 'navMini');
@@ -966,5 +1062,8 @@
     loadQuota().then(() => C.S.tab === 'home' && renderHome());
   };
 
+  // UI-5: dùng ở trang chi tiết nhiệm vụ (biểu tượng trạng thái, mở dự án từ bảng Thuộc tính)
+  D.statusIcon = (status) => si(status);
+  D.openProject = (id) => openProject(id);
   window.Drive = D;
 })();
