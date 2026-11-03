@@ -5,6 +5,16 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 6 (T-20261103-195822-b03, 3/11/2026): sửa câu lỗi thời, tách "đã sửa / đang làm ở D9 / cần đo"
+
+Căn cứ: quyết định của giám đốc 3/11 19:56 ("đã là đề tài thì phải fix hết, không để đề xuất sửa"); `BRIEF-D9.md` (`90cd913`). Không chạy benchmark, không đổi số liệu §6, không sửa `src/` hay `bench/`.
+
+- **`paper/paper.md` (S1):** thay câu "l1-modules, l2-chain chưa có `task.json`" ở tóm tắt, ô H6, P-09, §7.3, §7.4, B-15, §8.1(5), §9 bằng "đã có từ 3/11 (D8 `3ff7df3`), chưa đo". MAST ghi "đọc thân bài v3, chưa đọc phụ lục" (`related-work.md` §2.12). §7.4 và §9 "Trước khi công bố cần" viết lại thành ba nhóm: (a) đã sửa, kèm commit và dòng mã; (b) đang làm ở D9 (B-03, B-07, B-08, B-09, B-12, B-13, B-14, B-16, B-17); (c) cần đo (B-14, B-12, B-15, H6 trên T5/l1/l2, B-16, nhãn người). B-12, B-14, B-16 ghi "D9 → sau đó cần đo".
+- **`improvement-backlog.md` (S2, áp dụng bởi S3):** bảng §0 có thêm cột Trạng thái và Ghi chú trạng thái (đã làm kèm commit / D9 / cần đo / cần giám đốc duyệt); mục chỉ còn đo ghi số lượt theo đặc tả (B-12 25–46 lượt, B-14 ≤ 8 lượt, B-15 40 + 6 lượt, B-16 12 cặp); B-14.2 và B-17 ghi "chưa có đặc tả số lượt". Tiêu đề §5 của B-09, B-12…B-17 và các câu "bị chặn", "hoãn", "không làm trong vòng này" được thay bằng trạng thái hiện hành. Bản vá do S2 soạn (`.ccoding/…/S2-backlog-patch.md`, không vào git) vì S2 không có công cụ Edit.
+- **`challenges.md` (S2, S3):** trạng thái kèm commit cho các thách thức đã có bản sửa (P-14: đã có κ, còn nhãn người). S3 sửa số dòng cũ `src/config.ts:285` → `:297` (4 chỗ, L7–L11; dòng 297 chứa `defaults`) và thêm dẫn chiếu cờ "cần xem" `src/orchestrator.ts:1978`.
+- **`facts.json` (S3):** ba luật `stale` mới (`l1l2-no-task-json`, `mast-abstract-only`, `b-open-proposal-label`); dời hai ngoại lệ theo số dòng mới (backlog 284 → 285, paper 547 → 563). Không đổi giá trị số nào.
+- **Kiểm:** hash và dòng mã đã dẫn kiểm bằng `git cat-file -t` và `sed -n`; ba lệnh kiểm tra của dự án exit 0.
+
 ## Vòng 4, gói 5 — Q1 (T-20261103-163327-d48, 3/11/2026): ghi kết quả dừng sớm B7′
 
 - **`improvement-backlog.md` (S1, S2):** B-11.5 có tiểu mục "Kết quả GĐ1" (R̂ token 2,04 [1,45; 2,99], thời gian 2,16 [1,53; 3,21]; > 1,6 ⇒ dừng vô ích, chưa phải kết luận; n = 2 mỗi ô; `1333eef`; CLI 2.1.317) và "Hàm ý" (a)–(c): so mô tả với B7 ×2,498 / ×2,566, ba công tắc chưa đủ ×1,3, ứng viên B-13…B-17 với B-14 phải chạy được trước. Cập nhật ô trạng thái hàng B-11.
