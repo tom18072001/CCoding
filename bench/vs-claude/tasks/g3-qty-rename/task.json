@@ -1,0 +1,24 @@
+{
+  "id": "g3-qty-rename",
+  "category": "coding",
+  "size": 4,
+  "sizeReason": "Bốn module độc lập cùng đổi một tên trường",
+  "title": "Đổi tên trường qty thành quantity trên toàn bộ module nghiệp vụ",
+  "hypotheses": [
+    "H1",
+    "B-12"
+  ],
+  "deliverable": "src/",
+  "brief": "Đổi tên trường `qty` của dòng hàng thành `quantity` trong mọi module của src/ (dữ liệu đầu vào dùng `quantity`; không còn đọc `qty`). Cập nhật test công khai cho khớp và đảm bảo `npm test` xanh. Không thêm thư viện ngoài.",
+  "grader": "code",
+  "repoDir": "starter",
+  "solutionDir": "ref",
+  "plantedFaults": [
+    {
+      "class": "plan-omission",
+      "where": "src/export.js và src/stock.js cũng đọc item.qty nhưng test công khai chỉ phủ order.js và report.js",
+      "expectGate": "b10"
+    }
+  ],
+  "plantedFaultNote": "Đề bài nói \"mọi module trong src/\"; kế hoạch dễ chỉ liệt kê order.js, report.js (có test) và bỏ sót export.js, stock.js. Test công khai vẫn xanh sau khi sửa thiếu."
+}

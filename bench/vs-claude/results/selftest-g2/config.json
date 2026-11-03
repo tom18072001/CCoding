@@ -1,0 +1,39 @@
+{
+  "argv": [
+    "--arms",
+    "oracle,null",
+    "--tasks",
+    "g1-slug-dedupe,g2-cart-coupon,g3-qty-rename,g4-gb-unit,g5-median-stats,g6-range-merge",
+    "--repeats",
+    "1",
+    "--out",
+    "results/selftest-g2"
+  ],
+  "cfg": {
+    "ccodingUrl": "http://127.0.0.1:7420",
+    "ccodingData": "C:\\Users\\admin\\CCoding\\workspaces\\ccoding-dev\\wt-T-20261103-195815-fd0--S6\\data",
+    "runtime": "claude-cli",
+    "timeoutMin": 60,
+    "claudeBin": "claude",
+    "judge": {
+      "enabled": false,
+      "model": "opus"
+    },
+    "seed": "ccvb",
+    "workRoot": "C:\\Users\\admin\\AppData\\Local\\Temp\\ccvb-3a0e17"
+  },
+  "armIds": [
+    "oracle",
+    "null"
+  ],
+  "taskIds": [
+    "g1-slug-dedupe",
+    "g2-cart-coupon",
+    "g3-qty-rename",
+    "g4-gb-unit",
+    "g5-median-stats",
+    "g6-range-merge"
+  ],
+  "repeats": 1,
+  "startedAt": "2026-11-03T13:15:02.259Z"
+}

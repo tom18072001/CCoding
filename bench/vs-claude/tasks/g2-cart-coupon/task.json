@@ -1,0 +1,24 @@
+{
+  "id": "g2-cart-coupon",
+  "category": "coding",
+  "size": 2,
+  "sizeReason": "Hai module nhỏ: sửa money.js, thêm applyCoupon vào cart.js",
+  "title": "Tổng giỏ hàng theo xu và áp mã giảm giá (lệnh kiểm tra đỏ sẵn)",
+  "hypotheses": [
+    "H1",
+    "B-12"
+  ],
+  "deliverable": "src/cart.js",
+  "brief": "Thêm applyCoupon(totalCents, coupon) vào src/cart.js theo SPEC.md và đảm bảo `npm test` xanh. Bộ nghiệm thu ẩn kiểm tra thêm các trường hợp biên. Không thêm thư viện ngoài.",
+  "grader": "code",
+  "repoDir": "starter",
+  "solutionDir": "ref",
+  "plantedFaults": [
+    {
+      "class": "red-check",
+      "where": "src/money.js:toCents (Math.floor làm lệch 1 xu: 19.99 → 1998) → test công khai test/cart.test.js đỏ ngay từ starter",
+      "expectGate": "b02"
+    }
+  ],
+  "plantedFaultNote": "Starter có test công khai đỏ vì toCents cắt thay vì làm tròn; lỗi nằm ở module phụ, không phải ở cart.js nên agent phải đọc kết quả test để lần ra."
+}

@@ -1,0 +1,24 @@
+{
+  "id": "g6-range-merge",
+  "category": "coding",
+  "size": 2,
+  "sizeReason": "Một module: thêm mergeRanges dựa trên overlaps hiện có",
+  "title": "Gộp khoảng thời gian nửa mở dùng overlaps có sẵn (overlaps tính cả điểm chạm, test công khai vẫn xanh)",
+  "hypotheses": [
+    "H1",
+    "B-12"
+  ],
+  "deliverable": "src/range.js",
+  "brief": "Thêm mergeRanges(ranges) vào src/range.js theo SPEC.md (dùng lại overlaps có sẵn nếu hợp lý). Bổ sung test và đảm bảo `npm test` xanh. Không thêm thư viện ngoài.",
+  "grader": "code",
+  "repoDir": "starter",
+  "solutionDir": "ref",
+  "plantedFaults": [
+    {
+      "class": "hidden-wrong",
+      "where": "src/range.js:overlaps (dùng <= nên coi [1,3) và [3,5) là chồng lấn, sai với khoảng nửa mở); test công khai chỉ có cặp chồng rõ và tách rõ",
+      "expectGate": "cto"
+    }
+  ],
+  "plantedFaultNote": "overlaps coi hai khoảng chạm đầu mút là chồng; mergeRanges dựng trên đó gộp nhầm khoảng kề nhau. Test công khai chỉ có cặp rõ ràng nên xanh; chỉ test ẩn bắt được."
+}
