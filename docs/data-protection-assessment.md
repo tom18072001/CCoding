@@ -445,3 +445,14 @@ Kết luận giữ nguyên: **ĐẠT CÓ ĐIỀU KIỆN** (điều kiện sao l�
 Không thêm luồng dữ liệu ra ngoài, không đổi thời hạn lưu. Dữ liệu probe chuyển vào `data/` (trước đây nằm ngoài).
 
 **Kết luận: ĐẠT CÓ ĐIỀU KIỆN** — điều kiện: không trỏ `--base-url` của probe tới nhà cung cấp bên ngoài với hồ sơ agent/đề có nội dung không được phép gửi ra ngoài; chạy probe trên máy không có dịch vụ nội bộ nhạy cảm mở không xác thực (sandbox chưa chặn mạng).
+
+## Bổ sung 03/11/2026 — UI-7: ngân sách theo dự án/agent, sửa thuộc tính nhiệm vụ, agent ngoài (process/http)
+
+| Hạng mục | Dữ liệu | Nhãn nội bộ | Đánh giá & biện pháp |
+|---|---|---|---|
+| `data/budgets.json` | Mã dự án/agent, số token, ngưỡng — không có PII | Nội bộ | Mức dùng tính lại từ sổ cái token, không ghi thêm dữ liệu. Mọi lần tạo/sửa/xóa ghi nhật ký hệ thống (`budget.policy.*`, có chuỗi băm). |
+| `POST /api/tasks/:id/props` | Tiêu đề, ưu tiên nhiệm vụ | Theo nhãn của nhiệm vụ | Thay đổi ghi `task.updated` (giá trị cũ → mới) qua LogStore, nên PII trong tiêu đề vẫn được che trong log. |
+| Runtime `process` | Toàn bộ prompt của lượt gọi đi vào tiến trình con | Theo nhãn của nhiệm vụ | Tiến trình chỉ nhận PATH/HOME/LANG + `CCODING_*`, không thừa hưởng khóa API của máy chủ. Mặc định coi là cục bộ; đặt `"local": false` nếu script gửi dữ liệu ra ngoài (GOV: chủ dự án chịu trách nhiệm khai báo đúng). |
+| Runtime `http` | Prompt gửi tới địa chỉ cấu hình | Theo nhãn của nhiệm vụ | Chỉ coi là cục bộ khi host là loopback; máy chủ ở xa luôn bị loại với dữ liệu Bảo mật/Hạn chế dù cấu hình ghi `"local": true` (PRE). Lượt gọi vẫn đi qua `Orchestrator.call()` nên có log, đếm token, che PII như runtime khác (DET). |
+
+Khuyến nghị: trước khi cắm agent ngoài cho dự án Bảo mật/Hạn chế, rà mã script/dịch vụ đó như một nhà xử lý dữ liệu (nơi lưu, thời gian giữ, có gửi ra ngoài không); với dịch vụ http ở xa cần hồ sơ đánh giá tác động nếu có DLCN hoặc chuyển xuyên biên giới.

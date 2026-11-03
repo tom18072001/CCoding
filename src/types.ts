@@ -401,8 +401,13 @@ export interface PauseInfo {
   streak?: number;
 }
 
+export type TaskPriority = 'urgent' | 'high' | 'medium' | 'low';
+export const TASK_PRIORITIES: TaskPriority[] = ['urgent', 'high', 'medium', 'low'];
+
 export interface Task {
   id: string;
+  /** UI-7: mức ưu tiên do giám đốc đặt (sắp xếp, lọc) — không ảnh hưởng thứ tự chạy. */
+  priority?: TaskPriority;
   /** Số thứ tự nhiệm vụ (mã ngắn hiển thị `<tiền tố>-<seq>`, vd. CC-94) — gán lúc tạo, nhiệm vụ cũ được đánh số bù theo lúc tạo. */
   seq?: number;
   title: string;

@@ -49,6 +49,8 @@ import { estimateTokens } from './util/tokens.js';
 import { fmtNum } from './util/format.js';
 import {
   addUsage,
+  TASK_PRIORITIES,
+  type TaskPriority,
   emptyUsage,
   totalTokens,
   type AgentDef,
@@ -76,6 +78,7 @@ import {
   type ToolAccess,
   type ToolName,
 } from './types.js';
+import type { BudgetPolicies } from './budgets.js';
 
 export interface OrchestratorDeps {
   config: Config;
@@ -87,6 +90,8 @@ export interface OrchestratorDeps {
   bus: EventBus;
   herdr?: Herdr;
   uploads?: Uploads;
+  /** UI-7: ngân sách theo dự án / agent (ngưỡng mềm + trần cứng). */
+  budgets?: BudgetPolicies;
 }
 
 /** Dừng nhiệm vụ nhưng giữ nguyên tiến độ để tiếp tục sau (chạm trần ngân sách, hết tài nguyên, yêu cầu thủ công). */
@@ -396,6 +401,35 @@ export class Orchestrator {
   }
 
   /** Đổi ngân sách / chế độ ngân sách khi nhiệm vụ đang chạy hoặc tạm dừng. */
+  /** UI-7: sửa thuộc tính hiển thị từ bảng Thuộc tính — tiêu đề, ưu tiên. Không đụng phần đang chạy. */
+  updateProps(id: string, o: { title?: string; priority?: TaskPriority | null }): Task {
+    const t = this.d.store.get(id);
+    if (!t) throw new Error('Không có nhiệm vụ');
+    const changed: string[] = [];
+    if (o.title !== undefined) {
+      const title = o.title.replace(/\s+/g, ' ').trim();
+      if (!title || title.length > 200) throw new Error('Tiêu đề phải có 1–200 ký tự');
+      if (title !== t.title) {
+        changed.push(`tiêu đề "${t.title}" → "${title}"`);
+        t.title = title;
+      }
+    }
+    if (o.priority !== undefined) {
+      const p = o.priority ?? undefined;
+      if (p !== undefined && !TASK_PRIORITIES.includes(p)) throw new Error('Ưu tiên không hợp lệ (urgent | high | medium | low)');
+      if (p !== t.priority) {
+        changed.push(`ưu tiên ${t.priority ?? '—'} → ${p ?? '—'}`);
+        if (p) t.priority = p;
+        else delete t.priority;
+      }
+    }
+    if (changed.length) {
+      this.d.logs.write({ level: 'info', kind: 'task.updated', msg: `Sửa ${t.id}: ${changed.join('; ')}`, taskId: t.id, projectId: t.projectId });
+      this.save(t, true);
+    }
+    return t;
+  }
+
   updateBudget(id: string, o: ResumeOptions): Task {
     const t = this.d.store.get(id);
     if (!t) throw new Error('Không có nhiệm vụ');
@@ -1657,6 +1691,34 @@ export class Orchestrator {
     if (pct >= 100 && mode === 'pause') throw new PauseSignal('budget', `Đã dùng ${fmtNum(used)}/${fmtNum(budget)} token (chạm trần ngân sách)`);
   }
 
+  /** Mốc đã cảnh báo của chính sách ngân sách: `<id>|<đầu kỳ>|soft|hard` — mỗi kỳ cảnh báo một lần mỗi mức. */
+  private policyAlerted = new Set<string>();
+
+  /** Ngân sách theo dự án / agent: ngưỡng mềm → cảnh báo; trần cứng → tạm dừng nhiệm vụ trước khi gọi model. */
+  private checkPolicies(task: Task, agent: AgentDef): void {
+    const pols = this.d.budgets?.matching(task.projectId, agent.id);
+    if (!pols?.length) return;
+    const KY: Record<string, string> = { day: 'hôm nay', month: 'tháng này', total: 'từ trước tới nay' };
+    for (const p of pols) {
+      if (p.level === 'ok') continue;
+      const who = p.scope === 'project' ? `dự án ${p.target}` : `agent @${p.target}`;
+      const msg = `${who} đã dùng ${fmtNum(p.used)}/${fmtNum(p.tokens)} token ${KY[p.period]} (${Math.round(p.pct)}%)`;
+      const key = `${p.id}|${p.since ?? '-'}|${p.level}`;
+      if (!this.policyAlerted.has(key)) {
+        this.policyAlerted.add(key);
+        const stop = p.level === 'hard' && p.hard;
+        this.alert({
+          level: stop ? 'error' : 'warn',
+          kind: p.level === 'hard' ? 'budget.policy.hard' : 'budget.policy.soft',
+          title: p.level === 'hard' ? (stop ? `Chạm trần ngân sách ${who} — tạm dừng` : `Vượt ngân sách ${who}`) : `Ngân sách ${who} đã qua ${p.softPct}%`,
+          msg: `${task.title}: ${msg}${p.level === 'hard' && !p.hard ? ' — chính sách chỉ cảnh báo, vẫn chạy tiếp' : ''}`,
+          taskId: task.id,
+        });
+      }
+      if (p.level === 'hard' && p.hard) throw new PauseSignal('budget', `Chạm trần ngân sách: ${msg}. Tăng ngân sách trong Kiểm toán › Hạn mức rồi tiếp tục.`);
+    }
+  }
+
   /** Phần ngân sách của một hạng mục (cộng dồn mọi lần chạy/sửa): cố định theo tùy chọn, hoặc 2 × ngân sách / số hạng mục. */
   subtaskBudget(task: Task, run: DeptRun): number {
     const fixed = task.options.subtaskBudgetTokens ?? this.d.config.defaults.subtaskBudgetTokens ?? 0;
@@ -2592,6 +2654,7 @@ export class Orchestrator {
       this.checkAbort(task);
       if (this.pauseRequests.has(task.id)) throw new PauseSignal('manual', 'Tạm dừng theo yêu cầu');
       this.checkBudget(task);
+      this.checkPolicies(task, agent);
       if (ctx.subtask && ctx.run) this.checkSubtaskBudget(task, ctx.run, ctx.subtask);
       const cls = task.classification;
       const want = task.options.phaseModels?.[phase] ?? ctx.project?.models?.[agent.id] ?? config.phases?.models?.[phase] ?? agent.model;

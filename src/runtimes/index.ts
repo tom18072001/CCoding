@@ -1,3 +1,4 @@
+import { ExternalRuntime } from './external.js';
 import { firstModels, modelChain, type Config, type ModelEntry } from '../config.js';
 import type { Classification, ErrorKind, RateLimitInfo, RunResult, Runtime, RuntimeAvailability } from '../types.js';
 import { AnthropicApiRuntime, OpenAiApiRuntime } from './api.js';
@@ -94,8 +95,10 @@ export class RuntimeManager {
     for (const r of all) this.runtimes.set(r.id, r);
     // Runtime tùy biến khai báo trong cấu hình, ví dụ "bifrost", "ollama", "litellm": { "type": "openai-api", … }
     for (const [id, c] of Object.entries(config.runtimes)) {
-      if (this.runtimes.has(id) || !c || c.type !== 'openai-api') continue;
-      this.runtimes.set(id, new OpenAiApiRuntime(c, mm(id), id));
+      if (this.runtimes.has(id) || !c) continue;
+      if (c.type === 'openai-api') this.runtimes.set(id, new OpenAiApiRuntime(c, mm(id), id));
+      // UI-7: agent ngoài kiểu Paperclip — tiến trình (stdin/stdout JSON) hoặc HTTP
+      else if (c.type === 'process' || c.type === 'http') this.runtimes.set(id, new ExternalRuntime(id, c));
     }
   }
 
