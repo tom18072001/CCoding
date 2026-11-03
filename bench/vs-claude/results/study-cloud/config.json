@@ -1,12 +1,11 @@
 {
   "argv": [
     "--arms",
-    "A0-sonnet,B0",
+    "A1",
     "--tasks",
-    "a1",
+    "c1,c2,c3,c4,c5,l3,l4,s1,re1,a1,l1,l2,r1",
     "--repeats",
-    "11",
-    "--judge",
+    "1",
     "--timeout",
     "20",
     "--runtime",
@@ -27,19 +26,30 @@
     "timeoutMin": 20,
     "claudeBin": "claude",
     "judge": {
-      "enabled": true,
+      "enabled": false,
       "model": "opus"
     },
     "seed": "ccvb",
     "workRoot": "/tmp/vb"
   },
   "armIds": [
-    "A0-sonnet",
-    "B0"
+    "A1"
   ],
   "taskIds": [
-    "a1-ambiguous-spec"
+    "c1-iis-ecs",
+    "c2-burst-alert",
+    "c3-shop-bugs",
+    "c4-audit-chain",
+    "c5-tickets-api",
+    "l3-reconcile",
+    "l4-startup-order",
+    "s1-sec-review",
+    "re1-lit-synthesis",
+    "a1-ambiguous-spec",
+    "l1-oncall",
+    "l2-knights",
+    "r1-elk-design"
   ],
-  "repeats": 11,
-  "startedAt": "2026-11-03T02:16:37.716Z"
+  "repeats": 1,
+  "startedAt": "2026-11-03T03:06:18.290Z"
 }
