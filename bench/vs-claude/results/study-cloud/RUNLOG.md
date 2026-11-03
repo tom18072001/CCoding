@@ -23,6 +23,10 @@ Theo `bench/vs-claude/RUNBOOK-cloud-session.md`, Nhánh 1 (`docs/research/run-pl
 | W4b | A0-sonnet, B0 (server main 7424, chặn web) | a1 `--judge` | r4–11 (16) | 2026-11-03T02:16:37Z | 2026-11-03T03:06:18Z | xong 16/16 |
 | W4c | A1 (claude, không dùng server) | R13 | r1 (13) | 2026-11-03T03:06:18Z | 2026-11-03T03:15:51Z | xong 13/13 |
 | neo-W4 | B0 (server main 7424), `--out study-cloud-anchor-W4` | l4-startup-order | r1–2 (2) | 2026-11-03T03:15:51Z | 2026-11-03T03:20:59Z | xong 2/2 |
+| W5a | A1 (claude) | R13 | r2–3 (26) | 2026-11-03T03:20:59Z | 2026-11-03T03:41:40Z | xong 26/26 |
+| W5b | A2 (best-of-3, claude), `--timeout 40` | R13 | r1–2 (26) | 2026-11-03T03:41:40Z | 2026-11-03T04:25:40Z | xong 26/26 |
+| W5c | B0 (server main 7424, chặn web) | T5 | r1 (5) | 2026-11-03T04:25:40Z | 2026-11-03T05:02:01Z | xong 5/5 |
+| neo-W5 | B0 (server main 7424), `--out study-cloud-anchor-W5` | l4-startup-order | r1–2 (2) | 2026-11-03T05:02:01Z | 2026-11-03T05:07:09Z | xong 2/2 |
 
 ## Bảng cửa sổ (`run-plan.md` §3.0)
 
@@ -135,3 +139,19 @@ Lệnh đầu của W4 (`--arms A0-sonnet,FL --tasks $T5 --repeats 9`) đã ch�
 Lỗi socket keep-alive xảy ra 2 lần ở W4b (02:47Z, 02:59Z), cả hai được gửi lại một lần và trả `201`; không mất lượt nào.
 
 **Neo B0 W4** (`results/study-cloud-anchor-W4`): 2/2 `done`; TB 159 653 token, 145 s; so với B0 × `l4` W1: token ×0,99, thời gian ×1,01. Không trôi.
+
+## W5 (`run-plan.md` §5.2)
+
+Server main 7424, hash `e0bd2f4…` không đổi. A1, A2 là arm claude, không dùng server.
+
+| Lệnh | Arm | Lượt `done` | `infra` | Token có trọng số | Wall-sum | Wall dài nhất | leak |
+|---|---|---|---|---|---|---|---|
+| W5a | A1 (R13 r2–3) | 26/26 | 0 | 1,25 M | 0,34 h | 297 s | 0 |
+| W5b | A2 (R13 r1–2, `--timeout 40`) | 26/26 | 0 | 2,84 M | 0,68 h | 617 s | 0 |
+| W5c | B0 (T5 r1) | 5/5 | 0 | 2,59 M | 0,59 h | 631 s | 0 |
+
+B0 ở W5c không gọi WebFetch/WebSearch (`calls.jsonl`). Không gặp hạn mức ở cửa sổ nào W3–W5.
+
+**Neo B0 W5** (`results/study-cloud-anchor-W5`): 2/2 `done`; TB 161 570 token, 150 s; so với B0 × `l4` W1: token ×1,00, thời gian ×1,05. Không trôi.
+
+Ba neo W3–W5 (token ×0,96 / ×0,99 / ×1,00; thời gian ×1,01 / ×1,01 / ×1,05) cho thấy độ trôi giữa cửa sổ nhỏ trên `l4` (k = 2, một bài: chỉ báo thô, không phải hiệu chỉnh).
