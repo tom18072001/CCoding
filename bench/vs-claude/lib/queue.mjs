@@ -5,7 +5,7 @@ import path from 'node:path';
 export const EXIT_RATE_LIMIT = 3;
 
 /** Dòng infra (hạn mức, lỗi hạ tầng) không phải kết quả của arm: lượt đó phải chạy lại. */
-export const isDoneRow = (row) => row.status !== 'infra';
+export const isDoneRow = (row) => row.status === 'done' || !!row.excluded; // SR-01a: failed/error/infra phải chạy lại; khóa bị loại thì không
 
 export function doneKeys(runsText) {
   const keys = new Set();
@@ -47,4 +47,89 @@ export function checkArms(armIds, arms, lanes) {
     }
   }
   return errs;
+}
+
+// ---------- SR-01: lượt xong, lượt bị loại, lượt thay ----------
+
+function parseRows(runsText) {
+  const rows = [];
+  for (const l of String(runsText).split('\n')) {
+    if (!l.trim()) continue;
+    try { const r = JSON.parse(l); if (r?.key) rows.push(r); } catch { /* bỏ dòng hỏng */ }
+  }
+  return rows;
+}
+
+/**
+ * Phân loại một lượt đã chạy xong (không phải infra) thành { failReason, excluded } theo D1 / preregistration §4.3.
+ * failReason ∈ quota|timeout|error|null (chỉ khi không done). excluded ∈ quota|leak|timeout|null.
+ * Timeout do hệ không xong thì GIỮ (excluded null); chỉ timeout kèm chứng cứ hạ tầng mới bị loại.
+ */
+export function classifyRun(r, { timeoutMin, error, infraTimeout = false } = {}) {
+  const status = error ? 'error' : r?.status;
+  let failReason = null;
+  if (status !== 'done') {
+    const timedOut = !!r?.timedOut || (status === 'failed' && timeoutMin > 0 && (r?.wallSec ?? 0) >= 0.98 * timeoutMin * 60);
+    failReason = r?.infra === 'rate-limit' ? 'quota' : timedOut ? 'timeout' : 'error';
+  }
+  const excluded = failReason === 'quota' ? 'quota' : r?.leak ? 'leak' : failReason === 'timeout' && infraTimeout ? 'timeout' : null;
+  return { failReason, excluded };
+}
+
+/** Lượt xong khi status === 'done' HOẶC bị loại (excluded): khóa bị loại không chạy lại, chỗ của nó do lượt thay. */
+export function isFinishedRow(row) {
+  return row.status === 'done' || !!row.excluded;
+}
+
+/**
+ * Lượt cần chạy thêm ngoài `repeats` mặc định cho các ô (task × arm): (1) khóa rep > repeats đã có nhưng chưa xong;
+ * (2) lượt thay cho mỗi khóa bị loại chưa có thay, nhận rep = max(rep của ô) + 1.
+ */
+export function replacementRuns(runsText, repeats, cells) {
+  const rows = parseRows(runsText);
+  const out = [];
+  for (const { task, arm } of cells) {
+    const mine = rows.filter((r) => r.task === task && r.arm === arm);
+    if (!mine.length) continue;
+    const excluded = new Set(mine.filter((r) => r.excluded).map((r) => r.key));
+    const extra = new Map();
+    for (const r of mine) if (r.rep > repeats) extra.set(r.key, Math.max(extra.get(r.key) ?? 0, r.rep));
+    let maxRep = Math.max(repeats, ...mine.map((r) => r.rep ?? 0));
+    for (const rep of extra.values()) if (!doneKeys(runsText).has(`${task}__${arm}__r${rep}`)) out.push({ task, arm, rep });
+    for (let k = excluded.size - extra.size; k > 0; k--) out.push({ task, arm, rep: ++maxRep });
+  }
+  return out;
+}
+
+// ---------- SR-23: bảng Latin thật ----------
+
+/** Các thứ tự arm cho k arm: bảng Latin cân bằng bậc nhất (Williams); k lẻ thì thêm bản đảo → 2k hàng. Mỗi arm đứng mỗi vị trí đều nhau, mỗi cặp liền kề đều nhau. */
+export function latinOrders(k) {
+  if (k <= 1) return [[0]];
+  const first = [0]; let lo = 1, hi = k - 1;
+  while (first.length < k) { first.push(lo++); if (first.length < k) first.push(hi--); }
+  const rows = Array.from({ length: k }, (_, i) => first.map((x) => (x + i) % k));
+  return k % 2 ? [...rows, ...rows.map((r) => [...r].reverse())] : rows;
+}
+
+// ---------- SR-21: dò rò rỉ chỉ trên đường dẫn và tham số công cụ ----------
+
+/** needles: danh sách chuỗi bộ đo (đường dẫn suite, hidden/…). Chỉ xét tool_use của transcript stream-json; dòng không phải JSON thì xét nguyên dòng. */
+export function leakInTranscript(lines, needles) {
+  const hit = (s) => needles.some((n) => String(s).includes(n));
+  return lines.some((l) => {
+    let ev; try { ev = JSON.parse(l); } catch { return hit(l); }
+    if (ev?.type !== 'assistant') return false; // system/init, user tool_result, result: không phải thao tác của agent
+    return (ev.message?.content ?? []).some((b) => b?.type === 'tool_use' && hit(JSON.stringify(b.input ?? {})));
+  });
+}
+
+/** calls.jsonl của CCoding: chỉ xét `tools` (thao tác công cụ), không xét `text`/prompt hệ thống. */
+export function leakInCalls(callsText, needles) {
+  const hit = (s) => needles.some((n) => String(s).includes(n));
+  return String(callsText).split('\n').some((l) => {
+    if (!l.trim()) return false;
+    let c; try { c = JSON.parse(l); } catch { return hit(l); }
+    return c.tools ? hit(JSON.stringify(c.tools)) : false;
+  });
 }
