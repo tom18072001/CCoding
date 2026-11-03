@@ -116,6 +116,32 @@ Chủ dự án giới hạn sub-agent theo bốn chiều: *cái gì được là
 
 ## 5. Phương pháp đánh giá
 
+Phần này gồm hai bộ dữ liệu có địa vị khác nhau. **§5.1 là nghiên cứu đăng ký trước W1–W5**, nguồn của mọi phép thử xác nhận ở §6.1. **§5.2 là các vòng thăm dò C1–C8** (bộ cũ 5 bài), không thuộc phép thử xác nhận nào. Quy ước nguồn: `SCF` = `bench/vs-claude/results/study-cloud-final`; `AN` = `docs/research/analysis`; `PT` = `SCF/prereg-tests-448.md`.
+
+### 5.1 Nghiên cứu đăng ký trước W1–W5
+
+**(a) Bộ bài.** Bộ bài của giám đốc gồm hai tập: **R13** (13 bài, gồm cả bài phi lập trình như đánh giá bảo mật, tổng quan tài liệu và thiết kế hệ thống; `SCF/final-extra.md`, đầu tệp) và **T5** (năm bài t1–t5, cùng 5 bài ở §5.2; B-01 chỉ tính trên T5; `PT` §2). Mỗi ô (bài × arm) chạy lượt r1–r3 trên R13; trên T5 chạy đến r9 cho B6/B7 và A0-sonnet (`PT` §2, cỡ ô 9/9/9/9/9).
+
+**(b) Bảy arm.** A0-sonnet (Claude Code một mình bằng Sonnet; đối chứng chung), A1 (Claude Code kèm prompt lập kế hoạch và tự review), A2 (best-of-3), B0 (CCoding đủ phòng), B5 (CCoding với một agent `senior-swe`), B6 (làn nhanh) và B7 (làn đơn; bản đăng ký trước gọi là "SL", `bench/vs-claude/RUNBOOK-cloud-session.md:75`). Tên và cấu hình theo `SCF/README.md` (bảng "Kết quả chính", mục 3).
+
+**(c) Cửa sổ và máy chủ.** Năm cửa sổ W1–W5 chạy ngày 2–3/11/2026 (`SCF/README.md`, đầu tệp và mục "Giới hạn"). Hai máy chủ khác mã: `main` ở `e0bd2f4` cho B0 và B5; nhánh `7fb18ba` cho B6 và B7 (`SCF/README.md`, mục "Giới hạn"). **Các arm không chạy cùng cửa sổ** (A0-sonnet: W1/W2a; B5, B6: W3; A1: W4–W5; A2: W5; B7: B7b; `SCF/final-extra.md`, đầu tệp), nên so sánh chéo arm ở bảng chi phí là mô tả. Để kiểm độ trôi giữa cửa sổ, ba lượt neo B0 × `l4` ở W3, W4, W5 lệch ≤ 5 % so với W1 về token và thời gian; **đó là chỉ báo thô, k = 2, không phải bằng chứng tương đương giữa các cửa sổ** (`SCF/README.md`, mục "Giới hạn").
+
+**(d) Thước đo.** Chi phí đo bằng token có trọng số: `weighted = input + 1,25·cacheWrite + 0,1·cacheRead + 5·output` (`docs/research/preregistration.md:46`; cài ở `bench/vs-claude/lib/claude.mjs:15-17`). **`weighted` khác USD** và không suy ra tương đương USD (`preregistration.md:343`); trường `costUsd` của các arm CCoding bằng 0, chỉ A0-sonnet có `costUsd` > 0 (`AN/cache-sensitivity.md`, C-5, bảng "USD theo arm"). Thời gian là `wallSec` của cả lượt. Điểm là tỉ lệ test ẩn hoặc mục checklist đạt.
+
+**(e) Phép thử.**
+- *Tương đương TOST ±15 %:* B-01 kiểm B6 và B7 so với A0-sonnet trên T5 bằng ba phép (token, thời gian, điểm), biên [0,85; 1,15], CI 90 % phân vị; kết luận "tương đương" chỉ khi cả ba phép (IUT) đạt (`PT` §0, §2).
+- *Quy tắc trần §2.7:* bài mà mọi lượt của cả hai arm có điểm ≥ 0,99 bị bỏ khỏi phép về điểm; còn dưới 3 bài thì phép về điểm "không kết luận" (`PT` §2, dòng (c)).
+- *Tiêu chí loại lượt:* `classifyRows` loại theo cờ Q, L, T, E1, E4 tính tự động từ `status`, `leak`, `error`, `_FINAL.txt` và `wallSec` so với hạn 20 phút, không dùng điểm. Đọc 448 dòng; **loại 16, giữ 432** (`PT` §0, §1). Bảng của `SCF/final-extra.md` dùng bộ lọc khác (bỏ `infra` và `leak`) nên giữ 440 dòng; hai con số thuộc hai bộ lọc, `PT` §1 không liệt kê riêng cờ của từng dòng bị loại nên bài này không quy 16 − 8 dòng chênh vào nguyên nhân cụ thể.
+- *Quarantine:* không có dòng `failed`; 8 dòng `infra` (lỗi socket keep-alive ở W3, không có lượt gọi LLM) bị mọi script bỏ qua, không chuyển dòng nào (`SCF/README.md`, mục "Dữ liệu"). 0 leak, không lượt nào chạm hạn mức.
+- *Ước lượng khoảng:* tỉ số = mũ của trung bình theo bài của log(TB arm / TB A0-sonnet); bootstrap **hai tầng** (lấy lại bài, rồi lấy lại lượt trong ô), B = 4000, hạt 20261102 (`PT` §0; `SCF/final-extra.md`, đầu tệp). p bootstrap chỉ là xấp xỉ; phán quyết dùng CI (`PT` §2, §6).
+- *Họ Holm:* H3 và H6 chỉ vào họ Holm khi đủ N và có mã kiểm định; ngược lại hạ xuống ước lượng kèm CI (`PT` §5).
+- *Phân tích phụ, ngoài họ Holm:* phân rã chi phí, tách phương sai, độ nhạy hệ số đọc cache 0,05 và độ khớp giữa các bộ chấm (§6.1, mục 4–6). Các phân tích này chạy trên **ảnh chụp `runs.jsonl` cũ hơn 448 dòng** (221, 240 hoặc 276 dòng; số dòng nêu ở từng mục).
+- *Ghi nhận sai lệch:* `PT` §6 ghi rằng quy tắc trần được áp trên dữ liệu xác nhận vì không có pilot cho T5 (khác chữ §2.7, "chỉ bằng pilot"), và A0-sonnet cùng cửa sổ B7a chỉ có 6 lượt mỗi ô (đăng ký 9).
+
+**(f) Vòng thăm dò.** Các vòng C1–C8 (§5.2) có trước đăng ký, dùng bộ cũ 5 bài, vài lượt mỗi ô và không hiệu chỉnh so sánh bội. Bài này gọi chúng là **"vòng thăm dò"**: chúng sinh giả thuyết và mô tả, **không thuộc phép thử xác nhận nào**.
+
+### 5.2 Vòng thăm dò C1–C8 (bộ cũ)
+
 **Thiết kế.** So sánh hai hệ trên cùng đề, cùng repo xuất phát: (a) Claude Code chạy một mình (`claude -p`, mô hình Opus) và (b) CCoding (dự án mới cho mỗi lượt, quyền `exec`, worktree, `checkCommands: ["npm test"]`, runtime `claude-cli`). Từ C7 có thêm (c) Claude Code chạy một mình bằng Sonnet (hệ `claude-sonnet`), để tách hiệu ứng mô hình (làn nhanh của CCoding cũng dùng Sonnet). Các hệ chạy với cách ly cấu hình người dùng như nhau; mỗi hệ chạy **tuần tự** (hai nhiệm vụ CCoding cùng lúc làm nhiễu thời gian vì tranh agent) (`bench/vs-claude/README.md`).
 
 **Bộ bài (5 bài, 461 test ẩn).** `t1-duration` (module theo đặc tả dày quy tắc, 149 test), `t2-orders` (sửa 6 lỗi khách báo, 60), `t3-api` (4 tính năng trên API sẵn có, 87), `t4-perf` (tối ưu hiệu năng, kết quả giống từng byte, 19), `t5-logq` (công cụ nhiều module từ đặc tả, 146). Test ẩn được chấm tự động bằng `node --test` và cả hai hệ không thấy; thời gian trung bình mỗi lượt chạy từ 91 đến 446 s (T-a), tức **không có bài nào dài hơn 15 phút**.
@@ -140,7 +166,122 @@ node docs/research/performance/scripts/token-analysis.mjs --check docs/research/
 
 ## 6. Kết quả (RQ3)
 
-### 6.1 Chất lượng ngang nhau; khác biệt nằm ở thời gian và chi phí
+**Kết luận trước.** Trong nghiên cứu đăng ký trước W1–W5 (440 khóa `done`, 7 arm, không lượt nào chạm hạn mức), **giả thuyết tương đương B-01 bị bác bỏ cho cả B7 (làn đơn) và B6 (làn nhanh)**: CI 90 % của tỉ số token và thời gian nằm hoàn toàn trên biên 1,15 (Bảng 9). Họ Holm rỗng; không giả thuyết nào được gọi "xác nhận" theo §2.5 (Bảng 10). Điểm chất lượng hầu như chạm trần ở mọi arm nên bộ đo này chủ yếu phân biệt về chi phí và thời gian (Bảng 8). Các vòng C1–C8 ở §6.2 là vòng thăm dò. Nhãn dùng trong mục này: **[Xác nhận]** = phép thử đăng ký trước; **[Mô tả]** và **[Phân tích phụ]** = không có kiểm định giả thuyết, ngoài họ Holm.
+
+### 6.1 Nghiên cứu đăng ký trước W1–W5
+
+**Dữ liệu.** `study-cloud/runs.jsonl` ở `78cc7b6`: 448 dòng = 440 khóa `done` + 8 dòng `infra` (`SCF/README.md`, mục "Dữ liệu"). Phép thử xác nhận đọc 448 dòng, giữ 432 (`PT` §0–§1). Bảng chi phí giữ 440 (`SCF/final-extra.md`, đầu tệp).
+
+**(1) Chi phí 6 arm so với A0-sonnet trên R13 [Mô tả].**
+
+**Bảng 8.** Tỉ số chi phí so với A0-sonnet, 13 bài, lượt r1–3; trung bình hình học theo bài, CI 90 % bootstrap hai tầng (B = 4000, hạt 20261102). **Mô tả: các arm chạy ở cửa sổ khác nhau (xem §5.1(c)); chỉ B0 và A0-sonnet cùng cửa sổ.** Nguồn: `SCF/final-extra.md`, bảng đầu; cột "Điểm TB" khớp `SCF/README.md`, mục "Kết quả chính" 3.
+
+| Arm | Máy chủ | Token ×A0 (CI 90 %) | Thời gian ×A0 (CI 90 %) | Điểm TB (A0-sonnet: 0,979) |
+|---|---|---|---|---:|
+| B0 (đủ phòng) | `main` `e0bd2f4` | ×6,58 [5,67; 7,70] | ×9,76 [7,93; 12,19] | 1,000 |
+| B5 (một agent `senior-swe`) | `main` `e0bd2f4` | ×1,61 [1,41; 1,87] | ×2,59 [2,15; 3,15] | 0,984 |
+| B6 (làn nhanh) | nhánh `7fb18ba` | ×4,23 [3,59; 5,05] | ×6,29 [5,00; 8,05] | 0,996 |
+| B7 (làn đơn) | nhánh `7fb18ba` | ×2,61 [2,13; 3,23] | ×3,96 [3,11; 5,23] | 1,000 |
+| A1 (Claude + prompt lập kế hoạch/tự review) | — | ×0,96 [0,83; 1,10] | ×1,28 [1,14; 1,44] | 0,993 |
+| A2 (best-of-3) | — | ×2,23 [1,94; 2,60] | ×2,55 [2,30; 2,88] | 0,995 |
+
+Chỉ A1 có CI token chứa 1 (0,96 [0,83; 1,10]); mọi arm CCoding đắt hơn A0-sonnet cả về token lẫn thời gian. Chất lượng hầu như chạm trần: chỉ 3 bài có ô dưới 0,99 (c3-shop-bugs, l1-oncall, r1-elk-design), chênh tối đa 1 lượt trên 3 (`SCF/final-extra.md`, bảng "Bài có điểm dưới trần"; `SCF/README.md`, kết quả 3). Trong bảng đó A0-sonnet có điểm TB 0,889 ở l1-oncall và 0,833 ở r1-elk-design; B0 đạt 1,000 ở cả hai. Mô tả cùng cửa sổ [Mô tả] (`PT` §3, hàng W1): B0/A0-sonnet có token trung vị theo bài ×5,68 [5,05; 6,58] và thời gian ×9,60 [6,71; 12,80] (CI 95 %), 9/9 bài đạt cả hai ngưỡng 3× và 1,5×; W2a: ×9,54 [5,96; 13,96] và ×11,71 [4,70; 23,71], 4/4 bài; W2c (chỉ s1): ×9,32 và ×11,05, 1/1 bài. B7 trên 13 bài ngoài T5 (B7b) là mô tả khác cửa sổ và khác máy chủ: token ×2,607 [2,13; 3,23], thời gian ×3,965 [3,11; 5,23] (`SCF/step4-extra-448.md`, §3). Hai tệp ghi thời gian ×3,96 (`final-extra.md`) và ×3,965 (`step4-extra-448.md`) cho cùng cặp B7/A0-sonnet trên 13 bài; chúng tôi giữ cả hai như nguồn ghi, sai khác chỉ ở làm tròn.
+
+**(2) B-01 bị bác bỏ cho B7 và B6 [Xác nhận].**
+
+**Bảng 9.** B-01 (IUT ba phép, biên [0,85; 1,15], CI 90 %) trên T5. R = tỉ số tập trung bình hình học theo bài, B7 hoặc B6 so với A0-sonnet. Nguồn: B7, `PT` §2 (bảng "Chính" và hai bảng "Độ nhạy"), và `SCF/step4-extra-448.md` §2 (hàng "A0 r1–11"); B6, `SCF/step4-extra-448.md` §1 (ba bảng).
+
+| Arm; phép so | Cỡ ô A0 / arm theo bài | Token R [CI 90 %] | Thời gian R [CI 90 %] | Điểm (phép c) | Kết luận |
+|---|---|---|---|---|---|
+| B7; **chính**: A0 cùng cửa sổ r4–9 so với B7 r1–9 | 6 / 9 | 2,498 [2,02; 3,18] | 2,566 [2,09; 3,25] | n/a: không kết luận (0 bài không chạm trần) | **bác bỏ** |
+| B7; độ nhạy 1: A0 gộp r1–9 | 9 / 9 | 2,511 [2,05; 3,20] | 2,563 [2,09; 3,27] | n/a | bác bỏ |
+| B7; độ nhạy 2: chỉ r4–9 cả hai arm | 6 / 6 | 2,534 [2,04; 3,22] | 2,609 [2,12; 3,31] | n/a | bác bỏ |
+| B7; độ nhạy 3: A0 r1–11 (có 2 lượt neo) | 11 / 9 | 2,519 [2,05; 3,13] | 2,580 [2,10; 3,25] | n/a | bác bỏ |
+| B6; **chính**: A0 r1–9 so với B6 r1–9 | 9 / 9 | 3,921 [3,49; 4,43] | 4,047 [3,45; 4,76] | 0,987 [0,98; 0,99]: không kết luận (còn 1 bài không chạm trần, < 3) | **bác bỏ** |
+| B6; độ nhạy: chỉ cùng cửa sổ W2b (r1–3) | 3 / 3 | 3,886 [3,42; 4,43] | 3,756 [3,17; 4,51] | 0,994 [0,99; 1,00]: không kết luận | bác bỏ |
+| B6; độ nhạy: A0 r1–11 so với B6 r1–9 | 11 / 9 | 3,934 [3,51; 4,39] | 4,074 [3,47; 4,75] | 0,987 [0,98; 0,99]: không kết luận | bác bỏ |
+
+Cả bảy phép cho cùng kết luận. Ở phép chính của B7, cận dưới CI 90 % của token (2,02) và thời gian (2,09) đều cao hơn nhiều so với biên trên 1,15, nên không thể tuyên bố tương đương trong ±15 %. p bootstrap = 1,0000 chỉ là xấp xỉ kèm theo; phán quyết dùng CI (`PT` §2). Phép về điểm không kết luận vì T5 chạm trần; chênh điểm tuyệt đối B7 − A0 là −0,04 pp (phép chính) và 0,00 pp (độ nhạy 2; `PT` §2). Số ×2,50 [2,02; 3,18] và ×2,57 ở `SCF/README.md` (kết quả 1) là làm tròn của 2,498 và 2,566. Số 2,519 (A0 r1–11, `step4-extra-448.md`) và 2,498 (A0 r4–9, `PT`) là hai **phép so khác nhau** của cùng cặp, không phải mâu thuẫn. Mô tả thêm [Mô tả], khác cửa sổ cùng máy chủ: B7/B6 token 0,65 [0,55; 0,77], thời gian 0,68 [0,58; 0,79] (`PT` §4.2); B0 không chạy T5 nên không có so sánh B0 với B6/B7 trên cùng bài.
+
+**(3) H3–H7 và họ Holm [Xác nhận, trạng thái của từng giả thuyết].**
+
+**Bảng 10.** Trạng thái các giả thuyết thứ cấp. Nguồn: `PT` §5, bổ sung từ `SCF/README.md` (kết quả 4–9).
+
+| Giả thuyết | Cần (§3.1) | Hiện có | Trạng thái |
+|---|---|---|---|
+| H3 (review, s1) | r = 10 mỗi arm (A0-sonnet, B0) | 10 / 10 | **Đủ N nhưng không tính p** (SR-26 chưa có mã); hạ xuống ước lượng: recall 0,0 pp [0,0; 0,0], precision 0,0 pp [0,0; 0,0] (n 10/10). `SCF/README.md`: mọi lượt đạt 1,0, **suy biến** |
+| H4 (a1, `--judge`) | mô tả | n = 11 mỗi arm | **Mô tả, không có phép kiểm**: A0-sonnet TB 0,985 (sd 0,050; nhỏ nhất 0,833), B0 1,000; Δ ≈ +1,5 pp, xa ngưỡng +20 pp của H4 (`SCF/final-extra.md`, mục H4) |
+| H5 (chi phí B0/A0) | mô tả cùng cửa sổ | xem mục (1) | Mô tả kèm CI (`PT` §3): W1 9/9, W2a 4/4, W2c 1/1 bài đạt ngưỡng; họ Holm chỉ gồm {H3, H6} |
+| H6 (A1/A2 ≈ B0) | A1 r = 3, A2 r = 2 trên l1-modules, l2-chain, t1–t5 | A1, A2 chưa chạy t1–t5; l1-modules, l2-chain chưa có `task.json` | **Chưa đủ N**, không tính p |
+| H7 (SD B0/A0 ≤ 0,7) | r = 5 mỗi ô, ≥ 3 bài | chỉ 2 bài (a1-ambiguous-spec, s1-sec-review) | **Chưa đủ N**, không tính p |
+| Họ Holm {H3, H6} | — | — | **Rỗng (K = 0)**: không giả thuyết nào được "xác nhận" |
+
+Ba điểm cần đọc kèm. (i) **H6 lệch giữa `run-plan.md` và đăng ký trước**: `analyze.mjs` báo |Δ| ≤ 5 pp giữa B0 và A1/A2 trên 13 bài vì `run-plan.md` §5.2 chạy A1/A2 trên R13; nhưng đăng ký trước v2.1 (§9 dòng 6) chỉ tính H6 trên l1-modules, l2-chain và t1–t5, nên H6 vẫn "chưa đủ N" (`SCF/README.md`, kết quả 7). Số 5 pp đó không được dùng như kết quả H6. (ii) Cột "Hiện có" của H6 trong `PT` §5 ghi "không có A1, A2" vì bảng dùng nhãn cửa sổ cố định của vòng 3; A1, A2 có mặt trong `final-extra.md` (`SCF/README.md`, mục "Giới hạn"). (iii) Nhãn "SUPPORTED"/"not supported" của `analyze.mjs` không dùng làm kết luận (`preregistration.md` §2.4, §9 V3-06; `SCF/README.md`, mục "Đọc `analyze.mjs` thế nào").
+
+**(4) Phân rã chi phí và tách phương sai [Mô tả / phân tích phụ].** Không có kiểm định; chạy trên ảnh chụp 221 dòng đầu của `runs.jsonl` (phân rã) và 240 dòng (tách phương sai), không phải 448 dòng (`AN/b7-cost-decomposition.md`, ghi chú vòng 4 gói 1b; `AN/variance-decomposition.md`, V-0).
+
+**Bảng 11.** Phần chênh weighted B7 − A0-sonnet theo thành phần (T-4) và theo thứ tự quy phần cố định (T-5). Nguồn: `AN/b7-cost-decomposition.md`, T-4 và T-5. Δ tính từ trung vị theo bài; k token weighted mỗi bài.
+
+| Bộ | Tách | Phần | % của Δ |
+|---|---|---|---:|
+| T5 (45 lượt B7, 45 lượt A0) | T-4, theo thành phần | out 50,4 % · cacheWrite 36,8 % · cacheRead 12,8 % · input 0,0 % | Δ = 101,5k/bài |
+| T5 | T-5, theo thứ tự | (i) pha accept 47,7 % (48,4k) · (ii) out vượt A0 43,6 % (44,3k) · (iii) cacheWrite vượt A0 8,7 % (8,9k) · (iv) còn lại 0,0 % | 100 % |
+| B7b, 13 bài (24 lượt B7, 46 lượt A0) | T-4 | out 56,1 % · cacheWrite 38,0 % · cacheRead 5,9 % · input 0,0 % | Δ = 61,9k/bài |
+| B7b | T-5 | accept 46,8 % (29,0k) · out 45,4 % (28,1k) · cacheWrite 7,8 % (4,9k) · còn lại 0,0 % | 100 % |
+
+Đọc kết quả, đúng mức bằng chứng. (a) Chỉ pha **accept** là đo trực tiếp qua `byPhase` (47,7 % trên T5; 46,8 % trên B7b, T-5). Nếu đổi thứ tự quy phần (quy accept sau cùng), accept chỉ còn 14,5 % (T5) và 6,0 % (B7b), vì out và cacheWrite của cả lượt trùng một phần với chính token của accept; hai con số là hai đầu của một khoảng (T-5, bảng độ nhạy; T-7). (b) `byPhase` không có out, cacheWrite hay giây theo pha, nên **không tách được** "out của execute", "mẫu đầu ra so với báo cáo bàn giao", và **thời gian không tách được theo pha nào** (T-6); các phần (ii)–(iv) là cận phụ thuộc thứ tự, không phải phân rã nhân quả. (c) Ước lượng điểm kiểu đăng ký trước tái lập ×2,51 token và ×2,56 thời gian trên T5, ×2,64 và ×3,97 trên B7b (T-7); ba cách tính tỉ số cho ba con số khác nhau (×3,03 trung vị gộp mọi lượt, T-1; ×2,51 trung bình hình học, T-7; ×1,96 trung vị tỉ số theo bài, T-3) và chỉ cách thứ hai tương ứng với B-01 (T-1). (d) Thời gian của B7 tương quan rất mạnh với out (Spearman 0,97 ở B7, 0,98 ở A0 trên T5; T-6), một tương quan chứ không phải phân rã. (e) Hàm ý thô cho B7′: bỏ hẳn accept (giả định cổng B-02 cho phép) chỉ đưa tỉ số từ khoảng ×2,5 xuống khoảng ×1,79, phép nhân tỉ lệ chưa kiểm bằng dữ liệu; chưa đủ cho mục tiêu ×1,3 (`AN/b7-cost-decomposition.md`, mục "Hàm ý cho S3 (B-11)"). B7b có thêm sai lệch cửa sổ vì A0 và B7 khác cửa sổ và khác máy chủ (cùng tệp, "Phân tích lỗi").
+
+**Bảng 12.** Tách phương sai log(B7/A0-sonnet). Nguồn: `AN/variance-decomposition.md`, V-1 (CI 90 %, bootstrap hai mức, 4000 vòng, hạt 20261104) và V-2 (nửa độ rộng CI 90 % dự kiến cho B7′ ở R thật = 1,3, thang log, mô phỏng).
+
+| Đại lượng | Bộ bài | σ²_task [CI 90 %] | σ²_run [CI 90 %] |
+|---|---|---|---|
+| token có trọng số | T5 (5 bài) | 0,0974 [0,0000; 0,1883] | 0,0873 [0,0359; 0,1354] |
+| token có trọng số | B7b (13 bài) | 0,2138 [0,0691; 0,3478] | 0,0310 [0,0070; 0,0391] |
+| thời gian thực | T5 | 0,0994 [0,0000; 0,1902] | 0,0809 [0,0360; 0,1151] |
+| thời gian thực | B7b | 0,3257 [0,1206; 0,5321] | 0,0583 [0,0194; 0,0662] |
+
+Trên T5, phương sai giữa bài và giữa lượt cùng bậc, và CI 90 % của σ²_task chạm 0, nên "giữa bài lớn hơn giữa lượt" là chưa chắc (V-1; tóm tắt của tệp). σ²_task của B7b gồm cả hiệu ứng cửa sổ và máy chủ, không tách được (mục "Phân tích lỗi" của tệp). Nửa độ rộng CI dự kiến của B7′ (V-2, mô phỏng): phương án A (10 lượt × 5 bài) 0,218 cho cả token và thời gian; phương án B (5 lượt × 10 bài) 0,170 (K1, giả định B7b đồng nhất với T5, chưa kiểm), 0,196 / 0,224 (K2, theo ước lượng riêng của B7b) và 0,245 / 0,291 (K3, B7b nhiễu gấp đôi). Phương án A được chọn (V-3). Cả hai phương án cho cận trên CI khoảng R̂ × 1,2–1,3, nên kết luận "đạt ≤ ×1,3" chỉ có khi R thật ≲ 1,05 (tóm tắt của tệp).
+
+**(5) Độ nhạy hệ số đọc cache 0,05 [Phân tích phụ, ngoài họ Holm].** Hệ số 0,1 vẫn là thước đo chính; hệ số 0,05 (giá đọc cache bằng 0,05× giá đầu vào theo trang giá, `AN/cache-sensitivity.md`, C-4 và C-5) chỉ là độ nhạy, không có p, không đổi K. Dữ liệu là ảnh chụp 276 dòng (`838a5f1`), không phải 448 dòng (C-0).
+
+**Bảng 13.** Đổi hệ số cacheRead từ 0,1 sang 0,05. Nguồn: `AN/cache-sensitivity.md`, C-4.
+
+| Tỉ số (ước lượng điểm kiểu đăng ký trước) | Số bài | Hệ số 0,1 (chính) | Hệ số 0,05 | Đổi |
+|---|---:|---:|---:|---:|
+| B7/A0, T5 | 5 | ×2,52 | ×2,55 | 1,3 % |
+| B7/A0, mọi bài có cả hai arm | 18 | ×2,63 | ×2,73 | 4,0 % |
+| B6/A0, mọi bài có cả hai arm | 5 | ×3,93 | ×4,03 | 2,5 % |
+
+Kết luận không đổi: hệ số này gần như không ảnh hưởng tỉ số (C-4). Các bảng còn lại của tệp, đều mô tả: C-1, ở B7 1,25·cacheWrite chiếm 34,8 %, 0,1·cacheRead 12,9 %, 5·out 52,3 %, input ~0 %; C-2, tỉ lệ trúng cache gộp 87,0 % (A0-sonnet), 76,5 % (B0), 80,5 % (B6), 82,2 % (B7), tập bài của các arm khác nhau nên không kiểm định; C-3, con số "ghi cache ≈ 68 % chi phí" của tài liệu tham chiếu **không được dữ liệu ủng hộ như đặc điểm chung** (tối đa theo lượt: B7 53,8 %, B0 54,2 %; chỉ 1/101 lượt A0-sonnet ≥ 68 %), còn "cache là thành phần lớn thứ hai sau out" thì phù hợp (cacheWrite + cacheRead khoảng 44–52 % tùy mẫu số); C-5, USD theo bảng giá, ảnh chụp không có trường `model` nên chỉ có hai kịch bản cận (toàn Sonnet 5.5 hoặc toàn Opus 5.5), tỉ số USD B7/A0 ×2,73 (18 bài) và B6/A0 ×4,03 (5 bài), còn tổng `costUsd` đã ghi của A0-sonnet $14,43 khớp giá ghi cache 1 giờ chứ không phải 5 phút ($12,06), và chưa kiểm cho B0, B6, B7 vì `costUsd` = 0. Phần chênh B7 − A0 trên T5 tính lại ở C-3 (cacheWrite 36,5 %, cacheRead 12,5 %, out 51,0 %) khớp T-4 (36,8 / 12,8 / 50,4 %) trong vài điểm phần trăm vì khác ảnh chụp (276 so với 221 dòng).
+
+**(6) Độ khớp giữa các bộ chấm và cổng chất lượng [Mô tả / phân tích phụ].** Coi bộ chấm và cổng như bộ phân loại (`AN/agreement.md`, đầu tệp). **Đây là độ khớp, không phải độ đúng**: không bên nào là chuẩn vàng; bộ nhãn vàng 60 mục đã chuẩn bị nhưng chưa có nhãn người, nên chưa có κ hay Accuracy cho chuẩn vàng (mục (b) của tệp, G-0).
+
+**Bảng 14.** Chỉ số độ khớp. CI 95 % bootstrap lấy lại theo lượt (B = 2000, hạt 20261103) trừ khi ghi khác. Nguồn: `AN/agreement.md`, A-2 (judge so với regex), C-1 và C-2 (cổng), M-1 (MAST).
+
+| Phép đo | n | Accuracy | Precision | Recall | F1 | κ | PABAK |
+|---|---|---|---|---|---|---|---|
+| Judge (ref) so với regex (pred), gộp: r1 + a1 | 12 lượt; 84 cặp | 0,940 [0,89; 0,99] | 0,963 [0,93; 1,00] | 0,975 [0,94; 1,00] | 0,969 [0,94; 0,99] | 0,255 [−0,04; 0,65] | 0,881 [0,77; 0,98] |
+| — riêng r1-elk-design | 6 lượt; 48 cặp | 0,896 [0,83; 0,96] | 0,933 [0,88; 0,98] | 0,955 [0,90; 1,00] | 0,944 [0,90; 0,98] | 0,231 [−0,08; 0,55] | 0,792 [0,67; 0,92] |
+| — riêng a1-ambiguous-spec | 6 lượt; 36 cặp | 1,000 | 1,000 | 1,000 | 1,000 | n/a | 1,000 |
+| Cổng B-02 chặn so với lượt lỗi thật, C1–C9 | 54 lượt; 4 lỗi thật | 0,944 [0,87; 1,00] | 1,000 (1/1) | **chưa ước lượng được** (4 < 10) | chưa tính | 0,382 [0,00; 1,00] | 0,889 [0,74; 1,00] |
+| "Vào vòng sửa" so với lượt lỗi thật, C1–C9 (đại diện) | 54; 4 lỗi thật | 0,796 [0,69; 0,91] | 0,111 [0,00; 0,33] | chưa ước lượng được | chưa tính | 0,057 [−0,14; 0,35] | 0,593 [0,37; 0,81] |
+| "Vào vòng sửa" so với test ẩn < 100 %, ảnh chụp 276 dòng | 120; 7 lỗi thật | 0,942 [0,90; 0,98] | n/a (0 dự đoán dương) | chưa ước lượng được (7 < 10) | chưa tính | 0,000 | 0,883 [0,80; 0,97] |
+| MAST, mức chi tiết (14 FM + INF + NA), hai người gán A và B | 49 thách thức | 0,735 [0,61; 0,86] | 0,618 (macro) | 0,615 (macro) | 0,592 (macro) [0,46; 0,77] | 0,673 [0,52; 0,82] | 0,708 [0,57; 0,84] |
+| MAST, mức nhóm (FM-1/2/3, INF, NA) | 49 | 0,755 [0,63; 0,88] | 0,815 (macro) | 0,827 (macro) | 0,780 (macro) [0,64; 0,87] | 0,677 [0,52; 0,83] | 0,694 [0,54; 0,85] |
+
+*Judge so với regex.* Khớp thô 0,940 (79/84 cặp trùng nhãn, 5 bất đồng) nhưng κ chỉ 0,255 và CI 95 % chứa 0. Đó là **nghịch lý κ**: judge cho đạt 80/84 và regex 81/84, nên κ bị phạt nặng bởi hai ô chéo hiếm; đọc PABAK 0,881 và khớp thô, không đọc κ riêng lẻ (A-2). 12/14 mục checklist không có bất đồng nào; cả 5 bất đồng nằm ở r1 (`ilm`, `ingest-throughput`); 13/14 mục có cảnh báo nghịch lý κ (A-1). Giả thuyết giải thích hướng bất đồng chưa kiểm từng văn bản (kết luận (a), điểm 3). Hai lỗi regex đã biết (`sign` khớp "design"; bỏ sót "1,4 TB") không xảy ra trong 12 văn bản này (A-3). 12 lượt này do cấu hình `--judge` chọn, không phải mẫu ngẫu nhiên của 276 dòng.
+
+*Cổng B-02.* Trên C1–C9 cổng chặn **1 lượt và đó là lượt lỗi thật (1/1)**, và **chặn nhầm 0 trong 50 lượt không lỗi** (cận trên Clopper–Pearson 95 % là 7,1 %; C-1 và "Đọc kết quả" (c), điểm 1). Precision 1/1 có CP 95 % [2,5 %; 100 %], tức không thông tin. **Recall chưa ước lượng được**: chỉ có 4 lượt lỗi thật (và 7 ở ảnh chụp), dưới ngưỡng 10 nên tệp không in Recall và F1. Ba trong bốn lỗi thật là lượt có test ẩn hỏng nhưng lệnh kiểm tra xanh, loại lỗi B-02 không thể thấy theo thiết kế (đọc `projectChecks.latest`), nên đây là giới hạn của phép đo chứ chưa phải thất bại của cổng. Nhãn lỗi đo ở cuối lượt, sau cổng và vòng sửa, nên precision là cận dưới. B-10 và CTO không đo được vì không có trường ghi quyết định. Cần khoảng 25–46 lượt bài cài lỗi (recall kỳ vọng 0,8, q = 0,7) để nửa CI 95 % của recall ≤ 0,15 (C-3 của tệp; đề xuất B-12, chưa chạy).
+
+*MAST.* κ = 0,673 (mức chi tiết) và 0,677 (mức nhóm) giữa hai người gán A và B (trùng chi tiết 36/49, trùng nhóm 37/49). Nguồn lệch chủ yếu là nhãn NA: 10 trong 12 thách thức lệch nhóm có NA ở một bên, vì sổ mã chưa nói cách xử lý thách thức chỉ tốn chi phí hoặc độ trễ. Khi bỏ cặp có NA, κ = 0,869 [0,71; 1,00] (n = 35), nhưng đó là chọn mẫu theo nhãn nên **không dùng làm κ chính** (M-1, "Đọc kết quả" 2). **Hai bên gán nhãn là hai agent cùng họ mô hình, không phải κ người–người**; các mốc MAST 0,88 (người–người) và 0,77 (LLM–người) chỉ để định vị, không so trực tiếp được (M-1, điểm 4).
+
+**(7) B7′ (B-11): đang đo.** Phép đo B7′ (hạng mục B-11 của `improvement-backlog.md`; bối cảnh ở `AN/b7-cost-decomposition.md`, mục "Hàm ý cho S3 (B-11)") **đang chạy**; chưa có số nào để báo cáo ở bản này. Mục này là chỗ giữ cho kết quả B7′; không được suy từ mô phỏng ở Bảng 12 hoặc từ hàm ý ×1,79 ở Bảng 11. [CẦN SỐ LIỆU: chờ kết quả B-11, kèm tệp nguồn và bảng khi có.]
+
+### 6.2 Vòng thăm dò C1–C8 (bộ cũ, không thuộc phép thử xác nhận)
+
+Các mục 6.2.1–6.2.6 dưới đây giữ kết quả của vòng thăm dò trên bộ cũ 5 bài (n = 1–5 lượt mỗi ô, không hiệu chỉnh so sánh bội). Chúng sinh giả thuyết và mô tả cơ chế; mọi CI và p ở đây là **minh họa**. Khi hai nguồn lệch nhau, nghiên cứu đăng ký trước (§6.1) được ưu tiên.
+
+### 6.2.1 Chất lượng ngang nhau; khác biệt nằm ở thời gian và chi phí
 
 **Bảng 2.** Thời gian, chi phí và test ẩn theo bài (trung bình các lượt lặp; n = 2 mỗi ô, trừ ghi chú). Nguồn: **T-a**. Lệnh tái lập: `node docs/research/performance/scripts/token-analysis.mjs --table T-a`.
 
@@ -161,7 +302,7 @@ node docs/research/performance/scripts/token-analysis.mjs --check docs/research/
 
 **Chất lượng.** Cả hai hệ gần như đạt trọn test ẩn ở mọi vòng; mỗi hệ rớt đúng một test ở một số lượt (Claude 297/298 ở `t1` C1 và C5; CCoding 59/60 ở `t2` C4) (T-a). **Chất lượng không phải lợi thế đo được trong 5 bài này**, nên so sánh quy về thời gian và chi phí.
 
-### 6.2 Kết quả âm tính: thiết kế ban đầu chậm hơn và đắt hơn khoảng gấp đôi
+### 6.2.2 Kết quả âm tính: thiết kế ban đầu chậm hơn và đắt hơn khoảng gấp đôi
 
 **Bảng 3.** Chênh lệch CCoding − Claude Code, bootstrap 95%. **MINH HỌA, n nhỏ — không đủ lực thống kê để khái quát**; CI chỉ mô phỏng nhiễu trong ô nên hẹp hơn thực tế. Nguồn: **T-f**. Lệnh tái lập: `node docs/research/performance/scripts/token-analysis.mjs --table T-f`.
 
@@ -180,7 +321,7 @@ node docs/research/performance/scripts/token-analysis.mjs --check docs/research/
 
 *C6 nằm trong T-f (hai dòng cuối). Với 2 lượt mỗi ô, kiểm định hoán vị chính xác có p nhỏ nhất đạt được là 2/36 = 0,0556, nên thời gian C6 tách hoàn toàn giữa hai hệ nhưng không đạt 0,05 dù CI bootstrap không chứa 0; cả hai chỉ là minh họa (p hoán vị: `dev-review/stats-report.md`, `dev-review.md` §2).*
 
-**Đọc kết quả C1–C5.** (i) Ở C1 và C2 — thiết kế ban đầu — CCoding chậm hơn và đắt hơn ở mọi bài có đối chứng, và khoảng tin cậy không chứa 0 theo hướng đó (Bảng 2, 3). (ii) Ở C5 (làn nhanh), chênh lệch thời gian là +21,1 s với CI chứa 0, tức không phân biệt được với bằng nhau. Dòng loại ngoại lệ đổi hướng (−14,7 s) nhưng đó là **phân tích độ nhạy chọn sau khi thấy dữ liệu**, nên kết luận về thời gian ở C5 nhạy với một lượt chạy. (iii) Chi phí C5 vẫn cao hơn +21,8%; chỉ một ô (`t4`) thấp hơn Claude (0,574 so với 0,627 USD, Bảng 2). (iv) Ở C5, CCoding nhanh hơn ở t1, t4, t5 nhưng chậm hơn ở t2 (106 so với 91 s) và t3 (400 so với 158 s). **Với bài nhỏ, CCoding không có lợi thế chi phí, và lợi thế thời gian chưa được chứng minh.** Hai hệ còn khác cấu hình mô hình (Claude Code: Opus; CCoding ở C5: Sonnet), nên so sánh là của cả hệ thống, không tách hiệu ứng multi-agent khỏi hiệu ứng mô hình; vòng C7 (mục 6.3) được thêm để tách hiệu ứng đó (`token-analysis.md` §5).
+**Đọc kết quả C1–C5.** (i) Ở C1 và C2 — thiết kế ban đầu — CCoding chậm hơn và đắt hơn ở mọi bài có đối chứng, và khoảng tin cậy không chứa 0 theo hướng đó (Bảng 2, 3). (ii) Ở C5 (làn nhanh), chênh lệch thời gian là +21,1 s với CI chứa 0, tức không phân biệt được với bằng nhau. Dòng loại ngoại lệ đổi hướng (−14,7 s) nhưng đó là **phân tích độ nhạy chọn sau khi thấy dữ liệu**, nên kết luận về thời gian ở C5 nhạy với một lượt chạy. (iii) Chi phí C5 vẫn cao hơn +21,8%; chỉ một ô (`t4`) thấp hơn Claude (0,574 so với 0,627 USD, Bảng 2). (iv) Ở C5, CCoding nhanh hơn ở t1, t4, t5 nhưng chậm hơn ở t2 (106 so với 91 s) và t3 (400 so với 158 s). **Với bài nhỏ, CCoding không có lợi thế chi phí, và lợi thế thời gian chưa được chứng minh.** Hai hệ còn khác cấu hình mô hình (Claude Code: Opus; CCoding ở C5: Sonnet), nên so sánh là của cả hệ thống, không tách hiệu ứng multi-agent khỏi hiệu ứng mô hình; vòng C7 (mục 6.2.3) được thêm để tách hiệu ứng đó (`token-analysis.md` §5).
 
 **Bảng 3b. C6 — kiểm chứng sửa `maxParallel` (`d7600f6`).** Nguồn: **T-a** (thời gian, chi phí, test ẩn), **T-b** (ghi cache), **T-f** (CI, p hoán vị) và **T-g** (tỉ lệ). Lệnh tái lập: `node docs/research/performance/scripts/token-analysis.mjs --table T-a` (tương tự `--table T-b`, `T-f`, `T-g`); dữ liệu gốc: `git show 5866cda:bench/vs-claude/results/runs.csv | grep "^C6"`. **Hai hệ chạy cùng lúc (như C5); Claude Code dùng Opus, CCoding làn nhanh dùng Sonnet; n = 2 mỗi ô; CI và p hoán vị ở Bảng 3 chỉ là minh họa.**
 
@@ -189,9 +330,9 @@ node docs/research/performance/scripts/token-analysis.mjs --check docs/research/
 | t3-api | 246, 258 → 252 | 211, 173 → 192 | 0,76 | 1,044 / 1,103 | 1,06 | 42 120 / 129 942 (3,1×) | 87/87 cả hai hệ |
 | t5-logq | 283, 236 → 259,5 | 134, 214 → 174 | 0,67 | 1,009 / 1,222 | 1,21 | 40 615 / 148 805 (3,7×) | 146/146 cả hai hệ |
 
-**Đọc C6.** (i) Chất lượng không đổi (100% test ẩn, 8/8 lượt). (ii) Thời gian: CCoding nhanh hơn ở cả hai bài (TB 0,76 và 0,67), và khoảng min–max của hai hệ không chồng nhau (t3: CCoding 173–211 s, Claude Code 246–258 s; t5: CCoding 134–214 s, Claude Code 236–283 s), nhưng với n = 2 mỗi ô đó chỉ là dấu hiệu, không phải kiểm định. Hướng này khớp giả thuyết rằng bài **nhiều module có hạng mục độc lập** hưởng lợi từ làn nhanh chạy cùng lúc tối đa 4 hạng mục — nhưng lợi thế so với Opus này phần lớn là hiệu ứng mô hình (mục 6.3). (iii) **Chi phí không theo hướng đó**: CCoding đắt hơn ở TB (+5,6% t3, +21,1% t5), và ghi cache vẫn gấp 3,1–3,7 lần Claude Code, cùng cỡ với C5 (3,34×, Bảng 5). Ở t3 lượt 2, CCoding rẻ hơn Claude Code (0,946 so với 1,104 USD), nên không có hướng chi phí nhất quán trong 2 lượt. (iv) **Không chứng minh được sửa `maxParallel` là nguyên nhân**: C6 không có nhánh đối chứng "trước sửa" chạy cùng thời điểm (C5 chạy trước, ở thời điểm khác và có lượt treo stdin), và hai hệ khác mô hình. Chúng tôi chỉ ghi nhận rằng sau sửa, hai bài có nhiều hạng mục độc lập không còn lượt chậm như C5 t3 (400 s TB). Bản ghi PROCESS-REVIEW §13 còn báo tỉ lệ gộp C5 + C6 (bỏ lượt treo stdin) với t3 ≈ 0,99 — nghĩa là ở t3, lợi thế thời gian khi gộp mẫu nhỏ hơn con số C6 riêng lẻ; T-g xác nhận 0,98 khi bỏ lượt treo (giá trị thực 0,985) và 1,45 khi giữ lượt treo. Với C6 riêng, chênh lệch thời gian −72,8 s, CI bootstrap [−105,3; −40,3] nhưng p hoán vị = 0,0556 (T-f, Bảng 3).
+**Đọc C6.** (i) Chất lượng không đổi (100% test ẩn, 8/8 lượt). (ii) Thời gian: CCoding nhanh hơn ở cả hai bài (TB 0,76 và 0,67), và khoảng min–max của hai hệ không chồng nhau (t3: CCoding 173–211 s, Claude Code 246–258 s; t5: CCoding 134–214 s, Claude Code 236–283 s), nhưng với n = 2 mỗi ô đó chỉ là dấu hiệu, không phải kiểm định. Hướng này khớp giả thuyết rằng bài **nhiều module có hạng mục độc lập** hưởng lợi từ làn nhanh chạy cùng lúc tối đa 4 hạng mục — nhưng lợi thế so với Opus này phần lớn là hiệu ứng mô hình (mục 6.2.3). (iii) **Chi phí không theo hướng đó**: CCoding đắt hơn ở TB (+5,6% t3, +21,1% t5), và ghi cache vẫn gấp 3,1–3,7 lần Claude Code, cùng cỡ với C5 (3,34×, Bảng 5). Ở t3 lượt 2, CCoding rẻ hơn Claude Code (0,946 so với 1,104 USD), nên không có hướng chi phí nhất quán trong 2 lượt. (iv) **Không chứng minh được sửa `maxParallel` là nguyên nhân**: C6 không có nhánh đối chứng "trước sửa" chạy cùng thời điểm (C5 chạy trước, ở thời điểm khác và có lượt treo stdin), và hai hệ khác mô hình. Chúng tôi chỉ ghi nhận rằng sau sửa, hai bài có nhiều hạng mục độc lập không còn lượt chậm như C5 t3 (400 s TB). Bản ghi PROCESS-REVIEW §13 còn báo tỉ lệ gộp C5 + C6 (bỏ lượt treo stdin) với t3 ≈ 0,99 — nghĩa là ở t3, lợi thế thời gian khi gộp mẫu nhỏ hơn con số C6 riêng lẻ; T-g xác nhận 0,98 khi bỏ lượt treo (giá trị thực 0,985) và 1,45 khi giữ lượt treo. Với C6 riêng, chênh lệch thời gian −72,8 s, CI bootstrap [−105,3; −40,3] nhưng p hoán vị = 0,0556 (T-f, Bảng 3).
 
-### 6.3 Cùng mô hình: một agent nhanh hơn làn nhanh (C7)
+### 6.2.3 Cùng mô hình: một agent nhanh hơn làn nhanh (C7)
 
 **Kết luận RQ3 (số lấy từ T-h, T-i, T-d).** Khi cùng mô hình Sonnet và cùng thời điểm (C7), một agent nhanh hơn làn nhanh 1,7–2,5× ở 4/5 bài (chỉ lượt C7; gộp làn nhanh C5–C7 cho 1,6–2,9×, trộn lượt khác thời điểm), và làn nhanh chỉ hòa ở t5, bài có nhiều module độc lập (tỉ lệ 1,00; 0,77× với một lượt C7). Chênh lệch trung bình là +38,0 s, p hoán vị 0,0329. Lợi thế của làn nhanh so với Opus chủ yếu đến từ mô hình: Sonnet đơn nhanh hơn Opus 90,8 s, còn làn nhanh chỉ nhanh hơn Opus 28–35 s. Chi phí của làn nhanh bằng 2,5–3,8× Sonnet đơn (p hoán vị 0,0041). **Đây là minh họa, không phải kết luận khái quát:** C7 chỉ có 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài; 8 phép kiểm định ở T-i không hiệu chỉnh so sánh bội; p nhỏ nhất của dòng C7 bị chặn ở 1/243.
 
@@ -238,7 +379,7 @@ Gộp C5–C7 (bỏ lượt treo), phần cố định bằng 312,1 s so với 4
 
 **Điều kiện có thể có lợi: giả thuyết, chưa được kiểm.** (a) Việc chia được thành phần độc lập và đủ lớn để phần song song bù phần cố định: gợi ý bởi t5 (execute 79,4 s so với 165,5 s Sonnet đơn); (b) bài đủ dài: phần cố định ở C7 chỉ 38,5–58,6 s dù Sonnet đơn cần 41,5–165,5 s, nên tỉ lệ cố định có thể giảm khi bài dài hơn. Bài dài nhất trong dữ liệu là Opus t5, 259 s (khoảng 4 phút); muốn kiểm cần bài > 15 phút có nhiều hạng mục độc lập, cùng mô hình và cùng thời điểm, với nhiều lượt hơn mỗi ô. Dữ liệu hiện có chỉ cho một gợi ý yếu về (a) (t5, một lượt làn nhanh C7) và không có gì để kiểm (b).
 
-### 6.4 Song song hóa: có tác dụng nhưng chỉ ở pha execute
+### 6.2.4 Song song hóa: có tác dụng nhưng chỉ ở pha execute
 
 **Bảng 4.** Đường găng theo lượt chạy. Nguồn: **T-d** phần (2). Lệnh tái lập: `node docs/research/performance/scripts/token-analysis.mjs --table T-d`.
 
@@ -258,7 +399,7 @@ Theo pha (T-d phần 1), chỉ `execute` có song song; hệ số tăng từ 1.2
 
 *Khi nào multi-agent nhanh hơn?* Trên dữ liệu có (n nhỏ, 5 bài, dài nhất khoảng 4 phút), **không có bài nào làn nhanh nhanh hơn một agent cùng mô hình một cách phân biệt được**: ở C7 một agent nhanh hơn ở t1–t4 và chỉ hòa ở t5 (Bảng 3c; T-h), dù song song hóa có tác dụng trong pha `execute` (hệ số 1,88 ở C7, T-d). Điều kiện có thể có lợi — việc chia được thành hạng mục độc lập và bài đủ dài để phần song song bù phần cố định 38,5–58,6 s (Bảng 3e) — **chỉ là giả thuyết cần thí nghiệm**, không phải kết quả: muốn kiểm cần bài > 15 phút, nhiều hạng mục độc lập, cùng mô hình, cùng thời điểm (`token-analysis.md` §4). C6 (t3, t5; Bảng 3b) nhất quán với hướng thời gian nhưng so với Opus, nên lẫn hiệu ứng mô hình.
 
-### 6.5 Cache và token: "gấp 2,8–4 lần" chỉ đúng một phần
+### 6.2.5 Cache và token: "gấp 2,8–4 lần" chỉ đúng một phần
 
 **Bảng 5.** Tỉ lệ ghi cache CCoding / Claude (gộp theo vòng). Nguồn: **T-b** (hàng "GỘP"). Lệnh tái lập: `node docs/research/performance/scripts/token-analysis.mjs --table T-b`.
 
@@ -284,7 +425,7 @@ Theo từng ô có đối chứng, tỉ lệ ghi cache nằm trong 2.76–6.08 v
 
 **Tiền tố prompt không phải thủ phạm chính.** Hồi quy cache_write ≈ F + a·(Σ *_chars/3,5) + b·output trên 170 lượt gọi cho F = 2 588 token mỗi lượt gọi (hệ số a = 1.50, b = 1.16, R² = 0.716) (**T-e1**; lệnh: `… --table T-e1`). Phần cố định nhỏ so với 19 656–21 146 token ghi mỗi lượt gọi, nên lượng ghi lớn đến từ nội dung (đầu ra và kết quả công cụ bị ghi lại ở mỗi tiến trình). Đây là tương quan, phụ thuộc giả định `charsPerToken`, và R² 0.716 nghĩa là một phần ghi cache chưa được giải thích.
 
-### 6.6 Sáu đề xuất tối ưu: ước lượng, chưa kiểm chứng
+### 6.2.6 Sáu đề xuất tối ưu: ước lượng, chưa kiểm chứng
 
 **Bảng 7.** Ước lượng độc lập cho O1–O6. Nguồn: **T-e** (nền T-e0 giá hiệu dụng: opus 20.08 / sonnet 9.73 USD/triệu token output). Lệnh tái lập: `node docs/research/performance/scripts/token-analysis.mjs --table T-e`.
 
