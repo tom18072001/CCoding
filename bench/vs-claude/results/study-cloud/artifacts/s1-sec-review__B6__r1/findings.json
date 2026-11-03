@@ -1,0 +1,9 @@
+[
+{"line":11,"type":"hardcoded-secret","severity":"high","fix":"Load the JWT signing secret from an environment variable or secret manager, rotate the exposed one, and remove it from source."},
+{"line":30,"type":"sqli","severity":"critical","fix":"Use a parameterized query such as `title LIKE $1` with the value `%${q}%` passed in the params array."},
+{"line":42,"type":"path-traversal","severity":"high","fix":"Resolve the path, verify it stays inside REPORT_DIR (or use path.basename / sendFile with the root option), and reject anything else."},
+{"line":58,"type":"weak-crypto","severity":"high","fix":"Hash passwords with a salted adaptive algorithm such as bcrypt, scrypt or argon2 instead of MD5."},
+{"line":65,"type":"ssrf","severity":"high","fix":"Validate the URL against an allowlist of schemes and hosts and block private, loopback and link-local addresses before fetching."},
+{"line":70,"type":"missing-authz","severity":"high","fix":"Require requireAdmin or check ticket ownership (e.g. AND owner_id = $2) before deleting."},
+{"line":84,"type":"command-injection","severity":"critical","fix":"Validate format against a fixed allowlist and use execFile with an argument array instead of exec with string interpolation."}
+]
