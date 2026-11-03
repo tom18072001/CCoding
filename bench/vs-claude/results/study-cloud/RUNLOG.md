@@ -20,6 +20,9 @@ Theo `bench/vs-claude/RUNBOOK-cloud-session.md`, Nhánh 1 (`docs/research/run-pl
 | W3a | A0-sonnet, B5 (server main 7424, chặn web) | R13 `--judge` | B5 r1–3 (39) | 2026-11-02T23:52:15Z | 2026-11-03T01:18:22Z | xong 39/39 (3 lượt hạ tầng đã chạy lại) |
 | W3b | A0-sonnet, B6 (server nhánh 7425, chặn web) | R13 `--judge` | B6 r1–3 (39) | 2026-11-03T00:35:25Z | 2026-11-03T02:11:29Z | 36/39; 3 khóa chờ bù |
 | neo-W3 | B0 (server main 7424), `--out study-cloud-anchor-W3` | l4-startup-order | r1–2 (2) | 2026-11-03T02:11:30Z | 2026-11-03T02:16:37Z | xong 2/2 |
+| W4b | A0-sonnet, B0 (server main 7424, chặn web) | a1 `--judge` | r4–11 (16) | 2026-11-03T02:16:37Z | 2026-11-03T03:06:18Z | xong 16/16 |
+| W4c | A1 (claude, không dùng server) | R13 | r1 (13) | 2026-11-03T03:06:18Z | 2026-11-03T03:15:51Z | xong 13/13 |
+| neo-W4 | B0 (server main 7424), `--out study-cloud-anchor-W4` | l4-startup-order | r1–2 (2) | 2026-11-03T03:15:51Z | 2026-11-03T03:20:59Z | xong 2/2 |
 
 ## Bảng cửa sổ (`run-plan.md` §3.0)
 
@@ -118,3 +121,17 @@ Theo RUNBOOK bước 3b (hai server), lệnh tách đôi: `--arms A0-sonnet,B5` 
 Khóa B6 còn thiếu (`re1-lit-synthesis` r2, `l2-knights` r3, `r1-elk-design` r3) sẽ bù bằng cách chạy lại đúng lệnh W3b sau chuỗi.
 
 **Neo B0 W3** (`results/study-cloud-anchor-W3`): 2/2 `done`; TB 154 945 token, 145 s; so với B0 × `l4` W1 (r1–3: 162 074 token, 143 s): token ×0,96, thời gian ×1,01. Không có dấu hiệu "cửa sổ trôi" (ngưỡng ±30 %).
+
+## W4 (`run-plan.md` §5.2)
+
+Lệnh đầu của W4 (`--arms A0-sonnet,FL --tasks $T5 --repeats 9`) đã chạy trước ở B7a (A0-sonnet r4–9) và B6b (B6 r4–9), nên không chạy lại. Hai lệnh còn lại chạy trên server main 7424, hash không đổi (`e0bd2f4…`, `git status --short` sạch).
+
+| Lệnh | Arm | Lượt `done` | `infra` | Token có trọng số | Wall-sum | Wall dài nhất | leak |
+|---|---|---|---|---|---|---|---|
+| W4b | A0-sonnet (a1 r4–11) | 8/8 | 0 | 0,38 M | 0,11 h | 54 s | 0 |
+| W4b | B0 (a1 r4–11) | 8/8 | 0 | 2,71 M | 0,68 h | 360 s | 0 |
+| W4c | A1 (R13 r1) | 13/13 | 0 | 0,61 M | 0,15 h | 233 s | 0 |
+
+Lỗi socket keep-alive xảy ra 2 lần ở W4b (02:47Z, 02:59Z), cả hai được gửi lại một lần và trả `201`; không mất lượt nào.
+
+**Neo B0 W4** (`results/study-cloud-anchor-W4`): 2/2 `done`; TB 159 653 token, 145 s; so với B0 × `l4` W1: token ×0,99, thời gian ×1,01. Không trôi.
