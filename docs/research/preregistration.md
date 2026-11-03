@@ -476,13 +476,13 @@ Phần khác của `run-plan.md` đã đối chiếu nhưng không tìm thấy l
   - `--negatives cross` chỉ là độ nhạy, không dùng cho kết quả đăng ký.
   - Cổng `null` (không có sự kiện `gate.decision`) **không vào mẫu của cổng đó**. Số dòng bị bỏ theo cổng cũng được báo.
 - **Nhãn `ref` (`--label gate`, mặc định, là nhãn đăng ký theo B-12 trường 7(b)):**
-  - **cto:** nhãn là trạng thái test ẩn cuối lượt. Trên g5, g6, `ref = 1` khi dòng `runs.jsonl` có `pass = false`, tức lỗi cài còn. Ở làn đơn, trạng thái này đúng bằng trạng thái CTO đã thấy:
+  - **cto:** nhãn là trạng thái test ẩn cuối lượt. Trên g5, g6, `ref = 1` khi dòng `runs.jsonl` có `pass = false` (lỗi cài còn), `ref = 0` khi `pass = true`. **Bài sạch giữ `ref = 0` theo nhãn bài, không đọc `pass`.** Dòng g5/g6 thiếu `pass` (không phải boolean) lùi về nhãn theo bài (`ref = 1`), báo ở stderr (`cto: N/M dòng thiếu pass → dùng nhãn theo bài`) và ở dòng tổng hợp `cto nhãn hiệu lực`; cùng ngưỡng lùi 10 % như b02. Script `gates-pairs.mjs` đã làm đúng như vậy và có test. Ở làn đơn, trạng thái này đúng bằng trạng thái CTO đã thấy:
     - `accept` là bước cuối của `runTask` (`src/orchestrator.ts:1085`), sau đó chỉ có `status = 'done'` (`:1087`);
     - sau kết luận "không đạt" không còn vòng sửa hay lượt chạy nào, mã chỉ đặt `task.attention` (`:1221-1225`);
     - pha `accept` chỉ có công cụ chỉ đọc (`:3954-3961`);
     - test ẩn được chấm sau lượt, trên chính workspace đó.
 
-    Lập luận này chỉ đúng cho lượt chạy bằng harness. Thao tác "làm lại từ accept" của người dùng (`:583-606`) nằm ngoài. **Lệch script đã biết:** `gates-pairs.mjs` trên nhánh này cho cto dưới `--label gate` dùng nhãn theo bài (`gates-pairs.mjs:37-38,50`). Trước phân tích E4, script phải đọc `pass` và có test. Nếu chưa sửa, kết quả cto phải ghi "nhãn theo bài, chưa phải nhãn tại thời điểm cổng" và không là kết quả xác nhận theo 7(b). q̂ của cto ở E2 tính trực tiếp theo khối (a) bước 1, không qua script.
+    Lập luận này chỉ đúng cho lượt chạy bằng harness. Thao tác "làm lại từ accept" của người dùng (`:583-606`) nằm ngoài.
   - **b02:** nhãn "lỗi còn nguyên tại cổng" là `gates.b02.checksRed > 0`. Đây là số lệnh kiểm đỏ ghi **ngay sau lần `classify()` đầu, trước vòng sửa đầu tiên** (`src/orchestrator.ts:3181-3182`), không phải lúc ghi sự kiện ở `:3272`.
     - `blocked` của b02 chính là "có lệnh kiểm đỏ", nên dưới `--label gate` recall b02 bằng 1 theo định nghĩa và chặn nhầm bằng 0. **Không báo đây là recall của cổng.** Đại lượng có thông tin là q̂, tức tỉ lệ lỗi cài còn sống tới cổng. Dưới `--label task`, q̂ bằng recall b02, kèm số vòng sửa (`rounds`).
     - Dòng b02 thiếu `checksRed` lùi về nhãn theo bài, không dừng (exit 0). Số dòng và tỉ lệ lùi được báo ở stderr, và ở dòng tổng hợp `b02 nhãn hiệu lực: gate | gate (lùi một phần) | task (lùi)`. Dòng tổng hợp vào stdout chỉ khi có `--out`, luôn có ở stderr, và được chép vào RUNLOG.

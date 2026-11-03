@@ -399,8 +399,8 @@ done
 ```
 
 - Cổng `null` (ví dụ b10 ở làn đơn) bị bỏ khỏi mẫu của cổng đó. Bài cài lỗi thuộc cổng khác bị loại khỏi mẫu của cổng đang xét (`--negatives clean`). Hai số dòng bị bỏ in ra stderr và phải chép vào RUNLOG.
-- Dòng tổng hợp `gates-pairs: b02 nhãn hiệu lực: …; số dòng lùi: N/M; tỷ lệ lùi: P%` luôn có ở stderr, và vào stdout khi có `--out`; chép vào RUNLOG. Tỉ lệ lùi > 10 % thì kết quả b02 ở `--label gate` chỉ là thăm dò, báo nhãn theo bài (§9, quy ước chung). Khi chưa có `gates.b02.checksRed` (D10 mục C), tỉ lệ lùi là 100 %.
-- Nhãn cto ở `--label gate` của script trên nhánh này vẫn là nhãn theo bài; §9 quy định nhãn cto là test ẩn cuối lượt (`pass = false`). Giới hạn của `--unit decision` (thứ tự và nhãn từng vòng của b02 bị mất) ghi ở `docs/research/analysis/README.md`.
+- Dòng tổng hợp `gates-pairs: b02|cto nhãn hiệu lực: …; số dòng lùi: N/M; tỷ lệ lùi: P%` luôn có ở stderr, và vào stdout khi có `--out`; chép vào RUNLOG. Tỉ lệ lùi > 10 % thì kết quả b02 ở `--label gate` chỉ là thăm dò, báo nhãn theo bài (§9, quy ước chung). Khi chưa có `gates.b02.checksRed` (D10 mục C), tỉ lệ lùi là 100 %.
+- Nhãn cto ở `--label gate`: g5/g6 lấy `ref = 1` khi dòng `runs.jsonl` có `pass = false`, `0` khi `pass = true`; bài sạch `ref = 0`; dòng g5/g6 thiếu `pass` lùi về nhãn theo bài, báo ở stderr và dòng tổng hợp `cto` (§9, quy ước chung). Giới hạn của `--unit decision` (thứ tự và nhãn từng vòng của b02 bị mất) ghi ở `docs/research/analysis/README.md`.
 - Từ dữ liệu này, Phòng Nghiên cứu tính q̂_b02, q̂_cto theo tử và mẫu của §9 khối (a) bước 1, cộng hai arm, không tách arm. Sau đó ghi RUNLOG cùng N theo khối (a) (đã xác định: R_E4 = 16, R_B6 = 32), rồi commit `pairs-*.csv`, `agreement-*.md` và RUNLOG. Đây là điểm dừng trước E4.
 
 **Hết credit trên cloud** (429, "usage_limit_reached", "credit", "hit your … limit"): dừng ngay, commit phần đã có, ghi khóa cuối cùng vào RUNLOG. **Không** chạy tiếp bằng hạn mức gói trên cloud.
@@ -470,7 +470,6 @@ done
 ```
 
 - Kết quả đăng ký dùng `--unit decision --label gate`. `--unit run` và `--label task` là độ nhạy. b10 chỉ báo theo nhãn bài, từ các lượt B6. Recall gộp hai arm.
-- Trước khi chạy khối trên, `gates-pairs.mjs` phải đọc `pass` cho nhãn cto ở `--label gate` (§9, quy ước chung). Chưa sửa thì kết quả cto ghi "nhãn theo bài, chưa phải nhãn tại thời điểm cổng".
 - Lượt thí điểm `gates-pilot` không đưa vào mẫu chính.
 - Phép so B7cab với B7cabO (B-16: McNemar chính xác ghép cặp theo bài và `rep`, Clopper–Pearson từng arm) theo §9 `V4-3e-E4`, không theo mục này. Commit `pairs-*.csv`, `agreement-*.md` sau khi chạy.
 

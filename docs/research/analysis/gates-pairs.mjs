@@ -34,8 +34,11 @@ export function taskGate(task, kinds) {
  * - b02: ref = `checksRed > 0` (số lệnh kiểm đỏ tại cổng). Dòng thiếu `checksRed` (không phải số hữu hạn ≥ 0)
  *   → lùi về nhãn theo bài, đếm vào `fallback.b02`; `seen.b02` đếm mọi dòng b02 vào mẫu.
  *   b02 đọc chính lệnh kiểm nên recall b02 gần như theo định nghĩa; đại lượng có thông tin là q̂ (lỗi sống tới cổng).
- * - cto: nhãn cuối lượt = nhãn theo bài. Lập luận [chờ research-lead chốt]: ở làn đơn nghiệm thu là pha cuối,
- *   nên trạng thái test ẩn cuối lượt là trạng thái CTO đã thấy.
+ * - cto: nhãn cuối lượt = trạng thái test ẩn của dòng (`pass`). Ở làn đơn nghiệm thu là pha cuối (`accept` là bước cuối
+ *   của runTask, sau "không đạt" không còn vòng sửa), nên trạng thái này đúng bằng trạng thái CTO đã thấy.
+ *   Bài cài lỗi của cto (g5/g6): ref = `pass === false` (lỗi còn) → 1, `pass === true` → 0. Dòng thiếu `pass` (không phải boolean)
+ *   → lùi về nhãn theo bài (ref = 1), đếm vào `fallback.cto`; `seen.cto` đếm mọi dòng cto của bài cài lỗi cto vào mẫu.
+ *   Bài sạch: ref = 0 theo nhãn bài, không đọc `pass`.
  * - b10: nhãn theo bài.
  */
 export function rowToPairs(row, kinds, { unit = 'run', gates = GATES, negatives = 'clean', label = 'gate' } = {}) {
@@ -53,6 +56,13 @@ export function rowToPairs(row, kinds, { unit = 'run', gates = GATES, negatives 
       if (label === 'gate') {
         if (Number.isFinite(d.checksRed) && d.checksRed >= 0) ref = d.checksRed > 0 ? '1' : '0';
         else fallback.b02 = 1;
+      }
+    }
+    if (gate === 'cto' && tg === 'cto') {
+      seen.cto = 1;
+      if (label === 'gate') {
+        if (typeof row.pass === 'boolean') ref = row.pass ? '0' : '1';
+        else fallback.cto = 1;
       }
     }
     const base = { ref, runId: row.key ?? row.runId ?? '', gate, task: row.task ?? '', arm: row.arm ?? '' };
@@ -105,13 +115,16 @@ export function main(argv, io = { out: (s) => process.stdout.write(s), err: (s) 
     addTo(all.skipped, r.skipped); addTo(all.cross, r.cross); addTo(all.unrun, r.unrun); addTo(all.fallback, r.fallback); addTo(all.seen, r.seen);
   }
   const csv = toCsv(all.pairs);
-  // Dòng tổng hợp nhãn b02: lùi N/M, tỷ lệ lùi, nhãn hiệu lực. Luôn ở stderr; thêm vào stdout chỉ khi có --out (để không làm hỏng CSV).
+  // Dòng tổng hợp nhãn (b02: checksRed; cto: pass): lùi N/M, tỷ lệ lùi, nhãn hiệu lực. Luôn ở stderr; thêm vào stdout chỉ khi có --out (để không làm hỏng CSV).
   let summary = '';
-  if (gates.includes('b02')) {
-    const m = all.seen.b02 ?? 0, n = label === 'gate' ? (all.fallback.b02 ?? 0) : 0;
+  for (const [g, field] of [['b02', 'checksRed'], ['cto', 'pass']]) {
+    if (!gates.includes(g)) continue;
+    const m = all.seen[g] ?? 0, n = label === 'gate' ? (all.fallback[g] ?? 0) : 0;
     const eff = label === 'task' ? 'task' : m > 0 && n === m ? 'task (lùi)' : n > 0 ? 'gate (lùi một phần)' : 'gate';
-    summary = `gates-pairs: b02 nhãn hiệu lực: ${eff}; số dòng lùi: ${n}/${m}; tỷ lệ lùi: ${m ? ((100 * n) / m).toFixed(1) : '0.0'}%\n`;
-    if (n > 0) io.err(`b02: ${n}/${m} dòng thiếu checksRed → dùng nhãn theo bài\n`);
+    summary += `gates-pairs: ${g} nhãn hiệu lực: ${eff}; số dòng lùi: ${n}/${m}; tỷ lệ lùi: ${m ? ((100 * n) / m).toFixed(1) : '0.0'}%
+`;
+    if (n > 0) io.err(`${g}: ${n}/${m} dòng thiếu ${field} → dùng nhãn theo bài
+`);
   }
   if (opt('--out')) { fs.writeFileSync(opt('--out'), csv); io.out(summary); } else io.out(csv);
   const per = (o) => gates.map((k) => `${k}=${o[k] ?? 0}`).join(' ');

@@ -154,9 +154,36 @@ test('(12) --label task cho đầu ra CSV giống --negatives/hành vi cũ, bỏ
   assert.doesNotMatch(t.err, /thiếu checksRed/);
 });
 
-test('(13) --label sai → mã 2; cto và b10 giữ nhãn theo bài ở --label gate', () => {
+test('(13) --label sai → mã 2; b10 giữ nhãn theo bài, cto thiếu pass lùi về nhãn theo bài ở --label gate', () => {
   const { f, a } = mk([run('a', 'g5-a', { b10: { blocked: false }, cto: { pass: false } })]);
   assert.equal(go([f, '--arms-json', a, '--unit', 'run', '--label', 'x']).code, 2);
   const r = go([f, '--arms-json', a, '--unit', 'run']);
   assert.deepEqual(parseCsv(r.out).map((x) => [x.gate, x.ref]), [['cto', '1']]);
+});
+
+test('(14) cto + --label gate: ref theo pass của dòng (false → 1, true → 0), bài sạch ref = 0, thiếu pass lùi', () => {
+  const cto = { pass: true };
+  const rows = [
+    { ...run('a', 'g5-a', { cto }), pass: false },
+    { ...run('b', 'g5-b', { cto }), pass: true },
+    run('c', 'g6-a', { cto }),
+    { ...run('d', 't1-a', { cto }), pass: false },
+  ];
+  const { f, a } = mk(rows);
+  const r = go([f, '--arms-json', a, '--unit', 'run', '--gate', 'cto', '--out', path.join(path.dirname(f), 'o.csv')]);
+  assert.equal(r.code, 0);
+  const csv = parseCsv(fs.readFileSync(path.join(path.dirname(f), 'o.csv'), 'utf8'));
+  assert.deepEqual(csv.map((x) => [x.runId, x.ref]), [['a', '1'], ['b', '0'], ['c', '1'], ['d', '0']]);
+  assert.match(r.err, /cto: 1\/3 dòng thiếu pass → dùng nhãn theo bài/);
+  assert.match(r.out, /cto nhãn hiệu lực: gate \(lùi một phần\); số dòng lùi: 1\/3; tỷ lệ lùi: 33\.3%/);
+  const t = go([f, '--arms-json', a, '--unit', 'run', '--gate', 'cto', '--label', 'task']);
+  assert.deepEqual(parseCsv(t.out).map((x) => x.ref), ['1', '1', '1', '0']);
+  const all = go([f, '--arms-json', a, '--unit', 'run', '--gate', 'cto']);
+  assert.match(all.err, /cto: 1\/3/);
+});
+
+test('(15) cto: mọi dòng g5/g6 thiếu pass → nhãn hiệu lực task (lùi)', () => {
+  const { f, a } = mk([run('a', 'g5-a', { cto: { pass: false } })]);
+  const r = go([f, '--arms-json', a, '--unit', 'run', '--gate', 'cto', '--out', path.join(path.dirname(f), 'o2.csv')]);
+  assert.match(r.out, /cto nhãn hiệu lực: task \(lùi\); số dòng lùi: 1\/1/);
 });
