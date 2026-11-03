@@ -120,7 +120,7 @@ export function isWorktreeOf(dir: string, peer: string): boolean {
 }
 
 /** Repo chưa cấu hình người commit → dùng danh tính CCoding cho riêng lệnh này. */
-function identity(wt: string): string[] {
+export function identity(wt: string): string[] {
   const hasIdentity = git(wt, ['config', 'user.email'], 10_000).out.includes('@');
   return hasIdentity ? [] : ['-c', 'user.name=CCoding Office', '-c', 'user.email=ccoding@localhost'];
 }

@@ -8,12 +8,16 @@
  *  2. clusterIncidents/openAnalysisTask — gom nhóm thuần; phân tích là nhiệm vụ do giám đốc bấm, ngân sách analysisTokens; người gán nhãn ghi vào labeledBy[].
  *  3. openPatchTask — nhiệm vụ viết bản vá, ngân sách patchTokens; từ chối author ∈ labeledBy[] hoặc = runner.
  *  4. verifyHoldout/buildAbSpec/recordAbStarted/decide — buildAbSpec CHỈ dựng lệnh; kết luận chỉ lấy lượt phase 'confirm'.
+ *  5–7. screenPatch/applyApproved/monitorApplied/rollback/listProposals/purgeExpired — không LLM; chỉ giám đốc duyệt/áp/rollback (đọc lại LogStore, kiểm chuỗi băm).
  */
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import type { Config } from './config.js';
-import type { LogStore } from './logger.js';
+import { git, identity } from './git.js';
+import { verifyChain, type LogStore } from './logger.js';
+import { redact } from './util/redact.js';
 import type { Classification, LogEntry, NewTaskInput, Task } from './types.js';
 
 export type SelfImproveConfig = Config['selfImprove'];
@@ -544,4 +548,372 @@ export function decide(runs: AbRun[], kind: ProposalMeta['kind'] = 'optimize'): 
   if (!(out.safety.lo >= -0.02)) out.reasons.push(`An toàn: cận dưới ${(out.safety.lo * 100).toFixed(1)} điểm % < −2`);
   out.decision = out.reasons.length ? 'fail' : 'pass';
   return out;
+}
+
+// ───────────────────────── Bước 5–7 — Duyệt, áp dụng, theo dõi ─────────────────────────
+
+const sha256 = (s: string | Buffer): string => crypto.createHash('sha256').update(s).digest('hex');
+function safePid(pid: string): string {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(pid) || pid.includes(String('.').repeat(2))) throw new Error(`Mã đề xuất không hợp lệ: ${pid}`);
+  return pid;
+}
+const propDir = (dataDir: string, pid: string, ...p: string[]): string => siPath(dataDir, 'proposals', safePid(pid), ...p);
+
+export interface Screening {
+  ok: boolean;
+  violations: string[];
+}
+
+const FORBIDDEN_FILES = [
+  /^src\/tools\/(claude-guard|guard-paths|shell-policy|workspace)\.ts$/,
+  /^src\/(config|logger|selfimprove)\.ts$/,
+  /^src\/util\/redact\.ts$/,
+  /^\.claude\//,
+  /(^|\/)settings[^/]*\.json$/,
+  /^(AGENTS|CLAUDE)\.md$/,
+  /^docs\/data-protection-assessment\.md$/,
+];
+const ALLOWED_TARGETS = [/^src\/prompts\.ts$/, /^agents\/[^/]+\/[^/]+\.md$/];
+const FORBIDDEN_TEXT: [RegExp, string][] = [
+  [/CLASSIFICATION_RULE/, 'CLASSIFICATION_RULE'],
+  [/Phân loại dữ liệu của nhiệm vụ/, 'dòng "Phân loại dữ liệu của nhiệm vụ"'],
+  [/Quy tắc chung/, 'mục "Quy tắc chung"'],
+  [/\b(dataProtection|allowedRuntimes|hashChain|denyCommands)\b/, 'chính sách dữ liệu/runtime'],
+  [/\b(redact\w*|guard|hook|access|runtime)\b/, 'từ khóa bảo vệ (redact/guard/hook/access/runtime)'],
+  [/\btools:|^[+-]\s*"?tools"?\s*:/m, 'quyền công cụ (tools:)'],
+];
+
+/**
+ * Thuần: loại bản vá chạm vùng cấm (spec §4 điểm 2). Mục nào không xác định được thì loại. Có `deps` + `pid` và không ok thì ghi
+ * `selfimprove.rejected {pid, by:'auto', violations}`.
+ */
+export function screenPatch(patch: string, deps?: Pick<Deps, 'logs'>, pid?: string): Screening {
+  const violations: string[] = [];
+  const norm = patch.replace(/\r\n/g, '\n');
+  if (!norm.trim()) violations.push('Bản vá rỗng');
+  if (/^GIT binary patch$/m.test(norm) || /^Binary files /m.test(norm)) violations.push('Bản vá nhị phân');
+  const files = new Set<string>();
+  for (const m of norm.matchAll(/^diff --git a\/(\S+) b\/(\S+)$/gm)) {
+    files.add(m[1]);
+    files.add(m[2]);
+  }
+  if (!files.size) for (const m of norm.matchAll(/^\+\+\+ b\/(\S+)$/gm)) files.add(m[1]);
+  if (!files.size && norm.trim()) violations.push('Không xác định được tệp bị chạm');
+  if (files.size > 1) violations.push(`Chạm ${files.size} tệp (chỉ cho phép một)`);
+  for (const f of files) {
+    if (f.split('/').includes(String('.').repeat(2)) || f.startsWith('/')) violations.push(`Đường dẫn không an toàn: ${f}`);
+    else if (FORBIDDEN_FILES.some((re) => re.test(f))) violations.push(`Tệp bị cấm: ${f}`);
+    else if (!ALLOWED_TARGETS.some((re) => re.test(f))) violations.push(`Tệp ngoài phạm vi cho phép (src/prompts.ts, agents/<phòng>/<id>.md): ${f}`);
+  }
+  const body = norm.split('\n').filter((l) => /^[+-]/.test(l) && !/^(\+\+\+|---) /.test(l)).join('\n');
+  for (const [re, label] of FORBIDDEN_TEXT) if (re.test(body)) violations.push(`Chạm ${label}`);
+  const out = { ok: violations.length === 0, violations: [...new Set(violations)] };
+  if (!out.ok && deps && pid) deps.logs.write({ level: 'warn', kind: 'selfimprove.rejected', msg: `Loại tự động ${pid}`, data: { pid, by: 'auto', violations: out.violations } });
+  return out;
+}
+
+/** Tệp duy nhất mà bản vá chạm (hoặc null). */
+const targetOf = (patch: string): string | null => /^diff --git a\/(\S+) b\//m.exec(patch.replace(/\r\n/g, '\n'))?.[1] ?? null;
+
+/** Lưu bản vá + meta, ghi `selfimprove.proposed {pid, patchSha256}`, rồi sàng lọc (không ok ⇒ thêm `rejected {by:'auto'}`). */
+export function recordProposed(pid: string, patch: string, meta: ProposalMeta & { hypothesis?: string }, deps: Pick<Deps, 'logs' | 'dataDir'>): Screening {
+  const dir = propDir(deps.dataDir, pid);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'patch.diff'), patch, 'utf8');
+  fs.writeFileSync(path.join(dir, 'meta.json'), JSON.stringify({ ...meta, pid }, null, 2), 'utf8');
+  deps.logs.write({ level: 'info', kind: 'selfimprove.proposed', msg: `Đề xuất ${pid}`, data: { pid, patchSha256: sha256(patch), clusterId: meta.clusterId, author: meta.author, target: targetOf(patch) } });
+  return screenPatch(patch, deps, pid);
+}
+
+/** Ghi kết quả A/B để giao diện hiển thị. deltaPass = ước lượng hiệu tỉ lệ test ẩn đạt (B−A). */
+export function recordAbDecision(pid: string, d: Decision, deps: Pick<Deps, 'logs'>): void {
+  deps.logs.write({ level: 'info', kind: 'selfimprove.ab.decided', msg: `A/B ${pid}: ${d.decision}`, data: { pid, deltaPass: Number.isFinite(d.safety.est) ? d.safety.est : null, decision: d.decision } });
+}
+
+/** Ghi quyết định của giám đốc; `by:'director'` cố định vì chỉ route đã xác thực mới được gọi hàm này (agent không có đường tới). */
+export function recordDirector(kind: 'approved' | 'rejected' | 'rollback.confirmed', pid: string, deps: Pick<Deps, 'logs'>, reason?: string): SystemEvent {
+  safePid(pid);
+  const data: Record<string, unknown> = { pid, by: 'director' };
+  if (reason) data.reason = clip(reason, 300);
+  deps.logs.write({ level: 'info', kind: `selfimprove.${kind}`, msg: `Giám đốc: ${kind} ${pid}`, data });
+  return { kind: `selfimprove.${kind}`, data };
+}
+
+const PID_KINDS = ['selfimprove.proposed', 'selfimprove.approved', 'selfimprove.rejected', 'selfimprove.applied', 'selfimprove.apply.failed', 'selfimprove.rollback.proposed', 'selfimprove.rollback.confirmed', 'selfimprove.rolledback', 'selfimprove.ab.started', 'selfimprove.ab.decided', 'selfimprove.monitor'];
+const forPid = (evs: SystemEvent[], pid: string): SystemEvent[] => evs.filter((e) => e.data?.pid === pid);
+
+export type ProposalStatus = 'proposed' | 'rejected' | 'approved' | 'applied' | 'rollback.proposed' | 'rolledback';
+/** Trạng thái theo sự kiện của một pid, đọc theo thứ tự ghi. `approved` chỉ tính khi by:'director'. */
+export function proposalStatus(evs: SystemEvent[]): ProposalStatus | null {
+  let st: ProposalStatus | null = null;
+  for (const e of evs) {
+    if (e.kind === 'selfimprove.proposed') st = 'proposed';
+    else if (e.kind === 'selfimprove.rejected') st = 'rejected';
+    else if (e.kind === 'selfimprove.approved' && e.data?.by === 'director' && (st === 'proposed' || st === null)) st = 'approved';
+    else if (e.kind === 'selfimprove.applied') st = 'applied';
+    else if (e.kind === 'selfimprove.rollback.proposed' && st === 'applied') st = 'rollback.proposed';
+    else if (e.kind === 'selfimprove.rolledback') st = 'rolledback';
+  }
+  return st;
+}
+
+export interface ProposalView {
+  id: string;
+  cluster: string | null;
+  targetFile: string | null;
+  status: ProposalStatus;
+  screening: Screening;
+  ab: { screenRuns: number; confirmRuns: number; maxConfirmRuns: number; result: null | { deltaPass: number | null; decision: string } };
+  /** văn bản không đáng tin, đã che PII/bí mật ở server */
+  agentProposal: string;
+  diff: string;
+}
+
+/** Hợp đồng GET /api/selfimprove/proposals. agentProposal và diff đã qua redact() (secrets + pii) ở đây, không dựa vào client. */
+export function listProposals(deps: Pick<Deps, 'cfg' | 'logs' | 'dataDir'>): ProposalView[] {
+  let ids: string[] = [];
+  try {
+    ids = fs.readdirSync(siPath(deps.dataDir, 'proposals'), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name).sort();
+  } catch {
+    return [];
+  }
+  const evs = readEvents(deps, PID_KINDS);
+  const incidents = loadIncidents(deps.dataDir);
+  const out: ProposalView[] = [];
+  for (const id of ids) {
+    const mine = forPid(evs, id);
+    const status = proposalStatus(mine);
+    if (!status) continue;
+    let meta: Partial<ProposalMeta> = {};
+    let patch = '';
+    try {
+      meta = JSON.parse(fs.readFileSync(propDir(deps.dataDir, id, 'meta.json'), 'utf8'));
+      patch = fs.readFileSync(propDir(deps.dataDir, id, 'patch.diff'), 'utf8');
+    } catch {
+      /* thiếu tệp: vẫn hiện với trường rỗng */
+    }
+    let prop = '';
+    if (meta.clusterId) {
+      try {
+        const c = JSON.parse(fs.readFileSync(siPath(deps.dataDir, 'clusters', `${meta.clusterId}.json`), 'utf8')) as Cluster;
+        prop = incidents.filter((i) => c.incidents.includes(i.id) && i.agentProposal).map((i) => i.agentProposal).join('\n---\n');
+      } catch {
+        /* chưa có cụm */
+      }
+    }
+    const decided = mine.filter((e) => e.kind === 'selfimprove.ab.decided').pop();
+    const started = mine.filter((e) => e.kind === 'selfimprove.ab.started');
+    out.push({
+      id,
+      cluster: meta.clusterId ?? null,
+      targetFile: targetOf(patch),
+      status,
+      screening: screenPatch(patch),
+      ab: {
+        screenRuns: started.filter((e) => e.data?.phase === 'screen').length,
+        confirmRuns: started.filter((e) => e.data?.phase === 'confirm').length,
+        maxConfirmRuns: deps.cfg.ab.maxConfirmRunsPerLock,
+        result: decided ? { deltaPass: (decided.data?.deltaPass as number | null) ?? null, decision: String(decided.data?.decision) } : null,
+      },
+      agentProposal: redact(prop, { secrets: true, pii: true }),
+      diff: redact(patch, { secrets: true, pii: true }),
+    });
+  }
+  return out;
+}
+
+export interface ApplyOptions {
+  /** Chạy typecheck/test trên cây đã áp; trả lý do lỗi hoặc null nếu đạt. Mặc định `npm run typecheck` rồi `npm test`. */
+  verify?: (root: string) => string | null;
+}
+
+function defaultVerify(root: string): string | null {
+  for (const args of [['run', 'typecheck'], ['test']]) {
+    const r = spawnSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', args, { cwd: root, encoding: 'utf8', windowsHide: true, timeout: 900_000, shell: process.platform === 'win32' });
+    if (r.status !== 0) return `npm ${args.join(' ')} lỗi: ${`${r.stdout ?? ''}${r.stderr ?? ''}`.slice(-400)}`;
+  }
+  return null;
+}
+
+const nextTagNo = (root: string): number => Math.max(0, ...git(root, ['tag', '--list', 'prompts-v*'], 15_000).out.split('\n').map((x) => Number(/^prompts-v(\d+)$/.exec(x.trim())?.[1] ?? 0))) + 1;
+
+/** Kiểm chuỗi băm nhật ký hệ thống (đồng bộ). */
+const chainOk = (deps: Pick<Deps, 'logs'>): boolean => verifyChain(deps.logs.fileFor('system')).ok;
+
+/**
+ * Chỉ áp khi LogStore (đọc lại, không tin tham số) có `selfimprove.approved {by:'director'}` còn hiệu lực, chuỗi băm hợp lệ,
+ * sha256(patch.diff) khớp `selfimprove.proposed` và screenPatch vẫn ok (CT-07, CT-08). Một commit riêng chỉ chứa tệp bị vá + thẻ prompts-vN.
+ * Không reset --hard, không push. Lỗi apply/verify ⇒ hoàn tác bằng `git apply -R`, ghi `apply.failed`, ném lỗi. Không có timer tự duyệt.
+ */
+export function applyApproved(pid: string, deps: Deps, opts: ApplyOptions = {}): { commit: string; tag: string } {
+  safePid(pid);
+  if (!deps.cfg.enabled) throw new Error('Vòng tự cải thiện đang tắt (selfImprove.enabled=false)');
+  if (!chainOk(deps)) throw new Error('Chuỗi băm nhật ký hệ thống không hợp lệ: không áp dụng');
+  const mine = forPid(readEvents(deps, PID_KINDS), pid);
+  const proposed = mine.filter((e) => e.kind === 'selfimprove.proposed').pop();
+  if (!proposed) throw new Error(`Chưa có đề xuất ${pid} trong nhật ký`);
+  if (proposalStatus(mine) !== 'approved') throw new Error(`Đề xuất ${pid} chưa được giám đốc duyệt (hoặc đã bị từ chối/áp/rollback)`);
+  const patchFile = propDir(deps.dataDir, pid, 'patch.diff');
+  let patch = '';
+  try {
+    patch = fs.readFileSync(patchFile, 'utf8');
+  } catch {
+    throw new Error(`Thiếu patch.diff của ${pid}`);
+  }
+  if (sha256(patch) !== proposed.data?.patchSha256) throw new Error(`sha256 của bản vá khác bản đã đề xuất (${pid}): không áp dụng`);
+  const scr = screenPatch(patch);
+  if (!scr.ok) throw new Error(`Bản vá vi phạm danh sách cấm: ${scr.violations.join('; ')}`);
+  const target = targetOf(patch)!;
+  const fail = (reason: string, undo: boolean): never => {
+    if (undo) git(deps.root, ['apply', '-R', '--whitespace=nowarn', patchFile], 30_000);
+    deps.logs.write({ level: 'warn', kind: 'selfimprove.apply.failed', msg: `Áp ${pid} lỗi`, data: { pid, reason: clip(reason, 300) } });
+    throw new Error(`Áp dụng ${pid} thất bại: ${reason}`);
+  };
+  const chk = git(deps.root, ['apply', '--check', '--whitespace=nowarn', patchFile], 30_000);
+  if (!chk.ok) fail(`git apply --check: ${chk.out}`, false);
+  const ap = git(deps.root, ['apply', '--whitespace=nowarn', patchFile], 30_000);
+  if (!ap.ok) fail(`git apply: ${ap.out}`, false);
+  const bad = (opts.verify ?? defaultVerify)(deps.root);
+  if (bad) fail(bad, true);
+  let hyp = '';
+  try {
+    hyp = clip((JSON.parse(fs.readFileSync(propDir(deps.dataDir, pid, 'meta.json'), 'utf8')) as { hypothesis?: string }).hypothesis, 80);
+  } catch {
+    /* không có giả thuyết */
+  }
+  const cid = clusterIdOf(deps.dataDir, pid);
+  const add = git(deps.root, ['add', '--', target], 30_000);
+  if (!add.ok) fail(`git add: ${add.out}`, true);
+  const cm = git(deps.root, [...identity(deps.root), 'commit', '--no-verify', '-m', `selfimprove: ${pid} ${cid} ${hyp}`.trim()], 120_000);
+  if (!cm.ok) fail(`git commit: ${cm.out}`, true);
+  const commit = git(deps.root, ['rev-parse', 'HEAD'], 15_000).out.trim();
+  const tag = `prompts-v${nextTagNo(deps.root)}`;
+  git(deps.root, [...identity(deps.root), 'tag', tag, commit], 15_000);
+  deps.logs.write({ level: 'info', kind: 'selfimprove.applied', msg: `Đã áp ${pid}`, data: { pid, commit, tag, target } });
+  return { commit, tag };
+}
+function clusterIdOf(dataDir: string, pid: string): string {
+  try {
+    return (JSON.parse(fs.readFileSync(propDir(dataDir, pid, 'meta.json'), 'utf8')) as ProposalMeta).clusterId ?? '';
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Chưa có `selfimprove.rollback.confirmed {by:'director'}` sau lần `applied` ⇒ CHỈ ghi `rollback.proposed`, không revert (CT-16).
+ * Có xác nhận ⇒ `git revert --no-edit <commit>`, thẻ prompts-vN+1, ghi `rolledback {revertCommit, by:'director'}`.
+ */
+export function rollback(pid: string, deps: Deps, reason = 'Giám đốc yêu cầu'): { reverted: boolean; revertCommit?: string; tag?: string } {
+  safePid(pid);
+  if (!deps.cfg.enabled) throw new Error('Vòng tự cải thiện đang tắt (selfImprove.enabled=false)');
+  const mine = forPid(readEvents(deps, PID_KINDS), pid);
+  const st = proposalStatus(mine);
+  if (st !== 'applied' && st !== 'rollback.proposed') throw new Error(`Đề xuất ${pid} chưa được áp dụng hoặc đã rollback`);
+  const appliedIdx = mine.map((e) => e.kind).lastIndexOf('selfimprove.applied');
+  const applied = mine[appliedIdx];
+  const confirmed = mine.slice(appliedIdx).some((e) => e.kind === 'selfimprove.rollback.confirmed' && e.data?.by === 'director');
+  if (!confirmed || !chainOk(deps)) {
+    if (st !== 'rollback.proposed') deps.logs.write({ level: 'info', kind: 'selfimprove.rollback.proposed', msg: `Đề nghị rollback ${pid}`, data: { pid, reason: clip(reason, 200), severity: 'strong' } });
+    return { reverted: false };
+  }
+  const commit = String(applied.data?.commit ?? '');
+  if (!/^[0-9a-f]{7,40}$/.test(commit)) throw new Error('Commit đã áp không hợp lệ trong nhật ký');
+  const rv = git(deps.root, [...identity(deps.root), 'revert', '--no-edit', commit], 120_000);
+  if (!rv.ok) {
+    git(deps.root, ['revert', '--abort'], 15_000);
+    throw new Error(`git revert thất bại: ${rv.out.slice(0, 300)}`);
+  }
+  const revertCommit = git(deps.root, ['rev-parse', 'HEAD'], 15_000).out.trim();
+  const tag = `prompts-v${nextTagNo(deps.root)}`;
+  git(deps.root, [...identity(deps.root), 'tag', tag, revertCommit], 15_000);
+  deps.logs.write({ level: 'info', kind: 'selfimprove.rolledback', msg: `Đã rollback ${pid}`, data: { pid, revertCommit, tag, by: 'director' } });
+  return { reverted: true, revertCommit, tag };
+}
+
+export interface TaskMetric {
+  taskId: string;
+  /** tỉ lệ lệnh kiểm tra đạt 0..1 */
+  checkPassRate: number;
+  /** 1 nếu đạt ngay lần đầu */
+  firstPassOk: number;
+}
+export interface MonitorSource {
+  /** `monitorTasks` nhiệm vụ thật đầu tiên sau lúc áp */
+  after: TaskMetric[];
+  /** `baselineTasks` nhiệm vụ gần nhất trước đó */
+  before: TaskMetric[];
+  /** check.regression mới xuất hiện sau lúc áp */
+  regressions: { agentId: string; taskId: string }[];
+}
+
+/** agents/<phòng>/<id>.md ⇒ id; src/prompts.ts ⇒ null (ảnh hưởng mọi agent). */
+function patchedAgent(patch: string): string | null {
+  const t = targetOf(patch);
+  const m = t && /^agents\/[^/]+\/([^/]+)\.md$/.exec(t);
+  return m ? m[1] : null;
+}
+
+/**
+ * Theo dõi sau áp (không LLM, không revert). Chưa đủ `monitorTasks` nhiệm vụ ⇒ null. Ghi monitor.json và `selfimprove.monitor`.
+ * check.regression của agent bị vá ⇒ `rollback.proposed` severity 'strong'; chỉ thấp hơn trung bình (n nhỏ, báo giả cao) ⇒ 'early' (CT-20).
+ * Nguồn số liệu (computeKpi, check.regression) do bên gọi cấp qua `src`; module không đọc KPI.
+ */
+export function monitorApplied(pid: string, src: MonitorSource, deps: Deps): { severity: 'early' | 'strong' | null } | null {
+  safePid(pid);
+  if (!deps.cfg.enabled) return null;
+  const st = proposalStatus(forPid(readEvents(deps, PID_KINDS), pid));
+  if (st !== 'applied' && st !== 'rollback.proposed') return null; // đã có phiếu 'early' thì vẫn nhận thêm bằng chứng để nâng lên 'strong'
+  if (src.after.length < deps.cfg.monitorTasks || !src.before.length) return null;
+  const avg = (a: TaskMetric[], f: (m: TaskMetric) => number): number => mean(a.map(f));
+  const metrics = {
+    checkPassRate: { before: avg(src.before, (m) => m.checkPassRate), after: avg(src.after, (m) => m.checkPassRate) },
+    firstPassOk: { before: avg(src.before, (m) => m.firstPassOk), after: avg(src.after, (m) => m.firstPassOk) },
+  };
+  let patch = '';
+  try {
+    patch = fs.readFileSync(propDir(deps.dataDir, pid, 'patch.diff'), 'utf8');
+  } catch {
+    /* không còn bản vá: coi như vá mọi agent */
+  }
+  const who = patchedAgent(patch);
+  const own = src.regressions.filter((r) => who === null || r.agentId === who);
+  const lower = metrics.checkPassRate.after < metrics.checkPassRate.before || metrics.firstPassOk.after < metrics.firstPassOk.before;
+  const severity: 'early' | 'strong' | null = own.length ? 'strong' : lower ? 'early' : null;
+  const n = src.after.length;
+  fs.writeFileSync(propDir(deps.dataDir, pid, 'monitor.json'), JSON.stringify({ pid, n, metrics, regressions: own.length, severity }, null, 2), 'utf8');
+  deps.logs.write({ level: 'info', kind: 'selfimprove.monitor', msg: `Theo dõi ${pid}`, data: { pid, n, metrics } });
+  if (severity) {
+    const reason = severity === 'strong' ? `Có ${own.length} check.regression mới thuộc agent bị vá` : `n = ${n}, thấp hơn trung bình ${src.before.length} nhiệm vụ trước; tỉ lệ báo giả cao — nên kéo dài theo dõi (monitorTasks 5–10)`;
+    deps.logs.write({ level: 'warn', kind: 'selfimprove.rollback.proposed', msg: `Đề nghị rollback ${pid} (${severity})`, data: { pid, reason, severity } });
+  }
+  return { severity };
+}
+
+const DAY_MS = 86_400_000;
+/** Sàn lưu giữ nhật ký xử lý DLCN: 6 tháng (AGENTS.md) ≈ 183 ngày. */
+export const MIN_RETENTION_DAYS = 183;
+
+/**
+ * Dọn tệp dưới data/self-improve/ theo retentionDays nhưng không bao giờ xóa tệp trẻ hơn 183 ngày (CT-11).
+ * Chỉ xóa tệp thường, không theo liên kết. Trả danh sách tệp đã xóa (tương đối so với data/self-improve/).
+ */
+export function purgeExpired(dataDir: string, retentionDays: number, now = Date.now()): string[] {
+  const days = Math.max(MIN_RETENTION_DAYS, Number.isFinite(retentionDays) ? retentionDays : MIN_RETENTION_DAYS);
+  const root = siPath(dataDir);
+  if (!fs.existsSync(root)) return [];
+  const removed: string[] = [];
+  const visit = (dir: string): void => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const f = path.join(dir, e.name);
+      if (e.isSymbolicLink()) continue;
+      if (e.isDirectory()) visit(f);
+      else if (e.isFile() && now - fs.statSync(f).mtimeMs > days * DAY_MS) {
+        fs.rmSync(f);
+        removed.push(path.relative(root, f).split(path.sep).join('/'));
+      }
+    }
+  };
+  visit(root);
+  return removed;
 }
