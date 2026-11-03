@@ -392,7 +392,8 @@ export interface Alert {
 
 export interface PauseInfo {
   /** plan: kế hoạch đã chốt, chờ giám đốc duyệt trước khi thực thi (tùy chọn planApproval). */
-  reason: 'budget' | 'quota' | 'interrupted' | 'manual' | 'plan';
+  /** backlog (UI-8): giám đốc xếp vào backlog — chưa chạy cho tới khi chuyển sang "Chờ chạy". */
+  reason: 'budget' | 'quota' | 'interrupted' | 'manual' | 'plan' | 'backlog';
   detail: string;
   at: string;
   /** Tự tiếp tục lúc này (khi hết thời gian chờ quota). */
@@ -612,6 +613,8 @@ export interface NewTaskInput {
   attachments?: string[];
   /** Tạo bởi việc định kỳ này (UX-4d) — chỉ bộ lập lịch đặt, API giao việc bỏ qua. */
   routineId?: string;
+  /** UI-8: tạo vào backlog (tạm dừng lý do "backlog", không vào hàng đợi). */
+  backlog?: boolean;
   /** Việc định kỳ do giám đốc bấm "Chạy ngay" (không phải tới lịch) — để trang Kiểm toán ghi đúng người thao tác. */
   routineManual?: boolean;
 }

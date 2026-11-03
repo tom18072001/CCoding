@@ -456,3 +456,5 @@ Không thêm luồng dữ liệu ra ngoài, không đổi thời hạn lưu. D�
 | Runtime `http` | Prompt gửi tới địa chỉ cấu hình | Theo nhãn của nhiệm vụ | Chỉ coi là cục bộ khi host là loopback; máy chủ ở xa luôn bị loại với dữ liệu Bảo mật/Hạn chế dù cấu hình ghi `"local": true` (PRE). Lượt gọi vẫn đi qua `Orchestrator.call()` nên có log, đếm token, che PII như runtime khác (DET). |
 
 Khuyến nghị: trước khi cắm agent ngoài cho dự án Bảo mật/Hạn chế, rà mã script/dịch vụ đó như một nhà xử lý dữ liệu (nơi lưu, thời gian giữ, có gửi ra ngoài không); với dịch vụ http ở xa cần hồ sơ đánh giá tác động nếu có DLCN hoặc chuyển xuyên biên giới.
+
+**Bổ sung UI-8 (03/11/2026):** đổi dự án của nhiệm vụ chưa bắt đầu từ bảng Thuộc tính không bao giờ hạ nhãn dữ liệu. Nhãn mới là mức cao hơn giữa nhãn của dự án và nhãn đang có, nên rời một dự án Hạn chế thì nhiệm vụ vẫn mang nhãn Hạn chế. Đổi người phụ trách vẫn áp danh sách nhân sự của dự án. Mọi thay đổi ghi `task.updated` (cũ → mới, kể cả đổi nhãn). Backlog chỉ là trạng thái chờ, không tạo thêm dữ liệu.

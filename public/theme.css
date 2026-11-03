@@ -436,3 +436,10 @@ code, kbd { background: var(--panel-3); border-radius: 4px; }
 .board { grid-auto-columns: minmax(220px, 1fr); }
 .bp-tbl th, .bp-tbl td { text-align: left !important; font-family: var(--font) !important; font-size: 12.5px; }
 .bp-tbl td.bp-act { text-align: right !important; }
+
+/* UI-8: kéo thả Backlog ↔ Chờ chạy */
+.tcard.drag { cursor: grab; }
+.bcol.over { outline: 2px dashed var(--info); outline-offset: -2px; }
+.st-backlog i { background: var(--faint) !important; }
+.cmp-chk { padding: 3px 10px; cursor: pointer; }
+.cmp-chk input { margin: 0; }

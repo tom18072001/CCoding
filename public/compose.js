@@ -23,7 +23,7 @@
   function body(f) {
     const who = f.who.value;
     const proj = f.proj.value || undefined;
-    const b = { title: f.title.value.trim() || undefined, brief: f.brief.value.trim() || f.title.value.trim(), options: {} };
+    const b = { title: f.title.value.trim() || undefined, brief: f.brief.value.trim() || f.title.value.trim(), options: {}, ...(f.backlog.checked ? { backlog: true } : {}) };
     if (who.startsWith('agent:')) Object.assign(b, { mode: 'agent', agentId: who.slice(6), projectId: proj });
     else if (who.startsWith('dept:')) Object.assign(b, { mode: 'department', department: who.slice(5), projectId: proj });
     else if (who === 'joint') Object.assign(b, { mode: 'joint', projectId: proj });
@@ -48,6 +48,7 @@
       <div class="cmp-props">
         <label class="cmp-chip"><span>Giao cho</span><select name="who">${assignees()}</select></label>
         <label class="cmp-chip"><span>Dự án</span><select name="proj">${projects()}</select></label>
+        <label class="cmp-chip cmp-chk"><input type="checkbox" name="backlog" /><span>Đưa vào backlog (chưa chạy)</span></label>
       </div>
       <div class="cmp-msg" aria-live="polite"></div>
       <div class="cmp-foot"><button type="button" class="cmp-link" data-full>Mở trình giao việc đầy đủ</button><span class="grow"></span><kbd>Ctrl</kbd><kbd>Enter</kbd><button type="button" class="btn ghost sm" data-x>Hủy</button><button type="submit" class="btn primary sm">Tạo nhiệm vụ</button></div>

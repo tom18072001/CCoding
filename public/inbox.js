@@ -27,6 +27,7 @@
   /** Loại việc + hành động theo trạng thái. */
   function kindOf(t) {
     if (t.status === 'paused' && t.pause?.reason === 'plan') return 'plan';
+    if (t.status === 'paused' && t.pause?.reason === 'backlog') return null;
     if (t.status === 'paused') return 'paused';
     if (t.status === 'failed') return 'failed';
     if (t.status === 'done' && t.attention) return 'attention';

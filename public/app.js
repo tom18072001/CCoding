@@ -46,7 +46,7 @@
   const PHASE_INDEX = { route: -1, plan: 0, discuss: 1, finalize: 1, execute: 2, review: 3, revise: 3, synthesize: 4 };
   const STATUS_VI = { idle: 'rảnh', thinking: 'suy nghĩ', working: 'đang làm', discussing: 'đang họp', reviewing: 'review', waiting: 'chờ', error: 'lỗi' };
   const TASK_VI = { queued: 'chờ', running: 'đang chạy', paused: 'tạm dừng', done: 'xong', failed: 'lỗi', cancelled: 'đã hủy', pending: 'chờ', skipped: 'bỏ qua' };
-  const PAUSE_VI = { budget: 'chạm trần ngân sách', quota: 'hết tài nguyên token', interrupted: 'server khởi động lại', manual: 'tạm dừng thủ công', plan: 'chờ duyệt kế hoạch' };
+  const PAUSE_VI = { budget: 'chạm trần ngân sách', quota: 'hết tài nguyên token', interrupted: 'server khởi động lại', manual: 'tạm dừng thủ công', plan: 'chờ duyệt kế hoạch', backlog: 'nằm trong backlog' };
   const ACCESS_VI = { none: 'không công cụ', read: 'chỉ đọc', write: 'đọc/ghi file', exec: 'đọc/ghi + chạy lệnh' };
   const size = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n >= 1024 ? Math.round(n / 1024) + ' KB' : n + ' B');
   const MODE_VI = { auto: 'Tự động', department: 'Theo phòng', project: 'Theo dự án', joint: 'Liên phòng', agent: 'Giao riêng' };
@@ -949,14 +949,14 @@
     const prop = (k, v) => (v ? `<dt>${k}</dt><dd>${v}</dd>` : '');
     const props = `<aside class="td-props" aria-label="Thuộc tính nhiệm vụ">
         <h3>Công việc</h3><dl>
-          ${prop('Trạng thái', `<span class="st-badge"><span class="status ${t.status}">${TASK_VI[t.status] || t.status}</span>${t.attention ? `<span class="status attention" title="${esc(t.attention.detail)}">cần xem</span>` : ''}</span>`)}
-          ${prop('Giai đoạn', window.Drive?.stage ? `<span class="stage-pill st-${window.Drive.stage(t)}"><i></i>${esc(window.Drive.STAGE_VI[window.Drive.stage(t)])}</span>` : '')}
+          ${prop('Trạng thái', `<span class="st-badge"><span class="status ${t.status}">${t.pause?.reason === 'backlog' ? 'Backlog' : TASK_VI[t.status] || t.status}</span>${t.attention ? `<span class="status attention" title="${esc(t.attention.detail)}">cần xem</span>` : ''}</span>`)}
+          ${prop('Giai đoạn', stageCell(t))}
           ${prop('Mã', `<span class="tcode" title="${esc(t.id)}">${esc(code(t))}</span>`)}
           ${prop('Ưu tiên', `<select class="pe-sel" data-pe="priority" aria-label="Ưu tiên">${PRIO.map(([k, l]) => `<option value="${k}"${(t.priority || '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}
           ${prop('Chế độ', esc(MODE_VI[t.mode] || t.mode))}
           ${prop('Phòng', esc((t.departments || []).map((d) => deptShort(d)).join(' → ')))}
-          ${prop('Giao riêng', t.agentId ? `<span class="who">${av(t.agentId, 'av xs')}${esc(agentName(t.agentId))}</span>` : '')}
-          ${prop('Dự án', t.projectId ? `<a data-proj="${esc(t.projectId)}">${esc(S.projects.find((p) => p.id === t.projectId)?.name || t.projectId)}</a>` : 'Ngoài dự án')}
+          ${prop('Phụ trách', ownerCell(t))}
+          ${prop('Dự án', projectCell(t))}
           ${prop('Dữ liệu', `<span class="cls ${esc(t.classification)}">${esc(CLS_VI[t.classification] || t.classification)}</span>`)}
         </dl>
         <h3>Thực thi</h3><dl>
@@ -991,7 +991,7 @@
         ${t.attention ? `<p style="font-size:12.5px;color:var(--warn);margin:0 0 8px">Cần xem lại: ${esc(t.attention.detail)} — xem báo cáo, "Làm lại từ review" hoặc tách việc còn lại.</p>` : ''}
       ${banner}${redo}${splitForm}
       <details class="doc" style="margin-bottom:10px"><summary style="cursor:pointer;color:var(--muted);font-size:12.5px">Yêu cầu gốc</summary><div class="md">${md(t.brief)}</div></details>
-      ${blocks || '<div class="empty">Đang định tuyến…</div>'}
+      ${blocks || (t.pause?.reason === 'backlog' ? '<div class="empty">Nhiệm vụ đang nằm trong backlog — chưa chạy. Đổi Giai đoạn sang "Chờ chạy" ở bảng Thuộc tính để bắt đầu.</div>' : '<div class="empty">Đang định tuyến…</div>')}
       <div class="subtabs">
         <button data-v="chat" class="${S.taskView === 'chat' ? 'active' : ''}">💬 Hội thoại (${S.taskDetail.transcript.length})</button>
         <button data-v="final" class="${S.taskView === 'final' ? 'active' : ''}" ${t.finalPath ? '' : 'disabled'}>🏁 Báo cáo</button>
@@ -1300,7 +1300,32 @@
     });
     inp.addEventListener('blur', () => finish(true));
   }
+  // UI-8: người phụ trách / dự án / giai đoạn — sửa được khi nhiệm vụ chưa bắt đầu (server cũng chặn)
+  const notStarted = (t) => (t.status === 'queued' || t.status === 'paused') && !(t.runs || []).length;
+  const LOCK_TIP = 'Nhiệm vụ đã bắt đầu — dùng "Giao lại tương tự" (đổi người) hoặc tạm dừng rồi "Đóng gói vào dự án" (đổi dự án)';
+  function ownerCell(t) {
+    const cur = t.mode === 'agent' ? t.agentId : '';
+    if (!notStarted(t)) return cur ? `<span class="who" title="${esc(LOCK_TIP)}">${av(cur, 'av xs')}${esc(agentName(cur))}</span>` : `<span title="${esc(LOCK_TIP)}">${esc(MODE_VI[t.mode] || t.mode)}</span>`;
+    const opts = [...S.agents.values()].filter((a) => a.role !== 'router').map((a) => `<option value="${esc(a.id)}"${a.id === cur ? ' selected' : ''}>${esc(a.name)}</option>`).join('');
+    return `<select class="pe-sel" data-pe="agent" aria-label="Người phụ trách"><option value=""${cur ? '' : ' selected'}>Điều phối chọn</option>${opts}</select>`;
+  }
+  function projectCell(t) {
+    const name = (id) => S.projects.find((p) => p.id === id)?.name || id;
+    if (!notStarted(t)) return t.projectId ? `<a data-proj="${esc(t.projectId)}">${esc(name(t.projectId))}</a>` : `<span title="${esc(LOCK_TIP)}">Ngoài dự án</span>`;
+    return `<select class="pe-sel" data-pe="project" aria-label="Dự án"><option value="">Ngoài dự án</option>${S.projects.map((p) => `<option value="${esc(p.id)}"${p.id === t.projectId ? ' selected' : ''}>${esc(p.name)}</option>`).join('')}</select>`;
+  }
+  function stageCell(t) {
+    const D = window.Drive;
+    if (!D?.stage) return '';
+    const st = D.stage(t);
+    if ((st === 'backlog' || st === 'todo') && notStarted(t))
+      return `<select class="pe-sel" data-pe="stage" aria-label="Giai đoạn"><option value="backlog"${st === 'backlog' ? ' selected' : ''}>${esc(D.STAGE_VI.backlog)}</option><option value="todo"${st === 'todo' ? ' selected' : ''}>${esc(D.STAGE_VI.todo)}</option></select>`;
+    return `<span class="stage-pill st-${st}"><i></i>${esc(D.STAGE_VI[st])}</span>`;
+  }
   function bindPropEdits(el, t) {
+    el.querySelector('[data-pe="agent"]')?.addEventListener('change', (e) => saveProps(t, 'props', { agentId: e.target.value }));
+    el.querySelector('[data-pe="project"]')?.addEventListener('change', (e) => saveProps(t, 'props', { projectId: e.target.value }));
+    el.querySelector('[data-pe="stage"]')?.addEventListener('change', (e) => saveProps(t, 'stage', { stage: e.target.value }));
     const title = el.querySelector('[data-pe="title"]');
     const editTitle = () => inlineInput(title, t.title, 'text', (v) => saveProps(t, 'props', { title: v }));
     title?.addEventListener('click', editTitle);

@@ -54,7 +54,8 @@
 
   // ── Tiện ích nhiệm vụ ────────────────────────────────────────────────────
   const tasks = () => [...C.S.tasks.values()];
-  const needsAttention = (t) => !!t.attention || t.status === 'paused' || t.status === 'failed';
+  // backlog (UI-8) là việc chưa làm, không phải việc cần giám đốc xử lý
+  const needsAttention = (t) => !!t.attention || (t.status === 'paused' && t.pause?.reason !== 'backlog') || t.status === 'failed';
   const active = (t) => t.status === 'running' || t.status === 'queued';
   function progress(t) {
     if (t.status === 'done') return 100;
@@ -83,7 +84,7 @@
   }
   // UI-7: vòng đời hiển thị kiểu Paperclip (backlog → todo → đang làm → review → xong/bị chặn), suy ra từ trạng thái thật — không đổi dữ liệu lưu
   const STAGES = [
-    ['backlog', 'Chờ việc khác'],
+    ['backlog', 'Backlog'],
     ['todo', 'Chờ chạy'],
     ['in_progress', 'Đang làm'],
     ['in_review', 'Đang review'],
@@ -92,9 +93,9 @@
     ['cancelled', 'Đã hủy'],
   ];
   function stage(t) {
-    if (t.status === 'queued') return (t.after || []).some((id) => !['done', 'cancelled'].includes(C.S.tasks.get(id)?.status)) ? 'backlog' : 'todo';
+    if (t.status === 'queued') return 'todo';
     if (t.status === 'running') return ['review', 'revise', 'accept'].includes(t.phase) ? 'in_review' : 'in_progress';
-    if (t.status === 'paused') return t.pause?.reason === 'plan' ? 'in_review' : 'blocked';
+    if (t.status === 'paused') return t.pause?.reason === 'backlog' ? 'backlog' : t.pause?.reason === 'plan' ? 'in_review' : 'blocked';
     if (t.status === 'failed') return 'blocked';
     if (t.status === 'done') return t.attention ? 'in_review' : 'done';
     return t.status === 'cancelled' ? 'cancelled' : 'todo';
@@ -102,10 +103,40 @@
   D.stage = stage;
   D.STAGE_VI = Object.fromEntries(STAGES);
   function boardHtml(list) {
-    const cols = STAGES.map(([k, l]) => [k, l, list.filter((t) => stage(t) === k)]).filter(([k, , xs]) => xs.length || !['backlog', 'cancelled'].includes(k));
+    const cols = STAGES.map(([k, l]) => [k, l, list.filter((t) => stage(t) === k)]).filter(([k, , xs]) => xs.length || k !== 'cancelled');
+    const drop = (k) => (k === 'backlog' || k === 'todo' ? ` data-drop="${k}"` : '');
     return `<div class="board">${cols
-      .map(([k, l, xs]) => `<section class="bcol st-${k}"><h4><i></i>${esc(l)}<em>${xs.length}</em></h4><div class="bcards">${xs.map(cardHtml).join('') || '<div class="bempty">—</div>'}</div></section>`)
+      .map(([k, l, xs]) => `<section class="bcol st-${k}"${drop(k)}><h4><i></i>${esc(l)}<em>${xs.length}</em></h4><div class="bcards">${xs.map(cardHtml).join('') || `<div class="bempty">${k === 'backlog' ? 'Kéo thẻ "Chờ chạy" vào đây để hoãn' : '—'}</div>`}</div></section>`)
       .join('')}</div>`;
+  }
+  /** UI-8: kéo thẻ giữa Backlog ↔ Chờ chạy (chỉ nhiệm vụ chưa bắt đầu; giai đoạn khác do trạng thái thật quyết định). */
+  function bindBoard(el) {
+    const movable = (t) => t && !(t.runs || []).length && (t.status === 'queued' || (t.status === 'paused' && t.pause?.reason === 'backlog'));
+    $$('.board .tcard', el).forEach((c) => {
+      const t = C.S.tasks.get(c.dataset.id);
+      if (!movable(t)) return;
+      c.draggable = true;
+      c.classList.add('drag');
+      c.addEventListener('dragstart', (e) => (e.dataTransfer.setData('text/plain', t.id), (e.dataTransfer.effectAllowed = 'move')));
+    });
+    $$('.board [data-drop]', el).forEach((col) => {
+      col.addEventListener('dragover', (e) => (e.preventDefault(), col.classList.add('over')));
+      col.addEventListener('dragleave', () => col.classList.remove('over'));
+      col.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        col.classList.remove('over');
+        const t = C.S.tasks.get(e.dataTransfer.getData('text/plain'));
+        if (!movable(t) || stage(t) === col.dataset.drop) return;
+        try {
+          const r = await C.api(`/api/tasks/${encodeURIComponent(t.id)}/stage`, { method: 'POST', body: JSON.stringify({ stage: col.dataset.drop }) });
+          if (r?.id) C.S.tasks.set(r.id, r);
+          C.toast({ level: 'info', title: col.dataset.drop === 'backlog' ? 'Đã đưa vào backlog' : 'Đã chuyển sang chờ chạy', msg: t.title });
+        } catch (err) {
+          C.toast({ level: 'error', title: 'Không chuyển được', msg: err.message });
+        }
+        D.changed();
+      });
+    });
   }
   const who = (t) => (t.mode === 'agent' && t.agentId ? `📌 ${C.agentName(t.agentId)}` : C.MODE_VI[t.mode] || t.mode);
   const projName = (id) => (id ? C.S.projects.find((p) => p.id === id)?.name || id : 'Ngoài dự án');
@@ -358,13 +389,14 @@
   function cardHtml(t) {
     const pct = progress(t);
     return `<div class="tcard" data-id="${esc(t.id)}" tabindex="0">
-      <div class="tc-top">${dot(t)}<span class="status ${esc(t.status)}">${esc(C.TASK_VI[t.status] || t.status)}</span>${t.attention ? '<span class="status attention">⚠ cần xem</span>' : ''}<button class="star${V.stars.has(t.id) ? ' on' : ''}" data-star>${V.stars.has(t.id) ? '★' : '☆'}</button><button class="more" data-more>⋮</button></div>
+      <div class="tc-top">${dot(t)}<span class="status ${esc(t.status)}">${t.pause?.reason === 'backlog' ? 'Backlog' : esc(C.TASK_VI[t.status] || t.status)}</span>${t.attention ? '<span class="status attention">⚠ cần xem</span>' : ''}<button class="star${V.stars.has(t.id) ? ' on' : ''}" data-star>${V.stars.has(t.id) ? '★' : '☆'}</button><button class="more" data-more>⋮</button></div>
       <b class="tc-title">${esc(t.title)}</b>${proof(t) ? `<div class="tc-proof">${proof(t)}</div>` : ''}
       <small>${esc(who(t))} · ${t.projectId ? `📁 ${esc(projName(t.projectId))}` : 'ngoài dự án'}</small>
       <div class="pbar"><i style="width:${pct}%"></i></div>
       <div class="tc-foot"><span class="c-people">${assignees(t).map((a) => C.av(a, 'av xs')).join('')}</span><small>${C.fmt(C.total(t.usage))} token · ${esc(C.dateTime(updated(t)))}</small></div></div>`;
   }
   function bindItems(el) {
+    bindBoard(el);
     $$('[data-id]', el).forEach((row) => {
       const t = C.S.tasks.get(row.dataset.id);
       if (!t) return;
