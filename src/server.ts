@@ -213,6 +213,7 @@ export function createServer(app: App): http.Server {
           continueBranch: typeof b.continueBranch === 'boolean' ? b.continueBranch : undefined,
           options: b.options ?? {},
           attachments: Array.isArray(b.attachments) ? b.attachments.map(String) : undefined,
+          backlog: b.backlog === true,
         });
         return send(res, 201, t);
       } catch (e) {
@@ -311,6 +312,25 @@ export function createServer(app: App): http.Server {
       } catch (e) {
         if (e instanceof HttpError) throw e;
         throw new HttpError(409, (e as Error).message);
+      }
+    }
+    if ((mm = m(/^\/api\/tasks\/([^/]+)\/stage$/)) && req.method === 'POST') {
+      const b = await readBody(req);
+      if (b.stage !== 'backlog' && b.stage !== 'todo') throw new HttpError(400, 'Giai đoạn đặt tay chỉ là backlog hoặc todo');
+      try {
+        return send(res, 200, orchestrator.setStage(mm[1], b.stage));
+      } catch (e) {
+        throw new HttpError(/Không có nhiệm vụ/.test((e as Error).message) ? 404 : 409, (e as Error).message);
+      }
+    }
+    if ((mm = m(/^\/api\/tasks\/([^/]+)\/props$/)) && req.method === 'POST') {
+      const b = await readBody(req);
+      if (b.title !== undefined && typeof b.title !== 'string') throw new HttpError(400, 'title phải là chuỗi');
+      try {
+        const opt = (v: unknown) => (v === undefined ? undefined : v === '' || v === null ? null : String(v));
+        return send(res, 200, orchestrator.updateProps(mm[1], { title: b.title, priority: b.priority === '' ? null : b.priority, agentId: opt(b.agentId), projectId: opt(b.projectId) }));
+      } catch (e) {
+        throw new HttpError(/Không có nhiệm vụ/.test((e as Error).message) ? 404 : 400, (e as Error).message);
       }
     }
     if ((mm = m(/^\/api\/tasks\/([^/]+)\/budget$/)) && req.method === 'POST') {
@@ -453,7 +473,7 @@ export function createServer(app: App): http.Server {
     if (p === '/api/kpi') {
       const tasks = q('task')?.split(',').map((s) => s.trim()).filter(Boolean);
       const days = Number(q('days') ?? 0) || undefined;
-      return send(res, 200, kpiReport(app, { tasks, days, department: q('dept') || undefined, project: q('project') || undefined, resolve: q('raw') !== '1' }));
+      return send(res, 200, kpiReport(app, { tasks, days, department: q('dept') || undefined, project: q('project') || undefined, resolve: q('raw') !== '1', by: q('by') === 'model' ? 'model' : 'agent' }));
     }
 
     if (p === '/api/agents') return send(res, 200, snapshot(app).agents);
@@ -537,6 +557,28 @@ export function createServer(app: App): http.Server {
       const day = new Date();
       day.setHours(0, 0, 0, 0);
       return send(res, 200, { at: nowIso(), order: config.runtime.order, runtimes: runtimes.quota(), today: usage.total({ since: day.toISOString() }) });
+    }
+
+    // ── UI-7: ngân sách theo dự án / agent (ngưỡng mềm cảnh báo, trần cứng tạm dừng) ──
+    if (p === '/api/budgets' && req.method === 'GET') return send(res, 200, { at: nowIso(), policies: app.budgets.statuses() });
+    if (p === '/api/budgets' && req.method === 'POST') {
+      const b = await readBody(req);
+      if (b.scope === 'project' && !store.project(String(b.target ?? ''))) throw new HttpError(400, `Không có dự án "${b.target}"`);
+      if (b.scope === 'agent' && !registry.agents.has(String(b.target ?? ''))) throw new HttpError(400, `Không có agent "${b.target}"`);
+      let pol;
+      try {
+        pol = app.budgets.upsert({ id: b.id ? String(b.id) : undefined, scope: b.scope, target: b.target, period: b.period, tokens: b.tokens, softPct: b.softPct, hard: b.hard });
+      } catch (e) {
+        throw new HttpError(400, (e as Error).message);
+      }
+      logs.write({ level: 'info', kind: 'budget.policy.saved', msg: `Ngân sách ${pol.scope} ${pol.target}: ${pol.tokens} token/${pol.period}, mềm ${pol.softPct}%, ${pol.hard ? 'trần cứng' : 'chỉ cảnh báo'}`, projectId: pol.scope === 'project' ? pol.target : undefined, agentId: pol.scope === 'agent' ? pol.target : undefined });
+      return send(res, 200, app.budgets.status(pol));
+    }
+    if ((mm = m(/^\/api\/budgets\/([^/]+)$/)) && req.method === 'DELETE') {
+      const gone = app.budgets.remove(mm[1]);
+      if (!gone) throw new HttpError(404, 'Không có chính sách ngân sách này');
+      logs.write({ level: 'info', kind: 'budget.policy.deleted', msg: `Xóa ngân sách ${gone.scope} ${gone.target} (${gone.period})`, projectId: gone.scope === 'project' ? gone.target : undefined, agentId: gone.scope === 'agent' ? gone.target : undefined });
+      return send(res, 200, { ok: true });
     }
 
     if (p === '/api/usage') {

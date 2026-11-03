@@ -57,6 +57,8 @@ import { resolveSlim, sanitizeSlim, type AcceptMode } from './slim.js';
 const SMALL_REPO_FILES = 300;
 import {
   addUsage,
+  TASK_PRIORITIES,
+  type TaskPriority,
   emptyUsage,
   totalTokens,
   type AgentDef,
@@ -84,6 +86,7 @@ import {
   type ToolAccess,
   type ToolName,
 } from './types.js';
+import type { BudgetPolicies } from './budgets.js';
 
 export interface OrchestratorDeps {
   config: Config;
@@ -95,6 +98,8 @@ export interface OrchestratorDeps {
   bus: EventBus;
   herdr?: Herdr;
   uploads?: Uploads;
+  /** UI-7: ngân sách theo dự án / agent (ngưỡng mềm + trần cứng). */
+  budgets?: BudgetPolicies;
 }
 
 /** Dừng nhiệm vụ nhưng giữ nguyên tiến độ để tiếp tục sau (chạm trần ngân sách, hết tài nguyên, yêu cầu thủ công). */
@@ -372,10 +377,40 @@ export class Orchestrator {
       projectId: task.projectId,
       data: { mode, department: input.department, budgetTokens: task.options.budgetTokens, budgetMode, attachments: task.attachments?.map((a) => ({ name: a.name, kind: a.kind, chars: a.chars })), routineId: input.routineId, routineManual: input.routineId ? !!input.routineManual : undefined },
     });
+    if (input.backlog) {
+      task.status = 'paused';
+      task.pause = { reason: 'backlog', detail: 'Trong backlog — chuyển sang "Chờ chạy" để bắt đầu', at: now };
+      this.save(task, true);
+      return task;
+    }
     this.emitTask(task);
     this.queue.push(task.id);
     this.pump();
     return task;
+  }
+
+  /**
+   * UI-8: đổi giai đoạn bằng tay — chỉ giữa "backlog" và "Chờ chạy" (nhiệm vụ chưa làm gì).
+   * Các giai đoạn khác (đang làm, review, xong, bị chặn) do trạng thái thật quyết định.
+   */
+  setStage(id: string, stage: 'backlog' | 'todo'): Task {
+    const t = this.d.store.get(id);
+    if (!t) throw new Error('Không có nhiệm vụ');
+    const untouched = t.runs.length === 0;
+    if (stage === 'backlog') {
+      if (t.status === 'paused' && t.pause?.reason === 'backlog') return t;
+      if (t.status !== 'queued' || !untouched) throw new Error('Chỉ đưa vào backlog được nhiệm vụ đang chờ chạy và chưa bắt đầu');
+      this.queue = this.queue.filter((q) => q !== id);
+      t.status = 'paused';
+      t.pause = { reason: 'backlog', detail: 'Trong backlog — chuyển sang "Chờ chạy" để bắt đầu', at: nowIso() };
+      this.d.logs.write({ level: 'info', kind: 'task.backlog', msg: `${t.id}: chuyển vào backlog`, taskId: t.id, projectId: t.projectId });
+      this.save(t, true);
+      return t;
+    }
+    if (t.status === 'queued') return t;
+    if (t.status !== 'paused' || t.pause?.reason !== 'backlog') throw new Error('Chỉ chuyển sang "Chờ chạy" được nhiệm vụ đang nằm trong backlog');
+    this.d.logs.write({ level: 'info', kind: 'task.unbacklog', msg: `${t.id}: rời backlog → chờ chạy`, taskId: t.id, projectId: t.projectId });
+    return this.resume(id, {});
   }
 
   cancel(id: string): boolean {
@@ -414,6 +449,80 @@ export class Orchestrator {
   }
 
   /** Đổi ngân sách / chế độ ngân sách khi nhiệm vụ đang chạy hoặc tạm dừng. */
+  /** UI-7: sửa thuộc tính hiển thị từ bảng Thuộc tính — tiêu đề, ưu tiên. Không đụng phần đang chạy. */
+  updateProps(id: string, o: { title?: string; priority?: TaskPriority | null; agentId?: string | null; projectId?: string | null }): Task {
+    const t = this.d.store.get(id);
+    if (!t) throw new Error('Không có nhiệm vụ');
+    const changed: string[] = [];
+    const { registry, store } = this.d;
+    // người phụ trách / dự án chỉ đổi được khi nhiệm vụ chưa bắt đầu (chưa lập kế hoạch, chưa có workspace)
+    const editable = (t.status === 'queued' || t.status === 'paused') && t.runs.length === 0;
+    const lockMsg = (what: string) =>
+      `Chỉ đổi ${what} khi nhiệm vụ chưa bắt đầu (đang chờ chạy hoặc trong backlog)${what === 'dự án' ? ' — nhiệm vụ đã chạy: tạm dừng rồi dùng "Đóng gói vào dự án"' : ' — nhiệm vụ đã chạy: dùng "Giao lại tương tự"'}`;
+    // tính trước, kiểm tra hết rồi mới ghi (lỗi không để lại thay đổi dở)
+    let nextProject = t.projectId ? store.project(t.projectId) : undefined;
+    if (o.projectId !== undefined && (o.projectId || undefined) !== t.projectId) {
+      if (!editable) throw new Error(lockMsg('dự án'));
+      nextProject = o.projectId ? store.project(o.projectId) : undefined;
+      if (o.projectId && !nextProject) throw new Error(`Không có dự án "${o.projectId}"`);
+    }
+    let nextAgent = t.mode === 'agent' ? t.agentId : undefined;
+    if (o.agentId !== undefined && (o.agentId || undefined) !== nextAgent) {
+      if (!editable) throw new Error(lockMsg('người phụ trách'));
+      nextAgent = o.agentId || undefined;
+      if (nextAgent) {
+        const a = registry.agents.get(nextAgent);
+        if (!a) throw new Error(`Agent không hợp lệ: ${nextAgent}`);
+        if (!registry.departments.has(a.department)) throw new Error(`${a.name} không thuộc phòng ban nào nhận việc (điều phối viên chỉ định tuyến)`);
+      }
+    }
+    if (nextAgent && nextProject?.agents?.length && !nextProject.agents.includes(nextAgent))
+      throw new Error(`${registry.agents.get(nextAgent)?.name ?? nextAgent} không nằm trong nhân sự của dự án ${nextProject.name}`);
+    if ((nextProject?.id ?? undefined) !== t.projectId) {
+      changed.push(`dự án ${t.projectId ?? '—'} → ${nextProject?.id ?? '—'}`);
+      t.projectId = nextProject?.id;
+      // không bao giờ hạ nhãn dữ liệu: rời dự án Bảo mật thì giữ nhãn cũ
+      const before = t.classification;
+      t.classification = maxClass((nextProject?.classification ?? this.d.config.dataProtection.defaultClassification) as Classification, before);
+      if (t.classification !== before) changed.push(`nhãn dữ liệu ${before} → ${t.classification}`);
+      if (t.mode === 'project' && !nextProject) t.mode = 'auto';
+    }
+    if (nextAgent !== (t.mode === 'agent' ? t.agentId : undefined)) {
+      changed.push(`người phụ trách ${t.mode === 'agent' ? `@${t.agentId}` : '— (điều phối)'} → ${nextAgent ? `@${nextAgent}` : '— (điều phối)'}`);
+      if (nextAgent) {
+        t.mode = 'agent';
+        t.agentId = nextAgent;
+        t.department = registry.agents.get(nextAgent)!.department;
+      } else {
+        t.mode = nextProject ? 'project' : 'auto';
+        t.agentId = undefined;
+        t.department = undefined;
+      }
+    }
+    if (o.title !== undefined) {
+      const title = o.title.replace(/\s+/g, ' ').trim();
+      if (!title || title.length > 200) throw new Error('Tiêu đề phải có 1–200 ký tự');
+      if (title !== t.title) {
+        changed.push(`tiêu đề "${t.title}" → "${title}"`);
+        t.title = title;
+      }
+    }
+    if (o.priority !== undefined) {
+      const p = o.priority ?? undefined;
+      if (p !== undefined && !TASK_PRIORITIES.includes(p)) throw new Error('Ưu tiên không hợp lệ (urgent | high | medium | low)');
+      if (p !== t.priority) {
+        changed.push(`ưu tiên ${t.priority ?? '—'} → ${p ?? '—'}`);
+        if (p) t.priority = p;
+        else delete t.priority;
+      }
+    }
+    if (changed.length) {
+      this.d.logs.write({ level: 'info', kind: 'task.updated', msg: `Sửa ${t.id}: ${changed.join('; ')}`, taskId: t.id, projectId: t.projectId });
+      this.save(t, true);
+    }
+    return t;
+  }
+
   updateBudget(id: string, o: ResumeOptions): Task {
     const t = this.d.store.get(id);
     if (!t) throw new Error('Không có nhiệm vụ');
@@ -1783,6 +1892,8 @@ export class Orchestrator {
           // review lỗi KHÔNG được coi là "duyệt"
           if (res.error && !res.text) throw new Error(`Không review được: ${res.error}`);
           review = parseReview(res.text, items.map((i) => i.st.id));
+          // kết luận GỐC của reviewer — KPI chấm độ đúng của reviewer theo trường này (approved có thể bị ép ngay dưới đây)
+          const reviewerApproved = review.approved;
           const stray = assignStrayIssues(review.issues, done());
           if (stray) review.approved = false;
           // lệnh kiểm tra của dự án đạt trước khi sửa mà hỏng sau khi sửa → không duyệt, dù reviewer nói gì
@@ -1806,7 +1917,7 @@ export class Orchestrator {
           // chỉ lệnh kiểm chứng thật (test/typecheck/lint/build/migration) mới là bằng chứng — git status, rg… là khảo sát
           // bằng chứng có sẵn khi CCoding đã tự chạy lệnh kiểm tra của dự án (không phụ thuộc reviewer/model)
           const verified = sys.length ? true : reviewTools.includes('run_command') ? ran.some((tc) => isCheckCommand(tc.args)) : undefined;
-          run.review = { approved: review.approved, summary: review.summary, issues: review.issues, checks, verified };
+          run.review = { approved: review.approved, summary: review.summary, issues: review.issues, checks, verified, reviewerApproved };
           const evidence =
             verified === false
               ? `\n⚠️ Reviewer có quyền chạy lệnh nhưng KHÔNG chạy lệnh kiểm tra nào (test/typecheck/lint/build)${ran.length ? ` — chỉ chạy lệnh khảo sát: ${ran.map((tc) => `\`${tc.args.slice(0, 60)}\``).join(', ')}` : ''} — kết luận chưa có bằng chứng chạy thật.`
@@ -2112,6 +2223,34 @@ export class Orchestrator {
       });
     }
     if (pct >= 100 && mode === 'pause') throw new PauseSignal('budget', `Đã dùng ${fmtNum(used)}/${fmtNum(budget)} token (chạm trần ngân sách)`);
+  }
+
+  /** Mốc đã cảnh báo của chính sách ngân sách: `<id>|<đầu kỳ>|soft|hard` — mỗi kỳ cảnh báo một lần mỗi mức. */
+  private policyAlerted = new Set<string>();
+
+  /** Ngân sách theo dự án / agent: ngưỡng mềm → cảnh báo; trần cứng → tạm dừng nhiệm vụ trước khi gọi model. */
+  private checkPolicies(task: Task, agent: AgentDef): void {
+    const pols = this.d.budgets?.matching(task.projectId, agent.id);
+    if (!pols?.length) return;
+    const KY: Record<string, string> = { day: 'hôm nay', month: 'tháng này', total: 'từ trước tới nay' };
+    for (const p of pols) {
+      if (p.level === 'ok') continue;
+      const who = p.scope === 'project' ? `dự án ${p.target}` : `agent @${p.target}`;
+      const msg = `${who} đã dùng ${fmtNum(p.used)}/${fmtNum(p.tokens)} token ${KY[p.period]} (${Math.round(p.pct)}%)`;
+      const key = `${p.id}|${p.since ?? '-'}|${p.level}`;
+      if (!this.policyAlerted.has(key)) {
+        this.policyAlerted.add(key);
+        const stop = p.level === 'hard' && p.hard;
+        this.alert({
+          level: stop ? 'error' : 'warn',
+          kind: p.level === 'hard' ? 'budget.policy.hard' : 'budget.policy.soft',
+          title: p.level === 'hard' ? (stop ? `Chạm trần ngân sách ${who} — tạm dừng` : `Vượt ngân sách ${who}`) : `Ngân sách ${who} đã qua ${p.softPct}%`,
+          msg: `${task.title}: ${msg}${p.level === 'hard' && !p.hard ? ' — chính sách chỉ cảnh báo, vẫn chạy tiếp' : ''}`,
+          taskId: task.id,
+        });
+      }
+      if (p.level === 'hard' && p.hard) throw new PauseSignal('budget', `Chạm trần ngân sách: ${msg}. Tăng ngân sách trong Kiểm toán › Hạn mức rồi tiếp tục.`);
+    }
   }
 
   /** Phần ngân sách của một hạng mục (cộng dồn mọi lần chạy/sửa): cố định theo tùy chọn, hoặc 2 × ngân sách / số hạng mục. */
@@ -3140,6 +3279,13 @@ export class Orchestrator {
       pc.baseline = results;
       pc.baselineAt = nowIso();
     } else {
+      // theo phòng (các phòng chạy lần lượt trên cùng workspace): trạng thái trước khi phòng này sửa = kết quả gần nhất của phòng
+      // trước, hoặc baseline — KPI gán kết quả lệnh kiểm tra cho đúng phòng đã làm thay đổi. Bỏ `tail` cho task.json gọn.
+      const slim = (rs?: CheckResult[]) => rs?.map((r) => ({ ...r, tail: '' }));
+      const d = ((pc.depts ??= {})[dept] ??= {});
+      d.before ??= slim(pc.latest ?? pc.baseline) ?? [];
+      d.latest = slim(results);
+      d.at = nowIso();
       pc.latest = results;
       pc.latestAt = nowIso();
       pc.latestAfter = when;
@@ -3229,6 +3375,7 @@ export class Orchestrator {
       this.checkAbort(task);
       if (this.pauseRequests.has(task.id)) throw new PauseSignal('manual', 'Tạm dừng theo yêu cầu');
       this.checkBudget(task);
+      this.checkPolicies(task, agent);
       if (ctx.subtask && ctx.run) this.checkSubtaskBudget(task, ctx.run, ctx.subtask);
       const cls = task.classification;
       const want = task.options.phaseModels?.[phase] ?? ctx.project?.models?.[agent.id] ?? config.phases?.models?.[phase] ?? agent.model;
@@ -3527,7 +3674,12 @@ export class Orchestrator {
       ...rec,
       attempts,
       sizes: req ? { system: req.system.length, context: req.context?.length ?? 0, prompt: req.prompt.length } : undefined,
-      maxTokens: req?.maxTokens,
+      // trần đầu ra THỰC của lượt: max_tokens của pha, không có thì của runtime (KPI so "bị cắt" với trần này)
+      maxTokens: req?.maxTokens ?? (Number(config.runtimes?.[result.runtime]?.maxTokens) || undefined),
+      // prompt lớn nhất trong các vòng công cụ (KPI: độ đầy ngữ cảnh theo vòng lớn nhất)
+      maxPrompt: result.maxPromptTokens,
+      // runtime không ghi thao tác công cụ (Codex/Kimi CLI) → KPI Trung thực của lượt này "không đo được"
+      toolsTracked: result.toolsTracked === false ? false : undefined,
       turns: result.turns,
       truncated: result.truncated,
       errorKind: result.errorKind,
@@ -3554,7 +3706,7 @@ export class Orchestrator {
       usage.output += r2.usage.output;
       usage.cacheRead += r2.usage.cacheRead;
       usage.cacheWrite += r2.usage.cacheWrite;
-      res = { ...r2, text, usage: { ...usage }, toolCalls: first.toolCalls, turns: (res.turns ?? 1) + (r2.turns ?? 1), capped: first.capped, diag: first.diag };
+      res = { ...r2, text, usage: { ...usage }, toolCalls: first.toolCalls, turns: (res.turns ?? 1) + (r2.turns ?? 1), capped: first.capped, diag: first.diag, maxPromptTokens: Math.max(res.maxPromptTokens ?? 0, r2.maxPromptTokens ?? 0) || undefined };
     }
     return res;
   }

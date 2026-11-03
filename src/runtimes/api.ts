@@ -386,6 +386,8 @@ export class OpenAiApiRuntime implements Runtime {
     let thinkNudged = false;
     let capped: 'turns' | 'input' | undefined;
     let turns = 0;
+    /** prompt lớn nhất trong các vòng (prompt_tokens gồm cả phần cache) — KPI đo độ đầy ngữ cảnh theo vòng lớn nhất */
+    let maxPrompt = 0;
     // chống "khảo sát mãi không ghi": đếm tệp đã ghi, nhắc khi đã dùng ~35% / ~65% lượt hoặc trần token mà chưa ghi gì
     let wrote = 0;
     let writeNudges = 0;
@@ -454,6 +456,7 @@ export class OpenAiApiRuntime implements Runtime {
       usage.output += t.output;
       usage.cached += t.cached;
       usage.cacheWrite += t.cacheWrite;
+      maxPrompt = Math.max(maxPrompt, t.input);
       if (t.input > 500 && sentChars > 0) charsPerToken = Math.min(5, Math.max(1.5, sentChars / t.input));
       if (t.model) usedModel = t.model;
       finish = t.finish;
@@ -593,6 +596,7 @@ export class OpenAiApiRuntime implements Runtime {
       toolCalls: records.length ? records : undefined,
       diag: diag.length ? diag.join('; ') : undefined,
       capped,
+      maxPromptTokens: maxPrompt || undefined,
     };
   }
 }

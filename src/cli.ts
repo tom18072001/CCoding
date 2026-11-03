@@ -51,7 +51,7 @@ ${c.bold('Log & token')}
   logs ls                                   Danh sách tệp log (hệ thống, phòng ban, agent, nhiệm vụ gần nhất)
   logs verify                               Kiểm tra chuỗi băm (log có bị sửa không)
   usage [--by agent|department|task|project|model|runtime|day|phase] [--task id] [--dept id] [--watch] [--json]
-  kpi [--task id,id] [--days 7] [--dept id] [--project id] [--json]   KPI từng sub-agent (chất lượng, hiệu quả, tin cậy, tuân thủ) + việc cần sửa
+  kpi [--task id,id] [--days 7] [--dept id] [--project id] [--by agent|model] [--json]   KPI v2 từng sub-agent (chất lượng, kết quả thật, trung thực, hiệu quả, tin cậy, tuân thủ) + việc cần sửa; --by model tách theo agent × model
 
 ${c.bold('Benchtest (đo trước khi đổi mặc định)')}
   bench run <spec.json> [--dry-run]         Chạy cùng đề bài với từng biến thể tùy chọn, xen kẽ, lặp; chỉ chạy khi máy rảnh
@@ -504,11 +504,12 @@ async function cmdUsage(args: string[]): Promise<void> {
 }
 
 function cmdKpi(args: string[]): void {
-  const { values } = parseArgs({ args, options: { task: { type: 'string' }, days: { type: 'string' }, dept: { type: 'string' }, project: { type: 'string' }, json: { type: 'boolean' } } });
+  const { values } = parseArgs({ args, options: { task: { type: 'string' }, days: { type: 'string' }, dept: { type: 'string' }, project: { type: 'string' }, json: { type: 'boolean' }, by: { type: 'string' } } });
+  if (values.by && !['agent', 'model'].includes(values.by)) throw new Error('--by chỉ nhận agent hoặc model');
   const logs = new LogStore(config.dataDir, { redactSecrets: true, redactPii: true, hashChain: true });
   const store = new Store(config.dataDir, logs);
   const registry = new Registry(config.agentsDir, config.departmentsDir);
-  const rep = kpiReport({ store, registry, config }, { tasks: values.task?.split(','), days: values.days ? Number(values.days) : undefined, department: values.dept, project: values.project, resolve: true });
+  const rep = kpiReport({ store, registry, config }, { tasks: values.task?.split(','), days: values.days ? Number(values.days) : undefined, department: values.dept, project: values.project, resolve: true, by: values.by as 'agent' | 'model' | undefined });
   if (values.json) {
     console.log(JSON.stringify(rep, null, 2));
     return;
@@ -519,15 +520,15 @@ function cmdKpi(args: string[]): void {
   const grade = (g: string) => (g === 'A' ? c.green(g) : g === 'B' ? c.cyan(g) : g === 'C' ? c.yellow(g) : c.red(g));
   console.log(
     table(
-      ['Agent', 'Phòng', 'Điểm', 'CL', 'HQ', 'TC', 'TT', 'Hạng mục', 'Lần chạy', 'Token', 'Công cụ lỗi'],
+      ['Agent', 'Phòng', 'Điểm', 'Tin', 'CL', 'KQ', 'TTh', 'HQ', 'TC', 'TT', 'Hạng mục', 'Lần chạy', 'Token', 'Công cụ lỗi', 'Ngữ cảnh'],
       rep.agents
         .filter((k) => k.calls || k.subtasks)
-        .map((k) => [k.agentId, k.department, `${k.score} ${grade(k.grade)}`, String(k.scores.quality ?? '—'), String(k.scores.efficiency ?? '—'), String(k.scores.reliability ?? '—'), String(k.scores.compliance ?? '—'), String(k.subtasks), String(k.attemptsAvg || '—'), fmtNum(k.tokens.total), k.tools.calls ? `${k.tools.failed}/${k.tools.calls}` : '—']),
+        .map((k) => [k.key ?? k.agentId, k.department, `${k.score} ${grade(k.grade)}`, k.confidence === 'low' ? c.yellow('thấp') : k.confidence === 'medium' ? 'vừa' : 'cao', String(k.scores.quality ?? '—'), String(k.scores.outcome ?? '—'), String(k.scores.honesty ?? '—'), String(k.scores.efficiency ?? '—'), String(k.scores.reliability ?? '—'), String(k.scores.compliance ?? '—'), String(k.subtasks), String(k.attemptsAvg || '—'), fmtNum(k.tokens.total), k.tools.calls ? `${k.tools.failed}/${k.tools.calls}` : '—', k.context?.known ? `${k.context.maxFillPct}%` : '—']),
     ),
   );
-  console.log(c.gray('CL = chất lượng · HQ = hiệu quả · TC = tin cậy · TT = tuân thủ mẫu đầu ra/bằng chứng\n'));
+  console.log(c.gray('Tin = độ tin của điểm (lượng bằng chứng) · CL = chất lượng (review) · KQ = kết quả thật (lệnh kiểm tra, CTO) · TTh = trung thực (khẳng định có lệnh kiểm chứng) · HQ = hiệu quả · TC = tin cậy · TT = tuân thủ · Ngữ cảnh = prompt đầy nhất so với cửa sổ runtime\n'));
   for (const k of rep.agents.filter((x) => x.findings.length)) {
-    console.log(`${c.bold(k.agentId)} (${k.score} ${grade(k.grade)})`);
+    console.log(`${c.bold(k.key ?? k.agentId)} (${k.score} ${grade(k.grade)})`);
     k.findings.forEach((f, i) => console.log(`  - ${c.gray(`[${k.findingKeys[i]}]`)} ${f}`));
   }
   const done = rep.agents.reduce((n, k) => n + (k.resolved?.length ?? 0), 0);
