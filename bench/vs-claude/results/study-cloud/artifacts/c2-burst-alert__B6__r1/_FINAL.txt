@@ -1,0 +1,108 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude c2-burst-alert__B6__r1] Sliding-window 5xx burst alerting
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Hàm detectBursts là một hàm đơn lẻ nên chia 2 hạng mục: hiện thực trong src/alert.js (backend-dev) và bộ test biên độc lập trong test/alert.edge.test.js (senior-swe), chạy song song vì không ghi cùng tệp. Không cần kiến trúc, BA hay cổng bảo vệ dữ liệu. Cả hai hạng mục đều nêu rõ event.ts là khóa sắp xếp và là mốc của cửa sổ nửa mở.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Hiện thực detectBursts trong src/alert.js (dùng event.ts làm mốc cửa sổ) (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã hiện thực `detectBursts` trong `src/alert.js` theo thuật toán của hạng mục S1. Hàm sắp xếp ổn định theo `ts` trên bản sao, chỉ giữ 5xx và dùng cửa sổ nửa mở theo từng host. `npm test` pass 1/1; ở baseline nó fail 1/1.
+
+## Tệp đã tạo/sửa
+- `src/alert.js`: hiện thực `detectBursts`, giữ nguyên ES module export.
+
+## Hợp đồng API
+Không áp dụng. Hàm `detectBursts(events, opts)` trả về `[{ host, ts, count }]`, sắp xếp theo `ts` rồi `host`.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0, tests 1, pass 1, fail 0.
+- Tôi chỉ chạy test hiện có (`test/basic.test.js`). Các trường hợp biên như cooldown, `ts` bằng nhau và thứ tự host do S2 phụ trách; tôi chưa tự kiểm các trường hợp đó.
+
+## Việc còn lại
+- Không có biến môi trường mới.
+- `@senior-swe` (S2) viết bộ test biên trong `test/alert.edge.test.js`.
+
+Bản đầy đủ: `.ccoding/T-20261103-004443-423/outputs/dev-S1-backend-dev.md`
+
+### S2 — Bộ test biên độc lập cho detectBursts (ranh giới event.ts) (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã tạo `test/alert.edge.test.js` với 11 ca biên phủ đủ các mục (a)–(j). `npm test` chạy xong với 12 test pass, 0 fail (11 ca mới và 1 ca có sẵn). Tôi không phát hiện lỗi trong `src/alert.js`.
+
+## Tệp đã tạo/sửa
+- `test/alert.edge.test.js` · tạo mới. Tôi không sửa `src/alert.js` hay `test/basic.test.js`.
+
+## Kiểm chứng
+- `npm test` → exit 0 (lấy từ đầu ra `npm test`, không phải `$?` qua pipe). Kết quả: tests 12, pass 12, fail 0, skipped 0.
+- Baseline CCoding đo trước đó là exit 1 với 1 test fail. Lúc tôi chạy, `src/alert.js` đã có hiện thực, nên không còn lỗi đó.
+
+## Quyết định thiết kế
+- Dùng `node:test` và `node:assert/strict`, giống `test/basic.test.js`.
+- Mỗi ca dùng `windowMs` và `threshold` nhỏ để biên dễ thấy.
+- Ca (c) kiểm tra cả hai phía của biên cooldown: `ts = alert.ts + cooldownMs - 1` không alert, `ts = alert.ts + cooldownMs` có alert. Nó cũng kiểm tra event trong cooldown vẫn được tính, với `count` 5 và 6 ở lần alert sau.
+- Ca (f) có 4 event cùng `ts` trên một host với `threshold` 3. Kết quả đúng là một alert `count` 3, và event thứ 4 bị cooldown chặn.
+- Ca (h) thử các status 499, 600, 200, `'500'` (chuỗi), `null`, `undefined`, `NaN` và `'abc'`. Hai ca 599 và 500 đối chứng phải alert.
+- Ca (i) so sánh bằng `deepEqual` với bản `structuredClone` của cả `events` và `opts`.
+
+## Rủi ro & việc còn mở
+- Test không kiểm tra `events` là `null`/`undefined` hay các phần tử `null`, vì brief không nêu hành vi đó.
+- Test không kiểm tra `ts` không phải số.
+- Hook của môi trường chặn nhầm heredoc có chuỗi `../src/alert.js`, nên tôi ghi file bằng công cụ Write. Không ảnh hưởng đến sản phẩm.
+
+## Phát hiện
+Không áp dụng. Tôi không rà mã hạng mục khác, và các ca biên không cho thấy lỗi nào trong `src/alert.js`.
+
+Bản đầy đủ: `.ccoding/T-20261103-004443-423/outputs/dev-S2-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-004443-423` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **20 in / 10.8k out**, cache đọc 94.5k, 5 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 8 | 5582 | 49021 | 1 |
+| Backend Developer (@backend-dev) | dev | 6 | 1320 | 32550 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 3512 | 10718 | 2 |
+| Điều phối viên (@orchestrator) | office | 2 | 338 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Hiện thực detectBursts trong src/alert.js (dùng event.ts làm mốc cửa sổ) (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 Bộ test biên độc lập cho detectBursts (ranh giới event.ts) (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 1 · # suites 0 · # pass 0 · # fail 1 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 12 · # suites 0 · # pass 12 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **85** A | — | 81 | 80 | 100 | 1 | 1 | 55k | 1/4 |
+| Backend Developer (@backend-dev) | dev | **100** A | — | 100 | 100 | 100 | 1 | 1 | 34k | 0/4 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 14k | — |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._
