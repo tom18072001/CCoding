@@ -15,6 +15,8 @@ import { AUDIT_CATS, auditOf, type AuditRow } from './audit.js';
 import { listArtifacts } from './artifacts.js';
 import { describeSchedule, RoutineError } from './routines.js';
 import { verifyChainStream } from './logger.js';
+import { ROOT } from './config.js';
+import { applyApproved, listProposals, recordDirector, rollback, type Deps as SiDeps } from './selfimprove.js';
 import { deniedReason } from './tools/workspace.js';
 import type { BudgetMode, Classification, LogEntry, Phase, ProjectDef, TaskMode, ToolAccess } from './types.js';
 import type { UsageDim } from './usage.js';
@@ -676,6 +678,43 @@ export function createServer(app: App): http.Server {
     }
 
     // ── UX-4d: Kiểm toán, Sản phẩm, Kỹ năng & Kết nối, Việc định kỳ ──────────────────────────────
+    // ── B-19: vòng tự cải thiện (khi selfImprove.enabled=false: 404, giao diện dựa vào đó để ẩn mục) ──
+    if (p.startsWith('/api/selfimprove/')) {
+      if (!config.selfImprove.enabled) throw new HttpError(404, 'Không tìm thấy');
+      const si: SiDeps = { cfg: config.selfImprove, logs, dataDir: config.dataDir, root: ROOT };
+      if (p === '/api/selfimprove/proposals' && req.method === 'GET') return send(res, 200, listProposals(si));
+      if ((mm = m(/^\/api\/selfimprove\/proposals\/([^/]+)\/(approve|reject|apply|rollback-confirm)$/)) && req.method === 'POST') {
+        const pid = decodeURIComponent(mm[1]);
+        const act = mm[2];
+        const known = listProposals(si).find((x) => x.id === pid);
+        if (!known) throw new HttpError(404, 'Không có đề xuất');
+        const b = act === 'reject' ? await readBody(req) : {};
+        try {
+          if (act === 'approve') {
+            if (known.status !== 'proposed') throw new HttpError(409, `Đề xuất đang ở trạng thái ${known.status}, không duyệt được`);
+            if (!known.screening.ok) throw new HttpError(409, 'Bản vá vi phạm danh sách cấm, không duyệt được');
+            return send(res, 200, { ok: true, event: recordDirector('approved', pid, si) });
+          }
+          if (act === 'reject') {
+            if (known.status !== 'proposed' && known.status !== 'approved') throw new HttpError(409, `Đề xuất đang ở trạng thái ${known.status}, không từ chối được`);
+            return send(res, 200, { ok: true, event: recordDirector('rejected', pid, si, String(b.reason ?? '')) });
+          }
+          if (act === 'apply') {
+            const r = applyApproved(pid, si);
+            return send(res, 200, { ok: true, event: { kind: 'selfimprove.applied', data: { pid, ...r, by: 'director' } } });
+          }
+          if (known.status !== 'applied' && known.status !== 'rollback.proposed') throw new HttpError(409, `Đề xuất đang ở trạng thái ${known.status}, không rollback được`);
+          const event = recordDirector('rollback.confirmed', pid, si);
+          const r = rollback(pid, si);
+          return send(res, 200, { ok: true, event, rollback: r });
+        } catch (e) {
+          if (e instanceof HttpError) throw e;
+          throw new HttpError(409, (e as Error).message);
+        }
+      }
+      throw new HttpError(404, 'Không tìm thấy');
+    }
+
     if (p === '/api/audit/verify') {
       // kiểm chuỗi băm của nhật ký hệ thống (đọc luồng toàn tệp — chỉ chạy khi bấm, không chặn server)
       const file = logs.fileFor('system');
