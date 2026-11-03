@@ -17,6 +17,9 @@ Theo `bench/vs-claude/RUNBOOK-cloud-session.md`, Nhánh 1 (`docs/research/run-pl
 | B7b | A0-sonnet, B7 (server nhánh 7425, chặn web) | `all` = 18 bài có `task.json` | r1–3, mới 39 lượt B7 | 2026-11-02T19:13:32Z | 2026-11-02T20:21:00Z | xong 39/39 |
 | B6b | A0-sonnet, B6 (server nhánh 7425, chặn web) | T5 | B6 r4–9 (30) | 2026-11-02T20:22:20Z | 2026-11-02T22:27:23Z | xong 30/30 |
 | neo-A0 | A0-sonnet (runner trỏ server nhánh 7425; arm A không dùng server) | T5 | r10–11 (10) | 2026-11-02T22:28:16Z | 2026-11-02T22:38:45Z | xong 10/10 |
+| W3a | A0-sonnet, B5 (server main 7424, chặn web) | R13 `--judge` | B5 r1–3 (39) | 2026-11-02T23:52:15Z | 2026-11-03T01:18:22Z | xong 39/39 (3 lượt hạ tầng đã chạy lại) |
+| W3b | A0-sonnet, B6 (server nhánh 7425, chặn web) | R13 `--judge` | B6 r1–3 (39) | 2026-11-03T00:35:25Z | 2026-11-03T02:11:29Z | 36/39; 3 khóa chờ bù |
+| neo-W3 | B0 (server main 7424), `--out study-cloud-anchor-W3` | l4-startup-order | r1–2 (2) | 2026-11-03T02:11:30Z | 2026-11-03T02:16:37Z | xong 2/2 |
 
 ## Bảng cửa sổ (`run-plan.md` §3.0)
 
@@ -99,3 +102,19 @@ Trình theo dõi lại bị dừng ở giới hạn 2 giờ lúc 22:22Z và đư
 ## Trạng thái sau RUNBOOK bước 3b
 
 Tổng 276 lượt trong `runs.jsonl`: A0-sonnet 101, B0 46, B6 45, B7 84; không lượt nào lỗi hạ tầng hay gặp hạn mức; chưa chạy `analyze.mjs`/`pairwise.mjs` và chưa xem điểm tổng hợp (RUNBOOK bước 4, `preregistration.md` §4).
+
+## W3 (`run-plan.md` §5.2: `--arms A0-sonnet,B5,FL --tasks $R13 --repeats 3 --judge`)
+
+Theo RUNBOOK bước 3b (hai server), lệnh tách đôi: `--arms A0-sonnet,B5` trên server main 7424 (W3a) và `--arms A0-sonnet,B6` trên server nhánh 7425 (W3b), chạy tuần tự. A0-sonnet đã đủ r1–3 trên R13 nên không có lượt A0 mới. Thứ tự xen kẽ vì vậy khác lệnh gộp ba arm của `run-plan.md` (lịch phụ thuộc thứ tự `--arms`). Hai lệnh dùng cùng `--out study-cloud`. Hash server không đổi: 7424 `e0bd2f4…`, 7425 `7fb18ba…`; `git status --short` sạch.
+
+**Container khởi động lại ba lần** (khoảng 23:49Z, 00:24Z, 01:13Z): mỗi lần hai server và `run.mjs` tắt; lượt đang chạy dở không có dòng kết quả và được chạy lại khi chạy tiếp đúng lệnh. Lần đầu (23:50Z) chuỗi khởi chạy trước khi bật lại server nên các lệnh thoát ngay, không ghi lượt nào; 4 commit tạm chỉ chứa `config` đã gỡ ở `838a5f1`.
+
+| Arm | Khóa `done` | Dòng `infra` | Token có trọng số | Wall-sum | Wall dài nhất | leak |
+|---|---|---|---|---|---|---|
+| B5 (W3a) | 39/39 | 3 | 2,82 M | 0,74 h | 310 s | 0 |
+| B6 (W3b) | 36/39 | 5 | 5,90 M | 1,46 h | 671 s | 0 |
+
+**Lỗi hạ tầng (8 dòng `infra`, 0 lượt gọi LLM).** Mỗi dòng hỏng sau 1–6 ms ngay khi tạo project. Đã ghi lỗi gốc bằng một module nạp qua `NODE_OPTIONS=--import` (chỉ bọc `fetch`, không sửa `run.mjs`): `POST /api/projects` → `UND_ERR_SOCKET other side closed`, tức runner gửi trên socket keep-alive mà server vừa đóng. Từ lệnh `anchor-W3` trở đi, module này gửi lại **một lần** khi gặp đúng lỗi đó, chỉ với GET và `POST /api/projects` (upsert theo id); `POST /api/tasks` không bao giờ gửi lại. Dòng `infra` giữ nguyên trong `runs.jsonl` làm bằng chứng; `analyze.mjs` và `prereg-tests.mjs` bỏ qua `status: infra`. Khóa hỏng được chạy lại với cùng `rN` (cơ chế của `run.mjs` từ `7fb18ba`); khác quy tắc "rep mới" của `run-plan.md` §5.0, nhưng lượt hỏng không có kết quả nào để chọn lọc.
+Khóa B6 còn thiếu (`re1-lit-synthesis` r2, `l2-knights` r3, `r1-elk-design` r3) sẽ bù bằng cách chạy lại đúng lệnh W3b sau chuỗi.
+
+**Neo B0 W3** (`results/study-cloud-anchor-W3`): 2/2 `done`; TB 154 945 token, 145 s; so với B0 × `l4` W1 (r1–3: 162 074 token, 143 s): token ×0,96, thời gian ×1,01. Không có dấu hiệu "cửa sổ trôi" (ngưỡng ±30 %).
