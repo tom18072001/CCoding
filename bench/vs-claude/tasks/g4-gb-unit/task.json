@@ -2,6 +2,8 @@
   "id": "g4-gb-unit",
   "category": "coding",
   "size": 4,
+  "sizeBasis": "files: src/format.js, parse.js, units.js, validate.js",
+  "sizeLegacy": 4,
   "sizeReason": "Bốn module nhỏ cùng phụ thuộc danh sách đơn vị",
   "title": "Thêm đơn vị GB vào bộ module kích thước tệp",
   "hypotheses": [

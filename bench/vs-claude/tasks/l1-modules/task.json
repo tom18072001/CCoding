@@ -2,6 +2,8 @@
   "id": "l1-modules",
   "category": "coding",
   "size": 5,
+  "sizeBasis": "files: src/{calendar,csvcheck,money,ratelimit,slug}/index.js",
+  "sizeLegacy": 5,
   "sizeReason": "Năm module độc lập trong SPEC.md: money, calendar, csvcheck, slug, ratelimit (mỗi module ở src/<tên>/index.js, không phụ thuộc nhau)",
   "title": "Năm module độc lập từ đặc tả dày quy tắc",
   "hypotheses": [

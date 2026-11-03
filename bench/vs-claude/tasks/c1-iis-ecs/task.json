@@ -1,7 +1,9 @@
 {
   "id": "c1-iis-ecs",
   "category": "coding",
-  "size": 2,
+  "size": 1,
+  "sizeBasis": "functions: parseIisLog",
+  "sizeLegacy": 2,
   "title": "IIS W3C log to ECS parser",
   "hypotheses": [
     "H1",

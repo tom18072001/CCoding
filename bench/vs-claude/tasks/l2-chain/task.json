@@ -1,7 +1,9 @@
 {
   "id": "l2-chain",
   "category": "coding",
-  "size": 4,
+  "size": 7,
+  "sizeBasis": "files: src/check.js, core.js, diff.js, evaluate.js, index.js, lexer.js, parser.js",
+  "sizeLegacy": 4,
   "sizeReason": "Bốn tầng phụ thuộc tuần tự trong SPEC.md: lexer/parser, check, evaluate, diff (tầng sau dùng AST và đầu ra của tầng trước), cộng hàm compile ở src/index.js",
   "title": "Thư viện cfgchain: bốn tầng nối tiếp từ đặc tả",
   "hypotheses": [

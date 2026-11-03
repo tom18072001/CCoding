@@ -11,7 +11,7 @@ analyze.mjs        hypotheses H1–H10, per-category scores, cost-quality fronti
 pairwise.mjs       blinded pairwise LLM judge (both orders) for design / requirements / research deliverables
 lib/queue.mjs      lượt đã xong, lane được hỗ trợ, kiểm arm trước khi chạy (hàm thuần, có test)
 lib/               claude.mjs (single-agent arm) · ccoding.mjs (REST arm) · grade.mjs · judge.mjs
-tasks/<id>/        task.json (brief, category, size, grader) · repo/ (starting workspace) · hidden/ (tests, answers, references — never copied)
+tasks/<id>/        task.json (brief, category, size/sizeBasis/sizeLegacy, grader) · repo/ (starting workspace) · hidden/ (tests, answers, references — never copied)
 ```
 
 ## Tasks (13 + t1–t5)
@@ -31,6 +31,50 @@ tasks/<id>/        task.json (brief, category, size, grader) · repo/ (starting 
 | a1-ambiguous-spec | requirements | 3 | 6-item checklist (regex or `--judge`) |
 | r1-elk-design | design | 4 | 8-item checklist (regex or `--judge`), license trap |
 | re1-lit-synthesis | research | 3 | answers, citation validity, correct refusal |
+
+
+### Định nghĩa `size` (SR-05)
+
+`size` = **số phần sản phẩm độc lập, kiểm được riêng** của bài, đếm theo đơn vị ghi ở `sizeBasis` (dạng `"<đơn vị>: <liệt kê>"`; số mục liệt kê phải bằng `size`):
+
+| Đơn vị | Dùng cho | Cách đếm | Kiểm bằng máy |
+| --- | --- | --- | --- |
+| `files` | bài code có lời giải tham chiếu nhiều tệp (hoặc một) | số tệp `src/`, `bin/` mà lời giải tham chiếu (`ref/` hoặc `hidden/solution/`) tạo mới hoặc sửa so với workspace khởi đầu; không đếm test, tài liệu, `package.json`, dữ liệu | có (`test/task-size.test.mjs`) |
+| `functions` | bài code một tệp | số hàm xuất / điểm vào brief bắt buộc | không |
+| `answers` | logic, nghiên cứu | số khóa của `answer.json` | có |
+| `sections` | tài liệu (requirements, design) | số phần brief liệt kê bắt buộc | không |
+| `deliverables` | review | số tệp sản phẩm | không |
+
+`sizeLegacy` giữ số cũ (1–5, chưa có định nghĩa) để tái lập kết quả đã công bố (D7); **không** dùng `sizeLegacy` cho phân tích mới. Giới hạn đã biết: đơn vị không đồng nhất giữa các loại bài, nên H10 phải điều chỉnh theo loại bài (SR-05 i); bài một tệp nhiều hành vi (c5) bị đếm 1.
+
+| Bài | size cũ | size mới | Đơn vị |
+| --- | --- | --- | --- |
+| a1-ambiguous-spec | 3 | 2 | sections |
+| c1-iis-ecs | 2 | 1 | functions |
+| c2-burst-alert | 2 | 1 | functions |
+| c3-shop-bugs | 3 | 3 | files |
+| c4-audit-chain | 4 | 4 | functions |
+| c5-tickets-api | 5 | 1 | functions |
+| g1-slug-dedupe | 2 | 1 | files |
+| g2-cart-coupon | 2 | 2 | files |
+| g3-qty-rename | 4 | 4 | files |
+| g4-gb-unit | 4 | 4 | files |
+| g5-median-stats | 2 | 1 | files |
+| g6-range-merge | 2 | 1 | files |
+| l1-modules | 5 | 5 | files |
+| l1-oncall | 1 | 3 | answers |
+| l2-chain | 4 | 7 | files |
+| l2-knights | 1 | 3 | answers |
+| l3-reconcile | 2 | 4 | answers |
+| l4-startup-order | 2 | 3 | answers |
+| r1-elk-design | 4 | 6 | sections |
+| re1-lit-synthesis | 3 | 4 | answers |
+| s1-sec-review | 3 | 1 | deliverables |
+| t1-duration | 2 | 1 | files |
+| t2-orders | 6 | 4 | files |
+| t3-api | 4 | 6 | files |
+| t4-perf | 1 | 1 | files |
+| t5-logq | 4 | 4 | files |
 
 ### Bộ bài cài lỗi g1–g6 (B-12)
 
