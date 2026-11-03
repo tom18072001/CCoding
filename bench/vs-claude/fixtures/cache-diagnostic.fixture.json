@@ -1,0 +1,13 @@
+{
+  "_note": "Dữ liệu GIẢ để test script cache-diagnostic.mjs — không phải kết quả đo.",
+  "model": "sonnet",
+  "calls": {
+    "warmup": { "input_tokens": 3, "cache_creation_input_tokens": 9000, "cache_read_input_tokens": 0, "output_tokens": 5 },
+    "a1": { "input_tokens": 3, "cache_creation_input_tokens": 12000, "cache_read_input_tokens": 0, "output_tokens": 5 },
+    "a2": { "input_tokens": 3, "cache_creation_input_tokens": 200, "cache_read_input_tokens": 11800, "output_tokens": 5 },
+    "b1": { "input_tokens": 3, "cache_creation_input_tokens": 12500, "cache_read_input_tokens": 0, "output_tokens": 5 },
+    "b2": { "input_tokens": 3, "cache_creation_input_tokens": 12400, "cache_read_input_tokens": 100, "output_tokens": 5 },
+    "c1": { "input_tokens": 3, "cache_creation_input_tokens": 12000, "cache_read_input_tokens": 0, "output_tokens": 5 },
+    "c2": { "input_tokens": 3, "cache_creation_input_tokens": 300, "cache_read_input_tokens": 11700, "output_tokens": 5 }
+  }
+}
