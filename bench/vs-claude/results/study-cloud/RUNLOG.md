@@ -27,6 +27,7 @@ Theo `bench/vs-claude/RUNBOOK-cloud-session.md`, Nhánh 1 (`docs/research/run-pl
 | W5b | A2 (best-of-3, claude), `--timeout 40` | R13 | r1–2 (26) | 2026-11-03T03:41:40Z | 2026-11-03T04:25:40Z | xong 26/26 |
 | W5c | B0 (server main 7424, chặn web) | T5 | r1 (5) | 2026-11-03T04:25:40Z | 2026-11-03T05:02:01Z | xong 5/5 |
 | neo-W5 | B0 (server main 7424), `--out study-cloud-anchor-W5` | l4-startup-order | r1–2 (2) | 2026-11-03T05:02:01Z | 2026-11-03T05:07:09Z | xong 2/2 |
+| W3b-bù | A0-sonnet, B6 (server nhánh 7425, chặn web), đúng lệnh W3b | R13 `--judge` | 3 khóa B6 còn thiếu | 2026-11-03T05:07:23Z | 2026-11-03T05:20:57Z | xong 3/3 |
 
 ## Bảng cửa sổ (`run-plan.md` §3.0)
 
@@ -155,3 +156,9 @@ B0 ở W5c không gọi WebFetch/WebSearch (`calls.jsonl`). Không gặp hạn m
 **Neo B0 W5** (`results/study-cloud-anchor-W5`): 2/2 `done`; TB 161 570 token, 150 s; so với B0 × `l4` W1: token ×1,00, thời gian ×1,05. Không trôi.
 
 Ba neo W3–W5 (token ×0,96 / ×0,99 / ×1,00; thời gian ×1,01 / ×1,01 / ×1,05) cho thấy độ trôi giữa cửa sổ nhỏ trên `l4` (k = 2, một bài: chỉ báo thô, không phải hiệu chỉnh).
+
+## Bù khóa và trạng thái sau W5
+
+**W3b-bù:** chạy lại đúng lệnh W3b; runner chỉ xếp 3 khóa B6 chưa `done` (`re1-lit-synthesis` r2, `l2-knights` r3, `r1-elk-design` r3): 3/3 `done`, 0 leak; 0,71 M token có trọng số, 771 s wall-sum. W3b nay đủ 39/39.
+
+`runs.jsonl`: 448 dòng = 440 khóa `done` (A0-sonnet 109, B0 59, B5 39, B6 84, B7 84, A1 39, A2 26) + 8 dòng `infra` (lỗi socket keep-alive ở W3, xem mục W3; giữ làm bằng chứng, bị `analyze.mjs`/`prereg-tests.mjs` bỏ qua). Không còn khóa nào thiếu; 0 leak; không gặp hạn mức ở bất kỳ cửa sổ nào W1–W5.
