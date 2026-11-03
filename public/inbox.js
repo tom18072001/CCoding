@@ -6,7 +6,7 @@
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   let C = null;
   const esc = (s) => C.esc(s);
-  const IB = { sel: null, showSnoozed: false, pending: null };
+  const IB = { sel: null, showSnoozed: false, pending: null, filter: 'all' };
   const UNDO_MS = 4000;
   const SNOOZE_MS = 4 * 3600e3;
   const snz = {
@@ -27,19 +27,25 @@
   /** Loại việc + hành động theo trạng thái. */
   function kindOf(t) {
     if (t.status === 'paused' && t.pause?.reason === 'plan') return 'plan';
+    if (t.status === 'paused' && t.pause?.reason === 'backlog') return null;
     if (t.status === 'paused') return 'paused';
     if (t.status === 'failed') return 'failed';
     if (t.status === 'done' && t.attention) return 'attention';
     return null;
   }
   const KIND = {
-    plan: { icon: '📝', label: 'Kế hoạch chờ duyệt', p: 'Duyệt kế hoạch', s: 'Sửa kế hoạch', order: 0, cancel: true },
-    paused: { icon: '⏸', label: 'Tạm dừng', p: 'Chạy tiếp tới khi xong', s: '+50% ngân sách & tiếp tục', order: 1, cancel: true },
+    plan: { icon: '📝', label: 'Kế hoạch chờ duyệt', tab: 'Kế hoạch', q: 'Duyệt', p: 'Duyệt kế hoạch', s: 'Sửa kế hoạch', order: 0, cancel: true },
+    paused: { icon: '⏸', label: 'Tạm dừng', tab: 'Tạm dừng', q: 'Chạy tiếp', p: 'Chạy tiếp tới khi xong', s: '+50% ngân sách & tiếp tục', order: 1, cancel: true },
     // lỗi / xong: nhiệm vụ đã dừng, server không cho hủy (409) → không có "Hủy"
-    failed: { icon: '❌', label: 'Lỗi', p: 'Chạy tiếp phần chưa xong', s: 'Mở trang nhiệm vụ', order: 2 },
-    attention: { icon: '⚠', label: 'Xong — cần xem', p: 'Duyệt kết quả', s: 'Yêu cầu sửa…', order: 3 },
+    failed: { icon: '❌', label: 'Lỗi', tab: 'Lỗi', q: 'Chạy tiếp', p: 'Chạy tiếp phần chưa xong', s: 'Mở trang nhiệm vụ', order: 2 },
+    attention: { icon: '⚠', label: 'Xong — cần xem', tab: 'Cần xem', q: 'Duyệt', p: 'Duyệt kết quả', s: 'Yêu cầu sửa…', order: 3 },
   };
-  function items() {
+  /** UI-6: danh sách theo tab đang chọn; all=true → mọi loại (để đếm số trên tab). */
+  function items(all) {
+    const list = allItems();
+    return all || IB.filter === 'all' ? list : list.filter((x) => x.k === IB.filter);
+  }
+  function allItems() {
     const now = Date.now();
     const s = snz.get();
     let dirty = false;
@@ -80,9 +86,16 @@
     const snoozedN = Object.keys(snz.get()).length;
     const cur = list.find((x) => x.t.id === IB.sel);
     const k = cur ? KIND[cur.k] : null;
+    const every = items(true);
+    const cnt = (kk) => every.filter((x) => x.k === kk).length;
+    const tabs = [['all', 'Tất cả', every.length], ...Object.entries(KIND).map(([kk, v]) => [kk, v.tab, cnt(kk)])]
+      .filter(([kk, , n]) => kk === 'all' || n || kk === IB.filter)
+      .map(([kk, label, n]) => `<button type="button" role="tab" aria-selected="${IB.filter === kk}" class="${IB.filter === kk ? 'on' : ''}" data-ib-tab="${kk}">${esc(label)}${n ? `<em>${n}</em>` : ''}</button>`)
+      .join('');
     el.innerHTML = `<div class="ib">
-      <div class="dv-head"><h1>📥 Cần bạn</h1><span class="ib-n">${list.length ? `${list.length} việc` : ''}</span><span class="grow"></span>
+      <div class="dv-head"><h1>Cần bạn</h1><span class="ib-n">${every.length ? `${every.length} việc` : ''}</span><span class="grow"></span>
         ${snoozedN ? `<label class="check c-chk"><input type="checkbox" data-ib-snz${IB.showSnoozed ? ' checked' : ''} /> hiện ${snoozedN} việc đã hoãn</label>` : ''}</div>
+      <div class="ib-tabs" role="tablist" aria-label="Lọc theo loại">${tabs}</div>
       <div class="ib-keys" aria-hidden="true"><span><kbd>J</kbd>/<kbd>K</kbd> chọn</span><span><kbd>Enter</kbd> mở hội thoại</span><span><kbd>O</kbd> trang nhiệm vụ</span>${k ? `<span><kbd>1</kbd> ${esc(k.p)}</span><span><kbd>2</kbd> ${esc(k.s)}</span>` : ''}<span><kbd>H</kbd> hoãn 4 giờ</span>${k?.cancel ? '<span><kbd>X</kbd> hủy</span>' : ''}<span><kbd>Z</kbd> hoàn tác</span></div>
       <div class="ib-undo" ${IB.pending ? '' : 'hidden'} role="status" aria-live="polite">${IB.pending ? `⏳ Sẽ <b>${esc(IB.pending.label)}</b> — “${esc(IB.pending.title)}” <button type="button" class="btn ghost sm" data-ib-undo>Hoàn tác (Z)</button>` : ''}</div>
       ${
@@ -90,12 +103,13 @@
           ? `<div class="ib-body"><ol class="ib-list" role="listbox" aria-label="Việc cần bạn">${list
               .map(
                 (x) => `<li role="option" tabindex="-1" data-ib="${esc(x.t.id)}" aria-selected="${x.t.id === IB.sel}" class="${x.t.id === IB.sel ? 'on' : ''}${x.snoozed ? ' snz' : ''}">
-                <span class="ib-ic" title="${esc(KIND[x.k].label)}">${KIND[x.k].icon}</span>
-                <div class="ib-m"><b>${esc(x.t.title)}</b><small>${esc(KIND[x.k].label)}${why(x) ? ` · ${esc(why(x).slice(0, 140))}` : ''}</small></div>
-                <time>${esc(ago(x.t.updatedAt || x.t.createdAt))}${x.snoozed ? ' · 💤' : ''}</time></li>`,
+                <span class="ib-dot k-${x.k}" title="${esc(KIND[x.k].label)}"></span>
+                <div class="ib-m"><b>${esc(x.t.title)}</b><small><span class="code">${esc(C.code(x.t))}</span> · ${esc(KIND[x.k].label)}${why(x) ? ` · ${esc(why(x).slice(0, 140))}` : ''}</small></div>
+                <span class="ib-qa-row"><button type="button" class="btn sm${x.k === 'failed' ? ' ghost' : ' primary'}" data-ib-q="${esc(x.t.id)}" title="${esc(KIND[x.k].p)} (1)">${esc(KIND[x.k].q)}</button></span>
+                <time>${esc(ago(x.t.updatedAt || x.t.createdAt))}${x.snoozed ? ' · đã hoãn' : ''}</time></li>`,
               )
               .join('')}</ol><section class="ib-pv" aria-label="Xem trước">${cur ? preview(cur) : ''}</section></div>`
-          : `<div class="empty ib-empty">✅ Không có việc nào chờ bạn quyết.${snoozedN ? ` (${snoozedN} việc đã hoãn)` : ''}</div>`
+          : `<div class="empty ib-empty">${IB.filter !== 'all' && every.length ? 'Không có việc nào trong mục này.' : 'Không có việc nào chờ bạn quyết.'}${snoozedN ? ` (${snoozedN} việc đã hoãn)` : ''}</div>`
       }</div>`;
     bind(el, cur);
   };
@@ -127,6 +141,23 @@
         }),
     );
     $('[data-ib-undo]', el)?.addEventListener('click', undo);
+    $$('[data-ib-tab]', el).forEach(
+      (b) =>
+        (b.onclick = () => {
+          IB.filter = b.dataset.ibTab;
+          IB.sel = null;
+          IB.render(true);
+        }),
+    );
+    // duyệt ngay tại dòng — vẫn qua hàng chờ 4 giây (Z hoàn tác) như phím 1
+    $$('[data-ib-q]', el).forEach(
+      (b) =>
+        (b.onclick = (e) => {
+          e.stopPropagation();
+          IB.sel = b.dataset.ibQ;
+          act('1');
+        }),
+    );
     if (!cur) return;
     const pv = $('.ib-pv', el);
     window.Flow?.bind(pv, () => IB.render(true));

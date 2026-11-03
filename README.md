@@ -120,7 +120,7 @@ Tùy chọn: `--rounds 0-3` (số vòng họp), `--parallel 1-8`, `--no-review`,
 | `openai-api` | API tương thích OpenAI bất kỳ (9router, LiteLLM, OpenRouter…) | chính xác nếu server trả `usage` | cục bộ nếu đặt `"local": true` |
 | `mock` | Demo, kiểm thử, dữ liệu "Hạn chế" khi chưa có model cục bộ | ước lượng | cục bộ |
 
-Mặc định `runtime: auto` chọn runtime đầu tiên **sẵn sàng và được phép** theo thứ tự `claude-cli → bifrost → anthropic-api → openai-api → codex-cli → kimi-cli → ollama → mock`. Có thể thêm runtime tương thích OpenAI bất kỳ bằng `"type": "openai-api"`; `herdr up` có thể tự chạy kèm Bifrost (`herdr.services`). Ghi đè trong `ccoding.local.json` (không commit) — xem [ccoding.local.example.json](ccoding.local.example.json) và [docs/RUNTIMES.md](docs/RUNTIMES.md).
+Mặc định `runtime: auto` chọn runtime đầu tiên **sẵn sàng và được phép** theo thứ tự `claude-cli → bifrost → anthropic-api → openai-api → codex-cli → kimi-cli → ollama → mock`. Có thể thêm runtime tương thích OpenAI bất kỳ bằng `"type": "openai-api"`; `herdr up` có thể tự chạy kèm Bifrost (`herdr.services`). Ghi đè trong `ccoding.local.json` (không commit) — xem [ccoding.local.example.json](ccoding.local.example.json) và [docs/RUNTIMES.md](docs/RUNTIMES.md). Agent tự viết hoặc dịch vụ agent của đội khác cắm vào bằng `"type": "process"` / `"type": "http"` — xem [docs/EXTERNAL-AGENTS.md](docs/EXTERNAL-AGENTS.md).
 
 ## Log & bộ đếm token
 
@@ -142,7 +142,9 @@ ccoding usage                       # tổng + theo phòng + theo agent + theo t
 ccoding usage --by model --dept dev
 ccoding usage --task <taskId> --json
 ccoding usage --watch               # bảng token tự làm mới
-ccoding kpi --days 7                # KPI từng sub-agent (chất lượng, hiệu quả, tin cậy, tuân thủ) + việc cần sửa
+ccoding kpi --days 7                # KPI v2 từng sub-agent (chất lượng, kết quả thật, trung thực, hiệu quả, tin cậy, tuân thủ) + việc cần sửa — docs/KPI.md
+ccoding kpi --by model              # tách theo agent × model (vd. cùng vị trí chạy Claude và Ollama)
+node bench/agent-probes/probe.mjs --models qwen3:8b   # probe thử thách từng agent.md trên Ollama
 ccoding logs -f --agent data-engineer
 ccoding logs verify                 # kiểm tra toàn vẹn chuỗi băm
 ```
