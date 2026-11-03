@@ -366,6 +366,76 @@
         "paper/paper.md"
       ],
       "exceptions": []
+    },
+    {
+      "id": "b7prime-rhat-token",
+      "value": "2,04",
+      "reason": "bench/vs-claude/results/b7prime/RUNLOG.md (Điểm dừng GĐ1); tính lại bằng bootstrapRatio, hạt 20261102, B = 4000, CI 90 %",
+      "pattern": "token có trọng số \\*\\*R̂ = (\\d,\\d\\d)\\*\\*",
+      "files": [
+        "improvement-backlog.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-ci-token",
+      "value": "1,45; 2,99",
+      "reason": "bench/vs-claude/results/b7prime/RUNLOG.md (Điểm dừng GĐ1); tính lại bằng bootstrapRatio, hạt 20261102, B = 4000, CI 90 %",
+      "pattern": "R̂ = 2,04\\*\\*, CI 90 % \\[(\\d,\\d\\d; \\d,\\d\\d)\\]",
+      "files": [
+        "improvement-backlog.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-rhat-time",
+      "value": "2,16",
+      "reason": "bench/vs-claude/results/b7prime/RUNLOG.md (Điểm dừng GĐ1); tính lại bằng bootstrapRatio, hạt 20261102, B = 4000, CI 90 %",
+      "pattern": "thời gian thực \\*\\*R̂ = (\\d,\\d\\d)\\*\\*",
+      "files": [
+        "improvement-backlog.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-ci-time",
+      "value": "1,53; 3,21",
+      "reason": "bench/vs-claude/results/b7prime/RUNLOG.md (Điểm dừng GĐ1); tính lại bằng bootstrapRatio, hạt 20261102, B = 4000, CI 90 %",
+      "pattern": "R̂ = 2,16\\*\\*, CI 90 % \\[(\\d,\\d\\d; \\d,\\d\\d)\\]",
+      "files": [
+        "improvement-backlog.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-n-per-cell",
+      "value": "2",
+      "reason": "b7prime/RUNLOG.md: 2 lượt mỗi ô × 5 bài",
+      "pattern": "n = (\\d) lượt mỗi ô × 5 bài \\(t1–t5\\)",
+      "files": [
+        "improvement-backlog.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-server",
+      "value": "1333eef",
+      "reason": "b7prime/RUNLOG.md dòng 5",
+      "pattern": "server `(\\w{7})`; Claude Code CLI",
+      "files": [
+        "improvement-backlog.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-cli",
+      "value": "2.1.317",
+      "reason": "b7prime/RUNLOG.md dòng 7",
+      "pattern": "Claude Code CLI (\\d\\.\\d\\.\\d+) \\(W1–W5",
+      "files": [
+        "improvement-backlog.md"
+      ],
+      "exceptions": []
     }
   ]
 }
