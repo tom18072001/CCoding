@@ -127,7 +127,7 @@ Quy ước "Mức đọc": **[ĐỌC TRANG]** = đã mở trang bằng `WebFetch
   - **Quy mô phân tích lý thuyết nền (grounded theory):** 150 vết, 6 chuyên gia (Mục 3.1, "Data Collection with Grounded Theory Analysis"; vị trí câu chứa số 150 và 6 theo bản tóm lược của công cụ, chưa đối chiếu từng câu).
   - **Đồng thuận người–người:** Cohen's κ trung bình = **0,88 "in the final rounds"**, giữa **3** người chú thích: Mục 3.2 ("Standardizing Failure Labels via Inter-Annotator Agreement"). Đây là κ ở các vòng cuối, không phải κ toàn quá trình.
   - **LLM-as-a-Judge** (Mục 3.3; **Bảng 2** "Performance of LLM-as-a-judge pipeline"; cột Accuracy, Recall, Precision, F1, Cohen's κ). Hàng *o1*: 0,89 · 0,62 · 0,68 · 0,64 · 0,58. Hàng *o1 (few shot)*: **0,94 · 0,77 · 0,833 · 0,80 · 0,77**. Số o1 few-shot **khớp** số trong đề bài. Bảng chỉ có hai hàng này trong phần đã đọc (không có hàng GPT-4o hay Claude, và hàng "o1" không nhãn zero-shot): không dùng lời "o1 zero-shot".
-  - **Can thiệp trên ChatDev:** **+9,4 %** (Mục 1 và Mục 4/FC1; Phụ lục H) và **+15,6 %** (Mục 4/FC3, benchmark ProgramDev; Mục 5.3 gọi là mức cải thiện tối đa; Phụ lục H.2, Bảng 5 theo chỉ dẫn của trang, `[CHƯA KIỂM CHỨNG]`). **Lệch cần ghi:** Mục 1 gán +9,4 % cho việc đổi quy trình (CEO quyết định cuối), còn Mục 4 gán cho cải thiện đặc tả vai trò; hai mục không đồng nhất về nguyên nhân. Điều kiện nền: cùng prompt người dùng, cùng LLM (GPT-4o) theo Mục 4 (đọc qua bản tóm lược công cụ). Hai mức này là cải thiện thực nghiệm của một can thiệp trên một hệ, không phải hiệu ứng chung của MAS.
+  - **Can thiệp trên ChatDev:** **+9,4 %** (Mục 1 và Mục 4/FC1; Phụ lục H) và **+15,6 %** (Mục 4/FC3, benchmark ProgramDev; Mục 5.3 gọi là mức cải thiện tối đa; Phụ lục H.2, Bảng 5 theo chỉ dẫn của trang, `[CHƯA KIỂM CHỨNG]`). **Lệch cần ghi:** Mục 1 gán +9,4 % cho việc đổi quy trình (CEO quyết định cuối), còn Mục 4 gán cho cải thiện đặc tả vai trò; hai mục không đồng nhất về nguyên nhân. **Giải (3/11/2026, §2.21):** Bảng 5 (Phụ lục H.2, ChatDev ProgramDev-v0) cho 25,0 → 34,4 khi cải thiện prompt (+9,4 điểm %) và → 40,6 khi đổi topology (+15,6 điểm %), nên +9,4 thuộc đặc tả vai trò/prompt. Điều kiện nền: cùng prompt người dùng, cùng LLM (GPT-4o) theo Mục 4 (đọc qua bản tóm lược công cụ). Hai mức này là cải thiện thực nghiệm của một can thiệp trên một hệ, không phải hiệu ứng chung của MAS.
   - Kết luận: lỗi chủ yếu do thiết kế và lệch phối hợp, không chỉ do năng lực mô hình (abstract, Mục 4–5).
 - **Phiên bản:** v1 17/3/2025, v2 22/4/2025, v3 26/10/2025 (F5). Số khung, vết, κ khác nhau giữa các bản: một bản tóm lược tìm kiếm ghi "κ = 0,77" ở slide NeurIPS, trùng với κ **LLM–người** của Bảng 2 chứ không mâu thuẫn κ người–người 0,88. Chỉ dẫn số theo **v3**.
 - **Mẫu cho CCoding:** MAST kiểm bộ chú thích LLM bằng đúng 5 chỉ số (Accuracy, Recall, Precision, F1, κ) so với nhãn người (Bảng 2); κ người–người 0,88 là mức tham chiếu. CCoding dùng cách đo này cho bộ chấm và cổng chất lượng (`analysis/agreement.mjs`).
@@ -156,6 +156,72 @@ Quy ước "Mức đọc": **[ĐỌC TRANG]** = đã mở trang bằng `WebFetch
 - **Loại:** blog / ý kiến kỹ sư. **Mức đọc:** [ĐỌC TRANG] (qua `WebFetch`, tóm lược bằng công cụ).
 - **Đóng góp:** hai nguyên tắc — (1) chia sẻ ngữ cảnh đầy đủ (cả vết agent, không chỉ tin nhắn); (2) "hành động mang quyết định ngầm, và các quyết định xung đột cho kết quả xấu" (*"Actions carry implicit decisions, and conflicting decisions carry bad results."*). Ví dụ Flappy Bird: hai sub-agent làm hai phần không khớp phong cách. Khuyến nghị: agent tuyến tính một luồng + mô hình nén ngữ cảnh; sub-agent kiểu Claude Code chủ yếu trả lời câu hỏi rõ ràng, không viết mã song song.
 - **Mâu thuẫn với 2.14:** Cognition chống song song ghi; Anthropic ủng hộ song song cho truy vấn rộng nhưng thừa nhận mã ít song song. **CCoding nằm giữa:** worktree con song song cho hạng mục độc lập + tự gộp/giải xung đột + review độc lập — đây chính là phép thử thực nghiệm của lập luận "quyết định xung đột". *Ghi chú:* kết quả tìm kiếm thứ cấp cho biết tác giả có bài tiếp theo (2026-04-22) nới quan điểm — **chưa mở, `[CHƯA KIỂM CHỨNG]`, chuyển S5.**
+
+### 2.16 Debate or Vote (bổ sung 3/11/2026, kiểm tài liệu "4 hướng tăng tốc")
+- **APA 7:** Choi, H. K., Zhu, X., & Li, S. (2025). *Debate or vote: Which yields better decisions in multi-agent large language models?* (arXiv:2508.17536). https://arxiv.org/abs/2508.17536 — v1 24/8/2025, v2 23/10/2025; trang arXiv ghi "NeurIPS 2025 Spotlight" (từ trang tóm tắt arXiv, chưa đối chiếu trang NeurIPS).
+- **Loại:** preprint, trang arXiv ghi đã nhận NeurIPS 2025. **Mức đọc:** [ĐỌC TRANG arXiv abs + HTML, công cụ tóm lược; HTML đọc 100.000/121.486 ký tự đầu].
+- **Đã kiểm:** câu trích "Majority Voting alone accounts for most of the performance gains typically attributed to MAD" nằm ở **Abstract** (đúng nguyên văn). Qwen2.5-7B-Instruct, cột "Average", **Bảng 1** ("Majority Voting vs. Multi-Agent Debate"): Decentralized MAD T=2 là 0,7377 (làm tròn 0,738), T=5 là 0,7050 (0,705), Majority Voting 0,7691 (0,769). Ba số trong tài liệu **khớp**. Abstract còn ghi: tranh luận tạo martingale trên quỹ đạo niềm tin, "debate alone does not improve expected correctness".
+- **Giới hạn:** bảy benchmark NLP (suy luận, kiến thức), không phải sửa mã; kết luận về *tranh luận*, không phải về họp lập kế hoạch có vai trò khác nhau. Dùng làm căn cứ hướng cho B1 (`discussionRounds: 0`), không là bằng chứng cho CCoding. Tài liệu giám đốc trỏ `…/2508.17536v1`; nên trỏ bản không đuôi (v2 hiện hành).
+
+### 2.17 RouteLLM
+- **APA 7:** Ong, I., Almahairi, A., Wu, V., Chiang, W.-L., Wu, T., Gonzalez, J. E., Kadous, M. W., & Stoica, I. (2024). *RouteLLM: Learning to route LLMs with preference data* (arXiv:2406.18665v4). https://arxiv.org/abs/2406.18665 — v1 26/6/2024, v4 23/2/2025; trang không ghi hội nghị hay tạp chí.
+- **Loại:** preprint. **Mức đọc:** [CHỈ ĐỌC TÓM TẮT arXiv].
+- **Đã kiểm (Abstract):** bộ định tuyến chọn giữa model mạnh và yếu lúc suy luận, huấn luyện bằng dữ liệu ưa thích của người; nguyên văn: "significantly reduces costs-by over 2 times in certain cases-without compromising the quality of responses".
+- **Không nhất quán với tài liệu giám đốc:** tài liệu đặt trong ngoặc kép "reduce costs by over 2 times without sacrificing response quality" — **không phải nguyên văn** và bỏ cụm "in certain cases" (giảm ">2×" chỉ ở một số trường hợp). Cần sửa thành trích đúng hoặc diễn giải không ngoặc.
+- **Giới hạn:** bộ định tuyến học trên chat/câu hỏi, chọn theo **từng truy vấn**; CCoding chọn model **theo pha** bằng quy tắc, không học. Chỉ so hướng. Chưa đọc thân bài nên số ngưỡng chi phí theo benchmark `[CHƯA KIỂM CHỨNG]`.
+
+### 2.18 LLMCompiler
+- **APA 7:** Kim, S., Moon, S., Tabrizi, R., Lee, N., Mahoney, M. W., Keutzer, K., & Gholami, A. (2024). *An LLM compiler for parallel function calling* (arXiv:2312.04511v3). https://arxiv.org/abs/2312.04511 — v1 7/12/2023, v3 5/6/2024; trang ghi "ICML 2024".
+- **Loại:** preprint, trang ghi ICML 2024 (chưa đối chiếu proceedings). **Mức đọc:** [CHỈ ĐỌC TÓM TẮT arXiv].
+- **Đã kiểm (Abstract):** ba thành phần (planner, đơn vị dispatch tác vụ, executor chạy song song); "consistent latency speedup of up to 3.7x", "cost savings of up to 6.7x", tăng độ chính xác tới khoảng 9 % so với ReAct. Số 3,7× **khớp**; baseline của 3,7× (ReAct) tôi **chưa đọc ở thân bài** `[CHƯA KIỂM CHỨNG]` (abstract chỉ gắn ReAct với phần độ chính xác trong bản tóm lược đã nhận).
+- **Suy luận trong tài liệu giám đốc, không có trong nguồn:** "đây đúng là mô hình của LLMCompiler" cho `dependsOn` + worktree. LLMCompiler song song các **lệnh gọi hàm** trong một truy vấn; CCoding song song **hạng mục sửa mã** có thể xung đột khi gộp (xem 2.14, 2.15). Chỉ giống ở đồ thị phụ thuộc.
+
+### 2.19 Anthropic — prompt caching và bảng giá (tài liệu nhà cung cấp, truy cập 3/11/2026)
+- **URL (thấy trong kết quả công cụ):** https://platform.claude.com/docs/en/build-with-claude/prompt-caching (mục "How prompt caching works", "Pricing", "Supported models") và https://platform.claude.com/docs/en/about-claude/pricing (mục "Model pricing"). Loại: tài liệu nhà cung cấp, có thể đổi bất kỳ lúc nào. **Mức đọc:** [ĐỌC TRANG, công cụ tóm lược; trang caching đọc 100.000/165.895 ký tự đầu].
+- **Thứ tự tiền tố:** "Cache prefixes are created in the following order: `tools`, `system`, then `messages`." Tối đa 4 điểm cache ("up to 4 cache breakpoints"). Khớp tài liệu giám đốc.
+- **Ngưỡng token tối thiểu (mục "Supported models", ghi riêng từng model):** 512 cho Claude Opus 5.5, Sonnet 5.5, Haiku 5.5 (cùng Fable 5.1, Mythos 5.1, Opus 5, Fable 5, Mythos 5). Model khác **không phải 512**: 1.024 (Sonnet 5, Sonnet 4.6/4.5/4, Opus 4.8/4.1/4), 2.048 (Opus 4.7, Mythos Preview, Haiku 3.5), 4.096 (Opus 4.6/4.5, Haiku 4.5). Con số 512 trong tài liệu giám đốc **đúng cho ba model 5.5**, nhưng không được suy ra cho model khác; runtime claude-cli có thể chạy model khác thì phải tra riêng.
+- **Hệ số giá (mục "Pricing"):** ghi cache 5 phút = 1,25× giá đầu vào; 1 giờ = 2×; đọc = 0,1× nói chung, **0,05× cho Opus 5.5 và Sonnet 5.5** (0,025× cho Fable 5.1 và Mythos 5.1). Tỉ lệ ghi/đọc = 1,25/0,05 = 25: khớp "một token ghi bằng 25 token đọc" của tài liệu giám đốc (cho hai model đó).
+- **Giá USD/MTok (mục "Pricing" của trang caching; trang pricing mở được, bảng đầu trang khớp cấu trúc nhưng dòng 5.5 tôi chưa trích riêng được — xem ghi chú dưới bảng):**
+
+| Model | Input | Ghi 5 phút | Ghi 1 giờ | Đọc cache | Output |
+|---|---|---|---|---|---|
+| Claude Sonnet 5.5 | 2 | 2,50 | 4 | 0,10 | 10 |
+| Claude Opus 5.5 | 4 | 5 | 8 | 0,20 | 20 |
+
+- **Chưa kiểm:** (i) TTL mặc định 5 phút và "làm mới miễn phí khi trúng" (tiêu đề "TTL support" thấy, câu cụ thể chưa trích); (ii) giá Haiku 5.5 (không cần cho gói này); (iii) trang pricing không được trích riêng dòng Sonnet/Opus 5.5 do công cụ trả bảng quá lớn → giá khớp qua một nguồn (trang caching), `verified` chỉ ở mức một trang.
+
+### 2.20 Cognition — thống nhất URL
+- URL chuẩn dùng trong dự án: **https://cognition.com/blog/dont-build-multi-agents**. Kiểm 3/11/2026 bằng `WebFetch`: `https://cognition.ai/blog/dont-build-multi-agents` trả **301 Moved Permanently** sang URL `cognition.com` (Location do máy chủ trả). Trang `cognition.com` ghi tiêu đề "Don't Build Multi-Agents | Cognition", tác giả Walden Yan, ngày 2025.06.12 (khớp 2.15). Tài liệu giám đốc đã dùng đúng URL này. Không cần sửa. Nội dung trang đọc qua tóm lược của công cụ: câu "Actions carry implicit decisions…" ở 2.15 trích lại từ vòng trước, không trích lại ở vòng này.
+
+### 2.21 Bảng kiểm câu trích trong tài liệu "4 hướng tăng tốc" (`context/acceleration-4-directions-2026-11-03.md`)
+
+| # | Câu trong tài liệu (dòng) | Nguồn, mục/bảng | Kết quả |
+|---|---|---|---|
+| 1 | Debate or Vote: "Majority Voting alone accounts for most of the performance gains typically attributed to MAD" (65–66) | arXiv 2508.17536, Abstract | **Đúng** (nguyên văn) |
+| 2 | Qwen2.5-7B: 0,738 (2 vòng), 0,705 (5 vòng), bỏ phiếu 0,769 (67–69) | Bảng 1, cột Average (0,7377 / 0,7050 / 0,7691) | **Đúng** |
+| 3 | RouteLLM: "reduce costs by over 2 times without sacrificing response quality" (218–219) | arXiv 2406.18665, Abstract | **Sai nguyên văn**: nguồn là "significantly reduces costs-by over 2 times in certain cases-without compromising the quality of responses"; thiếu "in certain cases" |
+| 4 | LLMCompiler: "latency speedup of up to 3.7x" so với ReAct (122–123) | arXiv 2312.04511, Abstract | **Đúng** số và nguyên văn; "so với ReAct" `[CHƯA KIỂM CHỨNG]` ở thân bài |
+| 5 | "Đây đúng là mô hình của LLMCompiler" (129) | — | Suy luận của tài liệu; **không nhất quán** về loại song song (xem 2.18) |
+| 6 | MAST: "trong hơn 1.600 vết của 7 hệ" (71–72) | Bảng 1, Mục 3 (1.642 vết, 7 hệ; abstract "1600+") | **Đúng** |
+| 7 | MAST: "khoảng 23 % lỗi nằm ở khâu kiểm chứng" (71–72, 222) | Mục 4, đoạn FC3: FM-3.1 6,20 % + FM-3.2 8,20 % + FM-3.3 9,10 % | **Đúng nhưng suy ra**: bài **không nêu** tổng nhóm FC3; cộng ba kiểu = 23,5 %. Tỉ lệ này là phần trăm vết có kiểu lỗi đó (có thể chồng nhau), nên tổng cộng chỉ gần đúng, không là tỉ lệ lỗi riêng biệt (suy luận, chưa kiểm cách chia mẫu số) |
+| 8 | MAST: "thêm người có quyền chốt cuối giúp ChatDev tăng 9,4 % tỉ lệ thành công" (72–74) | Mục 1 (Introduction), Mục 4 đoạn FC1, **Bảng 5** (Phụ lục H.2) | **Sai theo Bảng 5; nguồn không nhất quán nội bộ.** Mục 1: "ensuring the CEO had the final say contributed to a +9.4% increase". Mục 4/FC1: "improving agent role specifications alone yields a +9.4% success rate increase … (GPT-4o)". Bảng 5, ChatDev ProgramDev-v0: baseline 25,0; prompt cải thiện 34,4 (**+9,4 điểm %**); topology mới 40,6 (+15,6 điểm %). Vậy +9,4 gắn với **prompt/đặc tả vai trò**; +15,6 gắn với **topology/bước kiểm chứng** (Mục 4/FC3, Mục 5.3). Phụ lục H.2: "we ensured that only superior agents can finalize conversations" thuộc nhóm thay topology, không thuộc mức +9,4 |
+| 9 | Cognition: URL `cognition.com/blog/dont-build-multi-agents` (119, 326) | Thử `cognition.ai/…` → 301 | **Đúng** |
+| 10 | Cache: thứ tự tools → system → messages (159) | Prompt caching, "How prompt caching works" | **Đúng** |
+| 11 | Cache: tối thiểu 512 token cho Opus 5.5, Sonnet 5.5, Haiku 5.5 (163–164) | Prompt caching, "Supported models" | **Đúng cho ba model 5.5**; model khác 1.024–4.096 |
+| 12 | Ghi 5 phút 1,25×, ghi 1 giờ 2×, đọc 0,05× (Opus/Sonnet 5.5), ghi bằng 25 lần đọc (167–169) | Prompt caching, "Pricing" | **Đúng** |
+| 13 | Cache sống 5 phút, làm mới miễn phí; tối đa 4 điểm cache (171–172) | "TTL support"; "up to 4 cache breakpoints" | 4 điểm: **đúng**; 5 phút/làm mới: `[CHƯA KIỂM CHỨNG]` (chưa trích câu) |
+
+- **Hệ quả cho §2.12:** dòng "Lệch cần ghi" ở trên được giải bằng Bảng 5: dùng "+9,4 điểm % khi cải thiện prompt/đặc tả vai trò" và "+15,6 điểm % khi đổi topology (có bước kiểm chứng/quyền chốt)"; không viết "người chốt cuối +9,4 %". Đơn vị là **điểm phần trăm** trên ProgramDev-v0 (25,0 → 34,4 → 40,6), mẫu nhỏ, một hệ. Phụ lục H tôi đọc qua tóm lược công cụ (phần ký tự 100.000–160.349), `[CHƯA KIỂM CHỨNG]` từng ô ngoài các số đã nêu.
+
+### 2.22 Giá và ngưỡng đã kiểm (bàn giao cho S3, đối chiếu `PRICES` của S1 và `MIN_CACHE_TOKENS` của S2)
+
+| Model | Input | Ghi 5 phút | Đọc | Output | Min token cache | URL | Ngày |
+|---|---|---|---|---|---|---|---|
+| Sonnet 5.5 | 2 | 2,50 | 0,10 (0,05×) | 10 | 512 | https://platform.claude.com/docs/en/build-with-claude/prompt-caching | 3/11/2026 |
+| Opus 5.5 | 4 | 5 | 0,20 (0,05×) | 20 | 512 | như trên | 3/11/2026 |
+| Haiku 5.5 | — | — | — | — | 512 | như trên (chỉ ngưỡng) | 3/11/2026 |
+
+Đơn vị USD/MTok. Trang https://platform.claude.com/docs/en/about-claude/pricing (mục "Model pricing") cũng mở được 3/11/2026 nhưng dòng Sonnet/Opus 5.5 chưa được trích riêng → giá chỉ xác nhận một trang. Ghi 1 giờ: Sonnet 4, Opus 8.
 
 ## 3. Bảng so sánh theo tiêu chí
 
