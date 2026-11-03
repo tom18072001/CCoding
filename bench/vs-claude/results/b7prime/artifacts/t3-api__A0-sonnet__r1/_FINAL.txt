@@ -1,0 +1,12 @@
+Cả 4 tính năng đã xong và `npm test` xanh (9 test). Tôi chưa chạy `npm start` để gọi thử bằng HTTP ngoài test. Tôi đã nâng `package.json` lên 0.4.0.
+
+- **Xác thực và phân quyền:** làm đúng theo đặc tả. Thứ tự kiểm tra là 401 → 400 truy vấn → 404 → 403 → 400 body, nên member sửa nhiệm vụ không phải của mình, hoặc sửa trường khác `status`, sẽ nhận 403 trước khi bị validate body.
+- **Danh sách:** `GET /tasks` trả `{items, total, page, pageSize}` với đủ bộ lọc, tìm không dấu, sắp xếp và phân trang. Tham số lạ hoặc lặp trả 400 `INVALID_QUERY`.
+- **CSV:** `GET /tasks/export.csv` dùng chung bộ lọc và quyền với danh sách, nhưng `page`/`pageSize` bị 400. Định dạng gồm BOM, `\r\n`, RFC 4180 và chống chèn công thức.
+- **Nhật ký:** mỗi thao tác ghi thành công thêm một mục (`seq`, `at`, `userId`, `action`, `taskId`, `changes`). `GET /audit` chỉ admin dùng được, trả mới nhất trước và lọc được theo `taskId`.
+
+Code nằm ở `src/query.js` và `src/csv.js` (mới), cùng `src/handlers/tasks.js` và `src/store.js` (đã sửa). Tôi đã chuyển các test có sẵn sang kết quả mới và thêm test cho 401, quyền member và manager, lọc/sắp xếp/phân trang, truy vấn sai, CSV và nhật ký. `test/helpers.js` giờ trả thêm `bytes`, vì `fetch().text()` cắt mất BOM.
+
+Có hai chỗ đặc tả chưa nói rõ, tôi chọn như sau:
+- **Tham số lặp và lỗi khác cùng URL:** lỗi báo theo thứ tự lần xuất hiện đầu tiên của từng tham số. Ví dụ `page=1&sort=bad&page=2` báo `page`, vì `page` xuất hiện trước `sort`.
+- **Sắp theo `title`:** dùng `localeCompare` locale `vi` như đặc tả. Theo cách so này, "-Ghi chú nội bộ" đứng trước "=SUM…", và test khớp với thứ tự đó.
