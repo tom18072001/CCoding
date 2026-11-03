@@ -1432,6 +1432,31 @@
         .join('')}</div>`;
   }
 
+  // [B-13] tỉ lệ trúng cache = cacheRead / (cacheRead + cacheWrite + input); mẫu số 0 thì ẩn ô
+  const pct1 = (h) => (h === null || h === undefined ? '' : `${(h * 100).toFixed(1).replace('.', ',')}%`);
+  async function loadCache() {
+    try {
+      S.cache = await api('/api/cache?limit=20');
+    } catch {
+      S.cache = null;
+    }
+    if (S.tab === 'tokens') renderCacheCard();
+  }
+  function renderCacheCard() {
+    const el = $('#cache-hit');
+    const c = S.cache;
+    if (!el || !c) return;
+    const rows = (obj) => Object.entries(obj || {}).filter(([, b]) => b.hit !== null).map(([k, b]) => `<tr><td>${esc(k)}</td><td>${fmt(b.calls)}</td><td>${fmt(b.cacheRead)}</td><td>${fmt(b.cacheWrite)}</td><td>${fmt(b.input)}</td><td><b>${pct1(b.hit)}</b></td></tr>`).join('');
+    const head = (l) => `<thead><tr><th>${l}</th><th>Lượt</th><th>Cache đọc</th><th>Cache ghi</th><th>Input</th><th>Trúng cache</th></tr></thead>`;
+    if (c.hit === null) return void (el.innerHTML = '');
+    const calls = (c.rows || []).filter((r) => r.hit !== null).map((r) => `<tr><td>${esc(r.phase)}</td><td>${esc(r.runtime)}</td><td>${esc(r.model)}</td><td>${fmt(r.cacheRead)}</td><td>${fmt(r.cacheWrite)}</td><td>${fmt(r.input)}</td><td><b>${pct1(r.hit)}</b></td></tr>`).join('');
+    el.innerHTML = `<div class="card"><h2>Tỉ lệ trúng cache <small style="color:var(--muted)">· ${pct1(c.hit)} toàn bộ</small></h2>
+      <p style="font-size:12px;color:var(--muted)">Trúng cache = cache đọc / (cache đọc + cache ghi + input), tính theo token prompt của từng lượt gọi. Lượt không có token prompt thì ẩn.</p>
+      <table class="tbl">${head('Pha')}<tbody>${rows(c.byPhase)}</tbody></table>
+      <table class="tbl" style="margin-top:8px">${head('Runtime')}<tbody>${rows(c.byRuntime)}</tbody></table>
+      ${calls ? `<table class="tbl" style="margin-top:8px"><thead><tr><th>Pha</th><th>Runtime</th><th>Model</th><th>Cache đọc</th><th>Cache ghi</th><th>Input</th><th>Trúng cache</th></tr></thead><tbody>${calls}</tbody></table>` : ''}</div>`;
+  }
+
   function renderTokens() {
     const u = S.usage;
     const t = u.total || {};
@@ -1450,8 +1475,11 @@
       <div class="card"><h2>Theo agent</h2>${usageTable(u.byAgent, 'Agent', (k) => `<span class="who">${av(k)}${esc(agentName(k))}</span>`, 'data-ag')}</div>
       <div class="card"><h2>Theo nhiệm vụ</h2>${usageTable(u.byTask.slice(0, 20), 'Nhiệm vụ', (k) => esc(S.tasks.get(k)?.title?.slice(0, 34) || k), 'data-tk')}</div>
       <div class="card"><h2>Theo model</h2>${usageTable(u.byModel, 'Model')}</div>
+      <div id="cache-hit"></div>
       ${days.length ? `<div class="card"><h2>Theo ngày</h2><div class="spark">${days.map((d) => `<div title="${esc(d.key)}: ${fmt(d.total)}" style="height:${((d.total || 0) / maxDay) * 100}%"></div>`).join('')}</div><div class="spark-lbl"><span>${esc(days[0].key)}</span><span>${esc(days[days.length - 1].key)}</span></div></div>` : ''}
       <p style="font-size:12px;color:var(--muted)">Số liệu lấy từ sổ cái <code>data/usage/ledger.jsonl</code>. Lượt "ước lượng" là khi runtime không báo usage (ví dụ một số CLI) — token được ước tính theo độ dài văn bản. Xem trong terminal: <code>ccoding usage --watch</code>.</p>`;
+    renderCacheCard();
+    if (S.cache === undefined) loadCache();
     $$('#tokens [data-ag]').forEach((r) => r.addEventListener('click', () => openAgent(r.dataset.ag)));
     $$('#tokens [data-tk]').forEach((r) => r.addEventListener('click', () => openTask(r.dataset.tk)));
   }
@@ -1486,10 +1514,10 @@
         ${(r.departments || []).map((d) => `<div class="stat"><span>${esc(deptName(d.id))} · ${d.agents} agent</span><b>${d.score}<small style="font-size:12px;color:var(--muted)"> /100 · ${fmt(d.tokens)} token</small></b></div>`).join('')}
       </div>
       <div class="card"><h2>Bảng KPI</h2>
-        <table class="tbl kpi"><thead><tr><th>Agent</th><th>Điểm</th><th title="Lượng bằng chứng của điểm (ít bằng chứng thì điểm co về 60)">Độ tin</th><th title="Qua review lần đầu, ít blocker; người review: kết luận đúng so với kết quả thật">Chất lượng</th><th title="Lệnh kiểm tra của dự án trước/sau + tiêu chí CTO nghiệm thu">Kết quả thật</th><th title="Khẳng định đã chạy test/typecheck phải có lệnh kiểm chứng thật">Trung thực</th><th title="Token và thời gian mỗi hạng mục so với đồng nghiệp, số lần làm lại">Hiệu quả</th><th title="Lượt gọi hỏng, công cụ lỗi, chạm trần">Tin cậy</th><th title="Đủ mục trong Mẫu đầu ra + bằng chứng">Tuân thủ</th><th>Hạng mục</th><th>Lần chạy TB</th><th>Token</th><th>Công cụ lỗi</th><th title="Prompt đầy nhất so với cửa sổ ngữ cảnh của runtime (Ollama: num_ctx)">Ngữ cảnh</th></tr></thead><tbody>
+        <table class="tbl kpi"><thead><tr><th>Agent</th><th>Điểm</th><th title="Lượng bằng chứng của điểm (ít bằng chứng thì điểm co về 60)">Độ tin</th><th title="Qua review lần đầu, ít blocker; người review: kết luận đúng so với kết quả thật">Chất lượng</th><th title="Lệnh kiểm tra của dự án trước/sau + tiêu chí CTO nghiệm thu">Kết quả thật</th><th title="Khẳng định đã chạy test/typecheck phải có lệnh kiểm chứng thật">Trung thực</th><th title="Token và thời gian mỗi hạng mục so với đồng nghiệp, số lần làm lại">Hiệu quả</th><th title="Lượt gọi hỏng, công cụ lỗi, chạm trần">Tin cậy</th><th title="Đủ mục trong Mẫu đầu ra + bằng chứng">Tuân thủ</th><th>Hạng mục</th><th>Lần chạy TB</th><th>Token</th><th title="cache đọc / (cache đọc + cache ghi + input)">Trúng cache</th><th>Công cụ lỗi</th><th title="Prompt đầy nhất so với cửa sổ ngữ cảnh của runtime (Ollama: num_ctx)">Ngữ cảnh</th></tr></thead><tbody>
         ${agents
           .map(
-            (k) => `<tr class="click" data-ag="${esc(k.agentId)}"><td><span class="who">${av(k.agentId)}${esc(agentName(k.agentId))}</span></td><td><b class="grade ${gcls(k.grade)}">${k.score} ${k.grade}</b></td><td>${{ low: 'thấp', medium: 'vừa', high: 'cao' }[k.confidence] ?? '—'}</td><td>${cell(k.scores.quality)}</td><td>${cell(k.scores.outcome)}</td><td>${cell(k.scores.honesty)}</td><td>${cell(k.scores.efficiency)}</td><td>${cell(k.scores.reliability)}</td><td>${cell(k.scores.compliance)}</td><td>${k.subtasks}</td><td>${k.attemptsAvg || '—'}</td><td>${fmt(k.tokens.total)}</td><td>${k.tools.calls ? `${k.tools.failed}/${k.tools.calls}` : '—'}</td><td>${k.context?.known ? `<span class="${k.context.overLimit ? 'bad' : k.context.maxFillPct >= 85 ? 'warn' : ''}">${k.context.maxFillPct}%</span>` : '—'}</td></tr>`,
+            (k) => `<tr class="click" data-ag="${esc(k.agentId)}"><td><span class="who">${av(k.agentId)}${esc(agentName(k.agentId))}</span></td><td><b class="grade ${gcls(k.grade)}">${k.score} ${k.grade}</b></td><td>${{ low: 'thấp', medium: 'vừa', high: 'cao' }[k.confidence] ?? '—'}</td><td>${cell(k.scores.quality)}</td><td>${cell(k.scores.outcome)}</td><td>${cell(k.scores.honesty)}</td><td>${cell(k.scores.efficiency)}</td><td>${cell(k.scores.reliability)}</td><td>${cell(k.scores.compliance)}</td><td>${k.subtasks}</td><td>${k.attemptsAvg || '—'}</td><td>${fmt(k.tokens.total)}</td><td>${k.cache && k.cache.hit !== null ? pct1(k.cache.hit) : '—'}</td><td>${k.tools.calls ? `${k.tools.failed}/${k.tools.calls}` : '—'}</td><td>${k.context?.known ? `<span class="${k.context.overLimit ? 'bad' : k.context.maxFillPct >= 85 ? 'warn' : ''}">${k.context.maxFillPct}%</span>` : '—'}</td></tr>`,
           )
           .join('')}
         </tbody></table></div>

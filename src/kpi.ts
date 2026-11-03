@@ -48,6 +48,50 @@ export interface CallRow {
   toolsTracked?: boolean;
 }
 
+/**
+ * [B-13] Tỉ lệ trúng cache của prompt: cacheRead / (cacheRead + cacheWrite + input). Mẫu số 0 (không có token prompt) → null,
+ * giao diện ẩn ô. Chỉ dùng số token, không đụng nội dung prompt.
+ */
+export function cacheHit(u: { input?: number; cacheRead?: number; cacheWrite?: number }): number | null {
+  const read = u.cacheRead ?? 0;
+  const den = read + (u.cacheWrite ?? 0) + (u.input ?? 0);
+  return den > 0 ? read / den : null;
+}
+
+export interface CacheBucket { calls: number; input: number; cacheRead: number; cacheWrite: number; hit: number | null }
+export interface CacheStats extends CacheBucket { byPhase: Record<string, CacheBucket>; byRuntime: Record<string, CacheBucket> }
+export interface CacheCallRow { callId: string; taskId: string; phase: string; runtime: string; model: string; input: number; cacheRead: number; cacheWrite: number; hit: number | null }
+
+const newBucket = (): CacheBucket => ({ calls: 0, input: 0, cacheRead: 0, cacheWrite: 0, hit: null });
+const addBucket = (b: CacheBucket, r: Pick<CallRow, 'input' | 'cacheRead' | 'cacheWrite'>) => {
+  b.calls++;
+  b.input += r.input ?? 0;
+  b.cacheRead += r.cacheRead ?? 0;
+  b.cacheWrite += r.cacheWrite ?? 0;
+};
+const finishBucket = (b: CacheBucket) => void (b.hit = cacheHit(b));
+export const newCacheStats = (): CacheStats => ({ ...newBucket(), byPhase: {}, byRuntime: {} });
+export function addCacheCall(c: CacheStats, r: Pick<CallRow, 'input' | 'cacheRead' | 'cacheWrite' | 'phase' | 'runtime'>): void {
+  addBucket(c, r);
+  addBucket((c.byPhase[r.phase] ??= newBucket()), r);
+  addBucket((c.byRuntime[r.runtime] ??= newBucket()), r);
+}
+export function finishCacheStats(c: CacheStats): CacheStats {
+  finishBucket(c);
+  for (const b of [...Object.values(c.byPhase), ...Object.values(c.byRuntime)]) finishBucket(b);
+  return c;
+}
+/** Gộp các lượt gọi: tổng, theo pha, theo runtime và từng lượt (cũ nhất trước; chỉ token + tên model). */
+export function cacheReport(calls: CallRow[]): CacheStats & { calls_: CacheCallRow[] } {
+  const c = newCacheStats();
+  const rows: CacheCallRow[] = [];
+  for (const r of calls) {
+    addCacheCall(c, r);
+    rows.push({ callId: r.callId, taskId: r.taskId, phase: r.phase, runtime: r.runtime, model: r.model, input: r.input ?? 0, cacheRead: r.cacheRead ?? 0, cacheWrite: r.cacheWrite ?? 0, hit: cacheHit(r) });
+  }
+  return Object.assign(finishCacheStats(c), { calls_: rows });
+}
+
 export interface KpiSource {
   tasks: Task[];
   calls(taskId: string): CallRow[];
@@ -86,6 +130,8 @@ export interface AgentKpi {
   attemptsMax: number;
   /** perSubtask: token của các lượt gắn với hạng mục (thực thi/sửa) chia cho số hạng mục — không tính lượt review/họp/lập kế hoạch. */
   tokens: { input: number; cache: number; output: number; total: number; subtaskWork: number; perSubtask: number };
+  /** (B-13) Tỉ lệ trúng cache theo agent, pha, runtime. */
+  cache?: CacheStats;
   durationSec: number;
   outTokPerSec?: number;
   /** shellReads: lệnh shell chỉ để đọc/tìm/liệt kê tệp (cat, grep, sed -n, ls…) — không tính test/build/git. */
@@ -166,6 +212,8 @@ export const FINDING_LABELS: Record<string, string> = {
 export interface KpiReport {
   generatedAt: string;
   tasks: Array<{ id: string; title: string; status: string; tokens: number }>;
+  /** (B-13) Tỉ lệ trúng cache toàn báo cáo. */
+  cache?: CacheStats;
   agents: AgentKpi[];
   departments: Array<{ id: string; agents: number; tokens: number; score: number; calls: number }>;
   method: string;
@@ -341,6 +389,7 @@ const emptyKpi = (key: string, id: string, def: AgentDef | undefined, dept: stri
   attemptsAvg: 0,
   attemptsMax: 0,
   tokens: { input: 0, cache: 0, output: 0, total: 0, subtaskWork: 0, perSubtask: 0 },
+  cache: newCacheStats(),
   durationSec: 0,
   tools: { calls: 0, failed: 0, byName: {}, capHits: 0, avgTurns: 0, maxTurns: 0, shellReads: 0 },
   truncated: 0,
@@ -429,6 +478,7 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
     return a;
   };
 
+  const allCache = newCacheStats();
   const taskRows: KpiReport['tasks'] = [];
   /** Ngân sách và token thực tế theo phòng (để chấm trưởng phòng: kế hoạch có vừa ngân sách không). */
   const deptBudget = new Map<string, { budget: number; used: number }>();
@@ -475,6 +525,8 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
       k.tokens.input += r.input ?? 0;
       k.tokens.cache += r.cacheRead ?? 0;
       k.tokens.output += r.output ?? 0;
+      addCacheCall(k.cache!, r);
+      addCacheCall(allCache, r);
       const work = !!r.subtaskId && (r.phase === 'execute' || r.phase === 'revise');
       if (work) {
         k.tokens.subtaskWork += (r.input ?? 0) + (r.cacheRead ?? 0) + (r.output ?? 0);
@@ -729,6 +781,7 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
   for (const a of list) {
     const k = a.k;
     k.tasks = a.taskIds.size;
+    finishCacheStats(k.cache!);
     k.tokens.total = k.tokens.input + k.tokens.cache + k.tokens.output;
     k.tokens.perSubtask = k.subtasks ? Math.round(k.tokens.subtaskWork / k.subtasks) : 0;
     k.attemptsAvg = a.attempts.length ? Math.round((a.attempts.reduce((s, x) => s + x, 0) / a.attempts.length) * 10) / 10 : 0;
@@ -839,6 +892,7 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
   return {
     generatedAt: new Date().toISOString(),
     tasks: taskRows,
+    cache: finishCacheStats(allCache),
     agents: list.map((a) => a.k),
     departments,
     method:
