@@ -485,7 +485,7 @@
     if (tab === 'tokens') renderTokens();
     if (tab === 'kpi') loadKpi();
     if (tab === 'logs') loadLogs();
-    if (tab === 'quota') window.Director?.renderQuota();
+    if (tab === 'quota') window.Director?.renderQuota(), window.Budgets?.render();
     if (tab === 'inbox') window.Inbox?.render(true);
     if (window.Pages?.tabs.includes(tab)) window.Pages.render(tab);
     window.Router?.sync();
@@ -950,7 +950,9 @@
     const props = `<aside class="td-props" aria-label="Thuộc tính nhiệm vụ">
         <h3>Công việc</h3><dl>
           ${prop('Trạng thái', `<span class="st-badge"><span class="status ${t.status}">${TASK_VI[t.status] || t.status}</span>${t.attention ? `<span class="status attention" title="${esc(t.attention.detail)}">cần xem</span>` : ''}</span>`)}
+          ${prop('Giai đoạn', window.Drive?.stage ? `<span class="stage-pill st-${window.Drive.stage(t)}"><i></i>${esc(window.Drive.STAGE_VI[window.Drive.stage(t)])}</span>` : '')}
           ${prop('Mã', `<span class="tcode" title="${esc(t.id)}">${esc(code(t))}</span>`)}
+          ${prop('Ưu tiên', `<select class="pe-sel" data-pe="priority" aria-label="Ưu tiên">${PRIO.map(([k, l]) => `<option value="${k}"${(t.priority || '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}
           ${prop('Chế độ', esc(MODE_VI[t.mode] || t.mode))}
           ${prop('Phòng', esc((t.departments || []).map((d) => deptShort(d)).join(' → ')))}
           ${prop('Giao riêng', t.agentId ? `<span class="who">${av(t.agentId, 'av xs')}${esc(agentName(t.agentId))}</span>` : '')}
@@ -960,7 +962,7 @@
         <h3>Thực thi</h3><dl>
           ${prop('Runtime', esc(t.options?.runtime || S.defaults.runtime || 'mặc định'))}
           ${prop('Token', `${fmt(t.usage.input)} vào · ${fmt(t.usage.output)} ra`)}
-          ${prop('Ngân sách', budget ? `${pct}% của ${fmt(budget)}` : '')}
+          ${prop('Ngân sách', `<button type="button" class="pe-btn" data-pe="budget" title="Sửa ngân sách token">${budget ? `${pct}% của ${fmt(budget)}` : 'Chưa đặt'}</button>`)}
           ${prop('Review', t.options?.review === false ? 'tắt' : 'bật')}
           ${prop('CTO', t.acceptance ? (t.acceptance.accepted ? 'nghiệm thu đạt' : t.acceptance.parsed ? 'chưa đạt' : 'không đọc được') : t.options?.acceptance === false ? 'tắt' : '')}
           ${prop('Nhánh', t.branch ? `<code>${esc(t.branch)}</code>` : '')}
@@ -981,7 +983,7 @@
       </aside>`;
     el.innerHTML = `<div class="td-top"><button class="btn ghost sm back" id="td-back">← Nhiệm vụ</button><span class="grow"></span>
         ${canPause ? '<button class="btn sm" id="td-pause">Tạm dừng</button>' : ''}${canCancel ? '<button class="btn sm danger" id="td-cancel">Hủy</button>' : ''}<button class="btn sm" id="td-again" title="Mở form giao việc với yêu cầu, chế độ và phòng/dự án/agent như nhiệm vụ này">Giao lại tương tự</button></div>
-      <div class="td-head"><h2><span class="si-wrap">${window.Drive?.statusIcon ? window.Drive.statusIcon(t.status) : ''}</span>${esc(t.title)}</h2></div>
+      <div class="td-head"><h2><span class="si-wrap">${window.Drive?.statusIcon ? window.Drive.statusIcon(t.status) : ''}</span><span class="td-title" data-pe="title" title="Bấm để sửa tiêu đề" tabindex="0">${esc(t.title)}</span></h2></div>
       <div class="td-grid"><div class="td-main">
         ${meter}${git}${atts}${window.Flow?.summaryHtml(t) || ''}${window.Flow?.acceptHtml(t) || ''}${window.UX?.checksHtml(t) || ''}${window.Flow?.shipHtml(t) || ''}
         ${t.routing ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">Định tuyến: ${esc(t.routing.reason)}</p>` : ''}
@@ -1002,6 +1004,7 @@
       </div>
       <div id="td-body"></div></div>${props}</div>`;
     el.querySelectorAll('[data-proj]').forEach((a) => a.addEventListener('click', () => window.Drive?.openProject?.(a.dataset.proj)));
+    bindPropEdits(el, t);
     const act = async (path, body, okMsg) => {
       try {
         const r = await api(path, { method: 'POST', body: JSON.stringify(body || {}) });
@@ -1221,11 +1224,12 @@
       ['lead', 'Trưởng phòng', all.filter((a) => a.role === 'lead').length],
       ['reviewer', 'Reviewer', all.filter((a) => a.role === 'reviewer').length],
     ];
+    loadAgentKpi();
     const row = (a) => {
       const st = a.state?.status || 'idle';
       const u = S.usage.byAgent.find((x) => x.key === a.id);
       return `<div class="ag-item" data-agent="${esc(a.id)}">${av(a.id, 'av')}<div class="nm"><b>${esc(a.name)}${a.role === 'lead' ? ' <small title="Trưởng phòng">★</small>' : ''}</b><small>@${esc(a.id)} · ${esc(a.title)}</small></div>
-        <span class="stt ${esc(st)}"><i></i>${st !== 'idle' && st !== 'error' ? '<span class="pill-live">Đang chạy</span>' : esc(STATUS_VI[st] || st)}</span><span class="mdl">${esc(a.model || '')}</span><span class="kp">${fmt(total(u))} token</span></div>`;
+        <span class="stt ${esc(st)}"><i></i>${st !== 'idle' && st !== 'error' ? '<span class="pill-live">Đang chạy</span>' : esc(STATUS_VI[st] || st)}</span><span class="mdl">${esc(a.model || '')}</span>${kpiBadge(a.id)}<span class="kp">${fmt(total(u))} token</span></div>`;
     };
     const body = groups
       .map((g) => {
@@ -1240,6 +1244,76 @@
       <div class="ag-list">${body || '<div class="empty-row" style="padding:16px">Không có agent nào khớp bộ lọc.</div>'}</div>`;
     el.querySelectorAll('[data-pf]').forEach((b) => b.addEventListener('click', () => ((S.peopleFilter = b.dataset.pf), renderPeople())));
     el.querySelectorAll('[data-agent]').forEach((b) => b.addEventListener('click', () => openAgent(b.dataset.agent)));
+  }
+
+  // UI-7: điểm KPI v2 (7 ngày) cạnh tên agent — tải một lần mỗi phút, không chặn vẽ danh sách
+  const agentKpi = { at: 0, by: new Map() };
+  async function loadAgentKpi() {
+    if (Date.now() - agentKpi.at < 60000) return;
+    agentKpi.at = Date.now();
+    try {
+      const r = await api('/api/kpi?days=7');
+      agentKpi.by = new Map((r.agents || []).filter((k) => k.calls || k.subtasks).map((k) => [k.agentId || k.key, k]));
+      if (S.tab === 'people' && !S.selectedAgent) renderPeople();
+    } catch {}
+  }
+  const CONF_VI = { low: 'thấp', medium: 'vừa', high: 'cao' };
+  function kpiBadge(id) {
+    const k = agentKpi.by.get(id);
+    if (!k) return '<span class="kpi-b none" title="Chưa có dữ liệu KPI trong 7 ngày">—</span>';
+    return `<span class="kpi-b g-${esc(k.grade)}${k.confidence === 'low' ? ' low' : ''}" title="KPI v2, 7 ngày: ${k.score}/100 · độ tin ${CONF_VI[k.confidence] || k.confidence} · ${k.tasks} nhiệm vụ">${k.score} <b>${esc(k.grade)}</b></span>`;
+  }
+
+  // UI-7: bảng Thuộc tính sửa được tại chỗ — tiêu đề, ưu tiên, ngân sách token
+  const PRIO = [['', 'Không'], ['urgent', 'Khẩn'], ['high', 'Cao'], ['medium', 'Vừa'], ['low', 'Thấp']];
+  async function saveProps(t, path, body) {
+    try {
+      const r = await api(`/api/tasks/${encodeURIComponent(t.id)}/${path}`, { method: 'POST', body: JSON.stringify(body) });
+      if (r?.id) S.tasks.set(r.id, { ...S.tasks.get(r.id), ...r });
+      toast({ level: 'info', title: 'Đã lưu', msg: r?.title || t.title });
+    } catch (e) {
+      toast({ level: 'error', title: 'Không lưu được', msg: e.message });
+    }
+    renderTaskDetail(true);
+    window.Drive?.changed?.();
+  }
+  /** Ô nhập tạm thay cho phần tử; Enter lưu, Esc bỏ. */
+  function inlineInput(host, value, type, onSave) {
+    const inp = document.createElement('input');
+    inp.className = 'pe-input';
+    inp.type = type;
+    inp.value = value;
+    if (type === 'number') (inp.min = '0'), (inp.step = '1000');
+    host.replaceWith(inp);
+    inp.focus();
+    inp.select();
+    let done = false;
+    const finish = (save) => {
+      if (done) return;
+      done = true;
+      if (save && inp.value.trim() !== String(value)) onSave(inp.value.trim());
+      else renderTaskDetail(true);
+    };
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') (e.preventDefault(), finish(true));
+      if (e.key === 'Escape') (e.preventDefault(), finish(false));
+    });
+    inp.addEventListener('blur', () => finish(true));
+  }
+  function bindPropEdits(el, t) {
+    const title = el.querySelector('[data-pe="title"]');
+    const editTitle = () => inlineInput(title, t.title, 'text', (v) => saveProps(t, 'props', { title: v }));
+    title?.addEventListener('click', editTitle);
+    title?.addEventListener('keydown', (e) => e.key === 'Enter' && (e.preventDefault(), editTitle()));
+    el.querySelector('[data-pe="priority"]')?.addEventListener('change', (e) => saveProps(t, 'props', { priority: e.target.value }));
+    const bud = el.querySelector('[data-pe="budget"]');
+    bud?.addEventListener('click', () =>
+      inlineInput(bud, t.options?.budgetTokens || 0, 'number', (v) => {
+        const n = Number(v);
+        if (!Number.isFinite(n) || n < 0) return toast({ level: 'error', title: 'Ngân sách không hợp lệ', msg: 'Nhập số token ≥ 0' }), renderTaskDetail(true);
+        saveProps(t, 'budget', { budgetTokens: Math.round(n) });
+      }),
+    );
   }
 
   async function openAgent(id) {

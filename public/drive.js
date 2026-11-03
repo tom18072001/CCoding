@@ -81,6 +81,32 @@
     const ph = C.PHASES.find(([k]) => k === t.phase) || (t.phase === 'finalize' ? ['', 'Thảo luận'] : t.phase === 'revise' ? ['', 'Sửa theo review'] : t.phase === 'route' ? ['', 'Định tuyến'] : t.phase === 'accept' ? ['', 'CTO nghiệm thu'] : null);
     return ph ? ph[1] : t.status === 'queued' ? 'Chờ chạy' : 'Đang chạy';
   }
+  // UI-7: vòng đời hiển thị kiểu Paperclip (backlog → todo → đang làm → review → xong/bị chặn), suy ra từ trạng thái thật — không đổi dữ liệu lưu
+  const STAGES = [
+    ['backlog', 'Chờ việc khác'],
+    ['todo', 'Chờ chạy'],
+    ['in_progress', 'Đang làm'],
+    ['in_review', 'Đang review'],
+    ['blocked', 'Bị chặn'],
+    ['done', 'Xong'],
+    ['cancelled', 'Đã hủy'],
+  ];
+  function stage(t) {
+    if (t.status === 'queued') return (t.after || []).some((id) => !['done', 'cancelled'].includes(C.S.tasks.get(id)?.status)) ? 'backlog' : 'todo';
+    if (t.status === 'running') return ['review', 'revise', 'accept'].includes(t.phase) ? 'in_review' : 'in_progress';
+    if (t.status === 'paused') return t.pause?.reason === 'plan' ? 'in_review' : 'blocked';
+    if (t.status === 'failed') return 'blocked';
+    if (t.status === 'done') return t.attention ? 'in_review' : 'done';
+    return t.status === 'cancelled' ? 'cancelled' : 'todo';
+  }
+  D.stage = stage;
+  D.STAGE_VI = Object.fromEntries(STAGES);
+  function boardHtml(list) {
+    const cols = STAGES.map(([k, l]) => [k, l, list.filter((t) => stage(t) === k)]).filter(([k, , xs]) => xs.length || !['backlog', 'cancelled'].includes(k));
+    return `<div class="board">${cols
+      .map(([k, l, xs]) => `<section class="bcol st-${k}"><h4><i></i>${esc(l)}<em>${xs.length}</em></h4><div class="bcards">${xs.map(cardHtml).join('') || '<div class="bempty">—</div>'}</div></section>`)
+      .join('')}</div>`;
+  }
   const who = (t) => (t.mode === 'agent' && t.agentId ? `📌 ${C.agentName(t.agentId)}` : C.MODE_VI[t.mode] || t.mode);
   const projName = (id) => (id ? C.S.projects.find((p) => p.id === id)?.name || id : 'Ngoài dự án');
   const assignees = (t) => [...new Set((t.runs || []).flatMap((r) => r.subtasks.map((s) => s.assignee)))].slice(0, 5);
@@ -305,7 +331,8 @@
   // UI-6: điểm mạnh của CCoding hiện ngay trên dòng — CTO nghiệm thu (có bằng chứng) và nhãn dữ liệu Bảo mật/Hạn chế
   const SHIELD = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6Z"/><path d="m9 12 2 2 4-4"/></svg>';
   function proof(t) {
-    let out = '';
+    const PRIO_VI = { urgent: 'Khẩn', high: 'Cao', medium: 'Vừa', low: 'Thấp' };
+    let out = t.priority ? `<span class="prio ${esc(t.priority)}" title="Ưu tiên">${PRIO_VI[t.priority] || esc(t.priority)}</span>` : '';
     const a = t.acceptance;
     if (a && !a.error && a.parsed && (a.criteria || []).length) {
       const n = a.criteria.length;
@@ -408,6 +435,7 @@
   function taskTable(list, opts = {}) {
     if (!list.length) return `<div class="empty">${opts.empty || 'Không có nhiệm vụ nào khớp.'}</div>`;
     if (V.view === 'grid') return `<div class="tcards">${list.map(cardHtml).join('')}</div>`;
+    if (V.view === 'board') return boardHtml(list);
     if (V.view === 'tree') return treeHtml(list, opts);
     return `<div class="dtable${opts.noProject ? ' noproj' : ''}" role="table"><div class="dhead" role="row"><span></span><span>Tên</span>${opts.noProject ? '' : '<span>Dự án</span>'}<span>Tiến độ</span><span>Người làm</span><span>Token</span><span>Cập nhật</span><span></span></div>${list.map((t) => rowHtml(t, opts)).join('')}</div>`;
   }
@@ -418,7 +446,7 @@
       ${V.query ? `<button class="chip-q" data-clearq>🔎 “${esc(V.query)}” ✕</button>` : ''}
       <select data-mode title="Chế độ"><option value="">Mọi chế độ</option>${Object.entries(C.MODE_VI).map(([k, v]) => `<option value="${k}" ${V.mode === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>
       <select data-sort title="Sắp xếp">${SORTS.map(([k, v]) => `<option value="${k}" ${V.sort === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
-      <div class="seg" role="group" aria-label="Kiểu xem"><button data-v="tree" class="${V.view === 'tree' ? 'on' : ''}" title="Cây: nhiệm vụ → hạng mục, việc nối, việc tách" aria-label="Xem dạng cây"><svg class="ic sm" viewBox="0 0 24 24"><path d="M6 3v12"/><path d="M6 9h6a3 3 0 0 1 3 3v0"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="12" r="3"/></svg></button><button data-v="list" class="${V.view === 'list' ? 'on' : ''}" title="Bảng" aria-label="Xem dạng bảng"><svg class="ic sm" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button><button data-v="grid" class="${V.view === 'grid' ? 'on' : ''}" title="Lưới" aria-label="Xem dạng lưới"><svg class="ic sm" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button></div>
+      <div class="seg" role="group" aria-label="Kiểu xem"><button data-v="tree" class="${V.view === 'tree' ? 'on' : ''}" title="Cây: nhiệm vụ → hạng mục, việc nối, việc tách" aria-label="Xem dạng cây"><svg class="ic sm" viewBox="0 0 24 24"><path d="M6 3v12"/><path d="M6 9h6a3 3 0 0 1 3 3v0"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="12" r="3"/></svg></button><button data-v="list" class="${V.view === 'list' ? 'on' : ''}" title="Bảng" aria-label="Xem dạng bảng"><svg class="ic sm" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button><button data-v="board" class="${V.view === 'board' ? 'on' : ''}" title="Bảng Kanban theo giai đoạn" aria-label="Xem dạng Kanban"><svg class="ic sm" viewBox="0 0 24 24"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="10" rx="1"/><rect x="17" y="4" width="4" height="13" rx="1"/></svg></button><button data-v="grid" class="${V.view === 'grid' ? 'on' : ''}" title="Lưới" aria-label="Xem dạng lưới"><svg class="ic sm" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button></div>
       ${opts.newBtn ? `<button class="btn primary sm" data-newtask>＋ Nhiệm vụ</button>` : ''}</div>`;
   }
   function bindToolbar(el, rerender) {
