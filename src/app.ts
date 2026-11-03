@@ -1,3 +1,4 @@
+import { BudgetPolicies } from './budgets.js';
 import { loadConfig, type Config } from './config.js';
 import { EventBus } from './events.js';
 import { Herdr } from './herdr.js';
@@ -21,6 +22,8 @@ export interface App {
   herdr: Herdr;
   uploads: Uploads;
   orchestrator: Orchestrator;
+  /** Ngân sách theo dự án / agent (UI-7). */
+  budgets: BudgetPolicies;
   /** Việc định kỳ (UX-4d) — bộ lập lịch chỉ bật trong `ccoding serve`. */
   routines: Routines;
 }
@@ -48,8 +51,9 @@ export function createApp(overrides: Partial<Config> = {}, opts: { root?: string
   } catch {
     /* thư mục tạm lỗi: bỏ qua */
   }
-  const orchestrator = new Orchestrator({ config, registry, runtimes, logs, usage, store, bus, herdr, uploads });
+  const budgets = new BudgetPolicies(config.dataDir, usage);
+  const orchestrator = new Orchestrator({ config, registry, runtimes, logs, usage, store, bus, herdr, uploads, budgets });
   for (const e of registry.errors) logs.write({ level: 'warn', kind: 'registry', msg: e });
   const routines = new Routines(config.dataDir, { store, registry, logs, orchestrator });
-  return { config, bus, logs, usage, registry, runtimes, store, herdr, uploads, orchestrator, routines };
+  return { config, bus, logs, usage, registry, runtimes, store, herdr, uploads, orchestrator, budgets, routines };
 }

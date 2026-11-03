@@ -46,7 +46,7 @@
   const PHASE_INDEX = { route: -1, plan: 0, discuss: 1, finalize: 1, execute: 2, review: 3, revise: 3, synthesize: 4 };
   const STATUS_VI = { idle: 'rảnh', thinking: 'suy nghĩ', working: 'đang làm', discussing: 'đang họp', reviewing: 'review', waiting: 'chờ', error: 'lỗi' };
   const TASK_VI = { queued: 'chờ', running: 'đang chạy', paused: 'tạm dừng', done: 'xong', failed: 'lỗi', cancelled: 'đã hủy', pending: 'chờ', skipped: 'bỏ qua' };
-  const PAUSE_VI = { budget: 'chạm trần ngân sách', quota: 'hết tài nguyên token', interrupted: 'server khởi động lại', manual: 'tạm dừng thủ công', plan: 'chờ duyệt kế hoạch' };
+  const PAUSE_VI = { budget: 'chạm trần ngân sách', quota: 'hết tài nguyên token', interrupted: 'server khởi động lại', manual: 'tạm dừng thủ công', plan: 'chờ duyệt kế hoạch', backlog: 'nằm trong backlog' };
   const ACCESS_VI = { none: 'không công cụ', read: 'chỉ đọc', write: 'đọc/ghi file', exec: 'đọc/ghi + chạy lệnh' };
   const size = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n >= 1024 ? Math.round(n / 1024) + ' KB' : n + ' B');
   const MODE_VI = { auto: 'Tự động', department: 'Theo phòng', project: 'Theo dự án', joint: 'Liên phòng', agent: 'Giao riêng' };
@@ -485,7 +485,7 @@
     if (tab === 'tokens') renderTokens();
     if (tab === 'kpi') loadKpi();
     if (tab === 'logs') loadLogs();
-    if (tab === 'quota') window.Director?.renderQuota();
+    if (tab === 'quota') window.Director?.renderQuota(), window.Budgets?.render();
     if (tab === 'inbox') window.Inbox?.render(true);
     if (window.Pages?.tabs.includes(tab)) window.Pages.render(tab);
     window.Router?.sync();
@@ -944,24 +944,54 @@
       ? `<div class="t-atts">📎 ${t.attachments.map((a) => `<a data-file="${esc(a.textPath || a.path)}" title="${esc(a.note || '')}">${esc(a.name)} <small>(${esc(a.kind)}, ${fmt(a.chars)} ký tự)</small></a>`).join(' · ')}</div>`
       : '';
     const git = t.branch ? `<div class="t-git">🌿 nhánh <code>${esc(t.branch)}</code> · worktree <code>${esc(t.workspace)}</code>${t.commit ? ` · ${esc(t.commit)}` : ''}</div>` : t.workspace ? `<div class="t-git">📁 <code>${esc(t.workspace)}</code></div>` : '';
-    el.innerHTML = `<button class="btn ghost sm back" id="td-back">← Danh sách</button>
-      <div class="td-head"><h2>${esc(t.title)}</h2>
-        <div class="t-meta"><span class="status ${t.status}">${TASK_VI[t.status] || t.status}</span>${t.attention ? `<span class="status attention" title="${esc(t.attention.detail)}">⚠ cần xem</span>` : ''}<span class="tcode" title="${esc(t.id)}">${esc(code(t))}</span><span>${esc(MODE_VI[t.mode] || t.mode)}</span>
-        <span class="cls ${esc(t.classification)}">${esc(CLS_VI[t.classification] || t.classification)}</span>
-        ${t.projectId ? `<span>dự án: ${esc(t.projectId)}</span>` : ''}<span>token <b style="font-family:var(--mono);color:var(--text)">${fmt(t.usage.input)} in / ${fmt(t.usage.output)} out</b></span>
-        ${t.agentId ? `<span>giao riêng: ${esc(agentName(t.agentId))}</span>` : ''}
-        ${canPause ? '<button class="btn ghost sm" id="td-pause">⏸ Tạm dừng</button>' : ''}${canCancel ? '<button class="btn ghost sm danger" id="td-cancel">Hủy</button>' : ''}<button class="btn ghost sm" id="td-again" title="Mở form giao việc với yêu cầu, chế độ và phòng/dự án/agent như nhiệm vụ này">↻ Giao lại tương tự</button></div>
+    // UI-5: bố cục kiểu Paperclip — tiêu đề + thao tác ở đầu; cột giữa là nội dung làm việc; bảng Thuộc tính bên phải
+    const when = (iso) => (iso ? dateTime(iso) : '—');
+    const prop = (k, v) => (v ? `<dt>${k}</dt><dd>${v}</dd>` : '');
+    const props = `<aside class="td-props" aria-label="Thuộc tính nhiệm vụ">
+        <h3>Công việc</h3><dl>
+          ${prop('Trạng thái', `<span class="st-badge"><span class="status ${t.status}">${t.pause?.reason === 'backlog' ? 'Backlog' : TASK_VI[t.status] || t.status}</span>${t.attention ? `<span class="status attention" title="${esc(t.attention.detail)}">cần xem</span>` : ''}</span>`)}
+          ${prop('Giai đoạn', stageCell(t))}
+          ${prop('Mã', `<span class="tcode" title="${esc(t.id)}">${esc(code(t))}</span>`)}
+          ${prop('Ưu tiên', `<select class="pe-sel" data-pe="priority" aria-label="Ưu tiên">${PRIO.map(([k, l]) => `<option value="${k}"${(t.priority || '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}
+          ${prop('Chế độ', esc(MODE_VI[t.mode] || t.mode))}
+          ${prop('Phòng', esc((t.departments || []).map((d) => deptShort(d)).join(' → ')))}
+          ${prop('Phụ trách', ownerCell(t))}
+          ${prop('Dự án', projectCell(t))}
+          ${prop('Dữ liệu', `<span class="cls ${esc(t.classification)}">${esc(CLS_VI[t.classification] || t.classification)}</span>`)}
+        </dl>
+        <h3>Thực thi</h3><dl>
+          ${prop('Runtime', esc(t.options?.runtime || S.defaults.runtime || 'mặc định'))}
+          ${prop('Token', `${fmt(t.usage.input)} vào · ${fmt(t.usage.output)} ra`)}
+          ${prop('Ngân sách', `<button type="button" class="pe-btn" data-pe="budget" title="Sửa ngân sách token">${budget ? `${pct}% của ${fmt(budget)}` : 'Chưa đặt'}</button>`)}
+          ${prop('Review', t.options?.review === false ? 'tắt' : 'bật')}
+          ${prop('CTO', t.acceptance ? (t.acceptance.accepted ? 'nghiệm thu đạt' : t.acceptance.parsed ? 'chưa đạt' : 'không đọc được') : t.options?.acceptance === false ? 'tắt' : '')}
+          ${prop('Nhánh', t.branch ? `<code>${esc(t.branch)}</code>` : '')}
+          ${prop('Commit', t.commit ? `<code>${esc(String(t.commit).slice(0, 40))}</code>` : '')}
+        </dl>
+        ${t.splitFrom || (t.splitInto || []).length || t.followUpOf || (t.after || []).length ? `<h3>Liên quan</h3><dl>
+          ${prop('Tách từ', t.splitFrom ? `<a data-task="${esc(t.splitFrom.taskId)}">${esc(code(S.tasks.get(t.splitFrom.taskId)) || t.splitFrom.taskId)}</a> · ${esc(t.splitFrom.subtaskId)}` : '')}
+          ${prop('Tiếp nối', t.followUpOf ? `<a data-task="${esc(t.followUpOf)}">${esc(code(S.tasks.get(t.followUpOf)) || t.followUpOf)}</a>` : '')}
+          ${prop('Tách thành', (t.splitInto || []).map((x) => `<a data-task="${esc(x)}">${esc(code(S.tasks.get(x)) || x)}</a>`).join(', '))}
+          ${prop('Chờ', (t.after || []).map((x) => `<a data-task="${esc(x)}">${esc(code(S.tasks.get(x)) || x)}</a>`).join(', '))}
+        </dl>` : ''}
+        <h3>Thời gian</h3><dl>
+          ${prop('Tạo', when(t.createdAt))}
+          ${prop('Bắt đầu', t.startedAt ? when(t.startedAt) : '')}
+          ${prop('Kết thúc', t.finishedAt ? when(t.finishedAt) : '')}
+          ${prop('Cập nhật', when(t.updatedAt))}
+        </dl>
+      </aside>`;
+    el.innerHTML = `<div class="td-top"><button class="btn ghost sm back" id="td-back">← Nhiệm vụ</button><span class="grow"></span>
+        ${canPause ? '<button class="btn sm" id="td-pause">Tạm dừng</button>' : ''}${canCancel ? '<button class="btn sm danger" id="td-cancel">Hủy</button>' : ''}<button class="btn sm" id="td-again" title="Mở form giao việc với yêu cầu, chế độ và phòng/dự án/agent như nhiệm vụ này">Giao lại tương tự</button></div>
+      <div class="td-head"><h2><span class="si-wrap">${window.Drive?.statusIcon ? window.Drive.statusIcon(t.status) : ''}</span><span class="td-title" data-pe="title" title="Bấm để sửa tiêu đề" tabindex="0">${esc(t.title)}</span></h2></div>
+      <div class="td-grid"><div class="td-main">
         ${meter}${git}${atts}${window.Flow?.summaryHtml(t) || ''}${window.Flow?.acceptHtml(t) || ''}${window.UX?.checksHtml(t) || ''}${window.Flow?.shipHtml(t) || ''}
-        ${t.routing ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">🧭 ${esc(t.routing.reason)}</p>` : ''}
+        ${t.routing ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">Định tuyến: ${esc(t.routing.reason)}</p>` : ''}
         ${t.error && !canResume ? `<p style="font-size:12.5px;color:var(--bad);margin:0 0 8px">${esc(t.error)}</p>` : ''}
-        ${t.attention ? `<p style="font-size:12.5px;color:var(--warn);margin:0 0 8px">⚠ Cần xem lại: ${esc(t.attention.detail)} — xem báo cáo, "Làm lại từ review" hoặc tách việc còn lại.</p>` : ''}
-        ${t.splitFrom ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">✂ Tách từ <a data-task="${esc(t.splitFrom.taskId)}">${esc(t.splitFrom.taskId)}</a> · hạng mục ${esc(t.splitFrom.subtaskId)}</p>` : ''}
-        ${(t.splitInto || []).length ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">✂ Đã tách thành: ${t.splitInto.map((x) => `<a data-task="${esc(x)}">${esc(x)}</a>`).join(', ')}</p>` : ''}
-        ${(t.after || []).length && t.status === 'queued' ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">⏳ Chờ nhiệm vụ trước xong: ${t.after.map((x) => `<a data-task="${esc(x)}">${esc(x)}</a>`).join(', ')}</p>` : ''}
-      </div>
+        ${t.attention ? `<p style="font-size:12.5px;color:var(--warn);margin:0 0 8px">Cần xem lại: ${esc(t.attention.detail)} — xem báo cáo, "Làm lại từ review" hoặc tách việc còn lại.</p>` : ''}
       ${banner}${redo}${splitForm}
       <details class="doc" style="margin-bottom:10px"><summary style="cursor:pointer;color:var(--muted);font-size:12.5px">Yêu cầu gốc</summary><div class="md">${md(t.brief)}</div></details>
-      ${blocks || '<div class="empty">Đang định tuyến…</div>'}
+      ${blocks || (t.pause?.reason === 'backlog' ? '<div class="empty">Nhiệm vụ đang nằm trong backlog — chưa chạy. Đổi Giai đoạn sang "Chờ chạy" ở bảng Thuộc tính để bắt đầu.</div>' : '<div class="empty">Đang định tuyến…</div>')}
       <div class="subtabs">
         <button data-v="chat" class="${S.taskView === 'chat' ? 'active' : ''}">💬 Hội thoại (${S.taskDetail.transcript.length})</button>
         <button data-v="final" class="${S.taskView === 'final' ? 'active' : ''}" ${t.finalPath ? '' : 'disabled'}>🏁 Báo cáo</button>
@@ -972,7 +1002,9 @@
         <button data-v="events" class="${S.taskView === 'events' ? 'active' : ''}">🧾 Nhật ký</button>
         <button data-v="calls" class="${S.taskView === 'calls' ? 'active' : ''}">📡 Lượt gọi</button>
       </div>
-      <div id="td-body"></div>`;
+      <div id="td-body"></div></div>${props}</div>`;
+    el.querySelectorAll('[data-proj]').forEach((a) => a.addEventListener('click', () => window.Drive?.openProject?.(a.dataset.proj)));
+    bindPropEdits(el, t);
     const act = async (path, body, okMsg) => {
       try {
         const r = await api(path, { method: 'POST', body: JSON.stringify(body || {}) });
@@ -1180,14 +1212,133 @@
     }));
     const office = [...S.agents.values()].filter((a) => !S.departments.some((d) => d.id === a.department));
     if (office.length) groups.unshift({ id: 'office', name: 'Văn phòng điều phối', color: '#b91c1c', purpose: 'routing', list: office });
-    el.innerHTML = groups
+    // UI-5: danh sách kiểu Paperclip — tab lọc theo trạng thái, mỗi agent một dòng (ảnh · tên + vai · trạng thái · model · token)
+    const busy = (a) => a.state && a.state.status && a.state.status !== 'idle';
+    const F = S.peopleFilter || 'all';
+    const keep = (a) => (F === 'all' ? true : F === 'active' ? busy(a) : F === 'error' ? a.state?.status === 'error' : a.role === F);
+    const all = [...S.agents.values()];
+    const tabs = [
+      ['all', 'Tất cả', all.length],
+      ['active', 'Đang làm', all.filter(busy).length],
+      ['error', 'Lỗi', all.filter((a) => a.state?.status === 'error').length],
+      ['lead', 'Trưởng phòng', all.filter((a) => a.role === 'lead').length],
+      ['reviewer', 'Reviewer', all.filter((a) => a.role === 'reviewer').length],
+    ];
+    loadAgentKpi();
+    const row = (a) => {
+      const st = a.state?.status || 'idle';
+      const u = S.usage.byAgent.find((x) => x.key === a.id);
+      return `<div class="ag-item" data-agent="${esc(a.id)}">${av(a.id, 'av')}<div class="nm"><b>${esc(a.name)}${a.role === 'lead' ? ' <small title="Trưởng phòng">★</small>' : ''}</b><small>@${esc(a.id)} · ${esc(a.title)}</small></div>
+        <span class="stt ${esc(st)}"><i></i>${st !== 'idle' && st !== 'error' ? '<span class="pill-live">Đang chạy</span>' : esc(STATUS_VI[st] || st)}</span><span class="mdl">${esc(a.model || '')}</span>${kpiBadge(a.id)}<span class="kp">${fmt(total(u))} token</span></div>`;
+    };
+    const body = groups
       .map((g) => {
+        const list = g.list.filter(keep);
+        if (!list.length) return '';
         const u = S.usage.byDepartment.find((x) => x.key === g.id);
-        return `<div class="dept-head"><span class="dot" style="background:${g.color}"></span><h2>${esc(g.name)}</h2><small>${g.list.length} người · ${fmt(total(u))} token</small></div>
-          <div class="agents-grid">${g.list.map(agentCard).join('')}</div>`;
+        return `<div class="grp">${esc(g.name)} · ${list.length} · ${fmt(total(u))} token</div>${list.map(row).join('')}`;
       })
       .join('');
+    el.innerHTML = `<div class="dv-head"><h1>Agent</h1></div>
+      <div class="ag-tabs" role="tablist">${tabs.map(([k, l, n]) => `<button data-pf="${k}" class="${F === k ? 'on' : ''}" role="tab">${l} <small>${n}</small></button>`).join('')}</div>
+      <div class="ag-list">${body || '<div class="empty-row" style="padding:16px">Không có agent nào khớp bộ lọc.</div>'}</div>`;
+    el.querySelectorAll('[data-pf]').forEach((b) => b.addEventListener('click', () => ((S.peopleFilter = b.dataset.pf), renderPeople())));
     el.querySelectorAll('[data-agent]').forEach((b) => b.addEventListener('click', () => openAgent(b.dataset.agent)));
+  }
+
+  // UI-7: điểm KPI v2 (7 ngày) cạnh tên agent — tải một lần mỗi phút, không chặn vẽ danh sách
+  const agentKpi = { at: 0, by: new Map() };
+  async function loadAgentKpi() {
+    if (Date.now() - agentKpi.at < 60000) return;
+    agentKpi.at = Date.now();
+    try {
+      const r = await api('/api/kpi?days=7');
+      agentKpi.by = new Map((r.agents || []).filter((k) => k.calls || k.subtasks).map((k) => [k.agentId || k.key, k]));
+      if (S.tab === 'people' && !S.selectedAgent) renderPeople();
+    } catch {}
+  }
+  const CONF_VI = { low: 'thấp', medium: 'vừa', high: 'cao' };
+  function kpiBadge(id) {
+    const k = agentKpi.by.get(id);
+    if (!k) return '<span class="kpi-b none" title="Chưa có dữ liệu KPI trong 7 ngày">—</span>';
+    return `<span class="kpi-b g-${esc(k.grade)}${k.confidence === 'low' ? ' low' : ''}" title="KPI v2, 7 ngày: ${k.score}/100 · độ tin ${CONF_VI[k.confidence] || k.confidence} · ${k.tasks} nhiệm vụ">${k.score} <b>${esc(k.grade)}</b></span>`;
+  }
+
+  // UI-7: bảng Thuộc tính sửa được tại chỗ — tiêu đề, ưu tiên, ngân sách token
+  const PRIO = [['', 'Không'], ['urgent', 'Khẩn'], ['high', 'Cao'], ['medium', 'Vừa'], ['low', 'Thấp']];
+  async function saveProps(t, path, body) {
+    try {
+      const r = await api(`/api/tasks/${encodeURIComponent(t.id)}/${path}`, { method: 'POST', body: JSON.stringify(body) });
+      if (r?.id) S.tasks.set(r.id, { ...S.tasks.get(r.id), ...r });
+      toast({ level: 'info', title: 'Đã lưu', msg: r?.title || t.title });
+    } catch (e) {
+      toast({ level: 'error', title: 'Không lưu được', msg: e.message });
+    }
+    renderTaskDetail(true);
+    window.Drive?.changed?.();
+  }
+  /** Ô nhập tạm thay cho phần tử; Enter lưu, Esc bỏ. */
+  function inlineInput(host, value, type, onSave) {
+    const inp = document.createElement('input');
+    inp.className = 'pe-input';
+    inp.type = type;
+    inp.value = value;
+    if (type === 'number') (inp.min = '0'), (inp.step = '1000');
+    host.replaceWith(inp);
+    inp.focus();
+    inp.select();
+    let done = false;
+    const finish = (save) => {
+      if (done) return;
+      done = true;
+      if (save && inp.value.trim() !== String(value)) onSave(inp.value.trim());
+      else renderTaskDetail(true);
+    };
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') (e.preventDefault(), finish(true));
+      if (e.key === 'Escape') (e.preventDefault(), finish(false));
+    });
+    inp.addEventListener('blur', () => finish(true));
+  }
+  // UI-8: người phụ trách / dự án / giai đoạn — sửa được khi nhiệm vụ chưa bắt đầu (server cũng chặn)
+  const notStarted = (t) => (t.status === 'queued' || t.status === 'paused') && !(t.runs || []).length;
+  const LOCK_TIP = 'Nhiệm vụ đã bắt đầu — dùng "Giao lại tương tự" (đổi người) hoặc tạm dừng rồi "Đóng gói vào dự án" (đổi dự án)';
+  function ownerCell(t) {
+    const cur = t.mode === 'agent' ? t.agentId : '';
+    if (!notStarted(t)) return cur ? `<span class="who" title="${esc(LOCK_TIP)}">${av(cur, 'av xs')}${esc(agentName(cur))}</span>` : `<span title="${esc(LOCK_TIP)}">${esc(MODE_VI[t.mode] || t.mode)}</span>`;
+    const opts = [...S.agents.values()].filter((a) => a.role !== 'router').map((a) => `<option value="${esc(a.id)}"${a.id === cur ? ' selected' : ''}>${esc(a.name)}</option>`).join('');
+    return `<select class="pe-sel" data-pe="agent" aria-label="Người phụ trách"><option value=""${cur ? '' : ' selected'}>Điều phối chọn</option>${opts}</select>`;
+  }
+  function projectCell(t) {
+    const name = (id) => S.projects.find((p) => p.id === id)?.name || id;
+    if (!notStarted(t)) return t.projectId ? `<a data-proj="${esc(t.projectId)}">${esc(name(t.projectId))}</a>` : `<span title="${esc(LOCK_TIP)}">Ngoài dự án</span>`;
+    return `<select class="pe-sel" data-pe="project" aria-label="Dự án"><option value="">Ngoài dự án</option>${S.projects.map((p) => `<option value="${esc(p.id)}"${p.id === t.projectId ? ' selected' : ''}>${esc(p.name)}</option>`).join('')}</select>`;
+  }
+  function stageCell(t) {
+    const D = window.Drive;
+    if (!D?.stage) return '';
+    const st = D.stage(t);
+    if ((st === 'backlog' || st === 'todo') && notStarted(t))
+      return `<select class="pe-sel" data-pe="stage" aria-label="Giai đoạn"><option value="backlog"${st === 'backlog' ? ' selected' : ''}>${esc(D.STAGE_VI.backlog)}</option><option value="todo"${st === 'todo' ? ' selected' : ''}>${esc(D.STAGE_VI.todo)}</option></select>`;
+    return `<span class="stage-pill st-${st}"><i></i>${esc(D.STAGE_VI[st])}</span>`;
+  }
+  function bindPropEdits(el, t) {
+    el.querySelector('[data-pe="agent"]')?.addEventListener('change', (e) => saveProps(t, 'props', { agentId: e.target.value }));
+    el.querySelector('[data-pe="project"]')?.addEventListener('change', (e) => saveProps(t, 'props', { projectId: e.target.value }));
+    el.querySelector('[data-pe="stage"]')?.addEventListener('change', (e) => saveProps(t, 'stage', { stage: e.target.value }));
+    const title = el.querySelector('[data-pe="title"]');
+    const editTitle = () => inlineInput(title, t.title, 'text', (v) => saveProps(t, 'props', { title: v }));
+    title?.addEventListener('click', editTitle);
+    title?.addEventListener('keydown', (e) => e.key === 'Enter' && (e.preventDefault(), editTitle()));
+    el.querySelector('[data-pe="priority"]')?.addEventListener('change', (e) => saveProps(t, 'props', { priority: e.target.value }));
+    const bud = el.querySelector('[data-pe="budget"]');
+    bud?.addEventListener('click', () =>
+      inlineInput(bud, t.options?.budgetTokens || 0, 'number', (v) => {
+        const n = Number(v);
+        if (!Number.isFinite(n) || n < 0) return toast({ level: 'error', title: 'Ngân sách không hợp lệ', msg: 'Nhập số token ≥ 0' }), renderTaskDetail(true);
+        saveProps(t, 'budget', { budgetTokens: Math.round(n) });
+      }),
+    );
   }
 
   async function openAgent(id) {
@@ -1217,7 +1368,7 @@
     $('#people').hidden = true;
     const el = $('#agent-detail');
     el.hidden = false;
-    el.innerHTML = `<button class="btn ghost sm back" id="ad-back" style="margin-bottom:10px">← Nhân sự</button>
+    el.innerHTML = `<button class="btn ghost sm back" id="ad-back" style="margin-bottom:10px">← Agent</button>
       <div class="ad-head"><img src="${avatarUrl(id)}" width="56" height="56" alt="" style="image-rendering:pixelated;background:var(--bg-2);border-radius:10px">
         <div><h2 style="font-size:16px">${esc(a.title)} <small>@${esc(a.id)}</small></h2>
         <div style="color:var(--muted);font-size:12.5px"><span style="color:${deptColor(a.department)}">${esc(deptName(a.department))}</span> · vai trò ${esc(a.role)} · model ${esc(a.model)}</div>
@@ -1246,7 +1397,7 @@
         const k = (r.agents || []).find((x) => x.agentId === id);
         const box = $('#ad-kpi');
         if (!k || !box || S.selectedAgent !== id) return;
-        box.innerHTML = `<div class="card" style="margin:8px 0"><h2>KPI 30 ngày: <b class="grade ${k.grade === 'A' ? 'ok' : k.grade === 'B' ? 'info' : k.grade === 'C' ? 'warn' : 'bad'}">${k.score} ${k.grade}</b> <small style="color:var(--muted);font-weight:400">· ${k.tasks} nhiệm vụ · ${k.subtasks} hạng mục · chất lượng ${k.scores.quality ?? '—'} · hiệu quả ${k.scores.efficiency ?? '—'} · tin cậy ${k.scores.reliability ?? '—'} · tuân thủ ${k.scores.compliance ?? '—'}</small></h2>${k.findings.length ? `<ul class="kpi-f">${k.findings.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : '<p style="font-size:12.5px;color:var(--muted)">Không có phát hiện vượt ngưỡng.</p>'}</div>`;
+        box.innerHTML = `<div class="card" style="margin:8px 0"><h2>KPI 30 ngày: <b class="grade ${k.grade === 'A' ? 'ok' : k.grade === 'B' ? 'info' : k.grade === 'C' ? 'warn' : 'bad'}">${k.score} ${k.grade}</b> <small style="color:var(--muted);font-weight:400">· ${k.tasks} nhiệm vụ · ${k.subtasks} hạng mục · độ tin ${{ low: 'thấp', medium: 'vừa', high: 'cao' }[k.confidence] ?? '—'} · chất lượng ${k.scores.quality ?? '—'} · kết quả thật ${k.scores.outcome ?? '—'} · trung thực ${k.scores.honesty ?? '—'} · hiệu quả ${k.scores.efficiency ?? '—'} · tin cậy ${k.scores.reliability ?? '—'} · tuân thủ ${k.scores.compliance ?? '—'}</small></h2>${k.findings.length ? `<ul class="kpi-f">${k.findings.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : '<p style="font-size:12.5px;color:var(--muted)">Không có phát hiện vượt ngưỡng.</p>'}</div>`;
       })
       .catch(() => {});
     $('#ad-back').onclick = () => {
@@ -1335,10 +1486,10 @@
         ${(r.departments || []).map((d) => `<div class="stat"><span>${esc(deptName(d.id))} · ${d.agents} agent</span><b>${d.score}<small style="font-size:12px;color:var(--muted)"> /100 · ${fmt(d.tokens)} token</small></b></div>`).join('')}
       </div>
       <div class="card"><h2>Bảng KPI</h2>
-        <table class="tbl kpi"><thead><tr><th>Agent</th><th>Điểm</th><th title="Qua review lần đầu, ít blocker">Chất lượng</th><th title="Token/hạng mục so với đồng nghiệp, số lần làm lại">Hiệu quả</th><th title="Lượt gọi hỏng, công cụ lỗi, chạm trần">Tin cậy</th><th title="Đủ mục trong Mẫu đầu ra + bằng chứng">Tuân thủ</th><th>Hạng mục</th><th>Lần chạy TB</th><th>Token</th><th>Công cụ lỗi</th></tr></thead><tbody>
+        <table class="tbl kpi"><thead><tr><th>Agent</th><th>Điểm</th><th title="Lượng bằng chứng của điểm (ít bằng chứng thì điểm co về 60)">Độ tin</th><th title="Qua review lần đầu, ít blocker; người review: kết luận đúng so với kết quả thật">Chất lượng</th><th title="Lệnh kiểm tra của dự án trước/sau + tiêu chí CTO nghiệm thu">Kết quả thật</th><th title="Khẳng định đã chạy test/typecheck phải có lệnh kiểm chứng thật">Trung thực</th><th title="Token và thời gian mỗi hạng mục so với đồng nghiệp, số lần làm lại">Hiệu quả</th><th title="Lượt gọi hỏng, công cụ lỗi, chạm trần">Tin cậy</th><th title="Đủ mục trong Mẫu đầu ra + bằng chứng">Tuân thủ</th><th>Hạng mục</th><th>Lần chạy TB</th><th>Token</th><th>Công cụ lỗi</th><th title="Prompt đầy nhất so với cửa sổ ngữ cảnh của runtime (Ollama: num_ctx)">Ngữ cảnh</th></tr></thead><tbody>
         ${agents
           .map(
-            (k) => `<tr class="click" data-ag="${esc(k.agentId)}"><td><span class="who">${av(k.agentId)}${esc(agentName(k.agentId))}</span></td><td><b class="grade ${gcls(k.grade)}">${k.score} ${k.grade}</b></td><td>${cell(k.scores.quality)}</td><td>${cell(k.scores.efficiency)}</td><td>${cell(k.scores.reliability)}</td><td>${cell(k.scores.compliance)}</td><td>${k.subtasks}</td><td>${k.attemptsAvg || '—'}</td><td>${fmt(k.tokens.total)}</td><td>${k.tools.calls ? `${k.tools.failed}/${k.tools.calls}` : '—'}</td></tr>`,
+            (k) => `<tr class="click" data-ag="${esc(k.agentId)}"><td><span class="who">${av(k.agentId)}${esc(agentName(k.agentId))}</span></td><td><b class="grade ${gcls(k.grade)}">${k.score} ${k.grade}</b></td><td>${{ low: 'thấp', medium: 'vừa', high: 'cao' }[k.confidence] ?? '—'}</td><td>${cell(k.scores.quality)}</td><td>${cell(k.scores.outcome)}</td><td>${cell(k.scores.honesty)}</td><td>${cell(k.scores.efficiency)}</td><td>${cell(k.scores.reliability)}</td><td>${cell(k.scores.compliance)}</td><td>${k.subtasks}</td><td>${k.attemptsAvg || '—'}</td><td>${fmt(k.tokens.total)}</td><td>${k.tools.calls ? `${k.tools.failed}/${k.tools.calls}` : '—'}</td><td>${k.context?.known ? `<span class="${k.context.overLimit ? 'bad' : k.context.maxFillPct >= 85 ? 'warn' : ''}">${k.context.maxFillPct}%</span>` : '—'}</td></tr>`,
           )
           .join('')}
         </tbody></table></div>
