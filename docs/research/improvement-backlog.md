@@ -5,6 +5,7 @@
 > Cập nhật R12 (T-20261103-025758-514, S3, @methodologist, 3/11/2026): thêm **B-11** (làm gọn làn đơn, §5), đề xuất chỉ tiêu B-01′ (×1,3, chờ giám đốc duyệt; `preregistration.md` §9 V4-01, nhãn post-hoc) và kế hoạch đo B7′ (§5 B-11.5). Số lấy từ `analysis/b7-cost-decomposition.md` và `analysis/b02m-replay.md`.
 > Cập nhật R13 (T-20261103-034225-3c7, S1, @methodologist, 3/11/2026): sửa B-11 theo review — (d) **đóng** (trích mã `route()` và cấu hình arm B7); (a) tách (a-skip) bị chặn / (a-brief) cần giám đốc duyệt; B-11.5 viết lại theo arm B7c/B7cb/B7cab (điều kiện chạy, ngân sách lượt trong trần 3,6 giờ, kết quả dự kiến, điểm dừng vô ích sau 20 lượt); CI dự kiến lấy từ `analysis/variance-decomposition.md` (S2, @data-scientist); minor: lịch ≈ 3,5 giờ, V4-01 "chỉ báo thô", T-6 là Δ gộp, `b02m-replay` đã đọc `finalPath`.
 > Cập nhật R14 (T-20261103-115014-174, S3, @research-lead, 3/11/2026): thêm **B-13…B-17** (§5) từ đối chiếu tài liệu "4 hướng tăng tốc" của giám đốc (`analysis/acceleration-crosscheck.md`). Số lấy từ `analysis/cache-sensitivity.md` (C-0…C-5, ảnh chụp `838a5f1`), `analysis/cache-diagnostic-spec.md`, `analysis/b7-cost-decomposition.md` (T-x), `analysis/agreement.md`, `related-work.md` §2.16–2.22. Cả năm mục là **đề xuất, chưa chạy**; không đưa lên `main`.
+> Cập nhật R15 (T-20261103-214233-452, S3, @data-scientist, 3/11/2026): thêm **B-18** (sandbox cấp hệ điều hành cho hook; `sandbox-spec.md`) và **B-19** (triển khai vòng tự cải thiện RQ5; `self-improvement/implementation-spec.md`) vào §0, §5, §6. Cả hai chỉ là đặc tả cho D10, mặc định tắt, chưa có mã và chưa chạy đo. Bộ giữ lại của B-19 đã khóa hash; t1–t5 và g1–g6 chỉ dùng chẩn đoán (D7).
 > Cập nhật vòng 4 gói 6 (T-20261103-195822-b03, S2, @research-lead, 3/11/2026): §0 có thêm cột **Trạng thái** (đúng một trong bốn giá trị: `đã làm (<commit>)` / `D9` / `cần đo` / `cần giám đốc duyệt`; riêng B-12, B-14, B-16 ghi `D9 → sau đó cần đo`) và cột **Ghi chú trạng thái** (commit, mục `BRIEF-D9.md`, số lượt cần đo theo đặc tả). Căn cứ: quyết định của giám đốc 3/11 19:56 ("đã là đề tài thì phải fix hết, không để đề xuất sửa") và `BRIEF-D9.md` (`90cd913`). Các nhãn "đề xuất", "hoãn", "bị chặn" ở cột Mã và tiêu đề §5 của B-09, B-12…B-17 được thay bằng trạng thái. Câu "Cả năm mục là **đề xuất, chưa chạy**" ở dòng trên là trạng thái tại R14. Hash đã kiểm bằng `git show --stat`.
 > Nguyên tắc của giám đốc: mọi nâng cấp phải dựa vào nghiên cứu; mỗi thay đổi của Phòng Dev ghi mã `B-xx`; benchtest chạy theo `preregistration.md` để kiểm lại.
 > Số từ `token-analysis.md` dẫn theo **mã bảng** (T-0, T-d…), không chép lại bản S1 đang làm mới.
@@ -32,6 +33,8 @@
 | — | **B-15** (R14) | Đo họp bằng arm B1 (`discussionRounds: 0`) trên bài lớn | đề xuất 3; `cache-diagnostic-spec.md` Phần 2 | chưa chấm | 3 | — | Có (mở đo mới) | cần đo | Chỉ còn đo: arm B1 trên l1-modules/l2-chain, 10 lượt × 2 arm × 2 bài = 40 lượt + 6 lượt thí điểm (B-15 trường 5). Tiên quyết đã xong: `task.json` của hai bài (`3ff7df3`, D8) |
 | — | **B-16** (R14) | Thí điểm "CTO Opus + nghiệm thu brief", đo bằng bộ bài B-12 | đề xuất 4; `cache-diagnostic-spec.md` Phần 3; T-5; C-5; B-11 (a-brief) | chưa chấm | 3 | — | Có (cần duyệt (a-brief) và B-12) | D9 → sau đó cần đo | `BRIEF-D9.md` mục 8: arm `B7cabO`, không đổi mặc định. Chỉ còn đo sau D9: thí điểm 12 cặp (B-16 trường 4), rồi 25–46 lượt lỗi cài mỗi arm (B-16 trường 5); cần bộ bài B-12 |
 | — | **B-17** (R14) | Model lập kế hoạch theo độ khó 1–3 | đề xuất 6; tín hiệu tất định của bộ chọn làn; trường `model` của B-13 | chưa chấm | 3 | — | Có | D9 | `BRIEF-D9.md` mục 9: sau công tắc, mặc định tắt; trước 3/11 ghi "hoãn". Đo A/B: chưa có đặc tả số lượt |
+| — | **B-18** (R15) | Sandbox cấp hệ điều hành làm lớp 2 sau hook `claude-guard` | `paper.md` §4.2, §8.2 (hook chỉ kiểm mẫu chuỗi); slide bảo vệ dữ liệu; TeamBench tách quyền bằng hệ điều hành | chưa chấm | 4 | — | Có (đổi biên bảo mật; mặc định tắt) | D10 (đặc tả xong, mặc định tắt) | `sandbox-spec.md`: Linux dùng sandbox có sẵn của Claude Code; Windows ứng viên WSL2, dự phòng AppContainer/Job Object + ACL; cần spike G1 trước khi viết mã. Đánh giá 5 lớp: `data-protection-assessment.md` mục "B-18 Sandbox cho hook" |
+| — | **B-19** (R15) | Triển khai vòng tự cải thiện RQ5 (7 bước, bộ giữ lại khóa hash) | `self-improvement/design.md`; B-03 (nhật ký sự cố làm đầu vào) | chưa chấm | 4 | — | Có (không tự áp bản vá; mặc định tắt) | D10 (đặc tả xong, mặc định tắt) | `self-improvement/implementation-spec.md`: khóa `selfImprove.enabled: false`; bộ giữ lại 10 bài, sàng lọc 60 lượt, xác nhận 160 lượt (`holdout-and-sample-size.md`, `holdout-lock.json`) |
 
 B-01 và B-02 đứng đầu theo quyết định của giám đốc (2/11, 13:42), không phải theo điểm. **B-10 đứng thứ ba** (R8): cùng điểm ưu tiên 2,0 với B-03, nhưng là mục duy nhất ngoài B-01/B-02 có số đo chất lượng trực tiếp (t5: 95/146 test ẩn, §5 B-10), chặn một loại lỗi mà reviewer LLM đã bỏ lọt, và nên triển khai cùng B-02 (chung bước "trước thực thi/sau thực thi" của pipeline). Thang điểm 1–5 là đánh giá chuyên gia; chỉ B-01/B-02/B-10 có số đo hỗ trợ trực tiếp (§3, §5 B-10).
 
@@ -597,6 +600,34 @@ Các ô thứ tự chính của (b), (c) là phần còn lại sau khi accept đ
 | **8. Ưu tiên** | D9 (trước 3/11: hoãn). |
 | **9. Giám đốc duyệt** | Có, nếu làm. |
 
+### B-18 — Sandbox cấp hệ điều hành cho hook (vòng 4 gói 7; 3/11/2026; @methodologist) — **D10** (đặc tả xong, mặc định tắt)
+
+| Trường | Nội dung |
+|---|---|
+| **1. Vấn đề** | Hook `claude-guard.ts`/`guard-paths.ts` chỉ kiểm theo mẫu chuỗi (`paper.md` §4.2, §8.2); agent cố tình vẫn có thể lách (tiến trình con, mã hóa lệnh). |
+| **2. Bằng chứng** | Mô hình mối đe dọa T1–T4 kèm `tệp:dòng` thật ở `sandbox-spec.md` §a. Chưa có số đo lách thực tế: bộ test đối kháng (§e) chưa chạy. |
+| **3. Nguyên nhân gốc** | Hook chạy ở cấp ứng dụng, không có ranh giới hệ điều hành. Tài liệu chính thức nói Claude Code không sandbox lệnh trên Windows native (`sandbox-spec.md` tóm tắt, S-01, S-02). |
+| **4. Thay đổi đề xuất** | Hook giữ nguyên làm lớp 1; sandbox là lớp 2 sau khóa `runtimes.claude-cli.sandbox.enabled`, mặc định `false` cho tới khi giám đốc duyệt. Linux: sandbox có sẵn của Claude Code (mức A), mức B nếu cần bọc cả hook. Windows: WSL2 + sandbox có sẵn là ứng viên chính, AppContainer/Job Object + ACL là dự phòng (cổng G1). Bật khóa mà không có sandbox thì từ chối chạy. Ngoại lệ mạng duy nhất: kết nối của `claude-cli` tới endpoint Anthropic (`sandbox-spec.md` §c). Không dùng 9router hay khóa API ngoài. |
+| **5. Hiệu quả kỳ vọng** | Giảm rủi ro đọc `.env`, ghi ngoài worktree, mạng và lách hook; không có số ước lượng. Chi phí khởi động đo theo `sandbox-spec.md` §f (ngưỡng là giả định). |
+| **6. Cách kiểm lại** | Bộ test đối kháng E1–E4 và hồi quy E5 (không chặn nhầm `checkCommands`) ở §e; đo thời gian khởi động ở §f. Dev làm spike G1 (§d.0) trước khi viết mã. |
+| **7. Rủi ro / dữ liệu** | Nhãn **Nội bộ**. Đánh giá 5 lớp/25 năng lực ở `docs/data-protection-assessment.md` mục "B-18 Sandbox cho hook" (không chép lại ở đây). Nhật ký `sandbox.deny` chỉ ghi `tool`, `rule`, `backend`. Rollback: `sandbox-spec.md` §g. Nhiều thông số còn `[CHƯA KIỂM CHỨNG]`, Dev phải đo ở spike. |
+| **8. Ưu tiên** | D10; công sức 4. Chưa chấm hiệu quả. |
+| **9. Giám đốc duyệt** | **Có**: duyệt bật khóa, chọn đường Windows sau spike G1. Mặc định tắt. |
+
+### B-19 — Triển khai vòng tự cải thiện RQ5 (vòng 4 gói 7; 3/11/2026; @research-lead) — **D10** (đặc tả xong, mặc định tắt)
+
+| Trường | Nội dung |
+|---|---|
+| **1. Vấn đề** | `self-improvement/design.md` có thiết kế 7 bước nhưng chưa triển khai; nhật ký sự cố (B-03) đã có nhưng chưa có gì dùng nó làm đầu vào. |
+| **2. Bằng chứng** | B-03 đã làm (`d9-implementation-2026-11-03.md` §3.3). Chưa có lượt chạy vòng nào; mọi số ở dưới là giả định hoặc tính trước. |
+| **3. Nguyên nhân gốc** | Không áp dụng: đây là hạng mục triển khai. |
+| **4. Thay đổi đề xuất** | Module `src/selfimprove.ts` và khóa `selfImprove.enabled: false`. Bảy bước (sự cố → gom nhóm → đề xuất bản vá → A/B → giám đốc duyệt → áp dụng → theo dõi/rollback), mỗi bước đủ 8 trường ở `implementation-spec.md` §3. Không bước nào tự áp bản vá; áp dụng và rollback cần sự kiện duyệt của giám đốc. Vòng không sửa hook hay chính sách dữ liệu. |
+| **5. Hiệu quả kỳ vọng** | Chưa ước lượng. Cỡ mẫu: sàng lọc r = 3 (60 lượt), xác nhận r = 8 (160 lượt) trên bộ giữ lại 10 bài; tính với τ² = 0, nên dừng xác nhận nếu τ² ≥ 0,0005 (`implementation-spec.md` §2). |
+| **6. Cách kiểm lại** | Test chấp nhận (CT-01…CT-nn) ở `implementation-spec.md` §6. Ngưỡng hiệu ứng theo `design.md` §5.3 (giả định do giám đốc chốt); Holm trên ba chỉ số chính. |
+| **7. Rủi ro / dữ liệu** | Nhãn **Nội bộ**; sự cố từ nhiệm vụ Bảo mật/Hạn chế bị loại (§5 của đặc tả). Hai điều kiện chặn của S2a (bài có `starter/` hay `repo/`; cờ `leak` khi chưa có sandbox) cần Dev xử lý trước lần A/B đầu; B-18 giảm rủi ro `leak`. Khi D10 hiện thực hóa thì thêm mục "B-19 Vòng tự cải thiện" vào `data-protection-assessment.md`. |
+| **8. Ưu tiên** | D10; công sức 4. Chưa chấm hiệu quả. |
+| **9. Giám đốc duyệt** | **Có**: bật khóa, chốt ngân sách và ngưỡng, duyệt từng bản vá và từng rollback. |
+
 ---
 
 ## 6. Quan hệ với đăng ký trước và các giới hạn
@@ -610,6 +641,7 @@ Các ô thứ tự chính của (b), (c) là phần còn lại sau khi accept đ
 | **B-10** | **H8** (`analyze.mjs:96-100`) — đúng loại lỗi "requirements dropped"; phán quyết hiện chỉ dựa `formatMiss` nên chưa bắt được ca coding kiểu t5 (§5 B-10 trường 6) | ĐK-P3 (test ẩn không kém hơn) | Phát lại offline trên `results/C*/` không tốn hạn mức 5 giờ; nên chạy trước mọi vòng LLM. Chung giả thuyết B-02 mới |
 | B-03…B-09 | — | — | KPI, đếm log, test đơn vị. Không cần benchtest, trừ B-03/B-07 (F1) và B-09 |
 | **B-13…B-17** (R14) | Không có giả thuyết H_i tương ứng | — | Mọi phép đo mới (B-14 bước 2, B-15, B-16) phải ghi dòng §9 trước lượt đầu. USD và hệ số cacheRead 0,05 chỉ là phân tích phụ, ngoài họ Holm (§9 V4-03) |
+| **B-18, B-19** (R15) | Không có giả thuyết H_i tương ứng | — | B-19 dùng bộ giữ lại 10 bài đã khóa hash (`holdout-lock.json`), tách khỏi t1–t5 và g1–g6. D7: các bài đó chỉ dùng để chẩn đoán ở bước 2; cả hai pha A/B chạy trên bộ giữ lại và kết luận chỉ lấy từ pha xác nhận. Đây là điểm siết chặt hơn `design.md` §5.4. Phép đo của B-18 là bộ test đối kháng, không phải benchmark. Mọi phép đo mới phải ghi dòng §9 của `preregistration.md` trước lượt đầu |
 
 **Giới hạn và kết quả âm tính**
 - N3b, N5 **không kiểm được** từ CSV; N4 kiểm gián tiếp. Phép kiểm cần dữ liệu từ API `kpi`.

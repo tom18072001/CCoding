@@ -536,3 +536,57 @@ Kiểm tra điểm (cổng thiết kế), nhãn dữ liệu: **Nội bộ**. Kh�
 | stablePrefix | Một bộ `--tools` cố định (có Write/Edit/MultiEdit/Bash) cho mọi pha; quyền theo pha do hook quyết định | **Bề mặt cấp quyền rộng hơn ở cấp CLI**: nếu hook lỗi/không chạy, pha chỉ đọc có công cụ ghi/Bash. Pha review không còn chạy lệnh (CCoding tự chạy lệnh kiểm tra rồi đưa kết quả). Review hạng mục chạy ở thư mục gốc nhiệm vụ nên thấy cây nhiệm vụ, không thấy worktree con chưa gộp | Hook deny-by-default: pha ngoài `execute`/`revise` (kể cả thiếu hoặc sai `phase`) chặn Write, Edit, MultiEdit, NotebookEdit và TOÀN BỘ Bash — không lọc Bash bằng regex (test `; rm`, `$(...)`, backtick, `> tệp`, `tee`, `sed -i`, `node -e`); công cụ ngoài `callTools` của lượt (quyền dự án/vai trò, tra cứu web theo nhãn) cũng bị chặn; thiếu `callTools` → chỉ công cụ đọc. Hook thiếu cấu hình vẫn thoát mã 2 (chặn) | `runtimes.claude-cli.stablePrefix`, **TẮT**; chỉ bật sau khi benchtest xác nhận lợi ích cache và chủ dự án chấp nhận rủi ro trên |
 
 Khuyến nghị: giữ `stablePrefix` tắt với dự án Bảo mật/Hạn chế; bật cho Nội bộ/Công khai khi đã có số đo cache (B-14a). Điều kiện kiểm: `npx tsx --test test/claude-guard-paths.test.ts test/claude-stable-prefix.test.ts`.
+
+## Bổ sung 03/11/2026 — B-18 Sandbox cho hook
+
+**Loại cổng:** cổng thiết kế đầy đủ (5 lớp, 25 năng lực) vì thay đổi chạm biên bảo mật. **Nhãn dữ liệu:** **Nội bộ**. Đặc tả và bảng quyết định nằm ở `docs/research/sandbox-spec.md` (không chép lại ở đây). Trạng thái: **đặc tả, chưa triển khai**; khóa `runtimes.claude-cli.osSandbox.enabled` mặc định **false** cho tới khi giám đốc duyệt.
+
+**Phạm vi dữ liệu:** lệnh shell của agent trong worktree; tệp `.env` (Hạn chế, chỉ là mục tiêu cần che chắn); nhật ký sự kiện `sandbox.deny`/`sandbox.unavailable` (chỉ `tool`, `rule`, `backend`; không lệnh thô, không đường dẫn). Không có PII, không dữ liệu khách hàng, không bên nhận mới. Ngoại lệ mạng duy nhất: chính `claude-cli` tới `api.anthropic.com`, `claude.ai`, `platform.claude.com` (đã có trong luồng hiện tại, không thêm luồng). Không dùng 9router hay khóa API ngoài.
+
+**Năm lớp:** (1) Quản trị: khóa bật/tắt do giám đốc duyệt, ghi lý do ở `ccoding.local.json`. (2) Phòng ngừa: hook (lớp 1) giữ nguyên + sandbox hệ điều hành (lớp 2). (3) Phát hiện: `sandbox.deny` qua `LogStore`. (4) Quyền riêng tư: tối thiểu hóa, không ghi lệnh thô. (5) Khôi phục: tắt khóa là về trạng thái cũ.
+
+| Mã | Trạng thái | Đánh giá / khuyến nghị cho B-18 | Mức |
+|---|---|---|---|
+| GOV-01 | Một phần | Chính sách dạng code: thêm `osSandbox` vào `ccoding.config.json`; mặc định tắt; bật phải có lý do ghi ở `ccoding.local.json` | Nên có |
+| GOV-02 | Một phần | Người duyệt bật/tắt và duyệt ngưỡng đo: Tom. Ghi người duyệt và ngày vào đặc tả khi duyệt | Nên có |
+| GOV-03 | Một phần | Loại dữ liệu mới: sự kiện `sandbox.*` (Nội bộ). Cập nhật bảng phân loại khi triển khai | Nên có |
+| GOV-04 | Đạt (phạm vi này) | Không có PII mới. `.env` thuộc nhãn Hạn chế; test đối kháng chỉ dùng `.env` giả chứa chuỗi canary, không bí mật thật | Nên có |
+| GOV-05 | Một phần | Truy vết: `sandbox.deny` có `taskId`, đối chiếu được với `guard.block` của lớp 1 | Nên có |
+| GOV-06 | Một phần | Không thêm nhà cung cấp. Ngoại lệ mạng chỉ tới Anthropic như hiện nay; mức B không được mở domain nào khác | **Bắt buộc** (giữ nguyên) |
+| PRE-01 | Một phần | Không đổi bề mặt mạng của máy chủ CCoding (vẫn loopback). Cài WSL2/AppContainer cần quyền quản trị một lần: ghi lại ai cài, cấp quyền tối thiểu | Bắt buộc (giữ nguyên) |
+| PRE-02 | Một phần | Lệnh agent hiện chạy dưới tài khoản Windows của người dùng; sandbox thu hẹp quyền này. Không dùng tài khoản quản trị cho agent. `srt` Windows tạo tài khoản `srt-sandbox` (S-03) — nếu dùng sau này phải đánh giá lại | Nên có |
+| PRE-03 | Một phần | Bật BitLocker cho ổ chứa `data/`, `workspaces/` (như cũ). Nếu worktree chuyển vào đĩa ảo WSL (ext4.vhdx) thì cũng phải được mã hóa: **cần kiểm** | **Bắt buộc** |
+| PRE-04 | Một phần | Mục tiêu chính: hệ điều hành chặn đọc `.env` kể cả khi regex lớp 1 bị lách (nhóm E1). `sandbox.deny` che bí mật/PII qua `LogStore` | Bắt buộc |
+| PRE-05 | Một phần | Mục tiêu chính: chặn mạng ra ngoài cho lệnh agent (trước đây ghi "Nâng cao"). Mức A: allowlist rỗng + `network.strictAllowlist: true` bắt buộc (thiếu thì ở `bypassPermissions` host ngoài allowlist vẫn qua — S-01; cần Claude Code ≥ v2.1.219); mức B: đúng 3 domain + `strictAllowlist`. Rủi ro dư tồn: domain fronting | Nên có |
+| PRE-06 | Một phần | Kiểm soát mục đích: ghi chỉ trong worktree + thư mục tạm; `failIfUnavailable: true`; từ chối chạy khi nền tảng không hỗ trợ | Bắt buộc |
+| PRE-07 | N/A | Không thêm API cục bộ | — |
+| DET-01 | Một phần | Thêm sự kiện `sandbox.deny`, `sandbox.unavailable`; trường `data` chỉ `{ tool, rule, backend }` | Nên có |
+| DET-02 | Chưa có | Rà `workspaces/` tìm tệp rò rỉ (như cũ). Thêm: sau thử nghiệm đối kháng xóa mọi tệp canary/`leak.txt` | Nâng cao |
+| DET-03 | Một phần | Nhiều `sandbox.deny` trong một nhiệm vụ là tín hiệu prompt-injection. Đề xuất cảnh báo khi ≥ 3 sự kiện/nhiệm vụ (ngưỡng giả định, giám đốc chốt) | Nâng cao |
+| DET-04 | Một phần | `sandbox.deny` ghi qua `LogStore` (`redactSecrets`, `redactPii`, `hashChain`) vào `<data>/logs/system.jsonl` và nhật ký nhiệm vụ. **Giữ ≥ 12 tháng** (`retentionDays: 400`); nhật ký xử lý dữ liệu cốt lõi/quan trọng ≥ 6 tháng | **Bắt buộc** |
+| DET-05 | Một phần | Chuỗi băm SHA-256 từng tệp + `ccoding logs verify`. Nếu `sandbox.deny` làm chứng cứ: bất biến (WORM/Object Lock, ký số, TSA, tách quyền quản trị log). Hạn chế đã biết: mỗi tiến trình hook mở `LogStore` riêng nên chuỗi băm có thể rẽ nhánh khi chạy song song (B-04/B-06) | Nâng cao |
+| PRI-01 | N/A | Không thu thập DLCN từ chủ thể | — |
+| PRI-02 | Một phần | Tối thiểu hóa: log không có lệnh thô, tham số hay đường dẫn; `cmd` qua `safeCmdName` | Nên có |
+| PRI-03 | N/A | Không quản lý hồ sơ chủ thể dữ liệu | — |
+| PRI-04 | Một phần | Không thêm luồng xuyên biên giới. Nếu sau này có DLCN thật trong worktree: vẫn áp hồ sơ đánh giá tác động như các mục trên | **Bắt buộc** (khi phát sinh) |
+| RES-01 | Một phần | Khôi phục: tắt khóa → `buildClaudeArgs` trở lại như cũ (test từng byte, ca R8). Nếu dùng AppContainer phải có hàm gỡ ACE đã cấp trên worktree | Nên có |
+| RES-02 | Một phần | Thời hạn lưu `sandbox.*` như DET-04; chưa có tác vụ tự xóa, giữ tới khi có chính sách lưu trữ. Xóa an toàn tệp canary sau thử nghiệm | Nên có |
+| RES-03 | Một phần | Phát hiện agent thoát sandbox → tắt `osSandbox`/dừng nhiệm vụ, thu hồi khóa nếu `.env` có thể bị đọc, **thông báo sự cố DLCN ≤ 72 giờ nếu có DLCN bị lộ** | Nên có |
+
+**Pháp lý Việt Nam** (số hiệu lấy từ các mục trên của chính tài liệu này, "căn cứ cập nhật đến 28/9/2026"; **chưa tra lại văn bản gốc trong phiên này — cần soát với Công báo trước khi trích dẫn chính thức**):
+
+| Nghĩa vụ | Căn cứ (theo tài liệu này) | Áp vào B-18 |
+|---|---|---|
+| Thông báo vi phạm DLCN ≤ 72 giờ | Luật BVDLCN Đ23 | Sandbox giảm xác suất lộ `.env`/dữ liệu qua agent; sự cố vẫn phải thông báo (RES-03) |
+| Chuyển DLCN xuyên biên giới | Luật BVDLCN Đ20; Luật Dữ liệu Đ23; NĐ 165/2025 Đ12 | Không thêm luồng; ngoại lệ mạng chỉ tới endpoint Anthropic như hiện nay |
+| Nhật ký hệ thống truy xuất ≥ 12 tháng | NĐ 333/2026 | `sandbox.deny` thuộc nhật ký hệ thống: giữ ≥ 12 tháng (DET-04) |
+| An ninh mạng, bảo vệ hệ thống thông tin | Luật An ninh mạng: số hiệu/điều khoản **[CHƯA KIỂM CHỨNG]** trong phiên này; NĐ 363/2026 hiệu lực 11/11/2026 theo ghi chú ở mục 4 | Sandbox là biện pháp kỹ thuật bảo vệ; cấp độ HTTT không áp dụng vì là công cụ cá nhân (mục 1) |
+| Bí mật nhà nước | Luật Bảo vệ bí mật nhà nước 117/2025/QH15 | Vẫn **cấm** đưa vào CCoding; sandbox không thay quy định này |
+
+**Phân loại:** "nhật ký `sandbox.*`" = **Nội bộ** / dữ liệu vận hành; "`.env` của worktree" = **Hạn chế** / thông tin xác thực (nhiều tiêu chí → mức cao nhất cho phần cần che chắn). Test dùng dữ liệu giả, không dữ liệu thật trên DEV/UAT.
+
+**Yêu cầu nhật ký `sandbox.deny`:** (1) ghi qua `LogStore` với `redactSecrets`, `redactPii`, `hashChain`, không ghi trực tiếp; (2) `data` chỉ `{ tool, rule, backend }`; (3) lưu ≥ 12 tháng; (4) bất biến khi làm chứng cứ (WORM, băm, ký số); (5) lỗi ghi bị nuốt nhưng **không** đổi quyết định chặn (như `logGuardBlock`); (6) độ phủ chưa chắc: mẫu thông báo vi phạm của Claude Code chưa kiểm chứng, nên "không có `sandbox.deny`" không có nghĩa "không có vi phạm".
+
+**Rủi ro còn lại:** (1) sandbox có sẵn không bọc hook và công cụ tệp — lớp 1 giữ vai trò đó; (2) domain fronting; (3) trên Windows native Claude Code không sandbox lệnh, nên khóa bật mà không có WSL2 phải từ chối chạy; (4) WSL2 cho phép chạy `.exe` Windows nếu không tắt interop; (5) bộ test đối kháng chỉ phủ các đòn đã biết.
+
+**Kết luận: ĐẠT CÓ ĐIỀU KIỆN** (cho phần đặc tả). Điều kiện: (1) giữ khóa tắt cho tới khi giám đốc duyệt, sau khi spike (cổng G1) và bộ E1–E5 đạt; (2) lưu nhật ký `sandbox.*` ≥ 12 tháng; (3) soát lại căn cứ pháp lý với văn bản gốc trước khi dùng trong hồ sơ chính thức; (4) BitLocker, kể cả đĩa ảo WSL nếu worktree chuyển vào đó.
