@@ -4,8 +4,7 @@
 import os from 'node:os';
 import path from 'node:path';
 
-const WIN_ABS = /^[A-Za-z]:[\\/]/;
-const isWinAbs = (p: string) => WIN_ABS.test(p) || /^\\\\[^\\]/.test(p);
+import { isWinAbs } from './guard-paths.js';
 
 /** p nằm trong root (chính nó hoặc thư mục con). Một bên là đường dẫn Windows, bên kia không (trên máy không phải Windows) ⇒ ngoài. */
 export function pathInside(root: string, p: string): boolean {
