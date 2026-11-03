@@ -135,3 +135,59 @@ COMMON="--runtime claude-cli --ccoding-url http://127.0.0.1:7424 --ccoding-data 
   - Commit và push phần đã có.
   - Ghi vào RUNLOG khóa cuối cùng đã `done`.
   - Phần còn lại chạy local.
+
+## Bước 3e. Đợt đo sau D9 (B-14, B-12, B-16, B-15, H6) — chỉ chạy khi giám đốc đã duyệt
+
+> **Điều kiện trước khi chạy:**
+> - D9b đã gộp (8 test hook Linux xanh).
+> - `preregistration.md` §9 đã có các dòng của đợt 3e (BRIEF-14).
+> - Giám đốc đã duyệt chi phí.
+>
+> E1–E3 chạy trên cloud trước 5/11 14:59 giờ VN. E4–E6 chạy local bằng hạn mức gói, trên server riêng, không đụng server 7420.
+> Ước lượng USD dưới đây quy giá Sonnet 5.5; arm B có pha chạy Opus thì cao hơn. Lấy từ `results/study-cloud`, `results/b7prime` (BRIEF-14).
+
+1. **Server 7425 từ commit đã gộp D9b.**
+   ```bash
+   git pull && git worktree add ../ccoding-3e HEAD && cd ../ccoding-3e && npm ci --no-audit --no-fund && npm run build
+   # ccoding.local.json như Bước 2, "server": { "port": 7425 }; chạy nền: node dist/cli.js serve
+   git -C ../ccoding-3e rev-parse HEAD   # ghi vào RUNLOG
+   ```
+   - Bản này có B-13: `runs.jsonl` ghi `model`, token và giây theo pha.
+   - Bản này có B-12: `gates.b02`, `gates.b10`, `gates.cto`.
+   ```bash
+   S3E="--runtime claude-cli --ccoding-url http://127.0.0.1:7425 --ccoding-data ../ccoding-3e/data --work /tmp/vb"
+   ```
+2. **E1, B-14 chẩn đoán cache.**
+   - Quy mô: 7–8 lượt `claude -p`, khoảng $0,2 và 20 phút. Script tự chờ 330 giây giữa các cặp.
+   - Chạy trực tiếp trong shell, không qua CCoding nên không qua hook:
+     ```bash
+     node bench/vs-claude/cache-diagnostic.mjs --model sonnet --out bench/vs-claude/results/b14-diag/diag.csv
+     ```
+   - Diễn giải theo bảng của `analysis/cache-diagnostic-spec.md` Phần 1. Commit.
+3. **E2, thí điểm B-12/B-16.**
+   - Quy mô: 28 lượt, khoảng $14 và 1,4 giờ.
+     ```bash
+     node bench/vs-claude/run.mjs --arms B7cab,B7cabO --tasks suite:gates --repeats 2 --timeout 20 $S3E --out bench/vs-claude/results/gates-pilot
+     node bench/vs-claude/run.mjs --arms B6 --tasks g3-qty-rename,g4-gb-unit --repeats 2 --timeout 20 $S3E --out bench/vs-claude/results/gates-pilot
+     ```
+   - Arm B6 chạy vì cổng b10 chỉ có ở làn có pha plan. Làn đơn không có pha này.
+   - Commit sau mỗi lệnh.
+   - Không xem điểm. Phòng Nghiên cứu ước lượng q, ρ và chốt N cho E4 theo công thức đã ghi ở §9.
+4. **E3, thí điểm bài lớn.**
+   - Quy mô: 6 lượt, khoảng $8 và 0,8 giờ.
+     ```bash
+     node bench/vs-claude/run.mjs --arms A0-sonnet,B0,B1 --tasks l1-modules,l2-chain --repeats 1 --timeout 40 $S3E --out bench/vs-claude/results/large-pilot
+     ```
+   - Kiểm lượt B0 có pha `discuss` (`byPhase.discuss`). Nếu không có, B-15 không đo được trên bài này: ghi RUNLOG và báo lại.
+   - Commit.
+5. **Hết credit** (429, "usage_limit_reached", "credit", "hit your … limit"):
+   - Dừng ngay, commit phần đã có, ghi khóa cuối cùng vào RUNLOG.
+   - **Không** chạy tiếp bằng hạn mức gói trên cloud.
+6. **Local (sau 5/11 hoặc khi hết credit)**, cùng lệnh, server riêng cổng 7425 trên máy giám đốc:
+   - **E4:** B-12/B-16 chính, `--arms B7cab,B7cabO --tasks suite:gates`, `--repeats` theo N đã chốt. Khoảng 50–92 lượt, 2,3–4,2 giờ.
+   - **E5:** B-15, `--arms B0,B1 --tasks l1-modules,l2-chain --repeats 10`. 40 lượt, khoảng 7 giờ, chia nhiều cửa sổ 5 giờ.
+   - **E6:** H6, `--arms A1 --repeats 3`, `--arms A2 --repeats 2`, `--arms B0 --repeats 3` trên `l1-modules,l2-chain,t1-duration,t2-orders,t3-api,t4-perf,t5-logq`. Runner bỏ qua khóa đã có. Khoảng 49 lượt, 2,7 giờ.
+   - Gặp giới hạn 5 giờ thì chờ cửa sổ sau. Runner bỏ qua khóa đã `done`.
+7. **Nhãn người** (giám đốc, khoảng 30–45 phút):
+   - Gán 60 mục ở `docs/research/analysis/gold-sheet.csv`. Arm đã ẩn.
+   - Phòng Nghiên cứu chạy `agreement.mjs` với `gold-key.csv`.
