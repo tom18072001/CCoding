@@ -172,7 +172,8 @@ test('KPI v2: một hạng mục sạch không còn được điểm A (co về 
     const one = computeKpi(source(app, [task('A')], { A: mk('A') })).agents.find((a) => a.agentId === 'backend-dev')!;
     assert.equal(one.confidence, 'low');
     assert.ok(one.score < 80, `một hạng mục: ${one.score}`);
-    const ids = ['B', 'BB', 'BBB', 'BBBB', 'BBBBB'];
+    // n đếm mỗi hạng mục một lần (không cộng thêm sản phẩm của chính nó) → cần ≥ 8 hạng mục cho độ tin "cao"
+    const ids = ['B', 'BB', 'BBB', 'BBBB', 'BBBBB', 'BBBBBB', 'BBBBBBB', 'BBBBBBBB'];
     const many = computeKpi(source(app, ids.map((i) => task(i)), Object.fromEntries(ids.map((i) => [i, mk(i)])))).agents.find((a) => a.agentId === 'backend-dev')!;
     assert.equal(many.confidence, 'high');
     assert.ok(Math.abs(many.score - many.scoreRaw!) < Math.abs(one.score - one.scoreRaw!));
@@ -460,6 +461,58 @@ test('KPI v2 (sửa 3): sửa tệp bằng run_command không bị báo "sản p
     assert.equal(mk('git apply fix.patch'), 0);
     assert.equal(mk('cat src/a.ts'), 1, 'chỉ đọc thì vẫn là rỗng');
     assert.equal(mk('npm test'), 1, 'chỉ chạy kiểm tra thì vẫn là rỗng');
+  } finally {
+    app.cleanup();
+  }
+});
+
+// ───────── sửa theo review KPI v2 — nhóm 4: lỗi nhỏ ─────────
+
+test('KPI v2 (sửa 4): --by model không sinh dòng ma "agent@?"', () => {
+  const app = testApp();
+  try {
+    const t = task('T1', {
+      runs: [run('dev', [{ id: 'S1', assignee: 'backend-dev' }, { id: 'S2', assignee: 'frontend-dev' }], { approved: true, reviewerApproved: true })],
+      projectChecks: { baseline: [ok('npm test')], latest: [ok('npm test')] },
+    });
+    const calls = {
+      T1: [
+        call({ taskId: 'T1', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S1', text: '## Tóm tắt\nx', tools: [tool('edit_file', 'a.ts')] }),
+        call({ taskId: 'T1', agentId: 'qa-tester', phase: 'review', text: '{}' }),
+        call({ taskId: 'T1', agentId: 'dev-lead', phase: 'synthesize', text: '## Tóm tắt\ntổng hợp' }),
+      ],
+    };
+    // trưởng phòng dùng kế hoạch dự phòng (không có lượt plan trong calls), reviewer nêu lỗi hạng mục S2 chưa từng chạy
+    const tr = {
+      T1: [
+        { kind: 'plan', from: 'dev-lead', department: 'dev', text: 'Dùng kế hoạch dự phòng' },
+        { kind: 'review', from: 'qa-tester', department: 'dev', text: '⚠️ Cần sửa\n- [major] S2: chưa làm' },
+      ],
+    };
+    const keys = computeKpi(source(app, [t], calls, tr), { by: 'agent-model' }).agents.map((a) => a.key!);
+    assert.deepEqual(keys.filter((k) => k.endsWith('@?')), [], keys.join(', '));
+    assert.ok(keys.includes('dev-lead@qwen3:8b'), 'kế hoạch dự phòng gán vào model đã dùng của trưởng phòng');
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('KPI v2 (sửa 4): số bằng chứng n không đếm trùng hạng mục/sản phẩm và review/quyết định', () => {
+  const app = testApp();
+  try {
+    const t = task('T1', { projectChecks: { baseline: [ok('npm test')], latest: [ok('npm test')] }, runs: [run('dev', [{ id: 'S1', assignee: 'backend-dev' }], { approved: true, reviewerApproved: true })] });
+    const calls = {
+      T1: [
+        call({ taskId: 'T1', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S1', text: '## Tóm tắt\nx', tools: [tool('edit_file', 'a.ts')] }),
+        call({ taskId: 'T1', agentId: 'qa-tester', phase: 'review', text: '{}' }),
+      ],
+    };
+    const tr = { T1: [{ kind: 'review', from: 'qa-tester', department: 'dev', text: '✅ Duyệt' }] };
+    const r = computeKpi(source(app, [t], calls, tr));
+    // 1 hạng mục (cũng là 1 sản phẩm) + 1 nhiệm vụ có kết quả thật
+    assert.equal(r.agents.find((a) => a.agentId === 'backend-dev')!.evidenceN, 2);
+    // 1 lượt review (cũng là 1 quyết định duyệt)
+    assert.equal(r.agents.find((a) => a.agentId === 'qa-tester')!.evidenceN, 1);
   } finally {
     app.cleanup();
   }

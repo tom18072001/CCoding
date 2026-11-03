@@ -13,7 +13,8 @@ import { readJsonl } from './util/fsx.js';
  * Bốn nhóm điểm (0–100): Chất lượng (qua review lần đầu, ít blocker) · Hiệu quả (token/hạng mục so với đồng nghiệp, số lần làm lại)
  * · Tin cậy (lượt gọi hỏng, thao tác công cụ lỗi, chạm trần vòng công cụ) · Tuân thủ (đủ mục trong "Mẫu đầu ra" của agent.md,
  * có bằng chứng: lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu).
- * Điểm tổng = trung bình có trọng số (40/25/20/15) trên các nhóm có dữ liệu. Kèm "việc cần sửa" sinh tự động theo ngưỡng.
+ * v2 thêm Kết quả thật và Trung thực; điểm tổng = trung bình có trọng số (xem WEIGHTS) trên các nhóm có dữ liệu, co về mức trung tính
+ * theo lượng bằng chứng. Kèm "việc cần sửa" sinh tự động theo ngưỡng. Chi tiết: docs/KPI.md.
  */
 
 export interface CallRow {
@@ -114,7 +115,7 @@ export interface AgentKpi {
   format?: { reviewUnparsed: number; acceptUnparsed: number; emptyOutputs: number };
   /** (v2) Hiệu chỉnh của người review/nghiệm thu so với kết quả thật: duyệt nhưng lệnh kiểm tra lỗi / CTO không đạt. */
   calibration?: { decisions: number; falseApprovals: number; falseRejections: number };
-  /** (v2) Lượng bằng chứng (hạng mục + review + sản phẩm + nhiệm vụ có kết quả thật) và độ tin cậy của điểm. */
+  /** (v2) Lượng bằng chứng (max(hạng mục, sản phẩm) + max(review, quyết định duyệt) + nhiệm vụ có kết quả thật + kế hoạch) và độ tin cậy của điểm. */
   evidenceN?: number;
   confidence?: 'low' | 'medium' | 'high';
   /** (v2) Điểm trước khi co về mức trung tính theo lượng bằng chứng (điểm `score` đã co). */
@@ -414,11 +415,15 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
   const byModel = opts.by === 'agent-model';
   const acc = new Map<string, Acc>();
   const keyOf = (id: string, model?: string) => (byModel ? `${id}@${model || '?'}` : id);
+  const fresh = (key: string, id: string, dept: string): Acc => ({ k: emptyKpi(key, id, src.agent(id), dept), taskIds: new Set(), turns: [], coverage: [], missing: new Map(), issueTexts: [], attempts: [], outputs: 0, outcomeVals: [], workSec: 0 });
   const get = (id: string, dept: string, model?: string): Acc => {
+    // tách theo model mà không biết model (hạng mục chưa từng chạy, agent không có lượt gọi nào trong nhiệm vụ): không tạo dòng
+    // ma "agent@?" — dữ liệu này không gán được cho model nào nên bỏ (bảng theo agent vẫn tính)
+    if (byModel && !model) return fresh(`${id}@?`, id, dept);
     const key = keyOf(id, model);
     let a = acc.get(key);
     if (!a) {
-      a = { k: emptyKpi(key, id, src.agent(id), dept), taskIds: new Set(), turns: [], coverage: [], missing: new Map(), issueTexts: [], attempts: [], outputs: 0, outcomeVals: [], workSec: 0 };
+      a = fresh(key, id, dept);
       acc.set(key, a);
     }
     return a;
@@ -445,13 +450,17 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
     /** model của lượt thực thi/sửa cuối mỗi hạng mục, của lượt review/nghiệm thu cuối mỗi agent (để gán theo agent × model). */
     const subModel = new Map<string, string>();
     const roleModel = new Map<string, string>();
+    /** model của lượt gọi gần nhất của mỗi agent trong nhiệm vụ — dự phòng khi không biết model của vai trò/hạng mục cụ thể */
+    const lastModel = new Map<string, string>();
+    for (const r of calls) if (r.agentId && r.model) lastModel.set(r.agentId, r.model);
+    const modelOf = (kind: string, id: string) => roleModel.get(`${kind}:${id}`) ?? lastModel.get(id);
     /** người thực thi (khóa KPI) của nhiệm vụ → phòng, có ghi tệp không, có lượt runtime không ghi công cụ không (không biết đã ghi gì). */
     const executors = new Map<string, { depts: Set<string>; wrote: boolean; untracked: boolean }>();
     const outs = new Map<string, { agentId: string; department: string; model: string; text: string; executed: boolean; ranCheck: boolean; lastRuns: Map<CheckKind | 'any', boolean>; tracked: boolean }>();
     // ── lượt gọi ──
     for (const r of calls) {
       if (!r.agentId) continue;
-      const a = get(r.agentId, r.department, r.model);
+      const a = get(r.agentId, r.department, r.model || r.runtime);
       const k = a.k;
       a.taskIds.add(task.id);
       k.calls++;
@@ -580,7 +589,7 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
     const owner = new Map<string, { id: string; model?: string }>();
     for (const run of task.runs) {
       for (const st of run.subtasks) {
-        const model = subModel.get(`${run.department}:${st.id}`);
+        const model = subModel.get(`${run.department}:${st.id}`) ?? lastModel.get(st.assignee);
         owner.set(`${run.department}:${st.id}`, { id: st.assignee, model });
         if (st.splitTo && !st.attempts) continue;
         const a = get(st.assignee, run.department, model);
@@ -594,11 +603,11 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
     const lastReviewer = new Map<string, string>();
     for (const m of transcript) {
       if (m.kind === 'plan' && /kế hoạch dự phòng/.test(m.text) && m.from) {
-        const l = get(m.from, m.department, roleModel.get(`plan:${m.from}`));
+        const l = get(m.from, m.department, modelOf('plan', m.from));
         (l.k.lead ??= { plans: 0, planFallback: 0, syntheses: 0 }).planFallback++;
       }
       if (m.kind !== 'review') continue;
-      const rmodel = roleModel.get(`review:${m.from}`);
+      const rmodel = modelOf('review', m.from);
       lastReviewer.set(m.department, m.from);
       if (/Không đọc được kết quả review|Không đọc được kết luận review/.test(m.text)) {
         // v1 bỏ qua im lặng — v2 tính là lỗi định dạng của người review (model nhỏ hay trả lời ngoài JSON)
@@ -624,7 +633,7 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
       for (const run of task.runs.filter((r) => r.department === dept))
         for (const st of run.subtasks) {
           if (!st.output && !st.attempts) continue;
-          const a = get(st.assignee, dept, subModel.get(`${dept}:${st.id}`));
+          const a = get(st.assignee, dept, subModel.get(`${dept}:${st.id}`) ?? lastModel.get(st.assignee));
           a.k.quality.reviewed++;
           if (!first.some((i) => i.sid === st.id && i.sev !== 'minor')) a.k.quality.firstPassOk++;
           if (!last.some((i) => i.sid === st.id && i.sev === 'blocker')) a.k.quality.finalClean++;
@@ -637,7 +646,7 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
     const acceptKnown = !!acc0?.parsed;
     // lượt nghiệm thu lỗi (không có nội dung: hạ tầng, hết ngân sách…) đã tính ở lượt gọi hỏng (hạ tầng thì không trừ điểm) —
     // không phải "không đọc được JSON"
-    if (acc0 && !acc0.parsed && !acc0.error && acc0.by) get(acc0.by, 'coord', roleModel.get(`accept:${acc0.by}`)).k.format!.acceptUnparsed++;
+    if (acc0 && !acc0.parsed && !acc0.error && acc0.by) get(acc0.by, 'coord', modelOf('accept', acc0.by)).k.format!.acceptUnparsed++;
     if (finished) {
       const crit = acceptKnown ? acc0!.criteria : [];
       const critFailed = crit.filter((c) => c.result === 'fail').length;
@@ -700,7 +709,7 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
         const bad = !!c?.regressed || accBad;
         const good = !bad && (!!c || acceptMeasured) && (!c || c.pass) && (!acceptMeasured || accGood);
         if (!bad && !good) continue;
-        const cal = (get(who, run.department, roleModel.get(`review:${who}`)).k.calibration ??= { decisions: 0, falseApprovals: 0, falseRejections: 0 });
+        const cal = (get(who, run.department, modelOf('review', who)).k.calibration ??= { decisions: 0, falseApprovals: 0, falseRejections: 0 });
         cal.decisions++;
         const approved = run.review.reviewerApproved ?? (run.review.approved || FORCED_REJECT_RE.test(run.review.summary ?? ''));
         if (approved && bad) cal.falseApprovals++;
@@ -708,7 +717,7 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
       }
       // CTO: nghiệm thu đạt nhưng lệnh kiểm tra của dự án hồi quy so với baseline của nhiệm vụ
       if (acceptKnown && checks && acc0!.by && (checks.regressed || checks.pass)) {
-        const cal = (get(acc0!.by, 'coord', roleModel.get(`accept:${acc0!.by}`)).k.calibration ??= { decisions: 0, falseApprovals: 0, falseRejections: 0 });
+        const cal = (get(acc0!.by, 'coord', modelOf('accept', acc0!.by)).k.calibration ??= { decisions: 0, falseApprovals: 0, falseRejections: 0 });
         cal.decisions++;
         if (acc0!.accepted && checks.regressed) cal.falseApprovals++;
       }
@@ -804,7 +813,8 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
     let raw = w ? Math.round(sum / w) : 0;
     if (w && w < 0.5) raw = Math.min(raw, 79);
     // độ tin cậy của điểm: bằng chứng ít thì co về mức trung tính — 1 hạng mục sạch không còn là điểm A
-    const n = k.subtasks + (k.reviewer?.reviews ?? 0) + a.outputs + a.outcomeVals.length + (k.calibration?.decisions ?? 0) + (k.lead?.plans ?? 0);
+    // mỗi đơn vị bằng chứng đếm một lần: hạng mục và sản phẩm của nó là một; lượt review và quyết định duyệt của nó là một
+    const n = Math.max(k.subtasks, a.outputs) + Math.max(k.reviewer?.reviews ?? 0, k.calibration?.decisions ?? 0) + a.outcomeVals.length + (k.lead?.plans ?? 0);
     k.evidenceN = n;
     k.confidence = n < 3 ? 'low' : n < 8 ? 'medium' : 'high';
     k.scoreRaw = raw;
@@ -832,7 +842,7 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
     agents: list.map((a) => a.k),
     departments,
     method:
-      'KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20%: lệnh kiểm tra của dự án sau cùng (đạt 1, vẫn lỗi 0,4, hồi quy 0) và tiêu chí CTO nghiệm thu đạt — chia đều cho người thực thi và trưởng phòng · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt) · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n: (n·thô + 3·60)/(n + 3).',
+      'KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3).',
   };
 }
 

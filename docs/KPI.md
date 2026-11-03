@@ -7,7 +7,7 @@
 - **Vấn đề:** KPI v1 chấm sub-agent qua review của một agent khác. Khi chạy trên Ollama, người review cũng là model nhỏ — review dễ dãi hoặc trả lời sai định dạng JSON lại làm điểm **tăng**. Prompt dài hơn `num_ctx` bị Ollama cắt mất phần đầu (hồ sơ agent, đề bài) mà không chỉ số nào báo.
 - **KPI v2** thêm hai nhóm không phụ thuộc ý kiến LLM — **Kết quả thật** (lệnh kiểm tra của dự án, CTO nghiệm thu) và **Trung thực** (khẳng định "test đạt" phải có lệnh chạy thật) — cùng các chỉ số định dạng, ngữ cảnh, độ tin của điểm, và chấm tách theo model.
 - **Bộ probe** (`bench/agent-probes`) chấm từng `agent.md` trên model cục bộ bằng 12 đề cố định, để chọn model cho từng vị trí **trước khi** giao việc thật.
-- Kiểm thử: `npm test` 174/174 đạt (8 bài mới trong `test/kpi-v2.test.ts`), `npm run typecheck` sạch; probe `--self-test` 129/129 cặp đạt.
+- Kiểm thử (lần chạy gần nhất, sau các bản sửa theo review): `npm test` 189 bài — 188 đạt, 1 bỏ qua (PDF mã hóa cần `qpdf`, máy kiểm thử không có), 0 lỗi; 23 bài trong `test/kpi-v2.test.ts`; `npm run typecheck` sạch. (Bản ghi trước đó "174/174 đạt" là sai: thực tế 173 đạt, 1 bỏ qua.)
 
 ## Có gì trên nhánh
 
@@ -17,7 +17,7 @@
 | `src/cli.ts` | `ccoding kpi --by model`; bảng CLI thêm cột Tin, KQ, TTh, Ngữ cảnh |
 | `src/server.ts` | `GET /api/kpi?by=model` |
 | `public/app.js` | Tab KPI thêm cột Độ tin, Kết quả thật, Trung thực, Ngữ cảnh; thẻ KPI trong hồ sơ agent |
-| `test/kpi-v2.test.ts` | 8 bài kiểm thử mới |
+| `test/kpi-v2.test.ts` | 23 bài kiểm thử (8 bài ban đầu + 15 bài tái hiện lỗi từ review) |
 | `bench/agent-probes/` | `probe.mjs` (chạy), `probes.mjs` (12 probe + bộ chấm), `report.mjs` (báo cáo), `README.md` |
 | `docs/KPI.md`, `README.md` | Tài liệu này và dòng lệnh mới |
 
@@ -64,7 +64,7 @@ Giao diện web: tab **KPI** (cột mới), thẻ KPI trong hồ sơ agent. API:
 
 Ba quy tắc chung:
 
-1. **Co điểm theo bằng chứng.** n = hạng mục + review + sản phẩm + nhiệm vụ có kết quả thật + quyết định duyệt + kế hoạch. Điểm = (n × điểm thô + 3 × 60) / (n + 3). Một hạng mục sạch cho khoảng 70, không còn 100. Cột **Độ tin**: thấp (n < 3), vừa (n < 8), cao. `scoreRaw` trong JSON là điểm trước khi co.
+1. **Co điểm theo bằng chứng.** n = max(hạng mục, sản phẩm) + max(lượt review, quyết định duyệt) + nhiệm vụ có kết quả thật + kế hoạch — mỗi đơn vị bằng chứng đếm một lần (hạng mục và sản phẩm của nó là một; lượt review và quyết định duyệt của nó là một). Điểm = (n × điểm thô + 3 × 60) / (n + 3). Một hạng mục sạch cho khoảng 70, không còn 100. Cột **Độ tin**: thấp (n < 3), vừa (n < 8), cao. `scoreRaw` trong JSON là điểm trước khi co.
 2. **Thiếu dữ liệu không được điểm A.** Các nhóm có dữ liệu chiếm dưới 50% trọng số thì điểm tối đa 79.
 3. **Hạ tầng không trừ điểm agent.** Hạn mức, mạng, đăng nhập (như v1) và prompt vượt cửa sổ ngữ cảnh chỉ được báo, không trừ điểm — đó là cấu hình runtime, không phải lỗi của agent.
 
@@ -92,7 +92,7 @@ Trước đây `unknown` bị loại khỏi mẫu số: 1 đạt + 3 không rõ 
 
 ## Đọc KPI theo model
 
-`--by model` tách mỗi agent thành từng dòng `agent@model`. Hạng mục, review và kết quả thật được gán theo model của lượt thực thi / review cuối. Dùng khi:
+`--by model` tách mỗi agent thành từng dòng `agent@model`. Hạng mục, review và kết quả thật được gán theo model của lượt thực thi / review cuối; không có thì theo model của lượt gọi gần nhất của agent trong nhiệm vụ. Dữ liệu không gán được cho model nào (hạng mục chưa từng chạy, agent không có lượt gọi trong nhiệm vụ) bị bỏ ở bảng theo model — không còn dòng ma `agent@?`; bảng theo agent vẫn tính. Dùng khi:
 
 - Một vị trí chạy cả model đám mây lẫn Ollama do chuyển runtime dự phòng — xem model nào kéo điểm xuống.
 - So hai model Ollama cho cùng vị trí sau một tuần chạy thật, sau khi đã lọc bằng probe.
