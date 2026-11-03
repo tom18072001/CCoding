@@ -1,0 +1,9 @@
+// Amounts are VND (integer dong). Percent discounts are rounded half-up to the nearest dong.
+/** Returns amount minus the percentage discount; the discount is rounded half-up to whole dong. */
+export function applyPercent(amount, pct) {
+  const discount = Math.floor((amount * pct + 50) / 100);
+  return amount - discount;
+}
+export function sum(values) {
+  return values.reduce((a, b) => a + b, 0);
+}
