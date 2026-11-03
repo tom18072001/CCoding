@@ -331,18 +331,22 @@ done
 
 ### 5.4 Đợt 3e (sau D9: B-14, B-12, B-16, B-15, H6) — chỉ chạy khi giám đốc đã duyệt
 
-> Hạng mục S3 của BRIEF-14 (vòng 4, gói 8) · research-lead · phân loại dữ liệu: Nội bộ. Mục này là **kế hoạch vận hành**: chép lệnh từ `bench/vs-claude/RUNBOOK-cloud-session.md` Bước 3e và lệnh phân tích cổng đã chốt cho `docs/research/analysis/gates-pairs.mjs`. Giả thuyết, thước đo, phép kiểm, quy tắc dừng và quy tắc loại nằm ở `preregistration.md` §9, mục "Đăng ký trước vòng 4 gói 8: đợt đo 3e (ghi 3/11/2026, trước lượt đầu tiên)", dòng `V4-3e-E1` … `V4-3e-E6`. Khi §9 và mục này lệch nhau thì theo §9. Số USD và giờ máy dưới đây là ước lượng của người điều phối (BRIEF-14), không phải ngưỡng.
+> Hạng mục S3 của BRIEF-14 (vòng 4, gói 8) · research-lead · phân loại dữ liệu: Nội bộ. Đồng bộ lại ở vòng 4 gói 9 (BRIEF-15, T-20261103-224501-4e4) theo bảng quyết định đầu mục §9 gói 8. Mục này là **kế hoạch vận hành**: chép lệnh từ `bench/vs-claude/RUNBOOK-cloud-session.md` Bước 3e và lệnh phân tích cổng đã chốt cho `docs/research/analysis/gates-pairs.mjs`. Giả thuyết, thước đo, phép kiểm, quy tắc dừng và quy tắc loại nằm ở `preregistration.md` §9, mục "Đăng ký trước vòng 4 gói 8: đợt đo 3e (ghi 3/11/2026, trước lượt đầu tiên; …)", dòng `V4-3e-E1` … `V4-3e-E6`. Khi §9 và mục này lệch nhau thì theo §9. Số USD và giờ máy dưới đây là ước lượng của người điều phối (BRIEF-14), không phải ngưỡng; riêng **trần 15 giờ của E4** là quy tắc dừng của §9.
 
 **Điều kiện trước khi chạy** (RUNBOOK 3e):
 1. D9b đã gộp (8 test hook Linux xanh).
 2. §9 đã có các dòng `V4-3e-E1` … `V4-3e-E6` **và đã commit**, kể cả công thức chốt N cho E4.
 3. Giám đốc đã duyệt chi phí.
 
+commit khóa §9: <hash>
+
+Dòng trên do orchestrator điền bằng hash commit gộp của nhiệm vụ T-20261103-224501-4e4 (mốc khóa §9 gói 8), sau khi gộp và trước lượt đầu của E2. **Dòng còn `<hash>` thì không được bắt đầu E2.**
+
 **Điểm dừng cứng:**
-- **Trước E2:** chỉ chạy khi §9 đã commit, có công thức chốt N cho E4 (q̂, ρ̂ từ E2 theo tử và mẫu ghi sẵn, rồi tra bảng C-3 của `analysis/agreement.md`). Chưa commit thì dừng sau E1.
+- **Trước E2:** chỉ chạy khi §9 đã commit, có công thức chốt N cho E4, **và dòng `commit khóa §9` ở trên đã có hash thật**. Chưa đủ thì dừng sau E1.
 - **Trước lượt local đầu tiên** (E4, hoặc phần cloud chạy tiếp ở local theo §5.4.2): đã chốt server local dựng từ commit nào (§5.4.2, [CẦN XÁC NHẬN]), ghi quyết định vào RUNLOG và commit. Chưa chốt thì không chạy local.
-- **Trước E4:** chỉ bắt đầu khi N đã được chốt bằng đúng công thức §9 `V4-3e-E4`, và giá trị N cùng phép tính đã ghi vào RUNLOG, có commit. Không chọn N sau khi xem điểm.
-- **Trước E6:** đã chốt `--out` của E6 (ghi chú §5.4.3, [CẦN XÁC NHẬN]) **cùng lúc** với mục (9) của §9 `V4-3e-E6` (ghép khóa cũ khác server), ghi vào RUNLOG và commit trước lượt E6 đầu tiên. Chưa chốt thì không chạy E6, vì chọn sai `--out` sẽ trộn hai server trong một thư mục, trái §6.4.
+- **Trước E4:** ghi vào RUNLOG, có commit, phép tính N theo §9 khối (a) từ E2. Theo §9 khối (a) bước 5, kết quả đã xác định trước: R_E4 = 16, R_B6 = 32, tổng 192 lượt; RUNLOG ghi q̂ của E2 chỉ để mô tả. Không chọn N sau khi xem điểm.
+- **Trước E6:** `--out` của E6 đã chốt ở §9 `V4-3e-E6` mục (9): thư mục mới `bench/vs-claude/results/h6-3e`, chỉ ghép A với B0 cùng cửa sổ và cùng server. Ghi nguồn p (SR-26 có hash hay phương án lùi) vào RUNLOG và commit trước lượt E6 đầu tiên.
 - **Không xem điểm** giữa các phần (§3.0, `preregistration.md` §4.4a). Giữa các phần chỉ xem bảng vận hành ở §3.0, đổi đường dẫn sang thư mục `--out` của phần đó.
 - **Thiếu credit hoặc thiếu giờ:** thứ tự ưu tiên lấy theo §9. Mục này không chép lại để tránh hai bản lệch nhau.
 
@@ -382,21 +386,22 @@ Ghi chú theo RUNBOOK:
 
 ```bash
 P=bench/vs-claude/results/gates-pilot
-# đơn vị chính: lần cổng quyết định (B-12); CI bootstrap cụm theo runId
-for G in b02 b10 cto; do
-  node docs/research/analysis/gates-pairs.mjs $P/runs.jsonl --arms-json bench/vs-claude/arms.json --unit decision --gate $G --out $P/pairs-$G-decision.csv
-  node docs/research/analysis/agreement.mjs --pairs $P/pairs-$G-decision.csv --positive 1 > $P/agreement-$G-decision.md
-done
-# độ nhạy: mỗi lượt một cặp
-for G in b02 b10 cto; do
-  node docs/research/analysis/gates-pairs.mjs $P/runs.jsonl --arms-json bench/vs-claude/arms.json --unit run --gate $G --out $P/pairs-$G-run.csv
-  node docs/research/analysis/agreement.mjs --pairs $P/pairs-$G-run.csv --positive 1 > $P/agreement-$G-run.md
+# nhãn chính: --label gate (nhãn tại thời điểm cổng, B-12 7(b)); độ nhạy: --label task (nhãn theo bài)
+# đơn vị chính: lần cổng quyết định (B-12); độ nhạy: mỗi lượt một cặp; CI bootstrap cụm theo runId
+for L in gate task; do
+  for U in decision run; do
+    for G in b02 b10 cto; do
+      node docs/research/analysis/gates-pairs.mjs $P/runs.jsonl --arms-json bench/vs-claude/arms.json --unit $U --gate $G --negatives clean --label $L --out $P/pairs-$G-$U-$L.csv
+      node docs/research/analysis/agreement.mjs --pairs $P/pairs-$G-$U-$L.csv --positive 1 > $P/agreement-$G-$U-$L.md
+    done
+  done
 done
 ```
 
-- Cổng `null` (ví dụ b10 ở làn đơn) bị bỏ khỏi mẫu của cổng đó; số dòng bị bỏ in ra stderr và phải chép vào RUNLOG.
-- Giới hạn của `--unit decision` khi chỉ có bản tóm tắt (thứ tự và nhãn từng vòng của b02 bị mất; ref là nhãn theo bài, chưa phải nhãn tại thời điểm cổng như B-12 trường 7(b) đòi hỏi) ghi ở `docs/research/analysis/README.md`. §9 `V4-3e-E2` dẫn chiếu README đó.
-- Từ đầu ra này, Phòng Nghiên cứu tính q̂, ρ̂ theo tử và mẫu của §9, chốt N, ghi RUNLOG, rồi commit `pairs-*.csv`, `agreement-*.md` và RUNLOG. Đây là điểm dừng trước E4.
+- Cổng `null` (ví dụ b10 ở làn đơn) bị bỏ khỏi mẫu của cổng đó. Bài cài lỗi thuộc cổng khác bị loại khỏi mẫu của cổng đang xét (`--negatives clean`). Hai số dòng bị bỏ in ra stderr và phải chép vào RUNLOG.
+- Dòng tổng hợp `gates-pairs: b02 nhãn hiệu lực: …; số dòng lùi: N/M; tỷ lệ lùi: P%` luôn có ở stderr, và vào stdout khi có `--out`; chép vào RUNLOG. Tỉ lệ lùi > 10 % thì kết quả b02 ở `--label gate` chỉ là thăm dò, báo nhãn theo bài (§9, quy ước chung). Khi chưa có `gates.b02.checksRed` (D10 mục C), tỉ lệ lùi là 100 %.
+- Nhãn cto ở `--label gate` của script trên nhánh này vẫn là nhãn theo bài; §9 quy định nhãn cto là test ẩn cuối lượt (`pass = false`). Giới hạn của `--unit decision` (thứ tự và nhãn từng vòng của b02 bị mất) ghi ở `docs/research/analysis/README.md`.
+- Từ dữ liệu này, Phòng Nghiên cứu tính q̂_b02, q̂_cto theo tử và mẫu của §9 khối (a) bước 1, cộng hai arm, không tách arm. Sau đó ghi RUNLOG cùng N theo khối (a) (đã xác định: R_E4 = 16, R_B6 = 32), rồi commit `pairs-*.csv`, `agreement-*.md` và RUNLOG. Đây là điểm dừng trước E4.
 
 **Hết credit trên cloud** (429, "usage_limit_reached", "credit", "hit your … limit"): dừng ngay, commit phần đã có, ghi khóa cuối cùng vào RUNLOG. **Không** chạy tiếp bằng hạn mức gói trên cloud.
 
@@ -420,35 +425,54 @@ Cùng thiết lập `$S3E`, server riêng cổng 7425 trên máy giám đốc. G
 
 | Thứ tự | Phần | §9 | Lệnh (cờ chép nguyên từ RUNBOOK 3e bước 6) | Số lượt | USD (Sonnet) | Giờ máy | Điểm commit |
 |---|---|---|---|---|---|---|---|
-| 4 | E4, B-12/B-16 chính | `V4-3e-E4` | `node bench/vs-claude/run.mjs --arms B7cab,B7cabO --tasks suite:gates --repeats <R> --timeout 20 $S3E --out <OUT_E4>` | 50–92 | 23–44 | 2,3–4,2 | sau lệnh, và cuối mỗi cửa sổ 5 giờ |
+| 4 | E4, B-12/B-16 chính | `V4-3e-E4` | hai lệnh, theo thứ tự: `node bench/vs-claude/run.mjs --arms B7cab,B7cabO --tasks g1-slug-dedupe,g2-cart-coupon,g5-median-stats,g6-range-merge --repeats 16 --timeout 20 $S3E --out bench/vs-claude/results/gates-main` rồi `node bench/vs-claude/run.mjs --arms B6 --tasks g3-qty-rename,g4-gb-unit --repeats 32 --timeout 20 $S3E --out bench/vs-claude/results/gates-main` | 128 + 64 = 192 | ≈ 60 + B6 (chưa ước lượng) | ≈ 8,8; **trần 15** | sau **mỗi** lệnh, và cuối mỗi cửa sổ 5 giờ |
 | 5 | E5, B-15 chính | `V4-3e-E5` | `node bench/vs-claude/run.mjs --arms B0,B1 --tasks l1-modules,l2-chain --repeats 10 --timeout 40 $S3E --out bench/vs-claude/results/b15-main` | 40 | ≈ 73 | ≈ 7 | cuối mỗi cửa sổ 5 giờ; trải trên nhiều cửa sổ |
-| 6 | E6, H6 cho đủ N | `V4-3e-E6` | ba lệnh: `--arms A1 --repeats 3`, `--arms A2 --repeats 2`, `--arms B0 --repeats 3`, mỗi lệnh với `--tasks l1-modules,l2-chain,t1-duration,t2-orders,t3-api,t4-perf,t5-logq` | ≈ 49 | ≈ 32 | ≈ 2,7 | sau mỗi lệnh |
-| | **Cộng local** | | | ≈ 139–181 | ≈ 128–149 | ≈ 12–13,9 | |
+| 6 | E6, H6 cho đủ N | `V4-3e-E6` | ba lệnh: `--arms A1 --repeats 3 --timeout 20`, `--arms A2 --repeats 2 --timeout 40`, `--arms B0 --repeats 3 --timeout 20`, mỗi lệnh với `--tasks l1-modules,l2-chain,t1-duration,t2-orders,t3-api,t4-perf,t5-logq $S3E --out bench/vs-claude/results/h6-3e` | 21 + 14 + 21 = 56 (B0 mới 21) | ≈ 37 | ≈ 3,1 | sau mỗi lệnh |
+| | **Cộng local** | | | 288 | ≈ 170 + B6 | ≈ 18,9 | |
 
 Ghi chú:
-- **Giá trị điền cho E4:** `<R>` là số lượt mỗi khóa arm × bài, suy từ N theo §9 `V4-3e-E4`. Mỗi lần tăng `--repeats` thêm 1 sinh 12 khóa (2 arm × 6 bài). N là tổng lượt, lượt mỗi cổng hay lượt mỗi arm: theo định nghĩa của §9. `<OUT_E4>` cũng theo §9. Nếu §9 tính lượt thí điểm vào mẫu chính thì dùng `bench/vs-claude/results/gates-pilot` (runner bỏ qua r1–r2 đã có). Nếu không, dùng thư mục mới `bench/vs-claude/results/gates-main`. Đề xuất của mục này là thư mục mới, để thí điểm chỉ dùng chốt N [CẦN XÁC NHẬN ở §9].
-- **E4 không có B6**, nên b10 ở E4 là `null` với mọi lượt làn đơn. Mẫu b10 chỉ có 4 lượt B6 của E2. Nếu §9 cần b10 trong mẫu chính thì phải thêm lệnh B6. Lệnh đó không có trong RUNBOOK, nên mục này không tự thêm [CẦN XÁC NHẬN].
+- **Số lượt E4** theo §9 khối (a): E2 có tối đa 8 lượt có lỗi cài mỗi cổng, ít hơn 10 dương thật, nên bước 5 luôn áp (q = 0,5, N_gộp = 64). Vì vậy R_E4 = ⌈64/4⌉ = 16 trên 4 bài × 2 arm = 128 lượt, và R_B6 = ⌈64/2⌉ = 32 trên 2 bài = 64 lượt. g3, g4 bị bỏ khỏi B7cab, B7cabO vì làn đơn không có pha plan, nên b10 luôn `null`. b10 lấy từ lệnh B6 (chạy local, không tốn USD cloud). `<OUT_E4>` là thư mục mới `bench/vs-claude/results/gates-main`: lượt thí điểm `gates-pilot` không vào mẫu chính.
+- **Trần thời gian máy của E4 (§9 khối (a) bước 4):**
+  - Trần là **15 giờ đồng hồ thực**, cộng (giờ kết thúc − giờ bắt đầu, UTC, ghi RUNLOG) của các lệnh E4. Thời gian chờ giữa hai cửa sổ không tính. E4 dùng tối đa 3 cửa sổ 5 giờ.
+  - Chạy lệnh B7cab, B7cabO trước, lệnh B6 sau.
+  - Khi chạm trần: không bắt đầu lượt mới, cho lượt đang chạy chạy hết rồi dừng. Báo số lượt đã chạy mỗi ô (cổng × arm × bài). **Không chạy bù**, không mở cửa sổ thứ tư.
+- **USD và giờ của E4:**
+  - Tốc độ lấy theo BRIEF-14: 50–92 lượt mất 2,3–4,2 giờ, tức ≈ 2,75 phút mỗi lượt, và 23–44 USD, tức ≈ 0,47 USD mỗi lượt.
+  - 128 lượt B7cab, B7cabO ≈ 5,9 giờ và ≈ 60 USD.
+  - 64 lượt B6 ≈ 2,9 giờ, giả định B6 chạy cùng tốc độ (chưa kiểm). USD của B6 chưa ước lượng.
+  - Đây chỉ là phép nhân, chưa có số đo.
 - **`--out` của E5 là thư mục mới `bench/vs-claude/results/b15-main`**, không dùng `large-pilot`. Lý do: §9 `V4-3e-E3` mục (6) ghi dữ liệu E3 "không gộp vào ước lượng của E5", và `V4-3e-E5` mục (4) ghi "Thí điểm E3 (6 lượt) tách riêng, không gộp". Vì runner bỏ qua khóa đã `done`, nếu E5 ghi vào `large-pilot` thì B0, B1 r1 của E3 sẽ bị coi là r1 của E5: mỗi ô chỉ có 9 lượt mới và lượt thí điểm lọt vào mẫu chính. Với thư mục mới, E5 chạy đủ r1–r10 mỗi ô. Nếu E5 dừng giữa chừng, chạy tiếp đúng lệnh trên, cùng `b15-main`.
-- **`--timeout` của E5, E6:** RUNBOOK 3e bước 6 ghi "cùng lệnh" nhưng không ghi timeout cho E5, E6. `--timeout 40` của E5 là **đề xuất** của mục này, lấy theo lệnh E3 cùng bài và cùng arm B0, B1 [CẦN XÁC NHẬN]; chốt trước lượt E5 đầu tiên, sau đó không đổi giữa chừng (§3.0). E6 cần dùng **cùng `--out` và cùng `--timeout`** với các khóa H6 đã có, để runner bỏ qua khóa đã xong: A1, B0 theo §5.2 là 20; A2 là 40. Thư mục chứa khóa H6 đã có là `results/study-cloud`, theo RUNBOOK Bước 3 và 3d. Server 3e khác commit với server 7424 đã chạy các khóa đó, nên nếu ghi vào cùng `--out` thì trái §6.4. Cách xử lý (cùng thư mục, ghi hash vào RUNLOG, tách hash làm biến độ nhạy; hay thư mục mới, chạy đủ N từ đầu) do §9 `V4-3e-E6` quyết định theo quy tắc H6 v2.1 [CẦN XÁC NHẬN]. Điểm này chốt cùng mục (9) của `V4-3e-E6`, trước lượt E6 đầu tiên (điểm dừng "Trước E6" ở trên).
+- **`--timeout` của E5:** RUNBOOK 3e bước 6 ghi "cùng lệnh" nhưng không ghi timeout cho E5. `--timeout 40` của E5 là **đề xuất** của mục này, lấy theo lệnh E3 cùng bài và cùng arm B0, B1 [CẦN XÁC NHẬN]. Chốt trước lượt E5 đầu tiên, sau đó không đổi giữa chừng (§3.0).
+- **E6:**
+  - `--out` là thư mục mới `bench/vs-claude/results/h6-3e`, theo §9 `V4-3e-E6` mục (9). H6 chỉ ghép A với B0 cùng cửa sổ và cùng server.
+  - Không dùng `results/study-cloud`, vì runner bỏ qua khóa đã `done`. Nếu dùng chung, các khóa H6 cũ của server 7424 sẽ trộn với server 3e, trái §6.4. Vì vậy E6 chạy đủ N từ đầu: 56 lượt, B0 mới 21. Thay cho "≈ 49, trừ khóa đã có" của BRIEF-14.
+  - `--timeout` giữ như các khóa H6 đã có (§5.2): A1, B0 là 20, A2 là 40.
+  - USD và giờ nhân từ BRIEF-14 theo tỉ lệ 56/49: 32 → ≈ 37 USD, 2,7 → ≈ 3,1 giờ. Đây chỉ là phép nhân.
 - **E5:** quy tắc loại "lượt đối chứng phải có pha `discuss`" áp như ở E3 (§9).
-- Dòng "Cộng" cộng từ bảng BRIEF-14. Theo §2 (3,6 giờ wall-sum mỗi cửa sổ, giả định), 12–13,9 giờ cần **ít nhất 4 cửa sổ** 5 giờ.
+- Dòng "Cộng":
+  - 192 + 40 + 56 = 288 lượt.
+  - USD ≈ 60 + 73 + 37 = 170, chưa gồm B6.
+  - Giờ ≈ 8,8 + 7 + 3,1 = 18,9.
+  - Theo §2 (3,6 giờ wall-sum mỗi cửa sổ, giả định), 18,9 giờ cần **ít nhất 6 cửa sổ** 5 giờ.
 
-**Phân tích cổng sau E4.** Cùng dạng như sau E2, thay `P` bằng thư mục `--out` của E4. Chỉ chạy khi E4 đã đủ N, sau quarantine §5.0:
+**Phân tích cổng sau E4.** Cùng dạng như sau E2, với `P=bench/vs-claude/results/gates-main`. Chỉ chạy khi E4 đã đủ N hoặc đã chạm trần thời gian, sau quarantine §5.0:
 
 ```bash
-P=<OUT_E4>
-for G in b02 b10 cto; do
-  node docs/research/analysis/gates-pairs.mjs $P/runs.jsonl --arms-json bench/vs-claude/arms.json --unit decision --gate $G --out $P/pairs-$G-decision.csv
-  node docs/research/analysis/agreement.mjs --pairs $P/pairs-$G-decision.csv --positive 1 > $P/agreement-$G-decision.md
-done
-for G in b02 b10 cto; do
-  node docs/research/analysis/gates-pairs.mjs $P/runs.jsonl --arms-json bench/vs-claude/arms.json --unit run --gate $G --out $P/pairs-$G-run.csv
-  node docs/research/analysis/agreement.mjs --pairs $P/pairs-$G-run.csv --positive 1 > $P/agreement-$G-run.md
+P=bench/vs-claude/results/gates-main
+for L in gate task; do
+  for U in decision run; do
+    for G in b02 b10 cto; do
+      node docs/research/analysis/gates-pairs.mjs $P/runs.jsonl --arms-json bench/vs-claude/arms.json --unit $U --gate $G --negatives clean --label $L --out $P/pairs-$G-$U-$L.csv
+      node docs/research/analysis/agreement.mjs --pairs $P/pairs-$G-$U-$L.csv --positive 1 > $P/agreement-$G-$U-$L.md
+    done
+  done
 done
 ```
 
-- Nếu §9 tính lượt thí điểm vào mẫu chính mà E4 lại dùng thư mục mới, thì đưa cả hai tệp `runs.jsonl` vào `gates-pairs.mjs`. Script nhận nhiều tệp `runs.jsonl`.
-- Phép so B7cab với B7cabO (B-16: McNemar, Clopper–Pearson) theo §9 `V4-3e-E4`, không theo mục này. Commit `pairs-*.csv`, `agreement-*.md` sau khi chạy.
+- Kết quả đăng ký dùng `--unit decision --label gate`. `--unit run` và `--label task` là độ nhạy. b10 chỉ báo theo nhãn bài, từ các lượt B6. Recall gộp hai arm.
+- Trước khi chạy khối trên, `gates-pairs.mjs` phải đọc `pass` cho nhãn cto ở `--label gate` (§9, quy ước chung). Chưa sửa thì kết quả cto ghi "nhãn theo bài, chưa phải nhãn tại thời điểm cổng".
+- Lượt thí điểm `gates-pilot` không đưa vào mẫu chính.
+- Phép so B7cab với B7cabO (B-16: McNemar chính xác ghép cặp theo bài và `rep`, Clopper–Pearson từng arm) theo §9 `V4-3e-E4`, không theo mục này. Commit `pairs-*.csv`, `agreement-*.md` sau khi chạy.
 
 **Nhãn người** (RUNBOOK 3e bước 7, giám đốc, khoảng 30–45 phút, làm được song song với E4–E6): gán 60 mục ở `docs/research/analysis/gold-sheet.csv` (arm đã ẩn). Sau đó Phòng Nghiên cứu chạy `agreement.mjs` với `gold-key.csv`: `node docs/research/analysis/agreement.mjs --gold-score` (theo `agreement.mjs:11`).
 
