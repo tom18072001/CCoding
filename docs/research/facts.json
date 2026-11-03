@@ -86,8 +86,8 @@
       "exceptions": [
         {
           "file": "docs/research/paper/paper.md",
-          "line": 513,
-          "reason": "Trích dẫn câu cũ để ghi nhận đã sửa, không phải khẳng định"
+          "line": 547,
+          "reason": "Trích dẫn câu cũ để ghi nhận đã sửa, không phải khẳng định (dòng dời 513 → 547 do chèn §4.3)"
         }
       ]
     }
@@ -434,6 +434,106 @@
       "pattern": "Claude Code CLI (\\d\\.\\d\\.\\d+) \\(W1–W5",
       "files": [
         "improvement-backlog.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "s43-main-commits",
+      "value": "16",
+      "reason": "context/merge-main-2026-11-03.md §1: 16 commit của main (e0bd2f4..9e6079b)",
+      "pattern": "nhận (\\d+) commit mới của `main`",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "s43-merge-hash",
+      "value": "37f88b6",
+      "reason": "context/merge-main-2026-11-03.md §1: merge commit",
+      "pattern": "merge commit `(\\w{7})`, không rebase",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "s43-tests-linux",
+      "value": "285/285",
+      "reason": "Đề bài vòng 4 gói 5 (Phòng Dev báo, Linux); merge-main §6 ghi 282 đạt/0 lỗi/3 bỏ qua ở lần chạy đầu",
+      "pattern": "`npm test` (\\d+/\\d+) trên Linux",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "s43-b7prime-server",
+      "value": "1333eef",
+      "reason": "b7prime/RUNLOG.md dòng 5; khớp V4-04, backlog B-11.5, paper §6.1(7)",
+      "pattern": "máy chủ 7425 ở `(\\w{7})` cho B7′",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "s43-b7prime-cli",
+      "value": "2.1.317",
+      "reason": "b7prime/RUNLOG.md dòng 7",
+      "pattern": "CLI (\\d\\.\\d\\.\\d+) thay cho 2\\.1\\.316",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "s43-w-main-server",
+      "value": "e0bd2f4",
+      "reason": "study-cloud/RUNLOG.md dòng 5, 56: máy chủ 7424 ở origin/main",
+      "pattern": "máy chủ 7424 ở `origin/main` `(\\w{7})`",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "s43-w-branch-server",
+      "value": "7fb18ba",
+      "reason": "study-cloud/RUNLOG.md dòng 5, 56: máy chủ 7425 ở nhánh",
+      "pattern": "máy chủ 7425 ở nhánh `(\\w{7})`",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-server-paper",
+      "value": "1333eef",
+      "reason": "b7prime/RUNLOG.md dòng 5; khớp backlog B-11.5",
+      "pattern": "server `(\\w{7})`, Claude Code CLI",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-n-paper",
+      "value": "2",
+      "reason": "b7prime/RUNLOG.md: 2 lượt mỗi ô × 5 bài",
+      "pattern": "n = (\\d) lượt mỗi ô, 10 lượt mỗi arm",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-rhat-token-paper",
+      "value": "2,04",
+      "reason": "như b7prime-rhat-token (backlog B-11.5)",
+      "pattern": "token có trọng số là \\*\\*×(\\d,\\d\\d)\\*\\*",
+      "files": [
+        "paper/paper.md"
       ],
       "exceptions": []
     }

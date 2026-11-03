@@ -13,6 +13,13 @@
 - **`facts.json` (S1):** 7 mục `b7prime-*`.
 - **Chặn lộ điểm:** không đọc, không nêu điểm hay chất lượng của B7′.
 
+## Vòng 4, gói 5 — Q2 (T-20261103-163327-d48, 3/11/2026): cập nhật §4 Hệ thống sau khi gộp `main`
+
+- **`paper/paper.md` (S3):** thêm §4.3 "Trạng thái hiện hành sau khi gộp `main`" (sau "Nhận xét" của §4.2): (a) sáu ý đã có trên `main` (KPI v2 và bộ probe, thứ tự ghi `reviewerApproved`, lộ trình REA/backlog/Kanban, ngân sách và trần token theo dự án/agent, agent ngoài, giao diện v2), mỗi ý trích về `merge-main-2026-11-03.md`; (b) Bảng 1b tách "đã có trên `main`" / "chỉ trên nhánh" (B-01, B-02, B-04, B-05, B-06, B-10, B-11: chưa triển khai, chờ giám đốc duyệt; B-05 vẫn là giả định); (c) W1–W5 và B7′ đo trước khi gộp, hash theo từng đợt và từng server (`e0bd2f4` máy chủ 7424; `7fb18ba` máy chủ 7425; `1333eef` B7′, CLI 2.1.316 → 2.1.317), nêu rõ hành vi sau gộp chưa được đo. §8.2 thêm một dòng "Hiệu lực mô tả". Không sửa phần khác.
+- **`facts.json` (S4):** thêm 10 mục `numbers` cho `paper/paper.md`: 16 commit của `main`, merge `37f88b6`, `npm test` 285/285 (Linux), `e0bd2f4`, `7fb18ba`, `1333eef` (hai chỗ), CLI 2.1.317, n = 2 mỗi ô, R̂ token ×2,04. Đổi ngoại lệ `c1c8-single-labeller` từ dòng 513 → 547 vì §4.3 làm dòng trích dẫn cũ dời xuống; không đổi nội dung câu.
+- **Ghi chú đối chiếu:** 285/285 là số của đề bài (Phòng Dev báo, Linux); `merge-main` §6 chỉ ghi 282 đạt/0 lỗi/3 bỏ qua ở lần chạy đầu — cả hai đều có trong §4.3, kèm nguồn. "Trước khi gộp" tính theo nội dung mã máy chủ (không chứa `main`); theo đồng hồ, các lượt B7′ cam kết sau dấu thời gian của merge.
+- **Kiểm (S4):** `token-analysis.mjs --check` exit 0 (12 bảng); `stats.test.mjs` 12/12; `consistency-check.mjs` exit 0 (41 tệp). Chặn lộ điểm: grep quanh B7′/B7cab rỗng.
+
 ## Vòng 4, gói 4 (T-20261103-150407-7a3, 3/11/2026): đưa nghiên cứu đăng ký trước W1–W5 vào báo cáo khoa học
 
 - **`paper/paper.md` (S1, S2):** §5.1 và §6.1 mới theo nghiên cứu đăng ký trước W1–W5 (440 khóa giữ ở bảng chi phí, 432 lượt ở phép thử xác nhận, 16 lượt loại; Bảng 8–14; mục giữ chỗ B7′ "đang đo", không có số). Các vòng C1–C8 hạ thành §5.2 và §6.2 "Vòng thăm dò", không thuộc phép thử xác nhận. Viết lại Tóm tắt VI/EN, §7, §8, §9. Kết luận âm tính nêu thẳng: B-01 bị bác bỏ cho B7 (token 2,498, thời gian 2,566) và B6 (3,921; 4,047); họ Holm rỗng (K = 0); H3 suy biến, H6 và H7 chưa đủ N; recall cổng B-02 chưa ước lượng được.
