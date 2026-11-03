@@ -42,6 +42,8 @@ export class ClaudeStreamParser {
   model = '';
   isError = false;
   errorText = '';
+  /** subtype của sự kiện result (vd. error_max_turns khi chạm --max-turns) — B-07. */
+  subtype = '';
   sawResult = false;
   /** Lượt gọi công cụ của Claude Code, quy về tên công cụ của CCoding — để log tool.call và KPI (kiểm chứng, đọc/ghi) tính được. */
   toolCalls: ToolCallRecord[] = [];
@@ -106,6 +108,7 @@ export class ClaudeStreamParser {
       }
       case 'result':
         this.sawResult = true;
+        if (typeof ev.subtype === 'string') this.subtype = ev.subtype;
         if (typeof ev.result === 'string') this.resultText = ev.result;
         if (ev.usage) this.usage = ev.usage;
         if (typeof ev.total_cost_usd === 'number') this.costUsd = ev.total_cost_usd;
@@ -113,6 +116,7 @@ export class ClaudeStreamParser {
           const names = Object.keys(ev.modelUsage);
           if (names.length) this.model = names.join('+');
         }
+        if (ev.subtype === 'error_max_turns') break; // chạm --max-turns: không phải lỗi — run() báo capped để CCoding chạy tiếp (B-07)
         if (ev.is_error || (ev.subtype && ev.subtype !== 'success')) {
           this.isError = true;
           this.errorText = String(ev.result ?? ev.subtype ?? 'lỗi không rõ');
@@ -124,6 +128,50 @@ export class ClaudeStreamParser {
   finalUsage(): ClaudeUsage {
     return this.sawResult && Object.keys(this.usage).length ? this.usage : this.turnUsage;
   }
+}
+
+function toolTurnCap(req: RunRequest): number {
+  const n = req.toolPolicy?.maxTurns;
+  return typeof n === 'number' && n > 0 ? Math.floor(n) : 0;
+}
+
+/** Dựng cờ CLI + biến môi trường của `claude -p` (hàm thuần, không spawn) — dùng cho run() và bench/vs-claude/cache-diagnostic.mjs (B-07, B-14a). */
+export function buildClaudeArgs(cfg: RuntimeConfig, req: RunRequest, model: string): { args: string[]; env: NodeJS.ProcessEnv } {
+    const args = ['-p', '--output-format', 'stream-json', '--verbose', '--model', model, '--no-session-persistence'];
+    const env: NodeJS.ProcessEnv = {};
+    if (req.allowTools && req.tools.length) {
+      args.push('--tools', req.tools.join(','), '--permission-mode', cfg.permissionMode ?? 'acceptEdits');
+      // B-07: trần lượt mô hình như vòng công cụ của runtime API (phases.toolTurns); tắt bằng runtimes.claude-cli.maxTurns=false
+      if (cfg.maxTurns !== false && toolTurnCap(req) > 0) args.push('--max-turns', String(toolTurnCap(req)));
+      // Hook PreToolUse áp cùng chính sách với vòng công cụ của CCoding (lệnh cấm mặc định + denyCommands
+      // của dự án + chặn tạo/chuyển nhánh) và giữ mọi thao tác tệp trong thư mục làm việc của nhiệm vụ.
+      const policy = req.toolPolicy;
+      const guard = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'tools', 'claude-guard.js').replace(/\\/g, '/');
+      const settings = { hooks: { PreToolUse: [{ matcher: '.*', hooks: [{ type: 'command', command: `node "${guard}"`, timeout: 15 }] }] } };
+      args.push('--settings', JSON.stringify(settings));
+      env.CCODING_GUARD = JSON.stringify({
+        root: policy?.root ?? req.cwd,
+        deny: policy?.denyCommands ?? [],
+        allowGitCommit: policy?.allowGitCommit ?? false,
+        // vai trò không có quyền chạy lệnh: Bash chỉ để xem lịch sử git (tương ứng git_read của vòng công cụ CCoding)
+        shell: policy?.gitReadOnly ? 'git-read' : 'full',
+        // giới hạn khảo sát như vòng công cụ của CCoding: chỉ ở pha phải tạo sản phẩm bằng tệp (thực thi/sửa)
+        readsBeforeWrite: policy?.expectWrites && policy.guardState ? policy.readsBeforeWrite ?? 0 : 0,
+        state: policy?.guardState,
+        closeStdin: cfg.closeStdin !== false,
+      });
+      // cắt đầu ra lệnh shell (kết quả công cụ bị gửi lại ở mọi lượt sau) — chỉ khi nhiệm vụ/cấu hình đặt (benchtest trước khi đổi mặc định)
+      if (policy?.bashMaxOutput && policy.bashMaxOutput > 0) env.BASH_MAX_OUTPUT_LENGTH = String(Math.floor(policy.bashMaxOutput));
+      // công cụ đã được CCoding cấp theo quyền dự án/pha → chạy không hỏi (chế độ -p không hỏi được); hook vẫn chặn trước
+      args.push('--allowedTools', req.tools.join(','));
+    } else {
+      args.push('--tools', '');
+    }
+    // Không nạp MCP/plugin/hook cấu hình cấp người dùng: mỗi lượt gọi bớt ~85k token ngữ cảnh (đo 28/10: 93k → 7,6k)
+    // và agent không chạm công cụ ngoài chính sách của CCoding. Đặt userSettings: true để nạp lại.
+    if (!cfg.userSettings) args.push('--strict-mcp-config', '--setting-sources', 'project,local');
+    args.push(...(cfg.extraArgs ?? []));
+  return { args, env };
 }
 
 export class ClaudeCliRuntime implements Runtime {
@@ -142,39 +190,7 @@ export class ClaudeCliRuntime implements Runtime {
   async run(req: RunRequest, hooks: RunHooks): Promise<RunResult> {
     const started = Date.now();
     const model = this.models[req.model] ?? req.model;
-    const args = ['-p', '--output-format', 'stream-json', '--verbose', '--model', model, '--no-session-persistence'];
-    const env: NodeJS.ProcessEnv = {};
-    if (req.allowTools && req.tools.length) {
-      args.push('--tools', req.tools.join(','), '--permission-mode', this.cfg.permissionMode ?? 'acceptEdits');
-      // Hook PreToolUse áp cùng chính sách với vòng công cụ của CCoding (lệnh cấm mặc định + denyCommands
-      // của dự án + chặn tạo/chuyển nhánh) và giữ mọi thao tác tệp trong thư mục làm việc của nhiệm vụ.
-      const policy = req.toolPolicy;
-      const guard = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'tools', 'claude-guard.js').replace(/\\/g, '/');
-      const settings = { hooks: { PreToolUse: [{ matcher: '.*', hooks: [{ type: 'command', command: `node "${guard}"`, timeout: 15 }] }] } };
-      args.push('--settings', JSON.stringify(settings));
-      env.CCODING_GUARD = JSON.stringify({
-        root: policy?.root ?? req.cwd,
-        deny: policy?.denyCommands ?? [],
-        allowGitCommit: policy?.allowGitCommit ?? false,
-        // vai trò không có quyền chạy lệnh: Bash chỉ để xem lịch sử git (tương ứng git_read của vòng công cụ CCoding)
-        shell: policy?.gitReadOnly ? 'git-read' : 'full',
-        // giới hạn khảo sát như vòng công cụ của CCoding: chỉ ở pha phải tạo sản phẩm bằng tệp (thực thi/sửa)
-        readsBeforeWrite: policy?.expectWrites && policy.guardState ? policy.readsBeforeWrite ?? 0 : 0,
-        state: policy?.guardState,
-        closeStdin: this.cfg.closeStdin !== false,
-      });
-      // cắt đầu ra lệnh shell (kết quả công cụ bị gửi lại ở mọi lượt sau) — chỉ khi nhiệm vụ/cấu hình đặt (benchtest trước khi đổi mặc định)
-      if (policy?.bashMaxOutput && policy.bashMaxOutput > 0) env.BASH_MAX_OUTPUT_LENGTH = String(Math.floor(policy.bashMaxOutput));
-      // công cụ đã được CCoding cấp theo quyền dự án/pha → chạy không hỏi (chế độ -p không hỏi được); hook vẫn chặn trước
-      args.push('--allowedTools', req.tools.join(','));
-    } else {
-      args.push('--tools', '');
-    }
-    // Không nạp MCP/plugin/hook cấu hình cấp người dùng: mỗi lượt gọi bớt ~85k token ngữ cảnh (đo 28/10: 93k → 7,6k)
-    // và agent không chạm công cụ ngoài chính sách của CCoding. Đặt userSettings: true để nạp lại.
-    if (!this.cfg.userSettings) args.push('--strict-mcp-config', '--setting-sources', 'project,local');
-    args.push(...(this.cfg.extraArgs ?? []));
-
+    const { args, env } = buildClaudeArgs(this.cfg, req, model);
     const prompt = combinedPrompt(req);
     const parser = new ClaudeStreamParser(hooks);
     const proc = await runProcess({
@@ -199,6 +215,7 @@ export class ClaudeCliRuntime implements Runtime {
     else if (proc.aborted) error = 'Đã hủy';
     else if (parser.isError) error = parser.errorText;
     else if (proc.code !== 0 && !text) error = `claude thoát mã ${proc.code}: ${proc.stderr.slice(-400)}`;
+    const capped = !error && parser.subtype === 'error_max_turns' ? ('turns' as const) : undefined;
     return {
       text,
       usage: {
@@ -214,6 +231,8 @@ export class ClaudeCliRuntime implements Runtime {
       durationMs: Date.now() - started,
       error,
       toolCalls: parser.toolCalls.length ? parser.toolCalls : undefined,
+      capped,
+      diag: capped ? `chạm trần ${toolTurnCap(req) || '?'} lượt (--max-turns của claude-cli)` : undefined,
     };
   }
 }

@@ -40,6 +40,8 @@ export interface RuntimeConfig {
   userSettings?: boolean;
   /** claude-cli: lệnh Bash chạy với stdin = /dev/null qua hook (mặc định bật) — tránh lệnh đọc stdin treo tới hết thời gian chờ. */
   closeStdin?: boolean;
+  /** B-07 — claude-cli: truyền --max-turns theo phases.toolTurns (mặc định bật; false = không truyền cờ, args như trước). */
+  maxTurns?: boolean;
   sandbox?: string;
   baseUrl?: string;
   apiKeyEnv?: string;
