@@ -36,7 +36,11 @@ const renderAll = (flags?: Ctx['flags']) => {
 };
 
 // Băm prompt của mã TRƯỚC khi thêm B-09/B-03 (commit 90cd913), cùng fixture ở trên: công tắc tắt phải trùng từng byte.
-const SNAPSHOT = { execute: '29b87ce4e067cc8f', revise: '93bf7702f2f246d3', synthesize: '82b8ba8ef40d98b8' };
+// Theo nền tảng: src/prompts.ts thêm ghi chú "Shell là PowerShell" vào execute/revise chỉ khi process.platform === 'win32'.
+// Băm posix lấy bằng cách dựng đúng fixture này trên mã 90cd913 chạy trên Linux (3/11/2026).
+const SNAPSHOT = process.platform === 'win32'
+  ? { execute: '29b87ce4e067cc8f', revise: '93bf7702f2f246d3', synthesize: '82b8ba8ef40d98b8' }
+  : { execute: 'f0c3a63729e64800', revise: '9dcde8fcc4ffcded', synthesize: '82b8ba8ef40d98b8' };
 
 test('B-09: công tắc tắt → prompt trùng từng byte với bản trước khi sửa (execute, revise, synthesize)', () => {
   const r = renderAll(undefined);

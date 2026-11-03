@@ -623,7 +623,7 @@ Các ô thứ tự chính của (b), (c) là phần còn lại sau khi accept đ
 | **3. Nguyên nhân gốc** | Không áp dụng: đây là hạng mục triển khai. |
 | **4. Thay đổi đề xuất** | Module `src/selfimprove.ts` và khóa `selfImprove.enabled: false`. Bảy bước (sự cố → gom nhóm → đề xuất bản vá → A/B → giám đốc duyệt → áp dụng → theo dõi/rollback), mỗi bước đủ 8 trường ở `implementation-spec.md` §3. Không bước nào tự áp bản vá; áp dụng và rollback cần sự kiện duyệt của giám đốc. Vòng không sửa hook hay chính sách dữ liệu. |
 | **5. Hiệu quả kỳ vọng** | Chưa ước lượng. Cỡ mẫu: sàng lọc r = 3 (60 lượt), xác nhận r = 8 (160 lượt) trên bộ giữ lại 10 bài; tính với τ² = 0, nên dừng xác nhận nếu τ² ≥ 0,0005 (`implementation-spec.md` §2). |
-| **6. Cách kiểm lại** | Test chấp nhận (CT-01…CT-nn) ở `implementation-spec.md` §6. Ngưỡng hiệu ứng theo `design.md` §5.3 (giả định do giám đốc chốt); Holm trên ba chỉ số chính. |
+| **6. Cách kiểm lại** | Test chấp nhận (CT-01…CT-20) ở `implementation-spec.md` §6. Ngưỡng hiệu ứng theo `design.md` §5.3 (giả định do giám đốc chốt); Holm trên ba chỉ số chính. |
 | **7. Rủi ro / dữ liệu** | Nhãn **Nội bộ**; sự cố từ nhiệm vụ Bảo mật/Hạn chế bị loại (§5 của đặc tả). Hai điều kiện chặn của S2a (bài có `starter/` hay `repo/`; cờ `leak` khi chưa có sandbox) cần Dev xử lý trước lần A/B đầu; B-18 giảm rủi ro `leak`. Khi D10 hiện thực hóa thì thêm mục "B-19 Vòng tự cải thiện" vào `data-protection-assessment.md`. |
 | **8. Ưu tiên** | D10; công sức 4. Chưa chấm hiệu quả. |
 | **9. Giám đốc duyệt** | **Có**: bật khóa, chốt ngân sách và ngưỡng, duyệt từng bản vá và từng rollback. |

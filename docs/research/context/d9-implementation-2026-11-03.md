@@ -192,6 +192,27 @@ Arm `B7cabO` giữ cấu hình của `B7cab` và thêm `phaseModels: {accept: "o
 ### Bằng chứng Linux
 `wsl -l -v` chỉ có `docker-desktop`, không có distro chạy Node. Chưa chạy trên Linux; ngữ nghĩa Linux được phủ bằng test tiêm path.posix của S1.
 
+**Người điều phối chạy trên Linux (3/11/2026, sau khi gộp D9b `de9d92e` và BRIEF-13 `742fbcb`).**
+- Sau D9b, 7/8 test đỏ đã xanh: `claude-guard-paths:38`, `claude-guard:29` và 5 test B-14b.
+- **Test thứ 8:** `s3-incident-difficulty.test.ts` "B-09: công tắc tắt → prompt trùng từng byte". Lỗi do băm chụp chỉ đúng trên Windows: `src/prompts.ts` chỉ thêm ghi chú "Shell là PowerShell" khi `process.platform === 'win32'`, không phải do B-09 làm đổi prompt.
+- **Kiểm chứng:** dựng đúng fixture của test trên mã `90cd913` (trước B-09) chạy Linux, cho `execute f0c3a63729e64800`, `revise 9dcde8fcc4ffcded`, `synthesize 82b8ba8ef40d98b8`. Mã hiện tại trên Linux cho cùng ba giá trị, nên tính bất biến khi tắt công tắc vẫn đúng trên Linux.
+- **Sửa:** băm chụp theo nền tảng (bản win32 giữ nguyên, thêm bản posix). Không đổi `src/`.
+
+| Lệnh (Linux, Node 22) | Kết quả |
+|---|---|
+| `npm ci`, `npm run typecheck`, `npm run build` | exit 0 |
+| `npm test` lần 1, 2, 3 | exit 0 · tests 331 · pass 331 · fail 0 · skipped 0 (cả ba lần) |
+| 3 lệnh kiểm của dự án `ccoding-research` | exit 0 |
+| `holdout-sample-size.mjs --size` và `--check holdout-and-sample-size.md` | exit 0, hash khớp `holdout-lock.json` |
+
+- `fast-lane.test.ts:182` xanh ở cả 3 lần trên Linux.
+- **Số skipped khác nhau:** Windows bỏ qua 3 test, Linux 0. Có ba test tự bỏ qua trên win32:
+  - `bench.test.ts:248` (`skip: process.platform === 'win32'`);
+  - `logview.test.ts:96` (herdr giả dùng shebang);
+  - `claude-guard-paths.test.ts:77, :121` (`t.skip(why)`, tùy quyền tạo liên kết).
+
+  Con số 3 của Windows khớp với các test này, nên đây không phải lỗi.
+
 ### Rà "không nới chính sách" (D6)
 `git diff 3da8dc5 HEAD` trên `test/claude-guard*.test.ts`, `claude-stable-prefix.test.ts`, `shell-policy.test.ts`: không có dòng nào bị xóa/sửa (chỉ `claude-guard-paths.test.ts` được thêm 42 dòng). Các ca chặn cũ (`../`, symlink, junction, `.claude/` ngoài tool-results, Grep ra ngoài) giữ nguyên kỳ vọng. D3 có test cho cả hai chiều: `C:/…` khi root POSIX và `/etc/passwd`, UNC khi root Windows đều bị chặn.
 
