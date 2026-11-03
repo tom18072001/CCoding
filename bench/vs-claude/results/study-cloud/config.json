@@ -1,13 +1,13 @@
 {
   "argv": [
     "--arms",
-    "A1",
+    "A2",
     "--tasks",
     "c1,c2,c3,c4,c5,l3,l4,s1,re1,a1,l1,l2,r1",
     "--repeats",
-    "3",
+    "2",
     "--timeout",
-    "20",
+    "40",
     "--runtime",
     "claude-cli",
     "--ccoding-url",
@@ -23,7 +23,7 @@
     "ccodingUrl": "http://127.0.0.1:7424",
     "ccodingData": "/home/user/ccoding-main/data",
     "runtime": "claude-cli",
-    "timeoutMin": 20,
+    "timeoutMin": 40,
     "claudeBin": "claude",
     "judge": {
       "enabled": false,
@@ -33,7 +33,7 @@
     "workRoot": "/tmp/vb"
   },
   "armIds": [
-    "A1"
+    "A2"
   ],
   "taskIds": [
     "c1-iis-ecs",
@@ -50,6 +50,6 @@
     "l2-knights",
     "r1-elk-design"
   ],
-  "repeats": 3,
-  "startedAt": "2026-11-03T03:20:59.941Z"
+  "repeats": 2,
+  "startedAt": "2026-11-03T03:41:40.976Z"
 }
