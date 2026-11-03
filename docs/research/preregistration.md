@@ -445,6 +445,7 @@ Phần khác của `run-plan.md` đã đối chiếu nhưng không tìm thấy l
 | Mã | Đăng ký nói gì (§) | Thực tế / đề xuất | Phép bị ảnh hưởng | Cách xử lý |
 |---|---|---|---|---|
 | V4-02 | §5 (v2.1): phân tích phụ/khám phá liệt kê (1)-(10); không có phân tích nào đo độ tin cậy của bộ chấm hay cổng | **Thêm sau khi đã bắt đầu thu dữ liệu, theo yêu cầu của giám đốc ngày 3/11/2026:** §5.1 (bản 2.2) gồm (a) judge so với regex, (b) bộ nhãn vàng (chỉ chuẩn bị), (c) cổng chất lượng như bộ phát hiện lỗi, và κ giữa hai người gán nhãn MAST cho C-01…C-49. Nhãn: **không phải tiên nghiệm** (tác giả đã thấy 276 dòng ở bước 4, và đã đọc bảng điểm vòng 3) | Không phép nào của §3 | Phân tích phụ/khám phá, **ngoài họ Holm**, không p, không đổi K; kết quả gọi là "khám phá", không là xác nhận. Gộp mọi arm; seed 20261103; bootstrap theo `runId` (κ MAST theo C-xx); kết luận chỉ mô tả |
+| V4-03 | §5 (v2.2): thước đo chi phí là token có trọng số `input + 1,25·cacheWrite + 0,1·cacheRead + 5·out`; không có phân tích độ nhạy theo hệ số cacheRead hay theo USD | **Bổ sung 03/11/2026, sau khi đã xem ảnh chụp 838a5f1 (276 dòng):** `analysis/cache-sensitivity.md` gồm cơ cấu chi phí, tỉ lệ trúng cache, tỉ số B7/A0 và B6/A0 với hệ số cacheRead 0,05 (giá đọc cache Sonnet 5.5 và Opus 5.5 = 0,05× giá đầu vào) và USD theo bảng giá. Nhãn: **không phải tiên nghiệm** | Không phép nào của §3 | Phân tích độ nhạy mô tả, **ngoài họ Holm**, không p, không đổi K; hệ số 0,1 vẫn là thước đo chính; kết luận chỉ mô tả |
 
 ## 10. Đạo đức & dữ liệu
 
