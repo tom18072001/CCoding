@@ -1,0 +1,70 @@
+# Thứ tự khởi động service: answer.json đã xong và đúng
+
+## Tóm tắt
+`answer.json` đã có ở thư mục gốc repo. Trong 22 service, 18 service khởi động được và 4 service bị chặn. Có đúng một chu trình: `reporting → warehouse → etl → reporting`. `admin-ui` bị chặn vì phụ thuộc `reporting`, nhưng nó không nằm trên chu trình. S2 đã chạy script kiểm chứng riêng và cả 5 điều kiện đều đạt. Lượt review cuối không chạy lệnh nào, nên tôi đã tự dò lại toàn bộ thuật toán bằng tay trên `services.txt`, và kết quả khớp. Việc còn mở duy nhất là `answer.json` chưa được commit.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Tính thứ tự khởi động, `blocked`, `cycle_members`; ghi `answer.json` | @senior-swe | Đạt | Tệp `answer.json`. Script tạm chạy với exit 0, ra 18 + 4 = 22 service. Chi tiết trong `.ccoding/T-20261103-031822-5a7/outputs/dev-S1-senior-swe.md` |
+| S2 | Kiểm chứng độc lập | @qa-tester | Đạt | `python3 -I .../scratchpad/s2_verify.py` chạy với exit 0, ra `ALL True` (a–e PASS). Chi tiết trong `.ccoding/T-20261103-031822-5a7/outputs/dev-S2-qa-tester.md` |
+| — | Đối chiếu của Trưởng phòng | @dev-lead | Khớp | Tôi đọc `services.txt` và `answer.json`, rồi dò tay thuật toán Kahn với quy tắc chọn tên nhỏ nhất: 18 bước đều trùng với `startup_order`. `git status --short` ra `?? answer.json` |
+
+## Quyết định
+- **Thứ tự khởi động:** dùng thuật toán Kahn với min-heap theo tên, nên kết quả là duy nhất như đề bài yêu cầu.
+- **`blocked`:** gồm mọi service không khởi động được, kể cả service bị chặn gián tiếp (giả định A2). Vì vậy `admin-ui` có trong `blocked`.
+- **`cycle_members`:** chỉ gồm service tự đến được chính nó qua các phụ thuộc. Kết quả là `etl`, `reporting`, `warehouse`; `admin-ui` không thuộc nhóm này.
+- **Giả định A1:** service chỉ xuất hiện ở vế phụ thuộc vẫn được tính là một service. Với tệp này, giả định A1 không làm thay đổi kết quả.
+- Không cần kiến trúc, BA hay cổng bảo vệ dữ liệu vì việc này nhỏ.
+
+## Kết quả review
+- Không có blocker, major hay minor.
+- S2 có chạy script thật: tính lại từ `services.txt`, không dùng mã của S1.
+- Lượt review cuối đánh giá "Đạt" nhưng không chạy lệnh nào. Để bù chỗ này, tôi đã dò tay toàn bộ thứ tự và kết quả khớp. Tôi không chạy thêm script vì vai trò của tôi chỉ được chạy lệnh chỉ đọc.
+- Chuỗi `fraud → ml-scorer → feature-store → fraud-history → db-orders` trông giống chu trình nhưng không phải, nên các service trong chuỗi vẫn khởi động được.
+
+## Việc còn mở & rủi ro
+- `answer.json` chưa commit. Tôi không tự commit vì việc đó ngoài quyền của vai trò này.
+- Rủi ro thấp: nếu người chấm hiểu `blocked` là chỉ gồm service trên chu trình, thì `admin-ui` sẽ bị coi là thừa. Đề bài ghi "can never start", nên cách hiểu hiện tại (A2) là phù hợp.
+- Các script tạm nằm trong scratchpad, ngoài repo, không ảnh hưởng gì đến repo.
+
+## Bước tiếp theo
+1. Nếu cần nộp qua git, Tom hoặc người có quyền commit `answer.json`. Xong khi `git status` sạch.
+2. Không cần tách thêm nhiệm vụ nào, vì phạm vi đề bài đã làm đủ.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-031822-5a7` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **32 in / 11.0k out**, cache đọc 170.7k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | 12 | 4882 | 69114 | 2 |
+| QA Engineer (@qa-tester) | dev | 12 | 3689 | 67172 | 2 |
+| Senior Software Engineer (@senior-swe) | dev | 6 | 1907 | 32159 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 477 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Tính thứ tự khởi động, danh sách bị chặn và thành viên chu trình; ghi answer.json (@senior-swe)
+- `outputs/dev-S2-qa-tester.md` — S2 Kiểm chứng độc lập answer.json (@qa-tester)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | **97** A | 100 | 100 | 84 | 100 | 0 | — | 74k | 1/5 |
+| QA Engineer (@qa-tester) | dev | **93** A | 100 | 97 | 100 | 60 | 1 | 1 | 71k | 0/4 |
+| Senior Software Engineer (@senior-swe) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 34k | 0/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Trưởng phòng Phát triển** (@dev-lead, 97 A):
+  - Thao tác công cụ lỗi nhiều (1/5, 20%; nhiều nhất ở run_command 1/2) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+- **QA Engineer** (@qa-tester, 93 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+- **Senior Software Engineer** (@senior-swe, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._
