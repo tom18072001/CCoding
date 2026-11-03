@@ -75,7 +75,7 @@
     const text = await res.text();
     let body = text;
     try { body = JSON.parse(text); } catch {}
-    if (!res.ok) throw new Error(body?.error || `${res.status}`);
+    if (!res.ok) throw Object.assign(new Error(body?.error || `${res.status}`), { status: res.status });
     return body;
   }
 
@@ -485,7 +485,7 @@
     if (tab === 'tokens') renderTokens();
     if (tab === 'kpi') loadKpi();
     if (tab === 'logs') loadLogs();
-    if (tab === 'quota') window.Director?.renderQuota(), window.Budgets?.render();
+    if (tab === 'quota') window.Director?.renderQuota(), window.Budgets?.render(), window.SelfImprove?.render();
     if (tab === 'inbox') window.Inbox?.render(true);
     if (window.Pages?.tabs.includes(tab)) window.Pages.render(tab);
     window.Router?.sync();
