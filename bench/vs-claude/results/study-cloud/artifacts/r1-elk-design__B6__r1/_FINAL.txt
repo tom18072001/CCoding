@@ -1,0 +1,109 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude r1-elk-design__B6__r1] ELK audit platform sizing and design
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Việc là một tài liệu duy nhất (DESIGN.md) nên giao cho một kiến trúc sư viết toàn bộ. Tài liệu không cần chạy lệnh, và chia nhiều người cùng ghi một tệp sẽ gây xung đột. Hạng mục nêu sẵn các mâu thuẫn trong đầu vào và phép tính mẫu để bản thảo không bỏ sót.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Viết DESIGN.md: kiến trúc và sizing nền tảng audit log Elastic Stack (@solution-architect, done)
+
+## Tóm tắt
+Mình đã viết xong `DESIGN.md` ở thư mục gốc repo. Đề xuất gồm: collector tính hash trên bản gốc, Kafka giữ 72 giờ làm bộ đệm, một thành phần Evidence Sealer ký bản gốc, đóng dấu thời gian RFC 3161 rồi cất vào kho WORM (S3 Object Lock), và Logstash mask PII bằng HMAC trước khi ghi vào Elasticsearch. Dữ liệu trên Elasticsearch chia hot 0–7 ngày và warm 8–30 ngày; dữ liệu cũ hơn nằm trong snapshot và được restore khi có yêu cầu, trong vòng 24 giờ. Rủi ro lớn nhất là searchable snapshots mà khách gợi ý cần license Enterprise, không có trong Basic. Mâu thuẫn thứ hai là mask trước khi index thì không còn giữ được bản gốc làm chứng cứ. Mọi con số sizing dựa trên tỷ lệ nén chưa đo, cần PoC trước khi mua phần cứng.
+
+## Bối cảnh & NFR
+- **Nhãn dữ liệu:** tài liệu xếp loại *internal*; bản thân dữ liệu audit chứa dữ liệu cá nhân nên xếp mức hạn chế.
+- **Cấp độ ATTT:** chưa xác định được vì thiếu thông tin phân loại hệ thống thông tin của khách. Tài liệu giả định nền tảng log kế thừa cấp cao nhất của các hệ thống nguồn và ghi việc này thành câu hỏi Q-09.
+- **NFR:** có bảng ở mục 2.1 (throughput, độ trễ, RPO/RTO, toàn vẹn) và 14 giả định đặt tên A-01 đến A-14.
+
+## Kiến trúc & luồng dữ liệu
+**Khối lượng thô:**
+- 20.000 EPS × 800 B = 16 MB/s, tức **1,38 TB/ngày** (1,26 TiB) và khoảng **504 TB/năm** (504,58 TB, 458,9 TiB).
+
+**Dung lượng theo tier**, giả định tỷ lệ dung lượng trên đĩa so với raw là 0,7 (dải 0,5–0,7, kịch bản xấu 1,0):
+
+| Tier | Dung lượng | Cấp phát |
+|---|---|---|
+| Hot (7 ngày, có replica) | 13,55 TB | 8 node × 3,2 TB NVMe |
+| Warm (23 ngày, có replica) | 44,51 TB | 7 node × 12 TB |
+| Archive repo (12 tháng) | 353,20 TB | khoảng 406 TB sau khi cộng headroom |
+| Kho bằng chứng | khoảng 76 TB (dải 50–101 TB) | |
+
+- Headroom tính theo watermark 85% cộng 15% dư, và đã kiểm tra trường hợp mất một node.
+- Các thành phần khác: 3 master, 4 node restore, 2 coordinating, 2 Kibana, 4 Logstash, 3 Kafka, 2 Sealer.
+
+**Các phần khác trong tài liệu:**
+- Sơ đồ ASCII của luồng dữ liệu.
+- Cấu hình mẫu cho Logstash và cho ingest pipeline `final_pipeline` làm lưới an toàn.
+- 12 test case cho phần masking.
+- Mẫu template, mapping, ILM và SLM dạng JSON; mỗi index 4 primary, sau shrink còn 2 shard 50 GB.
+- Runbook restore và ước tính thời gian: 30 ngày dữ liệu restore mất khoảng 8,1 giờ, với điều kiện mỗi node đạt 250 MB/s.
+
+## ADR
+- **ADR-01:** dùng snapshot/restore thường thay searchable snapshots. Mình so sánh với hai phương án: nâng license Enterprise, và giữ đủ 12 tháng trên node (cần khoảng 439 TB đĩa).
+- **ADR-02:** chứng cứ là kho WORM tách riêng, hash và ký trên bản gốc. Elasticsearch chỉ là bản làm việc để tra cứu.
+- **ADR-03:** Kafka làm bộ đệm.
+- **ADR-04:** HMAC có khóa tại Logstash.
+- **ADR-05:** dùng data stream chỉ cho phép ghi mới (create-only), và forcemerge ở hot.
+
+## Phát hiện
+- **Cao — searchable snapshots (C-01):** tính năng này cần license Enterprise nên không làm được theo gợi ý của khách. Tài liệu thay bằng snapshot thường và restore khi cần.
+- **Cao — mask và giá trị chứng cứ (C-02):** dữ liệu đã mask không còn là bản gốc. Giải pháp là giữ bản gốc đã ký, có timestamp RFC 3161, trong kho WORM.
+- **Cao — quyền xóa dữ liệu cá nhân và WORM (C-03):** hai yêu cầu xung đột nhau, cần pháp chế của khách quyết định.
+- **Trung bình — phạm vi "24 giờ" (C-04):** tìm cả 12 tháng trong 24 giờ là không khả thi. Đề xuất giới hạn mỗi yêu cầu tối đa 30 ngày dữ liệu và dùng thêm index tóm tắt.
+- **Các rủi ro khác (R-01 đến R-12):**
+  - Basic không có audit log của ES/Kibana, không có SSO và không có DLS/FLS.
+  - Tỷ lệ nén chưa đo.
+  - Giới hạn tốc độ recovery mặc định có thể làm restore vượt SLA.
+  - Object Lock có thể không tương thích với snapshot repo.
+  - Quản lý khóa HMAC và khóa ký.
+  - PII còn ở dạng rõ trong Kafka.
+  - DR, mất replica, lệch NTP.
+- **Danh sách tính năng Basic ở mục 3 chưa kiểm chứng.** Mình chưa đối chiếu với trang subscriptions của Elastic theo đúng phiên bản sẽ triển khai.
+- **Cổng bảo mật:** vì có dữ liệu 
+…[đã cắt 1166 ký tự]
+
+Bản đầy đủ: `.ccoding/T-20261103-005545-fc7/outputs/dev-S1-solution-architect.md`
+
+## Review
+
+Đã duyệt: DESIGN.md đạt. Tài liệu có đủ 16 mục (0–15), gồm các mục bắt buộc: tính toán dung lượng, mâu thuẫn và rủi ro, ingest/masking, ILM/SLM, toàn vẹn, giám sát, bảng đánh đổi và câu hỏi mở. Mình tính lại các con số chính và đều khớp: 1,3824 TB/ngày, 504,58 TB/năm, hot 13,55 TB, warm 44,51 TB, archive 353,20 TB, hot cần 18,33 TB, và restore 30 ngày mất 8,06 giờ. Mục 11 và ADR-01 nêu rõ searchable snapshots cần license Enterprise nên không dùng được với Basic. Mục 3 nêu rõ danh sách tính năng Basic chưa được đối chiếu với trang subscription của Elastic. Các giả định nén (r = 0,5–0,7, kịch bản xấu 1,0) được đặt tên và gắn với PoC. Mình chưa chạy được cấu hình trên cluster Elasticsearch thật. Các khối JSON viết theo dạng Dev Tools (dòng PUT rồi JSON); mình tách dòng PUT ra thì ingest pipeline và ILM parse được. Hai khối còn lại có nhiều request trong một khối nên không parse được như một JSON duy nhất. Điều này không phải lỗi. Vì vậy chỉ review tài liệu, chưa kiểm cú pháp trên Elasticsearch.
+(Reviewer KHÔNG chạy lệnh kiểm tra nào — kết luận chưa có bằng chứng chạy thật; nêu rõ trong báo cáo.)
+
+
+---
+
+> ⚠ **Cần xem lại:** Phát triển: duyệt nhưng chưa có kiểm chứng chạy thật (không có lệnh kiểm tra của dự án, reviewer không chạy lệnh) — cần giám đốc xem.
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-005545-fc7` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **28 in / 64.6k out**, cache đọc 347.6k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Kiến trúc sư giải pháp (@solution-architect) | dev | 14 | 58674 | 254673 | 1 |
+| QA Engineer (@qa-tester) | dev | 10 | 2533 | 85316 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 2 | 2855 | 5359 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 514 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-solution-architect.md` — S1 Viết DESIGN.md: kiến trúc và sizing nền tảng audit log Elastic Stack (@solution-architect)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Kiến trúc sư giải pháp (@solution-architect) | dev | **98** A | 100 | 100 | 89 | 100 | 1 | 1 | 313k | 1/7 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 88k | 0/4 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | 100 | 100 | 100 | — | 0 | — | 8k | — |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._
