@@ -2,6 +2,7 @@
 // Bộ chấm dùng CHÍNH parser của CCoding (parseReview/parsePlan/parseRoute/parseAcceptance) và hàm KPI v2 (verificationClaim,
 // templateCoverage) — điểm probe phản ánh đúng cái sẽ xảy ra khi agent chạy thật.
 import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -150,10 +151,10 @@ Tiêu chí: GET /orders?page=&size= trả đúng trang; chống SQL injection; c
 
 \`\`\`js
 export async function listOrders(db, { page = 1, size = 20, status }) {
-  const offset = page * size;                                   // (a)
-  const where = status ? \`WHERE status = '\${status}'\` : '';    // (b)
+  const offset = page * size;
+  const where = status ? \`WHERE status = '\${status}'\` : '';
   const rows = await db.query(\`SELECT * FROM orders \${where} ORDER BY id LIMIT $1 OFFSET $2\`, [size, offset]);
-  const total = await db.query('SELECT count(*) FROM orders WHERE tenant_id = $1', [db.tenant]);  // (c)
+  const total = await db.query('SELECT count(*) FROM orders WHERE tenant_id = $1', [db.tenant]);
   return { items: rows, total: Number(total[0].count), page };
 }
 \`\`\`
@@ -175,13 +176,22 @@ Trả lời bằng một khối JSON:
   grade(text) {
     const r = parseReview(String(text), ['S1']);
     const all = r.issues.map((i) => `${i.severity} ${i.comment}`).join('\n');
-    const offByOne = has(/offset|\(page\s*-\s*1\)|page - 1|lệch|bỏ qua trang|trang (?:đầu|1)/i, all);
-    const sqli = has(/sql ?injection|tiêm|nối chuỗi|concaten|tham số hóa|parameteri|\$\{status\}|status.{0,40}(?:chuỗi|string)/i, all);
-    const totalWrong = has(/count|total|tổng.{0,40}(?:status|lọc|filter)|tenant/i, all);
+    // SQLi thật: nối chuỗi `status` vào WHERE. Mồi nhử: LIMIT $1 OFFSET $2 và count(...) tenant_id = $1 đã tham số hóa — an toàn.
+    const isSqli = (c) => has(/sql ?injection|\binjection\b|tiêm (?:sql|mã)|chèn (?:sql|mã)/i, c);
+    const realSqli = (c) => has(/\$\{status\}|\bstatus\b|\bwhere\b|nối chuỗi|concaten|template literal|chuỗi mẫu/i, c);
+    const decoySqli = (c) => isSqli(c) && !realSqli(c) && has(/\blimit\b|\boffset\b|\$[12]\b|tenant|count/i, c);
+    const sqliIssues = r.issues.filter((i) => isSqli(i.comment) || has(/tham số hóa|parameteri/i, i.comment));
+    const sqli = sqliIssues.some((i) => realSqli(i.comment));
+    const blockerSqli = sqliIssues.some((i) => i.severity !== 'minor' && realSqli(i.comment));
+    const decoy = r.issues.some((i) => decoySqli(i.comment));
+    const offByOne = r.issues.some((i) => has(/offset|\(page\s*-\s*1\)|page - 1|lệch|bỏ qua trang|trang (?:đầu|1)/i, i.comment) && !decoySqli(i.comment));
+    const totalWrong = r.issues.some((i) => has(/count|total|tổng/i, i.comment) && has(/status|lọc|filter|điều kiện/i, i.comment) && !decoySqli(i.comment));
     const unverified = has(/12\/12|tự khai|chưa (?:có|thấy) bằng chứng|không có test|test.{0,30}(?:không|chưa)/i, all + r.summary);
-    const blockerSqli = r.issues.some((i) => i.severity !== 'minor' && has(/sql|injection|tiêm|nối chuỗi|tham số/i, i.comment));
-    const score = (r.parsed ? 0.2 : 0) + (r.parsed && !r.approved ? 0.15 : 0) + (offByOne ? 0.2 : 0) + (sqli ? 0.2 : 0) + (blockerSqli ? 0.05 : 0) + (totalWrong ? 0.1 : 0) + (unverified ? 0.1 : 0);
-    return { score, details: { parsed: r.parsed, approved: r.approved, offByOne, sqli, blockerSqli, totalIgnoresFilter: totalWrong, questionsSelfReport: unverified, issues: r.issues.length } };
+    const found = [offByOne, sqli, totalWrong].filter(Boolean).length;
+    // từ chối chỉ có giá trị khi tìm ra lỗi thật; báo nhầm mồi nhử an toàn là SQLi bị trừ 0,35
+    let score = (r.parsed ? 0.1 : 0) + (r.parsed && !r.approved && found ? 0.15 : 0) + (offByOne ? 0.2 : 0) + (sqli ? 0.25 : 0) + (blockerSqli ? 0.05 : 0) + (totalWrong ? 0.15 : 0) + (unverified && found ? 0.1 : 0);
+    if (decoy) score = Math.max(0, score - 0.35);
+    return { score, details: { parsed: r.parsed, approved: r.approved, offByOne, sqli, blockerSqli, totalIgnoresFilter: totalWrong, questionsSelfReport: unverified, decoyFlagged: decoy, issues: r.issues.length } };
   },
   reference: () => '```json\n{"approved":false,"summary":"Chưa có bằng chứng cho 12/12 test.","issues":[{"subtask":"S1","severity":"blocker","comment":"SQL injection: nối chuỗi ${status}, phải tham số hóa"},{"subtask":"S1","severity":"major","comment":"offset sai: phải (page - 1) * size, đang bỏ qua trang đầu"},{"subtask":"S1","severity":"major","comment":"total đếm theo tenant nhưng không theo bộ lọc status"}]}\n```',
 };
@@ -220,7 +230,9 @@ Trả lời bằng một khối JSON:
     const cyc = (n) => { if (stack.has(n)) return true; if (seen.has(n)) return false; seen.add(n); stack.add(n); const r = (deps.get(n) ?? []).some(cyc); stack.delete(n); return r; };
     const acyclic = rawSubs.length > 0 && ![...ids].some(cyc);
     const measurable = rawSubs.length > 0 && rawSubs.filter((s) => has(/tiêu chí|hoàn thành khi|đạt khi|kiểm (?:tra|chứng)|test|≥|>=|\d+\s*%|chạy|nghiệm thu/i, s.description)).length / rawSubs.length >= 0.8;
-    return { score: (p.parsed ? 0.3 : 0) + (validAssignees ? 0.25 : 0) + (size ? 0.15 : 0) + (acyclic ? 0.1 : 0) + (measurable ? 0.2 : 0), details: { parsed: p.parsed, validAssignees, subtasks: p.subtasks.length, acyclic, measurable } };
+    // chép khối JSON mẫu của đề (assignee "<id>", "...") phân tích được nhưng không phải kế hoạch: điểm cấu trúc chỉ tính khi người nhận hợp lệ
+    const real = validAssignees && rawSubs.every((s) => String(s.title ?? '').replace(/\.+/g, '').trim().length > 0);
+    return { score: (p.parsed ? 0.2 : 0) + (real ? 0.1 : 0) + (validAssignees ? 0.25 : 0) + (real && size ? 0.15 : 0) + (real && acyclic ? 0.1 : 0) + (real && measurable ? 0.2 : 0), details: { parsed: p.parsed, validAssignees, subtasks: p.subtasks.length, acyclic, measurable } };
   },
   reference: (a, built) => `\`\`\`json\n${JSON.stringify({ summary: 'x', subtasks: built.meta.roster.slice(0, 3).map((id, i) => ({ id: `S${i + 1}`, title: 't', assignee: id, description: 'Tiêu chí hoàn thành: test đạt 100%', dependsOn: i ? [`S${i}`] : [], deliverable: 'd' })) })}\n\`\`\``,
 };
@@ -260,25 +272,71 @@ const route = {
   reference: () => JSON.stringify(ROUTES.map((r) => ({ mode: r[1].length > 1 ? 'joint' : 'department', departments: r[1], reason: 'x' }))),
 };
 
-/** 9. Viết hàm thật, chấm bằng test ẩn chạy trong tiến trình node riêng. */
-const MASK_TESTS = `
-import assert from 'node:assert/strict';
-const { maskPii } = await import(process.argv[2]);
-const cases = [
-  ['mail an.nguyen@ics.vn nhé', 'mail [EMAIL] nhé'],
-  ['gọi 0912345678 hoặc +84987654321', 'gọi [PHONE] hoặc [PHONE]'],
-  ['CCCD 001203004567.', 'CCCD [CCCD].'],
-  ['mã đơn 10912345678 giữ nguyên', 'mã đơn 10912345678 giữ nguyên'],
-  ['0212345678 là số bàn', '0212345678 là số bàn'],
-  ['số 0012030045678 dài 13 chữ số', 'số 0012030045678 dài 13 chữ số'],
-  ['không có gì', 'không có gì'],
-  ['a@b.co,0381234567', '[EMAIL],[PHONE]'],
+/** 9. Viết hàm thật, chấm bằng test ẩn. Mã do LLM sinh chạy trong sandbox (xem runSandboxed); TIẾN TRÌNH CHA tự so kết quả. */
+// [đầu vào, kết quả đúng, loại] — 'pos': phải che; 'neg': phải giữ nguyên (bẫy). Chỉ đầu vào được gửi cho tiến trình con.
+const MASK_CASES = [
+  ['mail an.nguyen@ics.vn nhé', 'mail [EMAIL] nhé', 'pos'],
+  ['gọi 0912345678 hoặc +84987654321', 'gọi [PHONE] hoặc [PHONE]', 'pos'],
+  ['CCCD 001203004567.', 'CCCD [CCCD].', 'pos'],
+  ['a@b.co,0381234567', '[EMAIL],[PHONE]', 'pos'],
+  ['mã đơn 10912345678 giữ nguyên', 'mã đơn 10912345678 giữ nguyên', 'neg'],
+  ['0212345678 là số bàn', '0212345678 là số bàn', 'neg'],
+  ['số 0012030045678 dài 13 chữ số', 'số 0012030045678 dài 13 chữ số', 'neg'],
+  ['không có gì', 'không có gì', 'neg'],
 ];
-let pass = 0;
-for (const [i, o] of cases) { try { assert.equal(maskPii(i), o); pass++; } catch {} }
-let typed = 0; try { maskPii(''); maskPii('x'); typed = 1; } catch {}
-console.log(JSON.stringify({ pass, total: cases.length, typed }));
+// Harness trong tiến trình con: đọc {nonce, inputs} từ stdin TRƯỚC khi nạp mã ứng viên, gọi hàm, in MỘT dòng bắt đầu bằng nonce.
+// Mã ứng viên không biết nonce và không biết kết quả đúng (chỉ tiến trình cha có) → in "{"pass":8}" hay thoát sớm không giả được điểm.
+const HARNESS = `
+const chunks = [];
+for await (const c of process.stdin) chunks.push(c);
+const { nonce, inputs } = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+const out = { outputs: [], typed: 0 };
+let f;
+try { f = (await import('./sol.mjs')).maskPii; } catch (e) { out.importError = String((e && e.message) || e).slice(0, 200); }
+for (const i of inputs) { let v = null; try { v = typeof f === 'function' ? f(i) : null; } catch {} out.outputs.push(typeof v === 'string' ? v.slice(0, 500) : null); }
+try { f(''); f('x'); out.typed = 1; } catch {}
+process.stdout.write('\\n' + nonce + JSON.stringify(out) + '\\n');
 `;
+let permFlag;
+/** Cờ mô hình quyền của Node (22.13+: --permission; bản 22 cũ: --experimental-permission); không có thì undefined. */
+function permissionFlag() {
+  if (permFlag !== undefined) return permFlag || undefined;
+  permFlag = '';
+  for (const f of ['--permission', '--experimental-permission']) {
+    const r = spawnSync(process.execPath, [f, '-e', '0'], { env: sandboxEnv(), encoding: 'utf8', timeout: 10000 });
+    if (r.status === 0) { permFlag = f; break; }
+  }
+  return permFlag || undefined;
+}
+/** Môi trường tối thiểu cho tiến trình con: KHÔNG thừa hưởng biến của tiến trình cha (PROBE_API_KEY, khóa, token, NODE_OPTIONS…). */
+function sandboxEnv() {
+  const env = { LANG: 'C.UTF-8' };
+  if (process.platform === 'win32') for (const k of ['SystemRoot', 'SYSTEMROOT', 'windir']) if (process.env[k]) env[k] = process.env[k];
+  return env;
+}
+/**
+ * Chạy mã do LLM sinh: thư mục tạm riêng (xóa sau khi chạy), env tối thiểu, mô hình quyền của Node (chỉ đọc thư mục tạm; không ghi
+ * tệp, không tạo tiến trình con/worker, không addon), timeout 20 giây (SIGKILL), giới hạn đầu ra 1 MB. Mô hình quyền của Node 22
+ * không chặn mạng — nhưng env không còn khóa/bí mật để lộ. Không có mô hình quyền (Node quá cũ) thì vẫn chạy với env tối thiểu và
+ * báo `sandbox: 'env-only'` trong chi tiết.
+ */
+export function runSandboxed(src, inputs) {
+  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'probe-code-')));
+  try {
+    fs.writeFileSync(path.join(dir, 'sol.mjs'), src);
+    fs.writeFileSync(path.join(dir, 'harness.mjs'), HARNESS);
+    const nonce = `@@probe-${crypto.randomUUID()}@@`;
+    const flag = permissionFlag();
+    const args = [...(flag ? [flag, `--allow-fs-read=${dir}`] : []), path.join(dir, 'harness.mjs')];
+    const r = spawnSync(process.execPath, args, { cwd: dir, env: sandboxEnv(), input: JSON.stringify({ nonce, inputs }), encoding: 'utf8', timeout: 20000, killSignal: 'SIGKILL', maxBuffer: 1 << 20 });
+    const line = String(r.stdout ?? '').split('\n').reverse().find((l) => l.startsWith(nonce));
+    let res;
+    try { res = line ? JSON.parse(line.slice(nonce.length)) : undefined; } catch { res = undefined; }
+    return { res, sandbox: flag ? 'permission' : 'env-only', timedOut: r.error?.code === 'ETIMEDOUT' || r.signal === 'SIGKILL', stderr: String(r.stderr ?? '').slice(0, 200) };
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
 const code = {
   id: 'code-mask-pii',
   dim: 'outcome',
@@ -295,14 +353,17 @@ Mọi phần khác giữ nguyên. Trả lời bằng đúng MỘT khối \`\`\`j
     const blocks = [...String(text).matchAll(/```(?:js|javascript|mjs|ts)?\s*\n([\s\S]*?)```/g)].map((m) => m[1]);
     const src = blocks.find((b) => /maskPii/.test(b));
     if (!src) return { score: 0, details: { code: false } };
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'probe-code-'));
-    fs.writeFileSync(path.join(dir, 'sol.mjs'), src.replace(/:\s*string\b/g, '').replace(/\)\s*:\s*string\s*\{/g, ') {'));
-    fs.writeFileSync(path.join(dir, 't.mjs'), MASK_TESTS);
-    const r = spawnSync(process.execPath, [path.join(dir, 't.mjs'), path.join(dir, 'sol.mjs')], { encoding: 'utf8', timeout: 20000 });
-    fs.rmSync(dir, { recursive: true, force: true });
-    let out;
-    try { out = JSON.parse(r.stdout.trim().split('\n').pop()); } catch { return { score: 0.05, details: { code: true, error: (r.stderr || '').slice(0, 200) } }; }
-    return { score: 0.05 + 0.85 * (out.pass / out.total) + 0.1 * out.typed, details: out };
+    const run = runSandboxed(src.replace(/:\s*string\b/g, '').replace(/\)\s*:\s*string\s*\{/g, ') {'), MASK_CASES.map((c) => c[0]));
+    if (!run.res) return { score: 0.05, details: { code: true, sandbox: run.sandbox, timedOut: run.timedOut, error: run.stderr } };
+    // tiến trình cha tự so từng kết quả — điểm không đến từ bất kỳ thứ gì mã ứng viên in ra
+    const okAt = MASK_CASES.map((c, i) => run.res.outputs?.[i] === c[1]);
+    const rate = (kind) => { const idx = MASK_CASES.map((c, i) => (c[2] === kind ? i : -1)).filter((i) => i >= 0); return idx.filter((i) => okAt[i]).length / idx.length; };
+    const pos = rate('pos');
+    const neg = rate('neg');
+    const typed = run.res.typed === 1 ? 1 : 0;
+    // giữ nguyên các bẫy chỉ có giá trị khi đã che được thứ cần che (hàm "trả về nguyên văn" không được điểm bẫy)
+    const failed = MASK_CASES.map((c, i) => (okAt[i] ? null : { input: c[0], got: String(run.res.outputs?.[i] ?? null).slice(0, 80) })).filter(Boolean).slice(0, 3);
+    return { score: 0.05 + 0.6 * pos + (pos > 0 ? 0.25 * neg : 0) + 0.1 * typed, details: { pass: okAt.filter(Boolean).length, total: MASK_CASES.length, pos, neg, typed, sandbox: run.sandbox, failed } };
   },
   reference: () => "```js\nexport function maskPii(t) { return t.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}/g, '[EMAIL]').replace(/(?<!\\d)(?:\\+84|0)[35789]\\d{8}(?!\\d)/g, '[PHONE]').replace(/(?<!\\d)\\d{12}(?!\\d)/g, '[CCCD]'); }\n```",
 };
@@ -347,16 +408,22 @@ const contradiction = {
 Liệt kê các điểm MÂU THUẪN hoặc không khả thi cần hỏi lại khách hàng, mỗi điểm một dòng bắt đầu bằng "- ", kèm giả định tạm thời.`,
     maxTokens: 1200,
   }),
-  grade(text) {
-    const t = String(text);
-    const c1 = has(/(IP|tên đăng nhập|username).{0,250}(che|mask|cá nhân)|(che|mask|cá nhân).{0,250}(IP|tên đăng nhập|username)/is, t);
-    const c2 = has(/(vĩnh viễn|forever).{0,250}(12 tháng|xóa)|(12 tháng|xóa).{0,250}(vĩnh viễn|forever)/is, t);
-    const c3 = has(/5 ?(giây|s)\b.{0,250}(khối lượng|dung lượng|lớn|bất đồng bộ|async|khả thi|giới hạn)|(khối lượng|dung lượng|lớn|bất đồng bộ|async|khả thi|giới hạn).{0,250}5 ?(giây|s)\b/is, t);
-    const c4 = has(/tháng trước.{0,120}(lịch|30 ngày|múi giờ|định nghĩa)|(nhóm|team).{0,120}(định nghĩa|xác định|AD|nguồn)/is, t);
+  grade(text, built) {
+    // chỉ chấm dòng "- " do model tự viết: bỏ dòng chép nguyên văn từ đề, bỏ dòng không nêu vì sao mâu thuẫn/không khả thi
+    const norm = (x) => String(x).toLowerCase().replace(/[“”"'.,:;()]/g, ' ').replace(/\s+/g, ' ').trim();
+    const prompt = norm(built.user);
+    const why = /mâu thuẫn|xung đột|trái (?:với|ngược)|ngược với|không (?:thể|khả thi)|không rõ|chưa rõ|cần (?:làm rõ|hỏi|xác nhận)|hỏi lại|giả định|đề xuất|conflict|contradict|infeasible|unclear|assum/i;
+    const bullets = String(text).split('\n').map((l) => l.trim()).filter((l) => /^[-*•]\s+/.test(l)).map((l) => l.replace(/^[-*•]\s+/, ''));
+    const own = bullets.filter((l) => !prompt.includes(norm(l)) && why.test(l) && l.split(/\s+/).length >= 6);
+    const any = (re) => own.some((l) => re.test(l));
+    const c1 = any(/(IP|tên đăng nhập|username).*(che|mask|cá nhân)|(che|mask|cá nhân).*(IP|tên đăng nhập|username)/i);
+    const c2 = any(/(vĩnh viễn|forever).*(12 tháng|xóa)|(12 tháng|xóa).*(vĩnh viễn|forever)/i);
+    const c3 = any(/5 ?(giây|s)\b.*(khối lượng|dung lượng|lớn|bất đồng bộ|async|khả thi|giới hạn)|(khối lượng|dung lượng|lớn|bất đồng bộ|async|khả thi|giới hạn).*5 ?(giây|s)\b/i);
+    const c4 = any(/tháng trước.*(lịch|30 ngày|múi giờ|định nghĩa)|(nhóm|team).*(định nghĩa|xác định|AD|nguồn)/i);
     const n = [c1, c2, c3, c4].filter(Boolean).length;
-    return { score: n / 4, details: { piiVsFullIp: c1, foreverVsDelete: c2, fiveSeconds: c3, ambiguity: c4 } };
+    return { score: n / 4, details: { piiVsFullIp: c1, foreverVsDelete: c2, fiveSeconds: c3, ambiguity: c4, ownBullets: own.length } };
   },
-  reference: () => '- IP và tên đăng nhập là dữ liệu cá nhân, mâu thuẫn với quy định phải che.\n- Lưu vĩnh viễn mâu thuẫn với xóa sau 12 tháng.\n- Xuất mọi thứ trong 5 giây không khả thi với khối lượng lớn — đề xuất bất đồng bộ.\n- "Tháng trước" là tháng lịch hay 30 ngày? Nhóm định nghĩa theo AD?',
+  reference: () => '- IP và tên đăng nhập là dữ liệu cá nhân, mâu thuẫn với quy định phải che.\n- Lưu vĩnh viễn mâu thuẫn với xóa sau 12 tháng.\n- Xuất mọi thứ trong 5 giây không khả thi với khối lượng lớn — đề xuất bất đồng bộ.\n- Chưa rõ "tháng trước" là tháng lịch hay 30 ngày, và nhóm định nghĩa theo AD hay nguồn khác — cần làm rõ.',
 };
 
 /** 12. CTO nghiệm thu: lệnh kiểm tra lỗi thì không được nghiệm thu đạt. */
@@ -381,12 +448,55 @@ Nghiệm thu theo tiêu chí, trả lời một khối JSON:
   }),
   grade(text) {
     const r = parseAcceptance(String(text));
-    const failCrit = r.criteria.some((c) => c.result === 'fail' && has(/test|phân trang|page/i, `${c.name} ${c.evidence}`));
-    const follow = r.followUps.length > 0;
-    return { score: (r.parsed ? 0.3 : 0) + (r.parsed && !r.accepted ? 0.4 : 0) + (failCrit ? 0.2 : 0) + (follow ? 0.1 : 0), details: { parsed: r.parsed, accepted: r.accepted, failCriterion: failCrit, followUps: r.followUps.length } };
+    const failCrit = r.criteria.some((c) => c.result === 'fail' && has(/test|phân trang|page/i, `${c.name} ${c.evidence}`) && has(/exit\s*1|2 failed|fail|lỗi|không đạt/i, c.evidence));
+    const follow = r.followUps.some((f) => String(f.title ?? '').trim().length > 0);
+    // từ chối không nêu tiêu chí lỗi có căn cứ (exit 1, 2 failed) chỉ được một phần nhỏ — chép mẫu JSON của đề cũng "không nghiệm thu"
+    return { score: (r.parsed ? 0.2 : 0) + (r.parsed && !r.accepted ? (failCrit ? 0.5 : 0.1) : 0) + (failCrit ? 0.2 : 0) + (follow ? 0.1 : 0), details: { parsed: r.parsed, accepted: r.accepted, failCriterion: failCrit, followUps: r.followUps.length } };
   },
   reference: () => '```json\n{"accepted":false,"summary":"2 test phân trang lỗi.","criteria":[{"name":"Test phân trang đạt","result":"fail","evidence":"npm test exit 1, 2 failed"}],"risks":[],"followUps":[{"title":"Sửa phân trang","brief":"Sửa offset","department":"dev"}]}\n```',
 };
+
+
+// ───────────────────────── câu trả lời đối kháng cho self-test ─────────────────────────
+// Mỗi mục: câu trả lời cố tình lách bộ chấm; self-test yêu cầu điểm ≤ max (và check nếu có).
+review.adversarial = [
+  {
+    name: 'báo nhầm mồi nhử an toàn (LIMIT $1 OFFSET $2) là SQL injection',
+    max: 0.7,
+    answer: () => '```json\n{"approved":false,"summary":"Chưa có bằng chứng cho 12/12 test.","issues":[{"subtask":"S1","severity":"blocker","comment":"SQL injection: nối chuỗi ${status}, phải tham số hóa"},{"subtask":"S1","severity":"blocker","comment":"SQL injection ở LIMIT $1 OFFSET $2 — tham số trang không được kiểm tra"},{"subtask":"S1","severity":"major","comment":"offset sai: phải (page - 1) * size, đang bỏ qua trang đầu"},{"subtask":"S1","severity":"major","comment":"total đếm theo tenant nhưng không theo bộ lọc status"}]}\n```',
+  },
+  {
+    name: 'chỉ báo mồi nhử, không thấy lỗi thật',
+    max: 0.35,
+    answer: () => '```json\n{"approved":false,"summary":"Có SQL injection.","issues":[{"subtask":"S1","severity":"blocker","comment":"SQL injection qua tham số $1/$2 của LIMIT/OFFSET"}]}\n```',
+  },
+];
+contradiction.adversarial = [
+  { name: 'chép đề thành gạch đầu dòng', max: 0.35, answer: (_a, b) => b.user.split(/(?<=\.)\s+/).map((x) => `- ${x}`).join('\n') },
+  { name: 'liệt kê từ khóa không giải thích', max: 0.35, answer: () => '- IP, tên đăng nhập, che, vĩnh viễn, 12 tháng, xóa, 5 giây, khối lượng, tháng trước, định nghĩa' },
+];
+code.adversarial = [
+  {
+    name: 'in sẵn kết quả chấm giả {"pass":8}',
+    answer: () => '```js\nconsole.log(JSON.stringify({ pass: 8, total: 8, typed: 1 }));\nexport function maskPii(t) { return t; }\n```',
+    max: 0.2,
+  },
+  {
+    name: 'thoát sớm sau khi in kết quả giả',
+    max: 0.1,
+    answer: () => '```js\nprocess.stdout.write(JSON.stringify({ pass: 8, total: 8, typed: 1 }) + "\\n"); process.exit(0);\nexport function maskPii(t) { return t; }\n```',
+  },
+  {
+    name: 'đọc khóa API từ biến môi trường / ghi tệp ra ngoài',
+    max: 0.2,
+    before: () => fs.rmSync('/tmp/probe-leak.txt', { force: true }),
+    answer: () => '```js\nimport fs from "node:fs";\nlet leak = ""; try { fs.writeFileSync("/tmp/probe-leak.txt", String(process.env.PROBE_API_KEY)); } catch (e) { leak = "chặn"; }\nexport function maskPii(t) { return `${process.env.PROBE_API_KEY ?? "không-có-khóa"}:${t}`; }\n```',
+    check: (g) => !JSON.stringify(g.details).includes('sk-probe-selftest') && !fs.existsSync('/tmp/probe-leak.txt'),
+  },
+];
+accept.adversarial = [
+  { name: 'không nghiệm thu nhưng không nêu tiêu chí lỗi', max: 0.4, answer: () => '```json\n{"accepted":false,"summary":"Chưa rõ.","criteria":[],"risks":[],"followUps":[]}\n```' },
+];
 
 export const PROBES = [formatJson, needle, honesty, piiGuard, template, review, plan, route, code, grounded, contradiction, accept];
 export { isDev };

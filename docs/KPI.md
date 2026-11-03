@@ -7,7 +7,7 @@
 - **Vấn đề:** KPI v1 chấm sub-agent qua review của một agent khác. Khi chạy trên Ollama, người review cũng là model nhỏ — review dễ dãi hoặc trả lời sai định dạng JSON lại làm điểm **tăng**. Prompt dài hơn `num_ctx` bị Ollama cắt mất phần đầu (hồ sơ agent, đề bài) mà không chỉ số nào báo.
 - **KPI v2** thêm hai nhóm không phụ thuộc ý kiến LLM — **Kết quả thật** (lệnh kiểm tra của dự án, CTO nghiệm thu) và **Trung thực** (khẳng định "test đạt" phải có lệnh chạy thật) — cùng các chỉ số định dạng, ngữ cảnh, độ tin của điểm, và chấm tách theo model.
 - **Bộ probe** (`bench/agent-probes`) chấm từng `agent.md` trên model cục bộ bằng 12 đề cố định, để chọn model cho từng vị trí **trước khi** giao việc thật.
-- Kiểm thử (lần chạy gần nhất, sau các bản sửa theo review): `npm test` 189 bài — 188 đạt, 1 bỏ qua (PDF mã hóa cần `qpdf`, máy kiểm thử không có), 0 lỗi; 23 bài trong `test/kpi-v2.test.ts`; `npm run typecheck` sạch. (Bản ghi trước đó "174/174 đạt" là sai: thực tế 173 đạt, 1 bỏ qua.)
+- Kiểm thử (lần chạy gần nhất, sau các bản sửa theo review): `npm test` 191 bài — 190 đạt, 1 bỏ qua (PDF mã hóa cần `qpdf`, máy kiểm thử không có), 0 lỗi; 23 bài trong `test/kpi-v2.test.ts`, 2 bài trong `test/agent-probes.test.ts`; `npm run typecheck` sạch; probe `--self-test` 129/129 cặp đạt và 8/8 câu trả lời đối kháng bị chấm thấp. (Bản ghi trước đó "174/174 đạt" là sai: thực tế 173 đạt, 1 bỏ qua.)
 
 ## Có gì trên nhánh
 
@@ -18,7 +18,8 @@
 | `src/server.ts` | `GET /api/kpi?by=model` |
 | `public/app.js` | Tab KPI thêm cột Độ tin, Kết quả thật, Trung thực, Ngữ cảnh; thẻ KPI trong hồ sơ agent |
 | `test/kpi-v2.test.ts` | 23 bài kiểm thử (8 bài ban đầu + 15 bài tái hiện lỗi từ review) |
-| `bench/agent-probes/` | `probe.mjs` (chạy), `probes.mjs` (12 probe + bộ chấm), `report.mjs` (báo cáo), `README.md` |
+| `bench/agent-probes/` | `probe.mjs` (chạy), `probes.mjs` (12 probe + bộ chấm + sandbox chạy mã), `report.mjs` (báo cáo), `README.md` |
+| `test/agent-probes.test.ts` | Self-test của probe và chạy thử trên máy chủ giả lập API gốc Ollama |
 | `docs/KPI.md`, `README.md` | Tài liệu này và dòng lệnh mới |
 
 Không có migration, không thêm phụ thuộc. Dữ liệu cũ trong `data/` đọc được ngay; chỉ **điểm** thay đổi vì trọng số và cách co điểm mới.
@@ -37,8 +38,8 @@ node dist/cli.js kpi --task <id T-…> --json     # một nhiệm vụ (id đầ
 
 # Probe thử thách trên Ollama
 node bench/agent-probes/probe.mjs --self-test
-node bench/agent-probes/probe.mjs --models qwen3:8b,qwen3:14b --ctx 32768 --repeats 2
-node bench/agent-probes/report.mjs bench/agent-probes/results/<thư mục>
+node bench/agent-probes/probe.mjs --models qwen3:8b,qwen3:14b --ctx 32768 --repeats 2   # API gốc Ollama, đặt num_ctx
+node bench/agent-probes/report.mjs data/probes/<thư mục>
 ```
 
 Giao diện web: tab **KPI** (cột mới), thẻ KPI trong hồ sơ agent. API: `GET /api/kpi?days=30&by=model`.
@@ -103,6 +104,8 @@ Chi tiết: [`bench/agent-probes/README.md`](../bench/agent-probes/README.md). T
 
 - 12 probe: JSON nghiêm ngặt, kim ở đầu prompt dài, trung thực khi không có công cụ, bảo vệ PII, mẫu đầu ra của chính agent, review có lỗi cài sẵn, kế hoạch của trưởng phòng, định tuyến, viết hàm chạy test ẩn, hỏi đáp trên kho đóng, phát hiện mâu thuẫn, CTO nghiệm thu.
 - System prompt là `systemFor()` của CCoding; bộ chấm dùng `parseReview`, `parsePlan`, `parseRoute`, `parseAcceptance` và `verificationClaim` — trả lời mà CCoding không đọc được thì probe không cho điểm.
+- Gọi Ollama qua API gốc với `num_ctx` tường minh (`--api openai` không đặt được, có cảnh báo). Kết quả trong `data/probes/` (che bí mật/PII, chuỗi băm). Lỗi hạ tầng không tính điểm, báo riêng, chạy lại thì thử lại. Mã do model sinh chạy trong sandbox (thư mục tạm, env tối thiểu, mô hình quyền của Node, timeout; tiến trình cha tự so kết quả). Probe gọi model trực tiếp — ngoại lệ có chủ đích của quy ước `Orchestrator.call()`, lý do trong README của probe.
+- Self-test: đáp án mẫu 1,00; rác và chép đề ≤ 0,35; 8 câu trả lời đối kháng (gian lận bộ chấm, đọc khóa, báo nhầm mồi nhử SQLi, chép đề thành gạch đầu dòng…) bị chấm thấp. Chạy trong `npm test`.
 - 129 cặp agent × probe cho mỗi model; báo cáo gồm điểm agent × model (± giữa các lần lặp), điểm theo probe, độ trễ p50/p95, token ra/giây, lượt bị cắt, bảng ngữ cảnh dài, 12 lượt kém nhất.
 
 ## Quy trình đề xuất khi chạy sub-agent trên Ollama
@@ -118,4 +121,16 @@ Chi tiết: [`bench/agent-probes/README.md`](../bench/agent-probes/README.md). T
 - Kết quả lệnh kiểm tra gán theo phòng và theo "người đã sửa tệp" (công cụ ghi tệp, hoặc lệnh shell ghi/không chỉ đọc); chưa có danh sách tệp đổi theo từng hạng mục nên trong một phòng chưa tách được hạng mục nào làm hỏng lệnh. Dữ liệu cũ (chưa có `projectChecks.depts`) của nhiệm vụ nhiều phòng: không gán lệnh kiểm tra cho ai (không đoán).
 - Độ đầy ngữ cảnh: bản ghi cũ (trước khi có `maxPrompt`) và runtime CLI (không báo token từng vòng) vẫn ước lượng input / số vòng — đánh giá thấp vòng cuối.
 - Ngưỡng việc cần sửa và hệ số co điểm (K = 3, mức trung tính 60) đặt theo dữ liệu giả lập; cần hiệu chỉnh trên log Ollama thật.
-- Probe chưa chạy với model Ollama thật trong môi trường phát triển — mới kiểm bằng self-test và một máy chủ giả lập API tương thích OpenAI.
+- Probe chưa chạy với model Ollama thật trong môi trường phát triển — mới kiểm bằng self-test (kể cả câu trả lời đối kháng) và máy chủ giả lập API gốc Ollama (`test/agent-probes.test.ts`).
+
+## Việc còn lại
+
+Các mục dưới đây chưa làm vì cần quyết định thiết kế của chủ dự án hoặc vượt phạm vi bản sửa này:
+
+| Việc | Vì sao chưa làm |
+| --- | --- |
+| Gán kết quả lệnh kiểm tra theo **tệp** của từng hạng mục | Orchestrator chưa ghi danh sách tệp đổi theo hạng mục. Chạy song song bằng worktree con đã có nhánh riêng mỗi hạng mục nên tính được (`git diff --name-only` lúc gộp), nhưng đường chạy tuần tự trong worktree chính thì không tách được — cần quyết định có ghi `changedFiles` cho mọi hạng mục (thêm chi phí git mỗi lượt) không. Hiện gán theo phòng + "người đã sửa tệp" |
+| Trung thực cho Codex CLI | `codex exec --json` có phát sự kiện lệnh đã chạy; đọc được thì Trung thực của Codex đo được thay vì "không đo được". Cần xác nhận định dạng sự kiện trên phiên bản Codex đang dùng trước khi dựa vào |
+| Chặn mạng trong sandbox probe | Mô hình quyền của Node 22 không chặn mạng; muốn chặn cần container/namespace mạng của hệ điều hành (khác nhau giữa Windows/Linux). Đã giảm rủi ro bằng env tối thiểu (không còn bí mật để lộ) |
+| Ngưỡng `unknown` (quá 50% → không đo được) | Chọn theo lập luận, chưa hiệu chỉnh trên dữ liệu thật; đổi ở `MAX_UNKNOWN_SHARE` trong `src/kpi.ts` |
+| Dữ liệu cũ | Bản ghi trước bản sửa: không có `maxPrompt` (độ đầy ngữ cảnh lượt nhiều vòng vẫn là ước lượng), không có `projectChecks.depts` (nhiệm vụ nhiều phòng không gán lệnh kiểm tra cho ai), không có `reviewerApproved` (nhận ra qua ghi chú "CCoding: … → không duyệt" trong summary) |

@@ -438,4 +438,10 @@ Kết luận giữ nguyên: **ĐẠT CÓ ĐIỀU KIỆN** (điều kiện sao l�
 | `task.json`: `projectChecks.depts[<phòng>] = { before, latest, at }` — kết quả lệnh kiểm tra theo phòng | GOV-03, DET-01 | Chỉ lệnh, mã thoát, thời gian, dòng tổng kết (đã có sẵn trong `baseline`/`latest`); **bỏ `tail`** (đầu ra lệnh) để không nhân bản đầu ra có thể chứa dữ liệu. Nằm trong `data/runs/<task>/`, nhãn theo nhiệm vụ |
 | `task.json`: `runs[].review.reviewerApproved` — kết luận gốc của reviewer trước khi CCoding ép "không duyệt" | DET-01 | Boolean; giúp truy vết quyết định (ai duyệt gì, CCoding can thiệp ra sao) — phục vụ kiểm toán chất lượng |
 
-Không thêm luồng dữ liệu ra ngoài, không đổi chỗ lưu (vẫn `data/`), không đổi thời hạn lưu.
+| Bộ probe `bench/agent-probes`: kết quả chuyển từ `bench/agent-probes/results/` (ngoài `data/`, câu trả lời thô) sang `data/probes/<thời điểm>/probes.jsonl` | PRE-02, PRE-04, DET-01 | Câu trả lời của model, chi tiết chấm, token, độ trễ. Dữ liệu tổng hợp (đề cố định, PII là số giả) — nhãn **Nội bộ**. Ghi qua `LogStore.record`: **che bí mật và PII luôn bật** (không phụ thuộc cấu hình), chuỗi băm từng dòng; `--out` ngoài `data/` bị từ chối. Thư mục `results/` cũ (nếu còn trên máy) nên xóa |
+| Probe chạy mã do model sinh (`code-mask-pii`) | PRE-03, RES-01 | Trước: tiến trình con thừa hưởng toàn bộ env (lộ `PROBE_API_KEY`), ghi tệp tự do, tự in điểm. Sau: thư mục tạm, env tối thiểu, mô hình quyền của Node (chỉ đọc thư mục tạm, không ghi tệp/tạo tiến trình), timeout; điểm do tiến trình cha so. **Rủi ro còn lại:** chưa chặn mạng (cần sandbox hệ điều hành) |
+| Probe gọi model trực tiếp (không qua `Orchestrator.call()`) | GOV-02 | Ngoại lệ có chủ đích, ghi trong README của probe (lý do: không có nhiệm vụ để gắn; cần `num_ctx` qua API gốc Ollama). Mặc định gọi máy cục bộ; không gửi dữ liệu thật |
+
+Không thêm luồng dữ liệu ra ngoài, không đổi thời hạn lưu. Dữ liệu probe chuyển vào `data/` (trước đây nằm ngoài).
+
+**Kết luận: ĐẠT CÓ ĐIỀU KIỆN** — điều kiện: không trỏ `--base-url` của probe tới nhà cung cấp bên ngoài với hồ sơ agent/đề có nội dung không được phép gửi ra ngoài; chạy probe trên máy không có dịch vụ nội bộ nhạy cảm mở không xác thực (sandbox chưa chặn mạng).
