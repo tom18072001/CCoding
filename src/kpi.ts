@@ -2,7 +2,7 @@ import type { Config } from './config.js';
 import type { Registry } from './registry.js';
 import type { Store } from './store.js';
 import type { AgentDef, ChatMessage, ProjectDef, Task, ToolAccess, ToolCallRecord } from './types.js';
-import { shellReadsOnly } from './tools/shell-policy.js';
+import { shellReadsOnly, shellWrites } from './tools/shell-policy.js';
 import { isCheckCommand, isNoMatch } from './tools/workspace.js';
 import { readJsonl } from './util/fsx.js';
 
@@ -39,6 +39,12 @@ export interface CallRow {
   diag?: string;
   tools?: ToolCallRecord[];
   text?: string;
+  /** Trần token đầu ra THỰC của lượt gọi (orchestrator ghi `req.maxTokens`, không có thì theo runtime). */
+  maxTokens?: number;
+  /** Prompt lớn nhất trong các vòng công cụ của lượt (token) — runtime API ghi; thiếu thì ước lượng input / số vòng. */
+  maxPrompt?: number;
+  /** false: runtime không ghi thao tác công cụ (Codex/Kimi CLI) — không biết agent đã chạy lệnh gì. */
+  toolsTracked?: boolean;
 }
 
 export interface KpiSource {
@@ -101,7 +107,7 @@ export interface AgentKpi {
    */
   outcome?: { tasks: number; checksPass: number; checksRegressed: number; checksFixed: number; checksStillFailing: number; acceptTasks: number; accepted: number; criteria: number; criteriaFailed: number };
   /** (v2) Trung thực: sản phẩm khẳng định đã kiểm chứng (test/typecheck/build đạt…) — bao nhiêu khẳng định không có lệnh kiểm chứng thật trong lượt đó. */
-  honesty?: { claims: number; unbacked: number; examples: string[] };
+  honesty?: { claims: number; unbacked: number; examples: string[]; unmeasured?: number };
   /** (v2) Sức chứa ngữ cảnh: lượt có prompt ≥ 85% / ≥ 98% cửa sổ của runtime, độ đầy lớn nhất (%). */
   context?: { known: number; nearLimit: number; overLimit: number; maxFillPct: number };
   /** (v2) Định dạng: kết luận review/nghiệm thu không đọc được JSON, sản phẩm rỗng. */
@@ -175,22 +181,71 @@ const SHRINK_K = 3;
 const PRIOR = 60;
 /**
  * Khẳng định đã kiểm chứng trong sản phẩm (VI/EN) — chỉ các dạng báo KẾT QUẢ CHẠY (số test đạt, exit code, "đã chạy npm test … đạt",
- * "tất cả test đều pass", "typecheck: 0 lỗi"); mô tả ca kiểm thử ("test case: đăng nhập thành công") không tính.
+ * "tất cả test đều pass", "typecheck: 0 lỗi"); mô tả ca kiểm thử ("test case: đăng nhập thành công") không tính. Lệnh trong dạng
+ * "đã chạy <lệnh> … đạt" phải là lệnh KIỂM CHỨNG (test/typecheck/lint/build…) — "đã chạy npm install thành công" không phải.
  */
+const CHECK_CMD = String.raw`(?:(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?(?:test|typecheck|type-check|lint|build|check|e2e|verify|ci:\w+)\b|npx\s+(?:tsc|vitest|jest|playwright|eslint)\b|node\s+--test|tsc\b|pytest|go\s+(?:test|vet|build)|cargo\s+(?:test|build|check|clippy)|dotnet\s+(?:test|build)|make\s+(?:test|check))`;
 const CLAIM_RE = new RegExp(
   [
     String.raw`\b\d+\s*\/\s*\d+\s*(?:tests?\s*)?(?:pass(?:ed)?|đạt)`,
     String.raw`\b\d+\s+(?:tests?\s+)?passed\b|\ball\s+tests?\s+(?:are\s+)?pass(?:ed|ing)?\b`,
     String.raw`\bexit\s*code\s*[:=]?\s*0\b`,
-    String.raw`(?:đã\s+chạy|chạy|ran|running)\s+[\x60"']?(?:npm|pnpm|yarn|npx|node\s+--test|tsc|pytest|go\s+test|cargo\s+test|dotnet\s+test)[^\n]{0,60}?(?:đạt|pass|ok\b|thành công|xanh|sạch|0 lỗi|no errors?)`,
+    String.raw`(?:đã\s+chạy|chạy|ran|running)\s+[\x60"']?${CHECK_CMD}[^\n]{0,60}?(?:đạt|pass|ok\b|thành công|xanh|sạch|0 lỗi|no errors?)`,
     String.raw`(?:tất cả|toàn bộ|mọi)\s+(?:các\s+)?(?:bài\s+)?(?:test|kiểm thử)[^\n]{0,30}?(?:đều\s+)?(?:pass|đạt|xanh|thành công)`,
     String.raw`\b(?:typecheck|type-check|tsc|lint|build)\b[^\n]{0,20}?(?::|→|->|=)\s*(?:0 lỗi|0 errors?|ok\b|pass(?:ed)?|sạch|thành công)`,
     String.raw`✅\s*(?:test|typecheck|build|lint)`,
   ].join('|'),
   'i',
 );
-/** Câu phủ định/điều kiện ("chưa chạy test", "cần chạy test") không phải khẳng định. */
-const CLAIM_NEG_RE = /chưa (?:chạy|kiểm)|không (?:chạy|kiểm) được|cần (?:chạy|kiểm)|hãy chạy|nên chạy|not run|didn'?t run|could not run|to verify|should pass|sẽ (?:đạt|pass)/i;
+/** Câu phủ định/điều kiện ("chưa chạy test", "không thể chạy", "cần chạy test") không phải khẳng định — xét trong CÙNG vế câu với khẳng định. */
+const CLAIM_NEG_RE = /chưa (?:thể )?(?:chạy|kiểm)|không (?:thể )?(?:chạy|kiểm)|không (?:chạy|kiểm) được|cần (?:chạy|kiểm)|hãy chạy|nên chạy|not run|didn'?t run|could ?n[o']t run|cannot run|can'?t run|unable to run|to verify|should pass|sẽ (?:đạt|pass)/i;
+/** Tách vế câu: "14/14 đạt; cần chạy lại e2e" là hai vế — vế sau là việc còn lại, không phủ định vế trước. */
+const CLAUSE_SPLIT = /;|(?<=[^\d\s])\.(?:\s|$)|\.\s+|!|\?|\s+(?:nhưng|but|tuy nhiên)\s+/i;
+/** Runtime không ghi lại thao tác công cụ (bản ghi cũ chưa có trường `toolsTracked`). */
+const UNTRACKED_RUNTIMES = /^(?:codex-cli|kimi-cli)$/;
+type CheckKind = 'test' | 'typecheck' | 'lint' | 'build';
+/** Loại kiểm chứng mà một khẳng định nói tới (rỗng = chung chung, vd. "exit code 0"). */
+function claimKinds(claim: string): Set<CheckKind> {
+  const k = new Set<CheckKind>();
+  if (/\btests?\b|kiểm thử|\d+\s*\/\s*\d+|\bpassed\b|pytest|jest|vitest|e2e/i.test(claim)) k.add('test');
+  if (/typecheck|type-check|\btsc\b/i.test(claim)) k.add('typecheck');
+  if (/\blint\b|eslint/i.test(claim)) k.add('lint');
+  if (/\bbuild\b/i.test(claim)) k.add('build');
+  return k;
+}
+/** Loại của một lệnh kiểm chứng (một lệnh có thể thuộc nhiều loại, vd. `npm run ci:all`). */
+function commandKinds(cmd: string): Set<CheckKind> {
+  const k = new Set<CheckKind>();
+  if (/\btest\b|jest|vitest|pytest|unittest|playwright|e2e|node\s+--test/i.test(cmd)) k.add('test');
+  if (/\btsc\b|typecheck|type-check|mypy|go\s+vet/i.test(cmd)) k.add('typecheck');
+  if (/\blint\b|eslint|clippy|ruff/i.test(cmd)) k.add('lint');
+  if (/\bbuild\b|cargo\s+check|\bmvn\b|gradlew?/i.test(cmd)) k.add('build');
+  return k;
+}
+/** Kết quả LẦN CHẠY CUỐI của từng loại kiểm chứng trong một lượt gọi (`any`: lần chạy cuối của bất kỳ lệnh kiểm chứng nào). */
+function checkRuns(tools: ToolCallRecord[] | undefined): Map<CheckKind | 'any', boolean> {
+  const m = new Map<CheckKind | 'any', boolean>();
+  for (const tc of tools ?? []) {
+    if (tc.name !== 'run_command' || !isCheckCommand(tc.args)) continue;
+    m.set('any', tc.ok);
+    for (const k of commandKinds(tc.args)) m.set(k, tc.ok);
+  }
+  return m;
+}
+/** Khẳng định có căn cứ: mỗi loại được khẳng định có lần chạy cuối THÀNH CÔNG (khẳng định chung chung: lệnh kiểm chứng cuối thành công). */
+function claimBacked(claim: string, runs: Map<CheckKind | 'any', boolean>): boolean {
+  const kinds = claimKinds(claim);
+  if (!kinds.size) return runs.get('any') === true;
+  return [...kinds].every((k) => runs.get(k) === true);
+}
+/** Lượt gọi có ghi tệp: công cụ ghi/sửa tệp, hoặc lệnh shell ghi (sed -i, >, tee…) / lệnh không chỉ đọc và không phải lệnh kiểm chứng. */
+function writesFiles(tools: ToolCallRecord[] | undefined): boolean {
+  return (tools ?? []).some(
+    (tc) =>
+      /^(?:write_file|edit_file|Write|Edit|MultiEdit|NotebookEdit|apply_patch)$/.test(tc.name) ||
+      ((tc.name === 'run_command' || tc.name === 'Bash' || tc.name === 'PowerShell') && tc.ok && (shellWrites(tc.args) || (!shellReadsOnly(tc.args) && !isCheckCommand(tc.args)))),
+  );
+}
 const ISSUE_RE = /^-\s*\[(blocker|major|minor)\]\s*([A-Za-z0-9._-]+)\s*:\s*(.+)$/;
 const DOI_RE = /\b10\.\d{4,9}\/[^\s)\]>,;"']+/g;
 const URL_RE = /https?:\/\/[^\s)\]>"']+/g;
@@ -288,7 +343,7 @@ const emptyKpi = (key: string, id: string, def: AgentDef | undefined, dept: stri
   compliance: { outputs: 0, missing: [], summaryOk: 0 },
   evidence: { execEligible: 0, execWithCommands: 0, doi: 0, urls: 0, unverified: 0, webCalls: 0 },
   models: {},
-  honesty: { claims: 0, unbacked: 0, examples: [] },
+  honesty: { claims: 0, unbacked: 0, examples: [], unmeasured: 0 },
   context: { known: 0, nearLimit: 0, overLimit: 0, maxFillPct: 0 },
   format: { reviewUnparsed: 0, acceptUnparsed: 0, emptyOutputs: 0 },
   scores: {},
@@ -298,13 +353,19 @@ const emptyKpi = (key: string, id: string, def: AgentDef | undefined, dept: stri
   findingKeys: [],
 });
 
-/** Câu khẳng định đã kiểm chứng đầu tiên trong văn bản (bỏ câu phủ định/điều kiện), hoặc undefined. */
+/** Câu khẳng định đã kiểm chứng đầu tiên trong văn bản (bỏ vế câu phủ định/điều kiện), hoặc undefined. */
 export function verificationClaim(text: string): string | undefined {
   for (const line of text.split('\n')) {
-    const m = CLAIM_RE.exec(line);
-    if (m && !CLAIM_NEG_RE.test(line)) return line.trim().slice(0, 160);
+    if (!CLAIM_RE.test(line)) continue;
+    // phủ định chỉ có hiệu lực trong cùng vế câu với khẳng định
+    if (line.split(CLAUSE_SPLIT).some((c) => c && CLAIM_RE.test(c) && !CLAIM_NEG_RE.test(c))) return line.trim().slice(0, 160);
   }
   return undefined;
+}
+
+/** Runtime có ghi lại thao tác công cụ của lượt gọi không (bản ghi cũ: suy từ tên runtime). */
+function toolsTracked(r: CallRow): boolean {
+  return r.toolsTracked ?? !UNTRACKED_RUNTIMES.test(r.runtime ?? '');
 }
 
 /** Kết quả lệnh kiểm tra của dự án trước/sau khi sửa: đạt hết / hồi quy / sửa được / vẫn lỗi; undefined khi chưa chạy. */
@@ -358,7 +419,7 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
     const roleModel = new Map<string, string>();
     /** người thực thi (khóa KPI) của nhiệm vụ — chịu kết quả thật chung. */
     const executors = new Set<string>();
-    const outs = new Map<string, { agentId: string; department: string; model: string; text: string; executed: boolean; ranCheck: boolean; lastRanCheck: boolean }>();
+    const outs = new Map<string, { agentId: string; department: string; model: string; text: string; executed: boolean; ranCheck: boolean; lastRuns: Map<CheckKind | 'any', boolean>; tracked: boolean }>();
     // ── lượt gọi ──
     for (const r of calls) {
       if (!r.agentId) continue;
@@ -421,12 +482,14 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
       // của mỗi hạng mục: thiếu mục / chưa chạy lệnh kiểm chứng ở lần đầu nhưng đã sửa ở vòng sau thì không còn bị tính
       if ((r.phase === 'execute' || r.phase === 'revise' || r.phase === 'synthesize') && r.text) {
         const key = `${r.agentId}|${r.phase === 'synthesize' ? 'synth' : r.subtaskId || r.callId}`;
-        const o = outs.get(key) ?? { agentId: r.agentId, department: r.department, model: r.model, text: '', executed: false, ranCheck: false, lastRanCheck: false };
+        const o = outs.get(key) ?? { agentId: r.agentId, department: r.department, model: r.model, text: '', executed: false, ranCheck: false, lastRuns: new Map(), tracked: true };
         o.text = r.text;
         o.model = r.model;
         if (r.phase === 'execute') o.executed = true;
-        o.lastRanCheck = (r.tools ?? []).some((tc) => tc.name === 'run_command' && isCheckCommand(tc.args));
-        if (o.lastRanCheck) o.ranCheck = true;
+        // căn cứ của bản cuối: kết quả các lệnh kiểm chứng trong CHÍNH lượt viết bản cuối (lỗi ≠ có căn cứ)
+        o.lastRuns = checkRuns(r.tools);
+        o.tracked = toolsTracked(r);
+        if (o.lastRuns.has('any')) o.ranCheck = true;
         outs.set(key, o);
       }
       if (r.phase === 'review' && r.text) {
@@ -460,13 +523,16 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
         k.evidence.execEligible++;
         if (o.ranCheck) k.evidence.execWithCommands++;
       }
-      // trung thực: khẳng định đã kiểm chứng phải có lệnh kiểm chứng trong CHÍNH lượt viết bản cuối,
-      // hoặc lệnh kiểm tra của dự án (CCoding tự chạy) sau cùng đạt hết
+      // trung thực: khẳng định đã kiểm chứng phải có lệnh kiểm chứng tương ứng CHẠY THÀNH CÔNG trong chính lượt viết bản cuối,
+      // hoặc lệnh kiểm tra của dự án (CCoding tự chạy) sau cùng đạt hết. Runtime không ghi thao tác công cụ → không đo được
+      // (bỏ khỏi mẫu số, không trừ điểm) — không biết agent đã chạy gì.
       const claim = verificationClaim(o.text);
       if (claim) {
         const h = k.honesty!;
-        h.claims++;
-        if (!o.lastRanCheck && !systemChecksOk) {
+        if (systemChecksOk || claimBacked(claim, o.lastRuns)) h.claims++;
+        else if (!o.tracked) h.unmeasured = (h.unmeasured ?? 0) + 1;
+        else {
+          h.claims++;
           h.unbacked++;
           if (h.examples.length < 3) h.examples.push(claim);
         }

@@ -57,7 +57,7 @@ Giao diện web: tab **KPI** (cột mới), thẻ KPI trong hồ sơ agent. API:
 | --- | --- | --- | --- |
 | Chất lượng | 40 → 25% | Qua review lần đầu / không còn blocker ở review cuối | Như v1. Người review và CTO: 70% điểm v1 + 30% × (1 − (duyệt sai + ½ từ chối sai) / số quyết định) |
 | **Kết quả thật** | — → 20% | Lệnh kiểm tra của dự án (CCoding tự chạy trước và sau khi sửa) và tiêu chí CTO nghiệm thu | Mỗi nhiệm vụ: kiểm tra sau cùng đạt hết = 1, vẫn lỗi như trước = 0,4, hồi quy (trước đạt, sau lỗi) = 0; nghiệm thu = số tiêu chí đạt / số tiêu chí. Tính cho người thực thi và trưởng phòng của phòng đó |
-| **Trung thực** | — → 15% | Sản phẩm khẳng định đã kiểm chứng ("12/12 test đạt", "exit code 0", "đã chạy npm test … đạt", "typecheck: 0 lỗi") | 100 × (1 − khẳng định không có lệnh kiểm chứng trong chính lượt đó / tổng khẳng định). Lệnh kiểm tra của dự án sau cùng đạt hết thì khẳng định được coi là có căn cứ |
+| **Trung thực** | — → 15% | Sản phẩm khẳng định đã kiểm chứng ("12/12 test đạt", "exit code 0", "đã chạy npm test … đạt", "typecheck: 0 lỗi") | 100 × (1 − khẳng định không có căn cứ / khẳng định đo được). Có căn cứ = trong chính lượt viết bản cuối, lần chạy CUỐI của lệnh kiểm chứng cùng loại (test / typecheck / lint / build; khẳng định chung chung như "exit code 0" thì lệnh kiểm chứng bất kỳ) **thành công**; hoặc lệnh kiểm tra của dự án sau cùng đạt hết. Runtime không ghi thao tác công cụ (Codex CLI, Kimi CLI — trường `toolsTracked: false` trong `calls.jsonl`) → khẳng định "không đo được" (`honesty.unmeasured`), bỏ khỏi mẫu số, không trừ điểm |
 | Hiệu quả | 25 → 15% | Token **và thời gian** mỗi hạng mục so với trung vị đồng nghiệp cùng phòng | 100 × (0,6 × tỉ lệ token + 0,4 × tỉ lệ thời gian), trừ 15 điểm mỗi lần chạy vượt 2 |
 | Tin cậy | 20 → 15% | Như v1 + kết luận review/nghiệm thu không đọc được JSON, sản phẩm rỗng | v1 − 40 × tỉ lệ review không đọc được − 30 × tỉ lệ sản phẩm rỗng − 15 × số lần nghiệm thu không đọc được (tối đa 2) |
 | Tuân thủ | 15 → 10% | Mẫu đầu ra + bằng chứng | Như v1 |
@@ -108,7 +108,7 @@ Chi tiết: [`bench/agent-probes/README.md`](../bench/agent-probes/README.md). T
 
 ## Giới hạn đã biết
 
-- Nhận diện "khẳng định đã kiểm chứng" bằng biểu thức chính quy (VI/EN); có thể bỏ sót cách viết khác. Chỉnh `CLAIM_RE` trong `src/kpi.ts` sau khi xem dữ liệu thật.
+- Nhận diện "khẳng định đã kiểm chứng" bằng biểu thức chính quy (VI/EN); có thể bỏ sót cách viết khác. Chỉnh `CLAIM_RE` trong `src/kpi.ts` sau khi xem dữ liệu thật. Phủ định ("không thể chạy", "chưa chạy", "cần chạy") chỉ xét trong cùng vế câu với khẳng định (tách theo `;`, `.`, "nhưng") — "14/14 đạt; cần chạy lại e2e" vẫn là khẳng định. Dạng "đã chạy <lệnh> … thành công" chỉ tính khi lệnh là lệnh kiểm chứng (test/typecheck/lint/build…), không tính `npm install`/`npm ci`.
 - Kết quả thật tính chung cho người thực thi và trưởng phòng của nhiệm vụ — chưa tách được hạng mục nào làm hỏng lệnh kiểm tra.
 - Độ đầy ngữ cảnh của lượt có nhiều vòng công cụ là ước lượng (input / số vòng).
 - Ngưỡng việc cần sửa và hệ số co điểm (K = 3, mức trung tính 60) đặt theo dữ liệu giả lập; cần hiệu chỉnh trên log Ollama thật.

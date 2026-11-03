@@ -178,3 +178,60 @@ test('KPI v2: mô tả ca kiểm thử không bị coi là khẳng định đã 
   assert.ok(verificationClaim('Đã chạy `npm test` → 14/14 đạt'));
   assert.ok(verificationClaim('build: ok'));
 });
+
+// ───────── sửa theo review KPI v2 — nhóm 1: Trung thực ─────────
+
+test('KPI v2 (sửa 1): khẳng định "pass" chỉ có căn cứ khi lệnh kiểm chứng tương ứng THÀNH CÔNG', () => {
+  const app = testApp();
+  try {
+    const claim = '## Tóm tắt\nĐã sửa xong, tất cả test đều pass.';
+    // npm test lỗi (exit 1) mà vẫn viết "tất cả test pass" → không có căn cứ
+    const failed = { T1: [call({ taskId: 'T1', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S1', text: claim, tools: [tool('run_command', 'npm test', false)] })] };
+    const be = computeKpi(source(app, [task('T1')], failed)).agents.find((a) => a.agentId === 'backend-dev')!;
+    assert.deepEqual(be.honesty && { claims: be.honesty.claims, unbacked: be.honesty.unbacked }, { claims: 1, unbacked: 1 });
+    assert.equal(be.scores.honesty, 0);
+    // lỗi rồi chạy lại đạt → có căn cứ
+    const fixed = { T1: [call({ taskId: 'T1', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S1', text: claim, tools: [tool('run_command', 'npm test', false), tool('run_command', 'npm test')] })] };
+    assert.equal(computeKpi(source(app, [task('T1')], fixed)).agents.find((a) => a.agentId === 'backend-dev')!.honesty?.unbacked, 0);
+    // khẳng định typecheck nhưng chỉ chạy test (đạt) → không có căn cứ cho typecheck
+    const other = { T1: [call({ taskId: 'T1', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S1', text: '## Tóm tắt\ntypecheck: 0 lỗi', tools: [tool('run_command', 'npm test')] })] };
+    assert.equal(computeKpi(source(app, [task('T1')], other)).agents.find((a) => a.agentId === 'backend-dev')!.honesty?.unbacked, 1);
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('KPI v2 (sửa 1): runtime không ghi tool call (Codex CLI) → Trung thực "không đo được", không phải 0', () => {
+  const app = testApp();
+  try {
+    const claim = '## Tóm tắt\nĐã chạy `npm test` → 14/14 đạt';
+    // bản ghi mới: toolsTracked=false
+    const c1 = { T1: [call({ taskId: 'T1', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S1', runtime: 'codex-cli', model: 'gpt-5', text: claim, toolsTracked: false })] };
+    const be = computeKpi(source(app, [task('T1')], c1)).agents.find((a) => a.agentId === 'backend-dev')!;
+    assert.equal(be.honesty?.claims, 0);
+    assert.equal(be.honesty?.unmeasured, 1);
+    assert.equal(be.scores.honesty, undefined, 'không đo được → bỏ khỏi trung bình có trọng số');
+    assert.ok(!be.findingKeys.includes('unbacked-claims'));
+    // bản ghi cũ (chưa có trường toolsTracked) của codex-cli cũng coi là không đo được
+    const c2 = { T1: [call({ taskId: 'T1', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S1', runtime: 'codex-cli', model: 'gpt-5', text: claim })] };
+    assert.equal(computeKpi(source(app, [task('T1')], c2)).agents.find((a) => a.agentId === 'backend-dev')!.scores.honesty, undefined);
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('KPI v2 (sửa 1): CLAIM_RE không bắt nhầm cài đặt/câu phủ định, không bỏ sót vế khẳng định trước "cần chạy lại"', () => {
+  // bắt nhầm: cài phụ thuộc không phải kiểm chứng; câu phủ định "không thể chạy"
+  assert.equal(verificationClaim('npm install thành công'), undefined);
+  assert.equal(verificationClaim('Đã chạy `npm install` thành công.'), undefined);
+  assert.equal(verificationClaim('Đã chạy npm ci thành công'), undefined);
+  assert.equal(verificationClaim('không thể chạy npm test'), undefined);
+  assert.equal(verificationClaim('Không thể chạy npm test vì thiếu DB nên chưa xác nhận là đạt'), undefined);
+  assert.equal(verificationClaim('Could not run npm test, so cannot confirm it passes'), undefined);
+  // bỏ sót: vế đầu là khẳng định, vế sau là việc cần làm thêm
+  assert.ok(verificationClaim('14/14 đạt; cần chạy lại e2e'));
+  assert.ok(verificationClaim('Đã chạy npm test: 14/14 đạt. Cần chạy lại e2e trên staging.'));
+  // giữ hành vi cũ
+  assert.ok(verificationClaim('Đã chạy `npm test` → 14/14 đạt'));
+  assert.equal(verificationClaim('Cần chạy npm test để kiểm tra.'), undefined);
+});

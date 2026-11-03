@@ -2882,6 +2882,8 @@ export class Orchestrator {
       attempts,
       sizes: req ? { system: req.system.length, context: req.context?.length ?? 0, prompt: req.prompt.length } : undefined,
       maxTokens: req?.maxTokens,
+      // runtime không ghi thao tác công cụ (Codex/Kimi CLI) → KPI Trung thực của lượt này "không đo được"
+      toolsTracked: result.toolsTracked === false ? false : undefined,
       turns: result.turns,
       truncated: result.truncated,
       errorKind: result.errorKind,
