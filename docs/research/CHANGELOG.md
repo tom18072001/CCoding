@@ -5,6 +5,14 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 5 — Q1 (T-20261103-163327-d48, 3/11/2026): ghi kết quả dừng sớm B7′
+
+- **`improvement-backlog.md` (S1, S2):** B-11.5 có tiểu mục "Kết quả GĐ1" (R̂ token 2,04 [1,45; 2,99], thời gian 2,16 [1,53; 3,21]; > 1,6 ⇒ dừng vô ích, chưa phải kết luận; n = 2 mỗi ô; `1333eef`; CLI 2.1.317) và "Hàm ý" (a)–(c): so mô tả với B7 ×2,498 / ×2,566, ba công tắc chưa đủ ×1,3, ứng viên B-13…B-17 với B-14 phải chạy được trước. Cập nhật ô trạng thái hàng B-11.
+- **`preregistration.md` v2.3 (S2):** dòng V4-04 ở §9 (dừng ở GĐ1; CLI 2.1.316 → 2.1.317; B7c hủy trước khi có dòng nào). Sai lệch về thực thi, không đổi giả thuyết hay họ Holm.
+- **`paper/paper.md` (S2):** §6.1 mục (7) thay chỗ giữ bằng kết quả [Mô tả]; sửa các câu "đang đo" ở §7.4, hàng RQ3c bảng §9, "Ưu tiên đo tiếp" và "Trước khi công bố cần". Không sửa §4, §8.
+- **`facts.json` (S1):** 7 mục `b7prime-*`.
+- **Chặn lộ điểm:** không đọc, không nêu điểm hay chất lượng của B7′.
+
 ## Vòng 4, gói 4 (T-20261103-150407-7a3, 3/11/2026): đưa nghiên cứu đăng ký trước W1–W5 vào báo cáo khoa học
 
 - **`paper/paper.md` (S1, S2):** §5.1 và §6.1 mới theo nghiên cứu đăng ký trước W1–W5 (440 khóa giữ ở bảng chi phí, 432 lượt ở phép thử xác nhận, 16 lượt loại; Bảng 8–14; mục giữ chỗ B7′ "đang đo", không có số). Các vòng C1–C8 hạ thành §5.2 và §6.2 "Vòng thăm dò", không thuộc phép thử xác nhận. Viết lại Tóm tắt VI/EN, §7, §8, §9. Kết luận âm tính nêu thẳng: B-01 bị bác bỏ cho B7 (token 2,498, thời gian 2,566) và B6 (3,921; 4,047); họ Holm rỗng (K = 0); H3 suy biến, H6 và H7 chưa đủ N; recall cổng B-02 chưa ước lượng được.
