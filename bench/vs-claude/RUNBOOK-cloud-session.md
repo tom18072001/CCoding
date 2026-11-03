@@ -119,7 +119,7 @@ COMMON="--runtime claude-cli --ccoding-url http://127.0.0.1:7424 --ccoding-data 
 - **Thứ tự dùng credit:**
   1. Chạy hết lệnh W5a đang chạy (A1 r2–3).
   2. **Không chạy** A2 × R13 và B0 × T5 của W5 trên cloud. Hai lệnh này chuyển sang chạy local.
-  3. Dựng lại server 7425 từ `HEAD` của nhánh, ghi hash vào RUNLOG.
+  3. Dựng lại server 7425 **từ commit `1333eef`** (không lấy `HEAD`: Phòng Dev sắp gộp `main` mới vào nhánh, nên B7′ phải đo trên mã chưa gộp để so được với B7). Lệnh: `git worktree add ../ccoding-b7p 1333eef`. Ghi hash vào RUNLOG.
   4. **GĐ1 (điểm dừng):**
      ```bash
      node bench/vs-claude/run.mjs --arms A0-sonnet,B7cab --tasks t1-duration,t2-orders,t3-api,t4-perf,t5-logq --repeats 2 --timeout 20 $B7 --out bench/vs-claude/results/b7prime
