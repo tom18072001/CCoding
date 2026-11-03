@@ -1,0 +1,33 @@
+`DESIGN.md` is written at the repo root, and the review fixes are applied. It is a design document only, so there were no tests to run. I did recompute the arithmetic with a script. I did not commit it.
+
+**Capacity** (decimal TB, 1 replica on hot and warm):
+- **Volume:** 20,000 events/s × 800 B is 16 MB/s, which is 1.38 TB/day and 504.6 TB raw per year.
+- **Compression assumption:** primary shards take 0.5× raw in hot and 0.4× after force-merge. These ratios are estimates and need a proof of concept on real events, because they drive every disk figure.
+- **Tiers:**
+
+| Tier | Days resident | Data incl. replicas | Disk planned |
+|---|---|---|---|
+| Hot | 8 | 11.1 TB | 24 TB NVMe on 6 nodes |
+| Warm | 23 | 25.4 TB | 40 TB SSD on 5 nodes |
+| Cold | 335 | 185 TB (0 replicas) | 288 TB HDD on 12 nodes |
+
+- **Object storage:** about 63 TB for the evidence archive (69 TB with the lock margin) and about 207 TB for the Elasticsearch snapshot repository.
+- **Node count:** 28 Elasticsearch nodes in total, plus Logstash, Kafka, Kibana and the archiver.
+
+**Searchable snapshots:** the customer's suggestion can't be followed on Basic. Searchable snapshots and the frozen tier need an Enterprise license, and an ILM policy using them would stall. Instead, the cold tier keeps one online copy with no replicas, backed by a regular snapshot on object storage. That is a similar saving without the license. Because the cold data stays online, the 24-hour requirement is met without a restore step. An offline option is described, with its restore-time catch.
+
+**Integrity:** Elasticsearch on Basic can't prove data is unaltered, so the sealed archive is the evidence of record. Events are hashed and chained per Kafka partition and signed daily. They are timestamped by an external authority and stored in a locked bucket (S3 Object Lock, compliance mode). A daily reconciliation compares Elasticsearch counts against the archive.
+
+**Conflicts and risks flagged in the document:**
+- **Masking vs "unaltered":** masking changes the event, so only the masked form can be proven unaltered. Counsel must decide whether that is acceptable.
+- **Immutability vs erasure:** the locked archive conflicts with data-protection erasure and retention limits.
+- **Basic-license gaps:** no Elasticsearch audit log, no document-level security, no SSO, and limited alerting.
+- **Cold tier risk:** with no replicas, losing a node means restoring from snapshot.
+- **PII in free text:** usernames written into free text can't be reliably masked.
+- **Unmasked quarantine data:** the quarantine topic holds unmasked data.
+- **Legal hold:** ILM has no hold feature, so holds are a manual runbook step.
+- **Unverified license claims:** the license statements come from my memory of Elastic's subscription matrix. Check them against elastic.co/subscriptions for your version before relying on them.
+
+The document ends with open questions for the customer. The main ones are peak ingest rate, the cold-tier replica count, and whether masked evidence is legally acceptable.
+
+Review fixes: I corrected the hot-node indexing-rate line, the savings percentage (40 %, not 38 %), the headroom wording, the leap-year note, and the `wait_for_snapshot` description.
