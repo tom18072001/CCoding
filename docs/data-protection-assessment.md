@@ -611,3 +611,44 @@ Khuyến nghị: giữ `stablePrefix` tắt với dự án Bảo mật/Hạn ch�
 **Kết luận (cập nhật): ĐẠT CÓ ĐIỀU KIỆN** — cổng thiết kế, **chưa phải cổng phát hành**. Mã lõi khớp đặc tả ở mức đọc mã và test thuần; thiếu bằng chứng chạy thật. Điều kiện: (1) giữ khóa tắt cho tới khi giám đốc duyệt, sau khi spike G1 và bộ E1–E5 đạt trên Linux/WSL2; (2) lưu nhật ký `sandbox.*` ≥ 12 tháng; (3) soát lại căn cứ pháp lý với văn bản gốc; (4) BitLocker, kể cả đĩa ảo WSL; (5) xử lý phát hiện 1 và 3 ở trên.
 
 *(Kết luận gốc của phần đặc tả, giữ để đối chiếu:)* ĐẠT CÓ ĐIỀU KIỆN** (cho phần đặc tả). Điều kiện: (1) giữ khóa tắt cho tới khi giám đốc duyệt, sau khi spike (cổng G1) và bộ E1–E5 đạt; (2) lưu nhật ký `sandbox.*` ≥ 12 tháng; (3) soát lại căn cứ pháp lý với văn bản gốc trước khi dùng trong hồ sơ chính thức; (4) BitLocker, kể cả đĩa ảo WSL nếu worktree chuyển vào đó.
+
+## Bổ sung 03/11/2026 — B-19 Vòng tự cải thiện
+
+**Loại cổng:** cổng thiết kế, rà mã đã triển khai (bước 1–7 + route), **chưa phải cổng phát hành**. Chỉ đọc mã và test; chưa chạy vòng thật. Đặc tả: `docs/research/self-improvement/implementation-spec.md` §4–§5 (không chép lại). Khóa `selfImprove.enabled` mặc định **false** (`src/config.ts:381`); tắt ⇒ route `/api/selfimprove/*` trả 404 (`src/server.ts:683`).
+
+**Phân loại (nhãn · pháp lý):**
+
+| Tập dữ liệu | Nhãn | Phân loại pháp lý |
+|---|---|---|
+| Cụm, đề xuất, kết quả A/B, bản vá (`data/self-improve/`) | **Nội bộ** | Dữ liệu vận hành, không có DLCN thật |
+| Sự kiện `incident.*`, `selfimprove.*` trong `LogStore` | **Nội bộ** (mang mức cao nhất của nhiệm vụ nguồn) | Nhật ký xử lý dữ liệu: giữ ≥ 6 tháng |
+| Bộ bài giữ lại (holdout) | **Nội bộ**, dữ liệu tổng hợp | Không DLCN |
+| Sự cố từ nhiệm vụ Bảo mật/Hạn chế | **Không vào vòng** | Chỉ đếm `incident.skipped {reason:'classification'}` |
+
+**Phạm vi dữ liệu:** không thêm endpoint, khóa API, nhà cung cấp hay luồng xuyên biên giới; A/B dùng runtime đã cấu hình theo `allowedRuntimes`.
+
+| Yêu cầu | Hiện thực (tệp:dòng, tại commit `c0e3aa8`) | Trạng thái |
+|---|---|---|
+| Loại sự cố của nhiệm vụ Bảo mật/Hạn chế (PRE-04, PRI-02) | `SECRET_CLASSES` `src/selfimprove.ts:61`; `toIncident` trả `skip('classification')` `src/selfimprove.ts:106`; phân loại lấy từ `task`, không do agent khai | Đạt (đọc mã). Test: `test/selfimprove.test.ts:67` (`reason === 'classification'`) |
+| Che PII/bí mật trước log (DET-04, PRI-02) | Mọi bản ghi qua `LogStore.write` (`redactSecrets`, `redactPii`); `reason` cắt 300 ký tự `src/selfimprove.ts:636`; `agentProposal` cắt 300 | Đạt |
+| Che PII/bí mật trước payload route (PRE-04) | `redact(..., {secrets, pii})` cho `agentProposal` và `diff` `src/selfimprove.ts:718-719`; route trả JSON, không HTML | Đạt (test route `test/selfimprove-apply.test.ts:228` kiểm hợp đồng khóa) |
+| Lưu giữ ≥ 6 tháng (DET-04, RES-02) | `retentionDays: 400` `src/config.ts:434`; `MIN_RETENTION_DAYS = 183` và `purgeExpired` `src/selfimprove.ts:895-919`; **CT-11** `test/selfimprove-apply.test.ts:192` | Đạt về hàm; **`purgeExpired` chưa được ai gọi** (tìm `purgeExpired` ngoài `selfimprove.ts`: không có) nên hiện **không xóa gì** — an toàn về lưu giữ, nhưng chưa có dọn |
+| Log bất biến, chuỗi băm (DET-05) | Ghi qua `LogStore` có `hashChain` (`src/logger.ts:66`); **CT-17** `test/selfimprove-apply.test.ts:165` (chuỗi không `broken`) | Đạt mức băm. WORM/ký số vẫn là mức "Nâng cao" như B-18 |
+| Duyệt và rollback chỉ do giám đốc (GOV-02) | `recordDirector` đặt `by:'director'` cố định `src/selfimprove.ts:634-640`; `proposalStatus` chỉ tính `approved` khi `by==='director'` `src/selfimprove.ts:652`; `applyApproved` đọc lại sự kiện từ `LogStore`, không tin tham số `src/selfimprove.ts:748`; `rollback` cần `rollback.confirmed` `src/selfimprove.ts:807-815`; CT-07/08 `:88`, CT-16 | Đạt ở tầng hàm. **Xem phát hiện M1**: danh tính "giám đốc" ở tầng route chưa được xác thực |
+| Tách vai (GOV-02) | `loadConfig` từ chối ba vai trùng `src/config.ts:471` | Đạt |
+| Không xuyên biên giới mới (PRI-04) | Không có mã gọi mạng mới trong `selfimprove.ts`/route | Đạt (đọc mã) |
+| Khôi phục (RES-01) | Tắt khóa ⇒ 404 và không có sự kiện; rollback bằng `git revert` có thẻ prompts-vN | Đạt (test CT-10/16/17) |
+
+Các mã còn lại (GOV-01/03/05/06, PRE-01/02/03/05/06/07, DET-01/02/03, PRI-01/03, RES-03) giữ trạng thái như mục B-18 hoặc **N/A**: không thêm DLCN, bề mặt mạng hay nhà cung cấp mới; sự cố DLCN nếu có vẫn thông báo ≤ 72 giờ (RES-03).
+
+**Review route (`src/server.ts:681-714`) — phát hiện:**
+
+1. **Chính (major) · `src/server.ts:148-157`, `:686`** — "`by:'director'`" được gán cứng cho mọi POST tới route. Danh tính chỉ dựa vào việc gọi được loopback: `config.server.token` là tùy chọn (mặc định không đặt), và kiểm Origin chỉ chặn khi có header `Origin` (`:151-152`), nên lệnh gọi không có `Origin` (ví dụ `curl` từ shell của agent) đi thẳng qua. Agent có công cụ shell trong worktree có thể tự POST `/approve` rồi `/apply`, làm vô hiệu điều "không tự áp" (spec §4.1). Khuyến nghị cho `@backend-dev`: khi `selfImprove.enabled=true`, bắt buộc có `server.token` (loadConfig từ chối nếu thiếu) và yêu cầu `Origin` hợp lệ cho các POST `/api/selfimprove/*`; thêm test gọi không token ⇒ 401/403. Bổ sung cho chủ dự án: rà xem hook/shell-policy có chặn `curl` tới loopback không (chưa kiểm). **Trước khi bật `selfImprove.enabled` phải xử lý.**
+2. **Phụ (minor) · `src/server.ts:699-705`** — route `apply` trả `{ ...r }` từ `applyApproved`; lỗi git trả `(e as Error).message` nguyên văn qua `HttpError(409)`. Thông điệp lỗi git có thể chứa đường dẫn cục bộ. Nên che qua `redact` hoặc cắt ngắn; Nội bộ nên rủi ro thấp.
+3. **Phụ (minor) · `src/selfimprove.ts:901`** — `purgeExpired` dựa vào `mtime`; `incidents.jsonl` được nối thêm liên tục nên không bao giờ hết hạn, và chưa có nơi gọi. Cần quyết định có dọn hay không trước khi bật (RES-02).
+4. **Ghi chú (không phải lỗi)** — `pid` được kiểm `safePid` (`src/selfimprove.ts:556`) trước khi nối đường dẫn nên không có path traversal; `reason` đi qua `LogStore` nên được che; client hiển thị bằng `textContent` là lớp thứ hai, không phải lớp bảo vệ chính.
+5. **Chưa kiểm** — đường tới `selfimprove.proposed` đến từ `agentProposal` do agent viết: đã cắt và che, nhưng nội dung vẫn là dữ liệu không đáng tin hiển thị cho giám đốc (spec §4.3).
+
+**Khuyến nghị cho chủ dự án:** (1) giữ `selfImprove.enabled=false` cho tới khi xử lý M1 (xác thực route); (2) đặt `server.token` khi bật; (3) quyết định chính sách dọn `data/self-improve/` và nơi gọi `purgeExpired`, giữ ≥ 183 ngày; (4) soát lại căn cứ pháp lý (số hiệu như mục B-18, **chưa tra lại văn bản gốc**); (5) giữ log `selfimprove.*`/`incident.*` ≥ 12 tháng theo `retentionDays: 400`.
+
+**Kết luận: ĐẠT CÓ ĐIỀU KIỆN** — cổng thiết kế, **chưa phải cổng phát hành**. Điều kiện: (1) xử lý phát hiện major M1 trước khi bật khóa; (2) giữ khóa tắt mặc định; (3) quyết định việc gọi `purgeExpired`; (4) soát căn cứ pháp lý với văn bản gốc.
