@@ -106,6 +106,8 @@ export class CodexCliRuntime implements Runtime {
       runtime: this.id,
       durationMs: Date.now() - started,
       error: proc.timedOut ? 'Hết thời gian' : proc.aborted ? 'Đã hủy' : p.error || (proc.code !== 0 && !text ? proc.stderr.slice(-400) : undefined),
+      // Codex CLI tự chạy lệnh trong sandbox của nó — CCoding không ghi lại được thao tác công cụ (KPI Trung thực: không đo được)
+      toolsTracked: false,
     };
   }
 }
@@ -196,6 +198,7 @@ export class KimiCliRuntime implements Runtime {
       runtime: this.id,
       durationMs: Date.now() - started,
       error: proc.timedOut ? 'Hết thời gian' : proc.aborted ? 'Đã hủy' : proc.code !== 0 && !text ? proc.stderr.slice(-400) : undefined,
+      toolsTracked: false,
     };
   }
 }

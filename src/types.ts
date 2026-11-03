@@ -186,6 +186,10 @@ export interface RunResult {
   diag?: string;
   /** Vòng lặp công cụ bị dừng vì hết lượt ('turns') hoặc hết trần token đầu vào ('input') — sản phẩm có thể còn dang dở. */
   capped?: 'turns' | 'input';
+  /** Prompt LỚN NHẤT trong các vòng của lượt gọi (token, gồm phần đọc từ cache) — để biết vòng nào sát/vượt cửa sổ ngữ cảnh. */
+  maxPromptTokens?: number;
+  /** false: runtime không ghi lại thao tác công cụ (vd. Codex CLI, Kimi CLI) — không biết agent đã chạy lệnh gì trong lượt này. */
+  toolsTracked?: boolean;
 }
 
 export interface RuntimeAvailability { ok: boolean; detail: string; models?: string[] }
@@ -281,6 +285,11 @@ export interface DeptRun {
     verified?: boolean;
     /** 'director': kết luận do giám đốc (người dùng) quyết bằng tay — duyệt, hoặc yêu cầu sửa (chạy một vòng sửa + review lại). */
     by?: 'director';
+    /**
+     * Kết luận GỐC của reviewer trước khi CCoding can thiệp (vd. lệnh kiểm tra hồi quy → ép `approved=false`) — KPI dùng trường này
+     * để chấm độ đúng của reviewer, vì `approved` có thể đã bị ép.
+     */
+    reviewerApproved?: boolean;
   };
   /** Vòng review hiện tại (0 = review đầu) — giữ qua tạm dừng/tiếp tục để không vượt maxRevisions. */
   reviewRound?: number;
@@ -482,6 +491,12 @@ export interface ProjectChecks {
   latestAfter?: 'execute' | 'revise';
   /** Workspace có thể đã đổi sau lần kiểm tra gần nhất (bắt đầu một lượt sửa) — review sau đó phải chạy lại lệnh kiểm tra. */
   staleAt?: string;
+  /**
+   * Kết quả theo phòng (các phòng chạy lần lượt trên cùng workspace): `before` = trạng thái ngay trước khi phòng này sửa (kết quả
+   * gần nhất của phòng trước, hoặc baseline), `latest` = lần kiểm tra gần nhất do phòng này chạy. KPI gán kết quả thật theo phòng.
+   * Không lưu `tail` (đầu ra) để task.json gọn.
+   */
+  depts?: Record<string, { before?: CheckResult[]; latest?: CheckResult[]; at?: string }>;
 }
 
 export interface ChatMessage {

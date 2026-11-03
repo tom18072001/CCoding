@@ -1333,6 +1333,8 @@ export class Orchestrator {
           // review lỗi KHÔNG được coi là "duyệt"
           if (res.error && !res.text) throw new Error(`Không review được: ${res.error}`);
           review = parseReview(res.text, items.map((i) => i.st.id));
+          // kết luận GỐC của reviewer — KPI chấm độ đúng của reviewer theo trường này (approved có thể bị ép ngay dưới đây)
+          const reviewerApproved = review.approved;
           // lệnh kiểm tra của dự án đạt trước khi sửa mà hỏng sau khi sửa → không duyệt, dù reviewer nói gì
           const regressed = this.checkRegressions(task);
           if (regressed.length) {
@@ -1354,7 +1356,7 @@ export class Orchestrator {
           // chỉ lệnh kiểm chứng thật (test/typecheck/lint/build/migration) mới là bằng chứng — git status, rg… là khảo sát
           // bằng chứng có sẵn khi CCoding đã tự chạy lệnh kiểm tra của dự án (không phụ thuộc reviewer/model)
           const verified = sys.length ? true : reviewTools.includes('run_command') ? ran.some((tc) => isCheckCommand(tc.args)) : undefined;
-          run.review = { approved: review.approved, summary: review.summary, issues: review.issues, checks, verified };
+          run.review = { approved: review.approved, summary: review.summary, issues: review.issues, checks, verified, reviewerApproved };
           const evidence =
             verified === false
               ? `\n⚠️ Reviewer có quyền chạy lệnh nhưng KHÔNG chạy lệnh kiểm tra nào (test/typecheck/lint/build)${ran.length ? ` — chỉ chạy lệnh khảo sát: ${ran.map((tc) => `\`${tc.args.slice(0, 60)}\``).join(', ')}` : ''} — kết luận chưa có bằng chứng chạy thật.`
@@ -2494,6 +2496,13 @@ export class Orchestrator {
       pc.baseline = results;
       pc.baselineAt = nowIso();
     } else {
+      // theo phòng (các phòng chạy lần lượt trên cùng workspace): trạng thái trước khi phòng này sửa = kết quả gần nhất của phòng
+      // trước, hoặc baseline — KPI gán kết quả lệnh kiểm tra cho đúng phòng đã làm thay đổi. Bỏ `tail` cho task.json gọn.
+      const slim = (rs?: CheckResult[]) => rs?.map((r) => ({ ...r, tail: '' }));
+      const d = ((pc.depts ??= {})[dept] ??= {});
+      d.before ??= slim(pc.latest ?? pc.baseline) ?? [];
+      d.latest = slim(results);
+      d.at = nowIso();
       pc.latest = results;
       pc.latestAt = nowIso();
       pc.latestAfter = when;
@@ -2881,7 +2890,12 @@ export class Orchestrator {
       ...rec,
       attempts,
       sizes: req ? { system: req.system.length, context: req.context?.length ?? 0, prompt: req.prompt.length } : undefined,
-      maxTokens: req?.maxTokens,
+      // trần đầu ra THỰC của lượt: max_tokens của pha, không có thì của runtime (KPI so "bị cắt" với trần này)
+      maxTokens: req?.maxTokens ?? (Number(config.runtimes?.[result.runtime]?.maxTokens) || undefined),
+      // prompt lớn nhất trong các vòng công cụ (KPI: độ đầy ngữ cảnh theo vòng lớn nhất)
+      maxPrompt: result.maxPromptTokens,
+      // runtime không ghi thao tác công cụ (Codex/Kimi CLI) → KPI Trung thực của lượt này "không đo được"
+      toolsTracked: result.toolsTracked === false ? false : undefined,
       turns: result.turns,
       truncated: result.truncated,
       errorKind: result.errorKind,
@@ -2908,7 +2922,7 @@ export class Orchestrator {
       usage.output += r2.usage.output;
       usage.cacheRead += r2.usage.cacheRead;
       usage.cacheWrite += r2.usage.cacheWrite;
-      res = { ...r2, text, usage: { ...usage }, toolCalls: first.toolCalls, turns: (res.turns ?? 1) + (r2.turns ?? 1), capped: first.capped, diag: first.diag };
+      res = { ...r2, text, usage: { ...usage }, toolCalls: first.toolCalls, turns: (res.turns ?? 1) + (r2.turns ?? 1), capped: first.capped, diag: first.diag, maxPromptTokens: Math.max(res.maxPromptTokens ?? 0, r2.maxPromptTokens ?? 0) || undefined };
     }
     return res;
   }

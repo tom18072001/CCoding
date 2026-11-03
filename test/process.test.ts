@@ -792,6 +792,10 @@ test('CCoding tự chạy lệnh chuẩn bị + kiểm tra của dự án: basel
     assert.match(pc.baseline?.[0].summary ?? '', /fail 0/);
     assert.equal(pc.latestAfter, 'revise');
     assert.equal(pc.latest?.[0].ok, true, 'sau vòng sửa lệnh kiểm tra đạt lại');
+    // KPI: kết quả theo phòng (trước khi phòng sửa / lần gần nhất), không lưu đầu ra; kết luận gốc của reviewer
+    assert.equal(pc.depts?.dev?.before?.[0].ok, true);
+    assert.equal(pc.depts?.dev?.latest?.[0].ok, true);
+    assert.equal(pc.depts?.dev?.latest?.[0].tail, '');
     // agent thấy baseline đo sẵn; reviewer thấy lệnh hỏng sau thực thi
     assert.match(gw.prompts.execute[0], /Lệnh kiểm tra của dự án \(CCoding tự chạy/);
     assert.match(gw.prompts.execute[0], /KHÔNG đo lại baseline/);
@@ -801,6 +805,7 @@ test('CCoding tự chạy lệnh chuẩn bị + kiểm tra của dự án: basel
     assert.match(gw.prompts.revise[0], /đạt trước khi sửa nhưng lỗi sau khi sửa/);
     assert.ok(app.orchestrator.alerts.some((a) => a.kind === 'checks.regression'));
     assert.equal(done.runs[0].review?.approved, true, 'review lần 2 duyệt sau khi đạt lại');
+    assert.equal(done.runs[0].review?.reviewerApproved, true);
     assert.equal(done.runs[0].review?.verified, true, 'có bằng chứng do CCoding chạy');
     assert.equal(done.attention, undefined);
     const fin = app.store.readRunFile(t.id, 'FINAL.md') ?? '';

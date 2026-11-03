@@ -944,21 +944,49 @@
       ? `<div class="t-atts">📎 ${t.attachments.map((a) => `<a data-file="${esc(a.textPath || a.path)}" title="${esc(a.note || '')}">${esc(a.name)} <small>(${esc(a.kind)}, ${fmt(a.chars)} ký tự)</small></a>`).join(' · ')}</div>`
       : '';
     const git = t.branch ? `<div class="t-git">🌿 nhánh <code>${esc(t.branch)}</code> · worktree <code>${esc(t.workspace)}</code>${t.commit ? ` · ${esc(t.commit)}` : ''}</div>` : t.workspace ? `<div class="t-git">📁 <code>${esc(t.workspace)}</code></div>` : '';
-    el.innerHTML = `<button class="btn ghost sm back" id="td-back">← Danh sách</button>
-      <div class="td-head"><h2>${esc(t.title)}</h2>
-        <div class="t-meta"><span class="status ${t.status}">${TASK_VI[t.status] || t.status}</span>${t.attention ? `<span class="status attention" title="${esc(t.attention.detail)}">⚠ cần xem</span>` : ''}<span class="tcode" title="${esc(t.id)}">${esc(code(t))}</span><span>${esc(MODE_VI[t.mode] || t.mode)}</span>
-        <span class="cls ${esc(t.classification)}">${esc(CLS_VI[t.classification] || t.classification)}</span>
-        ${t.projectId ? `<span>dự án: ${esc(t.projectId)}</span>` : ''}<span>token <b style="font-family:var(--mono);color:var(--text)">${fmt(t.usage.input)} in / ${fmt(t.usage.output)} out</b></span>
-        ${t.agentId ? `<span>giao riêng: ${esc(agentName(t.agentId))}</span>` : ''}
-        ${canPause ? '<button class="btn ghost sm" id="td-pause">⏸ Tạm dừng</button>' : ''}${canCancel ? '<button class="btn ghost sm danger" id="td-cancel">Hủy</button>' : ''}<button class="btn ghost sm" id="td-again" title="Mở form giao việc với yêu cầu, chế độ và phòng/dự án/agent như nhiệm vụ này">↻ Giao lại tương tự</button></div>
+    // UI-5: bố cục kiểu Paperclip — tiêu đề + thao tác ở đầu; cột giữa là nội dung làm việc; bảng Thuộc tính bên phải
+    const when = (iso) => (iso ? dateTime(iso) : '—');
+    const prop = (k, v) => (v ? `<dt>${k}</dt><dd>${v}</dd>` : '');
+    const props = `<aside class="td-props" aria-label="Thuộc tính nhiệm vụ">
+        <h3>Công việc</h3><dl>
+          ${prop('Trạng thái', `<span class="st-badge"><span class="status ${t.status}">${TASK_VI[t.status] || t.status}</span>${t.attention ? `<span class="status attention" title="${esc(t.attention.detail)}">cần xem</span>` : ''}</span>`)}
+          ${prop('Mã', `<span class="tcode" title="${esc(t.id)}">${esc(code(t))}</span>`)}
+          ${prop('Chế độ', esc(MODE_VI[t.mode] || t.mode))}
+          ${prop('Phòng', esc((t.departments || []).map((d) => deptShort(d)).join(' → ')))}
+          ${prop('Giao riêng', t.agentId ? `<span class="who">${av(t.agentId, 'av xs')}${esc(agentName(t.agentId))}</span>` : '')}
+          ${prop('Dự án', t.projectId ? `<a data-proj="${esc(t.projectId)}">${esc(S.projects.find((p) => p.id === t.projectId)?.name || t.projectId)}</a>` : 'Ngoài dự án')}
+          ${prop('Dữ liệu', `<span class="cls ${esc(t.classification)}">${esc(CLS_VI[t.classification] || t.classification)}</span>`)}
+        </dl>
+        <h3>Thực thi</h3><dl>
+          ${prop('Runtime', esc(t.options?.runtime || S.defaults.runtime || 'mặc định'))}
+          ${prop('Token', `${fmt(t.usage.input)} vào · ${fmt(t.usage.output)} ra`)}
+          ${prop('Ngân sách', budget ? `${pct}% của ${fmt(budget)}` : '')}
+          ${prop('Review', t.options?.review === false ? 'tắt' : 'bật')}
+          ${prop('CTO', t.acceptance ? (t.acceptance.accepted ? 'nghiệm thu đạt' : t.acceptance.parsed ? 'chưa đạt' : 'không đọc được') : t.options?.acceptance === false ? 'tắt' : '')}
+          ${prop('Nhánh', t.branch ? `<code>${esc(t.branch)}</code>` : '')}
+          ${prop('Commit', t.commit ? `<code>${esc(String(t.commit).slice(0, 40))}</code>` : '')}
+        </dl>
+        ${t.splitFrom || (t.splitInto || []).length || t.followUpOf || (t.after || []).length ? `<h3>Liên quan</h3><dl>
+          ${prop('Tách từ', t.splitFrom ? `<a data-task="${esc(t.splitFrom.taskId)}">${esc(code(S.tasks.get(t.splitFrom.taskId)) || t.splitFrom.taskId)}</a> · ${esc(t.splitFrom.subtaskId)}` : '')}
+          ${prop('Tiếp nối', t.followUpOf ? `<a data-task="${esc(t.followUpOf)}">${esc(code(S.tasks.get(t.followUpOf)) || t.followUpOf)}</a>` : '')}
+          ${prop('Tách thành', (t.splitInto || []).map((x) => `<a data-task="${esc(x)}">${esc(code(S.tasks.get(x)) || x)}</a>`).join(', '))}
+          ${prop('Chờ', (t.after || []).map((x) => `<a data-task="${esc(x)}">${esc(code(S.tasks.get(x)) || x)}</a>`).join(', '))}
+        </dl>` : ''}
+        <h3>Thời gian</h3><dl>
+          ${prop('Tạo', when(t.createdAt))}
+          ${prop('Bắt đầu', t.startedAt ? when(t.startedAt) : '')}
+          ${prop('Kết thúc', t.finishedAt ? when(t.finishedAt) : '')}
+          ${prop('Cập nhật', when(t.updatedAt))}
+        </dl>
+      </aside>`;
+    el.innerHTML = `<div class="td-top"><button class="btn ghost sm back" id="td-back">← Nhiệm vụ</button><span class="grow"></span>
+        ${canPause ? '<button class="btn sm" id="td-pause">Tạm dừng</button>' : ''}${canCancel ? '<button class="btn sm danger" id="td-cancel">Hủy</button>' : ''}<button class="btn sm" id="td-again" title="Mở form giao việc với yêu cầu, chế độ và phòng/dự án/agent như nhiệm vụ này">Giao lại tương tự</button></div>
+      <div class="td-head"><h2><span class="si-wrap">${window.Drive?.statusIcon ? window.Drive.statusIcon(t.status) : ''}</span>${esc(t.title)}</h2></div>
+      <div class="td-grid"><div class="td-main">
         ${meter}${git}${atts}${window.Flow?.summaryHtml(t) || ''}${window.Flow?.acceptHtml(t) || ''}${window.UX?.checksHtml(t) || ''}${window.Flow?.shipHtml(t) || ''}
-        ${t.routing ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">🧭 ${esc(t.routing.reason)}</p>` : ''}
+        ${t.routing ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">Định tuyến: ${esc(t.routing.reason)}</p>` : ''}
         ${t.error && !canResume ? `<p style="font-size:12.5px;color:var(--bad);margin:0 0 8px">${esc(t.error)}</p>` : ''}
-        ${t.attention ? `<p style="font-size:12.5px;color:var(--warn);margin:0 0 8px">⚠ Cần xem lại: ${esc(t.attention.detail)} — xem báo cáo, "Làm lại từ review" hoặc tách việc còn lại.</p>` : ''}
-        ${t.splitFrom ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">✂ Tách từ <a data-task="${esc(t.splitFrom.taskId)}">${esc(t.splitFrom.taskId)}</a> · hạng mục ${esc(t.splitFrom.subtaskId)}</p>` : ''}
-        ${(t.splitInto || []).length ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">✂ Đã tách thành: ${t.splitInto.map((x) => `<a data-task="${esc(x)}">${esc(x)}</a>`).join(', ')}</p>` : ''}
-        ${(t.after || []).length && t.status === 'queued' ? `<p style="font-size:12.5px;color:var(--muted);margin:0 0 8px">⏳ Chờ nhiệm vụ trước xong: ${t.after.map((x) => `<a data-task="${esc(x)}">${esc(x)}</a>`).join(', ')}</p>` : ''}
-      </div>
+        ${t.attention ? `<p style="font-size:12.5px;color:var(--warn);margin:0 0 8px">Cần xem lại: ${esc(t.attention.detail)} — xem báo cáo, "Làm lại từ review" hoặc tách việc còn lại.</p>` : ''}
       ${banner}${redo}${splitForm}
       <details class="doc" style="margin-bottom:10px"><summary style="cursor:pointer;color:var(--muted);font-size:12.5px">Yêu cầu gốc</summary><div class="md">${md(t.brief)}</div></details>
       ${blocks || '<div class="empty">Đang định tuyến…</div>'}
@@ -972,7 +1000,8 @@
         <button data-v="events" class="${S.taskView === 'events' ? 'active' : ''}">🧾 Nhật ký</button>
         <button data-v="calls" class="${S.taskView === 'calls' ? 'active' : ''}">📡 Lượt gọi</button>
       </div>
-      <div id="td-body"></div>`;
+      <div id="td-body"></div></div>${props}</div>`;
+    el.querySelectorAll('[data-proj]').forEach((a) => a.addEventListener('click', () => window.Drive?.openProject?.(a.dataset.proj)));
     const act = async (path, body, okMsg) => {
       try {
         const r = await api(path, { method: 'POST', body: JSON.stringify(body || {}) });
@@ -1180,13 +1209,36 @@
     }));
     const office = [...S.agents.values()].filter((a) => !S.departments.some((d) => d.id === a.department));
     if (office.length) groups.unshift({ id: 'office', name: 'Văn phòng điều phối', color: '#b91c1c', purpose: 'routing', list: office });
-    el.innerHTML = groups
+    // UI-5: danh sách kiểu Paperclip — tab lọc theo trạng thái, mỗi agent một dòng (ảnh · tên + vai · trạng thái · model · token)
+    const busy = (a) => a.state && a.state.status && a.state.status !== 'idle';
+    const F = S.peopleFilter || 'all';
+    const keep = (a) => (F === 'all' ? true : F === 'active' ? busy(a) : F === 'error' ? a.state?.status === 'error' : a.role === F);
+    const all = [...S.agents.values()];
+    const tabs = [
+      ['all', 'Tất cả', all.length],
+      ['active', 'Đang làm', all.filter(busy).length],
+      ['error', 'Lỗi', all.filter((a) => a.state?.status === 'error').length],
+      ['lead', 'Trưởng phòng', all.filter((a) => a.role === 'lead').length],
+      ['reviewer', 'Reviewer', all.filter((a) => a.role === 'reviewer').length],
+    ];
+    const row = (a) => {
+      const st = a.state?.status || 'idle';
+      const u = S.usage.byAgent.find((x) => x.key === a.id);
+      return `<div class="ag-item" data-agent="${esc(a.id)}">${av(a.id, 'av')}<div class="nm"><b>${esc(a.name)}${a.role === 'lead' ? ' <small title="Trưởng phòng">★</small>' : ''}</b><small>@${esc(a.id)} · ${esc(a.title)}</small></div>
+        <span class="stt ${esc(st)}"><i></i>${st !== 'idle' && st !== 'error' ? '<span class="pill-live">Đang chạy</span>' : esc(STATUS_VI[st] || st)}</span><span class="mdl">${esc(a.model || '')}</span><span class="kp">${fmt(total(u))} token</span></div>`;
+    };
+    const body = groups
       .map((g) => {
+        const list = g.list.filter(keep);
+        if (!list.length) return '';
         const u = S.usage.byDepartment.find((x) => x.key === g.id);
-        return `<div class="dept-head"><span class="dot" style="background:${g.color}"></span><h2>${esc(g.name)}</h2><small>${g.list.length} người · ${fmt(total(u))} token</small></div>
-          <div class="agents-grid">${g.list.map(agentCard).join('')}</div>`;
+        return `<div class="grp">${esc(g.name)} · ${list.length} · ${fmt(total(u))} token</div>${list.map(row).join('')}`;
       })
       .join('');
+    el.innerHTML = `<div class="dv-head"><h1>Agent</h1></div>
+      <div class="ag-tabs" role="tablist">${tabs.map(([k, l, n]) => `<button data-pf="${k}" class="${F === k ? 'on' : ''}" role="tab">${l} <small>${n}</small></button>`).join('')}</div>
+      <div class="ag-list">${body || '<div class="empty-row" style="padding:16px">Không có agent nào khớp bộ lọc.</div>'}</div>`;
+    el.querySelectorAll('[data-pf]').forEach((b) => b.addEventListener('click', () => ((S.peopleFilter = b.dataset.pf), renderPeople())));
     el.querySelectorAll('[data-agent]').forEach((b) => b.addEventListener('click', () => openAgent(b.dataset.agent)));
   }
 
@@ -1217,7 +1269,7 @@
     $('#people').hidden = true;
     const el = $('#agent-detail');
     el.hidden = false;
-    el.innerHTML = `<button class="btn ghost sm back" id="ad-back" style="margin-bottom:10px">← Nhân sự</button>
+    el.innerHTML = `<button class="btn ghost sm back" id="ad-back" style="margin-bottom:10px">← Agent</button>
       <div class="ad-head"><img src="${avatarUrl(id)}" width="56" height="56" alt="" style="image-rendering:pixelated;background:var(--bg-2);border-radius:10px">
         <div><h2 style="font-size:16px">${esc(a.title)} <small>@${esc(a.id)}</small></h2>
         <div style="color:var(--muted);font-size:12.5px"><span style="color:${deptColor(a.department)}">${esc(deptName(a.department))}</span> · vai trò ${esc(a.role)} · model ${esc(a.model)}</div>
@@ -1246,7 +1298,7 @@
         const k = (r.agents || []).find((x) => x.agentId === id);
         const box = $('#ad-kpi');
         if (!k || !box || S.selectedAgent !== id) return;
-        box.innerHTML = `<div class="card" style="margin:8px 0"><h2>KPI 30 ngày: <b class="grade ${k.grade === 'A' ? 'ok' : k.grade === 'B' ? 'info' : k.grade === 'C' ? 'warn' : 'bad'}">${k.score} ${k.grade}</b> <small style="color:var(--muted);font-weight:400">· ${k.tasks} nhiệm vụ · ${k.subtasks} hạng mục · chất lượng ${k.scores.quality ?? '—'} · hiệu quả ${k.scores.efficiency ?? '—'} · tin cậy ${k.scores.reliability ?? '—'} · tuân thủ ${k.scores.compliance ?? '—'}</small></h2>${k.findings.length ? `<ul class="kpi-f">${k.findings.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : '<p style="font-size:12.5px;color:var(--muted)">Không có phát hiện vượt ngưỡng.</p>'}</div>`;
+        box.innerHTML = `<div class="card" style="margin:8px 0"><h2>KPI 30 ngày: <b class="grade ${k.grade === 'A' ? 'ok' : k.grade === 'B' ? 'info' : k.grade === 'C' ? 'warn' : 'bad'}">${k.score} ${k.grade}</b> <small style="color:var(--muted);font-weight:400">· ${k.tasks} nhiệm vụ · ${k.subtasks} hạng mục · độ tin ${{ low: 'thấp', medium: 'vừa', high: 'cao' }[k.confidence] ?? '—'} · chất lượng ${k.scores.quality ?? '—'} · kết quả thật ${k.scores.outcome ?? '—'} · trung thực ${k.scores.honesty ?? '—'} · hiệu quả ${k.scores.efficiency ?? '—'} · tin cậy ${k.scores.reliability ?? '—'} · tuân thủ ${k.scores.compliance ?? '—'}</small></h2>${k.findings.length ? `<ul class="kpi-f">${k.findings.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : '<p style="font-size:12.5px;color:var(--muted)">Không có phát hiện vượt ngưỡng.</p>'}</div>`;
       })
       .catch(() => {});
     $('#ad-back').onclick = () => {
@@ -1335,10 +1387,10 @@
         ${(r.departments || []).map((d) => `<div class="stat"><span>${esc(deptName(d.id))} · ${d.agents} agent</span><b>${d.score}<small style="font-size:12px;color:var(--muted)"> /100 · ${fmt(d.tokens)} token</small></b></div>`).join('')}
       </div>
       <div class="card"><h2>Bảng KPI</h2>
-        <table class="tbl kpi"><thead><tr><th>Agent</th><th>Điểm</th><th title="Qua review lần đầu, ít blocker">Chất lượng</th><th title="Token/hạng mục so với đồng nghiệp, số lần làm lại">Hiệu quả</th><th title="Lượt gọi hỏng, công cụ lỗi, chạm trần">Tin cậy</th><th title="Đủ mục trong Mẫu đầu ra + bằng chứng">Tuân thủ</th><th>Hạng mục</th><th>Lần chạy TB</th><th>Token</th><th>Công cụ lỗi</th></tr></thead><tbody>
+        <table class="tbl kpi"><thead><tr><th>Agent</th><th>Điểm</th><th title="Lượng bằng chứng của điểm (ít bằng chứng thì điểm co về 60)">Độ tin</th><th title="Qua review lần đầu, ít blocker; người review: kết luận đúng so với kết quả thật">Chất lượng</th><th title="Lệnh kiểm tra của dự án trước/sau + tiêu chí CTO nghiệm thu">Kết quả thật</th><th title="Khẳng định đã chạy test/typecheck phải có lệnh kiểm chứng thật">Trung thực</th><th title="Token và thời gian mỗi hạng mục so với đồng nghiệp, số lần làm lại">Hiệu quả</th><th title="Lượt gọi hỏng, công cụ lỗi, chạm trần">Tin cậy</th><th title="Đủ mục trong Mẫu đầu ra + bằng chứng">Tuân thủ</th><th>Hạng mục</th><th>Lần chạy TB</th><th>Token</th><th>Công cụ lỗi</th><th title="Prompt đầy nhất so với cửa sổ ngữ cảnh của runtime (Ollama: num_ctx)">Ngữ cảnh</th></tr></thead><tbody>
         ${agents
           .map(
-            (k) => `<tr class="click" data-ag="${esc(k.agentId)}"><td><span class="who">${av(k.agentId)}${esc(agentName(k.agentId))}</span></td><td><b class="grade ${gcls(k.grade)}">${k.score} ${k.grade}</b></td><td>${cell(k.scores.quality)}</td><td>${cell(k.scores.efficiency)}</td><td>${cell(k.scores.reliability)}</td><td>${cell(k.scores.compliance)}</td><td>${k.subtasks}</td><td>${k.attemptsAvg || '—'}</td><td>${fmt(k.tokens.total)}</td><td>${k.tools.calls ? `${k.tools.failed}/${k.tools.calls}` : '—'}</td></tr>`,
+            (k) => `<tr class="click" data-ag="${esc(k.agentId)}"><td><span class="who">${av(k.agentId)}${esc(agentName(k.agentId))}</span></td><td><b class="grade ${gcls(k.grade)}">${k.score} ${k.grade}</b></td><td>${{ low: 'thấp', medium: 'vừa', high: 'cao' }[k.confidence] ?? '—'}</td><td>${cell(k.scores.quality)}</td><td>${cell(k.scores.outcome)}</td><td>${cell(k.scores.honesty)}</td><td>${cell(k.scores.efficiency)}</td><td>${cell(k.scores.reliability)}</td><td>${cell(k.scores.compliance)}</td><td>${k.subtasks}</td><td>${k.attemptsAvg || '—'}</td><td>${fmt(k.tokens.total)}</td><td>${k.tools.calls ? `${k.tools.failed}/${k.tools.calls}` : '—'}</td><td>${k.context?.known ? `<span class="${k.context.overLimit ? 'bad' : k.context.maxFillPct >= 85 ? 'warn' : ''}">${k.context.maxFillPct}%</span>` : '—'}</td></tr>`,
           )
           .join('')}
         </tbody></table></div>
