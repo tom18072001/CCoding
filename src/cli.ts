@@ -17,6 +17,7 @@ import { createBench, loadState, parseSpec, reportMarkdown, runBench, runInput, 
 import { levelFilter, logFiles, pickLatestTask, recentTasks } from './logview.js';
 import { c, fmtDuration, fmtNum, fmtUsd, hexColor, table } from './util/format.js';
 import { readJsonFile, readJsonl, writeJsonAtomic } from './util/fsx.js';
+import { runRetention } from './selfimprove.js';
 import { totalTokens, type ChatMessage, type LogEntry, type RunRequest, type RunResult, type Task, type TaskMode } from './types.js';
 
 const HELP = `
@@ -141,6 +142,7 @@ async function cmdServe(args: string[]): Promise<void> {
     app.logs.write({ level: 'info', kind: 'server.start', msg: `Server khởi động tại ${host}:${port} (runner ${app.orchestrator.runner})` });
     // việc định kỳ: chỉ tiến trình server lập lịch (CLI đọc dữ liệu không giao việc)
     app.routines.start();
+    try { runRetention({ cfg: app.config.selfImprove, logs: app.logs, dataDir: app.config.dataDir }); } catch (e) { console.error(c.yellow(`   ⚠ dọn data/self-improve lỗi: ${(e as NodeJS.ErrnoException).code ?? 'unknown'}`)); }
     if (app.routines.all().length) console.log(`   việc định kỳ: ${app.routines.all().filter((r) => r.enabled).length}/${app.routines.all().length} đang bật`);
     void app.runtimes.status().then((list) => {
       for (const r of list) console.log(`   ${r.ok ? c.green('●') : c.gray('○')} ${r.id.padEnd(14)} ${c.gray(r.detail)}`);
