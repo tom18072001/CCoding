@@ -7,7 +7,6 @@
   "title": "Multi-file bug hunt in a cart module",
   "hypotheses": [
     "H1",
-    "H3",
     "H10"
   ],
   "deliverable": "src/",

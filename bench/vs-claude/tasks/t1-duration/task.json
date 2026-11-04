@@ -7,7 +7,6 @@
   "sizeReason": "Hai hàm độc lập trong SPEC.md: parseDuration và formatDuration (cùng một module nhỏ, không phụ thuộc nhau)",
   "title": "Duration parse/format theo đặc tả, nhiều trường hợp biên",
   "hypotheses": [
-    "H1",
     "H8"
   ],
   "deliverable": "src/duration.js",

@@ -7,6 +7,7 @@
   "sizeReason": "Năm module độc lập trong SPEC.md: money, calendar, csvcheck, slug, ratelimit (mỗi module ở src/<tên>/index.js, không phụ thuộc nhau)",
   "title": "Năm module độc lập từ đặc tả dày quy tắc",
   "hypotheses": [
+    "H1",
     "H5",
     "H6"
   ],

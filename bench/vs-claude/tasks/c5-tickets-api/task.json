@@ -6,7 +6,6 @@
   "sizeLegacy": 5,
   "title": "Filtering, sorting and cursor pagination for a tickets API",
   "hypotheses": [
-    "H1",
     "H8",
     "H10"
   ],

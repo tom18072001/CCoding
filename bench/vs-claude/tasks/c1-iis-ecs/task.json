@@ -6,7 +6,6 @@
   "sizeLegacy": 2,
   "title": "IIS W3C log to ECS parser",
   "hypotheses": [
-    "H1",
     "H10"
   ],
   "deliverable": "src/iis.js",
