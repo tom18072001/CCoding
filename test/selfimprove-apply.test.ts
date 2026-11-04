@@ -9,13 +9,14 @@ import { loadConfig, ROOT } from '../src/config.js';
 import { LogStore, verifyChain } from '../src/logger.js';
 import { createServer } from '../src/server.js';
 import {
-  applyApproved, listProposals, monitorApplied, isEvidenceFile, purgeExpired, runRetention, MIN_RETENTION_DAYS, recordAbDecision, recordAbStarted, recordDirector, recordProposed, rollback, screenPatch,
+  applyApproved, listProposals, monitorApplied, isEvidenceFile, purgeExpired, runRetention, MIN_RETENTION_DAYS, recordAbDecision, recordAbStarted, recordDirector, recordProposed, rollback, screenPatch, actorFromToken,
   type Deps, type MonitorSource, type TaskMetric,
 } from '../src/selfimprove.js';
 import { testApp } from './helpers.js';
 
 // B-19 phần 2: bước 5–7, an toàn §4, route API. CT-05 (payload đã che), 06, 07, 08, 11, 16, 17, 20.
 
+const ACTOR = actorFromToken('tok-gia-cho-test');
 const tmp = (p: string) => fs.mkdtempSync(path.join(os.tmpdir(), `ccoding-${p}-`));
 const gitc = (cwd: string, ...args: string[]): string => {
   const r = spawnSync('git', args, { cwd, encoding: 'utf8', windowsHide: true });
@@ -92,19 +93,19 @@ test('CT-07/08: applyApproved ném lỗi khi chưa duyệt hoặc sha256 lệch;
   const patch = PROMPT_PATCH(root);
   assert.equal(recordProposed('P-1', patch, meta, d).ok, true);
   // chưa duyệt
-  assert.throws(() => applyApproved('P-1', d, { verify: pass }), /chưa được giám đốc duyệt/);
+  assert.throws(() => applyApproved('P-1', d, { verify: pass, actor: ACTOR }), /chưa được giám đốc duyệt/);
   // duyệt không phải của giám đốc (agent tự ghi) không có hiệu lực
   d.logs.write({ level: 'info', kind: 'selfimprove.approved', msg: 'giả', data: { pid: 'P-1', by: 'agent' } });
-  assert.throws(() => applyApproved('P-1', d, { verify: pass }), /chưa được giám đốc duyệt/);
-  recordDirector('approved', 'P-1', d);
+  assert.throws(() => applyApproved('P-1', d, { verify: pass, actor: ACTOR }), /chưa được giám đốc duyệt/);
+  recordDirector('approved', 'P-1', d, ACTOR);
   // đổi bản vá sau khi duyệt
   fs.writeFileSync(path.join(d.dataDir, 'self-improve', 'proposals', 'P-1', 'patch.diff'), patch.replace('kiểm biên rỗng', 'kiểm biên khác'));
-  assert.throws(() => applyApproved('P-1', d, { verify: pass }), /sha256/);
+  assert.throws(() => applyApproved('P-1', d, { verify: pass, actor: ACTOR }), /sha256/);
   assert.equal(gitc(root, 'rev-parse', 'HEAD'), head);
   assert.equal(gitc(root, 'status', '--porcelain'), '');
   assert.equal(events(d, 'selfimprove.applied').length, 0);
   // tắt công tắc
-  assert.throws(() => applyApproved('P-1', { ...d, cfg: { ...d.cfg, enabled: false } }, { verify: pass }), /đang tắt/);
+  assert.throws(() => applyApproved('P-1', { ...d, cfg: { ...d.cfg, enabled: false } }, { verify: pass, actor: ACTOR }), /đang tắt/);
   fs.rmSync(root, { recursive: true, force: true });
 });
 
@@ -113,12 +114,12 @@ test('applyApproved: verify lỗi ⇒ hoàn tác, không commit, ghi apply.faile
   const d = mkDeps(root);
   const head = gitc(root, 'rev-parse', 'HEAD');
   recordProposed('P-1', PROMPT_PATCH(root), meta, d);
-  recordDirector('approved', 'P-1', d);
-  assert.throws(() => applyApproved('P-1', d, { verify: () => 'typecheck lỗi' }), /thất bại/);
+  recordDirector('approved', 'P-1', d, ACTOR);
+  assert.throws(() => applyApproved('P-1', d, { verify: () => 'typecheck lỗi', actor: ACTOR }), /thất bại/);
   assert.equal(gitc(root, 'rev-parse', 'HEAD'), head);
   assert.equal(gitc(root, 'status', '--porcelain'), '', 'cây làm việc đã hoàn tác');
   assert.equal(events(d, 'selfimprove.apply.failed').length, 1);
-  assert.throws(() => applyApproved('../x', d, { verify: pass }), /không hợp lệ/);
+  assert.throws(() => applyApproved('../x', d, { verify: pass, actor: ACTOR }), /không hợp lệ/);
   fs.rmSync(root, { recursive: true, force: true });
 });
 
@@ -126,16 +127,16 @@ test('CT-16: rollback chưa có xác nhận của giám đốc chỉ ghi rollbac
   const root = mkRepo();
   const d = mkDeps(root);
   recordProposed('P-1', PROMPT_PATCH(root), meta, d);
-  recordDirector('approved', 'P-1', d);
-  const { commit } = applyApproved('P-1', d, { verify: pass });
+  recordDirector('approved', 'P-1', d, ACTOR);
+  const { commit } = applyApproved('P-1', d, { verify: pass, actor: ACTOR });
   assert.equal(gitc(root, 'rev-parse', 'HEAD'), commit);
-  const r = rollback('P-1', d);
+  const r = rollback('P-1', d, ACTOR);
   assert.equal(r.reverted, false);
   assert.equal(gitc(root, 'rev-parse', 'HEAD'), commit, 'không revert');
   assert.equal(events(d, 'selfimprove.rollback.proposed').length, 1);
   assert.equal(events(d, 'selfimprove.rolledback').length, 0);
   // gọi lại không ghi trùng phiếu
-  rollback('P-1', d);
+  rollback('P-1', d, ACTOR);
   assert.equal(events(d, 'selfimprove.rollback.proposed').length, 1);
   fs.rmSync(root, { recursive: true, force: true });
 });
@@ -147,8 +148,8 @@ test('CT-20: monitorApplied — thấp hơn trung bình ⇒ early; có check.reg
   const d = mkDeps(root);
   const patch = makePatch(root, 'agents/dev/x.md', '---\nname: X\ntools: read\n---\nMô tả rõ hơn.\n');
   recordProposed('P-1', patch, meta, d);
-  recordDirector('approved', 'P-1', d);
-  const { commit } = applyApproved('P-1', d, { verify: pass });
+  recordDirector('approved', 'P-1', d, ACTOR);
+  const { commit } = applyApproved('P-1', d, { verify: pass, actor: ACTOR });
   const lower: MonitorSource = { after: M(3, 0.6, 0), before: M(5, 0.9, 1), regressions: [] };
   assert.deepEqual(monitorApplied('P-1', { ...lower, after: M(2, 0.6, 0) }, d), null, 'chưa đủ 3 nhiệm vụ');
   assert.equal(monitorApplied('P-1', lower, d)!.severity, 'early');
@@ -169,14 +170,14 @@ test('CT-17: đủ 7 bước (mock) ⇒ chuỗi băm không broken; rollback có
   recordProposed('P-1', PROMPT_PATCH(root), meta, d); // bước 3
   recordAbStarted({ pid: 'P-1', phase: 'confirm', lockSha256: 'l', tasks: [], repeats: 8, runs: 160, runner: 'data-scientist', seed: 's', tokenBudget: 1, startDirs: {}, commands: { A: [], B: [] } }, d); // bước 4
   recordAbDecision('P-1', { decision: 'pass', token: { est: 0.9, lo: 0.8, hi: 0.93 }, time: { est: 1, lo: 0.9, hi: 1 }, safety: { est: 0, lo: -0.01, hi: 0.01 }, nConfirm: 160, dropped: { A: 0, B: 0 }, reasons: [] }, d);
-  recordDirector('approved', 'P-1', d); // bước 5
-  const { tag } = applyApproved('P-1', d, { verify: pass }); // bước 6
+  recordDirector('approved', 'P-1', d, ACTOR); // bước 5
+  const { tag } = applyApproved('P-1', d, { verify: pass, actor: ACTOR }); // bước 6
   assert.equal(tag, 'prompts-v1');
   assert.notEqual(fs.readFileSync(path.join(root, 'src', 'prompts.ts'), 'utf8'), before);
   assert.deepEqual(gitc(root, 'show', '--name-only', '--format=', 'HEAD').split('\n'), ['src/prompts.ts'], 'commit riêng chỉ chứa tệp bị vá');
   monitorApplied('P-1', { after: M(3, 0.5, 0), before: M(5, 0.9, 1), regressions: [] }, d); // bước 7
-  recordDirector('rollback.confirmed', 'P-1', d);
-  const r = rollback('P-1', d);
+  recordDirector('rollback.confirmed', 'P-1', d, ACTOR);
+  const r = rollback('P-1', d, ACTOR);
   assert.equal(r.reverted, true);
   assert.equal(r.tag, 'prompts-v2');
   assert.equal(fs.readFileSync(path.join(root, 'src', 'prompts.ts'), 'utf8'), before);
@@ -185,7 +186,7 @@ test('CT-17: đủ 7 bước (mock) ⇒ chuỗi băm không broken; rollback có
   assert.equal(chain.ok, true, JSON.stringify(chain));
   assert.ok(chain.lines >= 8);
   // sau rollback không áp lại được
-  assert.throws(() => applyApproved('P-1', d, { verify: pass }), /chưa được giám đốc duyệt/);
+  assert.throws(() => applyApproved('P-1', d, { verify: pass, actor: ACTOR }), /chưa được giám đốc duyệt/);
   fs.rmSync(root, { recursive: true, force: true });
 });
 
@@ -282,7 +283,7 @@ test('CT-05 (payload): listProposals che PII/bí mật trong agentProposal và d
   assert.equal(v.status, 'proposed');
 });
 
-test('route /api/selfimprove/*: tắt ⇒ 404; bật ⇒ đúng hợp đồng, POST tạo sự kiện by:director', async () => {
+test('route /api/selfimprove/*: tắt ⇒ 404; bật ⇒ đúng hợp đồng, POST tạo sự kiện với actor đã xác thực', async () => {
   const app = testApp();
   const srv0 = createServer(app);
   await new Promise<void>((r) => srv0.listen(0, '127.0.0.1', r));
@@ -338,7 +339,7 @@ test('route /api/selfimprove/*: tắt ⇒ 404; bật ⇒ đúng hợp đồng, P
     assert.equal(a.status, 200);
     const aj = (await a.json()) as { ok: boolean; event: { kind: string; data: { by: string; pid: string } } };
     assert.equal(aj.ok, true);
-    assert.equal(aj.event.data.by, 'director');
+    assert.equal(aj.event.data.by, ACTOR.by);
     assert.equal(((await (await call('/api/selfimprove/proposals')).json()) as Array<{ id: string; status: string }>).find((x) => x.id === 'P-OK')!.status, 'approved');
     // reject có lý do
     const r = await call('/api/selfimprove/proposals/P-OK/reject', 'POST', { reason: 'chưa thuyết phục' });
@@ -348,7 +349,7 @@ test('route /api/selfimprove/*: tắt ⇒ 404; bật ⇒ đúng hợp đồng, P
     // rollback-confirm khi chưa áp ⇒ 409, không ghi sự kiện xác nhận
     assert.equal((await call('/api/selfimprove/proposals/P-OK/rollback-confirm', 'POST', {})).status, 409);
     assert.equal(events(app, 'selfimprove.rollback.confirmed').length, 0);
-    assert.equal(events(app, 'selfimprove.approved').every((e) => e.data.by === 'director'), true);
+    assert.equal(events(app, 'selfimprove.approved').every((e) => e.data.by === ACTOR.by && e.data.auth === 'server.token'), true);
   } finally {
     srv.close();
     app.cleanup();
