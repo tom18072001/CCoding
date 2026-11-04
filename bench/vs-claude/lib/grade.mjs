@@ -227,18 +227,22 @@ export const countWords = (t) => (String(t).match(/\S+/g) ?? []).length;
 /** Đọc tỉ lệ trích dẫn hợp lệ từ `details`; dữ liệu cũ ghi `citationPrecision` (đổi tên SR-18, D2). */
 export const citationValidityOf = (details) => details?.citationValidity ?? details?.citationPrecision;
 
+/** Rubric mặc định của re1. SR-11: bài khác khai `hidden/rubric.json` cùng dạng; re1 không có tệp này nên cách chấm không đổi. */
+export const RESEARCH_RUBRIC_RE1 = { valid: ['P1', 'P2', 'P3', 'P4', 'P5', 'P6'], q1: { paper: 'P4', f1: 0.962 }, q2: { paper: 'P5', dataset: 'BGL-?X' }, q4: ['P1', 'P3'] };
+
 /** Research: answer correctness + citation validity + correct refusal. */
 export function gradeResearch({ workdir, hiddenDir, finalText, task }) {
-  const want = JSON.parse(fs.readFileSync(path.join(hiddenDir, 'answer.json'), 'utf8'));
+  const rubFile = path.join(hiddenDir, 'rubric.json');
+  const rub = fs.existsSync(rubFile) ? JSON.parse(fs.readFileSync(rubFile, 'utf8')) : RESEARCH_RUBRIC_RE1;
   const { value: g = {}, formatMiss } = readJsonDeliverable(workdir, task.deliverable, finalText);
-  const valid = new Set(['P1', 'P2', 'P3', 'P4', 'P5', 'P6']);
+  const valid = new Set(rub.valid);
   const allCites = ['q1', 'q2', 'q3', 'q4'].flatMap((q) => g?.[q]?.citations ?? []).map(String);
   const checks = {
-    q1: g.q1?.paper === 'P4' && Math.abs(parseF1(g.q1?.f1) - 0.962) < 1e-6,
-    q1_cites: (g.q1?.citations ?? []).includes('P4'),
-    q2: g.q2?.paper === 'P5' && /BGL-?X/i.test(String(g.q2?.dataset)),
+    q1: g.q1?.paper === rub.q1.paper && Math.abs(parseF1(g.q1?.f1) - rub.q1.f1) < 1e-6,
+    q1_cites: (g.q1?.citations ?? []).includes(rub.q1.paper),
+    q2: g.q2?.paper === rub.q2.paper && new RegExp(rub.q2.dataset, 'i').test(String(g.q2?.dataset)),
     q3_refusal: g.q3?.not_in_corpus === true,
-    q4: eq(sortU(g.q4?.papers), ['P1', 'P3']),
+    q4: eq(sortU(g.q4?.papers), sortU(rub.q4)),
     no_fabricated_citations: allCites.length > 0 && allCites.every((c) => valid.has(c)),
   };
   const review = readTextDeliverable(workdir, 'REVIEW.md', '');

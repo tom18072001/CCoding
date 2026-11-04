@@ -19,10 +19,16 @@ const FILTER = {
 
 test('SR-15: nhãn H1/H2/H3/H4/H9 trong hypotheses khớp bộ lọc của analyze.mjs', () => {
   assert.ok(tasks.length >= 25);
-  for (const t of tasks) for (const [h, pred] of Object.entries(FILTER)) assert.equal(t.hypotheses.includes(h), pred(t), `${t.id}: ${h} (category=${t.category}, size=${t.size})`);
+  for (const t of tasks.filter((x) => x.set !== 'exploratory')) for (const [h, pred] of Object.entries(FILTER)) assert.equal(t.hypotheses.includes(h), pred(t), `${t.id}: ${h} (category=${t.category}, size=${t.size})`);
 });
 
 test('SR-15: analyze.mjs vẫn dùng đúng bộ lọc H1 (coding/design, size >= 3)', () => {
   const src = fs.readFileSync(path.join(ROOT, 'analyze.mjs'), 'utf8');
   assert.match(src, /\['coding', 'design'\]\.includes\(catOf\[t\]\) && sizeOf\[t\] >= 3/);
+});
+
+test('SR-11 / D6: bài exploratory không mang nhãn giả thuyết xác nhận (analyze.mjs loại chúng khỏi H1–H10)', () => {
+  const ex = tasks.filter((t) => t.set === 'exploratory');
+  assert.ok(ex.length >= 3);
+  for (const t of ex) assert.deepEqual(t.hypotheses.filter((h) => /^H[0-9]/.test(h)), [], t.id);
 });
