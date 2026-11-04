@@ -16,6 +16,7 @@ import {
   isMerged,
   isSafeRef,
   isWorktreeOf,
+  resolveBase,
   mergeBranch,
   mergeInProgress,
   manifestDiff,
@@ -3061,20 +3062,34 @@ export class Orchestrator {
           task.notes = [...(task.notes ?? []), { id: shortId('n'), at: nowIso(), text: why }].slice(-30);
           task.startFrom = undefined;
         }
-        const from = task.startFrom || project.baseRef || 'HEAD';
-        const r = addWorktree(base, wt, branch, from);
+        // K5: nhánh cục bộ của baseRef có thể cũ hơn origin → resolveBase fetch rồi chọn base mới nhất (nối từ startFrom thì giữ nguyên)
+        let from = task.startFrom || project.baseRef || 'HEAD';
+        let baseNote = '';
+        let r: { ok: boolean; out: string };
+        try {
+          const rb = task.startFrom ? undefined : resolveBase(base, project.baseRef);
+          if (rb) from = rb.ref;
+          if (rb) baseNote = ` · base ${rb.ref} @ ${rb.commit ?? '?'} (nguồn: ${rb.source === 'remote' ? 'origin — nhánh cục bộ đi sau' : 'nhánh cục bộ'})`;
+          if (rb?.warning) {
+            baseNote += ` · CẢNH BÁO: ${rb.warning}`;
+            logs.write({ level: 'warn', kind: 'workspace.base', msg: rb.warning, taskId: task.id, projectId: project.id });
+          }
+          r = addWorktree(base, wt, branch, from);
+        } catch (e) {
+          r = { ok: false, out: e instanceof Error ? e.message : String(e) };
+        }
         if (r.ok) {
           const copied = copyUntracked(base, wt, project.worktreeCopy ?? config.tools.worktreeCopy);
           task.workspace = wt;
           task.branch = branch;
           task.baseRef = headCommit(wt);
-          logs.write({ level: 'info', kind: 'workspace.worktree', msg: `Worktree ${wt} (nhánh ${branch} từ ${from})${copied.length ? ` · chép ${copied.join(', ')}` : ''}`, taskId: task.id, projectId: project.id });
+          logs.write({ level: 'info', kind: 'workspace.worktree', msg: `Worktree ${wt} (nhánh ${branch} từ ${from})${baseNote}${copied.length ? ` · chép ${copied.join(', ')}` : ''}`, taskId: task.id, projectId: project.id });
           this.message(
             task,
             'office',
             'system',
             'system',
-            `🌿 Làm việc trên git worktree riêng \`${wt}\` (nhánh \`${branch}\`${task.startFrom ? ` tách từ nhánh của nhiệm vụ trước \`${task.startFrom}\`` : project.baseRef ? ` tách từ \`${project.baseRef}\`` : ''}) — nhánh chính của repo không bị đụng tới.`,
+            `🌿 Làm việc trên git worktree riêng \`${wt}\` (nhánh \`${branch}\`${task.startFrom ? ` tách từ nhánh của nhiệm vụ trước \`${task.startFrom}\`` : project.baseRef ? ` tách từ \`${from}\`` : ''}${baseNote}) — nhánh chính của repo không bị đụng tới.`,
           );
         } else {
           logs.write({ level: 'warn', kind: 'workspace.worktree', msg: `Không tạo được worktree: ${r.out.slice(0, 300)} — làm trực tiếp trong ${base}`, taskId: task.id, projectId: project.id });
