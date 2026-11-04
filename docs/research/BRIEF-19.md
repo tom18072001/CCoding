@@ -11,7 +11,7 @@
 - **Người điều phối đã làm, không gọi LLM.** Đăng ký trước ở §9 "Đăng ký trước V4-3f", mốc khóa `f5a31dc`.
   - **G:** cổng lệnh kiểm tra B-02 đo trên lỗi cài bằng máy, dựng từ artifact của `study-cloud`. Sổ chạy `results/g-mutation/RUNLOG.md`, sai lệch G-a.
   - **P:** song song trong vận hành thật, lấy metadata của server chính qua API đọc. Sổ chạy `results/p-parallel/RUNLOG.md`, sai lệch P-a.
-  - **Khối B (khám phá):** harness bench chạy với `isolation: 'none'`, nên mọi hạng mục chạy lệnh làm lần lượt. 44/44 lượt có trường thời gian cho thấy không có lượt gọi nào chồng nhau.
+  - **Khối B (khám phá):** harness bench chạy với `isolation: 'none'`, nên mọi hạng mục chạy lệnh làm lần lượt. Trong 18/42 lượt có từ 2 lượt gọi thực thi trở lên, không thấy lượt gọi nào chồng nhau đáng kể.
 - **Phòng Dev đã sửa (D14, chờ CTO duyệt):**
   - `fastLane.requireParallel`: không chia việc khi không chạy song song được;
   - tùy chọn `--isolation worktree` cho harness.
@@ -47,7 +47,9 @@
   - (2) khung quản trị, với hiện trạng và việc còn thiếu;
   - (3) song song an toàn, với P-1, P-2, P-3, kèm câu "bench đo chi phí chia việc mà không có song song".
 - **Kết quả chi phí đã đăng ký trước** giữ nguyên và giữ làm kết quả chính.
-- **§6:** thêm đe dọa "harness bench `isolation: none` khác cấu hình vận hành".
+- **§6:** thêm hai đe dọa:
+  - harness bench `isolation: none` khác cấu hình vận hành;
+  - `wallSec` của arm CCoding làm tròn lên theo vòng hỏi 10 s (lệch khoảng 5 s mỗi lượt), nên tỉ số thời gian ở Bảng chi phí bị lệch lên một chút.
 - **Thay Nghị định 13/2023/NĐ-CP bằng Nghị định 356/2025/NĐ-CP** ở mọi chỗ: bài báo, `facts.json`, tài liệu trong `docs/`. Ghi rõ có hiệu lực từ 01/01/2026.
 - `facts.json` và `CHANGELOG.md` đồng bộ; `consistency-check` đạt.
 

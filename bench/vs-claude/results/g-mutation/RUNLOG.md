@@ -105,3 +105,22 @@ Lý do: một người phản biện độc lập (agent chưa thấy quá trìn
   - `g-repro.mjs` và `g-starter.mjs`: mới.
 
   Hash bản dùng để báo ghi ở mục "Chạy".
+
+## Kết quả G-5 (khám phá): đối chứng chỉ test của starter
+
+`node docs/research/analysis/g-starter.mjs …` (sha256 `40bc50dd682d31aaa42c1467ef5019368a08bcd3cd12a6ac442dfc6ea5466884`), chạy 20:52–21:00. Đầu ra ở `g-starter.jsonl` và `starter.txt`.
+
+- **Loại:** `t3-api`, 30 lượt, vì test của starter đỏ ngay trên sản phẩm chưa đột biến. Còn 173 lượt, 8 bài, 1 798 lỗi thật. Dựng lại đúng vị trí cả 1 798.
+- **Kết quả:**
+
+| | Chỉ test của starter | Cổng đầy đủ (test của lượt) | Phần do test agent viết thêm (bootstrap hai tầng 95 %) |
+|---|---|---|---|
+| Tất cả | 884/1 798 = **49,2 %** | 1 623/1 798 = **90,3 %** | **+41,1** [28,2; 52,3] điểm % |
+| Agent đơn (A0) | 221/494 = 44,7 % | 452/494 = 91,5 % | +46,8 [34,1; 56,0] |
+| CCoding (B0, B5, B6, B7) | 529/1 054 = 50,2 % | 957/1 054 = 90,8 % | +40,6 [27,4; 52,4] |
+
+- **Theo bài** (chỉ starter → đầy đủ): `c1` 80,8 → 98,7; `c2` 57,9 → 73,2; `c3` 66,0 → 91,2; `c4` 44,4 → 100; `c5` 24,3 → 83,0; `t1` 56,9 → 98,3; `t2` 38,6 → 78,4; `t5` 34,7 → 95,8 %.
+- **Cách đọc:**
+  - Test có sẵn của bài chỉ bắt khoảng một nửa số lỗi. Nửa còn lại do test agent tự viết.
+  - Vì vậy recall khoảng 91 % chủ yếu **không** đến từ test của tác giả bài. Nhận xét của người phản biện về điểm này không đúng.
+  - Claude Code đơn viết thêm test mạnh ngang, hoặc hơn, CCoding: +46,8 so với +40,6 điểm. Hai khoảng tin cậy chồng nhau nhiều.

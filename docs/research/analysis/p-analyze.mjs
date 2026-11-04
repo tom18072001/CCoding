@@ -40,7 +40,10 @@ export function runRows(data) {
     if (subs.length < 2) continue;
     const iv = subs.map((s) => [Date.parse(s.startedAt), Date.parse(s.finishedAt)]);
     const sum = iv.reduce((x, [s, e]) => x + (e - s), 0), span = unionMs(iv);
-    const independentPairs = subs.some((a) => subs.some((b) => a !== b && !a.dependsOn.includes(b.id) && !b.dependsOn.includes(a.id)));
+    // phụ thuộc bắc cầu (phản biện độc lập: chuỗi S1→S2→S3 không có cặp độc lập)
+    const anc = new Map();
+    const ancestors = (id, seen = new Set()) => { if (anc.has(id)) return anc.get(id); const out = new Set(); if (seen.has(id)) return out; seen.add(id); for (const d of subs.find((x) => x.id === id)?.dependsOn ?? []) { out.add(d); for (const a of ancestors(d, seen)) out.add(a); } anc.set(id, out); return out; };
+    const independentPairs = subs.some((a) => subs.some((b) => a !== b && !ancestors(a.id).has(b.id) && !ancestors(b.id).has(a.id)));
     out.push({
       task: t.task, project: t.project, isolation: t.isolation, taskStatus: t.status, runStatus: r.status, dept: r.department, n: subs.length,
       sumMin: sum / 60000, spanMin: span / 60000, critMin: criticalPathMs(subs) / 60000, overlap: sum / span, maxConc: maxConcurrent(iv), savedMin: (sum - span) / 60000,
@@ -60,7 +63,7 @@ export function summarize(rows) {
     overlap: { median: q(rs.map((r) => r.overlap), 0.5), q1: q(rs.map((r) => r.overlap), 0.25), q3: q(rs.map((r) => r.overlap), 0.75), max: Math.max(...rs.map((r) => r.overlap)) },
     sumMin: rs.reduce((s, r) => s + r.sumMin, 0), spanMin: rs.reduce((s, r) => s + r.spanMin, 0), savedMin: rs.reduce((s, r) => s + r.savedMin, 0),
     savedShare: rs.reduce((s, r) => s + r.savedMin, 0) / rs.reduce((s, r) => s + r.sumMin, 0),
-    conflictSubtasks: rs.reduce((s, r) => s + r.conflicts, 0), mainOnly: rs.reduce((s, r) => s + r.mainOnly, 0), merges: uniq(rs).reduce((s, r) => s + r.msgMerged, 0), conflictMsgs: uniq(rs).reduce((s, r) => s + r.msgConflict, 0), serialMsgs: uniq(rs).reduce((s, r) => s + r.msgSerial, 0),
+    conflictSubtasks: rs.reduce((s, r) => s + r.conflicts, 0), mainOnly: rs.reduce((s, r) => s + r.mainOnly, 0), merges: uniq(rs).reduce((s, r) => s + r.msgMerged, 0), conflictMsgs: uniq(rs).reduce((s, r) => s + r.msgConflict, 0), serialMsgs: uniq(rs).reduce((s, r) => s + r.msgSerial, 0), serialTasks: uniq(rs).filter((r) => r.msgSerial > 0).length, noOverlapChain: rs.filter((r) => r.maxConc < 2 && !r.independentPairs).length, noOverlapIndep: rs.filter((r) => r.maxConc < 2 && r.independentPairs).length, projects: new Set(rs.map((r) => r.project).filter(Boolean)).size, noProject: rs.filter((r) => !r.project).length,
     endRed: rs.filter((r) => r.checksRed > 0).length, endChecked: rs.filter((r) => r.checksRed !== null).length,
     endNewRed: rs.filter((r) => r.checksNewRed > 0).length, baselineRed: rs.filter((r) => r.checksBaselineRed > 0).length, endDeniedOnly: rs.filter((r) => r.checksRed > 0 && r.checksDenied >= r.checksRed).length,
   });
@@ -72,9 +75,10 @@ export function report(s, data) {
   const L = [`Trích lúc ${data.extractedAt}: ${data.tasks} nhiệm vụ, ${data.projects} dự án (nhãn ẩn danh).`];
   for (const [k, g] of Object.entries({ 'mọi lượt phòng ≥ 2 hạng mục': s.all, 'lượt phòng xong (done)': s.done, ...Object.fromEntries(Object.entries(s.byIsolation).map(([k2, v]) => [`isolation = ${k2}`, v])) })) {
     L.push('', `**${k}:** ${g.runs} lượt phòng, ${g.tasks} nhiệm vụ, ${g.subtasks} hạng mục; có chạy chồng (≥ 2 cùng lúc): ${g.parallelRuns}/${g.runs}.`);
+    L.push(`- Dự án: ${g.projects} (+ ${g.noProject} lượt không thuộc dự án nào). Lượt không chạy chồng: ${g.noOverlapChain} chỉ có chuỗi phụ thuộc, ${g.noOverlapIndep} có hạng mục độc lập (tính bắc cầu).`);
     L.push(`- Hệ số chồng Σ thời lượng / thời gian thực: trung vị ${f(g.overlap.median, 2)} (IQR ${f(g.overlap.q1, 2)}–${f(g.overlap.q3, 2)}, lớn nhất ${f(g.overlap.max, 2)}).`);
     L.push(`- Tổng thời lượng hạng mục ${f(g.sumMin, 0)} phút; thời gian thực của pha thực thi ${f(g.spanMin, 0)} phút; tiết kiệm nhờ chạy chồng ${f(g.savedMin, 0)} phút (${f(100 * g.savedShare)} %, cận trên).`);
-    L.push(`- Gộp worktree con: ${g.merges} lần gộp xong; ${g.conflictMsgs} tin xung đột khi gộp; ${g.serialMsgs} nhiệm vụ báo "làm lần lượt"; ${g.conflictSubtasks} hạng mục còn ghi xung đột; ${g.mainOnly} hạng mục phải làm lại lần lượt; kết thúc còn lệnh kiểm tra đỏ: ${g.endRed}/${g.endChecked} (đỏ mới so với trước khi sửa: ${g.endNewRed}; đỏ có sẵn từ trước: ${g.baselineRed}; chỉ do lệnh bị chặn theo chính sách: ${g.endDeniedOnly}).`);
+    L.push(`- Gộp worktree con: ${g.merges} lần gộp xong; ${g.conflictMsgs} tin xung đột khi gộp; ${g.serialMsgs} tin "làm lần lượt" ở ${g.serialTasks} nhiệm vụ; ${g.conflictSubtasks} hạng mục còn ghi xung đột; ${g.mainOnly} hạng mục phải làm lại lần lượt; kết thúc còn lệnh kiểm tra đỏ: ${g.endRed}/${g.endChecked} (đỏ mới so với trước khi sửa: ${g.endNewRed}; đỏ có sẵn từ trước: ${g.baselineRed}; chỉ do lệnh bị chặn theo chính sách: ${g.endDeniedOnly}).`);
   }
   return L.join('\n');
 }

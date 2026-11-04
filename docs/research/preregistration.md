@@ -961,8 +961,8 @@ Bước 2 **chưa được giám đốc duyệt chạy**. Lý do phải duyệt:
 - **Phân loại dữ liệu:** Nội bộ. Không có dữ liệu cá nhân. Nhãn dự án không đảo ngược được.
 
 **Khối B: chẩn đoán đã thấy trước khi ghi (khám phá, không phải đăng ký trước)**
-- Lúc 19:20, người điều phối đọc `byPhaseSec` (tổng `calls.durationMs` theo pha) và `wallSec` của 44 lượt CCoding có trường này: `large-pilot` 4, `gates-pilot` 28, `b7prime` 10, gồm cả hai làn.
-- Kết quả: Σ thời lượng lượt gọi / thời gian thực nằm trong 0,75–0,99. Không lượt nào có lượt gọi chồng nhau, kể cả `l1-modules` (5 hạng mục độc lập, 5 lượt gọi thực thi, Σ 374 s so với thực 380 s).
+- Lúc 19:20, người điều phối đọc `byPhaseSec` (tổng `calls.durationMs` theo pha) và `wallSec` của **42** lượt CCoding có trường này: `large-pilot` 4, `gates-pilot` 28, `b7prime` 10, gồm cả hai làn. (Sửa 4/11 lúc 20:55 theo phản biện độc lập: bản đầu ghi nhầm 44. Chỉ 18/42 lượt có từ 2 lượt gọi thực thi trở lên. 24 lượt làn đơn không thể chồng theo thiết kế. Ngoài ra `wallSec` của CCoding bị làm tròn lên theo chu kỳ hỏi 10 s, nên chồng ngắn dưới khoảng 10 s có thể không thấy.)
+- Kết quả: Σ thời lượng lượt gọi / thời gian thực nằm trong 0,75–0,99. Ở 18 lượt có thể chồng, không thấy chồng đáng kể, kể cả `l1-modules` (5 hạng mục độc lập, 5 lượt gọi thực thi, Σ 374 s so với thực 380 s).
 - **Nguyên nhân (đọc mã):** harness `bench/vs-claude/lib/ccoding.mjs` tạo dự án với `isolation: 'none'` từ commit đầu `1568774`. Khi đó `parallelWorktrees()` trả false (`src/orchestrator.ts`), nên mọi hạng mục chạy lệnh là độc quyền và **làm lần lượt**.
 - **Hệ quả:** mọi so sánh chi phí và thời gian của làn nhanh hay đủ phòng trong bench đo **chi phí chia việc mà không có lợi ích song song**. Cấu hình này khác cấu hình vận hành (mặc định `worktree`). Đây là đe dọa tính hợp lệ, phải ghi ở §6 và trong bài báo.
 - Không đổi kết quả đã báo. Đo lại ở E8.

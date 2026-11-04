@@ -27,3 +27,9 @@ test('runRows + summarize: lượt song song và lượt lần lượt', () => {
   assert.equal(s.all.parallelRuns, 1); assert.equal(s.all.merges, 3); assert.equal(s.all.serialMsgs, 1);
   assert.equal(s.byIsolation.worktree.runs, 1);
 });
+
+test('independentPairs tính phụ thuộc bắc cầu: chuỗi S1→S2→S3 không có cặp độc lập', () => {
+  const sub = (id, a, b, deps = []) => ({ id, status: 'done', startedAt: T(a), finishedAt: T(b), dependsOn: deps, conflict: null, mainOnly: false, mergePending: false });
+  const data = { rows: [{ task: 'z', project: 'P1', isolation: 'worktree', status: 'done', msg: { merged: 0, conflict: 0, serial: 0 }, checksLatest: null, runs: [{ status: 'done', department: 'dev', subtasks: [sub('S1', 0, 5), sub('S2', 5, 10, ['S1']), sub('S3', 10, 15, ['S2'])] }] }] };
+  assert.equal(runRows(data)[0].independentPairs, false);
+});
