@@ -888,6 +888,16 @@ Bước 2 **chưa được giám đốc duyệt chạy**. Lý do phải duyệt:
 - **A-3:** `analyze.mjs:246` đọc `citationPrecision`, trong khi grader ghi `citationValidity`.
 - **P-2:** kích thước hoán vị.
 
+### Phân tích độ nhạy mô tả cho H6: bài có sàn null cao (`t2-orders`, `t4-perf`) — đặt trước dữ liệu E6 (ghi 4/11/2026)
+
+**Nhãn thời điểm:** đặt trước dữ liệu E6. Theo `bench/vs-claude/results/local-3e/RUNLOG.md` (mục "Nguồn p của H6", ghi khoảng 13:50 ngày 4/11) chưa có lượt E6 nào, và `results/h6-3e` chưa tồn tại ở nhánh này. Tác giả không xem điểm E3, E4, E6.
+
+**Căn cứ:** `context/d11-suite-review-2026-11-04.md` §4: arm null đạt 0,53 ở `t2-orders` và 0,84 ở `t4-perf` (dải còn lại 0,47 và 0,16; oracle − nearmiss 0,02 và 0,05). Đánh giá đầy đủ ở `context/k3-open-points-2026-11-04.md` (a). Kết luận ngắn: sàn cao làm Δ trung bình và SE co lại, nên nghiêng về "tương đương giả", không về suy biến.
+
+**Phần thêm (chỉ mô tả, báo cùng kết quả H6 ở V4-3e-E6):** (i) Δ và CI 90 % hoặc 95 % theo cùng mức H6 đang dùng, tính lại trên 5 bài, bỏ `t2-orders` và `t4-perf`; (ii) Δ_i từng bài kèm dải 1 − null; (iii) cờ "nhạy với bài" nếu Δ̂ đổi phía so với 0 hoặc CI đổi vị trí so với ±0,05. Không có p mới.
+
+**Không đổi:** H1–H10, biên ±0,05, tập 7 bài, quy tắc trần và suy biến v2.1 (a)–(d), nguồn p (SR-26), họ Holm, phép kiểm chính, phán quyết chính của H6. Khối này không vào họ Holm. Không đổi bài hay tham số trong đợt 3e. Các đề xuất cho lần đo sau (test ẩn hạ sàn null, chuẩn hóa (score − null)/(oracle − null), tiêu chí nhận bài "null ≤ ngưỡng") ở tệp K3, chưa áp dụng.
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.
