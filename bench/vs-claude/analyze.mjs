@@ -95,6 +95,8 @@ function compare(a, b, { metric = 'score', filter = () => true } = {}) {
 }
 const catOf = Object.fromEntries(R.map((r) => [r.task, r.category]));
 const sizeOf = Object.fromEntries(R.map((r) => [r.task, r.size]));
+// SR-11: một giả thuyết cần ≥ 3 bài mới được phán; ít hơn ⇒ insufficient data (không phán SUPPORTED/not supported).
+const MIN_TASKS = 3;
 const inCats = (...c) => (t) => c.includes(catOf[t]);
 
 // ---------- hypotheses ----------
@@ -127,9 +129,11 @@ const h3 = (() => {
   const runsOf = (arm) => R.filter((r) => r.arm === arm && s1.includes(r.task)).length;
   const rec = permTwoSample(pool(BASE, 'recall'), pool(TREAT, 'recall'), { shift: -0.15 });
   const prec = permTwoSample(pool(BASE, 'precision'), pool(TREAT, 'precision'), { shift: 0.05 });
-  const have = rec.N > 0 && prec.N > 0;
+  const nTasks = tasks.filter(inCats('review')).length;
+  const have = rec.N > 0 && prec.N > 0 && nTasks >= MIN_TASKS; // SR-11: < 3 bài review ⇒ insufficient data, ra khỏi họ Holm
+  const haveData = rec.N > 0 && prec.N > 0;
   const droppedPrec = runsOf(BASE) + runsOf(TREAT) - pool(BASE, 'precision').length - pool(TREAT, 'precision').length;
-  return { rec, prec, have, p: have ? Math.max(rec.p, prec.p) : null, pMin: have ? Math.max(rec.pMin, prec.pMin) : null, droppedPrec };
+  return { rec, prec, have, haveData, nTasks, p: have ? Math.max(rec.p, prec.p) : null, pMin: have ? Math.max(rec.pMin, prec.pMin) : null, droppedPrec };
 })();
 const holm = (() => {
   const members = [];
@@ -150,13 +154,13 @@ const holm = (() => {
 const holmTxt = (m) => (m ? `p=${fp(m.p)}, p_min=${fp(m.pMin)}, confirmable=${m.confirmable ? 'có' : 'không'} (ngưỡng p_min ≤ ${fp(HOLM_ALPHA / holm.K)}), Holm ${m.rejected ? 'bác bỏ H0' : 'không bác bỏ'}` : 'ngoài họ Holm (ước lượng)');
 {
   const c = compare(BASE, TREAT, { filter: (t) => ['coding', 'design'].includes(catOf[t]) && sizeOf[t] >= 3 });
-  H.push(['H1', `Decomposable work (coding/design, size>=3): ${TREAT} - ${BASE}`, `${pp(c.est)} [${pp(c.lo)}, ${pp(c.hi)}], p=${f(c.p, 3)}, tasks=${c.n}`, verdict(c.est >= 0.1 && c.lo > 0, !c.n)]);
+  H.push(['H1', `Decomposable work (coding/design, size>=3): ${TREAT} - ${BASE}`, `${pp(c.est)} [${pp(c.lo)}, ${pp(c.hi)}], p=${f(c.p, 3)}, tasks=${c.n}`, verdict(c.est >= 0.1 && c.lo > 0, c.n < MIN_TASKS)]);
 }
 {
   const c = compare(BASE, TREAT, { filter: inCats('logic') });
   // SR-04: phán quyết bằng cận trên CI 90 % (bootstrap hai tầng, hạt riêng) ≤ +0,05, không bằng ước lượng điểm.
   const t = tost(cellsOf(BASE, TREAT, tasks.filter(inCats('logic'))), { margin: 0.05 });
-  H.push(['H2', `Coupled reasoning (logic) is not better: ${TREAT} - ${BASE} (90% CI upper bound ≤ +5 pp)`, `${pp(c.est)} [${pp(c.lo)}, ${pp(c.hi)}], p=${f(c.p, 3)}, tasks=${c.n}; TOST90 [${pp(t.lo90)}, ${pp(t.hi90)}]`, verdict(t.hi90 <= 0.05 + EPS, !c.n)]);
+  H.push(['H2', `Coupled reasoning (logic) is not better: ${TREAT} - ${BASE} (90% CI upper bound ≤ +5 pp)`, `${pp(c.est)} [${pp(c.lo)}, ${pp(c.hi)}], p=${f(c.p, 3)}, tasks=${c.n}; TOST90 [${pp(t.lo90)}, ${pp(t.hi90)}]`, verdict(t.hi90 <= 0.05 + EPS, c.n < MIN_TASKS)]);
 }
 {
   const s = tasks.filter(inCats('review'));
@@ -164,12 +168,12 @@ const holmTxt = (m) => (m ? `p=${fp(m.p)}, p_min=${fp(m.pMin)}, confirmable=${m.
   const lines = [[BASE, TREAT], ['B2', TREAT]].filter(([a]) => arms.includes(a)).map(([a, b]) => `${b} vs ${a}: recall ${pp(m(b, 'recall') - m(a, 'recall'))}, precision ${pp(m(b, 'precision') - m(a, 'precision'))}`);
   // SR-26: hoán vị hai mẫu chính xác trên s1; recall dịch −0,15, precision dịch +0,05, p = max.
   const m3 = holm.byId.H3;
-  const permTxt = h3.have ? `s1: recall p=${fp(h3.rec.p)} (N=${h3.rec.N}), precision p=${fp(h3.prec.p)} (N=${h3.prec.N}, bỏ ${h3.droppedPrec} lượt precision NaN); ${holmTxt(m3)}` : 's1 chưa đủ dữ liệu cho hoán vị';
+  const permTxt = h3.haveData ? `s1: recall p=${fp(h3.rec.p)} (N=${h3.rec.N}), precision p=${fp(h3.prec.p)} (N=${h3.prec.N}, bỏ ${h3.droppedPrec} lượt precision NaN); ${holmTxt(m3)}${h3.have ? '' : ` — chỉ ${h3.nTasks} bài review (< ${MIN_TASKS}), không phán (SR-11)`}` : 's1 chưa đủ dữ liệu cho hoán vị';
   H.push(['H3', 'Review raises seeded-issue recall without hurting precision (exact two-sample permutation, s1, margins recall −0.15 / precision +0.05)', `${lines.join('; ') || 'n/a'}; ${permTxt}`, h3.have ? verdict(m3.confirmed, false) + (m3.confirmable ? '' : ' (p_min > ngưỡng: không xác nhận được)') : 'insufficient data']);
 }
 {
   const c = compare(BASE, TREAT, { filter: inCats('requirements') });
-  H.push(['H4', 'Planted-ambiguity detection (requirements)', `${pp(c.est)} [${pp(c.lo)}, ${pp(c.hi)}], tasks=${c.n}`, verdict(c.est >= 0.2, !c.n)]);
+  H.push(['H4', 'Planted-ambiguity detection (requirements)', `${pp(c.est)} [${pp(c.lo)}, ${pp(c.hi)}], tasks=${c.n}`, verdict(c.est >= 0.2, c.n < MIN_TASKS)]);
 }
 {
   const ratio = (metric) => tasks.map((t) => median(cell(TREAT, t, metric)) / median(cell(BASE, t, metric)));
@@ -204,7 +208,7 @@ const holmTxt = (m) => (m ? `p=${fp(m.p)}, p_min=${fp(m.pMin)}, confirmable=${m.
   const m = (arm, k) => mean(s.flatMap((t) => cell(arm, t, `detail:${k}`).map(Number)));
   const dP = m(TREAT, 'citationPrecision') - m(BASE, 'citationPrecision');
   const dR = m(TREAT, 'correctRefusal') - m(BASE, 'correctRefusal');
-  H.push(['H9', 'Grounding: citation precision and correct refusal', `citation precision ${pp(dP)}, correct refusal ${pp(dR)}`, verdict(dP >= 0.1 && dR >= 0.1, !s.length)]);
+  H.push(['H9', 'Grounding: citation precision and correct refusal', `citation precision ${pp(dP)}, correct refusal ${pp(dR)}`, verdict(dP >= 0.1 && dR >= 0.1, s.length < MIN_TASKS)]);
 }
 {
   const c = compare(BASE, TREAT);
@@ -212,7 +216,7 @@ const holmTxt = (m) => (m ? `p=${fp(m.p)}, p_min=${fp(m.pMin)}, confirmable=${m.
   const slope = (p) => { const mx = mean(p.map((x) => x[0])), my = mean(p.map((x) => x[1])); const num = p.reduce((s, [x, y]) => s + (x - mx) * (y - my), 0), den = p.reduce((s, [x]) => s + (x - mx) ** 2, 0); return den ? num / den : NaN; };
   const b = slope(pts); let ext = 0; const P = 5000;
   for (let i = 0; i < P; i++) { const ys = LEGACY ? pts.map((x) => x[1]).sort(() => rnd() - 0.5) : fisherYates(pts.map((x) => x[1]), rnd); if (Math.abs(slope(pts.map((x, j) => [x[0], ys[j]]))) >= Math.abs(b)) ext++; }
-  H.push(['H10', 'Advantage grows with task size (slope of delta vs parts)', `slope ${pp(b)} per extra part, permutation p=${f(ext / P, 3)}, tasks=${pts.length}`, verdict(b > 0 && ext / P < 0.05, pts.length < 4)]);
+  H.push(['H10', 'Advantage grows with task size (slope of delta vs parts)', `slope ${pp(b)} per extra part, permutation p=${f(ext / P, 3)}, tasks=${pts.length}`, verdict(b > 0 && ext / P < 0.05, pts.length < MIN_TASKS || pts.length < 4)]);
 }
 
 // SR-26: họ Holm {H3, H6}; NA xếp như 1 (không bác bỏ, không chặn).
