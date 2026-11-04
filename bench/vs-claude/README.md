@@ -186,3 +186,8 @@ Lỗi hạ tầng khác (`infra: "error"`: không spawn được `claude`, khôn
 Before this suite, the `perf/vs-claude-loop` branch measured the same question with `harness/run.mjs` on five coding tasks
 (`tasks/t1-duration` … `tasks/t5-logq`: `starter/`, `prompt.txt`, `hidden/`, `ref/`; nay có `task.json` riêng nên `run.mjs` ở trên chạy được chúng; cấu trúc thư mục cũ không đổi). `harness/` chỉ dùng module của node, không import `lib/`, nên thay đổi ở `lib/` không ảnh hưởng nó. Hai harness cùng tồn tại: harness cũ cho vòng C1–C9 (so được với kết quả cũ), bộ này là hệ đánh giá chính.
 Docs: [`harness/README.md`](harness/README.md); results: `results/C1` … `results/C9`, `results/runs.csv`; analysis: `docs/PROCESS-REVIEW.md` §13 and `docs/research/`.
+
+### Arm `nearmiss` và bài khám phá (SR-24, SR-11)
+
+- `nearmiss` (tự kiểm bộ chấm, không gọi LLM, chi phí 0): chạy như `oracle` rồi đè `tasks/<id>/hidden/nearmiss/` lên workspace; mọi bài phải có thư mục này và phải chấm `0 < điểm < 1` (oracle = 1,00). Bài code: lời giải tham chiếu bị đột biến một chỗ; bài khác: đáp án/tham chiếu bỏ hoặc sai một mục. `hidden/nearmiss.note.txt` ghi chỗ đột biến. Kiểm: `node bench/vs-claude/run.mjs --arms oracle,null,nearmiss --repeats 1 --out <tmp>`.
+- Ba bài khám phá `a2-oncall-sms` (requirements), `re2-stream-synthesis` (research, rubric riêng ở `hidden/rubric.json`), `s2-support-review` (review, có decoy): `"set": "exploratory"`, `hypotheses: []`, không có `sizeLegacy`; `analyze.mjs` chỉ đưa vào bảng khám phá (D6).

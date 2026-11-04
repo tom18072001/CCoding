@@ -1,0 +1,38 @@
+[
+ {
+  "line": 9,
+  "type": "hardcoded-secret",
+  "severity": "high",
+  "fix": "reference"
+ },
+ {
+  "line": 23,
+  "type": "xss",
+  "severity": "medium",
+  "fix": "reference"
+ },
+ {
+  "line": 36,
+  "type": "sqli",
+  "severity": "high",
+  "fix": "reference"
+ },
+ {
+  "line": 49,
+  "type": "weak-crypto",
+  "severity": "high",
+  "fix": "reference"
+ },
+ {
+  "line": 63,
+  "type": "missing-authn",
+  "severity": "high",
+  "fix": "reference"
+ },
+ {
+  "line": 74,
+  "type": "info-leak",
+  "severity": "medium",
+  "fix": "reference"
+ }
+]

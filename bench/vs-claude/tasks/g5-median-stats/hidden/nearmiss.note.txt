@@ -1,0 +1,1 @@
+SR-24: src/stats.js:7: "- 1" -> "" (một chỗ trên lời giải tham chiếu); điểm khi sinh = 0.667; test trượt: 

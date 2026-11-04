@@ -23,7 +23,8 @@ test('SR-05: mọi task.json có size nguyên >= 1, sizeBasis hợp lệ và siz
   assert.ok(tasks.length >= 25);
   for (const t of tasks) {
     assert.ok(Number.isInteger(t.size) && t.size >= 1, `${t.id}: size`);
-    assert.ok(Number.isInteger(t.sizeLegacy) && t.sizeLegacy >= 1, `${t.id}: sizeLegacy`);
+    if (t.set !== 'exploratory') assert.ok(Number.isInteger(t.sizeLegacy) && t.sizeLegacy >= 1, `${t.id}: sizeLegacy`); // SR-11: bài mới không có số cũ để giữ
+    else assert.equal(t.sizeLegacy, undefined, `${t.id}: bài khám phá không có sizeLegacy (không bịa số cũ)`);
     assert.match(t.sizeBasis ?? '', new RegExp(`^(${UNITS.join('|')}): .+`), `${t.id}: sizeBasis phải dạng "<đơn vị>: <liệt kê>"`);
   }
 });

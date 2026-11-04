@@ -1,0 +1,1 @@
+SR-24: findings.json: bỏ finding "command-injection" (dòng 84) và thêm một finding sai (FP) ở dòng 1
