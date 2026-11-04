@@ -289,7 +289,7 @@ Mọi lượt (execute, vòng sửa, sửa định dạng, reviewer) đi qua `Or
 
 | Trường | Nội dung |
 |---|---|
-| **1. Vấn đề** | Số liệu lệch giữa các tệp tài liệu (cụm "C6 chưa có dữ liệu" cũ), bị bắt ở review cuối. |
+| **1. Vấn đề** | Số liệu lệch giữa các tệp tài liệu (cụm câu cũ nói dữ liệu C6 còn thiếu), bị bắt ở review cuối. |
 | **2. Bằng chứng** | `kpi-research…md:19` (academic-writer còn major ở review cuối); `dev-review.md:217` (mục R1 đồng bộ); §1.2 N4: hiện `paper.md` và `challenges.md` đã 0 chỗ sót, còn 33 chỗ ở 4 tệp (lịch sử/trích dẫn). |
 | **3. Nguyên nhân gốc** | Giả thuyết: số chuẩn sống trong nhiều tệp, không có nguồn duy nhất. Chưa kiểm cơ chế bằng dữ liệu. |
 | **4. Thay đổi đề xuất** | `docs/research/consistency-check.mjs` + `facts.json` (mỗi mục: mã số, giá trị chuẩn, tệp nguồn, cụm lỗi thời bị cấm, ngoại lệ có lý do như `CHANGELOG.md`). Chạy được như `--check` (exit ≠ 0 khi lệch). Dùng như lệnh kiểm tra của dự án sau khi S1 ổn định. Không thuộc `src/`. |
