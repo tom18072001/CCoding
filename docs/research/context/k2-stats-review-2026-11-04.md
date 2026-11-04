@@ -231,3 +231,76 @@ Chú thích cho bài báo: mọi số `analyze.mjs` trên study-cloud chạy v�
 - Chưa chạy gì (theo yêu cầu). S3b chạy fixture F1–F12 và kiểm V1; mọi ô "Mã" ở mục 3 là suy bằng tay, có thể sai ở số lẻ.
 - Cần kiểm trước khi bài báo dùng: (i) `SCF/README.md` có đúng "mọi lượt recall = precision = 1,0" cho s1; (ii) cờ chạy `analyze.mjs` của v0.4 (S1/S3b ghi); (iii) hai bài logic nào chạm trần trong study-cloud (không phải pilot).
 - Lệnh kiểm của dự án (CCoding tự chạy): `node --test bench/vs-claude/harness/stats.test.mjs`, `node docs/research/scripts/consistency-check.mjs`, `node docs/research/performance/scripts/token-analysis.mjs --check docs/research/performance/token-analysis.md`. Tôi chỉ thêm một tệp `.md`; `consistency-check` có thể quét tệp mới, chưa kiểm.
+
+## 10. Kết quả chạy (S3b, @data-scientist, 4/11/2026)
+
+Nhãn **Nội bộ**. Đây là phần chạy thật; **không đổi phán quyết nào của mục 1–8**. Chỗ chạy khác hoặc bổ sung so với kỳ vọng S2 ghi ở 10.4 để methodologist và research-lead xử lý ở review. Không sửa `stats.mjs`, `analyze.mjs` hay `prereg-tests.mjs`.
+
+### 10.1 Lệnh (nguyên văn; chạy từ gốc worktree, Node ≥ 22)
+
+```bash
+node docs/research/analysis/d11-stats-edgecases.mjs --v1 bench/vs-claude/results/study-cloud   # F1–F12 + V1
+node --test docs/research/analysis/d11-stats-edgecases.test.mjs                               # 2/2 pass
+T=$(mktemp -d); cp bench/vs-claude/results/study-cloud/runs.jsonl $T/                          # analyze.mjs ghi report.md vào thư mục, nên chạy trên bản sao
+node bench/vs-claude/analyze.mjs $T --baseline A0-sonnet --treatment B0 --allow-mixed-judge
+node bench/vs-claude/analyze.mjs $T --baseline A0-sonnet --treatment B0 --allow-mixed-judge --b01-arm B7   # và B6
+node bench/vs-claude/analyze.mjs $T --baseline A0-sonnet --treatment B0 --allow-mixed-judge --legacy-rng    # chỉ để đối chiếu v0.4
+node docs/research/analysis/prereg-tests.mjs                                                  # không cờ (PT:3-5)
+```
+
+**Cờ của bài báo v0.4: một phần là giả định.** `study-cloud-final/README.md` ghi `analyze.mjs --baseline A0-sonnet --treatment X` cho `analyze-{B0,B5,B6,B7,A1,A2}.md`; `prereg-tests-448.md` là `prereg-tests.mjs` **không cờ** (đã kiểm: đầu ra hôm nay **trùng từng dòng** với tệp này, `diff` rỗng). RUNLOG study-cloud và CHANGELOG không ghi lệnh `analyze.mjs`. Bản v0.4 chạy trước cổng SR-07 nên không có `--allow-mixed-judge`; ở HEAD cổng này bắt buộc (chạy không cờ: exit 1, "Từ chối (SR-07) … r1-elk-design: opus / regex; a1-ambiguous-spec: opus / regex"). Vì vậy `--allow-mixed-judge` là cờ theo D11 §2, **không phải cờ v0.4**; `--b01-arm B7|B6` là giả định của tôi (mặc định mã là `SL`, không có trong dữ liệu). Mọi số `analyze.mjs` dưới đây là **số đối chiếu** (A-7).
+
+### 10.2 Ca biên F1–F12
+
+Bảng đầy đủ do script in. "vs S2" = đầu ra thật so với cột "Mã" ở mục 3; "vs ĐK" = so với quy tắc đăng ký.
+
+| ID | Ca | Đầu ra thật (tóm tắt) | vs S2 | vs ĐK |
+| --- | --- | --- | --- | --- |
+| F1 | suy biến 0,7 | `bootP`: p = null, "Không kết luận (trần/suy biến)", ci90 [0, 0]; `tost`: est 0, [0, 0], **equivalent = true** | Đạt | **Lệch** (T-1) |
+| F2 | trần hai phía | 4 bài trần, nA1 = 0, `estimate`, ci90 = null | Đạt | Khớp |
+| F3 | 0,99 / một phía | (i) trần, (ii) trần, (iii) giữ, (iv) giữ | Đạt | Khớp |
+| F4 | n = 0 | nA1 = 0, `estimate`, ci90 = null (cells rỗng và ngoài taskSet) | Đạt | Khớp |
+| F5 | n = 1, 2, 3 | n = 1, 2: `estimate`, p = null; n = 3: `p`, p = 0,6476; `tost` n = 1, 2: equivalent = false | Đạt | Khớp |
+| F6 | suy biến, bác bỏ | p = null, "Bác bỏ", ci90 ≈ [0,1; 0,1] | Đạt | Khớp |
+| F7 | NaN | p = **0,00025 (1/4001)**, `p`, ci90 [NaN, NaN] | Đạt | **Lệch** (B-1) |
+| F8 | `h6Combine` (a)–(e) | (a) `estimate`, nA1 = nA2 = 0, ci90 và k = null cả hai; (b) `estimate`; (c) "Bác bỏ"; (d) "Không kết luận"; (e) p = 0,03 | Đạt | Khớp |
+| F9 | `permTwoSample` H3 | recall N = 184 756, p = 1, p_min = 5,41e-6; precision p = 5,41e-6; b rỗng hoặc NaN: p = null; [0,0] vs [1,1]: greater 1/6, two 2/6 | Đạt | Khớp |
+| F10 | `permStratified` (i)–(v) | (i) n = 0, p = null; (ii) 2 hoán vị, p = 0,5; (iii) bỏ `x`, p = 0,5; (iv) 36 hoán vị, p = 1; (v) Monte Carlo 10 000, lặp lại trùng | Đạt | Khớp |
+| F11 | H2′ trần + margin | r = 2: p = 1/6; r = 5: **p = 1/252 = 0,00397 ≤ 0,0125** | Đạt | **Lệch** (S-1) |
+| F12 | `tost` logratio | stats: est = 0,00985 (R = 1,010); công thức P:80 (TB log-tỉ số theo bài): est = 0,3466 (R = 1,414) | Đạt | **Lệch** (T-2) |
+
+Tổng: **12/12 khớp dự đoán S2** (kể cả số lẻ ở F5, F9, F11, F12); **4 ca lệch đăng ký (F1, F7, F11, F12)**, đúng 4 ca S2 đã báo. Hai chi tiết nhỏ: (1) `permStratified` trả trường `nPerm`, không có `N` như S2 viết ở F10/F11; (2) F12 không import `prereg-tests.mjs` (script chạy ngay khi nạp), nên công thức P:80 được tính lại trong script ca biên; số B-01 thật ở 10.3. **Giao Phòng Phát triển** (không sửa ở đây): T-1, B-1, S-1, T-2 như mục 2.
+
+### 10.3 So sánh `analyze.mjs` và `prereg-tests.mjs` trên study-cloud (440 lượt, 8 dòng infra bị loại)
+
+| Mục | `analyze.mjs` (HEAD, `--allow-mixed-judge`) | `prereg-tests.mjs` (không cờ) | Nguồn chính thức (mục 7) |
+| --- | --- | --- | --- |
+| H1 | +2,8 pp [0,0; +9,0], p = 1,000, 6 bài | không có | `analyze.mjs`, ước lượng |
+| H2 | +2,8 pp [0,0; +11,1], TOST90 [0,0; +8,3], 4 bài; nhãn `not supported` | không có | `analyze.mjs`, ước lượng, "không kết luận" |
+| H3 | recall p = 1,0000 (N = 184 756); precision p = 5,41e-6; Δ 0,0 pp [0,0; 0,0]; nhãn `insufficient data` ("chỉ 1 bài review", SR-11) | recall 0,0 pp [0,0; 0,0], precision 0,0 pp [0,0; 0,0], n 10/10; không p | `prereg-tests.mjs` §5 |
+| H4 | +1,5 pp [0,0; +4,5], 1 bài; `insufficient data` | không có | `final-extra.md` (v0.4) |
+| H5 | tỉ số trung vị gộp mọi cửa sổ: token ×6,2; thời gian ×9,1; 100 % đạt ngưỡng | theo cặp cùng cửa sổ: W1 B0/A0 token ×5,68 [5,05; 6,58], thời gian ×9,60 [6,71; 12,80], 9/9; W2a ×9,54 / ×11,71, 4/4; W2c ×9,32 / ×11,05, 1/1 | `prereg-tests.mjs` §3 |
+| H6 | tập khai báo: A1 và A2 đều n = 0; `insufficient data`; ra khỏi họ Holm | "chưa đủ N" | `analyze.mjs` (cùng kết luận) |
+| H7 | tỉ số SD gộp 0,00 [0,00; 1,00], 13 bài (10 có sd(A0) = 0), trung vị cũ 1,00 trên 18 bài; nhãn `SUPPORTED` | chỉ 2 bài r ≥ 5 (a1-ambiguous-spec, s1-sec-review): "chưa đủ N" | `prereg-tests.mjs` §5 (theo S2); số 0,00 ở chú thích |
+| H8 | `insufficient data`; `formatMiss` 0,0 pp vs 0,0 pp | không có | `analyze.mjs` |
+| H9 | `insufficient data`; citation precision +0,0 pp | không có | `analyze.mjs` |
+| H10 | độ dốc +1,1 pp/phần, p = 0,129, 18 bài; `H10-coding` −0,0 pp (10 bài); `H10-adj` −0,1 pp [−0,6; +0,0] | không có | `analyze.mjs`, thăm dò |
+| Holm {H3, H6} | K = 0, họ rỗng | K = 0 | hai bên khớp |
+| B-01 B7 (a) token | R = 2,460 [2,070; 3,023], 5 bài, `not supported` | **R = 2,498 [2,02; 3,18]**, bác bỏ | `prereg-tests.mjs` |
+| B-01 B7 (b) thời gian | R = 2,482 [2,079; 3,140], `not supported` | **R = 2,566 [2,09; 3,25]**, bác bỏ | `prereg-tests.mjs` |
+| B-01 B7 (c) điểm | R = 1,000 [0,999; 1,000], **`SUPPORTED`** | n/a, **"không kết luận"** (cả 5 bài t1–t5 chạm trần, còn 0 bài < 3) | `prereg-tests.mjs` |
+| B-01 B6 | (a) 3,752 [3,415; 4,290]; (b) 3,798 [3,297; 4,622]; (c) 0,998 [0,993; 1,000] `SUPPORTED` | không có trong `prereg-tests.mjs`; `study-cloud-final/step4-extra-448.md` (v0.4): token ×3,92 [3,49; 4,43], thời gian ×4,05 [3,45; 4,76], bác bỏ | `step4-extra-448.md` |
+
+H5 và B-01 của `prereg-tests.mjs` chạy hôm nay **trùng từng dòng** `study-cloud-final/prereg-tests-448.md`.
+
+### 10.4 Chỗ khác hoặc bổ sung so với kỳ vọng S2 (để methodologist và research-lead xử lý; tôi không đổi phán quyết)
+
+1. **V1 xác nhận dự đoán của S2.** Trên 4000 mẫu bootstrap H7 (hạt 20261102 + 71, 13 bài, 10 bài sd(A0) = 0): **139/4000 = 3,48 %** mẫu có cả sd gộp A0 và B0 bằng 0 nên rơi vào nhánh `0/0 := 1` (`analyze.mjs:217`), vượt 2,5 %; số mẫu `∞` = 0. Dự đoán S2: (10/13)¹³ = 3,30 %. Vậy cận trên "1,00" của CI [0,00; 1,00] đến từ quy ước 0/0, không từ dữ liệu, ủng hộ mục 4.2 điểm 3(B). Lưu ý: V1 là bản **tái lập** vòng bootstrap H7 trong script ca biên (cùng bộ lọc, hạt, công thức), không đọc từ nội bộ `analyze.mjs`.
+2. **B-01 (c) cho B7 và B6: `analyze.mjs` ra SUPPORTED, `prereg-tests.mjs` ra "không kết luận".** Đúng hướng T-3 (thiếu quy tắc trần). Bảng 10 và bài báo lấy `prereg-tests.mjs`, **không** lấy dòng `SUPPORTED` của `analyze.mjs`. B-01 (a), (b) của hai script cũng lệch (2,460 vs 2,498; 2,482 vs 2,566) do **hai nguyên nhân gộp lại**: T-2 (log của tỉ số hai trung bình so với trung bình log-tỉ số) và cách chọn lượt A0 (`prereg-tests.mjs` dùng A0 cùng cửa sổ r4–9, `analyze.mjs` dùng mọi lượt A0). Tôi chưa tách phần đóng góp từng nguyên nhân; kết luận bác bỏ không đổi.
+3. **`--legacy-rng` tái lập H1 của v0.4** (+2,4 pp [0,0; +7,7], 7 bài, trùng `analyze-B0.md`). Phần đổi 7 → 6 bài và +2,4 → +2,8 pp ở H1 mặc định đi cùng thay đổi mà cờ này tắt (đúng hướng A-2, V4-K2-6). Tôi chưa tách xem là RNG hay `size`; D11 §2 ghi H1 và H10 trùng mốc khi `--legacy-rng`.
+4. **H2 và H6 (cũ → mới) khớp S2:** H2 cũ `SUPPORTED` → mới `not supported`, TOST90 [0,0; +8,3] (cận trên > +5 pp, lo90 = 0,0); H6 cũ `SUPPORTED` → mới `insufficient data` (n_A1 = n_A2 = 0). Số CI "mọi bài, mô tả" của H6 khác nhau theo hạt (A1 [0,0; +2,2] hạt mặc định; [0,0; +2,6] `--legacy-rng`, khớp v0.4), không đổi kết luận.
+5. **Không có chỗ nào khác với kỳ vọng S2 ở F1–F12.** Trong ba mục "cần kiểm" ở mục 9: (ii) cờ v0.4 đã trả lời ở 10.1 (một phần là giả định); (i) `SCF/README.md` và (iii) hai bài logic chạm trần trong study-cloud **chưa kiểm** ở hạng mục này.
+
+### 10.5 Tái lập
+
+Môi trường: Node ≥ 22 (không gói ngoài), Windows 11, Git Bash. Tệp mới: `docs/research/analysis/d11-stats-edgecases.mjs` và `.test.mjs` (2 ca). Script chỉ đọc `runs.jsonl` và `tasks/*/task.json`, không ghi tệp; `analyze.mjs` chạy trên bản sao trong thư mục tạm, không ghi đè `results/`.
