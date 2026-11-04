@@ -148,3 +148,61 @@ export function h6Combine(pA1, pA2) {
   }
   return out(Math.max(pA1.p, pA2.p), 'p');
 }
+
+// ---------- SR-25: hoán vị nhãn arm theo lượt, phân tầng theo bài (H1′/H2′) ----------
+
+const choose = (n, k) => { let r = 1; for (let i = 1; i <= k; i++) r = (r * (n - k + i)) / i; return Math.round(r); };
+
+/**
+ * cells = [{ task, a: BASE[], b: TREAT[] }]. b′ = b − margin (margin trừ khỏi điểm TREAT) rồi hoán vị trong từng bài.
+ * T = TB theo bài của (mean(b′) − mean(a)). alt: 'greater' | 'less' | 'two'; sai số 1e-12.
+ * ∏ C(r_a + r_b, r_b) ≤ maxExact ⇒ liệt kê đủ; ngược lại Monte Carlo M lần (Fisher-Yates, bộ sinh riêng), p = (k + 1)/(M + 1).
+ * Bài thiếu a hoặc b vào `skipped` (tên bài).
+ */
+export function permStratified(cells, { alt = 'greater', margin = 0, maxExact = 1e6, M = 10000, seed = 20261102 } = {}) {
+  const skipped = [], ts = [];
+  for (const c of cells ?? []) {
+    const a = (c.a ?? []).filter(Number.isFinite), b = (c.b ?? []).filter(Number.isFinite).map((v) => v - margin);
+    if (a.length && b.length) ts.push({ pool: [...a, ...b], ra: a.length, rb: b.length });
+    else skipped.push(c.task);
+  }
+  const n = ts.length;
+  if (!n) return { n, nPerm: 0, exact: true, tObs: NaN, p: null, pMin: null, skipped };
+  const sum = (x) => x.reduce((s, v) => s + v, 0);
+  // d của một cách chọn TREAT có tổng s: s/rb − (tot − s)/ra
+  const dOf = (t, s, tot) => s / t.rb - (tot - s) / t.ra;
+  const tots = ts.map((t) => sum(t.pool));
+  const tObs = ts.reduce((s, t, i) => s + dOf(t, sum(t.pool.slice(t.ra)), tots[i]), 0) / n;
+  const hit = (t) => (alt === 'less' ? t <= tObs + EPS : alt === 'two' ? Math.abs(t) >= Math.abs(tObs) - EPS : t >= tObs - EPS);
+  const N = ts.reduce((s, t) => s * choose(t.pool.length, t.rb), 1);
+  if (N <= maxExact) {
+    // d từng bài cho mọi cách chọn, rồi duyệt tích Descartes
+    const lists = ts.map((t, i) => {
+      const out = [], m = t.pool.length;
+      const rec = (start, left, s) => {
+        if (left === 0) { out.push(dOf(t, s, tots[i])); return; }
+        for (let j = start; j <= m - left; j++) rec(j + 1, left - 1, s + t.pool[j]);
+      };
+      rec(0, t.rb, 0);
+      return out;
+    });
+    let k = 0;
+    const walk = (i, acc) => {
+      if (i === n) { if (hit(acc / n)) k++; return; }
+      for (const d of lists[i]) walk(i + 1, acc + d);
+    };
+    walk(0, 0);
+    return { n, nPerm: N, exact: true, tObs, p: k / N, pMin: 1 / N, skipped };
+  }
+  const rnd = mulberry32(seed);
+  let k = 0;
+  for (let it = 0; it < M; it++) {
+    let acc = 0;
+    ts.forEach((t, i) => {
+      const sh = fisherYates(t.pool, rnd);
+      acc += dOf(t, sum(sh.slice(0, t.rb)), tots[i]);
+    });
+    if (hit(acc / n)) k++;
+  }
+  return { n, nPerm: M, exact: false, tObs, p: (k + 1) / (M + 1), pMin: 1 / (M + 1), skipped };
+}

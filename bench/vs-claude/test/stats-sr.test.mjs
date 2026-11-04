@@ -173,3 +173,81 @@ test('SR-26 (a) taskSet: bài ngoài tập khai báo không được dùng', () 
   assert.equal(A1(c, { taskSet: ['t1', 't2', 't3'] }).nA1, 3);
   assert.equal(A1(c).nA1, 4);
 });
+
+// ---------- SR-25 ----------
+import { permStratified } from '../lib/stats.mjs';
+
+const c1 = () => [mk('bài 1', [0, 0], [1, 1]), mk('bài 2', [0.2, 0.3], [0.8, 0.9])];
+
+test('SR-25 ca 1: p_min tính tay = 1/36', () => {
+  const r = permStratified(c1());
+  near(r.p, 1 / 36);
+  near(r.pMin, 1 / 36);
+  assert.equal(r.exact, true);
+  assert.equal(r.nPerm, 36);
+  assert.equal(r.n, 2);
+});
+
+test('SR-25 ca 2: có hòa ⇒ p = 5/36', () => {
+  const r = permStratified([mk('b1', [0, 0], [1, 1]), mk('b2', [0.5, 1], [0.5, 1])]);
+  near(r.tObs, 0.5);
+  near(r.p, 5 / 36);
+});
+
+test('SR-25 ca 3: 3 bài r = 1 ⇒ N = 8, p = pMin = 1/8', () => {
+  const r = permStratified(['x', 'y', 'z'].map((t) => mk(t, [0], [1])));
+  assert.equal(r.nPerm, 8);
+  near(r.p, 0.125);
+  near(r.pMin, 0.125);
+});
+
+test('SR-25 ca 4: không có hiệu ứng ⇒ tObs = 0, p = 1', () => {
+  const r = permStratified([mk('x', [1, 1], [1, 1]), mk('y', [1, 1, 1], [1, 1, 1])]);
+  assert.equal(r.tObs, 0);
+  assert.equal(r.p, 1);
+});
+
+test('SR-25 ca 5: alt = less trên ca 1 ⇒ p = 1', () => {
+  assert.equal(permStratified(c1(), { alt: 'less' }).p, 1);
+});
+
+test('SR-25 ca 6: bài thiếu a hoặc b bị bỏ và báo, p không đổi', () => {
+  const r = permStratified([...c1(), { task: 'bài 3', a: [0.1, 0.2], b: [] }]);
+  assert.deepEqual(r.skipped, ['bài 3']);
+  near(r.p, 1 / 36);
+  assert.deepEqual(permStratified([...c1(), { task: 'bài 4', a: [0.1] }]).skipped, ['bài 4']);
+});
+
+test('SR-25 ca 7: N > maxExact ⇒ Monte Carlo, cùng hạt cùng p, pMin = 1/(M+1)', () => {
+  const cells = Array.from({ length: 8 }, (_, i) => mk(`t${i}`, [0.1, 0.2, 0.3, 0.4, 0.5, 0.6], [0.3, 0.5, 0.2, 0.7, 0.6, 0.9]));
+  const r1 = permStratified(cells, { seed: 9 }), r2 = permStratified(cells, { seed: 9 });
+  assert.equal(r1.exact, false);
+  assert.equal(r1.p, r2.p);
+  assert.equal(r1.nPerm, 10000);
+  near(r1.pMin, 1 / 10001);
+  assert.ok(r1.p >= 1 / 10001 && r1.p <= 1);
+});
+
+test('SR-25 ca 8: cổng nhãn — pMin = 0,125 ở ngưỡng 0,0125 ⇒ confirmable = false', () => {
+  const r = permStratified(['x', 'y', 'z'].map((t) => mk(t, [0], [1])));
+  assert.equal(confirmable(r.pMin, 0.0125), false);
+  assert.equal(confirmable(1 / 252, 0.0125), true);
+});
+
+test('SR-25 ca 9: margin trừ khỏi TREAT (H2′, alt = less)', () => {
+  const r = permStratified([mk('x', [0.5, 0.5], [0.55, 0.55])], { alt: 'less', margin: 0.05 });
+  assert.equal(r.p, 1);
+  near(r.pMin, 1 / 6);
+  const o = permStratified([mk('x', [0.5, 0.5], [0.4, 0.4])], { alt: 'less', margin: 0.05 });
+  near(o.p, 1 / 6);
+});
+
+test('SR-25 margin phân biệt: greater, b = a + margin ⇒ sau dịch hòa ⇒ p = 1; margin = 0 ⇒ p = 1/6', () => {
+  const c = [mk('x', [0.5, 0.5], [0.55, 0.55])];
+  assert.equal(permStratified(c, { margin: 0.05 }).p, 1);
+  near(permStratified(c, { margin: 0 }).p, 1 / 6);
+});
+
+test('SR-25 bài r_a ≠ r_b hợp lệ: N = C(5,2)', () => {
+  assert.equal(permStratified([mk('x', [0.1, 0.2, 0.3], [0.9, 0.8])]).nPerm, 10);
+});
