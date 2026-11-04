@@ -94,7 +94,9 @@ function compare(a, b, { metric = 'score', filter = () => true } = {}) {
   return { n: ts.length, est, lo: boots[Math.floor(0.025 * boots.length)], hi: boots[Math.floor(0.975 * boots.length)], p: extreme / P, deltas: Object.fromEntries(ts.map((t, i) => [t, deltas[i]])) };
 }
 const catOf = Object.fromEntries(R.map((r) => [r.task, r.category]));
-const sizeOf = Object.fromEntries(R.map((r) => [r.task, r.size]));
+// SR-05: `size` lấy từ task.json (định nghĩa mới, có sizeBasis); --legacy-rng giữ `size` ghi trong dòng chạy để tái lập số cũ (D7).
+const taskSize = (t) => { try { return JSON.parse(fs.readFileSync(path.join(SUITE, t, 'task.json'), 'utf8')).size; } catch { return undefined; } };
+const sizeOf = Object.fromEntries(R.map((r) => [r.task, LEGACY ? r.size : (taskSize(r.task) ?? r.size)]));
 // SR-11: một giả thuyết cần ≥ 3 bài mới được phán; ít hơn ⇒ insufficient data (không phán SUPPORTED/not supported).
 const MIN_TASKS = 3;
 const inCats = (...c) => (t) => c.includes(catOf[t]);
@@ -252,6 +254,31 @@ const holmTxt = (m) => (m ? `p=${fp(m.p)}, p_min=${fp(m.pMin)}, confirmable=${m.
   const b = slope(pts); let ext = 0; const P = 5000;
   for (let i = 0; i < P; i++) { const ys = LEGACY ? pts.map((x) => x[1]).sort(() => rnd() - 0.5) : fisherYates(pts.map((x) => x[1]), rnd); if (Math.abs(slope(pts.map((x, j) => [x[0], ys[j]]))) >= Math.abs(b)) ext++; }
   H.push(['H10', 'Advantage grows with task size (slope of delta vs parts)', `slope ${pp(b)} per extra part, permutation p=${f(ext / P, 3)}, tasks=${pts.length}`, verdict(b > 0 && ext / P < 0.05, pts.length < MIN_TASKS || pts.length < 4)]);
+}
+
+// SR-05 (i, ii): độ dốc H10 chỉ trong coding và độ dốc điều chỉnh loại bài (trừ trung bình theo loại ở cả size và delta), CI bootstrap theo bài.
+{
+  const c = compare(BASE, TREAT);
+  const pts = Object.entries(c.deltas ?? {}).map(([t, d]) => ({ x: sizeOf[t], y: d, cat: catOf[t] }));
+  const ols = (p) => { const mx = mean(p.map((q) => q.x)), my = mean(p.map((q) => q.y)); const den = p.reduce((a, q) => a + (q.x - mx) ** 2, 0); return den ? p.reduce((a, q) => a + (q.x - mx) * (q.y - my), 0) / den : NaN; };
+  const within = (p) => { // độ dốc gộp trong loại: Σx̃ỹ / Σx̃²
+    let num = 0, den = 0;
+    for (const cat of new Set(p.map((q) => q.cat))) { const g = p.filter((q) => q.cat === cat), mx = mean(g.map((q) => q.x)), my = mean(g.map((q) => q.y)); for (const q of g) { num += (q.x - mx) * (q.y - my); den += (q.x - mx) ** 2; } }
+    return den ? num / den : NaN;
+  };
+  const bootSlope = (p, fn, seed) => {
+    const r = mulberry32(seed), bs = [];
+    for (let i = 0; i < 4000 && p.length; i++) { const v = fn(p.map(() => p[Math.floor(r() * p.length)])); if (Number.isFinite(v)) bs.push(v); }
+    bs.sort((a, b) => a - b);
+    return bs.length ? [bs[Math.floor(0.025 * bs.length)], bs[Math.floor(0.975 * bs.length)]] : [NaN, NaN];
+  };
+  for (const [id, label, p, fn, seed] of [
+    ['H10-coding', 'Slope of delta vs size, coding tasks only', pts.filter((q) => q.cat === 'coding'), ols, SEED + 91],
+    ['H10-adj', 'Slope of delta vs size adjusted for task category (within-category pooled)', pts, within, SEED + 92],
+  ]) {
+    const b = fn(p), [lo, hi] = bootSlope(p, fn, seed);
+    H.push([id, `${label} (SR-05)`, `slope ${pp(b)} per extra part [${pp(lo)}, ${pp(hi)}] (95% bootstrap over tasks), tasks=${p.length}`, verdict(b > 0 && lo > 0, p.length < 4 || !Number.isFinite(b))]);
+  }
 }
 
 // SR-26: họ Holm {H3, H6}; NA xếp như 1 (không bác bỏ, không chặn).

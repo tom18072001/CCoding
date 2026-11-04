@@ -339,3 +339,28 @@ test('SR-22: cột Overall theo loại là trung bình các loại có trọng s
   assert.equal(cols[4], '0.75');
   assert.equal(cols[5], '0.50');
 });
+
+// ---------- S7: SR-05 (i, ii) ----------
+test('SR-05: H10-coding và H10-adj báo độ dốc kèm CI; độ dốc điều chỉnh loại bài không bị lệch bởi loại logic', () => {
+  const sizes = [1, 2, 3, 4, 5];
+  const rows = [
+    ...sizes.flatMap((s) => [row(`c${s}`, 'A0-sonnet', 0.3, { size: s }), row(`c${s}`, 'B0', 0.3 + 0.1 * s, { size: s })]),
+    ...[1, 2, 3].flatMap((s) => [row(`l${s}`, 'A0-sonnet', 0.9, { category: 'logic', size: s }), row(`l${s}`, 'B0', 0.4 + 0.1 * s, { category: 'logic', size: s })]),
+  ];
+  const rep = run(rows).report;
+  assert.match(hRow(rep, 'H10-coding'), /slope \+10\.0 pp per extra part \[\+10\.0 pp, \+10\.0 pp\].*tasks=5/);
+  assert.match(hRow(rep, 'H10-adj'), /slope \+10\.0 pp per extra part \[\+10\.0 pp, \+10\.0 pp\].*tasks=8/);
+  assert.doesNotMatch(hRow(rep, 'H10'), /slope \+10\.0 pp/); // độ dốc gộp bị loại logic kéo lệch
+  assert.match(hRow(rep, 'H10-coding'), /SUPPORTED/);
+  // thiếu bài coding ⇒ insufficient
+  const few = rows.filter((r) => !['c4', 'c5'].includes(r.task));
+  assert.match(hRow(run(few).report, 'H10-coding'), /insufficient data/);
+});
+
+test('SR-05: H1 và H10 dùng size mới từ task.json; --legacy-rng giữ size ghi trong dòng chạy', () => {
+  // c5-tickets-api: size cũ 5 (trong dòng chạy), size mới 1 (task.json) ⇒ H1 (size >= 3) không còn tính bài này
+  const mk = (t) => ['A0-sonnet', 'B0'].flatMap((a) => mkCells(t, a, a === 'B0' ? [0.9, 0.9] : [0.3, 0.3], { size: 5 }));
+  const rows = ['c3-shop-bugs', 'c4-audit-chain', 'c5-tickets-api', 'g1-slug-dedupe', 't5-logq'].flatMap(mk);
+  assert.match(hRow(run(rows).report, 'H1'), /tasks=3/);
+  assert.match(hRow(run(rows, ['--legacy-rng']).report, 'H1'), /tasks=5/);
+});
