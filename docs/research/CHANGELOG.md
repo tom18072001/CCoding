@@ -34,6 +34,8 @@ Căn cứ: bảng "trước D12 → sau D12" (`context/d12-stats-fixes-2026-11-0
 - **Phụ lục A:** nhãn **R19** (bảng "trước D12 → sau D12"); R18 thêm "đợt 3e gồm E6 và sổ E5′". Đầu bài ghi v0.6; §9 mục (c) cập nhật E3/E5′ và H6 (T-1 đã sửa).
 - `facts.json`: 17 mục `numbers` mới (D12: 15; E5′: 2). Các mẫu cũ không đổi chữ nên vẫn khớp.
 
+
+**Sửa khi kiểm số (S5), 4/11/2026:** (1) `facts.json`, ngoại lệ của `c1c8-single-labeller`: `line` 573 → 576 (dòng trích câu cũ của §8.1(3) dời 3 dòng do S2 thêm §6.1 mục (8) và R19); trước sửa `consistency-check` báo 1 lỗi, sau sửa "Đạt: 47 tệp". Không đổi số nào trong `paper.md`. (2) Đối chiếu máy: chạy `d12-before-after.sh` (chỉ đọc `study-cloud`, `b7prime`, không benchmark) rồi `d12-diff-rows.mjs`; các số H1, H7, H10, B-01a/b/c của B7 và B6 khớp bảng "sau D12".
 **Ẩn danh: chưa làm.** Giám đốc chưa chọn mức trong `context/anonymization-options-2026-11-04.md`; tên tác giả và tên hệ giữ như v0.5.
 
 **Còn mở, chuyển S5 và người phản biện:** (1) ngữ nghĩa "bác bỏ" của B-2 (D12-§ ghi chú đọc số, đề nghị S5b/N-2 xác nhận); (2) D12 nói "24 mã" nhưng liệt kê 23, chưa đối chiếu với K2 mục 2; (3) `d12-diff-rows.mjs` chưa chạy lại trong hạng mục này (người viết không chạy lệnh); (4) các số trong bảng trên chép từ D12-§2 bằng tay, S5 đối chiếu từng ô.
