@@ -1,0 +1,72 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g4-gb-unit__B7cab__r1] Thêm đơn vị GB vào bộ module kích thước tệp
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Đã có sẵn thay đổi GB trong worktree (src/units.js, format.js, parse.js, validate.js, test/size.test.js); không làm lại. Chỉ cần một lượt xác minh độc lập bằng `npm test` và đối chiếu tiêu chí, không cần kiến trúc/BA.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Xác minh và vá nhỏ phần GB hiện có (@senior-swe, done)
+
+## Tóm tắt
+Phần GB có sẵn trong worktree đã được đối chiếu và đúng cả bốn chức năng: `UNITS.GB`, `formatSize`, `parseSize` (không phân biệt hoa thường) và `isValidUnit`. Tôi chỉ bổ sung một test cho các ca còn thiếu. `npm test` xanh, 4/4 test đạt. Không sửa `src/` và không thêm thư viện.
+
+## Tệp đã tạo/sửa
+- `test/size.test.js`: thêm test "GB: ranh giới, chữ thường, đơn vị sai" gồm:
+  - `formatSize(1024 ** 3)` ra `'1 GB'`, và `formatSize(1024 * UNITS.MB)` cũng ra `'1 GB'`.
+  - `parseSize('2gb')` ra `2 * 1024 ** 3`.
+  - `isValidUnit('GB')` đúng, `isValidUnit('XB')` sai.
+  - `parseSize('1 TB')` ném `TypeError`.
+
+## Kiểm chứng
+- `npm test` → exit 0, tests 4, pass 4, fail 0.
+
+## Quyết định thiết kế
+Giữ nguyên diff của lượt trước, không đổi quy tắc làm tròn.
+
+## Rủi ro & việc còn mở
+`formatSize` làm tròn giá trị ngay dưới ngưỡng GB lên thành `1024.0 MB` thay vì `1 GB`, ví dụ `formatSize(1024 ** 3 - 1024)`. KB→MB cũng bị như vậy. Đây là hành vi đã biết, nằm ngoài phạm vi nên tôi để nguyên và không có test cho nó.
+
+Bản đầy đủ: `.ccoding/T-20261104-102953-e03/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-102953-e03` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **24 in / 5,115 out**, cache đọc 296.6k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 20 | 4269 | 250110 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 846 | 46462 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Xác minh và vá nhỏ phần GB hiện có (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 2 · # suites 0 · # pass 2 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 4 · # suites 0 · # pass 4 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **70** B | thấp | — | — | 100 | 100 | 93 | 100 | 1 | 1 | 254k | 1/12 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 47k | 0/1 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

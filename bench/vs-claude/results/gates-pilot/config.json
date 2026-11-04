@@ -1,0 +1,49 @@
+{
+  "argv": [
+    "--arms",
+    "B7cab,B7cabO",
+    "--tasks",
+    "suite:gates",
+    "--repeats",
+    "2",
+    "--timeout",
+    "20",
+    "--runtime",
+    "claude-cli",
+    "--ccoding-url",
+    "http://127.0.0.1:7425",
+    "--ccoding-data",
+    "/home/claude/ccoding-3e/data",
+    "--work",
+    "/tmp/vb3e",
+    "--out",
+    "/home/claude/ccoding-dev/bench/vs-claude/results/gates-pilot"
+  ],
+  "cfg": {
+    "ccodingUrl": "http://127.0.0.1:7425",
+    "ccodingData": "/home/claude/ccoding-3e/data",
+    "runtime": "claude-cli",
+    "timeoutMin": 20,
+    "claudeBin": "claude",
+    "judge": {
+      "enabled": false,
+      "model": "opus"
+    },
+    "seed": "ccvb",
+    "workRoot": "/tmp/vb3e"
+  },
+  "armIds": [
+    "B7cab",
+    "B7cabO"
+  ],
+  "taskIds": [
+    "g1-slug-dedupe",
+    "g2-cart-coupon",
+    "g3-qty-rename",
+    "g4-gb-unit",
+    "g5-median-stats",
+    "g6-range-merge"
+  ],
+  "repeats": 2,
+  "startedAt": "2026-11-04T03:28:42.866Z"
+}
