@@ -73,3 +73,35 @@ Phân loại dữ liệu: **Nội bộ**. Bài tổng hợp, không có dữ li�
 - Dựng lại đúng vị trí: 200/200.
 - Khớp cả hai nhãn (lỗi thật, bị chặn): **200/200**.
 - Đầu ra ở `g-repro.jsonl` và `repro.log`.
+
+## Bổ sung sau kết quả chính (khám phá, ghi 4/11 lúc 20:50, trước khi chạy)
+
+Lý do: một người phản biện độc lập (agent chưa thấy quá trình làm) đọc lại script và dữ liệu, rồi nêu các điểm dưới đây. Mọi phân tích ở mục này là **khám phá**. Chúng không thay kết quả chính ở trên và không có phép kiểm mới.
+
+- **G-5, đối chứng "chỉ test của starter".**
+  - Cả 10 starter đều có test, và `npm test` chạy luôn các test này ở mọi arm. Vì vậy recall khoảng 91 % có thể chủ yếu đến từ test do tác giả bài viết.
+  - Cách đo: trên đúng các đột biến đã có, thay `test/` và `package.json` của lượt bằng bản của starter, rồi chạy lại `npm test` (`analysis/g-starter.mjs`).
+  - Báo:
+    - recall khi chỉ có test của starter;
+    - phần do test agent viết thêm (cổng đầy đủ trừ chỉ starter), theo nhóm A và C.
+  - Lượt mà test của starter đỏ ngay trên sản phẩm chưa đột biến (agent đổi API) thì loại, và báo số lượt.
+- **G-c, độ nhạy có `t4-perf`.**
+  - Lý do loại `t4-perf` ghi ở §9 sai: "bộ test chạy khoảng 190 s" là của starter chưa tối ưu (`lib/grade.mjs:26`). Base của 30 lượt `t4-perf` chỉ chạy 4–12 s.
+  - Chạy thêm 30 lượt này với cùng tham số, ghi vào `g-mutation-t4.jsonl`. Báo G-3 khi gộp cả hai tệp, để mô tả; kết quả chính vẫn theo §9.
+- **Các điểm phản biện ghi nhận, không đo thêm:**
+  - G-1 và G-2 chỉ đo trạng thái cuối. Sản phẩm của CCoding đã qua cổng, nên "0/250 giao khi đỏ" chỉ có nghĩa là trên bộ bài này cổng không có gì để chặn.
+  - 6 lượt B6 đủ điều kiện ở `t1-duration` có 0 vị trí đột biến: agent tách logic sang `parse.js` và `format.js`, ngoài `task.deliverable` là `src/duration.js`. Vì vậy các lượt này rơi khỏi G-3.
+  - 25 đột biến quá hạn `npm test` được tính là bị chặn.
+  - Các đột biến của một lượt chạy lần lượt trên cùng một bản sao. Kiểm độ lặp lại 200/200 cho thấy không có rò trạng thái đáng kể.
+  - Đơn vị độc lập là 9 bài. Test ẩn và test starter do cùng tác giả viết.
+- **Sửa mô tả toán tử ở §9:**
+  - Bộ đã dùng không đúng là "bộ đủ của Offutt cộng hai": không có ABS; UOI ở đây là bỏ `!`; ROR gồm đổi biên và đảo chiều.
+  - Mô tả đúng: ROR, EQ, AOR, LCR, bỏ `!`, đổi hằng số, đảo điều kiện, dựa theo nhóm toán tử của Offutt và cs. (1996).
+- **Sửa giờ G-b:** G-b ghi lúc khoảng **20:08**, không phải 20:12 (tệp `report-run1.md` lúc 20:08:48). Lần chạy lại bắt đầu 20:09:18. G-b chỉ được commit cùng kết quả (`5ca04f4`), nên không có mốc git trước lần chạy lại. Quy tắc "lệch với `pass` chính thức thì chạy lại" chỉ đi một chiều: lượt khớp nhưng sai vì tranh CPU sẽ không được chạy lại.
+- **Script sửa sau mốc khóa `f5a31dc`:**
+  - `g-analyze.mjs`: thêm `--rebase`, ở `f9ed4ed`;
+  - `g-mutation.mjs`: G-b, ở `5ca04f4`;
+  - `g-rebase.mjs`: mới, ở `f9ed4ed`, sha256 `7442c35f…`;
+  - `g-repro.mjs` và `g-starter.mjs`: mới.
+
+  Hash bản dùng để báo ghi ở mục "Chạy".
