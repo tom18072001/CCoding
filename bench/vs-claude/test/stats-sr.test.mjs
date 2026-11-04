@@ -144,7 +144,9 @@ test('SR-26 ca 5c: gộp hai cặp — một cặp NA ⇒ p(H6) = NA, không max
   const h = h6Combine(deg, ok);
   assert.equal(h.p, null);
   assert.equal(h.verdict, 'Không kết luận (trần/suy biến)');
-  assert.equal(h6Combine(ok, ok).p, ok.p);
+  // C-1 (K2): h6Combine đòi pA1 từ arm A1, pA2 từ arm A2 (cùng ô, cùng hạt ⇒ cùng p)
+  const ok1 = bootP(tasks(['t1', 't2', 't3'], [0.6, 0.7, 0.8], [0.6, 0.7, 0.8]), { arm: 'A1' });
+  assert.equal(h6Combine(ok1, ok).p, ok.p);
 });
 
 test('SR-26 ca 6: đủ bài, không suy biến ⇒ p số trong [pMin, 1], pMin = 1/4001', () => {

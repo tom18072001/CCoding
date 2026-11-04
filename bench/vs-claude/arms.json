@@ -135,6 +135,21 @@
     },
     "label": "CCoding làn đơn, B7cab + CTO nghiệm thu bằng Opus (B-16, phaseModels.accept)"
   },
+  "B0F": {
+    "kind": "ccoding",
+    "options": {
+      "lane": "full"
+    },
+    "label": "CCoding làn đầy đủ (ép)"
+  },
+  "B1F": {
+    "kind": "ccoding",
+    "options": {
+      "lane": "full",
+      "discussionRounds": 0
+    },
+    "label": "CCoding làn đầy đủ (ép), bỏ họp"
+  },
   "oracle": {
     "kind": "oracle",
     "label": "Reference solution (grader self-test)"

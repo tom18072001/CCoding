@@ -135,6 +135,7 @@ Options: `--tasks all|<id>,<prefix>,<category>` · `--repeats N` · `--timeout <
 ## Arm B6 và B7
 
 - **B6** — CCoding làn nhanh (`options.lane: "fast"`).
+- **B0F** / **B1F** — CCoding ép làn đầy đủ (`options.lane: "full"`), B1F thêm `discussionRounds: 0` (bỏ họp). Dùng khi B0 tự chọn làn nhanh/đơn nên không có pha họp (E3, `l1-modules`, `l2-chain`).
 - **B7** — CCoding làn đơn (`options.lane: "single"`), **chờ B-01** (`docs/research/improvement-backlog.md`). Trước khi gửi task, runner đọc union `lane` trong `src/types.ts` (hoặc `dist/types.d.ts`). Nếu chưa có `'single'`, runner thoát mã 2 với "Arm B7 cần lane 'single' (B-01) — CCoding hiện chưa hỗ trợ" và không chạy sang làn khác. `--dry-run` vẫn liệt kê lượt B7.
 
 ## Hạn mức tài khoản và chạy tiếp
@@ -180,6 +181,20 @@ Lỗi hạ tầng khác (`infra: "error"`: không spawn được `claude`, khôn
 ## Output (`results/<run>/`)
 
 `runs.jsonl` (one row per run: score, details, tokens, cost, wall time, leak flag) · `artifacts/<key>/` (deliverable snapshot + `_FINAL.txt`) · `report.md` · `summary.csv` · `pareto.csv` · `pairwise.jsonl` / `pairwise.md`.
+
+### Chi phí (USD) và giá Haiku 5.5 (D12/K2)
+
+`lib/pricing.mjs` (phiên bản `PRICING_VERSION`) tính `costUsd` cho arm CCoding theo model của từng dòng `calls.jsonl`. Model không có trong bảng ⇒ `costUsd: null`, `costBasis: 'unknown-model'` (không đoán). Nguồn giá Haiku 5.5 và bảng trích nguyên văn nằm ở đầu `lib/pricing.mjs`.
+
+- Haiku 5.5 có hai bậc giá theo độ dài prompt (ngưỡng 100K token, trang chính thức), nhưng `calls.jsonl` chỉ có token cộng dồn nên không biết bậc từng request. Quy ước: `costUsd` = **cận trên** (bậc > 100K), `costUsdLow` = **cận dưới** (bậc ≤ 100K), `costBasis` có hậu tố `/haiku-tier-upper`. Lượt không có Haiku giữ nguyên dạng cũ (không có `costUsdLow`). Đọc cache của Haiku là 0,1× giá input (Sonnet/Opus: 0,05×).
+- Dữ liệu đã công bố trước 4/11/2026 (ví dụ `results/large-pilot`) có `costUsd: null` ở arm CCoding. `runs.jsonl` là dữ liệu thô, không sửa. Tính lại bằng:
+
+```bash
+node bench/vs-claude/recost.mjs bench/vs-claude/results/<run>            # ghi results/<run>/costs-recomputed.json
+node bench/vs-claude/recost.mjs bench/vs-claude/results/<run> --out /tmp/costs.json
+```
+
+  Nguồn token: `<run>/calls/<key>.jsonl` nếu có; không thì `byPhaseDetail` × `byPhaseModel` của dòng `runs.jsonl` (cần mỗi pha đúng một model). Dòng không tính lại được giữ số cũ và ghi lý do. Phân tích dùng khoảng `[costUsdLow, costUsd]`.
 
 ## Older harness on this branch (`harness/`, tasks t1–t5, rounds C1–C9)
 

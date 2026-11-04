@@ -5,7 +5,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mulberry32, fisherYates, tost, permTwoSample, bootP, h6Combine, permStratified, confirmable } from './lib/stats.mjs';
+import { mulberry32, fisherYates, streamFor, percentileCI, DEGENERATE_LABEL, tost, permTwoSample, bootP, h6Combine, permStratified, confirmable } from './lib/stats.mjs';
+import { citationValidityOf } from './lib/grade.mjs';
 
 const dir = path.resolve(process.argv[2] ?? '.');
 const argv = process.argv.slice(3);
@@ -24,6 +25,11 @@ for (const r of excludedRows) { const e = (excludedByArm[r.arm] ??= {}); e[r.exc
 const excludedTxt = Object.entries(excludedByArm).map(([a, e]) => `${a}: ${Object.entries(e).map(([k, n]) => `${k} ${n}`).join(', ')}`).join('; ') || 'không';
 if (excludedRows.length) console.log(`SR-01: đã loại ${excludedRows.length} lượt excluded (${excludedTxt}).`);
 const die = (msg) => { console.error(msg); process.exit(1); };
+// C-1 (K2): dòng không có `arm` làm mọi so sánh theo arm sai im lặng ⇒ từ chối và nêu dòng lỗi.
+{
+  const noArm = allRows.filter((r) => !r.arm);
+  if (noArm.length) die(`Từ chối (C-1): ${noArm.length} dòng trong runs.jsonl thiếu trường \`arm\` (${noArm.slice(0, 3).map((r) => r.key ?? `${r.task ?? '?'}#${r.rep ?? '?'}`).join(', ')}${noArm.length > 3 ? ', …' : ''}). Sửa dữ liệu rồi chạy lại.`);
+}
 // SR-03: một arm chạy bằng nhiều hash CCoding thì cảnh báo; --strict thì từ chối.
 const commitsByArm = {};
 for (const r of rows) if (r.ccodingCommit) (commitsByArm[r.arm] ??= new Set()).add(r.ccodingCommit);
@@ -61,8 +67,9 @@ const LEGACY = has('legacy-rng');
 const SEED = LEGACY ? 12345 : 20261102;
 let lcg = SEED;
 const rnd = LEGACY ? () => ((lcg = (lcg * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff) : mulberry32(SEED);
-const rngTxt = LEGACY ? `LCG cũ (--legacy-rng), hạt ${SEED}, xáo H10 kiểu cũ` : `mulberry32, hạt ${SEED}, xáo H10 Fisher-Yates`;
-const pick = (a) => a[Math.floor(rnd() * a.length)];
+// A-5 (K2): mỗi giả thuyết một luồng suy tất định từ hạt gốc, streamFor(mã) = mulberry32(hạt gốc ^ fnv1a32(mã)); kết quả không còn phụ thuộc thứ tự gọi. Quy tắc suy hạt này CHỜ Phòng Nghiên cứu đăng ký.
+const rngFor = (hypId) => (LEGACY ? rnd : streamFor(hypId, SEED));
+const rngTxt = LEGACY ? `LCG cũ (--legacy-rng), hạt ${SEED}, xáo H10 kiểu cũ` : `mulberry32, hạt ${SEED} (hạt gốc); compare và hoán vị của H1, H2, H4, H6, H10 dùng luồng riêng mulberry32(${SEED} ^ fnv1a32(mã giả thuyết)) (A-5, chờ đăng ký); H3, H7, H10-coding/adj dùng hạt cố định riêng (gốc + 31/32, 71, 91, 92); tost, bootP, permStratified dùng hạt mặc định ${SEED}; xáo H10 Fisher-Yates; luồng chung cũ chỉ ở mục độ nhạy`;
 const f = (x, d = 2) => (Number.isFinite(x) ? x.toFixed(d) : 'n/a');
 const pp = (x) => (Number.isFinite(x) ? `${x >= 0 ? '+' : ''}${(x * 100).toFixed(1)} pp` : 'n/a');
 
@@ -77,7 +84,8 @@ const get = (r, metric) => {
 const cell = (arm, task, metric = 'score') => R.filter((r) => r.arm === arm && r.task === task).map((r) => get(r, metric)).filter((v) => v !== undefined && v !== null).map(Number);
 
 /** Paired comparison over tasks: delta = mean(b) - mean(a) per task, then averaged. Two-level bootstrap CI + sign-flip permutation p. */
-function compare(a, b, { metric = 'score', filter = () => true } = {}) {
+function compare(a, b, { metric = 'score', filter = () => true, rng = rnd } = {}) {
+  const pick = (arr) => arr[Math.floor(rng() * arr.length)];
   const ts = tasks.filter((t) => filter(t) && cell(a, t, metric).length && cell(b, t, metric).length);
   if (!ts.length) return { n: 0 };
   const deltas = ts.map((t) => mean(cell(b, t, metric)) - mean(cell(a, t, metric)));
@@ -88,10 +96,10 @@ function compare(a, b, { metric = 'score', filter = () => true } = {}) {
     for (let j = 0; j < ts.length; j++) { const t = pick(ts); const xa = cell(a, t, metric), xb = cell(b, t, metric); d.push(mean(xb.map(() => pick(xb))) - mean(xa.map(() => pick(xa)))); }
     boots.push(mean(d));
   }
-  boots.sort((x, y) => x - y);
+  const ci = percentileCI(boots) ?? [NaN, NaN]; // A-6: phân vị 2,5 % / 97,5 % nội suy, không còn floor(0,975·n)
   let extreme = 0; const P = 10000;
-  for (let i = 0; i < P; i++) { const m = mean(deltas.map((d) => (rnd() < 0.5 ? -d : d))); if (Math.abs(m) >= Math.abs(est) - 1e-12) extreme++; }
-  return { n: ts.length, est, lo: boots[Math.floor(0.025 * boots.length)], hi: boots[Math.floor(0.975 * boots.length)], p: extreme / P, deltas: Object.fromEntries(ts.map((t, i) => [t, deltas[i]])) };
+  for (let i = 0; i < P; i++) { const m = mean(deltas.map((d) => (rng() < 0.5 ? -d : d))); if (Math.abs(m) >= Math.abs(est) - 1e-12) extreme++; }
+  return { n: ts.length, est, lo: ci[0], hi: ci[1], p: extreme / P, deltas: Object.fromEntries(ts.map((t, i) => [t, deltas[i]])) };
 }
 const catOf = Object.fromEntries(R.map((r) => [r.task, r.category]));
 // SR-05: `size` lấy từ task.json (định nghĩa mới, có sizeBasis); --legacy-rng giữ `size` ghi trong dòng chạy để tái lập số cũ (D7).
@@ -103,13 +111,25 @@ const inCats = (...c) => (t) => c.includes(catOf[t]);
 
 // ---------- hypotheses ----------
 const H = [];
-const verdict = (ok, unknown) => (unknown ? 'insufficient data' : ok ? 'SUPPORTED' : 'not supported');
+// A-4 (K2): 'not supported' tách hai nghĩa: bác bỏ (CI nằm hẳn ngoài vùng ủng hộ/biên) và không kết luận (gồm suy biến). Giữ tiền tố 'not supported' cho mã đọc cũ.
+// `degenerate` (T-1/B-1, §2.5 (c)): phân phối suy biến, không bao giờ SUPPORTED, kể cả khi `ok` đúng.
+const verdict = (ok, unknown, { refuted = false, degenerate = false } = {}) => {
+  if (unknown) return 'insufficient data';
+  if (degenerate && !refuted) return `not supported — ${DEGENERATE_LABEL}`;
+  if (ok && !degenerate) return 'SUPPORTED';
+  if (LEGACY) return 'not supported'; // --legacy-rng tái lập nhãn cũ
+  return refuted ? 'not supported — bác bỏ (CI hẳn ngoài vùng ủng hộ/biên)' : 'not supported — không kết luận';
+};
 const fp = (x) => (x == null || !Number.isFinite(x) ? 'NA' : x < 1e-3 ? x.toExponential(2) : x.toFixed(4));
 const cellsOf = (a, b, ts, metric = 'score') => ts.map((t) => ({ task: t, a: cell(a, t, metric), b: cell(b, t, metric) })).filter((c) => c.a.length && c.b.length);
 const HOLM_ALPHA = 0.025;
 const EPS = 1e-12;
 
 // SR-26/SR-04/SR-12: phép kiểm của H2, H3, H6 và họ Holm {H3, H6}. Mọi hàm có hạt riêng, không đụng `rnd` chung.
+const H7_MIN_RUNS = 5; // P:174
+const sizeFilter = (t) => ['coding', 'design'].includes(catOf[t]) && sizeOf[t] >= 3; // lọc cũ của H1 (SR-05), chỉ cho độ nhạy và --legacy-rng
+const H1_TASKS = ['c3', 'c4', 'c5', 'r1']; // P:181: tiền tố mã bài (c3-shop-bugs, …)
+const inH1 = (t) => H1_TASKS.some((id) => t === id || t.startsWith(`${id}-`));
 const H6_TASKS = ['l1-modules', 'l2-chain', 't1-duration', 't2-orders', 't3-api', 't4-perf', 't5-logq']; // §2.5 (a)
 const H6_MARGIN = 0.05;
 const h6 = (() => {
@@ -123,7 +143,11 @@ const h6 = (() => {
   const comb = h6Combine(per.A1.res, per.A2.res);
   const nOk = per.A1.kept.length >= 3 && per.A2.kept.length >= 3;
   const equiv = ['A1', 'A2'].every((a) => per[a].tost.equivalent); // SR-12: cả hai arm khai báo phải nằm trong biên, không `.some()`
-  return { per, comb, nOk, equiv, pMin: comb.p == null ? null : 1 / (comb.B + 1) };
+  // C-2 (K2): nhãn H6 lấy từ h6Combine (label/supported) kết hợp tost.equivalent (CI hai tầng); suy biến ở bootP HOẶC tost ⇒ không kết luận (T-1).
+  const degenerate = comb.degenerate || ['A1', 'A2'].some((a) => per[a].tost.degenerate);
+  const refuted = comb.label === 'Bác bỏ' || ['A1', 'A2'].some((a) => per[a].tost.label === 'Bác bỏ');
+  const supported = comb.supported && equiv && !degenerate;
+  return { per, comb, nOk, equiv, degenerate, refuted, supported, pMin: comb.p == null ? null : 1 / (comb.B + 1) };
 })();
 const h3 = (() => {
   const s1 = tasks.filter((t) => t.startsWith('s1'));
@@ -133,8 +157,9 @@ const h3 = (() => {
   const rec = permTwoSample(pool(REF, 'recall'), pool(TREAT, 'recall'), { shift: -0.15 });
   const prec = permTwoSample(pool(REF, 'precision'), pool(TREAT, 'precision'), { shift: 0.05 });
   const nTasks = tasks.filter(inCats('review')).length;
-  const have = rec.N > 0 && prec.N > 0 && nTasks >= MIN_TASKS; // SR-11: < 3 bài review ⇒ insufficient data, ra khỏi họ Holm
-  const haveData = rec.N > 0 && prec.N > 0;
+  // P-1 (K2): H3 đăng ký đúng 1 bài (s1, P:100, :170); cổng ≥ 3 bài chỉ đăng ký cho H6 và H7, nên không áp ở đây. Chỉ cần có dữ liệu hai phía.
+  const have = rec.N > 0 && prec.N > 0;
+  const haveData = have;
   const droppedPrec = runsOf(REF) + runsOf(TREAT) - pool(REF, 'precision').length - pool(TREAT, 'precision').length;
   return { rec, prec, have, haveData, nTasks, p: have ? Math.max(rec.p, prec.p) : null, pMin: have ? Math.max(rec.pMin, prec.pMin) : null, droppedPrec };
 })();
@@ -156,14 +181,17 @@ const holm = (() => {
 })();
 const holmTxt = (m) => (m ? `p=${fp(m.p)}, p_min=${fp(m.pMin)}, confirmable=${m.confirmable ? 'có' : 'không'} (ngưỡng p_min ≤ ${fp(HOLM_ALPHA / holm.K)}), Holm ${m.rejected ? 'bác bỏ H0' : 'không bác bỏ'}` : 'ngoài họ Holm (ước lượng)');
 {
-  const c = compare(BASE, TREAT, { filter: (t) => ['coding', 'design'].includes(catOf[t]) && sizeOf[t] >= 3 });
-  H.push(['H1', `Decomposable work (coding/design, size>=3): ${TREAT} - ${BASE}`, `${pp(c.est)} [${pp(c.lo)}, ${pp(c.hi)}], p=${f(c.p, 3)}, tasks=${c.n}`, verdict(c.est >= 0.1 && c.lo > 0, c.n < MIN_TASKS)]);
+  // A-2 (K2): danh sách bài H1 đăng ký cố định (P:181), không đổi theo `size` đọc sau dữ liệu; lọc `size ≥ 3` cũ chỉ ở mục độ nhạy.
+  const c = compare(BASE, TREAT, { filter: LEGACY ? sizeFilter : inH1, rng: rngFor('H1') });
+  H.push(['H1', LEGACY ? `Decomposable work (coding/design, size>=3): ${TREAT} - ${BASE}` : `Decomposable work (danh sách cố định ${H1_TASKS.join(', ')}): ${TREAT} - ${BASE}`, `${pp(c.est)} [${pp(c.lo)}, ${pp(c.hi)}], p=${f(c.p, 3)}, tasks=${c.n}`, verdict(c.est >= 0.1 && c.lo > 0, c.n < MIN_TASKS, { refuted: Number.isFinite(c.hi) && c.hi < 0.1 })]);
 }
 {
-  const c = compare(BASE, TREAT, { filter: inCats('logic') });
+  const c = compare(BASE, TREAT, { filter: inCats('logic'), rng: rngFor('H2') });
   // SR-04: phán quyết bằng cận trên CI 90 % (bootstrap hai tầng, hạt riêng) ≤ +0,05, không bằng ước lượng điểm.
   const t = tost(cellsOf(BASE, TREAT, tasks.filter(inCats('logic'))), { margin: 0.05 });
-  H.push(['H2', `Coupled reasoning (logic) is not better: ${TREAT} - ${BASE} (90% CI upper bound ≤ +5 pp)`, `${pp(c.est)} [${pp(c.lo)}, ${pp(c.hi)}], p=${f(c.p, 3)}, tasks=${c.n}; TOST90 [${pp(t.lo90)}, ${pp(t.hi90)}]`, verdict(t.hi90 <= 0.05 + EPS, c.n < MIN_TASKS)]);
+  H.push(['H2', `Coupled reasoning (logic) is not better: ${TREAT} - ${BASE} (90% CI upper bound ≤ +5 pp)`, `${pp(c.est)} [${pp(c.lo)}, ${pp(c.hi)}], p=${f(c.p, 3)}, tasks=${c.n}; TOST90 [${pp(t.lo90)}, ${pp(t.hi90)}]${t.degenerate ? ` — ${DEGENERATE_LABEL}` : ''}`,
+    // T-1: phân phối suy biến (kể cả NaN, Δ = 0 do trần) không bao giờ SUPPORTED. Bác bỏ = CI 90 % hẳn trên +0,05 (B0 hơn).
+    verdict(Number.isFinite(t.hi90) && t.hi90 <= 0.05 + EPS, c.n < MIN_TASKS, { degenerate: t.degenerate, refuted: Number.isFinite(t.lo90) && t.lo90 > 0.05 + EPS })]);
 }
 {
   const s = tasks.filter(inCats('review'));
@@ -176,20 +204,19 @@ const holmTxt = (m) => (m ? `p=${fp(m.p)}, p_min=${fp(m.pMin)}, confirmable=${m.
     if (!a.length || !b.length) return [NaN, NaN];
     const r = mulberry32(seed), bs = [];
     for (let i = 0; i < 4000; i++) bs.push(mean(b.map(() => b[Math.floor(r() * b.length)])) - mean(a.map(() => a[Math.floor(r() * a.length)])));
-    bs.sort((x, y) => x - y);
-    return [bs[Math.floor(0.025 * bs.length)], bs[Math.floor(0.975 * bs.length)]];
+    return percentileCI(bs) ?? [NaN, NaN]; // A-6
   };
   const one = (a, b) => ['recall', 'precision'].map((k, i) => { const [lo, hi] = ciOf(fin(a, k), fin(b, k), SEED + 31 + i); return `${k} ${pp(mean(fin(b, k)) - mean(fin(a, k)))} [${pp(lo)}, ${pp(hi)}]`; }).join(', ');
   const lines = [[REF, TREAT], ...(isolated ? [[BASE, TREAT]] : [])].map(([a, b]) => `${b} vs ${a}: ${one(a, b)}`);
   // SR-26: hoán vị hai mẫu chính xác trên s1; recall dịch −0,15, precision dịch +0,05, p = max.
   const m3 = holm.byId.H3;
-  const permTxt = h3.haveData ? `s1 (${TREAT} vs ${REF}): recall p=${fp(h3.rec.p)} (N=${h3.rec.N}), precision p=${fp(h3.prec.p)} (N=${h3.prec.N}, bỏ ${h3.droppedPrec} lượt precision NaN); ${holmTxt(m3)}${h3.have ? '' : ` — chỉ ${h3.nTasks} bài review (< ${MIN_TASKS}), không phán (SR-11)`}` : 's1 chưa đủ dữ liệu cho hoán vị';
+  const permTxt = h3.haveData ? `s1 (${TREAT} vs ${REF}): recall p=${fp(h3.rec.p)} (N=${h3.rec.N}), precision p=${fp(h3.prec.p)} (N=${h3.prec.N}, bỏ ${h3.droppedPrec} lượt precision NaN); ${holmTxt(m3)}; ${h3.nTasks} bài review (H3 đăng ký 1 bài s1, không áp cổng ≥ ${MIN_TASKS} bài, P-1)` : 's1 chưa đủ dữ liệu cho hoán vị';
   const label = isolated ? 'Review raises seeded-issue recall without hurting precision (B0 vs B2: review tắt)' : `Seeded-issue recall/precision of ${TREAT} vs ${BASE} (B2 vắng nên KHÔNG cô lập hiệu ứng review; SR-10)`;
-  H.push(['H3', `${label} (exact two-sample permutation, s1, margins recall −0.15 / precision +0.05)`, `${lines.join('; ') || 'n/a'}; ${permTxt}`, h3.have ? verdict(m3.confirmed, false) + (m3.confirmable ? '' : ' (p_min > ngưỡng: không xác nhận được)') : 'insufficient data']);
+  H.push(['H3', `${label} (exact two-sample permutation, s1, margins recall −0.15 / precision +0.05)`, `${lines.join('; ') || 'n/a'}; ${permTxt}`, h3.have ? (m3.confirmable ? verdict(m3.confirmed, false) : (m3.confirmed ? 'SUPPORTED' : 'not supported') + ' (p_min > ngưỡng: không xác nhận được)') : 'insufficient data']);
 }
 {
-  const c = compare(BASE, TREAT, { filter: inCats('requirements') });
-  H.push(['H4', 'Planted-ambiguity detection (requirements)', `${pp(c.est)} [${pp(c.lo)}, ${pp(c.hi)}], tasks=${c.n}`, verdict(c.est >= 0.2, c.n < MIN_TASKS)]);
+  const c = compare(BASE, TREAT, { filter: inCats('requirements'), rng: rngFor('H4') });
+  H.push(['H4', 'Planted-ambiguity detection (requirements)', `${pp(c.est)} [${pp(c.lo)}, ${pp(c.hi)}], tasks=${c.n}`, verdict(c.est >= 0.2, c.n < MIN_TASKS, { refuted: Number.isFinite(c.hi) && c.hi < 0.2 })]);
 }
 {
   const ratio = (metric) => tasks.map((t) => median(cell(TREAT, t, metric)) / median(cell(BASE, t, metric)));
@@ -201,29 +228,33 @@ const holmTxt = (m) => (m ? `p=${fp(m.p)}, p_min=${fp(m.pMin)}, confirmable=${m.
   H.push(['H5', `Cost ratio ${TREAT}/${BASE}`, `weighted tokens median x${f(median(tr), 1)}, wall time median x${f(median(wr), 1)}; tasks meeting both thresholds ${(share * 100).toFixed(0)}%`, verdict(share >= 0.8, !tr.length)]);
 }
 {
-  const parts = ['A1', 'A2'].filter((a) => arms.includes(a)).map((a) => { const c = compare(a, TREAT); return { a, c }; });
+  const parts = ['A1', 'A2'].filter((a) => arms.includes(a)).map((a) => { const c = compare(a, TREAT, { rng: rngFor(`H6-${a}`) }); return { a, c }; });
   const txt = parts.map(({ a, c }) => `${TREAT} - ${a}: ${pp(c.est)} [${pp(c.lo)}, ${pp(c.hi)}]`).join('; ');
   // SR-04/SR-12/SR-26: phán quyết bằng TOST CI 90 % trên tập bài khai báo sau khi loại bài chạm trần; cả A1 và A2 phải nằm trong ±0,05.
   const tokRatio = (a) => mean(R.filter((r) => r.arm === a).map((r) => r.tokens?.weighted ?? 0)) / mean(R.filter((r) => r.arm === TREAT).map((r) => r.tokens?.weighted ?? 0));
   const armTxt = (a) => { const x = h6.per[a]; return `${a}: n=${x.kept.length}, bỏ trần [${x.res.ceilingTasks.join(', ') || 'không'}], TOST90 [${pp(x.tost.lo90)}, ${pp(x.tost.hi90)}]${x.tost.equivalent ? ' trong biên' : ' ngoài biên'}`; };
-  const confirmTxt = `tập khai báo: ${armTxt('A1')}; ${armTxt('A2')}; token có trọng số A2/${TREAT} x${f(tokRatio('A2'))}, A1/${TREAT} x${f(tokRatio('A1'))} (mọi bài); bootstrap ${h6.comb.verdict}: ${holmTxt(holm.byId.H6)}`;
-  const unknown = !parts.length || !h6.nOk;
-  H.push(['H6', 'Compute-matched single agent matches CCoding (null); both A1 and A2 within ±5 pp (TOST 90% CI)', `${txt || 'needs arms A1/A2'} (mọi bài, mô tả); ${confirmTxt}`, verdict(h6.equiv, unknown)]);
+  const confirmTxt = `tập khai báo: ${armTxt('A1')}; ${armTxt('A2')}; token có trọng số A2/${TREAT} x${f(tokRatio('A2'))}, A1/${TREAT} x${f(tokRatio('A1'))} (mọi bài); bootstrap ${h6.comb.label} (${h6.per.A1.res.ciNote}): ${holmTxt(holm.byId.H6)}${h6.degenerate ? ` — ${DEGENERATE_LABEL}` : ''}`;
+  const unknown = !parts.length || !h6.nOk || h6.comb.verdict === 'estimate';
+  // N-2 M-1 (§2.4): xác nhận = qua phép kiểm mức Holm VÀ CI vượt biên. H6 trong họ Holm thì phải `confirmed`; ngoài họ (ước lượng) thì chỉ CI, và đã là 'insufficient data' ở trên.
+  const h6Holm = holm.byId.H6 ? holm.byId.H6.confirmed : true;
+  H.push(['H6', 'Compute-matched single agent matches CCoding (null); both A1 and A2 within ±5 pp (TOST 90% CI)', `${txt || 'needs arms A1/A2'} (mọi bài, mô tả); ${confirmTxt}`, verdict(h6.supported && h6Holm, unknown, { degenerate: h6.degenerate, refuted: h6.refuted })]);
 }
 {
-  // SR-14: phương sai gộp theo bài (trọng số n−1), không bỏ bài có sd(A0) = 0; CI bootstrap theo bài. Trung vị tỉ số SD cũ chỉ để đối chiếu.
-  const ts = tasks.filter((t) => cell(BASE, t).length > 1 && cell(TREAT, t).length > 1);
+  // A-1 (K2): cổng của H7 đăng ký (P:174): r ≥ 5 mỗi ô và ≥ 3 bài. SR-14 (sd gộp theo bài, trọng số n−1) giữ làm phép kiểm chính nhưng
+  // sd gộp mẫu số = 0 (0/0 hoặc a/0) hay sd gộp treatment = 0 (trần che hết biến thiên) ⇒ suy biến, không SUPPORTED, không quy ước 0/0 := 1.
+  // Phép cũ (>1 lượt, 0/0 := 1, trung vị tỉ số SD theo bài) chỉ ở mục độ nhạy (V4-K2-1).
+  const ts = tasks.filter((t) => cell(BASE, t).length >= H7_MIN_RUNS && cell(TREAT, t).length >= H7_MIN_RUNS);
   const pooled = (set, arm) => { let ss = 0, df = 0; for (const t of set) { const x = cell(arm, t); ss += sd(x) ** 2 * (x.length - 1); df += x.length - 1; } return df ? Math.sqrt(ss / df) : NaN; };
-  const ratioOf = (set) => { const a = pooled(set, BASE), b = pooled(set, TREAT); return a > 0 ? b / a : (b === 0 ? 1 : Infinity); }; // sd gộp của A0 = 0 mà treatment dao động ⇒ vô hạn (kém ổn định hơn), không bỏ
-  const est = ratioOf(ts);
+  const ratioOf = (set) => { const a = pooled(set, BASE), b = pooled(set, TREAT); return a > 0 ? b / a : NaN; };
+  const sdA = pooled(ts, BASE), sdB = pooled(ts, TREAT);
+  const degenerate = ts.length >= MIN_TASKS && !(sdA > 0 && sdB > 0);
+  const est = degenerate ? NaN : sdB / sdA;
   const rb = mulberry32(SEED + 71), boots = [];
-  for (let i = 0; i < 4000 && ts.length; i++) { const v = ratioOf(ts.map(() => ts[Math.floor(rb() * ts.length)])); if (!Number.isNaN(v)) boots.push(v); }
-  boots.sort((x, y) => x - y);
-  const lo = boots.length ? boots[Math.floor(0.025 * boots.length)] : NaN, hi = boots.length ? boots[Math.floor(0.975 * boots.length)] : NaN;
-  const fr = (x) => (x === Infinity ? '∞' : f(x));
-  const old = tasks.map((t) => { const a = sd(cell(BASE, t)), b = sd(cell(TREAT, t)); return a > 0 ? b / a : (b === 0 ? 1 : NaN); }).filter(Number.isFinite);
+  for (let i = 0; i < 4000 && ts.length; i++) { const v = ratioOf(ts.map(() => ts[Math.floor(rb() * ts.length)])); if (Number.isFinite(v)) boots.push(v); }
+  const ci = percentileCI(boots) ?? [NaN, NaN], lo = ci[0], hi = ci[1]; // A-6
   const zero = ts.filter((t) => sd(cell(BASE, t)) === 0).length;
-  H.push(['H7', 'Run-to-run stability (pooled SD ratio treatment/baseline, per-task variance pooled)', `pooled SD ratio ${fr(est)} [${fr(lo)}, ${fr(hi)}] over ${ts.length} tasks (${zero} có sd(${BASE}) = 0, vẫn tính); median per-task ratio cũ ${f(median(old))} over ${old.length}`, verdict(est <= 0.7, ts.length < MIN_TASKS || Number.isNaN(est))]);
+  const excl = tasks.length - ts.length;
+  H.push(['H7', 'Run-to-run stability (pooled SD ratio treatment/baseline, per-task variance pooled; r ≥ 5 và ≥ 3 bài, P:174)', degenerate ? `pooled SD ${BASE} = ${f(sdA, 3)}, ${TREAT} = ${f(sdB, 3)} over ${ts.length} tasks — ${DEGENERATE_LABEL} (không báo tỉ số); ${excl} bài loại vì r < ${H7_MIN_RUNS}` : `pooled SD ratio ${f(est)} [${f(lo)}, ${f(hi)}] over ${ts.length} tasks (${zero} có sd(${BASE}) = 0); ${excl} bài loại vì r < ${H7_MIN_RUNS}`, verdict(est <= 0.7, ts.length < MIN_TASKS, { degenerate })]);
 }
 {
   // SR-13: chỉ số điều phối đúng nghĩa, cặp theo bài (D2): `untouchedFileFailures` (test trượt thuộc tệp agent không sửa) và `redAtEnd` (lệnh kiểm còn đỏ khi kết thúc).
@@ -242,23 +273,26 @@ const holmTxt = (m) => (m ? `p=${fp(m.p)}, p_min=${fp(m.pMin)}, confirmable=${m.
 }
 {
   const s = tasks.filter(inCats('research'));
+  // A-3 (K2): grader mới chỉ ghi `citationValidity`; đọc qua citationValidityOf (alias `citationPrecision` cho dữ liệu cũ). NaN ⇒ insufficient data, không rơi im lặng về not supported.
+  const cv = (arm) => mean(R.filter((r) => r.arm === arm && s.includes(r.task)).map((r) => citationValidityOf(r.details)).filter((v) => v != null).map(Number).filter(Number.isFinite));
   const m = (arm, k) => mean(s.flatMap((t) => cell(arm, t, `detail:${k}`).map(Number)));
-  const dP = m(TREAT, 'citationPrecision') - m(BASE, 'citationPrecision');
+  const dP = cv(TREAT) - cv(BASE);
   const dR = m(TREAT, 'correctRefusal') - m(BASE, 'correctRefusal');
-  H.push(['H9', 'Grounding: citation precision and correct refusal', `citation precision ${pp(dP)}, correct refusal ${pp(dR)}`, verdict(dP >= 0.1 && dR >= 0.1, s.length < MIN_TASKS)]);
+  H.push(['H9', 'Grounding: citation precision and correct refusal', `citation precision ${pp(dP)}, correct refusal ${pp(dR)}`, verdict(dP >= 0.1 && dR >= 0.1, s.length < MIN_TASKS || !Number.isFinite(dP) || !Number.isFinite(dR))]);
 }
 {
-  const c = compare(BASE, TREAT);
+  const r10 = rngFor('H10');
+  const c = compare(BASE, TREAT, { rng: r10 });
   const pts = Object.entries(c.deltas ?? {}).map(([t, d]) => [sizeOf[t], d]);
   const slope = (p) => { const mx = mean(p.map((x) => x[0])), my = mean(p.map((x) => x[1])); const num = p.reduce((s, [x, y]) => s + (x - mx) * (y - my), 0), den = p.reduce((s, [x]) => s + (x - mx) ** 2, 0); return den ? num / den : NaN; };
   const b = slope(pts); let ext = 0; const P = 5000;
-  for (let i = 0; i < P; i++) { const ys = LEGACY ? pts.map((x) => x[1]).sort(() => rnd() - 0.5) : fisherYates(pts.map((x) => x[1]), rnd); if (Math.abs(slope(pts.map((x, j) => [x[0], ys[j]]))) >= Math.abs(b)) ext++; }
+  for (let i = 0; i < P; i++) { const ys = LEGACY ? pts.map((x) => x[1]).sort(() => r10() - 0.5) : fisherYates(pts.map((x) => x[1]), r10); if (Math.abs(slope(pts.map((x, j) => [x[0], ys[j]]))) >= Math.abs(b)) ext++; }
   H.push(['H10', 'Advantage grows with task size (slope of delta vs parts)', `slope ${pp(b)} per extra part, permutation p=${f(ext / P, 3)}, tasks=${pts.length}`, verdict(b > 0 && ext / P < 0.05, pts.length < MIN_TASKS || pts.length < 4)]);
 }
 
 // SR-05 (i, ii): độ dốc H10 chỉ trong coding và độ dốc điều chỉnh loại bài (trừ trung bình theo loại ở cả size và delta), CI bootstrap theo bài.
 {
-  const c = compare(BASE, TREAT);
+  const c = compare(BASE, TREAT, { rng: rngFor('H10-adj') });
   const pts = Object.entries(c.deltas ?? {}).map(([t, d]) => ({ x: sizeOf[t], y: d, cat: catOf[t] }));
   const ols = (p) => { const mx = mean(p.map((q) => q.x)), my = mean(p.map((q) => q.y)); const den = p.reduce((a, q) => a + (q.x - mx) ** 2, 0); return den ? p.reduce((a, q) => a + (q.x - mx) * (q.y - my), 0) / den : NaN; };
   const within = (p) => { // độ dốc gộp trong loại: Σx̃ỹ / Σx̃²
@@ -269,8 +303,7 @@ const holmTxt = (m) => (m ? `p=${fp(m.p)}, p_min=${fp(m.pMin)}, confirmable=${m.
   const bootSlope = (p, fn, seed) => {
     const r = mulberry32(seed), bs = [];
     for (let i = 0; i < 4000 && p.length; i++) { const v = fn(p.map(() => p[Math.floor(r() * p.length)])); if (Number.isFinite(v)) bs.push(v); }
-    bs.sort((a, b) => a - b);
-    return bs.length ? [bs[Math.floor(0.025 * bs.length)], bs[Math.floor(0.975 * bs.length)]] : [NaN, NaN];
+    return percentileCI(bs) ?? [NaN, NaN]; // A-6
   };
   for (const [id, label, p, fn, seed] of [
     ['H10-coding', 'Slope of delta vs size, coding tasks only', pts.filter((q) => q.cat === 'coding'), ols, SEED + 91],
@@ -293,8 +326,9 @@ for (const [id, desc, names, opts] of [
 ]) {
   const cells = cellsOf(BASE, TREAT, names.filter((t) => tasks.includes(t)));
   const r = permStratified(cells, opts);
-  const txt = r.n ? `T=${pp(r.tObs)}, p=${fp(r.p)}, p_min=${fp(r.pMin)}, bài=${r.n}, ${r.exact ? 'liệt kê đủ' : 'Monte Carlo'} (${r.nPerm}), confirmable=${confirmable(r.pMin, HOLM_ALPHA / 2) ? 'có' : 'không'} (ngưỡng 0,0125)${r.skipped.length ? `, bỏ [${r.skipped.join(', ')}]` : ''}` : 'chưa có bài nào đủ lượt cả hai arm';
-  H.push([id, desc, txt, 'dự kiến, chưa khóa (§2.6)']);
+  const txt = r.n ? `T=${pp(r.tObs)}, p=${fp(r.p)}, p_min=${fp(r.pMin)}, bài=${r.n}, ${r.exact ? 'liệt kê đủ' : 'Monte Carlo'} (${r.nPerm}), confirmable=${confirmable(r.pMin, HOLM_ALPHA / 2) ? 'có' : 'không'} (ngưỡng 0,0125)${r.skipped.length ? `, bỏ [${r.skipped.join(', ')}]` : ''}${r.ceilingTasks?.length ? `, bỏ trần [${r.ceilingTasks.join(', ')}]` : ''}${r.degenerate ? ` — ${r.label ?? DEGENERATE_LABEL}` : ''}` : 'chưa có bài nào đủ lượt cả hai arm';
+  // S-1: quy tắc trần/suy biến cho margin ≠ 0 là bảo thủ (loại bài trần rồi kiểm suy biến), CHỜ Phòng Nghiên cứu đăng ký trước khi khóa H1′/H2′.
+  H.push([id, desc, txt, 'dự kiến, chưa khóa (§2.6); quy tắc trần/suy biến bảo thủ chờ đăng ký (S-1)']);
 }
 // SR-04: B-01 (làn đơn so với BASE), mỗi đại lượng một TOST trên log-tỉ số, biên [0,85; 1,15], t1–t5.
 {
@@ -302,11 +336,41 @@ for (const [id, desc, names, opts] of [
   const t15 = tasks.filter((t) => /^t[1-5]-/.test(t));
   for (const [id, label, metric] of [['B-01a', 'token có trọng số', 'weighted'], ['B-01b', 'thời gian thực', 'wallSec'], ['B-01c', 'điểm tương đối', 'score']]) {
     const cells = arms.includes(B01) ? cellsOf(BASE, B01, t15, metric) : [];
-    const t = tost(cells, { margin: Math.log(1.15), scale: 'logratio' });
+    // T-2: thống kê = TRUNG BÌNH THEO BÀI của ln(tỉ số) (P:80, prereg-tests.mjs). T-3/T-6: (c) bỏ bài trần ≥ 0,99 ở cả hai arm; mọi đại lượng cần ≥ 3 bài. T-1/T-5: suy biến/NaN ⇒ không kết luận.
+    const t = tost(cells, { margin: Math.log(1.15), scale: 'logratio', minTasks: MIN_TASKS, ...(metric === 'score' ? { ceil: 0.99 } : {}) });
     const lo = Math.exp(t.lo90), hi = Math.exp(t.hi90);
-    H.push([id, `${label}: ${B01}/${BASE} trong [0,85; 1,15] (TOST 90% CI, log-tỉ số)`, cells.length ? `R=${f(Math.exp(t.est), 3)} [${f(lo, 3)}, ${f(hi, 3)}], bài=${cells.length}` : `không có dữ liệu ${B01} trên t1–t5`, verdict(lo >= 0.85 - EPS && hi <= 1.15 + EPS, !cells.length)]);
+    const finite = Number.isFinite(lo) && Number.isFinite(hi);
+    const inside = finite && lo >= 0.85 - EPS && hi <= 1.15 + EPS;
+    const refuted = finite && (lo > 1.15 + EPS || hi < 0.85 - EPS);
+    const unknown = !cells.length || (!t.degenerate && !finite);
+    const txt = !cells.length ? `không có dữ liệu ${B01} trên t1–t5` : `R=${f(Math.exp(t.est), 3)} [${f(lo, 3)}, ${f(hi, 3)}], bài=${t.n}${t.ceilingTasks.length ? `, bỏ trần [${t.ceilingTasks.join(', ')}]` : ''} — ${t.label}`;
+    H.push([id, `${label}: ${B01}/${BASE} trong [0,85; 1,15] (TOST 90% CI, trung bình theo bài của log-tỉ số)`, txt, verdict(inside, unknown, { degenerate: t.degenerate, refuted })]);
   }
 }
+
+// ---------- độ nhạy (không dùng để phán quyết) ----------
+// A-1 (V4-K2-1), A-2, A-5 (K2): giữ cách cũ làm dòng đối chiếu: lọc size ≥ 3 cho H1, H7 cũ (>1 lượt, 0/0 := 1), luồng chung cũ `rnd` cho compare/hoán vị theo đúng thứ tự gọi cũ.
+const SENS = [];
+{
+  const old = mulberry32(SEED);
+  const cmp = (a, b, o) => compare(a, b, { ...o, rng: old });
+  const fmt = (c) => (c.n ? `${pp(c.est)} [${pp(c.lo)}, ${pp(c.hi)}], p=${f(c.p, 3)}, tasks=${c.n}` : 'n/a');
+  const c1 = cmp(BASE, TREAT, { filter: sizeFilter });
+  const c2 = cmp(BASE, TREAT, { filter: inCats('logic') });
+  const c4 = cmp(BASE, TREAT, { filter: inCats('requirements') });
+  const c6 = ['A1', 'A2'].filter((a) => arms.includes(a)).map((a) => `${TREAT} - ${a}: ${fmt(cmp(a, TREAT, {}))}`);
+  const c10 = cmp(BASE, TREAT, {});
+  SENS.push(['H1 (độ nhạy)', 'lọc cũ coding/design size ≥ 3 (SR-05) + luồng chung cũ', fmt(c1)]);
+  SENS.push(['H2/H4/H6/H10 (độ nhạy)', 'luồng chung cũ, đúng thứ tự gọi cũ (H1, H2, H4, H6, H10)', `H2 ${fmt(c2)}; H4 ${fmt(c4)}; H6 ${c6.join('; ') || 'n/a'}; H10 delta ${fmt(c10)}`]);
+  const ts = tasks.filter((t) => cell(BASE, t).length > 1 && cell(TREAT, t).length > 1);
+  const pooled = (set, arm) => { let ss = 0, df = 0; for (const t of set) { const x = cell(arm, t); ss += sd(x) ** 2 * (x.length - 1); df += x.length - 1; } return df ? Math.sqrt(ss / df) : NaN; };
+  const a = pooled(ts, BASE), b = pooled(ts, TREAT);
+  const ratio = a > 0 ? b / a : (b === 0 ? 1 : Infinity); // quy ước cũ 0/0 := 1
+  const perTask = tasks.map((t) => { const x = sd(cell(BASE, t)), y = sd(cell(TREAT, t)); return x > 0 ? y / x : (y === 0 ? 1 : NaN); }).filter(Number.isFinite);
+  SENS.push(['H7 (độ nhạy)', 'phép cũ: mọi bài có > 1 lượt, 0/0 := 1, không cổng r ≥ 5', `pooled SD ratio ${ratio === Infinity ? '∞' : f(ratio)} over ${ts.length} tasks; median per-task ratio ${f(median(perTask))} over ${perTask.length}; nhãn cũ ${ts.length < MIN_TASKS || Number.isNaN(ratio) ? 'insufficient data' : ratio <= 0.7 ? 'SUPPORTED' : 'not supported'}`]);
+}
+const mixedNote = has('allow-mixed-judge') ? 'CHẠY VỚI --allow-mixed-judge (A-7): số liệu chỉ để ĐỐI CHIẾU dữ liệu cũ, KHÔNG dùng cho phân tích chính; Bảng 10 phải ghi đây là số đối chiếu.' : '';
+if (mixedNote) console.warn(mixedNote);
 
 // ---------- tables ----------
 const summary = [];
@@ -334,13 +398,23 @@ Folder: \`${dir}\` - ${rows.length} runs (${leaks.length} excluded for touching 
 
 ${commitWarn}` : ''}${mixedWarn ? `
 
-${mixedWarn}` : ''}
+${mixedWarn}` : ''}${mixedNote ? `
+
+**${mixedNote}**` : ''}
 
 ## Hypotheses
 
 | ID | Test | Result | Verdict |
 | --- | --- | --- | --- |
 ${H.map((h) => `| ${h.join(' | ')} |`).join('\n')}
+
+Nhãn: \`not supported — bác bỏ\` = CI hẳn ngoài vùng ủng hộ/biên; \`not supported — không kết luận\` (gồm suy biến) KHÔNG phải bác bỏ (A-4). H1′/H2′ dùng quy tắc trần/suy biến bảo thủ CHỜ Phòng Nghiên cứu đăng ký (S-1).
+
+## Độ nhạy (cách cũ, chỉ đối chiếu; không phán quyết)
+
+| ID | Cách cũ | Kết quả |
+| --- | --- | --- |
+${SENS.map((h) => `| ${h.join(' | ')} |`).join('\n')}
 
 ## Mean score by category
 
