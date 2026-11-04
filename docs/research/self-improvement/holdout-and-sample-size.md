@@ -54,21 +54,23 @@ Kiểm: `git log -- bench/vs-claude/tasks`, `grep` tên bài trong `improvement-
 
 Lệnh: `node docs/research/self-improvement/holdout-sample-size.mjs --hash` → exit 0. 10 dòng "có" được chép vào `holdout-lock.json`.
 
+**Khóa lại 4/11/2026:** bảng dưới là hash sau khi khóa lại cho nội dung tại `902fc78` (D11 sửa `task.json` và `hidden/`); hash cũ, lý do và biên bản rà diff ở `holdout-relock-2026-11-04.md` và `preregistration.md` §9. Cỡ mẫu §4 không đổi.
+
 | Bài | Trong bộ giữ lại | sha256 task.json | Số tệp ẩn | sha256 thư mục hidden/ |
 | --- | ---: | ---: | ---: | ---: |
-| c1-iis-ecs | có | `cfab976b556d8d03e3b4c65f14a36419c3c3b35f194e4c8c3655fce492202deb` | 2 | `6565ca2323bc4865d2473454acaf9688182c35fe6c796ee2d8eef921b950e108` |
-| c2-burst-alert | có | `308513e6112e6d73d38ce771568a7d1316437c64870e0cca847a9d916d78cbf8` | 2 | `5277755da8e57382dd844060a24c83c41afe62d67bd18dd24564052eb0a70fc7` |
-| c3-shop-bugs | có | `723e266c61c51416e715d7e35c5a1d1a8eaa79f626b94356f49a32bbdb2b9d9a` | 4 | `77b7e695fedaa8ec1b96486be5ca951a71e7a282f3a013bed68326c8f5109494` |
-| c4-audit-chain | có | `6ac634a94400520fe25cfe48f0de5e673a3aba8c0549ba9b6b04f583653e1a28` | 2 | `dec3ef65f5b30b0103528630445d235460e019e511cee3646b0c4904f8a8a433` |
-| c5-tickets-api | có | `132988780f1f52fdcab5fad058927911b211cc6d456acc0b96e9c88c5ac9eeaf` | 2 | `2648b012cf765f509aba7004643d8cfd7bc950545b981d93ab419e0e98b7b8e1` |
-| l1-oncall | có | `59c1d04f2e1f6eec6f14619dab134fae2720569d63c3d24d3313f5b8a9903b8c` | 1 | `6dd47dfb85226e100acc7686922a600dbae8cc40c36ba29a0a6c17f1a21551c3` |
-| l2-knights | có | `9701823e9a5f5f0a7e98a7a32f8b905ca7bf6c2f1482a8e405362e144d1c5171` | 1 | `a08e8d994b0618119ed905aa7d6e54d09e7077db87306a59e4fc1fcd52e44588` |
-| l3-reconcile | có | `357593db167c54b4f307b9bb66771910bdb32ab71d857ff1a93a9a24fc055073` | 1 | `bd033ab3712ab6e5cad7373207deb4e75ebfb48172ec94c49457434331171701` |
-| l4-startup-order | có | `cf69a6939604dfd8ff06480b90aa4f4da693d98a0c107393c24e20ac367e0580` | 1 | `25d0003e3e422de9bfd3340f43bc926a2d9c46f4ec87b33612f1d21ddf224b31` |
-| s1-sec-review | có | `8c5f1505c2b8747c91b8f20d657ed0e8d821d5d1ea9a4bcc822d2172cdef1b02` | 2 | `278257718ce3da6a4c31b24cff68ad42d550432a4c1de9b94a557bd274614540` |
-| a1-ambiguous-spec | không (loại, §1) | `816faacafbdeecd76f5e50b2d86b8f330411279961caeb4b638ab255a9eea57a` | 2 | `e485ae20ed85244435b66edfb02d630c2bf01fd60574543c411b18e2efcae569` |
-| r1-elk-design | không (loại, §1) | `d02c4171e1959913708fbb140c85e2b4dff07f51342d437cab8d63e4f11ef218` | 2 | `b2632723fd1695f643d8a87c49bb8b202334d4e6e06d898f0cd541bf1d2f1532` |
-| re1-lit-synthesis | không (loại, §1) | `1b2733539d3b548e3b44b97ed43ef4c7693db37d27b5b0820b0e4a3690b4838e` | 2 | `75ed1d692b2dd3314cdc87bf4654eb3b8974e4b2ea70585e46c186ace9ecf150` |
+| c1-iis-ecs | có | `0b878cf3081732ba173fedbefd6a209c88a82a56960346044cbfed3133fd8326` | 4 | `58f1b5649426a3820077452832626c5020b6754447e0a6851d585e37061435a1` |
+| c2-burst-alert | có | `8c2221aa9634f1759a8eca7fe74e97dc6bc35a37f44e93803342b452d8d0d907` | 4 | `28078504768236aee575f5151422f05ddcd8ca0f1037b1b339a742f65a71899d` |
+| c3-shop-bugs | có | `2049df7b1f04c693938f878024aa32605ebfc8d3faaf7d0a81469a555e97bb7d` | 6 | `ab8263012fdebd231564d6bc7a42455b1fed5365d49ab619acd20cfb5246ba9d` |
+| c4-audit-chain | có | `1f47afff670612613808a4ae0b4f0567a201972eeb65ff38c47e4e5fc0fcd7fe` | 4 | `1712f4a0fe429f795a215fcab8d2922765325a49e0195972f16b8409960d2e4e` |
+| c5-tickets-api | có | `dfbdeff29a3ea4a64a3ad0a7e7a09d889613a7ae6792f1b5842e116018f7a308` | 4 | `e63d39e86bf6e198a3a25474bea4539edcb6608d5817d5c0043a591aa8b20bc5` |
+| l1-oncall | có | `1918a4bb22879aafe8a52fc708e3cf4ca8d5237b0accd0e80f85eaee3217d6ce` | 4 | `d52eb417ca1f23f08e7847a6fb9246e18d37a1c60728b6345e376c583be551a5` |
+| l2-knights | có | `03d0a9ec9486feaae46b7291cb31363381086eb295dcc2189b4b7209300de80b` | 3 | `c94b462658a19cace61ca4d3d55082a01cb382f322f5cfa42842afb5992f1c14` |
+| l3-reconcile | có | `79810448b4304a3a9ab39acb4f8f906cc41048f961c3820bb3e6649e78aff28f` | 3 | `0cf7636fc9e4112f6ef8b3b64960f413394f66f6896c3cde14c7126c81a7da54` |
+| l4-startup-order | có | `027b8cf881ca50511546a499870eb1bc8d95f6f46ae789fb7806cae45435248f` | 3 | `4f48535743cf47768caa44aee57adc128195bd3d1d57d3c49dd702296152de27` |
+| s1-sec-review | có | `2264cb3bcd8488199184c50d39fbb20235ca25c34ca58615366be29136a38e2d` | 4 | `c306f6dcbc5e0f3bb4672e0139ab8bdf059044af7ba03a2253ab9d7fa3f63f88` |
+| a1-ambiguous-spec | không (loại, §1) | `9d0f1e96dda2057d9d1ebe50eedc506f56cd3e04933f7798551417474c18f413` | 4 | `3d8ba88d5f1af35b3033755125911b2ef9e4e9916086f0943dcb2d51c91f7dd3` |
+| r1-elk-design | không (loại, §1) | `a12d5aa631cf3d4b593b9425f0f1ec44e0a39dfe75ad61f5a33285404119b087` | 4 | `af8c7073d1b7222d1a275d56e05eb7e9dd2a43edbae553d9e49202be5ecebec2` |
+| re1-lit-synthesis | không (loại, §1) | `985ab4cb02432768266e1f3ec7bbd2692a7434b5a6986b7e834e285b25860b2c` | 4 | `2a641f9f527b215a3c8fb51395137c7b88a09db87b2c25c13f2de83a273ef8d7` |
 
 Quy ước: sha256 chuẩn hóa CRLF → LF (như `prereg-tests.mjs`); hash thư mục = sha256 của các dòng `đường dẫn tương đối<TAB>sha256 tệp` sắp theo tên, mỗi dòng kết thúc bằng LF.
 

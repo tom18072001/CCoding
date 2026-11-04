@@ -5,6 +5,22 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 10 (T-20261104-110942-567, 4/11/2026): bài báo v0.5 — Bảng 10 sau thẩm định thống kê, chẩn đoán cache (E1), thí điểm cổng (E2) mô tả
+
+Căn cứ: thẩm định thống kê (`context/k2-stats-review-2026-11-04.md`), chạy ca biên (S3b), mô tả E2 (`context/k4-e2-descriptive-b14-step2-n.md`), sổ chạy `b14-diag` và `gates-pilot`. Không chạy benchmark, không sửa `src/` hay mã `bench/`. Mọi số mới có khóa trong `facts.json`.
+
+- **`paper/paper.md` (S5), v0.4 → v0.5:**
+  - **Bảng 10** viết lại, mỗi ô một nguồn số. H2: từ SUPPORTED sang "không kết luận" (+2,8 pp, TOST 90 % [0,0; +8,3 pp]; cận trên CI quyết định). H6: rút nhãn SUPPORTED, n = 0 ở A1 và A2, chưa đủ dữ liệu. H7: **không xác nhận**, không ghi SUPPORTED; tỉ số SD gộp 0,00 [0,00; 1,00] là suy biến do trần, phép kiểm đặt sau khi thấy dữ liệu, hai cách đọc ghi trong ô. H3, H4, H8, H9: nhãn mã "chưa đủ dữ liệu", kèm lý do đăng ký (H3 suy biến do trần; H4, H9 mô tả một bài; H8 đổi thước đo). Thêm 5 điểm đọc kèm, nêu nguồn chính thức (script ngoài cho B-01, H3, H5, H7; mã mới cho H2, H6, H8, H9) và hai chỗ lệch giữa hai script.
+  - **§6.2.5** thêm đoạn chẩn đoán cache: đổi bộ công cụ cho h = 0,00, đổi thư mục làm việc vẫn h = 0,98; chưa đo mức tiết kiệm; bước 2 đã được đăng ký trước.
+  - **§7.4** cập nhật B-14; thêm đoạn "Thí điểm cổng chất lượng (E2): chỉ mô tả" (q̂ 0/4 [0,00; 0,60], 0/3 [0,00; 0,71] khi bỏ 6 lượt; chi phí; 6 lượt "lỡ thấy điểm"; không câu nào về recall); mục (c) thành "Những gì chưa có".
+  - **§8.1** sửa (5) cho H6 n = 0; thêm (6) khai báo sai lệch H7 và các chỗ lệch mã–đăng ký, (7) lỡ thấy điểm; mục cũ (6) thành (8).
+  - **§9** cập nhật nhóm (b), (c); Tóm tắt VI/EN cập nhật câu về họ Holm. Đầu bài ghi tên bản v0.5.
+  - **Giữ nguyên:** Bảng 8, 9, 11–14 và toàn bộ số của §6.2.
+- **`facts.json` (S5):** thêm 27 mục `numbers` cho `paper/paper.md` (E1: 6; E2: 14; H2: 2; H7: 3; B-01 hai script: 2).
+- **Rà ẩn danh (sửa theo review):** thân bài không còn đường dẫn `docs/`, `bench/`, `AN/`, `SCF/`, mã BRIEF hay mã S2/S3; tệp nội bộ đổi thành nhãn R1–R18 và gom ở Phụ lục A (mục "Tái lập") của `paper/paper.md`. Nhãn "V-BRIEF" đổi thành "V-đầu vào". Mẫu `prereg-keys-kept` trong `facts.json` đổi theo chữ mới. Còn giữ: tên hệ CCoding (đối tượng của bài), mã backlog B-xx và mã thách thức C-xx (đã định nghĩa trong bài), đường dẫn mã `src/…` và tên script `*.mjs` — chờ Tom quyết có ẩn nốt khi nộp.
+- **Chưa làm, ghi để S6:** chạy `consistency-check.mjs` để xác nhận 27 mẫu mới và mẫu đã đổi khớp (chưa chạy được).
+- **Quy ước tên:** giữ tên arm của v0.4 (A0-sonnet = agent đơn; B0 = đủ phòng; B6 = làn nhanh; B7 = làn đơn); B7cab = làn đơn có cổng chất lượng; B7cabO = biến thể của B7cab, CTO nghiệm thu bằng Opus.
+
 ## Vòng 4, gói 6 (T-20261103-195822-b03, 3/11/2026): sửa câu lỗi thời, tách "đã sửa / đang làm ở D9 / cần đo"
 
 Căn cứ: quyết định của giám đốc 3/11 19:56 ("đã là đề tài thì phải fix hết, không để đề xuất sửa"); `BRIEF-D9.md` (`90cd913`). Không chạy benchmark, không đổi số liệu §6, không sửa `src/` hay `bench/`.
