@@ -21,3 +21,18 @@ Phân loại dữ liệu: **Nội bộ**. Bài tổng hợp, không có dữ li�
 | 12:03 | E3 xong: 6/6 lượt, exit 0, không chạm hạn mức. Kết quả ở `results/large-pilot`, sổ chạy riêng `large-pilot/RUNLOG.md`. Bắt đầu E4a |
 | 12:19 | **Đổi thứ tự** theo §9, mục "E3 xong; E5 tạm giữ" ghi lúc 12:20, trước lượt đầu của E4b, E5 và E6. Kịch bản `run3e-b.ps1` chạy nền. Khi `run3e.ps1` bắt đầu E4b, nó tạo `STOP-3e` kèm `STOP-3e.auto`, để `run3e.ps1` dừng trước E5. Sau đó nó chạy tiếp E4b (bỏ qua khóa đã xong), rồi E6a, E6b, E6c. **E5 tạm giữ**, chờ Phòng Nghiên cứu thiết kế lại và giám đốc duyệt. Tệp `STOP-3e` do giám đốc tạo vẫn dừng cả hai kịch bản |
 | 12:50 | **Giám đốc duyệt** trong phiên: (1) bước 2 của B-14, A/B `stablePrefix`, 96 lượt, local, sau E6, đúng mục đăng ký trước ở §9; (2) E5 thiết kế lại (E5′, ép làn đầy đủ, khoảng 40 lượt), local, sau E6. E5′ chỉ chạy khi mục §9 V4-3e-E5′ của BRIEF-17 đã gộp và D12 (arm `B0F`, `B1F`) đã gộp. Bước 2 chỉ chạy khi dòng hash mốc khóa đầu `results/b14-step2/RUNLOG.md` đã điền. Thứ tự dự kiến: E4 → E6 → E5′ → B-14 bước 2. Kiểm sandbox trong WSL để sau |
+
+## Nguồn p của H6 cho E6 (ghi trước lượt E6 đầu tiên, theo V4-3e-E6 (6))
+
+Ghi lúc 4/11/2026 khoảng 13:50 giờ VN. Lúc này **chưa có lượt E6 nào**, vì `run3e-b.ps1` đang chờ tệp `GO-E6`.
+
+| Mục | Giá trị |
+|---|---|
+| Bản sửa thống kê | D12 (T-20261104-123633-378), gộp vào `perf/vs-claude-loop` ở commit `57148de`. Sửa T-1 (suy biến không bao giờ cho "tương đương"), B-1 (NaN), C-2 (nhãn H6 lấy từ `h6Combine`) cùng các mục còn lại của K2 |
+| `bench/vs-claude/lib/stats.mjs` | commit `9c3136c9345ee54df27fe52e193aaa163af1662d`, blob `fa048e744bffbb5e210fb106ef49607a38f5c69e` |
+| `bench/vs-claude/analyze.mjs` | commit `ef8b78fa7041c2a605f66fc46ffd0289d6bf51e5`, blob `7c69f438e693ff810b1870cbf84405ce9c6a26c8` |
+| Test | 12 ca F1–F12 thành test: `bench/vs-claude/test/stats-k2.test.mjs`, `analyze-k2.test.mjs`. Trên Linux sau khi gộp: `npm test` 415/415 chạy ba lần, `npm run test:bench` 245/245, `holdout-sample-size --check` OK, `consistency-check` đạt, `token-analysis --check` OK, test của `docs/research/analysis` 48/48 |
+| Kết luận theo (6) | SR-26 đã gộp, có test, và hash đã ghi ở đây trước lượt E6 đầu. Vì vậy H6 dùng **p của SR-26** đúng quy tắc trần và suy biến v2.1 (a)–(d), không dùng phương án lùi |
+| Nơi chạy E6 | Server và runner 7425 vẫn ở `6c454f6`. Mã thống kê chỉ dùng khi phân tích, không ảnh hưởng lúc chạy |
+
+Ghi chú: CTO của D12 chưa nghiệm thu vì `npm test` đỏ bốn test holdout và `--check` lệch hash. Nguyên nhân là nhánh nhiệm vụ dựng từ `e12e037`, trước khi BRIEF-16 khóa lại holdout. Sau khi gộp vào HEAD (đã có khóa mới), cả hai đều xanh như bảng trên. `results/study-cloud-final` không có `runs.jsonl`, nên không chạy lại được.

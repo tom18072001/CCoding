@@ -10,7 +10,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { tost, permTwoSample, bootP, h6Combine, permStratified, mulberry32 } from '../../../bench/vs-claude/lib/stats.mjs';
+// Đông cứng bản trước D12 (8941103) để kết quả tái lập đúng K2 §10; bản sửa có test riêng ở bench/vs-claude/test/stats-k2.test.mjs.
+import { tost, permTwoSample, bootP, h6Combine, permStratified, mulberry32 } from './vendor/stats-pre-d12.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const near = (x, y, e = 1e-9) => Number.isFinite(x) && Number.isFinite(y) && Math.abs(x - y) <= e;
