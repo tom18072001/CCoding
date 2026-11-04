@@ -608,6 +608,16 @@ E1–E3 trên cloud trước 5/11 14:59; E4–E6 local bằng hạn mức gói.
   - Không phần nào bị tách giữa cloud và local. E2 không gộp vào E4 vì N của E4 đã cố định (R_E4 = 16, R_B6 = 32), và E3 không gộp vào E5. Vì vậy hai nơi chạy hai commit khác nhau không làm trộn dữ liệu.
 - **Xem kết quả trước khi sửa?** Không, chưa có lượt nào của đợt 3e.
 
+**Sự cố hạ tầng E1 (4/11/2026 10:08 giờ VN).**
+- **Diễn biến:** lần chạy đầu của `cache-diagnostic.mjs` khởi động lúc 10:04, chạy nền bằng `nohup`. Môi trường đã dừng tiến trình khi lượt trả lời của người điều phối kết thúc.
+- **Hậu quả:** script chỉ ghi CSV ở cuối, nên **không có dữ liệu nào**: CSV rỗng, log rỗng, không ai xem số nào.
+- **Số lượt đã gọi:** ước khoảng 3 lượt `claude -p` (khởi động, lượt 1 và 2 của cặp (a)), suy từ thời gian chạy khoảng 4 phút trước lần chờ 330 giây đầu tiên. Con số này **chưa kiểm được**.
+- **Cách xử lý:**
+  - Chạy lại đủ một lần, tối đa 8 lượt, bằng tiến trình nền do công cụ quản lý.
+  - Vì vậy tổng số lượt có thể vượt trần 8 của (7), nhưng phần vượt là lượt hạ tầng hỏng, không có dữ liệu.
+  - Đây không phải "chạy lại cho đẹp" (CD 1.5), vì chưa có kết quả nào.
+- Giám đốc được báo ngay trong phiên.
+
 Ghi chú: pha chạy Opus thì chi phí cao hơn; `runs.jsonl` ghi `model` theo pha (B-13), nên mọi phần ghi `model` theo pha cùng hash server để nối dữ liệu cloud với local (`run-plan.md` §6.1).
 
 ## 10. Đạo đức & dữ liệu
