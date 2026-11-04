@@ -417,7 +417,7 @@ Phần cloud nào chưa xong khi chuyển vẫn giữ thứ tự E1 → E2 → E
 **Cách nối dữ liệu cloud với local:**
 - Cùng thư mục `--out` cho cùng một phần, nên khóa `task__arm__rN` (`run.mjs:49`) là khóa chung, theo §6.1.
 - Mỗi phần, và mỗi máy trong cùng phần, ghi một dòng RUNLOG gồm hash server, `git status --short`, máy (cloud hoặc local) và `model` theo pha. Khi phân tích, hash hoặc `model` theo pha khác nhau giữa các lượt của cùng phần thì tách ra làm biến độ nhạy, không gộp im lặng (§6.4).
-- Máy local dựng server từ **cùng commit** với cloud: `git worktree add ../ccoding-3e <hash cloud>`, thay cho `HEAD`, rồi kiểm bằng `git -C ../ccoding-3e rev-parse HEAD`. **Đã chốt (người điều phối, 4/11/2026):** local dựng từ đúng commit của server cloud; RUNBOOK Bước 3e đã ghi lệnh này. Lý do: hai nơi chạy cùng mã thì nối được dữ liệu cloud với local (§6.1). Nếu phải đổi commit thì dữ liệu sau thời điểm đổi tách thành cửa sổ riêng, không gộp. Đây là điểm dừng "trước lượt local đầu tiên" ở trên.
+- Máy local dựng server từ **cùng commit** với cloud: `git worktree add ../ccoding-3e <hash cloud>`, thay cho `HEAD`, rồi kiểm bằng `git -C ../ccoding-3e rev-parse HEAD`. **Đã chốt (người điều phối, 4/11/2026):** một phần đã chạy dở trên cloud thì phần còn lại ở local dựng từ đúng commit của server cloud. Phần chạy trọn ở local thì dùng commit ghim riêng ghi trong RUNLOG; xem sai lệch ghi lúc 10:05 trong `preregistration.md` §9 khối (c): E3 chuyển sang local, E2 chạy cloud ở `1ab5514`. Lý do: hai nơi chạy cùng mã thì nối được dữ liệu cloud với local (§6.1). Nếu phải đổi commit thì dữ liệu sau thời điểm đổi tách thành cửa sổ riêng, không gộp. Đây là điểm dừng "trước lượt local đầu tiên" ở trên.
 
 #### 5.4.3 Bảng local: E4–E6, bằng hạn mức gói
 

@@ -595,6 +595,19 @@ Phần khác của `run-plan.md` đã đối chiếu nhưng không tìm thấy l
 
 E1–E3 trên cloud trước 5/11 14:59; E4–E6 local bằng hạn mức gói.
 
+**Sai lệch ghi trước lượt đầu (người điều phối, 4/11/2026 10:05 giờ VN).**
+- **Duyệt:** giám đốc duyệt chạy E1–E3 trên cloud, E4–E6 local, và cài WSL2 để kiểm sandbox B-18.
+- **Credit:** ảnh chụp lúc 10:03 cho thấy chỉ còn $22/$250. Số này dùng chung với chính phiên điều phối, nên không đủ cho cả ba phần, ước lượng ≈ $22 cộng phần Opus.
+- **Thay đổi về nơi chạy:**
+  - E1, E2 chạy cloud, giữ thứ tự E1 > E2.
+  - **E3 chuyển sang local** và chạy trước E5 trên cùng server local.
+  - Thứ tự ưu tiên của khối (b) không đổi, chỉ đổi nơi chạy.
+- **Commit ghim:**
+  - E1 không qua server. E2 chạy trên server cloud ở `1ab5514`.
+  - Các phần local chạy trên một commit ghim riêng, ghi vào RUNLOG trước lượt local đầu tiên.
+  - Không phần nào bị tách giữa cloud và local. E2 không gộp vào E4 vì N của E4 đã cố định (R_E4 = 16, R_B6 = 32), và E3 không gộp vào E5. Vì vậy hai nơi chạy hai commit khác nhau không làm trộn dữ liệu.
+- **Xem kết quả trước khi sửa?** Không, chưa có lượt nào của đợt 3e.
+
 Ghi chú: pha chạy Opus thì chi phí cao hơn; `runs.jsonl` ghi `model` theo pha (B-13), nên mọi phần ghi `model` theo pha cùng hash server để nối dữ liệu cloud với local (`run-plan.md` §6.1).
 
 ## 10. Đạo đức & dữ liệu
