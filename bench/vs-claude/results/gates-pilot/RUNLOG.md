@@ -32,3 +32,44 @@ Phân loại dữ liệu: **Nội bộ**. Bài tổng hợp, không có dữ li�
 - Wall-sum 0,45 giờ. Không chạm hạn mức hay hết credit.
 - `costUsd` của arm CCoding vẫn bằng 0. SR-02 thuộc D11, chưa gộp.
 - Phân tích (q̂, tỉ lệ bất đồng, mô tả) do Phòng Nghiên cứu làm theo §9 V4-3e-E2, bằng `docs/research/analysis/gates-pairs.mjs`.
+
+## Phân tích mô tả (K4, 4/11/2026)
+
+Người làm: @data-scientist (T-20261104-110942-567, S3a). Chỉ đọc `runs.jsonl`; không chạy benchmark. Mô tả, không p, không suy diễn recall. Chi tiết và bảng đầy đủ: `docs/research/context/k4-e2-descriptive-b14-step2-n.md`.
+
+**Lệnh** (từ gốc repo; cờ theo `preregistration.md` §9 V4-3e-E2 mục 6):
+
+```
+node docs/research/analysis/gates-pairs.mjs bench/vs-claude/results/gates-pilot/runs.jsonl --unit run --gate <b02|b10|cto> --negatives clean --label gate --out <gate>.csv
+node docs/research/analysis/k4-e2-descriptive.mjs
+node --test docs/research/analysis/gates-pairs.test.mjs   # 17/17 đạt
+```
+
+**Sáu lượt 'lỡ thấy điểm'** (6 dòng đầu của lệnh 1, theo thứ tự hoàn thành): g4-gb-unit__B7cabO__r1, g4-gb-unit__B7cab__r1, g1-slug-dedupe__B7cab__r1, g1-slug-dedupe__B7cabO__r1, g5-median-stats__B7cabO__r1, g5-median-stats__B7cab__r1. Danh sách này suy từ thứ tự dòng, không có khóa ghi sẵn ở mục "Sai lệch quy trình".
+
+| Arm · cổng | Gộp: cặp · q̂ [CP 95 %] · bất đồng | Loại 6 lượt: cặp · q̂ [CP 95 %] · bất đồng |
+|---|---|---|
+| B7cab · b02 | 4 · 0/4 = 0,00 [0,00; 0,60] · 0/4 | 3 · 0/3 = 0,00 [0,00; 0,71] · 0/3 |
+| B7cabO · b02 | 4 · 0/4 = 0,00 [0,00; 0,60] · 0/4 | 3 · 0/3 = 0,00 [0,00; 0,71] · 0/3 |
+| B7cab · cto | 4 · 0/4 = 0,00 [0,00; 0,60] · 0/4 | 3 · 0/3 = 0,00 [0,00; 0,71] · 0/3 |
+| B7cabO · cto | 4 · 0/4 = 0,00 [0,00; 0,60] · 0/4 | 3 · 0/3 = 0,00 [0,00; 0,71] · 0/3 |
+| B7cab · b10 | 4 · n/a (nhãn theo bài) · 3/4 (chặn 1) | 3 · n/a · 2/3 (chặn 1) |
+| B7cabO · b10 | 4 · n/a · 3/4 (chặn 1) | 3 · n/a · 2/3 (chặn 1) |
+| B6 · b10 | 4 · n/a · 4/4 (chặn 0) | 4 · n/a · 4/4 (chặn 0) |
+
+| Arm | Gộp: lượt · token có trọng số TB/lượt · test ẩn đạt | Loại 6: lượt · TB/lượt · test ẩn đạt |
+|---|---|---|
+| B7cab | 12 · 77.657 · 12/12 | 9 · 78.182 · 9/9 |
+| B7cabO | 12 · 102.742 · 11/12 | 9 · 105.915 · 8/9 |
+| B6 | 4 · 132.925 · 4/4 | 4 · 132.925 · 4/4 |
+
+- q̂ = 0 ở mọi ô b02 và cto: lỗi cài đã được agent tự sửa trước cổng (`checksRed = 0`, `pass = true`). Không có dương thật, nên không nói gì về recall. Cận trên CP 0,60–0,71 vì n = 3–4.
+- Với `--label task` (độ nhạy), b02 và cto đều có 8/8 cặp ref = 1, pred = 0; không đọc là cổng bỏ sót vì lỗi đã được sửa trước cổng.
+- b10 có nhãn theo bài nên "bất đồng" chỉ nghĩa là cổng không chặn.
+- E2 không có lượt sạch; không đánh giá được điểm dừng 'Có hại'. N của E4 giữ nguyên R = 16 (E4) và R_B6 = 32 (§9 khối (a) bước 5).
+- Token có trọng số là `input + 1,25·cacheWrite + 0,1·cacheRead + 5·out`. Không so trực tiếp giữa B7cab và B7cabO (khác model ở pha `accept`).
+
+**Định nghĩa arm** (nguồn `bench/vs-claude/arms.json`, chép nhãn):
+- **B7cab:** "CCoding làn đơn, B-11(a)+(b)+(c) nghiệm thu brief + mẫu gọn + promptDiet"; `lane: single`, `slim: { accept: "brief", compactTemplate: true, promptDiet: true }`.
+- **B7cabO:** "CCoding làn đơn, B7cab + CTO nghiệm thu bằng Opus (B-16, phaseModels.accept)"; như B7cab và thêm `phaseModels: { accept: "opus" }`.
+- **B6:** "CCoding làn nhanh".
