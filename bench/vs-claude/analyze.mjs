@@ -1,20 +1,53 @@
 #!/usr/bin/env node
 // Analyse a results folder: node analyze.mjs results/<run> [--baseline A0-sonnet] [--treatment B0]
 // Writes report.md, summary.csv and pareto.csv into the folder.
+// Cờ: --allow-mixed-judge (chỉ đối chiếu dữ liệu cũ, SR-07) · --strict (từ chối khi một arm có >1 hash CCoding, SR-03) · --legacy-rng (LCG + xáo cũ để tái lập số cũ, SR-20).
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const dir = path.resolve(process.argv[2] ?? '.');
 const argv = process.argv.slice(3);
 const flag = (k, d) => { const i = argv.indexOf(`--${k}`); return i < 0 ? d : argv[i + 1]; };
 const allRows = fs.readFileSync(path.join(dir, 'runs.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
+const has = (k) => argv.includes(`--${k}`);
+const STRICT = has('strict');
 const infraRows = allRows.filter((r) => r.status === 'infra'); // hạn mức / lỗi hạ tầng, không phải kết quả của arm
-const rows = allRows.filter((r) => r.status !== 'infra');
+const afterInfra = allRows.filter((r) => r.status !== 'infra');
 if (infraRows.length) console.log(`Đã loại ${infraRows.length} dòng infra (hạn mức/lỗi hạ tầng) khỏi phân tích.`);
+// SR-01c: lượt có `excluded` (quota | leak | timeout) bị loại; dòng cũ thiếu trường coi là null, không loại.
+const excludedRows = afterInfra.filter((r) => r.excluded);
+const rows = afterInfra.filter((r) => !r.excluded);
+const excludedByArm = {};
+for (const r of excludedRows) { const e = (excludedByArm[r.arm] ??= {}); e[r.excluded] = (e[r.excluded] ?? 0) + 1; }
+const excludedTxt = Object.entries(excludedByArm).map(([a, e]) => `${a}: ${Object.entries(e).map(([k, n]) => `${k} ${n}`).join(', ')}`).join('; ') || 'không';
+if (excludedRows.length) console.log(`SR-01: đã loại ${excludedRows.length} lượt excluded (${excludedTxt}).`);
+const die = (msg) => { console.error(msg); process.exit(1); };
+// SR-03: một arm chạy bằng nhiều hash CCoding thì cảnh báo; --strict thì từ chối.
+const commitsByArm = {};
+for (const r of rows) if (r.ccodingCommit) (commitsByArm[r.arm] ??= new Set()).add(r.ccodingCommit);
+const multiCommit = Object.entries(commitsByArm).filter(([, s]) => s.size > 1).map(([a, s]) => `${a}: ${[...s].join(', ')}`);
+const commitWarn = multiCommit.length ? `CẢNH BÁO SR-03: arm có nhiều hơn một hash CCoding (${multiCommit.join('; ')}).` : '';
+if (commitWarn) { console.warn(commitWarn); if (STRICT) die('Từ chối (--strict, SR-03): một arm có nhiều hơn một hash CCoding.'); }
+// SR-07: một chế độ chấm cho mỗi bài. Lượt không ghi `details.judge` chỉ bị tính là "khác" khi bài có lượt đã ghi giám khảo.
+const judgesByTask = {};
+for (const r of rows) (judgesByTask[r.task] ??= new Set()).add(r.details?.judge ?? null);
+const mixedJudge = Object.entries(judgesByTask).filter(([, s]) => s.size > 1 && [...s].some((j) => j !== null)).map(([t, s]) => `${t}: ${[...s].map((j) => j ?? '(không ghi)').join(' / ')}`);
+const mixedWarn = mixedJudge.length ? `CẢNH BÁO SR-07: chế độ chấm khác nhau giữa các lượt cùng bài (${mixedJudge.join('; ')}); chạy với --allow-mixed-judge chỉ để đối chiếu dữ liệu cũ, không dùng cho phân tích chính.` : '';
+if (mixedJudge.length && !has('allow-mixed-judge')) die(`Từ chối (SR-07): chế độ chấm khác nhau giữa các lượt cùng bài (${mixedJudge.join('; ')}). Chạy lại với một giám khảo (hoặc --allow-mixed-judge để đối chiếu dữ liệu cũ).`);
+const judgeModels = [...new Set(rows.map((r) => r.details?.judge).filter(Boolean))];
+const judgeTxt = judgeModels.length ? judgeModels.join(', ') : 'không ghi (regex hoặc dữ liệu cũ)';
 const leaks = rows.filter((r) => r.leak);
-const R = rows.filter((r) => !r.leak);
-const arms = [...new Set(R.map((r) => r.arm))];
-const tasks = [...new Set(R.map((r) => r.task))].sort();
+const Rall = rows.filter((r) => !r.leak);
+const tasksAll = [...new Set(Rall.map((r) => r.task))].sort();
+// D6: bài `set: "exploratory"` không vào H1–H10, tập bài H6 và H1′/H2′; chỉ ở bảng khám phá.
+const SUITE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'tasks');
+const setOf = (t) => { try { return JSON.parse(fs.readFileSync(path.join(SUITE, t, 'task.json'), 'utf8')).set; } catch { return undefined; } };
+const exploratory = tasksAll.filter((t) => setOf(t) === 'exploratory');
+const tasks = tasksAll.filter((t) => !exploratory.includes(t));
+const R = Rall.filter((r) => !exploratory.includes(r.task));
+const Rx = Rall.filter((r) => exploratory.includes(r.task));
+const arms = [...new Set(Rall.map((r) => r.arm))];
 const BASE = flag('baseline', arms.includes('A0-sonnet') ? 'A0-sonnet' : arms[0]);
 const TREAT = flag('treatment', arms.includes('B0') ? 'B0' : arms[1] ?? arms[0]);
 
@@ -138,6 +171,12 @@ for (const a of arms) {
 const md = `# CCoding vs single Claude - results
 
 Folder: \`${dir}\` - ${rows.length} runs (${leaks.length} excluded for touching hidden files, ${infraRows.length} infra rows dropped), arms: ${arms.join(', ')}. Baseline **${BASE}**, treatment **${TREAT}**. Scores are 0-1 per run; deltas in percentage points, 95% two-level bootstrap CI over tasks, p from a paired sign-flip permutation test.
+
+Đã loại ${excludedRows.length} lượt excluded (SR-01c; theo arm: ${excludedTxt}). Giám khảo: ${judgeTxt} (SR-07).${commitWarn ? `
+
+${commitWarn}` : ''}${mixedWarn ? `
+
+${mixedWarn}` : ''}
 
 ## Hypotheses
 
