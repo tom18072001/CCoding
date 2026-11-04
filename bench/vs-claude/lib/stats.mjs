@@ -21,6 +21,23 @@ export function mulberry32(seed) {
   };
 }
 
+/** FNV-1a 32 bit trên chuỗi UTF-16 (mã đơn vị): băm tất định, không phụ thuộc nền tảng. */
+export function fnv1a32(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 0x01000193) >>> 0;
+  return h >>> 0;
+}
+
+/**
+ * A-5 (K2): luồng ngẫu nhiên riêng của từng giả thuyết, suy tất định từ hạt gốc đã đăng ký (20261102):
+ * mulberry32((baseSeed ^ fnv1a32(hypId)) >>> 0). Nhờ vậy p/CI của một giả thuyết không phụ thuộc thứ tự gọi
+ * hay việc thêm giả thuyết khác. Quy tắc suy hạt này CHỜ Phòng Nghiên cứu đăng ký (preregistration chỉ nêu hạt gốc);
+ * kết quả theo luồng chung cũ của analyze.mjs phải ghi thành dòng độ nhạy để đối chiếu.
+ */
+export function streamFor(hypId, baseSeed = 20261102) {
+  return mulberry32((baseSeed ^ fnv1a32(String(hypId))) >>> 0);
+}
+
 /** Fisher-Yates: trả bản xáo mới, không sửa mảng vào. */
 export function fisherYates(arr, rnd) {
   const out = [...arr];
@@ -129,8 +146,11 @@ export function confirmable(pMin, holmThreshold) {
  * Hoán vị hai mẫu chính xác (H3). a = BASE, b = TREAT; b′ = b + shift (recall: shift = −0,15; precision: +0,05).
  * Liệt kê đủ C(r_a + r_b, r_b) cách chọn r_b lượt làm TREAT. T = mean(b′) − mean(a).
  * alt: 'greater' (T* ≥ T_obs), 'less' (T* ≤ T_obs), 'two' (|T*| ≥ |T_obs|); sai số 1e-12. Giá trị không hữu hạn bị bỏ.
+ * P-2 (K2): C(r_a + r_b, r_b) > maxExact (mặc định 10⁶; s1 r = 10 là 184 756 nên vẫn chính xác) ⇒ Monte Carlo M lần
+ * (mặc định 10 000, hạt 20261102, Fisher-Yates), p = (k + 1)/(M + 1), exact = false, N = M, nTotal = số cách thật.
+ * Trước đây r = 20 mỗi arm (≈ 1,4·10¹¹ cách) làm treo tiến trình.
  */
-export function permTwoSample(a, b, { shift = 0, alt = 'greater' } = {}) {
+export function permTwoSample(a, b, { shift = 0, alt = 'greater', maxExact = 1e6, M = 10000, seed = 20261102 } = {}) {
   const xa = (a ?? []).filter(Number.isFinite), xb = (b ?? []).filter(Number.isFinite).map((v) => v + shift);
   const ra = xa.length, rb = xb.length;
   if (!ra || !rb) return { p: null, pMin: null, N: 0, exact: true };
@@ -138,6 +158,16 @@ export function permTwoSample(a, b, { shift = 0, alt = 'greater' } = {}) {
   const tOf = (s) => s / rb - (total - s) / ra;
   const tObs = tOf(xb.reduce((s, v) => s + v, 0));
   const hit = (t) => (alt === 'less' ? t <= tObs + EPS : alt === 'two' ? Math.abs(t) >= Math.abs(tObs) - EPS : t >= tObs - EPS);
+  const nTotal = choose(n, Math.min(ra, rb));
+  if (!(nTotal <= maxExact)) {
+    const rnd = mulberry32(seed);
+    let kMc = 0;
+    for (let it = 0; it < M; it++) {
+      const sh = fisherYates(pool, rnd);
+      if (hit(tOf(sh.slice(0, rb).reduce((s, v) => s + v, 0)))) kMc++;
+    }
+    return { p: (kMc + 1) / (M + 1), pMin: 1 / (M + 1), N: M, nTotal, exact: false };
+  }
   let N = 0, k = 0;
   const rec = (start, left, s) => {
     if (left === 0) { N++; if (hit(tOf(s))) k++; return; }
@@ -230,16 +260,32 @@ const choose = (n, k) => { let r = 1; for (let i = 1; i <= k; i++) r = (r * (n -
  * T = TB theo bài của (mean(b′) − mean(a)). alt: 'greater' | 'less' | 'two'; sai số 1e-12.
  * ∏ C(r_a + r_b, r_b) ≤ maxExact ⇒ liệt kê đủ; ngược lại Monte Carlo M lần (Fisher-Yates, bộ sinh riêng), p = (k + 1)/(M + 1).
  * Bài thiếu a hoặc b vào `skipped` (tên bài).
+ * P-2: ∏ C > maxExact ⇒ Monte Carlo (không bao giờ liệt kê); N tích có thể là Infinity vẫn đi nhánh Monte Carlo.
+ * S-1 (K2): margin ≠ 0 làm bài chạm trần cho p = p_min giả (b − margin kém hơn a ở mọi lượt, F11). Quy tắc BẢO THỦ, cùng
+ * H6 v2.1 (b), (c): (i) bỏ bài mà mọi lượt cả hai arm (điểm gốc, trước khi trừ margin) ≥ ceil (mặc định 0,99), báo
+ * `ceilingTasks`; (ii) nếu mọi bài còn lại có điểm gốc hằng (một giá trị duy nhất) hoặc không còn bài ⇒ suy biến: p = null,
+ * degenerate = true, label 'không kết luận (suy biến)'. Chỉ bật khi margin ≠ 0 (margin = 0 thì T* = T_obs = 0 ở bài trần, p = 1,
+ * không có p_min giả); `ceilGuard` ghi đè. CHỜ Phòng Nghiên cứu đăng ký trước khi khóa H1′/H2′ (§2.6 chưa có quy tắc này).
+ * S-2: `alt = 'two'` kèm margin hợp lệ: |T*| ≥ |T_obs|, T_obs đã tính trên b − margin (xem test stats-k2).
+ * Trả { n, nPerm, exact, tObs, p, pMin, skipped, ceilingTasks, degenerate, label }.
  */
-export function permStratified(cells, { alt = 'greater', margin = 0, maxExact = 1e6, M = 10000, seed = 20261102 } = {}) {
-  const skipped = [], ts = [];
+export function permStratified(cells, { alt = 'greater', margin = 0, maxExact = 1e6, M = 10000, seed = 20261102, ceil = 0.99, ceilGuard = margin !== 0 } = {}) {
+  const skipped = [], ceilingTasks = [], ts = [];
   for (const c of cells ?? []) {
-    const a = (c.a ?? []).filter(Number.isFinite), b = (c.b ?? []).filter(Number.isFinite).map((v) => v - margin);
-    if (a.length && b.length) ts.push({ pool: [...a, ...b], ra: a.length, rb: b.length });
-    else skipped.push(c.task);
+    const rawA = (c.a ?? []).filter(Number.isFinite), rawB = (c.b ?? []).filter(Number.isFinite);
+    if (!rawA.length || !rawB.length) { skipped.push(c.task); continue; }
+    if (ceilGuard && rawA.every((v) => v >= ceil) && rawB.every((v) => v >= ceil)) { ceilingTasks.push(c.task); continue; }
+    const raw = [...rawA, ...rawB];
+    ts.push({ pool: [...rawA, ...rawB.map((v) => v - margin)], ra: rawA.length, rb: rawB.length, flat: Math.max(...raw) - Math.min(...raw) <= EPS });
   }
   const n = ts.length;
-  if (!n) return { n, nPerm: 0, exact: true, tObs: NaN, p: null, pMin: null, skipped };
+  const extra = { skipped, ceilingTasks, degenerate: false, label: 'p' };
+  if (!n) {
+    return ceilGuard && ceilingTasks.length
+      ? { n, nPerm: 0, exact: true, tObs: NaN, p: null, pMin: null, ...extra, degenerate: true, label: DEGENERATE_LABEL }
+      : { n, nPerm: 0, exact: true, tObs: NaN, p: null, pMin: null, ...extra, label: 'không kết luận (thiếu dữ liệu)' };
+  }
+  const degenerate = ceilGuard && ts.every((t) => t.flat);
   const sum = (x) => x.reduce((s, v) => s + v, 0);
   // d của một cách chọn TREAT có tổng s: s/rb − (tot − s)/ra
   const dOf = (t, s, tot) => s / t.rb - (tot - s) / t.ra;
@@ -264,7 +310,9 @@ export function permStratified(cells, { alt = 'greater', margin = 0, maxExact = 
       for (const d of lists[i]) walk(i + 1, acc + d);
     };
     walk(0, 0);
-    return { n, nPerm: N, exact: true, tObs, p: k / N, pMin: 1 / N, skipped };
+    return degenerate
+      ? { n, nPerm: N, exact: true, tObs, p: null, pMin: null, ...extra, degenerate, label: DEGENERATE_LABEL }
+      : { n, nPerm: N, exact: true, tObs, p: k / N, pMin: 1 / N, ...extra };
   }
   const rnd = mulberry32(seed);
   let k = 0;
@@ -276,5 +324,7 @@ export function permStratified(cells, { alt = 'greater', margin = 0, maxExact = 
     });
     if (hit(acc / n)) k++;
   }
-  return { n, nPerm: M, exact: false, tObs, p: (k + 1) / (M + 1), pMin: 1 / (M + 1), skipped };
+  return degenerate
+    ? { n, nPerm: M, exact: false, tObs, p: null, pMin: null, ...extra, degenerate, label: DEGENERATE_LABEL }
+    : { n, nPerm: M, exact: false, tObs, p: (k + 1) / (M + 1), pMin: 1 / (M + 1), ...extra };
 }

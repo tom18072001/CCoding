@@ -2,7 +2,7 @@
 // Kỳ vọng lấy theo QUY TẮC ĐĂNG KÝ (preregistration §2.5 v2.1), không theo đầu ra cũ của mã.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { tost, bootP, h6Combine, percentileCI } from '../lib/stats.mjs';
+import { tost, bootP, h6Combine, percentileCI, permTwoSample, permStratified, streamFor, fnv1a32, mulberry32 } from '../lib/stats.mjs';
 
 const mk = (task, a, b) => ({ task, a, b });
 const three = (a, b) => ['x', 'y', 'z'].map((t) => mk(t, a, b));
@@ -243,4 +243,126 @@ test('F2–F5: bootP trần, ngưỡng 0,99, n = 0, n = 1–3', () => {
   const r3 = bootP(mkN(3), { arm: 'A1' });
   assert.equal(r3.verdict, 'p');
   assert.ok(r3.p >= 1 / 4001 && r3.p <= 1);
+});
+
+// ---------- S-1, S-2, P-2, A-5, F9–F11 ----------
+
+const same = (n, v, r = 2) => Array.from({ length: n }, (_, i) => mk(`t${i}`, Array(r).fill(v), Array(r).fill(v)));
+
+test('F9: permTwoSample suy biến (H3) — recall p = 1, precision p = pMin; b rỗng ⇒ null; a=[0,0], b=[1,1]', () => {
+  const ones = Array(10).fill(1.0);
+  const rec = permTwoSample(ones, ones, { shift: -0.15 });
+  assert.equal(rec.N, 184756);
+  assert.equal(rec.p, 1);
+  assert.equal(rec.pMin, 1 / 184756);
+  assert.equal(rec.exact, true);
+  const prec = permTwoSample(ones, ones, { shift: 0.05 });
+  assert.equal(prec.p, 1 / 184756);
+  assert.equal(Math.max(rec.p, prec.p), 1);
+  const empty = permTwoSample([1, 2], [NaN]);
+  assert.equal(empty.p, null);
+  assert.equal(empty.N, 0);
+  assert.equal(permTwoSample([0, 0], [1, 1]).p, 1 / 6);
+  assert.equal(permTwoSample([0, 0], [1, 1], { alt: 'two' }).p, 2 / 6);
+});
+
+test('P-2: permTwoSample r = 20 mỗi arm ⇒ Monte Carlo M = 10 000, hạt 20261102, tái lập, không treo', () => {
+  const a = Array.from({ length: 20 }, (_, i) => 0.3 + i * 0.01), b = Array.from({ length: 20 }, (_, i) => 0.5 + i * 0.01);
+  const t0 = Date.now();
+  const r = permTwoSample(a, b);
+  assert.ok(Date.now() - t0 < 10000);
+  assert.equal(r.exact, false);
+  assert.equal(r.N, 10000);
+  assert.ok(r.nTotal > 1e11);
+  assert.equal(r.pMin, 1 / 10001);
+  assert.ok(r.p >= 1 / 10001 && r.p <= 1);
+  assert.deepEqual(permTwoSample(a, b), r);
+  assert.equal(permTwoSample(a, b, { seed: 1 }).exact, false);
+  assert.equal(permTwoSample(a.slice(0, 10), b.slice(0, 10)).exact, true); // C(20,10) ≤ 10⁶ ⇒ vẫn chính xác
+  assert.equal(permTwoSample(a.slice(0, 10), b.slice(0, 10), { maxExact: 1000 }).exact, false);
+});
+
+test('P-2: permStratified ∏ C > 10⁶ ⇒ Monte Carlo M = 10 000 (không liệt kê), tái lập', () => {
+  const cells = ['x', 'y', 'z'].map((t) => mk(t, Array.from({ length: 20 }, (_, i) => 0.2 + i * 0.01), Array.from({ length: 20 }, (_, i) => 0.4 + i * 0.01)));
+  const r = permStratified(cells);
+  assert.equal(r.exact, false);
+  assert.equal(r.nPerm, 10000);
+  assert.ok(r.p >= 1 / 10001 && r.p <= 1);
+  assert.deepEqual(permStratified(cells), r);
+});
+
+test('F10: permStratified cơ bản (margin 0 giữ hành vi cũ)', () => {
+  const e = permStratified([]);
+  assert.deepEqual([e.n, e.nPerm, e.p, e.pMin], [0, 0, null, null]);
+  assert.ok(Number.isNaN(e.tObs));
+  const b = permStratified([mk('t', [0], [1])]);
+  assert.deepEqual([b.nPerm, b.tObs, b.p, b.pMin], [2, 1, 0.5, 0.5]);
+  const c = permStratified([mk('x', [1], []), mk('y', [0], [1])]);
+  assert.deepEqual([c.n, c.skipped, c.p], [1, ['x'], 0.5]);
+  const d = permStratified([mk('x', [1, 1], [1, 1]), mk('y', [1, 1], [1, 1])]);
+  assert.deepEqual([d.nPerm, d.tObs, d.p, d.pMin, d.degenerate], [36, 0, 1, 1 / 36, false]);
+  const mc = permStratified([mk('x', [1, 1], [1, 1]), mk('y', [1, 1], [1, 1])], { maxExact: 1 });
+  assert.equal(mc.exact, false);
+  assert.equal(mc.nPerm, 10000);
+  assert.deepEqual(permStratified([mk('x', [1, 1], [1, 1]), mk('y', [1, 1], [1, 1])], { maxExact: 1 }), mc);
+});
+
+test('F11 (S-1): bài trần có margin (H2′) ⇒ p = null, degenerate, ceilingTasks; không còn p_min giả 1/6 và 1/252', () => {
+  for (const r of [2, 5]) {
+    const cells = [mk('x', Array(r).fill(1), Array(r).fill(1))];
+    const res = permStratified(cells, { alt: 'less', margin: 0.05 });
+    assert.equal(res.p, null);
+    assert.equal(res.degenerate, true);
+    assert.equal(res.label, 'không kết luận (suy biến)');
+    assert.deepEqual(res.ceilingTasks, ['x']);
+    assert.equal(res.n, 0);
+    // độ nhạy: tắt chốt chặn ⇒ tái hiện số cũ
+    const legacy = permStratified(cells, { alt: 'less', margin: 0.05, ceilGuard: false });
+    assert.equal(legacy.p, r === 2 ? 1 / 6 : 1 / 252);
+    assert.ok(Math.abs(legacy.tObs + 0.05) < 1e-12);
+  }
+});
+
+test('S-1: bài hằng không do trần (mọi lượt 0,7) có margin ⇒ suy biến; bài trần bị loại, bài còn lại vẫn cho p', () => {
+  const flat = permStratified(same(2, 0.7), { alt: 'less', margin: 0.05 });
+  assert.equal(flat.p, null);
+  assert.equal(flat.degenerate, true);
+  assert.deepEqual(flat.ceilingTasks, []);
+  const mixed = permStratified([mk('top', [1, 1], [1, 1]), mk('x', [0.4, 0.6], [0.5, 0.7]), mk('y', [0.3, 0.5], [0.4, 0.6])], { alt: 'greater', margin: 0.05 });
+  assert.deepEqual(mixed.ceilingTasks, ['top']);
+  assert.equal(mixed.n, 2);
+  assert.equal(mixed.degenerate, false);
+  assert.equal(typeof mixed.p, 'number');
+  assert.equal(mixed.nPerm, 36);
+  // bài trần một phía thì giữ
+  assert.equal(permStratified([mk('x', [1, 1], [1, 0.9]), mk('y', [0.3, 0.5], [0.4, 0.6])], { margin: 0.05 }).ceilingTasks.length, 0);
+});
+
+test('S-2: alt = two kèm margin — T_obs tính trên b − margin; p = #{|T*| ≥ |T_obs|}/N', () => {
+  const cells = [mk('t', [0.2, 0.4], [0.8, 0.6])];
+  const two = permStratified(cells, { alt: 'two', margin: 0.1 });
+  assert.ok(Math.abs(two.tObs - 0.3) < 1e-12);
+  assert.equal(two.nPerm, 6);
+  assert.equal(two.p, 2 / 6);
+  assert.equal(permStratified(cells, { alt: 'greater', margin: 0.1 }).p, 1 / 6);
+  assert.equal(permStratified(cells, { alt: 'less', margin: 0.1 }).p, 1);
+  // margin đổi dấu T_obs: hai phía bắt được cả hai đuôi
+  const neg = permStratified([mk('t', [0.8, 0.6], [0.2, 0.4])], { alt: 'two', margin: -0.1 });
+  assert.ok(neg.tObs < 0);
+  assert.equal(neg.p, 2 / 6);
+});
+
+test('A-5: streamFor tất định theo (hypId, hạt gốc); fnv1a32 khớp vector chuẩn', () => {
+  assert.equal(fnv1a32(''), 0x811c9dc5);
+  assert.equal(fnv1a32('a'), 0xe40c292c);
+  assert.equal(fnv1a32('foobar'), 0xbf9cf968);
+  const seq = (g) => Array.from({ length: 5 }, g);
+  assert.deepEqual(seq(streamFor('H6')), seq(streamFor('H6')));
+  assert.deepEqual(seq(streamFor('H6')), seq(mulberry32((20261102 ^ fnv1a32('H6')) >>> 0)));
+  assert.notDeepEqual(seq(streamFor('H6')), seq(streamFor('H7')));
+  assert.notDeepEqual(seq(streamFor('H6')), seq(streamFor('H6', 7)));
+  const g = streamFor('H1');
+  const first = g();
+  assert.ok(first >= 0 && first < 1);
+  assert.equal(first, streamFor('H1')()); // độc lập thứ tự gọi các luồng khác
 });
