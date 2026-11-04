@@ -1,16 +1,56 @@
 {
   "issues": [
-    { "type": "hardcoded-secret", "anchor": "const JWT_SECRET =" },
-    { "type": "sqli", "anchor": "WHERE title LIKE '%${q}%'" },
-    { "type": "path-traversal", "anchor": "const file = path.join(REPORT_DIR, req.params.name);" },
-    { "type": "weak-crypto", "anchor": "createHash('md5')" },
-    { "type": "ssrf", "anchor": "await fetch(req.body.url)" },
-    { "type": "missing-authz", "anchor": "await db.query('DELETE FROM tickets WHERE id = $1'" },
-    { "type": "command-injection", "anchor": "exec(`/opt/legacy/export.sh" }
+    {
+      "type": "hardcoded-secret",
+      "anchor": "const JWT_SECRET ="
+    },
+    {
+      "type": "sqli",
+      "anchor": "WHERE title LIKE '%${q}%'"
+    },
+    {
+      "type": "path-traversal",
+      "anchor": "const file = path.join(REPORT_DIR, req.params.name);"
+    },
+    {
+      "type": "weak-crypto",
+      "anchor": "createHash('md5')"
+    },
+    {
+      "type": "ssrf",
+      "anchor": "await fetch(req.body.url)"
+    },
+    {
+      "type": "missing-authz",
+      "anchor": "await db.query('DELETE FROM tickets WHERE id = $1'"
+    },
+    {
+      "type": "command-injection",
+      "anchor": "exec(`/opt/legacy/export.sh"
+    }
   ],
   "decoys": [
-    { "anchor": "FROM ${STATUS_TABLE} WHERE active" },
-    { "anchor": "res.sendFile(path.join('/srv/attachments', safe));" },
-    { "anchor": "execFile('ping'" }
-  ]
+    {
+      "anchor": "FROM ${STATUS_TABLE} WHERE active"
+    },
+    {
+      "anchor": "res.sendFile(path.join('/srv/attachments', safe));"
+    },
+    {
+      "anchor": "execFile('ping'"
+    }
+  ],
+  "bonus": [
+    {
+      "anchor": "app.get('/api/attachments/:id'",
+      "tolerance": 1,
+      "note": "SR-17: tuyến tải tệp đính kèm (server.js:47); báo ở đây là finding thật ngoài danh sách (rà quyền truy cập đối tượng), không phạt, không tính điểm"
+    },
+    {
+      "anchor": "req.user = verifyJwt(token, JWT_SECRET);",
+      "tolerance": 1,
+      "note": "SR-17: xác thực JWT không nêu thuật toán/hạn dùng; không phạt, không tính điểm"
+    }
+  ],
+  "note": "decoys: báo vào đây KHÔNG tính FP (D5), chỉ đếm decoyHits; bonus: không phạt, đếm bonusHits"
 }

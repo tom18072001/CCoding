@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { judgeChecklist } from './judge.mjs';
+import { agreementRate, judgeChecklist } from './judge.mjs';
 
 /** Read a JSON deliverable; fall back to the last ```json block in the final report (format miss). */
 export function readJsonDeliverable(workdir, file, finalText = '') {
@@ -44,10 +44,81 @@ export function tapScore(out) {
   return { score: total ? pass / total : 0, pass: summary && total > 0 && fail === 0, details: { passed: pass, total, failed, ...(summary ? {} : { noSummary: true }) } };
 }
 
-/** Coding: copy workdir to a scratch dir, drop hidden tests in, run node:test, score = passed / total hidden tests. */
-export function gradeCode({ workdir, hiddenDir }) {
+/** Danh sách tệp/thư mục sản phẩm từ `task.deliverable` ("src/, bin/logq.js"). */
+export function deliverablePaths(deliverable) {
+  return String(deliverable ?? '').split(/[,;]/).map((x) => x.trim()).filter(Boolean);
+}
+const hasFiles = (p) => {
+  if (!fs.existsSync(p)) return false;
+  if (!fs.statSync(p).isDirectory()) return true;
+  return fs.readdirSync(p, { withFileTypes: true }).some((e) => e.isFile() || hasFiles(path.join(p, e.name)));
+};
+/** SR-13: thiếu tệp/thư mục sản phẩm (thư mục rỗng cũng là thiếu). Không có `task.deliverable` → false. */
+export function deliverablesMissing(workdir, deliverable) {
+  return deliverablePaths(deliverable).filter((d) => !hasFiles(path.join(workdir, d)));
+}
+
+const SKIP = new Set(['.git', 'node_modules']);
+function listFiles(root, rel = '') {
+  const dir = path.join(root, rel);
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    if (SKIP.has(e.name)) return [];
+    const r = path.posix.join(rel.split(path.sep).join('/'), e.name);
+    return e.isDirectory() ? listFiles(root, r) : [r];
+  });
+}
+const sameFile = (a, b) => fs.existsSync(a) && fs.existsSync(b) && fs.readFileSync(a).equals(fs.readFileSync(b));
+
+/**
+ * SR-13: tệp sản phẩm "phải đổi" = tệp ở lời giải tham chiếu (task.solutionDir / hidden/solution) khác starter hoặc không có ở starter.
+ * Tệp agent không sửa = còn nguyên như starter (hoặc không tồn tại).
+ */
+export function requiredFiles({ hiddenDir, starterDir, solutionDir }) {
+  const refs = [solutionDir, path.join(hiddenDir, 'solution')].filter((d) => d && fs.existsSync(d));
+  const required = new Set();
+  for (const ref of refs) for (const f of listFiles(ref)) if (!starterDir || !sameFile(path.join(ref, f), path.join(starterDir, f))) required.add(f);
+  return [...required].sort();
+}
+export function untouchedRequiredFiles({ workdir, hiddenDir, starterDir, solutionDir }) {
+  return requiredFiles({ hiddenDir, starterDir, solutionDir }).filter((f) => {
+    const w = path.join(workdir, f);
+    if (!fs.existsSync(w)) return true;
+    return !!starterDir && sameFile(w, path.join(starterDir, f));
+  });
+}
+
+/** Gán test ẩn trượt cho tệp: `hidden/filemap.json` {regex tên test: tệp}; không có thì khớp tên cơ sở của tệp (không đuôi) trong tên test. */
+export function attributeFailures(failed, files, map = {}) {
+  const rules = Object.entries(map).map(([re, file]) => [new RegExp(re, 'i'), file]);
+  let n = 0;
+  for (const name of failed) {
+    const viaMap = rules.find(([re]) => re.test(name));
+    if (viaMap) { if (files.includes(viaMap[1])) n++; continue; }
+    if (files.some((f) => name.toLowerCase().includes(path.posix.basename(f).replace(/\.[^.]+$/, '').toLowerCase()))) n++;
+  }
+  return n;
+}
+
+/** SR-13: lệnh kiểm của chính agent (`npm test`) còn đỏ khi lượt kết thúc. Không có script test → false. */
+export function visibleRed(dir, { timeoutMs = 120000 } = {}) {
+  const pj = path.join(dir, 'package.json');
+  if (!fs.existsSync(pj)) return false;
+  let scripts; try { scripts = JSON.parse(fs.readFileSync(pj, 'utf8')).scripts; } catch { return true; }
+  if (!scripts?.test) return false;
+  const r = spawnSync('npm', ['test', '--silent'], { cwd: dir, encoding: 'utf8', timeout: timeoutMs, shell: process.platform === 'win32', env: { ...process.env, NODE_TEST_CONTEXT: undefined } });
+  return r.status !== 0;
+}
+
+/**
+ * Coding: copy workdir to a scratch dir, drop hidden tests in, run node:test, score = passed / total hidden tests.
+ * Có `task`: thêm formatMiss (thiếu tệp sản phẩm), details.redAtEnd, details.untouchedFileFailures (SR-13).
+ */
+export function gradeCode({ workdir, hiddenDir, task, suiteRepoDir, visibleCheck = true }) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ccvb-grade-'));
   fs.cpSync(workdir, tmp, { recursive: true, filter: (s) => !s.includes(`${path.sep}.git`) && !s.includes(`${path.sep}node_modules`) });
+  const missing = task ? deliverablesMissing(workdir, task.deliverable) : [];
+  const redAtEnd = task && visibleCheck ? visibleRed(tmp) : false;
   fs.mkdirSync(path.join(tmp, 'hidden'), { recursive: true });
   // Copy every top-level file (tests plus helpers such as _helpers.js, _gen.js, oracle.js) but run only *.test.js.
   const files = fs.readdirSync(hiddenDir, { withFileTypes: true }).filter((e) => e.isFile()).map((e) => e.name);
@@ -57,10 +128,31 @@ export function gradeCode({ workdir, hiddenDir }) {
   // --test-force-exit: handle còn mở (setInterval, server) trong mã được chấm không làm treo bộ chấm.
   const r = spawnSync(process.execPath, ['--test', '--test-force-exit', `--test-timeout=${GRADE_TEST_TIMEOUT_MS}`, '--test-reporter=tap', ...tests.map((f) => `hidden/${f}`)], { cwd: tmp, encoding: 'utf8', timeout: GRADE_PROCESS_TIMEOUT_MS, maxBuffer: 64 << 20, env: { ...process.env, NODE_TEST_CONTEXT: undefined } }); // NODE_TEST_CONTEXT: do not inherit when run under `node --test`
   fs.rmSync(tmp, { recursive: true, force: true });
-  return { ...tapScore(`${r.stdout}\n${r.stderr}`), ...(r.error ? { gradeError: String(r.error.code ?? r.error.message) } : {}) };
+  const g = tapScore(`${r.stdout}
+${r.stderr}`);
+  const extra = {};
+  if (task) {
+    const root = path.dirname(hiddenDir);
+    const dirs = { hiddenDir, starterDir: suiteRepoDir, solutionDir: task.solutionDir ? path.join(root, task.solutionDir) : undefined };
+    const required = requiredFiles(dirs);
+    const untouched = untouchedRequiredFiles({ workdir, ...dirs });
+    const mapFile = path.join(hiddenDir, 'filemap.json');
+    const map = fs.existsSync(mapFile) ? JSON.parse(fs.readFileSync(mapFile, 'utf8')) : {};
+    extra.redAtEnd = redAtEnd;
+    // Agent không sửa tệp nào trong số tệp phải đổi: mọi test trượt đều thuộc tệp không sửa (không cần bản đồ tên test).
+    extra.untouchedFileFailures = required.length && untouched.length === required.length ? g.details.failed.length : attributeFailures(g.details.failed, untouched, map);
+    extra.untouchedFiles = untouched;
+  }
+  return { ...g, details: { ...g.details, ...extra }, ...(task ? { formatMiss: missing.length > 0, ...(missing.length ? { missingDeliverables: missing } : {}) } : {}), ...(r.error ? { gradeError: String(r.error.code ?? r.error.message) } : {}) };
 }
 
-const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+/** Chuẩn hóa JSON: sắp khóa đối tượng theo thứ tự chữ cái (đệ quy); thứ tự mảng giữ nguyên (SR-16). */
+export function canonJson(v) {
+  if (Array.isArray(v)) return v.map(canonJson);
+  if (v && typeof v === 'object') return Object.fromEntries(Object.keys(v).sort().map((k) => [k, canonJson(v[k])]));
+  return v;
+}
+export const eq = (a, b) => JSON.stringify(canonJson(a)) === JSON.stringify(canonJson(b));
 const sortU = (a) => [...new Set((a ?? []).map(String))].sort();
 
 /** Logic: exact match per field; score = matched fields / fields. */
@@ -77,28 +169,31 @@ export function gradeExact({ workdir, hiddenDir, finalText, task }) {
   return { score: n / Object.keys(fields).length, pass: n === Object.keys(fields).length, details: { fields }, formatMiss };
 }
 
-/** Security review: recall over seeded issues, precision over reported findings (findings near a seeded line with another type are neutral). */
+/** Security review: recall over seeded issues, precision over reported findings (findings near a seeded line with another type, on a decoy or on a 'bonus' line are neutral; decoyHits/bonusHits reported separately). */
 export function gradeSecurity({ workdir, hiddenDir, finalText, task, suiteRepoDir }) {
   const spec = JSON.parse(fs.readFileSync(path.join(hiddenDir, 'issues.json'), 'utf8'));
   const src = fs.readFileSync(path.join(suiteRepoDir, 'src/server.js'), 'utf8').split('\n');
   const lineOf = (a) => src.findIndex((l) => l.includes(a)) + 1;
   const issues = spec.issues.map((i) => ({ ...i, line: lineOf(i.anchor) }));
   const decoys = spec.decoys.map((d) => ({ ...d, line: lineOf(d.anchor) }));
+  const bonus = (spec.bonus ?? []).map((b) => ({ ...b, line: lineOf(b.anchor) })).filter((b) => b.line > 0);
   const { value, formatMiss } = readJsonDeliverable(workdir, task.deliverable, finalText);
   const findings = Array.isArray(value) ? value : Array.isArray(value?.findings) ? value.findings : [];
   const near = (f, l) => Math.abs(Number(f.line) - l) <= 3;
-  const found = new Set(); let tp = 0, fp = 0, neutral = 0, decoyHits = 0;
+  const found = new Set(); let tp = 0, fp = 0, neutral = 0, decoyHits = 0, bonusHits = 0;
   for (const f of findings) {
     const hit = issues.find((i) => near(f, i.line) && String(f.type).toLowerCase() === i.type && !found.has(i.type));
     if (hit) { found.add(hit.type); tp++; continue; }
-    if (decoys.some((d) => near(f, d.line)) && !issues.some((i) => near(f, i.line))) { decoyHits++; fp++; continue; }
+    // SR-17: finding thật ngoài danh sách (bonus) và finding trúng decoy đều không phải FP; báo riêng, không vào điểm chính (D5).
+    if (bonus.some((b) => Math.abs(Number(f.line) - b.line) <= (b.tolerance ?? 1)) && !issues.some((i) => near(f, i.line))) { bonusHits++; continue; }
+    if (decoys.some((d) => near(f, d.line)) && !issues.some((i) => near(f, i.line))) { decoyHits++; continue; }
     if (issues.some((i) => near(f, i.line))) { neutral++; continue; }
     fp++;
   }
   const recall = found.size / issues.length;
   const precision = tp + fp ? tp / (tp + fp) : 0;
   const f1 = recall + precision ? (2 * recall * precision) / (recall + precision) : 0;
-  return { score: f1, pass: recall === 1 && fp === 0, details: { recall, precision, tp, fp, neutral, decoyHits, missed: issues.filter((i) => !found.has(i.type)).map((i) => i.type) }, formatMiss };
+  return { score: f1, pass: recall === 1 && fp === 0, details: { recall, precision, tp, fp, neutral, decoyHits, bonusHits, missed: issues.filter((i) => !found.has(i.type)).map((i) => i.type) }, formatMiss };
 }
 
 /** Checklist (requirements/design): LLM judge per item when enabled, regex fallback otherwise. */
@@ -109,8 +204,28 @@ export async function gradeChecklist({ workdir, hiddenDir, finalText, task, judg
   if (judge?.enabled) verdicts = await judgeChecklist(text, items, judge);
   else verdicts = Object.fromEntries(items.map((it) => [it.id, it.regex.some((re) => new RegExp(re, 'is').test(text))]));
   const n = Object.values(verdicts).filter(Boolean).length;
-  return { score: n / items.length, pass: n === items.length, details: { verdicts, judge: judge?.enabled ? judge.model : 'regex', chars: text.length }, formatMiss };
+  // SR-08a: giám khảo thứ hai (judge.model2, khác judge.model) chỉ để đo đồng thuận; điểm chính vẫn theo giám khảo 1.
+  const second = {};
+  if (judge?.enabled && judge.model2 && judge.model2 !== judge.model) {
+    const v2 = await judgeChecklist(text, items, { ...judge, model: judge.model2 });
+    second.judge2 = judge.model2;
+    second.judgeAgreement = agreementRate(items.map((it) => verdicts[it.id]), items.map((it) => v2[it.id]));
+  }
+  return { score: n / items.length, pass: n === items.length, details: { verdicts, judge: judge?.enabled ? judge.model : 'regex', ...second, chars: text.length }, formatMiss };
 }
+
+/** F1 dạng 0,962 hoặc phần trăm (96.2 / "96.2%") → số trong [0,1]; không đọc được → NaN (SR-18). */
+export function parseF1(v) {
+  const raw = typeof v === 'string' ? v.trim() : v;
+  const pct = typeof raw === 'string' && raw.endsWith('%');
+  const n = Number(pct ? raw.slice(0, -1) : raw);
+  if (raw === '' || raw === null || raw === undefined || !Number.isFinite(n)) return NaN;
+  return pct || n > 1 ? n / 100 : n;
+}
+export const REVIEW_WORDS = { min: 300, max: 500 };
+export const countWords = (t) => (String(t).match(/\S+/g) ?? []).length;
+/** Đọc tỉ lệ trích dẫn hợp lệ từ `details`; dữ liệu cũ ghi `citationPrecision` (đổi tên SR-18, D2). */
+export const citationValidityOf = (details) => details?.citationValidity ?? details?.citationPrecision;
 
 /** Research: answer correctness + citation validity + correct refusal. */
 export function gradeResearch({ workdir, hiddenDir, finalText, task }) {
@@ -119,7 +234,7 @@ export function gradeResearch({ workdir, hiddenDir, finalText, task }) {
   const valid = new Set(['P1', 'P2', 'P3', 'P4', 'P5', 'P6']);
   const allCites = ['q1', 'q2', 'q3', 'q4'].flatMap((q) => g?.[q]?.citations ?? []).map(String);
   const checks = {
-    q1: g.q1?.paper === 'P4' && Math.abs(Number(g.q1?.f1) - 0.962) < 1e-6,
+    q1: g.q1?.paper === 'P4' && Math.abs(parseF1(g.q1?.f1) - 0.962) < 1e-6,
     q1_cites: (g.q1?.citations ?? []).includes('P4'),
     q2: g.q2?.paper === 'P5' && /BGL-?X/i.test(String(g.q2?.dataset)),
     q3_refusal: g.q3?.not_in_corpus === true,
@@ -128,11 +243,12 @@ export function gradeResearch({ workdir, hiddenDir, finalText, task }) {
   };
   const review = readTextDeliverable(workdir, 'REVIEW.md', '');
   const reviewCites = [...review.text.matchAll(/\[(P\d+)\]/g)].map((m) => m[1]);
-  checks.review_written = !review.formatMiss && reviewCites.length >= 3 && reviewCites.every((c) => valid.has(c));
+  const reviewWords = review.formatMiss ? 0 : countWords(review.text);
+  checks.review_written = !review.formatMiss && reviewCites.length >= 3 && reviewCites.every((c) => valid.has(c)) && reviewWords >= REVIEW_WORDS.min && reviewWords <= REVIEW_WORDS.max;
   const n = Object.values(checks).filter(Boolean).length;
   return {
     score: n / Object.keys(checks).length, pass: n === Object.keys(checks).length,
-    details: { checks, citationPrecision: allCites.length ? allCites.filter((c) => valid.has(c)).length / allCites.length : 0, correctRefusal: checks.q3_refusal },
+    details: { checks, citationValidity: allCites.length ? allCites.filter((c) => valid.has(c)).length / allCites.length : 0, correctRefusal: checks.q3_refusal, reviewWords },
     formatMiss,
   };
 }
