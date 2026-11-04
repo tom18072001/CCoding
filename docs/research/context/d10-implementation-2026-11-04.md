@@ -206,3 +206,9 @@ Năm mục dưới đây là những việc chưa làm vì cần quyền cài đ
 5. **Ngân sách và ngưỡng A/B.**
    - Mục đích: chốt chi phí và tiêu chí đạt của phép đo A/B.
    - Đề xuất: giữ xác nhận r = 8 (160 lượt) theo `implementation-spec.md:48`. Giữ ngưỡng D5 ở `implementation-spec.md:49` (token, an toàn, thời gian; Holm trên ba chỉ số chính). Nếu muốn phủ trường hợp Holm xấu nhất thì dùng r = 10 (200 lượt). Mọi ngưỡng hiện là giả định do giám đốc chốt.
+
+## Kiểm trên Linux sau khi gộp D10b (người điều phối, 4/11/2026)
+
+- **Lỗi:** `test/sandbox-log-fallback.test.ts:66` (DET-04) đỏ trên Linux. Khi một thành phần của đường dẫn là tệp, `fs.rmSync(guardState, { force: true })` ném `ENOTDIR`, vì `force` chỉ bỏ qua `ENOENT`. Trên Windows lỗi trả về là `ENOENT` nên không lộ ra.
+- **Sửa** (`c614ef9`, `src/runtimes/claude-cli.ts`): bọc lệnh dọn tệp trạng thái hook bằng `try/catch` ở nhánh fail-closed. Hành vi không đổi: vẫn không chạy, vẫn trả lỗi tiếng Việt, vẫn ghi `sandbox.unavailable` hoặc báo lỗi ghi log.
+- **Kết quả trên Linux:** `npm test` 3 lần đều exit 0 (tests 415, pass 415, fail 0, skipped 0). `node --test bench/vs-claude/test/*.mjs` 38/38. `consistency-check.mjs` đạt.
