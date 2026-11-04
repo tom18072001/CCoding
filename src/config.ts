@@ -204,6 +204,8 @@ export interface Config {
    * B-19: vòng tự cải thiện RQ5 (docs/research/self-improvement/implementation-spec.md §1). Mặc định TẮT: tắt thì không sự kiện, không lượt LLM, prompt giữ nguyên byte.
    * ab.tasks không được chứa t1–t5/g1–g6 (D7); ba khóa roles phải đôi một khác nhau (§4 điểm 4). Ngân sách và ngưỡng là giả định do giám đốc chốt.
    */
+  /** K2 (D13): dọn data/logs/ + niêm phong bằng sổ băm. Mặc định TẮT. days chỉ nâng được sàn (183/365 ngày, src/log-retention.ts); 0 = dùng sàn. */
+  logs: { retention: { enabled: boolean; days: number; intervalHours: number } };
   selfImprove: {
     enabled: boolean;
     collect: boolean;
@@ -380,6 +382,7 @@ const BUILTIN: Omit<Config, 'root'> = {
     incidentLog: true,
   },
   planner: { difficultyModel: { enabled: false, models: { 1: 'sonnet', 3: 'opus' } } },
+  logs: { retention: { enabled: false, days: 0, intervalHours: 24 } },
   selfImprove: {
     enabled: false,
     collect: true,
