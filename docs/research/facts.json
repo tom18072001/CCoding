@@ -370,7 +370,7 @@
       "id": "prereg-keys-kept",
       "value": "440",
       "reason": "bench/vs-claude/results/study-cloud-final/final-extra.md đầu tệp (440 khóa giữ); README.md mục \"Dữ liệu\"",
-      "pattern": "giữ (\\d{3}) \\(`SCF/final-extra\\.md`",
+      "pattern": "giữ (\\d{3}) \\(tệp R2",
       "files": [
         "paper/paper.md"
       ],

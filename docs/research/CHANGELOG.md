@@ -17,7 +17,8 @@ Căn cứ: thẩm định thống kê (`context/k2-stats-review-2026-11-04.md`),
   - **§9** cập nhật nhóm (b), (c); Tóm tắt VI/EN cập nhật câu về họ Holm. Đầu bài ghi tên bản v0.5.
   - **Giữ nguyên:** Bảng 8, 9, 11–14 và toàn bộ số của §6.2.
 - **`facts.json` (S5):** thêm 27 mục `numbers` cho `paper/paper.md` (E1: 6; E2: 14; H2: 2; H7: 3; B-01 hai script: 2).
-- **Chưa làm, ghi để S6:** (1) chạy `consistency-check.mjs` để xác nhận 27 mẫu mới khớp (chưa chạy được ở S5); (2) đoạn văn cũ ở §3–§9 vẫn còn dẫn đường dẫn nội bộ, mã SR và mã BRIEF ngoài các chỗ S5 đã sửa (BRIEF-D9 đã bỏ ở §7.4 và §9); cần một lượt rà ẩn danh riêng.
+- **Rà ẩn danh (sửa theo review):** thân bài không còn đường dẫn `docs/`, `bench/`, `AN/`, `SCF/`, mã BRIEF hay mã S2/S3; tệp nội bộ đổi thành nhãn R1–R18 và gom ở Phụ lục A (mục "Tái lập") của `paper/paper.md`. Nhãn "V-BRIEF" đổi thành "V-đầu vào". Mẫu `prereg-keys-kept` trong `facts.json` đổi theo chữ mới. Còn giữ: tên hệ CCoding (đối tượng của bài), mã backlog B-xx và mã thách thức C-xx (đã định nghĩa trong bài), đường dẫn mã `src/…` và tên script `*.mjs` — chờ Tom quyết có ẩn nốt khi nộp.
+- **Chưa làm, ghi để S6:** chạy `consistency-check.mjs` để xác nhận 27 mẫu mới và mẫu đã đổi khớp (chưa chạy được).
 - **Quy ước tên:** giữ tên arm của v0.4 (A0-sonnet = agent đơn; B0 = đủ phòng; B6 = làn nhanh; B7 = làn đơn); B7cab = làn đơn có cổng chất lượng; B7cabO = biến thể của B7cab, CTO nghiệm thu bằng Opus.
 
 ## Vòng 4, gói 6 (T-20261103-195822-b03, 3/11/2026): sửa câu lỗi thời, tách "đã sửa / đang làm ở D9 / cần đo"
