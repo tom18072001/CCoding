@@ -34,6 +34,13 @@
   - 27,5 % là cận trên.
 - Ghi vào `context/v43f-review-2026-11-0x.md`.
 
+**K1b — methodologist: đăng ký trước phép đo trục 2 (quản trị), không gọi LLM**
+- Hiện trục 2 chưa có số đo nào. 27 lệnh tấn công trong test do nhóm tự viết.
+- **Thiết kế và ghi §9 trước khi tính:**
+  - (a) tỉ lệ chặn nhầm của bộ kiểm lệnh (`src/tools/shell-policy.ts`, `claude-guard.ts`) trên **lệnh thật agent đã chạy**, lấy từ nhật ký sẵn có (sự kiện của hook, `calls.jsonl` của các đợt đo; chỉ đọc qua API hoặc từ thư mục kết quả đã commit), có người gán nhãn lệnh nào đáng chặn;
+  - (b) tỉ lệ chặn đúng trên một **bộ lệnh tấn công do bên ngoài viết** (ví dụ ca lệnh của AgentDojo hay AIShellJack, nếu giấy phép cho dùng), chạy qua đúng hàm thật như `scripts/replay-guard-deny.mjs`.
+- Báo n, Clopper–Pearson. Không chạy sandbox thật khi giám đốc chưa đăng nhập WSL.
+
 **K2 — academic-writer (data-scientist kiểm số): bài báo v0.7**
 - **Dựng lại đóng góp quanh ba trục.** Mỗi trục ghi số đo và giới hạn:
   - (1) nghiệm thu bằng kiểm chứng thật, với G-1, G-2, G-3, G-3Δ;
