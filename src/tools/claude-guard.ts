@@ -176,37 +176,61 @@ export function logGuardBlock(b: GuardBlock, cfg: GuardConfig, env: NodeJS.Proce
 /** B-18: backend sandbox ghi trong log (không phải đường dẫn hay lệnh). */
 export type SandboxBackend = 'native' | 'wsl2' | 'none';
 
+/** Kết quả ghi log sandbox: ok=false ⇒ đã in đúng một dòng cảnh báo ra stderr (DET-04), `kind` là loại lỗi (không có đường dẫn). */
+export type SandboxLogResult = { ok: true } | { ok: false; kind: string };
+
+/** Loại lỗi an toàn để in: mã lỗi hệ thống (EISDIR…) hoặc tên lỗi — không lấy message (có thể chứa đường dẫn). */
+function errKind(e: unknown): string {
+  const raw = (e as { code?: unknown })?.code ?? (e as { name?: unknown })?.name ?? 'Error';
+  const s = String(raw);
+  return /^[A-Za-z0-9_]{1,40}$/.test(s) ? s : 'Error';
+}
+
 /**
- * B-18: ghi `sandbox.deny` (sandbox hệ điều hành từ chối một thao tác) theo khuôn logGuardBlock.
- * data chỉ { tool, rule, backend } — không lệnh thô, không đường dẫn. Mọi lỗi đều nuốt.
+ * DET-04: ghi sự kiện sandbox qua LogStore (system.jsonl). Không xác định được dataDir, hoặc LogStore ném lỗi → ghi MỘT dòng stderr
+ * cố định { tool, rule, backend } + loại lỗi (không lệnh thô, không đường dẫn, không message gốc) và trả { ok: false } để nơi gọi
+ * đưa lỗi vào kết quả lượt. Không đổi quyết định chặn (không ném lỗi).
  */
-export function logSandboxDeny(d: { tool: string; rule: string; backend: SandboxBackend }, cfg: Pick<GuardConfig, 'state' | 'dataDir'>, env: NodeJS.ProcessEnv = process.env): void {
+function writeSandboxEvent(
+  kind: 'sandbox.deny' | 'sandbox.unavailable',
+  entry: { level: 'warn' | 'error'; msg: string; data: Record<string, string> },
+  fields: { tool?: string; rule?: string; backend: SandboxBackend },
+  cfg: Pick<GuardConfig, 'state' | 'dataDir'>,
+  env: NodeJS.ProcessEnv,
+): SandboxLogResult {
+  let why: string;
+  let errType = '';
   try {
     const t = guardLogTarget(cfg as GuardConfig, env);
-    if (!t) return;
-    const logs = new LogStore(t.dataDir, { redactSecrets: true, redactPii: true, hashChain: true });
-    logs.write({
-      level: 'warn',
-      kind: 'sandbox.deny',
-      msg: `sandbox từ chối ${d.tool}: ${d.rule}`,
-      taskId: t.taskId,
-      data: { tool: d.tool, rule: d.rule, backend: d.backend },
-    });
-  } catch {
-    /* log chẩn đoán là phụ trợ */
+    if (!t) {
+      why = 'không xác định thư mục dữ liệu (đặt CCODING_DATA_DIR)';
+    } else {
+      const logs = new LogStore(t.dataDir, { redactSecrets: true, redactPii: true, hashChain: true });
+      logs.write({ level: entry.level, kind, msg: entry.msg, taskId: t.taskId, data: entry.data });
+      return { ok: true };
+    }
+  } catch (e) {
+    errType = errKind(e);
+    why = `ghi nhật ký thất bại (${errType})`;
   }
+  const f = `{tool: ${fields.tool ?? '-'}, rule: ${fields.rule ?? '-'}, backend: ${fields.backend}}`;
+  try {
+    process.stderr.write(`[ccoding] ${kind} không ghi được log: ${why} ${f}
+`);
+  } catch {
+    /* stderr đóng: không còn đường nào, vẫn trả ok=false cho nơi gọi */
+  }
+  return { ok: false, kind: errType || 'NO_DATA_DIR' };
+}
+
+/** B-18: ghi `sandbox.deny` (sandbox hệ điều hành từ chối một thao tác). data chỉ { tool, rule, backend } — không lệnh thô, không đường dẫn. */
+export function logSandboxDeny(d: { tool: string; rule: string; backend: SandboxBackend }, cfg: Pick<GuardConfig, 'state' | 'dataDir'>, env: NodeJS.ProcessEnv = process.env): SandboxLogResult {
+  return writeSandboxEvent('sandbox.deny', { level: 'warn', msg: `sandbox từ chối ${d.tool}: ${d.rule}`, data: { tool: d.tool, rule: d.rule, backend: d.backend } }, d, cfg, env);
 }
 
 /** B-18: ghi `sandbox.unavailable` khi khóa bật mà nền tảng không có sandbox (fail-closed). data chỉ { backend, platform }. */
-export function logSandboxUnavailable(d: { backend: SandboxBackend; platform: string }, cfg: Pick<GuardConfig, 'state' | 'dataDir'>, env: NodeJS.ProcessEnv = process.env): void {
-  try {
-    const t = guardLogTarget(cfg as GuardConfig, env);
-    if (!t) return;
-    const logs = new LogStore(t.dataDir, { redactSecrets: true, redactPii: true, hashChain: true });
-    logs.write({ level: 'error', kind: 'sandbox.unavailable', msg: 'osSandbox bật nhưng nền tảng không có sandbox — không chạy', taskId: t.taskId, data: { backend: d.backend, platform: d.platform } });
-  } catch {
-    /* log chẩn đoán là phụ trợ */
-  }
+export function logSandboxUnavailable(d: { backend: SandboxBackend; platform: string }, cfg: Pick<GuardConfig, 'state' | 'dataDir'>, env: NodeJS.ProcessEnv = process.env): SandboxLogResult {
+  return writeSandboxEvent('sandbox.unavailable', { level: 'error', msg: 'osSandbox bật nhưng nền tảng không có sandbox — không chạy', data: { backend: d.backend, platform: d.platform } }, { backend: d.backend }, cfg, env);
 }
 
 /**
