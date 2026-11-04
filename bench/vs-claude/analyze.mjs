@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mulberry32, fisherYates } from './lib/stats.mjs';
+import { mulberry32, fisherYates, tost, permTwoSample, bootP, h6Combine, permStratified, confirmable } from './lib/stats.mjs';
 
 const dir = path.resolve(process.argv[2] ?? '.');
 const argv = process.argv.slice(3);
@@ -100,20 +100,72 @@ const inCats = (...c) => (t) => c.includes(catOf[t]);
 // ---------- hypotheses ----------
 const H = [];
 const verdict = (ok, unknown) => (unknown ? 'insufficient data' : ok ? 'SUPPORTED' : 'not supported');
+const fp = (x) => (x == null || !Number.isFinite(x) ? 'NA' : x < 1e-3 ? x.toExponential(2) : x.toFixed(4));
+const cellsOf = (a, b, ts, metric = 'score') => ts.map((t) => ({ task: t, a: cell(a, t, metric), b: cell(b, t, metric) })).filter((c) => c.a.length && c.b.length);
+const HOLM_ALPHA = 0.025;
+const EPS = 1e-12;
+
+// SR-26/SR-04/SR-12: phép kiểm của H2, H3, H6 và họ Holm {H3, H6}. Mọi hàm có hạt riêng, không đụng `rnd` chung.
+const H6_TASKS = ['l1-modules', 'l2-chain', 't1-duration', 't2-orders', 't3-api', 't4-perf', 't5-logq']; // §2.5 (a)
+const H6_MARGIN = 0.05;
+const h6 = (() => {
+  const per = {};
+  for (const arm of ['A1', 'A2']) {
+    const cells = cellsOf(TREAT, arm, H6_TASKS.filter((t) => tasks.includes(t)));
+    const res = bootP(cells, { taskSet: H6_TASKS, arm });
+    const kept = cells.filter((c) => !res.ceilingTasks.includes(c.task));
+    per[arm] = { res, kept, tost: tost(kept, { margin: H6_MARGIN }) };
+  }
+  const comb = h6Combine(per.A1.res, per.A2.res);
+  const nOk = per.A1.kept.length >= 3 && per.A2.kept.length >= 3;
+  const equiv = ['A1', 'A2'].every((a) => per[a].tost.equivalent); // SR-12: cả hai arm khai báo phải nằm trong biên, không `.some()`
+  return { per, comb, nOk, equiv, pMin: comb.p == null ? null : 1 / (comb.B + 1) };
+})();
+const h3 = (() => {
+  const s1 = tasks.filter((t) => t.startsWith('s1'));
+  const pool = (arm, k) => s1.flatMap((t) => cell(arm, t, `detail:${k}`)).filter(Number.isFinite);
+  const runsOf = (arm) => R.filter((r) => r.arm === arm && s1.includes(r.task)).length;
+  const rec = permTwoSample(pool(BASE, 'recall'), pool(TREAT, 'recall'), { shift: -0.15 });
+  const prec = permTwoSample(pool(BASE, 'precision'), pool(TREAT, 'precision'), { shift: 0.05 });
+  const have = rec.N > 0 && prec.N > 0;
+  const droppedPrec = runsOf(BASE) + runsOf(TREAT) - pool(BASE, 'precision').length - pool(TREAT, 'precision').length;
+  return { rec, prec, have, p: have ? Math.max(rec.p, prec.p) : null, pMin: have ? Math.max(rec.pMin, prec.pMin) : null, droppedPrec };
+})();
+const holm = (() => {
+  const members = [];
+  if (h3.have) members.push({ id: 'H3', p: h3.p, pMin: h3.pMin });
+  if (h6.comb.verdict !== 'estimate') members.push({ id: 'H6', p: h6.comb.p, pMin: h6.pMin }); // < 3 bài ⇒ ước lượng, ra khỏi họ (§2.5 d)
+  const K = members.length;
+  const order = [...members].sort((x, y) => (x.p ?? 1) - (y.p ?? 1)); // NA xếp như 1, không bao giờ bị bác bỏ, không chặn bước trước
+  let ok = true;
+  order.forEach((m, i) => {
+    const thr = HOLM_ALPHA / (K - i);
+    ok = ok && m.p != null && m.p <= thr + EPS;
+    m.rejected = ok;
+    m.confirmable = confirmable(m.pMin, HOLM_ALPHA / K);
+    m.confirmed = m.rejected && m.confirmable;
+  });
+  return { K, byId: Object.fromEntries(members.map((m) => [m.id, m])), members: order };
+})();
+const holmTxt = (m) => (m ? `p=${fp(m.p)}, p_min=${fp(m.pMin)}, confirmable=${m.confirmable ? 'có' : 'không'} (ngưỡng p_min ≤ ${fp(HOLM_ALPHA / holm.K)}), Holm ${m.rejected ? 'bác bỏ H0' : 'không bác bỏ'}` : 'ngoài họ Holm (ước lượng)');
 {
   const c = compare(BASE, TREAT, { filter: (t) => ['coding', 'design'].includes(catOf[t]) && sizeOf[t] >= 3 });
   H.push(['H1', `Decomposable work (coding/design, size>=3): ${TREAT} - ${BASE}`, `${pp(c.est)} [${pp(c.lo)}, ${pp(c.hi)}], p=${f(c.p, 3)}, tasks=${c.n}`, verdict(c.est >= 0.1 && c.lo > 0, !c.n)]);
 }
 {
   const c = compare(BASE, TREAT, { filter: inCats('logic') });
-  H.push(['H2', `Coupled reasoning (logic) is not better: ${TREAT} - ${BASE}`, `${pp(c.est)} [${pp(c.lo)}, ${pp(c.hi)}], p=${f(c.p, 3)}, tasks=${c.n}`, verdict(c.est <= 0.05, !c.n)]);
+  // SR-04: phán quyết bằng cận trên CI 90 % (bootstrap hai tầng, hạt riêng) ≤ +0,05, không bằng ước lượng điểm.
+  const t = tost(cellsOf(BASE, TREAT, tasks.filter(inCats('logic'))), { margin: 0.05 });
+  H.push(['H2', `Coupled reasoning (logic) is not better: ${TREAT} - ${BASE} (90% CI upper bound ≤ +5 pp)`, `${pp(c.est)} [${pp(c.lo)}, ${pp(c.hi)}], p=${f(c.p, 3)}, tasks=${c.n}; TOST90 [${pp(t.lo90)}, ${pp(t.hi90)}]`, verdict(t.hi90 <= 0.05 + EPS, !c.n)]);
 }
 {
   const s = tasks.filter(inCats('review'));
   const m = (arm, k) => mean(s.flatMap((t) => cell(arm, t, `detail:${k}`)));
   const lines = [[BASE, TREAT], ['B2', TREAT]].filter(([a]) => arms.includes(a)).map(([a, b]) => `${b} vs ${a}: recall ${pp(m(b, 'recall') - m(a, 'recall'))}, precision ${pp(m(b, 'precision') - m(a, 'precision'))}`);
-  const ok = m(TREAT, 'recall') - m(BASE, 'recall') >= 0.15 && m(BASE, 'precision') - m(TREAT, 'precision') <= 0.05;
-  H.push(['H3', 'Review raises seeded-issue recall without hurting precision', lines.join('; ') || 'n/a', verdict(ok, !s.length)]);
+  // SR-26: hoán vị hai mẫu chính xác trên s1; recall dịch −0,15, precision dịch +0,05, p = max.
+  const m3 = holm.byId.H3;
+  const permTxt = h3.have ? `s1: recall p=${fp(h3.rec.p)} (N=${h3.rec.N}), precision p=${fp(h3.prec.p)} (N=${h3.prec.N}, bỏ ${h3.droppedPrec} lượt precision NaN); ${holmTxt(m3)}` : 's1 chưa đủ dữ liệu cho hoán vị';
+  H.push(['H3', 'Review raises seeded-issue recall without hurting precision (exact two-sample permutation, s1, margins recall −0.15 / precision +0.05)', `${lines.join('; ') || 'n/a'}; ${permTxt}`, h3.have ? verdict(m3.confirmed, false) + (m3.confirmable ? '' : ' (p_min > ngưỡng: không xác nhận được)') : 'insufficient data']);
 }
 {
   const c = compare(BASE, TREAT, { filter: inCats('requirements') });
@@ -131,8 +183,12 @@ const verdict = (ok, unknown) => (unknown ? 'insufficient data' : ok ? 'SUPPORTE
 {
   const parts = ['A1', 'A2'].filter((a) => arms.includes(a)).map((a) => { const c = compare(a, TREAT); return { a, c }; });
   const txt = parts.map(({ a, c }) => `${TREAT} - ${a}: ${pp(c.est)} [${pp(c.lo)}, ${pp(c.hi)}]`).join('; ');
-  const ok = parts.length && parts.some(({ c }) => Math.abs(c.est) <= 0.05);
-  H.push(['H6', 'Compute-matched single agent matches CCoding (null)', txt || 'needs arms A1/A2', verdict(ok, !parts.length)]);
+  // SR-04/SR-12/SR-26: phán quyết bằng TOST CI 90 % trên tập bài khai báo sau khi loại bài chạm trần; cả A1 và A2 phải nằm trong ±0,05.
+  const tokRatio = (a) => mean(R.filter((r) => r.arm === a).map((r) => r.tokens?.weighted ?? 0)) / mean(R.filter((r) => r.arm === TREAT).map((r) => r.tokens?.weighted ?? 0));
+  const armTxt = (a) => { const x = h6.per[a]; return `${a}: n=${x.kept.length}, bỏ trần [${x.res.ceilingTasks.join(', ') || 'không'}], TOST90 [${pp(x.tost.lo90)}, ${pp(x.tost.hi90)}]${x.tost.equivalent ? ' trong biên' : ' ngoài biên'}`; };
+  const confirmTxt = `tập khai báo: ${armTxt('A1')}; ${armTxt('A2')}; token có trọng số A2/${TREAT} x${f(tokRatio('A2'))}, A1/${TREAT} x${f(tokRatio('A1'))} (mọi bài); bootstrap ${h6.comb.verdict}: ${holmTxt(holm.byId.H6)}`;
+  const unknown = !parts.length || !h6.nOk;
+  H.push(['H6', 'Compute-matched single agent matches CCoding (null); both A1 and A2 within ±5 pp (TOST 90% CI)', `${txt || 'needs arms A1/A2'} (mọi bài, mô tả); ${confirmTxt}`, verdict(h6.equiv, unknown)]);
 }
 {
   const r = tasks.map((t) => { const a = sd(cell(BASE, t)), b = sd(cell(TREAT, t)); return a > 0 ? b / a : (b === 0 ? 1 : NaN); }).filter(Number.isFinite);
@@ -157,6 +213,23 @@ const verdict = (ok, unknown) => (unknown ? 'insufficient data' : ok ? 'SUPPORTE
   const b = slope(pts); let ext = 0; const P = 5000;
   for (let i = 0; i < P; i++) { const ys = LEGACY ? pts.map((x) => x[1]).sort(() => rnd() - 0.5) : fisherYates(pts.map((x) => x[1]), rnd); if (Math.abs(slope(pts.map((x, j) => [x[0], ys[j]]))) >= Math.abs(b)) ext++; }
   H.push(['H10', 'Advantage grows with task size (slope of delta vs parts)', `slope ${pp(b)} per extra part, permutation p=${f(ext / P, 3)}, tasks=${pts.length}`, verdict(b > 0 && ext / P < 0.05, pts.length < 4)]);
+}
+
+// SR-26: họ Holm {H3, H6}; NA xếp như 1 (không bác bỏ, không chặn).
+{
+  const txt = holm.members.map((m) => `${m.id}: ${holmTxt(m)}${m.confirmed ? ' ⇒ xác nhận' : ''}`).join('; ') || 'họ rỗng';
+  H.push(['Holm {H3, H6}', `K=${holm.K}, ngưỡng ${HOLM_ALPHA}/(K−i+1), H6 ra khỏi họ khi < 3 bài (§2.5)`, txt, holm.members.some((m) => m.confirmed) ? 'có giả thuyết xác nhận' : 'không có giả thuyết xác nhận']);
+}
+// SR-04: B-01 (làn đơn so với BASE), mỗi đại lượng một TOST trên log-tỉ số, biên [0,85; 1,15], t1–t5.
+{
+  const B01 = flag('b01-arm', 'SL');
+  const t15 = tasks.filter((t) => /^t[1-5]-/.test(t));
+  for (const [id, label, metric] of [['B-01a', 'token có trọng số', 'weighted'], ['B-01b', 'thời gian thực', 'wallSec'], ['B-01c', 'điểm tương đối', 'score']]) {
+    const cells = arms.includes(B01) ? cellsOf(BASE, B01, t15, metric) : [];
+    const t = tost(cells, { margin: Math.log(1.15), scale: 'logratio' });
+    const lo = Math.exp(t.lo90), hi = Math.exp(t.hi90);
+    H.push([id, `${label}: ${B01}/${BASE} trong [0,85; 1,15] (TOST 90% CI, log-tỉ số)`, cells.length ? `R=${f(Math.exp(t.est), 3)} [${f(lo, 3)}, ${f(hi, 3)}], bài=${cells.length}` : `không có dữ liệu ${B01} trên t1–t5`, verdict(lo >= 0.85 - EPS && hi <= 1.15 + EPS, !cells.length)]);
+  }
 }
 
 // ---------- tables ----------
@@ -209,7 +282,13 @@ ${pareto.map((p) => `| ${p.arm} | ${f(p.meanScore)} | ${Math.round(p.meanWeighte
 | --- | --- | --- | --- | --- | --- |
 ${tasks.map((t) => { const a = mean(cell(BASE, t)), b = mean(cell(TREAT, t)); return `| ${t} | ${catOf[t]} | ${sizeOf[t]} | ${f(a)} | ${f(b)} | ${pp(b - a)} |`; }).join('\n')}
 
-Errors / non-done runs: ${rows.filter((r) => r.status !== 'done').map((r) => r.key).join(', ') || 'none'}.
+${exploratory.length ? `## Exploratory tasks (set: exploratory; không vào H1–H10, H6, H1′/H2′)
+
+| Task | Category | ${BASE} | ${TREAT} | Delta |
+| --- | --- | --- | --- | --- |
+${exploratory.map((t) => { const xs = Rx.filter((r) => r.task === t); const m = (arm) => mean(xs.filter((r) => r.arm === arm).map((r) => r.score)); return `| ${t} | ${xs[0]?.category} | ${f(m(BASE))} | ${f(m(TREAT))} | ${pp(m(TREAT) - m(BASE))} |`; }).join('\n')}
+
+` : ''}Errors / non-done runs: ${rows.filter((r) => r.status !== 'done').map((r) => r.key).join(', ') || 'none'}.
 Leaked runs: ${leaks.map((r) => r.key).join(', ') || 'none'}.
 `;
 fs.writeFileSync(path.join(dir, 'report.md'), md);
