@@ -135,6 +135,7 @@ Options: `--tasks all|<id>,<prefix>,<category>` · `--repeats N` · `--timeout <
 ## Arm B6 và B7
 
 - **B6** — CCoding làn nhanh (`options.lane: "fast"`).
+- **B0F** / **B1F** — CCoding ép làn đầy đủ (`options.lane: "full"`), B1F thêm `discussionRounds: 0` (bỏ họp). Dùng khi B0 tự chọn làn nhanh/đơn nên không có pha họp (E3, `l1-modules`, `l2-chain`).
 - **B7** — CCoding làn đơn (`options.lane: "single"`), **chờ B-01** (`docs/research/improvement-backlog.md`). Trước khi gửi task, runner đọc union `lane` trong `src/types.ts` (hoặc `dist/types.d.ts`). Nếu chưa có `'single'`, runner thoát mã 2 với "Arm B7 cần lane 'single' (B-01) — CCoding hiện chưa hỗ trợ" và không chạy sang làn khác. `--dry-run` vẫn liệt kê lượt B7.
 
 ## Hạn mức tài khoản và chạy tiếp
