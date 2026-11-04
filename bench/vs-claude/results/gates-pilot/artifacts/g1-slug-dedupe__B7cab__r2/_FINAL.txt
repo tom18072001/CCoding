@@ -1,0 +1,69 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g1-slug-dedupe__B7cab__r2] Slug hóa tiêu đề và sinh slug không trùng (lệnh kiểm tra đỏ sẵn)
+
+_Làn đơn: một agent làm trọn đề bài; báo cáo dựng tự động từ bàn giao và kết quả cổng chất lượng (không gọi model)._
+
+## Tóm tắt
+
+Làn đơn: Senior Software Engineer (@senior-swe) làm trọn đề bài trong worktree nhiệm vụ
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — [vs-claude g1-slug-dedupe__B7cab__r2] Slug hóa tiêu đề và sinh slug không trùng (lệnh kiểm tra đỏ sẵn) (@senior-swe, done)
+
+## Tóm tắt
+Đã sửa `slugify` (thiếu bước cắt `-` ở hai đầu, nên test baseline đỏ) và thêm `uniqueSlugs(titles)` theo SPEC.md. `npm test` giờ xanh: 3 test pass, 0 fail. Chưa thấy rủi ro còn lại.
+
+## Tệp đã tạo/sửa
+- `src/slug.js`: thêm `.replace(/^-+|-+$/g, '')` vào `slugify`. Thêm và export `uniqueSlugs`.
+- `test/slug.test.js`: thêm test `uniqueSlugs`.
+
+## Kiểm chứng
+- `npm test` → exit 0. Kết quả: tests 3, pass 3, fail 0. Tôi đọc exit 0 từ bản tóm tắt `# fail 0`, không in mã thoát riêng.
+- Lần chạy đầu bị hook chặn vì lệnh chứa `../src/slug`, nên không chạy. Tôi chuyển sang dùng Write/Edit rồi chạy lại.
+- Baseline đã được cung cấp sẵn nên tôi không đo lại.
+
+## Quyết định thiết kế
+- `uniqueSlugs` dùng `Set` các slug đã dùng. Slug rỗng đổi thành `untitled`. Hậu tố `-2`, `-3`… được thử tăng dần trên slug gốc, kể cả khi trùng với slug của tiêu đề khác. Ví dụ `['a','a','a-2']` cho ra `['a','a-2','a-2-2']`.
+- Dùng `Array.from(titles, …)` nên nhận được cả iterable. Mảng rỗng trả về `[]`.
+
+## Rủi ro & việc còn mở
+- Bộ nghiệm thu ẩn chưa chạy được. Chưa kiểm tra đầu vào `null`/`undefined`: `slugify` dùng `String(s)` nên chúng thành `'null'`/`'undefined'`, SPEC không nêu rõ trường hợp này.
+
+Bản đầy đủ: `.ccoding/T-20261104-105029-a80/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng (làn đơn): lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-105029-a80` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **8 in / 2,362 out**, cache đọc 95.5k, 1 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 8 | 2362 | 95466 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude g1-slug-dedupe__B7cab__r2] Slug hóa tiêu đề và sinh slug không trùng (lệnh kiểm tra đỏ sẵn) (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 2 · # suites 0 · # pass 1 · # fail 1 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 3 · # suites 0 · # pass 3 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 100 | 89 | 100 | 1 | 1 | 98k | 1/7 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

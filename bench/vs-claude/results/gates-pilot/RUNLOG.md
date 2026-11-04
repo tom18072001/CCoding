@@ -10,6 +10,7 @@ Phân loại dữ liệu: **Nội bộ**. Bài tổng hợp, không có dữ li�
 | Claude Code CLI | 2.1.318 |
 | Lệnh 1 | `--arms B7cab,B7cabO --tasks suite:gates --repeats 2` (24 lượt) |
 | Lệnh 2 | `--arms B6 --tasks g3-qty-rename,g4-gb-unit --repeats 2` (4 lượt) |
+| Thời gian | Lệnh 1 `2026-11-04T03:28:42Z` → `03:51:09Z`, exit 0. Lệnh 2 → `03:55:51Z`, exit 0 |
 
 ## Sai lệch quy trình
 
@@ -19,3 +20,15 @@ Phân loại dữ liệu: **Nội bộ**. Bài tổng hợp, không có dữ li�
   - N của E4 đã cố định trước (R_E4 = 16, R_B6 = 32; §9 khối (a) bước 5).
   - E2 là thí điểm mô tả.
 - **Cách xử lý từ lúc đó:** chỉ kiểm tiến độ bằng số dòng, đã lọc bỏ cột điểm. Sai lệch này giống V3-09.
+
+## Kết quả chạy (không có điểm)
+
+| Arm | Lượt `done` | Lỗi hạ tầng | Token có trọng số | USD quy giá Sonnet 5.5 | Model ghi nhận | Bản ghi cổng khác `null` (b02 / b10 / cto) |
+|---|---|---|---|---|---|---|
+| B7cab | 12/12 | 0 | 0,93 M | 2,05 | sonnet | 12 / 4 / 12 |
+| B7cabO | 12/12 | 0 | 1,23 M | 2,78 (chưa tính phần Opus) | sonnet, opus | 12 / 6 / 12 |
+| B6 | 4/4 | 0 | 0,53 M | 1,19 | haiku, sonnet | 4 / 4 / 4 |
+
+- Wall-sum 0,45 giờ. Không chạm hạn mức hay hết credit.
+- `costUsd` của arm CCoding vẫn bằng 0. SR-02 thuộc D11, chưa gộp.
+- Phân tích (q̂, tỉ lệ bất đồng, mô tả) do Phòng Nghiên cứu làm theo §9 V4-3e-E2, bằng `docs/research/analysis/gates-pairs.mjs`.

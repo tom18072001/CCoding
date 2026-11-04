@@ -1,9 +1,9 @@
 {
   "argv": [
     "--arms",
-    "B7cab,B7cabO",
+    "B6",
     "--tasks",
-    "suite:gates",
+    "g3-qty-rename,g4-gb-unit",
     "--repeats",
     "2",
     "--timeout",
@@ -33,17 +33,12 @@
     "workRoot": "/tmp/vb3e"
   },
   "armIds": [
-    "B7cab",
-    "B7cabO"
+    "B6"
   ],
   "taskIds": [
-    "g1-slug-dedupe",
-    "g2-cart-coupon",
     "g3-qty-rename",
-    "g4-gb-unit",
-    "g5-median-stats",
-    "g6-range-merge"
+    "g4-gb-unit"
   ],
   "repeats": 2,
-  "startedAt": "2026-11-04T03:28:42.866Z"
+  "startedAt": "2026-11-04T03:51:10.049Z"
 }
