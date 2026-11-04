@@ -151,6 +151,15 @@ test('SR-26 H3: r = 3 ⇒ p_min = 1/20 > ngưỡng ⇒ không xác nhận đư�
   assert.match(r, /not supported \(p_min > ngưỡng/);
 });
 
+test('SR-26 H3: dịch biên recall −0,15 và precision +0,05 (recall hơn 0,10 < biên ⇒ p = 1; precision kém 0,10 > biên ⇒ p lớn)', () => {
+  const mk = (rb, pb) => ['A0-sonnet', 'B0'].flatMap((a) => Array.from({ length: 10 }, () => row('s1-sec-review', a, 0.5, { category: 'review', details: { recall: a === 'B0' ? rb : 0.5, precision: a === 'B0' ? pb : 0.9 } })));
+  const r = hRow(run(mk(0.6, 0.9)).report, 'H3');
+  assert.match(r, /recall p=1\.0000/);
+  assert.match(r, /not supported/);
+  // precision kém đi 0,10: b + 0,05 vẫn thấp hơn a ⇒ precision p = 1
+  assert.match(hRow(run(mk(1, 0.8)).report, 'H3'), /precision p=1\.0000/);
+});
+
 test('SR-26 H3: precision NaN (null) bị bỏ và báo số lượt bỏ', () => {
   const d = { category: 'review' };
   const rows = ['A0-sonnet', 'B0'].flatMap((a) => Array.from({ length: 10 }, (_, i) => row('s1-sec-review', a, 0.5, { ...d, details: { recall: a === 'B0' ? 1 : 0.5, precision: i < 2 ? null : 1 } })));
