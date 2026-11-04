@@ -1,0 +1,6 @@
+{
+  "name": "l2-chain",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test" }
+}

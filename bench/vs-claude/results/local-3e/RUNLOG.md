@@ -12,3 +12,11 @@ Phân loại dữ liệu: **Nội bộ**. Bài tổng hợp, không có dữ li�
 | N của E4 | Cố định trước theo §9 khối (a) bước 5: R_E4 = 16 (B7cab, B7cabO × g1, g2, g5, g6), R_B6 = 32 (B6 × g3, g4); tổng 192 lượt. q̂ của E2 chỉ để mô tả, không đổi N |
 | Timeout | E3, E5, E6b, E6c: 40 phút. E4, E6a: 20 phút |
 | Không xem điểm | Log ghi vào tệp, người điều phối chỉ đếm số lượt. Phòng Nghiên cứu phân tích khi đủ N |
+
+## Diễn biến
+
+| Giờ VN (4/11/2026) | Sự việc |
+|---|---|
+| 11:12 | Bắt đầu E3 |
+| 12:03 | E3 xong: 6/6 lượt, exit 0, không chạm hạn mức. Kết quả ở `results/large-pilot`, sổ chạy riêng `large-pilot/RUNLOG.md`. Bắt đầu E4a |
+| 12:19 | **Đổi thứ tự** theo §9, mục "E3 xong; E5 tạm giữ" ghi lúc 12:20, trước lượt đầu của E4b, E5 và E6. Kịch bản `run3e-b.ps1` chạy nền. Khi `run3e.ps1` bắt đầu E4b, nó tạo `STOP-3e` kèm `STOP-3e.auto`, để `run3e.ps1` dừng trước E5. Sau đó nó chạy tiếp E4b (bỏ qua khóa đã xong), rồi E6a, E6b, E6c. **E5 tạm giữ**, chờ Phòng Nghiên cứu thiết kế lại và giám đốc duyệt. Tệp `STOP-3e` do giám đốc tạo vẫn dừng cả hai kịch bản |

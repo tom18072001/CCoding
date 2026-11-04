@@ -618,6 +618,19 @@ E1–E3 trên cloud trước 5/11 14:59; E4–E6 local bằng hạn mức gói.
   - Đây không phải "chạy lại cho đẹp" (CD 1.5), vì chưa có kết quả nào.
 - Giám đốc được báo ngay trong phiên.
 
+**E3 xong; E5 tạm giữ, E6 chạy trước E5 (người điều phối, 4/11/2026 12:20 giờ VN; ghi trước lượt đầu của E5 và E6).**
+- **Căn cứ:** thước đo chính của V4-3e-E3 là pha `discuss` của B0, và kết quả là **không có** ở cả hai bài (`results/large-pilot/RUNLOG.md`).
+  - l1-modules đi làn nhanh.
+  - l2-chain đi làn đơn rồi nâng lên làn nhanh.
+  - Làn nhanh và làn đơn đều không có pha họp. Lựa chọn làn là hàm thuần của đề bài, nên lặp lại không đổi được.
+- **Hệ quả:** theo V4-3e-E5 (8), mọi lượt B0 của E5 sẽ bị loại, kéo theo cả cặp với B1. Như vậy E5 đúng như đăng ký chỉ cho ô "thiếu dữ liệu", tốn khoảng 40 lượt hạn mức mà không có dữ liệu cho B-15.
+- **Đổi thứ tự theo khối (b):** E4a, E4b như cũ, rồi E6a, E6b, E6c. **E5 tạm giữ**, chưa có lượt nào. Số lượt, arm, bài và phép kiểm của E4 và E6 không đổi.
+- **Thiết kế lại E5:** Phòng Nghiên cứu quyết định và ghi vào mục này trước lượt đầu của E5 mới. Hướng gợi ý là ép `lane: full` cho cả hai arm, tức đúng "đối chứng làn đầy đủ, `discussionRounds: 1`" mà V4-3e-E5 (1) mô tả. Lượt nào chạy cũng cần giám đốc duyệt.
+- **Xem kết quả trước khi đổi?**
+  - Không xem điểm của E3.
+  - Quyết định chỉ dựa trên trường quy trình `lane`, `escalatedFrom` và `byPhase`, cùng nhật ký `lane.pick`. Đây là thước đo chính đã đăng ký của E3.
+  - Chưa có lượt nào của E4b, E5 hay E6.
+
 Ghi chú: pha chạy Opus thì chi phí cao hơn; `runs.jsonl` ghi `model` theo pha (B-13), nên mọi phần ghi `model` theo pha cùng hash server để nối dữ liệu cloud với local (`run-plan.md` §6.1).
 
 ## 10. Đạo đức & dữ liệu

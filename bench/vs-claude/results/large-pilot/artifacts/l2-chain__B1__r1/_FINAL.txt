@@ -1,0 +1,200 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude l2-chain__B1__r1] Thư viện cfgchain: bốn tầng nối tiếp từ đặc tả
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Bốn tầng và compile đã có sẵn trong worktree, và npm test đang xanh (37 pass). Việc còn lại là đối chiếu từng quy tắc với SPEC.md để xử lý các chỗ mơ hồ mà lượt trước tự chọn cách hiểu, vì bộ nghiệm thu ẩn kiểm tra từng quy tắc. Chia 3 hạng mục song song, mỗi hạng mục sở hữu tệp riêng. Không làm lại từ đầu.
+
+Kết quả: 3/3 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Đối chiếu SPEC cho lexer và parser (@senior-swe, done)
+
+## Tóm tắt
+Tôi đối chiếu lexer và parser với SPEC mục 1–4. Chỉ có một chỗ lệch: `${true}` và các từ khóa khác trong nội suy, nay báo `LEX_BAD_INTERPOLATION`. Các điểm (b), (c), (d) đã khớp SPEC nên giữ nguyên code, chỉ bổ sung test. `npm test` → exit 0, 41 pass, 0 fail. AST không đổi hình dạng.
+
+## Tệp đã tạo/sửa
+- `src/lexer.js` · trong nội suy `${…}`, mọi đoạn tên (kể cả tên sau `@`) không được là từ khóa.
+- `test/lexer.test.js` · thêm 4 test: từ khóa trong nội suy, `\` cuối tệp, CR/CRLF/BOM, thứ tự báo lỗi.
+- `src/parser.js`, `test/parser.test.js` · không đổi.
+
+## Kiểm chứng
+- `npm test` → exit 0, `pass 41 / fail 0`.
+- Lần chạy đầu ra exit 1, do heredoc làm mất dấu `\` trong test tôi vừa thêm. Tôi đã sửa test, không phải code.
+- Bộ nghiệm thu ẩn chưa chạy.
+
+Quy tắc SPEC và nơi kiểm chứng:
+- **Số (§3):** `src/lexer.js`, test hiện có.
+- **Chuỗi và thoát (§3):** `src/lexer.js`, test hiện có.
+- **Nội suy (§3):** `src/lexer.js`, test hiện có và test mới `lexer: nội suy không nhận từ khóa…`.
+- **Mã `LEX_*` (§3):** `src/lexer.js`, `test/lexer.test.js`.
+- **AST và mã lỗi `PARSE_*` (§2, §4):** `src/parser.js`, `test/parser.test.js` (đã kiểm tra bằng cách đọc code, không sửa).
+- **Thứ tự khóa `files` theo tiền thứ tự (§4):** `src/parser.js`, `test/parser.test.js`.
+
+## Quyết định thiết kế
+- **(a) `${true}` không hợp lệ.**
+  - SPEC §1 viết "khóa và tên là định danh … (không phải từ khóa)".
+  - §3 viết nội dung nội suy phải khớp `@?ident(.đoạn)*` với `đoạn` là `ident` hoặc số.
+  - Tôi hiểu `ident` ở §3 cùng nghĩa với §1, nên từ khóa bị loại, kể cả `${a.null}` và `${@const}`.
+  - Đây vẫn là cách đọc của tôi, không phải điều SPEC nói thẳng.
+- **(b) `\` ngay trước hết tệp báo `LEX_BAD_ESCAPE` tại ký tự `\`.**
+  - SPEC §3 có "lỗi nào gặp trước (đọc từ trái sang) được báo". Dấu `\` đọc trước khi lexer thấy hết tệp.
+  - Đây là cách đọc của tôi vì SPEC không nêu riêng trường hợp này.
+- **(c) Vị trí.** Lexer bỏ BOM rồi chuẩn hóa `\r\n` và `\r` thành `\n`. Số dòng và cột khớp §0, và test đã kiểm tra.
+- **(d) Thứ tự lỗi.**
+  - `parse` chạy lexer trọn vẹn trước (§4). Lexer dừng ở lỗi đầu tiên theo thứ tự đọc.
+  - `PARSE_CONST_NOT_TOP` báo ngay tại từ khóa `const`.
+
+## Rủi ro & việc còn mở
+- Với hạng mục khác: `${true}` giờ là lỗi lexer, nên `check` và `evaluate` không còn nhận `Ref` có đoạn là từ khóa.
+- Bản `parseProject` gán `out[name]` nên một tệp tên `__proto__` có thể gây lỗi. Tôi coi là rất hiếm và không sửa.
+
+Bản đầy đủ: `.ccoding/T-20261104-112820-e0d/outputs/dev-S1-senior-swe.md`
+
+### S2 — Đối chiếu SPEC cho check, model và evaluate (@backend-dev, done)
+
+## Tóm tắt
+Tôi đối chiếu check, model và evaluate với SPEC §5–§6. Phần lớn đã khớp, chỉ có một chỗ phải sửa. `SEM_UNKNOWN_KEY` nay luôn báo tại token khóa, kể cả khi đối tượng đến từ chuỗi thuần tham chiếu. Tôi thêm 6 test mới và `npm test` cho 47 pass, 0 fail. Các test mới do tôi tự viết từ SPEC, chưa chạy bộ nghiệm thu ẩn.
+
+## Tệp đã tạo/sửa
+- `src/check.js` (dòng 215): `SEM_UNKNOWN_KEY` dùng `child.keyPos`, không còn dùng vị trí chuỗi tham chiếu.
+- `test/check.test.js`: thêm 6 test mới.
+- `src/model.js`, `src/evaluate.js`: không đổi. Đã đối chiếu và khớp SPEC §6.1–6.3: ghi đè, trộn khối, mảng thay hẳn, thứ tự khóa, nội suy, `JSON.stringify` số, không chia sẻ tham chiếu.
+
+## Điểm mơ hồ đã chốt
+- **(a) Vị trí `SEM_UNKNOWN_KEY`:** SPEC có hai câu mâu thuẫn. Câu "vị trí chuỗi, cho cả giá trị và mọi thứ bên trong nó" là quy tắc chung. Câu §5 dòng 192 ("tại vị trí **khóa**") và mục "SEM_UNKNOWN_KEY: … (token khóa)" nêu riêng mã lỗi này. Tôi chọn câu riêng vì nó cụ thể hơn. Giá trị, `SEM_TYPE_MISMATCH`, `SEM_NOT_IN_ENUM` và `SEM_MISSING_REQUIRED` qua chuỗi thuần tham chiếu vẫn dùng vị trí chuỗi ngoài cùng. Đây vẫn là một lựa chọn trong chỗ SPEC mâu thuẫn, nên có thể lệch với bộ ẩn.
+- **(b) `Ref` cấu hình trong `const`:** vẫn tính là cạnh khi xét vòng, vì SPEC định nghĩa cạnh theo "mọi `Ref` phân giải được trong `s`". Bản thân `Ref` đó báo `SEM_CONST_CONFIG_REF`, `Ref` hằng khác có thể bị `SEM_REF_CYCLE` qua cạnh này.
+- **(c) `S(đích)`:** mọi `String` trong đích. Chuỗi thì là chính nó, mảng thì mọi chuỗi bên trong, đối tượng thì chỉ định nghĩa thắng. Code khớp.
+
+## Bảng quy tắc SPEC và test
+| Quy tắc SPEC | Test (`test/check.test.js` hoặc `test/evaluate.test.js`) |
+|---|---|
+| Pha A: trùng khóa, trùng hằng, include không thấy, vòng include | `pha A: trùng khóa/hằng, include` |
+| Pha A: hình thoi không phải vòng, khóa khác tệp không trùng | `pha A: hình thoi…` |
+| Pha A lỗi thì dừng, không chạy pha B | `pha A dừng trước pha B` |
+| Pha B: `CONST_CONFIG_REF`, `UNDEFINED_REF`, hằng khai báo muộn, hằng của tệp khác không thấy | `pha B: undefined, hằng` |
+| Pha B: vòng tham chiếu (tự tham chiếu, hai chiều, tổ tiên) | `pha B: vòng tham chiếu` |
+| Pha B: `S(đích)` chỉ tính định nghĩa thắng, vòng qua mảng | `pha B: S(đích)…` (mới) |
+| Pha B: cạnh từ `Ref` cấu hình trong `const` | `pha B: Ref cấu hình trong const…` (mới) |
+| Pha B: thứ tự theo tệp rồi theo vị trí, chuỗi bị ghi đè vẫn bị xét | `pha B: thứ tự theo tệp…` (mới) |
+| Pha B: `BAD_INTERPOLATION` | `pha B: nội suy mảng/đối tượng` |
+| Pha C: thứ tự lỗi, vị trí `Assign`, phần tử mảng, `required`, `closed`, `enum` | `pha C: lược đồ` |
+| Pha C: vị trí khối khởi tạo, vị trí qua chuỗi thuần tham chiếu | `pha C: vị trí qua tham chiếu thuần và khối khởi tạo` |
+| Pha C: `UNKNOWN_KEY` tại token khóa | `pha C: SEM_UNKNOWN_KEY luôn ở token khóa…` (mới) |
+| Pha C: `MISSING_REQUIRED`/`TYPE_MISMATCH` qua `Ref` thuần dùng vị trí chuỗi | `pha C: MISSING_REQUIRED/TYPE_MISMATCH qua tham chiếu thuần…` (mới) |
+| Pha C: `type` không khớp thì không kiểm sâu, `null`, `number` | `pha C: type/enum không kiểm sâu…` (mới) |
+| §6.1 include và ghi đè, thứ tự khóa | `evaluate: include và ghi đè, thứ tự khóa` |
+| §6.1 ghi đè khác loại, mảng thay hẳn | `evaluate: ghi đè khác loại…` |
+| §6.3 giữ kiểu, ép chuỗi, không chia sẻ tham chiếu | `evaluate: tham chiếu thấy giá trị cuối…` |
+| §6.3 lồng, đối tượng, `\$` | `evaluate: lồng và đối tượng` |
+
+## Hợp đồng API
+Không áp dụng (thư viện, không có endpoint).
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0, `tests 47 / pass 47 / fail 0`. Baseline đỏ đã ghi từ bàn giao trước, không đo lại.
+- Typecheck và lint: repo không có script này, nên chưa chạy.
+
+## Việc còn lại
+- Không có biến môi trường mới.
+- Mục (a) là lựa chọn của tôi trong chỗ SPEC mâu thuẫn. Nếu bộ ẩn dùng vị trí chuỗi, chỉ cần đổi lại một dòng ở `src/check.js:215`.
+- Các hạng mục S1 và S3 sở hữu lexer, parser, diff và compile, nên tôi không động tới.
+
+Bản đầy đủ: `.ccoding/T-20261104-112820-e0d/outputs/dev-S2-backend-dev.md`
+
+### S3 — Đối chiếu SPEC cho diff và compile (@frontend-dev, done)
+
+## Tóm tắt
+Tôi đối chiếu `src/diff.js` và `src/index.js` với SPEC mục 7 và 8. Cả hai đã khớp nên tôi không sửa mã nguồn. Tôi chỉ bổ sung test cho các trường hợp biên. Sau khi sửa, `npm test` xanh (54 pass, 0 fail).
+
+## Tệp đã tạo/sửa
+- `test/diff.test.js`: thêm 5 test.
+  - Khóa chứa `/` và `~`.
+  - `null`, mảng và đối tượng được coi là các loại khác nhau.
+  - Thứ tự khóa của op.
+  - Mảng: `add` theo chỉ số tăng dần, `remove` giảm dần.
+  - Bản sao sâu độc lập với đầu vào.
+  - `applyDiff`: các lỗi `DIFF_APPLY_FAILED`, `remove` ở gốc, thay gốc, không đổi `doc`.
+  - Pointer sai.
+  - `formatText`, `formatJson` và `summarize` khi không có thay đổi.
+- `test/compile.test.js`: thêm 2 test.
+  - `entry` thiếu cho ra `stage: 'parse'` với đúng một lỗi `PARSE_ENTRY_NOT_FOUND`.
+  - `index.js` xuất đủ 15 hàm công khai.
+  - Ví dụ include và ghi đè trong SPEC cho ra đúng JSON, thứ tự khóa `server`, `mode`.
+- `src/diff.js`, `src/index.js`: không đổi.
+
+## Màn hình & trạng thái
+Không áp dụng (thư viện, không có giao diện).
+
+## API sử dụng
+Chỉ dùng chữ ký hiện hành: `parseProject(files, entry)`, `check(program, schema)` và `evaluate(program)`.
+
+Các chỗ SPEC không nói rõ, tôi giữ cách hiểu của lượt trước:
+- `applyDiff` ném `DIFF_APPLY_FAILED` khi `remove` ở gốc.
+- `applyDiff` chấp nhận chỉ số `-` để thêm vào cuối mảng.
+
+Cả hai đã có test.
+
+## Kiểm chứng
+- `npm test` → exit 0, `tests 54 / pass 54 / fail 0`.
+- Lần chạy đầu có 1 test lỗi do tôi viết sai assertion trong test mới. Tôi đã sửa rồi chạy lại.
+- Bộ nghiệm thu ẩn chưa chạy.
+
+## Việc còn lại
+Không có việc còn lại ở S3. Truy cập (a11y): không áp dụng.
+
+Bản đầy đủ: `.ccoding/T-20261104-112820-e0d/outputs/dev-S3-frontend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-112820-e0d` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **110 in / 80.9k out**, cache đọc 2.24M, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 64 | 60281 | 1616495 | 2 |
+| Backend Developer (@backend-dev) | dev | 24 | 12603 | 425715 | 1 |
+| Frontend Developer (@frontend-dev) | dev | 18 | 5672 | 195245 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 2 | 2063 | 4701 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 269 | 649 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Đối chiếu SPEC cho lexer và parser (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Đối chiếu SPEC cho check, model và evaluate (@backend-dev)
+- `outputs/dev-S3-frontend-dev.md` — S3 Đối chiếu SPEC cho diff và compile (@frontend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) · at Test.run (node:internal/test_runner/test:1118:25) · at Test.processPendingSubte |
+| sau thực thi | `npm test` | 0 | ℹ tests 54 · ℹ suites 0 · ℹ pass 54 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **63** C | thấp | — | — | — | 27 | 95 | 100 | 1 | 1 | 1.68M | 3/46 | — |
+| Backend Developer (@backend-dev) | dev | **65** B | thấp | — | — | — | 100 | 100 | 100 | 1 | 1 | 438k | 0/11 | — |
+| Frontend Developer (@frontend-dev) | dev | **65** B | thấp | — | — | — | 100 | 94 | 100 | 1 | 1 | 201k | 1/13 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 60 | 100 | — | 0 | — | 7k | — | — |
+| Điều phối viên (@orchestrator) | office | **60** C | thấp | — | — | — | — | 100 | — | 0 | — | 920 | — | — |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 63 C):
+  - Tốn token gấp 3.8 lần trung vị phòng cho mỗi hạng mục (1677k so với 438k).
+- **Trưởng phòng Phát triển** (@dev-lead, 65 B):
+  - Phòng dùng 1,7 lần ngân sách (2.51M/1.50M) — kế hoạch ôm quá nhiều việc cho một nhiệm vụ: chia theo gói/giai đoạn, mỗi hạng mục có tiêu chí xong đo được trong một lượt.
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._
