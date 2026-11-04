@@ -36,3 +36,12 @@ Ghi lúc 4/11/2026 khoảng 13:50 giờ VN. Lúc này **chưa có lượt E6 nà
 | Nơi chạy E6 | Server và runner 7425 vẫn ở `6c454f6`. Mã thống kê chỉ dùng khi phân tích, không ảnh hưởng lúc chạy |
 
 Ghi chú: CTO của D12 chưa nghiệm thu vì `npm test` đỏ bốn test holdout và `--check` lệch hash. Nguyên nhân là nhánh nhiệm vụ dựng từ `e12e037`, trước khi BRIEF-16 khóa lại holdout. Sau khi gộp vào HEAD (đã có khóa mới), cả hai đều xanh như bảng trên. `results/study-cloud-final` không có `runs.jsonl`, nên không chạy lại được.
+
+## Hạn mức (Q) trong E4a
+
+- **14:28 → 17:09 giờ VN:** runner thoát mã 3 vì hạn mức 5 giờ của gói Max. Hàng đợi báo mở lại lúc 16:50. `run3e.ps1` thử lại mỗi 20 phút, 8 lần thoát ngay; lần 9 lúc 17:09 chạy tiếp.
+- **Lượt bị cắt:** lượt đang chạy khi chạm hạn mức được runner chạy lại đúng khóa đó, theo §4.1 (Q).
+- **Nguyên nhân góp phần:** BRIEF-18 và D13 chạy cùng lúc trên cùng gói, khoảng 15 M token, trong khi E4a đang chạy. CTO của BRIEF-18 cũng không chạy được vì chạm hạn mức.
+- **Từ nay:** không giao nhiệm vụ CCoding mới trong lúc đợt đo đang chạy, trừ khi giám đốc yêu cầu.
+- Thời gian chờ giữa hai cửa sổ không tính vào trần 15 giờ của E4 (khối (a) bước 4).
+- E4a đã dùng cửa sổ 1, phần còn lại chạy ở cửa sổ 2, bắt đầu 16:50.
