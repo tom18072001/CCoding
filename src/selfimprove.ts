@@ -36,7 +36,7 @@ const INCIDENTS = (dataDir: string): string => siPath(dataDir, 'incidents.jsonl'
 
 // ───────────────────────── Bước 1 — Nhật ký sự cố ─────────────────────────
 
-export type IncidentSource = 'agent.selfReport' | 'guard.block' | 'ab.run';
+export type IncidentSource = 'agent.selfReport' | 'guard.block' | 'ab.run' | 'review.issue' | 'checks.regressed';
 export type IncidentCategory = 'FM-1' | 'FM-2' | 'FM-3' | 'INF';
 export interface Incident {
   schema: 'ccoding/incident/v1';
@@ -92,48 +92,106 @@ const nextIncidentSeq = (dataDir: string): number => {
   }
 };
 
+/** Sự kiện nguồn mới của bước 1: `review.incident` (issue blocker/major), `checks.regressed`, `guard.block` (đọc từ LogStore, D6). */
+const SOURCE_OF: Record<string, IncidentSource> = { 'review.incident': 'review.issue', 'checks.regressed': 'checks.regressed', 'guard.block': 'guard.block' };
+/** Khóa khử trùng ổn định của một issue review: subtask + nội dung (băm, không lưu comment). */
+export const reviewIssueKey = (subtask: string, comment: string): string => crypto.createHash('sha256').update(`${subtask}\n${comment}`).digest('hex').slice(0, 10);
+
+interface Draft {
+  source: IncidentSource;
+  subtaskId?: string;
+  round?: number;
+  category: IncidentCategory;
+  ref: string;
+  evKind: Incident['evidence'][number]['kind'];
+  symptom: string;
+  proposal?: string;
+  agentId: string;
+  phase: string;
+}
+
+/** Bản nháp từ các nguồn mới. `untrusted[key]` = comment issue (dữ liệu không tin cậy: chỉ vào incidents.jsonl.agentProposal, không vào sự kiện). */
+function draftsOf(entry: LogEntry, taskId: string, untrusted: Record<string, string>): Draft[] {
+  const source = SOURCE_OF[entry.kind]!;
+  const d = (entry.data ?? {}) as { round?: number; issues?: { subtask?: string; severity?: string; key?: string }[]; commands?: number; tool?: string; rule?: string; clause?: string };
+  const at = (sub: string | undefined, round: number | undefined, key: string): string => `${taskId}/${sub ?? '-'}/r${round ?? 0}#${key}`;
+  if (source === 'review.issue') {
+    return (d.issues ?? [])
+      .filter((i) => (i.severity === 'blocker' || i.severity === 'major') && i.key)
+      .map((i): Draft => ({ source, subtaskId: i.subtask, round: d.round, category: 'FM-3', ref: at(i.subtask, d.round, `${source}:${i.key}`), evKind: 'reviewIssue', symptom: `Review vòng ${d.round ?? '?'} nêu lỗi mức ${i.severity} ở ${i.subtask ?? '?'}`, proposal: clip(untrusted[i.key!], 300) || undefined, agentId: entry.agentId ?? 'reviewer', phase: 'review' }));
+  }
+  if (source === 'checks.regressed') {
+    const n = d.commands ?? 0;
+    return [{ source, round: d.round, category: 'FM-3', ref: at(undefined, d.round, `${source}:${n}`), evKind: 'kpiKey', symptom: `Vòng ${d.round ?? '?'}: ${n} lệnh kiểm tra đạt trước khi sửa nhưng hỏng sau khi sửa`, agentId: entry.agentId ?? 'reviewer', phase: 'review' }];
+  }
+  // guard.block: chỉ { tool, clause, rule } do CCoding sinh; không chép cmd
+  return [{ source, category: 'FM-3', ref: at(undefined, undefined, `${source}:${entry.ts}:${d.tool ?? '?'}:${d.rule ?? '?'}`), evKind: 'logSeq', symptom: `Hook chặn ${d.tool ?? '?'}: câu ${d.clause ?? '?'} ${d.rule ?? '?'}`, agentId: entry.agentId ?? 'guard', phase: 'execute' }];
+}
+
 /**
- * Đổi sự kiện `revise.incident` (B-03) thành bản ghi v1 (mỗi mục một bản). `null` = không ghi gì (đã loại); khi có `deps` thì ghi
+ * Đổi sự kiện nguồn sự cố (`revise.incident` B-03, `review.incident`, `checks.regressed`, `guard.block`) thành bản ghi v1 (mỗi mục một bản). `null` = không ghi gì (đã loại); khi có `deps` thì ghi
  * `incident.skipped {taskId, kind, reason}` (không symptom/agentProposal) hoặc `incident.recorded` + incidents.jsonl.
- * classification lấy từ task, KHÔNG do agent khai. Lỗi hạ tầng (429/hạn mức) không đi tiếp.
+ * classification lấy từ task, KHÔNG do agent khai. Lỗi hạ tầng (429/hạn mức) không đi tiếp. Nguồn mới khử trùng lặp theo (taskId, subtaskId, round, source, khóa) qua evidence đã ghi.
  */
-export function toIncident(entry: LogEntry, task: Pick<Task, 'id' | 'classification' | 'options'>, deps?: Pick<Deps, 'logs' | 'dataDir' | 'root'>): Incident[] | null {
+export function toIncident(entry: LogEntry, task: Pick<Task, 'id' | 'classification' | 'options'>, deps?: Pick<Deps, 'logs' | 'dataDir' | 'root'>, untrusted: Record<string, string> = {}): Incident[] | null {
   const skip = (reason: SkipReason): null => {
     deps?.logs.write({ level: 'info', kind: 'incident.skipped', msg: `${task.id}: bỏ sự cố (${reason})`, taskId: task.id, data: { taskId: task.id, kind: entry.kind, reason } });
     return null;
   };
-  if (entry.kind !== 'revise.incident') return null;
+  const extra = entry.kind in SOURCE_OF;
+  if (entry.kind !== 'revise.incident' && !extra) return null;
   if (SECRET_CLASSES.includes(task.classification)) return skip('classification');
-  const d = (entry.data ?? {}) as { taskId?: string; subtaskId?: string; round?: number; items?: { error?: string; cause?: string; fix?: string; verifyCmd?: string }[] };
-  const items = (d.items ?? []).filter((it) => !INFRA_RE.test(`${it.error ?? ''} ${it.cause ?? ''}`));
-  if (!items.length) return skip(d.items?.length ? 'infra' : 'no-evidence');
-  const taskId = d.taskId ?? entry.taskId;
-  if (!taskId || !entry.agentId) return skip('no-evidence');
   const abRun = String(task.options?.variant ?? '').startsWith('selfimprove/');
   const ts = entry.ts;
   const day = ts.slice(0, 10).replace(/-/g, '');
   const seq0 = deps ? nextIncidentSeq(deps.dataDir) : 1;
-  const pv = deps ? promptVersionOf(deps.root, entry.agentId, entry.department) : 'unknown';
-  const out = items.map((it, i): Incident => {
+  let drafts: Draft[];
+  let taskId: string;
+  if (extra) {
+    taskId = entry.taskId ?? task.id;
+    const seen = new Set(deps ? loadIncidents(deps.dataDir).flatMap((i) => i.evidence.map((e) => e.ref)) : []);
+    drafts = draftsOf(entry, taskId, untrusted).filter((x, i, a) => !seen.has(x.ref) && a.findIndex((y) => y.ref === x.ref) === i);
+    if (!drafts.length) return null; // trùng hoặc issue minor: không ghi gì
+  } else {
+    const d = (entry.data ?? {}) as { taskId?: string; subtaskId?: string; round?: number; items?: { error?: string; cause?: string; fix?: string; verifyCmd?: string }[] };
+    const items = (d.items ?? []).filter((it) => !INFRA_RE.test(`${it.error ?? ''} ${it.cause ?? ''}`));
+    if (!items.length) return skip(d.items?.length ? 'infra' : 'no-evidence');
+    const tid = d.taskId ?? entry.taskId;
+    if (!tid || !entry.agentId) return skip('no-evidence');
+    taskId = tid;
+    drafts = items.map((it, i): Draft => ({
+      source: 'agent.selfReport',
+      subtaskId: d.subtaskId,
+      round: d.round,
+      category: categoryOf(`${it.error ?? ''} ${it.cause ?? ''}`),
+      ref: `${taskId}/${d.subtaskId ?? '-'}/r${d.round ?? 0}#${i + 1}`,
+      evKind: 'logSeq',
+      // symptom do CCoding sinh từ tín hiệu, không chép nguyên văn đầu ra agent
+      symptom: `Vòng sửa ${d.round ?? '?'} của ${d.subtaskId ?? '?'}: mục lỗi ${i + 1}/${items.length}${it.verifyCmd ? ', có lệnh kiểm' : ''}`,
+      proposal: clip(it.fix, 300) || undefined,
+      agentId: entry.agentId!,
+      phase: entry.phase ?? 'revise',
+    }));
+  }
+  const pv = deps ? promptVersionOf(deps.root, drafts[0].agentId, entry.department) : 'unknown';
+  const out = drafts.map((x, i): Incident => {
     const inc: Incident = {
       schema: 'ccoding/incident/v1',
       id: `INC-${day}-${String(seq0 + i).padStart(4, '0')}`,
       ts,
       taskId,
-      ...(d.subtaskId ? { subtaskId: d.subtaskId } : {}),
-      agentId: entry.agentId!,
-      phase: entry.phase ?? 'revise',
-      source: abRun ? 'ab.run' : 'agent.selfReport',
-      category: categoryOf(`${it.error ?? ''} ${it.cause ?? ''}`),
+      ...(x.subtaskId ? { subtaskId: x.subtaskId } : {}),
+      agentId: x.agentId,
+      phase: x.phase,
+      source: abRun ? 'ab.run' : x.source,
+      category: x.category,
       challengeId: 'new',
-      evidence: [{ kind: 'logSeq', ref: `${taskId}/${d.subtaskId ?? '-'}/r${d.round ?? 0}#${i + 1}` }],
-      // symptom do CCoding sinh từ tín hiệu, không chép nguyên văn đầu ra agent
-      symptom: `Vòng sửa ${d.round ?? '?'} của ${d.subtaskId ?? '?'}: mục lỗi ${i + 1}/${items.length}${it.verifyCmd ? ', có lệnh kiểm' : ''}`,
+      evidence: [{ kind: x.evKind, ref: x.ref }],
+      symptom: x.symptom,
       classification: task.classification,
       promptVersion: pv,
     };
-    const prop = clip(it.fix, 300);
-    if (prop) inc.agentProposal = prop;
+    if (x.proposal) inc.agentProposal = x.proposal;
     return inc;
   });
   if (deps) {
@@ -148,12 +206,25 @@ export function toIncident(entry: LogEntry, task: Pick<Task, 'id' | 'classificat
 }
 
 /** Móc từ Orchestrator: chỉ chạy khi selfImprove.enabled && collect. Không bao giờ ném lỗi ra vòng review. */
-export function onLog(entry: LogEntry, task: Pick<Task, 'id' | 'classification' | 'options'>, deps: Deps): void {
+export function onLog(entry: LogEntry, task: Pick<Task, 'id' | 'classification' | 'options'>, deps: Deps, untrusted?: Record<string, string>): void {
   if (!deps.cfg.enabled || !deps.cfg.collect) return;
   try {
-    toIncident(entry, task, deps);
+    toIncident(entry, task, deps, untrusted);
   } catch {
     /* thu thập sự cố là phụ: lỗi không được làm hỏng nhiệm vụ */
+  }
+}
+
+/**
+ * Nguồn `guard.block` (D6): hook chạy ở tiến trình riêng nên sự kiện không đi qua EventBus; đọc lại từ nhật ký nhiệm vụ trong LogStore
+ * (logGuardBlock ghi vào runs/<task>/events.jsonl khi biết taskId). Khử trùng lặp nên gọi lại nhiều lần an toàn.
+ */
+export function collectGuardBlocks(task: Pick<Task, 'id' | 'classification' | 'options'>, deps: Deps): void {
+  if (!deps.cfg.enabled || !deps.cfg.collect) return;
+  try {
+    for (const e of deps.logs.query({ task: task.id, limit: 500 })) if (e.kind === 'guard.block') onLog(e, task, deps);
+  } catch {
+    /* phụ trợ */
   }
 }
 
@@ -481,6 +552,10 @@ export interface Decision {
   token: Interval;
   time: Interval;
   safety: Interval;
+  /** p một phía chưa hiệu chỉnh của ba chỉ số chính (token, thời gian, an toàn); NaN nếu chưa đủ bài */
+  pRaw: { token: number; time: number; safety: number };
+  /** p đã hiệu chỉnh Holm step-down (design.md §5.3); `pass` chỉ khi cả ba < 0,05 */
+  pHolm: { token: number; time: number; safety: number };
   nConfirm: number;
   dropped: { A: number; B: number };
   reasons: string[];
@@ -499,14 +574,87 @@ const tInv = (p: number, df: number): number => {
 };
 const mean = (a: number[]): number => a.reduce((s, x) => s + x, 0) / a.length;
 
-/** CI theo bài (ghép cặp): mỗi bài một hiệu số, khoảng tin cậy t trên trung bình các bài. Bonferroni 3 chỉ số (bảo thủ hơn Holm), hai phía 95 %. */
-function pairedCi(diffs: number[]): Interval {
+// CDF phân phối t qua hàm beta không đầy đủ chính quy hóa (Lentz); tự viết, không thêm phụ thuộc
+function lgamma(x: number): number {
+  const c = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+  let y = x;
+  let ser = 1.000000000190015;
+  const tmp = x + 5.5 - (x + 0.5) * Math.log(x + 5.5);
+  for (const cj of c) ser += cj / ++y;
+  return -tmp + Math.log((2.5066282746310005 * ser) / x);
+}
+function betacf(a: number, b: number, x: number): number {
+  const tiny = 1e-300;
+  let c = 1;
+  let d = 1 - ((a + b) * x) / (a + 1);
+  if (Math.abs(d) < tiny) d = tiny;
+  d = 1 / d;
+  let h = d;
+  for (let m = 1; m <= 300; m++) {
+    const m2 = 2 * m;
+    let aa = (m * (b - m) * x) / ((a + m2 - 1) * (a + m2));
+    d = 1 + aa * d; if (Math.abs(d) < tiny) d = tiny;
+    c = 1 + aa / c; if (Math.abs(c) < tiny) c = tiny;
+    d = 1 / d; h *= d * c;
+    aa = (-(a + m) * (a + b + m) * x) / ((a + m2) * (a + m2 + 1));
+    d = 1 + aa * d; if (Math.abs(d) < tiny) d = tiny;
+    c = 1 + aa / c; if (Math.abs(c) < tiny) c = tiny;
+    d = 1 / d;
+    const del = d * c;
+    h *= del;
+    if (Math.abs(del - 1) < 1e-15) break;
+  }
+  return h;
+}
+function betaI(x: number, a: number, b: number): number {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  const bt = Math.exp(lgamma(a + b) - lgamma(a) - lgamma(b) + a * Math.log(x) + b * Math.log(1 - x));
+  return x < (a + 1) / (a + b + 2) ? (bt * betacf(a, b, x)) / a : 1 - (bt * betacf(b, a, 1 - x)) / b;
+}
+/** P(T ≤ t) với T ~ t(df) */
+export function tCdf(t: number, df: number): number {
+  if (Number.isNaN(t)) return NaN;
+  if (t === Infinity) return 1;
+  if (t === -Infinity) return 0;
+  const tail = 0.5 * betaI(df / (df + t * t), df / 2, 0.5);
+  return t > 0 ? 1 - tail : tail;
+}
+
+/**
+ * Holm step-down: sắp p tăng dần p(1) ≤ … ≤ p(k); p hiệu chỉnh (i) = max lũy tích của (k−i+1)·p(i), chặn trên 1.
+ * Với k = 3 các ngưỡng tương ứng α/3, α/2, α. Trả về theo thứ tự đầu vào.
+ */
+export function holmAdjust(p: number[]): number[] {
+  const k = p.length;
+  const idx = p.map((_, i) => i).sort((a, b) => p[a] - p[b]);
+  const out = new Array<number>(k).fill(NaN);
+  let run = 0;
+  idx.forEach((orig, rank) => {
+    run = Math.max(run, Math.min(1, (k - rank) * p[orig]));
+    out[orig] = run;
+  });
+  return out;
+}
+
+/**
+ * Kiểm định ghép cặp theo bài. Trả về khoảng tin cậy t hai phía 95 % chia 3 (chỉ để báo cáo) và p một phía của
+ * H0 "trung bình ≥ h0" (dir 'less') hoặc "trung bình ≤ h0" (dir 'greater').
+ * Ghi chú thống kê: quy tắc `pass` là "cả ba đạt" (giao các giả thuyết, IUT) nên về lý thuyết không cần hiệu chỉnh;
+ * ta vẫn áp Holm vì design.md §5.3 và implementation-spec.md yêu cầu, và Holm chỉ bảo thủ hơn IUT.
+ */
+function pairedTest(diffs: number[], h0: number, dir: 'less' | 'greater'): { ci: Interval; p: number } {
   const n = diffs.length;
   const m = mean(diffs);
   const sd = n > 1 ? Math.sqrt(diffs.reduce((s, x) => s + (x - m) ** 2, 0) / (n - 1)) : 0;
   const crit = n > 1 ? tInv(1 - 0.05 / 2 / 3, n - 1) : 0;
-  const half = (crit * sd) / Math.sqrt(n);
-  return { est: m, lo: m - half, hi: m + half };
+  const se = sd / Math.sqrt(n);
+  const half = crit * se;
+  const ci = { est: m, lo: m - half, hi: m + half };
+  if (n < 2) return { ci, p: NaN };
+  const dz = dir === 'less' ? h0 - m : m - h0; // dương = bằng chứng chống H0
+  const p = se === 0 ? (dz > 0 ? 0 : 1) : tCdf(-dz / se, n - 1);
+  return { ci, p };
 }
 
 /**
@@ -534,18 +682,26 @@ export function decide(runs: AbRun[], kind: ProposalMeta['kind'] = 'optimize'): 
   const saf = paired((r) => r.safety, (b, a) => b - a);
   const exp = (i: Interval): Interval => ({ est: Math.exp(i.est), lo: Math.exp(i.lo), hi: Math.exp(i.hi) });
   const nan: Interval = { est: NaN, lo: NaN, hi: NaN };
-  const out: Decision = { decision: 'need-more-tasks', token: nan, time: nan, safety: nan, nConfirm: confirm.length, dropped, reasons: [] };
+  const nanP = { token: NaN, time: NaN, safety: NaN };
+  const out: Decision = { decision: 'need-more-tasks', token: nan, time: nan, safety: nan, pRaw: nanP, pHolm: nanP, nConfirm: confirm.length, dropped, reasons: [] };
   if (tok.length < 2) {
     out.reasons.push('Chưa đủ bài có cả hai nhánh trong pha xác nhận (cần ≥ 2)');
     return out;
   }
-  out.token = exp(pairedCi(tok));
-  out.time = exp(pairedCi(wall));
-  out.safety = pairedCi(saf);
   const tokLimit = kind === 'collect' ? 1.05 : 0.95;
-  if (!(out.token.hi < tokLimit)) out.reasons.push(`Token: cận trên B/A ${out.token.hi.toFixed(3)} ≥ ${tokLimit}`);
-  if (!(out.time.hi < 1.05)) out.reasons.push(`Thời gian: cận trên B/A ${out.time.hi.toFixed(3)} ≥ 1,05`);
-  if (!(out.safety.lo >= -0.02)) out.reasons.push(`An toàn: cận dưới ${(out.safety.lo * 100).toFixed(1)} điểm % < −2`);
+  const tt = pairedTest(tok, Math.log(tokLimit), 'less');
+  const tw = pairedTest(wall, Math.log(1.05), 'less');
+  const ts = pairedTest(saf, -0.02, 'greater');
+  out.token = exp(tt.ci);
+  out.time = exp(tw.ci);
+  out.safety = ts.ci;
+  out.pRaw = { token: tt.p, time: tw.p, safety: ts.p };
+  const [hTok, hTime, hSaf] = holmAdjust([tt.p, tw.p, ts.p]);
+  out.pHolm = { token: hTok, time: hTime, safety: hSaf };
+  const fmt = (x: number): string => x.toFixed(3);
+  if (!(hTok < 0.05)) out.reasons.push(`Token: cận trên B/A ${out.token.hi.toFixed(3)}, p Holm ${fmt(hTok)} ≥ 0,05 (ngưỡng ${tokLimit})`);
+  if (!(hTime < 0.05)) out.reasons.push(`Thời gian: cận trên B/A ${out.time.hi.toFixed(3)}, p Holm ${fmt(hTime)} ≥ 0,05 (ngưỡng 1,05)`);
+  if (!(hSaf < 0.05)) out.reasons.push(`An toàn: cận dưới ${(out.safety.lo * 100).toFixed(1)} điểm %, p Holm ${fmt(hSaf)} ≥ 0,05 (ngưỡng −2)`);
   out.decision = out.reasons.length ? 'fail' : 'pass';
   return out;
 }
@@ -627,7 +783,7 @@ export function recordProposed(pid: string, patch: string, meta: ProposalMeta & 
 
 /** Ghi kết quả A/B để giao diện hiển thị. deltaPass = ước lượng hiệu tỉ lệ test ẩn đạt (B−A). */
 export function recordAbDecision(pid: string, d: Decision, deps: Pick<Deps, 'logs'>): void {
-  deps.logs.write({ level: 'info', kind: 'selfimprove.ab.decided', msg: `A/B ${pid}: ${d.decision}`, data: { pid, deltaPass: Number.isFinite(d.safety.est) ? d.safety.est : null, decision: d.decision } });
+  deps.logs.write({ level: 'info', kind: 'selfimprove.ab.decided', msg: `A/B ${pid}: ${d.decision}`, data: { pid, deltaPass: Number.isFinite(d.safety.est) ? d.safety.est : null, decision: d.decision, pRaw: d.pRaw, pHolm: d.pHolm } });
 }
 
 /** Ghi quyết định của giám đốc; `by:'director'` cố định vì chỉ route đã xác thực mới được gọi hàm này (agent không có đường tới). */
@@ -895,10 +1051,19 @@ const DAY_MS = 86_400_000;
 export const MIN_RETENTION_DAYS = 183;
 
 /**
- * Dọn tệp dưới data/self-improve/ theo retentionDays nhưng không bao giờ xóa tệp trẻ hơn 183 ngày (CT-11).
+ * Bằng chứng không bao giờ xóa (WORM, D8): cố định trong code, cấu hình không ghi đè được.
+ * incidents.jsonl và mọi tệp .jsonl/.chain (nhật ký có chuỗi băm), toàn bộ proposals/ (meta, patch, monitor, bản ghi apply/rollback), ab-*.json.
+ */
+export function isEvidenceFile(rel: string): boolean {
+  const parts = rel.split(/[\\/]/);
+  const base = parts[parts.length - 1];
+  return parts[0] === 'proposals' || base === 'incidents.jsonl' || /\.(jsonl|chain)$/.test(base) || /^ab-.*\.json$/.test(base);
+}
+
+/**
+ * Dọn tệp dưới data/self-improve/ theo retentionDays nhưng không bao giờ xóa tệp trẻ hơn 183 ngày (CT-11) và không xóa bằng chứng (isEvidenceFile).
  * Chỉ xóa tệp thường, không theo liên kết. Trả danh sách tệp đã xóa (tương đối so với data/self-improve/).
- * Chính sách (chờ giám đốc chốt trước khi bật): dựa vào mtime nên tệp nối thêm như incidents.jsonl không bao giờ hết hạn
- * (có chủ ý: xóa giữa chừng sẽ làm đứt chuỗi băm của nhật ký làm chứng cứ). Hàm chưa được gọi tự động.
+ * Xét theo mtime; tệp bằng chứng bị loại trừ theo tên nên incidents.jsonl (chỉ nối thêm) không bị xóa giữa chừng làm đứt chuỗi băm.
  */
 export function purgeExpired(dataDir: string, retentionDays: number, now = Date.now()): string[] {
   const days = Math.max(MIN_RETENTION_DAYS, Number.isFinite(retentionDays) ? retentionDays : MIN_RETENTION_DAYS);
@@ -909,13 +1074,30 @@ export function purgeExpired(dataDir: string, retentionDays: number, now = Date.
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
       const f = path.join(dir, e.name);
       if (e.isSymbolicLink()) continue;
+      const rel = path.relative(root, f).split(path.sep).join('/');
       if (e.isDirectory()) visit(f);
-      else if (e.isFile() && now - fs.statSync(f).mtimeMs > days * DAY_MS) {
+      else if (e.isFile() && !isEvidenceFile(rel) && now - fs.statSync(f).mtimeMs > days * DAY_MS) {
         fs.rmSync(f);
-        removed.push(path.relative(root, f).split(path.sep).join('/'));
+        removed.push(rel);
       }
     }
   };
   visit(root);
   return removed;
+}
+
+/**
+ * Nơi gọi purgeExpired: server khởi động (src/cli.ts cmdServe) khi selfImprove.enabled. Tắt ⇒ không làm gì.
+ * Thời hạn cấu hình thấp hơn MIN_RETENTION_DAYS bị nâng lên mức tối thiểu kèm cảnh báo. Sự kiện chỉ có số lượng và số ngày, không đường dẫn.
+ */
+export function runRetention(deps: Pick<Deps, 'cfg' | 'logs' | 'dataDir'>, now = Date.now()): { count: number; olderThanDays: number } | null {
+  if (!deps.cfg.enabled) return null;
+  const want = Number(deps.cfg.retention?.proposalDays);
+  const olderThanDays = Number.isFinite(want) && want >= MIN_RETENTION_DAYS ? want : MIN_RETENTION_DAYS;
+  if (olderThanDays !== want) {
+    deps.logs.write({ level: 'warn', kind: 'selfimprove.retention.clamped', msg: `selfImprove.retention.proposalDays dưới mức tối thiểu; dùng ${MIN_RETENTION_DAYS} ngày`, data: { olderThanDays } });
+  }
+  const count = purgeExpired(deps.dataDir, olderThanDays, now).length;
+  deps.logs.write({ level: 'info', kind: 'selfimprove.purged', msg: `Dọn data/self-improve/: ${count} tệp quá hạn`, data: { count, olderThanDays } });
+  return { count, olderThanDays };
 }

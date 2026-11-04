@@ -1,4 +1,4 @@
-// B-19: vòng tự cải thiện — danh sách đề xuất, Duyệt/Từ chối, Rollback có xác nhận.
+// B-19: vòng tự cải thiện — danh sách đề xuất, Duyệt/Từ chối, Áp dụng và Rollback (cả hai có xác nhận).
 // Khi GET /api/selfimprove/proposals trả 404 (selfImprove.enabled=false) thì ẩn toàn bộ mục.
 // Dữ liệu agentProposal/diff đã che PII ở server; client vẫn chỉ dùng textContent (không innerHTML).
 (function (root) {
@@ -29,8 +29,8 @@
   // Mô tả nút khả dụng theo trạng thái.
   function actionsFor(status) {
     if (status === 'proposed') return ['approve', 'reject'];
+    if (status === 'approved') return ['apply'];
     if (status === 'rollback.proposed') return ['rollback'];
-    if (status === 'applied') return [];
     return [];
   }
   // Mô hình hiển thị: chỉ chuỗi thuần, chưa chạm DOM.
@@ -74,7 +74,7 @@
       box.appendChild(el(doc, 'pre', m.diff));
     }
     const act = el(doc, 'div', null, 'si-act');
-    const LABEL = { approve: ['Duyệt', 'btn primary sm'], reject: ['Từ chối', 'btn ghost sm danger'], rollback: ['Rollback', 'btn ghost sm danger'] };
+    const LABEL = { approve: ['Duyệt', 'btn primary sm'], apply: ['Áp dụng', 'btn primary sm'], reject: ['Từ chối', 'btn ghost sm danger'], rollback: ['Rollback', 'btn ghost sm danger'] };
     m.actions.forEach((a) => {
       const b = el(doc, 'button', LABEL[a][0], LABEL[a][1]);
       b.type = 'button';
@@ -92,7 +92,32 @@
     list.forEach((p) => host.appendChild(renderItem(doc, p, on)));
   }
 
-  const pure = { statusLabel, abSummary, screeningSummary, actionsFor, viewModel, isHidden, renderItem, renderList };
+  // Xử lý bấm nút. C.api tự gắn token (cơ chế chung của app.js); lỗi chỉ hiện message server đã che, không in body thô.
+  // Hợp đồng route (src/server.ts): proposed→approve|reject; approved→apply; rollback.proposed→rollback-confirm.
+  function makeHandler(rt, C, rerender) {
+    const BASE = '/api/selfimprove/proposals';
+    const post = async (id, verb, body, okMsg) => {
+      try {
+        await C.api(`${BASE}/${encodeURIComponent(id)}/${verb}`, { method: 'POST', body: JSON.stringify(body || {}) });
+        C.toast({ level: 'info', title: okMsg, msg: id });
+        await rerender();
+      } catch (e) {
+        C.toast({ level: 'error', title: 'Thao tác không thành công', msg: String((e && e.message) || 'Lỗi không xác định') });
+      }
+    };
+    return (a, p) => {
+      if (a === 'approve') return post(p.id, 'approve', {}, 'Đã duyệt đề xuất');
+      if (a === 'reject') {
+        const reason = rt.prompt(`Lý do từ chối ${p.id} (có thể bỏ trống):`, '');
+        if (reason === null) return;
+        return post(p.id, 'reject', reason ? { reason } : {}, 'Đã từ chối đề xuất');
+      }
+      if (a === 'apply' && rt.confirm(`Áp dụng ${p.id} vào ${p.targetFile}? Hệ thống sẽ sửa tệp này và tạo một commit riêng; có thể rollback sau.`)) return post(p.id, 'apply', {}, 'Đã áp dụng đề xuất');
+      if (a === 'rollback' && rt.confirm(`Rollback thay đổi ${p.id} trên ${p.targetFile}? Thao tác này hoàn tác bản đã áp dụng.`)) return post(p.id, 'rollback-confirm', {}, 'Đã xác nhận rollback');
+    };
+  }
+
+  const pure = { statusLabel, abSummary, screeningSummary, actionsFor, viewModel, isHidden, renderItem, renderList, makeHandler };
   if (typeof module !== 'undefined' && module.exports) module.exports = pure;
   if (!root.document) {
     root.SelfImprove = pure;
@@ -114,25 +139,7 @@
       return;
     }
     host.hidden = false;
-    const post = async (id, verb, body, okMsg) => {
-      try {
-        await C.api(`${BASE}/${encodeURIComponent(id)}/${verb}`, { method: 'POST', body: JSON.stringify(body || {}) });
-        C.toast({ level: 'info', title: okMsg, msg: id });
-        await render();
-      } catch (e) {
-        C.toast({ level: 'error', title: 'Thao tác không thành công', msg: e.message });
-      }
-    };
-    const on = (a, p) => {
-      if (a === 'approve') return post(p.id, 'approve', {}, 'Đã duyệt đề xuất');
-      if (a === 'reject') {
-        const reason = root.prompt(`Lý do từ chối ${p.id} (có thể bỏ trống):`, '');
-        if (reason === null) return;
-        return post(p.id, 'reject', reason ? { reason } : {}, 'Đã từ chối đề xuất');
-      }
-      if (a === 'rollback' && root.confirm(`Rollback thay đổi ${p.id} trên ${p.targetFile}? Thao tác này hoàn tác bản đã áp dụng.`)) return post(p.id, 'rollback-confirm', {}, 'Đã xác nhận rollback');
-    };
-    renderList(root.document, host, Array.isArray(list) ? list : [], on);
+    renderList(root.document, host, Array.isArray(list) ? list : [], makeHandler(root, C, render));
   }
   root.SelfImprove = { render, ...pure };
 })(typeof window !== 'undefined' ? window : globalThis);

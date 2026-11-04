@@ -68,3 +68,68 @@ test('404 → ẩn mục; lỗi khác không ẩn', () => {
   assert.equal(SI.isHidden({ status: 500 }), false);
   assert.equal(SI.isHidden(new Error('x')), false);
 });
+
+test('actionsFor: mỗi trạng thái đúng hành động (proposed → Duyệt/Từ chối; approved → Áp dụng; rollback.proposed → Rollback)', () => {
+  assert.deepEqual(SI.actionsFor('proposed'), ['approve', 'reject']);
+  assert.deepEqual(SI.actionsFor('approved'), ['apply']);
+  assert.deepEqual(SI.actionsFor('rollback.proposed'), ['rollback']);
+  for (const s of ['rejected', 'applied', 'rolledback', undefined]) assert.deepEqual(SI.actionsFor(s), [], String(s));
+  const labels = (status: string) => all(SI.renderItem(doc, { ...P, status }, () => {})).filter((n) => n.tag === 'button').map((b) => b.textContent);
+  assert.deepEqual(labels('proposed'), ['Duyệt', 'Từ chối']);
+  assert.deepEqual(labels('approved'), ['Áp dụng']);
+  assert.deepEqual(labels('rollback.proposed'), ['Rollback']);
+});
+
+function harness(confirmAnswer: boolean, apiImpl?: (url: string, opts: any) => Promise<unknown>) {
+  const posts: Array<{ url: string; opts: any }> = [];
+  const toasts: any[] = [];
+  const asked: string[] = [];
+  let rerenders = 0;
+  const C = {
+    api: async (url: string, opts: any) => { posts.push({ url, opts }); return apiImpl ? apiImpl(url, opts) : { ok: true }; },
+    toast: (t: any) => toasts.push(t),
+  };
+  const rt = { confirm: (m: string) => (asked.push(m), confirmAnswer), prompt: () => '' };
+  const on = SI.makeHandler(rt, C, async () => { rerenders++; });
+  return { on, posts, toasts, asked, rerenders: () => rerenders };
+}
+const APPROVED = { ...P, status: 'approved', targetFile: 'agents/dev/x.md' };
+
+test('Áp dụng: không xác nhận ⇒ không POST; có xác nhận ⇒ POST /apply, hỏi nêu tên tệp đích', async () => {
+  const no = harness(false);
+  await no.on('apply', APPROVED);
+  assert.equal(no.posts.length, 0);
+  assert.ok(no.asked[0].includes('agents/dev/x.md'));
+  const yes = harness(true);
+  await yes.on('apply', APPROVED);
+  assert.equal(yes.posts.length, 1);
+  assert.equal(yes.posts[0].url, '/api/selfimprove/proposals/P-1/apply');
+  assert.equal(yes.posts[0].opts.method, 'POST');
+  assert.equal(yes.rerenders(), 1);
+  assert.equal(yes.toasts[0].level, 'info');
+});
+
+test('Rollback vẫn cần xác nhận; Duyệt không hỏi', async () => {
+  const no = harness(false);
+  await no.on('rollback', { ...P, status: 'rollback.proposed' });
+  assert.equal(no.posts.length, 0);
+  const yes = harness(true);
+  await yes.on('rollback', { ...P, status: 'rollback.proposed' });
+  assert.equal(yes.posts[0].url, '/api/selfimprove/proposals/P-1/rollback-confirm');
+  const ap = harness(false);
+  await ap.on('approve', P);
+  assert.equal(ap.posts[0].url, '/api/selfimprove/proposals/P-1/approve');
+});
+
+test('lỗi 409: hiển thị đúng thông báo server đã che, không làm mới danh sách', async () => {
+  const masked = 'Áp dụng P-1 thất bại: git apply --check: error: patch failed: <đường dẫn>';
+  const h = harness(true, async () => { throw Object.assign(new Error(masked), { status: 409 }); });
+  await h.on('apply', APPROVED);
+  assert.equal(h.toasts.length, 1);
+  assert.equal(h.toasts[0].level, 'error');
+  assert.equal(h.toasts[0].msg, masked);
+  assert.equal(h.rerenders(), 0);
+  const h2 = harness(true, async () => { throw {}; });
+  await h2.on('apply', APPROVED);
+  assert.equal(h2.toasts[0].msg, 'Lỗi không xác định');
+});

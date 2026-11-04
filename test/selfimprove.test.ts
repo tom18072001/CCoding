@@ -9,7 +9,7 @@ import { LogStore, verifyChain } from '../src/logger.js';
 import { Registry } from '../src/registry.js';
 import { executePrompt, revisePrompt, synthesizePrompt, type Ctx } from '../src/prompts.js';
 import {
-  buildAbSpec, clusterIncidents, confirmRunsOnLock, decide, loadIncidents, onLog, openAnalysisTask, openPatchTask, persistClusters, recordAbStarted, toIncident, verifyHoldout,
+  buildAbSpec, clusterIncidents, collectGuardBlocks, reviewIssueKey, confirmRunsOnLock, decide, loadIncidents, onLog, openAnalysisTask, openPatchTask, persistClusters, recordAbStarted, toIncident, verifyHoldout,
   type AbRun, type Cluster, type Deps, type Incident,
 } from '../src/selfimprove.js';
 import type { LogEntry, NewTaskInput, Task } from '../src/types.js';
@@ -313,4 +313,79 @@ test('CT-10: selfImprove.enabled=false → băm prompt execute/revise/synthesize
   assert.throws(() => buildAbSpec('P1', 'screen', d));
   assert.equal(events(d, 'incident.').length + events(d, 'selfimprove.').length, 0);
   assert.equal(fs.existsSync(path.join(d.dataDir, 'self-improve')), false);
+});
+
+// ───────── B-19 bước 1: ba nguồn mới (D10b/S3) ─────────
+const srcEntry = (kind: string, data: Record<string, unknown>, over: Partial<LogEntry> = {}): LogEntry => ({
+  ts: '2026-11-04T10:00:00.000Z', level: 'info', kind, msg: 'x', taskId: 'T-1', agentId: 'reviewer', department: 'dev', phase: 'review', data, ...over,
+});
+const reviewEv = (issues: { subtask: string; severity: string; key: string }[], round = 1) => srcEntry('review.incident', { taskId: 'T-1', round, issues });
+
+test('S3: review.incident blocker/major → đúng 1 bản ghi/issue, source review.issue; comment chỉ ở incidents.jsonl; minor không ghi', () => {
+  const d = mkDeps();
+  const key = reviewIssueKey('S1', 'COMMENT-KHONG-TIN-CAY thiếu kiểm biên');
+  const out = toIncident(reviewEv([{ subtask: 'S1', severity: 'blocker', key }, { subtask: 'S2', severity: 'minor', key: 'zz' }]), mkTask(), d, { [key]: 'COMMENT-KHONG-TIN-CAY thiếu kiểm biên' })!;
+  assert.equal(out.length, 1);
+  assert.equal(out[0].source, 'review.issue');
+  assert.equal(out[0].schema, 'ccoding/incident/v1');
+  assert.equal(loadIncidents(d.dataDir).length, 1);
+  assert.match(fs.readFileSync(path.join(d.dataDir, 'self-improve', 'incidents.jsonl'), 'utf8'), /COMMENT-KHONG-TIN-CAY/);
+  assert.ok(!JSON.stringify(events(d, 'incident.')).includes('COMMENT-KHONG-TIN-CAY'), 'comment không vào payload sự kiện');
+  // chỉ minor → không ghi gì
+  const d2 = mkDeps();
+  assert.equal(toIncident(reviewEv([{ subtask: 'S2', severity: 'minor', key: 'zz' }]), mkTask(), d2), null);
+  assert.equal(loadIncidents(d2.dataDir).length, 0);
+});
+
+test('S3: cùng issue trong cùng vòng chỉ 1 bản ghi; vòng khác thì ghi thêm', () => {
+  const d = mkDeps();
+  const it = { subtask: 'S1', severity: 'major', key: reviewIssueKey('S1', 'c') };
+  toIncident(reviewEv([it, it]), mkTask(), d);
+  assert.equal(toIncident(reviewEv([it]), mkTask(), d), null);
+  assert.equal(loadIncidents(d.dataDir).length, 1);
+  toIncident(reviewEv([it], 2), mkTask(), d);
+  assert.equal(loadIncidents(d.dataDir).length, 2);
+});
+
+test('S3: checks.regressed → đúng 1 bản ghi source checks.regressed, lặp cùng vòng không thêm', () => {
+  const d = mkDeps();
+  const ev = srcEntry('checks.regressed', { taskId: 'T-1', round: 1, commands: 2 });
+  assert.equal(toIncident(ev, mkTask(), d)!.length, 1);
+  assert.equal(toIncident(ev, mkTask(), d), null);
+  const all = loadIncidents(d.dataDir);
+  assert.equal(all.length, 1);
+  assert.equal(all[0].source, 'checks.regressed');
+});
+
+test('S3: guard.block đọc từ LogStore theo đúng task → 1 bản ghi/sự kiện, task khác bị bỏ, gọi lại không trùng, cmd không được chép', () => {
+  const d = mkDeps();
+  d.logs.write({ level: 'warn', kind: 'guard.block', msg: 'hook chặn', taskId: 'T-1', data: { tool: 'run_command', clause: 'a', rule: 'R-DEL', cmd: 'LENH-THO-NHAY-CAM' } });
+  d.logs.write({ level: 'warn', kind: 'guard.block', msg: 'hook chặn', taskId: 'T-2', data: { tool: 'run_command', clause: 'a', rule: 'R-DEL', cmd: 'x' } });
+  collectGuardBlocks(mkTask(), d);
+  collectGuardBlocks(mkTask(), d);
+  const all = loadIncidents(d.dataDir);
+  assert.equal(all.length, 1);
+  assert.equal(all[0].source, 'guard.block');
+  assert.equal(all[0].taskId, 'T-1');
+  assert.ok(!fs.readFileSync(path.join(d.dataDir, 'self-improve', 'incidents.jsonl'), 'utf8').includes('LENH-THO-NHAY-CAM'));
+});
+
+test('S3: công tắc tắt (enabled/collect=false) → không ghi bất kỳ nguồn mới nào', () => {
+  for (const over of [{ enabled: false }, { collect: false }]) {
+    const d = mkDeps(over);
+    d.logs.write({ level: 'warn', kind: 'guard.block', msg: 'x', taskId: 'T-1', data: { tool: 't', clause: 'a', rule: 'R' } });
+    collectGuardBlocks(mkTask(), d);
+    onLog(reviewEv([{ subtask: 'S1', severity: 'blocker', key: 'k' }]), mkTask(), d);
+    onLog(srcEntry('checks.regressed', { taskId: 'T-1', round: 1, commands: 1 }), mkTask(), d);
+    assert.equal(loadIncidents(d.dataDir).length, 0);
+  }
+});
+
+test('S3: task confidential/restricted → bỏ qua cả ba nguồn mới và ghi incident.skipped', () => {
+  for (const cls of ['confidential', 'restricted']) {
+    const d = mkDeps();
+    for (const e of [reviewEv([{ subtask: 'S1', severity: 'blocker', key: 'k' }]), srcEntry('checks.regressed', { round: 1, commands: 1 }), srcEntry('guard.block', { tool: 't', rule: 'R' })]) assert.equal(toIncident(e, mkTask(cls), d), null);
+    assert.equal(loadIncidents(d.dataDir).length, 0);
+    assert.equal(events(d, 'incident.skipped').length, 3);
+  }
 });

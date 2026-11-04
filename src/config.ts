@@ -214,6 +214,8 @@ export interface Config {
     roles: { analyst: string; author: string; runner: string };
     monitorTasks: number;
     baselineTasks: number;
+    /** proposalDays: thời hạn giữ tệp không phải bằng chứng dưới data/self-improve/; sàn 183 ngày (AGENTS.md ≥ 6 tháng), thấp hơn bị nâng lên. */
+    retention: { proposalDays: number };
   };
   /**
    * Làn nhanh cho việc nhỏ (options.lane 'auto'): đề bài ≤ maxBriefChars ký tự và repo ≤ maxRepoFiles tệp / maxRepoBytes byte (git ls-files).
@@ -393,6 +395,7 @@ const BUILTIN: Omit<Config, 'root'> = {
     roles: { analyst: 'methodologist', author: 'research-lead', runner: 'data-scientist' },
     monitorTasks: 3,
     baselineTasks: 5,
+    retention: { proposalDays: 183 },
   },
   fastLane: { enabled: true, maxBriefChars: 4000, maxRepoFiles: 300, maxRepoBytes: 1_500_000, planModel: 'sonnet', finalReport: 'template', maxParallel: 4 },
   lanes: { single: { enabled: true, maxParts: 5, maxFilesTouched: 6, slim: { ...SLIM_DEFAULTS } } },

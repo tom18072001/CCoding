@@ -305,7 +305,7 @@ export class ClaudeCliRuntime implements Runtime {
       const av = (this.deps.sandboxAvailable ?? sandboxAvailable)(process.platform, undefined, os.platformBackend ?? 'auto');
       if (!av.ok) {
         // fail-closed: không có sandbox thì KHÔNG chạy (không tụt về chạy không sandbox)
-        logSandboxUnavailable({ backend: av.backend, platform: process.platform }, { state: req.toolPolicy?.guardState });
+        const logged = logSandboxUnavailable({ backend: av.backend, platform: process.platform }, { state: req.toolPolicy?.guardState });
         if (req.toolPolicy?.guardState) fs.rmSync(req.toolPolicy.guardState, { force: true });
         return {
           text: '',
@@ -314,12 +314,20 @@ export class ClaudeCliRuntime implements Runtime {
           model,
           runtime: this.id,
           durationMs: Date.now() - started,
-          error: `Sandbox hệ điều hành đã bật (runtimes.claude-cli.osSandbox) nhưng nền tảng không có sandbox: ${av.reason ?? 'không rõ lý do'}. Không chạy — cài WSL2 hoặc tắt osSandbox.`,
+          error: `Sandbox hệ điều hành đã bật (runtimes.claude-cli.osSandbox) nhưng nền tảng không có sandbox: ${av.reason ?? 'không rõ lý do'}. Không chạy — cài WSL2 hoặc tắt osSandbox.${logged.ok ? '' : ` Cảnh báo: không ghi được sự kiện sandbox.unavailable vào nhật ký (${logged.kind}).`}`,
         };
       }
       backend = av.backend;
     }
-    const parser = new ClaudeStreamParser(hooks, os?.enabled === true ? (d) => logSandboxDeny({ ...d, backend }, { state: req.toolPolicy?.guardState }) : undefined);
+    let denyLogFailures = 0;
+    const parser = new ClaudeStreamParser(
+      hooks,
+      os?.enabled === true
+        ? (d) => {
+            if (!logSandboxDeny({ ...d, backend }, { state: req.toolPolicy?.guardState }).ok) denyLogFailures++;
+          }
+        : undefined,
+    );
     let spec: { cmd: string; args: string[]; cwd: string; env: NodeJS.ProcessEnv } = { cmd: this.cfg.command ?? 'claude', args, cwd: req.cwd, env };
     if (backend === 'wsl2') spec = wrapForWsl(spec);
     const proc = await runProcess({
@@ -361,7 +369,13 @@ export class ClaudeCliRuntime implements Runtime {
       error,
       toolCalls: parser.toolCalls.length ? parser.toolCalls : undefined,
       capped,
-      diag: capped ? `chạm trần ${toolTurnCap(req) || '?'} lượt (--max-turns của claude-cli)` : undefined,
+      diag:
+        [
+          capped ? `chạm trần ${toolTurnCap(req) || '?'} lượt (--max-turns của claude-cli)` : '',
+          denyLogFailures ? `không ghi được ${denyLogFailures} sự kiện sandbox.deny vào nhật ký (xem stderr)` : '',
+        ]
+          .filter(Boolean)
+          .join('; ') || undefined,
     };
   }
 }
