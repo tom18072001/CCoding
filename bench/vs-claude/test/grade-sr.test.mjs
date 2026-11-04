@@ -139,7 +139,10 @@ test('SR-13: untouchedFileFailures chỉ đếm test trượt thuộc tệp agen
 
 test('SR-13: agent không sửa tệp nào cần đổi → mọi test trượt thuộc tệp không sửa (không cần bản đồ tên test)', () => {
   const T = mkTask();
+  const hf = path.join(T.hiddenDir, 'x.hidden.test.js'); // tên test không chứa tên tệp nguồn
+  fs.writeFileSync(hf, fs.readFileSync(hf, 'utf8').replace(/'a: một'/, "'tc1'").replace(/'a: hai'/, "'tc2'").replace(/'b: một'/, "'tc3'"));
   const g = gradeCode({ workdir: copyOf(T.suiteRepoDir), ...T, visibleCheck: false });
+  assert.deepEqual(g.details.failed, ['tc1', 'tc2', 'tc3']);
   assert.equal(g.details.failed.length, 3);
   assert.equal(g.details.untouchedFileFailures, 3);
   assert.deepEqual(g.details.untouchedFiles, ['src/a.js', 'src/b.js']);
