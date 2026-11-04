@@ -38,17 +38,27 @@ const quantile = (sorted, q) => {
   return sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo);
 };
 
+/** Nhãn đăng ký cho phân phối suy biến (preregistration §2.5 v2.1 (c)): không có p, không "xác nhận". */
+export const DEGENERATE_LABEL = 'không kết luận (suy biến)';
+
 /**
  * Tương đương (TOST) bằng CI bootstrap hai tầng (bài → lượt). `b` là TREAT, `a` là BASE.
  * scale 'diff': thống kê = TB theo bài của (mean(b) − mean(a)); margin cùng đơn vị điểm.
  * scale 'logratio': thống kê = ln(TB theo bài mean(b) / TB theo bài mean(a)); margin theo ln (vd. ln 1.1).
- * CI (1 − 2·alpha) = [alpha, 1 − alpha]; equivalent ⇔ CI nằm trọn trong [−margin, +margin].
+ * CI (1 − 2·alpha) = [alpha, 1 − alpha]; equivalent ⇔ CI nằm trọn trong [−margin, +margin] VÀ không suy biến.
+ * T-1/B-1/T-5 (K2): suy biến ⇒ p = null, degenerate = true, equivalent = false, label = DEGENERATE_LABEL.
+ * Suy biến = điểm gốc hoặc bất kỳ mẫu bootstrap nào không hữu hạn (NaN), hoặc mọi mẫu bằng nhau (dung sai 1e-12).
+ * Giống H6 (P:107): suy biến nhưng CI nằm hẳn ngoài biên (vd. Δ cố định +0,10) vẫn nhãn 'Bác bỏ' (p vẫn null).
+ * p (phụ, kiểu bootP): max hai phía (k + 1)/(B + 1); null khi suy biến.
+ * Trả { est, lo, hi, lo90, hi90, p, equivalent, degenerate, label } (lo90/hi90 giữ cho analyze.mjs).
  */
 export function tost(cells, { margin, alpha = 0.05, B = 4000, seed = 20261102, scale = 'diff' } = {}) {
   const cs = cells.filter((c) => c.a?.length && c.b?.length);
   const stat = (ma, mb) => (scale === 'logratio' ? Math.log(mean(mb) / mean(ma)) : mean(mb) - mean(ma));
-  const nan = { est: NaN, lo90: NaN, hi90: NaN, equivalent: false };
-  if (!cs.length || !(margin > 0)) return nan;
+  const out = (o) => ({ lo: o.lo90, hi: o.hi90, ...o });
+  if (!cs.length || !(margin > 0)) {
+    return out({ est: NaN, lo90: NaN, hi90: NaN, p: null, equivalent: false, degenerate: false, label: 'không kết luận (thiếu dữ liệu)' });
+  }
   const est = stat(cs.map((c) => mean(c.a)), cs.map((c) => mean(c.b)));
   const rnd = mulberry32(seed);
   const res = (x) => x.map(() => x[Math.floor(rnd() * x.length)]);
@@ -62,10 +72,20 @@ export function tost(cells, { margin, alpha = 0.05, B = 4000, seed = 20261102, s
     }
     boots.push(stat(ma, mb));
   }
-  const ok = boots.filter(Number.isFinite).sort((x, y) => x - y);
-  if (!Number.isFinite(est) || !ok.length) return { ...nan, est };
-  const lo90 = quantile(ok, alpha), hi90 = quantile(ok, 1 - alpha);
-  return { est, lo90, hi90, equivalent: lo90 >= -margin - EPS && hi90 <= margin + EPS };
+  if (!Number.isFinite(est) || !boots.every(Number.isFinite)) {
+    return out({ est, lo90: NaN, hi90: NaN, p: null, equivalent: false, degenerate: true, label: DEGENERATE_LABEL });
+  }
+  const sorted = [...boots].sort((x, y) => x - y);
+  const lo90 = quantile(sorted, alpha), hi90 = quantile(sorted, 1 - alpha);
+  const degenerate = sorted[sorted.length - 1] - sorted[0] <= EPS;
+  const outside = lo90 >= margin - EPS || hi90 <= -margin + EPS;
+  if (degenerate) {
+    return out({ est, lo90, hi90, p: null, equivalent: false, degenerate: true, label: outside ? 'Bác bỏ' : DEGENERATE_LABEL });
+  }
+  const equivalent = lo90 >= -margin - EPS && hi90 <= margin + EPS;
+  const kLow = boots.filter((d) => d <= -margin + EPS).length, kHigh = boots.filter((d) => d >= margin - EPS).length;
+  const p = (Math.max(kLow, kHigh) + 1) / (B + 1);
+  return out({ est, lo90, hi90, p, equivalent, degenerate: false, label: equivalent ? 'Tương đương (CI trong biên)' : outside ? 'Bác bỏ' : 'Không kết luận' });
 }
 
 // ---------- SR-26: cổng nhãn, H3 (hoán vị hai mẫu chính xác), H6 (bootstrap có quy tắc trần/suy biến) ----------
@@ -104,6 +124,8 @@ const H6_MARGIN = 0.05;
  * `arm` ('A1' | 'A2', mặc định 'A1') chỉ quyết định điền nA1 hay nA2; trường kia là null.
  * v2.1: (a) chỉ dùng taskSet khai báo; (b) bỏ bài chạm trần ở CẢ HAI arm (mọi lượt ≥ ceil), giữ bài chạm trần một phía;
  * (c) Δ* suy biến ⇒ p = null (không bao giờ 1/(B+1)); (d) < minTasks bài ⇒ verdict 'estimate' kèm ci90, không p.
+ * T-1/B-1 (K2): điểm không hữu hạn (NaN) cũng là suy biến (trước đây NaN ≤ EPS sai ⇒ p = 1/(B+1)).
+ * Trả thêm `degenerate` (bool) và `label` ('không kết luận (suy biến)' khi suy biến không bị bác bỏ); `verdict` giữ như cũ.
  */
 export function bootP(cells, { B = 4000, seed = 20261102, ceil = 0.99, minTasks = 3, taskSet, arm = 'A1' } = {}) {
   const inSet = (c) => !taskSet || taskSet.includes(c.task);
@@ -122,31 +144,43 @@ export function bootP(cells, { B = 4000, seed = 20261102, ceil = 0.99, minTasks 
       deltas.push(s / n);
     }
   }
+  const finite = deltas.every(Number.isFinite);
   const sorted = [...deltas].sort((x, y) => x - y);
   const ci90 = n ? [quantile(sorted, 0.05), quantile(sorted, 0.95)] : null;
-  if (n < minTasks) return { ...base, p: null, verdict: 'estimate', ci90, k: null };
+  if (n < minTasks) return { ...base, p: null, degenerate: !finite, label: finite ? 'ước lượng (ít bài)' : DEGENERATE_LABEL, verdict: 'estimate', ci90, k: null };
+  if (!finite) return { ...base, p: null, degenerate: true, label: DEGENERATE_LABEL, verdict: 'Không kết luận (trần/suy biến)', ci90, k: null };
   const degenerate = sorted[sorted.length - 1] - sorted[0] <= EPS;
   if (degenerate) {
     const rejected = deltas.every((d) => Math.abs(d) >= H6_MARGIN - EPS);
-    return { ...base, p: null, verdict: rejected ? 'Bác bỏ' : 'Không kết luận (trần/suy biến)', ci90, k: null };
+    return { ...base, p: null, degenerate: true, label: rejected ? 'Bác bỏ' : DEGENERATE_LABEL, verdict: rejected ? 'Bác bỏ' : 'Không kết luận (trần/suy biến)', ci90, k: null };
   }
   const kLow = deltas.filter((d) => d <= -H6_MARGIN + EPS).length, kHigh = deltas.filter((d) => d >= H6_MARGIN - EPS).length;
   const k = Math.max(kLow, kHigh);
-  return { ...base, p: (k + 1) / (B + 1), pMin: 1 / (B + 1), verdict: 'p', ci90, k };
+  return { ...base, p: (k + 1) / (B + 1), pMin: 1 / (B + 1), degenerate: false, label: 'p', verdict: 'p', ci90, k };
 }
 
-/** Gộp hai cặp của H6: p = max(p(A1), p(A2)); một cặp NA ⇒ NA; một cặp 'estimate' ⇒ H6 hạ xuống ước lượng. */
+/**
+ * Gộp hai cặp của H6: p = max(p(A1), p(A2)); một cặp NA (suy biến, kể cả NaN) ⇒ p = null, degenerate = true,
+ * supported = false; một cặp 'estimate' ⇒ H6 hạ xuống ước lượng. `supported` = cả hai cặp có p và ci90 một tầng trong ±0,05;
+ * ngưỡng Holm và CI hai tầng của tost áp ở analyze.mjs. Trả { p, degenerate, supported, label, verdict, ... }.
+ */
 export function h6Combine(pA1, pA2) {
-  const out = (p, verdict) => ({
-    p, verdict, nA1: pA1.nA1, nA2: pA2.nA2, ci90: { A1: pA1.ci90, A2: pA2.ci90 },
+  const out = (p, verdict, extra) => ({
+    p, verdict, degenerate: false, supported: false, label: verdict, ...extra,
+    nA1: pA1.nA1, nA2: pA2.nA2, ci90: { A1: pA1.ci90, A2: pA2.ci90 },
     ceilingTasks: { A1: pA1.ceilingTasks, A2: pA2.ceilingTasks }, B: pA1.B, k: { A1: pA1.k, A2: pA2.k },
   });
-  if (pA1.verdict === 'estimate' || pA2.verdict === 'estimate') return out(null, 'estimate');
-  if (pA1.p == null || pA2.p == null) {
-    const bad = [pA1, pA2].filter((r) => r.p == null);
-    return out(null, bad.some((r) => r.verdict === 'Bác bỏ') ? 'Bác bỏ' : 'Không kết luận (trần/suy biến)');
+  if (pA1.verdict === 'estimate' || pA2.verdict === 'estimate') {
+    const nan = pA1.degenerate || pA2.degenerate;
+    return out(null, 'estimate', nan ? { degenerate: true, label: DEGENERATE_LABEL } : { label: 'ước lượng (ít bài)' });
   }
-  return out(Math.max(pA1.p, pA2.p), 'p');
+  if (pA1.p == null || pA2.p == null || pA1.degenerate || pA2.degenerate) {
+    const bad = [pA1, pA2].filter((r) => r.p == null);
+    const rejected = bad.some((r) => r.verdict === 'Bác bỏ');
+    return out(null, rejected ? 'Bác bỏ' : 'Không kết luận (trần/suy biến)', { degenerate: true, label: rejected ? 'Bác bỏ' : DEGENERATE_LABEL });
+  }
+  const inside = (ci) => Array.isArray(ci) && ci[0] >= -H6_MARGIN - EPS && ci[1] <= H6_MARGIN + EPS;
+  return out(Math.max(pA1.p, pA2.p), 'p', { supported: inside(pA1.ci90) && inside(pA2.ci90), label: 'p' });
 }
 
 // ---------- SR-25: hoán vị nhãn arm theo lượt, phân tầng theo bài (H1′/H2′) ----------
