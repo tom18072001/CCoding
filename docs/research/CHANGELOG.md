@@ -5,6 +5,39 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 12 (T-20261104-135425-669, hạng mục S2, 4/11/2026): bài báo v0.6 — Bảng 10 theo bảng "sau D12", E3 ở mức quy trình
+
+Căn cứ: bảng "trước D12 → sau D12" (`context/d12-stats-fixes-2026-11-04.md` mục 2, nguồn chuẩn duy nhất; ghi tắt D12-§), `context/d12-stats-fixes-2026-11-04.n2-review.md`, `bench/vs-claude/results/local-3e/RUNLOG.md` (chỉ mục "Nguồn p của H6 cho E6"; bỏ qua mọi dòng kết quả E3, E4), `preregistration.md` §9 V4-3e-E5′ (dòng 560–585) và đầu `bench/vs-claude/results/b15f-main/RUNLOG.md`. Không chạy lệnh nào, không chạy benchmark, không sửa `src/`, `bench/`, `preregistration.md`. `consistency-check` do S5 chạy.
+
+**Số đổi ở `paper/paper.md` (cũ → mới; mã K2; nguồn):**
+
+| Vị trí | Khóa `facts.json` | Cũ → mới | Mã K2 | Nguồn |
+|---|---|---|---|---|
+| Bảng 10, H7 (B0) | `d12-h7-b0-ratio`, `d12-h7-b0-dropped` | SD gộp 0,00 trên 13 bài, nhãn cũ SUPPORTED → 0,00 [0,00; 0,00] trên 2 bài, 16 bài bị loại vì r < 5, nhãn "chưa đủ dữ liệu" | A-1 | D12-§2.1 (H7), §2.3 |
+| Bảng 10, H7 (B6, B7; chỉ đối chiếu) | `d12-h7-b6`, `d12-h7-b7` | SUPPORTED/not supported trên 13–18 bài → B6 5,87 [0,00; 10,17], 5 bài; B7 1,55 [1,55; 1,55], 5 bài; cả hai "không kết luận" | A-1 | D12-§2.1 (H7) |
+| Bảng 10, H3 | `d12-h3-recall-p` | nhãn "insufficient data" → "không kết luận"; p recall 1,0000 (mới) | P-1 | D12-§2.1 (H3) |
+| Bảng 10, dòng Holm | `d12-holm-k` | K = 0 "họ rỗng" → K = 1 (chỉ H3, p = 1,0000, Holm không bác bỏ). Giữ K = 0 theo R4; kết luận "không giả thuyết nào xác nhận" không đổi | P-1 | D12-§2.1 (dòng Holm) |
+| Bảng 10, H2 | (giữ `h2-estimate`, `h2-ci-upper`) | **Số không đổi** (+2,8 pp, [0,0; +8,3 pp], 4 bài). Chỉ nhãn của mã: "not supported" → "không kết luận" | A-4, T-1 | D12-§2.1 (H2) |
+| Bảng 10, H5 (B0) | — | Số không đổi (mô tả cùng cửa sổ). Nhãn của mã: "not supported" → "không kết luận" | A-4 | D12-§2.1 (H5) |
+| Bảng 10, H6 | — | Số không đổi (n = 0, chưa đủ dữ liệu). Chỉ thêm ghi chú CI một tầng "ước lượng (ít bài)" | B-3, C-2 | D12-§2.2 (dòng cuối) |
+| Bảng 10, hàng mới H1/H10 (B0, thăm dò) | `d12-h1-b0-after`, `d12-h1-b0-before`, `d12-h10-b0-p` | H1: +2,8 pp [0,0; 9,0], 6 bài (lọc size ≥ 3) → +4,2 pp [0,0; 12,5], 4 bài (danh sách cố định c3, c4, c5, r1), nhãn mã "không kết luận". H10: p hoán vị 0,129 → 0,132 | A-2, A-4, A-5 | D12-§2.1 (H1), §2.2 (H10) |
+| Bảng 10, điểm (i): B-01 của `analyze.mjs` (`--b01-arm B7`) | `d12-b01-b7-token`, `d12-b01-b7-time` | token 2,460 [2,070; 3,023] → 2,519 [2,052; 3,131]; thời gian 2,482 [2,079; 3,140] → 2,580 [2,097; 3,242]; cả hai "bác bỏ"; phép (c) R = 1,000 SUPPORTED → "chưa đủ dữ liệu" (0 bài sau khi bỏ trần). `facts.json` giữ `b01-b7-token-analyze` (2,460) và `b01-b7-time-analyze` (2,482) làm số "trước D12" | T-2, T-3, T-6, B-2 | D12-§2.1 (B-01a/b/c, B7) |
+| Bảng 10, điểm (i): B-01 của `analyze.mjs` (`--b01-arm B6`) | `d12-b01-b6-token`, `d12-b01-b6-time`, `d12-b01c-b6` | token 3,752 [3,415; 4,290] → 3,934 [3,514; 4,392]; thời gian 3,798 [3,297; 4,622] → 4,074 [3,468; 4,753]; cả hai "bác bỏ"; phép (c) 0,998 SUPPORTED, 5 bài → 0,987, 1 bài sau khi bỏ trần, "không kết luận" | T-2, T-3, T-6, B-2 | D12-§2.1 (B-01a/b/c, B6) |
+| Bảng 10, điểm (iii) | — | Ghi cách mã tách "bác bỏ" khỏi "không kết luận"; ghi ngữ nghĩa "bác bỏ" của H1 (A1, A2) còn chờ xác nhận, không chép số H1 của A1, A2 | A-4, B-2 | D12-§2.1, ghi chú đọc số |
+| §8.1 (5), (6) | `d12-test-bench` | Bốn chỗ lệch (T-1, B-1, T-2, S-1) từ "phải sửa" thành "đã sửa ở D12, `57148de`"; cổng ≥ 3 bài bỏ cho H3; thêm `test:bench` 245/245 | T-1, B-1, T-2, S-1, P-1 | D12-§1, §3, "Hash và kiểm cuối" |
+| Tóm tắt VI/EN, đầu §6, §9 | — | Câu về họ Holm: "rỗng (K = 0)" → "rỗng theo phép kiểm đăng ký; mã sau D12 K = 1 (H3, p = 1,0000)"; H7 "không xác nhận" → "chưa đủ dữ liệu (2 bài)" | P-1, A-1 | D12-§2.1 |
+
+**Không đổi, đã đối chiếu:** Bảng 8, 9 (số R4 và R3), 11–14, mọi số §6.2, H2 (số), H4, H8, H9 (D12-§2.4), H6 (số). Bảng 9 không đổi vì số chính thức của B-01 lấy từ `prereg-tests.mjs` (R4), không phải `analyze.mjs`. Số H6 mô tả "mọi bài" (+0,7 [0,0; +2,4]…, mã T-4) và p hoán vị H10 của các arm khác B0 (A-5) **không có** trong bài nên không thêm; xem D12-§2.2.
+
+**Thêm mới:**
+- **§6.1 mục (8)** "E3 và thiết kế lại E5 thành E5′" [Quy trình]: B0 không có pha họp ở cả hai bài lớn nên E5 là ô "thiếu dữ liệu"; E5′ ép làn đầy đủ (B0F, B1F), 40 lượt, dừng 1, dừng 2, kiểm nhiễu, giám đốc duyệt 12:50 ngày 4/11, sổ chạy `results/b15f-main/RUNLOG.md`, chạy sau E6. Khóa `e5p-runs`, `e5p-stop2`. **Không có điểm, tỉ lệ đạt, token hay thời gian của E3, E4; không câu so sánh kết quả; không mở `runs.jsonl` hay tệp điểm.**
+- **Phụ lục A:** nhãn **R19** (bảng "trước D12 → sau D12"); R18 thêm "đợt 3e gồm E6 và sổ E5′". Đầu bài ghi v0.6; §9 mục (c) cập nhật E3/E5′ và H6 (T-1 đã sửa).
+- `facts.json`: 17 mục `numbers` mới (D12: 15; E5′: 2). Các mẫu cũ không đổi chữ nên vẫn khớp.
+
+**Ẩn danh: chưa làm.** Giám đốc chưa chọn mức trong `context/anonymization-options-2026-11-04.md`; tên tác giả và tên hệ giữ như v0.5.
+
+**Còn mở, chuyển S5 và người phản biện:** (1) ngữ nghĩa "bác bỏ" của B-2 (D12-§ ghi chú đọc số, đề nghị S5b/N-2 xác nhận); (2) D12 nói "24 mã" nhưng liệt kê 23, chưa đối chiếu với K2 mục 2; (3) `d12-diff-rows.mjs` chưa chạy lại trong hạng mục này (người viết không chạy lệnh); (4) các số trong bảng trên chép từ D12-§2 bằng tay, S5 đối chiếu từng ô.
+
 ## Vòng 4, gói 10 (T-20261104-110942-567, 4/11/2026): bài báo v0.5 — Bảng 10 sau thẩm định thống kê, chẩn đoán cache (E1), thí điểm cổng (E2) mô tả
 
 Căn cứ: thẩm định thống kê (`context/k2-stats-review-2026-11-04.md`), chạy ca biên (S3b), mô tả E2 (`context/k4-e2-descriptive-b14-step2-n.md`), sổ chạy `b14-diag` và `gates-pilot`. Không chạy benchmark, không sửa `src/` hay mã `bench/`. Mọi số mới có khóa trong `facts.json`.

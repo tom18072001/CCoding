@@ -781,6 +781,142 @@
       "pattern": "(2,482) so với 2,566 \\(thời gian\\)",
       "files": ["paper/paper.md"],
       "exceptions": []
+    },
+    {
+      "id": "d12-b01-b7-token",
+      "value": "2,519",
+      "reason": "v0.6, mã T-2/T-3/T-6/B-2: docs/research/context/d12-stats-fixes-2026-11-04.md mục 2.1, hàng 'study-cloud B0 --b01-arm B7' B-01a: R=2,519 [2,052; 3,131] (trước D12: 2,460 [2,070; 3,023])",
+      "pattern": "--b01-arm B7` cho (2,519) \\[2,052; 3,131\\] \\(token\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-b01-b7-time",
+      "value": "2,580",
+      "reason": "v0.6, mã T-2/B-2: d12-stats-fixes-2026-11-04.md mục 2.1, B-01b B7: R=2,580 [2,097; 3,242] (trước D12: 2,482 [2,079; 3,140])",
+      "pattern": "và (2,580) \\[2,097; 3,242\\] \\(thời gian\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-b01-b6-token",
+      "value": "3,934",
+      "reason": "v0.6, mã T-2/B-2: d12-stats-fixes-2026-11-04.md mục 2.1, B-01a với --b01-arm B6: R=3,934 [3,514; 4,392] (trước D12: 3,752 [3,415; 4,290])",
+      "pattern": "`--b01-arm B6`: (3,934) \\[3,514; 4,392\\]",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-b01-b6-time",
+      "value": "4,074",
+      "reason": "v0.6, mã T-2/B-2: d12-stats-fixes-2026-11-04.md mục 2.1, B-01b với --b01-arm B6: R=4,074 [3,468; 4,753] (trước D12: 3,798 [3,297; 4,622])",
+      "pattern": "và (4,074) \\[3,468; 4,753\\], \"bác bỏ\"",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-b01c-b6",
+      "value": "0,987",
+      "reason": "v0.6, mã T-3/T-6/T-2: d12-stats-fixes-2026-11-04.md mục 2.1, B-01c B6: R=0,987, 1 bài sau khi bỏ trần (trước D12: 0,998 SUPPORTED, 5 bài)",
+      "pattern": "phép \\(c\\) (0,987), 1 bài sau khi bỏ trần",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h7-b0-ratio",
+      "value": "0,00; 0,00",
+      "reason": "v0.6, mã A-1: d12-stats-fixes-2026-11-04.md mục 2.1, H7: B0 tỉ số SD gộp 0,00 [0,00; 0,00], 2 bài (trước D12: SD gộp 0,00 trên 13 bài, SUPPORTED)",
+      "pattern": "SD gộp là 0,00 \\[(0,00; 0,00)\\] trên 2 bài",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h7-b0-dropped",
+      "value": "16",
+      "reason": "v0.6, mã A-1: d12-stats-fixes-2026-11-04.md mục 2.1, H7 B0: 16 bài bị loại vì r < 5",
+      "pattern": "(16) bài bị loại vì r < 5",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h7-b6",
+      "value": "5,87",
+      "reason": "v0.6, mã A-1: d12-stats-fixes-2026-11-04.md mục 2.1, H7 B6: 5,87 [0,00; 10,17], 5 bài, không kết luận",
+      "pattern": "Số B6 \\((5,87) \\[0,00; 10,17\\], 5 bài\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h7-b7",
+      "value": "1,55",
+      "reason": "v0.6, mã A-1: d12-stats-fixes-2026-11-04.md mục 2.1, H7 B7: 1,55 [1,55; 1,55], 5 bài, không kết luận",
+      "pattern": "B7 \\((1,55) \\[1,55; 1,55\\], 5 bài\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h3-recall-p",
+      "value": "1,0000",
+      "reason": "v0.6, mã P-1: d12-stats-fixes-2026-11-04.md mục 2.1, H3: p recall 1,0000; dòng Holm K=1, H3 p=1,0000",
+      "pattern": "p recall = (1,0000); dòng Holm",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-holm-k",
+      "value": "1",
+      "reason": "v0.6, mã P-1: d12-stats-fixes-2026-11-04.md mục 2.1, dòng Holm {H3, H6}: trước D12 K=0 'họ rỗng', sau D12 K=1",
+      "pattern": "Mã sau D12 ghi K = (1) \\(chỉ H3",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h1-b0-after",
+      "value": "4,2",
+      "reason": "v0.6, mã A-2/A-4: d12-stats-fixes-2026-11-04.md mục 2.1, H1 study-cloud B0: danh sách cố định c3, c4, c5, r1, 4 bài, +4,2 [0,0; 12,5], NK",
+      "pattern": "\\(4 bài đủ lượt\\): \\+(4,2) pp \\[0,0; 12,5\\]",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h1-b0-before",
+      "value": "2,8",
+      "reason": "d12-stats-fixes-2026-11-04.md mục 2.1 và 2.3: H1 cách cũ (lọc size ≥ 3, 6 bài) B0 +2,8 pp [0,0; 9,0], p=1,000; giữ làm dòng độ nhạy",
+      "pattern": "trên 6 bài: \\+(2,8) pp \\[0,0; 9,0\\], p = 1,000",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h10-b0-p",
+      "value": "0,132",
+      "reason": "v0.6, mã A-5: d12-stats-fixes-2026-11-04.md mục 2.2, H10 p hoán vị B0: 0,129 → 0,132",
+      "pattern": "p hoán vị 0,129 → (0,132) do",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-test-bench",
+      "value": "245",
+      "reason": "d12-stats-fixes-2026-11-04.md mục 'Hash và kiểm cuối': npm run test:bench exit 0, tests 245, pass 245",
+      "pattern": "`npm run test:bench`\\) (245)/245",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e5p-runs",
+      "value": "40",
+      "reason": "v0.6: preregistration.md §9 V4-3e-E5′ (2) dòng 571: 2 arm × 2 bài × 10 = 40 lượt",
+      "pattern": "10 lượt mỗi ô, tức (40) lượt",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e5p-stop2",
+      "value": "3",
+      "reason": "v0.6: preregistration.md §9 V4-3e-E5′ (3) 'Dừng 2' dòng 578: từ 3/10 cặp trở lên bị loại thì dừng",
+      "pattern": "có từ (3)/10 cặp trở lên bị loại",
+      "files": ["paper/paper.md"],
+      "exceptions": []
     }
   ]
 }
