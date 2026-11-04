@@ -13,7 +13,7 @@ import { PROCESS_SUFFIX, runClaude, weighted } from './lib/claude.mjs';
 import { runCcoding, serverUp } from './lib/ccoding.mjs';
 import { GRADERS } from './lib/grade.mjs';
 import { blind } from './lib/judge.mjs';
-import { EXIT_RATE_LIMIT, checkArms, doneKeys, suiteTaskIds, supportedLanes } from './lib/queue.mjs';
+import { EXIT_RATE_LIMIT, checkArms, classifyRun, doneKeys, replacementRuns, suiteTaskIds, supportedLanes } from './lib/queue.mjs';
 import { populateWorkspace, taskDirs } from './lib/workspace.mjs';
 
 const SUITE = path.dirname(fileURLToPath(import.meta.url));
@@ -54,6 +54,15 @@ for (let r = 1; r <= repeats; r++) {
   });
 }
 
+// SR-01: lượt failed/error/infra chạy lại; khóa bị loại (excluded) vẫn tính là xong và được lượt thay rep = max(rep)+1 (§4.3).
+const runsFile = path.join(out, 'runs.jsonl');
+const runsText = fs.existsSync(runsFile) ? fs.readFileSync(runsFile, 'utf8') : '';
+const done = doneKeys(runsText);
+for (const x of replacementRuns(runsText, repeats, taskIds.flatMap((task) => armIds.map((arm) => ({ task, arm }))))) {
+  const key = `${x.task}__${x.arm}__r${x.rep}`;
+  if (!schedule.some((s) => s.key === key)) schedule.push({ task: x.task, arm: x.arm, rep: x.rep, key });
+}
+
 if (has('dry-run')) {
   console.log(`${schedule.length} runs -> ${out}`);
   for (const s of schedule) console.log(s.key);
@@ -62,8 +71,6 @@ if (has('dry-run')) {
 
 fs.mkdirSync(out, { recursive: true });
 fs.writeFileSync(path.join(out, 'config.json'), JSON.stringify({ argv, cfg, armIds, taskIds, repeats, startedAt: new Date().toISOString() }, null, 2));
-const runsFile = path.join(out, 'runs.jsonl');
-const done = doneKeys(fs.existsSync(runsFile) ? fs.readFileSync(runsFile, 'utf8') : ''); // dòng infra không tính là xong
 
 const armErrors = checkArms(armIds, ARMS, supportedLanes(path.resolve(SUITE, '../..')));
 if (armErrors.length) { for (const e of armErrors) console.error(e); process.exit(2); }
@@ -175,7 +182,8 @@ for (const s of schedule) {
     }
   } catch (e) { error = String(e?.stack ?? e).slice(0, 2000); }
   if (r?.infra) {
-    const row = { key: s.key, task: s.task, arm: s.arm, rep: s.rep, at: new Date().toISOString(), status: 'infra', infra: r.infra, resetsAt: r.resetsAt, wallSec: r.wallSec };
+    const row = { key: s.key, task: s.task, arm: s.arm, rep: s.rep, at: new Date().toISOString(), status: 'infra', infra: r.infra, resetsAt: r.resetsAt, wallSec: r.wallSec,
+      failReason: r.infra === 'rate-limit' ? 'quota' : 'error', excluded: null }; // infra luôn chạy lại, nên không ghi excluded
     fs.appendFileSync(runsFile, `${JSON.stringify(row)}\n`);
     if (r.infra === 'rate-limit') {
       console.log(`HẠN MỨC${r.resetsAt ? ` — mở lại lúc ${r.resetsAt}` : ''}`);
@@ -185,9 +193,10 @@ for (const s of schedule) {
     console.log('LỖI HẠ TẦNG (lượt sẽ chạy lại khi chạy tiếp)');
     continue;
   }
+  const { failReason, excluded } = classifyRun(r, { timeoutMin: cfg.timeoutMin, error });
   const row = {
     key: s.key, task: s.task, category: task.category, size: task.size, arm: s.arm, rep: s.rep, at: new Date().toISOString(),
-    status: error ? 'error' : r.status, error, wallSec: r?.wallSec, tokens: r?.tokens, costUsd: r?.costUsd, turns: r?.turns,
+    status: error ? 'error' : r.status, failReason, excluded, error, wallSec: r?.wallSec, tokens: r?.tokens, costUsd: r?.costUsd, turns: r?.turns,
     calls: r?.calls, agentsUsed: r?.agentsUsed, byPhase: r?.byPhase, ...(r?.research ?? {}), picked: r?.picked, leak: !!r?.leak,
     score: g?.score ?? 0, pass: !!g?.pass, formatMiss: !!g?.formatMiss, details: g?.details,
   };
