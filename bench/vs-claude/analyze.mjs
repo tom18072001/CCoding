@@ -213,9 +213,19 @@ const holmTxt = (m) => (m ? `p=${fp(m.p)}, p_min=${fp(m.pMin)}, confirmable=${m.
   H.push(['H7', 'Run-to-run stability (SD ratio treatment/baseline)', `median SD ratio ${f(median(r))} over ${r.length} tasks`, verdict(median(r) <= 0.7, r.length < 3)]);
 }
 {
-  const fm = (arm) => mean(R.filter((x) => x.arm === arm).map((x) => (x.formatMiss ? 1 : 0)));
-  const fail = (arm) => mean(R.filter((x) => x.arm === arm && x.category === 'coding').map((x) => (x.details?.total ? (x.details.total - x.details.passed) / x.details.total : 0)));
-  H.push(['H8', 'Coordination failures (deliverable missing / requirements dropped)', `deliverable-missing rate ${BASE} ${pp(fm(BASE))} vs ${TREAT} ${pp(fm(TREAT))}; failed hidden-test share ${BASE} ${pp(fail(BASE))} vs ${TREAT} ${pp(fail(TREAT))}`, verdict(fm(TREAT) > fm(BASE), false) + ' (confirm with transcript review)']);
+  // SR-13: chỉ số điều phối đúng nghĩa, cặp theo bài (D2): `untouchedFileFailures` (test trượt thuộc tệp agent không sửa) và `redAtEnd` (lệnh kiểm còn đỏ khi kết thúc).
+  // `formatMiss` (thiếu sản phẩm) chỉ là chỉ số phụ. Dòng cũ không có hai trường chính ⇒ bài đó không vào cặp.
+  const fmOf = (x) => (x.formatMiss ?? x.details?.formatMiss ? 1 : 0);
+  const pairs = tasks.map((t) => {
+    const u = [cell(BASE, t, 'detail:untouchedFileFailures'), cell(TREAT, t, 'detail:untouchedFileFailures')];
+    const r = [cell(BASE, t, 'detail:redAtEnd'), cell(TREAT, t, 'detail:redAtEnd')];
+    if (!u.every((x) => x.length) || !r.every((x) => x.length)) return null;
+    return { t, du: mean(u[1]) - mean(u[0]), dr: mean(r[1]) - mean(r[0]) };
+  }).filter(Boolean);
+  const fm = (arm) => mean(R.filter((x) => x.arm === arm).map(fmOf));
+  const dU = mean(pairs.map((x) => x.du)), dR = mean(pairs.map((x) => x.dr));
+  const txt = pairs.length ? `cặp theo ${pairs.length} bài: untouchedFileFailures ${TREAT} − ${BASE} = ${dU >= 0 ? '+' : ''}${f(dU, 2)} test/lượt, redAtEnd ${pp(dR)}; ` : 'chưa có dữ liệu untouchedFileFailures/redAtEnd (dòng cũ, trước S5); ';
+  H.push(['H8', 'Coordination failures: untouched-file test failures and check-still-red-at-end, paired by task', `${txt}chỉ số phụ formatMiss ${BASE} ${pp(fm(BASE))} vs ${TREAT} ${pp(fm(TREAT))}`, verdict(dR > 0 && dU >= 0, pairs.length < MIN_TASKS) + ' (confirm with transcript review)']);
 }
 {
   const s = tasks.filter(inCats('research'));

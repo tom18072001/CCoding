@@ -284,3 +284,23 @@ test('SR-10: có B2 ⇒ H3 so B0 với B2 (B2 kém hơn A0 không làm lệch); 
   const m = /recall [+-][0-9.]+ pp \[([+-][0-9.]+) pp, ([+-][0-9.]+) pp\]/.exec(noisy);
   assert.ok(m && +m[1] < +m[2], noisy);
 });
+
+// ---------- S7: SR-13 ----------
+test('SR-13: H8 cặp theo bài trên untouchedFileFailures và redAtEnd; formatMiss chỉ là chỉ số phụ; dòng cũ ⇒ insufficient data', () => {
+  const mkd = (t, arm, u, red, fm = false) => [0, 1].map(() => row(t, arm, 0.5, { details: { untouchedFileFailures: u, redAtEnd: red, formatMiss: fm } }));
+  const worse = ['c3', 'c4', 'c5'].flatMap((t) => [...mkd(t, 'A0-sonnet', 0, false), ...mkd(t, 'B0', 2, true)]);
+  const h = hRow(run(worse).report, 'H8');
+  assert.match(h, /cặp theo 3 bài/);
+  assert.match(h, /untouchedFileFailures B0 − A0-sonnet = \+2\.00/);
+  assert.match(h, /redAtEnd \+100\.0 pp/);
+  assert.match(h, /chỉ số phụ formatMiss/);
+  assert.match(h, /SUPPORTED/);
+  // formatMiss cao hơn ở B0 nhưng hai chỉ số chính không tệ hơn ⇒ KHÔNG SUPPORTED (trước đây SUPPORTED chỉ nhờ formatMiss)
+  const fmOnly = ['c3', 'c4', 'c5'].flatMap((t) => [...mkd(t, 'A0-sonnet', 0, false, false), ...mkd(t, 'B0', 0, false, true)]);
+  assert.match(hRow(run(fmOnly).report, 'H8'), /not supported/);
+  const old = hRow(run(base()).report, 'H8');
+  assert.match(old, /insufficient data/);
+  assert.match(old, /chưa có dữ liệu/);
+  const two = ['c3', 'c4'].flatMap((t) => [...mkd(t, 'A0-sonnet', 0, false), ...mkd(t, 'B0', 2, true)]);
+  assert.match(hRow(run(two).report, 'H8'), /insufficient data/);
+});
