@@ -45,4 +45,4 @@ Không lệnh nào bị hook chặn.
 | `run.mjs --arms oracle,null --tasks suite:gates` | oracle 1,00 cả 6 bài; null 0–0,22 |
 | `run.mjs --arms oracle,null --tasks l1-modules,l2-chain,t1-duration,t5-logq` | oracle 1,00; null ≤ 0,007 |
 
-- Máy cloud của người điều phối không có `bwrap`, `socat` hay `claude` đã đăng nhập, nên chưa chạy `scripts/sandbox-adversarial.mjs` thật. Việc chạy thật vẫn nằm trong danh sách chờ giám đốc duyệt, cùng với cài distro WSL2.
+- Máy cloud của người điều phối có `claude` nhưng không có `bwrap` và `socat`. Sandbox có sẵn của Claude Code trên Linux cần hai công cụ này, nên chưa chạy `scripts/sandbox-adversarial.mjs` thật. Việc chạy thật vẫn nằm trong danh sách chờ giám đốc duyệt, cùng với cài distro WSL2.
