@@ -11,6 +11,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PROCESS_SUFFIX, runClaude, weighted } from './lib/claude.mjs';
 import { runCcoding, serverUp } from './lib/ccoding.mjs';
+import { costOfCalls, priceRun } from './lib/pricing.mjs';
 import { GRADERS } from './lib/grade.mjs';
 import { blind } from './lib/judge.mjs';
 import { EXIT_RATE_LIMIT, checkArms, classifyRun, cliVersion, doneKeys, gitCommit, provenance, replacementRuns, suiteTaskIds, supportedLanes } from './lib/queue.mjs';
@@ -155,10 +156,10 @@ async function runArm(arm, task, key) {
     const projectId = `vb-${crypto.createHash('sha1').update(key + cfg.workRoot).digest('hex').slice(0, 12)}`;
     const r = await runCcoding({ baseUrl: cfg.ccodingUrl, dataDir: cfg.ccodingData, runtime: cfg.runtime, projectId, workdir: dir, brief, title: `[vs-claude ${key}] ${task.title}`.slice(0, 120), taskOptions: spec.options ?? {}, agentId: spec.agentId, variant: `vs-claude/${key}`, timeoutMin: cfg.timeoutMin });
     if (r.infra || !r.taskId) return { dir, ...r, infra: r.infra ?? 'error' }; // chưa tạo được task: lỗi hạ tầng, không chấm
-    let leak = false;
+    let leak = false, callsCost; // SR-02: costUsd cộng theo model của từng dòng calls.jsonl
     const callsFile = path.join(cfg.ccodingData, 'runs', r.taskId, 'calls.jsonl');
-    if (fs.existsSync(callsFile)) leak = leakCheck(fs.readFileSync(callsFile, 'utf8').split('\n'));
-    return { dir, ...r, leak };
+    if (fs.existsSync(callsFile)) { const text = fs.readFileSync(callsFile, 'utf8'); leak = leakCheck(text.split('\n')); callsCost = costOfCalls(text); }
+    return { dir, ...r, leak, callsCost: callsCost ?? costOfCalls('') };
   }
   throw new Error(`unknown arm kind ${spec.kind}`);
 }
@@ -200,7 +201,7 @@ for (const s of schedule) {
   const { failReason, excluded } = classifyRun(r, { timeoutMin: cfg.timeoutMin, error });
   const row = {
     key: s.key, task: s.task, category: task.category, size: task.size, arm: s.arm, rep: s.rep, at: new Date().toISOString(),
-    status: error ? 'error' : r.status, failReason, excluded, ...provenance(meta, ARMS[s.arm], r, { quotaState: failReason === 'quota' ? 'rate-limited' : undefined }), error, wallSec: r?.wallSec, tokens: r?.tokens, costUsd: r?.costUsd, turns: r?.turns,
+    status: error ? 'error' : r.status, failReason, excluded, ...provenance(meta, ARMS[s.arm], r, { quotaState: failReason === 'quota' ? 'rate-limited' : undefined }), error, wallSec: r?.wallSec, tokens: r?.tokens, ...(r ? priceRun(ARMS[s.arm], r) : {}), turns: r?.turns,
     calls: r?.calls, agentsUsed: r?.agentsUsed, byPhase: r?.byPhase, ...(r?.research ?? {}), picked: r?.picked, leak: !!r?.leak,
     score: g?.score ?? 0, pass: !!g?.pass, formatMiss: !!g?.formatMiss, details: g?.details,
   };

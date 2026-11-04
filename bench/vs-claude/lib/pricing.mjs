@@ -43,3 +43,14 @@ export function costOfCalls(callsText, { cacheTtl = '1h' } = {}) {
   }
   return n ? { costUsd: sum, costBasis: costBasisOf(cacheTtl) } : { costUsd: null, costBasis: 'unknown-model' };
 }
+
+/**
+ * costUsd/costBasis của một dòng runs.jsonl (D1/D4). r.callsCost = kết quả costOfCalls cho arm CCoding.
+ * Arm claude: tính lại từ token + model thực của phiên, giữ số CLI tự báo ở costUsdReported; thiếu model ⇒ null/'unknown-model'.
+ */
+export function priceRun(spec, r, { cacheTtl = '1h' } = {}) {
+  if (spec?.kind === 'null' || spec?.kind === 'oracle') return { costUsd: 0, costBasis: costBasisOf(cacheTtl) };
+  if (spec?.kind === 'ccoding') return r?.callsCost ?? { costUsd: null, costBasis: 'unknown-model' };
+  const usd = r?.model && r?.tokens ? costOf(r.tokens, r.model, { cacheTtl }) : null;
+  return { costUsd: usd, costBasis: usd === null ? 'unknown-model' : costBasisOf(cacheTtl), costUsdReported: r?.costUsd ?? null };
+}
