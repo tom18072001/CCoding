@@ -552,6 +552,10 @@ export interface Decision {
   token: Interval;
   time: Interval;
   safety: Interval;
+  /** p một phía chưa hiệu chỉnh của ba chỉ số chính (token, thời gian, an toàn); NaN nếu chưa đủ bài */
+  pRaw: { token: number; time: number; safety: number };
+  /** p đã hiệu chỉnh Holm step-down (design.md §5.3); `pass` chỉ khi cả ba < 0,05 */
+  pHolm: { token: number; time: number; safety: number };
   nConfirm: number;
   dropped: { A: number; B: number };
   reasons: string[];
@@ -570,14 +574,87 @@ const tInv = (p: number, df: number): number => {
 };
 const mean = (a: number[]): number => a.reduce((s, x) => s + x, 0) / a.length;
 
-/** CI theo bài (ghép cặp): mỗi bài một hiệu số, khoảng tin cậy t trên trung bình các bài. Bonferroni 3 chỉ số (bảo thủ hơn Holm), hai phía 95 %. */
-function pairedCi(diffs: number[]): Interval {
+// CDF phân phối t qua hàm beta không đầy đủ chính quy hóa (Lentz); tự viết, không thêm phụ thuộc
+function lgamma(x: number): number {
+  const c = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+  let y = x;
+  let ser = 1.000000000190015;
+  const tmp = x + 5.5 - (x + 0.5) * Math.log(x + 5.5);
+  for (const cj of c) ser += cj / ++y;
+  return -tmp + Math.log((2.5066282746310005 * ser) / x);
+}
+function betacf(a: number, b: number, x: number): number {
+  const tiny = 1e-300;
+  let c = 1;
+  let d = 1 - ((a + b) * x) / (a + 1);
+  if (Math.abs(d) < tiny) d = tiny;
+  d = 1 / d;
+  let h = d;
+  for (let m = 1; m <= 300; m++) {
+    const m2 = 2 * m;
+    let aa = (m * (b - m) * x) / ((a + m2 - 1) * (a + m2));
+    d = 1 + aa * d; if (Math.abs(d) < tiny) d = tiny;
+    c = 1 + aa / c; if (Math.abs(c) < tiny) c = tiny;
+    d = 1 / d; h *= d * c;
+    aa = (-(a + m) * (a + b + m) * x) / ((a + m2) * (a + m2 + 1));
+    d = 1 + aa * d; if (Math.abs(d) < tiny) d = tiny;
+    c = 1 + aa / c; if (Math.abs(c) < tiny) c = tiny;
+    d = 1 / d;
+    const del = d * c;
+    h *= del;
+    if (Math.abs(del - 1) < 1e-15) break;
+  }
+  return h;
+}
+function betaI(x: number, a: number, b: number): number {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  const bt = Math.exp(lgamma(a + b) - lgamma(a) - lgamma(b) + a * Math.log(x) + b * Math.log(1 - x));
+  return x < (a + 1) / (a + b + 2) ? (bt * betacf(a, b, x)) / a : 1 - (bt * betacf(b, a, 1 - x)) / b;
+}
+/** P(T ≤ t) với T ~ t(df) */
+export function tCdf(t: number, df: number): number {
+  if (Number.isNaN(t)) return NaN;
+  if (t === Infinity) return 1;
+  if (t === -Infinity) return 0;
+  const tail = 0.5 * betaI(df / (df + t * t), df / 2, 0.5);
+  return t > 0 ? 1 - tail : tail;
+}
+
+/**
+ * Holm step-down: sắp p tăng dần p(1) ≤ … ≤ p(k); p hiệu chỉnh (i) = max lũy tích của (k−i+1)·p(i), chặn trên 1.
+ * Với k = 3 các ngưỡng tương ứng α/3, α/2, α. Trả về theo thứ tự đầu vào.
+ */
+export function holmAdjust(p: number[]): number[] {
+  const k = p.length;
+  const idx = p.map((_, i) => i).sort((a, b) => p[a] - p[b]);
+  const out = new Array<number>(k).fill(NaN);
+  let run = 0;
+  idx.forEach((orig, rank) => {
+    run = Math.max(run, Math.min(1, (k - rank) * p[orig]));
+    out[orig] = run;
+  });
+  return out;
+}
+
+/**
+ * Kiểm định ghép cặp theo bài. Trả về khoảng tin cậy t hai phía 95 % chia 3 (chỉ để báo cáo) và p một phía của
+ * H0 "trung bình ≥ h0" (dir 'less') hoặc "trung bình ≤ h0" (dir 'greater').
+ * Ghi chú thống kê: quy tắc `pass` là "cả ba đạt" (giao các giả thuyết, IUT) nên về lý thuyết không cần hiệu chỉnh;
+ * ta vẫn áp Holm vì design.md §5.3 và implementation-spec.md yêu cầu, và Holm chỉ bảo thủ hơn IUT.
+ */
+function pairedTest(diffs: number[], h0: number, dir: 'less' | 'greater'): { ci: Interval; p: number } {
   const n = diffs.length;
   const m = mean(diffs);
   const sd = n > 1 ? Math.sqrt(diffs.reduce((s, x) => s + (x - m) ** 2, 0) / (n - 1)) : 0;
   const crit = n > 1 ? tInv(1 - 0.05 / 2 / 3, n - 1) : 0;
-  const half = (crit * sd) / Math.sqrt(n);
-  return { est: m, lo: m - half, hi: m + half };
+  const se = sd / Math.sqrt(n);
+  const half = crit * se;
+  const ci = { est: m, lo: m - half, hi: m + half };
+  if (n < 2) return { ci, p: NaN };
+  const dz = dir === 'less' ? h0 - m : m - h0; // dương = bằng chứng chống H0
+  const p = se === 0 ? (dz > 0 ? 0 : 1) : tCdf(-dz / se, n - 1);
+  return { ci, p };
 }
 
 /**
@@ -605,18 +682,26 @@ export function decide(runs: AbRun[], kind: ProposalMeta['kind'] = 'optimize'): 
   const saf = paired((r) => r.safety, (b, a) => b - a);
   const exp = (i: Interval): Interval => ({ est: Math.exp(i.est), lo: Math.exp(i.lo), hi: Math.exp(i.hi) });
   const nan: Interval = { est: NaN, lo: NaN, hi: NaN };
-  const out: Decision = { decision: 'need-more-tasks', token: nan, time: nan, safety: nan, nConfirm: confirm.length, dropped, reasons: [] };
+  const nanP = { token: NaN, time: NaN, safety: NaN };
+  const out: Decision = { decision: 'need-more-tasks', token: nan, time: nan, safety: nan, pRaw: nanP, pHolm: nanP, nConfirm: confirm.length, dropped, reasons: [] };
   if (tok.length < 2) {
     out.reasons.push('Chưa đủ bài có cả hai nhánh trong pha xác nhận (cần ≥ 2)');
     return out;
   }
-  out.token = exp(pairedCi(tok));
-  out.time = exp(pairedCi(wall));
-  out.safety = pairedCi(saf);
   const tokLimit = kind === 'collect' ? 1.05 : 0.95;
-  if (!(out.token.hi < tokLimit)) out.reasons.push(`Token: cận trên B/A ${out.token.hi.toFixed(3)} ≥ ${tokLimit}`);
-  if (!(out.time.hi < 1.05)) out.reasons.push(`Thời gian: cận trên B/A ${out.time.hi.toFixed(3)} ≥ 1,05`);
-  if (!(out.safety.lo >= -0.02)) out.reasons.push(`An toàn: cận dưới ${(out.safety.lo * 100).toFixed(1)} điểm % < −2`);
+  const tt = pairedTest(tok, Math.log(tokLimit), 'less');
+  const tw = pairedTest(wall, Math.log(1.05), 'less');
+  const ts = pairedTest(saf, -0.02, 'greater');
+  out.token = exp(tt.ci);
+  out.time = exp(tw.ci);
+  out.safety = ts.ci;
+  out.pRaw = { token: tt.p, time: tw.p, safety: ts.p };
+  const [hTok, hTime, hSaf] = holmAdjust([tt.p, tw.p, ts.p]);
+  out.pHolm = { token: hTok, time: hTime, safety: hSaf };
+  const fmt = (x: number): string => x.toFixed(3);
+  if (!(hTok < 0.05)) out.reasons.push(`Token: cận trên B/A ${out.token.hi.toFixed(3)}, p Holm ${fmt(hTok)} ≥ 0,05 (ngưỡng ${tokLimit})`);
+  if (!(hTime < 0.05)) out.reasons.push(`Thời gian: cận trên B/A ${out.time.hi.toFixed(3)}, p Holm ${fmt(hTime)} ≥ 0,05 (ngưỡng 1,05)`);
+  if (!(hSaf < 0.05)) out.reasons.push(`An toàn: cận dưới ${(out.safety.lo * 100).toFixed(1)} điểm %, p Holm ${fmt(hSaf)} ≥ 0,05 (ngưỡng −2)`);
   out.decision = out.reasons.length ? 'fail' : 'pass';
   return out;
 }
@@ -698,7 +783,7 @@ export function recordProposed(pid: string, patch: string, meta: ProposalMeta & 
 
 /** Ghi kết quả A/B để giao diện hiển thị. deltaPass = ước lượng hiệu tỉ lệ test ẩn đạt (B−A). */
 export function recordAbDecision(pid: string, d: Decision, deps: Pick<Deps, 'logs'>): void {
-  deps.logs.write({ level: 'info', kind: 'selfimprove.ab.decided', msg: `A/B ${pid}: ${d.decision}`, data: { pid, deltaPass: Number.isFinite(d.safety.est) ? d.safety.est : null, decision: d.decision } });
+  deps.logs.write({ level: 'info', kind: 'selfimprove.ab.decided', msg: `A/B ${pid}: ${d.decision}`, data: { pid, deltaPass: Number.isFinite(d.safety.est) ? d.safety.est : null, decision: d.decision, pRaw: d.pRaw, pHolm: d.pHolm } });
 }
 
 /** Ghi quyết định của giám đốc; `by:'director'` cố định vì chỉ route đã xác thực mới được gọi hàm này (agent không có đường tới). */
