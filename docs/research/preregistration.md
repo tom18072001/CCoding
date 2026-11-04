@@ -557,6 +557,103 @@ Phần khác của `run-plan.md` đã đối chiếu nhưng không tìm thấy l
 - **(8) Loại:** **lượt đối chứng B0 không có pha `discuss` (`byPhase.discuss` vắng) bị loại**, vì họp không xảy ra nên kết quả rỗng, không âm (CD 2.2 mục 2; BL B-15 trường 4); loại cả cặp B0/B1 tương ứng theo quy tắc khai báo trước và **báo số lượt loại**. Cộng §4.1, §4.3; thay lượt tối đa 2 mỗi ô; quá mức thì ô "thiếu dữ liệu". Phân tích độ nhạy không loại lượt nào.
 - **(9) Hash server:** ghi khi chạy.
 - **Nguồn:** BL B-15 trường 4–6; CD Phần 2 (2.2–2.4); RUNBOOK Bước 3e mục 4, 6.
+- **Thiết kế lại (ghi 4/11/2026, đặt trước dữ liệu E5′):** theo (8), E5 như đăng ký cho cả hai bài là ô "thiếu dữ liệu", vì B0 không có pha `discuss` trên `l1-modules` lẫn `l2-chain` (E3, `results/large-pilot/RUNLOG.md`). E5 không chạy; thay bằng **V4-3e-E5′** ngay dưới đây.
+
+#### V4-3e-E5′ — B-15 chính (họp, làn đầy đủ)
+
+**Nhãn: đặt trước dữ liệu E5′.** Ghi ngày 4/11/2026, trên commit nền `1a31f1f93d1c59873d2a6c46c1c1d68cbbf2f6ca` (S0, sau fast-forward). Chưa có thư mục `results/b15f-main`, chưa có lượt E5′ nào. **Chờ giám đốc duyệt trước lượt đầu.**
+
+**Đầu vào duy nhất lấy từ E3** (`results/large-pilot`): trường quy trình `lane`, `escalatedFrom`, `byPhase` (có/không `discuss`), token và thời gian thực. Không dùng kết quả chấm của E3 hay E4 cho bất kỳ quyết định nào ở mục này. Số trong (5) lấy từ RUNLOG E3 và từ `byPhase`, token, thời gian của `study-cloud` (không mở cột điểm).
+
+- **(1) Câu hỏi:** giữ nguyên V4-3e-E5 (1): bỏ họp (`discussionRounds: 0`) đổi chi phí, thời gian và điểm thế nào so với đối chứng làn đầy đủ có họp (`discussionRounds: 1`) trên bài lớn? Không đặt ngưỡng ý nghĩa trước dữ liệu; **ước lượng điểm kèm CI**, không phải kiểm định. Vì ép `lane: full`, kết luận chỉ cho **làn đầy đủ ép**, không khái quát sang làn mà `chooseLane` chọn (nhanh/đơn), vốn không họp.
+- **(2) Thiết kế:**
+  - Arm `B0F` = `{ "lane": "full" }` (đối chứng, có họp) và `B1F` = `{ "lane": "full", "discussionRounds": 0 }` (bỏ họp), định nghĩa ở `BRIEF-D12.md` K3. Hai arm chỉ khác `discussionRounds`.
+  - Bài `l1-modules`, `l2-chain`. n = 10 mỗi ô, 2 arm × 2 bài × 10 = **40 lượt**. Giữ nguyên bài, n và thước đo của E5: không có lý do đổi, và nếu đổi thì không được dựa vào kết quả chấm E3.
+  - Vì sao hai arm này: `chooseLane` là hàm thuần của đề bài và repo, nên B0/B1 không bao giờ họp trên hai bài này (E3). Ép `lane: full` là cách duy nhất trong tập arm hiện có để có pha họp; hai arm ép cũng tách được tác dụng của họp khỏi tác dụng của làn.
+  - Họp còn bị bỏ khi kế hoạch nhỏ: ít hơn `phases.meetingMinSubtasks` (mặc định 3) hạng mục hoặc dưới 2 người tham gia (`src/orchestrator.ts`, khối "Họp thảo luận + chốt", điều kiện `rounds > 0 && !small && task.lane !== 'fast'`). Nên làn đầy đủ ép vẫn có thể không họp; đó là lý do của (8).
+- **(3) Điều kiện tiên quyết, cổng chạy và quy tắc dừng** (số cố định, ghi trước lượt đầu):
+  - **Cổng chạy:** chỉ chạy khi đủ **cả bốn**: (i) D12 đã gộp, hash `[ĐIỀN KHI D12 GỘP]`; (ii) test bằng runtime giả "ép làn đầy đủ thì có `discuss`, thêm `discussionRounds: 0` thì không" xanh; (iii) E6 xong; (iv) giám đốc đã duyệt.
+  - **Không có thí điểm riêng.** Lệnh đầu chạy `--repeats 1` vào chính `results/b15f-main` (cặp đầu của mỗi bài, 4 lượt) và là lượt kiểm. Lượt này **thuộc mẫu chính**, vì runner bỏ qua khóa đã `done`; lệnh `--repeats 10` sau đó chạy tiếp r2–r10. Chỉ kiểm bằng `byPhase`, không xem điểm.
+  - **Dừng 1 (B0F không họp):** nếu B0F của cặp đầu ở **bất kỳ** bài nào không có `byPhase.discuss`, dừng toàn bộ E5′, báo giám đốc, không đổi bài. Cặp đầu có họp không bảo đảm các cặp sau cũng họp; tần suất không họp về sau tính theo Dừng 2.
+  - **Dừng 2 (loại nhiều):** nếu một bài có **từ 3/10 cặp trở lên** bị loại theo (8) thì dừng, ghi ô đó "thiếu dữ liệu" và báo lại. Ngưỡng 3 là mức vượt giới hạn thay lượt 2 mỗi ô của (8). Methodologist được đổi ngưỡng này **chỉ khi** ghi lý do vào §9 trước lượt đầu.
+  - **Kiểm nhiễu B0F/B1F (điều kiện tiên quyết):** với cặp đầu mỗi bài, so tập khóa của `byPhase`. Các pha cấu trúc `route`, `plan`, `execute`, `review`, `synthesize`, `accept` phải có ở cả hai arm. Pha duy nhất được phép chỉ có ở B0F là `discuss` và `finalize` (khối họp). `revise` có điều kiện theo kết quả `review` nên được phép khác, và ghi lại. Nếu B1F mất thêm pha khác ngoài hai pha họp, hoặc có pha ngoài `VARIANT_PHASES` (`src/orchestrator.ts`), ghi là **nhiễu**, dừng và để giám đốc quyết. Đối chiếu mã chỉ đọc, không sửa `src/`.
+- **(4) Nơi chạy:**
+  - Local, gói Max, **sau E6** (E5′ không chạy trước E6).
+  - **Worktree và server MỚI** ở commit gộp D12 `[ĐIỀN KHI D12 GỘP]`, cổng **7426** (khác 7420, 7425 và 7424 của cloud).
+  - **Runner và server cùng một worktree**, vì `ccodingCommit` là `git rev-parse HEAD` của thư mục runner (`run.mjs:77`), không phải của server.
+  - Lệnh dự kiến (cờ như `$S3E` của `run-plan.md` §5.4.3, đổi cổng và `--ccoding-data` theo server mới): `node bench/vs-claude/run.mjs --arms B0F,B1F --tasks l1-modules,l2-chain --repeats 10 --timeout 40 … --out bench/vs-claude/results/b15f-main`; `--timeout 40` như E3, E5 cùng bài. `--out` là thư mục mới, không dùng `large-pilot`, `b15-main` hay `h6-3e`.
+  - **Khác commit với E6 không trộn dữ liệu:** E5′ không gộp với phần nào khác (`run-plan.md` §5.4), ước lượng R̂ chỉ dùng B0F và B1F chạy cùng server, cùng cửa sổ. Hai arm B0F, B1F không có ở E6, nên E6 không cung cấp lượt nào cho E5′ và ngược lại.
+- **(5) Thước đo:** giữ (5) của E5: chính là token có trọng số `input + 1,25·cacheWrite + 0,1·cacheRead + 5·out`, R̂ = B1F/B0F. Phụ: thời gian thực, test ẩn, `byPhase.discuss` và `byPhase.finalize`, số hạng mục kế hoạch của mỗi lượt; USD (ngoài họ Holm).
+  - **ƯỚC LƯỢNG chi phí và thời gian (để giám đốc cân nhắc, không phải hạn mức ngân sách):**
+    - **Gốc:** B0 làn nhanh trên `l1-modules`, `l2-chain` ≈ **0,77 M** token có trọng số mỗi lượt (1,53 M cho 2 lượt; `results/large-pilot/RUNLOG.md`, bảng kết quả chạy). Thời gian thực 22 phút cho 2 lượt B0 và 18 phút cho 2 lượt B1, tức 11 và 9 phút mỗi lượt.
+    - **Hệ số làn đầy đủ so với làn nhanh:** tính từ `byPhase` của 3 lượt B0 `r1-elk-design` có pha `discuss` trong `results/study-cloud/runs.jsonl` (dòng 58, 65, 78; `byPhase` là token có trọng số, cộng các pha ≈ `tokens.weighted`). Chỉ đọc `byPhase`, token và thời gian. Hệ số = tổng ÷ (route + plan + execute + accept): r1 1.007.298 ÷ 794.156 = 1,27; r2 1.410.617 ÷ 888.284 = 1,59; r3 765.763 ÷ 545.101 = 1,40; trung bình 1,42.
+    - **Phần họp** (discuss + finalize) là 11,8 %, 8,0 %, 14,2 % của tổng ba lượt trên. Hệ số của B1F = (tổng − họp) ÷ (route + plan + execute + accept): 1,12; 1,46; 1,21; trung bình 1,26.
+    - **Mỗi lượt:** B0F ≈ 0,77 × 1,42 ≈ 1,09 M (0,98–1,22); B1F ≈ 0,77 × 1,26 ≈ 0,97 M (0,86–1,12).
+    - **Tổng 40 lượt** (20 B0F + 20 B1F): ≈ 21,9 + 19,4 ≈ **41 M** token có trọng số (khoảng 37–47 M), chưa kể lượt thay thế (tối đa 2 mỗi ô, tức tối đa thêm 8 lượt).
+    - **Thời gian chạy thực:** lấy hệ số token làm đại diện (byPhase không tách thời gian theo pha): B0F ≈ 11 × 1,42 ≈ 15,6 phút, B1F ≈ 9 × 1,26 ≈ 11,4 phút, tổng ≈ 20 × (15,6 + 11,4) ≈ 540 phút ≈ **9 giờ** (khoảng 8–10 giờ), một luồng. Đối chiếu thô: ba lượt B0 `r1-elk-design` mất 911, 1171, 751 giây (trung bình 15,7 phút). Dài hơn một cửa sổ 5 giờ, nên trải trên ≥ 2 cửa sổ.
+    - **Giả định chưa kiểm:** hệ số lấy từ bài thiết kế r1, không phải `l1-modules`, `l2-chain`; số này sai lệch được. Ước lượng cũ của E5 (≈ 73 USD, ≈ 7 giờ, `run-plan.md` §5.4.3) là cho làn nhanh, không so trực tiếp được.
+- **(6) Phép kiểm và CI:** giữ (6) của E5, thay B0, B1 bằng B0F, B1F: R̂ = B1F/B0F, **CI 90 %** bootstrap phân tầng hai mức (bài rồi lượt), 4000 vòng, hạt 20261104, theo phương án A của `variance-decomposition.md`; **không p**. CI chứa 1 thì ghi "không phân biệt được". Số bài chỉ 2, nên không tuyên bố độ chính xác 0,218. Cặp ghép theo (bài, `rep`).
+- **(7) Dừng:** n = 10 mỗi ô (§4.4(a)); không dừng sớm vì kết quả (§4.4(b)); hết hạn mức thì dừng, chờ cửa sổ sau, kèm các điểm dừng của (3). Chạm trần là dừng, không thêm lượt cho đủ ý nghĩa.
+- **(8) Loại:** **lượt B0F không có `byPhase.discuss` bị loại**, kèm cả cặp B1F tương ứng (ghép theo bài và `rep`), và **báo số lượt loại**, giữ nguyên lý do của E5 (8): họp không xảy ra nên kết quả rỗng, không âm. Cộng §4.1, §4.3; thay lượt tối đa 2 mỗi ô; từ 3/10 cặp loại thì dừng (3). Phân tích độ nhạy không loại lượt nào, kèm số hạng mục kế hoạch của B0F và B1F.
+- **(9) Hash server:** hash của worktree D12 mới; ghi `[ĐIỀN KHI D12 GỘP]` trước lượt đầu, vào RUNLOG `results/b15f-main`.
+- **Mối đe dọa đã biết (ghi trước):** loại theo B0F có họp chọn kế hoạch lớn hơn; B1F không bị loại độc lập, nên có thể lệch. Biện pháp: báo số hạng mục kế hoạch của hai arm và phân tích độ nhạy không loại.
+- **Nguồn:** V4-3e-E5, V4-3e-E3 (8); `BRIEF-D12.md` K3; `BRIEF-17.md` K2; `run-plan.md` §5.4; `src/orchestrator.ts` khối "Họp thảo luận + chốt"; `results/large-pilot/RUNLOG.md`; `results/study-cloud/runs.jsonl` (`byPhase`, token, thời gian).
+
+#### V4-3e-K3 — Quy tắc bổ sung (đặt trước dữ liệu)
+
+**Nhãn: đặt trước.** Ghi ngày 4/11/2026, trên commit nền `1a31f1f93d1c59873d2a6c46c1c1d68cbbf2f6ca` (S0, sau fast-forward). Gồm ba quy tắc (a), (b), (c). Mỗi quy tắc có nhãn thời điểm và nguồn riêng. Khi viết **không đọc điểm mới** nào: không mở điểm E3, E4, E2; số trong (c) lấy từ `context/k4-e2-descriptive-b14-step2-n.md` §2 (σ và N đã có trước gói này). Mọi số tính tay ở đây ghi rõ "tính tay"; phải được script chạy lại trước khi dùng cho quyết định.
+
+**(a) S-1: trần ở H1′/H2′ — `đặt trước`, ghi 4/11/2026, trước khi khóa H1′/H2′.** Nguồn: `BRIEF-D12.md` K2 (S-1), `context/k2-stats-review-2026-11-04.md` (S-1, F11), §2.5 (H6 v2.1 (b)) và §2.7.
+
+- **Lý do:** `permStratified` với `margin > 0` (H2′, `margin = 0,05`, `alt = 'less'`) cho p = p_min ở bài mà cả hai arm chạm trần, vì b − 0,05 làm B0 "kém hơn" A0 ở mọi lượt một cách giả tạo (F11: r = 5 ⇒ p = 1/252 ≈ 0,0040 ≤ 0,0125). Quy tắc dưới đây thay cho việc sửa hàm: nó chặn ca này **trước** khi gọi `permStratified`.
+- **Bước 1, loại bài trần.** Bài mà **cả hai arm** (B0 và A0-sonnet) có điểm ≥ 0,99 ở **mọi lượt** bị loại khỏi H1′ và H2′. Ngưỡng 0,99 như §2.7. Bài chạm trần **một phía** (chỉ một arm ≥ 0,99 ở mọi lượt) thì **giữ**, như §2.7. Loại theo từng bài, từ chính dữ liệu xác nhận của H1′/H2′ (khác §2.7, vốn đánh giá trần bằng pilot); danh sách bài loại được báo.
+- **Bước 2, kiểm suy biến.** Sau bước 1:
+  - **H1′ (`margin = 0`):** cần **≥ 3 bài** còn lại (cùng ngưỡng với H6) **và** thống kê T có phương sai khác 0 qua các cách hoán vị (không phải mọi lượt của mọi ô còn lại cùng một giá trị).
+  - **H2′ (`margin = 0,05`):** tập ứng viên chỉ có `l2-chain` (§2.6), nên ngưỡng "≥ 3 bài" không áp dụng (cùng lý do P-1 của D12 cho H3 một bài). Cần **≥ 1 bài** còn lại, **r ≥ 5** mỗi ô (p_min = 1/252, §2.6) **và** phương sai khác 0 như trên. Nếu `l2-chain` bị loại ở bước 1 thì H2′ không còn bài nào.
+  - Không đạt thì kết luận **"không xác nhận do suy biến"**, **không phải SUPPORTED**, cũng không phải "không hơn". Cách xử lý như H7 (A-1 của D12): suy biến ra "suy biến", không ra SUPPORTED. Trần che mất khác biệt (cảnh báo H2 của §2.7), nên Δ = 0 do trần không bao giờ là bằng chứng.
+  - H1′ vẫn báo như ước lượng kèm CI ngay cả khi suy biến; chỉ nhãn "xác nhận" bị chặn.
+- **Số bài tối thiểu bằng số:** H1′ ≥ 3 bài; H2′ ≥ 1 bài; r ≥ 5 mỗi ô cho H2′ khi chỉ một bài (§2.6).
+- **Ghi chú trạng thái:** quy tắc này thay cho sửa mã S-1 ở D12 về mặt kết luận; nếu D12 sửa hàm khác đi thì quy tắc ở đây vẫn áp, và sửa lệch phải ghi thành sai lệch. H1′/H2′ vẫn chưa khóa; hai điều kiện khóa của §2.6 không đổi.
+- **Kiểm "chưa mở dữ liệu H1′/H2′" (methodologist, công cụ Grep chỉ đọc, 4/11/2026):**
+  - Mẫu 1: `H1′|H2′|H1'|H2'` trong `bench/vs-claude/results/` (nội dung). Kết quả: **1 tệp**, `results/study-cloud/artifacts/c3-shop-bugs__B6__r1/test/cart.test.js`, là tệp kiểm thử do agent sinh ra trong lượt cũ, không phải phân tích H1′/H2′.
+  - Mẫu 2: tên tệp `**/*{h1p,h2p,h1-prime,h2-prime,h1h2,b15f}*` trong `docs/research/`. Kết quả: **không có tệp**.
+  - Mẫu 3: `results/{b14-step2,b15f-main,h6-3e,b15-main}/**`. Kết quả: **không có tệp**.
+  - Đối chiếu thêm: trong `docs/research/analysis/`, chữ H2′ chỉ nằm ở `d11-stats-edgecases.mjs:143`, là ca biên giả (F11), không phải dữ liệu H1′/H2′. Chưa có `l1-modules` hay `l2-chain` nào của A0-sonnet cho H1′/H2′ được phân tích (kết quả E3 chưa mở điểm).
+  - Kết luận: **chưa có tệp kết quả hay phân tích H1′/H2′ nào được mở hoặc tạo** tại thời điểm đăng ký.
+
+**(b) SS-1…SS-3 của `l3-reconcile`: cỡ mẫu đo trên prompt cũ — `đặt trước`, ghi 4/11/2026, trước khi dùng cỡ mẫu cho N xác nhận của bộ giữ lại B-19.** Nguồn: `self-improvement/holdout-relock-2026-11-04.md` §3 (phương án A), `self-improvement/holdout-and-sample-size.md` SS-1…SS-3, `holdout-sample-size.mjs`, `BRIEF-17.md` K3.
+
+- **Sự kiện:** `brief` của `l3-reconcile` đổi ở D11 (`096e47d`, SR-16); bộ giữ lại khóa lại ở `84ded09` theo phương án (A). Dữ liệu phương sai SS-1…SS-3 trong `study-cloud/runs.jsonl` đo trên **prompt cũ**. Trong SS-2 chỉ ba lượt B0 của `l3-reconcile` bị ảnh hưởng (n = 3, σ²_w token 0,0002, wallSec 0,0072, bậc tự do 2 trên 27 của B0).
+- **Hệ quả (nêu, chưa đo):** σ²_w của token và wallSec, SD điểm và (với điểm TB 1,000 ở cả 3 lượt cũ) khả năng chạm trần của `l3-reconcile` **có thể khác** trên prompt mới. Câu thêm vào `brief` chỉ định nghĩa quy ước đếm mà bộ chấm đã dùng, nên kỳ vọng khác biệt nhỏ, nhưng đó là kỳ vọng, không phải số đo. Cỡ hiệu ứng giả định (Δ) không đổi vì là giả định kế hoạch, không đo từ l3.
+- **Quy tắc tính lại (methodologist chịu trách nhiệm công thức; data-scientist áp khi chạy):**
+  1. **k cố định = 5** lượt B0 `done` đầu tiên của `l3-reconcile` chạy trên prompt mới (hash `task.json` khớp `holdout-lock.json`), trong chính pha xác nhận. Chọn k = 5 để bậc tự do là 4, gấp đôi bậc tự do hiện có (2) của l3; không xem kết quả trước khi chọn. k không đổi theo dữ liệu, không dừng hay mở rộng sớm.
+  2. **Công thức:** với mỗi chỉ số m ∈ {ln(`tokens.weighted`), ln(`wallSec`)}, SS_l3 = Σ(x − x̄)² trên k lượt đó. Phương sai gộp mới: σ²_mới = (SS_khác + SS_l3) ÷ (df_khác + (k − 1)), trong đó SS_khác và df_khác là tổng SS và bậc tự do của **các bài còn lại** trong `holdout-sample-size.mjs` (hàm `pooled`, cùng bộ lọc `classifyRows().kept ∩ done`), tức bỏ đúng phần của l3 cũ. Số lượt r lấy từ cùng hàm `requiredRuns` của `bench/vs-claude/harness/stats.mjs` với tham số của SS-3 (T = 10, power 0,8, α, τ², Δ như bảng SS-3), thay σ² cũ bằng σ²_mới. Kèm cột σ² thấp (×0,5) và cao (×2) như SS-3.
+  3. **SD điểm:** chỉ tính lại cho nhánh B0; cột "mọi nhánh CCoding" giữ số cũ và gắn nhãn "gồm l3 prompt cũ", vì chỉ k lượt B0 là mới.
+  4. **Chỉ tăng, không giảm:** r dùng cho phần còn lại của pha xác nhận = max(r hiện hành của SS-3, r tính lại). Lý do: tránh rút ngắn mẫu vì ước lượng từ chỉ 4 bậc tự do.
+  5. Ghi cả σ² cũ lẫn σ²_mới và r hai bản vào RUNLOG hoặc phân tích; báo l3 có chạm trần (điểm ≥ 0,99 ở cả k lượt) hay không.
+- **Phương án không chọn:** giữ nguyên cỡ mẫu cũ không kèm kiểm tra. Bị loại vì k lượt đầu nằm sẵn trong kế hoạch xác nhận (không tốn lượt thêm) và thay số cũ bằng số đo trên đúng prompt đang dùng.
+- **Chưa làm ở gói này:** không chạy `holdout-sample-size.mjs`, không có lượt l3 mới nào.
+
+**(c) Bước 2 của B-14 (96 lượt): hai giới hạn và phân tích độ nhạy — `đặt trước`, ghi 4/11/2026, trước lượt đầu của bước 2.** Nguồn: mục "Đăng ký trước bước 2 của B-14" ngay trên (§9), `context/k4-e2-descriptive-b14-step2-n.md` §2, `results/b14-diag/RUNLOG.md` (E1).
+
+- **Giới hạn 1, mức tiết kiệm 10 % là giả định.** E1 chỉ cho cơ chế (n = 1 mỗi cặp, lời nhắc giả) và RUNLOG E1 ghi rõ E1 không ước lượng mức tiết kiệm. 10 % là lựa chọn kế hoạch (khoảng 29 % của phần 1,25·cacheWrite ≈ 35 % token có trọng số). N = 96 chỉ đạt power 0,8 nếu hiệu ứng thật ≥ khoảng 9,9 %.
+- **Giới hạn 2, thiên lệch chọn bài.** `t2-orders`, `t3-api`, `t4-perf` được chọn theo σ nhỏ và tỉ phần cacheWrite trên dữ liệu B7 đã có; `t1` (σ 0,381) và `t5` (σ 0,338) bị bỏ vì σ lớn. Chọn bài σ thấp làm σ gộp (0,182) **thấp hơn** σ của cả năm bài (0,268): N có thể **thiếu**, power thật có thể **thấp hơn** 0,8, và kết luận chỉ áp cho ba bài (đã ghi ở (3) của mục bước 2).
+- **Phân tích độ nhạy đã đặt trước** (báo cùng kết quả chính, **không** đổi phán quyết chính, không vào họ Holm):
+  1. **Bảng lực thống kê và N theo mức tiết kiệm**, σ = 0,182, hai phía, α = 0,05, power 0,8, 3 bài. Cột power ứng với N = 96 (SE(T) = 0,182/√24 ≈ 0,0372; power = Φ(Δ/SE − 1,960), tính tay):
+
+     | x | Δ = ln(1/(1−x)) | N cần (tổng, `k4-b14-step2-n.md`) | Power ở N = 96 (tính tay) |
+     |--:|--:|--:|--:|
+     | 5 % | 0,051 | 396 | ≈ 0,28 |
+     | 10 % | 0,105 | 96 | ≈ 0,81 |
+     | 20 % | 0,223 | 24 | > 0,99 |
+
+     Cùng ba hàng với σ = 0,268 (cả năm bài): N cần 860 / 210 / 50 lượt.
+  2. **Một lần phân tích không có các bài đã chọn, về mặt kế hoạch:** tính lại N với σ của hai bài **không** được chọn, `t1` và `t5` (σ gộp = √((0,381² + 0,338²)/2) ≈ 0,360; tính tay), ở x = 10 %: n ≈ 184 mỗi nhánh, r ≈ 62 mỗi bài với 3 bài, tổng ≈ 368 lượt (tính tay, cần chạy lại bằng script). Số này cho biết N sẽ cần lớn tới đâu nếu σ của ba bài chọn là đại diện sai. **Không có lượt nào của `t1`, `t5` được chạy** trong bước 2 vì không có hạn mức; đây là phân tích trên σ đã có, không phải dữ liệu mới.
+  3. **Về mặt kết quả (sau khi đủ 96 lượt):** (i) bỏ từng bài một (leave-one-task-out, 3 lần, mỗi lần 2 bài), báo R̂ và CI 95 %; (ii) σ quan sát của bước 2 so với 0,182 và power thực ở σ quan sát. Nếu R̂ đổi dấu hay CI đổi phán quyết khi bỏ một bài thì ghi "nhạy với bài".
+  4. Kết quả "không phân biệt được" **không** là bằng chứng không có hiệu ứng (đã ghi ở mục bước 2). Bài báo và backlog báo CI của R và bảng độ nhạy.
+- **Thời điểm:** quy tắc (c) có hiệu lực **trước lượt đầu của bước 2** (`results/b14-step2/` chưa tồn tại). Bước 2 vẫn chờ giám đốc duyệt riêng.
+
+- **Nguồn chung:** `BRIEF-17.md` K3; `BRIEF-D12.md` K2 (S-1, A-1, P-1); `context/k2-stats-review-2026-11-04.md`; `self-improvement/holdout-relock-2026-11-04.md`; `self-improvement/holdout-and-sample-size.md`; `context/k4-e2-descriptive-b14-step2-n.md`.
 
 #### V4-3e-E6 — H6 cho đủ N
 

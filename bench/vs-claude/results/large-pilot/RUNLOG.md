@@ -35,3 +35,7 @@ Phân loại dữ liệu: **Nội bộ**. Bài tổng hợp, không có dữ li�
 - **Hệ quả theo V4-3e-E3 (8):** B-15 **không đo được** trên `l1-modules` và `l2-chain` với arm B0/B1 như đã đăng ký. Theo V4-3e-E5 (8), mọi lượt B0 của E5 sẽ bị loại vì không có `discuss`, kéo theo cả cặp với B1. Vì vậy E5 như đăng ký chỉ cho ô "thiếu dữ liệu".
 - **Cách xử lý:** E5 **tạm giữ**, E6 chạy trước, theo khối (b) của §9 (ghi lý do trước lượt đầu của phần bị đổi). Phòng Nghiên cứu quyết định thiết kế lại E5 và ghi §9 trước lượt đầu. Ví dụ: hai arm ép `lane: full`, tức đúng "đối chứng làn đầy đủ" mà V4-3e-E5 (1) mô tả. Giám đốc được báo trong phiên.
 - Phần đo phụ (thời gian, token, test ẩn, độ dài kế hoạch) để Phòng Nghiên cứu đọc khi phân tích. Người điều phối không xem điểm.
+
+## Ghi chú §9 (E5′)
+
+- 4/11/2026, sau 12:40 giờ VN (mốc commit nền, chưa có giờ ghi chính xác): **E5′ đã đăng ký** trong `docs/research/preregistration.md` §9, mục `V4-3e-E5′`, trên commit nền `1a31f1f`. **Không có lượt mới** ở `large-pilot`; E5 vẫn tạm giữ, chờ giám đốc duyệt E5′.
