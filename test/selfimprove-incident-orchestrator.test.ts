@@ -7,7 +7,7 @@ import path from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { createApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
-import { loadIncidents, type SkipReason } from '../src/selfimprove.js';
+import { clusterIncidents, clusterSummary, listProposals, loadIncidents, persistClusters, recordProposed, type SkipReason } from '../src/selfimprove.js';
 import type { Classification } from '../src/types.js';
 
 // K4 (D13): chạy cả vòng Orchestrator bằng gateway giả (không LLM thật, không claude -p) cho khối nguồn sự cố B-19.
@@ -78,7 +78,7 @@ async function runTask(selfImprove: Record<string, unknown>, classification: Cla
     const t = app.orchestrator.submit({ brief: 'Viết API', projectId: 'p-k4', options: { discussionRounds: 0, maxRevisions: 1 } });
     const done = await app.orchestrator.waitFor(t.id);
     assert.equal(done.classification, classification, 'nhãn dữ liệu của nhiệm vụ lấy từ dự án');
-    return { dataDir, taskId: t.id, ev: allEvents(dataDir) };
+    return { dataDir, taskId: t.id, ev: allEvents(dataDir), app };
   } finally {
     gw.srv.close();
   }
@@ -136,4 +136,38 @@ test('K4(3): công tắc tắt → không có sự kiện incident.* và không 
   assert.equal(ev.filter((e) => String(e.kind).startsWith('incident.')).length, 0);
   assert.equal(fs.existsSync(incidentsFile(dataDir)), false);
   assert.equal(fs.existsSync(path.join(dataDir, 'self-improve')), false);
+});
+
+test('K4(4): sự cố đi tiếp vào hàng đợi đề xuất — cụm → bản vá đề xuất → listProposals; không lộ PII, agentProposal chỉ ở trường không đáng tin', async () => {
+  const { dataDir, app } = await runTask({ enabled: true, collect: true }, 'internal');
+  const incs = loadIncidents(dataDir);
+  assert.ok(incs.length >= 1, 'đối chứng: có sự cố');
+  // ngưỡng cụm hạ xuống 1/1 cho một nhiệm vụ thử (mặc định 3 sự cố, 2 nhiệm vụ)
+  const clusters = clusterIncidents(incs, { cluster: { minIncidents: 1, minTasks: 1 } });
+  assert.ok(clusters.length >= 1, 'có ít nhất một cụm');
+  const cl = clusters[0];
+  const summary = clusterSummary(cl);
+  assert.doesNotMatch(summary, SECRETS, 'tóm tắt cụm không lộ PII/bí mật');
+  for (const i of incs) if (i.agentProposal) assert.equal(summary.includes(i.agentProposal), false, 'tóm tắt cụm không chứa agentProposal');
+  persistClusters(clusters, { logs: app.logs, dataDir });
+  assert.ok(fs.existsSync(path.join(dataDir, 'self-improve', 'clusters', `${cl.id}.json`)), 'cụm được ghi ra tệp');
+  const patch = [
+    'diff --git a/agents/dev/backend-dev.md b/agents/dev/backend-dev.md',
+    '--- a/agents/dev/backend-dev.md',
+    '+++ b/agents/dev/backend-dev.md',
+    '@@ -1,1 +1,2 @@',
+    ' # backend-dev',
+    '+Luôn viết test cho API mới trước khi bàn giao.',
+    '',
+  ].join('\n');
+  const screening = recordProposed('P-K4', patch, { pid: 'P-K4', clusterId: cl.id, author: 'prompt-engineer', labeledBy: [], kind: 'optimize' }, { logs: app.logs, dataDir });
+  assert.equal(screening.ok, true, `sàng lọc tự động đạt (vi phạm: ${screening.violations.join('; ')})`);
+  const views = listProposals({ cfg: app.config.selfImprove, logs: app.logs, dataDir });
+  const v = views.find((x) => x.id === 'P-K4');
+  assert.ok(v, 'đề xuất có trong hàng đợi');
+  assert.equal(v!.status, 'proposed');
+  assert.equal(v!.cluster, cl.id);
+  assert.equal(v!.targetFile, 'agents/dev/backend-dev.md');
+  assert.doesNotMatch(v!.agentProposal, SECRETS, 'agentProposal hiển thị đã che PII/bí mật');
+  assert.doesNotMatch(JSON.stringify(views), SECRETS);
 });

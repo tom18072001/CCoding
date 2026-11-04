@@ -18,3 +18,11 @@ Sổ này ghi **trước lượt đầu**, lúc 4/11/2026 13:55 giờ VN. Khi đ
 | Kiểm sau r1 | Dừng 1: B0F cặp đầu của bài nào không có `discuss` thì dừng. Kiểm nhiễu: thiếu pha cấu trúc, có pha lạ, hoặc B1F mất pha ngoài `discuss`, `finalize`, `revise` thì dừng |
 | Kiểm sau r2…r10 | Dừng 2: một bài có ≥ 3 cặp bị loại theo (8) thì dừng. Khi dừng, kịch bản tạo `ccoding-e5f\STOP-E5F` và giám đốc được báo |
 | Hạn mức | Runner thoát mã 3 thì chờ 20 phút rồi chạy tiếp. `STOP-3e` dừng cả kịch bản này |
+
+## Sự cố trước lượt đầu (người điều phối, 4/11/2026 18:42 giờ VN)
+
+- **18:17:** `run3e-b.ps1` tạo `STOP-3e` kèm `STOP-3e.auto` để bàn giao sau E4a. Đây là cơ chế đã ghi ở `local-3e/RUNLOG.md`.
+- **18:22:** `run3e-c.ps1` hiểu nhầm tệp bàn giao này là lệnh dừng của giám đốc, nên tự thoát lúc đang chờ. **Lúc đó chưa có lượt E5′ nào.**
+- **Cách sửa:** hàm `Stopped` bỏ qua `STOP-3e` khi có kèm `STOP-3e.auto`. Bản sửa nằm trong `run3e-c.ps1` ở thư mục này.
+- **18:41:** chạy lại kịch bản, pid 47536. Kịch bản đang chờ E6 xong.
+- Không đổi lệnh, arm, bài hay quy tắc dừng nào của V4-3e-E5′.

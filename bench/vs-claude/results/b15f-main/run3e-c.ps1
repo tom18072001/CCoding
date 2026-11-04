@@ -9,7 +9,8 @@ $CHECK = 'C:\Users\admin\ccoding-vs-claude\ops\check-e5f.mjs'
 Set-Location $W
 New-Item -ItemType Directory -Force logs-e5f | Out-Null
 function Log([string]$m) { "$(Get-Date -Format o) $m" | Add-Content "$R3E\runlog-3e.txt" }
-function Stopped { if (Test-Path "$R3E\STOP-3e") { Log 'E5F STOP-3e co mat: dung'; return $true }; return $false }
+# STOP-3e kèm STOP-3e.auto là tệp bàn giao của run3e-b.ps1 (không phải lệnh dừng của giám đốc) ⇒ bỏ qua
+function Stopped { if ((Test-Path "$R3E\STOP-3e") -and -not (Test-Path "$R3E\STOP-3e.auto")) { Log 'E5F STOP-3e co mat: dung'; return $true }; return $false }
 Log 'E5F cho run3e-b xong'
 while (-not (Select-String -Path "$R3E\runlog-3e.txt" -Pattern 'XONG phan sau' -SimpleMatch -Quiet)) {
   if (Stopped) { exit 0 }
