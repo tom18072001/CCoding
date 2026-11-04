@@ -74,15 +74,18 @@ const sameFile = (a, b) => fs.existsSync(a) && fs.existsSync(b) && fs.readFileSy
  * SR-13: tệp sản phẩm "phải đổi" = tệp ở lời giải tham chiếu (task.solutionDir / hidden/solution) khác starter hoặc không có ở starter.
  * Tệp agent không sửa = còn nguyên như starter (hoặc không tồn tại).
  */
-export function untouchedRequiredFiles({ workdir, hiddenDir, starterDir, solutionDir }) {
+export function requiredFiles({ hiddenDir, starterDir, solutionDir }) {
   const refs = [solutionDir, path.join(hiddenDir, 'solution')].filter((d) => d && fs.existsSync(d));
   const required = new Set();
   for (const ref of refs) for (const f of listFiles(ref)) if (!starterDir || !sameFile(path.join(ref, f), path.join(starterDir, f))) required.add(f);
-  return [...required].filter((f) => {
+  return [...required].sort();
+}
+export function untouchedRequiredFiles({ workdir, hiddenDir, starterDir, solutionDir }) {
+  return requiredFiles({ hiddenDir, starterDir, solutionDir }).filter((f) => {
     const w = path.join(workdir, f);
     if (!fs.existsSync(w)) return true;
     return !!starterDir && sameFile(w, path.join(starterDir, f));
-  }).sort();
+  });
 }
 
 /** Gán test ẩn trượt cho tệp: `hidden/filemap.json` {regex tên test: tệp}; không có thì khớp tên cơ sở của tệp (không đuôi) trong tên test. */
@@ -130,11 +133,14 @@ ${r.stderr}`);
   const extra = {};
   if (task) {
     const root = path.dirname(hiddenDir);
-    const untouched = untouchedRequiredFiles({ workdir, hiddenDir, starterDir: suiteRepoDir, solutionDir: task.solutionDir ? path.join(root, task.solutionDir) : undefined });
+    const dirs = { hiddenDir, starterDir: suiteRepoDir, solutionDir: task.solutionDir ? path.join(root, task.solutionDir) : undefined };
+    const required = requiredFiles(dirs);
+    const untouched = untouchedRequiredFiles({ workdir, ...dirs });
     const mapFile = path.join(hiddenDir, 'filemap.json');
     const map = fs.existsSync(mapFile) ? JSON.parse(fs.readFileSync(mapFile, 'utf8')) : {};
     extra.redAtEnd = redAtEnd;
-    extra.untouchedFileFailures = attributeFailures(g.details.failed, untouched, map);
+    // Agent không sửa tệp nào trong số tệp phải đổi: mọi test trượt đều thuộc tệp không sửa (không cần bản đồ tên test).
+    extra.untouchedFileFailures = required.length && untouched.length === required.length ? g.details.failed.length : attributeFailures(g.details.failed, untouched, map);
     extra.untouchedFiles = untouched;
   }
   return { ...g, details: { ...g.details, ...extra }, ...(task ? { formatMiss: missing.length > 0, ...(missing.length ? { missingDeliverables: missing } : {}) } : {}), ...(r.error ? { gradeError: String(r.error.code ?? r.error.message) } : {}) };

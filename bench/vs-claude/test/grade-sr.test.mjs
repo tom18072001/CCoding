@@ -137,6 +137,14 @@ test('SR-13: untouchedFileFailures chỉ đếm test trượt thuộc tệp agen
   assert.equal(ok.score, 1); assert.equal(ok.details.untouchedFileFailures, 0);
 });
 
+test('SR-13: agent không sửa tệp nào cần đổi → mọi test trượt thuộc tệp không sửa (không cần bản đồ tên test)', () => {
+  const T = mkTask();
+  const g = gradeCode({ workdir: copyOf(T.suiteRepoDir), ...T, visibleCheck: false });
+  assert.equal(g.details.failed.length, 3);
+  assert.equal(g.details.untouchedFileFailures, 3);
+  assert.deepEqual(g.details.untouchedFiles, ['src/a.js', 'src/b.js']);
+});
+
 test('SR-13: filemap.json gán test theo tên không chứa tên tệp', () => {
   assert.equal(attributeFailures(['truy vấn: x', 'CLI: y', 'parse: z'], ['src/query.js', 'bin/logq.js'], { '^truy vấn': 'src/query.js', '^CLI': 'bin/logq.js' }), 2);
   assert.equal(attributeFailures(['parse: z', 'CLI: y'], ['src/parse.js'], {}), 1);
