@@ -294,10 +294,10 @@ const pareto = arms.map((a) => { const rs = R.filter((r) => r.arm === a); return
 fs.writeFileSync(path.join(dir, 'pareto.csv'), csv(pareto));
 
 const cats = [...new Set(tasks.map((t) => catOf[t]))];
-const byCat = ['| Arm | ' + cats.join(' | ') + ' | Overall | Weighted tok (mean) | Wall s (median) |', '|' + ' --- |'.repeat(cats.length + 4)];
+const byCat = ['| Arm | ' + cats.join(' | ') + ' | Overall | Overall theo loại | Weighted tok (mean) | Wall s (median) |', '|' + ' --- |'.repeat(cats.length + 5)];
 for (const a of arms) {
   const rs = R.filter((r) => r.arm === a);
-  byCat.push(`| ${a} | ${cats.map((c) => f(mean(rs.filter((r) => r.category === c).map((r) => r.score)))).join(' | ')} | ${f(mean(rs.map((r) => r.score)))} | ${Math.round(mean(rs.map((r) => r.tokens?.weighted ?? 0))).toLocaleString('en-US')} | ${Math.round(median(rs.map((r) => r.wallSec ?? 0)))} |`);
+  byCat.push(`| ${a} | ${cats.map((c) => f(mean(rs.filter((r) => r.category === c).map((r) => r.score)))).join(' | ')} | ${f(mean(rs.map((r) => r.score)))} | ${f(mean(cats.map((c) => mean(rs.filter((r) => r.category === c).map((r) => r.score))).filter(Number.isFinite)))} | ${Math.round(mean(rs.map((r) => r.tokens?.weighted ?? 0))).toLocaleString('en-US')} | ${Math.round(median(rs.map((r) => r.wallSec ?? 0)))} |`);
 }
 const md = `# CCoding vs single Claude - results
 
@@ -316,6 +316,8 @@ ${mixedWarn}` : ''}
 ${H.map((h) => `| ${h.join(' | ')} |`).join('\n')}
 
 ## Mean score by category
+
+Overall = trung bình theo lượt (loại nhiều bài như coding nặng hơn); Overall theo loại = trung bình có trọng số bằng nhau giữa các loại (SR-22).
 
 ${byCat.join('\n')}
 

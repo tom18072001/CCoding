@@ -325,3 +325,17 @@ test('SR-14: H7 dùng phương sai gộp theo bài, bài sd(A0) = 0 vẫn tính,
   const mix = [...['c3', 'c4'].flatMap((t) => [...mkCells(t, 'A0-sonnet', [0.5, 0.6, 0.7]), ...mkCells(t, 'B0', [0.6, 0.6, 0.6])]), ...mkCells('c5', 'A0-sonnet', [0.5, 0.6, 0.7]), ...mkCells('c5', 'B0', [0.0, 0.6, 1.0])];
   assert.match(hRow(run(mix).report, 'H7'), /not supported/);
 });
+
+// ---------- S7: SR-22 ----------
+test('SR-22: cột Overall theo loại là trung bình các loại có trọng số bằng nhau, khác Overall theo lượt', () => {
+  // 3 bài coding điểm 1.0, 1 bài logic điểm 0.0 ⇒ theo lượt 0.75, theo loại 0.50
+  const rows = [...['c3', 'c4', 'c5'].map((t) => row(t, 'B0', 1)), row('l3', 'B0', 0, { category: 'logic' }), ...['c3', 'c4', 'c5'].map((t) => row(t, 'A0-sonnet', 1)), row('l3', 'A0-sonnet', 0, { category: 'logic' })];
+  const rep = run(rows).report;
+  const head = rep.split(/\r?\n/).find((l) => l.startsWith('| Arm | coding'));
+  assert.match(head, /Overall \| Overall theo loại/);
+  const line = rep.split(/\r?\n/).find((l) => l.startsWith('| B0 | 1.00'));
+  assert.ok(line, rep);
+  const cols = line.split('|').map((c) => c.trim());
+  assert.equal(cols[4], '0.75');
+  assert.equal(cols[5], '0.50');
+});
