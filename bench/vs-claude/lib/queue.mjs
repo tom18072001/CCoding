@@ -165,3 +165,13 @@ export function provenance(meta, spec, r, { quotaState } = {}) {
     window: meta.window ?? null, quotaState: quotaState ?? meta.quotaState ?? null, timeoutMin: meta.timeoutMin,
   };
 }
+
+/** SR-21, bước chọn của A2 (best-of-n): prompt người chọn chỉ được chứa bản giao nộp; có chuỗi của bộ đo (đường dẫn suite, hidden/…) ⇒ true. */
+export function leakInSelectorPrompt(prompt, needles) {
+  return needles.some((n) => String(prompt).includes(n));
+}
+
+/** Chuỗi bộ đo dùng chung cho mọi dò rò rỉ. */
+export function leakNeedles(suiteDir, sep) {
+  return [suiteDir, `${sep}hidden${sep}`, 'hidden/answer.json', 'hidden/solution', 'checklist.json', 'issues.json'];
+}

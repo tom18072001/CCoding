@@ -14,7 +14,7 @@ import { runCcoding, serverUp } from './lib/ccoding.mjs';
 import { costOfCalls, priceRun } from './lib/pricing.mjs';
 import { GRADERS } from './lib/grade.mjs';
 import { blind } from './lib/judge.mjs';
-import { EXIT_RATE_LIMIT, checkArms, classifyRun, cliVersion, doneKeys, gitCommit, provenance, replacementRuns, suiteTaskIds, supportedLanes } from './lib/queue.mjs';
+import { EXIT_RATE_LIMIT, checkArms, classifyRun, cliVersion, doneKeys, gitCommit, leakInCalls, leakInSelectorPrompt, leakInTranscript, leakNeedles, provenance, replacementRuns, suiteTaskIds, supportedLanes } from './lib/queue.mjs';
 import { populateWorkspace, taskDirs } from './lib/workspace.mjs';
 
 const SUITE = path.dirname(fileURLToPath(import.meta.url));
@@ -99,11 +99,9 @@ function briefFor(task) {
   return `${task.brief}\n\nYou are working in the current directory, a git repository. Put deliverables exactly where the brief says. Work only inside this directory.`;
 }
 
-/** Did the agent touch the suite (hidden tests / answers)? */
-function leakCheck(lines) {
-  const needles = [SUITE, `${path.sep}hidden${path.sep}`, 'hidden/answer.json', 'hidden/solution', 'checklist.json', 'issues.json'];
-  return lines.some((l) => needles.some((n) => String(l).includes(n)));
-}
+/** Did the agent touch the suite (hidden tests / answers)? SR-21: chỉ xét đường dẫn và tham số công cụ (tool_use), không xét văn bản prompt hệ thống/kết quả công cụ. */
+const NEEDLES = leakNeedles(SUITE, path.sep);
+const leakCheck = (transcriptLines) => leakInTranscript(transcriptLines, NEEDLES);
 
 function visibleTestScore(dir) {
   if (!fs.existsSync(path.join(dir, 'package.json'))) return 0;
@@ -137,19 +135,22 @@ async function runArm(arm, task, key) {
       const r = await runClaude({ cwd: dir, prompt: brief, model: spec.model, timeoutMin: cfg.timeoutMin, bin: cfg.claudeBin });
       cands.push({ dir, ...r, leak: leakCheck(r.transcript), transcript: undefined });
     }
-    let pick = 0, selector = zero(), selCost = 0;
+    let pick = 0, selector = zero(), selCost = 0, selectorSawSuite = false;
     if (task.grader === 'code') {
       const s = cands.map((c) => visibleTestScore(c.dir)); pick = s.indexOf(Math.max(...s));
     } else {
       // Selector sees only the deliverables (never hidden data).
       const shown = cands.map((c, i) => { const p = path.join(c.dir, task.deliverable); const t = fs.existsSync(p) && fs.statSync(p).isFile() ? fs.readFileSync(p, 'utf8') : c.finalText; return `### Candidate ${i}\n${blind(t).slice(0, 40000)}`; }).join('\n\n');
-      const sel = spawnSync(cfg.claudeBin, ['-p', `Brief:\n${task.brief}\n\n${shown}\n\nWhich candidate best satisfies the brief? Reply with only JSON {"best": <index>}.`, '--output-format', 'json', '--model', spec.model, '--tools', '', '--no-session-persistence', '--strict-mcp-config'], { cwd: os.tmpdir(), encoding: 'utf8', timeout: 600000, maxBuffer: 64 << 20 });
+      const selPrompt = `Brief:\n${task.brief}\n\n${shown}\n\nWhich candidate best satisfies the brief? Reply with only JSON {"best": <index>}.`;
+      selectorSawSuite = leakInSelectorPrompt(selPrompt.replace(task.brief, ''), NEEDLES);
+      const sel = spawnSync(cfg.claudeBin, ['-p', selPrompt, '--output-format', 'json', '--model', spec.model, '--tools', '', '--no-session-persistence', '--strict-mcp-config'], { cwd: os.tmpdir(), encoding: 'utf8', timeout: 600000, maxBuffer: 64 << 20 });
       try { const o = JSON.parse(sel.stdout); pick = Number(String(o.result).match(/"best"\s*:\s*(\d+)/)?.[1] ?? 0); const u = o.usage ?? {}; selector = { input: u.input_tokens ?? 0, output: u.output_tokens ?? 0, cacheRead: u.cache_read_input_tokens ?? 0, cacheWrite: u.cache_creation_input_tokens ?? 0 }; selCost = o.total_cost_usd ?? 0; } catch { pick = 0; }
     }
     const tok = [...cands.map((c) => c.tokens), selector].reduce((a, b) => ({ input: a.input + b.input, output: a.output + b.output, cacheRead: a.cacheRead + b.cacheRead, cacheWrite: a.cacheWrite + b.cacheWrite }), zero());
     tok.total = tok.input + tok.output + tok.cacheRead + tok.cacheWrite; tok.weighted = weighted(tok);
     const best = cands[Math.min(pick, cands.length - 1)];
-    return { ...best, tokens: tok, costUsd: cands.reduce((s, c) => s + c.costUsd, selCost), wallSec: cands.reduce((s, c) => s + c.wallSec, 0), turns: cands.reduce((s, c) => s + c.turns, 0), leak: cands.some((c) => c.leak), picked: pick };
+    const selLeak = selectorSawSuite; // SR-21: bước chọn của A2 cũng được kiểm
+    return { ...best, tokens: tok, costUsd: cands.reduce((s, c) => s + c.costUsd, selCost), wallSec: cands.reduce((s, c) => s + c.wallSec, 0), turns: cands.reduce((s, c) => s + c.turns, 0), leak: selLeak || cands.some((c) => c.leak), picked: pick };
   }
   if (spec.kind === 'ccoding') {
     const dir = freshWorkspace(task, key);
@@ -158,7 +159,7 @@ async function runArm(arm, task, key) {
     if (r.infra || !r.taskId) return { dir, ...r, infra: r.infra ?? 'error' }; // chưa tạo được task: lỗi hạ tầng, không chấm
     let leak = false, callsCost; // SR-02: costUsd cộng theo model của từng dòng calls.jsonl
     const callsFile = path.join(cfg.ccodingData, 'runs', r.taskId, 'calls.jsonl');
-    if (fs.existsSync(callsFile)) { const text = fs.readFileSync(callsFile, 'utf8'); leak = leakCheck(text.split('\n')); callsCost = costOfCalls(text); }
+    if (fs.existsSync(callsFile)) { const text = fs.readFileSync(callsFile, 'utf8'); leak = leakInCalls(text, NEEDLES); callsCost = costOfCalls(text); }
     return { dir, ...r, leak, callsCost: callsCost ?? costOfCalls('') };
   }
   throw new Error(`unknown arm kind ${spec.kind}`);

@@ -118,3 +118,40 @@ test('SR-03/19: run.mjs ghi đủ trường D1 vào config.json và mỗi dòng 
   }
   fs.rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
+
+// ---------- SR-21: dò rò rỉ chỉ trên đường dẫn và tham số công cụ ----------
+import { leakInCalls, leakInSelectorPrompt, leakInTranscript, leakNeedles } from '../lib/queue.mjs';
+
+const NEEDLES = leakNeedles(SUITE, path.sep);
+const ev = (o) => JSON.stringify(o);
+const toolUse = (input) => ev({ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Read', input }] } });
+
+test('SR-21: văn bản prompt hệ thống/kết quả công cụ có chuỗi bộ đo KHÔNG phải rò rỉ', () => {
+  const lines = [
+    ev({ type: 'system', subtype: 'init', cwd: SUITE, system_prompt: `xem ${SUITE} và checklist.json` }),
+    ev({ type: 'user', message: { content: [{ type: 'tool_result', content: 'issues.json hidden/answer.json' }] } }),
+    ev({ type: 'assistant', message: { content: [{ type: 'text', text: 'tôi sẽ không đọc checklist.json' }] } }),
+    ev({ type: 'result', result: 'xong' }),
+  ];
+  assert.equal(leakInTranscript(lines, NEEDLES), false);
+});
+
+test('SR-21: tool_use đọc đường dẫn hidden/ hoặc suite ⇒ rò rỉ; tool_use bình thường thì không', () => {
+  assert.equal(leakInTranscript([toolUse({ file_path: path.join(SUITE, 'tasks', 'x', 'hidden', 'answer.json') })], NEEDLES), true);
+  assert.equal(leakInTranscript([toolUse({ command: 'cat hidden/answer.json' })], NEEDLES), true);
+  assert.equal(leakInTranscript([toolUse({ file_path: 'src/index.js' })], NEEDLES), false);
+  assert.equal(leakInTranscript(['dòng không phải JSON nhắc checklist.json'], NEEDLES), true, 'dòng thô giữ hành vi cũ (thận trọng)');
+});
+
+test('SR-21: calls.jsonl của CCoding chỉ xét `tools`, không xét `text`', () => {
+  const j = (...r) => r.map((x) => JSON.stringify(x)).join('\n');
+  assert.equal(leakInCalls(j({ text: `prompt nhắc ${SUITE} và hidden/answer.json`, tools: [{ name: 'Read', input: { file_path: 'a.js' } }] }), NEEDLES), false);
+  assert.equal(leakInCalls(j({ text: 'x', tools: [{ name: 'Read', input: { file_path: 'tasks/x/hidden/answer.json' } }] }), NEEDLES), true);
+  assert.equal(leakInCalls(j({ text: 'chỉ có văn bản' }), NEEDLES), false);
+});
+
+test('SR-21: bước chọn của A2 — prompt người chọn chứa chuỗi bộ đo ⇒ rò rỉ, bản giao nộp sạch thì không', () => {
+  assert.equal(leakInSelectorPrompt('### Candidate 0\nbáo cáo sạch', NEEDLES), false);
+  assert.equal(leakInSelectorPrompt(`### Candidate 1\nđã đọc ${path.join(SUITE, 'tasks')}`, NEEDLES), true);
+  assert.equal(leakInSelectorPrompt('### Candidate 1\ntheo hidden/answer.json thì …', NEEDLES), true);
+});
