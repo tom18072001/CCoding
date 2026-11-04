@@ -86,8 +86,8 @@
       "exceptions": [
         {
           "file": "docs/research/paper/paper.md",
-          "line": 563,
-          "reason": "Trích dẫn câu cũ để ghi nhận đã sửa, không phải khẳng định (dòng dời 513 → 547 do chèn §4.3, → 563 ở gói 6 do viết lại §7.4 và §9)"
+          "line": 573,
+          "reason": "Trích dẫn câu cũ để ghi nhận đã sửa, không phải khẳng định (dòng dời 513 → 547 do chèn §4.3, → 563 ở gói 6 do viết lại §7.4 và §9, → 573 ở v0.5 do thêm E1, E2 và sai lệch)"
         }
       ]
     },
