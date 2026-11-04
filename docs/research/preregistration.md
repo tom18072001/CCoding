@@ -599,6 +599,62 @@ Phần khác của `run-plan.md` đã đối chiếu nhưng không tìm thấy l
 - **Mối đe dọa đã biết (ghi trước):** loại theo B0F có họp chọn kế hoạch lớn hơn; B1F không bị loại độc lập, nên có thể lệch. Biện pháp: báo số hạng mục kế hoạch của hai arm và phân tích độ nhạy không loại.
 - **Nguồn:** V4-3e-E5, V4-3e-E3 (8); `BRIEF-D12.md` K3; `BRIEF-17.md` K2; `run-plan.md` §5.4; `src/orchestrator.ts` khối "Họp thảo luận + chốt"; `results/large-pilot/RUNLOG.md`; `results/study-cloud/runs.jsonl` (`byPhase`, token, thời gian).
 
+#### V4-3e-K3 — Quy tắc bổ sung (đặt trước dữ liệu)
+
+**Nhãn: đặt trước.** Ghi ngày 4/11/2026, trên commit nền `1a31f1f93d1c59873d2a6c46c1c1d68cbbf2f6ca` (S0, sau fast-forward). Gồm ba quy tắc (a), (b), (c). Mỗi quy tắc có nhãn thời điểm và nguồn riêng. Khi viết **không đọc điểm mới** nào: không mở điểm E3, E4, E2; số trong (c) lấy từ `context/k4-e2-descriptive-b14-step2-n.md` §2 (σ và N đã có trước gói này). Mọi số tính tay ở đây ghi rõ "tính tay"; phải được script chạy lại trước khi dùng cho quyết định.
+
+**(a) S-1: trần ở H1′/H2′ — `đặt trước`, ghi 4/11/2026, trước khi khóa H1′/H2′.** Nguồn: `BRIEF-D12.md` K2 (S-1), `context/k2-stats-review-2026-11-04.md` (S-1, F11), §2.5 (H6 v2.1 (b)) và §2.7.
+
+- **Lý do:** `permStratified` với `margin > 0` (H2′, `margin = 0,05`, `alt = 'less'`) cho p = p_min ở bài mà cả hai arm chạm trần, vì b − 0,05 làm B0 "kém hơn" A0 ở mọi lượt một cách giả tạo (F11: r = 5 ⇒ p = 1/252 ≈ 0,0040 ≤ 0,0125). Quy tắc dưới đây thay cho việc sửa hàm: nó chặn ca này **trước** khi gọi `permStratified`.
+- **Bước 1, loại bài trần.** Bài mà **cả hai arm** (B0 và A0-sonnet) có điểm ≥ 0,99 ở **mọi lượt** bị loại khỏi H1′ và H2′. Ngưỡng 0,99 như §2.7. Bài chạm trần **một phía** (chỉ một arm ≥ 0,99 ở mọi lượt) thì **giữ**, như §2.7. Loại theo từng bài, từ chính dữ liệu xác nhận của H1′/H2′ (khác §2.7, vốn đánh giá trần bằng pilot); danh sách bài loại được báo.
+- **Bước 2, kiểm suy biến.** Sau bước 1:
+  - **H1′ (`margin = 0`):** cần **≥ 3 bài** còn lại (cùng ngưỡng với H6) **và** thống kê T có phương sai khác 0 qua các cách hoán vị (không phải mọi lượt của mọi ô còn lại cùng một giá trị).
+  - **H2′ (`margin = 0,05`):** tập ứng viên chỉ có `l2-chain` (§2.6), nên ngưỡng "≥ 3 bài" không áp dụng (cùng lý do P-1 của D12 cho H3 một bài). Cần **≥ 1 bài** còn lại, **r ≥ 5** mỗi ô (p_min = 1/252, §2.6) **và** phương sai khác 0 như trên. Nếu `l2-chain` bị loại ở bước 1 thì H2′ không còn bài nào.
+  - Không đạt thì kết luận **"không xác nhận do suy biến"**, **không phải SUPPORTED**, cũng không phải "không hơn". Cách xử lý như H7 (A-1 của D12): suy biến ra "suy biến", không ra SUPPORTED. Trần che mất khác biệt (cảnh báo H2 của §2.7), nên Δ = 0 do trần không bao giờ là bằng chứng.
+  - H1′ vẫn báo như ước lượng kèm CI ngay cả khi suy biến; chỉ nhãn "xác nhận" bị chặn.
+- **Số bài tối thiểu bằng số:** H1′ ≥ 3 bài; H2′ ≥ 1 bài; r ≥ 5 mỗi ô cho H2′ khi chỉ một bài (§2.6).
+- **Ghi chú trạng thái:** quy tắc này thay cho sửa mã S-1 ở D12 về mặt kết luận; nếu D12 sửa hàm khác đi thì quy tắc ở đây vẫn áp, và sửa lệch phải ghi thành sai lệch. H1′/H2′ vẫn chưa khóa; hai điều kiện khóa của §2.6 không đổi.
+- **Kiểm "chưa mở dữ liệu H1′/H2′" (methodologist, công cụ Grep chỉ đọc, 4/11/2026):**
+  - Mẫu 1: `H1′|H2′|H1'|H2'` trong `bench/vs-claude/results/` (nội dung). Kết quả: **1 tệp**, `results/study-cloud/artifacts/c3-shop-bugs__B6__r1/test/cart.test.js`, là tệp kiểm thử do agent sinh ra trong lượt cũ, không phải phân tích H1′/H2′.
+  - Mẫu 2: tên tệp `**/*{h1p,h2p,h1-prime,h2-prime,h1h2,b15f}*` trong `docs/research/`. Kết quả: **không có tệp**.
+  - Mẫu 3: `results/{b14-step2,b15f-main,h6-3e,b15-main}/**`. Kết quả: **không có tệp**.
+  - Đối chiếu thêm: trong `docs/research/analysis/`, chữ H2′ chỉ nằm ở `d11-stats-edgecases.mjs:143`, là ca biên giả (F11), không phải dữ liệu H1′/H2′. Chưa có `l1-modules` hay `l2-chain` nào của A0-sonnet cho H1′/H2′ được phân tích (kết quả E3 chưa mở điểm).
+  - Kết luận: **chưa có tệp kết quả hay phân tích H1′/H2′ nào được mở hoặc tạo** tại thời điểm đăng ký.
+
+**(b) SS-1…SS-3 của `l3-reconcile`: cỡ mẫu đo trên prompt cũ — `đặt trước`, ghi 4/11/2026, trước khi dùng cỡ mẫu cho N xác nhận của bộ giữ lại B-19.** Nguồn: `self-improvement/holdout-relock-2026-11-04.md` §3 (phương án A), `self-improvement/holdout-and-sample-size.md` SS-1…SS-3, `holdout-sample-size.mjs`, `BRIEF-17.md` K3.
+
+- **Sự kiện:** `brief` của `l3-reconcile` đổi ở D11 (`096e47d`, SR-16); bộ giữ lại khóa lại ở `84ded09` theo phương án (A). Dữ liệu phương sai SS-1…SS-3 trong `study-cloud/runs.jsonl` đo trên **prompt cũ**. Trong SS-2 chỉ ba lượt B0 của `l3-reconcile` bị ảnh hưởng (n = 3, σ²_w token 0,0002, wallSec 0,0072, bậc tự do 2 trên 27 của B0).
+- **Hệ quả (nêu, chưa đo):** σ²_w của token và wallSec, SD điểm và (với điểm TB 1,000 ở cả 3 lượt cũ) khả năng chạm trần của `l3-reconcile` **có thể khác** trên prompt mới. Câu thêm vào `brief` chỉ định nghĩa quy ước đếm mà bộ chấm đã dùng, nên kỳ vọng khác biệt nhỏ, nhưng đó là kỳ vọng, không phải số đo. Cỡ hiệu ứng giả định (Δ) không đổi vì là giả định kế hoạch, không đo từ l3.
+- **Quy tắc tính lại (methodologist chịu trách nhiệm công thức; data-scientist áp khi chạy):**
+  1. **k cố định = 5** lượt B0 `done` đầu tiên của `l3-reconcile` chạy trên prompt mới (hash `task.json` khớp `holdout-lock.json`), trong chính pha xác nhận. Chọn k = 5 để bậc tự do là 4, gấp đôi bậc tự do hiện có (2) của l3; không xem kết quả trước khi chọn. k không đổi theo dữ liệu, không dừng hay mở rộng sớm.
+  2. **Công thức:** với mỗi chỉ số m ∈ {ln(`tokens.weighted`), ln(`wallSec`)}, SS_l3 = Σ(x − x̄)² trên k lượt đó. Phương sai gộp mới: σ²_mới = (SS_khác + SS_l3) ÷ (df_khác + (k − 1)), trong đó SS_khác và df_khác là tổng SS và bậc tự do của **các bài còn lại** trong `holdout-sample-size.mjs` (hàm `pooled`, cùng bộ lọc `classifyRows().kept ∩ done`), tức bỏ đúng phần của l3 cũ. Số lượt r lấy từ cùng hàm `requiredRuns` của `bench/vs-claude/harness/stats.mjs` với tham số của SS-3 (T = 10, power 0,8, α, τ², Δ như bảng SS-3), thay σ² cũ bằng σ²_mới. Kèm cột σ² thấp (×0,5) và cao (×2) như SS-3.
+  3. **SD điểm:** chỉ tính lại cho nhánh B0; cột "mọi nhánh CCoding" giữ số cũ và gắn nhãn "gồm l3 prompt cũ", vì chỉ k lượt B0 là mới.
+  4. **Chỉ tăng, không giảm:** r dùng cho phần còn lại của pha xác nhận = max(r hiện hành của SS-3, r tính lại). Lý do: tránh rút ngắn mẫu vì ước lượng từ chỉ 4 bậc tự do.
+  5. Ghi cả σ² cũ lẫn σ²_mới và r hai bản vào RUNLOG hoặc phân tích; báo l3 có chạm trần (điểm ≥ 0,99 ở cả k lượt) hay không.
+- **Phương án không chọn:** giữ nguyên cỡ mẫu cũ không kèm kiểm tra. Bị loại vì k lượt đầu nằm sẵn trong kế hoạch xác nhận (không tốn lượt thêm) và thay số cũ bằng số đo trên đúng prompt đang dùng.
+- **Chưa làm ở gói này:** không chạy `holdout-sample-size.mjs`, không có lượt l3 mới nào.
+
+**(c) Bước 2 của B-14 (96 lượt): hai giới hạn và phân tích độ nhạy — `đặt trước`, ghi 4/11/2026, trước lượt đầu của bước 2.** Nguồn: mục "Đăng ký trước bước 2 của B-14" ngay trên (§9), `context/k4-e2-descriptive-b14-step2-n.md` §2, `results/b14-diag/RUNLOG.md` (E1).
+
+- **Giới hạn 1, mức tiết kiệm 10 % là giả định.** E1 chỉ cho cơ chế (n = 1 mỗi cặp, lời nhắc giả) và RUNLOG E1 ghi rõ E1 không ước lượng mức tiết kiệm. 10 % là lựa chọn kế hoạch (khoảng 29 % của phần 1,25·cacheWrite ≈ 35 % token có trọng số). N = 96 chỉ đạt power 0,8 nếu hiệu ứng thật ≥ khoảng 9,9 %.
+- **Giới hạn 2, thiên lệch chọn bài.** `t2-orders`, `t3-api`, `t4-perf` được chọn theo σ nhỏ và tỉ phần cacheWrite trên dữ liệu B7 đã có; `t1` (σ 0,381) và `t5` (σ 0,338) bị bỏ vì σ lớn. Chọn bài σ thấp làm σ gộp (0,182) **thấp hơn** σ của cả năm bài (0,268): N có thể **thiếu**, power thật có thể **thấp hơn** 0,8, và kết luận chỉ áp cho ba bài (đã ghi ở (3) của mục bước 2).
+- **Phân tích độ nhạy đã đặt trước** (báo cùng kết quả chính, **không** đổi phán quyết chính, không vào họ Holm):
+  1. **Bảng lực thống kê và N theo mức tiết kiệm**, σ = 0,182, hai phía, α = 0,05, power 0,8, 3 bài. Cột power ứng với N = 96 (SE(T) = 0,182/√24 ≈ 0,0372; power = Φ(Δ/SE − 1,960), tính tay):
+
+     | x | Δ = ln(1/(1−x)) | N cần (tổng, `k4-b14-step2-n.md`) | Power ở N = 96 (tính tay) |
+     |--:|--:|--:|--:|
+     | 5 % | 0,051 | 396 | ≈ 0,28 |
+     | 10 % | 0,105 | 96 | ≈ 0,81 |
+     | 20 % | 0,223 | 24 | > 0,99 |
+
+     Cùng ba hàng với σ = 0,268 (cả năm bài): N cần 860 / 210 / 50 lượt.
+  2. **Một lần phân tích không có các bài đã chọn, về mặt kế hoạch:** tính lại N với σ của hai bài **không** được chọn, `t1` và `t5` (σ gộp = √((0,381² + 0,338²)/2) ≈ 0,360; tính tay), ở x = 10 %: n ≈ 184 mỗi nhánh, r ≈ 62 mỗi bài với 3 bài, tổng ≈ 368 lượt (tính tay, cần chạy lại bằng script). Số này cho biết N sẽ cần lớn tới đâu nếu σ của ba bài chọn là đại diện sai. **Không có lượt nào của `t1`, `t5` được chạy** trong bước 2 vì không có hạn mức; đây là phân tích trên σ đã có, không phải dữ liệu mới.
+  3. **Về mặt kết quả (sau khi đủ 96 lượt):** (i) bỏ từng bài một (leave-one-task-out, 3 lần, mỗi lần 2 bài), báo R̂ và CI 95 %; (ii) σ quan sát của bước 2 so với 0,182 và power thực ở σ quan sát. Nếu R̂ đổi dấu hay CI đổi phán quyết khi bỏ một bài thì ghi "nhạy với bài".
+  4. Kết quả "không phân biệt được" **không** là bằng chứng không có hiệu ứng (đã ghi ở mục bước 2). Bài báo và backlog báo CI của R và bảng độ nhạy.
+- **Thời điểm:** quy tắc (c) có hiệu lực **trước lượt đầu của bước 2** (`results/b14-step2/` chưa tồn tại). Bước 2 vẫn chờ giám đốc duyệt riêng.
+
+- **Nguồn chung:** `BRIEF-17.md` K3; `BRIEF-D12.md` K2 (S-1, A-1, P-1); `context/k2-stats-review-2026-11-04.md`; `self-improvement/holdout-relock-2026-11-04.md`; `self-improvement/holdout-and-sample-size.md`; `context/k4-e2-descriptive-b14-step2-n.md`.
+
 #### V4-3e-E6 — H6 cho đủ N
 
 - **(1) Giả thuyết:** H6 (§3.1): A1, A2 không kém B0 trong biên ±0,05 về điểm, kiểm không-vượt/tương đương, p = max trên A1, A2 và hai phía. **Không đổi** quy tắc, biên, B = 4000, hạt 20261102 (§2.5).
