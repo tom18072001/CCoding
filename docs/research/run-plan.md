@@ -10,6 +10,7 @@
 - **Không đạt trước 5/11 dù có đủ cửa sổ:** H8, H9, H10 (do thiết kế phép kiểm, không do hạn mức) và B-02 kiểm chứng thống kê. H7 không đạt ở Nhánh 2. B-01 trên arm làn nhanh hiện có **đã dự đoán không tương đương** (token ×4,09, thời gian ×2,20 so với A0-sonnet, C7+C9).
 - **Bốn cảnh báo vận hành** (đọc §3.0 và §5.0 trước khi chạy): (1) lượt hỏng vì hạn mức vẫn bị `run.mjs` coi là "đã xong" và bị bỏ qua khi chạy lại; (2) `analyze.mjs` tính cả lượt hỏng với điểm 0; (3) 4 bài `a1,l1,l2,r1` lỗi ENOENT cho mọi arm; (4) `pairwise.mjs` bỏ qua cặp mới nếu `pairwise.jsonl` đã có `task#rep` đó.
 - **Đợt 3e (sau D9, §5.4) — chỉ chạy khi giám đốc đã duyệt:** E1–E3 chạy trên cloud trước 5/11 14:59, gồm 34 lượt `run.mjs` và 7–8 lượt `claude -p`, ≈ 22 USD, ≈ 2,5 giờ máy. E4–E6 chạy local bằng hạn mức gói, ≈ 139–181 lượt, ≈ 128–149 USD, ≈ 12–13,9 giờ máy. Các số này cộng từ bảng BRIEF-14, quy giá Sonnet. E2 chỉ chạy khi §9 `V4-3e-*` đã commit; E4 chỉ chạy khi N đã chốt bằng công thức §9.
+- **Thứ tự còn lại của đợt 3e (cập nhật 4/11/2026, BRIEF-18 K4):** E4 → E6 → E5′ → B-14 bước 2. E5 không chạy, thay bằng E5′. Mỗi bước có sổ chạy và điều kiện bắt đầu ở §5.4.4.
 
 ## Tệp đã lưu
 
@@ -332,6 +333,7 @@ done
 ### 5.4 Đợt 3e (sau D9: B-14, B-12, B-16, B-15, H6) — chỉ chạy khi giám đốc đã duyệt
 
 > Hạng mục S3 của BRIEF-14 (vòng 4, gói 8) · research-lead · phân loại dữ liệu: Nội bộ. Đồng bộ lại ở vòng 4 gói 9 (BRIEF-15, T-20261103-224501-4e4) theo bảng quyết định đầu mục §9 gói 8. Mục này là **kế hoạch vận hành**: chép lệnh từ `bench/vs-claude/RUNBOOK-cloud-session.md` Bước 3e và lệnh phân tích cổng đã chốt cho `docs/research/analysis/gates-pairs.mjs`. Giả thuyết, thước đo, phép kiểm, quy tắc dừng và quy tắc loại nằm ở `preregistration.md` §9, mục "Đăng ký trước vòng 4 gói 8: đợt đo 3e (ghi 3/11/2026, trước lượt đầu tiên; …)", dòng `V4-3e-E1` … `V4-3e-E6`. Khi §9 và mục này lệch nhau thì theo §9. Số USD và giờ máy dưới đây là ước lượng của người điều phối (BRIEF-14), không phải ngưỡng; riêng **trần 15 giờ của E4** là quy tắc dừng của §9.
+> Cập nhật vòng 4 gói 12 (BRIEF-18 K4, T-20261104-135425-669 S4, @research-lead, 4/11/2026): thêm §5.4.4, thứ tự còn lại E4 → E6 → E5′ → B-14 bước 2, kèm sổ chạy và điều kiện bắt đầu mỗi bước. E5 ở bảng §5.4.3 không chạy, thay bằng E5′. Không đổi lệnh, N hay quy tắc nào của E4, E6.
 
 **Điều kiện trước khi chạy** (RUNBOOK 3e):
 1. D9b đã gộp (8 test hook Linux xanh).
@@ -421,6 +423,8 @@ Phần cloud nào chưa xong khi chuyển vẫn giữ thứ tự E1 → E2 → E
 
 #### 5.4.3 Bảng local: E4–E6, bằng hạn mức gói
 
+> Cập nhật 4/11/2026 (BRIEF-18 K4): dòng 5 (E5) **không chạy**. E5 được thiết kế lại thành E5′ (`preregistration.md` §9 `V4-3e-E5′`), chạy sau E6, sổ chạy `results/b15f-main/RUNLOG.md`. Thứ tự và điều kiện bắt đầu các bước còn lại ở §5.4.4. Bảng dưới giữ nguyên làm hồ sơ kế hoạch gốc.
+
 Cùng thiết lập `$S3E`, server riêng cổng 7425 trên máy giám đốc. Gặp giới hạn 5 giờ thì chờ cửa sổ sau; runner bỏ qua khóa đã `done`. Mỗi cửa sổ vẫn theo §3.0: máy rảnh, một luồng, điền bảng vận hành.
 
 | Thứ tự | Phần | §9 | Lệnh (cờ chép nguyên từ RUNBOOK 3e bước 6) | Số lượt | USD (Sonnet) | Giờ máy | Điểm commit |
@@ -474,6 +478,19 @@ done
 - Phép so B7cab với B7cabO (B-16: McNemar chính xác ghép cặp theo bài và `rep`, Clopper–Pearson từng arm) theo §9 `V4-3e-E4`, không theo mục này. Commit `pairs-*.csv`, `agreement-*.md` sau khi chạy.
 
 **Nhãn người** (RUNBOOK 3e bước 7, giám đốc, khoảng 30–45 phút, làm được song song với E4–E6): gán 60 mục ở `docs/research/analysis/gold-sheet.csv` (arm đã ẩn). Sau đó Phòng Nghiên cứu chạy `agreement.mjs` với `gold-key.csv`: `node docs/research/analysis/agreement.mjs --gold-score` (theo `agreement.mjs:11`).
+
+#### 5.4.4 Thứ tự còn lại của đợt 3e: E4 → E6 → E5′ → B-14 bước 2 (cập nhật 4/11/2026, BRIEF-18 K4)
+
+Nguồn thứ tự: giám đốc duyệt lúc 12:50 ngày 4/11/2026, "Thứ tự dự kiến: E4 → E6 → E5′ → B-14 bước 2" (`results/local-3e/RUNLOG.md:23`, commit `9e3c410`). Mỗi bước chỉ bắt đầu khi bước trước đã xong **và** mọi điều kiện ở cột "Điều kiện bắt đầu" đã đạt. Cột "Trạng thái" chỉ chép dòng diễn biến và dòng cổng của sổ chạy. Tôi không mở `runs.jsonl` hay tệp điểm nào của E3, E4, E6. Khi bảng này lệch với §9 hoặc với sổ chạy thì theo §9, rồi theo sổ chạy.
+
+| Bước | Phần | §9 | Sổ chạy | `--out` | Điều kiện bắt đầu | Trạng thái lúc ghi (nguồn) |
+|---|---|---|---|---|---|---|
+| 1 | **E4**, B-12/B-16 chính | `V4-3e-E4` | Theo RUNBOOK hiện hành (`bench/vs-claude/RUNBOOK-cloud-session.md` Bước 3e, bước 6): sổ chung của phần local `results/local-3e/RUNLOG.md`. Mỗi lệnh ghi hash server, `git status --short`, giờ UTC và `model` theo pha (§5.4, "Quy tắc mỗi phần" mục 3) | `results/gates-main` | N cố định trước khi xem điểm: R_E4 = 16, R_B6 = 32, tổng 192 lượt (`local-3e/RUNLOG.md:12`; §9 khối (a) bước 5). Server local ghi hash trước lượt local đầu (điểm dừng cứng ở §5.4). Trần 15 giờ đồng hồ thực, không chạy bù (§5.4.3) | E4a bắt đầu lúc 12:03 (`local-3e/RUNLOG.md:21`). E4b chạy bằng `run3e-b.ps1`, sau đó tới E6a–c (`:22`). Sổ chưa có dòng "E4 xong" |
+| 2 | **E6**, H6 cho đủ N | `V4-3e-E6` | `results/local-3e/RUNLOG.md`, mục "Nguồn p của H6 cho E6" (`:25-36`) | `results/h6-3e` (thư mục mới, §9 `V4-3e-E6` (9)) | Sau E4: `run3e-b.ps1` chạy E4b rồi mới chạy E6a, E6b, E6c (`:22`), chờ tệp `GO-E6` (`:27`). Nguồn p đã ghi trước lượt đầu: H6 dùng p của SR-26, hash mã thống kê D12 ghi ở `eb7b53d` (`:35`). Khối §9 độ nhạy mô tả "bỏ `t2-orders`, `t4-perf`" đã đặt trước dữ liệu E6 (`preregistration.md` §9, BRIEF-18 K3 `f211bc7`). Khối này chỉ mô tả, không đổi H6 | Lúc 13:50 chưa có lượt E6 nào (`:27`). Thư mục `results/h6-3e` chưa có trên nhánh này |
+| 3 | **E5′**, B-15 chính, họp ở làn đầy đủ ép (B0F so với B1F) | `V4-3e-E5′` (gộp ở `f36a1d9`) | `results/b15f-main/RUNLOG.md` (ghi trước lượt đầu: `5346275`, `8c6d2d1`) | `results/b15f-main` | Cổng (3) ở `b15f-main/RUNLOG.md:11`: (i) D12 đã gộp ở `57148de`; (ii) test runtime giả `bench/vs-claude/test/arms-full-lane.test.mjs` xanh trong `npm run test:bench` 245/245; (iii) **E6 xong**, tức kịch bản thấy dòng "XONG phan sau" của `run3e-b.ps1`; (iv) giám đốc đã duyệt lúc 12:50. Server 7426, worktree `ccoding-e5f` ghim ở `57148de` (`:12-13`). Điểm dừng sau r1 và r2…r10 theo `:18-19` | Kịch bản `run3e-c.ps1` chạy nền từ 13:52, chờ E6 (`:16`). Chưa có lượt E5′ (`:5`) |
+| 4 | **B-14 bước 2**, A/B `stablePrefix`, 96 lượt | "Đăng ký trước bước 2 của B-14" và `V4-3e-K3` (c) | `results/b14-step2/RUNLOG.md` | `results/b14-step2/on`, `results/b14-step2/off` (hai nhánh cùng arm B7, phân biệt bằng thư mục) | Sau E5′, **và** cả hai tiền điều kiện đều đạt: **(6)** script phân tích có test, commit và hash ghi trước lượt đầu: đạt, `b14-step2.mjs` commit `4e546f47d2c17002971718492108c2dd330439b4`, test 10/10, dòng hash ở `b14-step2/RUNLOG.md:2` (commit `c6fd35f`). Ô "Tiền điều kiện (6)" ở dòng 12 của sổ do BRIEF-18 S5 chốt. **(7)** bộ test lệnh ác ý cho `stablePrefix` xanh trên commit ghim: **chưa đạt**, 5/8 ca có test, thiếu heredoc, `awk 'BEGIN{system(...)}'`, `.env`, chờ D13 K6 (`b14-step2/RUNLOG.md:13`, `:18-39`; `context/k3-open-points-2026-11-04.md` (b); commit `f211bc7`). Cộng thêm: mốc khóa `8941103` (`:1`); commit ghim server chứa B-14b; sha256 hai cấu hình, diff chỉ khác khóa `stablePrefix` (`:14-15`) | Chưa có lượt. **Chưa được bắt đầu** cho tới khi D13 K6 thêm 3 ca và bộ test xanh trên commit ghim. Nếu (6) mất hiệu lực vì sửa script sau mốc hash, kết quả chỉ được báo mô tả (§9, mục (6)) |
+
+Hệ quả cho lịch máy: nếu (7) chưa đạt khi E5′ xong thì máy dừng sau E5′, không chạy B-14 bước 2, cũng không chạy bù phần khác vào chỗ trống. Thứ tự E4 → E6 → E5′ không phụ thuộc (7).
 
 ---
 

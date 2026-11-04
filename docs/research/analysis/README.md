@@ -54,3 +54,24 @@ Không dùng pipe: `--pairs` nhận **đường dẫn tệp**, không đọc std
 node --test docs/research/analysis/gates-pairs.test.mjs
 node --test docs/research/analysis/agreement.test.mjs
 ```
+
+## b14-step2.mjs (phân tích bước 2 của B-14)
+
+Tiền điều kiện (6) của `preregistration.md` §9 "Đăng ký trước bước 2 của B-14". Chỉ đọc `bench/vs-claude/results/b14-step2/{off,on}/runs.jsonl`; không đọc, không tạo dữ liệu thật; thiếu tệp thì báo lỗi tiếng Việt và thoát mã ≠ 0.
+
+```
+node docs/research/analysis/b14-step2.mjs [--off <path>] [--on <path>] [--json]
+node --test docs/research/analysis/b14-step2.test.mjs
+```
+
+- **Giao diện:** `analyze(rowsOff, rowsOn, deps = { permStratified })`. `--json` có trường `permArgs` chép đúng tham số đã truyền vào `permStratified`.
+- **Nguồn hàm:** `permStratified`, `mulberry32`, `percentileCI` từ `bench/vs-claude/lib/stats.mjs` (bản sau D12), **không** từ `analysis/vendor/` (bản trước D12, chỉ dành cho K2 §10). Có test kiểm.
+- **Độ lệch số dòng:** §9 (6) ghi `permStratified` ở `lib/stats.mjs:162`; đó là số trước D12. Hiện hàm ở `:272`. §9 không sửa. Tham số vẫn đúng `{ alt: 'two', margin: 0, M: 10000, seed: 20261104 }`; `ceilGuard` mặc định tắt vì `margin` = 0; ∏C(32,16) > 10⁶ nên chạy Monte Carlo.
+- **Thước đo chính:** ln(`tokens.weighted`). Dòng thiếu `weighted` thì tính `input + 1,25·cacheWrite + 0,1·cacheRead + 5·output` (làm tròn như `weighted()` của runner; chấp nhận cả khóa `out`).
+- **T, R̂, CI:** T = TB theo bài của (TB ln bật − TB ln tắt); R̂ = exp(T); CI 95 % bootstrap phân tầng 4000 vòng, `mulberry32(20261104)`, `percentileCI(·, 0.95)`.
+- **Phán quyết:** "giảm" (p ≤ 0,05 và cận trên < 1), "tăng" (p ≤ 0,05 và cận dưới > 1), còn lại "không phân biệt được". p = null, hoặc có bài thiếu dữ liệu, thì "không kết luận (thiếu dữ liệu)".
+- **Loại lượt (§9 (8)):** `status ≠ done` hoặc `excluded` khác null; không loại theo token, h hay điểm. Báo số lượt loại theo lý do.
+- **Quy tắc gán lượt thay (không thêm trường dữ liệu):** trong mỗi ô bài × nhánh, các lượt `rep > 16` xếp theo `rep` tăng dần, được gán lần lượt cho các lượt `rep ≤ 16` bị loại xếp theo `rep` tăng dần, và nhận cặp khối của lượt bị thay. Ô có hơn 2 lượt thay là "thiếu dữ liệu": bài đó vào `skipped` và verdict là "không kết luận". Lượt thay không có lượt gốc tương ứng bị loại, lý do "thay thế không có lượt gốc". Lượt thay tự hỏng vẫn chiếm một lượt gốc.
+- **Dừng giữa chừng:** cặp khối suy từ `rep` theo ABBA (r1–4 cặp 1, …, r13–16 cặp 4). Chỉ giữ cặp có ít nhất một lượt dùng được ở mọi bài và cả hai nhánh; nếu n < 96 thì nhãn "chưa đủ N (n = …/96)".
+- **Phụ (mô tả, không p):** h trung vị theo bài × nhánh; tỉ phần 1,25·cacheWrite trên weighted; tỉ lệ `pass` (Clopper–Pearson 95 %) và TB `score`; `wallSec`; `calls`.
+- **Độ nhạy V4-3e-(c) mục 3 (chỉ mô tả, không gọi `permStratified`):** bỏ từng bài một (R̂ kèm CI 95 %; cờ "nhạy với bài" nếu R̂ đổi phía so với 1 hoặc CI đổi vị trí so với 1); σ quan sát gộp trong bài, SE(T) = √(Σσ²(1/r_a + 1/r_b))/3, mức tiết kiệm nhỏ nhất phát hiện và power xấp xỉ chuẩn (cùng công thức §9 (4)).
