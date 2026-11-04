@@ -73,3 +73,42 @@ test('SR-07: judge khác nhau cùng bài ⇒ từ chối; ghi model giám khảo
   assert.equal(allowed.code, 0);
   assert.match(allowed.report, /CẢNH BÁO SR-07/);
 });
+
+test('SR-20: báo cáo ghi hạt; mặc định mulberry32 tái lập; --legacy-rng đổi sang LCG', () => {
+  const a = run(base()), b = run(base()), l = run(base(), ['--legacy-rng']);
+  assert.match(a.report, /RNG: mulberry32, hạt 20261102/);
+  assert.match(l.report, /RNG: LCG cũ \(--legacy-rng\), hạt 12345/);
+  assert.equal(hRow(a.report, 'H1'), hRow(b.report, 'H1'));
+  assert.equal(hRow(a.report, 'H10'), hRow(b.report, 'H10'));
+  assert.notEqual(hRow(a.report, 'H1'), hRow(l.report, 'H1'));
+});
+
+test('SR-26 ca 9 / SR-20: --legacy-rng trên study-cloud cho H1, H2, H10 trùng mốc d11-baseline', () => {
+  const root = path.resolve(HERE, '../../..');
+  const baseline = fs.readFileSync(path.join(root, 'docs/research/context/d11-baseline/study-cloud/report.md'), 'utf8');
+  const rows = fs.readFileSync(path.join(root, 'bench/vs-claude/results/study-cloud/runs.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  const r = run(rows, ['--legacy-rng', '--allow-mixed-judge']);
+  assert.equal(r.code, 0, r.err);
+  for (const id of ['H1', 'H2', 'H10']) assert.equal(hRow(r.report, id), hRow(baseline, id), id);
+});
+
+test('SR-05(iii): H10 xáo Fisher-Yates tái lập theo hạt và cho p trong (0, 0.5) với 6 điểm', () => {
+  const rows = [];
+  for (const [i, t] of ['c1', 'c2', 'c3', 'c4', 'c5', 'c6'].entries()) {
+    const b = 0.5 + 0.05 * i + (i % 2) * 0.1;
+    rows.push(row(t, 'A0-sonnet', 0.5, { size: i + 1 }), row(t, 'A0-sonnet', 0.5, { size: i + 1 }), row(t, 'B0', b, { size: i + 1 }), row(t, 'B0', b, { size: i + 1 }));
+  }
+  const fy = run(rows), fy2 = run(rows), lg = run(rows, ['--legacy-rng']);
+  assert.equal(hRow(fy.report, 'H10'), hRow(fy2.report, 'H10'));
+  const p = +/permutation p=([0-9.]+)/.exec(hRow(fy.report, 'H10'))[1];
+  assert.ok(p > 0 && p < 0.5, `p=${p}`);
+  assert.match(hRow(lg.report, 'H10'), /permutation p=/);
+});
+
+test('SR-06: H5 ghép tr và wr theo bài, bài có tỉ số vô hạn bị bỏ cả hai chỉ số', () => {
+  const mk = (t, bw, tw, bs, ts) => [row(t, 'A0-sonnet', 0.5, { weighted: bw, wallSec: bs }), row(t, 'B0', 0.5, { weighted: tw, wallSec: ts })];
+  // a: token cơ sở 0 ⇒ tỉ số vô hạn (bỏ); b, c: token ×4, thời gian ×2 ⇒ đạt cả hai ngưỡng
+  const rows = [...mk('a', 0, 1000, 10, 10), ...mk('b', 1000, 4000, 10, 20), ...mk('c', 1000, 4000, 10, 20)];
+  const r = run(rows);
+  assert.match(hRow(r.report, 'H5'), /tasks meeting both thresholds 100%/);
+});

@@ -5,6 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { mulberry32, fisherYates } from './lib/stats.mjs';
 
 const dir = path.resolve(process.argv[2] ?? '.');
 const argv = process.argv.slice(3);
@@ -55,7 +56,12 @@ const TREAT = flag('treatment', arms.includes('B0') ? 'B0' : arms[1] ?? arms[0])
 const mean = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : NaN);
 const sd = (a) => { if (a.length < 2) return 0; const m = mean(a); return Math.sqrt(a.reduce((s, x) => s + (x - m) ** 2, 0) / (a.length - 1)); };
 const median = (a) => { if (!a.length) return NaN; const s = [...a].sort((x, y) => x - y); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
-let seed = 12345; const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+// SR-20: mulberry32 có hạt, ghi vào báo cáo. --legacy-rng giữ LCG cũ (và cách xáo cũ ở H10) để tái lập số đã công bố.
+const LEGACY = has('legacy-rng');
+const SEED = LEGACY ? 12345 : 20261102;
+let lcg = SEED;
+const rnd = LEGACY ? () => ((lcg = (lcg * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff) : mulberry32(SEED);
+const rngTxt = LEGACY ? `LCG cũ (--legacy-rng), hạt ${SEED}, xáo H10 kiểu cũ` : `mulberry32, hạt ${SEED}, xáo H10 Fisher-Yates`;
 const pick = (a) => a[Math.floor(rnd() * a.length)];
 const f = (x, d = 2) => (Number.isFinite(x) ? x.toFixed(d) : 'n/a');
 const pp = (x) => (Number.isFinite(x) ? `${x >= 0 ? '+' : ''}${(x * 100).toFixed(1)} pp` : 'n/a');
@@ -114,9 +120,12 @@ const verdict = (ok, unknown) => (unknown ? 'insufficient data' : ok ? 'SUPPORTE
   H.push(['H4', 'Planted-ambiguity detection (requirements)', `${pp(c.est)} [${pp(c.lo)}, ${pp(c.hi)}], tasks=${c.n}`, verdict(c.est >= 0.2, !c.n)]);
 }
 {
-  const ratio = (metric) => tasks.map((t) => median(cell(TREAT, t, metric)) / median(cell(BASE, t, metric))).filter(Number.isFinite);
-  const tr = ratio('weighted'), wr = ratio('wallSec');
-  const share = tr.filter((x, i) => x >= 3 && (wr[i] ?? 0) >= 1.5).length / Math.max(1, tr.length);
+  const ratio = (metric) => tasks.map((t) => median(cell(TREAT, t, metric)) / median(cell(BASE, t, metric)));
+  // SR-06: ghép tr và wr theo bài, bỏ bài có tỉ số NaN/vô hạn ở bất kỳ chỉ số nào trước khi đếm.
+  const rT = ratio('weighted'), rW = ratio('wallSec');
+  const pairs = tasks.map((t, i) => [rT[i], rW[i]]).filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y));
+  const tr = pairs.map((x) => x[0]), wr = pairs.map((x) => x[1]);
+  const share = tr.filter((x, i) => x >= 3 && wr[i] >= 1.5).length / Math.max(1, tr.length);
   H.push(['H5', `Cost ratio ${TREAT}/${BASE}`, `weighted tokens median x${f(median(tr), 1)}, wall time median x${f(median(wr), 1)}; tasks meeting both thresholds ${(share * 100).toFixed(0)}%`, verdict(share >= 0.8, !tr.length)]);
 }
 {
@@ -146,7 +155,7 @@ const verdict = (ok, unknown) => (unknown ? 'insufficient data' : ok ? 'SUPPORTE
   const pts = Object.entries(c.deltas ?? {}).map(([t, d]) => [sizeOf[t], d]);
   const slope = (p) => { const mx = mean(p.map((x) => x[0])), my = mean(p.map((x) => x[1])); const num = p.reduce((s, [x, y]) => s + (x - mx) * (y - my), 0), den = p.reduce((s, [x]) => s + (x - mx) ** 2, 0); return den ? num / den : NaN; };
   const b = slope(pts); let ext = 0; const P = 5000;
-  for (let i = 0; i < P; i++) { const ys = pts.map((x) => x[1]).sort(() => rnd() - 0.5); if (Math.abs(slope(pts.map((x, j) => [x[0], ys[j]]))) >= Math.abs(b)) ext++; }
+  for (let i = 0; i < P; i++) { const ys = LEGACY ? pts.map((x) => x[1]).sort(() => rnd() - 0.5) : fisherYates(pts.map((x) => x[1]), rnd); if (Math.abs(slope(pts.map((x, j) => [x[0], ys[j]]))) >= Math.abs(b)) ext++; }
   H.push(['H10', 'Advantage grows with task size (slope of delta vs parts)', `slope ${pp(b)} per extra part, permutation p=${f(ext / P, 3)}, tasks=${pts.length}`, verdict(b > 0 && ext / P < 0.05, pts.length < 4)]);
 }
 
@@ -172,7 +181,7 @@ const md = `# CCoding vs single Claude - results
 
 Folder: \`${dir}\` - ${rows.length} runs (${leaks.length} excluded for touching hidden files, ${infraRows.length} infra rows dropped), arms: ${arms.join(', ')}. Baseline **${BASE}**, treatment **${TREAT}**. Scores are 0-1 per run; deltas in percentage points, 95% two-level bootstrap CI over tasks, p from a paired sign-flip permutation test.
 
-Đã loại ${excludedRows.length} lượt excluded (SR-01c; theo arm: ${excludedTxt}). Giám khảo: ${judgeTxt} (SR-07).${commitWarn ? `
+Đã loại ${excludedRows.length} lượt excluded (SR-01c; theo arm: ${excludedTxt}). Giám khảo: ${judgeTxt} (SR-07). RNG: ${rngTxt} (SR-20).${commitWarn ? `
 
 ${commitWarn}` : ''}${mixedWarn ? `
 
