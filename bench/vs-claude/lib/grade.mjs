@@ -83,28 +83,31 @@ export function gradeExact({ workdir, hiddenDir, finalText, task }) {
   return { score: n / Object.keys(fields).length, pass: n === Object.keys(fields).length, details: { fields }, formatMiss };
 }
 
-/** Security review: recall over seeded issues, precision over reported findings (findings near a seeded line with another type are neutral). */
+/** Security review: recall over seeded issues, precision over reported findings (findings near a seeded line with another type, on a decoy or on a 'bonus' line are neutral; decoyHits/bonusHits reported separately). */
 export function gradeSecurity({ workdir, hiddenDir, finalText, task, suiteRepoDir }) {
   const spec = JSON.parse(fs.readFileSync(path.join(hiddenDir, 'issues.json'), 'utf8'));
   const src = fs.readFileSync(path.join(suiteRepoDir, 'src/server.js'), 'utf8').split('\n');
   const lineOf = (a) => src.findIndex((l) => l.includes(a)) + 1;
   const issues = spec.issues.map((i) => ({ ...i, line: lineOf(i.anchor) }));
   const decoys = spec.decoys.map((d) => ({ ...d, line: lineOf(d.anchor) }));
+  const bonus = (spec.bonus ?? []).map((b) => ({ ...b, line: lineOf(b.anchor) })).filter((b) => b.line > 0);
   const { value, formatMiss } = readJsonDeliverable(workdir, task.deliverable, finalText);
   const findings = Array.isArray(value) ? value : Array.isArray(value?.findings) ? value.findings : [];
   const near = (f, l) => Math.abs(Number(f.line) - l) <= 3;
-  const found = new Set(); let tp = 0, fp = 0, neutral = 0, decoyHits = 0;
+  const found = new Set(); let tp = 0, fp = 0, neutral = 0, decoyHits = 0, bonusHits = 0;
   for (const f of findings) {
     const hit = issues.find((i) => near(f, i.line) && String(f.type).toLowerCase() === i.type && !found.has(i.type));
     if (hit) { found.add(hit.type); tp++; continue; }
-    if (decoys.some((d) => near(f, d.line)) && !issues.some((i) => near(f, i.line))) { decoyHits++; fp++; continue; }
+    // SR-17: finding thật ngoài danh sách (bonus) và finding trúng decoy đều không phải FP; báo riêng, không vào điểm chính (D5).
+    if (bonus.some((b) => Math.abs(Number(f.line) - b.line) <= (b.tolerance ?? 1)) && !issues.some((i) => near(f, i.line))) { bonusHits++; continue; }
+    if (decoys.some((d) => near(f, d.line)) && !issues.some((i) => near(f, i.line))) { decoyHits++; continue; }
     if (issues.some((i) => near(f, i.line))) { neutral++; continue; }
     fp++;
   }
   const recall = found.size / issues.length;
   const precision = tp + fp ? tp / (tp + fp) : 0;
   const f1 = recall + precision ? (2 * recall * precision) / (recall + precision) : 0;
-  return { score: f1, pass: recall === 1 && fp === 0, details: { recall, precision, tp, fp, neutral, decoyHits, missed: issues.filter((i) => !found.has(i.type)).map((i) => i.type) }, formatMiss };
+  return { score: f1, pass: recall === 1 && fp === 0, details: { recall, precision, tp, fp, neutral, decoyHits, bonusHits, missed: issues.filter((i) => !found.has(i.type)).map((i) => i.type) }, formatMiss };
 }
 
 /** Checklist (requirements/design): LLM judge per item when enabled, regex fallback otherwise. */

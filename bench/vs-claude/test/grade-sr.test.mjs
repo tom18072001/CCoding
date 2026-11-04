@@ -25,3 +25,33 @@ test('SR-16: gradeExact đúng khi schedule viết khác thứ tự khóa', () =
   put(work, 'answer.json', { n: 10, startup_order: ['b', 'a'], schedule: { Tue: 'Chi', Mon: 'Dung' } });
   assert.equal(gradeExact({ workdir: work, hiddenDir: hidden, finalText: '', task: { deliverable: 'answer.json' } }).details.fields.startup_order, false);
 });
+
+// ---- SR-17
+import { gradeSecurity } from '../lib/grade.mjs';
+const SUITE = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
+const s1 = (findings) => {
+  const work = tmp('s1');
+  put(work, 'findings.json', findings);
+  return gradeSecurity({ workdir: work, hiddenDir: path.join(SUITE, 'tasks/s1-sec-review/hidden'), suiteRepoDir: path.join(SUITE, 'tasks/s1-sec-review/repo'), finalText: '', task: { deliverable: 'findings.json' } });
+};
+const ref = JSON.parse(fs.readFileSync(path.join(SUITE, 'tasks/s1-sec-review/hidden/reference/findings.json'), 'utf8'));
+
+test('SR-17: oracle = 1,00; decoyHits = bonusHits = 0', () => {
+  const g = s1(ref);
+  assert.equal(g.score, 1); assert.equal(g.pass, true); assert.equal(g.details.decoyHits, 0); assert.equal(g.details.bonusHits, 0);
+});
+
+test('SR-17: finding thật ngoài danh sách (IDOR server.js:47) không là FP, báo riêng bonusHits', () => {
+  const g = s1([...ref, { line: 47, type: 'missing-authz', severity: 'medium', fix: 'x' }]);
+  assert.equal(g.details.fp, 0); assert.equal(g.details.bonusHits, 1); assert.equal(g.score, 1); assert.equal(g.pass, true);
+});
+
+test('SR-17: trúng decoy không là FP và không đổi điểm chính; decoyHits đếm riêng', () => {
+  const g = s1([...ref, { line: 36, type: 'sqli', severity: 'high', fix: 'x' }, { line: 79, type: 'command-injection', severity: 'high', fix: 'x' }]);
+  assert.equal(g.details.decoyHits, 2); assert.equal(g.details.fp, 0); assert.equal(g.score, 1);
+});
+
+test('SR-17: finding xa mọi dòng đã biết vẫn là FP', () => {
+  const g = s1([...ref, { line: 24, type: 'other', severity: 'low', fix: 'x' }]);
+  assert.equal(g.details.fp, 1); assert.ok(g.score < 1);
+});
