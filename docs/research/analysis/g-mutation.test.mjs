@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { mutationSites, applySite, rng, sample, productFiles, evalRun } from './g-mutation.mjs';
+import { mutationSites, applySite, rng, sample, productFiles, evalRun, overlayStarter } from './g-mutation.mjs';
 import { analyze, cp, deltaStat, permDelta } from './g-analyze.mjs';
 
 test('mutationSites: đủ các toán tử và áp đúng vị trí', () => {
@@ -104,4 +104,16 @@ test('deltaStat/permDelta: bài thiếu một nhóm bị bỏ', () => {
   const r2 = [...runs, { key: 'z', task: 't1', arm: 'B6', real: 4, caught: 4 }];
   assert.equal(deltaStat(r2), 0.5);
   assert.ok(permDelta(r2, 50, 's').p > 0);
+});
+
+test('overlayStarter (G-b): chép tệp starter còn thiếu, không ghi đè tệp đã có', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'g-ov-'));
+  const st = path.join(root, 'st'), wk = path.join(root, 'wk');
+  fs.mkdirSync(path.join(st, 'data'), { recursive: true }); fs.mkdirSync(path.join(st, 'src'), { recursive: true }); fs.mkdirSync(path.join(wk, 'src'), { recursive: true });
+  fs.writeFileSync(path.join(st, 'data', 'seed.json'), '{}'); fs.writeFileSync(path.join(st, 'src', 'a.js'), 'starter'); fs.writeFileSync(path.join(wk, 'src', 'a.js'), 'agent');
+  assert.equal(overlayStarter(wk, st), 1);
+  assert.equal(fs.readFileSync(path.join(wk, 'data', 'seed.json'), 'utf8'), '{}');
+  assert.equal(fs.readFileSync(path.join(wk, 'src', 'a.js'), 'utf8'), 'agent');
+  assert.equal(overlayStarter(wk, undefined), 0);
+  fs.rmSync(root, { recursive: true, force: true });
 });

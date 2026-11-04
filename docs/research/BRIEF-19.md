@@ -46,7 +46,7 @@
 
 **K3 — methodologist: chốt E7 và E8**
 - Rà phần "Dự kiến, chưa duyệt" ở §9 V4-3f: cỡ mẫu, phép kiểm, quy tắc loại, quy tắc dừng.
-- **E7:** dùng kho lỗi G-4 thật (sha256 ghi trong RUNLOG). Kiểm xem đủ ≥ 60 lỗi, ≥ 6 bài không. Nếu không đủ thì đề xuất nâng `perRun` cho riêng kho này và ghi sai lệch trước khi lấy mẫu.
+- **E7:** dùng kho lỗi G-4 thật: 194 lỗi, 8 bài, sha256 ghi trong RUNLOG. Với trần 8 lỗi mỗi bài và 1 lỗi mỗi lượt thì chỉ được 53 lỗi, dưới 60. Chọn một trong hai: nâng trần lên 10 mỗi bài (được 65), hoặc giảm số lỗi và tính lại độ rộng CI. Ghi lựa chọn vào §9 trước khi lấy mẫu.
 - **E8:** ước σ_ln của thời gian thực từ `large-pilot`, `gates-pilot` và `b7prime`, rồi tính lại số lượt.
 - Ghi bản chốt ở §9. **Chưa chạy.** Giám đốc duyệt riêng.
 

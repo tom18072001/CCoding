@@ -125,10 +125,24 @@ export async function hidden(dir, hiddenDir) {
 }
 
 /** Đánh giá một lượt: base rồi (nếu đủ điều kiện) các đột biến. Gọi cb(row) cho từng dòng kết quả. */
-export async function evalRun({ run, task, artifactDir, hiddenDir, perRun, seed, skipMut = false }, cb) {
+/** Sai lệch G-b: chép tệp của starter mà artifact không có (vd. `data/` bị .gitignore bỏ khi commit artifact); không ghi đè. */
+export function overlayStarter(work, starterDir) {
+  let n = 0;
+  if (!starterDir || !fs.existsSync(starterDir)) return n;
+  for (const rel of walk(starterDir)) {
+    const dst = path.join(work, rel);
+    if (fs.existsSync(dst)) continue;
+    fs.mkdirSync(path.dirname(dst), { recursive: true });
+    fs.copyFileSync(path.join(starterDir, rel), dst); n++;
+  }
+  return n;
+}
+
+export async function evalRun({ run, task, artifactDir, hiddenDir, starterDir, perRun, seed, skipMut = false }, cb) {
   const work = fs.mkdtempSync(path.join(os.tmpdir(), 'g-run-'));
   try {
     copyTree(artifactDir, work);
+    const overlaid = overlayStarter(work, starterDir);
     const v0 = await visible(work);
     const h0 = await hidden(work, hiddenDir);
     const files = productFiles(work, task.deliverable);
@@ -139,7 +153,7 @@ export async function evalRun({ run, task, artifactDir, hiddenDir, perRun, seed,
     }
     const slow = v0.ms + h0.ms > SLOW_BASE_MS;
     const eligible = !v0.none && !v0.red && h0.pass && !slow && !skipMut;
-    const base = { type: 'base', key: run.key, task: run.task, arm: run.arm, rep: run.rep, vRed: v0.red, vNone: !!v0.none, vTimeout: !!v0.timedOut, hPass: h0.pass, hTimeout: !!h0.timedOut, hTotal: h0.total, baseMs: v0.ms + h0.ms, slow, files: files.length, sites: sites.length, eligible };
+    const base = { type: 'base', key: run.key, task: run.task, arm: run.arm, rep: run.rep, vRed: v0.red, vNone: !!v0.none, vTimeout: !!v0.timedOut, hPass: h0.pass, hTimeout: !!h0.timedOut, hTotal: h0.total, baseMs: v0.ms + h0.ms, slow, files: files.length, sites: sites.length, eligible, ...(overlaid ? { overlaid } : {}) };
     cb(base);
     if (!eligible) return;
     const pick = sample(sites, perRun, rng(`${seed}|${run.key}`));
@@ -160,11 +174,17 @@ async function main() {
   const perRun = Number(args.perRun ?? 12), seed = String(args.seed ?? 20261104), jobs = Number(args.jobs ?? 2);
   const exclude = new Set(String(args.exclude ?? 't4-perf').split(',').filter(Boolean));
   const only = args.only ? new Set(args.only.split(',')) : null;
+  const replace = args.replace ? new Set(args.replace.split(',')) : null; // sai lệch G-b: chạy lại các khóa này, thay dòng cũ
+  const overlay = args['no-overlay'] !== 'true';
   const tasksDir = args.tasks, out = args.out;
   const runsText = fs.readFileSync(args.runs, 'utf8');
   const done = new Set();
+  if (replace && fs.existsSync(out)) {
+    const keep = fs.readFileSync(out, 'utf8').split('\n').filter((l) => l.trim() && !replace.has(JSON.parse(l).key));
+    fs.writeFileSync(out, keep.join('\n') + '\n');
+  }
   if (fs.existsSync(out)) for (const l of fs.readFileSync(out, 'utf8').split('\n')) { if (!l.trim()) continue; const d = JSON.parse(l); if (d.type === 'base') done.add(d.key); if (d.type === 'end') done.add(d.key + '#end'); }
-  const header = { type: 'meta', runs: args.runs, runsSha256: crypto.createHash('sha256').update(runsText).digest('hex'), perRun, seed, jobs, exclude: [...exclude], node: process.version, startedAt: new Date().toISOString() };
+  const header = { type: 'meta', runs: args.runs, runsSha256: crypto.createHash('sha256').update(runsText).digest('hex'), perRun, seed, jobs, exclude: [...exclude], node: process.version, startedAt: new Date().toISOString(), ...(replace ? { replace: [...replace] } : {}), overlay };
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.appendFileSync(out, JSON.stringify(header) + '\n');
   const taskCache = new Map();
@@ -176,10 +196,11 @@ async function main() {
     const task = taskOf(run.task);
     if (!task || task.grader !== 'code' || run.status !== 'done') continue;
     if (only && !only.has(run.key)) continue;
+    if (replace && !replace.has(run.key)) continue;
     const artifactDir = path.join(args.artifacts, run.key);
     if (!fs.existsSync(artifactDir)) { fs.appendFileSync(out, JSON.stringify({ type: 'missing', key: run.key, task: run.task, arm: run.arm }) + '\n'); continue; }
     if (done.has(run.key + '#end')) continue;
-    queue.push({ run, task, artifactDir, hiddenDir: path.join(tasksDir, run.task, 'hidden'), perRun, seed, skipMut: exclude.has(run.task) });
+    queue.push({ run, task, artifactDir, hiddenDir: path.join(tasksDir, run.task, 'hidden'), starterDir: overlay ? path.join(tasksDir, run.task, task.repoDir ?? 'repo') : undefined, perRun, seed, skipMut: exclude.has(run.task) });
   }
   // lượt dở dang (có base mà chưa có end): xóa dòng của lượt đó rồi làm lại
   if (done.size) {
