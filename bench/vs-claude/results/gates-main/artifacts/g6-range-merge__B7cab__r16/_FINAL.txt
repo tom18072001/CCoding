@@ -1,0 +1,83 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g6-range-merge__B7cab__r16] Gộp khoảng thời gian nửa mở dùng overlaps có sẵn (overlaps tính cả điểm chạm, tes
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Mã nguồn và test đã nằm trong worktree: `src/range.js` có `overlaps` dùng `<` và `mergeRanges`, `test/range.test.js` có thêm test. Phần bàn giao nói 'chưa có thay đổi' là sai, vì `git diff` cho thấy 2 tệp đã sửa, 43 dòng thêm và 3 dòng xóa. Việc còn lại là kiểm chứng độc lập bằng `npm test` và đối chiếu với SPEC.md, không viết lại mã.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Kiểm chứng độc lập mergeRanges và overlaps theo SPEC (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã kiểm chứng độc lập `overlaps` (dùng `<`) và `mergeRanges` theo SPEC.md, và mã đúng ở mọi điều khoản nên không phải sửa `src/range.js`. Tôi thêm 3 test ca biên vào `test/range.test.js`. `npm test` cho 12/12 pass, exit 0. Với bản `overlaps` cũ (`<=`), 2 test chạm đầu mút fail (đỏ), và bản hiện tại pass (xanh).
+
+## Tệp đã tạo/sửa
+- `src/range.js`: giữ nguyên so với bản bàn giao. Tôi chỉ sửa tạm sang `<=` để thử đỏ, rồi khôi phục từ bản sao lưu.
+- `test/range.test.js`: thêm 3 test:
+  - hai khoảng giống hệt nhau;
+  - một khoảng bao trọn nhiều khoảng, đầu vào chưa sắp;
+  - `NaN` ở `start` hoặc `end` ném `RangeError`.
+
+## Kiểm chứng
+- Đối chiếu SPEC (điều khoản → mã/test):
+  - chạm đầu mút không chồng → `overlaps` dùng `<`, có test `overlaps` và test giữ riêng khoảng chạm đầu mút;
+  - mảng rỗng → có test;
+  - `start >= end` ném `RangeError` → có test với `[2,2]` và `[5,3]`, cộng thêm `NaN`;
+  - không đột biến đầu vào → `mergeRanges` sao chép đối tượng trước khi sắp xếp, có test kiểm cả đối tượng đầu vào lẫn đầu ra;
+  - trả mảng mới sắp theo start → có test.
+- `npm test` trước khi thêm test: exit 0, 9/9 pass.
+- Đỏ với `overlaps` cũ (`<=`): `npm test` → pass 10, fail 2, hai test fail là "overlaps: chạm đầu mút không chồng" và "mergeRanges giữ riêng khoảng chạm đầu mút". Tôi dùng sửa tạm và sao lưu thay cho `git stash`, vì stash sẽ làm mất mã của worktree chung.
+- Xanh sau khi khôi phục: `npm test` → exit 0, tests 12, pass 12, fail 0.
+- `git status --short`: chỉ ` M src/range.js` và ` M test/range.test.js`.
+
+## Quyết định thiết kế
+- Giữ `overlaps` ở dạng `<`, `mergeRanges` dùng lại nó.
+- Không sửa mã vì các test biên mới đều pass ngay.
+
+## Rủi ro & việc còn mở
+- Không kiểm tra kiểu số nguyên: `1.5` hay chuỗi số vẫn qua kiểm tra. Điều này nằm ngoài yêu cầu của SPEC, tôi chưa kiểm chứng.
+- Git cảnh báo LF sẽ đổi thành CRLF ở hai tệp. Đây chỉ là cảnh báo về cấu hình line ending, không ảnh hưởng kết quả test.
+
+Bản đầy đủ: `.ccoding/T-20261104-180239-608/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-180239-608` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **18 in / 6,324 out**, cache đọc 106.0k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 14 | 5352 | 84217 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 972 | 21747 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Kiểm chứng độc lập mergeRanges và overlaps theo SPEC (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 12 · ℹ suites 0 · ℹ pass 12 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **70** B | thấp | — | — | 100 | 100 | 91 | 100 | 1 | 1 | 90k | 1/9 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 23k | 0/1 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

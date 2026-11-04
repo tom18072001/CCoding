@@ -1,0 +1,83 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g1-slug-dedupe__B7cab__r3] Slug hóa tiêu đề và sinh slug không trùng (lệnh kiểm tra đỏ sẵn)
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Mã nguồn đã có sẵn trong worktree: slugify cắt '-' ở hai đầu và uniqueSlugs theo SPEC.md, cùng test bổ sung. Phần việc còn lại là một hạng mục xác minh các ca biên của bộ nghiệm thu ẩn, không viết lại.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Xác minh ca biên slugify/uniqueSlugs và chốt npm test xanh (@senior-swe, done)
+
+## Tóm tắt
+Tôi đối chiếu `src/slug.js` với SPEC.md và thấy mã đã đúng cho mọi ca biên được giao, nên không sửa gì ở đó. Tôi chỉ thêm 2 test ca biên vào `test/slug.test.js`. `npm test` ra exit 0 (5 test đạt, 0 lỗi). Tôi không thấy rủi ro còn lại. Bộ nghiệm thu ẩn thì tôi không xem được.
+
+## Tệp đã tạo/sửa
+- `src/slug.js`: không đổi, giữ nguyên diff có sẵn.
+- `test/slug.test.js`: thêm test `slugify ca biên` và `uniqueSlugs ca biên`.
+
+## Kiểm chứng
+`npm test` → exit 0 (tests 5, pass 5, fail 0).
+
+Các ca biên đã chạy, đều đạt:
+- **(a)** `'đ Đ'` → `'d-d'`. NFD tổ hợp `'e\u0301 a\u0323'` → `'e-a'`. `'!@# $%^'` → `''`. `''` → `''`.
+- **(b)** `null` → `''`, `undefined` → `''`, số `123` → `'123'`.
+- **(c)** `['a','a','a']` → `['a','a-2','a-3']`.
+- **(d)** `['a','a','a-2']` → `['a','a-2','a-2-2']`.
+- **(e)** `['a-2','a','a']` → `['a-2','a','a-3']`.
+- **(f)** `['','','','']` → `['untitled','untitled-2','untitled-3','untitled-4']`.
+- **(g)** `[]` → `[]`.
+- **(h)** `['Untitled','']` → `['untitled','untitled-2']`.
+- **(i)** mảng đầu vào không bị sửa đổi (so sánh với bản sao).
+
+Các ca (d), (g) và một phần của (f) đã có sẵn trong test từ trước. Lần này tôi chạy lại chúng cùng bộ test.
+
+## Quyết định thiết kế
+- Tôi giữ thuật toán `Set` đã dùng với hậu tố tăng dần, vì nó khớp SPEC, kể cả khi slug trùng với slug của tiêu đề khác.
+- Tôi không đụng vào `src/slug.js` vì không có ca nào sai.
+
+## Rủi ro & việc còn mở
+Không có. Tôi không thêm thư viện ngoài.
+
+Bản đầy đủ: `.ccoding/T-20261104-123522-1e8/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-123522-1e8` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **18 in / 5,676 out**, cache đọc 106.4k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 14 | 4686 | 84861 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 990 | 21538 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Xác minh ca biên slugify/uniqueSlugs và chốt npm test xanh (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | ℹ skipped 0 · ℹ todo 0 · at Test.run (node:internal/test_runner/test:1118:25) · at Test.processPendingSubtests (node:internal/test_runner/test:787:18) · at Test |
+| sau thực thi | `npm test` | 0 | ℹ tests 5 · ℹ suites 0 · ℹ pass 5 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 100 | 94 | 100 | 1 | 1 | 90k | 1/13 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 23k | 0/1 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

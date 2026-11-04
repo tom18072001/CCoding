@@ -1,0 +1,53 @@
+{
+  "argv": [
+    "--arms",
+    "B6",
+    "--tasks",
+    "g3-qty-rename,g4-gb-unit",
+    "--repeats",
+    "32",
+    "--timeout",
+    "20",
+    "--out",
+    "bench\\vs-claude\\results\\gates-main",
+    "--runtime",
+    "claude-cli",
+    "--ccoding-url",
+    "http://127.0.0.1:7425",
+    "--ccoding-data",
+    "C:\\Users\\admin\\ccoding-vs-claude\\ccoding-3e\\data",
+    "--work",
+    "C:\\Users\\admin\\ccoding-vs-claude\\vb3e"
+  ],
+  "cfg": {
+    "ccodingUrl": "http://127.0.0.1:7425",
+    "ccodingData": "C:\\Users\\admin\\ccoding-vs-claude\\ccoding-3e\\data",
+    "runtime": "claude-cli",
+    "timeoutMin": 20,
+    "claudeBin": "claude",
+    "judge": {
+      "enabled": false,
+      "model": "opus"
+    },
+    "seed": "ccvb",
+    "window": null,
+    "quotaState": null,
+    "workRoot": "C:\\Users\\admin\\ccoding-vs-claude\\vb3e"
+  },
+  "meta": {
+    "ccodingCommit": "6c454f67518244af6724ca68037613f99e34ab46",
+    "claudeCliVersion": "2.1.318 (Claude Code)",
+    "window": null,
+    "quotaState": null,
+    "timeoutMin": 20
+  },
+  "armIds": [
+    "B6"
+  ],
+  "taskIds": [
+    "g3-qty-rename",
+    "g4-gb-unit"
+  ],
+  "repeats": 32,
+  "startedAt": "2026-11-04T12:50:01.185Z"
+}

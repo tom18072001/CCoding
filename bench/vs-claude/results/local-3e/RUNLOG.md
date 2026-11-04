@@ -21,6 +21,8 @@ Phân loại dữ liệu: **Nội bộ**. Bài tổng hợp, không có dữ li�
 | 12:03 | E3 xong: 6/6 lượt, exit 0, không chạm hạn mức. Kết quả ở `results/large-pilot`, sổ chạy riêng `large-pilot/RUNLOG.md`. Bắt đầu E4a |
 | 12:19 | **Đổi thứ tự** theo §9, mục "E3 xong; E5 tạm giữ" ghi lúc 12:20, trước lượt đầu của E4b, E5 và E6. Kịch bản `run3e-b.ps1` chạy nền. Khi `run3e.ps1` bắt đầu E4b, nó tạo `STOP-3e` kèm `STOP-3e.auto`, để `run3e.ps1` dừng trước E5. Sau đó nó chạy tiếp E4b (bỏ qua khóa đã xong), rồi E6a, E6b, E6c. **E5 tạm giữ**, chờ Phòng Nghiên cứu thiết kế lại và giám đốc duyệt. Tệp `STOP-3e` do giám đốc tạo vẫn dừng cả hai kịch bản |
 | 12:50 | **Giám đốc duyệt** trong phiên: (1) bước 2 của B-14, A/B `stablePrefix`, 96 lượt, local, sau E6, đúng mục đăng ký trước ở §9; (2) E5 thiết kế lại (E5′, ép làn đầy đủ, khoảng 40 lượt), local, sau E6. E5′ chỉ chạy khi mục §9 V4-3e-E5′ của BRIEF-17 đã gộp và D12 (arm `B0F`, `B1F`) đã gộp. Bước 2 chỉ chạy khi dòng hash mốc khóa đầu `results/b14-step2/RUNLOG.md` đã điền. Thứ tự dự kiến: E4 → E6 → E5′ → B-14 bước 2. Kiểm sandbox trong WSL để sau |
+| 18:17 | E4a xong 128/128 khóa. Bắt đầu E4b. Từ dòng 18:18, Claude Code CLI tự cập nhật 2.1.312 → 2.1.318 (sai lệch ghi ở `gates-main/RUNLOG.md`) |
+| 19:49–19:53 | E4b xong 64/64 khóa. `run3e.ps1` thấy `STOP-3e` (do `run3e-b.ps1` tạo) nên dừng trước E5, đúng bàn giao. `run3e-b.ps1` chạy lại E4b để bỏ qua khóa đã xong, rồi bắt đầu **E6a lúc 19:53**. E4: 192/192 khóa, 5,10 giờ máy, khoảng 54 USD (`gates-main/RUNLOG.md`) |
 
 ## Nguồn p của H6 cho E6 (ghi trước lượt E6 đầu tiên, theo V4-3e-E6 (6))
 
