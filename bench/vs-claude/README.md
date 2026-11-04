@@ -123,6 +123,11 @@ node bench/vs-claude/run.mjs --arms A0-opus,A0-sonnet,A1,A2,B0,B1,B2,B6 --repeat
 # 4. Analyse
 node bench/vs-claude/analyze.mjs bench/vs-claude/results/full --baseline A0-sonnet --treatment B0
 node bench/vs-claude/pairwise.mjs bench/vs-claude/results/full --x A0-opus --y B0
+
+# Chế độ chấm (SR-07): MỘT chế độ cho cả nghiên cứu. Chạy chính LUÔN có `--judge` (regex chỉ là lưới an toàn).
+# analyze.mjs từ chối khi `details.judge` khác nhau giữa các lượt cùng bài và ghi model giám khảo vào báo cáo.
+# Cờ phân tích: `--strict` (từ chối khi một arm có nhiều hơn một hash CCoding, SR-03) · `--legacy-rng` (LCG cũ + xáo H10 cũ, chỉ để tái lập số đã công bố, SR-20)
+# · `--allow-mixed-judge` (chỉ để đối chiếu dữ liệu cũ lẫn regex/opus; không dùng cho phân tích chính) · `--b01-arm SL` (arm cho dòng TOST B-01).
 ```
 
 Options: `--tasks all|<id>,<prefix>,<category>` · `--repeats N` · `--timeout <min>` · `--runtime claude-cli` · `--ccoding-url` · `--ccoding-data <CCoding data dir>` (for `calls.jsonl` token detail; default `../../data`) · `--judge --judge-model opus` · `--claude-bin <path>` · `--work <dir>` (workspaces; default OS temp) · `--dry-run`. Test đơn vị: `node --test "bench/vs-claude/test/*.test.mjs"` (Node 24 không nhận tên thư mục).
