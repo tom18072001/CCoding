@@ -155,3 +155,46 @@ test('SR-21: bước chọn của A2 — prompt người chọn chứa chuỗi b
   assert.equal(leakInSelectorPrompt(`### Candidate 1\nđã đọc ${path.join(SUITE, 'tasks')}`, NEEDLES), true);
   assert.equal(leakInSelectorPrompt('### Candidate 1\ntheo hidden/answer.json thì …', NEEDLES), true);
 });
+
+// ---------- SR-23: bảng Latin thật ----------
+import { latinOrders } from '../lib/queue.mjs';
+
+test('SR-23: latinOrders — mỗi arm đứng mỗi vị trí đều nhau, mỗi cặp liền kề (có thứ tự) đúng một lần, với k = 1…8', () => {
+  assert.deepEqual(latinOrders(1), [[0]]);
+  for (let k = 2; k <= 8; k++) {
+    const rows = latinOrders(k);
+    assert.equal(rows.length, k % 2 ? 2 * k : k, `k=${k}`);
+    for (const r of rows) assert.deepEqual([...r].sort((a, b) => a - b), [...Array(k).keys()], `k=${k}: mỗi hàng là một hoán vị`);
+    const perRow = rows.length / k;
+    for (let pos = 0; pos < k; pos++) for (let a = 0; a < k; a++) assert.equal(rows.filter((r) => r[pos] === a).length, perRow, `k=${k}: arm ${a} ở vị trí ${pos}`);
+    const pairs = new Map();
+    for (const r of rows) for (let i = 0; i + 1 < k; i++) pairs.set(`${r[i]}>${r[i + 1]}`, (pairs.get(`${r[i]}>${r[i + 1]}`) ?? 0) + 1);
+    assert.equal(pairs.size, k * (k - 1), `k=${k}: đủ mọi cặp có thứ tự`);
+    assert.ok([...pairs.values()].every((n) => n === (k % 2 ? 2 : 1)), `k=${k}: mỗi cặp đúng ${k % 2 ? 'hai (k lẻ, thêm bản đảo)' : 'một'} lần`);
+  }
+});
+
+test('SR-23: xoay vòng cũ (r+ti)%k KHÔNG cân bằng cặp liền kề — bảng Latin thì có (k=4)', () => {
+  const rot = Array.from({ length: 4 }, (_, i) => [0, 1, 2, 3].map((x) => (x + i) % 4));
+  const pairs = (rows) => new Set(rows.flatMap((r) => r.slice(0, -1).map((x, i) => `${x}>${r[i + 1]}`))).size;
+  assert.equal(pairs(rot), 4);
+  assert.equal(pairs(latinOrders(4)), 12);
+});
+
+test('SR-23: run.mjs --dry-run xếp lịch theo bảng Latin (4 arm × 4 bài: mỗi arm đứng mỗi vị trí đúng một lần) và vẫn chạy với 1 arm', () => {
+  const run = (arms, tasks) => spawnSync(process.execPath, [path.join(SUITE, 'run.mjs'), '--arms', arms, '--tasks', tasks, '--repeats', '1', '--dry-run'], { encoding: 'utf8' });
+  const r = run('A0-sonnet,B0,B6,A2', 't1,t2,t3,t4');
+  assert.equal(r.status, 0, r.stderr);
+  const keys = r.stdout.trim().split('\n').slice(1);
+  assert.equal(keys.length, 16);
+  for (let pos = 0; pos < 4; pos++) {
+    const armsAtPos = [0, 1, 2, 3].map((b) => keys[b * 4 + pos].split('__')[1]);
+    assert.equal(new Set(armsAtPos).size, 4, `vị trí ${pos}: ${armsAtPos}`);
+  }
+  const adj = new Set();
+  for (let b = 0; b < 4; b++) for (let pos = 0; pos < 3; pos++) adj.add(`${keys[b * 4 + pos].split('__')[1]}>${keys[b * 4 + pos + 1].split('__')[1]}`);
+  assert.equal(adj.size, 12, 'cặp liền kề cân bằng (xoay vòng chỉ cho 4)');
+  const one = run('B0', 't1');
+  assert.equal(one.status, 0, one.stderr);
+  assert.match(one.stdout, /^1 runs/);
+});

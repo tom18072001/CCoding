@@ -14,7 +14,7 @@ import { runCcoding, serverUp } from './lib/ccoding.mjs';
 import { costOfCalls, priceRun } from './lib/pricing.mjs';
 import { GRADERS } from './lib/grade.mjs';
 import { blind } from './lib/judge.mjs';
-import { EXIT_RATE_LIMIT, checkArms, classifyRun, cliVersion, doneKeys, gitCommit, leakInCalls, leakInSelectorPrompt, leakInTranscript, leakNeedles, provenance, replacementRuns, suiteTaskIds, supportedLanes } from './lib/queue.mjs';
+import { EXIT_RATE_LIMIT, checkArms, classifyRun, cliVersion, doneKeys, gitCommit, latinOrders, leakInCalls, leakInSelectorPrompt, leakInTranscript, leakNeedles, provenance, replacementRuns, suiteTaskIds, supportedLanes } from './lib/queue.mjs';
 import { populateWorkspace, taskDirs } from './lib/workspace.mjs';
 
 const SUITE = path.dirname(fileURLToPath(import.meta.url));
@@ -52,8 +52,8 @@ function shuffled(arr, seed) {
 const schedule = [];
 for (let r = 1; r <= repeats; r++) {
   shuffled(taskIds, `${cfg.seed}/${r}`).forEach((t, ti) => {
-    const k = (r + ti) % armIds.length;
-    for (const a of [...armIds.slice(k), ...armIds.slice(0, k)]) schedule.push({ task: t, arm: a, rep: r, key: `${t}__${a}__r${r}` });
+    // SR-23: bảng Latin (Williams) thật — mỗi arm đứng mỗi vị trí đều nhau, mỗi cặp liền kề đều nhau; thay cho xoay vòng (r + ti) % k.
+    for (const a of latinOrders(armIds.length)[(r + ti) % latinOrders(armIds.length).length].map((x) => armIds[x])) schedule.push({ task: t, arm: a, rep: r, key: `${t}__${a}__r${r}` });
   });
 }
 
