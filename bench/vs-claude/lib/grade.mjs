@@ -44,10 +44,78 @@ export function tapScore(out) {
   return { score: total ? pass / total : 0, pass: summary && total > 0 && fail === 0, details: { passed: pass, total, failed, ...(summary ? {} : { noSummary: true }) } };
 }
 
-/** Coding: copy workdir to a scratch dir, drop hidden tests in, run node:test, score = passed / total hidden tests. */
-export function gradeCode({ workdir, hiddenDir }) {
+/** Danh sách tệp/thư mục sản phẩm từ `task.deliverable` ("src/, bin/logq.js"). */
+export function deliverablePaths(deliverable) {
+  return String(deliverable ?? '').split(/[,;]/).map((x) => x.trim()).filter(Boolean);
+}
+const hasFiles = (p) => {
+  if (!fs.existsSync(p)) return false;
+  if (!fs.statSync(p).isDirectory()) return true;
+  return fs.readdirSync(p, { withFileTypes: true }).some((e) => e.isFile() || hasFiles(path.join(p, e.name)));
+};
+/** SR-13: thiếu tệp/thư mục sản phẩm (thư mục rỗng cũng là thiếu). Không có `task.deliverable` → false. */
+export function deliverablesMissing(workdir, deliverable) {
+  return deliverablePaths(deliverable).filter((d) => !hasFiles(path.join(workdir, d)));
+}
+
+const SKIP = new Set(['.git', 'node_modules']);
+function listFiles(root, rel = '') {
+  const dir = path.join(root, rel);
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    if (SKIP.has(e.name)) return [];
+    const r = path.posix.join(rel.split(path.sep).join('/'), e.name);
+    return e.isDirectory() ? listFiles(root, r) : [r];
+  });
+}
+const sameFile = (a, b) => fs.existsSync(a) && fs.existsSync(b) && fs.readFileSync(a).equals(fs.readFileSync(b));
+
+/**
+ * SR-13: tệp sản phẩm "phải đổi" = tệp ở lời giải tham chiếu (task.solutionDir / hidden/solution) khác starter hoặc không có ở starter.
+ * Tệp agent không sửa = còn nguyên như starter (hoặc không tồn tại).
+ */
+export function untouchedRequiredFiles({ workdir, hiddenDir, starterDir, solutionDir }) {
+  const refs = [solutionDir, path.join(hiddenDir, 'solution')].filter((d) => d && fs.existsSync(d));
+  const required = new Set();
+  for (const ref of refs) for (const f of listFiles(ref)) if (!starterDir || !sameFile(path.join(ref, f), path.join(starterDir, f))) required.add(f);
+  return [...required].filter((f) => {
+    const w = path.join(workdir, f);
+    if (!fs.existsSync(w)) return true;
+    return !!starterDir && sameFile(w, path.join(starterDir, f));
+  }).sort();
+}
+
+/** Gán test ẩn trượt cho tệp: `hidden/filemap.json` {regex tên test: tệp}; không có thì khớp tên cơ sở của tệp (không đuôi) trong tên test. */
+export function attributeFailures(failed, files, map = {}) {
+  const rules = Object.entries(map).map(([re, file]) => [new RegExp(re, 'i'), file]);
+  let n = 0;
+  for (const name of failed) {
+    const viaMap = rules.find(([re]) => re.test(name));
+    if (viaMap) { if (files.includes(viaMap[1])) n++; continue; }
+    if (files.some((f) => name.toLowerCase().includes(path.posix.basename(f).replace(/\.[^.]+$/, '').toLowerCase()))) n++;
+  }
+  return n;
+}
+
+/** SR-13: lệnh kiểm của chính agent (`npm test`) còn đỏ khi lượt kết thúc. Không có script test → false. */
+export function visibleRed(dir, { timeoutMs = 120000 } = {}) {
+  const pj = path.join(dir, 'package.json');
+  if (!fs.existsSync(pj)) return false;
+  let scripts; try { scripts = JSON.parse(fs.readFileSync(pj, 'utf8')).scripts; } catch { return true; }
+  if (!scripts?.test) return false;
+  const r = spawnSync('npm', ['test', '--silent'], { cwd: dir, encoding: 'utf8', timeout: timeoutMs, shell: process.platform === 'win32', env: { ...process.env, NODE_TEST_CONTEXT: undefined } });
+  return r.status !== 0;
+}
+
+/**
+ * Coding: copy workdir to a scratch dir, drop hidden tests in, run node:test, score = passed / total hidden tests.
+ * Có `task`: thêm formatMiss (thiếu tệp sản phẩm), details.redAtEnd, details.untouchedFileFailures (SR-13).
+ */
+export function gradeCode({ workdir, hiddenDir, task, suiteRepoDir, visibleCheck = true }) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ccvb-grade-'));
   fs.cpSync(workdir, tmp, { recursive: true, filter: (s) => !s.includes(`${path.sep}.git`) && !s.includes(`${path.sep}node_modules`) });
+  const missing = task ? deliverablesMissing(workdir, task.deliverable) : [];
+  const redAtEnd = task && visibleCheck ? visibleRed(tmp) : false;
   fs.mkdirSync(path.join(tmp, 'hidden'), { recursive: true });
   // Copy every top-level file (tests plus helpers such as _helpers.js, _gen.js, oracle.js) but run only *.test.js.
   const files = fs.readdirSync(hiddenDir, { withFileTypes: true }).filter((e) => e.isFile()).map((e) => e.name);
@@ -57,7 +125,19 @@ export function gradeCode({ workdir, hiddenDir }) {
   // --test-force-exit: handle còn mở (setInterval, server) trong mã được chấm không làm treo bộ chấm.
   const r = spawnSync(process.execPath, ['--test', '--test-force-exit', `--test-timeout=${GRADE_TEST_TIMEOUT_MS}`, '--test-reporter=tap', ...tests.map((f) => `hidden/${f}`)], { cwd: tmp, encoding: 'utf8', timeout: GRADE_PROCESS_TIMEOUT_MS, maxBuffer: 64 << 20, env: { ...process.env, NODE_TEST_CONTEXT: undefined } }); // NODE_TEST_CONTEXT: do not inherit when run under `node --test`
   fs.rmSync(tmp, { recursive: true, force: true });
-  return { ...tapScore(`${r.stdout}\n${r.stderr}`), ...(r.error ? { gradeError: String(r.error.code ?? r.error.message) } : {}) };
+  const g = tapScore(`${r.stdout}
+${r.stderr}`);
+  const extra = {};
+  if (task) {
+    const root = path.dirname(hiddenDir);
+    const untouched = untouchedRequiredFiles({ workdir, hiddenDir, starterDir: suiteRepoDir, solutionDir: task.solutionDir ? path.join(root, task.solutionDir) : undefined });
+    const mapFile = path.join(hiddenDir, 'filemap.json');
+    const map = fs.existsSync(mapFile) ? JSON.parse(fs.readFileSync(mapFile, 'utf8')) : {};
+    extra.redAtEnd = redAtEnd;
+    extra.untouchedFileFailures = attributeFailures(g.details.failed, untouched, map);
+    extra.untouchedFiles = untouched;
+  }
+  return { ...g, details: { ...g.details, ...extra }, ...(task ? { formatMiss: missing.length > 0, ...(missing.length ? { missingDeliverables: missing } : {}) } : {}), ...(r.error ? { gradeError: String(r.error.code ?? r.error.message) } : {}) };
 }
 
 /** Chuẩn hóa JSON: sắp khóa đối tượng theo thứ tự chữ cái (đệ quy); thứ tự mảng giữ nguyên (SR-16). */

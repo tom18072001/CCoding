@@ -92,3 +92,69 @@ test('SR-18: REVIEW ngoài 300–500 từ không đạt review_written', () => {
   assert.equal(re1(refAns, `${refReview}\n${'word '.repeat(200)}`).details.checks.review_written, false);
   assert.equal(countWords('a  b\nc'), 3);
 });
+
+// ---- SR-13
+import { gradeCode, deliverablesMissing, attributeFailures } from '../lib/grade.mjs';
+/** Bài giả: starter (a.js, b.js trả sai), ref sửa cả hai; test ẩn: 2 test tên "a: …", 1 test "b: …". */
+const mkTask = () => {
+  const root = tmp('task');
+  put(root, 'starter/package.json', { scripts: { test: 'node --test \"test/**/*.test.js\"' } });
+  put(root, 'starter/src/a.js', 'export const a = () => 0;\n');
+  put(root, 'starter/src/b.js', 'export const b = () => 0;\n');
+  put(root, 'starter/test/ok.test.js', "import t from 'node:test'; t('ok', () => {});\n");
+  put(root, 'ref/src/a.js', 'export const a = () => 1;\n');
+  put(root, 'ref/src/b.js', 'export const b = () => 2;\n');
+  put(root, 'hidden/x.hidden.test.js', "import t from 'node:test'; import assert from 'node:assert/strict'; import { a } from '../src/a.js'; import { b } from '../src/b.js';\nt('a: một', () => assert.equal(a(), 1));\nt('a: hai', () => assert.equal(a(), 1));\nt('b: một', () => assert.equal(b(), 2));\n");
+  return { root, hiddenDir: path.join(root, 'hidden'), suiteRepoDir: path.join(root, 'starter'), task: { id: 'fake', deliverable: 'src/', solutionDir: 'ref' } };
+};
+const copyOf = (src) => { const d = tmp('copy'); fs.cpSync(src, d, { recursive: true }); return d; };
+
+test('SR-13: thiếu tệp sản phẩm → formatMiss; đủ → không', () => {
+  const w = tmp('fm'); put(w, 'bin/x.js', '1');
+  assert.deepEqual(deliverablesMissing(w, 'src/, bin/x.js'), ['src/']);
+  assert.deepEqual(deliverablesMissing(w, 'bin/x.js'), []);
+  fs.mkdirSync(path.join(w, 'src')); // thư mục rỗng vẫn là thiếu
+  assert.deepEqual(deliverablesMissing(w, 'src/'), ['src/']);
+  const T = mkTask();
+  const empty = tmp('empty');
+  assert.equal(gradeCode({ workdir: empty, ...T, visibleCheck: false }).formatMiss, true);
+  assert.equal(gradeCode({ workdir: copyOf(path.join(T.root, 'ref')), ...T, visibleCheck: false }).formatMiss, false);
+});
+
+test('SR-13: untouchedFileFailures chỉ đếm test trượt thuộc tệp agent không sửa', () => {
+  const T = mkTask();
+  const w = copyOf(T.suiteRepoDir); // agent chỉ sửa b.js
+  fs.copyFileSync(path.join(T.root, 'ref/src/b.js'), path.join(w, 'src/b.js'));
+  const g = gradeCode({ workdir: w, ...T, visibleCheck: false });
+  assert.deepEqual(g.details.failed, ['a: một', 'a: hai']);
+  assert.equal(g.details.untouchedFileFailures, 2);
+  assert.deepEqual(g.details.untouchedFiles, ['src/a.js']);
+  // agent sửa a.js nhưng sửa sai: trượt nhưng KHÔNG thuộc tệp không sửa
+  fs.writeFileSync(path.join(w, 'src/a.js'), 'export const a = () => 5;\n');
+  assert.equal(gradeCode({ workdir: w, ...T, visibleCheck: false }).details.untouchedFileFailures, 0);
+  // lời giải tham chiếu đúng: 0 trượt, 0 untouched
+  const ok = gradeCode({ workdir: copyOf(path.join(T.root, 'ref')), ...T, visibleCheck: false });
+  assert.equal(ok.score, 1); assert.equal(ok.details.untouchedFileFailures, 0);
+});
+
+test('SR-13: filemap.json gán test theo tên không chứa tên tệp', () => {
+  assert.equal(attributeFailures(['truy vấn: x', 'CLI: y', 'parse: z'], ['src/query.js', 'bin/logq.js'], { '^truy vấn': 'src/query.js', '^CLI': 'bin/logq.js' }), 2);
+  assert.equal(attributeFailures(['parse: z', 'CLI: y'], ['src/parse.js'], {}), 1);
+});
+
+test('SR-13: redAtEnd khi lệnh kiểm của agent còn đỏ lúc kết thúc', () => {
+  const T = mkTask();
+  const green = copyOf(path.join(T.root, 'ref')); put(green, 'package.json', { type: 'module', scripts: { test: 'node --test \"test/**/*.test.js\"' } }); put(green, 'test/ok.test.js', "import t from 'node:test'; t('ok', () => {});\n");
+  assert.equal(gradeCode({ workdir: green, ...T }).details.redAtEnd, false);
+  const red = copyOf(green); put(red, 'test/bad.test.js', "import t from 'node:test'; import assert from 'node:assert/strict'; t('bad', () => assert.equal(1, 2));\n");
+  assert.equal(gradeCode({ workdir: red, ...T }).details.redAtEnd, true);
+});
+
+test('SR-13: ca t5 (starter chưa làm gì, như C9 ccoding-fastlane.2): trượt toàn bộ, untouched > 0', { timeout: 600000 }, () => {
+  const t5 = path.join(SUITE, 'tasks/t5-logq');
+  const task = JSON.parse(fs.readFileSync(path.join(t5, 'task.json'), 'utf8'));
+  const g = gradeCode({ workdir: copyOf(path.join(t5, 'starter')), hiddenDir: path.join(t5, 'hidden'), suiteRepoDir: path.join(t5, 'starter'), task, visibleCheck: false });
+  assert.ok(g.details.failed.length > 0);
+  assert.equal(g.details.untouchedFileFailures, g.details.failed.length);
+  assert.ok(g.details.untouchedFiles.includes('src/parse.js'));
+});

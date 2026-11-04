@@ -1,0 +1,1 @@
+{ "^parse": "src/parse.js", "^truy vấn": "src/query.js", "^lỗi cú pháp": "src/query.js", "^tổng hợp": "src/agg.js", "^CLI": "bin/logq.js" }
