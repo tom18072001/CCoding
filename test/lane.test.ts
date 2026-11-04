@@ -57,6 +57,22 @@ test('l1-modules (5 phần độc lập) ⇒ lớn, làn nhanh', () => {
   assert.equal(c.rule, 3);
 });
 
+test('V4-3f khối B: l1-modules mà hạng mục chạy lệnh làm lần lượt (không có worktree con) ⇒ giữ làn đơn; tắt requireParallel ⇒ làn nhanh như cũ', () => {
+  const { s } = pick('l1-modules');
+  const serial = { ...s, serialWriters: true };
+  const c = chooseLane(serial, cfg);
+  assert.deepEqual([c.lane, c.rule], ['single', 3]);
+  assert.match(c.why, /làm lần lượt/);
+  assert.equal(cfg.fastLane.requireParallel, true, 'mặc định bật');
+  const off: LaneConfig = { ...cfg, fastLane: { ...cfg.fastLane, requireParallel: false } };
+  assert.equal(chooseLane(serial, off).lane, 'fast');
+  // song song được thì không đổi
+  assert.equal(chooseLane({ ...s, serialWriters: false }, cfg).lane, 'fast');
+  // làn đơn tắt thì vẫn làn nhanh (không có làn nào rẻ hơn để chọn)
+  const noSingle: LaneConfig = { ...cfg, lanes: { single: { enabled: false, maxParts: 5, maxFilesTouched: 6 } } };
+  assert.equal(chooseLane(serial, noSingle).lane, 'fast');
+});
+
 test('l2-chain (chuỗi phụ thuộc tuần tự) ⇒ làn đơn dù nêu nhiều tệp', () => {
   const { s, c } = pick('l2-chain');
   assert.equal(s.sequential, true);

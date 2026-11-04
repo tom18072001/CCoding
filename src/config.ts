@@ -223,8 +223,10 @@ export interface Config {
    * Làn nhanh cho việc nhỏ (options.lane 'auto'): đề bài ≤ maxBriefChars ký tự và repo ≤ maxRepoFiles tệp / maxRepoBytes byte (git ls-files).
    * planModel: model lập kế hoạch · finalReport: 'template' (báo cáo dựng từ bàn giao, không gọi model) hoặc 'llm' ·
    * maxParallel: số hạng mục độc lập chạy cùng lúc tối đa (nâng options.maxParallel của nhiệm vụ lên khi kế hoạch có nhiều hạng mục độc lập hơn).
+   * requireParallel (mặc định true): 'auto' chỉ chọn làn nhanh vì "việc lớn" khi hạng mục chạy lệnh chạy song song được (có worktree con);
+   * không thì giữ làn đơn và làn đơn không nâng cấp chỉ vì phạm vi rộng — chia việc mà vẫn làm lần lượt chỉ thêm chi phí (V4-3f khối B).
    */
-  fastLane: { enabled: boolean; maxBriefChars: number; maxRepoFiles: number; maxRepoBytes: number; planModel: string; finalReport: 'template' | 'llm'; maxParallel?: number };
+  fastLane: { enabled: boolean; maxBriefChars: number; maxRepoFiles: number; maxRepoBytes: number; planModel: string; finalReport: 'template' | 'llm'; maxParallel?: number; requireParallel?: boolean };
   /**
    * Làn đơn (B-01, options.lane 'auto'): việc có parts < maxParts và filesTouched < maxFilesTouched (hoặc chuỗi tuần tự) chạy một agent, không điều phối.
    * Ép làn: options.lane của nhiệm vụ > ProjectDef.lane của dự án > auto (không ép).
@@ -400,7 +402,7 @@ const BUILTIN: Omit<Config, 'root'> = {
     baselineTasks: 5,
     retention: { proposalDays: 183 },
   },
-  fastLane: { enabled: true, maxBriefChars: 4000, maxRepoFiles: 300, maxRepoBytes: 1_500_000, planModel: 'sonnet', finalReport: 'template', maxParallel: 4 },
+  fastLane: { enabled: true, maxBriefChars: 4000, maxRepoFiles: 300, maxRepoBytes: 1_500_000, planModel: 'sonnet', finalReport: 'template', maxParallel: 4, requireParallel: true },
   lanes: { single: { enabled: true, maxParts: 5, maxFilesTouched: 6, slim: { ...SLIM_DEFAULTS } } },
   guard: { useEventCwd: true, allowOwnToolResults: true }, // B-08
   tools: {

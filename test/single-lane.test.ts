@@ -154,3 +154,44 @@ test('B-01: ép làn đơn trên dự án phòng "auto" → định tuyến bằ
     a.cleanupAll();
   }
 });
+
+test('V4-3f khối B: dự án không tách được worktree con (isolation none) + việc 5 module ⇒ làn đơn, không nâng cấp chỉ vì phạm vi rộng; có worktree ⇒ làn nhanh như cũ', async () => {
+  const brief = 'Hiện thực năm module độc lập (money, calendar, csvcheck, slug, ratelimit) theo SPEC.md, mỗi module một tệp src/<tên>/index.js và test riêng.';
+  for (const isolation of ['none', 'worktree'] as const) {
+    const a = setup(GREEN);
+    compliantExecute(a);
+    const p = a.store.project('repo')!;
+    a.store.saveProject({ ...p, isolation });
+    // agent "làm" 10 tệp (> lanes.single.maxFilesTouched = 6) để thử nhánh nâng cấp theo phạm vi
+    const orch = a.orchestrator as unknown as { call: (...x: unknown[]) => Promise<{ text: string }> };
+    const orig = orch.call.bind(orch);
+    orch.call = async (agent, phase, build, ctx) => {
+      const r = await orig(agent, phase, build, ctx);
+      const cwd = (ctx as { cwd?: string }).cwd;
+      if (phase === 'execute' && cwd) for (const m of ['money', 'calendar', 'csvcheck', 'slug', 'ratelimit']) {
+        fs.mkdirSync(path.join(cwd, 'src', m), { recursive: true });
+        fs.writeFileSync(path.join(cwd, 'src', m, 'index.js'), `module.exports = '${m}';\n`);
+        fs.mkdirSync(path.join(cwd, 'test'), { recursive: true });
+        fs.writeFileSync(path.join(cwd, 'test', `${m}.test.js`), '\n');
+      }
+      return r;
+    };
+    try {
+      const t = a.orchestrator.submit({ brief, projectId: 'repo' });
+      const done = await a.orchestrator.waitFor(t.id);
+      assert.equal(done.status, 'done', `${isolation}: ${done.error}`);
+      const pickEv = a.logs.query({ task: t.id }).find((e) => e.kind === 'lane.pick');
+      if (isolation === 'none') {
+        assert.equal(done.lane, 'single', JSON.stringify(pickEv?.data));
+        assert.match(String((pickEv?.data as { why?: string })?.why), /làm lần lượt/);
+        assert.equal((pickEv?.data as { signals?: { serialWriters?: boolean } })?.signals?.serialWriters, true);
+        assert.equal(a.logs.query({ task: t.id }).some((e) => e.kind === 'lane.escalate'), false, 'không nâng cấp vì phạm vi');
+        assert.equal(phasesOf(a, t.id).filter((x) => x === 'execute').length, 1);
+      } else {
+        assert.equal((pickEv?.data as { lane?: string })?.lane, 'fast', JSON.stringify(pickEv?.data));
+      }
+    } finally {
+      a.cleanupAll();
+    }
+  }
+});

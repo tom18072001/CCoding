@@ -1,4 +1,5 @@
 // CCoding arm: register the run's workspace as a project, submit the brief over REST, wait, collect usage.
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { weighted } from './claude.mjs';
@@ -106,7 +107,7 @@ export async function runCcoding(opts) {
   try {
   await api('/api/projects', { method: 'POST', body: JSON.stringify({
     id: opts.projectId, name: `bench ${opts.projectId}`, workspace: opts.workdir, department: 'auto',
-    classification: 'internal', runtime: opts.runtime, toolAccess: 'exec', isolation: 'none', budgetMode: 'complete', planApproval: false,
+    classification: 'internal', runtime: opts.runtime, toolAccess: 'exec', isolation: opts.isolation ?? 'none', budgetMode: 'complete', planApproval: false,
     checkCommands: fs.existsSync(path.join(opts.workdir, 'package.json')) ? ['npm test'] : [],
   }) });
   task = await api('/api/tasks', { method: 'POST', body: JSON.stringify({
@@ -140,6 +141,10 @@ export async function runCcoding(opts) {
   }
   if (!infra && t.status !== 'done') { const rl = scan(); if (rl.rateLimited) { infra = 'rate-limit'; resetsAt = rl.resetsAt; } }
   const wallSec = (Date.now() - t0) / 1000;
+  // V4-3f: isolation 'worktree' → CCoding làm trên nhánh nhiệm vụ trong worktree riêng; đưa thư mục chấm về đúng commit cuối của nhánh
+  const isolation = opts.isolation ?? 'none';
+  let checkout;
+  if (isolation === 'worktree') checkout = checkoutTaskBranch(opts.workdir, t.branch);
   let finalText = '';
   try { finalText = String(await api(`/api/tasks/${task.id}/file?path=FINAL.md`)); } catch { /* no report */ }
 
@@ -177,8 +182,15 @@ export async function runCcoding(opts) {
     status: t.status === 'done' ? 'done' : 'failed', wallSec, tokens, costUsd, turns, calls,
     finalText, taskId: task.id, byPhase, agentsUsed: Object.keys(byAgent).length, byAgent,
     department: t.department, attention: t.attention,
-    research, infra, ...(resetsAt ? { resetsAt } : {}),
+    research: { ...research, isolation, ...(checkout ? { checkout } : {}) }, infra, ...(resetsAt ? { resetsAt } : {}),
   };
+}
+
+/** Đưa `workdir` (repo gốc của lượt) về commit cuối của nhánh nhiệm vụ (HEAD tách rời: nhánh có thể đang mở ở worktree khác). */
+export function checkoutTaskBranch(workdir, branch) {
+  if (!branch) return { ok: false, note: 'nhiệm vụ không có nhánh' };
+  const r = spawnSync('git', ['checkout', '-q', '--detach', branch], { cwd: workdir, encoding: 'utf8' });
+  return r.status === 0 ? { ok: true, branch } : { ok: false, branch, note: String(r.stderr || r.error?.message || '').trim().slice(0, 300) };
 }
 
 export async function serverUp(baseUrl) {

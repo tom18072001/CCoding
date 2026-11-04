@@ -17,10 +17,15 @@ export interface LaneSignals {
   forced?: LaneName;
   /** Dấu hiệu chuỗi phụ thuộc tuần tự (tầng sau dùng đầu ra tầng trước): song song không có ích ⇒ giữ làn đơn. */
   sequential: boolean;
+  /**
+   * Hạng mục chạy lệnh sẽ làm LẦN LƯỢT vì dự án không tách được worktree con (vd. `isolation: 'none'`, không có nhánh nhiệm vụ).
+   * V4-3f khối B: bench chạy như vậy nên làn nhanh chỉ thêm chi phí chia việc mà không nhanh hơn ⇒ giữ làn đơn (khi `fastLane.requireParallel`).
+   */
+  serialWriters?: boolean;
 }
 
 export interface LaneConfig {
-  fastLane: { maxBriefChars: number; maxRepoFiles: number; maxRepoBytes: number };
+  fastLane: { maxBriefChars: number; maxRepoFiles: number; maxRepoBytes: number; requireParallel?: boolean };
   lanes?: { single?: { enabled: boolean; maxParts: number; maxFilesTouched: number } };
 }
 
@@ -131,6 +136,8 @@ export function chooseLane(s: LaneSignals, cfg: LaneConfig): LaneChoice {
   const big = s.parts >= single.maxParts ? `${s.parts} phần độc lập` : s.filesTouched >= single.maxFilesTouched ? `${s.filesTouched} tệp/thư mục` : '';
   if (big) {
     if (s.sequential) return { lane: small, rule: 3, why: `${big} nhưng nối tiếp phụ thuộc — song song không có ích` };
+    if (s.serialWriters && fl.requireParallel !== false && single.enabled)
+      return { lane: 'single', rule: 3, why: `${big} nhưng hạng mục chạy lệnh sẽ làm lần lượt (dự án không tách được worktree con) — chia việc chỉ thêm chi phí` };
     return { lane: 'fast', rule: 3, why: `việc lớn: ${big}` };
   }
   return { lane: small, rule: 4, why: `việc nhỏ: ${s.parts} phần, ${s.filesTouched} tệp/thư mục nêu, repo ${s.repoFiles} tệp` };

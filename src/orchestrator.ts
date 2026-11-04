@@ -1396,6 +1396,8 @@ export class Orchestrator {
           if (bytes > fl.maxRepoBytes) break;
         }
         signals = laneSignals(task.brief, files, bytes);
+        // V4-3f khối B: không có worktree con ⇒ hạng mục chạy lệnh làm lần lượt (executeAll: exclusive) ⇒ chia việc không nhanh hơn
+        if (pctx.serialWriters && !pctx.parallelWriters) signals.serialWriters = true;
         const ch = chooseLane(signals, cfg);
         pick = { lane: ch.lane, why: ch.why };
       }
@@ -1411,7 +1413,7 @@ export class Orchestrator {
     });
     if (signals) {
       const sg = signals;
-      this.message(task, task.departments?.[0] ?? 'system', 'system', 'system', `🧭 Chọn làn ${pick.lane}${pick.why ? ` (${pick.why})` : ''} — tín hiệu: đề ${sg.briefChars} ký tự, ${sg.parts} phần, ${sg.filesTouched} tệp/thư mục nêu, repo ${sg.repoFiles} tệp / ${Math.round(sg.repoBytes / 1024)} KB${sg.sequential ? ', nối tiếp' : ''}${sg.forced ? `, ép ${sg.forced}` : ''}.`);
+      this.message(task, task.departments?.[0] ?? 'system', 'system', 'system', `🧭 Chọn làn ${pick.lane}${pick.why ? ` (${pick.why})` : ''} — tín hiệu: đề ${sg.briefChars} ký tự, ${sg.parts} phần, ${sg.filesTouched} tệp/thư mục nêu, repo ${sg.repoFiles} tệp / ${Math.round(sg.repoBytes / 1024)} KB${sg.sequential ? ', nối tiếp' : ''}${sg.serialWriters ? ', không chạy song song được' : ''}${sg.forced ? `, ép ${sg.forced}` : ''}.`);
     }
     return pick;
   }
@@ -1478,6 +1480,8 @@ export class Orchestrator {
     const agent = registry.agent(st.assignee);
 
     const scopeExceeded = (): string | undefined => {
+      // V4-3f khối B: hạng mục chạy lệnh sẽ làm lần lượt ⇒ nâng lên đội chỉ vì phạm vi rộng không nhanh hơn mà tốn thêm (còn đỏ / ESCALATE vẫn nâng)
+      if (pctx.serialWriters && !pctx.parallelWriters && config.fastLane?.requireParallel !== false) return undefined;
       const files = changedFiles(task.workspace, task.baseRef).filter((f) => !f.startsWith('.ccoding/'));
       const max = config.lanes?.single?.maxFilesTouched ?? 6;
       const est = laneSignals(task.brief, [], 0).filesTouched;

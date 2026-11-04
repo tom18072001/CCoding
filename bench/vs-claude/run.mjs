@@ -41,7 +41,10 @@ const cfg = {
   window: flag('window', null), // SR-19: cửa sổ hạn mức/ca chạy do người vận hành khai, vd. 'W3'
   quotaState: flag('quota-state', null), // SR-19: trạng thái hạn mức lúc bắt đầu do người vận hành khai; không đoán
   workRoot: path.resolve(flag('work', path.join(os.tmpdir(), `ccvb-${crypto.randomBytes(3).toString('hex')}`))),
+  // V4-3f khối B: 'none' (mặc định, như mọi đợt đo trước) → hạng mục chạy lệnh làm lần lượt; 'worktree' như vận hành thật → song song được
+  isolation: flag('isolation', 'none'),
 };
+if (!['none', 'worktree'].includes(cfg.isolation)) throw new Error(`--isolation phải là none hoặc worktree (nhận: ${cfg.isolation})`);
 
 // ---------- schedule: interleaved, arm order rotated per (repeat, task) to spread drift and warm-cache effects ----------
 function shuffled(arr, seed) {
@@ -159,7 +162,7 @@ async function runArm(arm, task, key) {
   if (spec.kind === 'ccoding') {
     const dir = freshWorkspace(task, key);
     const projectId = `vb-${crypto.createHash('sha1').update(key + cfg.workRoot).digest('hex').slice(0, 12)}`;
-    const r = await runCcoding({ baseUrl: cfg.ccodingUrl, dataDir: cfg.ccodingData, runtime: cfg.runtime, projectId, workdir: dir, brief, title: `[vs-claude ${key}] ${task.title}`.slice(0, 120), taskOptions: spec.options ?? {}, agentId: spec.agentId, variant: `vs-claude/${key}`, timeoutMin: cfg.timeoutMin });
+    const r = await runCcoding({ baseUrl: cfg.ccodingUrl, dataDir: cfg.ccodingData, runtime: cfg.runtime, projectId, workdir: dir, brief, title: `[vs-claude ${key}] ${task.title}`.slice(0, 120), taskOptions: spec.options ?? {}, agentId: spec.agentId, variant: `vs-claude/${key}`, timeoutMin: cfg.timeoutMin, isolation: spec.isolation ?? cfg.isolation });
     if (r.infra || !r.taskId) return { dir, ...r, infra: r.infra ?? 'error' }; // chưa tạo được task: lỗi hạ tầng, không chấm
     let leak = false, callsCost; // SR-02: costUsd cộng theo model của từng dòng calls.jsonl
     const callsFile = path.join(cfg.ccodingData, 'runs', r.taskId, 'calls.jsonl');
