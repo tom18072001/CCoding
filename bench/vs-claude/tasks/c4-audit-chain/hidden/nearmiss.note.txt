@@ -1,0 +1,1 @@
+SR-24: src/index.js:26: "||" -> "&&" (một chỗ trên lời giải tham chiếu); điểm khi sinh = 0.857; test trượt: verify detects first tampered record

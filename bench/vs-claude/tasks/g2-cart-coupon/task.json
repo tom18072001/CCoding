@@ -2,10 +2,11 @@
   "id": "g2-cart-coupon",
   "category": "coding",
   "size": 2,
+  "sizeBasis": "files: src/cart.js, src/money.js",
+  "sizeLegacy": 2,
   "sizeReason": "Hai module nhỏ: sửa money.js, thêm applyCoupon vào cart.js",
   "title": "Tổng giỏ hàng theo xu và áp mã giảm giá (lệnh kiểm tra đỏ sẵn)",
   "hypotheses": [
-    "H1",
     "B-12"
   ],
   "deliverable": "src/cart.js",

@@ -1,11 +1,11 @@
 {
   "id": "c2-burst-alert",
   "category": "coding",
-  "size": 2,
+  "size": 1,
+  "sizeBasis": "functions: detectBursts",
+  "sizeLegacy": 2,
   "title": "Sliding-window 5xx burst alerting",
   "hypotheses": [
-    "H1",
-    "H2",
     "H10"
   ],
   "deliverable": "src/alert.js",

@@ -1,0 +1,38 @@
+{
+  "_note": "SR-09: giải pháp sai điển hình cho checklist a1/r1. `legacy` là regex cũ (trước SR-09); `wrong` là câu sai mà regex cũ cho qua nhưng regex mới phải phạt; `right` là câu đúng mà regex mới phải chấp nhận (regex cũ không nhận ở các ca có `legacyMisses`).",
+  "a1-ambiguous-spec": {
+    "last-month": {
+      "legacy": ["(calendar month|rolling|30 days|previous month).{0,200}", "time ?zone|UTC\\+7"],
+      "wrong": ["Exported reports are kept for 30 days on the share.", "The server timezone is configured by the platform team."],
+      "right": ["Does 'last month' mean the previous calendar month or a rolling 30 days, and in which time zone (UTC+7?)"]
+    },
+    "team-definition": {
+      "legacy": ["team.{0,200}(defin|membership|source|AD|Active Directory|HR|org chart|branch)"],
+      "wrong": ["Our team will add a download button and load the file."],
+      "right": ["How is a manager's team defined? Is membership taken from the HR system or from AD groups?"]
+    }
+  },
+  "r1-elk-design": {
+    "daily-volume": {
+      "legacy": ["1[.,](2[5-9]|3\\d|4\\d)\\d* ?(TB|TiB|T)"],
+      "wrong": ["Daily raw volume is about 21.38 TB per day.", "Daily volume is 41.45 TiB per day."],
+      "right": ["Daily raw volume is about 1,4 TB/day.", "Daily raw volume is about 1,3 TB/day."],
+      "legacyMisses": ["Daily raw volume is about 1,4 TB/day.", "Daily raw volume is about 1,3 TB/day."]
+    },
+    "replicas": {
+      "legacy": ["replica"],
+      "wrong": ["We do not use replica shards on the hot tier."],
+      "right": ["Hot tier with 1 replica (x2): 41 TB x 2 = 83 TB."]
+    },
+    "integrity": {
+      "legacy": ["(hash|sha-?256|sign).{0,400}(WORM|object lock|immutable|write-once)|(WORM|object lock|immutable|write-once).{0,400}(hash|sha-?256|sign)"],
+      "wrong": ["Our design relies on immutable infrastructure for the cluster."],
+      "right": ["Batches are signed and stored in WORM storage with S3 Object Lock."]
+    },
+    "ilm": {
+      "legacy": ["ILM|index lifecycle"],
+      "wrong": ["We will use ILM."],
+      "right": ["ILM policy: rollover daily, hot phase 30 days, then delete after 12 months."]
+    }
+  }
+}

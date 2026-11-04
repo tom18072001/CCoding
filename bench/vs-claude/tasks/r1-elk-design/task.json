@@ -1,11 +1,12 @@
 {
   "id": "r1-elk-design",
   "category": "design",
-  "size": 4,
+  "size": 6,
+  "sizeBasis": "sections: tính dung lượng, bố trí node theo tầng, ingest pipeline, ILM, toàn vẹn, rủi ro/xung đột",
+  "sizeLegacy": 4,
   "title": "ELK audit platform sizing and design",
   "hypotheses": [
     "H1",
-    "H4",
     "H10"
   ],
   "deliverable": "DESIGN.md",

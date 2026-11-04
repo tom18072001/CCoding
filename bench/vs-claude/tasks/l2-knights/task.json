@@ -1,7 +1,9 @@
 {
   "id": "l2-knights",
   "category": "logic",
-  "size": 1,
+  "size": 3,
+  "sizeBasis": "answers: healthy, compromised, unique",
+  "sizeLegacy": 1,
   "title": "Knights and knaves",
   "hypotheses": [
     "H2"

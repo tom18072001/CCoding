@@ -1,7 +1,9 @@
 {
   "id": "re1-lit-synthesis",
   "category": "research",
-  "size": 3,
+  "size": 4,
+  "sizeBasis": "answers: q1, q2, q3, q4",
+  "sizeLegacy": 3,
   "title": "Grounded literature synthesis over a closed corpus",
   "hypotheses": [
     "H9"

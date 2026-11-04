@@ -2,11 +2,13 @@
   "id": "g3-qty-rename",
   "category": "coding",
   "size": 4,
+  "sizeBasis": "files: src/export.js, order.js, report.js, stock.js",
+  "sizeLegacy": 4,
   "sizeReason": "Bốn module độc lập cùng đổi một tên trường",
   "title": "Đổi tên trường qty thành quantity trên toàn bộ module nghiệp vụ",
   "hypotheses": [
-    "H1",
-    "B-12"
+    "B-12",
+    "H1"
   ],
   "deliverable": "src/",
   "brief": "Đổi tên trường `qty` của dòng hàng thành `quantity` trong mọi module của src/ (dữ liệu đầu vào dùng `quantity`; không còn đọc `qty`). Cập nhật test công khai cho khớp và đảm bảo `npm test` xanh. Không thêm thư viện ngoài.",

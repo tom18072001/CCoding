@@ -1,12 +1,13 @@
 {
   "id": "t3-api",
   "category": "coding",
-  "size": 4,
+  "size": 6,
+  "sizeBasis": "files: src/auth.js, csv.js, handlers/audit.js, handlers/tasks.js, query.js, server.js",
+  "sizeLegacy": 4,
   "sizeReason": "Bốn tính năng độc lập trong FEATURES.md: xác thực/phân quyền, lọc-tìm-sắp xếp-phân trang, xuất CSV, nhật ký thao tác",
   "title": "Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật",
   "hypotheses": [
     "H1",
-    "H3",
     "H10"
   ],
   "deliverable": "src/",

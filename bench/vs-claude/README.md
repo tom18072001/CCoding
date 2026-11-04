@@ -11,7 +11,7 @@ analyze.mjs        hypotheses H1–H10, per-category scores, cost-quality fronti
 pairwise.mjs       blinded pairwise LLM judge (both orders) for design / requirements / research deliverables
 lib/queue.mjs      lượt đã xong, lane được hỗ trợ, kiểm arm trước khi chạy (hàm thuần, có test)
 lib/               claude.mjs (single-agent arm) · ccoding.mjs (REST arm) · grade.mjs · judge.mjs
-tasks/<id>/        task.json (brief, category, size, grader) · repo/ (starting workspace) · hidden/ (tests, answers, references — never copied)
+tasks/<id>/        task.json (brief, category, size/sizeBasis/sizeLegacy, grader) · repo/ (starting workspace) · hidden/ (tests, answers, references — never copied)
 ```
 
 ## Tasks (13 + t1–t5)
@@ -31,6 +31,54 @@ tasks/<id>/        task.json (brief, category, size, grader) · repo/ (starting 
 | a1-ambiguous-spec | requirements | 3 | 6-item checklist (regex or `--judge`) |
 | r1-elk-design | design | 4 | 8-item checklist (regex or `--judge`), license trap |
 | re1-lit-synthesis | research | 3 | answers, citation validity, correct refusal |
+
+
+### Định nghĩa `size` (SR-05)
+
+`size` = **số phần sản phẩm độc lập, kiểm được riêng** của bài, đếm theo đơn vị ghi ở `sizeBasis` (dạng `"<đơn vị>: <liệt kê>"`; số mục liệt kê phải bằng `size`):
+
+| Đơn vị | Dùng cho | Cách đếm | Kiểm bằng máy |
+| --- | --- | --- | --- |
+| `files` | bài code có lời giải tham chiếu nhiều tệp (hoặc một) | số tệp `src/`, `bin/` mà lời giải tham chiếu (`ref/` hoặc `hidden/solution/`) tạo mới hoặc sửa so với workspace khởi đầu; không đếm test, tài liệu, `package.json`, dữ liệu | có (`test/task-size.test.mjs`) |
+| `functions` | bài code một tệp | số hàm xuất / điểm vào brief bắt buộc | không |
+| `answers` | logic, nghiên cứu | số khóa của `answer.json` | có |
+| `sections` | tài liệu (requirements, design) | số phần brief liệt kê bắt buộc | không |
+| `deliverables` | review | số tệp sản phẩm | không |
+
+`sizeLegacy` giữ số cũ (1–5, chưa có định nghĩa) để tái lập kết quả đã công bố (D7); **không** dùng `sizeLegacy` cho phân tích mới. Giới hạn đã biết: đơn vị không đồng nhất giữa các loại bài, nên H10 phải điều chỉnh theo loại bài (SR-05 i); bài một tệp nhiều hành vi (c5) bị đếm 1.
+
+| Bài | size cũ | size mới | Đơn vị |
+| --- | --- | --- | --- |
+| a1-ambiguous-spec | 3 | 2 | sections |
+| c1-iis-ecs | 2 | 1 | functions |
+| c2-burst-alert | 2 | 1 | functions |
+| c3-shop-bugs | 3 | 3 | files |
+| c4-audit-chain | 4 | 4 | functions |
+| c5-tickets-api | 5 | 1 | functions |
+| g1-slug-dedupe | 2 | 1 | files |
+| g2-cart-coupon | 2 | 2 | files |
+| g3-qty-rename | 4 | 4 | files |
+| g4-gb-unit | 4 | 4 | files |
+| g5-median-stats | 2 | 1 | files |
+| g6-range-merge | 2 | 1 | files |
+| l1-modules | 5 | 5 | files |
+| l1-oncall | 1 | 3 | answers |
+| l2-chain | 4 | 7 | files |
+| l2-knights | 1 | 3 | answers |
+| l3-reconcile | 2 | 4 | answers |
+| l4-startup-order | 2 | 3 | answers |
+| r1-elk-design | 4 | 6 | sections |
+| re1-lit-synthesis | 3 | 4 | answers |
+| s1-sec-review | 3 | 1 | deliverables |
+| t1-duration | 2 | 1 | files |
+| t2-orders | 6 | 4 | files |
+| t3-api | 4 | 6 | files |
+| t4-perf | 1 | 1 | files |
+| t5-logq | 4 | 4 | files |
+
+### Nhãn `hypotheses` (SR-15)
+
+Nhãn trong `task.json` được đồng bộ với bộ lọc thật của `analyze.mjs`: **H1** = `category` ∈ {coding, design} và `size >= 3` (size mới); **H2** = logic; **H3** = review; **H4** = requirements; **H9** = research. H5–H8 và H10 tính trên mọi bài (H5/H6 giữ nhãn theo tập bài đã khai báo ở `preregistration.md` §2.5). Nhãn `B-12` đánh dấu bài thuộc bộ cổng g1–g6. `test/task-hypotheses.test.mjs` kiểm H1/H2/H3/H4/H9; đổi `size` thì nhãn H1 đổi theo.
 
 ### Bộ bài cài lỗi g1–g6 (B-12)
 
@@ -75,6 +123,11 @@ node bench/vs-claude/run.mjs --arms A0-opus,A0-sonnet,A1,A2,B0,B1,B2,B6 --repeat
 # 4. Analyse
 node bench/vs-claude/analyze.mjs bench/vs-claude/results/full --baseline A0-sonnet --treatment B0
 node bench/vs-claude/pairwise.mjs bench/vs-claude/results/full --x A0-opus --y B0
+
+# Chế độ chấm (SR-07): MỘT chế độ cho cả nghiên cứu. Chạy chính LUÔN có `--judge` (regex chỉ là lưới an toàn).
+# analyze.mjs từ chối khi `details.judge` khác nhau giữa các lượt cùng bài và ghi model giám khảo vào báo cáo.
+# Cờ phân tích: `--strict` (từ chối khi một arm có nhiều hơn một hash CCoding, SR-03) · `--legacy-rng` (LCG cũ + xáo H10 cũ, chỉ để tái lập số đã công bố, SR-20)
+# · `--allow-mixed-judge` (chỉ để đối chiếu dữ liệu cũ lẫn regex/opus; không dùng cho phân tích chính) · `--b01-arm SL` (arm cho dòng TOST B-01).
 ```
 
 Options: `--tasks all|<id>,<prefix>,<category>` · `--repeats N` · `--timeout <min>` · `--runtime claude-cli` · `--ccoding-url` · `--ccoding-data <CCoding data dir>` (for `calls.jsonl` token detail; default `../../data`) · `--judge --judge-model opus` · `--claude-bin <path>` · `--work <dir>` (workspaces; default OS temp) · `--dry-run`. Test đơn vị: `node --test "bench/vs-claude/test/*.test.mjs"` (Node 24 không nhận tên thư mục).
@@ -133,3 +186,8 @@ Lỗi hạ tầng khác (`infra: "error"`: không spawn được `claude`, khôn
 Before this suite, the `perf/vs-claude-loop` branch measured the same question with `harness/run.mjs` on five coding tasks
 (`tasks/t1-duration` … `tasks/t5-logq`: `starter/`, `prompt.txt`, `hidden/`, `ref/`; nay có `task.json` riêng nên `run.mjs` ở trên chạy được chúng; cấu trúc thư mục cũ không đổi). `harness/` chỉ dùng module của node, không import `lib/`, nên thay đổi ở `lib/` không ảnh hưởng nó. Hai harness cùng tồn tại: harness cũ cho vòng C1–C9 (so được với kết quả cũ), bộ này là hệ đánh giá chính.
 Docs: [`harness/README.md`](harness/README.md); results: `results/C1` … `results/C9`, `results/runs.csv`; analysis: `docs/PROCESS-REVIEW.md` §13 and `docs/research/`.
+
+### Arm `nearmiss` và bài khám phá (SR-24, SR-11)
+
+- `nearmiss` (tự kiểm bộ chấm, không gọi LLM, chi phí 0): chạy như `oracle` rồi đè `tasks/<id>/hidden/nearmiss/` lên workspace; mọi bài phải có thư mục này và phải chấm `0 < điểm < 1` (oracle = 1,00). Bài code: lời giải tham chiếu bị đột biến một chỗ; bài khác: đáp án/tham chiếu bỏ hoặc sai một mục. `hidden/nearmiss.note.txt` ghi chỗ đột biến. Kiểm: `node bench/vs-claude/run.mjs --arms oracle,null,nearmiss --repeats 1 --out <tmp>`.
+- Ba bài khám phá `a2-oncall-sms` (requirements), `re2-stream-synthesis` (research, rubric riêng ở `hidden/rubric.json`), `s2-support-review` (review, có decoy): `"set": "exploratory"`, `hypotheses: []`, không có `sizeLegacy`; `analyze.mjs` chỉ đưa vào bảng khám phá (D6).

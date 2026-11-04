@@ -2,11 +2,12 @@
   "id": "t5-logq",
   "category": "coding",
   "size": 4,
+  "sizeBasis": "files: bin/logq.js, src/agg.js, parse.js, query.js",
+  "sizeLegacy": 4,
   "sizeReason": "Bốn phần theo SPEC.md: parseLine, compile (truy vấn), aggregate và CLI bin/logq.js",
   "title": "Xây công cụ logq (thư viện + CLI) theo đặc tả",
   "hypotheses": [
     "H1",
-    "H3",
     "H10"
   ],
   "deliverable": "src/, bin/logq.js",

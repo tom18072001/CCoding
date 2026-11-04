@@ -139,6 +139,10 @@
     "kind": "oracle",
     "label": "Reference solution (grader self-test)"
   },
+  "nearmiss": {
+    "kind": "nearmiss",
+    "label": "Near-miss solution (grader self-test, SR-24): phải chấm < 1,00"
+  },
   "null": {
     "kind": "null",
     "label": "Does nothing (grader self-test)"

@@ -6,6 +6,8 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { gradeCode } from '../lib/grade.mjs';
+import { spawnSync } from 'node:child_process';
+import { cliVersion, gitCommit, modelsOf, provenance } from '../lib/queue.mjs';
 import { populateWorkspace, taskDirs } from '../lib/workspace.mjs';
 
 const SUITE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -65,4 +67,134 @@ test('mọi task có task.json đều có thư mục repo (hoặc repoDir) và h
     assert.ok(fs.existsSync(d.repoDir), `${id}: thiếu ${d.repoDir}`);
     assert.ok(fs.existsSync(d.hiddenDir), `${id}: thiếu hidden/`);
   }
+});
+
+// ---------- SR-03 / SR-19: nguồn gốc của dòng runs.jsonl (D1) ----------
+test('SR-03: cliVersion đọc dòng đầu của <bin> --version (bin giả); bin không tồn tại ⇒ null', () => {
+  const root = tmp(); const fake = path.join(root, 'fake-claude.mjs');
+  write(fake, "if (process.argv.includes('--version')) console.log('9.9.9 (Fake CLI)\\nphụ');\n");
+  assert.equal(cliVersion(process.execPath, [fake]), '9.9.9 (Fake CLI)');
+  assert.equal(cliVersion(path.join(root, 'khong-co-bin.exe')), null);
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+test('SR-03: gitCommit trả hash 40 ký tự trong repo; ngoài repo ⇒ null', () => {
+  assert.match(gitCommit(SUITE), /^[0-9a-f]{40}$/);
+  const root = tmp();
+  assert.equal(gitCommit(root), null);
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+test('SR-03: modelsOf — CCoding theo pha từ byPhaseModel, claude theo model thực, không biết ⇒ {}', () => {
+  assert.deepEqual(modelsOf({ kind: 'ccoding' }, { research: { byPhaseModel: { plan: ['claude-opus-5-5'], execute: ['claude-sonnet-5-5', 'claude-opus-5-5'] } } }),
+    { plan: 'claude-opus-5-5', execute: 'claude-sonnet-5-5+claude-opus-5-5' });
+  assert.deepEqual(modelsOf({ kind: 'claude' }, { model: 'claude-sonnet-5-5' }), { exec: 'claude-sonnet-5-5' });
+  assert.deepEqual(modelsOf({ kind: 'claude' }, { model: null }), {});
+  assert.deepEqual(modelsOf({ kind: 'null' }, {}), {});
+});
+
+test('SR-19: provenance thiếu thông tin thì để null, không điền mặc định giả', () => {
+  const p = provenance({ timeoutMin: 60 }, { kind: 'null' }, {});
+  assert.deepEqual(p, { ccodingCommit: null, claudeCliVersion: null, models: {}, window: null, quotaState: null, timeoutMin: 60 });
+  assert.equal(provenance({ quotaState: 'ok', timeoutMin: 1 }, {}, {}, { quotaState: 'rate-limited' }).quotaState, 'rate-limited');
+});
+
+test('SR-03/19: run.mjs ghi đủ trường D1 vào config.json và mỗi dòng runs.jsonl (oracle,null, bin giả in phiên bản)', () => {
+  const root = tmp();
+  const r = spawnSync(process.execPath, [path.join(SUITE, 'run.mjs'), '--arms', 'oracle,null', '--tasks', 't1-duration', '--repeats', '1',
+    '--out', path.join(root, 'out'), '--work', path.join(root, 'w'), '--window', 'W9', '--quota-state', 'ok', '--timeout', '7',
+    '--claude-bin', process.execPath], { encoding: 'utf8' }); // `node --version` đóng vai bin giả
+  assert.equal(r.status, 0, r.stderr);
+  const rows = fs.readFileSync(path.join(root, 'out', 'runs.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+  assert.equal(rows.length, 2);
+  const cfg = JSON.parse(fs.readFileSync(path.join(root, 'out', 'config.json'), 'utf8'));
+  assert.match(cfg.meta.ccodingCommit, /^[0-9a-f]{40}$/);
+  assert.equal(cfg.meta.claudeCliVersion, process.version);
+  for (const row of rows) {
+    assert.equal(row.ccodingCommit, cfg.meta.ccodingCommit);
+    assert.equal(row.claudeCliVersion, process.version);
+    assert.deepEqual([row.window, row.quotaState, row.timeoutMin, row.excluded, row.failReason, row.status], ['W9', 'ok', 7, null, null, 'done']);
+    assert.deepEqual(row.models, {});
+  }
+  fs.rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+});
+
+// ---------- SR-21: dò rò rỉ chỉ trên đường dẫn và tham số công cụ ----------
+import { leakInCalls, leakInSelectorPrompt, leakInTranscript, leakNeedles } from '../lib/queue.mjs';
+
+const NEEDLES = leakNeedles(SUITE, path.sep);
+const ev = (o) => JSON.stringify(o);
+const toolUse = (input) => ev({ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Read', input }] } });
+
+test('SR-21: văn bản prompt hệ thống/kết quả công cụ có chuỗi bộ đo KHÔNG phải rò rỉ', () => {
+  const lines = [
+    ev({ type: 'system', subtype: 'init', cwd: SUITE, system_prompt: `xem ${SUITE} và checklist.json` }),
+    ev({ type: 'user', message: { content: [{ type: 'tool_result', content: 'issues.json hidden/answer.json' }] } }),
+    ev({ type: 'assistant', message: { content: [{ type: 'text', text: 'tôi sẽ không đọc checklist.json' }] } }),
+    ev({ type: 'result', result: 'xong' }),
+  ];
+  assert.equal(leakInTranscript(lines, NEEDLES), false);
+});
+
+test('SR-21: tool_use đọc đường dẫn hidden/ hoặc suite ⇒ rò rỉ; tool_use bình thường thì không', () => {
+  assert.equal(leakInTranscript([toolUse({ file_path: path.join(SUITE, 'tasks', 'x', 'hidden', 'answer.json') })], NEEDLES), true);
+  assert.equal(leakInTranscript([toolUse({ command: 'cat hidden/answer.json' })], NEEDLES), true);
+  assert.equal(leakInTranscript([toolUse({ file_path: 'src/index.js' })], NEEDLES), false);
+  assert.equal(leakInTranscript(['dòng không phải JSON nhắc checklist.json'], NEEDLES), true, 'dòng thô giữ hành vi cũ (thận trọng)');
+});
+
+test('SR-21: calls.jsonl của CCoding chỉ xét `tools`, không xét `text`', () => {
+  const j = (...r) => r.map((x) => JSON.stringify(x)).join('\n');
+  assert.equal(leakInCalls(j({ text: `prompt nhắc ${SUITE} và hidden/answer.json`, tools: [{ name: 'Read', input: { file_path: 'a.js' } }] }), NEEDLES), false);
+  assert.equal(leakInCalls(j({ text: 'x', tools: [{ name: 'Read', input: { file_path: 'tasks/x/hidden/answer.json' } }] }), NEEDLES), true);
+  assert.equal(leakInCalls(j({ text: 'chỉ có văn bản' }), NEEDLES), false);
+});
+
+test('SR-21: bước chọn của A2 — prompt người chọn chứa chuỗi bộ đo ⇒ rò rỉ, bản giao nộp sạch thì không', () => {
+  assert.equal(leakInSelectorPrompt('### Candidate 0\nbáo cáo sạch', NEEDLES), false);
+  assert.equal(leakInSelectorPrompt(`### Candidate 1\nđã đọc ${path.join(SUITE, 'tasks')}`, NEEDLES), true);
+  assert.equal(leakInSelectorPrompt('### Candidate 1\ntheo hidden/answer.json thì …', NEEDLES), true);
+});
+
+// ---------- SR-23: bảng Latin thật ----------
+import { latinOrders } from '../lib/queue.mjs';
+
+test('SR-23: latinOrders — mỗi arm đứng mỗi vị trí đều nhau, mỗi cặp liền kề (có thứ tự) đúng một lần, với k = 1…8', () => {
+  assert.deepEqual(latinOrders(1), [[0]]);
+  for (let k = 2; k <= 8; k++) {
+    const rows = latinOrders(k);
+    assert.equal(rows.length, k % 2 ? 2 * k : k, `k=${k}`);
+    for (const r of rows) assert.deepEqual([...r].sort((a, b) => a - b), [...Array(k).keys()], `k=${k}: mỗi hàng là một hoán vị`);
+    const perRow = rows.length / k;
+    for (let pos = 0; pos < k; pos++) for (let a = 0; a < k; a++) assert.equal(rows.filter((r) => r[pos] === a).length, perRow, `k=${k}: arm ${a} ở vị trí ${pos}`);
+    const pairs = new Map();
+    for (const r of rows) for (let i = 0; i + 1 < k; i++) pairs.set(`${r[i]}>${r[i + 1]}`, (pairs.get(`${r[i]}>${r[i + 1]}`) ?? 0) + 1);
+    assert.equal(pairs.size, k * (k - 1), `k=${k}: đủ mọi cặp có thứ tự`);
+    assert.ok([...pairs.values()].every((n) => n === (k % 2 ? 2 : 1)), `k=${k}: mỗi cặp đúng ${k % 2 ? 'hai (k lẻ, thêm bản đảo)' : 'một'} lần`);
+  }
+});
+
+test('SR-23: xoay vòng cũ (r+ti)%k KHÔNG cân bằng cặp liền kề — bảng Latin thì có (k=4)', () => {
+  const rot = Array.from({ length: 4 }, (_, i) => [0, 1, 2, 3].map((x) => (x + i) % 4));
+  const pairs = (rows) => new Set(rows.flatMap((r) => r.slice(0, -1).map((x, i) => `${x}>${r[i + 1]}`))).size;
+  assert.equal(pairs(rot), 4);
+  assert.equal(pairs(latinOrders(4)), 12);
+});
+
+test('SR-23: run.mjs --dry-run xếp lịch theo bảng Latin (4 arm × 4 bài: mỗi arm đứng mỗi vị trí đúng một lần) và vẫn chạy với 1 arm', () => {
+  const run = (arms, tasks) => spawnSync(process.execPath, [path.join(SUITE, 'run.mjs'), '--arms', arms, '--tasks', tasks, '--repeats', '1', '--dry-run'], { encoding: 'utf8' });
+  const r = run('A0-sonnet,B0,B6,A2', 't1,t2,t3,t4');
+  assert.equal(r.status, 0, r.stderr);
+  const keys = r.stdout.trim().split('\n').slice(1);
+  assert.equal(keys.length, 16);
+  for (let pos = 0; pos < 4; pos++) {
+    const armsAtPos = [0, 1, 2, 3].map((b) => keys[b * 4 + pos].split('__')[1]);
+    assert.equal(new Set(armsAtPos).size, 4, `vị trí ${pos}: ${armsAtPos}`);
+  }
+  const adj = new Set();
+  for (let b = 0; b < 4; b++) for (let pos = 0; pos < 3; pos++) adj.add(`${keys[b * 4 + pos].split('__')[1]}>${keys[b * 4 + pos + 1].split('__')[1]}`);
+  assert.equal(adj.size, 12, 'cặp liền kề cân bằng (xoay vòng chỉ cho 4)');
+  const one = run('B0', 't1');
+  assert.equal(one.status, 0, one.stderr);
+  assert.match(one.stdout, /^1 runs/);
 });

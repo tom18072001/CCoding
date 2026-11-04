@@ -2,6 +2,8 @@
   "id": "t4-perf",
   "category": "coding",
   "size": 1,
+  "sizeBasis": "files: src/report.js",
+  "sizeLegacy": 1,
   "sizeReason": "Một hàm duy nhất (buildReport) cần tối ưu, không chia được thành phần độc lập",
   "title": "Tối ưu buildReport dưới 1 giây trên 200.000 dòng, giữ nguyên hành vi",
   "hypotheses": [

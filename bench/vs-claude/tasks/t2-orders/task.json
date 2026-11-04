@@ -1,12 +1,13 @@
 {
   "id": "t2-orders",
   "category": "coding",
-  "size": 6,
+  "size": 4,
+  "sizeBasis": "files: src/cart.js, checkout.js, money.js, promotions.js",
+  "sizeLegacy": 6,
   "sizeReason": "Sáu lỗi khách hàng báo trong ISSUES.md, mỗi lỗi có nguyên nhân gốc riêng (làm tròn tiền, phân bổ giảm giá, mua X tặng Y, hạn mã, giữ chỗ kho, thuế)",
   "title": "Sửa 6 lỗi trong thư viện tính tiền giỏ hàng",
   "hypotheses": [
     "H1",
-    "H3",
     "H10"
   ],
   "deliverable": "src/",
