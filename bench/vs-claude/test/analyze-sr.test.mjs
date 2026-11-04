@@ -242,7 +242,9 @@ test('D6: bài set exploratory không vào H1–H10 và H1′/H2′, chỉ ở b
 test('SR-04 B-01: TOST log-tỉ số ba đại lượng; thiếu arm SL ⇒ insufficient data', () => {
   const none = run(base());
   assert.match(hRow(none.report, 'B-01a'), /insufficient data/);
-  const same = ['t1-duration', 't2-orders', 't3-api'].flatMap((t) => [...mkCells(t, 'A0-sonnet', [0.8, 0.81, 0.79]), ...mkCells(t, 'SL', [0.8, 0.79, 0.81])]);
+  // K2 T-1: trọng số/thời gian hằng ⇒ suy biến ⇒ không SUPPORTED; cho chúng biến thiên theo lượt để CI có độ rộng thật.
+  const mkVar = (t, a, ss) => ss.map((s) => row(t, a, s, { weighted: 1000 * s, wallSec: 10 * s }));
+  const same = ['t1-duration', 't2-orders', 't3-api'].flatMap((t) => [...mkVar(t, 'A0-sonnet', [0.8, 0.81, 0.79]), ...mkVar(t, 'SL', [0.8, 0.79, 0.81])]);
   for (const id of ['B-01a', 'B-01b', 'B-01c']) assert.match(hRow(run(same).report, id), /SUPPORTED/, id);
   const slow = ['t1-duration', 't2-orders', 't3-api'].flatMap((t) => [...mkCells(t, 'A0-sonnet', [0.8, 0.8, 0.8]), ...mkCells(t, 'SL', [0.8, 0.8, 0.8], { weighted: 3000 })]);
   assert.match(hRow(run(slow).report, 'B-01a'), /not supported/);
@@ -260,9 +262,10 @@ test('SR-11: dưới 3 bài ⇒ insufficient data ở H1, H2, H4, H9, H10 và H3
   assert.doesNotMatch(hRow(three.report, 'H1'), /insufficient/);
   const s1one = ['A0-sonnet', 'B0'].flatMap((a) => Array.from({ length: 10 }, () => row('s1-only', a, 0.5, { category: 'review', details: { recall: a === 'B0' ? 1 : 0.5, precision: 1 } })));
   const h3 = hRow(run(s1one).report, 'H3');
-  assert.match(h3, /insufficient data/);
-  assert.match(h3, /chỉ 1 bài review/);
-  assert.match(hRow(run(s1one).report, 'Holm {H3, H6}'), /họ rỗng|K=0/);
+  // K2 P-1: H3 đăng ký đúng 1 bài s1 ⇒ không áp cổng ≥ 3 bài; 1 bài review vẫn được phán và vào họ Holm.
+  assert.doesNotMatch(h3, /insufficient data/);
+  assert.match(h3, /không áp cổng ≥ 3 bài/);
+  assert.match(hRow(run(s1one).report, 'Holm {H3, H6}'), /K=1/);
 });
 
 // ---------- S7: SR-10 ----------
@@ -308,21 +311,21 @@ test('SR-13: H8 cặp theo bài trên untouchedFileFailures và redAtEnd; format
 // ---------- S7: SR-14 ----------
 test('SR-14: H7 dùng phương sai gộp theo bài, bài sd(A0) = 0 vẫn tính, có CI bootstrap', () => {
   // A0 không đổi (sd = 0) ở mọi bài, B0 dao động ⇒ cách cũ bỏ hết bài (NaN) và "insufficient"; cách mới ra tỉ số lớn, not supported
-  const rows = ['c3', 'c4', 'c5'].flatMap((t) => [...mkCells(t, 'A0-sonnet', [0.6, 0.6, 0.6]), ...mkCells(t, 'B0', [0.3, 0.6, 0.9])]);
+  // K2 A-1: sd gộp A0 = 0 ⇒ suy biến (không báo tỉ số, không quy ước 0/0 := 1); cổng r ≥ 5 cần 5 lượt mỗi ô.
+  const rows = ['c3', 'c4', 'c5'].flatMap((t) => [...mkCells(t, 'A0-sonnet', [0.6, 0.6, 0.6, 0.6, 0.6]), ...mkCells(t, 'B0', [0.3, 0.6, 0.9, 0.4, 0.8])]);
   const h = hRow(run(rows).report, 'H7');
-  assert.match(h, /3 có sd\(A0-sonnet\) = 0, vẫn tính/);
   assert.match(h, /over 3 tasks/);
-  assert.match(h, /not supported|insufficient data/);
-  assert.doesNotMatch(h, /pooled SD ratio n\/a/);
+  assert.match(h, /suy biến/);
+  assert.doesNotMatch(h, /SUPPORTED/);
   // A0 dao động 0.1, B0 dao động 0.05 ở mọi bài ⇒ tỉ số gộp 0.5 ≤ 0.7, CI bao 0.5
-  const ok = ['c3', 'c4', 'c5'].flatMap((t) => [...mkCells(t, 'A0-sonnet', [0.5, 0.6, 0.7]), ...mkCells(t, 'B0', [0.55, 0.6, 0.65])]);
+  const ok = ['c3', 'c4', 'c5'].flatMap((t) => [...mkCells(t, 'A0-sonnet', [0.5, 0.6, 0.7, 0.5, 0.7]), ...mkCells(t, 'B0', [0.55, 0.6, 0.65, 0.55, 0.65])]);
   const m = /pooled SD ratio ([0-9.]+) \[([0-9.]+), ([0-9.]+)\]/.exec(hRow(run(ok).report, 'H7'));
   assert.ok(m, 'định dạng');
-  assert.equal(+m[1], 0.5);
-  assert.ok(+m[2] <= 0.5 && +m[3] >= 0.5);
+  assert.ok(Math.abs(+m[1] - 0.5) < 0.01, `tỉ số ${m[1]}`);
+  assert.ok(+m[2] <= +m[1] && +m[3] >= +m[1]);
   assert.match(hRow(run(ok).report, 'H7'), /SUPPORTED/);
   // phương sai gộp, không phải trung vị: hai bài ổn định tuyệt đối + một bài B0 rất nhiễu ⇒ trung vị cũ nhỏ nhưng gộp lớn
-  const mix = [...['c3', 'c4'].flatMap((t) => [...mkCells(t, 'A0-sonnet', [0.5, 0.6, 0.7]), ...mkCells(t, 'B0', [0.6, 0.6, 0.6])]), ...mkCells('c5', 'A0-sonnet', [0.5, 0.6, 0.7]), ...mkCells('c5', 'B0', [0.0, 0.6, 1.0])];
+  const mix = [...['c3', 'c4'].flatMap((t) => [...mkCells(t, 'A0-sonnet', [0.5, 0.6, 0.7, 0.5, 0.7]), ...mkCells(t, 'B0', [0.6, 0.6, 0.6, 0.6, 0.6])]), ...mkCells('c5', 'A0-sonnet', [0.5, 0.6, 0.7, 0.5, 0.7]), ...mkCells('c5', 'B0', [0.0, 0.6, 1.0, 0.0, 1.0])];
   assert.match(hRow(run(mix).report, 'H7'), /not supported/);
 });
 
