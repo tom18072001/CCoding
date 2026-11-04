@@ -209,8 +209,19 @@ const holmTxt = (m) => (m ? `p=${fp(m.p)}, p_min=${fp(m.pMin)}, confirmable=${m.
   H.push(['H6', 'Compute-matched single agent matches CCoding (null); both A1 and A2 within ±5 pp (TOST 90% CI)', `${txt || 'needs arms A1/A2'} (mọi bài, mô tả); ${confirmTxt}`, verdict(h6.equiv, unknown)]);
 }
 {
-  const r = tasks.map((t) => { const a = sd(cell(BASE, t)), b = sd(cell(TREAT, t)); return a > 0 ? b / a : (b === 0 ? 1 : NaN); }).filter(Number.isFinite);
-  H.push(['H7', 'Run-to-run stability (SD ratio treatment/baseline)', `median SD ratio ${f(median(r))} over ${r.length} tasks`, verdict(median(r) <= 0.7, r.length < 3)]);
+  // SR-14: phương sai gộp theo bài (trọng số n−1), không bỏ bài có sd(A0) = 0; CI bootstrap theo bài. Trung vị tỉ số SD cũ chỉ để đối chiếu.
+  const ts = tasks.filter((t) => cell(BASE, t).length > 1 && cell(TREAT, t).length > 1);
+  const pooled = (set, arm) => { let ss = 0, df = 0; for (const t of set) { const x = cell(arm, t); ss += sd(x) ** 2 * (x.length - 1); df += x.length - 1; } return df ? Math.sqrt(ss / df) : NaN; };
+  const ratioOf = (set) => { const a = pooled(set, BASE), b = pooled(set, TREAT); return a > 0 ? b / a : (b === 0 ? 1 : Infinity); }; // sd gộp của A0 = 0 mà treatment dao động ⇒ vô hạn (kém ổn định hơn), không bỏ
+  const est = ratioOf(ts);
+  const rb = mulberry32(SEED + 71), boots = [];
+  for (let i = 0; i < 4000 && ts.length; i++) { const v = ratioOf(ts.map(() => ts[Math.floor(rb() * ts.length)])); if (!Number.isNaN(v)) boots.push(v); }
+  boots.sort((x, y) => x - y);
+  const lo = boots.length ? boots[Math.floor(0.025 * boots.length)] : NaN, hi = boots.length ? boots[Math.floor(0.975 * boots.length)] : NaN;
+  const fr = (x) => (x === Infinity ? '∞' : f(x));
+  const old = tasks.map((t) => { const a = sd(cell(BASE, t)), b = sd(cell(TREAT, t)); return a > 0 ? b / a : (b === 0 ? 1 : NaN); }).filter(Number.isFinite);
+  const zero = ts.filter((t) => sd(cell(BASE, t)) === 0).length;
+  H.push(['H7', 'Run-to-run stability (pooled SD ratio treatment/baseline, per-task variance pooled)', `pooled SD ratio ${fr(est)} [${fr(lo)}, ${fr(hi)}] over ${ts.length} tasks (${zero} có sd(${BASE}) = 0, vẫn tính); median per-task ratio cũ ${f(median(old))} over ${old.length}`, verdict(est <= 0.7, ts.length < MIN_TASKS || Number.isNaN(est))]);
 }
 {
   // SR-13: chỉ số điều phối đúng nghĩa, cặp theo bài (D2): `untouchedFileFailures` (test trượt thuộc tệp agent không sửa) và `redAtEnd` (lệnh kiểm còn đỏ khi kết thúc).

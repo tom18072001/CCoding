@@ -304,3 +304,24 @@ test('SR-13: H8 cặp theo bài trên untouchedFileFailures và redAtEnd; format
   const two = ['c3', 'c4'].flatMap((t) => [...mkd(t, 'A0-sonnet', 0, false), ...mkd(t, 'B0', 2, true)]);
   assert.match(hRow(run(two).report, 'H8'), /insufficient data/);
 });
+
+// ---------- S7: SR-14 ----------
+test('SR-14: H7 dùng phương sai gộp theo bài, bài sd(A0) = 0 vẫn tính, có CI bootstrap', () => {
+  // A0 không đổi (sd = 0) ở mọi bài, B0 dao động ⇒ cách cũ bỏ hết bài (NaN) và "insufficient"; cách mới ra tỉ số lớn, not supported
+  const rows = ['c3', 'c4', 'c5'].flatMap((t) => [...mkCells(t, 'A0-sonnet', [0.6, 0.6, 0.6]), ...mkCells(t, 'B0', [0.3, 0.6, 0.9])]);
+  const h = hRow(run(rows).report, 'H7');
+  assert.match(h, /3 có sd\(A0-sonnet\) = 0, vẫn tính/);
+  assert.match(h, /over 3 tasks/);
+  assert.match(h, /not supported|insufficient data/);
+  assert.doesNotMatch(h, /pooled SD ratio n\/a/);
+  // A0 dao động 0.1, B0 dao động 0.05 ở mọi bài ⇒ tỉ số gộp 0.5 ≤ 0.7, CI bao 0.5
+  const ok = ['c3', 'c4', 'c5'].flatMap((t) => [...mkCells(t, 'A0-sonnet', [0.5, 0.6, 0.7]), ...mkCells(t, 'B0', [0.55, 0.6, 0.65])]);
+  const m = /pooled SD ratio ([0-9.]+) \[([0-9.]+), ([0-9.]+)\]/.exec(hRow(run(ok).report, 'H7'));
+  assert.ok(m, 'định dạng');
+  assert.equal(+m[1], 0.5);
+  assert.ok(+m[2] <= 0.5 && +m[3] >= 0.5);
+  assert.match(hRow(run(ok).report, 'H7'), /SUPPORTED/);
+  // phương sai gộp, không phải trung vị: hai bài ổn định tuyệt đối + một bài B0 rất nhiễu ⇒ trung vị cũ nhỏ nhưng gộp lớn
+  const mix = [...['c3', 'c4'].flatMap((t) => [...mkCells(t, 'A0-sonnet', [0.5, 0.6, 0.7]), ...mkCells(t, 'B0', [0.6, 0.6, 0.6])]), ...mkCells('c5', 'A0-sonnet', [0.5, 0.6, 0.7]), ...mkCells('c5', 'B0', [0.0, 0.6, 1.0])];
+  assert.match(hRow(run(mix).report, 'H7'), /not supported/);
+});
