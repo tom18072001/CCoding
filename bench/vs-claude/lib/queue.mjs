@@ -1,5 +1,6 @@
 // Hàng đợi của runner: lượt nào đã xong, lane nào CCoding hỗ trợ, và kiểm arm trước khi gửi task. Hàm thuần để test.
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
 export const EXIT_RATE_LIMIT = 3;
@@ -132,4 +133,35 @@ export function leakInCalls(callsText, needles) {
     let c; try { c = JSON.parse(l); } catch { return hit(l); }
     return c.tools ? hit(JSON.stringify(c.tools)) : false;
   });
+}
+
+// ---------- SR-03 / SR-19: nguồn gốc của từng dòng runs.jsonl (hợp đồng D1) ----------
+
+/** Hash commit CCoding đang chạy (git rev-parse HEAD); không lấy được ⇒ null, không điền giả. Gọi một lần lúc khởi động. */
+export function gitCommit(cwd) {
+  const r = spawnSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' });
+  return r.status === 0 && /^[0-9a-f]{7,64}$/.test(r.stdout.trim()) ? r.stdout.trim() : null;
+}
+
+/** Phiên bản CLI: dòng đầu của `<bin> --version`; lỗi/không có ⇒ null. prefixArgs dùng cho bin giả trong test (node script.mjs). */
+export function cliVersion(bin, prefixArgs = []) {
+  const shell = process.platform === 'win32' && /\.(cmd|bat)$|^[^\\/.]+$/i.test(bin);
+  const r = spawnSync(bin, [...prefixArgs, '--version'], { encoding: 'utf8', timeout: 15000, shell });
+  const v = r.status === 0 ? String(r.stdout).split(/\r?\n/).find((l) => l.trim()) : null;
+  return v ? v.trim() : null;
+}
+
+/** models theo pha (D1): CCoding lấy từ byPhaseModel (nhiều model trong một pha ⇒ nối bằng '+'); arm claude ghi model thực của phiên vào pha exec. Không biết ⇒ {}. */
+export function modelsOf(spec, r) {
+  const by = r?.research?.byPhaseModel;
+  if (spec?.kind === 'ccoding' && by) return Object.fromEntries(Object.entries(by).map(([ph, m]) => [ph, Array.isArray(m) ? m.join('+') : String(m)]));
+  return r?.model ? { exec: r.model } : {};
+}
+
+/** Các trường nguồn gốc chép vào mỗi dòng. quotaState: giá trị người vận hành khai (--quota-state), dòng hạn mức tự ghi 'rate-limited'. */
+export function provenance(meta, spec, r, { quotaState } = {}) {
+  return {
+    ccodingCommit: meta.ccodingCommit ?? null, claudeCliVersion: meta.claudeCliVersion ?? null, models: modelsOf(spec, r),
+    window: meta.window ?? null, quotaState: quotaState ?? meta.quotaState ?? null, timeoutMin: meta.timeoutMin,
+  };
 }

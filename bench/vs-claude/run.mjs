@@ -13,7 +13,7 @@ import { PROCESS_SUFFIX, runClaude, weighted } from './lib/claude.mjs';
 import { runCcoding, serverUp } from './lib/ccoding.mjs';
 import { GRADERS } from './lib/grade.mjs';
 import { blind } from './lib/judge.mjs';
-import { EXIT_RATE_LIMIT, checkArms, classifyRun, doneKeys, replacementRuns, suiteTaskIds, supportedLanes } from './lib/queue.mjs';
+import { EXIT_RATE_LIMIT, checkArms, classifyRun, cliVersion, doneKeys, gitCommit, provenance, replacementRuns, suiteTaskIds, supportedLanes } from './lib/queue.mjs';
 import { populateWorkspace, taskDirs } from './lib/workspace.mjs';
 
 const SUITE = path.dirname(fileURLToPath(import.meta.url));
@@ -37,6 +37,8 @@ const cfg = {
   claudeBin: flag('claude-bin', 'claude'),
   judge: { enabled: has('judge'), model: flag('judge-model', 'opus') },
   seed: flag('seed', 'ccvb'),
+  window: flag('window', null), // SR-19: cửa sổ hạn mức/ca chạy do người vận hành khai, vd. 'W3'
+  quotaState: flag('quota-state', null), // SR-19: trạng thái hạn mức lúc bắt đầu do người vận hành khai; không đoán
   workRoot: path.resolve(flag('work', path.join(os.tmpdir(), `ccvb-${crypto.randomBytes(3).toString('hex')}`))),
 };
 
@@ -70,7 +72,9 @@ if (has('dry-run')) {
 }
 
 fs.mkdirSync(out, { recursive: true });
-fs.writeFileSync(path.join(out, 'config.json'), JSON.stringify({ argv, cfg, armIds, taskIds, repeats, startedAt: new Date().toISOString() }, null, 2));
+// SR-03: hash CCoding và phiên bản claude CLI lấy một lần lúc khởi động, ghi vào config.json rồi chép vào mỗi dòng.
+const meta = { ccodingCommit: gitCommit(SUITE), claudeCliVersion: cliVersion(cfg.claudeBin), window: cfg.window, quotaState: cfg.quotaState, timeoutMin: cfg.timeoutMin };
+fs.writeFileSync(path.join(out, 'config.json'), JSON.stringify({ argv, cfg, meta, armIds, taskIds, repeats, startedAt: new Date().toISOString() }, null, 2));
 
 const armErrors = checkArms(armIds, ARMS, supportedLanes(path.resolve(SUITE, '../..')));
 if (armErrors.length) { for (const e of armErrors) console.error(e); process.exit(2); }
@@ -183,7 +187,7 @@ for (const s of schedule) {
   } catch (e) { error = String(e?.stack ?? e).slice(0, 2000); }
   if (r?.infra) {
     const row = { key: s.key, task: s.task, arm: s.arm, rep: s.rep, at: new Date().toISOString(), status: 'infra', infra: r.infra, resetsAt: r.resetsAt, wallSec: r.wallSec,
-      failReason: r.infra === 'rate-limit' ? 'quota' : 'error', excluded: null }; // infra luôn chạy lại, nên không ghi excluded
+      failReason: r.infra === 'rate-limit' ? 'quota' : 'error', excluded: null, ...provenance(meta, ARMS[s.arm], r, { quotaState: r.infra === 'rate-limit' ? 'rate-limited' : undefined }) }; // infra luôn chạy lại, nên không ghi excluded
     fs.appendFileSync(runsFile, `${JSON.stringify(row)}\n`);
     if (r.infra === 'rate-limit') {
       console.log(`HẠN MỨC${r.resetsAt ? ` — mở lại lúc ${r.resetsAt}` : ''}`);
@@ -196,7 +200,7 @@ for (const s of schedule) {
   const { failReason, excluded } = classifyRun(r, { timeoutMin: cfg.timeoutMin, error });
   const row = {
     key: s.key, task: s.task, category: task.category, size: task.size, arm: s.arm, rep: s.rep, at: new Date().toISOString(),
-    status: error ? 'error' : r.status, failReason, excluded, error, wallSec: r?.wallSec, tokens: r?.tokens, costUsd: r?.costUsd, turns: r?.turns,
+    status: error ? 'error' : r.status, failReason, excluded, ...provenance(meta, ARMS[s.arm], r, { quotaState: failReason === 'quota' ? 'rate-limited' : undefined }), error, wallSec: r?.wallSec, tokens: r?.tokens, costUsd: r?.costUsd, turns: r?.turns,
     calls: r?.calls, agentsUsed: r?.agentsUsed, byPhase: r?.byPhase, ...(r?.research ?? {}), picked: r?.picked, leak: !!r?.leak,
     score: g?.score ?? 0, pass: !!g?.pass, formatMiss: !!g?.formatMiss, details: g?.details,
   };
