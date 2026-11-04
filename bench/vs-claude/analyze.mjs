@@ -220,6 +220,16 @@ const holmTxt = (m) => (m ? `p=${fp(m.p)}, p_min=${fp(m.pMin)}, confirmable=${m.
   const txt = holm.members.map((m) => `${m.id}: ${holmTxt(m)}${m.confirmed ? ' ⇒ xác nhận' : ''}`).join('; ') || 'họ rỗng';
   H.push(['Holm {H3, H6}', `K=${holm.K}, ngưỡng ${HOLM_ALPHA}/(K−i+1), H6 ra khỏi họ khi < 3 bài (§2.5)`, txt, holm.members.some((m) => m.confirmed) ? 'có giả thuyết xác nhận' : 'không có giả thuyết xác nhận']);
 }
+// SR-25: H1′/H2′ (§2.6, dự kiến, chưa khóa): hoán vị nhãn arm theo lượt, phân tầng theo bài. Bài exploratory đã bị loại khỏi `tasks`.
+for (const [id, desc, names, opts] of [
+  ['H1′', `Decomposable (l1-modules, t1–t5): ${TREAT} > ${BASE}, margin 0`, ['l1-modules', ...tasks.filter((t) => /^t[1-5]-/.test(t))], { alt: 'greater', margin: 0 }],
+  ['H2′', `Dependency chain (l2-chain): ${TREAT} not better than ${BASE}, margin 0,05`, ['l2-chain'], { alt: 'less', margin: 0.05 }],
+]) {
+  const cells = cellsOf(BASE, TREAT, names.filter((t) => tasks.includes(t)));
+  const r = permStratified(cells, opts);
+  const txt = r.n ? `T=${pp(r.tObs)}, p=${fp(r.p)}, p_min=${fp(r.pMin)}, bài=${r.n}, ${r.exact ? 'liệt kê đủ' : 'Monte Carlo'} (${r.nPerm}), confirmable=${confirmable(r.pMin, HOLM_ALPHA / 2) ? 'có' : 'không'} (ngưỡng 0,0125)${r.skipped.length ? `, bỏ [${r.skipped.join(', ')}]` : ''}` : 'chưa có bài nào đủ lượt cả hai arm';
+  H.push([id, desc, txt, 'dự kiến, chưa khóa (§2.6)']);
+}
 // SR-04: B-01 (làn đơn so với BASE), mỗi đại lượng một TOST trên log-tỉ số, biên [0,85; 1,15], t1–t5.
 {
   const B01 = flag('b01-arm', 'SL');

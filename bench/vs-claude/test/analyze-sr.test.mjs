@@ -194,6 +194,40 @@ test('SR-26 họ Holm: H6 NA xếp như 1, không chặn H3', () => {
   assert.doesNotMatch(h, /H6: [^;]*⇒ xác nhận/);
 });
 
+test('SR-25: H1′ hoán vị phân tầng, p_min = 1/∏C(2r,r), nhãn dự kiến chưa khóa; margin 0,05 + alt less cho H2′', () => {
+  // 6 bài × r = 2 mỗi arm: ∏ C(4,2) = 6^6 = 46656 ⇒ p_min = 1/46656 = 2.14e-5, B0 hơn hẳn ⇒ p = p_min
+  const names = ['l1-modules', 't1-duration', 't2-orders', 't3-api', 't4-perf', 't5-logq'];
+  const rows = names.flatMap((t) => [...mkCells(t, 'A0-sonnet', [0.2, 0.3]), ...mkCells(t, 'B0', [0.8, 0.9])]);
+  const h1 = hRow(run(rows).report, 'H1′');
+  assert.match(h1, /bài=6/);
+  assert.match(h1, /liệt kê đủ \(46656\)/);
+  assert.match(h1, /p=2\.14e-5, p_min=2\.14e-5/);
+  assert.match(h1, /confirmable=có/);
+  assert.match(h1, /dự kiến, chưa khóa/);
+  // r = 1, 6 bài: ∏ = 64 ⇒ p_min = 0,0156 > 0,0125 ⇒ không confirmable
+  const r1 = names.flatMap((t) => [row(t, 'A0-sonnet', 0.2), row(t, 'B0', 0.9)]);
+  assert.match(hRow(run(r1).report, 'H1′'), /p_min=0\.0156.*confirmable=không/);
+  // H2′: B0 kém hơn A0 ⇒ T < 0 ⇒ alt less cho p nhỏ; B0 hơn 0,2 ⇒ p lớn
+  const chain = (b) => ['A0-sonnet', 'B0'].flatMap((a) => mkCells('l2-chain', a, a === 'B0' ? [b, b, b, b] : [0.6, 0.6, 0.6, 0.6]));
+  const worse = hRow(run(chain(0.4)).report, 'H2′'), better = hRow(run(chain(0.8)).report, 'H2′');
+  assert.match(worse, /p=0\.0143/);
+  assert.match(better, /p=1\.0000/);
+});
+
+test('D6: bài set exploratory không vào H1–H10 và H1′/H2′, chỉ ở bảng khám phá', () => {
+  const rows = [...base(), ...['A0-sonnet', 'B0'].flatMap((a) => mkCells('a2-ambiguity-new', a, a === 'B0' ? [1, 1] : [0, 0]))];
+  // task.json của bài thật chưa có a2; tạo bài tạm ngay trong thư mục tasks, dọn sau khi chạy
+  const dir = path.resolve(HERE, '../tasks/a2-ambiguity-new');
+  fs.mkdirSync(dir, { recursive: true });
+  try {
+    fs.writeFileSync(path.join(dir, 'task.json'), JSON.stringify({ id: 'a2-ambiguity-new', set: 'exploratory' }));
+    const withX = run(rows), without = run(base());
+    assert.equal(hRow(withX.report, 'H1'), hRow(without.report, 'H1'));
+    assert.match(withX.report, /Exploratory tasks/);
+    assert.match(withX.report, /a2-ambiguity-new/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test('SR-04 B-01: TOST log-tỉ số ba đại lượng; thiếu arm SL ⇒ insufficient data', () => {
   const none = run(base());
   assert.match(hRow(none.report, 'B-01a'), /insufficient data/);
