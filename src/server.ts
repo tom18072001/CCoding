@@ -17,7 +17,7 @@ import { listArtifacts } from './artifacts.js';
 import { describeSchedule, RoutineError } from './routines.js';
 import { verifyChainStream } from './logger.js';
 import { ROOT } from './config.js';
-import { applyApproved, listProposals, recordDirector, rollback, type Deps as SiDeps } from './selfimprove.js';
+import { actorFromToken, applyApproved, listProposals, recordDirector, rollback, tokenEquals, type Actor, type Deps as SiDeps } from './selfimprove.js';
 import { deniedReason } from './tools/workspace.js';
 import type { BudgetMode, Classification, LogEntry, Phase, ProjectDef, TaskMode, ToolAccess } from './types.js';
 import type { UsageDim } from './usage.js';
@@ -153,14 +153,16 @@ export function createServer(app: App): http.Server {
     if (origin && req.method !== 'GET' && !allowedHosts.has(origin.replace(/^https?:\/\//, ''))) throw new HttpError(403, 'Origin không hợp lệ');
 
     if (p.startsWith('/api/')) {
-      // B-19: thao tác ghi của vòng tự cải thiện (by:'director') bắt buộc có token, kể cả khi cấu hình bị sửa sau lúc khởi động
-      if (req.method !== 'GET' && p.startsWith('/api/selfimprove/') && config.selfImprove.enabled && !config.server.token) throw new HttpError(403, 'Thao tác duyệt/áp/hoàn tác cần server.token');
+      // B-19: thao tác ghi của vòng tự cải thiện bắt buộc có danh tính xác thực bằng token, kể cả khi cấu hình bị sửa sau lúc khởi động
+      if (req.method !== 'GET' && p.startsWith('/api/selfimprove/') && config.selfImprove.enabled && !config.server.token) throw new HttpError(403, 'Chưa cấu hình server.token — không xác định được người duyệt');
+      let actor: Actor | undefined;
       if (config.server.token) {
         const auth = req.headers.authorization ?? '';
         const tok = auth.startsWith('Bearer ') ? auth.slice(7) : url.searchParams.get('token');
-        if (tok !== config.server.token) throw new HttpError(401, 'Thiếu hoặc sai token');
+        if (!tok || !tokenEquals(tok, config.server.token)) throw new HttpError(401, 'Thiếu hoặc sai token');
+        actor = actorFromToken(config.server.token);
       }
-      return api(req, res, url);
+      return api(req, res, url, actor);
     }
 
     // File tĩnh
@@ -171,7 +173,7 @@ export function createServer(app: App): http.Server {
     fs.createReadStream(file).pipe(res);
   };
 
-  const api = async (req: http.IncomingMessage, res: http.ServerResponse, url: URL) => {
+  const api = async (req: http.IncomingMessage, res: http.ServerResponse, url: URL, actor?: Actor) => {
     let p = url.pathname;
     // mọi API của nhiệm vụ nhận cả mã ngắn (CC-94): quy về mã đầy đủ trước khi khớp route (giao diện, CLI, liên kết dán)
     const tm = /^\/api\/tasks\/([^/]+)(\/.*)?$/.exec(p);
@@ -687,6 +689,8 @@ export function createServer(app: App): http.Server {
       const si: SiDeps = { cfg: config.selfImprove, logs, dataDir: config.dataDir, root: ROOT };
       if (p === '/api/selfimprove/proposals' && req.method === 'GET') return send(res, 200, listProposals(si));
       if ((mm = m(/^\/api\/selfimprove\/proposals\/([^/]+)\/(approve|reject|apply|rollback-confirm)$/)) && req.method === 'POST') {
+        // không có danh tính đã xác thực ⇒ không ghi sự kiện selfimprove.* nào (phòng thủ thêm ngoài kiểm ở handler)
+        if (!actor) throw new HttpError(403, 'Chưa cấu hình server.token — không xác định được người duyệt');
         const pid = decodeURIComponent(mm[1]);
         const act = mm[2];
         const known = listProposals(si).find((x) => x.id === pid);
@@ -696,19 +700,19 @@ export function createServer(app: App): http.Server {
           if (act === 'approve') {
             if (known.status !== 'proposed') throw new HttpError(409, `Đề xuất đang ở trạng thái ${known.status}, không duyệt được`);
             if (!known.screening.ok) throw new HttpError(409, 'Bản vá vi phạm danh sách cấm, không duyệt được');
-            return send(res, 200, { ok: true, event: recordDirector('approved', pid, si) });
+            return send(res, 200, { ok: true, event: recordDirector('approved', pid, si, actor) });
           }
           if (act === 'reject') {
             if (known.status !== 'proposed' && known.status !== 'approved') throw new HttpError(409, `Đề xuất đang ở trạng thái ${known.status}, không từ chối được`);
-            return send(res, 200, { ok: true, event: recordDirector('rejected', pid, si, String(b.reason ?? '')) });
+            return send(res, 200, { ok: true, event: recordDirector('rejected', pid, si, actor, String(b.reason ?? '')) });
           }
           if (act === 'apply') {
-            const r = applyApproved(pid, si);
-            return send(res, 200, { ok: true, event: { kind: 'selfimprove.applied', data: { pid, ...r, by: 'director' } } });
+            const r = applyApproved(pid, si, { actor });
+            return send(res, 200, { ok: true, event: { kind: 'selfimprove.applied', data: { pid, ...r, ...actor } } });
           }
           if (known.status !== 'applied' && known.status !== 'rollback.proposed') throw new HttpError(409, `Đề xuất đang ở trạng thái ${known.status}, không rollback được`);
-          const event = recordDirector('rollback.confirmed', pid, si);
-          const r = rollback(pid, si);
+          const event = recordDirector('rollback.confirmed', pid, si, actor);
+          const r = rollback(pid, si, actor);
           return send(res, 200, { ok: true, event, rollback: r });
         } catch (e) {
           if (e instanceof HttpError) throw e;

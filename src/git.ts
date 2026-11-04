@@ -53,6 +53,54 @@ export function addWorktree(repo: string, wtPath: string, branch: string, startP
   return git(repo, ['worktree', 'add', '--no-track', '-b', branch, wtPath, startPoint]);
 }
 
+/** Nhánh cục bộ và origin lệch hai chiều — nhiệm vụ phải dừng, không được làm việc trên base không rõ. */
+export class BaseDivergedError extends Error {}
+
+export interface ResolvedBase {
+  /** Ref dùng làm điểm xuất phát (nhánh cục bộ hoặc `origin/<nhánh>`). */
+  ref: string;
+  /** Commit đầy đủ của ref tại thời điểm chọn (undefined nếu không phân giải được). */
+  commit?: string;
+  source: 'local' | 'remote';
+  warning?: string;
+}
+
+/**
+ * Chọn base cho worktree nhiệm vụ. Nếu `baseRef` là nhánh cục bộ và repo có remote `origin`: fetch đúng nhánh đó (có timeout),
+ * rồi so hai phía. Cục bộ đi sau, không đi trước → dùng `origin/<baseRef>`; bằng nhau hoặc chỉ đi trước → dùng cục bộ;
+ * lệch hai chiều → ném lỗi (không tạo worktree). Fetch lỗi → dùng cục bộ kèm cảnh báo. Không sửa nhánh cục bộ, không force.
+ * `baseRef` không phải nhánh (commit, HEAD, nhánh nối từ nhiệm vụ trước) hoặc không có remote → giữ hành vi cũ.
+ */
+export function resolveBase(repo: string, baseRef: string | undefined, fetchTimeoutMs = 60_000): ResolvedBase {
+  const name = baseRef || 'HEAD';
+  const full = (ref: string) => {
+    const r = git(repo, ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], 15_000);
+    return r.ok ? r.out.trim().split('\n')[0] : undefined;
+  };
+  const legacy: ResolvedBase = { ref: name, commit: full(name), source: 'local' };
+  if (name === 'HEAD' || !isSafeRef(name)) return legacy;
+  if (!git(repo, ['rev-parse', '--verify', '--quiet', `refs/heads/${name}`], 15_000).ok) return legacy;
+  const remote = 'origin';
+  if (!git(repo, ['remote', 'get-url', remote], 15_000).ok) return legacy;
+  const f = git(repo, ['fetch', '--quiet', remote, name], fetchTimeoutMs);
+  const remoteRef = `${remote}/${name}`;
+  const remoteCommit = f.ok ? full(`refs/remotes/${remoteRef}`) : undefined;
+  if (!remoteCommit) {
+    const why = f.ok ? `không thấy nhánh ${remoteRef} sau khi fetch` : `fetch ${remote} ${name} lỗi: ${f.out.slice(0, 160)}`;
+    return { ...legacy, warning: `Không cập nhật được base từ remote (${why}) — dùng nhánh cục bộ \`${name}\` có thể đã cũ.` };
+  }
+  const c = git(repo, ['rev-list', '--left-right', '--count', `${name}...refs/remotes/${remoteRef}`], 30_000);
+  const [ahead, behind] = c.ok ? c.out.trim().split(/\s+/).map(Number) : [NaN, NaN];
+  if (!Number.isFinite(ahead) || !Number.isFinite(behind)) {
+    return { ...legacy, warning: `Không so được \`${name}\` với \`${remoteRef}\` (${c.out.slice(0, 160)}) — dùng nhánh cục bộ.` };
+  }
+  if (ahead > 0 && behind > 0) {
+    throw new BaseDivergedError(`Nhánh cục bộ \`${name}\` và \`${remoteRef}\` đã lệch nhau (cục bộ có ${ahead} commit riêng, remote có ${behind} commit riêng). Không tạo worktree — hãy hợp nhất hoặc chọn nhánh nào làm base rồi chạy lại.`);
+  }
+  if (behind > 0) return { ref: remoteRef, commit: remoteCommit, source: 'remote' };
+  return legacy;
+}
+
 /** File chưa track (vd. .env) chép từ repo gốc sang worktree để chạy test/migration — không bao giờ đọc nội dung. */
 export function copyUntracked(repo: string, wtPath: string, names: string[]): string[] {
   const copied: string[] = [];

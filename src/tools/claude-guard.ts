@@ -90,7 +90,7 @@ export function guardBlock(input: HookInput, cfg: GuardConfig, env: NodeJS.Proce
   const ti = input.tool_input ?? {};
   if (cfg.stablePrefix) {
     // deny-by-default: bộ công cụ không đổi giữa các pha nên quyền do hook quyết định, không lọc Bash bằng regex
-    const readOnly = !WRITE_PHASES.has(String(cfg.phase ?? ''));
+    const readOnly = !(typeof cfg.phase === 'string' && WRITE_PHASES.has(cfg.phase)); // phase không phải chuỗi (vd. mảng ['execute']) → chỉ đọc
     const granted = cfg.callTools ?? ['Read', 'Glob', 'Grep', 'LS']; // thiếu danh sách → chỉ công cụ đọc (fail-closed)
     if (!granted.includes(name)) return blk(name, 'tool-not-granted', `CCoding chặn: công cụ ${name} không được cấp cho lượt gọi này`);
     if (readOnly && (WRITE_TOOLS.has(name) || SHELL_TOOLS.has(name))) return blk(name, 'read-only-phase', `CCoding chặn: pha ${cfg.phase || '(không rõ)'} chỉ đọc — ${name} không được dùng (ghi tệp/chạy lệnh chỉ ở pha thực thi/sửa)`);
