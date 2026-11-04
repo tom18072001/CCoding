@@ -45,7 +45,7 @@ export function runRows(data) {
       task: t.task, project: t.project, isolation: t.isolation, taskStatus: t.status, runStatus: r.status, dept: r.department, n: subs.length,
       sumMin: sum / 60000, spanMin: span / 60000, critMin: criticalPathMs(subs) / 60000, overlap: sum / span, maxConc: maxConcurrent(iv), savedMin: (sum - span) / 60000,
       independentPairs, conflicts: r.subtasks.filter((s) => s.conflict).length, mainOnly: r.subtasks.filter((s) => s.mainOnly).length, mergePending: r.subtasks.filter((s) => s.mergePending).length,
-      msgMerged: t.msg.merged, msgConflict: t.msg.conflict, msgSerial: t.msg.serial, checksRed: t.checksLatest?.red ?? null,
+      msgMerged: t.msg.merged, msgConflict: t.msg.conflict, msgSerial: t.msg.serial, checksRed: t.checksLatest?.red ?? null, checksNewRed: t.checksNewRed ?? null, checksBaselineRed: t.checksBaseline?.red ?? null, checksDenied: t.checksDenied ?? null,
     });
   }
   return out;
@@ -62,6 +62,7 @@ export function summarize(rows) {
     savedShare: rs.reduce((s, r) => s + r.savedMin, 0) / rs.reduce((s, r) => s + r.sumMin, 0),
     conflictSubtasks: rs.reduce((s, r) => s + r.conflicts, 0), mainOnly: rs.reduce((s, r) => s + r.mainOnly, 0), merges: uniq(rs).reduce((s, r) => s + r.msgMerged, 0), conflictMsgs: uniq(rs).reduce((s, r) => s + r.msgConflict, 0), serialMsgs: uniq(rs).reduce((s, r) => s + r.msgSerial, 0),
     endRed: rs.filter((r) => r.checksRed > 0).length, endChecked: rs.filter((r) => r.checksRed !== null).length,
+    endNewRed: rs.filter((r) => r.checksNewRed > 0).length, baselineRed: rs.filter((r) => r.checksBaselineRed > 0).length, endDeniedOnly: rs.filter((r) => r.checksRed > 0 && r.checksDenied >= r.checksRed).length,
   });
   const done = rows.filter((r) => r.runStatus === 'done');
   return { all: g(rows), done: g(done), byIsolation: Object.fromEntries([...new Set(rows.map((r) => r.isolation))].map((k) => [k, g(rows.filter((r) => r.isolation === k))])) };
@@ -73,7 +74,7 @@ export function report(s, data) {
     L.push('', `**${k}:** ${g.runs} lượt phòng, ${g.tasks} nhiệm vụ, ${g.subtasks} hạng mục; có chạy chồng (≥ 2 cùng lúc): ${g.parallelRuns}/${g.runs}.`);
     L.push(`- Hệ số chồng Σ thời lượng / thời gian thực: trung vị ${f(g.overlap.median, 2)} (IQR ${f(g.overlap.q1, 2)}–${f(g.overlap.q3, 2)}, lớn nhất ${f(g.overlap.max, 2)}).`);
     L.push(`- Tổng thời lượng hạng mục ${f(g.sumMin, 0)} phút; thời gian thực của pha thực thi ${f(g.spanMin, 0)} phút; tiết kiệm nhờ chạy chồng ${f(g.savedMin, 0)} phút (${f(100 * g.savedShare)} %, cận trên).`);
-    L.push(`- Gộp worktree con: ${g.merges} lần gộp xong; ${g.conflictMsgs} tin xung đột khi gộp; ${g.serialMsgs} nhiệm vụ báo "làm lần lượt"; ${g.conflictSubtasks} hạng mục còn ghi xung đột; ${g.mainOnly} hạng mục phải làm lại lần lượt; kết thúc còn lệnh kiểm tra đỏ: ${g.endRed}/${g.endChecked}.`);
+    L.push(`- Gộp worktree con: ${g.merges} lần gộp xong; ${g.conflictMsgs} tin xung đột khi gộp; ${g.serialMsgs} nhiệm vụ báo "làm lần lượt"; ${g.conflictSubtasks} hạng mục còn ghi xung đột; ${g.mainOnly} hạng mục phải làm lại lần lượt; kết thúc còn lệnh kiểm tra đỏ: ${g.endRed}/${g.endChecked} (đỏ mới so với trước khi sửa: ${g.endNewRed}; đỏ có sẵn từ trước: ${g.baselineRed}; chỉ do lệnh bị chặn theo chính sách: ${g.endDeniedOnly}).`);
   }
   return L.join('\n');
 }

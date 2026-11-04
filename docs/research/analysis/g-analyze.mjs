@@ -20,9 +20,12 @@ export function cp(k, n, a = 0.05) {
   return [lo, hi];
 }
 
-export function load(file) {
+export function load(file, rebaseFile) {
   const rows = fs.readFileSync(file, 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l));
-  const base = rows.filter((r) => r.type === 'base');
+  // sai lệch G-a: lượt base quá hạn 60 s dùng kết quả chạy lại với hạn thật của B-02 (600 s), chỉ cho G-1/G-2
+  const rb = new Map();
+  if (rebaseFile && fs.existsSync(rebaseFile)) for (const l of fs.readFileSync(rebaseFile, 'utf8').split('\n')) if (l.trim()) { const r = JSON.parse(l); rb.set(r.key, r); }
+  const base = rows.filter((r) => r.type === 'base').map((r) => (rb.has(r.key) ? { ...r, vRed: rb.get(r.key).vRed, vTimeout: rb.get(r.key).vTimeout, rebased: true } : r));
   const mut = rows.filter((r) => r.type === 'mut');
   const missing = rows.filter((r) => r.type === 'missing');
   const meta = rows.filter((r) => r.type === 'meta');
@@ -113,7 +116,7 @@ export function analyze({ base, mut, missing }, { seed = '20261104', B = 4000, M
   for (const r of mut.filter((m) => m.real)) { byOp[r.op] ??= { real: 0, caught: 0 }; byOp[r.op].real++; if (r.vRed) byOp[r.op].caught++; }
   const survivors = mut.filter((m) => m.real && !m.vRed).map((m) => ({ key: m.key, task: m.task, arm: m.arm, i: m.i, file: m.file, line: m.line, op: m.op, repl: m.repl }));
   return {
-    counts: { baseRuns: base.length, eligible: base.filter((b) => b.eligible).length, slow: base.filter((b) => b.slow).length, missing: missing.length, mutants: mut.length, real: mut.filter((m) => m.real).length, notReal: mut.filter((m) => !m.real).length, vTimeout: mut.filter((m) => m.vTimeout).length, hTimeout: mut.filter((m) => m.hTimeout).length },
+    counts: { rebased: base.filter((b) => b.rebased).length, baseRuns: base.length, eligible: base.filter((b) => b.eligible).length, slow: base.filter((b) => b.slow).length, missing: missing.length, mutants: mut.length, real: mut.filter((m) => m.real).length, notReal: mut.filter((m) => !m.real).length, vTimeout: mut.filter((m) => m.vTimeout).length, hTimeout: mut.filter((m) => m.hTimeout).length },
     g1, g2, g3, g3delta: { ...delta, ci: deltaCi, tasksUsed: Object.values(byTask).filter((x) => Number.isFinite(x.A) && Number.isFinite(x.C)).length }, byTask, byOp, survivors,
   };
 }
@@ -123,7 +126,7 @@ const ci = (c) => (c && Number.isFinite(c[0] ?? c.lo) ? `[${pct(c[0] ?? c.lo)}; 
 export function report(res) {
   const L = [];
   const c = res.counts;
-  L.push(`Lượt có base: ${c.baseRuns} · đủ điều kiện đột biến: ${c.eligible} · base chậm (> 30 s): ${c.slow} · thiếu artifact: ${c.missing}`);
+  L.push(`Lượt có base: ${c.baseRuns} · đủ điều kiện đột biến: ${c.eligible} · base chậm (> 30 s): ${c.slow} · thiếu artifact: ${c.missing} · base chạy lại với hạn 600 s (G-a): ${c.rebased}`);
   L.push(`Đột biến: ${c.mutants} · lỗi thật (test ẩn trượt): ${c.real} · không phải lỗi thật: ${c.notReal} · quá hạn npm test: ${c.vTimeout} · quá hạn test ẩn: ${c.hTimeout}`);
   L.push('', '| Arm | G-1 chặn nhầm (lượt đúng mà lệnh đỏ) | G-2 báo xong khi lệnh đỏ | G-3 cổng bắt lỗi cài máy |', '|---|---|---|---|');
   for (const a of Object.keys(res.g1)) {
@@ -144,6 +147,6 @@ export function report(res) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   const file = process.argv[2];
   const opt = Object.fromEntries(process.argv.slice(3).reduce((acc, a, i, all) => (a.startsWith('--') ? [...acc, [a.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : 'true']] : acc), []));
-  const res = analyze(load(file), { seed: opt.seed ?? '20261104', B: Number(opt.B ?? 4000), M: Number(opt.M ?? 10000) });
+  const res = analyze(load(file, opt.rebase), { seed: opt.seed ?? '20261104', B: Number(opt.B ?? 4000), M: Number(opt.M ?? 10000) });
   if (opt.json) console.log(JSON.stringify(res, null, 1)); else console.log(report(res));
 }

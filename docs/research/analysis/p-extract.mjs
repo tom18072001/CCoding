@@ -40,6 +40,10 @@ for (const t0 of tasks) {
     toolAccess: p.toolAccess ?? null, classification: t.classification ?? null, mode: t.mode, status: t.status, lane: t.lane ?? t.options?.lane ?? null,
     hasBranch: !!t.branch, createdAt: t.createdAt, startedAt: t.startedAt ?? null, finishedAt: t.finishedAt ?? null,
     checksLatest: Array.isArray(t.projectChecks?.latest) ? { n: t.projectChecks.latest.length, red: t.projectChecks.latest.filter((r) => !r.ok).length } : null,
+    // sai lệch P-a (ghi sau khi thấy 11/47 kết thúc còn đỏ): tách đỏ có sẵn từ trước (baseline) khỏi đỏ mới; so theo tên lệnh, không ghi tên lệnh
+    checksBaseline: Array.isArray(t.projectChecks?.baseline) ? { n: t.projectChecks.baseline.length, red: t.projectChecks.baseline.filter((r) => !r.ok && !r.denied).length } : null,
+    checksNewRed: Array.isArray(t.projectChecks?.latest) ? t.projectChecks.latest.filter((r) => !r.ok && !r.denied && !(t.projectChecks.baseline ?? []).some((b) => b.command === r.command && !b.ok)).length : null,
+    checksDenied: Array.isArray(t.projectChecks?.latest) ? t.projectChecks.latest.filter((r) => r.denied).length : null,
     msg: { merged: count(PATTERNS.merged), conflict: count(PATTERNS.conflict), serial: count(PATTERNS.serial), system: sys.length },
     runs: (t.runs ?? []).map((r) => ({
       department: r.department, status: r.status, startedAt: r.startedAt ?? null, finishedAt: r.finishedAt ?? null, escalatedFrom: r.escalatedFrom ?? null,

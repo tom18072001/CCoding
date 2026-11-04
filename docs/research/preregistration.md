@@ -898,7 +898,7 @@ Bước 2 **chưa được giám đốc duyệt chạy**. Lý do phải duyệt:
 
 **Không đổi:** H1–H10, biên ±0,05, tập 7 bài, quy tắc trần và suy biến v2.1 (a)–(d), nguồn p (SR-26), họ Holm, phép kiểm chính, phán quyết chính của H6. Khối này không vào họ Holm. Không đổi bài hay tham số trong đợt 3e. Các đề xuất cho lần đo sau (test ẩn hạ sàn null, chuẩn hóa (score − null)/(oracle − null), tiêu chí nhận bài "null ≤ ngưỡng") ở tệp K3, chưa áp dụng.
 
-### Đăng ký trước V4-3f: đo không gọi LLM cho trục nghiệm thu (G) và trục song song (P) (ghi 4/11/2026 khoảng 20:00, trước khi tính bất kỳ kết quả nào)
+### Đăng ký trước V4-3f: đo không gọi LLM cho trục nghiệm thu (G) và trục song song (P) (ghi 4/11/2026, commit `f5a31dc` lúc 19:31, trước khi tính bất kỳ kết quả nào; giờ ghi sửa lại theo commit)
 
 **Lý do.** Giám đốc, 4/11 19:14: "Bằng chứng hiện tại (1/1, 2/2) chưa đủ để kết luận gì. Đề tài chưa có số đo nào, và chính dữ liệu chi phí của CCoding còn đi ngược lợi ích của chạy song song. fix 2 vấn đề này". Bản phản biện `wf-f01e23b8` cũng nêu: trục nghiệm thu cần tỉ lệ bắt lỗi và chặn nhầm trên ≥ 30 lỗi độc lập không do người thiết kế cổng viết; trục song song chưa có số đo nào.
 

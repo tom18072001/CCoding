@@ -679,3 +679,16 @@ Mục này đánh giá ba thay đổi của D13 về dữ liệu. Nhãn dữ li�
 Rủi ro còn lại. Mọi người dùng chung `server.token` có cùng một danh tính. Tác vụ dọn xóa dữ liệu thật nên chỉ bật sau khi có xoay vòng log. Khi lệch hai chiều, `resolveBase` ném `BaseDivergedError` (`src/git.ts:98`) và orchestrator dừng nhiệm vụ, không tạo worktree, không rơi về repo gốc (`src/orchestrator.ts:3081`, test `test/git-base-orchestrator.test.ts`); người dùng tự hợp nhất nhánh rồi chạy lại.
 
 **Khuyến nghị cho chủ dự án:** (1) giữ `logs.retention.enabled=false` và `selfImprove.enabled=false` cho tới khi duyệt bật; (2) chạy thử `ccoding logs seal` và `ccoding logs verify-seal` trước khi bật dọn; (3) nếu cần giá trị chứng cứ, tạo khóa ed25519 ngoài `data/` và ký sổ băm; (4) khi nhiệm vụ dừng vì base lệch hai chiều, hợp nhất hoặc chọn nhánh base rồi chạy lại; không ép (force) nhánh.
+
+## V4-3f — Đo không gọi LLM: trích metadata song song từ server chính; chạy lại test trên artifact bench (4/11/2026)
+
+Mục này đánh giá hai luồng dữ liệu mới của V4-3f. Nhãn của cả hai là **Nội bộ**. Không có DLCN, không có endpoint ngoài, không gọi LLM, không có luồng xuyên biên giới mới.
+
+| Hạng mục | Lớp / năng lực | Đánh giá | Trạng thái |
+|---|---|---|---|
+| P: `docs/research/analysis/p-extract.mjs` đọc server chính 7420 | GOV-01, PRE-02, PRI-01, PRI-03 | Chỉ gọi GET `/api/projects`, `/api/tasks`, `/api/tasks/<id>`, không đọc `data/` trực tiếp. **Ghi:** mốc thời gian, trạng thái, `dependsOn`, cờ gộp và xung đột, số lệnh đỏ, và số đếm ba mẫu tin nhắn hệ thống. **Không ghi:** đề bài, tiêu đề, đầu ra, nội dung tin nhắn, tên lệnh. Mã nhiệm vụ băm SHA-256 kèm muối ngẫu nhiên không lưu; mã dự án đổi thành P1–P6. Đã kiểm danh sách khóa của tệp kết quả (RUNLOG). Repo công khai, nên tệp từng lượt **không commit**: nó ở lại máy giám đốc, repo chỉ có số tổng hợp | Đạt |
+| G: `g-mutation.mjs`, `g-rebase.mjs` chạy `npm test` và test ẩn trên artifact `study-cloud` | PRE-04, RES-01 | Artifact là repo của bài tổng hợp, không có dữ liệu thật. Mỗi lượt chạy trong bản sao ở thư mục tạm, xóa sau khi xong. Tiến trình con có hạn giờ và bị giết cả nhóm khi quá hạn. Chạy trong container Linux của phiên, không trên máy giám đốc | Đạt |
+
+**Rủi ro còn lại.** Tệp từng lượt có mốc thời gian theo nhiệm vụ. Người có quyền vào server có thể dùng chúng để đối chiếu ra nhiệm vụ nào, nên tệp chỉ giữ trên máy giám đốc.
+
+**Khuyến nghị cho chủ dự án:** chỉ công bố số tổng hợp của P; không đưa tệp từng lượt lên repo công khai.
