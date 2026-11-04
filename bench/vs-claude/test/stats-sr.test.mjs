@@ -61,3 +61,115 @@ test('SR-04 tost: không có ô hợp lệ ⇒ không tương đương, est NaN'
   assert.equal(r.equivalent, false);
   assert.ok(Number.isNaN(r.est));
 });
+
+// ---------- SR-26 ----------
+import { permTwoSample, bootP, h6Combine, confirmable } from '../lib/stats.mjs';
+
+const rep = (v, n) => Array(n).fill(v);
+const A1 = (cells, o = {}) => bootP(cells, { arm: 'A1', ...o });
+const tasks = (names, a, b) => names.map((t) => mk(t, a, b));
+
+test('SR-26 ca 1 (H3, hiệu ứng rõ): p = 1/184756, N, exact, confirmable', () => {
+  const rec = permTwoSample(rep(0.5, 10), rep(0.9, 10), { shift: -0.15 });
+  const pre = permTwoSample(rep(0.8, 10), rep(0.8, 10), { shift: 0.05 });
+  assert.equal(rec.N, 184756);
+  assert.equal(rec.exact, true);
+  near(rec.p, 1 / 184756, 1e-15);
+  near(pre.p, 1 / 184756, 1e-15);
+  near(Math.max(rec.p, pre.p), 1 / 184756, 1e-15);
+  assert.equal(confirmable(rec.pMin, 0.0125), true);
+});
+
+test('SR-26 ca 2 (H3, dưới ngưỡng): Δ = 0,10 ≤ 0,15 ⇒ p = 1', () => {
+  assert.equal(permTwoSample(rep(0.5, 10), rep(0.6, 10), { shift: -0.15 }).p, 1);
+});
+
+test('SR-26 permTwoSample: r_a ≠ r_b (NaN bị bỏ) ⇒ N = C(r_a + r_b, r_b)', () => {
+  const r = permTwoSample(rep(0.8, 5), [0.9, NaN, 0.9, 0.9]);
+  assert.equal(r.N, 56); // C(8, 3)
+});
+
+test('SR-26 ca 3: chạm trần cả hai arm ⇒ estimate, không p', () => {
+  const r = A1(tasks(['t1', 't2', 't3'], rep(1, 3), rep(1, 3)));
+  assert.equal(r.verdict, 'estimate');
+  assert.equal(r.p, null);
+  assert.equal(r.nA1, 0);
+  assert.deepEqual(r.ceilingTasks, ['t1', 't2', 't3']);
+});
+
+test('SR-26 ca 3 biến thể: 4 bài 0,7 không biến thiên ⇒ p = NA, không phải 1/4001', () => {
+  const r = A1(tasks(['t1', 't2', 't3', 't4'], rep(0.7, 3), rep(0.7, 3)));
+  assert.equal(r.p, null);
+  assert.notEqual(r.p, 1 / 4001);
+  assert.equal(r.verdict, 'Không kết luận (trần/suy biến)');
+  assert.equal(r.pMin, undefined);
+});
+
+test('SR-26 ca 4: lệch +0,10 ổn định ⇒ p = NA, Bác bỏ; có biến thiên ⇒ p số ≈ 1', () => {
+  const r = A1(tasks(['t1', 't2', 't3'], rep(0.7, 3), rep(0.8, 3)));
+  assert.equal(r.p, null);
+  assert.equal(r.verdict, 'Bác bỏ');
+  const v = A1(tasks(['t1', 't2', 't3'], [0.6, 0.7, 0.5], [0.8, 0.9, 0.7]));
+  assert.ok(typeof v.p === 'number' && v.p > 0.9, `p=${v.p}`);
+});
+
+test('SR-26 ca 5: chạm trần một phía ⇒ giữ bài; bài trần cả hai arm bị loại', () => {
+  const cells = [mk('t1', [1, 1, 1], [1, 1, 1]), mk('t2', [1, 1, 1], [1, 1, 1]), mk('t3', [1, 1, 0.9], [1, 1, 1])];
+  const r = A1(cells);
+  assert.deepEqual(r.ceilingTasks, ['t1', 't2']);
+  assert.equal(r.nA1, 1);
+  assert.equal(r.verdict, 'estimate');
+  const more = [...cells.slice(0, 2), ...['t3', 't4', 't5'].map((t) => mk(t, [1, 1, 0.9], [1, 1, 1]))];
+  const r2 = A1(more);
+  assert.equal(r2.nA1, 3);
+  assert.equal(typeof r2.p, 'number');
+});
+
+test('SR-26 ca 5b: ngưỡng 0,99 — 0,998 vẫn là trần; 0,98 thì giữ bài', () => {
+  const names = ['t1', 't2', 't3'];
+  const r = A1(tasks(names, [1, 1, 0.998], [1, 1, 1]));
+  assert.equal(r.nA1, 0);
+  assert.equal(r.ceilingTasks.length, 3);
+  assert.equal(r.verdict, 'estimate');
+  const k = A1(tasks(names, [1, 1, 0.98], [1, 1, 1]));
+  assert.equal(k.nA1, 3);
+  assert.equal(k.ceilingTasks.length, 0);
+});
+
+test('SR-26 ca 5c: gộp hai cặp — một cặp NA ⇒ p(H6) = NA, không max', () => {
+  const deg = bootP(tasks(['t1', 't2', 't3'], rep(0.7, 3), rep(0.7, 3)), { arm: 'A1' });
+  const ok = bootP(tasks(['t1', 't2', 't3'], [0.6, 0.7, 0.8], [0.6, 0.7, 0.8]), { arm: 'A2' });
+  assert.equal(deg.p, null);
+  assert.equal(typeof ok.p, 'number');
+  const h = h6Combine(deg, ok);
+  assert.equal(h.p, null);
+  assert.equal(h.verdict, 'Không kết luận (trần/suy biến)');
+  assert.equal(h6Combine(ok, ok).p, ok.p);
+});
+
+test('SR-26 ca 6: đủ bài, không suy biến ⇒ p số trong [pMin, 1], pMin = 1/4001', () => {
+  const r = A1(tasks(['t1', 't2', 't3'], [0.6, 0.7, 0.8], [0.6, 0.7, 0.8]));
+  assert.equal(typeof r.p, 'number');
+  assert.ok(r.p >= 1 / 4001 && r.p <= 1);
+  near(r.pMin, 1 / 4001, 1e-15);
+  assert.notEqual(r.verdict, 'Không kết luận (trần/suy biến)');
+  assert.equal(r.B, 4000);
+});
+
+test('SR-26 ca 7: cùng hạt ⇒ cùng kết quả', () => {
+  const c = tasks(['t1', 't2', 't3'], [0.6, 0.7, 0.8], [0.5, 0.75, 0.9]);
+  assert.deepEqual(A1(c, { seed: 5 }), A1(c, { seed: 5 }));
+});
+
+test('SR-26 ca 8: B = 19 ⇒ pMin = 0,05 ⇒ confirmable = false ở ngưỡng 0,0125', () => {
+  const r = A1(tasks(['t1', 't2', 't3'], [0.6, 0.7, 0.8], [0.6, 0.7, 0.8]), { B: 19 });
+  near(r.pMin, 0.05, 1e-12);
+  assert.equal(confirmable(r.pMin, 0.0125), false);
+  assert.equal(confirmable(1 / 184756, 0.0125), true);
+});
+
+test('SR-26 (a) taskSet: bài ngoài tập khai báo không được dùng', () => {
+  const c = [...tasks(['t1', 't2', 't3'], [0.6, 0.7, 0.8], [0.6, 0.7, 0.8]), mk('s1', [0.1], [0.9])];
+  assert.equal(A1(c, { taskSet: ['t1', 't2', 't3'] }).nA1, 3);
+  assert.equal(A1(c).nA1, 4);
+});
