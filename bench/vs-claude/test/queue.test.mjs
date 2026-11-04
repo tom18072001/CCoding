@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { checkArms, doneKeys, supportedLanes } from '../lib/queue.mjs';
+import { checkArms, classifyRun, doneKeys, isFinishedRow, replacementRuns, supportedLanes } from '../lib/queue.mjs';
 
 const SUITE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ARMS = JSON.parse(fs.readFileSync(path.join(SUITE, 'arms.json'), 'utf8'));
@@ -26,8 +26,9 @@ test('dòng infra không được tính là xong, lượt đó phải chạy l�
     '',
   ].join('\n');
   const done = doneKeys(text);
-  assert.ok(done.has('a') && done.has('c'));
+  assert.ok(done.has('a'));
   assert.ok(!done.has('b'));
+  assert.ok(!done.has('c'), 'SR-01a: failed phải chạy lại');
 });
 
 test('checkArms: B7 chạy được khi lane single được hỗ trợ; thiếu lane thì báo lỗi rõ, không tự lùi sang lane khác', () => {
@@ -55,5 +56,47 @@ test('analyze.mjs loại dòng infra và in số dòng đã loại', () => {
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /Đã loại 1 dòng infra/);
   assert.ok(!fs.readFileSync(path.join(dir, 'summary.csv'), 'utf8').includes('B6'));
+  fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+});
+
+// ---------- SR-01 ----------
+const J = (...rows) => rows.map((r) => JSON.stringify(r)).join('\n');
+
+test('SR-01a: doneKeys chỉ nhận done (và khóa bị loại); failed/error/infra chạy lại; dòng cũ thiếu trường vẫn đọc được', () => {
+  const d = doneKeys(J(
+    { key: 'ok', status: 'done' }, { key: 'f', status: 'failed', failReason: 'error' }, { key: 'e', status: 'error' },
+    { key: 'i', status: 'infra' }, { key: 'x', status: 'done', excluded: 'leak' }, { key: 'xf', status: 'failed', excluded: 'quota' },
+  ));
+  assert.deepEqual([...d].sort(), ['ok', 'x', 'xf']);
+});
+
+test('SR-01b: classifyRun gán failReason/excluded theo §4.3', () => {
+  assert.deepEqual(classifyRun({ status: 'done' }, { timeoutMin: 60 }), { failReason: null, excluded: null });
+  assert.deepEqual(classifyRun({ status: 'done', leak: true }, {}), { failReason: null, excluded: 'leak' });
+  assert.deepEqual(classifyRun({ status: 'failed', infra: 'rate-limit' }, {}), { failReason: 'quota', excluded: 'quota' });
+  assert.deepEqual(classifyRun({ status: 'failed', timedOut: true }, {}), { failReason: 'timeout', excluded: null }, 'timeout do hệ không xong thì giữ');
+  assert.deepEqual(classifyRun({ status: 'failed', timedOut: true }, { infraTimeout: true }), { failReason: 'timeout', excluded: 'timeout' });
+  assert.deepEqual(classifyRun({ status: 'failed', wallSec: 59 * 60 }, { timeoutMin: 60 }), { failReason: 'timeout', excluded: null });
+  assert.deepEqual(classifyRun({ status: 'done' }, { error: 'ENOENT' }), { failReason: 'error', excluded: null });
+  assert.equal(isFinishedRow({ status: 'failed', excluded: 'quota' }), true);
+  assert.equal(isFinishedRow({ status: 'failed' }), false);
+});
+
+test('SR-01d: lượt thay nhận rep = max(rep)+1, khóa bị loại không chạy lại, không thay hai lần', () => {
+  const cells = [{ task: 't', arm: 'A' }];
+  const rows = [{ key: 't__A__r1', task: 't', arm: 'A', rep: 1, status: 'done' }, { key: 't__A__r2', task: 't', arm: 'A', rep: 2, status: 'done', excluded: 'leak' }];
+  assert.deepEqual(replacementRuns(J(...rows), 2, cells), [{ task: 't', arm: 'A', rep: 3 }]);
+  const withRepl = [...rows, { key: 't__A__r3', task: 't', arm: 'A', rep: 3, status: 'done' }];
+  assert.deepEqual(replacementRuns(J(...withRepl), 2, cells), []);
+  assert.deepEqual(replacementRuns(J(rows[0]), 2, cells), []);
+  assert.deepEqual(replacementRuns(J(...rows.map((r) => ({ ...r, excluded: 'leak' }))), 2, cells).map((x) => x.rep), [3, 4]);
+});
+
+test('SR-01: run.mjs --dry-run chạy lượt thay cho khóa bị loại trong runs.jsonl có sẵn', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccvb-sr01-'));
+  fs.writeFileSync(path.join(dir, 'runs.jsonl'), J({ key: 't1-duration__null__r1', task: 't1-duration', arm: 'null', rep: 1, status: 'done', excluded: 'leak' }));
+  const r = spawnSync(process.execPath, [path.join(SUITE, 'run.mjs'), '--arms', 'null', '--tasks', 't1-duration', '--repeats', '1', '--out', dir, '--dry-run'], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /t1-duration__null__r2/);
   fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
