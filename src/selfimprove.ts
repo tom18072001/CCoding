@@ -1051,10 +1051,19 @@ const DAY_MS = 86_400_000;
 export const MIN_RETENTION_DAYS = 183;
 
 /**
- * Dọn tệp dưới data/self-improve/ theo retentionDays nhưng không bao giờ xóa tệp trẻ hơn 183 ngày (CT-11).
+ * Bằng chứng không bao giờ xóa (WORM, D8): cố định trong code, cấu hình không ghi đè được.
+ * incidents.jsonl và mọi tệp .jsonl/.chain (nhật ký có chuỗi băm), toàn bộ proposals/ (meta, patch, monitor, bản ghi apply/rollback), ab-*.json.
+ */
+export function isEvidenceFile(rel: string): boolean {
+  const parts = rel.split(/[\\/]/);
+  const base = parts[parts.length - 1];
+  return parts[0] === 'proposals' || base === 'incidents.jsonl' || /\.(jsonl|chain)$/.test(base) || /^ab-.*\.json$/.test(base);
+}
+
+/**
+ * Dọn tệp dưới data/self-improve/ theo retentionDays nhưng không bao giờ xóa tệp trẻ hơn 183 ngày (CT-11) và không xóa bằng chứng (isEvidenceFile).
  * Chỉ xóa tệp thường, không theo liên kết. Trả danh sách tệp đã xóa (tương đối so với data/self-improve/).
- * Chính sách (chờ giám đốc chốt trước khi bật): dựa vào mtime nên tệp nối thêm như incidents.jsonl không bao giờ hết hạn
- * (có chủ ý: xóa giữa chừng sẽ làm đứt chuỗi băm của nhật ký làm chứng cứ). Hàm chưa được gọi tự động.
+ * Xét theo mtime; tệp bằng chứng bị loại trừ theo tên nên incidents.jsonl (chỉ nối thêm) không bị xóa giữa chừng làm đứt chuỗi băm.
  */
 export function purgeExpired(dataDir: string, retentionDays: number, now = Date.now()): string[] {
   const days = Math.max(MIN_RETENTION_DAYS, Number.isFinite(retentionDays) ? retentionDays : MIN_RETENTION_DAYS);
@@ -1065,13 +1074,30 @@ export function purgeExpired(dataDir: string, retentionDays: number, now = Date.
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
       const f = path.join(dir, e.name);
       if (e.isSymbolicLink()) continue;
+      const rel = path.relative(root, f).split(path.sep).join('/');
       if (e.isDirectory()) visit(f);
-      else if (e.isFile() && now - fs.statSync(f).mtimeMs > days * DAY_MS) {
+      else if (e.isFile() && !isEvidenceFile(rel) && now - fs.statSync(f).mtimeMs > days * DAY_MS) {
         fs.rmSync(f);
-        removed.push(path.relative(root, f).split(path.sep).join('/'));
+        removed.push(rel);
       }
     }
   };
   visit(root);
   return removed;
+}
+
+/**
+ * Nơi gọi purgeExpired: server khởi động (src/cli.ts cmdServe) khi selfImprove.enabled. Tắt ⇒ không làm gì.
+ * Thời hạn cấu hình thấp hơn MIN_RETENTION_DAYS bị nâng lên mức tối thiểu kèm cảnh báo. Sự kiện chỉ có số lượng và số ngày, không đường dẫn.
+ */
+export function runRetention(deps: Pick<Deps, 'cfg' | 'logs' | 'dataDir'>, now = Date.now()): { count: number; olderThanDays: number } | null {
+  if (!deps.cfg.enabled) return null;
+  const want = Number(deps.cfg.retention?.proposalDays);
+  const olderThanDays = Number.isFinite(want) && want >= MIN_RETENTION_DAYS ? want : MIN_RETENTION_DAYS;
+  if (olderThanDays !== want) {
+    deps.logs.write({ level: 'warn', kind: 'selfimprove.retention.clamped', msg: `selfImprove.retention.proposalDays dưới mức tối thiểu; dùng ${MIN_RETENTION_DAYS} ngày`, data: { olderThanDays } });
+  }
+  const count = purgeExpired(deps.dataDir, olderThanDays, now).length;
+  deps.logs.write({ level: 'info', kind: 'selfimprove.purged', msg: `Dọn data/self-improve/: ${count} tệp quá hạn`, data: { count, olderThanDays } });
+  return { count, olderThanDays };
 }

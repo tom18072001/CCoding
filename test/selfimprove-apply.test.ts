@@ -9,7 +9,7 @@ import { loadConfig, ROOT } from '../src/config.js';
 import { LogStore, verifyChain } from '../src/logger.js';
 import { createServer } from '../src/server.js';
 import {
-  applyApproved, listProposals, monitorApplied, purgeExpired, recordAbDecision, recordAbStarted, recordDirector, recordProposed, rollback, screenPatch,
+  applyApproved, listProposals, monitorApplied, isEvidenceFile, purgeExpired, runRetention, MIN_RETENTION_DAYS, recordAbDecision, recordAbStarted, recordDirector, recordProposed, rollback, screenPatch,
   type Deps, type MonitorSource, type TaskMetric,
 } from '../src/selfimprove.js';
 import { testApp } from './helpers.js';
@@ -206,6 +206,63 @@ test('CT-11: purgeExpired không xóa tệp data/self-improve/ dưới 183 ngày
   assert.ok(fs.existsSync(path.join(base, 'young.jsonl')) && fs.existsSync(path.join(base, 'edge.jsonl')));
   assert.deepEqual(purgeExpired(d.dataDir, 400), []);
   assert.deepEqual(purgeExpired(path.join(d.dataDir, 'khong-co'), 400), []);
+});
+
+// D8: chính sách giữ log. Đường dẫn dựng bằng path.join, mtime bằng fs.utimesSync; không phụ thuộc nền tảng (win32/posix cùng kỳ vọng).
+const putAged = (base: string, rel: string, ageDays: number) => {
+  const f = path.join(base, ...rel.split('/'));
+  fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, 'x');
+  const t = new Date(Date.now() - ageDays * 86_400_000);
+  fs.utimesSync(f, t, t);
+  return f;
+};
+
+test('retention: cấu hình dưới mức tối thiểu bị nâng lên 183 ngày kèm cảnh báo; mặc định là 183', () => {
+  assert.equal(loadConfig().selfImprove.retention.proposalDays, MIN_RETENTION_DAYS);
+  const d = mkDeps(ROOT, { retention: { proposalDays: 30 } });
+  const base = path.join(d.dataDir, 'self-improve');
+  putAged(base, 'clusters/young.json', 100);
+  putAged(base, 'clusters/old.json', 200);
+  const r = runRetention(d);
+  assert.deepEqual(r, { count: 1, olderThanDays: MIN_RETENTION_DAYS });
+  assert.ok(fs.existsSync(path.join(base, 'clusters', 'young.json')) && !fs.existsSync(path.join(base, 'clusters', 'old.json')));
+  assert.equal(events(d, 'selfimprove.retention.clamped').length, 1);
+});
+
+test('retention: tệp bằng chứng cũ không bị xóa, tệp thường quá hạn bị xóa; sự kiện selfimprove.purged không kèm đường dẫn', () => {
+  const d = mkDeps(ROOT, { retention: { proposalDays: 183 } });
+  const base = path.join(d.dataDir, 'self-improve');
+  const keep = ['incidents.jsonl', 'proposals/P-1/meta.json', 'proposals/P-1/patch.diff', 'proposals/P-1/monitor.json', 'ab-P-1.json', 'ab/P-1/ab-confirm.json', 'ab/P-1/ledger.chain'];
+  for (const k of keep) putAged(base, k, 900);
+  putAged(base, 'clusters/CL-1.json', 900);
+  putAged(base, 'ab/P-1/out.json', 900);
+  const r = runRetention(d);
+  assert.deepEqual(r, { count: 2, olderThanDays: 183 });
+  for (const k of keep) assert.ok(fs.existsSync(path.join(base, ...k.split('/'))), `phải giữ ${k}`);
+  assert.ok(!fs.existsSync(path.join(base, 'clusters', 'CL-1.json')) && !fs.existsSync(path.join(base, 'ab', 'P-1', 'out.json')));
+  const ev = events(d, 'selfimprove.purged');
+  assert.equal(ev.length, 1);
+  assert.deepEqual(ev[0].data, { count: 2, olderThanDays: 183 });
+  assert.ok(!JSON.stringify(ev[0]).includes('CL-1') && !JSON.stringify(ev[0]).includes(d.dataDir), 'không có tên tệp hay đường dẫn trong log');
+  assert.equal(verifyChain(d.logs.fileFor('system')).ok, true);
+});
+
+test('retention: isEvidenceFile nhận cả dấu phân cách win32 và posix', () => {
+  for (const rel of ['incidents.jsonl', 'proposals/P-1/patch.diff', path.win32.join('proposals', 'P-1', 'meta.json'), 'ab/P-1/ab-x.json', 'x/y.chain']) assert.equal(isEvidenceFile(rel), true, rel);
+  for (const rel of ['clusters/CL-1.json', path.win32.join('clusters', 'CL-1.json'), 'ab/P-1/out.json']) assert.equal(isEvidenceFile(rel), false, rel);
+});
+
+test('retention: nơi gọi chạy khi selfImprove.enabled, không chạy (không xóa, không log) khi tắt', () => {
+  const on = mkDeps();
+  putAged(path.join(on.dataDir, 'self-improve'), 'clusters/old.json', 400);
+  assert.equal(runRetention(on)?.count, 1);
+  assert.equal(events(on, 'selfimprove.purged').length, 1);
+  const off = mkDeps(ROOT, { enabled: false });
+  const f = putAged(path.join(off.dataDir, 'self-improve'), 'clusters/old.json', 400);
+  assert.equal(runRetention(off), null);
+  assert.ok(fs.existsSync(f));
+  assert.equal(events(off, 'selfimprove.purged').length, 0);
 });
 
 test('CT-05 (payload): listProposals che PII/bí mật trong agentProposal và diff, giữ nguyên chuỗi tiêm lệnh như văn bản', () => {
