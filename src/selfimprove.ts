@@ -36,7 +36,7 @@ const INCIDENTS = (dataDir: string): string => siPath(dataDir, 'incidents.jsonl'
 
 // ───────────────────────── Bước 1 — Nhật ký sự cố ─────────────────────────
 
-export type IncidentSource = 'agent.selfReport' | 'guard.block' | 'ab.run';
+export type IncidentSource = 'agent.selfReport' | 'guard.block' | 'ab.run' | 'review.issue' | 'checks.regressed';
 export type IncidentCategory = 'FM-1' | 'FM-2' | 'FM-3' | 'INF';
 export interface Incident {
   schema: 'ccoding/incident/v1';
@@ -92,48 +92,106 @@ const nextIncidentSeq = (dataDir: string): number => {
   }
 };
 
+/** Sự kiện nguồn mới của bước 1: `review.incident` (issue blocker/major), `checks.regressed`, `guard.block` (đọc từ LogStore, D6). */
+const SOURCE_OF: Record<string, IncidentSource> = { 'review.incident': 'review.issue', 'checks.regressed': 'checks.regressed', 'guard.block': 'guard.block' };
+/** Khóa khử trùng ổn định của một issue review: subtask + nội dung (băm, không lưu comment). */
+export const reviewIssueKey = (subtask: string, comment: string): string => crypto.createHash('sha256').update(`${subtask}\n${comment}`).digest('hex').slice(0, 10);
+
+interface Draft {
+  source: IncidentSource;
+  subtaskId?: string;
+  round?: number;
+  category: IncidentCategory;
+  ref: string;
+  evKind: Incident['evidence'][number]['kind'];
+  symptom: string;
+  proposal?: string;
+  agentId: string;
+  phase: string;
+}
+
+/** Bản nháp từ các nguồn mới. `untrusted[key]` = comment issue (dữ liệu không tin cậy: chỉ vào incidents.jsonl.agentProposal, không vào sự kiện). */
+function draftsOf(entry: LogEntry, taskId: string, untrusted: Record<string, string>): Draft[] {
+  const source = SOURCE_OF[entry.kind]!;
+  const d = (entry.data ?? {}) as { round?: number; issues?: { subtask?: string; severity?: string; key?: string }[]; commands?: number; tool?: string; rule?: string; clause?: string };
+  const at = (sub: string | undefined, round: number | undefined, key: string): string => `${taskId}/${sub ?? '-'}/r${round ?? 0}#${key}`;
+  if (source === 'review.issue') {
+    return (d.issues ?? [])
+      .filter((i) => (i.severity === 'blocker' || i.severity === 'major') && i.key)
+      .map((i): Draft => ({ source, subtaskId: i.subtask, round: d.round, category: 'FM-3', ref: at(i.subtask, d.round, `${source}:${i.key}`), evKind: 'reviewIssue', symptom: `Review vòng ${d.round ?? '?'} nêu lỗi mức ${i.severity} ở ${i.subtask ?? '?'}`, proposal: clip(untrusted[i.key!], 300) || undefined, agentId: entry.agentId ?? 'reviewer', phase: 'review' }));
+  }
+  if (source === 'checks.regressed') {
+    const n = d.commands ?? 0;
+    return [{ source, round: d.round, category: 'FM-3', ref: at(undefined, d.round, `${source}:${n}`), evKind: 'kpiKey', symptom: `Vòng ${d.round ?? '?'}: ${n} lệnh kiểm tra đạt trước khi sửa nhưng hỏng sau khi sửa`, agentId: entry.agentId ?? 'reviewer', phase: 'review' }];
+  }
+  // guard.block: chỉ { tool, clause, rule } do CCoding sinh; không chép cmd
+  return [{ source, category: 'FM-3', ref: at(undefined, undefined, `${source}:${entry.ts}:${d.tool ?? '?'}:${d.rule ?? '?'}`), evKind: 'logSeq', symptom: `Hook chặn ${d.tool ?? '?'}: câu ${d.clause ?? '?'} ${d.rule ?? '?'}`, agentId: entry.agentId ?? 'guard', phase: 'execute' }];
+}
+
 /**
- * Đổi sự kiện `revise.incident` (B-03) thành bản ghi v1 (mỗi mục một bản). `null` = không ghi gì (đã loại); khi có `deps` thì ghi
+ * Đổi sự kiện nguồn sự cố (`revise.incident` B-03, `review.incident`, `checks.regressed`, `guard.block`) thành bản ghi v1 (mỗi mục một bản). `null` = không ghi gì (đã loại); khi có `deps` thì ghi
  * `incident.skipped {taskId, kind, reason}` (không symptom/agentProposal) hoặc `incident.recorded` + incidents.jsonl.
- * classification lấy từ task, KHÔNG do agent khai. Lỗi hạ tầng (429/hạn mức) không đi tiếp.
+ * classification lấy từ task, KHÔNG do agent khai. Lỗi hạ tầng (429/hạn mức) không đi tiếp. Nguồn mới khử trùng lặp theo (taskId, subtaskId, round, source, khóa) qua evidence đã ghi.
  */
-export function toIncident(entry: LogEntry, task: Pick<Task, 'id' | 'classification' | 'options'>, deps?: Pick<Deps, 'logs' | 'dataDir' | 'root'>): Incident[] | null {
+export function toIncident(entry: LogEntry, task: Pick<Task, 'id' | 'classification' | 'options'>, deps?: Pick<Deps, 'logs' | 'dataDir' | 'root'>, untrusted: Record<string, string> = {}): Incident[] | null {
   const skip = (reason: SkipReason): null => {
     deps?.logs.write({ level: 'info', kind: 'incident.skipped', msg: `${task.id}: bỏ sự cố (${reason})`, taskId: task.id, data: { taskId: task.id, kind: entry.kind, reason } });
     return null;
   };
-  if (entry.kind !== 'revise.incident') return null;
+  const extra = entry.kind in SOURCE_OF;
+  if (entry.kind !== 'revise.incident' && !extra) return null;
   if (SECRET_CLASSES.includes(task.classification)) return skip('classification');
-  const d = (entry.data ?? {}) as { taskId?: string; subtaskId?: string; round?: number; items?: { error?: string; cause?: string; fix?: string; verifyCmd?: string }[] };
-  const items = (d.items ?? []).filter((it) => !INFRA_RE.test(`${it.error ?? ''} ${it.cause ?? ''}`));
-  if (!items.length) return skip(d.items?.length ? 'infra' : 'no-evidence');
-  const taskId = d.taskId ?? entry.taskId;
-  if (!taskId || !entry.agentId) return skip('no-evidence');
   const abRun = String(task.options?.variant ?? '').startsWith('selfimprove/');
   const ts = entry.ts;
   const day = ts.slice(0, 10).replace(/-/g, '');
   const seq0 = deps ? nextIncidentSeq(deps.dataDir) : 1;
-  const pv = deps ? promptVersionOf(deps.root, entry.agentId, entry.department) : 'unknown';
-  const out = items.map((it, i): Incident => {
+  let drafts: Draft[];
+  let taskId: string;
+  if (extra) {
+    taskId = entry.taskId ?? task.id;
+    const seen = new Set(deps ? loadIncidents(deps.dataDir).flatMap((i) => i.evidence.map((e) => e.ref)) : []);
+    drafts = draftsOf(entry, taskId, untrusted).filter((x, i, a) => !seen.has(x.ref) && a.findIndex((y) => y.ref === x.ref) === i);
+    if (!drafts.length) return null; // trùng hoặc issue minor: không ghi gì
+  } else {
+    const d = (entry.data ?? {}) as { taskId?: string; subtaskId?: string; round?: number; items?: { error?: string; cause?: string; fix?: string; verifyCmd?: string }[] };
+    const items = (d.items ?? []).filter((it) => !INFRA_RE.test(`${it.error ?? ''} ${it.cause ?? ''}`));
+    if (!items.length) return skip(d.items?.length ? 'infra' : 'no-evidence');
+    const tid = d.taskId ?? entry.taskId;
+    if (!tid || !entry.agentId) return skip('no-evidence');
+    taskId = tid;
+    drafts = items.map((it, i): Draft => ({
+      source: 'agent.selfReport',
+      subtaskId: d.subtaskId,
+      round: d.round,
+      category: categoryOf(`${it.error ?? ''} ${it.cause ?? ''}`),
+      ref: `${taskId}/${d.subtaskId ?? '-'}/r${d.round ?? 0}#${i + 1}`,
+      evKind: 'logSeq',
+      // symptom do CCoding sinh từ tín hiệu, không chép nguyên văn đầu ra agent
+      symptom: `Vòng sửa ${d.round ?? '?'} của ${d.subtaskId ?? '?'}: mục lỗi ${i + 1}/${items.length}${it.verifyCmd ? ', có lệnh kiểm' : ''}`,
+      proposal: clip(it.fix, 300) || undefined,
+      agentId: entry.agentId!,
+      phase: entry.phase ?? 'revise',
+    }));
+  }
+  const pv = deps ? promptVersionOf(deps.root, drafts[0].agentId, entry.department) : 'unknown';
+  const out = drafts.map((x, i): Incident => {
     const inc: Incident = {
       schema: 'ccoding/incident/v1',
       id: `INC-${day}-${String(seq0 + i).padStart(4, '0')}`,
       ts,
       taskId,
-      ...(d.subtaskId ? { subtaskId: d.subtaskId } : {}),
-      agentId: entry.agentId!,
-      phase: entry.phase ?? 'revise',
-      source: abRun ? 'ab.run' : 'agent.selfReport',
-      category: categoryOf(`${it.error ?? ''} ${it.cause ?? ''}`),
+      ...(x.subtaskId ? { subtaskId: x.subtaskId } : {}),
+      agentId: x.agentId,
+      phase: x.phase,
+      source: abRun ? 'ab.run' : x.source,
+      category: x.category,
       challengeId: 'new',
-      evidence: [{ kind: 'logSeq', ref: `${taskId}/${d.subtaskId ?? '-'}/r${d.round ?? 0}#${i + 1}` }],
-      // symptom do CCoding sinh từ tín hiệu, không chép nguyên văn đầu ra agent
-      symptom: `Vòng sửa ${d.round ?? '?'} của ${d.subtaskId ?? '?'}: mục lỗi ${i + 1}/${items.length}${it.verifyCmd ? ', có lệnh kiểm' : ''}`,
+      evidence: [{ kind: x.evKind, ref: x.ref }],
+      symptom: x.symptom,
       classification: task.classification,
       promptVersion: pv,
     };
-    const prop = clip(it.fix, 300);
-    if (prop) inc.agentProposal = prop;
+    if (x.proposal) inc.agentProposal = x.proposal;
     return inc;
   });
   if (deps) {
@@ -148,12 +206,25 @@ export function toIncident(entry: LogEntry, task: Pick<Task, 'id' | 'classificat
 }
 
 /** Móc từ Orchestrator: chỉ chạy khi selfImprove.enabled && collect. Không bao giờ ném lỗi ra vòng review. */
-export function onLog(entry: LogEntry, task: Pick<Task, 'id' | 'classification' | 'options'>, deps: Deps): void {
+export function onLog(entry: LogEntry, task: Pick<Task, 'id' | 'classification' | 'options'>, deps: Deps, untrusted?: Record<string, string>): void {
   if (!deps.cfg.enabled || !deps.cfg.collect) return;
   try {
-    toIncident(entry, task, deps);
+    toIncident(entry, task, deps, untrusted);
   } catch {
     /* thu thập sự cố là phụ: lỗi không được làm hỏng nhiệm vụ */
+  }
+}
+
+/**
+ * Nguồn `guard.block` (D6): hook chạy ở tiến trình riêng nên sự kiện không đi qua EventBus; đọc lại từ nhật ký nhiệm vụ trong LogStore
+ * (logGuardBlock ghi vào runs/<task>/events.jsonl khi biết taskId). Khử trùng lặp nên gọi lại nhiều lần an toàn.
+ */
+export function collectGuardBlocks(task: Pick<Task, 'id' | 'classification' | 'options'>, deps: Deps): void {
+  if (!deps.cfg.enabled || !deps.cfg.collect) return;
+  try {
+    for (const e of deps.logs.query({ task: task.id, limit: 500 })) if (e.kind === 'guard.block') onLog(e, task, deps);
+  } catch {
+    /* phụ trợ */
   }
 }
 

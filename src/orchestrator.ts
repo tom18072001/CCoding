@@ -43,7 +43,7 @@ import { subtaskHistory, type AgentHistory } from './estimate.js';
 import { buildRepoMap } from './repomap.js';
 import { chooseLane, forcedLane, laneSignals, type LaneSignals } from './lane.js';
 import { parseIncidentLog } from './incident.js';
-import { onLog as selfImproveOnLog } from './selfimprove.js';
+import { collectGuardBlocks as selfImproveGuardBlocks, onLog as selfImproveOnLog, reviewIssueKey } from './selfimprove.js';
 import { modelForDifficulty, scoreDifficulty } from './difficulty.js';
 import { cappedDone } from './runtimes/api.js';
 import { isCheckCommand, runCheckCommand, toolsFor } from './tools/workspace.js';
@@ -1916,6 +1916,18 @@ export class Orchestrator {
               const target = [...done()].reverse().find((s) => this.isWriter(registry.agent(s.assignee), task, project)) ?? done().at(-1);
               if (target) review.issues.push({ subtask: target.id, severity: 'blocker', comment: `Lệnh ${regressed.map((c) => `\`${c}\``).join(', ')} đạt trước khi sửa nhưng lỗi sau khi sửa — sửa cho đạt lại (đầu ra ở mục "Lệnh kiểm tra của dự án").` });
             }
+          }
+          // B-19 bước 1: issue blocker/major, regressed, guard.block (chỉ khi selfImprove.enabled && collect; comment không vào sự kiện)
+          if (this.d.config.selfImprove?.enabled && this.d.config.selfImprove.collect) {
+            const si = { cfg: this.d.config.selfImprove, logs: this.d.logs, dataDir: this.d.config.dataDir, root: this.d.config.root };
+            const serious = review.issues.filter((i) => i.severity === 'blocker' || i.severity === 'major');
+            if (serious.length) {
+              const untrusted = Object.fromEntries(serious.map((i) => [reviewIssueKey(i.subtask, i.comment), i.comment]));
+              const ev = this.d.logs.write({ level: 'info', kind: 'review.incident', msg: `${task.id}: review nêu ${serious.length} lỗi blocker/major vòng ${attempt + 1}`, taskId: task.id, department: dept.id, agentId: reviewer.id, phase: 'review', data: { taskId: task.id, round: attempt + 1, issues: serious.map((i) => ({ subtask: i.subtask, severity: i.severity, key: reviewIssueKey(i.subtask, i.comment) })) } });
+              selfImproveOnLog(ev, task, si, untrusted);
+            }
+            if (regressed.length) selfImproveOnLog(this.d.logs.write({ level: 'info', kind: 'checks.regressed', msg: `${task.id}: ${regressed.length} lệnh kiểm tra hỏng sau khi sửa`, taskId: task.id, department: dept.id, agentId: reviewer.id, phase: 'review', data: { taskId: task.id, round: attempt + 1, commands: regressed.length } }), task, si);
+            selfImproveGuardBlocks(task, si);
           }
           // bằng chứng: lệnh reviewer thực sự chạy qua công cụ (không chỉ lời khai trong JSON)
           const ran = (res.toolCalls ?? []).filter((tc) => tc.name === 'run_command');
