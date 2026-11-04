@@ -102,3 +102,88 @@ test('(8) stderr tách cổng null, bài loại khác và dòng infra/error theo
   assert.match(err, /cổng null: cto=1/); assert.match(err, /loại khác: cto=1/); assert.match(err, /infra=1 error=1/);
   assert.equal(main([f, '--arms-json', a, '--unit', 'run', '--negatives', 'x'], { out: () => {}, err: () => {} }), 2);
 });
+
+const mk = (rows) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gp-')), f = path.join(dir, 'runs.jsonl'), a = path.join(dir, 'arms.json'), o = path.join(dir, 'o.csv');
+  fs.writeFileSync(a, JSON.stringify(ARMS)); fs.writeFileSync(f, rows.map((x) => JSON.stringify(x)).join('\n'));
+  return { f, a, o };
+};
+const go = (argv) => { let out = '', err = ''; const code = main(argv, { out: (s) => { out += s; }, err: (s) => { err += s; } }); return { code, out, err }; };
+
+test('(9) --label gate: b02 ref theo checksRed > 0 / = 0, bất kể nhãn theo bài', () => {
+  const pr = (task, cr) => rowToPairs(run('k', task, { b02: { blocked: true, rounds: 1, checksRed: cr } }), kinds, { unit: 'run', gates: ['b02'] });
+  assert.equal(pr('g1-a', 2).pairs[0].ref, '1');
+  assert.equal(pr('g1-a', 0).pairs[0].ref, '0');
+  assert.equal(pr('t1-a', 1).pairs[0].ref, '1');
+  assert.deepEqual(pr('g1-a', 0).fallback, {});
+  assert.equal(pr('g1-a', 0).seen.b02, 1);
+});
+
+test('(10) thiếu một phần checksRed: lùi về nhãn theo bài; stderr và dòng tổng hợp có số dòng lùi', () => {
+  const { f, a, o } = mk([
+    run('a', 'g1-a', { b02: { blocked: true, rounds: 1, checksRed: 0 } }),
+    run('b', 'g2-a', { b02: { blocked: true, rounds: 1 } }),
+    run('c', 't1-a', { b02: { blocked: false, rounds: 0, checksRed: 3 } }),
+    run('d', 't1-b', { b02: { blocked: false, rounds: 0 } }),
+  ]);
+  const r = go([f, '--arms-json', a, '--unit', 'run', '--gate', 'b02', '--out', o]);
+  assert.equal(r.code, 0);
+  assert.match(r.err, /b02: 2\/4 dòng thiếu checksRed → dùng nhãn theo bài/);
+  assert.match(r.out, /nhãn hiệu lực: gate \(lùi một phần\); số dòng lùi: 2\/4; tỷ lệ lùi: 50\.0%/);
+  assert.match(r.err, /số dòng lùi: 2\/4/);
+  const refs = parseCsv(fs.readFileSync(o, 'utf8')).map((x) => x.ref);
+  assert.deepEqual(refs, ['0', '1', '1', '0']);
+});
+
+test('(11) thiếu toàn bộ checksRed: vẫn exit 0, dòng tổng hợp ghi "task (lùi)", nhãn = nhãn theo bài', () => {
+  const { f, a } = mk([run('a', 'g1-a', { b02: { blocked: true, rounds: 1 } }), run('b', 't1-a', { b02: { blocked: false, rounds: 0 } })]);
+  const r = go([f, '--arms-json', a, '--unit', 'run', '--gate', 'b02']);
+  assert.equal(r.code, 0);
+  assert.match(r.err, /nhãn hiệu lực: task \(lùi\); số dòng lùi: 2\/2; tỷ lệ lùi: 100\.0%/);
+  assert.deepEqual(parseCsv(r.out).map((x) => x.ref), ['1', '0']);
+});
+
+test('(12) --label task cho đầu ra CSV giống --negatives/hành vi cũ, bỏ qua checksRed', () => {
+  const rows = [run('a', 'g1-a', { b02: { blocked: true, rounds: 2, checksRed: 0 }, cto: { pass: true } }), run('b', 't1-a', { b02: { blocked: false, rounds: 0, checksRed: 5 }, cto: { pass: false } })];
+  const { f, a } = mk(rows);
+  const t = go([f, '--arms-json', a, '--unit', 'decision', '--label', 'task']);
+  assert.equal(t.code, 0);
+  assert.deepEqual(parseCsv(t.out).filter((x) => x.gate === 'b02').map((x) => [x.ref, x.pred]), [['1', '1'], ['1', '1'], ['0', '0']]);
+  const { f: f2, a: a2 } = mk(rows.map((r) => ({ ...r, gates: { ...r.gates, b02: { blocked: r.gates.b02.blocked, rounds: r.gates.b02.rounds } } })));
+  assert.equal(go([f2, '--arms-json', a2, '--unit', 'decision', '--label', 'task']).out, t.out);
+  assert.doesNotMatch(t.err, /thiếu checksRed/);
+});
+
+test('(13) --label sai → mã 2; b10 giữ nhãn theo bài, cto thiếu pass lùi về nhãn theo bài ở --label gate', () => {
+  const { f, a } = mk([run('a', 'g5-a', { b10: { blocked: false }, cto: { pass: false } })]);
+  assert.equal(go([f, '--arms-json', a, '--unit', 'run', '--label', 'x']).code, 2);
+  const r = go([f, '--arms-json', a, '--unit', 'run']);
+  assert.deepEqual(parseCsv(r.out).map((x) => [x.gate, x.ref]), [['cto', '1']]);
+});
+
+test('(14) cto + --label gate: ref theo pass của dòng (false → 1, true → 0), bài sạch ref = 0, thiếu pass lùi', () => {
+  const cto = { pass: true };
+  const rows = [
+    { ...run('a', 'g5-a', { cto }), pass: false },
+    { ...run('b', 'g5-b', { cto }), pass: true },
+    run('c', 'g6-a', { cto }),
+    { ...run('d', 't1-a', { cto }), pass: false },
+  ];
+  const { f, a } = mk(rows);
+  const r = go([f, '--arms-json', a, '--unit', 'run', '--gate', 'cto', '--out', path.join(path.dirname(f), 'o.csv')]);
+  assert.equal(r.code, 0);
+  const csv = parseCsv(fs.readFileSync(path.join(path.dirname(f), 'o.csv'), 'utf8'));
+  assert.deepEqual(csv.map((x) => [x.runId, x.ref]), [['a', '1'], ['b', '0'], ['c', '1'], ['d', '0']]);
+  assert.match(r.err, /cto: 1\/3 dòng thiếu pass → dùng nhãn theo bài/);
+  assert.match(r.out, /cto nhãn hiệu lực: gate \(lùi một phần\); số dòng lùi: 1\/3; tỷ lệ lùi: 33\.3%/);
+  const t = go([f, '--arms-json', a, '--unit', 'run', '--gate', 'cto', '--label', 'task']);
+  assert.deepEqual(parseCsv(t.out).map((x) => x.ref), ['1', '1', '1', '0']);
+  const all = go([f, '--arms-json', a, '--unit', 'run', '--gate', 'cto']);
+  assert.match(all.err, /cto: 1\/3/);
+});
+
+test('(15) cto: mọi dòng g5/g6 thiếu pass → nhãn hiệu lực task (lùi)', () => {
+  const { f, a } = mk([run('a', 'g5-a', { cto: { pass: false } })]);
+  const r = go([f, '--arms-json', a, '--unit', 'run', '--gate', 'cto', '--out', path.join(path.dirname(f), 'o2.csv')]);
+  assert.match(r.out, /cto nhãn hiệu lực: task \(lùi\); số dòng lùi: 1\/1/);
+});
