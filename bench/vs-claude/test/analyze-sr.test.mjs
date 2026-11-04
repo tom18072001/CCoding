@@ -25,7 +25,9 @@ const row = (task, arm, score, extra = {}) => ({
   wallSec: extra.wallSec ?? 10, tokens: { weighted: extra.weighted ?? 1000 }, costUsd: 0, leak: false, score, pass: score >= 0.99, formatMiss: false,
   details: extra.details, ...extra.fields,
 });
-const hRow = (report, id) => report.split('\n').find((l) => l.startsWith(`| ${id} |`)) ?? '';
+let k3 = 0;
+const s1n = () => ['s1-a', 's1-b', 's1-c'][k3++ % 3]; // SR-11: H3 cần ≥ 3 bài review
+const hRow = (report, id) => report.split(/\r?\n/).find((l) => l.startsWith(`| ${id} |`)) ?? '';
 
 const base = () => ['c3', 'c4', 'c5'].flatMap((t) => [row(t, 'A0-sonnet', 0.5), row(t, 'A0-sonnet', 0.6), row(t, 'B0', 0.7), row(t, 'B0', 0.8)]);
 
@@ -134,7 +136,7 @@ test('SR-04 H2: ước lượng ≤ 5 pp nhưng CI 90 % tràn biên ⇒ không p
 
 test('SR-26 H3: hoán vị chính xác trên s1 r = 10, p = 1/184756, xác nhận qua Holm', () => {
   const d = { category: 'review' };
-  const rows = ['A0-sonnet', 'B0'].flatMap((a) => Array.from({ length: 10 }, () => row('s1-sec-review', a, 0.5, { ...d, details: { recall: a === 'B0' ? 1 : 0.5, precision: 1 } })));
+  const rows = ['A0-sonnet', 'B0'].flatMap((a) => Array.from({ length: 10 }, () => row(s1n(), a, 0.5, { ...d, details: { recall: a === 'B0' ? 1 : 0.5, precision: 1 } })));
   const r = hRow(run(rows).report, 'H3');
   assert.match(r, /N=184756/);
   assert.match(r, /recall p=5\.41e-6/);
@@ -145,14 +147,14 @@ test('SR-26 H3: hoán vị chính xác trên s1 r = 10, p = 1/184756, xác nhậ
 
 test('SR-26 H3: r = 3 ⇒ p_min = 1/20 > ngưỡng ⇒ không xác nhận được dù tách hoàn toàn', () => {
   const d = { category: 'review' };
-  const rows = ['A0-sonnet', 'B0'].flatMap((a) => Array.from({ length: 3 }, () => row('s1-sec-review', a, 0.5, { ...d, details: { recall: a === 'B0' ? 1 : 0.2, precision: 1 } })));
+  const rows = ['A0-sonnet', 'B0'].flatMap((a) => Array.from({ length: 3 }, () => row(s1n(), a, 0.5, { ...d, details: { recall: a === 'B0' ? 1 : 0.2, precision: 1 } })));
   const r = hRow(run(rows).report, 'H3');
   assert.match(r, /confirmable=không/);
   assert.match(r, /not supported \(p_min > ngưỡng/);
 });
 
 test('SR-26 H3: dịch biên recall −0,15 và precision +0,05 (recall hơn 0,10 < biên ⇒ p = 1; precision kém 0,10 > biên ⇒ p lớn)', () => {
-  const mk = (rb, pb) => ['A0-sonnet', 'B0'].flatMap((a) => Array.from({ length: 10 }, () => row('s1-sec-review', a, 0.5, { category: 'review', details: { recall: a === 'B0' ? rb : 0.5, precision: a === 'B0' ? pb : 0.9 } })));
+  const mk = (rb, pb) => ['A0-sonnet', 'B0'].flatMap((a) => Array.from({ length: 10 }, () => row(s1n(), a, 0.5, { category: 'review', details: { recall: a === 'B0' ? rb : 0.5, precision: a === 'B0' ? pb : 0.9 } })));
   const r = hRow(run(mk(0.6, 0.9)).report, 'H3');
   assert.match(r, /recall p=1\.0000/);
   assert.match(r, /not supported/);
@@ -162,7 +164,7 @@ test('SR-26 H3: dịch biên recall −0,15 và precision +0,05 (recall hơn 0,1
 
 test('SR-26 H3: precision NaN (null) bị bỏ và báo số lượt bỏ', () => {
   const d = { category: 'review' };
-  const rows = ['A0-sonnet', 'B0'].flatMap((a) => Array.from({ length: 10 }, (_, i) => row('s1-sec-review', a, 0.5, { ...d, details: { recall: a === 'B0' ? 1 : 0.5, precision: i < 2 ? null : 1 } })));
+  const rows = ['A0-sonnet', 'B0'].flatMap((a) => Array.from({ length: 10 }, (_, i) => row(s1n(), a, 0.5, { ...d, details: { recall: a === 'B0' ? 1 : 0.5, precision: i < 2 ? null : 1 } })));
   assert.match(hRow(run(rows).report, 'H3'), /bỏ 4 lượt precision NaN/);
 });
 
@@ -195,7 +197,7 @@ test('SR-12 + SR-26 H6: cả A1 và A2 trong biên ⇒ SUPPORTED, báo n, tỉ s
 
 test('SR-26 họ Holm: H6 NA xếp như 1, không chặn H3', () => {
   const d = { category: 'review' };
-  const s1 = ['A0-sonnet', 'B0'].flatMap((a) => Array.from({ length: 10 }, () => row('s1-sec-review', a, 0.5, { ...d, details: { recall: a === 'B0' ? 1 : 0.5, precision: 1 } })));
+  const s1 = ['A0-sonnet', 'B0'].flatMap((a) => Array.from({ length: 10 }, () => row(s1n(), a, 0.5, { ...d, details: { recall: a === 'B0' ? 1 : 0.5, precision: 1 } })));
   const rows = [...s1, ...h6Data([0.7, 0.7, 0.7], [0.5, 0.5, 0.5], [0.5, 0.5, 0.5])];
   const h = hRow(run(rows).report, 'Holm {H3, H6}');
   assert.match(h, /K=2/);
@@ -244,4 +246,121 @@ test('SR-04 B-01: TOST log-tỉ số ba đại lượng; thiếu arm SL ⇒ insu
   for (const id of ['B-01a', 'B-01b', 'B-01c']) assert.match(hRow(run(same).report, id), /SUPPORTED/, id);
   const slow = ['t1-duration', 't2-orders', 't3-api'].flatMap((t) => [...mkCells(t, 'A0-sonnet', [0.8, 0.8, 0.8]), ...mkCells(t, 'SL', [0.8, 0.8, 0.8], { weighted: 3000 })]);
   assert.match(hRow(run(slow).report, 'B-01a'), /not supported/);
+});
+
+// ---------- S7: SR-11 ----------
+test('SR-11: dưới 3 bài ⇒ insufficient data ở H1, H2, H4, H9, H10 và H3; đủ 3 bài thì phán', () => {
+  const two = ['c3', 'c4'].flatMap((t) => [row(t, 'A0-sonnet', 0.3), row(t, 'B0', 0.9)]);
+  assert.match(hRow(run(two).report, 'H1'), /insufficient data/);
+  const cat = (category, t) => ['A0-sonnet', 'B0'].flatMap((a) => mkCells(t, a, a === 'B0' ? [0.9, 0.9] : [0.3, 0.3], { category }));
+  const lo = run([...cat('logic', 'l3'), ...cat('logic', 'l4'), ...cat('requirements', 'a1'), ...cat('requirements', 'a3'), ...cat('research', 'r1'), ...cat('research', 'r2')]);
+  for (const id of ['H2', 'H4', 'H9']) assert.match(hRow(lo.report, id), /insufficient data/, id);
+  const three = run(['c3', 'c4', 'c5'].flatMap((t) => [row(t, 'A0-sonnet', 0.3), row(t, 'A0-sonnet', 0.3), row(t, 'B0', 0.9), row(t, 'B0', 0.9)]));
+  assert.match(hRow(three.report, 'H1'), /SUPPORTED/);
+  assert.doesNotMatch(hRow(three.report, 'H1'), /insufficient/);
+  const s1one = ['A0-sonnet', 'B0'].flatMap((a) => Array.from({ length: 10 }, () => row('s1-only', a, 0.5, { category: 'review', details: { recall: a === 'B0' ? 1 : 0.5, precision: 1 } })));
+  const h3 = hRow(run(s1one).report, 'H3');
+  assert.match(h3, /insufficient data/);
+  assert.match(h3, /chỉ 1 bài review/);
+  assert.match(hRow(run(s1one).report, 'Holm {H3, H6}'), /họ rỗng|K=0/);
+});
+
+// ---------- S7: SR-10 ----------
+test('SR-10: có B2 ⇒ H3 so B0 với B2 (B2 kém hơn A0 không làm lệch); thiếu B2 ⇒ đổi tên giả thuyết; có CI và bỏ precision NaN', () => {
+  const mk = (arm, rec, prec) => Array.from({ length: 9 }, (_, i) => row(s1n(), arm, 0.5, { category: 'review', details: { recall: rec, precision: i === 0 ? NaN : prec } }));
+  // A0 recall 0.9 (cao), B2 recall 0.3, B0 recall 0.9: so với A0 thì B0 không hơn; so với B2 thì hơn 0.6
+  const withB2 = hRow(run([...mk('A0-sonnet', 0.9, 1), ...mk('B2', 0.3, 1), ...mk('B0', 0.9, 1)]).report, 'H3');
+  assert.match(withB2, /B0 vs B2: recall \+60\.0 pp \[\+60\.0 pp, \+60\.0 pp\]/);
+  assert.match(withB2, /B0 vs A0-sonnet: recall \+0\.0 pp/);
+  assert.match(withB2, /\(B0 vs B2: review tắt\)/);
+  assert.match(withB2, /bỏ 2 lượt precision NaN/);
+  assert.doesNotMatch(withB2, /NaN pp|n\/a/);
+  assert.match(withB2, /N=\d+/);
+  const noB2 = hRow(run([...mk('A0-sonnet', 0.9, 1), ...mk('B0', 0.9, 1)]).report, 'H3');
+  assert.match(noB2, /B2 vắng nên KHÔNG cô lập hiệu ứng review/);
+  assert.doesNotMatch(noB2, /B0 vs B2/);
+  // CI thật sự mở rộng khi mẫu nhiễu
+  const noisy = hRow(run([...mk('A0-sonnet', 0.5, 1), ...['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'].map((x, i) => row(s1n(), 'B0', 0.5, { category: 'review', details: { recall: i % 2 ? 1 : 0, precision: 1 } }))]).report, 'H3');
+  const m = /recall [+-][0-9.]+ pp \[([+-][0-9.]+) pp, ([+-][0-9.]+) pp\]/.exec(noisy);
+  assert.ok(m && +m[1] < +m[2], noisy);
+});
+
+// ---------- S7: SR-13 ----------
+test('SR-13: H8 cặp theo bài trên untouchedFileFailures và redAtEnd; formatMiss chỉ là chỉ số phụ; dòng cũ ⇒ insufficient data', () => {
+  const mkd = (t, arm, u, red, fm = false) => [0, 1].map(() => row(t, arm, 0.5, { details: { untouchedFileFailures: u, redAtEnd: red, formatMiss: fm } }));
+  const worse = ['c3', 'c4', 'c5'].flatMap((t) => [...mkd(t, 'A0-sonnet', 0, false), ...mkd(t, 'B0', 2, true)]);
+  const h = hRow(run(worse).report, 'H8');
+  assert.match(h, /cặp theo 3 bài/);
+  assert.match(h, /untouchedFileFailures B0 − A0-sonnet = \+2\.00/);
+  assert.match(h, /redAtEnd \+100\.0 pp/);
+  assert.match(h, /chỉ số phụ formatMiss/);
+  assert.match(h, /SUPPORTED/);
+  // formatMiss cao hơn ở B0 nhưng hai chỉ số chính không tệ hơn ⇒ KHÔNG SUPPORTED (trước đây SUPPORTED chỉ nhờ formatMiss)
+  const fmOnly = ['c3', 'c4', 'c5'].flatMap((t) => [...mkd(t, 'A0-sonnet', 0, false, false), ...mkd(t, 'B0', 0, false, true)]);
+  assert.match(hRow(run(fmOnly).report, 'H8'), /not supported/);
+  const old = hRow(run(base()).report, 'H8');
+  assert.match(old, /insufficient data/);
+  assert.match(old, /chưa có dữ liệu/);
+  const two = ['c3', 'c4'].flatMap((t) => [...mkd(t, 'A0-sonnet', 0, false), ...mkd(t, 'B0', 2, true)]);
+  assert.match(hRow(run(two).report, 'H8'), /insufficient data/);
+});
+
+// ---------- S7: SR-14 ----------
+test('SR-14: H7 dùng phương sai gộp theo bài, bài sd(A0) = 0 vẫn tính, có CI bootstrap', () => {
+  // A0 không đổi (sd = 0) ở mọi bài, B0 dao động ⇒ cách cũ bỏ hết bài (NaN) và "insufficient"; cách mới ra tỉ số lớn, not supported
+  const rows = ['c3', 'c4', 'c5'].flatMap((t) => [...mkCells(t, 'A0-sonnet', [0.6, 0.6, 0.6]), ...mkCells(t, 'B0', [0.3, 0.6, 0.9])]);
+  const h = hRow(run(rows).report, 'H7');
+  assert.match(h, /3 có sd\(A0-sonnet\) = 0, vẫn tính/);
+  assert.match(h, /over 3 tasks/);
+  assert.match(h, /not supported|insufficient data/);
+  assert.doesNotMatch(h, /pooled SD ratio n\/a/);
+  // A0 dao động 0.1, B0 dao động 0.05 ở mọi bài ⇒ tỉ số gộp 0.5 ≤ 0.7, CI bao 0.5
+  const ok = ['c3', 'c4', 'c5'].flatMap((t) => [...mkCells(t, 'A0-sonnet', [0.5, 0.6, 0.7]), ...mkCells(t, 'B0', [0.55, 0.6, 0.65])]);
+  const m = /pooled SD ratio ([0-9.]+) \[([0-9.]+), ([0-9.]+)\]/.exec(hRow(run(ok).report, 'H7'));
+  assert.ok(m, 'định dạng');
+  assert.equal(+m[1], 0.5);
+  assert.ok(+m[2] <= 0.5 && +m[3] >= 0.5);
+  assert.match(hRow(run(ok).report, 'H7'), /SUPPORTED/);
+  // phương sai gộp, không phải trung vị: hai bài ổn định tuyệt đối + một bài B0 rất nhiễu ⇒ trung vị cũ nhỏ nhưng gộp lớn
+  const mix = [...['c3', 'c4'].flatMap((t) => [...mkCells(t, 'A0-sonnet', [0.5, 0.6, 0.7]), ...mkCells(t, 'B0', [0.6, 0.6, 0.6])]), ...mkCells('c5', 'A0-sonnet', [0.5, 0.6, 0.7]), ...mkCells('c5', 'B0', [0.0, 0.6, 1.0])];
+  assert.match(hRow(run(mix).report, 'H7'), /not supported/);
+});
+
+// ---------- S7: SR-22 ----------
+test('SR-22: cột Overall theo loại là trung bình các loại có trọng số bằng nhau, khác Overall theo lượt', () => {
+  // 3 bài coding điểm 1.0, 1 bài logic điểm 0.0 ⇒ theo lượt 0.75, theo loại 0.50
+  const rows = [...['c3', 'c4', 'c5'].map((t) => row(t, 'B0', 1)), row('l3', 'B0', 0, { category: 'logic' }), ...['c3', 'c4', 'c5'].map((t) => row(t, 'A0-sonnet', 1)), row('l3', 'A0-sonnet', 0, { category: 'logic' })];
+  const rep = run(rows).report;
+  const head = rep.split(/\r?\n/).find((l) => l.startsWith('| Arm | coding'));
+  assert.match(head, /Overall \| Overall theo loại/);
+  const line = rep.split(/\r?\n/).find((l) => l.startsWith('| B0 | 1.00'));
+  assert.ok(line, rep);
+  const cols = line.split('|').map((c) => c.trim());
+  assert.equal(cols[4], '0.75');
+  assert.equal(cols[5], '0.50');
+});
+
+// ---------- S7: SR-05 (i, ii) ----------
+test('SR-05: H10-coding và H10-adj báo độ dốc kèm CI; độ dốc điều chỉnh loại bài không bị lệch bởi loại logic', () => {
+  const sizes = [1, 2, 3, 4, 5];
+  const rows = [
+    ...sizes.flatMap((s) => [row(`c${s}`, 'A0-sonnet', 0.3, { size: s }), row(`c${s}`, 'B0', 0.3 + 0.1 * s, { size: s })]),
+    ...[1, 2, 3].flatMap((s) => [row(`l${s}`, 'A0-sonnet', 0.9, { category: 'logic', size: s }), row(`l${s}`, 'B0', 0.4 + 0.1 * s, { category: 'logic', size: s })]),
+  ];
+  const rep = run(rows).report;
+  assert.match(hRow(rep, 'H10-coding'), /slope \+10\.0 pp per extra part \[\+10\.0 pp, \+10\.0 pp\].*tasks=5/);
+  assert.match(hRow(rep, 'H10-adj'), /slope \+10\.0 pp per extra part \[\+10\.0 pp, \+10\.0 pp\].*tasks=8/);
+  assert.doesNotMatch(hRow(rep, 'H10'), /slope \+10\.0 pp/); // độ dốc gộp bị loại logic kéo lệch
+  assert.match(hRow(rep, 'H10-coding'), /SUPPORTED/);
+  // thiếu bài coding ⇒ insufficient
+  const few = rows.filter((r) => !['c4', 'c5'].includes(r.task));
+  assert.match(hRow(run(few).report, 'H10-coding'), /insufficient data/);
+});
+
+test('SR-05: H1 và H10 dùng size mới từ task.json; --legacy-rng giữ size ghi trong dòng chạy', () => {
+  // c5-tickets-api: size cũ 5 (trong dòng chạy), size mới 1 (task.json) ⇒ H1 (size >= 3) không còn tính bài này
+  const mk = (t) => ['A0-sonnet', 'B0'].flatMap((a) => mkCells(t, a, a === 'B0' ? [0.9, 0.9] : [0.3, 0.3], { size: 5 }));
+  const rows = ['c3-shop-bugs', 'c4-audit-chain', 'c5-tickets-api', 'g1-slug-dedupe', 't5-logq'].flatMap(mk);
+  assert.match(hRow(run(rows).report, 'H1'), /tasks=3/);
+  assert.match(hRow(run(rows, ['--legacy-rng']).report, 'H1'), /tasks=5/);
 });
