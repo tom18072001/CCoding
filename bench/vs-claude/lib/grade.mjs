@@ -60,7 +60,13 @@ export function gradeCode({ workdir, hiddenDir }) {
   return { ...tapScore(`${r.stdout}\n${r.stderr}`), ...(r.error ? { gradeError: String(r.error.code ?? r.error.message) } : {}) };
 }
 
-const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+/** Chuẩn hóa JSON: sắp khóa đối tượng theo thứ tự chữ cái (đệ quy); thứ tự mảng giữ nguyên (SR-16). */
+export function canonJson(v) {
+  if (Array.isArray(v)) return v.map(canonJson);
+  if (v && typeof v === 'object') return Object.fromEntries(Object.keys(v).sort().map((k) => [k, canonJson(v[k])]));
+  return v;
+}
+export const eq = (a, b) => JSON.stringify(canonJson(a)) === JSON.stringify(canonJson(b));
 const sortU = (a) => [...new Set((a ?? []).map(String))].sort();
 
 /** Logic: exact match per field; score = matched fields / fields. */
