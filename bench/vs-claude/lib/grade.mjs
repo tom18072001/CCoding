@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { judgeChecklist } from './judge.mjs';
+import { agreementRate, judgeChecklist } from './judge.mjs';
 
 /** Read a JSON deliverable; fall back to the last ```json block in the final report (format miss). */
 export function readJsonDeliverable(workdir, file, finalText = '') {
@@ -198,7 +198,14 @@ export async function gradeChecklist({ workdir, hiddenDir, finalText, task, judg
   if (judge?.enabled) verdicts = await judgeChecklist(text, items, judge);
   else verdicts = Object.fromEntries(items.map((it) => [it.id, it.regex.some((re) => new RegExp(re, 'is').test(text))]));
   const n = Object.values(verdicts).filter(Boolean).length;
-  return { score: n / items.length, pass: n === items.length, details: { verdicts, judge: judge?.enabled ? judge.model : 'regex', chars: text.length }, formatMiss };
+  // SR-08a: giám khảo thứ hai (judge.model2, khác judge.model) chỉ để đo đồng thuận; điểm chính vẫn theo giám khảo 1.
+  const second = {};
+  if (judge?.enabled && judge.model2 && judge.model2 !== judge.model) {
+    const v2 = await judgeChecklist(text, items, { ...judge, model: judge.model2 });
+    second.judge2 = judge.model2;
+    second.judgeAgreement = agreementRate(items.map((it) => verdicts[it.id]), items.map((it) => v2[it.id]));
+  }
+  return { score: n / items.length, pass: n === items.length, details: { verdicts, judge: judge?.enabled ? judge.model : 'regex', ...second, chars: text.length }, formatMiss };
 }
 
 /** F1 dạng 0,962 hoặc phần trăm (96.2 / "96.2%") → số trong [0,1]; không đọc được → NaN (SR-18). */
