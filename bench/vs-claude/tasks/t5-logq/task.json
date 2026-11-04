@@ -8,7 +8,6 @@
   "title": "Xây công cụ logq (thư viện + CLI) theo đặc tả",
   "hypotheses": [
     "H1",
-    "H3",
     "H10"
   ],
   "deliverable": "src/, bin/logq.js",

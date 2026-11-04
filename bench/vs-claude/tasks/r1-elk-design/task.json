@@ -7,7 +7,6 @@
   "title": "ELK audit platform sizing and design",
   "hypotheses": [
     "H1",
-    "H4",
     "H10"
   ],
   "deliverable": "DESIGN.md",

@@ -6,8 +6,6 @@
   "sizeLegacy": 2,
   "title": "Sliding-window 5xx burst alerting",
   "hypotheses": [
-    "H1",
-    "H2",
     "H10"
   ],
   "deliverable": "src/alert.js",

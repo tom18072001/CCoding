@@ -8,7 +8,6 @@
   "title": "Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật",
   "hypotheses": [
     "H1",
-    "H3",
     "H10"
   ],
   "deliverable": "src/",

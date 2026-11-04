@@ -76,6 +76,10 @@ tasks/<id>/        task.json (brief, category, size/sizeBasis/sizeLegacy, grader
 | t4-perf | 1 | 1 | files |
 | t5-logq | 4 | 4 | files |
 
+### Nhãn `hypotheses` (SR-15)
+
+Nhãn trong `task.json` được đồng bộ với bộ lọc thật của `analyze.mjs`: **H1** = `category` ∈ {coding, design} và `size >= 3` (size mới); **H2** = logic; **H3** = review; **H4** = requirements; **H9** = research. H5–H8 và H10 tính trên mọi bài (H5/H6 giữ nhãn theo tập bài đã khai báo ở `preregistration.md` §2.5). Nhãn `B-12` đánh dấu bài thuộc bộ cổng g1–g6. `test/task-hypotheses.test.mjs` kiểm H1/H2/H3/H4/H9; đổi `size` thì nhãn H1 đổi theo.
+
 ### Bộ bài cài lỗi g1–g6 (B-12)
 
 Sáu bài tổng hợp (không dựa trên t1–t5) để đo recall của cổng chất lượng. Chọn bằng `run.mjs --tasks suite:gates` (bảng tên ở `_suites.gates` trong `arms.json`). Cấu trúc như t1–t5 (`starter/`, `hidden/`, `ref/`, `prompt.txt`, `task.json` với `repoDir`/`solutionDir`), grader `code`. Nhãn thật nằm ở `task.json` → `plantedFaults: [{class, where, expectGate}]`; `plantedFaultNote` mô tả cách lỗi lọt qua.
