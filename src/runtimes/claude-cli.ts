@@ -306,7 +306,8 @@ export class ClaudeCliRuntime implements Runtime {
       if (!av.ok) {
         // fail-closed: không có sandbox thì KHÔNG chạy (không tụt về chạy không sandbox)
         const logged = logSandboxUnavailable({ backend: av.backend, platform: process.platform }, { state: req.toolPolicy?.guardState });
-        if (req.toolPolicy?.guardState) fs.rmSync(req.toolPolicy.guardState, { force: true });
+        // Dọn tệp trạng thái hook. Trên Linux, rmSync ném ENOTDIR khi một thành phần của đường dẫn là tệp; force chỉ bỏ qua ENOENT.
+        if (req.toolPolicy?.guardState) try { fs.rmSync(req.toolPolicy.guardState, { force: true }); } catch { /* không có gì để dọn */ }
         return {
           text: '',
           usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, costUsd: 0 },
