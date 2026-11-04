@@ -7,6 +7,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { startDir } from '../lib/workspace.mjs';
 
 const args = process.argv.slice(2);
 const cmd = args[0];
@@ -56,7 +57,9 @@ function childEnv() {
 
 // ── chuẩn bị repo xuất phát
 function prepareRepo(task, dir) {
-  copyTree(path.join(BENCH, 'tasks', task, 'starter'), dir);
+  const src = startDir(path.join(BENCH, 'tasks', task));
+  if (!src) throw new Error(`Bài ${task} không có starter/ hoặc repo/`);
+  copyTree(src, dir);
   git(dir, 'init', '-q', '-b', 'main');
   git(dir, 'config', 'user.email', 'bench@local');
   git(dir, 'config', 'user.name', 'bench');
@@ -216,7 +219,7 @@ function grade(job, workdir, outDir) {
   const h = tapCount(hidden.out);
   const v = tapCount(visible.out);
   // các tệp đã đổi so với khởi điểm
-  const starter = path.join(BENCH, 'tasks', job.task, 'starter');
+  const starter = startDir(path.join(BENCH, 'tasks', job.task)) ?? path.join(BENCH, 'tasks', job.task, 'starter');
   const changed = [];
   const walk = (d, rel = '') => {
     for (const e of fs.readdirSync(d, { withFileTypes: true })) {

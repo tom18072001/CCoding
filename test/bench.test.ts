@@ -333,8 +333,16 @@ test('[B-12] gateDecisions: fixture sự kiện gate.decision theo hợp đồng
     { kind: 'gate.decision', data: { gate: 'cto', verdict: 'pass' } },
     { kind: 'gate.decision', data: { gate: 'khác', verdict: 'block' } },
   ];
-  assert.deepEqual(gateDecisions(ev), { b02: { blocked: true, rounds: 1 }, b10: { blocked: true }, cto: { pass: true } });
+  assert.deepEqual(gateDecisions(ev), { b02: { blocked: true, rounds: 1, checksRed: null }, b10: { blocked: true }, cto: { pass: true } });
   assert.deepEqual(gateDecisions([]), { b02: null, b10: null, cto: null });
   assert.deepEqual(gateDecisions([{ kind: 'gate.decision', gate: 'cto', verdict: 'block' }]).cto, { pass: false });
   assert.deepEqual(runMetrics(fakeTask(), [], undefined, ev).gates?.b10, { blocked: true });
+});
+
+test('[B-12] gateDecisions: sự kiện mới có checks → checksRed; sự kiện cũ → null; trường cũ không đổi', () => {
+  const mới = [{ kind: 'gate.decision', data: { gate: 'b02', verdict: 'block', rounds: 2, checks: { red: 1, total: 3 } } }];
+  assert.deepEqual(gateDecisions(mới).b02, { blocked: true, rounds: 2, checksRed: 1 });
+  const cũ = [{ kind: 'gate.decision', data: { gate: 'b02', verdict: 'block', rounds: 2 } }];
+  assert.deepEqual(gateDecisions(cũ).b02, { blocked: true, rounds: 2, checksRed: null });
+  assert.equal(gateDecisions([{ kind: 'gate.decision', data: { gate: 'b02', verdict: 'pass', checks: { red: 0, total: 2 } } }]).b02?.checksRed, 0);
 });

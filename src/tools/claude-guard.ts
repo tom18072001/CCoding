@@ -173,6 +173,42 @@ export function logGuardBlock(b: GuardBlock, cfg: GuardConfig, env: NodeJS.Proce
   }
 }
 
+/** B-18: backend sandbox ghi trong log (không phải đường dẫn hay lệnh). */
+export type SandboxBackend = 'native' | 'wsl2' | 'none';
+
+/**
+ * B-18: ghi `sandbox.deny` (sandbox hệ điều hành từ chối một thao tác) theo khuôn logGuardBlock.
+ * data chỉ { tool, rule, backend } — không lệnh thô, không đường dẫn. Mọi lỗi đều nuốt.
+ */
+export function logSandboxDeny(d: { tool: string; rule: string; backend: SandboxBackend }, cfg: Pick<GuardConfig, 'state' | 'dataDir'>, env: NodeJS.ProcessEnv = process.env): void {
+  try {
+    const t = guardLogTarget(cfg as GuardConfig, env);
+    if (!t) return;
+    const logs = new LogStore(t.dataDir, { redactSecrets: true, redactPii: true, hashChain: true });
+    logs.write({
+      level: 'warn',
+      kind: 'sandbox.deny',
+      msg: `sandbox từ chối ${d.tool}: ${d.rule}`,
+      taskId: t.taskId,
+      data: { tool: d.tool, rule: d.rule, backend: d.backend },
+    });
+  } catch {
+    /* log chẩn đoán là phụ trợ */
+  }
+}
+
+/** B-18: ghi `sandbox.unavailable` khi khóa bật mà nền tảng không có sandbox (fail-closed). data chỉ { backend, platform }. */
+export function logSandboxUnavailable(d: { backend: SandboxBackend; platform: string }, cfg: Pick<GuardConfig, 'state' | 'dataDir'>, env: NodeJS.ProcessEnv = process.env): void {
+  try {
+    const t = guardLogTarget(cfg as GuardConfig, env);
+    if (!t) return;
+    const logs = new LogStore(t.dataDir, { redactSecrets: true, redactPii: true, hashChain: true });
+    logs.write({ level: 'error', kind: 'sandbox.unavailable', msg: 'osSandbox bật nhưng nền tảng không có sandbox — không chạy', taskId: t.taskId, data: { backend: d.backend, platform: d.platform } });
+  } catch {
+    /* log chẩn đoán là phụ trợ */
+  }
+}
+
 /**
  * Giới hạn khảo sát: đếm thao tác đọc/tìm liên tiếp (Read, Grep, Glob, lệnh shell chỉ đọc). Ghi tệp hoặc chạy lệnh khác (test, build…)
  * đặt lại bộ đếm. Ở mốc N nhắc một lần (chặn đúng lần đọc đó, lần sau được), từ 2N chặn đọc cho tới khi ghi.

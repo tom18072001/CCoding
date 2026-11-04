@@ -238,7 +238,7 @@ function toolClass(name: string, args: string): 'read' | 'write' | 'shell' | 'ot
 }
 
 export interface GateDecisions {
-  b02: { blocked: boolean; rounds: number } | null;
+  b02: { blocked: boolean; rounds: number; checksRed: number | null } | null;
   b10: { blocked: boolean } | null;
   cto: { pass: boolean } | null;
 }
@@ -248,15 +248,15 @@ export interface GateDecisions {
  * thành quyết định của từng cổng. Cổng không có sự kiện → null.
  */
 export function gateDecisions(events: ReadonlyArray<Record<string, unknown>> | undefined): GateDecisions {
-  const by: Record<'b02' | 'b10' | 'cto', Array<{ verdict: string; rounds?: number }>> = { b02: [], b10: [], cto: [] };
+  const by: Record<'b02' | 'b10' | 'cto', Array<{ verdict: string; rounds?: number; checksRed: number | null }>> = { b02: [], b10: [], cto: [] };
   for (const e of events ?? []) {
     if (e?.kind !== 'gate.decision') continue;
-    const d = (e.data && typeof e.data === 'object' ? e.data : e) as { gate?: string; verdict?: string; rounds?: number };
-    if ((d.gate === 'b02' || d.gate === 'b10' || d.gate === 'cto') && (d.verdict === 'block' || d.verdict === 'pass')) by[d.gate].push({ verdict: d.verdict, rounds: d.rounds });
+    const d = (e.data && typeof e.data === 'object' ? e.data : e) as { gate?: string; verdict?: string; rounds?: number; checks?: { red?: unknown } };
+    if ((d.gate === 'b02' || d.gate === 'b10' || d.gate === 'cto') && (d.verdict === 'block' || d.verdict === 'pass')) by[d.gate].push({ verdict: d.verdict, rounds: d.rounds, checksRed: typeof d.checks?.red === 'number' ? d.checks.red : null });
   }
   const blockN = (a: Array<{ verdict: string }>) => a.filter((d) => d.verdict === 'block').length;
   return {
-    b02: by.b02.length ? { blocked: blockN(by.b02) > 0, rounds: Math.max(blockN(by.b02), ...by.b02.map((d) => (Number.isFinite(d.rounds) ? (d.rounds as number) : 0))) } : null,
+    b02: by.b02.length ? { blocked: blockN(by.b02) > 0, rounds: Math.max(blockN(by.b02), ...by.b02.map((d) => (Number.isFinite(d.rounds) ? (d.rounds as number) : 0))), checksRed: by.b02[by.b02.length - 1].checksRed } : null,
     b10: by.b10.length ? { blocked: blockN(by.b10) > 0 } : null,
     cto: by.cto.length ? { pass: by.cto[by.cto.length - 1].verdict === 'pass' } : null,
   };

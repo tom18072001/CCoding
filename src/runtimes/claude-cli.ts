@@ -1,12 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 import { quickRun, runProcess } from './spawn.js';
 import { scrubEnv } from '../tools/workspace.js';
 import { isGitReadCommand } from '../tools/shell-policy.js';
 import { estimateTokens } from '../util/tokens.js';
 import { combinedPrompt } from './common.js';
-import type { RuntimeConfig } from '../config.js';
+import { logSandboxDeny, logSandboxUnavailable, type SandboxBackend } from '../tools/claude-guard.js';
+import type { OsSandboxConfig, RuntimeConfig } from '../config.js';
 import type { RunHooks, RunRequest, RunResult, Runtime, RuntimeAvailability, ToolCallRecord } from '../types.js';
 
 /** Tên công cụ Claude Code → tên công cụ CCoding (KPI nhận "đã chạy test" qua run_command, đọc/ghi qua read_file/edit_file…). */
@@ -32,6 +34,93 @@ interface ClaudeUsage {
   cache_creation_input_tokens?: number;
 }
 
+// ───────── B-18: sandbox cấp hệ điều hành (lớp 2) ─────────
+
+/** Khóa `sandbox` trộn vào chuỗi --settings (hàm thuần). strictAllowlist: thiếu thì ở bypassPermissions host ngoài allowlist vẫn qua. */
+export function buildSandboxSettings(root: string, osSandbox: OsSandboxConfig = {}): Record<string, unknown> {
+  return {
+    enabled: true,
+    failIfUnavailable: true,
+    allowUnsandboxedCommands: false,
+    filesystem: { allowWrite: [root], denyRead: ['.env*', ...(osSandbox.denyRead ?? [])] },
+    network: { allowedDomains: [...(osSandbox.extraAllowedDomains ?? [])], strictAllowlist: true },
+  };
+}
+
+export interface SandboxAvailability {
+  ok: boolean;
+  backend: 'native' | 'wsl2' | 'none';
+  reason?: string;
+}
+
+/** Có WSL2 với ít nhất một distro? (`wsl.exe -l -q` in UTF-16LE.) Chưa kiểm trên máy thật — xem spike G1. */
+function probeWsl(): boolean {
+  const r = spawnSync('wsl.exe', ['-l', '-q'], { timeout: 5000 });
+  if (r.error || r.status !== 0) return false;
+  return String(r.stdout ?? '').replace(/\u0000/g, '').split(/\r?\n/).some((l) => l.trim());
+}
+
+/** Nền tảng có sandbox không? Linux/macOS: gốc (Claude Code tự báo nếu thiếu bwrap nhờ failIfUnavailable). Windows: chỉ qua WSL2. */
+export function sandboxAvailable(platform: NodeJS.Platform = process.platform, probe: () => boolean = probeWsl, backend: NonNullable<OsSandboxConfig['platformBackend']> = 'auto'): SandboxAvailability {
+  if (backend === 'appcontainer') return { ok: false, backend: 'none', reason: 'backend appcontainer chưa được hỗ trợ' };
+  if (platform === 'win32') return probe() ? { ok: true, backend: 'wsl2' } : { ok: false, backend: 'none', reason: 'Windows không có WSL2 với distro nào' };
+  if (backend === 'wsl2') return { ok: false, backend: 'none', reason: 'backend wsl2 chỉ dùng trên Windows' };
+  return { ok: true, backend: 'native' };
+}
+
+const WIN_PATH = /^[A-Za-z]:[\\/]/;
+
+/** C:\a\b → /mnt/c/a/b. Đường dẫn POSIX giữ nguyên; UNC/không có ổ đĩa → lỗi (không đoán). Chưa kiểm trên máy thật. */
+export function toWslPath(p: string): string {
+  const m = /^([A-Za-z]):[\\/]*(.*)$/.exec(p);
+  if (m) {
+    const rest = m[2].replace(/\\/g, '/').replace(/\/+$/, '');
+    return `/mnt/${m[1].toLowerCase()}${rest ? `/${rest}` : ''}`;
+  }
+  if (p.startsWith('/') && !p.startsWith('//')) return p;
+  throw new Error(`Không đổi được đường dẫn sang WSL: ${p.slice(0, 60)}`);
+}
+
+/** Đổi đường dẫn Windows trong một chuỗi: nguyên chuỗi là đường dẫn, hoặc đoạn trong "…" (vd. `node "C:/x/claude-guard.js"`). */
+function mapPathsInString(v: string): string {
+  if (WIN_PATH.test(v)) return toWslPath(v);
+  return v.replace(/"([A-Za-z]:[\\/][^"]*)"/g, (_m, q: string) => `"${toWslPath(q)}"`);
+}
+
+function mapPathsDeep(v: unknown): unknown {
+  if (typeof v === 'string') return mapPathsInString(v);
+  if (Array.isArray(v)) return v.map(mapPathsDeep);
+  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, mapPathsDeep(x)]));
+  return v;
+}
+
+/**
+ * Bọc lệnh claude để chạy trong WSL2: cmd → wsl.exe, ánh xạ cwd, root/state trong CCODING_GUARD, và đường dẫn trong chuỗi --settings
+ * (hook claude-guard.js, allowWrite). Biến môi trường qua WSLENV (không phải trích dẫn trên dòng lệnh). Hàm thuần.
+ * CHƯA KIỂM TRÊN MÁY THẬT — cần distro WSL2 có node + claude (spike G1, docs/research/context/d10-implementation-2026-11-04.md).
+ */
+export function wrapForWsl(p: { cmd: string; args: string[]; cwd: string; env: NodeJS.ProcessEnv }): { cmd: string; args: string[]; cwd: string; env: NodeJS.ProcessEnv } {
+  const args = p.args.map((a, i) => (p.args[i - 1] === '--settings' ? JSON.stringify(mapPathsDeep(JSON.parse(a))) : a));
+  const env: NodeJS.ProcessEnv = { ...p.env };
+  if (env.CCODING_GUARD) {
+    const g = JSON.parse(env.CCODING_GUARD) as Record<string, unknown>;
+    for (const k of ['root', 'state', 'dataDir']) if (typeof g[k] === 'string' && WIN_PATH.test(g[k] as string)) g[k] = toWslPath(g[k] as string);
+    env.CCODING_GUARD = JSON.stringify(g);
+  }
+  const share = Object.keys(env).filter((k) => k === 'CCODING_GUARD' || k === 'BASH_MAX_OUTPUT_LENGTH');
+  env.WSLENV = [...(env.WSLENV ? [env.WSLENV] : []), ...share].join(':');
+  return { cmd: 'wsl.exe', args: ['--cd', toWslPath(p.cwd), '--exec', p.cmd, ...args], cwd: p.cwd, env };
+}
+
+/** Nhận diện kết quả công cụ bị sandbox từ chối. null = không phải. `rule` là nhãn cố định (không chứa lệnh/đường dẫn). Mẫu chuỗi chưa đo thật — spike G1. */
+export function parseSandboxDeny(text: string): { rule: string } | null {
+  if (/read-only file system/i.test(text)) return { rule: 'fs-readonly' };
+  if (/\b403\b[^\n]*(proxy|forbidden|blocked|not allowed)|(proxy|blocked|not allowed)[^\n]*\b403\b/i.test(text)) return { rule: 'net-403' };
+  if (/(host|domain)[^\n]*(blocked|not allowed|denied)|(blocked|denied)[^\n]*(host|domain)/i.test(text)) return { rule: 'net-host' };
+  if (/sandbox/i.test(text)) return { rule: 'unknown' };
+  return null;
+}
+
 /** Bóc tách luồng stream-json của `claude -p --output-format stream-json --verbose`. */
 export class ClaudeStreamParser {
   text = '';
@@ -49,7 +138,8 @@ export class ClaudeStreamParser {
   toolCalls: ToolCallRecord[] = [];
   private pending = new Map<string, { rec: ToolCallRecord; t0: number }>();
 
-  constructor(private hooks: RunHooks = {}) {}
+  /** `onSandboxDeny` chỉ truyền khi osSandbox bật (tắt thì chuỗi như 'Read-only file system' là lỗi thường, không báo). */
+  constructor(private hooks: RunHooks = {}, private onSandboxDeny?: (d: { tool: string; rule: string }) => void) {}
 
   feed(line: string): void {
     let ev: Record<string, any>;
@@ -102,6 +192,8 @@ export class ClaudeStreamParser {
           if (block.is_error) {
             p.rec.ok = false;
             p.rec.error = out.slice(0, 200);
+            const deny = this.onSandboxDeny ? parseSandboxDeny(out) : null;
+            if (deny) this.onSandboxDeny?.({ tool: p.rec.name, rule: deny.rule });
           }
         }
         break;
@@ -142,7 +234,7 @@ function toolTurnCap(req: RunRequest): number {
 export const STABLE_TOOLS = ['Read', 'Glob', 'Grep', 'LS', 'WebSearch', 'WebFetch', 'Edit', 'Write', 'MultiEdit', 'Bash'];
 
 /** Dựng cờ CLI + biến môi trường của `claude -p` (hàm thuần, không spawn) — dùng cho run() và bench/vs-claude/cache-diagnostic.mjs (B-07, B-14a). */
-export function buildClaudeArgs(cfg: RuntimeConfig, req: RunRequest, model: string): { args: string[]; env: NodeJS.ProcessEnv } {
+export function buildClaudeArgs(cfg: RuntimeConfig, req: RunRequest, model: string, osSandbox: OsSandboxConfig | undefined = cfg.osSandbox): { args: string[]; env: NodeJS.ProcessEnv } {
     const args = ['-p', '--output-format', 'stream-json', '--verbose', '--model', model, '--no-session-persistence'];
     const env: NodeJS.ProcessEnv = {};
     if (req.allowTools && req.tools.length) {
@@ -155,7 +247,9 @@ export function buildClaudeArgs(cfg: RuntimeConfig, req: RunRequest, model: stri
       // của dự án + chặn tạo/chuyển nhánh) và giữ mọi thao tác tệp trong thư mục làm việc của nhiệm vụ.
       const policy = req.toolPolicy;
       const guard = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'tools', 'claude-guard.js').replace(/\\/g, '/');
-      const settings = { hooks: { PreToolUse: [{ matcher: '.*', hooks: [{ type: 'command', command: `node "${guard}"`, timeout: 15 }] }] } };
+      const settings: Record<string, unknown> = { hooks: { PreToolUse: [{ matcher: '.*', hooks: [{ type: 'command', command: `node "${guard}"`, timeout: 15 }] }] } };
+      // B-18: khóa `sandbox` chung chuỗi --settings (chỉ khi bật; tắt thì chuỗi trùng từng byte bản trước)
+      if (osSandbox?.enabled === true) settings.sandbox = buildSandboxSettings(policy?.root ?? req.cwd, osSandbox);
       args.push('--settings', JSON.stringify(settings));
       env.CCODING_GUARD = JSON.stringify({
         root: policy?.root ?? req.cwd,
@@ -193,7 +287,7 @@ export class ClaudeCliRuntime implements Runtime {
   local = false;
   supportsTools = true;
 
-  constructor(private cfg: RuntimeConfig, private models: Record<string, string>) {}
+  constructor(private cfg: RuntimeConfig, private models: Record<string, string>, private deps: { sandboxAvailable?: typeof sandboxAvailable } = {}) {}
 
   async available(): Promise<RuntimeAvailability> {
     const r = await quickRun(this.cfg.command ?? 'claude', ['--version']);
@@ -205,14 +299,36 @@ export class ClaudeCliRuntime implements Runtime {
     const model = this.models[req.model] ?? req.model;
     const { args, env } = buildClaudeArgs(this.cfg, req, model);
     const prompt = combinedPrompt(req);
-    const parser = new ClaudeStreamParser(hooks);
+    const os = this.cfg.osSandbox;
+    let backend: SandboxBackend = 'none';
+    if (os?.enabled === true) {
+      const av = (this.deps.sandboxAvailable ?? sandboxAvailable)(process.platform, undefined, os.platformBackend ?? 'auto');
+      if (!av.ok) {
+        // fail-closed: không có sandbox thì KHÔNG chạy (không tụt về chạy không sandbox)
+        logSandboxUnavailable({ backend: av.backend, platform: process.platform }, { state: req.toolPolicy?.guardState });
+        if (req.toolPolicy?.guardState) fs.rmSync(req.toolPolicy.guardState, { force: true });
+        return {
+          text: '',
+          usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, costUsd: 0 },
+          estimated: true,
+          model,
+          runtime: this.id,
+          durationMs: Date.now() - started,
+          error: `Sandbox hệ điều hành đã bật (runtimes.claude-cli.osSandbox) nhưng nền tảng không có sandbox: ${av.reason ?? 'không rõ lý do'}. Không chạy — cài WSL2 hoặc tắt osSandbox.`,
+        };
+      }
+      backend = av.backend;
+    }
+    const parser = new ClaudeStreamParser(hooks, os?.enabled === true ? (d) => logSandboxDeny({ ...d, backend }, { state: req.toolPolicy?.guardState }) : undefined);
+    let spec: { cmd: string; args: string[]; cwd: string; env: NodeJS.ProcessEnv } = { cmd: this.cfg.command ?? 'claude', args, cwd: req.cwd, env };
+    if (backend === 'wsl2') spec = wrapForWsl(spec);
     const proc = await runProcess({
-      cmd: this.cfg.command ?? 'claude',
-      args,
-      cwd: req.cwd,
+      cmd: spec.cmd,
+      args: spec.args,
+      cwd: spec.cwd,
       // Dùng phiên đăng nhập claude.ai của máy (gói đăng ký), KHÔNG dùng ANTHROPIC_API_KEY/BASE_URL hay khóa khác
       // (scrubEnv bỏ mọi biến khóa/token) — trừ khi cấu hình useApiKey.
-      env: { ...(this.cfg.useApiKey ? process.env : scrubEnv(process.env)), ...env },
+      env: { ...(this.cfg.useApiKey ? process.env : scrubEnv(process.env)), ...spec.env },
       replaceEnv: true,
       stdin: prompt,
       timeoutMs: req.timeoutMs,
