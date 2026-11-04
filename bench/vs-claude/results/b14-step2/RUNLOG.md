@@ -1,4 +1,5 @@
 Mốc khóa đăng ký trước: `8941103` (commit gộp T-20261104-110942-567, BRIEF-16).
+Script phân tích (tiền điều kiện (6)): docs/research/analysis/b14-step2.mjs, commit 4e546f47d2c17002971718492108c2dd330439b4, test 10/10 xanh
 
 # Sổ chạy bước 2 của B-14: A/B `runtimes.claude-cli.stablePrefix`
 
