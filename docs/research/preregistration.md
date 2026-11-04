@@ -898,6 +898,102 @@ Bước 2 **chưa được giám đốc duyệt chạy**. Lý do phải duyệt:
 
 **Không đổi:** H1–H10, biên ±0,05, tập 7 bài, quy tắc trần và suy biến v2.1 (a)–(d), nguồn p (SR-26), họ Holm, phép kiểm chính, phán quyết chính của H6. Khối này không vào họ Holm. Không đổi bài hay tham số trong đợt 3e. Các đề xuất cho lần đo sau (test ẩn hạ sàn null, chuẩn hóa (score − null)/(oracle − null), tiêu chí nhận bài "null ≤ ngưỡng") ở tệp K3, chưa áp dụng.
 
+### Đăng ký trước V4-3f: đo không gọi LLM cho trục nghiệm thu (G) và trục song song (P) (ghi 4/11/2026 khoảng 20:00, trước khi tính bất kỳ kết quả nào)
+
+**Lý do.** Giám đốc, 4/11 19:14: "Bằng chứng hiện tại (1/1, 2/2) chưa đủ để kết luận gì. Đề tài chưa có số đo nào, và chính dữ liệu chi phí của CCoding còn đi ngược lợi ích của chạy song song. fix 2 vấn đề này". Bản phản biện `wf-f01e23b8` cũng nêu: trục nghiệm thu cần tỉ lệ bắt lỗi và chặn nhầm trên ≥ 30 lỗi độc lập không do người thiết kế cổng viết; trục song song chưa có số đo nào.
+
+**Vị thế.** Ghi trước khi chạy đột biến nào trên artifact và trước khi trích dữ liệu nào từ server 7420.
+- **Dữ liệu tác giả đã thấy khi viết:**
+  - điểm và `pass` từng lượt của `study-cloud`, đã phân tích từ vòng 3;
+  - số lượt trượt test ẩn theo arm, đếm lúc 19:25 để biết lỗi tự nhiên quá ít (A0 code 1/70);
+  - kết quả phát lại B-02 trên 54 lượt (`analysis/b02m-replay.md`);
+  - chẩn đoán thời gian ở khối B bên dưới.
+- **Chưa ai thấy:** kết quả chạy đột biến trên artifact, `npm test` chạy lại trên artifact, metadata song song của 7420.
+- Không phép nào ở đây vào họ Holm. K của §2.5 không đổi. Không chạm đợt 3e: không gọi LLM, không dùng máy giám đốc cho G.
+- **Mốc khóa:** commit chứa mục này cùng `analysis/g-mutation.mjs`, `g-analyze.mjs`, `p-extract.mjs`, `p-analyze.mjs` và test dữ liệu giả của chúng. Người chạy ghi hash commit và sha256 từng script vào RUNLOG (`results/g-mutation/RUNLOG.md`, `results/p-parallel/RUNLOG.md`) trước khi chạy.
+
+**Khối G: cổng lệnh kiểm tra (B-02) trên lỗi cài bằng máy**
+- **(1) Dữ liệu.**
+  - Mọi dòng `status = done` của bài có `grader = code` trong `results/study-cloud/runs.jsonl` (sha256 `0dcee840…2cffb`), có thư mục artifact. Gồm mọi arm: A0-sonnet, A1, A2, B0, B5, B6, B7.
+  - Artifact là toàn bộ repo cuối của lượt, gồm mã agent viết và test agent viết.
+  - Thiếu artifact thì ghi `missing`, không thay thế.
+- **(2) Cổng được đo.** Đúng lệnh B-02 chạy ở bench: `npm test` (`checkCommands` của `bench/vs-claude/lib/ccoding.mjs`), trên chính repo của lượt. **Đỏ** = mã thoát ≠ 0 hoặc quá 60 s. Đây là lớp kiểm tra xác định. Lớp CTO (LLM) không đo ở đây, xem E7.
+- **(3) Sự thật.** Bộ test ẩn của bài, chạy với hạn 30 s mỗi tệp và 60 s cả bộ. **Lỗi thật** = test ẩn không đạt hết.
+- **(4) Đột biến.**
+  - **Toán tử cố định:** ROR (đổi `<`, `<=`, `>`, `>=` sang biên và chiều ngược); EQ (`===`↔`!==`, `==`↔`!=`); AOR (`+`↔`-`, `*`↔`/`, `%`→`*`); LCR (`&&`↔`||`); UOI (bỏ `!`); CRP (hằng số n → n+1, 0 → 1); COND (đảo điều kiện `if`, `while` và `?:`). Đây là bộ "đủ" của Offutt và cs. (1996) cộng hai toán tử phổ biến, chọn trước, không theo cổng.
+  - **Tệp bị đột biến:** tệp `.js`, `.mjs`, `.cjs` thuộc `task.deliverable`, trừ tệp test.
+  - **Lấy mẫu:** mỗi lượt tối đa **12** vị trí, không lặp, hạt giống `20261104|<key>`.
+  - **Lượt đủ điều kiện:** base `npm test` xanh, base test ẩn đạt hết, base chạy ≤ 30 s.
+  - **Loại trước:** bài `t4-perf`, vì bộ test công khai chạy khoảng 190 s mỗi lần (`GRADE_TEST_TIMEOUT_MS`). Bài này vẫn có ở G-1 và G-2.
+  - Mỗi đột biến chạy trong bản sao riêng của lượt. Song song 2 tiến trình.
+- **(5) Thước đo** (G-1, G-2 mức lượt; G-3, G-4 mức đột biến):
+  - **G-1, chặn nhầm:** trong các lượt base test ẩn đạt hết, tỉ lệ lượt có `npm test` đỏ.
+  - **G-2, báo xong khi lệnh còn đỏ:** trong mọi lượt có `package.json`, tỉ lệ có `npm test` đỏ ở trạng thái cuối. Với A0, A1, A2 (không có cổng) đây là phần việc cổng sẽ chặn. Với CCoding, đây là phần lọt qua cổng.
+  - **G-3, recall của cổng:** số lỗi thật bị `npm test` chặn chia cho số lỗi thật. Báo gộp, theo arm, và theo nhóm A = {A0-sonnet} và C = {B0, B5, B6, B7}. A1 và A2 chỉ báo theo arm.
+  - **G-4, kho lỗi lọt cổng:** danh sách lỗi thật mà `npm test` không chặn, đông cứng bằng sha256, làm đầu vào cho E7.
+  - **Phụ:** recall theo bài và theo toán tử; số đột biến không phải lỗi thật (tương đương hoặc test ẩn không phủ); số lần quá hạn.
+- **(6) Thống kê.**
+  - **CI cho G-1, G-2:** Clopper–Pearson 95 % hai phía.
+  - **CI cho G-3:** bootstrap hai tầng (lấy lại bài, rồi lấy lại lượt trong bài), 4000 vòng, hạt giống 20261104, phân vị 2,5 % và 97,5 %.
+  - **Phép kiểm duy nhất, G-3Δ:** Δ = trung bình theo bài của (recall C − recall A), chỉ trên bài có lỗi thật ở cả hai nhóm. p hai phía bằng hoán vị nhãn arm giữa các lượt trong cùng bài, M = 10000. CI của Δ bằng bootstrap hai tầng như trên.
+  - Câu hỏi của G-3Δ: quy trình CCoding có để lại bộ test bắt được nhiều lỗi hơn Claude Code đơn không?
+- **(7) Cách đọc, ghi trước.**
+  - G-3 đo **độ mạnh của bộ test mà cổng chạy**, không đo CTO.
+  - Đột biến không phải lỗi tự nhiên. Tài liệu cho thấy điểm đột biến tương quan với khả năng bắt lỗi thật (Just và cs., 2014), nhưng không đồng nhất.
+  - Đơn vị độc lập thực sự là **bài** (9 bài), nên CI lấy lại theo bài.
+  - G-1 dùng nhãn đúng/sai của test ẩn, nên "chặn nhầm" là chặn một sản phẩm mà test ẩn coi là đúng.
+  - Không dùng G để chọn arm hay sửa cổng trong đợt 3e.
+
+**Khối P: song song trong vận hành thật (server 7420)**
+- **(1) Dữ liệu.**
+  - Mọi nhiệm vụ trả về bởi `GET /api/tasks` và `GET /api/tasks/<id>` của server chính, tại thời điểm trích. Chỉ dùng API đọc; không đọc `data/` trực tiếp.
+  - **Chỉ lấy metadata:** thời điểm bắt đầu và kết thúc của hạng mục, `dependsOn`, trạng thái, cờ `conflict`, `mainOnly`, `mergePending`, `isolation` của dự án, số lệnh kiểm tra đỏ lúc cuối.
+  - Từ bản ghi tin nhắn hệ thống, chỉ đếm số dòng khớp ba mẫu cố định trong `p-extract.mjs`: gộp xong, xung đột khi gộp, làm lần lượt.
+  - Không lấy đề bài, tiêu đề, đầu ra hay nội dung tin nhắn.
+  - Mã nhiệm vụ băm kèm muối ngẫu nhiên không lưu; mã dự án đổi thành P1, P2…
+- **(2) Đơn vị.** Một lượt phòng có ≥ 2 hạng mục có đủ hai mốc thời gian.
+- **(3) Thước đo, chỉ mô tả.**
+  - **P-1:** hệ số chồng = Σ thời lượng hạng mục / thời gian hợp các khoảng. Báo số lượt có ≥ 2 hạng mục chạy cùng lúc.
+  - **P-2:** thời gian tiết kiệm = Σ − hợp, theo phút và theo tỉ lệ. Đây là **cận trên**, vì khi chạy chồng mỗi hạng mục có thể chậm hơn khi chạy một mình.
+  - **P-3:** số lần gộp worktree con xong, số tin xung đột khi gộp, số hạng mục phải làm lại lần lượt, số nhiệm vụ kết thúc còn lệnh kiểm tra đỏ.
+  - Báo tách theo `isolation`.
+- **(4) Cách đọc.** Đây là dữ liệu quan sát, không ngẫu nhiên hóa. P chỉ cho biết song song **có xảy ra** và **lợi ích thời gian cận trên** trong vận hành thật; không so với chạy đơn.
+- **Phân loại dữ liệu:** Nội bộ. Không có dữ liệu cá nhân. Nhãn dự án không đảo ngược được.
+
+**Khối B: chẩn đoán đã thấy trước khi ghi (khám phá, không phải đăng ký trước)**
+- Lúc 19:20, người điều phối đọc `byPhaseSec` (tổng `calls.durationMs` theo pha) và `wallSec` của 44 lượt CCoding có trường này: `large-pilot` 4, `gates-pilot` 28, `b7prime` 10, gồm cả hai làn.
+- Kết quả: Σ thời lượng lượt gọi / thời gian thực nằm trong 0,75–0,99. Không lượt nào có lượt gọi chồng nhau, kể cả `l1-modules` (5 hạng mục độc lập, 5 lượt gọi thực thi, Σ 374 s so với thực 380 s).
+- **Nguyên nhân (đọc mã):** harness `bench/vs-claude/lib/ccoding.mjs` tạo dự án với `isolation: 'none'` từ commit đầu `1568774`. Khi đó `parallelWorktrees()` trả false (`src/orchestrator.ts`), nên mọi hạng mục chạy lệnh là độc quyền và **làm lần lượt**.
+- **Hệ quả:** mọi so sánh chi phí và thời gian của làn nhanh hay đủ phòng trong bench đo **chi phí chia việc mà không có lợi ích song song**. Cấu hình này khác cấu hình vận hành (mặc định `worktree`). Đây là đe dọa tính hợp lệ, phải ghi ở §6 và trong bài báo.
+- Không đổi kết quả đã báo. Đo lại ở E8.
+
+**Dự kiến, chưa duyệt, chưa chạy (cần LLM, chạy sau đợt 3e nếu giám đốc duyệt)**
+- **E7: CTO nghiệm thu trên lỗi lọt cổng.**
+  - **Mẫu:**
+    - 60 lỗi thật lấy từ G-4 (≤ 8 mỗi bài, ≥ 6 bài, tối đa 1 mỗi lượt), phân tầng theo bài, hạt giống 20261104;
+    - 60 sản phẩm đúng (test ẩn đạt, `npm test` xanh) cùng các bài.
+  - **Arm, mỗi mục chấm bởi mọi arm (ghép cặp):**
+    - R1: pha `accept` của CCoding (Sonnet, như hiện nay);
+    - R2: như R1 nhưng dùng Opus;
+    - R3: một Claude Code đơn (Sonnet) được hỏi "duyệt hay từ chối sản phẩm này so với đề bài", cùng đầu vào.
+  - **Đầu vào:** đề bài, diff so với starter, đầu ra `npm test` (xanh). Không có nhãn.
+  - **Thước đo:** recall trên 60 lỗi, chặn nhầm trên 60 bài đúng. CI Clopper–Pearson, kèm bootstrap theo bài.
+  - **Phép kiểm chính:** McNemar hai phía, R1 so với R3, trên 60 lỗi.
+  - **Cỡ mẫu:** 60 lỗi cho nửa độ rộng CI ≤ khoảng 13 điểm %. Nếu 0/60 chặn nhầm thì cận trên 6 %.
+  - **Ước tính:** khoảng 360 lượt gọi, khoảng 11 M token có trọng số.
+  - **Cần Phòng Dev dựng trước:** harness phát lại pha `accept` qua `Orchestrator.call()`.
+- **E8: song song có worktree.**
+  - **Arm:** cùng commit, cùng harness, `isolation: worktree`, làn nhanh ép:
+    - B6w4: `fastLane.maxParallel` 4;
+    - B6w1: `fastLane.maxParallel` 1, trên server riêng vì khóa này nâng `options.maxParallel` lên;
+    - A0-sonnet làm mốc.
+  - **Bài:** `l1-modules`, `t2-orders`, `t3-api`.
+  - **Số lượt:** 6 lượt mỗi arm mỗi bài, tổng 54 lượt.
+  - **Thước đo chính:** tỉ số thời gian thực B6w4/B6w1, trên thang ln, hoán vị phân tầng theo bài, hai phía.
+  - **Thước đo phụ:** tỉ số token có trọng số; xung đột và lệnh đỏ sau gộp; điểm test ẩn, chỉ mô tả.
+  - **Cỡ mẫu:** giả định σ_ln = 0,25, giảm 30 %, 6 lượt mỗi ô. SE ≈ 0,083 trên 3 bài, power > 0,9.
+  - **Cần Phòng Dev làm trước:** tùy chọn `isolation` của harness (xem D14).
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.
