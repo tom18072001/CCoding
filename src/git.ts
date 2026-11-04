@@ -53,6 +53,9 @@ export function addWorktree(repo: string, wtPath: string, branch: string, startP
   return git(repo, ['worktree', 'add', '--no-track', '-b', branch, wtPath, startPoint]);
 }
 
+/** Nhánh cục bộ và origin lệch hai chiều — nhiệm vụ phải dừng, không được làm việc trên base không rõ. */
+export class BaseDivergedError extends Error {}
+
 export interface ResolvedBase {
   /** Ref dùng làm điểm xuất phát (nhánh cục bộ hoặc `origin/<nhánh>`). */
   ref: string;
@@ -92,7 +95,7 @@ export function resolveBase(repo: string, baseRef: string | undefined, fetchTime
     return { ...legacy, warning: `Không so được \`${name}\` với \`${remoteRef}\` (${c.out.slice(0, 160)}) — dùng nhánh cục bộ.` };
   }
   if (ahead > 0 && behind > 0) {
-    throw new Error(`Nhánh cục bộ \`${name}\` và \`${remoteRef}\` đã lệch nhau (cục bộ có ${ahead} commit riêng, remote có ${behind} commit riêng). Không tạo worktree — hãy hợp nhất hoặc chọn nhánh nào làm base rồi chạy lại.`);
+    throw new BaseDivergedError(`Nhánh cục bộ \`${name}\` và \`${remoteRef}\` đã lệch nhau (cục bộ có ${ahead} commit riêng, remote có ${behind} commit riêng). Không tạo worktree — hãy hợp nhất hoặc chọn nhánh nào làm base rồi chạy lại.`);
   }
   if (behind > 0) return { ref: remoteRef, commit: remoteCommit, source: 'remote' };
   return legacy;

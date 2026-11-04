@@ -17,6 +17,7 @@ import {
   isSafeRef,
   isWorktreeOf,
   resolveBase,
+  BaseDivergedError,
   mergeBranch,
   mergeInProgress,
   manifestDiff,
@@ -3076,6 +3077,12 @@ export class Orchestrator {
           }
           r = addWorktree(base, wt, branch, from);
         } catch (e) {
+          // K5: lệch hai chiều → dừng nhiệm vụ (lỗi lên prepareWorkspace → catch ngoài đặt status 'failed'), không làm việc trên base không rõ
+          if (e instanceof BaseDivergedError) {
+            logs.write({ level: 'error', kind: 'workspace.base', msg: e.message, taskId: task.id, projectId: project.id });
+            task.workspace = undefined;
+            throw e;
+          }
           r = { ok: false, out: e instanceof Error ? e.message : String(e) };
         }
         if (r.ok) {
