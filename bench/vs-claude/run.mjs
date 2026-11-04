@@ -115,12 +115,16 @@ async function runArm(arm, task, key) {
   const spec = ARMS[arm];
   const brief = briefFor(task);
   if (spec.kind === 'null') { const dir = freshWorkspace(task, key); return { dir, status: 'done', wallSec: 0, tokens: zero(), costUsd: 0, turns: 0, finalText: '' }; }
-  if (spec.kind === 'oracle') {
+  if (spec.kind === 'oracle' || spec.kind === 'nearmiss') { // SR-24: nearmiss = lời giải tham chiếu rồi đè hidden/nearmiss/ (lời giải gần đúng, phải chấm < 1,00)
     const dir = freshWorkspace(task, key); const { hiddenDir: h, solutionDir } = taskDirs(SUITE, task);
     if (solutionDir) fs.cpSync(solutionDir, dir, { recursive: true });
     if (fs.existsSync(path.join(h, 'solution'))) fs.cpSync(path.join(h, 'solution'), dir, { recursive: true });
     if (fs.existsSync(path.join(h, 'answer.json'))) fs.copyFileSync(path.join(h, 'answer.json'), path.join(dir, task.deliverable.endsWith('.json') ? task.deliverable : 'answer.json'));
     if (fs.existsSync(path.join(h, 'reference'))) fs.cpSync(path.join(h, 'reference'), dir, { recursive: true });
+    if (spec.kind === 'nearmiss') {
+      if (!fs.existsSync(path.join(h, 'nearmiss'))) throw new Error(`Bài ${task.id} thiếu hidden/nearmiss/ (SR-24)`);
+      fs.cpSync(path.join(h, 'nearmiss'), dir, { recursive: true });
+    }
     return { dir, status: 'done', wallSec: 0, tokens: zero(), costUsd: 0, turns: 0, finalText: '' };
   }
   if (spec.kind === 'claude') {

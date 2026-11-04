@@ -1,0 +1,1 @@
+SR-24: src/money.js:37: "=== 0" -> "=== 1" (một chỗ trên lời giải tham chiếu); điểm khi sinh = 0.983; test trượt: \#2 allocate(7, [0,0]) = [0,0]

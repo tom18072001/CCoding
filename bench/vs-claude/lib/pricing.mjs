@@ -49,7 +49,7 @@ export function costOfCalls(callsText, { cacheTtl = '1h' } = {}) {
  * Arm claude: tính lại từ token + model thực của phiên, giữ số CLI tự báo ở costUsdReported; thiếu model ⇒ null/'unknown-model'.
  */
 export function priceRun(spec, r, { cacheTtl = '1h' } = {}) {
-  if (spec?.kind === 'null' || spec?.kind === 'oracle') return { costUsd: 0, costBasis: costBasisOf(cacheTtl) };
+  if (spec?.kind === 'null' || spec?.kind === 'oracle' || spec?.kind === 'nearmiss') return { costUsd: 0, costBasis: costBasisOf(cacheTtl) };
   if (spec?.kind === 'ccoding') return r?.callsCost ?? { costUsd: null, costBasis: 'unknown-model' };
   const usd = r?.model && r?.tokens ? costOf(r.tokens, r.model, { cacheTtl }) : null;
   return { costUsd: usd, costBasis: usd === null ? 'unknown-model' : costBasisOf(cacheTtl), costUsdReported: r?.costUsd ?? null };

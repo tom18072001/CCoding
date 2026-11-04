@@ -1,0 +1,1 @@
+SR-24: SPEC.md: bỏ dòng "6. What columns and format does the old …" (một mục checklist)
