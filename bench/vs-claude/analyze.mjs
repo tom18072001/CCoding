@@ -235,7 +235,9 @@ const holmTxt = (m) => (m ? `p=${fp(m.p)}, p_min=${fp(m.pMin)}, confirmable=${m.
   const armTxt = (a) => { const x = h6.per[a]; return `${a}: n=${x.kept.length}, bỏ trần [${x.res.ceilingTasks.join(', ') || 'không'}], TOST90 [${pp(x.tost.lo90)}, ${pp(x.tost.hi90)}]${x.tost.equivalent ? ' trong biên' : ' ngoài biên'}`; };
   const confirmTxt = `tập khai báo: ${armTxt('A1')}; ${armTxt('A2')}; token có trọng số A2/${TREAT} x${f(tokRatio('A2'))}, A1/${TREAT} x${f(tokRatio('A1'))} (mọi bài); bootstrap ${h6.comb.label} (${h6.per.A1.res.ciNote}): ${holmTxt(holm.byId.H6)}${h6.degenerate ? ` — ${DEGENERATE_LABEL}` : ''}`;
   const unknown = !parts.length || !h6.nOk || h6.comb.verdict === 'estimate';
-  H.push(['H6', 'Compute-matched single agent matches CCoding (null); both A1 and A2 within ±5 pp (TOST 90% CI)', `${txt || 'needs arms A1/A2'} (mọi bài, mô tả); ${confirmTxt}`, verdict(h6.supported, unknown, { degenerate: h6.degenerate, refuted: h6.refuted })]);
+  // N-2 M-1 (§2.4): xác nhận = qua phép kiểm mức Holm VÀ CI vượt biên. H6 trong họ Holm thì phải `confirmed`; ngoài họ (ước lượng) thì chỉ CI, và đã là 'insufficient data' ở trên.
+  const h6Holm = holm.byId.H6 ? holm.byId.H6.confirmed : true;
+  H.push(['H6', 'Compute-matched single agent matches CCoding (null); both A1 and A2 within ±5 pp (TOST 90% CI)', `${txt || 'needs arms A1/A2'} (mọi bài, mô tả); ${confirmTxt}`, verdict(h6.supported && h6Holm, unknown, { degenerate: h6.degenerate, refuted: h6.refuted })]);
 }
 {
   // A-1 (K2): cổng của H7 đăng ký (P:174): r ≥ 5 mỗi ô và ≥ 3 bài. SR-14 (sd gộp theo bài, trọng số n−1) giữ làm phép kiểm chính nhưng

@@ -84,6 +84,7 @@ test('F5 (n = 1, 2, 3): dưới 3 bài ⇒ ước lượng (insufficient data); 
   const h6 = hRow(three.report, 'H6');
   assert.doesNotMatch(h6, /insufficient data/);
   assert.match(hRow(three.report, 'Holm {H3, H6}'), /H6: p=0\.\d+/);
+  assert.ok(!isSupported(h6), 'm-2: n = 3, Δ quan sát +0,067 ⇒ không SUPPORTED');
 });
 
 test('F6 (suy biến bị bác bỏ): Δ cố định +0,10 ⇒ nhãn "bác bỏ", không SUPPORTED, p = NA', () => {
@@ -110,6 +111,9 @@ test('F8 (a)(e) h6Combine ở analyze: thiếu A1/A2 ⇒ insufficient data và n
   assert.match(hRow(none.report, 'H6'), /ngoài họ Holm/);
   const ok = run(h6Data([0.5, 0.6, 0.7], [0.5, 0.62, 0.7], [0.52, 0.6, 0.68]));
   assert.match(hRow(ok.report, 'Holm {H3, H6}'), /H6: p=0\.\d+/);
+  assert.match(hRow(ok.report, 'Holm {H3, H6}'), /Holm (không )?bác bỏ/); // m-2: dòng Holm có kết luận mức Holm
+  const h6 = hRow(ok.report, 'H6');
+  assert.equal(isSupported(h6), /confirmable=có[^;]*Holm bác bỏ H0/.test(hRow(ok.report, 'Holm {H3, H6}').split('H6:')[1] ?? '') && /trong biên/.test(h6) && !/ngoài biên/.test(h6), 'M-1: SUPPORTED chỉ khi H6 xác nhận mức Holm');
 });
 
 test('F9 (H3 suy biến): recall và precision hằng ở cả hai arm ⇒ p(recall) = 1, H3 không SUPPORTED, không xác nhận', () => {
@@ -143,7 +147,11 @@ test('F12 (T-2): B-01 là trung bình theo bài của log-tỉ số, không ph�
   const t = (task, a, b) => [row(task, 'A0-sonnet', 0.5, { weighted: a }), row(task, 'SL', 0.5, { weighted: b })];
   const r = run([...t('t1-duration', 1000, 2000), ...t('t2-orders', 100000, 100000), ...t('t3-api', 100000, 100000)]);
   assert.match(hRow(r.report, 'B-01a'), /R=1\.260/);
-  assert.doesNotMatch(hRow(r.report, 'B-01a'), /R=1\.005/);
+  assert.doesNotMatch(hRow(r.report, 'B-01a'), /R=1\.005/);  // m-1: mỗi ô một lượt nhưng bootstrap lấy lại cả bài ⇒ Δ* biến thiên, không suy biến; CI không hẳn ngoài biên ⇒ không 'Bác bỏ'.
+  const two = run([...t('t1-duration', 100, 200), ...t('t2-orders', 100, 100)]);
+  const b = hRow(two.report, 'B-01a');
+  assert.doesNotMatch(b, /suy biến/);
+  assert.ok(!isSupported(b), b);
 });
 
 // ---------- Các mục còn lại của mục 2 ----------

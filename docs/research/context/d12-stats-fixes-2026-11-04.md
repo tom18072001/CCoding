@@ -151,19 +151,70 @@ Lưu ý từ S1b: kiểm đột biến cho thấy 13/23 test đỏ khi dùng `an
 
 ## (5) K2 giá Haiku và K3 arm
 
-_(để trống cho S6 điền từ bàn giao S2, S3)_
+Nguồn: bàn giao S2, S3 (`.ccoding/T-20261104-123633-378/outputs/dev-S2-data-engineer.md`, `dev-S3-backend-dev.md`). **K2 đạt** (S2 không báo blocker).
+
+**K2: giá Haiku 5.5** (`bench/vs-claude/lib/pricing.mjs`, `recost.mjs`)
+- Nguồn chính thức, truy cập 4/11/2026 (HTTP 200): https://www.anthropic.com/claude-haiku-5-5 và https://platform.claude.com/docs/en/models/haiku-5-5/overview. Không dùng số bên thứ ba. Trích nguyên văn nằm ở comment đầu `pricing.mjs`.
+- USD / 1 triệu token, hai bậc: input 0,10 (≤ 100K) / 0,50 (> 100K); output 0,50 / 2,50; ghi cache 5 phút 0,125 / 0,625; ghi cache 1 giờ 0,20 / 1; đọc cache 0,01 / 0,05.
+- Ngưỡng bậc: trang viết "for prompts up to 100,000 tokens" và "for requests up to 100,000 tokens", tức theo từng prompt/request; trang không nói cách tính phần cache trong "prompt". `costUsd` dùng bậc cao (cận trên), `costUsdLow` dùng bậc thấp, nên mọi cách áp ngưỡng đều nằm trong [`costUsdLow`, `costUsd`]. `costBasis` có hậu tố `/haiku-tier-upper`; `PRICING_VERSION` = `2026-11-04`. Đọc cache của Haiku là 0,1× input (Sonnet/Opus 0,05×) nên có `cacheReadMult` riêng. **Chờ Phòng Nghiên cứu xác nhận** cách áp ngưỡng nếu muốn một số duy nhất.
+- Kết quả `large-pilot` (`node bench/vs-claude/recost.mjs bench/vs-claude/results/large-pilot --out <tạm>`, exit 0, không sửa `runs.jsonl`): cả 6 dòng có chi phí; 4 dòng CCoding (B0, B1) hết `null`. B0: 1,210–2,060; B1: 1,392–1,873; A0-sonnet 0,890–1,006 (2 dòng giữ số cũ). Chênh giữa hai cận cùng một lượt chỉ ≈ 0,006 USD. Dữ liệu dựa `byPhaseDetail` × `byPhaseModel` (mỗi pha một model) vì `large-pilot` không có `calls.jsonl`.
+- Test: `test/pricing.test.mjs` (thêm 3 test), `test/recost.test.mjs` (3 test: `recostRow` theo pha; ưu tiên `calls/<key>.jsonl`; ghi `costs-recomputed.json`, chạy lại cùng kết quả, CLI).
+
+**K3: arm B0F/B1F ép làn đầy đủ** (`bench/vs-claude/arms.json`, README bench)
+- Đường truyền, không sửa `src/`: `lib/ccoding.mjs:114` trải `opts.taskOptions` vào `options`; `src/types.ts:75` có `lane` gồm `'full'` (nên `supportedLanes()` ở `lib/queue.mjs:23` đọc được); `src/lane.ts:100` `forcedLane` và `src/orchestrator.ts:1373` `pickLane`; `src/orchestrator.ts:325` clamp `discussionRounds` 0–3, `:1719`/`:1725` họp khi `rounds > 0`, kế hoạch không nhỏ và lane khác `fast`.
+- Test (`test/arms-full-lane.test.mjs`, runtime giả `mock`, không gọi `claude -p`): khai báo đúng; (a) `lane:full` + kế hoạch giả ≥ 3 hạng mục, ≥ 2 người ⇒ có pha họp; (b) `discussionRounds:0` ⇒ không họp; (c) `checkArms(['B0F','B1F'])` trả `[]`; (d) mọi arm cũ giống hệt `arms.json` ở `e12e037` (bỏ qua khi clone nông).
+- Không thấy danh sách arm bị khóa cứng trong `bench/vs-claude/test` và README.
 
 ## Người đọc mã độc lập (N-2)
 
-_(để trống cho S6; kỳ vọng F1–F12 của S5a ở `d12-stats-fixes-2026-11-04.n2-review.md`)_
+Tệp đầy đủ: [`d12-stats-fixes-2026-11-04.n2-review.md`](d12-stats-fixes-2026-11-04.n2-review.md) (mục 1: kỳ vọng F1–F12 tự suy, commit `ce9cd13` trước mọi commit sửa mã; mục 3: so với diff, S5b). Tóm tắt: **đạt có điều kiện**; T-1, B-1, C-2 đạt; 245/245 `test:bench`; F1–F12: 9 khớp hoàn toàn, 2 khớp một phần (F5, F8), 1 lệch (F12, kỳ vọng S5a sai, mã đúng); biên, ngưỡng, B = 4000, hạt 20261102 không đổi. Không có blocker. Cách S6 xử lý (không viết lại ý kiến người đọc):
+
+| Phát hiện | Xử lý ở S6 | Commit/test |
+| --- | --- | --- |
+| M-1 major: nhãn H6 chưa đòi mức Holm (§2.4) | **Sửa.** `analyze.mjs` H6: `verdict(h6.supported && h6Holm, …)`, `h6Holm = holm.byId.H6 ? holm.byId.H6.confirmed : true`. Dòng H6 trên dữ liệu đã công bố không đổi (H6 vốn "insufficient data"; đã chạy lại `d12-before-after.sh` và `d12-diff-rows.mjs`, bảng (2) giữ nguyên). **Chưa chứng minh được test có răng:** không dựng được ca CI trong biên mà Holm không xác nhận (S5b cũng không); test F8 chỉ khẳng định SUPPORTED ⇔ (Holm bác bỏ ∧ trong biên). | `ef8b78f`; `analyze-k2.test.mjs` F8 |
+| m-1: F12 chưa kiểm nhãn/CI hai bài | **Sửa.** Thêm ca hai bài: không "suy biến", không SUPPORTED | `ef8b78f`; F12 |
+| m-2: F5 n = 3 không kiểm "không SUPPORTED"; F8(e) không kiểm Holm | **Sửa.** Thêm `!isSupported` ở F5; thêm khẳng định dòng Holm ở F8 | `ef8b78f`; F5, F8 |
+| m-3: chưa chứng minh từng ca đỏ rồi xanh cho `stats-k2.test.mjs` | **Làm đột biến** trên `stats.mjs` (đã hoàn nguyên, `git status` sạch): bỏ kiểm NaN của `bootP` (:212) ⇒ 2 test đỏ; bỏ nhánh suy biến của `tost` (:129) ⇒ 4 đỏ; bỏ nhánh suy biến của `bootP` (:218) ⇒ 5 đỏ. **Hai đột biến sống sót:** bỏ `!boots.every(isFinite)` ở `tost` (:122) và bỏ `pA.degenerate` ở `h6Combine` (:244), vì có chặn dự phòng (est không hữu hạn ở :122; `p == null` ở :244 bắt cùng ca). Tôi coi là tương đương về hành vi, **chưa chứng minh bằng ca đầu vào**. | không đổi mã |
+| m-4: hai loại luồng hạt (xor-băm và hạt gốc) | **Chuyển** Phòng Nghiên cứu: ghi cả hai loại khi đăng ký A-5 (mục (4), 2) | không đổi mã |
+| m-5: kỳ vọng F12 của S5a sai | Không sửa mục 1 (đúng quy trình); S5b đã đính chính ở mục 3 | n/a |
+| Ghi chú S4: "24 mã" nhưng liệt kê 23 | S6 **không** đối chiếu với K2 mục 2 (chưa chạy `git show 5df2cfc:…`). Bảng (3) phủ 23 mã. **Việc còn mở** cho người điều phối. | n/a |
 
 ## Hash và kiểm cuối
 
-_(để trống cho S6)_
+Hash lấy sau commit mã cuối của S6 (`ef8b78f`); tài liệu này commit riêng, sau cùng (không đổi hai tệp mã).
+
+```
+git log -1 --format=%H -- bench/vs-claude/lib/stats.mjs   -> 9c3136c9345ee54df27fe52e193aaa163af1662d
+git log -1 --format=%H -- bench/vs-claude/analyze.mjs     -> ef8b78fa7041c2a605f66fc46ffd0289d6bf51e5
+git rev-parse HEAD:bench/vs-claude/lib/stats.mjs          -> fa048e744bffbb5e210fb106ef49607a38f5c69e
+git rev-parse HEAD:bench/vs-claude/analyze.mjs            -> 7c69f438e693ff810b1870cbf84405ce9c6a26c8
+```
+
+Hash commit có thể đổi khi gộp vào `perf/vs-claude-loop` (rebase/squash đổi, merge thường không); hash blob không đổi. RUNLOG E6 ghi cả hai. Commit đầu gỡ chặn T-1/B-1 là `860118b` (chỉ tham chiếu, không dùng cho E6).
+
+Kiểm cuối (worktree S6, Node v24.14.0, Windows):
+
+| Lệnh | Kết quả thật |
+| --- | --- |
+| `npm run typecheck` | exit 0 |
+| `npm test` lần 1 | exit 1; tests 415, pass 408, fail 4, skipped 3 |
+| `npm test` lần 2 | exit 1; tests 415, pass 408, fail 4, skipped 3 |
+| `npm test` lần 3 | exit 1; tests 415, pass 408, fail 4, skipped 3 |
+| `npm run test:bench` | exit 0; tests 245, pass 245, fail 0, skipped 0 |
+| `node docs/research/scripts/consistency-check.mjs` | exit 0; "Đạt: 46 tệp, không lệch số liệu." |
+| `node docs/research/self-improvement/holdout-sample-size.mjs --check` (không đối số) | exit 1; `TypeError [ERR_INVALID_ARG_TYPE]: The "path" argument must be of type string or an instance of Buffer or URL. Received undefined` (script cần đường dẫn tệp) |
+| `… holdout-sample-size.mjs --check docs/research/self-improvement/holdout-and-sample-size.md` | exit 1; "LỆCH HASH so với holdout-lock.json: c1-iis-ecs, c2-burst-alert, c3-shop-bugs, c4-audit-chain, c5-tickets-api, l1-oncall, l2-knights, l3-reconcile, l4-startup-order, s1-sec-review — dừng, không tính cỡ mẫu." |
+| `node docs/research/performance/scripts/token-analysis.mjs --check` (không đối số) | exit 1; `TypeError [ERR_INVALID_ARG_TYPE]: The "paths[0]" argument must be of type string. Received undefined` |
+| `… token-analysis.mjs --check docs/research/performance/token-analysis.md` | exit 0; "OK: 12 bảng trong docs/research/performance/token-analysis.md trùng đầu ra script." |
+| `node --test docs/research/analysis/*.test.mjs` (glob mở được: `agreement`, `gates-pairs`, `prereg-tests`) | exit 0; tests 46, pass 46, fail 0, skipped 0 |
+
+Bốn test fail của `npm test` giống nhau cả ba lần: CT-09, CT-12, CT-13, CT-19 (nhóm `buildAbSpec`/`verifyHoldout`/holdout lock). Đề không yêu cầu điều tra; S6 không đổi `src/` hay `test/` của chúng. **Giả thuyết chưa kiểm:** cùng nguyên nhân với "LỆCH HASH holdout" ở trên. `npm test` đã đỏ ở baseline (exit 1) nhưng đề không có danh sách tên test đỏ của baseline nên **không so sánh được từng tên**.
+
+`git diff e12e037 --stat` (18 tệp): chỉ `bench/vs-claude/**` và `docs/research/{analysis,context}/d12-*`. **Không chạm** `src/`, `docs/research/paper/`, `docs/research/preregistration.md`, `facts.json`, `results/**/runs.jsonl`, `RUNLOG.md` (lọc theo các mẫu này: không dòng nào).
 
 ## Giới hạn
 
 - `study-cloud-final` không có `runs.jsonl` nên không có cột trước → sau cho tập này; báo cáo `analyze-*.md` ở đó là bản công bố v0.4 và không thể tính lại ở HEAD.
 - Cờ chạy là cờ đối chiếu (xem mục 1), không phải cờ bản v0.4 (không có trong RUNLOG).
-- Thiếu bàn giao S1a: cột "Test" của các mã `stats.mjs` chưa liệt kê tên test cụ thể. Tôi không bịa tên test.
+- Cột "Test" của các mã `stats.mjs` ở mục (3) ghi theo tệp `stats-k2.test.mjs`; S6 không đối chiếu từng tên test với bàn giao S1a.
 - `prereg-tests.mjs` (K2 §10.1) không nằm trong phạm vi S4 và không được chạy lại.
