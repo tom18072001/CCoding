@@ -127,12 +127,13 @@ const h3 = (() => {
   const s1 = tasks.filter((t) => t.startsWith('s1'));
   const pool = (arm, k) => s1.flatMap((t) => cell(arm, t, `detail:${k}`)).filter(Number.isFinite);
   const runsOf = (arm) => R.filter((r) => r.arm === arm && s1.includes(r.task)).length;
-  const rec = permTwoSample(pool(BASE, 'recall'), pool(TREAT, 'recall'), { shift: -0.15 });
-  const prec = permTwoSample(pool(BASE, 'precision'), pool(TREAT, 'precision'), { shift: 0.05 });
+  const REF = arms.includes('B2') && TREAT !== 'B2' ? 'B2' : BASE; // SR-10
+  const rec = permTwoSample(pool(REF, 'recall'), pool(TREAT, 'recall'), { shift: -0.15 });
+  const prec = permTwoSample(pool(REF, 'precision'), pool(TREAT, 'precision'), { shift: 0.05 });
   const nTasks = tasks.filter(inCats('review')).length;
   const have = rec.N > 0 && prec.N > 0 && nTasks >= MIN_TASKS; // SR-11: < 3 bài review ⇒ insufficient data, ra khỏi họ Holm
   const haveData = rec.N > 0 && prec.N > 0;
-  const droppedPrec = runsOf(BASE) + runsOf(TREAT) - pool(BASE, 'precision').length - pool(TREAT, 'precision').length;
+  const droppedPrec = runsOf(REF) + runsOf(TREAT) - pool(REF, 'precision').length - pool(TREAT, 'precision').length;
   return { rec, prec, have, haveData, nTasks, p: have ? Math.max(rec.p, prec.p) : null, pMin: have ? Math.max(rec.pMin, prec.pMin) : null, droppedPrec };
 })();
 const holm = (() => {
@@ -164,12 +165,25 @@ const holmTxt = (m) => (m ? `p=${fp(m.p)}, p_min=${fp(m.pMin)}, confirmable=${m.
 }
 {
   const s = tasks.filter(inCats('review'));
-  const m = (arm, k) => mean(s.flatMap((t) => cell(arm, t, `detail:${k}`)));
-  const lines = [[BASE, TREAT], ['B2', TREAT]].filter(([a]) => arms.includes(a)).map(([a, b]) => `${b} vs ${a}: recall ${pp(m(b, 'recall') - m(a, 'recall'))}, precision ${pp(m(b, 'precision') - m(a, 'precision'))}`);
+  // SR-10: có B2 (review tắt) thì H3 so TREAT với B2 để cô lập hiệu ứng review; không có B2 thì so với BASE và đổi tên giả thuyết.
+  const REF = arms.includes('B2') && TREAT !== 'B2' ? 'B2' : BASE;
+  const isolated = REF === 'B2';
+  const fin = (arm, k) => s.flatMap((t) => cell(arm, t, `detail:${k}`)).filter(Number.isFinite); // bỏ NaN/null
+  // CI 95 % bootstrap phần trăm của hiệu trung bình theo lượt; hạt riêng, không đụng `rnd` chung.
+  const ciOf = (a, b, seed) => {
+    if (!a.length || !b.length) return [NaN, NaN];
+    const r = mulberry32(seed), bs = [];
+    for (let i = 0; i < 4000; i++) bs.push(mean(b.map(() => b[Math.floor(r() * b.length)])) - mean(a.map(() => a[Math.floor(r() * a.length)])));
+    bs.sort((x, y) => x - y);
+    return [bs[Math.floor(0.025 * bs.length)], bs[Math.floor(0.975 * bs.length)]];
+  };
+  const one = (a, b) => ['recall', 'precision'].map((k, i) => { const [lo, hi] = ciOf(fin(a, k), fin(b, k), SEED + 31 + i); return `${k} ${pp(mean(fin(b, k)) - mean(fin(a, k)))} [${pp(lo)}, ${pp(hi)}]`; }).join(', ');
+  const lines = [[REF, TREAT], ...(isolated ? [[BASE, TREAT]] : [])].map(([a, b]) => `${b} vs ${a}: ${one(a, b)}`);
   // SR-26: hoán vị hai mẫu chính xác trên s1; recall dịch −0,15, precision dịch +0,05, p = max.
   const m3 = holm.byId.H3;
-  const permTxt = h3.haveData ? `s1: recall p=${fp(h3.rec.p)} (N=${h3.rec.N}), precision p=${fp(h3.prec.p)} (N=${h3.prec.N}, bỏ ${h3.droppedPrec} lượt precision NaN); ${holmTxt(m3)}${h3.have ? '' : ` — chỉ ${h3.nTasks} bài review (< ${MIN_TASKS}), không phán (SR-11)`}` : 's1 chưa đủ dữ liệu cho hoán vị';
-  H.push(['H3', 'Review raises seeded-issue recall without hurting precision (exact two-sample permutation, s1, margins recall −0.15 / precision +0.05)', `${lines.join('; ') || 'n/a'}; ${permTxt}`, h3.have ? verdict(m3.confirmed, false) + (m3.confirmable ? '' : ' (p_min > ngưỡng: không xác nhận được)') : 'insufficient data']);
+  const permTxt = h3.haveData ? `s1 (${TREAT} vs ${REF}): recall p=${fp(h3.rec.p)} (N=${h3.rec.N}), precision p=${fp(h3.prec.p)} (N=${h3.prec.N}, bỏ ${h3.droppedPrec} lượt precision NaN); ${holmTxt(m3)}${h3.have ? '' : ` — chỉ ${h3.nTasks} bài review (< ${MIN_TASKS}), không phán (SR-11)`}` : 's1 chưa đủ dữ liệu cho hoán vị';
+  const label = isolated ? 'Review raises seeded-issue recall without hurting precision (B0 vs B2: review tắt)' : `Seeded-issue recall/precision of ${TREAT} vs ${BASE} (B2 vắng nên KHÔNG cô lập hiệu ứng review; SR-10)`;
+  H.push(['H3', `${label} (exact two-sample permutation, s1, margins recall −0.15 / precision +0.05)`, `${lines.join('; ') || 'n/a'}; ${permTxt}`, h3.have ? verdict(m3.confirmed, false) + (m3.confirmable ? '' : ' (p_min > ngưỡng: không xác nhận được)') : 'insufficient data']);
 }
 {
   const c = compare(BASE, TREAT, { filter: inCats('requirements') });

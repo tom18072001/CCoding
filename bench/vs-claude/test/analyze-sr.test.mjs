@@ -264,3 +264,23 @@ test('SR-11: dưới 3 bài ⇒ insufficient data ở H1, H2, H4, H9, H10 và H3
   assert.match(h3, /chỉ 1 bài review/);
   assert.match(hRow(run(s1one).report, 'Holm {H3, H6}'), /họ rỗng|K=0/);
 });
+
+// ---------- S7: SR-10 ----------
+test('SR-10: có B2 ⇒ H3 so B0 với B2 (B2 kém hơn A0 không làm lệch); thiếu B2 ⇒ đổi tên giả thuyết; có CI và bỏ precision NaN', () => {
+  const mk = (arm, rec, prec) => Array.from({ length: 9 }, (_, i) => row(s1n(), arm, 0.5, { category: 'review', details: { recall: rec, precision: i === 0 ? NaN : prec } }));
+  // A0 recall 0.9 (cao), B2 recall 0.3, B0 recall 0.9: so với A0 thì B0 không hơn; so với B2 thì hơn 0.6
+  const withB2 = hRow(run([...mk('A0-sonnet', 0.9, 1), ...mk('B2', 0.3, 1), ...mk('B0', 0.9, 1)]).report, 'H3');
+  assert.match(withB2, /B0 vs B2: recall \+60\.0 pp \[\+60\.0 pp, \+60\.0 pp\]/);
+  assert.match(withB2, /B0 vs A0-sonnet: recall \+0\.0 pp/);
+  assert.match(withB2, /\(B0 vs B2: review tắt\)/);
+  assert.match(withB2, /bỏ 2 lượt precision NaN/);
+  assert.doesNotMatch(withB2, /NaN pp|n\/a/);
+  assert.match(withB2, /N=\d+/);
+  const noB2 = hRow(run([...mk('A0-sonnet', 0.9, 1), ...mk('B0', 0.9, 1)]).report, 'H3');
+  assert.match(noB2, /B2 vắng nên KHÔNG cô lập hiệu ứng review/);
+  assert.doesNotMatch(noB2, /B0 vs B2/);
+  // CI thật sự mở rộng khi mẫu nhiễu
+  const noisy = hRow(run([...mk('A0-sonnet', 0.5, 1), ...['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'].map((x, i) => row(s1n(), 'B0', 0.5, { category: 'review', details: { recall: i % 2 ? 1 : 0, precision: 1 } }))]).report, 'H3');
+  const m = /recall [+-][0-9.]+ pp \[([+-][0-9.]+) pp, ([+-][0-9.]+) pp\]/.exec(noisy);
+  assert.ok(m && +m[1] < +m[2], noisy);
+});
