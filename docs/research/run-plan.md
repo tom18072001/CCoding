@@ -338,13 +338,13 @@ done
 2. §9 đã có các dòng `V4-3e-E1` … `V4-3e-E6` **và đã commit**, kể cả công thức chốt N cho E4.
 3. Giám đốc đã duyệt chi phí.
 
-commit khóa §9: <hash>
+commit khóa §9: 9e1694c
 
-Dòng trên do orchestrator điền bằng hash commit gộp của nhiệm vụ T-20261103-224501-4e4 (mốc khóa §9 gói 8), sau khi gộp và trước lượt đầu của E2. **Dòng còn `<hash>` thì không được bắt đầu E2.**
+Dòng trên do orchestrator điền bằng hash commit gộp của nhiệm vụ T-20261103-224501-4e4 (mốc khóa §9 gói 8), sau khi gộp và trước lượt đầu của E2. **Dòng còn `<hash>` thì không được bắt đầu E2.** Người điều phối đã điền ngày 4/11/2026: `9e1694c` là commit gộp BRIEF-15 vào `perf/vs-claude-loop`, chưa có lượt nào của đợt 3e.
 
 **Điểm dừng cứng:**
 - **Trước E2:** chỉ chạy khi §9 đã commit, có công thức chốt N cho E4, **và dòng `commit khóa §9` ở trên đã có hash thật**. Chưa đủ thì dừng sau E1.
-- **Trước lượt local đầu tiên** (E4, hoặc phần cloud chạy tiếp ở local theo §5.4.2): đã chốt server local dựng từ commit nào (§5.4.2, [CẦN XÁC NHẬN]), ghi quyết định vào RUNLOG và commit. Chưa chốt thì không chạy local.
+- **Trước lượt local đầu tiên** (E4, hoặc phần cloud chạy tiếp ở local theo §5.4.2): đã chốt server local dựng từ commit nào (§5.4.2: **đã chốt**, cùng commit với server cloud), ghi hash vào RUNLOG và commit. Chưa ghi thì không chạy local.
 - **Trước E4:** ghi vào RUNLOG, có commit, phép tính N theo §9 khối (a) từ E2. Theo §9 khối (a) bước 5, kết quả đã xác định trước: R_E4 = 16, R_B6 = 32, tổng 192 lượt; RUNLOG ghi q̂ của E2 chỉ để mô tả. Không chọn N sau khi xem điểm.
 - **Trước E6:** `--out` của E6 đã chốt ở §9 `V4-3e-E6` mục (9): thư mục mới `bench/vs-claude/results/h6-3e`, chỉ ghép A với B0 cùng cửa sổ và cùng server. Ghi nguồn p (SR-26 có hash hay phương án lùi) vào RUNLOG và commit trước lượt E6 đầu tiên.
 - **Không xem điểm** giữa các phần (§3.0, `preregistration.md` §4.4a). Giữa các phần chỉ xem bảng vận hành ở §3.0, đổi đường dẫn sang thư mục `--out` của phần đó.
@@ -417,7 +417,7 @@ Phần cloud nào chưa xong khi chuyển vẫn giữ thứ tự E1 → E2 → E
 **Cách nối dữ liệu cloud với local:**
 - Cùng thư mục `--out` cho cùng một phần, nên khóa `task__arm__rN` (`run.mjs:49`) là khóa chung, theo §6.1.
 - Mỗi phần, và mỗi máy trong cùng phần, ghi một dòng RUNLOG gồm hash server, `git status --short`, máy (cloud hoặc local) và `model` theo pha. Khi phân tích, hash hoặc `model` theo pha khác nhau giữa các lượt của cùng phần thì tách ra làm biến độ nhạy, không gộp im lặng (§6.4).
-- Máy local dựng server từ **cùng commit** với cloud: `git worktree add ../ccoding-3e <hash cloud>`, thay cho `HEAD`, rồi kiểm bằng `git -C ../ccoding-3e rev-parse HEAD`. Đây là đề xuất của mục này, chưa có trong RUNBOOK; giám đốc hoặc người điều phối xác nhận trước khi chạy local [CẦN XÁC NHẬN]. Đây là điểm dừng "trước lượt local đầu tiên" ở trên.
+- Máy local dựng server từ **cùng commit** với cloud: `git worktree add ../ccoding-3e <hash cloud>`, thay cho `HEAD`, rồi kiểm bằng `git -C ../ccoding-3e rev-parse HEAD`. **Đã chốt (người điều phối, 4/11/2026):** local dựng từ đúng commit của server cloud; RUNBOOK Bước 3e đã ghi lệnh này. Lý do: hai nơi chạy cùng mã thì nối được dữ liệu cloud với local (§6.1). Nếu phải đổi commit thì dữ liệu sau thời điểm đổi tách thành cửa sổ riêng, không gộp. Đây là điểm dừng "trước lượt local đầu tiên" ở trên.
 
 #### 5.4.3 Bảng local: E4–E6, bằng hạn mức gói
 
@@ -427,7 +427,7 @@ Cùng thiết lập `$S3E`, server riêng cổng 7425 trên máy giám đốc. G
 |---|---|---|---|---|---|---|---|
 | 4 | E4, B-12/B-16 chính | `V4-3e-E4` | hai lệnh, theo thứ tự: `node bench/vs-claude/run.mjs --arms B7cab,B7cabO --tasks g1-slug-dedupe,g2-cart-coupon,g5-median-stats,g6-range-merge --repeats 16 --timeout 20 $S3E --out bench/vs-claude/results/gates-main` rồi `node bench/vs-claude/run.mjs --arms B6 --tasks g3-qty-rename,g4-gb-unit --repeats 32 --timeout 20 $S3E --out bench/vs-claude/results/gates-main` | 128 + 64 = 192 | ≈ 60 + B6 (chưa ước lượng) | ≈ 8,8; **trần 15** | sau **mỗi** lệnh, và cuối mỗi cửa sổ 5 giờ |
 | 5 | E5, B-15 chính | `V4-3e-E5` | `node bench/vs-claude/run.mjs --arms B0,B1 --tasks l1-modules,l2-chain --repeats 10 --timeout 40 $S3E --out bench/vs-claude/results/b15-main` | 40 | ≈ 73 | ≈ 7 | cuối mỗi cửa sổ 5 giờ; trải trên nhiều cửa sổ |
-| 6 | E6, H6 cho đủ N | `V4-3e-E6` | ba lệnh: `--arms A1 --repeats 3 --timeout 20`, `--arms A2 --repeats 2 --timeout 40`, `--arms B0 --repeats 3 --timeout 20`, mỗi lệnh với `--tasks l1-modules,l2-chain,t1-duration,t2-orders,t3-api,t4-perf,t5-logq $S3E --out bench/vs-claude/results/h6-3e` | 21 + 14 + 21 = 56 (B0 mới 21) | ≈ 37 | ≈ 3,1 | sau mỗi lệnh |
+| 6 | E6, H6 cho đủ N | `V4-3e-E6` | ba lệnh: `--arms A1 --repeats 3 --timeout 20`, `--arms A2 --repeats 2 --timeout 40`, `--arms B0 --repeats 3 --timeout 40` (người điều phối đổi 20 → 40 ngày 4/11/2026, trước mọi lượt: để khớp E3, E5 cùng arm B0 trên l1, l2, tránh cắt lượt vì timeout), mỗi lệnh với `--tasks l1-modules,l2-chain,t1-duration,t2-orders,t3-api,t4-perf,t5-logq $S3E --out bench/vs-claude/results/h6-3e` | 21 + 14 + 21 = 56 (B0 mới 21) | ≈ 37 | ≈ 3,1 | sau mỗi lệnh |
 | | **Cộng local** | | | 288 | ≈ 170 + B6 | ≈ 18,9 | |
 
 Ghi chú:
@@ -442,7 +442,7 @@ Ghi chú:
   - 64 lượt B6 ≈ 2,9 giờ, giả định B6 chạy cùng tốc độ (chưa kiểm). USD của B6 chưa ước lượng.
   - Đây chỉ là phép nhân, chưa có số đo.
 - **`--out` của E5 là thư mục mới `bench/vs-claude/results/b15-main`**, không dùng `large-pilot`. Lý do: §9 `V4-3e-E3` mục (6) ghi dữ liệu E3 "không gộp vào ước lượng của E5", và `V4-3e-E5` mục (4) ghi "Thí điểm E3 (6 lượt) tách riêng, không gộp". Vì runner bỏ qua khóa đã `done`, nếu E5 ghi vào `large-pilot` thì B0, B1 r1 của E3 sẽ bị coi là r1 của E5: mỗi ô chỉ có 9 lượt mới và lượt thí điểm lọt vào mẫu chính. Với thư mục mới, E5 chạy đủ r1–r10 mỗi ô. Nếu E5 dừng giữa chừng, chạy tiếp đúng lệnh trên, cùng `b15-main`.
-- **`--timeout` của E5:** RUNBOOK 3e bước 6 ghi "cùng lệnh" nhưng không ghi timeout cho E5. `--timeout 40` của E5 là **đề xuất** của mục này, lấy theo lệnh E3 cùng bài và cùng arm B0, B1 [CẦN XÁC NHẬN]. Chốt trước lượt E5 đầu tiên, sau đó không đổi giữa chừng (§3.0).
+- **`--timeout` của E5:** RUNBOOK 3e bước 6 ghi "cùng lệnh" nhưng không ghi timeout cho E5. `--timeout 40` của E5 lấy theo lệnh E3 cùng bài và cùng arm B0, B1. **Đã chốt (người điều phối, 4/11/2026)** trước mọi lượt của đợt 3e. Căn cứ: B0 trên t5-logq mất khoảng 631 s; l1 và l2 có cỡ tương đương t5. Không đổi giữa chừng (§3.0).
 - **E6:**
   - `--out` là thư mục mới `bench/vs-claude/results/h6-3e`, theo §9 `V4-3e-E6` mục (9). H6 chỉ ghép A với B0 cùng cửa sổ và cùng server.
   - Không dùng `results/study-cloud`, vì runner bỏ qua khóa đã `done`. Nếu dùng chung, các khóa H6 cũ của server 7424 sẽ trộn với server 3e, trái §6.4. Vì vậy E6 chạy đủ N từ đầu: 56 lượt, B0 mới 21. Thay cho "≈ 49, trừ khóa đã có" của BRIEF-14.

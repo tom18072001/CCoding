@@ -146,9 +146,9 @@ COMMON="--runtime claude-cli --ccoding-url http://127.0.0.1:7424 --ccoding-data 
 > E1–E3 chạy trên cloud trước 5/11 14:59 giờ VN. E4–E6 chạy local bằng hạn mức gói, trên server riêng, không đụng server 7420.
 > Ước lượng USD dưới đây quy giá Sonnet 5.5; arm B có pha chạy Opus thì cao hơn. Lấy từ `results/study-cloud`, `results/b7prime` (BRIEF-14).
 
-1. **Server 7425 từ commit đã gộp D9b.**
+1. **Server 7425 từ một commit ghim, dùng chung cho cloud và local** (`run-plan.md` §5.4.2). Commit này là commit gộp D11 nếu D11 đã gộp trước lượt đầu, vì D11 thêm hash, phiên bản CLI và USD vào mỗi dòng; nếu chưa thì dùng HEAD hiện tại. §9 khóa ở `9e1694c`.
    ```bash
-   git pull && git worktree add ../ccoding-3e HEAD && cd ../ccoding-3e && npm ci --no-audit --no-fund && npm run build
+   git pull && git worktree add ../ccoding-3e <commit ghim> && cd ../ccoding-3e && npm ci --no-audit --no-fund && npm run build
    # ccoding.local.json như Bước 2, "server": { "port": 7425 }; chạy nền: node dist/cli.js serve
    git -C ../ccoding-3e rev-parse HEAD   # ghi vào RUNLOG
    ```
@@ -184,9 +184,9 @@ COMMON="--runtime claude-cli --ccoding-url http://127.0.0.1:7424 --ccoding-data 
    - Dừng ngay, commit phần đã có, ghi khóa cuối cùng vào RUNLOG.
    - **Không** chạy tiếp bằng hạn mức gói trên cloud.
 6. **Local (sau 5/11 hoặc khi hết credit)**, cùng lệnh, server riêng cổng 7425 trên máy giám đốc:
-   - **E4:** B-12/B-16 chính, `--arms B7cab,B7cabO --tasks suite:gates`, `--repeats` theo N đã chốt. Khoảng 50–92 lượt, 2,3–4,2 giờ.
-   - **E5:** B-15, `--arms B0,B1 --tasks l1-modules,l2-chain --repeats 10`. 40 lượt, khoảng 7 giờ, chia nhiều cửa sổ 5 giờ.
-   - **E6:** H6, `--arms A1 --repeats 3`, `--arms A2 --repeats 2`, `--arms B0 --repeats 3` trên `l1-modules,l2-chain,t1-duration,t2-orders,t3-api,t4-perf,t5-logq`. Runner bỏ qua khóa đã có. Khoảng 49 lượt, 2,7 giờ.
+   - **E4:** B-12/B-16 chính, đã chốt ở BRIEF-15. Chạy `--arms B7cab,B7cabO --tasks g1-slug-dedupe,g2-cart-coupon,g5-median-stats,g6-range-merge --repeats 16`, rồi `--arms B6 --tasks g3-qty-rename,g4-gb-unit --repeats 32`, `--out bench/vs-claude/results/gates-main`. Tổng 192 lượt, khoảng 8,8 giờ, trần 15 giờ.
+   - **E5:** B-15, `--arms B0,B1 --tasks l1-modules,l2-chain --repeats 10 --timeout 40 --out bench/vs-claude/results/b15-main`. 40 lượt, khoảng 7 giờ, chia nhiều cửa sổ 5 giờ.
+   - **E6:** H6, `--arms A1 --repeats 3 --timeout 20`, `--arms A2 --repeats 2 --timeout 40`, `--arms B0 --repeats 3 --timeout 40` trên `l1-modules,l2-chain,t1-duration,t2-orders,t3-api,t4-perf,t5-logq`, `--out bench/vs-claude/results/h6-3e`. Chỉ ghép cặp cùng cửa sổ và cùng server. 56 lượt, khoảng 3,1 giờ.
    - Gặp giới hạn 5 giờ thì chờ cửa sổ sau. Runner bỏ qua khóa đã `done`.
 7. **Nhãn người** (giám đốc, khoảng 30–45 phút):
    - Gán 60 mục ở `docs/research/analysis/gold-sheet.csv`. Arm đã ẩn.

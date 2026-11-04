@@ -69,7 +69,10 @@ test('B-18: wrapForWsl đổi cmd, ánh xạ cwd, CCODING_GUARD.root/state, hook
   assert.equal(w.cmd, 'wsl.exe');
   assert.deepEqual(w.args.slice(0, 4), ['--cd', '/mnt/c/w/task 1', '--exec', 'claude']);
   const s = JSON.parse(w.args[w.args.indexOf('--settings') + 1]);
-  assert.match(s.hooks.PreToolUse[0].hooks[0].command, /^node "\/mnt\/[a-z]\/.*claude-guard\.js"$/);
+  // Đường dẫn hook lấy theo nơi cài repo: trên Windows là C:\… nên phải thành /mnt/<ổ>/…; trên Linux/macOS đã là POSIX nên giữ nguyên.
+  const hookOrig = JSON.parse(args[args.indexOf('--settings') + 1]).hooks.PreToolUse[0].hooks[0].command as string;
+  if (process.platform === 'win32') assert.match(s.hooks.PreToolUse[0].hooks[0].command, /^node "\/mnt\/[a-z]\/.*claude-guard\.js"$/);
+  else assert.equal(s.hooks.PreToolUse[0].hooks[0].command, hookOrig);
   assert.deepEqual(s.sandbox.filesystem.allowWrite, ['/mnt/c/w/task 1']);
   const g = JSON.parse(w.env.CCODING_GUARD!);
   assert.equal(g.root, '/mnt/c/w/task 1');

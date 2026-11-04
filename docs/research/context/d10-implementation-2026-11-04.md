@@ -28,3 +28,21 @@ Không lệnh nào bị hook chặn.
 - Backend WSL2 (`toWslPath`, `wrapForWsl`) đánh dấu "chưa kiểm trên máy thật".
 - `sandboxAvailable()` trên máy này phải trả `ok:false` (không có distro dùng được) nên khi bật `osSandbox.enabled` sẽ fail-closed: lỗi tiếng Việt, ghi `sandbox.unavailable`, không chạy. Đây là hành vi đúng.
 - Việc còn mở cho S7: thêm "cài distro WSL2 để đóng G1" vào danh sách chờ giám đốc duyệt. Khi chọn distro, `wsl -l -v` phải lọc bỏ `docker-desktop` và `docker-desktop-data`.
+
+## Kiểm trên Linux của người điều phối (4/11/2026, sau khi gộp D10 `7b7f4cf` và BRIEF-15 `9e1694c`)
+
+- **Một test đỏ trên Linux:** `test/sandbox-regression.test.ts:66` kỳ vọng đường dẫn hook luôn dạng `/mnt/<ổ>/…`.
+  - Nguyên nhân: đường dẫn hook lấy theo nơi cài repo. Trên Windows là `C:\…` nên được ánh xạ; trên Linux đã là POSIX nên `toWslPath` giữ nguyên. Hành vi này đúng.
+  - Sửa: kỳ vọng theo nền tảng. Win32 giữ nguyên regex `/mnt/…`; nền tảng khác đòi đường dẫn giữ nguyên. Không đổi `src/`.
+
+| Lệnh (Linux, Node 22) | Kết quả |
+|---|---|
+| `npm ci`, `npm run typecheck`, `npm run build` | exit 0 |
+| `npm test` lần 1, 2, 3 | exit 0 · tests 391 · pass 391 · fail 0 · skipped 0 (cả ba lần) |
+| `node --test bench/vs-claude/test/*.mjs` | 38/38 |
+| `gates-pairs.test.mjs` + `agreement.test.mjs` | 33/33 |
+| 3 lệnh kiểm của `ccoding-research`, `holdout-sample-size.mjs --check` | exit 0 |
+| `run.mjs --arms oracle,null --tasks suite:gates` | oracle 1,00 cả 6 bài; null 0–0,22 |
+| `run.mjs --arms oracle,null --tasks l1-modules,l2-chain,t1-duration,t5-logq` | oracle 1,00; null ≤ 0,007 |
+
+- Máy cloud của người điều phối không có `bwrap`, `socat` hay `claude` đã đăng nhập, nên chưa chạy `scripts/sandbox-adversarial.mjs` thật. Việc chạy thật vẫn nằm trong danh sách chờ giám đốc duyệt, cùng với cài distro WSL2.
