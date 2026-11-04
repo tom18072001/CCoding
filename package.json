@@ -20,6 +20,7 @@
     "cli": "node dist/cli.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsx --test --test-reporter=spec \"test/**/*.test.ts\"",
+    "test:bench": "node --test \"bench/vs-claude/test/*.test.mjs\"",
     "herdr:up": "node dist/cli.js herdr up",
     "doctor": "node dist/cli.js doctor",
     "demo": "node dist/cli.js task \"Thiết kế API quản lý hồ sơ nhân sự bằng Node.js/TypeScript, có phân quyền và log kiểm toán\" --mode auto --runtime mock --wait"

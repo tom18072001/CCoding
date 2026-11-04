@@ -52,7 +52,7 @@ Chạy lại trên bản sao `runs.jsonl`, ra thư mục tạm, không ghi đè 
 | H3 | recall +0,0 / precision +0,0 pp, not supported | cùng ước lượng, kèm CI; chỉ 1 bài review nên **insufficient data**; B2 vắng nên tên đổi, không cô lập hiệu ứng review | SR-10, SR-11, SR-26 |
 | H4 | +1,5 pp, tasks=1, not supported | cùng ước lượng, **insufficient data** | SR-11 (1 bài) |
 | H5 | tokens ×6,2, thời gian ×9,1, 100 %, SUPPORTED | giống hệt | SR-06 không đổi số ở dữ liệu này |
-| H6 | B0−A1 +0,7 [0,0; +2,6]; B0−A2 +0,5 [0,0; +1,9]; **SUPPORTED** | B0−A1 +0,7 [0,0; +2,2]; B0−A2 +0,5 [0,0; +1,9]; tập khai báo n=0 ở cả A1 và A2; **insufficient data** | SR-04, SR-12, SR-26: phán theo tập bài khai báo (§2.5 (a)) và cả A1, A2 phải nằm trong ±5 pp. Dữ liệu này không có ô A1/A2 nào trên tập khai báo; **chưa kiểm nguyên nhân cụ thể** (khớp tên bài hay thiếu lượt). **Phán quyết đảo.** |
+| H6 | B0−A1 +0,7 [0,0; +2,6]; B0−A2 +0,5 [0,0; +1,9]; **SUPPORTED** | B0−A1 +0,7 [0,0; +2,2]; B0−A2 +0,5 [0,0; +1,9]; tập khai báo n=0 ở cả A1 và A2; **insufficient data** | SR-04, SR-12, SR-26: phán theo tập bài khai báo (§2.5 (a)) và cả A1, A2 phải nằm trong ±5 pp. **Nguyên nhân đã kiểm:** A1/A2 trong `study-cloud/runs.jsonl` chạy trên bộ bài khác (c1–c5, l1-oncall, l2-knights, l3-reconcile, l4-startup-order, r1-elk-design, re1-lit-synthesis, a1-ambiguous-spec, s1-sec-review), không trùng bài nào trong tập khai báo `H6_TASKS` (l1-modules, l2-chain, t1…t5). Không phải lỗi khớp tên hay thiếu lượt; tập khai báo cố định theo §2.5 (a) nên n=0 là kết quả đúng, và phán quyết cũ dựa trên tập bài không khai báo. **Phán quyết đảo.** |
 | H7 | trung vị tỉ số SD 1,00 trên 18 bài, not supported | tỉ số SD gộp 0,00 [0,00; 1,00] trên 13 bài (10 bài sd(A0)=0 vẫn tính), **SUPPORTED**; trung vị cũ vẫn 1,00 | SR-14. Tỉ số 0,00 nghĩa là sd gộp của B0 bằng 0; điểm B0 gần như luôn 1,0 (trần), nên đây là hiệu ứng trần, không nên đọc là B0 ổn định hơn. **Phán quyết đảo.** |
 | H8 | tỉ lệ thiếu sản phẩm 0 % vs 0 %, not supported | **insufficient data** | SR-13: dòng cũ không có `untouchedFileFailures`/`redAtEnd` (S5 mới ghi). `formatMiss` còn là chỉ số phụ. |
 | H9 | +0,0 pp, not supported | **insufficient data** | SR-11 (dưới 3 bài research) |
@@ -160,3 +160,8 @@ Mỗi SR có test trong `bench/vs-claude/test/analyze-sr.test.mjs`. Mỗi đột
 | SR-05 | H10-adj dùng OLS thường | `SR-05: H10-coding và H10-adj…` |
 
 Có một sửa ngoài SR: `hRow` trong test tách dòng theo `/\r?\n/`, vì `report.md` mốc D8 có CRLF khiến test SR-26 ca 9 đỏ (S4 đã báo).
+
+
+## 6. Lệnh test của bench
+
+`node --test bench/vs-claude/test/` **không dùng được** trên Node 24 (coi thư mục là module, chạy 0 test, exit 1). Dùng `npm run test:bench` (= `node --test "bench/vs-claude/test/*.test.mjs"`), thêm trong D11 ở S7-fix. Đây là sai lệch có chủ đích so với tiêu chí gốc.
