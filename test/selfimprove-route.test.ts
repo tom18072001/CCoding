@@ -5,12 +5,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { ROOT } from '../src/config.js';
 import { createServer } from '../src/server.js';
-import { recordDirector, recordProposed, type Deps } from '../src/selfimprove.js';
+import { actorFromToken, recordDirector, recordProposed, type Deps } from '../src/selfimprove.js';
 import { testApp } from './helpers.js';
 
 // B-19 / D10b-S1: lỗi 409 của route /api/selfimprove/* phải che đường dẫn cục bộ (D4); thao tác ghi cần token.
 // Route dùng ROOT thật làm repo: test KHÔNG sửa tệp trong repo; "tệp đích bị sửa ngoài luồng" mô phỏng bằng bản vá có ngữ cảnh không còn khớp.
 
+const ACTOR = actorFromToken('tok-gia-cho-test');
 const lc = (s: string) => (process.platform === 'win32' ? s.toLowerCase() : s);
 const meta = { pid: 'P-1', clusterId: 'CL-1', author: 'research-lead', labeledBy: ['methodologist'], kind: 'optimize' as const, hypothesis: 'thêm kiểm biên' };
 const STALE = 'diff --git a/src/prompts.ts b/src/prompts.ts\n--- a/src/prompts.ts\n+++ b/src/prompts.ts\n@@ -1 +1 @@\n-dòng-không-tồn-tại-trong-tệp-đích\n+Kiểm biên rỗng.\n';
@@ -45,7 +46,7 @@ test('route 409 che đường dẫn (apply sai trạng thái; apply khi tệp đ
     assertMasked(aText, '(a)');
 
     // (b) đã duyệt nhưng tệp đích không còn khớp bản vá ⇒ 409
-    recordDirector('approved', 'P-1', si);
+    recordDirector('approved', 'P-1', si, ACTOR);
     const b = await call('/api/selfimprove/proposals/P-1/apply');
     assert.equal(b.status, 409);
     const bText = await b.text();

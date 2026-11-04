@@ -786,10 +786,33 @@ export function recordAbDecision(pid: string, d: Decision, deps: Pick<Deps, 'log
   deps.logs.write({ level: 'info', kind: 'selfimprove.ab.decided', msg: `A/B ${pid}: ${d.decision}`, data: { pid, deltaPass: Number.isFinite(d.safety.est) ? d.safety.est : null, decision: d.decision, pRaw: d.pRaw, pHolm: d.pHolm } });
 }
 
-/** Ghi quyết định của giám đốc; `by:'director'` cố định vì chỉ route đã xác thực mới được gọi hàm này (agent không có đường tới). */
-export function recordDirector(kind: 'approved' | 'rejected' | 'rollback.confirmed', pid: string, deps: Pick<Deps, 'logs'>, reason?: string): SystemEvent {
+/** Danh tính người duyệt đã xác thực (D13-K1): `by` = 'token-' + 8 hex đầu của SHA-256(server.token); không bao giờ chứa token thô. */
+export interface Actor {
+  by: string;
+  auth: 'server.token';
+}
+// 'token-' (không phải 'token:'): redact.ts che mọi chuỗi 'token: xxxx' thành [REDACTED] khi vào LogStore
+const ACTOR_BY = /^token-[0-9a-f]{8}$/;
+export function actorFromToken(token: string): Actor {
+  return { by: `token-${crypto.createHash('sha256').update(token).digest('hex').slice(0, 8)}`, auth: 'server.token' };
+}
+/** So token thời gian hằng (băm trước để hai chuỗi cùng độ dài). */
+export function tokenEquals(a: string, b: string): boolean {
+  const h = (s: string) => crypto.createHash('sha256').update(s).digest();
+  return crypto.timingSafeEqual(h(a), h(b));
+}
+const assertActor = (actor: Actor | undefined): Actor => {
+  if (!actor || actor.auth !== 'server.token' || !ACTOR_BY.test(actor.by)) throw new Error('Thiếu danh tính người duyệt đã xác thực: không ghi');
+  return actor;
+};
+/** Sự kiện duyệt/xác nhận hợp lệ: actor đã xác thực, hoặc `by:'director'` cũ — tương thích ngược trước D13 (log có chuỗi băm, chỉ server cũ ghi ra). */
+const isApprover = (d: Record<string, unknown> | undefined): boolean =>
+  !!d && ((d.auth === 'server.token' && typeof d.by === 'string' && ACTOR_BY.test(d.by)) || d.by === 'director');
+
+/** Ghi quyết định của người duyệt; actor do route truyền xuống sau khi xác thực server.token (agent không có đường tới). */
+export function recordDirector(kind: 'approved' | 'rejected' | 'rollback.confirmed', pid: string, deps: Pick<Deps, 'logs'>, actor: Actor | undefined, reason?: string): SystemEvent {
   safePid(pid);
-  const data: Record<string, unknown> = { pid, by: 'director' };
+  const data: Record<string, unknown> = { pid, ...assertActor(actor) };
   if (reason) data.reason = clip(reason, 300);
   deps.logs.write({ level: 'info', kind: `selfimprove.${kind}`, msg: `Giám đốc: ${kind} ${pid}`, data });
   return { kind: `selfimprove.${kind}`, data };
@@ -799,13 +822,13 @@ const PID_KINDS = ['selfimprove.proposed', 'selfimprove.approved', 'selfimprove.
 const forPid = (evs: SystemEvent[], pid: string): SystemEvent[] => evs.filter((e) => e.data?.pid === pid);
 
 export type ProposalStatus = 'proposed' | 'rejected' | 'approved' | 'applied' | 'rollback.proposed' | 'rolledback';
-/** Trạng thái theo sự kiện của một pid, đọc theo thứ tự ghi. `approved` chỉ tính khi by:'director'. */
+/** Trạng thái theo sự kiện của một pid, đọc theo thứ tự ghi. `approved` chỉ tính khi có actor đã xác thực (hoặc by cũ, xem isApprover). */
 export function proposalStatus(evs: SystemEvent[]): ProposalStatus | null {
   let st: ProposalStatus | null = null;
   for (const e of evs) {
     if (e.kind === 'selfimprove.proposed') st = 'proposed';
     else if (e.kind === 'selfimprove.rejected') st = 'rejected';
-    else if (e.kind === 'selfimprove.approved' && e.data?.by === 'director' && (st === 'proposed' || st === null)) st = 'approved';
+    else if (e.kind === 'selfimprove.approved' && isApprover(e.data) && (st === 'proposed' || st === null)) st = 'approved';
     else if (e.kind === 'selfimprove.applied') st = 'applied';
     else if (e.kind === 'selfimprove.rollback.proposed' && st === 'applied') st = 'rollback.proposed';
     else if (e.kind === 'selfimprove.rolledback') st = 'rolledback';
@@ -879,6 +902,8 @@ export function listProposals(deps: Pick<Deps, 'cfg' | 'logs' | 'dataDir'>): Pro
 }
 
 export interface ApplyOptions {
+  /** Người duyệt đã xác thực (bắt buộc; thiếu ⇒ ném lỗi trước mọi thao tác). */
+  actor: Actor | undefined;
   /** Chạy typecheck/test trên cây đã áp; trả lý do lỗi hoặc null nếu đạt. Mặc định `npm run typecheck` rồi `npm test`. */
   verify?: (root: string) => string | null;
 }
@@ -897,12 +922,13 @@ const nextTagNo = (root: string): number => Math.max(0, ...git(root, ['tag', '--
 const chainOk = (deps: Pick<Deps, 'logs'>): boolean => verifyChain(deps.logs.fileFor('system')).ok;
 
 /**
- * Chỉ áp khi LogStore (đọc lại, không tin tham số) có `selfimprove.approved {by:'director'}` còn hiệu lực, chuỗi băm hợp lệ,
+ * Chỉ áp khi LogStore (đọc lại, không tin tham số) có `selfimprove.approved {actor đã xác thực}` còn hiệu lực, chuỗi băm hợp lệ,
  * sha256(patch.diff) khớp `selfimprove.proposed` và screenPatch vẫn ok (CT-07, CT-08). Một commit riêng chỉ chứa tệp bị vá + thẻ prompts-vN.
  * Không reset --hard, không push. Lỗi apply/verify ⇒ hoàn tác bằng `git apply -R`, ghi `apply.failed`, ném lỗi. Không có timer tự duyệt.
  */
-export function applyApproved(pid: string, deps: Deps, opts: ApplyOptions = {}): { commit: string; tag: string } {
+export function applyApproved(pid: string, deps: Deps, opts: ApplyOptions): { commit: string; tag: string } {
   safePid(pid);
+  const actor = assertActor(opts.actor);
   if (!deps.cfg.enabled) throw new Error('Vòng tự cải thiện đang tắt (selfImprove.enabled=false)');
   if (!chainOk(deps)) throw new Error('Chuỗi băm nhật ký hệ thống không hợp lệ: không áp dụng');
   const mine = forPid(readEvents(deps, PID_KINDS), pid);
@@ -945,7 +971,7 @@ export function applyApproved(pid: string, deps: Deps, opts: ApplyOptions = {}):
   const commit = git(deps.root, ['rev-parse', 'HEAD'], 15_000).out.trim();
   const tag = `prompts-v${nextTagNo(deps.root)}`;
   git(deps.root, [...identity(deps.root), 'tag', tag, commit], 15_000);
-  deps.logs.write({ level: 'info', kind: 'selfimprove.applied', msg: `Đã áp ${pid}`, data: { pid, commit, tag, target } });
+  deps.logs.write({ level: 'info', kind: 'selfimprove.applied', msg: `Đã áp ${pid}`, data: { pid, commit, tag, target, ...actor } });
   return { commit, tag };
 }
 function clusterIdOf(dataDir: string, pid: string): string {
@@ -957,18 +983,19 @@ function clusterIdOf(dataDir: string, pid: string): string {
 }
 
 /**
- * Chưa có `selfimprove.rollback.confirmed {by:'director'}` sau lần `applied` ⇒ CHỈ ghi `rollback.proposed`, không revert (CT-16).
- * Có xác nhận ⇒ `git revert --no-edit <commit>`, thẻ prompts-vN+1, ghi `rolledback {revertCommit, by:'director'}`.
+ * Chưa có `selfimprove.rollback.confirmed {actor đã xác thực}` sau lần `applied` ⇒ CHỈ ghi `rollback.proposed`, không revert (CT-16).
+ * Có xác nhận ⇒ `git revert --no-edit <commit>`, thẻ prompts-vN+1, ghi `rolledback {revertCommit, actor}`.
  */
-export function rollback(pid: string, deps: Deps, reason = 'Giám đốc yêu cầu'): { reverted: boolean; revertCommit?: string; tag?: string } {
+export function rollback(pid: string, deps: Deps, actor: Actor | undefined, reason = 'Giám đốc yêu cầu'): { reverted: boolean; revertCommit?: string; tag?: string } {
   safePid(pid);
+  assertActor(actor);
   if (!deps.cfg.enabled) throw new Error('Vòng tự cải thiện đang tắt (selfImprove.enabled=false)');
   const mine = forPid(readEvents(deps, PID_KINDS), pid);
   const st = proposalStatus(mine);
   if (st !== 'applied' && st !== 'rollback.proposed') throw new Error(`Đề xuất ${pid} chưa được áp dụng hoặc đã rollback`);
   const appliedIdx = mine.map((e) => e.kind).lastIndexOf('selfimprove.applied');
   const applied = mine[appliedIdx];
-  const confirmed = mine.slice(appliedIdx).some((e) => e.kind === 'selfimprove.rollback.confirmed' && e.data?.by === 'director');
+  const confirmed = mine.slice(appliedIdx).some((e) => e.kind === 'selfimprove.rollback.confirmed' && isApprover(e.data));
   if (!confirmed || !chainOk(deps)) {
     if (st !== 'rollback.proposed') deps.logs.write({ level: 'info', kind: 'selfimprove.rollback.proposed', msg: `Đề nghị rollback ${pid}`, data: { pid, reason: clip(reason, 200), severity: 'strong' } });
     return { reverted: false };
@@ -983,7 +1010,7 @@ export function rollback(pid: string, deps: Deps, reason = 'Giám đốc yêu c�
   const revertCommit = git(deps.root, ['rev-parse', 'HEAD'], 15_000).out.trim();
   const tag = `prompts-v${nextTagNo(deps.root)}`;
   git(deps.root, [...identity(deps.root), 'tag', tag, revertCommit], 15_000);
-  deps.logs.write({ level: 'info', kind: 'selfimprove.rolledback', msg: `Đã rollback ${pid}`, data: { pid, revertCommit, tag, by: 'director' } });
+  deps.logs.write({ level: 'info', kind: 'selfimprove.rolledback', msg: `Đã rollback ${pid}`, data: { pid, revertCommit, tag, ...actor } });
   return { reverted: true, revertCommit, tag };
 }
 
