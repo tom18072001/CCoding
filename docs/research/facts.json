@@ -47,8 +47,8 @@
         },
         {
           "file": "docs/research/improvement-backlog.md",
-          "line": 288,
-          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (mô tả vấn đề B-05; dòng dời 284 → 285 do chèn dòng cập nhật gói 6, rồi 285 → 288 do ghi chú R15 và hai dòng B-18, B-19 ở §0)"
+          "line": 289,
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (mô tả vấn đề B-05; dòng dời 284 → 285 do chèn dòng cập nhật gói 6, rồi 285 → 288 do ghi chú R15 và hai dòng B-18, B-19 ở §0, rồi 288 → 289 do dòng R16)"
         }
       ]
     },
