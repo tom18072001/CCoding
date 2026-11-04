@@ -124,3 +124,12 @@ Lý do: một người phản biện độc lập (agent chưa thấy quá trìn
   - Test có sẵn của bài chỉ bắt khoảng một nửa số lỗi. Nửa còn lại do test agent tự viết.
   - Vì vậy recall khoảng 91 % chủ yếu **không** đến từ test của tác giả bài. Nhận xét của người phản biện về điểm này không đúng.
   - Claude Code đơn viết thêm test mạnh ngang, hoặc hơn, CCoding: +46,8 so với +40,6 điểm. Hai khoảng tin cậy chồng nhau nhiều.
+
+## Kết quả G-c (độ nhạy có `t4-perf`, mô tả)
+
+- **Chạy:** 30 lượt `t4-perf`, 21:00–21:40, cùng tham số, `--exclude none`. Kết quả ở `g-mutation-t4.jsonl`. Base của cả 30 lượt đều xanh và đạt test ẩn, khớp `pass` chính thức 30/30. Có 360 đột biến, trong đó 263 lỗi thật.
+- **Cách gộp:** bỏ các dòng `t4-perf` của tệp chính (base không có đột biến), rồi nối với tệp t4. Đầu ra ở `report-gc-t4.md`.
+- **G-3 gộp 10 bài:** 2 164/2 360 = **91,7 %** [85,6; 96,6]. Nhóm A 647/700 = 92,4 %, nhóm C 1 303/1 410 = 92,4 %.
+- **Δ:** +0,9 điểm % [−4,2; +6,9], p hoán vị = 0,67.
+- `t4-perf` riêng: 99,2 %. 6 đột biến quá hạn test ẩn được tính là lỗi thật. Kho lọt cổng lên 196 lỗi.
+- **Không đổi kết luận:** cổng bắt khoảng 9/10 lỗi; CCoding và agent đơn không phân biệt được.
