@@ -55,3 +55,40 @@ test('SR-17: finding xa mọi dòng đã biết vẫn là FP', () => {
   const g = s1([...ref, { line: 24, type: 'other', severity: 'low', fix: 'x' }]);
   assert.equal(g.details.fp, 1); assert.ok(g.score < 1);
 });
+
+// ---- SR-18
+import { gradeResearch, parseF1, countWords, citationValidityOf } from '../lib/grade.mjs';
+const RE1 = path.join(SUITE, 'tasks/re1-lit-synthesis/hidden');
+const re1 = (answer, review) => {
+  const work = tmp('re1');
+  put(work, 'answer.json', answer);
+  if (review !== undefined) put(work, 'REVIEW.md', review);
+  return gradeResearch({ workdir: work, hiddenDir: RE1, finalText: '', task: { deliverable: 'answer.json' } });
+};
+const refAns = JSON.parse(fs.readFileSync(path.join(RE1, 'answer.json'), 'utf8'));
+const refReview = fs.readFileSync(path.join(RE1, 'reference/REVIEW.md'), 'utf8');
+
+test('SR-18: oracle re1 = 1,00 với REVIEW tham chiếu 300–500 từ', () => {
+  const g = re1(refAns, refReview);
+  assert.equal(g.score, 1); assert.ok(g.details.reviewWords >= 300 && g.details.reviewWords <= 500);
+});
+
+test('SR-18: details ghi citationValidity; citationPrecision chỉ còn là alias đọc dữ liệu cũ', () => {
+  const g = re1({ ...refAns, q1: { ...refAns.q1, citations: ['P4', 'P9'] } }, refReview);
+  assert.equal('citationPrecision' in g.details, false);
+  assert.ok(g.details.citationValidity < 1);
+  assert.equal(citationValidityOf({ citationPrecision: 0.5 }), 0.5);
+  assert.equal(citationValidityOf({ citationValidity: 0.7, citationPrecision: 0.5 }), 0.7);
+});
+
+test('SR-18: F1 dạng phần trăm được chấp nhận; giá trị sai vẫn trượt', () => {
+  for (const v of [0.962, 96.2, '96.2%', '0.962', ' 96.2 % '.trim()]) assert.equal(re1({ ...refAns, q1: { ...refAns.q1, f1: v } }, refReview).details.checks.q1, true, String(v));
+  for (const v of [0.931, '93.1%', 'abc', null, undefined, '']) assert.equal(re1({ ...refAns, q1: { ...refAns.q1, f1: v } }, refReview).details.checks.q1, false, String(v));
+  assert.ok(Number.isNaN(parseF1('x')));
+});
+
+test('SR-18: REVIEW ngoài 300–500 từ không đạt review_written', () => {
+  assert.equal(re1(refAns, 'Too short [P1] [P2] [P3].').details.checks.review_written, false);
+  assert.equal(re1(refAns, `${refReview}\n${'word '.repeat(200)}`).details.checks.review_written, false);
+  assert.equal(countWords('a  b\nc'), 3);
+});

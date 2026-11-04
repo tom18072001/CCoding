@@ -121,6 +121,19 @@ export async function gradeChecklist({ workdir, hiddenDir, finalText, task, judg
   return { score: n / items.length, pass: n === items.length, details: { verdicts, judge: judge?.enabled ? judge.model : 'regex', chars: text.length }, formatMiss };
 }
 
+/** F1 dạng 0,962 hoặc phần trăm (96.2 / "96.2%") → số trong [0,1]; không đọc được → NaN (SR-18). */
+export function parseF1(v) {
+  const raw = typeof v === 'string' ? v.trim() : v;
+  const pct = typeof raw === 'string' && raw.endsWith('%');
+  const n = Number(pct ? raw.slice(0, -1) : raw);
+  if (raw === '' || raw === null || raw === undefined || !Number.isFinite(n)) return NaN;
+  return pct || n > 1 ? n / 100 : n;
+}
+export const REVIEW_WORDS = { min: 300, max: 500 };
+export const countWords = (t) => (String(t).match(/\S+/g) ?? []).length;
+/** Đọc tỉ lệ trích dẫn hợp lệ từ `details`; dữ liệu cũ ghi `citationPrecision` (đổi tên SR-18, D2). */
+export const citationValidityOf = (details) => details?.citationValidity ?? details?.citationPrecision;
+
 /** Research: answer correctness + citation validity + correct refusal. */
 export function gradeResearch({ workdir, hiddenDir, finalText, task }) {
   const want = JSON.parse(fs.readFileSync(path.join(hiddenDir, 'answer.json'), 'utf8'));
@@ -128,7 +141,7 @@ export function gradeResearch({ workdir, hiddenDir, finalText, task }) {
   const valid = new Set(['P1', 'P2', 'P3', 'P4', 'P5', 'P6']);
   const allCites = ['q1', 'q2', 'q3', 'q4'].flatMap((q) => g?.[q]?.citations ?? []).map(String);
   const checks = {
-    q1: g.q1?.paper === 'P4' && Math.abs(Number(g.q1?.f1) - 0.962) < 1e-6,
+    q1: g.q1?.paper === 'P4' && Math.abs(parseF1(g.q1?.f1) - 0.962) < 1e-6,
     q1_cites: (g.q1?.citations ?? []).includes('P4'),
     q2: g.q2?.paper === 'P5' && /BGL-?X/i.test(String(g.q2?.dataset)),
     q3_refusal: g.q3?.not_in_corpus === true,
@@ -137,11 +150,12 @@ export function gradeResearch({ workdir, hiddenDir, finalText, task }) {
   };
   const review = readTextDeliverable(workdir, 'REVIEW.md', '');
   const reviewCites = [...review.text.matchAll(/\[(P\d+)\]/g)].map((m) => m[1]);
-  checks.review_written = !review.formatMiss && reviewCites.length >= 3 && reviewCites.every((c) => valid.has(c));
+  const reviewWords = review.formatMiss ? 0 : countWords(review.text);
+  checks.review_written = !review.formatMiss && reviewCites.length >= 3 && reviewCites.every((c) => valid.has(c)) && reviewWords >= REVIEW_WORDS.min && reviewWords <= REVIEW_WORDS.max;
   const n = Object.values(checks).filter(Boolean).length;
   return {
     score: n / Object.keys(checks).length, pass: n === Object.keys(checks).length,
-    details: { checks, citationPrecision: allCites.length ? allCites.filter((c) => valid.has(c)).length / allCites.length : 0, correctRefusal: checks.q3_refusal },
+    details: { checks, citationValidity: allCites.length ? allCites.filter((c) => valid.has(c)).length / allCites.length : 0, correctRefusal: checks.q3_refusal, reviewWords },
     formatMiss,
   };
 }
