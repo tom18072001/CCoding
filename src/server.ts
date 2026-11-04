@@ -1,5 +1,6 @@
 import http from 'node:http';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import type { App } from './app.js';
 import type { BusEvent } from './events.js';
@@ -712,7 +713,14 @@ export function createServer(app: App): http.Server {
         } catch (e) {
           if (e instanceof HttpError) throw e;
           // lỗi git/hệ thống có thể chứa đường dẫn cục bộ: chỉ trả dòng đầu, che đường dẫn, cắt ngắn
-          const msg = (e as Error).message.split(/\r?\n/)[0].replace(/(?:[A-Za-z]:)?[\\/][^\s'"]*[\\/][^\s'"]*/g, '<đường dẫn>').slice(0, 200);
+          // che trước các gốc đã biết (dataDir, repo, thư mục tạm; kể cả khi có dấu cách), rồi che mọi đường dẫn còn lại
+          let first = (e as Error).message.split(/\r?\n/)[0];
+          const win = process.platform === 'win32';
+          for (const base of [config.dataDir, ROOT, os.tmpdir()].flatMap((x) => [x, path.resolve(x)]).filter((x, i, a) => x && a.indexOf(x) === i).sort((a, b) => b.length - a.length)) {
+            const esc = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            first = first.replace(new RegExp(esc, win ? 'gi' : 'g'), '<đường dẫn>');
+          }
+          const msg = first.replace(/(?:[A-Za-z]:)?[\\/][^\s'"]*[\\/][^\s'"]*/g, '<đường dẫn>').slice(0, 200);
           throw new HttpError(409, msg);
         }
       }
