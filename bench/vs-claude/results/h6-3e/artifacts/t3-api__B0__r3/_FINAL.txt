@@ -1,0 +1,116 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t3-api__B0__r3] Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Worktree đã có đủ 4 tính năng (git status cho thấy auth.js, audit.js, tasks.js, server.js, store.js, test/tasks.test.js đã thay đổi) và `npm test` báo 10 pass, nên không làm lại từ đầu. Chỉ giao một hạng mục đối chiếu từng quy tắc trong FEATURES.md với mã hiện có và sửa chỗ lệch. Lý do chỉ có một hạng mục: các tệp nguồn dùng chung, chia song song sẽ ghi chồng tệp. Bàn giao ghi 'chưa có thay đổi' ở mục diff nhưng git status có thay đổi; tôi chưa mở diff nên chưa đối chiếu được.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Đối chiếu FEATURES.md với mã hiện có và sửa chỗ lệch (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã đối chiếu từng quy tắc trong FEATURES.md với mã hiện có và không thấy chỗ nào lệch đáng kể. Tôi chỉ sửa một điểm biên nhỏ: `validDate` ánh xạ sai năm 0–99. Tôi thêm 1 test biên vào `test/tasks.test.js`. `npm test` cho 11 pass, 0 fail.
+
+## Tệp đã tạo/sửa
+- `src/handlers/tasks.js`: `validDate` dùng `setUTCFullYear` để không ánh xạ năm 0–99 sang 1900–1999. Ví dụ `0050-02-29` trước đây có thể bị xử lý sai.
+- `test/tasks.test.js`: thêm test "đối chiếu biên: query, audit, CSV".
+
+## Hợp đồng API
+Đã đối chiếu bằng đọc mã. Các điểm dưới đây được kiểm chứng bằng test HTTP thật, trừ các mục ghi riêng.
+
+**Nhóm 1 – Xác thực và phân quyền**
+- Đúng đặc tả:
+  - 401 `UNAUTHENTICATED` khi thiếu hoặc sai `X-User`, kiểm tra trước mọi thứ.
+  - Member thấy nhiệm vụ nhóm khác → 404.
+  - Member tạo hoặc xóa → 403.
+  - Member sửa nhiệm vụ không giao cho mình, hoặc body có trường khác `status` → 403.
+  - Manager tạo hoặc chuyển nhiệm vụ sang nhóm khác → 403.
+  - Manager sửa nhiệm vụ nhóm khác → 403; manager xóa → 403.
+- Các điểm bàn giao tự quyết (403 trước khi đọc body với member, manager gửi `team` khác nhóm thì 403) không mâu thuẫn đặc tả và được giữ nguyên.
+- Thứ tự 401 → 400 query → 404 → 403 → 400 body được giữ đúng.
+
+**Nhóm 2 – Danh sách, lọc, sắp xếp, phân trang**
+- Dạng kết quả `{items,total,page,pageSize}` đúng.
+- Mặc định `page=1`, `pageSize=20`, giới hạn 1–100 đúng.
+- Query lạ hoặc lặp → 400; `field` là tham số đầu tiên theo thứ tự trên URL (test: `pageSize=1.5&page=0&zzz=1` → `pageSize`).
+- `status=` rỗng → 400 `status`; `q=` rỗng → không lọc.
+- `dueBefore=2026-02-30` → 400.
+- `fold` đúng: NFD, bỏ dấu kết hợp, `đ` → `d`.
+- Sắp xếp: hòa theo số của id tăng dần bất kể chiều sắp; `dueDate` null luôn cuối; `title` dùng `localeCompare` locale `vi`. Phần này đối chiếu qua mã và test "sắp xếp" có sẵn.
+- Member bị áp thêm bộ lọc nhóm của mình.
+
+**Nhóm 3 – Xuất CSV**
+- Route `/tasks/export.csv` được đăng ký trước `/tasks/:id`.
+- `page`/`pageSize` → 400.
+- Content-Type, Content-Disposition, BOM, header 8 cột, `\r\n` kể cả sau dòng cuối đều đúng.
+- Escape RFC 4180 và tiền tố `'` cho công thức đúng. Test: `=SUM(A1),"x"` → `"'=SUM(A1),""x"""`.
+- Lọc quyền theo vai trò dùng chung `queryTasks` với danh sách.
+
+**Nhóm 4 – Nhật ký thao tác**
+- Mục audit có đủ `{seq,at,userId,action,taskId,changes}`.
+- `changes` được sắp a→z trong `store.logAudit`.
+- `PATCH` không đổi gì vẫn ghi `update` với `changes: []`. Test mới kiểm chứng điểm này.
+- Thao tác lỗi không ghi audit.
+- `GET /audit` chỉ cho admin, mới nhất trước, lọc `taskId`, tham số khác → 400; query sai được kiểm tra trước 403.
+
+## Migration
+Không áp dụng (lưu trong bộ nhớ, không có CSDL).
+
+## Kiểm chứng
+- `npm test` (sau khi sửa) → exit 0, `ℹ pass 11`, `ℹ fail 0`. Baseline là 2 pass.
+- Tôi không gọi thêm request thủ công ngoài bộ test. Các request HTTP biên được chạy trong test mới qua `start()` của `test/helpers`.
+- Tôi chưa chạy lại test sau cả hai lần sửa `validDate` riêng lẻ, chỉ chạy ở trạng thái cuối. Test cuối đạt.
+- Không có test riêng cho năm 0–99 của `dueBefore`. Chỗ sửa này đã được đọc lại nhưng chưa được test trực tiếp.
+
+## Việc còn lại
+- Không có biến môi trường mới.
+- Điểm đặc tả không nói rõ và vẫn là quyết định thiết kế: `assignee` không kiểm tra id tồn tại; `/tasks/:id` không kiểm tra query.
+- Tôi chưa đối chiếu với bộ nghiệm thu ẩn.
+
+Bản đầy đủ: `.ccoding/T-20261105-020141-abb/outputs/dev-S1-backend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261105-020141-abb` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **38 in / 23.1k out**, cache đọc 414.1k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 16 | 16423 | 200586 | 1 |
+| Backend Developer (@backend-dev) | dev | 18 | 5242 | 208206 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 2 | 1271 | 4701 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 153 | 649 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Đối chiếu FEATURES.md với mã hiện có và sửa chỗ lệch (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 11 · ℹ suites 0 · ℹ pass 11 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | — | 93 | 100 | 0 | — | 217k | 2/23 | — |
+| Backend Developer (@backend-dev) | dev | **65** B | thấp | — | — | — | 100 | 100 | 100 | 1 | 1 | 213k | 0/11 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 6k | — | — |
+| Điều phối viên (@orchestrator) | office | **60** C | thấp | — | — | — | — | 100 | — | 0 | — | 804 | — | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

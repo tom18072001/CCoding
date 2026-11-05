@@ -23,6 +23,8 @@ Phân loại dữ liệu: **Nội bộ**. Bài tổng hợp, không có dữ li�
 | 12:50 | **Giám đốc duyệt** trong phiên: (1) bước 2 của B-14, A/B `stablePrefix`, 96 lượt, local, sau E6, đúng mục đăng ký trước ở §9; (2) E5 thiết kế lại (E5′, ép làn đầy đủ, khoảng 40 lượt), local, sau E6. E5′ chỉ chạy khi mục §9 V4-3e-E5′ của BRIEF-17 đã gộp và D12 (arm `B0F`, `B1F`) đã gộp. Bước 2 chỉ chạy khi dòng hash mốc khóa đầu `results/b14-step2/RUNLOG.md` đã điền. Thứ tự dự kiến: E4 → E6 → E5′ → B-14 bước 2. Kiểm sandbox trong WSL để sau |
 | 18:17 | E4a xong 128/128 khóa. Bắt đầu E4b. Từ dòng 18:18, Claude Code CLI tự cập nhật 2.1.312 → 2.1.318 (sai lệch ghi ở `gates-main/RUNLOG.md`) |
 | 19:49–19:53 | E4b xong 64/64 khóa. `run3e.ps1` thấy `STOP-3e` (do `run3e-b.ps1` tạo) nên dừng trước E5, đúng bàn giao. `run3e-b.ps1` chạy lại E4b để bỏ qua khóa đã xong, rồi bắt đầu **E6a lúc 19:53**. E4: 192/192 khóa, 5,10 giờ máy, khoảng 54 USD (`gates-main/RUNLOG.md`) |
+| 21:04 → 5/11 02:05 | E6a xong 21:04 (21/21). E6b chạm hạn mức 21:08–22:08 (3 lần thoát mã 3), xong 00:15 (14/14). E6c xong 02:05 (20/21; `t2-orders__B0__r3` lỗi hạ tầng, chưa chạy lại). Chi tiết ở `h6-3e/RUNLOG.md` |
+| 5/11 02:07 → 03:46 | E5′ r1 (4 khóa, 2 lần chạm hạn mức). Kiểm nhiễu sau r1 dừng vì pha `review` vắng ở cả hai arm (cổng B-02 bỏ reviewer khi xanh). `STOP-E5F`, chờ giám đốc. Chi tiết ở `b15f-main/RUNLOG.md` |
 
 ## Nguồn p của H6 cho E6 (ghi trước lượt E6 đầu tiên, theo V4-3e-E6 (6))
 

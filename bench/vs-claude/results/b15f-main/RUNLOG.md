@@ -11,7 +11,7 @@ Sổ này ghi **trước lượt đầu**, lúc 4/11/2026 13:55 giờ VN. Khi đ
 | Cổng (3) | **(i)** D12 đã gộp ở `57148de026103e5fe9451ffc068650580bb4c399`. **(ii)** Test runtime giả "ép làn đầy đủ thì có `discuss`, thêm `discussionRounds: 0` thì không" (`bench/vs-claude/test/arms-full-lane.test.mjs`) xanh trong `npm run test:bench` 245/245. **(iii)** E6 xong: kịch bản chờ dòng "XONG phan sau" của `run3e-b.ps1`. **(iv)** Đã duyệt |
 | Hash server và runner (9) | Worktree mới `C:\Users\admin\ccoding-vs-claude\ccoding-e5f`, detached ở `57148de`. `npm ci` và `npm run build` xong. Server và runner chạy chung worktree này, vì `ccodingCommit` lấy theo runner |
 | Server | Cổng **7426**. `ccoding.local.json` chép từ `ccoding-3e` và chỉ đổi cổng; sha256 `D9B87197A3A687EDDDB6A7BA0C67D4DE5DD6C3878DA867C737D09B935D0867EA`. Thư mục dữ liệu `ccoding-e5f\data`. Không đụng 7420, 7425 |
-| Claude Code CLI | 2.1.312 |
+| Claude Code CLI | 2.1.312 lúc ghi sổ. **Khi chạy là 2.1.318**: CLI đã tự cập nhật từ lúc bắt đầu E4b. Server log ghi `cli 2.1.318` lúc 5/11 02:07 |
 | Lệnh | `run.mjs --arms B0F,B1F --tasks l1-modules,l2-chain --repeats k --timeout 40 --out bench\vs-claude\results\b15f-main`, chạy với k = 1, 2, …, 10. Runner bỏ qua khóa đã `done`, nên mỗi k chỉ chạy thêm lượt r_k |
 | Kịch bản | `run3e-c.ps1` (bản sao ở đây), chạy nền từ 13:52, chờ E6 |
 | Kiểm cổng | `check-e5f.mjs` (bản sao ở đây), sha256 `e22f5d5ec04a5cf5d8887ef146ca8e013cec270d95be34445a0776d9a0e612d1`. Chỉ đọc `arm`, `task`, `rep`, `status`, `byPhase`; không in điểm, token hay thời gian |
@@ -26,3 +26,24 @@ Sổ này ghi **trước lượt đầu**, lúc 4/11/2026 13:55 giờ VN. Khi đ
 - **Cách sửa:** hàm `Stopped` bỏ qua `STOP-3e` khi có kèm `STOP-3e.auto`. Bản sửa nằm trong `run3e-c.ps1` ở thư mục này.
 - **18:41:** chạy lại kịch bản, pid 47536. Kịch bản đang chờ E6 xong.
 - Không đổi lệnh, arm, bài hay quy tắc dừng nào của V4-3e-E5′.
+
+## Chạy r1 và dừng theo (3) (ghi 5/11/2026 khoảng 10:05 giờ VN)
+
+- **02:07:** E6 xong ("XONG phan sau" lúc 02:05), nên `run3e-c.ps1` khởi động server 7426 (pid 12988, commit `57148de`) và bắt đầu r1.
+- **02:30 và 02:50:** thoát mã 3 vì hạn mức; `l2-chain__B0F__r1` có 2 dòng `infra: rate-limit`. Lần 3 bắt đầu 03:10.
+- **03:46:** r1 xong, 4/4 khóa `done`.
+
+| Arm | Khóa `done` | Dòng không `done` | Token có trọng số | USD (`pricing.mjs`) | Thời gian thực |
+|---|---|---|---|---|---|
+| B0F | 2/2 | 2 hạn mức | 2,34 M | 5,66 | 0,63 giờ |
+| B1F | 2/2 | 0 | 1,86 M | 4,55 | 0,36 giờ |
+
+- **Kiểm sau r1** (`check-e5f.mjs --first`, chỉ đọc khóa `byPhase`):
+  - **Dừng 1 đạt:** B0F có `discuss` ở cả hai bài.
+  - Pha của B0F: `route/plan/discuss/finalize/execute/synthesize/accept`. Pha của B1F: `route/plan/execute/synthesize/accept`.
+  - **Kiểm nhiễu không đạt:** pha cấu trúc `review` **vắng ở cả hai arm, cả hai bài**. Kịch bản tạo `STOP-E5F` lúc 03:46 và dừng, chờ giám đốc quyết, đúng (3).
+- **Nguyên nhân (đọc mã ở `57148de`, chỉ đọc):** từ B-02, cổng chất lượng chạy **trước** reviewer. Khi lệnh kiểm tra xanh, mẫu đầu ra đạt và diff không chạm vùng bảo mật, orchestrator ghi `gate.review` với `decision: 'skip-reviewer'` và không gọi pha `review` ("không thuộc diện bắt buộc review", `src/orchestrator.ts` khối B-02 của làn đầy đủ).
+  - Vì vậy `review` là pha **có điều kiện theo cổng**, giống `revise`. Đây không phải pha cấu trúc luôn có.
+  - Danh sách `STRUCT` ở (3) và trong `check-e5f.mjs` đặt sai khi đưa `review` vào.
+  - Hai arm vắng `review` như nhau, và B1F chỉ mất đúng hai pha họp. Như vậy so sánh họp với không họp không bị nhiễu bởi pha khác.
+- **Chưa xem điểm.** Không lượt nào sau r1 được chạy.

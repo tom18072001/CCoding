@@ -1,0 +1,17 @@
+Cả 4 tính năng đã xong và `npm test` xanh (17/17 test pass). Tôi chưa chạy `npm start` để thử thủ công với API thật; kiểm tra qua HTTP chỉ có trong các test.
+
+**Đã làm**
+- **Xác thực và phân quyền:** `src/server.js` kiểm tra `X-User` trước khi định tuyến cho mọi đường dẫn `/tasks…` và `/audit`. Quyền admin, manager, member nằm ở `src/handlers/tasks.js`, theo đúng thứ tự 401, 400 query, 404, 403, 400 body.
+- **Lọc, tìm, sắp xếp, phân trang:** logic nằm trong `src/query.js`. `GET /tasks` trả `{items,total,page,pageSize}` và báo `INVALID_QUERY` kèm `field` theo đặc tả.
+- **CSV:** `src/csv.js` tạo file. Route `export.csv` được đăng ký trước `/tasks/:id`.
+- **Nhật ký:** `store.logAudit` ghi mục cho thao tác thành công. `GET /audit` nằm ở `src/handlers/audit.js`.
+- **Test:** `test/tasks.test.js` đã sửa cho dạng kết quả mới và có header `X-User`. Thêm `auth`, `list`, `csv`, `audit` test. Test CSV đọc byte thô để kiểm tra BOM, vì `fetch().text()` tự bỏ BOM.
+
+**Giả định cho chỗ đặc tả chưa nói rõ**
+- Tham số lặp lại được tính tại vị trí xuất hiện đầu tiên của tên đó khi xác định "tham số lỗi đầu tiên".
+- Member PATCH nhiệm vụ không giao cho mình → 403 trước khi đọc body. Body JSON hỏng → 400 `INVALID_JSON` ở bước validate body.
+- PATCH không đổi gì vẫn ghi nhật ký với `changes: []`. `create` ghi các khóa có trong body.
+- `taskId=` rỗng ở `/audit` được coi là giá trị lọc thật, nên kết quả rỗng.
+- Tôi siết validate `dueDate` khi ghi: phải là chuỗi và là ngày có thật trên lịch. Trước đây `2026-02-30` hoặc một mảng chứa chuỗi ngày vẫn qua được. Đây là thay đổi ngoài đặc tả; nói nếu bạn muốn bỏ.
+
+**Lỗi tự phát hiện và đã sửa:** `logAudit` chưa được thêm vào store, và regex nhận diện route cần xác thực bị mất dấu `\`. Ba kỳ vọng test sai (thứ tự `d` < `đ` trong locale `vi`, kết quả `q=an`, và BOM bị `fetch` bỏ) cũng đã sửa.

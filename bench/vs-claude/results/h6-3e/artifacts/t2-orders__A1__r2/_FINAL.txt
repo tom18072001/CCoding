@@ -1,0 +1,28 @@
+**3. SELF-REVIEW**
+
+Tôi đã đối chiếu từng mục trong ISSUES.md với code và test:
+- Mục 1: `toCents` đúng cho 1.005, -1.005 và 2.675. Mã giảm cố định cũng dùng `toCents`. `minSubtotal` vốn đã dùng hàm này.
+- Mục 2: `allocate` luôn cho tổng bằng đúng số tiền, hòa thì phần đứng trước được trước.
+- Mục 3: công thức mới là `floor(qty/(buy+free))*free`, khớp các ví dụ 2, 3, 5 và 6 hộp.
+- Mục 4: `endsAt` dạng ngày chỉ bị từ chối từ 00:00Z ngày kế tiếp.
+- Mục 5: giữ chỗ chỉ theo phần chênh lệch, xóa món thì nhả chỗ. Một `updateQty` bị từ chối vì hết hàng không làm đổi giỏ hay số giữ chỗ.
+- Mục 6: thuế tính trên `net`.
+
+Vài điểm tôi đã sửa thêm trong lúc rà soát:
+- Giảm theo danh mục bị giới hạn không vượt quá `gross` của dòng.
+- Thuế và giảm % không còn dùng `Math.round` trên số thực nên không còn lỗi .5.
+
+Giả định `endsAt` chỉ có dạng `YYYY-MM-DD` chưa được kiểm chứng với bộ nghiệm thu ẩn. API công khai không đổi, chỉ thêm export `roundHalfUp` từ `money`.
+
+**4. FIX / Báo cáo cuối**
+
+Không còn lỗi nào cần sửa thêm sau bước rà soát. `npm test` xanh, 14/14 test đạt (3 test cũ và 11 test hồi quy mới trong `test/regression.test.js`).
+
+Các file đã đổi:
+- `src/money.js`
+- `src/promotions.js`
+- `src/cart.js`
+- `src/checkout.js`
+- `src/tax.js`
+
+Tôi chưa commit gì.

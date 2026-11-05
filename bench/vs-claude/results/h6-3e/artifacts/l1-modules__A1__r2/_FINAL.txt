@@ -1,0 +1,27 @@
+**Giai đoạn 4 – FIX và báo cáo**
+
+Cả năm module đã hiện thực xong ở `src/<tên>/index.js` và `npm test` xanh: 69 test, 0 lỗi (23 test mẫu cũ cộng 46 test mới). Tôi chưa commit gì, vì bạn không yêu cầu.
+
+Bước tự rà soát chỉ tìm ra lỗi trong bài test của tôi chứ không phải trong mã nguồn. Tôi đã sửa các lỗi đó:
+- đếm sai số ngày nghỉ năm 2027 (đúng là 14);
+- `addDays` với 36524 ngày vượt khoảng hỗ trợ;
+- hai assertion tự mâu thuẫn trong test `rollForward`/`rollBackward`;
+- kỳ vọng `remaining` ở 667 ms phải là 0;
+- kỳ vọng `peek` ở `retryAfterMs − 1` phải luôn bị từ chối;
+- một dòng assertion vô nghĩa trong test csvcheck.
+
+Tôi cũng grep để xác nhận không có `Date.now`, `setTimeout`, `setInterval`, `Intl`, `localeCompare` hay import chéo giữa các module trong mã nguồn.
+
+Test mới nằm ở `test/*.spec.test.js`. Chúng phủ mọi ví dụ trong SPEC, thứ tự báo lỗi và các biên. Có thêm hai kiểm tra rộng:
+- `parseMoney(formatMoney(m))` khớp lại `m` trên mọi tổ hợp locale, kiểu hiển thị và kiểu số âm;
+- `isoWeekToDate(isoWeek(d))` trả lại đúng `d` cho mọi ngày từ 1900 đến 2100.
+
+Các chỗ spec không nói rõ, tôi đã chọn như sau (bộ nghiệm thu ẩn có thể chọn khác):
+- `convert` kiểm `m` trước rồi mới kiểm `to`. `convertSum` kiểm `list` rồi `to`.
+- `min`/`max` trên cột `string`/`bool` không bị coi là lược đồ sai, mà chỉ bị bỏ qua khi kiểm.
+- `required` được hiểu theo giá trị truthy.
+- `slugify` kiểm kiểu `text` trước rồi mới kiểm `maxLength`.
+- `isoWeekToDate` ra ngoài 1900–2100 thì ném `CAL_OUT_OF_RANGE`.
+- Ở `peek` của sliding window, khóa đã có chỉ bị dọn sự kiện hết hạn (không xóa khóa), khóa chưa có thì không bị tạo.
+- Trong ngoặc của `parseMoney`, khoảng trắng sát ngoặc được chấp nhận.
+- Ở token bucket, `now()` được làm tròn xuống số nguyên ms.

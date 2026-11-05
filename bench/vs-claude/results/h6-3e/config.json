@@ -1,0 +1,58 @@
+{
+  "argv": [
+    "--arms",
+    "B0",
+    "--tasks",
+    "l1-modules,l2-chain,t1-duration,t2-orders,t3-api,t4-perf,t5-logq",
+    "--repeats",
+    "3",
+    "--timeout",
+    "40",
+    "--out",
+    "bench\\vs-claude\\results\\h6-3e",
+    "--runtime",
+    "claude-cli",
+    "--ccoding-url",
+    "http://127.0.0.1:7425",
+    "--ccoding-data",
+    "C:\\Users\\admin\\ccoding-vs-claude\\ccoding-3e\\data",
+    "--work",
+    "C:\\Users\\admin\\ccoding-vs-claude\\vb3e"
+  ],
+  "cfg": {
+    "ccodingUrl": "http://127.0.0.1:7425",
+    "ccodingData": "C:\\Users\\admin\\ccoding-vs-claude\\ccoding-3e\\data",
+    "runtime": "claude-cli",
+    "timeoutMin": 40,
+    "claudeBin": "claude",
+    "judge": {
+      "enabled": false,
+      "model": "opus"
+    },
+    "seed": "ccvb",
+    "window": null,
+    "quotaState": null,
+    "workRoot": "C:\\Users\\admin\\ccoding-vs-claude\\vb3e"
+  },
+  "meta": {
+    "ccodingCommit": "6c454f67518244af6724ca68037613f99e34ab46",
+    "claudeCliVersion": "2.1.318 (Claude Code)",
+    "window": null,
+    "quotaState": null,
+    "timeoutMin": 40
+  },
+  "armIds": [
+    "B0"
+  ],
+  "taskIds": [
+    "l1-modules",
+    "l2-chain",
+    "t1-duration",
+    "t2-orders",
+    "t3-api",
+    "t4-perf",
+    "t5-logq"
+  ],
+  "repeats": 3,
+  "startedAt": "2026-11-04T17:15:34.703Z"
+}

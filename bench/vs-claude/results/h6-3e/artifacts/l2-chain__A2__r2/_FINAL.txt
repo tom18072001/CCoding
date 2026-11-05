@@ -1,0 +1,17 @@
+Cả bốn tầng và `compile` đã hiện thực xong, `npm test` xanh (36 test, 0 lỗi). Tôi chưa commit gì.
+
+- **Tầng 1:** `src/lexer.js` và `src/parser.js` (`tokenize`, `parse`, `parseProject`).
+- **Tầng 2:** `src/check.js`, ba pha A → B → C, dừng ở pha đầu tiên có lỗi.
+- **Tầng 3:** `src/evaluate.js`.
+- **Tầng 4:** `src/diff.js` (con trỏ JSON, `diff`, `applyDiff`, `formatText`, `formatJson`, `summarize`).
+- **`compile`:** nằm trong `src/index.js`.
+- **Tệp dùng chung:** tôi thêm `src/model.js` chứa phần hợp nhất, phân giải tham chiếu và đánh giá. `check` và `evaluate` cùng dùng nó nên hai tầng không lệch nhau về thứ tự khóa hay vị trí đối tượng.
+- **Test:** mỗi tầng có một tệp trong `test/` (`lexer`, `parser`, `check`, `evaluate`, `diff`), cộng `test/smoke.test.js` có sẵn.
+
+Đặc tả chưa nói rõ ở vài chỗ, tôi chọn như sau:
+- **`${true}`:** nội suy có từ khóa làm đoạn đầu được coi là hợp lệ về cú pháp. Nó sẽ bị báo `SEM_UNDEFINED_REF` ở tầng 2.
+- **`\` ở cuối tệp:** báo `LEX_BAD_ESCAPE`, không phải `LEX_UNTERMINATED_STRING`.
+- **`SEM_UNKNOWN_KEY` trong giá trị đến từ chuỗi thuần tham chiếu:** báo tại vị trí của chuỗi đó, không phải tại khóa.
+- **`SEM_UNKNOWN_KEY` với khóa là một khối đã trộn:** báo tại khối đầu tiên tạo ra khóa.
+
+Các test tôi viết cho tầng 2 và 3 chỉ kiểm theo cách đọc đặc tả của tôi, nên bộ nghiệm thu ẩn vẫn có thể bắt được chỗ hiểu sai ở những điểm trên.

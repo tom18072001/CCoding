@@ -1,0 +1,9 @@
+Cả năm module đã được hiện thực và `npm test` xanh: 53 test, 0 lỗi, gồm vài test sẵn có và các test tôi viết thêm. Chưa có bộ nghiệm thu ẩn để chạy, nên tôi chỉ đối chiếu với các ví dụ trong SPEC.md. Tôi chưa commit gì.
+
+Mỗi module nằm ở `src/<tên>/index.js`, không import lẫn nhau và không dùng thư viện ngoài. Test mới nằm ở `test/<tên>.spec.test.js`, kiểm gần như mọi ví dụ và mã lỗi trong đặc tả.
+
+Một số chỗ đặc tả không nói rõ, tôi tự chọn như sau:
+- **`convert`:** khi cả `m` và `to` đều sai, tôi báo lỗi của `m` trước, giống thứ tự `a` rồi `b` ở `add`.
+- **`min`/`max` trong lược đồ csv:** chỉ kiểm kiểu cho cột `int`, `number` và `date`. Ở cột `string` và `bool` thì bỏ qua.
+- **`validateCsv`:** kiểm lược đồ trước cả `text`, nên lược đồ sai sẽ ném `CSV_INVALID_SCHEMA` dù `text` cũng sai.
+- **`parseMoney` ở `fr-FR`:** chỉ nhận dấu cách thường U+0020 làm phân cách nghìn, không nhận NBSP.

@@ -1,0 +1,82 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t2-orders__B0__r1] Sửa 6 lỗi trong thư viện tính tiền giỏ hàng
+
+_Làn đơn: một agent làm trọn đề bài; báo cáo dựng tự động từ bàn giao và kết quả cổng chất lượng (không gọi model)._
+
+## Tóm tắt
+
+Làn đơn: Senior Software Engineer (@senior-swe) làm trọn đề bài trong worktree nhiệm vụ
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — [vs-claude t2-orders__B0__r1] Sửa 6 lỗi trong thư viện tính tiền giỏ hàng (@senior-swe, done)
+
+## Tóm tắt
+Đã sửa 6 lỗi trong ISSUES.md ở nguyên nhân gốc và thêm test hồi quy cho từng lỗi. API công khai không đổi. `npm test` xanh: 13 test, 13 pass, 0 fail.
+
+## Tệp đã tạo/sửa
+- `src/money.js`
+  - `toCents` đổi qua dạng thập phân (`'1.005e2'`) nên 1.005 → 101 và -1.005 → -101. `Catalog` và `promotions.js` đều gọi `toCents` nên lỗi 1 được sửa ở cả giá sản phẩm, mã giảm cố định và giá trị đơn tối thiểu.
+  - `allocate` giờ chia phần dư theo phương pháp phần dư lớn nhất, bằng nhau thì phần đứng trước được trước (lỗi 2).
+- `src/promotions.js`
+  - `freeUnits` dùng `floor(qty / (buy + free)) * free` (lỗi 3).
+  - `endsAt` được tính đến hết ngày UTC, bị từ chối từ 00:00 ngày kế tiếp (lỗi 4).
+- `src/cart.js`
+  - `updateQty` chỉ giữ chỗ phần chênh lệch khi tăng và trả lại phần chênh khi giảm.
+  - `removeItem` trả lại toàn bộ số lượng đang giữ (lỗi 5).
+- `src/checkout.js`: thuế tính trên `net` thay vì `gross` (lỗi 6).
+- `src/tax.js`: làm tròn thuế half up bằng số nguyên, để tránh sai số dấu phẩy động. Đây là thay đổi thêm, không nằm trong ISSUES.md.
+- `test/regression.test.js` (mới): 7 test, mỗi test ứng với một lỗi trong ISSUES.md. Riêng lỗi 1 và lỗi 2 mỗi lỗi có thêm test riêng cho `toCents`/`allocate`.
+
+## Kiểm chứng
+- `npm test` lần đầu → test giảm giá cố định đỏ, do dữ liệu test của tôi sai (3 × 3.33 = 9.99, mã bị giới hạn bằng tạm tính). Tôi đổi giá thành 3.34 trong test.
+- `npm test` lần sau → exit 0, tests 13, pass 13, fail 0.
+- Tôi không chạy lại baseline.
+
+## Quyết định thiết kế
+- `toCents` dùng chuỗi thập phân thay vì cộng epsilon, để không lệch ở các giá trị khác. Số ở dạng mũ (như `1e-7`) quay về `Math.round(abs * 100)`.
+- Mã giảm % và mã theo danh mục vẫn dùng `Math.round(x * percent / 100)`, không đổi.
+
+## Rủi ro & việc còn mở
+- `endsAt` chỉ xử lý định dạng `YYYY-MM-DD` như mô tả. Nếu truyền chuỗi có giờ, hạn sẽ bị cộng thêm 1 ngày.
+- `Cart.removeItem` và `updateQty` giả định mỗi giỏ tự quản lý phần giữ chỗ của nó. Cơ chế hết hạn giữ chỗ hoặc thanh toán xong không có trong repo nên tôi không đụng tới.
+
+Bản đầy đủ: `.ccoding/T-20261105-002627-bd4/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng (làn đơn): lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261105-002627-bd4` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **12 in / 9,156 out**, cache đọc 90.3k, 2 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 10 | 8735 | 89604 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 421 | 649 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude t2-orders__B0__r1] Sửa 6 lỗi trong thư viện tính tiền giỏ hàng (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 6 · ℹ suites 0 · ℹ pass 6 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 13 · ℹ suites 0 · ℹ pass 13 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 100 | 96 | 100 | 1 | 1 | 98k | 1/21 | — |
+| Điều phối viên (@orchestrator) | office | **60** C | thấp | — | — | — | — | 100 | — | 0 | — | 1k | — | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

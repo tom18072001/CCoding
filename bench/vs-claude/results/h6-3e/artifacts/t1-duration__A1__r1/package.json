@@ -1,0 +1,7 @@
+{
+  "name": "duration",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/duration.js",
+  "scripts": { "test": "node --test \"test/**/*.test.js\"" }
+}

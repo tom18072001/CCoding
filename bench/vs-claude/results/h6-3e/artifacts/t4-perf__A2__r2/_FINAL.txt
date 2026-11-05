@@ -1,0 +1,13 @@
+`buildReport` giờ chạy 200.000 dòng trong khoảng 220 ms (`npm run bench`), trước đây khoảng 15 giây. `npm test` xanh cả 3 test.
+
+- **Cách làm:** viết lại `src/report.js` thành một lượt duyệt, dùng `Map`/`Set` thay cho `find`/`includes`/`filter` lồng nhau. Chữ ký hàm giữ nguyên và không có cache giữa các lần gọi. Cache tháng theo chuỗi `date` chỉ sống trong một lần gọi.
+- **Giữ nguyên hành vi cũ:**
+  - Sản phẩm trùng `sku` thì lấy bản đầu tiên.
+  - Ngày không hợp lệ vẫn ném lỗi như cũ.
+  - Thứ tự phần tử mảng và các phép tính tổng cộng dồn theo thứ tự dòng như cũ.
+  - Bản cũ có bước `JSON.parse(JSON.stringify(...))` làm số không hữu hạn (NaN/Infinity) thành `null`, tức là cộng như 0. Tôi bắt chước đúng điều này.
+- **Test so sánh:** bản cũ được lưu ở `test/report.reference.js`. Test mới so `deepStrictEqual` kết quả mới với bản cũ trên 22 bộ dữ liệu, gồm:
+  - nhiều seed, và các tùy chọn `topN`, `from`, `to`;
+  - đầu vào rỗng;
+  - `sku` sản phẩm trùng, sản phẩm thiếu so với đơn hàng, đơn giá bằng 0.
+- **Chưa kiểm chứng:** các trường là object hoặc kiểu lạ (ví dụ `id` là object) thì bản cũ bị đổi do bước JSON nói trên, bản mới không bắt chước. Tôi coi đó là đầu vào không hợp lệ.
