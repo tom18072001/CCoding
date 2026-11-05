@@ -599,6 +599,15 @@ Phần khác của `run-plan.md` đã đối chiếu nhưng không tìm thấy l
 - **Mối đe dọa đã biết (ghi trước):** loại theo B0F có họp chọn kế hoạch lớn hơn; B1F không bị loại độc lập, nên có thể lệch. Biện pháp: báo số hạng mục kế hoạch của hai arm và phân tích độ nhạy không loại.
 - **Nguồn:** V4-3e-E5, V4-3e-E3 (8); `BRIEF-D12.md` K3; `BRIEF-17.md` K2; `run-plan.md` §5.4; `src/orchestrator.ts` khối "Họp thảo luận + chốt"; `results/large-pilot/RUNLOG.md`; `results/study-cloud/runs.jsonl` (`byPhase`, token, thời gian).
 
+- **Sai lệch (3), ghi 5/11/2026 khoảng 10:10 giờ VN, trước cặp r2:**
+  - **Vì sao dừng:** sau r1, kiểm nhiễu dừng vì pha `review` vắng ở **cả hai arm, cả hai bài** (`results/b15f-main/RUNLOG.md`).
+  - **Nguyên nhân (đọc mã `57148de`):** từ B-02, cổng chất lượng chạy trước reviewer và bỏ pha `review` khi lệnh kiểm tra xanh, mẫu đầu ra đạt và diff không chạm vùng bảo mật (`gate.review` với `decision: 'skip-reviewer'`). Như vậy `review` là **pha có điều kiện theo cổng**, giống `revise`. Đưa nó vào danh sách pha cấu trúc là lỗi của bản đăng ký.
+  - **Quyết định:** giám đốc chọn "chạy tiếp" lúc 5/11 khoảng 10:05, trong phiên.
+  - **Thay đổi duy nhất:** pha cấu trúc bắt buộc ở cả hai arm còn `route`, `plan`, `execute`, `synthesize`, `accept`. `review` được phép khác giữa hai arm, như `revise`, và được ghi lại.
+  - **Giữ nguyên mọi phần khác:** Dừng 1, Dừng 2, quy tắc loại (8), n, thuật toán phân tích. Cặp r1 đã chạy được giữ; chỉ khóa `byPhase` của nó đã được xem, chưa xem điểm.
+  - `check-e5f.mjs` sửa theo đúng thay đổi này; sha256 mới ghi ở RUNLOG trước r2.
+  - Ghi thêm: E5′ chạy trên Claude Code CLI 2.1.318, không phải 2.1.312 như RUNLOG ghi lúc lập.
+
 #### V4-3e-K3 — Quy tắc bổ sung (đặt trước dữ liệu)
 
 **Nhãn: đặt trước.** Ghi ngày 4/11/2026, trên commit nền `1a31f1f93d1c59873d2a6c46c1c1d68cbbf2f6ca` (S0, sau fast-forward). Gồm ba quy tắc (a), (b), (c). Mỗi quy tắc có nhãn thời điểm và nguồn riêng. Khi viết **không đọc điểm mới** nào: không mở điểm E3, E4, E2; số trong (c) lấy từ `context/k4-e2-descriptive-b14-step2-n.md` §2 (σ và N đã có trước gói này). Mọi số tính tay ở đây ghi rõ "tính tay"; phải được script chạy lại trước khi dùng cho quyết định.

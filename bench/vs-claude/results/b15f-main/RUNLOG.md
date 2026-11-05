@@ -47,3 +47,14 @@ Sổ này ghi **trước lượt đầu**, lúc 4/11/2026 13:55 giờ VN. Khi đ
   - Danh sách `STRUCT` ở (3) và trong `check-e5f.mjs` đặt sai khi đưa `review` vào.
   - Hai arm vắng `review` như nhau, và B1F chỉ mất đúng hai pha họp. Như vậy so sánh họp với không họp không bị nhiễu bởi pha khác.
 - **Chưa xem điểm.** Không lượt nào sau r1 được chạy.
+
+## Giám đốc quyết và chạy tiếp (5/11/2026, ghi trước r2)
+
+- **Quyết định:** khoảng 10:05, giám đốc chọn "Chạy tiếp, coi review là pha có điều kiện". Sai lệch ghi ở §9, mục V4-3e-E5′, "Sai lệch (3)".
+- **`check-e5f.mjs` sửa:** bỏ `review` khỏi pha cấu trúc; `review` được khác giữa hai arm như `revise`. sha256 mới `87274600f6c2413d0ef29a7a7726c26c5ba102b9a838f32e121f0226da88112f`. Chạy lại `--first` trên r1: đạt (exit 0).
+- **Ghim Claude Code CLI:** giám đốc duyệt tắt tự cập nhật. `DISABLE_AUTOUPDATER=1` đặt ở `env` của `~/.claude/settings.json`, ở biến môi trường người dùng, và ở tiến trình kịch bản chạy tiếp. Server 7426 khởi động lại để nhận biến này. Phiên bản ghi ở từng dòng (`claudeCliVersion`).
+- **Thứ tự còn lại:**
+  1. chạy lại 1 khóa thiếu của E6 (`t2-orders__B0__r3`, §4.1);
+  2. E5′ r2…r10;
+  3. bước 2 của B-14;
+  4. E7, E8 (giám đốc duyệt lúc 10:05).

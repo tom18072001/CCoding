@@ -8,7 +8,8 @@ import fs from 'node:fs';
 const [file, flag] = process.argv.slice(2);
 if (!file || !fs.existsSync(file)) { console.log(JSON.stringify({ ok: false, error: 'thiếu runs.jsonl' })); process.exit(2); }
 const VARIANT = new Set(['route', 'plan', 'discuss', 'finalize', 'execute', 'review', 'revise', 'synthesize', 'accept']);
-const STRUCT = ['route', 'plan', 'execute', 'review', 'synthesize', 'accept'];
+// Sai lệch (3) 5/11: `review` là pha có điều kiện theo cổng B-02 (bỏ reviewer khi xanh), như `revise` — không còn là pha cấu trúc
+const STRUCT = ['route', 'plan', 'execute', 'synthesize', 'accept'];
 const rows = fs.readFileSync(file, 'utf8').split(/\r?\n/).filter(Boolean).map((l) => JSON.parse(l))
   .filter((r) => (r.arm === 'B0F' || r.arm === 'B1F') && r.status === 'done');
 const key = (r) => `${r.task}|${r.rep}`;
@@ -28,7 +29,7 @@ if (flag === '--first') {
     if (!v.B0F.includes('discuss')) out.stop.push(`Dừng 1: ${t} B0F cặp đầu không có discuss`);
     for (const a of ['B0F', 'B1F']) for (const p of v[a]) if (!VARIANT.has(p)) out.stop.push(`nhiễu: ${t} ${a} có pha lạ ${p}`);
     for (const p of STRUCT) for (const a of ['B0F', 'B1F']) if (!v[a].includes(p)) out.stop.push(`nhiễu: ${t} ${a} thiếu pha cấu trúc ${p}`);
-    const extra = v.B0F.filter((p) => !v.B1F.includes(p) && !['discuss', 'finalize', 'revise'].includes(p));
+    const extra = v.B0F.filter((p) => !v.B1F.includes(p) && !['discuss', 'finalize', 'revise', 'review'].includes(p));
     if (extra.length) out.stop.push(`nhiễu: ${t} B1F mất thêm pha ${extra.join(',')}`);
     out[`phases_${t}`] = { B0F: v.B0F.join('/'), B1F: v.B1F.join('/') };
   }

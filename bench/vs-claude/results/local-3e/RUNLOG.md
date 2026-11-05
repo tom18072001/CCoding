@@ -25,6 +25,7 @@ Phân loại dữ liệu: **Nội bộ**. Bài tổng hợp, không có dữ li�
 | 19:49–19:53 | E4b xong 64/64 khóa. `run3e.ps1` thấy `STOP-3e` (do `run3e-b.ps1` tạo) nên dừng trước E5, đúng bàn giao. `run3e-b.ps1` chạy lại E4b để bỏ qua khóa đã xong, rồi bắt đầu **E6a lúc 19:53**. E4: 192/192 khóa, 5,10 giờ máy, khoảng 54 USD (`gates-main/RUNLOG.md`) |
 | 21:04 → 5/11 02:05 | E6a xong 21:04 (21/21). E6b chạm hạn mức 21:08–22:08 (3 lần thoát mã 3), xong 00:15 (14/14). E6c xong 02:05 (20/21; `t2-orders__B0__r3` lỗi hạ tầng, chưa chạy lại). Chi tiết ở `h6-3e/RUNLOG.md` |
 | 5/11 02:07 → 03:46 | E5′ r1 (4 khóa, 2 lần chạm hạn mức). Kiểm nhiễu sau r1 dừng vì pha `review` vắng ở cả hai arm (cổng B-02 bỏ reviewer khi xanh). `STOP-E5F`, chờ giám đốc. Chi tiết ở `b15f-main/RUNLOG.md` |
+| 5/11 10:05 | **Giám đốc quyết** (trong phiên): (1) E5′ chạy tiếp, coi `review` là pha có điều kiện (§9 V4-3e-E5′ "Sai lệch (3)"); (2) **duyệt E7 và E8**, chạy sau bước 2 của B-14 (§9 V4-3f, mục "Dự kiến"); (3) tắt tự cập nhật Claude Code, ghim 2.1.318 cho phần còn lại |
 
 ## Nguồn p của H6 cho E6 (ghi trước lượt E6 đầu tiên, theo V4-3e-E6 (6))
 
