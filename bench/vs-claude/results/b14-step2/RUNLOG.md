@@ -71,3 +71,8 @@ Ghi 4/11/2026 (BRIEF-18 K3(b)), chỉ đọc tệp, không chạy test. Danh sá
 - **Ảnh hưởng:**
   - B-14: không có dữ liệu nào bị ảnh hưởng.
   - E5′ r2: chạy chồng khoảng 1–2 phút với một phiên `claude` của B-14 (tranh hạn mức và CPU). Ghi ở `b15f-main/RUNLOG.md`.
+
+## Sự cố 11:10 (5/11/2026): kịch bản chờ bị kết thúc cùng ứng dụng desktop
+
+- `b14-run.ps1` (pid 44828) đang ở bước chờ E5′ thì bị kết thúc lúc khoảng 11:10, khi ứng dụng Claude desktop khởi động lại (`b15f-main/RUNLOG.md`). Chưa có khối nào chạy, chưa có dữ liệu.
+- **11:53:** chạy lại đúng kịch bản (sha256 `87d49357…`, không đổi) bằng WMI, pid 12140. Kịch bản đang chờ dòng "E5F XONG", do `run3e-e.ps1` ghi khi E5′ xong.

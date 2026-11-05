@@ -51,3 +51,9 @@ Ghi chú: CTO của D12 chưa nghiệm thu vì `npm test` đỏ bốn test holdo
 - **Từ nay:** không giao nhiệm vụ CCoding mới trong lúc đợt đo đang chạy, trừ khi giám đốc yêu cầu.
 - Thời gian chờ giữa hai cửa sổ không tính vào trần 15 giờ của E4 (khối (a) bước 4).
 - E4a đã dùng cửa sổ 1, phần còn lại chạy ở cửa sổ 2, bắt đầu 16:50.
+
+## Sự cố 11:10 ngày 5/11: ứng dụng desktop khởi động lại
+
+- Ứng dụng Claude desktop khởi động lại lúc khoảng 11:10. Mọi tiến trình con bị kết thúc theo: `run3e-d.ps1`, `b14-run.ps1`, các server 7425, 7426, 7427.
+- **11:53:** chạy tiếp bằng `run3e-e.ps1` (E5′ r3…r10) và `b14-run.ps1`, khởi chạy qua WMI để không phụ thuộc vào ứng dụng. Chi tiết ở `b15f-main/RUNLOG.md` và `b14-step2/RUNLOG.md`.
+- Server chính 7420 cũng không còn nghe. Không khởi động lại server này: chỉ giám đốc mới khởi động lại nó.

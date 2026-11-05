@@ -66,3 +66,19 @@ Sổ này ghi **trước lượt đầu**, lúc 4/11/2026 13:55 giờ VN. Khi đ
   - Chạy lại khóa thiếu của E6, xong lúc 10:14 (E6 đủ 56/56).
   - E5′: r1 bỏ qua vì đã xong. Kiểm `--first` bằng bản sửa: **đạt**. Bắt đầu **r2 lúc 10:14:52**.
 - **Sự cố 10:16–10:18:** kịch bản của bước 2 B-14 bắt đầu nhầm khối 1 và chạy một phiên `claude` khoảng 1–2 phút song song với r2, rồi bị dừng (`b14-step2/RUNLOG.md`). Lượt r2 không bị dừng. Khi phân tích, ghi lượt r2 nào đang chạy trong khoảng này.
+- **11:05:** r2 xong (exit 0), kiểm Dừng 2 đạt (2 cặp mỗi bài). Bắt đầu r3 lúc 11:05:25.
+
+## Sự cố 11:10: ứng dụng Claude desktop khởi động lại (5/11/2026)
+
+- **Hiện tượng:** lúc 11:51 kiểm định kỳ thấy không còn `run3e-d.ps1` (pid 20892), không còn `b14-run.ps1` (pid 44828), và không server nào nghe ở 7425, 7426, 7427 (cả 7420).
+  - Tiến trình `claude.exe` của ứng dụng desktop mới được tạo lúc **11:10:38**. Máy không khởi động lại (lần khởi động gần nhất 29/10).
+  - Các kịch bản được khởi chạy từ công cụ của ứng dụng, nên bị kết thúc cùng cây tiến trình của ứng dụng.
+- **Ảnh hưởng tới dữ liệu:**
+  - Lượt đầu tiên của r3 đang chạy khi bị giết, **chưa ghi dòng nào** vào `runs.jsonl`. Lúc đó tệp có 10 dòng: 8 `done`, 2 `infra` từ trước.
+  - Nhiệm vụ dở trong data của server 7426 sẽ ở trạng thái "bị gián đoạn" khi server khởi động lại, và không tự chạy tiếp.
+  - Phần hạn mức đã tiêu cho lượt dở không được ghi lại.
+- **Xử lý, theo §4.1 (lỗi hạ tầng → chạy lại đúng khóa):**
+  - **11:53:** chạy `run3e-e.ps1` (`results/local-3e/scripts/run3e-e.ps1`, pid 48492) bằng WMI (`Win32_Process.Create`), để kịch bản không nằm trong cây tiến trình của ứng dụng. Đã kiểm trước bằng một tiến trình thử: phiên 1, người dùng admin, `DISABLE_AUTOUPDATER=1`, CLI 2.1.318.
+  - Server 7426 khởi động lại (pid 37628, `57148de`). r3 bắt đầu lại lúc 11:53:11; runner bỏ qua khóa đã xong.
+  - Không đổi bài, arm, tham số hay quy tắc kiểm.
+- Khi phân tích, ghi khóa r3 nào bị chạy lại sau sự cố.
