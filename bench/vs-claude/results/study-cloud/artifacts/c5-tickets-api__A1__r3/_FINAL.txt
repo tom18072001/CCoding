@@ -1,0 +1,28 @@
+**3. SELF-REVIEW**
+
+Checked against the brief:
+- No params keeps the bare array sorted by id, and the existing test passes.
+- Filters, sort, tie-break, limit and cursor each follow the brief.
+- All invalid cases return `invalid_<param>`.
+- `limit` absent keeps the array body, even with filters or sort.
+- Unknown params are ignored.
+
+Issues found:
+- A non-string `cursor` value, such as an array, goes through `decodeCursor` and is rejected as `invalid_cursor`. That's correct.
+- A forged cursor can carry a `v` of the wrong type for the sort field. I handle that with a type check. A forged `id` or `v` of the right type just repositions the page, which is harmless for an opaque, unsigned cursor.
+- `NaN` and `Infinity` can't appear, because JSON can't carry them and `v` must be a number or string.
+- Cursor and `limit` ordering: `limit=0&cursor=x` returns `invalid_limit`, since `limit` is validated first. That follows my stated order.
+- Seed data has no duplicate ids, so the tie-break is exercised through priority and date ties.
+
+**4. FIX**
+
+The review found nothing that needed code changes. All 9 tests pass (1 existing, 8 new).
+
+**Final report**
+- `src/handler.js`: `GET /tickets` now supports `status`, `assignee`, `sort`, `limit` and `cursor`. Pagination is keyset-based on (sort value, id).
+- `test/tickets-query.test.js`: new tests. They cover filters, sort and tie-break, full pagination walks for every sort with and without filters, the exact-fit last page, 20 validation cases, and cursor binding.
+- Assumptions:
+  - Empty list items and empty strings are invalid.
+  - Cursor "same values" is compared after canonicalising: list order and duplicates are ignored, and an omitted `sort` equals `sort=id`.
+  - Validation order is status, assignee, sort, limit, cursor, and the first failure wins.
+- Cursors are base64url JSON and not signed. They are opaque by convention only, which I judged fine for this in-memory handler.

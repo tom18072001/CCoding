@@ -1,0 +1,74 @@
+# Knights and knaves: answer.json đã ghi xong, có một nghiệm duy nhất
+
+## Tóm tắt
+Nghiệm là **healthy [B, C], compromised [A, D, E], unique = true**, đã ghi vào `answer.json` ở thư mục gốc repo. S1 duyệt cả 32 cách gán và chỉ một cách thỏa mãn, khớp với giả thuyết suy luận lúc lập kế hoạch. Khi tổng hợp, tôi đã tự đọc `answer.json`, tự xem `git status` và tự kiểm tay 5 phát biểu; kết quả đúng như hai thành viên báo. Còn một điểm cần nói rõ: S2 ghi là đã chạy script kiểm, nhưng phần ghi chú review lại nói reviewer không chạy lệnh nào. Chi tiết ở mục Kết quả review.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Duyệt 32 cách gán và ghi `answer.json` | @backend-dev | Đạt | `answer.json` (mới). S1 báo `solve.py` đặt trong scratchpad, exit 0, cho đúng 1 nghiệm `(0,1,1,0,0)`. Báo cáo: `.ccoding/T-20261102-182551-52a/outputs/dev-S1-backend-dev.md` |
+| S2 | Kiểm lại độc lập nghiệm và định dạng | @senior-swe | Đạt | S2 báo `verify2.py` (script riêng, chạy với `python3 -I`) exit 0: 1 trên 32 cách gán, định dạng hợp lệ. Báo cáo: `.ccoding/T-20261102-182551-52a/outputs/dev-S2-senior-swe.md` |
+| Tổng hợp | Tự kiểm khi viết báo cáo | @dev-lead | Đạt | `cat answer.json` cho ra `{"healthy": ["B","C"], "compromised": ["A","D","E"], "unique": true}`. `git status --short` chỉ có `?? answer.json`. |
+
+Kiểm tay với A=knave, B=knight, C=knight, D=knave, E=knave:
+- A nói "B compromised": sai. Đúng, vì A là knave.
+- B nói "A và E cùng trạng thái": đúng, vì cả hai đều compromised.
+- C nói "đúng 3 máy compromised": đúng, vì A, D, E compromised.
+- D nói "E healthy hoặc C compromised": sai ở cả hai vế. Đúng, vì D là knave.
+- E nói "A healthy và D compromised": sai, vì A không healthy. Đúng, vì E là knave.
+
+Tính duy nhất: nếu A là knight thì suy ra C mâu thuẫn với chính lời của C, nên A phải là knave. Từ đó B, E, C, D lần lượt bị ép thành đúng một cách gán.
+
+## Quyết định
+- Kế hoạch chỉ gồm 2 hạng mục: giải và kiểm độc lập. Không cần kiến trúc, BA hay cổng bảo vệ dữ liệu, vì đầu ra chỉ là một tệp JSON.
+- "Exactly three of us five are compromised" được hiểu đúng theo nghĩa đen: đếm số máy compromised trong cả 5 máy, tính cả C.
+- Hai script để ở scratchpad, ngoài repo, nên repo chỉ có thêm đúng tệp sản phẩm.
+
+## Kết quả review
+- Không có blocker hay major. S2 không tìm thấy lỗi về nghiệm, về `unique` hay về định dạng (đủ 3 khóa, hai danh sách đã sắp xếp, không trùng nhau, gộp lại đủ A–E, `unique` là boolean).
+- **Điểm không nhất quán:** báo cáo S2 ghi đã chạy `verify2.py` (lần đầu lỗi cú pháp, sửa rồi chạy lại, exit 0). Nhưng ghi chú kèm phần kết luận review lại nói reviewer không chạy lệnh nào. Tôi không xác minh được log chạy của S2. Phần tôi đã tự kiểm được là nội dung `answer.json`, `git status`, và cả 5 phát biểu cùng tính duy nhất bằng suy luận tay. Chừng đó đủ để chốt kết quả.
+
+## Việc còn mở & rủi ro
+- Không còn việc mở.
+- Rủi ro thấp: tệp chưa được commit, đề bài chỉ yêu cầu đặt tệp ở thư mục gốc. Theo quy định, tôi không commit và không push.
+
+## Bước tiếp theo
+- Không cần tách nhiệm vụ nào thêm. Nếu Tom muốn đưa tệp vào lịch sử git, có thể commit `answer.json` lên nhánh làm việc, không commit vào main.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-182551-52a` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **22 in / 8,632 out**, cache đọc 232.5k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | 6 | 4138 | 61044 | 2 |
+| Senior Software Engineer (@senior-swe) | dev | 6 | 1853 | 70653 | 1 |
+| Backend Developer (@backend-dev) | dev | 4 | 1289 | 43375 | 1 |
+| QA Engineer (@qa-tester) | dev | 4 | 882 | 42797 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 470 | 14680 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Duyệt 32 cách gán và ghi answer.json (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 Kiểm lại độc lập nghiệm và định dạng (@senior-swe)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **89** A | 100 | 81 | 100 | 60 | 1 | 1 | 73k | 0/2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | 100 | 100 | 100 | 100 | 0 | — | 65k | 0/1 |
+| Backend Developer (@backend-dev) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 45k | 0/1 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 44k | 0/1 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 15k | — |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 89 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **Backend Developer** (@backend-dev, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

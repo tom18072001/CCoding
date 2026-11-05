@@ -1,10 +1,36 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Classification, Phase, TaskOptions, ToolAccess } from './types.js';
+import type { Classification, GateConfig, Phase, TaskOptions, ToolAccess } from './types.js';
+import { SLIM_DEFAULTS, type Slim } from './slim.js';
 
 /** Thư mục gốc của repo (chứa package.json). */
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+export interface OsSandboxConfig {
+  enabled?: boolean;
+  platformBackend?: 'auto' | 'wsl2' | 'appcontainer';
+  /** Domain được phép thêm (mặc định rỗng; strictAllowlist luôn bật). */
+  extraAllowedDomains?: string[];
+  /** Mẫu cấm đọc thêm, ngoài `.env*`. */
+  denyRead?: string[];
+}
+
+/** B-18: kiểm kiểu runtimes.claude-cli.osSandbox; sai kiểu → lỗi tiếng Việt (không đoán ý). */
+export function validateOsSandbox(v: unknown): void {
+  if (v === undefined) return;
+  const bad = (msg: string): never => {
+    throw new Error(`Cấu hình runtimes.claude-cli.osSandbox sai: ${msg}`);
+  };
+  if (!v || typeof v !== 'object' || Array.isArray(v)) bad('phải là đối tượng');
+  const o = v as Record<string, unknown>;
+  if (o.enabled !== undefined && typeof o.enabled !== 'boolean') bad('enabled phải là true/false');
+  if (o.platformBackend !== undefined && !['auto', 'wsl2', 'appcontainer'].includes(String(o.platformBackend))) bad('platformBackend phải là auto, wsl2 hoặc appcontainer');
+  for (const k of ['extraAllowedDomains', 'denyRead']) {
+    const a = o[k];
+    if (a !== undefined && (!Array.isArray(a) || a.some((x) => typeof x !== 'string' || !x.trim()))) bad(`${k} phải là mảng chuỗi không rỗng`);
+  }
+}
 
 export interface RuntimeConfig {
   /** Kiểu cho runtime tùy biến: "openai-api". */
@@ -37,7 +63,22 @@ export interface RuntimeConfig {
   useApiKey?: boolean;
   /** claude-cli: true = nạp cả cấu hình cấp người dùng (~/.claude: plugin, MCP, hook); mặc định false — gọn ngữ cảnh, đúng chính sách CCoding. */
   userSettings?: boolean;
+  /** claude-cli: lệnh Bash chạy với stdin = /dev/null qua hook (mặc định bật) — tránh lệnh đọc stdin treo tới hết thời gian chờ. */
+  closeStdin?: boolean;
+  /** B-07 — claude-cli: truyền --max-turns theo phases.toolTurns (mặc định bật; false = không truyền cờ, args như trước). */
+  maxTurns?: boolean;
+  /**
+   * B-14b — claude-cli: giữ MỘT bộ --tools/--allowedTools cho cả nhiệm vụ (tiền tố prompt ổn định để cache tái dùng); quyền theo pha do hook
+   * claude-guard quyết định (pha chỉ đọc chặn Write/Edit/MultiEdit/NotebookEdit và toàn bộ Bash); pha không sửa tệp chạy ở thư mục gốc nhiệm vụ.
+   * Mặc định TẮT (xem docs/data-protection-assessment.md §B-08/B-14b).
+   */
+  stablePrefix?: boolean;
   sandbox?: string;
+  /**
+   * B-18 — claude-cli: sandbox cấp hệ điều hành (lớp 2, sau hook claude-guard) qua khóa `sandbox` của --settings.
+   * Mặc định TẮT. Bật mà nền tảng không có sandbox (Windows không WSL2) → từ chối chạy (fail-closed). Không liên quan `sandbox` của Codex.
+   */
+  osSandbox?: OsSandboxConfig;
   baseUrl?: string;
   apiKeyEnv?: string;
   maxTokens?: number;
@@ -143,7 +184,56 @@ export interface Config {
     maxContinuations?: number;
     /** P8: số nhiệm vụ trước của cùng dự án đưa vào pha lập kế hoạch (tóm tắt, nhánh, kiểm tra, việc còn mở). Mặc định 3; 0 = tắt. */
     projectHistory?: number;
+    /** Họp chỉ khi kế hoạch có ít nhất ngần này hạng mục (và ≥ 2 người tham gia). Mặc định 3. */
+    meetingMinSubtasks?: number;
+    /** Các thành viên phát biểu song song trong một vòng họp (mặc định true; false = lần lượt như trước). */
+    parallelDiscuss?: boolean;
+    /** B-09 (P1): giới hạn độ dài báo cáo bàn giao ở pha execute/synthesize. Mặc định TẮT (cần đo A/B). */
+    outputCap?: boolean;
+    /** B-09 (P2): nhắc dừng khảo sát sớm (~8 lần đọc) và ghi bản nháp trước. Mặc định TẮT. */
+    stopSurveyHint?: boolean;
+    /** B-03 (P4): yêu cầu mục "Nhật ký sự cố" ở pha revise và ghi kind `revise.incident` qua LogStore. Mặc định BẬT. */
+    incidentLog?: boolean;
   };
+  /**
+   * B-17: model lập kế hoạch theo độ khó 1–3 (chấm từ LaneSignals, không thêm lượt LLM). Mặc định TẮT.
+   * models: mức → model (mức không khai báo dùng model hiện hành của pha plan).
+   */
+  planner: { difficultyModel: { enabled: boolean; models: { 1?: string; 2?: string; 3?: string } } };
+  /**
+   * B-19: vòng tự cải thiện RQ5 (docs/research/self-improvement/implementation-spec.md §1). Mặc định TẮT: tắt thì không sự kiện, không lượt LLM, prompt giữ nguyên byte.
+   * ab.tasks không được chứa t1–t5/g1–g6 (D7); ba khóa roles phải đôi một khác nhau (§4 điểm 4). Ngân sách và ngưỡng là giả định do giám đốc chốt.
+   */
+  /** K2 (D13): dọn data/logs/ + niêm phong bằng sổ băm. Mặc định TẮT. days chỉ nâng được sàn (183/365 ngày, src/log-retention.ts); 0 = dùng sàn. */
+  logs: { retention: { enabled: boolean; days: number; intervalHours: number } };
+  selfImprove: {
+    enabled: boolean;
+    collect: boolean;
+    cluster: { minIncidents: number; minTasks: number };
+    budgets: { analysisTokens: number; patchTokens: number; abScreenTokens: number; abConfirmTokens: number };
+    holdoutLock: string;
+    ab: { screenRepeats: number; confirmRepeats: number; tasks: string[]; maxConfirmRunsPerLock: number };
+    roles: { analyst: string; author: string; runner: string };
+    monitorTasks: number;
+    baselineTasks: number;
+    /** proposalDays: thời hạn giữ tệp không phải bằng chứng dưới data/self-improve/; sàn 183 ngày (AGENTS.md ≥ 6 tháng), thấp hơn bị nâng lên. */
+    retention: { proposalDays: number };
+  };
+  /**
+   * Làn nhanh cho việc nhỏ (options.lane 'auto'): đề bài ≤ maxBriefChars ký tự và repo ≤ maxRepoFiles tệp / maxRepoBytes byte (git ls-files).
+   * planModel: model lập kế hoạch · finalReport: 'template' (báo cáo dựng từ bàn giao, không gọi model) hoặc 'llm' ·
+   * maxParallel: số hạng mục độc lập chạy cùng lúc tối đa (nâng options.maxParallel của nhiệm vụ lên khi kế hoạch có nhiều hạng mục độc lập hơn).
+   * requireParallel (mặc định true): 'auto' chỉ chọn làn nhanh vì "việc lớn" khi hạng mục chạy lệnh chạy song song được (có worktree con);
+   * không thì giữ làn đơn và làn đơn không nâng cấp chỉ vì phạm vi rộng — chia việc mà vẫn làm lần lượt chỉ thêm chi phí (V4-3f khối B).
+   */
+  fastLane: { enabled: boolean; maxBriefChars: number; maxRepoFiles: number; maxRepoBytes: number; planModel: string; finalReport: 'template' | 'llm'; maxParallel?: number; requireParallel?: boolean };
+  /**
+   * Làn đơn (B-01, options.lane 'auto'): việc có parts < maxParts và filesTouched < maxFilesTouched (hoặc chuỗi tuần tự) chạy một agent, không điều phối.
+   * Ép làn: options.lane của nhiệm vụ > ProjectDef.lane của dự án > auto (không ép).
+   */
+  lanes: { single: { enabled: boolean; maxParts: number; maxFilesTouched: number; /** B-11: làm gọn làn đơn (mặc định accept=full, compactTemplate=false, promptDiet=true). */ slim: Slim } };
+  /** B-02 cổng chất lượng: maxFixRounds = số vòng sửa theo kiểm tra (lệnh đỏ, sai mẫu đầu ra) trước khi nâng cấp/không duyệt. */
+  gate: GateConfig;
   /** Công cụ workspace cho agent (đọc/ghi file, chạy lệnh) — xem docs/TOOLS.md. */
   tools: {
     /** Quyền mặc định khi nhiệm vụ không thuộc dự án (workspace riêng của CCoding). */
@@ -186,6 +276,13 @@ export interface Config {
      * Mặc định bật; false = chạy lần lượt trong một worktree như trước.
      */
     parallelWorktrees?: boolean;
+  };
+  /** B-08 — hook claude-guard (runtime claude-cli). Mỗi công tắc mặc định BẬT; false = hành vi cũ. */
+  guard?: {
+    /** Dùng `cwd` của sự kiện hook để giải đường dẫn tương đối/`..`, so bằng realpath với worktree (G3). */
+    useEventCwd?: boolean;
+    /** Cho Read tệp tool-results của chính phiên (G4); không mở thư mục khác trong .claude/. */
+    allowOwnToolResults?: boolean;
   };
   /** Ước lượng token của kế hoạch — cảnh báo khi nhiệm vụ quá lớn so với ngân sách (đo từ các lượt chạy thật). */
   estimate: {
@@ -272,15 +369,42 @@ const BUILTIN: Omit<Config, 'root'> = {
     waitPhases: ['execute', 'revise', 'review'],
   },
   runner: 'auto',
+  gate: { maxFixRounds: 2 },
   maxConcurrentTasks: 2,
   defaults: { discussionRounds: 1, review: true, maxParallel: 3, maxRevisions: 1, budgetTokens: 1500000, budgetMode: 'complete', subtaskBudgetTokens: 0, timeoutMs: 1800000, planApprovalMinutes: 0, acceptance: true },
   phases: {
-    models: { route: 'haiku', discuss: 'haiku' },
+    // tổng hợp báo cáo bằng Sonnet: pha cuối nằm trên đường găng (Opus 31–52 giây, $0,15–0,25 mỗi nhiệm vụ — benchtest 1/11)
+    models: { route: 'haiku', discuss: 'haiku', synthesize: 'sonnet' },
     maxTokens: { route: 800, plan: 8000, discuss: 700, finalize: 8000, execute: 32000, review: 6000, revise: 32000, synthesize: 10000, accept: 6000 },
     toolTurns: { plan: 8, finalize: 4, execute: 40, review: 10, revise: 16, synthesize: 4, accept: 6 },
     toolInputBudget: { plan: 100000, finalize: 50000, execute: 800000, review: 200000, revise: 300000, synthesize: 60000, accept: 120000 },
     maxContinuations: 2,
+    outputCap: false,
+    stopSurveyHint: false,
+    incidentLog: true,
   },
+  planner: { difficultyModel: { enabled: false, models: { 1: 'sonnet', 3: 'opus' } } },
+  logs: { retention: { enabled: false, days: 0, intervalHours: 24 } },
+  selfImprove: {
+    enabled: false,
+    collect: true,
+    cluster: { minIncidents: 3, minTasks: 2 },
+    budgets: { analysisTokens: 300_000, patchTokens: 400_000, abScreenTokens: 14_000_000, abConfirmTokens: 38_000_000 },
+    holdoutLock: 'docs/research/self-improvement/holdout-lock.json',
+    ab: {
+      screenRepeats: 3,
+      confirmRepeats: 8,
+      tasks: ['c1-iis-ecs', 'c2-burst-alert', 'c3-shop-bugs', 'c4-audit-chain', 'c5-tickets-api', 'l1-oncall', 'l2-knights', 'l3-reconcile', 'l4-startup-order', 's1-sec-review'],
+      maxConfirmRunsPerLock: 3,
+    },
+    roles: { analyst: 'methodologist', author: 'research-lead', runner: 'data-scientist' },
+    monitorTasks: 3,
+    baselineTasks: 5,
+    retention: { proposalDays: 183 },
+  },
+  fastLane: { enabled: true, maxBriefChars: 4000, maxRepoFiles: 300, maxRepoBytes: 1_500_000, planModel: 'sonnet', finalReport: 'template', maxParallel: 4, requireParallel: true },
+  lanes: { single: { enabled: true, maxParts: 5, maxFilesTouched: 6, slim: { ...SLIM_DEFAULTS } } },
+  guard: { useEventCwd: true, allowOwnToolResults: true }, // B-08
   tools: {
     defaultAccess: 'write',
     projectAccess: 'exec',
@@ -336,6 +460,8 @@ export function loadConfig(opts: { root?: string; configFile?: string; local?: b
     cfg = deepMerge(cfg, readJson(path.resolve(extra)));
   }
 
+  validateOsSandbox((cfg.runtimes?.['claude-cli'] as RuntimeConfig | undefined)?.osSandbox);
+
   const env = process.env;
   if (env.CCODING_PORT) cfg.server.port = Number(env.CCODING_PORT);
   if (env.CCODING_HOST) cfg.server.host = env.CCODING_HOST;
@@ -345,6 +471,14 @@ export function loadConfig(opts: { root?: string; configFile?: string; local?: b
   if (env.CCODING_RUNNER) cfg.runner = env.CCODING_RUNNER as Config['runner'];
   if (env.CCODING_HERDR_SESSION) cfg.herdr.session = env.CCODING_HERDR_SESSION;
   if (env.HERDR_BIN_PATH && !cfg.herdr.bin) cfg.herdr.bin = env.HERDR_BIN_PATH;
+
+  const si = cfg.selfImprove;
+  const diagnosticOnly = si.ab.tasks.filter((t) => /^(t[1-5]|g[1-6])(?![0-9])/.test(String(t)));
+  if (diagnosticOnly.length) throw new Error(`selfImprove.ab.tasks không được chứa bài chẩn đoán t1–t5/g1–g6 (D7): ${diagnosticOnly.join(', ')}`);
+  const { analyst, author, runner } = si.roles;
+  if (analyst === author || analyst === runner || author === runner) throw new Error('selfImprove.roles: ba vai analyst, author, runner phải đôi một khác nhau (tách vai, B-19 §4)');
+
+  if (si.enabled && !cfg.server.token) throw new Error('selfImprove.enabled=true yêu cầu server.token (hoặc CCODING_TOKEN): chỉ giám đốc có token mới được duyệt/áp/hoàn tác bản vá (B-19 §4.1)');
 
   const abs = (p: string) => (path.isAbsolute(p) ? p : path.join(root, p));
   const prefix = String(cfg.taskPrefix ?? '').trim().toUpperCase();

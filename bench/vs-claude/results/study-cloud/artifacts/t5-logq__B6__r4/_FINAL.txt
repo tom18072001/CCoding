@@ -1,0 +1,192 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t5-logq__B6__r4] Xây công cụ logq (thư viện + CLI) theo đặc tả
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Chia 4 hạng mục độc lập, mỗi hạng mục một tệp nguồn và một tệp test riêng, bám hợp đồng của SPEC.md (src/index.js đã có, không sửa). CLI chỉ dùng API công khai parseLine/compile/QuerySyntaxError/aggregate nên có thể viết song song, không phải chờ các module.
+
+Kết quả: 4/4 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — src/parse.js: parseLine (JSON, logfmt, @t) (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã hiện thực `src/parse.js` (`parseLine`) theo SPEC §1 và viết `test/parse.test.js`. Cả 8 test của hạng mục xanh. `npm test` toàn dự án vẫn đỏ 2 test (`truy vấn cơ bản`, `tổng hợp count by`). Đó là smoke test phụ thuộc `query.js` và `agg.js` của S2/S3, chưa làm xong.
+
+## Tệp đã tạo/sửa
+- `src/parse.js`: hiện thực `parseLine`.
+- `test/parse.test.js`: 8 test (`node:test` + `assert/strict`).
+
+## Kiểm chứng
+- `node --test test/parse.test.js` → exit 0, pass 8, fail 0.
+- `npm test` → pass 9, fail 2. Hai test đỏ là `truy vấn cơ bản` và `tổng hợp count by`. Tôi chưa chạy lại để lấy exit code thật của lệnh này. Baseline là 3 fail, giờ còn 2 và test `parse` đã xanh.
+
+## Quyết định thiết kế
+- Key logfmt theo đúng SPEC là `[A-Za-z_]...` nên **không có `@`**. Dòng logfmt `@timestamp=...` là dòng lỗi (`{ok:false}`). Trường `@timestamp` chỉ dùng được qua JSON. Test của tôi ban đầu viết sai chỗ này; tôi đã sửa test cho khớp SPEC, không sửa code.
+- `@t` chỉ được thêm khi chuỗi khớp `^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}` và `Date.parse` hiểu được. Ngày không có giờ hoặc giá trị không phải chuỗi thì không có `@t`.
+- Trường đầu tiên có mặt (kể cả `null` hoặc rỗng) quyết định kết quả; không xét các trường sau.
+- Ghi key bằng `Object.defineProperty`, nên key như `__proto__` không làm hỏng prototype của bản ghi.
+- Chỉ bỏ một `\r` ở cuối dòng.
+
+## Rủi ro & việc còn mở
+- SPEC không nói rõ có chấp nhận dấu cách thay cho `T` (`2024-01-02 03:04:05`) hay không. Hiện tôi chỉ chấp nhận `T`.
+- Khoảng trắng giữa các cặp logfmt chỉ là dấu cách hoặc tab, đúng SPEC. Các khoảng trắng khác (ví dụ `\f`) được coi là một phần của giá trị trần.
+- Hai test đỏ còn lại thuộc `query.js` và `agg.js` (S2, S3).
+
+Bản đầy đủ: `.ccoding/T-20261102-203854-a8a/outputs/dev-S1-senior-swe.md`
+
+### S2 — src/query.js: compile + QuerySyntaxError với vị trí lỗi chính xác (@frontend-dev, done)
+
+## Tóm tắt
+Tôi đã viết `src/query.js` (tokenizer có vị trí, parser đệ quy or > and > not > primary) và `test/query.test.js` theo SPEC §2. `node --test test/query.test.js` chạy xanh 11/11. `npm test` toàn bộ còn 1 test đỏ, "tổng hợp count by", thuộc hạng mục agg (S3), không thuộc phần của tôi.
+
+## Tệp đã tạo/sửa
+- `src/query.js`: export `compile` và `QuerySyntaxError`.
+  - Lỗi có `name='QuerySyntaxError'`, `position`, và message bắt đầu `syntax error at position <n>`.
+  - Ngoặc kép không đóng được ghi thành token lỗi và chỉ ném khi parser chạm tới. Nhờ vậy lỗi đứng trước trong truy vấn được báo trước.
+- `test/query.test.js`: 11 test gồm:
+  - ngữ nghĩa field/wildcard/quoted;
+  - so sánh số;
+  - `_exists_`;
+  - tìm chuỗi con trong msg/message;
+  - ưu tiên NOT > AND > OR và AND ngầm;
+  - từ khóa chữ thường;
+  - từng quy tắc vị trí lỗi: ngoặc, toán hạng thiếu, từ khóa sai chỗ, so sánh, `field:`, ngoặc kép.
+
+## Màn hình & trạng thái
+Không áp dụng (hạng mục thư viện, không có giao diện).
+
+## API sử dụng
+Không áp dụng. Giả định của tôi ở những chỗ SPEC chưa nói rõ:
+- Từ có `:` mà phần trước không phải `FIELD` hợp lệ (ví dụ `:foo`) báo lỗi tại đầu từ.
+- Dấu `"` nằm giữa một từ trần, không đứng sau `FIELD:`, được coi là ký tự thường.
+
+## Kiểm chứng
+- `node --test test/query.test.js` → exit 0, tests 11, pass 11, fail 0. Lần chạy đầu có 1 test fail vì tôi tính sai kỳ vọng vị trí trong test (`a:1 status>abc` phải là 11, không phải 12). Đã sửa test, code không đổi.
+- `npm test` → test fail duy nhất là `not ok 22 - tổng hợp count by`, tests 22, pass 21, fail 1. Đây là test của agg, tôi không điều tra vì ngoài phạm vi. Baseline trước đó là 3 fail.
+
+## Việc còn lại
+- Phần agg (S3) cần xử lý test "tổng hợp count by".
+- Không chạm tệp nào ngoài `src/query.js` và `test/query.test.js`, chưa commit.
+- a11y: không áp dụng.
+
+Bản đầy đủ: `.ccoding/T-20261102-203854-a8a/outputs/dev-S2-frontend-dev.md`
+
+### S3 — src/agg.js: aggregate (count, by, top, sum/avg/min/max, pXX, histogram) (@backend-dev, done)
+
+## Tóm tắt
+`src/agg.js` đã hiện thực `aggregate(records, spec)` theo SPEC §3, với đủ các lệnh `count`, `count by`, `top`, `sum|avg|min|max`, `pXX` và `histogram`. Bộ test riêng `test/agg.test.js` có 7 test, cả 7 đều pass. Tôi không chạy `npm test` toàn bộ vì các hạng mục khác chưa xong và baseline đã đỏ.
+
+## Tệp đã tạo/sửa
+- `src/agg.js`
+- `test/agg.test.js`
+
+Các điểm chính trong cách hiện thực:
+- **Gom nhóm:** dùng `Map`, nên số `1` và chuỗi `'1'` là hai bucket riêng. Bản ghi thiếu trường hoặc có giá trị `null` bị bỏ. Thứ tự là count giảm dần, hòa thì so `String(key)` bằng `<` thường.
+- **`top n`:** `n` phải là số nguyên ≥ 1. Giá trị 0, âm, thập phân hoặc không phải số đều ném lỗi.
+- **Số liệu:** chỉ tính giá trị là số hữu hạn hoặc chuỗi khớp `^-?\d+(\.\d+)?$`. Không có giá trị nào thì `value` là `null`. `avg` làm tròn bằng `Math.round(x*1e4)/1e4`.
+- **Percentile:** nearest-rank, hạng = `Math.ceil(p/100*n)`, `type` là `p50`/`p90`/`p95`/`p99`.
+- **`histogram`:** chỉ tính bản ghi có `@t`, điền các mốc trống với count 0, không có bản ghi thì `buckets: []`. Mốc tính bằng `Math.floor(@t/khoảng)*khoảng` và `key` là `toISOString()`.
+- **Spec sai:** lệnh lạ, thiếu hoặc thừa tham số, spec không phải chuỗi, `histogram 0m`, `histogram 5x`... đều ném `Error` có message bắt đầu bằng `invalid aggregation`.
+
+## Hợp đồng API
+`aggregate(records: object[], spec: string) → object`. Ném `Error('invalid aggregation …')` khi spec sai. Không có quyền hay mã lỗi HTTP vì đây là thư viện.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `node --test test/agg.test.js` → exit 0, `# tests 7 · # pass 7 · # fail 0`.
+- `npm test` → chưa chạy. Baseline đã đo sẵn là exit 1 (3 test lỗi), và CCoding sẽ tự chạy lại.
+
+## Việc còn lại
+Không có biến môi trường mới. Không sửa tệp nào ngoài hai tệp trên. Hạng mục S4 (CLI) chỉ cần gọi `aggregate` theo SPEC §3.
+
+Bản đầy đủ: `.ccoding/T-20261102-203854-a8a/outputs/dev-S3-backend-dev.md`
+
+### S4 — bin/logq.js: CLI (tham số, stdin/tệp, format, stats, mã thoát) (@data-engineer, done)
+
+## Tóm tắt
+Tôi đã hiện thực `bin/logq.js` (CLI theo SPEC §4) và `test/cli.test.js` (12 test). Kiểm chứng: `node --test test/cli.test.js` xanh 12/12, và `npm test` toàn bộ xanh 41/41 (các module S1–S3 đã có sẵn trong worktree). Baseline là exit 1 với 3 test fail, nay không còn test nào đỏ.
+
+## Tệp đã tạo/sửa
+- `bin/logq.js`: giữ shebang, đã `chmod +x`. Chỉ dùng `require('../src')`.
+- `test/cli.test.js`: dùng `spawnSync node bin/logq.js` với tệp tạm trong `os.tmpdir()`, tự dọn sau khi chạy.
+
+## Luồng dữ liệu
+Nguồn là stdin hoặc các tệp log (nhãn internal, dữ liệu giả trong test), đọc tuần tự.
+- Mỗi tệp được tách dòng bằng `\n`, rồi qua `parseLine`.
+- Các dòng khớp `compile(q)` được gom lại, rồi xuất JSON từng dòng (bỏ `@t`) hoặc qua `aggregate` ra json/table.
+- Query được compile và spec `--agg` được validate bằng `aggregate([], spec)` TRƯỚC khi đọc dữ liệu.
+- Output được đệm rồi mới ghi một lần. Vì vậy lỗi tệp ở giữa danh sách (exit 1) không để lại gì trên stdout.
+- Quyết định về dòng:
+  - `\n` cuối tệp không tạo dòng rỗng thêm.
+  - Dòng rỗng ở giữa được tính vào `lines` và vào `malformed`, vì `parseLine` trả `ok:false` cho dòng rỗng.
+  - Tệp rỗng cho `lines=0`.
+- Option phụ ngoài SPEC: `--opt=value` và `--` để kết thúc option.
+- Mã thoát:
+  - `2`: lỗi query, spec agg sai, option lạ, thiếu giá trị, `--format` sai, hoặc `--format table` không có `--agg`.
+  - `1`: không đọc được tệp, stderr có `cannot read <tệp>` (thư mục cũng tính là không đọc được).
+  - `0`: còn lại, kể cả khi không khớp bản ghi nào.
+
+## Dữ liệu nhạy cảm
+Không áp dụng. Test chỉ dùng dữ liệu giả, không có PII, bí mật hay khóa. Không có lưu trữ hay log bất biến nào được tạo, nên không áp ngưỡng lưu giữ.
+
+## Kiểm chứng
+- `node --test test/cli.test.js` → exit 0, tests 12, pass 12, fail 0.
+- `npm test` → xanh, tests 41, pass 41, fail 0.
+- Test cover: stdin, `-`, nhiều tệp, option trước/sau tệp, dòng cuối không có `\n`, stats, agg json, table (giá trị đơn, `null`, `count_by`, `top`, `histogram`), exit 2 (9 kiểu dùng sai và lỗi query ở vị trí 5), exit 1 (stdout trống), exit 0 khi không khớp.
+- Chưa chạy: không có.
+
+Bản đầy đủ: `.ccoding/T-20261102-203854-a8a/outputs/dev-S4-data-engineer.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-203854-a8a` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **56 in / 45.0k out**, cache đọc 464.6k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Frontend Developer (@frontend-dev) | dev | 14 | 11823 | 137948 | 1 |
+| Data Engineer (@data-engineer) | dev | 12 | 10774 | 105071 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 12 | 8952 | 102423 | 1 |
+| Backend Developer (@backend-dev) | dev | 10 | 8928 | 76088 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 6 | 4136 | 40780 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 415 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 src/parse.js: parseLine (JSON, logfmt, @t) (@senior-swe)
+- `outputs/dev-S2-frontend-dev.md` — S2 src/query.js: compile + QuerySyntaxError với vị trí lỗi chính xác (@frontend-dev)
+- `outputs/dev-S3-backend-dev.md` — S3 src/agg.js: aggregate (count, by, top, sum/avg/min/max, pXX, histogram) (@backend-dev)
+- `outputs/dev-S4-data-engineer.md` — S4 bin/logq.js: CLI (tham số, stdin/tệp, format, stats, mã thoát) (@data-engineer)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 3 · # suites 0 · # pass 0 · # fail 3 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 41 · # suites 0 · # pass 41 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Frontend Developer (@frontend-dev) | dev | **86** A | — | 76 | 89 | 100 | 1 | 1 | 150k | 1/7 |
+| Data Engineer (@data-engineer) | dev | **95** A | — | 98 | 87 | 100 | 1 | 1 | 116k | 1/6 |
+| Senior Software Engineer (@senior-swe) | dev | **96** A | — | 100 | 89 | 100 | 1 | 1 | 111k | 1/7 |
+| Backend Developer (@backend-dev) | dev | **96** A | — | 100 | 87 | 100 | 1 | 1 | 85k | 1/6 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 45k | 0/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

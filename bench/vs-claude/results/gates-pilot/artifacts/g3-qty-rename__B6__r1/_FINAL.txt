@@ -1,0 +1,103 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g3-qty-rename__B6__r1] Đổi tên trường qty thành quantity trên toàn bộ module nghiệp vụ
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Repo rất nhỏ (4 module trong src/ tổng 35 dòng, 1 tệp test), nên chia 2 hạng mục độc lập theo sở hữu tệp: nhóm order/stock cùng test, và nhóm report/export. Hai hạng mục cùng đổi `qty` thành `quantity` và đọc `quantity` ở đầu vào, không còn đọc `qty`. Mỗi hạng mục chạy `npm test` sau khi xong.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Đổi qty→quantity trong order.js, stock.js và test/order.test.js (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã đổi `qty` thành `quantity` trong `src/order.js`, `src/stock.js` và `test/order.test.js`. Không còn fallback đọc `qty`. `npm test` chưa xanh: test `summary` đang lỗi vì `src/report.js` (và `src/export.js`) vẫn đọc `it.qty`. Hai tệp này thuộc S2, không phải phạm vi của tôi.
+
+## Tệp đã tạo/sửa
+- `src/order.js`: `item.qty` → `item.quantity`.
+- `src/stock.js`: `it.qty` → `it.quantity` (2 chỗ).
+- `test/order.test.js`: dữ liệu mẫu dùng `quantity`.
+
+## Hợp đồng API
+Không áp dụng. Dòng hàng bây giờ là `{sku, price, quantity}`.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `grep -rn qty src/order.js src/stock.js test/` → không có kết quả (grep exit 1, tức là không khớp).
+- `npm test` → 2 test, 1 pass, 1 fail. Test `summary` lỗi AssertionError vì `src/report.js:5` vẫn dùng `it.qty`.
+- `grep -n qty src/*.js` → chỉ còn `src/report.js:5`, `src/export.js:4-5`, đều thuộc S2.
+
+## Việc còn lại
+- @senior-swe (S2) đổi `qty` thành `quantity` trong `src/report.js` và `src/export.js`. Dòng header CSV `sku,qty,price` trong `export.js` cũng cần quyết định đổi hay giữ.
+- Sau khi S2 xong, chạy lại `npm test`. Tôi kỳ vọng kết quả xanh, nhưng chưa kiểm chứng.
+
+Bản đầy đủ: `.ccoding/T-20261104-105220-4bd/outputs/dev-S1-backend-dev.md`
+
+### S2 — Đổi qty→quantity trong report.js và export.js (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã đổi `qty` thành `quantity` trong `src/report.js` và `src/export.js`. Cả hai tệp giờ chỉ đọc `it.quantity`, không còn fallback. Tiêu đề cột CSV của export cũng đổi thành `quantity`. `grep -rn qty src/` không còn kết quả và `npm test` xanh. Rủi ro còn lại: bất kỳ bên nhận CSV nào đang phụ thuộc tên cột cũ `qty` sẽ cần cập nhật.
+
+## Tệp đã tạo/sửa
+- `src/report.js`: `it.qty` → `it.quantity` trong phép tính `units`.
+- `src/export.js`: `it.qty` → `it.quantity` ở các dòng dữ liệu, và tiêu đề `sku,qty,price` → `sku,quantity,price`.
+
+## Kiểm chứng
+- `grep -rn qty src/` → exit 1, không còn kết quả.
+- `npm test` → exit 0, 2 test, pass 2, fail 0. Lúc chạy, S1 đã xong hoặc chưa ảnh hưởng đến kết quả này; tôi không kiểm tra riêng.
+
+## Quyết định thiết kế
+Tên cột export đổi theo `quantity` để khớp với tên trường, đúng như hạng mục yêu cầu.
+
+## Rủi ro & việc còn mở
+- `package.json:2` có `"name": "qty-rename"`. Đây chỉ là tên package và không phải đọc trường dữ liệu, nên tôi chỉ báo cáo mà không sửa.
+- Bên dùng CSV cũ cần biết cột đã đổi tên.
+
+Bản đầy đủ: `.ccoding/T-20261104-105220-4bd/outputs/dev-S2-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-105220-4bd` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **20 in / 3,384 out**, cache đọc 223.1k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | 8 | 1022 | 94395 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 6 | 935 | 68549 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 1141 | 45516 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 286 | 14680 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Đổi qty→quantity trong order.js, stock.js và test/order.test.js (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 Đổi qty→quantity trong report.js và export.js (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 2 · # suites 0 · # pass 2 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 2 · # suites 0 · # pass 2 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | **65** B | thấp | — | — | — | 89 | 100 | 100 | 1 | 1 | 95k | 0/3 | — |
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 100 | 100 | 100 | 1 | 1 | 69k | 0/2 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 47k | 0/1 | — |
+| Điều phối viên (@orchestrator) | office | **60** C | thấp | — | — | — | — | 100 | — | 0 | — | 15k | — | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

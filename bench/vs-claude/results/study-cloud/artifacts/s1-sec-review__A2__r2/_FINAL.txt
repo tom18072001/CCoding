@@ -1,0 +1,17 @@
+I reviewed `src/server.js` and wrote seven findings to `findings.json` in the repository root. I didn't modify the source or run the app.
+
+| Line | Type | Severity | Issue |
+|---|---|---|---|
+| 11 | `hardcoded-secret` | high | The JWT secret is hardcoded in the source. |
+| 30 | `sqli` | critical | The ticket search query interpolates `q` directly into the SQL string. |
+| 42 | `path-traversal` | high | `req.params.name` goes into `path.join` unchecked, so a `..` sequence can escape `REPORT_DIR`. |
+| 58 | `weak-crypto` | high | Passwords are hashed with unsalted MD5. |
+| 65 | `ssrf` | high | The server fetches any user-supplied URL and returns the response body. |
+| 70 | `missing-authz` | high | Any logged-in user can delete any ticket; there's no ownership or admin check. |
+| 84 | `command-injection` | critical | `req.body.format` is interpolated into a shell command passed to `exec`. |
+
+I left out a few things on purpose:
+- **`/api/diag/ping`:** it uses `execFile` with an argument array and a hostname regex, and it's admin-only. The regex does allow a leading `-`, so a hostname like `-f` could pass as a ping option. That's a minor argument-injection risk behind admin access, so I didn't report it.
+- **`/api/attachments/:id`:** it filters by owner, uses `path.basename`, and checks the file extension, so it looks safe.
+- **`/api/statuses`:** the interpolated table name is a server-side constant, so it isn't exploitable.
+- **`verifyJwt` (line 18):** it is called but never imported or defined. That is a bug rather than a security finding, and I didn't check `./db.js` or the rest of the repo for a global definition.

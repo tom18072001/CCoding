@@ -1,0 +1,124 @@
+TAP version 13
+# Subtest: ghi create / update / delete thành công; thao tác lỗi không ghi
+ok 1 - ghi create / update / delete thành công; thao tác lỗi không ghi
+  ---
+  duration_ms: 70.673234
+  type: 'test'
+  ...
+# Subtest: lọc taskId; chỉ admin; tham số lạ → 400
+ok 2 - lọc taskId; chỉ admin; tham số lạ → 400
+  ---
+  duration_ms: 21.640466
+  type: 'test'
+  ...
+# Subtest: 401 khi thiếu hoặc sai X-User, trên mọi route
+ok 3 - 401 khi thiếu hoặc sai X-User, trên mọi route
+  ---
+  duration_ms: 83.079572
+  type: 'test'
+  ...
+# Subtest: 401 đứng trước 400 tham số truy vấn
+ok 4 - 401 đứng trước 400 tham số truy vấn
+  ---
+  duration_ms: 8.362422
+  type: 'test'
+  ...
+# Subtest: member chỉ thấy nhóm mình; nhóm khác → 404
+ok 5 - member chỉ thấy nhóm mình; nhóm khác → 404
+  ---
+  duration_ms: 17.84754
+  type: 'test'
+  ...
+# Subtest: member: không tạo, không xóa; chỉ sửa status của nhiệm vụ giao cho mình
+ok 6 - member: không tạo, không xóa; chỉ sửa status của nhiệm vụ giao cho mình
+  ---
+  duration_ms: 30.454772
+  type: 'test'
+  ...
+# Subtest: manager: đọc mọi nhóm, tạo/sửa chỉ nhóm mình, không xóa
+ok 7 - manager: đọc mọi nhóm, tạo/sửa chỉ nhóm mình, không xóa
+  ---
+  duration_ms: 20.60422
+  type: 'test'
+  ...
+# Subtest: admin làm mọi việc
+ok 8 - admin làm mọi việc
+  ---
+  duration_ms: 8.244035
+  type: 'test'
+  ...
+# Subtest: header HTTP, BOM, dòng tiêu đề, CRLF
+ok 9 - header HTTP, BOM, dòng tiêu đề, CRLF
+  ---
+  duration_ms: 56.005578
+  type: 'test'
+  ...
+# Subtest: RFC 4180 và chống chèn công thức
+ok 10 - RFC 4180 và chống chèn công thức
+  ---
+  duration_ms: 14.408939
+  type: 'test'
+  ...
+# Subtest: lọc, sắp xếp và quyền như danh sách; không phân trang
+ok 11 - lọc, sắp xếp và quyền như danh sách; không phân trang
+  ---
+  duration_ms: 19.621431
+  type: 'test'
+  ...
+# Subtest: dạng kết quả và mặc định
+ok 12 - dạng kết quả và mặc định
+  ---
+  duration_ms: 49.25629
+  type: 'test'
+  ...
+# Subtest: lọc status / assignee / team / dueBefore
+ok 13 - lọc status / assignee / team / dueBefore
+  ---
+  duration_ms: 28.876372
+  type: 'test'
+  ...
+# Subtest: q: không phân biệt hoa thường và dấu
+ok 14 - q: không phân biệt hoa thường và dấu
+  ---
+  duration_ms: 13.119052
+  type: 'test'
+  ...
+# Subtest: sắp xếp
+ok 15 - sắp xếp
+  ---
+  duration_ms: 10.799567
+  type: 'test'
+  ...
+# Subtest: phân trang
+ok 16 - phân trang
+  ---
+  duration_ms: 9.917296
+  type: 'test'
+  ...
+# Subtest: tham số không hợp lệ → 400 INVALID_QUERY với field
+ok 17 - tham số không hợp lệ → 400 INVALID_QUERY với field
+  ---
+  duration_ms: 25.425077
+  type: 'test'
+  ...
+# Subtest: CRUD cơ bản
+ok 18 - CRUD cơ bản
+  ---
+  duration_ms: 78.695584
+  type: 'test'
+  ...
+# Subtest: validate
+ok 19 - validate
+  ---
+  duration_ms: 19.364722
+  type: 'test'
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 19
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1020.993639

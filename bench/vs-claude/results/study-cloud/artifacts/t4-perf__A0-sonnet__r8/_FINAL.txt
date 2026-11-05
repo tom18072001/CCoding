@@ -1,0 +1,17 @@
+Tôi đã viết lại `buildReport` trong `src/report.js`. Với 200.000 dòng, `npm run bench` chạy khoảng 0,32 giây, trước đây khoảng 15 giây. Trên bộ dữ liệu của bench, kết quả giống hệt bản cũ (`deepStrictEqual`), và `npm test` xanh (3 test).
+
+**Cách làm**
+- Thay các phép `find`, `includes` và `filter` lồng nhau bằng `Map`/`Set`, gom dữ liệu trong một lượt duyệt.
+- Thứ tự cộng dồn, thứ tự xuất hiện đầu tiên của phần tử và các comparator sắp xếp giữ nguyên như bản cũ.
+
+**Hành vi lạ của bản cũ được giữ nguyên**
+- Sản phẩm trùng `sku`: lấy sản phẩm đầu tiên.
+- `sku` không có trong danh sách sản phẩm: danh mục là `'unknown'`, tên là `'(không rõ)'`.
+- Phép `JSON.parse(JSON.stringify(...))` của bản cũ làm `-0` thành `0` và `NaN`/`Infinity` thành `null` (tính là 0 khi cộng). Tôi bỏ bước sao chép này nhưng mô phỏng lại đúng hai hiệu ứng đó.
+- `topN` bất thường (0, âm) vẫn đi qua `slice`.
+
+**Test**
+- Bản cũ được lưu ở `test/report.reference.js`.
+- Test mới trong `test/report.test.js` so sánh bản mới với bản cũ trên 6 seed và 7 tổ hợp `options`. Nó cũng kiểm tra các trường hợp lạ: số lượng 0 kèm hoàn tiền, `sku` trùng, `sku` không rõ, múi giờ âm và đầu vào rỗng.
+
+Tôi chưa commit gì.

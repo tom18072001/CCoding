@@ -1,0 +1,149 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t2-orders__B6__r4] Sửa 6 lỗi trong thư viện tính tiền giỏ hàng
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Repo nhỏ (8 tệp nguồn). Chia 3 hạng mục song song theo tệp nguồn và tệp test riêng. Mỗi người tìm nguyên nhân gốc trong phần của mình, sửa, thêm test hồi quy, không đổi API công khai. Sau đó CCoding gộp và chạy `npm test`.
+
+Kết quả: 3/3 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Lỗi 1 và 2: làm tròn sang xu và phân bổ giảm giá (money, catalog) (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã sửa lỗi 1 (`toCents` làm tròn sai do dấu phẩy động) và lỗi 2 (`allocate` chia thiếu xu) trong `src/money.js`. `npm test` cho 11/11 test xanh, gồm 5 test hồi quy mới và 6 test cũ. `src/checkout.js` có chỗ tự đổi xu bằng `Math.round(... * 100)`, tôi không sửa vì ngoài phạm vi (xem "Rủi ro & việc còn mở").
+
+## Tệp đã tạo/sửa
+- `src/money.js`: sửa `toCents` và `allocate`.
+- `test/money-regression.test.js`: tạo mới, 5 test hồi quy.
+- `src/catalog.js`: không cần sửa. Nó gọi `toCents` chung, nên được sửa theo `money.js`.
+
+## Kiểm chứng
+- `npm test` → exit 0, `# tests 11`, `# pass 11`, `# fail 0`.
+- Tôi chỉ chạy lệnh này sau khi sửa, không chạy test đỏ-trước-sửa. Baseline 6/6 pass lấy từ số CCoding đo sẵn.
+
+## Quyết định thiết kế
+- **Nguyên nhân gốc lỗi 1:** `1.005 * 100 = 100.49999999999999`, nên `Math.round` ra 100.
+  - Cách sửa: lấy giá trị tuyệt đối, nhân 100, cắt nhiễu bằng `toPrecision(15)`, làm tròn, rồi gắn lại dấu. Nhờ vậy làm tròn là half away from zero cho cả số âm.
+  - Test cho kết quả đúng với 1.005→101, 2.675→268, -1.005→-101 và -2.675→-268.
+- **Nguyên nhân gốc lỗi 2:** `allocate` chỉ dùng `Math.floor` cho từng phần và bỏ phần dư, nên tổng nhỏ hơn `total`.
+  - Cách sửa: dùng phương pháp phần dư lớn nhất. Xu còn dư được chia lần lượt cho các phần có phần lẻ lớn nhất, bằng nhau thì phần đứng trước được trước.
+  - Phần có trọng số 0 không nhận xu.
+  - Với `total` âm, tôi chia theo giá trị tuyệt đối rồi gắn lại dấu. Test cho kết quả đúng: 1000 chia `[1,1,1]` ra `[334,333,333]` và -1000 ra `[-334,-333,-333]`.
+
+## Rủi ro & việc còn mở
+- `src/checkout.js:34` tự đổi xu bằng `Math.round(promo.amount * 100)` cho mã giảm cố định. Chỗ này vẫn dính lỗi dấu phẩy động và nên đổi thành `toCents(promo.amount)`. Phần này thuộc S3 (checkout).
+- `src/checkout.js:30` và `src/checkout.js:37` dùng `Math.round(x * percent / 100)` cho giảm theo %. Chỗ này không bị lỗi dấu phẩy động kiểu `1.005`, nhưng với số âm `Math.round` làm tròn half toward +∞, không phải half away from zero.
+- `src/promotions.js:27` gọi `toCents` chung nên đã được sửa theo `money.js`.
+
+Bản đầy đủ: `.ccoding/T-20261102-203239-186/outputs/dev-S1-senior-swe.md`
+
+### S2 — Lỗi 3 và 4: mua X tặng Y và hạn mã giảm giá (promotions) (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã sửa lỗi 3 (mua X tặng Y) và lỗi 4 (hạn mã giảm giá) trong `src/promotions.js`, và thêm test hồi quy. `npm test` chạy xanh, 17/17 test pass (6 test cũ và 11 test mới trong tổng 17).
+
+- **Lỗi 3:** `freeUnits` dùng `floor(qty/buy)*free`, nên tặng cả khi chưa đủ X+Y món. Đã đổi thành `floor(qty/(buy+free))*free`. Với mua 2 tặng 1, 2 món ra 0, 3 ra 1, 5 ra 1, 6 ra 2.
+- **Lỗi 4:** `endsAt` dạng `YYYY-MM-DD` bị `new Date()` hiểu là 00:00Z của chính ngày đó, nên mã hết hạn sớm một ngày. Đã thêm hàm `endExclusive`: ngày thuần được cộng thêm `DAY_MS`, nên dùng được đến 23:59:59.999Z và bị từ chối từ 00:00:00Z ngày kế tiếp. Dạng có giờ thì giữ nguyên mốc. `startsAt` và `minSubtotal` không đổi.
+
+## Tệp đã tạo/sửa
+- `src/promotions.js` (sửa)
+- `test/promotions-regression.test.js` (mới)
+
+## Hợp đồng API
+Không áp dụng. API công khai giữ nguyên; `endExclusive` là hàm nội bộ, không export.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0, `# tests 17 · # pass 17 · # fail 0 · # skipped 0`. Đã gồm các test mới: `freeUnits` với 2+1, 1+1, 3+2, 1+3; `endsAt` dạng ngày và dạng có giờ; `startsAt`; `minSubtotal`.
+
+## Việc còn lại
+Không có. Tôi chưa kiểm tra đường tích hợp qua `computeTotals` với mã `bxgy`, vì phần đó thuộc hạng mục khác.
+
+Bản đầy đủ: `.ccoding/T-20261102-203239-186/outputs/dev-S2-backend-dev.md`
+
+### S3 — Lỗi 5 và 6: giữ chỗ kho và thuế sau giảm (inventory, cart, tax, checkout) (@frontend-dev, done)
+
+## Tóm tắt
+Đã sửa lỗi 5 (giữ chỗ kho) và lỗi 6 (thuế sau giảm), đồng thời thêm 4 test hồi quy. `npm test` xanh: 21/21 test pass, 0 fail. Con số này gồm cả phần S1 và S2 đang có trong worktree.
+
+## Tệp đã tạo/sửa
+- `src/cart.js`
+  - Lỗi 5, nguyên nhân gốc: `updateQty` đặt chỗ lại toàn bộ `qty` mới trên số đã giữ, nên bị tính dồn. `removeItem` thì không nhả chỗ.
+  - `updateQty` giờ chỉ đặt chỗ hoặc nhả phần chênh lệch (delta). `removeItem` nhả đúng số lượng đang có, và bỏ qua nếu món không có trong giỏ.
+  - Khi `updateQty` vượt kho, `reserve` ném lỗi trước khi giỏ được cập nhật, nên trạng thái giỏ và kho không đổi.
+- `src/checkout.js`
+  - Lỗi 6, nguyên nhân gốc: `lineTax` được gọi với `l.gross`. Giờ gọi với `l.net`.
+  - Cách làm tròn thuế và định dạng kết quả giữ nguyên.
+- `test/inventory-tax-regression.test.js` (mới), gồm 4 test:
+  - kho 4, thêm 2 rồi sửa thành 3 thì thành công và giữ chỗ bằng 3;
+  - giảm số lượng thì nhả chỗ, còn vượt kho thì báo lỗi và không đổi trạng thái;
+  - xóa món hoặc `updateQty(0)` thì nhả chỗ cho giỏ khác, xóa món không có thì không đổi;
+  - thuế tính trên `net` khi có mã giảm giá.
+- `src/inventory.js` và `src/tax.js` không cần sửa.
+- Không đụng tới `money.js`, `promotions.js`, `catalog.js`. Các thay đổi của chúng trong `git diff` là của S1 và S2.
+
+## Màn hình & trạng thái
+Không áp dụng (thư viện, không có giao diện).
+
+## API sử dụng
+Không áp dụng. API công khai giữ nguyên, và `checkout.js` vẫn gọi `allocate` theo API cũ.
+
+## Kiểm chứng
+- `npm test` → exit 0, `# tests 21`, `# pass 21`, `# fail 0`. Lệnh đã chạy sau khi sửa.
+
+## Việc còn lại
+Không có. Không áp dụng kiểm a11y vì đây không phải giao diện.
+
+Bản đầy đủ: `.ccoding/T-20261102-203239-186/outputs/dev-S3-frontend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-203239-186` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **30 in / 15.3k out**, cache đọc 177.2k, 5 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Frontend Developer (@frontend-dev) | dev | 8 | 4127 | 54074 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 8 | 4502 | 51089 | 1 |
+| Backend Developer (@backend-dev) | dev | 8 | 4109 | 48998 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 2197 | 20746 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 404 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Lỗi 1 và 2: làm tròn sang xu và phân bổ giảm giá (money, catalog) (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Lỗi 3 và 4: mua X tặng Y và hạn mã giảm giá (promotions) (@backend-dev)
+- `outputs/dev-S3-frontend-dev.md` — S3 Lỗi 5 và 6: giữ chỗ kho và thuế sau giảm (inventory, cart, tax, checkout) (@frontend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 6 · # suites 0 · # pass 6 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 21 · # suites 0 · # pass 21 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Frontend Developer (@frontend-dev) | dev | **93** A | — | 96 | 84 | 100 | 1 | 1 | 58k | 1/5 |
+| Senior Software Engineer (@senior-swe) | dev | **97** A | — | 100 | 90 | 100 | 1 | 1 | 56k | 1/8 |
+| Backend Developer (@backend-dev) | dev | **97** A | — | 100 | 90 | 100 | 1 | 1 | 53k | 1/8 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 23k | 0/1 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Frontend Developer** (@frontend-dev, 93 A):
+  - Thao tác công cụ lỗi nhiều (1/5, 20%; nhiều nhất ở run_command 1/4) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

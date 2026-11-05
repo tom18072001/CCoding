@@ -1,0 +1,64 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261101-181038-41e",
+  "wallSec": 569,
+  "wallSecHarness": 572,
+  "costUsd": 1.4394996999999998,
+  "tokens": {
+   "input": 66,
+   "output": 47879,
+   "cacheRead": 932486,
+   "cacheWrite": 162550
+  },
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "Đóng băng bản cũ và viết bộ test đối chiếu (differential) với bản cũ"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "Viết lại buildReport thành một lượt duyệt, giữ nguyên ngữ nghĩa"
+   },
+   {
+    "id": "S3",
+    "status": "done",
+    "title": "Tích hợp: đối chiếu bản mới, mutation check, đo cuối"
+   }
+  ],
+  "workdir": "/home/claude/tom18072001/ccoding/workspaces/b-c1-t4-1/wt-T-20261101-181038-41e",
+  "branch": "ccoding/t-20261101-181038-41e"
+ },
+ "task": "t4-perf",
+ "system": "ccoding",
+ "rep": 1,
+ "key": "t4-perf.ccoding.1",
+ "env": "cloud",
+ "startedAt": "2026-11-01T11:10:38.459Z",
+ "finishedAt": "2026-11-01T11:20:28.525Z",
+ "grade": {
+  "hidden": {
+   "pass": 19,
+   "fail": 0,
+   "total": 19,
+   "failed": [],
+   "ms": 8339,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 29,
+   "fail": 0,
+   "total": 29
+  },
+  "changed": [
+   "~src/report.js",
+   "+test/legacy/report.legacy.js",
+   "+test/report.equivalence.test.js"
+  ],
+  "perfMs": 544
+ },
+ "audit": []
+}

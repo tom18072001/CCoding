@@ -1,0 +1,6 @@
+I wrote `answer.json` and `REVIEW.md` (443 words) at the repository root.
+
+- **q1:** P4 (LogGraphT) has the highest F1 on the full HDFS-X split, at 0.962. P2 reports 0.971, but that is on HDFS-X-small, a different and easier test set. P6 warns against comparing the two.
+- **q2:** P5 reports results with 0.5% labeled data, on BGL-X.
+- **q3:** The corpus doesn't contain an answer, so `not_in_corpus` is true. P4 gives only inference latency (3.1 ms per session on one A100) and no energy figure.
+- **q4:** P1 says log parsing is necessary. P3 says it is optional.

@@ -1,0 +1,904 @@
+TAP version 13
+# Subtest: số thuần (number) \#1
+ok 1 - số thuần (number) \#1
+  ---
+  duration_ms: 1.861675
+  type: 'test'
+  ...
+# Subtest: số thuần (number) \#2
+ok 2 - số thuần (number) \#2
+  ---
+  duration_ms: 0.179561
+  type: 'test'
+  ...
+# Subtest: số thuần (number) \#3
+ok 3 - số thuần (number) \#3
+  ---
+  duration_ms: 0.086934
+  type: 'test'
+  ...
+# Subtest: số thuần (number) \#4
+ok 4 - số thuần (number) \#4
+  ---
+  duration_ms: 0.073515
+  type: 'test'
+  ...
+# Subtest: số thuần (number) \#5
+ok 5 - số thuần (number) \#5
+  ---
+  duration_ms: 0.124874
+  type: 'test'
+  ...
+# Subtest: số thuần (number) \#6
+ok 6 - số thuần (number) \#6
+  ---
+  duration_ms: 0.122784
+  type: 'test'
+  ...
+# Subtest: number không hữu hạn / kiểu sai → lỗi đúng message \#7
+ok 7 - number không hữu hạn / kiểu sai → lỗi đúng message \#7
+  ---
+  duration_ms: 0.503186
+  type: 'test'
+  ...
+# Subtest: number không hữu hạn / kiểu sai → lỗi đúng message \#8
+ok 8 - number không hữu hạn / kiểu sai → lỗi đúng message \#8
+  ---
+  duration_ms: 0.098221
+  type: 'test'
+  ...
+# Subtest: number không hữu hạn / kiểu sai → lỗi đúng message \#9
+ok 9 - number không hữu hạn / kiểu sai → lỗi đúng message \#9
+  ---
+  duration_ms: 0.302819
+  type: 'test'
+  ...
+# Subtest: number không hữu hạn / kiểu sai → lỗi đúng message \#10
+ok 10 - number không hữu hạn / kiểu sai → lỗi đúng message \#10
+  ---
+  duration_ms: 0.488186
+  type: 'test'
+  ...
+# Subtest: number không hữu hạn / kiểu sai → lỗi đúng message \#11
+ok 11 - number không hữu hạn / kiểu sai → lỗi đúng message \#11
+  ---
+  duration_ms: 0.168447
+  type: 'test'
+  ...
+# Subtest: number không hữu hạn / kiểu sai → lỗi đúng message \#12
+ok 12 - number không hữu hạn / kiểu sai → lỗi đúng message \#12
+  ---
+  duration_ms: 0.069633
+  type: 'test'
+  ...
+# Subtest: number không hữu hạn / kiểu sai → lỗi đúng message \#13
+ok 13 - number không hữu hạn / kiểu sai → lỗi đúng message \#13
+  ---
+  duration_ms: 0.047814
+  type: 'test'
+  ...
+# Subtest: number không hữu hạn / kiểu sai → lỗi đúng message \#14
+ok 14 - number không hữu hạn / kiểu sai → lỗi đúng message \#14
+  ---
+  duration_ms: 0.044104
+  type: 'test'
+  ...
+# Subtest: chuỗi số thuần \#15
+ok 15 - chuỗi số thuần \#15
+  ---
+  duration_ms: 0.304349
+  type: 'test'
+  ...
+# Subtest: chuỗi số thuần \#16
+ok 16 - chuỗi số thuần \#16
+  ---
+  duration_ms: 0.361576
+  type: 'test'
+  ...
+# Subtest: chuỗi số thuần \#17
+ok 17 - chuỗi số thuần \#17
+  ---
+  duration_ms: 0.082898
+  type: 'test'
+  ...
+# Subtest: chuỗi số thuần \#18
+ok 18 - chuỗi số thuần \#18
+  ---
+  duration_ms: 0.052034
+  type: 'test'
+  ...
+# Subtest: chuỗi số thuần \#19
+ok 19 - chuỗi số thuần \#19
+  ---
+  duration_ms: 0.043995
+  type: 'test'
+  ...
+# Subtest: chuỗi số thuần \#20
+ok 20 - chuỗi số thuần \#20
+  ---
+  duration_ms: 0.045074
+  type: 'test'
+  ...
+# Subtest: chuỗi số thuần \#21
+ok 21 - chuỗi số thuần \#21
+  ---
+  duration_ms: 0.050368
+  type: 'test'
+  ...
+# Subtest: chuỗi số không hợp lệ \#22
+ok 22 - chuỗi số không hợp lệ \#22
+  ---
+  duration_ms: 0.143481
+  type: 'test'
+  ...
+# Subtest: chuỗi số không hợp lệ \#23
+ok 23 - chuỗi số không hợp lệ \#23
+  ---
+  duration_ms: 0.137465
+  type: 'test'
+  ...
+# Subtest: chuỗi số không hợp lệ \#24
+ok 24 - chuỗi số không hợp lệ \#24
+  ---
+  duration_ms: 0.11594
+  type: 'test'
+  ...
+# Subtest: chuỗi số không hợp lệ \#25
+ok 25 - chuỗi số không hợp lệ \#25
+  ---
+  duration_ms: 0.089137
+  type: 'test'
+  ...
+# Subtest: chuỗi số không hợp lệ \#26
+ok 26 - chuỗi số không hợp lệ \#26
+  ---
+  duration_ms: 0.056222
+  type: 'test'
+  ...
+# Subtest: chuỗi số không hợp lệ \#27
+ok 27 - chuỗi số không hợp lệ \#27
+  ---
+  duration_ms: 0.04872
+  type: 'test'
+  ...
+# Subtest: chuỗi số không hợp lệ \#28
+ok 28 - chuỗi số không hợp lệ \#28
+  ---
+  duration_ms: 0.050693
+  type: 'test'
+  ...
+# Subtest: chuỗi số không hợp lệ \#29
+ok 29 - chuỗi số không hợp lệ \#29
+  ---
+  duration_ms: 0.045198
+  type: 'test'
+  ...
+# Subtest: chuỗi số không hợp lệ \#30
+ok 30 - chuỗi số không hợp lệ \#30
+  ---
+  duration_ms: 0.044709
+  type: 'test'
+  ...
+# Subtest: chuỗi số không hợp lệ \#31
+ok 31 - chuỗi số không hợp lệ \#31
+  ---
+  duration_ms: 0.045158
+  type: 'test'
+  ...
+# Subtest: đơn vị ngắn và ghép \#32
+ok 32 - đơn vị ngắn và ghép \#32
+  ---
+  duration_ms: 0.064657
+  type: 'test'
+  ...
+# Subtest: đơn vị ngắn và ghép \#33
+ok 33 - đơn vị ngắn và ghép \#33
+  ---
+  duration_ms: 0.047723
+  type: 'test'
+  ...
+# Subtest: đơn vị ngắn và ghép \#34
+ok 34 - đơn vị ngắn và ghép \#34
+  ---
+  duration_ms: 0.054354
+  type: 'test'
+  ...
+# Subtest: đơn vị ngắn và ghép \#35
+ok 35 - đơn vị ngắn và ghép \#35
+  ---
+  duration_ms: 0.183699
+  type: 'test'
+  ...
+# Subtest: đơn vị ngắn và ghép \#36
+ok 36 - đơn vị ngắn và ghép \#36
+  ---
+  duration_ms: 0.158798
+  type: 'test'
+  ...
+# Subtest: đơn vị ngắn và ghép \#37
+ok 37 - đơn vị ngắn và ghép \#37
+  ---
+  duration_ms: 0.070557
+  type: 'test'
+  ...
+# Subtest: đơn vị ngắn và ghép \#38
+ok 38 - đơn vị ngắn và ghép \#38
+  ---
+  duration_ms: 0.056748
+  type: 'test'
+  ...
+# Subtest: đơn vị ngắn và ghép \#39
+ok 39 - đơn vị ngắn và ghép \#39
+  ---
+  duration_ms: 0.056335
+  type: 'test'
+  ...
+# Subtest: đơn vị ngắn và ghép \#40
+ok 40 - đơn vị ngắn và ghép \#40
+  ---
+  duration_ms: 0.043411
+  type: 'test'
+  ...
+# Subtest: bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#41
+ok 41 - bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#41
+  ---
+  duration_ms: 0.048078
+  type: 'test'
+  ...
+# Subtest: bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#42
+ok 42 - bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#42
+  ---
+  duration_ms: 0.046949
+  type: 'test'
+  ...
+# Subtest: bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#43
+ok 43 - bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#43
+  ---
+  duration_ms: 0.046095
+  type: 'test'
+  ...
+# Subtest: bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#44
+ok 44 - bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#44
+  ---
+  duration_ms: 0.059258
+  type: 'test'
+  ...
+# Subtest: bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#45
+ok 45 - bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#45
+  ---
+  duration_ms: 0.051217
+  type: 'test'
+  ...
+# Subtest: bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#46
+ok 46 - bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#46
+  ---
+  duration_ms: 0.052818
+  type: 'test'
+  ...
+# Subtest: bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#47
+ok 47 - bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#47
+  ---
+  duration_ms: 0.104229
+  type: 'test'
+  ...
+# Subtest: bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#48
+ok 48 - bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#48
+  ---
+  duration_ms: 1.016729
+  type: 'test'
+  ...
+# Subtest: bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#49
+ok 49 - bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#49
+  ---
+  duration_ms: 0.130506
+  type: 'test'
+  ...
+# Subtest: bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#50
+ok 50 - bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#50
+  ---
+  duration_ms: 0.0689
+  type: 'test'
+  ...
+# Subtest: bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#51
+ok 51 - bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#51
+  ---
+  duration_ms: 0.0549
+  type: 'test'
+  ...
+# Subtest: bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#52
+ok 52 - bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#52
+  ---
+  duration_ms: 0.06181
+  type: 'test'
+  ...
+# Subtest: bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#53
+ok 53 - bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#53
+  ---
+  duration_ms: 0.053658
+  type: 'test'
+  ...
+# Subtest: bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#54
+ok 54 - bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#54
+  ---
+  duration_ms: 0.051868
+  type: 'test'
+  ...
+# Subtest: bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#55
+ok 55 - bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#55
+  ---
+  duration_ms: 0.050131
+  type: 'test'
+  ...
+# Subtest: bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#56
+ok 56 - bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#56
+  ---
+  duration_ms: 0.046948
+  type: 'test'
+  ...
+# Subtest: bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#57
+ok 57 - bí danh đơn vị dài, hoa thường, khoảng trắng giữa số và đơn vị \#57
+  ---
+  duration_ms: 0.050607
+  type: 'test'
+  ...
+# Subtest: dấu áp dụng cho cả chuỗi \#58
+ok 58 - dấu áp dụng cho cả chuỗi \#58
+  ---
+  duration_ms: 0.056311
+  type: 'test'
+  ...
+# Subtest: dấu áp dụng cho cả chuỗi \#59
+ok 59 - dấu áp dụng cho cả chuỗi \#59
+  ---
+  duration_ms: 0.053546
+  type: 'test'
+  ...
+# Subtest: dấu áp dụng cho cả chuỗi \#60
+ok 60 - dấu áp dụng cho cả chuỗi \#60
+  ---
+  duration_ms: 0.15809
+  type: 'test'
+  ...
+# Subtest: dấu áp dụng cho cả chuỗi \#61
+ok 61 - dấu áp dụng cho cả chuỗi \#61
+  ---
+  duration_ms: 0.086377
+  type: 'test'
+  ...
+# Subtest: đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#62
+ok 62 - đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#62
+  ---
+  duration_ms: 0.080882
+  type: 'test'
+  ...
+# Subtest: đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#63
+ok 63 - đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#63
+  ---
+  duration_ms: 0.06193
+  type: 'test'
+  ...
+# Subtest: đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#64
+ok 64 - đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#64
+  ---
+  duration_ms: 0.05804
+  type: 'test'
+  ...
+# Subtest: đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#65
+ok 65 - đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#65
+  ---
+  duration_ms: 0.188785
+  type: 'test'
+  ...
+# Subtest: đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#66
+ok 66 - đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#66
+  ---
+  duration_ms: 0.062038
+  type: 'test'
+  ...
+# Subtest: đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#67
+ok 67 - đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#67
+  ---
+  duration_ms: 0.054618
+  type: 'test'
+  ...
+# Subtest: đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#68
+ok 68 - đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#68
+  ---
+  duration_ms: 0.057817
+  type: 'test'
+  ...
+# Subtest: đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#69
+ok 69 - đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#69
+  ---
+  duration_ms: 0.058093
+  type: 'test'
+  ...
+# Subtest: đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#70
+ok 70 - đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#70
+  ---
+  duration_ms: 0.109227
+  type: 'test'
+  ...
+# Subtest: đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#71
+ok 71 - đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#71
+  ---
+  duration_ms: 0.095875
+  type: 'test'
+  ...
+# Subtest: đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#72
+ok 72 - đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#72
+  ---
+  duration_ms: 0.081166
+  type: 'test'
+  ...
+# Subtest: đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#73
+ok 73 - đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#73
+  ---
+  duration_ms: 0.080427
+  type: 'test'
+  ...
+# Subtest: đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#74
+ok 74 - đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#74
+  ---
+  duration_ms: 0.07725
+  type: 'test'
+  ...
+# Subtest: đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#75
+ok 75 - đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#75
+  ---
+  duration_ms: 0.058782
+  type: 'test'
+  ...
+# Subtest: đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#76
+ok 76 - đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#76
+  ---
+  duration_ms: 0.057273
+  type: 'test'
+  ...
+# Subtest: đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#77
+ok 77 - đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#77
+  ---
+  duration_ms: 0.055318
+  type: 'test'
+  ...
+# Subtest: đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#78
+ok 78 - đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \#78
+  ---
+  duration_ms: 0.144189
+  type: 'test'
+  ...
+# Subtest: ISO 8601 \#79
+ok 79 - ISO 8601 \#79
+  ---
+  duration_ms: 0.45584
+  type: 'test'
+  ...
+# Subtest: ISO 8601 \#80
+ok 80 - ISO 8601 \#80
+  ---
+  duration_ms: 0.199566
+  type: 'test'
+  ...
+# Subtest: ISO 8601 \#81
+ok 81 - ISO 8601 \#81
+  ---
+  duration_ms: 0.075211
+  type: 'test'
+  ...
+# Subtest: ISO 8601 \#82
+ok 82 - ISO 8601 \#82
+  ---
+  duration_ms: 0.059621
+  type: 'test'
+  ...
+# Subtest: ISO 8601 \#83
+ok 83 - ISO 8601 \#83
+  ---
+  duration_ms: 0.058479
+  type: 'test'
+  ...
+# Subtest: ISO 8601 \#84
+ok 84 - ISO 8601 \#84
+  ---
+  duration_ms: 0.076768
+  type: 'test'
+  ...
+# Subtest: ISO 8601 \#85
+ok 85 - ISO 8601 \#85
+  ---
+  duration_ms: 0.157469
+  type: 'test'
+  ...
+# Subtest: ISO 8601 \#86
+ok 86 - ISO 8601 \#86
+  ---
+  duration_ms: 0.067322
+  type: 'test'
+  ...
+# Subtest: ISO 8601 \#87
+ok 87 - ISO 8601 \#87
+  ---
+  duration_ms: 0.051428
+  type: 'test'
+  ...
+# Subtest: ISO 8601 \#88
+ok 88 - ISO 8601 \#88
+  ---
+  duration_ms: 0.981773
+  type: 'test'
+  ...
+# Subtest: ISO 8601 \#89
+ok 89 - ISO 8601 \#89
+  ---
+  duration_ms: 0.095952
+  type: 'test'
+  ...
+# Subtest: ISO 8601 \#90
+ok 90 - ISO 8601 \#90
+  ---
+  duration_ms: 0.051042
+  type: 'test'
+  ...
+# Subtest: ISO 8601 \#91
+ok 91 - ISO 8601 \#91
+  ---
+  duration_ms: 0.050152
+  type: 'test'
+  ...
+# Subtest: ISO 8601 không hợp lệ \#92
+ok 92 - ISO 8601 không hợp lệ \#92
+  ---
+  duration_ms: 0.057942
+  type: 'test'
+  ...
+# Subtest: ISO 8601 không hợp lệ \#93
+ok 93 - ISO 8601 không hợp lệ \#93
+  ---
+  duration_ms: 0.051127
+  type: 'test'
+  ...
+# Subtest: ISO 8601 không hợp lệ \#94
+ok 94 - ISO 8601 không hợp lệ \#94
+  ---
+  duration_ms: 0.042607
+  type: 'test'
+  ...
+# Subtest: ISO 8601 không hợp lệ \#95
+ok 95 - ISO 8601 không hợp lệ \#95
+  ---
+  duration_ms: 0.075633
+  type: 'test'
+  ...
+# Subtest: ISO 8601 không hợp lệ \#96
+ok 96 - ISO 8601 không hợp lệ \#96
+  ---
+  duration_ms: 0.041208
+  type: 'test'
+  ...
+# Subtest: ISO 8601 không hợp lệ \#97
+ok 97 - ISO 8601 không hợp lệ \#97
+  ---
+  duration_ms: 0.038838
+  type: 'test'
+  ...
+# Subtest: ISO 8601 không hợp lệ \#98
+ok 98 - ISO 8601 không hợp lệ \#98
+  ---
+  duration_ms: 0.038739
+  type: 'test'
+  ...
+# Subtest: ISO 8601 không hợp lệ \#99
+ok 99 - ISO 8601 không hợp lệ \#99
+  ---
+  duration_ms: 0.081057
+  type: 'test'
+  ...
+# Subtest: ISO 8601 không hợp lệ \#100
+ok 100 - ISO 8601 không hợp lệ \#100
+  ---
+  duration_ms: 0.051428
+  type: 'test'
+  ...
+# Subtest: ISO 8601 không hợp lệ \#101
+ok 101 - ISO 8601 không hợp lệ \#101
+  ---
+  duration_ms: 0.043511
+  type: 'test'
+  ...
+# Subtest: ISO 8601 không hợp lệ \#102
+ok 102 - ISO 8601 không hợp lệ \#102
+  ---
+  duration_ms: 0.040161
+  type: 'test'
+  ...
+# Subtest: ISO 8601 không hợp lệ \#103
+ok 103 - ISO 8601 không hợp lệ \#103
+  ---
+  duration_ms: 0.043323
+  type: 'test'
+  ...
+# Subtest: format short \#104
+ok 104 - format short \#104
+  ---
+  duration_ms: 0.25505
+  type: 'test'
+  ...
+# Subtest: format short \#105
+ok 105 - format short \#105
+  ---
+  duration_ms: 0.058255
+  type: 'test'
+  ...
+# Subtest: format short \#106
+ok 106 - format short \#106
+  ---
+  duration_ms: 0.050014
+  type: 'test'
+  ...
+# Subtest: format short \#107
+ok 107 - format short \#107
+  ---
+  duration_ms: 0.058677
+  type: 'test'
+  ...
+# Subtest: format short \#108
+ok 108 - format short \#108
+  ---
+  duration_ms: 0.039088
+  type: 'test'
+  ...
+# Subtest: format short \#109
+ok 109 - format short \#109
+  ---
+  duration_ms: 0.04255
+  type: 'test'
+  ...
+# Subtest: format short \#110
+ok 110 - format short \#110
+  ---
+  duration_ms: 0.039908
+  type: 'test'
+  ...
+# Subtest: format short \#111
+ok 111 - format short \#111
+  ---
+  duration_ms: 3.05371
+  type: 'test'
+  ...
+# Subtest: format short \#112
+ok 112 - format short \#112
+  ---
+  duration_ms: 0.189699
+  type: 'test'
+  ...
+# Subtest: format short \#113
+ok 113 - format short \#113
+  ---
+  duration_ms: 0.079887
+  type: 'test'
+  ...
+# Subtest: format long, số ít/số nhiều \#114
+ok 114 - format long, số ít/số nhiều \#114
+  ---
+  duration_ms: 0.076807
+  type: 'test'
+  ...
+# Subtest: format long, số ít/số nhiều \#115
+ok 115 - format long, số ít/số nhiều \#115
+  ---
+  duration_ms: 0.229713
+  type: 'test'
+  ...
+# Subtest: format long, số ít/số nhiều \#116
+ok 116 - format long, số ít/số nhiều \#116
+  ---
+  duration_ms: 0.072554
+  type: 'test'
+  ...
+# Subtest: format long, số ít/số nhiều \#117
+ok 117 - format long, số ít/số nhiều \#117
+  ---
+  duration_ms: 0.04755
+  type: 'test'
+  ...
+# Subtest: format long, số ít/số nhiều \#118
+ok 118 - format long, số ít/số nhiều \#118
+  ---
+  duration_ms: 0.079655
+  type: 'test'
+  ...
+# Subtest: format long, số ít/số nhiều \#119
+ok 119 - format long, số ít/số nhiều \#119
+  ---
+  duration_ms: 0.351085
+  type: 'test'
+  ...
+# Subtest: format long, số ít/số nhiều \#120
+ok 120 - format long, số ít/số nhiều \#120
+  ---
+  duration_ms: 0.210769
+  type: 'test'
+  ...
+# Subtest: format long, số ít/số nhiều \#121
+ok 121 - format long, số ít/số nhiều \#121
+  ---
+  duration_ms: 0.156677
+  type: 'test'
+  ...
+# Subtest: format largest: cắt và làm tròn \#122
+ok 122 - format largest: cắt và làm tròn \#122
+  ---
+  duration_ms: 0.293806
+  type: 'test'
+  ...
+# Subtest: format largest: cắt và làm tròn \#123
+ok 123 - format largest: cắt và làm tròn \#123
+  ---
+  duration_ms: 0.164326
+  type: 'test'
+  ...
+# Subtest: format largest: cắt và làm tròn \#124
+ok 124 - format largest: cắt và làm tròn \#124
+  ---
+  duration_ms: 0.292588
+  type: 'test'
+  ...
+# Subtest: format largest: cắt và làm tròn \#125
+ok 125 - format largest: cắt và làm tròn \#125
+  ---
+  duration_ms: 0.175195
+  type: 'test'
+  ...
+# Subtest: format largest: cắt và làm tròn \#126
+ok 126 - format largest: cắt và làm tròn \#126
+  ---
+  duration_ms: 0.070226
+  type: 'test'
+  ...
+# Subtest: format largest: cắt và làm tròn \#127
+ok 127 - format largest: cắt và làm tròn \#127
+  ---
+  duration_ms: 0.107302
+  type: 'test'
+  ...
+# Subtest: format largest: cắt và làm tròn \#128
+ok 128 - format largest: cắt và làm tròn \#128
+  ---
+  duration_ms: 0.056474
+  type: 'test'
+  ...
+# Subtest: format largest: cắt và làm tròn \#129
+ok 129 - format largest: cắt và làm tròn \#129
+  ---
+  duration_ms: 0.046201
+  type: 'test'
+  ...
+# Subtest: format largest: cắt và làm tròn \#130
+ok 130 - format largest: cắt và làm tròn \#130
+  ---
+  duration_ms: 0.134051
+  type: 'test'
+  ...
+# Subtest: format largest: đơn vị 0 ở giữa vẫn được tính \#131
+ok 131 - format largest: đơn vị 0 ở giữa vẫn được tính \#131
+  ---
+  duration_ms: 0.151378
+  type: 'test'
+  ...
+# Subtest: format largest: đơn vị 0 ở giữa vẫn được tính \#132
+ok 132 - format largest: đơn vị 0 ở giữa vẫn được tính \#132
+  ---
+  duration_ms: 0.146977
+  type: 'test'
+  ...
+# Subtest: format largest: đơn vị 0 ở giữa vẫn được tính \#133
+ok 133 - format largest: đơn vị 0 ở giữa vẫn được tính \#133
+  ---
+  duration_ms: 0.128416
+  type: 'test'
+  ...
+# Subtest: format largest: đơn vị 0 ở giữa vẫn được tính \#134
+ok 134 - format largest: đơn vị 0 ở giữa vẫn được tính \#134
+  ---
+  duration_ms: 0.117629
+  type: 'test'
+  ...
+# Subtest: format largest: đơn vị 0 ở giữa vẫn được tính \#135
+ok 135 - format largest: đơn vị 0 ở giữa vẫn được tính \#135
+  ---
+  duration_ms: 0.078539
+  type: 'test'
+  ...
+# Subtest: format largest: nhớ lên đơn vị lớn hơn \#136
+ok 136 - format largest: nhớ lên đơn vị lớn hơn \#136
+  ---
+  duration_ms: 0.216007
+  type: 'test'
+  ...
+# Subtest: format largest: nhớ lên đơn vị lớn hơn \#137
+ok 137 - format largest: nhớ lên đơn vị lớn hơn \#137
+  ---
+  duration_ms: 0.196095
+  type: 'test'
+  ...
+# Subtest: format largest: nhớ lên đơn vị lớn hơn \#138
+ok 138 - format largest: nhớ lên đơn vị lớn hơn \#138
+  ---
+  duration_ms: 0.073049
+  type: 'test'
+  ...
+# Subtest: format largest: nhớ lên đơn vị lớn hơn \#139
+ok 139 - format largest: nhớ lên đơn vị lớn hơn \#139
+  ---
+  duration_ms: 0.699282
+  type: 'test'
+  ...
+# Subtest: format largest: nhớ lên đơn vị lớn hơn \#140
+ok 140 - format largest: nhớ lên đơn vị lớn hơn \#140
+  ---
+  duration_ms: 0.156579
+  type: 'test'
+  ...
+# Subtest: format largest: nhớ lên đơn vị lớn hơn \#141
+ok 141 - format largest: nhớ lên đơn vị lớn hơn \#141
+  ---
+  duration_ms: 0.107003
+  type: 'test'
+  ...
+# Subtest: format: tham số sai \#142
+ok 142 - format: tham số sai \#142
+  ---
+  duration_ms: 0.140801
+  type: 'test'
+  ...
+# Subtest: format: tham số sai \#143
+ok 143 - format: tham số sai \#143
+  ---
+  duration_ms: 0.180231
+  type: 'test'
+  ...
+# Subtest: format: tham số sai \#144
+ok 144 - format: tham số sai \#144
+  ---
+  duration_ms: 0.108392
+  type: 'test'
+  ...
+# Subtest: format: tham số sai \#145
+ok 145 - format: tham số sai \#145
+  ---
+  duration_ms: 0.118341
+  type: 'test'
+  ...
+# Subtest: format: tham số sai \#146
+ok 146 - format: tham số sai \#146
+  ---
+  duration_ms: 0.102527
+  type: 'test'
+  ...
+# Subtest: format: tham số sai \#147
+ok 147 - format: tham số sai \#147
+  ---
+  duration_ms: 0.177435
+  type: 'test'
+  ...
+# Subtest: format: tham số sai \#148
+ok 148 - format: tham số sai \#148
+  ---
+  duration_ms: 0.132753
+  type: 'test'
+  ...
+# Subtest: tính chất round-trip
+ok 149 - tính chất round-trip
+  ---
+  duration_ms: 10.981026
+  type: 'test'
+  ...
+1..149
+# tests 149
+# suites 0
+# pass 149
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 185.075428

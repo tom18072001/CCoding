@@ -1,0 +1,16 @@
+I implemented `canonicalize`, `redact`, `append` and `verify` in `src/index.js`. `npm test` passes all 6 tests: the existing smoke test plus 5 new ones in `test/audit.test.js`.
+
+The tests cover:
+- code-point key ordering, including a surrogate pair against a BMP character
+- redaction depth and non-mutation
+- phone boundary cases
+- hash linkage
+- tamper detection
+
+Judgment calls beyond the brief:
+- **Redaction order:** emails are redacted first, so `0912345678@x.com` becomes `[EMAIL]`.
+- **Email pattern:** I used a pragmatic email pattern that accepts Unicode letters and digits. The brief didn't define one.
+- **Phone formats:** only unspaced digit forms count as phone numbers, as the brief defines them. `+84 912…` with a space is not redacted.
+- **Stricter `verify`:** it also flags a record whose stored `entry` still contains PII, even if its hash was recomputed to match. Without this, someone could insert a record with PII and a valid hash and `verify` would accept it. If you only want the consistency checks in the brief, remove the `canonicalize(redact(r.entry)) === canonicalize(r.entry)` line from `verify`.
+- **`toJSON`:** both `canonicalize` and `redact` call `toJSON` where it exists, so a `Date` becomes its ISO string.
+- **Errors:** `canonicalize` throws on `BigInt` and on circular structures, as `JSON.stringify` does.

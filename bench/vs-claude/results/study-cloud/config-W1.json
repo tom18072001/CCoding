@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "--arms",
+    "A0-sonnet,B0",
+    "--tasks",
+    "c1,c2,c3,c4,c5,l3,l4,s1,re1",
+    "--repeats",
+    "3",
+    "--timeout",
+    "20",
+    "--runtime",
+    "claude-cli",
+    "--ccoding-url",
+    "http://127.0.0.1:7424",
+    "--ccoding-data",
+    "/home/user/ccoding-main/data",
+    "--work",
+    "/tmp/vb",
+    "--out",
+    "bench/vs-claude/results/study-cloud"
+  ],
+  "cfg": {
+    "ccodingUrl": "http://127.0.0.1:7424",
+    "ccodingData": "/home/user/ccoding-main/data",
+    "runtime": "claude-cli",
+    "timeoutMin": 20,
+    "claudeBin": "claude",
+    "judge": {
+      "enabled": false,
+      "model": "opus"
+    },
+    "seed": "ccvb",
+    "workRoot": "/tmp/vb"
+  },
+  "armIds": [
+    "A0-sonnet",
+    "B0"
+  ],
+  "taskIds": [
+    "c1-iis-ecs",
+    "c2-burst-alert",
+    "c3-shop-bugs",
+    "c4-audit-chain",
+    "c5-tickets-api",
+    "l3-reconcile",
+    "l4-startup-order",
+    "s1-sec-review",
+    "re1-lit-synthesis"
+  ],
+  "repeats": 3,
+  "startedAt": "2026-11-02T11:41:23.841Z"
+}

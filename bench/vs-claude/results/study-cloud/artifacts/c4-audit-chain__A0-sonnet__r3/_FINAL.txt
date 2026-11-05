@@ -1,0 +1,8 @@
+I implemented `canonicalize`, `redact`, `append` and `verify` in `src/index.js`. I added tests in `test/audit.test.js`, and `npm test` passes all 8 tests, including the existing smoke test.
+
+- **PII:** `append` redacts the entry before it computes the hash. The tests check that the original e-mail address appears nowhere in the stored chain, and that the stored hash matches a hash of the redacted entry.
+- **Email before phone:** `redact` replaces e-mails first. A local part that looks like a phone number, such as `0912345678@mail.vn`, becomes a single `[EMAIL]`.
+- **`toJSON`:** `redact` and `canonicalize` call `toJSON` first, as `JSON.stringify` does. A `Date`, or any object that returns a string, is therefore redacted before hashing.
+- **Key order:** Keys are sorted by Unicode code point rather than by JavaScript's default UTF-16 order. The default order would put emoji before some characters in the U+E000–U+FFFF range.
+- **Phone boundaries:** The "not preceded or followed by a digit" rule is checked against ASCII digits only. For `+84…` numbers, the check applies to the character before the `+`.
+- **`verify`:** It returns the first record that has the wrong `seq`, a `prev` that doesn't match the previous hash, a missing hash, or a recomputed hash that differs. The tests cover an edited entry, a deleted record and a broken `prev`.

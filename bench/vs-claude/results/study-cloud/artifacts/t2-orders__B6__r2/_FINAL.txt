@@ -1,0 +1,151 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t2-orders__B6__r2] Sửa 6 lỗi trong thư viện tính tiền giỏ hàng
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Repo nhỏ (~300 dòng) với 6 lỗi nằm ở các module tách biệt. Chia 3 hạng mục độc lập, mỗi hạng mục sở hữu tệp nguồn và tệp test riêng, để chạy song song không đụng tệp nhau. Cuối cùng CCoding gộp lại và chạy `npm test`.
+
+Kết quả: 3/3 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Lỗi 1+2: làm tròn tiền và phân bổ giảm giá (money) (@senior-swe, done)
+
+## Tóm tắt
+Đã sửa lỗi 1 (làm tròn xu) và lỗi 2 (phân bổ giảm giá). `toCents` giờ làm tròn trên chuỗi thập phân nên không còn lệch do float, và `allocate` chia theo phần dư lớn nhất. `npm test` xanh (9/9). Tôi không chạy test hồi quy ở trạng thái đỏ trước khi sửa. Tôi chưa kiểm tra đầu-cuối trường hợp giỏ 3 món với mã 10.00 qua `computeTotals`.
+
+## Tệp đã tạo/sửa
+- `src/money.js`:
+  - `toCents` tách chuỗi của `abs(amount)`, lấy 2 chữ số xu và cộng 1 nếu chữ số thứ 3 ≥ 5. Dấu được áp lại sau cùng nên -1.005 → -101.
+  - `allocate` lấy phần nguyên, rồi chia số xu dư cho các phần có phần lẻ lớn nhất, ưu tiên phần đứng trước khi bằng nhau. Tổng các phần bằng đúng `total`.
+- `src/checkout.js`: dòng mã giảm cố định đổi `Math.round(promo.amount * 100)` thành `toCents(promo.amount)`, và import thêm `toCents`. Chữ ký không đổi. **Báo S3:** tệp này của S3, thay đổi chỉ ở dòng đó và dòng import.
+- `src/catalog.js`: không cần sửa, đã dùng `toCents` nên tự đúng.
+- `test/money-alloc.test.js` (mới): kiểm tra `toCents` với 1.005, 2.675 và các số âm, giá ở catalog, và `allocate` (10.00 chia 3 dòng = 3.34+3.33+3.33, trọng số 0, tổng khớp).
+
+## Kiểm chứng
+- `npm test` → exit 0 — tests 9, pass 9, fail 0 (baseline là 6 test; thêm 3 test mới).
+
+## Quyết định thiết kế
+- Dùng biểu diễn chuỗi ngắn nhất của số (`String(abs)`) thay vì epsilon. Với số rất nhỏ hoặc rất lớn (dạng mũ) thì dùng `toFixed(20)`.
+- `allocate` hỗ trợ `total` âm bằng cách phân bổ trên giá trị tuyệt đối rồi gắn lại dấu.
+- Mã giảm % vẫn dùng `Math.round` cho `totalDiscount` trong `checkout.js`. Với giá trị dương thì giống half away from zero, và tôi chỉ đo rằng đó là số nguyên xu nên không cần sửa. Các dòng chia qua `allocate` nên tổng giảm các dòng bằng đúng số giảm của mã.
+- `src/promotions.js` dùng `toCents` cho `minSubtotal` nên tự đúng, không cần sửa; S2 không cần thay đổi gì ở đó.
+
+## Rủi ro & việc còn mở
+- Giảm theo danh mục (`category`) vẫn dùng `Math.round(gross*percent/100)` ở từng dòng, nằm ngoài phạm vi lỗi 2.
+- Lỗi 6 (thuế trên `net`, `lineTax(l.gross…)` trong `checkout.js`) thuộc S3; tôi không động tới.
+
+Bản đầy đủ: `.ccoding/T-20261102-153200-37b/outputs/dev-S1-senior-swe.md`
+
+### S2 — Lỗi 3+4: khuyến mãi mua X tặng Y và hạn mã (promotions) (@backend-dev, done)
+
+## Tóm tắt
+Đã sửa lỗi 3 và lỗi 4 trong `src/promotions.js` và thêm test hồi quy. `npm test` xanh (13/13 pass, trước đó là 6).
+
+- **Lỗi 3:** `freeUnits` dùng `floor(qty/buy)*free` nên khách được tặng quá sớm. Giờ là `floor(qty/(buy+free))*free`. Với mua 2 tặng 1: 2→0, 3→1, 5→1, 6→2. Chú thích đầu module không nói gì về phần dư, nên tôi không cộng phần dư. Cách tính này khớp cả bốn ví dụ trong yêu cầu.
+- **Lỗi 4:** `endsAt` dạng `YYYY-MM-DD` bị hiểu là 00:00Z của chính ngày đó, nên mã hết hạn từ đầu ngày cuối. Thêm hàm `endExclusive` (nội bộ) cộng `DAY_MS` cho dạng ngày thuần. Mã vẫn dùng được hết ngày `endsAt` và bị từ chối từ 00:00:00Z ngày kế tiếp.
+- `startsAt` đã đúng (hiệu lực từ đầu ngày) nên giữ nguyên, chỉ thêm test khóa hành vi này.
+
+## Tệp đã tạo/sửa
+- `src/promotions.js` (sửa)
+- `test/promotions.test.js` (mới)
+
+## Hợp đồng API
+Không áp dụng. API công khai không đổi.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0, `# tests 13 · # pass 13 · # fail 0 · # skipped 0 · # todo 0`.
+- Các test mới trong `test/promotions.test.js` gồm:
+  - `freeUnits` với mua 2 tặng 1 và các cấu hình khác (1/1, 3/2);
+  - biên `endsAt`: 00:00Z, 10:00Z và 23:59:59.999Z của ngày cuối còn hợp lệ, 2026-12-01T00:00:00Z bị từ chối;
+  - biên `startsAt`: trước 00:00Z của ngày bắt đầu thì bị từ chối, đúng 00:00Z thì hợp lệ.
+
+## Việc còn lại
+Không có. Hook của môi trường chặn một heredoc có chuỗi `../src`, nên tôi sửa bằng công cụ Edit/Write thay vì script. Kết quả không bị ảnh hưởng.
+
+Bản đầy đủ: `.ccoding/T-20261102-153200-37b/outputs/dev-S2-backend-dev.md`
+
+### S3 — Lỗi 5+6: giữ chỗ kho và thuế trên giá sau giảm (@frontend-dev, done)
+
+## Tóm tắt
+Đã sửa lỗi 5 (giữ chỗ kho) và lỗi 6 (thuế trên giá sau giảm) và thêm 4 test hồi quy. `npm test` xanh: 17 test, 17 pass, 0 fail. Chưa commit.
+
+## Tệp đã tạo/sửa
+- `src/cart.js`:
+  - Lỗi 5: `updateQty` giờ reserve hoặc release theo delta (`qty` mới trừ `qty` cũ). Trước đây nó reserve cả `qty` mới rồi ghi đè dòng, nên giữ chỗ bị cộng dồn.
+  - Lỗi 5: `removeItem` giờ release đúng số lượng của dòng. Trước đây nó chỉ xóa dòng mà không trả kho.
+  - Thêm `clear()` để release toàn bộ và bỏ mã giảm giá. Giỏ chưa có hàm này, nên đây là phương thức công khai mới.
+- `src/checkout.js`: lỗi 6, `lineTax(l.net, …)` thay cho `l.gross`. Dạng kết quả hóa đơn giữ nguyên.
+- `test/inventory-tax.test.js` (mới), 4 test:
+  - Kho 4: thêm 2 rồi sửa lên 3 được, giữ chỗ bằng 3.
+  - Giảm số lượng và xóa về 0 release đúng.
+  - Xóa món thì giỏ khác mua được; `clear` release hết.
+  - Mã giảm 50% thì thuế tính trên `net` (tax 100, total 1100).
+- Không cần sửa `src/inventory.js` và `src/tax.js`.
+
+## Màn hình & trạng thái
+Không áp dụng. Hạng mục này chỉ sửa thư viện, không có giao diện.
+
+## API sử dụng
+Không áp dụng. Chỉ có thêm `Cart.clear()`; tên hàm, tham số và dạng kết quả hiện có không đổi.
+
+## Kiểm chứng
+- `npm test` → exit 0, 17 test, 17 pass, 0 fail. Số test gồm baseline 6 cộng test của S1, S2 và 4 test của tôi.
+- Lần chạy đầu có 4 test lỗi, vì lệnh sửa bằng Python bị hook chặn nên `cart.js` chưa được sửa. Lần chạy sau còn 1 lỗi (test thuế), vì `checkout.js` đã bị S1 đổi một phần nên bản sửa của tôi chưa áp dụng. Sau khi sửa lại hai chỗ này thì xanh.
+- Trong `src/checkout.js` còn thay đổi của S1 (dùng `toCents` thay `Math.round(promo.amount * 100)`), tôi giữ nguyên.
+
+## Việc còn lại
+Không có.
+
+Bản đầy đủ: `.ccoding/T-20261102-153200-37b/outputs/dev-S3-frontend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-153200-37b` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **34 in / 15.2k out**, cache đọc 220.4k, 5 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Frontend Developer (@frontend-dev) | dev | 12 | 4563 | 93568 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 8 | 4529 | 54939 | 1 |
+| Backend Developer (@backend-dev) | dev | 8 | 3707 | 48873 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 2068 | 20750 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 377 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Lỗi 1+2: làm tròn tiền và phân bổ giảm giá (money) (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Lỗi 3+4: khuyến mãi mua X tặng Y và hạn mã (promotions) (@backend-dev)
+- `outputs/dev-S3-frontend-dev.md` — S3 Lỗi 5+6: giữ chỗ kho và thuế trên giá sau giảm (@frontend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 6 · # suites 0 · # pass 6 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 17 · # suites 0 · # pass 17 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Frontend Developer (@frontend-dev) | dev | **80** A | — | 61 | 90 | 100 | 1 | 1 | 98k | 1/8 |
+| Senior Software Engineer (@senior-swe) | dev | **95** A | — | 100 | 84 | 100 | 1 | 1 | 59k | 1/5 |
+| Backend Developer (@backend-dev) | dev | **97** A | — | 100 | 90 | 100 | 1 | 1 | 53k | 1/8 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 23k | 0/1 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 95 A):
+  - Thao tác công cụ lỗi nhiều (1/5, 20%; nhiều nhất ở run_command 1/4) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

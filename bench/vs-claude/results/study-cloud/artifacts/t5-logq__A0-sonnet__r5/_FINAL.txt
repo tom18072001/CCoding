@@ -1,0 +1,8 @@
+`logq` đã xong theo SPEC.md: `src/parse.js`, `src/query.js`, `src/agg.js` và `bin/logq.js`, không thêm thư viện ngoài. `npm test` xanh, 26/26 test, gồm test mới cho từng module, test CLI chạy thật và test smoke có sẵn. Tôi chưa có bộ nghiệm thu ẩn nên chưa chạy thử với nó.
+
+Có mấy chỗ đặc tả để mở, tôi chọn như sau:
+- **Dòng rỗng trong `--stats`:** dòng rỗng tính vào `malformed`, vì `parseLine` trả `ok: false` cho nó.
+- **Thiếu toán hạng trước `)`:** với trường hợp như `a AND )`, vị trí lỗi là vị trí của `)`.
+- **Interval của histogram:** được chuẩn hoá, nên `05m` thành `"5m"`.
+- **Thứ tự kiểm tra trong CLI:** tùy chọn, truy vấn và spec tổng hợp được kiểm tra trước khi đọc tệp, nên lỗi cú pháp hay lỗi dùng sai trả mã 2 ngay cả khi tệp không tồn tại.
+- **Đầu ra khi lỗi:** stdout chỉ được in ở cuối, nên khi lỗi nó trống hoàn toàn.

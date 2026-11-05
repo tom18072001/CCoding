@@ -1,0 +1,21 @@
+I wrote the specification to `SPEC.md` at the repository root. There was no code to test, and I haven't committed anything.
+
+**Four contradictions in the customer request**
+
+The spec resolves each one with the safest default. All four are listed under `## Open questions and assumptions` (Q1, Q3, Q7, Q8):
+
+1. **Unmasked data vs. "no personal data unmasked".** The default export is masked: the last IP octet is hidden and usernames become keyed pseudonyms. Full IPs and usernames come only from a separate forensic export. That export needs its own permission, a justification, a second approver and an encrypted single-use link. It also expires.
+2. **"Kept forever" vs. "delete personal data after 12 months".** The 12-month deletion wins for every export file that contains personal data. Only an audit record with no personal data is kept indefinitely: export ID, hash, scope, requester, approver and timestamps.
+3. **"Export everything they can see" vs. "team, last month".** The scope is the manager's team for the previous calendar month in Vietnam time (UTC+7). Viewer permissions are only an upper bound.
+4. **5 seconds vs. unknown data volume.** The 5-second target applies to exports up to 100,000 rows. Larger exports run in the background and the user is notified.
+
+**What else is in the spec**
+
+- **Requirements:** 10 functional and 5 non-functional, covering CSV format, spreadsheet-formula injection protection, rate limits, audit and alerting.
+- **Open questions:** 14 in total, each with the assumption used meanwhile. I wrote the bank's own policy and the legal references (Decree 13/2023, the 2026 data-protection law, SBV Circular 09/2020) as items for the bank's data-protection officer and legal team to confirm. The spec makes no claim of compliance.
+- **Acceptance criteria:** 8 checks, including month-boundary, empty-result and role-loss edge cases.
+- **Build order:** the masked export first. The forensic tier and the retention job wait for written confirmation of Q1, Q6, Q8 and Q9.
+
+**Self-review fixes:** I corrected a garbled sentence on pseudonym key rotation, clarified that a manager of several branches exports one branch at a time, and reworded the delivery notes.
+
+**Still unverified:** the 100,000-row and 5,000,000-row thresholds, the 30-day file lifetime and the CSV columns are my placeholders. They need the customer's volume figures and a sample file from the old system.

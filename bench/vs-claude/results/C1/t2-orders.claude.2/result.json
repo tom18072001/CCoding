@@ -1,0 +1,86 @@
+{
+ "run": {
+  "exitCode": 0,
+  "status": "done",
+  "wallSec": 86,
+  "costUsd": 0.3759608,
+  "turns": 5,
+  "tokens": {
+   "input": 10,
+   "output": 8799,
+   "cacheRead": 221026,
+   "cacheWrite": 19417
+  },
+  "models": [
+   "claude-haiku-5-5",
+   "claude-opus-5-5"
+  ],
+  "modelUsage": {
+   "claude-haiku-5-5": {
+    "inputTokens": 1351,
+    "outputTokens": 529,
+    "cacheReadInputTokens": 0,
+    "cacheCreationInputTokens": 0,
+    "webSearchRequests": 0,
+    "costUSD": 0.00039959999999999996,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 64000,
+    "thinkingTokens": 499,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 0,
+    "canonicalModel": "claude-haiku-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   },
+   "claude-opus-5-5": {
+    "inputTokens": 10,
+    "outputTokens": 8799,
+    "cacheReadInputTokens": 221026,
+    "cacheCreationInputTokens": 19417,
+    "webSearchRequests": 0,
+    "costUSD": 0.37556120000000004,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000,
+    "thinkingTokens": 2070,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 19417,
+    "canonicalModel": "claude-opus-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   }
+  },
+  "finalText": "Đã sửa xong cả 6 lỗi trong `ISSUES.md`. `npm test` chạy xanh: 17 test pass, 0 fail, gồm 3 test cũ và 14 test hồi quy mới trong `test/regressions.test.js`. API công khai giữ nguyên, tôi chưa commit.\n\n| # | Nguyên nhân gốc | Cách sửa |\n|---|---|---|\n| 1 | `toCents` dùng `Math.round(amount * 100)`, mà `1.005 * 100` ra `100.49999…` do sai số dấu phẩy động nên bị làm tròn xuống. Ngoài ra mã giảm cố định trong `checkout.js` tự nhân 100 thay vì gọi `toCents`. | `src/money.js`: khử sai số (làm tròn về 15 chữ số có nghĩa) rồi làm tròn half away from zero theo dấu; không trả về `-0`. `checkout.js` chuyển sang dùng `toCents(promo.amount)`. Giá sản phẩm và `minSubtotal` vốn đã gọi `toCents` nên tự đúng theo. |\n| 2 | `allocate` chỉ lấy phần nguyên nên mất số xu lẻ (10.00 chia 3 dòng chỉ còn 9.99). | Thêm bước phần dư lớn nhất: số xu còn dư chia cho các phần có phần lẻ lớn nhất, bằng nhau thì phần đứng trước được trước. Phần dư tính bằng số nguyên nên không bị sai số. |\n| 3 | `freeUnits` chia `qty / buy`, nên 2 hộp đã được tặng 1. | Đổi thành `floor(qty / (buy + free)) * free`: 2 hộp → 0, 3 → 1, 5 → 1, 6 → 2. |\n| 4 | Mã bị so với nửa đêm đầu ngày `endsAt`, nên ngày cuối không dùng được. | So với `endsAt + DAY_MS`: dùng được tới hết ngày 30/11 (UTC), bị từ chối từ `2026-12-01T00:00:00Z`. |\n| 5 | `updateQty` giữ chỗ lại toàn bộ số lượng mới thay vì phần chênh lệch, còn `removeItem` không trả lại hàng đã giữ chỗ. | `src/cart.js`: `updateQty` chỉ giữ thêm hoặc trả lại phần chênh lệch; `removeItem` trả lại hàng (sửa về 0 cũng đi qua đường này). Nếu sửa vượt tồn kho thì báo lỗi và giỏ giữ nguyên. |\n| 6 | `lineTax` được gọi với `l.gross`. | Đổi sang `l.net`. |\n\nNgoài 6 lỗi trên, tôi làm thêm vài chỗ:\n- Phần làm tròn tiền giảm theo % (cả toàn giỏ và theo danh mục) và phần làm tròn thuế trong `tax.js` cũng được khử sai số dấu phẩy động theo cùng cách với `toCents`.\n- Gọi `removeItem` với món không có trong giỏ vẫn không báo lỗi như trước.\n- Riêng lỗi 3, khi số món lẻ ra nhiều hơn `buy` nhưng chưa đủ một nhóm (ví dụ mua 1 tặng 2 mà giỏ có 2 món), tôi chọn không tặng món nào. Báo cáo không nói rõ trường hợp này, nên nếu bộ nghiệm thu muốn tặng một phần thì cần đổi lại công thức.\n\nTest hồi quy kiểm tra từng lỗi, kể cả các trường hợp ở biên: số âm, mốc 23:59:59.999, sửa vượt tồn kho, hai giỏ dùng chung một kho, và mã cố định lớn hơn giá trị giỏ.",
+  "workdir": "/tmp/bw/C1-t2-orders.claude.2-mj5s2l/repo"
+ },
+ "task": "t2-orders",
+ "system": "claude",
+ "rep": 2,
+ "key": "t2-orders.claude.2",
+ "env": "cloud",
+ "startedAt": "2026-11-01T11:20:28.680Z",
+ "finishedAt": "2026-11-01T11:21:54.717Z",
+ "grade": {
+  "hidden": {
+   "pass": 60,
+   "fail": 0,
+   "total": 60,
+   "failed": [],
+   "ms": 190,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 17,
+   "fail": 0,
+   "total": 17
+  },
+  "changed": [
+   "~src/cart.js",
+   "~src/checkout.js",
+   "~src/money.js",
+   "~src/promotions.js",
+   "~src/tax.js",
+   "+test/regressions.test.js"
+  ]
+ },
+ "audit": []
+}

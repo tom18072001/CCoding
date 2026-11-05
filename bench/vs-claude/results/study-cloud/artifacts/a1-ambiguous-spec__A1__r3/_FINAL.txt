@@ -1,0 +1,19 @@
+I've written the specification to `SPEC.md` at the repo root. It includes the `## Open questions and assumptions` section, with 15 items. Each has the assumption I used in the meantime. The repo had no code, so there were no tests to run. The only check I ran was a grep confirming the retention wording is consistent.
+
+The customer request contradicts itself in four places. I resolved each with an assumption you should confirm with them:
+- **Full identifiers versus masking:** they want full IPs and usernames, but also no unmasked personal data leaving the platform. The branch manager's export is masked: IPs keep their first two octets, and usernames become pseudonyms. Unmasked data can only be viewed inside the platform, by an approved forensic role.
+- **"Everything they can see" versus "their team, last month":** the export is only what the manager may see, limited to their team and the previous calendar month in Vietnam time.
+- **5 seconds versus unbounded volume:** the spec uses streamed output with a cap of 200,000 rows. Above the cap the export is refused rather than silently cut short. The 200,000 figure is my assumption, so please confirm it.
+- **"Kept forever" versus deleting personal data after 12 months:** exported files are deleted once their oldest row reaches 12 months. A record of each export, containing no personal data, is kept indefinitely.
+
+The "old system" CSV format wasn't given, so the column layout in the spec is a placeholder. Ask the customer for a sample file.
+
+During self-review I found and fixed three defects: the deletion clock was keyed to the newest row rather than the oldest, one requirement contradicted another about what the audit record stores, and one open question repeated the first error.
+
+Four points need a legal or compliance answer rather than an engineering one:
+- Whether masked data still counts as personal data.
+- Whether backups must also be purged.
+- Whether any State Bank of Vietnam record-keeping rule overrides the 12-month limit.
+- Whether a data-protection impact assessment is required.
+
+I didn't commit anything.

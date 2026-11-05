@@ -1,0 +1,109 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude a1-ambiguous-spec__B6__r2] Spec from an ambiguous, self-contradicting brief
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Yêu cầu của khách tự mâu thuẫn ở nhiều điểm, nên spec ghi rõ từng mâu thuẫn, cách xử lý tạm thời và danh sách câu hỏi cần khách xác nhận. Đây là một tài liệu duy nhất nên chỉ cần 1 hạng mục, giao cho BA vì BA có quyền ghi tệp.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Viết SPEC.md cho tính năng Log Export (@business-analyst, done)
+
+## Tóm tắt
+Tôi đã sửa `SPEC.md` theo cả 5 góp ý review. Spec giờ ghi rõ audit record có user ID nội bộ của người xuất và người duyệt, là dữ liệu cá nhân của nhân viên. User ID này được ẩn danh hoá sau 12 tháng, còn metadata và hash được giữ lại. Mục `## Open questions and assumptions` nay có 16 câu hỏi (Q1–Q16), mỗi câu có mức [Chặn]/[Sớm] và assumption đi kèm. Spec nêu đủ mâu thuẫn C1–C5 và không dẫn điều luật nào. Các con số 200.000 dòng, 5 yêu cầu/giờ, TTL 24 giờ và 20% đều là giả định, đã ghi rõ như vậy.
+
+## Đã sửa theo review
+- **[major] Audit "không chứa dữ liệu cá nhân"** (mục 1, C3, 4.4, AC-8, Q4, Q12):
+  - Câu ở C3 nay phân biệt hai loại dữ liệu. Audit record không chứa IP/username của dữ liệu xuất, nhưng có user ID của người xuất và người duyệt, vốn là dữ liệu cá nhân của nhân viên.
+  - Mục 4.4 ghi rõ các trường user ID là dữ liệu cá nhân. Sau 12 tháng chúng được thay bằng token ẩn danh không đảo ngược; metadata và hash giữ nguyên.
+  - Q4 hỏi thêm thời hạn giữ user ID và việc ẩn danh hoá, với assumption tương ứng.
+  - Q12 yêu cầu pháp chế xác nhận riêng việc giữ audit có user ID nhân viên và việc ẩn danh hoá.
+  - AC-8 thêm điều kiện kiểm: user ID trong record quá 12 tháng phải bị thay bằng token.
+  - Mục 1 (phạm vi) thêm một vế nhắc việc ẩn danh hoá user ID.
+- **[minor] Điểm bắt đầu đo 5 giây**: NFR-1 đã thống nhất với Q7, đo từ lúc server nhận request tới byte cuối được gửi, không tính thời gian mạng phía client.
+- **[minor] NFR-3**: đã viết lại thành tiêu chí đo được: p95 của truy vấn log thông thường không tăng quá X% khi có export chạy song song. X chưa xác định; thêm Q16 [Sớm] với assumption tạm 20%.
+- **[minor] FR-13 và phạm vi**: FR-13 nay ghi job xóa/ẩn danh log gốc là điều kiện tiên quyết, không xây mới. Phạm vi chỉ gồm xác nhận job đã có; nếu chưa có thì là hạng mục riêng, khách quyết ở Q4. Bước ẩn danh hoá user ID trong audit thuộc phạm vi.
+- **[minor] Pseudonym theo muối từng lượt xuất**: mục 4.3 ghi đây là đánh đổi có chủ đích, vì không tương quan được giữa các lượt xuất và cản đối chiếu forensic xuyên kỳ. Q1 nêu lại điều này, nhu cầu đó thuộc luồng unmasked (Q2).
+
+## Bảng gap
+Không áp dụng. Repo trống (chỉ có `.gitkeep`), nên không có hiện trạng để so sánh. Bảng mâu thuẫn C1–C5 nằm ở mục 2 của `SPEC.md`.
+
+## Yêu cầu
+Có 13 yêu cầu chức năng FR-1…FR-13, 6 yêu cầu phi chức năng NFR-1…NFR-6 và 13 tiêu chí nghiệm thu Cho/Khi/Thì AC-1…AC-13. Ưu tiên MoSCoW nằm trong từng FR. Các mục chính:
+- chống CSV injection (FR-6, AC-7);
+- UTF-8 BOM (FR-5, AC-6);
+- audit cả lượt xuất bị từ chối (FR-7, AC-8);
+- không lưu file xuất (FR-8, AC-9).
+
+## NFR & giả định
+Nằm ở mục 5 và mục 8 của `SPEC.md`. Giả định chính:
+- Nút của Branch Manager luôn masked.
+- Luồng unmasked chỉ cho vai trò forensic, duyệt 4-eyes, mặc định tắt.
+- p95 ≤ 5 giây tới 200.000 dòng, vượt thì xuất async.
+- Không lưu file, chỉ giữ audit record (metadata và hash). User ID trong record được ẩn danh hoá sau 12 tháng.
+
+## Ngoài phạm vi
+Nằm ở mục 1 của `SPEC.md`:
+- xuất ngoài team hoặc ngoài tháng trước;
+- lưu file lâu dài;
+- xuất định kỳ, định dạng khác CSV, gửi file ra kênh ngoài;
+- tích hợp hệ thống cũ;
+- xây mới job retention của log gốc (FR-13 chỉ xác nhận job đã có).
+
+## Câu hỏi còn mở
+Nằm ở mục `## Open questions and assumptions`, gồm Q1–Q16. Các câu [Chặn] là Q1, Q2, Q3, Q4, Q5 và Q12. Người trả lời là khách, và pháp chế ngân hàng cho Q12.
+
+## Tệp đã ghi
+- `/tmp/vb/a1-ambiguous-spec__B6__r2/SPEC.md` (đã sửa)
+
+Lệnh kiểm chứng:
+- Công cụ Grep với mẫu `^## Open questions and assumptions` tìm thấy tiêu đề ở dòng 142. Grep với mẫu `^\| Q16` thấy dòng Q16 ở cuối bảng, dòng 163.
+- Lệnh `grep -n '^## Open questions and assumptions' SPEC.md` chạy trong Bash chưa được: hook chỉ cho phép lệnh đã được duyệt. Người có quyền có thể chạy lại lệnh này.
+- Cụm "không chứa dữ liệu cá nhân" còn lại ở NFR-5 (metric) và trong C3 (đã phân biệt rõ hai loại dữ liệu). Cả hai đúng nghĩa.
+- Tôi chưa commit.
+
+Bản đầy đủ: `.ccoding/T-20261103-014253-33c/outputs/dev-S1-business-analyst.md`
+
+## Review
+
+Đã duyệt: SPEC.md đạt yêu cầu. Tệp có đủ 8 mục theo bố cục và tiêu đề `## Open questions and assumptions` đúng nguyên văn ở dòng 142. Mâu thuẫn C1–C5 đều có trong bảng mục 2, mỗi mâu thuẫn kèm assumption đúng như brief. Bảng Q1–Q16 có 16 dòng, mỗi dòng có mức [Chặn]/[Sớm] và assumption. Các điểm brief yêu cầu hỏi đều có câu hỏi tương ứng. Chống CSV injection (FR-6), UTF-8 BOM (FR-5) và audit cho lượt bị từ chối (FR-7) đều có, kèm tiêu chí nghiệm thu AC-1…AC-13. Spec không dẫn điều luật nào, giao việc đó cho pháp chế (Q12), và các con số được ghi rõ là giả định. Phần user ID trong audit là dữ liệu cá nhân nhân viên đã được xử lý nhất quán giữa C3, 4.4, AC-8, Q4 và Q12. Không có blocker hay major. Còn 3 góp ý minor, không chặn bàn giao.
+(Reviewer KHÔNG chạy lệnh kiểm tra nào — kết luận chưa có bằng chứng chạy thật; nêu rõ trong báo cáo.)
+
+
+---
+
+> ⚠ **Cần xem lại:** Phát triển: duyệt nhưng chưa có kiểm chứng chạy thật (không có lệnh kiểm tra của dự án, reviewer không chạy lệnh) — cần giám đốc xem.
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-014253-33c` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **34 in / 33.2k out**, cache đọc 238.9k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Business Analyst (@business-analyst) | dev | 18 | 19908 | 162565 | 2 |
+| QA Engineer (@qa-tester) | dev | 8 | 3837 | 37574 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 6 | 8518 | 36525 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 945 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-business-analyst.md` — S1 Viết SPEC.md cho tính năng Log Export (@business-analyst)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Business Analyst (@business-analyst) | dev | **78** B | 50 | 100 | 92 | 100 | 1 | 2 | 182k | 2/21 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **67** B | 50 | 100 | 60 | — | 0 | — | 45k | 1/2 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 41k | 0/4 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Business Analyst** (@business-analyst, 78 B):
+  - Qua review lần đầu 0/1 hạng mục, còn blocker ở review cuối 0/1 (bị nêu qua các vòng: 0 blocker, 1 major). Lỗi ở review cuối: —
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 2/2 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

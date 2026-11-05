@@ -1,0 +1,130 @@
+TAP version 13
+# Subtest: parse cơ bản
+ok 1 - parse cơ bản
+  ---
+  duration_ms: 1.57769
+  type: 'test'
+  ...
+# Subtest: format cơ bản
+ok 2 - format cơ bản
+  ---
+  duration_ms: 0.337066
+  type: 'test'
+  ...
+# Subtest: lỗi
+ok 3 - lỗi
+  ---
+  duration_ms: 0.485576
+  type: 'test'
+  ...
+# Subtest: zero, negative, rounding
+ok 4 - zero, negative, rounding
+  ---
+  duration_ms: 1.338388
+  type: 'test'
+  ...
+# Subtest: each unit and singular/plural
+ok 5 - each unit and singular/plural
+  ---
+  duration_ms: 0.224368
+  type: 'test'
+  ...
+# Subtest: largest
+ok 6 - largest
+  ---
+  duration_ms: 0.201322
+  type: 'test'
+  ...
+# Subtest: errors
+ok 7 - errors
+  ---
+  duration_ms: 0.918387
+  type: 'test'
+  ...
+# Subtest: lỗi: message theo JSON.stringify
+ok 8 - lỗi: message theo JSON.stringify
+  ---
+  duration_ms: 1.344419
+  type: 'test'
+  ...
+# Subtest: number
+ok 9 - number
+  ---
+  duration_ms: 0.229062
+  type: 'test'
+  ...
+# Subtest: số thuần
+ok 10 - số thuần
+  ---
+  duration_ms: 0.887952
+  type: 'test'
+  ...
+# Subtest: dấu
+ok 11 - dấu
+  ---
+  duration_ms: 0.299591
+  type: 'test'
+  ...
+# Subtest: dạng đơn vị và bí danh
+ok 12 - dạng đơn vị và bí danh
+  ---
+  duration_ms: 1.535663
+  type: 'test'
+  ...
+# Subtest: thứ tự, trùng, ký tự lạ
+ok 13 - thứ tự, trùng, ký tự lạ
+  ---
+  duration_ms: 0.293575
+  type: 'test'
+  ...
+# Subtest: ISO 8601
+ok 14 - ISO 8601
+  ---
+  duration_ms: 0.763088
+  type: 'test'
+  ...
+# Subtest: export đúng hai hàm
+ok 15 - export đúng hai hàm
+  ---
+  duration_ms: 1.106866
+  type: 'test'
+  ...
+# Subtest: round-trip: parse(format(x)) === parse(x), short và long
+ok 16 - round-trip: parse(format(x)) === parse(x), short và long
+  ---
+  duration_ms: 5.081677
+  type: 'test'
+  ...
+# Subtest: formatDuration với largest tạo chuỗi parse được
+ok 17 - formatDuration với largest tạo chuỗi parse được
+  ---
+  duration_ms: 5.277828
+  type: 'test'
+  ...
+# Subtest: tích hợp: 1h30m → "1h 30m"
+ok 18 - tích hợp: 1h30m → "1h 30m"
+  ---
+  duration_ms: 0.217003
+  type: 'test'
+  ...
+# Subtest: -0 không xuất hiện
+ok 19 - -0 không xuất hiện
+  ---
+  duration_ms: 0.146914
+  type: 'test'
+  ...
+# Subtest: thông điệp lỗi có tiền tố "Invalid duration: "
+ok 20 - thông điệp lỗi có tiền tố "Invalid duration: "
+  ---
+  duration_ms: 0.836208
+  type: 'test'
+  ...
+1..20
+# tests 20
+# suites 0
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 252.054348

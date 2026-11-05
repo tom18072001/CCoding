@@ -1,0 +1,14 @@
+Cả 6 lỗi trong ISSUES.md đã được sửa, và `npm test` xanh (13 test đều qua). Tôi không đổi API công khai.
+
+| # | Nguyên nhân gốc | Cách sửa |
+|---|---|---|
+| 1 | `Math.round(x*100)` bị sai số nhị phân (`1.005*100` ra `100.4999…`) | `toCents` giờ làm tròn theo chuỗi thập phân, half away from zero (`-1.005` → `-101`). Mã giảm cố định dùng lại `toCents`. Giá trị đơn tối thiểu vốn đã dùng `toCents` nên được sửa theo. |
+| 2 | `allocate` chỉ lấy phần nguyên, không chia số xu dư | Chia theo phần dư lớn nhất bằng số nguyên; phần bằng nhau thì phần đứng trước được trước. |
+| 3 | `freeUnits` nhóm theo `buy` thay vì `buy + free` | Đổi thành `floor(qty / (buy + free)) * free`. |
+| 4 | `endsAt` kiểu `'YYYY-MM-DD'` bị hiểu là 00:00 UTC của chính ngày đó | Hạn dùng được cộng thêm 1 ngày khi `endsAt` là dạng chỉ có ngày, nên mã bị từ chối từ `2026-12-01T00:00:00Z`. |
+| 5 | `updateQty` giữ chỗ lại toàn bộ số lượng mới, còn `removeItem` không trả hàng về kho | `updateQty` chỉ giữ thêm hoặc trả phần chênh lệch; `removeItem` và `updateQty(sku, 0)` trả lại toàn bộ số lượng. |
+| 6 | Thuế tính trên `gross` | Thuế tính trên `net`. |
+
+Ngoài ra tôi cho `lineTax` tính bằng số nguyên (thuế suất ×100) để tránh lỗi làm tròn dấu phẩy động cùng loại với lỗi 1.
+
+Test hồi quy nằm trong `test/regression.test.js`, mỗi lỗi có một test. Trong test #1, phần mã đơn tối thiểu chỉ kiểm tra áp mã được (không ném lỗi) với `minSubtotal: 1.01`, chưa kiểm tra trường hợp bị từ chối.

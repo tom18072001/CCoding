@@ -1,0 +1,85 @@
+# Báo cáo rà bảo mật `src/server.js`: đã ghi 7 phát hiện vào `findings.json`
+
+## Tóm tắt
+`findings.json` đã nằm ở thư mục gốc repo, gồm 7 phát hiện: 2 critical (SQLi dòng 30, command injection dòng 84) và 5 high. Không phát hiện nào trùng gốc với phát hiện khác, và không decoy nào bị báo nhầm. `src/` không bị sửa. Hệ thống ghi nhận S2 không chạy lệnh nào, dù báo cáo S2 có nêu lệnh. Vì vậy tôi tự đọc lại `src/server.js`, `findings.json` và `git status`. Kết quả khớp với S1 và S2. Còn một điểm mở: `verifyJwt` ở dòng 18 không được import hay định nghĩa trong tệp.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Rà `src/server.js`, ghi `findings.json` | @security | Đạt | `findings.json` có 7 mục đúng schema. Báo cáo: `.ccoding/T-20261102-162132-4a0/outputs/dev-S1-security.md` |
+| S2 | Đối chiếu độc lập: số dòng, loại, false positive | @senior-swe | Đạt về nội dung, nhưng không có bằng chứng chạy lệnh | `.ccoding/T-20261102-162132-4a0/outputs/dev-S2-senior-swe.md`. Phần chạy lệnh thì Trưởng phòng đã làm thay: `cat -n src/server.js`, `cat findings.json`, `git status --short` cho ra chỉ `?? findings.json` |
+
+Danh sách phát hiện, đã đối chiếu từng dòng với sink:
+
+| Dòng | Loại | Mức |
+|---|---|---|
+| 11 | hardcoded-secret | high |
+| 30 | sqli | critical |
+| 42 | path-traversal | high |
+| 58 | weak-crypto | high |
+| 65 | ssrf | high |
+| 71 | missing-authz | high |
+| 84 | command-injection | critical |
+
+## Quyết định
+- **Không báo các decoy:**
+  - Dòng 36: tên bảng là hằng số, giá trị đi qua `$1`.
+  - Dòng 47–53: truy vấn có tham số, lọc theo `owner_id`, có `basename` và allow-list đuôi tệp.
+  - Dòng 76–79: có `requireAdmin`, regex chặt, và `execFile` truyền mảng tham số.
+- **Không báo CSRF:** xác thực dùng Bearer header, không dùng cookie.
+- **Mỗi gốc lỗi chỉ báo một lần:** dòng 66 (trả nội dung từ SSRF) và output của export không được tách thành xss hay info-leak riêng.
+- **Path traversal dòng 42 được giữ:** Express giải mã `%2e%2e%2f` trong `:name`. `path.join` chuẩn hóa đường dẫn trước khi gọi `sendFile`, nên kiểm tra `..` của `send` không còn tác dụng. Đường dẫn vì thế ra được ngoài `/srv/reports`.
+- **Không báo `verifyJwt` (dòng 18):** chưa chứng minh được khai thác. Nếu hàm thiếu thật, mọi route dùng `requireUser` sẽ trả 500. Đó là lỗi chức năng, không phải lỗ hổng.
+
+## Kết quả review
+- Không còn blocker hay major. Cả 7 mục đều trỏ đúng dòng sink, `type` thuộc tập cho phép, và mức độ hợp lý.
+- Bằng chứng chạy lệnh của S2 chưa đáng tin vì hệ thống ghi nhận S2 không chạy lệnh nào. Trưởng phòng đã đọc lại tệp, và kết quả khớp.
+
+## Việc còn mở & rủi ro
+- **Giả định:** `db.query` dùng tham số vị trí của PostgreSQL, như đề bài mô tả. `./db.js` không được rà.
+- **`verifyJwt` chưa rõ nguồn.** Nếu hàm được định nghĩa ở nơi khác, có thể còn lỗi xác thực, ví dụ không kiểm tra chữ ký hoặc chấp nhận `alg: none`.
+- **Secret đã nằm trong lịch sử git** (dòng 11), nên phải rotate kể cả sau khi đã sửa mã.
+- Repo không có `package.json` hay bộ test, nên không có test hồi quy nào được chạy.
+
+## Bước tiếp theo
+1. **Sửa 7 lỗ hổng** (@backend-dev, nhiệm vụ riêng). Tiêu chí xong: chạy lại review thì `findings.json` rỗng, và có test hồi quy cho từng mục.
+2. **Rotate `JWT_SECRET`** (@devops). Tiêu chí xong: `git grep` không còn giá trị secret, và secret mới được nạp từ env hoặc secret manager.
+3. **Làm rõ `verifyJwt` và rà `db.js`** (@security, spike nhỏ). Tiêu chí xong: xác định được nguồn của hàm và có kết luận về thuật toán và cách kiểm tra chữ ký.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-162132-4a0` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **30 in / 10.7k out**, cache đọc 163.0k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | 10 | 5066 | 54552 | 2 |
+| QA Engineer (@qa-tester) | dev | 6 | 1310 | 36806 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 6 | 1839 | 36024 | 1 |
+| Chuyên viên ATTT (@security) | dev | 6 | 2146 | 33382 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 387 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-security.md` — S1 Rà bảo mật src/server.js và ghi findings.json (@security)
+- `outputs/dev-S2-senior-swe.md` — S2 Đối chiếu độc lập findings.json: số dòng, loại, false positive (@senior-swe)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | 100 | 100 | 100 | 100 | 0 | — | 60k | 0/3 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 38k | 0/2 |
+| Senior Software Engineer (@senior-swe) | dev | **93** A | 100 | 97 | 100 | 60 | 1 | 1 | 38k | 0/2 |
+| Chuyên viên ATTT (@security) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 36k | 0/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+- **Senior Software Engineer** (@senior-swe, 93 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **Chuyên viên ATTT** (@security, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

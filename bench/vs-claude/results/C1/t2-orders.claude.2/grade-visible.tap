@@ -1,0 +1,112 @@
+TAP version 13
+# Subtest: tính tiền không mã giảm giá
+ok 1 - tính tiền không mã giảm giá
+  ---
+  duration_ms: 1.512102
+  type: 'test'
+  ...
+# Subtest: giữ chỗ tồn kho khi thêm
+ok 2 - giữ chỗ tồn kho khi thêm
+  ---
+  duration_ms: 0.248927
+  type: 'test'
+  ...
+# Subtest: mã không tồn tại
+ok 3 - mã không tồn tại
+  ---
+  duration_ms: 0.563276
+  type: 'test'
+  ...
+# Subtest: toCents cơ bản
+ok 4 - toCents cơ bản
+  ---
+  duration_ms: 1.553294
+  type: 'test'
+  ...
+# Subtest: formatMoney
+ok 5 - formatMoney
+  ---
+  duration_ms: 0.372535
+  type: 'test'
+  ...
+# Subtest: allocate chia đều
+ok 6 - allocate chia đều
+  ---
+  duration_ms: 1.177762
+  type: 'test'
+  ...
+# Subtest: \#1 toCents làm tròn half away from zero với 3 chữ số thập phân
+ok 7 - \#1 toCents làm tròn half away from zero với 3 chữ số thập phân
+  ---
+  duration_ms: 2.021711
+  type: 'test'
+  ...
+# Subtest: \#1 giá sản phẩm, mã cố định và giá trị tối thiểu dùng toCents đúng
+ok 8 - \#1 giá sản phẩm, mã cố định và giá trị tối thiểu dùng toCents đúng
+  ---
+  duration_ms: 2.807533
+  type: 'test'
+  ...
+# Subtest: \#2 allocate theo phần dư lớn nhất, tổng đúng bằng total
+ok 9 - \#2 allocate theo phần dư lớn nhất, tổng đúng bằng total
+  ---
+  duration_ms: 1.333086
+  type: 'test'
+  ...
+# Subtest: \#2 tổng giảm của mã cố định / % bằng đúng số tiền giảm
+ok 10 - \#2 tổng giảm của mã cố định / % bằng đúng số tiền giảm
+  ---
+  duration_ms: 0.946907
+  type: 'test'
+  ...
+# Subtest: \#2 mã cố định không làm giỏ âm
+ok 11 - \#2 mã cố định không làm giỏ âm
+  ---
+  duration_ms: 0.46657
+  type: 'test'
+  ...
+# Subtest: \#3 freeUnits mua X tặng Y
+ok 12 - \#3 freeUnits mua X tặng Y
+  ---
+  duration_ms: 0.218673
+  type: 'test'
+  ...
+# Subtest: \#3 giỏ mua 2 tặng 1
+ok 13 - \#3 giỏ mua 2 tặng 1
+  ---
+  duration_ms: 0.477434
+  type: 'test'
+  ...
+# Subtest: \#4 mã dùng được tới hết ngày endsAt (UTC)
+ok 14 - \#4 mã dùng được tới hết ngày endsAt (UTC)
+  ---
+  duration_ms: 0.404236
+  type: 'test'
+  ...
+# Subtest: \#5 sửa số lượng chỉ giữ chỗ phần chênh lệch
+ok 15 - \#5 sửa số lượng chỉ giữ chỗ phần chênh lệch
+  ---
+  duration_ms: 0.762935
+  type: 'test'
+  ...
+# Subtest: \#5 xóa món trả lại tồn kho cho khách khác
+ok 16 - \#5 xóa món trả lại tồn kho cho khách khác
+  ---
+  duration_ms: 0.827039
+  type: 'test'
+  ...
+# Subtest: \#6 thuế tính trên net
+ok 17 - \#6 thuế tính trên net
+  ---
+  duration_ms: 0.476374
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 234.274741

@@ -1,0 +1,18 @@
+**Stage 4: FIX**
+
+The review found no defects. The only failures were in my throwaway fuzz script, which I corrected. After that, 5000 random values matched an independent reference serializer. That reference includes code-point ordering, integer-like keys and lone surrogates. I made no changes to `src/index.js` in this stage.
+
+## Final report
+
+`src/index.js` implements all four functions, and `npm test` passes all 12 tests. The 11 new tests are in `test/audit.test.js`, alongside the existing smoke test.
+
+- **`canonicalize`**: Serialization is hand-written. This is needed because JS reorders integer-like keys, so rebuilding objects wouldn't sort them correctly. Keys sort by code point. It follows `JSON.stringify` for `toJSON`, `undefined`, functions, `NaN` and boxed primitives. It throws on BigInt and cycles.
+- **`redact`**: Emails are replaced before phones, so an email like `0912345678@x.vn` becomes `[EMAIL]` as a whole. Phones use the exact `0`/`+84` plus `[35789]` plus 8 digits rule, with digit lookarounds on both sides. Objects with `toJSON` (such as Dates) are converted first, so nothing reaches the hash unredacted. One test confirms that two entries differing only in PII produce the same hash.
+- **`append` and `verify`**: `append` hashes only the redacted entry. `verify` checks seq, prev linkage and the recomputed hash (which must be lowercase hex). It returns the index of the first bad record. A record whose hash can't be computed counts as bad.
+
+Assumptions and limits:
+- **PII in keys**: Keys are not redacted, as the brief says, so PII in an object key would reach the hash. If that matters for the evidence use, the brief needs changing.
+- **Phone formats**: Only unseparated digits are redacted. Numbers written like `+84 912 345 678` or `091.234.5678` are left as they are.
+- **Email matching**: The email regex is pragmatic rather than RFC-complete.
+- **Cycles**: `redact` doesn't guard against cyclic input.
+- **Non-array chain**: `verify` returns `{ ok: false, index: 0 }`.

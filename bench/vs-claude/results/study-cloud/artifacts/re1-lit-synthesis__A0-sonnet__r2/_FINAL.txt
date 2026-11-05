@@ -1,0 +1,6 @@
+I wrote `answer.json` and `REVIEW.md` at the repository root. `REVIEW.md` is 493 words, inside the 300–500 target. I haven't re-read it since the last trim.
+
+- **q1:** P4 (LogGraphT) has the highest F1 on the full HDFS-X split, at 0.962. The other full-split results are 0.948 for P3 and 0.931 for P1. P2's 0.971 is on HDFS-X-small, which P6 says is not comparable to the full split.
+- **q2:** P5 reports results with less than 1% labeled data: 0.5% on BGL-X.
+- **q3:** The corpus does not report LogGraphT's inference energy consumption, so `not_in_corpus` is true. P4 gives only inference latency (3.1 ms per session on one A100) and no training cost.
+- **q4:** P1 and P3 disagree. P1 says log parsing into templates is necessary, and P3 says it is optional.

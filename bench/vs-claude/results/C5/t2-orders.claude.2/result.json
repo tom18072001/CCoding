@@ -1,0 +1,85 @@
+{
+ "run": {
+  "exitCode": 0,
+  "status": "done",
+  "wallSec": 89,
+  "costUsd": 0.4075253,
+  "turns": 5,
+  "tokens": {
+   "input": 10,
+   "output": 9650,
+   "cacheRead": 217811,
+   "cacheWrite": 21327
+  },
+  "models": [
+   "claude-haiku-5-5",
+   "claude-opus-5-5"
+  ],
+  "modelUsage": {
+   "claude-haiku-5-5": {
+    "inputTokens": 1351,
+    "outputTokens": 344,
+    "cacheReadInputTokens": 0,
+    "cacheCreationInputTokens": 0,
+    "webSearchRequests": 0,
+    "costUSD": 0.00030710000000000004,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 64000,
+    "thinkingTokens": 314,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 0,
+    "canonicalModel": "claude-haiku-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   },
+   "claude-opus-5-5": {
+    "inputTokens": 10,
+    "outputTokens": 9650,
+    "cacheReadInputTokens": 217811,
+    "cacheCreationInputTokens": 21327,
+    "webSearchRequests": 0,
+    "costUSD": 0.4072182,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000,
+    "thinkingTokens": 2173,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 21327,
+    "canonicalModel": "claude-opus-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   }
+  },
+  "finalText": "Tôi đã sửa xong cả 6 lỗi trong `ISSUES.md` và thêm 15 test hồi quy vào `test/regression.test.js`. `npm test` xanh: 18/18 test qua, gồm 3 test cũ. API công khai không đổi. Tôi chưa commit.\n\n| # | Nguyên nhân gốc | Cách sửa |\n|---|---|---|\n| 1 | `toCents` tính `Math.round(amount * 100)`, mà `1.005 * 100` ra `100.49999…` do sai số số thực nên bị làm tròn xuống. Mã giảm cố định trong `checkout.js` cũng tự nhân 100 kiểu này thay vì gọi `toCents`. | Dời dấu thập phân ngay trên chuỗi số thập phân (`\"1.005e2\"` → 100.5) rồi làm tròn half away from zero theo dấu, không trả về `-0`. `checkout.js` giờ dùng `toCents(promo.amount)`. Giá trị đơn tối thiểu vốn đã gọi `toCents` nên được sửa theo. |\n| 2 | `allocate` chỉ lấy phần nguyên của từng phần, bỏ mất số xu dư (giảm 1000 xu chia 3 dòng chỉ ra 999). | Làm đúng phương pháp phần dư lớn nhất: số xu dư chia cho các phần có phần lẻ lớn nhất, bằng nhau thì phần đứng trước được trước. Phần dư được tính bằng số nguyên nên không lệch. Mã giảm % và mã giảm cố định đều được sửa vì cùng dùng hàm này. |\n| 3 | `freeUnits` tính `floor(qty / buy) * free`, nên 2 hộp đã được tặng 1. | Đổi thành `floor(qty / (buy + free)) * free`: phải đủ một nhóm `buy + free` món thì mới được tặng. |\n| 4 | `endsAt: '2026-11-30'` được hiểu là 00:00 UTC ngày 30, nên mã hết hạn ngay từ đầu ngày. | Với `endsAt` dạng `YYYY-MM-DD`, mã còn hiệu lực tới trước `endsAt` + 1 ngày, tức bị từ chối từ `2026-12-01T00:00:00Z`. |\n| 5 | `updateQty` giữ chỗ thêm cả số lượng mới thay vì chỉ phần chênh lệch, còn `removeItem` không trả lại chỗ đã giữ. | `updateQty` chỉ giữ thêm hoặc trả lại phần chênh lệch, và nếu báo hết hàng thì giỏ không bị thay đổi. `removeItem` trả lại chỗ (sửa thành 0 cũng đi qua hàm này). |\n| 6 | Thuế được tính bằng `lineTax(l.gross, …)`. | Đổi thành `lineTax(l.net, …)`. |\n\nTest mới còn kiểm tra một số trường hợp biên và hành vi vốn đã đúng: mã giảm cố định không làm giỏ âm, ngày bắt đầu `startsAt`, đầu vào không phải số thì báo `TypeError`, xóa món không có trong giỏ thì không làm sai lượng giữ chỗ của giỏ khác.\n\n**Hai điểm tôi phải tự chọn cách hiểu:**\n- **Mua X tặng Y khi Y > 1:** chỉ tính tặng khi đủ nguyên nhóm `buy + free`. Ví dụ mua 3 tặng 2 mà giỏ có 4 món thì không tặng gì. Cách hiểu khác là cho tặng một phần nhóm (4 món → 1 món miễn phí). Với mọi cấu hình tặng 1 thì hai cách cho cùng kết quả. Báo cáo chỉ đưa ví dụ mua 2 tặng 1, nên nếu bộ nghiệm thu dùng cách kia thì bộ này có thể trượt.\n- **`endsAt` có kèm giờ cụ thể:** vẫn hết hạn đúng giờ đó, không được cộng thêm ngày. Chú thích trong code chỉ mô tả dạng `YYYY-MM-DD`.",
+  "workdir": "/tmp/bw/C5-t2-orders.claude.2-l3krn1/repo"
+ },
+ "task": "t2-orders",
+ "system": "claude",
+ "rep": 2,
+ "key": "t2-orders.claude.2",
+ "env": "cloud",
+ "startedAt": "2026-11-02T04:03:59.653Z",
+ "finishedAt": "2026-11-02T04:05:29.512Z",
+ "grade": {
+  "hidden": {
+   "pass": 60,
+   "fail": 0,
+   "total": 60,
+   "failed": [],
+   "ms": 153,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 18,
+   "fail": 0,
+   "total": 18
+  },
+  "changed": [
+   "~src/cart.js",
+   "~src/checkout.js",
+   "~src/money.js",
+   "~src/promotions.js",
+   "+test/regression.test.js"
+  ]
+ },
+ "audit": []
+}

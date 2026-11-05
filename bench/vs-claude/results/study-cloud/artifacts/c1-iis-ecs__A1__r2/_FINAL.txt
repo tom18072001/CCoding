@@ -1,0 +1,12 @@
+**Stage 3: Self-review**
+- Rules 1–5 are each covered in `src/iis.js`.
+- The CRLF test, the `-` omission, the several `#Fields:` lines, the pre-`#Fields:` skip and the column-count mismatch skip all passed in `npm test`.
+- `time-taken` is rounded to an integer in nanoseconds. Unknown fields are ignored, and `Object.hasOwn` stops names like `constructor` from matching.
+- The change to `test/basic.test.js` is only the test I appended.
+- I found no bugs.
+- I did not test an invalid date or time string, or a non-numeric status. The code omits the affected key in those cases.
+
+**Stage 4: Fix**
+Nothing needed fixing.
+
+**Report:** `parseIisLog` is implemented in `src/iis.js` as an ES module with the same export name. `npm test` passes both tests: the original one and a new one I added in `test/basic.test.js`. The assumptions I made are listed in the plan.

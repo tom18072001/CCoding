@@ -1,0 +1,12 @@
+{
+  "id": "a2-oncall-sms",
+  "category": "requirements",
+  "set": "exploratory",
+  "size": 2,
+  "sizeBasis": "sections: phần thân SPEC.md; mục \"Open questions and assumptions\"",
+  "title": "Spec from an ambiguous, self-contradicting brief (SMS on-call paging)",
+  "hypotheses": [],
+  "deliverable": "SPEC.md",
+  "brief": "Our customer (a Vietnamese insurer) sent this request for the log platform. Turn it into an implementation-ready specification in `SPEC.md` at the repository root. The spec must include a section headed `## Open questions and assumptions` listing every point that must be confirmed with the customer before building, each with the assumption you would use meanwhile.\n\nCustomer request (verbatim):\n> We want the log platform to page our on-call engineers by SMS when something goes wrong. Every on-call engineer must receive the full log line so they can act at once, but under our data-protection policy no customer identifier may be sent to a third-party SMS provider. Alerts must reach the engineer within 1 minute of the event and, to keep SMS costs low, alerts are sent as one batch every 15 minutes. The service must run 24/7, but we only staff on-call on business days. If nobody reacts, the alert goes up to a manager. Keep it simple.",
+  "grader": "checklist"
+}

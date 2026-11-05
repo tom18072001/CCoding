@@ -1,0 +1,1 @@
+Tối ưu hiệu năng hàm buildReport trong src/report.js theo PERF.md: dưới 1 giây với 200.000 dòng (npm run bench) và kết quả phải giống hệt bản hiện tại với mọi đầu vào hợp lệ — bản hiện tại là đặc tả, kể cả các hành vi trông lạ. Bộ nghiệm thu ẩn so kết quả với bản cũ trên nhiều bộ dữ liệu và đo thời gian. Thêm test so sánh với bản cũ, đảm bảo `npm test` xanh.

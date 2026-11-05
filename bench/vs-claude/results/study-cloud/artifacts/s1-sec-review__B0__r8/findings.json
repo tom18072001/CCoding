@@ -1,0 +1,9 @@
+[
+{"line":11,"type":"hardcoded-secret","severity":"high","fix":"Remove the JWT secret from source and load it from an environment variable or secret manager, then rotate it."},
+{"line":30,"type":"sqli","severity":"critical","fix":"Use a parameterized query such as WHERE title LIKE $1 with ['%' + q + '%'] instead of interpolating q."},
+{"line":42,"type":"path-traversal","severity":"high","fix":"Resolve the path, verify it stays under REPORT_DIR (or use sendFile with the root option and a basename), and reject otherwise."},
+{"line":58,"type":"weak-crypto","severity":"high","fix":"Hash passwords with a salted adaptive algorithm such as bcrypt, scrypt or argon2 instead of unsalted MD5."},
+{"line":65,"type":"ssrf","severity":"high","fix":"Validate req.body.url against an allowlist of hosts/schemes and block internal and link-local addresses before fetching."},
+{"line":70,"type":"missing-authz","severity":"high","fix":"Add requireAdmin or an ownership check (AND owner_id = $2) so users can delete only permitted tickets."},
+{"line":84,"type":"command-injection","severity":"critical","fix":"Use execFile with an argument array and validate format against an allowlist such as csv/json."}
+]

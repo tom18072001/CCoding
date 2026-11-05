@@ -42,7 +42,7 @@ async function gateway(plan: Plan, script: (who: string, user: string) => Call[]
   const stats = { peakRunners: 0, subPrompts: 0, toolResults: [] as Array<{ who: string; text: string }> };
   const srv = http.createServer(async (req, res) => {
     if (req.url === '/v1/models') {
-      res.writeHead(200, { 'content-type': 'application/json' });
+      res.writeHead(200, { 'content-type': 'application/json', connection: 'close' });
       return res.end(JSON.stringify({ data: [{ id: 'm-ok' }] }));
     }
     let raw = '';
@@ -55,7 +55,7 @@ async function gateway(plan: Plan, script: (who: string, user: string) => Call[]
     const who = /\(@([a-z-]+)\)/.exec(sys)?.[1] ?? '?';
     const executing = user.includes('## Hạng mục của bạn');
     const send = (o: unknown) => res.write(`data: ${JSON.stringify(o)}\n\n`);
-    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    res.writeHead(200, { 'content-type': 'text/event-stream', connection: 'close' });
     if (executing) {
       if (!tools.length && user.includes('worktree CON riêng')) stats.subPrompts++;
       if (tools.length) stats.toolResults.push({ who, text: text(tools.at(-1)) });
@@ -92,6 +92,7 @@ function app(url: string, dataDir: string, parallelWorktrees = true, resolveRoun
     runtimes: { fake: { type: 'openai-api', baseUrl: url, tags: 'none', local: false } },
     models: { fake: { opus: ['m-ok'], sonnet: ['m-ok'], haiku: ['m-ok'] } },
     tools: { ...base.tools, serializeWriters: true, parallelWorktrees, repoMap: false, ...(resolveRounds !== undefined ? { resolveRounds } : {}) },
+    lanes: { ...base.lanes, single: { ...base.lanes.single, enabled: false } }, // các test này kiểm luồng multi-agent: tắt làn đơn tự chọn
     herdr: { ...base.herdr, notify: false, agentPanes: false },
   });
 }
@@ -100,7 +101,7 @@ function project(a: ReturnType<typeof app>, repo: string) {
   a.store.saveProject({ id: 'repo', name: 'Repo', department: 'dev', workspace: repo, classification: 'internal', toolAccess: 'exec', createdAt: new Date().toISOString() });
 }
 
-test('repo git: hạng mục chạy lệnh chạy song song trong worktree con rồi gộp vào nhánh nhiệm vụ; hạng mục phụ thuộc thấy phần đã gộp', async () => {
+test('repo git: hạng mục chạy lệnh chạy song song trong worktree con rồi gộp vào nhánh nhiệm vụ; hạng mục phụ thuộc thấy phần đã gộp', { timeout: 120_000 }, async () => {
   const plan: Plan = [
     { id: 'S1', title: 'API', assignee: 'backend-dev', dependsOn: [] },
     { id: 'S2', title: 'CI', assignee: 'devops', dependsOn: [] },
@@ -117,9 +118,10 @@ test('repo git: hạng mục chạy lệnh chạy song song trong worktree con r
     const a = app(gw.url, dataDir, parallel);
     try {
       project(a, repo);
-      const t = a.orchestrator.submit({ brief: 'Xây tính năng', projectId: 'repo', options: { discussionRounds: 0, maxParallel: 3, maxRevisions: 0 } });
+      // làn đầy đủ: repo thử rất nhỏ nên 'auto' sẽ chọn làn nhanh (chuyển hạng mục của người review thành trọng tâm review)
+      const t = a.orchestrator.submit({ brief: 'Xây tính năng', projectId: 'repo', options: { discussionRounds: 0, maxParallel: 3, maxRevisions: 0, lane: 'full' } });
       const done = await a.orchestrator.waitFor(t.id);
-      assert.equal(done.status, 'done', done.error);
+      assert.equal(done.status, 'done', `${done.error} ${JSON.stringify(done.attention ?? done.pause)}`);
       const run = done.runs[0];
       assert.ok(run.subtasks.every((s) => s.status === 'done'), JSON.stringify(run.subtasks.map((s) => [s.id, s.status, s.error])));
       const msgs = a.store.transcript(t.id).map((m) => m.text).join('\n');
@@ -146,13 +148,13 @@ test('repo git: hạng mục chạy lệnh chạy song song trong worktree con r
       }
     } finally {
       gw.srv.close();
-      fs.rmSync(dataDir, { recursive: true, force: true });
-      fs.rmSync(repo, { recursive: true, force: true });
+      fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+      fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   }
 });
 
-test('gộp worktree con bị xung đột → giải quyết trong worktree con MỚI (CCoding gộp sẵn nhánh cũ), agent chỉ sửa dấu xung đột', async () => {
+test('gộp worktree con bị xung đột → giải quyết trong worktree con MỚI (CCoding gộp sẵn nhánh cũ), agent chỉ sửa dấu xung đột', { timeout: 120_000 }, async () => {
   const plan: Plan = [
     { id: 'S1', title: 'Sửa phần A', assignee: 'backend-dev', dependsOn: [] },
     { id: 'S2', title: 'Sửa phần B', assignee: 'devops', dependsOn: [] },
@@ -192,12 +194,12 @@ test('gộp worktree con bị xung đột → giải quyết trong worktree con 
     assert.doesNotMatch(gitc(repo, 'worktree', 'list'), /--s\d/i);
   } finally {
     gw.srv.close();
-    fs.rmSync(dataDir, { recursive: true, force: true });
-    fs.rmSync(repo, { recursive: true, force: true });
+    fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
-test('trong lúc một hạng mục giải quyết xung đột, hạng mục khác vẫn gộp được (không chờ khóa worktree chính)', async () => {
+test('trong lúc một hạng mục giải quyết xung đột, hạng mục khác vẫn gộp được (không chờ khóa worktree chính)', { timeout: 120_000 }, async () => {
   const plan: Plan = [
     { id: 'S1', title: 'Sửa phần A', assignee: 'backend-dev', dependsOn: [] },
     { id: 'S2', title: 'Sửa phần B', assignee: 'devops', dependsOn: [] },
@@ -228,12 +230,12 @@ test('trong lúc một hạng mục giải quyết xung đột, hạng mục kh�
     assert.equal(gitc(repo, 'show', `${done.branch}:shared.txt`), 'tu backend-dev\ntu devops');
   } finally {
     gw.srv.close();
-    fs.rmSync(dataDir, { recursive: true, force: true });
-    fs.rmSync(repo, { recursive: true, force: true });
+    fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
-test('vai trò không có quyền chạy lệnh (Kiến trúc sư) vẫn giải quyết được xung đột — CCoding gộp sẵn và tự hoàn tất merge', async () => {
+test('vai trò không có quyền chạy lệnh (Kiến trúc sư) vẫn giải quyết được xung đột — CCoding gộp sẵn và tự hoàn tất merge', { timeout: 120_000 }, async () => {
   const plan: Plan = [
     { id: 'S1', title: 'Sửa phần A', assignee: 'backend-dev', dependsOn: [] },
     { id: 'S2', title: 'Ghi tài liệu', assignee: 'solution-architect', dependsOn: [] },
@@ -258,12 +260,12 @@ test('vai trò không có quyền chạy lệnh (Kiến trúc sư) vẫn giải 
     assert.match(gitc(repo, 'log', '--format=%s', done.branch), /gộp lại ccoding\/[^ ]+-xd1 \(S2\)/, 'CCoding tự hoàn tất merge');
   } finally {
     gw.srv.close();
-    fs.rmSync(dataDir, { recursive: true, force: true });
-    fs.rmSync(repo, { recursive: true, force: true });
+    fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
-test('lượt giải quyết xung đột để lại dấu xung đột → KHÔNG commit dấu, hạng mục KHÔNG coi là xong, nhánh phần việc gốc giữ lại', async () => {
+test('lượt giải quyết xung đột để lại dấu xung đột → KHÔNG commit dấu, hạng mục KHÔNG coi là xong, nhánh phần việc gốc giữ lại', { timeout: 120_000 }, async () => {
   const plan: Plan = [
     { id: 'S1', title: 'Sửa phần A', assignee: 'backend-dev', dependsOn: [] },
     { id: 'S2', title: 'Sửa phần B', assignee: 'devops', dependsOn: [] },
@@ -289,12 +291,12 @@ test('lượt giải quyết xung đột để lại dấu xung đột → KHÔN
     assert.notEqual(done.status, 'done');
   } finally {
     gw.srv.close();
-    fs.rmSync(dataDir, { recursive: true, force: true });
-    fs.rmSync(repo, { recursive: true, force: true });
+    fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
-test('đường dự phòng (resolveRounds: 0): làm lại lần lượt trong worktree chính, agent tự merge nhánh cũ', async () => {
+test('đường dự phòng (resolveRounds: 0): làm lại lần lượt trong worktree chính, agent tự merge nhánh cũ', { timeout: 120_000 }, async () => {
   const plan: Plan = [
     { id: 'S1', title: 'Sửa phần A', assignee: 'backend-dev', dependsOn: [] },
     { id: 'S2', title: 'Sửa phần B', assignee: 'devops', dependsOn: [] },
@@ -329,12 +331,12 @@ test('đường dự phòng (resolveRounds: 0): làm lại lần lượt trong w
     assert.doesNotMatch(gitc(repo, 'branch', '--list'), /--s\d/i);
   } finally {
     gw.srv.close();
-    fs.rmSync(dataDir, { recursive: true, force: true });
-    fs.rmSync(repo, { recursive: true, force: true });
+    fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
-test('hook commit của repo không chặn CCoding commit/gộp worktree con', async () => {
+test('hook commit của repo không chặn CCoding commit/gộp worktree con', { timeout: 120_000 }, async () => {
   const plan: Plan = [
     { id: 'S1', title: 'API', assignee: 'backend-dev', dependsOn: [] },
     { id: 'S2', title: 'CI', assignee: 'devops', dependsOn: [] },
@@ -353,12 +355,12 @@ test('hook commit của repo không chặn CCoding commit/gộp worktree con', a
     for (const f of Object.values(files)) assert.match(gitc(repo, 'show', `${done.branch}:${f}`), /^tu /);
   } finally {
     gw.srv.close();
-    fs.rmSync(dataDir, { recursive: true, force: true });
-    fs.rmSync(repo, { recursive: true, force: true });
+    fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
-test('isWorktreeOf: thư mục con của repo khác (worktree gỡ dở) không được coi là worktree con', async () => {
+test('isWorktreeOf: thư mục con của repo khác (worktree gỡ dở) không được coi là worktree con', { timeout: 120_000 }, async () => {
   const { isWorktreeOf } = await import('../src/git.js');
   const repo = initRepo();
   const wt = `${repo}-wt`;
@@ -369,14 +371,14 @@ test('isWorktreeOf: thư mục con của repo khác (worktree gỡ dở) không 
     assert.equal(isWorktreeOf(path.join(repo, 'workspaces', 'wt-x'), repo), false, 'thư mục thường trong repo');
     const other = initRepo();
     assert.equal(isWorktreeOf(other, repo), false, 'repo khác');
-    fs.rmSync(other, { recursive: true, force: true });
+    fs.rmSync(other, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   } finally {
-    fs.rmSync(wt, { recursive: true, force: true });
-    fs.rmSync(repo, { recursive: true, force: true });
+    fs.rmSync(wt, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
-test('phụ thuộc mới cài trong worktree con rồi gộp → chạy lại lệnh chuẩn bị ở worktree nhiệm vụ trước khi kiểm tra; báo cáo ghi đúng commit', async () => {
+test('phụ thuộc mới cài trong worktree con rồi gộp → chạy lại lệnh chuẩn bị ở worktree nhiệm vụ trước khi kiểm tra; báo cáo ghi đúng commit', { timeout: 120_000 }, async () => {
   const plan: Plan = [
     { id: 'S1', title: 'Thêm thư viện', assignee: 'backend-dev', dependsOn: [] },
     { id: 'S2', title: 'CI', assignee: 'devops', dependsOn: [] },
@@ -421,12 +423,12 @@ test('phụ thuộc mới cài trong worktree con rồi gộp → chạy lại l
     assert.match(a.store.readRunFile(t.id, 'FINAL.md') ?? '', /commit: [0-9a-f]{10} — \d+ commit/);
   } finally {
     gw.srv.close();
-    fs.rmSync(dataDir, { recursive: true, force: true });
-    fs.rmSync(repo, { recursive: true, force: true });
+    fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
-test('hạng mục chỉ ghi tài liệu cũng làm trong worktree con (không bị commit dở khi gộp hạng mục khác), không chạy lệnh chuẩn bị', async () => {
+test('hạng mục chỉ ghi tài liệu cũng làm trong worktree con (không bị commit dở khi gộp hạng mục khác), không chạy lệnh chuẩn bị', { timeout: 120_000 }, async () => {
   const plan: Plan = [
     { id: 'S1', title: 'API', assignee: 'backend-dev', dependsOn: [] },
     { id: 'S2', title: 'ADR', assignee: 'solution-architect', dependsOn: [] },
@@ -461,7 +463,7 @@ test('hạng mục chỉ ghi tài liệu cũng làm trong worktree con (không b
     assert.match(setups[0], /S1 worktree con/);
   } finally {
     gw.srv.close();
-    fs.rmSync(dataDir, { recursive: true, force: true });
-    fs.rmSync(repo, { recursive: true, force: true });
+    fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

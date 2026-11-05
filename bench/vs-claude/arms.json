@@ -1,0 +1,196 @@
+{
+  "A0-opus": {
+    "kind": "claude",
+    "model": "opus",
+    "label": "Single Claude (Opus)"
+  },
+  "A0-sonnet": {
+    "kind": "claude",
+    "model": "sonnet",
+    "label": "Single Claude (Sonnet)"
+  },
+  "A1": {
+    "kind": "claude",
+    "model": "sonnet",
+    "process": true,
+    "label": "Single Claude + plan/self-review prompt"
+  },
+  "A2": {
+    "kind": "best-of-n",
+    "model": "sonnet",
+    "n": 3,
+    "label": "Single Claude best-of-N (compute-matched)"
+  },
+  "B0": {
+    "kind": "ccoding",
+    "options": {},
+    "label": "CCoding default"
+  },
+  "B1": {
+    "kind": "ccoding",
+    "options": {
+      "discussionRounds": 0
+    },
+    "label": "CCoding, no meeting"
+  },
+  "B2": {
+    "kind": "ccoding",
+    "options": {
+      "review": false
+    },
+    "label": "CCoding, no review"
+  },
+  "B3": {
+    "kind": "ccoding",
+    "options": {
+      "phaseModels": {
+        "route": "opus",
+        "plan": "opus",
+        "discuss": "opus",
+        "finalize": "opus",
+        "execute": "opus",
+        "review": "opus",
+        "revise": "opus",
+        "synthesize": "opus",
+        "accept": "opus"
+      }
+    },
+    "label": "CCoding, all Opus (optional)"
+  },
+  "B4": {
+    "kind": "ccoding",
+    "options": {
+      "acceptance": false
+    },
+    "label": "CCoding, no CTO acceptance"
+  },
+  "B5": {
+    "kind": "ccoding",
+    "agentId": "senior-swe",
+    "options": {},
+    "label": "CCoding single agent (senior-swe) - scaffolding without the office"
+  },
+  "B6": {
+    "kind": "ccoding",
+    "options": {
+      "lane": "fast"
+    },
+    "label": "CCoding làn nhanh"
+  },
+  "B7": {
+    "kind": "ccoding",
+    "options": {
+      "lane": "single"
+    },
+    "label": "CCoding làn đơn (B-01)"
+  },
+  "B7c": {
+    "kind": "ccoding",
+    "options": {
+      "lane": "single",
+      "slim": {
+        "accept": "full",
+        "compactTemplate": false,
+        "promptDiet": true
+      }
+    },
+    "label": "CCoding làn đơn, B-11(c) promptDiet"
+  },
+  "B7cb": {
+    "kind": "ccoding",
+    "options": {
+      "lane": "single",
+      "slim": {
+        "accept": "full",
+        "compactTemplate": true,
+        "promptDiet": true
+      }
+    },
+    "label": "CCoding làn đơn, B-11(b)+(c) mẫu gọn + promptDiet"
+  },
+  "B7cab": {
+    "kind": "ccoding",
+    "options": {
+      "lane": "single",
+      "slim": {
+        "accept": "brief",
+        "compactTemplate": true,
+        "promptDiet": true
+      }
+    },
+    "label": "CCoding làn đơn, B-11(a)+(b)+(c) nghiệm thu brief + mẫu gọn + promptDiet"
+  },
+  "B7cabO": {
+    "kind": "ccoding",
+    "options": {
+      "lane": "single",
+      "slim": {
+        "accept": "brief",
+        "compactTemplate": true,
+        "promptDiet": true
+      },
+      "phaseModels": {
+        "accept": "opus"
+      }
+    },
+    "label": "CCoding làn đơn, B7cab + CTO nghiệm thu bằng Opus (B-16, phaseModels.accept)"
+  },
+  "B0F": {
+    "kind": "ccoding",
+    "options": {
+      "lane": "full"
+    },
+    "label": "CCoding làn đầy đủ (ép)"
+  },
+  "B1F": {
+    "kind": "ccoding",
+    "options": {
+      "lane": "full",
+      "discussionRounds": 0
+    },
+    "label": "CCoding làn đầy đủ (ép), bỏ họp"
+  },
+  "oracle": {
+    "kind": "oracle",
+    "label": "Reference solution (grader self-test)"
+  },
+  "nearmiss": {
+    "kind": "nearmiss",
+    "label": "Near-miss solution (grader self-test, SR-24): phải chấm < 1,00"
+  },
+  "null": {
+    "kind": "null",
+    "label": "Does nothing (grader self-test)"
+  },
+  "B6w4": {
+    "kind": "ccoding",
+    "options": {
+      "lane": "fast"
+    },
+    "isolation": "worktree",
+    "label": "CCoding làn nhanh, worktree, fastLane.maxParallel 4 (E8)"
+  },
+  "B6w1": {
+    "kind": "ccoding",
+    "options": {
+      "lane": "fast",
+      "maxParallel": 1
+    },
+    "isolation": "worktree",
+    "server": "alt",
+    "label": "CCoding làn nhanh, worktree, lần lượt: server riêng có fastLane.maxParallel 1 (E8)"
+  },
+  "_suites": {
+    "_doc": "Không phải arm. Bộ bài cài lỗi B-12 (g1-*…g6-*, do S6 dựng): chọn bằng run.mjs --tasks suite:gates. Tự kiểm: --arms oracle,null. Đo B-16: --arms B7cab,B7cabO.",
+    "gates": {
+      "label": "B-12 bộ bài cài lỗi để đo recall của cổng chất lượng",
+      "kinds": {
+        "red-check": { "prefixes": ["g1-", "g2-"], "expectGate": "b02" },
+        "plan-omission": { "prefixes": ["g3-", "g4-"], "expectGate": "b10" },
+        "hidden-wrong": { "prefixes": ["g5-", "g6-"], "expectGate": "cto" }
+      },
+      "selfTestArms": ["oracle", "null"],
+      "pilotArms": ["B7cab", "B7cabO"]
+    }
+  }
+}

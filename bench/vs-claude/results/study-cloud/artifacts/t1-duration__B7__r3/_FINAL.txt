@@ -1,0 +1,74 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t1-duration__B7__r3] Duration parse/format theo đặc tả, nhiều trường hợp biên
+
+_Làn đơn: một agent làm trọn đề bài; báo cáo dựng tự động từ bàn giao và kết quả cổng chất lượng (không gọi model)._
+
+## Tóm tắt
+
+Làn đơn: Senior Software Engineer (@senior-swe) làm trọn đề bài trong worktree nhiệm vụ
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — [vs-claude t1-duration__B7__r3] Duration parse/format theo đặc tả, nhiều trường hợp biên (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã hiện thực `src/duration.js` (`parseDuration`, `formatDuration`) theo SPEC.md và bổ sung 7 test biên vào `test/duration.test.js`. `npm test` cho 10/10 test pass (baseline là 0/3). Chưa có bộ nghiệm thu ẩn để đối chiếu nên có một vài chỗ SPEC không nói rõ, tôi tự quyết (xem Rủi ro).
+
+## Tệp đã tạo/sửa
+- `src/duration.js`: viết mới toàn bộ.
+- `test/duration.test.js`: thêm test cho kiểu đầu vào, số thuần và dấu, dạng đơn vị, ISO 8601, format biên, `largest` (có nhớ lên đơn vị lớn hơn) và round-trip.
+
+## Kiểm chứng
+- `npm test` → exit 0, `# tests 10 · # pass 10 · # fail 0`.
+- Chưa chạy lint hay typecheck vì repo không có.
+
+## Quyết định thiết kế
+- Cộng và làm tròn bằng `BigInt` nên chính xác với số thập phân (`"0.0005s"` → 1). Cách này cũng tránh sai số dấu phẩy động và giữ nguyên số rất lớn như `1e21`, nên round-trip không hỏng.
+- Làm tròn half away from zero, `-0` trả về `0`.
+- Chuỗi được cắt khoảng trắng, đưa về chữ thường, rồi nhận số thuần, ISO hoặc dạng đơn vị. Dạng đơn vị được tách từng thành phần và kiểm tra thứ tự giảm dần, không lặp đơn vị.
+- ISO dùng một regex. Các trường hợp `P`, `PT`, `P1DT` và `P1W` kèm thành phần khác đều bị từ chối.
+- `largest` giữ các đơn vị liên tiếp từ đơn vị lớn nhất khác 0, làm tròn phần dư (≥ nửa đơn vị thì +1), rồi nhớ lên.
+- Thông báo lỗi dùng `JSON.stringify`, có fallback `String` cho giá trị như BigInt mà `JSON.stringify` không xử lý được.
+
+## Rủi ro & việc còn mở
+- Với `options` hoặc `largest`, tôi coi `undefined` là mặc định. `options` bằng `null` được coi như `{}`, còn `largest: null` thì ném `TypeError`.
+- Dấu `-` hoặc `+` được cho phép khoảng trắng phía sau cả với ISO (`"- PT1S"`). SPEC chỉ nói rõ điều này cho dạng đơn vị.
+- Khoảng trắng nhận theo `\s` của JS.
+
+Bản đầy đủ: `.ccoding/T-20261102-170531-82b/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng (làn đơn): lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-170531-82b` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **10 in / 8,456 out**, cache đọc 80.6k, 1 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 10 | 8456 | 80608 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude t1-duration__B7__r3] Duration parse/format theo đặc tả, nhiều trường hợp biên (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 3 · # suites 0 · # pass 0 · # fail 3 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 10 · # suites 0 · # pass 10 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **100** A | — | 100 | 100 | 100 | 1 | 1 | 89k | 0/4 |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

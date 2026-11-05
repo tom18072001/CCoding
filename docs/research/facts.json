@@ -1,0 +1,922 @@
+{
+  "stale": [
+    {
+      "id": "C6-no-data",
+      "pattern": "C6 chưa có (dữ liệu|trong)",
+      "reason": "Đã có dữ liệu C6: docs/research/performance/c6-extract/ (C6-runs.csv, C6-calls.csv…); cập nhật bằng số C6 (dev-review.md R1-02..R1-12)",
+      "exceptions": [
+        {
+          "file": "docs/research/dev-review.md",
+          "line": 200,
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng lỗi R1-02..R1-12)"
+        },
+        {
+          "file": "docs/research/dev-review.md",
+          "line": 201,
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng lỗi R1-02..R1-12)"
+        },
+        {
+          "file": "docs/research/dev-review.md",
+          "line": 202,
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng lỗi R1-02..R1-12)"
+        },
+        {
+          "file": "docs/research/dev-review.md",
+          "line": 210,
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng lỗi R1-02..R1-12)"
+        },
+        {
+          "file": "docs/research/dev-review/verification.md",
+          "line": 69,
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng xác minh)"
+        },
+        {
+          "file": "docs/research/dev-review/verification.md",
+          "line": 83,
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng xác minh)"
+        },
+        {
+          "file": "docs/research/dev-review/verification.md",
+          "line": 84,
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng xác minh)"
+        },
+        {
+          "file": "docs/research/dev-review/verification.md",
+          "line": 85,
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng xác minh)"
+        },
+        {
+          "file": "docs/research/improvement-backlog.md",
+          "line": 289,
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (mô tả vấn đề B-05; dòng dời 284 → 285 do chèn dòng cập nhật gói 6, rồi 285 → 288 do ghi chú R15 và hai dòng B-18, B-19 ở §0, rồi 288 → 289 do dòng R16)"
+        }
+      ]
+    },
+    {
+      "id": "agent-deadline-27-11",
+      "pattern": "AGENT[^\\n]{0,120}27/11|27/11[^\\n]{0,120}AGENT",
+      "reason": "Hạn AGENT'27 là 13/11/2026, không phải 27/11 (BRIEF-2.md mục 5; publication-plan.md dòng AGENT'27)",
+      "exceptions": [
+        {
+          "file": "docs/research/BRIEF-2.md",
+          "line": 13,
+          "reason": "Dòng nêu rõ \"không phải ≈ 27/11\", đúng là 13/11/2026"
+        }
+      ]
+    },
+    {
+      "id": "c7t2-review-missed",
+      "pattern": "review không bắt",
+      "reason": "Lượt C7 t2 (52/60): reviewer bắt được, lỗi ở điều phối (hạng mục thứ ba không chạy) — token-analysis.md:489, publication-plan.md:28, PROCESS-REVIEW.md:312",
+      "exceptions": [
+        {
+          "file": "docs/research/performance/token-analysis.md",
+          "line": 489,
+          "reason": "Dòng bác bỏ: BRIEF-2 (\"review không bắt\") không khớp dữ liệu"
+        }
+      ]
+    },
+    {
+      "id": "c1c8-single-labeller",
+      "pattern": "do một người gán",
+      "reason": "Hai bên gán nhãn MAST là hai agent cùng họ mô hình, không phải một người (agreement.md M-1; paper.md §8.1(3))",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": [
+        {
+          "file": "docs/research/paper/paper.md",
+          "line": 576,
+          "reason": "Trích dẫn câu cũ để ghi nhận đã sửa, không phải khẳng định (dòng dời 513 → 547 do chèn §4.3, → 563 ở gói 6 do viết lại §7.4 và §9, → 573 ở v0.5 do thêm E1, E2 và sai lệch, → 576 ở v0.6 do thêm §6.1 mục (8) và R19)"
+        }
+      ]
+    },
+    {
+      "id": "l1l2-no-task-json",
+      "pattern": "l[12]-[a-z]+[^|\\n]{0,30}chưa có `task\\.json`",
+      "reason": "l1-modules và l2-chain đã có task.json từ 3/11/2026 (D8, 3ff7df3; oracle 1,00, null ≤ 0,01); còn thiếu là phép đo A1/A2, không phải bài",
+      "files": [
+        "paper/paper.md",
+        "improvement-backlog.md",
+        "challenges.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "mast-abstract-only",
+      "pattern": "MAST mới đọc",
+      "reason": "MAST đã được đọc thân bài bản v3 (related-work.md §2.12, gói 2); chưa đọc phụ lục",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b-open-proposal-label",
+      "pattern": "ĐỀ XUẤT, (BỊ CHẶN|CHƯA CHẠY|KHÔNG CHẠY)|\\*\\*HOÃN\\*\\*",
+      "reason": "B-09, B-12…B-17 đã chuyển sang D9 hoặc cần đo theo quyết định của giám đốc 3/11/2026 (BRIEF-D9.md, 90cd913); không còn nhãn đề xuất/hoãn",
+      "files": [
+        "improvement-backlog.md"
+      ],
+      "exceptions": []
+    }
+  ],
+  "numbers": [
+    {
+      "id": "agent-deadline",
+      "value": "13/11/2026",
+      "reason": "Nguồn: publication-plan.md dòng AGENT'27 (kiểm ngày 2/11/2026) và BRIEF-2.md mục 5",
+      "pattern": "AGENT[^\\n]{0,60}?(\\d{1,2}/\\d{1,2}/20\\d\\d)",
+      "files": [
+        "publication-plan.md",
+        "BRIEF-2.md",
+        "paper/paper.md",
+        "presentation-notes.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "c7t2-score",
+      "value": "52/60",
+      "reason": "Nguồn: token-analysis.md T-h (kiểm lượt C7 t2) và PROCESS-REVIEW.md:312",
+      "pattern": "C7 t2[^\\n]{0,40}?\\((\\d+/60)\\)",
+      "files": [
+        "**/*.md",
+        "../PROCESS-REVIEW.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-token-B0-vs-A0",
+      "value": "6,58",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
+      "pattern": "^\\| B0 \\(đủ phòng\\)[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-time-B0-vs-A0",
+      "value": "9,76",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
+      "pattern": "^\\| B0 \\(đủ phòng\\)[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-token-B5-vs-A0",
+      "value": "1,61",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
+      "pattern": "^\\| B5 \\(một agent[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-time-B5-vs-A0",
+      "value": "2,59",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
+      "pattern": "^\\| B5 \\(một agent[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-token-B6-vs-A0",
+      "value": "4,23",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
+      "pattern": "^\\| B6 \\(làn nhanh\\)[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-time-B6-vs-A0",
+      "value": "6,29",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
+      "pattern": "^\\| B6 \\(làn nhanh\\)[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-token-B7-vs-A0",
+      "value": "2,61",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
+      "pattern": "^\\| B7 \\(làn đơn\\)[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-time-B7-vs-A0",
+      "value": "3,96",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
+      "pattern": "^\\| B7 \\(làn đơn\\)[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-token-A1-vs-A0",
+      "value": "0,96",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
+      "pattern": "^\\| A1 \\(Claude[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-time-A1-vs-A0",
+      "value": "1,28",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
+      "pattern": "^\\| A1 \\(Claude[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-token-A2-vs-A0",
+      "value": "2,23",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
+      "pattern": "^\\| A2 \\(best-of-3\\)[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-time-A2-vs-A0",
+      "value": "2,55",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
+      "pattern": "^\\| A2 \\(best-of-3\\)[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b01-b7-main-token",
+      "value": "2,498",
+      "reason": "bench/vs-claude/results/study-cloud-final/prereg-tests-448.md §2 bảng \"Chính\" (A0 r4–9 so với B7 r1–9); khác 2,519 của step4-extra-448.md §2 (A0 r1–11): hai phép so khác nhau",
+      "pattern": "^\\| B7; \\*\\*chính\\*\\*[^|]*\\|[^|]*\\| (\\d,\\d{3}) \\[",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b01-b7-main-time",
+      "value": "2,566",
+      "reason": "bench/vs-claude/results/study-cloud-final/prereg-tests-448.md §2 bảng \"Chính\"",
+      "pattern": "^\\| B7; \\*\\*chính\\*\\*[^|]*\\|[^|]*\\|[^|]*\\| (\\d,\\d{3}) \\[",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b01-b7-sens3-token",
+      "value": "2,519",
+      "reason": "bench/vs-claude/results/study-cloud-final/step4-extra-448.md §2 (A0 r1–11)",
+      "pattern": "^\\| B7; độ nhạy 3[^|]*\\|[^|]*\\| (\\d,\\d{3}) \\[",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b01-b6-main-token",
+      "value": "3,921",
+      "reason": "bench/vs-claude/results/study-cloud-final/step4-extra-448.md §1 (A0 r1–9 so với B6 r1–9)",
+      "pattern": "^\\| B6; \\*\\*chính\\*\\*[^|]*\\|[^|]*\\| (\\d,\\d{3}) \\[",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b01-b6-main-time",
+      "value": "4,047",
+      "reason": "bench/vs-claude/results/study-cloud-final/step4-extra-448.md §1",
+      "pattern": "^\\| B6; \\*\\*chính\\*\\*[^|]*\\|[^|]*\\|[^|]*\\| (\\d,\\d{3}) \\[",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "cache-sens-b7-t5",
+      "value": "2,55",
+      "reason": "docs/research/analysis/cache-sensitivity.md C-4 (hệ số cacheRead 0,05, ảnh chụp 276 dòng); Bảng 13, hàng T5",
+      "pattern": "^\\| B7/A0, T5 \\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "cache-sens-b7-all",
+      "value": "2,73",
+      "reason": "docs/research/analysis/cache-sensitivity.md C-4; Bảng 13 (18 bài)",
+      "pattern": "^\\| B7/A0, mọi bài[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "cache-sens-b6-all",
+      "value": "4,03",
+      "reason": "docs/research/analysis/cache-sensitivity.md C-4; Bảng 13 (5 bài)",
+      "pattern": "^\\| B6/A0, mọi bài[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "kappa-mast-detail",
+      "value": "0,673",
+      "reason": "docs/research/analysis/agreement.md M-1; giữa hai agent cùng họ mô hình, không phải κ người–người",
+      "pattern": "κ = (0,\\d{3}) \\(mức chi tiết\\)",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "pabak-judge-regex",
+      "value": "0,881",
+      "reason": "docs/research/analysis/agreement.md A-2 (judge so với regex, gộp r1 + a1)",
+      "pattern": "đọc PABAK (0,\\d{3})",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "prereg-keys-kept",
+      "value": "440",
+      "reason": "bench/vs-claude/results/study-cloud-final/final-extra.md đầu tệp (440 khóa giữ); README.md mục \"Dữ liệu\"",
+      "pattern": "giữ (\\d{3}) \\(tệp R2",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "prereg-rows-kept-tests",
+      "value": "432",
+      "reason": "bench/vs-claude/results/study-cloud-final/prereg-tests-448.md §0–§1 (16 lượt loại, 432 giữ)",
+      "pattern": "đọc 448 dòng, giữ (\\d{3})",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "gate-false-block",
+      "value": "0",
+      "reason": "docs/research/analysis/agreement.md C-1 (cổng B-02: 1/1 lượt lỗi thật; 0/50 chặn nhầm)",
+      "pattern": "chặn nhầm (\\d+) trong 50 lượt",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-rhat-token",
+      "value": "2,04",
+      "reason": "bench/vs-claude/results/b7prime/RUNLOG.md (Điểm dừng GĐ1); tính lại bằng bootstrapRatio, hạt 20261102, B = 4000, CI 90 %",
+      "pattern": "token có trọng số \\*\\*R̂ = (\\d,\\d\\d)\\*\\*",
+      "files": [
+        "improvement-backlog.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-ci-token",
+      "value": "1,45; 2,99",
+      "reason": "bench/vs-claude/results/b7prime/RUNLOG.md (Điểm dừng GĐ1); tính lại bằng bootstrapRatio, hạt 20261102, B = 4000, CI 90 %",
+      "pattern": "R̂ = 2,04\\*\\*, CI 90 % \\[(\\d,\\d\\d; \\d,\\d\\d)\\]",
+      "files": [
+        "improvement-backlog.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-rhat-time",
+      "value": "2,16",
+      "reason": "bench/vs-claude/results/b7prime/RUNLOG.md (Điểm dừng GĐ1); tính lại bằng bootstrapRatio, hạt 20261102, B = 4000, CI 90 %",
+      "pattern": "thời gian thực \\*\\*R̂ = (\\d,\\d\\d)\\*\\*",
+      "files": [
+        "improvement-backlog.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-ci-time",
+      "value": "1,53; 3,21",
+      "reason": "bench/vs-claude/results/b7prime/RUNLOG.md (Điểm dừng GĐ1); tính lại bằng bootstrapRatio, hạt 20261102, B = 4000, CI 90 %",
+      "pattern": "R̂ = 2,16\\*\\*, CI 90 % \\[(\\d,\\d\\d; \\d,\\d\\d)\\]",
+      "files": [
+        "improvement-backlog.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-n-per-cell",
+      "value": "2",
+      "reason": "b7prime/RUNLOG.md: 2 lượt mỗi ô × 5 bài",
+      "pattern": "n = (\\d) lượt mỗi ô × 5 bài \\(t1–t5\\)",
+      "files": [
+        "improvement-backlog.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-server",
+      "value": "1333eef",
+      "reason": "b7prime/RUNLOG.md dòng 5",
+      "pattern": "server `(\\w{7})`; Claude Code CLI",
+      "files": [
+        "improvement-backlog.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-cli",
+      "value": "2.1.317",
+      "reason": "b7prime/RUNLOG.md dòng 7",
+      "pattern": "Claude Code CLI (\\d\\.\\d\\.\\d+) \\(W1–W5",
+      "files": [
+        "improvement-backlog.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "s43-main-commits",
+      "value": "16",
+      "reason": "context/merge-main-2026-11-03.md §1: 16 commit của main (e0bd2f4..9e6079b)",
+      "pattern": "nhận (\\d+) commit mới của `main`",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "s43-merge-hash",
+      "value": "37f88b6",
+      "reason": "context/merge-main-2026-11-03.md §1: merge commit",
+      "pattern": "merge commit `(\\w{7})`, không rebase",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "s43-tests-linux",
+      "value": "285/285",
+      "reason": "Đề bài vòng 4 gói 5 (Phòng Dev báo, Linux); merge-main §6 ghi 282 đạt/0 lỗi/3 bỏ qua ở lần chạy đầu",
+      "pattern": "`npm test` (\\d+/\\d+) trên Linux",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "s43-b7prime-server",
+      "value": "1333eef",
+      "reason": "b7prime/RUNLOG.md dòng 5; khớp V4-04, backlog B-11.5, paper §6.1(7)",
+      "pattern": "máy chủ 7425 ở `(\\w{7})` cho B7′",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "s43-b7prime-cli",
+      "value": "2.1.317",
+      "reason": "b7prime/RUNLOG.md dòng 7",
+      "pattern": "CLI (\\d\\.\\d\\.\\d+) thay cho 2\\.1\\.316",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "s43-w-main-server",
+      "value": "e0bd2f4",
+      "reason": "study-cloud/RUNLOG.md dòng 5, 56: máy chủ 7424 ở origin/main",
+      "pattern": "máy chủ 7424 ở `origin/main` `(\\w{7})`",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "s43-w-branch-server",
+      "value": "7fb18ba",
+      "reason": "study-cloud/RUNLOG.md dòng 5, 56: máy chủ 7425 ở nhánh",
+      "pattern": "máy chủ 7425 ở nhánh `(\\w{7})`",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-server-paper",
+      "value": "1333eef",
+      "reason": "b7prime/RUNLOG.md dòng 5; khớp backlog B-11.5",
+      "pattern": "server `(\\w{7})`, Claude Code CLI",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-n-paper",
+      "value": "2",
+      "reason": "b7prime/RUNLOG.md: 2 lượt mỗi ô × 5 bài",
+      "pattern": "n = (\\d) lượt mỗi ô, 10 lượt mỗi arm",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-rhat-token-paper",
+      "value": "2,04",
+      "reason": "như b7prime-rhat-token (backlog B-11.5)",
+      "pattern": "token có trọng số là \\*\\*×(\\d,\\d\\d)\\*\\*",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "e1-h-same",
+      "value": "0,98",
+      "reason": "bench/vs-claude/results/b14-diag/RUNLOG.md, cặp (a) giống hệt, h lượt 2",
+      "pattern": "giữ nguyên mọi thứ: h = (\\d,\\d\\d)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e1-h-tools",
+      "value": "0,00",
+      "reason": "b14-diag/RUNLOG.md, cặp (b) khác bộ công cụ",
+      "pattern": "đổi bộ công cụ: h = (\\d,\\d\\d)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e1-cw-tools",
+      "value": "41 464",
+      "reason": "b14-diag/RUNLOG.md, cặp (b), CW lượt 2",
+      "pattern": "\\(ghi (41 464), đọc 0\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e1-h-cwd",
+      "value": "0,98",
+      "reason": "b14-diag/RUNLOG.md, cặp (c) khác cwd",
+      "pattern": "\\(`cwd`\\): h = (\\d,\\d\\d)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e1-runs",
+      "value": "7",
+      "reason": "b14-diag/RUNLOG.md, lần 2: 7 lượt claude -p (1 khởi động + 6 đo)",
+      "pattern": "Phép chẩn đoán gồm (\\d+) lượt `claude -p`",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e1-cli-version",
+      "value": "2.1.318",
+      "reason": "b14-diag/RUNLOG.md, bảng đầu",
+      "pattern": "Claude Code CLI (2\\.1\\.318) với mô hình Sonnet",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-runs",
+      "value": "28",
+      "reason": "gates-pilot/RUNLOG.md: 24 + 4 lượt done",
+      "pattern": "Một thí điểm (\\d+) lượt, tất cả hoàn tất",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-runs-b7",
+      "value": "12",
+      "reason": "gates-pilot/RUNLOG.md, bảng 'Kết quả chạy'",
+      "pattern": "B7cab và B7cabO có (\\d+) lượt mỗi arm",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-runs-b6",
+      "value": "4",
+      "reason": "gates-pilot/RUNLOG.md, bảng 'Kết quả chạy'",
+      "pattern": "B6 có (\\d+) lượt\\.",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-qhat-ci-hi-pooled",
+      "value": "0,60",
+      "reason": "gates-pilot/RUNLOG.md (K4): q̂ 0/4, CP 95 % [0,00; 0,60]",
+      "pattern": "q̂ = 0/4 = 0,00 ở cả B7cab và B7cabO, khoảng CP 95 % \\[0,00; (\\d,\\d\\d)\\]",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-qhat-ci-hi-excl",
+      "value": "0,71",
+      "reason": "gates-pilot/RUNLOG.md (K4): bỏ 6 lượt, q̂ 0/3, CP 95 % [0,00; 0,71]",
+      "pattern": "q̂ = 0/3 \\[0,00; (\\d,\\d\\d)\\]",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-excluded-runs",
+      "value": "6",
+      "reason": "gates-pilot/RUNLOG.md, mục 'Sai lệch quy trình': 6 lượt đầu của lệnh 1",
+      "pattern": "Khi bỏ (\\d+) lượt \"lỡ thấy điểm\"",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-b10-block",
+      "value": "1",
+      "reason": "gates-pilot/RUNLOG.md (K4): b10 chặn 1/4 ở mỗi arm B7",
+      "pattern": "cổng chặn (\\d)/4 lượt ở mỗi arm B7",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-cost-b7cab",
+      "value": "77 657",
+      "reason": "gates-pilot/RUNLOG.md (K4): token có trọng số TB/lượt, gộp 12 lượt",
+      "pattern": "B7cab (77 657), B7cabO",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-cost-b7cabo",
+      "value": "102 742",
+      "reason": "gates-pilot/RUNLOG.md (K4): gộp 12 lượt",
+      "pattern": "B7cabO (102 742), B6",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-cost-b6",
+      "value": "132 925",
+      "reason": "gates-pilot/RUNLOG.md (K4): 4 lượt",
+      "pattern": "B6 (132 925); test ẩn",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-cost-b7cab-excl",
+      "value": "78 182",
+      "reason": "gates-pilot/RUNLOG.md (K4): bỏ 6 lượt, còn 9",
+      "pattern": "B7cab (78 182) \\(9/9\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-cost-b7cabo-excl",
+      "value": "105 915",
+      "reason": "gates-pilot/RUNLOG.md (K4): bỏ 6 lượt, còn 9",
+      "pattern": "B7cabO (105 915) \\(8/9\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-hidden-b7cab",
+      "value": "12/12",
+      "reason": "gates-pilot/RUNLOG.md (K4): test ẩn đạt, gộp",
+      "pattern": "test ẩn đạt (12/12), 11/12 và 4/4",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-hidden-b7cabo",
+      "value": "11/12",
+      "reason": "gates-pilot/RUNLOG.md (K4): test ẩn đạt, gộp",
+      "pattern": "test ẩn đạt 12/12, (11/12) và 4/4",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "h2-estimate",
+      "value": "2,8",
+      "reason": "k2-stats-review-2026-11-04.md mục 8 và S3b: analyze.mjs, H2 +2,8 pp",
+      "pattern": "Ước lượng \\+(\\d,\\d) pp, TOST 90 %",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "h2-ci-upper",
+      "value": "8,3",
+      "reason": "k2-stats-review-2026-11-04.md mục 8 và S3b: TOST 90 % [0,0; +8,3 pp]",
+      "pattern": "TOST 90 % \\[0,0; \\+(\\d,\\d) pp\\]",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "h7-pooled-sd-ratio",
+      "value": "0,00; 1,00",
+      "reason": "k2-stats-review-2026-11-04.md mục 4; S3b: tỉ số SD gộp 0,00, CI 90 % [0,00; 1,00], 13 bài; số đối chiếu, không phải kết luận",
+      "pattern": "cho 0,00 \\[(0,00; 1,00)\\] trên 13 bài",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "h7-zero-branch-count",
+      "value": "139",
+      "reason": "S3b, V1: 139/4000 mẫu bootstrap rơi vào nhánh 0/0 := 1",
+      "pattern": "(139)/4000 mẫu bootstrap",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "h7-zero-branch-pct",
+      "value": "3,48",
+      "reason": "S3b, V1: 139/4000 = 3,48 %",
+      "pattern": "139/4000 mẫu bootstrap \\((\\d,\\d\\d) %\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b01-b7-token-analyze",
+      "value": "2,460",
+      "reason": "S3b: analyze.mjs cho B7 phép (a) token; prereg-tests.mjs cho 2,498",
+      "pattern": "(2,460) so với 2,498 \\(token\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b01-b7-time-analyze",
+      "value": "2,482",
+      "reason": "S3b: analyze.mjs cho B7 phép (b) thời gian; prereg-tests.mjs cho 2,566",
+      "pattern": "(2,482) so với 2,566 \\(thời gian\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-b01-b7-token",
+      "value": "2,519",
+      "reason": "v0.6, mã T-2/T-3/T-6/B-2: docs/research/context/d12-stats-fixes-2026-11-04.md mục 2.1, hàng 'study-cloud B0 --b01-arm B7' B-01a: R=2,519 [2,052; 3,131] (trước D12: 2,460 [2,070; 3,023])",
+      "pattern": "--b01-arm B7` cho (2,519) \\[2,052; 3,131\\] \\(token\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-b01-b7-time",
+      "value": "2,580",
+      "reason": "v0.6, mã T-2/B-2: d12-stats-fixes-2026-11-04.md mục 2.1, B-01b B7: R=2,580 [2,097; 3,242] (trước D12: 2,482 [2,079; 3,140])",
+      "pattern": "và (2,580) \\[2,097; 3,242\\] \\(thời gian\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-b01-b6-token",
+      "value": "3,934",
+      "reason": "v0.6, mã T-2/B-2: d12-stats-fixes-2026-11-04.md mục 2.1, B-01a với --b01-arm B6: R=3,934 [3,514; 4,392] (trước D12: 3,752 [3,415; 4,290])",
+      "pattern": "`--b01-arm B6`: (3,934) \\[3,514; 4,392\\]",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-b01-b6-time",
+      "value": "4,074",
+      "reason": "v0.6, mã T-2/B-2: d12-stats-fixes-2026-11-04.md mục 2.1, B-01b với --b01-arm B6: R=4,074 [3,468; 4,753] (trước D12: 3,798 [3,297; 4,622])",
+      "pattern": "và (4,074) \\[3,468; 4,753\\], \"bác bỏ\"",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-b01c-b6",
+      "value": "0,987",
+      "reason": "v0.6, mã T-3/T-6/T-2: d12-stats-fixes-2026-11-04.md mục 2.1, B-01c B6: R=0,987, 1 bài sau khi bỏ trần (trước D12: 0,998 SUPPORTED, 5 bài)",
+      "pattern": "phép \\(c\\) (0,987), 1 bài sau khi bỏ trần",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h7-b0-ratio",
+      "value": "0,00; 0,00",
+      "reason": "v0.6, mã A-1: d12-stats-fixes-2026-11-04.md mục 2.1, H7: B0 tỉ số SD gộp 0,00 [0,00; 0,00], 2 bài (trước D12: SD gộp 0,00 trên 13 bài, SUPPORTED)",
+      "pattern": "SD gộp là 0,00 \\[(0,00; 0,00)\\] trên 2 bài",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h7-b0-dropped",
+      "value": "16",
+      "reason": "v0.6, mã A-1: d12-stats-fixes-2026-11-04.md mục 2.1, H7 B0: 16 bài bị loại vì r < 5",
+      "pattern": "(16) bài bị loại vì r < 5",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h7-b6",
+      "value": "5,87",
+      "reason": "v0.6, mã A-1: d12-stats-fixes-2026-11-04.md mục 2.1, H7 B6: 5,87 [0,00; 10,17], 5 bài, không kết luận",
+      "pattern": "Số B6 \\((5,87) \\[0,00; 10,17\\], 5 bài\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h7-b7",
+      "value": "1,55",
+      "reason": "v0.6, mã A-1: d12-stats-fixes-2026-11-04.md mục 2.1, H7 B7: 1,55 [1,55; 1,55], 5 bài, không kết luận",
+      "pattern": "B7 \\((1,55) \\[1,55; 1,55\\], 5 bài\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h3-recall-p",
+      "value": "1,0000",
+      "reason": "v0.6, mã P-1: d12-stats-fixes-2026-11-04.md mục 2.1, H3: p recall 1,0000; dòng Holm K=1, H3 p=1,0000",
+      "pattern": "p recall = (1,0000); dòng Holm",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-holm-k",
+      "value": "1",
+      "reason": "v0.6, mã P-1: d12-stats-fixes-2026-11-04.md mục 2.1, dòng Holm {H3, H6}: trước D12 K=0 'họ rỗng', sau D12 K=1",
+      "pattern": "Mã sau D12 ghi K = (1) \\(chỉ H3",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h1-b0-after",
+      "value": "4,2",
+      "reason": "v0.6, mã A-2/A-4: d12-stats-fixes-2026-11-04.md mục 2.1, H1 study-cloud B0: danh sách cố định c3, c4, c5, r1, 4 bài, +4,2 [0,0; 12,5], NK",
+      "pattern": "\\(4 bài đủ lượt\\): \\+(4,2) pp \\[0,0; 12,5\\]",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h1-b0-before",
+      "value": "2,8",
+      "reason": "d12-stats-fixes-2026-11-04.md mục 2.1 và 2.3: H1 cách cũ (lọc size ≥ 3, 6 bài) B0 +2,8 pp [0,0; 9,0], p=1,000; giữ làm dòng độ nhạy",
+      "pattern": "trên 6 bài: \\+(2,8) pp \\[0,0; 9,0\\], p = 1,000",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h10-b0-p",
+      "value": "0,132",
+      "reason": "v0.6, mã A-5: d12-stats-fixes-2026-11-04.md mục 2.2, H10 p hoán vị B0: 0,129 → 0,132",
+      "pattern": "p hoán vị 0,129 → (0,132) do",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-test-bench",
+      "value": "245",
+      "reason": "d12-stats-fixes-2026-11-04.md mục 'Hash và kiểm cuối': npm run test:bench exit 0, tests 245, pass 245",
+      "pattern": "`npm run test:bench`\\) (245)/245",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e5p-runs",
+      "value": "40",
+      "reason": "v0.6: preregistration.md §9 V4-3e-E5′ (2) dòng 571: 2 arm × 2 bài × 10 = 40 lượt",
+      "pattern": "10 lượt mỗi ô, tức (40) lượt",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e5p-stop2",
+      "value": "3",
+      "reason": "v0.6: preregistration.md §9 V4-3e-E5′ (3) 'Dừng 2' dòng 578: từ 3/10 cặp trở lên bị loại thì dừng",
+      "pattern": "có từ (3)/10 cặp trở lên bị loại",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    }
+  ]
+}

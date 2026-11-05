@@ -1,0 +1,95 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude s1-sec-review__B6__r1] Security review with seeded vulnerabilities and decoys
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+src/server.js chỉ có 87 dòng và chỉ có một đầu ra là findings.json, nên không chia song song. Giao một hạng mục cho @security rà toàn bộ tệp theo checklist, kiểm chứng từng phát hiện có khai thác được hay không, rồi ghi findings.json. @qa-tester sẽ review độc lập ở bước sau.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Security review src/server.js và ghi findings.json (@security, done)
+
+## Tóm tắt
+Tôi đã rà toàn bộ `src/server.js` và ghi 7 phát hiện khai thác được vào `findings.json`. Hai phát hiện nặng nhất là SQL injection ở dòng 30 và command injection ở dòng 84, cả hai đều ở mức critical. Tôi đã loại 4 decoy. Tôi không sửa mã nguồn.
+
+## Kết luận
+CHƯA ĐẠT. Đây là kết luận cổng phát hành, vì code có lỗi khai thác trực tiếp từ request.
+
+## Phát hiện
+| Dòng | Loại | Mức | Luận cứ khai thác |
+|---|---|---|---|
+| 11 | hardcoded-secret | high | Khóa ký JWT nằm trong mã nguồn. Ai đọc được repo đều có thể tự ký token, kể cả token role admin. |
+| 30 | sqli | critical | `req.query.q` được nối thẳng vào chuỗi SQL, ví dụ `q=' UNION SELECT ...`. |
+| 42 | path-traversal | high | `req.params.name` đi vào `path.join` rồi `sendFile`. `..%2f..%2fetc%2fpasswd` được giải mã thành `../` và đọc được tệp ngoài `/srv/reports`. |
+| 58 | weak-crypto | high | Mật khẩu băm bằng MD5, không có salt, nên bẻ nhanh được bằng rainbow table hoặc brute force. |
+| 65 | ssrf | high | `req.body.url` được fetch không lọc, và nội dung phản hồi được trả lại cho người gọi. Có thể gọi tới metadata cloud hoặc dịch vụ nội bộ, và đọc kết quả. |
+| 70 | missing-authz | high | Mọi user đã đăng nhập đều xóa được ticket bất kỳ. Route không có `requireAdmin` và không kiểm tra chủ sở hữu, dù comment ghi "Delete any ticket". |
+| 84 | command-injection | critical | `req.body.format` được nội suy vào chuỗi truyền cho `exec`, ví dụ `csv; id`. Chạy được lệnh shell tùy ý. |
+
+Dòng 18 gọi `verifyJwt` nhưng tệp không import hay định nghĩa hàm này. Tôi coi đó là lỗi chức năng chứ không phải lỗ hổng khai thác, nên không báo. Tôi chưa chạy ứng dụng để xác nhận.
+
+**Decoy đã loại:**
+- **Dòng 36:** tên bảng là hằng số phía server, còn giá trị truyền qua `$1`.
+- **Dòng 48–52:** truy vấn có tham số hóa, có `path.basename` và whitelist đuôi tệp, nên không có đường traversal.
+- **Dòng 59, 71:** truy vấn đã tham số hóa.
+- **Dòng 76–80:** dùng `execFile` với mảng tham số, cố định binary `ping` và có validate bằng regex. Regex vẫn cho `host` bắt đầu bằng `-`, nên có thể chèn tùy chọn cho `ping`. Rủi ro này thấp và chỉ admin dùng được, nên tôi không báo.
+
+## Điều kiện bắt buộc
+- Sửa 7 finding trước khi phát hành. Cách kiểm: chạy lại review và thử payload cho dòng 30, 42 và 84.
+- Xoay khóa JWT đã lộ trong repo. Cách kiểm: khóa mới nằm trong biến môi trường và `git grep` không còn thấy khóa cũ.
+- Đã nêu ở trên: định nghĩa hoặc import `verifyJwt`.
+
+## Kiểm chứng
+- `node -e "JSON.parse(require('fs').readFileSync('findings.json'))"` → chạy không lỗi, mảng có 7 phần tử.
+- `git diff --stat src/` → rỗng (không sửa mã nguồn).
+- Số dòng: tôi đối chiếu bằng cách đọc tệp có đánh số dòng, chưa chạy `sed -n`.
+- Không chạy `npm audit` vì hạng mục chỉ yêu cầu rà code.
+
+## Tệp đã ghi
+- `/tmp/vb/s1-sec-review__B6__r1/findings.json`
+
+Bản đầy đủ: `.ccoding/T-20261103-004643-e73/outputs/dev-S1-security.md`
+
+## Review
+
+Đã duyệt: findings.json có 7 phần tử và khớp với src/server.js. Tôi đối chiếu từng dòng trong `cat -n` và dòng nào cũng trỏ đúng sink hoặc dòng lỗi: 11 secret JWT, 30 SQL nối chuỗi, 42 path.join với req.params.name rồi sendFile, 58 MD5, 65 fetch URL do người dùng đưa vào và trả lại nội dung, 70 xóa ticket không kiểm tra chủ sở hữu hay vai trò, 84 exec nội suy req.body.format. Các decoy đều đã được loại đúng: dòng 36 (tên bảng là hằng số), 48–52 (tham số hóa, basename và whitelist đuôi tệp), 59 và 71 (tham số hóa), 76–80 (execFile có regex). Dòng 18 gọi verifyJwt chưa được import, đó là lỗi chức năng nên không báo là đúng. Các type và severity hợp lý, mỗi issue chỉ có một finding. Tôi chưa chạy ứng dụng hay payload nào (chỉ đọc code) và không chạy npm audit. File không có script test/lint nào để chạy trong phạm vi nhiệm vụ này.
+(Reviewer KHÔNG chạy lệnh kiểm tra nào — kết luận chưa có bằng chứng chạy thật; nêu rõ trong báo cáo.)
+
+
+---
+
+> ⚠ **Cần xem lại:** Phát triển: duyệt nhưng chưa có kiểm chứng chạy thật (không có lệnh kiểm tra của dự án, reviewer không chạy lệnh) — cần giám đốc xem.
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-004643-e73` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **16 in / 5,352 out**, cache đọc 73.3k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Chuyên viên ATTT (@security) | dev | 6 | 2458 | 32376 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 1259 | 20808 | 1 |
+| QA Engineer (@qa-tester) | dev | 4 | 1259 | 17915 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 376 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-security.md` — S1 Security review src/server.js và ghi findings.json (@security)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Chuyên viên ATTT (@security) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 35k | 0/2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | 100 | 100 | 100 | — | 0 | — | 22k | 0/1 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 19k | 0/1 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Chuyên viên ATTT** (@security, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

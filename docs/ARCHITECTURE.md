@@ -74,6 +74,176 @@ sequenceDiagram
 - **Giao riêng** (`mode: "agent"`): một agent làm luôn — bỏ định tuyến, lập kế hoạch, họp và CTO nghiệm thu; reviewer của phòng vẫn review.
 - **Checkpoint**: mỗi pha lưu vào `task.json`; server khởi động lại giữa chừng → nhiệm vụ "tạm dừng — bị gián đoạn", bấm Tiếp tục để chạy từ chỗ đã xong. `resume` nhận `from: "review" | "synthesize" | "accept"` và `rerun: ["S1"] | "all"`.
 
+## Làn đơn, cổng chất lượng và cổng phủ kế hoạch
+
+Ba cơ chế dưới đây giữ chi phí thấp cho việc nhỏ mà vẫn chặn kết quả sai. Làn đơn quyết định có cần cả đội hay không. Cổng phủ kế hoạch kiểm kế hoạch trước khi thực thi. Cổng chất lượng kiểm kết quả sau khi thực thi. Cả ba chạy bằng mã thuần, không gọi LLM để quyết định. Mọi lượt LLM phát sinh (sửa kế hoạch, vòng sửa, sửa định dạng, agent của làn đơn) đều đi qua `Orchestrator.call()`.
+
+Cấu hình liên quan (mặc định trong `src/config.ts`, ghi đè bằng `ccoding.local.json`):
+
+| Khóa | Mặc định | Ý nghĩa |
+|---|---|---|
+| `lanes.single.enabled` | `true` | Bật chọn làn đơn. Tắt thì việc nhỏ đi làn nhanh |
+| `lanes.single.maxParts` | `5` | Từ số hạng mục này trở lên đề bài bị coi là lớn |
+| `lanes.single.maxFilesTouched` | `6` | Từ số tệp này trở lên đề bài bị coi là lớn |
+| `gate.maxFixRounds` | `2` | Ngân sách vòng sửa của cổng chất lượng cho cả nhiệm vụ, không tính lại mỗi lần gọi cổng. Không liên quan đến `maxRevisions` của review |
+
+### Làn đơn (B-01)
+
+Làn đơn dành cho việc nhỏ: một agent đúng vai làm trọn đề bài trong worktree của nhiệm vụ. Không có định tuyến, lập kế hoạch, họp, worktree con hay tổng hợp bằng LLM.
+
+**Chọn làn.** `pickLane` gọi `laneSignals` rồi `chooseLane` (`src/lane.ts`). Không có lượt LLM nào. Kết quả ghi vào log `lane.pick` (gồm `signals`, `lane`, `why`) và gửi một tin hệ thống `🧭 Chọn làn …`. Các tín hiệu gồm:
+
+| Tín hiệu | Nội dung |
+|---|---|
+| `briefChars` | Độ dài đề bài |
+| `parts` | Số phần việc nêu trong đề bài (mục đánh số, "N module", danh sách tên) |
+| `filesTouched` | Số tệp, thư mục đề bài nhắc tới (đường dẫn có trong `git ls-files`, tệp sẽ tạo) |
+| `repoFiles`, `repoBytes` | Số tệp và dung lượng repo theo `git ls-files` |
+| `forced` | Làn bị ép qua `options.lane` hoặc `ProjectDef.lane` |
+| `sequential` | Đề bài mô tả việc nối tiếp, đầu ra tầng trước làm đầu vào tầng sau |
+
+Quy tắc áp theo thứ tự:
+
+1. `forced` có giá trị thì theo giá trị đó.
+2. `briefChars` vượt `fastLane.maxBriefChars`, hoặc repo vượt ngưỡng của `fastLane`, thì làn đầy (`full`).
+3. `parts` ≥ `lanes.single.maxParts` hoặc `filesTouched` ≥ `lanes.single.maxFilesTouched` thì việc lớn, đi làn nhanh (`fast`). Ngoại lệ: nếu có `sequential` thì vẫn chọn `single`.
+4. Còn lại chọn `single`.
+
+Nếu `lanes.single.enabled` là `false` thì việc nhỏ đi `fast`. Các điều kiện cũ của `pickLane` (tắt `fastLane`, `mode` agent hoặc joint, không có workspace, `git ls-files` lỗi) vẫn cho `full`.
+
+**Ép làn.** Làn có thể bị ép ở hai cấp: `options.lane` của nhiệm vụ và `ProjectDef.lane` của dự án (`src/types.ts`). Cả hai nhận `single`, `fast`, `full` hoặc `auto`. Hàm `forcedLane(optionsLane, projectLane)` trong `src/lane.ts` chọn theo thứ tự `options.lane` rồi `project.lane` rồi `auto`. Giá trị `auto` hoặc không đặt nghĩa là không ép. Dự án cũ không có trường này được coi là `auto`.
+
+Khi ép `single`, `route()` bỏ lượt định tuyến bằng LLM và định tuyến bằng từ khóa. Dự án ở `auto` vẫn tốn một lượt `route`. `pickLane` dùng cùng `forcedLane` nên làn ép đi vào `laneSignals` qua tín hiệu `forced`.
+
+Dự án đặt `lane` qua `POST /api/projects` với giá trị `auto | single | fast | full`. Giá trị khác trả 400 ("Làn xử lý không hợp lệ (auto | single | fast | full)"). Gửi `auto` thì xóa ép. Không gửi `lane` thì giữ giá trị cũ. `GET /api/projects` trả lại `lane` khi dự án có ép (`src/server.ts`). Giao diện `public/` chưa có ô chọn làn.
+
+**Luồng.** `runSingleLane` chạy tuần tự:
+
+1. Chạy baseline `checkCommands` (dự án git).
+2. Chọn một agent đúng vai, xếp theo `skillScore`. Nếu dự án có `checkCommands` thì ưu tiên vai có công cụ `run_command`.
+3. Chạy pha execute bằng một lần `runSubtask` trong worktree nhiệm vụ.
+4. Chạy `runQualityGate` (xem mục B-02).
+5. Dựng `FINAL.md` từ mẫu `templateReport`, không gọi LLM.
+
+Run của làn đơn có đúng một hạng mục, nên KPI, lịch sử và nghiệm thu hoạt động như các làn khác. Reviewer chỉ được gọi tối đa một lượt, khi cổng yêu cầu (mục B-02). Nếu reviewer chê thì nhiệm vụ gắn `attention: review`, không có vòng sửa theo review.
+
+**Nâng lên multi-agent.** Làn đơn nâng cấp khi xảy ra một trong ba điều kiện:
+
+- Cổng chất lượng vẫn đỏ sau `gate.maxFixRounds` vòng sửa (nhánh `regression-or-new` hoặc `red-required`).
+- Diff thực tế (bỏ `.ccoding/`) vượt `lanes.single.maxFilesTouched`, hoặc vượt gấp đôi số tệp ước lượng từ đề bài.
+- Đầu ra của agent có dòng `ESCALATE: <lý do>`. Dòng này được kiểm cả trước và sau cổng.
+
+Khi nâng cấp, CCoding giữ worktree và `projectChecks`, đặt lại `run.subtasks`, `run.stage` và `run.review`, rồi ghi `LANE-HANDOVER.md` (diff, kết quả baseline và mới nhất, ghi chú của agent). `LANE-HANDOVER.md` được ghi vào thư mục run của nhiệm vụ (`store.runDir(task.id)`, nằm trong `data/`), không nằm ở `.ccoding/<task>/`. Run được đánh dấu `escalatedFrom = 'single'`, và tệp được ghi trước lệnh `save()`. Tệp này nối vào `prior` của pha plan, nên kế hoạch mới phải qua cổng phủ kế hoạch. Đích là `fast` nếu `fastLane` bật và đề đủ ngắn, ngược lại là `full`. Sự kiện ghi vào log `lane.escalate` (`from`, `to`, `trigger`, `reason`) cùng một tin hệ thống.
+
+**Nghiệm thu CTO.** Làn đơn không có đường riêng: `runTask` gọi `accept()` sau khi các phòng xong, không phân biệt làn. Run của làn đơn có `finalPath`, `review` và một hạng mục, nên CTO nhận đầu vào như thường và hành vi nghiệm thu không đổi theo mặc định. Hai chế độ nghiệm thu gọn hơn nằm sau công tắc `lanes.single.slim.accept`, mô tả ở mục "Làm gọn làn đơn (B-11)" bên dưới.
+
+### Làm gọn làn đơn (B-11)
+
+Nghiệm thu CTO, báo cáo dài và prompt thực thi là ba nguồn chi phí chính của làn đơn so với một agent chạy một mình. Công tắc `lanes.single.slim` cho phép giảm từng nguồn mà không phải sửa mã. Công tắc chỉ có tác dụng ở làn đơn. Khi nhiệm vụ đã nâng làn (`escalatedFrom = 'single'`), prompt trở lại đầy đủ và nghiệm thu quay về `full`.
+
+| Khóa | Mặc định | Ý nghĩa |
+|---|---|---|
+| `accept` | `full` | `full`: như trước. `brief`: CTO chỉ trả bảng tiêu chí đạt/không đạt, mỗi tiêu chí một dòng, bằng chứng một câu, trần `maxTokens` 950 (`ACCEPT_BRIEF_MAX_TOKENS`). `skip`: bỏ lượt CTO khi đủ điều kiện, thiếu thì lùi về `brief` |
+| `compactTemplate` | `false` | Agent vẫn viết đủ mọi tiêu đề của "Mẫu đầu ra", mỗi mục 1–3 dòng, không chép mã hay diff, báo cáo khoảng 800 token. Trần này chỉ nằm trong chỉ dẫn của prompt, `src/kpi.ts` không đổi |
+| `promptDiet` | `true` | Bỏ khỏi prompt thực thi các phần chỉ dành cho đa-agent: khối kế hoạch chung, mục "Đầu vào từ các hạng mục trước" khi rỗng, câu về đồng nghiệp song song và `git merge`. Repo ≤ 300 tệp (`SMALL_REPO_FILES`) nhận danh sách tệp gọn thay bản đồ repo |
+
+**Thứ tự ghi đè.** `resolveSlim` (`src/slim.ts`) gộp theo thứ tự: mặc định `SLIM_DEFAULTS`, rồi `config.lanes.single.slim`, rồi `ProjectDef.slim`, rồi `options.slim` của nhiệm vụ. Cấu hình sau thắng cấu hình trước. Khóa sai kiểu hoặc giá trị lạ bị bỏ qua. Nhờ vậy benchtest bật được từng phần cho từng arm (`B7c`, `B7cb`, `B7cab` trong `bench/vs-claude/arms.json`).
+
+**Trạng thái duyệt.** Giám đốc chưa duyệt `accept` khác `full` và `compactTemplate = true`. Vì vậy hai khóa này mặc định tắt và chỉ bật khi giám đốc đồng ý. `promptDiet` không cần duyệt nên bật mặc định.
+
+**Điều kiện của `skip`.** Cần đủ cả ba điều kiện, thiếu điều kiện nào thì lùi về `brief`:
+
+1. Cổng B-02 xanh: `projectChecks.latest` không rỗng và mọi lệnh đều xanh.
+2. Diff không chạm `sensitivePaths` (`src/quality-gate.ts`, cùng danh sách mục 4.3 của backlog, dùng chung với quyết định gọi reviewer).
+3. Nhãn dữ liệu cao hơn giữa `ProjectDef.classification` và nhãn nhiệm vụ là `public` hoặc `internal`.
+
+**Sự kiện và dữ liệu.** `accept.skipped` (`gateGreen`, `sensitiveHit`, `classification`, `checks[{cmd, ok}]`) và `accept.brief` (`reason`: `configured` hoặc `fallback:<điều kiện thiếu>`) ghi qua `LogStore`. Kết quả nghiệm thu ghi `acceptance.mode`. Mỗi dòng `runs.jsonl` của bộ đo có thêm số đo theo pha: `byPhaseSec` (kèm `byPhaseSecSource`), `byPhaseTokens` đủ bốn thành phần, `promptChars`, `lane`, `escalatedFrom`, `gate`, `fixRounds`, `acceptMode`. Giá trị `gate` phản ánh các lệnh kiểm tra của dự án ở lần chạy gần nhất, không phải trạng thái cuối của cổng B-02.
+
+**Số đo prompt.** Một lượt mock mỗi cấu hình, ở làn đơn: ngữ cảnh giảm từ 742 xuống 530 ký tự, prompt từ 1715 xuống 1669 ký tự, system prompt giữ 3909 ký tự. Số này cho thấy hướng giảm, chưa đại diện cho đề bài thật. Mock chưa kiểm chứng được `accept = brief` và hiệu quả của `compactTemplate`, vì cả ba lượt mock đều nâng làn do cổng đỏ.
+
+**Tiếp tục sau khi tạm dừng giữa lúc nâng cấp.** Khi nhiệm vụ tiếp tục, `runDepartment` kiểm tra run có `escalatedFrom = 'single'`, làn hiện tại không còn là `single`, pha thực thi chưa xong và `prior` chưa chứa tiêu đề bàn giao. Khi đủ điều kiện, nó đọc `LANE-HANDOVER.md` từ thư mục run (`store.readRunFile`) và nạp vào `prior`. Không thấy tệp thì chỉ ghi log cảnh báo `lane.handover`, không dừng nhiệm vụ.
+
+**Hạn chế đã biết.** Ngưỡng `lanes.single` chưa hiệu chỉnh bằng số đo thật.
+
+### Cổng chất lượng (B-02)
+
+Cổng chất lượng chặn việc duyệt khi lệnh kiểm tra còn đỏ và kiểm báo cáo của agent có đúng mẫu hay không. Nó chạy ở mọi làn (đơn, nhanh, đầy) và ở việc giao riêng cho một agent, qua `Orchestrator.runQualityGate`. Logic phân loại nằm ở `src/quality-gate.ts`.
+
+**Chạy ở mọi làn.** Trong pha "Review & sửa" của làn nhanh và làn đầy, cổng chạy khi có hạng mục `done`, hoặc khi giám đốc yêu cầu sửa lại. Cổng chạy cả khi phòng không có reviewer, hoặc khi `options.review` là `false`. Làn đơn gọi cổng trực tiếp. Kết quả khi không có reviewer, ghi vào `run.review` và log `gate.review` (`src/orchestrator.ts`):
+
+| Tình huống | Kết quả |
+|---|---|
+| Lệnh đề bài đòi xanh còn đỏ sau các vòng sửa | `approved = false`, `verified = true`, `decision: forced-unapproved`, nhiệm vụ gắn `attention: review` |
+| Cần reviewer (xem danh sách bên dưới) mà phòng không có hoặc không bật, và có lệnh kiểm tra | `approved = false`, `verified` theo cổng, `decision: no-reviewer`, chờ giám đốc xem |
+| Đã sửa theo yêu cầu giám đốc mà không có reviewer duyệt lại | `approved = false`, chờ giám đốc xem |
+| Lệnh đều xanh, mẫu đạt, không thuộc diện bắt buộc review, có lệnh kiểm tra | `approved = true`, `verified = true`, `decision: skip-reviewer` |
+| Dự án không có lệnh kiểm tra nào | `run.review` để trống như trước; cổng vẫn chạy phần sửa định dạng và ghi log |
+
+**Bốn nhánh.** `classifyChecks` so kết quả baseline với kết quả mới nhất của từng lệnh trong `checkCommands`:
+
+| Nhánh (`CheckClass`) | Điều kiện | Xử lý |
+|---|---|---|
+| `green` | Lệnh xanh | Không cần làm gì thêm |
+| `regression-or-new` | Đỏ, baseline xanh (hồi quy) hoặc không có baseline (đỏ mới) | Vào vòng sửa; còn đỏ sau vòng sửa thì ép không duyệt |
+| `red-required` | Đỏ ở cả baseline, và `task.brief` nhắc tên lệnh (so khớp chuỗi) | Bắt buộc vào vòng sửa, không gọi reviewer, ép `approved = false` chừng nào còn đỏ |
+| `red-unrelated` | Đỏ ở cả baseline, đề bài không nhắc tên lệnh (hoặc lệnh bị chính sách chặn) | Không bắt sửa; buộc gọi reviewer |
+
+**Vòng sửa.** Tham số `gate.maxFixRounds` (mặc định 2) giới hạn số vòng, tách riêng khỏi `maxRevisions`.
+
+**Ngân sách cho cả nhiệm vụ.** Số vòng đã dùng nằm ở `DeptRun.gateFixRoundsUsed` (`src/types.ts`, mặc định 0). Mỗi lần gọi, `runQualityGate` đếm tiếp từ giá trị này. `Orchestrator` tăng số đếm và gọi `save(task)` trước mỗi vòng, rồi mới gọi LLM. Vì vậy tạm dừng rồi tiếp tục, nâng làn rồi chạy lại cổng, hay gọi cổng lần hai đều không cấp lại ngân sách. Vòng sửa định dạng cũng tính vào số đếm. Ngân sách tính theo từng run, nên nhiệm vụ nhiều phòng thì mỗi phòng có ngân sách riêng.
+
+Nội dung mỗi vòng sửa: Prompt (`gateFixPrompt`) nhận đúng đầu ra của lệnh đỏ. Nếu có `run.planGate.uncovered` thì kèm danh sách đích chưa có hạng mục nhận. Mỗi vòng ghi log `gate.fix`. Phân loại ghi log `gate.classify`.
+
+**Kiểm mẫu đầu ra.** `templateGate` dùng `templateHeadings`, `templateCoverage` và `headingKey` của `src/kpi.ts`, cộng kiểm tiêu đề "Tóm tắt". Cổng đạt khi coverage bằng 1. Tiêu đề không có dòng nội dung nào bên dưới bị coi là thiếu. Nếu không đạt, cổng chạy một lượt "sửa định dạng" ngắn, không dùng công cụ (`formatFixPrompt`, cờ `CallCtx.noTools`), tính vào N. Bản sửa chỉ thay bản cũ khi đạt mẫu. Kết quả ghi log `gate.template`.
+
+**Khi nào gọi reviewer.** `needsReviewer` cho kết quả đúng khi có ít nhất một lý do trong `reviewerReasons`:
+
+- dự án không có `checkCommands`;
+- diff chạm vùng bảo mật hoặc dữ liệu (`sensitivePaths`: `src/tools/`, `src/runtimes/`, `src/kpi.ts`, `src/store.ts`, `.env*`, `data/`, `agents/`, tệp cấu hình);
+- nhãn dữ liệu `confidential` hoặc `restricted`;
+- có lệnh `red-unrelated`;
+- chưa đạt sau các vòng sửa.
+
+Nếu không có lý do nào thì bỏ qua reviewer và duyệt kèm lý do của cổng. Quyết định ghi log `gate.review` với `decision` là `forced-unapproved`, `skip-reviewer` hoặc `call-reviewer`. Khi dự án có `checkCommands`, bàn giao gửi cho reviewer được rút gọn (mỗi bàn giao tối đa 1.500 ký tự, diff tối đa 8.000 ký tự).
+
+**D-02.** Nếu nhiệm vụ được duyệt mà không có kiểm chứng máy (dự án không có lệnh kiểm tra), reviewer có quyền chạy lệnh nhưng không chạy (`run.review.verified === false`), thì nhiệm vụ gắn `attention: review` để giám đốc xem.
+
+### Cổng phủ kế hoạch (B-10)
+
+Cổng phủ kế hoạch chạy sau khi có kế hoạch và trước khi thực thi. Nó chặn kế hoạch bỏ sót đích hoặc dở dang, vì lỗi này không thể sửa ở các pha sau. Logic ở `src/plan-gate.ts` (hàm `planGate`, `checkPlanCoverage`, `checkPlanReadable`, `planTargets`), nối vào orchestrator qua `gatePlan`, đặt trước bước duyệt kế hoạch. Cổng áp cho cả làn nhanh và làn đầy; việc giao riêng cho một agent thì bỏ qua. Làn đơn không đi qua cổng này vì không có bước chia việc; kế hoạch sau khi nâng cấp thì có.
+
+| Quy tắc | Nội dung |
+|---|---|
+| A | Mỗi đích (tệp nguồn có đuôi tệp trong đề bài) phải có hạng mục nhận. Tệp tham khảo (`SPEC.md`, `package.json`), tệp "đã có sẵn", "không ai sửa", "chỉ dùng API" không tính |
+| B (i) | Số hạng mục tự khai trong tóm tắt phải khớp số hạng mục phân tích được |
+| B (ii) | `deliverable` không được là chỗ giữ như "(không dùng)" hay "—" |
+| B (iii) | Vai nêu trong mô tả phải khớp `assignee` |
+| B (iv) | JSON kế hoạch không bị cắt cụt hoặc bỏ dở (cờ `truncated` của `parsePlan`) |
+
+Với quy tắc B (ii), `deliverable` rỗng hoặc thiếu chỉ bị coi là dở khi có hạng mục khác trong cùng kế hoạch có `deliverable` thật. Một đích có thể được miễn nếu trưởng phòng khai `outOfScope` kèm lý do.
+
+Khi kế hoạch trượt A hoặc B, cổng chạy đúng một lượt sửa kế hoạch (`replanPrompt`, đi qua `Orchestrator.call()`). Nếu vẫn trượt, nhiệm vụ dừng ở trạng thái `failed` và không hạng mục nào được chạy. Trường `attention.reason` là:
+
+- `plan-coverage` khi quy tắc A trượt (kể cả khi B cũng trượt);
+- `plan-unreadable` khi chỉ quy tắc B trượt.
+
+Log `plan.gate` ghi ở ba giai đoạn `blocked`, `replanned`, `stopped`. Kết quả lưu ở `run.planGate` (`uncovered`, `reasons`, `rules`, `replanned`); kế hoạch đạt lưu `rules: []`.
+
+**Phát lại offline.** Công cụ `scripts/replay-plan-gate.mjs` chạy cổng trên kế hoạch đã ghi của bộ đo mà không gọi LLM. Nó đọc `bench/vs-claude/results/C*/*/ccoding-task.json` và danh sách vai từ `agents/**`, rồi in kết quả ra stdout, không ghi tệp nào.
+
+```bash
+npm run build && node scripts/replay-plan-gate.mjs
+# chưa build: node --experimental-strip-types scripts/replay-plan-gate.mjs
+```
+
+Trên 54 lượt đã ghi, công cụ chặn 2 lượt: `C9/t5-logq.ccoding-fastlane.2` (quy tắc A và B) và `C7/t2-orders.ccoding-fastlane.1` (quy tắc B). Lượt `C9/t1` thứ 3 không bị chặn.
+
+## Sự kiện chẩn đoán của hook (`guard.block`)
+
+Hook `claude-guard` chạy trong tiến trình riêng của Claude Code, không đi qua `Orchestrator.call()`. Khi hook chặn một lệnh, nó ghi một sự kiện `guard.block` để tra cứu vì sao lệnh bị chặn. Mã nguồn: `logGuardBlock` và `guardLogTarget` trong `src/tools/claude-guard.ts`.
+
+Sự kiện ghi qua `LogStore` (che PII và bí mật, chuỗi băm) ở mức `warn`, vào `<data>/logs/system.jsonl` và vào `<data>/runs/<task>/events.jsonl` khi biết nhiệm vụ. Phần `data` có bốn trường: `tool`, `clause` (số câu, từ 1), `rule` (mã quy tắc) và `cmd` (chỉ tên lệnh hoặc toán tử, không có lệnh thô). Hook không biết thư mục `data/` thì bỏ qua việc ghi. Lỗi ghi log không đổi quyết định chặn. Danh sách mã quy tắc và thứ tự tìm thư mục `data/` nằm ở [TOOLS.md](TOOLS.md), mục *Thông báo chẩn đoán khi hook chặn*. Hook dùng bản `dist/` đã cài, nên sự kiện chỉ xuất hiện sau khi build và cài lại.
+
 ## Trạng thái agent
 
 `idle` (rảnh) · `thinking` (lập kế hoạch/chốt/tổng hợp/định tuyến/nghiệm thu) · `discussing` (đang họp) · `working` (thực thi/sửa) · `reviewing` · `error`. Văn phòng hiện bằng vòng màu quanh chân dung agent.

@@ -1,0 +1,5 @@
+{
+  "schedule": { "Mon": "Dung", "Tue": "Chi", "Wed": "Binh", "Thu": "An", "Fri": "Em" },
+  "count_without_rule_2": 10,
+  "most_permissive_rule": 2
+}

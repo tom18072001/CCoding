@@ -1,0 +1,70 @@
+# Báo cáo tổng hợp T-20261103-021350-5d8: thứ tự khởi động service và chu trình ẩn
+
+## Tóm tắt
+`answer.json` ở gốc repo đã đúng yêu cầu và không cần sửa. Tệp có 3 khóa. `startup_order` gồm 18 service, theo thứ tự hợp lệ và chọn tên nhỏ nhất theo bảng chữ cái khi có nhiều lựa chọn. `blocked` là `[admin-ui, etl, reporting, warehouse]`, `cycle_members` là `[etl, reporting, warehouse]`. Lần review cuối không chạy lệnh nào, nên tôi tự đọc `services.txt` và `answer.json` rồi đi tay lại thuật toán từng bước. Kết quả khớp với cả S1 lẫn S2. Còn mở một việc: `answer.json` chưa được commit (đang untracked) vì chưa có yêu cầu commit.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Tính startup order, blocked, cycle_members (Kahn + min-heap) rồi ghi `answer.json` | @backend-dev | Đạt | `answer.json`. S1 báo script `s.py` (trong scratchpad, ngoài repo) chạy exit 0 và các assert đều qua: tổng số service, không trùng tên, dependency luôn đứng trước service phụ thuộc. Chi tiết ở `.ccoding/T-20261103-021350-5d8/outputs/dev-S1-backend-dev.md` |
+| S2 | Kiểm chứng độc lập bằng mô phỏng theo vòng và reachability | @senior-swe | Đạt | S2 báo script `v.py` chạy exit 0 và cả ba trường khớp. Chi tiết ở `.ccoding/T-20261103-021350-5d8/outputs/dev-S2-senior-swe.md` |
+| Review cuối | Đối chiếu kết quả | reviewer | Đạt, nhưng reviewer không chạy lệnh | Tôi bổ sung bằng hai việc. Một là đọc trực tiếp `services.txt` và `answer.json` rồi đi tay Kahn với tập sẵn sàng sắp theo bảng chữ cái: thứ tự ra trùng từng phần tử với `answer.json`. Hai là chạy `git status --short`, kết quả `?? answer.json` |
+
+## Quyết định
+- Giữ nguyên `answer.json`, không sửa.
+- Đính chính kế hoạch: tôi ghi "23 service" là nhầm. Tệp có 23 dòng, trong đó 1 dòng comment, nên chỉ có **22 service**. Phép kiểm 18 + 4 = 22 khớp.
+- Không đưa `admin-ui` vào `cycle_members`. Service này bị chặn vì phụ thuộc `reporting` nhưng không nằm trên chu trình.
+- Chuỗi fraud → ml-scorer → feature-store → fraud-history → db-orders không phải chu trình. Cả năm service này đều khởi động được, nên đúng là bẫy như đã nghi trong kế hoạch.
+
+## Kết quả review
+- Không có lỗi blocker hay major.
+- Hai bên dùng hai cách tính khác nhau (S1: min-heap, S2: quét theo vòng) và cho cùng kết quả. Lần đi tay của tôi cũng khớp.
+- Lưu ý về bằng chứng: reviewer không chạy lệnh nào. Tôi chỉ được chạy lệnh chỉ đọc, nên không chạy lại được script của S1/S2. Exit 0 của hai script là theo báo cáo của S1/S2, tôi không chứng kiến trực tiếp.
+
+## Việc còn mở & rủi ro
+- `answer.json` vẫn untracked. Chỉ commit khi Tom yêu cầu, và commit trên nhánh riêng, không commit vào main.
+- Rủi ro thấp: đồ thị chỉ có 22 node và kết quả đã được kiểm theo ba đường độc lập.
+
+## Bước tiếp theo
+- Nếu cần lưu kết quả: tạo một việc commit `answer.json` lên nhánh riêng. Tiêu chí xong: `git status` sạch và commit có đủ dòng attribution.
+- Không còn phần việc nào cần tách thành nhiệm vụ riêng.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-021350-5d8` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **32 in / 10.7k out**, cache đọc 167.7k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | 12 | 4833 | 67448 | 2 |
+| QA Engineer (@qa-tester) | dev | 6 | 2036 | 32651 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 6 | 1592 | 33417 | 1 |
+| Backend Developer (@backend-dev) | dev | 6 | 1835 | 31919 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 367 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Tính startup order / blocked / cycle_members và ghi answer.json (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 Kiểm chứng độc lập answer.json (@senior-swe)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | **97** A | 100 | 100 | 84 | 100 | 0 | — | 72k | 1/5 |
+| Senior Software Engineer (@senior-swe) | dev | **94** A | 100 | 98 | 100 | 60 | 1 | 1 | 35k | 0/2 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 35k | 0/2 |
+| Backend Developer (@backend-dev) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 34k | 0/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Trưởng phòng Phát triển** (@dev-lead, 97 A):
+  - Thao tác công cụ lỗi nhiều (1/5, 20%; nhiều nhất ở run_command 1/2) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+- **Senior Software Engineer** (@senior-swe, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+- **Backend Developer** (@backend-dev, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

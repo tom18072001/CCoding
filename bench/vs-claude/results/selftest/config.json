@@ -1,0 +1,49 @@
+{
+  "argv": [
+    "--arms",
+    "oracle,null",
+    "--repeats",
+    "1",
+    "--out",
+    "bench/vs-claude/results/selftest"
+  ],
+  "cfg": {
+    "ccodingUrl": "http://127.0.0.1:7420",
+    "ccodingData": "C:\\Users\\admin\\CCoding\\workspaces\\ccoding-dev\\wt-T-20261102-175855-1e6--S2\\data",
+    "runtime": "claude-cli",
+    "timeoutMin": 60,
+    "claudeBin": "claude",
+    "judge": {
+      "enabled": false,
+      "model": "opus"
+    },
+    "seed": "ccvb",
+    "workRoot": "C:\\Users\\admin\\AppData\\Local\\Temp\\ccvb-89877a"
+  },
+  "armIds": [
+    "oracle",
+    "null"
+  ],
+  "taskIds": [
+    "a1-ambiguous-spec",
+    "c1-iis-ecs",
+    "c2-burst-alert",
+    "c3-shop-bugs",
+    "c4-audit-chain",
+    "c5-tickets-api",
+    "l1-oncall",
+    "l2-knights",
+    "l3-reconcile",
+    "l4-startup-order",
+    "r1-elk-design",
+    "re1-lit-synthesis",
+    "s1-sec-review",
+    "t1-duration",
+    "t2-orders",
+    "t3-api",
+    "t4-perf",
+    "t5-logq"
+  ],
+  "repeats": 1,
+  "startedAt": "2026-11-02T11:27:02.071Z"
+}

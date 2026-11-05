@@ -1,0 +1,23 @@
+Cả năm module đã được hiện thực trong `src/<tên>/index.js`, và `npm test` xanh với 71 test. Không có thư viện ngoài và các module không import lẫn nhau. Bộ nghiệm thu ẩn thì tôi không có, nên chưa so với nó được.
+
+**Test:** tôi giữ 5 file test mẫu và thêm 5 file mới, mỗi module một file `*.spec.test.js`. Các file này kiểm tra:
+- mọi ví dụ trong SPEC;
+- các mã lỗi và thứ tự kiểm lỗi;
+- các giá trị biên: `-0`, số nguyên an toàn, năm nhuận, đồng hồ lùi.
+
+Hai vòng kiểm cũng được chạy trên dữ liệu rộng:
+- parse/format round-trip của money trên đủ 3 loại tiền × 3 locale;
+- `isoWeek`/`isoWeekToDate` được thử trên từng ngày từ 1900 đến 2100.
+
+**Self-review:**
+- Hai test đầu tiên fail do chính tôi viết sai test, không phải lỗi code: một chuỗi tiền thiếu ký hiệu và một phép tính `remaining` của token bucket. Tôi đã sửa cả hai.
+- Mã nguồn `slug` ban đầu chứa dấu kết hợp Unicode viết thẳng (không nhìn thấy được). Tôi đổi sang dạng `\uXXXX` và chạy lại test vẫn xanh.
+
+**Giả định ở chỗ SPEC chưa rõ:**
+- `convert` kiểm `m` trước rồi mới kiểm `to`.
+- Tỉ giá bằng 0 (kể cả `"0.00"`) báo `MONEY_INVALID_RATE`.
+- `isoWeeksInYear` với năm ngoài 1900–2100 ném `CAL_INVALID_WEEK`.
+- Trong lược đồ csvcheck, `name` rỗng vẫn được chấp nhận, và `required`/`unique` đọc theo giá trị truthy.
+- `parseMoney` cho phép khoảng trắng bên trong ngoặc kế toán, ví dụ `( $5 )`.
+
+Tôi chưa commit vì bạn không yêu cầu.

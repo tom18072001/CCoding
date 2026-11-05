@@ -1,0 +1,72 @@
+> Việc giao riêng cho Senior Software Engineer (@senior-swe)
+
+## Tóm tắt
+Tôi đã sửa `SPEC.md` theo cả 3 góp ý review. Giờ mọi file export, kể cả file masked, bị xóa sau 12 tháng. Chỉ metadata audit không chứa PII được giữ lâu hơn. Spec cũng nói rõ v1 chưa đáp ứng nhu cầu forensic. Mục `## Open questions and assumptions` giờ có 17 câu hỏi: Q1–Q14 cùng Q4a, Q4b và Q5a mới thêm. Repo chưa có code nên không có test để chạy. Rủi ro còn lại là các giả định vẫn chưa được khách hàng xác nhận.
+
+## Tệp đã tạo/sửa
+- `SPEC.md`: sửa tệp đã có (§1, C3, FR4, NFR3, §7, §10, §11).
+
+## Đã sửa theo review
+- **[major] Retention của file masked:**
+  - C3 và §7 giờ coi bản masked/pseudonym là dữ liệu cá nhân cho đến khi DPO xác nhận ngược lại.
+  - Mọi file export bị xóa sau 12 tháng. Khóa của file bị hủy cùng lúc.
+  - Chỉ metadata audit không PII (user, thời điểm, team, số dòng, hash, kết quả) được giữ lâu, giả định 7 năm. Đây là ý nghĩa của "giữ mãi để audit".
+  - Thêm câu hỏi Q4a: DPO có coi bản masked là PII không. Q4 đã sửa lại theo hướng này.
+  - FR4 bỏ HMAC ổn định toàn hệ thống. Username dùng khóa HMAC riêng cho từng export, nên không tương quan được giữa các file. Cách này vẫn cho phép điều tra trong một file. Đây là phương án (c) của reviewer.
+- **[minor] v1 chưa đáp ứng forensic:** đã nói rõ trong §1 (đoạn "Lưu ý quan trọng") và §11. Thêm Q5a hỏi "mọi thứ user thấy được" có vượt team hoặc tháng trước không. Giả định tạm là không.
+- **[minor] Quy tắc lưu file không thống nhất:**
+  - NFR3 và §7 giờ dùng một quy tắc: platform lưu file đã sinh (mã hóa) tối đa 12 tháng.
+  - Bản sao tạm của bước sinh file hoặc job async bị xóa sau khi hoàn tất, tối đa 24 giờ.
+  - Thêm Q4b hỏi khách hàng "file giữ mãi" nghĩa là lưu file hay chỉ lưu bản ghi việc đã xuất.
+
+## Kiểm chứng
+- Chạy một script Python để sửa file, các lệnh `assert` thay thế đều qua. Lệnh `grep` sau đó cho exit code 0 và xác nhận các đoạn sửa ở dòng 35, 55, 81.
+- Không chạy test hay typecheck vì repo chỉ có `.gitkeep`.
+- Tôi chưa đọc lại toàn bộ `SPEC.md` sau khi sửa.
+
+## Quyết định thiết kế
+- Mặc định an toàn là coi dữ liệu masked vẫn là PII. Nếu DPO xác nhận không phải, có thể nới retention cho file masked.
+- Khóa HMAC riêng cho từng export đổi khả năng tương quan chéo file lấy việc không thể tái định danh.
+- Masked mặc định; unmasked chỉ cho role `Forensic`, có người duyệt thứ hai, nằm sau feature flag tắt cho đến khi Q1 được xác nhận.
+- Thời hạn 5 giây áp dụng tới 100.000 dòng, vượt thì chuyển sang async. Ngưỡng này là giả định (Q5).
+
+## Rủi ro & việc còn mở
+- Cần khách hàng xác nhận các câu hỏi Q1, Q4, Q4a, Q4b, Q7. Các giả định như thời hạn 7 năm, ngưỡng 100.000 dòng và quy tắc masking chưa có căn cứ pháp lý hoặc dữ liệu.
+- Cột CSV và quy tắc masking cần DPO duyệt.
+
+## Review
+✅ Đã duyệt: Tôi đã đọc toàn bộ SPEC.md (98 dòng, chưa commit). Spec đạt yêu cầu. Mục `## Open questions and assumptions` có 17 câu hỏi, mỗi câu kèm assumption tạm. Các mâu thuẫn trong brief (IP đầy đủ và không mask, giữ mãi và xóa sau 12 tháng, 5 giây và mọi thứ user thấy được, team và tháng trước) đều được nêu rõ ở §2 và được giải quyết nhất quán giữa C3, FR4, NFR3, §7, §10 và §11. Spec nói thẳng rằng v1 chưa đáp ứng nhu cầu forensic. Các rủi ro lớn, gồm formula injection, kiểm quyền phía server, rate limit, audit và ranh giới tháng UTC+7, đều có yêu cầu và tiêu chí chấp nhận. Còn vài điểm minor, không chặn bàn giao. Repo chỉ có SPEC.md, không có code, test hay CI nên không có test hay typecheck để chạy. Báo cáo của dev về 3 chỗ sửa khớp với nội dung tệp.
+- [minor] §7 và FR7 (dòng 'Metadata audit') nói metadata audit 'không chứa PII' nhưng có trường `user` (username của manager). Đây vẫn là dữ liệu cá nhân và bị giữ 7 năm, trái với cách spec tự coi pseudonym là PII (Q4a). Cách sửa: dùng user ID nội bộ hoặc pseudonym cho trường này. Hoặc thêm vào Q4/Q4a câu hỏi về việc giữ định danh người thực hiện export, vì cần thiết cho audit.
+- [minor] §10: Q5a nằm trước Q5 và Q4a/Q4b nằm sau Q4, nên thứ tự đánh số lộn xộn. Cách sửa: đổi thành số liên tục hoặc xếp Q5a sau Q5.
+- [minor] Một số mốc trong spec chưa có câu hỏi riêng cho khách hàng: ngưỡng 100.000 dòng (nằm trong Q5), thời hạn 15 phút của link tải, và bản sao tạm tối đa 24 giờ (NFR3). Hiện chúng chỉ là giả định ngầm. Cách sửa: gộp vào Q5 hoặc Q9. Ngoài ra §7 mốc xóa file là 12 tháng kể từ sự kiện cũ nhất, nên file có thể bị xóa ngay sau khi sinh nếu Q4 hoặc luật yêu cầu. Nên nói rõ trong Q4b.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-003254-f22` · chế độ: agent · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **20 in / 14.0k out**, cache đọc 104.7k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 12 | 10586 | 69995 | 2 |
+| QA Engineer (@qa-tester) | dev | 8 | 3450 | 34718 | 2 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude a1-ambiguous-spec__B5__r3] Spec from an ambiguous, self-contradicting brief (@senior-swe)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **74** B | 50 | 100 | 100 | 60 | 1 | 2 | 81k | 0/4 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 38k | 0/2 |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 74 B):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+  - Qua review lần đầu 0/1 hạng mục, còn blocker ở review cuối 0/1 (bị nêu qua các vòng: 0 blocker, 1 major). Lỗi ở review cuối: —
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 2/2 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

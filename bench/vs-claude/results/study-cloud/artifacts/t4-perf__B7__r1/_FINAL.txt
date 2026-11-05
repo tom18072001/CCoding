@@ -1,0 +1,139 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t4-perf__B7__r1] Tối ưu buildReport dưới 1 giây trên 200.000 dòng, giữ nguyên hành vi
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Repo đã có bản viết lại `buildReport` (src/report.js), bản cũ làm đặc tả (test/fixtures/report.legacy.js) và test/compare.test.js. Bản bàn giao ghi 'chưa có thay đổi' nhưng `git status` cho thấy các tệp này đang ở worktree, chưa commit. Kế hoạch không làm lại từ đầu mà chỉ củng cố. Một việc rà các hành vi lạ của bản cũ (JSON round-trip, comparator hòa, first-seen order) trong src/report.js. Một việc song song viết test đối chiếu fuzz vào tệp riêng.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Rà soát và vá khác biệt hành vi của buildReport so với bản cũ (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã rà `src/report.js` song song với bản cũ và không tìm thấy khác biệt hành vi nào nên không sửa gì. Tôi chạy thêm một fuzz tạm gồm 3000 ca với dữ liệu cố ý lệch (`NaN`, `Infinity`, `-0`, `null`, `undefined`, chuỗi số, `1e308`). Cả 3000 ca khớp bản cũ theo `deepStrictEqual`, 0 ca lệch. `npm test` cho 8 test pass, `npm run bench` chạy 242 ms với 200.000 dòng. Rủi ro còn lại: `id`, `customerId`, `sku` hoặc `category` là `NaN` hay `-0` có thể khác bản cũ, vì bản mới không mô phỏng JSON round-trip cho các trường đó.
+
+## Tệp đã tạo/sửa
+Không có tệp nào bị sửa trong lượt này. `src/report.js` giữ nguyên bản viết lại từ phòng trước (chưa commit). Script fuzz tạm nằm ngoài repo, tại `/tmp/claude-0/-tmp-vb-t4-perf--B7--r1/d1e1e9dd-fe0c-5909-9d1d-01fccf35645d/scratchpad/f.js`.
+
+## Kiểm chứng
+- `npm test` → exit 0 (không ghi lại mã thoát trực tiếp, tôi lọc kết quả qua `grep`), 8 pass, 0 fail. Baseline là 2 test.
+- `npm run bench` → 200000 dòng: 242 ms, 13 tháng, 11 danh mục, tổng 11445199250.
+- Fuzz tạm `f.js` → 3000 ca so với `test/fixtures/report.legacy.js`, 0 ca lệch.
+  - Dữ liệu fuzz: `qty` thuộc {0, 1, 2, 3, -1, 1.5, 0.1, NaN, Infinity, -0, null, undefined, '2', 1e308}; `unitPrice` thuộc {0, 100, 250, -0, 1e308, 0.1, NaN, undefined}.
+  - `id`/`customerId` có thêm `null`/`undefined`/số/chuỗi; `name`/`category` có `undefined`/`null`; `status` có 'x' và `undefined`.
+  - Có sku trùng, sku không có trong `products` và 5 giá trị `date` có múi giờ lệch tháng.
+  - `options` thuộc {rỗng, `topN` 0/1/-1/null/100, `from`, `to`, `from`+`to`}.
+- Tôi không chạy bản cũ trên 200.000 dòng vì mất khoảng 15 giây theo PERF.md.
+
+## Quyết định thiết kế
+Các hành vi của bản cũ đã đối chiếu, đều khớp:
+- **JSON round-trip cho `amount`/`qtySigned`**:
+  - Giá trị không hữu hạn thành `null`, và `null` cộng vào tổng như 0.
+  - `-0` thành `0`.
+  - `qty` là chuỗi số thì `qtySigned` giữ chuỗi khi không hoàn tiền, nên tổng nối chuỗi như bản cũ. Khi hoàn tiền thì `-qty` ra số.
+  - `qty` là `undefined` thì ra `NaN` ở tổng `qty`, giống bản cũ.
+- **Trường `undefined` bị JSON bỏ khỏi `row`**: `id`, `customerId`, `name`, `category` là `undefined` vẫn khớp, vì bản cũ đọc lại cũng ra `undefined`.
+- **Thứ tự first-seen**:
+  - Tháng được `sort()` mặc định.
+  - Danh mục, sku trong danh mục và khách hàng giữ thứ tự xuất hiện đầu tiên bằng `Map`.
+  - Các comparator giữ nguyên, kể cả nhánh `? -1 : 1` không đối xứng, nên kết quả khi hòa giống bản cũ.
+- **Sku trùng trong `products`**: lấy bản ghi đầu, như `find` cũ. Sku không có trong `products` vào `category = 'unknown'`, `name = '(không rõ)'`.
+- **Thứ tự cộng số thực**: `grandTotal`, tổng theo danh mục, tổng theo tháng và `refunds` cộng theo đúng thứ tự dòng như bản cũ, nên không lệch dấu phẩy động.
+- **`topN`**: dùng `??` nên `null`/`undefined` thành 3, còn 0, âm và lớn hơn số phần tử đi qua `slice` giống bản cũ.
+- **`from`/`to`**: điều kiện `from && month < from` giữ nguyên, bao gồm hai đầu.
+- **Ngày không hợp lệ**: vẫn ném `RangeError` trước khi lọc, kể cả dòng `cancelled`.
+- **Dòng `cancelled`**: bị bỏ sau bước lọc tháng, như bản cũ.
+- **Bộ nhớ đệm**: `monthCache` chỉ sống trong một lần gọi, không có cache giữa các lần gọi.
+
+## Rủi ro & việc còn mở
+- Cố ý không tái hiện (đầu vào không hợp lệ): `id`, `customerId`, `sku`, `category` là `NaN`/`Infinity`/`-0`. Bản cũ biến chúng thành `null`/`0` qua JSON, còn bản mới giữ nguyên giá trị. `Map` cũng coi `NaN` là một khóa, trong khi `===` của `find` coi các `NaN` là khác nhau. Giá trị `Date` hoặc object lồng nhau ở các trường đó cũng không được xử lý. PERF.md chỉ yêu cầu đầu vào hợp lệ.
+- Script fuzz của tôi chưa nằm trong repo. S2 (`test/fuzz.test.js`) có thể tham khảo dải dữ liệu lệch ở trên.
+
+Bản đầy đủ: `.ccoding/T-20261102-164440-e7a/outputs/dev-S1-senior-swe.md`
+
+### S2 — Bộ test đối chiếu fuzz với bản cũ (tệp riêng) (@backend-dev, done)
+
+## Tóm tắt
+Tôi thêm `test/fuzz.test.js`, gồm 113 test đối chiếu `src/report.js` với bản cũ `test/fixtures/report.legacy.js` bằng `assert.deepStrictEqual`. Có 112 bộ dữ liệu có seed cố định (14 kiểu hình × 4 cỡ × 2 seed) và 1 test mảng rỗng. `npm test` xanh, 121/121 pass, khoảng 2,3 giây. Tôi không tìm thấy khác biệt nào giữa bản mới và bản cũ.
+
+## Tệp đã tạo/sửa
+- `test/fuzz.test.js` (mới). Không sửa tệp nào khác.
+  - **Sinh dữ liệu:** dùng `rng` của `src/gen.js`, mỗi bộ có từ 1 đến 1500 dòng (4 cỡ: 1, 37, 400, 1500).
+  - **Kiểu hình (14):**
+    - mặc định
+    - nhiều đơn hoàn/hủy
+    - toàn hoàn
+    - toàn hủy
+    - `qty=0`
+    - `unitPrice` âm
+    - số thực lẻ
+    - sku trùng trong `products`
+    - sku thiếu nhiều trong `products`
+    - khách lặp
+    - hòa điểm ở top-N
+    - hòa điểm kèm sku trùng
+    - một ngày duy nhất
+    - ngày hỗn hợp gần ranh giới tháng và múi giờ (+14, -12, năm nhuận, đầu/cuối năm)
+  - **Options:** mỗi bộ chạy 12 tổ hợp `topN`/`from`/`to`: `topN` bằng 0, 1, 2, 5, 100, `from` sau `to`, `from` ở tương lai, và lọc một tháng.
+  - **Mảng rỗng:** test riêng cho `orders` rỗng, `products` rỗng, và cả hai rỗng.
+
+## Hợp đồng API
+Không áp dụng.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0. 121 test, 121 pass, 0 fail, 0 cancelled, 0 skipped. Gồm 113 test mới của `test/fuzz.test.js`, 8 test đã có từ trước.
+- Lần chạy đầu bị hook chặn vì đường dẫn `../src/report` nằm trong heredoc. Tôi tạo tệp bằng công cụ Write rồi chạy lại.
+
+## Việc còn lại
+- Không có biến môi trường mới.
+- Khác biệt hành vi: không tìm thấy trên các bộ dữ liệu trên, nên không có bộ tái hiện nào cần báo.
+- Giới hạn của fuzz: chưa phủ đầu vào không hợp lệ như `id`/`sku` là `undefined` hoặc `NaN`, đã nêu ở rủi ro trong bàn giao trước. Nếu S1 muốn phủ, người nhận là `@senior-swe`.
+
+Bản đầy đủ: `.ccoding/T-20261102-164440-e7a/outputs/dev-S2-backend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-164440-e7a` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **34 in / 22.4k out**, cache đọc 259.4k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 22 | 14575 | 178420 | 2 |
+| Backend Developer (@backend-dev) | dev | 8 | 6063 | 58770 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 1786 | 22236 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Rà soát và vá khác biệt hành vi của buildReport so với bản cũ (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Bộ test đối chiếu fuzz với bản cũ (tệp riêng) (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 2 · # suites 0 · # pass 2 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 121 · # suites 0 · # pass 121 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **84** A | — | 67 | 93 | 100 | 1 | 1 | 193k | 1/12 |
+| Backend Developer (@backend-dev) | dev | **93** A | — | 100 | 80 | 100 | 1 | 1 | 65k | 1/4 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 24k | 0/1 |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

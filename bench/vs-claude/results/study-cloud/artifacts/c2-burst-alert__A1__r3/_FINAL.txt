@@ -1,0 +1,12 @@
+I implemented `detectBursts` in `src/alert.js`. `npm test` passes, but the repo has only one visible test. I also ran a few small checks of my own, and they behaved as expected. They covered:
+- unsorted input
+- ignoring a 404
+- equal timestamps
+- the half-open window boundary
+- cooldown, where events skipped during cooldown still counted toward the next alert
+
+The function drops non-5xx events, groups the rest by host and stable-sorts each group by `ts`. It then counts a sliding window over `(ts - windowMs, ts]` and applies the cooldown. The input array isn't mutated, and alerts are sorted by `ts`, then by `host`.
+
+I added two assumptions the brief didn't cover:
+- **Bad timestamps:** events whose `ts` isn't a finite number are ignored.
+- **Zero or negative window:** I bounded the window pointer so a `windowMs` of 0 or less can't run past the current event.

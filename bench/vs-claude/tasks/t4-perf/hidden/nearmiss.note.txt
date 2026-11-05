@@ -1,0 +1,1 @@
+SR-24: src/report.js:87: ">" -> ">=" (một chỗ trên lời giải tham chiếu); điểm khi sinh = 0.947; test trượt: tương đương: ngày sát ranh giới tháng theo múi giờ

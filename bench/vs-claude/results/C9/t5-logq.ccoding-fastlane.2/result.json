@@ -1,0 +1,112 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261102-140019-8c2",
+  "wallSec": 177,
+  "wallSecHarness": 180,
+  "costUsd": 0.7220856,
+  "tokens": {
+   "input": 36,
+   "output": 32573,
+   "cacheRead": 534073,
+   "cacheWrite": 84852
+  },
+  "attention": "checks",
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "Hiện thực src/parse.js + test"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "Hiện thực src/query.js + test"
+   }
+  ],
+  "workdir": "/home/claude/ccoding-dev/workspaces/b-c9-t5-fastla-2/wt-T-20261102-140019-8c2",
+  "branch": "ccoding/t-20261102-140019-8c2"
+ },
+ "task": "t5-logq",
+ "system": "ccoding-fastlane",
+ "rep": 2,
+ "key": "t5-logq.ccoding-fastlane.2",
+ "env": "cloud",
+ "startedAt": "2026-11-02T07:00:19.762Z",
+ "finishedAt": "2026-11-02T07:03:20.755Z",
+ "grade": {
+  "hidden": {
+   "pass": 95,
+   "fail": 51,
+   "total": 146,
+   "failed": [
+    "tổng hợp: count",
+    "tổng hợp:   count  ",
+    "tổng hợp: count by s",
+    "tổng hợp: count by code",
+    "tổng hợp: count by missing",
+    "tổng hợp: top 2 s",
+    "tổng hợp: top 10 code",
+    "tổng hợp: sum n",
+    "tổng hợp: avg n",
+    "tổng hợp: min n",
+    "tổng hợp: max n",
+    "tổng hợp: p50 n",
+    "tổng hợp: p90 n",
+    "tổng hợp: p99 n",
+    "tổng hợp: avg nothing",
+    "tổng hợp: p95 nothing",
+    "tổng hợp: histogram 1m",
+    "tổng hợp: histogram 2m",
+    "tổng hợp: histogram 30s",
+    "tổng hợp: histogram 1d",
+    "tổng hợp: percentile nearest-rank",
+    "tổng hợp: avg làm tròn 4 chữ số",
+    "tổng hợp: histogram rỗng",
+    "tổng hợp sai: \"\"",
+    "tổng hợp sai: \"counts\"",
+    "tổng hợp sai: \"count by\"",
+    "tổng hợp sai: \"count s\"",
+    "tổng hợp sai: \"top s\"",
+    "tổng hợp sai: \"top 0 s\"",
+    "tổng hợp sai: \"top x s\"",
+    "tổng hợp sai: \"median n\"",
+    "tổng hợp sai: \"avg\"",
+    "tổng hợp sai: \"histogram\"",
+    "tổng hợp sai: \"histogram 0m\"",
+    "tổng hợp sai: \"histogram 1w\"",
+    "tổng hợp sai: \"histogram m\"",
+    "tổng hợp sai: \"sum a b\"",
+    "CLI: in bản ghi khớp dạng JSON, bỏ @t, theo thứ tự đọc",
+    "CLI: không truy vấn = mọi dòng hợp lệ; tùy chọn đứng sau tệp",
+    "CLI: --stats ra stderr",
+    "CLI: đọc stdin khi không có tệp và khi tệp là -",
+    "CLI: --agg json",
+    "CLI: --agg kết hợp --query",
+    "CLI: --format table cho bucket (căn cột, hai dấu cách)",
+    "CLI: --format table cho histogram",
+    "CLI: --format table cho giá trị đơn",
+    "CLI: lỗi cú pháp truy vấn → mã 2, stderr có vị trí, stdout rỗng",
+    "CLI: spec tổng hợp sai → mã 2",
+    "CLI: table không có --agg → mã 2",
+    "CLI: tùy chọn lạ / format lạ → mã 2",
+    "CLI: tệp không đọc được → mã 1, stdout rỗng"
+   ],
+   "ms": 592,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 22,
+   "fail": 1,
+   "total": 23
+  },
+  "changed": [
+   "~src/parse.js",
+   "~src/query.js",
+   "+test/parse.test.js",
+   "+test/query.test.js"
+  ]
+ },
+ "audit": []
+}

@@ -1,0 +1,89 @@
+# Báo cáo tổng hợp: answer.json và REVIEW.md từ corpus P1–P6
+
+## Tóm tắt
+Cả hai sản phẩm đã xong, nằm ở repo root, và review cuối cho kết quả **Đạt**. Không có blocker hay major. Đáp án: q1 là **P4, F1 0.962** trên HDFS-X full split. q2 là **P5, BGL-X** với 0.5% nhãn. q3 **không có trong corpus** (`not_in_corpus: true`) vì P4 chỉ báo latency. q4 là **P1 và P3**. `REVIEW.md` dài 477 từ, tôi đã đếm lại bằng `wc -w`. Hai tệp hiện **chưa commit** (git báo untracked).
+
+## Kết quả theo RQ
+| RQ | Kết luận | Bằng chứng (nguyên văn trong corpus) | Mức chắc chắn |
+|---|---|---|---|
+| q1 | P4 (LogGraphT), F1 0.962 | P4: "On HDFS-X (full split) it achieves F1 0.962". Các paper khác trên full split: P3 đạt 0.948, P1 đạt 0.931. Số 0.971 của P2 chỉ đo trên HDFS-X-small, và P6 ghi tập này "not comparable to the full split" | Cao trong phạm vi corpus. Tuy vậy, đây là con số P4 tự báo cáo, còn việc so sánh giữa các paper là do ta tự làm. P6 nói rõ "We do not rank methods" |
+| q2 | P5, BGL-X | P5: "With 0.5% labeled data on BGL-X" | Cao. Không paper nào khác dùng dưới 1% nhãn |
+| q3 | Không có trong corpus | P4 chỉ có câu "Inference latency is 3.1 ms per session on one A100 GPU. We do not report training cost." | Cao. Đáp án không ước lượng con số năng lượng |
+| q4 | P1 và P3 | P1 nói parsing là "necessary first step", và F1 giảm 9–14 điểm khi bỏ parser. P3 viết "Contrary to the common belief that template extraction is required" | Cao |
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Tệp |
+|---|---|---|---|---|
+| S1 | Trích bằng chứng, viết answer.json | @literature-researcher | Đạt. Mỗi giá trị có câu trích nguyên văn, schema đúng | `answer.json`, `.ccoding/T-20261102-125004-ee3/evidence.md`, `outputs/research-S1-literature-researcher.md` |
+| S2 | REVIEW.md tổng hợp state of the art | @academic-writer | Đạt. Có đủ các mục (a)–(e), nêu rõ corpus là hư cấu, không mâu thuẫn với answer.json | `REVIEW.md`, `outputs/research-S2-academic-writer.md` |
+| S3 | Kiểm tra schema, số từ, trích dẫn | @data-scientist | Đạt. 5/5 kiểm tra PASS (SCHEMA OK, 477 từ, 16 con số khớp corpus, chỉ trích [P1]..[P6]) | `.ccoding/T-20261102-125004-ee3/validation.md`, `outputs/research-S3-data-scientist.md` |
+
+**Quyết định chính**
+- Bỏ câu "no paper ranks methods". Thay bằng ý: [P6] không xếp hạng phương pháp, [P4] tự nhận kết quả tốt nhất, và corpus không có so sánh chéo độc lập.
+- Mọi nhận định "cao nhất" đều ghi kèm phạm vi "trong corpus, trên HDFS-X full split".
+- Kết quả BGL-X của P5 (0.861 với 0.5% nhãn) chỉ so với baseline 0.701 dùng cùng ngân sách nhãn, không so với các paper dùng 80% nhãn.
+- Tỷ lệ nhãn của P2 và P4 ghi là "corpus không nêu".
+
+**Rủi ro và giả định**
+- Corpus là hư cấu, nên các con số chỉ có giá trị trong bài tập này.
+- REVIEW.md có 477 từ, chỉ cách ngưỡng 500 là 23 từ. Nếu sửa thì phải đếm lại.
+
+## Phương pháp & giới hạn
+Nhóm chỉ đọc `corpus/P1–P6.md`, không dùng web hay kiến thức ngoài. Số liệu được đối chiếu thủ công với corpus. Schema và số từ được kiểm bằng lệnh, ghi lại trong `validation.md`. Các văn bản là bản nháp để Tom sở hữu. Khi dùng cho mục đích học thuật, cần tuân theo quy định liêm chính và chính sách dùng AI của trường.
+
+## Phản biện đã xử lý
+- @peer-reviewer yêu cầu S1 tự trích dẫn lại từ corpus thay vì chép từ kế hoạch. Đã làm trong evidence.md.
+- @literature-researcher và @academic-writer góp ý câu "no paper ranks methods" nói quá phạm vi. Câu này đã được thay.
+- @data-scientist đề nghị đối chiếu cả các số mô tả dataset (11M, 4.7M, 10%). Đã đối chiếu, tất cả khớp.
+- Review cuối có một ghi chú nhỏ, không bắt buộc sửa: câu "no common protocol … [P6]" là diễn giải của người viết. Tôi giữ nguyên câu này vì nó không sai với corpus.
+
+## Bước tiếp theo
+1. Commit `answer.json` và `REVIEW.md` nếu Tom muốn lưu vào lịch sử. Hiện cả hai đang untracked, và tôi chưa commit vì Tom chưa yêu cầu.
+2. Không có giai đoạn sau cần tách thành nhiệm vụ riêng.
+
+## Tài liệu tham khảo
+[P1]–[P6]: các tóm tắt bài báo hư cấu trong `corpus/`, không có DOI. Không dùng nguồn ngoài corpus.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-125004-ee3` · chế độ: project · phòng: research · phân loại dữ liệu: internal
+- Tổng: **60 in / 27.1k out**, cache đọc 380.1k, 12 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Trưởng phòng Nghiên cứu (@research-lead) | research | 16 | 8827 | 104556 | 3 |
+| Data Scientist (@data-scientist) | research | 12 | 4408 | 84426 | 2 |
+| Peer Reviewer (@peer-reviewer) | research | 10 | 3323 | 63825 | 2 |
+| Academic Writer (@academic-writer) | research | 10 | 4096 | 64524 | 2 |
+| Literature Researcher (@literature-researcher) | research | 10 | 5872 | 60477 | 2 |
+| Điều phối viên (@orchestrator) | office | 2 | 526 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/research-S1-literature-researcher.md` — S1 Trích bằng chứng từ corpus và viết answer.json (@literature-researcher)
+- `outputs/research-S2-academic-writer.md` — S2 Viết REVIEW.md: tổng hợp state of the art (300–500 từ) (@academic-writer)
+- `outputs/research-S3-data-scientist.md` — S3 Kiểm tra tự động schema, số từ và trích dẫn (@data-scientist)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+| Trưởng phòng Nghiên cứu (@research-lead) | research | **94** A | 100 | 100 | 92 | 70 | 0 | — | 113k | 1/10 |
+| Data Scientist (@data-scientist) | research | **88** A | 100 | 76 | 100 | 60 | 1 | 1 | 89k | 0/5 |
+| Academic Writer (@academic-writer) | research | **92** A | 100 | 100 | 80 | 70 | 1 | 1 | 69k | 1/4 |
+| Peer Reviewer (@peer-reviewer) | research | **42** D | — | — | 73 | 0 | 0 | — | 67k | 1/3 |
+| Literature Researcher (@literature-researcher) | research | **92** A | 100 | 100 | 80 | 70 | 1 | 1 | 66k | 1/4 |
+
+### Việc cần sửa theo agent
+- **Data Scientist** (@data-scientist, 88 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+  - Không có nguồn kiểm chứng được (DOI/URL) và không dùng công cụ tra cứu.
+- **Academic Writer** (@academic-writer, 92 A):
+  - Không có nguồn kiểm chứng được (DOI/URL) và không dùng công cụ tra cứu.
+- **Peer Reviewer** (@peer-reviewer, 42 D):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+- **Literature Researcher** (@literature-researcher, 92 A):
+  - Không có nguồn kiểm chứng được (DOI/URL) và không dùng công cụ tra cứu.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

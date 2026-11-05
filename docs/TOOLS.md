@@ -124,5 +124,85 @@ Các CLI agent tự có công cụ riêng; CCoding truyền danh sách công c�
 - lệnh cấm mặc định + `denyCommands` của dự án; không tạo/chuyển nhánh, rebase, reset --hard, push; không `.env` (kể cả `git show HEAD:…/.env`);
 - `Read/Edit/Write/Grep/Glob` chỉ trong thư mục làm việc của lượt gọi (worktree hoặc worktree con);
 - **lệnh shell cũng bị giữ trong thư mục làm việc** (từ 1/11/2026): đường dẫn ổ đĩa `C:\…`/`C:/…`, MSYS `/c/…`, UNC, `~/`, `$HOME`, `$env:USERPROFILE` và `../` vượt gốc (tính theo `cd` trong lệnh) đều bị chặn — trừ thư mục tạm và thư mục cài đặt hệ thống/Node. Trước đây `cat /c/Users/admin/<thư mục khác>/…` qua Bash không bị chặn dù `Read` thì có. Cùng quy tắc áp cho `run_command` của CCoding;
-- vai trò chỉ có **git chỉ đọc**: CCoding thêm `Bash` vào `--tools`, hook chỉ cho lệnh CHỈ ĐỌC trong worktree — `git <lệnh đọc>` và đọc tệp (`cat`, `head`, `tail`, `ls`, `grep`, `find` không `-exec/-delete`, `sed -n 'a,bp'`…), nối bằng `&&`, lọc qua `| head/grep/wc…`; chặn `||`, chuyển hướng, `$(…)`, ghi tệp qua shell — test/build/lệnh khác bị chặn kèm hướng dẫn ghi lệnh vào bàn giao. Lệnh Bash chỉ xem git được ghi log/KPI là `git_read` (không tính "chạy lệnh");
+- vai trò chỉ có **git chỉ đọc**: CCoding thêm `Bash` vào `--tools`, hook chỉ cho lệnh CHỈ ĐỌC trong worktree — `git <lệnh đọc>` và đọc tệp (`cat`, `head`, `tail`, `ls`, `grep`, `find` không `-exec/-delete`, `sed -n 'a,bp'`…), nối bằng `&&`, `||`, `;` hoặc `|` (chi tiết ở mục *Chế độ shell chỉ đọc của hook*); chặn chuyển hướng, `$(…)`, ghi tệp qua shell — test/build/lệnh khác bị chặn kèm hướng dẫn ghi lệnh vào bàn giao. Lệnh Bash chỉ xem git được ghi log/KPI là `git_read` (không tính "chạy lệnh");
 - **giới hạn khảo sát** (`tools.readsBeforeWrite`, pha thực thi/sửa): đếm `Read/Grep/Glob` và lệnh shell chỉ đọc (`cat`, `sed -n`, `grep`, `ls`, `git log`…) liên tiếp; ghi tệp hoặc chạy lệnh khác (test, build) đặt lại bộ đếm. Ở N lần: chặn đúng lần đọc đó với lời nhắc ghi dần (lần sau được đọc); từ 2N: chặn đọc cho tới khi ghi. Bộ đếm nằm ở `data/runs/<task>/guard/<lượt gọi>.json`, xóa khi lượt gọi xong. Trước đây giới hạn này chỉ có trong vòng công cụ của CCoding.
+
+## Chế độ shell chỉ đọc của hook (B-04)
+
+Mục này mô tả cách hook `claude-guard` quyết định một lệnh Bash có phải lệnh chỉ đọc hay không, với vai trò chỉ có git chỉ đọc. Mã nguồn nằm ở `src/tools/shell-policy.ts` (`shellParse`, `gitReadViolation`) và được hook gọi trong `src/tools/claude-guard.ts`. Phần này chỉ nới quyền đọc trong workspace. Chặn đọc `.env` và chặn đường dẫn ngoài workspace vẫn áp như cũ.
+
+**Tách lệnh có xét nháy.** `shellParse` tách lệnh thành các câu con. Các toán tử `&&`, `||`, `;`, xuống dòng và `|` chỉ có nghĩa khi nằm ngoài nháy đơn hoặc nháy kép. Ký tự `<` và `>` trong nháy không phải chuyển hướng, nên `grep "a > b" tệp` được qua. Hai dạng `2>&1` và `>/dev/null` (kể cả `2>/dev/null`) được bỏ qua. Dấu `\"` trong nháy kép được hiểu đúng (`splitArgs`).
+
+**Các lệnh được nới.**
+
+| Lệnh | Điều kiện |
+|---|---|
+| `echo`, `printf` | Không chuyển hướng |
+| `pwd`, `true` | Không có |
+| `sed -n` | Nhiều địa chỉ dạng `Np`, `N,Mp`, `N,$p`, cách nhau bằng `;`, ví dụ `sed -n '271p;480p;524p' tệp` |
+| `awk` | Chương trình không chứa `system`, `getline`, `close`, `ENVIRON`, `fflush`, `>`, `\|`, `@include`, `@load`; không dùng `-f`, `-i`, `-E`, `-l`, `-W`, `--file`, `--source` |
+| `cat`, `sed -n`, `awk` an toàn | Được làm bộ lọc sau dấu `\|` |
+| `\|\|` | Chỉ giữa các lệnh chỉ đọc |
+
+**Các ca vẫn bị chặn.**
+
+| Dạng | Mã quy tắc |
+|---|---|
+| `; rm …` và mọi lệnh không phải chỉ đọc, `sed -i`, `tee`, `sort -o`, `tree -o` | `not-read-only` |
+| `python`, `node` và các trình thông dịch khác, `awk 'BEGIN{system(…)}'` | `interpreter` hoặc `not-read-only` |
+| `> tệp`, `>> tệp`, `<` | `redirect` |
+| `$(…)` và dấu backtick, kể cả trong nháy kép (bash vẫn chạy chúng) | `subst` |
+| Heredoc | `heredoc` |
+| `for`, `while` | `loop` |
+| Đọc tệp `.env`, kể cả dạng nối nháy như `.e""nv` | `env-file` |
+| Đường dẫn ngoài thư mục làm việc | `outside-root` |
+
+Lệnh gộp có `cd` sang thư mục khác cũng có thể bị chặn. Hook không nhớ thư mục hiện tại giữa các lượt Bash, nên `cd ../paper` từ gốc workspace bị coi là đi ra ngoài.
+
+**Kết quả phát lại.** Script `scripts/replay-guard-deny.mjs` phát lại 44 lệnh `git-read-deny` của `docs/research/context/tool-failures-2026-11-02.csv` qua hàm thật. Trước khi sửa, 0 trên 44 lệnh qua. Sau khi sửa, 33 lệnh qua và 11 lệnh vẫn bị chặn. Trong 11 lệnh đó có 8 lệnh ghi hoặc chạy mã, đúng như dự kiến, và 3 lệnh chỉ đọc không nới được (một lệnh dùng `$(…)`, một lệnh `cd ..` ra ngoài, một lệnh bị CSV cắt cụt). Mốc 36 trên 44 của đề bài chưa đạt, và quyết định chấp nhận 33 trên 44 chờ giám đốc. Nhãn đọc, ghi, chạy mã trong CSV là nhãn suy từ nội dung lệnh. Để chạy lại:
+
+```bash
+node --import tsx scripts/replay-guard-deny.mjs
+```
+
+Bộ test ác ý nằm ở `test/shell-policy-adversarial.test.ts`.
+
+## Thông báo chẩn đoán khi hook chặn (B-06)
+
+Khi chặn, hook nêu câu lệnh con vi phạm và quy tắc bị vi phạm, thay cho một thông báo chung. Mã nguồn: `blockMessage` và `safeCmdName` trong `src/tools/shell-policy.ts`, `guardBlock` trong `src/tools/claude-guard.ts`.
+
+Thông báo có dạng `CCoding chặn câu N: \`lệnh\` <quy tắc> — <gợi ý>` và dài tối đa 300 ký tự. Ví dụ, khi câu thứ 2 là `python3`: "CCoding chặn câu 2: `python3` không phải lệnh chỉ đọc (chạy mã) — đọc/tìm bằng Read/Grep/Glob…". Thông báo chỉ giữ tên lệnh hoặc toán tử. Tên dài hơn 24 ký tự, có ký tự lạ hoặc giống khóa, token thì được thay bằng `?`, nên không lộ tham số hay bí mật.
+
+Các mã quy tắc: `not-read-only`, `redirect`, `subst`, `heredoc`, `loop`, `interpreter`, `env-file`, `outside-root`, `deny-list`, `git-branch`, `read-limit`. Lệnh khớp danh sách cấm mặc định (ví dụ `rm -r`) bị chặn trước khi tách câu, nên sự kiện của chúng có `rule: deny-list` và `clause: 1`.
+
+**Sự kiện `guard.block`.** Mỗi lần chặn, hook ghi một sự kiện mức `warn` qua `LogStore` (che PII và bí mật, có chuỗi băm).
+
+| Trường trong `data` | Nội dung |
+|---|---|
+| `tool` | Công cụ bị chặn |
+| `clause` | Số thứ tự câu, bắt đầu từ 1 |
+| `rule` | Mã quy tắc ở trên |
+| `cmd` | Chỉ tên lệnh hoặc toán tử, không có lệnh thô |
+
+Sự kiện nằm ở `<data>/logs/system.jsonl` và, khi biết nhiệm vụ, ở `<data>/runs/<task>/events.jsonl`. Hook tìm thư mục `data/` theo thứ tự: trường `dataDir` trong cấu hình `CCODING_GUARD`, biến môi trường `CCODING_DATA_DIR`, rồi suy từ đường dẫn bộ đếm `<data>/runs/<task>/guard/<lượt>.json`. Không tìm được thì bỏ qua việc ghi log. Lỗi khi ghi log không đổi quyết định chặn hay cho qua. Mỗi lần chặn mở một `LogStore` mới, nên khi nhiều hook chạy song song chuỗi băm có thể rẽ nhánh. Đây là log chẩn đoán, không dùng làm chứng cứ. Kiểm thử: `test/guard-block-diag.test.ts`.
+
+**Hiệu lực.** Hook chạy theo bản `dist/` đã cài, không chạy theo `src/`. Cả hai thay đổi trên (B-04 và B-06) chỉ có hiệu lực sau khi build và cài lại `dist/`. Cách kiểm: chạy một lệnh bị chặn rồi tìm dòng `guard.block` trong `data/logs/system.jsonl`.
+
+## Kiểm tra nhất quán số liệu nghiên cứu (B-05)
+
+Script kiểm tra tài liệu nghiên cứu để phát hiện cụm đã lỗi thời và số liệu lệch so với giá trị chuẩn. Script là Node thuần, không thêm phụ thuộc, chỉ đọc và không ghi gì ra đĩa. Mã nguồn: `docs/research/scripts/consistency-check.mjs`. Dữ liệu chuẩn: `docs/research/facts.json`.
+
+Script quét các tệp `.md` trong `docs/research/**` và `docs/PROCESS-REVIEW.md`, bỏ qua `CHANGELOG.md` và thư mục `context/`. Mỗi dòng được chuẩn hóa NFC rồi so khớp với `facts.json`. Tệp này có hai nhóm:
+
+- `stale`: cụm đã lỗi thời, mỗi mục có thể giới hạn theo `files` và có `exceptions`.
+- `numbers`: số chuẩn. Mỗi mục có `value`, `reason` (ghi nguồn của số), `pattern`, `files`, `exceptions`. Nhóm bắt đầu đầu tiên của `pattern` (hoặc cả đoạn khớp) phải bằng `value`.
+
+Mỗi ngoại lệ có dạng `{file, line?, reason}`. Ngoại lệ thiếu `reason` thì script dừng với exit 2.
+
+```bash
+node docs/research/scripts/consistency-check.mjs            # in lỗi dạng tệp:dòng — id — mô tả
+node docs/research/scripts/consistency-check.mjs --json     # in mảng JSON {file,line,id,kind,message}
+node docs/research/scripts/consistency-check.mjs <thư-mục-gốc> --facts <tệp-facts.json>
+```
+
+Có lỗi thì exit 1, sạch thì exit 0. Test nằm ở `test/consistency-check.test.ts` và chạy trong `npm test`. Khi chạy trên repo thật, script báo một lỗi ở `docs/research/BRIEF-2.md:6` (dòng nói lượt C7 t2 "review không bắt", lệch so với `token-analysis.md`). Việc sửa dòng này chưa làm.

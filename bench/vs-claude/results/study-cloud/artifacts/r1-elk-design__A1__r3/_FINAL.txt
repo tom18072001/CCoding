@@ -1,0 +1,24 @@
+`DESIGN.md` is written at the repo root. I haven't committed it.
+
+**Capacity figures** (these rest on my compression assumptions, which a proof-of-concept must check):
+- **Raw volume:** 16 MB/s, which is 1.38 TB/day and 504.6 TB/year (1.73 billion events/day).
+- **Compression assumptions:** indexed data is 1.0× raw when fresh and 0.7× after force-merge. The signed archive is 0.17× raw. All three are unvalidated and could be off by about 40 %.
+- **Interactive 30 days:**
+  - Hot (days 0–7): 19.4 TB with one replica, on 8 nodes.
+  - Warm (days 8–30): 44.5 TB with one replica, on 8 nodes.
+- **Older data:**
+  - Days 8–365 sit as snapshots in an object store, about 346 TB.
+  - A 10-node restore tier of 80 TB serves requests of up to 31 days. The 24-hour target holds only if the object store sustains about 0.5 GB/s.
+- **Evidence archive:** 92.8 TB per copy, 186 TB for two sites.
+- **Other tiers:** the document also covers masters, coordinating nodes, Kafka (4 brokers), Logstash and the archiver.
+
+**Conflicts and risks it flags:**
+- **Searchable snapshots:** my understanding is that they need an Enterprise license, as does the frozen tier, so the customer's suggestion can't be built on Basic. The document uses plain snapshots with restore on demand instead. The 24-hour requirement is what makes that acceptable. Please re-check that license claim against the Elastic subscription matrix for the version you pin.
+- **Masking vs. "unaltered":** masking changes the evidence. The document defines the evidence as the masked record plus a hash of the original, and asks for a legal decision on keeping an unmasked escrow.
+- **Elasticsearch can't prove integrity on Basic:** there is no immutability or ES audit log. The proof therefore lives in a separate archive on locked (WORM) storage. It is hash-chained, signed and timestamped.
+- **Smaller risks:** key loss or rotation breaks user correlation. Restore speed is unproven. Retention is ambiguous (365 days vs. calendar months), and the 30-day grace on the archive over-retains. Growth is only covered by headroom.
+
+**Stages:**
+- **Plan:** I turned the brief into a checklist with assumptions, now §1 of the document.
+- **Self-review:** I rechecked every figure against a script and checked each requirement against the text. There were no tests to run.
+- **Fix:** I corrected the event count, the undersized Logstash tier (now 6 nodes), several garbled sentences and some unsupported claims.

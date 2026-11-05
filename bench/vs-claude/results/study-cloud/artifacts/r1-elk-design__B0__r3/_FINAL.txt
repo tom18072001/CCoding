@@ -1,0 +1,126 @@
+# Báo cáo tổng hợp T-20261102-145233-2f9: Thiết kế và định cỡ nền tảng audit-log Elastic Stack (DESIGN.md)
+
+## Tóm tắt
+`DESIGN.md` đã có ở thư mục gốc repo: 593 dòng, tiếng Anh, chưa commit. Tài liệu có đủ các phần brief yêu cầu: số học dung lượng, bố trí node, pipeline nạp và che dữ liệu, ILM, cách bảo đảm toàn vẹn, rủi ro và xung đột trong đầu vào. Ngoài ra có thêm §8 ghi cách kiểm lại số học. Theo review không có blocker hay major, chỉ còn vài điểm minor.
+
+Reviewer kết luận "đã chạy lại 3 script" nhưng hệ thống ghi nhận reviewer **không chạy lệnh nào**. Vì vậy tôi tự đọc lại các log do S2/S3 tạo khi chạy thật và đối chiếu với tài liệu, thấy khớp. Tôi không chạy lại được script vì vai trò này chỉ được dùng lệnh chỉ đọc. Phần còn mở là PoC: chưa có Logstash, Elasticsearch hay object storage thật, tỷ lệ nén chưa được đo, và khách hàng/pháp chế còn phải chốt các quyết định OD.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Bản nháp: số học dung lượng, bố trí node, ILM/SLM, xung đột đầu vào | @solution-architect | Đạt | `DESIGN.md` §1–§4, §7. S1 tính tay, không chạy được lệnh nào; số liệu được S2 kiểm lại bằng script. Output: `.ccoding/T-20261102-145233-2f9/outputs/dev-S1-solution-architect.md` |
+| S2 | Pipeline nạp và che PII, kiểm lại toàn bộ số học | @data-engineer | Đạt, có ghi chú | `DESIGN.md` §5 và §8. Chạy `verify_capacity.py` ra exit 0, chỉ lệch một chỗ (tổng cụm 464,876 → 464,877 TB) và đã sửa. Chạy `pipeline_ref.py` ra exit 0 sau khi sửa 2 lỗi regex/thứ tự che. Cấu hình Logstash §5.4 **chưa chạy**. Script và log: `/tmp/claude-0/-tmp-vb-r1-elk-design--B0--r3/d1e1e9dd-fe0c-5909-9d1d-01fccf35645d/scratchpad/verify_capacity.py`, `/tmp/claude-0/-tmp-vb-r1-elk-design--B0--r3/d1e1e9dd-fe0c-5909-9d1d-01fccf35645d/scratchpad/verify_capacity.log`, `/tmp/claude-0/-tmp-vb-r1-elk-design--B0--r3/d1e1e9dd-fe0c-5909-9d1d-01fccf35645d/scratchpad/pipeline_ref.py`, `/tmp/claude-0/-tmp-vb-r1-elk-design--B0--r3/d1e1e9dd-fe0c-5909-9d1d-01fccf35645d/scratchpad/pipeline_ref.log` |
+| S3 | Toàn vẹn chứng cứ pháp lý, rà bảo mật trong giới hạn Basic | @security | Đạt có điều kiện (cổng thiết kế) | `DESIGN.md` §6 và §7 (R11–R14, OD8, OD9). Chạy `merkle_ref.py` ra exit 0: chuỗi sạch xác minh đạt; sửa, xóa hoặc chèn event đều làm hỏng đúng lô bị ảnh hưởng; bỏ một lô thì chain báo thiếu; inclusion proof đúng. Script và log: `/tmp/claude-0/-tmp-vb-r1-elk-design--B0--r3/d1e1e9dd-fe0c-5909-9d1d-01fccf35645d/scratchpad/merkle_ref.py`, `/tmp/claude-0/-tmp-vb-r1-elk-design--B0--r3/d1e1e9dd-fe0c-5909-9d1d-01fccf35645d/scratchpad/merkle_ref.log` |
+
+**Trưởng phòng tự kiểm (chỉ đọc):**
+- `git status` ra `?? DESIGN.md`. Tệp có 593 dòng và đủ 8 heading từ §1 đến §8.
+- Grep thấy các số chính (1,3824; 504,576; 51,42528; 72,600; 277,8624; 392,276; 361,304) xuất hiện 24 lần. Tổng 464,877 TB khớp log.
+- Đọc `verify_capacity.log`: restore một node cold mất 9,08 giờ ở 500 MB/s, PQ là 345,6 GB.
+- Đọc `merkle_ref.log`: kết quả đúng như S3 mô tả.
+- Grep mẫu mật khẩu, khóa hay private key trong `DESIGN.md`: không có kết quả. Tài liệu chỉ dùng tham chiếu `${HMAC_KEY}`, `${PSEUDO_KEY}` và `${ES_WRITER_PASS}`.
+
+## Quyết định
+- **D1 – Chạy tuần tự S1 → S2 → S3:** cả ba hạng mục cùng ghi `DESIGN.md`.
+- **D2/D3 – Hai trường băm:**
+  - `event.hash_masked`: SHA-256 của bản đã che. Ai cũng kiểm chứng được mà không cần khóa.
+  - `event.hmac_original`: HMAC-SHA256 của bản gốc, **bắt buộc có khóa**. Hash trần của PII entropy thấp có thể bị dò ngược bằng từ điển.
+  - Lưu bản gốc mã hóa ngoài cụm: mặc định TẮT.
+- **D4 – Bí mật:** chỉ nằm trong keystore. Tài liệu chỉ tham chiếu biến, dữ liệu mẫu là dữ liệu giả.
+- **D5 – Quy ước tính:** đơn vị thập phân, năm 365 ngày. 20.000 eps × 800 B = 16 MB/s, tức 1,3824 TB/ngày và 504,576 TB/năm raw. Tỷ lệ nén `r` có ba mức 0,4 / 0,6 / 1,0.
+- **D6 / ADR-1 – Không dùng searchable snapshots:** gợi ý của khách bị ghi là **xung đột** với ràng buộc chỉ dùng Basic, vì tính năng này cần Enterprise. Thay vào đó dùng tier cold trên node thường, đĩa rẻ, kèm snapshot.
+- **ADR-2 – Cold 0 replica:** snapshot repository đóng vai bản dự phòng.
+- **ADR-3 – Giữ đủ 335 ngày trên cold (Option A):** dữ liệu cũ đáp ứng SLA 24 giờ mà không phụ thuộc thông lượng restore. Option B (xóa sau 30 ngày, restore khi có yêu cầu) giữ làm phương án dự phòng.
+- **Bố trí cụm (expected, r = 0,6):** 38 node, gồm 3 master, 12 hot/ingest, 17 cold, 2 Kibana và 4 Logstash.
+  - Hot (31 ngày × 2 bản): cấp phát 72,6 TB.
+  - Cold (335 ngày × 1 bản): cấp phát 392,276 TB.
+  - Snapshot repository: 361,304 TB.
+- **Toàn vẹn (§6):**
+  - Merkle tree và hash chain theo lô giờ, có chữ ký và timestamp.
+  - Bản "vault copy" WORM (Object Lock) nằm ngoài Elastic.
+  - Quy trình kiểm chứng 9 bước cho kiểm toán viên.
+  - Kiểm soát bù cho việc Basic không có audit logging và FLS/DLS.
+- **D7 – Đánh dấu chưa kiểm chứng:** mọi khẳng định về license và mọi ước lượng restore đều gắn nhãn `[LICENCE – to verify]` hoặc assumption. Không bịa benchmark.
+
+## Kết quả review
+- @qa-tester duyệt, không có blocker hay major. **Lưu ý:** reviewer không chạy lệnh nào, nên phần "đã chạy lại 3 script" trong kết luận review không có bằng chứng. Bằng chứng chạy thật hiện có là log do S2/S3 tạo, cộng phần đối chiếu chỉ đọc của tôi ở trên.
+- Kết luận cổng của @security: **ĐẠT CÓ ĐIỀU KIỆN** ở mức thiết kế, chưa phải phát hành. Có 5 điều kiện bắt buộc, chuyển thành việc PoC ở mục Bước tiếp theo.
+- Các phát hiện mức Trung bình đều được chấp nhận có lý do và ghi trong §7:
+  - **R11:** Object Lock đặt trên repository đang chạy có thể làm hỏng snapshot. Xử lý bằng vault copy riêng.
+  - **R12:** `hash_masked` không có khóa nên không phát hiện được event bị giả mạo trước khi niêm phong. Bù bằng role chỉ ghi, hardening host Logstash và cửa sổ niêm phong 1 giờ + 15 phút.
+  - **R13/R14:** nhiều thành phần nằm ngoài Elastic (sealer, khóa ký, TSA, Object Lock, reverse proxy, log hệ điều hành).
+- Chỗ lệch đã sửa: hot tính 31 ngày thay vì 30, vì index nằm thêm tối đa 1 ngày khi còn là write index trước rollover.
+
+## Việc còn mở & rủi ro
+- **Giả định chưa đo:**
+  - Tỷ lệ nén `r` (R5): nếu r = 1,0 thì cần 19 hot và 28 cold node.
+  - Thông lượng restore `R`: ở 200 MB/s, restore 30 ngày dữ liệu mất 34,56 giờ, vượt 24 giờ nếu phải dùng Option B.
+  - Hệ số peak của tải nạp (R8).
+- **License:** cần đối chiếu các mục `[LICENCE – to verify]` với bảng subscription của đúng phiên bản sẽ triển khai.
+- **Chưa chạy thật:** cấu hình Logstash §5.4, Elasticsearch, object storage và TSA.
+- **Persistent queue chứa dữ liệu RAW có PII**, vì nằm trước bước che (OD7). Đề xuất mã hóa volume.
+- **Quyết định chờ khách hàng/pháp chế (§7.3):**
+  - OD1: chấp nhận tier cold không mount snapshot?
+  - OD2: SLA 24 giờ có tính cả thời gian restore?
+  - OD3: có giữ bản gốc mã hóa? Khuyến nghị phương án A, chỉ giữ `hmac_original`.
+  - OD4: ngân sách cho object storage có Object Lock.
+  - OD5: hệ số peak/trung bình của tải nạp.
+  - OD6: duyệt PoC để đo `r` và `R`.
+  - OD7: PQ chứa dữ liệu chưa che có thuộc phạm vi kiểm soát không.
+  - OD8, OD9: các thành phần ngoài Elastic phục vụ toàn vẹn (§6).
+- Một số trích dẫn pháp lý (ví dụ RFC 3161) đang gắn `[cần soát lại]`.
+- **`DESIGN.md` chưa commit.** Việc commit cần Tom duyệt, không commit vào main.
+
+## Bước tiếp theo
+Đề xuất tách thành các nhiệm vụ riêng, mỗi nhiệm vụ một gói việc:
+1. **Commit DESIGN.md** (S, sau khi Tom duyệt): tạo nhánh riêng và commit. Xong khi `git log` có commit trên nhánh, không phải main.
+2. **PoC đo nén và restore** (@data-engineer, M): đo `r` trên mẫu log thật đã che và `R` restore trên repository thật. Xong khi có log đo, chạy lại `verify_capacity.py` với `r` và `R` thật, và §2–§4 được cập nhật.
+3. **PoC pipeline Logstash** (@data-engineer, M): chạy cấu hình §5.4 trên dữ liệu giả. Xong khi `hash_masked` và `hmac_original` khớp bản tham chiếu `pipeline_ref.py`, không còn PII trong index và DLQ, và đo được throughput mỗi node.
+4. **PoC toàn vẹn và WORM** (@security, M), tương ứng điều kiện 1, 2 và 5:
+   - Vault copy Object Lock không làm hỏng snapshot/SLM: thử xóa hoặc ghi đè bằng credential của ES đều thất bại.
+   - Sealer chạy trên dữ liệu thật: root tính lại khớp header đã ký, và đo được chi phí băm 72 triệu event mỗi giờ.
+   - ILM `delete` chạy dưới `audit_ops`, không phải `superuser`.
+5. **Rà license** (@solution-architect, S): xác minh từng mục `[LICENCE – to verify]` ở §5.8 và §6.8 với bảng subscription của phiên bản sẽ triển khai. Xong khi không còn nhãn nào chưa xác minh.
+6. **Chốt quyết định với khách hàng/pháp chế** (@business-analyst, S): có văn bản chốt OD1–OD9, đặc biệt OD3, OD8 và OD9, rồi cập nhật §7.3.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-145233-2f9` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **74 in / 79.6k out**, cache đọc 677.9k, 12 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Data Engineer (@data-engineer) | dev | 18 | 14956 | 195321 | 2 |
+| Chuyên viên ATTT (@security) | dev | 16 | 17537 | 171040 | 2 |
+| Kiến trúc sư giải pháp (@solution-architect) | dev | 14 | 26913 | 138037 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 16 | 15578 | 120430 | 3 |
+| QA Engineer (@qa-tester) | dev | 8 | 4119 | 50836 | 2 |
+| Điều phối viên (@orchestrator) | office | 2 | 542 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-solution-architect.md` — S1 Bản nháp DESIGN.md: số học dung lượng, bố trí node, ILM, xung đột đầu vào (@solution-architect)
+- `outputs/dev-S2-data-engineer.md` — S2 Mục pipeline nạp/che dữ liệu + script kiểm lại toàn bộ số học (@data-engineer)
+- `outputs/dev-S3-security.md` — S3 Thiết kế toàn vẹn (chứng cứ pháp lý) + rà rủi ro bảo mật dưới Basic (@security)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Data Engineer (@data-engineer) | dev | **91** A | 100 | 89 | 100 | 60 | 1 | 1 | 210k | 0/8 |
+| Chuyên viên ATTT (@security) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 189k | 0/7 |
+| Kiến trúc sư giải pháp (@solution-architect) | dev | **97** A | 100 | 100 | 87 | 100 | 1 | 1 | 165k | 1/6 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **96** A | 100 | 100 | 80 | 100 | 0 | — | 136k | 2/8 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 55k | 0/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Data Engineer** (@data-engineer, 91 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **Chuyên viên ATTT** (@security, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **Trưởng phòng Phát triển** (@dev-lead, 96 A):
+  - Thao tác công cụ lỗi nhiều (2/8, 25%; nhiều nhất ở run_command 2/6) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

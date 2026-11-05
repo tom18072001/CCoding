@@ -1,0 +1,17 @@
+{
+  "id": "t4-perf",
+  "category": "coding",
+  "size": 1,
+  "sizeBasis": "files: src/report.js",
+  "sizeLegacy": 1,
+  "sizeReason": "Một hàm duy nhất (buildReport) cần tối ưu, không chia được thành phần độc lập",
+  "title": "Tối ưu buildReport dưới 1 giây trên 200.000 dòng, giữ nguyên hành vi",
+  "hypotheses": [
+    "H8"
+  ],
+  "deliverable": "src/report.js",
+  "brief": "Tối ưu hiệu năng hàm buildReport trong src/report.js theo PERF.md: dưới 1 giây với 200.000 dòng (npm run bench) và kết quả phải giống hệt bản hiện tại với mọi đầu vào hợp lệ — bản hiện tại là đặc tả, kể cả các hành vi trông lạ. Bộ nghiệm thu ẩn so kết quả với bản cũ trên nhiều bộ dữ liệu và đo thời gian. Thêm test so sánh với bản cũ, đảm bảo `npm test` xanh.",
+  "grader": "code",
+  "repoDir": "starter",
+  "solutionDir": "ref"
+}

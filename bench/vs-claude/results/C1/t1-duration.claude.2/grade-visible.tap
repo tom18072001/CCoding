@@ -1,0 +1,100 @@
+TAP version 13
+# Subtest: parse cơ bản
+ok 1 - parse cơ bản
+  ---
+  duration_ms: 1.352338
+  type: 'test'
+  ...
+# Subtest: format cơ bản
+ok 2 - format cơ bản
+  ---
+  duration_ms: 0.259664
+  type: 'test'
+  ...
+# Subtest: lỗi
+ok 3 - lỗi
+  ---
+  duration_ms: 0.475233
+  type: 'test'
+  ...
+# Subtest: parse: số
+ok 4 - parse: số
+  ---
+  duration_ms: 1.157121
+  type: 'test'
+  ...
+# Subtest: parse: lỗi kiểu & message
+ok 5 - parse: lỗi kiểu & message
+  ---
+  duration_ms: 0.829899
+  type: 'test'
+  ...
+# Subtest: parse: số thuần
+ok 6 - parse: số thuần
+  ---
+  duration_ms: 1.892494
+  type: 'test'
+  ...
+# Subtest: parse: dạng đơn vị & bí danh
+ok 7 - parse: dạng đơn vị & bí danh
+  ---
+  duration_ms: 0.700101
+  type: 'test'
+  ...
+# Subtest: parse: dấu
+ok 8 - parse: dấu
+  ---
+  duration_ms: 0.262475
+  type: 'test'
+  ...
+# Subtest: parse: lỗi dạng đơn vị
+ok 9 - parse: lỗi dạng đơn vị
+  ---
+  duration_ms: 0.33412
+  type: 'test'
+  ...
+# Subtest: parse: ISO 8601
+ok 10 - parse: ISO 8601
+  ---
+  duration_ms: 0.776432
+  type: 'test'
+  ...
+# Subtest: format: cơ bản & đơn vị
+ok 11 - format: cơ bản & đơn vị
+  ---
+  duration_ms: 0.441504
+  type: 'test'
+  ...
+# Subtest: format: làm tròn & dấu
+ok 12 - format: làm tròn & dấu
+  ---
+  duration_ms: 0.328965
+  type: 'test'
+  ...
+# Subtest: format: largest
+ok 13 - format: largest
+  ---
+  duration_ms: 0.550072
+  type: 'test'
+  ...
+# Subtest: format: lỗi
+ok 14 - format: lỗi
+  ---
+  duration_ms: 0.699853
+  type: 'test'
+  ...
+# Subtest: tính chất round-trip
+ok 15 - tính chất round-trip
+  ---
+  duration_ms: 45.760846
+  type: 'test'
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 15
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 180.830323

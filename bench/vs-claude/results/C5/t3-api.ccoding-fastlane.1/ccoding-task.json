@@ -1,0 +1,212 @@
+{
+ "id": "T-20261102-105231-9e5",
+ "title": "[bench C5] t3-api #1",
+ "brief": "Hiện thực đầy đủ 4 tính năng trong FEATURES.md cho API quản lý nhiệm vụ này (xác thực & phân quyền, lọc/tìm/sắp xếp/phân trang, xuất CSV, nhật ký thao tác). Bám sát từng quy tắc của đặc tả (mã lỗi, thứ tự kiểm tra, định dạng CSV) — bộ nghiệm thu ẩn sẽ gọi API thật qua HTTP để kiểm tra. Cập nhật test có sẵn cho hợp với dạng kết quả mới, thêm test cho từng tính năng, đảm bảo `npm test` xanh. Không thêm thư viện ngoài.",
+ "mode": "project",
+ "projectId": "b-c5-t3-fastla-1",
+ "classification": "internal",
+ "status": "done",
+ "departments": [
+  "dev"
+ ],
+ "runs": [
+  {
+   "department": "dev",
+   "status": "done",
+   "subtasks": [
+    {
+     "description": "Sở hữu: src/handlers/tasks.js, src/server.js, src/store.js, src/auth.js (mới), src/audit.js (mới), test/tasks.test.js (sửa cho hợp dạng mới: header X-User, GET /tasks trả {items,total,page,pageSize}), test/auth.test.js, test/audit.test.js. Không sửa src/query.js, src/csv.js.\nLàm: (1) Xác thực X-User → 401 UNAUTHENTICATED cho mọi route /tasks… và /audit. (2) Phân quyền admin/manager/member đúng FEATURES.md mục 1; thứ tự: 401 → tham số truy vấn 400 → 404/quyền đọc (member nhiệm vụ nhóm khác = 404) → 403 → validate body 400. Lưu ý PATCH member: body có trường khác status (kể cả trùng giá trị cũ) hoặc không phải assignee của mình → 403; manager POST/PATCH team khác nhóm mình → 403; DELETE chỉ admin. (3) Nhật ký mục 4: store ghi {seq,at,userId,action,taskId,changes} dùng store.now().toISOString(), seq từ 1, changes sắp a→z, update chỉ trường có giá trị đổi, chỉ ghi khi thành công; GET /audit chỉ admin, mới nhất trước, tham số duy nhất taskId, tham số khác → 400 INVALID_QUERY (field=tên tham số). (4) Nối GET /tasks và GET /tasks/export.csv (đăng ký TRƯỚC /tasks/:id) vào module của S2/S3 theo hợp đồng dưới đây; member tự bị lọc theo nhóm mình (áp thêm sau khi parse).\nHỢP ĐỒNG src/query.js (S2 viết): `parseQuery(searchParams, { paginate: boolean }) -> { filters:{status:string[]|null,assignee:string|null,team:string|null,q:string|null,dueBefore:string|null}, sort:{field,desc}, page, pageSize }` ném HttpError(400,'INVALID_QUERY',msg,{field}); `applyQuery(tasks, parsed, { forceTeam?: string }) -> { total, items }` (items đã sắp, đã phân trang nếu paginate; export dùng paginate:false thì items là toàn bộ). Với export: page/pageSize → 400.\nHỢP ĐỒNG src/csv.js (S3 viết): `toCsv(tasks) -> string` (đã gồm BOM, header, \\r\\n). Handler export gửi header Content-Type 'text/csv; charset=utf-8' và Content-Disposition 'attachment; filename=\"tasks.csv\"' qua send(res,200,string,headers).\nHoàn thành: `npm test` xanh (sau khi CCoding gộp S2/S3); tự test bằng stub nếu chưa có module.",
+     "dependsOn": [],
+     "status": "done",
+     "attempts": 1,
+     "usage": {
+      "input": 22,
+      "output": 12750,
+      "cacheRead": 403904,
+      "cacheWrite": 29662,
+      "costUsd": 0.28734410000000005,
+      "calls": 1,
+      "estimatedCalls": 0
+     },
+     "id": "S1",
+     "title": "Lõi: xác thực, phân quyền, nhật ký, nối route",
+     "assignee": "backend-dev",
+     "deliverable": "src/handlers/tasks.js, server.js, store.js, auth.js, audit.js đã sửa; test/tasks.test.js cập nhật; test/auth.test.js, test/audit.test.js",
+     "startedAt": "2026-11-02T03:53:00.056Z",
+     "output": "outputs/dev-S1-backend-dev.md",
+     "summary": "S1 đã xong: xác thực `X-User`, phân quyền admin/manager/member, nhật ký thao tác, `GET /audit`, và nối `GET /tasks` cùng `GET /tasks/export.csv` vào `query.js`/`csv.js` theo hợp đồng. Khi `src/query.js` và `src/csv.js` chưa có trong worktree, tôi chạy test bằng stub tạm: 12/12 test pass. Tôi đã xóa stub trước khi bàn g…",
+     "finishedAt": "2026-11-02T03:54:23.714Z"
+    },
+    {
+     "description": "Sở hữu duy nhất: src/query.js và test/query.test.js (test đơn vị thuần, không cần HTTP). Hiện thực đúng hợp đồng parseQuery/applyQuery ghi ở S1 và FEATURES.md mục 2: tham số lạ hoặc lặp → 400 INVALID_QUERY; báo field của tham số ĐẦU TIÊN theo thứ tự xuất hiện trên URL (duyệt searchParams theo thứ tự, kiểm tra từng cái); status nhiều giá trị phẩy; assignee=none = chưa giao; team A/B; q chuẩn hóa NFD bỏ dấu kết hợp, đ/Đ→d, không phân biệt hoa thường, q rỗng = không lọc; dueBefore YYYY-MM-DD hợp lệ theo lịch (loại 2026-02-30), loại task không có dueDate, so ≤; sort createdAt|dueDate|priority|title với tiền tố '-', mặc định createdAt tăng, hòa theo số của id tăng dần bất kể chiều, dueDate null luôn cuối cả hai chiều, title dùng localeCompare('vi'); page nguyên ≥1 (mặc định 1), pageSize nguyên 1–100 (mặc định 20), từ chối '1.5','0','abc','101'; page vượt → items [] và total đúng; forceTeam áp thêm AND. Khi paginate:false thì page/pageSize xuất hiện → INVALID_QUERY. Kiểm chứng: `node --test test/query.test.js`. Chỉ require '../src/http' cho HttpError.",
+     "dependsOn": [],
+     "status": "done",
+     "attempts": 1,
+     "usage": {
+      "input": 16,
+      "output": 13901,
+      "cacheRead": 279941,
+      "cacheWrite": 28811,
+      "costUsd": 0.2829889,
+      "calls": 1,
+      "estimatedCalls": 0
+     },
+     "id": "S2",
+     "title": "Module query: lọc, tìm, sắp xếp, phân trang",
+     "assignee": "data-engineer",
+     "deliverable": "src/query.js, test/query.test.js",
+     "startedAt": "2026-11-02T03:53:00.088Z",
+     "output": "outputs/dev-S2-data-engineer.md",
+     "summary": "Tôi đã viết `src/query.js` (`parseQuery`, `applyQuery`, kèm `normalize`) theo hợp đồng S1 và mục 2 của FEATURES.md, cùng `test/query.test.js` gồm 12 test đơn vị thuần. `node --test test/query.test.js` đạt 12/12 và `npm test` đạt 14/14, exit 0. Module chỉ require `./http` để lấy `HttpError`.",
+     "finishedAt": "2026-11-02T03:54:19.671Z"
+    },
+    {
+     "description": "Sở hữu duy nhất: src/csv.js và test/csv.test.js (test đơn vị thuần). Hiện thực `toCsv(tasks) -> string` theo FEATURES.md mục 3: bắt đầu BOM U+FEFF, tiêu đề `id,title,status,priority,assignee,team,dueDate,createdAt`, mỗi task một dòng, xuống dòng \\r\\n kể cả sau dòng cuối; trường chứa , \" \\r \\n bọc \"…\" và nhân đôi \"; null/undefined → ô trống; chuỗi bắt đầu bằng = + - @ tab hoặc \\r thì thêm ' ở đầu TRƯỚC khi bọc ngoặc kép (kể cả kiểm tra áp dụng cho id, title, assignee…); số (priority) giữ nguyên, không thêm '. Danh sách rỗng → BOM + tiêu đề + \\r\\n. Kiểm chứng: `node --test test/csv.test.js`. Test cả ca tiếng Việt, dấu phẩy, ngoặc kép, xuống dòng trong title, '=cmd', '-5' dạng chuỗi.",
+     "dependsOn": [],
+     "status": "done",
+     "attempts": 1,
+     "usage": {
+      "input": 10,
+      "output": 4418,
+      "cacheRead": 123189,
+      "cacheWrite": 33937,
+      "costUsd": 0.1930345,
+      "calls": 1,
+      "estimatedCalls": 0
+     },
+     "id": "S3",
+     "title": "Module CSV (RFC 4180, chống chèn công thức)",
+     "assignee": "security",
+     "deliverable": "src/csv.js, test/csv.test.js",
+     "startedAt": "2026-11-02T03:53:00.093Z",
+     "output": "outputs/dev-S3-security.md",
+     "summary": "Tôi đã hiện thực `toCsv(tasks)` trong `src/csv.js` theo mục 3 của FEATURES.md: BOM, tiêu đề, CRLF, RFC 4180 và chống chèn công thức. 6 test đơn vị mới đều qua. Rủi ro còn lại nằm ở phía route (S1): handler phải truyền task đã lọc theo quyền member và đặt đúng header HTTP. Các giá trị chuỗi (id, title, assignee…) đều đi…",
+     "finishedAt": "2026-11-02T03:53:29.247Z"
+    }
+   ],
+   "usage": {
+    "input": 58,
+    "output": 34642,
+    "cacheRead": 928611,
+    "cacheWrite": 112934,
+    "costUsd": 1.0755801,
+    "calls": 5,
+    "estimatedCalls": 0
+   },
+   "startedAt": "2026-11-02T03:52:31.322Z",
+   "stage": "done",
+   "planSummary": "Tách thành 3 module thuần độc lập theo hợp đồng hàm (query.js, csv.js) chạy song song với phần lõi tích hợp (xác thực/phân quyền, nhật ký, route, sửa test cũ). Mỗi hạng mục sở hữu tệp riêng, kể cả tệp test.",
+   "decisions": "",
+   "estimate": {
+    "tokens": 1171237,
+    "budget": 1402262,
+    "at": "2026-11-02T03:52:59.991Z",
+    "basis": "theo lịch sử: @backend-dev ~188.2k/hạng mục (8 mẫu), @data-engineer ~193.0k/hạng mục (3 mẫu)"
+   },
+   "reviewRound": 0,
+   "review": {
+    "approved": false,
+    "summary": "Không đọc được kết luận review dạng JSON — chưa coi là đã duyệt. Nội dung: Thông báo này chỉ báo lệnh nền đầu tiên đã xong. Lệnh đó bị treo vì tôi viết `cat > $TMPDIR/s.js` mà không có stdin, nên nó không phải kết quả kiểm thử. Kết quả review ở trên không đổi: tôi duyệt, với 4 góp ý minor và không có blocker hay major.\n\nBằng chứng của tôi là `npm test` (exit 0, 30/30 đạt) và lần gọi HTTP thật thứ hai bằng script ở thư mục scratchpad (exit 0). Tôi chưa tự chạy lại BOM và nội dung CSV đầy đủ qua HTTP, `seq`/`changes` của nhật ký qua HTTP, và sort tiếng Việt. Ba mục đó ch",
+    "issues": [],
+    "checks": [
+     {
+      "command": "npm test",
+      "exitCode": 0,
+      "ok": true,
+      "note": "CCoding tự chạy — # tests 30 · # suites 0 · # pass 30 · # fail 0 · # skipped 0 · # todo 0"
+     },
+     {
+      "command": "npm test 2>&1 | tail -12; echo EXIT=${PIPESTATUS[0]}; cat FEATURES.md; cat src/handlers/tasks.js src/server.js src/auth.js src/audit.js src/store.js",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "cat src/query.js src/csv.js src/http.js",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "cat data/seed.json | head -30; cat > $TMPDIR/s.js 2>/dev/null || true; S=/tmp/claude-0/-home-claude-ccoding-dev-workspaces-b-c5-t3-fastla-1-wt-T-20261102-105231-9e5/f0b9113a-3e47-5284-a91d-91f01aca3e1e/scratchpad; cat > $S/s.js <<'EOF'\nconst {createServer}=require('/home/claude/ccoding-dev/workspace",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "S=/tmp/claude-0/-home-claude-ccoding-dev-workspaces-b-c5-t3-fastla-1-wt-T-20261102-105231-9e5/f0b9113a-3e47-5284-a91d-91f01aca3e1e/scratchpad; ls $S/s.js && timeout 30 node $S/s.js </dev/null",
+      "ok": false,
+      "note": "lỗi: Exit code 2\nls: cannot access '/tmp/claude-0/-home-claude-ccoding-dev-workspaces-b-c5-t3-fastla-1-wt-T-20261102-105231-9e5/f0b9113a-3e47-5284-a91d-91f01aca3e1e/"
+     },
+     {
+      "command": "S=/tmp/claude-0/-home-claude-ccoding-dev-workspaces-b-c5-t3-fastla-1-wt-T-20261102-105231-9e5/f0b9113a-3e47-5284-a91d-91f01aca3e1e/scratchpad; mkdir -p $S; W=$PWD; cat > $S/s.js <<EOF\nconst W='$W';\nconst {createServer}=require(W+'/src/server');\nconst seed=require(W+'/data/seed.json');\nconst s=create",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     }
+    ],
+    "verified": true
+   },
+   "finalPath": "dev-FINAL.md",
+   "finishedAt": "2026-11-02T04:02:09.754Z"
+  }
+ ],
+ "options": {
+  "discussionRounds": 1,
+  "review": true,
+  "maxParallel": 3,
+  "maxRevisions": 1,
+  "budgetTokens": 1500000,
+  "budgetMode": "complete",
+  "phaseModels": {
+   "plan": "sonnet"
+  }
+ },
+ "usage": {
+  "input": 58,
+  "output": 34642,
+  "cacheRead": 928611,
+  "cacheWrite": 112934,
+  "costUsd": 1.0755801,
+  "calls": 5,
+  "estimatedCalls": 0
+ },
+ "createdAt": "2026-11-02T03:52:31.280Z",
+ "updatedAt": "2026-11-02T04:02:09.805Z",
+ "autoTitle": false,
+ "startedAt": "2026-11-02T03:52:31.280Z",
+ "workspace": "/home/claude/ccoding-dev/workspaces/b-c5-t3-fastla-1/wt-T-20261102-105231-9e5",
+ "branch": "ccoding/t-20261102-105231-9e5",
+ "baseRef": "2a4361a3a851d525841102435e58e8d28b558a47",
+ "lane": "fast",
+ "projectChecks": {
+  "baseline": [
+   {
+    "command": "npm test",
+    "code": 0,
+    "ok": true,
+    "ms": 511,
+    "summary": "# tests 2 · # suites 0 · # pass 2 · # fail 0 · # skipped 0 · # todo 0",
+    "tail": "> task-tracker-api@0.3.0 test\n> node --test \"test/**/*.test.js\"\n\nTAP version 13\n# Subtest: CRUD cơ bản\nok 1 - CRUD cơ bản\n  ---\n  duration_ms: 93.145404\n  type: 'test'\n  ...\n# Subtest: validate\nok 2 - validate\n  ---\n  duration_ms: 25.489868\n  type: 'test'\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 220.883082"
+   }
+  ],
+  "baselineAt": "2026-11-02T03:52:31.834Z",
+  "latest": [
+   {
+    "command": "npm test",
+    "code": 0,
+    "ok": true,
+    "ms": 820,
+    "summary": "# tests 30 · # suites 0 · # pass 30 · # fail 0 · # skipped 0 · # todo 0",
+    "tail": "…của nhiệm vụ giao cho mình\nok 6 - member: chỉ sửa status của nhiệm vụ giao cho mình\n  ---\n  duration_ms: 16.439222\n  type: 'test'\n  ...\n# Subtest: manager: tạo/sửa trong nhóm mình, không xóa, không chuyển nhóm\nok 7 - manager: tạo/sửa trong nhóm mình, không xóa, không chuyển nhóm\n  ---\n  duration_ms: 14.946966\n  type: 'test'\n  ...\n# Subtest: admin làm mọi việc\nok 8 - admin làm mọi việc\n  ---\n  duration_ms: 9.326328\n  type: 'test'\n  ...\n# Subtest: danh sách rỗng: BOM + tiêu đề + CRLF\nok 9 - danh sách rỗng: BOM + tiêu đề + CRLF\n  ---\n  duration_ms: 0.796441\n  type: 'test'\n  ...\n# Subtest: một dòng thường, null → ô trống, CRLF cuối\nok 10 - một dòng thường, null → ô trống, CRLF cuối\n  ---\n  duration_ms: 0.402705\n  type: 'test'\n  ...\n# Subtest: tiếng Việt giữ nguyên\nok 11 - tiếng Việt giữ nguyên\n  ---\n  duration_ms: 0.242795\n  type: 'test'\n  ...\n# Subtest: dấu phẩy, ngoặc kép, xuống dòng được bọc và nhân đôi\nok 12 - dấu phẩy, ngoặc kép, xuống dòng được bọc và nhân đôi\n  ---\n  duration_ms: 0.148409\n  type: 'test'\n  ...\n# Subtest: chống chèn công thức\nok 13 - chống chèn công thức\n  ---\n  duration_ms: 0.277875\n  type: 'test'\n  ...\n# Subtest: thêm ' trước khi bọc ngoặc kép; áp dụng cho id/assignee; số giữ nguyên\nok 14 - thêm ' trước khi bọc ngoặc kép; áp dụng cho id/assignee; số giữ nguyên\n  ---\n  duration_ms: 0.158914\n  type: 'test'\n  ...\n# Subtest: mặc định: createdAt tăng, hòa theo số của id, page=1 pageSize=20\nok 15 - mặc định: createdAt tăng, hòa theo số của id, page=1 pageSize=20\n  ---\n  duration_ms: 1.757931\n  type: 'test'\n  ...\n# Subtest: tham số lạ / lặp → INVALID_QUERY, field là tham số đầu tiên\nok 16 - tham số lạ / lặp → INVALID_QUERY, field là tham số đầu tiên\n  ---\n  duration_ms: 0.664849\n  type: 'test'\n  ...\n# Subtest: giá trị không hợp lệ\nok 17 - giá trị không hợp lệ\n  ---\n  duration_ms: 1.481489\n  type: 'test'\n  ...\n# Subtest: paginate:false: page/pageSize → INVALID_QUERY, trả toàn bộ\nok 18 - paginate:false: page/pageSize → INVALID_QUERY, trả toàn bộ\n  ---\n  duration_ms: 0.280597\n  type: 'test'\n  ...\n# Subtest: status nhiều giá trị, assignee, none, team\nok 19 - status nhiều giá trị, assignee, none, team\n  ---\n  duration_ms: 0.271567\n  type: 'test'\n  ...\n# Subtest: q: không phân biệt hoa thường và dấu tiếng Việt, đ→d, q rỗng = không lọc\nok 20 - q: không phân biệt hoa thường và dấu tiếng Việt, đ→d, q rỗng = không lọc\n  ---\n  duration_ms: 0.604172\n  type: 'test'\n  ...\n# Subtest: dueBefore: ≤, loại task không có dueDate\nok 21 - dueBefore: ≤, loại task không có dueDate\n  ---\n  duration_ms: 0.209409\n  type: 'test'\n  ...\n# Subtest: sort dueDate: null luôn cuối cả hai chiều, hòa theo id số tăng dần\nok 22 - sort dueDate: null luôn cuối cả hai chiều, hòa theo id số tăng dần\n  ---\n  duration_ms: 0.111317\n  type: 'test'\n  ...\n# Subtest: sort priority / createdAt giảm: hòa theo id tăng dần\nok 23 - sort priority / createdAt giảm: hòa theo id tăng dần\n  ---\n  duration_ms: 0.319503\n  type: 'test'\n  ...\n# Subtest: sort title dùng localeCompare vi\nok 24 - sort title dùng localeCompare vi\n  ---\n  duration_ms: 6.471953\n  type: 'test'\n  ...\n# Subtest: phân trang và page vượt\nok 25 - phân trang và page vượt\n  ---\n  duration_ms: 0.321953\n  type: 'test'\n  ...\n# Subtest: forceTeam áp thêm AND\nok 26 - forceTeam áp thêm AND\n  ---\n  duration_ms: 0.119012\n  type: 'test'\n  ...\n# Subtest: CRUD cơ bản (admin)\nok 27 - CRUD cơ bản (admin)\n  ---\n  duration_ms: 58.762342\n  type: 'test'\n  ...\n# Subtest: validate\nok 28 - validate\n  ---\n  duration_ms: 11.222073\n  type: 'test'\n  ...\n# Subtest: GET /tasks/export.csv được nối vào route (không bị /tasks/:id nuốt)\nok 29 - GET /tasks/export.csv được nối vào route (không bị /tasks/:id nuốt)\n  ---\n  duration_ms: 4.790629\n  type: 'test'\n  ...\n# Subtest: member chỉ thấy nhóm mình trong danh sách và export\nok 30 - member chỉ thấy nhóm mình trong danh sách và export\n  ---\n  duration_ms: 7.390377\n  type: 'test'\n  ...\n1..30\n# tests 30\n# suites 0\n# pass 30\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 642.625779"
+   }
+  ],
+  "latestAt": "2026-11-02T03:54:24.800Z",
+  "latestAfter": "execute"
+ },
+ "attention": {
+  "reason": "review",
+  "detail": "Phát triển: Không đọc được kết luận review dạng JSON — chưa coi là đã duyệt. Nội dung: Thông báo này chỉ báo lệnh nền đầu tiên đã xong. Lệnh đó bị treo vì tôi viết `cat > $TMPDIR/s.js` mà không có stdin, nên nó không phải kết quả kiểm thử. Kết quả review ở trên không đổi: tôi duyệt, với 4 gó",
+  "at": "2026-11-02T04:02:09.736Z"
+ },
+ "changes": "src/audit.js          |  20 +++++++\n src/auth.js           |  21 ++++++++\n src/csv.js            |  22 ++++++++\n src/handlers/tasks.js |  65 +++++++++++++++++-----\n src/query.js          | 145 ++++++++++++++++++++++++++++++++++++++++++++++++++\n src/server.js         |   6 ++-\n src/store.js          |   8 +++\n test/audit.test.js    |  62 +++++++++++++++++++++\n test/auth.test.js     |  82 ++++++++++++++++++++++++++++\n test/csv.test.js      |  43 +++++++++++++++\n test/query.test.js    | 119 +++++++++++++++++++++++++++++++++++++++++\n test/tasks.test.js    |  48 ++++++++++++++---\n 12 files changed, 618 insertions(+), 23 deletions(-)",
+ "commit": "f1e1573b05 — 6 commit trên nhánh từ 2a4361a3a8 (gồm gộp worktree con)",
+ "finalPath": "FINAL.md",
+ "finishedAt": "2026-11-02T04:02:09.805Z"
+}

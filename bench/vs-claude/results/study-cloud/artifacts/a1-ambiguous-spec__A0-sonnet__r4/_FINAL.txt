@@ -1,0 +1,12 @@
+I wrote the specification to `SPEC.md` at the repository root. It includes the `## Open questions and assumptions` section, with 15 questions, each paired with the assumption to use until the customer answers. I haven't committed it.
+
+The request contradicts itself in four places, and the spec says so up front:
+
+- **Full data vs masking:** Full IPs and usernames conflict with "no personal data leaves the platform unmasked." I assumed branch managers get masked exports only (IP masked to /24, username replaced by a keyed pseudonym). An unmasked path is optional, for a separate forensics role only, with a ticket and a second approver. It gets built only if the customer approves it.
+- **Last month vs everything:** "Last month's team logs" conflicts with "everything they can see." I assumed the previous calendar month in Vietnam time, limited to the manager's team. Filters can narrow the export but never widen it.
+- **Keep forever vs delete at 12 months:** Keeping export files forever conflicts with deleting personal data after 12 months. I assumed export files are deleted at 12 months with the source data. Only a metadata audit record of each export (no personal data) is kept longer.
+- **5 seconds vs unlimited:** The 5-second limit can't hold for unlimited volume. I assumed exports up to 50,000 rows stream within 5 seconds. Larger ones run as a background job. There is a hard cap of 2,000,000 rows, and nothing is silently truncated.
+
+The 50,000-row threshold, the 2,000,000-row cap and the 20 concurrent users are my own placeholders (Q8); the customer should replace them with real volumes. The CSV columns are also a guess, because "like the old system" isn't defined. We need a sample file from the old system (Q5).
+
+The spec also covers authorization, audit logging, CSV injection protection, rate limits, the retention job, acceptance criteria and phased delivery. It doesn't assert specific Vietnamese legal obligations. Q2 asks the bank's legal and compliance team to confirm which regulations apply.

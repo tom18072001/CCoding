@@ -1,0 +1,7 @@
+I wrote `answer.json` in the repo root. I checked the order by hand, but I didn't run any separate tests.
+
+- **`startup_order`:** 18 services can start, beginning with `cache`, `db-catalog`, `db-orders`, `db-users`, `auth` and ending with `gateway`, `templates`, `notifier`. Each one comes after all its dependencies, and ties went to the alphabetically smallest service.
+- **`blocked`:** `admin-ui`, `etl`, `reporting` and `warehouse`. The last three can't start because `reporting`, `warehouse` and `etl` depend on each other in a loop. `admin-ui` is blocked because it needs `reporting`.
+- **`cycle_members`:** `etl`, `reporting` and `warehouse`. `admin-ui` is blocked but not on the cycle, so it's left out.
+
+Every dependency named in `services.txt` has its own line, so I didn't need to decide how to treat an undefined service. The 18 that start and the 4 blocked add up to all 22 listed services.

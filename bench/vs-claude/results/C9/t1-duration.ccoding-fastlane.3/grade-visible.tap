@@ -1,0 +1,898 @@
+TAP version 13
+# Subtest: parse cơ bản
+ok 1 - parse cơ bản
+  ---
+  duration_ms: 1.675036
+  type: 'test'
+  ...
+# Subtest: format cơ bản
+ok 2 - format cơ bản
+  ---
+  duration_ms: 0.363585
+  type: 'test'
+  ...
+# Subtest: lỗi
+ok 3 - lỗi
+  ---
+  duration_ms: 0.45953
+  type: 'test'
+  ...
+# Subtest: cơ bản short/long
+ok 4 - cơ bản short/long
+  ---
+  duration_ms: 1.026623
+  type: 'test'
+  ...
+# Subtest: âm và làm tròn half away from zero
+ok 5 - âm và làm tròn half away from zero
+  ---
+  duration_ms: 0.218614
+  type: 'test'
+  ...
+# Subtest: largest
+ok 6 - largest
+  ---
+  duration_ms: 0.213635
+  type: 'test'
+  ...
+# Subtest: đầu vào/option sai
+ok 7 - đầu vào/option sai
+  ---
+  duration_ms: 1.558522
+  type: 'test'
+  ...
+# Subtest: round-trip parse(format(x)) === parse(x)
+ok 8 - round-trip parse(format(x)) === parse(x)
+  ---
+  duration_ms: 0.989884
+  type: 'test'
+  ...
+# Subtest: số rất lớn: không dùng dạng mũ, không lặp dấu/đơn vị âm
+ok 9 - số rất lớn: không dùng dạng mũ, không lặp dấu/đơn vị âm
+  ---
+  duration_ms: 0.374753
+  type: 'test'
+  ...
+# Subtest: round-trip số lớn và ngẫu nhiên (seed cố định)
+ok 10 - round-trip số lớn và ngẫu nhiên (seed cố định)
+  ---
+  duration_ms: 93.62404
+  type: 'test'
+  ...
+# Subtest: parse 1500 = 1500
+ok 11 - parse 1500 = 1500
+  ---
+  duration_ms: 1.672179
+  type: 'test'
+  ...
+# Subtest: parse 1.5 = 2
+ok 12 - parse 1.5 = 2
+  ---
+  duration_ms: 0.113648
+  type: 'test'
+  ...
+# Subtest: parse -1.5 = -2
+ok 13 - parse -1.5 = -2
+  ---
+  duration_ms: 0.207514
+  type: 'test'
+  ...
+# Subtest: parse 0.5 = 1
+ok 14 - parse 0.5 = 1
+  ---
+  duration_ms: 0.116445
+  type: 'test'
+  ...
+# Subtest: parse -0.5 = -1
+ok 15 - parse -0.5 = -1
+  ---
+  duration_ms: 0.082459
+  type: 'test'
+  ...
+# Subtest: parse 1.4 = 1
+ok 16 - parse 1.4 = 1
+  ---
+  duration_ms: 0.079946
+  type: 'test'
+  ...
+# Subtest: parse 0 = 0
+ok 17 - parse 0 = 0
+  ---
+  duration_ms: 0.062222
+  type: 'test'
+  ...
+# Subtest: parse -0.4 = 0
+ok 18 - parse -0.4 = 0
+  ---
+  duration_ms: 0.112259
+  type: 'test'
+  ...
+# Subtest: parse null -> lỗi
+ok 19 - parse null -> lỗi
+  ---
+  duration_ms: 0.563841
+  type: 'test'
+  ...
+# Subtest: parse null -> lỗi
+ok 20 - parse null -> lỗi
+  ---
+  duration_ms: 0.342713
+  type: 'test'
+  ...
+# Subtest: parse null -> lỗi
+ok 21 - parse null -> lỗi
+  ---
+  duration_ms: 0.127918
+  type: 'test'
+  ...
+# Subtest: parse null -> lỗi
+ok 22 - parse null -> lỗi
+  ---
+  duration_ms: 0.06244
+  type: 'test'
+  ...
+# Subtest: parse undefined -> lỗi
+ok 23 - parse undefined -> lỗi
+  ---
+  duration_ms: 0.05467
+  type: 'test'
+  ...
+# Subtest: parse {} -> lỗi
+ok 24 - parse {} -> lỗi
+  ---
+  duration_ms: 0.0462
+  type: 'test'
+  ...
+# Subtest: parse [] -> lỗi
+ok 25 - parse [] -> lỗi
+  ---
+  duration_ms: 0.116309
+  type: 'test'
+  ...
+# Subtest: parse true -> lỗi
+ok 26 - parse true -> lỗi
+  ---
+  duration_ms: 0.052067
+  type: 'test'
+  ...
+# Subtest: parse undefined -> lỗi
+ok 27 - parse undefined -> lỗi
+  ---
+  duration_ms: 0.125247
+  type: 'test'
+  ...
+# Subtest: undefined message
+ok 28 - undefined message
+  ---
+  duration_ms: 0.338144
+  type: 'test'
+  ...
+# Subtest: parse "1500" = 1500
+ok 29 - parse "1500" = 1500
+  ---
+  duration_ms: 1.460772
+  type: 'test'
+  ...
+# Subtest: parse "1.5" = 2
+ok 30 - parse "1.5" = 2
+  ---
+  duration_ms: 0.148379
+  type: 'test'
+  ...
+# Subtest: parse "-20" = -20
+ok 31 - parse "-20" = -20
+  ---
+  duration_ms: 0.054742
+  type: 'test'
+  ...
+# Subtest: parse "+7" = 7
+ok 32 - parse "+7" = 7
+  ---
+  duration_ms: 0.043455
+  type: 'test'
+  ...
+# Subtest: parse "0.5" = 1
+ok 33 - parse "0.5" = 1
+  ---
+  duration_ms: 0.038
+  type: 'test'
+  ...
+# Subtest: parse "-0.5" = -1
+ok 34 - parse "-0.5" = -1
+  ---
+  duration_ms: 0.040224
+  type: 'test'
+  ...
+# Subtest: parse "  42  " = 42
+ok 35 - parse "  42  " = 42
+  ---
+  duration_ms: 0.0444
+  type: 'test'
+  ...
+# Subtest: parse "- 5" = -5
+ok 36 - parse "- 5" = -5
+  ---
+  duration_ms: 0.040998
+  type: 'test'
+  ...
+# Subtest: parse "-0" = 0
+ok 37 - parse "-0" = 0
+  ---
+  duration_ms: 0.13643
+  type: 'test'
+  ...
+# Subtest: parse "" -> lỗi
+ok 38 - parse "" -> lỗi
+  ---
+  duration_ms: 0.066198
+  type: 'test'
+  ...
+# Subtest: parse "   " -> lỗi
+ok 39 - parse "   " -> lỗi
+  ---
+  duration_ms: 0.04246
+  type: 'test'
+  ...
+# Subtest: parse ".5" -> lỗi
+ok 40 - parse ".5" -> lỗi
+  ---
+  duration_ms: 0.088123
+  type: 'test'
+  ...
+# Subtest: parse "5." -> lỗi
+ok 41 - parse "5." -> lỗi
+  ---
+  duration_ms: 0.070437
+  type: 'test'
+  ...
+# Subtest: parse "1e3" -> lỗi
+ok 42 - parse "1e3" -> lỗi
+  ---
+  duration_ms: 0.044633
+  type: 'test'
+  ...
+# Subtest: parse "1E3" -> lỗi
+ok 43 - parse "1E3" -> lỗi
+  ---
+  duration_ms: 0.051771
+  type: 'test'
+  ...
+# Subtest: parse "--5" -> lỗi
+ok 44 - parse "--5" -> lỗi
+  ---
+  duration_ms: 0.042547
+  type: 'test'
+  ...
+# Subtest: parse "+-5" -> lỗi
+ok 45 - parse "+-5" -> lỗi
+  ---
+  duration_ms: 0.078512
+  type: 'test'
+  ...
+# Subtest: parse "-" -> lỗi
+ok 46 - parse "-" -> lỗi
+  ---
+  duration_ms: 0.048385
+  type: 'test'
+  ...
+# Subtest: parse "+" -> lỗi
+ok 47 - parse "+" -> lỗi
+  ---
+  duration_ms: 0.110877
+  type: 'test'
+  ...
+# Subtest: parse "1,5" -> lỗi
+ok 48 - parse "1,5" -> lỗi
+  ---
+  duration_ms: 0.053089
+  type: 'test'
+  ...
+# Subtest: parse "1 2" -> lỗi
+ok 49 - parse "1 2" -> lỗi
+  ---
+  duration_ms: 0.041594
+  type: 'test'
+  ...
+# Subtest: parse "abc" -> lỗi
+ok 50 - parse "abc" -> lỗi
+  ---
+  duration_ms: 0.071458
+  type: 'test'
+  ...
+# Subtest: parse "0x10" -> lỗi
+ok 51 - parse "0x10" -> lỗi
+  ---
+  duration_ms: 0.05289
+  type: 'test'
+  ...
+# Subtest: parse "1h30m" = 5400000
+ok 52 - parse "1h30m" = 5400000
+  ---
+  duration_ms: 0.059927
+  type: 'test'
+  ...
+# Subtest: parse "-1h30m" = -5400000
+ok 53 - parse "-1h30m" = -5400000
+  ---
+  duration_ms: 0.037151
+  type: 'test'
+  ...
+# Subtest: parse "1h 30m" = 5400000
+ok 54 - parse "1h 30m" = 5400000
+  ---
+  duration_ms: 0.083929
+  type: 'test'
+  ...
+# Subtest: parse "2 days 4 hours" = 187200000
+ok 55 - parse "2 days 4 hours" = 187200000
+  ---
+  duration_ms: 0.053097
+  type: 'test'
+  ...
+# Subtest: parse "- 5s" = -5000
+ok 56 - parse "- 5s" = -5000
+  ---
+  duration_ms: 0.038386
+  type: 'test'
+  ...
+# Subtest: parse "+ 5s" = 5000
+ok 57 - parse "+ 5s" = 5000
+  ---
+  duration_ms: 0.031933
+  type: 'test'
+  ...
+# Subtest: parse "1W" = 604800000
+ok 58 - parse "1W" = 604800000
+  ---
+  duration_ms: 0.033267
+  type: 'test'
+  ...
+# Subtest: parse "1 WEEK" = 604800000
+ok 59 - parse "1 WEEK" = 604800000
+  ---
+  duration_ms: 0.030975
+  type: 'test'
+  ...
+# Subtest: parse "1Wk 1D 1Hr 1Min 1Sec 1Msec" = 694861001
+ok 60 - parse "1Wk 1D 1Hr 1Min 1Sec 1Msec" = 694861001
+  ---
+  duration_ms: 0.044006
+  type: 'test'
+  ...
+# Subtest: parse "1w1d1h1m1s1ms" = 694861001
+ok 61 - parse "1w1d1h1m1s1ms" = 694861001
+  ---
+  duration_ms: 0.042319
+  type: 'test'
+  ...
+# Subtest: parse "1.5h" = 5400000
+ok 62 - parse "1.5h" = 5400000
+  ---
+  duration_ms: 0.040188
+  type: 'test'
+  ...
+# Subtest: parse "0.5ms" = 1
+ok 63 - parse "0.5ms" = 1
+  ---
+  duration_ms: 0.038811
+  type: 'test'
+  ...
+# Subtest: parse "2 ms" = 2
+ok 64 - parse "2 ms" = 2
+  ---
+  duration_ms: 0.042046
+  type: 'test'
+  ...
+# Subtest: parse "1 hours 2 mins 3 secs 4 msecs" = 3723004
+ok 65 - parse "1 hours 2 mins 3 secs 4 msecs" = 3723004
+  ---
+  duration_ms: 0.043396
+  type: 'test'
+  ...
+# Subtest: parse "2 milliseconds" = 2
+ok 66 - parse "2 milliseconds" = 2
+  ---
+  duration_ms: 0.036694
+  type: 'test'
+  ...
+# Subtest: parse "1.0005s" = 1001
+ok 67 - parse "1.0005s" = 1001
+  ---
+  duration_ms: 0.075102
+  type: 'test'
+  ...
+# Subtest: parse "0.0005s" = 1
+ok 68 - parse "0.0005s" = 1
+  ---
+  duration_ms: 0.049079
+  type: 'test'
+  ...
+# Subtest: parse "0.0004s" = 0
+ok 69 - parse "0.0004s" = 0
+  ---
+  duration_ms: 0.040724
+  type: 'test'
+  ...
+# Subtest: parse "-0.0005s" = -1
+ok 70 - parse "-0.0005s" = -1
+  ---
+  duration_ms: 0.038757
+  type: 'test'
+  ...
+# Subtest: parse "-0ms" = 0
+ok 71 - parse "-0ms" = 0
+  ---
+  duration_ms: 0.051357
+  type: 'test'
+  ...
+# Subtest: parse "1.1h1.1m" = 4026000
+ok 72 - parse "1.1h1.1m" = 4026000
+  ---
+  duration_ms: 0.043481
+  type: 'test'
+  ...
+# Subtest: parse "0.1s0.2ms" = 100
+ok 73 - parse "0.1s0.2ms" = 100
+  ---
+  duration_ms: 2.5859
+  type: 'test'
+  ...
+# Subtest: parse "1.0015s" = 1002
+ok 74 - parse "1.0015s" = 1002
+  ---
+  duration_ms: 0.090593
+  type: 'test'
+  ...
+# Subtest: parse "30m1h" -> lỗi
+ok 75 - parse "30m1h" -> lỗi
+  ---
+  duration_ms: 0.071846
+  type: 'test'
+  ...
+# Subtest: parse "1h1h" -> lỗi
+ok 76 - parse "1h1h" -> lỗi
+  ---
+  duration_ms: 0.053418
+  type: 'test'
+  ...
+# Subtest: parse "1h-30m" -> lỗi
+ok 77 - parse "1h-30m" -> lỗi
+  ---
+  duration_ms: 0.04995
+  type: 'test'
+  ...
+# Subtest: parse "1h 30" -> lỗi
+ok 78 - parse "1h 30" -> lỗi
+  ---
+  duration_ms: 0.051017
+  type: 'test'
+  ...
+# Subtest: parse "30 1h" -> lỗi
+ok 79 - parse "30 1h" -> lỗi
+  ---
+  duration_ms: 0.044801
+  type: 'test'
+  ...
+# Subtest: parse "1h+30m" -> lỗi
+ok 80 - parse "1h+30m" -> lỗi
+  ---
+  duration_ms: 0.047471
+  type: 'test'
+  ...
+# Subtest: parse "5x" -> lỗi
+ok 81 - parse "5x" -> lỗi
+  ---
+  duration_ms: 0.043975
+  type: 'test'
+  ...
+# Subtest: parse "1h30" -> lỗi
+ok 82 - parse "1h30" -> lỗi
+  ---
+  duration_ms: 0.047888
+  type: 'test'
+  ...
+# Subtest: parse "1h!" -> lỗi
+ok 83 - parse "1h!" -> lỗi
+  ---
+  duration_ms: 0.043998
+  type: 'test'
+  ...
+# Subtest: parse "1 y" -> lỗi
+ok 84 - parse "1 y" -> lỗi
+  ---
+  duration_ms: 0.046356
+  type: 'test'
+  ...
+# Subtest: parse "1.h" -> lỗi
+ok 85 - parse "1.h" -> lỗi
+  ---
+  duration_ms: 0.044692
+  type: 'test'
+  ...
+# Subtest: parse ".5h" -> lỗi
+ok 86 - parse ".5h" -> lỗi
+  ---
+  duration_ms: 0.041459
+  type: 'test'
+  ...
+# Subtest: parse "1e3s" -> lỗi
+ok 87 - parse "1e3s" -> lỗi
+  ---
+  duration_ms: 0.043273
+  type: 'test'
+  ...
+# Subtest: parse "1h,30m" -> lỗi
+ok 88 - parse "1h,30m" -> lỗi
+  ---
+  duration_ms: 0.078448
+  type: 'test'
+  ...
+# Subtest: parse "s" -> lỗi
+ok 89 - parse "s" -> lỗi
+  ---
+  duration_ms: 0.052022
+  type: 'test'
+  ...
+# Subtest: parse "h1" -> lỗi
+ok 90 - parse "h1" -> lỗi
+  ---
+  duration_ms: 0.045825
+  type: 'test'
+  ...
+# Subtest: parse "1mss" -> lỗi
+ok 91 - parse "1mss" -> lỗi
+  ---
+  duration_ms: 0.152954
+  type: 'test'
+  ...
+# Subtest: parse "1 h m" -> lỗi
+ok 92 - parse "1 h m" -> lỗi
+  ---
+  duration_ms: 0.057396
+  type: 'test'
+  ...
+# Subtest: parse "- - 5s" -> lỗi
+ok 93 - parse "- - 5s" -> lỗi
+  ---
+  duration_ms: 0.052911
+  type: 'test'
+  ...
+# Subtest: parse "5s-" -> lỗi
+ok 94 - parse "5s-" -> lỗi
+  ---
+  duration_ms: 0.059397
+  type: 'test'
+  ...
+# Subtest: parse "1ms1s" -> lỗi
+ok 95 - parse "1ms1s" -> lỗi
+  ---
+  duration_ms: 0.050231
+  type: 'test'
+  ...
+# Subtest: parse "1s1m" -> lỗi
+ok 96 - parse "1s1m" -> lỗi
+  ---
+  duration_ms: 0.055474
+  type: 'test'
+  ...
+# Subtest: parse "P1W" = 604800000
+ok 97 - parse "P1W" = 604800000
+  ---
+  duration_ms: 0.1006
+  type: 'test'
+  ...
+# Subtest: parse "p1w" = 604800000
+ok 98 - parse "p1w" = 604800000
+  ---
+  duration_ms: 0.079069
+  type: 'test'
+  ...
+# Subtest: parse "P1D" = 86400000
+ok 99 - parse "P1D" = 86400000
+  ---
+  duration_ms: 0.216066
+  type: 'test'
+  ...
+# Subtest: parse "PT1M" = 60000
+ok 100 - parse "PT1M" = 60000
+  ---
+  duration_ms: 0.099417
+  type: 'test'
+  ...
+# Subtest: parse "PT1H" = 3600000
+ok 101 - parse "PT1H" = 3600000
+  ---
+  duration_ms: 0.044399
+  type: 'test'
+  ...
+# Subtest: parse "PT1S" = 1000
+ok 102 - parse "PT1S" = 1000
+  ---
+  duration_ms: 0.035558
+  type: 'test'
+  ...
+# Subtest: parse "P1DT2H3M4S" = 93784000
+ok 103 - parse "P1DT2H3M4S" = 93784000
+  ---
+  duration_ms: 0.038507
+  type: 'test'
+  ...
+# Subtest: parse "PT0,5S" = 500
+ok 104 - parse "PT0,5S" = 500
+  ---
+  duration_ms: 0.036389
+  type: 'test'
+  ...
+# Subtest: parse "PT0.5S" = 500
+ok 105 - parse "PT0.5S" = 500
+  ---
+  duration_ms: 2.877629
+  type: 'test'
+  ...
+# Subtest: parse "P0.5D" = 43200000
+ok 106 - parse "P0.5D" = 43200000
+  ---
+  duration_ms: 0.072562
+  type: 'test'
+  ...
+# Subtest: parse "P1,5D" = 129600000
+ok 107 - parse "P1,5D" = 129600000
+  ---
+  duration_ms: 0.097938
+  type: 'test'
+  ...
+# Subtest: parse "-PT1M" = -60000
+ok 108 - parse "-PT1M" = -60000
+  ---
+  duration_ms: 0.054614
+  type: 'test'
+  ...
+# Subtest: parse "- PT1M" = -60000
+ok 109 - parse "- PT1M" = -60000
+  ---
+  duration_ms: 0.037749
+  type: 'test'
+  ...
+# Subtest: parse "+P1D" = 86400000
+ok 110 - parse "+P1D" = 86400000
+  ---
+  duration_ms: 0.031018
+  type: 'test'
+  ...
+# Subtest: parse "PT1.0005S" = 1001
+ok 111 - parse "PT1.0005S" = 1001
+  ---
+  duration_ms: 0.031168
+  type: 'test'
+  ...
+# Subtest: parse "P2W" = 1209600000
+ok 112 - parse "P2W" = 1209600000
+  ---
+  duration_ms: 0.028414
+  type: 'test'
+  ...
+# Subtest: parse "P1.5W" = 907200000
+ok 113 - parse "P1.5W" = 907200000
+  ---
+  duration_ms: 0.027023
+  type: 'test'
+  ...
+# Subtest: parse "PT0.0005S" = 1
+ok 114 - parse "PT0.0005S" = 1
+  ---
+  duration_ms: 0.027806
+  type: 'test'
+  ...
+# Subtest: parse "-PT0.0005S" = -1
+ok 115 - parse "-PT0.0005S" = -1
+  ---
+  duration_ms: 0.072788
+  type: 'test'
+  ...
+# Subtest: parse "PT0S" = 0
+ok 116 - parse "PT0S" = 0
+  ---
+  duration_ms: 0.042035
+  type: 'test'
+  ...
+# Subtest: parse "-P0D" = 0
+ok 117 - parse "-P0D" = 0
+  ---
+  duration_ms: 0.033028
+  type: 'test'
+  ...
+# Subtest: parse "PT1H30M" = 5400000
+ok 118 - parse "PT1H30M" = 5400000
+  ---
+  duration_ms: 0.030504
+  type: 'test'
+  ...
+# Subtest: parse "P1DT1S" = 86401000
+ok 119 - parse "P1DT1S" = 86401000
+  ---
+  duration_ms: 0.02776
+  type: 'test'
+  ...
+# Subtest: parse "P" -> lỗi
+ok 120 - parse "P" -> lỗi
+  ---
+  duration_ms: 0.056889
+  type: 'test'
+  ...
+# Subtest: parse "PT" -> lỗi
+ok 121 - parse "PT" -> lỗi
+  ---
+  duration_ms: 0.038557
+  type: 'test'
+  ...
+# Subtest: parse "P1DT" -> lỗi
+ok 122 - parse "P1DT" -> lỗi
+  ---
+  duration_ms: 0.035093
+  type: 'test'
+  ...
+# Subtest: parse "P1Y" -> lỗi
+ok 123 - parse "P1Y" -> lỗi
+  ---
+  duration_ms: 0.035525
+  type: 'test'
+  ...
+# Subtest: parse "P1M" -> lỗi
+ok 124 - parse "P1M" -> lỗi
+  ---
+  duration_ms: 0.035168
+  type: 'test'
+  ...
+# Subtest: parse "P1M1D" -> lỗi
+ok 125 - parse "P1M1D" -> lỗi
+  ---
+  duration_ms: 0.039588
+  type: 'test'
+  ...
+# Subtest: parse "P1W1D" -> lỗi
+ok 126 - parse "P1W1D" -> lỗi
+  ---
+  duration_ms: 0.035976
+  type: 'test'
+  ...
+# Subtest: parse "P1WT1H" -> lỗi
+ok 127 - parse "P1WT1H" -> lỗi
+  ---
+  duration_ms: 0.03537
+  type: 'test'
+  ...
+# Subtest: parse "P1D1W" -> lỗi
+ok 128 - parse "P1D1W" -> lỗi
+  ---
+  duration_ms: 0.036566
+  type: 'test'
+  ...
+# Subtest: parse "PT1S1M" -> lỗi
+ok 129 - parse "PT1S1M" -> lỗi
+  ---
+  duration_ms: 0.045787
+  type: 'test'
+  ...
+# Subtest: parse "PT1M1H" -> lỗi
+ok 130 - parse "PT1M1H" -> lỗi
+  ---
+  duration_ms: 0.052498
+  type: 'test'
+  ...
+# Subtest: parse "P1H" -> lỗi
+ok 131 - parse "P1H" -> lỗi
+  ---
+  duration_ms: 0.046869
+  type: 'test'
+  ...
+# Subtest: parse "PT1D" -> lỗi
+ok 132 - parse "PT1D" -> lỗi
+  ---
+  duration_ms: 2.476596
+  type: 'test'
+  ...
+# Subtest: parse "P 1D" -> lỗi
+ok 133 - parse "P 1D" -> lỗi
+  ---
+  duration_ms: 0.094361
+  type: 'test'
+  ...
+# Subtest: parse "P1D T1H" -> lỗi
+ok 134 - parse "P1D T1H" -> lỗi
+  ---
+  duration_ms: 0.051507
+  type: 'test'
+  ...
+# Subtest: parse "PT 1H" -> lỗi
+ok 135 - parse "PT 1H" -> lỗi
+  ---
+  duration_ms: 0.041036
+  type: 'test'
+  ...
+# Subtest: parse "P.5D" -> lỗi
+ok 136 - parse "P.5D" -> lỗi
+  ---
+  duration_ms: 0.038125
+  type: 'test'
+  ...
+# Subtest: parse "PT5.S" -> lỗi
+ok 137 - parse "PT5.S" -> lỗi
+  ---
+  duration_ms: 0.041626
+  type: 'test'
+  ...
+# Subtest: parse "PT1,S" -> lỗi
+ok 138 - parse "PT1,S" -> lỗi
+  ---
+  duration_ms: 0.036181
+  type: 'test'
+  ...
+# Subtest: parse "P1DT1" -> lỗi
+ok 139 - parse "P1DT1" -> lỗi
+  ---
+  duration_ms: 0.035273
+  type: 'test'
+  ...
+# Subtest: parse "P-1D" -> lỗi
+ok 140 - parse "P-1D" -> lỗi
+  ---
+  duration_ms: 0.034498
+  type: 'test'
+  ...
+# Subtest: parse "PT-1S" -> lỗi
+ok 141 - parse "PT-1S" -> lỗi
+  ---
+  duration_ms: 0.039232
+  type: 'test'
+  ...
+# Subtest: parse "P1S" -> lỗi
+ok 142 - parse "P1S" -> lỗi
+  ---
+  duration_ms: 0.043272
+  type: 'test'
+  ...
+# Subtest: parse "P1.5.5D" -> lỗi
+ok 143 - parse "P1.5.5D" -> lỗi
+  ---
+  duration_ms: 0.078179
+  type: 'test'
+  ...
+# Subtest: parse "P1WT" -> lỗi
+ok 144 - parse "P1WT" -> lỗi
+  ---
+  duration_ms: 0.050619
+  type: 'test'
+  ...
+# Subtest: parse "PW" -> lỗi
+ok 145 - parse "PW" -> lỗi
+  ---
+  duration_ms: 0.045492
+  type: 'test'
+  ...
+# Subtest: parse "PTS" -> lỗi
+ok 146 - parse "PTS" -> lỗi
+  ---
+  duration_ms: 0.041517
+  type: 'test'
+  ...
+# Subtest: parse "P1Y2M" -> lỗi
+ok 147 - parse "P1Y2M" -> lỗi
+  ---
+  duration_ms: 0.046251
+  type: 'test'
+  ...
+# Subtest: parse "P1DT2H3M4S5" -> lỗi
+ok 148 - parse "P1DT2H3M4S5" -> lỗi
+  ---
+  duration_ms: 0.041531
+  type: 'test'
+  ...
+1..148
+# tests 148
+# suites 0
+# pass 148
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 370.443807

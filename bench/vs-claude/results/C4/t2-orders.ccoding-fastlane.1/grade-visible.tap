@@ -1,0 +1,160 @@
+TAP version 13
+# Subtest: tính tiền không mã giảm giá
+ok 1 - tính tiền không mã giảm giá
+  ---
+  duration_ms: 1.335
+  type: 'test'
+  ...
+# Subtest: giữ chỗ tồn kho khi thêm
+ok 2 - giữ chỗ tồn kho khi thêm
+  ---
+  duration_ms: 0.166075
+  type: 'test'
+  ...
+# Subtest: mã không tồn tại
+ok 3 - mã không tồn tại
+  ---
+  duration_ms: 0.476725
+  type: 'test'
+  ...
+# Subtest: thêm 2 rồi sửa thành 3 (kho 4) → giữ chỗ 3
+ok 4 - thêm 2 rồi sửa thành 3 (kho 4) → giữ chỗ 3
+  ---
+  duration_ms: 1.040644
+  type: 'test'
+  ...
+# Subtest: xóa món nhả đúng phần giữ chỗ; xóa món không có là no-op
+ok 5 - xóa món nhả đúng phần giữ chỗ; xóa món không có là no-op
+  ---
+  duration_ms: 0.174564
+  type: 'test'
+  ...
+# Subtest: thêm nhiều lần, giảm số lượng, đặt 0
+ok 6 - thêm nhiều lần, giảm số lượng, đặt 0
+  ---
+  duration_ms: 0.197791
+  type: 'test'
+  ...
+# Subtest: vượt tồn kho ném OutOfStockError và không đổi trạng thái
+ok 7 - vượt tồn kho ném OutOfStockError và không đổi trạng thái
+  ---
+  duration_ms: 1.590084
+  type: 'test'
+  ...
+# Subtest: nhiều giỏ dùng chung Inventory: reserved = tổng số lượng các giỏ
+ok 8 - nhiều giỏ dùng chung Inventory: reserved = tổng số lượng các giỏ
+  ---
+  duration_ms: 0.318348
+  type: 'test'
+  ...
+# Subtest: toCents half away from zero
+ok 9 - toCents half away from zero
+  ---
+  duration_ms: 0.836465
+  type: 'test'
+  ...
+# Subtest: catalog dùng toCents đúng
+ok 10 - catalog dùng toCents đúng
+  ---
+  duration_ms: 0.184496
+  type: 'test'
+  ...
+# Subtest: allocate largest remainder
+ok 11 - allocate largest remainder
+  ---
+  duration_ms: 0.730256
+  type: 'test'
+  ...
+# Subtest: giảm cố định 10.00 chia 3 dòng = 10.00
+ok 12 - giảm cố định 10.00 chia 3 dòng = 10.00
+  ---
+  duration_ms: 1.157275
+  type: 'test'
+  ...
+# Subtest: giảm % tổng khớp
+ok 13 - giảm % tổng khớp
+  ---
+  duration_ms: 0.308288
+  type: 'test'
+  ...
+# Subtest: mã cố định 1.005 → 101 xu
+ok 14 - mã cố định 1.005 → 101 xu
+  ---
+  duration_ms: 0.17945
+  type: 'test'
+  ...
+# Subtest: thuế tính trên net
+ok 15 - thuế tính trên net
+  ---
+  duration_ms: 0.119235
+  type: 'test'
+  ...
+# Subtest: không có mã: thuế như cũ; lineTax half up
+ok 16 - không có mã: thuế như cũ; lineTax half up
+  ---
+  duration_ms: 0.162397
+  type: 'test'
+  ...
+# Subtest: toCents cơ bản
+ok 17 - toCents cơ bản
+  ---
+  duration_ms: 0.980747
+  type: 'test'
+  ...
+# Subtest: formatMoney
+ok 18 - formatMoney
+  ---
+  duration_ms: 0.24003
+  type: 'test'
+  ...
+# Subtest: allocate chia đều
+ok 19 - allocate chia đều
+  ---
+  duration_ms: 0.684166
+  type: 'test'
+  ...
+# Subtest: freeUnits mua 2 tặng 1
+ok 20 - freeUnits mua 2 tặng 1
+  ---
+  duration_ms: 1.195414
+  type: 'test'
+  ...
+# Subtest: freeUnits cấu hình khác: mua 1 tặng 1, mua 3 tặng 2, mua 1 tặng 3
+ok 21 - freeUnits cấu hình khác: mua 1 tặng 1, mua 3 tặng 2, mua 1 tặng 3
+  ---
+  duration_ms: 0.231632
+  type: 'test'
+  ...
+# Subtest: freeUnits không vượt số món
+ok 22 - freeUnits không vượt số món
+  ---
+  duration_ms: 0.23104
+  type: 'test'
+  ...
+# Subtest: endsAt dạng ngày: dùng được hết ngày UTC, từ chối từ 00:00:00Z hôm sau
+ok 23 - endsAt dạng ngày: dùng được hết ngày UTC, từ chối từ 00:00:00Z hôm sau
+  ---
+  duration_ms: 0.502478
+  type: 'test'
+  ...
+# Subtest: startsAt dạng ngày: hiệu lực từ 00:00:00Z
+ok 24 - startsAt dạng ngày: hiệu lực từ 00:00:00Z
+  ---
+  duration_ms: 0.121616
+  type: 'test'
+  ...
+# Subtest: endsAt có giờ: giữ nguyên mốc, không cộng thêm ngày
+ok 25 - endsAt có giờ: giữ nguyên mốc, không cộng thêm ngày
+  ---
+  duration_ms: 0.095571
+  type: 'test'
+  ...
+1..25
+# tests 25
+# suites 0
+# pass 25
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 276.533826

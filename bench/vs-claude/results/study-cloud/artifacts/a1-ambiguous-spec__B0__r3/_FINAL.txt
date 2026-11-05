@@ -1,0 +1,74 @@
+# Báo cáo tổng hợp: SPEC.md cho tính năng Log Export (T-20261102-144222-174)
+
+## Tóm tắt
+`SPEC.md` đã có ở thư mục gốc repo và đạt yêu cầu của đề bài. Có đúng 1 mục `## Open questions and assumptions` gồm 12 câu hỏi mở (OQ-1..OQ-12), câu nào cũng kèm giả định dùng tạm, có thêm A-1..A-3. Reviewer không chạy lệnh kiểm tra nào, nên tôi đã tự chạy các lệnh chỉ đọc trên tệp thật. Kết quả khớp với những gì S1/S2 báo cáo (số liệu ở bảng bên dưới). Tệp chưa được commit (`git status`: `?? SPEC.md`). Trước khi build, khách hàng hoặc Legal/DPO phải chốt OQ-1, 7, 8, 9, 10.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Soạn SPEC.md: 11 FR có Given/When/Then, các mục CSV, phân quyền, DLCN, retention, NFR, audit, mã lỗi, 12 OQ, bảng truy vết | @business-analyst | Đạt | `SPEC.md` (358 dòng), báo cáo `.ccoding/T-20261102-144222-174/outputs/dev-S1-business-analyst.md` |
+| S2 | Rà bảo vệ dữ liệu, phân quyền và lưu giữ, sửa trực tiếp trên SPEC.md | @security | Đạt có điều kiện (đây là cổng thiết kế, chưa phải cổng phát hành) | `SPEC.md`, báo cáo `.ccoding/T-20261102-144222-174/outputs/dev-S2-security.md` |
+| Kiểm chứng của Trưởng phòng | Chạy lại các lệnh kiểm tra vì reviewer chưa chạy | @dev-lead | Đạt | `grep -c '^## Open questions and assumptions$'` → 1 (dòng 254); `grep -c '^### OQ-'` → 12; `grep -c '^### FR-'` → 11; quét IPv4 ngoài dải `192.0.2.x` → không có; đủ các mục 1–11 cùng Traceability |
+
+## Quyết định
+Spec giải quyết các mâu thuẫn trong đề bài bằng giả định an toàn. Tất cả đều nằm trong OQ để khách hàng xác nhận:
+- **IP và username đầy đủ, trong khi chính sách cấm đưa dữ liệu cá nhân ra ngoài khi chưa che (OQ-1, OQ-8):** mặc định file xuất ra được che. IP cắt octet cuối. Username đổi thành pseudonym HMAC 8 hex. Muốn có bản đầy đủ phải đi luồng forensic riêng (FR-8): duyệt bốn mắt, lưu ở kho riêng có mã hóa, link tải sống 24 giờ, file tự xóa sau 7 ngày. Luồng này do Security/Audit thực hiện, không phải Branch Manager.
+- **"Log của team" so với "mọi thứ họ thấy được" (OQ-2):** chỉ xuất log của team mình. Scope lấy từ session chứ không lấy từ tham số client gửi lên, nhằm chống IDOR.
+- **Giới hạn 5 giây so với xuất "mọi thứ" (OQ-5):** từ N = 50.000 dòng trở xuống thì xuất đồng bộ, lớn hơn thì chuyển sang job bất đồng bộ. Trần là 1.000.000 dòng hoặc 250 MB.
+- **"Lưu vĩnh viễn" so với "xóa sau 12 tháng" (OQ-7):** chỉ audit record và metadata/hash được giữ vĩnh viễn. File có dữ liệu cá nhân bị xóa khi sự kiện cũ nhất trong file đủ 12 tháng tuổi. Bản S1 tính 12 tháng từ ngày tạo file, S2 đã sửa thành tính theo tuổi sự kiện.
+- Không làm hạng mục kiến trúc, ADR hay code. Lý do: đề bài chỉ yêu cầu spec, và các mâu thuẫn cần khách hàng chốt trước khi thiết kế.
+
+## Kết quả review
+- Không còn blocker. S2 nêu 3 phát hiện mức Cao (retention, backup, kho lưu file forensic) và đã sửa thẳng vào spec. Phần backup còn lệch một chỗ (xem mục rủi ro bên dưới).
+- Lưu ý về bằng chứng: reviewer kết luận "đạt" nhưng **không chạy lệnh nào**. Kiểm chứng duy nhất có chạy thật là bước của Trưởng phòng ghi trong bảng trên. Ở S2, @security ghi đè toàn bộ tệp bằng Write và không diff với bản S1. Tôi chưa đối chiếu từng dòng giữa hai phiên bản. Hiện chỉ biết chắc số FR/OQ và cấu trúc mục vẫn đủ.
+
+## Việc còn mở & rủi ro
+- **Chờ khách hàng hoặc Legal/DPO:** OQ-1 và OQ-8 (thế nào thì tính là "masked", thế nào là "rời platform"), OQ-7 (cách xử lý "vĩnh viễn" so với 12 tháng), OQ-9 (căn cứ pháp lý, có cần DPIA không), OQ-10 (ai được gán vai trò Forensic Requester/Approver). Chưa gán vai trò thì không ai lấy được bản unmasked.
+- **Backup 35 ngày** có thể giữ file đã quá hạn 12 tháng. Cần DPO chấp nhận ngoại lệ này. Sau mỗi lần restore phải chạy lại job xóa.
+- **Mọi ngưỡng đều là giả định**, không cái nào do khách hàng đưa ra (A-3): N, trần dòng/dung lượng, 24 giờ, 7 ngày, 3 ngày, xoay khóa hằng năm, 35 ngày. Phải kiểm lại bằng load test và chính sách.
+- **Rủi ro về độ tương xứng:** khách hàng dặn "Make it simple", nhưng luồng forensic bốn mắt làm phạm vi lớn lên. Nên hỏi khách hàng xem có cần luồng này ngay trong MVP không. Nếu không, có thể hoãn FR-8 và chỉ phát hành bản xuất đã che.
+- OQ-6: chưa có mẫu CSV của "hệ thống cũ", nên định dạng ở mục 5 mới là giả định.
+- `SPEC.md` chưa commit. Theo quy định tôi không commit; Tom quyết định.
+
+## Bước tiếp theo
+1. **Gửi danh sách câu hỏi cho khách hàng** (Tom hoặc @business-analyst): gửi 12 OQ, trong đó OQ-1, 5, 7, 8, 10 được ưu tiên. *Xong khi:* mỗi OQ có câu trả lời bằng văn bản gắn vào spec, và spec được cập nhật thành v1.0.
+2. **Tách nhiệm vụ riêng: thiết kế và ADR** (@solution-architect và @security), làm sau khi OQ đã chốt. Gồm cách xuất đồng bộ/bất đồng bộ, kho lưu file, quản lý khóa HMAC, job xóa theo tuổi sự kiện, xử lý backup. *Xong khi:* có ADR được duyệt và cổng bảo vệ dữ liệu đạt.
+3. **Tách nhiệm vụ riêng: build MVP bản xuất đã che** (@backend-dev, @frontend-dev). Gồm FR-1..FR-7, FR-9, FR-10. *Xong khi:* có test cho IDOR ở FR-3, cho việc file đã che không chứa IP/username đầy đủ ở FR-4, fixture formula injection ở §5.4, job xóa ở FR-10, và đo được p95 dưới 5 giây với N dòng.
+4. **Tách nhiệm vụ riêng (tùy câu trả lời OQ-10): luồng forensic unmasked FR-8** (@backend-dev, @security). *Xong khi:* có test chặn tự duyệt, link hết hạn sau 24 giờ, file bị xóa sau 7 ngày.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-144222-174` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **36 in / 44.3k out**, cache đọc 296.2k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Chuyên viên ATTT (@security) | dev | 10 | 21943 | 124064 | 1 |
+| Business Analyst (@business-analyst) | dev | 10 | 12288 | 84621 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 8 | 7530 | 42621 | 2 |
+| QA Engineer (@qa-tester) | dev | 6 | 1952 | 42626 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 614 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-business-analyst.md` — S1 Soạn SPEC.md: đặc tả tính năng Log Export và danh sách câu hỏi mở (@business-analyst)
+- `outputs/dev-S2-security.md` — S2 Rà và bổ sung phần bảo vệ dữ liệu, phân quyền, lưu giữ trong SPEC.md (@security)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Chuyên viên ATTT (@security) | dev | **77** B | 100 | 83 | 38 | 60 | 1 | 1 | 146k | 10/13 |
+| Business Analyst (@business-analyst) | dev | **98** A | 100 | 100 | 89 | 100 | 1 | 1 | 97k | 1/7 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | 100 | 100 | 100 | 100 | 0 | — | 50k | 0/2 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 45k | 0/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Chuyên viên ATTT** (@security, 77 B):
+  - Thao tác công cụ lỗi nhiều (10/13, 77%; nhiều nhất ở edit_file 10/10) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

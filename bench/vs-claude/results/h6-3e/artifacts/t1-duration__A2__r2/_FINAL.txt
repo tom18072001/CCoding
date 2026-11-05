@@ -1,0 +1,9 @@
+Tôi đã hiện thực xong `src/duration.js` theo SPEC.md (`parseDuration` và `formatDuration`), và `npm test` xanh: 7/7 test đạt. Các test biên nằm trong file mới `test/duration.edge.test.js`.
+
+- **Làm tròn:** chuỗi được cộng và làm tròn bằng số học BigInt chính xác, nên kết quả đúng kiểu *half away from zero* không bị lệch do số thực (vd. `"1.0005s"` ra 1001). `-0` trả về `0`.
+- **`formatDuration`:** cũng dùng BigInt, gồm cả bước làm tròn và nhớ khi có `largest`. Nhờ vậy `parseDuration(formatDuration(x))` đúng với số rất lớn như `1e15`.
+- **Test biên:** gồm các ca của đặc tả như dấu, thứ tự và trùng đơn vị, ISO (`PT0,5S`, `P1W1D` lỗi), thông báo lỗi, `largest` có nhớ (`6d 23h 59m 31s` ra `1w`) và round-trip.
+
+Khoảng trắng giữa dấu và `P` ở ISO (vd. `"- PT1S"`) đặc tả không nói rõ. Tôi cho phép, theo quy tắc dấu chung ở mục 4.
+
+Tôi chưa commit gì.

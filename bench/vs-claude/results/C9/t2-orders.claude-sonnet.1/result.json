@@ -1,0 +1,86 @@
+{
+ "run": {
+  "exitCode": 0,
+  "status": "done",
+  "wallSec": 42,
+  "costUsd": 0.1417295,
+  "turns": 4,
+  "tokens": {
+   "input": 8,
+   "output": 5382,
+   "cacheRead": 164264,
+   "cacheWrite": 17765
+  },
+  "models": [
+   "claude-haiku-5-5",
+   "claude-sonnet-5-5"
+  ],
+  "modelUsage": {
+   "claude-haiku-5-5": {
+    "inputTokens": 1351,
+    "outputTokens": 544,
+    "cacheReadInputTokens": 0,
+    "cacheCreationInputTokens": 0,
+    "webSearchRequests": 0,
+    "costUSD": 0.0004071,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000,
+    "thinkingTokens": 511,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 0,
+    "canonicalModel": "claude-haiku-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   },
+   "claude-sonnet-5-5": {
+    "inputTokens": 8,
+    "outputTokens": 5382,
+    "cacheReadInputTokens": 164264,
+    "cacheCreationInputTokens": 17765,
+    "webSearchRequests": 0,
+    "costUSD": 0.1413224,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 64000,
+    "thinkingTokens": 1211,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 17765,
+    "canonicalModel": "claude-sonnet-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   }
+  },
+  "finalText": "Cả 6 lỗi trong ISSUES.md đã được sửa, và `npm test` xanh với 12 test. API công khai giữ nguyên. Các test hồi quy mới nằm ở `test/regression.test.js`, mỗi lỗi một test.\n\n1. **Làm tròn xu** (`money.js`): `toCents` nhân `amount * 100` bằng số thực nên `1.005` ra `100.4999…`. Giờ hàm đọc trực tiếp dạng thập phân của số, nên `1.005` ra 101, `-1.005` ra -101 và `2.675` ra 268. Mã giảm cố định (`checkout.js`) trước đây tự làm tròn bằng `Math.round(amount * 100)`, giờ gọi `toCents`. Giá trị đơn tối thiểu vốn đã dùng `toCents` nên tự được sửa.\n2. **Tổng giảm bị hụt** (`allocate`): hàm chỉ lấy phần nguyên và bỏ số xu dư. Giờ nó chia phần dư theo phương pháp phần dư lớn nhất, bằng nhau thì phần đứng trước được trước. Tổng giảm của các dòng luôn bằng đúng số tiền giảm của mã.\n3. **Mua X tặng Y** (`freeUnits`): công thức cũ là `floor(qty / buy) * free`. Đúng phải là `floor(qty / (buy + free)) * free`, nên 2 hộp tặng 0, 3 hộp tặng 1, 5 hộp tặng 1, 6 hộp tặng 2.\n4. **Hạn mã** (`promotions.js`): `endsAt` dạng `YYYY-MM-DD` giờ được cộng thêm 1 ngày làm mốc loại trừ. Mã dùng được tới 23:59:59.999Z ngày `endsAt` và bị từ chối từ `00:00:00Z` ngày hôm sau.\n5. **Tồn kho** (`cart.js`):\n   - `updateQty` trước đây giữ chỗ lại toàn bộ số lượng mới mà không trừ phần đã giữ. Giờ nó chỉ giữ thêm hoặc trả lại phần chênh lệch.\n   - `removeItem` trước đây không trả chỗ. Giờ nó trả lại.\n   - Nếu `updateQty` bị báo hết hàng thì trạng thái giỏ và kho không đổi.\n6. **Thuế** (`checkout.js`): `lineTax` giờ nhận `net` thay vì `gross`.\n\nNgoài danh sách lỗi, tôi sửa thêm một chỗ: `lineTax` (`tax.js`) trước dùng `Math.round(amount * 0.1)` nên có thể lệch 1 xu do số thực. Giờ nó dùng phần trăm nguyên và làm tròn half up. Kết quả thuế các trường hợp bình thường không đổi.",
+  "workdir": "/tmp/bw/C9-t2-orders.claude-sonnet.1-hcqevb/repo"
+ },
+ "task": "t2-orders",
+ "system": "claude-sonnet",
+ "rep": 1,
+ "key": "t2-orders.claude-sonnet.1",
+ "env": "cloud",
+ "startedAt": "2026-11-02T06:35:27.093Z",
+ "finishedAt": "2026-11-02T06:36:09.770Z",
+ "grade": {
+  "hidden": {
+   "pass": 60,
+   "fail": 0,
+   "total": 60,
+   "failed": [],
+   "ms": 173,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 12,
+   "fail": 0,
+   "total": 12
+  },
+  "changed": [
+   "~src/cart.js",
+   "~src/checkout.js",
+   "~src/money.js",
+   "~src/promotions.js",
+   "~src/tax.js",
+   "+test/regression.test.js"
+  ]
+ },
+ "audit": []
+}

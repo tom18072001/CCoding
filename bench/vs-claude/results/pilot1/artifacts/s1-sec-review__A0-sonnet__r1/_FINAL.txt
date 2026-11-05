@@ -1,0 +1,18 @@
+I reviewed `src/server.js` without changing it and wrote seven findings to `findings.json` in the repository root. I didn't run the server or test any of these.
+
+| Line | Type | Severity | Issue |
+|---|---|---|---|
+| 11 | hardcoded-secret | high | The JWT secret is hardcoded in the source. |
+| 30 | sqli | critical | `q` is concatenated into the SQL string. |
+| 42 | path-traversal | high | `req.params.name` goes into `path.join` unchecked, so a `../` sequence can leave `/srv/reports`. |
+| 58 | weak-crypto | high | Passwords are hashed with unsalted MD5. |
+| 65 | ssrf | high | Any logged-in user can make the server fetch an arbitrary URL and read the response. |
+| 70 | missing-authz | high | Any logged-in user can delete any ticket. |
+| 84 | command-injection | critical | `req.body.format` is interpolated into an `exec` shell command. |
+
+I left these out because they aren't exploitable as written:
+- **Status table (line 36):** the interpolated table name is a server-side constant.
+- **Attachments (lines 47–53):** the route uses `path.basename`, an extension allow-list and an owner check.
+- **Ping (lines 76–79):** it uses `execFile` with an argument array, and the host is validated by a regex.
+
+Line 18 calls `verifyJwt`, which is neither defined nor imported. I treated that as a bug rather than a security finding, so it isn't in the file. If it were wired up incorrectly, authentication would break, but that isn't an exploit by itself.

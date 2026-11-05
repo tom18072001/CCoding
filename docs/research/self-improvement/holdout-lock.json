@@ -1,0 +1,52 @@
+{
+  "c1-iis-ecs": {
+    "taskJson": "0b878cf3081732ba173fedbefd6a209c88a82a56960346044cbfed3133fd8326",
+    "hiddenFiles": 4,
+    "hiddenSha": "58f1b5649426a3820077452832626c5020b6754447e0a6851d585e37061435a1"
+  },
+  "c2-burst-alert": {
+    "taskJson": "8c2221aa9634f1759a8eca7fe74e97dc6bc35a37f44e93803342b452d8d0d907",
+    "hiddenFiles": 4,
+    "hiddenSha": "28078504768236aee575f5151422f05ddcd8ca0f1037b1b339a742f65a71899d"
+  },
+  "c3-shop-bugs": {
+    "taskJson": "2049df7b1f04c693938f878024aa32605ebfc8d3faaf7d0a81469a555e97bb7d",
+    "hiddenFiles": 6,
+    "hiddenSha": "ab8263012fdebd231564d6bc7a42455b1fed5365d49ab619acd20cfb5246ba9d"
+  },
+  "c4-audit-chain": {
+    "taskJson": "1f47afff670612613808a4ae0b4f0567a201972eeb65ff38c47e4e5fc0fcd7fe",
+    "hiddenFiles": 4,
+    "hiddenSha": "1712f4a0fe429f795a215fcab8d2922765325a49e0195972f16b8409960d2e4e"
+  },
+  "c5-tickets-api": {
+    "taskJson": "dfbdeff29a3ea4a64a3ad0a7e7a09d889613a7ae6792f1b5842e116018f7a308",
+    "hiddenFiles": 4,
+    "hiddenSha": "e63d39e86bf6e198a3a25474bea4539edcb6608d5817d5c0043a591aa8b20bc5"
+  },
+  "l1-oncall": {
+    "taskJson": "1918a4bb22879aafe8a52fc708e3cf4ca8d5237b0accd0e80f85eaee3217d6ce",
+    "hiddenFiles": 4,
+    "hiddenSha": "d52eb417ca1f23f08e7847a6fb9246e18d37a1c60728b6345e376c583be551a5"
+  },
+  "l2-knights": {
+    "taskJson": "03d0a9ec9486feaae46b7291cb31363381086eb295dcc2189b4b7209300de80b",
+    "hiddenFiles": 3,
+    "hiddenSha": "c94b462658a19cace61ca4d3d55082a01cb382f322f5cfa42842afb5992f1c14"
+  },
+  "l3-reconcile": {
+    "taskJson": "79810448b4304a3a9ab39acb4f8f906cc41048f961c3820bb3e6649e78aff28f",
+    "hiddenFiles": 3,
+    "hiddenSha": "0cf7636fc9e4112f6ef8b3b64960f413394f66f6896c3cde14c7126c81a7da54"
+  },
+  "l4-startup-order": {
+    "taskJson": "027b8cf881ca50511546a499870eb1bc8d95f6f46ae789fb7806cae45435248f",
+    "hiddenFiles": 3,
+    "hiddenSha": "4f48535743cf47768caa44aee57adc128195bd3d1d57d3c49dd702296152de27"
+  },
+  "s1-sec-review": {
+    "taskJson": "2264cb3bcd8488199184c50d39fbb20235ca25c34ca58615366be29136a38e2d",
+    "hiddenFiles": 4,
+    "hiddenSha": "c306f6dcbc5e0f3bb4672e0139ab8bdf059044af7ba03a2253ab9d7fa3f63f88"
+  }
+}

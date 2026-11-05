@@ -1,0 +1,78 @@
+# Báo cáo tổng hợp T-20261102-143010-a5c: Knights and knaves (5 server A–E)
+
+## Tóm tắt
+Bài toán có đúng một nghiệm. Server **khỏe (healthy): B, C**. Server **bị xâm nhập (compromised): A, D, E**. Vì chỉ có một nghiệm nên `unique: true`. Nghiệm này đã ghi vào `answer.json` ở gốc repo. Có ba nguồn độc lập cho cùng kết quả: lời giải tay, phép vét cạn của S1 và script đối chiếu riêng của S2. Hai việc còn mở: `answer.json` chưa commit, và hai script kiểm chứng không được lưu thành tệp.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Vét cạn 32 cách gán, ghi `answer.json` | @senior-swe | Đạt | `answer.json` (tạo mới). Script chạy inline qua stdin, exit 0, ra `so nghiem: 1`. Báo cáo: `.ccoding/T-20261102-143010-a5c/outputs/dev-S1-senior-swe.md` |
+| S2 | Kiểm chứng độc lập `answer.json` | @qa-tester | Đạt, bốn tiêu chí (a)–(d) đều đạt | Script tự viết lại, chạy `python3 -I -` inline, exit 0, ra `nghiem: 1`. Báo cáo: `.ccoding/T-20261102-143010-a5c/outputs/dev-S2-qa-tester.md` |
+
+Lúc tổng hợp, Trưởng phòng đã tự đọc lại (chỉ đọc, không chạy script):
+- `cat answer.json` ra `{"healthy": ["B", "C"], "compromised": ["A", "D", "E"], "unique": true}`.
+- `git status --short` chỉ có `?? answer.json`.
+
+## Quyết định
+- Kế hoạch tối giản gồm hai hạng mục: một bên giải, một bên đối chiếu độc lập. Không cần kiến trúc, BA hay cổng bảo vệ dữ liệu, vì việc chỉ giao một tệp JSON nhỏ và dữ liệu thuộc loại internal.
+- Quy ước: knight = True. Một cách gán hợp lệ khi với mọi X, trạng thái của X trùng với giá trị đúng/sai của phát biểu X. Giá trị `unique` lấy theo điều kiện `số nghiệm == 1`.
+- Không đặt script trong repo, vì đề chỉ yêu cầu `answer.json`.
+- Kiểm tay từng phát biểu với nghiệm (A✗ B✓ C✓ D✗ E✗):
+  - A nói "B bị xâm nhập": sai, đúng với việc A là knave.
+  - B nói "A và E cùng trạng thái": đúng (cả hai đều knave), đúng với việc B là knight.
+  - C nói "đúng 3 server bị xâm nhập": đúng (A, D, E), đúng với việc C là knight.
+  - D nói "E khỏe hoặc C bị xâm nhập": sai, đúng với việc D là knave.
+  - E nói "A khỏe và D bị xâm nhập": sai, đúng với việc E là knave.
+- Nhánh A = knight dẫn đến B, C, E đều là knave. Khi đó đúng 3 server bị xâm nhập, nên phát biểu của C lại đúng, mâu thuẫn với việc C là knave. Vì vậy nghiệm là duy nhất.
+
+## Kết quả review
+- S2 (@qa-tester) kết luận **Đạt**, không có blocker, major hay minor. Bốn tiêu chí đều đạt:
+  - (a) JSON hợp lệ, có đúng 3 khóa.
+  - (b) Hai danh sách rời nhau, hợp lại đủ A–E và đã sắp xếp.
+  - (c) Nghiệm thỏa cả 5 phát biểu.
+  - (d) `unique` khớp với số nghiệm.
+- Bằng chứng chạy thật lấy từ báo cáo S1/S2, gồm lệnh, exit code và output. Riêng phần "Kết luận review" có ghi rằng reviewer không chạy lệnh kiểm tra nào. Ghi chú này trái với báo cáo S2, vốn nêu rõ lệnh đã chạy và exit 0. Trưởng phòng không chạy lại script để xác minh. Bù lại, nghiệm đã được kiểm tay đầy đủ (mục Quyết định) và khớp với cả S1 lẫn S2.
+
+## Việc còn mở & rủi ro
+- `answer.json` chưa commit, đúng phạm vi đã giao. Việc commit cần Tom quyết định.
+- Script vét cạn của S1 và S2 không lưu thành tệp, vì hook `claude-guard` chặn ghi vào scratchpad. Hậu quả là sau này muốn chạy lại phải viết lại. Rủi ro này thấp, vì bài toán chỉ có 32 cách gán và đã kiểm tay được.
+- Bằng chứng chạy thật của reviewer không nhất quán (đã nêu ở mục Kết quả review). Điều này không ảnh hưởng đến tính đúng của đáp án.
+
+## Bước tiếp theo
+1. **(Tùy chọn) Commit `answer.json`.** Commit trên nhánh làm việc, không commit vào main. Xong khi `git status` sạch và có commit chứa `answer.json`.
+2. Không cần tách thêm nhiệm vụ nào, vì yêu cầu gốc đã hoàn tất.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-143010-a5c` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **24 in / 10.8k out**, cache đọc 110.8k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| QA Engineer (@qa-tester) | dev | 10 | 3576 | 52186 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 6 | 4666 | 24233 | 2 |
+| Senior Software Engineer (@senior-swe) | dev | 6 | 2050 | 32086 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 477 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Vét cạn 32 cách gán và ghi answer.json (@senior-swe)
+- `outputs/dev-S2-qa-tester.md` — S2 Kiểm chứng độc lập answer.json (@qa-tester)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| QA Engineer (@qa-tester) | dev | **89** A | 100 | 97 | 80 | 60 | 1 | 1 | 56k | 1/4 |
+| Senior Software Engineer (@senior-swe) | dev | **89** A | 100 | 100 | 73 | 60 | 1 | 1 | 34k | 1/3 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | 100 | 100 | 100 | 100 | 0 | — | 29k | 0/1 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **QA Engineer** (@qa-tester, 89 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+- **Senior Software Engineer** (@senior-swe, 89 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

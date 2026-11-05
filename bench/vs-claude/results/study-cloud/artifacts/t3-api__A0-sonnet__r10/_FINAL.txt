@@ -1,0 +1,13 @@
+Cả 4 tính năng trong `FEATURES.md` đã được hiện thực và `npm test` xanh (6/6 test). Tôi chưa gọi API thật qua HTTP bằng tay; các test chạy server trên cổng ngẫu nhiên và gọi bằng `fetch`.
+
+- **Xác thực và phân quyền:** mọi route `/tasks…` và `/audit` kiểm tra `X-User` trước, rồi tới tham số truy vấn, tồn tại/quyền đọc, quyền thao tác, và validate body sau cùng. Member xem nhiệm vụ nhóm khác nhận 404. Manager và member bị chặn đúng các trường hợp trong đặc tả.
+- **Lọc, tìm, sắp xếp, phân trang:** `GET /tasks` trả `{items,total,page,pageSize}`. Các tham số được duyệt theo thứ tự trên URL, nên lỗi báo đúng tham số đầu tiên. Tìm `q` bỏ dấu tiếng Việt (kể cả `đ`). Nhiệm vụ không có `dueDate` luôn nằm cuối. Khi hòa, thứ tự theo `id` tăng dần theo số.
+- **Xuất CSV:** `GET /tasks/export.csv` có BOM, header, `\r\n`, bọc ngoặc kép theo RFC 4180 và thêm `'` chống chèn công thức. `page` hoặc `pageSize` trả 400. Test kiểm tra BOM bằng byte thô, vì `fetch().text()` tự bỏ BOM.
+- **Nhật ký thao tác:** `POST`, `PATCH`, `DELETE` thành công ghi một mục `{seq, at, userId, action, taskId, changes}`; thao tác lỗi không ghi. `GET /audit` chỉ cho admin, trả mới nhất trước, và nhận tham số `taskId`.
+
+Test cũ đã được sửa cho dạng kết quả mới và thêm header `X-User`. Có thêm test cho từng tính năng. Phần chính nằm ở `src/handlers/tasks.js`, kho nhật ký ở `src/store.js`.
+
+Mấy chỗ đặc tả chưa nói rõ, tôi chọn như sau:
+- **`team` sai giá trị khi manager tạo hoặc sửa:** ví dụ `team: "C"` trả 403, vì quyền kiểm tra trước validate.
+- **`assignee=` rỗng:** coi là lọc theo chuỗi rỗng, nên kết quả rỗng thay vì lỗi.
+- **Body JSON hỏng:** trả `INVALID_JSON` sau các kiểm tra quyền không cần đọc body (member tạo hoặc xóa vẫn nhận 403 trước).

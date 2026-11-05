@@ -1,0 +1,19 @@
+{
+  "id": "l1-modules",
+  "category": "coding",
+  "size": 5,
+  "sizeBasis": "files: src/{calendar,csvcheck,money,ratelimit,slug}/index.js",
+  "sizeLegacy": 5,
+  "sizeReason": "Năm module độc lập trong SPEC.md: money, calendar, csvcheck, slug, ratelimit (mỗi module ở src/<tên>/index.js, không phụ thuộc nhau)",
+  "title": "Năm module độc lập từ đặc tả dày quy tắc",
+  "hypotheses": [
+    "H1",
+    "H5",
+    "H6"
+  ],
+  "deliverable": "src/",
+  "brief": "Hiện thực năm module độc lập theo đúng đặc tả trong SPEC.md: money (tiền VND/USD/EUR, làm tròn half-even, chia và đổi tiền), calendar (ngày làm việc, nghỉ bù, tuần ISO), csvcheck (phân tích CSV RFC 4180 và kiểm theo lược đồ), slug (chuẩn hóa, so khớp, sắp xếp tiếng Việt) và ratelimit (token bucket, cửa sổ trượt, đồng hồ tiêm vào), mỗi module ở src/<tên>/index.js. Đặc tả có nhiều quy tắc chi tiết (thứ tự làm tròn, quy ước biên, mã lỗi, thứ tự báo lỗi) — bộ nghiệm thu ẩn kiểm tra từng quy tắc của từng module qua API công khai. Viết test cho các module, đảm bảo `npm test` xanh. Không thêm thư viện ngoài.",
+  "grader": "code",
+  "repoDir": "starter",
+  "solutionDir": "ref"
+}

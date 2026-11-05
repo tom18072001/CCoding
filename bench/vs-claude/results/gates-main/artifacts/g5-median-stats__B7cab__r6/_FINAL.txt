@@ -1,0 +1,89 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g5-median-stats__B7cab__r6] Thống kê tóm tắt dùng median có sẵn (median sai nhưng test công khai xanh)
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Repo có sẵn bản triển khai `summary` và sửa `median` trong working copy (src/stats.js, test/stats.test.js), khớp SPEC.md khi tôi đọc diff. Phần đã làm không cần làm lại. Việc còn lại là một lượt kiểm chứng độc lập: chạy `npm test` không pipe, xác nhận bộ test mới bắt được lỗi `median` cũ, rồi bàn giao. Tôi chưa chạy lệnh nào, vì vai trò này không chạy được lệnh.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Kiểm chứng npm test và test đỏ trên median cũ (@senior-swe, done)
+
+## Tóm tắt
+`npm test` trên working copy hiện tại cho exit code 0, 9 test pass, 0 fail. Cả 3 test `median` mới đều đỏ trên `median` cũ ở HEAD. `src/stats.js` và `test/stats.test.js` khớp SPEC.md. Tôi không sửa gì, nên diff cuối trùng diff hiện tại.
+
+## Tệp đã tạo/sửa
+Không sửa tệp nào. Diff hiện có vẫn là `src/stats.js` (+26/−4 dòng, gộp với `test/stats.test.js`) và `test/stats.test.js`. `git status` sau khi kiểm chứng vẫn chỉ có hai tệp này ở trạng thái `M`.
+
+## Kiểm chứng
+- `npm test` (không pipe) → exit 0. tests 9, pass 9, fail 0.
+- Test đỏ trên `median` cũ:
+  - Cách làm: tôi chép `git show HEAD:src/stats.js` và `test/stats.test.js` hiện tại vào một thư mục tạm bên ngoài repo, rồi chạy `node --test test/stats.test.js` trong đó. Working copy không bị đụng tới, nên không cần stash hay khôi phục.
+  - Kết quả: tests 9, pass 2, fail 7.
+  - Đỏ ở `median chẵn`, `median sắp xếp theo số, không theo chuỗi` và `median không đổi đầu vào`.
+  - `summary cơ bản`, `summary làm tròn mean 2 chữ số`, `summary rỗng` và `summary không đổi đầu vào` cũng đỏ, vì HEAD chưa có `summary`.
+  - Hai test cũ (`median lẻ`, `median rỗng`) vẫn pass.
+- Lần chạy đầu bằng `node --test test/` trong thư mục tạm báo `1 test, fail 1`. Đó là lỗi cách gọi, không phải kết quả test, nên tôi chạy lại với đường dẫn tệp cụ thể.
+- Đối chiếu SPEC.md với `src/stats.js` (đọc mã):
+
+| Yêu cầu | Trạng thái |
+|---|---|
+| `median` chẵn → trung bình hai phần tử giữa | Khớp |
+| `median` rỗng → `RangeError` | Khớp |
+| `median` không đổi đầu vào (sort trên bản sao `[...xs]`) | Khớp |
+| `summary` có đủ 5 trường `{count, min, max, mean, median}` | Khớp |
+| `summary` mean = `Number(toFixed(2))` | Khớp |
+| `summary` rỗng → `RangeError` | Khớp |
+| `summary` không đổi đầu vào | Khớp |
+
+- Chưa chạy: lint hay typecheck, vì repo không có script nào như vậy.
+
+## Quyết định thiết kế
+Tôi chạy test cũ trong thư mục tạm thay vì `git stash` hay khôi phục tệp. Cách này không có rủi ro mất working copy, và các đồng nghiệp đang dùng chung worktree cũng không bị ảnh hưởng.
+
+## Rủi ro & việc còn mở
+- Không kiểm tra kiểu đầu vào (phần tử không phải số, `NaN`), vì SPEC không yêu cầu.
+- Git cảnh báo LF sẽ đổi thành CRLF ở hai tệp. Cảnh báo này chỉ về kết thúc dòng, không ảnh hưởng hành vi.
+
+Bản đầy đủ: `.ccoding/T-20261104-130355-b9d/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-130355-b9d` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **18 in / 4,994 out**, cache đọc 105.7k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 14 | 3937 | 84101 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 1057 | 21564 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Kiểm chứng npm test và test đỏ trên median cũ (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 9 · ℹ suites 0 · ℹ pass 9 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **70** B | thấp | — | — | 100 | 100 | 100 | 100 | 1 | 1 | 88k | 0/7 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 23k | 0/1 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

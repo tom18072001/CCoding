@@ -1,0 +1,127 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t3-api__B6__r2] Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Repo nhỏ (handlers/tasks.js ~60 dòng) nên chia 2 hạng mục song song theo tệp. S2 viết các hàm thuần (parse query, lọc/sắp xếp, CSV) trong tệp mới và test riêng. S1 làm xác thực/phân quyền/nhật ký và nối S2 vào route theo hợp đồng đã ghi sẵn. CCoding tự gộp, chạy `npm test` và review.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Xác thực, phân quyền, nhật ký thao tác và nối route (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã làm xong S1: xác thực `X-User` (401), phân quyền admin/manager/member (404 trước 403, 403 trước validate), nhật ký thao tác, `GET /audit`, và nối `GET /tasks` (dạng `{items,total,page,pageSize}`) cùng `GET /tasks/export.csv` vào module của S2. `npm test` pass 10/10, exit 0. Nhưng S2 chưa có `src/query.js` và `src/csv.js`, nên tôi tạo **stub tạm** hai file này để chạy test. Chúng chưa có lọc `q`/`dueBefore`/`sort`, kiểm tra miền giá trị hay chống chèn công thức. S2 cần ghi đè hai file này, sau đó CCoding chạy lại `npm test`.
+
+## Tệp đã tạo/sửa
+- Sửa: `src/handlers/tasks.js`, `src/store.js` (`audit[]`, `addAudit`), `src/http.js` (`sendText`), `src/server.js` (đăng ký audit), `test/helpers.js` (tùy chọn `user` để gửi `X-User`), `test/tasks.test.js`.
+- Mới: `src/handlers/audit.js`, `test/auth.test.js`, `test/audit.test.js`.
+- Stub tạm của S2, chưa phải bản thật: `src/query.js`, `src/csv.js`.
+
+## Hợp đồng API
+- Mọi route `/tasks…` và `/audit`: thiếu hoặc sai `X-User` → 401 `UNAUTHENTICATED`.
+- `GET /tasks`: mọi vai trò; member chỉ thấy nhóm mình. Query lỗi → 400 `INVALID_QUERY`.
+- `GET /tasks/export.csv`: đăng ký trước `/tasks/:id`, không phân trang. Header `text/csv; charset=utf-8` và `Content-Disposition: attachment; filename="tasks.csv"`.
+- `GET /tasks/:id`: member xem nhóm khác → 404.
+- `POST /tasks`:
+  - admin được tạo cho mọi nhóm.
+  - manager chỉ tạo cho nhóm mình; `team` hợp lệ nhưng khác nhóm → 403 trước validate. Body không có `team` → 400.
+  - member → 403.
+- `PATCH /tasks/:id`:
+  - Member xem nhóm khác → 404 trước mọi kiểm tra quyền.
+  - manager sửa nhiệm vụ nhóm khác, hoặc đổi `team` sang nhóm khác → 403.
+  - member chỉ được sửa khi `assignee` là mình và body chỉ có key `status`; ngược lại → 403.
+  - Validate body (400) chạy sau cùng.
+- `DELETE /tasks/:id`: member xem nhóm khác → 404, nhóm mình → 403; manager → 403; admin → 204.
+- `GET /audit`: query chỉ nhận `taskId` một lần, khác hoặc lặp → 400 `INVALID_QUERY` (kiểm tra trước 403); không phải admin → 403. Kết quả `{items}` theo `seq` giảm dần.
+- Nhật ký chỉ ghi khi thao tác thành công. `changes` sắp a→z; `create` lấy key của body, `update` chỉ lấy trường đổi giá trị, `delete` là `[]`.
+
+## Migration
+Không áp dụng. Dữ liệu trong bộ nhớ, `audit` bắt đầu rỗng.
+
+## Kiểm chứng
+- `npm test` → exit 0, `# tests 10`, `# pass 10`, `# fail 0`. Chạy với stub của S2, nên chưa kiểm chứng phần lọc, sắp xếp và CSV thật.
+- Test CSV của S1 không kiểm BOM vì `fetch().text()` tự bỏ BOM; `test/csv.test.js` của S2 phải kiểm BOM.
+
+## Việc còn lại
+- Biến môi trường mới: không có.
+- **S2** ghi đè `src/query.js` và `src/csv.js` theo hợp đồng, rồi chạy lại `npm test`.
+- Hai điểm đặc tả chưa nêu rõ, tôi tự chọn:
+  - `team` không phải A/B (ví dụ `'C'`) bị coi là lỗi validate (400), không phải 403.
+  - Body JSON sai cú pháp trả 400 sau các kiểm tra quyền không cần body.
+
+Bản đầy đủ: `.ccoding/T-20261102-155112-5eb/outputs/dev-S1-backend-dev.md`
+
+### S2 — Module lọc/tìm/sắp xếp/phân trang và xuất CSV (hàm thuần) (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã viết `src/query.js` (`parseListQuery`, `applyList`) và `src/csv.js` (`toCsv`) theo hợp đồng S2, thay cho hai stub của S1, kèm hai file test. `node --test test/query.test.js test/csv.test.js` xanh 16/16, và `npm test` toàn bộ xanh 26/26. Rủi ro còn lại nhỏ, ghi ở mục cuối.
+
+## Tệp đã tạo/sửa
+- `src/query.js` · ghi đè stub: parse query, lọc, sắp xếp, phân trang.
+- `src/csv.js` · ghi đè stub: xuất CSV.
+- `test/query.test.js` · mới, 11 test.
+- `test/csv.test.js` · mới, 5 test.
+
+## Kiểm chứng
+- Lần chạy đầu của `node --test test/query.test.js test/csv.test.js` đỏ 1/16. Lỗi nằm ở kỳ vọng sai trong test của tôi (`sort=-priority` khi mọi priority bằng nhau thì phải hòa theo id tăng dần). Tôi đã sửa kỳ vọng, code không đổi.
+- `node --test test/query.test.js test/csv.test.js` → exit 0, pass 16, fail 0.
+- `npm test` → pass 26, fail 0. Tôi không đo lại baseline.
+
+## Quyết định thiết kế
+- `parseListQuery` duyệt `searchParams` theo thứ tự URL và trả lỗi ở khóa đầu tiên bị lạ, lặp hoặc sai giá trị. Với `paged:false`, `page` và `pageSize` bị coi là khóa lạ.
+- Ngày `dueBefore` được kiểm tra theo lịch (từ chối `2026-02-30`, `2026-02-29` nếu không phải năm nhuận).
+- `page` và `pageSize` chỉ nhận chuỗi `/^\d+$/` trong miền cho phép.
+- Sắp xếp: hòa thì so id theo số (`t2` < `t10`) bất kể chiều. `dueDate` null luôn ở cuối, cả tăng lẫn giảm. `title` dùng `localeCompare(…, 'vi')`.
+- `toCsv` chỉ thêm `'` cho giá trị kiểu chuỗi, nên số `priority` giữ nguyên. Dấu `'` được thêm trước khi bọc ngoặc kép.
+
+## Rủi ro & việc còn mở
+- Đặc tả không nói rõ trường hợp `assignee=` (rỗng). Tôi coi là hợp lệ và nó không khớp nhiệm vụ nào. Các tham số `status`, `team`, `dueBefore`, `sort` rỗng thì báo lỗi.
+- Việc nối route, việc áp bộ lọc nhóm cho member và các test HTTP thuộc S1, tôi chưa kiểm.
+
+Bản đầy đủ: `.ccoding/T-20261102-155112-5eb/outputs/dev-S2-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-155112-5eb` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **46 in / 35.6k out**, cache đọc 515.7k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | 22 | 16971 | 296776 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 16 | 14032 | 177403 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 6 | 4121 | 39240 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 453 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Xác thực, phân quyền, nhật ký thao tác và nối route (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 Module lọc/tìm/sắp xếp/phân trang và xuất CSV (hàm thuần) (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 2 · # suites 0 · # pass 2 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 26 · # suites 0 · # pass 26 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | **91** A | — | 81 | 96 | 100 | 1 | 1 | 314k | 1/18 |
+| Senior Software Engineer (@senior-swe) | dev | **97** A | — | 100 | 92 | 100 | 1 | 1 | 191k | 1/10 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **82** A | — | 100 | 60 | — | 0 | — | 43k | 1/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

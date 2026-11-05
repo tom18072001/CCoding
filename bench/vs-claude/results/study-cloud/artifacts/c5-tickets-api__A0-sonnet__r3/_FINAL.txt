@@ -1,0 +1,13 @@
+`GET /tickets` now takes `status`, `assignee`, `sort`, `limit` and `cursor`, and `npm test` passes (15 tests). With no parameters it still returns the bare array sorted by id.
+
+The change is in `src/handler.js`, and the new tests are in `test/list.test.js`.
+
+- **Filters and sort:** these apply with or without `limit`. Without `limit` the body is still a bare array.
+- **With `limit`:** the body is `{ items, nextCursor }`, and `nextCursor` is `null` on the last page. The tests page through every sort order and check that all tickets come back once, in order.
+- **Cursors:** a cursor records the last item's sort value and id, plus the `status`, `assignee` and `sort` strings it was issued for. A cursor is rejected as `invalid_cursor` if any of those three strings differs, so `status=open,closed` and `status=closed,open` don't share cursors. You can change `limit` between pages.
+- **Errors:** invalid input returns 400 with `{ error: 'invalid_<param>' }`. Parameters are checked in the order status, assignee, sort, limit, cursor, and the first failure is reported. Unknown parameters are ignored.
+
+A few strict choices you may want to know about:
+- An empty entry in `status` or `assignee` (for example `open,` or `assignee=`) returns an error.
+- `limit` must be plain digits, so `1.5`, `1e1` and `-1` are rejected.
+- `sort=-id` is a true descending sort by id.

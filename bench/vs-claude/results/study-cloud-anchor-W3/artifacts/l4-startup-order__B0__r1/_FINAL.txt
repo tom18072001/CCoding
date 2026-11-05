@@ -1,0 +1,70 @@
+# Báo cáo tổng hợp: Thứ tự khởi động service và chu trình ẩn (T-20261103-021130-035)
+
+## Tóm tắt
+`answer.json` đã được ghi ở thư mục gốc repo và đúng yêu cầu đề bài. Trong 22 service, 18 service khởi động được. 4 service bị chặn: `admin-ui`, `etl`, `reporting`, `warehouse`. Chu trình duy nhất là `reporting → warehouse → etl → reporting`. Ở bước tổng hợp, tôi đọc lại `services.txt` và dò tay thuật toán Kahn với tie-break theo chữ cái; kết quả khớp từng vị trí với `answer.json`. Chỉ còn một việc mở: tệp chưa được commit, vì commit cần Tom quyết.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Tính thứ tự khởi động và ghi `answer.json` | `@backend-dev` | Đạt | `answer.json` (mới). Cách tính: Kahn dùng min-heap cho thứ tự, Tarjan SCC cho chu trình. `python3 -m json.tool answer.json` trả exit 0. Script tạm nằm ngoài repo. Chi tiết: `.ccoding/T-20261103-021130-035/outputs/dev-S1-backend-dev.md` |
+| S2 | Kiểm chứng độc lập, chỉ đọc | `@senior-swe` | Đạt | `python3 -I s2_verify.py` trả exit 0, cả 4 kiểm tra (a)–(d) PASS. Chu trình được tìm bằng hai cách khác nhau: DFS back-edge và bao đóng đạt được. Chi tiết: `.ccoding/T-20261103-021130-035/outputs/dev-S2-senior-swe.md` |
+| Tổng hợp | Đối chiếu cuối | `@dev-lead` | Đạt | Đọc `services.txt` và `answer.json`, dò tay từng bước chọn tập sẵn sàng: 18 vị trí khớp. `git status --short` chỉ có `?? answer.json`, repo không có tệp lạ nào khác |
+
+## Quyết định
+- **Quy mô:** Đây là việc nhỏ trên một tệp dữ liệu, nên chỉ làm 2 hạng mục (tính kết quả và kiểm chứng). Không cần kiến trúc, BA hay cổng bảo vệ dữ liệu.
+- **Định nghĩa `cycle_members`:** Gồm các service nằm trong một SCC có hơn một phần tử, hoặc tự phụ thuộc vào chính nó. `admin-ui` bị chặn vì phụ thuộc `reporting`, nhưng không nằm trên chu trình nên không có trong `cycle_members`.
+- **Nhánh `fraud → ml-scorer → feature-store → fraud-history`:** Trông giống chu trình nhưng không phải, vì `fraud-history` chỉ phụ thuộc `db-orders`. Cả bốn service này đều khởi động được.
+
+## Kết quả review
+- S2 tự phân tích lại `services.txt` từ đầu, không dùng code của S1, và ra kết quả trùng khớp hoàn toàn, kể cả thứ tự khi có nhiều service cùng sẵn sàng.
+- Reviewer cuối **không tự chạy lệnh nào**. Phần kết luận của reviewer dựa trên việc đọc đồ thị và đầu ra S1/S2 báo cáo. Bằng chứng có chạy thật là các lệnh S1 và S2 tự ghi lại. Ở bước tổng hợp, tôi chỉ được chạy lệnh chỉ đọc, nên phần đối chiếu của tôi là dò tay chứ không chạy script.
+- Không có blocker hay major nào.
+
+## Việc còn mở & rủi ro
+- **Chưa commit:** `answer.json` chưa được commit. Không ai commit vì theo quy tắc, việc này cần Tom quyết.
+- **Giả định của S1:** Một dependency không được khai báo thành service riêng sẽ bị coi là không thể khởi động. Dữ liệu hiện tại không có trường hợp nào như vậy, nên giả định này không ảnh hưởng đến kết quả.
+- **Script kiểm chứng không nằm trong repo:** Hai script ở trong scratchpad, nên sau phiên này sẽ không chạy lại được.
+
+## Bước tiếp theo
+1. Tom xem `answer.json` và quyết định có commit hay không. Không nên commit lên `main`.
+2. Không cần tách thêm nhiệm vụ nào. Nếu sau này `services.txt` thay đổi thường xuyên, có thể mở một nhiệm vụ riêng để đưa script tính và kiểm chứng vào repo kèm test. Tiêu chí xong: chạy một lệnh tạo lại `answer.json` và test pass.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-021130-035` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **32 in / 10.0k out**, cache đọc 166.7k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | 12 | 4763 | 66896 | 2 |
+| Senior Software Engineer (@senior-swe) | dev | 6 | 2026 | 33137 | 1 |
+| Backend Developer (@backend-dev) | dev | 6 | 1736 | 32119 | 1 |
+| QA Engineer (@qa-tester) | dev | 6 | 1005 | 32263 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 470 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Tính thứ tự khởi động và ghi answer.json (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 Kiểm chứng độc lập answer.json (@senior-swe)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | **97** A | 100 | 100 | 84 | 100 | 0 | — | 72k | 1/5 |
+| Senior Software Engineer (@senior-swe) | dev | **94** A | 100 | 98 | 100 | 60 | 1 | 1 | 35k | 0/2 |
+| Backend Developer (@backend-dev) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 34k | 0/2 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 33k | 0/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Trưởng phòng Phát triển** (@dev-lead, 97 A):
+  - Thao tác công cụ lỗi nhiều (1/5, 20%; nhiều nhất ở run_command 1/2) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+- **Senior Software Engineer** (@senior-swe, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **Backend Developer** (@backend-dev, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

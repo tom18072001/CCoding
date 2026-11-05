@@ -1,0 +1,84 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g5-median-stats__B7cab__r11] Thống kê tóm tắt dùng median có sẵn (median sai nhưng test công khai xanh)
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Phần hiện thực đã có trong worktree: `src/stats.js` có `median` đã sửa (sort số trên bản sao, trung bình hai phần tử giữa khi chẵn) và `summary` khớp SPEC.md. Chỉ còn một bước kiểm chứng độc lập, nên giao một hạng mục duy nhất, không làm lại từ đầu. Tôi chỉ đọc SPEC.md, src/stats.js và `git diff --stat`. Tôi chưa chạy `npm test`, và chưa đọc `test/stats.test.js` nên chưa xác nhận test hiện có.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Xác nhận summary/median và bổ sung test còn thiếu (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã xác nhận `summary` và `median` trong worktree khớp SPEC.md. Mọi ca SPEC yêu cầu đều đã có test, nên tôi không phải thêm test nào. `npm test` thoát với exit 0, 5/5 test pass. Test median mới đỏ trên bản gốc và xanh trên bản đã sửa.
+
+## Tệp đã tạo/sửa
+Không áp dụng. Tôi không sửa tệp nào. Diff hiện có ở `src/stats.js` và `test/stats.test.js` được giữ nguyên. Bản gốc được chạy trong thư mục tạm bằng `git show HEAD:src/stats.js`.
+
+## Kiểm chứng
+- `npm test` → exit 0 (lấy từ lần chạy riêng, không phải exit của pipe). Kết quả: tests 5, pass 5, fail 0.
+- Bản gốc `HEAD:src/stats.js` trong thư mục tạm, chạy `test/stats.test.js` hiện tại: tests 5, pass 2, fail 3.
+  - Đỏ: `median chẵn, số nhiều chữ số, không đổi đầu vào`. Test này gộp ba ca: mảng chẵn, `[10,9,100,1]` và không đổi đầu vào.
+  - Đỏ: `summary` (`summary is not a function`) và `summary rỗng` (nhận `TypeError` thay vì `RangeError`).
+  - Xanh: `median lẻ` và `median rỗng`.
+- Bản đã sửa trong worktree: 5/5 xanh, nên đỏ→xanh được chứng minh.
+- Đối chiếu SPEC với test:
+
+| Dòng SPEC | Test |
+|---|---|
+| `median` RangeError với mảng rỗng | `median rỗng` |
+| `median` chẵn → trung bình hai phần tử giữa | `[4,1,3,2]` → 2.5 và `[10,9,100,1]` → 9.5 |
+| `median` không đổi đầu vào | `[10,9,1]` giữ nguyên |
+| `summary` RangeError với mảng rỗng | `summary rỗng` |
+| `summary` mean làm tròn 2 chữ số | `[1,2,2]` → 1.67 và `[10,2,33,4]` → 12.25 |
+| `summary` không đổi đầu vào | `[10,2,33,4]` giữ nguyên |
+
+## Quyết định thiết kế
+Không thêm test thừa vì các ca SPEC đã được phủ đủ. Phần dựng bản gốc để chạy đỏ nằm trong thư mục tạm, không đụng worktree.
+
+## Rủi ro & việc còn mở
+- Test "không đổi đầu vào" của `median` dùng `[10,9,1]`. Nếu sort tại chỗ, kết quả sẽ thành `[1,9,10]` nên test có bắt được lỗi này. Tôi chưa chạy riêng ca này trên bản gốc, vì test gộp báo đỏ chung.
+- Không kiểm tra đầu vào có `NaN` hoặc phần tử không phải số, vì SPEC không yêu cầu.
+
+Bản đầy đủ: `.ccoding/T-20261104-141520-56d/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-141520-56d` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **16 in / 4,198 out**, cache đọc 89.5k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 12 | 3266 | 68056 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 932 | 21436 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Xác nhận summary/median và bổ sung test còn thiếu (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 5 · ℹ suites 0 · ℹ pass 5 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **70** B | thấp | — | — | 100 | 100 | 100 | 100 | 1 | 1 | 71k | 0/6 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 22k | 0/1 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

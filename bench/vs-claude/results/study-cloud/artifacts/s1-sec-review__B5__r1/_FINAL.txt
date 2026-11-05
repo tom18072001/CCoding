@@ -1,0 +1,68 @@
+> Việc giao riêng cho Senior Software Engineer (@senior-swe)
+
+## Tóm tắt
+Tôi đã rà `src/server.js` và ghi 7 phát hiện vào `findings.json`. Không sửa mã nguồn. Tôi chưa chạy server hay khai thác thử lỗi nào, nên các mức độ chỉ dựa trên việc đọc mã.
+
+## Tệp đã tạo/sửa
+- `findings.json` (mới): mảng 7 phát hiện.
+
+## Kiểm chứng
+- `node -e "JSON.parse(...findings.json).length"` → exit 0, in ra 7. Lệnh này chỉ xác nhận JSON hợp lệ.
+
+## Quyết định thiết kế
+Bỏ qua các điểm trông giống lỗi nhưng không khai thác được:
+- **Dòng 36:** `STATUS_TABLE` là hằng số phía server, và giá trị còn lại đi qua tham số `$1`.
+- **Dòng 52:** `path.basename` cộng với allow-list đuôi tệp, và truy vấn lọc theo `owner_id`.
+- **Dòng 79:** `execFile` dùng mảng tham số, endpoint chỉ dành cho admin, và `host` được kiểm tra bằng regex.
+- **Dòng 18:** `verifyJwt` không được import ở đâu trong file. Đây là lỗi runtime, không phải lỗ hổng bảo mật.
+
+## Rủi ro & việc còn mở
+Dòng 18 cần xác minh riêng. Nếu `verifyJwt` không kiểm tra chữ ký hoặc không bắt lỗi khi token sai, đó sẽ là một lỗi xác thực. Hàm này không có trong file nên tôi không đưa vào báo cáo.
+
+## Phát hiện
+| Mức | Dòng | Loại | Vấn đề |
+|---|---|---|---|
+| critical | 30 | sqli | `q` được nối thẳng vào câu SQL. |
+| critical | 84 | command-injection | `format` được nối vào chuỗi lệnh chạy bằng `exec`. |
+| high | 11 | hardcoded-secret | Khóa JWT nằm cứng trong mã. |
+| high | 42 | path-traversal | `:name` đi thẳng vào `path.join` rồi `sendFile`. |
+| high | 58 | weak-crypto | Mật khẩu băm bằng MD5, không có salt. |
+| high | 65 | ssrf | Server fetch URL do người dùng cung cấp. |
+| high | 70 | missing-authz | Bất kỳ user đăng nhập nào cũng xóa được mọi ticket. |
+
+Cách sửa của từng mục nằm trong trường `fix` của `findings.json`.
+
+## Review
+✅ Đã duyệt: Tôi đã đọc từng dòng của src/server.js và đối chiếu với findings.json. Cả 7 phát hiện đều là lỗi thật, khai thác được, đúng số dòng, đúng type, mức độ hợp lý và mỗi lỗi chỉ có một mục: dòng 11 hardcoded-secret, 30 sqli, 42 path-traversal, 58 weak-crypto (MD5), 65 ssrf, 70 missing-authz (xóa ticket của người khác), 84 command-injection. Các decoy đều được bỏ qua đúng: dòng 36 (tên bảng là hằng số, giá trị đi qua $1), dòng 52 (basename, allow-list đuôi tệp, lọc theo owner_id) và dòng 79 (execFile, chỉ admin, regex kiểm tra host). Dòng 18 (`verifyJwt` không được import) là lỗi runtime, không phải lỗ hổng, nên việc bỏ qua là hợp lý. Tôi không thấy mục nào cần thêm hay bỏ. Mã nguồn không bị sửa: git diff trống, chỉ có findings.json là tệp mới. Hạn chế: repo không có test hay typecheck cho tác vụ review này, nên tôi chỉ chạy kiểm tra JSON và schema. Mức độ dựa trên việc đọc mã, chưa khai thác thử.
+- [minor] Dòng 18: `verifyJwt` không được import, nên mọi request có token đều ném ReferenceError. Đây là lỗi chức năng. Nếu bản `verifyJwt` thật không bắt lỗi token sai hoặc không kiểm tra chữ ký, đó sẽ là lỗi xác thực. Hiện chưa có bằng chứng nên việc không đưa vào findings.json là đúng. Nên ghi chú trong báo cáo.
+- [minor] Dòng 79: regex `^[a-z0-9.-]+$` cho phép host bắt đầu bằng `-`, tức là argument injection vào ping. Endpoint chỉ dành cho admin và tác động thấp nên không bắt buộc đưa vào findings. Nếu muốn chặt hơn thì thêm `--` hoặc cấm ký tự `-` ở đầu.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-235811-f14` · chế độ: agent · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **12 in / 3,387 out**, cache đọc 62.7k, 2 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 6 | 1862 | 31863 | 1 |
+| QA Engineer (@qa-tester) | dev | 6 | 1525 | 30846 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude s1-sec-review__B5__r1] Security review with seeded vulnerabilities and decoys (@senior-swe)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 34k | 0/3 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 32k | 0/2 |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

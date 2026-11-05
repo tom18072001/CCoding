@@ -1,0 +1,13 @@
+I wrote the specification to `SPEC.md` at the repository root. I haven't committed it. The spec shouldn't be built until the customer answers Q1 and Q2, because the request contradicts itself on both.
+
+The request conflicts with itself in these places:
+- **Masking (Q1):** The request asks for full IPs and usernames, and also says no personal data may leave the platform unmasked. The spec assumes the default export is masked. Unmasked export is not built in v1 and is described as a separate approved flow.
+- **Retention (Q2):** Exported files are to be "kept forever", but personal data must be deleted after 12 months. The spec assumes exported files are deleted at 12 months. Only an audit record with no personal data is kept long-term.
+- **Scope (Q3):** "Team's logs from last month" and "everything they can see" don't mean the same thing. The spec uses the overlap of the two.
+- **Speed (Q4):** A 5-second limit can't be guaranteed without knowing log volumes. The spec treats 5 seconds as the time to start the download for up to 200,000 rows. Larger exports run in the background.
+- **Simplicity:** "Make it simple" sits uneasily with a bank's need for authorization checks, masking and an audit trail. The spec keeps those controls.
+- **Old format (Q6):** "Like the old system" gives no columns or encoding, so the spec proposes a default CSV layout.
+
+The spec also covers requirements, acceptance criteria and delivery notes. The `## Open questions and assumptions` section lists 14 questions, each with the assumption used meanwhile.
+
+The spec doesn't claim any particular Vietnamese law applies; Q9 asks the customer's legal team to confirm which ones do.

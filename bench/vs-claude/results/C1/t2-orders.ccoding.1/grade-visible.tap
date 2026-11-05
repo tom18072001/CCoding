@@ -1,0 +1,130 @@
+TAP version 13
+# Subtest: tính tiền không mã giảm giá
+ok 1 - tính tiền không mã giảm giá
+  ---
+  duration_ms: 1.469915
+  type: 'test'
+  ...
+# Subtest: giữ chỗ tồn kho khi thêm
+ok 2 - giữ chỗ tồn kho khi thêm
+  ---
+  duration_ms: 0.233803
+  type: 'test'
+  ...
+# Subtest: mã không tồn tại
+ok 3 - mã không tồn tại
+  ---
+  duration_ms: 0.712845
+  type: 'test'
+  ...
+# Subtest: toCents cơ bản
+ok 4 - toCents cơ bản
+  ---
+  duration_ms: 1.522768
+  type: 'test'
+  ...
+# Subtest: formatMoney
+ok 5 - formatMoney
+  ---
+  duration_ms: 0.403604
+  type: 'test'
+  ...
+# Subtest: allocate chia đều
+ok 6 - allocate chia đều
+  ---
+  duration_ms: 1.175125
+  type: 'test'
+  ...
+# Subtest: lỗi 1: toCents half away from zero, an toàn dấu phẩy động
+ok 7 - lỗi 1: toCents half away from zero, an toàn dấu phẩy động
+  ---
+  duration_ms: 1.236808
+  type: 'test'
+  ...
+# Subtest: lỗi 2: allocate phần dư lớn nhất
+ok 8 - lỗi 2: allocate phần dư lớn nhất
+  ---
+  duration_ms: 1.043597
+  type: 'test'
+  ...
+# Subtest: lỗi 2: tổng giảm các dòng = giảm của mã (cố định và %)
+ok 9 - lỗi 2: tổng giảm các dòng = giảm của mã (cố định và %)
+  ---
+  duration_ms: 1.863815
+  type: 'test'
+  ...
+# Subtest: lỗi 6: thuế tính trên net
+ok 10 - lỗi 6: thuế tính trên net
+  ---
+  duration_ms: 0.614814
+  type: 'test'
+  ...
+# Subtest: freeUnits mua 2 tặng 1
+ok 11 - freeUnits mua 2 tặng 1
+  ---
+  duration_ms: 1.436867
+  type: 'test'
+  ...
+# Subtest: freeUnits mua 3 tặng 2
+ok 12 - freeUnits mua 3 tặng 2
+  ---
+  duration_ms: 1.327155
+  type: 'test'
+  ...
+# Subtest: endsAt hợp lệ tới hết ngày UTC
+ok 13 - endsAt hợp lệ tới hết ngày UTC
+  ---
+  duration_ms: 0.533708
+  type: 'test'
+  ...
+# Subtest: startsAt và minSubtotal giữ nguyên
+ok 14 - startsAt và minSubtotal giữ nguyên
+  ---
+  duration_ms: 0.260467
+  type: 'test'
+  ...
+# Subtest: kho 4: thêm 2 rồi sửa thành 3 thành công
+ok 15 - kho 4: thêm 2 rồi sửa thành 3 thành công
+  ---
+  duration_ms: 0.409891
+  type: 'test'
+  ...
+# Subtest: giảm số lượng trả lại kho
+ok 16 - giảm số lượng trả lại kho
+  ---
+  duration_ms: 0.145568
+  type: 'test'
+  ...
+# Subtest: hai giỏ: một giỏ xóa món thì giỏ kia mua được
+ok 17 - hai giỏ: một giỏ xóa món thì giỏ kia mua được
+  ---
+  duration_ms: 0.338783
+  type: 'test'
+  ...
+# Subtest: updateQty về 0 như xóa
+ok 18 - updateQty về 0 như xóa
+  ---
+  duration_ms: 0.125893
+  type: 'test'
+  ...
+# Subtest: reserve thất bại không đổi giỏ và kho
+ok 19 - reserve thất bại không đổi giỏ và kho
+  ---
+  duration_ms: 0.395517
+  type: 'test'
+  ...
+# Subtest: bất biến reserved = tổng qty các giỏ
+ok 20 - bất biến reserved = tổng qty các giỏ
+  ---
+  duration_ms: 0.443415
+  type: 'test'
+  ...
+1..20
+# tests 20
+# suites 0
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 277.739819

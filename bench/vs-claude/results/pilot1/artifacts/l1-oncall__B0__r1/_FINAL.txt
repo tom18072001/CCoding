@@ -1,0 +1,76 @@
+# Báo cáo tổng hợp T-20261102-185603-317: Lịch trực on-call (bài ràng buộc)
+
+## Tóm tắt
+Đã ghi `answer.json` ở thư mục gốc repo, đúng dạng đề yêu cầu. Lịch duy nhất là Mon=Dung, Tue=Chi, Wed=Binh, Thu=An, Fri=Em. `count_without_rule_2` = 10 và `most_permissive_rule` = 2. Hai script viết độc lập (S1, S2) cho cùng một kết quả, và kết quả này khớp với lời giải tay của tôi. Tệp chưa được commit (`?? answer.json`), chưa push.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Kết quả | Bằng chứng | Tệp |
+|---|---|---|---|---|---|
+| S1 | Vét cạn 120 hoán vị, tính 3 đáp án, ghi `answer.json` | @senior-swe | Đạt | `python3 s.py` exit 0: đúng 1 lịch; số lịch khi bỏ từng luật 1–7 là 2/10/4/2/2/2/3. Lệnh kiểm tiêu chí lúc đầu báo AssertionError do khóa xếp sai thứ tự. Đã sửa và chạy lại exit 0. | `answer.json`; `.ccoding/T-20261102-185603-317/outputs/dev-S1-senior-swe.md` |
+| S2 | Tự tính lại để đối chiếu, không xem code S1 | @qa-tester | Đạt | `python3 s2.py` exit 0: `full count 1`, `counts {1: 2, 2: 10, 3: 4, 4: 2, 5: 2, 6: 2, 7: 3}`, `max 10 [2]` | `.ccoding/T-20261102-185603-317/outputs/dev-S2-qa-tester.md` |
+
+Script của cả hai hạng mục nằm trong scratchpad, ngoài repo:
+- `/tmp/claude-0/-tmp-vb-pilot1-l1-oncall--B0--r1/f0b9113a-3e47-5284-a91d-91f01aca3e1e/scratchpad/s.py`
+- `/tmp/claude-0/-tmp-vb-pilot1-l1-oncall--B0--r1/f0b9113a-3e47-5284-a91d-91f01aca3e1e/scratchpad/s2.py`
+
+## Quyết định
+- Không làm kiến trúc, BA hay cổng bảo vệ dữ liệu, vì đây là bài suy luận nhỏ và chỉ cần giao một tệp.
+- Để kiểm chứng, tôi cho hai người viết hai bản vét cạn độc lập rồi so kết quả với nhau. Lời giải tay chỉ dùng để tham chiếu cho câu (a). Hai số đếm lấy hoàn toàn từ script.
+- Không để script nào trong repo, vì đề chỉ yêu cầu `answer.json`.
+
+## Kết quả review
+- S1 và S2 khớp nhau ở cả 3 đáp án. Không có luật nào hòa ở số đếm lớn nhất. Không có blocker, major hay minor.
+- Kết luận review cuối của @qa-tester không kèm lệnh nào được chạy thật. Vì vậy tôi đã tự chạy lệnh chỉ đọc để kiểm:
+  - `cat answer.json` cho đúng nội dung và đúng dạng: khóa xếp Mon..Fri, hai giá trị số là int.
+  - `git status --short` chỉ báo `?? answer.json`.
+- Tôi cũng soát tay lịch theo 7 luật và lịch thỏa đủ cả 7:
+  - Luật 1: An trực thứ Năm.
+  - Luật 2: Chi thứ Ba, Binh thứ Tư.
+  - Luật 3: Dung thứ Hai, sớm hơn An thứ Năm.
+  - Luật 4: Em thứ Sáu và Binh thứ Tư không liền nhau.
+  - Luật 5: Chi không trực thứ Hai.
+  - Luật 6: Em không trực thứ Tư.
+  - Luật 7: Dung thứ Hai và Em thứ Sáu không liền nhau.
+
+## Việc còn mở & rủi ro
+- `answer.json` chưa được commit. Theo quy tắc, tôi không commit vào main và không push. Tom quyết định có commit hay không.
+- Rủi ro thấp: hai cách mã hóa luật độc lập cho cùng kết quả. Rủi ro còn lại chỉ là trường hợp cả hai cùng hiểu sai đề theo một cách. Tôi thấy khả năng này nhỏ, vì các luật được diễn đạt rõ.
+
+## Bước tiếp theo
+- Tom duyệt `answer.json`. Nếu cần, commit trên một nhánh riêng, không commit vào main.
+- Nhiệm vụ đã xong trọn, không cần tách thêm nhiệm vụ nào.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-185603-317` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **24 in / 10.8k out**, cache đọc 262.5k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | 8 | 4773 | 89321 | 2 |
+| QA Engineer (@qa-tester) | dev | 8 | 3479 | 87672 | 2 |
+| Senior Software Engineer (@senior-swe) | dev | 6 | 2187 | 70823 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 396 | 14680 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Vét cạn 120 hoán vị, tính 3 đáp án và ghi answer.json (@senior-swe)
+- `outputs/dev-S2-qa-tester.md` — S2 Tính lại độc lập để đối chiếu (@qa-tester)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | 100 | 100 | 100 | 100 | 0 | — | 94k | 0/2 |
+| QA Engineer (@qa-tester) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 91k | 0/2 |
+| Senior Software Engineer (@senior-swe) | dev | **81** A | 100 | 81 | 60 | 60 | 1 | 1 | 73k | 1/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 15k | — |
+
+### Việc cần sửa theo agent
+- **QA Engineer** (@qa-tester, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+- **Senior Software Engineer** (@senior-swe, 81 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

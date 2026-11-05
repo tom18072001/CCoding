@@ -1,0 +1,261 @@
+{
+ "id": "T-20261102-113118-0ed",
+ "title": "[bench C6] t5-logq #2",
+ "brief": "Xây dựng công cụ logq theo đúng đặc tả trong SPEC.md: thư viện (src/parse.js, src/query.js, src/agg.js) và CLI bin/logq.js. Đặc tả có nhiều quy tắc chi tiết (cú pháp truy vấn, vị trí lỗi, thứ tự bucket, mã thoát CLI) — bộ nghiệm thu ẩn kiểm tra từng quy tắc qua API và qua CLI thật. Viết test cho các module, đảm bảo `npm test` xanh. Không thêm thư viện ngoài.",
+ "mode": "project",
+ "projectId": "b-c6-t5-fastla-2",
+ "classification": "internal",
+ "status": "done",
+ "departments": [
+  "dev"
+ ],
+ "runs": [
+  {
+   "department": "dev",
+   "status": "done",
+   "subtasks": [
+    {
+     "description": "Viết src/parse.js, export { parseLine } bằng module.exports = { parseLine } (src/index.js đã có, không sửa). Làm đúng SPEC.md §1. JSON: bỏ \\r cuối dòng, làm phẳng đối tượng lồng bằng dấu chấm, giữ mảng làm giá trị, bỏ đối tượng rỗng lồng bên trong; kết quả không phải đối tượng thì trả { ok:false }. logfmt: key đúng dạng, value trần suy kiểu (số, boolean, null, chuỗi), value trong ngoặc kép với các thoát \\\" \\\\ \\n \\t, thoát khác giữ nguyên cả \\ và ký tự; ký tự liền sau ngoặc kép đóng phải là khoảng trắng hoặc hết dòng; key trùng thì giá trị sau thắng; bất kỳ lỗi nào thì cả dòng { ok:false }. Dòng rỗng hoặc chỉ khoảng trắng thì { ok:false }. @t: xét lần lượt @timestamp, ts, time; chỉ lấy trường ĐẦU TIÊN có mặt; chuỗi ISO có cả ngày và giờ mà Date.parse hiểu được thì thêm record['@t'] = số ms; không parse được thì không có @t và không xét trường sau. Chú ý các trường hợp biên: `key=` (chuỗi rỗng), `-5`, `1.5`, `\"42\"` luôn là chuỗi, tab làm khoảng trắng phân tách, `a=\"x\"y` là lỗi. Viết test/parse.test.js (node:test + assert/strict) phủ các trường hợp trên. Kiểm chứng: node --test test/parse.test.js. Chỉ sửa src/parse.js và test/parse.test.js.",
+     "dependsOn": [],
+     "status": "done",
+     "attempts": 1,
+     "usage": {
+      "input": 12,
+      "output": 7616,
+      "cacheRead": 177733,
+      "cacheWrite": 19789,
+      "costUsd": 0.17382240000000002,
+      "calls": 1,
+      "estimatedCalls": 0
+     },
+     "id": "S1",
+     "title": "Hiện thực src/parse.js + test",
+     "assignee": "backend-dev",
+     "deliverable": "src/parse.js, test/parse.test.js; test xanh",
+     "startedAt": "2026-11-02T04:31:47.835Z",
+     "output": "outputs/dev-S1-backend-dev.md",
+     "summary": "Tôi đã viết `src/parse.js` (export `{ parseLine }`) theo SPEC §1 và `test/parse.test.js` với 10 test. Cả 10 test đều xanh. `npm test` toàn bộ vẫn còn 2 test đỏ, là `truy vấn cơ bản` và `tổng hợp count by` trong `test/smoke.test.js`. Hai test đó thuộc `query.js` và `agg.js` của S2 và S3, chưa làm. Smoke test về parse đã…",
+     "finishedAt": "2026-11-02T04:32:34.408Z"
+    },
+    {
+     "description": "Viết src/query.js, export { compile, QuerySyntaxError } theo SPEC.md §2. Cần một tokenizer có vị trí ký tự và một recursive-descent parser. Ưu tiên NOT > AND > OR; hai điều kiện đứng cạnh nhau là AND ngầm. Từ khóa AND/OR/NOT chỉ tính khi viết HOA và đứng thành token riêng; ( và ) luôn là token riêng. Các dạng term: FIELD:VALUE (so khớp toàn chuỗi, không phân biệt hoa/thường, wildcard * và ?; value trong ngoặc kép thì so khớp chính xác; field null hoặc thiếu thì false), FIELD CMP NUMBER (số, hoặc chuỗi dạng số; các trường hợp khác là false), _exists_:field, WORD hoặc QUOTED đứng một mình (tìm chuỗi con không phân biệt hoa/thường trong msg, nếu không có msg thì trong message, không có cả hai thì false). Truy vấn rỗng khớp tất cả. QuerySyntaxError extends Error, name='QuerySyntaxError', có .position, message bắt đầu bằng `syntax error at position <n>`. Vị trí lỗi: thiếu ) thì query.length; thừa ) thì vị trí ) đó; () thì vị trí của ); thiếu toán hạng sau AND/OR/NOT ở cuối thì query.length; AND/OR ở đầu biểu thức, ngay sau ( hoặc sau AND/OR/NOT khác thì vị trí của từ khóa đó; so sánh mà vế phải không phải NUMBER (status>=abc, status>=) thì vị trí ngay sau toán tử; `field:` không có giá trị thì vị trí ngay sau dấu :; ngoặc kép không đóng thì vị trí của dấu \" mở. Escape regex đúng cho wildcard. Viết test/query.test.js phủ ngữ nghĩa và MỌI quy tắc vị trí lỗi. Kiểm chứng: node --test test/query.test.js. Chỉ sửa src/query.js và test/query.test.js.",
+     "dependsOn": [],
+     "status": "done",
+     "attempts": 1,
+     "usage": {
+      "input": 20,
+      "output": 16367,
+      "cacheRead": 377542,
+      "cacheWrite": 29756,
+      "costUsd": 0.3212116,
+      "calls": 1,
+      "estimatedCalls": 0
+     },
+     "id": "S2",
+     "title": "Hiện thực src/query.js + test",
+     "assignee": "data-engineer",
+     "deliverable": "src/query.js, test/query.test.js; test xanh",
+     "startedAt": "2026-11-02T04:31:47.871Z",
+     "output": "outputs/dev-S2-data-engineer.md",
+     "summary": "`src/query.js` (tokenizer có vị trí ký tự và recursive-descent parser) và `test/query.test.js` đã xong, theo SPEC §2. `node --test test/query.test.js` chạy 16/16 test xanh. `npm test` toàn dự án vẫn còn 2 test đỏ là smoke \"parse JSON và logfmt\" và \"tổng hợp count by\". Hai test này thuộc `parse.js` và `agg.js` của S1 và…",
+     "finishedAt": "2026-11-02T04:33:24.519Z"
+    },
+    {
+     "description": "Viết src/agg.js, export { aggregate } theo SPEC.md §3. Spec là chuỗi, bỏ khoảng trắng thừa, từ khóa viết thường. Các dạng: count; count by f (bỏ bản ghi thiếu f hoặc null, key giữ nguyên kiểu, sắp count giảm dần, hòa thì String(key) tăng dần bằng so sánh `<` thường, không dùng localeCompare); top n f (n nguyên >= 1, type 'top'); sum/avg/min/max f (chỉ lấy giá trị số hoặc chuỗi dạng số ^-?\\d+(\\.\\d+)?$; không có giá trị thì value null; avg làm tròn Math.round(x*1e4)/1e4); p50/p90/p95/p99 f (nearest-rank: rank = Math.ceil(p/100*n), sắp tăng dần, không có giá trị thì null; type là chính tên p đó); histogram <k><u> với u ∈ s,m,h,d và k nguyên >= 1 (chỉ bản ghi có @t; mốc = floor(@t/interval)*interval; key = ISO string; sắp tăng dần và điền mốc trống count 0; không có bản ghi thì buckets []; interval giữ nguyên chuỗi như người dùng gõ). Spec không hợp lệ (rỗng, từ khóa lạ, thiếu hoặc thừa tham số, n=0, k=0, đơn vị sai) thì ném Error có message bắt đầu bằng `invalid aggregation`. Viết test/agg.test.js phủ các trường hợp biên: tie-break, kiểu số của key, histogram điền mốc trống, các lỗi spec. Kiểm chứng: node --test test/agg.test.js. Chỉ sửa src/agg.js và test/agg.test.js.",
+     "dependsOn": [],
+     "status": "done",
+     "attempts": 1,
+     "usage": {
+      "input": 8,
+      "output": 9230,
+      "cacheRead": 104386,
+      "cacheWrite": 18573,
+      "costUsd": 0.1777573,
+      "calls": 1,
+      "estimatedCalls": 0
+     },
+     "id": "S3",
+     "title": "Hiện thực src/agg.js + test",
+     "assignee": "frontend-dev",
+     "deliverable": "src/agg.js, test/agg.test.js; test xanh",
+     "startedAt": "2026-11-02T04:31:47.915Z",
+     "output": "outputs/dev-S3-frontend-dev.md",
+     "summary": "Tôi đã viết `src/agg.js` (export `aggregate`) theo SPEC.md §3 và `test/agg.test.js` với 8 test. `node --test test/agg.test.js` cho kết quả 8/8 pass. Đây là hạng mục thư viện thuần Node, không có giao diện.",
+     "finishedAt": "2026-11-02T04:32:39.394Z"
+    },
+    {
+     "description": "Viết bin/logq.js (shebang, CommonJS, không thư viện ngoài) theo SPEC.md §4; dùng require('../src') với parseLine, compile, QuerySyntaxError, aggregate theo hợp đồng trong SPEC. Các module S1–S3 đang được viết song song, nên khi test cục bộ có thể dùng stub tạm hoặc chờ gộp; KHÔNG sửa src/*. Tùy chọn: --query/-q <q>, --agg <spec>, --format json|table, --stats, và tệp (hoặc '-' / stdin nếu không có tệp); tùy chọn có thể đứng trước hoặc sau tệp; tùy chọn lạ, thiếu đối số hoặc --format không hợp lệ thì mã 2. Không có --agg: in mỗi bản ghi khớp một dòng JSON.stringify bỏ trường '@t', theo thứ tự đọc; --format table mà không có --agg thì mã 2. Có --agg: json mặc định in một dòng JSON.stringify(kết quả); table: các dạng đơn giá trị in đúng một dòng (null in 'null'); count_by/top/histogram in dòng đầu `key  count`, mỗi bucket một dòng, cột key căn trái đệm tới độ rộng lớn nhất (tính cả chữ 'key'), rồi hai dấu cách, rồi count. --stats in ra stderr `lines=<tổng dòng đọc, kể cả dòng rỗng> matched=<n> malformed=<n>` (lưu ý: file kết thúc bằng \\n không tạo thêm dòng ma; dòng chỉ có khoảng trắng tính vào lines và malformed). Mã thoát: 0 thành công; 2 khi QuerySyntaxError (stderr in message), spec tổng hợp sai hoặc dùng sai tùy chọn; 1 khi không đọc được tệp (stderr chứa `cannot read <tệp>`). Khi lỗi thì stdout không in gì: phải biên dịch truy vấn và kiểm tra spec TRƯỚC khi in bất cứ gì, và đọc hết các tệp trước khi in. Mọi dòng xuất kết thúc bằng \\n. Xử lý \\r\\n. Viết test/cli.test.js dùng child_process.spawnSync chạy `node bin/logq.js` với tệp tạm (os.tmpdir) và stdin, kiểm tra stdout, stderr, mã thoát cho mọi nhánh. Phần test cần module S1–S3 thật nên chạy lại sau khi CCoding gộp. Kiểm chứng: node --test test/cli.test.js sau khi gộp; npm test. Chỉ sửa bin/logq.js và test/cli.test.js.",
+     "dependsOn": [],
+     "status": "done",
+     "attempts": 2,
+     "usage": {
+      "input": 20,
+      "output": 10777,
+      "cacheRead": 277360,
+      "cacheWrite": 33489,
+      "costUsd": 0.27112970000000003,
+      "calls": 2,
+      "estimatedCalls": 0
+     },
+     "id": "S4",
+     "title": "Hiện thực CLI bin/logq.js + test CLI",
+     "assignee": "devops",
+     "deliverable": "bin/logq.js, test/cli.test.js",
+     "startedAt": "2026-11-02T04:31:47.919Z",
+     "output": "outputs/dev-S4-devops.md",
+     "summary": "`bin/logq.js` (CLI theo SPEC §4) và `test/cli.test.js` (15 test) đã xong. S1–S3 đã gộp, nên tôi chạy lại với module thật. `node --test test/cli.test.js` cho 15 pass, 0 fail. `npm test` cho 52 pass, 0 fail. Hai test từng đỏ là do test sai, CLI không phải sửa.",
+     "finishedAt": "2026-11-02T04:32:41.280Z"
+    }
+   ],
+   "usage": {
+    "input": 82,
+    "output": 54034,
+    "cacheRead": 1282965,
+    "cacheWrite": 171996,
+    "costUsd": 1.364583,
+    "calls": 8,
+    "estimatedCalls": 0
+   },
+   "startedAt": "2026-11-02T04:31:18.285Z",
+   "stage": "done",
+   "planSummary": "Chia bốn phần độc lập, mỗi phần một tệp nguồn và một tệp test riêng, nên chạy song song được. Phần CLI chỉ dùng API của ba module theo hợp đồng trong SPEC.md. Việc tích hợp và review do CCoding tự làm.",
+   "decisions": "",
+   "estimate": {
+    "tokens": 1256102,
+    "budget": 1403232,
+    "at": "2026-11-02T04:31:47.763Z",
+    "basis": "theo lịch sử: @backend-dev ~134.2k/hạng mục (8 mẫu), @data-engineer ~226.9k/hạng mục (8 mẫu), @frontend-dev ~185.3k/hạng mục (7 mẫu), @devops ~319.7k/hạng mục (2 mẫu)"
+   },
+   "reviewRound": 1,
+   "review": {
+    "approved": true,
+    "summary": "Bốn hạng mục S1–S4 đều khớp SPEC.md khi tôi đọc code và chạy thử. Tôi đã kiểm trực tiếp các quy tắc dễ sai: parse logfmt/JSON (`a=\"x\"y`, `key=`, `-5`, `\"42\"`, tab, key trùng, đối tượng rỗng, `@t` lấy trường đầu tiên có mặt), mọi vị trí lỗi truy vấn, wildcard, comparator, substring `msg`/`message`, tie-break và bucket của agg, và mã thoát cùng đầu ra table/stats của CLI. Tôi không tìm thấy lỗi chặn hay lỗi lớn. Còn vài điểm mơ hồ nhỏ, ghi ở phần issues. Tôi chưa đối chiếu được với bộ nghiệm thu ẩn.",
+    "issues": [
+     {
+      "subtask": "S2",
+      "severity": "minor",
+      "comment": "src/query.js: ký tự `\"` giữa một từ được tách thành token riêng, và field sai dạng như `:foo` báo lỗi tại đầu token. SPEC không quy định hai trường hợp này; hiện tại là lựa chọn hợp lý nhưng chưa được kiểm chứng với bộ ẩn."
+     },
+     {
+      "subtask": "S4",
+      "severity": "minor",
+      "comment": "bin/logq.js: nếu vừa có truy vấn sai vừa có tệp không đọc được thì CLI trả mã 2 (kiểm truy vấn trước khi đọc tệp). SPEC không nói rõ thứ tự ưu tiên giữa hai lỗi này. Thứ tự hiện tại hợp lý."
+     },
+     {
+      "subtask": "S4",
+      "severity": "minor",
+      "comment": "Báo cáo S4 ghi exit code lấy từ `grep` chứ không phải từ `npm test`. Tôi đã tự chạy lại `npm test` và exit code là 0, nên không ảnh hưởng kết luận."
+     }
+    ],
+    "checks": [
+     {
+      "command": "npm test",
+      "exitCode": 0,
+      "ok": true,
+      "note": "CCoding tự chạy — # tests 52 · # suites 0 · # pass 52 · # fail 0 · # skipped 0 · # todo 0"
+     },
+     {
+      "command": "npm test 2>&1 | tail -12; echo EXIT=${PIPESTATUS[0]}; cat SPEC.md",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "cat bin/logq.js src/parse.js src/agg.js",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "cat src/query.js; cat > /tmp/claude-0/q.js <<'E'\nconst {compile:c}=require('/home/claude/ccoding-dev/workspaces/b-c6-t5-fastla-2/wt-T-20261102-113118-0ed/src');\nfor(const q of ['(a','a)','()','a AND','NOT','AND a','( OR a','a AND OR b','status>=abc','status>=','status:','msg:\"abc','\"abc','a OR','NOT",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "node -e \"\nconst {parseLine:p}=require('./src');\nfor(const l of ['a=\\\"x\\\"y','a=b=c','k= v','a=\\\"x\\\\\\\\q\\\"','{\\\"ts\\\":\\\"bad\\\",\\\"time\\\":\\\"2024-01-02T03:04:05Z\\\"}','{\\\"a\\\":{},\\\"b\\\":{\\\"c\\\":{}},\\\"d\\\":[1]}','[1]','a=1\\ta=2\\r','{\\\"time\\\":\\\"2024-01-02T03:04:05Z\\\"}\\r','a=-5 b=1.5 c=\\\"42\\\" d=','x','a=1 =2'])cons",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "node script khảo sát query: 23 truy vấn lỗi/hợp lệ, in ra position và message",
+      "exitCode": 0,
+      "ok": true,
+      "note": "Vị trí lỗi khớp SPEC: `(a`→2, `a)`→1, `()`→1, `a AND`→5, `AND a`→0, `( OR a`→2, `a AND OR b`→6, `status>=abc`→8, `status>=`→8, `status:`→7, `msg:\"abc`→4. Ngữ nghĩa wildcard, ngoặc kép, `_exists_`, `msg`/`message` đúng."
+     },
+     {
+      "command": "node -e parseLine trên các trường hợp biên (logfmt, JSON, @t, \\r, tab)",
+      "exitCode": 0,
+      "ok": true,
+      "note": "Kết quả đúng SPEC §1"
+     },
+     {
+      "command": "printf ... | node bin/logq.js --stats --agg 'count by level' --format table; -q 'a)' x; nofile",
+      "exitCode": 0,
+      "ok": true,
+      "note": "Bảng căn cột đúng. `lines=3 matched=2 malformed=1`. Truy vấn sai → mã 2, tệp không có → mã 1 kèm `cannot read nofile`. Exit 0 là của lệnh đầu; hai lệnh sau thoát 2 và 1 như kỳ vọng."
+     }
+    ],
+    "verified": true
+   },
+   "finalPath": "dev-FINAL.md",
+   "finishedAt": "2026-11-02T04:34:52.262Z"
+  }
+ ],
+ "options": {
+  "discussionRounds": 1,
+  "review": true,
+  "maxParallel": 4,
+  "maxRevisions": 1,
+  "budgetTokens": 1500000,
+  "budgetMode": "complete",
+  "phaseModels": {
+   "plan": "sonnet"
+  }
+ },
+ "usage": {
+  "input": 82,
+  "output": 54034,
+  "cacheRead": 1282965,
+  "cacheWrite": 171996,
+  "costUsd": 1.364583,
+  "calls": 8,
+  "estimatedCalls": 0
+ },
+ "createdAt": "2026-11-02T04:31:18.242Z",
+ "updatedAt": "2026-11-02T04:34:52.397Z",
+ "autoTitle": false,
+ "startedAt": "2026-11-02T04:31:18.242Z",
+ "workspace": "/home/claude/ccoding-dev/workspaces/b-c6-t5-fastla-2/wt-T-20261102-113118-0ed",
+ "branch": "ccoding/t-20261102-113118-0ed",
+ "baseRef": "e6b7a11384b9c1ab2ed7f0f3cec841040001a5be",
+ "lane": "fast",
+ "projectChecks": {
+  "baseline": [
+   {
+    "command": "npm test",
+    "code": 1,
+    "ok": false,
+    "ms": 375,
+    "summary": "# tests 3 · # suites 0 · # pass 0 · # fail 3 · # skipped 0 · # todo 0",
+    "tail": "> logq@0.1.0 test\n> node --test \"test/**/*.test.js\"\n\nTAP version 13\n# Subtest: parse JSON và logfmt\nnot ok 1 - parse JSON và logfmt\n  ---\n  duration_ms: 1.462204\n  type: 'test'\n  location: '/home/claude/ccoding-dev/workspaces/b-c6-t5-fastla-2/wt-T-20261102-113118-0ed/test/smoke.test.js:6:1'\n  failureType: 'testCodeFailure'\n  error: 'parseLine is not a function'\n  code: 'ERR_TEST_FAILURE'\n  name: 'TypeError'\n  stack: |-\n    TestContext.<anonymous> (/home/claude/ccoding-dev/workspaces/b-c6-t5-fastla-2/wt-T-20261102-113118-0ed/test/smoke.test.js:7:20)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.start (node:internal/test_runner/test:944:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)\n  ...\n# Subtest: truy vấn cơ bản\nnot ok 2 - truy vấn cơ bản\n  ---\n  duration_ms: 0.190114\n  type: 'test'\n  location: '/home/claude/ccoding-dev/workspaces/b-c6-t5-fastla-2/wt-T-20261102-113118-0ed/test/smoke.test.js:11:1'\n  failureType: 'testCodeFailure'\n  error: 'compile is not a function'\n  code: 'ERR_TEST_FAILURE'\n  name: 'TypeError'\n  stack: |-\n    TestContext.<anonymous> (/home/claude/ccoding-dev/workspaces/b-c6-t5-fastla-2/wt-T-20261102-113118-0ed/test/smoke.test.js:12:13)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.processPendingSubtests (node:internal/test_runner/test:744:18)\n    Test.postRun (node:internal/test_runner/test:1173:19)\n    Test.run (node:internal/test_runner/test:1101:12)\n    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)\n  ...\n# Subtest: tổng hợp count by\nnot ok 3 - tổng hợp count by\n  ---\n  duration_ms: 0.213475\n  type: 'test'\n  location: '/home/claude/ccoding-dev/workspaces/b-c6-t5-fastla-2/wt-T-20261102-113118-0ed/test/smoke.test.js:17:1'\n  failureType: 'testCodeFailure'\n  error: 'aggregate is not a function'\n  code: 'ERR_TEST_FAILURE'\n  name: 'TypeError'\n  stack: |-\n    TestContext.<anonymous> (/home/claude/ccoding-dev/workspaces/b-c6-t5-fastla-2/wt-T-20261102-113118-0ed/test/smoke.test.js:18:20)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.processPendingSubtests (node:internal/test_runner/test:744:18)\n    Test.postRun (node:internal/test_runner/test:1173:19)\n    Test.run (node:internal/test_runner/test:1101:12)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ...\n1..3\n# tests 3\n# suites 0\n# pass 0\n# fail 3\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 123.645381"
+   }
+  ],
+  "baselineAt": "2026-11-02T04:31:18.661Z",
+  "latest": [
+   {
+    "command": "npm test",
+    "code": 0,
+    "ok": true,
+    "ms": 1584,
+    "summary": "# tests 52 · # suites 0 · # pass 52 · # fail 0 · # skipped 0 · # todo 0",
+    "tail": "… chọn → 2\nok 21 - dùng sai tùy chọn → 2\n  ---\n  duration_ms: 215.675936\n  type: 'test'\n  ...\n# Subtest: không đọc được tệp → 1, stdout rỗng kể cả khi tệp khác đọc được\nok 22 - không đọc được tệp → 1, stdout rỗng kể cả khi tệp khác đọc được\n  ---\n  duration_ms: 57.102081\n  type: 'test'\n  ...\n# Subtest: không khớp gì vẫn mã 0\nok 23 - không khớp gì vẫn mã 0\n  ---\n  duration_ms: 37.942293\n  type: 'test'\n  ...\n# Subtest: dòng rỗng / khoảng trắng\nok 24 - dòng rỗng / khoảng trắng\n  ---\n  duration_ms: 1.378923\n  type: 'test'\n  ...\n# Subtest: JSON: làm phẳng, mảng, rỗng, \\\\r\nok 25 - JSON: làm phẳng, mảng, rỗng, \\\\r\n  ---\n  duration_ms: 0.401294\n  type: 'test'\n  ...\n# Subtest: JSON: lỗi\nok 26 - JSON: lỗi\n  ---\n  duration_ms: 0.180529\n  type: 'test'\n  ...\n# Subtest: logfmt: suy kiểu\nok 27 - logfmt: suy kiểu\n  ---\n  duration_ms: 0.503675\n  type: 'test'\n  ...\n# Subtest: logfmt: key= là chuỗi rỗng, tab phân tách\nok 28 - logfmt: key= là chuỗi rỗng, tab phân tách\n  ---\n  duration_ms: 0.208498\n  type: 'test'\n  ...\n# Subtest: logfmt: ngoặc kép\nok 29 - logfmt: ngoặc kép\n  ---\n  duration_ms: 1.042482\n  type: 'test'\n  ...\n# Subtest: logfmt: lỗi cả dòng\nok 30 - logfmt: lỗi cả dòng\n  ---\n  duration_ms: 0.289393\n  type: 'test'\n  ...\n# Subtest: logfmt: key trùng, giá trị sau thắng\nok 31 - logfmt: key trùng, giá trị sau thắng\n  ---\n  duration_ms: 0.124047\n  type: 'test'\n  ...\n# Subtest: @t: ISO hợp lệ\nok 32 - @t: ISO hợp lệ\n  ---\n  duration_ms: 0.384245\n  type: 'test'\n  ...\n# Subtest: @t: chỉ xét trường đầu tiên có mặt\nok 33 - @t: chỉ xét trường đầu tiên có mặt\n  ---\n  duration_ms: 0.416414\n  type: 'test'\n  ...\n# Subtest: truy vấn rỗng khớp tất cả\nok 34 - truy vấn rỗng khớp tất cả\n  ---\n  duration_ms: 1.123903\n  type: 'test'\n  ...\n# Subtest: field:value không phân biệt hoa thường, toàn chuỗi\nok 35 - field:value không phân biệt hoa thường, toàn chuỗi\n  ---\n  duration_ms: 0.813825\n  type: 'test'\n  ...\n# Subtest: wildcard * và ?, escape regex\nok 36 - wildcard * và ?, escape regex\n  ---\n  duration_ms: 2.140874\n  type: 'test'\n  ...\n# Subtest: value trong ngoặc kép: chính xác, không wildcard\nok 37 - value trong ngoặc kép: chính xác, không wildcard\n  ---\n  duration_ms: 0.449287\n  type: 'test'\n  ...\n# Subtest: so sánh số\nok 38 - so sánh số\n  ---\n  duration_ms: 0.300237\n  type: 'test'\n  ...\n# Subtest: _exists_\nok 39 - _exists_\n  ---\n  duration_ms: 0.111417\n  type: 'test'\n  ...\n# Subtest: WORD và QUOTED tìm trong msg / message\nok 40 - WORD và QUOTED tìm trong msg / message\n  ---\n  duration_ms: 0.277687\n  type: 'test'\n  ...\n# Subtest: toán tử, ưu tiên và AND ngầm\nok 41 - toán tử, ưu tiên và AND ngầm\n  ---\n  duration_ms: 0.309398\n  type: 'test'\n  ...\n# Subtest: từ khóa chỉ khi viết HOA\nok 42 - từ khóa chỉ khi viết HOA\n  ---\n  duration_ms: 0.398515\n  type: 'test'\n  ...\n# Subtest: ngoặc luôn là token riêng\nok 43 - ngoặc luôn là token riêng\n  ---\n  duration_ms: 0.401097\n  type: 'test'\n  ...\n# Subtest: lỗi: ngoặc\nok 44 - lỗi: ngoặc\n  ---\n  duration_ms: 0.656302\n  type: 'test'\n  ...\n# Subtest: lỗi: thiếu toán hạng cuối\nok 45 - lỗi: thiếu toán hạng cuối\n  ---\n  duration_ms: 0.255132\n  type: 'test'\n  ...\n# Subtest: lỗi: AND/OR sai chỗ\nok 46 - lỗi: AND/OR sai chỗ\n  ---\n  duration_ms: 0.177397\n  type: 'test'\n  ...\n# Subtest: lỗi: so sánh\nok 47 - lỗi: so sánh\n  ---\n  duration_ms: 0.121163\n  type: 'test'\n  ...\n# Subtest: lỗi: field: không có giá trị\nok 48 - lỗi: field: không có giá trị\n  ---\n  duration_ms: 0.842531\n  type: 'test'\n  ...\n# Subtest: lỗi: ngoặc kép không đóng\nok 49 - lỗi: ngoặc kép không đóng\n  ---\n  duration_ms: 0.154112\n  type: 'test'\n  ...\n# Subtest: parse JSON và logfmt\nok 50 - parse JSON và logfmt\n  ---\n  duration_ms: 2.461871\n  type: 'test'\n  ...\n# Subtest: truy vấn cơ bản\nok 51 - truy vấn cơ bản\n  ---\n  duration_ms: 1.216553\n  type: 'test'\n  ...\n# Subtest: tổng hợp count by\nok 52 - tổng hợp count by\n  ---\n  duration_ms: 0.769343\n  type: 'test'\n  ...\n1..52\n# tests 52\n# suites 0\n# pass 52\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 1387.945917"
+   }
+  ],
+  "latestAt": "2026-11-02T04:34:21.156Z",
+  "latestAfter": "revise",
+  "staleAt": "2026-11-02T04:33:53.589Z"
+ },
+ "budgetAlerted": 80,
+ "changes": "bin/logq.js        | 100 ++++++++++++++++++++++++-\n src/agg.js         | 126 ++++++++++++++++++++++++++++++-\n src/parse.js       | 102 ++++++++++++++++++++++++-\n src/query.js       | 215 ++++++++++++++++++++++++++++++++++++++++++++++++++++-\n test/agg.test.js   |  81 ++++++++++++++++++++\n test/cli.test.js   | 139 ++++++++++++++++++++++++++++++++++\n test/parse.test.js |  58 +++++++++++++++\n test/query.test.js | 160 +++++++++++++++++++++++++++++++++++++++\n 8 files changed, 974 insertions(+), 7 deletions(-)",
+ "commit": "[ccoding/t-20261102-113118-0ed 8fd4345] CCoding T-20261102-113118-0ed: [bench C6] t5-logq #2",
+ "finalPath": "FINAL.md",
+ "finishedAt": "2026-11-02T04:34:52.397Z"
+}

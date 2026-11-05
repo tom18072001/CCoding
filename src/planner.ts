@@ -6,6 +6,10 @@ export interface PlanResult {
   decisions: string[];
   subtasks: Subtask[];
   parsed: boolean;
+  /** B-10: JSON kế hoạch bị cắt cụt/không đóng (có "subtasks" nhưng không đọc hết được). */
+  truncated?: boolean;
+  /** B-10: đích kế hoạch khai ngoài phạm vi kèm lý do. */
+  outOfScope?: Array<{ target: string; reason: string }>;
 }
 
 interface RawSubtask {
@@ -20,7 +24,7 @@ interface RawSubtask {
 
 const MAX_SUBTASKS = 8;
 
-function skillScore(text: string, a: AgentDef): number {
+export function skillScore(text: string, a: AgentDef): number {
   const t = text.toLowerCase();
   return a.skills.reduce((n, s) => (t.includes(s.replace(/-/g, ' ')) || t.includes(s) ? n + 2 : n), 0) + (t.includes(a.id) ? 3 : 0);
 }
@@ -89,8 +93,13 @@ export function fallbackPlan(brief: string, roster: AgentDef[], lead: AgentDef):
 }
 
 export function parsePlan(text: string, roster: AgentDef[], lead: AgentDef, brief: string): PlanResult {
-  const raw = extractJson<{ summary?: unknown; decisions?: unknown; subtasks?: RawSubtask[] }>(text);
-  if (!raw || !Array.isArray(raw.subtasks) || raw.subtasks.length === 0) return fallbackPlan(brief, roster, lead);
+  const raw = extractJson<{ summary?: unknown; decisions?: unknown; subtasks?: RawSubtask[]; outOfScope?: unknown; out_of_scope?: unknown }>(text);
+  if (!raw || !Array.isArray(raw.subtasks) || raw.subtasks.length === 0) {
+    const fb = fallbackPlan(brief, roster, lead);
+    return text.includes('"subtasks"') ? { ...fb, truncated: true } : fb;
+  }
+  // còn nhiều "assignee" trong văn bản hơn số hạng mục đọc được → JSON bị cắt giữa chừng
+  const truncated = (text.match(/"assignee"\s*:/g)?.length ?? 0) > raw.subtasks.length;
   const used = new Set<string>();
   const idMap = new Map<string, string>();
   const subtasks: Subtask[] = [];
@@ -108,7 +117,18 @@ export function parsePlan(text: string, roster: AgentDef[], lead: AgentDef, brie
   });
   for (const s of subtasks) s.dependsOn = s.dependsOn.map((d) => idMap.get(d) ?? d);
   const decisions = Array.isArray(raw.decisions) ? raw.decisions.map(String) : typeof raw.decisions === 'string' ? [raw.decisions] : [];
-  return { summary: String(raw.summary ?? '').slice(0, 1000), decisions, subtasks: breakCycles(subtasks), parsed: true };
+  const oosRaw = raw.outOfScope ?? raw.out_of_scope;
+  const outOfScope = (Array.isArray(oosRaw) ? oosRaw : [])
+    .map((o: any) => ({ target: String(typeof o === 'string' ? o.split(/\s+[—–-]\s+|:\s+/)[0] : (o?.target ?? o?.path ?? o?.file ?? '')).trim(), reason: String(typeof o === 'string' ? o.split(/\s+[—–-]\s+|:\s+/).slice(1).join(' — ') : (o?.reason ?? o?.why ?? '')).trim() }))
+    .filter((o) => o.target);
+  return {
+    summary: String(raw.summary ?? '').slice(0, 1000),
+    decisions,
+    subtasks: breakCycles(subtasks),
+    parsed: true,
+    ...(truncated ? { truncated } : {}),
+    ...(outOfScope.length ? { outOfScope } : {}),
+  };
 }
 
 export interface ReviewResult {
@@ -118,6 +138,34 @@ export interface ReviewResult {
   /** Lệnh kiểm tra reviewer khai báo đã chạy ("checks" trong JSON). */
   checks: ReviewCheck[];
   parsed: boolean;
+}
+
+/**
+ * Lỗi review không trỏ đúng mã hạng mục (vd. "Lỗi 3/4 (src/promotions.js)") trước đây không vào vòng sửa nào → nhiệm vụ xong mà lỗi
+ * còn nguyên (benchtest C7 t2, 2/11: 52/60 test ẩn). Gán mỗi lỗi blocker/major như vậy cho hạng mục gần nhất theo từ chung (tên tệp,
+ * từ khóa) — hòa thì lấy hạng mục đầu; giữ nhãn gốc trong nội dung. Trả về số lỗi đã gán.
+ */
+export function assignStrayIssues(issues: ReviewIssue[], subtasks: Array<Pick<Subtask, 'id' | 'title' | 'description'>>): number {
+  if (!subtasks.length) return 0;
+  const ids = new Set(subtasks.map((s) => s.id));
+  const words = (t: string) => new Set((t.toLowerCase().match(/[\p{L}\p{N}_./-]{3,}/gu) ?? []).flatMap((w) => [w, ...w.split(/[./-]/).filter((x) => x.length >= 3)]));
+  let n = 0;
+  for (const i of issues) {
+    if (i.severity === 'minor' || ids.has(i.subtask)) continue;
+    const want = words(`${i.subtask} ${i.comment}`);
+    let best = subtasks[0];
+    let bestScore = -1;
+    for (const s of subtasks) {
+      const have = words(`${s.id} ${s.title} ${s.description}`);
+      let score = 0;
+      for (const w of want) if (have.has(w)) score++;
+      if (score > bestScore) [best, bestScore] = [s, score];
+    }
+    i.comment = `(${i.subtask || 'không ghi hạng mục'}) ${i.comment}`;
+    i.subtask = best.id;
+    n++;
+  }
+  return n;
 }
 
 export function parseReview(text: string, subtaskIds: string[]): ReviewResult {

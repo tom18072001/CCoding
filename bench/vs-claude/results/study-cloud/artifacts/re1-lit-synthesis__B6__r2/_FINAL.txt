@@ -1,0 +1,97 @@
+# Báo cáo Phòng Nghiên cứu — [vs-claude re1-lit-synthesis__B6__r2] Grounded literature synthesis over a closed corpus
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Kế hoạch dự phòng: giao cho thành viên có kỹ năng phù hợp nhất.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Literature Researcher: xử lý yêu cầu (@literature-researcher, done)
+
+## Tóm tắt
+Tôi đã trả lời cả bốn câu hỏi chỉ từ `corpus/`, rồi ghi `answer.json` và `REVIEW.md`. F1 cao nhất trên HDFS-X full split là LogGraphT của P4, 0.962. Mức năng lượng suy luận của LogGraphT không có trong corpus.
+
+## Tệp đã lưu
+- `answer.json`: câu trả lời q1–q4.
+- `REVIEW.md`: bản tổng hợp 484 từ (đếm bằng `wc -w`, nằm trong khoảng 300–500), có trích dẫn [P1]–[P6].
+- Không có `search-log.csv` hay `sources.md`: nhiệm vụ cấm dùng nguồn ngoài corpus nên tôi không tra cứu web.
+
+## Chiến lược tìm kiếm
+Không áp dụng tìm kiếm ngoài. Tôi đọc toàn bộ 6 tệp `corpus/P1.md`–`P6.md` (6/6 được đưa vào).
+
+## Kết quả theo câu hỏi
+- **q1:** P4 (LogGraphT), F1 = 0.962. Trên full split còn có RT-AD của P3 (0.948) và TF-LAD của P1 (0.931). P2 có F1 0.971 nhưng chỉ trên HDFS-X-small, một tập con có test set dễ hơn, và P2 nói rõ không đánh giá trên full split. P6 cũng cảnh báo hai tập này không so sánh được, nên tôi loại P2.
+- **q2:** P5, tập BGL-X, với 0.5% nhãn (F1 0.861).
+- **q3:** `not_in_corpus: true`. P4 chỉ báo cáo độ trễ suy luận (3.1 ms mỗi session trên một GPU A100), không có số liệu năng lượng.
+- **q4:** P1 và P3. P1 cho rằng tách template là bước đầu cần thiết; P3 cho rằng không cần.
+
+## Ma trận tài liệu
+| Bài | Phương pháp | Kết quả chính | Tỉ lệ nhãn |
+|---|---|---|---|
+| P1 | TF-LAD (template + LSTM) | HDFS-X full 0.931; BGL-X 0.874 | 80% |
+| P2 | LogBERT-lite (raw lines) | HDFS-X-small 0.971; BGL-X 0.902 | không nêu |
+| P3 | RT-AD (raw tokens) | HDFS-X full 0.948 | 80% |
+| P4 | LogGraphT (graph transformer) | HDFS-X full 0.962; BGL-X 0.915 | không nêu |
+| P5 | CL-LAD (contrastive) | BGL-X 0.861 | 0.5% |
+| P6 | Khảo sát benchmark | Không xếp hạng phương pháp | — |
+
+## Mâu thuẫn & khoảng trống
+- P1 và P3 mâu thuẫn trực tiếp về việc có cần parsing hay không. Hai bài dùng thiết lập khác nhau và không có thí nghiệm đối chứng chung.
+- Không bài nào báo cáo năng lượng; P4 cũng không báo cáo chi phí huấn luyện.
+- Phương pháp few-label chỉ được thử trên BGL-X.
+- Lời "tốt nhất" của P4 là tự đánh giá của tác giả, không phải xếp hạng độc lập.
+
+## Tài liệu tham khảo
+P1–P6 là các tóm tắt trong `corpus/` (đều ghi là fictional). Tôi không có toàn văn nên không kiểm chứng được các bài này. Không có DOI hay URL ngoài.
+
+**Lệnh kiểm chứng:**
+- `wc -w REVIEW.md` → 484 từ.
+- Kiểm tra JSON bằng `python3` bị hook chặn, nên tôi chưa chạy. Người có quyền chạy có thể dùng `python3 -c "import json;json.load(open('answer.json'))"` (kỳ vọng exit 0).
+
+Bản đầy đủ: `.ccoding/T-20261103-050723-968/outputs/research-S1-literature-researcher.md`
+
+## Review
+
+Đã duyệt: Tôi đã đối chiếu từng câu trả lời với cả 6 tệp corpus/P1–P6.md. Cả 4 câu đều đúng và chỉ dựa vào corpus. q1: P4, F1 0.962. Bài làm loại đúng P2, vì 0.971 chỉ đạt trên HDFS-X-small và P6 cảnh báo tập này không so sánh được với full split. q2: P5, BGL-X, 0.5% nhãn. q3: not_in_corpus=true là đúng; P4 chỉ nêu latency 3.1 ms trên A100 và nói rõ không báo cáo chi phí huấn luyện. q4: P1 và P3. Mọi con số trong REVIEW.md đều khớp nguyên văn corpus: 0.931, 0.948, 0.962, 0.874, 0.902, 0.915, 0.861 so với 0.701, giảm 9–14 điểm, 11M/4.7M dòng, 80%. Điểm mạnh của bản tổng hợp: nói rõ giới hạn (các tóm tắt đều là fictional; câu 'best' của P4 chỉ là tác giả tự đánh giá), không suy ra P4 có dùng parser hay không, và chỉ ra đúng các khoảng trống về năng lượng, nhãn và khả năng so sánh. Tôi đọc answer.json bằng mắt thì thấy cấu trúc hợp lệ và đúng shape, nhưng chưa chạy được json.load vì hook chặn. Tôi cũng chưa tự đếm lại được 484 từ. Không có blocker hay major.
+Lệnh kiểm tra reviewer đã chạy: for f in corpus/*; do echo "== $f"; cat "$f"; done; echo "== answer.json"; cat answer.json; echo "== REVIEW"; cat REVIEW.md; wc -w REVIEW.md; python3 -I -c "import json;json.load(open('answer.json'));print('ok')"; git status --short (lỗi); head -n 100 corpus/P1.md corpus/P2.md corpus/P3.md corpus/P4.md corpus/P5.md corpus/P6.md answer.json REVIEW.md && git status --short (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-050723-968` · chế độ: project · phòng: research · phân loại dữ liệu: internal
+- Tổng: **26 in / 11.4k out**, cache đọc 151.5k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Literature Researcher (@literature-researcher) | research | 12 | 5585 | 82219 | 1 |
+| Trưởng phòng Nghiên cứu (@research-lead) | research | 6 | 3567 | 35740 | 1 |
+| Peer Reviewer (@peer-reviewer) | research | 6 | 1837 | 31327 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 455 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/research-S1-literature-researcher.md` — S1 Literature Researcher: xử lý yêu cầu (@literature-researcher)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+| Literature Researcher (@literature-researcher) | research | **92** A | 100 | 100 | 80 | 70 | 1 | 1 | 88k | 2/8 |
+| Trưởng phòng Nghiên cứu (@research-lead) | research | **91** A | 100 | 100 | 60 | — | 0 | — | 39k | 1/2 |
+| Peer Reviewer (@peer-reviewer) | research | **34** D | — | — | 60 | 0 | 0 | — | 33k | 1/2 |
+
+### Việc cần sửa theo agent
+- **Literature Researcher** (@literature-researcher, 92 A):
+  - Thao tác công cụ lỗi nhiều (2/8, 25%; nhiều nhất ở run_command 2/5) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+  - Không có nguồn kiểm chứng được (DOI/URL) và không dùng công cụ tra cứu.
+- **Trưởng phòng Nghiên cứu** (@research-lead, 91 A):
+  - 1 lần kế hoạch không đúng định dạng JSON (phải dùng kế hoạch dự phòng).
+- **Peer Reviewer** (@peer-reviewer, 34 D):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

@@ -57,7 +57,7 @@ GitHub ◀── chỉ mã nguồn (data/, workspaces/, ccoding.local.json bị 
 | DET-02 | Chưa có | Định kỳ quét `data/` và `workspaces/` tìm PII lọt (script Presidio) | Nâng cao |
 | DET-03 | Chưa có | Một người dùng; ngân sách token là chốt chặn khối lượng bất thường. Có thể dùng Elastic ML trên log CCoding | Nâng cao |
 | DET-04 | Một phần | Log tập trung JSONL theo vị trí/phòng/nhiệm vụ, `retentionDays: 400` (≥ 12 tháng). Đẩy `data/logs/**/*.jsonl` vào ELK nội bộ bằng Elastic Agent (filestream) | Nên có |
-| DET-05 | Một phần | Chuỗi băm SHA-256 từng file + `ccoding logs verify`. Nếu cần giá trị chứng cứ: WORM/Object Lock, ký số, dấu thời gian TSA, tách quyền quản trị log | Nâng cao |
+| DET-05 | Một phần | Chuỗi băm SHA-256 từng file + `ccoding logs verify`; từ D13 có thêm sổ niêm phong tệp xoay vòng + `ccoding logs verify-seal`. Ký số mới có hướng dẫn. Nếu cần giá trị chứng cứ: WORM/Object Lock, ký số, dấu thời gian TSA, tách quyền quản trị log | Nâng cao |
 | PRI-01 | N/A | Không thu thập DLCN trực tiếp từ chủ thể; nếu tài liệu dự án có DLCN thì kế thừa căn cứ xử lý của dự án gốc | — |
 | PRI-02 | Một phần | Prompt chỉ chứa brief + đầu ra liên quan (có cắt độ dài); **không đưa dữ liệu thật**, dùng dữ liệu mẫu/giả lập | **Bắt buộc** |
 | PRI-03 | N/A | Không quản lý hồ sơ chủ thể dữ liệu | — |
@@ -164,7 +164,7 @@ Phản hồi ──► data/runs/<task>/{outputs, calls.jsonl (che + băm chuỗ
 | DET-02 | Chưa có | Định kỳ rà `workspaces/` và `.ccoding/` trong các repo; xóa worktree đã merge (`git worktree remove`) | Nên có |
 | DET-03 | N/A | Một người dùng, một máy — chưa cần UEBA; cảnh báo hiện có: hết hạn mức, ngân sách 80/100%, lỗi xác thực runtime | — |
 | DET-04 | Một phần | Log tập trung trong `data/logs` (hệ thống/agent/phòng/nhiệm vụ), giữ 400 ngày (≥ 12 tháng); nên đẩy về ELK nội bộ | Nên có |
-| DET-05 | Một phần | `calls.jsonl`, `events.jsonl`, sổ cái token có chuỗi băm (`ccoding logs verify`); chưa WORM/ký số/TSA | Nâng cao |
+| DET-05 | Một phần | `calls.jsonl`, `events.jsonl`, sổ cái token có chuỗi băm (`ccoding logs verify`); từ D13 có sổ niêm phong tệp xoay vòng (`ccoding logs verify-seal`); chưa WORM thật/ký số/TSA (ký số: xem hướng dẫn ở đầu `src/log-retention.ts`) | Nâng cao |
 | PRI-01 | N/A | CCoding không thu thập dữ liệu từ chủ thể; tài liệu do người dùng chủ động đưa vào | — |
 | PRI-02 | Một phần | Tối thiểu hóa: mỗi pha chỉ gửi phần yêu cầu/tài liệu cần thiết (giới hạn ký tự theo pha), phần còn lại agent tự đọc trong workspace khi cần | Nên có |
 | PRI-03 | Một phần | Xóa được theo nhiệm vụ (`data/runs/<task>`, `.ccoding/<task>`); tệp tải lên tạm tự xóa sau 24 giờ hoặc ngay khi gắn vào nhiệm vụ | Nên có |
@@ -399,7 +399,7 @@ Chỉ thay giao diện ô Văn phòng (bỏ canvas, nhân vật giám đốc, đ
 | Việc định kỳ (`data/routines.json`, bộ lập lịch trong server) | GOV-03, PRE-05, DET-01 | Nhiệm vụ mẫu (đề bài) lưu trong `data/` như nhiệm vụ thường; mỗi lần chạy đi qua đúng đường giao việc (nhãn dữ liệu theo dự án, runtime được phép, che bí mật/PII khi gửi ra ngoài, ngân sách). Tạo/sửa/xóa/chạy/bỏ qua đều ghi nhật ký có chuỗi băm (`routine.*`). Không chạy chồng (lần trước chưa xong thì bỏ qua); lỡ lịch lâu thì không chạy bù hàng loạt. `routineId` không đặt được qua API giao việc |
 | Sản phẩm (`GET /api/artifacts`) | PRE-06 | Chỉ liệt kê siêu dữ liệu (đường dẫn, kích thước, thời gian) từ thư mục chạy; nội dung mở qua API tệp đã có (chặn path traversal). Tải xuống tạo trong trình duyệt từ nội dung đã mở |
 | Kỹ năng & Kết nối (`GET /api/skills`) | GOV-02 | Chỉ đọc hồ sơ agent, chính sách công cụ, trạng thái runtime (không trả khóa API, chỉ trả runtime được xử lý nhãn nào) |
-| Kiểm toán (`GET /api/audit`, `/api/audit/verify`) | DET-01, DET-05, RES-03 | Đọc nhật ký hệ thống (đã che bí mật/PII lúc ghi), lọc sự kiện thay đổi trạng thái/an toàn; kiểm chuỗi băm để phát hiện sửa/xóa. Đáp ứng yêu cầu truy xuất nhật ký hệ thống; **khuyến nghị**: sao lưu `data/logs/` sang nơi chỉ ghi thêm (WORM) để giữ ≥ 12 tháng, vì tệp trên máy vẫn có thể bị xóa cả cụm |
+| Kiểm toán (`GET /api/audit`, `/api/audit/verify`) | DET-01, DET-05, RES-03 | Đọc nhật ký hệ thống (đã che bí mật/PII lúc ghi), lọc sự kiện thay đổi trạng thái/an toàn; kiểm chuỗi băm để phát hiện sửa/xóa. Đáp ứng yêu cầu truy xuất nhật ký hệ thống; **khuyến nghị** (D13: đã có sổ niêm phong `seal-ledger.jsonl` + `ccoding logs verify-seal` để phát hiện sửa/mất tệp xoay vòng; vẫn nên): sao lưu `data/logs/` sang nơi chỉ ghi thêm (WORM) để giữ ≥ 12 tháng, vì tệp trên máy vẫn có thể bị xóa cả cụm |
 
 **Kết luận: ĐẠT CÓ ĐIỀU KIỆN** — điều kiện: đặt lịch sao lưu `data/logs/` (WORM/ký số) nếu nhật ký dùng làm chứng cứ.
 
@@ -428,6 +428,72 @@ Kết luận giữ nguyên: **ĐẠT CÓ ĐIỀU KIỆN** (điều kiện sao l�
 | README, `docs/ARCHITECTURE.md`, `docs/UI.md`, `docs/TOOLS.md`, `docs/RUNTIMES.md`, `docs/HERDR.md` | — | Tài liệu, không đụng dữ liệu |
 
 **Kết luận: ĐẠT.**
+
+### Bổ sung: làn đơn, cổng chất lượng, cổng phủ kế hoạch (B-01, B-02, B-10, 2/11/2026)
+
+Ba thay đổi này chỉ thêm logic điều phối và kiểm tra. Chúng không đổi nhãn dữ liệu, hook, `LogStore` hay đường ghi. Dữ liệu xử lý là đề bài và mã nguồn nội bộ, không có PII mới. Dữ liệu kiểm thử là fixture và runtime `mock`.
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| Làn đơn (`lane.pick`, `lane.escalate`), cổng chất lượng (`gate.classify`, `gate.fix`, `gate.template`, `gate.review`), cổng phủ kế hoạch (`plan.gate`) | GOV-03, DET | Mọi lượt LLM mới (agent làn đơn, vòng sửa, sửa định dạng, sửa kế hoạch) đi qua `Orchestrator.call()`, nên vẫn được ghi log, đếm token và áp chính sách dữ liệu theo nhãn. Sự kiện mới chỉ ghi qua `LogStore` trong `data/`, đã che PII/bí mật và có chuỗi băm. Tín hiệu chọn làn (`signals`) chỉ gồm số và cờ, không chứa nội dung đề |
+| `LANE-HANDOVER.md` khi nâng cấp làn | GOV-03 | Ghi trong thư mục chạy của nhiệm vụ, cùng nhãn với nhiệm vụ; chứa diff và ghi chú của agent |
+| `scripts/replay-plan-gate.mjs` | PRE-04 | Công cụ phát lại chỉ đọc `bench/vs-claude/results` và `agents/**`, in ra stdout, không ghi tệp, không gọi LLM, không gửi ra ngoài |
+| Cấu hình `lanes.single`, `gate.maxFixRounds` | GOV-02 | Chỉ là ngưỡng số; mặc định nằm trong `src/config.ts` |
+
+**Kết luận: ĐẠT.** Không phát sinh khuyến nghị mới.
+
+### Bổ sung: bộ phân tích lệnh của hook và chẩn đoán chặn (B-04, B-06, 2/11/2026)
+
+**Loại cổng:** cổng thiết kế, kiểm tra điểm (không phải đánh giá đầy đủ). **Nhãn dữ liệu:** Nội bộ. Dữ liệu xử lý là câu lệnh shell của agent trong workspace nội bộ và nhật ký chặn. Không có PII hay dữ liệu khách hàng.
+
+**B-04 (nới lệnh chỉ đọc):** chỉ nới quyền ĐỌC trong workspace. Quyền ghi và chạy mã không đổi: `> tệp`, `tee`, `sed -i`, heredoc, `$(…)`, backtick, `for`/`while`, `python`/`node` và `awk` có `system`/`getline`/`>`/`|` đều vẫn bị chặn. Hook đang chạy theo `dist/` đã cài, nên quy tắc mới chỉ có hiệu lực sau khi build và cài lại.
+
+| Rủi ro | Kiểm soát | Cách kiểm |
+|---|---|---|
+| Lách nháy: giấu toán tử hoặc chuyển hướng trong nháy, hoặc nháy không đóng, để lệnh ghi lọt qua | Tách lệnh có xét nháy. `$(…)` và backtick bị chặn kể cả trong nháy kép. Nháy không đóng, `&` nền, `<` và `>` ra tệp bị chặn | `test/shell-policy-adversarial.test.ts` (bộ test ác ý) |
+| Đọc `.env` (bí mật) qua lệnh chỉ đọc, kể cả dạng nối nháy `.e""nv` | Mọi tham số của lệnh chỉ đọc đi qua kiểm `.env`. Công cụ tệp cũng chặn `.env` | Cùng bộ test ác ý và `test/claude-guard.test.ts` |
+| Đọc ngoài root workspace | `outsidePathReason` vẫn áp sau khi qua bộ lọc chỉ đọc. Hook không nhớ `cd` giữa các lượt nên không nới lệnh `cd` ra ngoài | `test/claude-guard.test.ts`, `scripts/replay-guard-deny.mjs` |
+| `awk`, `sed` bị lạm dụng để ghi hoặc chạy mã | Danh sách từ khoá và cờ bị cấm (`system`, `getline`, `>`, `\|`, `close`, `ENVIRON`, `fflush`, `-f`, `-i`, `sed -i`) | Bộ test ác ý |
+
+**B-06 (chẩn đoán chặn):** thông báo chặn có dạng `CCoding chặn câu N: \`lệnh\` <quy tắc> — <gợi ý>`, tối đa 300 ký tự, chỉ nêu tên lệnh hoặc toán tử. Mỗi lần chặn ghi một sự kiện `guard.block` qua `LogStore`:
+
+| Nội dung | Giá trị |
+|---|---|
+| Trường `data` | `tool`, `clause` (từ 1), `rule` (`not-read-only`, `redirect`, `subst`, `heredoc`, `loop`, `interpreter`, `env-file`, `outside-root`, và `deny-list`, `git-branch`, `read-limit`), `cmd` (tên lệnh hoặc toán tử) |
+| Không ghi | Lệnh thô, tham số, đường dẫn, nội dung tệp. Tên lệnh dài hơn 24 ký tự, có ký tự lạ hoặc giống khoá/token thì thay bằng `?` |
+| Che bí mật | Qua `LogStore` (che bí mật và PII, chuỗi băm), thêm lớp lọc `safeCmdName` trước đó |
+| Xác định data dir | `dataDir` trong cấu hình hook, rồi biến `CCODING_DATA_DIR`, rồi suy từ đường dẫn bộ đếm `<data>/runs/<task>/guard/<lượt>.json`. Không xác định được thì bỏ qua việc ghi |
+| Nơi ghi | `<data>/logs/system.jsonl` và `<data>/runs/<task>/events.jsonl`. Không ghi ngoài `data/` |
+| Lỗi ghi | Bị nuốt, không đổi quyết định chặn hay cho qua (có test) |
+
+**Rà năng lực liên quan** (các mã còn lại: N/A, không đổi luồng dữ liệu):
+
+| Mã | Trạng thái | Khuyến nghị |
+|---|---|---|
+| GOV-03 | Đạt | Sự kiện mới nằm trong `data/`, cùng nhãn Nội bộ |
+| PRE-04 | Đạt | Không chép lệnh thô. Có test lệnh chứa khoá giả: thông báo và log không chứa chuỗi đó |
+| DET-04 | Đạt | Che bí mật và PII qua `LogStore` trước khi ghi |
+| DET-05 | Đạt | Chuỗi băm theo từng tệp log. Log làm chứng cứ cần WORM và ký số, ngoài phạm vi thay đổi này (từ D13 đã có sổ niêm phong bằng băm, xem mục D13 cuối tài liệu) |
+| RES | Cần theo dõi | Thời gian lưu: nhật ký hệ thống truy xuất `guard.block` giữ ≥ 12 tháng theo khung. Chưa có tác vụ xoá tự động, cần giữ cho đến khi có chính sách lưu trữ |
+
+**Rủi ro còn lại:** (1) hook tiến trình riêng và `LogStore` mới mở mỗi lần chặn, mỗi tiến trình có chuỗi băm riêng, nên có thể rẽ nhánh chuỗi khi nhiều hook chạy song song (log chẩn đoán, không phải chứng cứ); (2) hook dùng `dist/` cũ đến khi build và cài lại.
+
+**Kết luận: ĐẠT CÓ ĐIỀU KIỆN.** Điều kiện: build và cài lại `dist/` trước khi đo, và đặt chính sách lưu nhật ký ≥ 12 tháng cho `data/logs`.
+
+### Bổ sung: làm gọn làn đơn (B-11, 3/11/2026)
+
+**Loại cổng:** cổng thiết kế, bản gọn. **Nhãn dữ liệu:** Nội bộ. Thay đổi chỉ bớt nội dung gửi runtime ở làn đơn và thêm số đo. Không có nguồn dữ liệu hay bên nhận mới.
+
+| Thay đổi | Năng lực | Đánh giá |
+|---|---|---|
+| `accept = skip` (công tắc `lanes.single.slim`, mặc định `full`) | PRE-05, GOV-03 | Chỉ áp khi đủ ba điều kiện: cổng B-02 xanh, diff không chạm `sensitivePaths` (backlog 4.3), và nhãn cao hơn giữa dự án và nhiệm vụ nhỏ hơn Bảo mật. Thiếu điều kiện nào thì lùi về `brief`. `confidential` và `restricted` không bao giờ được `skip`. Nâng làn thì nghiệm thu quay về `full` |
+| `accept = brief` | PRE-06 | Giảm dữ liệu gửi đi: prompt không có báo cáo các phòng, diff cắt 3.000 ký tự, trần `maxTokens` 950. Vẫn đi qua `Orchestrator.call()` nên giữ chính sách nhãn và che bí mật/PII |
+| Sự kiện `accept.skipped`, `accept.brief` | DET-01, DET-04 | Ghi qua `LogStore` (che bí mật/PII, chuỗi băm). Payload chỉ có cờ, nhãn và tên lệnh kiểm tra, không có diff hay nội dung prompt |
+| `promptDiet` (bật mặc định) | PRE-06 | Bỏ khối kế hoạch chung, mục đầu vào rỗng, câu về đồng nghiệp song song. Không lược quy tắc dữ liệu/bảo mật, nhãn phân loại, chỉ dẫn `CLAUDE.md`/`AGENTS.md`, quy tắc công cụ và quy tắc không đổi nhánh/không push. Test kiểm từng chuỗi này còn trong prompt |
+| `compactTemplate` | — | Chỉ đổi độ dài báo cáo bằng chỉ dẫn trong prompt; không đổi `src/kpi.ts` hay cổng mẫu |
+| Trường nghiên cứu mới trong `runs.jsonl` | PRE-04, GOV-03 | Chỉ là số đo và cờ: thời gian và token theo pha, `promptChars`, `lane`, `gate`, `fixRounds`, `acceptMode`. Không chứa nội dung prompt, đường dẫn hay PII. Test khẳng định nội dung lượt gọi không lọt vào kết quả. Tệp `runs.jsonl` nghiên cứu cũ không bị ghi đè |
+
+**Kết luận: ĐẠT CÓ ĐIỀU KIỆN.** Điều kiện: (1) `accept` khác `full` và `compactTemplate = true` chỉ bật sau khi giám đốc duyệt; (2) dự án nhãn Bảo mật/Hạn chế không dựa vào `skip`, chỉ dùng `full` hoặc `brief`. **Rủi ro còn lại:** `gate = green` trong `runs.jsonl` phản ánh lệnh kiểm tra ở lần chạy gần nhất, không phải cờ cuối của cổng B-02; `skip` chặn cả khi chỉ có lệnh đỏ không liên quan đề bài (đọc chặt, an toàn hơn nhưng giữ lại nhiều lượt CTO).
 
 ### Bổ sung: sửa KPI v2 và bộ probe sau review (nhánh `feat/kpi-v2`, 3/11/2026)
 
@@ -458,3 +524,184 @@ Không thêm luồng dữ liệu ra ngoài, không đổi thời hạn lưu. D�
 Khuyến nghị: trước khi cắm agent ngoài cho dự án Bảo mật/Hạn chế, rà mã script/dịch vụ đó như một nhà xử lý dữ liệu (nơi lưu, thời gian giữ, có gửi ra ngoài không); với dịch vụ http ở xa cần hồ sơ đánh giá tác động nếu có DLCN hoặc chuyển xuyên biên giới.
 
 **Bổ sung UI-8 (03/11/2026):** đổi dự án của nhiệm vụ chưa bắt đầu từ bảng Thuộc tính không bao giờ hạ nhãn dữ liệu. Nhãn mới là mức cao hơn giữa nhãn của dự án và nhãn đang có, nên rời một dự án Hạn chế thì nhiệm vụ vẫn mang nhãn Hạn chế. Đổi người phụ trách vẫn áp danh sách nhân sự của dự án. Mọi thay đổi ghi `task.updated` (cũ → mới, kể cả đổi nhãn). Backlog chỉ là trạng thái chờ, không tạo thêm dữ liệu.
+
+## Bổ sung 03/11/2026 — D9/S2: biên đọc của hook claude-guard (B-08) và công tắc stablePrefix (B-14b)
+
+Kiểm tra điểm (cổng thiết kế), nhãn dữ liệu: **Nội bộ**. Không thêm dữ liệu mới vào log; sự kiện `guard.block` vẫn chỉ ghi { tool, clause, rule, cmd } qua `LogStore`.
+
+| Hạng mục | Thay đổi | Rủi ro | Kiểm soát | Công tắc / mặc định |
+|---|---|---|---|---|
+| Biên đọc ngoài worktree (G3) | Hook giải đường dẫn theo `cwd` của sự kiện rồi so `realpath` + `path.relative` với worktree đã `realpath` | `cwd` do sự kiện cung cấp có thể bị giả; symlink/junction trỏ ra ngoài | Kết quả giải ra ngoài worktree (bắt đầu bằng `..` hoặc tuyệt đối) → chặn; cwd giả ngoài worktree làm tệp tương đối giải ra ngoài nên bị chặn; thiếu cwd → giải theo root như cũ. Test đối kháng: `../`, cwd giả, symlink/junction (junction tạo được trên Windows, không skip) | `guard.useEventCwd`, BẬT |
+| tool-results (G4) | Read được tệp `<cấu hình Claude>/projects/<slug>/<session_id>/tool-results/*` khi `session_id` của sự kiện khớp | Đọc nhầm kết quả công cụ của phiên khác (chứa mã/dữ liệu nhiệm vụ khác); mở rộng sang phần còn lại của `.claude/` | Chỉ công cụ Read; `session_id` phải đúng định dạng và khớp từng đoạn đường dẫn; đường dẫn chứa `..` bị chuẩn hóa rồi so lại; liên kết trong cây này bị loại bằng `realpath`; không mở `settings.json` hay thư mục khác. Nội dung tool-results là đầu ra công cụ của chính phiên, đã qua chính sách của hook khi sinh ra | `guard.allowOwnToolResults`, BẬT |
+| stablePrefix | Một bộ `--tools` cố định (có Write/Edit/MultiEdit/Bash) cho mọi pha; quyền theo pha do hook quyết định | **Bề mặt cấp quyền rộng hơn ở cấp CLI**: nếu hook lỗi/không chạy, pha chỉ đọc có công cụ ghi/Bash. Pha review không còn chạy lệnh (CCoding tự chạy lệnh kiểm tra rồi đưa kết quả). Review hạng mục chạy ở thư mục gốc nhiệm vụ nên thấy cây nhiệm vụ, không thấy worktree con chưa gộp | Hook deny-by-default: pha ngoài `execute`/`revise` (kể cả thiếu hoặc sai `phase`) chặn Write, Edit, MultiEdit, NotebookEdit và TOÀN BỘ Bash — không lọc Bash bằng regex (test `; rm`, `$(...)`, backtick, `> tệp`, `tee`, `sed -i`, `node -e`); công cụ ngoài `callTools` của lượt (quyền dự án/vai trò, tra cứu web theo nhãn) cũng bị chặn; thiếu `callTools` → chỉ công cụ đọc. Hook thiếu cấu hình vẫn thoát mã 2 (chặn) | `runtimes.claude-cli.stablePrefix`, **TẮT**; chỉ bật sau khi benchtest xác nhận lợi ích cache và chủ dự án chấp nhận rủi ro trên |
+
+Khuyến nghị: giữ `stablePrefix` tắt với dự án Bảo mật/Hạn chế; bật cho Nội bộ/Công khai khi đã có số đo cache (B-14a). Điều kiện kiểm: `npx tsx --test test/claude-guard-paths.test.ts test/claude-stable-prefix.test.ts`.
+
+## Bổ sung 03/11/2026 — B-18 Sandbox cho hook
+
+**Loại cổng:** cổng thiết kế đầy đủ (5 lớp, 25 năng lực) vì thay đổi chạm biên bảo mật. **Nhãn dữ liệu:** **Nội bộ**. Đặc tả và bảng quyết định nằm ở `docs/research/sandbox-spec.md` (không chép lại ở đây). Trạng thái: **lõi đã triển khai ở commit `f8ec686` (xem "Cập nhật theo mã S1" bên dưới), chưa kiểm trên máy thật**; khóa `runtimes.claude-cli.osSandbox.enabled` mặc định **false** cho tới khi giám đốc duyệt.
+
+**Phạm vi dữ liệu:** lệnh shell của agent trong worktree; tệp `.env` (Hạn chế, chỉ là mục tiêu cần che chắn); nhật ký sự kiện `sandbox.deny`/`sandbox.unavailable` (chỉ `tool`, `rule`, `backend`; không lệnh thô, không đường dẫn). Không có PII, không dữ liệu khách hàng, không bên nhận mới. Ngoại lệ mạng duy nhất: chính `claude-cli` tới `api.anthropic.com`, `claude.ai`, `platform.claude.com` (đã có trong luồng hiện tại, không thêm luồng). Không dùng 9router hay khóa API ngoài.
+
+**Năm lớp:** (1) Quản trị: khóa bật/tắt do giám đốc duyệt, ghi lý do ở `ccoding.local.json`. (2) Phòng ngừa: hook (lớp 1) giữ nguyên + sandbox hệ điều hành (lớp 2). (3) Phát hiện: `sandbox.deny` qua `LogStore`. (4) Quyền riêng tư: tối thiểu hóa, không ghi lệnh thô. (5) Khôi phục: tắt khóa là về trạng thái cũ.
+
+| Mã | Trạng thái | Đánh giá / khuyến nghị cho B-18 | Mức |
+|---|---|---|---|
+| GOV-01 | Một phần | Chính sách dạng code: thêm `osSandbox` vào `ccoding.config.json`; mặc định tắt; bật phải có lý do ghi ở `ccoding.local.json` | Nên có |
+| GOV-02 | Một phần | Người duyệt bật/tắt và duyệt ngưỡng đo: Tom. Ghi người duyệt và ngày vào đặc tả khi duyệt | Nên có |
+| GOV-03 | Một phần | Loại dữ liệu mới: sự kiện `sandbox.*` (Nội bộ). Cập nhật bảng phân loại khi triển khai | Nên có |
+| GOV-04 | Đạt (phạm vi này) | Không có PII mới. `.env` thuộc nhãn Hạn chế; test đối kháng chỉ dùng `.env` giả chứa chuỗi canary, không bí mật thật | Nên có |
+| GOV-05 | Một phần | Truy vết: `sandbox.deny` có `taskId`, đối chiếu được với `guard.block` của lớp 1 | Nên có |
+| GOV-06 | Một phần | Không thêm nhà cung cấp. Ngoại lệ mạng chỉ tới Anthropic như hiện nay; mức B không được mở domain nào khác | **Bắt buộc** (giữ nguyên) |
+| PRE-01 | Một phần | Không đổi bề mặt mạng của máy chủ CCoding (vẫn loopback). Cài WSL2/AppContainer cần quyền quản trị một lần: ghi lại ai cài, cấp quyền tối thiểu | Bắt buộc (giữ nguyên) |
+| PRE-02 | Một phần | Lệnh agent hiện chạy dưới tài khoản Windows của người dùng; sandbox thu hẹp quyền này. Không dùng tài khoản quản trị cho agent. `srt` Windows tạo tài khoản `srt-sandbox` (S-03) — nếu dùng sau này phải đánh giá lại | Nên có |
+| PRE-03 | Một phần | Bật BitLocker cho ổ chứa `data/`, `workspaces/` (như cũ). Nếu worktree chuyển vào đĩa ảo WSL (ext4.vhdx) thì cũng phải được mã hóa: **cần kiểm** | **Bắt buộc** |
+| PRE-04 | Một phần | Mục tiêu chính: hệ điều hành chặn đọc `.env` kể cả khi regex lớp 1 bị lách (nhóm E1). `sandbox.deny` che bí mật/PII qua `LogStore` | Bắt buộc |
+| PRE-05 | Một phần | Mục tiêu chính: chặn mạng ra ngoài cho lệnh agent (trước đây ghi "Nâng cao"). Mức A: allowlist rỗng + `network.strictAllowlist: true` bắt buộc (thiếu thì ở `bypassPermissions` host ngoài allowlist vẫn qua — S-01; cần Claude Code ≥ v2.1.219); mức B: đúng 3 domain + `strictAllowlist`. Rủi ro dư tồn: domain fronting | Nên có |
+| PRE-06 | Một phần | Kiểm soát mục đích: ghi chỉ trong worktree + thư mục tạm; `failIfUnavailable: true`; từ chối chạy khi nền tảng không hỗ trợ | Bắt buộc |
+| PRE-07 | N/A | Không thêm API cục bộ | — |
+| DET-01 | Một phần | Thêm sự kiện `sandbox.deny`, `sandbox.unavailable`; trường `data` chỉ `{ tool, rule, backend }` | Nên có |
+| DET-02 | Chưa có | Rà `workspaces/` tìm tệp rò rỉ (như cũ). Thêm: sau thử nghiệm đối kháng xóa mọi tệp canary/`leak.txt` | Nâng cao |
+| DET-03 | Một phần | Nhiều `sandbox.deny` trong một nhiệm vụ là tín hiệu prompt-injection. Đề xuất cảnh báo khi ≥ 3 sự kiện/nhiệm vụ (ngưỡng giả định, giám đốc chốt) | Nâng cao |
+| DET-04 | Một phần | `sandbox.deny` ghi qua `LogStore` (`redactSecrets`, `redactPii`, `hashChain`) vào `<data>/logs/system.jsonl` và nhật ký nhiệm vụ. **Giữ ≥ 12 tháng** (`retentionDays: 400`); nhật ký xử lý dữ liệu cốt lõi/quan trọng ≥ 6 tháng | **Bắt buộc** — **Cập nhật D10b/S2:** `logSandboxDeny` và `logSandboxUnavailable` không còn bỏ qua im lặng. Khi xác định được dataDir vẫn ghi `system.jsonl` qua LogStore (che bí mật/PII + chuỗi băm). Chỉ khi KHÔNG xác định được dataDir hoặc `LogStore.write` ném lỗi mới ghi một dòng stderr cố định `{tool, rule, backend}` kèm loại lỗi, không chứa lệnh thô, đường dẫn hay message gốc. stderr là cảnh báo vận hành, không phải nơi lưu log; quyết định chặn và fail-closed không đổi. `claude-cli` nối cảnh báo vào `error` (với `unavailable`) hoặc `diag` (với `deny`) của kết quả lượt. Mã: `src/tools/claude-guard.ts:176-232`, `src/runtimes/claude-cli.ts` (khối `logSandboxUnavailable`, `denyLogFailures`). Test: `test/sandbox-log-fallback.test.ts` (4 ca). Trạng thái: **Đạt về đường ghi**; còn nợ đẩy log về ELK và WORM (mức Nâng cao) | **Bắt buộc** |
+| DET-05 | Một phần | Chuỗi băm SHA-256 từng tệp + `ccoding logs verify`. Nếu `sandbox.deny` làm chứng cứ: bất biến (WORM/Object Lock, ký số, TSA, tách quyền quản trị log); từ D13 có sổ niêm phong tệp xoay vòng + `ccoding logs verify-seal`, ký số vẫn là mức "Nâng cao". Hạn chế đã biết: mỗi tiến trình hook mở `LogStore` riêng nên chuỗi băm có thể rẽ nhánh khi chạy song song (B-04/B-06) | Nâng cao |
+| PRI-01 | N/A | Không thu thập DLCN từ chủ thể | — |
+| PRI-02 | Một phần | Tối thiểu hóa: log không có lệnh thô, tham số hay đường dẫn; `cmd` qua `safeCmdName` | Nên có |
+| PRI-03 | N/A | Không quản lý hồ sơ chủ thể dữ liệu | — |
+| PRI-04 | Một phần | Không thêm luồng xuyên biên giới. Nếu sau này có DLCN thật trong worktree: vẫn áp hồ sơ đánh giá tác động như các mục trên | **Bắt buộc** (khi phát sinh) |
+| RES-01 | Một phần | Khôi phục: tắt khóa → `buildClaudeArgs` trở lại như cũ (test từng byte, ca R8). Nếu dùng AppContainer phải có hàm gỡ ACE đã cấp trên worktree | Nên có |
+| RES-02 | Một phần | Thời hạn lưu `sandbox.*` như DET-04: nằm trong `data/logs/*.jsonl`, giữ theo `retentionDays: 400` (`src/config.ts:434`). Chính sách tự xóa cho `data/self-improve/` đã có từ D10b (xem mục B-19, `src/selfimprove.ts:912-947`); log hệ thống chưa có tác vụ tự xóa nên vẫn giữ vô thời hạn. Xóa an toàn tệp canary sau thử nghiệm | Nên có |
+| RES-03 | Một phần | Phát hiện agent thoát sandbox → tắt `osSandbox`/dừng nhiệm vụ, thu hồi khóa nếu `.env` có thể bị đọc, **thông báo sự cố DLCN ≤ 72 giờ nếu có DLCN bị lộ** | Nên có |
+
+**Pháp lý Việt Nam** (số hiệu lấy từ các mục trên của chính tài liệu này, "căn cứ cập nhật đến 28/9/2026"; **chưa tra lại văn bản gốc trong phiên này — cần soát với Công báo trước khi trích dẫn chính thức**):
+
+| Nghĩa vụ | Căn cứ (theo tài liệu này) | Áp vào B-18 |
+|---|---|---|
+| Thông báo vi phạm DLCN ≤ 72 giờ | Luật BVDLCN Đ23 | Sandbox giảm xác suất lộ `.env`/dữ liệu qua agent; sự cố vẫn phải thông báo (RES-03) |
+| Chuyển DLCN xuyên biên giới | Luật BVDLCN Đ20; Luật Dữ liệu Đ23; NĐ 165/2025 Đ12 | Không thêm luồng; ngoại lệ mạng chỉ tới endpoint Anthropic như hiện nay |
+| Nhật ký hệ thống truy xuất ≥ 12 tháng | NĐ 333/2026 | `sandbox.deny` thuộc nhật ký hệ thống: giữ ≥ 12 tháng (DET-04) |
+| An ninh mạng, bảo vệ hệ thống thông tin | Luật An ninh mạng: số hiệu/điều khoản **[CHƯA KIỂM CHỨNG]** trong phiên này; NĐ 363/2026 hiệu lực 11/11/2026 theo ghi chú ở mục 4 | Sandbox là biện pháp kỹ thuật bảo vệ; cấp độ HTTT không áp dụng vì là công cụ cá nhân (mục 1) |
+| Bí mật nhà nước | Luật Bảo vệ bí mật nhà nước 117/2025/QH15 | Vẫn **cấm** đưa vào CCoding; sandbox không thay quy định này |
+
+**Phân loại:** "nhật ký `sandbox.*`" = **Nội bộ** / dữ liệu vận hành; "`.env` của worktree" = **Hạn chế** / thông tin xác thực (nhiều tiêu chí → mức cao nhất cho phần cần che chắn). Test dùng dữ liệu giả, không dữ liệu thật trên DEV/UAT.
+
+**Yêu cầu nhật ký `sandbox.deny`:** (1) ghi qua `LogStore` với `redactSecrets`, `redactPii`, `hashChain`, không ghi trực tiếp; (2) `data` chỉ `{ tool, rule, backend }`; (3) lưu ≥ 12 tháng; (4) bất biến khi làm chứng cứ (WORM, băm, ký số); (5) lỗi ghi bị nuốt nhưng **không** đổi quyết định chặn (như `logGuardBlock`); (6) độ phủ chưa chắc: mẫu thông báo vi phạm của Claude Code chưa kiểm chứng, nên "không có `sandbox.deny`" không có nghĩa "không có vi phạm".
+
+**Rủi ro còn lại:** (1) sandbox có sẵn không bọc hook và công cụ tệp — lớp 1 giữ vai trò đó; (2) domain fronting; (3) trên Windows native Claude Code không sandbox lệnh, nên khóa bật mà không có WSL2 phải từ chối chạy; (4) WSL2 cho phép chạy `.exe` Windows nếu không tắt interop; (5) bộ test đối kháng chỉ phủ các đòn đã biết.
+
+**Cập nhật 03/11/2026 theo mã S1 (commit `f8ec686`, gộp `15d8ee4`) — S6 rà lại.** Phạm vi: chỉ đọc mã, chưa chạy sandbox thật. Bằng chứng nằm ở tệp:dòng dưới đây (số dòng đúng tại `15d8ee4`).
+
+| Yêu cầu của mục này | Hiện thực trong mã | Trạng thái |
+|---|---|---|
+| Khóa tắt mặc định, tắt = như cũ (PRE-06, RES-01) | `src/config.ts:81` (`RuntimeConfig.osSandbox`), `validateOsSandbox` `src/config.ts:20`, gọi ở `src/config.ts:424`; nhánh bật chỉ khi `osSandbox?.enabled === true` (`src/runtimes/claude-cli.ts:252`); băm chụp khi tắt ở `test/sandbox-args.test.ts` | Có test |
+| Khóa `sandbox` trong `--settings`: `failIfUnavailable`, `allowUnsandboxedCommands:false`, `allowWrite=[root]`, `denyRead` `.env*`, `strictAllowlist` (PRE-04, PRE-05) | `buildSandboxSettings` `src/runtimes/claude-cli.ts:40` | Có test dựng lệnh; **chưa kiểm Claude Code thật có nhận khóa** (việc của spike G1/S0) |
+| Fail-closed (PRE-06) | `ClaudeCliRuntime.run` `src/runtimes/claude-cli.ts:305-308`: không có sandbox → ghi `sandbox.unavailable`, trả lỗi tiếng Việt, **không gọi `runProcess`**; `sandboxAvailable` `src/runtimes/claude-cli.ts:64` (win32 chỉ qua WSL2) | Có test (`test/sandbox-regression.test.ts`, probe tiêm) |
+| Log `sandbox.deny` chỉ `{tool, rule, backend}`, qua `LogStore` có che + chuỗi băm (DET-01, DET-04, PRI-02) | `logSandboxDeny` `src/tools/claude-guard.ts:183`, `logSandboxUnavailable` `src/tools/claude-guard.ts:201` (`data` chỉ `{backend, platform}`); nối vào parser `src/runtimes/claude-cli.ts:195-196` và `:322`, chỉ khi khóa bật (tránh ghi nhầm lượt thường) | Có test |
+| `rule` không chứa lệnh/đường dẫn (PRI-02) | `parseSandboxDeny` `src/runtimes/claude-cli.ts:116` trả nhãn cố định `fs-readonly`/`net-403`/`net-host`/`unknown` | **Mẫu chuỗi chưa đo thật** → "không có `sandbox.deny`" ≠ "không có vi phạm" |
+| WSL2 (PRE-02, RES-01) | `toWslPath` `:74`, `wrapForWsl` `:102` (env qua `WSLENV`, đổi đường dẫn hook/`allowWrite`/`CCODING_GUARD`) | **Chưa kiểm trên máy thật**; chỉ có test thuần cho phần ánh xạ. Chờ distro WSL2 có `node` + `claude` (cần giám đốc duyệt cài) |
+| Bộ test đối kháng, đo khởi động (DET-02, §e, §f) | S6: `scripts/sandbox-adversarial.mjs`, `scripts/sandbox-bench.mjs`, `scripts/lib/sandbox-cases.mjs`, `scripts/lib/sandbox-bench-stats.mjs`, `test/sandbox-adversarial-cases.test.ts` | Mặc định `--dry-run` trên dữ liệu giả; chạy thật từ chối trên win32, khi có `CCODING_GUARD`, thiếu `CCODING_SANDBOX_TEST=1` hoặc thiếu `--sandbox-wrapper`. **Chưa chạy thật lần nào** — chưa có bằng chứng sandbox chặn được |
+
+**Phát hiện khi rà mã (S6):**
+1. *Thấp · `src/tools/claude-guard.ts:139-153`, `src/runtimes/claude-cli.ts:308`* — `logSandboxUnavailable`/`logSandboxDeny` chỉ ghi được khi xác định được thư mục dữ liệu (từ `guardState` dạng `<data>/runs/<task>/guard/…`, `cfg.dataDir` hoặc `CCODING_DATA_DIR`); không xác định được thì bỏ qua im lặng. Lượt `allowTools=false` hoặc gọi ngoài orchestrator có thể mất sự kiện fail-closed. Lỗi vẫn trả về cho người gọi nên **quyết định chặn không đổi**, nhưng bằng chứng log có thể thiếu → DET-04. Khuyến nghị: người nhận `@senior-swe`, thêm test khẳng định `sandbox.unavailable` vẫn được ghi khi chạy qua orchestrator, hoặc truyền `dataDir` tường minh. **Đã xử lý ở D10b/S2** (đường ghi dự phòng stderr, xem dòng DET-04 ở trên).
+2. *Thấp · `scripts/lib/sandbox-cases.mjs`* — nhóm E4 trên Linux chỉ có 4 ca chạy được (E4-5 và E4-WMI là Windows/AppContainer); tiêu chí §e "mỗi nhóm ≥ 5 ca" chưa đạt trên Linux. Script in rõ nhóm thiếu ca và `summarize().pass=false`; không che. Khuyến nghị: Phòng Nghiên cứu bổ sung một ca E4 Linux (hoặc chấp nhận 4 ca và ghi vào tiêu chí). Người nhận `@dev-lead`.
+3. *Trung bình · căn cứ §e* — ca chế độ S (bỏ qua hook) cần một cách chạy lệnh trực tiếp trong sandbox; đặc tả không nêu công cụ. Script nhận `--sandbox-wrapper` do người chạy cung cấp thay vì đoán một công cụ. Việc chọn wrapper cần giám đốc/S0 chốt trước khi chạy thật.
+
+**Khuyến nghị cho chủ dự án:** (1) giữ `osSandbox.enabled=false` — hiện chưa có bằng chứng thật rằng sandbox chặn được, và trên máy giám đốc (Windows) khóa bật sẽ **từ chối chạy** vì WSL2 chưa được kiểm; (2) duyệt riêng việc cài distro WSL2 rồi chạy spike G1 + E1–E5 trên Linux/WSL2 ngoài hook; (3) bật BitLocker kể cả đĩa ảo WSL (PRE-03); (4) giữ log `sandbox.*` ≥ 12 tháng (DET-04); (5) soát lại căn cứ pháp lý ở bảng trên với văn bản gốc trước khi dùng cho hồ sơ chính thức.
+
+**Kết luận (cập nhật; D10b/S2 đóng phát hiện log sandbox im lặng, DET-04 có đường dự phòng): ĐẠT CÓ ĐIỀU KIỆN** — cổng thiết kế, **chưa phải cổng phát hành**. Mã lõi khớp đặc tả ở mức đọc mã và test thuần; thiếu bằng chứng chạy thật. Điều kiện: (1) giữ khóa tắt cho tới khi giám đốc duyệt, sau khi spike G1 và bộ E1–E5 đạt trên Linux/WSL2; (2) lưu nhật ký `sandbox.*` ≥ 12 tháng; (3) soát lại căn cứ pháp lý với văn bản gốc; (4) BitLocker, kể cả đĩa ảo WSL; (5) xử lý phát hiện 1 và 3 ở trên.
+
+*(Kết luận gốc của phần đặc tả, giữ để đối chiếu:)* ĐẠT CÓ ĐIỀU KIỆN** (cho phần đặc tả). Điều kiện: (1) giữ khóa tắt cho tới khi giám đốc duyệt, sau khi spike (cổng G1) và bộ E1–E5 đạt; (2) lưu nhật ký `sandbox.*` ≥ 12 tháng; (3) soát lại căn cứ pháp lý với văn bản gốc trước khi dùng trong hồ sơ chính thức; (4) BitLocker, kể cả đĩa ảo WSL nếu worktree chuyển vào đó.
+
+## Bổ sung 03/11/2026 — B-19 Vòng tự cải thiện
+
+**Loại cổng:** cổng thiết kế, rà mã đã triển khai (bước 1–7 + route), **chưa phải cổng phát hành**. Chỉ đọc mã và test; chưa chạy vòng thật. Đặc tả: `docs/research/self-improvement/implementation-spec.md` §4–§5 (không chép lại). Khóa `selfImprove.enabled` mặc định **false** (`src/config.ts:381`); tắt ⇒ route `/api/selfimprove/*` trả 404 (`src/server.ts:683`).
+
+**Phân loại (nhãn · pháp lý):**
+
+| Tập dữ liệu | Nhãn | Phân loại pháp lý |
+|---|---|---|
+| Cụm, đề xuất, kết quả A/B, bản vá (`data/self-improve/`) | **Nội bộ** | Dữ liệu vận hành, không có DLCN thật |
+| Sự kiện `incident.*`, `selfimprove.*` trong `LogStore` | **Nội bộ** (mang mức cao nhất của nhiệm vụ nguồn) | Nhật ký xử lý dữ liệu: giữ ≥ 6 tháng |
+| Bộ bài giữ lại (holdout) | **Nội bộ**, dữ liệu tổng hợp | Không DLCN |
+| Sự cố từ nhiệm vụ Bảo mật/Hạn chế | **Không vào vòng** | Chỉ đếm `incident.skipped {reason:'classification'}` |
+
+**Phạm vi dữ liệu:** không thêm endpoint, khóa API, nhà cung cấp hay luồng xuyên biên giới; A/B dùng runtime đã cấu hình theo `allowedRuntimes`.
+
+| Yêu cầu | Hiện thực (tệp:dòng, tại commit `c0e3aa8`) | Trạng thái |
+|---|---|---|
+| Loại sự cố của nhiệm vụ Bảo mật/Hạn chế (PRE-04, PRI-02) | `SECRET_CLASSES` `src/selfimprove.ts:61`; `toIncident` trả `skip('classification')` `src/selfimprove.ts:106`; phân loại lấy từ `task`, không do agent khai | Đạt (đọc mã). Test: `test/selfimprove.test.ts:67` (`reason === 'classification'`) |
+| Che PII/bí mật trước log (DET-04, PRI-02) | Mọi bản ghi qua `LogStore.write` (`redactSecrets`, `redactPii`); `reason` cắt 300 ký tự `src/selfimprove.ts:636`; `agentProposal` cắt 300 | Đạt |
+| Che PII/bí mật trước payload route (PRE-04) | `redact(..., {secrets, pii})` cho `agentProposal` và `diff` `src/selfimprove.ts:718-719`; route trả JSON, không HTML | Đạt (test route `test/selfimprove-apply.test.ts:228` kiểm hợp đồng khóa) |
+| Lưu giữ ≥ 6 tháng (DET-04, RES-02) | `retentionDays: 400` `src/config.ts:434`; `selfImprove.retention.proposalDays` (mặc định 183) `src/config.ts:218`, `:398`; `MIN_RETENTION_DAYS = 183` `src/selfimprove.ts:1078`; `isEvidenceFile` `:1084`; `purgeExpired` `:1095`; `runRetention` `:1120`; nơi gọi `src/cli.ts:149`; **CT-11** `test/selfimprove-apply.test.ts:192` và 3 test `retention:` cùng tệp | **Đạt (D10b/S4)**: có nơi gọi và cấu hình, sàn cố định trong code, bằng chứng không xóa. Xem bảng chính sách giữ log bên dưới |
+| Log bất biến, chuỗi băm (DET-05) | Ghi qua `LogStore` có `hashChain` (`src/logger.ts:66`); **CT-17** `test/selfimprove-apply.test.ts:165` (chuỗi không `broken`) | Đạt mức băm, và từ D13/K2 có thêm niêm phong tệp đã xoay vòng bằng sổ băm `data/logs/seal-ledger.jsonl` (`src/log-retention.ts:134`), kiểm bằng `ccoding logs verify-seal` (exit 2 nếu tệp bị sửa/mất hoặc chuỗi sổ đứt, `src/cli.ts:372`; 11 test `test/log-retention.test.ts`). Chưa phải WORM thật; ký số vẫn là mức "Nâng cao" và mới có hướng dẫn (ed25519 qua `node:crypto`, khóa lưu ngoài `data/`, có thể thêm TSA, `src/log-retention.ts:1-27`) |
+| Duyệt và rollback chỉ do người đã xác thực (GOV-02) | Route so `server.token` bằng `tokenEquals` (`timingSafeEqual`) rồi dựng actor `actorFromToken` `src/server.ts:157-165`, `src/selfimprove.ts:796-803`; `recordDirector`, `rollback`, `applyApproved` đều bắt buộc actor, thiếu thì ném lỗi và không ghi `src/selfimprove.ts:804-819`, `:929`, `:989`; `proposalStatus` chỉ tính `approved` khi `isApprover` đúng `src/selfimprove.ts:808-810`, `:831`; `applyApproved` đọc lại sự kiện từ `LogStore`, không tin tham số; `rollback` cần `rollback.confirmed`; CT-07/08, CT-16, test K1 `test/selfimprove-route-auth.test.ts` (4 test: 401, 403, đúng actor và log không chứa token thô, thiếu actor/tương thích ngược) | **Đạt; M1 đã đóng (D13/K1).** Actor ghi vào log là `{by:'token-<8 hex đầu của SHA-256(server.token)>', auth:'server.token'}`. Chưa cấu hình token ⇒ 403; thiếu hoặc sai token ⇒ 401; cả hai không ghi sự kiện `selfimprove.*`. Sự kiện cũ `by:'director'` vẫn được tính là đã duyệt (tương thích ngược trước D13). Hạn chế: mọi người giữ chung một token đều cùng một danh tính, và kiểm Origin vẫn chỉ chặn khi có header `Origin` |
+| Tách vai (GOV-02) | `loadConfig` từ chối ba vai trùng `src/config.ts:471` | Đạt |
+| Không xuyên biên giới mới (PRI-04) | Không có mã gọi mạng mới trong `selfimprove.ts`/route | Đạt (đọc mã) |
+| Khôi phục (RES-01) | Tắt khóa ⇒ 404 và không có sự kiện; rollback bằng `git revert` có thẻ prompts-vN | Đạt (test CT-10/16/17) |
+
+**Chính sách giữ log (D10b/S4, quyết định D8) — nhãn Nội bộ:**
+
+| Loại dữ liệu | Thời hạn | Căn cứ | Mã (tệp:dòng) |
+|---|---|---|---|
+| Tệp không phải bằng chứng dưới `data/self-improve/` (cụm `clusters/*.json`, kết quả chạy A/B trung gian, tệp tạm) | Cấu hình `selfImprove.retention.proposalDays`, mặc định **183 ngày**; thấp hơn 183 bị nâng lên 183 kèm `selfimprove.retention.clamped` | AGENTS.md: nhật ký xử lý dữ liệu cốt lõi/quan trọng ≥ 6 tháng | `src/config.ts:218`, `:398`; `src/selfimprove.ts:895`, `:937-950` |
+| `data/self-improve/incidents.jsonl`, mọi `*.jsonl`/`*.chain`, `ab-*.json`, toàn bộ `proposals/` (meta, patch, monitor, bản ghi apply/rollback) | **Không xóa** (WORM); danh sách cố định trong code, cấu hình không ghi đè được | AGENTS.md: log làm chứng cứ phải bất biến (WORM, băm); xóa giữa chừng làm đứt chuỗi băm | `src/selfimprove.ts:901-905` (`isEvidenceFile`), `:912` |
+| Nhật ký hệ thống truy xuất `data/logs/*.jsonl` (gồm `selfimprove.*`, `incident.*`, `sandbox.*`) | `retentionDays: 400`. Từ D13/K2 có tác vụ dọn **mặc định tắt**; khi bật chỉ xóa tệp **đã xoay vòng**, đã có trong sổ băm và băm khớp, quá **sàn 365 ngày** | AGENTS.md: nhật ký hệ thống truy xuất ≥ 12 tháng | `src/config.ts:440`; `src/log-retention.ts:32`, `:167` |
+| Nhật ký xử lý dữ liệu (tên tệp chứa `processing`) dưới `data/logs/` | **Sàn 183 ngày**; thời hạn áp dụng là `max(sàn, logs.retention.days)`, cấu hình chỉ nâng được, không hạ được (hạ thì ghi `logs.retention.clamped`) | AGENTS.md: nhật ký xử lý dữ liệu cốt lõi/quan trọng ≥ 6 tháng | `src/log-retention.ts:31`, `:50-57` |
+| Loại log không xác định được; tệp đang ghi; `seal-ledger.jsonl` | Không xác định được ⇒ 365 ngày. Tệp đang ghi và sổ niêm phong **không bao giờ bị dọn** | Giữ chuỗi băm và dấu vết | `src/log-retention.ts:43-52`; công tắc `logs.retention.enabled=false`, `intervalHours: 24` `src/config.ts:385` |
+
+Nơi gọi: `runRetention` chạy **một lần khi server khởi động** nếu `selfImprove.enabled` (`src/cli.ts:145`); tắt ⇒ không xóa, không ghi log. Chưa thêm timer hằng ngày: server chỉ có timer `setInterval` ping SSE (`src/server.ts:193`) và `Routines` dành cho việc định kỳ do người dùng khai báo, không phải mẫu timer chung; server chạy lâu thì khởi động lại mới dọn. Mỗi lần chạy ghi `selfimprove.purged {count, olderThanDays}` qua LogStore, không kèm đường dẫn hay tên tệp (test `retention:` kiểm). Từ D13/K2, `data/logs/` có lịch dọn riêng: `setInterval` trong `cmdServe` (`src/cli.ts:150-156`), chỉ chạy khi `logs.retention.enabled` bật, dừng khi tắt server. Đây là đường dọn duy nhất cho `data/logs/`; `purgeExpired` giữ nguyên hành vi. Giả định cần chốt: `LogStore` hiện chưa xoay vòng log, nên tác vụ chỉ xử lý tệp đặt tên theo quy ước xoay vòng (`x.jsonl.<hậu tố>` hoặc `x.<YYYY-MM-DD…>.jsonl`). Trạng thái: **RES-02 Đạt cho `data/self-improve/`**, **Một phần** cho `data/logs/` (có tác vụ dọn và sổ băm nhưng mặc định tắt, chưa chạy thật trên CLI, chưa có cơ chế xoay vòng); **DET-04 Đạt** về che và băm, còn nợ đẩy ELK.
+
+
+Các mã còn lại (GOV-01/03/05/06, PRE-01/02/03/05/06/07, DET-01/02/03, PRI-01/03, RES-03) giữ trạng thái như mục B-18 hoặc **N/A**: không thêm DLCN, bề mặt mạng hay nhà cung cấp mới; sự cố DLCN nếu có vẫn thông báo ≤ 72 giờ (RES-03).
+
+**Review route (`src/server.ts:681-714`) — phát hiện:**
+
+1. **Chính (major) · `src/server.ts:148-157`, `:686`** — *Đã đóng ở D13/K1: route nay xác thực `server.token` và ghi actor thật (`src/server.ts:157-165`, `src/selfimprove.ts:796-819`); `server.token` bắt buộc khi bật `selfImprove` (`src/config.ts:479`). Đoạn dưới giữ nguyên làm hồ sơ phát hiện ban đầu.* — "`by:'director'`" được gán cứng cho mọi POST tới route. Danh tính chỉ dựa vào việc gọi được loopback: `config.server.token` là tùy chọn (mặc định không đặt), và kiểm Origin chỉ chặn khi có header `Origin` (`:151-152`), nên lệnh gọi không có `Origin` (ví dụ `curl` từ shell của agent) đi thẳng qua. Agent có công cụ shell trong worktree có thể tự POST `/approve` rồi `/apply`, làm vô hiệu điều "không tự áp" (spec §4.1). Khuyến nghị cho `@backend-dev`: khi `selfImprove.enabled=true`, bắt buộc có `server.token` (loadConfig từ chối nếu thiếu) và yêu cầu `Origin` hợp lệ cho các POST `/api/selfimprove/*`; thêm test gọi không token ⇒ 401/403. Bổ sung cho chủ dự án: rà xem hook/shell-policy có chặn `curl` tới loopback không (chưa kiểm). **Trước khi bật `selfImprove.enabled` phải xử lý.**
+2. **Phụ (minor) · `src/server.ts:699-705`** — route `apply` trả `{ ...r }` từ `applyApproved`; lỗi git trả `(e as Error).message` nguyên văn qua `HttpError(409)`. Thông điệp lỗi git có thể chứa đường dẫn cục bộ. Nên che qua `redact` hoặc cắt ngắn; Nội bộ nên rủi ro thấp.
+3. **Phụ (minor) · `src/selfimprove.ts:1095`** — *Đã xử lý ở D10b/S4.* Trước đây `purgeExpired` xét theo `mtime` nên `incidents.jsonl` (chỉ nối thêm) không bao giờ hết hạn và không ai gọi hàm. Nay danh sách bằng chứng không xóa cố định trong code (`isEvidenceFile`, `src/selfimprove.ts:1084`), nơi gọi là khi server khởi động (`src/cli.ts:149`) và chỉ khi `selfImprove.enabled`.
+4. **Ghi chú (không phải lỗi)** — `pid` được kiểm `safePid` (`src/selfimprove.ts:556`) trước khi nối đường dẫn nên không có path traversal; `reason` đi qua `LogStore` nên được che; client hiển thị bằng `textContent` là lớp thứ hai, không phải lớp bảo vệ chính.
+5. **Chưa kiểm** — đường tới `selfimprove.proposed` đến từ `agentProposal` do agent viết: đã cắt và che, nhưng nội dung vẫn là dữ liệu không đáng tin hiển thị cho giám đốc (spec §4.3).
+
+**Khuyến nghị cho chủ dự án (cập nhật D13):** (1) M1 đã đóng bằng actor xác thực token; có thể bật `selfImprove.enabled` khi đã chốt ngân sách và ngưỡng, nhưng mặc định vẫn `false`; (2) đặt `server.token` riêng cho người duyệt và không chia sẻ cho agent (bắt buộc khi bật: `src/config.ts:479`, `src/server.ts:157`); (3) `purgeExpired` đã có nơi gọi (`src/cli.ts:149`) và sàn 183 ngày, không cần quyết định thêm; (4) soát lại căn cứ pháp lý (số hiệu như mục B-18, **chưa tra lại văn bản gốc**); (5) giữ log `selfimprove.*`/`incident.*` ≥ 12 tháng: để tác vụ dọn `data/logs/` ở trạng thái tắt cho tới khi có cơ chế xoay vòng log và đã chạy thử `ccoding logs seal` rồi `ccoding logs verify-seal` trên dữ liệu thật của dự án; (6) khi cần giá trị chứng cứ: tạo khóa ed25519 ngoài `data/`, ký sổ băm, cân nhắc TSA.
+
+**Kết luận (cập nhật D13): ĐẠT CÓ ĐIỀU KIỆN** — cổng thiết kế, **chưa phải cổng phát hành**. Điều kiện còn lại: (1) giữ `selfImprove.enabled=false` mặc định cho tới khi chủ dự án duyệt bật; (2) soát căn cứ pháp lý với văn bản gốc; (3) kiểm Origin vẫn chỉ chặn khi có header `Origin`, nên token là lớp xác thực chính. **Đã đóng:** M1 (D13/K1); quyết định gọi `purgeExpired` (D10b); tác vụ dọn `data/logs/` theo sàn 183/365 ngày và sổ băm kiểm được (D13/K2, mặc định tắt). **Còn mở:** WORM thật và ký số cho log làm chứng cứ (mới có hướng dẫn); cơ chế xoay vòng log.
+
+## D13 — Xác thực người duyệt, lưu giữ log, base nhánh nhiệm vụ
+
+Mục này đánh giá ba thay đổi của D13 về dữ liệu. Nhãn dữ liệu của cả ba là **Nội bộ**; không thêm DLCN, endpoint ngoài, khóa API hay luồng xuyên biên giới. Số liệu kiểm chứng lấy từ bàn giao của từng hạng mục; chưa chạy lại độc lập trong mục này.
+
+| Hạng mục | Lớp / năng lực | Đánh giá | Trạng thái |
+|---|---|---|---|
+| K1: route B-19 ghi actor thật | GOV-02, PRE-05, DET-01 | Người duyệt được xác định bằng `server.token`; log chỉ có 8 hex đầu của SHA-256, không có token thô (test `test/selfimprove-route-auth.test.ts`). Không token ⇒ 403/401, không ghi sự kiện | Đạt |
+| K2: dọn và niêm phong `data/logs/` | DET-05, RES-02, DET-04 | Sổ băm chỉ ghi thêm, lệnh `verify-seal`, sàn 183/365 ngày cố định trong code, công tắc mặc định tắt. Sổ chỉ chứa đường dẫn tương đối, băm, kích thước, thời điểm; không chứa nội dung log | Một phần: chưa WORM thật, chưa ký số, chưa có xoay vòng log |
+| K5: base nhánh nhiệm vụ | GOV-01, RES-01 | `resolveBase` (`src/git.ts:71`) chỉ fetch `origin/<baseRef>` có timeout 60 giây, không sửa nhánh cục bộ, không force; lệch hai chiều thì dừng và báo; base thật được ghi vào log `workspace.worktree`/`workspace.base` (`src/orchestrator.ts:3065-3070`). Không đưa dữ liệu mới ra ngoài: chỉ tải mã nguồn về từ remote đã cấu hình | Đạt (8 test: 7 ở `test/git-base.test.ts`, 1 ở `test/git-base-orchestrator.test.ts`) |
+
+Rủi ro còn lại. Mọi người dùng chung `server.token` có cùng một danh tính. Tác vụ dọn xóa dữ liệu thật nên chỉ bật sau khi có xoay vòng log. Khi lệch hai chiều, `resolveBase` ném `BaseDivergedError` (`src/git.ts:98`) và orchestrator dừng nhiệm vụ, không tạo worktree, không rơi về repo gốc (`src/orchestrator.ts:3081`, test `test/git-base-orchestrator.test.ts`); người dùng tự hợp nhất nhánh rồi chạy lại.
+
+**Khuyến nghị cho chủ dự án:** (1) giữ `logs.retention.enabled=false` và `selfImprove.enabled=false` cho tới khi duyệt bật; (2) chạy thử `ccoding logs seal` và `ccoding logs verify-seal` trước khi bật dọn; (3) nếu cần giá trị chứng cứ, tạo khóa ed25519 ngoài `data/` và ký sổ băm; (4) khi nhiệm vụ dừng vì base lệch hai chiều, hợp nhất hoặc chọn nhánh base rồi chạy lại; không ép (force) nhánh.
+
+## V4-3f — Đo không gọi LLM: trích metadata song song từ server chính; chạy lại test trên artifact bench (4/11/2026)
+
+Mục này đánh giá hai luồng dữ liệu mới của V4-3f. Nhãn của cả hai là **Nội bộ**. Không có DLCN, không có endpoint ngoài, không gọi LLM, không có luồng xuyên biên giới mới.
+
+| Hạng mục | Lớp / năng lực | Đánh giá | Trạng thái |
+|---|---|---|---|
+| P: `docs/research/analysis/p-extract.mjs` đọc server chính 7420 | GOV-01, PRE-02, PRI-01, PRI-03 | Chỉ gọi GET `/api/projects`, `/api/tasks`, `/api/tasks/<id>`, không đọc `data/` trực tiếp. **Ghi:** mốc thời gian, trạng thái, `dependsOn`, cờ gộp và xung đột, số lệnh đỏ, và số đếm ba mẫu tin nhắn hệ thống. **Không ghi:** đề bài, tiêu đề, đầu ra, nội dung tin nhắn, tên lệnh. Mã nhiệm vụ băm SHA-256 kèm muối ngẫu nhiên không lưu; mã dự án đổi thành P1–P6. Nhãn băm vẫn **nối ngược được** qua `createdAt` với mã nhiệm vụ trong git log công khai (phản biện 4/11), nên tệp từng lượt không được công bố. Đã kiểm danh sách khóa của tệp kết quả (RUNLOG). Repo công khai, nên tệp từng lượt **không commit**: nó ở lại máy giám đốc, repo chỉ có số tổng hợp | Đạt |
+| G: `g-mutation.mjs`, `g-rebase.mjs` chạy `npm test` và test ẩn trên artifact `study-cloud` | PRE-04, RES-01 | Artifact là repo của bài tổng hợp, không có dữ liệu thật. Mỗi lượt chạy trong bản sao ở thư mục tạm, xóa sau khi xong. Tiến trình con có hạn giờ và bị giết cả nhóm khi quá hạn. Chạy trong container Linux của phiên, không trên máy giám đốc | Đạt |
+
+**Rủi ro còn lại.** Tệp từng lượt có mốc thời gian theo nhiệm vụ. Người có quyền vào server có thể dùng chúng để đối chiếu ra nhiệm vụ nào, nên tệp chỉ giữ trên máy giám đốc.
+
+**Khuyến nghị cho chủ dự án:** chỉ công bố số tổng hợp của P; không đưa tệp từng lượt lên repo công khai.
+
+## E7 và E8 — CTO nghiệm thu trên lỗi lọt cổng; song song có worktree (5/11/2026, trước khi chạy)
+
+Hai đợt đo dùng lại bài tổng hợp của bench. Nhãn **Nội bộ**. Không có DLCN, không có dữ liệu thật của khách hàng. Không dùng 9router hay khóa API: `claude` chạy bằng đăng nhập Max của giám đốc, như các đợt trước, nên không có luồng xuyên biên giới mới so với các đợt đo trước.
+
+| Hạng mục | Lớp / năng lực | Đánh giá | Trạng thái |
+|---|---|---|---|
+| E7 R1/R2: CCoding chạy trong tiến trình (`createApp`) với thư mục data riêng của đợt | GOV-01, PRI-01, DET-01 | Mọi lượt gọi LLM đi qua `Orchestrator.call()`, được ghi log qua `LogStore` (che bí mật, chuỗi băm). Thư mục data của app nằm trong thư mục làm việc của đợt, không commit. Harness chỉ đọc lại văn bản lượt `accept` để so `promptSha` với R3, không sửa nội dung | Đạt |
+| E7 lưu văn bản kết luận (`results/e7-cto/responses/`) và lỗi vào repo công khai | PRI-03, PRE-02 | Nội dung là nhận xét về mã của bài tổng hợp. Trước khi ghi, đường dẫn máy chạy (thư mục tạm, bản checkout, thư mục người dùng) được thay bằng `<work>`, `<ccoding>`, `<home>`. Sổ tay chạy yêu cầu tìm `C:\Users` một lần nữa trước khi commit | Đạt, có kiểm lại thủ công |
+| E7 nhãn mục (lỗi/đúng) | GOV-02 | Nhãn chỉ có trong `items.json`. Workspace, đề bài, báo cáo, prompt và mã mục không mang nhãn (có test) | Đạt |
+| E8: hai server bench từ cùng bản ghim, data riêng (`e8-data-a`, `e8-data-b`) | GOV-01, RES-01 | Không đụng server 7420 hay `data/` chính. Repo của lượt là bài tổng hợp | Đạt |
+
+**Khuyến nghị cho chủ dự án:** giữ thư mục data của E7 và hai server E8 trên máy ít nhất 6 tháng (nhật ký xử lý), như các đợt đo trước. Chỉ commit số tổng hợp, `runs.jsonl` và văn bản đã thay đường dẫn.

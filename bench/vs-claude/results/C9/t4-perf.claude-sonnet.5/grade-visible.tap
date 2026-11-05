@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: giống bản cũ trên dữ liệu sinh với nhiều tuỳ chọn
+ok 1 - giống bản cũ trên dữ liệu sinh với nhiều tuỳ chọn
+  ---
+  duration_ms: 618.278335
+  type: 'test'
+  ...
+# Subtest: giống bản cũ: rỗng, hoàn trả, hòa điểm, sku trùng/thiếu
+ok 2 - giống bản cũ: rỗng, hoàn trả, hòa điểm, sku trùng/thiếu
+  ---
+  duration_ms: 96.518699
+  type: 'test'
+  ...
+# Subtest: giống bản cũ: số âm, tổng bằng 0, múi giờ lệch tháng
+ok 3 - giống bản cũ: số âm, tổng bằng 0, múi giờ lệch tháng
+  ---
+  duration_ms: 0.402789
+  type: 'test'
+  ...
+# Subtest: ném lỗi giống bản cũ với ngày không hợp lệ
+ok 4 - ném lỗi giống bản cũ với ngày không hợp lệ
+  ---
+  duration_ms: 0.413949
+  type: 'test'
+  ...
+# Subtest: báo cáo nhỏ
+ok 5 - báo cáo nhỏ
+  ---
+  duration_ms: 2.309683
+  type: 'test'
+  ...
+# Subtest: dữ liệu sinh ngẫu nhiên chạy được
+ok 6 - dữ liệu sinh ngẫu nhiên chạy được
+  ---
+  duration_ms: 9.474216
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 866.012196

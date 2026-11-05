@@ -1,0 +1,66 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261102-134940-9cb",
+  "wallSec": 191,
+  "wallSecHarness": 195,
+  "costUsd": 0.9490143000000001,
+  "tokens": {
+   "input": 58,
+   "output": 36467,
+   "cacheRead": 820257,
+   "cacheWrite": 123814
+  },
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "parseDuration + tệp re-export duration.js"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "formatDuration"
+   },
+   {
+    "id": "S3",
+    "status": "done",
+    "title": "Test tính chất round-trip và hợp đồng export (độc lập)"
+   }
+  ],
+  "workdir": "/home/claude/ccoding-dev/workspaces/b-c9-t1-fastla-2/wt-T-20261102-134940-9cb",
+  "branch": "ccoding/t-20261102-134940-9cb"
+ },
+ "task": "t1-duration",
+ "system": "ccoding-fastlane",
+ "rep": 2,
+ "key": "t1-duration.ccoding-fastlane.2",
+ "env": "cloud",
+ "startedAt": "2026-11-02T06:49:40.990Z",
+ "finishedAt": "2026-11-02T06:52:56.729Z",
+ "grade": {
+  "hidden": {
+   "pass": 149,
+   "fail": 0,
+   "total": 149,
+   "failed": [],
+   "ms": 228,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 20,
+   "fail": 0,
+   "total": 20
+  },
+  "changed": [
+   "~src/duration.js",
+   "+src/format.js",
+   "+src/parse.js",
+   "+test/format.test.js",
+   "+test/parse.test.js",
+   "+test/roundtrip.test.js"
+  ]
+ },
+ "audit": []
+}

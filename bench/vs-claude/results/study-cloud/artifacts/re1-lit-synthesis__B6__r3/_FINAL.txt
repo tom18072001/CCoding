@@ -1,0 +1,102 @@
+# Báo cáo Phòng Nghiên cứu — [vs-claude re1-lit-synthesis__B6__r3] Grounded literature synthesis over a closed corpus
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Kế hoạch dự phòng: giao cho thành viên có kỹ năng phù hợp nhất.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Literature Researcher: xử lý yêu cầu (@literature-researcher, done)
+
+## Tóm tắt
+Tôi đã sửa cả hai tệp theo review. `REVIEW.md` giờ viết bằng tiếng Anh, dùng dấu chấm thập phân, dài khoảng 405 từ. `answer.json` đã gọn lại. Các kết luận không đổi: q1 là P4 với F1 0.962, q2 là P5 trên BGL-X, q3 là `not_in_corpus: true`, q4 là P1 và P3. Bằng chứng ít và đều do tác giả tự báo cáo.
+
+## Đã sửa theo review
+- **[major] Vượt 500 từ:** Tôi viết lại `REVIEW.md` ngắn hơn. Tôi gộp mục "Khoảng khoảng trống" thành danh sách ngắn và bỏ các ý lặp, như việc "80% nhãn" nhắc hai lần. Tôi đếm bằng Grep `-o '\S+'`, tương đương `wc -w`, được khoảng 405 token, gồm cả tiêu đề, nên nằm trong 300–500. Hook chặn `wc` nên tôi không chạy được lệnh đó.
+- **[minor] Ngôn ngữ và dấu thập phân:** Bản giao nộp viết bằng tiếng Anh, khớp ngôn ngữ của brief. Số dùng dấu chấm (0.962), thống nhất với `answer.json`. Việc đếm theo âm tiết tiếng Việt không còn ảnh hưởng.
+- **[minor] Citations của q1:** Tôi thu còn `["P4", "P6"]` cho sát mẫu. P6 giữ lại vì nó là lý do loại HDFS-X-small. P3 và P1 vẫn được nêu trong `REVIEW.md`.
+- **[minor] Lệch về phía P3:** Mục tranh luận nay nói rõ bằng chứng của P3 chỉ đến từ một dataset, còn ablation của P1 trải trên ba benchmark. Văn bản kết luận rằng chưa bên nào được giải quyết và cần một ablation chung.
+
+## Tệp đã lưu
+- `/tmp/vb/re1-lit-synthesis__B6__r3/answer.json`
+- `/tmp/vb/re1-lit-synthesis__B6__r3/REVIEW.md`
+
+## Chiến lược tìm kiếm
+Không áp dụng. Brief yêu cầu chỉ dùng `corpus/`, nên tôi không tra cứu ngoài. Lần này tôi không đọc lại các tóm tắt và dựa vào nội dung đã ghi ở bản trước.
+
+## Kết quả theo câu hỏi
+- **q1:** P4 (LogGraphT) đạt F1 0.962. P3 đạt 0.948 và P1 đạt 0.931 trên full split. F1 0.971 của P2 nằm trên HDFS-X-small, và P6 cảnh báo tập đó không so sánh được với full split, nên tôi không tính.
+- **q2:** P5 báo cáo 0.5% nhãn trên BGL-X, F1 0.861 so với 0.701 của baseline có giám sát.
+- **q3:** P4 chỉ nêu độ trễ suy luận (3.1 ms mỗi session trên một A100), không nêu năng lượng. Vì vậy `not_in_corpus` là true.
+- **q4:** P1 cho rằng parsing là cần thiết. P3 cho rằng nó không cần thiết.
+
+## Ma trận tài liệu
+| Bài | Phương pháp | % nhãn | HDFS-X full | BGL-X |
+|---|---|---|---|---|
+| P1 | TF-LAD (template + LSTM) | 80% | 0.931 | 0.874 |
+| P2 | LogBERT-lite (log thô) | không nêu | không đánh giá (small: 0.971) | 0.902 |
+| P3 | RT-AD (raw token) | 80% | 0.948 | không báo cáo |
+| P4 | LogGraphT (graph transformer) | không nêu | 0.962 | 0.915 |
+| P5 | CL-LAD (contrastive) | 0.5% | không đánh giá | 0.861 |
+| P6 | Khảo sát benchmark | không áp dụng | không áp dụng | không áp dụng |
+
+## Mâu thuẫn & khoảng trống
+- P1 và P3 bất đồng về việc có cần parsing hay không. Bằng chứng của hai bên không đối xứng và chưa có ablation chung.
+- Chưa có số liệu năng lượng hay chi phí huấn luyện.
+- P2 chưa được đánh giá trên full split.
+- P5 chưa được đánh giá trên HDFS-X.
+
+## Tài liệu tham khảo
+Chỉ P1–P6 trong `corpus/`. Cả sáu đều ghi "fictional" trong tiêu đề. Không có DOI hay URL ngoài corpus.
+
+## Kiểm chứng
+- `wc -w REVIEW.md` và `python3 -m json.tool answer.json` → chưa chạy, vì hook chặn lệnh này (lỗi chặn từ `claude-guard`).
+- Grep `-o '\S+'` trên `REVIEW.md` cho khoảng 405 từ, nằm trong khoảng yêu cầu.
+- Tôi chưa kiểm tra `answer.json` bằng trình phân tích JSON. Người có quyền có thể chạy hai lệnh trên để xác nhận.
+
+Bản đầy đủ: `.ccoding/T-20261103-020022-75c/outputs/research-S1-literature-researcher.md`
+
+## Review
+
+Đã duyệt: Tôi đã đối chiếu từng câu trả lời và từng số liệu với cả sáu tệp P1–P6. Không câu nào cần chặn bàn giao (blocker hay major). Chi tiết: q1 = P4 với F1 0.962, đúng theo P4.md. Con số 0.971 của P2 đo trên HDFS-X-small, và P6.md nói rõ tập này không so sánh được với full split, nên loại nó ra là đúng. q2 = P5 trên BGL-X, đúng: P5.md ghi 0.5% labeled data. P2 và P4 không nêu tỷ lệ nhãn, P1 và P3 dùng 80%. q3 đặt not_in_corpus = true là đúng: P4.md chỉ nêu latency 3.1 ms/session trên A100 và tự ghi không báo cáo training cost, không có số năng lượng nào. q4 = P1 và P3, đúng: P1 nói parsing là 'necessary first step', P3 nói 'Contrary to the common belief that template extraction is required'. Tôi đã kiểm các số trong REVIEW.md: 0.962/0.948/0.931, BGL 0.915/0.902/0.874, 0.861 so với 0.701, 9–14 điểm, 11M/4.7M lines, 22M params, 3.1 ms. Tất cả khớp nguyên văn corpus, và mỗi trích dẫn [Px] được gán đúng bài. Nhận định 'bằng chứng của P3 chỉ dựa trên một dataset' là đúng, vì P3.md chỉ báo cáo HDFS-X. Điểm mạnh: phân biệt đúng các split, nói rõ số liệu là tác giả tự báo cáo, cân bằng hai phía trong tranh luận về parsing, không có kiến thức ngoài corpus. Kết luận: Chấp nhận, kèm vài góp ý nhỏ (minor).
+Lệnh kiểm tra reviewer đã chạy: ls corpus && cat corpus/* && echo ---- && cat answer.json && echo ---- && cat REVIEW.md && wc -w REVIEW.md && python3 -m json.tool answer.json >/dev/null && echo JSONOK; git status --short (lỗi); ls corpus && cat corpus/* && echo ---- && cat answer.json && echo ---- && cat REVIEW.md && git status --short (lỗi)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-020022-75c` · chế độ: project · phòng: research · phân loại dữ liệu: internal
+- Tổng: **52 in / 20.1k out**, cache đọc 341.1k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Peer Reviewer (@peer-reviewer) | research | 22 | 6671 | 144192 | 2 |
+| Literature Researcher (@literature-researcher) | research | 18 | 9580 | 127845 | 2 |
+| Trưởng phòng Nghiên cứu (@research-lead) | research | 10 | 3377 | 66830 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 498 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/research-S1-literature-researcher.md` — S1 Literature Researcher: xử lý yêu cầu (@literature-researcher)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+| Peer Reviewer (@peer-reviewer) | research | **94** A | — | — | 90 | 100 | 0 | — | 151k | 3/23 |
+| Literature Researcher (@literature-researcher) | research | **73** B | 50 | 100 | 85 | 70 | 1 | 2 | 137k | 2/11 |
+| Trưởng phòng Nghiên cứu (@research-lead) | research | **72** B | 50 | 100 | 82 | — | 0 | — | 70k | 2/9 |
+
+### Việc cần sửa theo agent
+- **Literature Researcher** (@literature-researcher, 73 B):
+  - Không có nguồn kiểm chứng được (DOI/URL) và không dùng công cụ tra cứu.
+  - Qua review lần đầu 0/1 hạng mục, còn blocker ở review cuối 0/1 (bị nêu qua các vòng: 0 blocker, 1 major). Lỗi ở review cuối: —
+- **Trưởng phòng Nghiên cứu** (@research-lead, 72 B):
+  - Thao tác công cụ lỗi nhiều (2/9, 22%; nhiều nhất ở run_command 2/2) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+  - 1 lần kế hoạch không đúng định dạng JSON (phải dùng kế hoạch dự phòng).
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

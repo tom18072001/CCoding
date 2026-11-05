@@ -1,0 +1,1 @@
+SR-24: src/money.js:4: "||" -> "&&" (một chỗ trên lời giải tham chiếu); điểm khi sinh = 0.889; test trượt: 

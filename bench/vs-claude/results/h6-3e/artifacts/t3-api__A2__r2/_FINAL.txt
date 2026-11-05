@@ -1,0 +1,17 @@
+Cả 4 tính năng trong FEATURES.md đã được hiện thực và `npm test` xanh (8 test, không lỗi). Tôi chưa chạy thử server thật bằng tay ngoài bộ test, vốn đã gọi API thật qua HTTP.
+
+- **Xác thực & phân quyền:** mọi route `/tasks…` và `/audit` kiểm tra theo thứ tự 401 → 400 truy vấn → 404 → 403 → 400 body, trong `src/handlers/tasks.js`. Member chỉ thấy nhiệm vụ nhóm mình (nhóm khác trả 404). Quyền của manager, admin và member đúng như đặc tả.
+- **Danh sách:** `GET /tasks` trả `{items,total,page,pageSize}`. Đủ các tham số lọc, tìm, sắp xếp và phân trang; `q` không phân biệt dấu và `đ`. Tham số lạ, trùng hoặc sai giá trị đều trả `INVALID_QUERY` kèm `field` của tham số lỗi đầu tiên trên URL. Khi sắp xếp, hòa thì xếp theo số của `id`, và nhiệm vụ không có `dueDate` luôn nằm cuối.
+- **CSV:** `GET /tasks/export.csv` đặt trước `/tasks/:id`, dùng chung bộ lọc, sắp xếp và quyền với danh sách, và trả 400 khi có `page`/`pageSize`. Có BOM, `\r\n`, bọc ngoặc kép theo RFC 4180 và thêm `'` chống chèn công thức cho chuỗi.
+- **Nhật ký:** `store.audit` và `addAudit` trong `src/store.js`. Chỉ thao tác thành công mới được ghi. `GET /audit` chỉ cho admin, mới nhất trước, lọc được theo `taskId`.
+
+`res.text()` của `fetch` tự bỏ BOM, nên tôi sửa `test/helpers.js` để giữ nguyên BOM khi đọc phản hồi (thêm trường `buf`). Server vẫn gửi BOM đúng đặc tả.
+
+Test cũ đã đổi sang dạng kết quả mới kèm header `X-User`. Tôi thêm test cho xác thực, phân quyền member và manager, lọc/tìm/sắp xếp/phân trang, CSV và nhật ký, nằm trong `test/tasks.test.js`.
+
+Đặc tả không nói rõ một vài trường hợp nên tôi tự chọn như sau:
+- Tham số rỗng `status=` hoặc `team=` bị coi là không hợp lệ (400).
+- `assignee=` và `taskId=` rỗng được dùng như giá trị lọc bình thường nên kết quả rỗng.
+- Một thao tác `PATCH` thành công nhưng không đổi trường nào vẫn được ghi vào nhật ký, với `changes: []`.
+
+Tôi chưa commit gì.

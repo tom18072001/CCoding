@@ -1,0 +1,77 @@
+# D-01 — Trần lượt mô hình cho runtime claude-cli (--max-turns) và báo `capped`
+#
+# Trạng thái: ĐỀ XUẤT, CHƯA KIỂM --check, chưa typecheck, chưa test. Không áp dụng.
+# Gốc: HEAD e886c04 (src/ không đổi kể từ d7600f6 — S2 §2). Tác giả: S5 @solution-architect.
+# Kiểm (reviewer): git apply --ignore-whitespace --check docs/research/dev-review/patches/D-01-claude-cli-max-turns.diff
+#   (working tree CRLF, bản vá LF — xem dev-review/verification.md §2)
+#
+# Vấn đề (S3 K37, K39): `phases.toolTurns` (thực thi 40, sửa 16, review 10) được đưa vào
+#   toolPolicy.maxTurns (src/orchestrator.ts:2673-2674) nhưng chỉ runtime API đọc
+#   (src/runtimes/api.ts:377). ClaudeCliRuntime.run không truyền trần lượt
+#   (src/runtimes/claude-cli.ts:145-176) và không trả `capped`, nên `maxContinuations`
+#   (orchestrator.ts:1603) không bao giờ kích hoạt và KPI `capHits` luôn bằng 0 với claude-cli —
+#   runtime của toàn bộ benchtest.
+# Thay đổi: truyền `--max-turns <toolPolicy.maxTurns>` khi có công cụ; khi Claude Code kết thúc với
+#   result.subtype = "error_max_turns" thì KHÔNG coi là lỗi mà trả capped = 'turns' + diag,
+#   để orchestrator chạy tiếp như runtime API.
+#
+# Giả thuyết H-D01: có trần lượt + chạy tiếp với ngữ cảnh mới, lượt execute dài bị cắt thành các
+#   lượt ngắn hơn → giảm token ghi/đọc cache của lượt dài (C-13, C-20) mà không giảm tỉ lệ test ẩn.
+# Chỉ số (khai báo trước):
+#   - chính: chi phí USD / lượt chạy, token ghi cache / lượt chạy (calls.csv) — kỳ vọng không tăng;
+#   - an toàn: tỉ lệ test ẩn đạt — cận dưới 95 % của hiệu ≥ −2 điểm % (design.md §5.3);
+#   - cơ chế: số lượt gọi có capped = 'turns' (log `subtask.continue`) > 0 ở bài lớn; capHits ≠ 0.
+# Cách đo: A/B theo khung gói F1 của experiment-plan.md §3 (nhánh A = gốc, nhánh D01 = bản vá),
+#   làn nhanh Sonnet, t1–t5, 3 lượt/nhánh (thăm dò) → 6 lượt (xác nhận); thêm gói C (bài lớn) vì
+#   bài t1–t5 có thể không chạm trần 40 lượt.
+# Rủi ro / giả định CHƯA KIỂM:
+#   - cờ `--max-turns` của `claude -p` và subtype "error_max_turns" lấy theo tài liệu Claude Code
+#     đã biết, chưa thử với phiên bản claude đang cài;
+#   - trần review = 10 lượt có thể quá thấp cho reviewer claude-cli chạy test nhiều bước →
+#     review bị cắt; theo dõi tỉ lệ review có capped, cân nhắc nâng phases.toolTurns.review;
+#   - khi chạm trần mà văn bản rỗng, hành vi giữ như cũ (báo lỗi "claude thoát mã …").
+# Hoàn tác: git apply -R (một tệp, không đổi cấu hình hay dữ liệu).
+diff --git a/src/runtimes/claude-cli.ts b/src/runtimes/claude-cli.ts
+--- a/src/runtimes/claude-cli.ts
++++ b/src/runtimes/claude-cli.ts
+@@ -42,4 +42,6 @@ export class ClaudeStreamParser {
+   model = '';
+   isError = false;
+   errorText = '';
++  /** subtype của sự kiện result (vd. error_max_turns khi chạm --max-turns). */
++  subtype = '';
+   sawResult = false;
+@@ -107,11 +109,13 @@ export class ClaudeStreamParser {
+       case 'result':
+         this.sawResult = true;
++        if (typeof ev.subtype === 'string') this.subtype = ev.subtype;
+         if (typeof ev.result === 'string') this.resultText = ev.result;
+         if (ev.usage) this.usage = ev.usage;
+         if (typeof ev.total_cost_usd === 'number') this.costUsd = ev.total_cost_usd;
+         if (ev.modelUsage && typeof ev.modelUsage === 'object') {
+           const names = Object.keys(ev.modelUsage);
+           if (names.length) this.model = names.join('+');
+         }
++        if (ev.subtype === 'error_max_turns') break; // chạm --max-turns: không phải lỗi — run() báo capped để CCoding chạy tiếp
+         if (ev.is_error || (ev.subtype && ev.subtype !== 'success')) {
+           this.isError = true;
+@@ -147,4 +151,6 @@ export class ClaudeCliRuntime implements Runtime {
+     if (req.allowTools && req.tools.length) {
+       args.push('--tools', req.tools.join(','), '--permission-mode', this.cfg.permissionMode ?? 'acceptEdits');
++      // trần lượt mô hình như vòng công cụ của runtime API (phases.toolTurns) — trước đây claude-cli không có trần lượt
++      if (req.toolPolicy?.maxTurns && req.toolPolicy.maxTurns > 0) args.push('--max-turns', String(Math.floor(req.toolPolicy.maxTurns)));
+       // Hook PreToolUse áp cùng chính sách với vòng công cụ của CCoding (lệnh cấm mặc định + denyCommands
+       // của dự án + chặn tạo/chuyển nhánh) và giữ mọi thao tác tệp trong thư mục làm việc của nhiệm vụ.
+@@ -200,4 +206,5 @@ export class ClaudeCliRuntime implements Runtime {
+     else if (parser.isError) error = parser.errorText;
+     else if (proc.code !== 0 && !text) error = `claude thoát mã ${proc.code}: ${proc.stderr.slice(-400)}`;
++    const capped = !error && parser.subtype === 'error_max_turns' ? ('turns' as const) : undefined;
+     return {
+       text,
+@@ -214,4 +221,6 @@ export class ClaudeCliRuntime implements Runtime {
+       durationMs: Date.now() - started,
+       error,
+       toolCalls: parser.toolCalls.length ? parser.toolCalls : undefined,
++      capped,
++      diag: capped ? `hết ${req.toolPolicy?.maxTurns ?? '?'} lượt (--max-turns của claude-cli)` : undefined,
+     };

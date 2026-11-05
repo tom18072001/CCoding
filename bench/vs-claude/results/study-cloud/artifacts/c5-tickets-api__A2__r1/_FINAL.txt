@@ -1,0 +1,7 @@
+`GET /tickets` now takes `status`, `assignee`, `sort`, `limit` and `cursor`, and `npm test` passes (7 tests, including the original one). A call with no parameters still returns the bare array sorted by id.
+
+The change is in `src/handler.js`, with new tests in `test/list.test.js`. The tests cover filtering, sort order with the id tie-break, paging through every sort option, a full last page, each validation error and ignored unknown parameters.
+
+- **Cursor:** it is a base64url-encoded token holding the last item's sort value and id, plus a fingerprint of `status`, `assignee` and `sort`. Paging resumes after that item, so it stays correct and gives no duplicates even if tickets change between requests. Changing any of those three values makes the cursor invalid.
+- **Empty values:** `status=` or `status=open,` returns `invalid_status`. An empty `assignee` entry just matches no tickets. The brief didn't cover this case, so I left it lenient.
+- **Strict `limit`:** only plain digit strings are accepted, so `1.5`, ` 5`, `+5` and an empty value all return `invalid_limit`.

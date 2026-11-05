@@ -1,0 +1,84 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g1-slug-dedupe__B7cab__r10] Slug hóa tiêu đề và sinh slug không trùng (lệnh kiểm tra đỏ sẵn)
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+src/slug.js đã có slugify (cắt '-' hai đầu) và uniqueSlugs theo SPEC.md, và `npm test` xanh (4/4, theo bàn giao). Tôi đọc src/slug.js và SPEC.md và thấy mã khớp đặc tả. Phần còn lại chỉ là kiểm tra độc lập các trường hợp biên mà bộ nghiệm thu ẩn có thể đụng tới. Không làm lại từ đầu.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Kiểm thử biên độc lập cho slugify/uniqueSlugs (@qa-tester, done)
+
+## Tóm tắt
+Tôi đã thêm `test/slug-edge.test.js` với 9 test biên cho `slugify` và `uniqueSlugs`, đối chiếu với SPEC.md. `npm test` chạy 13/13 pass (4 test cũ và 9 test mới), không phát hiện lỗi trong `src/slug.js`. Tôi chưa kiểm tra "test mới phải từng đỏ khi cố tình làm hỏng" vì không được sửa mã nguồn.
+
+## Kết luận
+Đạt
+
+## Ma trận tiêu chí
+| Tiêu chí | Cách kiểm | Kết quả | Bằng chứng |
+|---|---|---|---|
+| (a) Đ/đ hoa và thường | `slugify('Đ')`, `slugify('đ')`, `slugify('ĐÀ NẴNG đẹp')` | Đạt | cả ba trả đúng (`d`, `d`, `da-nang-dep`) |
+| (b) NFC và NFD | cùng một chuỗi ở hai dạng chuẩn hóa | Đạt | hai dạng cho cùng `tieng-viet-uot-o-a-a-e-o-u` |
+| (c) Ký tự đặc biệt liên tiếp | `a!!!   ---___b`, `--a--b--` | Đạt | cả hai ra `a-b` |
+| (d) Rỗng hoặc chỉ ký tự đặc biệt | `''`, `' '`, `'!@#'`, `'---'`, `'___'`, `'😀'`… | Đạt | tất cả ra `''` |
+| (e) null/undefined/số | `null`, `undefined`, `123`, `0`, `-1.5` | Đạt | `''`, `''`, `'123'`, `'0'`, `'1-5'` |
+| (f) uniqueSlugs | `['a','a','a-2']`, `['','',' ']`, `['!!','untitled']`, mảng rỗng, thứ tự, không đổi input | Đạt | đúng như SPEC. Ví dụ: `['a','a','a-2']` → `['a','a-2','a-2-2']`, `['','',' ']` → `['untitled','untitled-2','untitled-3']` |
+
+Ngoài danh sách yêu cầu, tôi thêm hai ca: `['a-2','a','a']` → `['a-2','a','a-3']` và `['untitled','!!']` → `['untitled','untitled-2']`.
+
+## Lệnh đã chạy
+- `npm test` → exit 0, 13 tests, 13 pass, 0 fail. Không đo lại baseline, theo yêu cầu.
+
+## Phát hiện
+Không có blocker, major hay minor nào.
+- Ghi chú (không phải lỗi): mã dùng `Array.from(titles, …)`, nên `uniqueSlugs` cũng nhận iterable. SPEC không yêu cầu điều này.
+- Ghi chú (không phải lỗi): ký tự không thuộc `[a-z0-9]` sau khi bỏ dấu, ví dụ emoji hoặc chữ CJK, đều thành `-` rồi bị cắt. Hành vi này khớp SPEC.
+
+**Tệp đã tạo:** `test/slug-edge.test.js`. `src/slug.js` và `test/slug.test.js` giữ nguyên.
+
+Bản đầy đủ: `.ccoding/T-20261104-140802-e78/outputs/dev-S1-qa-tester.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-140802-e78` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **16 in / 5,550 out**, cache đọc 90.6k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| QA Engineer (@qa-tester) | dev | 6 | 2978 | 36898 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 6 | 1672 | 32170 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 900 | 21509 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-qa-tester.md` — S1 Kiểm thử biên độc lập cho slugify/uniqueSlugs (@qa-tester)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | ℹ skipped 0 · ℹ todo 0 · at Test.run (node:internal/test_runner/test:1118:25) · at Test.processPendingSubtests (node:internal/test_runner/test:787:18) · at Test |
+| sau thực thi | `npm test` | 0 | ℹ tests 13 · ℹ suites 0 · ℹ pass 13 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| QA Engineer (@qa-tester) | dev | **70** B | thấp | — | — | 100 | 100 | 100 | 100 | 1 | 1 | 40k | 0/5 | — |
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | 100 | — | 100 | 60 | 0 | — | 34k | 0/4 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 22k | 0/1 | — |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 65 B):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

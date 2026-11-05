@@ -1,0 +1,128 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t1-duration__B7__r5] Duration parse/format theo đặc tả, nhiều trường hợp biên
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Bản hiện thực src/duration.js và test/edge.test.js đã có trong worktree (chưa commit; 11 test pass theo bàn giao). Việc còn lại là đối chiếu độc lập với SPEC.md để bắt các lỗi biên mà bộ nghiệm thu ẩn có thể kiểm tra. Chia hai hạng mục song song: một bên sở hữu src/duration.js để sửa lỗi, một bên viết test đối chiếu theo đặc tả vào tệp riêng. Tôi chưa chạy được `npm test` trong lượt lập kế hoạch này vì quyền chỉ đọc.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Rà soát và sửa src/duration.js theo SPEC.md (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã đối chiếu từng câu của SPEC.md với `src/duration.js` (cả `parseDuration` và `formatDuration`). Tôi không sửa gì trong `src/duration.js` so với bản bàn giao, và `npm test` xanh (exit 0, 11/11 pass). Chỉ có một điểm đặc tả mơ hồ là `"- P1D"`. Tôi nghiêng về việc SPEC cho phép nó, nhưng chưa sửa vì test cũ của bản bàn giao đang khẳng định ngược lại.
+
+## Tệp đã tạo/sửa
+- `src/duration.js`: không đổi so với bản bàn giao. Tôi từng sửa thử `"- P1D"` rồi hoàn lại, nên không có thay đổi ròng.
+- Không sửa tệp test nào, theo đúng ràng buộc.
+
+## Kiểm chứng
+- Sửa thử cho `"- P1D"` hợp lệ → `npm test` còn 10/11 pass. Test đỏ là `parse lỗi` ở `test/edge.test.js:42`, vì danh sách lỗi có `'- P1D'`.
+- Hoàn lại thay đổi → `npm test` → exit 0, 11 test, 0 fail.
+- Chạy thử bằng `node -e` (sau khi sửa thử, trước khi hoàn lại): `"- P1D"`, `"-P1D"` → −86 400 000; `"+ pt0,5s"` → 500; `"- 5s"` → −5000. `"-"`, `"- "`, `"P 1D"`, `"1h-30m"`, `"1h 30"` đều ném `TypeError` đúng message.
+
+## Quyết định thiết kế
+**Các điểm đã đối chiếu và khớp SPEC, không cần sửa:**
+- **Message lỗi:** `"Invalid duration: " + JSON.stringify(input)`, và `undefined` ra đúng `"Invalid duration: undefined"`.
+- **Làm tròn:** half away from zero, và `-0` thành `0`.
+- **Số thuần:** `".5"`, `"5."`, `"1e3"` đều lỗi.
+- **ISO:** dấu phẩy thập phân, `P1W` không kèm thành phần khác, `P`/`PT`/`P1DT` lỗi, `P1Y`/`P1M` lỗi, `PT1M` = 1 phút, không phân biệt hoa/thường.
+- **Dạng đơn vị:** thứ tự giảm dần, không lặp đơn vị, không trộn số thuần với đơn vị, bí danh tra bằng `hasOwnProperty`.
+- **Format:** `largest` giữ các đơn vị liên tiếp kể cả đơn vị bằng 0 ở giữa, làm tròn khi phần còn lại ≥ nửa đơn vị, nhớ lên đơn vị lớn hơn, `-0` không có dấu `-`, và tên số ít/số nhiều của kiểu long.
+
+**Điểm mơ hồ đã chốt:**
+- **`"- P1D"` (khoảng trắng giữa dấu và `P`):**
+  - Hiện trạng: ném lỗi, khớp assertion ở `test/edge.test.js:42`.
+  - Cách đọc khác: mục 4 cho phép khoảng trắng sau dấu cho cả chuỗi, còn "không khoảng trắng bên trong" ở mục 7 chỉ nói về phần thân ISO. Nếu đọc theo mục 4 thì `"- P1D"` phải hợp lệ, và bộ nghiệm thu ẩn có thể kiểm tra theo hướng này.
+  - Cách sửa nếu chốt đọc theo mục 4: gọi `s = s.trimStart()` ngay sau khi tách dấu, trước nhánh `s[0] === 'p'` ở `parseDuration`, rồi bỏ `'- P1D'` khỏi danh sách lỗi ở `test/edge.test.js:42`. Tôi đã thử và nó chạy đúng.
+- **`options: null`:** coi như mặc định. SPEC không nói rõ, giữ nguyên.
+
+## Rủi ro & việc còn mở
+- Cần chủ sở hữu test (S2 hoặc người điều phối) chốt hướng cho `"- P1D"`. Tôi nghiêng về việc cho hợp lệ (đọc theo mục 4), nhưng vì không được sửa `test/edge.test.js` nên chưa áp dụng.
+- Với số mili giây rất lớn (từ khoảng 1e21), `parseFloat` làm mất độ chính xác. Round-trip chỉ đảm bảo trong miền số an toàn.
+- Tôi chưa có bộ nghiệm thu ẩn nên chưa kiểm chứng phần đó.
+
+ESCALATE: Không áp dụng.
+
+Bản đầy đủ: `.ccoding/T-20261102-173748-29d/outputs/dev-S1-senior-swe.md`
+
+### S2 — Bộ test đối chiếu đặc tả độc lập (parse và format) (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã viết `test/spec-conformance.test.js` với 26 test, dựa trên SPEC.md và không phụ thuộc vào cách `src/duration.js` hiện thực. `npm test` cho 37 test, 37 pass, 0 fail. Code hiện tại không sai điều khoản SPEC nào mà các test này kiểm tra, nên không có mục nào cần chuyển cho S1.
+
+## Tệp đã tạo/sửa
+- `test/spec-conformance.test.js` (mới). Tôi không sửa `src/duration.js`. Các test bao gồm:
+  - **Export và parse số:** kiểm tra module export đúng hai hàm. Số làm tròn half away from zero, `-0` ra `0`. Số thuần lớn.
+  - **Đơn vị và khoảng trắng:** bảng giá trị 6 đơn vị. Toàn bộ bí danh với các kiểu hoa/thường. Các dạng khoảng trắng và dấu `+`/`-`. Số thập phân ở từng thành phần được cộng rồi mới làm tròn.
+  - **ISO 8601:** nhiều dạng hợp lệ, gồm dấu phẩy, `P1.5W`, dấu âm và chữ thường.
+  - **Đầu vào lỗi:** gần 100 chuỗi lỗi về số, đơn vị, thứ tự và ISO. Kiểm tra kiểu đầu vào và `message` lỗi.
+  - **Format:** các ví dụ trong SPEC. Mỗi đơn vị ở dạng short/long, số ít/nhiều. Bỏ đơn vị 0, làm tròn và số âm. Số lớn không in dạng mũ.
+  - **Option `largest`:** đơn vị 0 nằm giữa, ngưỡng đúng nửa thì làm tròn lên, nhớ nhiều tầng (`1d 23h 59m 59.5s` với `largest: 3` ra `2d`). Giá trị `largest`/`style` không hợp lệ.
+  - **Round-trip:** 30 giá trị cố định và 300 giá trị giả ngẫu nhiên có hạt giống cố định.
+- Bốn lần chạy đầu fail đều do kỳ vọng sai trong test của tôi, không phải lỗi của code. Tôi đã sửa test, không sửa code:
+  - `"1"` là số thuần hợp lệ.
+  - `"P1W "` được trim nên hợp lệ.
+  - `"0.4ms 0.4ms"` lặp đơn vị nên lỗi đúng spec.
+  - Với `D+7` và `largest: 5` thì kết quả là `1d 7ms`.
+
+## Hợp đồng API
+Không áp dụng.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0. `# tests 37 · # pass 37 · # fail 0`. Gồm 3 test sẵn có, 8 test của `edge.test.js` và 26 test mới.
+- Danh sách test fail so với SPEC: không có.
+
+## Việc còn lại
+- Không có biến môi trường mới.
+- Ba điểm SPEC không quy định rõ nên tôi không đưa vào test: `"- P1D"` (khoảng trắng giữa dấu và ISO), `options: null`, và độ chính xác của số trên khoảng 1e21 khi parse. `edge.test.js` đã kiểm tra `"- P1D"` là lỗi theo cách hiểu của S1.
+- Test `format` ở 1e21 chỉ kiểm tra không in dạng mũ, không kiểm tra giá trị chính xác.
+
+Bản đầy đủ: `.ccoding/T-20261102-173748-29d/outputs/dev-S2-backend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-173748-29d` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **40 in / 33.7k out**, cache đọc 371.8k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 22 | 18556 | 198876 | 2 |
+| Backend Developer (@backend-dev) | dev | 12 | 13471 | 133607 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 6 | 1630 | 39362 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Rà soát và sửa src/duration.js theo SPEC.md (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Bộ test đối chiếu đặc tả độc lập (parse và format) (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 3 · # suites 0 · # pass 0 · # fail 3 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 37 · # suites 0 · # pass 37 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **91** A | — | 84 | 94 | 100 | 1 | 1 | 217k | 1/14 |
+| Backend Developer (@backend-dev) | dev | **100** A | — | 100 | 100 | 100 | 1 | 1 | 147k | 0/6 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **82** A | — | 100 | 60 | — | 0 | — | 41k | 1/2 |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

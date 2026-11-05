@@ -1,0 +1,14 @@
+I wrote the spec to `SPEC.md` at the repository root. It includes the `## Open questions and assumptions` section, with 13 questions and an assumption for each.
+
+The request contradicts itself in several places. The spec picks a conservative default for each one and lists it for the customer to confirm:
+
+- **Full IPs and usernames vs. no unmasked personal data (Q1):** exports are masked by default. Unmasked data is only available through an approval-gated forensic path with an audit trail. That path is marked as blocked until the customer answers.
+- **Keep exports forever vs. delete personal data after 12 months (Q2):** masked exports are kept under the audit policy. Unmasked exports are deleted at 12 months from the event date. The audit record and file hash are kept forever.
+- **5-second limit vs. "export everything" (Q3):** the spec assumes a cap of 50,000 rows per export, with a 5-second target at the 95th percentile. Larger exports are told to narrow the scope. There is no asynchronous export in v1.
+- **"Their team's logs from last month" vs. "everything they can see" (Q4):** the spec fixes the scope to the manager's own team and the previous calendar month, in Vietnam time (UTC+7).
+- **"Like the old system" (Q5):** the old format is unknown, so the spec uses placeholder columns until the customer sends a sample.
+- **"Make it simple" (Q12):** the spec keeps the UI to one button. It asks the customer to confirm that this does not mean dropping the masking, audit and approval controls.
+
+The legal references (Decree 13/2023 and the State Bank of Vietnam rules) are flagged for legal review in Q9. They are not legal conclusions.
+
+I did not commit anything.

@@ -1,0 +1,19 @@
+Cả bốn tầng của cfgchain và hàm `compile` đã xong, và `npm test` xanh (28 test, 0 lỗi). Chưa có commit nào.
+
+Tôi đã viết:
+- **Tầng 1:** `src/lexer.js` và `src/parser.js` (gồm `parse` và `parseProject`).
+- **Tầng 2:** `src/check.js`, ba pha liên tiếp theo đặc tả.
+- **Tầng 3:** `src/evaluate.js`.
+- **Tầng 4:** `src/diff.js`.
+- **`compile`:** nằm trong `src/index.js`.
+- **Tệp phụ `src/merge.js`:** dùng chung cho tầng 2 và 3, chứa phần hợp nhất cấu hình và phân giải tham chiếu, để hai tầng không lệch nhau.
+- **Test:** thêm một tệp cho mỗi tầng (lexer, parser, check, evaluate, diff, compile), giữ nguyên `smoke.test.js`. Chúng kiểm mã lỗi, `file`, `line`, `column`, thứ tự báo lỗi và ví dụ trong đặc tả.
+
+Một số chỗ đặc tả chưa nói rõ, tôi tự chọn như sau; nếu bộ nghiệm thu hiểu khác thì đây là những chỗ cần sửa:
+- **Dấu `\` ở cuối tệp:** báo `LEX_BAD_ESCAPE`.
+- **Từ khóa trong tham chiếu:** `${a.true}` được coi là hợp lệ về mặt lexer, vì chỉ kiểm theo mẫu định danh.
+- **Khối được trộn từ nhiều `Block`:** vị trí của đối tượng và của khóa (cho `SEM_UNKNOWN_KEY`) lấy theo `Block` khởi tạo đầu tiên.
+- **Lược đồ `closed: true` không có `fields`:** không báo gì, vì đặc tả chỉ nói đến `fields` khi đối tượng có `fields`.
+- **`applyDiff`:** chấp nhận thêm `-` làm chỉ số thêm vào cuối mảng. Đặc tả không nói tới, nhưng nó theo RFC 6901 và không ảnh hưởng quy tắc bất biến.
+
+Phần lớn lỗi test lúc đầu là do tôi đếm cột sai trong chính các test. Tôi đã đối chiếu từng chỗ bằng tay với đặc tả rồi mới sửa test; không có chỗ nào phải sửa mã nguồn.
