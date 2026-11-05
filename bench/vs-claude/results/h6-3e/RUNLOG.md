@@ -9,7 +9,7 @@ Phân loại dữ liệu: **Nội bộ**. Bài tổng hợp, không có dữ li�
 | Lệnh (`run3e-b.ps1`) | 7 bài `l1-modules, l2-chain, t1-duration, t2-orders, t3-api, t4-perf, t5-logq`, `--out results\h6-3e`. E6a: `--arms A1 --repeats 3 --timeout 20`. E6b: `--arms A2 --repeats 2 --timeout 40`. E6c: `--arms B0 --repeats 3 --timeout 40` |
 | Thời gian (giờ VN) | E6a 4/11 19:53 → 21:04. E6b 21:04 → 5/11 00:15; chạm hạn mức 21:08–22:08, thoát mã 3 ba lần. E6c 00:15 → 02:05 |
 | Claude Code CLI | **2.1.318** ở mọi dòng. Bản đã tự cập nhật từ lúc bắt đầu E4b (`gates-main/RUNLOG.md`) |
-| `runs.jsonl` | sha256 `e23a98de981d74dd092d1391b8a93de86b6a03ba5bdd04179211fe9b990e5d5f`, 59 dòng |
+| `runs.jsonl` | sha256 `ae25175c6de34f11198463a19673336f8a68c34442f09d4b3de58a1db3d4c4e6`, 60 dòng (bản 59 dòng trước khi chạy lại: `e23a98de…5d5f`) |
 
 ## Kết quả chạy (không có điểm)
 
@@ -17,8 +17,8 @@ Phân loại dữ liệu: **Nội bộ**. Bài tổng hợp, không có dữ li�
 |---|---|---|---|---|---|---|
 | A1 | 21/21 | 0 | 0 | 5,81 M | 11,87 | 1,17 giờ |
 | A2 | 14/14 | 3 hạn mức, cùng khóa `l2-chain__A2__r1`, chạy lại xong | 0 | 9,62 M | 19,83 | 2,17 giờ |
-| B0 | **20/21** | 1 lỗi hạ tầng `t2-orders__B0__r3` (`infra: error`), **chưa chạy lại** | 0 | 8,97 M | 19,73 | 1,81 giờ |
+| B0 | **21/21** | 1 lỗi hạ tầng `t2-orders__B0__r3` (`infra: error`, 4/11 lúc 19:01Z); chạy lại xong 5/11 lúc 10:14 giờ VN | 0 | 9,30 M | 20,47 | 1,88 giờ |
 
-- **Tổng:** 55/56 khóa xong. Thời gian máy 5,15 giờ, khoảng 51 USD.
-- **Thiếu 1 khóa:** `t2-orders__B0__r3`. Theo §4.1, lượt lỗi hạ tầng được thay. Chạy lại bằng cùng lệnh E6c thì runner bỏ qua khóa đã xong, chỉ chạy đúng khóa này, khoảng 5 phút. Việc chạy lại chờ giám đốc cho phép dùng hạn mức.
+- **Tổng:** 56/56 khóa xong. Chạy lại lúc 5/11 10:10–10:14 bằng `run3e-d.ps1`; server 7425 được khởi động lại ở cùng commit `6c454f6`, kèm `DISABLE_AUTOUPDATER=1`. Thời gian máy khoảng 5,2 giờ, khoảng 52 USD.
+- **Khóa chạy lại:** `t2-orders__B0__r3`. Theo §4.1, lượt lỗi hạ tầng được thay. Lượt này chạy cách các lượt khác khoảng 15 giờ, sau khi khởi động lại server. CLI vẫn 2.1.318.
 - Phòng Nghiên cứu phân tích H6 theo §9 V4-3e-E6, kèm phân tích độ nhạy sàn null (t2, t4) đã đặt trước.

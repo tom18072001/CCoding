@@ -58,3 +58,11 @@ Sổ này ghi **trước lượt đầu**, lúc 4/11/2026 13:55 giờ VN. Khi đ
   2. E5′ r2…r10;
   3. bước 2 của B-14;
   4. E7, E8 (giám đốc duyệt lúc 10:05).
+
+## Chạy tiếp (5/11/2026)
+
+- **10:10:** `run3e-d.ps1` (pid 20892, `results/local-3e/scripts/run3e-d.ps1`) chạy với `DISABLE_AUTOUPDATER=1`.
+  - Khởi động lại server 7425 (pid 20988, `6c454f6`) và server 7426 (pid 39844, `57148de`).
+  - Chạy lại khóa thiếu của E6, xong lúc 10:14 (E6 đủ 56/56).
+  - E5′: r1 bỏ qua vì đã xong. Kiểm `--first` bằng bản sửa: **đạt**. Bắt đầu **r2 lúc 10:14:52**.
+- **Sự cố 10:16–10:18:** kịch bản của bước 2 B-14 bắt đầu nhầm khối 1 và chạy một phiên `claude` khoảng 1–2 phút song song với r2, rồi bị dừng (`b14-step2/RUNLOG.md`). Lượt r2 không bị dừng. Khi phân tích, ghi lượt r2 nào đang chạy trong khoảng này.

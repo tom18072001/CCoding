@@ -37,3 +37,37 @@ Ghi 4/11/2026 (BRIEF-18 K3(b)), chỉ đọc tệp, không chạy test. Danh sá
 - Ca 8: `Bash` `cat .env`, `grep KEY app/.env.local` → bị chặn (`/chỉ đọc/` ở pha chỉ đọc; `env-file` ở `execute`). `Read` `${root}/.env`, `Grep`/`Glob` `${root}/.env.local` ở `plan` → bị chặn bởi `env-file`, thông báo khớp `/\.env/`; đối chứng `.env.example` không bị chặn.
 
 **Kết luận (7): chưa đủ, chờ D13 K6.** 5/8 ca có test đúng chế độ, 3/8 thiếu. Thỏa khi D13 K6 thêm 3 ca trên và bộ test xanh trên commit ghim. Chi tiết: `docs/research/context/k3-open-points-2026-11-04.md`.
+
+## Dựng trước khối 1 (5/11/2026, người điều phối)
+
+Đầu ra nguyên văn ở `setup/b14-prerun.txt`. Kịch bản là `setup/b14-setup.ps1` và `setup/b14-run.ps1`.
+
+| Mục | Giá trị |
+|---|---|
+| Commit ghim server và runner (9) | `0d216eb63c0be1ff3c085f5e1f6a5fd881d78049`, worktree `C:\Users\admin\ccoding-vs-claude\ccoding-b14`, detached, `git status` sạch. Có B-14b (`STABLE_TOOLS`, hook `stablePrefix`) và D13 (sửa hook cho phase không phải chuỗi). **Chưa có** `203482e` (luật làn mới) |
+| Build | `npm ci` exit 0, `npm run build` exit 0, lúc 10:15 giờ VN |
+| Server | Cổng 7427, thư mục dữ liệu `ccoding-b14\data`, thư mục làm việc `vbb14`. Không đụng 7420, 7425, 7426 |
+| Cấu hình nhánh tắt | `b14-off.json` (chép từ `ccoding-e5f`, chỉ đổi cổng sang 7427), sha256 `4bc56eafa042a8eb52a26e257af23d0e1d4beef45800d4e73e4856a57739cff0` |
+| Cấu hình nhánh bật | `b14-on.json`, sha256 `3899ac695583ba72409bc1a40be50cef11d9f996faa34101b702f96949a56798` |
+| Diff hai cấu hình | Chỉ thêm `"stablePrefix": true` vào `runtimes.claude-cli`, kèm dấu phẩy của dòng trước (đã so bằng JSON sắp khóa) |
+| Tiền điều kiện (7) | `npx tsx --test test/claude-stable-prefix.test.ts test/claude-stable-prefix-adversarial.test.ts test/shell-policy-adversarial.test.ts` trên commit ghim: **23/23 đạt**, exit 0 (`setup/adv-tests.log`). Có 3 ca D13 K6 thêm vào (heredoc, `awk 'BEGIN{system(...)}'`, `.env`). **Đã thỏa** |
+| Tiền điều kiện (6) | Script `docs/research/analysis/b14-step2.mjs`, blob `ae5afb9effbbea0f220ddad39cb8860b95df3bf9`, commit cuối `4e546f4` |
+| Claude Code CLI | `2.1.318`, ghim bằng `DISABLE_AUTOUPDATER=1`. Kịch bản dừng nếu CLI đổi giữa các khối (9) |
+| Chạy | `b14-run.ps1` chờ dòng "E5F XONG 10 luot moi o" trong `runlog-3e.txt`. Mỗi khối: chép cấu hình, khởi động lại server, ghi giờ UTC, sha256 và CLI vào `ops\b14-run.txt`. Sau mỗi khối kiểm `leak` của nhánh bật (dừng an toàn (7)) |
+
+## Sự cố trước khối 1 (5/11/2026 10:16–10:18 giờ VN)
+
+- **Diễn biến:**
+  - Bản đầu của `b14-run.ps1` lỗi cú pháp và thoát ngay.
+  - Bản sửa thì **không chờ E5′**. Điều kiện chờ tìm chuỗi `E5F XONG` (không phân biệt hoa thường) trong `runlog-3e.txt`, mà chính dòng log đầu của kịch bản lại ghi "B14 cho E5F xong" vào tệp đó.
+  - Vì vậy khối 1 (nhánh tắt) bắt đầu lúc **10:16:18**, trong khi E5′ r2 đang chạy.
+- **Xử lý:**
+  - Người điều phối thấy ngay và dừng runner, server 7427 cùng tiến trình `claude` của B-14, khoảng 10:17–10:18.
+  - Lượt chạy dở **chưa ghi dòng nào** vào `runs.jsonl`. Thư mục `b14-step2/off` đã xóa (chỉ có `config.json`).
+- **Sửa:**
+  - Dòng log đổi thành "doi E5-phay ket thuc".
+  - Điều kiện chờ thành regex phân biệt hoa thường `^\S+ E5F XONG 10 luot moi o`.
+  - Đã kiểm hai điều: điều kiện trả `False` khi E5′ chưa xong, và kịch bản đang chờ (pid 44828).
+- **Ảnh hưởng:**
+  - B-14: không có dữ liệu nào bị ảnh hưởng.
+  - E5′ r2: chạy chồng khoảng 1–2 phút với một phiên `claude` của B-14 (tranh hạn mức và CPU). Ghi ở `b15f-main/RUNLOG.md`.

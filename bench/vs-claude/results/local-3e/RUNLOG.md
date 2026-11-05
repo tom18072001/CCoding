@@ -26,6 +26,7 @@ Phân loại dữ liệu: **Nội bộ**. Bài tổng hợp, không có dữ li�
 | 21:04 → 5/11 02:05 | E6a xong 21:04 (21/21). E6b chạm hạn mức 21:08–22:08 (3 lần thoát mã 3), xong 00:15 (14/14). E6c xong 02:05 (20/21; `t2-orders__B0__r3` lỗi hạ tầng, chưa chạy lại). Chi tiết ở `h6-3e/RUNLOG.md` |
 | 5/11 02:07 → 03:46 | E5′ r1 (4 khóa, 2 lần chạm hạn mức). Kiểm nhiễu sau r1 dừng vì pha `review` vắng ở cả hai arm (cổng B-02 bỏ reviewer khi xanh). `STOP-E5F`, chờ giám đốc. Chi tiết ở `b15f-main/RUNLOG.md` |
 | 5/11 10:05 | **Giám đốc quyết** (trong phiên): (1) E5′ chạy tiếp, coi `review` là pha có điều kiện (§9 V4-3e-E5′ "Sai lệch (3)"); (2) **duyệt E7 và E8**, chạy sau bước 2 của B-14 (§9 V4-3f, mục "Dự kiến"); (3) tắt tự cập nhật Claude Code, ghim 2.1.318 cho phần còn lại |
+| 5/11 10:10 → | `run3e-d.ps1`: ghim CLI, khởi động lại 7425/7426, **E6 đủ 56/56** lúc 10:14 (chạy lại `t2-orders__B0__r3`), E5′ r2 từ 10:14:52. Bước 2 B-14 dựng xong 10:15 (worktree `0d216eb`, tiền điều kiện (7) 23/23), chờ E5′ xong; sự cố khởi động sớm 10:16–10:18 đã dừng (`b14-step2/RUNLOG.md`) |
 
 ## Nguồn p của H6 cho E6 (ghi trước lượt E6 đầu tiên, theo V4-3e-E6 (6))
 
