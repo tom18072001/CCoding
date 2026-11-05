@@ -33,6 +33,9 @@ const out = path.resolve(flag('out', path.join(SUITE, 'results', new Date().toIS
 const cfg = {
   ccodingUrl: flag('ccoding-url', 'http://127.0.0.1:7420'),
   ccodingData: flag('ccoding-data', path.resolve(SUITE, '../../data')),
+  // E8: server thứ hai (arm có `server: "alt"`, vd. B6w1 cần fastLane.maxParallel = 1 ở cấu hình server)
+  ccodingUrlAlt: flag('ccoding-url-alt', null),
+  ccodingDataAlt: flag('ccoding-data-alt', null),
   runtime: flag('runtime', 'claude-cli'),
   timeoutMin: Number(flag('timeout', '60')),
   claudeBin: flag('claude-bin', 'claude'),
@@ -83,10 +86,16 @@ fs.writeFileSync(path.join(out, 'config.json'), JSON.stringify({ argv, cfg, meta
 const armErrors = checkArms(armIds, ARMS, supportedLanes(path.resolve(SUITE, '../..')));
 if (armErrors.length) { for (const e of armErrors) console.error(e); process.exit(2); }
 
-if (armIds.some((a) => ARMS[a].kind === 'ccoding') && !(await serverUp(cfg.ccodingUrl))) {
+if (armIds.some((a) => ARMS[a].kind === 'ccoding' && ARMS[a].server !== 'alt') && !(await serverUp(cfg.ccodingUrl))) {
   console.error(`CCoding server not reachable at ${cfg.ccodingUrl} - start it with: node dist/cli.js serve`);
   process.exit(2);
 }
+if (armIds.some((a) => ARMS[a].server === 'alt')) {
+  if (!cfg.ccodingUrlAlt || !cfg.ccodingDataAlt) { console.error('Arm có server "alt" cần --ccoding-url-alt và --ccoding-data-alt (xem RUNBOOK, E8)'); process.exit(2); }
+  if (!(await serverUp(cfg.ccodingUrlAlt))) { console.error(`CCoding server (alt) không truy cập được ở ${cfg.ccodingUrlAlt}`); process.exit(2); }
+}
+/** Server của arm: mặc định hoặc server thứ hai (E8). */
+const serverOf = (spec) => (spec.server === 'alt' ? { url: cfg.ccodingUrlAlt, data: cfg.ccodingDataAlt } : { url: cfg.ccodingUrl, data: cfg.ccodingData });
 
 // ---------- helpers ----------
 function freshWorkspace(task, key) { // task: the parsed task.json
@@ -162,10 +171,11 @@ async function runArm(arm, task, key) {
   if (spec.kind === 'ccoding') {
     const dir = freshWorkspace(task, key);
     const projectId = `vb-${crypto.createHash('sha1').update(key + cfg.workRoot).digest('hex').slice(0, 12)}`;
-    const r = await runCcoding({ baseUrl: cfg.ccodingUrl, dataDir: cfg.ccodingData, runtime: cfg.runtime, projectId, workdir: dir, brief, title: `[vs-claude ${key}] ${task.title}`.slice(0, 120), taskOptions: spec.options ?? {}, agentId: spec.agentId, variant: `vs-claude/${key}`, timeoutMin: cfg.timeoutMin, isolation: spec.isolation ?? cfg.isolation });
+    const srv = serverOf(spec);
+    const r = await runCcoding({ baseUrl: srv.url, dataDir: srv.data, runtime: cfg.runtime, projectId, workdir: dir, brief, title: `[vs-claude ${key}] ${task.title}`.slice(0, 120), taskOptions: spec.options ?? {}, agentId: spec.agentId, variant: `vs-claude/${key}`, timeoutMin: cfg.timeoutMin, isolation: spec.isolation ?? cfg.isolation });
     if (r.infra || !r.taskId) return { dir, ...r, infra: r.infra ?? 'error' }; // chưa tạo được task: lỗi hạ tầng, không chấm
     let leak = false, callsCost; // SR-02: costUsd cộng theo model của từng dòng calls.jsonl
-    const callsFile = path.join(cfg.ccodingData, 'runs', r.taskId, 'calls.jsonl');
+    const callsFile = path.join(srv.data, 'runs', r.taskId, 'calls.jsonl');
     if (fs.existsSync(callsFile)) { const text = fs.readFileSync(callsFile, 'utf8'); leak = leakInCalls(text, NEEDLES); callsCost = costOfCalls(text); }
     return { dir, ...r, leak, callsCost: callsCost ?? costOfCalls('') };
   }

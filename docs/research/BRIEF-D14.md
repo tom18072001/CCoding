@@ -28,24 +28,25 @@
   - resume sau nâng cấp.
 - Thiếu test thì thêm. Sai thì sửa.
 
-**K2: harness phát lại pha `accept` cho E7.**
-- **Đầu vào mỗi mục:**
-  - đề bài;
-  - thư mục repo của artifact sau khi áp đột biến của G-4 (`docs/research/analysis/g-mutation.mjs`, `applySite`), hoặc bản đúng;
-  - đầu ra `npm test`.
-- **Đi qua `Orchestrator.call()`**, đúng quy ước AGENTS.md. Ví dụ: tùy chọn nhiệm vụ `acceptOnly` bỏ route, plan và execute, chỉ chạy baseline, lệnh kiểm tra và pha `accept` trên workspace đã chuẩn bị, rồi ghi phán quyết vào `gate.decision cto`.
-- **Arm R3** (một Claude Code đơn duyệt hay từ chối) chạy bằng đường `claude` sẵn có của harness, cùng đầu vào.
-- **Test bằng runtime giả:** mục lỗi bị từ chối thì ghi `cto block`; mục đúng thì ghi `cto pass`; không lộ nhãn.
+**K2: CTO duyệt harness E7 (người điều phối đã dựng, 5/11).**
+- Tệp: `bench/vs-claude/e7/` (`sample.mjs`, `lib.mjs`, `run.mjs`, `analyze.mjs`, `README.md`), test `bench/vs-claude/test/e7.test.mjs`. Thiết kế ở §9 "Bản chốt E7 và E8".
+- **Cách làm, không sửa `src/`:**
+  - R1/R2 dựng một nhiệm vụ "đã xong thực thi" ở làn nhanh, cổng B-02 xanh, báo cáo `templateReport`, rồi gọi `resume(id, { from: 'accept' })`. Lượt gọi đi qua `Orchestrator.call()` thật;
+  - R3 gọi `claude -p` với cùng văn bản, bỏ hồ sơ CTO. `runClaude` thêm tùy chọn `tools`, `allowedTools`, `permissionMode`, `maxTurns`, `stdin`; mặc định giữ đúng từng cờ cũ (có test).
+- **Tìm ca hỏng:**
+  - trạng thái nhiệm vụ giả thiếu trường mà `runTask` hay `accept` cần;
+  - `finishWorkspace` commit vào repo của mục;
+  - `waitFor` không trả khi nhiệm vụ tạm dừng vì hạn mức;
+  - Windows: `npm test` qua `runCheckCommand`, đường dẫn, CRLF làm lệch vị trí đột biến (đã có kiểm `site-not-found`).
+- Đánh giá có nên thêm tùy chọn `acceptOnly` thật vào `src/` thay cho nhiệm vụ giả hay không. Chưa làm trước E7.
 
-**K3: cấu hình cho E8.**
-- Thêm arm `B6w4` và `B6w1` vào `bench/vs-claude/arms.json`, có `isolation: 'worktree'`, làn nhanh ép.
-- `B6w1` cần `fastLane.maxParallel = 1` ở server. Ghi trong `RUNBOOK` cách chạy hai server.
-- Có test cho `arms.json`.
+**K3: CTO duyệt arm E8 (đã thêm).**
+- `B6w4`, `B6w1` trong `bench/vs-claude/arms.json`. B6w1 có `server: "alt"`, chọn bằng `--ccoding-url-alt` và `--ccoding-data-alt` của `run.mjs`.
+- Cách chạy hai server ở `bench/vs-claude/e7/README.md`. Test ở `bench/vs-claude/test/e8-arms.test.mjs`.
 
-**K4: thời gian thực của arm CCoding.**
-- `bench/vs-claude/lib/ccoding.mjs` đo `wallSec` bằng vòng hỏi 10 s, nên thời gian bị làm tròn lên. Theo người phản biện, 92–100 % số lượt rơi đúng lưới 10 s. Trong khi đó `claude -p` của arm A đo chính xác. Kết quả là tỉ số thời gian bị lệch lên khoảng 5 s mỗi lượt CCoding.
-- Ghi thêm `wallSecTask`, tính từ `task.startedAt`/`finishedAt` (hoặc mốc của sự kiện đầu và cuối). Giữ `wallSec` cũ để so sánh được.
-- Có test.
+**K4: CTO duyệt `wallSecTask` (đã thêm).**
+- `taskTimes()` trong `bench/vs-claude/lib/ccoding.mjs` ghi `wallSecTask` (`finishedAt − startedAt`), `queueSecTask` và `maxConcSubtasks` vào mỗi dòng CCoding. `wallSec` cũ giữ nguyên.
+- Kiểm thêm: nhiệm vụ tạm dừng rồi tiếp tục thì `wallSecTask` gồm cả thời gian dừng, như `wallSec`. Có nên tách ra không?
 
 ## Kiểm tra
 - `npm run typecheck`.

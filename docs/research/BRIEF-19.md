@@ -53,11 +53,13 @@
 - **Thay Nghị định 13/2023/NĐ-CP bằng Nghị định 356/2025/NĐ-CP** ở mọi chỗ: bài báo, `facts.json`, tài liệu trong `docs/`. Ghi rõ có hiệu lực từ 01/01/2026.
 - `facts.json` và `CHANGELOG.md` đồng bộ; `consistency-check` đạt.
 
-**K3 — methodologist: chốt E7 và E8**
-- Rà phần "Dự kiến, chưa duyệt" ở §9 V4-3f: cỡ mẫu, phép kiểm, quy tắc loại, quy tắc dừng.
-- **E7:** dùng kho lỗi G-4 thật: 194 lỗi, 8 bài, sha256 ghi trong RUNLOG. Với trần 8 lỗi mỗi bài và 1 lỗi mỗi lượt thì chỉ được 53 lỗi, dưới 60. Chọn một trong hai: nâng trần lên 10 mỗi bài (được 65), hoặc giảm số lỗi và tính lại độ rộng CI. Ghi lựa chọn vào §9 trước khi lấy mẫu.
-- **E8:** ước σ_ln của thời gian thực từ `large-pilot`, `gates-pilot` và `b7prime`, rồi tính lại số lượt.
-- Ghi bản chốt ở §9. **Chưa chạy.** Giám đốc duyệt riêng.
+**K3 — methodologist: thẩm định bản chốt E7 và E8**
+- Giám đốc đã duyệt chạy E7 và E8 (5/11 khoảng 10:05). Người điều phối đã ghi bản chốt ở §9 ("Bản chốt E7 và E8", v2.6) trước mọi lượt gọi LLM, vì đợt đo cần mốc khóa trước khi lấy mẫu trên máy chạy.
+- Việc của K3 là thẩm định, không viết lại:
+  - E7: trần 10 mỗi bài; quy tắc kiểm lại nhãn (3 lần cho mục lỗi); thay mục dự phòng; cắt mục đúng cho ghép cặp; định nghĩa R3 (cùng văn bản, bỏ hồ sơ CTO); "không đọc được kết luận" tính là không chặn; McNemar chính xác.
+  - E8: σ_ln = 0,178 (df 24, lệch xuống do làm tròn 10 s), giữ 0,25 và 6 lượt mỗi ô; thước đo chính `wallSecTask`; kiểm B6w1 không chạy chồng.
+- Thấy lỗi thiết kế thì ghi thành sai lệch ở §9 kèm giờ và lý do. Chỉ được sửa khi E7 hoặc E8 chưa có lượt gọi nào; nếu đã có thì chỉ ghi, không sửa.
+- Ghi chú cho K1: bộ test ẩn của `t5-logq` cho số test khác nhau giữa các lần chạy (123–146 với cùng mã). Hai lỗi G-4 của bài này không tái lập được. Cần đánh giá ảnh hưởng tới G-3 của `t5-logq`.
 
 **K4 — research-lead:** cập nhật `improvement-backlog.md` và `run-plan.md` (E7, E8 sau đợt 3e) và deck PL7 theo v0.7.
 

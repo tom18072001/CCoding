@@ -162,6 +162,24 @@
     "kind": "null",
     "label": "Does nothing (grader self-test)"
   },
+  "B6w4": {
+    "kind": "ccoding",
+    "options": {
+      "lane": "fast"
+    },
+    "isolation": "worktree",
+    "label": "CCoding làn nhanh, worktree, fastLane.maxParallel 4 (E8)"
+  },
+  "B6w1": {
+    "kind": "ccoding",
+    "options": {
+      "lane": "fast",
+      "maxParallel": 1
+    },
+    "isolation": "worktree",
+    "server": "alt",
+    "label": "CCoding làn nhanh, worktree, lần lượt: server riêng có fastLane.maxParallel 1 (E8)"
+  },
   "_suites": {
     "_doc": "Không phải arm. Bộ bài cài lỗi B-12 (g1-*…g6-*, do S6 dựng): chọn bằng run.mjs --tasks suite:gates. Tự kiểm: --arms oracle,null. Đo B-16: --arms B7cab,B7cabO.",
     "gates": {

@@ -100,6 +100,20 @@ export function researchFields(callsText, task, eventsText) {
   };
 }
 
+/**
+ * D14 K4: thời gian thực theo mốc của chính nhiệm vụ (startedAt → finishedAt), không theo vòng hỏi 10 s của harness.
+ * `wallSec` cũ (đồng hồ harness, làm tròn lên theo vòng hỏi) giữ nguyên để so được với các đợt trước. Thiếu mốc → null.
+ */
+export function taskTimes(task) {
+  const at = (x) => (typeof x === 'string' ? Date.parse(x) : NaN);
+  const d = (a, b) => { const v = (at(b) - at(a)) / 1000; return Number.isFinite(v) && v >= 0 ? +v.toFixed(3) : null; };
+  // E8: số hạng mục chạy cùng lúc tối đa (theo mốc hạng mục), để kiểm B6w1 thật sự chạy lần lượt
+  const iv = (task?.runs ?? []).flatMap((r) => r.subtasks ?? []).map((st) => [at(st.startedAt), at(st.finishedAt)]).filter(([a, b]) => Number.isFinite(a) && Number.isFinite(b) && b > a);
+  const ev = iv.flatMap(([a, b]) => [[a, 1], [b, -1]]).sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+  let c = 0, maxConc = 0; for (const [, k] of ev) { c += k; maxConc = Math.max(maxConc, c); }
+  return { wallSecTask: d(task?.startedAt, task?.finishedAt), queueSecTask: d(task?.createdAt, task?.startedAt), subtasksTimed: iv.length, maxConcSubtasks: maxConc };
+}
+
 export async function runCcoding(opts) {
   const api = client(opts.baseUrl);
   const t0 = Date.now();
@@ -169,12 +183,13 @@ export async function runCcoding(opts) {
       byAgent[row.key] = weighted(row);
     }
   }
-  let research;
+  let research, final;
   try {
     const callsText = opts.dataDir && fs.existsSync(callsFile) ? fs.readFileSync(callsFile, 'utf8') : '';
     const evFile = path.join(opts.dataDir ?? '', 'runs', task.id, 'events.jsonl');
     const eventsText = opts.dataDir && fs.existsSync(evFile) ? fs.readFileSync(evFile, 'utf8') : '';
-    research = researchFields(callsText, (await api(`/api/tasks/${task.id}`)).task ?? t, eventsText);
+    final = (await api(`/api/tasks/${task.id}`)).task ?? t;
+    research = researchFields(callsText, final, eventsText);
   } catch { research = researchFields('', t); }
   tokens.total = tokens.input + tokens.output + tokens.cacheRead + tokens.cacheWrite;
   tokens.weighted = weighted(tokens);
@@ -182,7 +197,7 @@ export async function runCcoding(opts) {
     status: t.status === 'done' ? 'done' : 'failed', wallSec, tokens, costUsd, turns, calls,
     finalText, taskId: task.id, byPhase, agentsUsed: Object.keys(byAgent).length, byAgent,
     department: t.department, attention: t.attention,
-    research: { ...research, isolation, ...(checkout ? { checkout } : {}) }, infra, ...(resetsAt ? { resetsAt } : {}),
+    research: { ...research, isolation, ...taskTimes(final ?? t), ...(checkout ? { checkout } : {}) }, infra, ...(resetsAt ? { resetsAt } : {}),
   };
 }
 

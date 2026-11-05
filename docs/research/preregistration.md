@@ -1003,6 +1003,96 @@ Bước 2 **chưa được giám đốc duyệt chạy**. Lý do phải duyệt:
   - **Cỡ mẫu:** giả định σ_ln = 0,25, giảm 30 %, 6 lượt mỗi ô. SE ≈ 0,083 trên 3 bài, power > 0,9.
   - **Cần Phòng Dev làm trước:** tùy chọn `isolation` của harness (xem D14).
 
+### Bản chốt E7 và E8 (ghi 5/11/2026, trước mọi lượt gọi LLM của E7 và E8)
+
+**Vị thế.** Giám đốc duyệt chạy cả E7 và E8 lúc khoảng 10:05 ngày 5/11 ("Duyệt cả hai"), chạy sau bước 2 của B-14, E7 trước. Mục này chốt các điểm còn để ngỏ ở bản dự kiến bên trên; chỗ nào khác bản dự kiến thì ghi rõ "đổi so với bản dự kiến".
+- Ghi trước khi có kết luận nào của CTO hay của Claude Code đơn trên mục E7, và trước khi chạy lượt E8 nào.
+- **Dữ liệu tác giả đã thấy khi viết:**
+  - kho G-4 và các dòng `base` của `g-mutation.jsonl`;
+  - kết quả lấy mẫu (`results/e7-cto/items.json`);
+  - một lần chạy thử bước chuẩn bị trên máy cloud, không gọi LLM: 128 mục chuẩn bị được; 2 mục lỗi của `t5-logq` không tái lập được nhãn (test ẩn đạt ở cả 3 lần chạy lại), nên 1 mục đúng của bài đó bị bớt để giữ ghép cặp;
+  - `wallSec` của `gates-pilot` và `b7prime` để ước σ_ln.
+- **Mốc khóa:** commit chứa mục này cùng:
+  - `bench/vs-claude/e7/` (`sample.mjs`, `lib.mjs`, `run.mjs`, `analyze.mjs`, `README.md` là sổ tay chạy);
+  - `bench/vs-claude/e8/analyze.mjs`;
+  - `results/e7-cto/items.json`;
+  - arm B6w4/B6w1 trong `arms.json`, `taskTimes` trong `lib/ccoding.mjs`;
+  - test của chúng (`test/e7.test.mjs`, `test/e8-arms.test.mjs`). Người chạy ghi hash commit và sha256 từng tệp vào `results/e7-cto/RUNLOG.md` và `results/e8-parallel/RUNLOG.md` trước khi chạy.
+- Không phép nào ở đây vào họ Holm. K của §2.5 không đổi.
+
+**E7: CTO nghiệm thu trên lỗi lọt cổng**
+- **(1) Mẫu (đổi so với bản dự kiến: trần 10 thay cho 8).**
+  - Với trần 8 mỗi bài và tối đa 1 lỗi mỗi lượt, kho G-4 chỉ cho 53 lỗi, dưới mức 60 đã định. Nâng trần lên 10 mỗi bài: được 65 lỗi ở 8 bài.
+  - **Mục lỗi:** mỗi bài lấy tối đa 10 lượt có lỗi lọt cổng, theo thứ tự xáo của `rng("20261104|e7|faulty|<bài>")`. Trong mỗi lượt lấy 1 lỗi, theo `rng("20261104|e7|pick|<khóa lượt>")`. Các lượt còn lại của bài xếp sau làm dự phòng.
+  - **Mục đúng:** cùng bài, cùng số lượng với mục lỗi. Ứng viên là lượt có test ẩn đạt hết và `npm test` xanh ở dòng `base` của G. Ưu tiên lượt chưa có mục lỗi nào được chọn. Thứ tự theo `rng("20261104|e7|clean|<bài>")`; phần còn lại làm dự phòng.
+  - Mã mục là 10 ký tự hex, băm từ hạt giống, loại mục, khóa lượt và vị trí. Mã không cho biết loại mục.
+- **(2) Chuẩn bị và kiểm lại nhãn trên máy chạy, trước mọi lượt gọi LLM** (`run.mjs`, bước 1; ghi `prep.jsonl` và `selected.json`).
+  - **Sản phẩm:** artifact của lượt, cộng tệp starter mà artifact không có (như sai lệch G-b).
+  - **Mục lỗi:** tìm lại đúng vị trí đột biến của G bằng cùng danh sách vị trí, cùng `sample(…, 12, rng("20261104|<khóa>"))` và phần tử thứ `i`. Không khớp thì loại mục với lý do `site-not-found`.
+  - **Điều kiện giữ mục:** `npm test` phải xanh (`prep-red` nếu không). Test ẩn phải trượt ít nhất 1 trong 3 lần chạy với mục lỗi, và đạt với mục đúng (`label-mismatch` nếu không).
+    - Có 3 lần chạy cho mục lỗi vì bộ test ẩn của `t5-logq` cho số test khác nhau giữa các lần chạy.
+  - **Thay mục:** mục bị loại được thay bằng mục dự phòng kế tiếp cùng bài và cùng loại. Sau đó số mục đúng mỗi bài cắt bằng số mục lỗi chốt được của bài đó.
+  - Danh sách chốt (`selected.json`) ghi trước lượt gọi đầu tiên và không đổi sau đó.
+- **(3) Arm (mọi arm chấm mọi mục, ghép cặp):**
+  - **R1:** pha `accept` thật của CCoding, model mặc định của CTO (Sonnet), qua `Orchestrator.call()`. Cách làm:
+    - dựng một nhiệm vụ đã xong thực thi ở làn nhanh, cổng B-02 xanh nên reviewer được bỏ qua, như vận hành thật;
+    - bàn giao trung tính, giống hệt nhau cho mọi mục;
+    - báo cáo dựng bằng `templateReport`;
+    - `projectChecks` lấy từ `npm test` thật trên starter (baseline) và trên sản phẩm (sau thực thi);
+    - có nhánh nhiệm vụ như chế độ worktree, nên CTO nhận `diff --stat` so với starter cùng công cụ chỉ đọc (Read, Glob, Grep, git chỉ đọc), trần 6 lượt;
+    - rồi gọi `resume(id, { from: 'accept' })`. Chế độ nghiệm thu là `full`.
+  - **R2:** như R1, `phaseModels.accept = "opus"`.
+  - **R3:** `claude -p` đơn (Sonnet), chạy trong bản sao repo của mục, ở cùng trạng thái git như R1 sau bước commit. **Đổi so với bản dự kiến** (cách hiểu "cùng đầu vào", vì bản dự kiến không định nghĩa):
+    - R3 nhận đúng văn bản bối cảnh và công việc mà R1 nhận, chỉ bỏ phần "VAI TRÒ CỦA BẠN" (hồ sơ CTO). Vì vậy R1 và R3 chỉ khác ở hồ sơ CTO và lớp vận hành của CCoding;
+    - công cụ tương ứng: Read, Glob, Grep, Bash chỉ cho `git log/show/diff/status/blame`; cùng trần 6 lượt.
+- **(4) Kết luận.** "Chặn" nghĩa là khối JSON đọc được, với `accepted = false`, đúng luật của CCoding. Không đọc được kết luận thì tính là không chặn, như CCoding vẫn giao kết quả trong trường hợp đó. Số lượt như vậy báo riêng.
+- **(5) Thước đo.**
+  - **Recall:** tỉ lệ mục lỗi bị chặn.
+  - **Chặn nhầm:** tỉ lệ mục đúng bị chặn.
+  - CI Clopper–Pearson 95 %, kèm bootstrap hai tầng theo bài (4000 vòng, hạt giống 20261104).
+  - Báo thêm token có trọng số, USD theo `pricing.mjs` và thời gian.
+- **(6) Phép kiểm chính:** McNemar chính xác hai phía, R1 so với R3, trên mục lỗi có kết quả ở cả hai arm. α = 0,05.
+  - **Phụ, chỉ mô tả:** R1 so với R2, R2 so với R3 trên mục lỗi; R1 so với R3 và R1 so với R2 trên mục đúng.
+  - **Độ nhạy:** tính lại khi coi "không đọc được kết luận" là chặn.
+- **(7) Lịch chạy.**
+  - Thứ tự mục xáo theo `rng("20261104|e7|order")`. Thứ tự arm trong mỗi mục theo bảng Latin cân bằng của 3 arm.
+  - Lỗi hạ tầng thì chạy lại. Hết hạn mức thì dừng rồi chạy tiếp đúng lệnh.
+  - Runner không in kết luận khi đang chạy, chỉ in đếm. Không ai xem `runs.jsonl` hay `responses/` trước khi đủ.
+  - Trước đợt chính, chạy thử 1 mục dự phòng không thuộc danh sách chốt (R1 và R3) vào thư mục riêng, để kiểm hạ tầng và `promptSha` R1 = R3. Lượt này không vào phân tích.
+- **(8) Quy tắc dừng.** Chỉ dừng vì hạ tầng hoặc hạn mức. Không dừng sớm vì kết quả. Một cặp (mục, arm) lỗi hạ tầng 3 lần thì ghi thiếu, và chỉ loại cặp đó khỏi phép ghép.
+- **(9) Cách đọc, ghi trước.**
+  - E7 đo lớp CTO **trên lỗi mà `npm test` đã bỏ lọt**, không đo cả cổng.
+  - Lỗi là đột biến, không phải lỗi tự nhiên.
+  - Bàn giao và báo cáo trung tính, nên CTO thiếu phần bàn giao chi tiết mà agent thật viết. Kết quả có thể khác khi có bàn giao thật, theo cả hai chiều.
+  - Đơn vị độc lập vẫn là bài (8 bài), nên báo kèm bootstrap theo bài.
+- **Cỡ mẫu:** 64–65 mục lỗi cho nửa độ rộng CI ≤ khoảng 12,5 điểm %. Nếu 0/64 mục đúng bị chặn thì cận trên là 5,6 %. Ước khoảng 390 lượt gọi.
+
+**E8: song song có worktree**
+- **Arm** (cùng commit, cùng harness):
+  - **B6w4:** `isolation: worktree`, làn nhanh ép, server A với cấu hình mặc định (`fastLane.maxParallel` 4);
+  - **B6w1:** như B6w4, thêm `options.maxParallel = 1`, chạy trên server B. Server B cùng bản checkout, chỉ khác cấu hình thêm `{"fastLane": {"maxParallel": 1}}` (ghi sha256 hai cấu hình vào RUNLOG);
+  - **A0-sonnet:** làm mốc.
+  - Harness chọn server B bằng `server: "alt"` của arm, kèm `--ccoding-url-alt` và `--ccoding-data-alt`.
+- **Bài:** `l1-modules`, `t2-orders`, `t3-api`. **Số lượt:** 6 mỗi arm mỗi bài, 54 lượt. Lịch Latin của `run.mjs`.
+- **σ_ln (BRIEF-19 K3):**
+  - σ_ln gộp trong ô của `gates-pilot` và `b7prime` là 0,178, df 24. Cận trên 95 % theo χ² là 0,248.
+  - Ước này lệch xuống vì `wallSec` làm tròn theo vòng hỏi 10 s: nhiều ô có σ = 0.
+  - Giữ giả định 0,25 và 6 lượt mỗi ô. Khi đó SE của Δ ln trung bình 3 bài ≈ 0,083, power với giảm 30 % > 0,9. Nếu σ thật là 0,4 thì power ≈ 0,77.
+- **Thước đo chính (đổi so với bản dự kiến: dùng mốc thời gian của nhiệm vụ):**
+  - Δ = trung bình theo bài của (trung bình ln `wallSecTask` của B6w4 − của B6w1). `wallSecTask` = `finishedAt − startedAt` của nhiệm vụ (D14 K4), không bị làm tròn như `wallSec`.
+  - Báo exp(Δ) kèm CI 95 % bootstrap trong bài, 4000 vòng.
+  - p hai phía bằng hoán vị nhãn arm trong bài, M = 10000, hạt giống 20261104.
+- **Thước đo phụ, chỉ mô tả:**
+  - cùng phép tính trên `wallSec` của harness (độ nhạy);
+  - tỉ số token có trọng số;
+  - số lượt có ≥ 2 hạng mục chạy cùng lúc, đọc từ mốc hạng mục;
+  - xung đột khi gộp, lệnh kiểm tra đỏ sau gộp;
+  - điểm test ẩn, kèm A0-sonnet làm mốc.
+- **Quy tắc loại:**
+  - lượt `infra` chạy lại;
+  - lượt có hạng mục chạy chồng ở B6w1 (`maxConc ≥ 2`) là lỗi cấu hình: dừng đợt và báo giám đốc, không loại lặng lẽ.
+- **Cách đọc, ghi trước.** E8 đo lợi ích thời gian của chạy song song khi chia việc ở làn nhanh, **trên cùng chi phí chia việc**. Không trả lời câu hỏi làn nhanh có rẻ hơn làm một mình hay không. Câu đó so với A0-sonnet, chỉ mô tả.
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.
@@ -1012,6 +1102,7 @@ Bước 2 **chưa được giám đốc duyệt chạy**. Lý do phải duyệt:
 
 ## Lịch sử bản
 
+- **v2.6 (5/11/2026, người điều phối, chờ Phòng Nghiên cứu thẩm định ở BRIEF-19 K3):** chỉ **thêm** ở §9 mục "Bản chốt E7 và E8" (giám đốc duyệt chạy lúc khoảng 10:05 ngày 5/11). E7: trần 10 mỗi bài, quy tắc chuẩn bị và kiểm lại nhãn, định nghĩa R3 là cùng văn bản bỏ hồ sơ CTO. E8: thước đo chính dùng `wallSecTask`, σ_ln ước từ dữ liệu cũ. Không đổi giả thuyết, họ Holm hay phép kiểm nào đã có.
 - **v2.5 (4/11/2026, S4 của T-20261104-110942-567, @research-lead):** chỉ **thêm** ở §9 hai mục: (1) đăng ký trước bước 2 của B-14 (A/B `stablePrefix` trên B7, gồm t2/t3/t4, 16 lượt mỗi bài mỗi nhánh, 96 lượt, ABBA, hoán vị phân tầng hai phía α = 0,05, mức hiệu ứng nhỏ nhất phát hiện được ≈ 9,9 %); (2) sai lệch V4-K2-1…7 kèm duyệt H7, nguồn số chính thức và lỗi giao Phòng Phát triển. Mục khóa lại bộ giữ lại B-19 (phương án (A), hash cũ/mới) do S1 thêm ở `84ded09`, cùng gói. Không đổi giả thuyết, ngưỡng, họ Holm hay phép kiểm nào của v2.4.
 - **v2.4 (3/11/2026, S1 của T-20261103-214630-c4e, @methodologist):** chỉ **thêm** ở §9 mục "Đăng ký trước vòng 4 gói 8: đợt đo 3e" gồm V4-3e-E1…E6 (B-14, B-12/B-16 thí điểm và chính, B-15, H6; đủ 9 trường và nguồn), khối (a) công thức chốt N cho E4, (b) thứ tự ưu tiên khi thiếu credit, (c) lịch cloud/local. Chép số từ `cache-diagnostic-spec.md`, `improvement-backlog.md`, `agreement.md` và quy tắc H6 v2.1; không đặt ngưỡng mới, không đổi giả thuyết, họ Holm hay phép kiểm nào của v2.3.
 - **v2.3 (3/11/2026, S2 của T-20261103-163327-d48, @methodologist):** chỉ **thêm** dòng V4-04 ở §9 (B7′ dừng vô ích ở GĐ1, R̂ token 2,04 và thời gian 2,16 > 1,6; CLI 2.1.316 → 2.1.317; B7c bị hủy trước khi có dòng nào). Sai lệch về thực thi; không đổi giả thuyết, ngưỡng, họ Holm hay phép kiểm nào của v2.2.

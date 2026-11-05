@@ -24,13 +24,25 @@ export function weighted(u) {
  * Cờ: giữ --setting-sources project,local như CCoding và harness cũ (không nạp cài đặt/MCP/hook cấp người dùng).
  * `bin` lets you point at a wrapper; `extraArgs` are appended verbatim.
  */
-export function runClaude({ cwd, prompt, model, timeoutMin = 45, bin = 'claude', extraArgs = [] }) {
-  const args = ['-p', prompt, '--output-format', 'stream-json', '--verbose', '--model', model,
-    '--permission-mode', 'acceptEdits', '--allowedTools', TOOLS, '--disallowedTools', 'WebFetch,WebSearch,Task',
+/**
+ * Cờ của `claude -p` (hàm thuần). Mặc định giữ đúng từng phần tử như mọi đợt đo trước.
+ * E7 (arm R3, chỉ đọc): `tools` (→ --tools), `allowedTools` (thay TOOLS), `permissionMode`, `maxTurns`;
+ * `stdin: true` → prompt đi qua stdin thay vì tham số (Windows giới hạn dòng lệnh khoảng 32 nghìn ký tự).
+ */
+export function claudeArgs({ prompt, model, extraArgs = [], tools, allowedTools = TOOLS, permissionMode = 'acceptEdits', maxTurns, stdin = false }) {
+  return ['-p', ...(stdin ? [] : [prompt]), '--output-format', 'stream-json', '--verbose', '--model', model,
+    ...(tools !== undefined ? ['--tools', tools] : []),
+    '--permission-mode', permissionMode, '--allowedTools', allowedTools, '--disallowedTools', 'WebFetch,WebSearch,Task',
+    ...(maxTurns ? ['--max-turns', String(maxTurns)] : []),
     '--no-session-persistence', '--strict-mcp-config', '--setting-sources', 'project,local', ...extraArgs];
+}
+
+export function runClaude({ cwd, prompt, model, timeoutMin = 45, bin = 'claude', extraArgs = [], tools, allowedTools, permissionMode, maxTurns, stdin = false }) {
+  const args = claudeArgs({ prompt, model, extraArgs, tools, allowedTools, permissionMode, maxTurns, stdin });
   const t0 = Date.now();
   return new Promise((resolve) => {
-    const child = spawn(bin, args, { cwd, env: { ...process.env, CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1' }, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(bin, args, { cwd, env: { ...process.env, CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1' }, stdio: [stdin ? 'pipe' : 'ignore', 'pipe', 'pipe'] });
+    if (stdin) { child.stdin.on('error', () => { /* tiến trình thoát sớm */ }); child.stdin.end(prompt); }
     let buf = '', err = '', result = null, model = null, timedOut = false; const transcript = [];
     const timer = setTimeout(() => { timedOut = true; child.kill('SIGTERM'); }, timeoutMin * 60000);
     child.stdout.on('data', (d) => {

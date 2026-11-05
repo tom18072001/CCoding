@@ -692,3 +692,16 @@ Mục này đánh giá hai luồng dữ liệu mới của V4-3f. Nhãn của c�
 **Rủi ro còn lại.** Tệp từng lượt có mốc thời gian theo nhiệm vụ. Người có quyền vào server có thể dùng chúng để đối chiếu ra nhiệm vụ nào, nên tệp chỉ giữ trên máy giám đốc.
 
 **Khuyến nghị cho chủ dự án:** chỉ công bố số tổng hợp của P; không đưa tệp từng lượt lên repo công khai.
+
+## E7 và E8 — CTO nghiệm thu trên lỗi lọt cổng; song song có worktree (5/11/2026, trước khi chạy)
+
+Hai đợt đo dùng lại bài tổng hợp của bench. Nhãn **Nội bộ**. Không có DLCN, không có dữ liệu thật của khách hàng. Không dùng 9router hay khóa API: `claude` chạy bằng đăng nhập Max của giám đốc, như các đợt trước, nên không có luồng xuyên biên giới mới so với các đợt đo trước.
+
+| Hạng mục | Lớp / năng lực | Đánh giá | Trạng thái |
+|---|---|---|---|
+| E7 R1/R2: CCoding chạy trong tiến trình (`createApp`) với thư mục data riêng của đợt | GOV-01, PRI-01, DET-01 | Mọi lượt gọi LLM đi qua `Orchestrator.call()`, được ghi log qua `LogStore` (che bí mật, chuỗi băm). Thư mục data của app nằm trong thư mục làm việc của đợt, không commit. Harness chỉ đọc lại văn bản lượt `accept` để so `promptSha` với R3, không sửa nội dung | Đạt |
+| E7 lưu văn bản kết luận (`results/e7-cto/responses/`) và lỗi vào repo công khai | PRI-03, PRE-02 | Nội dung là nhận xét về mã của bài tổng hợp. Trước khi ghi, đường dẫn máy chạy (thư mục tạm, bản checkout, thư mục người dùng) được thay bằng `<work>`, `<ccoding>`, `<home>`. Sổ tay chạy yêu cầu tìm `C:\Users` một lần nữa trước khi commit | Đạt, có kiểm lại thủ công |
+| E7 nhãn mục (lỗi/đúng) | GOV-02 | Nhãn chỉ có trong `items.json`. Workspace, đề bài, báo cáo, prompt và mã mục không mang nhãn (có test) | Đạt |
+| E8: hai server bench từ cùng bản ghim, data riêng (`e8-data-a`, `e8-data-b`) | GOV-01, RES-01 | Không đụng server 7420 hay `data/` chính. Repo của lượt là bài tổng hợp | Đạt |
+
+**Khuyến nghị cho chủ dự án:** giữ thư mục data của E7 và hai server E8 trên máy ít nhất 6 tháng (nhật ký xử lý), như các đợt đo trước. Chỉ commit số tổng hợp, `runs.jsonl` và văn bản đã thay đường dẫn.
