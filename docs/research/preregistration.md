@@ -1003,6 +1003,27 @@ Bước 2 **chưa được giám đốc duyệt chạy**. Lý do phải duyệt:
   - **Cỡ mẫu:** giả định σ_ln = 0,25, giảm 30 %, 6 lượt mỗi ô. SE ≈ 0,083 trên 3 bài, power > 0,9.
   - **Cần Phòng Dev làm trước:** tùy chọn `isolation` của harness (xem D14).
 
+### Phân tích E4, E5′, E6 và các quyết định lúc phân tích (ghi 12/11/2026, người điều phối được giám đốc giao quyền tự duyệt)
+
+**Vị thế.** Ba đợt đã đủ dữ liệu: E4 192/192 lượt, E6 56/56, E5′ 40/40. Phân tích chạy bằng script, không gọi LLM:
+- E4: `analysis/e4-analyze.mjs`, kết quả ở `results/gates-main/report-e4.md`;
+- E5′: `analysis/e5f-analyze.mjs`, kết quả ở `results/b15f-main/report.md`;
+- E6: `bench/vs-claude/analyze.mjs` (blob `7c69f438…`, đúng bản ghi trước lượt E6 đầu tiên ở `local-3e/RUNLOG.md`) và `analysis/h6-sensitivity.mjs`, kết quả ở `results/h6-3e/report.md` và `report-h6-sensitivity.md`.
+- Test: `analysis/e-analyses.test.mjs`.
+
+Phòng Nghiên cứu thẩm định lại ở BRIEF-19 K1: chạy lại và đối chiếu số.
+
+**Quyết định lúc phân tích, không đổi phép kiểm nào:**
+- **(A1) E4, nguồn lượt sạch.** (3) của E4 kể "E5 (B0, B1: tối đa 40)", nhưng E5 không chạy mà được thay bằng E5′. Phân tích dùng 40 lượt B0F/B1F của E5′ thay cho E5: cùng định nghĩa "lượt CCoding có bản ghi cổng trên bài không thuộc g1–g6", tổng vẫn 65 = mức tối đa đã ghi.
+  - Khác biệt cần ghi: E5′ ép làn đầy đủ, nên dùng pha accept `full`.
+- **(A2) E4, phần ngoài đăng ký.** Bảng "chặn trên lượt có test ẩn đạt" của B7cab so với B7cabO, tính trên g1, g2, g5, g6, là **khám phá**: không có trong (5)/(6), không vào kết luận chính, có ghi nhãn trong báo cáo.
+- **(A3) E5′, số hạng mục kế hoạch.** Dòng `runs.jsonl` không có trường này. Số lấy từ `task.json` trong thư mục data của server 7426 (`ccoding-e5f\data\runs`), khớp theo nhãn `[vs-claude <khóa>]` của tiêu đề. Kết quả ở `results/b15f-main/subtasks.json`, có đủ 40/40 khóa.
+- **(A4) E6, cờ "nhạy với bài".** Quy tắc (iii) bật cờ vì Δ̂ đổi phía so với 0, nhưng độ lớn dưới 0,1 điểm %:
+  - A1: +0,0 pp ở 7 bài, −0,0 pp ở 5 bài;
+  - A2: +0,1 pp ở 7 bài, 0,0 ở 5 bài.
+  - CI ở cả hai cách tính đều nằm trong ±5 pp. Báo đúng cờ, kèm độ lớn.
+- **(A5) E5′, không có lượt nào chạm quy tắc loại (8).** Mọi B0F đều có `discuss` và `finalize`, nên phân tích chính và phân tích độ nhạy cho cùng số.
+
 ### Bản chốt E7 và E8 (ghi 5/11/2026, trước mọi lượt gọi LLM của E7 và E8)
 
 **Vị thế.** Giám đốc duyệt chạy cả E7 và E8 lúc khoảng 10:05 ngày 5/11 ("Duyệt cả hai"), chạy sau bước 2 của B-14, E7 trước. Mục này chốt các điểm còn để ngỏ ở bản dự kiến bên trên; chỗ nào khác bản dự kiến thì ghi rõ "đổi so với bản dự kiến".
