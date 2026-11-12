@@ -7,7 +7,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runCcoding, taskTimes } from '../lib/ccoding.mjs';
+import { runCcoding, taskTimes, checkServers } from '../lib/ccoding.mjs';
 import { checkArms } from '../lib/queue.mjs';
 
 const SUITE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -67,7 +67,39 @@ test('run.mjs: arm server "alt" cần --ccoding-url-alt và --ccoding-data-alt, 
   assert.match(d.stdout, /^54 runs/);
 });
 
-test('e8/analyze: Δ ln theo bài, hoán vị trong bài, kiểm B6w1 không chạy chồng', async () => {
+test('K3 checkServers: thiếu, trùng URL hoặc trùng data → lỗi tiếng Việt; arm không dùng alt → bỏ qua', () => {
+  const T = os.tmpdir();
+  const base = { ccodingUrl: 'http://127.0.0.1:7428', ccodingData: path.join(T, 'dA') };
+  assert.deepEqual(checkServers(['B6w4'], ARMS, base), []);
+  assert.match(checkServers(['B6w1'], ARMS, base)[0], /--ccoding-url-alt và --ccoding-data-alt/);
+  assert.match(checkServers(['B6w1'], ARMS, { ...base, ccodingUrlAlt: 'http://localhost:7428/', ccodingDataAlt: path.join(T, 'dB') }).join('|'), /trùng --ccoding-url/);
+  assert.match(checkServers(['B6w1'], ARMS, { ...base, ccodingUrlAlt: 'http://127.0.0.1:7429', ccodingDataAlt: path.join(T, 'dA') }).join('|'), /không được dùng chung/);
+  assert.deepEqual(checkServers(['B6w4', 'B6w1'], ARMS, { ...base, ccodingUrlAlt: 'http://127.0.0.1:7429', ccodingDataAlt: path.join(T, 'dB') }), []);
+});
+
+test('K4: tạm dừng rồi tiếp tục → wallSecTask gồm cả thời gian dừng; có pausedSecObserved/pauseCount mới', async () => {
+  const mk = (status) => ({ id: 'T-2', status, createdAt: '2026-11-05T00:00:00.000Z', startedAt: '2026-11-05T00:00:01.000Z', ...(status === 'done' ? { finishedAt: '2026-11-05T00:00:41.000Z' } : {}), runs: [] });
+  let polls = 0;
+  const srv = http.createServer((req, res) => {
+    const send = (body) => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)); };
+    if (req.method === 'POST' && req.url === '/api/projects') return send({ ok: true });
+    if (req.method === 'POST' && req.url === '/api/tasks') return send(mk('paused'));
+    if (req.method === 'POST' && req.url.endsWith('/resume')) return send({ ok: true });
+    if (req.url === '/api/tasks/T-2') { polls++; return send({ task: mk(polls >= 2 ? 'done' : 'paused'), usage: [] }); }
+    res.writeHead(404); res.end('{}');
+  });
+  await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+  try {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'k4-'));
+    const r = await runCcoding({ baseUrl: `http://127.0.0.1:${srv.address().port}`, dataDir: dir, runtime: 'mock', projectId: 'p', workdir: dir, brief: 'b', title: 't', timeoutMin: 1 });
+    assert.equal(r.status, 'done');
+    assert.equal(r.research.wallSecTask, 40, 'gồm cả thời gian dừng');
+    assert.equal(r.research.pauseCount, 1);
+    assert.ok(r.research.pausedSecObserved >= 9, `pausedSecObserved=${r.research.pausedSecObserved}`);
+  } finally { srv.close(); }
+});
+
+test('e8/analyze:Δ ln theo bài, hoán vị trong bài, kiểm B6w1 không chạy chồng', async () => {
   const { analyze, deltaLn, permP } = await import('../e8/analyze.mjs');
   const rows = [];
   for (const task of ['l1', 't2', 't3']) for (let r = 0; r < 6; r++) {
