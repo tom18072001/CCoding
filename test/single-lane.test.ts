@@ -195,3 +195,139 @@ test('V4-3f khối B: dự án không tách được worktree con (isolation non
     }
   }
 });
+
+// ── K1(a) D14: các ca hỏng của fastLane.requireParallel ─────────────────────────────────────────
+const BRIEF5 = 'Hiện thực năm module độc lập (money, calendar, csvcheck, slug, ratelimit) theo SPEC.md, mỗi module một tệp src/<tên>/index.js và test riêng.';
+
+function writeTenFiles(a: ReturnType<typeof setup>): void {
+  const orch = a.orchestrator as unknown as { call: (...x: unknown[]) => Promise<{ text: string }> };
+  const orig = orch.call.bind(orch);
+  orch.call = async (agent, phase, build, ctx) => {
+    const r = await orig(agent, phase, build, ctx);
+    const cwd = (ctx as { cwd?: string }).cwd;
+    if (phase === 'execute' && cwd) for (const m of ['money', 'calendar', 'csvcheck', 'slug', 'ratelimit']) {
+      fs.mkdirSync(path.join(cwd, 'src', m), { recursive: true });
+      fs.writeFileSync(path.join(cwd, 'src', m, 'index.js'), `module.exports = '${m}';\n`);
+      fs.mkdirSync(path.join(cwd, 'test'), { recursive: true });
+      fs.writeFileSync(path.join(cwd, 'test', `${m}.test.js`), '\n');
+    }
+    return r;
+  };
+}
+const pickData = (a: ReturnType<typeof setup>, id: string) => a.logs.query({ task: id }).find((e) => e.kind === 'lane.pick')?.data as { lane?: string; why?: string; signals?: { serialWriters?: boolean } } | undefined;
+
+test('D14 K1(a) ca (2): toolAccess không phải exec ⇒ không xếp hàng, serialWriters=false, không ép làn đơn (làn nhanh như cũ)', async () => {
+  const a = setup(GREEN);
+  compliantExecute(a);
+  try {
+    const p = a.store.project('repo')!;
+    a.store.saveProject({ ...p, toolAccess: 'write' as never, isolation: 'none' });
+    const t = a.orchestrator.submit({ brief: BRIEF5, projectId: 'repo' });
+    await a.orchestrator.waitFor(t.id);
+    const d = pickData(a, t.id);
+    assert.notEqual(d?.signals?.serialWriters, true, JSON.stringify(d));
+    assert.notEqual(d?.lane, 'single', JSON.stringify(d));
+  } finally {
+    a.cleanupAll();
+  }
+});
+
+test('D14 K1(a) ca (4): ép làn fast / single — requireParallel không ghi đè (không có tín hiệu serialWriters, làn đúng như ép)', async () => {
+  for (const lane of ['fast', 'single'] as const) {
+    const a = setup(GREEN);
+    compliantExecute(a);
+    try {
+      const p = a.store.project('repo')!;
+      a.store.saveProject({ ...p, isolation: 'none' });
+      const t = a.orchestrator.submit({ brief: BRIEF5, projectId: 'repo', options: { lane } });
+      await a.orchestrator.waitFor(t.id);
+      const d = pickData(a, t.id);
+      assert.equal(d?.lane, lane, JSON.stringify(d));
+      assert.notEqual(d?.signals?.serialWriters, true);
+    } finally {
+      a.cleanupAll();
+    }
+  }
+});
+
+test('D14 K1(a) ca (6): fastLane.requireParallel=false ⇒ hành vi cũ — isolation none + việc 5 module ⇒ làn nhanh', async () => {
+  const a = setup(GREEN);
+  let fl: { requireParallel?: boolean } | undefined;
+  let prev: boolean | undefined;
+  compliantExecute(a);
+  try {
+    fl = (a.orchestrator as unknown as { d: { config: { fastLane: { requireParallel?: boolean } } } }).d.config.fastLane;
+    prev = fl.requireParallel;
+    fl.requireParallel = false;
+    const p = a.store.project('repo')!;
+    a.store.saveProject({ ...p, isolation: 'none' });
+    const t = a.orchestrator.submit({ brief: BRIEF5, projectId: 'repo' });
+    await a.orchestrator.waitFor(t.id);
+    assert.equal(pickData(a, t.id)?.lane, 'fast', JSON.stringify(pickData(a, t.id)));
+  } finally {
+    if (fl) fl.requireParallel = prev; // config mặc định dùng chung giữa các test
+    a.cleanupAll();
+  }
+});
+
+test('D14 K1(a) ca (7a): làn đơn do requireParallel + đề đòi lệnh xanh mà lệnh đỏ ⇒ vẫn nâng cấp; chọn làn đúng một lần, không quay về làn đơn', async () => {
+  const a = setup(RED);
+  compliantExecute(a);
+  try {
+    const p = a.store.project('repo')!;
+    a.store.saveProject({ ...p, isolation: 'none' });
+    const brief = `${BRIEF5} Đảm bảo \`${RED}\` xanh.`;
+    const t = a.orchestrator.submit({ brief, projectId: 'repo', options: { discussionRounds: 0, maxRevisions: 1 } });
+    const done = await a.orchestrator.waitFor(t.id);
+    assert.equal(pickData(a, t.id)?.lane, 'single', JSON.stringify(pickData(a, t.id)));
+    assert.ok(a.logs.query({ task: t.id }).some((e) => e.kind === 'lane.escalate'), 'đỏ ⇒ phải nâng cấp');
+    assert.equal(a.logs.query({ task: t.id }).filter((e) => e.kind === 'lane.pick').length, 1, 'chọn làn đúng một lần');
+    assert.notEqual(done.lane, 'single', 'sau nâng cấp không quay về làn đơn');
+  } finally {
+    a.cleanupAll();
+  }
+});
+
+test('D14 K1(a) ca (7b): isolation none, làn đơn do requireParallel, agent ghi ESCALATE: ⇒ vẫn nâng cấp', async () => {
+  const a = setup(GREEN);
+  try {
+    const p = a.store.project('repo')!;
+    a.store.saveProject({ ...p, isolation: 'none' });
+    const orch = a.orchestrator as unknown as { call: (...x: unknown[]) => Promise<{ text: string }> };
+    const orig = orch.call.bind(orch);
+    orch.call = async (agent, phase, build, ctx) => {
+      const r = await orig(agent, phase, build, ctx);
+      if (phase === 'execute' && (ctx as { task: { lane?: string } }).task.lane === 'single') r.text += '\nESCALATE: cần chia việc\n';
+      return r;
+    };
+    const t = a.orchestrator.submit({ brief: BRIEF5, projectId: 'repo' });
+    const done = await a.orchestrator.waitFor(t.id);
+    assert.equal(pickData(a, t.id)?.lane, 'single', JSON.stringify(pickData(a, t.id)));
+    const esc = a.logs.query({ task: t.id }).find((e) => e.kind === 'lane.escalate');
+    assert.ok(esc, 'ESCALATE ⇒ phải nâng cấp');
+    assert.equal((esc!.data as { trigger: string }).trigger, 'agent');
+    assert.notEqual(done.lane, 'single');
+  } finally {
+    a.cleanupAll();
+  }
+});
+
+test('D14 K1(a) ca (3): nhiệm vụ joint ⇒ làn full, không tín hiệu serialWriters; ca (1): dự án không có git ⇒ làn full, không vỡ', async () => {
+  const a = setup(GREEN);
+  try {
+    const p = a.store.project('repo')!;
+    const dir = fs.mkdtempSync(path.join(fs.realpathSync(process.env.TEMP ?? process.env.TMPDIR ?? '/tmp'), 'ccoding-nogit-'));
+    try {
+      fs.writeFileSync(path.join(dir, 'a.js'), '1\n');
+      a.store.saveProject({ ...p, id: 'nogit', workspace: dir, isolation: 'worktree' });
+      const t = a.orchestrator.submit({ brief: BRIEF5, projectId: 'nogit', options: { lane: 'auto' } });
+      await a.orchestrator.waitFor(t.id);
+      const d = pickData(a, t.id);
+      assert.notEqual(d?.lane, 'single', `không git ⇒ không ép làn đơn: ${JSON.stringify(d)}`);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    }
+  } finally {
+    a.cleanupAll();
+  }
+});
