@@ -57,3 +57,21 @@ Ghi chú: CTO của D12 chưa nghiệm thu vì `npm test` đỏ bốn test holdo
 - Ứng dụng Claude desktop khởi động lại lúc khoảng 11:10. Mọi tiến trình con bị kết thúc theo: `run3e-d.ps1`, `b14-run.ps1`, các server 7425, 7426, 7427.
 - **11:53:** chạy tiếp bằng `run3e-e.ps1` (E5′ r3…r10) và `b14-run.ps1`, khởi chạy qua WMI để không phụ thuộc vào ứng dụng. Chi tiết ở `b15f-main/RUNLOG.md` và `b14-step2/RUNLOG.md`.
 - Server chính 7420 cũng không còn nghe. Không khởi động lại server này: chỉ giám đốc mới khởi động lại nó.
+
+## Văn phòng CCoding riêng cho Phòng Nghiên cứu và Phòng Dev (12/11/2026)
+
+- **Bối cảnh:** server chính 7420 tắt từ 5/11, khi ứng dụng desktop khởi động lại. Người điều phối không bật lại server chính.
+  - Giám đốc giao quyền tự duyệt lúc 22:57 và cho dùng tối đa hạn mức lúc 23:47 ("tôi chỉ cần kết quả cuối cùng").
+  - Hai phòng được giao việc **song song bước 2 của B-14**, để thẩm định harness E7/E8 xong trước khi E7 chạy.
+- **Server 7430:**
+  - mã của bản ghim `ccoding-e78` (`d70959c`), dữ liệu riêng ở `office-data`;
+  - `CCODING_NO_LOCAL=1`, nên không đọc cấu hình bench;
+  - `CCODING_CONFIG=ops\office.json` (sha256 `34c6a198…`): chỉ `claude-cli` (đăng nhập gói Max, không 9router, không khóa API), không chặn web để Phòng Nghiên cứu tra cứu được.
+  - `/api/runtimes` xác nhận chỉ `claude-cli` nằm trong thứ tự chạy.
+- **Dự án:** `ccoding-dev` và `ccoding-research`, chép đúng định nghĩa của server chính (`data\projects.json`). Workspace là bản clone `ccoding`, `baseRef` là `perf/vs-claude-loop` (nhánh cục bộ cập nhật tới `d1e8573`).
+- **Việc giao (23:56–23:57):**
+  - `T-20261112-235644-728` cho Phòng Dev: `docs/research/BRIEF-D14.md`;
+  - `T-20261112-235700-08d` cho Phòng Nghiên cứu: `docs/research/BRIEF-19.md`.
+- **Ảnh hưởng tới đợt đo:**
+  - tranh hạn mức với B-14: runner chờ khi chạm hạn mức, không mất dữ liệu;
+  - tranh CPU: chỉ ảnh hưởng `wallSec` của B-14, là thước đo phụ; thước đo chính là token. Khoảng giờ chạy chồng sẽ ghi khi phân tích.
