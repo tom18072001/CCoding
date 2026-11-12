@@ -5,6 +5,14 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 13 (T-20261112-235700-08d, BRIEF-19, 13/11/2026): thẩm định G, P, E4, E5′, E6 và bản chốt E7/E8
+
+Không gọi LLM, không sửa `bench/`, `src/`. Không dùng điểm của B-14 bước 2, E7, E8. Chi tiết: `context/v43f-review-2026-11-12.md`.
+
+- **K3** (thẩm định thiết kế bản chốt E7/E8): 12 điểm, 5 đạt, 7 đạt có điều kiện, 0 lỗi thiết kế; không sửa bản chốt; thêm tiểu mục "Thẩm định bản chốt E7/E8" ở §9. Commit `cc758d3` (gộp `2ef7b51`). Bổ sung E8/`t5-logq` ở mục K3.5 (S5): σ_ln 0,178 df 24 dựng lại được; làm tròn 10 s chỉ hạ σ 3–7 %; power σ = 0,4 là 0,73–0,75 (không 0,77); 2 mục lỗi `t5-logq` của E7 đạt 146 test.
+- **K1b** (đăng ký trước phép đo trục 2, quản trị): thêm mục "Đăng ký trước trục 2" ở cuối §9, chưa có số kết quả. Commit `9482684` (gộp `d8727ce`).
+- **K1** (thẩm định G, P, A1–A5, ba phát hiện): chạy lại G, E4, E5′, E6 khớp báo cáo, lệch 0; **P không tái lập được** (dữ liệu ở máy giám đốc). Sửa `g-analyze.mjs` (CI G-3Δ [−4,7; +7,4] → [−5,4; +8,8], bội số bài ở bootstrap) và `p-analyze.mjs` (đếm lệnh đỏ theo nhiệm vụ, thêm CP, theo phòng, đường găng); không sửa `e4-analyze.mjs`, `e5f-analyze.mjs`, `h6-sensitivity.mjs`. G-a không kiểm chứng được bằng git (tác động 0); P-a không đổi thước đo ngoài lệnh đỏ nhưng làm sau khi thấy 11/47. Ghi sai lệch ở hai mục §9 ("Đăng ký trước V4-3f", "Phân tích E4, E5′, E6…"). Commit trước sửa `9c6e0de`, sau sửa `5c48f44` (gộp `c0680f4`); S4 `2916d69` (gộp `f001857`); ghi §9, K1 và dòng này ở commit của hạng mục S5 (mã ghi ở báo cáo bàn giao).
+
 ## Vòng 4, gói 12 (T-20261104-135425-669, hạng mục S2, 4/11/2026): bài báo v0.6 — Bảng 10 theo bảng "sau D12", E3 ở mức quy trình
 
 Căn cứ: bảng "trước D12 → sau D12" (`context/d12-stats-fixes-2026-11-04.md` mục 2, nguồn chuẩn duy nhất; ghi tắt D12-§), `context/d12-stats-fixes-2026-11-04.n2-review.md`, `bench/vs-claude/results/local-3e/RUNLOG.md` (chỉ mục "Nguồn p của H6 cho E6"; bỏ qua mọi dòng kết quả E3, E4), `preregistration.md` §9 V4-3e-E5′ (dòng 560–585) và đầu `bench/vs-claude/results/b15f-main/RUNLOG.md`. Không chạy lệnh nào, không chạy benchmark, không sửa `src/`, `bench/`, `preregistration.md`. `consistency-check` do S5 chạy.

@@ -1003,6 +1003,21 @@ Bước 2 **chưa được giám đốc duyệt chạy**. Lý do phải duyệt:
   - **Cỡ mẫu:** giả định σ_ln = 0,25, giảm 30 %, 6 lượt mỗi ô. SE ≈ 0,083 trên 3 bài, power > 0,9.
   - **Cần Phòng Dev làm trước:** tùy chọn `isolation` của harness (xem D14).
 
+**Sai lệch ghi ở BRIEF-19 K1 (13/11/2026, @methodologist, hạng mục S5; chỉ ghi, không sửa chữ đăng ký ở trên; giờ chính thức là giờ của commit chứa mục này).** Căn cứ: chạy lại ở `analysis/v43f-rerun.md`. Hai mã commit bằng chứng thứ tự cho phần sửa script: **`9c6e0de`** (00:08:51, trước khi sửa: số "trước" và bảng lệch) và **`5c48f44`** (00:12:27, sửa script và test, số "sau"). Số dòng là của commit gốc `d1e8573`. Chi tiết đánh giá ở `context/v43f-review-2026-11-12.md`, mục K1.
+- **Đã sửa ở `5c48f44` (có số đổi):**
+  - **D-G1** (`g-analyze.mjs:48-74`, đăng ký G (6) "bootstrap hai tầng"): bootstrap Δ làm mất bội số của bài bị rút nhiều lần (nhóm lại theo tên bài sau khi rút). Lý do sửa: sai so với "lấy lại bài", CI quá hẹp. Số đổi: **CI 95 % của G-3Δ [−4,7; +7,4] → [−5,4; +8,8]**. Δ = +0,8 đ.% và p hoán vị 0,7408 không đổi; CI vẫn chứa 0, kết luận "không phân biệt được" không đổi. Số [−4,7; +7,4] đã báo ở `g-mutation/RUNLOG.md` và `report.md` giữ nguyên làm số gốc, không sửa; mọi chỗ dẫn lại từ nay dùng [−5,4; +8,8] hoặc ghi cả hai.
+  - **D-G2** (`g-analyze.mjs:7`): bỏ import kéo theo `typescript`, chép hàm `rng` cùng thuật toán, có test trùng dãy. Không đổi số.
+  - **D-P1** (`p-analyze.mjs:67-68`, đăng ký P (3) "số nhiệm vụ kết thúc còn lệnh kiểm tra đỏ"): năm đếm (`endRed`, `endChecked`, `endNewRed`, `baselineRed`, `endDeniedOnly`) đếm theo lượt phòng chứ không theo nhiệm vụ. Đã sửa đếm theo nhiệm vụ. **Số thật chưa tính lại được** (xem dưới); chiều đổi tối đa −1 đơn vị so với RUNLOG (54 lượt, 53 nhiệm vụ).
+  - **D-P2** (`p-analyze.mjs:73-84`): thêm vào báo cáo CP 95 % cho P-1 và P-3, tách theo phòng, so với đường găng. Các số này có ở `p-parallel/RUNLOG.md` nhưng **không có trong §9** và script cũ không in; nay có trong script, nhãn "ngoài đăng ký, mô tả". Không đổi số đã báo.
+- **Không sửa (đã đọc, nêu để độc giả biết):**
+  - **D-G3:** phân vị bootstrap làm tròn ra ngoài (`floor`/`ceil` trên 4000), lệch ≤ 1 hạng; không đổi kết luận.
+  - **D-G5:** 25 đột biến quá hạn `npm test` tính là "đỏ" đúng G (2). Độ nhạy: coi quá hạn là không chặn thì G-3 = 1 878/2 097 = 89,6 % (so với 90,7 %).
+  - **D-G6:** 6 lượt đủ điều kiện (`t1-duration__B6__r1,2,3,5,6,7`) có 0 vị trí đột biến, nên 209 lượt đủ điều kiện nhưng 203 lượt vào G-3; `t1-duration` vắng ở nhánh B6 của G-3.
+  - **D-P3 (P-a):** thêm quy tắc mà RUNLOG chưa nói: `checksNewRed` và `checksBaseline.red` **loại lệnh bị chặn theo chính sách (`denied`)**, còn lệnh đỏ ở trạng thái cuối thì tính cả `denied`.
+- **Thứ tự thời gian của G-a (không kiểm chứng được bằng git).** RUNLOG ghi G-a "ghi 4/11 lúc 19:39, trước khi tính G-1/G-2". Git: mốc khóa `f5a31dc` 19:31:56; RUNLOG trước khi chạy `4d62256` 19:32:06 không có chữ "G-a"; chữ này xuất hiện lần đầu ở `5ca04f4` 20:23:15, **cùng commit với kết quả**. Không có commit nào trong 19:32–20:23. Bằng chứng duy nhất cho "trước khi tính G-1/G-2" là lời của RUNLOG. Tác động bằng 0: 0 lượt base quá hạn 60 s, `g-rebase.jsonl` rỗng, nên G-1/G-2 giống hệt có hay không có G-a. Bản `g-analyze.mjs` khóa (`44c28b8f…`) chưa có `--rebase`; bản lúc báo là `f0fdb520…`; `g-mutation.mjs` cũng đổi ở G-b. Các thay đổi này đã ghi ở RUNLOG, nhưng chỉ bằng mốc giờ tự khai.
+- **P-a đã đổi thước đo ngoài phần lệnh đỏ chưa?** Không. `git diff f5a31dc d1e8573 -- p-extract.mjs` chỉ thêm ba trường (`checksBaseline`, `checksNewRed`, `checksDenied`), 4 dòng; P-1, P-2, mốc thời gian, đếm gộp/xung đột không đổi. Nhưng P-a được thêm **sau khi thấy** "11/47" (lần trích 19:32, trích lại 19:34), nên "đỏ mới 2/47" là chỉ số lập sau kết quả. Phần "Chưa ai thấy" của mục V4-3f đúng đến 19:32 với P-3 lệnh đỏ, không đúng sau đó.
+- **P không tái lập được ở đây.** `prod-parallel.json` nằm trên máy giám đốc (không commit), nên 42/54, 1,32, 375 phút (27,5 %), 6/213, 11/47, 2/47 chỉ kiểm gián tiếp (băm script, CP từ đếm, test dữ liệu giả). Cần người có quyền chạy `node docs/research/analysis/p-analyze.mjs <tệp> --json` với script sau sửa. Tiêu chí "số in ra khớp RUNLOG" **chưa đạt với P**.
+
 ### Phân tích E4, E5′, E6 và các quyết định lúc phân tích (ghi 12/11/2026, người điều phối được giám đốc giao quyền tự duyệt)
 
 **Vị thế.** Ba đợt đã đủ dữ liệu: E4 192/192 lượt, E6 56/56, E5′ 40/40. Phân tích chạy bằng script, không gọi LLM:
@@ -1023,6 +1038,15 @@ Phòng Nghiên cứu thẩm định lại ở BRIEF-19 K1: chạy lại và đ�
   - A2: +0,1 pp ở 7 bài, 0,0 ở 5 bài.
   - CI ở cả hai cách tính đều nằm trong ±5 pp. Báo đúng cờ, kèm độ lớn.
 - **(A5) E5′, không có lượt nào chạm quy tắc loại (8).** Mọi B0F đều có `discuss` và `finalize`, nên phân tích chính và phân tích độ nhạy cho cùng số.
+
+**Sai lệch ghi ở BRIEF-19 K1 (13/11/2026, @methodologist, hạng mục S5; chỉ ghi; giờ chính thức là giờ của commit chứa mục này).** Chạy lại E4, E5′, E6 từ tệp đã commit (`analysis/v43f-rerun.md` mục 2.3–2.5): **mọi số in ra giống hệt báo cáo đã commit, lệch 0**. **Không sửa dòng nào** của `e4-analyze.mjs`, `e5f-analyze.mjs`, `h6-sensitivity.mjs` ở `5c48f44`; `9c6e0de` là số "trước", `5c48f44` là số "sau", hai commit cho các script này giống hệt. Chỗ lệch chữ đăng ký, không đổi số:
+- **D-E4-1:** E4 (6) nói CI bootstrap cụm kèm CP; script chỉ tính Clopper–Pearson cho q̂ (64 lượt/cổng), không bootstrap cụm. Với q̂ = 0/64 bootstrap suy biến ([0; 0]), CP rộng hơn nên bảo thủ hơn. Không có recall (0 < 10 dương), nên không phép nào cần bootstrap.
+- **D-E4-2:** E4 (7) "có hại" **không đánh giá được** vì không có lượt sạch của B7cab/B7cabO. Ở bảng khám phá (A2), B7cabO chặn **ít hơn** B7cab (1/64 so với 23/64), tức dấu "có lợi" chứ không "có hại".
+- **D-E5-1:** CI 90 % của E5′ lấy phân vị chỉ số 200 và 3800 trên 4000 (5,00 % và 95,03 %), lệch 1 hạng (A-6 đã biết); giữ.
+- **D-E5-2:** dòng `excluded` trong `done` bị bỏ không đếm vào báo cáo ở E5′; ở dữ liệu này `excluded` = 0.
+- **D-E6-1:** độ nhạy H6 dùng `rng` của `prereg-tests.mjs` và bootstrap 90 %, còn `analyze.mjs` dùng `mulberry32` của `lib/stats.mjs` và nội suy phân vị 95 %; cùng hạt, khác dãy. Hai CI không so từng chữ số được; §9 cho phép "90 % hoặc 95 %". Kết luận (cả hai trong ±5 pp) không đổi.
+- **Không kiểm được:** nguồn `subtasks.json` (A3) là `ccoding-e5f\data\runs` ngoài repo; chỉ kiểm được 40/40 khóa có số, không kiểm được số.
+- **Thay thế lượt (E4 (8) "tối đa 2 mỗi ô"):** 11 dòng không `done` đều thuộc cùng khóa và được chạy lại đúng khóa, mỗi khóa đúng một dòng `done`; không có lượt thay khóa nên không chạm trần.
 
 ### Bản chốt E7 và E8 (ghi 5/11/2026, trước mọi lượt gọi LLM của E7 và E8)
 
