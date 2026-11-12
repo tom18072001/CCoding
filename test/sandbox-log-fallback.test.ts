@@ -7,6 +7,9 @@ import path from 'node:path';
 import { logSandboxDeny, logSandboxUnavailable } from '../src/tools/claude-guard.js';
 import { ClaudeCliRuntime } from '../src/runtimes/claude-cli.js';
 import type { RunRequest } from '../src/types.js';
+// Cô lập môi trường: CCODING_DATA_DIR của máy chạy sẽ lấn át thư mục dữ liệu suy từ state và làm test ghi vào dữ liệu thật.
+delete process.env.CCODING_DATA_DIR;
+
 
 function tmp(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'cc-sbxfb-'));

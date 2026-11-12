@@ -10,7 +10,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PROCESS_SUFFIX, runClaude, weighted } from './lib/claude.mjs';
-import { runCcoding, serverUp } from './lib/ccoding.mjs';
+import { runCcoding, serverUp, checkServers } from './lib/ccoding.mjs';
 import { costOfCalls, priceRun } from './lib/pricing.mjs';
 import { GRADERS } from './lib/grade.mjs';
 import { blind } from './lib/judge.mjs';
@@ -86,12 +86,17 @@ fs.writeFileSync(path.join(out, 'config.json'), JSON.stringify({ argv, cfg, meta
 const armErrors = checkArms(armIds, ARMS, supportedLanes(path.resolve(SUITE, '../..')));
 if (armErrors.length) { for (const e of armErrors) console.error(e); process.exit(2); }
 
+{ // isolation: trường của arm thắng cờ --isolation; báo khi cờ tường minh bị đè
+  const over = armIds.filter((a) => ARMS[a].isolation && ARMS[a].isolation !== cfg.isolation);
+  if (has('isolation') && over.length) console.error(`Lưu ý: --isolation ${cfg.isolation} bị đè bởi trường isolation của arm: ${over.map((a) => `${a}=${ARMS[a].isolation}`).join(', ')}`);
+}
 if (armIds.some((a) => ARMS[a].kind === 'ccoding' && ARMS[a].server !== 'alt') && !(await serverUp(cfg.ccodingUrl))) {
   console.error(`CCoding server not reachable at ${cfg.ccodingUrl} - start it with: node dist/cli.js serve`);
   process.exit(2);
 }
 if (armIds.some((a) => ARMS[a].server === 'alt')) {
-  if (!cfg.ccodingUrlAlt || !cfg.ccodingDataAlt) { console.error('Arm có server "alt" cần --ccoding-url-alt và --ccoding-data-alt (xem RUNBOOK, E8)'); process.exit(2); }
+  const srvErrors = checkServers(armIds, ARMS, cfg);
+  if (srvErrors.length) { for (const e of srvErrors) console.error(e); process.exit(2); }
   if (!(await serverUp(cfg.ccodingUrlAlt))) { console.error(`CCoding server (alt) không truy cập được ở ${cfg.ccodingUrlAlt}`); process.exit(2); }
 }
 /** Server của arm: mặc định hoặc server thứ hai (E8). */
@@ -206,7 +211,7 @@ for (const s of schedule) {
   } catch (e) { error = String(e?.stack ?? e).slice(0, 2000); }
   if (r?.infra) {
     const row = { key: s.key, task: s.task, arm: s.arm, rep: s.rep, at: new Date().toISOString(), status: 'infra', infra: r.infra, resetsAt: r.resetsAt, wallSec: r.wallSec,
-      failReason: r.infra === 'rate-limit' ? 'quota' : 'error', excluded: null, ...provenance(meta, ARMS[s.arm], r, { quotaState: r.infra === 'rate-limit' ? 'rate-limited' : undefined }) }; // infra luôn chạy lại, nên không ghi excluded
+      failReason: r.infra === 'rate-limit' ? 'quota' : 'error', excluded: null, ...(r.error ? { error: String(r.error).slice(0, 300) } : {}), ...provenance(meta, ARMS[s.arm], r, { quotaState: r.infra === 'rate-limit' ? 'rate-limited' : undefined }) }; // infra luôn chạy lại, nên không ghi excluded
     fs.appendFileSync(runsFile, `${JSON.stringify(row)}\n`);
     if (r.infra === 'rate-limit') {
       console.log(`HẠN MỨC${r.resetsAt ? ` — mở lại lúc ${r.resetsAt}` : ''}`);

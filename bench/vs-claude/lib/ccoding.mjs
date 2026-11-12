@@ -135,6 +135,8 @@ export async function runCcoding(opts) {
   }
   const deadline = t0 + (opts.timeoutMin ?? 60) * 60000;
   let t = task; let infra, resetsAt;
+  // K4: thời gian harness thấy nhiệm vụ ở trạng thái tạm dừng (độ chính xác = vòng hỏi 10 s); chỉ thêm trường mới, wallSecTask vẫn gồm cả thời gian dừng
+  let pausedSince = null, pausedMs = 0, pauseCount = 0;
   const callsPath = path.join(opts.dataDir ?? '', 'runs', task.id, 'calls.jsonl');
   const scan = () => {
     const texts = [t.attention, t.error];
@@ -149,16 +151,20 @@ export async function runCcoding(opts) {
       await api(`/api/tasks/${task.id}/cancel`, { method: 'POST', body: '{}' }).catch(() => {});
       t = { ...t, status: 'failed' }; break;
     }
-    if (t.status === 'paused') { await api(`/api/tasks/${task.id}/resume`, { method: 'POST', body: JSON.stringify({ budgetMode: 'complete' }) }).catch(() => {}); }
+    if (t.status === 'paused') { if (pausedSince === null) { pausedSince = Date.now(); pauseCount++; } await api(`/api/tasks/${task.id}/resume`, { method: 'POST', body: JSON.stringify({ budgetMode: 'complete' }) }).catch(() => {}); }
     await sleep(10000);
-    try { t = (await api(`/api/tasks/${task.id}`)).task; } catch (e) { infra = 'error'; t = { ...t, status: 'failed', error: String(e.message) }; break; }
+    try { t = (await api(`/api/tasks/${task.id}`)).task; if (pausedSince !== null && t.status !== 'paused') { pausedMs += Date.now() - pausedSince; pausedSince = null; } } catch (e) { infra = 'error'; t = { ...t, status: 'failed', error: String(e.message) }; break; }
   }
   if (!infra && t.status !== 'done') { const rl = scan(); if (rl.rateLimited) { infra = 'rate-limit'; resetsAt = rl.resetsAt; } }
+  if (pausedSince !== null) { pausedMs += Date.now() - pausedSince; pausedSince = null; }
   const wallSec = (Date.now() - t0) / 1000;
   // V4-3f: isolation 'worktree' → CCoding làm trên nhánh nhiệm vụ trong worktree riêng; đưa thư mục chấm về đúng commit cuối của nhánh
   const isolation = opts.isolation ?? 'none';
   let checkout;
   if (isolation === 'worktree') checkout = checkoutTaskBranch(opts.workdir, t.branch);
+  // Nhiệm vụ xong mà không đưa được thư mục chấm về nhánh → không được chấm trên thư mục cũ (sẽ ra điểm 0 giả): coi là lỗi hạ tầng, chạy lại khi chạy tiếp
+  let checkoutError;
+  if (checkout && !checkout.ok && t.status === 'done' && !infra) { infra = 'error'; checkoutError = `Không đưa được thư mục chấm về nhánh nhiệm vụ: ${checkout.note ?? ''}`; }
   let finalText = '';
   try { finalText = String(await api(`/api/tasks/${task.id}/file?path=FINAL.md`)); } catch { /* no report */ }
 
@@ -197,15 +203,30 @@ export async function runCcoding(opts) {
     status: t.status === 'done' ? 'done' : 'failed', wallSec, tokens, costUsd, turns, calls,
     finalText, taskId: task.id, byPhase, agentsUsed: Object.keys(byAgent).length, byAgent,
     department: t.department, attention: t.attention,
-    research: { ...research, isolation, ...taskTimes(final ?? t), ...(checkout ? { checkout } : {}) }, infra, ...(resetsAt ? { resetsAt } : {}),
+    research: { ...research, isolation, ...taskTimes(final ?? t), pausedSecObserved: +(pausedMs / 1000).toFixed(1), pauseCount, ...(checkout ? { checkout } : {}) }, infra, ...(checkoutError ? { error: checkoutError } : {}), ...(resetsAt ? { resetsAt } : {}),
   };
 }
 
 /** Đưa `workdir` (repo gốc của lượt) về commit cuối của nhánh nhiệm vụ (HEAD tách rời: nhánh có thể đang mở ở worktree khác). */
 export function checkoutTaskBranch(workdir, branch) {
   if (!branch) return { ok: false, note: 'nhiệm vụ không có nhánh' };
-  const r = spawnSync('git', ['checkout', '-q', '--detach', branch], { cwd: workdir, encoding: 'utf8' });
+  const r = spawnSync('git', ['checkout', '-q', '-f', '--detach', branch], { cwd: workdir, encoding: 'utf8' });
   return r.status === 0 ? { ok: true, branch } : { ok: false, branch, note: String(r.stderr || r.error?.message || '').trim().slice(0, 300) };
+}
+
+/**
+ * K3: kiểm cấu hình hai server của E8. Trả về danh sách lỗi tiếng Việt (rỗng = ổn).
+ * Arm có `server: "alt"` bắt buộc có URL và data riêng, không trùng server chính (không âm thầm rơi về server chính, không dùng chung data/).
+ */
+export function checkServers(armIds, arms, cfg) {
+  if (!armIds.some((a) => arms[a]?.server === 'alt')) return [];
+  const errs = [];
+  if (!cfg.ccodingUrlAlt || !cfg.ccodingDataAlt) return ['Arm có server "alt" cần --ccoding-url-alt và --ccoding-data-alt (xem RUNBOOK, E8)'];
+  const normUrl = (u) => String(u).trim().replace(/\/+$/, '').toLowerCase().replace('localhost', '127.0.0.1');
+  const normDir = (d) => { const r = path.resolve(String(d)); return process.platform === 'win32' ? r.toLowerCase() : r; };
+  if (normUrl(cfg.ccodingUrlAlt) === normUrl(cfg.ccodingUrl)) errs.push('--ccoding-url-alt trùng --ccoding-url: arm "alt" phải chạy trên server thứ hai (cổng khác)');
+  if (normDir(cfg.ccodingDataAlt) === normDir(cfg.ccodingData)) errs.push('--ccoding-data-alt trùng --ccoding-data: hai server không được dùng chung thư mục data/');
+  return errs;
 }
 
 export async function serverUp(baseUrl) {

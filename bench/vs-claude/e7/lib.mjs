@@ -33,8 +33,16 @@ export const NEUTRAL = {
 };
 
 const sha = (t) => crypto.createHash('sha256').update(String(t)).digest('hex');
-const copyTree = (src, dst) => fs.cpSync(src, dst, { recursive: true, filter: (s) => !s.split(path.sep).some((x) => x === '.git' || x === 'node_modules' || x === '_FINAL.txt') });
+// lọc theo đường dẫn TƯƠNG ĐỐI so với gốc chép: thư mục cha tên `.git`/`node_modules` (vd. --work đặt trong một worktree) không làm mất cả cây
+const SKIP = new Set(['.git', 'node_modules', '_FINAL.txt']);
+export const copyTree = (src, dst) => fs.cpSync(src, dst, { recursive: true, filter: (s) => !path.relative(src, s).split(path.sep).some((x) => SKIP.has(x)) });
 const git = (cwd, ...args) => spawnSync('git', args, { cwd, encoding: 'utf8' });
+const realPath = (p) => { try { return fs.realpathSync.native(p).toLowerCase(); } catch { return path.resolve(p).toLowerCase(); } };
+/** Thư mục làm việc phải là gốc của một repo git riêng (không phải thư mục con của repo khác): git của harness và của CCoding chỉ chạm repo tạm. */
+export function assertOwnRepo(dir) {
+  const top = git(dir, 'rev-parse', '--show-toplevel');
+  if (top.status !== 0 || realPath(top.stdout.trim()) !== realPath(dir)) throw new Error(`${dir} không phải gốc repo git riêng của mục — dừng để không làm bẩn repo khác`);
+}
 const ID = ['-c', 'user.name=bench', '-c', 'user.email=bench@local'];
 
 /** Nạp các hàm thật của CCoding từ `dist/` của một bản checkout (bản ghim của đợt đo). */
@@ -114,7 +122,9 @@ export async function prepareItem(item, { suite, artifacts, workRoot, cc, arms =
     const overlaid = overlayStarter(prod, starterDir);
     if (siteMode) {
       const fp = path.join(prod, siteMode.site.file);
-      fs.writeFileSync(fp, applySite(fs.readFileSync(fp, 'utf8'), siteMode.site));
+      const before = fs.readFileSync(fp, 'utf8'), after = applySite(before, siteMode.site);
+      if (after === before) return { ok: false, reason: 'site-not-found' };
+      fs.writeFileSync(fp, after);
     }
     const opts = { denyCommands: [], timeoutSec: checkTimeoutSec, maxChars: 12000 };
     const latest = [await check(cc, prod, opts)];
@@ -133,6 +143,9 @@ export async function prepareItem(item, { suite, artifacts, workRoot, cc, arms =
       fs.mkdirSync(dir, { recursive: true });
       if (fs.existsSync(starterDir)) fs.cpSync(starterDir, dir, { recursive: true });
       git(dir, 'init', '-q');
+      // Windows: autocrlf của máy làm git in `warning: LF will be replaced by CRLF` lệch giữa các lần gọi (changeSummary của harness và của CCoding) → văn bản R1 ≠ R3
+      git(dir, 'config', 'core.autocrlf', 'false'); git(dir, 'config', 'core.safecrlf', 'false');
+      assertOwnRepo(dir);
       git(dir, 'add', '-A');
       git(dir, ...ID, 'commit', '-qm', 'base', '--allow-empty');
       const b = git(dir, 'rev-parse', 'HEAD').stdout.trim();
@@ -199,7 +212,7 @@ export function verdictOf(parsed, accepted) {
 }
 
 /** R1/R2: một nhiệm vụ CCoding "đã xong thực thi", chạy lại đúng bước CTO nghiệm thu. */
-export async function runCto(app, cc, prep, arm, { runtime = 'claude-cli', capture } = {}) {
+export async function runCto(app, cc, prep, arm, { runtime = 'claude-cli', capture, waitTimeoutMs = 90 * 60_000 } = {}) {
   const { store, orchestrator, registry } = app;
   const { dir, base } = prep.dirs[arm];
   const now = new Date().toISOString();
@@ -209,6 +222,7 @@ export async function runCto(app, cc, prep, arm, { runtime = 'claude-cli', captu
   const created = orchestrator.submit({ brief: prep.brief, title: prep.title, mode: 'project', projectId, backlog: true, options: { budgetMode: 'complete', planApproval: false, ...(model ? { phaseModels: { accept: model } } : {}) } });
   const task = store.get(created.id);
   const branch = `ccoding/${task.id.toLowerCase()}`;
+  assertOwnRepo(dir);
   git(dir, 'checkout', '-q', '-b', branch);
   const dept = registry.department('dev');
   const { run, report } = syntheticRun(cc, { task, dept, latest: prep.latest, changes: prep.changes, at: now });
@@ -223,7 +237,10 @@ export async function runCto(app, cc, prep, arm, { runtime = 'claude-cli', captu
   store.put(task, true);
   const t0 = Date.now();
   orchestrator.resume(task.id, { from: 'accept' });
-  const t = await orchestrator.waitFor(task.id);
+  // waitFor không có hạn: runtime treo thì treo cả đợt → đặt hạn; quá hạn thì hủy (abort runtime) và ghi hạ tầng
+  let timer, timedOut = false;
+  const t = await Promise.race([orchestrator.waitFor(task.id), new Promise((res) => { timer = setTimeout(() => { timedOut = true; orchestrator.cancel(task.id); res(store.get(task.id)); }, waitTimeoutMs); })]);
+  clearTimeout(timer);
   const wallSec = (Date.now() - t0) / 1000;
   const callsText = fs.existsSync(store.callsFile(task.id)) ? fs.readFileSync(store.callsFile(task.id), 'utf8') : '';
   const calls = callsText.split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l));
@@ -233,12 +250,13 @@ export async function runCto(app, cc, prep, arm, { runtime = 'claude-cli', captu
   const acc = t.acceptance;
   const errText = [acc?.error, t.pause?.detail, t.error, callErrors(callsText).slice(-5)];
   const rl = detectRateLimit(errText);
-  const infra = t.status === 'paused' ? (rl.rateLimited || t.pause?.reason === 'quota' ? 'rate-limit' : 'error') : rl.rateLimited ? 'rate-limit' : acc?.error || !acc ? 'error' : undefined;
+  const infra = timedOut ? 'error' : t.status === 'paused' ? (rl.rateLimited || t.pause?.reason === 'quota' ? 'rate-limit' : 'error') : rl.rateLimited ? 'rate-limit' : acc?.error || !acc ? 'error' : undefined;
+  const pausedDetail = t.pause?.detail; // cancel() xóa `pause` → giữ lại trước khi hủy để dòng infra còn lý do
   if (t.status === 'paused') orchestrator.cancel(task.id);
   const text = acc?.path ? store.readRunFile(task.id, acc.path) ?? '' : '';
   const cap = capture?.get(task.id);
   return {
-    taskId: task.id, status: infra ? 'infra' : 'done', infra, ...(rl.resetsAt ? { resetsAt: rl.resetsAt } : {}), error: infra ? String(acc?.error ?? t.pause?.detail ?? t.error ?? '').slice(0, 300) : undefined,
+    taskId: task.id, status: infra ? 'infra' : 'done', infra, ...(rl.resetsAt ? { resetsAt: rl.resetsAt } : {}), error: infra ? String(timedOut ? `quá hạn chờ ${Math.round(waitTimeoutMs / 1000)}s` : (acc?.error ?? pausedDetail ?? t.error ?? '')).slice(0, 300) : undefined,
     verdict: infra ? null : verdictOf(acc.parsed, acc.accepted), accepted: acc?.accepted ?? null, parsed: acc?.parsed ?? null, acceptMode: acc?.mode ?? null,
     criteria: acc?.criteria?.length ?? 0, fails: acc?.criteria?.filter((c) => c.result === 'fail').length ?? 0, unknowns: acc?.criteria?.filter((c) => c.result === 'unknown').length ?? 0,
     tokens, calls: calls.length, turns: calls.reduce((n, c) => n + (c.turns ?? 0), 0), models: [...new Set(calls.map((c) => c.model).filter(Boolean))], ...costOfCalls(callsText),
@@ -248,7 +266,7 @@ export async function runCto(app, cc, prep, arm, { runtime = 'claude-cli', captu
 }
 
 /** R3: `claude -p` đơn trong repo của mục, cùng văn bản (bỏ hồ sơ CTO), cùng bộ công cụ chỉ đọc và cùng trần lượt. */
-export async function runSingle(cc, prep, { config, cto, deptName, bin = 'claude', timeoutMin = 20, maxTurns }) {
+export async function runSingle(cc, prep, { config, cto, deptName, bin = 'claude', binArgs = [], timeoutMin = 20, maxTurns }) {
   const { dir } = prep.dirs.R3;
   // trạng thái git như R1 sau finishWorkspace: sản phẩm đã commit trên nhánh nhiệm vụ
   git(dir, 'checkout', '-q', '-b', 'ccoding/task');
@@ -256,7 +274,7 @@ export async function runSingle(cc, prep, { config, cto, deptName, bin = 'claude
   git(dir, ...ID, 'commit', '-qm', `CCoding: ${prep.title}`.slice(0, 200));
   const prompt = r3Prompt(cc, { config, cto, deptName, prep });
   const { tools, allowedTools } = r3Tools(cc, cto, { gitRead: config.tools.gitRead !== false });
-  const r = await runClaude({ cwd: dir, prompt, model: ARMS.R3.model, timeoutMin, bin, tools, allowedTools, permissionMode: 'default', maxTurns, stdin: true });
+  const r = await runClaude({ cwd: dir, prompt, model: ARMS.R3.model, timeoutMin, bin, binArgs, tools, allowedTools, permissionMode: 'default', maxTurns, stdin: true });
   const p = r.status === 'done' ? cc.parseAcceptance(r.finalText) : { parsed: false, accepted: false, criteria: [] };
   const infra = r.infra ?? (r.status !== 'done' ? 'error' : undefined);
   const usd = r.model ? costOf(r.tokens, r.model) : null;

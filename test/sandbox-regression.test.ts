@@ -8,6 +8,9 @@ import path from 'node:path';
 import { buildClaudeArgs, ClaudeCliRuntime, ClaudeStreamParser, parseSandboxDeny, sandboxAvailable, toWslPath, wrapForWsl } from '../src/runtimes/claude-cli.js';
 import { logSandboxDeny } from '../src/tools/claude-guard.js';
 import { loadConfig, validateOsSandbox } from '../src/config.js';
+// Cô lập môi trường: CCODING_DATA_DIR của máy chạy sẽ lấn át thư mục dữ liệu suy từ state và làm test ghi vào dữ liệu thật.
+delete process.env.CCODING_DATA_DIR;
+
 import type { RunRequest } from '../src/types.js';
 
 function tmpData() {
