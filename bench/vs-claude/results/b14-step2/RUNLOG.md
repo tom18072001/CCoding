@@ -76,3 +76,27 @@ Ghi 4/11/2026 (BRIEF-18 K3(b)), chỉ đọc tệp, không chạy test. Danh sá
 
 - `b14-run.ps1` (pid 44828) đang ở bước chờ E5′ thì bị kết thúc lúc khoảng 11:10, khi ứng dụng Claude desktop khởi động lại (`b15f-main/RUNLOG.md`). Chưa có khối nào chạy, chưa có dữ liệu.
 - **11:53:** chạy lại đúng kịch bản (sha256 `87d49357…`, không đổi) bằng WMI, pid 12140. Kịch bản đang chờ dòng "E5F XONG", do `run3e-e.ps1` ghi khi E5′ xong.
+
+## Hạn mức tuần và lỗi sang khối sớm (5/11–12/11/2026)
+
+- **18:18 ngày 5/11:** E5′ xong, khối 1 (nhánh `off`, r1–4) bắt đầu.
+  - Lượt `t3-api__B7__r1` xong.
+  - Lượt thứ hai (`t2-orders__B7__r1`) gặp **hạn mức tuần** của gói Max. Thông báo của CLI: "limit · resets Nov 8, 8pm (Asia/Bangkok)".
+- **Lỗi kịch bản:** `b14-run.ps1` thử lại mỗi 20 phút, tối đa 60 lần, rồi **sang khối kế tiếp dù khối trước chưa đủ**.
+  - **14:36 ngày 6/11:** sang khối 2 (nhánh `on`) khi khối 1 mới có 1/12 lượt.
+  - Khối 2 chỉ có 3 dòng `infra` (hạn mức), **không có lượt `done` nào**. Vì vậy không có dữ liệu nào chạy sai thứ tự ABBA.
+- **Sau 15:16 ngày 6/11:** kịch bản dừng hẳn. Máy khởi động lại (lần gần nhất 12/11 00:31), nên không còn tiến trình nào.
+- **Dữ liệu lúc chạy tiếp:**
+  - `off/runs.jsonl`: 61 dòng, gồm 1 `done` và 60 `infra` hạn mức;
+  - `on/runs.jsonl`: 3 dòng `infra`.
+  - Runner chạy lại mọi khóa chưa `done` (§4.1).
+- **Sửa (người điều phối được giám đốc giao quyền tự duyệt lúc 22:57 ngày 12/11):** `b14-run2.ps1` (bản sao `setup/b14-run2.ps1`, sha256 `bc868087…`). Giữ nguyên kế hoạch 8 khối, arm, bài, lệnh, cấu hình và kiểm ro rỉ. Chỉ đổi cách lặp:
+  - khối chỉ xong khi đủ số dòng `done` của khối;
+  - gặp hạn mức thì chờ 30 phút rồi thử lại, không giới hạn số lần;
+  - lỗi khác 5 lần liền không tiến triển thì dừng và tạo `STOP-B14`;
+  - khối đã đủ thì bỏ qua, nên chạy lại được sau khi máy khởi động lại.
+- **23:01 ngày 12/11:** chạy tiếp bằng WMI, pid 29700. Khối 1 khởi động server với cấu hình sha256 `4bc56eaf…` (`off`), CLI 2.1.318, đã có 1/12.
+- **Sai lệch cần ghi khi phân tích:**
+  - lượt `t3-api__B7__r1` của khối 1 chạy trước các lượt còn lại của khối khoảng 7 ngày;
+  - **độ nhạy:** phân tích lại khi bỏ lượt này;
+  - nhật ký đầy đủ ở `b14-run.txt` (thư mục này).

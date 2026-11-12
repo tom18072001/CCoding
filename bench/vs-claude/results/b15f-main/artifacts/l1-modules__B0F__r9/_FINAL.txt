@@ -1,0 +1,98 @@
+# Năm module độc lập từ SPEC: money, calendar, csvcheck, slug, ratelimit
+
+## Tóm tắt
+Cả năm module đã được hiện thực trong `src/<tên>/index.js`, mỗi module có test trong `test/<tên>.test.js`, không thêm thư viện ngoài. Lệnh `npm test` do CCoding chạy sau thực thi cho kết quả exit 0, 88 test pass, 0 fail, trong khi baseline exit 1. Không module nào có test mẫu lệch SPEC, nên giả định A1 đúng. Còn mở một số điểm SPEC mơ hồ (xem bên dưới) và chưa có bản ghi review riêng của @qa-tester trong dữ liệu tôi nhận được. Chưa commit gì.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? | Bằng chứng | Tệp |
+|---|---|---|---|---|---|
+| S1 | money (VND/USD/EUR, half-even BigInt, allocate, convert) | @backend-dev | Đạt | `node --test test/money.test.js` 19/19; đổi cố ý 3 quy tắc, test đỏ rồi hoàn nguyên | `src/money/index.js`, `test/money.test.js` |
+| S2 | calendar (ngày làm việc, nghỉ bù, tuần ISO) | @backend-dev | Đạt | `node --test test/calendar.test.js` 20/20; đổi cố ý 2 quy tắc (nghỉ bù, biên `workingDaysBetween`) | `src/calendar/index.js`, `test/calendar.test.js` |
+| S3 | csvcheck (RFC 4180, kiểm lược đồ) | @data-engineer | Đạt | `node --test test/csvcheck.test.js` 16/16; đổi cố ý 2 quy tắc (dừng sau REQUIRED/TYPE) | `src/csvcheck/index.js`, `test/csvcheck.test.js` |
+| S4 | slug (fold, slugify, so khớp, sort tiếng Việt) | @frontend-dev | Đạt | `node --test test/slug.test.js` 15/15; đổi cố ý thanh hỏi/ngã và hoa/thường | `src/slug/index.js`, `test/slug.test.js` |
+| S5 | ratelimit (token bucket, sliding window, clock tiêm vào) | @senior-swe | Đạt | `node --test test/ratelimit.test.js` 18/18; đổi cố ý biên `>`/`>=` và ceil/floor | `src/ratelimit/index.js`, `test/ratelimit.test.js` |
+| Chốt | `npm test` toàn bộ | CCoding (tự chạy) | Đạt | Baseline exit 1; sau thực thi exit 0, 88 pass / 0 fail | — |
+
+Chi tiết từng hạng mục nằm trong `.ccoding/T-20261105-164436-d4b/outputs/dev-S1-backend-dev.md` đến `dev-S5-senior-swe.md`.
+
+## Quyết định
+- Giữ 5 hạng mục song song, vì mỗi người chỉ ghi module và test của mình.
+- SPEC là chuẩn duy nhất. Hai chỗ dự thảo hiểu sai ở ratelimit đã sửa: token bucket nạp liên tục bằng số nguyên (nhân với `refillIntervalMs`), và kết quả là `{ allowed, retryAfterMs, remaining }`.
+- Không cần kiến trúc, BA hay cổng bảo vệ dữ liệu, vì đây là thư viện thuần, nhãn internal.
+- Mỗi người đổi cố ý ít nhất 2 quy tắc rủi ro để kiểm tra test thật sự bắt lỗi. Tất cả đã hoàn nguyên.
+
+## Kết quả review
+- Cổng chất lượng ghi nhận đã duyệt: lệnh kiểm tra xanh, không chạm vùng bảo mật.
+- Không có blocker nào được ghi nhận. Danh sách test mẫu lệch SPEC: rỗng ở cả 5 module.
+- Tôi không nhận được bản review blocker/major/minor chi tiết của @qa-tester, nên không thể nêu số lượng phát hiện. Đây là việc chưa xác nhận.
+
+## Việc còn mở & rủi ro
+Bộ nghiệm thu ẩn chấm theo SPEC, nên các điểm mơ hồ sau là rủi ro thật, chưa kiểm chứng:
+- **money:** thứ tự kiểm `m` và `to` trong `convert`, và thứ tự trong `convertSum`. Cách xử lý `rates` sai dạng (`INVALID_RATE` so với `MISSING_RATE`). `parseMoney` chỉ nhận chữ số ASCII.
+- **calendar:** `options` không hợp lệ ném `CAL_INVALID_OPTION`, `isoWeekToDate` ngoài khoảng ném `CAL_OUT_OF_RANGE`, đều do người làm tự suy ra.
+- **csvcheck:** delimiter chỉ nhận chuỗi dài 1. Dòng chỉ có `\r` được coi là dòng trống.
+- **slug:** thứ tự kiểm `maxLength` so với kiểu `text`. Chưa kiểm `compareVi` với ký tự mà `toLowerCase` ra nhiều ký tự (ví dụ `İ`).
+- **ratelimit:** sliding window khi đồng hồ lùi (SPEC không quy định), `reset(key)` kiểm key, `null` ở tùy chọn bị coi là sai.
+- Cảnh báo CRLF của git ở `src/ratelimit/index.js` chỉ là thông báo.
+
+## Bước tiếp theo
+Phần chính đã xong, không cần tách nhiệm vụ lớn. Đề xuất hai gói nhỏ, mỗi gói một nhiệm vụ riêng:
+1. **Rà SPEC với các điểm mơ hồ.** @qa-tester đối chiếu từng điểm ở mục trên với số dòng SPEC. Xong khi mỗi điểm có kết luận "SPEC quy định/không quy định" và test tương ứng nếu SPEC có quy định.
+2. **Bổ sung ca biên còn thiếu.** Gồm `compareVi` với `İ` và sliding window khi đồng hồ lùi. Xong khi có test và `npm test` vẫn xanh.
+
+Việc commit, nếu Tom muốn, cần được yêu cầu riêng.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261105-164436-d4b` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **104 in / 117.7k out**, cache đọc 1.29M, 14 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | 36 | 48247 | 613750 | 3 |
+| Data Engineer (@data-engineer) | dev | 18 | 24946 | 239189 | 2 |
+| Frontend Developer (@frontend-dev) | dev | 16 | 13866 | 171699 | 2 |
+| Senior Software Engineer (@senior-swe) | dev | 16 | 14928 | 163319 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 14 | 14304 | 95712 | 3 |
+| QA Engineer (@qa-tester) | dev | 2 | 933 | 3029 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 450 | 649 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Hiện thực module money (VND/USD/EUR, half-even, allocate, convert) (@backend-dev)
+- `outputs/dev-S2-backend-dev.md` — S2 Hiện thực module calendar (ngày làm việc, nghỉ bù, tuần ISO) (@backend-dev)
+- `outputs/dev-S3-data-engineer.md` — S3 Hiện thực module csvcheck (parser RFC 4180 và kiểm theo lược đồ) (@data-engineer)
+- `outputs/dev-S4-frontend-dev.md` — S4 Hiện thực module slug (fold, slugify, so khớp, sắp xếp tiếng Việt) (@frontend-dev)
+- `outputs/dev-S5-senior-swe.md` — S5 Hiện thực module ratelimit (token bucket, cửa sổ trượt, đồng hồ tiêm vào) (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | at Test.run (node:internal/test_runner/test:1175:12) · at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) { · at Test.run (node:interna |
+| sau thực thi | `npm test` | 0 | ℹ tests 88 · ℹ suites 0 · ℹ pass 88 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | **71** B | thấp | — | — | 100 | 71 | 80 | 100 | 2 | 1 | 662k | 5/20 | — |
+| Data Engineer (@data-engineer) | dev | **67** B | thấp | — | — | 100 | 80 | 74 | 100 | 1 | 1 | 264k | 2/10 | — |
+| Frontend Developer (@frontend-dev) | dev | **70** B | thấp | — | — | 100 | 100 | 91 | 100 | 1 | 1 | 186k | 1/9 | — |
+| Senior Software Engineer (@senior-swe) | dev | **69** B | thấp | — | — | 100 | 100 | 81 | 100 | 1 | 1 | 178k | 1/9 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **68** B | thấp | — | — | — | 89 | 100 | 100 | 0 | — | 110k | 0/5 | — |
+| QA Engineer (@qa-tester) | dev | **60** C | thấp | — | — | — | — | 90 | — | 0 | — | 4k | — | — |
+| Điều phối viên (@orchestrator) | office | **60** C | thấp | — | — | — | — | 100 | — | 0 | — | 1k | — | — |
+
+### Việc cần sửa theo agent
+- **Backend Developer** (@backend-dev, 71 B):
+  - Thao tác công cụ lỗi nhiều (5/20, 25%; nhiều nhất ở run_command 5/14) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+- **Data Engineer** (@data-engineer, 67 B):
+  - Thao tác công cụ lỗi nhiều (2/10, 20%; nhiều nhất ở run_command 2/6) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+  - 1 lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp.
+- **Senior Software Engineer** (@senior-swe, 69 B):
+  - 1 lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp.
+- **QA Engineer** (@qa-tester, 60 C):
+  - 1 lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp.
+  - Chỉ tham gia họp, không nhận hạng mục — cân nhắc không mời họp khi không có việc liên quan.
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

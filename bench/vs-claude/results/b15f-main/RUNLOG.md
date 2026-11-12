@@ -82,3 +82,21 @@ Sổ này ghi **trước lượt đầu**, lúc 4/11/2026 13:55 giờ VN. Khi đ
   - Server 7426 khởi động lại (pid 37628, `57148de`). r3 bắt đầu lại lúc 11:53:11; runner bỏ qua khóa đã xong.
   - Không đổi bài, arm, tham số hay quy tắc kiểm.
 - Khi phân tích, ghi khóa r3 nào bị chạy lại sau sự cố.
+- **11:53–18:14:** r3…r10 chạy bằng `run3e-e.ps1`, không có sự cố mới. Kiểm Dừng 2 sau mỗi cặp đều đạt: mỗi bài đủ k cặp, 0 cặp bị loại.
+
+## Kết thúc (ghi 12/11/2026, không mở điểm)
+
+- **18:14:15 ngày 5/11:** "E5F XONG 10 luot moi o", CLI 2.1.318. Nhật ký đầy đủ ở `results/local-3e/runlog-3e.txt`.
+- **`runs.jsonl`: 42 dòng**, trong đó:
+  - **40 `done`:** 10 cặp × 2 bài × 2 arm, mỗi khóa đúng một dòng;
+  - **2 `infra`:** cùng khóa `l2-chain__B0F__r1`, hạn mức lúc 4/11 19:30 và 19:50. Khóa này đã chạy lại theo §4.1.
+- **Lượt chạy lại sau sự cố 11:10:** lượt đầu của r3, bị giết khi chưa có dòng nào. Nó được chạy lại ở lần chạy r3 lúc 11:53, như mọi khóa chưa xong.
+- **Thời gian:** lượt `done` đầu tiên 4/11 19:19 UTC, lượt cuối 5/11 11:14 UTC. Tổng `wallSec` của các lượt `done` là 7,98 giờ máy.
+- **Chi phí quy đổi** (`costUsd` của runner, bảng giá `pricing.mjs`): 96,85 USD cho 40 lượt. Chỉ đọc trường chi phí; chi phí theo arm để dành cho phân tích.
+- **CLI:** 2.1.318 ở mọi dòng (`claudeCliVersion`). Ghim bằng `DISABLE_AUTOUPDATER=1` từ 10:10 ngày 5/11.
+- **Tệp:**
+  - `runs.jsonl` cuối;
+  - 40 thư mục `artifacts/<khóa>`;
+  - `config-final.json`, là cấu hình của lần gọi runner cuối (`repeats` 10). `config.json` là của lần gọi đầu, giữ nguyên.
+  - Hai cấu hình chỉ khác `repeats` và `startedAt`.
+- **Phân tích:** theo §9 V4-3e-E5′, sau khi Phòng Nghiên cứu nhận dữ liệu. Chưa ai xem điểm hay token theo arm trước bước đó.
