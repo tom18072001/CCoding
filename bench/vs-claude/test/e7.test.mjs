@@ -8,7 +8,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { claudeArgs, TOOLS } from '../lib/claude.mjs';
 import { sampleItems, countItems } from '../e7/sample.mjs';
-import { loadCcoding, locateSite, prepareItem, r3Prompt, r3Tools, runCto, runSingle, verdictOf, ARM_DIR } from '../e7/lib.mjs';
+import { spawnSync } from 'node:child_process';
+import { assertOwnRepo, copyTree, loadCcoding, locateSite, prepareItem, r3Prompt, r3Tools, runCto, runSingle, verdictOf, ARM_DIR } from '../e7/lib.mjs';
 import { analyze, mcnemarExact } from '../e7/analyze.mjs';
 import { mutationSites, productFiles, rng, sample, applySite } from '../../../docs/research/analysis/g-mutation.mjs';
 
@@ -197,10 +198,9 @@ test('runSingle (R3) với claude giả: cờ chỉ đọc, prompt qua stdin, k�
   const base = cc.loadConfig({ root: ROOT });
   const app = cc.createApp({ dataDir: data, workspacesDir: path.join(data, 'workspaces'), runner: 'process', herdr: { ...base.herdr, notify: false, agentPanes: false } }, { root: ROOT });
   const dir = tmp();
-  const bin = path.join(dir, 'claude');
+  const bin = path.join(dir, 'claude.cjs');
   const log = path.join(dir, 'args.jsonl');
-  write(bin, `#!/usr/bin/env node
-const fs = require('fs'); const path = require('path');
+  write(bin, `const fs = require('fs'); const path = require('path');
 let input = ''; process.stdin.on('data', (d) => (input += d)); process.stdin.on('end', () => {
   fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify({ argv: process.argv.slice(2), stdin: input, cwd: process.cwd() }) + '\\n');
   const ok = /score >= 50\\)/.test(fs.readFileSync(path.join(process.cwd(), 'src', 'grade.js'), 'utf8'));
@@ -209,12 +209,11 @@ let input = ''; process.stdin.on('data', (d) => (input += d)); process.stdin.on(
   console.log(JSON.stringify({ type: 'result', is_error: false, result: res, num_turns: 2, total_cost_usd: 0.01, usage: { input_tokens: 900, output_tokens: 150, cache_read_input_tokens: 4000, cache_creation_input_tokens: 100 } }));
 });
 `);
-  fs.chmodSync(bin, 0o755);
   const work = tmp();
   const opts = { suite: fx.suite, artifacts: path.join(fx.suite, 'artifacts'), workRoot: work, cc };
   const deptName = app.registry.department('dev').name;
   const pf = await prepareItem(fx.faulty, opts), pc = await prepareItem(fx.clean, opts);
-  const ctx = { config: app.config, cto: app.registry.cto(), deptName, bin, timeoutMin: 1, maxTurns: app.config.phases.toolTurns.accept };
+  const ctx = { config: app.config, cto: app.registry.cto(), deptName, bin: process.execPath, binArgs: [bin], timeoutMin: 1, maxTurns: app.config.phases.toolTurns.accept };
   const rf = await runSingle(cc, pf, ctx), rc = await runSingle(cc, pc, ctx);
   assert.deepEqual([rf.status, rf.verdict, rc.verdict], ['done', 'block', 'pass']);
   const calls = fs.readFileSync(log, 'utf8').trim().split('\n').map((l) => JSON.parse(l));
@@ -228,4 +227,105 @@ let input = ''; process.stdin.on('data', (d) => (input += d)); process.stdin.on(
   assert.equal(path.basename(calls[0].cwd), ARM_DIR.R3);
   assert.ok(rf.costUsd > 0);
   assert.equal(rf.promptSha.length, 64);
+});
+
+// ───────────── K2: các ca hỏng của harness (Windows, treo, làm bẩn repo) ─────────────
+const newApp = (cc) => {
+  const data = tmp();
+  const base = cc.loadConfig({ root: ROOT });
+  const app = cc.createApp({ dataDir: data, workspacesDir: path.join(data, 'workspaces'), runner: 'process', herdr: { ...base.herdr, notify: false, agentPanes: false } }, { root: ROOT });
+  app.runtimes.get('claude-cli').available = async () => ({ ok: true, detail: 'giả' });
+  return { app, data };
+};
+const treeSha = (dir) => fs.readdirSync(dir, { recursive: true }).sort().map((f) => { const p = path.join(dir, f); return fs.statSync(p).isFile() ? `${f}:${fs.readFileSync(p, 'hex')}` : f; }).join('|');
+
+test('copyTree: thư mục cha tên .git/node_modules không làm mất cả cây; vẫn bỏ .git, node_modules, _FINAL.txt bên trong', () => {
+  const root = path.join(tmp(), '.git', 'node_modules', 'art');
+  write(path.join(root, 'src', 'a.js'), 'x');
+  write(path.join(root, '_FINAL.txt'), 'y');
+  write(path.join(root, 'node_modules', 'm', 'i.js'), 'z');
+  write(path.join(root, '.git', 'HEAD'), 'h');
+  const dst = tmp();
+  copyTree(root, dst);
+  assert.deepEqual(fs.readdirSync(dst, { recursive: true }).map((f) => f.split(path.sep).join('/')).sort(), ['src', 'src/a.js']);
+});
+
+test('prepareItem: artifact CRLF (Windows autocrlf) vẫn tìm đúng vị trí đột biến và áp đúng; vị trí lệch thì site-not-found', async () => {
+  const cc = await loadCcoding(ROOT);
+  const fx = fixture();
+  const art = path.join(fx.suite, 'artifacts', fx.key);
+  for (const f of ['src/grade.js', 'test/grade.test.js']) { const p = path.join(art, f); fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace(/\r?\n/g, '\r\n')); }
+  const opts = { suite: fx.suite, artifacts: path.join(fx.suite, 'artifacts'), workRoot: tmp(), cc };
+  const pf = await prepareItem(fx.faulty, opts);
+  assert.equal(pf.ok, true, pf.reason);
+  const src = fs.readFileSync(path.join(pf.dirs.R1.dir, 'src', 'grade.js'), 'utf8');
+  assert.match(src, /score >= 51\)/);
+  assert.match(src, /\r\n/, 'CRLF giữ nguyên, chỉ đổi đúng 50 → 51');
+  assert.equal((src.match(/>= 5[01]/g) ?? []).length, 1);
+  // cùng dòng nhưng sai phép đột biến / sai chuỗi thay → không bắt nhầm vị trí khác
+  for (const site of [{ ...fx.faulty.site, repl: '52' }, { ...fx.faulty.site, op: 'ROR' }, { ...fx.faulty.site, file: 'src/other.js' }, { ...fx.faulty.site, i: 11 }]) {
+    const r = await prepareItem({ ...fx.faulty, id: 'eeeeeeeeee', site }, opts);
+    assert.deepEqual([r.ok, r.reason], [false, 'site-not-found'], JSON.stringify(site));
+  }
+  // thiếu artifact
+  const m = await prepareItem({ ...fx.faulty, key: 'khong-co' }, opts);
+  assert.deepEqual([m.ok, m.reason], [false, 'missing-artifact']);
+});
+
+test('prepareItem/runCto: repo của mục là gốc riêng, bản gốc (artifact, starter) không đổi, autocrlf tắt, git của CCoding chỉ commit vào repo tạm', async () => {
+  const cc = await loadCcoding(ROOT);
+  const fx = fixture();
+  const { app } = newApp(cc);
+  const rt = app.runtimes.get('claude-cli');
+  rt.run = fakeCto([]);
+  const art = path.join(fx.suite, 'artifacts', fx.key), starter = path.join(fx.suite, 'tasks', fx.task.id, 'repo');
+  const before = [treeSha(art), treeSha(starter)];
+  const work = tmp();
+  const pf = await prepareItem(fx.faulty, { suite: fx.suite, artifacts: path.join(fx.suite, 'artifacts'), workRoot: work, cc });
+  for (const arm of Object.keys(ARM_DIR)) {
+    assertOwnRepo(pf.dirs[arm].dir);
+    assert.equal(spawnSync('git', ['config', 'core.autocrlf'], { cwd: pf.dirs[arm].dir, encoding: 'utf8' }).stdout.trim(), 'false');
+  }
+  const r = await runCto(app, cc, pf, 'R1', {});
+  assert.equal(r.status, 'done');
+  const d = pf.dirs.R1.dir;
+  const g = (...a) => spawnSync('git', a, { cwd: d, encoding: 'utf8' }).stdout.trim();
+  assert.equal(g('rev-parse', '--abbrev-ref', 'HEAD'), `ccoding/${r.taskId.toLowerCase()}`);
+  assert.equal(g('status', '--porcelain', '--', '.', ':!.ccoding'), '', 'sản phẩm đã commit trên nhánh nhiệm vụ');
+  assert.equal(g('rev-list', '--count', `${pf.base}..HEAD`), '1');
+  assert.deepEqual([treeSha(art), treeSha(starter)], before, 'artifact và starter nguyên vẹn');
+  // thư mục không phải gốc repo riêng (con của repo khác) → từ chối trước khi chạy bất kỳ lệnh git nào
+  const sub = path.join(pf.dirs.R2.dir, 'src');
+  assert.throws(() => assertOwnRepo(sub), /không phải gốc repo git riêng/);
+  const plain = tmp();
+  assert.throws(() => assertOwnRepo(plain), /không phải gốc repo git riêng/);
+  await assert.rejects(runCto(app, cc, { ...pf, dirs: { ...pf.dirs, R2: { ...pf.dirs.R2, dir: sub } } }, 'R2', {}), /không phải gốc repo git riêng/);
+});
+
+test('runCto: runtime treo → quá hạn chờ thì hủy, ghi hạ tầng "error" (không treo đợt); runtime tạm dừng vì hạn mức → rate-limit, không treo', async () => {
+  const cc = await loadCcoding(ROOT);
+  const fx = fixture();
+  const { app } = newApp(cc);
+  const rt = app.runtimes.get('claude-cli');
+  const opts = { suite: fx.suite, artifacts: path.join(fx.suite, 'artifacts'), workRoot: tmp(), cc };
+  const pf = await prepareItem(fx.faulty, opts);
+  // treo: chỉ trả khi bị abort, như tiến trình claude bị kill
+  rt.run = (req, hooks) => new Promise((_, rej) => { hooks.signal.addEventListener('abort', () => rej(new Error('bị hủy'))); });
+  const t0 = Date.now();
+  const r = await runCto(app, cc, pf, 'R1', { waitTimeoutMs: 400 });
+  assert.ok(Date.now() - t0 < 20_000, 'trả về trong hạn');
+  assert.deepEqual([r.status, r.infra, r.verdict], ['infra', 'error', null]);
+  assert.match(r.error, /quá hạn chờ/);
+  assert.equal((await app.orchestrator.waitFor(r.taskId)).status, 'cancelled', 'hủy thật: tiến trình runtime bị abort, nhiệm vụ không còn chạy ngầm');
+  // hết hạn mức: không chờ trong tiến trình (waitForFastMs = 0), nhiệm vụ tạm dừng → waitFor trả về, runCto hủy và báo rate-limit
+  app.config.runtime.waitForFastMs = 0;
+  rt.run = async () => { throw new Error('429 rate_limit_error: You have hit your limit · resets 4:50pm'); };
+  const pc = await prepareItem(fx.clean, opts);
+  const t1 = Date.now();
+  const q = await runCto(app, cc, pc, 'R1', { waitTimeoutMs: 20_000 });
+  assert.ok(Date.now() - t1 < 15_000, `không chạm hạn chờ (mất ${Date.now() - t1}ms)`);
+  assert.equal(q.status, 'infra');
+  assert.equal(q.infra, 'rate-limit');
+  assert.match(q.error, /429|hạn mức|limit/i, 'dòng infra còn lý do sau khi hủy nhiệm vụ tạm dừng');
+  assert.equal(app.store.get(q.taskId).status === 'paused', false, 'không để nhiệm vụ tạm dừng treo lại hàng đợi');
 });
