@@ -225,9 +225,39 @@ Tất cả cùng cách tính: tỉ số B1F/B0F, TB hình học theo bài, CI 90
 
 ## 6. Sau khi sửa (commit 2)
 
-_(Điền sau khi sửa script; xem phần dưới.)_
+Đã sửa: `g-analyze.mjs` (D-G1, D-G2), `p-analyze.mjs` (D-P1, D-P2). Không sửa `e4-analyze.mjs`, `e5f-analyze.mjs`, `h6-sensitivity.mjs`: mọi chỗ lệch của ba script này là **K** (lý do ở mục 4.3–4.5); `e4-analyze.mjs` chỉ hưởng lợi từ D-G2 (import `cp` từ `g-analyze.mjs` không còn kéo `typescript`). Không sửa `bench/`, `g-mutation.mjs`, `preregistration.md`.
+
+**Chạy lại sau khi sửa** (cùng lệnh như mục 1; đầu ra `v43f-rerun/g.after.txt`; các đầu ra khác giống hệt trước khi sửa, `diff` không có dòng nào):
+
+| Số | Trước | Sau | Ghi chú |
+|---|---|---|---|
+| G-1, G-2, G-3 (gộp, từng arm, nhóm A, C), theo bài, theo toán tử, G-4 | như mục 2.1 | **không đổi** | recall gộp theo lượt, không dùng `deltaStat` |
+| G-3Δ điểm | +0,8 điểm % | +0,8 | không đổi |
+| G-3Δ p hoán vị | 0,7408 | 0,7408 | hoán vị không dùng bootstrap |
+| **G-3Δ CI 95 % bootstrap hai tầng** | **[−4,7; +7,4]** | **[−5,4; +8,8]** | rộng hơn (từ 12,1 lên 14,2 điểm %), đúng chiều dự đoán: bội số của bài rút nhiều lần được giữ. CI vẫn chứa 0, kết luận "không phân biệt được" **không đổi** |
+| E4, E5′, E6 (độ nhạy), ba phát hiện | mục 2.3–2.5, 5 | không đổi | script không sửa |
+| P (mọi số) | RUNLOG | **chưa tính lại được** | cần `prod-parallel-b.json` ở máy giám đốc (mục 3). Ghi trước chiều thay đổi: `endRed`, `endChecked`, `endNewRed`, `baselineRed`, `endDeniedOnly` có thể giảm tối đa 1 đơn vị so với RUNLOG (54 lượt phòng, 53 nhiệm vụ); các số còn lại không đổi |
+
+**Cái này có nghĩa với §9 (đề xuất cho S5, S1 không ghi vào `preregistration.md`):**
+- Số **G-3Δ CI** đã báo ở RUNLOG và các tài liệu dẫn nó nên đổi thành [−5,4; +8,8] hoặc ghi cả hai kèm "sai lệch D-G1".
+- G-a: ghi "không kiểm chứng được bằng git, tác động bằng 0".
+- P-a: thêm quy tắc loại lệnh `denied` khỏi `checksNewRed` và `checksBaseline.red`.
+- P-3: đếm theo nhiệm vụ (D-P1); các số "ngoài đăng ký" của P (CP, theo phòng, đường găng) nay có trong script.
+- E4: ghi "q̂ chỉ CP, không bootstrap cụm" (D-E4-1).
+
+**Kiểm bằng (sau khi sửa):**
+
+| Lệnh | Exit | Kết quả |
+|---|---|---|
+| `node --test docs/research/analysis/*.test.mjs` | 1 | 79 test, 78 đạt, **1 lỗi**: `evalRun trên bài giả…` (`g-mutation.test.mjs:49`), **cũng lỗi trước khi sửa** (cùng test, chạy lần đầu ở commit gốc). Test này gọi `g-mutation.mjs` (ngoài phạm vi sửa), nghi do `spawn('npm')` không qua shell trên Windows; không điều tra theo quy tắc nhiệm vụ. 5 test mới (`g-analyze.test.mjs` 4, `p-analyze.test.mjs` 1) đều đạt |
+| `node --test docs/research/analysis/g-analyze.test.mjs docs/research/analysis/p-analyze.test.mjs` | 0 | 9/9 đạt |
+| `npm run typecheck` | 0 | sạch |
+| `npm test` | 1 | 455 test, 449 đạt, 3 lỗi, đều ở `src/`: `B-18: bật mà không có sandbox…`, `B-18: logSandboxDeny…`, `DET-04: claude-cli với log hỏng…`. Hạng mục này chỉ sửa tệp trong `docs/research/analysis/`, không chạm `src/` hay `test/` |
+| `node docs/research/performance/scripts/token-analysis.mjs --check docs/research/performance/token-analysis.md` | 0 | OK: 12 bảng trùng |
+| `node --test bench/vs-claude/harness/stats.test.mjs` | 0 | 12/12 |
+| `node docs/research/scripts/consistency-check.mjs` | 0 | Đạt: 48 tệp, không lệch số liệu (baseline 47; nay 48, nhiều khả năng do tệp `.md` mới của hạng mục này, chưa xác minh) |
 
 ## 7. Mã commit
 
-- Commit 1 (trước khi sửa): _(điền)_
-- Commit 2 (sửa và test): _(điền)_
+- **Commit 1** (trước khi sửa, chứa số "trước" và bảng lệch): `9c6e0de`.
+- **Commit 2** (sửa script, thêm test, ghi số "sau"): commit ngay sau `9c6e0de` trên nhánh này, thông điệp bắt đầu "BRIEF-19 S1 (commit 2". Mã đầy đủ ở báo cáo bàn giao (một tệp không tự dẫn mã băm của chính commit chứa nó).

@@ -4,7 +4,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { rng } from './g-mutation.mjs';
+
+// Bản sao nguyên văn của rng ở g-mutation.mjs (FNV-1a trên chuỗi hạt + mulberry32). Không import g-mutation.mjs để script phân tích chạy được
+// khi chưa cài typescript (S1 D-G2); g-analyze.test.mjs kiểm hai bản cho cùng dãy.
+export function rng(seedStr) {
+  let h = 2166136261 >>> 0;
+  for (const ch of String(seedStr)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  let a = h || 1;
+  return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
 
 export const GROUP_A = ['A0-sonnet'];
 export const GROUP_C = ['B0', 'B5', 'B6', 'B7'];
@@ -44,7 +52,8 @@ export function perRun(mut) {
 }
 const recall = (runs) => { const real = runs.reduce((s, r) => s + r.real, 0); return real ? runs.reduce((s, r) => s + r.caught, 0) / real : NaN; };
 
-/** Bootstrap hai tầng: lấy lại bài, rồi lấy lại lượt trong bài. f(runs) → số. */
+/** Bootstrap hai tầng: lấy lại bài, rồi lấy lại lượt trong bài. f(runs) → số.
+ *  Mỗi lần rút bài gắn chỉ số cụm `_c`: bài rút 2 lần là 2 cụm riêng (S1 D-G1), để thống kê theo bài (deltaStat) giữ bội số. */
 export function bootstrap2(runs, f, B, seed) {
   const byTask = groupBy(runs, (r) => r.task); const tasks = [...byTask.keys()].sort();
   const rnd = rng(seed); const vals = [];
@@ -52,7 +61,7 @@ export function bootstrap2(runs, f, B, seed) {
     const pick = [];
     for (let i = 0; i < tasks.length; i++) {
       const rs = byTask.get(tasks[Math.floor(rnd() * tasks.length)]);
-      for (let j = 0; j < rs.length; j++) pick.push(rs[Math.floor(rnd() * rs.length)]);
+      for (let j = 0; j < rs.length; j++) pick.push({ ...rs[Math.floor(rnd() * rs.length)], _c: i });
     }
     const v = f(pick); if (Number.isFinite(v)) vals.push(v);
   }
@@ -63,7 +72,7 @@ function groupBy(a, k) { const m = new Map(); for (const x of a) { const key = k
 
 /** Δ = trung bình theo bài của (recall nhóm C − recall nhóm A), chỉ bài có lỗi thật ở cả hai nhóm. */
 export function deltaStat(runs) {
-  const byTask = groupBy(runs.filter((r) => groupOf(r.arm)), (r) => r.task);
+  const byTask = groupBy(runs.filter((r) => groupOf(r.arm)), (r) => r._c ?? r.task); // _c: lần rút của bootstrap; không có thì nhóm theo bài
   const d = [];
   for (const rs of byTask.values()) {
     const a = rs.filter((r) => groupOf(r.arm) === 'A'), c = rs.filter((r) => groupOf(r.arm) === 'C');
