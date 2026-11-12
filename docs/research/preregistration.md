@@ -1114,6 +1114,20 @@ Phòng Nghiên cứu thẩm định lại ở BRIEF-19 K1: chạy lại và đ�
   - lượt có hạng mục chạy chồng ở B6w1 (`maxConc ≥ 2`) là lỗi cấu hình: dừng đợt và báo giám đốc, không loại lặng lẽ.
 - **Cách đọc, ghi trước.** E8 đo lợi ích thời gian của chạy song song khi chia việc ở làn nhanh, **trên cùng chi phí chia việc**. Không trả lời câu hỏi làn nhanh có rẻ hơn làm một mình hay không. Câu đó so với A0-sonnet, chỉ mô tả.
 
+### Thẩm định bản chốt E7/E8 — sai lệch (nếu có) (ghi 13/11/2026, @methodologist, BRIEF-19 K3; chỉ ghi, không sửa bản chốt)
+
+- **Thứ tự thời gian.** Bản chốt khóa ở commit `cd90988`, 5/11/2026 10:56:52. Sổ `results/e7-cto/RUNLOG.md` tại commit `d1e8573` (12/11/2026 23:55:49) chưa có lượt gọi LLM nào; kịch bản `e78-run.ps1` khởi động 23:08 ngày 12/11 và chờ B-14. Không đọc `runs.jsonl` hay `e8-parallel/`, nên không xác nhận được giờ lượt gọi đầu tiên.
+- **Sai lệch do lỗi thiết kế: không có.** 12 điểm thẩm định: 5 đạt, 7 đạt có điều kiện, 0 lỗi thiết kế (chi tiết ở `docs/research/context/v43f-review-2026-11-12.md`, mục K3). Bản chốt không bị sửa.
+- **Điều kiện khi phân tích và đọc kết quả (khai trước, không đổi thiết kế):**
+  1. E7: báo bảng theo bài, và bootstrap theo bài đọc cùng p của McNemar; hai bên khác chiều thì ghi "chưa kết luận". Nếu số cặp bất đồng < 10 thì p chỉ mô tả.
+  2. E7: ghi số lần trượt (1/3, 2/3, 3/3) của từng mục lỗi; báo recall của `t5-logq` tách riêng và bản bỏ `t5-logq` làm độ nhạy.
+  3. E7: R1 − R3 là hiệu của hồ sơ CTO cộng lớp vận hành CCoding; viết đúng như vậy. Nếu số lượt `unparsed` lệch giữa các arm thì tách nguyên nhân trước khi đọc recall.
+  4. E8: nói rõ σ_ln = 0,178 lấy từ arm một agent, ngoại suy sang B6w1/B6w4 là giả định; "lệch xuống" do nhiều ô σ = 0 (lượng tử hóa), không phải do làm tròn.
+  5. E8: báo số lượt B6w4 có `maxConc ≥ 2` và số lượt (cả hai arm) chia dưới 2 hạng mục, như điều kiện đọc Δ.
+  6. E8: server A và B lẫn với arm; ghi `git rev-parse HEAD`, sha256 `dist` của hai server, và nêu giới hạn này; chỉ suy ra cho 3 bài.
+  7. [CẦN KIỂM, người điều phối] luật "dừng đợt khi B6w1 có `maxConc ≥ 2`" được `e78-run.ps1` thực thi tự động; tôi không được mở tệp đó.
+- **Ghi chú RUNLOG (không sửa):** câu "dự phòng cũng không đạt" của `t5-logq` ở RUNLOG e7-cto không khớp với 128 mục (64+64) và "9 mục lỗi"; đối chiếu với `selected.json` thật khi chạy.
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.
