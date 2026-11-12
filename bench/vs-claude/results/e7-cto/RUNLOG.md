@@ -18,3 +18,23 @@ Thiết kế: `docs/research/preregistration.md` §9, "Bản chốt E7 và E8" (
 ## Mốc khóa và chạy
 
 _(người chạy ghi: hash commit bản ghim, sha256 từng script, phiên bản CLI, sha256 `ccoding.local.json`, giờ bắt đầu từng bước, số mục chốt và mục thay, lỗi hạ tầng, giờ máy, USD. Không ghi kết luận của arm trước khi đủ.)_
+
+### Dựng bản ghim và kịch bản nối tiếp (12/11/2026, người điều phối, được giám đốc giao quyền tự duyệt lúc 22:57)
+
+- **Bản ghim:** `C:\Users\admin\ccoding-vs-claude\ccoding-e78`, detached ở `d70959c0611ad1237f03007576e0d31b344c6fe3`. Từ `cd90988` (mốc khóa E7/E8) tới bản này chỉ thêm dữ liệu và RUNLOG; không đổi `src/` hay `bench/vs-claude/e7`, `e8`.
+  - `npm ci` và `npm run build` xong (`npm-setup.log` có SETUP-OK).
+  - `ccoding.local.json` chép từ `ccoding-3e`, sha256 `0ee7b0a6…`.
+  - CLI 2.1.318.
+- **Kiểm nhanh trên Windows** (`ops/e7-wincheck.mjs`, 2 mục dự phòng, không gọi LLM, không ghi vào `results`):
+  - mục lỗi `t2-orders` tìm lại được vị trí đột biến (khớp kiểu `artifact`) và `npm test` xanh;
+  - mục đúng `c2-burst-alert` đạt;
+  - repo trên Windows dùng `core.autocrlf=true`, nhưng vị trí đột biến vẫn khớp.
+- **Kịch bản nối tiếp `e78-run.ps1`** (bản sao `setup/e78-run.ps1`, sha256 `cc729833…`; kèm `setup/e78-check.mjs`, sha256 `d7080ec3…`). Chạy bằng WMI lúc 23:08 ngày 12/11, pid 1244.
+  - Chờ dòng "XONG 8 khoi" của B-14, rồi:
+    1. E7 chạy thử mục `067cd64cc5`, tự kiểm `promptSha` R1 = R3 và bộ công cụ;
+    2. bước 1 (chốt danh sách);
+    3. bước 2 (chạy chính);
+    4. E8.
+  - Gặp hạn mức thì chờ 30 phút, không giới hạn số lần. Chạy lại được sau khi máy khởi động lại.
+  - `e78-check.mjs` chỉ đọc trường hạ tầng (`status`, `promptSha`, `tools`, `maxConcSubtasks`), không đọc `verdict`.
+- **Sai lệch nhỏ so với sổ tay (`e7/README.md`, bước 2):** `selected.json` và `prep.jsonl` không commit trước bước chạy chính. Thay vào đó, kịch bản ghi sha256 của hai tệp vào `ops/e78-run.txt` trước lượt gọi đầu tiên của bước chính. Lý do: chạy không người trực, không chờ được commit từ máy khác. Mốc giờ trong `selected.json` (`at`) và dòng đầu của `runs.jsonl` cho phép kiểm thứ tự.
