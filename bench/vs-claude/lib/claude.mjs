@@ -22,7 +22,7 @@ export function weighted(u) {
  * model: model thực do phiên init báo (SR-03), null nếu không có; timedOut: bị kill vì quá timeoutMin (SR-01).
  * infra: 'rate-limit' | 'error' | undefined; resetsAt: chuỗi thô từ thông báo (vd. '4:50pm').
  * Cờ: giữ --setting-sources project,local như CCoding và harness cũ (không nạp cài đặt/MCP/hook cấp người dùng).
- * `bin` lets you point at a wrapper; `extraArgs` are appended verbatim.
+ * `bin` lets you point at a wrapper (`binArgs` đứng trước mọi cờ, vd. bin = node + binArgs = [tệp claude giả] trong test; mặc định rỗng); `extraArgs` are appended verbatim.
  */
 /**
  * Cờ của `claude -p` (hàm thuần). Mặc định giữ đúng từng phần tử như mọi đợt đo trước.
@@ -37,11 +37,11 @@ export function claudeArgs({ prompt, model, extraArgs = [], tools, allowedTools 
     '--no-session-persistence', '--strict-mcp-config', '--setting-sources', 'project,local', ...extraArgs];
 }
 
-export function runClaude({ cwd, prompt, model, timeoutMin = 45, bin = 'claude', extraArgs = [], tools, allowedTools, permissionMode, maxTurns, stdin = false }) {
+export function runClaude({ cwd, prompt, model, timeoutMin = 45, bin = 'claude', binArgs = [], extraArgs = [], tools, allowedTools, permissionMode, maxTurns, stdin = false }) {
   const args = claudeArgs({ prompt, model, extraArgs, tools, allowedTools, permissionMode, maxTurns, stdin });
   const t0 = Date.now();
   return new Promise((resolve) => {
-    const child = spawn(bin, args, { cwd, env: { ...process.env, CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1' }, stdio: [stdin ? 'pipe' : 'ignore', 'pipe', 'pipe'] });
+    const child = spawn(bin, [...binArgs, ...args], { cwd, env: { ...process.env, CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1' }, stdio: [stdin ? 'pipe' : 'ignore', 'pipe', 'pipe'] });
     if (stdin) { child.stdin.on('error', () => { /* tiến trình thoát sớm */ }); child.stdin.end(prompt); }
     let buf = '', err = '', result = null, model = null, timedOut = false; const transcript = [];
     const timer = setTimeout(() => { timedOut = true; child.kill('SIGTERM'); }, timeoutMin * 60000);
