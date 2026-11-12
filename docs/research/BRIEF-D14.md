@@ -1,8 +1,8 @@
 # Phòng Dev, D14: CTO duyệt luật "không chia việc khi không chạy song song được" và tùy chọn worktree của harness; dựng harness phát lại pha nghiệm thu cho E7
 
-**Nhiệm vụ vừa. Ngân sách 6M token.** Giao **sau khi đợt 3e chạy xong**, để không tranh hạn mức.
+**Nhiệm vụ vừa. Ngân sách 6M token.** Giao 12/11/2026, chạy song song bước 2 của B-14 (giám đốc 12/11 23:47: dùng tối đa hạn mức). Cần xong **trước khi E7 chạy**, vì E7 chạy trên harness này.
 - Nhánh `perf/vs-claude-loop`. Phân loại dữ liệu: **Nội bộ**.
-- **Không đổi hành vi đang đo:** đợt 3e chạy trên worktree ghim, nên D14 không ảnh hưởng tới nó.
+- **Không đổi hành vi đang đo:** B-14, E7, E8 chạy trên worktree ghim (`ccoding-b14` ở `0d216eb`, `ccoding-e78` ở `d70959c`), nên D14 không ảnh hưởng tới chúng. Thấy lỗi ở harness E7/E8 thì sửa trên nhánh và ghi rõ trong báo cáo; người điều phối quyết định có ghim lại trước E7 hay không.
 
 ## Căn cứ
 - **Giám đốc, 4/11 19:14:** "Bằng chứng hiện tại (1/1, 2/2) chưa đủ để kết luận gì. Đề tài chưa có số đo nào, và chính dữ liệu chi phí của CCoding còn đi ngược lợi ích của chạy song song. fix 2 vấn đề này".

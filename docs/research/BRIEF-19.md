@@ -1,6 +1,6 @@
-# Phòng Nghiên cứu, vòng 4 gói 13: thẩm định V4-3f (G, P, khối B); bài báo v0.7 theo ba trục; chốt E7, E8
+# Phòng Nghiên cứu, vòng 4 gói 13: thẩm định V4-3f (G, P, khối B) và phân tích E4, E5′, E6; thẩm định bản chốt E7, E8
 
-**Gói vừa: 4 hạng mục + review. Ngân sách 5M token.** Giao **sau khi đợt 3e chạy xong**, để không tranh hạn mức với đợt đo.
+**Gói vừa: 3 hạng mục + review. Ngân sách 5M token.** Giao 12/11/2026, chạy song song bước 2 của B-14 (giám đốc 12/11 23:47: dùng tối đa hạn mức, chỉ cần kết quả cuối). Bài báo v0.7 (K2 cũ) và cập nhật backlog, deck (K4 cũ) chuyển sang BRIEF-20, giao khi B-14, E7, E8 có kết quả.
 - **Được sửa:** `docs/research/` (gồm `paper/`, `facts.json`, `CHANGELOG.md`, `analysis/`, `context/`, `preregistration.md` §6 và §9) và `bench/vs-claude/results/*/RUNLOG.md`.
 - **Không sửa:** `src/`, mã và cấu hình của `bench/`.
 - Không chạy benchmark, không gọi `claude -p`.
@@ -32,7 +32,16 @@
   - G-3 đo bộ test, không đo CTO;
   - P là dữ liệu quan sát;
   - 27,5 % là cận trên.
-- Ghi vào `context/v43f-review-2026-11-0x.md`.
+- **Thêm (12/11): kiểm lại phân tích E4, E5′, E6** do người điều phối chạy bằng script:
+  - script: `analysis/e4-analyze.mjs`, `e5f-analyze.mjs`, `h6-sensitivity.mjs`; `bench/vs-claude/analyze.mjs` cho H6;
+  - báo cáo: `results/gates-main/report-e4.md`, `results/b15f-main/report.md`, `results/h6-3e/report.md` và `report-h6-sensitivity.md`;
+  - quyết định lúc phân tích: §9, mục "Phân tích E4, E5′, E6…" (A1–A5).
+  - Việc cần làm: chạy lại, số phải khớp. Đối chiếu script với đăng ký (5)–(8) của từng đợt. Có chỗ nào script làm khác đăng ký thì ghi rõ và sửa. Đánh giá A1–A5 có hợp lý không.
+  - Cần đọc kỹ ba phát hiện:
+    - CTO chặn 62/65 lượt sạch (gần như mọi lượt sạch ở bài lớn);
+    - B7cab chặn 23/64 lượt đạt test ẩn, B7cabO chỉ 1/64 (khám phá);
+    - R̂ của E5′ (0,722) giảm nhiều hơn phần token của riêng họp (10,7 %), vì B1F có ít hạng mục kế hoạch hơn (5,15 so với 5,95).
+- Ghi vào `context/v43f-review-2026-11-12.md`.
 
 **K1b — methodologist: đăng ký trước phép đo trục 2 (quản trị), không gọi LLM**
 - Hiện trục 2 chưa có số đo nào. 27 lệnh tấn công trong test do nhóm tự viết.
@@ -40,18 +49,6 @@
   - (a) tỉ lệ chặn nhầm của bộ kiểm lệnh (`src/tools/shell-policy.ts`, `claude-guard.ts`) trên **lệnh thật agent đã chạy**, lấy từ nhật ký sẵn có (sự kiện của hook, `calls.jsonl` của các đợt đo; chỉ đọc qua API hoặc từ thư mục kết quả đã commit), có người gán nhãn lệnh nào đáng chặn;
   - (b) tỉ lệ chặn đúng trên một **bộ lệnh tấn công do bên ngoài viết** (ví dụ ca lệnh của AgentDojo hay AIShellJack, nếu giấy phép cho dùng), chạy qua đúng hàm thật như `scripts/replay-guard-deny.mjs`.
 - Báo n, Clopper–Pearson. Không chạy sandbox thật khi giám đốc chưa đăng nhập WSL.
-
-**K2 — academic-writer (data-scientist kiểm số): bài báo v0.7**
-- **Dựng lại đóng góp quanh ba trục.** Mỗi trục ghi số đo và giới hạn:
-  - (1) nghiệm thu bằng kiểm chứng thật, với G-1, G-2, G-3, G-3Δ;
-  - (2) khung quản trị, với hiện trạng và việc còn thiếu;
-  - (3) song song an toàn, với P-1, P-2, P-3, kèm câu "bench đo chi phí chia việc mà không có song song".
-- **Kết quả chi phí đã đăng ký trước** giữ nguyên và giữ làm kết quả chính.
-- **§6:** thêm hai đe dọa:
-  - harness bench `isolation: none` khác cấu hình vận hành;
-  - `wallSec` của arm CCoding làm tròn lên theo vòng hỏi 10 s (lệch khoảng 5 s mỗi lượt), nên tỉ số thời gian ở Bảng chi phí bị lệch lên một chút.
-- **Thay Nghị định 13/2023/NĐ-CP bằng Nghị định 356/2025/NĐ-CP** ở mọi chỗ: bài báo, `facts.json`, tài liệu trong `docs/`. Ghi rõ có hiệu lực từ 01/01/2026.
-- `facts.json` và `CHANGELOG.md` đồng bộ; `consistency-check` đạt.
 
 **K3 — methodologist: thẩm định bản chốt E7 và E8**
 - Giám đốc đã duyệt chạy E7 và E8 (5/11 khoảng 10:05). Người điều phối đã ghi bản chốt ở §9 ("Bản chốt E7 và E8", v2.6) trước mọi lượt gọi LLM, vì đợt đo cần mốc khóa trước khi lấy mẫu trên máy chạy.
@@ -61,13 +58,11 @@
 - Thấy lỗi thiết kế thì ghi thành sai lệch ở §9 kèm giờ và lý do. Chỉ được sửa khi E7 hoặc E8 chưa có lượt gọi nào; nếu đã có thì chỉ ghi, không sửa.
 - Ghi chú cho K1: bộ test ẩn của `t5-logq` cho số test khác nhau giữa các lần chạy (123–146 với cùng mã). Hai lỗi G-4 của bài này không tái lập được. Cần đánh giá ảnh hưởng tới G-3 của `t5-logq`.
 
-**K4 — research-lead:** cập nhật `improvement-backlog.md` và `run-plan.md` (E7, E8 sau đợt 3e) và deck PL7 theo v0.7.
-
-**K5 — peer-reviewer:** review K1–K4.
-- Có câu nào dựa vào điểm E3 hoặc E4 không? Phải không có.
+**K5 — peer-reviewer:** review K1, K1b, K3.
+- Có câu nào dựa vào điểm của B-14 bước 2, E7 hay E8 không? Phải không có, vì các đợt này chưa có kết quả.
 - Có số nào không có nguồn không?
 - Kiểm bằng "🧪 Lệnh kiểm tra của dự án". `git status` sạch.
 
 ## Không làm
-- Không chạy benchmark, không gọi `claude -p`, không xem điểm E3, E4, E5′, E6 trước khi đợt 3e có kết quả chính thức.
+- Không chạy benchmark, không gọi `claude -p`. Không mở `results/b14-step2`, `e7-cto` (trừ `items.json`, `RUNLOG.md`) hay `e8-parallel` khi các đợt này đang chạy.
 - Không sửa `src/`, `bench/` (trừ `RUNLOG.md`).
