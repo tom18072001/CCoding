@@ -59,3 +59,19 @@ Cả hai lần chỉ chạy mục chạy thử `067cd64cc5` (không thuộc mẫ
    - **Ảnh hưởng tới các đợt trước (giới hạn, chưa xác minh trực tiếp được):** các arm `claude -p` đã có dữ liệu (pilot1, b7prime, large-pilot, h6-3e; 2–4/11) không lưu `apiKeySource`. Bằng chứng gián tiếp là A2 của h6-3e (4/11) gặp hạn mức kiểu gói claude.ai ("10pm (Asia/Bangkok)"), tức lúc đó phiên đăng nhập được dùng. Khóa HKCU\Environment ghi lần cuối 5/11 03:09 UTC; mốc này không cho biết biến khóa có từ khi nào. Các đợt chỉ có arm CCoding (B-15f, local-3e, B-14) không bị ảnh hưởng vì runtime `claude-cli` luôn bỏ biến khóa.
 3. **Bản ghim mới:** commit chứa mục này; hash, sha256 các script và `dist` ghi ở `ops/e78-run.txt` của máy chạy. Kịch bản `setup/e78-run.ps1` và `setup/e78-check.mjs` ở commit này thay bản `cc729833…`/`d7080ec3…`; sha256 mới ghi ở mục sau khi khởi động.
 
+
+### Khởi động lại, bước 1 và kiểm nhãn (13/11/2026, người điều phối)
+
+- **03:29:09 UTC**, bản ghim `e15f653`, pid 29080. Kịch bản `e78-run.ps1` sha256 `fc731b8af52f…`, `e78-check.mjs` sha256 `2af2a11820a6…` (bản `ops/` trên máy chạy; bản trong repo sinh ra hai tệp này qua git với `core.autocrlf`). `dist` sha256 gộp `bbd93f0798e9…`, không đổi so với `521c98a`.
+- **03:29:53 chạy thử OK:** R1 và R3 đều `done`; `promptSha` R1 = R3; bộ công cụ đúng; R3 `authSource = none` (phiên đăng nhập claude.ai).
+- **03:37:33 bước 1 xong:**
+  - 128 mục (64 lỗi + 64 đúng); 3 mục bị bỏ hoặc thay: 2 mục lỗi `t5-logq` `label-mismatch` (`fb0117bb43`, `563af1e6d7`) và 1 mục đúng `t5-logq` bớt để ghép cặp (`da4d3bf28c`). Giống hệt lần chạy cloud.
+  - `selected.json` sha256 `1263fb7c2ac4…`, `prep.jsonl` sha256 `0c1aa658bc48…`. Hai hash này được ghi vào `ops/e78-run.txt` trước lượt gọi đầu tiên của bước 2 (03:37:34). Hai tệp chép vào repo lúc khoảng 04:20, sau khi bước 2 đã chạy; người điều phối mới chỉ đếm số dòng của `runs.jsonl`.
+- **Kiểm nhãn 3 lần (điều kiện 2 của K3; `e7/label-trials.mjs`, không gọi LLM, chạy trên máy cloud Linux, `label-trials.jsonl`):**
+  - Cách làm: dựng sản phẩm của từng mục đúng như bước chuẩn bị, rồi chạy test ẩn 3 lần, không dừng ở lần trượt đầu.
+  - Kết quả: **cả 64 mục lỗi trượt 3/3; cả 64 mục đúng đạt 3/3**, kể cả 9 mục lỗi và 9 mục đúng của `t5-logq`. Nhãn của danh sách chốt ổn định. Tính không tất định của bộ test ẩn `t5-logq` chỉ làm hỏng 2 mục đã bị loại ở bước 1.
+  - Giới hạn: kiểm trên Linux. Trên Windows, bước 1 đã kiểm mỗi mục lỗi tới lần trượt đầu (tối đa 3 lần) và mỗi mục đúng 1 lần.
+- **Mã phân tích theo điều kiện đọc K3** (viết trước khi xem dữ liệu bước 2; `e7/analyze.mjs`, `e8/analyze.mjs`, test `test/e7e8-k3.test.mjs`):
+  - E7: bảng theo bài; hiệu recall R1 − R3 kèm bootstrap hai tầng theo bài, đọc cùng p của McNemar (< 10 cặp bất đồng thì p chỉ mô tả; hai bên không thống nhất thì "chưa kết luận"); độ nhạy coi "không đọc được kết luận" là chặn (§9 E7 (6)); độ nhạy bỏ `t5-logq`; cờ khi số lượt không đọc được lệch giữa các arm; recall theo số lần trượt khi kiểm nhãn.
+  - E8: mô tả theo arm gồm số lượt chạy chồng, số lượt chia dưới 2 hạng mục, cổng kiểm tra cuối, điểm và pass (A0-sonnet làm mốc); câu giới hạn về σ_ln và server A/B.
+  - Xung đột khi gộp của E8 lấy sau đợt bằng `p-extract.mjs` (chỉ GET) trên server A và B.
