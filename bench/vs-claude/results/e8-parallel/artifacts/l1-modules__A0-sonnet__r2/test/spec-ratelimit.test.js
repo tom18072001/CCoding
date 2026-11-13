@@ -1,0 +1,82 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createTokenBucket, createSlidingWindow } from '../src/ratelimit/index.js';
+
+const code = (f, c) => assert.throws(f, (e) => e.code === c);
+const clock = () => { const c = { t: 0, now: () => c.t }; return c; };
+
+test('token bucket', () => {
+  const c = clock();
+  const b = createTokenBucket({ capacity: 5, now: c.now });
+  assert.deepEqual([1, 2, 3, 4, 5].map(() => b.take('k').remaining), [4, 3, 2, 1, 0]);
+  assert.deepEqual(b.take('k'), { allowed: false, retryAfterMs: 1000, remaining: 0 });
+  const b2 = createTokenBucket({ capacity: 6, refillAmount: 3, refillIntervalMs: 2000, now: c.now });
+  b2.take('k', 6);
+  assert.equal(b2.take('k').retryAfterMs, 667);
+  c.t = 666;
+  assert.deepEqual(b2.take('k'), { allowed: false, retryAfterMs: 1, remaining: 0 });
+  c.t = 667;
+  assert.equal(b2.take('k').allowed, true);
+});
+test('token bucket: đồng hồ lùi, peek, reset, sweep', () => {
+  const c = clock();
+  c.t = 1000;
+  const b = createTokenBucket({ capacity: 2, now: c.now });
+  b.take('k', 2);
+  c.t = 500;
+  assert.equal(b.take('k').allowed, false);
+  c.t = 1500;
+  assert.equal(b.peek('k').remaining, 0);
+  c.t = 2000;
+  assert.equal(b.peek('k').remaining, 1);
+  assert.equal(b.size(), 1);
+  assert.equal(b.peek('zz').remaining, 2);
+  assert.equal(b.size(), 1);
+  assert.equal(b.sweep(), 0);
+  c.t = 3000;
+  assert.equal(b.sweep(), 1);
+  assert.equal(b.size(), 0);
+  b.take('a');
+  assert.equal(b.reset('a'), true);
+  assert.equal(b.reset('a'), false);
+});
+test('lỗi', () => {
+  const c = clock();
+  const b = createTokenBucket({ capacity: 3, now: c.now });
+  code(() => b.take(''), 'RL_INVALID_KEY');
+  code(() => b.take(5, 0), 'RL_INVALID_KEY');
+  code(() => b.take('k', 0), 'RL_INVALID_COST');
+  code(() => b.take('k', 1.5), 'RL_INVALID_COST');
+  code(() => b.take('k', 4), 'RL_COST_EXCEEDS_CAPACITY');
+  assert.equal(b.size(), 0);
+  assert.equal(b.take('k', 3).allowed, true);
+  code(() => createTokenBucket(), 'RL_INVALID_OPTIONS');
+  code(() => createTokenBucket({ capacity: 1 }), 'RL_INVALID_OPTIONS');
+  code(() => createTokenBucket({ capacity: 0, now: c.now }), 'RL_INVALID_OPTIONS');
+  code(() => createSlidingWindow({ limit: 1, windowMs: 1.5, now: c.now }), 'RL_INVALID_OPTIONS');
+});
+test('cửa sổ trượt', () => {
+  const c = clock();
+  const w = createSlidingWindow({ limit: 3, windowMs: 1000, now: c.now });
+  assert.deepEqual([1, 2, 3].map(() => w.take('k').remaining), [2, 1, 0]);
+  assert.deepEqual(w.take('k'), { allowed: false, retryAfterMs: 1000, remaining: 0 });
+  c.t = 999;
+  assert.equal(w.take('k').retryAfterMs, 1);
+  assert.equal(w.peek('k').remaining, 0);
+  c.t = 1000;
+  assert.equal(w.take('k').allowed, true);
+});
+test('cửa sổ trượt: retryAfter theo sự kiện, sweep', () => {
+  const c = clock();
+  const w = createSlidingWindow({ limit: 4, windowMs: 1000, now: c.now });
+  w.take('k', 1);
+  c.t = 100; w.take('k', 1);
+  c.t = 200; w.take('k', 2);
+  c.t = 300;
+  assert.equal(w.take('k', 2).retryAfterMs, 800);
+  assert.equal(w.take('k', 4).retryAfterMs, 900);
+  c.t = 5000;
+  assert.equal(w.size(), 1);
+  assert.equal(w.sweep(), 1);
+  assert.equal(w.size(), 0);
+});

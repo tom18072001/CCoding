@@ -1,0 +1,10 @@
+Cả năm module đã xong ở `src/<tên>/index.js` và `npm test` xanh (48/48). Tôi chưa chạy bộ nghiệm thu ẩn nên chưa biết nó có đạt hay không. Test là các ví dụ trong `SPEC.md` cộng thêm các mã lỗi và quy ước biên, nằm ở `test/spec-*.test.js`; các file test có sẵn được giữ nguyên.
+
+Khi sửa, tôi chỉ gặp một lỗi: `peek` của token bucket trả `remaining` sai khi được phép. Tôi đã sửa và test pass.
+
+Có vài chỗ đặc tả chưa nói rõ, tôi tự chọn như sau. Nếu bộ nghiệm thu hiểu khác thì đây là chỗ cần xem lại:
+- **`convert` và `convertSum`:** kiểm `to` trước rồi mới kiểm `m` (hoặc `list`).
+- **`validateCsv`:** kiểm lược đồ trước, rồi mới kiểm kiểu của `text`.
+- **`take` bị từ chối của `ratelimit`:** vẫn tạo khóa trong bộ nhớ, và `sweep` sẽ dọn khóa đó sau.
+
+Chưa có gì được commit; các thay đổi đang nằm trong working tree trên nhánh `master`.

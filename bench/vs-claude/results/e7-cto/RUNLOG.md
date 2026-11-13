@@ -126,3 +126,13 @@ Cả hai lần chỉ chạy mục chạy thử `067cd64cc5` (không thuộc mẫ
   - **Chính:** lượt chạy lại.
   - **Độ nhạy:** giữ kết quả như đã ghi lúc đầu (không đọc được = không chặn), và bỏ các mục có cặp R1 hoặc R3 bị phân loại lại. Cả ba được báo.
 - **Sản phẩm:** lỗi CCoding dùng thông báo lỗi làm văn bản nghiệm thu cũng xảy ra khi vận hành thật (nghiệm thu "không đọc được" rồi vẫn giao). Ghi vào backlog cho Phòng Dev, không sửa `src/` trong đợt đo.
+
+### Chạy lại 16 cặp và kết thúc (13/11/2026, người điều phối)
+
+- **16:32 UTC:** E8 đã xong (15:46). Ghim `ccoding-e78` ở `909abb6` (không đổi `src/`, `package*.json`). Các tệp gốc của E7 trên máy chạy được cất rồi trả lại, sha256 không đổi; `runs.jsonl` trước khi phân loại lại là `0f98778bbb83…`. Chép `e78-check.mjs` mới vào `ops` (sha256 `792294ad511b…`).
+- **`reclassify.mjs`:** chạy thử ra đúng 16 cặp, rồi `--apply` ghi 16 dòng `infra` (`reclassified`).
+- **16:33 chạy lại `e78-run.ps1`** (pid 17152):
+  - 16 cặp chạy lại lúc 16:33–16:44. Một lượt R2 (`397e3c4ffa`) thoát mã 1, được ghi `infra` theo luật mới và chạy lại lúc 16:45.
+  - **16:45:28: 384/384.** E8 đã đủ nên bỏ qua; kịch bản bật rồi tắt server A/B và ghi "XONG".
+- **Dữ liệu cuối:** `runs.jsonl` 419 dòng (sha256 `13870b8086cd…`), `responses/` 383 tệp. Lượt chạy lại ghi đè tệp phản hồi cùng tên; lượt R3 chạm trần không có văn bản nên không có tệp.
+- **Báo cáo:** `report.md`. Phép kiểm chính: chỉ R1 chặn 3, chỉ R3 chặn 1, p = 0,625, 4 cặp bất đồng < 10, nên **p chỉ mô tả**. Mọi phân tích độ nhạy cho cùng cách đọc.

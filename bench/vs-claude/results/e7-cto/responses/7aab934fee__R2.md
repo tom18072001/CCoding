@@ -1,1 +1,1 @@
-Failed to authenticate. API Error: 403 Attention Required! | Cloudflare
+Tôi đang kiểm tĩnh mã vì hook chặn chạy `npm`/`node`. Tôi đã thấy một lỗi ở bộ so sánh `createdAt` và đang kiểm nốt các byte Unicode (BOM, dải dấu kết hợp).

@@ -1,0 +1,14 @@
+Đã sửa cả 6 lỗi trong `ISSUES.md`, và `npm test` xanh (12 test, 0 lỗi). API công khai không đổi, chỉ thêm hàm `roundHalfAway` được export từ `money.js`.
+
+| # | Nguyên nhân gốc | Sửa |
+|---|---|---|
+| 1 | `Math.round(1.005*100)` ra 100 vì sai số dấu phẩy động, và `Math.round` làm tròn số âm theo hướng +∞. | Thêm `roundHalfAway` (làm tròn half away from zero, bỏ nhiễu dấu phẩy động). `toCents` dùng nó, và mã giảm cố định cũng đi qua `toCents`. Giảm giá %, giảm theo danh mục và thuế cũng dùng nó. |
+| 2 | `allocate` chỉ lấy phần nguyên, không chia số xu dư. | Cài phương pháp phần dư lớn nhất. Phần lẻ bằng nhau thì phần đứng trước được trước, và dòng có trọng số 0 không nhận xu dư. |
+| 3 | `freeUnits` tính `floor(qty/buy)*free`. | Đổi thành `floor(qty/(buy+free))*free`. Phải đủ cả nhóm mới được tặng. |
+| 4 | `endsAt` được hiểu là 00:00 UTC của ngày đó. | Hạn là `endsAt + 1 ngày`, nên mã dùng được hết ngày `endsAt` và bị từ chối từ 00:00 UTC ngày hôm sau. |
+| 5 | `updateQty` giữ chỗ lại toàn bộ số lượng thay vì phần chênh lệch, và `removeItem` không trả hàng về kho. | `updateQty` chỉ giữ thêm hoặc trả lại phần chênh lệch, `removeItem` trả lại toàn bộ. |
+| 6 | Thuế tính trên `gross`. | `computeTotals` tính thuế trên `net`. |
+
+Test hồi quy nằm ở `test/regression.test.js`, mỗi lỗi một test.
+
+Chỗ đề bài chưa rõ, tôi hiểu như sau: với mua X tặng Y, phần dư không đủ cả nhóm thì không được tặng. Ví dụ mua 1 tặng 2 mà giỏ có 2 món thì tặng 0 món.

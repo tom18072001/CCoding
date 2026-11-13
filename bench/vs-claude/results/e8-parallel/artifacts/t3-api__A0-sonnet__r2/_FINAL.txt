@@ -1,0 +1,15 @@
+Cả 4 tính năng trong `FEATURES.md` đã được hiện thực và `npm test` xanh (9/9). Tôi chưa chạy server thật để gọi thử bằng tay; các test gọi API qua HTTP thật trên cổng ngẫu nhiên.
+
+- **Xác thực và phân quyền:** `src/auth.js` kiểm tra header `X-User`. Thứ tự kiểm tra là 401 → 400 (query) → 404 → 403 → 400 (body). Với `POST`/`PATCH`, nếu body là JSON lỗi thì chỉ báo `INVALID_JSON` sau khi đã qua các kiểm tra quyền.
+- **Danh sách:** `src/query.js` xử lý lọc, tìm không dấu, sắp xếp, phân trang, và trả `{items, total, page, pageSize}`. Lỗi `INVALID_QUERY` báo tham số đầu tiên theo thứ tự trên URL; tham số lạ hoặc lặp cũng bị 400.
+- **CSV:** `src/csv.js` xuất `GET /tasks/export.csv` đúng BOM, `\r\n`, RFC 4180 và chống chèn công thức. Route này được đăng ký trước `/tasks/:id`, và `page`/`pageSize` bị 400.
+- **Nhật ký:** `GET /audit` chỉ admin dùng được, mục mới nhất xếp trước, có lọc theo `taskId`. Thao tác thất bại không ghi mục nào.
+- **Test:** `test/tasks.test.js` đã sửa cho dạng kết quả mới (có kèm header `X-User`) và có thêm test cho từng tính năng.
+
+Đặc tả không nói rõ vài chỗ, nên tôi tự chọn:
+- Các tham số `status`, `team`, `dueBefore` để trống đều bị 400; riêng `assignee=` để trống thì cho kết quả rỗng, không báo lỗi.
+- `PATCH` hợp lệ có thể ghi mục `update` với `changes: []` (khi không trường nào đổi giá trị).
+- `GET /tasks/:id` bỏ qua tham số truy vấn lạ.
+- `dueDate` trong body của `POST`/`PATCH` vẫn chỉ kiểm tra đúng dạng, chưa kiểm tra ngày có thật.
+
+Khi test BOM, `fetch().text()` tự bỏ BOM nên test đọc byte thô để kiểm tra BOM.

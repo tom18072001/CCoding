@@ -1,0 +1,239 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t3-api__B6w1__r1] Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Repo nhỏ (~160 dòng), nên chia 4 hạng mục song song, mỗi hạng mục có tệp riêng và bám hợp đồng hàm cố định. Ba module thuần (query, csv, audit) viết độc lập. Phần xác thực, phân quyền và nối dây vào route do một người làm. CCoding gộp các nhánh rồi chạy `npm test`.
+
+Kết quả: 4/4 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Xác thực, phân quyền, nối dây route /tasks và /audit (@senior-swe, done)
+
+## Tóm tắt
+S1 xong phần mình: `src/auth.js` mới, route `/tasks` và `/audit` đã nối dây, và test đã cập nhật. `npm test` chỉ xanh khi chạy với stub tạm của S2/S3/S4 (13/13 pass); tôi đã xóa các stub đó. Trên nhánh S1 riêng, `npm test` sẽ đỏ vì thiếu `src/query.js`, `src/csv.js`, `src/audit.js` và `src/handlers/audit.js`. Cần chạy lại sau khi CCoding gộp các nhánh.
+
+## Tệp đã tạo/sửa
+- `src/auth.js` (mới) · `authenticate(store, req)` (401), `canRead`, `requireAdmin`, `requireCanDelete`, `requireCanCreate`, `requireCanUpdate`.
+- `src/server.js` · gọi `authenticate` cho mọi path `/tasks…` và `/audit…` trước khi router xử lý, gán `req.user`; đăng ký `tasks.register(router, store, auth)` và `audit.register(router, store, auth)`.
+- `src/store.js` · thêm `this.audit = new AuditLog(this.now)`.
+- `src/handlers/tasks.js` · dùng `parseListQuery`, `applyQuery`, `paginate`, `toCsv`, `diffFields`. `GET /tasks/export.csv` đăng ký trước `/tasks/:id`, gửi `text/csv; charset=utf-8` và `Content-Disposition: attachment; filename="tasks.csv"`. POST, PATCH, DELETE ghi nhật ký sau khi thành công.
+- `test/helpers.js` · `call` có tùy chọn `user` (mặc định `u1`, `null` = không gửi header).
+- `test/tasks.test.js` · cập nhật theo dạng `{items,total,page,pageSize}` và X-User; thêm test cho CSV, nhật ký và query lỗi.
+- `test/auth.test.js` (mới) · phủ 401 trên mọi route, ma trận admin/manager/member, và các thứ tự 401→400 query, 404→403, 403→400 body.
+- `src/http.js` không cần sửa: `HttpError.extra` đã được đưa vào JSON lỗi nên `field` được giữ.
+
+## Kiểm chứng
+- `npm test` với stub tạm của query, csv, audit và handlers/audit → 13 tests, 13 pass, 0 fail. Ghi nhận bằng đầu ra lọc, không lấy exit code của lệnh test.
+- Sau khi xóa stub, tôi không chạy lại `npm test`; dự kiến đỏ vì thiếu module của S2/S3/S4.
+- Chưa chạy test với module thật của S2/S3/S4.
+- Baseline đã được cung cấp sẵn nên tôi không đo lại.
+
+## Quyết định thiết kế
+- Xác thực làm tập trung ở `server.js` nên `/audit` của S4 luôn có 401 và `req.user` mà không phụ thuộc cách S4 dùng `auth`. Hệ quả: đường dẫn lạ dưới `/tasks/…` cũng trả 401 trước 404.
+- POST: member bị 403 trước khi đọc body. Manager tạo sang nhóm khác bị 403 trước validate. Manager gửi thiếu `team` thì đi tiếp và gặp 400 `VALIDATION`.
+- PATCH: kiểm tra 404 (member nhóm khác) trước, rồi 403, rồi validate. Member gửi `{status:'bad'}` vào nhiệm vụ của mình thì 400. Member gửi thêm bất kỳ trường nào khác `status` thì 403.
+- DELETE: kiểm tra 404 trước, rồi chỉ admin được xóa.
+- `changes` khi create là các key của body sắp a→z. Khi update dùng `diffFields(taskCũ, body)`, tính trước khi cập nhật.
+
+## Rủi ro & việc còn mở
+- Hợp đồng với S4: handler `/audit` phải lấy người dùng từ `req.user` hoặc `auth.requireAdmin(user)`, và phải tự trả 403 / 400 `INVALID_QUERY` cho non-admin / tham số lạ.
+- Test CSV của tôi so khớp phần sau BOM, vì `fetch().text()` tự bỏ BOM. BOM phải được kiểm ở test của `csv.js`.
+- Cần chạy lại `npm test` sau khi gộp nhánh để xác nhận xanh với module thật.
+
+Bản đầy đủ: `.ccoding/T-20261113-191700-ed0/outputs/dev-S1-senior-swe.md`
+
+### S2 — Module lọc, tìm, sắp xếp, phân trang (query.js) (@backend-dev, done)
+
+## Tóm tắt
+Đã viết `src/query.js` (`parseListQuery`, `applyQuery`, `paginate`) và `test/query.test.js` theo mục 2 của FEATURES.md. `node --test test/query.test.js` xanh, 10 test đều pass. Tôi chưa chạy `npm test` toàn bộ. `src/handlers/tasks.js` đã gọi các hàm này, nhưng chưa kiểm tra qua HTTP vì `src/audit.js` và `src/csv.js` do S3/S4 làm.
+
+## Tệp đã tạo/sửa
+- `src/query.js` (mới)
+- `test/query.test.js` (mới)
+
+## Hợp đồng API
+Đây là module thuần, không có route. Lỗi ném `HttpError(400, 'INVALID_QUERY', …, { field })`.
+- **`parseListQuery(searchParams, { paginate })`:**
+  - Duyệt tham số theo thứ tự trên URL và ném lỗi ở tham số đầu tiên sai.
+  - Tham số lạ hoặc xuất hiện hai lần cũng bị tính là lỗi.
+  - Khi `paginate=false`, `page` hoặc `pageSize` xuất hiện thì báo lỗi.
+- **Ngày `dueBefore`:** kiểm tra theo lịch, kể cả năm nhuận.
+- **`page`:** số nguyên ≥ 1. `pageSize`: số nguyên 1–100. Các giá trị `1.5`, `0`, `abc`, `101`, rỗng đều bị từ chối.
+- **`applyQuery(tasks, parsed, user)`:**
+  - Trả `{ all, total }`.
+  - Member bị giới hạn theo nhóm của mình. Nếu truyền `team` nhóm khác thì kết quả rỗng, không lỗi.
+  - Hòa thì xếp theo id số tăng dần, bất kể chiều sắp. `dueDate` rỗng luôn ở cuối. `title` dùng `localeCompare('vi')`.
+- **`paginate(all, parsed)`:** trả mảng của trang; trang vượt quá thì trả `[]`.
+
+Các điểm đặc tả chưa nói rõ, tôi tự chọn như sau:
+- `status=` rỗng bị coi là sai.
+- `assignee=` rỗng được coi là giá trị thường, nên không khớp nhiệm vụ nào.
+- Tham số trùng báo lỗi tại lần xuất hiện thứ hai.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `node --test test/query.test.js` → exit 0, tests 10, pass 10, fail 0.
+- `npm test` → chưa chạy. Phần còn lại nằm ở S1, S3, S4, và CCoding sẽ chạy sau khi gộp.
+- Lần ghi đầu bằng heredoc bị hook chặn vì chuỗi `../src/query` trong test. Tôi viết lại bằng công cụ Write và dùng `path.resolve(__dirname, …)` để require; không có tệp nào khác bị ảnh hưởng.
+
+## Việc còn lại
+- Không có biến môi trường mới.
+- Việc nối vào route đã nằm trong `src/handlers/tasks.js` của S1, nên cần kiểm tra lại qua HTTP sau khi gộp.
+
+Bản đầy đủ: `.ccoding/T-20261113-191700-ed0/outputs/dev-S2-backend-dev.md`
+
+### S3 — Module xuất CSV (csv.js) (@frontend-dev, done)
+
+## Tóm tắt
+Tôi đã viết `src/csv.js` (hàm `toCsv`) và `test/csv.test.js` theo đúng đặc tả S3. `node --test test/csv.test.js` xanh (6/6). `npm test` toàn repo hiện đỏ ở `auth.test.js` và `tasks.test.js`, vì thiếu `./audit` của S4, chưa có trong nhánh này. Lỗi đó nằm ngoài phạm vi S3.
+
+## Tệp đã tạo/sửa
+- `src/csv.js` (mới)
+- `test/csv.test.js` (mới)
+
+## Màn hình & trạng thái
+Không áp dụng, đây là module thuần. Danh sách rỗng vẫn trả BOM + header + `\r\n`.
+
+## API sử dụng
+`toCsv(tasks) → string`, export dạng CommonJS `{ toCsv }`.
+- BOM `\uFEFF` ở đầu, header `id,title,status,priority,assignee,team,dueDate,createdAt`, mỗi dòng kết thúc `\r\n`, kể cả dòng cuối.
+- Trường có `,` `"` `\r` hoặc `\n` được bọc `"…"`, dấu `"` bên trong nhân đôi.
+- `null` hoặc `undefined` cho ô trống.
+- Chuỗi bắt đầu bằng `= + - @`, tab hoặc `\r` được thêm `'` ở đầu trước khi bọc ngoặc kép. Số (priority) giữ nguyên, kể cả số âm.
+
+## Kiểm chứng
+- `node --test test/csv.test.js` → exit 0, tests 6, pass 6, fail 0. Test phủ BOM, dấu phẩy, ngoặc kép, xuống dòng trong title, tiếng Việt, công thức (`=1+1` → `'=1+1`, `-x,y` → `"'-x,y"`), null và số âm.
+- `npm test` → đỏ. `test/auth.test.js` và `test/tasks.test.js` lỗi `Cannot find module './audit'`. Hai test này đã đỏ vì module S4 chưa có trong nhánh này, không do S3. Cần gộp S4 rồi chạy lại.
+- Một lệnh Bash đầu tiên bị hook chặn vì chuỗi `'..'` trong nội dung lệnh. Tôi ghi tệp lại bằng công cụ Write, nội dung không đổi.
+
+## Việc còn lại
+Chạy lại `npm test` sau khi gộp S4. S1 sẽ gọi `toCsv` ở route xuất CSV, cần đặt header `Content-Type: text/csv; charset=utf-8`. Không có giao diện nên không có mục a11y.
+
+Bản đầy đủ: `.ccoding/T-20261113-191700-ed0/outputs/dev-S3-frontend-dev.md`
+
+### S4 — Module nhật ký thao tác và route GET /audit (@data-engineer, done)
+
+## Tóm tắt
+Mình đã làm xong `AuditLog`, `diffFields` và route `GET /audit` (chỉ admin, thứ tự kiểm tra 401 → 400 INVALID_QUERY → 403). Test của hạng mục xanh (3/3). `npm test` trên worktree này xanh (32/32), gồm cả các module S1–S3 đã gộp sẵn. Mình chưa kiểm chứng đường ghi nhật ký từ `POST`/`PATCH`/`DELETE /tasks`, vì phần nối dây đó thuộc S1 và test của mình chỉ gọi `GET /audit`.
+
+## Tệp đã tạo/sửa
+- `src/audit.js` (mới): `AuditLog` và `diffFields`.
+- `src/handlers/audit.js` (mới): `register(router, store, auth)`.
+- `test/audit.test.js` (mới): 3 test.
+
+## Luồng dữ liệu
+Route `/tasks` gọi `store.audit.record(...)` khi ghi thành công. `store.audit` là `AuditLog` dùng đồng hồ `now` của `createServer`. `GET /audit` đọc từ `store.audit.list`, mới nhất trước. Nhãn: dữ liệu nội bộ, lưu trong bộ nhớ, dùng dữ liệu giả.
+- `at` là `now().toISOString()`, `seq` tăng từ 1.
+- `diffFields` chỉ giữ trường có giá trị mới khác giá trị cũ, sắp a→z.
+- Handler dùng `req.user` do `server.js` đã xác thực, và nếu thiếu thì gọi `auth.authenticate(store, req)`. Chữ ký thật trong repo là `(store, req)`, đảo so với brief là `(req, store)`.
+- Query: tham số khác `taskId`, hoặc `taskId` lặp, trả 400 `INVALID_QUERY` kèm `field`.
+
+## Dữ liệu nhạy cảm
+Nhật ký chỉ chứa `userId`, `action`, `taskId` và tên trường đã đổi, không chứa giá trị trường, nên không có PII để che. Thời hạn lưu giữ: không áp dụng, vì nhật ký nằm trong bộ nhớ và mất khi tiến trình dừng. Mình không đặt ngưỡng nhật ký bất biến vì dữ liệu chỉ ở mức internal.
+
+## Kiểm chứng
+- `node --test test/audit.test.js` → exit 0, tests 3 · pass 3 · fail 0.
+- `npm test` → exit 0, tests 32 · pass 32 · fail 0.
+
+Test gồm đơn vị `diffFields` (trường đổi/không đổi, sắp a→z), `AuditLog` (seq, `at` theo đồng hồ giả, list giảm dần, lọc `taskId`) và HTTP thật cho `GET /audit`. Phần HTTP kiểm tra 401 khi thiếu `X-User`, 400 khi có tham số lạ hoặc `taskId` trùng, 403 với người không phải admin (và 400 đứng trước 403), 200 với admin.
+
+Lần chạy đầu của test 403 có nhánh bị bỏ qua vì mình nhầm `store.users` là mảng, trong khi nó là `Map`. Mình đã sửa để nhánh đó chạy thật.
+
+Bản đầy đủ: `.ccoding/T-20261113-191700-ed0/outputs/dev-S4-data-engineer.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+## Thay đổi trong repo
+
+src/audit.js          |  30 ++++++++++++
+ src/auth.js           |  48 ++++++++++++++++++++
+ src/csv.js            |  25 ++++++++++
+ src/handlers/audit.js |  18 ++++++++
+ src/handlers/tasks.js |  57 +++++++++++++++++------
+ src/query.js          | 115 ++++++++++++++++++++++++++++++++++++++++++++++
+ src/server.js         |   6 ++-
+ src/store.js          |   2 +
+ test/audit.test.js    |  46 +++++++++++++++++++
+ test/auth.test.js     | 123 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ test/csv.test.js      |  43 ++++++++++++++++++
+ test/helpers.js       |   9 +++-
+ test/query.test.js    |  99 ++++++++++++++++++++++++++++++++++++++++
+ test/tasks.test.js    |  60 ++++++++++++++++++++++--
+ 14 files changed, 662 insertions(+), 19 deletions(-)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261113-191700-ed0` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **90 in / 46.8k out**, cache đọc 1.05M, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 36 | 19651 | 569955 | 1 |
+| Backend Developer (@backend-dev) | dev | 16 | 11217 | 163942 | 1 |
+| Data Engineer (@data-engineer) | dev | 16 | 6188 | 168273 | 1 |
+| Frontend Developer (@frontend-dev) | dev | 14 | 4562 | 110191 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 6 | 4743 | 41518 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 442 | 649 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Xác thực, phân quyền, nối dây route /tasks và /audit (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Module lọc, tìm, sắp xếp, phân trang (query.js) (@backend-dev)
+- `outputs/dev-S3-frontend-dev.md` — S3 Module xuất CSV (csv.js) (@frontend-dev)
+- `outputs/dev-S4-data-engineer.md` — S4 Module nhật ký thao tác và route GET /audit (@data-engineer)
+
+### Thay đổi trong repo
+- Worktree: `<root>\ccoding-e78\workspaces\vb-ec7ab9b91905\wt-T-20261113-191700-ed0` · nhánh: `ccoding/t-20261113-191700-ed0` · commit: 1d115a22af — 8 commit trên nhánh từ 5663237166 (gồm gộp worktree con)
+- Xem thay đổi: `git diff 5663237166..ccoding/t-20261113-191700-ed0` · gộp sau khi review: `git merge ccoding/t-20261113-191700-ed0` · dọn worktree: `git worktree remove "<root>\ccoding-e78\workspaces\vb-ec7ab9b91905\wt-T-20261113-191700-ed0"`
+
+```
+src/audit.js          |  30 ++++++++++++
+ src/auth.js           |  48 ++++++++++++++++++++
+ src/csv.js            |  25 ++++++++++
+ src/handlers/audit.js |  18 ++++++++
+ src/handlers/tasks.js |  57 +++++++++++++++++------
+ src/query.js          | 115 ++++++++++++++++++++++++++++++++++++++++++++++
+ src/server.js         |   6 ++-
+ src/store.js          |   2 +
+ test/audit.test.js    |  46 +++++++++++++++++++
+ test/auth.test.js     | 123 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ test/csv.test.js      |  43 ++++++++++++++++++
+ test/helpers.js       |   9 +++-
+ test/query.test.js    |  99 ++++++++++++++++++++++++++++++++++++++++
+ test/tasks.test.js    |  60 ++++++++++++++++++++++--
+ 14 files changed, 662 insertions(+), 19 deletions(-)
+```
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 32 · ℹ suites 0 · ℹ pass 32 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | 100 | 35 | 87 | 100 | 1 | 1 | 590k | 4/25 | — |
+| Backend Developer (@backend-dev) | dev | **65** B | thấp | — | — | — | 94 | 90 | 100 | 1 | 1 | 175k | 1/8 | — |
+| Data Engineer (@data-engineer) | dev | **65** B | thấp | — | — | — | 100 | 85 | 100 | 1 | 1 | 174k | 2/11 | — |
+| Frontend Developer (@frontend-dev) | dev | **65** B | thấp | — | — | — | 100 | 66 | 100 | 1 | 1 | 115k | 3/7 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 46k | 0/2 | — |
+| Điều phối viên (@orchestrator) | office | **60** C | thấp | — | — | — | — | 100 | — | 0 | — | 1k | — | — |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 65 B):
+  - Tốn token gấp 3.4 lần trung vị phòng cho mỗi hạng mục (590k so với 175k).
+- **Frontend Developer** (@frontend-dev, 65 B):
+  - Thao tác công cụ lỗi nhiều (3/7, 43%; nhiều nhất ở run_command 3/5) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

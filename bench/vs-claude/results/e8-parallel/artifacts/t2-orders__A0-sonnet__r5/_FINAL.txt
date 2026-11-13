@@ -1,0 +1,12 @@
+Cả 6 lỗi đã được sửa và `npm test` xanh (14 test, gồm 8 test hồi quy mới trong `test/regression.test.js`). API công khai không đổi.
+
+| # | Nguyên nhân gốc | Cách sửa |
+|---|---|---|
+| 1 | `Math.round(amount*100)` bị sai số dấu phẩy động (`1.005*100 = 100.4999…`) | `toCents` chuẩn hóa tích bằng `toPrecision(15)` rồi làm tròn half away from zero, nên `-1.005` ra `-101`. Mã giảm cố định trong `checkout.js` giờ dùng `toCents`. Giá trị đơn tối thiểu vốn đã dùng `toCents`. |
+| 2 | `allocate` chỉ lấy phần nguyên, không chia số xu dư | `allocate` cài đặt đúng phần dư lớn nhất, hòa thì phần đứng trước được trước. Phần dư tính chính xác bằng số nguyên khi các trọng số đều nguyên. |
+| 3 | `freeUnits` tính `floor(qty/buy)*free` | Đổi thành `floor(qty/(buy+free))*free`. |
+| 4 | `endsAt` bị hiểu là 00:00 UTC của ngày đó | Mã hết hạn từ `endsAt` + 1 ngày, tức 00:00 UTC ngày hôm sau. |
+| 5 | `updateQty` giữ chỗ thêm toàn bộ số lượng mới thay vì phần chênh. `removeItem` không trả lại hàng. | `updateQty` chỉ giữ chỗ thêm hoặc trả lại phần chênh. `removeItem` (và `updateQty` về 0) trả lại số lượng đang giữ. |
+| 6 | Thuế tính trên `gross` | Thuế tính trên `net`. |
+
+Ngoài phạm vi báo cáo, tôi cũng làm thêm hai việc ở `tax.js` và `checkout.js`: tính thuế và giảm % dùng cách làm tròn chống sai số dấu phẩy động tương tự `toCents`. Chưa có báo cáo nào về chỗ này, nên tôi chưa có test hồi quy riêng cho phần đó.

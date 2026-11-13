@@ -1,0 +1,10 @@
+Cả 6 lỗi trong ISSUES.md đã được sửa, và `npm test` xanh (14/14 test qua). Test hồi quy mới nằm ở `test/regression.test.js`.
+
+1. **Làm tròn xu**: `toCents` tính `amount * 100` rồi làm tròn bằng `Math.round`, nên `1.005` ra `100.4999…` và bị lệch. Tôi thêm hàm `roundHalfAway` trong `src/money.js` để làm tròn half away from zero. `toCents` dùng hàm này, mã giảm cố định cũng gọi `toCents` thay vì `Math.round(amount*100)`. Phần tính % giảm và thuế cũng dùng `roundHalfAway`. `minSubtotal` vốn đã đi qua `toCents` nên được sửa theo.
+2. **Giảm giá bị hụt**: `allocate` chỉ lấy phần nguyên nên mất phần dư. Giờ nó chia phần dư theo phương pháp phần dư lớn nhất, bằng nhau thì phần đứng trước được trước. Tổng các phần luôn bằng `total`.
+3. **Mua X tặng Y**: `freeUnits` giờ tính `floor(qty/(buy+free))*free`, nên 2 hộp → 0, 3 hộp → 1, 5 hộp → 1, 6 hộp → 2.
+4. **Hết hạn mã**: `endsAt` giờ được cộng thêm 1 ngày (UTC), nên mã dùng được tới hết ngày `endsAt` và bị từ chối từ `2026-12-01T00:00:00Z`.
+5. **Giữ chỗ tồn kho**: `updateQty` trước đây giữ chỗ toàn bộ số lượng mới thay vì chỉ phần chênh lệch. `removeItem` thì không trả hàng về kho. Giờ `updateQty` chỉ giữ chỗ hoặc trả lại phần chênh lệch, và `removeItem` trả lại toàn bộ số lượng của dòng. Nếu không đủ hàng thì kho không bị thay đổi.
+6. **Thuế**: `checkout.js` giờ tính thuế trên `net` thay vì `gross`.
+
+Tôi không đổi API công khai nào, chỉ thêm `roundHalfAway` vào phần export của `money.js`. Đây là chỗ duy nhất tôi thêm vào export.

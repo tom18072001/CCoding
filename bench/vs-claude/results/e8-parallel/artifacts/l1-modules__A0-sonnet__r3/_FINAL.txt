@@ -1,0 +1,7 @@
+Cả năm module đã được hiện thực ở `src/<tên>/index.js` theo SPEC.md, và `npm test` xanh (54/54 test pass). Bộ nghiệm thu ẩn thì tôi không chạy được nên chưa kiểm.
+
+Tôi thêm một file test mới cho mỗi module (`test/<tên>.spec.test.js`), phủ các ví dụ trong đặc tả, các mã lỗi và thứ tự báo lỗi; các test có sẵn vẫn giữ nguyên. Không có thư viện ngoài và các module không import lẫn nhau. Chưa commit gì, vì bạn chưa yêu cầu.
+
+Vài chỗ đặc tả không nói rõ, tôi tự chọn như sau:
+- **`convert`:** kiểm `m` trước rồi mới tới `to`. Nếu `rates[từ]` không có thì báo `MONEY_MISSING_RATE`, còn nếu có nhưng không phải đối tượng thì báo `MONEY_INVALID_RATE`.
+- **`csvcheck`:** tên cột rỗng bị coi là lược đồ sai (`CSV_INVALID_SCHEMA`). `min`/`max` trên cột `string` hoặc `bool` không bị kiểm.
