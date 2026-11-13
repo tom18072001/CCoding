@@ -1,0 +1,119 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t4-perf__B7__r13] Tối ưu buildReport dưới 1 giây trên 200.000 dòng, giữ nguyên hành vi
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Bản viết lại buildReport (562 ms trên 200.000 dòng, 4 test xanh) đã có sẵn trong worktree và được giữ nguyên, không làm lại. Kế hoạch chỉ gồm 2 hạng mục song song: một người rà soát và củng cố tính tương đương hành vi trong src/report.js, một người viết bộ test fuzz đối chiếu độc lập vào tệp riêng. Tôi chưa chạy lệnh nào để kiểm chứng; các con số trên lấy từ bàn giao của làn đơn.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Rà soát và củng cố tương đương hành vi của buildReport (@senior-swe, done)
+
+## Tóm tắt
+Tôi đối chiếu từng nhánh của `src/report.js` với bản cũ trong `test/fixtures/report.legacy.js` và không tìm thấy khác biệt nào trong phạm vi đầu vào hợp lệ, nên không sửa mã. Tôi chạy thêm 300 bộ dữ liệu ngẫu nhiên có kiểu lẫn lộn, kèm 2 bộ tùy chọn cho mỗi bộ. Cả hai bản cho kết quả `JSON.stringify` giống hệt nhau (0 khác biệt). `npm test` xanh và bench cả 3 lần đều dưới 1 s. Rủi ro còn lại là các đầu vào không hợp lệ (`NaN` làm `sku`/`id`/`customerId`, BigInt), tôi chưa xử lý.
+
+## Tệp đã tạo/sửa
+Không áp dụng. Không sửa tệp nào của repo vì không có khác biệt. Script đối chiếu ngẫu nhiên nằm ở `/tmp/mix.js`, ngoài repo.
+
+## Kiểm chứng
+- `npm test` → exit 0, 4 pass, 0 fail. Lệnh này nằm trong một pipeline `grep`, nên số `0` tôi thấy là exit code của `grep`. Kết luận exit 0 dựa trên số pass/fail, không phải exit code trực tiếp của `npm test`.
+- `node /tmp/mix.js` → `bad 0`. Script sinh 300 bộ dữ liệu cho mỗi seed, mỗi bộ chạy với 2 bộ tùy chọn (mặc định, và `topN: 2` kèm `from`). Dữ liệu trộn `id`, `customerId` và `sku` giữa số và chuỗi, `qty` gồm chuỗi, `0`, âm và `undefined`, `unitPrice` gồm `NaN` và chuỗi, `category` gồm `undefined` và `null`, và có `sku` không có trong `products`, `sku` trùng, cùng 3 trạng thái.
+- `npm run bench` ba lần: 549 ms, 572 ms, 574 ms (cùng 13 tháng, 11 danh mục, tổng 11445199250). Cả 3 lần đều dưới 1000 ms.
+
+## Quyết định thiết kế
+Các nhánh đã đối chiếu, tất cả tương đương:
+- **(a) Kiểu lẫn lộn:** `qty` dạng chuỗi cho cùng kết quả cộng dồn như bản cũ, kể cả nối chuỗi ở `qty` của sku, vì thứ tự cộng giữ nguyên. `id` và `customerId` lẫn số/chuỗi vẫn là khóa phân biệt trong `Map`/`Set`, giống `includes` (SameValueZero).
+- **(b) Sku trùng và sku lạ:** `Map` giữ phần tử đầu, giống `find`. Sku không có trong `products` cho `category` là `'unknown'` và `name` là `'(không rõ)'`. `name` của sku lấy từ dòng đầu tiên, giống `rs[0].name`.
+- **(c) Sort:** thứ tự chèn của `Map` bằng thứ tự xuất hiện đầu tiên của bản cũ. Các comparator giữ nguyên mã, và `revenue`/`total` không bao giờ là `NaN` vì đã null hóa. Do đó sort ổn định cho kết quả giống nhau, thứ tự khóa `byMonth` theo `months` đã sort.
+- **(d) Làm tròn và share:** công thức giữ nguyên. Các tổng cộng dồn theo thứ tự dòng như cũ nên số thực giống nhau. `refunds` và `runningTotal` cũng cộng theo cùng thứ tự.
+- **(e) Ngày không hợp lệ:** `new Date(...).toISOString()` chạy trước bộ lọc `from`/`to` và trạng thái, nên `RangeError` được ném cho đúng dòng đầu tiên, kể cả đơn bị hủy.
+- **(f) Null hóa:** `norm` đưa số không hữu hạn về `null`, và `0 + null = 0`, `null < 0` là `false`, giống kết quả sau `JSON.parse(JSON.stringify())`.
+
+## Rủi ro & việc còn mở
+- Bản cũ biến `NaN` thành `null` ở mọi trường qua JSON, còn bản mới chỉ làm vậy với `amount` và `qtySigned`. Nếu `sku`, `id` hoặc `customerId` là `NaN`, hai bản sẽ khác nhau. Đây là đầu vào không hợp lệ, nên tôi không sửa.
+- BigInt làm bản cũ ném lỗi khi chạy JSON, còn bản mới thì không. Cũng ngoài phạm vi đầu vào hợp lệ.
+- Khóa là đối tượng hoặc `Date` cũng có thể khác nhau, vì bản cũ chuyển chúng thành chuỗi qua JSON. Tôi chưa thử.
+- Bench dao động 549–574 ms, còn dư địa so với ngưỡng 1 s. Máy chậm hơn có thể làm con số tăng.
+
+Bản đầy đủ: `.ccoding/T-20261113-060657-4fc/outputs/dev-S1-senior-swe.md`
+
+### S2 — Bộ test fuzz đối chiếu độc lập với bản cũ (@backend-dev, done)
+
+## Tóm tắt
+Tôi tạo `test/report.fuzz.test.js` với 3 test fuzz đối chiếu `buildReport` mới với bản cũ. Không phát hiện khác biệt nào giữa hai bản. `npm test` xanh (7 test pass, 0 fail) và tệp fuzz chạy khoảng 1,3 s.
+
+## Tệp đã tạo/sửa
+- `test/report.fuzz.test.js` (mới). Không sửa `src/report.js` hay `test/report.test.js`.
+- PRNG mulberry32 với seed cố định. So sánh bằng `JSON.stringify` và `assert.deepStrictEqual`. Nếu bản cũ ném lỗi thì bản mới phải ném cùng loại lỗi và cùng message.
+- Test 1: 40 seed (1–40), mỗi seed chạy 15 bộ tùy chọn, tức 600 lần so sánh. Mỗi seed có tối đa vài trăm dòng, và seed chia hết cho 7 cho đầu vào rỗng. Dữ liệu trộn các yếu tố sau:
+  - trạng thái paid, refunded, cancelled;
+  - qty 0 và qty âm;
+  - giá thập phân (0.1, 0.2, 12.5, 33.33);
+  - sku trùng trong `products`, sku không có trong `products`;
+  - ngày ở ranh giới tháng/năm và lệch múi giờ (-05:00, +07:00, +14:00, -08:00);
+  - nhiều khách hàng, nhiều `id`, nhiều danh mục.
+- Các bộ tùy chọn gồm: mặc định, `topN` 0/1/5/1000, `from` riêng, `to` riêng, cả hai, `from > to`, và dải ngoài dữ liệu.
+- Test 2: 20 seed với mọi dòng cùng giá và cùng số lượng, để thử tie-break của sort khách hàng, danh mục và sản phẩm. Mỗi seed chạy 15 bộ tùy chọn.
+- Test 3: đầu vào rỗng (có và không có `products`). Ngày không hợp lệ (`'bad'`, `''`, `undefined`, `null`, `'2025-13-45'`) với cả ba trạng thái, gồm cả `cancelled`, kèm hoặc không kèm `from`. Kiểm tra loại lỗi và message khớp bản cũ.
+
+## Hợp đồng API
+Không áp dụng.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0: 7 test pass, 0 fail, `duration_ms` 1410. Gồm 4 test có sẵn và 3 test fuzz mới. Tổng thời gian chạy khoảng 2,1 s.
+
+## Việc còn lại
+- Khác biệt phát hiện: không có.
+- Chưa phủ (ngoài phạm vi đầu vào hợp lệ): `qty` dạng chuỗi, `id`/`customerId` kiểu lẫn lộn, BigInt, NaN trong comparator, và `unitPrice` NaN/Infinity (các trường hợp này không nằm trong fuzz; test có sẵn chỉ thử một dòng NaN).
+- Chưa chạy `npm run bench` trong lượt này.
+- Bộ nghiệm thu ẩn chưa chạy.
+
+Bản đầy đủ: `.ccoding/T-20261113-060657-4fc/outputs/dev-S2-backend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261113-060657-4fc` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **22 in / 16.9k out**, cache đọc 144.7k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 14 | 10778 | 98767 | 2 |
+| Backend Developer (@backend-dev) | dev | 6 | 4324 | 41252 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 2 | 1763 | 4701 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Rà soát và củng cố tương đương hành vi của buildReport (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Bộ test fuzz đối chiếu độc lập với bản cũ (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 7 · ℹ suites 0 · ℹ pass 7 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 69 | 100 | 60 | 1 | 1 | 110k | 0/10 | — |
+| Backend Developer (@backend-dev) | dev | **65** B | thấp | — | — | — | 100 | 100 | 100 | 1 | 1 | 46k | 0/4 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 6k | — | — |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 65 B):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

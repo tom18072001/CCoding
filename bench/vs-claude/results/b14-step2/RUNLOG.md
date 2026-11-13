@@ -100,3 +100,15 @@ Ghi 4/11/2026 (BRIEF-18 K3(b)), chỉ đọc tệp, không chạy test. Danh sá
   - lượt `t3-api__B7__r1` của khối 1 chạy trước các lượt còn lại của khối khoảng 7 ngày;
   - **độ nhạy:** phân tích lại khi bỏ lượt này;
   - nhật ký đầy đủ ở `b14-run.txt` (thư mục này).
+
+## Kết thúc và phân tích (12/11–13/11/2026, người điều phối)
+
+- **Chạy xong 8 khối lúc 23:48:58 UTC ngày 12/11** (`b14-run.txt`, bản đầy đủ chép từ máy chạy, 107 dòng). Mỗi khối chạy đúng thứ tự ABBA, đúng cấu hình của nhánh (sha256 ghi đầu mỗi khối). Cả 8 khối một commit `0d216eb` và một CLI 2.1.318.
+  - Khối 5 gặp hạn mức phiên lúc 18:38. Kịch bản chờ 5 lần × 30 phút, mở lại lúc 21:42 và chạy tiếp, không sang khối sớm.
+  - Mỗi nhánh có đủ 48 khóa `done` (3 bài × 16 rep). Dòng `infra`: nhánh tắt 75 (gồm 60 dòng hạn mức tuần ở khối 1), nhánh bật 13.
+  - Có 2 dòng `failed` (lỗi) ở nhánh tắt, khối 8: `t4-perf r14` và `t3-api r15`. Runner chạy lại đúng khóa trong cùng khối và cả hai lượt chạy lại đều `done`.
+- **Dữ liệu:** `off/` và `on/` (`runs.jsonl`, `config.json`, `artifacts/`) chép từ máy chạy lúc 13/11; tệp nén sha256 `87756a090991a866…`. Đường dẫn máy trong `config.json` thay bằng `<home>`. Không có dữ liệu dự án thật: chỉ có ba bài bench.
+- **Phân tích:** `report.md` và `analysis.json`.
+  - Kết quả chính: N = 96, R̂ 0,999 [0,886; 1,127], p 0,983, **không phân biệt được**. σ quan sát 0,312 (kế hoạch 0,182), power ở 10 % khoảng 0,38.
+  - Độ nhạy khi bỏ `off × t3-api × r1` (mục trên): R̂ 0,988 [0,872; 1,117], cùng phán quyết.
+- **Sai lệch phân tích (ghi ở `report.md` mục 4 và §9):** bản đầu của `b14-step2.mjs` giữ dòng đầu mỗi khóa, nên các dòng `infra` chặn mất lượt `done` của cùng khóa (n = 71). Người điều phối đã chạy bản đầu một lần và thấy kết quả của nó (R̂ 0,974, cùng phán quyết) trước khi sửa. Bản sửa (`collapseRetries`) làm theo quy tắc (8) và cách runner chạy lại khóa; bản đầu vẫn chạy lại được bằng `--retries first`.

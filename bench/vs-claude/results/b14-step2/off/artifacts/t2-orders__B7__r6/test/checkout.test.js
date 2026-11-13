@@ -1,0 +1,86 @@
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { Catalog, Inventory, Cart, computeTotals, toCents, allocate, freeUnits } = require('../src');
+
+function setup(promos = []) {
+  const catalog = new Catalog([
+    { sku: 'TEA', name: 'Trà', price: 5, category: 'drink', taxClass: 'reduced' },
+    { sku: 'MUG', name: 'Cốc', price: 12.5, category: 'home' },
+  ]);
+  const inv = new Inventory({ TEA: 10, MUG: 5 });
+  return { cart: new Cart(catalog, inv, promos), inv };
+}
+
+test('tính tiền không mã giảm giá', () => {
+  const { cart } = setup();
+  cart.addItem('TEA', 2);
+  cart.addItem('MUG', 1);
+  const t = computeTotals(cart);
+  assert.equal(t.subtotal, 2250);
+  assert.equal(t.tax, 50 + 125);
+  assert.equal(t.total, 2250 + 175);
+});
+
+test('giữ chỗ tồn kho khi thêm', () => {
+  const { cart, inv } = setup();
+  cart.addItem('MUG', 2);
+  assert.equal(inv.available('MUG'), 3);
+});
+
+test('mã không tồn tại', () => {
+  const { cart } = setup();
+  assert.throws(() => cart.applyCoupon('NOPE'), /không tồn tại/);
+});
+
+test('toCents làm tròn half away from zero', () => {
+  assert.equal(toCents(1.005), 101);
+  assert.equal(toCents(-1.005), -101);
+  assert.equal(toCents(2.675), 268);
+  assert.equal(toCents(12.34), 1234);
+});
+
+test('allocate phần dư lớn nhất, tổng đúng', () => {
+  assert.deepEqual(allocate(1000, [1, 1, 1]), [334, 333, 333]);
+  assert.deepEqual(allocate(5, [1, 3]), [1, 4]);
+});
+
+test('tổng giảm giá cố định đúng bằng mã', () => {
+  const { cart } = setup([{ code: 'X', type: 'fixed', amount: 10 }]);
+  cart.addItem('TEA', 1); cart.addItem('MUG', 1); cart.addItem('TEA', 1);
+  cart.applyCoupon('X');
+  assert.equal(computeTotals(cart).discount, 1000);
+});
+
+test('mua 2 tặng 1', () => {
+  assert.deepEqual([2, 3, 5, 6].map((q) => freeUnits(q, 2, 1)), [0, 1, 1, 2]);
+});
+
+test('mã hết hạn hết ngày endsAt (UTC)', () => {
+  const { cart } = setup([{ code: 'E', type: 'percent', percent: 10, endsAt: '2026-11-30' }]);
+  cart.addItem('TEA', 1);
+  assert.ok(cart.applyCoupon('E', new Date('2026-11-30T10:00:00Z')));
+  assert.throws(() => cart.applyCoupon('E', new Date('2026-12-01T00:00:00Z')), /hết hạn/);
+});
+
+test('giữ chỗ kho khi sửa/xóa', () => {
+  const catalog = new Catalog([{ sku: 'A', name: 'a', price: 1 }]);
+  const inv = new Inventory({ A: 4 });
+  const c = new Cart(catalog, inv);
+  c.addItem('A', 2);
+  c.updateQty('A', 3);
+  assert.equal(inv.available('A'), 1);
+  c.updateQty('A', 1);
+  assert.equal(inv.available('A'), 3);
+  c.removeItem('A');
+  assert.equal(inv.available('A'), 4);
+});
+
+test('thuế tính trên net sau giảm', () => {
+  const { cart } = setup([{ code: 'P', type: 'percent', percent: 50 }]);
+  cart.addItem('MUG', 2);
+  cart.applyCoupon('P');
+  const t = computeTotals(cart);
+  assert.equal(t.tax, 125);
+  assert.equal(t.total, 1250 + 125);
+});

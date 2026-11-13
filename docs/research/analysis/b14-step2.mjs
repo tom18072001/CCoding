@@ -1,6 +1,6 @@
 // Phân tích bước 2 của B-14 (A/B runtimes.claude-cli.stablePrefix): preregistration.md §9 "Đăng ký trước bước 2 của B-14" (4)–(8)
 // và V4-3e-(c) mục 3. Chỉ ĐỌC runs.jsonl của hai nhánh; không chạy benchmark, không tạo dữ liệu.
-// Dùng: node docs/research/analysis/b14-step2.mjs [--off <path>] [--on <path>] [--json]
+// Dùng: node docs/research/analysis/b14-step2.mjs [--off <path>] [--on <path>] [--json] [--retries last|first] [--exclude off|t3-api|1]
 // Hàm thống kê lấy từ bench/vs-claude/lib/stats.mjs (bản SAU D12), KHÔNG từ analysis/vendor/ (bản trước D12, chỉ dành cho K2 §10).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -78,10 +78,39 @@ const tOf = (cells) => (cells.length ? mean(cells.map((c) => mean(c.b) - mean(c.
 const position = (ci) => (ci[1] < 1 ? 'dưới 1' : ci[0] > 1 ? 'trên 1' : 'chứa 1');
 
 /**
+ * Gom các lần chạy lại cùng khóa (bài, rep) — sửa 13/11/2026 (sai lệch ghi ở §9 và RUNLOG b14-step2).
+ * Runner (`bench/vs-claude/lib/queue.mjs` isFinishedRow) chạy lại ĐÚNG KHÓA khi dòng là `infra` (hạn mức, lỗi hạ tầng) hoặc
+ * chưa xong (`failed` không có `excluded`); lượt `done` mới là quan sát của khóa đó. Bản trước giữ dòng ĐẦU của khóa nên dòng
+ * `infra` chặn mất lượt `done` sau nó. Ở đây: dòng `infra` không phải quan sát; trong các dòng còn lại, dòng `done` đầu tiên là
+ * quan sát, các dòng không xong trước nó là lượt bị loại theo (8) ("status ≠ done") và lượt `done` là lượt thay cùng khóa
+ * (tính vào trần 2 lượt thay mỗi ô). Khóa không có dòng `done` giữ dòng cuối (bị loại theo status). Dòng thừa sau `done` đếm là trùng.
+ */
+export function collapseRetries(rows) {
+  const byKey = new Map();
+  for (const r of rows) { const k = `${r.task}|${r.rep}`; if (!byKey.has(k)) byKey.set(k, []); byKey.get(k).push(r); }
+  const out = [], notes = { infra: 0, retried: [], dupAfterDone: 0 };
+  for (const rs of byKey.values()) {
+    const real = rs.filter((r) => r.status !== 'infra');
+    notes.infra += rs.length - real.length;
+    if (!real.length) { out.push(rs.at(-1)); continue; }
+    const iDone = real.findIndex((r) => r.status === 'done');
+    const pick = iDone >= 0 ? iDone : real.length - 1;
+    for (let i = 0; i < pick; i++) notes.retried.push({ task: real[i].task, rep: real[i].rep, status: real[i].status ?? null, sameKeyDone: iDone >= 0 });
+    notes.dupAfterDone += real.length - 1 - pick;
+    out.push(iDone > 0 ? { ...real[pick], _sameKeyReplacement: true } : real[pick]);
+  }
+  return { rows: out, notes };
+}
+
+/**
  * rowsOff, rowsOn: mảng dòng runs.jsonl của nhánh tắt/bật (cùng arm B7; nhánh phân biệt bằng thư mục, không bằng `arm`).
  * deps.permStratified: tiêm để test kiểm tham số; mặc định là hàm của bench/vs-claude/lib/stats.mjs.
+ * opts.retries: 'last' (mặc định, xem collapseRetries) | 'first' (cách của bản đầu, giữ dòng đầu mỗi khóa — chỉ để đối chiếu).
+ * opts.exclude: danh sách `${nhánh}|${bài}|${rep}` bỏ khỏi phân tích (phân tích độ nhạy, không phải phép kiểm chính).
  */
-export function analyze(rowsOff, rowsOn, deps = defaultDeps) {
+export function analyze(rowsOff, rowsOn, deps = defaultDeps, opts = {}) {
+  const retryMode = opts.retries ?? 'last';
+  const exclude = new Set(opts.exclude ?? []);
   const perm = deps.permStratified ?? permStratified;
   const arms = { off: rowsOff ?? [], on: rowsOn ?? [] };
   const drops = {}; // lý do → số lượt
@@ -91,11 +120,25 @@ export function analyze(rowsOff, rowsOn, deps = defaultDeps) {
   const cellsRows = {}; // `${arm}|${task}` → [{ row, rep, pair, w }]
 
   // 1–2. Phân loại, gán lượt thay thế (§9 (8)), suy cặp khối theo rep.
-  for (const [arm, rows] of Object.entries(arms)) {
+  const retryNotes = {};
+  for (const [arm, rowsIn] of Object.entries(arms)) {
+    let rows = rowsIn;
+    const sameKey = Object.fromEntries(TASKS.map((t) => [t, 0]));
+    if (retryMode === 'last') {
+      const c = collapseRetries(rowsIn);
+      rows = c.rows; retryNotes[arm] = c.notes;
+      if (c.notes.infra) bump('dòng hạ tầng (infra), chạy lại cùng khóa — không phải quan sát', c.notes.infra);
+      if (c.notes.dupAfterDone) bump('trùng khóa (bài, rep)', c.notes.dupAfterDone);
+      for (const x of c.notes.retried) {
+        bump(`status ≠ done (${x.status ?? 'không có'})${x.sameKeyDone ? ', thay bằng lượt cùng khóa' : ''}`);
+        if (x.sameKeyDone && TASKS.includes(x.task)) sameKey[x.task]++;
+      }
+    }
     const seen = new Set();
     const byTask = Object.fromEntries(TASKS.map((t) => [t, []]));
     for (const r of rows) {
       const key = `${r.task}|${r.rep}`;
+      if (exclude.has(`${arm}|${key}`)) { bump('bỏ theo phân tích độ nhạy (opts.exclude)'); continue; }
       if (TASKS.includes(r.task) && Number.isInteger(r.rep) && seen.has(key)) { bump('trùng khóa (bài, rep)'); continue; }
       seen.add(key);
       const why = dropReason(r);
@@ -106,13 +149,17 @@ export function analyze(rowsOff, rowsOn, deps = defaultDeps) {
       const all = byTask[task].sort((x, y) => x.rep - y.rep);
       const originals = all.filter((x) => x.rep <= REPS && x.why);
       const repls = all.filter((x) => x.rep > REPS);
-      if (repls.length > MAX_REPLACEMENTS) {
-        skipped.push({ task, reason: `ô ${arm} × ${task}: ${repls.length} lượt thay > ${MAX_REPLACEMENTS} (thiếu dữ liệu)` });
+      if (repls.length + sameKey[task] > MAX_REPLACEMENTS) {
+        skipped.push({ task, reason: `ô ${arm} × ${task}: ${repls.length + sameKey[task]} lượt thay > ${MAX_REPLACEMENTS} (thiếu dữ liệu)` });
         all.forEach((x) => bump('ô thiếu dữ liệu (quá số lượt thay)'));
         continue;
       }
       const kept = [];
-      for (const x of all) if (x.rep <= REPS) { if (x.why) bump(x.why); else kept.push({ ...x, pair: pairOf(x.rep) }); }
+      for (const x of all) if (x.rep <= REPS) {
+        if (x.why) { bump(x.why); continue; }
+        if (x.row._sameKeyReplacement) assignments.push({ arm, task, rep: x.rep, replaces: x.rep, pair: pairOf(x.rep), sameKey: true });
+        kept.push({ ...x, pair: pairOf(x.rep) });
+      }
       repls.forEach((x, k) => {
         if (k >= originals.length) { bump('thay thế không có lượt gốc'); return; }
         if (x.why) { bump(x.why); return; }
@@ -191,6 +238,7 @@ export function analyze(rowsOff, rowsOn, deps = defaultDeps) {
   return {
     n, nLabel, pairsKept, T, R, ci95: ci, p: pr.p, verdict, perm: { n: pr.n, exact: pr.exact, nPerm: pr.nPerm, skipped: pr.skipped, label: pr.label },
     permArgs, cells: cells.map((c) => ({ task: c.task, nOff: c.a.length, nOn: c.b.length })), skipped, drops, assignments, secondary, sensitivity,
+    retryMode, exclude: [...exclude], retryNotes,
     notes: ['permStratified nằm ở bench/vs-claude/lib/stats.mjs:272; §9 (6) ghi :162 là số dòng trước D12.', 'ceilGuard mặc định tắt vì margin = 0; ∏C(32,16) > 10⁶ nên hàm chạy Monte Carlo, p = (k + 1)/(M + 1).'],
   };
 }
@@ -202,6 +250,7 @@ const pct = (v) => (v == null ? '—' : `${f(100 * v, 1)} %`);
 export function toMarkdown(r) {
   const L = [];
   L.push('# Bước 2 của B-14: kết quả phân tích', '');
+  L.push(`- **Cách gom dòng chạy lại:** ${r.retryMode === 'first' ? 'giữ dòng đầu mỗi khóa (cách của bản đầu, chỉ để đối chiếu)' : 'dòng infra không phải quan sát; lượt done cùng khóa thay lượt không xong (collapseRetries)'}${r.exclude?.length ? `; bỏ theo độ nhạy: ${r.exclude.join(', ')}` : ''}`);
   L.push(`- **Số lượt dùng được:** ${r.n} — nhãn: **${r.nLabel}**; cặp khối giữ: ${r.pairsKept.join(', ') || 'không'}`);
   L.push(`- **T** (TB theo bài của TB ln bật − TB ln tắt) = ${f(r.T)}; **R̂ = exp(T)** = ${f(r.R)}; CI 95 % bootstrap (${B_BOOT} vòng, hạt ${SEED}) = ${r.ci95 ? `[${f(r.ci95[0])}; ${f(r.ci95[1])}]` : '—'}`);
   L.push(`- **p hai phía** (permStratified, ${r.perm.exact ? 'đủ' : 'Monte Carlo'}) = ${f(r.p, 4)}`);
@@ -209,7 +258,7 @@ export function toMarkdown(r) {
   L.push('| Bài | n tắt | n bật |', '|---|--:|--:|', ...r.cells.map((c) => `| ${c.task} | ${c.nOff} | ${c.nOn} |`), '');
   if (r.skipped.length) L.push('**Ô thiếu dữ liệu:**', ...r.skipped.map((s) => `- ${s.reason}`), '');
   L.push('**Lượt bị loại theo lý do:**', ...(Object.keys(r.drops).length ? Object.entries(r.drops).map(([k, v]) => `- ${k}: ${v}`) : ['- không có']), '');
-  if (r.assignments.length) L.push('**Lượt thay thế đã gán:**', ...r.assignments.map((a) => `- ${a.arm} × ${a.task}: rep ${a.rep} thay rep ${a.replaces} (cặp ${a.pair})`), '');
+  if (r.assignments.length) L.push('**Lượt thay thế đã gán:**', ...r.assignments.map((a) => (a.sameKey ? `- ${a.arm} × ${a.task}: rep ${a.rep} chạy lại cùng khóa thay lượt không xong (cặp ${a.pair})` : `- ${a.arm} × ${a.task}: rep ${a.rep} thay rep ${a.replaces} (cặp ${a.pair})`)), '');
   L.push('## Thước đo phụ (mô tả, không p)', '', '| Bài | Nhánh | n | h trung vị | 1,25·cacheWrite / weighted |', '|---|---|--:|--:|--:|');
   for (const x of r.secondary.byTaskArm) L.push(`| ${x.task} | ${x.arm === 'on' ? 'bật' : 'tắt'} | ${x.n} | ${f(x.hMedian)} | ${f(x.cacheWriteShare)} |`);
   L.push('', '| Nhánh | n | pass | CP 95 % | score TB | wallSec TB (trung vị) | calls TB (trung vị) |', '|---|--:|--:|---|--:|--:|--:|');
@@ -230,13 +279,15 @@ function readJsonl(file, label) {
 }
 
 export function main(argv = process.argv.slice(2)) {
-  const opt = { off: path.join(RESULTS, 'off', 'runs.jsonl'), on: path.join(RESULTS, 'on', 'runs.jsonl'), json: false };
+  const opt = { off: path.join(RESULTS, 'off', 'runs.jsonl'), on: path.join(RESULTS, 'on', 'runs.jsonl'), json: false, retries: 'last', exclude: [] };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--off') opt.off = argv[++i]; else if (argv[i] === '--on') opt.on = argv[++i]; else if (argv[i] === '--json') opt.json = true;
-    else { console.error(`Tham số không hợp lệ: ${argv[i]}. Dùng: --off <path> --on <path> [--json]`); return 2; }
+    else if (argv[i] === '--retries' && ['last', 'first'].includes(argv[i + 1])) opt.retries = argv[++i];
+    else if (argv[i] === '--exclude') opt.exclude.push(argv[++i]);
+    else { console.error(`Tham số không hợp lệ: ${argv[i]}. Dùng: --off <path> --on <path> [--json] [--retries last|first] [--exclude nhánh|bài|rep]`); return 2; }
   }
   try {
-    const res = analyze(readJsonl(opt.off, 'tắt'), readJsonl(opt.on, 'bật'));
+    const res = analyze(readJsonl(opt.off, 'tắt'), readJsonl(opt.on, 'bật'), defaultDeps, { retries: opt.retries, exclude: opt.exclude });
     console.log(opt.json ? JSON.stringify(res, null, 2) : toMarkdown(res));
     return 0;
   } catch (e) { console.error(`Lỗi: ${e.message}`); return 1; }

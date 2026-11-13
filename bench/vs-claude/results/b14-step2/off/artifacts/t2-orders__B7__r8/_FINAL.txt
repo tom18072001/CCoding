@@ -1,0 +1,132 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t2-orders__B7__r8] Sửa 6 lỗi trong thư viện tính tiền giỏ hàng
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Cả 6 lỗi đã được sửa trong worktree (src/cart.js, checkout.js, money.js, promotions.js, test/regression.test.js; 15/15 test pass). Kế hoạch này không làm lại từ đầu. Hai hạng mục song song, mỗi hạng mục dùng tệp riêng: một hạng mục đối chiếu lại bản sửa với ISSUES.md và vá phần còn thiếu, một hạng mục viết thêm test biên và test bảo vệ hành vi đang đúng. Lưu ý: diff trong bàn giao ghi 'chưa có thay đổi', nhưng git status cho thấy 4 tệp src đã sửa và test/regression.test.js đã được thêm.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Đối chiếu 6 bản sửa với ISSUES.md và vá phần thiếu (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã đối chiếu 6 bản sửa với ISSUES.md và với chú thích trong `src/*`. Cả 6 đều đúng nguyên nhân gốc và khớp mọi ví dụ trong ISSUES.md, nên tôi không phải vá thêm gì trong `src/`. `npm test` cho 15/15 pass. Tôi chỉ đọc mã, chạy thử `toCents` trên vài giá trị và chạy `npm test`. Tôi không viết thêm test nào.
+
+## Tệp đã tạo/sửa
+Không có thay đổi mới trong lượt này. Các tệp đã sửa từ trước (`src/cart.js`, `src/checkout.js`, `src/money.js`, `src/promotions.js`) giữ nguyên, và tôi không động tới `test/regression.test.js`.
+
+## Kiểm chứng
+- `npm test` → exit 0 (tests 15, pass 15, fail 0). Baseline trước đó là 6/6 pass.
+- Chạy thử `toCents` trực tiếp bằng `node -e`:
+
+| Đầu vào | Kết quả (xu) |
+|---|---|
+| 1.005 | 101 |
+| 2.675 | 268 |
+| -2.675 | -268 |
+| 0.1+0.2 | 30 |
+| 1e-7 | 0 |
+| 1.15 | 115 |
+| 8.345 | 835 |
+| 0.015 | 2 |
+| -0.005 | -1 |
+
+- Kết quả 1e21 là 1e+23 xu, tức vẫn là số rất lớn, không bị hỏng.
+
+Kết quả theo từng lỗi (từ đọc mã, trừ khi ghi khác):
+1. `toCents` làm tròn half away from zero đúng cho số âm, số 3 chữ số thập phân và dạng mũ (kết quả chạy thử ở bảng trên). Giá sản phẩm (`catalog.js`), `minSubtotal` (`promotions.js`) và mã giảm cố định (`checkout.js`) đều dùng `toCents`. Trong `src/` không còn chỗ nào nhân 100 trực tiếp.
+2. `allocate` dùng phần dư lớn nhất, phần lẻ bằng nhau thì phần đứng trước được trước. `total = 0` ra toàn số 0. Tổng các phần luôn bằng `total` (với `total` không âm). Ratios có số 0 cho phần chia 0, vì phần nguyên và phần dư đều bằng 0. Tổng trọng số bằng 0 trả về toàn số 0.
+3. `freeUnits` = `floor(qty/(buy+free))*free`. Với `qty < buy+free` cho 0, 2→0, 3→1, 5→1, 6→2 với `buy=2, free=1`. Các ví dụ này đã có trong test hồi quy.
+4. `endsAt` có hiệu lực tới 23:59:59.999 UTC của ngày đó và bị từ chối từ 00:00 ngày kế tiếp. Điều kiện `startsAt` vẫn là `now < startsAt`, tức hiệu lực từ đầu ngày UTC. Khớp chú thích "từ đầu ngày startsAt tới HẾT ngày endsAt".
+5. `updateQty` chỉ giữ hoặc trả phần chênh lệch. `removeItem` và `updateQty` về 0 trả lại toàn bộ số lượng trong giỏ. `removeItem` với sku không có trong giỏ không làm gì, nên không trả chỗ hai lần. Nếu `reserve` ném lỗi vượt tồn kho thì `lines` và `reserved` không đổi.
+6. `lineTax` nhận `net` (sau giảm giá), làm tròn từng dòng bằng `Math.round`. `total = Σ net + Σ tax` giữ nguyên.
+
+## Quyết định thiết kế
+- Giữ nguyên các bản sửa hiện có và không thêm thay đổi nào, để tránh vá thừa.
+- Chuyển đổi `toCents` dùng `toPrecision(15)` rồi dịch dấu thập phân qua dạng mũ. Cách này xử lý được các giá trị như 1.005 mà không phụ thuộc phép nhân nhị phân.
+
+## Rủi ro & việc còn mở
+- `allocate` giả định `total` không âm, đúng với mọi chỗ gọi hiện tại (mã giảm %, mã giảm cố định bị chặn bởi `subtotal`). Nếu sau này có giảm giá âm thì phải xem lại.
+- `endsAt` chỉ đúng với định dạng `YYYY-MM-DD` như chú thích mô tả. Nếu truyền timestamp đầy đủ thì hạn bị cộng thêm một ngày.
+- Mã `bxgy` tặng `free` món trên mỗi nhóm `buy+free` món. Đây là cách hiểu từ ISSUES.md; mọi ví dụ đều khớp.
+- Các test hồi quy của S2 chưa được chạy trên mã cũ để xác nhận chúng đỏ trước khi sửa.
+
+Bản đầy đủ: `.ccoding/T-20261113-012159-b91/outputs/dev-S1-senior-swe.md`
+
+### S2 — Test biên cho 6 lỗi và test bảo vệ hành vi đang đúng (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã tạo `test/edge.test.js` với 21 test: ca biên cho cả 6 lỗi và test bảo vệ hành vi đang đúng. Không sửa `src/*` hay `test/regression.test.js`. `npm test` cho 36/36 pass (15 test cũ và 21 test mới), không có ca đỏ.
+
+## Tệp đã tạo/sửa
+- `test/edge.test.js` (mới)
+  - #1: `toCents` với 0.005, -0.005, 1.004, 1.015, 0.1+0.2, số lớn, đầu vào không hợp lệ. Giá sản phẩm và `minSubtotal` dùng `toCents`.
+  - #2: `allocate` với tổng 0, trọng số 0 hoặc rỗng, phần lẻ bằng nhau, tổng luôn bằng `total`. Mã fixed lớn hơn giỏ không làm giỏ âm.
+  - #3: `freeUnits` với nhiều cấu hình mua X tặng Y. Mã `bxgy` ở checkout chỉ giảm đúng sku.
+  - #4: `startsAt`/`endsAt` ở các mốc UTC (đầu ngày, 23:59:59.999, 00:00:00 hôm sau). Mã không tồn tại, mã không phân biệt hoa thường.
+  - #5: giữ chỗ luôn bằng tổng số lượng trong giỏ. Sửa số lượng vượt kho thì trạng thái không đổi. Hai giỏ dùng chung kho. Đầu vào không hợp lệ.
+  - #6: thuế theo `net` của từng dòng với ba loại thuế, `lineTax` làm tròn.
+  - Giữ nguyên: giỏ trống, tổng tiền thường, mã percent, category, `minSubtotal` (kể cả đúng bằng ngưỡng), `formatMoney`.
+
+## Hợp đồng API
+Không áp dụng.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0; tests 36, pass 36, fail 0.
+- Lần ghi đầu bằng heredoc trong Bash bị hook chặn vì chuỗi `../src`. Tôi ghi lại bằng công cụ Write và chạy lại test.
+- Tôi không chạy test mới trên mã cũ, nên chưa xác nhận chúng đỏ trước khi sửa. Chúng được viết để bảo vệ bản sửa và hành vi đúng.
+
+## Việc còn lại
+- Ca đỏ: không có.
+- Không có biến môi trường mới.
+- `allocate` giả định `total` không âm, nên tôi không viết test cho trường hợp âm.
+
+Bản đầy đủ: `.ccoding/T-20261113-012159-b91/outputs/dev-S2-backend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261113-012159-b91` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **30 in / 22.4k out**, cache đọc 258.9k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 18 | 9267 | 151083 | 2 |
+| Backend Developer (@backend-dev) | dev | 10 | 11377 | 103153 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 2 | 1737 | 4701 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Đối chiếu 6 bản sửa với ISSUES.md và vá phần thiếu (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Test biên cho 6 lỗi và test bảo vệ hành vi đang đúng (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 6 · ℹ suites 0 · ℹ pass 6 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 36 · ℹ suites 0 · ℹ pass 36 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **69** B | thấp | — | — | 100 | 91 | 95 | 100 | 1 | 1 | 160k | 1/15 | — |
+| Backend Developer (@backend-dev) | dev | **69** B | thấp | — | — | 100 | 100 | 84 | 100 | 1 | 1 | 115k | 1/5 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 6k | — | — |
+
+### Việc cần sửa theo agent
+- **Backend Developer** (@backend-dev, 69 B):
+  - Thao tác công cụ lỗi nhiều (1/5, 20%; nhiều nhất ở run_command 1/4) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

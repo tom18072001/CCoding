@@ -6,7 +6,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { analyze, defaultDeps, weightedOf, TASKS } from './b14-step2.mjs';
+import { analyze, collapseRetries, defaultDeps, weightedOf, TASKS } from './b14-step2.mjs';
 import { permStratified, mulberry32 } from '../../../bench/vs-claude/lib/stats.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -146,4 +146,52 @@ test('CLI với dữ liệu giả ghi vào thư mục tạm: in bảng và --jso
   const m = spawnSync(process.execPath, [SCRIPT, '--off', off, '--on', on], { encoding: 'utf8' });
   assert.match(m.stdout, /Phán quyết: giảm/);
   fs.rmSync(dir, { recursive: true, force: true });
+});
+
+// ───── sửa 13/11/2026: runner chạy lại ĐÚNG KHÓA khi dòng là infra hoặc chưa xong (queue.mjs isFinishedRow) ─────
+test('10. collapseRetries: dòng infra trước lượt done không chặn quan sát; failed rồi done = lượt thay cùng khóa', () => {
+  const off = mkArm(11), on = mkArm(22);
+  const infra = (task, rep) => ({ key: `${task}|B7|${rep}`, task, arm: 'B7', rep, status: 'infra', infra: 'rate-limit' });
+  const failed = (task, rep) => ({ key: `${task}|B7|${rep}`, task, arm: 'B7', rep, status: 'failed', excluded: null, tokens: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, weighted: 6 } });
+  // tắt: 60 dòng hạn mức trước t2 r1 (như dữ liệu thật); t4 r14 failed trước done; bật: t3 r1 có 3 dòng infra trước done
+  const offRows = [...Array.from({ length: 60 }, () => infra('t2-orders', 1)), ...off.slice(0, 13 + 16 * 2), failed('t4-perf', 14), ...off.slice(13 + 16 * 2)];
+  const onRows = [infra('t3-api', 1), infra('t3-api', 1), infra('t3-api', 1), ...on];
+  const c = collapseRetries(offRows);
+  assert.equal(c.rows.length, 48);
+  assert.equal(c.notes.infra, 60);
+  assert.deepEqual(c.notes.retried, [{ task: 't4-perf', rep: 14, status: 'failed', sameKeyDone: true }]);
+  const a = analyze(offRows, onRows);
+  assert.equal(a.n, 96);
+  assert.equal(a.nLabel, 'đủ 96');
+  assert.equal(a.drops['dòng hạ tầng (infra), chạy lại cùng khóa — không phải quan sát'], 63);
+  assert.equal(a.drops['status ≠ done (failed), thay bằng lượt cùng khóa'], 1);
+  assert.equal(a.drops['trùng khóa (bài, rep)'], undefined);
+  assert.deepEqual(a.assignments, [{ arm: 'off', task: 't4-perf', rep: 14, replaces: 14, pair: 4, sameKey: true }]);
+  // cùng kết quả như khi không có dòng thừa (lượt thay cùng khóa giữ đúng cặp khối)
+  const clean = analyze(off, on);
+  assert.equal(a.T, clean.T);
+  // cách cũ (giữ dòng đầu): infra chặn khóa, n < 96
+  const first = analyze(offRows, onRows, defaultDeps, { retries: 'first' });
+  assert.ok(first.n < 96);
+  assert.ok(first.drops['trùng khóa (bài, rep)'] > 0);
+});
+
+test('11. lượt thay cùng khóa tính vào trần 2 mỗi ô; quá trần → ô thiếu dữ liệu', () => {
+  const off = mkArm(11), on = mkArm(22);
+  const failed = (rep) => ({ key: `t3-api|B7|${rep}`, task: 't3-api', arm: 'B7', rep, status: 'failed', excluded: null });
+  const a = analyze([failed(2), failed(5), failed(9), ...off], on);
+  assert.equal(a.skipped.length, 1);
+  assert.match(a.skipped[0].reason, /3 lượt thay > 2/);
+  assert.equal(a.verdict, 'không kết luận (thiếu dữ liệu)');
+  const b = analyze([failed(2), failed(5), ...off], on);
+  assert.equal(b.skipped.length, 0);
+  assert.equal(b.n, 96);
+});
+
+test('12. opts.exclude bỏ đúng một lượt (độ nhạy), không đổi tham số phép kiểm', () => {
+  const a = analyze(mkArm(11), mkArm(22), defaultDeps, { exclude: ['off|t3-api|1'] });
+  assert.equal(a.n, 95);
+  assert.equal(a.cells.find((c) => c.task === 't3-api').nOff, 15);
+  assert.equal(a.drops['bỏ theo phân tích độ nhạy (opts.exclude)'], 1);
+  assert.deepEqual(a.permArgs, { alt: 'two', margin: 0, M: 10000, seed: 20261104 });
 });

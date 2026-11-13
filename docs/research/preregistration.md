@@ -1160,6 +1160,19 @@ Phòng Nghiên cứu thẩm định lại ở BRIEF-19 K1: chạy lại và đ�
 - **Trả lời điều kiện 7 của mục thẩm định trên ([CẦN KIỂM]):** `e78-run.ps1` gọi `e78-check.mjs b6w1` sau mỗi lần chạy E8 và dừng (STOP-E78) khi có lượt B6w1 `maxConcSubtasks ≥ 2` — đã kiểm. Điều kiện 6: kịch bản ghi `git rev-parse HEAD` và sha256 gộp của `dist` vào `ops/e78-run.txt`; server A và B chạy cùng bản ghim, cùng `dist`.
 - **Giới hạn ghi cho các đợt cũ:** dòng của arm `claude -p` trước 13/11 không có `authSource`; xem `results/e7-cto/RUNLOG.md` mục 13/11.
 
+### Sai lệch phân tích bước 2 của B-14: gom các lần chạy lại cùng khóa (ghi 13/11/2026, người điều phối)
+
+- **Sai lệch:**
+  - Runner chạy lại **đúng khóa** (bài, rep) khi lượt là `infra` hoặc chưa xong (`failed` không `excluded`). Quy tắc (8) viết "thay bằng `rep` mới", còn runner thay bằng lượt cùng khóa.
+  - Bản đầu của `b14-step2.mjs` giữ dòng đầu mỗi khóa, nên dòng `infra` chặn lượt `done` sau nó (n = 71/96).
+- **Sửa:** `collapseRetries`.
+  - Dòng `infra` không phải quan sát.
+  - Lượt `done` đầu tiên của khóa là quan sát.
+  - Dòng không xong trước nó bị loại theo (8), và lượt `done` đó tính là lượt thay, vào trần 2 mỗi ô. Dữ liệu dùng 1 lượt thay ở hai ô (`off × t4-perf`, `off × t3-api`).
+  - Không đổi T, phép kiểm, tham số, ngưỡng hay quy tắc loại theo token, h, điểm.
+- **Minh bạch:** bản đầu đã được chạy một lần trên dữ liệu thật và người điều phối thấy kết quả của nó trước khi phát hiện lỗi (R̂ 0,974 [0,841; 1,134], p 0,733). Cách sửa suy ra từ (8) và `queue.mjs`, không từ kết quả. Hai bản cùng phán quyết "không phân biệt được"; cả hai được báo ở `results/b14-step2/report.md`.
+- **Độ nhạy thêm** (ghi ở RUNLOG trước khi phân tích, không vào phép kiểm chính): bỏ lượt `off × t3-api × r1`, vì lượt này chạy trước phần còn lại của khối 1 khoảng 7 ngày.
+
 ### Đăng ký trước trục 2 (quản trị): đo bộ kiểm lệnh không gọi LLM (ghi 13/11/2026, @methodologist, BRIEF-19 K1b; trước khi tính bất kỳ số nào; giờ chính thức là giờ của commit chứa mục này)
 
 **Phạm vi.** Hiện trục 2 chưa có số đo nào. Mục này chỉ đăng ký cách đo; không có con số kết quả nào trong mục. Không gọi LLM, không chạy benchmark, không chạy sandbox thật (giám đốc chưa đăng nhập WSL, nên phép đo **không** nói gì về sandbox WSL2/native; chỉ về chính sách tĩnh). Đã đọc, chỉ đọc: `src/tools/shell-policy.ts`, `src/tools/claude-guard.ts`, `scripts/replay-guard-deny.mjs`.
