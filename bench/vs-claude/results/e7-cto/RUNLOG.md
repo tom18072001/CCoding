@@ -75,3 +75,13 @@ Cả hai lần chỉ chạy mục chạy thử `067cd64cc5` (không thuộc mẫ
   - E7: bảng theo bài; hiệu recall R1 − R3 kèm bootstrap hai tầng theo bài, đọc cùng p của McNemar (< 10 cặp bất đồng thì p chỉ mô tả; hai bên không thống nhất thì "chưa kết luận"); độ nhạy coi "không đọc được kết luận" là chặn (§9 E7 (6)); độ nhạy bỏ `t5-logq`; cờ khi số lượt không đọc được lệch giữa các arm; recall theo số lần trượt khi kiểm nhãn.
   - E8: mô tả theo arm gồm số lượt chạy chồng, số lượt chia dưới 2 hạng mục, cổng kiểm tra cuối, điểm và pass (A0-sonnet làm mốc); câu giới hạn về σ_ln và server A/B.
   - Xung đột khi gộp của E8 lấy sau đợt bằng `p-extract.mjs` (chỉ GET) trên server A và B.
+
+### Gián đoạn do máy chạy khởi động lại (13/11/2026, người điều phối)
+
+- **04:33:54 UTC:** máy chạy khởi động lại. Nhật ký hệ thống (sự kiện 1074) ghi rằng việc khởi động lại do trình cài một phần mềm VPN mà người dùng máy chạy tự mở; không phải lỗi của đợt đo hay của Windows Update. Kịch bản `e78-run.ps1` (pid 29080) chết theo.
+- Trước đó có 88 dòng `done` (R1 29, R2 30, R3 29), dòng cuối lúc 04:33:50. Không có dòng `infra` nào.
+- Lượt đang chạy dở lúc khởi động lại không để lại dòng nào; nó chạy lại từ đầu khi kịch bản chạy tiếp:
+  - `prepareItem` xóa và dựng lại thư mục của từng arm;
+  - CCoding đánh dấu nhiệm vụ đang chạy dở là "bị gián đoạn" và không tự chạy tiếp, nên không có lượt gọi thừa.
+- **08:53:25 UTC chạy tiếp** (pid 20572). Bản ghim, CLI 2.1.318, `dist` và sha256 các script không đổi (ghi lại ở `ops/e78-run.txt`). Các bước đã xong được bỏ qua: chạy thử, danh sách chốt (sha256 `selected.json` không đổi).
+- **Ảnh hưởng:** không đổi mẫu hay thứ tự (thứ tự arm theo mục là cố định). Khoảng trống 4 giờ 20 phút giữa hai phần của đợt được ghi, vì thời gian và cửa sổ hạn mức là thước đo phụ; thước đo chính (chặn hay không) không phụ thuộc thời điểm chạy.
