@@ -256,7 +256,7 @@ export async function runCto(app, cc, prep, arm, { runtime = 'claude-cli', captu
   const text = acc?.path ? store.readRunFile(task.id, acc.path) ?? '' : '';
   const cap = capture?.get(task.id);
   return {
-    taskId: task.id, status: infra ? 'infra' : 'done', infra, ...(rl.resetsAt ? { resetsAt: rl.resetsAt } : {}), error: infra ? String(timedOut ? `quá hạn chờ ${Math.round(waitTimeoutMs / 1000)}s` : (acc?.error ?? pausedDetail ?? t.error ?? '')).slice(0, 300) : undefined,
+    taskId: task.id, status: infra ? 'infra' : 'done', infra, ...(rl.resetsAt ? { resetsAt: rl.resetsAt } : {}), error: infra ? String(timedOut ? `quá hạn chờ ${Math.round(waitTimeoutMs / 1000)}s` : (acc?.error || pausedDetail || t.error || (() => { const e = callErrors(callsText).at(-1); return e ? [e.errorKind, e.error ?? e.attempts?.map((a) => a.error ?? a.kind).filter(Boolean).join('; ')].filter(Boolean).join(': ') : ''; })() || '')).slice(0, 300) : undefined,
     verdict: infra ? null : verdictOf(acc.parsed, acc.accepted), accepted: acc?.accepted ?? null, parsed: acc?.parsed ?? null, acceptMode: acc?.mode ?? null,
     criteria: acc?.criteria?.length ?? 0, fails: acc?.criteria?.filter((c) => c.result === 'fail').length ?? 0, unknowns: acc?.criteria?.filter((c) => c.result === 'unknown').length ?? 0,
     tokens, calls: calls.length, turns: calls.reduce((n, c) => n + (c.turns ?? 0), 0), models: [...new Set(calls.map((c) => c.model).filter(Boolean))], ...costOfCalls(callsText),

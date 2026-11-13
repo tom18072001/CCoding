@@ -14,6 +14,7 @@ function Log([string]$m) { "$((Get-Date).ToUniversalTime().ToString('o')) $m" | 
 function Stopped { foreach ($f in "$R3E\STOP-3e", "$W\STOP-E78") { if (Test-Path $f) { Log "$f co mat: dung"; return $true } }; return $false }
 function Halt([string]$m) { Log "$m : DUNG, bao giam doc"; New-Item -ItemType File "$W\STOP-E78" -Force | Out-Null; exit 1 }
 function Sha([string]$f) { (Get-FileHash $f -Algorithm SHA256).Hash.ToLower() }
+function Sha2([string]$t) { $h = [Security.Cryptography.SHA256]::Create(); (($h.ComputeHash([Text.Encoding]::UTF8.GetBytes($t)) | ForEach-Object { $_.ToString('x2') }) -join '') }
 # chay lenh cho toi khi $done.Invoke() du; exit 3 -> cho 30 phut; 5 lan khong tien trien -> dung
 function Loop([string]$name, [scriptblock]$run, [scriptblock]$progress) {
   $stall = 0; $rl = 0; $try = 0
@@ -51,12 +52,13 @@ Set-Location $W
 if (-not (Select-String -Path "$W\npm-setup.log" -Pattern 'SETUP-OK' -Quiet)) { Halt 'npm ci/build cua ccoding-e78 chua xong' }
 $cli = "$(claude --version)"; if ($cli -ne $CLI0) { Halt "CLI la $cli, khong phai $CLI0" }
 $files = @('bench\vs-claude\e7\sample.mjs', 'bench\vs-claude\e7\lib.mjs', 'bench\vs-claude\e7\run.mjs', 'bench\vs-claude\e7\analyze.mjs', 'bench\vs-claude\e8\analyze.mjs', 'bench\vs-claude\results\e7-cto\items.json', 'bench\vs-claude\lib\ccoding.mjs', 'bench\vs-claude\lib\claude.mjs', 'ccoding.local.json')
-Log "ban ghim $(git rev-parse HEAD), cli $cli; sha256: $(($files | ForEach-Object { "$(Split-Path $_ -Leaf)=$((Sha "$W\$_").Substring(0,12))" }) -join ' ')"
+$distSha = Sha2 ((Get-ChildItem "$W\dist" -Recurse -File | Sort-Object FullName | ForEach-Object { "$($_.FullName.Substring($W.Length)) $(Sha $_.FullName)" }) -join "`n")
+Log "ban ghim $(git rev-parse HEAD), cli $cli, dist $($distSha.Substring(0,12)); sha256: $(($files | ForEach-Object { "$(Split-Path $_ -Leaf)=$((Sha "$W\$_").Substring(0,12))" }) -join ' ')"
 
 # ---------- E7 ----------
 $E7 = 'bench\vs-claude\results\e7-cto'
 $SMOKE = "$ROOT\e7-smoke"
-Loop 'E7 chay thu' { & node bench/vs-claude/e7/run.mjs --smoke 067cd64cc5 --arms R1,R3 --out $SMOKE --work "$ROOT\vbe7s" --timeout 20 *>> "$W\e7-smoke.log" } { & node $CHK smokecount "$SMOKE\runs.jsonl" 067cd64cc5 }
+Loop 'E7 chay thu' { & node bench/vs-claude/e7/run.mjs --smoke 067cd64cc5 --items "$W\$E7\items.json" --arms R1,R3 --out $SMOKE --work "$ROOT\vbe7s" --timeout 20 *>> "$W\e7-smoke.log" } { & node $CHK smokecount "$SMOKE\runs.jsonl" 067cd64cc5 }
 $s = & node $CHK smoke "$SMOKE\runs.jsonl" 067cd64cc5
 if ($s -ne 'OK') { Halt "E7 chay thu: $s" }
 Log 'E7 chay thu: OK (promptSha R1 = R3, cong cu dung)'
