@@ -4,6 +4,22 @@ import { detectRateLimit } from './infra.mjs';
 
 export const TOOLS = 'Read,Write,Edit,Bash,Grep,Glob';
 
+/** Biến khóa/token bị bỏ khỏi môi trường của mọi tiến trình `claude` do harness gọi — cùng mẫu với `scrubEnv` của CCoding (src/tools/workspace.ts). */
+export const SECRET_VAR = /(API_?KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|PRIVATE_KEY|^BIFROST_|^NINEROUTER|^CCODING_TOKEN|^ANTHROPIC_|^OPENAI_|^AWS_|^AZURE_|^GH_|^GITHUB_)/i;
+
+/**
+ * Môi trường cho `claude -p` của harness: bỏ mọi biến khóa/token (ANTHROPIC_API_KEY, ANTHROPIC_BASE_URL, …) để Claude Code
+ * dùng phiên đăng nhập claude.ai của máy như runtime claude-cli của CCoding — không dùng khóa API ngoài, và arm đơn
+ * cùng đường xác thực với arm CCoding. Phát hiện 13/11/2026: máy chạy có ANTHROPIC_API_KEY cấp người dùng, `claude -p`
+ * của R3 lấy khóa đó trước phiên đăng nhập.
+ */
+export function claudeEnv(env = process.env) {
+  const out = {};
+  for (const [k, v] of Object.entries(env)) if (!SECRET_VAR.test(k)) out[k] = v;
+  out.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '1';
+  return out;
+}
+
 export const PROCESS_SUFFIX = `
 
 Work in four explicit stages and do not skip any:
@@ -18,8 +34,11 @@ export function weighted(u) {
 }
 
 /**
- * Run claude -p. Returns { status, wallSec, tokens, costUsd, turns, finalText, transcript, infra, resetsAt, model, timedOut }.
+ * Run claude -p. Returns { status, wallSec, tokens, costUsd, turns, finalText, transcript, infra, resetsAt, model, authSource, isError, timedOut }.
  * model: model thực do phiên init báo (SR-03), null nếu không có; timedOut: bị kill vì quá timeoutMin (SR-01).
+ * authSource: trường `apiKeySource` của sự kiện init (nguồn xác thực Claude Code báo; null nếu không có);
+ * isError: sự kiện result có is_error (khi đó finalText là thông báo lỗi của Claude Code, không phải sản phẩm).
+ * Môi trường: claudeEnv() — không chuyển biến khóa/token cho tiến trình con.
  * infra: 'rate-limit' | 'error' | undefined; resetsAt: chuỗi thô từ thông báo (vd. '4:50pm').
  * Cờ: giữ --setting-sources project,local như CCoding và harness cũ (không nạp cài đặt/MCP/hook cấp người dùng).
  * `bin` lets you point at a wrapper (`binArgs` đứng trước mọi cờ, vd. bin = node + binArgs = [tệp claude giả] trong test; mặc định rỗng); `extraArgs` are appended verbatim.
@@ -41,9 +60,9 @@ export function runClaude({ cwd, prompt, model, timeoutMin = 45, bin = 'claude',
   const args = claudeArgs({ prompt, model, extraArgs, tools, allowedTools, permissionMode, maxTurns, stdin });
   const t0 = Date.now();
   return new Promise((resolve) => {
-    const child = spawn(bin, [...binArgs, ...args], { cwd, env: { ...process.env, CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1' }, stdio: [stdin ? 'pipe' : 'ignore', 'pipe', 'pipe'] });
+    const child = spawn(bin, [...binArgs, ...args], { cwd, env: claudeEnv(), stdio: [stdin ? 'pipe' : 'ignore', 'pipe', 'pipe'] });
     if (stdin) { child.stdin.on('error', () => { /* tiến trình thoát sớm */ }); child.stdin.end(prompt); }
-    let buf = '', err = '', result = null, model = null, timedOut = false; const transcript = [];
+    let buf = '', err = '', result = null, model = null, authSource = null, timedOut = false; const transcript = [];
     const timer = setTimeout(() => { timedOut = true; child.kill('SIGTERM'); }, timeoutMin * 60000);
     child.stdout.on('data', (d) => {
       buf += d;
@@ -52,7 +71,7 @@ export function runClaude({ cwd, prompt, model, timeoutMin = 45, bin = 'claude',
         const line = buf.slice(0, i); buf = buf.slice(i + 1);
         if (!line.trim()) continue;
         transcript.push(line);
-        try { const ev = JSON.parse(line); if (ev.type === 'result') result = ev; if (ev.type === 'system' && ev.subtype === 'init' && ev.model) model = ev.model; } catch { /* keep raw */ }
+        try { const ev = JSON.parse(line); if (ev.type === 'result') result = ev; if (ev.type === 'system' && ev.subtype === 'init') { if (ev.model) model = ev.model; authSource = ev.apiKeySource ?? null; } } catch { /* keep raw */ }
       }
     });
     child.stderr.on('data', (d) => { err += d; });
@@ -77,7 +96,7 @@ export function runClaude({ cwd, prompt, model, timeoutMin = 45, bin = 'claude',
         wallSec: (Date.now() - t0) / 1000,
         tokens, costUsd: result?.total_cost_usd ?? 0, turns: result?.num_turns ?? 0,
         finalText: result?.result ?? '', transcript, stderr: (spawnErr ? `${spawnErr.message}\n` : '') + err.slice(-4000),
-        infra, model, timedOut, ...(resetsAt ? { resetsAt } : {}),
+        infra, model, authSource, isError: !!result?.is_error, timedOut, ...(resetsAt ? { resetsAt } : {}),
       });
     });
   });

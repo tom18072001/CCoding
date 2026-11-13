@@ -11,6 +11,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { claudeEnv } from './lib/claude.mjs';
 
 export const MAX_CALLS = 8;
 export const PAIRS = [
@@ -125,7 +126,7 @@ export async function runDiagnostic(opts, io = {}) {
     } else {
       if (prevPair && prevPair !== step.pair && step.n === 1 && opts.wait > 0) await sleep(opts.wait);
       gap = step.n === 2 && prevEnd ? Math.round((Date.now() - prevEnd) / 1000) : 0;
-      const r = spawnSync('claude', args, { cwd, input: buildPrompt(nonces.get(step.pair)), env: { ...process.env, ...env }, encoding: 'utf8', timeout: 180000, maxBuffer: 64 * 1024 * 1024 });
+      const r = spawnSync('claude', args, { cwd, input: buildPrompt(nonces.get(step.pair)), env: { ...claudeEnv(), ...env }, encoding: 'utf8', timeout: 180000, maxBuffer: 64 * 1024 * 1024 });
       const p = new ClaudeStreamParser();
       for (const l of String(r.stdout ?? '').split('\n')) if (l.trim()) p.feed(l);
       usage = p.finalUsage();

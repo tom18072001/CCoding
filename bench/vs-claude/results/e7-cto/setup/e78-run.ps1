@@ -61,14 +61,19 @@ $SMOKE = "$ROOT\e7-smoke"
 Loop 'E7 chay thu' { & node bench/vs-claude/e7/run.mjs --smoke 067cd64cc5 --items "$W\$E7\items.json" --arms R1,R3 --out $SMOKE --work "$ROOT\vbe7s" --timeout 20 *>> "$W\e7-smoke.log" } { & node $CHK smokecount "$SMOKE\runs.jsonl" 067cd64cc5 }
 $s = & node $CHK smoke "$SMOKE\runs.jsonl" 067cd64cc5
 if ($s -ne 'OK') { Halt "E7 chay thu: $s" }
-Log 'E7 chay thu: OK (promptSha R1 = R3, cong cu dung)'
+Log 'E7 chay thu: OK (promptSha R1 = R3, cong cu dung, R3 dung phien dang nhap claude.ai)'
 if (-not (Test-Path "$W\$E7\selected.json")) {
   & node bench/vs-claude/e7/run.mjs --out $E7 --work "$ROOT\vbe7" --prepare-only *>> "$W\e7-prep.log"
   if (-not (Test-Path "$W\$E7\selected.json")) { Halt 'E7 buoc 1 khong tao duoc selected.json' }
 }
 $sel = Get-Content "$W\$E7\selected.json" -Raw | ConvertFrom-Json
 Log "E7 danh sach chot: $($sel.n) muc, $($sel.skipped.Count) muc bi bo/thay; selected.json sha256 $(Sha "$W\$E7\selected.json"); prep.jsonl sha256 $(Sha "$W\$E7\prep.jsonl")"
-Loop 'E7 chinh' { & node bench/vs-claude/e7/run.mjs --out $E7 --work "$ROOT\vbe7" --timeout 20 *>> "$W\e7-main.log" } { & node $CHK e7 "$W\$E7\runs.jsonl" "$W\$E7\selected.json" }
+Loop 'E7 chinh' {
+  & node bench/vs-claude/e7/run.mjs --out $E7 --work "$ROOT\vbe7" --timeout 20 *>> "$W\e7-main.log"
+  $rc = $LASTEXITCODE
+  $c = [int](& node $CHK auth "$W\$E7\runs.jsonl"); if ($c -gt 0) { Halt "E7: $c dong R3 khong dung phien dang nhap claude.ai (authSource)" }
+  $global:LASTEXITCODE = $rc
+} { & node $CHK e7 "$W\$E7\runs.jsonl" "$W\$E7\selected.json" }
 
 # ---------- E8 ----------
 $E8 = 'bench\vs-claude\results\e8-parallel'
@@ -82,6 +87,7 @@ Loop 'E8' {
   & node bench/vs-claude/run.mjs --arms A0-sonnet,B6w4,B6w1 --tasks l1-modules,t2-orders,t3-api --repeats 6 --timeout 30 --out $E8 @S8 *>> "$W\e8.log"
   $rc = $LASTEXITCODE
   $c = [int](& node $CHK b6w1 "$W\$E8\runs.jsonl"); if ($c -gt 0) { Halt "E8: $c luot B6w1 chay chong (loi cau hinh)" }
+  $c = [int](& node $CHK auth "$W\$E8\runs.jsonl"); if ($c -gt 0) { Halt "E8: $c dong A0 khong dung phien dang nhap claude.ai (authSource)" }
   $global:LASTEXITCODE = $rc
 } { & node $CHK e8 "$W\$E8\runs.jsonl" 54 }
 Stop-Process -Id $sa.Id, $sb.Id -Force -ErrorAction SilentlyContinue

@@ -5,6 +5,7 @@
 //   node e78-check.mjs e7 <runs.jsonl> <selected.json> → "<done> <cần>"
 //   node e78-check.mjs e8 <runs.jsonl> <cần>          → "<done> <cần>"
 //   node e78-check.mjs b6w1 <runs.jsonl>              → số lượt B6w1 có ≥ 2 hạng mục chạy cùng lúc
+//   node e78-check.mjs auth <runs.jsonl>              → số dòng `claude -p` báo nguồn xác thực khác phiên đăng nhập claude.ai (authSource là chuỗi ≠ "none"; null = không có sự kiện init, không tính)
 import fs from 'node:fs';
 
 const rows = (f) => (fs.existsSync(f) ? fs.readFileSync(f, 'utf8').split(/\r?\n/).filter(Boolean).map((l) => JSON.parse(l)) : []);
@@ -12,7 +13,7 @@ const [cmd, a, b] = process.argv.slice(2);
 if (cmd === 'smoke') {
   const rs = rows(a).filter((r) => r.id === b && r.status === 'done');
   const r1 = rs.findLast((r) => r.arm === 'R1'), r3 = rs.findLast((r) => r.arm === 'R3');
-  const why = !r1 ? 'thiếu R1 done' : !r3 ? 'thiếu R3 done' : !r1.promptSha || r1.promptSha !== r3.promptSha ? 'promptSha R1 khác R3' : JSON.stringify(r1.tools) !== JSON.stringify(['Read', 'Glob', 'Grep', 'Bash']) ? `tools R1 = ${JSON.stringify(r1.tools)}` : r3.tools !== 'Read,Glob,Grep,Bash' ? `tools R3 = ${r3.tools}` : null;
+  const why = !r1 ? 'thiếu R1 done' : !r3 ? 'thiếu R3 done' : !r1.promptSha || r1.promptSha !== r3.promptSha ? 'promptSha R1 khác R3' : JSON.stringify(r1.tools) !== JSON.stringify(['Read', 'Glob', 'Grep', 'Bash']) ? `tools R1 = ${JSON.stringify(r1.tools)}` : r3.tools !== 'Read,Glob,Grep,Bash' ? `tools R3 = ${r3.tools}` : r3.authSource !== 'none' ? `authSource R3 = ${r3.authSource}` : null;
   console.log(why ? `FAIL ${why}` : 'OK');
 } else if (cmd === 'smokecount') {
   console.log(`${new Set(rows(a).filter((r) => r.id === b && r.status === 'done' && (r.arm === 'R1' || r.arm === 'R3')).map((r) => r.arm)).size} 2`);
@@ -25,4 +26,6 @@ if (cmd === 'smoke') {
   console.log(`${new Set(rows(a).filter((r) => r.status === 'done').map((r) => r.key)).size} ${b}`);
 } else if (cmd === 'b6w1') {
   console.log(rows(a).filter((r) => r.status === 'done' && r.arm === 'B6w1' && (r.maxConcSubtasks ?? 0) >= 2).length);
-} else { console.error('lệnh: smoke | e7 | e8 | b6w1'); process.exit(2); }
+} else if (cmd === 'auth') {
+  console.log(rows(a).filter((r) => typeof r.authSource === 'string' && r.authSource !== 'none').length);
+} else { console.error('lệnh: smoke | e7 | e8 | b6w1 | auth'); process.exit(2); }

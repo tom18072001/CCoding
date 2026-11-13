@@ -279,7 +279,7 @@ export async function runSingle(cc, prep, { config, cto, deptName, bin = 'claude
   const infra = r.infra ?? (r.status !== 'done' ? 'error' : undefined);
   const usd = r.model ? costOf(r.tokens, r.model) : null;
   return {
-    status: infra ? 'infra' : 'done', infra, ...(r.resetsAt ? { resetsAt: r.resetsAt } : {}), error: infra ? String(r.stderr ?? '').slice(-300) : undefined,
+    status: infra ? 'infra' : 'done', infra, ...(r.resetsAt ? { resetsAt: r.resetsAt } : {}), error: infra ? [r.isError ? String(r.finalText ?? '').slice(0, 300) : '', String(r.stderr ?? '').slice(-300)].filter((x) => x.trim()).join(' | ') : undefined, authSource: r.authSource ?? null,
     verdict: infra ? null : verdictOf(p.parsed, p.accepted), accepted: infra ? null : p.accepted, parsed: infra ? null : p.parsed,
     criteria: p.criteria?.length ?? 0, fails: p.criteria?.filter((c) => c.result === 'fail').length ?? 0, unknowns: p.criteria?.filter((c) => c.result === 'unknown').length ?? 0,
     tokens: r.tokens, calls: 1, turns: r.turns, models: r.model ? [r.model] : [], costUsd: usd, costBasis: usd === null ? 'unknown-model' : undefined, costUsdReported: r.costUsd,

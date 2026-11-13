@@ -176,6 +176,8 @@ export function provenance(meta, spec, r, { quotaState } = {}) {
   return {
     ccodingCommit: meta.ccodingCommit ?? null, claudeCliVersion: meta.claudeCliVersion ?? null, models: modelsOf(spec, r),
     window: meta.window ?? null, quotaState: quotaState ?? meta.quotaState ?? null, timeoutMin: meta.timeoutMin,
+    // arm `claude -p`: nguồn xác thực Claude Code báo ở sự kiện init (phải là phiên đăng nhập claude.ai, không phải khóa API)
+    ...(r?.authSource !== undefined ? { authSource: r.authSource } : {}),
   };
 }
 

@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PROCESS_SUFFIX, runClaude, weighted } from './lib/claude.mjs';
+import { PROCESS_SUFFIX, claudeEnv, runClaude, weighted } from './lib/claude.mjs';
 import { runCcoding, serverUp, checkServers } from './lib/ccoding.mjs';
 import { costOfCalls, priceRun } from './lib/pricing.mjs';
 import { GRADERS } from './lib/grade.mjs';
@@ -164,7 +164,7 @@ async function runArm(arm, task, key) {
       const shown = cands.map((c, i) => { const p = path.join(c.dir, task.deliverable); const t = fs.existsSync(p) && fs.statSync(p).isFile() ? fs.readFileSync(p, 'utf8') : c.finalText; return `### Candidate ${i}\n${blind(t).slice(0, 40000)}`; }).join('\n\n');
       const selPrompt = `Brief:\n${task.brief}\n\n${shown}\n\nWhich candidate best satisfies the brief? Reply with only JSON {"best": <index>}.`;
       selectorSawSuite = leakInSelectorPrompt(selPrompt.replace(task.brief, ''), NEEDLES);
-      const sel = spawnSync(cfg.claudeBin, ['-p', selPrompt, '--output-format', 'json', '--model', spec.model, '--tools', '', '--no-session-persistence', '--strict-mcp-config'], { cwd: os.tmpdir(), encoding: 'utf8', timeout: 600000, maxBuffer: 64 << 20 });
+      const sel = spawnSync(cfg.claudeBin, ['-p', selPrompt, '--output-format', 'json', '--model', spec.model, '--tools', '', '--no-session-persistence', '--strict-mcp-config'], { cwd: os.tmpdir(), env: claudeEnv(), encoding: 'utf8', timeout: 600000, maxBuffer: 64 << 20 });
       try { const o = JSON.parse(sel.stdout); pick = Number(String(o.result).match(/"best"\s*:\s*(\d+)/)?.[1] ?? 0); const u = o.usage ?? {}; selector = { input: u.input_tokens ?? 0, output: u.output_tokens ?? 0, cacheRead: u.cache_read_input_tokens ?? 0, cacheWrite: u.cache_creation_input_tokens ?? 0 }; selCost = o.total_cost_usd ?? 0; } catch { pick = 0; }
     }
     const tok = [...cands.map((c) => c.tokens), selector].reduce((a, b) => ({ input: a.input + b.input, output: a.output + b.output, cacheRead: a.cacheRead + b.cacheRead, cacheWrite: a.cacheWrite + b.cacheWrite }), zero());

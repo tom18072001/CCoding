@@ -202,10 +202,10 @@ test('runSingle (R3) với claude giả: cờ chỉ đọc, prompt qua stdin, k�
   const log = path.join(dir, 'args.jsonl');
   write(bin, `const fs = require('fs'); const path = require('path');
 let input = ''; process.stdin.on('data', (d) => (input += d)); process.stdin.on('end', () => {
-  fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify({ argv: process.argv.slice(2), stdin: input, cwd: process.cwd() }) + '\\n');
+  fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify({ argv: process.argv.slice(2), stdin: input, cwd: process.cwd(), keys: Object.keys(process.env).filter((k) => /API_?KEY|TOKEN|^ANTHROPIC_/i.test(k)) }) + '\\n');
   const ok = /score >= 50\\)/.test(fs.readFileSync(path.join(process.cwd(), 'src', 'grade.js'), 'utf8'));
   const res = '## Tóm tắt\\nx\\n\\n\`\`\`json\\n' + JSON.stringify({ accepted: ok, summary: 's', criteria: [{ name: 'b', result: ok ? 'pass' : 'fail', evidence: 'e' }], risks: [], followUps: [] }) + '\\n\`\`\`';
-  console.log(JSON.stringify({ type: 'system', subtype: 'init', model: 'claude-sonnet-5-5' }));
+  console.log(JSON.stringify({ type: 'system', subtype: 'init', model: 'claude-sonnet-5-5', apiKeySource: 'none' }));
   console.log(JSON.stringify({ type: 'result', is_error: false, result: res, num_turns: 2, total_cost_usd: 0.01, usage: { input_tokens: 900, output_tokens: 150, cache_read_input_tokens: 4000, cache_creation_input_tokens: 100 } }));
 });
 `);
@@ -214,8 +214,13 @@ let input = ''; process.stdin.on('data', (d) => (input += d)); process.stdin.on(
   const deptName = app.registry.department('dev').name;
   const pf = await prepareItem(fx.faulty, opts), pc = await prepareItem(fx.clean, opts);
   const ctx = { config: app.config, cto: app.registry.cto(), deptName, bin: process.execPath, binArgs: [bin], timeoutMin: 1, maxTurns: app.config.phases.toolTurns.accept };
-  const rf = await runSingle(cc, pf, ctx), rc = await runSingle(cc, pc, ctx);
+  // 13/11: máy chạy có ANTHROPIC_API_KEY cấp người dùng → R3 phải không nhận khóa/token nào (như runtime claude-cli của CCoding)
+  const saved = { ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY, NINEROUTER_API_KEY: process.env.NINEROUTER_API_KEY, ANTHROPIC_BASE_URL: process.env.ANTHROPIC_BASE_URL };
+  Object.assign(process.env, { ANTHROPIC_API_KEY: 'sk-thu', NINEROUTER_API_KEY: 'x', ANTHROPIC_BASE_URL: 'http://127.0.0.1:9' });
+  let rf, rc;
+  try { rf = await runSingle(cc, pf, ctx); rc = await runSingle(cc, pc, ctx); } finally { for (const [k, v] of Object.entries(saved)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; } }
   assert.deepEqual([rf.status, rf.verdict, rc.verdict], ['done', 'block', 'pass']);
+  assert.equal(rf.authSource, 'none');
   const calls = fs.readFileSync(log, 'utf8').trim().split('\n').map((l) => JSON.parse(l));
   const a = calls[0].argv;
   assert.equal(a[a.indexOf('--tools') + 1], 'Read,Glob,Grep,Bash');
@@ -225,6 +230,7 @@ let input = ''; process.stdin.on('data', (d) => (input += d)); process.stdin.on(
   assert.equal(a[a.indexOf('--model') + 1], 'sonnet');
   assert.equal(calls[0].stdin, r3Prompt(cc, { config: app.config, cto: app.registry.cto(), deptName, prep: pf }));
   assert.equal(path.basename(calls[0].cwd), ARM_DIR.R3);
+  assert.deepEqual(calls.map((c) => c.keys), [[], []], 'không chuyển biến khóa/token cho claude -p');
   assert.ok(rf.costUsd > 0);
   assert.equal(rf.promptSha.length, 64);
 });

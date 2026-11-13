@@ -2,6 +2,7 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import os from 'node:os';
+import { claudeEnv } from './claude.mjs';
 import { fisherYates, mulberry32 } from './stats.mjs';
 
 /** Remove cues that reveal which system wrote a deliverable. */
@@ -55,7 +56,7 @@ export function wilson(k, n, z = 1.959964) {
 }
 
 function ask(prompt, { model = 'opus', bin = 'claude', binArgs = [] } = {}) {
-  const r = spawnSync(bin, [...binArgs, '-p', prompt, '--output-format', 'json', '--model', model, '--tools', '', '--no-session-persistence', '--strict-mcp-config'], { cwd: os.tmpdir(), encoding: 'utf8', timeout: 600000, maxBuffer: 64 << 20 });
+  const r = spawnSync(bin, [...binArgs, '-p', prompt, '--output-format', 'json', '--model', model, '--tools', '', '--no-session-persistence', '--strict-mcp-config'], { cwd: os.tmpdir(), env: claudeEnv(), encoding: 'utf8', timeout: 600000, maxBuffer: 64 << 20 });
   if (r.status !== 0) throw new Error(`judge failed: ${r.stderr?.slice(-500)}`);
   const out = JSON.parse(r.stdout);
   const text = String(out.result ?? '');
