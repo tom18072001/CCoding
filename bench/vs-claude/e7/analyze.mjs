@@ -128,6 +128,15 @@ export function analyze({ items, selected, rows, arms = ['R1', 'R2', 'R3'], labe
     row.r1Only = pt.aOnly; row.r3Only = pt.bOnly;
     return row;
   });
+  // 13/11/2026 (§9 sai lệch E7, ghi trước khi xem kết luận): trước bản sửa, R3 chạm --max-turns bị ghi `infra` (lỗi rỗng, turns > maxTurns)
+  // nên được chạy lại. Chính: dùng lượt chạy lại (như luật hạ tầng lúc đó); độ nhạy: coi lượt đầu là unparsed (không chặn), hoặc bỏ cặp.
+  const legacyCapped = new Set(rows.filter((r) => r.arm === 'R3' && r.status === 'infra' && r.infra === 'error' && !r.error && r.maxTurns && r.turns > r.maxTurns).map((r) => r.id));
+  const cappedLegacy = {
+    ids: [...legacyCapped].sort(),
+    asUnparsed: pair('R1', 'R3', 'faulty', { blockedOf: (r) => (r.arm === 'R3' && legacyCapped.has(r.id) ? false : r.verdict === 'block') }),
+    excluded: pair('R1', 'R3', 'faulty', { keep: (x) => !legacyCapped.has(x.id) }),
+  };
+  const cappedDone = Object.fromEntries(arms.map((arm) => [arm, sel.filter((x) => last.get(`${x.id}__${arm}`)?.capped).length]));
   const unparsed = Object.fromEntries(arms.map((arm) => [arm, per[arm].faulty.unparsed + per[arm].clean.unparsed]));
   const unparsedDiffers = new Set(Object.values(unparsed)).size > 1;
   // điều kiện 2: recall theo số lần test ẩn trượt khi kiểm nhãn (label-trials.jsonl; mô tả)
@@ -142,7 +151,7 @@ export function analyze({ items, selected, rows, arms = ['R1', 'R2', 'R3'], labe
       for (const arm of arms) if (last.get(`${x.id}__${arm}`)?.verdict === 'block') c[arm]++;
     }
   }
-  return { per, primary, secondary, nSelected: sel.length, sensitivity: { unparsedAsBlock, withoutT5 }, perTask, unparsed, unparsedDiffers, byLabelFails, arms };
+  return { per, primary, secondary, nSelected: sel.length, sensitivity: { unparsedAsBlock, withoutT5, cappedLegacy }, perTask, unparsed, unparsedDiffers, byLabelFails, arms, cappedDone };
 }
 
 export function report(a) {
@@ -159,6 +168,9 @@ export function report(a) {
   for (const s of a.secondary) L.push(`- ${s.a} so với ${s.b}, mục ${s.kind === 'faulty' ? 'lỗi' : 'đúng'} (n = ${s.n}): chỉ ${s.a} chặn ${s.aOnly}, chỉ ${s.b} chặn ${s.bOnly}, p = ${pp(s.p)}.`);
   const u = a.sensitivity.unparsedAsBlock, w = a.sensitivity.withoutT5;
   L.push('', '**Độ nhạy:**', `- Coi "không đọc được kết luận" là chặn (§9 E7 (6)): n = ${u.n}, chỉ R1 ${u.aOnly}, chỉ R3 ${u.bOnly}, p = ${pp(u.p)}; hiệu ${dci(u)}.`, `- Bỏ \`t5-logq\` (điều kiện 2): n = ${w.n}, chỉ R1 ${w.aOnly}, chỉ R3 ${w.bOnly}, p = ${pp(w.p)}; hiệu ${dci(w)}; đọc: ${w.reading.label}.`);
+  const cl = a.sensitivity.cappedLegacy;
+  if (cl.ids.length) L.push(`- R3 chạm trần lượt trước bản sửa 13/11 (${cl.ids.length} cặp, ghi nhầm là lỗi hạ tầng rồi chạy lại: ${cl.ids.join(', ')}): coi lượt đầu là không đọc được (không chặn): chỉ R1 ${cl.asUnparsed.aOnly}, chỉ R3 ${cl.asUnparsed.bOnly}, p = ${pp(cl.asUnparsed.p)}; bỏ các cặp này: n = ${cl.excluded.n}, chỉ R1 ${cl.excluded.aOnly}, chỉ R3 ${cl.excluded.bOnly}, p = ${pp(cl.excluded.p)}.`);
+  L.push('', `**Chạm trần lượt (dòng done có \`capped\`):** ${Object.entries(a.cappedDone).map(([k, v]) => `${k} ${v}`).join(', ')} (R1, R2 không ghi trường này: runtime CCoding xử lý trần lượt bên trong).`);
   L.push('', `**Không đọc được kết luận theo arm:** ${Object.entries(a.unparsed).map(([k, v]) => `${k} ${v}`).join(', ')}${a.unparsedDiffers ? ' — **lệch giữa các arm: tách nguyên nhân trước khi đọc recall (điều kiện 3)**' : ''}.`);
   L.push('', '## Theo bài', '', `| Bài | ${a.arms.map((x) => `${x} lỗi bị chặn`).join(' | ')} | ${a.arms.map((x) => `${x} đúng bị chặn`).join(' | ')} | chỉ R1 / chỉ R3 |`, `|---|${'--:|'.repeat(a.arms.length * 2)}---|`);
   for (const t of a.perTask) L.push(`| ${t.task} | ${a.arms.map((x) => `${t[`${x}|faulty`].blocked}/${t[`${x}|faulty`].n}`).join(' | ')} | ${a.arms.map((x) => `${t[`${x}|clean`].blocked}/${t[`${x}|clean`].n}`).join(' | ')} | ${t.r1Only} / ${t.r3Only} |`);

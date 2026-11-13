@@ -85,3 +85,21 @@ Cả hai lần chỉ chạy mục chạy thử `067cd64cc5` (không thuộc mẫ
   - CCoding đánh dấu nhiệm vụ đang chạy dở là "bị gián đoạn" và không tự chạy tiếp, nên không có lượt gọi thừa.
 - **08:53:25 UTC chạy tiếp** (pid 20572). Bản ghim, CLI 2.1.318, `dist` và sha256 các script không đổi (ghi lại ở `ops/e78-run.txt`). Các bước đã xong được bỏ qua: chạy thử, danh sách chốt (sha256 `selected.json` không đổi).
 - **Ảnh hưởng:** không đổi mẫu hay thứ tự (thứ tự arm theo mục là cố định). Khoảng trống 4 giờ 20 phút giữa hai phần của đợt được ghi, vì thời gian và cửa sổ hạn mức là thước đo phụ; thước đo chính (chặn hay không) không phụ thuộc thời điểm chạy.
+
+### R3 chạm trần lượt bị ghi nhầm là lỗi hạ tầng; sửa và ghim lại (13/11/2026, người điều phối)
+
+- **Phát hiện lúc 10:37 UTC**, khi kiểm định kỳ: có 2 dòng R3 `infra` (`e59884e561` lúc 09:23, `0bb51824b9` lúc 09:27). Người điều phối chỉ đọc trường hạ tầng: lỗi rỗng, `turns` = 7 > `maxTurns` = 6, `authSource` = none. Tức là `claude -p` chạm `--max-turns` (sự kiện result `error_max_turns`, thoát mã khác 0), và `runSingle` coi mọi lượt không `done` là lỗi hạ tầng. Người điều phối chưa xem kết luận nào.
+- **Vì sao sai:**
+  - §9 E7 (3) cho R1 và R3 cùng trần 6 lượt. (4): "không đọc được kết luận thì tính là không chặn".
+  - Runtime `claude-cli` của CCoding (R1, R2) coi chạm trần là dừng bình thường, không phải lỗi (`src/runtimes/claude-cli.ts`, B-07). Văn bản là `result` nếu có, không thì mọi khối văn bản assistant; sau đó `parseAcceptance` đọc như thường.
+  - Ghi `infra` rồi chạy lại cho R3 thêm cơ hội mà R1 không có. Nếu một mục chạm trần mãi, kịch bản còn tắc tiến độ và E8 không chạy.
+- **Sửa** (commit chứa mục này, trước khi xem kết luận):
+  - `runClaude` trả thêm `subtype` và `assistantText` (gom văn bản như parser của CCoding);
+  - `runSingle`: chạm `error_max_turns` (không hết giờ, không phải hạn mức) thì `status = done`, đọc kết luận từ `result` hoặc `assistantText`, ghi `capped: "turns"`;
+  - test mới trong `e7.test.mjs` (có JSON trước khi chạm trần → đọc được; không có → unparsed).
+- **Hai cặp đã ghi nhầm** (quyết trước khi xem kết luận, `e7/analyze.mjs`):
+  - **chính:** dùng lượt chạy lại theo bản sửa, đúng luật hạ tầng lúc chạy;
+  - **độ nhạy 1:** coi lượt đầu là không đọc được (không chặn);
+  - **độ nhạy 2:** bỏ hai cặp khỏi phép ghép.
+  - Cả ba được báo. Báo thêm số dòng `capped` theo arm.
+- **Ghim lại:** dừng kịch bản đang chạy, ghim `ccoding-e78` ở commit chứa mục này rồi chạy tiếp. Mục đang chạy dở lúc dừng không để lại dòng và sẽ chạy lại. R1 và R2 không đổi mã; R3 chỉ đổi ở ca chạm trần.

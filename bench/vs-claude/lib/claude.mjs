@@ -38,6 +38,8 @@ export function weighted(u) {
  * model: model thực do phiên init báo (SR-03), null nếu không có; timedOut: bị kill vì quá timeoutMin (SR-01).
  * authSource: trường `apiKeySource` của sự kiện init (nguồn xác thực Claude Code báo; null nếu không có);
  * isError: sự kiện result có is_error (khi đó finalText là thông báo lỗi của Claude Code, không phải sản phẩm).
+ * subtype: `subtype` của sự kiện result (vd. 'error_max_turns' khi chạm --max-turns); assistantText: mọi khối văn bản của
+ * các lượt assistant nối bằng xuống dòng — đúng như parser của runtime claude-cli trong CCoding (src/runtimes/claude-cli.ts).
  * Môi trường: claudeEnv() — không chuyển biến khóa/token cho tiến trình con.
  * infra: 'rate-limit' | 'error' | undefined; resetsAt: chuỗi thô từ thông báo (vd. '4:50pm').
  * Cờ: giữ --setting-sources project,local như CCoding và harness cũ (không nạp cài đặt/MCP/hook cấp người dùng).
@@ -62,7 +64,7 @@ export function runClaude({ cwd, prompt, model, timeoutMin = 45, bin = 'claude',
   return new Promise((resolve) => {
     const child = spawn(bin, [...binArgs, ...args], { cwd, env: claudeEnv(), stdio: [stdin ? 'pipe' : 'ignore', 'pipe', 'pipe'] });
     if (stdin) { child.stdin.on('error', () => { /* tiến trình thoát sớm */ }); child.stdin.end(prompt); }
-    let buf = '', err = '', result = null, model = null, authSource = null, timedOut = false; const transcript = [];
+    let buf = '', err = '', result = null, model = null, authSource = null, timedOut = false, assistantText = ''; const transcript = [];
     const timer = setTimeout(() => { timedOut = true; child.kill('SIGTERM'); }, timeoutMin * 60000);
     child.stdout.on('data', (d) => {
       buf += d;
@@ -71,7 +73,8 @@ export function runClaude({ cwd, prompt, model, timeoutMin = 45, bin = 'claude',
         const line = buf.slice(0, i); buf = buf.slice(i + 1);
         if (!line.trim()) continue;
         transcript.push(line);
-        try { const ev = JSON.parse(line); if (ev.type === 'result') result = ev; if (ev.type === 'system' && ev.subtype === 'init') { if (ev.model) model = ev.model; authSource = ev.apiKeySource ?? null; } } catch { /* keep raw */ }
+        try { const ev = JSON.parse(line); if (ev.type === 'result') result = ev; if (ev.type === 'system' && ev.subtype === 'init') { if (ev.model) model = ev.model; authSource = ev.apiKeySource ?? null; }
+          if (ev.type === 'assistant') for (const b of ev.message?.content ?? []) if (b?.type === 'text' && b.text) assistantText += (assistantText ? '\n' : '') + b.text; } catch { /* keep raw */ }
       }
     });
     child.stderr.on('data', (d) => { err += d; });
@@ -96,7 +99,7 @@ export function runClaude({ cwd, prompt, model, timeoutMin = 45, bin = 'claude',
         wallSec: (Date.now() - t0) / 1000,
         tokens, costUsd: result?.total_cost_usd ?? 0, turns: result?.num_turns ?? 0,
         finalText: result?.result ?? '', transcript, stderr: (spawnErr ? `${spawnErr.message}\n` : '') + err.slice(-4000),
-        infra, model, authSource, isError: !!result?.is_error, timedOut, ...(resetsAt ? { resetsAt } : {}),
+        infra, model, authSource, isError: !!result?.is_error, subtype: result?.subtype ?? null, assistantText, timedOut, ...(resetsAt ? { resetsAt } : {}),
       });
     });
   });

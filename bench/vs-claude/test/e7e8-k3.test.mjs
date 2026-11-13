@@ -76,3 +76,19 @@ test('E8 describe: chạy chồng, chia < 2 hạng mục, cổng, điểm; A0 kh
   assert.equal(d.B6w1.n, 1);
   assert.deepEqual(d['A0-sonnet'], { n: 1, scoreMean: 0.9, pass: 1 });
 });
+
+test('13/11 R3 chạm trần lượt: dòng infra cũ (turns > maxTurns, lỗi rỗng) → độ nhạy coi unparsed hoặc bỏ cặp; dòng capped mới được đếm', () => {
+  const d = fixture({ r3Block: ({ task }) => task === 't5-logq' });
+  const leg = d.items.filter((x) => x.kind === 'faulty' && x.task === 't5-logq').slice(0, 2).map((x) => x.id);
+  const rows = [...leg.map((id) => ({ id, arm: 'R3', status: 'infra', infra: 'error', error: '', maxTurns: 6, turns: 7 })), ...d.rows];
+  rows.find((r) => r.id === d.items[0].id && r.arm === 'R3').capped = 'turns';
+  // dòng infra thật (có lỗi) không bị tính
+  rows.unshift({ id: d.items[2].id, arm: 'R3', status: 'infra', infra: 'error', error: 'spawn ENOENT', maxTurns: 6, turns: 0 });
+  const a = analyze({ ...d, rows });
+  assert.deepEqual(a.sensitivity.cappedLegacy.ids, [...leg].sort());
+  assert.equal(a.primary.bOnly, 0);
+  assert.equal(a.sensitivity.cappedLegacy.asUnparsed.aOnly, a.primary.aOnly + 2);
+  assert.equal(a.sensitivity.cappedLegacy.excluded.n, a.primary.n - 2);
+  assert.equal(a.cappedDone.R3, 1);
+  assert.match(report(a), /chạm trần lượt trước bản sửa 13\/11 \(2 cặp/);
+});

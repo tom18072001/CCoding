@@ -275,14 +275,19 @@ export async function runSingle(cc, prep, { config, cto, deptName, bin = 'claude
   const prompt = r3Prompt(cc, { config, cto, deptName, prep });
   const { tools, allowedTools } = r3Tools(cc, cto, { gitRead: config.tools.gitRead !== false });
   const r = await runClaude({ cwd: dir, prompt, model: ARMS.R3.model, timeoutMin, bin, binArgs, tools, allowedTools, permissionMode: 'default', maxTurns, stdin: true });
-  const p = r.status === 'done' ? cc.parseAcceptance(r.finalText) : { parsed: false, accepted: false, criteria: [] };
-  const infra = r.infra ?? (r.status !== 'done' ? 'error' : undefined);
+  // 13/11/2026: chạm --max-turns (subtype error_max_turns) KHÔNG phải lỗi hạ tầng — như runtime claude-cli của CCoding (R1, R2):
+  // văn bản = result nếu có, không thì mọi khối văn bản assistant; đọc kết luận như thường (không đọc được → unparsed, §9 E7 (4)).
+  const capped = !r.timedOut && r.subtype === 'error_max_turns' && !r.infra;
+  const text = capped ? String(r.finalText || r.assistantText || '') : r.finalText;
+  const p = r.status === 'done' || capped ? cc.parseAcceptance(text) : { parsed: false, accepted: false, criteria: [] };
+  const infra = capped ? undefined : r.infra ?? (r.status !== 'done' ? 'error' : undefined);
   const usd = r.model ? costOf(r.tokens, r.model) : null;
   return {
     status: infra ? 'infra' : 'done', infra, ...(r.resetsAt ? { resetsAt: r.resetsAt } : {}), error: infra ? [r.isError ? String(r.finalText ?? '').slice(0, 300) : '', String(r.stderr ?? '').slice(-300)].filter((x) => x.trim()).join(' | ') : undefined, authSource: r.authSource ?? null,
     verdict: infra ? null : verdictOf(p.parsed, p.accepted), accepted: infra ? null : p.accepted, parsed: infra ? null : p.parsed,
     criteria: p.criteria?.length ?? 0, fails: p.criteria?.filter((c) => c.result === 'fail').length ?? 0, unknowns: p.criteria?.filter((c) => c.result === 'unknown').length ?? 0,
     tokens: r.tokens, calls: 1, turns: r.turns, models: r.model ? [r.model] : [], costUsd: usd, costBasis: usd === null ? 'unknown-model' : undefined, costUsdReported: r.costUsd,
-    wallSec: r.wallSec, timedOut: r.timedOut, promptSha: sha(prompt), tools, maxTurns: maxTurns ?? null, text: r.finalText,
+    wallSec: r.wallSec, timedOut: r.timedOut, promptSha: sha(prompt), tools, maxTurns: maxTurns ?? null, text,
+    ...(capped ? { capped: 'turns' } : {}),
   };
 }

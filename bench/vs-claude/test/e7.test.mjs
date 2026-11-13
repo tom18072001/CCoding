@@ -235,6 +235,39 @@ let input = ''; process.stdin.on('data', (d) => (input += d)); process.stdin.on(
   assert.equal(rf.promptSha.length, 64);
 });
 
+test('13/11 runSingle (R3) chạm --max-turns: không phải lỗi hạ tầng — văn bản assistant được đọc như runtime CCoding; không có JSON → unparsed', async () => {
+  const cc = await loadCcoding(ROOT);
+  const fx = fixture();
+  const data = tmp();
+  const base = cc.loadConfig({ root: ROOT });
+  const app = cc.createApp({ dataDir: data, workspacesDir: path.join(data, 'workspaces'), runner: 'process', herdr: { ...base.herdr, notify: false, agentPanes: false } }, { root: ROOT });
+  const dir = tmp();
+  const bin = path.join(dir, 'claude.cjs');
+  // E7_FAKE=json: khối JSON kết luận nằm trong văn bản assistant trước khi chạm trần; E7_FAKE=plain: chỉ có câu dở dang
+  write(bin, `let input = ''; process.stdin.on('data', (d) => (input += d)); process.stdin.on('end', () => {
+  const json = '\`\`\`json\\n' + JSON.stringify({ accepted: false, summary: 's', criteria: [{ name: 'b', result: 'fail', evidence: 'e' }], risks: [], followUps: [] }) + '\\n\`\`\`';
+  console.log(JSON.stringify({ type: 'system', subtype: 'init', model: 'claude-sonnet-5-5', apiKeySource: 'none' }));
+  console.log(JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'Để tôi xem diff.' }, { type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'git diff' } }] } }));
+  if (process.env.E7_FAKE === 'json') console.log(JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: '## Kết luận\\n' + json }] } }));
+  console.log(JSON.stringify({ type: 'result', subtype: 'error_max_turns', is_error: true, num_turns: 7, total_cost_usd: 0.02, usage: { input_tokens: 900, output_tokens: 150, cache_read_input_tokens: 4000, cache_creation_input_tokens: 100 } }));
+  process.exit(1);
+});
+`);
+  const work = tmp();
+  const opts = { suite: fx.suite, artifacts: path.join(fx.suite, 'artifacts'), workRoot: work, cc };
+  const deptName = app.registry.department('dev').name;
+  const ctx = { config: app.config, cto: app.registry.cto(), deptName, bin: process.execPath, binArgs: [bin], timeoutMin: 1, maxTurns: 6 };
+  const saved = process.env.E7_FAKE;
+  let rj, rp;
+  try {
+    process.env.E7_FAKE = 'json'; rj = await runSingle(cc, await prepareItem(fx.faulty, opts), ctx);
+    process.env.E7_FAKE = 'plain'; rp = await runSingle(cc, await prepareItem(fx.clean, opts), ctx);
+  } finally { if (saved === undefined) delete process.env.E7_FAKE; else process.env.E7_FAKE = saved; }
+  assert.deepEqual([rj.status, rj.infra, rj.capped, rj.verdict, rj.turns], ['done', undefined, 'turns', 'block', 7]);
+  assert.match(rj.text, /Để tôi xem diff\.\n## Kết luận/);
+  assert.deepEqual([rp.status, rp.infra, rp.capped, rp.verdict, rp.parsed], ['done', undefined, 'turns', 'unparsed', false]);
+});
+
 // ───────────── K2: các ca hỏng của harness (Windows, treo, làm bẩn repo) ─────────────
 const newApp = (cc) => {
   const data = tmp();
