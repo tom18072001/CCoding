@@ -22,9 +22,15 @@ export function mcnemarExact(b, c) {
 }
 
 /** Dòng done mới nhất theo (mục, arm). */
+/**
+ * Quan sát của mỗi cặp (mục, arm) = DÒNG CUỐI của cặp nếu dòng đó `done` (sửa 13/11/2026). Dòng `infra` ghi sau một dòng `done`
+ * (phân loại lại, e7/reclassify.mjs) làm cặp thành chưa có quan sát cho tới khi chạy lại. Trước đây: dòng `done` cuối cùng.
+ */
 export function latestDone(rows) {
+  const lastRow = new Map();
+  for (const r of rows) lastRow.set(`${r.id}__${r.arm}`, r);
   const m = new Map();
-  for (const r of rows) if (r.status === 'done' && r.verdict) m.set(`${r.id}__${r.arm}`, r);
+  for (const [k, r] of lastRow) if (r.status === 'done' && r.verdict) m.set(k, r);
   return m;
 }
 
@@ -83,7 +89,7 @@ export function readPrimary(pr, ci, alpha = 0.05) {
 export function analyze({ items, selected, rows, arms = ['R1', 'R2', 'R3'], labelTrials = null }) {
   const byId = new Map(items.map((x) => [x.id, x]));
   const sel = selected.map((id) => byId.get(id));
-  const last = latestDone(rows);
+  let last = latestDone(rows);
   const per = {};
   for (const arm of arms) {
     const out = { arm };
@@ -136,6 +142,22 @@ export function analyze({ items, selected, rows, arms = ['R1', 'R2', 'R3'], labe
     asUnparsed: pair('R1', 'R3', 'faulty', { blockedOf: (r) => (r.arm === 'R3' && legacyCapped.has(r.id) ? false : r.verdict === 'block') }),
     excluded: pair('R1', 'R3', 'faulty', { keep: (x) => !legacyCapped.has(x.id) }),
   };
+  // 13/11/2026: lượt R1/R2 có lượt gọi accept kết thúc bằng lỗi (403 khi xác thực) bị ghi `done`/unparsed; phân loại lại thành infra
+  // và chạy lại (chính). Độ nhạy: giữ kết quả như đã ghi lúc đầu (unparsed = không chặn), hoặc bỏ các cặp này.
+  const reclassPairs = new Set(rows.filter((r) => r.reclassified).map((r) => `${r.id}__${r.arm}`));
+  const firstDone = new Map();
+  for (const r of rows) { const k = `${r.id}__${r.arm}`; if (reclassPairs.has(k) && r.status === 'done' && !firstDone.has(k)) firstDone.set(k, r); }
+  const asRecorded = (a, b) => {
+    const lastSave = last; let pr;
+    try { last = new Map([...lastSave, ...firstDone]); pr = pair(a, b, 'faulty'); } finally { last = lastSave; }
+    return pr;
+  };
+  const reclassified = {
+    pairs: [...reclassPairs].sort(),
+    byArm: Object.fromEntries(arms.map((arm) => [arm, [...reclassPairs].filter((k) => k.endsWith(`__${arm}`)).length])),
+    asRecorded: asRecorded('R1', 'R3'),
+    excluded: pair('R1', 'R3', 'faulty', { keep: (x) => !reclassPairs.has(`${x.id}__R1`) && !reclassPairs.has(`${x.id}__R3`) }),
+  };
   const cappedDone = Object.fromEntries(arms.map((arm) => [arm, sel.filter((x) => last.get(`${x.id}__${arm}`)?.capped).length]));
   const unparsed = Object.fromEntries(arms.map((arm) => [arm, per[arm].faulty.unparsed + per[arm].clean.unparsed]));
   const unparsedDiffers = new Set(Object.values(unparsed)).size > 1;
@@ -151,7 +173,7 @@ export function analyze({ items, selected, rows, arms = ['R1', 'R2', 'R3'], labe
       for (const arm of arms) if (last.get(`${x.id}__${arm}`)?.verdict === 'block') c[arm]++;
     }
   }
-  return { per, primary, secondary, nSelected: sel.length, sensitivity: { unparsedAsBlock, withoutT5, cappedLegacy }, perTask, unparsed, unparsedDiffers, byLabelFails, arms, cappedDone };
+  return { per, primary, secondary, nSelected: sel.length, sensitivity: { unparsedAsBlock, withoutT5, cappedLegacy, reclassified }, perTask, unparsed, unparsedDiffers, byLabelFails, arms, cappedDone };
 }
 
 export function report(a) {
@@ -169,6 +191,8 @@ export function report(a) {
   const u = a.sensitivity.unparsedAsBlock, w = a.sensitivity.withoutT5;
   L.push('', '**Độ nhạy:**', `- Coi "không đọc được kết luận" là chặn (§9 E7 (6)): n = ${u.n}, chỉ R1 ${u.aOnly}, chỉ R3 ${u.bOnly}, p = ${pp(u.p)}; hiệu ${dci(u)}.`, `- Bỏ \`t5-logq\` (điều kiện 2): n = ${w.n}, chỉ R1 ${w.aOnly}, chỉ R3 ${w.bOnly}, p = ${pp(w.p)}; hiệu ${dci(w)}; đọc: ${w.reading.label}.`);
   const cl = a.sensitivity.cappedLegacy;
+  const rc = a.sensitivity.reclassified;
+  if (rc.pairs.length) L.push(`- Lượt accept lỗi hạ tầng bị ghi nhầm là "không đọc được" rồi phân loại lại và chạy lại (${rc.pairs.length} cặp: ${Object.entries(rc.byArm).filter(([, v]) => v).map(([k, v]) => `${k} ${v}`).join(', ')}): giữ kết quả như đã ghi lúc đầu: chỉ R1 ${rc.asRecorded.aOnly}, chỉ R3 ${rc.asRecorded.bOnly}, p = ${pp(rc.asRecorded.p)}; bỏ các mục có cặp R1 hoặc R3 bị phân loại lại: n = ${rc.excluded.n}, chỉ R1 ${rc.excluded.aOnly}, chỉ R3 ${rc.excluded.bOnly}, p = ${pp(rc.excluded.p)}.`);
   if (cl.ids.length) L.push(`- R3 chạm trần lượt trước bản sửa 13/11 (${cl.ids.length} cặp, ghi nhầm là lỗi hạ tầng rồi chạy lại: ${cl.ids.join(', ')}): coi lượt đầu là không đọc được (không chặn): chỉ R1 ${cl.asUnparsed.aOnly}, chỉ R3 ${cl.asUnparsed.bOnly}, p = ${pp(cl.asUnparsed.p)}; bỏ các cặp này: n = ${cl.excluded.n}, chỉ R1 ${cl.excluded.aOnly}, chỉ R3 ${cl.excluded.bOnly}, p = ${pp(cl.excluded.p)}.`);
   L.push('', `**Chạm trần lượt (dòng done có \`capped\`):** ${Object.entries(a.cappedDone).map(([k, v]) => `${k} ${v}`).join(', ')} (R1, R2 không ghi trường này: runtime CCoding xử lý trần lượt bên trong).`);
   L.push('', `**Không đọc được kết luận theo arm:** ${Object.entries(a.unparsed).map(([k, v]) => `${k} ${v}`).join(', ')}${a.unparsedDiffers ? ' — **lệch giữa các arm: tách nguyên nhân trước khi đọc recall (điều kiện 3)**' : ''}.`);

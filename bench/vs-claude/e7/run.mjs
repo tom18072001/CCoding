@@ -82,7 +82,9 @@ const byId = new Map([...doc.items, ...Object.values(doc.reserve).flatMap((r) =>
 const order = sample(sel.items, sel.items.length, rng(`${doc.seed}|e7|order`));
 const orders = latinOrders(armIds.length);
 const runsFile = path.join(out, 'runs.jsonl');
-const done = new Set(jl(runsFile).filter((r) => r.status === 'done').map((r) => `${r.id}__${r.arm}`));
+// cặp đã xong = dòng CUỐI của cặp là `done` (13/11/2026: dòng infra phân loại lại ghi sau dòng done → chạy lại cặp đó)
+const lastOf = new Map(jl(runsFile).map((r) => [`${r.id}__${r.arm}`, r]));
+const done = new Set([...lastOf].filter(([, r]) => r.status === 'done').map(([k]) => k));
 fs.writeFileSync(path.join(out, `config-${new Date().toISOString().replace(/[:.]/g, '-')}.json`), JSON.stringify({ argv: argv.map(scrub), out: scrub(out), root: scrub(root), armIds, timeoutMin, runtime, ...meta, startedAt: new Date().toISOString() }, null, 1));
 
 let app;

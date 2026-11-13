@@ -1,0 +1,24 @@
+## Tóm tắt
+Tôi đọc mã nguồn và đối chiếu từng tiêu chí với `FEATURES.md`. Cả 4 tính năng đều có trong mã và khớp đặc tả, kể cả thứ tự kiểm tra và định dạng CSV. Tôi không tự chạy được `npm test` vì môi trường từ chối quyền thực thi lệnh, nên kết quả xanh chỉ dựa vào báo cáo CCoding: 8/8 test đạt. Tôi cũng không tự gọi HTTP thật để thử. Vì vậy tôi chưa nhận bản này.
+
+## Tiêu chí nghiệm thu
+| Tiêu chí | Kết quả | Bằng chứng |
+|---|---|---|
+| Xác thực & phân quyền đúng vai trò (401/403/404, member chỉ sửa `status` của việc giao cho mình) | Đạt | `src/handlers/tasks.js`: hàm `authenticate`, `hidden`, và các kiểm tra theo vai trò trong POST/PATCH/DELETE. Thứ tự là 401 → truy vấn 400 → 404 → 403 → validate. Test `phân quyền member/manager` (`test/features.test.js:27`). |
+| Lọc/tìm/sắp xếp/phân trang đúng đặc tả (`{items,total,page,pageSize}`, 400 `INVALID_QUERY` kèm `field` theo thứ tự trên URL, tham số lạ hoặc lặp bị 400) | Đạt | `src/query.js`: `parseQuery` và `applyQuery`. Bỏ dấu NFD cộng `đ`→`d`, `dueDate` null luôn xếp cuối, hòa theo id số, `localeCompare('vi')`, ngày hợp lệ theo lịch. |
+| Xuất CSV: header HTTP, BOM, CRLF, RFC 4180, chống chèn công thức, `page`/`pageSize` bị 400 | Đạt | `toCsv` và `cell` trong `src/query.js`. Route `/tasks/export.csv` đặt trước `/tasks/:id` và dùng `parseQuery` với `paged:false`. |
+| Nhật ký thao tác: `seq`, `at`, `changes` sắp a→z, chỉ ghi khi thành công, `GET /audit` chỉ admin, lọc `taskId`, tham số khác bị 400 | Đạt | `Store.logAudit` trong `src/store.js`. Route `/audit` trong `src/handlers/tasks.js` kiểm tham số trước rồi mới kiểm quyền. Update chỉ ghi trường có giá trị khác. |
+| Test cũ được cập nhật, có test cho từng tính năng | Đạt | `test/features.test.js` có 6 test, mỗi tính năng ít nhất một. `test/tasks.test.js` và `test/helpers.js` đã sửa. |
+| `npm test` xanh | Đạt (theo báo cáo, tôi chưa tự chạy) | Báo cáo CCoding: sau thực thi 8 pass, 0 fail, exit 0. |
+| Không thêm thư viện ngoài | Đạt | Mã chỉ dùng `node:fs` và `node:path`. Diff chỉ gồm 6 tệp trong `src/` và `test/`. |
+| Qua bộ nghiệm thu ẩn qua HTTP thật | Chưa kiểm được | Tôi chưa gọi HTTP thật nên chưa có bằng chứng trực tiếp. |
+
+## Rủi ro / việc còn mở
+- Với PATCH hoặc POST, JSON body sai được đọc trước kiểm tra `team` của manager. Do đó body lỗi kèm `team` sai có thể trả 400 thay vì 403. Đây là trường hợp rất hẹp.
+- `assignee=` (rỗng) hiện được xử lý như lọc theo id rỗng, tức là không khớp nhiệm vụ nào. Đặc tả không nói rõ, có thể lệch.
+- Body của POST và PATCH không phải object (mảng hoặc `null`) chưa thấy được xử lý rõ.
+- Phần kiểm `dueDate` trong body chỉ xét dạng chuỗi, không xét ngày có thật trên lịch. Đặc tả không yêu cầu.
+
+```json
+{"accepted": false, "summary": "Mã nguồn và test của cả 4 tính năng khớp đặc tả khi đọc, và `npm test` xanh theo báo cáo. Tôi chưa tự chạy lại test hay gọi HTTP thật nên chưa nhận bản này.", "criteria": [{"name": "Xác thực & phân quyền đúng đặc tả", "result": "pass", "evidence": "src/handlers/tasks.js (authenticate, hidden, kiểm tra vai trò); test/features.test.js:27"}, {"name": "Lọc/tìm/sắp xếp/phân trang và INVALID_QUERY", "result": "pass", "evidence": "src/query.js parseQuery/applyQuery"}, {"name": "Xuất CSV đúng định dạng", "result": "pass", "evidence": "src/query.js toCsv/cell; route export.csv đặt trước /tasks/:id"}, {"name": "Nhật ký thao tác và GET /audit", "result": "pass", "evidence": "src/store.js logAudit; route /audit trong tasks.js"}, {"name": "Test cũ được cập nhật và có test cho từng tính năng", "result": "pass", "evidence": "test/features.test.js (6 test), test/tasks.test.js, test/helpers.js"}, {"name": "npm test xanh", "result": "pass", "evidence": "Báo cáo CCoding: 8 pass, 0 fail, exit 0 (tôi chưa tự chạy)"}, {"name": "Không thêm thư viện ngoài", "result": "pass", "evidence": "Mã chỉ dùng node:fs và node:path; diff chỉ gồm 6 tệp src/ và test/"}, {"name": "Qua bộ nghiệm thu ẩn qua HTTP thật", "result": "unknown", "evidence": "Chưa gọi HTTP thật để kiểm"}], "risks": ["JSON body sai được đọc trước kiểm tra team của manager nên có thể trả 400 thay vì 403", "assignee rỗng được xử lý như lọc theo id rỗng, đặc tả không nói rõ", "Body không phải object (mảng/null) chưa được xử lý rõ", "Chưa có kiểm thử đầu-cuối qua HTTP thật ngoài test có sẵn"], "followUps": [{"title": "Kiểm thử HTTP đầu-cuối bổ sung", "brief": "Dựng server bằng createServer rồi gọi HTTP thật để kiểm các trường hợp biên. Gồm: thứ tự 401/400/404/403/400, tham số lặp hoặc lạ, page vượt trang, CSV có BOM/CRLF/ký tự công thức/dấu ngoặc kép, body JSON sai hoặc không phải object, assignee rỗng. Sửa mã nếu lệch đặc tả và chạy npm test.", "department": "dev"}]}
+```

@@ -1,0 +1,26 @@
+{
+ "argv": [
+  "--out",
+  "bench\\vs-claude\\results\\e7-cto",
+  "--work",
+  "<work>",
+  "--timeout",
+  "20"
+ ],
+ "out": "<ccoding>\\bench\\vs-claude\\results\\e7-cto",
+ "root": "<ccoding>",
+ "armIds": [
+  "R1",
+  "R2",
+  "R3"
+ ],
+ "timeoutMin": 20,
+ "runtime": "claude-cli",
+ "ccodingCommit": "e15f653140ff3ba56513caa63ff40697cf9f6439",
+ "claudeCliVersion": "2.1.318 (Claude Code)",
+ "node": "v24.14.0",
+ "platform": "win32",
+ "localConfigSha256": "0ee7b0a6b4ac0b0306602471139c7e65b8a54b43d7f07948c0f8185621fce678",
+ "extraConfigSha256": null,
+ "startedAt": "2026-11-13T08:53:29.064Z"
+}

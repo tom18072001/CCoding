@@ -92,3 +92,27 @@ test('13/11 R3 chạm trần lượt: dòng infra cũ (turns > maxTurns, lỗi r
   assert.equal(a.cappedDone.R3, 1);
   assert.match(report(a), /chạm trần lượt trước bản sửa 13\/11 \(2 cặp/);
 });
+
+test('13/11 phân loại lại lượt accept lỗi hạ tầng: dòng cuối quyết định; độ nhạy giữ như đã ghi hoặc bỏ cặp', async () => {
+  const { findMisclassified, reclassRow } = await import('../e7/reclassify.mjs');
+  const { latestDone } = await import('../e7/analyze.mjs');
+  const d = fixture();
+  const fId = d.items.find((x) => x.kind === 'faulty').id;
+  // R1 của mục lỗi đầu: lượt cũ 403 ghi done/unparsed; lượt gọi có error
+  const rows = d.rows.map((r) => (r.id === fId && r.arm === 'R1' ? { ...r, verdict: 'unparsed', taskId: 'T-1', at: 't0' } : r));
+  const calls = { 'T-1': [{ phase: 'accept', error: 'Failed to authenticate. API Error: 403 Attention Required! | Cloudflare' }] };
+  const found = findMisclassified(rows, (t) => calls[t] ?? []);
+  assert.deepEqual(found.map((m) => m.key), [`${fId}__R1`]);
+  const withReclass = [...rows, reclassRow(found[0], 't1')];
+  assert.equal(latestDone(withReclass).has(`${fId}__R1`), false, 'chưa chạy lại → chưa có quan sát');
+  assert.deepEqual(findMisclassified(withReclass, (t) => calls[t] ?? []), [], 'đã có dòng sau → không ghi nữa');
+  const rerun = [...withReclass, { id: fId, arm: 'R1', status: 'done', verdict: 'block', taskId: 'T-2', at: 't2' }];
+  assert.equal(latestDone(rerun).get(`${fId}__R1`).verdict, 'block');
+  const a = analyze({ ...d, rows: rerun });
+  assert.deepEqual(a.sensitivity.reclassified.pairs, [`${fId}__R1`]);
+  assert.equal(a.sensitivity.reclassified.byArm.R1, 1);
+  assert.equal(a.primary.aOnly, 36, 'chính: lượt chạy lại (chặn)');
+  assert.equal(a.sensitivity.reclassified.asRecorded.aOnly, 35, 'như đã ghi: unparsed = không chặn');
+  assert.equal(a.sensitivity.reclassified.excluded.n, 35);
+  assert.match(report(a), /phân loại lại và chạy lại \(1 cặp: R1 1\)/);
+});

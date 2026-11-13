@@ -368,3 +368,17 @@ test('runCto: runtime treo → quá hạn chờ thì hủy, ghi hạ tầng "err
   assert.match(q.error, /429|hạn mức|limit/i, 'dòng infra còn lý do sau khi hủy nhiệm vụ tạm dừng');
   assert.equal(app.store.get(q.taskId).status === 'paused', false, 'không để nhiệm vụ tạm dừng treo lại hàng đợi');
 });
+
+test('13/11 runCto: lượt accept trả lỗi kèm văn bản (403 khi xác thực) → CCoding dùng văn bản lỗi làm nghiệm thu, harness ghi infra', async () => {
+  const cc = await loadCcoding(ROOT);
+  const fx = fixture();
+  const { app } = newApp(cc);
+  const rt = app.runtimes.get('claude-cli');
+  const msg = 'Failed to authenticate. API Error: 403 Attention Required! | Cloudflare';
+  rt.run = async () => ({ text: msg, error: msg, usage: { input: 10, output: 5, cacheRead: 0, cacheWrite: 0 }, model: 'claude-sonnet-5-5', runtime: 'claude-cli', durationMs: 5 });
+  const pf = await prepareItem(fx.faulty, { suite: fx.suite, artifacts: path.join(fx.suite, 'artifacts'), workRoot: tmp(), cc });
+  const r = await runCto(app, cc, pf, 'R1', { waitTimeoutMs: 20_000 });
+  assert.equal(app.store.get(r.taskId).acceptance?.parsed, false, 'CCoding ghi nghiệm thu không đọc được (không phải lỗi)');
+  assert.deepEqual([r.status, r.infra, r.verdict], ['infra', 'error', null]);
+  assert.match(r.error, /403/);
+});

@@ -1160,6 +1160,18 @@ Phòng Nghiên cứu thẩm định lại ở BRIEF-19 K1: chạy lại và đ�
 - **Trả lời điều kiện 7 của mục thẩm định trên ([CẦN KIỂM]):** `e78-run.ps1` gọi `e78-check.mjs b6w1` sau mỗi lần chạy E8 và dừng (STOP-E78) khi có lượt B6w1 `maxConcSubtasks ≥ 2` — đã kiểm. Điều kiện 6: kịch bản ghi `git rev-parse HEAD` và sha256 gộp của `dist` vào `ops/e78-run.txt`; server A và B chạy cùng bản ghim, cùng `dist`.
 - **Giới hạn ghi cho các đợt cũ:** dòng của arm `claude -p` trước 13/11 không có `authSource`; xem `results/e7-cto/RUNLOG.md` mục 13/11.
 
+### Sai lệch thực thi E7: chạm trần lượt và lỗi xác thực bị ghi sai loại (ghi 13/11/2026, người điều phối)
+
+- **R3 chạm `--max-turns`** (phát hiện 10:37 UTC, trước khi xem kết luận):
+  - Harness ghi `infra` rồi chạy lại. Theo (3)–(4), và như runtime CCoding của R1, đây là kết thúc bình thường; không có kết luận thì là "không đọc được".
+  - Đã sửa và ghim lại lúc 10:43. Hai cặp ghi nhầm trước đó: chính dùng lượt chạy lại; độ nhạy coi là không đọc được, hoặc bỏ cặp.
+- **R1/R2 lỗi xác thực (403) bị ghi `done`/"không đọc được"** (phát hiện **sau khi** đã xem kết quả chính, khi tách nguyên nhân theo điều kiện 3 của K3):
+  - 16 lượt: R1 8, R2 8. CCoding dùng thông báo lỗi làm văn bản nghiệm thu; cùng lỗi đó ở R3 thì thành `infra`.
+  - Theo luật hạ tầng của (8) và để hai arm được xử lý như nhau, phân loại lại thành `infra` và chạy lại sau E8.
+  - **Chính:** lượt chạy lại. **Độ nhạy bắt buộc báo kèm:** kết quả như đã ghi lúc đầu, và bỏ các mục bị phân loại lại.
+  - Vì quyết định này có sau khi thấy kết quả, bài báo phải nêu rõ, và mọi kết luận phải đứng được ở cả ba cách tính; không đứng được thì ghi "không kết luận".
+- **Quy tắc quan sát:** mỗi cặp (mục, arm) lấy **dòng cuối** nếu dòng đó `done`. Trước đây là dòng `done` cuối cùng; khác nhau chỉ ở các cặp bị phân loại lại.
+
 ### Sai lệch phân tích bước 2 của B-14: gom các lần chạy lại cùng khóa (ghi 13/11/2026, người điều phối)
 
 - **Sai lệch:**

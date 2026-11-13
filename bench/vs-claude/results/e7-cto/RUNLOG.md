@@ -103,3 +103,26 @@ Cả hai lần chỉ chạy mục chạy thử `067cd64cc5` (không thuộc mẫ
   - **độ nhạy 2:** bỏ hai cặp khỏi phép ghép.
   - Cả ba được báo. Báo thêm số dòng `capped` theo arm.
 - **Ghim lại:** dừng kịch bản đang chạy, ghim `ccoding-e78` ở commit chứa mục này rồi chạy tiếp. Mục đang chạy dở lúc dừng không để lại dòng và sẽ chạy lại. R1 và R2 không đổi mã; R3 chỉ đổi ở ca chạm trần.
+
+### Bước 2 xong; 16 lượt R1/R2 lỗi xác thực bị ghi nhầm là "không đọc được" (13/11/2026, người điều phối)
+
+- **11:51:07 UTC bước 2 xong: 384/384 cặp `done`.** R3 có 1 lượt chạm trần (`capped: "turns"`, `aa9e161a54`, không có văn bản nên không có tệp trong `responses/`) và 2 dòng `infra` cũ (mục trước). E8 bắt đầu lúc 11:51:17.
+- **Dữ liệu:** `runs.jsonl` (sha256 `0f98778bbb83…`), `responses/` (383 tệp), 3 tệp `config-*.json`, chép từ máy chạy lúc 12:03; tệp nén sha256 `1c43b7d492d9…`. Không có đường dẫn máy.
+- **Phát hiện khi tách nguyên nhân "không đọc được"** (điều kiện 3 của K3; làm **sau khi** đã chạy `e7/analyze.mjs` và thấy kết quả chính):
+  - Số lượt không đọc được lệch giữa các arm: R1 8, R2 19, R3 1. Cả 8 của R1 và 8 trong 19 của R2 là văn bản 72 ký tự "Failed to authenticate. API Error: 403 Attention Required! | Cloudflare". Bản ghi lượt gọi của CCoding (`runs/<task>/calls.jsonl`, trường `error`) xác nhận lượt gọi accept kết thúc bằng lỗi đó.
+  - 16 lượt này dồn vào hai khoảng, 09:47:55–09:51:49 và 10:17:37–10:20:05 UTC, mỗi lượt chỉ 5–15 giây. Trong cùng hai khoảng đó, mọi lượt R3 (gọi thẳng `claude -p`) đều chạy bình thường. Nguyên nhân 403 chỉ xảy ra trên đường runtime của CCoding hiện chưa xác định.
+  - 11 lượt không đọc được còn lại của R2 là lượt Opus dừng giữa chừng (câu kiểu "đang đọc mã…", chạm trần 6 lượt); lỗi `error` của lượt gọi rỗng. Đây là kết quả thật theo §9 E7 (4).
+- **Vì sao là lỗi hạ tầng:**
+  - CCoding (`src/orchestrator.ts`, bước accept) chỉ báo lỗi khi lượt gọi **không có văn bản**. Ở đây runtime trả cả lỗi lẫn văn bản (chính là thông báo lỗi), nên CCoding ghi nghiệm thu "không đọc được" và giao kết quả.
+  - Cùng lỗi đó ở R3 (`is_error`) bị ghi `infra` và chạy lại. Nếu giữ nguyên thì hai arm bị xử lý khác nhau.
+  - §9 E7 coi lỗi hạ tầng là không phải quan sát và chạy lại.
+- **Sửa** (commit chứa mục này):
+  - `runCto` ghi `infra` khi lượt gọi của nhiệm vụ có `error`;
+  - quan sát của một cặp là **dòng cuối** của cặp, áp ở `run.mjs`, `analyze.mjs` và `e78-check.mjs`;
+  - `e7/reclassify.mjs` ghi thêm một dòng `infra` (có trường `reclassified`) sau dòng `done` cho các cặp có lượt gọi lỗi. Lần chạy thử trên bản sao bản ghi lượt gọi tìm đúng 16 cặp;
+  - test trong `e7.test.mjs` và `e7e8-k3.test.mjs`.
+- **Kế hoạch:**
+  - Không chạy lại trong lúc E8 chạy, vì thước đo chính của E8 là thời gian. Khi E8 xong: ghim `ccoding-e78` ở commit chứa mục này, chạy `reclassify.mjs --apply` trên máy chạy, rồi chạy lại `e78-run.ps1`. Kịch bản chạy lại 16 cặp; E8 đã đủ thì bỏ qua.
+  - **Chính:** lượt chạy lại.
+  - **Độ nhạy:** giữ kết quả như đã ghi lúc đầu (không đọc được = không chặn), và bỏ các mục có cặp R1 hoặc R3 bị phân loại lại. Cả ba được báo.
+- **Sản phẩm:** lỗi CCoding dùng thông báo lỗi làm văn bản nghiệm thu cũng xảy ra khi vận hành thật (nghiệm thu "không đọc được" rồi vẫn giao). Ghi vào backlog cho Phòng Dev, không sửa `src/` trong đợt đo.

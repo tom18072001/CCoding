@@ -1,0 +1,27 @@
+## Tóm tắt
+
+Mã nguồn đáp ứng cả 4 tính năng khi đọc `src/handlers/tasks.js` và `src/store.js`. Báo cáo ghi `npm test` xanh, 8/8 test đạt. Tôi không chạy lại được `npm test` vì lệnh cần quyền phê duyệt, nên kết quả đó dựa vào bằng chứng CCoding tự chạy. Tôi chưa kiểm được hành vi qua HTTP thật. Còn vài ca biên mà test có sẵn chưa chứng minh.
+
+## Tiêu chí nghiệm thu
+
+| Tiêu chí | Kết quả | Bằng chứng |
+|---|---|---|
+| Xác thực 401 và phân quyền admin/manager/member, đúng thứ tự 401 → 400 → 404 → 403 → 400 | Đạt | `authenticate` chạy đầu mỗi route. `parseQuery` chạy trước `getTask`. Sau đó là 404, rồi 403, rồi `validate`. Member xem nhóm khác nhận 404. Member chỉ sửa được `status` của nhiệm vụ giao cho mình. Manager bị chặn khi tạo, chuyển hoặc sửa nhóm khác, và bị chặn xóa. |
+| `GET /tasks` có lọc, tìm không dấu, sắp xếp, phân trang, trả `{items,total,page,pageSize}` | Đạt | `parseQuery` báo tham số lạ, tham số lặp và lỗi đầu tiên theo thứ tự URL. `validDate` kiểm ngày theo lịch. `fold` dùng NFD và đổi `đ` thành `d`. Hòa thì xếp theo `idNum` tăng dần. `dueDate` rỗng nằm cuối cả hai chiều. Title dùng `localeCompare(...,'vi')`. Member bị áp thêm bộ lọc nhóm. |
+| Xuất CSV đúng header, BOM, CRLF, RFC 4180, chống chèn công thức, không nhận phân trang | Đạt | Route `/tasks/export.csv` đăng ký trước `/tasks/:id`. Nó loại `page` và `pageSize` khỏi tham số cho phép. `csvCell` thêm `'` cho chuỗi bắt đầu bằng `=+-@\t\r`, rồi mới bọc ngoặc kép. `toCsv` thêm BOM và kết thúc bằng `\r\n`. Header HTTP đúng đặc tả. |
+| Nhật ký thao tác và `GET /audit` chỉ dành cho admin | Đạt | `store.log` gán `seq` tăng từ 1, `at = now().toISOString()`, `changes` sắp a→z. Create, update và delete đều gọi `log` sau khi thành công. Update chỉ ghi trường có giá trị mới khác cũ. `/audit` kiểm tham số trước, rồi mới chặn người không phải admin bằng 403. Kết quả đảo ngược theo `seq` và có lọc `taskId`. |
+| `npm test` xanh, test cũ đã cập nhật, có test cho từng tính năng | Đạt (theo báo cáo, chưa tự chạy lại) | Trước khi sửa: 2/2 đạt. Sau thực thi: 8/8 đạt, 0 lỗi. Diff có `test/features.test.js` (+116 dòng) và sửa `test/tasks.test.js`. Tôi chưa đọc nội dung test, nên chưa biết từng ca biên có được phủ không. |
+| Không thêm thư viện ngoài, giữ `createServer({seed?,now?})` | Đạt | Diff chỉ chạm 4 tệp. Mã chỉ dùng module có sẵn của Node và `../http`. |
+| Hành vi qua HTTP thật khớp bộ nghiệm thu ẩn | Chưa kiểm được | Tôi không chạy server và không gọi HTTP. Việc đánh giá chỉ dựa trên đọc mã. |
+
+## Rủi ro và việc còn mở
+- Tôi chưa chạy lại `npm test`.
+- `validate` chỉ kiểm `dueDate` theo regex, chưa kiểm ngày có thật trên lịch. Đặc tả không yêu cầu điều này cho body, nên chỉ là rủi ro nhỏ.
+- Body PATCH hoặc POST không phải object, ví dụ mảng hoặc `null`, chưa rõ có trả 400 đúng hay không. Tôi chưa xem `readJson`.
+- Với `POST` của manager, nếu body thiếu `team` thì lỗi là 400 `VALIDATION`. Hành vi này hợp lý nhưng chưa có test.
+- `GET /audit?taskId=` cho giá trị rỗng sẽ lọc ra không mục nào, không báo lỗi.
+- `now()` được gọi trong `store.log`. Cần xác nhận `createServer` truyền đúng `now` vào `Store`.
+
+```json
+{"accepted": false, "summary": "Đọc mã thì 4 tính năng bám sát đặc tả và báo cáo ghi test xanh 8/8. Tôi chưa tự chạy HTTP hay `npm test` nên tiêu chí kiểm qua HTTP thật vẫn là chưa kiểm được.", "criteria": [{"name": "Xác thực 401, phân quyền ba vai trò, đúng thứ tự kiểm tra", "result": "pass", "evidence": "src/handlers/tasks.js: authenticate, rồi parseQuery, rồi getTask/404, rồi 403, rồi validate; member nhóm khác trả 404"}, {"name": "GET /tasks lọc, tìm không dấu, sắp xếp, phân trang, validate query", "result": "pass", "evidence": "parseQuery/checkListParam/validDate/fold/queryTasks trong tasks.js"}, {"name": "Xuất CSV đúng định dạng, BOM, CRLF, RFC 4180, chống chèn công thức", "result": "pass", "evidence": "csvCell/toCsv và route /tasks/export.csv; header content-type và content-disposition đúng đặc tả"}, {"name": "Nhật ký thao tác và GET /audit chỉ admin", "result": "pass", "evidence": "store.log trong src/store.js; ba lệnh gọi log trong tasks.js; route /audit"}, {"name": "npm test xanh, cập nhật test cũ, thêm test cho tính năng", "result": "pass", "evidence": "Báo cáo: baseline 2/2, sau thực thi 8/8; diff có test/features.test.js và test/tasks.test.js; chưa tự chạy lại"}, {"name": "Không thêm thư viện ngoài, giữ createServer", "result": "pass", "evidence": "Diff chỉ gồm 4 tệp src/test, không có package mới"}, {"name": "Hành vi qua HTTP thật khớp bộ nghiệm thu ẩn", "result": "unknown", "evidence": "Chưa chạy server hay gọi HTTP; chỉ đánh giá qua đọc mã"}], "risks": ["Chưa tự chạy lại npm test", "validate không kiểm ngày dueDate có thật trên lịch ở body", "Body JSON không phải object chưa rõ có xử lý đúng không", "Chưa xác nhận createServer truyền now vào Store", "Chưa xem nội dung test nên chưa biết ca biên nào được phủ"], "followUps": [{"title": "Kiểm thử HTTP đầu-cuối", "brief": "Khởi động createServer với seed có admin, manager và member thuộc cả nhóm A và B. Gọi HTTP thật để kiểm: thứ tự 401/400/404/403, các ca INVALID_QUERY (tham số lặp, lạ, ngày 2026-02-30), sắp xếp dueDate rỗng ở cuối, q không dấu, CSV (BOM, CRLF, chống công thức), audit (seq, changes, at theo now). Sửa lỗi nếu có và thêm test.", "department": "dev"}]}
+```

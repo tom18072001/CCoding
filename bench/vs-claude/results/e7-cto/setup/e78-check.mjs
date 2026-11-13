@@ -20,7 +20,9 @@ if (cmd === 'smoke') {
 } else if (cmd === 'e7') {
   const sel = JSON.parse(fs.readFileSync(b, 'utf8')).items;
   const want = new Set(sel.flatMap((id) => ['R1', 'R2', 'R3'].map((arm) => `${id}__${arm}`)));
-  const done = new Set(rows(a).filter((r) => r.status === 'done' && want.has(`${r.id}__${r.arm}`)).map((r) => `${r.id}__${r.arm}`));
+  // cặp xong = dòng cuối của cặp là done (13/11/2026: dòng infra phân loại lại làm cặp chạy lại)
+  const lastOf = new Map(rows(a).map((r) => [`${r.id}__${r.arm}`, r]));
+  const done = new Set([...lastOf].filter(([k, r]) => r.status === 'done' && want.has(k)).map(([k]) => k));
   console.log(`${done.size} ${want.size}`);
 } else if (cmd === 'e8') {
   console.log(`${new Set(rows(a).filter((r) => r.status === 'done').map((r) => r.key)).size} ${b}`);
