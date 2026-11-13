@@ -47,3 +47,14 @@ Lần 1 báo "kết thúc còn lệnh kiểm tra đỏ: 11/47" nhưng không tá
 - **Phạm vi diễn giải:**
   - P không có số token và không so với chạy đơn.
   - 21/54 lượt là Phòng Nghiên cứu, nơi song song không cần worktree. Bằng chứng gần nhất cho "song song có worktree" là 25/33 lượt của Phòng Dev, nhưng không có đối chứng.
+
+## Chạy lại bằng `p-analyze.mjs` sau BRIEF-19 (13/11/2026, người điều phối)
+
+- **Lý do:** Phòng Nghiên cứu sửa `p-analyze.mjs` ở `5c48f44` (BRIEF-19 S1: đếm lệnh đỏ theo nhiệm vụ, CP 95 %, theo phòng, đường găng) nhưng không chạy được trên dữ liệu thật, vì tệp từng lượt chỉ có trên máy giám đốc.
+- **Chạy:** người điều phối chạy trên bản sao của tệp dùng để báo (sha256 `4aec47f0a5b6481c…`, khớp bảng trên), bằng `p-analyze.mjs` sha256 `afced0cf1b5cd22c…`. Chỉ ghi số tổng hợp; tệp từng lượt vẫn không vào repo.
+- **Kết quả:** P-1, P-2 và P-3 **trùng với bảng trên**: 42/54 [64,4; 88,0]; trung vị 1,32 (IQR 1,17–1,63); 375 phút, 27,5 %; xung đột 6/213 [1,0; 6,0]; đỏ mới 2/47 [0,5; 14,5]; theo phòng Dev 25/33, 27,2 % và Nghiên cứu 17/21, 28,0 %.
+- **Số mới, mô tả, ngoài đăng ký:** ở các lượt có chạy chồng, thời gian thực pha thực thi so với đường găng theo phụ thuộc là:
+  - tất cả: **771 so với 717 phút** (42 lượt);
+  - Phòng Dev: 516 so với 463;
+  - Phòng Nghiên cứu: 254 so với 253.
+  Thời gian thực đã sát cận dưới của song song không giới hạn (+7,5 % tổng). Phần lợi ích còn lại bị giới hạn bởi phụ thuộc giữa hạng mục, không bởi lịch chạy. Câu ở dòng P-2 của bảng trên (ví dụ từng lượt) giữ nguyên; số gộp này thay cho ví dụ khi báo.
