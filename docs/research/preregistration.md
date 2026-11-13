@@ -1152,6 +1152,14 @@ Phòng Nghiên cứu thẩm định lại ở BRIEF-19 K1: chạy lại và đ�
   7. [CẦN KIỂM, người điều phối] luật "dừng đợt khi B6w1 có `maxConc ≥ 2`" được `e78-run.ps1` thực thi tự động; tôi không được mở tệp đó.
 - **Ghi chú RUNLOG (không sửa):** câu "dự phòng cũng không đạt" của `t5-logq` ở RUNLOG e7-cto không khớp với 128 mục (64+64) và "9 mục lỗi"; đối chiếu với `selected.json` thật khi chạy.
 
+### Sai lệch thực thi E7/E8 trước lượt gọi đầu tiên của mẫu (ghi 13/11/2026, người điều phối)
+
+- **Bản ghim đổi hai lần** (`d70959c` → `521c98a` → commit chứa mục này), đều trước mọi lượt gọi LLM của bước 1 và bước 2 E7 và trước E8; chỉ mục chạy thử `067cd64cc5` đã chạy. Không đổi `src/`, `package.json`, `package-lock.json`; không đổi giả thuyết, mẫu, thước đo hay phép kiểm.
+- **Lý do 1:** lệnh chạy thử thiếu `--items` (lỗi kịch bản, không gọi LLM).
+- **Lý do 2: đường xác thực của arm `claude -p`.** Máy chạy có `ANTHROPIC_API_KEY` cấp người dùng; `claude -p` do harness gọi thẳng (R3 của E7, A0-sonnet của E8) nhận nguyên môi trường và ưu tiên khóa hơn phiên đăng nhập claude.ai, còn arm CCoding (R1, R2, B6w4, B6w1) luôn bỏ biến khóa. Như vậy hai bên khác đường xác thực, trái với điều kiện "mọi arm dùng phiên đăng nhập claude.ai, không khóa API" của dự án. Từ commit này, harness bỏ biến khóa/token cho mọi tiến trình `claude` (cùng mẫu `scrubEnv`), ghi `authSource` từng dòng, và kịch bản dừng nếu có dòng không dùng phiên đăng nhập. Đây là khôi phục điều kiện đã định, không phải thay đổi thiết kế.
+- **Trả lời điều kiện 7 của mục thẩm định trên ([CẦN KIỂM]):** `e78-run.ps1` gọi `e78-check.mjs b6w1` sau mỗi lần chạy E8 và dừng (STOP-E78) khi có lượt B6w1 `maxConcSubtasks ≥ 2` — đã kiểm. Điều kiện 6: kịch bản ghi `git rev-parse HEAD` và sha256 gộp của `dist` vào `ops/e78-run.txt`; server A và B chạy cùng bản ghim, cùng `dist`.
+- **Giới hạn ghi cho các đợt cũ:** dòng của arm `claude -p` trước 13/11 không có `authSource`; xem `results/e7-cto/RUNLOG.md` mục 13/11.
+
 ### Đăng ký trước trục 2 (quản trị): đo bộ kiểm lệnh không gọi LLM (ghi 13/11/2026, @methodologist, BRIEF-19 K1b; trước khi tính bất kỳ số nào; giờ chính thức là giờ của commit chứa mục này)
 
 **Phạm vi.** Hiện trục 2 chưa có số đo nào. Mục này chỉ đăng ký cách đo; không có con số kết quả nào trong mục. Không gọi LLM, không chạy benchmark, không chạy sandbox thật (giám đốc chưa đăng nhập WSL, nên phép đo **không** nói gì về sandbox WSL2/native; chỉ về chính sách tĩnh). Đã đọc, chỉ đọc: `src/tools/shell-policy.ts`, `src/tools/claude-guard.ts`, `scripts/replay-guard-deny.mjs`.
