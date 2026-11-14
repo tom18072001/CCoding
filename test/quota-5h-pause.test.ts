@@ -47,7 +47,7 @@ const limitRes = (extra: Partial<RunResult> = {}, msg = MSG): RunResult => ({
   runtime: 'mock',
   durationMs: 1,
   turns: 3,
-  toolCalls: [{ name: 'write_file', args: 'a.md', ok: true, ms: 1 }],
+  toolCalls: [{ name: 'write_file', args: 'a.md', ok: true, ms: 1, outputChars: 0 }],
   ...extra,
 });
 
@@ -147,8 +147,8 @@ test('synthesize: cùng thông báo hạn mức → paused, không ghi FINAL/bá
       const p = path.join(dir, f);
       if (f.endsWith('.md') && fs.statSync(p).isFile()) assert.equal(fs.readFileSync(p, 'utf8').includes('5-hour limit'), false, `${f} không chứa thông báo lỗi`);
     }
-    const msgs = (done.messages ?? []) as Array<{ kind?: string; text?: string }>;
-    assert.equal(msgs.some((m) => m.kind === 'report' && String(m.text ?? '').includes('5-hour limit')), false);
+    const msgs = a.store.transcript(done.id);
+    assert.equal(msgs.some((m) => m.kind === 'final' && String(m.text ?? '').includes('5-hour limit')), false);
   } finally {
     a.cleanup();
   }
@@ -166,7 +166,7 @@ test('K4(a): paused vì hết hạn mức → không ghi FINAL.md, không finalP
     assert.equal(fs.existsSync(path.join(a.store.runDir(t.id), 'FINAL.md')), false, 'không có FINAL.md');
     const draft = a.store.readRunFile(t.id, 'DRAFT-paused.md') ?? '';
     assert.match(draft.split('\n')[0], /BẢN TẠM/, 'dòng đầu nói rõ là bản tạm');
-    assert.ok(!taskArtifacts(a.store, done).some((x) => x.name === 'Báo cáo tổng hợp' || x.path.includes('DRAFT-paused')), 'bản tạm không hiện thành báo cáo');
+    assert.ok(!taskArtifacts(a.store, done).some((x) => x.name === 'Báo cáo tổng hợp' || (x.path ?? '').includes('DRAFT-paused')), 'bản tạm không hiện thành báo cáo');
   } finally {
     a.cleanup();
   }

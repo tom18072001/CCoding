@@ -165,7 +165,7 @@ for (const lane of ['fast', 'full'] as const) {
       assert.equal(run.subtasks.length, 2);
       assert.equal(run.planGate?.replanned, true);
       assert.deepEqual(run.planGate?.uncovered, []);
-      const logs = a.logs.query({ task: t.id, kind: 'plan.gate' });
+      const logs = a.logs.query({ task: t.id }).filter((e) => e.kind === 'plan.gate');
       assert.ok(logs.length >= 2, 'ghi plan.gate lúc chặn và lúc sau khi sửa');
     } finally {
       s.restore();

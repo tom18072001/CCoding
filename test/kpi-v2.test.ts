@@ -653,7 +653,7 @@ test('FX13: estimatePlanDetail — đường găng và song song dự kiến tr�
     assert.equal(o.criticalPathEstimate, 200);
     assert.equal(app.orchestrator.estimatePlanDetail(tk, { department: 'dev', status: 'pending', usage: {}, subtasks: [] } as never).parallelism, 1);
   } finally {
-    app.close?.();
+    app.cleanup();
   }
 });
 
@@ -671,6 +671,6 @@ test('FX13: log plan.estimate ghi criticalPathEstimate và parallelism, run.esti
     assert.equal(est?.criticalPathEstimate, d.criticalPathEstimate);
     assert.equal(est?.parallelism, d.parallelism);
   } finally {
-    app.close?.();
+    app.cleanup();
   }
 });

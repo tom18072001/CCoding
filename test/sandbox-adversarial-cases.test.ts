@@ -2,8 +2,29 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { buildAdversarialCases, selectForPlatform, gradeCase, gradeControl, summarize, CANARY } from '../scripts/lib/sandbox-cases.mjs';
-import { stats, evaluate } from '../scripts/lib/sandbox-bench-stats.mjs';
+// Hai tệp .mjs dưới đây không có khai báo kiểu: nạp động rồi gán kiểu tối thiểu mà test dùng (không dùng any).
+interface AdvCase { id: string; group: string; cmd: string; expect: 'blocked' | 'allowed'; platforms: string[]; sideEffect?: string; okStdout?: RegExp; permissionMode?: string; mandatory?: boolean }
+interface AdvRun { exitCode: number | null; stdout: string; stderr: string; sideEffect?: boolean }
+interface AdvGrade { id: string; pass: boolean; reason: string }
+interface AdvControl { id: string; valid: boolean }
+interface Summary { skipped: number; thinGroups: string[]; pass: boolean; failed: string[] }
+interface CasesModule {
+  buildAdversarialCases(p: { envPath: string; outsideDir: string; port: number; worktree: string }): AdvCase[];
+  selectForPlatform(cases: AdvCase[], platform: string): { run: AdvCase[]; skipped: { id: string; reason: string }[] };
+  gradeCase(x: AdvCase, r: AdvRun): AdvGrade;
+  gradeControl(x: AdvCase, r: AdvRun): AdvControl;
+  summarize(cases: AdvCase[], graded: AdvGrade[], controls: AdvControl[], skipped: { id: string; reason: string }[]): Summary;
+  CANARY: string;
+}
+interface Check { median: number; p95: number; ok: boolean }
+interface StatsModule {
+  stats(xs: number[]): { n: number; median: number; p95: number; min: number; max: number };
+  evaluate(samples: Record<string, number[]>): { perCommand: Check | null; perClaude: Check | null; endToEnd?: { ok: boolean } | null };
+}
+const casesPath = '../scripts/lib/sandbox-cases.mjs';
+const statsPath = '../scripts/lib/sandbox-bench-stats.mjs';
+const { buildAdversarialCases, selectForPlatform, gradeCase, gradeControl, summarize, CANARY } = (await import(casesPath)) as CasesModule;
+const { stats, evaluate } = (await import(statsPath)) as StatsModule;
 
 const cases = buildAdversarialCases({ envPath: '/tmp/wt/.env', outsideDir: '/tmp/out', port: 1234, worktree: '/tmp/wt' });
 const byId = (id: string) => cases.find((c: { id: string }) => c.id === id)!;
@@ -57,7 +78,7 @@ test('tổng hợp: nhóm <5 ca bị nêu (E4 trên linux chỉ 4), một ca r�
   assert.equal(s.skipped, 2);
   assert.deepEqual(s.thinGroups, ['E4: 4 ca (<5)']);
   assert.equal(s.pass, false);
-  const bad = summarize(run, graded.map((g: { id: string }, i: number) => (i === 0 ? { ...g, pass: false } : g)), controls, skipped);
+  const bad = summarize(run, graded.map((g, i) => (i === 0 ? { ...g, pass: false } : g)), controls, skipped);
   assert.deepEqual(bad.failed, [graded[0].id]);
 });
 

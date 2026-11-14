@@ -45,7 +45,7 @@ type Hook = (phase: string, n: number, run: number) => RunResult | undefined | v
 function instrument(a: Ctx, acceptText: (n: number) => string, hook?: Hook): { accepts: () => number } {
   let n = 0;
   let phase = '';
-  const orch = a.orchestrator as unknown as { call: (...x: unknown[]) => Promise<{ text: string; error?: string }> };
+  const orch = a.orchestrator as unknown as { call: (agent: unknown, ph: string, build: unknown, ctx: unknown) => Promise<{ text: string; error?: string }> };
   const origCall = orch.call.bind(orch);
   const mock = a.runtimes.get('mock')!;
   const origRun = mock.run.bind(mock);
