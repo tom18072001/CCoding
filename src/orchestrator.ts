@@ -1197,7 +1197,8 @@ export class Orchestrator {
         hints: { brief: task.brief, subtasks: task.runs.flatMap((r) => r.subtasks.map(stHint)) },
         ...(mode.kind === 'brief' ? { maxTokens: ACCEPT_BRIEF_MAX_TOKENS } : {}),
       });
-      if (!res.text) throw new Error(res.error || 'không có nội dung');
+      // lỗi hạ tầng (res.error) không bao giờ vào parseAcceptance — nhảy xuống catch để ghi nghiệm thu lỗi, không ghi "không đọc được"
+      if (res.error || !res.text) throw new Error(res.error || 'không có nội dung');
       text = res.text;
     } catch (e) {
       // chạm trần ngân sách (chế độ "tạm dừng") ở bước nghiệm thu: báo cáo đã xong — giao kết quả, ghi chưa nghiệm thu thay vì tạm dừng cả nhiệm vụ
@@ -1207,6 +1208,8 @@ export class Orchestrator {
       task.acceptance = { ...base, accepted: false, parsed: false, summary: '', error: msg };
       logs.write({ level: 'warn', kind: 'accept.error', msg: `${task.id}: CTO chưa nghiệm thu được — ${msg}`, taskId: task.id, projectId: task.projectId, agentId: cto.id });
       this.message(task, 'office', 'system', 'system', `⚠️ CTO chưa nghiệm thu được (${msg}) — kết quả vẫn được giao; xem báo cáo và tự đối chiếu.`);
+      // lỗi hạ tầng ≠ "đã nghiệm thu": báo người dùng xem lại (không đè lý do cần xem sẵn có)
+      if (!budget && !task.attention) task.attention = { reason: 'acceptance', detail: `CTO chưa nghiệm thu được do lỗi lượt gọi: ${msg.slice(0, 200)} — bấm "↻ Nghiệm thu lại"`, at: nowIso() };
       this.save(task);
       return;
     }
@@ -1263,7 +1266,9 @@ export class Orchestrator {
         cwd: task.workspace ?? this.workspaceFor(task, project),
         hints: { brief: task.brief, departments: depts.map((d) => ({ id: d.id, name: d.name, keywords: d.keywords })) },
       });
-      result = parseRoute(res.text, depts.map((d) => d.id));
+      // lượt route lỗi → không đọc text lỗi như kết quả định tuyến; lùi về định tuyến bằng từ khóa (có log)
+      if (res.error) this.d.logs.write({ level: 'warn', kind: 'route.error', msg: `${task.id}: lượt định tuyến lỗi (${res.error.slice(0, 200)}) — dùng định tuyến từ khóa`, taskId: task.id, agentId: router.id });
+      result = res.error ? undefined : parseRoute(res.text, depts.map((d) => d.id));
       if (result) by = router.id;
     }
     result ??= keywordRoute(task.brief, depts);
@@ -1580,7 +1585,7 @@ export class Orchestrator {
         this.setPhase(task, run, 'review');
         const items = [this.depInput(task, st)];
         const res = await this.call(reviewer, 'review', (tools) => P.reviewPrompt({ ...pctx, reviewFocus: run.reviewFocus }, items, tools, this.workspaceChanges(task), checkable), { ...base, hints: { brief: task.brief, subtasks: [stHint(st)], attempt: 0 } });
-        if (res.error && !res.text) throw new Error(`Không review được: ${res.error}`);
+        if (res.error) throw new Error(`Không review được: ${res.error}`);
         const review = parseReview(res.text, [st.id]);
         if (assignStrayIssues(review.issues, [st])) review.approved = false;
         run.review = { approved: review.approved, summary: review.summary, issues: review.issues, checks: gateChecks, verified: gateChecks.length > 0 || (res.toolCalls ?? []).some((tc) => tc.name === 'run_command') };
@@ -1710,7 +1715,7 @@ export class Orchestrator {
         this.applyPlanDifficulty(task);
         const planRes = await this.call(lead, 'plan', (tools) => P.planPrompt(pctx, prior, tools), { ...base, hints: { brief: task.brief, roster: rosterHints, department: dept.name } });
         // lượt gọi lỗi → dừng (tiếp tục được) thay vì làm theo kế hoạch dự phòng đoán mò
-        if (planRes.error && !planRes.text) throw new Error(`Trưởng phòng không lập được kế hoạch: ${planRes.error}`);
+        if (planRes.error) throw new Error(`Trưởng phòng không lập được kế hoạch: ${planRes.error}`);
         plan = parsePlan(planRes.text, roster, lead, task.brief);
         run.subtasks = plan.subtasks;
         if (task.lane === 'fast') this.shapeFastPlan(task, run, roster, lead, reviewer, pctx);
@@ -1747,14 +1752,14 @@ export class Orchestrator {
                     this.call(a, 'discuss', () => P.discussPrompt(pctx, a, run.planSummary ?? '', run.subtasks, transcript, r, rounds, true), { ...base, hints: { brief: task.brief } }).then((res) => ({ a, res })),
                   ),
                 );
-                for (const { a, res } of said) if (res.text) this.message(task, dept.id, a.id, 'discussion', res.text.slice(0, 1500), { round: r });
+                for (const { a, res } of said) if (res.text && !res.error) this.message(task, dept.id, a.id, 'discussion', res.text.slice(0, 1500), { round: r });
                 continue;
               }
               for (const a of participants) {
                 this.checkAbort(task);
                 const transcript = transcriptNow();
                 const res = await this.call(a, 'discuss', () => P.discussPrompt(pctx, a, run.planSummary ?? '', run.subtasks, transcript, r, rounds), { ...base, hints: { brief: task.brief } });
-                if (res.text) this.message(task, dept.id, a.id, 'discussion', res.text.slice(0, 1500), { round: r });
+                if (res.text && !res.error) this.message(task, dept.id, a.id, 'discussion', res.text.slice(0, 1500), { round: r });
               }
             }
             this.setPhase(task, run, 'finalize');
@@ -1907,7 +1912,7 @@ export class Orchestrator {
             { ...base, hints: { brief: task.brief, subtasks: items.map((i) => stHint(i.st)), attempt } },
           );
           // review lỗi KHÔNG được coi là "duyệt"
-          if (res.error && !res.text) throw new Error(`Không review được: ${res.error}`);
+          if (res.error) throw new Error(`Không review được: ${res.error}`);
           review = parseReview(res.text, items.map((i) => i.st.id));
           // kết luận GỐC của reviewer — KPI chấm độ đúng của reviewer theo trường này (approved có thể bị ép ngay dưới đây)
           const reviewerApproved = review.approved;
@@ -1980,7 +1985,7 @@ export class Orchestrator {
                 activity: `Sửa ${st.id} theo review`,
                 hints: { brief: task.brief, subtask: stHint(st) },
               });
-              if (r.text) {
+              if (r.text && !r.error) {
                 st.attempts++;
                 this.writeOutput(task, run, st, agent, r);
                 this.message(task, dept.id, agent.id, 'handoff', `Đã sửa ${st.id} theo review: ${extractSummary(r.text, 200)}`, { subtaskId: st.id });
@@ -2050,7 +2055,7 @@ export class Orchestrator {
         ...base,
         hints: { brief: task.brief, subtasks: run.subtasks.map(stHint), departmentName: dept.name },
       });
-      if (!fin.text) throw new Error(`Trưởng phòng không viết được báo cáo tổng hợp${fin.error ? `: ${fin.error}` : ''}`);
+      if (fin.error || !fin.text) throw new Error(`Trưởng phòng không viết được báo cáo tổng hợp${fin.error ? `: ${fin.error}` : ''}`);
       finalText = fin.text;
     }
     const rel = `${safeName(dept.id)}-FINAL.md`;
@@ -2422,7 +2427,7 @@ export class Orchestrator {
         ...base,
         hints: { brief: task.brief, roster: roster.map((a) => ({ id: a.id, name: a.name, title: a.title, role: a.role, skills: a.skills })), department: dept.name, replan: true },
       });
-      if (res.error && !res.text) throw new Error(`Trưởng phòng không sửa được kế hoạch: ${res.error}`);
+      if (res.error) throw new Error(`Trưởng phòng không sửa được kế hoạch: ${res.error}`);
       const revised = parsePlan(res.text, roster, lead, task.brief);
       let again = g;
       if (revised.parsed) {
@@ -3253,7 +3258,7 @@ export class Orchestrator {
           ),
         { ...o.base, subtask: st, activity: `Sửa ${st.id} theo kiểm tra (${fixRounds}/${max})`, hints: { brief: task.brief, subtask: stHint(st), gateFix: fixRounds } },
       );
-      if (r.text) {
+      if (r.text && !r.error) {
         st.attempts++;
         this.writeOutput(task, run, st, fixer, r);
         this.message(task, deptId, fixer.id, 'handoff', `Đã sửa ${st.id} theo kiểm tra: ${extractSummary(r.text, 200)}`, { subtaskId: st.id });
@@ -3285,7 +3290,7 @@ export class Orchestrator {
             activity: `Sửa định dạng ${st.id} (${fixRounds}/${max})`,
             hints: { brief: task.brief, subtask: stHint(st), formatFix: fixRounds },
           });
-          if (r.text) {
+          if (r.text && !r.error) {
             // chỉ thay bản cũ khi bản viết lại ĐẠT mẫu — tránh mất nội dung (vd. mục CCoding thêm vào sau xung đột) khi model viết lại kém
             const fixed = templateGate(r.text, owner.body);
             if (fixed.ok) {
@@ -3589,7 +3594,9 @@ export class Orchestrator {
           } else {
             r = await rt.run(req, hooks);
           }
-          if (r.error && !r.text)
+          // D15: lượt gọi có `error` (kể cả khi runtime kèm `text` là chính thông báo lỗi, vd. claude-cli is_error) LUÔN là lỗi:
+          // đi vào thử lại/chuyển runtime/tạm dừng và không bao giờ để nơi gọi đọc `text` như sản phẩm. Chạm trần lượt (`capped`) không có `error`.
+          if (r.error)
             throw new RuntimeError(
               r.error,
               r.errorKind ?? classifyError(undefined, r.error),
@@ -3673,7 +3680,7 @@ export class Orchestrator {
         }
       }
       // mọi tài nguyên đều lỗi do hạn mức/kết nối → tạm dừng nhiệm vụ và hẹn tự tiếp tục
-      if (result?.error && !result.text && attempts.length && attempts.every((a) => CAPACITY_KINDS.has(a.kind))) {
+      if (result?.error && attempts.length && attempts.every((a) => CAPACITY_KINDS.has(a.kind))) {
         const onlyNet = attempts.every((a) => a.kind === 'transient' || a.kind === 'timeout' || a.kind === 'empty');
         const at = onlyNet ? Date.now() + 2 * 60_000 : (runtimes.earliestRecovery() ?? Date.now() + config.runtime.quotaCooldownMs);
         keepHandover();
@@ -3767,7 +3774,7 @@ export class Orchestrator {
       text: result.text.slice(0, 200_000),
     });
     this.save(task);
-    if (result.error && !result.text) this.setAgent(agent.id, { status: 'error', activity: result.error.slice(0, 80) });
+    if (result.error) this.setAgent(agent.id, { status: 'error', activity: result.error.slice(0, 80) });
     return result;
   }
 
@@ -3779,7 +3786,7 @@ export class Orchestrator {
     for (let k = 1; k <= 2 && res.truncated; k++) {
       this.d.logs.write({ level: 'info', kind: 'call.continue', msg: `${agent.name}: đầu ra bị cắt — viết tiếp (lần ${k})`, taskId: task.id, agentId: agent.id });
       const r2 = await rt.run({ ...req, prompt: P.continuePrompt(req.prompt, text), toolPolicy: undefined, allowTools: false, tools: [], meta: { ...req.meta, callId: `${req.meta.callId}-c${k}` } }, hooks);
-      if (!r2.text) break;
+      if (r2.error || !r2.text) break;
       text += r2.text;
       usage.input += r2.usage.input;
       usage.output += r2.usage.output;
