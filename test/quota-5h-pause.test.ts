@@ -5,6 +5,7 @@ import path from 'node:path';
 import { parseRetryAt } from '../src/runtimes/errors.js';
 import type { RunRequest, RunResult } from '../src/types.js';
 import { testApp } from './helpers.js';
+import { taskArtifacts } from '../src/artifacts.js';
 
 // K1/D16: hết hạn mức 5 giờ giữa lượt execute/synthesize ⇒ nhiệm vụ `paused` (không `failed`), không đốt lượt thử lại,
 // không ghi FINAL từ thông báo lỗi, usage của lượt làm dở vẫn vào sổ. Runtime là giả — không gọi claude -p.
@@ -148,6 +149,56 @@ test('synthesize: cùng thông báo hạn mức → paused, không ghi FINAL/bá
     }
     const msgs = (done.messages ?? []) as Array<{ kind?: string; text?: string }>;
     assert.equal(msgs.some((m) => m.kind === 'report' && String(m.text ?? '').includes('5-hour limit')), false);
+  } finally {
+    a.cleanup();
+  }
+});
+
+test('K4(a): paused vì hết hạn mức → không ghi FINAL.md, không finalPath; bản tạm là DRAFT-paused.md và không hiện là "Báo cáo tổng hợp"', async () => {
+  const a = testApp();
+  try {
+    inject(a, 'synthesize', () => limitRes());
+    const t = a.orchestrator.submit({ brief: BRIEF, options: { discussionRounds: 0 } });
+    const done = await a.orchestrator.waitFor(t.id);
+    assert.equal(done.status, 'paused');
+    assert.equal(done.pause?.reason, 'quota');
+    assert.equal(done.finalPath, undefined, 'task không có finalPath');
+    assert.equal(fs.existsSync(path.join(a.store.runDir(t.id), 'FINAL.md')), false, 'không có FINAL.md');
+    const draft = a.store.readRunFile(t.id, 'DRAFT-paused.md') ?? '';
+    assert.match(draft.split('\n')[0], /BẢN TẠM/, 'dòng đầu nói rõ là bản tạm');
+    assert.ok(!taskArtifacts(a.store, done).some((x) => x.name === 'Báo cáo tổng hợp' || x.path.includes('DRAFT-paused')), 'bản tạm không hiện thành báo cáo');
+  } finally {
+    a.cleanup();
+  }
+});
+
+test('K4(a): tiếp tục rồi hoàn thành → FINAL.md được ghi bình thường, bản tạm bị dọn', async () => {
+  const a = testApp();
+  try {
+    let limited = true;
+    const mock = a.runtimes.get('mock')!;
+    const orig = mock.run.bind(mock);
+    let phase = '';
+    const orch = a.orchestrator as unknown as { call: (agent: unknown, ph: string, ...rest: unknown[]) => Promise<unknown> };
+    const origCall = orch.call.bind(orch);
+    orch.call = (agent, ph, ...rest) => {
+      phase = ph;
+      return origCall(agent, ph, ...rest);
+    };
+    mock.run = async (req: RunRequest, hooks) => (limited && phase === 'synthesize' ? limitRes() : orig(req, hooks));
+    const t = a.orchestrator.submit({ brief: BRIEF, options: { discussionRounds: 0 } });
+    const paused = await a.orchestrator.waitFor(t.id);
+    assert.equal(paused.status, 'paused');
+    assert.equal(fs.existsSync(path.join(a.store.runDir(t.id), 'FINAL.md')), false);
+    limited = false;
+    // hạn mức đã mở lại: gỡ trạng thái tạm ngừng của runtime/model
+    for (const key of [...(a.runtimes as unknown as { health: Map<string, unknown> }).health.keys()]) a.runtimes.markOk(key);
+    a.orchestrator.resume(t.id);
+    const done = await a.orchestrator.waitFor(t.id);
+    assert.equal(done.status, 'done', `status=${done.status} ${JSON.stringify(done.pause)}`);
+    assert.equal(done.finalPath, 'FINAL.md');
+    assert.ok(fs.existsSync(path.join(a.store.runDir(t.id), 'FINAL.md')));
+    assert.equal(fs.existsSync(path.join(a.store.runDir(t.id), 'DRAFT-paused.md')), false, 'bản tạm đã dọn');
   } finally {
     a.cleanup();
   }

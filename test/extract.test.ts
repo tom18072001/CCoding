@@ -501,7 +501,7 @@ test('PDF thiếu ToUnicode, không có chữ, hoặc hỏng → text rỗng kè
   assert.ok(j.note);
 });
 
-test('PDF qua pdftotext (nếu có trên máy)', { skip: !hasTool('pdftotext', ['-v']) && 'không có pdftotext' }, async () => {
+test('PDF qua pdftotext (nếu có trên máy)', { skip: !hasTool('pdftotext', ['-v']) && 'mọi nền tảng: máy không cài pdftotext (poppler-utils) trong PATH' }, async () => {
   const r = await extractText(put('poppler.pdf', vietnamesePdf()));
   assert.equal(r.kind, 'pdf');
   assert.equal(r.pages, 2);
@@ -511,7 +511,7 @@ test('PDF qua pdftotext (nếu có trên máy)', { skip: !hasTool('pdftotext', [
   assert.equal(r.note, undefined);
 });
 
-test('PDF mã hóa mật khẩu rỗng (RC4/AES qua qpdf, nếu có trên máy)', { skip: !hasTool('qpdf', ['--version']) && 'không có qpdf' }, async () => {
+test('PDF mã hóa mật khẩu rỗng (RC4/AES qua qpdf, nếu có trên máy)', { skip: !hasTool('qpdf', ['--version']) && 'mọi nền tảng: máy không cài qpdf trong PATH' }, async () => {
   const src = put('goc.pdf', vietnamesePdf());
   const variants: [string, string[]][] = [
     ['rc4-128.pdf', ['--allow-weak-crypto', '--encrypt', '', 'chu-so-huu', '128', '--use-aes=n', '--']],

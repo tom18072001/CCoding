@@ -177,6 +177,8 @@ interface CallCtx {
   noTools?: boolean;
   /** B-11(a): trần token đầu ra riêng cho lượt này (ưu tiên hơn config.phases.maxTokens). */
   maxTokens?: number;
+  /** K2: trần lượt công cụ riêng cho lượt này (ưu tiên hơn config.phases.toolTurns) — dùng khi chạy lại review với trần cao hơn. */
+  maxTurns?: number;
 }
 
 type Builder = (tools: ToolName[]) => P.Built;
@@ -1584,9 +1586,7 @@ export class Orchestrator {
         logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: gọi reviewer — ${gate.reasons.join('; ')}`, taskId: task.id, department: dept.id, data: { decision: 'call-reviewer', reasons: gate.reasons, lane: 'single' } });
         this.setPhase(task, run, 'review');
         const items = [this.depInput(task, st)];
-        const res = await this.call(reviewer, 'review', (tools) => P.reviewPrompt({ ...pctx, reviewFocus: run.reviewFocus }, items, tools, this.workspaceChanges(task), checkable), { ...base, hints: { brief: task.brief, subtasks: [stHint(st)], attempt: 0 } });
-        if (res.error) throw new Error(`Không review được: ${res.error}`);
-        const review = parseReview(res.text, [st.id]);
+        const { res, review } = await this.reviewWithVerdict(task, dept.id, run, reviewer, { ...pctx, reviewFocus: run.reviewFocus }, items, (tools) => P.reviewPrompt({ ...pctx, reviewFocus: run.reviewFocus }, items, tools, this.workspaceChanges(task), checkable), { ...base, hints: { brief: task.brief, subtasks: [stHint(st)], attempt: 0 } });
         if (assignStrayIssues(review.issues, [st])) review.approved = false;
         run.review = { approved: review.approved, summary: review.summary, issues: review.issues, checks: gateChecks, verified: gateChecks.length > 0 || (res.toolCalls ?? []).some((tc) => tc.name === 'run_command') };
       }
@@ -1615,6 +1615,58 @@ export class Orchestrator {
     this.message(task, dept.id, agent.id, 'final', `Báo cáo làn đơn đã xong: ${extractSummary(finalText, 240)}`);
     this.save(task);
     return { final: finalText };
+  }
+
+  /**
+   * K2: một lượt review + lấy kết luận khi chạm trần lượt. Thứ tự: (1) không đọc được JSON và `capped` ⇒ một lượt tiếp nối
+   * không công cụ chỉ để trả JSON kết luận; (2) vẫn không ⇒ chạy lại review đúng một lần với trần lượt gấp đôi;
+   * (3) vẫn không ⇒ attention rõ "review chưa có kết luận", không bao giờ approved. Mọi lượt đi qua `call()`.
+   * Review bình thường (đọc được JSON ngay) không phát sinh lượt gọi thêm.
+   */
+  private async reviewWithVerdict(
+    task: Task,
+    deptId: string,
+    run: DeptRun,
+    reviewer: AgentDef,
+    pctx: P.Ctx,
+    items: Parameters<typeof P.reviewPrompt>[1],
+    build: Builder,
+    ctx: CallCtx,
+  ): Promise<{ res: RunResult; review: ReturnType<typeof parseReview> }> {
+    const ids = items.map((i) => i.st.id);
+    const { logs } = this.d;
+    let res = await this.call(reviewer, 'review', build, ctx);
+    if (res.error) throw new Error(`Không review được: ${res.error}`);
+    let review = parseReview(res.text, ids);
+    if (review.parsed || !res.capped) return { res, review };
+
+    const why = res.capped === 'input' ? 'hết trần token công cụ' : 'hết lượt công cụ';
+    // (1) lượt tiếp nối chỉ để trả kết luận — không công cụ (trần = 0)
+    logs.write({ level: 'warn', kind: 'review.verdict', msg: `${task.id}: review ${why} mà chưa có kết luận JSON — gọi lượt tiếp nối chỉ để trả kết luận`, taskId: task.id, department: deptId, agentId: reviewer.id, phase: 'review', data: { step: 'followup', capped: res.capped } });
+    this.message(task, deptId, 'system', 'system', `↻ Review ${why} mà chưa có kết luận — yêu cầu @${reviewer.id} trả kết luận theo mẫu JSON dựa trên những gì đã kiểm.`);
+    const first = res;
+    const fu = await this.call(reviewer, 'review', () => P.reviewVerdictPrompt(pctx, items, first.text), { ...ctx, noTools: true, activity: 'Review: trả kết luận sau khi chạm trần' });
+    if (!fu.error) {
+      const r = parseReview(fu.text, ids);
+      if (r.parsed) return { res: { ...first, text: fu.text }, review: r };
+    }
+    // (2) chạy lại review một lần với trần lượt công cụ gấp đôi
+    const turns = (this.d.config.phases?.toolTurns?.review ?? 8) * 2;
+    logs.write({ level: 'warn', kind: 'review.verdict', msg: `${task.id}: lượt tiếp nối không ra kết luận — chạy lại review với trần ${turns} lượt công cụ`, taskId: task.id, department: deptId, agentId: reviewer.id, phase: 'review', data: { step: 'rerun', maxTurns: turns } });
+    this.message(task, deptId, 'system', 'system', `↻ Lượt tiếp nối chưa ra kết luận — chạy lại review một lần với trần ${turns} lượt công cụ.`);
+    const again = await this.call(reviewer, 'review', build, { ...ctx, maxTurns: turns, activity: 'Review: chạy lại với trần lượt cao hơn' });
+    if (!again.error) {
+      res = again;
+      review = parseReview(again.text, ids);
+      if (review.parsed) return { res, review };
+    }
+    // (3) không im lặng đi tiếp
+    const summary = 'Review chưa có kết luận: reviewer chạm trần lượt công cụ, lượt tiếp nối và lần chạy lại đều không trả JSON kết luận — chưa duyệt, cần giám đốc xem.';
+    logs.write({ level: 'warn', kind: 'review.verdict', msg: `${task.id}: ${summary}`, taskId: task.id, department: deptId, agentId: reviewer.id, phase: 'review', data: { step: 'none' } });
+    this.message(task, deptId, 'system', 'system', `⛔ ${summary}`);
+    task.attention = { reason: 'review', detail: summary, at: nowIso() };
+    this.save(task);
+    return { res, review: { approved: false, summary, issues: [], checks: [], parsed: false } };
   }
 
   /** Năng lực công cụ ở pha thực thi của từng người (với quyền của nhiệm vụ) — trưởng phòng giao việc theo đó. */
@@ -1902,18 +1954,22 @@ export class Orchestrator {
           const items = done().map((st) => this.depInput(task, st));
           const changes = this.workspaceChanges(task);
           let reviewTools: ToolName[] = [];
-          const res = await this.call(
+          // review lỗi KHÔNG được coi là "duyệt"; chạm trần lượt mà chưa có kết luận → lấy kết luận (K2)
+          const rv = await this.reviewWithVerdict(
+            task,
+            dept.id,
+            run,
             reviewer,
-            'review',
+            { ...pctx, reviewFocus: run.reviewFocus },
+            items,
             (tools) => {
               reviewTools = tools;
               return P.reviewPrompt({ ...pctx, reviewFocus: run.reviewFocus }, items, tools, changes, this.projectCheckable(task, project));
             },
             { ...base, hints: { brief: task.brief, subtasks: items.map((i) => stHint(i.st)), attempt } },
           );
-          // review lỗi KHÔNG được coi là "duyệt"
-          if (res.error) throw new Error(`Không review được: ${res.error}`);
-          review = parseReview(res.text, items.map((i) => i.st.id));
+          const res = rv.res;
+          review = rv.review;
           // kết luận GỐC của reviewer — KPI chấm độ đúng của reviewer theo trường này (approved có thể bị ép ngay dưới đây)
           const reviewerApproved = review.approved;
           const stray = assignStrayIssues(review.issues, done());
@@ -3523,7 +3579,7 @@ export class Orchestrator {
                 root: reqCwd,
                 allow,
                 guard: config.guard, // B-08
-                maxTurns: config.phases?.toolTurns?.[phase] ?? 8,
+                maxTurns: ctx.maxTurns ?? config.phases?.toolTurns?.[phase] ?? 8,
                 maxInputTokens: config.phases?.toolInputBudget?.[phase],
                 commandTimeoutSec: config.tools.commandTimeoutSec,
                 maxOutputChars: config.tools.maxOutputChars,
@@ -3973,8 +4029,20 @@ export class Orchestrator {
         : '';
     const attention = task.attention ? `\n> ⚠ **Cần xem lại:** ${task.attention.detail}\n` : '';
     const appendix = `\n\n---\n${attention}\n## Phụ lục: token & sản phẩm (CCoding)\n\n- Nhiệm vụ: \`${task.id}\` · chế độ: ${task.mode} · phòng: ${task.departments.join(' → ')} · phân loại dữ liệu: ${task.classification}${paused ? ' · **đang tạm dừng**' : ''}\n- Tổng: **${fmtNum(task.usage.input)} in / ${fmtNum(task.usage.output)} out**, cache đọc ${fmtNum(task.usage.cacheRead)}, ${task.usage.calls} lượt gọi${task.usage.estimatedCalls ? ` (${task.usage.estimatedCalls} lượt ước lượng)` : ''} · ngân sách ${fmtNum(task.options.budgetTokens)} (${task.options.budgetMode === 'pause' ? 'dừng khi chạm trần' : 'chạy tới khi hoàn thành'})\n\n| Agent | Phòng | Input | Output | Cache đọc | Lượt |\n|---|---|---:|---:|---:|---:|\n${rows}\n\n### File đầu ra\n${outputs.join('\n') || '(không có)'}\n${scratch}${git}${checks}${kpi}`;
-    writeText(path.join(store.runDir(task.id), 'FINAL.md'), (task.runs.length > 1 ? `# Báo cáo liên phòng — ${task.title}\n\n` : '') + parts.join('\n\n---\n\n') + appendix);
+    const bodyText = (task.runs.length > 1 ? `# Báo cáo liên phòng — ${task.title}\n\n` : '') + parts.join('\n\n---\n\n') + appendix;
+    if (paused) {
+      // Tạm dừng (hết hạn mức/ngân sách/thủ công): chưa có báo cáo cuối → không ghi FINAL.md, không gán finalPath.
+      // Bản tạm dùng tên khác (artifacts.ts chỉ nhận FINAL.md là "Báo cáo tổng hợp") và nói rõ là bản tạm ở dòng đầu.
+      writeText(path.join(store.runDir(task.id), 'DRAFT-paused.md'), `> **BẢN TẠM khi tạm dừng — không phải báo cáo cuối.** FINAL.md sẽ được ghi khi nhiệm vụ tiếp tục và hoàn thành.\n\n${bodyText}`);
+      return;
+    }
+    writeText(path.join(store.runDir(task.id), 'FINAL.md'), bodyText);
     task.finalPath = 'FINAL.md';
+    try {
+      fs.rmSync(path.join(store.runDir(task.id), 'DRAFT-paused.md'), { force: true });
+    } catch {
+      /* không xóa được bản tạm: bỏ qua */
+    }
   }
 
   private checkAbort(task: Task): void {
