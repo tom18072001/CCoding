@@ -12,7 +12,7 @@
 - **Bốn cảnh báo vận hành** (đọc §3.0 và §5.0 trước khi chạy): (1) lượt hỏng vì hạn mức vẫn bị `run.mjs` coi là "đã xong" và bị bỏ qua khi chạy lại; (2) `analyze.mjs` tính cả lượt hỏng với điểm 0; (3) 4 bài `a1,l1,l2,r1` lỗi ENOENT cho mọi arm; (4) `pairwise.mjs` bỏ qua cặp mới nếu `pairwise.jsonl` đã có `task#rep` đó.
 - **Đợt 3e (sau D9, §5.4) — chỉ chạy khi giám đốc đã duyệt:** E1–E3 chạy trên cloud trước 5/11 14:59, gồm 34 lượt `run.mjs` và 7–8 lượt `claude -p`, ≈ 22 USD, ≈ 2,5 giờ máy. E4–E6 chạy local bằng hạn mức gói, ≈ 139–181 lượt, ≈ 128–149 USD, ≈ 12–13,9 giờ máy. Các số này cộng từ bảng BRIEF-14, quy giá Sonnet. E2 chỉ chạy khi §9 `V4-3e-*` đã commit; E4 chỉ chạy khi N đã chốt bằng công thức §9.
 - **Thứ tự còn lại của đợt 3e (cập nhật 4/11/2026, BRIEF-18 K4):** E4 → E6 → E5′ → B-14 bước 2. E5 không chạy, thay bằng E5′. Mỗi bước có sổ chạy và điều kiện bắt đầu ở §5.4.4.
-- **Trạng thái 14/11/2026 (BRIEF-20 K3):** E4, E6, E5′ đóng ngày 12/11 (`f9a5887`); B-14 bước 2 đóng ngày 13/11 (`d312b76`, `stablePrefix` không phân biệt được, giữ tắt); E7 và E8 đóng ngày 13/11 (`80f7e94`); trục 2 phần (b) đóng ngày 14/11 (khóa danh sách `74f11d9`, kết quả `6dac52c`). Mỗi đợt đóng đều có `report.md` (§5.4.5). Đợt còn mở và điều kiện mở ở §5.4.6: trục 2 phần (a) chờ giám đốc chỉ định hai người gán nhãn; tái lập P trên máy giám đốc; đo lại CTO Opus với trần lượt cao hơn (chưa đăng ký); B-14 ở mức 10 % (≈ 276 lượt, không xếp lịch). KPI của chương trình đo theo khung KPI v2: §9.
+- **Trạng thái 14/11/2026 (BRIEF-20 K3):** E4, E6, E5′ đóng ngày 12/11 (`f9a5887`); B-14 bước 2 đóng ngày 13/11 (`d312b76`, `stablePrefix` không phân biệt được, giữ tắt); E7 và E8 đóng ngày 13/11 (`80f7e94`); trục 2 phần (b) đóng ngày 14/11 (khóa danh sách `74f11d9`, kết quả `6dac52c`). Mỗi đợt đóng đều có `report.md` (§5.4.5). Đợt còn mở và điều kiện mở ở §5.4.6: trục 2 phần (a) chờ giám đốc chỉ định hai người gán nhãn; tái lập P trên máy giám đốc; đo lại CTO Opus với trần lượt cao hơn (chưa đăng ký); B-14 ở mức 10 % (≈ 276 lượt, không xếp lịch). KPI của chương trình đo theo khung KPI v2: §9 (mẫu là giả định của phòng, chờ giám đốc duyệt).
 
 ## Tệp đã lưu
 
@@ -568,12 +568,12 @@ Lượt B*/FL phải gắn hash commit đang chạy, không chỉ nhãn arm. `ru
 
 ## 7. Lệnh đã chạy (kiểm tra không gọi LLM)
 
-Môi trường: Git Bash trên Windows 11, Node v24.14.0, nhánh `ccoding/t-20261102-175854-65c--s2`. Thư mục tạm ngoài repo: `C:\Users\admin\AppData\Local\Temp\tmp.D21Vf9OIYe`.
+Môi trường: Git Bash trên Windows 11, Node v24.14.0, nhánh `ccoding/t-20261102-175854-65c--s2`. Thư mục tạm ngoài repo: `<tmp>`.
 
 | Lệnh | Exit | Kết quả (nguyên văn rút gọn) |
 |---|---|---|
 | `node bench/vs-claude/run.mjs --arms oracle,null --repeats 1 --out <tmp>/selftest` | 0 | 26 lượt: 18 chấm được (oracle 1,00; null 0,00–0,22); **8 dòng `ERROR Error: ENOENT: no such file or directory, lstat '…\tasks\<id>\repo'`** cho `l2-knights`, `r1-elk-design`, `l1-oncall`, `a1-ambiguous-spec` (mỗi bài 2 dòng: null, oracle). `run.mjs` thoát 0 dù có lỗi |
-| `node bench/vs-claude/run.mjs --arms A0-sonnet,B0 --tasks c1,c2,c3,c4,c5,l3,l4,s1,re1 --repeats 3 --timeout 20 --dry-run --out bench/vs-claude/results/s2` | 0 | `54 runs -> C:\Users\admin\CCoding\workspaces\ccoding-research\wt-T-20261102-175854-65c--S2\bench\vs-claude\results\s2` rồi 54 khóa (đầu: `l4-startup-order__B0__r1`, `l4-startup-order__A0-sonnet__r1`, `c2-burst-alert__A0-sonnet__r1` …). Không tạo thư mục; `git status --short` rỗng |
+| `node bench/vs-claude/run.mjs --arms A0-sonnet,B0 --tasks c1,c2,c3,c4,c5,l3,l4,s1,re1 --repeats 3 --timeout 20 --dry-run --out bench/vs-claude/results/s2` | 0 | `54 runs -> <worktree>/bench/vs-claude/results/s2` rồi 54 khóa (đầu: `l4-startup-order__B0__r1`, `l4-startup-order__A0-sonnet__r1`, `c2-burst-alert__A0-sonnet__r1` …). Không tạo thư mục; `git status --short` rỗng |
 | `node --test bench/vs-claude/harness/stats.test.mjs` | 0 | `ℹ tests 12 · ℹ pass 12 · ℹ fail 0 · ℹ cancelled 0 · ℹ skipped 0 · ℹ todo 0` |
 | `node docs/research/performance/scripts/token-analysis.mjs --check docs/research/performance/token-analysis.md` | 1 | **lỗi đã có ở baseline** (bảng cũ thiếu vòng C9); không thuộc hạng mục này |
 
@@ -594,7 +594,7 @@ Chưa chạy được: dry-run của lệnh Nhánh 2 (bài T5/N4 và arm `FL` ch
 
 ## 9. KPI của chương trình đo (thêm 14/11/2026, BRIEF-20 K3)
 
-**Mẫu dùng và giả định.** Đề bài yêu cầu "KPI theo mẫu của giám đốc". Tôi tìm chuỗi "KPI" trong `docs/research/BRIEF-10.md`, `BRIEF-11.md` và `publication-plan.md` (14/11/2026): `BRIEF-10.md:60` và `BRIEF-11.md:31` chỉ nhắc "KPI v2" của `main`; `publication-plan.md` không có. **Không thấy mẫu KPI riêng cho chương trình nghiên cứu.** **Giả định:** "mẫu của giám đốc" là KPI v2 (`docs/KPI.md`, mục "Cách chấm (v2)"), gồm sáu nhóm Chất lượng 25 %, Kết quả thật 20 %, Trung thực 15 %, Hiệu quả 15 %, Tin cậy 15 %, Tuân thủ 10 %, và ba quy tắc chung (co điểm theo lượng bằng chứng; thiếu dữ liệu thì không được điểm A; lỗi hạ tầng không trừ điểm agent). Bảng dưới chỉ dùng **sáu nhóm làm khung** cho đợt đo. Tôi **không** quy ra điểm 0–100: KPI v2 chấm agent theo nhiệm vụ, chưa có công thức nào được duyệt cho đợt đo, nên tự đặt thang là bịa số. Giám đốc xác nhận hoặc đổi mẫu; khi đó sửa mục này.
+**Mẫu dùng và giả định.** Đề bài yêu cầu "KPI theo mẫu của giám đốc". Tôi tìm chuỗi "KPI" trong `docs/research/BRIEF-10.md`, `BRIEF-11.md` và `publication-plan.md` (14/11/2026): `BRIEF-10.md:60` và `BRIEF-11.md:31` chỉ nhắc "KPI v2" của `main`; `publication-plan.md` không có. **Không thấy mẫu KPI riêng cho chương trình nghiên cứu.** **Giả định:** "mẫu của giám đốc" là KPI v2 (`docs/KPI.md`, mục "Cách chấm (v2)"), gồm sáu nhóm Chất lượng 25 %, Kết quả thật 20 %, Trung thực 15 %, Hiệu quả 15 %, Tin cậy 15 %, Tuân thủ 10 %, và ba quy tắc chung (co điểm theo lượng bằng chứng; thiếu dữ liệu thì không được điểm A; lỗi hạ tầng không trừ điểm agent). Bảng dưới chỉ dùng **sáu nhóm làm khung** cho đợt đo. Tôi **không** quy ra điểm 0–100: KPI v2 chấm agent theo nhiệm vụ, chưa có công thức nào được duyệt cho đợt đo, nên tự đặt thang là bịa số. Giám đốc xác nhận hoặc đổi mẫu; khi đó sửa mục này. **Trạng thái (BRIEF-21, 14/11/2026): mẫu KPI này là giả định của phòng, chờ giám đốc duyệt; chưa được duyệt, tiêu chí (5) của BRIEF-20 chưa đạt.**
 
 **Phạm vi:** tám đợt đã đóng ở §5.4.5 (G, E4, E6, E5′, B-14 bước 2, E7, E8, trục 2 phần (b)) và lần chạy lại P. Cột "Mục tiêu" là **đề xuất của trưởng phòng, chờ giám đốc duyệt**, không phải ngưỡng đã khóa.
 
@@ -622,7 +622,7 @@ Chưa chạy được: dry-run của lệnh Nhánh 2 (bài T5/N4 và arm `FL` ch
 - B0 hiện tại chưa đo; B0 cũ (14e2ec6) có thể tốn khác.
 - Không chạy lượt LLM, không chạy pilot; chưa kiểm `dist/cli.js serve` trong worktree này.
 - Kết quả âm tính báo trước: H8, H9, H10, H7 (Nhánh 2) và B-02 thống kê **không đạt trước 5/11** theo thiết kế; B-01 trên FL dự đoán **không tương đương** theo C7+C9.
-- **(14/11/2026)** §5.4.5–§9 chép số từ báo cáo của từng đợt, không mở `runs.jsonl` và không tính lại. Khung KPI ở §9 dựa trên giả định về mẫu của giám đốc (đã nêu ở §9).
+- **(14/11/2026)** §5.4.5–§9 chép số từ báo cáo của từng đợt, không mở `runs.jsonl` và không tính lại. Khung KPI ở §9 dựa trên giả định về mẫu của giám đốc (đã nêu ở §9; chờ giám đốc duyệt, chưa được duyệt).
 
 ## Phụ lục A. Mô hình chi phí (tái lập §1.3, §3)
 
