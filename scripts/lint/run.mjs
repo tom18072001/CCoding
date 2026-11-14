@@ -4,9 +4,10 @@
 // Chi tiết luật: docs/LINT.md.
 import fs from 'node:fs';
 import path from 'node:path';
-import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { sha256Norm } from './lib/hash.mjs';
+import { addedBaselineEntries } from './lib/baseline-shrink.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const RUNNER = 'lint-runner';
@@ -32,7 +33,7 @@ function gitIn(root, args) {
   return execFileSync('git', args, { cwd: root, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
 }
 
-const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
+const sha256 = sha256Norm;
 
 function readEntries(file, kind, errors) {
   const where = `scripts/lint/${kind}.json`;
@@ -209,8 +210,18 @@ async function main() {
     } catch {
       before = null; // mốc chưa có baseline.json: tệp đang được lập lần đầu
     }
-    if (before && Array.isArray(before.entries) && baseline.length > before.entries.length) {
-      errors.push({ rule: RUNNER, file: 'scripts/lint/baseline.json', line: 0, msg: `baseline tăng: ${baseline.length} mục so với ${before.entries.length} ở mốc ${baseRef} (chỉ được giảm)` });
+    if (before && Array.isArray(before.entries)) {
+      const showAtBase = (file) => {
+        try {
+          return execFileSync('git', ['show', `${baseRev}:${file}`], { cwd: root, maxBuffer: 256 * 1024 * 1024, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+        } catch {
+          return null;
+        }
+      };
+      const added = addedBaselineEntries(baseline, before.entries, showAtBase);
+      for (const e of added) {
+        errors.push({ rule: RUNNER, file: 'scripts/lint/baseline.json', line: 0, msg: `baseline tăng: mục ${entryDesc(e)} không có ở mốc ${baseRef} (chỉ được giảm; lỗi mới phải sửa tận gốc)` });
+      }
     }
   }
 

@@ -469,3 +469,36 @@ test('hạng mục chỉ ghi tài liệu cũng làm trong worktree con (không b
     fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
+
+test('runSubSetup: lệnh chuẩn bị trong worktree con nhận CCODING_BASE_REF = mốc của nhiệm vụ', { timeout: 120_000 }, async () => {
+  const plan: Plan = [
+    { id: 'S1', title: 'API', assignee: 'backend-dev', dependsOn: [] },
+    { id: 'S2', title: 'CI', assignee: 'devops', dependsOn: [] },
+  ];
+  const gw = await gateway(plan, (who) =>
+    who === 'backend-dev'
+      ? [{ name: 'write_file', args: { path: 'a.txt', content: 'tu backend\n' } }]
+      : who === 'devops'
+        ? [{ name: 'write_file', args: { path: 'b.txt', content: 'tu devops\n' } }]
+        : [],
+  );
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-par-'));
+  const repo = initRepo();
+  const out = path.join(dataDir, 'sub-setup-ref.txt').split(path.sep).join('/');
+  const a = app(gw.url, dataDir);
+  try {
+    a.store.saveProject({ id: 'repo', name: 'Repo', department: 'dev', workspace: repo, classification: 'internal', toolAccess: 'exec', setupCommands: [`node -e "require('fs').appendFileSync('${out}', (process.env.CCODING_BASE_REF||'-')+';')"`], createdAt: new Date().toISOString() });
+    const t = a.orchestrator.submit({ brief: 'API + CI', projectId: 'repo', options: { discussionRounds: 0, maxParallel: 3, maxRevisions: 0 } });
+    const done = await a.orchestrator.waitFor(t.id);
+    assert.equal(done.status, 'done', done.error);
+    assert.ok(gw.stats.subPrompts >= 2, 'các hạng mục làm trong worktree con');
+    assert.ok(done.baseRef && /^[0-9a-f]{7,40}$/.test(done.baseRef), `task.baseRef = ${done.baseRef}`);
+    const seen = fs.readFileSync(out, 'utf8').split(';').filter(Boolean);
+    assert.ok(seen.length >= 1, 'lệnh chuẩn bị đã chạy trong worktree con');
+    for (const v of seen) assert.equal(v, done.baseRef, 'mỗi lần chạy thấy mốc của nhiệm vụ');
+  } finally {
+    gw.srv.close();
+    fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});

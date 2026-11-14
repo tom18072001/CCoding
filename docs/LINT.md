@@ -84,11 +84,23 @@ Có hai nơi ghi ngoại lệ. Cả hai nằm trong `scripts/lint/` và mọi di
 
 `allow.json` giữ ngoại lệ lâu dài. Mỗi mục gồm `rule`, `file`, `anchor` (neo chữ duy nhất trong dòng lỗi hoặc thông báo), `reason` và `by`.
 
-`baseline.json` giữ nợ cũ đang trả. Mỗi mục gồm `rule`, `file`, `anchor` hoặc `sha256` (băm nội dung tệp), `owner` (chủ sửa), `fixIn` (gói sửa) và `by`. Số mục chỉ được giảm so với mốc. Thêm mục khi có mốc thì lint đỏ.
+`baseline.json` giữ nợ cũ đang trả. Mỗi mục gồm `rule`, `file`, `anchor` hoặc `sha256` (băm nội dung tệp), `owner` (chủ sửa), `fixIn` (gói sửa) và `by`. Số mục chỉ được giảm so với mốc (chi tiết ở 4.1). Thêm mục khi có mốc thì lint đỏ.
 
 Cả hai tệp chỉ chứa neo chữ đã làm sạch hoặc `sha256`. Không ghi đường dẫn máy hay khóa vào đó, kể cả khóa giả đầy đủ. Mục không còn khớp lỗi nào là lỗi, nên khi nợ được trả hoặc nội dung được đổi, xóa mục tương ứng.
 
 Ai review: khi diff chạm một trong năm tệp ngoại lệ hoặc khóa của lint-CI thì văn phòng bắt buộc gọi reviewer, và CTO phải nêu việc đó trong biên bản. Năm tệp là `scripts/lint/allow.json`, `scripts/lint/baseline.json`, `scripts/lint/overclaim.json`, `.github/workflows/` và `docs/research/preregistration.lock.json`.
+
+### 4.1. Băm chuẩn hóa xuống dòng và kiểm "baseline chỉ được giảm"
+
+**Băm.** Mọi chỗ băm trong `scripts/lint/` đi qua `scripts/lint/lib/hash.mjs` (`sha256Norm`): đổi `\r\n` thành `\n` rồi mới sha256 (`\r` đơn không đổi). Lý do: máy chạy văn phòng có `core.autocrlf=true` nên tệp ở cây làm việc là CRLF, còn Linux và CI ubuntu là LF. Băm byte thô cho hai mã khác nhau, nên mục `sha256` của baseline không khớp trên Linux (lỗi `machine-path` hiện ra, mục cũ báo "không còn khớp"). Áp dụng cho `run.mjs` (mục baseline), `lib/prereg.mjs` (khối đăng ký trước) và `rules/review-verdict.mjs` (thẻ `băm:`). Test: `test/lint-hash-baseline.test.ts`.
+
+**Khóa prereg không đổi.** `splitBlocks` đã chuẩn hóa xuống dòng trước khi băm nên mã băm trong `docs/research/preregistration.lock.json` giữ nguyên; test so tệp thật (bản LF và bản CRLF) với khóa đã commit. Vì vậy khóa này không cần đường chuyển đổi.
+
+**Baseline chỉ được giảm, theo khóa** (không còn so số mục). Mốc là ref lint nhận vào (`--base`, `LINT_BASE`, `CCODING_BASE_REF`); ở CI là base của PR hoặc commit trước lần đẩy. Mỗi mục baseline ở HEAD phải có ở mốc, so theo (`rule`, `file`, `anchor` hoặc `sha256` chuẩn hóa). Ba ca, đều có test:
+
+1. Mốc chưa có `baseline.json`: đạt (tệp được lập lần đầu).
+2. Mốc có `baseline.json`: mục HEAD không có ở mốc thì lỗi "baseline tăng"; mục giữ nguyên hoặc bị xóa thì đạt. Lỗi mới phải sửa tận gốc, không thêm mục.
+3. Chuyển tiếp (đổi cách băm): mục HEAD có `sha256` mà mốc có mục cùng (`rule`, `file`) và `sha256` đó bằng băm chuẩn hóa của `git show <mốc>:<tệp>` thì đạt. Tệp đã đổi nội dung sau mốc thì không phải chuyển tiếp. Ca này cần khi mốc là `f6f5b7f2` (baseline ghi băm byte thô); `node scripts/lint/run.mjs --base f6f5b7f2` phải exit 0.
 
 ## 5. Văn phòng coi kiểm tra đỏ là hỏng (`strictChecks`)
 

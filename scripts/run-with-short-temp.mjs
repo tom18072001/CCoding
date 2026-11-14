@@ -1,4 +1,4 @@
-// Mô phỏng (c) của CI Windows: đặt TEMP/TMP theo dạng 8.3 (runner GitHub: C:\Users\RUNNER~1\AppData\Local\Temp) rồi chạy lệnh.
+// Mô phỏng (c) của CI Windows: đặt TEMP/TMP theo dạng 8.3 (runner GitHub: thư mục người dùng dạng RUNNER~1 dưới ổ C) rồi chạy lệnh.
 // Dùng: node scripts/run-with-short-temp.mjs <lệnh> [đối số…]. Thoát 3 nếu ổ đĩa tắt tên 8.3 (không mô phỏng được).
 import fs from 'node:fs';
 import os from 'node:os';
@@ -16,7 +16,7 @@ let long = fs.realpathSync.native(process.env.TEMP ?? os.tmpdir());
 let short = shortOf(long);
 let made;
 if (!differs(short, long)) {
-  // TEMP của máy này đã ngắn sẵn (vd. C:\Users\admin\AppData\Local\Temp) → lấy thư mục con tên dài làm TEMP để vẫn có dạng 8.3 ≠ dạng dài (như RUNNER~1).
+  // TEMP của máy này đã ngắn sẵn (vd. thư mục người dùng tên ngắn) → lấy thư mục con tên dài làm TEMP để vẫn có dạng 8.3 ≠ dạng dài (như RUNNER~1).
   made = fs.mkdtempSync(path.join(long, 'ccoding-mo-phong-8dot3-ten-dai-'));
   long = made;
   short = shortOf(long);

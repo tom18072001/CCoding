@@ -7,7 +7,7 @@ import path from 'node:path';
 import { isWorktreeOf } from '../src/git.js';
 import { samePath } from '../src/tools/guard-paths.js';
 
-// K3: runner Windows của GitHub có TEMP dạng 8.3 (`C:\Users\RUNNER~1\…`) còn git trả đường dẫn dài → so chuỗi thô sai.
+// K3: runner Windows của GitHub có TEMP dạng 8.3 (thư mục người dùng dạng RUNNER~1) còn git trả đường dẫn dài → so chuỗi thô sai.
 
 /** Dạng 8.3 của một thư mục đang tồn tại (undefined nếu ổ đĩa tắt tạo tên ngắn hoặc không dịch được). */
 function shortForm(dir: string): string | undefined {
