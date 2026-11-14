@@ -53,5 +53,5 @@ test(`(d) mọi arm cũ giống hệt arms.json ở ${BASE_COMMIT}`, (t) => {
   } catch { return t.skip(`không đọc được ${BASE_COMMIT} (clone nông?)`); }
   for (const [id, arm] of Object.entries(old)) assert.deepEqual(ARMS[id], arm, `arm ${id} bị đổi`);
   // arm thêm sau e12e037: B0F/B1F (D12), B6w1/B6w4 (E8, V4-3f) — arm cũ không đổi
-  assert.deepEqual(Object.keys(ARMS).filter((k) => !(k in old)).sort(), ['B0F', 'B1F', 'B6w1', 'B6w4']);
+  assert.deepEqual(Object.keys(ARMS).filter((k) => !(k in old)).sort(), ['B0F', 'B1F', 'B6w1', 'B6w4', 'P-H', 'P-O', 'P-S']);
 });

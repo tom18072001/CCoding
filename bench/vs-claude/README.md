@@ -216,3 +216,23 @@ node bench/vs-claude/e9/gold-from-solution.mjs [--tasks-dir bench/vs-claude/task
 ```
 
 Test: `bench/vs-claude/test/e9-gold.test.mjs`, fixture `bench/vs-claude/test/fixtures/e9-gold/`.
+
+## E9-lite: arm chỉ lập kế hoạch (P-H/P-S/P-O)
+
+Ba arm `P-H`, `P-S`, `P-O` (`arms.json`) giống hệt nhau, chỉ khác `options.planModel` (`haiku`/`sonnet`/`opus`). Mỗi lượt gửi nhiệm vụ CCoding với `options: { lane: 'fast', planOnly: true, planModel }`: engine định tuyến, lập kế hoạch, qua cổng kế hoạch (kể cả sửa) rồi dừng; không thực thi, không chấm, không judge, **không in điểm**. Chỉ dùng được khi engine có `planOnly` (K1).
+
+```bash
+# server CCoding đang chạy (node dist/cli.js serve); thêm --runtime mock để chạy trọn luồng không gọi `claude -p`
+node bench/vs-claude/run.mjs --arms P-H,P-S,P-O --tasks <id,id,...> --repeats 3 --seed e9lite-1 --out <thư-mục-out>
+node bench/vs-claude/run.mjs --arms P-H,P-S,P-O --tasks <id,...> --repeats 3 --seed e9lite-1 --out <thư-mục-out> --dry-run   # chỉ xem thứ tự
+```
+
+- **Thứ tự**: xáo theo khối bài, tất định theo `--seed`: thứ tự bài xáo theo seed; trong mỗi bài, các cặp arm×lần lặp cũng xáo theo seed + tên bài. Không trộn arm `P-*` với arm có chấm điểm trong cùng một lệnh (thoát mã 2).
+- **Chạy tiếp**: chạy lại đúng lệnh với cùng `--out` và `--seed`; khóa `bài__arm__rN` đã `done` trong `runs.jsonl` bị bỏ qua. Lượt `error`/`failed`/`infra` được chạy lại.
+- **Mỗi lượt một dòng `runs.jsonl`**: khóa `{task, arm, rep}`; `planRaw`, `planFinal` (mảng `{id, title, assignee, dependsOn, files}`, `files` trích từ mô tả bằng `extractFiles` trong `lib/plan-only.mjs`); `planGate`; `replanCount` (= `run.planReplans`); `usage`; `planModel {arm, actual, source, match}`; `authSource`; `configHash` (sha256 của cấu hình arm + seed + runtime); `ccodingCommit`; `claudeCliVersion`. Không có `score`/`pass`.
+- **Model lệch**: nếu model thật của lượt `plan` không chứa tên `planModel` của arm, dòng ghi `status: 'error'` kèm `error` (nhãn arm không được sai; lượt chạy lại khi chạy tiếp).
+- **Ép làn**: `lane: 'fast'` ép làn nhanh như B6; với `planOnly` engine cũng đổi làn đơn thành làn nhanh. Muốn làn khác thì thêm arm mới, không sửa ba arm này.
+- **`authSource`**: runtime `mock` ghi `mock`; với runtime thật, harness không thấy nguồn xác thực của server CCoding nên ghi `null` (người vận hành xác nhận phiên đăng nhập ở máy chạy server). `claudeCliVersion` là `null` khi `--runtime mock`.
+- **Dữ liệu**: nhãn **Nội bộ**, chỉ gồm bài bench tổng hợp, không có PII, không đi xuyên biên giới. Chỉ thêm trường vào `runs.jsonl` trong thư mục `--out`; log CCoding vẫn qua `LogStore`.
+
+Test: `bench/vs-claude/test/plan-only-arms.test.mjs` (server giả + runtime mock).

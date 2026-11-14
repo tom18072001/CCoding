@@ -189,20 +189,23 @@ export async function runCcoding(opts) {
       byAgent[row.key] = weighted(row);
     }
   }
-  let research, final;
+  let research, final, plan;
   try {
     const callsText = opts.dataDir && fs.existsSync(callsFile) ? fs.readFileSync(callsFile, 'utf8') : '';
     const evFile = path.join(opts.dataDir ?? '', 'runs', task.id, 'events.jsonl');
     const eventsText = opts.dataDir && fs.existsSync(evFile) ? fs.readFileSync(evFile, 'utf8') : '';
     final = (await api(`/api/tasks/${task.id}`)).task ?? t;
     research = researchFields(callsText, final, eventsText);
+    // E9-lite (hợp đồng D3): run planOnly cuối cùng của task.json
+    const pr = [...(final?.runs ?? [])].reverse().find((x) => x?.planOnly);
+    if (pr) plan = { planModel: pr.planModel ?? null, planModelSource: pr.planModelSource ?? null, planRaw: pr.planRaw ?? null, planFinal: pr.planFinal ?? null, planGate: pr.planGate ?? null, planReplans: pr.planReplans ?? 0 };
   } catch { research = researchFields('', t); }
   tokens.total = tokens.input + tokens.output + tokens.cacheRead + tokens.cacheWrite;
   tokens.weighted = weighted(tokens);
   return {
     status: t.status === 'done' ? 'done' : 'failed', wallSec, tokens, costUsd, turns, calls,
     finalText, taskId: task.id, byPhase, agentsUsed: Object.keys(byAgent).length, byAgent,
-    department: t.department, attention: t.attention,
+    department: t.department, attention: t.attention, ...(plan ? { plan } : {}),
     research: { ...research, isolation, ...taskTimes(final ?? t), pausedSecObserved: +(pausedMs / 1000).toFixed(1), pauseCount, ...(checkout ? { checkout } : {}) }, infra, ...(checkoutError ? { error: checkoutError } : {}), ...(resetsAt ? { resetsAt } : {}),
   };
 }
