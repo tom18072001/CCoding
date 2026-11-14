@@ -36,7 +36,10 @@ export interface CallRow {
   errorKind?: string;
   attempts?: Array<{ kind: string; ms?: number }>;
   turns?: number;
+  /** Cắt thật: runtime báo stop_reason max_tokens / finish length. Không suy ra từ output cộng dồn của claude-cli. */
   truncated?: boolean;
+  /** Chạm trần vòng công cụ; bản ghi cũ chỉ có `diag` chứa "chạm trần". */
+  turnCapped?: boolean;
   diag?: string;
   tools?: ToolCallRecord[];
   text?: string;
@@ -136,11 +139,14 @@ export interface AgentKpi {
   outTokPerSec?: number;
   /** shellReads: lệnh shell chỉ để đọc/tìm/liệt kê tệp (cat, grep, sed -n, ls…) — không tính test/build/git. */
   tools: { calls: number; failed: number; byName: Record<string, { n: number; failed: number }>; capHits: number; avgTurns: number; maxTurns: number; shellReads?: number };
+  /** Lượt bị cắt THẬT theo trần token đầu ra (không gồm chạm trần vòng công cụ). */
   truncated: number;
+  /** Lượt chạm trần vòng công cụ (--max-turns / toolTurns). */
+  turnCapped: number;
   /** reviewed: hạng mục được review; firstPassOk: không bị blocker/major ở lần review đầu; finalClean: không còn blocker ở lần review cuối; blocker/major/minor: số lần bị nêu qua mọi vòng. */
   quality: { reviewed: number; firstPassOk: number; finalClean: number; blocker: number; major: number; minor: number; topIssues: string[] };
   compliance: { outputs: number; templateCoverage?: number; missing: Array<{ heading: string; count: number }>; summaryOk: number };
-  evidence: { execEligible: number; execWithCommands: number; doi: number; urls: number; unverified: number; webCalls: number };
+  evidence: { execEligible: number; execWithCommands: number; doi: number; urls: number; unverified: number; webCalls: number; /** sản phẩm của hạng mục không đòi nguồn ngoài (FX11) */ sourceExempt?: number };
   reviewer?: { reviews: number; issuesRaised: number; verified: number; checkable: number };
   /** Trưởng phòng: chịu trách nhiệm kết quả của phòng — budgetRatio = token thực tế / ngân sách các lượt phòng mình phụ trách. */
   lead?: { plans: number; planFallback: number; syntheses: number; budget?: number; used?: number; budgetRatio?: number };
@@ -194,7 +200,8 @@ export const FINDING_LABELS: Record<string, string> = {
   'review-quality': 'Chưa qua review / còn blocker',
   'failed-calls': 'Lượt gọi hỏng do đầu ra',
   infra: 'Lượt hỏng do hạ tầng',
-  truncated: 'Đầu ra chạm giới hạn độ dài',
+  truncated: 'Đầu ra bị cắt thật (chạm trần token)',
+  'turn-capped': 'Chạm trần vòng công cụ',
   tokens: 'Tốn token so với trung vị phòng',
   'reviewer-unverified': 'Review không kiểm chứng bằng công cụ',
   'plan-fallback': 'Kế hoạch không đúng định dạng JSON',
@@ -393,6 +400,7 @@ const emptyKpi = (key: string, id: string, def: AgentDef | undefined, dept: stri
   durationSec: 0,
   tools: { calls: 0, failed: 0, byName: {}, capHits: 0, avgTurns: 0, maxTurns: 0, shellReads: 0 },
   truncated: 0,
+  turnCapped: 0,
   quality: { reviewed: 0, firstPassOk: 0, finalClean: 0, blocker: 0, major: 0, minor: 0, topIssues: [] },
   compliance: { outputs: 0, missing: [], summaryOk: 0 },
   evidence: { execEligible: 0, execWithCommands: 0, doi: 0, urls: 0, unverified: 0, webCalls: 0 },
@@ -506,7 +514,9 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
     const modelOf = (kind: string, id: string) => roleModel.get(`${kind}:${id}`) ?? lastModel.get(id);
     /** người thực thi (khóa KPI) của nhiệm vụ → phòng, có ghi tệp không, có lượt runtime không ghi công cụ không (không biết đã ghi gì). */
     const executors = new Map<string, { depts: Set<string>; wrote: boolean; untracked: boolean }>();
-    const outs = new Map<string, { agentId: string; department: string; model: string; text: string; executed: boolean; ranCheck: boolean; lastRuns: Map<CheckKind | 'any', boolean>; tracked: boolean }>();
+    const outs = new Map<string, { agentId: string; department: string; model: string; text: string; executed: boolean; ranCheck: boolean; lastRuns: Map<CheckKind | 'any', boolean>; tracked: boolean; noExternal: boolean }>();
+    const subtaskText = new Map<string, string>();
+    for (const run of task.runs ?? []) for (const st of run.subtasks ?? []) subtaskText.set(st.id, `${st.title ?? ''} ${st.description ?? ''} ${st.deliverable ?? ''}`);
     // ── lượt gọi ──
     for (const r of calls) {
       if (!r.agentId) continue;
@@ -545,8 +555,14 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
       // đầu ra bị cắt: theo max_tokens THỰC của lượt (orchestrator ghi trong bản ghi), không có thì theo cấu hình runtime/pha;
       // không biết thì giữ heuristic cũ (8k/64k)
       const maxOut = Number(r.maxTokens) || lim.maxOut;
-      const capped = maxOut ? (r.output ?? 0) >= 0.98 * maxOut : (r.output === 8000 || r.output === 64000);
-      if (r.truncated || (r.output && capped && !r.tools?.length && r.phase !== 'plan')) k.truncated++;
+      // `truncated` = cắt thật. claude-cli không áp max_tokens và CỘNG DỒN output của mọi vòng công cụ, nên tỉ số output/maxTokens
+      // vô nghĩa với nó (và với lượt nhiều vòng): chỉ suy từ tỉ số cho lượt một vòng, không công cụ, runtime có áp trần,
+      // và chỉ khi bản ghi không có cờ `truncated` (bản ghi cũ).
+      const accumulates = r.runtime === 'claude-cli' || (r.turns ?? 1) > 1;
+      const atCap = maxOut ? (r.output ?? 0) >= 0.98 * maxOut : (r.output === 8000 || r.output === 64000);
+      const inferred = r.truncated === undefined && !accumulates && !!r.output && atCap && !r.tools?.length && r.phase !== 'plan';
+      if (r.truncated === true || inferred) k.truncated++;
+      if (r.turnCapped === true || (r.diag && /chạm trần/.test(r.diag))) k.turnCapped++;
       if (lim.contextWindow) {
         // prompt của MỘT vòng model: prompt lớn nhất mà runtime ghi (maxPrompt) — Ollama cắt đầu prompt ở vòng vượt cửa sổ, nên
         // phải xét vòng LỚN NHẤT. Bản ghi cũ không có maxPrompt: lượt một vòng = cả prompt; nhiều vòng = input / số vòng (ước lượng
@@ -579,13 +595,14 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
       // của mỗi hạng mục: thiếu mục / chưa chạy lệnh kiểm chứng ở lần đầu nhưng đã sửa ở vòng sau thì không còn bị tính
       if ((r.phase === 'execute' || r.phase === 'revise' || r.phase === 'synthesize') && r.text) {
         const key = `${r.agentId}|${r.phase === 'synthesize' ? 'synth' : r.subtaskId || r.callId}`;
-        const o = outs.get(key) ?? { agentId: r.agentId, department: r.department, model: r.model, text: '', executed: false, ranCheck: false, lastRuns: new Map(), tracked: true };
+        const o = outs.get(key) ?? { agentId: r.agentId, department: r.department, model: r.model, text: '', executed: false, ranCheck: false, lastRuns: new Map(), tracked: true, noExternal: false };
         o.text = r.text;
         o.model = r.model;
         if (r.phase === 'execute') o.executed = true;
         // căn cứ của bản cuối: kết quả các lệnh kiểm chứng trong CHÍNH lượt viết bản cuối (lỗi ≠ có căn cứ)
         o.lastRuns = checkRuns(r.tools);
         o.tracked = toolsTracked(r);
+        o.noExternal = noExternalSources(subtaskText.get(r.subtaskId ?? ''), r.tools);
         if (o.lastRuns.has('any')) o.ranCheck = true;
         outs.set(key, o);
       }
@@ -615,6 +632,7 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
       k.evidence.doi += new Set(o.text.match(DOI_RE) ?? []).size;
       k.evidence.urls += new Set(o.text.match(URL_RE) ?? []).size;
       k.evidence.unverified += (o.text.match(UNVERIFIED_RE) ?? []).length;
+      if (o.noExternal) k.evidence.sourceExempt = (k.evidence.sourceExempt ?? 0) + 1;
       const canRun = exec && (def?.tools ?? []).some((t) => t.toLowerCase() === 'bash');
       if (canRun && o.executed) {
         k.evidence.execEligible++;
@@ -1036,6 +1054,14 @@ function isInfra(r: CallRow): boolean {
   return /No model configured|log ?in|sign in|unauthori|api key|rate.?limit|429|quota|usage limit|connection|upstream|ECONN|socket|fetch failed|50[234]|timed? ?out|TimeoutError/i.test(r.error ?? '');
 }
 
+const SOURCE_NEEDED_RE = /tổng quan|tài liệu tham khảo|literature|systematic|survey|trích dẫn|citation|tra cứu|nguồn học thuật|bài báo|\bDOI\b/i;
+const REPO_ONLY_RE = /viết lại|thiết kế|rewrite|redesign|\bdesign\b|trong repo|từ repo|từ (?:các )?tệp/i;
+/** FX11: hạng mục không đòi nguồn ngoài — thiết kế/viết lại từ tệp trong repo. Tín hiệu: mô tả hạng mục + lượt có đọc tệp. */
+export function noExternalSources(subtask: string | undefined, tools: ToolCallRecord[] | undefined): boolean {
+  if (!subtask || SOURCE_NEEDED_RE.test(subtask) || !REPO_ONLY_RE.test(subtask)) return false;
+  return (tools ?? []).some((t) => ['read_file', 'list_files', 'search'].includes(t.name));
+}
+
 /** "Việc cần sửa" sinh tự động theo ngưỡng — gợi ý hướng sửa agent.md / cách giao việc. */
 function findings(k: AgentKpi, med: number): Array<{ key: string; text: string }> {
   const out: Array<{ key: string; text: string }> = [];
@@ -1057,13 +1083,14 @@ function findings(k: AgentKpi, med: number): Array<{ key: string; text: string }
   const fileTools = ['read_file', 'search', 'list_files'].reduce((s, n) => s + (k.tools.byName[n]?.n ?? 0), 0);
   if (shellReads >= 10 && shellReads > 2 * fileTools)
     f.push('shell-reads', `Đọc/tìm code bằng lệnh shell (${shellReads} lệnh cat/grep/sed… so với ${fileTools} lần read_file/search/list_files) — không có số dòng, không tính vào giới hạn khảo sát, dễ sai mã hóa và tốn lượt; đọc/tìm bằng công cụ file.`);
-  if (k.department === 'research' && k.compliance.outputs >= 1 && k.evidence.webCalls === 0 && k.evidence.doi + k.evidence.urls === 0 && k.role !== 'lead')
+  if (k.department === 'research' && k.compliance.outputs >= 1 && k.evidence.webCalls === 0 && k.evidence.doi + k.evidence.urls === 0 && k.role !== 'lead' && k.compliance.outputs > (k.evidence.sourceExempt ?? 0))
     f.push('no-sources', 'Không có nguồn kiểm chứng được (DOI/URL) và không dùng công cụ tra cứu.');
   if (k.quality.reviewed >= 1 && (k.quality.firstPassOk / k.quality.reviewed < 0.5 || k.quality.finalClean < k.quality.reviewed))
     f.push('review-quality', `Qua review lần đầu ${k.quality.firstPassOk}/${k.quality.reviewed} hạng mục, còn blocker ở review cuối ${k.quality.reviewed - k.quality.finalClean}/${k.quality.reviewed} (bị nêu qua các vòng: ${k.quality.blocker} blocker, ${k.quality.major} major). Lỗi ở review cuối: ${k.quality.topIssues.slice(0, 2).join(' | ') || '—'}`);
   if (k.failedCalls >= 2) f.push('failed-calls', `${k.failedCalls}/${k.calls} lượt gọi hỏng do đầu ra (rỗng/quá ngữ cảnh/lỗi khác) — kiểm tra model gán cho agent và độ dài prompt.`);
   if (k.infraFailedCalls) f.push('infra', `(Hạ tầng, không tính điểm) ${k.infraFailedCalls} lượt hỏng do hạn mức/đăng nhập/mạng.`);
-  if (k.truncated) f.push('truncated', `${k.truncated} lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp.`);
+  if (k.truncated) f.push('truncated', `${k.truncated} lượt đầu ra bị cắt thật (runtime báo chạm trần token đầu ra) — yêu cầu viết gọn, chi tiết đưa vào tệp, hoặc nâng maxTokens của pha.`);
+  if (k.turnCapped) f.push('turn-capped', `${k.turnCapped} lượt chạm trần vòng công cụ (không phải cắt đầu ra) — khảo sát có mục tiêu, ghi tệp sớm; nâng phases.toolTurns của pha nếu việc thật sự dài.`);
   if (med && k.subtasks && k.tokens.perSubtask > 2 * med) f.push('tokens', `Tốn token gấp ${Math.round((k.tokens.perSubtask / med) * 10) / 10} lần trung vị phòng cho mỗi hạng mục (${Math.round(k.tokens.perSubtask / 1000)}k so với ${Math.round(med / 1000)}k).`);
   if (k.reviewer && k.reviewer.reviews && k.reviewer.checkable && k.reviewer.verified < k.reviewer.checkable)
     f.push('reviewer-unverified', `Review không kiểm chứng bằng công cụ ${k.reviewer.checkable - k.reviewer.verified}/${k.reviewer.checkable} lần — kết luận dựa trên lời tự khai trong báo cáo.`);

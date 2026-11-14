@@ -517,3 +517,44 @@ test('KPI v2 (sửa 4): số bằng chứng n không đếm trùng hạng mục/
     app.cleanup();
   }
 });
+
+test('KPI v2 (FX8): tách truncated (cắt thật) và turnCapped; output cộng dồn của claude-cli không phải cắt', () => {
+  const app = testApp();
+  try {
+    const calls = {
+      T8: [
+        // discuss: runtime áp trần 700 và báo cắt thật
+        call({ taskId: 'T8', agentId: 'backend-dev', phase: 'discuss', runtime: 'api', output: 700, truncated: true, maxTokens: 700 }),
+        // execute claude-cli: output cộng dồn 4,8 lần maxTokens, không cờ cắt → KHÔNG truncated
+        call({ taskId: 'T8', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S1', runtime: 'claude-cli', output: 153_000, maxTokens: 32_000, turns: 20, tools: [tool('read_file', 'a')], text: 'x'.repeat(50) }),
+        // chạm trần vòng công cụ → turnCapped, không truncated
+        call({ taskId: 'T8', agentId: 'backend-dev', phase: 'revise', subtaskId: 'S1', runtime: 'claude-cli', output: 500, maxTokens: 32_000, turns: 16, diag: 'chạm trần 16 lượt (--max-turns của claude-cli)', tools: [tool('read_file', 'a')], text: 'y'.repeat(50) }),
+        call({ taskId: 'T8', agentId: 'backend-dev', phase: 'revise', subtaskId: 'S2', runtime: 'api', output: 100, turnCapped: true, text: 'z'.repeat(50) }),
+      ],
+    };
+    const be = computeKpi(source(app, [task('T8')], calls)).agents.find((a) => a.agentId === 'backend-dev')!;
+    assert.equal(be.truncated, 1);
+    assert.equal(be.turnCapped, 2);
+    assert.ok(be.findingKeys.includes('truncated'));
+    assert.ok(be.findingKeys.includes('turn-capped'));
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('KPI v2 (FX11): viết lại từ repo / thiết kế được miễn no-sources; tổng quan tài liệu vẫn bị báo', () => {
+  const app = testApp();
+  try {
+    const mk = (id: string, title: string, description: string, tools: ReturnType<typeof tool>[]) => {
+      const t = task(id, { runs: [{ department: 'research', usage: { input: 0, output: 0, cacheRead: 0 }, subtasks: [{ id: 'S1', assignee: 'academic-writer', title, description, attempts: 1, output: 'x' }], review: { approved: true, summary: '', issues: [] } }] });
+      const c = call({ taskId: id, agentId: 'academic-writer', department: 'research', phase: 'execute', subtaskId: 'S1', tools, text: '## Tóm tắt\nXong, không có nguồn ngoài.' });
+      return computeKpi(source(app, [t], { [id]: [c] })).agents.find((a) => a.agentId === 'academic-writer')!;
+    };
+    const rewrite = mk('TA', 'Viết lại mục 3', 'Viết lại từ các tệp trong repo, không cần nguồn ngoài', [tool('read_file', 'docs/a.md')]);
+    assert.ok(!rewrite.findingKeys.includes('no-sources'));
+    const review = mk('TB', 'Tổng quan tài liệu', 'Tổng quan tài liệu về chủ đề X', [tool('read_file', 'docs/a.md')]);
+    assert.ok(review.findingKeys.includes('no-sources'));
+  } finally {
+    app.cleanup();
+  }
+});
