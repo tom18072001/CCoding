@@ -8,7 +8,7 @@ import type { AddressInfo } from 'node:net';
 import { createApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
 import { templateHeadings } from '../src/kpi.js';
-import { classifyChecks,needsReviewer, sensitivePaths, templateGate } from '../src/quality-gate.js';
+import { briefDemandsReview, classifyChecks, needsReviewer, reviewerReasons, sensitivePaths, templateGate } from '../src/quality-gate.js';
 import type { CheckResult } from '../src/types.js';
 import { testApp } from './helpers.js';
 
@@ -188,3 +188,23 @@ test('B-02 D-02: dự án không có checkCommands, reviewer có quyền chạy 
   }
 });
 
+
+test('K2: briefDemandsReview — đề bài đòi review thì cổng xanh vẫn phải gọi reviewer, có lý do', () => {
+  const green = { hasCheckCommands: true, changedFiles: ['src/a.ts'], classes: ['green' as const] };
+  const demanding = '**K1 — dev-backend: viết hàm**\n**K4 — code-reviewer: review K1**';
+  const d = briefDemandsReview(demanding);
+  assert.deepEqual(d, { demands: true, codes: ['K4'] });
+  assert.equal(needsReviewer({ ...green, briefReviewCodes: d.codes }), true);
+  assert.ok(reviewerReasons({ ...green, briefReviewCodes: d.codes }).some((r) => r.includes('K4')));
+  assert.equal(briefDemandsReview('**K1 — làm A**\n**K2 — phản biện kết quả K1**').demands, true);
+  assert.equal(briefDemandsReview('K1 — làm A\nK2 — review: không làm').demands, false);
+  assert.equal(briefDemandsReview('Việc nhỏ cần @peer-reviewer xem').demands, true);
+});
+
+test('K2: đề bài không đòi review, cổng xanh ⇒ bỏ review như cũ', () => {
+  const green = { hasCheckCommands: true, changedFiles: ['src/a.ts'], classes: ['green' as const] };
+  const d = briefDemandsReview('**K1 — dev-backend: viết hàm**\n**K2 — dev-frontend: giao diện**');
+  assert.deepEqual(d, { demands: false, codes: [] });
+  assert.equal(needsReviewer({ ...green, briefReviewCodes: d.codes }), false);
+  assert.equal(briefDemandsReview('Sửa lỗi nhỏ, không mã hạng mục').demands, false);
+});

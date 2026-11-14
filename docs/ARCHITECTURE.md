@@ -85,6 +85,7 @@ Cấu hình liên quan (mặc định trong `src/config.ts`, ghi đè bằng `cc
 | `lanes.single.enabled` | `true` | Bật chọn làn đơn. Tắt thì việc nhỏ đi làn nhanh |
 | `lanes.single.maxParts` | `5` | Từ số hạng mục này trở lên đề bài bị coi là lớn |
 | `lanes.single.maxFilesTouched` | `6` | Từ số tệp này trở lên đề bài bị coi là lớn |
+| `defaults.acceptFollowupRounds` | `1` | Số vòng bổ sung tối đa sau khi CTO chưa nghiệm thu. `0` là tắt. Xem mục "Vòng bổ sung sau nghiệm thu" bên dưới |
 | `gate.maxFixRounds` | `2` | Ngân sách vòng sửa của cổng chất lượng cho cả nhiệm vụ, không tính lại mỗi lần gọi cổng. Không liên quan đến `maxRevisions` của review |
 
 ### Làn đơn (B-01)
@@ -202,15 +203,42 @@ Nội dung mỗi vòng sửa: Prompt (`gateFixPrompt`) nhận đúng đầu ra c
 - diff chạm vùng bảo mật hoặc dữ liệu (`sensitivePaths`: `src/tools/`, `src/runtimes/`, `src/kpi.ts`, `src/store.ts`, `.env*`, `data/`, `agents/`, tệp cấu hình);
 - nhãn dữ liệu `confidential` hoặc `restricted`;
 - có lệnh `red-unrelated`;
-- chưa đạt sau các vòng sửa.
+- chưa đạt sau các vòng sửa;
+- đề bài đòi review (`briefDemandsReview`).
 
-Nếu không có lý do nào thì bỏ qua reviewer và duyệt kèm lý do của cổng. Quyết định ghi log `gate.review` với `decision` là `forced-unapproved`, `skip-reviewer` hoặc `call-reviewer`. Khi dự án có `checkCommands`, bàn giao gửi cho reviewer được rút gọn (mỗi bàn giao tối đa 1.500 ký tự, diff tối đa 8.000 ký tự).
+**Đề bài đòi review.** Hàm `briefDemandsReview` (`src/quality-gate.ts`) đọc các hạng mục có mã của đề bài qua `briefItems`. Một hạng mục được tính là đòi review khi vai của nó là `peer-reviewer`, `code-reviewer` hoặc `qa-tester`, hoặc dòng hạng mục có chữ "review" hay "phản biện". Hạng mục đã được miễn ("không làm", "chờ") thì không tính. Đề bài không có mã hạng mục thì cổng xét các dòng nhắc `@peer-reviewer`, `@code-reviewer` hoặc `@qa-tester`. Khi đề bài đòi review, cổng chất lượng không được bỏ khâu review, dù lệnh đều xanh và diff không chạm vùng nhạy cảm. Lý do vào `reasons` dưới dạng "đề bài đòi review (<mã>)". Quy tắc áp ở cả làn đơn, làn nhanh và làn đầy.
+
+Nếu không có lý do nào thì bỏ qua reviewer và duyệt kèm lý do của cổng. Quyết định ghi log `gate.review` với `decision` là `forced-unapproved`, `skip-reviewer`, `no-reviewer` hoặc `call-reviewer`. Mọi bản ghi này có thêm `briefDemandsReview` (đúng/sai) và `briefReviewItems` (mảng mã hạng mục hoặc vai đòi review), để biết vì sao cổng giữ hay bỏ reviewer. Khi dự án có `checkCommands`, bàn giao gửi cho reviewer được rút gọn (mỗi bàn giao tối đa 1.500 ký tự, diff tối đa 8.000 ký tự).
 
 **D-02.** Nếu nhiệm vụ được duyệt mà không có kiểm chứng máy (dự án không có lệnh kiểm tra), reviewer có quyền chạy lệnh nhưng không chạy (`run.review.verified === false`), thì nhiệm vụ gắn `attention: review` để giám đốc xem.
 
+### Vòng bổ sung sau nghiệm thu
+
+Khi CTO chưa nghiệm thu, nhiệm vụ không dừng ngay ở "cần xem". Phòng tự làm thêm một vòng cho phần việc nằm trong phạm vi đề bài; phần cần người quyết định vẫn trả về giám đốc. Logic quyết định ở `src/accept-followup.ts` (`followupDecision`, `criteriaTable`), phần nối ở `Orchestrator.runFollowup`.
+
+**Phân loại tiêu chí.** Lời nhắc nghiệm thu yêu cầu CTO gắn trường `scope` cho mỗi tiêu chí `fail` hoặc `unknown`. Giá trị `in` nghĩa là phòng làm được với quyền và đề bài hiện có. Giá trị `decision` nghĩa là cần giám đốc, người ngoài, quyền mới, hoặc đề bài cấm. Tiêu chí `pass` không cần `scope`. `parseAcceptance` đọc trường này; thiếu hoặc giá trị lạ thì coi là `decision`, vì đó là lựa chọn an toàn.
+
+**Điều kiện mở vòng.** `followupDecision` là hàm thuần, chỉ mở vòng khi đủ mọi điều kiện sau:
+
+- lượt nghiệm thu không lỗi (không có `accept.error`) và đọc được kết luận;
+- `defaults.acceptFollowupRounds` lớn hơn 0 (mặc định 1) và số vòng đã mở (`task.acceptFollowups`) nhỏ hơn giá trị này;
+- có ít nhất một tiêu chí chưa đạt thuộc `in`;
+- nhiệm vụ không ở trạng thái `cancelled` hay `paused`, và tín hiệu abort chưa bật;
+- ngân sách còn lại không nhỏ hơn ước lượng của `src/estimate.ts` cho kế hoạch bổ sung. Khi chưa có kế hoạch, ước lượng thô theo số tiêu chí `in`.
+
+Đặt `defaults.acceptFollowupRounds` bằng `0` để tắt hẳn vòng bổ sung.
+
+**Diễn biến một vòng.** `runTask` gọi `accept()` rồi gọi `runFollowup` trong vòng lặp có chặn cứng, không gọi đệ quy. Khi mở vòng, `runFollowup` tăng `task.acceptFollowups` và lưu nhiệm vụ trước khi chạy, nên tiếp tục sau tạm dừng không mở thêm vòng. Sau đó nó tạo một run mới cùng phòng với run cuối (có `followupOf` và `round`). Trưởng phòng chỉ lập kế hoạch cho các tiêu chí `in`; tiêu chí `decision` được ghi rõ là "không làm". Run bổ sung đi qua các pha thường, gồm cổng phủ kế hoạch và cổng chất lượng. Báo cáo của vòng có hậu tố `-R<số vòng>` để không ghi đè báo cáo gốc. Cuối vòng, CTO nghiệm thu lại.
+
+**Hủy và tạm dừng.** Đầu `runFollowup` có một lần `checkAbort` (hủy hoặc tạm dừng thủ công), rồi `followupDecision` kiểm trạng thái nhiệm vụ và tín hiệu abort. Một lần `checkAbort` nữa chạy ngay trước khi lưu bộ đếm. Trong vòng, `runDepartment` và mọi lượt `call()` tự ném tín hiệu hủy hoặc tạm dừng, kể cả tạm dừng do hết hạn mức. Sau vòng còn một lần kiểm trước khi nghiệm thu lại.
+
+**Khi không mở vòng.** Lượt nghiệm thu lỗi hoặc không đọc được thì không có vòng và không có log `accept.followup`. Các trường hợp còn lại ghi `accept.followup` với `opened: false` kèm `reason`. Nếu vẫn chưa nghiệm thu, `attention.detail` được nối thêm "cần giám đốc quyết định:" cùng tên các tiêu chí `decision`, để giám đốc biết đúng việc phải quyết.
+
+**Log `accept.followup`.** Ghi qua `LogStore` với các trường `opened`, `round`, `maxRounds`, `inScope` (tên tiêu chí), `decision` (tên tiêu chí), `budgetLeft`, `estimate`, và `reason` khi không mở.
+
 ### Cổng phủ kế hoạch (B-10)
 
-Cổng phủ kế hoạch chạy sau khi có kế hoạch và trước khi thực thi. Nó chặn kế hoạch bỏ sót đích hoặc dở dang, vì lỗi này không thể sửa ở các pha sau. Logic ở `src/plan-gate.ts` (hàm `planGate`, `checkPlanCoverage`, `checkPlanReadable`, `planTargets`), nối vào orchestrator qua `gatePlan`, đặt trước bước duyệt kế hoạch. Cổng áp cho cả làn nhanh và làn đầy; việc giao riêng cho một agent thì bỏ qua. Làn đơn không đi qua cổng này vì không có bước chia việc; kế hoạch sau khi nâng cấp thì có.
+Cổng phủ kế hoạch chạy sau khi có kế hoạch và trước khi thực thi. Nó chặn kế hoạch bỏ sót đích hoặc dở dang, vì lỗi này không thể sửa ở các pha sau. Logic ở `src/plan-gate.ts` (hàm `planGate`, `checkPlanCoverage`, `checkPlanReadable`, `checkBriefItems`, `briefItems`, `planTargets`), nối vào orchestrator qua `gatePlan`, đặt trước bước duyệt kế hoạch. Cổng áp cho cả làn nhanh và làn đầy; việc giao riêng cho một agent thì bỏ qua. Làn đơn không đi qua cổng này vì không có bước chia việc; kế hoạch sau khi nâng cấp thì có.
 
 | Quy tắc | Nội dung |
 |---|---|
@@ -219,13 +247,20 @@ Cổng phủ kế hoạch chạy sau khi có kế hoạch và trước khi thự
 | B (ii) | `deliverable` không được là chỗ giữ như "(không dùng)" hay "—" |
 | B (iii) | Vai nêu trong mô tả phải khớp `assignee` |
 | B (iv) | JSON kế hoạch không bị cắt cụt hoặc bỏ dở (cờ `truncated` của `parsePlan`) |
+| `brief-item` | Mỗi hạng mục có mã của đề bài (`K1`, `K2`…) phải được ít nhất một hạng mục kế hoạch nhắc tới mã đó trong tiêu đề hoặc mô tả. Nếu đề bài nêu vai thì ít nhất một hạng mục như vậy phải giao cho agent có id hoặc vai đó |
 
 Với quy tắc B (ii), `deliverable` rỗng hoặc thiếu chỉ bị coi là dở khi có hạng mục khác trong cùng kế hoạch có `deliverable` thật. Một đích có thể được miễn nếu trưởng phòng khai `outOfScope` kèm lý do.
 
-Khi kế hoạch trượt A hoặc B, cổng chạy đúng một lượt sửa kế hoạch (`replanPrompt`, đi qua `Orchestrator.call()`). Nếu vẫn trượt, nhiệm vụ dừng ở trạng thái `failed` và không hạng mục nào được chạy. Trường `attention.reason` là:
+**Quy tắc `brief-item`.** Quy tắc A chỉ kiểm tệp, nên một kế hoạch có thể bỏ nguyên một hạng mục của đề bài mà vẫn đạt. Quy tắc `brief-item` bổ sung kiểm tra này. Hàm `briefItems` nhận diện hạng mục có mã ở dòng hoặc tiêu đề bắt đầu bằng mã, như `**K1 — …**`, `K2:` hay `K4 — peer-reviewer:`. Dải `K1–K3` trong câu mô tả không phải dòng định nghĩa. Mã khớp theo ranh giới từ nên `K1` không khớp `K10`. Vai của hạng mục lấy từ `@vai` hoặc từ tên vai ngay sau mã.
+
+Vai trong đề bài khớp với người nhận theo thứ tự sau. Thứ nhất là trùng id. Thứ hai, với `code-reviewer`, `peer-reviewer` hoặc `reviewer`, là agent có vai `reviewer` hoặc kỹ năng `code-review`. Thứ ba, với `qa-tester`, là agent có kỹ năng `testing`. Orchestrator truyền danh sách vai qua tham số `agentRoles`; thiếu tham số này thì chỉ khớp theo id. Hạng mục mà đề bài ghi "không làm" hoặc "chờ" được miễn. Đề bài không có mã hạng mục thì quy tắc không đổi hành vi nào.
+
+Khi kế hoạch trượt A, B hoặc `brief-item`, cổng chạy đúng một lượt sửa kế hoạch (`replanPrompt`, đi qua `Orchestrator.call()`). Nếu vẫn trượt, nhiệm vụ dừng ở trạng thái `failed` và không hạng mục nào được chạy. Trường `attention.reason` là:
 
 - `plan-coverage` khi quy tắc A trượt (kể cả khi B cũng trượt);
 - `plan-unreadable` khi chỉ quy tắc B trượt.
+
+Tên `brief-item` nằm trong mảng `rules` của log `plan.gate` và của `run.planGate`, nên log tách được quy tắc này khỏi A và B. Lý do chi tiết có tiền tố `brief-item:` trong `reasons`. Khi vẫn trượt mà không có quy tắc A, `attention.reason` là `plan-unreadable`, kể cả khi chỉ `brief-item` trượt.
 
 Log `plan.gate` ghi ở ba giai đoạn `blocked`, `replanned`, `stopped`. Kết quả lưu ở `run.planGate` (`uncovered`, `reasons`, `rules`, `replanned`); kế hoạch đạt lưu `rules: []`.
 

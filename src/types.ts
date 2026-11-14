@@ -312,7 +312,7 @@ export interface DeptRun {
   /** B-02: run đã nâng từ làn đơn lên fast/full — tiếp tục sau tạm dừng thì nạp lại LANE-HANDOVER.md vào `prior`. */
   escalatedFrom?: 'single';
   /** B-10: kết quả cổng phủ kế hoạch (sau parsePlan, trước execute). */
-  planGate?: { uncovered: string[]; reasons: string[]; rules: ('A' | 'B')[]; replanned?: boolean };
+  planGate?: { uncovered: string[]; reasons: string[]; rules: ('A' | 'B' | 'brief-item')[]; replanned?: boolean };
   /** Hạng mục còn phải sửa trong vòng hiện tại — tiếp tục sau tạm dừng thì sửa tiếp theo review đã có, không review lại. */
   revising?: string[];
   /** Ước lượng token của kế hoạch (sau khi lập/chốt) để cảnh báo nhiệm vụ quá lớn. */
@@ -331,6 +331,10 @@ export interface DeptRun {
   usage: Usage;
   startedAt?: string;
   finishedAt?: string;
+  /** Vòng bổ sung sau nghiệm thu (K3): id phòng của run gốc được làm tiếp. */
+  followupOf?: string;
+  /** Số thứ tự vòng bổ sung (1, 2…); run thường không có. */
+  round?: number;
 }
 
 export interface TaskOptions {
@@ -374,6 +378,8 @@ export interface AcceptanceCriterion {
   name: string;
   result: 'pass' | 'fail' | 'unknown';
   evidence: string;
+  /** Tiêu chí fail/unknown: in = phòng tự làm tiếp được; decision = cần giám đốc/người ngoài/quyền mới (thiếu = decision). */
+  scope?: 'in' | 'decision';
 }
 
 export interface Acceptance {
@@ -449,6 +455,8 @@ export interface Task {
   agentId?: string;
   /** Số lần liên tiếp tạm dừng vì "không còn runtime" (tự tiếp tục giãn dần, quá 5 lần thì dừng hẳn). */
   noRuntimeStreak?: number;
+  /** Số vòng bổ sung sau nghiệm thu đã mở (lưu bền, chống lặp vô hạn). */
+  acceptFollowups?: number;
   /** Chỉ dẫn bổ sung người dùng gửi trong lúc nhiệm vụ chạy — đưa vào bối cảnh các lượt gọi sau. */
   notes?: Array<{ id: string; at: string; text: string }>;
   /** Nhiệm vụ này tiếp nối nhiệm vụ trước (giao việc tiếp nối từ màn hình nhiệm vụ). */

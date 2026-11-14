@@ -764,6 +764,10 @@ export function checksBlock(task: Task, phase: 'execute' | 'review' | 'synthesiz
   return `${parts.join('\n')}\n`;
 }
 
+/** Hướng dẫn phân loại "scope" cho tiêu chí chưa đạt (đọc bởi parseAcceptance, dùng cho vòng bổ sung). */
+const SCOPE_GUIDE =
+  'Mỗi tiêu chí "fail" hoặc "unknown" PHẢI có "scope": "in" = phòng tự làm được với quyền và đề bài hiện có; "decision" = cần giám đốc, người ngoài, quyền mới, hoặc đề bài cấm. Không chắc thì chọn "decision". Tiêu chí "pass" không cần scope.';
+
 /** Phần một phòng đưa CTO nghiệm thu: báo cáo tổng hợp + kết luận review. */
 export interface AcceptInput {
   department: string;
@@ -792,9 +796,9 @@ Rút 3–6 tiêu chí kiểm được từ đề bài, kết luận từng tiêu
 
 Rồi thêm đúng một khối (JSON ngắn, cùng nội dung bảng):
 \`\`\`json
-{"accepted": true, "summary": "<1 câu>", "criteria": [{"name": "<tiêu chí>", "result": "pass|fail|unknown", "evidence": "<≤ 1 câu>"}], "risks": [], "followUps": []}
+{"accepted": true, "summary": "<1 câu>", "criteria": [{"name": "<tiêu chí>", "result": "pass|fail|unknown", "scope": "in|decision", "evidence": "<≤ 1 câu>"}], "risks": [], "followUps": []}
 \`\`\`
-"accepted" chỉ true khi mọi tiêu chí là "pass".`,
+"accepted" chỉ true khi mọi tiêu chí là "pass". ${SCOPE_GUIDE}`,
   };
 }
 
@@ -817,8 +821,8 @@ Rút 3–8 tiêu chí kiểm được từ đề bài (và tiêu chí của BA n
 
 Cuối câu trả lời thêm đúng một khối:
 \`\`\`json
-{"accepted": true, "summary": "<1–2 câu>", "criteria": [{"name": "<tiêu chí>", "result": "pass|fail|unknown", "evidence": "<bằng chứng>"}], "risks": ["<rủi ro/việc còn mở>"], "followUps": [{"title": "<tiêu đề ngắn>", "brief": "<đề bài đủ để giao ngay>", "department": "dev|research"}]}
+{"accepted": true, "summary": "<1–2 câu>", "criteria": [{"name": "<tiêu chí>", "result": "pass|fail|unknown", "scope": "in|decision", "evidence": "<bằng chứng>"}], "risks": ["<rủi ro/việc còn mở>"], "followUps": [{"title": "<tiêu đề ngắn>", "brief": "<đề bài đủ để giao ngay>", "department": "dev|research"}]}
 \`\`\`
-"accepted" chỉ true khi mọi tiêu chí là "pass".`,
+"accepted" chỉ true khi mọi tiêu chí là "pass". ${SCOPE_GUIDE}`,
   };
 }

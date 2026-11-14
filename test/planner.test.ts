@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { breakCycles, keywordRoute, matchAssignee, newSubtask, parsePlan, parseReview, parseRoute, readySubtasks } from '../src/planner.js';
+import { breakCycles, keywordRoute, matchAssignee, newSubtask, parseAcceptance, parsePlan, parseReview, parseRoute, readySubtasks } from '../src/planner.js';
 import { parseAgent } from '../src/registry.js';
 import { extractJson } from '../src/util/json-extract.js';
 
@@ -73,4 +73,14 @@ test('định tuyến: router JSON và từ khóa', () => {
   ];
   assert.deepEqual(keywordRoute('viết tổng quan tài liệu cho luận văn', depts).departments, ['research']);
   assert.deepEqual(keywordRoute('nghiên cứu tổng quan rồi triển khai api logstash', depts).departments, ['research', 'dev']);
+});
+
+test('parseAcceptance: đọc scope (in/in-scope/trong phạm vi/decision), thiếu hoặc lạ ⇒ decision, pass không có scope', () => {
+  const json = { accepted: false, summary: 's', criteria: [
+    { name: 'a', result: 'fail', scope: 'in' }, { name: 'b', result: 'unknown', scope: 'In-scope' },
+    { name: 'c', result: 'fail', scope: 'Trong phạm vi' }, { name: 'd', result: 'fail', scope: 'decision' },
+    { name: 'e', result: 'fail', scope: 'cần quyết định' }, { name: 'f', result: 'fail' }, { name: 'g', result: 'fail', scope: 'lạ' },
+    { name: 'h', result: 'pass', scope: 'in' } ] };
+  const r = parseAcceptance('## Tóm tắt\n```json\n' + JSON.stringify(json) + '\n```');
+  assert.deepEqual(r.criteria.map((x) => x.scope), ['in', 'in', 'in', 'decision', 'decision', 'decision', 'decision', undefined]);
 });
