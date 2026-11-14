@@ -40,6 +40,8 @@ export interface CallRow {
   truncated?: boolean;
   /** Chạm trần vòng công cụ; bản ghi cũ chỉ có `diag` chứa "chạm trần". */
   turnCapped?: boolean;
+  /** stop_reason nguyên văn của runtime (max_tokens/length ⇒ cắt thật). */
+  stopReason?: string;
   diag?: string;
   tools?: ToolCallRecord[];
   text?: string;
@@ -600,8 +602,12 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
       const accumulates = r.runtime === 'claude-cli' || (r.turns ?? 1) > 1;
       const atCap = maxOut ? (r.output ?? 0) >= 0.98 * maxOut : (r.output === 8000 || r.output === 64000);
       const inferred = r.truncated === undefined && !accumulates && !!r.output && atCap && !r.tools?.length && r.phase !== 'plan';
-      if (r.truncated === true || inferred) k.truncated++;
-      if (r.turnCapped === true || (r.diag && /chạm trần/.test(r.diag))) k.turnCapped++;
+      // stopReason (bản ghi mới) là tín hiệu thật: max_tokens/length ⇒ cắt; có stopReason mà không phải ⇒ không suy thêm
+      const stopCut = r.stopReason === 'max_tokens' || r.stopReason === 'length';
+      if (r.truncated === true || stopCut || (inferred && r.stopReason === undefined)) k.truncated++;
+      // turnCapped (bản ghi mới) ưu tiên; chỉ lùi về regex "chạm trần" trên diag khi bản ghi cũ thiếu trường
+      const turnCapped = r.turnCapped !== undefined ? r.turnCapped === true : !!(r.diag && /chạm trần/.test(r.diag));
+      if (turnCapped) k.turnCapped++;
       if (lim.contextWindow) {
         // prompt của MỘT vòng model: prompt lớn nhất mà runtime ghi (maxPrompt) — Ollama cắt đầu prompt ở vòng vượt cửa sổ, nên
         // phải xét vòng LỚN NHẤT. Bản ghi cũ không có maxPrompt: lượt một vòng = cả prompt; nhiều vòng = input / số vòng (ước lượng
@@ -614,7 +620,7 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
         if (fill >= 0.98) c.overLimit++;
         else if (fill >= 0.85) c.nearLimit++;
       }
-      if (r.diag && /chạm trần/.test(r.diag)) k.tools.capHits++;
+      if (turnCapped) k.tools.capHits++;
       if (r.turns && r.turns > 1) a.turns.push(r.turns);
       for (const tc of r.tools ?? []) {
         k.tools.calls++;
