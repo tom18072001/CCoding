@@ -42,6 +42,11 @@ export function classifyError(status: number | undefined, text: string): ErrorKi
   if (inner && inner !== status && (status === undefined || status >= 500)) {
     if (inner === 429 || inner === 402 || inner === 401 || inner === 403 || inner === 529 || inner === 400 || inner === 404) return classifyError(inner, t.replace(/\]\s*\[\d{3}\]\s*:/g, ']:'));
   }
+  // claude-cli báo lỗi API dạng chuỗi "Failed to authenticate. API Error: 403 …" không kèm mã HTTP → lấy mã từ chuỗi (chỉ phân loại)
+  if (status === undefined) {
+    const api = /API Error:\s*([1-5]\d{2})\b/i.exec(t);
+    if (api) status = Number(api[1]);
+  }
   if (LOGIN_RE.test(t) && !QUOTA_RE.test(t) && (!status || status === 401 || status === 403 || status === 400)) return 'auth';
   if (status === 402) return 'quota';
   if (status === 401 || status === 403) return QUOTA_RE.test(t) ? 'quota' : 'auth';
