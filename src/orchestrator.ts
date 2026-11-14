@@ -4029,8 +4029,20 @@ export class Orchestrator {
         : '';
     const attention = task.attention ? `\n> ⚠ **Cần xem lại:** ${task.attention.detail}\n` : '';
     const appendix = `\n\n---\n${attention}\n## Phụ lục: token & sản phẩm (CCoding)\n\n- Nhiệm vụ: \`${task.id}\` · chế độ: ${task.mode} · phòng: ${task.departments.join(' → ')} · phân loại dữ liệu: ${task.classification}${paused ? ' · **đang tạm dừng**' : ''}\n- Tổng: **${fmtNum(task.usage.input)} in / ${fmtNum(task.usage.output)} out**, cache đọc ${fmtNum(task.usage.cacheRead)}, ${task.usage.calls} lượt gọi${task.usage.estimatedCalls ? ` (${task.usage.estimatedCalls} lượt ước lượng)` : ''} · ngân sách ${fmtNum(task.options.budgetTokens)} (${task.options.budgetMode === 'pause' ? 'dừng khi chạm trần' : 'chạy tới khi hoàn thành'})\n\n| Agent | Phòng | Input | Output | Cache đọc | Lượt |\n|---|---|---:|---:|---:|---:|\n${rows}\n\n### File đầu ra\n${outputs.join('\n') || '(không có)'}\n${scratch}${git}${checks}${kpi}`;
-    writeText(path.join(store.runDir(task.id), 'FINAL.md'), (task.runs.length > 1 ? `# Báo cáo liên phòng — ${task.title}\n\n` : '') + parts.join('\n\n---\n\n') + appendix);
+    const bodyText = (task.runs.length > 1 ? `# Báo cáo liên phòng — ${task.title}\n\n` : '') + parts.join('\n\n---\n\n') + appendix;
+    if (paused) {
+      // Tạm dừng (hết hạn mức/ngân sách/thủ công): chưa có báo cáo cuối → không ghi FINAL.md, không gán finalPath.
+      // Bản tạm dùng tên khác (artifacts.ts chỉ nhận FINAL.md là "Báo cáo tổng hợp") và nói rõ là bản tạm ở dòng đầu.
+      writeText(path.join(store.runDir(task.id), 'DRAFT-paused.md'), `> **BẢN TẠM khi tạm dừng — không phải báo cáo cuối.** FINAL.md sẽ được ghi khi nhiệm vụ tiếp tục và hoàn thành.\n\n${bodyText}`);
+      return;
+    }
+    writeText(path.join(store.runDir(task.id), 'FINAL.md'), bodyText);
     task.finalPath = 'FINAL.md';
+    try {
+      fs.rmSync(path.join(store.runDir(task.id), 'DRAFT-paused.md'), { force: true });
+    } catch {
+      /* không xóa được bản tạm: bỏ qua */
+    }
   }
 
   private checkAbort(task: Task): void {

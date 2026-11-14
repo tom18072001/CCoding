@@ -37,7 +37,7 @@ for (const [label, bash, ps] of DENIED) {
   test(`outside-root-write chặn: ${label} (PowerShell)`, () => assert.equal(rule('PowerShell', ps), 'outside-root-write', ps));
 }
 
-test('outside-root-write: thư mục hệ thống Windows (khi chạy trên Windows)', { skip: !sysRoot }, () => {
+test('outside-root-write: thư mục hệ thống Windows (khi chạy trên Windows)', { skip: !sysRoot && 'chỉ Windows: cần biến môi trường SystemRoot/windir để dựng đường dẫn thư mục hệ thống Windows' }, () => {
   const w = sysRoot!.replace(/\\/g, '/');
   for (const c of [`rm ${w}/System32/x.dll`, `Remove-Item ${sysRoot}\\Temp\\..\\x.dll`.replace('Temp\\..\\', ''), `echo x > ${w}/win.ini`, `Copy-Item a.txt -Destination ${sysRoot}\\x`, `iwr https://example.invalid/x -OutFile ${sysRoot}\\x.exe`]) {
     assert.equal(rule('Bash', c), 'outside-root-write', c);
