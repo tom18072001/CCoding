@@ -36,7 +36,7 @@ import { historyText, selectHistory } from './history.js';
 import * as P from './prompts.js';
 import { planGate } from './plan-gate.js';
 import type { Registry } from './registry.js';
-import { classifyError, RuntimeError, shouldFailover, toRuntimeError } from './runtimes/errors.js';
+import { classifyError, parseRetryAt, RuntimeError, shouldFailover, toRuntimeError } from './runtimes/errors.js';
 import type { Candidate, RuntimeManager } from './runtimes/index.js';
 import type { Store } from './store.js';
 import { clearFixedFeedback, kpiMarkdown, kpiReport, templateHeadings } from './kpi.js';
@@ -3594,6 +3594,9 @@ export class Orchestrator {
           } else {
             r = await rt.run(req, hooks);
           }
+          // K2: dùng khóa API ngoài cấu hình (useApiKey tắt) → cảnh báo, chỉ ghi nhãn đã lọc
+          if (r.authSourceUnexpected)
+            logs.write({ level: 'warn', kind: 'runtime.auth-source', msg: `${agent.name} · ${cand.label}: đường xác thực "${r.authSource}" không phải đăng nhập, trong khi runtimes.claude-cli.useApiKey không bật`, taskId: task.id, agentId: agent.id, department: deptId, subtaskId: ctx.subtask?.id, phase, data: { callId, authSource: r.authSource } });
           // D15: lượt gọi có `error` (kể cả khi runtime kèm `text` là chính thông báo lỗi, vd. claude-cli is_error) LUÔN là lỗi:
           // đi vào thử lại/chuyển runtime/tạm dừng và không bao giờ để nơi gọi đọc `text` như sản phẩm. Chạm trần lượt (`capped`) không có `error`.
           if (r.error)
@@ -3601,7 +3604,7 @@ export class Orchestrator {
               r.error,
               r.errorKind ?? classifyError(undefined, r.error),
               undefined,
-              r.retryAt,
+              r.retryAt ?? parseRetryAt(undefined, r.error), // K1: "resets 1am (Asia/Bangkok)" → giờ tự tiếp tục
               r.usage.input || r.usage.output ? { input: r.usage.input, output: r.usage.output, cacheRead: r.usage.cacheRead, turns: r.turns ?? 0, toolCalls: r.toolCalls, model: r.model } : undefined,
             );
           if (r.truncated && r.text && CONTINUE_PHASES.has(phase)) r = await this.continueTruncated(rt, req, r, hooks, task, agent);
@@ -3711,6 +3714,7 @@ export class Orchestrator {
       runtime: result.runtime,
       model: result.model,
       requestedModel: cand?.model,
+      authSource: result.authSource,
       input: result.usage.input,
       output: result.usage.output,
       cacheRead: result.usage.cacheRead,

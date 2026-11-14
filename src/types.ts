@@ -178,6 +178,10 @@ export interface RunResult {
   usage: Omit<Usage, 'calls' | 'estimatedCalls'>;
   estimated: boolean;
   model: string;
+  /** Nhãn đường xác thực của claude-cli (apiKeySource, đã lọc — D4). Không bao giờ chứa khóa. */
+  authSource?: string;
+  /** claude-cli: nhãn xác thực là khóa API trong khi useApiKey không bật (để call() ghi cảnh báo). */
+  authSourceUnexpected?: boolean;
   runtime: string;
   durationMs: number;
   error?: string;
@@ -562,6 +566,8 @@ export interface UsageRecord {
   model: string;
   /** Model đã yêu cầu (id trong cấu hình) — dùng đếm hạn mức theo ngày. */
   requestedModel?: string;
+  /** Nhãn đường xác thực (claude-cli apiKeySource đã lọc). */
+  authSource?: string;
   input: number;
   output: number;
   cacheRead: number;

@@ -7,6 +7,7 @@ import { scrubEnv } from '../tools/workspace.js';
 import { isGitReadCommand } from '../tools/shell-policy.js';
 import { estimateTokens } from '../util/tokens.js';
 import { combinedPrompt } from './common.js';
+import { classifyError } from './errors.js';
 import { logSandboxDeny, logSandboxUnavailable, type SandboxBackend } from '../tools/claude-guard.js';
 import type { OsSandboxConfig, RuntimeConfig } from '../config.js';
 import type { RunHooks, RunRequest, RunResult, Runtime, RuntimeAvailability, ToolCallRecord } from '../types.js';
@@ -121,8 +122,33 @@ export function parseSandboxDeny(text: string): { rule: string } | null {
   return null;
 }
 
+/** D4: nhãn đường xác thực (apiKeySource của sự kiện system/init) — chỉ nhận nhãn ngắn an toàn, không bao giờ ghi chuỗi gốc lạ/dạng khóa. */
+const AUTH_LABEL_RE = /^[A-Za-z0-9_ ./-]{1,40}$/;
+export function sanitizeAuthSource(v: unknown): string | undefined {
+  if (typeof v !== 'string' || !v.length) return undefined;
+  return AUTH_LABEL_RE.test(v) && !/^sk-/i.test(v) ? v : 'unrecognized';
+}
+
+/** Nhãn đăng nhập (không phải khóa API) mà CLI báo — không cảnh báo khi gặp. */
+const LOGIN_AUTH_LABELS = new Set(['none', '/login managed key', 'oauth', 'claude.ai']);
+/** D4: có dùng khóa API ngoài cấu hình không (nhãn khác none/đăng nhập đã biết, trong khi useApiKey tắt). */
+export function isUnexpectedApiKeySource(authSource: string | undefined, useApiKey: boolean | undefined): boolean {
+  if (!authSource || useApiKey) return false;
+  return !LOGIN_AUTH_LABELS.has(authSource.toLowerCase());
+}
+
+/**
+ * D3: cờ chẩn đoán, tính trên env THỰC SỰ truyền cho CLI. Chỉ true/false, không ghi giá trị.
+ * Nguồn: docs/diagnostics/claude-cli-403.md (E2, E4, mục đề xuất): CI và CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC.
+ */
+export function diagFlags(env: NodeJS.ProcessEnv): { ci: boolean; disableNonessentialTraffic: boolean } {
+  return { ci: env.CI !== undefined, disableNonessentialTraffic: env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC !== undefined };
+}
+
 /** Bóc tách luồng stream-json của `claude -p --output-format stream-json --verbose`. */
 export class ClaudeStreamParser {
+  /** Nhãn đường xác thực đã lọc (D4); undefined khi không có sự kiện init. */
+  authSource?: string;
   text = '';
   resultText?: string;
   usage: ClaudeUsage = {};
@@ -151,6 +177,7 @@ export class ClaudeStreamParser {
     switch (ev.type) {
       case 'system':
         if (ev.model) this.model = ev.model;
+        if (ev.subtype === 'init' && 'apiKeySource' in ev) this.authSource = sanitizeAuthSource(ev.apiKeySource);
         break;
       case 'assistant': {
         const msg = ev.message ?? {};
@@ -331,13 +358,14 @@ export class ClaudeCliRuntime implements Runtime {
     );
     let spec: { cmd: string; args: string[]; cwd: string; env: NodeJS.ProcessEnv } = { cmd: this.cfg.command ?? 'claude', args, cwd: req.cwd, env };
     if (backend === 'wsl2') spec = wrapForWsl(spec);
+    // Dùng phiên đăng nhập claude.ai của máy (gói đăng ký), KHÔNG dùng ANTHROPIC_API_KEY/BASE_URL hay khóa khác
+    // (scrubEnv bỏ mọi biến khóa/token) — trừ khi cấu hình useApiKey.
+    const childEnv = { ...(this.cfg.useApiKey ? process.env : scrubEnv(process.env)), ...spec.env };
     const proc = await runProcess({
       cmd: spec.cmd,
       args: spec.args,
       cwd: spec.cwd,
-      // Dùng phiên đăng nhập claude.ai của máy (gói đăng ký), KHÔNG dùng ANTHROPIC_API_KEY/BASE_URL hay khóa khác
-      // (scrubEnv bỏ mọi biến khóa/token) — trừ khi cấu hình useApiKey.
-      env: { ...(this.cfg.useApiKey ? process.env : scrubEnv(process.env)), ...spec.env },
+      env: childEnv,
       replaceEnv: true,
       stdin: prompt,
       timeoutMs: req.timeoutMs,
@@ -353,6 +381,11 @@ export class ClaudeCliRuntime implements Runtime {
     else if (proc.aborted) error = 'Đã hủy';
     else if (parser.isError) error = parser.errorText;
     else if (proc.code !== 0 && !text) error = `claude thoát mã ${proc.code}: ${proc.stderr.slice(-400)}`;
+    // D3: lỗi xác thực → kèm nhãn authSource và cờ chẩn đoán có/không (không giá trị) để phân biệt nguyên nhân 403
+    if (error && classifyError(undefined, error) === 'auth') {
+      const f = diagFlags(childEnv);
+      error += ` [authSource=${parser.authSource ?? 'unknown'}; ci=${f.ci ? 'có' : 'không'}; disableNonessentialTraffic=${f.disableNonessentialTraffic ? 'có' : 'không'}]`;
+    }
     const capped = !error && parser.subtype === 'error_max_turns' ? ('turns' as const) : undefined;
     return {
       text,
@@ -365,6 +398,8 @@ export class ClaudeCliRuntime implements Runtime {
       },
       estimated,
       model: parser.model || model,
+      authSource: parser.authSource,
+      authSourceUnexpected: isUnexpectedApiKeySource(parser.authSource, this.cfg.useApiKey) || undefined,
       runtime: this.id,
       durationMs: Date.now() - started,
       error,

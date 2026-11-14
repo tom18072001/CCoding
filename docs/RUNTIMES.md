@@ -56,6 +56,10 @@ Runtime API tương thích OpenAI có `supportsTools` (mặc định bật; Olla
 - Token & chi phí **chính xác** từ sự kiện `result` (input, output, cache đọc/ghi, `total_cost_usd`).
 - Model: `opus` / `sonnet` / `haiku` dùng thẳng alias.
 - Chẩn đoán lỗi `403 Cloudflare` chỉ xảy ra trên đường runtime này: [docs/diagnostics/claude-cli-403.md](diagnostics/claude-cli-403.md).
+- **Đường xác thực (`authSource`)**: bộ parse đọc `apiKeySource` của sự kiện `system/init` (stream-json) và ghi vào kết quả runtime rồi vào bản ghi lượt gọi (sổ usage, cùng chỗ với `model` và token) dưới tên `authSource`. Chỉ ghi **nhãn**, không bao giờ ghi khóa.
+  - Quy tắc lọc nhãn: chỉ nhận `^[A-Za-z0-9_ ./-]{1,40}$` và không bắt đầu bằng `sk-`; không khớp thì ghi `authSource: "unrecognized"`, không ghi chuỗi gốc. Không có sự kiện init (hoặc init không có `apiKeySource`) thì `authSource` vắng, lượt gọi vẫn chạy bình thường.
+  - Lỗi `auth` (vd. 403): thông báo lỗi kèm `[authSource=<nhãn|unknown>; ci=có|không; disableNonessentialTraffic=có|không]`. Hai cờ chỉ cho biết có hay không biến `CI` / `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` trong env **thực sự truyền cho CLI** (không phải `process.env` của CCoding, vì `scrubEnv` tự đặt `CI=1`); không ghi giá trị. Nguồn các cờ: E2, E4 và mục đề xuất của [chẩn đoán 403](diagnostics/claude-cli-403.md).
+  - Cảnh báo: nếu nhãn khác `none` và khác các nhãn đăng nhập đã biết (`/login managed key`, `oauth`, `claude.ai`) trong khi `useApiKey` không bật, `call()` ghi sự kiện mức `warn` `runtime.auth-source` (data chỉ có `callId`, `authSource`) — dấu hiệu đang dùng khóa API ngoài cấu hình.
 
 ### `codex-cli` — OpenAI Codex
 - `codex exec --json --skip-git-repo-check --sandbox workspace-write|read-only [-m model] -`.
