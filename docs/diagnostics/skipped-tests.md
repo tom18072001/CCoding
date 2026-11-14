@@ -43,3 +43,19 @@ Ghi chú: chạy xong thì `skipped` của agent-probes luôn 0 nhờ tự build
 `test/agent-probes.test.ts`: thay `skip: !built` bằng `ensureBuilt()`, tự chạy `tsc -p tsconfig.json` khi thiếu `dist/kpi.js`; chỉ skip nếu build thất bại, kèm lý do. Đã kiểm: dời `dist/` đi, chạy lại → 2 pass, 0 skipped, `dist/` được dựng lại.
 
 Test win32/qpdf/pdftotext không sửa: thiếu thứ đó là hợp lý theo nền tảng/công cụ ngoài; cách bật ghi ở bảng.
+
+## Đo lại của người điều phối (15/11/2026, sau nghiệm thu D18d)
+
+CTO để mở tiêu chí "giải thích số 4 và 1" vì hai số này còn là giả định. Người điều phối đo lại bằng `npx tsx --test --test-reporter=tap "test/**/*.test.ts"` và lọc dòng `# SKIP`, ở commit `d82a239`.
+
+| Môi trường | pdftotext | qpdf | `SystemRoot` | Số test | Bỏ qua | Test bị bỏ qua |
+|---|---|---|---|---|---|---|
+| Linux (container cloud, Node 22) | có | có | không đặt | 800 | **1** | `shell-policy-write-outside.test.ts`: thư mục hệ thống Windows (thiếu `SystemRoot`) |
+| Windows, `cmd` của phiên tương tác (PATH có `Git\mingw64\bin`) | có | không | có | 797 | **3** | `bench.test.ts` (win32), `extract.test.ts` qpdf, `logview.test.ts` (win32) |
+| Windows, tiến trình tạo qua WMI như máy chủ văn phòng (cùng biến `CCODING_*`) | **không** | không | có | 797 | **4** | ba test trên + `extract.test.ts` pdftotext |
+
+Kết luận:
+- **Số 4** của văn phòng: đã xác nhận bằng số đo. Tiến trình văn phòng chạy với PATH hệ thống, không có `Git\mingw64\bin`, nên thiếu `pdftotext`. Giả định của K3 đúng.
+- **Số 1** trên Linux: giả định của K3 (thiếu qpdf hoặc pdftotext) **sai**. Máy Linux có cả hai công cụ; test bị bỏ qua là `shell-policy-write-outside` vì không có `SystemRoot`.
+- **Số 3** của reviewer: khớp phiên `cmd` tương tác (có pdftotext, không có qpdf).
+- Một lần chạy toàn bộ trong phiên `cmd` (văn phòng đang chạy hai nhiệm vụ cùng lúc) có 1 test đỏ: `followup-paths.test.ts:139` "D17(c) vòng bổ sung ở làn đầy", nhiệm vụ dừng ở `paused` thay vì `done` sau 15 giây. Chạy riêng tệp đó hai lần đều xanh (khoảng 11 giây), và lần chạy kiểu WMI ở bảng trên cũng xanh. Đây là test chập chờn khi máy tải nặng; giao Dev xử lý ở gói sau.
