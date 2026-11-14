@@ -16,6 +16,7 @@ import { GRADERS } from './lib/grade.mjs';
 import { blind } from './lib/judge.mjs';
 import { EXIT_RATE_LIMIT, checkArms, classifyRun, cliVersion, doneKeys, gitCommit, latinOrders, leakCounts, leakInCalls, leakInSelectorPrompt, leakInTranscript, leakNeedles, provenance, replacementRuns, suiteTaskIds, supportedLanes } from './lib/queue.mjs';
 import { populateWorkspace, taskDirs } from './lib/workspace.mjs';
+import { isPlanOnlyArm, planOnlyRow, planOnlySchedule, shuffled } from './lib/plan-only.mjs';
 
 const SUITE = path.dirname(fileURLToPath(import.meta.url));
 const argv = process.argv.slice(2);
@@ -50,13 +51,11 @@ const cfg = {
 if (!['none', 'worktree'].includes(cfg.isolation)) throw new Error(`--isolation phải là none hoặc worktree (nhận: ${cfg.isolation})`);
 
 // ---------- schedule: interleaved, arm order rotated per (repeat, task) to spread drift and warm-cache effects ----------
-function shuffled(arr, seed) {
-  const a = [...arr]; let h = crypto.createHash('sha256').update(seed).digest();
-  for (let i = a.length - 1; i > 0; i--) { h = crypto.createHash('sha256').update(h).digest(); const j = h.readUInt32BE(0) % (i + 1); [a[i], a[j]] = [a[j], a[i]]; }
-  return a;
-}
-const schedule = [];
-for (let r = 1; r <= repeats; r++) {
+// E9-lite: arm planOnly (P-*) xáo theo khối bài, không trộn với arm có chấm điểm (không in điểm, không judge)
+const planOnlyRun = armIds.some((a) => isPlanOnlyArm(ARMS[a]));
+if (planOnlyRun && !armIds.every((a) => isPlanOnlyArm(ARMS[a]))) { console.error('Arm planOnly (P-*) không chạy chung với arm có chấm điểm; tách thành hai lệnh.'); process.exit(2); }
+const schedule = planOnlyRun ? planOnlySchedule(taskIds, armIds, repeats, cfg.seed) : [];
+for (let r = 1; !planOnlyRun && r <= repeats; r++) {
   shuffled(taskIds, `${cfg.seed}/${r}`).forEach((t, ti) => {
     // SR-23: bảng Latin (Williams) thật — mỗi arm đứng mỗi vị trí đều nhau, mỗi cặp liền kề đều nhau; thay cho xoay vòng (r + ti) % k.
     for (const a of latinOrders(armIds.length)[(r + ti) % latinOrders(armIds.length).length].map((x) => armIds[x])) schedule.push({ task: t, arm: a, rep: r, key: `${t}__${a}__r${r}` });
@@ -67,7 +66,7 @@ for (let r = 1; r <= repeats; r++) {
 const runsFile = path.join(out, 'runs.jsonl');
 const runsText = fs.existsSync(runsFile) ? fs.readFileSync(runsFile, 'utf8') : '';
 const done = doneKeys(runsText);
-for (const x of replacementRuns(runsText, repeats, taskIds.flatMap((task) => armIds.map((arm) => ({ task, arm }))))) {
+for (const x of planOnlyRun ? [] : replacementRuns(runsText, repeats, taskIds.flatMap((task) => armIds.map((arm) => ({ task, arm }))))) {
   const key = `${x.task}__${x.arm}__r${x.rep}`;
   if (!schedule.some((s) => s.key === key)) schedule.push({ task: x.task, arm: x.arm, rep: x.rep, key });
 }
@@ -80,7 +79,7 @@ if (has('dry-run')) {
 
 fs.mkdirSync(out, { recursive: true });
 // SR-03: hash CCoding và phiên bản claude CLI lấy một lần lúc khởi động, ghi vào config.json rồi chép vào mỗi dòng.
-const meta = { ccodingCommit: gitCommit(SUITE), claudeCliVersion: cliVersion(cfg.claudeBin), window: cfg.window, quotaState: cfg.quotaState, timeoutMin: cfg.timeoutMin };
+const meta = { ccodingCommit: gitCommit(SUITE), claudeCliVersion: cfg.runtime === 'mock' ? null : cliVersion(cfg.claudeBin), window: cfg.window, quotaState: cfg.quotaState, timeoutMin: cfg.timeoutMin };
 fs.writeFileSync(path.join(out, 'config.json'), JSON.stringify({ argv, cfg, meta, armIds, taskIds, repeats, startedAt: new Date().toISOString() }, null, 2));
 
 const armErrors = checkArms(armIds, ARMS, supportedLanes(path.resolve(SUITE, '../..')));
@@ -203,7 +202,7 @@ for (const s of schedule) {
   let r, g, error;
   try {
     r = await runArm(s.arm, task, s.key);
-    if (!r.infra) { // lỗi hạ tầng: không chấm, không tính là xong
+    if (!r.infra && !planOnlyRun) { // lỗi hạ tầng: không chấm, không tính là xong
       g = await GRADERS[task.grader]({ workdir: r.dir, hiddenDir: path.join(SUITE, 'tasks', s.task, 'hidden'), suiteRepoDir: taskDirs(SUITE, task).repoDir, finalText: r.finalText, task, judge: cfg.judge });
       snapshot(r.dir, path.join(out, 'artifacts', s.key));
       fs.writeFileSync(path.join(out, 'artifacts', s.key, '_FINAL.txt'), r.finalText ?? '');
@@ -219,6 +218,12 @@ for (const s of schedule) {
       process.exit(EXIT_RATE_LIMIT);
     }
     console.log('LỖI HẠ TẦNG (lượt sẽ chạy lại khi chạy tiếp)');
+    continue;
+  }
+  if (planOnlyRun) { // không chấm, không judge, không in điểm
+    const prow = planOnlyRow({ s, spec: ARMS[s.arm], r: error ? { status: 'failed', error } : r, meta, runtime: cfg.runtime, seed: cfg.seed });
+    fs.appendFileSync(runsFile, `${JSON.stringify(prow)}\n`);
+    console.log(`${prow.status}${prow.error ? ` — ${prow.error.split('\n')[0]}` : ''} | kế hoạch ${prow.planFinal?.length ?? 0} hạng mục | ${Math.round(r?.wallSec ?? 0)}s`);
     continue;
   }
   const { failReason, excluded } = classifyRun(r, { timeoutMin: cfg.timeoutMin, error });
