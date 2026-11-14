@@ -234,7 +234,7 @@ Nguyên tắc (`preregistration.md` §4.1, §4.3): chỉ chuyển lượt có **
 Bước 1 — chỉ liệt kê, không ghi gì. Bằng chứng hạ tầng = `error` hoặc `artifacts/<key>/_FINAL.txt` chứa `429`, `usage_limit`, `rate limit`, `quota`, `overloaded`, `ECONN`, `ENOENT`, `ETIMEDOUT`. Đối số 1 là `--timeout` (phút) của lệnh vừa chạy. Dòng `failed` có `wallSec ≥ 0,98 × timeout × 60` mà không có bằng chứng được nhãn `T-giữ`:
 
 ```bash
-cat > /tmp/classify.cjs <<'EOF'
+cat > <thư-mục-tạm>/classify.cjs <<'EOF'
 const fs=require('fs'),path=require('path');
 const [,, dir, timeoutMin, apply]=process.argv;
 const L=fs.readFileSync(path.join(dir,'runs.jsonl'),'utf8').split('\n').filter(Boolean);
@@ -253,18 +253,18 @@ if(apply==='apply'){
   fs.appendFileSync(path.join(dir,'excluded.jsonl'),move.map(l=>l+'\n').join(''));
   fs.writeFileSync(path.join(dir,'runs.jsonl'),keep.map(l=>l+'\n').join(''))}
 EOF
-node /tmp/classify.cjs bench/vs-claude/results/s2 20          # bước 1: chỉ in
+node <thư-mục-tạm>/classify.cjs bench/vs-claude/results/s2 20          # bước 1: chỉ in
 ```
 
 Bước 2 — người chưa xem `score` của các dòng đó đọc danh sách ở bước 1, sửa nhãn nếu regex sai (ví dụ nhắc "429" trong nội dung sản phẩm), rồi mới áp dụng:
 
 ```bash
-node /tmp/classify.cjs bench/vs-claude/results/s2 20 apply    # chuyển dòng hạ tầng sang excluded.jsonl
+node <thư-mục-tạm>/classify.cjs bench/vs-claude/results/s2 20 apply    # chuyển dòng hạ tầng sang excluded.jsonl
 ```
 
 **Chạy lại sau khi loại lượt (giống hệt `preregistration.md` §4.1).** Chạy lại bằng `rep` MỚI, cùng khóa arm × bài; lượt bị loại vẫn giữ trong log kèm lý do, không ghi đè. Quy tắc áp dụng từ v2.1, không hồi tố cho 4 lượt C9 đã loại (`context/c9-partial-2026-11-02.md`); nếu C9 chạy tiếp thì theo quy tắc này. Thay lượt tối đa 2 mỗi ô (E1/E3/E4).
 
-Lưu ý cơ chế (cần kiểm): `run.mjs:64` chỉ bỏ qua khóa còn dòng trong `runs.jsonl`, nên khóa `rN` đã chuyển sang `excluded.jsonl` sẽ bị chạy lại với **cùng `rN`**, trái quy tắc trên. Cho tới khi SR-01 xong (trường `excluded`, khóa bị loại vẫn tính là đã xong, `suite-review.md` §5), vận hành viên phải gán `rep` mới bằng tay và ghi vào sổ; chưa có lệnh đã thử cho việc này. Số lượt `T-giữ` và `N1-giữ` theo arm được ghi vào sổ để báo cáo. Phòng Dev đang thêm nhận biết hạn mức vào `run.mjs`; khi có, bước này có thể thay bằng cờ đó (tên cờ chưa biết). Lưu ý: `/tmp/classify.cjs` là script vận hành nằm ngoài repo (hạng mục giới hạn một tệp); chưa chạy trên dữ liệu thật vì chưa có `results/s2`.
+Lưu ý cơ chế (cần kiểm): `run.mjs:64` chỉ bỏ qua khóa còn dòng trong `runs.jsonl`, nên khóa `rN` đã chuyển sang `excluded.jsonl` sẽ bị chạy lại với **cùng `rN`**, trái quy tắc trên. Cho tới khi SR-01 xong (trường `excluded`, khóa bị loại vẫn tính là đã xong, `suite-review.md` §5), vận hành viên phải gán `rep` mới bằng tay và ghi vào sổ; chưa có lệnh đã thử cho việc này. Số lượt `T-giữ` và `N1-giữ` theo arm được ghi vào sổ để báo cáo. Phòng Dev đang thêm nhận biết hạn mức vào `run.mjs`; khi có, bước này có thể thay bằng cờ đó (tên cờ chưa biết). Lưu ý: `<thư-mục-tạm>/classify.cjs` là script vận hành nằm ngoài repo (hạng mục giới hạn một tệp); chưa chạy trên dữ liệu thật vì chưa có `results/s2`.
 
 ### 5.1 Nhánh 1
 
@@ -363,13 +363,13 @@ Dòng trên do orchestrator điền bằng hash commit gộp của nhiệm vụ 
 git pull && git worktree add ../ccoding-3e HEAD && cd ../ccoding-3e && npm ci --no-audit --no-fund && npm run build
 # ccoding.local.json như Bước 2, "server": { "port": 7425 }; chạy nền: node dist/cli.js serve
 git -C ../ccoding-3e rev-parse HEAD   # ghi vào RUNLOG
-S3E="--runtime claude-cli --ccoding-url http://127.0.0.1:7425 --ccoding-data ../ccoding-3e/data --work /tmp/vb"
+S3E="--runtime claude-cli --ccoding-url http://127.0.0.1:7425 --ccoding-data ../ccoding-3e/data --work <thư-mục-tạm>/vb"
 ```
 
 Bản này có B-13 (`runs.jsonl` ghi `model`, token và giây theo pha) và B-12 (`gates.b02`, `gates.b10`, `gates.cto`). Local dùng server riêng cổng 7425, không đụng server 7420.
 
 **Quy tắc mỗi phần**, từ E1 đến E6:
-1. **Trước khi chạy**, nếu thư mục `--out` đã có `runs.jsonl`, làm quarantine §5.0 trên thư mục đó. Đối số timeout bằng `--timeout` của lệnh: `node /tmp/classify.cjs <thư mục --out> <timeout>`, đọc danh sách, rồi mới thêm `apply`. Sau đó làm bước kiểm "rep chạy lại ≠ rep đã loại" ở §3.0. E1 không qua `run.mjs` nên không có bước này.
+1. **Trước khi chạy**, nếu thư mục `--out` đã có `runs.jsonl`, làm quarantine §5.0 trên thư mục đó. Đối số timeout bằng `--timeout` của lệnh: `node <thư-mục-tạm>/classify.cjs <thư mục --out> <timeout>`, đọc danh sách, rồi mới thêm `apply`. Sau đó làm bước kiểm "rep chạy lại ≠ rep đã loại" ở §3.0. E1 không qua `run.mjs` nên không có bước này.
 2. **Trước khi phân tích**, làm lại quarantine §5.0 trên thư mục đó.
 3. **Ghi RUNLOG** cho mỗi phần: hash server (`git -C ../ccoding-3e rev-parse HEAD`), `git status --short`, giờ bắt đầu và kết thúc (UTC), và `model` theo pha lấy từ `runs.jsonl` (B-13). §9 ghi hash là "ghi khi chạy"; giá trị thật nằm ở RUNLOG.
 4. **Commit sau mỗi lệnh** (RUNBOOK Bước 3): `git add bench/vs-claude/results && git commit -m "…" && git push`.
@@ -694,7 +694,7 @@ Không đợt nào dưới đây được chạy trong gói BRIEF-22. Thứ tự
 
 ## Phụ lục A. Mô hình chi phí (tái lập §1.3, §3)
 
-Lưu tạm ngoài repo (`/tmp/rp/model.mjs`, Node). `cost(arm, task) = [max(A0[t][0]·mult_token, sàn_k), max(A0[t][1]·mult_wall, sàn_s)]`; `block(arms, tasks, reps)` cộng chi phí các lượt, cộng 30k + 30 s cho mỗi lượt `--judge` ở a1, r1, và 85k + 50 s cho mỗi cặp pairwise ở a1, r1, re1.
+Lưu tạm ngoài repo (`<thư-mục-tạm>/rp/model.mjs`, Node). `cost(arm, task) = [max(A0[t][0]·mult_token, sàn_k), max(A0[t][1]·mult_wall, sàn_s)]`; `block(arms, tasks, reps)` cộng chi phí các lượt, cộng 30k + 30 s cho mỗi lượt `--judge` ở a1, r1, và 85k + 50 s cho mỗi cặp pairwise ở a1, r1, re1.
 
 ```js
 const A0 = { c1:[90,65], c2:[80,45], c3:[170,105], c4:[130,90], c5:[210,165],

@@ -37,10 +37,10 @@ Không thấy biến nào cho 9router hoặc API key ngoài ở danh sách trên
 PreToolUse:Bash hook error: [node "<máy-chạy>/CCoding/dist/tools/claude-guard.js"]: CCoding chặn lệnh: liệt kê toàn bộ biến môi trường / đọc biến chứa khóa
 ```
 
-**(b)** Lệnh dựng thư mục tạm `/tmp/b14`, ghi script đo và khởi chạy 3 cặp `claude -p` (lệnh gộp, bị chặn nguyên khối):
+**(b)** Lệnh dựng thư mục tạm `<thư-mục-tạm>/b14`, ghi script đo và khởi chạy 3 cặp `claude -p` (lệnh gộp, bị chặn nguyên khối):
 
 ```
-PreToolUse:Bash hook error: [node "<root>/dist/tools/claude-guard.js"]: CCoding chặn lệnh: đường dẫn ngoài thư mục làm việc của nhiệm vụ (`cd /tmp/b14`) — chỉ làm việc trong <worktree của nhiệm vụ>
+PreToolUse:Bash hook error: [node "<root>/dist/tools/claude-guard.js"]: CCoding chặn lệnh: đường dẫn ngoài thư mục làm việc của nhiệm vụ (`cd <thư-mục-tạm>/b14`) — chỉ làm việc trong <worktree của nhiệm vụ>
 ```
 
 ## 4. Vì sao dừng
