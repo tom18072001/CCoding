@@ -1243,6 +1243,68 @@ Phòng Nghiên cứu thẩm định lại ở BRIEF-19 K1: chạy lại và đ�
 
 **Cập nhật tham chiếu pháp lý — Nghị định 356/2025/NĐ-CP (14/11/2026, người điều phối, sau khi gộp BRIEF-20).** Toàn văn có lớp chữ trên Cơ sở dữ liệu quốc gia về văn bản pháp luật (vbpl.moj.gov.vn) được đọc: Điều 42 khoản 1 (hiệu lực 01/01/2026), Điều 42 khoản 2 (Nghị định 13/2023/NĐ-CP hết hiệu lực), Điều 8 khoản 3 và Điều 29 khoản 1 điểm a (72 giờ, hai trường hợp), Điều 17, 18, 19 khớp nguồn thứ cấp. Nhãn [CHƯA KIỂM CHỨNG] của các số điều này được gỡ trong bài báo; chưa đối chiếu bản ký số đăng Công báo. Dòng "Căn cứ pháp lý" đã đăng ký ở trên giữ nguyên chữ. Không thay đổi thiết kế, ngưỡng hay kết quả đo. Chi tiết: `docs/research/context/nd356-2025-note.md` §0.
 
+### 9.x Đăng ký trước E9
+
+**E9 — chất lượng bóc tách và lợi ích của planner mạnh (BRIEF-22, K4, 14/11/2026, @methodologist).** Đăng ký **trước** mọi lượt chạy E9; chưa chạy. Căn cứ: `docs/research/analysis/decisions/model-per-role.md`, `effectiveness.md` (không có thước đo chất lượng bóc tách), `docs/research/context/decomposition-sources-2026-11-14.md` (N2, N12, N13, N21). Phân loại dữ liệu: **Nội bộ**; bài tổng hợp, không dữ liệu thật, không DLCN.
+
+**Câu hỏi.** (i) Trưởng phòng bóc tách có phủ đủ việc ở bài chia được và tránh chia thừa ở bài không chia được không? (ii) Planner mạnh hơn (Opus) có bóc tách tốt hơn planner đang chạy ở làn nhanh (Sonnet) không? Thiết kế: thực nghiệm đối chứng, cặp theo bài, đơn vị phân tích là **bài**.
+
+**Giả thuyết (một phía theo hướng nêu; Holm trên H1, H2).**
+- **H1.** Trên bài chia được, độ phủ kế hoạch của planner Opus cao hơn Sonnet (hiệu độ phủ trung bình theo bài > 0).
+- **H2.** Trên bài không chia được, tỉ lệ kế hoạch chia thừa (≥ 2 hạng mục chạy song song khi chuẩn là 1 chuỗi/1 hạng mục) của Opus thấp hơn Sonnet.
+- **H3 (khám phá, ngoài họ Holm).** Ở giai đoạn 2, kế hoạch tốt hơn đi kèm tỉ lệ pass test cao hơn và token/wall không tăng quá mức đã nêu.
+- Không có giả thuyết về Haiku làm planner chính; Haiku là arm tham chiếu mô tả.
+
+**Bài và chuẩn bóc tách (khóa trước khi chạy).**
+- 32 bài chia được + 32 bài không chia được (64 bài). Mỗi bài có **kế hoạch chuẩn** do hai người gán độc lập trước khi chạy bất kỳ planner nào: danh sách đơn vị việc bắt buộc (theo tệp/hạng mục), cạnh phụ thuộc, nhãn chia được / không. Báo κ giữa hai người; bài bất đồng thì người thứ ba quyết, ghi lại. Đơn vị việc chỉ dựa vào bài + kết quả chạy test, không dựa vào đầu ra planner.
+- Nguồn bài: bài sẵn có trong `bench/vs-claude/tasks` cộng bài mới do Phòng Dev soạn (giả định: có thể làm được; nếu không đủ 64 bài thì dừng theo quy tắc dưới, không hạ chuẩn).
+- Bài chia được: ít nhất 3 đơn vị độc lập theo chuẩn. Bài không chia được: chuỗi phụ thuộc hoặc một tệp/một sửa lỗi gốc.
+
+**Arm (đổi đúng một biến: `phaseModels.plan`).**
+- **Giai đoạn 1 (chỉ lập kế hoạch, không thực thi):** P-S (plan Sonnet = hiện trạng làn nhanh), P-O (plan Opus), P-H (plan Haiku, tham chiếu). Mỗi bài × 3 lượt lặp × 3 arm; thứ tự arm ngẫu nhiên theo khối bài, seed ghi trước.
+- **Giai đoạn 2 (thực thi, chỉ khi giai đoạn 1 xong và H1 hoặc H2 có hiệu +, theo quy tắc dưới):** F-S, F-O (cùng executor Sonnet, cùng accept Sonnet, cùng làn nhanh) và **A0 agent đơn Sonnet chạy cùng đợt, cùng bài, xen kẽ**. Không dùng A0 của đợt khác làm mốc.
+- Cấu hình, trần lượt, `authSource`, phiên bản harness giống nhau mọi arm; ghi `authSource` và hash cấu hình mỗi lượt (bài học E7/E8).
+
+**Thước đo.**
+- **Chính 1 (H1):** độ phủ = số đơn vị chuẩn có trong kế hoạch ÷ số đơn vị chuẩn (khớp theo tệp/hạng mục, luật khớp khóa trước; người chấm mù arm, thứ tự ngẫu nhiên). Trung bình 3 lượt lặp theo bài.
+- **Chính 2 (H2):** tỉ lệ chia thừa trên bài không chia được, trung bình 3 lượt lặp theo bài.
+- **Phụ (mô tả hoặc khám phá):** số hạng mục; độ rộng cấu trúc (n/độ sâu) và hạng mục dài nhất/tổng (đúng định nghĩa của `decomp-metrics.mjs`); `planGate` đạt lần đầu; số lượt `replan`; token có trọng số và USD của khâu `plan`; ở giai đoạn 2: tỉ lệ pass theo kết quả chạy test, điểm, wall, token tổng, so với A0 cùng đợt.
+- **Chuẩn cuối là kết quả chạy test** (N21: bộ chấm LLM chỉ κ 0,10–0,21 với test trên mã sinh). Nếu có chấm LLM, chỉ là phụ: đổi thứ tự cặp, có kế hoạch chuẩn làm tham chiếu (N17, N18), báo κ kèm trần người – người và nêu định nghĩa đồng thuận (N20).
+
+**Cỡ mẫu và power (giả định nêu rõ, chưa kiểm).**
+- H1: giả định sd của hiệu độ phủ theo bài = 0,20 (giả định; không có số đo nội bộ), hiệu cần phát hiện = 0,10, α một phía 0,025 sau Holm → dùng z = 1,96, power 80 % (z = 0,84): n = ((1,96 + 0,84) × 0,20 / 0,10)² ≈ 31,4 → **32 bài chia được**. Xấp xỉ chuẩn cho trung bình theo bài.
+- H2: giả định sd của hiệu tỉ lệ chia thừa theo bài = 0,35, hiệu cần phát hiện = 0,20: n = ((2,8) × 0,35 / 0,20)² ≈ 24,0 → 25; dùng **32 bài không chia được** để dự phòng.
+- Nếu sd thực lớn hơn 25 % so với giả định thì power xuống dưới ~65 %; kết quả báo kèm khoảng tin cậy, không chỉ p. Hiệu nhỏ hơn mức trên không đủ sức phát hiện; không diễn giải "không khác" thành "tương đương".
+- Giai đoạn 2 **không có power** cho tỉ lệ pass (cặp nhị phân với tỉ lệ bất đồng giả định 30 %, hiệu 15 điểm % cần ≈ 102 cặp độc lập, vượt số bài); chỉ mô tả, đánh dấu [Khám phá].
+
+**Phân tích.**
+- H1, H2: hiệu theo bài (Opus − Sonnet) → bootstrap theo bài (10 000 lần, seed khóa) lấy khoảng 95 %, kiểm Wilcoxon cặp (một phía); Holm trên hai kiểm. Báo hiệu dạng thô, không chỉ p.
+- So Haiku: chỉ hiệu và khoảng, không p.
+- Giai đoạn 2: hiệu từng cặp arm với A0 cùng đợt theo bài, mô tả; token và wall theo tỉ số trung vị bài (cùng cách `scorecard.mjs`).
+- Phân tầng theo nhãn chia được / không; không gộp hai tầng.
+
+**Quy tắc dừng.**
+- Không xem giữa chừng để đổi mẫu; không dừng sớm vì hiệu. Mỗi tầng chạy đủ 32 bài.
+- Dừng cả đợt khi: lỗi xác thực/`authSource` lẫn khóa API ở bất kỳ arm nào (sửa rồi chạy lại cả khối, không chọn lọc); quá ngân sách token đã khóa (số cụ thể do giám đốc duyệt trước khi chạy; chưa có số); chuẩn bóc tách chưa đủ 64 bài; κ giữa hai người gán < 0,6 (làm lại hướng dẫn gán, không chạy).
+- Điều kiện sang giai đoạn 2: giám đốc duyệt chi phí, **và** hiệu H1 hoặc H2 cùng chiều đã đăng ký với khoảng 95 % không chứa 0 ở ít nhất một tầng; nếu không, giai đoạn 2 không chạy và ghi lý do.
+- Lượt lỗi hạ tầng (không phải lỗi của planner) chạy lại theo quy tắc khóa trước: chỉ khi lỗi nằm trong danh sách "403, hết hạn mức, ngắt kết nối"; ghi cả lượt đầu và lượt chạy lại, báo kết quả cả hai cách tính.
+
+**Đe dọa tính hợp lệ.**
+1. **Chuẩn bóc tách là ý kiến người**: có thể có nhiều cách chia đúng. Giảm: hai người gán độc lập + κ, khớp theo đơn vị việc chứ không theo văn bản; báo độ phủ lẫn kế hoạch hợp lệ thay thế do người thứ ba xét (phụ).
+2. **Chấm có thiên lệch**: người chấm mù arm; đổi thứ tự; không dùng LLM làm chuẩn (N21).
+3. **Bài tự soạn không đại diện việc thật**; bài không chia được có thể dễ đoán. Giảm: lấy một phần từ bài bench sẵn; ghi ngoại suy hẹp (bài tổng hợp, không phải vận hành thật dự án A).
+4. **Lặp trong bài không độc lập**: gộp theo bài trước khi kiểm; không dùng 3 lượt lặp làm 3 đơn vị.
+5. **Planner chỉ khác `phaseModels.plan`** nhưng làn nhanh có `shapeFastPlan`/`planGate` sửa kế hoạch sau planner (`logic-map.md`): đo cả kế hoạch thô (trước sửa) và kế hoạch cuối; phần hiệu do mã nằm ở khác biệt hai số này.
+6. **Chạm trần điểm** (bench lệch ≤ 0,016 so với A0): giai đoạn 2 khó thấy hiệu về điểm; vì vậy thước đo chính là bóc tách, không phải điểm.
+7. **Trần lượt hay lỗi hạ tầng che hiệu model** (E7: 13 lượt Opus không đọc được): trần lượt giống nhau mọi arm và đặt đủ cao theo khóa trước; báo số lượt chạm trần theo arm; nếu Opus chạm trần nhiều hơn, báo cả hai cách (như đã ghi, và bỏ lượt chạm trần).
+8. **Cỡ mẫu theo giả định sd chưa kiểm**: nêu ở trên; không báo "không có hiệu ứng" từ kết quả không có ý nghĩa.
+9. **Bằng chứng ngoài khác loại việc** (tác vụ công cụ, không phải sửa mã): H1–H2 là giả thuyết, không phải điều đã biết.
+10. **Chi phí/USD**: giá Opus = 2× Sonnet (C-5); USD phân tích phụ, ngoài họ Holm.
+
+**Dữ liệu và đạo đức.** Không người tham gia (trừ hai người gán chuẩn: là thành viên dự án, chỉ gán trên bài tổng hợp, không DLCN). Không đưa dữ liệu nhiệm vụ vận hành thật vào repo. Log qua `LogStore`; mọi lượt gọi LLM qua `Orchestrator.call()` hoặc bench harness như các đợt trước. Data Protection Gate: không đổi luồng dữ liệu; đánh giá ở `docs/data-protection-assessment.md` không đổi.
+
+**Thứ tự và tiêu chí xong.** Mục này được commit trước khi soạn kế hoạch chuẩn, trước khi chạy bất kỳ planner nào. Kế hoạch chuẩn (64 bài) được băm và commit trước giai đoạn 1. Mọi thay đổi sau đó ghi thành sai lệch có giờ ngay dưới mục này, không sửa chữ ở trên. **Chưa chạy; chưa có số E9.**
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.
