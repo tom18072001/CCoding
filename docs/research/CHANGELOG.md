@@ -5,6 +5,16 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 14 (T-20261114-133920-30b, BRIEF-20, 14/11/2026): bài báo v0.7 dựng quanh ba trục, trục 2 (b), kiểm số
+
+Không gọi LLM, không chạy benchmark, không sửa `src/` hay mã `bench/` (chỉ RUNLOG). Bảng kiểm từng số: `analysis/v07-number-check.md`.
+
+- **K1 — `paper/paper.md` v0.7:** đóng góp dựng lại quanh ba trục (nghiệm thu bằng kiểm chứng thật; khung quản trị; song song), mỗi số có nhãn [Xác nhận]/[Mô tả]/[Khám phá] và giới hạn. Thêm §4.3(d), §6.3 (Bảng 16–18), §6.4 (Bảng 19: E5′, E6, B-14 bước 2), §8.3 (i)–(vi) (gồm việc 16 cặp E7 phân loại lại sau khi đã thấy kết quả), hàng mới ở §9, R20–R32 ở Phụ lục A. Danh sách số: `paper/v07-number-list.md`.
+- **K2 — trục 2 (b):** `guardDecision` trên 82 lệnh Bash một dòng của RedCode-Exec: `git-read` 82/82 [95,6; 100] % (52/82 chỉ vì vai chỉ-đọc), `full` 30/82 = 36,6 % [26,2; 48,0] %. Nhãn [Mô tả]. Phần (a): chưa đo. Commit khóa danh sách `74f11d99`, commit kết quả `6dac52c8`.
+- **Pháp lý:** Nghị định 356/2025/NĐ-CP (hiệu lực 01/01/2026) thay vì Nghị định 13/2023/NĐ-CP; số hiệu, ngày ban hành và ngày hiệu lực xác nhận từ cổng chính thức, **nội dung điều khoản [CHƯA KIỂM CHỨNG]** (PDF không có lớp chữ). `paper.md` v0.6 không nhắc Nghị định 13, nên đây là thêm mới ở cuối §6.3.2.
+- **S6 — sửa khi kiểm số:** (1) `paper.md` §8.3 (v): bỏ "ghim lại lúc 10:43", vì `e7-cto/RUNLOG.md` không ghi giờ ghim (chỉ có phát hiện 10:37 UTC); sửa tương ứng ở `v07-number-list.md` A16. (2) `results/g-mutation/RUNLOG.md` dòng 58: CI G-3Δ [−4,7; +7,4] → [−5,4; +8,8] (kèm ghi chú bản đầu), theo `analysis/v43f-rerun.md:237`. (3) `facts.json`: thêm 17 mục số v0.7 (G-3Δ CI, E7, E8, B-14 bước 2, E5′, E6, đường găng P, trục 2 (b), Nghị định 356/2025) và dời ngoại lệ `c1c8-single-labeller` từ dòng 576 sang 667 (dòng của `paper.md` đổi vì chèn v0.7). (4) `preregistration.md` §9: chèn dòng sai lệch tham chiếu pháp lý Nghị định 356/2025 (S1 soạn) sau dòng sai lệch của S2, trước §10; không sửa chữ nào ở trên.
+- **Kiểm tra:** `consistency-check.mjs` đạt 52 tệp; `npm run typecheck` exit 0; `npm test` 458/461 đạt, 3 bỏ qua, 0 lỗi.
+
 ## Vòng 4, gói 13 (T-20261112-235700-08d, BRIEF-19, 13/11/2026): thẩm định G, P, E4, E5′, E6 và bản chốt E7/E8
 
 Không gọi LLM, không sửa `bench/`, `src/`. Không dùng điểm của B-14 bước 2, E7, E8. Chi tiết: `context/v43f-review-2026-11-12.md`.

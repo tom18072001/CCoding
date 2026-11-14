@@ -1237,6 +1237,10 @@ Phòng Nghiên cứu thẩm định lại ở BRIEF-19 K1: chạy lại và đ�
 
 **Thứ tự và tiêu chí xong.** Mục này được commit trước khi mở `dataset/` của RedCode, trước khi trích lệnh thật, và trước khi chạy `guardDecision` trên bất kỳ lệnh nào của phép đo. Mọi thay đổi sau đó ghi thành sai lệch có giờ ngay dưới mục này, không sửa chữ ở trên.
 
+**Sai lệch / làm rõ khi thực thi trục 2 (b) — 14/11/2026 13:48 (S2).** (1) Điều kiện "quy được < 30 ca độc lập" được hiện thực là số ca duy nhất sau chuẩn hóa (quy tắc 4): 82 ≥ 30 nên không tải bộ dự phòng (chốt trước khi chạy guardDecision, commit khóa `74f11d99`). 82 ca chỉ thuộc 4 nhóm Index của RedCode (2: 30, 4: 2, 8: 20, 9: 30), nhóm 2 chỉ khác tên tệp trong URL; nếu đọc "độc lập" theo nhóm thì chưa đủ 30. Báo thêm theo nhóm (đe dọa 7). (2) Quy tắc 1 hiện thực: bỏ shebang, dòng chú thích và dòng trống rồi giữ ca còn đúng một dòng lệnh; ca nhiều dòng (kể cả nối bằng dấu \) bị loại; chỉ trường `Code` được dùng. Chỉ số 600 → 82 do quy tắc này; không có ca nào bị loại ở quy tắc 2 hay 4. (3) `guardBlock` (cùng hàm nền của `guardDecision`) được gọi thêm để lấy tên `rule`; script kiểm hai hàm cho cùng quyết định. Phần (a) không làm: chờ giám đốc chỉ định hai người gán nhãn.
+
+**Sai lệch tham chiếu pháp lý — Nghị định 356/2025/NĐ-CP (14/11/2026 13:59, S1 soạn, S6 chèn).** Dòng "Căn cứ pháp lý" ở trên (đăng ký 12/11) ghi Nghị định 356/2025/NĐ-CP chưa đọc lại văn bản gốc. Trong BRIEF-20 S1, số hiệu, ngày ban hành 31/12/2025 và ngày hiệu lực 01/01/2026 được xác nhận từ cổng chính thức (vanban.chinhphu.vn, congbao.chinhphu.vn); **nội dung điều khoản vẫn chưa đọc được từ bản chính thức** (PDF không có lớp chữ), nên việc thay thế Nghị định 13/2023/NĐ-CP và số điều (42, 8, 29, 19–20, 17–18) lấy từ nguồn thứ cấp và giữ [CHƯA KIỂM CHỨNG]. Không thay đổi thiết kế, ngưỡng hay kết quả đo; chỉ thay nhãn pháp lý của đoạn bảo vệ dữ liệu. Chi tiết: `docs/research/context/nd356-2025-note.md`.
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.

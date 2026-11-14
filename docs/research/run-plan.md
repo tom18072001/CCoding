@@ -1,6 +1,7 @@
 # Kế hoạch chạy bộ đo vs-claude theo cửa sổ hạn mức 5 giờ (2/11 → 5/11/2026)
 
 > Hạng mục S2 (R7) · data-scientist · phân loại dữ liệu: internal. Chỉ đọc mã và `results/`; chưa chạy lượt LLM nào. Mọi con số truy được về tệp hoặc lệnh ở §7 và Phụ lục A.
+> Cập nhật BRIEF-20 K3 (T-20261114-133920-30b S4, @research-lead, 14/11/2026): thêm dòng cuối của Tóm tắt, ghi chú ở §5.4 và §5.4.4, **§5.4.5** (đợt đã đóng, kèm ngày và commit đọc bằng `git log`), **§5.4.6** (đợt còn mở) và **§9 KPI**. Không đổi lệnh, N hay quy tắc nào của các mục cũ; §1–§5.3 giữ nguyên làm hồ sơ kế hoạch 2/11–5/11. Không chạy benchmark, không gọi `claude -p`.
 
 ## Tóm tắt
 
@@ -11,6 +12,7 @@
 - **Bốn cảnh báo vận hành** (đọc §3.0 và §5.0 trước khi chạy): (1) lượt hỏng vì hạn mức vẫn bị `run.mjs` coi là "đã xong" và bị bỏ qua khi chạy lại; (2) `analyze.mjs` tính cả lượt hỏng với điểm 0; (3) 4 bài `a1,l1,l2,r1` lỗi ENOENT cho mọi arm; (4) `pairwise.mjs` bỏ qua cặp mới nếu `pairwise.jsonl` đã có `task#rep` đó.
 - **Đợt 3e (sau D9, §5.4) — chỉ chạy khi giám đốc đã duyệt:** E1–E3 chạy trên cloud trước 5/11 14:59, gồm 34 lượt `run.mjs` và 7–8 lượt `claude -p`, ≈ 22 USD, ≈ 2,5 giờ máy. E4–E6 chạy local bằng hạn mức gói, ≈ 139–181 lượt, ≈ 128–149 USD, ≈ 12–13,9 giờ máy. Các số này cộng từ bảng BRIEF-14, quy giá Sonnet. E2 chỉ chạy khi §9 `V4-3e-*` đã commit; E4 chỉ chạy khi N đã chốt bằng công thức §9.
 - **Thứ tự còn lại của đợt 3e (cập nhật 4/11/2026, BRIEF-18 K4):** E4 → E6 → E5′ → B-14 bước 2. E5 không chạy, thay bằng E5′. Mỗi bước có sổ chạy và điều kiện bắt đầu ở §5.4.4.
+- **Trạng thái 14/11/2026 (BRIEF-20 K3):** E4, E6, E5′ đóng ngày 12/11 (`f9a5887`); B-14 bước 2 đóng ngày 13/11 (`d312b76`, `stablePrefix` không phân biệt được, giữ tắt); E7 và E8 đóng ngày 13/11 (`80f7e94`); trục 2 phần (b) đóng ngày 14/11 (khóa danh sách `74f11d9`, kết quả `6dac52c`). Mỗi đợt đóng đều có `report.md` (§5.4.5). Đợt còn mở và điều kiện mở ở §5.4.6: trục 2 phần (a) chờ giám đốc chỉ định hai người gán nhãn; tái lập P trên máy giám đốc; đo lại CTO Opus với trần lượt cao hơn (chưa đăng ký); B-14 ở mức 10 % (≈ 276 lượt, không xếp lịch). KPI của chương trình đo theo khung KPI v2: §9.
 
 ## Tệp đã lưu
 
@@ -334,6 +336,7 @@ done
 
 > Hạng mục S3 của BRIEF-14 (vòng 4, gói 8) · research-lead · phân loại dữ liệu: Nội bộ. Đồng bộ lại ở vòng 4 gói 9 (BRIEF-15, T-20261103-224501-4e4) theo bảng quyết định đầu mục §9 gói 8. Mục này là **kế hoạch vận hành**: chép lệnh từ `bench/vs-claude/RUNBOOK-cloud-session.md` Bước 3e và lệnh phân tích cổng đã chốt cho `docs/research/analysis/gates-pairs.mjs`. Giả thuyết, thước đo, phép kiểm, quy tắc dừng và quy tắc loại nằm ở `preregistration.md` §9, mục "Đăng ký trước vòng 4 gói 8: đợt đo 3e (ghi 3/11/2026, trước lượt đầu tiên; …)", dòng `V4-3e-E1` … `V4-3e-E6`. Khi §9 và mục này lệch nhau thì theo §9. Số USD và giờ máy dưới đây là ước lượng của người điều phối (BRIEF-14), không phải ngưỡng; riêng **trần 15 giờ của E4** là quy tắc dừng của §9.
 > Cập nhật vòng 4 gói 12 (BRIEF-18 K4, T-20261104-135425-669 S4, @research-lead, 4/11/2026): thêm §5.4.4, thứ tự còn lại E4 → E6 → E5′ → B-14 bước 2, kèm sổ chạy và điều kiện bắt đầu mỗi bước. E5 ở bảng §5.4.3 không chạy, thay bằng E5′. Không đổi lệnh, N hay quy tắc nào của E4, E6.
+> Cập nhật BRIEF-20 K3 (14/11/2026): bốn bước của §5.4.4 đã xong, cùng E7, E8 và trục 2 phần (b); bảng đóng đợt ở §5.4.5, đợt còn mở ở §5.4.6. Các mục §5.4.1–§5.4.4 giữ nguyên làm hồ sơ kế hoạch.
 
 **Điều kiện trước khi chạy** (RUNBOOK 3e):
 1. D9b đã gộp (8 test hook Linux xanh).
@@ -492,6 +495,42 @@ Nguồn thứ tự: giám đốc duyệt lúc 12:50 ngày 4/11/2026, "Thứ tự
 
 Hệ quả cho lịch máy: nếu (7) chưa đạt khi E5′ xong thì máy dừng sau E5′, không chạy B-14 bước 2, cũng không chạy bù phần khác vào chỗ trống. Thứ tự E4 → E6 → E5′ không phụ thuộc (7).
 
+**Cập nhật 14/11/2026 (BRIEF-20 K3).** Cột "Trạng thái lúc ghi" ở bảng trên là trạng thái ngày 4/11, giữ làm lịch sử. Cả bốn bước đã xong: E4, E6, E5′ có báo cáo ở commit `f9a5887` (12/11/2026); B-14 bước 2 chạy 5/11–12/11 và có báo cáo ở `d312b76` (13/11/2026). Tiền điều kiện (7) của B-14 đã đạt trước khối 1: ba tệp test lệnh ác ý 23/23 đạt trên commit ghim (`results/b14-step2/RUNLOG.md:53`). Chi tiết ở §5.4.5.
+
+#### 5.4.5 Đợt đã đóng (cập nhật 14/11/2026, BRIEF-20 K3)
+
+Quy tắc của bảng: một đợt chỉ ghi **đã đóng** khi có `report.md` (hoặc báo cáo cùng thư mục) đã commit; ngày và commit đọc bằng `git log -1 --format='%h %ci' <hash>` hoặc `git log --diff-filter=A -- <report>`. Số trong cột "Kết quả chính" chép từ báo cáo, không tính lại. Đường dẫn `results/…` là `bench/vs-claude/results/…`.
+
+| Đợt | Đăng ký (§9) | Báo cáo | Ngày đóng, commit | Kết quả chính (chép từ báo cáo) | Sai lệch / giới hạn cần nhắc khi trích |
+|---|---|---|---|---|---|
+| **G** (cổng `npm test` trên lỗi cài máy) | `V4-3f-G` | `results/g-mutation/report.md`, `RUNLOG.md` | 4/11/2026, `5ca04f4` (kết quả); thẩm định lại ở BRIEF-19 | G-3: 1 903/2 097 = 90,7 % [84,3; 95,9]. G-3Δ dùng CI sau BRIEF-19 S1: [−5,4; 8,8] (`docs/research/analysis/v43f-rerun.md:237`) | `RUNLOG.md` của G còn ghi CI cũ; khi trích dùng CI mới (S3, `paper/v07-axes-threats-draft.md`) |
+| **E4** (B-12, B-16) | `V4-3e-E4` | `results/gates-main/report-e4.md` | 12/11/2026, `f9a5887` | Recall b02, cto: chưa ước lượng được (0 lượt dương thật); b10 1/64. B-16 H-O1: chưa ước lượng được | Lượt sạch n = 65 < 72: không tuyên bố "chặn nhầm ≤ 5 %" |
+| **E6** (H6) | `V4-3e-E6` | `results/h6-3e/report.md`, `report-h6-sensitivity.md` | 12/11/2026, `f9a5887` | Xem báo cáo; §9 A1–A5 đã thẩm định ở BRIEF-19 | Không chép số H6 vào tệp này |
+| **E5′** (B-15) | `V4-3e-E5′` | `results/b15f-main/report.md` | 12/11/2026, `f9a5887` | B1F/B0F: token R̂ 0,722, CI 90 % [0,668; 0,790]; thời gian 0,717 [0,667; 0,779]; điểm không phân biệt được | 2 bài, làn đầy đủ ép; chưa đổi mặc định |
+| **B-14 bước 2** | "Đăng ký trước bước 2 của B-14", `V4-3e-K3` (c) | `results/b14-step2/report.md`, `analysis.json` | 13/11/2026 10:38 +07, `d312b76` | R̂ 0,999 [0,886; 1,127], p 0,983: **không phân biệt được**; power ở 10 % ≈ 0,38; trả lời ở 10 % cần ≈ 276 lượt. `stablePrefix` giữ tắt | Cách gom dòng sửa sau khi đã thấy bản đầu; cả hai bản cùng phán quyết (§9 "Sai lệch phân tích bước 2 của B-14") |
+| **E7** (CTO nghiệm thu trên lỗi lọt cổng) | "Bản chốt E7 và E8" + điều kiện đọc BRIEF-19 K3 | `results/e7-cto/report.md`, `RUNLOG.md`, `label-trials.jsonl` | 13/11/2026 23:50 +07, `80f7e94` (chạy 13/11, bản ghim `909abb6`) | Recall R1/R2/R3 98,4/85,9/95,3 %; chặn nhầm 42,2/6,3/46,9 %. Chính R1 so với R3: 3 so với 1, McNemar p 0,625, **p chỉ mô tả** (4 cặp bất đồng < 10) | **16 cặp (R1 8, R2 8) được phân loại lại thành lỗi hạ tầng và chạy lại sau khi đã thấy kết quả chính**; ba cách tính cùng cách đọc. Lỗi 403 chưa rõ nguyên nhân; trần 6 lượt bất lợi cho Opus |
+| **E8** (song song có worktree) | "Bản chốt E7 và E8" + điều kiện 4–6 của K3 | `results/e8-parallel/report.md`, `RUNLOG.md`, `extract-*.json` | 13/11/2026 23:50 +07, `80f7e94` (chạy 13/11, bản ghim `970f2be`) | `wallSecTask` B6w4/B6w1 0,520 [0,488; 0,552], p ≤ 0,0001; token 1,008 [0,942; 1,075]; chạy chồng 17/18 và 0/18; gộp 1 tin xung đột trên 70 lần gộp | Server A/B lẫn với arm; σ kế hoạch lấy từ arm một agent; so với A0 chỉ `l1-modules` nhanh hơn agent đơn |
+| **Trục 2 phần (b)** (guardDecision trên RedCode-Exec) | "Đăng ký trước trục 2", phần (b) | `results/axis2-guard/report.md`, `RUNLOG.md`, `results.json` | 14/11/2026: khóa danh sách `74f11d9` (13:46 +07) trước kết quả `6dac52c` (13:50 +07) | n = 82; `git-read` 82/82 [95,6; 100] %; `full` 30/82 = 36,6 % [26,2; 48,0] % | [Mô tả]: 4 nhóm kỹ thuật; bộ dự phòng không dùng nên chặn nhầm trên ca vô hại không đo; phần (a) chưa đo |
+
+**Không ghi "đã đóng" vì thiếu `report.md`:**
+- **P chạy lại sau BRIEF-19** (13/11/2026, `b3485bb`): số tổng hợp chỉ nằm trong `results/p-parallel/RUNLOG.md` (mục "Chạy lại bằng `p-analyze.mjs` sau BRIEF-19"), không có `report.md` riêng. P-1/P-2/P-3 trùng bảng cũ; đường găng 771 so với 717 phút. Ghi là **"có số ở RUNLOG"**, không ghi "xong".
+- **E1–E3** (cloud) không thuộc phạm vi cập nhật này; trạng thái theo RUNLOG của `b14-diag`, `gates-pilot`, `large-pilot`, chưa đối chiếu lại ở gói này.
+
+#### 5.4.6 Đợt còn mở (cập nhật 14/11/2026, BRIEF-20 K3)
+
+Không đợt nào dưới đây được chạy trong gói BRIEF-20. Thứ tự ưu tiên theo mức bằng chứng ở `improvement-backlog.md` §0.1 (b).
+
+| Đợt | Trạng thái | Điều kiện mở | Ai quyết | Nguồn |
+|---|---|---|---|---|
+| **Trục 2 phần (a)**: chặn nhầm trên lệnh thật | Chưa đo. **Chặn nhầm trên lệnh thật chưa đo, chờ giám đốc chỉ định hai người gán nhãn** | Hai người gán nhãn được chỉ định; lệnh thật che trước khi vào repo (dữ liệu Nội bộ); mốc n = 72 cho cận trên < 5 % khi 0 chặn nhầm đã kiểm bằng script | Giám đốc | `preregistration.md` §9 "Đăng ký trước trục 2" (a); `results/axis2-guard/report.md:5`, `:44` |
+| **Tái lập P trên máy giám đốc** | Chưa giao | Ghi sha256 `p-extract.mjs`/`p-analyze.mjs` ở commit đã ghim vào RUNLOG **trước** khi chạy (sửa sai lệch P-b); tệp từng lượt vẫn không vào repo | Giám đốc (máy và người chạy) | `results/p-parallel/RUNLOG.md:42-45` |
+| **Đo lại CTO Opus (R2) với trần lượt cao hơn** | Chưa đăng ký | Đăng ký §9 trước lượt đầu; BRIEF-D15 K1 đã gộp (lỗi hạ tầng không bị ghi thành "không đọc được"); `authSource` được ghi ở mọi arm; giám đốc duyệt chi phí Opus | Phòng Nghiên cứu soạn, giám đốc duyệt | `results/e7-cto/report.md` §5, §7; `improvement-backlog.md` §0.1 (b) hạng 7 |
+| **B-14 ở mức 10 %** | Không xếp lịch | ≈ 46 lượt mỗi ô, tổng ≈ 276 lượt; chỉ mở nếu giám đốc cần câu trả lời ở mức 10 % | Giám đốc | `results/b14-step2/report.md` §2, §6 |
+| **Nhãn người (bộ nhãn vàng 60 mục)** | Chưa thấy kết quả trong repo: `analysis/agreement.md:10` ghi "chưa có nhãn nên chưa có κ hay Accuracy" | Giám đốc gán `gold-sheet.csv`, rồi chạy `agreement.mjs --gold-score` | Giám đốc | §5.4.3, mục "Nhãn người" |
+| **E5 (bản gốc)** | Hủy, thay bằng E5′ (đã đóng) | — | — | §5.4.3, ghi chú 4/11 |
+
+**Điều kiện chung cho mọi đợt mới** (thêm 14/11/2026, từ sai lệch đường xác thực ở §9 "Sai lệch thực thi E7/E8 …"): (1) mọi arm ghi `authSource`, và kịch bản dừng nếu có lượt không dùng phiên đăng nhập, như E7/E8 đã làm (`results/e8-parallel/RUNLOG.md`). Harness ghi trường này từ `7ff4b9c`; runtime CCoding chưa ghi (tìm `authSource` trong `src/` ngày 14/11 cho 0 kết quả), nên với arm CCoding cần Phòng Dev bổ sung trước. (2) BRIEF-D15 K1 đã gộp trước mọi đợt có bước nghiệm thu chạy qua runtime CCoding. (3) Danh sách ca, script phân tích và sha256 commit trước lượt đầu, giữ nguyên commit khi gộp (như trục 2 phần (b): `74f11d9` trước `6dac52c`).
+
 ---
 
 ## 6. Gộp với harness cũ (`harness/`, C1–C9)
@@ -553,6 +592,29 @@ Chưa chạy được: dry-run của lệnh Nhánh 2 (bài T5/N4 và arm `FL` ch
 | R7 | Nhiệm vụ CCoding còn chạy sau khi Ctrl-C `run.mjs` | tiêu hạn mức ngoài số đo | hủy nhiệm vụ đang chạy qua `POST /api/tasks/<id>/cancel` (`lib/ccoding.mjs:36` dùng được endpoint này; chưa kiểm khi dừng ngoài) |
 | R8 | `pairwise` và `--judge` dùng Opus: tốn hạn mức, và giám khảo LLM chấm sản phẩm của LLM | sai lệch/tốn | số liệu chi phí là giả định (30k, 85k); xem S1 |
 
+## 9. KPI của chương trình đo (thêm 14/11/2026, BRIEF-20 K3)
+
+**Mẫu dùng và giả định.** Đề bài yêu cầu "KPI theo mẫu của giám đốc". Tôi tìm chuỗi "KPI" trong `docs/research/BRIEF-10.md`, `BRIEF-11.md` và `publication-plan.md` (14/11/2026): `BRIEF-10.md:60` và `BRIEF-11.md:31` chỉ nhắc "KPI v2" của `main`; `publication-plan.md` không có. **Không thấy mẫu KPI riêng cho chương trình nghiên cứu.** **Giả định:** "mẫu của giám đốc" là KPI v2 (`docs/KPI.md`, mục "Cách chấm (v2)"), gồm sáu nhóm Chất lượng 25 %, Kết quả thật 20 %, Trung thực 15 %, Hiệu quả 15 %, Tin cậy 15 %, Tuân thủ 10 %, và ba quy tắc chung (co điểm theo lượng bằng chứng; thiếu dữ liệu thì không được điểm A; lỗi hạ tầng không trừ điểm agent). Bảng dưới chỉ dùng **sáu nhóm làm khung** cho đợt đo. Tôi **không** quy ra điểm 0–100: KPI v2 chấm agent theo nhiệm vụ, chưa có công thức nào được duyệt cho đợt đo, nên tự đặt thang là bịa số. Giám đốc xác nhận hoặc đổi mẫu; khi đó sửa mục này.
+
+**Phạm vi:** tám đợt đã đóng ở §5.4.5 (G, E4, E6, E5′, B-14 bước 2, E7, E8, trục 2 phần (b)) và lần chạy lại P. Cột "Mục tiêu" là **đề xuất của trưởng phòng, chờ giám đốc duyệt**, không phải ngưỡng đã khóa.
+
+| Nhóm KPI v2 (trọng số) | Chỉ số cho đợt đo | Giá trị 14/11/2026 | Nguồn | Mục tiêu đề xuất |
+|---|---|---|---|---|
+| **Kết quả thật** (20 %) | (a) Đợt đóng có báo cáo và sổ chạy đã commit | 8/8 đợt ở §5.4.5. P chạy lại có số ở RUNLOG nhưng không có `report.md`, nên không tính là đã đóng | §5.4.5 | 100 % đợt ghi "đã đóng" có `report.md` |
+| | (b) Ba lệnh kiểm tra của dự án sau gói | Baseline: 3/3 exit 0. Sau sửa: xem báo cáo bàn giao S4 | Mục "Lệnh kiểm tra của dự án" của nhiệm vụ | 3/3 exit 0 |
+| **Trung thực** (15 %) | (a) Phép kiểm có < 10 cặp bất đồng mà p được viết như kết luận | 0 trong báo cáo: E7 ghi "p chỉ mô tả" (`results/e7-cto/report.md` §2) | `report.md` của E7 | 0 |
+| | (b) Phán quyết "không phân biệt được" viết thành "không có hiệu ứng" | 0 trong báo cáo B-14 (`report.md` §2 nói rõ CI tương thích hai phía) | `results/b14-step2/report.md` | 0; @peer-reviewer kiểm ở K4 |
+| | (c) Số trong backlog/run-plan có tệp nguồn | Mọi số mới ở `improvement-backlog.md` §0.1 và §5.4.5 có tệp nguồn; chưa có script kiểm riêng | Hai tệp này; S6 đối chiếu với `facts.json` | 100 %; `consistency-check` đạt |
+| **Chất lượng** (25 %) | Quyết định phân tích hoặc phân loại đưa ra **sau khi** đã thấy dữ liệu | 3 sự kiện: E7 (16 cặp phân loại lại rồi chạy lại), B-14 (sửa cách gom dòng), P-b (sha256 script ghi sau lần trích). E7 và B-14 có độ nhạy cho cùng cách đọc; P-b được chạy lại 13/11 cho số trùng. Trục 2 (b) và E8: 0 | `results/e7-cto/report.md` §2, §7; `results/b14-step2/report.md` §4; `results/p-parallel/RUNLOG.md:42-44` | 0 sự kiện không có dòng §9 và phân tích độ nhạy |
+| **Hiệu quả** (15 %) | (a) Token của gói so với ngân sách | Ngân sách gói BRIEF-20: 8M token. Số dùng thật chưa đọc được: cần `node dist/cli.js kpi --task <id> --json` sau khi nhiệm vụ xong; gói này không chạy | `docs/KPI.md` "Dùng nhanh"; BRIEF-20 | ≤ ngân sách gói |
+| | (b) Chi phí đo trên mỗi đợt | E7: USD theo arm R1/R2/R3 = 11,84 / 31,34 / 10,06. Các đợt khác không báo USD trong báo cáo | `results/e7-cto/report.md` §2 | Báo USD hoặc token có trọng số trong mọi `report.md` sau |
+| **Tin cậy** (15 %) | Lượt hỏng hạ tầng phải chạy lại | B-14: 88 dòng `infra` (tắt 75, bật 13) và 2 dòng `failed`; E7: 16 cặp lỗi xác thực 403 chạy lại muộn 6–7 giờ; E8: 1 lượt gặp hạn mức, chạy lại | `results/b14-step2/report.md` §4; `results/e7-cto/report.md` §5, §7; `results/e8-parallel/RUNLOG.md` | 0 lượt hạ tầng bị ghi thành kết quả (cần BRIEF-D15 K1) |
+| **Tuân thủ** (10 %) | (a) Danh sách ca, script hoặc mốc khóa commit trước dữ liệu | Có ở B-14 (mốc `8941103`, hash script `c6fd35f`), E7/E8 (bản chốt §9), trục 2 (b) (`74f11d9` trước `6dac52c`). Không có ở P (P-b) | §5.4.5; `results/p-parallel/RUNLOG.md` | 100 % đợt mới |
+| | (b) `authSource` ghi ở mọi arm | E7/E8: có cho arm `claude -p`. Runtime CCoding: chưa ghi. Các đợt trước 13/11: không có | §5.4.6 "Điều kiện chung" | 100 % arm, kể cả arm CCoding |
+| | (c) Dữ liệu Nội bộ: tệp từng lượt của P, lệnh thật chưa che không vào repo | 0 trường hợp được biết | `results/p-parallel/RUNLOG.md:5`; `results/axis2-guard/report.md` | 0 |
+
+**KPI của phòng (KPI v2 trên agent).** Số cũ ngày 2/11 (Phòng 68 điểm trong 7 ngày, 82 điểm cho hai nhiệm vụ 2/11; `context/kpi-research-2026-11-02.md:15`) tính theo trọng số v1. Theo `context/merge-main-2026-11-03.md:57`, không so trực tiếp KPI trước và sau khi gộp v2. Điểm v2 của gói này lấy sau khi nhiệm vụ xong; gói này chưa có số đó.
+
 ## Giới hạn
 
 - **Không có số đo cho A1, A2, B1–B5, FL ngoài t1–t5, và mọi bài không phải coding**; ước lượng chúng là giả định (§1.2). Mọi σ cho H3, H4, H9, H10 là giả định.
@@ -560,6 +622,7 @@ Chưa chạy được: dry-run của lệnh Nhánh 2 (bài T5/N4 và arm `FL` ch
 - B0 hiện tại chưa đo; B0 cũ (14e2ec6) có thể tốn khác.
 - Không chạy lượt LLM, không chạy pilot; chưa kiểm `dist/cli.js serve` trong worktree này.
 - Kết quả âm tính báo trước: H8, H9, H10, H7 (Nhánh 2) và B-02 thống kê **không đạt trước 5/11** theo thiết kế; B-01 trên FL dự đoán **không tương đương** theo C7+C9.
+- **(14/11/2026)** §5.4.5–§9 chép số từ báo cáo của từng đợt, không mở `runs.jsonl` và không tính lại. Khung KPI ở §9 dựa trên giả định về mẫu của giám đốc (đã nêu ở §9).
 
 ## Phụ lục A. Mô hình chi phí (tái lập §1.3, §3)
 
