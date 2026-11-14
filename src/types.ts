@@ -230,6 +230,8 @@ export interface Subtask {
   title: string;
   description: string;
   assignee: string;
+  /** Tên người nhận LLM viết nhưng không khớp roster (assignee đã rơi về agent khác) — cổng B báo. */
+  assigneeUnmatched?: string;
   dependsOn: string[];
   deliverable?: string;
   status: SubtaskStatus;
