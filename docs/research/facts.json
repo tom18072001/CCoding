@@ -1061,6 +1061,118 @@
       "pattern": "Luật số (91/2025/QH15), ban hành 26/06/2025, có hiệu lực từ 01/01/2026",
       "files": ["paper/paper.md"],
       "exceptions": []
+    },
+    {
+      "id": "axis2pf-full-after",
+      "value": "82/82 = 100,0 %",
+      "reason": "v0.7.2 (BRIEF-23, 14/11/2026): bench/vs-claude/results/axis2-guard-postfix/report.md (bảng chặn đúng theo tầng, sau vá; hồi quy sau vá)",
+      "pattern": "`full`, tổng \\| 30/82 = 36,6 % \\[26,2; 48,0\\] \\| (82/82 = 100,0 %)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "axis2pf-outside-root-write",
+      "value": "52/82 = 63,4 %",
+      "reason": "v0.7.2: axis2-guard-postfix/report.md (theo rule, full, outside-root-write, sau vá)",
+      "pattern": "`outside-root-write` \\| 0 \\| (52/82 = 63,4 %)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "axis2pf-ext-n",
+      "value": "15",
+      "reason": "v0.7.2: axis2-guard-postfix/report.md (bộ ngoài, n đo = 15, sau quy ca 1–7; results.json)",
+      "pattern": "còn \\*\\*(15) ca đo\\*\\*",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "axis2pf-ext-tp-full-before",
+      "value": "2/6 = 33,3 %",
+      "reason": "v0.7.2: axis2-guard-postfix/report.md (bộ ngoài [Khám phá], chặn đúng full, trước vá)",
+      "pattern": "Chặn đúng \\(n = 6\\) \\| `full` \\| (2/6 = 33,3 %)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "axis2pf-ext-tp-full-after",
+      "value": "3/6 = 50,0 %",
+      "reason": "v0.7.2: axis2-guard-postfix/report.md (bộ ngoài [Khám phá], chặn đúng full, sau vá)",
+      "pattern": "Chặn đúng \\(n = 6\\) \\| `full` \\| 2/6 = 33,3 % \\[4,3; 77,7\\] \\| (3/6 = 50,0 %)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "axis2pf-ext-fp-full",
+      "value": "1/7 = 14,3 %",
+      "reason": "v0.7.2: axis2-guard-postfix/report.md (bộ ngoài [Khám phá], chặn nhầm full; phép đo chặn nhầm đầu tiên của trục 2)",
+      "pattern": "\\*\\*Chặn nhầm\\*\\* \\(n = 7\\) \\| `full` \\| (1/7 = 14,3 %)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "axis2pf-ext-fp-gitread",
+      "value": "6/7 = 85,7 %",
+      "reason": "v0.7.2: axis2-guard-postfix/report.md (bộ ngoài [Khám phá], chặn nhầm git-read)",
+      "pattern": "\\*\\*Chặn nhầm\\*\\* \\(ca `approved`, n = 7\\) \\| `git-read` \\| (6/7 = 85,7 %)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7casc-recall",
+      "value": "55/64",
+      "reason": "v0.7.2 (BRIEF-23): analysis/e7-cascade.md Bảng 1 (cascade recall mục lỗi) [Khám phá]",
+      "pattern": "Cascade \\(R1 chấm mọi mục[^:]*: recall mục lỗi (55/64) = 85,9 %",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7casc-fp",
+      "value": "3/64",
+      "reason": "v0.7.2: analysis/e7-cascade.md Bảng 1 (cascade chặn nhầm) [Khám phá]",
+      "pattern": "chặn nhầm (3/64) = 4,7 % \\[1,0; 13,1\\]",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7casc-cost-cascade",
+      "value": "33,78",
+      "reason": "v0.7.2: analysis/e7-cascade.md Bảng 1 (USD costUsd, cascade) [Khám phá]",
+      "pattern": "\\[1,0; 13,1\\]; (33,78) USD",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7casc-cost-r2",
+      "value": "31,34",
+      "reason": "v0.7.2: analysis/e7-cascade.md Bảng 1 (USD costUsd, R2 đơn) [Khám phá]",
+      "pattern": "\\[1,7; 15,2\\]; (31,34) USD",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7casc-s1-cascade-recall",
+      "value": "60/64",
+      "reason": "v0.7.2: analysis/e7-cascade.md Bảng 2 (độ nhạy i, cascade) [Khám phá]",
+      "pattern": "độ nhạy \\(i\\)[^|]*\\| Cascade (60/64) = 93,8 %",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7casc-s1-r2-fp",
+      "value": "11/64",
+      "reason": "v0.7.2: analysis/e7-cascade.md Bảng 2 (độ nhạy i, R2 đơn chặn nhầm) [Khám phá]",
+      "pattern": "R2 đơn 61/64 = 95,3 % \\[86,9; 99,0\\] và (11/64) = 17,2 %",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7casc-s2-cost-cascade",
+      "value": "31,70",
+      "reason": "v0.7.2: analysis/e7-cascade.md Bảng 3 (độ nhạy ii, cascade USD) [Khám phá]",
+      "pattern": "Cascade 54/62 = 87,1 % \\[76,1; 94,3\\] và 3/57 = 5,3 % \\[1,1; 14,6\\], (31,70) USD",
+      "files": ["paper/paper.md"],
+      "exceptions": []
     }
   ]
 }
