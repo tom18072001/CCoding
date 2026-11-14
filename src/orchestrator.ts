@@ -34,7 +34,7 @@ import type { LogStore } from './logger.js';
 import { assignStrayIssues, blockedSubtasks, keywordRoute, newSubtask, orderJoint, parseAcceptance, parsePlan, parseReview, parseRoute, readySubtasks, skillScore } from './planner.js';
 import { historyText, selectHistory } from './history.js';
 import * as P from './prompts.js';
-import { planGate } from './plan-gate.js';
+import { planGate, planStopAttention } from './plan-gate.js';
 import type { Registry } from './registry.js';
 import { classifyError, parseRetryAt, RuntimeError, shouldFailover, toRuntimeError } from './runtimes/errors.js';
 import type { Candidate, RuntimeManager } from './runtimes/index.js';
@@ -1300,7 +1300,7 @@ export class Orchestrator {
     this.checkAbort(task);
     const round = roundsDone + 1;
     task.acceptFollowups = round; // lưu TRƯỚC khi chạy: tiếp tục sau tạm dừng không mở thêm vòng
-    const run: DeptRun = { department: last.department, status: 'pending', subtasks: [], usage: emptyUsage(), followupOf: last.department, round };
+    const run: DeptRun = { department: last.department, status: 'pending', subtasks: [], usage: emptyUsage(), followupOf: last.department, round, followupCriteria: d.inScope.map((c) => ({ name: c.name, detail: c.evidence })) };
     task.runs.push(run);
     if (task.attention?.reason === 'acceptance') task.attention = undefined;
     else if (task.attention) task.attention.detail = task.attention.detail.replace(/ · CTO chưa nghiệm thu:.*$/, '');
@@ -2619,10 +2619,10 @@ export class Orchestrator {
     const agentIds = [...registry.agents.keys()];
     // FX15: chỉ kiểm "hạng mục cần lệnh → agent có run_command" khi nhiệm vụ có người chạy lệnh được (cùng nguồn với danh sách năng lực của trưởng phòng)
     const canRun = Object.values(pctx.caps ?? {}).some((x) => /chạy lệnh/.test(x));
-    const evaluate = (oos = parsed?.outOfScope) => planGate({ brief: task.brief, planSummary: run.planSummary ?? '', subtasks: run.subtasks, outOfScope: oos, truncated, repoFiles, agentIds, agentRoles: Object.fromEntries([...registry.agents.values()].map((a) => [a.id.toLowerCase(), { role: a.role, skills: a.skills, ...(canRun ? { tools: pctx.caps?.[a.id]?.includes('chạy lệnh') ? ['run_command'] : [] } : {}) }])) });
+    const evaluate = (oos = parsed?.outOfScope) => planGate({ brief: task.brief, planSummary: run.planSummary ?? '', subtasks: run.subtasks, outOfScope: oos, truncated, ...(run.followupOf ? { followup: { criteria: (run.followupCriteria ?? []).map((c) => `${c.name}\n${c.detail}`) } } : {}), repoFiles, agentIds, agentRoles: Object.fromEntries([...registry.agents.values()].map((a) => [a.id.toLowerCase(), { role: a.role, skills: a.skills, ...(canRun ? { tools: pctx.caps?.[a.id]?.includes('chạy lệnh') ? ['run_command'] : [] } : {}) }])) });
     let truncated = !!parsed?.truncated;
     let g = evaluate();
-    if (!run.planGate?.replanned) logs.write({ level: g.blocked ? 'warn' : 'info', kind: 'gate.decision', msg: `${task.id}: cổng phủ kế hoạch ${g.blocked ? 'chặn' : 'đạt'}`, taskId: task.id, department: dept.id, data: { gate: 'b10', verdict: g.blocked ? 'block' : 'pass' } });
+    if (!run.planGate?.replanned) logs.write({ level: g.blocked ? 'warn' : 'info', kind: 'gate.decision', msg: `${task.id}: cổng phủ kế hoạch ${g.blocked ? 'chặn' : 'đạt'}`, taskId: task.id, department: dept.id, data: { gate: 'b10', verdict: g.blocked ? 'block' : 'pass', ...(g.followupScope ? { followupScope: { round: run.round, ...g.followupScope } } : {}) } });
     const record = (replanned: boolean) => {
       run.planGate = { uncovered: g.uncovered, reasons: g.reasons, rules: g.rules, ...(replanned ? { replanned: true } : {}) };
       this.save(task);
@@ -2634,7 +2634,7 @@ export class Orchestrator {
     const first = g;
     // sửa kế hoạch tối đa một lần cho mỗi lượt chạy (resume sau khi đã dừng thì dừng luôn, không đốt thêm lượt plan)
     if (!run.planGate?.replanned) {
-      logs.write({ level: 'warn', kind: 'plan.gate', msg: `${dept.short}: cổng phủ kế hoạch chặn (${g.rules.join('+')}) — ${g.reasons.join('; ')}`, taskId: task.id, department: dept.id, data: { stage: 'blocked', rules: g.rules, uncovered: g.uncovered, reasons: g.reasons, subtasks: run.subtasks.length } });
+      logs.write({ level: 'warn', kind: 'plan.gate', msg: `${dept.short}: cổng phủ kế hoạch chặn (${g.rules.join('+')}) — ${g.reasons.join('; ')}`, taskId: task.id, department: dept.id, data: { stage: 'blocked', ...(g.followupScope ? { followupScope: { round: run.round, ...g.followupScope } } : {}), rules: g.rules, uncovered: g.uncovered, reasons: g.reasons, subtasks: run.subtasks.length } });
       this.message(task, dept.id, 'system', 'system', `🚧 Cổng phủ kế hoạch chặn trước khi thực thi (quy tắc ${g.rules.join('+')}):\n${g.reasons.map((r) => `- ${r}`).join('\n')}\nYêu cầu trưởng phòng sửa kế hoạch một lần; không chạy kế hoạch dở.`);
       this.setPhase(task, run, 'plan');
       const res = await this.call(lead, 'plan', (tools) => P.replanPrompt(pctx, task.brief, run.planSummary ?? '', run.subtasks, g, tools), {
@@ -2660,8 +2660,7 @@ export class Orchestrator {
       }
     }
     // vẫn trượt → dừng, không chạy tập con
-    const reason = g.rules.includes('A') ? 'plan-coverage' : 'plan-unreadable';
-    const detail = reason === 'plan-coverage' ? `Kế hoạch ${dept.short} bỏ sót đích: ${g.uncovered.join(', ')} — không ai nhận; chưa chạy hạng mục nào` : `Kế hoạch ${dept.short} đọc dở: ${g.reasons.filter((r) => r.startsWith('B') || g.rules.includes('brief-item') && /^K\d+/.test(r)).join('; ')} — chưa chạy hạng mục nào`;
+    const { reason, detail } = planStopAttention(dept.short, g);
     task.attention = { reason, detail, at: nowIso() };
     run.planGate = { uncovered: g.uncovered, reasons: g.reasons, rules: g.rules, replanned: true };
     logs.write({ level: 'error', kind: 'plan.gate', msg: detail, taskId: task.id, department: dept.id, data: { stage: 'stopped', attention: reason, rules: g.rules, uncovered: g.uncovered, reasons: g.reasons } });
@@ -3949,6 +3948,8 @@ export class Orchestrator {
       estimated: result.estimated,
       toolCalls: result.toolCalls?.length,
       finishReason: result.finishReason,
+      stopReason: result.stopReason,
+      turnCapped: result.capped !== undefined || /chạm trần/.test(result.diag ?? ''),
       error: result.error,
     };
     if (result.runtime !== 'n/a') usage.record(rec);

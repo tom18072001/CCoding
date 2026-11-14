@@ -33,6 +33,8 @@ export interface PlanGateInput {
   /** id mọi agent có thể được nhắc trong mô tả (quy tắc B-iii). Mặc định: assignee của kế hoạch. */
   agentIds?: string[];
   /** id → role + skills (từ registry) để khớp vai của đề bài với assignee. Thiếu thì chỉ khớp theo id. */
+  /** Kế hoạch của vòng bổ sung: chỉ kiểm theo các tiêu chí của vòng (chữ tên + chi tiết), không theo toàn đề bài. */
+  followup?: { criteria: string[] };
   agentRoles?: Record<string, { role: string; skills: string[]; /** tools của agent (registry); có thì cổng kiểm hạng mục cần lệnh với agent không có run_command. */ tools?: string[] }>;
 }
 
@@ -41,6 +43,8 @@ export interface PlanGateResult {
   rules: ('A' | 'B' | 'brief-item')[];
   uncovered: string[];
   reasons: string[];
+  /** Có khi kế hoạch là của vòng bổ sung: mã K áp dụng và có bỏ rule A/brief-item không. */
+  followupScope?: { codes: string[]; skipped: boolean };
 }
 
 const SOURCE_EXT = 'js|mjs|cjs|jsx|ts|tsx|mts|cts|py|go|rs|java|kt|cs|rb|php|sh|sql|css|html|vue|svelte|c|h|cpp|hpp';
@@ -230,6 +234,27 @@ export function briefItems(brief: string): BriefItem[] {
   });
 }
 
+/** Thân (gồm dòng đầu) của từng hạng mục có mã trong đề bài, cắt cùng cách briefItems. */
+export function briefItemBodies(brief: string): Record<string, string> {
+  const lines = brief.split(/\r?\n/);
+  const out: Record<string, string> = {};
+  const seen = new Set<string>();
+  lines.forEach((ln, idx) => {
+    const m = ITEM_RE.exec(ln);
+    if (!m || /^K\d+(?![\p{L}\d])/iu.test(m[3]) || seen.has(m[1])) return;
+    seen.add(m[1]);
+    const end = Math.min(...[...lines.keys()].filter((k) => k > idx && (ITEM_RE.test(lines[k]) || HEADING_RE.test(lines[k]))), lines.length);
+    out[m[1]] = lines.slice(idx, end).join('\n');
+  });
+  return out;
+}
+
+/** Mã K của đề bài được tiêu chí của vòng bổ sung nhắc tới. */
+export function followupCodes(brief: string, criteria: string[]): string[] {
+  const text = criteria.join('\n');
+  return briefItems(brief).map((i) => i.code).filter((c) => codeRe(c).test(text));
+}
+
 const codeRe = (code: string): RegExp => new RegExp(`(?<![\\p{L}\\d])${code}(?![\\p{L}\\d])`, 'iu');
 const sortedParts = (id: string): string => id.split('-').sort().join('-');
 
@@ -247,10 +272,11 @@ function roleMatches(role: string, assignee: string, roles?: PlanGateInput['agen
 }
 
 /** Quy tắc brief-item: trả lý do cho mỗi mã hạng mục của đề bài chưa có subtask nhắc/giao đúng vai. */
-export function checkBriefItems(input: Pick<PlanGateInput, 'brief' | 'subtasks' | 'agentRoles'>): string[] {
+export function checkBriefItems(input: Pick<PlanGateInput, 'brief' | 'subtasks' | 'agentRoles'>, only?: string[]): string[] {
   const out: string[] = [];
   for (const it of briefItems(input.brief)) {
     if (it.exempt) continue;
+    if (only && !only.includes(it.code)) continue;
     const re = codeRe(it.code);
     const hit = input.subtasks.filter((s) => re.test(`${s.title}
 ${s.description}`));
@@ -261,9 +287,22 @@ ${s.description}`));
 }
 
 export function planGate(input: PlanGateInput): PlanGateResult {
-  const { uncovered } = checkPlanCoverage(input);
+  let followupScope: PlanGateResult['followupScope'];
+  let uncovered: string[] = [];
+  let items: string[] = [];
+  if (input.followup) {
+    const codes = followupCodes(input.brief, input.followup.criteria);
+    followupScope = { codes, skipped: !codes.length };
+    if (codes.length) {
+      const bodies = briefItemBodies(input.brief);
+      uncovered = checkPlanCoverage({ ...input, brief: codes.map((c) => bodies[c] ?? '').join('\n'), planSummary: '' }).uncovered;
+      items = checkBriefItems(input, codes);
+    }
+  } else {
+    uncovered = checkPlanCoverage(input).uncovered;
+    items = checkBriefItems(input);
+  }
   const readable = checkPlanReadable(input);
-  const items = checkBriefItems(input);
   const rules: ('A' | 'B' | 'brief-item')[] = [];
   const reasons: string[] = [];
   if (uncovered.length) {
@@ -278,5 +317,15 @@ export function planGate(input: PlanGateInput): PlanGateResult {
     rules.push('brief-item');
     for (const r of items) reasons.push(`brief-item: ${r}`);
   }
-  return { blocked: rules.length > 0, rules, uncovered, reasons };
+  return { blocked: rules.length > 0, rules, uncovered, reasons, ...(followupScope ? { followupScope } : {}) };
+}
+
+/** K2: loại attention + thông báo khi cổng chặn sau khi đã sửa kế hoạch. Không nhánh nào ra lý do rỗng. */
+export function planStopAttention(short: string, g: Pick<PlanGateResult, 'rules' | 'uncovered' | 'reasons'>): { reason: 'plan-coverage' | 'plan-brief-items' | 'plan-unreadable'; detail: string } {
+  const itemReasons = g.reasons.filter((r) => r.startsWith('brief-item'));
+  const bReasons = g.reasons.filter((r) => r.startsWith('B'));
+  const codes = [...new Set(itemReasons.map((r) => /^brief-item:\s*(K\d+)/.exec(r)?.[1]).filter((x): x is string => !!x))];
+  if (g.rules.includes('A')) return { reason: 'plan-coverage', detail: `Kế hoạch ${short} bỏ sót đích: ${g.uncovered.join(', ')} — không ai nhận; chưa chạy hạng mục nào` };
+  if (itemReasons.length) return { reason: 'plan-brief-items', detail: `Kế hoạch ${short} thiếu hạng mục đề bài: ${codes.join(', ') || 'xem lý do'} (${itemReasons.map((r) => r.replace(/^brief-item:\s*/, '')).join('; ')}) — chưa chạy hạng mục nào` };
+  return { reason: 'plan-unreadable', detail: `Kế hoạch ${short} đọc dở: ${(bReasons.length ? bReasons : g.reasons).join('; ') || 'không rõ lý do'} — chưa chạy hạng mục nào` };
 }

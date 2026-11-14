@@ -155,14 +155,22 @@ export interface ChainResult {
   reason?: string;
 }
 
+export interface VerifyOptions {
+  /** Bắt buộc mọi dòng có chữ ký HMAC. Mặc định: bật khi có khóa, tắt khi không có khóa. Bật mà không có khóa ⇒ lỗi. */
+  requireSigned?: boolean;
+  /** Cho phép log cũ chưa ký (chỉ kiểm hash; sau dòng ký đầu tiên vẫn bắt buộc ký). Thắng requireSigned. */
+  allowUnsigned?: boolean;
+}
+
 /** Bộ kiểm chuỗi băm theo từng dòng (dùng chung cho bản đọc một lần và bản đọc luồng). */
-function chainChecker() {
+function chainChecker(opts: VerifyOptions = {}) {
   let prev = 'genesis';
   let expectedSeq: number | undefined;
   let n = 0;
   let broken: { brokenAt: number; reason: string } | undefined;
   const key = hmacKey();
   const kid = key ? keyId(key) : undefined;
+  const required = opts.allowUnsigned ? false : (opts.requireSigned ?? !!key);
   let sawSigned = false; // đã gặp dòng có chữ ký: các dòng sau bắt buộc có ký
   return {
     line(l: string): void {
@@ -181,8 +189,10 @@ function chainChecker() {
       else if (rest.prev !== prev) broken = { brokenAt: n, reason: 'prev không khớp dòng trước' };
       else if (expectedSeq !== undefined && rest.seq !== expectedSeq) broken = { brokenAt: n, reason: 'seq không liên tục' };
       else if (crypto.createHash('sha256').update(prev).update(JSON.stringify(rest)).digest('hex').slice(0, 32) !== hash) broken = { brokenAt: n, reason: 'hash sai — nội dung đã bị sửa' };
-      else if (key && (sig !== undefined || sawSigned)) {
-        if (typeof sig !== 'string' || lineKid !== kid) broken = { brokenAt: n, reason: 'khóa khác/không có khóa' };
+      else if (required && !key) broken = { brokenAt: n, reason: 'yêu cầu chữ ký nhưng không có khóa HMAC để kiểm' };
+      else if (key && (required || sig !== undefined || sawSigned)) {
+        if (sig === undefined) broken = { brokenAt: n, reason: 'thiếu chữ ký' };
+        else if (typeof sig !== 'string' || lineKid !== kid) broken = { brokenAt: n, reason: 'khóa khác/không có khóa' };
         else if (signHash(key, hash) !== sig) broken = { brokenAt: n, reason: 'chữ ký sai' };
         else {
           sawSigned = true;
@@ -202,17 +212,17 @@ function chainChecker() {
 }
 
 /** Kiểm tra chuỗi băm của một file log. Trả về số dòng hợp lệ và vị trí lỗi đầu tiên (nếu có). Đọc cả tệp một lần — dùng cho CLI. */
-export function verifyChain(file: string): ChainResult {
+export function verifyChain(file: string, opts?: VerifyOptions): ChainResult {
   if (!fs.existsSync(file)) return { ok: true, lines: 0 };
-  const c = chainChecker();
+  const c = chainChecker(opts);
   for (const l of fs.readFileSync(file, 'utf8').split('\n')) c.line(l);
   return c.result();
 }
 
 /** Như verifyChain nhưng đọc theo luồng từng dòng: không giữ cả tệp trong bộ nhớ, không chặn server với nhật ký lớn. */
-export async function verifyChainStream(file: string): Promise<ChainResult> {
+export async function verifyChainStream(file: string, opts?: VerifyOptions): Promise<ChainResult> {
   if (!fs.existsSync(file)) return { ok: true, lines: 0 };
-  const c = chainChecker();
+  const c = chainChecker(opts);
   const rl = readline.createInterface({ input: fs.createReadStream(file, { encoding: 'utf8' }), crlfDelay: Infinity });
   for await (const l of rl) c.line(l);
   return c.result();

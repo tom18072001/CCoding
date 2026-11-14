@@ -1,5 +1,6 @@
 import { truncate } from './util/fsx.js';
 import { MAX_SUBTASKS } from './planner.js';
+import { briefItems } from './plan-gate.js';
 import type { AgentDef, ChatMessage, CheckResult, Classification, DepartmentDef, DeptRun, Phase, ProjectDef, Subtask, Task, ToolCallRecord, ToolName } from './types.js';
 
 /**
@@ -297,6 +298,18 @@ Câu trả lời cuối cùng là báo cáo bàn giao theo ĐÚNG các mục tro
 `;
 }
 
+/** K2: danh sách mã hạng mục của đề bài + vai bắt buộc, đưa vào lời nhắc lập kế hoạch (cả làn nhanh lẫn đầy đủ). */
+export function briefItemsBlock(brief: string): string {
+  const items = briefItems(brief);
+  if (!items.length) return '';
+  const lines = items.map((i) => {
+    const role = i.roles?.length ? i.roles.join(', ') : i.role;
+    const mark = i.exempt ? ' — MIỄN (không làm/chờ, không cần hạng mục)' : i.review ? ' — REVIEW: phải giao cho đúng vai review' : '';
+    return `- ${i.code}${role ? ` (vai ${role})` : ''}${mark}`;
+  });
+  return `\n- Đề bài có các hạng mục đánh mã; MỖI mã (trừ mã miễn) phải có ít nhất một hạng mục kế hoạch ghi mã ĐÚNG Ở ĐẦU \`title\` (ví dụ "K2 — …"), không đặt tiêu đề theo mã khác (C1, M1…); hạng mục review giao cho đúng vai nêu:\n${lines.join('\n')}`;
+}
+
 export function planPrompt(c: Ctx, priorContext: string | undefined, tools: ToolName[] = []): Built {
   return {
     context: header(c, 'plan'),
@@ -313,7 +326,7 @@ ${toolNote(c, tools, 'plan')}
 ## Việc của bạn (Trưởng phòng): LẬP KẾ HOẠCH
 Phân rã yêu cầu thành 1–${MAX_SUBTASKS} hạng mục rõ ràng, giao cho đúng người theo kỹ năng, quy mô tương xứng với yêu cầu. Quy tắc:
 ${c.lane === 'fast' ? FAST_LANE_PLAN : ''}
-- \`assignee\` phải là một id trong danh sách trên (không có dấu @). Hạn chế tự giao cho bản thân; người review sẽ kiểm tra ở bước sau nên không cần tạo hạng mục "review". ${REVIEWER_ITEM_EXCEPTION}${capsRule(c)}
+- \`assignee\` phải là một id trong danh sách trên (không có dấu @). Hạn chế tự giao cho bản thân; người review sẽ kiểm tra ở bước sau nên không cần tạo hạng mục "review". ${REVIEWER_ITEM_EXCEPTION}${capsRule(c)}${briefItemsBlock(c.task.brief)}
 - \`dependsOn\` chỉ trỏ tới id hạng mục khác; tối đa hóa phần chạy song song.${
         c.parallelWriters
           ? ' Hạng mục chạy lệnh (code, test, migration) CŨNG chạy song song — mỗi hạng mục một worktree con, xong thì CCoding gộp vào nhánh nhiệm vụ; chỉ đặt phụ thuộc khi hạng mục sau cần kết quả của hạng mục trước hoặc hai hạng mục sửa cùng một đoạn của cùng tệp (tránh xung đột khi gộp). Mỗi người chỉ làm một hạng mục một lúc nên muốn song song thì giao cho người khác nhau.'
@@ -339,6 +352,17 @@ export function replanPrompt(c: Ctx, brief: string, planSummary: string, subtask
         '',
       ].join('\n')
     : '';
+  const itemReasons = gate.reasons.filter((r) => r.startsWith('brief-item'));
+  const itemCodes = [...new Set(itemReasons.map((r) => /^brief-item:\s*(K\d+)/.exec(r)?.[1]).filter((x): x is string => !!x))];
+  const itemBlock = itemReasons.length
+    ? [
+        '### Hạng mục của đề bài CHƯA được kế hoạch phủ (bắt buộc xử lý)',
+        ...itemReasons.map((r) => `- ${r}`),
+        `Ghi mã hạng mục ĐÚNG Ở ĐẦU \`title\` (ví dụ "${itemCodes[0] ?? 'K1'} — …") cho mỗi mã thiếu: ${itemCodes.join(', ') || '(xem lý do trên)'}; hạng mục review phải giao cho đúng vai nêu trong lý do. Không đổi tiêu đề sang mã khác.`,
+        '',
+      ].join('\n')
+    : '';
+  const reasonsBlock = gate.reasons.length ? ['### Lý do của cổng (nguyên văn)', ...gate.reasons.map((r) => `- ${r}`), ''].join('\n') : '';
   const unreadable = gate.reasons.filter((r) => r.startsWith('B'));
   const partial = unreadable.length ? ['### Kế hoạch bị đọc dở', ...unreadable.map((r) => `- ${r}`), ''].join('\n') : '';
   const schema = PLAN_SCHEMA.replace('"subtasks": [', '"outOfScope": [{ "target": "đường/dẫn/tệp", "reason": "lý do không làm" }],\n  "subtasks": [');
@@ -351,7 +375,7 @@ ${truncate(brief, 4000)}
 ${planSummary || '(không có tóm tắt)'}
 ${planText(subtasks)}
 
-${missing}${partial}
+${reasonsBlock}${missing}${itemBlock}${partial}
 ## Nhân sự có thể giao việc
 ${rosterLines(c.roster, c.caps)}
 ${toolNote(c, tools, 'plan')}
@@ -437,10 +461,10 @@ export function planFile(planSummary: string, decisions: string, subtasks: Subta
   return `# Kế hoạch chung\n\n${planSummary}\n${decisions ? `\nQuyết định chính: ${decisions}\n` : ''}\n${planText(subtasks)}\n`;
 }
 
-/** Hướng dẫn lập kế hoạch ở làn nhanh (việc nhỏ): mục tiêu là xong NHANH HƠN một người làm một mình — nhờ chia song song. */
 /** FX2: ngoại lệ cho quy tắc "không tạo hạng mục review" — dùng chung cho cả hai làn. */
 export const REVIEWER_ITEM_EXCEPTION = 'NGOẠI LỆ: nếu đề bài giao một hạng mục có mã riêng cho vai reviewer (vd. K5 cho @qa-tester hoặc @peer-reviewer) thì PHẢI tạo hạng mục cho vai đó, kể cả ở làn nhanh.';
 
+/** Hướng dẫn lập kế hoạch ở làn nhanh (việc nhỏ): mục tiêu là xong NHANH HƠN một người làm một mình — nhờ chia song song. */
 export const FAST_LANE_PLAN = `- **LÀN NHANH (việc nhỏ)** — mục tiêu: cả nhóm xong NHANH HƠN một lập trình viên giỏi làm một mình. Chỉ đạt được khi chia việc chạy SONG SONG:
   - Chia **2–4 hạng mục ĐỘC LẬP chạy cùng lúc** (\`dependsOn\` rỗng), giao cho **người khác nhau**, cỡ gần bằng nhau (mỗi phần ~1–2 phút làm, ≤ ~20 thao tác công cụ).
   - Mỗi hạng mục **sở hữu tệp riêng** — không hai hạng mục cùng sửa một tệp (kể cả tệp test: mỗi người tự viết test cho phần mình vào tệp test riêng, vd. \`test/<phần>.test.js\`). Nếu đặc tả buộc một tệp chung (vd. tệp export lại các hàm), giao tệp đó cho MỘT hạng mục và ghi rõ hợp đồng (tên tệp, tên hàm, chữ ký, định dạng lỗi) trong mô tả của mọi hạng mục liên quan để các phần khác viết theo hợp đồng mà không phải chờ nhau.

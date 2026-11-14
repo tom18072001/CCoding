@@ -542,6 +542,29 @@ test('KPI v2 (FX8): tách truncated (cắt thật) và turnCapped; output cộng
   }
 });
 
+test('KPI v2 (D18c K4): ưu tiên turnCapped/stopReason; chỉ lùi về regex diag khi bản ghi cũ thiếu trường', () => {
+  const app = testApp();
+  try {
+    const calls = {
+      T9: [
+        // bản ghi mới: turnCapped=true, diag không cần chứa regex
+        call({ taskId: 'T9', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S1', runtime: 'claude-cli', output: 500, turns: 16, turnCapped: true, stopReason: 'tool_use', tools: [tool('read_file', 'a')], text: 'a'.repeat(50) }),
+        // bản ghi mới: turnCapped=false thắng diag có chữ "chạm trần" (không đếm)
+        call({ taskId: 'T9', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S2', runtime: 'claude-cli', output: 500, turns: 3, turnCapped: false, stopReason: 'end_turn', diag: 'chạm trần 16 lượt', tools: [tool('read_file', 'a')], text: 'b'.repeat(50) }),
+        // bản ghi cũ: không có turnCapped → lùi về regex diag
+        call({ taskId: 'T9', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S3', runtime: 'claude-cli', output: 500, turns: 16, diag: 'chạm trần 16 lượt (--max-turns của claude-cli)', tools: [tool('read_file', 'a')], text: 'c'.repeat(50) }),
+        // stopReason max_tokens ⇒ cắt thật
+        call({ taskId: 'T9', agentId: 'backend-dev', phase: 'discuss', runtime: 'api', output: 100, stopReason: 'max_tokens' }),
+      ],
+    };
+    const be = computeKpi(source(app, [task('T9')], calls)).agents.find((a) => a.agentId === 'backend-dev')!;
+    assert.equal(be.turnCapped, 2);
+    assert.equal(be.truncated, 1);
+  } finally {
+    app.cleanup();
+  }
+});
+
 test('KPI v2 (FX11): viết lại từ repo / thiết kế được miễn no-sources; tổng quan tài liệu vẫn bị báo', () => {
   const app = testApp();
   try {

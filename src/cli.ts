@@ -51,7 +51,7 @@ ${c.bold('Giao việc')}
 ${c.bold('Log & token')}
   logs [-f] [--agent id] [--dept id] [--task id|latest] [--level warn+] [-n 50]   Xem / theo dõi log
   logs ls                                   Danh sách tệp log (hệ thống, phòng ban, agent, nhiệm vụ gần nhất)
-  logs verify                               Kiểm tra chuỗi băm (log có bị sửa không)
+  logs verify [--require-signed|--allow-unsigned]  Kiểm tra chuỗi băm (log có bị sửa không); có khóa HMAC thì mặc định bắt buộc chữ ký, --allow-unsigned cho log cũ chưa ký
   logs seal                                 Niêm phong tệp log đã xoay vòng vào data/logs/seal-ledger.jsonl
   logs verify-seal                          Kiểm sổ niêm phong (exit 2 nếu tệp bị sửa/mất hoặc chuỗi sổ đứt)
   usage [--by agent|department|task|project|model|runtime|day|phase] [--task id] [--dept id] [--watch] [--json]
@@ -467,7 +467,7 @@ function cmdVerify(): void {
   walk(config.dataDir);
   let bad = 0;
   for (const f of files) {
-    const r = verifyChain(f);
+    const r = verifyChain(f, { requireSigned: process.argv.includes('--require-signed') ? true : undefined, allowUnsigned: process.argv.includes('--allow-unsigned') });
     if (!r.ok) bad++;
     console.log(`${r.ok ? c.green('✓') : c.red('✗')} ${path.relative(config.dataDir, f)} — ${r.lines} dòng${r.ok ? '' : c.red(` · lỗi ở dòng ${r.brokenAt}: ${r.reason}`)}`);
   }

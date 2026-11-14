@@ -188,6 +188,8 @@ export interface RunResult {
   errorKind?: ErrorKind;
   /** Lý do dừng của model (stop, length, tool_calls…). */
   finishReason?: string;
+  /** stop_reason nguyên văn của runtime khi có (api: stop_reason/finish_reason; claude-cli: stop_reason của sự kiện result/thông điệp cuối). */
+  stopReason?: string;
   /** Đầu ra bị cắt do chạm giới hạn max_tokens. */
   truncated?: boolean;
   turns?: number;
@@ -340,6 +342,8 @@ export interface DeptRun {
   followupOf?: string;
   /** Số thứ tự vòng bổ sung (1, 2…); run thường không có. */
   round?: number;
+  /** Tiêu chí 'in' của vòng bổ sung (cổng kế hoạch và resume đọc lại). */
+  followupCriteria?: { name: string; detail: string }[];
 }
 
 export interface TaskOptions {
@@ -505,7 +509,7 @@ export interface Task {
   /** Lệnh kiểm tra của dự án do CCoding tự chạy: trước khi sửa (baseline) và sau thực thi/sửa (latest). */
   projectChecks?: ProjectChecks;
   /** Nhiệm vụ đã chạy xong nhưng cần người xem lại (vd. review cuối chưa duyệt). */
-  attention?: { reason: 'review' | 'checks' | 'acceptance' | 'plan-coverage' | 'plan-unreadable'; detail: string; at: string };
+  attention?: { reason: 'review' | 'checks' | 'acceptance' | 'plan-coverage' | 'plan-brief-items' | 'plan-unreadable'; detail: string; at: string };
   /** Kết luận nghiệm thu của CTO sau khi các phòng tổng hợp xong (UX-4c). */
   acceptance?: Acceptance;
   createdAt: string;
@@ -590,6 +594,10 @@ export interface UsageRecord {
   estimated: boolean;
   toolCalls?: number;
   finishReason?: string;
+  /** stop_reason nguyên văn của runtime (khi runtime trả về). */
+  stopReason?: string;
+  /** Chạm trần vòng công cụ (lượt hết lượt/trần token đầu vào) — KPI ưu tiên trường này hơn regex trên diag. */
+  turnCapped?: boolean;
   error?: string;
 }
 
