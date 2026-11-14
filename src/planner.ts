@@ -22,7 +22,7 @@ interface RawSubtask {
   deliverable?: unknown;
 }
 
-const MAX_SUBTASKS = 8;
+export const MAX_SUBTASKS = 8;
 
 export function skillScore(text: string, a: AgentDef): number {
   const t = text.toLowerCase();

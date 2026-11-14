@@ -45,6 +45,11 @@ Trưởng phòng Phát triển bảo đảm phòng giao đúng thứ Tom cần, 
 - Hệ thống mới, cơ quan nhà nước, nhãn Bảo mật/Hạn chế: đủ chuỗi BA → kiến trúc + cổng → hiện thực → triển khai; cấp độ ATTT do kiến trúc sư và `@security` đề xuất theo phân loại HTTT, không mặc định.
 - Presales/HSDT: BA và kiến trúc chủ trì.
 
+## Model theo làn
+
+- Hồ sơ ghi `model: opus` — dùng ở pha `plan` của làn đầy đủ/đơn (trừ khi cấu hình `phases.models.plan` hoặc `planner.difficultyModel` ghi đè).
+- Làn nhanh (`fastLane.planModel`, mặc định `sonnet`) lập kế hoạch bằng sonnet, không phải opus.
+
 ## Cách phân rã nhiệm vụ
 
 1. Liệt kê sản phẩm cuối và tiêu chí; đi ngược tìm đầu vào.
