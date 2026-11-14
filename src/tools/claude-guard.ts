@@ -99,7 +99,7 @@ export function guardBlock(input: HookInput, cfg: GuardConfig, env: NodeJS.Proce
     const cmd = String(ti.command ?? '');
     const why = deniedReason(cmd, cfg.deny, cfg.allowGitCommit);
     if (why) return blk(name, 'deny-list', `CCoding chặn lệnh: ${why}`);
-    if (/\bgit\s+(checkout|switch|worktree|rebase|reset\s+--hard|push)\b|\bgit\s+branch\s+(-[mMdDcCf]\s+)?[^-\s]/i.test(cmd)) return blk(name, 'git-branch', 'CCoding chặn lệnh: agent không được tạo/chuyển nhánh, rebase, reset --hard hay push', 1, 'git');
+    if (/\bgit\s+(?:checkout\s+(?!--(?:\s|$))|(?:switch|worktree|rebase|reset\s+--hard|push)\b)|\bgit\s+branch\s+(-[mMdDcCf]\s+)?[^-\s]/i.test(cmd)) return blk(name, 'git-branch', 'CCoding chặn lệnh: agent không được tạo/chuyển nhánh, rebase, reset --hard hay push', 1, 'git');
     if (/(^|[\s"'\\/:])\.env(\.(?!example|sample|template)\w+)?(\s|"|'|$)/i.test(cmd)) return blk(name, 'env-file', 'CCoding chặn lệnh: không đọc/ghi tệp .env');
     if (cfg.shell === 'git-read') {
       const v = gitReadViolation(cmd);

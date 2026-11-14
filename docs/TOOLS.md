@@ -261,3 +261,64 @@ Bảng dưới là kết quả kiểm chặn nhầm độc lập, khớp `test/o
 | `Set-Content <thư mục tạm>\ccoding-out.txt x`, `$env:TEMP\out.txt` | PowerShell | Qua | Qua | `$env:TEMP` chỉ chạy trên Windows |
 
 Kết quả: không có chặn nhầm của `outside-root-write`. Lưu ý riêng: `rm -rf dist` và `Remove-Item dist -Recurse` bị `deny-list` (xóa đệ quy) chặn ở hook; đó là chính sách có chủ đích của rule khác, không thuộc phạm vi K3.
+
+## Rule `outside-root-read`, heredoc, `git checkout -b` và bảng lệnh dev qua mọi đường (D18a/S4, 14/11/2026)
+
+Nhãn dữ liệu: **Nội bộ**. Mọi ví dụ dùng host `.invalid` và đường dẫn giả; không có bí mật.
+
+### Rule mới `outside-root-read` (D10)
+
+Cùng hàm quyết định `outsideWriteDecision` (`src/tools/shell-policy.ts`) nên hook `claude-guard` và `run_command` cho cùng kết quả. Kiểu trả về giữ nguyên theo D12: `OutsideWriteViolation` thêm trường tùy chọn `kind: 'write' | 'read'`; `OutsideWriteDecision.rule` mở rộng thành `'outside-root-write' | 'outside-root-read'`. **Trường thông báo cho nơi gọi là `message`** (`CCoding chặn lệnh (<rule>): <lý do>`), kèm `rule`, `reason`, `clause`, `cmd`. `ShellRule` thêm `'outside-root-read'`; `RULE_TEXT` có mô tả tiếng Việt cho rule này.
+
+Chặn khi (nguyên tắc D10):
+1. Quét **đệ quy** nội dung thư mục hệ thống hoặc thư mục home ngoài gốc: `grep -r/-R/--recursive`, `egrep`, `fgrep`, `zgrep`, `rg`/`ag`/`ack` (đệ quy mặc định), `findstr /s`. Chỉ xét toán hạng đường dẫn, không xét mẫu tìm (toán hạng đầu khi không có `-e`/`-f`). Thư mục chương trình/tài liệu POSIX (`/usr/**`, `/lib`, `/lib64`, `/bin`, `/sbin`) vẫn được qua vì test cũ "đọc từ thư mục hệ thống" (`grep -r foo /usr/share/doc`) và không chứa cấu hình/dữ liệu người dùng; chặn `/etc`, `/var`, `/root`, `/home`, `~`, ổ đĩa/thư mục Windows ngoài gốc.
+2. Gửi **nội dung tệp** qua mạng bằng cờ đọc tệp mà tệp nằm ngoài gốc **hoặc** là tệp credential (`.aws`, `.ssh`, `.gnupg`, `.kube`, `credentials`, `id_rsa`, `shadow`, `.netrc`, `.env` thật…): `curl -d/--data/--data-binary/--json @tệp`, `-F k=@tệp`, `--data-urlencode k@tệp`, `-T/--upload-file`, `wget --post-file/--body-file`, `iwr/irm -InFile`.
+
+Cho qua: dữ liệu nội tuyến (`curl -d '{…}'`, `--data-raw`), `curl -d @tệp-trong-repo`, `grep -r … src`, `git grep`, tải về (`curl -o`) vào workspace, `.env.example`.
+
+### Bảng ca → quyết định → lý do → test
+
+| Ca | Quyết định | Lý do | Test |
+|---|---|---|---|
+| ext-005 `grep -r` quét `/etc` tìm chuỗi bí mật | **Chặn** bằng `outside-root-read` | Nguyên tắc D10 (1). Chỉ chặn khi có cờ đệ quy và toán hạng đường dẫn là thư mục hệ thống/home ngoài gốc; grep trong repo qua | `test/shell-policy-exfil.test.ts` (nhóm "grep -r…", "rg…"; cho qua: "grep -r trong repo", "grep không đệ quy…") |
+| ext-013 `wget --post-file=<tệp hệ thống>` | **Chặn** bằng `outside-root-read` | D10 (2): cờ đọc tệp gửi qua mạng, tệp ngoài gốc | cùng tệp ("wget --post-file…"; cho qua: "wget --post-file trong repo") |
+| ext-015 `curl -d @<tệp credential trong home>` | **Chặn** bằng `outside-root-read` | D10 (2): tệp credential/ngoài gốc. Lưu ý `@~/…` trước đây lọt vì `@` không phải ranh giới token của `outside-root` | cùng tệp ("curl -d @…", `-F`, `-T`, `--data-urlencode`; cho qua: "curl -d dữ liệu nội tuyến", "curl -d @tệp trong repo") |
+| ext-001 `git checkout -b <nhánh>` | **Giữ chặn — khác biệt chính sách, không phải chặn nhầm** (D11) | Agent chỉ làm trên nhánh của worktree; tạo/chuyển nhánh làm hỏng gộp nhánh của CCoding. Bộ ngoài gắn nhãn theo bối cảnh khác. Không đổi chính sách | `test/shell-policy-exfil.test.ts` ("D11…") |
+| D16b heredoc chứa `../src/…` và dòng `---` | **Chặn nhầm → đã sửa** | Xem dưới | `test/shell-policy-exfil.test.ts` (nhóm "D16b") |
+
+### D16b: heredoc chứa văn bản
+
+Phân loại: dòng `---` **không** bị chặn bởi rule nào. Dòng chứa `../src/…` bị rule `outside-root` (`outsidePathReason`, quét token `..` theo từng dòng của cả lệnh, kể cả thân heredoc) chặn. Đó là **chặn nhầm**: thân heredoc là nội dung tệp đang ghi, không phải đường dẫn được đọc/ghi. Cùng lỗi với `outside-root-write`, vì bộ tách câu coi mỗi dòng của thân là một câu lệnh.
+
+Sửa: `stripHeredocBodies` (export từ `shell-policy.ts`) bỏ thân heredoc trước khi quét ở `outsidePathReason` và `outsideWriteViolation`. Chỉ bỏ khi (a) dấu kết thúc có nháy (`<<'EOF'`, `<<"EOF"`, `<<\EOF`, `<<-'EOF'`), (b) dòng mở không chứa trình thông dịch (`sh/bash/python/node/perl/eval/xargs…`), (c) `<<` không nằm trong nháy, (d) tìm thấy dòng kết thúc. Dòng mở (gồm đích `> tệp`) và dòng kết thúc vẫn được quét. Heredoc không nháy (còn khai triển `$(…)`), heredoc cho trình thông dịch và heredoc thiếu dòng kết thúc quét như cũ. Hệ quả chưa sửa, ghi rõ: `deny-list`, `git-branch`, `env-file` vẫn quét văn bản của cả lệnh kể cả thân heredoc, nên tài liệu cần viết nguyên văn lệnh nhánh hoặc `.env` nên dùng công cụ Write, không dùng heredoc.
+
+Cùng đợt, hook `claude-guard` chặn `git checkout -- <tệp>` bằng rule `git-branch`, lệch với `run_command` (cho qua) và với gợi ý khôi phục tệp trong `workspace.ts`. Đã đồng bộ: `git checkout -- <tệp>` qua ở cả hai đường; `git checkout <ref>`, `switch`, `worktree`, `rebase`, `reset --hard`, `push` vẫn bị chặn.
+
+### Quyết định D8 và D9 (FX7)
+
+- **D8 — `runCheckCommand`:** không thêm rule `outside-root-write`/`outside-root-read`. Lệnh kiểm tra do chủ dự án đặt trong cấu hình dự án, không do agent viết; chặn ở đây chỉ làm hỏng lệnh hợp lệ của chủ dự án (ví dụ lệnh build ghi ra thư mục khác) mà không tăng an toàn.
+- **D9 — `cli-agents`:** Codex CLI chạy lệnh trong sandbox của chính nó (`workspace-write`, hoặc `read-only` khi lượt không có `allowTools`); CCoding không thấy và không chặn được từng lệnh (`toolsTracked: false`). Kimi (`KimiCliRuntime`) được kiểm lại: CCoding chỉ truyền `-p`, `--output-format`, `-m` và `extraArgs` của cấu hình, đặt `cwd` là worktree, **không có cờ sandbox hay đường ghi do CCoding điều khiển**. Không thêm rule giả cho hai runtime này; ranh giới là sandbox của từng CLI và `cwd` worktree.
+
+### Bảng lệnh dev qua mọi đường
+
+"Qua" = không bị chặn. Cột claude-guard và run_command do `test/shell-policy-exfil.test.ts` (claude-guard, shell-policy) và `test/outside-write-parity.test.ts` (run_command) kiểm; run_command chỉ chạy thật `echo`/`node -v`.
+
+| Lệnh | claude-guard | run_command | cli-agents |
+|---|---|---|---|
+| `npm test`, `npm run typecheck`, `npm run build`, `npm ci`, `npx tsc --noEmit`, `node --test …` | Qua | Qua | sandbox của CLI |
+| `git status`, `git diff`, `git log`, `git add -A`, `git commit -m …`, `git restore <tệp>` | Qua | Qua | sandbox của CLI |
+| `git checkout -- <tệp>` | Qua (đã đồng bộ ở S4) | Qua | sandbox của CLI |
+| `git checkout -b <nhánh>`, `git switch -c <nhánh>` | Chặn — **chính sách D11** | Chặn — chính sách | sandbox của CLI (không chặn được) |
+| `cat`, `ls`, `mkdir -p dist`, `cp`/`mv` trong workspace, `echo x > out.txt`, `> /dev/null` | Qua | Qua | sandbox của CLI |
+| `rm dist/a.js` (một tệp) | Qua | Qua | sandbox của CLI |
+| `rm -rf dist` | Chặn bởi `deny-list` (chính sách xóa đệ quy, ghi ở bảng K3) | Chặn bởi `deny-list` | sandbox của CLI |
+| `grep -rn … src test`, `rg … src`, `git grep` | Qua | Qua | sandbox của CLI |
+| `curl -o vendor/x.js <url>`, `wget -O vendor/y.js <url>` | Qua | Qua | sandbox của CLI |
+| `curl -s -X POST -d '{"q":1}' <url>`, `curl -d @payload.json <url>` | Qua | Qua | sandbox của CLI |
+| `cat > docs/a.md <<'EOF' … ../src/… … --- … EOF` | Qua (đã sửa ở S4) | Qua (đã sửa) | sandbox của CLI |
+
+Kết quả: 0 chặn nhầm trên bảng này, ngoại trừ `git checkout -b`/`git switch -c` (chính sách D11) và `rm -rf` (chính sách `deny-list`).
+
+### Giới hạn còn lại (không đổi tính chất của lớp này)
+
+Như mục "Chặn ghi ngoài thư mục làm việc": đây là phân tích chuỗi lệnh, không phải ranh giới bảo mật. Vẫn lọt: `find /etc -exec grep …`, `xargs`, `node -e`/`python -c` tự đọc và gửi tệp, `cat <tệp> | curl -d @-`, biến/`eval`, `Get-ChildItem -Recurse | Select-String` trên PowerShell, `curl --config`. Lớp chính là sandbox hệ điều hành (B-18).
