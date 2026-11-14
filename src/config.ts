@@ -454,7 +454,10 @@ export function loadConfig(opts: { root?: string; configFile?: string; local?: b
   // NODE_TEST_CONTEXT) để bộ test không phụ thuộc máy — 28/10 máy Tom đỏ 12/100 test chỉ vì cấu hình local.
   const skipLocal = opts.local === false || process.env.CCODING_NO_LOCAL === '1' || (!!process.env.NODE_TEST_CONTEXT && process.env.CCODING_TEST_LOCAL !== '1');
   if (!skipLocal) cfg = deepMerge(cfg, readJson(path.join(root, 'ccoding.local.json')));
-  const extra = opts.configFile ?? process.env.CCODING_CONFIG;
+  // CCODING_CONFIG (cấu hình cấp máy/văn phòng, vd. acceptFollowupRounds = 0) cũng bị bỏ qua khi chạy test, cùng lý do với
+  // ccoding.local.json; configFile truyền tường minh vẫn được dùng. Chỉ theo ngữ cảnh test, không theo CCODING_NO_LOCAL.
+  const inTest = !!process.env.NODE_TEST_CONTEXT && process.env.CCODING_TEST_LOCAL !== '1';
+  const extra = opts.configFile ?? (inTest ? undefined : process.env.CCODING_CONFIG);
   if (extra) {
     if (!fs.existsSync(path.resolve(extra))) throw new Error(`Không thấy file cấu hình ${extra} (CCODING_CONFIG)`);
     cfg = deepMerge(cfg, readJson(path.resolve(extra)));
