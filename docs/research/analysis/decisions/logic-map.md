@@ -204,7 +204,7 @@ Mỗi mục: **cái gì · tệp:dòng · mức · sửa được ở đâu**. "
 | L2 | **Đã sửa**: đề bài đòi review thì cổng không bỏ; review bị bỏ có `run.review` kèm dấu vết | `179da24b`, `8989e920` | `orch:2008-2050` (`canReview`); `orch:1671` (`gate.review`) |
 | L3 | **Sửa một phần**: `status` vẫn đặt `done` kèm `attention` khi CTO chưa đạt, nhưng nhiệm vụ `after` chờ khi nhiệm vụ trước chưa nghiệm thu | `8989e920` | `orch:1113` (`task.status`); `orch:897-903` (`unaccepted`) |
 | L4 | **Đã sửa**: lấy kết luận khi review chạm trần lượt, gọi lượt tiếp | `2579e012` | `orch:1737` (`res.capped`) |
-| L5 | **Sửa một phần**: `run_command` của runtime API đã gọi `outsideWriteDecision`; `runCheckCommand` (`workspace.ts:702`, `deniedReason`) và `cli-agents.ts` chưa gọi `outsideWriteDecision` ở mốc (đọc dòng, chưa đọc diff của `ae953e07`) | `78ad5179` | `workspace.ts:614` (`outsideWriteDecision`) |
+| L5 | **Sửa một phần**: `run_command` của runtime API đã gọi `outsideWriteDecision`; `runCheckCommand` `workspace.ts:702` (`deniedReason`) và `cli-agents.ts` chưa gọi `outsideWriteDecision` ở mốc (đọc dòng, chưa đọc diff của `ae953e07`) | `78ad5179` | `workspace.ts:614` (`outsideWriteDecision`) |
 | L6 | **Chưa đổi**: `readySubtasks` không có thay đổi trong khoảng | — | `planner.ts:304-314` (`readySubtasks`) |
 | L7 | **Chưa đổi**: `lane.ts` không có thay đổi trong khoảng | — | `lane.ts:140-141` (`lane: 'single', rule: 3`) |
 | L8 | **Đã sửa** lệch "1–7" (xem hàng L8 và FX14); mâu thuẫn song song/ít hạng mục lớn vẫn còn | `677fe521` | `prompts.ts:314` (`MAX_SUBTASKS`) |
