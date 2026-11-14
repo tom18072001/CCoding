@@ -54,6 +54,27 @@ const PATH_RE = new RegExp(`(?<![\\w@/.-])((?:[\\w.-]+/)*[\\w-][\\w.-]*\\.(?:${S
 const NUM_WORDS: Record<string, number> = { một: 1, hai: 2, ba: 3, bốn: 4, tư: 4, năm: 5, sáu: 6, bảy: 7, bẩy: 7, tám: 8, chín: 9, mười: 10 };
 // "một hạng mục sở hữu…" là mạo từ, không phải số đếm → không nhận "một"; số phải đứng đầu câu hoặc sau động từ chia việc
 const COUNT_RE = /(?:^|[.;\n]\s*|(?:chia|tách|giữ|có|gồm|thành|giao|lập)\s+(?:làm\s+|thành\s+)?)(\d{1,2}|hai|ba|bốn|năm|sáu|bảy|bẩy|tám|chín|mười)\s+(?:hạng mục|phần việc|đầu việc|việc con|subtasks?)(?![\p{L}])/iu;
+/**
+ * D21 K2 — luật A chỉ lấy đích thật. Với đề bài có hạng mục mã K, chỉ giữ phần "giao sửa": dòng hạng mục + thân của nó,
+ * và dòng "Được sửa:" của mục Phạm vi. Bỏ khỏi phần giữ: mô tả rule (`- \`tên-rule\` (…): …`), câu "vd."/"ví dụ" và ngoặc dẫn chứng
+ * "(theo|xem|nguồn|căn cứ …)". Mục Căn cứ và mọi chỗ ngoài hạng mục/Được sửa không được tính.
+ * Đề bài không có hạng mục K (đề tự do, vd. "Viết src/agg.js") giữ nguyên hành vi cũ: tính toàn văn.
+ * Lý do chọn cách này và bảng trước/sau: docs/PROCESS-REVIEW.md mục "D21 K2".
+ */
+const RULE_DESC_RE = /^(\s*(?:[-*+]|\d+[.)])\s*`[\w.-]+`\s*(?:\([^)\n]*\))?\s*)[:：].*$/u;
+const EDIT_LINE_RE = /^\s*(?:[-*+]\s*)?\*{0,2}\s*Được sửa\s*:?\s*\*{0,2}\s*:/iu;
+export function briefEditScope(brief: string): string {
+  const bodies = Object.values(briefItemBodies(brief));
+  if (!bodies.length) return brief;
+  const lines = brief.split(/\r?\n/);
+  const edit = lines.filter((l) => EDIT_LINE_RE.test(l));
+  return [...bodies.flatMap((b) => b.split('\n')), ...edit]
+    .map((l) => l.replace(RULE_DESC_RE, '$1'))
+    .map((l) => l.replace(/(?<![\p{L}])(?:vd\.?|ví dụ)(?![\p{L}])[^;\n)]*/giu, ''))
+    .map((l) => l.replace(/\((?:theo|xem|dẫn chứng|nguồn|căn cứ|từ)(?![\p{L}])[^)\n]*\)/giu, ''))
+    .join('\n');
+}
+
 /** Câu có các cụm này nhắc tệp để tham khảo/không sửa — đích trong câu đó coi là ngoài phạm vi có lý do. */
 const OUT_RE = /đã có sẵn|có sẵn|không ai sửa|không sửa|không đụng|giữ nguyên|chỉ đọc|chỉ để tham khảo|tham khảo|ngoài phạm vi|không thuộc phạm vi|chỉ dùng api/iu;
 const PLACEHOLDER_RE = /^[\s\-–—_.*()\[\]]*(?:không dùng|không có|không áp dụng|n\/a|na|none|null|tbd|todo|trống|chưa có|\.\.\.|…)?[\s\-–—_.*()\[\]]*$/iu;
@@ -101,6 +122,7 @@ function sentenceOf(text: string, idx: number): string {
  * Đích trong câu của tóm tắt có cụm "đã có sẵn / không ai sửa / chỉ dùng API…" không đưa vào D (đã ngoài phạm vi, có lý do ngay trong câu).
  */
 export function planTargets(brief: string, planSummary: string, repoFiles: string[] = []): string[] {
+  brief = briefEditScope(brief);
   const found: string[] = pathsIn(brief);
   for (const m of planSummary.matchAll(new RegExp(PATH_RE.source, 'gi'))) {
     const p = norm(m[1]);

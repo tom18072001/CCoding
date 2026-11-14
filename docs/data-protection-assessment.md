@@ -816,3 +816,5 @@ Cổng thiết kế (không phải cổng phát hành). Căn cứ: yêu cầu ch
 **Nghĩa vụ pháp lý / lưu giữ.** Không DLCN ⇒ không có nghĩa vụ thông báo sự cố 72 giờ hay hồ sơ đánh giá tác động cho thay đổi này. Nếu lint bắt được khóa thật đã commit: coi là sự cố bí mật, xoay khóa ngay; nếu khóa cho phép truy cập DLCN thì áp quy trình sự cố DLCN (thông báo ≤ 72 giờ).
 
 **Khuyến nghị cho chủ dự án:** (i) bật bảo vệ nhánh + secret scanning/push protection; (ii) chạy một lần công cụ quét lịch sử git bên ngoài (ví dụ gitleaks) rồi xoay mọi khóa tìm thấy, vì lint không quét lịch sử; (iii) xử lý dần 317 mục baseline theo gói của Phòng Nghiên cứu.
+
+**D21/K1 (hết giờ khác hết hạn mức):** chỉ thêm trường số liệu kỹ thuật (`stopReason`, `durationMs`, `attempt`) vào `calls.jsonl`, không có PII/văn bản; lời nhắc thử lại chỉ chứa tên tệp và tiêu đề commit trong worktree nhiệm vụ, đi qua `redact` như mọi lời nhắc; nhãn Nội bộ, không phát sinh nghĩa vụ DLCN; giữ nhật ký ≥ 6 tháng theo mục trên.

@@ -172,7 +172,7 @@ export interface Config {
   runner: 'auto' | 'process' | 'herdr';
   maxConcurrentTasks: number;
   /** planApprovalMinutes: kế hoạch chờ duyệt quá số phút này thì tự duyệt (0 = chờ giám đốc, không tự duyệt). */
-  defaults: TaskOptions & { timeoutMs: number; planApprovalMinutes?: number; /** Số vòng bổ sung tự làm sau khi CTO chưa nghiệm thu (0 = tắt). */ acceptFollowupRounds?: number };
+  defaults: TaskOptions & { timeoutMs: number; /** D21/K1: trần thời gian một lượt gọi theo pha (ms); pha không khai báo dùng `timeoutMs`. */ timeoutMsByPhase?: Partial<Record<Phase, number>>; planApprovalMinutes?: number; /** Số vòng bổ sung tự làm sau khi CTO chưa nghiệm thu (0 = tắt). */ acceptFollowupRounds?: number };
   /** Tinh chỉnh theo pha: model rẻ hơn cho pha nhẹ, giới hạn token đầu ra, số lượt công cụ. */
   phases: {
     models: Partial<Record<Phase, string>>;
@@ -377,7 +377,7 @@ const BUILTIN: Omit<Config, 'root'> = {
   runner: 'auto',
   gate: { maxFixRounds: 2 },
   maxConcurrentTasks: 2,
-  defaults: { discussionRounds: 1, review: true, maxParallel: 3, maxRevisions: 1, budgetTokens: 1500000, budgetMode: 'complete', subtaskBudgetTokens: 0, timeoutMs: 1800000, planApprovalMinutes: 0, acceptance: true, acceptFollowupRounds: 1 },
+  defaults: { discussionRounds: 1, review: true, maxParallel: 3, maxRevisions: 1, budgetTokens: 1500000, budgetMode: 'complete', subtaskBudgetTokens: 0, timeoutMs: 1800000, timeoutMsByPhase: { execute: 1800000, revise: 1500000, review: 1800000 }, planApprovalMinutes: 0, acceptance: true, acceptFollowupRounds: 1 },
   phases: {
     // tổng hợp báo cáo bằng Sonnet: pha cuối nằm trên đường găng (Opus 31–52 giây, $0,15–0,25 mỗi nhiệm vụ — benchtest 1/11)
     models: { route: 'haiku', discuss: 'haiku', synthesize: 'sonnet' },

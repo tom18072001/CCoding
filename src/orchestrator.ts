@@ -124,7 +124,7 @@ const NO_RUNTIME_MAX_RETRIES = 5;
 const READ_ONLY_TOOLS = new Set(['Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch', 'LS']);
 const STAGES: RunStage[] = ['planned', 'finalized', 'executed', 'reviewed', 'done'];
 const CONTINUE_PHASES = new Set<Phase>(['execute', 'revise', 'synthesize']);
-const CAPACITY_KINDS = new Set<ErrorKind>(['quota', 'rate', 'auth', 'transient', 'timeout', 'model', 'empty']);
+const CAPACITY_KINDS = new Set<ErrorKind>(['quota', 'rate', 'auth', 'transient', 'model', 'empty']); // D21/K1: 'timeout' KHÔNG phải lỗi hạn mức — xử lý riêng (thử lại 1 lần rồi hạng mục lỗi)
 
 const STATUS_BY_PHASE: Record<Phase, AgentStatus> = {
   route: 'thinking',
@@ -3793,6 +3793,11 @@ export class Orchestrator {
     };
     const attempts: Array<{ runtime: string; model: string; kind: ErrorKind; error: string; ms: number }> = [];
     let failedMs = 0;
+    /** D21/K1: số lượt hết giờ của lời gọi này (lần 1 → thử lại đúng 1 lần cho riêng lượt này; lần 2 → lỗi). */
+    let timeouts = 0;
+    let timeoutNote = '';
+    const writePhase = phase === 'execute' || phase === 'revise';
+    const startHead = writePhase ? headCommit(ctx.cwd) : undefined;
     try {
       this.checkAbort(task);
       if (this.pauseRequests.has(task.id)) throw new PauseSignal('manual', 'Tạm dừng theo yêu cầu');
@@ -3821,7 +3826,7 @@ export class Orchestrator {
         const fast = list.filter((c) => !runtimes.isSlow(c));
         if (fast.length && fast.length < list.length) list.splice(0, list.length, ...fast, ...list.filter((c) => runtimes.isSlow(c)));
       }
-      const maxTry = Math.min(list.length, Math.max(1, config.runtime.maxFailover));
+      let maxTry = Math.min(list.length, Math.max(1, config.runtime.maxFailover));
       const access = this.toolAccess(task, ctx.project);
       for (let i = 0; i < maxTry; i++) {
         cand = list[i];
@@ -3843,6 +3848,7 @@ export class Orchestrator {
         const allow = rt.supportsTools && rt.id !== 'mock' && !ctx.noTools ? toolsFor(agent.tools, access, phase, web, gitRead) : [];
         const built = build(allow);
         if (handover && allow.length) built.prompt = `${built.prompt}\n\n${handover}`;
+        if (timeoutNote) built.prompt = `${built.prompt}\n\n${timeoutNote}`;
         const fb = this.d.store.activeFeedback(agent.id).map((f) => `${f.rating === 'up' ? '👍 ' : f.rating === 'down' ? '👎 ' : ''}${f.text}`);
         const system = P.systemFor(agent, ctx.dept, cls, phase, fb);
         const piiOut = cls === 'confidential' || cls === 'restricted';
@@ -3860,7 +3866,7 @@ export class Orchestrator {
           cwd: reqCwd,
           tools: ctx.noTools ? [] : cliTools(agent.tools, access, phase, gitRead),
           allowTools: allow.length > 0 || (rt.supportsTools && !ctx.noTools && cliTools(agent.tools, access, phase, gitRead).length > 0),
-          timeoutMs: config.defaults.timeoutMs,
+          timeoutMs: config.defaults.timeoutMsByPhase?.[phase] ?? config.defaults.timeoutMs,
           maxTokens: ctx.maxTokens ?? config.phases?.maxTokens?.[phase],
           toolPolicy: allow.length
             ? {
@@ -3985,6 +3991,7 @@ export class Orchestrator {
             });
           // phần token đã tiêu trước khi lỗi vẫn ghi sổ (runtime thật), kèm các thao tác công cụ đã làm
           const pu = re.partial;
+          const timeoutRec = re.kind === 'timeout' ? { stopReason: 'timeout', attempt: timeouts + 1 } : {};
           if (pu?.toolCalls?.some((tc) => tc.ok && ['write_file', 'edit_file', 'run_command'].includes(tc.name)))
             handover = `${P.handoverNote(cand.label, re.kind, pu.toolCalls)}${handover ? `\n\n${handover.replace(/^## /, '### Trước đó — ')}` : ''}`.slice(0, 12_000);
           result = {
@@ -4000,7 +4007,7 @@ export class Orchestrator {
             toolCalls: pu?.toolCalls,
           };
           if (pu) {
-            const partialRec = { ts: nowIso(), callId: `${callId}-p${i}`, taskId: task.id, subtaskId: ctx.subtask?.id, projectId: task.projectId, department: deptId, agentId: agent.id, phase, runtime: rt.id, model: pu.model ?? cand.model, requestedModel: cand.model, input: pu.input, output: pu.output, cacheRead: pu.cacheRead, cacheWrite: 0, costUsd: 0, durationMs: 0, estimated: false, toolCalls: pu.toolCalls?.length, error: re.message };
+            const partialRec = { ts: nowIso(), callId: `${callId}-p${i}`, taskId: task.id, subtaskId: ctx.subtask?.id, projectId: task.projectId, department: deptId, agentId: agent.id, phase, runtime: rt.id, model: pu.model ?? cand.model, requestedModel: cand.model, input: pu.input, output: pu.output, cacheRead: pu.cacheRead, cacheWrite: 0, costUsd: 0, durationMs: re.kind === 'timeout' ? ms : 0, estimated: false, toolCalls: pu.toolCalls?.length, ...timeoutRec, error: re.message };
             usage.record(partialRec);
             addUsage(task.usage, { ...partialRec, calls: 1 });
             if (ctx.run) addUsage(ctx.run.usage, { ...partialRec, calls: 1 });
@@ -4011,12 +4018,39 @@ export class Orchestrator {
             // lượt gọi chạy lâu rồi mới lỗi (vd. 502 sau nhiều phút) mà nhà cung cấp không báo usage: ghi sổ ƯỚC LƯỢNG phần đầu vào
             // đã gửi đi để chi phí/hạn mức không "biến mất" khỏi thống kê
             const est = estimateTokens(req.system + (req.context ?? '') + req.prompt);
-            const lostRec = { ts: nowIso(), callId: `${callId}-lost${i}`, taskId: task.id, subtaskId: ctx.subtask?.id, projectId: task.projectId, department: deptId, agentId: agent.id, phase, runtime: rt.id, model: cand.model, requestedModel: cand.model, input: est, output: 0, cacheRead: 0, cacheWrite: 0, costUsd: 0, durationMs: ms, estimated: true, error: re.message.slice(0, 300) };
+            const lostRec = { ts: nowIso(), callId: `${callId}-lost${i}`, taskId: task.id, subtaskId: ctx.subtask?.id, projectId: task.projectId, department: deptId, agentId: agent.id, phase, runtime: rt.id, model: cand.model, requestedModel: cand.model, input: est, output: 0, cacheRead: 0, cacheWrite: 0, costUsd: 0, durationMs: ms, estimated: true, ...timeoutRec, error: re.message.slice(0, 300) };
             usage.record(lostRec);
             addUsage(task.usage, { ...lostRec, calls: 1 });
             if (ctx.run) addUsage(ctx.run.usage, { ...lostRec, calls: 1 });
             if (ctx.subtask) addUsage(ctx.subtask.usage, { ...lostRec, calls: 1 });
             logs.write({ level: 'warn', kind: 'call.lost', msg: `${agent.name} · ${cand.label}: lỗi sau ${Math.round(ms / 1000)} giây, không có usage — ghi sổ ước lượng ${fmtNum(est)} token đầu vào`, taskId: task.id, agentId: agent.id, department: deptId, subtaskId: ctx.subtask?.id, phase, data: { callId, ms, estInput: est } });
+          }
+          if (re.kind === 'timeout') {
+            if (!pu && ms < 60_000) {
+              // D21/K1: lượt hết giờ không có usage cũng phải thấy trong calls.jsonl (stopReason 'timeout' + thời lượng) để đo phần đuôi
+              const trec = { ts: nowIso(), callId: `${callId}-t${timeouts + 1}`, taskId: task.id, subtaskId: ctx.subtask?.id, projectId: task.projectId, department: deptId, agentId: agent.id, phase, runtime: rt.id, model: cand.model, requestedModel: cand.model, input: 0, output: 0, cacheRead: 0, cacheWrite: 0, costUsd: 0, durationMs: ms, estimated: false, ...timeoutRec, error: re.message.slice(0, 300) };
+              usage.record(trec);
+              addUsage(task.usage, { ...trec, calls: 1 });
+              if (ctx.run) addUsage(ctx.run.usage, { ...trec, calls: 1 });
+              if (ctx.subtask) addUsage(ctx.subtask.usage, { ...trec, calls: 1 });
+            }
+            timeouts++;
+            if (timeouts >= 2) break; // hết giờ lần hai: hạng mục lỗi (không đánh dấu runtime, không chuyển runtime, không tạm dừng)
+            if (this.pauseRequests.has(task.id)) {
+              keepHandover();
+              throw new PauseSignal('manual', 'Tạm dừng theo yêu cầu');
+            }
+            if (writePhase) {
+              // nối từ trạng thái worktree hiện có: không reset/stash/xóa commit — chỉ liệt kê việc đã làm
+              const gl = startHead ? git(ctx.cwd, ['log', '--oneline', `${startHead}..HEAD`], 15_000) : undefined;
+              const gs = git(ctx.cwd, ['status', '--short'], 15_000);
+              const lines = (o?: { ok: boolean; out: string }) => (o?.ok ? o.out.split('\n').map((l) => l.trim()).filter(Boolean) : []);
+              timeoutNote = P.timeoutRetryNote(phase, Math.round(ms / 1000), lines(gl), lines(gs));
+            }
+            logs.write({ level: 'warn', kind: 'call.timeout-retry', msg: `${agent.name} · ${cand.label}: hết giờ sau ${Math.round(ms / 1000)} giây — thử lại 1 lần cho riêng lượt này`, taskId: task.id, agentId: agent.id, department: deptId, subtaskId: ctx.subtask?.id, phase, data: { callId, ms } });
+            list.splice(i + 1, 0, cand); // cùng runtime/model, lần thử 2
+            maxTry++;
+            continue;
           }
           if (!shouldFailover(re.kind)) break;
           if (this.pauseRequests.has(task.id)) {
@@ -4028,7 +4062,7 @@ export class Orchestrator {
       }
       // mọi tài nguyên đều lỗi do hạn mức/kết nối → tạm dừng nhiệm vụ và hẹn tự tiếp tục
       if (result?.error && attempts.length && attempts.every((a) => CAPACITY_KINDS.has(a.kind))) {
-        const onlyNet = attempts.every((a) => a.kind === 'transient' || a.kind === 'timeout' || a.kind === 'empty');
+        const onlyNet = attempts.every((a) => a.kind === 'transient' || a.kind === 'empty');
         const at = onlyNet ? Date.now() + 2 * 60_000 : (runtimes.earliestRecovery() ?? Date.now() + config.runtime.quotaCooldownMs);
         keepHandover();
         throw new PauseSignal('quota', `Tất cả tài nguyên đã thử đều lỗi/hết hạn mức (${attempts.map((a) => `${a.runtime}/${a.model}: ${a.kind}`).join('; ')})`, at);
