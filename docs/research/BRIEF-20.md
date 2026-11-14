@@ -1,6 +1,6 @@
 # Phòng Nghiên cứu, vòng 4 gói 14: bài báo v0.7 (ba trục, số đo mới), đo trục 2 phần (b), cập nhật backlog và run-plan
 
-**Gói lớn: 4 hạng mục + review. Ngân sách 8M token.** Soạn 13/11/2026, giao 13/11/2026 sau khi E7 và E8 xong (văn phòng không chạy chồng lên E8, vì thước đo chính của E8 là thời gian). Giám đốc 12/11 23:47: dùng tối đa hạn mức, chỉ cần kết quả cuối; 12/11 22:58: "cần chuẩn công bố khoa học".
+**Gói lớn: 4 hạng mục + review. Ngân sách 8M token.** Soạn 13/11/2026, giao 13/11/2026 sau khi E7 và E8 xong; giao lại 14/11/2026 vì cổng kế hoạch hiểu nhầm tệp mã phân tích là đích của gói (văn phòng không chạy chồng lên E8, vì thước đo chính của E8 là thời gian). Giám đốc 12/11 23:47: dùng tối đa hạn mức, chỉ cần kết quả cuối; 12/11 22:58: "cần chuẩn công bố khoa học".
 - **Được sửa:** `docs/research/` (gồm `paper/`, `facts.json`, `CHANGELOG.md`, `analysis/`, `context/`, `improvement-backlog.md`, `run-plan.md`, `preregistration.md` §6 và §9) và `bench/vs-claude/results/*/RUNLOG.md`.
 - **Không sửa:** `src/`, mã và cấu hình của `bench/` (trừ RUNLOG).
 - Không chạy benchmark, không gọi `claude -p`.
@@ -50,7 +50,7 @@
 - Kiểm bằng "🧪 Lệnh kiểm tra của dự án". `git status` sạch.
 
 ## Người điều phối làm (ngoài văn phòng)
-- Đã làm trước khi giao gói: chạy `e7/analyze.mjs`, `e8/analyze.mjs`, trích xung đột E8 và ghi `report.md` của hai đợt. K1 đọc số từ hai báo cáo đó, không tính lại.
+- Đã làm trước khi giao gói: chạy phân tích E7 và E8 (mã phân tích của bench, không thuộc gói này), trích xung đột khi gộp của E8, và ghi báo cáo của hai đợt. K1 đọc số từ hai báo cáo đó (`results/e7-cto/report.md`, `results/e8-parallel/report.md`), không tính lại.
 - Cập nhật deck theo v0.7 (gồm CI G-3Δ [−5,4; 8,8] ở PL10), đọc bản đang công bố trước khi sửa.
 
 ## Không làm
