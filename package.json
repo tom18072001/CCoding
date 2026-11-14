@@ -21,10 +21,12 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsx --test --test-reporter=spec \"test/**/*.test.ts\"",
     "test:bench": "node --test \"bench/vs-claude/test/*.test.mjs\"",
+    "test:research": "node --test \"docs/research/**/*.test.mjs\" \"bench/vs-claude/harness/*.test.mjs\"",
     "herdr:up": "node dist/cli.js herdr up",
     "doctor": "node dist/cli.js doctor",
     "demo": "node dist/cli.js task \"Thiết kế API quản lý hồ sơ nhân sự bằng Node.js/TypeScript, có phân quyền và log kiểm toán\" --mode auto --runtime mock --wait",
-    "lint": "node scripts/lint/run.mjs"
+    "lint": "node scripts/lint/run.mjs",
+    "check": "npm run typecheck && npm run lint && npm test && npm run test:bench && npm run test:research"
   },
   "dependencies": {
     "yaml": "^2.8.1"
