@@ -29,15 +29,20 @@ export function skillScore(text: string, a: AgentDef): number {
   return a.skills.reduce((n, s) => (t.includes(s.replace(/-/g, ' ')) || t.includes(s) ? n + 2 : n), 0) + (t.includes(a.id) ? 3 : 0);
 }
 
+/** Khớp trực tiếp tên người nhận với roster (id, @id, tên, chức danh) — không đoán theo kỹ năng. */
+export function matchAssigneeDirect(raw: string, roster: AgentDef[]): AgentDef | undefined {
+  const r = raw.trim().replace(/^@/, '').toLowerCase();
+  if (!r) return undefined;
+  return (
+    roster.find((a) => a.id.toLowerCase() === r || a.name.toLowerCase() === r) ??
+    roster.find((a) => r.includes(a.id.toLowerCase()) || a.title.toLowerCase().includes(r) || r.includes(a.name.toLowerCase()))
+  );
+}
+
 /** Ghép tên người giao việc mà LLM viết (id, @id, tên, chức danh) về id agent hợp lệ. */
 export function matchAssignee(raw: string, roster: AgentDef[], context = ''): AgentDef | undefined {
-  const r = raw.trim().replace(/^@/, '').toLowerCase();
-  if (r) {
-    const exact = roster.find((a) => a.id.toLowerCase() === r || a.name.toLowerCase() === r);
-    if (exact) return exact;
-    const partial = roster.find((a) => r.includes(a.id.toLowerCase()) || a.title.toLowerCase().includes(r) || r.includes(a.name.toLowerCase()));
-    if (partial) return partial;
-  }
+  const direct = matchAssigneeDirect(raw, roster);
+  if (direct) return direct;
   const scored = roster
     .filter((a) => a.role !== 'lead')
     .map((a) => ({ a, s: skillScore(`${raw} ${context}`, a) }))
@@ -111,9 +116,11 @@ export function parsePlan(text: string, roster: AgentDef[], lead: AgentDef, brie
     idMap.set(String(r.id ?? id), id);
     const title = String(r.title ?? `Hạng mục ${i + 1}`).slice(0, 160);
     const description = String(r.description ?? '');
-    const who = matchAssignee(String(r.assignee ?? ''), roster, `${title} ${description}`) ?? lead;
+    const rawWho = String(r.assignee ?? '').trim();
+    const who = matchAssignee(rawWho, roster, `${title} ${description}`) ?? lead;
+    const unmatched = rawWho && !matchAssigneeDirect(rawWho, roster) ? rawWho.slice(0, 80) : undefined;
     const deps = (Array.isArray(r.dependsOn) ? r.dependsOn : Array.isArray(r.depends_on) ? r.depends_on : []).map(String);
-    subtasks.push(newSubtask({ id, title, assignee: who.id, description, dependsOn: deps, deliverable: r.deliverable ? String(r.deliverable) : undefined }));
+    subtasks.push(newSubtask({ id, title, assignee: who.id, description, dependsOn: deps, deliverable: r.deliverable ? String(r.deliverable) : undefined, ...(unmatched ? { assigneeUnmatched: unmatched } : {}) }));
   });
   for (const s of subtasks) s.dependsOn = s.dependsOn.map((d) => idMap.get(d) ?? d);
   const decisions = Array.isArray(raw.decisions) ? raw.decisions.map(String) : typeof raw.decisions === 'string' ? [raw.decisions] : [];

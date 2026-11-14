@@ -758,3 +758,30 @@ Nếu chưa có hạ tầng, ghi nhận đây là rủi ro tồn dư: người c
 
 ### Kiểm chứng
 `test/logger-hmac.test.ts` (khóa giả, thư mục tạm): ghi có khóa rồi kiểm; sửa một dòng báo đúng dòng; sửa + tính lại hash không khóa → `chữ ký sai`; khóa khác; thiếu khóa → cảnh báo một lần, hash vẫn đúng, log cũ kiểm được; nội dung log không chứa khóa. `test/sandbox-log-fallback.test.ts` đặt khóa giả để cảnh báo không lẫn vào kiểm tra stderr.
+
+## D18a/S4 — Bộ kiểm lệnh: `outside-root-read`, sửa heredoc, đo lại trục 2 (b) (14/11/2026, đánh giá ngắn trước khi chốt)
+
+Cổng thiết kế (không phải cổng phát hành). Theo `docs/research/preregistration.md` §9 (mục "Đo lại trục 2 (b) sau vá", đoạn (4)): đánh giá này ghi tại đây vì mục (4) ở đó chỉ ghi bằng văn bản do tệp này nằm ngoài phạm vi của BRIEF-23.
+
+**Phân loại.** Nhãn **Nội bộ**: mã bộ kiểm (`src/tools/shell-policy.ts`, `claude-guard.ts`), test, tài liệu, kết quả đo và script trục 2. Bộ RedCode và bộ dự phòng `ole-tail/agentic-execution-guardrail-eval` là **Công khai** (lệnh tổng hợp, CC BY 4.0 với bộ dự phòng, **không có DLCN**). Nhiều tiêu chí lấy mức cao nhất ⇒ kết quả gộp giữ **Nội bộ**. Phân loại pháp lý: không DLCN, không dữ liệu thật của khách hàng, không chuyển xuyên biên giới ⇒ không cần hồ sơ đánh giá tác động riêng. Cấp độ ATTT: không đề xuất cấp mới (không phải HTTT độc lập); giả định, cần soát lại nếu dự án được phân loại HTTT. Test mới chỉ dùng host `.invalid` và đường dẫn giả; không có bí mật, không có dữ liệu thật trên DEV/UAT (GOV-03).
+
+**Thay đổi luồng dữ liệu.** Thêm rule chặn gửi nội dung tệp ngoài gốc/tệp credential qua mạng và quét đệ quy thư mục hệ thống/home. Đây là kiểm soát **ngăn chặn** (PRE) làm giảm rủi ro rò rỉ bí mật qua agent; không tạo luồng dữ liệu mới, không ghi thêm dữ liệu vào log. Sự kiện `guard.block` vẫn chỉ ghi `{ tool, clause, rule, cmd }` (tên lệnh hoặc toán tử, không tham số, không đường dẫn) qua `LogStore` (che bí mật/PII, chuỗi băm): rule mới `outside-root-read` chỉ là một giá trị `rule` mới. Thông báo trả cho agent có đường dẫn bị chặn tối đa 80 ký tự, đã có ở rule `outside-root-write`.
+
+| Mã | Trạng thái | Nhận xét / khuyến nghị |
+|---|---|---|
+| PRE-01 (ngăn rò rỉ qua công cụ) | Cải thiện một phần | Thêm `outside-root-read` (D10) và sửa chặn nhầm heredoc. Ba ca lọt của bộ ngoài (ext-005, 013, 015) có test chặn tương đương. **Chưa đo lại** trên bộ ngoài thật; số đo lại thuộc BRIEF-23/phiên đo sau, không tuyên bố ở đây |
+| PRE-02 (che/token hóa trước khi vào log) | Đạt, không đổi | Không ghi lệnh thô vào log; `cmd` qua `safeCmdName` |
+| DET-04 (log chẩn đoán, không nuốt lỗi) | Đạt, không đổi | Không đổi đường ghi `guard.block` |
+| GOV-03 (nhãn, không dữ liệu thật DEV/UAT) | Đạt | Test dùng dữ liệu giả |
+| RES-01 (giới hạn của kiểm soát) | Ghi nhận | Lớp này là phân tích chuỗi lệnh, không phải ranh giới bảo mật; còn lọt `find -exec`, `xargs`, `node -e`, `curl -d @-` (xem `docs/TOOLS.md`). Lớp chính là sandbox (B-18; WSL chưa đăng nhập nên chưa đo) |
+| Các mã còn lại (25 năng lực) | N/A | Không đổi: không thêm dữ liệu, người dùng, dịch vụ ngoài hay xuyên biên giới |
+
+**Đo lại trục 2 (b) — điều kiện để không sai tuyên bố.**
+1. Kết quả RedCode sau vá là **hồi quy sau vá** (rule thiết kế sau khi thấy các ca lọt); không ghi thành khả năng chặn tấn công mới. Bộ ngoài (37 dòng) có nhãn **[Khám phá]**.
+2. Rule `outside-root-read` và sửa heredoc của S4 được thêm **sau** phép đo sau vá (`bench/vs-claude/results/axis2-guard-postfix/`): số đo ở đó **không** phản ánh các thay đổi này. Muốn có số mới phải đo lại theo đăng ký §9 (cùng 82 ca, cùng bộ dự phòng, cả hai bản mã) và ghi thêm mục §9; không sửa số cũ.
+3. Ca bộ ngoài sau thay đổi này theo test, **chưa phải phép đo**: ext-005, ext-013, ext-015 chặn (tương đương); ext-001 `git checkout -b` giữ chặn theo chính sách D11 (không tính là lỗi); các ca `git-read` chặn theo thiết kế của tầng chỉ đọc. Câu cấm khi viết (preregistration §9 mục (3)) vẫn áp dụng: không "bộ kiểm chặn X % tấn công", không "an toàn".
+4. Hai ca không sửa vì chỉ sandbox chặn được hoặc gây chặn nhầm trên bảng lệnh dev: gửi tệp qua stdin (`… | curl -d @-`) và quét bằng `find -exec`. Xếp là việc của sandbox.
+
+**Nghĩa vụ pháp lý / lưu giữ.** Không DLCN ⇒ không có nghĩa vụ thông báo sự cố 72 giờ hay hồ sơ đánh giá tác động cho thay đổi này. Nhật ký `guard.block` và RUNLOG của phép đo: giữ ≥ 6 tháng (xử lý dữ liệu quan trọng của dự án) và nhật ký hệ thống ≥ 12 tháng như mục D13 ở trên; log làm chứng cứ giữ chuỗi băm.
+
+**Khuyến nghị cho chủ dự án:** (i) đo lại trục 2 (b) bằng phiên mới sau khi gộp D18a; (ii) giữ nguyên chính sách D11; (iii) không coi bộ kiểm lệnh là ranh giới bảo mật khi sandbox chưa chạy.

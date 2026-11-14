@@ -34,6 +34,43 @@ function systemDirs(): string[] {
   );
 }
 
+
+const HEREDOC_INTERP = /(?<![\w.-])(sh|bash|zsh|dash|ksh|csh|tcsh|fish|pwsh|powershell|cmd|python[\d.]*|py|node|nodejs|deno|bun|perl|ruby|php|lua|eval|source|xargs|osascript)(?![\w.-])/i;
+
+/**
+ * Bỏ THÂN heredoc có dấu kết thúc được trích nháy (`<<'EOF'`, `<<"EOF"`, `<<\EOF`) khi lệnh nhận heredoc không phải trình thông dịch:
+ * thân đó là DỮ LIỆU (nội dung tệp/tài liệu đang ghi), không phải đường dẫn được đọc/ghi — vd. dòng chứa `../src/x.ts` hay `---` trong tài liệu.
+ * Giữ nguyên (vẫn quét như cũ) khi: dấu kết thúc không nháy (shell còn khai triển `$(…)`), dòng có sh/bash/python/node/eval… (thân là MÃ),
+ * `<<` nằm trong nháy, hoặc không thấy dòng kết thúc. Dòng mở và dòng kết thúc được giữ lại để chuyển hướng `> đích` vẫn bị kiểm.
+ */
+export function stripHeredocBodies(command: string): string {
+  if (!command.includes('<<')) return command;
+  const lines = command.split('\n');
+  const out: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    out.push(line);
+    const m = /<<(-?)\s*(?:(['"])([A-Za-z_][\w-]*)\2|\\([A-Za-z_][\w-]*))/.exec(line);
+    if (!m) continue;
+    const before = line.slice(0, m.index);
+    if (((before.match(/(?<!\\)'/g) ?? []).length % 2) || ((before.match(/(?<!\\)"/g) ?? []).length % 2)) continue; // `<<` trong nháy
+    if (HEREDOC_INTERP.test(line.replace(m[0], ' '))) continue;
+    const delim = m[3] ?? m[4];
+    let end = -1;
+    for (let j = i + 1; j < lines.length; j++) {
+      const t = lines[j].replace(/\r$/, '');
+      if ((m[1] ? t.replace(/^\t+/, '') : t) === delim) {
+        end = j;
+        break;
+      }
+    }
+    if (end < 0) continue;
+    out.push(lines[end]);
+    i = end;
+  }
+  return out.join('\n');
+}
+
 const STMT_SPLIT = /&&|\|\||;|\r?\n/;
 const BOUND = `(?:^|[\\s"'=(<>|&,])`;
 const STOP = `[^\\s"'|;&<>)\`,]*`;
@@ -60,7 +97,7 @@ export function outsidePathReason(command: string, root: string, extraAllowed: s
     if (pathInside(root, abs)) return false;
     return !allowed.some((a) => pathInside(a, abs));
   };
-  for (const raw of command.split(STMT_SPLIT)) {
+  for (const raw of stripHeredocBodies(command).split(STMT_SPLIT)) {
     const stmt = raw.trim();
     if (!stmt) continue;
     const cd = /^(?:cd|Set-Location|sl|pushd)\s+(.+)$/i.exec(stmt);
@@ -252,11 +289,125 @@ function writeTargetOutside(raw: string, root: string): boolean {
   return false;
 }
 
+// ── Đọc thông tin nhạy cảm / gửi tệp qua mạng (rule `outside-root-read`, D10) ───────────────────────────────
+// Chặn: (1) quét ĐỆ QUY nội dung thư mục hệ thống hoặc thư mục home ngoài gốc (grep -r, rg, findstr /s); (2) gửi NỘI DUNG TỆP qua mạng bằng cờ đọc tệp
+// (curl -d @tệp/-F/-T, wget --post-file, iwr -InFile) khi tệp nằm ngoài gốc hoặc là tệp credential. Dữ liệu nội tuyến (`curl -d '{…}'`),
+// `curl -d @tệp-trong-repo`, `grep -r … src` vẫn được qua. Cũng chỉ là lớp phân tích chuỗi lệnh, không phải ranh giới bảo mật (sandbox mới là lớp chính).
+
+const CREDENTIAL_PATH = /(^|[\\/])(\.aws|\.ssh|\.gnupg|\.kube|\.docker|\.azure)([\\/]|$)|(^|[\\/])(credentials|id_rsa|id_ed25519|id_ecdsa|shadow|\.netrc|\.pgpass|\.npmrc|\.git-credentials)$|(^|[\\/])\.env(\.(?!example$|sample$|template$|dist$)[^\\/]+)?$/i;
+
+/** Đích ĐỌC nằm ngoài gốc: home, đường dẫn tuyệt đối (POSIX/Windows) không thuộc gốc hay thư mục tạm, hoặc `..` vượt gốc. */
+function readTargetOutside(raw: string, root: string): boolean {
+  const t = raw.trim().replace(/^["']|["']$/g, '');
+  if (!t) return false;
+  if (/^(~|\$HOME|\$env:USERPROFILE|%USERPROFILE%)/i.test(t)) return true;
+  const tmps = [os.tmpdir(), process.env.TEMP, process.env.TMP].filter((x): x is string => !!x);
+  const insideTmp = (p: string) => tmps.some((d) => pathInside(d, p));
+  if (isWinAbs(t) || /^\/[A-Za-z](\/|$)/.test(t)) {
+    const abs = msysToWin(t.replace(/[\\/]+$/, '') || t);
+    return !(pathInside(root, abs) || insideTmp(abs));
+  }
+  if (/^\/(?!\/)/.test(t) || /^\\(?!\\)/.test(t)) return !(TMP_POSIX.test(t) || pathInside(root, t) || insideTmp(t));
+  if (/^(\.\.[\\/])+|^\.\.$/.test(t)) return !pathInside(root, path.resolve(root, t));
+  return false;
+}
+
+/** Tệp được gửi đi có nhạy cảm không: ngoài gốc hoặc là tệp credential. */
+function sendFileSensitive(raw: string, root: string): boolean {
+  const t = raw.trim().replace(/^["']|["']$/g, '');
+  return !!t && (readTargetOutside(t, root) || CREDENTIAL_PATH.test(t));
+}
+
+/** Đường dẫn tệp mà lệnh tải lên/gửi đọc từ đĩa (curl -d @f, -F k=@f, -T f; wget --post-file; iwr -InFile). `--data-raw` không đọc tệp. */
+function uploadFiles(name: string, args: string[]): string[] {
+  const files: string[] = [];
+  if (name === 'wget') {
+    for (let k = 0; k < args.length; k++) {
+      const a = args[k];
+      if (/^--(post-file|body-file)=/.test(a)) files.push(a.slice(a.indexOf('=') + 1));
+      else if (/^--(post-file|body-file)$/.test(a) && args[k + 1] !== undefined) files.push(args[k + 1]);
+    }
+  } else if (name === 'curl') {
+    for (let k = 0; k < args.length; k++) {
+      const a = args[k];
+      let flag = '';
+      let v: string | undefined;
+      const eq = /^(--[a-z-]+)=(.*)$/s.exec(a);
+      if (eq) {
+        flag = eq[1];
+        v = eq[2];
+      } else if (/^--[a-z-]+$/.test(a)) {
+        flag = a;
+        v = args[k + 1];
+      } else if (/^-[dFT]$/.test(a)) {
+        flag = a;
+        v = args[k + 1];
+      } else if (/^-[dFT]./.test(a)) {
+        flag = a.slice(0, 2);
+        v = a.slice(2);
+      }
+      if (v === undefined) continue;
+      if (/^(-d|--data|--data-binary|--data-ascii|--json)$/.test(flag)) {
+        if (v.startsWith('@')) files.push(v.slice(1));
+      } else if (/^(-F|--form)$/.test(flag)) {
+        const m = /^[^=]*=[@<]([^;]+)/.exec(v);
+        if (m) files.push(m[1]);
+      } else if (flag === '--data-urlencode') {
+        const m = /^[^@=]*@(.+)$/.exec(v) ?? /^[^=]*=@(.+)$/.exec(v);
+        if (m) files.push(m[1]);
+      } else if (/^(-T|--upload-file)$/.test(flag)) files.push(v);
+    }
+  } else if (/^(invoke-webrequest|iwr|invoke-restmethod|irm)$/.test(name)) {
+    for (let k = 0; k < args.length; k++) if (/^-infile$/i.test(args[k]) && args[k + 1] !== undefined) files.push(args[k + 1]);
+  }
+  return files;
+}
+
+/** Thư mục chương trình/tài liệu POSIX (không chứa cấu hình hay dữ liệu người dùng): tra cứu đệ quy ở đây vẫn được qua (test "đọc từ thư mục hệ thống"). `/etc`, `/var`, `/root`, `/home`, home, ổ đĩa khác vẫn chặn. */
+const PROGRAM_DOC_DIR = /^\/usr(\/|$)|^\/(lib|lib64|bin|sbin)(\/|$)/;
+
+const GREP_FAMILY = /^(grep|egrep|fgrep|zgrep|rg|ag|ack|findstr)$/;
+
+/** Toán hạng đường dẫn của lệnh tìm nội dung khi nó chạy đệ quy (grep -r/-R, rg/ag/ack mặc định đệ quy, findstr /s). */
+function recursiveScanPaths(name: string, args: string[]): string[] {
+  if (!GREP_FAMILY.test(name)) return [];
+  let recursive = name === 'rg' || name === 'ag' || name === 'ack';
+  let patternGiven = false;
+  const pos: string[] = [];
+  for (let k = 0; k < args.length; k++) {
+    const a = args[k];
+    if (name === 'findstr') {
+      if (/^\/s$/i.test(a)) recursive = true;
+      if (/^\/[cg]:/i.test(a)) patternGiven = true;
+      if (/^\/[A-Za-z](:.*)?$/.test(a)) continue;
+      pos.push(a);
+      continue;
+    }
+    if (a === '--') {
+      pos.push(...args.slice(k + 1));
+      break;
+    }
+    if (/^--(recursive|dereference-recursive)$/.test(a) || /^-[A-Za-z]*[rR][A-Za-z]*$/.test(a)) recursive = true;
+    if (/^(-e|-f|--regexp|--file)$/.test(a)) {
+      patternGiven = true;
+      k++; // bỏ đối số của -e/-f
+      continue;
+    }
+    if (/^--(regexp|file)=/.test(a)) patternGiven = true;
+    if (/^-/.test(a)) continue;
+    pos.push(a);
+  }
+  if (!recursive) return [];
+  return patternGiven ? pos : pos.slice(1); // không có -e/-f ⇒ toán hạng đầu là mẫu tìm, không phải đường dẫn
+}
+
 export interface OutsideWriteViolation {
   clause: number;
   /** Chỉ tên lệnh (hoặc `>` với chuyển hướng) — không chép đường dẫn. */
   cmd: string;
   reason: string;
+  /** Thêm ở D18a (S4): 'write' (ghi/xóa/đổi quyền → rule `outside-root-write`) hay 'read' (gửi tệp nhạy cảm/quét đệ quy → rule `outside-root-read`). Thiếu ⇒ 'write'. */
+  kind?: 'write' | 'read';
 }
 
 /**
@@ -265,7 +416,7 @@ export interface OutsideWriteViolation {
  * Đọc/chạy từ thư mục hệ thống (`ls /usr/bin`, `/usr/bin/env node x.js`) và mọi thao tác trong workspace vẫn được qua.
  */
 export function outsideWriteViolation(command: string, root: string): OutsideWriteViolation | undefined {
-  const stmts = writeStmts(command);
+  const stmts = writeStmts(stripHeredocBodies(command));
   for (let i = 0; i < stmts.length; i++) {
     const st = stmts[i];
     const hit = (cmd: string, t: string): OutsideWriteViolation => ({
@@ -276,13 +427,35 @@ export function outsideWriteViolation(command: string, root: string): OutsideWri
     for (const t of st.redirects) if (writeTargetOutside(t, root)) return hit('>', t);
     const { name, targets } = writeTargets(st.words);
     for (const t of targets) if (writeTargetOutside(t, root)) return hit(safeCmdName(name), t);
+    // D10: gửi tệp nhạy cảm qua mạng / quét đệ quy thư mục hệ thống-home
+    let k = 0;
+    while (k < st.words.length && (WRITE_PREFIX.has(st.words[k].toLowerCase()) || /^[A-Za-z_]\w*=/.test(st.words[k]))) k++;
+    const w = st.words.slice(k);
+    const cn = (w[0] ?? '').replace(/\.exe$/i, '').replace(/^.*[\\/]/, '').toLowerCase();
+    const rest = w.slice(1);
+    for (const f of uploadFiles(cn, rest))
+      if (sendFileSensitive(f, root))
+        return {
+          clause: i + 1,
+          cmd: safeCmdName(cn),
+          kind: 'read',
+          reason: `gửi nội dung tệp ngoài thư mục làm việc hoặc tệp credential qua mạng (\`${f.slice(0, 80)}\`) — chỉ gửi dữ liệu nội tuyến hoặc tệp trong ${root}`,
+        };
+    for (const p of recursiveScanPaths(cn, rest))
+      if (readTargetOutside(p, root) && !PROGRAM_DOC_DIR.test(p.trim().replace(/^["']|["']$/g, '')))
+        return {
+          clause: i + 1,
+          cmd: safeCmdName(cn),
+          kind: 'read',
+          reason: `quét đệ quy nội dung thư mục cấu hình/dữ liệu hệ thống hoặc home ngoài thư mục làm việc (\`${p.slice(0, 80)}\`) — chỉ tìm trong ${root}`,
+        };
   }
   return undefined;
 }
 
 /** Quyết định dùng chung cho hook claude-guard và run_command: cùng lệnh + cùng root ⇒ cùng rule/thông điệp. */
 export interface OutsideWriteDecision {
-  rule: 'outside-root-write';
+  rule: 'outside-root-write' | 'outside-root-read';
   clause: number;
   cmd: string;
   reason: string;
@@ -292,7 +465,8 @@ export interface OutsideWriteDecision {
 export function outsideWriteDecision(command: string, root: string): OutsideWriteDecision | undefined {
   const v = outsideWriteViolation(command, root);
   if (!v) return undefined;
-  return { rule: 'outside-root-write', clause: v.clause, cmd: v.cmd, reason: v.reason, message: `CCoding chặn lệnh (outside-root-write): ${v.reason}` };
+  const rule = v.kind === 'read' ? 'outside-root-read' : 'outside-root-write';
+  return { rule, clause: v.clause, cmd: v.cmd, reason: v.reason, message: `CCoding chặn lệnh (${rule}): ${v.reason}` };
 }
 
 // ── git chỉ đọc ─────────────────────────────────────────────────────────────
@@ -353,7 +527,7 @@ export function gitReadArgsReason(argv: string[]): string | undefined {
 // ── Bộ tách lệnh shell có xét nháy (B-04) ───────────────────────────────────
 
 /** Mã quy tắc vi phạm (hợp đồng với sự kiện `guard.block` của B-06). */
-export type ShellRule = 'not-read-only' | 'redirect' | 'subst' | 'heredoc' | 'loop' | 'interpreter' | 'env-file' | 'outside-root' | 'outside-root-write';
+export type ShellRule = 'not-read-only' | 'redirect' | 'subst' | 'heredoc' | 'loop' | 'interpreter' | 'env-file' | 'outside-root' | 'outside-root-write' | 'outside-root-read';
 
 export interface ShellViolation {
   /** Số thứ tự câu lệnh con (bắt đầu từ 1). */
@@ -613,6 +787,7 @@ const RULE_TEXT: Record<string, string> = {
   'env-file': 'tệp .env là bí mật — không đọc/ghi',
   'outside-root': 'ngoài thư mục làm việc — chỉ thao tác trong workspace của nhiệm vụ',
   'outside-root-write': 'ghi/xóa/đổi quyền ngoài thư mục làm việc (đường dẫn tuyệt đối hay thư mục hệ thống) — chỉ ghi trong workspace hoặc thư mục tạm',
+  'outside-root-read': 'gửi tệp nhạy cảm qua mạng hoặc quét đệ quy thư mục hệ thống/home — chỉ dùng dữ liệu nội tuyến hoặc tệp/thư mục trong workspace',
   'deny-list': 'khớp danh sách lệnh cấm của dự án',
   'git-branch': 'không được tạo/chuyển nhánh, rebase, reset --hard hay push',
 };

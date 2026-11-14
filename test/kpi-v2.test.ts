@@ -558,3 +558,96 @@ test('KPI v2 (FX11): viết lại từ repo / thiết kế được miễn no-so
     app.cleanup();
   }
 });
+
+test('FX17: tasksCounted = tổng tasksByStatus = số dòng tasks; có định nghĩa; tasksFinished chỉ đếm done', () => {
+  const app = testApp();
+  try {
+    const ts = [task('T1'), task('T2', { status: 'paused' }), task('T3', { status: 'failed' }), task('T4', { status: 'cancelled' }), task('T5', { status: 'running' })];
+    const r = computeKpi(source(app, ts, {}));
+    assert.equal(r.tasksCounted, 5);
+    assert.equal(r.tasks.length, r.tasksCounted);
+    assert.deepEqual(r.tasksByStatus, { done: 1, paused: 1, failed: 1, cancelled: 1, running: 1 });
+    assert.equal(Object.values(r.tasksByStatus).reduce((s, v) => s + v, 0), r.tasksCounted, 'hai số khớp nhau');
+    assert.equal(r.tasksFinished, 1);
+    for (const k of ['tasksCounted', 'tasksByStatus', 'tasksFinished']) assert.ok(r.definitions[k]?.length > 10, `có định nghĩa ${k}`);
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('FX17: KPI điều phối viên — token route, lùi về keywordRoute, từ khóa từ đầu', () => {
+  const app = testApp();
+  try {
+    const route = (taskId: string, input: number, output: number) => call({ taskId, agentId: 'router', department: 'office', phase: 'route', input, output });
+    const ts = [
+      task('T1', { routing: { departments: ['dev'], reason: '', by: 'router' } }), // LLM route dùng được
+      task('T2', { routing: { departments: ['dev'], reason: '', by: 'keywords' } }), // gọi LLM route nhưng lùi về từ khóa
+      task('T3', { routing: { departments: ['dev'], reason: '', by: 'keywords' } }), // ép làn đơn: không gọi LLM
+      task('T4'), // chưa định tuyến
+    ];
+    const calls = { T1: [route('T1', 1000, 100)], T2: [route('T2', 800, 0)], T3: [], T4: [] };
+    const c = computeKpi(source(app, ts, calls)).coordinator;
+    assert.equal(c.routed, 3);
+    assert.equal(c.routeCalls, 2);
+    assert.equal(c.routeTokens, 1900);
+    assert.equal(c.tasksWithRouteCall, 2);
+    assert.equal(c.avgRouteTokens, 950);
+    assert.equal(c.fallbackToKeywords, 1);
+    assert.equal(c.keywordOnly, 1);
+    assert.equal(c.fallbackRate, 0.5);
+    const none = computeKpi(source(app, [task('T9')], {})).coordinator;
+    assert.equal(none.fallbackRate, null);
+    assert.equal(none.avgRouteTokens, null);
+    assert.match(kpiMarkdown(computeKpi(source(app, ts, calls))), /Điều phối viên: 3 nhiệm vụ định tuyến · 2 lượt route/);
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('FX13: estimatePlanDetail — đường găng và song song dự kiến trên kế hoạch rẽ nhánh', () => {
+  const app = testApp();
+  try {
+    // người nhận không có trong roster → không có công cụ → mức "none"; đặt none = 100, tắt lịch sử để số tính tay được
+    const cfg = app.config.estimate as { base: number; perReview: number; historyDays?: number; web: number; perSubtask: Record<string, number> };
+    cfg.base = 50;
+    cfg.historyDays = 0;
+    cfg.perSubtask.none = 100;
+    const mk = (id: string, dependsOn: string[], status = 'pending') => ({ id, title: id, description: '', assignee: 'ghost', dependsOn, status, attempts: 0 });
+    const tk = { classification: 'internal', options: { review: false, maxRevisions: 0 } } as never;
+    // S1 → S2, S1 → S3, (S2, S3) → S4; S5 độc lập.
+    // work = 5 × 100 = 500; đường găng = S1 + S2 + S4 = 300 (S2 và S3 song song, đi theo một nhánh); song song = 500 / 300 = 1,67; total = 50 + 500.
+    const run = { department: 'dev', status: 'pending', usage: {}, subtasks: [mk('S1', []), mk('S2', ['S1']), mk('S3', ['S1']), mk('S4', ['S2', 'S3']), mk('S5', [])] } as never;
+    const d = app.orchestrator.estimatePlanDetail(tk, run);
+    assert.deepEqual(d, { total: 550, work: 500, criticalPathEstimate: 300, parallelism: 1.67 });
+    assert.equal(app.orchestrator.estimatePlan(tk, run), 550, 'estimatePlan vẫn trả tổng token');
+    // chuỗi thẳng S1→S2→S3: không song song được → cp = work, parallelism = 1
+    const chain = { department: 'dev', status: 'pending', usage: {}, subtasks: [mk('S1', []), mk('S2', ['S1']), mk('S3', ['S2'])] } as never;
+    assert.deepEqual(app.orchestrator.estimatePlanDetail(tk, chain), { total: 350, work: 300, criticalPathEstimate: 300, parallelism: 1 });
+    // hạng mục đã xong không tính; phụ thuộc vào hạng mục đã xong / không tồn tại bị bỏ qua; vòng phụ thuộc không treo
+    const odd = { department: 'dev', status: 'pending', usage: {}, subtasks: [mk('S1', [], 'done'), mk('S2', ['S1', 'S9']), mk('S3', ['S4']), mk('S4', ['S3'])] } as never;
+    const o = app.orchestrator.estimatePlanDetail(tk, odd);
+    assert.equal(o.work, 300);
+    assert.equal(o.criticalPathEstimate, 200);
+    assert.equal(app.orchestrator.estimatePlanDetail(tk, { department: 'dev', status: 'pending', usage: {}, subtasks: [] } as never).parallelism, 1);
+  } finally {
+    app.close?.();
+  }
+});
+
+test('FX13: log plan.estimate ghi criticalPathEstimate và parallelism, run.estimate lưu cùng số', async () => {
+  const app = testApp();
+  try {
+    const t = app.orchestrator.submit({ brief: 'Viết tài liệu API nhỏ cho dịch vụ thanh toán', options: { discussionRounds: 0 } });
+    const done = await app.orchestrator.waitFor(t.id);
+    const ev = app.logs.query({ task: t.id }).filter((e) => e.kind === 'plan.estimate');
+    assert.ok(ev.length >= 1, 'có log plan.estimate');
+    const d = ev[0].data as { estimate: number; work: number; criticalPathEstimate: number; parallelism: number };
+    assert.ok(d.criticalPathEstimate > 0 && d.criticalPathEstimate <= d.work);
+    assert.equal(d.parallelism, Math.round((d.work / d.criticalPathEstimate) * 100) / 100);
+    const est = done.runs[0].estimate;
+    assert.equal(est?.criticalPathEstimate, d.criticalPathEstimate);
+    assert.equal(est?.parallelism, d.parallelism);
+  } finally {
+    app.close?.();
+  }
+});

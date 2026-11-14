@@ -216,9 +216,36 @@ export const FINDING_LABELS: Record<string, string> = {
   'empty-output': 'Sản phẩm rỗng',
 };
 
+/**
+ * Điều phối viên (lượt `route`). routed: nhiệm vụ đã định tuyến; routeCalls/routeTokens: lượt LLM route và token của chúng (input+output+cache);
+ * fallbackToKeywords: có gọi LLM route nhưng kết quả bị bỏ (lỗi/không đọc được) → `keywordRoute`; keywordOnly: định tuyến từ khóa từ đầu
+ * (làn đơn ép định tuyến, không gọi LLM). fallbackRate = fallbackToKeywords / routeCalls-nhiệm-vụ (null khi chưa gọi LLM route).
+ */
+export interface CoordinatorKpi {
+  routed: number;
+  routeCalls: number;
+  routeTokens: number;
+  avgRouteTokens: number | null;
+  tasksWithRouteCall: number;
+  fallbackToKeywords: number;
+  keywordOnly: number;
+  fallbackRate: number | null;
+}
+
 export interface KpiReport {
   generatedAt: string;
   tasks: Array<{ id: string; title: string; status: string; tokens: number }>;
+  /**
+   * FX17: `tasksCounted` = `tasks.length` = tổng `tasksByStatus` (cả hai đếm cùng một tập: nhiệm vụ sau lọc, trừ `queued`; gồm cả
+   * nhiệm vụ đang chạy/tạm dừng/hủy/lỗi). `tasksFinished` = số nhiệm vụ `done` — tập duy nhất được tính "Kết quả thật" và hiệu chỉnh người duyệt.
+   * Không còn lệch giữa hai số; `definitions` ghi lại nghĩa từng trường để tệp xuất tự giải thích.
+   */
+  tasksCounted: number;
+  tasksByStatus: Record<string, number>;
+  tasksFinished: number;
+  definitions: Record<string, string>;
+  /** FX17: KPI điều phối viên (lượt route): chi phí token và tỉ lệ lùi về `keywordRoute`. */
+  coordinator: CoordinatorKpi;
   /** (B-13) Tỉ lệ trúng cache toàn báo cáo. */
   cache?: CacheStats;
   agents: AgentKpi[];
@@ -488,6 +515,7 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
 
   const allCache = newCacheStats();
   const taskRows: KpiReport['tasks'] = [];
+  const coord: CoordinatorKpi = { routed: 0, routeCalls: 0, routeTokens: 0, avgRouteTokens: null, tasksWithRouteCall: 0, fallbackToKeywords: 0, keywordOnly: 0, fallbackRate: null };
   /** Ngân sách và token thực tế theo phòng (để chấm trưởng phòng: kế hoạch có vừa ngân sách không). */
   const deptBudget = new Map<string, { budget: number; used: number }>();
   for (const task of src.tasks) {
@@ -499,6 +527,17 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
     }
     const calls = src.calls(task.id);
     const transcript = src.transcript(task.id);
+    const routeCalls = calls.filter((r) => r.phase === 'route');
+    if (task.routing) coord.routed++;
+    if (routeCalls.length) {
+      coord.tasksWithRouteCall++;
+      coord.routeCalls += routeCalls.length;
+      coord.routeTokens += routeCalls.reduce((n, r) => n + (r.input ?? 0) + (r.output ?? 0) + (r.cacheRead ?? 0) + (r.cacheWrite ?? 0), 0);
+    }
+    if (task.routing?.by === 'keywords') {
+      if (routeCalls.length) coord.fallbackToKeywords++;
+      else coord.keywordOnly++;
+    }
     const exec = src.access(task) === 'exec';
     const checks = checksOutcome(task);
     const deptChecks = checksByDept(task);
@@ -907,9 +946,25 @@ export function computeKpi(src: KpiSource, opts: KpiOptions = {}): KpiReport {
       score: scored.length ? Math.round(scored.reduce((s, k) => s + k.score * Math.max(1, k.tokens.total), 0) / scored.reduce((s, k) => s + Math.max(1, k.tokens.total), 0)) : 0,
     };
   });
+  coord.avgRouteTokens = coord.tasksWithRouteCall ? Math.round(coord.routeTokens / coord.tasksWithRouteCall) : null;
+  coord.fallbackRate = coord.tasksWithRouteCall ? Math.round((coord.fallbackToKeywords / coord.tasksWithRouteCall) * 1000) / 1000 : null;
+  const tasksByStatus: Record<string, number> = {};
+  for (const t of taskRows) tasksByStatus[t.status] = (tasksByStatus[t.status] ?? 0) + 1;
   return {
     generatedAt: new Date().toISOString(),
     tasks: taskRows,
+    tasksCounted: taskRows.length,
+    tasksByStatus,
+    tasksFinished: taskRows.filter((t) => t.status === 'done').length,
+    definitions: {
+      tasksCounted: 'Số nhiệm vụ trong báo cáo (đã lọc, bỏ nhiệm vụ queued) = độ dài `tasks` = tổng `tasksByStatus`.',
+      tasksByStatus: 'Số nhiệm vụ theo trạng thái, cùng tập với `tasksCounted` (gồm đang chạy, tạm dừng, hủy, lỗi).',
+      tasksFinished: 'Số nhiệm vụ `done` — chỉ tập này vào điểm "Kết quả thật" và hiệu chỉnh người duyệt; nhiệm vụ dở dang vẫn tính lượt gọi/token của agent.',
+      'coordinator.routeTokens': 'Token (input+output+cache) của các lượt LLM `route` của điều phối viên.',
+      'coordinator.fallbackRate': 'Tỉ lệ nhiệm vụ có gọi LLM route nhưng phải lùi về keywordRoute (lượt lỗi hoặc không đọc được); null khi chưa có lượt route.',
+      'coordinator.keywordOnly': 'Nhiệm vụ định tuyến từ khóa từ đầu (làn đơn ép định tuyến) — không phải lùi, không tính vào fallbackRate.',
+    },
+    coordinator: coord,
     cache: finishCacheStats(allCache),
     agents: list.map((a) => a.k),
     departments,
@@ -1131,7 +1186,11 @@ export function kpiMarkdown(r: KpiReport, opts: { findings?: boolean } = {}): st
     )
     .join('\n');
   const head = `| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |\n|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n${rows}`;
-  if (!opts.findings) return head;
+  const c = r.coordinator;
+  const coordLine = c?.routed ? `
+
+_Điều phối viên: ${c.routed} nhiệm vụ định tuyến · ${c.routeCalls} lượt route, ${fmtK(c.routeTokens)} token${c.avgRouteTokens !== null ? ` (TB ${fmtK(c.avgRouteTokens)}/nhiệm vụ)` : ''} · lùi về từ khóa ${c.fallbackToKeywords}${c.fallbackRate !== null ? ` (${Math.round(c.fallbackRate * 100)}%)` : ''} · từ khóa từ đầu ${c.keywordOnly}._` : '';
+  if (!opts.findings) return head + coordLine;
   const fx = r.agents
     .filter((k) => k.findings.length)
     .map((k) => `- **${k.name}** (@${k.agentId}, ${k.score} ${k.grade}):\n${k.findings.map((x) => `  - ${x}`).join('\n')}`)

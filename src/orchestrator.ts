@@ -556,6 +556,7 @@ export class Orchestrator {
     if (t.options.budgetMode === 'pause' && totalTokens(t.usage) >= t.options.budgetTokens)
       throw new Error(`Đã dùng ${fmtNum(totalTokens(t.usage))}/${fmtNum(t.options.budgetTokens)} token — hãy tăng ngân sách hoặc chọn "Chạy tới khi hoàn thành"`);
     this.clearResumeTimer(id);
+    this.renameLegacyInterimFinal(t);
     const rerun = o.rerun === 'all' ? 'all' : new Set(o.rerun ?? []);
     for (const r of t.runs) {
       const again = r.subtasks.filter((s) => s.status === 'done' && (rerun === 'all' || rerun.has(s.id)));
@@ -622,7 +623,7 @@ export class Orchestrator {
           if (o.auto) this.message(t, r.department, 'system', 'system', `⏱ Hết thời gian chờ duyệt — tự duyệt kế hoạch (${r.subtasks.length} hạng mục).`);
         }
     // người dùng chủ động tiếp tục: bỏ điều kiện chờ các nhiệm vụ trước đã lỗi/hủy/không còn
-    if (t.after?.some((a) => ['failed', 'cancelled', undefined].includes(store.get(a)?.status))) t.after = undefined;
+    if (t.after?.some((a) => ['failed', 'cancelled', undefined].includes(store.get(a)?.status)) || this.unacceptedBefore(t).length) t.after = undefined;
     t.status = 'queued';
     t.pause = undefined;
     // người bấm Tiếp tục → đếm lại; tự tiếp tục sau "không còn runtime" thì giữ để giãn/dừng hẳn
@@ -858,6 +859,15 @@ export class Orchestrator {
         continue;
       }
       this.queue.splice(i, 1);
+      if (wait === 'unaccepted') {
+        // FX5b: nhiệm vụ trước xong nhưng CTO chưa nghiệm thu (hết vòng bổ sung) → không tự chạy tiếp trên nền chưa đạt
+        const ids = this.unacceptedBefore(t);
+        t.status = 'paused';
+        t.pause = { reason: 'manual', detail: `Chờ nhiệm vụ trước (${ids.join(', ')}) nhưng CTO chưa nghiệm thu sau khi hết vòng bổ sung — xem kết quả rồi bấm "Tiếp tục" để vẫn chạy`, at: nowIso() };
+        this.d.logs.write({ level: 'warn', kind: 'task.blocked', msg: `${t.id}: ${t.pause.detail}`, taskId: t.id, data: { reason: 'unaccepted', after: ids } });
+        this.save(t, true);
+        continue;
+      }
       if (wait === 'blocked') {
         t.status = 'paused';
         t.pause = { reason: 'manual', detail: `Chờ nhiệm vụ trước (${t.after!.join(', ')}) nhưng nhiệm vụ đó lỗi/đã hủy — bấm "Tiếp tục" để vẫn chạy`, at: nowIso() };
@@ -875,11 +885,19 @@ export class Orchestrator {
     }
   }
 
+  /** FX5b: các nhiệm vụ "after" đã xong nhưng CTO có kết luận đọc được là CHƯA nghiệm thu (accepted=false, parsed=true). */
+  private unacceptedBefore(t: Task): string[] {
+    return (t.after ?? []).filter((a) => {
+      const ac = this.d.store.get(a)?.acceptance;
+      return !!ac && ac.parsed && !ac.accepted && !ac.error;
+    });
+  }
+
   /** Trạng thái chờ của nhiệm vụ có điều kiện "after": chạy được / còn chờ / bị chặn (nhiệm vụ trước lỗi, hủy, không còn). */
-  private waitingOn(t: Task): undefined | 'wait' | 'blocked' {
+  private waitingOn(t: Task): undefined | 'wait' | 'blocked' | 'unaccepted' {
     if (!t.after?.length) return undefined;
     const st = t.after.map((a) => this.d.store.get(a)?.status);
-    if (st.every((s) => s === 'done')) return undefined;
+    if (st.every((s) => s === 'done')) return this.unacceptedBefore(t).length ? 'unaccepted' : undefined;
     if (st.some((s) => s === undefined || s === 'failed' || s === 'cancelled')) return 'blocked';
     return 'wait';
   }
@@ -1673,7 +1691,7 @@ export class Orchestrator {
     }
     if (!reached(run, 'reviewed')) {
       run.stage = 'reviewed';
-      if (run.review && !run.review.approved) task.attention = { reason: 'review', detail: `${dept.short}: ${run.review.summary.slice(0, 280)}`, at: nowIso() };
+      if (run.review && !run.review.approved) task.attention = { reason: 'review', detail: `${dept.short}: ${run.review.skipped ? 'chưa review — ' : ''}${run.review.summary.slice(0, 280)}`, at: nowIso() };
       else if (task.projectChecks?.latest?.some((r) => !r.ok)) task.attention = { reason: 'checks', detail: `Lệnh kiểm tra còn lỗi: ${task.projectChecks.latest.filter((r) => !r.ok).map((r) => r.command).join(', ')}`, at: nowIso() };
       else if (run.review?.approved && !run.review.by && run.review.verified === false) task.attention = { reason: 'review', detail: `${dept.short}: duyệt nhưng chưa có kiểm chứng chạy thật — cần giám đốc xem.`, at: nowIso() };
       this.save(task);
@@ -2009,6 +2027,9 @@ export class Orchestrator {
               run.review = { approved: true, summary, issues: [], checks: gateChecks, verified: true };
               this.d.logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'skip-reviewer', fixRounds: gate.fixRounds, reviewer: false, briefDemandsReview: gate.briefDemandsReview, briefReviewItems: gate.briefReviewItems } });
               this.message(task, dept.id, 'system', 'system', `✅ ${summary}`);
+            } else {
+              // FX4: không review, không lệnh kiểm tra → ghi rõ "chưa review" thay vì để trống
+              this.markReviewSkipped(task, run, dept, !task.options.review ? 'review đang tắt' : 'phòng không có reviewer riêng');
             }
             break;
           }
@@ -2191,6 +2212,7 @@ export class Orchestrator {
       });
       if (fin.error || !fin.text) throw new Error(`Trưởng phòng không viết được báo cáo tổng hợp${fin.error ? `: ${fin.error}` : ''}`);
       finalText = fin.text;
+      this.finalTemplateGate(task, run, dept, lead, finalText);
     }
     const rel = `${safeName(dept.id)}${run.round ? `-R${run.round}` : ""}-FINAL.md`;
     writeText(path.join(this.d.store.runDir(task.id), rel), finalText);
@@ -2202,6 +2224,31 @@ export class Orchestrator {
     this.message(task, dept.id, lead.id, 'final', `Báo cáo tổng hợp đã xong: ${extractSummary(finalText, 240)}`);
     this.save(task);
     return finalText;
+  }
+
+  /** FX16: FINAL do trưởng phòng viết cũng qua cổng "Mẫu đầu ra" của hồ sơ lead; thiếu mục ⇒ cờ trong gate.decision (không chặn cứng). */
+  private finalTemplateGate(task: Task, run: DeptRun, dept: { id: string; short: string }, lead: AgentDef, text: string): { ok: boolean; missing: string[]; coverage: number } {
+    const g = templateGate(text, lead.body);
+    const missing = g.summaryOk ? g.missing : [...g.missing, 'Tóm tắt'];
+    this.d.logs.write({
+      level: g.ok ? 'info' : 'warn',
+      kind: 'gate.decision',
+      msg: `${task.id}: cổng mẫu FINAL ${g.ok ? 'đạt' : `thiếu mục: ${missing.join('; ')}`}`,
+      taskId: task.id,
+      department: dept.id,
+      agentId: lead.id,
+      data: { gate: 'final-template', verdict: g.ok ? 'pass' : 'block', flag: g.ok ? undefined : 'final-missing-sections', coverage: g.coverage, missing, summaryOk: g.summaryOk },
+    });
+    if (!g.ok) this.message(task, dept.id, 'system', 'system', `⚠️ Báo cáo tổng hợp của trưởng phòng thiếu mục bắt buộc trong "Mẫu đầu ra": ${missing.join('; ')}.`);
+    return { ok: g.ok, missing, coverage: g.coverage };
+  }
+
+  /** FX4: review bị bỏ qua mà không có lệnh kiểm tra nào thay thế → dấu vết trong run.review + log riêng (không tự "duyệt"). */
+  private markReviewSkipped(task: Task, run: DeptRun, dept: { id: string; short: string }, reason: string): void {
+    const summary = `Chưa review: ${reason} và dự án không có lệnh kiểm tra — đầu ra chưa có bằng chứng kiểm chứng nào.`;
+    run.review = { approved: false, summary, issues: [], skipped: true, reason };
+    this.d.logs.write({ level: 'warn', kind: 'review.skipped', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { reason } });
+    this.message(task, dept.id, 'system', 'system', `⚠️ ${summary}`);
   }
 
   private async executeAll(task: Task, run: DeptRun, pctx: P.Ctx, base: CallCtx, prior?: string): Promise<void> {
@@ -2488,13 +2535,23 @@ export class Orchestrator {
   }
 
   estimatePlan(task: Task, run: DeptRun, project?: ProjectDef): number {
+    return this.estimatePlanDetail(task, run, project).total;
+  }
+
+  /**
+   * FX13: ước lượng kèm đường găng. `work` = tổng token các hạng mục chưa xong (không gồm phần cố định `base` và review);
+   * `criticalPathEstimate` = chuỗi phụ thuộc (dependsOn) tốn token nhất trong số đó; `parallelism` = work / cp (≥ 1; 1 khi không có việc).
+   * Phụ thuộc vào hạng mục đã xong hoặc không có trong kế hoạch bị bỏ qua; vòng phụ thuộc không làm treo (cạnh quay lại bị cắt).
+   */
+  estimatePlanDetail(task: Task, run: DeptRun, project?: ProjectDef): { total: number; work: number; criticalPathEstimate: number; parallelism: number } {
     const e = this.d.config.estimate;
     const hist = this.history(task);
     const min = e.minSamples ?? 2;
     const access = this.toolAccess(task, project);
     const cls = task.classification;
     const web = this.d.config.tools.web !== false && (cls === 'public' || cls === 'internal');
-    let total = e.base + (task.options.review ? e.perReview * (1 + task.options.maxRevisions) : 0);
+    const fixed = e.base + (task.options.review ? e.perReview * (1 + task.options.maxRevisions) : 0);
+    const cost = new Map<string, number>();
     for (const st of run.subtasks) {
       if (st.status === 'done') continue;
       const agent = this.d.registry.agents.get(st.assignee);
@@ -2502,14 +2559,35 @@ export class Orchestrator {
       const lvl: ToolAccess = tools.includes('run_command') ? 'exec' : tools.includes('write_file') || tools.includes('edit_file') ? 'write' : tools.includes('read_file') ? 'read' : 'none';
       // có đủ lịch sử của agent → dùng token thực tế (đã gồm tra cứu web, sửa theo review); chưa có → hằng số theo quyền công cụ
       const h = hist.get(st.assignee);
-      if (h && h.samples >= min) {
-        total += h.median;
-        continue;
+      let c: number;
+      if (h && h.samples >= min) c = h.median;
+      else {
+        c = e.perSubtask[lvl] ?? e.perSubtask.none;
+        if (tools.some((t) => t === 'search_papers' || t === 'web_search' || t === 'fetch_url')) c += e.web;
       }
-      total += e.perSubtask[lvl] ?? e.perSubtask.none;
-      if (tools.some((t) => t === 'search_papers' || t === 'web_search' || t === 'fetch_url')) total += e.web;
+      cost.set(st.id, c);
     }
-    return total;
+    const deps = new Map(run.subtasks.map((s) => [s.id, s.dependsOn ?? []] as const));
+    const memo = new Map<string, number>();
+    const longest = (id: string, seen: Set<string>): number => {
+      const m = memo.get(id);
+      if (m !== undefined) return m;
+      if (seen.has(id)) return 0;
+      seen.add(id);
+      let best = 0;
+      for (const d of deps.get(id) ?? []) if (cost.has(d)) best = Math.max(best, longest(d, seen));
+      seen.delete(id);
+      const v = (cost.get(id) ?? 0) + best;
+      memo.set(id, v);
+      return v;
+    };
+    let work = 0;
+    let cp = 0;
+    for (const [id, c] of cost) {
+      work += c;
+      cp = Math.max(cp, longest(id, new Set()));
+    }
+    return { total: fixed + work, work, criticalPathEstimate: cp, parallelism: cp ? Math.round((work / cp) * 100) / 100 : 1 };
   }
 
   /**
@@ -2539,7 +2617,9 @@ export class Orchestrator {
     const ls = pctx.cwd ? spawnSync('git', ['ls-files', '-z'], { cwd: pctx.cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, windowsHide: true }) : undefined;
     const repoFiles = ls?.status === 0 ? ls.stdout.split('\0').filter(Boolean) : undefined;
     const agentIds = [...registry.agents.keys()];
-    const evaluate = (oos = parsed?.outOfScope) => planGate({ brief: task.brief, planSummary: run.planSummary ?? '', subtasks: run.subtasks, outOfScope: oos, truncated, repoFiles, agentIds, agentRoles: Object.fromEntries([...registry.agents.values()].map((a) => [a.id.toLowerCase(), { role: a.role, skills: a.skills }])) });
+    // FX15: chỉ kiểm "hạng mục cần lệnh → agent có run_command" khi nhiệm vụ có người chạy lệnh được (cùng nguồn với danh sách năng lực của trưởng phòng)
+    const canRun = Object.values(pctx.caps ?? {}).some((x) => /chạy lệnh/.test(x));
+    const evaluate = (oos = parsed?.outOfScope) => planGate({ brief: task.brief, planSummary: run.planSummary ?? '', subtasks: run.subtasks, outOfScope: oos, truncated, repoFiles, agentIds, agentRoles: Object.fromEntries([...registry.agents.values()].map((a) => [a.id.toLowerCase(), { role: a.role, skills: a.skills, ...(canRun ? { tools: pctx.caps?.[a.id]?.includes('chạy lệnh') ? ['run_command'] : [] } : {}) }])) });
     let truncated = !!parsed?.truncated;
     let g = evaluate();
     if (!run.planGate?.replanned) logs.write({ level: g.blocked ? 'warn' : 'info', kind: 'gate.decision', msg: `${task.id}: cổng phủ kế hoạch ${g.blocked ? 'chặn' : 'đạt'}`, taskId: task.id, department: dept.id, data: { gate: 'b10', verdict: g.blocked ? 'block' : 'pass' } });
@@ -2762,11 +2842,14 @@ export class Orchestrator {
 
   /** Kế hoạch vừa chốt: ước lượng ≫ phần ngân sách còn lại → nhắn + cảnh báo; chế độ "pause" thì dừng chờ quyết định. */
   private checkEstimate(task: Task, run: DeptRun, project?: ProjectDef, warn = true): void {
-    const est = this.estimatePlan(task, run, project);
+    const detail = this.estimatePlanDetail(task, run, project);
+    const est = this.estimatePlan(task, run, project); // qua estimatePlan (điểm móc cho test/ghi đè); detail chỉ để lấy đường găng
     const remaining = Math.max(0, task.options.budgetTokens - totalTokens(task.usage));
     const basis = this.estimateBasis(run, task);
-    run.estimate = { tokens: est, budget: remaining, at: nowIso(), basis };
+    run.estimate = { tokens: est, budget: remaining, at: nowIso(), basis, work: detail.work, criticalPathEstimate: detail.criticalPathEstimate, parallelism: detail.parallelism };
     this.save(task);
+    // FX13: ghi đường găng dự kiến vào log kế hoạch (chỉ số này so với song song thực tế khi đo)
+    this.d.logs.write({ level: 'info', kind: 'plan.estimate', msg: `${task.id}: ước lượng kế hoạch ${run.department} ~${fmtNum(est)} token, đường găng ~${fmtNum(detail.criticalPathEstimate)}, song song dự kiến ×${String(detail.parallelism).replace('.', ',')}`, taskId: task.id, department: run.department, data: { estimate: est, work: detail.work, criticalPathEstimate: detail.criticalPathEstimate, parallelism: detail.parallelism, subtasks: run.subtasks.length } });
     // K3: vòng bổ sung là việc tự mở, không được vượt phần ngân sách còn lại dù ở chế độ "complete" → dừng chờ giám đốc tăng ngân sách
     if (warn && run.followupOf && est > remaining) {
       const m = `Vòng bổ sung ${run.round ?? ''} ước tính ~${fmtNum(est)} token, vượt phần ngân sách còn lại (${fmtNum(remaining)}) — tăng ngân sách rồi tiếp tục.`.replace('  ', ' ');
@@ -4072,6 +4155,22 @@ export class Orchestrator {
     if (!st.output) return '';
     const t = this.d.store.readRunFile(task.id, st.output) ?? '';
     return t.replace(/^<!--[\s\S]*?-->\s*/, '');
+  }
+
+  /** D7: nhiệm vụ paused CŨ còn FINAL.md tạm (chưa có finalPath) → đổi tên thành DRAFT-paused.md (hoặc -legacy nếu đã có), không xóa, ghi log. */
+  private renameLegacyInterimFinal(task: Task): void {
+    if (task.status !== 'paused' || task.finalPath) return;
+    const { store, logs } = this.d;
+    const from = path.join(store.runDir(task.id), 'FINAL.md');
+    if (!fs.existsSync(from)) return;
+    let name = 'DRAFT-paused.md';
+    if (fs.existsSync(path.join(store.runDir(task.id), name))) name = 'DRAFT-paused-legacy.md';
+    try {
+      fs.renameSync(from, path.join(store.runDir(task.id), name));
+      logs.write({ level: 'info', kind: 'task.final.legacy-renamed', msg: `${task.id}: FINAL.md tạm của nhiệm vụ tạm dừng cũ được đổi tên thành ${name} (không xóa, giữ bằng chứng)`, taskId: task.id, projectId: task.projectId, data: { to: name } });
+    } catch {
+      /* không đổi tên được: để nguyên, writeFinal sẽ ghi đè khi hoàn thành */
+    }
   }
 
   private writeFinal(task: Task): void {

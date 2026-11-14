@@ -230,6 +230,8 @@ export interface Subtask {
   title: string;
   description: string;
   assignee: string;
+  /** Tên người nhận LLM viết nhưng không khớp roster (assignee đã rơi về agent khác) — cổng B báo. */
+  assigneeUnmatched?: string;
   dependsOn: string[];
   deliverable?: string;
   status: SubtaskStatus;
@@ -293,6 +295,9 @@ export interface DeptRun {
     approved: boolean;
     summary: string;
     issues: ReviewIssue[];
+    /** FX4: không có review nào (tắt/không có reviewer) và không có lệnh kiểm tra — không có bằng chứng gì để duyệt. */
+    skipped?: boolean;
+    reason?: string;
     /** Lệnh kiểm tra reviewer khai báo + lệnh thực sự chạy qua công cụ. */
     checks?: ReviewCheck[];
     /** false: reviewer có quyền chạy lệnh nhưng không chạy lệnh nào → kết luận chưa có bằng chứng chạy thật. */
@@ -316,7 +321,7 @@ export interface DeptRun {
   /** Hạng mục còn phải sửa trong vòng hiện tại — tiếp tục sau tạm dừng thì sửa tiếp theo review đã có, không review lại. */
   revising?: string[];
   /** Ước lượng token của kế hoạch (sau khi lập/chốt) để cảnh báo nhiệm vụ quá lớn. */
-  estimate?: { tokens: number; budget: number; at: string; basis?: string };
+  estimate?: { tokens: number; budget: number; at: string; basis?: string; work?: number; criticalPathEstimate?: number; parallelism?: number };
   /** Duyệt kế hoạch trước khi thực thi: nhân sự được chọn (kèm năng lực công cụ) lúc chờ duyệt, ai/khi nào duyệt. */
   planReview?: {
     at: string;

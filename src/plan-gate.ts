@@ -14,6 +14,8 @@ export interface GateSubtask {
   description: string;
   assignee: string;
   deliverable?: string;
+  /** parsePlan: tên người nhận LLM viết không khớp roster — cổng B báo, không đổi lặng lẽ. */
+  assigneeUnmatched?: string;
 }
 
 export interface OutOfScopeItem { target: string; reason: string }
@@ -31,7 +33,7 @@ export interface PlanGateInput {
   /** id mọi agent có thể được nhắc trong mô tả (quy tắc B-iii). Mặc định: assignee của kế hoạch. */
   agentIds?: string[];
   /** id → role + skills (từ registry) để khớp vai của đề bài với assignee. Thiếu thì chỉ khớp theo id. */
-  agentRoles?: Record<string, { role: string; skills: string[] }>;
+  agentRoles?: Record<string, { role: string; skills: string[]; /** tools của agent (registry); có thì cổng kiểm hạng mục cần lệnh với agent không có run_command. */ tools?: string[] }>;
 }
 
 export interface PlanGateResult {
@@ -119,6 +121,9 @@ export function planTargets(brief: string, planSummary: string, repoFiles: strin
   return merged.filter((p) => !refOnly.has(p) || found.filter((x) => x === p).length > 1);
 }
 
+/** Hạng mục đòi chạy lệnh thật (test/build/typecheck/migration/script/đo): cần agent có run_command. */
+const NEEDS_CMD_RE = /(?<![\p{L}])chạy\s+(?:lại\s+)?(?:các\s+)?(?:lệnh|test|build|typecheck|lint|migration|script|benchmark|đo|\x60)/iu;
+
 const subtaskText = (s: GateSubtask): string => norm(`${s.title}\n${s.description}\n${s.deliverable ?? ''}`);
 
 /** Quy tắc A: trả các đích chưa có hạng mục nhận. */
@@ -135,7 +140,7 @@ export function checkPlanCoverage(input: Pick<PlanGateInput, 'brief' | 'planSumm
 }
 
 /** Quy tắc B: trả danh sách lý do kế hoạch bị coi là đọc dở (rỗng = đọc được). */
-export function checkPlanReadable(input: Pick<PlanGateInput, 'planSummary' | 'subtasks' | 'truncated' | 'agentIds'>): string[] {
+export function checkPlanReadable(input: Pick<PlanGateInput, 'planSummary' | 'subtasks' | 'truncated' | 'agentIds'> & Partial<Pick<PlanGateInput, 'agentRoles'>>): string[] {
   const reasons: string[] = [];
   const n = input.subtasks.length;
   const m = COUNT_RE.exec(input.planSummary.trim());
@@ -160,17 +165,43 @@ export function checkPlanReadable(input: Pick<PlanGateInput, 'planSummary' | 'su
       }
     }
   }
+  for (const s of input.subtasks) {
+    if (s.assigneeUnmatched) reasons.push(`(v) ${s.id}: người nhận "${s.assigneeUnmatched}" không có trong roster — không được tự đổi sang ${s.assignee}, trưởng phòng phải giao lại đúng người`);
+    const info = input.agentRoles?.[s.assignee.toLowerCase()] ?? input.agentRoles?.[s.assignee];
+    if (info?.tools && !info.tools.includes('run_command') && NEEDS_CMD_RE.test(`${s.title}
+${s.description}`)) reasons.push(`(vi) ${s.id}: hạng mục cần chạy lệnh nhưng người nhận ${s.assignee} chỉ đọc/ghi tệp, không có công cụ chạy lệnh — giao cho người có quyền chạy lệnh`);
+  }
   if (input.truncated) reasons.push('(iv) JSON kế hoạch bị cắt cụt hoặc không đóng');
   return reasons;
 }
 
-export interface BriefItem { code: string; line: string; role?: string; review: boolean; exempt: boolean }
+export interface BriefItem {
+  code: string;
+  line: string;
+  role?: string;
+  /** Mọi vai nêu trên dòng hạng mục (chỉ có khi > 1, vd. "K4 — academic-writer, peer-reviewer:"). */
+  roles?: string[];
+  review: boolean;
+  exempt: boolean;
+}
 
 const ITEM_RE = /^\s*(?:[#>*+-]+\s*)*(?:\*\*)?(K\d+)(?![\p{L}\d])\s*(?:\*\*)?\s*([—–:-])\s*(.*)$/u;
 const REVIEW_ROLES = new Set(['peer-reviewer', 'code-reviewer', 'qa-tester']);
 const SKIP_RE = /(?<![\p{L}])(?:không làm|chờ)(?![\p{L}])/iu;
 const BELOW_SKIP_RE = /^\s*(?:[#>*+-]+\s*)*(?:\*\*)?(?:Phần\s*[^:\n]{1,20}:\s*)?(?:không làm|chờ)(?![\p{L}])/iu;
 const ROLE_AFTER_RE = /^\*{0,2}\s*([a-z][a-z0-9]*(?:-[a-z0-9]+)+)\s*\*{0,2}\s*(?::|—|–|$)/i;
+
+/** Tiêu đề Markdown bất kỳ cấp (# … ######) — kết thúc thân hạng mục. */
+const HEADING_RE = /^\s{0,3}#{1,6}(?:\s|$)/;
+const ROLE_TOKEN_RE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/i;
+
+/** Danh sách vai ở đầu phần mô tả của dòng hạng mục: "academic-writer, peer-reviewer: …" → cả hai vai. Bỏ phần trong ngoặc. */
+function rolesAfter(rest: string): string[] {
+  const head = rest.replace(/\*\*/g, ' ').replace(/\([^)]*\)/g, ' ').split(/[:—–]/)[0];
+  const toks = head.split(/\s*(?:,|;|\/|\+|&|\svà\s)\s*/i).map((t) => t.trim().replace(/^@/, '').toLowerCase()).filter(Boolean);
+  if (!toks.length || !toks.every((t) => /^[a-z][a-z0-9-]*$/.test(t))) return [];
+  return toks.filter((t) => ROLE_TOKEN_RE.test(t));
+}
 
 /** Hạng mục có mã (K1, K2…) của đề bài: dòng/tiêu đề bắt đầu bằng mã + dấu —/–/-/:. Mỗi mã lấy lần xuất hiện đầu. */
 export function briefItems(brief: string): BriefItem[] {
@@ -184,15 +215,18 @@ export function briefItems(brief: string): BriefItem[] {
   });
   return heads.map((h) => {
     const line = lines[h.idx].trim();
-    const end = Math.min(...[...lines.keys()].filter((k) => k > h.idx && ITEM_RE.test(lines[k])), lines.length);
+    // thân hạng mục: tới tiêu đề Markdown kế tiếp (mọi cấp) hoặc dòng hạng mục mã kế tiếp, mốc nào gặp trước — không kéo tới hết tệp
+    const end = Math.min(...[...lines.keys()].filter((k) => k > h.idx && (ITEM_RE.test(lines[k]) || HEADING_RE.test(lines[k]))), lines.length);
     const at = /@([a-z][a-z0-9]*(?:-[a-z0-9]+)*)/i.exec(line);
-    const after = ROLE_AFTER_RE.exec(h.rest.trim());
-    const role = (at?.[1] ?? after?.[1])?.toLowerCase();
-    const review = (!!role && REVIEW_ROLES.has(role)) || /review|phản biện/iu.test(line);
+    const roles = [...new Set([...(at ? [at[1].toLowerCase()] : []), ...rolesAfter(h.rest)])];
+    const single = ROLE_AFTER_RE.exec(h.rest.trim())?.[1]?.toLowerCase();
+    if (!roles.length && single) roles.push(single);
+    const role = roles.find((r) => REVIEW_ROLES.has(r)) ?? roles[0];
+    const review = roles.some((r) => REVIEW_ROLES.has(r)) || /review|phản biện/iu.test(line);
     // chỉ xét dòng hạng mục, hoặc dòng ngay dưới mà cụm "không làm"/"chờ" đứng đầu dòng / sau nhãn "Phần …:" (không xét câu ví dụ giữa thân)
     const below = lines.slice(h.idx + 1, end).filter((l) => BELOW_SKIP_RE.test(l));
     const exempt = SKIP_RE.test(h.rest) || below.length > 0;
-    return { code: h.code, line, ...(role ? { role } : {}), review, exempt };
+    return { code: h.code, line, ...(role ? { role } : {}), ...(roles.length > 1 ? { roles } : {}), review, exempt };
   });
 }
 
