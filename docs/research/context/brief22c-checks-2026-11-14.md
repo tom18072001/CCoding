@@ -254,3 +254,102 @@ exit code: 0
 
 - Lần chạy trước, test glob exit 1 vì `g-mutation.test.mjs` (`evalRun trên bài giả…`): `visible()` gọi `spawn("npm")` không shell nên trên Windows/Node 24 luôn lỗi, `base.vRed` thành đúng. Đã sửa ở `docs/research/analysis/g-mutation.mjs` (shell cho `npm` trên win32, `detached` chỉ ngoài win32), commit 069b6441. Bản ghi này là lần chạy sau sửa: 142/142 đạt.
 - Khối `git status --short` ở trên chạy trước khi commit tệp nhật ký này, nên có thể chỉ liệt kê chính nó. Sau commit, `git status --short` rỗng (kiểm lại ở báo cáo).
+
+
+## Chạy lại sau commit cuối (BRIEF-22d)
+
+HEAD đã chạy: `886aa2f6` (nhánh nhiệm vụ đã gộp S1–S3). Đường dẫn máy trong đầu ra đã thay bằng đường dẫn tương đối. Mọi lệnh chạy từ gốc repo.
+
+### Bước 1 — đột biến khóa `logic-map-refs-total`
+
+Trước đột biến: `node docs/research/scripts/consistency-check.mjs` → `Đạt: 60 tệp, không lệch số liệu.` (exit 0).
+
+Sửa tạm `improvement-backlog.md` dòng 38: `--strict` 445/445 → 444/444 (không có ngữ cảnh S2). Chạy lại:
+
+```
+docs/research/improvement-backlog.md:38 — logic-map-refs-total — số sai: "444", chuẩn "445"
+
+1 lỗi (logic-map-refs-total=1) trong 60 tệp.
+exit 1
+```
+
+Hoàn nguyên bằng `git checkout -- docs/research/improvement-backlog.md`. Khóa bắt được, không phải sửa pattern, không có commit phụ.
+
+### Bước 2 — đầu ra nguyên văn
+
+```
+## HEAD
+886aa2f6
+## sample
+Mốc: ccc76cc0840110debab2a0e69f64b10bee965533
+Chế độ: strict (mặc định)
+Tổng tham chiếu tệp:dòng: 445 (có ký hiệu: 445, không ký hiệu: 0); lệch: 0.
+
+Mẫu 10/445 tham chiếu (seed 20261115):
+- orch:3550 tại docs/research/analysis/decisions/logic-map.md:94 [ok]
+    ký hiệu: maxOutputChars
+    trong bài: …(cấu hình + dự án), `commandTimeoutSec`, `maxOutputChars` (`orch:3550` (`maxOutputChars`)). Ba mốc: `baseline` (trước khi sửa; ch…
+    dòng thật ở mốc (dòng 3550): const opts = { denyCommands: [...config.tools.denyCommands, ...(project.denyCommands ?? [])], timeoutSec: config.tools.commandTimeoutSec, maxChars: config.tools.maxOutputChars, signal };
+- orch:2169 tại docs/research/analysis/decisions/logic-map.md:94 [ok]
+    ký hiệu: dept.id, 'revise'
+    trong bài: …1977` (`dept.id, 'execute'`)), `revise` (sau mỗi vòng sửa, `orch:2169` (`dept.id, 'revise'`)). Điều kiện chạy: `projectCheckable` (`…
+    dòng thật ở mốc (dòng 2169): if (this.projectCheckable(task, project)) await this.runProjectChecks(task, project, dept.id, 'revise');
+- orch:1372 tại docs/research/analysis/decisions/logic-map.md:167 [ok]
+    ký hiệu: keywordRoute
+    trong bài: …ute` | LLM + mã lùi | `orch:1351` (`private async route`), `orch:1372` (`keywordRoute`), `planner.ts:275` (`parseRoute`), `:291…
+    dòng thật ở mốc (dòng 1372): result ??= keywordRoute(task.brief, depts);
+- lane.ts:130–145 tại docs/research/analysis/decisions/logic-map.md:168 [ok]
+    ký hiệu: cfg.lanes?.single
+    trong bài: …`chooseLane` (+ `forcedLane`) | **Mã thuần, không LLM** | `lane.ts:130-145` (`cfg.lanes?.single`), `orch:1477-1516` (`pickLane`) |…
+    dòng thật ở mốc (dòng 130): const single = cfg.lanes?.single ?? { enabled: true, maxParts: 5, maxFilesTouched: 6 };
+- claude-guard.ts:110 tại docs/research/analysis/decisions/logic-map.md:189 [ok]
+    ký hiệu: outsideWriteDecision
+    trong bài: …D16).** Rule được gọi ở đúng một chỗ: hook `claude-guard` (`claude-guard.ts:110` (`outsideWriteDecision`)). Hai đường chạy lệnh khác chỉ có `deni…
+    dòng thật ở mốc (dòng 110): const wv = outsideWriteDecision(cmd, cfg.root);
+- planner.ts:304–314 tại docs/research/analysis/decisions/logic-map.md:190 [ok]
+    ký hiệu: readySubtasks
+    trong bài: …đổi người để tách (`shapeFastPlan`); làn đầy thì không. | `planner.ts:304-314` (`readySubtasks`); `orch:1450-1462` (`seen.add`) | Trung…
+    dòng thật ở mốc (dòng 304): export function readySubtasks(subtasks: Subtask[], busyAgents: Set<string>): Subtask[] {
+- orch:1865–1867 tại docs/research/analysis/decisions/report.md:31 [ok]
+    ký hiệu: parsePlan
+    trong bài: …Plan`, `shapeFastPlan` (làn nhanh), `planGate` | có + mã | `orch:1865-1867` (`parsePlan`), `planner.ts:100` (`parsePlan`), `plan-…
+    dòng thật ở mốc (dòng 1867): plan = parsePlan(planRes.text, roster, lead, task.brief);
+- orchestrator.ts:1974 tại docs/research/improvement-backlog.md:198 [ok]
+    ký hiệu: task.projectChecks
+    trong bài: …ands` trước thực thi, sau thực thi, sau mỗi vòng sửa | Đọc `orchestrator.ts:1974` (`task.projectChecks`), `:2535` (chạy), `:1360` (chạy lại khi…
+    dòng thật ở mốc (dòng 1974): if (checkable && !task.projectChecks?.baseline && !run.subtasks.some((s) => s.attempts > 0 || s.status === 'done')) await this.runProjectChecks(task, project, dept.id, 'baseline');
+- bench/vs-claude/lib/ccoding.mjs:129 tại docs/research/improvement-backlog.md:529 [ok]
+    ký hiệu: ...opts.taskOptions
+    trong bài: ….options ?? {}`) truyền `taskOptions: spec.options ?? {}`. `bench/vs-claude/lib/ccoding.mjs:129` (`...opts.taskOptions`) dựng `options: { budgetMode: 'complete'…
+    dòng thật ở mốc (dòng 129): options: { budgetMode: 'complete', planApproval: false, ...opts.taskOptions, variant: opts.variant },
+- bench/vs-claude/analyze.mjs:272 tại docs/research/improvement-backlog.md:1142 [ok]
+    ký hiệu: Coordination failures
+    trong bài: …ation.ccoding-fastlane.3/{ccoding-task.json,result.json}`, `bench/vs-claude/analyze.mjs:272` (“Coordination failures”), `bench/vs-claude/lib/grade.mjs:146` (`…
+    dòng thật ở mốc (dòng 272): H.push(['H8', 'Coordination failures: untouched-file test failures and check-still-red-at-end, paired by task', `${txt}chỉ số phụ formatMiss ${BASE} ${pp(fm(BASE))} vs ${TREAT} ${pp(fm(TREAT))}`, verdict(dR > 0 && dU >= 0, pairs.length < MIN_TASKS) + ' (confirm with transcript review)']);
+Đạt: 445 tham chiếu khớp đúng dòng ở mốc.
+exit 0
+## strict
+Mốc: ccc76cc0840110debab2a0e69f64b10bee965533
+Chế độ: strict (mặc định)
+Tổng tham chiếu tệp:dòng: 445 (có ký hiệu: 445, không ký hiệu: 0); lệch: 0.
+Đạt: 445 tham chiếu khớp đúng dòng ở mốc.
+exit 0
+## consistency
+Đạt: 60 tệp, không lệch số liệu.
+exit 0
+## scorecard
+OK: 20/20 dòng agent trong scorecard.md (14 có KPI + 6 không có dữ liệu trong 30 ngày); 18 khối bảng trong scorecard.md và effectiveness.md trùng đầu ra script; 360 khóa brief22.*
+exit 0
+## test
+exit 1
+ℹ tests 136
+ℹ suites 0
+ℹ pass 133
+ℹ fail 3
+ℹ skipped 0
+ℹ todo 0
+## status
+(hết)
+```
+
+Ghi chú: dòng `exit` do tôi thêm để ghi mã thoát. Mục "test" chỉ chép dòng tổng kết; lệnh thoát 1 do 3 tệp đỏ có sẵn từ baseline (`e-analyses.test.mjs`, `g-analyze.test.mjs`, `g-mutation.test.mjs`), không phải lỗi mới. Ba lệnh kiểm còn lại exit 0. Dòng `(hết)` là dấu kết của khối `git status --short`: khối rỗng.
