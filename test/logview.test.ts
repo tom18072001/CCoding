@@ -93,7 +93,7 @@ process.exit(code);
 `;
 
 test('herdr logs: dựng các space log (hệ thống, nhiệm vụ, phòng ban, agent), idempotent, --rebuild dựng lại', async (t) => {
-  if (process.platform === 'win32') return t.skip('herdr giả dùng shebang (Linux/macOS)');
+  if (process.platform === 'win32') return t.skip('chỉ Linux/macOS: herdr giả là script shebang, Windows không thực thi được tệp không đuôi qua spawn');
   const d = tmp();
   const bin = path.join(d, 'fake-herdr.cjs');
   fs.writeFileSync(bin, FAKE_HERDR, { mode: 0o755 });

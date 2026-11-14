@@ -67,7 +67,7 @@ function tryLink(target: string, link: string): string | undefined {
     fs.symlinkSync(target, link, process.platform === 'win32' ? 'junction' : 'dir');
     return undefined;
   } catch (e) {
-    return `không tạo được symlink/junction: ${(e as Error).message}`;
+    return `${process.platform}: không tạo được symlink/junction (thường do thiếu quyền/hệ tệp không hỗ trợ): ${(e as Error).message}`;
   }
 }
 

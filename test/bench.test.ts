@@ -245,7 +245,7 @@ test('bản đồ repo gọn: ≤ 6k ký tự, thư mục theo số dòng, tệp
   }
 });
 
-test('claude-cli: bashMaxOutput của nhiệm vụ → BASH_MAX_OUTPUT_LENGTH; không đặt thì giữ mặc định của CLI', { skip: process.platform === 'win32' }, async () => {
+test('claude-cli: bashMaxOutput của nhiệm vụ → BASH_MAX_OUTPUT_LENGTH; không đặt thì giữ mặc định của CLI', { skip: process.platform === 'win32' && 'chỉ Linux/macOS: claude giả là script shebang (node), Windows không thực thi được tệp không đuôi qua spawn' }, async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-fake-claude-'));
   try {
     const bin = path.join(dir, 'fake-claude');
