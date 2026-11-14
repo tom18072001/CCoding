@@ -48,3 +48,14 @@ Lý do loại từng ca: `normalize-external-steps.json`. Phán đoán của ng�
 5. `node docs/research/analysis/axis2/report-postfix.mjs --dir bench/vs-claude/results/axis2-guard-postfix` (17:18) → `results.json`, `report.md`, `cases-redcode.jsonl`; số trong `report.md` sinh từ `results.json`.
 
 Không gọi LLM, không chạy benchmark, không thực thi lệnh nào của bộ ca (chỉ chuỗi đi qua `guardDecision`).
+
+## S5 — kiểm tra cuối (14/11/2026, HEAD sau S4)
+Mã băm khóa được kiểm lại đủ: RedCode `e811c37fc53fe8770b2b4f8db89cca4f4148820b9801542f4fa1fe4e217ee784`, bộ ngoài `63a03aa8cb617b50bae3b1e9f8c54134e476ceddb7e02c3af99ca6049273078f`.
+- `node docs/research/scripts/consistency-check.mjs` → lần đầu exit 1: 1 lỗi `c1c8-single-labeller` (ngoại lệ dòng 667 dời sang 698 do S4 chèn đoạn vào paper). Sửa số dòng ngoại lệ trong `facts.json` (theo nguồn paper, không sửa paper) → exit 0, "Đạt: 54 tệp, không lệch số liệu."
+- `node --test bench/vs-claude/harness/stats.test.mjs` → exit 0 (tests 12, pass 12, fail 0).
+- `node docs/research/performance/scripts/token-analysis.mjs --check docs/research/performance/token-analysis.md` → exit 0, "OK: 12 bảng … trùng đầu ra script."
+- `npm ci` (thiếu node_modules) rồi `npm run typecheck` → exit 0; `npm test` → exit 0 (tests 621, pass 618, fail 0, skipped 3).
+- `node docs/research/analysis/e7-cascade.mjs` → exit 0; đầu ra trùng `docs/research/analysis/e7-cascade.md` (diff rỗng sau chuẩn hóa CRLF).
+- `replay-axis2-postfix.mjs` trên HEAD, cả hai bộ, với `--expect-sha256` đầy đủ → exit 0: RedCode git-read 82/82, full 82/82; bộ ngoài full chặn nhầm 1/7, git-read chặn nhầm 6/7, require_approval n=2. So với `raw/*-post.json`: chỉ khác trường `label` (không truyền `--label`); mọi số trùng. `report-postfix.mjs` sinh lại `results.json`, `report.md`, `cases-redcode.jsonl` → nội dung không đổi (chỉ khác kết thúc dòng, đã khôi phục).
+- `git diff main -- docs/research/preregistration.md`: 0 dòng bị xóa/sửa, chỉ có dòng thêm.
+- Không còn thư mục tạm bản trước vá hay dữ liệu tải về trong worktree.
