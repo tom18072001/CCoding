@@ -29,7 +29,7 @@ Mỗi bí danh (`opus`/`sonnet`/`haiku`) trong `models.<runtime>` có thể là 
 
 Mỗi lượt gọi, CCoding dựng danh sách tài nguyên = (runtime ưu tiên → `runtime.order`) × (chuỗi model của runtime đó), bỏ qua tài nguyên:
 
-- đang **nghỉ**: hết hạn mức (`quota` — tới thời điểm reset nhà cung cấp báo trong `Retry-After`/thông báo, mặc định `runtime.quotaCooldownMs` = 30 phút), giới hạn tốc độ (`rate` — 1–5 phút), lỗi kết nối/timeout lặp lại (2–10 phút), phản hồi rỗng lặp lại (10 phút), lỗi xác thực (30 phút), model không hỗ trợ (6 giờ);
+- đang **nghỉ**: hết hạn mức (`quota` — tới thời điểm reset nhà cung cấp báo trong `Retry-After`/thông báo, mặc định `runtime.quotaCooldownMs` = 30 phút), giới hạn tốc độ (`rate` — 1–5 phút), lỗi kết nối lặp lại (2–10 phút; riêng **hết giờ `timeout` không bao giờ làm runtime nghỉ**, xem mục "Hết giờ"), phản hồi rỗng lặp lại (10 phút), lỗi xác thực (30 phút), model không hỗ trợ (6 giờ);
 - đã chạm **`dailyTokenLimit`** trong ngày (của mục trong chuỗi hoặc của cả runtime) — đếm từ sổ cái token.
 
 Lỗi trong lúc gọi ⇒ ghi `runtime.error`, đánh dấu nghỉ, **thử ngay tài nguyên kế tiếp** (`runtime.failover`, tối đa `runtime.maxFailover` lần). Hết hạn mức/lỗi xác thực ⇒ cảnh báo trên giao diện (chuông + thông báo nổi), log và thông báo herdr. Không còn tài nguyên nào ⇒ nhiệm vụ **tạm dừng** (không lỗi) và tự tiếp tục khi tài nguyên sớm nhất mở lại. Trạng thái từng runtime/model (đang nghỉ tới mấy giờ, token hôm nay/hạn mức) hiện ở thẻ *Runtime*.
@@ -197,3 +197,26 @@ Lượt thứ 2 trở đi của vòng công cụ gặp **429** (vd. Claude Max):
 ### Luồng trả lời treo
 
 Mỗi lượt gọi API dạng stream có **`idleTimeoutMs`** (mặc định 300000 = 5 phút, đặt theo runtime; 0 = tắt): không nhận được byte nào (kể cả keepalive) trong khoảng đó thì hủy lượt với lỗi `timeout` — giữa vòng công cụ thì thử lại lượt đó một lần, không được thì chuyển runtime (kèm danh sách thao tác đã làm). Trước đây một lượt treo phải chờ hết `timeoutMs` 30 phút (ND57 27/10: Codex treo >25 phút ở lần thử thứ hai của S2).
+
+
+## Hết giờ (`timeout`) khác hết hạn mức (D21/K1)
+
+Lượt gọi hết giờ (vd. `claude-cli`: `Hết thời gian (1800s)`) là lỗi của **riêng lượt đó**, không phải runtime hỏng hay hết hạn mức:
+
+- `timeout` **không** nằm trong nhóm lỗi hạn mức: không đánh dấu runtime tạm ngừng (`markFailure` không ghi sức khỏe/`until`), không `task.paused` lý do `quota`, nhiệm vụ khác dùng cùng runtime vẫn chạy. Chỉ lỗi hạn mức thật (thông báo giới hạn của nhà cung cấp, 429 kèm giờ mở lại) mới tạm ngừng như cũ.
+- **Thử lại đúng một lần** cho riêng lượt đó, cùng runtime/model. Pha `execute`/`revise`: lời nhắc lần 2 liệt kê commit mới kể từ đầu lượt và `git status --short`, yêu cầu làm tiếp; không reset, không stash, không xóa commit, agent không bị dọn worktree.
+- Hết giờ lần hai ⇒ hạng mục `failed` (không chuyển runtime, không tạm dừng); nhiệm vụ khác không bị ảnh hưởng.
+- Mỗi lượt hết giờ có dòng trong `calls.jsonl`: `stopReason: 'timeout'`, `durationMs`, `attempt` (1 hoặc 2), `phase`, usage một phần nếu có — để đo phần đuôi trên trần.
+
+### Trần thời gian theo pha — `defaults.timeoutMsByPhase`
+
+Pha không khai báo dùng `defaults.timeoutMs` (1 800 000 ms). Số đo 12–15/11 (21 nhiệm vụ, lượt đã xong, giây):
+
+| Pha | n | p50 | p90 | max | Trần mặc định | Lý do |
+|---|---|---|---|---|---|---|
+| `execute` | 107 | 262 | 688 | 1393 | 1800 s | max 1393 s; còn dư ~29 % cho phần đuôi chưa thấy (lượt hết giờ không có trong bảng). |
+| `revise` | 25 | 99 | 266 | 1291 | 1500 s | max 1291 s, p90 chỉ 266 s; trần thấp hơn 1800 s để lượt treo bị cắt sớm hơn 5 phút, vẫn dư ~16 % trên max. Có thử lại nối tiếp nên rủi ro mất việc thấp. |
+| `review` | 23 | 91 | 196 | 1620 | 1800 s | có ca max 1620 s nên không đặt trần dưới mức đó; dư ~11 %. |
+| pha khác | — | — | — | — | `timeoutMs` = 1800 s | chưa có số đo theo pha, giữ giá trị chung. |
+
+Đặt trong `config.json`: `"defaults": { "timeoutMsByPhase": { "revise": 1200000 } }`. Số liệu trên là số đo của gói D21; sau khi `calls.jsonl` ghi lượt hết giờ, đo lại phần đuôi rồi chỉnh.

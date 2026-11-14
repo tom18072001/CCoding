@@ -743,6 +743,19 @@ Lần thử trước đã thực hiện các thao tác dưới đây TRONG WORKS
 ${lines.join('\n')}${calls.length > 40 ? `\n- … (${calls.length - 40} thao tác trước đó)` : ''}`;
 }
 
+/** D21/K1: lượt execute/revise hết giờ → lời nhắc lần thử 2: nêu việc đã làm trong worktree, yêu cầu làm tiếp (không reset). */
+export function timeoutRetryNote(phase: string, seconds: number, commits: string[], status: string[]): string {
+  const c = commits.length ? commits.slice(0, 20).map((l) => `- ${l}`).join('\n') : '- (chưa có commit mới kể từ đầu lượt)';
+  const st = status.length ? status.slice(0, 40).map((l) => `- ${l}`).join('\n') : '- (worktree sạch, không có tệp sửa dở)';
+  return `## ⚠️ Lượt trước hết giờ (${seconds} giây, pha ${phase}) — LÀM TIẾP
+Lượt trước bị ngắt vì hết giờ. Mọi thay đổi và commit đã làm vẫn còn trong workspace — KHÔNG reset, không xóa commit, không làm lại từ đầu.
+Commit mới kể từ đầu lượt:
+${c}
+Tệp đang sửa dở (git status):
+${st}
+Việc cần làm: xem \`git log\`/\`git status\`/\`git diff\`, làm TIẾP phần còn thiếu, chạy kiểm chứng rồi commit. Việc đã xong thì giữ nguyên và báo cáo ngắn gọn.`;
+}
+
 /** Hạng mục làm song song trong worktree con, gộp vào nhánh nhiệm vụ bị xung đột → lần chạy lại (trong worktree chính) tự gộp. */
 export function mergeConflictNote(branch: string, files: string[], done: boolean, previous?: string): string {
   const list = files.length ? files.slice(0, 20).map((f) => `\`${f}\``).join(', ') : '(git không liệt kê được tệp — xem kết quả lệnh merge)';
