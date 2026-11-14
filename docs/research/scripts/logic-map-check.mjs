@@ -9,6 +9,8 @@
 // Tham chiếu hợp lệ: `đường/dẫn.ts:N` hoặc `:N–M` (cũng nhận bí danh khai báo dạng `orch` = `src/orchestrator.ts`
 // và tên tệp trần như lane.ts nếu duy nhất dưới src/), kèm ký hiệu trong ngoặc ngay sau, vd. lane.ts:129 (`chooseLane`).
 // Kiểm: git show <mốc>:<tệp> — dòng (hoặc dải) phải chứa ký hiệu. Tham chiếu không kèm ký hiệu đếm riêng, chỉ cảnh báo.
+// Cũng kiểm tham chiếu hồ sơ agent (agents/cto.md:47-53 hoặc cto.md:47-53): bắt buộc kèm cụm trích (`cụm` hoặc “cụm”).
+// Ký hiệu < 6 ký tự hoặc từ chung (single, accept, plan, gate, final…) ⇒ cảnh báo; --strict ⇒ lỗi.
 // Exit 0 khi không lệch; 1 khi có lệch; 2 khi lỗi cấu hình (không có mốc, không đọc được tệp).
 import { readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -18,14 +20,22 @@ const DEFAULT_FILES = [
   'docs/research/analysis/decisions/logic-map.md',
   'docs/research/analysis/decisions/report.md',
   'docs/research/improvement-backlog.md',
+  'docs/research/analysis/decisions/model-per-role.md',
+  'docs/research/analysis/decisions/scorecard.md',
 ];
 
+// Ký hiệu ngắn/chung dễ khớp nhầm ở dòng bất kỳ: < WEAK_MIN_LEN ký tự hoặc thuộc danh sách này
+// ⇒ cảnh báo (stderr); có --strict ⇒ tính là lệch.
+const WEAK_MIN_LEN = 6;
+const GENERIC_SYMBOLS = new Set(['single', 'accept', 'plan', 'gate', 'final', 'route', 'skip', 'brief', 'full', 'run', 'main', 'task', 'step', 'lane', 'mode', 'agent', 'model', 'error', 'result', 'report', 'review']);
+
 const args = process.argv.slice(2);
-let base; let root = process.cwd(); let noDefault = false; let asJson = false;
+let base; let root = process.cwd(); let noDefault = false; let asJson = false; let strict = false;
 const extra = [];
 for (let i = 0; i < args.length; i++) {
   const a = args[i];
-  if (a === '--base') base = args[++i];
+  if (a === '--strict') strict = true;
+  else if (a === '--base') base = args[++i];
   else if (a === '--root') root = resolve(args[++i]);
   else if (a === '--no-default') noDefault = true;
   else if (a === '--json') asJson = true;
@@ -71,6 +81,18 @@ function resolvePath(p) {
   if (!p.includes('/') && byBase.get(p)) return byBase.get(p);
   return null;
 }
+// Tham chiếu hồ sơ agent (agents/**/*.md): tên đầy đủ hoặc tên trần duy nhất dưới agents/. .md khác không được quét.
+const byBaseAgent = new Map();
+for (const p of tracked) {
+  if (!p.startsWith('agents/') || !p.endsWith('.md')) continue;
+  const b = p.split('/').pop();
+  byBaseAgent.set(b, byBaseAgent.has(b) ? null : p);
+}
+function resolveAgentMd(p) {
+  if (tracked.includes(p) && p.startsWith('agents/')) return p;
+  if (!p.includes('/') && byBaseAgent.get(p)) return byBaseAgent.get(p);
+  return null;
+}
 
 const cache = new Map();
 function linesAt(path) {
@@ -81,16 +103,19 @@ function linesAt(path) {
 }
 
 const aliasKeys = [...aliases.keys()].map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-const pathPart = `(?:[A-Za-z0-9_./-]+\\.(?:ts|mjs|js|json)${aliasKeys.length ? `|${aliasKeys.join('|')}` : ''})`;
+const pathPart = `(?:[A-Za-z0-9_./-]+\\.(?:ts|mjs|js|json|md)${aliasKeys.length ? `|${aliasKeys.join('|')}` : ''})`;
 const refRe = new RegExp(`(?<![\\w./-])(${pathPart}):(\\d+)(?:[–-](\\d+))?(?!\\d)(\`?)(?:[ \\t]*\\(([^)\\n]*)\\))?`, 'gu');
 
 let total = 0; let withSymbol = 0;
-const bad = []; const noSymbol = [];
+const bad = []; const noSymbol = []; const weak = [];
 for (const [f, text] of texts) {
   const rel = relative(root, f).split('\\').join('/');
   text.split(/\r?\n/).forEach((line, idx) => {
     for (const m of line.matchAll(refRe)) {
       const [, rawPath, a, b, , paren] = m;
+      const isMd = /\.md$/.test(rawPath);
+      let path = isMd ? resolveAgentMd(rawPath) : resolvePath(rawPath);
+      if (isMd && !path) continue; // .md ngoài agents/ không thuộc phạm vi kiểm
       total++;
       const where = `${rel}:${idx + 1}`;
       const from = Number(a); const to = b ? Number(b) : from;
@@ -98,12 +123,21 @@ for (const [f, text] of texts) {
       let sym;
       if (paren !== undefined) {
         const bt = paren.match(/`([^`]+)`/);
-        const cand = (bt ? bt[1] : paren).trim().replace(/\(\)$/, '');
-        if (bt || /^[A-Za-z_$][\w$]*[A-Z_.][\w$.]*$/.test(cand)) sym = cand; // ngoặc chữ thường thuần không phải ký hiệu
+        const q = paren.match(/[“"]([^”"]+)[”"]/); // cụm trích nguyên văn
+        const cand = (bt ? bt[1] : q ? q[1] : paren).trim().replace(/\(\)$/, '');
+        if (bt || q || (!isMd && /^[A-Za-z_$][\w$]*[A-Z_.][\w$.]*$/.test(cand))) sym = cand; // ngoặc chữ thường thuần không phải ký hiệu
       }
-      if (!sym) { noSymbol.push({ where, ref }); continue; }
+      if (!sym) {
+        if (isMd) { withSymbol++; bad.push({ where, ref, symbol: '', reason: `tham chiếu hồ sơ agent bắt buộc kèm cụm trích (\`cụm\` hoặc “cụm”) ngay sau` }); }
+        else noSymbol.push({ where, ref });
+        continue;
+      }
       withSymbol++;
-      const path = resolvePath(rawPath);
+      if (sym.length < WEAK_MIN_LEN || GENERIC_SYMBOLS.has(sym.toLowerCase())) {
+        weak.push({ where, ref, symbol: sym });
+        if (strict) { bad.push({ where, ref, symbol: sym, reason: `ký hiệu quá ngắn/chung (< ${WEAK_MIN_LEN} ký tự hoặc từ chung), dễ khớp nhầm — chọn ký hiệu đặc thù (--strict)` }); continue; }
+      }
+      if (!path) path = resolvePath(rawPath);
       if (!path) { bad.push({ where, ref, symbol: sym, reason: `không thấy tệp ${rawPath} ở mốc` }); continue; }
       const ls = linesAt(path);
       if (!ls) { bad.push({ where, ref, symbol: sym, reason: `không đọc được ${path} ở mốc` }); continue; }
@@ -118,11 +152,15 @@ for (const [f, text] of texts) {
 }
 
 if (asJson) {
-  console.log(JSON.stringify({ base, total, withSymbol, mismatched: bad.length, noSymbol: noSymbol.length, bad, noSymbolRefs: noSymbol }, null, 2));
+  console.log(JSON.stringify({ base, total, withSymbol, mismatched: bad.length, noSymbol: noSymbol.length, weakSymbol: weak.length, bad, noSymbolRefs: noSymbol, weakSymbolRefs: weak }, null, 2));
 } else {
   console.log(`Mốc: ${base}`);
   console.log(`Tổng tham chiếu tệp:dòng: ${total} (có ký hiệu: ${withSymbol}, không ký hiệu: ${noSymbol.length}); lệch: ${bad.length}.`);
-  for (const r of bad) console.log(`LỆCH ${r.where} — ${r.ref} (\`${r.symbol}\`): ${r.reason}`);
+  for (const r of bad) console.log(`LỆCH ${r.where} — ${r.ref}${r.symbol ? ` (\`${r.symbol}\`)` : ''}: ${r.reason}`);
+  if (weak.length && !strict) {
+    console.error(`Cảnh báo: ${weak.length} tham chiếu có ký hiệu quá ngắn/chung (dễ khớp nhầm; dùng --strict để coi là lỗi):`);
+    for (const r of weak) console.error(`  ${r.where} — ${r.ref} (\`${r.symbol}\`)`);
+  }
   if (noSymbol.length) {
     console.error(`Cảnh báo: ${noSymbol.length} tham chiếu không kèm ký hiệu trong ngoặc, chưa kiểm được:`);
     for (const r of noSymbol) console.error(`  ${r.where} — ${r.ref}`);
