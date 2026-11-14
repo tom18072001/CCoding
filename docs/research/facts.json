@@ -122,7 +122,7 @@
     }
   ],
   "brief22": {
-    "_note": "v0.8 (BRIEF-22, 14/11/2026): khóa và giá trị chép nguyên từ khối facts ở cuối analysis/decisions/scorecard.md và effectiveness.md (do scorecard.mjs sinh; kiểm bằng scorecard.mjs --check). consistency-check không đọc khóa này; các mục numbers bên dưới khóa giá trị trong paper.md.",
+    "_note": "v0.8 (BRIEF-22, 14/11/2026): khóa và giá trị chép nguyên từ khối facts ở cuối analysis/decisions/scorecard.md và effectiveness.md (do scorecard.mjs sinh; kiểm bằng scorecard.mjs --check). consistency-check không đọc khóa này; các mục numbers bên dưới khóa giá trị trong paper.md. Nhãn P-1/P-2 (BRIEF-22b, M1): hai giá trị cùng tồn tại, mỗi giá trị một định nghĩa. P-1 = 42/54 = 77,8 % (mẫu số 54: lượt có ≥ 2 hạng mục đủ mốc giờ) so với `brief22.eff.P.anyParallel` = 42/56 = 75,0 % (mẫu số 56: mọi lượt phòng). P-2 = 27,5 % (gộp phút, 375 phút) so với `brief22.eff.P.saveStructural` = 29,2 % (nghịch đảo của work/cp trung vị 1,41).",
     "brief22.axis2.full": "30/82",
     "brief22.axis2.fullPct": 36.6,
     "brief22.axis2.gitRead": "82/82",
