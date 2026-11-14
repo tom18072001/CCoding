@@ -5,6 +5,17 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 17 (T-20261114-165455-a63, BRIEF-23, 14/11/2026): bài báo v0.7.2, đo lại trục 2 (b) sau vá, cascade E7
+
+Không gọi LLM, không sửa `src/`, mã `bench/`, `preregistration.md` (§9 chỉ thêm, ở bước S1), tệp context hay kết quả cũ. Số mới lấy nguyên từ `bench/vs-claude/results/axis2-guard-postfix/{report.md,results.json}` và `analysis/e7-cascade.md`; không tính lại. Mỗi số mới có khóa `axis2pf-*` hoặc `e7casc-*` trong `facts.json`.
+
+- **`paper/paper.md` v0.7.2:**
+  - §6.3.2: đo lại phần (b) sau vá, nhãn **hồi quy sau vá, không phải ước lượng độc lập** (Bảng 17b: trước/sau vá theo tầng, rule, nhóm; `full` 30/82 → 82/82, rule `outside-root-write` 52/82, 0 ca còn lọt); bộ ngoài Agentic Execution Guardrail Eval **[Khám phá]**, CC BY 4.0, 15 ca đo (Bảng 17c: chặn đúng `full` 2/6 → 3/6, **chặn nhầm `full` 1/7**, `git-read` 6/7, `require_approval` báo riêng; mẫu số < 72 nên chưa kết luận). Đây là phép đo chặn nhầm đầu tiên của trục 2, không phải trên lệnh thật (phần (a) vẫn chưa đo).
+  - §6.3.1 (Bảng 16): thêm cascade nghiệm thu E7 **[Khám phá]** và hai bảng độ nhạy ("không đọc được" = chặn; bỏ 9 mục bị phân loại lại): cascade 55/64 và 3/64, 33,78 USD, đắt hơn R2 đơn 31,34 USD. Kèm câu ghi chú: bản tính nhanh (`context/decomposition-literature-2026-11-14.md` §4) đã được kiểm lại, mọi số khớp, nhưng bỏ ngỏ cách xử lý 13 lượt "không đọc được" và chưa nói chênh 1 ca không phân biệt được.
+  - Đầu bài, §9 (hàng Trục 1 và Trục 2), Phụ lục A (R33, R34) cập nhật. Không đổi số đo cũ; Bảng 17 và dòng `axis2b-*` giữ nguyên là số trước vá.
+- **`facts.json`:** thêm 15 khóa (`axis2pf-full-after`, `axis2pf-outside-root-write`, `axis2pf-ext-n`, `axis2pf-ext-tp-full-before/after`, `axis2pf-ext-fp-full`, `axis2pf-ext-fp-gitread`, `e7casc-recall`, `e7casc-fp`, `e7casc-cost-cascade`, `e7casc-cost-r2`, `e7casc-s1-cascade-recall`, `e7casc-s1-r2-fp`, `e7casc-s2-cost-cascade`).
+- **Chưa làm / cần S5:** chạy lại `consistency-check.mjs` để xác nhận các mẫu mới (vai S4 không chạy được `node`); `data-protection-assessment.md` nằm ngoài phạm vi, ghi đánh giá ngắn ở `preregistration.md` §9.
+
 ## Vòng 4, gói 16 (T-20261114-162216-35d, BRIEF-22, 14/11/2026): bài báo v0.8, engine và logic từng agent, bảng điểm và chỗ fail
 
 Hạng mục K5 (@academic-writer). Không gọi LLM, không chạy benchmark, không sửa `src/` hay mã `bench/`. Nguồn: `analysis/decisions/{logic-map.md, scorecard.md, effectiveness.md, model-per-role.md}`, `context/decomposition-sources-2026-11-14.md`, `preregistration.md` §9.x (E9). Phân loại dữ liệu: **Nội bộ**; chỉ số tổng hợp, "dự án A" ẩn danh, ba ca 14/11 lấy từ biên bản người điều phối (n = 3, [Mô tả]).
