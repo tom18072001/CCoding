@@ -91,7 +91,7 @@ flowchart TD
 
 ### 1.3 Lệnh kiểm tra của dự án
 
-`runProjectChecks` (`orch:3547` (`runProjectChecks`)) do CCoding tự chạy (không qua agent): `denyCommands` (cấu hình + dự án), `commandTimeoutSec`, `maxOutputChars` (`orch:3550` (`maxOutputChars`)). Ba mốc: `baseline` (trước khi sửa; chạy song song với plan/họp nếu `tools.earlyBaseline !== false`, `orch:1840` (`tools.earlyBaseline !== false`)), `execute` (sau executeAll, `orch:1974-1977` (`execute`)), `revise` (sau mỗi vòng sửa, `orch:2155` (`run.revising`)). Điều kiện chạy: `projectCheckable` (`orch:3419` (`projectCheckable`)). Hồi quy = đạt ở baseline, hỏng sau: `checkRegressions` (`orch:3617` (`checkRegressions`)).
+`runProjectChecks` (`orch:3547` (`runProjectChecks`)) do CCoding tự chạy (không qua agent): `denyCommands` (cấu hình + dự án), `commandTimeoutSec`, `maxOutputChars` (`orch:3550` (`maxOutputChars`)). Ba mốc: `baseline` (trước khi sửa; chạy song song với plan/họp nếu `tools.earlyBaseline !== false`, `orch:1840` (`tools.earlyBaseline !== false`)), `execute` (sau executeAll, `orch:1977` (`dept.id, 'execute'`)), `revise` (sau mỗi vòng sửa, `orch:2169` (`dept.id, 'revise'`)). Điều kiện chạy: `projectCheckable` (`orch:3419` (`projectCheckable`)). Hồi quy = đạt ở baseline, hỏng sau: `checkRegressions` (`orch:3617` (`checkRegressions`)).
 
 ### 1.4 Các cổng không dùng LLM
 
