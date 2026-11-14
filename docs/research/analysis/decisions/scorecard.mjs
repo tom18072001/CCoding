@@ -18,7 +18,7 @@ const MD = { scorecard: path.join(HERE, 'scorecard.md'), effectiveness: path.joi
 const mode = process.argv.includes('--check') ? 'check' : process.argv.includes('--write') ? 'write' : 'print';
 
 const readJson = (p) => JSON.parse(fs.readFileSync(p, 'utf8'));
-const readText = (p) => fs.readFileSync(p, 'utf8');
+const readText = (p) => fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
 const readJsonl = (p) => readText(p).split('\n').filter(Boolean).map((l) => JSON.parse(l));
 
 // ───────────── định dạng và thống kê nhỏ ─────────────
