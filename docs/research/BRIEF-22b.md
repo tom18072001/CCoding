@@ -2,6 +2,9 @@
 
 **Gói vừa: 4 hạng mục. Ngân sách 8M token.** Giao 14/11/2026.
 
+**Giao lại (lần 2), 14/11/2026 tối.** Lần 1 (T-20261114-205055-413) dừng ở cổng kế hoạch: kế hoạch không có hạng mục cho peer-reviewer, vì hồ sơ trưởng phòng cũ cấm (đã sửa ở D18b), và tiêu đề hạng mục không ghi mã K.
+**Kế hoạch:** mỗi hạng mục kế hoạch ghi mã K của đề bài ở đầu tiêu đề (vd. `K1 — …`). K4 giao cho `@peer-reviewer`.
+
 **Căn cứ:**
 - Biên bản nghiệm thu của CTO cho BRIEF-22: chưa nghiệm thu.
 - Phản biện K7, bản lưu nguyên văn: `docs/research/context/k7-brief22-review-2026-11-14.md`.
