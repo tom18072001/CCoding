@@ -40,7 +40,7 @@ import { classifyError, parseRetryAt, RuntimeError, shouldFailover, toRuntimeErr
 import type { Candidate, RuntimeManager } from './runtimes/index.js';
 import type { Store } from './store.js';
 import { clearFixedFeedback, kpiMarkdown, kpiReport, templateHeadings } from './kpi.js';
-import { briefDemandsReview, changedFiles, classifyChecks, reviewerReasons, sensitivePaths, templateGate, type ClassifiedCheck, type QualityGateOptions, type QualityGateResult } from './quality-gate.js';
+import { briefDemandsReview, changedFiles, classifyChecks, lintGuardPaths, reviewerReasons, sensitivePaths, templateGate, type ClassifiedCheck, type QualityGateOptions, type QualityGateResult } from './quality-gate.js';
 import { subtaskHistory, type AgentHistory } from './estimate.js';
 import { criteriaTable, followupDecision } from './accept-followup.js';
 import { buildRepoMap } from './repomap.js';
@@ -1105,12 +1105,19 @@ export class Orchestrator {
         logs.write({ level: 'warn', kind: 'task.failed', msg: `${task.id}: ${task.error}`, taskId: task.id, projectId: task.projectId, data: { usage: task.usage } });
         this.alert({ level: 'warn', kind: 'task.unfinished', title: 'Nhiệm vụ chưa xong hết', msg: `${task.title}: ${task.error}`, taskId: task.id });
       } else {
-        // CTO nghiệm thu (tạm dừng/hủy giữa chừng thì ném lên như mọi lượt gọi khác)
-        await this.accept(task, project);
-        // K3: CTO chưa nghiệm thu → tối đa `acceptFollowupRounds` vòng bổ sung; vòng lặp có chặn cứng, không đệ quy
-        for (let guard = 0; guard < 10 && (await this.runFollowup(task, project)); guard++);
+        // K5 strictChecks: còn lệnh kiểm tra đỏ thì không done, không gọi CTO — ghi biên bản "Chưa nghiệm thu: còn đỏ <lệnh>"
+        const strictRed = project?.strictChecks ? this.strictRed(task) : [];
+        if (strictRed.length) {
+          this.recordStrictRed(task, strictRed);
+        } else {
+          // CTO nghiệm thu (tạm dừng/hủy giữa chừng thì ném lên như mọi lượt gọi khác)
+          await this.accept(task, project);
+          // K3: CTO chưa nghiệm thu → tối đa `acceptFollowupRounds` vòng bổ sung; vòng lặp có chặn cứng, không đệ quy
+          for (let guard = 0; guard < 10 && (await this.runFollowup(task, project)); guard++);
+        }
         task.phase = undefined;
-        task.status = 'done';
+        task.status = strictRed.length ? 'failed' : 'done';
+        if (strictRed.length) task.error = task.acceptance?.summary;
         logs.write({ level: 'info', kind: 'task.done', msg: `Hoàn thành ${task.id} — ${fmtNum(totalTokens(task.usage))} token${task.attention ? ` · cần xem: ${task.attention.detail}` : ''}`, taskId: task.id, projectId: task.projectId, data: { usage: task.usage } });
         if (task.attention)
           this.alert({ level: 'warn', kind: 'task.attention', title: task.attention.reason === 'review' ? 'Xong nhưng review chưa duyệt' : task.attention.reason === 'acceptance' ? 'Xong nhưng CTO chưa nghiệm thu' : 'Xong nhưng lệnh kiểm tra còn lỗi', msg: `${task.title}: ${task.attention.detail} — xem báo cáo, "Làm lại từ review" hoặc tách việc còn lại`, taskId: task.id });
@@ -1166,6 +1173,41 @@ export class Orchestrator {
     }
   }
 
+  /** K5: lệnh kiểm tra của lần chạy gần nhất còn đỏ (kể cả bị chặn/hết giờ) — dùng khi dự án bật strictChecks. */
+  private strictRed(task: Task): CheckResult[] {
+    return (task.projectChecks?.latest ?? []).filter((r) => !r.ok);
+  }
+
+  /** K5: ghi biên bản "Chưa nghiệm thu: còn đỏ <lệnh>" kèm đầu ra cuối của lệnh; không gọi CTO. */
+  private recordStrictRed(task: Task, red: CheckResult[]): void {
+    const { store, logs } = this.d;
+    const cmds = red.map((r) => `\`${r.command}\``).join(', ');
+    const summary = `Chưa nghiệm thu: còn đỏ ${cmds}`;
+    const detail = red
+      .map((r) => `### \`${r.command}\` — ${r.denied ? `bị chặn: ${r.denied}` : r.timedOut ? 'hết thời gian' : `exit ${r.code}`}\n\`\`\`\n${(r.tail || r.summary || '').slice(-3000)}\n\`\`\``)
+      .join('\n\n');
+    const body = `## Tóm tắt\n${summary}\n\nDự án bật \`strictChecks\`: lệnh kiểm tra còn đỏ sau các vòng sửa thì không nghiệm thu, không gọi CTO.\n\n## Đầu ra cuối của lệnh đỏ\n${detail}`;
+    const rel = 'ACCEPTANCE.md';
+    writeText(path.join(store.runDir(task.id), rel), `${body}\n`);
+    task.acceptance = {
+      at: nowIso(),
+      by: 'ccoding',
+      sig: task.runs.map((r) => `${r.department}:${r.finishedAt ?? ''}:${r.finalPath ?? ''}`).join('|'),
+      accepted: false,
+      parsed: true,
+      summary,
+      criteria: red.map((r) => ({ name: `Lệnh \`${r.command}\` đạt`, result: 'fail' as const, evidence: r.summary || `exit ${r.code ?? '?'}` })),
+      risks: [],
+      followUps: [],
+      mode: 'full',
+      path: rel,
+    };
+    task.attention = { reason: 'checks', detail: summary, at: nowIso() };
+    logs.write({ level: 'warn', kind: 'accept.strict-red', msg: `${task.id}: ${summary} — không gọi CTO nghiệm thu`, taskId: task.id, projectId: task.projectId, data: { commands: red.map((r) => r.command) } });
+    this.message(task, 'office', 'system', 'system', `⛔ ${summary}\n\n${red.map((r) => `- \`${r.command}\`: ${r.summary}`).join('\n')}`);
+    this.save(task);
+  }
+
   /**
    * Pha nghiệm thu (UX-4c): sau khi mọi phòng tổng hợp xong, CTO đối chiếu đề bài với báo cáo, kết luận review và lệnh kiểm tra,
    * kết luận từng tiêu chí. Chưa đạt → "cần xem" (hộp Cần bạn). Báo cáo không đổi (cùng dấu vân tay) thì không nghiệm thu lại.
@@ -1211,8 +1253,9 @@ export class Orchestrator {
     }
     if (mode.kind === 'brief') logs.write({ level: 'info', kind: 'accept.brief', msg: `${task.id}: nghiệm thu CTO rút gọn (${mode.reason})`, taskId: task.id, projectId: task.projectId, agentId: cto.id, data: { reason: mode.reason } });
     let text = '';
+    const guardPaths = lintGuardPaths(changedFiles(task.workspace, task.baseRef));
     try {
-      const res = await this.call(cto, 'accept', (tools) => (mode.kind === 'brief' ? P.acceptBriefPrompt(task, { changes: task.changes, tools, projectName: project?.name }) : P.acceptPrompt(task, items, { changes: task.changes, tools, projectName: project?.name })), {
+      const res = await this.call(cto, 'accept', (tools) => (mode.kind === 'brief' ? P.acceptBriefPrompt(task, { changes: task.changes, tools, projectName: project?.name, guardPaths }) : P.acceptPrompt(task, items, { changes: task.changes, tools, projectName: project?.name, guardPaths })), {
         task,
         project,
         cwd: task.workspace ?? this.workspaceFor(task, project),
@@ -3435,7 +3478,7 @@ export class Orchestrator {
     let classes: ClassifiedCheck[] = [];
     const classify = () => {
       const pc = task.projectChecks;
-      classes = checkable ? classifyChecks(pc?.baseline, pc?.latest, task.brief, project!.checkCommands) : [];
+      classes = checkable ? classifyChecks(pc?.baseline, pc?.latest, task.brief, project!.checkCommands, !!project!.strictChecks) : [];
       if (checkable) logs.write({ level: classes.every((c) => c.cls === 'green') ? 'info' : 'warn', kind: 'gate.classify', msg: `${task.id}: ${classes.map((c) => `${c.command} → ${c.cls}`).join('; ')}`, taskId: task.id, department: deptId, data: { classes, fixRounds } });
     };
     const isRed = (c: ClassifiedCheck) => c.cls === 'regression-or-new' || c.cls === 'red-required';
@@ -3546,7 +3589,9 @@ export class Orchestrator {
   private async runProjectChecks(task: Task, project: ProjectDef, dept: string, when: 'baseline' | 'execute' | 'revise'): Promise<CheckResult[]> {
     const { config, logs } = this.d;
     const signal = this.controllers.get(task.id)?.signal;
-    const opts = { denyCommands: [...config.tools.denyCommands, ...(project.denyCommands ?? [])], timeoutSec: config.tools.commandTimeoutSec, maxChars: config.tools.maxOutputChars, signal };
+    // K5: lệnh kiểm tra biết mốc của nhiệm vụ (lint chạy theo diff so với mốc này)
+    const env = task.baseRef ? { CCODING_BASE_REF: task.baseRef } : undefined;
+    const opts = { denyCommands: [...config.tools.denyCommands, ...(project.denyCommands ?? [])], timeoutSec: config.tools.commandTimeoutSec, maxChars: config.tools.maxOutputChars, signal, env };
     const pc = (task.projectChecks ??= {});
     const cwd = task.workspace!;
     const mark = (r: CheckResult) => (r.ok ? '✓' : r.denied ? '⛔' : '✗');

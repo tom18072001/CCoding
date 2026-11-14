@@ -273,6 +273,17 @@ npm run build && node scripts/replay-plan-gate.mjs
 
 Trên 54 lượt đã ghi, công cụ chặn 2 lượt: `C9/t5-logq.ccoding-fastlane.2` (quy tắc A và B) và `C7/t2-orders.ccoding-fastlane.1` (quy tắc B). Lượt `C9/t1` thứ 3 không bị chặn.
 
+### Kiểm tra đỏ là hỏng (`strictChecks`, K5 của BRIEF-D20)
+
+Chủ dự án muốn lỗi đã lặp lại thì máy tự chặn, không dựa vào lời dặn trong hồ sơ agent. Ba cơ chế dưới đây là mã thuần, cùng chạy trên cổng chất lượng B-02 và pha nghiệm thu.
+
+- **Tùy chọn dự án `strictChecks: true`** (`ProjectDef.strictChecks`, lưu qua `POST /api/projects`). `classifyChecks(baseline, latest, brief, checkCommands, strict)` trong `src/quality-gate.ts` xếp mọi lệnh đỏ còn lại là `red-required`, kể cả lệnh đỏ từ mốc mà đề bài không nhắc, lệnh bị chặn hoặc không có kết quả. `Orchestrator.runQualityGate` truyền `project.strictChecks` nên các lệnh này vào vòng sửa như lệnh đề bài yêu cầu xanh. Tắt hoặc bỏ trống thì hành vi cũ: `red-unrelated` không ép vòng sửa, chỉ buộc gọi reviewer.
+- **Hết vòng sửa mà còn đỏ:** trước pha nghiệm thu, nếu `strictChecks` bật và lần chạy lệnh kiểm tra gần nhất còn lệnh không xanh thì `Orchestrator` không gọi CTO. Nhiệm vụ không ở `done` mà ở `failed` (`task.error` là câu "Chưa nghiệm thu: còn đỏ <lệnh>"). `ACCEPTANCE.md` ghi biên bản kèm exit code và đầu ra cuối (đã che bí mật/PII) của từng lệnh đỏ, `task.acceptance.accepted = false`, `task.attention.reason = 'checks'`, log `accept.strict-red`.
+- **`CCODING_BASE_REF`:** `runProjectChecks` đặt biến môi trường này bằng `task.baseRef` khi chạy lệnh chuẩn bị và lệnh kiểm tra (qua `runCheckCommand(…, { env })`), để lint trong CI chạy theo diff so với mốc của nhiệm vụ. Nhiệm vụ không có `baseRef` thì không đặt biến.
+- **Tệp ngoại lệ/khóa của lint-CI bắt buộc reviewer:** `lintGuardPaths()` khớp `scripts/lint/allow.json`, `baseline.json`, `overclaim.json`, `.github/workflows/` và `preregistration.lock.json`. Diff chạm một trong các tệp này thì `reviewerReasons()` thêm lý do "diff chạm tệp ngoại lệ/khóa của lint-CI" (cần reviewer, không bỏ qua dù cổng xanh). `acceptPrompt`/`acceptBriefPrompt` thêm khối bắt buộc CTO nêu thay đổi này trong biên bản nghiệm thu.
+
+Giới hạn: `strictChecks` chỉ áp khi dự án có `checkCommands` và nhiệm vụ có quyền `exec` trong workspace. Vòng bổ sung sau nghiệm thu của CTO không chạy khi biên bản này được ghi. Test: `test/strict-checks.test.ts`.
+
 ## Sự kiện chẩn đoán của hook (`guard.block`)
 
 Hook `claude-guard` chạy trong tiến trình riêng của Claude Code, không đi qua `Orchestrator.call()`. Khi hook chặn một lệnh, nó ghi một sự kiện `guard.block` để tra cứu vì sao lệnh bị chặn. Mã nguồn: `logGuardBlock` và `guardLogTarget` trong `src/tools/claude-guard.ts`.

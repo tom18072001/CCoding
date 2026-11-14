@@ -663,6 +663,7 @@ export function createServer(app: App): http.Server {
         setupCommands: setupCommands ?? existing?.setupCommands,
         checkCommands: checkCommands ?? existing?.checkCommands,
         parallelWorktrees: typeof b.parallelWorktrees === 'boolean' ? b.parallelWorktrees : existing?.parallelWorktrees,
+        strictChecks: typeof b.strictChecks === 'boolean' ? b.strictChecks || undefined : existing?.strictChecks,
         planApproval: typeof b.planApproval === 'boolean' ? b.planApproval || undefined : existing?.planApproval,
         createdAt: existing?.createdAt ?? nowIso(),
       };
