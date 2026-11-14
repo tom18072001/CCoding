@@ -48,7 +48,8 @@ const leaks = rows.filter((r) => r.leak);
 const Rall = rows.filter((r) => !r.leak);
 const tasksAll = [...new Set(Rall.map((r) => r.task))].sort();
 // D6: bài `set: "exploratory"` không vào H1–H10, tập bài H6 và H1′/H2′; chỉ ở bảng khám phá.
-const SUITE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'tasks');
+// Thư mục bài: --tasks-dir hoặc VSC_TASKS_DIR; mặc định <suite>/tasks.
+const SUITE = path.resolve(flag('tasks-dir', process.env.VSC_TASKS_DIR || path.join(path.dirname(fileURLToPath(import.meta.url)), 'tasks')));
 const setOf = (t) => { try { return JSON.parse(fs.readFileSync(path.join(SUITE, t, 'task.json'), 'utf8')).set; } catch { return undefined; } };
 const exploratory = tasksAll.filter((t) => setOf(t) === 'exploratory');
 const tasks = tasksAll.filter((t) => !exploratory.includes(t));
