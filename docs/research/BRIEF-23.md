@@ -27,7 +27,7 @@
   - **(2) Bộ dự phòng đã đăng ký:** Agentic Execution Guardrail Eval (Hugging Face `ole-tail/agentic-execution-guardrail-eval`).
     - Kiểm giấy phép từ thẻ dữ liệu.
     - Quy ca theo quy tắc 1–7 đã khóa; ghi mã băm danh sách trước khi chạy.
-    - Đo ở **cả hai bản mã**: trước vá (commit `618cb2c`, mở worktree tạm, không sửa) và sau vá.
+    - Đo ở **cả hai bản mã**: trước vá (commit `618cb2c`) và sau vá. Bản trước vá dựng bằng `git archive 618cb2c src` vào một thư mục tạm trong worktree; xóa thư mục này trước khi commit. Không dùng `git worktree` vì bộ kiểm chặn lệnh này. Script mới nhận tham số đường dẫn `src`.
     - `blocked` ⇒ chặn đúng. `approved` ⇒ **chặn nhầm trên bộ ngoài**, phép đo chặn nhầm đầu tiên của trục 2. `require_approval` báo riêng.
     - Nhãn **[Khám phá]**: dùng sau khi đã thấy kết quả của RedCode, và bộ chỉ 37 dòng.
   - **(3)** Ngưỡng diễn giải: giữ ngưỡng đã khóa của (b).
