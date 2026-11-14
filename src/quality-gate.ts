@@ -29,17 +29,20 @@ export function briefMentions(brief: string, command: string): boolean {
  * - đỏ mà baseline xanh (hồi quy) hoặc không có baseline (đỏ mới) → 'regression-or-new'
  * - đỏ → đỏ và brief nhắc tên lệnh → 'red-required'; không nhắc → 'red-unrelated'
  * Lệnh bị chặn theo chính sách (denied) không có bằng chứng nên coi như 'red-unrelated' (buộc gọi reviewer).
+ * strict (dự án `strictChecks`): mọi 'red-unrelated' thành 'red-required'.
  */
-export function classifyChecks(baseline: CheckResult[] | undefined, latest: CheckResult[] | undefined, brief: string, checkCommands: string[] = []): ClassifiedCheck[] {
+export function classifyChecks(baseline: CheckResult[] | undefined, latest: CheckResult[] | undefined, brief: string, checkCommands: string[] = [], strict = false): ClassifiedCheck[] {
   const names = checkCommands.length ? checkCommands : (latest ?? []).map((r) => r.command);
   return names.map((command) => {
     const now = latest?.find((r) => r.command === command);
-    if (!now) return { command, cls: 'red-unrelated' as const };
+    // K5 strictChecks: đỏ kéo dài không "liên quan đề bài" nữa — đỏ là bắt buộc phải xanh
+    const unrelated = strict ? ('red-required' as const) : ('red-unrelated' as const);
+    if (!now) return { command, cls: unrelated };
     if (now.ok) return { command, cls: 'green' as const };
-    if (now.denied) return { command, cls: 'red-unrelated' as const };
+    if (now.denied) return { command, cls: unrelated };
     const before = baseline?.find((r) => r.command === command);
     if (!before || before.ok) return { command, cls: 'regression-or-new' as const };
-    return { command, cls: briefMentions(brief, command) ? ('red-required' as const) : ('red-unrelated' as const) };
+    return { command, cls: briefMentions(brief, command) ? ('red-required' as const) : unrelated };
   });
 }
 
@@ -80,6 +83,20 @@ export function templateGate(text: string, agentBody: string): TemplateGateResul
 
 /** §4.3 — đường dẫn chạm bảo mật/dữ liệu (so khớp trên đường dẫn dùng dấu /). */
 const SENSITIVE: RegExp[] = [/^src\/tools\//, /^src\/runtimes\//, /^src\/kpi\.ts$/, /^src\/store\.ts$/, /(^|\/)\.env/, /^data\//, /^agents\//, /(^|\/)(ccoding\.)?config[^/]*$/i];
+
+/** K5 — tệp ngoại lệ/khóa của lint và CI: diff chạm vào thì bắt buộc reviewer và CTO phải nêu trong biên bản. */
+const LINT_GUARD: RegExp[] = [
+  /^scripts\/lint\/allow\.json$/,
+  /^scripts\/lint\/baseline\.json$/,
+  /^scripts\/lint\/overclaim\.json$/,
+  /^\.github\/workflows\//,
+  /^docs\/research\/preregistration\.lock\.json$/,
+  /(^|\/)preregistration\.lock\.json$/,
+];
+
+export function lintGuardPaths(files: string[]): string[] {
+  return files.map((f) => f.replace(/\\/g, '/').replace(/^\.\//, '')).filter((f) => LINT_GUARD.some((re) => re.test(f)));
+}
 
 export function sensitivePaths(files: string[]): string[] {
   return files.map((f) => f.replace(/\\/g, '/').replace(/^\.\//, '')).filter((f) => SENSITIVE.some((re) => re.test(f)));
@@ -124,6 +141,8 @@ export function reviewerReasons(n: ReviewerNeed): string[] {
   if (!n.hasCheckCommands) r.push('dự án không có checkCommands');
   const sens = sensitivePaths(n.changedFiles);
   if (sens.length) r.push(`diff chạm vùng bảo mật/dữ liệu: ${sens.slice(0, 4).join(', ')}`);
+  const guard = lintGuardPaths(n.changedFiles);
+  if (guard.length) r.push(`diff chạm tệp ngoại lệ/khóa của lint-CI: ${guard.slice(0, 5).join(', ')}`);
   if (n.classification === 'confidential' || n.classification === 'restricted') r.push(`nhãn dữ liệu ${n.classification}`);
   if (n.classes.includes('red-unrelated')) r.push('có lệnh đỏ kéo dài không liên quan đề bài');
   if (n.failedAfterRounds) r.push('chưa đạt sau các vòng sửa');
