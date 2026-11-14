@@ -23,7 +23,7 @@
 | token có trọng số | 1,008 | [0,942; 1,075] | 0,84 | 6/6 |
 
 - Chạy song song có worktree **rút thời gian hoàn thành còn khoảng một nửa** (−48 %, CI −45 % đến −51 %).
-- Không thấy tốn thêm token: tỉ số 1,008, CI chứa 1.
+- Token có trọng số (thước đo phụ, chỉ mô tả): tỉ số 1,008, CI [0,942; 1,075] chứa 1, tức không phát hiện được thay đổi. Đây **không** là bằng chứng hai arm tốn như nhau: CI vẫn cho phép tới +7,5 %, và E8 không đăng ký phép kiểm tương đương cho token. *(Sửa chữ 14/11/2026 theo nghiệm thu của CTO cho BRIEF-20; bản đầu viết "Không thấy tốn thêm token".)*
 - p là giá trị nhỏ nhất đo được với số hoán vị đã dùng (Monte Carlo), nên chỉ biết p ≤ 0,0001.
 
 ## 3. Kiểm cấu hình và mô tả (không p)
@@ -51,9 +51,9 @@
 
 ## 4. Đọc kết quả
 
-1. **Bench trước đây không bật song song; lần này đo được lợi ích của nó.** Giữ nguyên cách chia việc và cùng số lượt gọi (trung bình 7,0 lượt gọi và 3,9 hạng mục mỗi nhiệm vụ ở cả hai arm), chạy song song có worktree riêng làm thời gian còn khoảng một nửa (×0,52) mà không tốn thêm token.
+1. **Bench trước đây không bật song song; lần này đo được lợi ích của nó.** Giữ nguyên cách chia việc và cùng số lượt gọi (trung bình 7,0 lượt gọi và 3,9 hạng mục mỗi nhiệm vụ ở cả hai arm), chạy song song có worktree riêng làm thời gian còn khoảng một nửa (×0,52); không phát hiện được thay đổi token (×1,01, CI 0,94–1,08, chỉ mô tả, không phải bằng chứng tương đương).
 2. **Song song bù được phần chậm của chia việc ở bài chia được, chưa bù được ở bài khác.** Ở `l1-modules`, B6w4 nhanh hơn agent đơn khoảng 40 %. Ở `t2-orders` và `t3-api`, B6w4 vẫn chậm hơn 1,4–2,1 lần và tốn 2–4 lần token. Nghĩa là song song giảm được chi phí thời gian của chia việc, nhưng không giảm token. Nên chia việc cho nhiều agent khi việc chia được thành nhiều phần độc lập.
-3. **Chất lượng không đổi** (mô tả): điểm test ẩn trung bình 0,995 và 0,990. Pass ở B6w4 thấp hơn 2 lượt, nhưng n nhỏ và không có phép kiểm; ghi lại để theo dõi.
+3. **Không thấy khác biệt chất lượng** (mô tả, không có phép kiểm): điểm test ẩn trung bình 0,995 và 0,990. Pass ở B6w4 thấp hơn 2 lượt, nhưng n nhỏ và không có phép kiểm; ghi lại để theo dõi.
 
 ## 5. Giới hạn (điều kiện 4–6 của K3)
 
