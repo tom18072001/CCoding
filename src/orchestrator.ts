@@ -2405,7 +2405,7 @@ export class Orchestrator {
     const ls = pctx.cwd ? spawnSync('git', ['ls-files', '-z'], { cwd: pctx.cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, windowsHide: true }) : undefined;
     const repoFiles = ls?.status === 0 ? ls.stdout.split('\0').filter(Boolean) : undefined;
     const agentIds = [...registry.agents.keys()];
-    const evaluate = (oos = parsed?.outOfScope) => planGate({ brief: task.brief, planSummary: run.planSummary ?? '', subtasks: run.subtasks, outOfScope: oos, truncated, repoFiles, agentIds });
+    const evaluate = (oos = parsed?.outOfScope) => planGate({ brief: task.brief, planSummary: run.planSummary ?? '', subtasks: run.subtasks, outOfScope: oos, truncated, repoFiles, agentIds, agentRoles: Object.fromEntries([...registry.agents.values()].map((a) => [a.id.toLowerCase(), { role: a.role, skills: a.skills }])) });
     let truncated = !!parsed?.truncated;
     let g = evaluate();
     if (!run.planGate?.replanned) logs.write({ level: g.blocked ? 'warn' : 'info', kind: 'gate.decision', msg: `${task.id}: cổng phủ kế hoạch ${g.blocked ? 'chặn' : 'đạt'}`, taskId: task.id, department: dept.id, data: { gate: 'b10', verdict: g.blocked ? 'block' : 'pass' } });
