@@ -223,3 +223,41 @@ node docs/research/scripts/consistency-check.mjs <thư-mục-gốc> --facts <t�
 ```
 
 Có lỗi thì exit 1, sạch thì exit 0. Test nằm ở `test/consistency-check.test.ts` và chạy trong `npm test`. Khi chạy trên repo thật, script báo một lỗi ở `docs/research/BRIEF-2.md:6` (dòng nói lượt C7 t2 "review không bắt", lệch so với `token-analysis.md`). Việc sửa dòng này chưa làm.
+
+## Rule `outside-root-write` và kiểm chặn nhầm (K3)
+
+Rule `outside-root-write` chặn lệnh shell **ghi/xóa/đổi quyền** vào đường dẫn ngoài thư mục làm việc (ví dụ `rm /etc/x`, `echo x > /usr/y`, `curl -o /opt/x`). Hai đường dùng chung một hàm quyết định `outsideWriteDecision` (`src/tools/shell-policy.ts`): hook `claude-guard` của `claude-cli` và công cụ `run_command`. Ghi vào thư mục làm việc, `/dev/null` và thư mục tạm được cho qua.
+
+Bảng dưới là kết quả kiểm chặn nhầm độc lập, khớp `test/outside-write-false-positive.test.ts`. Cột claude-guard/run_command là kết quả **của rule outside-root-write**: "Qua" = không chặn. Lệnh bị rule khác chặn thì ghi rule nguồn ở Ghi chú (không tính là chặn nhầm). Lệnh có tác dụng phụ không được thực thi trong test; run_command chỉ chạy thật `echo`.
+
+| Lệnh | Shell | claude-guard | run_command | Ghi chú |
+|---|---|---|---|---|
+| `npm test` | Bash | Qua | Qua | |
+| `npm run build` | Bash | Qua | Qua | |
+| `node --test` | Bash | Qua | Qua | |
+| `npx tsc --noEmit` | Bash | Qua | Qua | |
+| `git diff`, `git status`, `git log` | Bash | Qua | Qua | |
+| `git add -A` | Bash | Qua | Qua | |
+| `cat package.json` | Bash | Qua | Qua | |
+| `ls node_modules/.bin` | Bash | Qua | Qua | |
+| `mkdir -p dist` | Bash | Qua | Qua | |
+| `rm -rf dist` | Bash | Qua | Qua | guard bị rule `deny-list` (xóa đệ quy) chặn, không phải outside-root-write |
+| `cp a.txt b.txt` | Bash | Qua | Qua | |
+| `mv x y` | Bash | Qua | Qua | |
+| `echo x > out.txt` | Bash | Qua | Qua | run_command chạy thật trong thư mục tạm |
+| `echo x > /dev/null` | Bash | Qua | Qua | run_command chạy thật |
+| `tee log.txt`, `echo x \| tee -a log.txt` | Bash | Qua | Qua | |
+| `curl -o vendor/x.js https://example.invalid/x.js` | Bash | Qua | Qua | không thực thi |
+| `wget -O vendor/x.js https://example.invalid/x.js` | Bash | Qua | Qua | không thực thi |
+| `echo x > <thư mục tạm>/ccoding-out.txt`, `/tmp/out.txt` | Bash | Qua | Qua | `$TMPDIR` (Linux) hoặc `%TEMP%` (Windows) có ca riêng |
+| `cd sub && mkdir -p dist` | Bash | Qua | Qua | |
+| `Get-ChildItem` | PowerShell | Qua | Qua | |
+| `Set-Content out.txt x` | PowerShell | Qua | Qua | |
+| `Remove-Item dist -Recurse` | PowerShell | Qua | Qua | guard bị rule `deny-list` chặn, không phải outside-root-write |
+| `Remove-Item out.txt` | PowerShell | Qua | Qua | |
+| `New-Item -ItemType Directory dist` | PowerShell | Qua | Qua | |
+| `Copy-Item a.txt b.txt` | PowerShell | Qua | Qua | |
+| `Get-Content package.json \| Set-Content out.txt` | PowerShell | Qua | Qua | |
+| `Set-Content <thư mục tạm>\ccoding-out.txt x`, `$env:TEMP\out.txt` | PowerShell | Qua | Qua | `$env:TEMP` chỉ chạy trên Windows |
+
+Kết quả: không có chặn nhầm của `outside-root-write`. Lưu ý riêng: `rm -rf dist` và `Remove-Item dist -Recurse` bị `deny-list` (xóa đệ quy) chặn ở hook; đó là chính sách có chủ đích của rule khác, không thuộc phạm vi K3.
