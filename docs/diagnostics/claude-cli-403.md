@@ -70,3 +70,8 @@ Tiêu chí: (a) khớp với hai cụm thời gian hẹp và R3 vẫn sạch; (b
 - **Không** chạy `claude -p`, không gọi mạng, không chạy benchmark; **không** sửa `src/`, `bench/`, `docs/research/`.
 - **Không** chép giá trị biến môi trường thật hay token; phép thử `node -e` chỉ dùng **tên** biến mẫu.
 - Mọi kết luận về hành vi nội bộ của Claude Code CLI (`CI`, cờ lưu lượng không thiết yếu, làm mới token) là **[CHƯA KIỂM CHỨNG]**.
+
+## Bổ sung D16/K1 — lỗi hạn mức 5 giờ giữa lượt (`resets 1am (Asia/Bangkok)`)
+
+- D15 đã sửa sẵn phần chính của ca này: lượt có `error` kèm `text` làm dở đi vào nhánh lỗi, ghi usage lượt làm dở, tạm dừng `quota` (không `failed`, không thử lại tức thì, không ghi báo cáo tổng hợp từ thông báo lỗi). Các ca này nay có test (`test/quota-5h-pause.test.ts`), xanh ngay không cần sửa.
+- Chỗ còn thiếu: giờ tự tiếp tục không đọc được từ dạng `resets <giờ> (<múi giờ IANA>)` nên rơi về `quotaCooldownMs`. D16 thêm bộ đọc trong `parseRetryAt` (`src/runtimes/errors.ts`) và `call()` truyền `parseRetryAt(undefined, r.error)` khi runtime không kèm `retryAt`. Múi giờ sai ⇒ vẫn rơi về `quotaCooldownMs`.
