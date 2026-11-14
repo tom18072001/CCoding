@@ -1,6 +1,6 @@
 # Hệ thống multi-agent CCoding cho lập trình: thiết kế, giới hạn sub-agent và đo chi phí–thời gian–cache so với một coding agent đơn
 
-> **Bản thảo v0.7.1 (14/11/2026) — Phòng Nghiên cứu. So với v0.7:** sửa theo phản biện K4 (`context/k4-v07-review-2026-11-14.md`): nhãn và câu giới hạn ở §1, §2, §6.2.5, §6.3, §6.4, §7.4, §8, §9; sửa hai lỗi trích dòng (A-F1, A-F2); thêm RedCode-Exec vào §10; cập nhật mục Luật Bảo vệ dữ liệu cá nhân theo `context/nd356-2025-note.md` §8 (số hiệu và hiệu lực đã xác nhận; điều về thông báo vi phạm vẫn **[CHƯA KIỂM CHỨNG]**); bài không dùng mẫu KPI nào làm căn cứ; mẫu KPI của chương trình đo ở `run-plan.md` §9 là giả định của phòng, chờ giám đốc duyệt (tiêu chí (5) của BRIEF-20 chưa đạt). Không đổi số đo nào. Lịch sử: **Bản thảo v0.7 (14/11/2026) — Phòng Nghiên cứu. So với v0.6 (4/11/2026):** (1) đóng góp dựng lại quanh **ba trục** (nghiệm thu bằng kiểm chứng thật; khung quản trị; song song an toàn), mỗi số đo ghi nhãn **[Xác nhận]/[Mô tả]/[Khám phá]** và câu giới hạn (§2, §6.3, §9); kết quả chi phí đăng ký trước W1–W5 (B-01) **giữ nguyên là kết quả chính**; (2) thêm §6.3 (ba trục: G, E4, E7; trục 2 phần (b) trên RedCode-Exec; P, E8) và §6.4 (E5′, E6/H6, B-14 bước 2 kèm power và bảng độ nhạy); (3) §8 thêm §8.3 với sáu đe dọa (i)–(vi) của giai đoạn sau 4/11, gồm việc phân loại lại 16 cặp E7 sau khi đã thấy kết quả; (4) §4.3 và §7.4 cập nhật trạng thái; (5) khung pháp lý bảo vệ dữ liệu cá nhân nay ghi **Nghị định 356/2025/NĐ-CP (hiệu lực 01/01/2026)**; số điều đã đối chiếu với toàn văn trên Cơ sở dữ liệu quốc gia về văn bản pháp luật (14/11/2026), chưa đối chiếu bản ký số trên Công báo; (6) cập nhật Khai báo sử dụng AI. Số mới có chú thích nguồn `tệp:dòng` và nằm ở `v07-number-list.md`. Tên tác giả và tên hệ giữ như v0.5/v0.6; dự án ứng dụng giữ ẩn danh "dự án A". Lịch sử: **v0.6 (4/11/2026) — Phòng Nghiên cứu. So với v0.5: Bảng 10 và các số liên quan cập nhật theo mã thống kê sau lần sửa D12 (tệp R19; các mã của thẩm định K2: T-1, T-2, T-3, T-6, A-1, A-2, A-4, A-5, B-2, P-1), nhãn của H3, H5, H7 và dòng Holm đổi, số B-01 của mã mới nay gần với hàng độ nhạy 3 của Bảng 9; thêm §6.1 mục (8) về E3 ở mức quy trình và việc thiết kế lại E5 thành E5′ (không có số điểm nào của E3, E4); Bảng 8, 9, 11–14 và mọi số của §6.2 không đổi. Tên tác giả và tên hệ giữ như v0.5 (chưa ẩn danh, chờ giám đốc chọn mức).** Lịch sử: **v0.5 (4/11/2026). So với v0.4 (3/11/2026): Bảng 10 viết lại sau khi chạy lại `analyze.mjs` bản mới (H2 đổi từ SUPPORTED sang không kết luận; H6 rút nhãn SUPPORTED; H7 không xác nhận); §6.2.5 và §7.4 thêm kết quả chẩn đoán cache (E1) và mô tả thí điểm cổng chất lượng (E2); §8.1 thêm hai sai lệch; mục "Những gì chưa có" ở §9. Không có phép đo mới nào thay số của Bảng 8, 9, 11–14.** Chuẩn trích dẫn APA 7, dạng (Tác giả, năm). Phân loại dữ liệu: nội bộ; dự án ứng dụng thật được ẩn danh.
+> **Bản thảo v0.8 (14/11/2026) — Phòng Nghiên cứu. So với v0.7.1 (BRIEF-22):** thêm §4.4 (engine và logic từng agent, từ `analysis/decisions/logic-map.md`, có sơ đồ và bảng mỗi agent một dòng) và §6.5 (bảng điểm từng agent, cấu trúc kế hoạch của trưởng phòng, hiệu quả chia việc, 23 chỗ fail kèm trạng thái, model theo vai và đăng ký trước E9, đối chiếu tài liệu); thêm 8 nguồn vào §10. **Giữ nguyên mọi số v0.7.1**; số mới có khóa `brief22.*` ở `facts.json`, trùng `scorecard.md` và `effectiveness.md`; không số cũ nào bị thay. Mọi số mới là [Mô tả]; E9 chưa chạy, chưa có số. Trong mã, CTO chỉ nghiệm thu; chỗ "CTO" dùng chung cho chia việc được tách ở §4.4. Lịch sử: **Bản thảo v0.7.1 (14/11/2026) — Phòng Nghiên cứu. So với v0.7:** sửa theo phản biện K4 (`context/k4-v07-review-2026-11-14.md`): nhãn và câu giới hạn ở §1, §2, §6.2.5, §6.3, §6.4, §7.4, §8, §9; sửa hai lỗi trích dòng (A-F1, A-F2); thêm RedCode-Exec vào §10; cập nhật mục Luật Bảo vệ dữ liệu cá nhân theo `context/nd356-2025-note.md` §8 (số hiệu và hiệu lực đã xác nhận; điều về thông báo vi phạm vẫn **[CHƯA KIỂM CHỨNG]**); bài không dùng mẫu KPI nào làm căn cứ; mẫu KPI của chương trình đo ở `run-plan.md` §9 là giả định của phòng, chờ giám đốc duyệt (tiêu chí (5) của BRIEF-20 chưa đạt). Không đổi số đo nào. Lịch sử: **Bản thảo v0.7 (14/11/2026) — Phòng Nghiên cứu. So với v0.6 (4/11/2026):** (1) đóng góp dựng lại quanh **ba trục** (nghiệm thu bằng kiểm chứng thật; khung quản trị; song song an toàn), mỗi số đo ghi nhãn **[Xác nhận]/[Mô tả]/[Khám phá]** và câu giới hạn (§2, §6.3, §9); kết quả chi phí đăng ký trước W1–W5 (B-01) **giữ nguyên là kết quả chính**; (2) thêm §6.3 (ba trục: G, E4, E7; trục 2 phần (b) trên RedCode-Exec; P, E8) và §6.4 (E5′, E6/H6, B-14 bước 2 kèm power và bảng độ nhạy); (3) §8 thêm §8.3 với sáu đe dọa (i)–(vi) của giai đoạn sau 4/11, gồm việc phân loại lại 16 cặp E7 sau khi đã thấy kết quả; (4) §4.3 và §7.4 cập nhật trạng thái; (5) khung pháp lý bảo vệ dữ liệu cá nhân nay ghi **Nghị định 356/2025/NĐ-CP (hiệu lực 01/01/2026)**; số điều đã đối chiếu với toàn văn trên Cơ sở dữ liệu quốc gia về văn bản pháp luật (14/11/2026), chưa đối chiếu bản ký số trên Công báo; (6) cập nhật Khai báo sử dụng AI. Số mới có chú thích nguồn `tệp:dòng` và nằm ở `v07-number-list.md`. Tên tác giả và tên hệ giữ như v0.5/v0.6; dự án ứng dụng giữ ẩn danh "dự án A". Lịch sử: **v0.6 (4/11/2026) — Phòng Nghiên cứu. So với v0.5: Bảng 10 và các số liên quan cập nhật theo mã thống kê sau lần sửa D12 (tệp R19; các mã của thẩm định K2: T-1, T-2, T-3, T-6, A-1, A-2, A-4, A-5, B-2, P-1), nhãn của H3, H5, H7 và dòng Holm đổi, số B-01 của mã mới nay gần với hàng độ nhạy 3 của Bảng 9; thêm §6.1 mục (8) về E3 ở mức quy trình và việc thiết kế lại E5 thành E5′ (không có số điểm nào của E3, E4); Bảng 8, 9, 11–14 và mọi số của §6.2 không đổi. Tên tác giả và tên hệ giữ như v0.5 (chưa ẩn danh, chờ giám đốc chọn mức).** Lịch sử: **v0.5 (4/11/2026). So với v0.4 (3/11/2026): Bảng 10 viết lại sau khi chạy lại `analyze.mjs` bản mới (H2 đổi từ SUPPORTED sang không kết luận; H6 rút nhãn SUPPORTED; H7 không xác nhận); §6.2.5 và §7.4 thêm kết quả chẩn đoán cache (E1) và mô tả thí điểm cổng chất lượng (E2); §8.1 thêm hai sai lệch; mục "Những gì chưa có" ở §9. Không có phép đo mới nào thay số của Bảng 8, 9, 11–14.** Chuẩn trích dẫn APA 7, dạng (Tác giả, năm). Phân loại dữ liệu: nội bộ; dự án ứng dụng thật được ẩn danh.
 > **Bản đã đối chiếu:** bộ dữ liệu và phân tích của nghiên cứu đăng ký trước (§5.1, §6.1; tệp R1–R9 ở Phụ lục A); bảng hiệu năng T-0…T-i (12 bảng, tệp R11; dữ liệu vòng thăm dò C1–C7, hash nguồn ghi ở đầu tệp); danh mục tham khảo v2 (R12); sổ thách thức (C-01…C-49, L1–L15; R10); thiết kế tự cải thiện v1.0 (R13); tổng quan tài liệu (R14, mục "Kết luận điểm mới"). Đường dẫn và lệnh tái lập nằm ở Phụ lục A, không rải trong thân bài.
 > **Quy ước số liệu:** §6.1 là nghiên cứu đăng ký trước W1–W5; mỗi số ghi kèm tệp và bảng nguồn, cùng nhãn **[Xác nhận]** (phép thử đăng ký trước) hoặc **[Mô tả]**/**[Phân tích phụ]** (không có kiểm định giả thuyết). Từ v0.7 bài dùng ba nhãn [Xác nhận]/[Mô tả]/[Khám phá], định nghĩa ở §6.3; [Phân tích phụ] ở §6.1 tương đương [Mô tả] ngoài họ Holm; phép độ nhạy chọn sau khi thấy dữ liệu ở §6.1–§6.2 là [Khám phá]. Số hiệu năng của vòng thăm dò C1–C7 (§6.2: thời gian, chi phí, token, cache, tỉ lệ, p hoán vị) lấy nguyên từ bảng T-a…T-i của tệp R11; mỗi bảng ghi tên bảng nguồn (T-x) và lệnh tái lập. Số đếm thách thức và tham số cấu hình lấy từ tệp R10. **Chỉ các số hiệu năng của vòng thăm dò C1–C8 là minh họa** (n nhỏ, không hiệu chỉnh so sánh bội).
 > **Nhãn nguồn:** CAID, *Don't Break the Cache* và Cognition 2026 đã đọc toàn văn trang lấy được (tệp R12 §2–§3); phần lớn nguồn còn lại chỉ đọc tóm tắt (xem mục 3); khẳng định về nguồn đó chỉ ở mức tóm tắt.
@@ -149,6 +149,102 @@ Việc nhánh nghiên cứu có `main` hay không không đổi trạng thái "c
 **(c) Các số đo W1–W5 và B7′ được đo trước khi gộp.** Mọi số đo của bài chạy trên mã **chưa chứa** 16 commit của `main`: máy chủ 7424 ở `origin/main` `e0bd2f4` (A0-sonnet, B0, B5) và máy chủ 7425 ở nhánh `7fb18ba` (B6, B7) trong W1–W5 (sổ chạy study-cloud, dòng 5, 56; R18); máy chủ 7425 ở `1333eef` cho B7′ (sổ chạy B7′, dòng 5; R18), với Claude Code CLI 2.1.317 thay cho 2.1.316 của W1–W5 (dòng 7). Kiểm bằng `git log`: `9e6079b` không nằm trong lịch sử của `1333eef`, còn `1333eef` và `7fb18ba` đều nằm trong lịch sử của nhánh trước và sau merge `37f88b6`. Cần phân biệt hai nghĩa của "trước": theo *nội dung mã* máy chủ, cả ba đợt đều trước gộp; theo *đồng hồ*, W1–W5 trước merge (cam kết ngày 02/11), còn các lượt B7′ được cam kết kết quả lúc 09:11–09:25 UTC ngày 03/11, sau dấu thời gian của merge (15:12 +07, tức 08:12 UTC), nhưng máy chủ vẫn chạy worktree `1333eef` không có `main`. **Hành vi của CCoding sau gộp chưa được đo**; mục 4.3(a) về việc luồng điều phối không đổi chỉ dựa trên diff.
 
 **(d) Ba trục ánh xạ vào cơ chế nào (v0.7).** Cơ chế nghiệm thu bằng kiểm chứng thật là lệnh kiểm tra tự chạy (`checkCommands`, `npm test`), cổng chất lượng B-02 và hồ sơ CTO ở pha accept (L15, §4.1 mục 3; trục 1). Cơ chế quản trị mà trục 2 đo là hook `claude-guard` và hàm thuần `guardDecision` (L2, L3; hai tầng `shell: git-read` và `full`, `deny: []`), tức chính sách tĩnh theo mẫu chuỗi, **không phải sandbox hệ điều hành**. Cơ chế song song của trục 3 là worktree con, tự gộp và `maxParallel` (§4.1 mục 2, L11). Các đợt đo của ba trục chạy sau đợt W1–W5; E7 và E8 dùng Claude Code CLI 2.1.318 và B-14 bước 2 dùng commit `0d216eb` (R23, R27, R31). Hành vi của hệ ở các đợt đó chưa được đối chiếu lại với diff `main` của mục (a); mục này vì vậy chỉ ánh xạ tên cơ chế, không nói thêm về hiệu lực của số đo ngoài phạm vi từng báo cáo. Harness bench dùng `isolation: none` nên **bench W1–W5 đo chi phí chia việc mà không có song song**; đây là lý do E8 bật `isolation: worktree` (§8.3 (i)).
+
+### 4.4 Engine và logic từng agent (v0.8)
+
+*Phạm vi và nguồn.* Mục này tóm tắt `analysis/decisions/logic-map.md` (đọc tĩnh mã tại commit `b146b87c`; mỗi dòng có `tệp:dòng` ở tệp nguồn, số dòng lệch khi mã đổi). Chưa chạy mã; điều chưa xác minh được ghi **[CHƯA KIỂM CHỨNG]** ở tệp nguồn. Đây là mô tả artefact, không phải kết quả đo.
+
+**Phân vai trong mã, và chỗ "CTO" được dùng chung.** Trong mã, vai `cto` (`agents/cto.md`) **chỉ nghiệm thu** (pha `accept`). Các quyết định về chia việc thuộc thành phần khác; khi người dùng nói "quyết định của CTO" về chia việc, câu trả lời đúng là ba thành phần dưới đây, và CTO chỉ góp ở đầu ra.
+
+| Quyết định | Thành phần thật | LLM hay mã |
+|---|---|---|
+| Định tuyến (phòng nào nhận việc) | **Điều phối viên** (`agents/orchestrator.md`); lỗi thì lùi về `keywordRoute` | LLM + mã lùi |
+| Chọn làn (đơn / nhanh / đầy) | **Hàm quy tắc** `chooseLane` (`src/lane.ts`) | Mã thuần, không LLM |
+| Bóc tách thành hạng mục, giao người, `dependsOn` | **Trưởng phòng** (`dev-lead`, `research-lead`); mã chỉnh lại sau bằng `parsePlan`, `shapeFastPlan`, `planGate` | LLM + mã |
+| Lịch chạy song song, `maxParallel`, gộp worktree con | **Engine** (`executeAll`) | Mã |
+| Duyệt từng hạng mục | **Cổng chất lượng** (mã) rồi **reviewer** (`qa-tester` ở Dev, `peer-reviewer` ở Nghiên cứu) | Mã + LLM |
+| Nghiệm thu | **CTO**; kết luận `accepted` do mã chốt từ các tiêu chí | LLM + mã |
+| Đóng nhiệm vụ "hoàn thành" | **Engine**: `status = 'done'` đặt sau `accept`, không phụ thuộc kết quả nghiệm thu | Mã |
+| Chọn model mỗi lượt | **Cấu hình**: `phaseModels` → `project.models` → `config.phases.models` → hồ sơ agent | Mã/cấu hình |
+
+**Hình 6.** Luồng một nhiệm vụ. Hộp "mã" không gọi LLM.
+
+```mermaid
+flowchart TD
+  A[submit / pump] --> B{mode}
+  B -- auto --> R[route: điều phối viên LLM<br/>lỗi thì keywordRoute]
+  B -- phòng cố định --> D
+  R --> D[chọn làn: chooseLane<br/>mã thuần]
+  D -- single --> S[runSingleLane<br/>1 agent]
+  S -- đỏ / vượt phạm vi / ESCALATE --> P
+  D -- fast / full --> P[plan: trưởng phòng LLM<br/>parsePlan]
+  P --> M{họp? full, từ 3 hạng mục,<br/>từ 2 người}
+  M -- có --> DS[discuss + finalize]
+  M -- không --> G
+  DS --> G[cổng phủ kế hoạch<br/>mã; chặn thì replan 1 lần]
+  G -- đạt --> E[execute: dependsOn + maxParallel]
+  G -- chặn lần 2 --> STOP[dừng, attention]
+  E --> Q[cổng chất lượng B-02<br/>lệnh kiểm tra + mẫu đầu ra]
+  S --> Q
+  Q -- cần reviewer --> RV[review: LLM] --> RE[revise] --> Q
+  Q -- không cần --> SY
+  RV --> SY[synthesize: trưởng phòng hoặc template]
+  SY --> AC[accept: CTO, chỉ đọc]
+  AC --> DONE[status = done<br/>attention nếu chưa duyệt / chưa nghiệm thu]
+```
+
+**Hình 7.** Lập lịch và gộp trong pha execute (`executeAll`).
+
+```mermaid
+flowchart TD
+  L[vòng lặp executeAll] --> K[hạng mục phụ thuộc failed -> skipped]
+  K --> SL[slots = maxParallel - đang chạy]
+  SL --> RD[readySubtasks: dependsOn đã done<br/>và người nhận không bận]
+  RD --> EX{writer không có worktree con?}
+  EX -- có, đã có writer --> W[chờ vòng sau]
+  EX -- không --> ISO{tách worktree con?}
+  ISO -- không --> RS[chạy trong worktree chính]
+  ISO -- có --> SW[tách, setup, chạy]
+  SW --> CL[commit + mergeBranch]
+  CL -- sạch --> DN[done]
+  CL -- xung đột --> CF[làm lại: resolve hoặc mainOnly]
+  CF -- còn dấu xung đột --> UF[failed, giữ nhánh]
+  CF -- sạch --> DN
+  CL -- lỗi khác --> HD[hold: failed, mergePending]
+  DN --> L
+  RS --> L
+```
+
+Ba điểm của engine ảnh hưởng trực tiếp tới chia việc (đều từ `logic-map.md` §1): (i) `readySubtasks` chỉ chọn một hạng mục mỗi người nhận mỗi lượt, nên hai hạng mục độc lập giao cùng một người chạy lần lượt; (ii) hạng mục chạy lệnh chỉ song song khi tách được worktree con, còn không thì chạy lần lượt; (iii) `estimatePlan` chỉ cộng token, không mô hình hóa thời gian hay lợi ích song song. Bộ ngưỡng chọn làn mặc định: ≥ 5 phần hoặc ≥ 6 tệp thì làn nhanh; việc nối tiếp hoặc ghi tuần tự thì làn đơn.
+
+**Bảng 20.** Mỗi agent một dòng: quyết định gì, theo logic nào, model hồ sơ và điểm KPI v2 (văn phòng phụ). Điểm và hạng lấy từ `scorecard.md` §1a (khóa `brief22.kpi.<agent>.total`, `.grade`); "không" nghĩa là agent không có dòng trong `kpi-office.json`. Model hồ sơ theo frontmatter; model thật của một lượt còn phụ thuộc `phaseModels` (xem dưới).
+
+| Agent | Quyết định gì, logic nào | Model hồ sơ | KPI v2 (hạng) |
+|---|---|---|---|
+| `orchestrator` | Chọn phòng hoặc liên phòng: lời nhắc + mã lùi `keywordRoute`; không chọn làn, không bóc tách | sonnet (pha `route` đè haiku) | không |
+| `cto` | Chỉ nghiệm thu: từng tiêu chí đạt/không/chưa biết; mã chốt `accepted` = mọi tiêu chí đạt | sonnet | 73 (B) |
+| `dev-lead` | Bóc tách, giao người, `dependsOn` (lời nhắc), mã hậu xử lý và cổng phủ | opus (làn nhanh: pha `plan` chạy sonnet) | 88 (A) |
+| `research-lead` | Như `dev-lead`; hồ sơ dặn không tạo hạng mục review cho `peer-reviewer` | opus (làn nhanh: sonnet) | 77 (B) |
+| `solution-architect` | Viết kiến trúc theo kỹ năng | opus | không |
+| `senior-swe` | Sửa lỗi gốc, rà mã; được chọn ở làn đơn qua `skillScore` | sonnet | 82 (A) |
+| `backend-dev` | Hạng mục API/CSDL; ghi mã | sonnet | 85 (A) |
+| `frontend-dev` | Hạng mục giao diện | sonnet | không |
+| `data-engineer` | Hạng mục pipeline/log | sonnet | không |
+| `devops` | Hạng mục CI/CD | sonnet | 71 (B) |
+| `security` | Rà soát ATTT; diff chạm vùng nhạy cảm kéo reviewer vào | sonnet | 68 (B) |
+| `business-analyst` | Viết yêu cầu, phân tích khoảng cách | sonnet | không |
+| `ba-presales` | Viết thuyết minh, ma trận | sonnet | không |
+| `tech-writer` | Viết README, hướng dẫn | sonnet | 65 (B) |
+| `qa-tester` | Reviewer Dev: duyệt/chưa duyệt, mức issue; mã có thể ép chưa duyệt khi có hồi quy lệnh | sonnet | 78 (B) |
+| `peer-reviewer` | Reviewer Nghiên cứu: như trên nhưng không có công cụ chạy lệnh | opus | 68 (B) |
+| `literature-researcher` | Tìm, đánh giá nguồn | sonnet | 77 (B) |
+| `methodologist` | Giao thức, kế hoạch phân tích | sonnet | 74 (B) |
+| `data-scientist` | Chạy script, thống kê; agent Nghiên cứu duy nhất có công cụ chạy lệnh | sonnet | 78 (B) |
+| `academic-writer` | Viết, biên tập bản thảo | sonnet | 74 (B) |
+
+Cả 20 tệp trong `agents/` đều có dòng; 14 agent có KPI, 6 không (điều phối viên, `solution-architect`, `frontend-dev`, `data-engineer`, `business-analyst`, `ba-presales`). Hồ sơ ghi opus cho 4 agent (`dev-lead`, `research-lead`, `solution-architect`, `peer-reviewer`); ở làn nhanh khâu `plan` chạy sonnet theo `fastLane.planModel`, nên hồ sơ opus của trưởng phòng không có hiệu lực ở các lượt đó (`logic-map.md` §1.5). Model thật trên vận hành chính (dự án A) **[CHƯA KIỂM CHỨNG]**: biên bản không nêu.
+
+**Lỗ hổng của logic (13 mục L1–L13).** `logic-map.md` §4 liệt kê 13 lỗ hổng hoặc chỗ lệch giữa mã và lời nhắc, mỗi mục có `tệp:dòng`. Những mục chạm trực tiếp chia việc: cổng phủ kế hoạch không kiểm vai bắt buộc (L1); cổng chất lượng cho qua khi không có review (L2); nhiệm vụ đóng "hoàn thành" dù CTO kết luận chưa đạt (L3); reviewer chạm trần lượt không có đường chạy tiếp (L4); song song bị chặn bởi người nhận và phụ thuộc worktree (L6, L7); lời nhắc bóc tách mâu thuẫn nhau (L8); chọn làn đếm bằng biểu thức chính quy (L10); ước lượng không phản ánh lợi ích chia việc (L11). Trạng thái từng mục ở §6.5. Một điểm đáng nhấn: cổng phủ kế hoạch kiểm tệp **nguồn** nêu trong đề, không kiểm vai nêu trong đề (L1), nên kế hoạch bỏ một vai bắt buộc vẫn "phủ".
 
 ---
 
@@ -574,6 +670,74 @@ Ba giới hạn bắt buộc của E8 (điều kiện 4–6 của đăng ký). (
 
 *Đọc đúng mức.* E5′ cho thấy ở làn đầy ép trên hai bài lớn, bỏ họp giảm token còn khoảng 0,72 lần, với điểm test ẩn không phân biệt được (Δ −0,000; pass 20/20 và 19/20; mô tả); kết luận không khái quát sang làn do `chooseLane` chọn (§6.1 mục (8)). E6 không phân biệt được vì điểm chạm trần, **không** có nghĩa CCoding "không hơn" hay "tương đương" agent đơn. B-14 bước 2 **không phân biệt được** `stablePrefix` với tắt; với power 0,38 ở mức 10 %, phép đo thiếu lực để phát hiện hiệu ứng cỡ 10 %; "không phân biệt được" không phải bằng chứng thiếu hiệu ứng (§8.3 (iii)).
 
+### 6.5 Bảng điểm từng agent và chỗ fail (v0.8)
+
+*Nguồn và nhãn.* Số lấy từ `analysis/decisions/scorecard.md` và `effectiveness.md`, do `scorecard.mjs` sinh từ `kpi-office.json`, `decomp-agg.json`, `runs.jsonl` và các báo cáo đã có; khóa `brief22.*` ở `facts.json`. Mọi số ở mục này là **[Mô tả]**: quan sát trên vận hành thật hoặc trên bench, không đối chứng, không p, không nhân quả; các đợt khác nhau không gộp. KPI v2 theo mẫu của giám đốc (mẫu của phòng ở `run-plan.md` §9 vẫn là giả định chờ duyệt; bài không dùng nó làm căn cứ). Dữ liệu vận hành thật ghi ẩn danh "dự án A"; không có đề bài, mã nhiệm vụ hay đường dẫn máy.
+
+**Bảng 21.** KPI v2 của 14 agent trên văn phòng phụ (30 ngày tới 14/11/2026; nhiệm vụ đang chạy vẫn được tính nên điểm sẽ đổi). "Độ tin" là mức bằng chứng của `kpi-office.json` (`low` nghĩa là 1–2 mục để chấm). "Lượt hỏng" = `failedCalls`/lượt gọi theo trường `method` của KPI (lỗi do agent, công cụ lỗi, chạm trần, kết luận không đọc được, sản phẩm rỗng; lỗi hạ tầng không tính). "Bị cắt" = `truncated`/lượt gọi (đầu ra chạm giới hạn độ dài). Hai định nghĩa giữ đúng như tệp nguồn.
+
+| Agent | Điểm (hạng) | Độ tin | Findings | Lượt hỏng | Bị cắt |
+|---|---|---|---|---|---|
+| `backend-dev` | 85 (A) | high | 2 | 0/13 | 2/13 |
+| `senior-swe` | 82 (A) | high | 2 | 0/10 | 2/10 |
+| `qa-tester` | 78 (B) | high | 1 | 0/9 | 4/9 |
+| `devops` | 71 (B) | low | 1 | 0/2 | 0/2 |
+| `dev-lead` | 88 (A) | high | 1 | 1/16 | 0/16 |
+| `security` | 68 (B) | low | 2 | 0/2 | 1/2 |
+| `tech-writer` | 65 (B) | low | 0 | 0/1 | 0/1 |
+| `cto` | 73 (B) | medium | 0 | 0/6 | 0/6 |
+| `data-scientist` | 78 (B) | high | 3 | 0/13 | 3/13 |
+| `academic-writer` | 74 (B) | medium | 3 | 0/5 | 3/5 |
+| `research-lead` | 77 (B) | high | 3 | 0/14 | 2/14 |
+| `methodologist` | 74 (B) | high | 3 | 0/9 | 3/9 |
+| `peer-reviewer` | 68 (B) | low | 2 | 0/5 | 4/5 |
+| `literature-researcher` | 77 (B) | medium | 2 | 0/7 | 3/7 |
+
+Trên 112 lượt gọi của 14 agent: 1 lượt hỏng (của `dev-lead`) và 27 lượt đầu ra bị cắt, ở 10/14 agent. Điểm từ 65 đến 88 (trung vị 75,5); điểm phòng: Dev 81, Nghiên cứu 76, văn phòng 73. Bốn agent có độ tin `low` (`devops`, `security`, `tech-writer`, `peer-reviewer`) nên khoảng cách vài điểm giữa các agent không đáng tin. Tệp nguồn có hai con số lệch nhau mà không giải thích (`tasksCounted` 7 so với tổng `tasksByStatus` 10), nên số nhiệm vụ nền của KPI không rõ (F-M1). Điều phối viên và 5 agent khác không có dòng KPI. Chỗ yếu chung không nằm ở lượt hỏng mà ở đầu ra bị cắt và nhóm Tin cậy.
+
+**Cấu trúc kế hoạch của trưởng phòng (56 lượt P và 5 lượt văn phòng phụ).** Hai nhóm khác bản chất: P là nhiệm vụ thật trên server chính (dự án A), văn phòng phụ là 5 nhiệm vụ phát triển chính CCoding; không gộp, không so.
+
+**Bảng 22.** Cấu trúc kế hoạch (`decomp-metrics.mjs` → `decomp-agg.json`). Ô là trung vị. "Cho phép" = work/cp, "đạt được" = work/span, "vượt đường găng" = span/cp − 1.
+
+| Nhóm | Lượt | Hạng mục/kế hoạch | Song song cho phép | Song song đạt được | Vượt đường găng | Hạng mục dài nhất/tổng | Lượt > 50 % | Kế hoạch 1 hạng mục |
+|---|---|---|---|---|---|---|---|---|
+| P (server chính) | 56 | 5,0 | 1,41 | 1,28 | 2,7 % | 35,7 % | 10/56 | 2/56 |
+| P/dev | 35 | 5,0 | 1,49 | 1,28 | 8,1 % | 34,2 % | 4/35 | 2/35 |
+| P/research | 21 | 4,0 | 1,33 | 1,28 | 1,1 % | 43,3 % | 6/21 | 0/21 |
+| Văn phòng phụ | 5 | 4,0 | 1,62 | 1,54 | 5,0 % | 51,3 % | 3/5 | 0/5 |
+
+*Đọc đúng mức [Mô tả].* Trên 56 lượt P, song song đạt được (1,28) chỉ thấp hơn mức cấu trúc cho phép (1,41) một chút; vượt đường găng trung vị 2,7 %. Hợp lý nhất là giới hạn tốc độ nằm ở **cấu trúc kế hoạch** (chuỗi phụ thuộc, hạng mục dài nhất) hơn ở lập lịch; P-2 (771 so với 717 phút ở các lượt có chạy chồng) cùng chiều. Có đuôi: phòng Dev vượt đường găng 8,1 % (q3 23,3 %), nên ở một phần lượt lập lịch hoặc chờ gộp có góp. 42/56 lượt (75,0 % [61,6; 85,6]) có ≥ 2 hạng mục chạy cùng lúc; 10/56 (17,9 % [8,9; 30,4]) có hạng mục dài nhất quá nửa tổng thời lượng; kế hoạch 1 hạng mục hiếm (2/56), tức trưởng phòng hầu như luôn chia. Văn phòng phụ mẫu quá nhỏ (3/5 lượt vượt 50 %; CI 14,7–94,7 %). Ở văn phòng phụ, mọi lượt `plan` chạy Opus; độ phủ hạng mục của đề bài 12/15, độ phủ vai 3/7 (đo bằng regex mã `K\d+`, có thể sót; mẫu số vai nhỏ); cổng phủ kế hoạch chặn 0 lượt, lập lại kế hoạch 2/5, cổng chất lượng bỏ review 2/5, CTO nghiệm thu 1 và không nghiệm thu 4 trong 5 lượt phòng. **Câu hỏi "chia có hợp lý không" chưa trả lời được**: không có thước đo chất lượng bóc tách và không có đối chứng (E9, §9.x của `preregistration.md`). Thước đo thời gian ở đây là thời lượng đã xảy ra; không biết kế hoạch khác có tốt hơn hay không.
+
+**Chia việc có hiệu quả không: ước lượng có khoảng [Mô tả].** (i) Thời gian trên vận hành thật: tiết kiệm tối đa theo cấu trúc ≈ 29,2 % (IQR 15,3–40,9 %) so với chạy lần lượt; đạt được ≈ 22,1 %; hiệu hai số ≈ 7,1 điểm % là phần lập lịch có thể cải thiện (xấp xỉ từ hai trung vị, không tính lại chính xác được vì dữ liệu từng lượt không nằm trong repo). (ii) Token trên bench: mọi arm CCoding tốn hơn agent đơn A0 cùng đợt (trung vị tỉ số theo bài), ví dụ B7 làn đơn ×2,40 và B6 ×4,01 ở `study-cloud`, B0 đủ phòng ×5,90 ở `pilot1`, B5 một agent `senior-swe` ×1,48 ở `pilot1`; điểm lệch ≤ 0,016 so với A0 (chạm trần). Khớp với kết luận B-01 của §6.1; không thêm hiệu ứng nào. (iii) Khâu phối hợp chiếm ≈ 31,6 % token có trọng số trên 632 lượt CCoding (route 2,0 %, plan 9,5 %, accept 12,1 %); phần này gồm cả `accept` và `review` có giá trị riêng ngoài việc chia, nên **không** là "mất vì chia kém". Tỉ trọng ở làn full thấp hơn (18,8 %) làn nhanh (30,2 %) và đơn (33,4 %): quan sát chéo đợt, không phải hiệu ứng của làn. (iv) Ở `e8-parallel`, B6w4 ÷ B6w1 cùng bài: token 0,99, wall 0,55 (3 bài); ρ(số hạng mục, token) 0,80 trên 36 lượt, lẫn hiệu ứng bài. Không có con số "mất X % vì chia kém"; chỉ có cận trên theo cấu trúc ở (i).
+
+**Số đo theo vai.** *Reviewer:* `qa-tester` bị cắt 4/9 lượt, `peer-reviewer` 4/5; 2/5 lượt phòng ở văn phòng phụ bị cổng chất lượng bỏ review; trong bench, khâu `review` chỉ xuất hiện ở đợt `study-cloud`; độ đúng của kết luận reviewer **chưa đo** (không có tập review có đáp án). *CTO (E7, đã có ở §6.3.1):* recall R1/R2/R3 = 63/64, 55/64, 61/64; chặn nhầm 27/64, 4/64, 30/64; kết luận không đọc được 0, 13, 1 (R2: Opus chạm trần 6 lượt). *Điều phối viên:* khâu route có ở 331/632 lượt CCoding, trung vị 9329 token có trọng số (3,7 % tổng), model haiku; không có số "định tuyến đúng". *Engine:* xung đột khi gộp worktree con 6/213 (2,8 %), 0 hạng mục còn xung đột; đỏ mới do nhiệm vụ 2/47. *Cổng không dùng LLM:* `npm test` bắt lỗi cài bằng máy 1903/2097 (90,7 %), lọt 194; trục 2 (b) `git-read` 82/82 (chủ yếu vì vai chỉ-đọc từ chối mọi lệnh ghi) và `full` 30/82 (36,6 %).
+
+**Chỗ fail và trạng thái.** `scorecard.md` §2 phân loại 23 chỗ fail (F-A, F-E, F-M): 14 sửa được trong mã hoặc lời nhắc, 7 cần đo thêm, 2 ngoài tầm. Trạng thái "đã sửa" chỉ khi có commit trong `git log` (đã đối chiếu ở thời điểm viết); "đang sửa" khi đã có đề bài giao Dev nhưng chưa có commit mã. Số chỗ đã sửa: 3.
+
+**Bảng 23.** Chỗ fail theo trạng thái. Ca 14/11/2026 lấy từ biên bản của người điều phối (n = 3, không có trong `runs.jsonl`, nhãn **[Mô tả]**, không suy tỉ lệ lỗi chung từ 3 ca).
+
+| Trạng thái | Mã | Chỗ fail (tóm tắt) | Bằng chứng, commit |
+|---|---|---|---|
+| **Đã sửa** | F-E9 | Hết hạn mức 5 giờ giữa lượt execute/synthesize làm nhiệm vụ `failed` thay vì `paused` | `c0e66fab` (hợp `e4ba9e6a`); test `quota-5h-pause` |
+| **Đã sửa** | F-E10 | Lỗi xác thực 403 bị ghi nhầm là kết luận (E7: 16 lượt R1/R2 ban đầu, đã chạy lại) | `e2b6573c` (lượt có error không dùng text làm kết quả); `39b9f166`, `a11abf45` (ghi `authSource`) |
+| **Đã sửa** | F-M3 | BRIEF-21: Điều 23 Luật chưa đọc được chữ; đường dẫn máy sót trong 32 tệp Markdown | `d1903029`; chưa có kiểm tự động đường dẫn máy (ghi backlog) |
+| **Đang sửa** (BRIEF-D17) | F-E1 | Cổng phủ kế hoạch không kiểm vai bắt buộc: BRIEF-20 bỏ K4 peer-reviewer mà cổng vẫn đạt (độ phủ vai 3/7 ở văn phòng phụ) | `4b0437c8` chỉ thêm đề bài, chưa có commit mã |
+| **Đang sửa** (BRIEF-D17) | F-E2 | Cổng chất lượng bỏ review kể cả khi đề đòi review (2/5 lượt phòng; BRIEF-20) | như trên |
+| **Đang sửa** (BRIEF-D17) | F-A10 | CTO nêu 3/9 tiêu chí chưa đạt nhưng nhiệm vụ đóng "hoàn thành, cần xem" (BRIEF-20; văn phòng phụ 4/5 lượt phòng không nghiệm thu) | như trên |
+| **Đang sửa** (giao Phòng Dev, gói D16) | F-A8 | Reviewer chạm trần lượt, không ra kết luận (BRIEF-D16; bị cắt `qa-tester` 4/9, `peer-reviewer` 4/5) | chưa có commit mã sửa ngưỡng review trong `git log` |
+| **Đang sửa** (BRIEF-D16b) | F-E3 | Một đường chạy lệnh chưa nối rule `outside-root-write` | rule đã vào ở `de4b78fc` (hook); đường còn lại chưa có commit |
+| Sửa được, chưa có commit | F-A1, F-A3, F-A4, F-A5, F-A6, F-M1 | Đầu ra bị cắt (10/14 agent); công cụ lỗi nhiều ở `security`, `peer-reviewer`; `data-scientist` đọc mã bằng lệnh shell; `academic-writer`, `methodologist` không có nguồn kiểm chứng được; `research-lead` dùng 2,2 lần ngân sách; KPI chưa nhất quán | `kpi-office.json`; chưa có commit |
+| **Cần đo thêm** | F-A2, F-A7, F-A9, F-E6, F-E7, F-E8, F-M2 | KPI gán tiêu chí không tách được từng agent; `devops` tốn token (n = 2); CTO chặn nhầm cao (E7) và R2 bị trần che; xung đột gộp 6/213; hạng mục dài nhất > 50 % (10/56); làm lại trung vị 22,5 % (q3 40,0 %) và lập lại kế hoạch 2/5; chỉ 36/632 lượt có `subtasksTimed` | mục §6.3, §6.5 trên; E9 |
+| **Ngoài tầm** (giám đốc/hạ tầng) | F-E4, F-E5 | Tầng `full` chỉ chặn 30/82 lệnh RedCode-Exec; `npm test` để lọt 194/2097 lỗi cài bằng máy | `axis2-guard`, `g-mutation` |
+
+Hai ghi chú trạng thái. Thứ nhất, "đang sửa" **chưa phải đã sửa**: `4b0437c8` (BRIEF-D17) chỉ thêm tệp đề bài; F-E1, F-E2 và F-A10 chỉ chuyển sang "đã sửa" khi có commit mã và có phép đo (tiêu chí đo được: cổng chặn kế hoạch thiếu vai bắt buộc). Thứ hai, ba ca 14/11 đều có tín hiệu từ CTO (chưa nghiệm thu, hoặc nghiệm thu rồi mà nhiệm vụ vẫn đóng), nhưng nguyên nhân gốc nằm ở khâu khác (kế hoạch, review, tìm nguồn); điều này không có nghĩa CTO là nguồn lỗi.
+
+*Giới hạn của mục này.* KPI v2 nhiều agent chỉ có 1–14 điểm bằng chứng, thứ hạng không có CI; `acceptance-fail` gán cho mọi người thực thi và trưởng phòng của nhiệm vụ nên không tách được lỗi từng agent (F-A2); thời lượng P gồm cả thời gian chờ hạn mức nếu có, P không có token; tỉ số bench là so chéo đợt, không đối chứng; chưa có thước đo độ đúng của reviewer và chất lượng bóc tách. Các sửa chữa nêu ở trên **chưa được đo lại**, nên bài không nói chúng cải thiện bao nhiêu.
+
+**Model theo vai và E9 (K4) [Đề xuất, chưa đo].** `analysis/decisions/model-per-role.md` đề xuất, không đổi mặc định nào trong mã: giữ haiku cho định tuyến (chi phí nhỏ, độ đúng chưa đo); giữ sonnet cho thành viên và cho CTO (R1) cho tới khi đo lại R2 với trần lượt cao hơn; không đổi model reviewer trước khi sửa trần lượt (đổi model khi trần còn cắt thì không đo được gì); trưởng phòng ở khâu `plan` là vai quyết định chia việc nhưng **chưa có số nào về chất lượng bóc tách**. Chỉ CTO có phép đo model đăng ký trước (E7), và mức bằng chứng cũng chỉ "vừa" vì Opus bị trần lượt che. Vì vậy `preregistration.md` §9.x đăng ký **E9** (chưa chạy, không có số): trên 32 bài chia được và 32 bài không chia được, đổi đúng một biến `phaseModels.plan` (Sonnet, Opus, Haiku làm tham chiếu), giai đoạn 1 chỉ lập kế hoạch, giả thuyết H1 (độ phủ) và H2 (chia thừa) theo Holm; chuẩn là kết quả chạy test, không phải bộ chấm LLM. Hồ sơ nói opus cho trưởng phòng nhưng ở làn nhanh khâu `plan` chạy sonnet; nói "trưởng phòng dùng Opus" sẽ sai với phần lớn lượt.
+
+**Đối chiếu tài liệu (K3) [Tổng quan có mục tiêu, không phải tổng quan hệ thống].** `context/decomposition-sources-2026-11-14.md` đọc 10 nguồn (6 bình duyệt, 3 preprint, 1 blog nhà cung cấp) phủ 5 nhánh; 5 nguồn khác chỉ thấy trong kết quả tìm, chưa đọc, không dùng làm căn cứ số. Ba điểm nhất quán: (1) đa agent chỉ có lợi khi việc tách song song được; trên việc tuần tự nó làm kết quả kém đi 39–70 % ở một benchmark lập kế hoạch, và trung bình mọi cấu hình là −3,5 % (Kim et al., 2025), điều khớp với việc đo "song song cho phép" ở Bảng 22 nhưng khác loại việc (tài chính, lập kế hoạch, không phải sửa mã); Anthropic tự báo cáo lợi ở việc nghiên cứu và nêu rõ phần lớn việc lập trình không hợp (Hadfield et al., 2025; blog, tự báo cáo); (2) bóc tách tĩnh một lần dễ hỏng khi bước giữa thất bại, và bóc tách thích ứng cải thiện rõ (Prasad et al., 2024), nên thước đo chất lượng bóc tách nên gồm việc kế hoạch có được chỉnh hay không, không chỉ độ phủ; (3) planner mạnh với executor rẻ là hướng hợp lý (Dong et al., 2025) nhưng bằng chứng đến từ việc gọi công cụ, không phải sửa mã, nên với CCoding chỉ là giả thuyết cho E9. Về định tuyến theo độ khó, nguồn là định tuyến từng câu hỏi (Ong et al., 2025; Ding et al., 2024), chỉ tương tự với chọn làn. Về bộ chấm LLM, đồng thuận với người rất khác nhau theo loại việc: với mã sinh, κ so với kết quả chạy test chỉ khoảng 0,10–0,21 (Crupi et al., 2025), nên chuẩn là kết quả chạy test (Zheng et al., 2023; Wang et al., 2024). Lỗi hệ đa agent thường nằm ở thiết kế, lệch giữa agent và xác minh, và thêm bước xác minh mục tiêu cấp cao cải thiện thêm 15,6 % trên một hệ (Cemri et al., 2025). Chưa nguồn nào đã đọc đo trực tiếp chất lượng bóc tách cho sửa mã hay model nghiệm thu: đó là khoảng trống mà E9 nhắm tới.
+
 ## 7. Thảo luận
 
 **Đọc kết quả chính.** Nghiên cứu đăng ký trước cho câu trả lời âm tính rõ hơn vòng thăm dò. Trên T5, cả làn đơn B7 lẫn làn nhanh B6 đều tốn hơn Claude Code một mình bằng Sonnet ở mức nằm ngoài biên ±15 %. Về token, B7 là 2,498 [2,02; 3,18] và B6 là 3,921 [3,49; 4,43]; về thời gian, B7 là 2,566 [2,09; 3,25] và B6 là 4,047 [3,45; 4,76] (Bảng 9). Điểm chạm trần nên bộ đo không phát hiện được lợi thế chất lượng nào để bù cho chi phí (Bảng 8, Bảng 10). Mục 7.1–7.2 rút gọn phần RQ4–RQ5 của bản trước. Mục 7.3 đặt kết quả cạnh các công bố đã có, gồm Anthropic, Cognition, MAST, Debate or Vote, CAID và TeamBench. Mục 7.4 nêu hàm ý thiết kế.
@@ -761,6 +925,12 @@ Chính phủ. (2025). *Nghị định số 356/2025/NĐ-CP ngày 31/12/2025 quy 
 
 Choi, H. K., Zhu, X., & Li, S. (2025). Debate or vote: Which yields better decisions in multi-agent large language models? *Advances in Neural Information Processing Systems (NeurIPS 2025)*. arXiv:2508.17536. https://arxiv.org/abs/2508.17536 **[V-thứ cấp: venue theo trường `comment` của arXiv ("NeurIPS 2025 Spotlight"); mới đọc trang tóm tắt arXiv (v2, 23/10/2025), kiểm ngày 3/11/2026]**
 
+Crupi, G., Tufano, R., Velasco, A., Mastropaolo, A., Poshyvanyk, D., & Bavota, G. (2025). *On the effectiveness of LLM-as-a-judge for code generation and summarization* (arXiv:2507.16587) [Preprint]. https://arxiv.org/abs/2507.16587 **[v0.8; đã đọc 100.000 ký tự đầu bản HTML (K3); tác giả đối chiếu với trang arXiv 14/11/2026]**
+
+Ding, D., Mallick, A., Wang, C., Sim, R., Mukherjee, S., Ruhle, V., Lakshmanan, L. V. S., & Awadallah, A. H. (2024). Hybrid LLM: Cost-efficient and quality-aware query routing. *The Twelfth International Conference on Learning Representations (ICLR 2024)*. arXiv:2404.14618. https://arxiv.org/abs/2404.14618 **[V-thứ cấp; v0.8: venue theo K3, chưa mở lại trang proceedings trong gói này]**
+
+Dong, S., Zhang, M., He, P., Ma, L., Thuraisingham, B., Liu, H., & Xing, Y. (2025). *PEAR: Planner-executor agent robustness benchmark* (arXiv:2510.07505) [Preprint]. https://arxiv.org/abs/2510.07505 **[v0.8; trang arXiv ghi chú quản trị về danh sách tác giả bị cắt trước đây; danh sách theo v4]**
+
 Geng, J., & Neubig, G. (2026). *Effective strategies for asynchronous software engineering agents* (arXiv:2603.21489) [Preprint]. https://arxiv.org/abs/2603.21489 **[đã đọc HTML 134.699 ký tự, thiếu Phụ lục C và D]**
 
 Guo, C., Liu, X., Xie, C., Zhou, A., Zeng, Y., Lin, Z., Song, D., & Li, B. (2024). RedCode: Risky code execution and generation benchmark for code agents. *Advances in Neural Information Processing Systems 37 (NeurIPS 2024), Datasets and Benchmarks Track*. arXiv:2411.07781. https://arxiv.org/abs/2411.07781 **[V-thứ cấp: venue theo trường `comment` của arXiv; dữ liệu CC BY 4.0, commit `664e479`]**
@@ -781,17 +951,25 @@ Kế toán An Pha. (2026). *Nghị định 356/2025/NĐ-CP* [Bản toàn văn th
 
 Khattab, O., Singhvi, A., Maheshwari, P., Zhang, Z., Santhanam, K., Vardhamanan, S., Haq, S., Sharma, A., Joshi, T. T., Moazam, H., Miller, H., Zaharia, M., & Potts, C. (2024). DSPy: Compiling declarative language model calls into state-of-the-art pipelines. *The Twelfth International Conference on Learning Representations (ICLR 2024)*. https://proceedings.iclr.cc/paper_files/paper/2024/hash/f1cf02ce09757f57c3b93c0db83181e0-Abstract-Conference.html **[V-chính theo kết quả tìm kiếm; bản arXiv dùng tên "…Self-Improving Pipelines"]**
 
+Kim, Y., Gu, K., Park, C., Park, C., Schmidgall, S., Heydari, A. A., Yan, Y., Zhang, Z., Zhuang, Y., Liu, Y., Malhotra, M., Liang, P. P., Park, H. W., Yang, Y., Xu, X., Du, Y., Patel, S., Althoff, T., McDuff, D., & Liu, X. (2025). *Towards a science of scaling agent systems* (arXiv:2512.08296) [Preprint]. https://arxiv.org/abs/2512.08296 **[v0.8; đã đọc 100.000 ký tự đầu bản v1 (K3); trang arXiv ghi "và 18 tác giả khác" nhưng liệt kê 20 tên: danh sách chép theo phần liệt kê]**
+
 Kim, Y., Park, C., Kim, T., Park, E., Schmidgall, S., Rahman, S., Park, C., Breazeal, C., Liu, X., Palangi, H., Park, H. W., & McDuff, D. (2026). *TeamBench: Evaluating agent coordination under enforced role separation* (arXiv:2605.07073) [Preprint]. https://arxiv.org/abs/2605.07073 **[mới đọc trang tóm tắt]**
 
 Lumer, E., Nizar, F., Jangiti, A., Frank, K., Gulati, A., Phadate, M., & Subbiah, V. K. (2026). *Don't break the cache: An evaluation of prompt caching for long-horizon agentic tasks* (arXiv:2601.06007) [Preprint]. https://arxiv.org/abs/2601.06007 **[đã đọc HTML]**
 
 Madaan, A., Tandon, N., Gupta, P., Hallinan, S., Gao, L., Wiegreffe, S., Alon, U., Dziri, N., Prabhumoye, S., Yang, Y., Gupta, S., Majumder, B. P., Hermann, K., Welleck, S., Yazdanbakhsh, A., & Clark, P. (2023). Self-Refine: Iterative refinement with self-feedback. *Advances in Neural Information Processing Systems 36 (NeurIPS 2023)*. arXiv:2303.17651. https://proceedings.neurips.cc/paper_files/paper/2023/hash/91edff07232fb1b55a505a9e9f6c0ff3-Abstract.html **[V-chính theo kết quả tìm kiếm; chưa mở trang]**
 
+Ong, I., Almahairi, A., Wu, V., Chiang, W.-L., Wu, T., Gonzalez, J. E., Kadous, M. W., & Stoica, I. (2025). RouteLLM: Learning to route LLMs with preference data. *The Thirteenth International Conference on Learning Representations (ICLR 2025)*. arXiv:2406.18665. https://arxiv.org/abs/2406.18665 **[V-thứ cấp; v0.8: venue theo K3, đã đọc bản v3]**
+
+Prasad, A., Koller, A., Hartmann, M., Clark, P., Sabharwal, A., Bansal, M., & Khot, T. (2024). ADaPT: As-needed decomposition and planning with language models. In *Findings of the Association for Computational Linguistics: NAACL 2024*. arXiv:2311.05772. https://arxiv.org/abs/2311.05772 **[V-thứ cấp; v0.8: venue theo trường `comment` của arXiv, chưa mở trang ACL Anthology]**
+
 Qian, C., Dang, Y., Li, J., Liu, W., Xie, Z., Wang, Y., Chen, W., Yang, C., Cong, X., Che, X., Liu, Z., & Sun, M. (2024). Experiential co-learning of software-developing agents. In *Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)* (pp. 5628–5640). Association for Computational Linguistics. https://doi.org/10.18653/v1/2024.acl-long.305 **[V-chính]**
 
 Ruan, Y., Dong, H., Wang, A., Pitis, S., Zhou, Y., Ba, J., Dubois, Y., Maddison, C. J., & Hashimoto, T. (2024). Identifying the risks of LM agents with an LM-emulated sandbox. *The Twelfth International Conference on Learning Representations (ICLR 2024)*. arXiv:2309.15817. https://arxiv.org/abs/2309.15817 **[V-thứ cấp]**
 
 Shinn, N., Cassano, F., Berman, E., Gopinath, A., Narasimhan, K., & Yao, S. (2023). Reflexion: Language agents with verbal reinforcement learning. *Advances in Neural Information Processing Systems 36 (NeurIPS 2023)*. arXiv:2303.11366. https://mlanthology.org/neurips/2023/shinn2023neurips-reflexion
+
+Wang, P., Li, L., Chen, L., Cai, Z., Zhu, D., Lin, B., Cao, Y., Liu, Q., Liu, T., & Sui, Z. (2024). Large language models are not fair evaluators. *Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)*. arXiv:2305.17926. https://arxiv.org/abs/2305.17926 **[V-thứ cấp; v0.8: venue theo K3, chưa mở lại trang ACL Anthology]**
 
 Wang, X., Li, B., Song, Y., Xu, F. F., Tang, X., Zhuge, M., Pan, J., Song, Y., Li, B., Singh, J., Tran, H. H., Li, F., Ma, R., Zheng, M., Qian, B., Shao, Y., Muennighoff, N., Zhang, Y., Hui, B., … Neubig, G. (2025). OpenHands: An open platform for AI software developers as generalist agents. *The Thirteenth International Conference on Learning Representations (ICLR 2025)*. arXiv:2407.16741. https://proceedings.iclr.cc/paper_files/paper/2025/hash/a4b6ad6b48850c0c331d1259fc66a69c-Abstract-Conference.html
 
@@ -810,6 +988,8 @@ Yang, J., Jimenez, C. E., Wettig, A., Lieret, K., Yao, S., Narasimhan, K., & Pre
 Yuksekgonul, M., Bianchi, F., Boen, J., Liu, S., Lu, P., Huang, Z., Guestrin, C., & Zou, J. (2025). Optimizing generative AI by backpropagating language model feedback. *Nature, 639*(8055), 609–616. https://doi.org/10.1038/s41586-025-08661-4 **[V-đầu vào; chưa tự mở trang Nature; bản tiền in arXiv:2406.07496 mang tên "TextGrad: Automatic 'differentiation' via text", 7 tác giả, không có Pan Lu]**
 
 Zhang, G., Yue, Y., Li, Z., Yun, S., Wan, G., Wang, K., Cheng, D., Yu, J. X., & Chen, T. (2025). Cut the crap: An economical communication pipeline for LLM-based multi-agent systems. *The Thirteenth International Conference on Learning Representations (ICLR 2025)*. arXiv:2410.02506. https://proceedings.iclr.cc/paper_files/paper/2025/hash/bbc461518c59a2a8d64e70e2c38c4a0e-Abstract-Conference.html
+
+Zheng, L., Chiang, W.-L., Sheng, Y., Zhuang, S., Wu, Z., Zhuang, Y., Lin, Z., Li, Z., Li, D., Xing, E. P., Zhang, H., Gonzalez, J. E., & Stoica, I. (2023). Judging LLM-as-a-judge with MT-Bench and Chatbot Arena. *Advances in Neural Information Processing Systems 36 (NeurIPS 2023)*. arXiv:2306.05685. https://arxiv.org/abs/2306.05685 **[V-thứ cấp; v0.8: venue theo K3, đã đọc bản v4]**
 
 ## Phụ lục A. Tái lập (nhãn trung tính cho tệp nội bộ)
 
@@ -846,4 +1026,4 @@ Thư mục R20–R32 (trừ R21) nằm dưới `bench/vs-claude/results/`; R21 d
 
 ## Khai báo sử dụng AI
 
-Bản thảo này được soạn với sự hỗ trợ của một trợ lý AI (mô hình Claude của Anthropic, chạy qua hệ CCoding — chính đối tượng được mô tả trong bài): AI tổng hợp bản nháp từ các tệp đầu vào do các hạng mục trước tạo ra (tổng quan tài liệu, báo cáo phân tích số liệu, bảng thách thức, thiết kế tự cải thiện), và chép số liệu từ các bảng đó. Tổng quan tài liệu cũng do AI thực hiện với công cụ tìm kiếm web; phần lớn nguồn chỉ được đọc ở mức tóm tắt. Ở vòng 2 (v0.3), AI viết lại phần kết quả theo bảng T-h, T-i, T-d do hạng mục phân tích số liệu cung cấp và thay danh mục tham khảo theo R12. Ở vòng 4 (v0.4), AI viết lại §5–§9 và phần Tóm tắt theo các tệp kết quả và phân tích của nghiên cứu đăng ký trước (R1–R9). AI **không** chạy benchmark mới và không tự chạy lại script phân tích trong hạng mục này. Tác giả (Tom) chịu trách nhiệm về nội dung: cần tự kiểm lại trích dẫn với bản gốc, đối chiếu số liệu với dữ liệu và mã, và đọc quy định liêm chính học thuật cũng như chính sách khai báo dùng AI của trường/hội nghị nơi nộp trước khi gửi. Ở vòng 4 gói 15 (v0.7.1, 14/11/2026), AI sửa chữ và nhãn theo phản biện K4 và đối chiếu số với nguồn; không chạy benchmark, không gọi `claude -p`, không đổi số đo. Ở vòng 4 gói 14 (v0.7, 14/11/2026), AI dựng lại phần đóng góp quanh ba trục (§1, §2, §4.3, §6.3, §6.4, §7.4, §8.3, §9) từ ba hạng mục trước: bản ghi nhận Nghị định 356/2025/NĐ-CP (siêu dữ liệu từ cổng chính thức; số điều sau đó được người điều phối đối chiếu với toàn văn trên Cơ sở dữ liệu quốc gia về văn bản pháp luật), kết quả trục 2 phần (b) trên RedCode-Exec (đo bằng script tất định, không gọi LLM) và bảng nhãn cùng danh sách câu cấm do hạng mục phương pháp luận soạn. Mọi số mới được chép từ báo cáo và sổ chạy đã có, kèm nguồn `tệp:dòng` ở `v07-number-list.md`; AI **không** chạy benchmark, không gọi `claude -p`, không tính lại số của E7 hay E8, và chưa tự chạy lệnh kiểm nào trong hạng mục viết bài. Việc kiểm từng số thuộc hạng mục sau. Phép đo trục 2 dùng dữ liệu RedCode-Exec (CC BY 4.0; Ghi nhận tác giả RedCode, NeurIPS 2024), tải về ngoài kho mã. Đây là bản nháp, không phải bản công bố.
+Bản thảo này được soạn với sự hỗ trợ của một trợ lý AI (mô hình Claude của Anthropic, chạy qua hệ CCoding — chính đối tượng được mô tả trong bài): AI tổng hợp bản nháp từ các tệp đầu vào do các hạng mục trước tạo ra (tổng quan tài liệu, báo cáo phân tích số liệu, bảng thách thức, thiết kế tự cải thiện), và chép số liệu từ các bảng đó. Tổng quan tài liệu cũng do AI thực hiện với công cụ tìm kiếm web; phần lớn nguồn chỉ được đọc ở mức tóm tắt. Ở vòng 2 (v0.3), AI viết lại phần kết quả theo bảng T-h, T-i, T-d do hạng mục phân tích số liệu cung cấp và thay danh mục tham khảo theo R12. Ở vòng 4 (v0.4), AI viết lại §5–§9 và phần Tóm tắt theo các tệp kết quả và phân tích của nghiên cứu đăng ký trước (R1–R9). AI **không** chạy benchmark mới và không tự chạy lại script phân tích trong hạng mục này. Tác giả (Tom) chịu trách nhiệm về nội dung: cần tự kiểm lại trích dẫn với bản gốc, đối chiếu số liệu với dữ liệu và mã, và đọc quy định liêm chính học thuật cũng như chính sách khai báo dùng AI của trường/hội nghị nơi nộp trước khi gửi. Ở vòng 4 gói 15 (v0.7.1, 14/11/2026), AI sửa chữ và nhãn theo phản biện K4 và đối chiếu số với nguồn; không chạy benchmark, không gọi `claude -p`, không đổi số đo. Ở vòng 4 gói 14 (v0.7, 14/11/2026), AI dựng lại phần đóng góp quanh ba trục (§1, §2, §4.3, §6.3, §6.4, §7.4, §8.3, §9) từ ba hạng mục trước: bản ghi nhận Nghị định 356/2025/NĐ-CP (siêu dữ liệu từ cổng chính thức; số điều sau đó được người điều phối đối chiếu với toàn văn trên Cơ sở dữ liệu quốc gia về văn bản pháp luật), kết quả trục 2 phần (b) trên RedCode-Exec (đo bằng script tất định, không gọi LLM) và bảng nhãn cùng danh sách câu cấm do hạng mục phương pháp luận soạn. Mọi số mới được chép từ báo cáo và sổ chạy đã có, kèm nguồn `tệp:dòng` ở `v07-number-list.md`; AI **không** chạy benchmark, không gọi `claude -p`, không tính lại số của E7 hay E8, và chưa tự chạy lệnh kiểm nào trong hạng mục viết bài. Việc kiểm từng số thuộc hạng mục sau. Phép đo trục 2 dùng dữ liệu RedCode-Exec (CC BY 4.0; Ghi nhận tác giả RedCode, NeurIPS 2024), tải về ngoài kho mã. Ở vòng 4 gói 16 (v0.8, 14/11/2026, BRIEF-22), AI viết §4.4 và §6.5 từ `logic-map.md`, `scorecard.md`, `effectiveness.md`, `model-per-role.md` và `context/decomposition-sources-2026-11-14.md`; số chép từ hai tệp bảng điểm do `scorecard.mjs` sinh, không tính lại; danh sách tác giả tám nguồn mới đối chiếu với trang arXiv; AI không chạy benchmark, không gọi `claude -p`, không chạy lệnh kiểm trong hạng mục này. Đây là bản nháp, không phải bản công bố.

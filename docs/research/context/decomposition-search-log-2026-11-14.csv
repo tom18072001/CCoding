@@ -1,0 +1,24 @@
+stt,ngay,cong_cu,truy_van,bo_loc,so_ket_qua,nhanh,ket_qua_chon
+1,2026-11-14,web_search,"Towards a science of scaling agent systems single-agent vs multi-agent",khong,10,1,arXiv 2512.08296
+2,2026-11-14,web_search,"Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena agreement with humans",khong,10,5,arXiv 2306.05685
+3,2026-11-14,web_search,"RouteLLM learning to route LLMs with preference data",khong,10,4,arXiv 2406.18665
+4,2026-11-14,web_search,"Why Do Multi-Agent LLM Systems Fail? MAST failure taxonomy",khong,10,1,arXiv 2503.13657
+5,2026-11-14,web_search,"ADaPT as-needed decomposition and planning with language models",khong,10,2,arXiv 2311.05772
+6,2026-11-14,web_search,"planner executor LLM cost strong planner weak executor agents arXiv",khong,10,3,arXiv 2510.07505 (PEAR); 2508.15310 va 2506.11578 va 2605.29927 chi thay trong ket qua tim - chua doc
+7,2026-11-14,web_search,"LLM-as-a-judge reliability agreement Cohen's kappa human annotators code generation judge",khong,10,5,arXiv 2507.16587; cac bai 2604.27727 va 2511.10865 chi thay trong ket qua tim - chua doc
+8,2026-11-14,web_search,"Large Language Models are not fair evaluators position bias calibration human annotators agreement",khong,10,5,arXiv 2305.17926
+9,2026-11-14,web_search,"Hybrid LLM cost-efficient quality-aware query routing small and large model difficulty",khong,10,4,arXiv 2404.14618
+10,2026-11-14,fetch_url,https://arxiv.org/html/2512.08296v1,doc 0-100000 / 157347 ky tu,1,1,DA DOC (phan sau 100000 chua doc)
+11,2026-11-14,fetch_url,https://arxiv.org/html/2306.05685v4,,1,5,DA DOC
+12,2026-11-14,fetch_url,https://arxiv.org/html/2406.18665v3,,1,4,DA DOC
+13,2026-11-14,fetch_url,https://arxiv.org/html/2503.13657v3,doc 0-100000 / 160349 ky tu,1,1,DA DOC (phan sau chua doc)
+14,2026-11-14,fetch_url,https://ar5iv.labs.arxiv.org/html/2311.05772,doc 0-100000 / 140660 ky tu,1,2,DA DOC
+15,2026-11-14,fetch_url,https://arxiv.org/pdf/2510.07505,,1,3,KHONG DOC DUOC (PDF nen)
+16,2026-11-14,fetch_url,https://arxiv.org/pdf/2507.16587,,1,5,KHONG DOC DUOC (PDF nen)
+17,2026-11-14,fetch_url,https://arxiv.org/abs/2510.07505,,1,3,DA DOC tom tat (khong co so)
+18,2026-11-14,fetch_url,https://arxiv.org/html/2507.16587v1,doc 0-100000 / 119485 ky tu,1,5,DA DOC
+19,2026-11-14,fetch_url,https://arxiv.org/html/2510.07505v4,doc 0-100000 / 121846 ky tu,1,3,DA DOC mot phan
+20,2026-11-14,fetch_url,https://www.anthropic.com/engineering/multi-agent-research-system,,1,1+3,DA DOC (blog nha cung cap)
+21,2026-11-14,fetch_url,https://arxiv.org/pdf/2305.17926v2.pdf,,1,5,KHONG DOC DUOC (PDF nen)
+22,2026-11-14,fetch_url,https://arxiv.org/html/2404.14618v1,,1,4,DA DOC
+23,2026-11-14,fetch_url,https://ar5iv.labs.arxiv.org/html/2305.17926,,1,5,DA DOC
