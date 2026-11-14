@@ -36,7 +36,7 @@ import { historyText, selectHistory } from './history.js';
 import * as P from './prompts.js';
 import { planGate } from './plan-gate.js';
 import type { Registry } from './registry.js';
-import { classifyError, RuntimeError, shouldFailover, toRuntimeError } from './runtimes/errors.js';
+import { classifyError, parseRetryAt, RuntimeError, shouldFailover, toRuntimeError } from './runtimes/errors.js';
 import type { Candidate, RuntimeManager } from './runtimes/index.js';
 import type { Store } from './store.js';
 import { clearFixedFeedback, kpiMarkdown, kpiReport, templateHeadings } from './kpi.js';
@@ -3601,7 +3601,7 @@ export class Orchestrator {
               r.error,
               r.errorKind ?? classifyError(undefined, r.error),
               undefined,
-              r.retryAt,
+              r.retryAt ?? parseRetryAt(undefined, r.error), // K1: "resets 1am (Asia/Bangkok)" → giờ tự tiếp tục
               r.usage.input || r.usage.output ? { input: r.usage.input, output: r.usage.output, cacheRead: r.usage.cacheRead, turns: r.turns ?? 0, toolCalls: r.toolCalls, model: r.model } : undefined,
             );
           if (r.truncated && r.text && CONTINUE_PHASES.has(phase)) r = await this.continueTruncated(rt, req, r, hooks, task, agent);
