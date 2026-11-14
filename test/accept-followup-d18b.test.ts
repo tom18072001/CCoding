@@ -97,7 +97,7 @@ test('m1 (D18d): vòng bổ sung bị chặn rồi replanned → log plan.gate r
     const plan = (title: string) => '```json\n' + JSON.stringify({ summary: 'Kế hoạch bổ sung', subtasks: [{ id: 'S1', title, description: BRIEF.replace(/\bK(\d)/g, 'X$1'), assignee: 'backend-dev', dependsOn: [] }] }) + '\n```';
     const { done } = await flow(a, 'K2 — thiếu log followupScope', [plan('Việc không nhắc mã nào'), plan('K2 — sửa log followupScope')]);
     assert.equal(done.status, 'done', done.error);
-    const gl = a.logs.query({ task: done.id, kind: 'plan.gate' }).map((e) => e.data as { stage?: string; followupScope?: { round: number; codes: string[] } });
+    const gl = a.logs.query({ task: done.id, limit: 1000 }).filter((e) => e.kind === 'plan.gate').map((e) => e.data as { stage?: string; followupScope?: { round: number; codes: string[] } });
     const blocked = gl.find((d) => d?.stage === 'blocked' && d.followupScope);
     const re = gl.find((d) => d?.stage === 'replanned');
     assert.ok(blocked, 'log blocked có followupScope');
