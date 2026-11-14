@@ -72,8 +72,9 @@ function instrument(a: Ctx, acceptText: (n: number) => string, hook?: Hook): { a
   return { accepts: () => n };
 }
 
+// Ngân sách ghim cao: ước lượng vòng bổ sung ở làn đầy (~1,45M) sát ngưỡng mặc định 1,5M nên phụ thuộc vài chục nghìn token của lượt mock (khác nhau giữa Linux/Windows) → test chập chờn.
 const submit = (a: Ctx, lane: 'single' | 'fast' | 'full', review = false) =>
-  a.orchestrator.submit({ brief: 'Thêm hàm cộng vào a.js', projectId: 'repo', options: { lane, slim: { accept: 'brief' }, review } });
+  a.orchestrator.submit({ brief: 'Thêm hàm cộng vào a.js', projectId: 'repo', options: { lane, slim: { accept: 'brief' }, review, budgetTokens: 20_000_000 } });
 const followLogs = (a: Ctx, id: string) => a.logs.query({ task: id }).filter((e) => e.kind === 'accept.followup');
 
 test('D17(a) tạm dừng giữa vòng bổ sung rồi tiếp tục → không mở thêm vòng, nghiệm thu lại đúng một lần', async () => {
@@ -142,7 +143,7 @@ test('D17(c) vòng bổ sung ở làn đầy (full) → run bổ sung có follow
   try {
     const t = submit(a, 'full');
     const done = await a.orchestrator.waitFor(t.id);
-    assert.equal(done.status, 'done', `status=${done.status} ${done.error ?? ''}`);
+    assert.equal(done.status, 'done', `status=${done.status} ${done.error ?? ''} ${JSON.stringify(done.pause ?? null)}`);
     assert.equal(done.lane, 'full');
     assert.equal(done.runs.length, 2);
     assert.equal(done.runs[1].followupOf, done.runs[0].department);

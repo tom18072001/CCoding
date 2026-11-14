@@ -36,6 +36,21 @@ export function realpathLoose(p: string, P: PathImpl = pathImplFor(p)): string {
   }
 }
 
+/**
+ * Hai đường dẫn cùng trỏ một nơi? Chuẩn hóa cả hai phía bằng realpathLoose (dạng 8.3 `RUNNER~1` ↔ dạng dài, symlink, junction; đường dẫn chưa
+ * tồn tại thì giải phần tồn tại gần nhất), bỏ dấu phân cách cuối, rồi so không phân biệt hoa thường trên win32.
+ */
+export function samePath(a: string, b: string): boolean {
+  const n = (p: string) => {
+    const r = realpathLoose(p);
+    const root = path.parse(r).root;
+    return r.length > root.length ? r.replace(/[\\/]+$/, '') : r;
+  };
+  const x = n(a);
+  const y = n(b);
+  return process.platform === 'win32' ? x.toLowerCase() === y.toLowerCase() : x === y;
+}
+
 /** `child` nằm trong (hoặc bằng) `parent`? Dùng relative theo kiểu của parent (win32: không phân biệt hoa thường): bắt đầu bằng '..' hoặc tuyệt đối → ngoài. */
 export function isWithin(parent: string, child: string, P: PathImpl = pathImplFor(parent)): boolean {
   const lc = (s: string) => (P === path.win32 ? s.toLowerCase() : s);
