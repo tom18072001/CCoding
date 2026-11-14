@@ -95,3 +95,44 @@ test('anchor xuất hiện hơn một lần → lỗi (exit 2)', () => {
     assert.match(r.stderr, /xuất hiện 2 lần/);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
+
+// --- Phép thử đột biến (BRIEF-24 K2, việc nhỏ BRIEF-22d): nhánh 'N tham chiếu khớp' của khóa số logic-map-refs-total ---
+// Dùng đúng mục numbers THẬT trong docs/research/facts.json: đổi khóa/mẫu/giá trị ở đó thì các test này đỏ.
+import { readFileSync } from 'node:fs';
+const realFacts = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'facts.json'), 'utf8'));
+const refsFact = realFacts.numbers.find((n) => n.id === 'logic-map-refs-total');
+const mutRoot = (n, value = refsFact?.value) => makeRoot({
+  'improvement-backlog.md': `Đạt: ${n} tham chiếu khớp đúng dòng ở mốc.\n`,
+  'analysis/decisions/logic-map.md': `Sau \`--strict\` ${n}/${n} khớp.\n`,
+}, { numbers: [{ ...refsFact, value }] });
+
+test('đột biến N: khóa logic-map-refs-total tồn tại và bắt cả hai dạng (N tham chiếu khớp, N/N sau --strict)', () => {
+  assert.ok(refsFact, 'thiếu khóa logic-map-refs-total trong facts.json');
+  assert.match('Đạt: 445 tham chiếu khớp', new RegExp(refsFact.pattern));
+  assert.match('--strict 445/445', new RegExp(refsFact.pattern));
+});
+
+test('đột biến N: N khớp giá trị khóa → xanh (exit 0)', () => {
+  const root = mutRoot(refsFact.value);
+  try { const r = run(root); assert.equal(r.status, 0, r.stdout + r.stderr); } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('đột biến N: đổi N trong văn bản (khác giá trị khóa) → đỏ, nêu tệp', () => {
+  const root = mutRoot(String(Number(refsFact.value) + 1));
+  try {
+    const r = run(root);
+    assert.equal(r.status, 1, r.stdout + r.stderr);
+    assert.match(r.stdout, /improvement-backlog\.md:1 /);
+    assert.match(r.stdout, /logic-map\.md:1 /);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('đột biến N: đổi giá trị khóa (văn bản giữ nguyên) → đỏ', () => {
+  const root = mutRoot(refsFact.value, String(Number(refsFact.value) + 1));
+  try { const r = run(root); assert.equal(r.status, 1, r.stdout + r.stderr); } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('đột biến N: bỏ riêng nhánh "N tham chiếu khớp" (đổi mẫu) → số lệch ở nhánh này không còn bị bắt, nên test trên phải dùng mẫu thật', () => {
+  const root = makeRoot({ 'improvement-backlog.md': 'Đạt: 999 tham chiếu khớp.\n' }, { numbers: [{ ...refsFact, pattern: '(?<=--strict`? )\d+(?=/\d+)' }] });
+  try { const r = run(root); assert.equal(r.status, 0, 'mẫu cắt nhánh thì 999 lọt qua: chứng tỏ nhánh được test ở trên là nhánh có tác dụng'); } finally { rmSync(root, { recursive: true, force: true }); }
+});

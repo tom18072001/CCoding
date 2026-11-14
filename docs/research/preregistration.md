@@ -1403,6 +1403,8 @@ node bench/vs-claude/run.mjs --arms P-H,P-S,P-O \
 
 **(10) Đánh giá bảo vệ dữ liệu ngắn (theo AGENTS.md).** Nhãn **Nội bộ**. Bài bench tổng hợp, **không có DLCN**, không chuyển xuyên biên giới, không dùng dữ liệu thật trên DEV/UAT. Kế hoạch và `runs.jsonl` ghi trong `bench/vs-claude/results/e9lite/` (thư mục dữ liệu của bench), log CCoding vẫn qua `LogStore`. Không có luồng dữ liệu mới nên `docs/data-protection-assessment.md` không đổi. Lưu `gold.json`, mã băm và `runs.jsonl` ≥ 6 tháng.
 
+**Mã băm khóa chuẩn E9-lite (BRIEF-24, K2; ghi trước lượt chạy đầu).** Lệnh: `cd bench/vs-claude/results/e9lite && sha256sum gold.json labels.json`. `gold.json` sha256 = `ee49fc5da243b1b656c3e2f8fcc9d395c39c3f5a30f325b0f8e1ea7406ed312f` (13 bài; trường `sha256` nội bộ = `a33c08865a433ac2d2b53e0a7eb2001556ae0a782bcb0eedfa666ca6a6c3251d`); `labels.json` sha256 = `602cea5c4f576297d76d2933edb214e10c85a7b7366c211fd8270cfcd1855667` (sinh bởi `docs/research/analysis/e9lite-labels.mjs`, quy tắc chép nguyên văn từ (3)). **Kết quả nhãn: 13/13 "chia được", 0 "không chia được" ⇒ phân tầng suy biến** theo đúng quy tắc ghi trước ở (3): không đổi quy tắc, không tính chia thừa, không so sánh theo tầng. Nguyên nhân (mô tả, không đổi gì): mọi lời giải mẫu đều đổi `package.json` ở gốc (module `.`) cùng `src` và `test`, nên số module ≥ 2 ở cả 13 bài.
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.
