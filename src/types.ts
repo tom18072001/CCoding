@@ -293,6 +293,9 @@ export interface DeptRun {
     approved: boolean;
     summary: string;
     issues: ReviewIssue[];
+    /** FX4: không có review nào (tắt/không có reviewer) và không có lệnh kiểm tra — không có bằng chứng gì để duyệt. */
+    skipped?: boolean;
+    reason?: string;
     /** Lệnh kiểm tra reviewer khai báo + lệnh thực sự chạy qua công cụ. */
     checks?: ReviewCheck[];
     /** false: reviewer có quyền chạy lệnh nhưng không chạy lệnh nào → kết luận chưa có bằng chứng chạy thật. */
