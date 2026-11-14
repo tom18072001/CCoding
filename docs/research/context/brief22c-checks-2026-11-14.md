@@ -272,3 +272,4 @@ exit code: 0
 ## Ghi chú
 
 - Lệnh test glob exit 1 chỉ vì 1 ca: `g-mutation.test.mjs` (`evalRun trên bài giả…`, assert tại dòng 49: `base.vRed` thật, kỳ vọng sai). Ca này đỏ từ baseline (baseline có 3 tệp đỏ; 2 tệp kia do thiếu `typescript`, hết sau `npm ci`). Ngoài phạm vi K3 và không điều tra thêm; chưa rõ là lỗi mã hay môi trường (Node 24 Windows). Đường dẫn máy trong đầu ra đã thay bằng `<repo>`.
+- Khối `git status --short` ở trên chạy khi tệp nhật ký này chưa được commit nên chỉ liệt kê chính nó. Sau commit, `git status --short` rỗng (đã kiểm lại).
