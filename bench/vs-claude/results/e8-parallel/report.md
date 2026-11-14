@@ -52,7 +52,7 @@
 ## 4. Đọc kết quả
 
 1. **Bench trước đây không bật song song; lần này đo được lợi ích của nó.** Giữ nguyên cách chia việc và cùng số lượt gọi (trung bình 7,0 lượt gọi và 3,9 hạng mục mỗi nhiệm vụ ở cả hai arm), chạy song song có worktree riêng làm thời gian còn khoảng một nửa (×0,52); không phát hiện được thay đổi token (×1,01, CI 0,94–1,08, chỉ mô tả, không phải bằng chứng tương đương).
-2. **Song song bù được phần chậm của chia việc ở bài chia được, chưa bù được ở bài khác.** Ở `l1-modules`, B6w4 nhanh hơn agent đơn khoảng 40 %. Ở `t2-orders` và `t3-api`, B6w4 vẫn chậm hơn 1,4–2,1 lần và tốn 2–4 lần token. Nghĩa là song song giảm được chi phí thời gian của chia việc, nhưng không giảm token. Nên chia việc cho nhiều agent khi việc chia được thành nhiều phần độc lập.
+2. **Song song bù được phần chậm của chia việc ở bài chia được, chưa bù được ở bài khác.** Ở `l1-modules`, B6w4 nhanh hơn agent đơn khoảng 40 %. Ở `t2-orders` và `t3-api`, B6w4 vẫn chậm hơn 1,4–2,1 lần và tốn 2–4 lần token. Nghĩa là song song giảm được chi phí thời gian của chia việc, và không phát hiện được thay đổi token (thước đo phụ, chỉ mô tả). Gợi ý [Khám phá], rút từ một bài (`l1-modules`), chưa kiểm: chia việc cho nhiều agent có vẻ đáng khi việc chia được thành nhiều phần độc lập.
 3. **Không thấy khác biệt chất lượng** (mô tả, không có phép kiểm): điểm test ẩn trung bình 0,995 và 0,990. Pass ở B6w4 thấp hơn 2 lượt, nhưng n nhỏ và không có phép kiểm; ghi lại để theo dõi.
 
 ## 5. Giới hạn (điều kiện 4–6 của K3)
