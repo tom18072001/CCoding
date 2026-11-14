@@ -477,6 +477,36 @@
       "exceptions": []
     },
     {
+      "id": "brief22-p1-a-ratio",
+      "value": "42/54",
+      "reason": "BRIEF-22b M1, m-r2: P-1 phương án A = 42/54 (mẫu số 54: lượt có ≥ 2 hạng mục đủ mốc giờ); số B 42/56 ở brief22.eff.P.anyParallel",
+      "pattern": "^\\| P-1 [^|]*\\| (42/54) = 77,8 %",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "brief22-p1-a-pct",
+      "value": "77,8",
+      "reason": "BRIEF-22b M1, m-r2: P-1 phương án A = 77,8 % (42/54)",
+      "pattern": "^\\| P-1 [^|]*\\| 42/54 = (77,8) %",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "brief22-p2-a-pct",
+      "value": "27,5",
+      "reason": "BRIEF-22b M1, m-r2: P-2 phương án A = 27,5 % (gộp phút, (1366 − 990)/1366 = 375 phút); số B 29,2 % là nghịch đảo work/cp trung vị 1,41",
+      "pattern": "^\\| P-2 [^|]*\\| Tối đa 375 phút = (27,5) %",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
       "id": "brief22-p-par-allowed",
       "value": "1,41",
       "reason": "v0.8 (BRIEF-22): brief22.decomp.P.parAllowedMedian = 1.412; effectiveness.md 3a",

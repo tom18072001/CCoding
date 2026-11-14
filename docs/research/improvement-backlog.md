@@ -12,6 +12,33 @@
 > Cập nhật R18 (T-20261114-133920-30b, S4, @research-lead, 14/11/2026; BRIEF-20 K3): thêm **§0.1** (kết quả mới của B-14 bước 2, E4, E5′, E7, E8, trục 2 phần (b); thứ tự việc tiếp theo theo mức bằng chứng). Cột "Trạng thái" của §0 có thêm giá trị `đã đo` (đợt đã có `report.md`; không có nghĩa là đã đổi mặc định); đổi ô trạng thái của B-12, B-14, B-15, B-16 và tiêu đề §5 của B-14. Mọi số ở §0.1 chép từ `report.md`/`RUNLOG.md` của từng đợt, không tính lại; mã commit đọc bằng `git log`. Không sửa `src/`, `bench/`.
 > Cập nhật R19 (T-20261114-162216-35d, K6, @research-lead, 14/11/2026; BRIEF-22): thêm **§0.2** và **B-20…B-49** (§5) từ danh sách lỗi sửa được (FX1–FX21) và thí nghiệm (TN1–TN9) của `analysis/decisions/report.md` mục 6. Mỗi mục ghi bằng chứng, chỗ sửa, tiêu chí xong đo được, test hoặc chỉ số kiểm lại, và trạng thái. Trạng thái đọc bằng `git log` ngày 14/11/2026; mã tham chiếu commit `b146b87c` (`analysis/decisions/logic-map.md`). Hạng 1 và 2 của §0.1 (b) đã có commit sửa (`e2b6573c`, `a11abf45`); hạng 7 chuyển thành B-42.
 > Nguyên tắc của giám đốc: mọi nâng cấp phải dựa vào nghiên cứu; mỗi thay đổi của Phòng Dev ghi mã `B-xx`; benchtest chạy theo `preregistration.md` để kiểm lại.
+
+> Cập nhật R20 (T-20261114-214506-fe1, gói 16b, 14/11/2026; đóng M-r2 của phản biện): cột "Trạng thái" của §0.2 và các hàng B-20…B-49 bên dưới **viết tại thời điểm R19 và chưa sửa** (chỉ thêm dòng). Trạng thái tại commit mốc `ccc76cc0` (đối chiếu `git log b146b87c..ccc76cc0`; "đã có mã" = có commit sửa, chưa phải kết quả đo lại — việc chấm lại là B-49). Trạng thái dưới đây thay cho cột cũ:
+>
+> | B | Trạng thái tại `ccc76cc0` | Commit |
+> |---|---|---|
+> | B-20 | đã có mã (rule `brief-item`) | `39bd9fe3`, `39cf2f7c` |
+> | B-21 | đã sửa hồ sơ (ngoại lệ reviewer ở `research-lead.md:58` (`Ngoại lệ`)) | `677fe521` |
+> | B-22 | đã có mã | `179da24b` |
+> | B-23 | đã có mã (review bị bỏ có `run.review` kèm dấu vết) | `8989e920` |
+> | B-24 | một phần: `after` chờ khi nhiệm vụ trước chưa nghiệm thu; `status` vẫn `done` kèm `attention`; vòng bổ sung sau nghiệm thu | `8989e920`, `6ee72e43` |
+> | B-25 | đã có mã | `2579e012`, `8989e920` |
+> | B-26 | một phần: `run_command` nối `outsideWriteDecision`; `runCheckCommand`, `cli-agents.ts` chưa kiểm lại | `78ad5179`, `ae953e07` |
+> | B-27 | đã có mã chẩn đoán/sửa cờ "đầu ra bị cắt"; chưa đo lại | `b6c08171` |
+> | B-28 | đã sửa hồ sơ `security`, `peer-reviewer` | `93b9b252` |
+> | B-29 | đã sửa hồ sơ `data-scientist` | `93b9b252` |
+> | B-30 | đã sửa: miễn `no-sources` trong `kpi.ts`, bổ sung hồ sơ | `b6c08171`, `93b9b252` |
+> | B-31 | đã sửa hồ sơ trưởng phòng (cỡ gói); test kiểm ước lượng ở bước plan | `677fe521`, `93b9b252` |
+> | B-32 | đã có mã (`criticalPathEstimate`, `parallelism`) | `53fb9bd3` |
+> | B-33 | đã sửa: lời nhắc lấy số hạng mục từ `MAX_SUBTASKS` | `677fe521` |
+> | B-34 | một phần: người nhận ngoài roster được ghi lại; `?? lead` còn | `39cf2f7c` |
+> | B-35 | đã có mã (`finalTemplateGate`) | `8989e920` |
+> | B-36 | đã có mã (KPI nhất quán, dòng điều phối viên) | `53fb9bd3` |
+> | B-37 | đã sửa hồ sơ (model theo làn) | `677fe521` |
+> | B-38 | **đã làm** (`logic-map-check.mjs`, 0 lệch tại mốc) | `0d70aa06`, `cd25b769` |
+> | B-39 | **đã làm** (mục đường dẫn máy trong `consistency-check.mjs`) | `0d70aa06` |
+> | B-40 | một phần: chữ ký HMAC; WORM còn là hạ tầng, cần giám đốc | `e2b72b23` |
+> | B-41…B-49 | không đổi (thí nghiệm/đo chưa chạy) | — |
 > Số từ `token-analysis.md` dẫn theo **mã bảng** (T-0, T-d…), không chép lại bản S1 đang làm mới.
 > **Mã giả thuyết (từ R8):** hệ chính là **H1–H10 của bộ đo giám đốc** (`bench/vs-claude/analyze.mjs:61-115`), viết `H_i` trong tệp này. Giả thuyết H1–H9 của `preregistration.md` bản 1 đổi mã theo quy ước H_i → ĐK-P_i (bản 2, hạng mục S4; cùng quy ước với `preregistration.md` §3.3, thống nhất ở v2.1). **Trùng mã:** P1–P4 ở cột "Gộp ứng viên", B-02, B-03, B-09 là **bản vá prompt** trong `self-improvement/prompt-patches/`; vì vậy trong tệp này giả thuyết bản 1 ghi là **ĐK-P_i** (= P_i của `preregistration.md` bản 2). Đề nghị S4 ghi chú trùng mã này trong bảng ánh xạ P↔H.
 > Phạm vi: chỉ viết tài liệu. Không sửa `src/`. Các số "kỳ vọng" là **giả thuyết cần kiểm**, không phải kết quả.
@@ -98,7 +125,7 @@ Nguồn: `analysis/decisions/report.md` mục 6. Số lấy từ `scorecard.md` 
 | Mã | Việc | Loại | Trạng thái 14/11/2026 | Trùng gói Dev | Report |
 |---|---|---|---|---|---|
 | B-20 | Cổng phủ kế hoạch kiểm hạng mục và vai bắt buộc của đề bài | sửa mã | đang sửa | D17 K1, D16b K4 | FX1 |
-| B-21 | Lời nhắc `research-lead.md:51` có ngoại lệ khi đề bài giao hạng mục reviewer | sửa `agent.md` | chưa giao | — | FX2 |
+| B-21 | Lời nhắc `research-lead.md:58` (`@peer-reviewer`) có ngoại lệ khi đề bài giao hạng mục reviewer | sửa `agent.md` | chưa giao | — | FX2 |
 | B-22 | Đề bài đòi review thì không bỏ review | sửa mã | đang sửa | D17 K2 | FX3 |
 | B-23 | Review bị bỏ phải để dấu vết và attention | sửa mã | chưa giao | — | FX4 |
 | B-24 | CTO chưa đạt: vòng bổ sung; nhiệm vụ `after` không tự chạy | sửa mã + lời nhắc | đang sửa một phần | D17 K3 (phần a) | FX5 |
@@ -788,7 +815,7 @@ Quy ước chung cho Khối C:
 
 | Trường | Nội dung |
 |---|---|
-| **Bằng chứng** | `agents/research/research-lead.md:51` dặn không tạo hạng mục review cho `@peer-reviewer`, kể cả khi đề bài giao mã riêng cho vai này. Đây là một trong hai nguyên nhân của BRIEF-20 (L1) |
+| **Bằng chứng** | `agents/research/research-lead.md:58` (`@peer-reviewer`) dặn không tạo hạng mục review cho `@peer-reviewer`, kể cả khi đề bài giao mã riêng cho vai này. Đây là một trong hai nguyên nhân của BRIEF-20 (L1) |
 | **Chỗ sửa** | `agents/research/research-lead.md` (và câu tương ứng ở `agents/dev/dev-lead.md` nếu có). Đổi định dạng `agent.md` ⇒ cập nhật `docs/AGENTS-GUIDE.md`, `test/registry.test.ts` (AGENTS.md) |
 | **Tiêu chí xong** | Câu có ngoại lệ "trừ khi đề bài giao hạng mục có mã cho vai reviewer"; `npm test` xanh |
 | **Kiểm lại** | Chấm lại: mọi kế hoạch có đề bài nêu hạng mục reviewer đều có hạng mục giao reviewer (n/n) |
@@ -798,7 +825,7 @@ Quy ước chung cho Khối C:
 
 | Trường | Nội dung |
 |---|---|
-| **Bằng chứng** | F-E2: `orch:1860-1899` (`this.setPhase`), `quality-gate.ts:84` (`sensitivePaths`); văn phòng phụ có 2/5 lượt phòng bỏ review; BRIEF-20 |
+| **Bằng chứng** | F-E2: `orch:2008-2050` (`canReview`), `quality-gate.ts:84` (`sensitivePaths`); văn phòng phụ có 2/5 lượt phòng bỏ review; BRIEF-20 |
 | **Chỗ sửa** | `src/quality-gate.ts`, `src/orchestrator.ts` |
 | **Tiêu chí xong** | Đề bài có hạng mục review ⇒ khâu review luôn chạy; lý do ghi vào `gate.decision` |
 | **Kiểm lại** | Test hai nhánh (D17 K2). Chấm lại: số lượt bỏ review khi đề bài đòi review = 0 |
@@ -908,7 +935,7 @@ Quy ước chung cho Khối C:
 
 | Trường | Nội dung |
 |---|---|
-| **Bằng chứng** | L8: `planPrompt` bảo tối đa song song; `dev-lead.md:57` bảo ít hạng mục lớn; `FAST_LANE_PLAN` bảo chia 2–4; lời nhắc ghi cứng "1–7" trong khi `MAX_SUBTASKS = 8` (`planner.ts:25` (`MAX_SUBTASKS`)) tại `b146b87c`; ở mốc `ccc76cc0` lời nhắc đã dùng hằng này (`prompts.ts:314` (`MAX_SUBTASKS`)) |
+| **Bằng chứng** | L8: `planPrompt` bảo tối đa song song; `dev-lead.md:61` (`Hạng mục chạy lệnh`) bảo ít hạng mục lớn; `FAST_LANE_PLAN` bảo chia 2–4; lời nhắc ghi cứng "1–7" trong khi `MAX_SUBTASKS = 8` (`planner.ts:25` (`MAX_SUBTASKS`)) tại `b146b87c`; ở mốc `ccc76cc0` lời nhắc đã dùng hằng này (`prompts.ts:314` (`MAX_SUBTASKS`)) |
 | **Chỗ sửa** | `src/prompts.ts`, `agents/dev/dev-lead.md` |
 | **Tiêu chí xong** | Một quy tắc theo làn; số trong lời nhắc lấy từ hằng `MAX_SUBTASKS` |
 | **Kiểm lại** | Test: chuỗi lời nhắc chứa đúng giá trị `MAX_SUBTASKS`; `npm test` |
