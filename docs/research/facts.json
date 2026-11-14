@@ -467,7 +467,78 @@
     "brief22.eff.ratio.study-cloud.B7.tokens": 2.4,
     "brief22.eff.ratio.study-cloud.B7.wall": 3.07
   },
+  "e9lite": {
+    "_note": "BRIEF-24 (15/11/2026, K3b): số thiết kế và mã băm chuẩn của E9-lite [Khám phá] (preregistration.md §9, mục Sai lệch E9 → E9-lite). Chưa chạy planner nên không có số kết quả. Không phải E9. consistency-check đối chiếu các số này với paper/paper.md §6.6 qua mục numbers (id e9lite-*).",
+    "e9lite.status": "chưa chạy",
+    "e9lite.tasks": 13,
+    "e9lite.arms": 3,
+    "e9lite.repeats": 3,
+    "e9lite.runsPlanned": 117,
+    "e9lite.labels.chiaDuoc": 13,
+    "e9lite.labels.khongChiaDuoc": 0,
+    "e9lite.bootstrapB": 4000,
+    "e9lite.bootstrapSeed": 20261115,
+    "e9lite.goldSha256": "ee49fc5da243b1b656c3e2f8fcc9d395c39c3f5a30f325b0f8e1ea7406ed312f",
+    "e9lite.labelsSha256": "602cea5c4f576297d76d2933edb214e10c85a7b7366c211fd8270cfcd1855667",
+    "e9lite.tests": 14
+  },
   "numbers": [
+    {
+      "id": "e9lite-status",
+      "value": "chưa chạy",
+      "reason": "BRIEF-24 K3b: trạng thái E9-lite ở paper.md §6.6 (khóa e9lite.status)",
+      "pattern": "\\*\\*Trạng thái: (chưa chạy)\\.",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e9lite-tasks",
+      "value": "13",
+      "reason": "BRIEF-24 K3b: số bài khóa của E9-lite (khóa e9lite.tasks)",
+      "pattern": "đúng (13) bài có `solutionDir` \\(g1",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e9lite-runs",
+      "value": "117",
+      "reason": "BRIEF-24 K3b: 3 arm × 3 lặp × 13 bài (khóa e9lite.runsPlanned)",
+      "pattern": "= (117) lượt;",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e9lite-labels-chia",
+      "value": "13",
+      "reason": "BRIEF-24 K3b/K2: số bài nhãn chia được trên tổng 13 (khóa e9lite.labels.chiaDuoc)",
+      "pattern": "cả 13 bài đều \"chia được\" \\((\\d+)/13\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e9lite-gold-sha",
+      "value": "ee49fc5d",
+      "reason": "BRIEF-24 K2: tiền tố 8 ký tự của sha256 gold.json (đầy đủ ở e9lite.goldSha256 và preregistration.md §9)",
+      "pattern": "`gold\\.json` \\(sha256 `([0-9a-f]{8})…",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e9lite-labels-sha",
+      "value": "602cea5c",
+      "reason": "BRIEF-24 K2: tiền tố 8 ký tự của sha256 labels.json (đầy đủ ở e9lite.labelsSha256)",
+      "pattern": "`labels\\.json` \\(sha256 `([0-9a-f]{8})…",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e9lite-tests",
+      "value": "14",
+      "reason": "BRIEF-24 K2: số test của e9lite.test.mjs (khóa e9lite.tests)",
+      "pattern": "\\((14) test trên `runs\\.jsonl` giả\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
     {
       "id": "logic-map-refs-total",
       "value": "445",
