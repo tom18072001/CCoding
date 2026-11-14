@@ -258,6 +258,26 @@
     {
       "key": "Lệnh kiểm chứng cần chạy (tôi không có quyền chạy lệnh)",
       "sha256": "8d87ed5ffa8959ecfadac1d7f617a7198a4666d2f2d80cbab3d6cecf5b5d2cfe"
+    },
+    {
+      "key": "Sai lệch E9 → E9-lite [Khám phá] — 15/11/2026 (BRIEF-24, K1)",
+      "sha256": "c697500d673d82ccf2cca35c00f2d3ab3ba0f1f8449ff78c2876a3c74e4e3db8"
+    },
+    {
+      "key": "Sửa chuẩn E9-lite sau khi thấy gold, trước khi thấy kế hoạch — 15/11/2026 (BRIEF-24, K1, sửa theo review @peer-reviewer)",
+      "sha256": "f1c47afa4b4c096d0e786d178f91b191cca55b83112ebc2c1b661261c0c55d2c"
+    },
+    {
+      "key": "Đính chính gateFirst (BRIEF-24b, K2; ghi trước lượt chạy đầu) — 15/11/2026",
+      "sha256": "2e5b5ac314b3c8969e8485d1fa7a613c586484b8db294d370ca882cdead028a9"
+    },
+    {
+      "key": "Đặc tả bàn giao cho mã",
+      "sha256": "78e01d2583936bc6aae43f639be34bb57ab5f20b58956fd4bf20aede9f39495e"
+    },
+    {
+      "key": "Mã băm khóa chuẩn E9-lite — bản thay thế (BRIEF-24b, K1; ghi trước lượt chạy đầu) — 15/11/2026",
+      "sha256": "064967de7625395bbf147e4797c25babe615289c6d890a5e47190cf8ed1a63fd"
     }
   ],
   "history": [

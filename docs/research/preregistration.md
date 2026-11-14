@@ -1471,6 +1471,15 @@ const gateFirst = (row) => {
 
 Đặc tả cài đặt và ví dụ kiểm thử: `docs/research/context/brief24b-k2-gatefirst-2026-11-15.md`. Mã (`e9lite.mjs`) và test phải khớp khối này, không khớp định nghĩa `ok` ở (S3).
 
+#### Mã băm khóa chuẩn E9-lite — bản thay thế (BRIEF-24b, K1; ghi trước lượt chạy đầu) — 15/11/2026
+
+**Dòng sha256 của khối "Mã băm khóa chuẩn E9-lite (BRIEF-24, K2…)" ở trên (nhãn 13/13, `labels.json` = `602cea5c…`) đã lỗi thời; khối đó không bị sửa chữ.** Từ đây giá trị hiệu lực là của khối này.
+- **Lệnh sinh:** `node bench/vs-claude/e9/gold-from-solution.mjs --out bench/vs-claude/results/e9lite/gold.json` rồi `node docs/research/analysis/e9lite-labels.mjs`. Sinh lại bằng hai lệnh này cho đúng cùng byte với tệp đã commit (không có thay đổi cần commit).
+- **Cách tính:** `sha256sum` trên bản làm việc **và** `git show HEAD:<đường dẫn> | sha256sum` (byte của blob đã commit). Hai giá trị trùng, không lệch do EOL.
+- `bench/vs-claude/results/e9lite/gold.json`: sha256 = `ee49fc5da243b1b656c3e2f8fcc9d395c39c3f5a30f325b0f8e1ea7406ed312f` (13 bài; trường `sha256` nội bộ = `a33c08865a433ac2d2b53e0a7eb2001556ae0a782bcb0eedfa666ca6a6c3251d`). Không đổi so với khối cũ.
+- `bench/vs-claude/results/e9lite/labels.json`: sha256 = `4059699277ab7df1b6b55dec5876b81feaea6352b59350a1b2807ef543694025`.
+- **Số nhãn thật do script sinh ra (nhãn chính, sau B1):** 3 "chia được", 10 "không chia được"; phân tầng không suy biến. Độ nhạy (mod2Of): 4 "chia được", 9 "không chia được".
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.

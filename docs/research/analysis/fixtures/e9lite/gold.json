@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "taskCount": 1,
+  "sha256": "fixture",
+  "tasks": [
+    {
+      "id": "a",
+      "modules": [
+        "src",
+        "test"
+      ],
+      "files": [
+        {
+          "path": "src/a.js",
+          "change": "modified",
+          "linesAdded": 1,
+          "linesRemoved": 0,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "test/a.test.js",
+          "change": "modified",
+          "linesAdded": 1,
+          "linesRemoved": 0,
+          "module": "test",
+          "flag": null
+        }
+      ]
+    }
+  ]
+}
