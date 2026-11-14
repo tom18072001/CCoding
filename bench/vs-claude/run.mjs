@@ -24,9 +24,11 @@ const flag = (k, d) => { const i = argv.indexOf(`--${k}`); return i < 0 ? d : ar
 const has = (k) => argv.includes(`--${k}`);
 
 const { _suites: SUITES = {}, ...ARMS } = JSON.parse(fs.readFileSync(path.join(SUITE, 'arms.json'), 'utf8')); // _suites không phải arm (B-12)
-const allTasks = fs.readdirSync(path.join(SUITE, 'tasks')).filter((d) => fs.existsSync(path.join(SUITE, 'tasks', d, 'task.json'))).sort();
+// Thư mục bài: --tasks-dir hoặc VSC_TASKS_DIR; mặc định <SUITE>/tasks (để test không phải ghi vào cây repo).
+const TASKS_DIR = path.resolve(flag('tasks-dir', process.env.VSC_TASKS_DIR || path.join(SUITE, 'tasks')));
+const allTasks = fs.readdirSync(TASKS_DIR).filter((d) => fs.existsSync(path.join(TASKS_DIR, d, 'task.json'))).sort();
 const taskSel = flag('tasks', 'all');
-const taskIds = taskSel === 'all' ? allTasks : taskSel.startsWith('suite:') ? suiteTaskIds(SUITES, taskSel.slice(6), allTasks) : taskSel.split(',').flatMap((s) => allTasks.filter((t) => t === s || t.startsWith(`${s}-`) || JSON.parse(fs.readFileSync(path.join(SUITE, 'tasks', t, 'task.json'))).category === s));
+const taskIds = taskSel === 'all' ? allTasks : taskSel.startsWith('suite:') ? suiteTaskIds(SUITES, taskSel.slice(6), allTasks) : taskSel.split(',').flatMap((s) => allTasks.filter((t) => t === s || t.startsWith(`${s}-`) || JSON.parse(fs.readFileSync(path.join(TASKS_DIR, t, 'task.json'))).category === s));
 const armIds = flag('arms', 'A0-sonnet,B0').split(',');
 for (const a of armIds) if (!ARMS[a]) throw new Error(`Unknown arm ${a}. Known: ${Object.keys(ARMS).join(', ')}`);
 const repeats = Number(flag('repeats', '3'));
@@ -104,7 +106,7 @@ const serverOf = (spec) => (spec.server === 'alt' ? { url: cfg.ccodingUrlAlt, da
 // ---------- helpers ----------
 function freshWorkspace(task, key) { // task: the parsed task.json
   const dir = path.join(cfg.workRoot, key);
-  populateWorkspace(dir, taskDirs(SUITE, task).repoDir);
+  populateWorkspace(dir, taskDirs(SUITE, task, TASKS_DIR).repoDir);
   const git = (...a) => spawnSync('git', a, { cwd: dir, encoding: 'utf8' });
   git('init', '-q'); git('add', '-A');
   git('-c', 'user.name=bench', '-c', 'user.email=bench@local', 'commit', '-qm', 'base');
@@ -132,7 +134,7 @@ async function runArm(arm, task, key) {
   const brief = briefFor(task);
   if (spec.kind === 'null') { const dir = freshWorkspace(task, key); return { dir, status: 'done', wallSec: 0, tokens: zero(), costUsd: 0, turns: 0, finalText: '' }; }
   if (spec.kind === 'oracle' || spec.kind === 'nearmiss') { // SR-24: nearmiss = lời giải tham chiếu rồi đè hidden/nearmiss/ (lời giải gần đúng, phải chấm < 1,00)
-    const dir = freshWorkspace(task, key); const { hiddenDir: h, solutionDir } = taskDirs(SUITE, task);
+    const dir = freshWorkspace(task, key); const { hiddenDir: h, solutionDir } = taskDirs(SUITE, task, TASKS_DIR);
     if (solutionDir) fs.cpSync(solutionDir, dir, { recursive: true });
     if (fs.existsSync(path.join(h, 'solution'))) fs.cpSync(path.join(h, 'solution'), dir, { recursive: true });
     if (fs.existsSync(path.join(h, 'answer.json'))) fs.copyFileSync(path.join(h, 'answer.json'), path.join(dir, task.deliverable.endsWith('.json') ? task.deliverable : 'answer.json'));
@@ -197,13 +199,13 @@ let i = 0;
 for (const s of schedule) {
   i++;
   if (done.has(s.key)) continue;
-  const task = JSON.parse(fs.readFileSync(path.join(SUITE, 'tasks', s.task, 'task.json'), 'utf8'));
+  const task = JSON.parse(fs.readFileSync(path.join(TASKS_DIR, s.task, 'task.json'), 'utf8'));
   process.stdout.write(`[${i}/${schedule.length}] ${s.key} ... `);
   let r, g, error;
   try {
     r = await runArm(s.arm, task, s.key);
     if (!r.infra && !planOnlyRun) { // lỗi hạ tầng: không chấm, không tính là xong
-      g = await GRADERS[task.grader]({ workdir: r.dir, hiddenDir: path.join(SUITE, 'tasks', s.task, 'hidden'), suiteRepoDir: taskDirs(SUITE, task).repoDir, finalText: r.finalText, task, judge: cfg.judge });
+      g = await GRADERS[task.grader]({ workdir: r.dir, hiddenDir: path.join(TASKS_DIR, s.task, 'hidden'), suiteRepoDir: taskDirs(SUITE, task, TASKS_DIR).repoDir, finalText: r.finalText, task, judge: cfg.judge });
       snapshot(r.dir, path.join(out, 'artifacts', s.key));
       fs.writeFileSync(path.join(out, 'artifacts', s.key, '_FINAL.txt'), r.finalText ?? '');
     }

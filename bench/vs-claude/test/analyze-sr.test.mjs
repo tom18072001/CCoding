@@ -227,16 +227,22 @@ test('SR-25: H1′ hoán vị phân tầng, p_min = 1/∏C(2r,r), nhãn dự ki�
 
 test('D6: bài set exploratory không vào H1–H10 và H1′/H2′, chỉ ở bảng khám phá', () => {
   const rows = [...base(), ...['A0-sonnet', 'B0'].flatMap((a) => mkCells('a2-ambiguity-new', a, a === 'B0' ? [1, 1] : [0, 0]))];
-  // task.json của bài thật chưa có a2; tạo bài tạm ngay trong thư mục tasks, dọn sau khi chạy
-  const dir = path.resolve(HERE, '../tasks/a2-ambiguity-new');
-  fs.mkdirSync(dir, { recursive: true });
+  // task.json của bài thật chưa có a2: dựng thư mục bài tạm (chép task.json thật + bài a2), truyền qua --tasks-dir
+  const realTasks = path.join(path.dirname(ANALYZE), 'tasks');
+  const tasksDir = fs.mkdtempSync(path.join(os.tmpdir(), 'an-tasks-'));
   try {
-    fs.writeFileSync(path.join(dir, 'task.json'), JSON.stringify({ id: 'a2-ambiguity-new', set: 'exploratory' }));
-    const withX = run(rows), without = run(base());
+    for (const d of fs.readdirSync(realTasks)) {
+      const tj = path.join(realTasks, d, 'task.json');
+      if (fs.existsSync(tj)) { fs.mkdirSync(path.join(tasksDir, d)); fs.copyFileSync(tj, path.join(tasksDir, d, 'task.json')); }
+    }
+    fs.mkdirSync(path.join(tasksDir, 'a2-ambiguity-new'));
+    fs.writeFileSync(path.join(tasksDir, 'a2-ambiguity-new', 'task.json'), JSON.stringify({ id: 'a2-ambiguity-new', set: 'exploratory' }));
+    const args = ['--tasks-dir', tasksDir];
+    const withX = run(rows, args), without = run(base(), args);
     assert.equal(hRow(withX.report, 'H1'), hRow(without.report, 'H1'));
     assert.match(withX.report, /Exploratory tasks/);
     assert.match(withX.report, /a2-ambiguity-new/);
-  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  } finally { fs.rmSync(tasksDir, { recursive: true, force: true }); }
 });
 
 test('SR-04 B-01: TOST log-tỉ số ba đại lượng; thiếu arm SL ⇒ insufficient data', () => {
