@@ -577,7 +577,33 @@ Trả lời bằng một khối JSON${tools.includes('run_command') ? ' ("checks
   };
 }
 
-export function revisePrompt(c: Ctx, st: Subtask, previous: string, issues: string, tools: ToolName[] = [], wsPath?: string): Built {
+/**
+ * K2 (D16b): lượt tiếp nối khi review chạm trần lượt mà chưa có JSON kết luận — KHÔNG cấp công cụ, chỉ trả kết luận
+ * theo mẫu review dựa trên những gì reviewer đã kiểm (`previous` = văn bản reviewer đã viết).
+ */
+export function reviewVerdictPrompt(c: Ctx, items: DepInput[], previous: string): Built {
+  return {
+    context: header(c, 'review'),
+    prompt: `## Review của bạn bị dừng vì hết lượt công cụ
+Bạn đã dùng hết lượt công cụ cho phép mà chưa trả kết luận. Lượt này KHÔNG có công cụ: đừng chạy thêm lệnh, đừng đọc thêm tệp.
+
+## Các hạng mục đã review
+${items.map((i) => `- ${i.st.id} — ${i.st.title} (@${i.st.assignee})`).join('\n')}
+
+## Những gì bạn đã viết/kiểm cho tới lúc dừng
+${truncate(previous.trim() || '(không có nội dung)', 6000)}
+
+## Việc của bạn
+Chỉ dựa trên những gì ĐÃ kiểm ở trên, trả NGAY kết luận review. Điều gì chưa kiểm thì nói rõ là chưa kiểm trong "summary", không bịa kết quả chạy. Chỉ đặt "approved": false khi có blocker/major.
+
+Trả lời bằng đúng một khối JSON:
+\`\`\`json
+{ "approved": true, "summary": "nhận xét chung", "issues": [ { "subtask": "${items[0]?.st.id ?? 'S1'}", "severity": "major", "comment": "vấn đề + cách sửa" } ], "checks": [ { "command": "npm test", "exitCode": 0, "note": "đã chạy ở lượt trước" } ] }
+\`\`\``,
+  };
+}
+
+export function revisePrompt(c: Ctx,st: Subtask, previous: string, issues: string, tools: ToolName[] = [], wsPath?: string): Built {
   return {
     context: header(c, 'revise'),
     prompt: `## Hạng mục: ${st.id} — ${st.title}
