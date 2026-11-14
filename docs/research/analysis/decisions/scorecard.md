@@ -4,7 +4,7 @@ Phân loại dữ liệu: **Nội bộ**. Chỉ có chỉ số tổng hợp; d�
 Nhãn: **[Mô tả]** = số quan sát, không đối chứng, không nhân quả. Mọi số trong các khối bảng do script sinh ra.
 
 - Sinh lại bảng: `node docs/research/analysis/decisions/scorecard.mjs --write`
-- Kiểm bảng trong md khớp đầu ra và đủ 14 agent: `node docs/research/analysis/decisions/scorecard.mjs --check`
+- Kiểm bảng trong md khớp đầu ra và đủ 20/20 dòng agent: `node docs/research/analysis/decisions/scorecard.mjs --check`
 - Nguồn: `bench/vs-claude/results/decisions/{kpi-office.json, decomp-agg.json, RUNLOG.md}`, `bench/vs-claude/results/p-parallel/RUNLOG.md`, `g-mutation/report.md`, `e7-cto/report.md`, `axis2-guard/results.json`, mọi `*/runs.jsonl` (cấu trúc kế hoạch tính bằng `decomp-metrics.mjs`).
 - Phạm vi KPI: văn phòng phụ, 30 ngày tới 14/11/2026; nhiệm vụ đang chạy vẫn được tính nên điểm sẽ đổi khi chúng xong.
 
@@ -12,14 +12,14 @@ Nhãn: **[Mô tả]** = số quan sát, không đối chứng, không nhân qu�
 
 | Việc | Ai làm trong mã | Dòng trong bảng điểm |
 |---|---|---|
-| Định tuyến nhiệm vụ | điều phối viên (`agents/orchestrator.md`); khâu `route` | không có dòng KPI; chi phí route ở mục 1b |
-| Chọn làn (single/fast/full) | hàm quy tắc `chooseLane` (`src/lane.ts:129`), không gọi LLM | không có KPI; đếm làn ở `effectiveness.md` |
+| Định tuyến nhiệm vụ | điều phối viên (`agents/orchestrator.md`); khâu `route` | dòng KPI "không có dữ liệu trong 30 ngày"; chi phí route ở mục 1b |
+| Chọn làn (single/fast/full) | hàm quy tắc `chooseLane` (`src/lane.ts:129` (`chooseLane`)), không gọi LLM | không có KPI; đếm làn ở `effectiveness.md` |
 | Bóc tách thành hạng mục song song | trưởng phòng `dev-lead`, `research-lead` (khâu `plan`, model Opus ở văn phòng phụ) | dòng `dev-lead`, `research-lead` + mục 1b |
 | Nghiệm thu | `cto` (`agents/cto.md`), **chỉ** nghiệm thu | dòng `cto` |
 
 Khi giám đốc nói "quyết định của CTO" về chia việc, số liệu tương ứng là của **trưởng phòng** (bóc tách) và **hàm chọn làn** (làn), không phải của `cto`. Phần "CTO" trong bảng điểm chỉ nói về nghiệm thu.
 
-## 1a. KPI v2 từng agent (đủ 14 agent của `kpi-office.json`)
+## 1a. KPI v2 từng agent (đủ 20/20 agent: 14 có KPI + 6 không có dữ liệu)
 
 <!-- BEGIN:kpi -->
 | Agent | Vai | Phòng | Điểm (hạng) | Thô | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Mức bằng chứng | Findings | Lượt hỏng | Bị cắt |
@@ -38,14 +38,21 @@ Khi giám đốc nói "quyết định của CTO" về chia việc, số liệu 
 | `methodologist` | member | research | **74** (B) | 78 | n/a | 81 | n/a | 100 | 58 | 70 | high (n=9) | 3 | 0/9 | 3/9 |
 | `peer-reviewer` | reviewer | research | **68** (B) | 81 | n/a | 83 | n/a | 95 | 53 | 100 | low (n=2) | 2 | 0/5 | 4/5 |
 | `literature-researcher` | member | research | **77** (B) | 84 | n/a | 81 | n/a | 100 | 61 | 100 | medium (n=7) | 2 | 0/7 | 3/7 |
+| `orchestrator` | router | office | — | — | — | — | — | — | — | — | không có dữ liệu trong 30 ngày; chi phí route (bench): 331/632 lượt CCoding có khâu route, trung vị 9329 token có trọng số = 3,7 % tổng (mục 1b, "Điều phối viên") | — | — | — |
+| `solution-architect` | member | dev | — | — | — | — | — | — | — | — | không có dữ liệu trong 30 ngày | — | — | — |
+| `frontend-dev` | member | dev | — | — | — | — | — | — | — | — | không có dữ liệu trong 30 ngày | — | — | — |
+| `data-engineer` | member | dev | — | — | — | — | — | — | — | — | không có dữ liệu trong 30 ngày | — | — | — |
+| `business-analyst` | member | dev | — | — | — | — | — | — | — | — | không có dữ liệu trong 30 ngày | — | — | — |
+| `ba-presales` | member | dev | — | — | — | — | — | — | — | — | không có dữ liệu trong 30 ngày | — | — | — |
 <!-- END:kpi -->
 
 <!-- BEGIN:kpiNotes -->
 - Nguồn: `bench/vs-claude/results/decisions/kpi-office.json` (`generatedAt` 2026-11-14T09:20:25.268Z); trường `tasksByStatus`: cancelled 1, paused 2, done 6, failed 1 (tổng 10); trường `tasksCounted` = 7. Hai con số lệch nhau, tệp không giải thích (xem mục chỗ fail F-M1).
-- Số dòng agent: 14 (dev 7, research 6, office 1). Điểm phòng: dev 81, office 73, research 76.
+- Số dòng agent có KPI: 14 (dev 7, research 6, office 1). Điểm phòng: dev 81, office 73, research 76.
 - **Lượt hỏng** (cột "Lượt hỏng") = `failedCalls`/`calls` của agent: lượt hỏng do agent, công cụ lỗi, chạm trần, kết luận không đọc được, sản phẩm rỗng theo trường `method` (nhóm Tin cậy); lỗi hạ tầng (`infraFailedCalls`) không tính điểm, chỉ báo. **Đầu ra bị cắt** (cột "Bị cắt") = `truncated`/`calls`: lượt đầu ra chạm giới hạn độ dài. Hai định nghĩa giữ đúng như `kpi-office.json`, không định nghĩa lại. `failedCalls` của mọi agent đều 0 trừ `dev-lead` (1); `infraFailedCalls` = 0 ở cả 14 agent.
 - "n/a" = nhóm không có dữ liệu nên bị bỏ khỏi điểm (theo `method`: nhóm không có dữ liệu bỏ qua; điểm co về 60 theo lượng bằng chứng `evidenceN`).
-- **Điều phối viên không có dòng nào trong `kpi-office.json`** (14 agent: 7 dev, 6 research, `cto`). Chi phí khâu route được đo riêng ở mục 1c.
+- **6 agent không có trong `kpi-office.json`** (điều phối viên `orchestrator`, `solution-architect`, `frontend-dev`, `data-engineer`, `business-analyst`, `ba-presales`): dòng ghi "không có dữ liệu trong 30 ngày", ô điểm là "—" (không cho điểm, không phải 0). Roster `agents/` có 20 agent = 14 có KPI + 6 không có.
+- **Điều phối viên — chi phí khâu route (thay cho KPI).** Nguồn: `byPhase.route` trong `bench/vs-claude/results/*/runs.jsonl` (trừ `e7-cto`, `selftest`), chỉ lượt CCoding `done` có `byPhase` (bỏ arm A*). Cách tính: với mỗi lượt có `byPhase.route`, chi phí = token có trọng số của khâu route; tỉ trọng = route ÷ tổng `byPhase` của lượt; báo trung vị. Không chạy benchmark mới; số cụ thể ở mục 1b (dòng "Điều phối viên") và khóa `brief22.route.*`.
 <!-- END:kpiNotes -->
 
 Đọc điểm: điểm hiển thị đã co về 60 theo lượng bằng chứng; agent mức bằng chứng `low` (`devops`, `security`, `tech-writer`, `peer-reviewer`) chỉ có 1–2 mục để chấm, nên thứ hạng giữa các agent không đáng tin ở khoảng cách vài điểm. Không có agent nào có `Lượt hỏng` > 0 ngoài `dev-lead`; cột đáng chú ý là `Bị cắt` và nhóm Tin cậy (`qa-tester` 39, `peer-reviewer` 53, `methodologist` 58). **[Mô tả]**
@@ -123,7 +130,7 @@ Quy ước phân loại: **sửa được trong mã/lời nhắc** · **cần đ
 <!-- BEGIN:fails -->
 | Mã | Agent / thành phần | Chỗ fail | Bằng chứng | Tần suất | Phân loại | Trạng thái / commit |
 |---|---|---|---|---|---|---|
-| F-A1 | `backend-dev`, `senior-swe`, `qa-tester`, `security`, `data-scientist`, `academic-writer`, `research-lead`, `methodologist`, `peer-reviewer`, `literature-researcher` | Đầu ra chạm giới hạn độ dài (KPI `truncated`) | `kpi-office.json` → agents[].truncated: backend-dev 2/13, senior-swe 2/10, qa-tester 4/9, security 1/2, data-scientist 3/13, academic-writer 3/5, research-lead 2/14, methodologist 3/9, peer-reviewer 4/5, literature-researcher 3/7; cấu hình vòng công cụ `ccoding.config.json:35`, `src/config.ts:379`; ngưỡng cảnh báo `src/kpi.ts:1047` | 10/14 agent; 27/112 lượt | sửa được trong mã/lời nhắc | Chưa có commit sửa (chưa tìm thấy trong `git log`) |
+| F-A1 | `backend-dev`, `senior-swe`, `qa-tester`, `security`, `data-scientist`, `academic-writer`, `research-lead`, `methodologist`, `peer-reviewer`, `literature-researcher` | Đầu ra chạm giới hạn độ dài (KPI `truncated`) | `kpi-office.json` → agents[].truncated: backend-dev 2/13, senior-swe 2/10, qa-tester 4/9, security 1/2, data-scientist 3/13, academic-writer 3/5, research-lead 2/14, methodologist 3/9, peer-reviewer 4/5, literature-researcher 3/7; cấu hình vòng công cụ `ccoding.config.json:35`, `src/config.ts:379` (`toolTurns`); ngưỡng cảnh báo `src/kpi.ts:1128` (`f.push`) | 10/14 agent; 27/112 lượt | sửa được trong mã/lời nhắc | Chưa có commit sửa (chưa tìm thấy trong `git log`) |
 | F-A2 | `backend-dev`, `senior-swe`, `dev-lead`, `data-scientist`, `academic-writer`, `research-lead`, `methodologist`, `literature-researcher` | Nhiệm vụ không được CTO nghiệm thu đầy đủ (KPI `acceptance-fail`); gồm cả lỗi của đề bài/nhiệm vụ, không tách được phần do agent | `kpi-office.json` → outcome.criteriaFailed/criteria: dev-lead 2/24, research-lead 4/26, data-scientist 4/26 | 8 agent (`backend-dev`, `senior-swe`, `dev-lead`, `data-scientist`, `academic-writer`, `research-lead`, `methodologist`, `literature-researcher`); văn phòng phụ 1/5 lượt phòng được nghiệm thu | cần đo thêm | Cần đo thêm: KPI gán tiêu chí cho mọi người thực thi và trưởng phòng của nhiệm vụ, nên không tách được lỗi từng agent |
 | F-A3 | `security`, `peer-reviewer` | Thao tác công cụ lỗi nhiều (KPI `tools-fail`): `agent.md` thiếu bước dò môi trường/lệnh của repo | `kpi-office.json` → findings: security, peer-reviewer (22–25 % thao tác lỗi); `src/kpi.ts` sinh finding | 2/14 agent | sửa được trong mã/lời nhắc | Chưa có commit sửa |
 | F-A4 | `data-scientist` | Đọc/tìm mã bằng lệnh shell (cat/grep/sed) thay vì công cụ tệp (KPI `shell-reads`) | `kpi-office.json` → findings (88 lệnh shell so với 24 lần dùng công cụ tệp) | 1/14 agent | sửa được trong mã/lời nhắc | Chưa có commit sửa |
@@ -132,9 +139,9 @@ Quy ước phân loại: **sửa được trong mã/lời nhắc** · **cần đ
 | F-A7 | `devops` | Tốn token gấp 2,4 lần trung vị phòng mỗi hạng mục (KPI `tokens`) | `kpi-office.json` → devops.scores.efficiency 60; bằng chứng n=2 (thấp) | 1/14 agent; n=2 lượt gọi | cần đo thêm | Cần đo thêm (mẫu 2 lượt) |
 | F-A8 | Reviewer (`peer-reviewer`, `qa-tester`) | Review chạm trần vòng công cụ, không ra kết luận (BRIEF-D16: reviewer chạm trần lượt, CTO chưa nghiệm thu) | Ca 14/11 [Mô tả]; `ccoding.config.json:35` review: 10 vòng; KPI `peer-reviewer` bị cắt 4/5, `qa-tester` 4/9; `qa-tester` reviewUnparsed 1; E7: R2 (Opus, trần 6 lượt) 13/128 lượt không đọc được (`e7-cto/report.md` mục 5) | 1/3 ca 14/11; 2/2 agent reviewer có đầu ra bị cắt | sửa được trong mã/lời nhắc | Đang sửa/giao Phòng Dev (gói D16); chưa có commit mã sửa ngưỡng review trong `git log` |
 | F-A9 | CTO (nghiệm thu) | E7: chặn nhầm sản phẩm đúng ở mức cao dù recall cao | `e7-cto/report.md` mục 2: R1 chặn nhầm 27/64 = 42,2 % [29,9; 55,2]; R3 30/64 = 46,9 % [34,3; 59,8]; R2 (Opus) 4/64 = 6,3 % [1,7; 15,2] nhưng 13 lượt không đọc được | quan sát trên 64 mục đúng, 1 đợt | cần đo thêm | Cần đo thêm: R2 chặn nhầm thấp nhưng có 13 lượt không đọc được (trần 6 lượt); chưa có đợt chạy lại với trần cao hơn |
-| F-A10 | CTO (nghiệm thu) + đóng nhiệm vụ | CTO nêu đúng 3/9 tiêu chí chưa đạt nhưng nhiệm vụ vẫn đóng "hoàn thành, cần xem" (BRIEF-20) | Ca 14/11 [Mô tả]; `src/orchestrator.ts:1091` ghi `task.done` kèm `task.attention` thay vì giữ trạng thái chưa xong; văn phòng phụ 4/5 lượt phòng không được nghiệm thu | 1/3 ca 14/11 (BRIEF-20); 4/5 lượt phòng không nghiệm thu | sửa được trong mã/lời nhắc | Đang sửa (gói D17): `4b0437c8` chỉ thêm đề bài `docs/research/BRIEF-D17.md`, chưa có commit mã |
-| F-E1 | Cổng phủ kế hoạch (`planGate`) | Kế hoạch bỏ hạng mục đề bài (K4 peer-reviewer) mà cổng vẫn đạt; cổng không kiểm "vai bắt buộc" | Ca BRIEF-20 [Mô tả]; `src/plan-gate.ts:123` (checkPlanCoverage), `:165` (planGate); đo trên văn phòng phụ: độ phủ hạng mục 12/15, độ phủ vai 3/7; cổng chặn 0 lượt | 1/3 ca 14/11; độ phủ vai 3/7 trên 5 lượt | sửa được trong mã/lời nhắc | Đang sửa (gói D17): `4b0437c8` là tệp đề bài, chưa có commit mã |
-| F-E2 | Cổng chất lượng | Bỏ review khi lệnh kiểm tra xanh và diff không chạm vùng bảo mật, kể cả khi đề bài đòi review | `src/orchestrator.ts:1571`, `:1878`, `:1894` (câu "không thuộc diện bắt buộc review"); 2/5 lượt phòng bỏ review trên văn phòng phụ | 1/3 ca 14/11 (BRIEF-20); 2/5 lượt phòng | sửa được trong mã/lời nhắc | Đang sửa (gói D17): `4b0437c8` |
+| F-A10 | CTO (nghiệm thu) + đóng nhiệm vụ | CTO nêu đúng 3/9 tiêu chí chưa đạt nhưng nhiệm vụ vẫn đóng "hoàn thành, cần xem" (BRIEF-20) | Ca 14/11 [Mô tả]; `src/orchestrator.ts:1114` (`logs.write`) ghi `task.done` kèm `task.attention` thay vì giữ trạng thái chưa xong; văn phòng phụ 4/5 lượt phòng không được nghiệm thu | 1/3 ca 14/11 (BRIEF-20); 4/5 lượt phòng không nghiệm thu | sửa được trong mã/lời nhắc | Đang sửa (gói D17): `4b0437c8` chỉ thêm đề bài `docs/research/BRIEF-D17.md`, chưa có commit mã |
+| F-E1 | Cổng phủ kế hoạch (`planGate`) | Kế hoạch bỏ hạng mục đề bài (K4 peer-reviewer) mà cổng vẫn đạt; cổng không kiểm "vai bắt buộc" | Ca BRIEF-20 [Mô tả]; `src/plan-gate.ts:130` (`checkPlanCoverage`), `:165` (planGate); đo trên văn phòng phụ: độ phủ hạng mục 12/15, độ phủ vai 3/7; cổng chặn 0 lượt | 1/3 ca 14/11; độ phủ vai 3/7 trên 5 lượt | sửa được trong mã/lời nhắc | Đang sửa (gói D17): `4b0437c8` là tệp đề bài, chưa có commit mã |
+| F-E2 | Cổng chất lượng | Bỏ review khi lệnh kiểm tra xanh và diff không chạm vùng bảo mật, kể cả khi đề bài đòi review | `src/orchestrator.ts:1669` (`summary`), `:1878`, `:1894` (câu "không thuộc diện bắt buộc review"); 2/5 lượt phòng bỏ review trên văn phòng phụ | 1/3 ca 14/11 (BRIEF-20); 2/5 lượt phòng | sửa được trong mã/lời nhắc | Đang sửa (gói D17): `4b0437c8` |
 | F-E3 | Bộ kiểm lệnh (hook, `guardDecision`) | Một đường chạy lệnh chưa nối rule mới (BRIEF-D16) | Ca 14/11 [Mô tả]; rule `outside-root-write` thêm ở `ce8f217b`/`de4b78fc` | 1/3 ca 14/11 | sửa được trong mã/lời nhắc | Đang sửa (gói D16b); rule mới đã vào ở `de4b78fc` |
 | F-E4 | Bộ kiểm lệnh — năng lực chặn | Tầng `full` chặn ít lệnh nguy hiểm (RedCode-Exec Bash): lọt phần còn lại | `axis2-guard/results.json`: full 30/82 = 36,6 % [26,2; 48,0]; lọt 52; git-read 82/82 = 100,0 % [95,6; 100,0] nhờ vai chỉ-đọc từ chối mọi lệnh ghi | 52/82 ca lọt ở tầng full; 4 nhóm kỹ thuật | ngoài tầm (giám đốc/hạ tầng) | Ngoài tầm: báo cáo trục 2 kết luận cần lớp khác (sandbox); chặn nhầm chưa đo (chờ giám đốc chỉ định hai người gán nhãn) |
 | F-E5 | Cổng `npm test` (G-3) | Lỗi cài bằng máy lọt cổng | `g-mutation/report.md`: recall 1903/2097 = 90,7 %; lọt 194/2097 | 194/2097 lỗi lọt (9,3 %) | ngoài tầm (giám đốc/hạ tầng) | Ngoài tầm cổng không dùng LLM (cần test mạnh hơn trong dự án đích); CTO bắt lại 98,4 % số lọt nhưng chặn nhầm 42,2 % (F-A9) |
@@ -248,6 +255,7 @@ K5 chép đúng khóa và giá trị dưới đây; phần bench/hiệu quả �
 | `brief22.kpi.academic-writer.total` | 74 |
 | `brief22.kpi.academic-writer.truncated` | 3 |
 | `brief22.kpi.agents` | 14 |
+| `brief22.kpi.agentsNoData` | 6 |
 | `brief22.kpi.agentsWithTruncated` | 10 |
 | `brief22.kpi.backend-dev.calls` | 13 |
 | `brief22.kpi.backend-dev.compliance` | 100 |
@@ -384,6 +392,7 @@ K5 chép đúng khóa và giá trị dưới đây; phần bench/hiệu quả �
 | `brief22.kpi.research-lead.reliability` | 70 |
 | `brief22.kpi.research-lead.total` | 77 |
 | `brief22.kpi.research-lead.truncated` | 2 |
+| `brief22.kpi.rosterAgents` | 20 |
 | `brief22.kpi.scoreMax` | 88 |
 | `brief22.kpi.scoreMedian` | 75.5 |
 | `brief22.kpi.scoreMin` | 65 |

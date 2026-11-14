@@ -33,7 +33,7 @@ Phủ nhánh: 1 = S1, S2, S3; 2 = S1, S3, S4; 3 = S2, S4, S5; 4 = S6, S7; 5 = S8
 
 ### Nhánh 1 — Một agent hay nhiều agent
 **Phát hiện.**
-- S1 (§4.2, Hình 2): 180 cấu hình, 4 bộ benchmark, 3 họ LLM. Thay đổi so với agent đơn: Finance-Agent (tách song song được) tốt nhất **+80,9%** (Centralized); PlanCraft (tuần tự, phụ thuộc trạng thái) "every multi-agent variant … degraded performance by 39–70%"; trung bình toàn bộ **−3,5%** (CI 95% −18,6% đến +25,7%).
+- S1 (§4.2, Hình 2): 180 cấu hình, 4 bộ benchmark, 3 họ LLM. Thay đổi so với agent đơn: Finance-Agent (tách song song được) tốt nhất **+80,9%** (Centralized; bản v1 đã đọc; trang arXiv v3 ghi +80,8 %, đối chiếu lại 14/11/2026); PlanCraft (tuần tự, phụ thuộc trạng thái) "every multi-agent variant … degraded performance by 39–70%"; trung bình toàn bộ **−3,5%** (CI 95% −18,6% đến +25,7%).
 - S1 (§4.3, bảng 4): khi baseline agent đơn vượt khoảng **45%**, phối hợp cho lợi suất giảm hoặc âm (β = −0,408, p < 0,001). Mô hình dự đoán chọn đúng kiến trúc cho **87%** cấu hình giữ lại (ngẫu nhiên 20%, chỉ-theo-năng-lực 54%).
 - S1 (bảng 5): khuếch đại lỗi: đơn 1,0×; Independent 17,2×; Decentralized 7,8×; Hybrid 5,1×; Centralized 4,4×. Chi phí: thành công trên 1K token: đơn 67,7 so với Centralized 21,5; chi phí thêm Centralized 285%, Hybrid 515%. Tác giả gán chênh lệch cho khâu kiểm tra của bộ điều phối.
 - S2: lead Opus 4 + subagent Sonnet 4 hơn Opus 4 đơn **90,2%** trên eval nghiên cứu nội bộ của hãng; dùng khoảng **15×** token so với chat (agent đơn ~4×); trên BrowseComp, token riêng giải thích **80%** phương sai. Hãng nêu rõ không hợp: ngữ cảnh chung, nhiều phụ thuộc, "most coding tasks".

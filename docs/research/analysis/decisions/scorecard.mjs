@@ -3,7 +3,7 @@
 // Cách dùng:
 //   node docs/research/analysis/decisions/scorecard.mjs            in mọi bảng ra stdout
 //   node docs/research/analysis/decisions/scorecard.mjs --write    ghi lại các khối bảng trong scorecard.md và effectiveness.md
-//   node docs/research/analysis/decisions/scorecard.mjs --check    so khối bảng trong 2 tệp md với đầu ra; exit 1 nếu lệch hoặc thiếu agent của kpi-office.json
+//   node docs/research/analysis/decisions/scorecard.mjs --check    so khối bảng trong 2 tệp md với đầu ra; exit 1 nếu lệch hoặc không đủ 20 dòng agent
 // Khối bảng trong md nằm giữa <!-- BEGIN:tên --> và <!-- END:tên -->; phần chữ ngoài khối do người viết, không kiểm.
 // Dữ liệu cấu trúc kế hoạch dùng lại decomp-metrics.mjs (đã tính ra decomp-agg.json); script này chỉ đọc kết quả đó.
 import fs from 'node:fs';
@@ -78,6 +78,13 @@ const GROUPS = ['quality', 'outcome', 'honesty', 'efficiency', 'reliability', 'c
 const GROUP_VN = { quality: 'Chất lượng', outcome: 'Kết quả thật', honesty: 'Trung thực', efficiency: 'Hiệu quả', reliability: 'Tin cậy', compliance: 'Tuân thủ' };
 
 // ───────────── (1a) KPI v2 từng agent ─────────────
+let kpiRows;
+// 6 agent của roster (agents/) không có trong kpi-office.json: ghi "không có dữ liệu trong 30 ngày", ô điểm là "—" (không phải 0).
+const NODATA = [
+  ['orchestrator', 'router', 'office'], ['solution-architect', 'member', 'dev'], ['frontend-dev', 'member', 'dev'],
+  ['data-engineer', 'member', 'dev'], ['business-analyst', 'member', 'dev'], ['ba-presales', 'member', 'dev'],
+];
+const ROSTER_N = 20;
 {
   const rows = AG.map((a) => [
     `\`${a.agentId}\``, a.role, a.department, `**${a.score}** (${a.grade})`, String(a.scoreRaw),
@@ -85,7 +92,7 @@ const GROUP_VN = { quality: 'Chất lượng', outcome: 'Kết quả thật', ho
     `${a.confidence} (n=${a.evidenceN})`,
     String(a.findings.length), `${a.failedCalls}/${a.calls}`, `${a.truncated}/${a.calls}`,
   ]);
-  blocks.scorecard.kpi = table(['Agent', 'Vai', 'Phòng', 'Điểm (hạng)', 'Thô', ...GROUPS.map((g) => GROUP_VN[g]), 'Mức bằng chứng', 'Findings', 'Lượt hỏng', 'Bị cắt'], rows);
+  kpiRows = rows;
   for (const a of AG) {
     setFact(`kpi.${a.agentId}.total`, a.score);
     setFact(`kpi.${a.agentId}.grade`, a.grade);
@@ -113,10 +120,11 @@ const GROUP_VN = { quality: 'Chất lượng', outcome: 'Kết quả thật', ho
   setFact('kpi.dept.research.tokens', mapDept.research?.tokens); setFact('kpi.dept.dev.tokens', mapDept.dev?.tokens);
   blocks.scorecard.kpiNotes = [
     `- Nguồn: \`bench/vs-claude/results/decisions/kpi-office.json\` (\`generatedAt\` ${kpi.generatedAt}); trường \`tasksByStatus\`: ${Object.entries(kpi.tasksByStatus).map(([k, v]) => `${k} ${v}`).join(', ')} (tổng ${facts['brief22.kpi.tasksByStatusSum']}); trường \`tasksCounted\` = ${kpi.tasksCounted}. Hai con số lệch nhau, tệp không giải thích (xem mục chỗ fail F-M1).`,
-    `- Số dòng agent: ${AG.length} (dev ${AG.filter((a) => a.department === 'dev').length}, research ${AG.filter((a) => a.department === 'research').length}, office ${AG.filter((a) => a.department === 'office').length}). Điểm phòng: ${kpi.departments.map((d) => `${d.id} ${d.score}`).join(', ')}.`,
+    `- Số dòng agent có KPI: ${AG.length} (dev ${AG.filter((a) => a.department === 'dev').length}, research ${AG.filter((a) => a.department === 'research').length}, office ${AG.filter((a) => a.department === 'office').length}). Điểm phòng: ${kpi.departments.map((d) => `${d.id} ${d.score}`).join(', ')}.`,
     `- **Lượt hỏng** (cột "Lượt hỏng") = \`failedCalls\`/\`calls\` của agent: lượt hỏng do agent, công cụ lỗi, chạm trần, kết luận không đọc được, sản phẩm rỗng theo trường \`method\` (nhóm Tin cậy); lỗi hạ tầng (\`infraFailedCalls\`) không tính điểm, chỉ báo. **Đầu ra bị cắt** (cột "Bị cắt") = \`truncated\`/\`calls\`: lượt đầu ra chạm giới hạn độ dài. Hai định nghĩa giữ đúng như \`kpi-office.json\`, không định nghĩa lại. \`failedCalls\` của mọi agent đều 0 trừ \`dev-lead\` (${idOf('dev-lead').failedCalls}); \`infraFailedCalls\` = ${AG.reduce((s, a) => s + a.infraFailedCalls, 0)} ở cả 14 agent.`,
     `- "n/a" = nhóm không có dữ liệu nên bị bỏ khỏi điểm (theo \`method\`: nhóm không có dữ liệu bỏ qua; điểm co về 60 theo lượng bằng chứng \`evidenceN\`).`,
-    `- **Điều phối viên không có dòng nào trong \`kpi-office.json\`** (14 agent: 7 dev, 6 research, \`cto\`). Chi phí khâu route được đo riêng ở mục 1c.`,
+    `- **6 agent không có trong \`kpi-office.json\`** (điều phối viên \`orchestrator\`, \`solution-architect\`, \`frontend-dev\`, \`data-engineer\`, \`business-analyst\`, \`ba-presales\`): dòng ghi "không có dữ liệu trong 30 ngày", ô điểm là "—" (không cho điểm, không phải 0). Roster \`agents/\` có ${AG.length + NODATA.length} agent = ${AG.length} có KPI + ${NODATA.length} không có.`,
+    `- **Điều phối viên — chi phí khâu route (thay cho KPI).** Nguồn: \`byPhase.route\` trong \`bench/vs-claude/results/*/runs.jsonl\` (trừ \`e7-cto\`, \`selftest\`), chỉ lượt CCoding \`done\` có \`byPhase\` (bỏ arm A*). Cách tính: với mỗi lượt có \`byPhase.route\`, chi phí = token có trọng số của khâu route; tỉ trọng = route ÷ tổng \`byPhase\` của lượt; báo trung vị. Không chạy benchmark mới; số cụ thể ở mục 1b (dòng "Điều phối viên") và khóa \`brief22.route.*\`.`,
   ].join('\n');
 }
 
@@ -212,6 +220,16 @@ setFact('route.runsWithRoute', withRoute.length); setFact('route.runsCCoding', c
 setFact('route.tokensMedian', Math.round(median(routeTok))); setFact('route.shareMedian', routeShare.length ? Math.round(median(routeShare) * 1000) / 1000 : null);
 setFact('route.models', Object.entries(routeModels).map(([k, v]) => `${k} ×${v}`).join(', '));
 
+// — dòng KPI đủ 20 agent: 14 có dữ liệu + 6 không có
+{
+  const NO = 'không có dữ liệu trong 30 ngày';
+  const rows = NODATA.map(([id, role, dept]) => [`\`${id}\``, role, dept, '—', '—', ...GROUPS.map(() => '—'),
+    id === 'orchestrator' ? `${NO}; chi phí route (bench): ${withRoute.length}/${ccAll.length} lượt CCoding có khâu route, trung vị ${vn(median(routeTok), 0)} token có trọng số = ${pct(median(routeShare))} tổng (mục 1b, "Điều phối viên")` : NO,
+    '—', '—', '—']);
+  blocks.scorecard.kpi = table(['Agent', 'Vai', 'Phòng', 'Điểm (hạng)', 'Thô', ...GROUPS.map((g) => GROUP_VN[g]), 'Mức bằng chứng', 'Findings', 'Lượt hỏng', 'Bị cắt'], [...kpiRows, ...rows]);
+  setFact('kpi.agentsNoData', NODATA.length); setFact('kpi.rosterAgents', AG.length + NODATA.length);
+}
+
 // — review bị bỏ trong bench
 const fastSingle = ccAll.filter((r) => r.lane);
 const reviewPresent = (rs) => rs.filter((r) => (r.byPhase.review ?? 0) > 0).length;
@@ -271,7 +289,7 @@ const add = (id, part, what, evidence, freq, cls, status) => fails.push([id, par
 
 const truncAgents = kf('truncated');
 add('F-A1', kfList('truncated'), 'Đầu ra chạm giới hạn độ dài (KPI `truncated`)',
-  `\`kpi-office.json\` → agents[].truncated: ${truncAgents.map((a) => `${a.agentId} ${a.truncated}/${a.calls}`).join(', ')}; cấu hình vòng công cụ \`ccoding.config.json:35\`, \`src/config.ts:379\`; ngưỡng cảnh báo \`src/kpi.ts:1047\``,
+  `\`kpi-office.json\` → agents[].truncated: ${truncAgents.map((a) => `${a.agentId} ${a.truncated}/${a.calls}`).join(', ')}; cấu hình vòng công cụ \`ccoding.config.json:35\`, \`src/config.ts:379\` (\`toolTurns\`); ngưỡng cảnh báo \`src/kpi.ts:1128\` (\`f.push\`)`,
   `${truncAgents.length}/${AG.length} agent; ${facts['brief22.kpi.truncatedTotal']}/${facts['brief22.kpi.callsTotal']} lượt`, 'fix', 'Chưa có commit sửa (chưa tìm thấy trong `git log`)');
 add('F-A2', kfList('acceptance-fail'), 'Nhiệm vụ không được CTO nghiệm thu đầy đủ (KPI `acceptance-fail`); gồm cả lỗi của đề bài/nhiệm vụ, không tách được phần do agent',
   `\`kpi-office.json\` → outcome.criteriaFailed/criteria: dev-lead ${idOf('dev-lead').outcome.criteriaFailed}/${idOf('dev-lead').outcome.criteria}, research-lead ${idOf('research-lead').outcome.criteriaFailed}/${idOf('research-lead').outcome.criteria}, data-scientist ${idOf('data-scientist').outcome.criteriaFailed}/${idOf('data-scientist').outcome.criteria}`,
@@ -292,13 +310,13 @@ add('F-A8', 'Reviewer (`peer-reviewer`, `qa-tester`)', 'Review chạm trần vò
 add('F-A9', 'CTO (nghiệm thu)', 'E7: chặn nhầm sản phẩm đúng ở mức cao dù recall cao',
   e7.R1 ? `\`e7-cto/report.md\` mục 2: R1 chặn nhầm ${rate(e7.R1.fb, e7.R1.good)}; R3 ${rate(e7.R3.fb, e7.R3.good)}; R2 (Opus) ${rate(e7.R2.fb, e7.R2.good)} nhưng ${e7.R2.unread} lượt không đọc được` : '—', 'quan sát trên 64 mục đúng, 1 đợt', 'measure', 'Cần đo thêm: R2 chặn nhầm thấp nhưng có 13 lượt không đọc được (trần 6 lượt); chưa có đợt chạy lại với trần cao hơn');
 add('F-A10', 'CTO (nghiệm thu) + đóng nhiệm vụ', 'CTO nêu đúng 3/9 tiêu chí chưa đạt nhưng nhiệm vụ vẫn đóng "hoàn thành, cần xem" (BRIEF-20)',
-  `Ca 14/11 [Mô tả]; \`src/orchestrator.ts:1091\` ghi \`task.done\` kèm \`task.attention\` thay vì giữ trạng thái chưa xong; văn phòng phụ ${frac(agg.office.notAcceptedTasks, agg.office.runs)} lượt phòng không được nghiệm thu`,
+  `Ca 14/11 [Mô tả]; \`src/orchestrator.ts:1114\` (\`logs.write\`) ghi \`task.done\` kèm \`task.attention\` thay vì giữ trạng thái chưa xong; văn phòng phụ ${frac(agg.office.notAcceptedTasks, agg.office.runs)} lượt phòng không được nghiệm thu`,
   '1/3 ca 14/11 (BRIEF-20); 4/5 lượt phòng không nghiệm thu', 'fix', `Đang sửa (gói D17): ${git('4b0437c8')} chỉ thêm đề bài \`docs/research/BRIEF-D17.md\`, chưa có commit mã`);
 add('F-E1', 'Cổng phủ kế hoạch (`planGate`)', 'Kế hoạch bỏ hạng mục đề bài (K4 peer-reviewer) mà cổng vẫn đạt; cổng không kiểm "vai bắt buộc"',
-  `Ca BRIEF-20 [Mô tả]; \`src/plan-gate.ts:123\` (checkPlanCoverage), \`:165\` (planGate); đo trên văn phòng phụ: độ phủ hạng mục ${facts['brief22.decomp.office.coverageBrief']}, độ phủ vai ${facts['brief22.decomp.office.coverageRole']}; cổng chặn ${agg.office.planGateBlocked} lượt`,
+  `Ca BRIEF-20 [Mô tả]; \`src/plan-gate.ts:130\` (\`checkPlanCoverage\`), \`:165\` (planGate); đo trên văn phòng phụ: độ phủ hạng mục ${facts['brief22.decomp.office.coverageBrief']}, độ phủ vai ${facts['brief22.decomp.office.coverageRole']}; cổng chặn ${agg.office.planGateBlocked} lượt`,
   `1/3 ca 14/11; độ phủ vai ${facts['brief22.decomp.office.coverageRole']} trên 5 lượt`, 'fix', `Đang sửa (gói D17): ${git('4b0437c8')} là tệp đề bài, chưa có commit mã`);
 add('F-E2', 'Cổng chất lượng', 'Bỏ review khi lệnh kiểm tra xanh và diff không chạm vùng bảo mật, kể cả khi đề bài đòi review',
-  `\`src/orchestrator.ts:1571\`, \`:1878\`, \`:1894\` (câu "không thuộc diện bắt buộc review"); ${frac(agg.office.reviewSkipped, agg.office.runs)} lượt phòng bỏ review trên văn phòng phụ`, `1/3 ca 14/11 (BRIEF-20); ${frac(agg.office.reviewSkipped, agg.office.runs)} lượt phòng`, 'fix', `Đang sửa (gói D17): ${git('4b0437c8')}`);
+  `\`src/orchestrator.ts:1669\` (\`summary\`), \`:1878\`, \`:1894\` (câu "không thuộc diện bắt buộc review"); ${frac(agg.office.reviewSkipped, agg.office.runs)} lượt phòng bỏ review trên văn phòng phụ`, `1/3 ca 14/11 (BRIEF-20); ${frac(agg.office.reviewSkipped, agg.office.runs)} lượt phòng`, 'fix', `Đang sửa (gói D17): ${git('4b0437c8')}`);
 add('F-E3', 'Bộ kiểm lệnh (hook, `guardDecision`)', 'Một đường chạy lệnh chưa nối rule mới (BRIEF-D16)', 'Ca 14/11 [Mô tả]; rule `outside-root-write` thêm ở `ce8f217b`/`de4b78fc`', '1/3 ca 14/11', 'fix', `Đang sửa (gói D16b); rule mới đã vào ở ${git('de4b78fc')}`);
 add('F-E4', 'Bộ kiểm lệnh — năng lực chặn', 'Tầng `full` chặn ít lệnh nguy hiểm (RedCode-Exec Bash): lọt phần còn lại',
   `\`axis2-guard/results.json\`: full ${rate(ax.full.x, ax.full.n)}; lọt ${ax.full.n - ax.full.x}; git-read ${rate(ax.gitRead.x, ax.gitRead.n)} nhờ vai chỉ-đọc từ chối mọi lệnh ghi`,
@@ -519,10 +537,19 @@ for (const doc of ['scorecard', 'effectiveness']) {
   }
   if (mode === 'write') { fs.writeFileSync(f, text); console.log(`Đã cập nhật ${path.relative(ROOT, f)}`); }
 }
+// đủ 20 dòng agent trong khối kpi của scorecard.md (đếm dòng bảng có id agent ở ô đầu)
+const rosterIds = [...AG.map((a) => a.agentId), ...NODATA.map((n) => n[0])];
+let rowsFound = 0;
+if (fs.existsSync(MD.scorecard)) {
+  const mk = reBlock('kpi').exec(readText(MD.scorecard));
+  const cells = mk ? mk[1].split(String.fromCharCode(10)).map((l) => /^\| `([^`]+)` \|/.exec(l)?.[1]).filter(Boolean) : [];
+  for (const id of rosterIds) if (cells.includes(id)) rowsFound++;
+  if (mode === 'check' && rowsFound !== ROSTER_N) { console.error(`scorecard.md: chỉ ${rowsFound}/${ROSTER_N} dòng agent (thiếu: ${rosterIds.filter((id) => !cells.includes(id)).join(', ')})`); bad++; }
+}
 if (missing.length) { console.error(`THIẾU agent trong bảng điểm: ${missing.join(', ')}`); bad++; }
 if (sourcesMissing.length) { console.error(`Nguồn không đọc được: ${sourcesMissing.join('; ')}`); bad++; }
 if (mode === 'check') {
   if (bad) { console.error(`Lỗi: ${bad} vấn đề`); process.exit(1); }
-  console.log(`OK: đủ ${AG.length}/${AG.length} agent của kpi-office.json; ${Object.keys(blocks.scorecard).length + Object.keys(blocks.effectiveness).length} khối bảng trong scorecard.md và effectiveness.md trùng đầu ra script; ${factKeys.length} khóa brief22.*`);
+  console.log(`OK: ${rowsFound}/${ROSTER_N} dòng agent trong scorecard.md (${AG.length} có KPI + ${NODATA.length} không có dữ liệu trong 30 ngày); ${Object.keys(blocks.scorecard).length + Object.keys(blocks.effectiveness).length} khối bảng trong scorecard.md và effectiveness.md trùng đầu ra script; ${factKeys.length} khóa brief22.*`);
 }
 if (bad) process.exit(1);

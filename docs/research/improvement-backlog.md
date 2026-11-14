@@ -10,7 +10,35 @@
 > Cập nhật R16 (T-20261104-123641-21b, S1, @data-scientist, 4/11/2026): đóng gói 10 (N-1 của CTO). B-12, B-16: E2 xong, E4 đang chạy, N cố định. B-14: E1 xong, đổi bộ công cụ là nguồn ghi cache; bước 2 đã đăng ký, 96 lượt, chờ giám đốc duyệt (giới hạn: `preregistration.md` §9 V4-3e-K3). B-15: E3 cho thấy không đo được với B0/B1 vì B0 không có pha `discuss` (l1-modules: `chooseLane` quy tắc 3 chọn làn nhanh; l2-chain: làn đơn nâng lên làn nhanh; hai làn này không họp); chờ §9 V4-3e-E5′ (đã đăng ký; chờ D12 và giám đốc duyệt). B-19: khóa lại `84ded09`. Chỉ dựa vào lane, byPhase, token, thời gian; không mở điểm E3/E4.
 > Cập nhật R17 (T-20261104-135425-669, S4, @research-lead, 4/11/2026; BRIEF-18 K4): **B-14:** giám đốc đã duyệt bước 2 (96 lượt) lúc 12:50 ngày 4/11 (`results/local-3e/RUNLOG.md:23`, `9e3c410`), nên trạng thái chuyển sang `cần đo`. Tiền điều kiện (6) đạt: script `4e546f4`, dòng hash ở `results/b14-step2/RUNLOG.md:2`, commit `c6fd35f`. Tiền điều kiện (7) chưa đạt, chờ D13 K6: thiếu 3 ca (kết luận K3(b), `f211bc7`). **B-15:** E5′ đã đăng ký (§9 V4-3e-E5′, `f36a1d9`) và đã duyệt; sổ chạy `results/b15f-main/RUNLOG.md`, chạy sau E6. Thêm ghi chú đo lường về arm null trên `t2-orders`, `t4-perf` (§0), áp cho lần đo sau, không đổi đợt 3e. Thứ tự còn lại của đợt 3e: `run-plan.md` §5.4.4. Không mở điểm E3, E4, E6.
 > Cập nhật R18 (T-20261114-133920-30b, S4, @research-lead, 14/11/2026; BRIEF-20 K3): thêm **§0.1** (kết quả mới của B-14 bước 2, E4, E5′, E7, E8, trục 2 phần (b); thứ tự việc tiếp theo theo mức bằng chứng). Cột "Trạng thái" của §0 có thêm giá trị `đã đo` (đợt đã có `report.md`; không có nghĩa là đã đổi mặc định); đổi ô trạng thái của B-12, B-14, B-15, B-16 và tiêu đề §5 của B-14. Mọi số ở §0.1 chép từ `report.md`/`RUNLOG.md` của từng đợt, không tính lại; mã commit đọc bằng `git log`. Không sửa `src/`, `bench/`.
+> Cập nhật R19 (T-20261114-162216-35d, K6, @research-lead, 14/11/2026; BRIEF-22): thêm **§0.2** và **B-20…B-49** (§5) từ danh sách lỗi sửa được (FX1–FX21) và thí nghiệm (TN1–TN9) của `analysis/decisions/report.md` mục 6. Mỗi mục ghi bằng chứng, chỗ sửa, tiêu chí xong đo được, test hoặc chỉ số kiểm lại, và trạng thái. Trạng thái đọc bằng `git log` ngày 14/11/2026; mã tham chiếu commit `b146b87c` (`analysis/decisions/logic-map.md`). Hạng 1 và 2 của §0.1 (b) đã có commit sửa (`e2b6573c`, `a11abf45`); hạng 7 chuyển thành B-42.
 > Nguyên tắc của giám đốc: mọi nâng cấp phải dựa vào nghiên cứu; mỗi thay đổi của Phòng Dev ghi mã `B-xx`; benchtest chạy theo `preregistration.md` để kiểm lại.
+
+> Cập nhật R20 (T-20261114-214506-fe1, gói 16b, 14/11/2026; đóng M-r2 của phản biện): cột "Trạng thái" của §0.2 và các hàng B-20…B-49 bên dưới **viết tại thời điểm R19 và chưa sửa** (chỉ thêm dòng). Trạng thái tại commit mốc `ccc76cc0` (đối chiếu `git log b146b87c..ccc76cc0`; "đã có mã" = có commit sửa, chưa phải kết quả đo lại — việc chấm lại là B-49). Trạng thái dưới đây thay cho cột cũ:
+>
+> | B | Trạng thái tại `ccc76cc0` | Commit |
+> |---|---|---|
+> | B-20 | đã có mã (rule `brief-item`) | `39bd9fe3`, `39cf2f7c` |
+> | B-21 | đã sửa hồ sơ (ngoại lệ reviewer ở `research-lead.md:58` (`Ngoại lệ`)) | `677fe521` |
+> | B-22 | đã có mã | `179da24b` |
+> | B-23 | đã có mã (review bị bỏ có `run.review` kèm dấu vết) | `8989e920` |
+> | B-24 | một phần: `after` chờ khi nhiệm vụ trước chưa nghiệm thu; `status` vẫn `done` kèm `attention`; vòng bổ sung sau nghiệm thu | `8989e920`, `6ee72e43` |
+> | B-25 | đã có mã | `2579e012`, `8989e920` |
+> | B-26 | một phần: `run_command` nối `outsideWriteDecision`; `runCheckCommand`, `cli-agents.ts` chưa kiểm lại | `78ad5179`, `ae953e07` |
+> | B-27 | đã có mã chẩn đoán/sửa cờ "đầu ra bị cắt"; chưa đo lại | `b6c08171` |
+> | B-28 | đã sửa hồ sơ `security`, `peer-reviewer` | `93b9b252` |
+> | B-29 | đã sửa hồ sơ `data-scientist` | `93b9b252` |
+> | B-30 | đã sửa: miễn `no-sources` trong `kpi.ts`, bổ sung hồ sơ | `b6c08171`, `93b9b252` |
+> | B-31 | đã sửa hồ sơ trưởng phòng (cỡ gói); test kiểm ước lượng ở bước plan | `677fe521`, `93b9b252` |
+> | B-32 | đã có mã (`criticalPathEstimate`, `parallelism`) | `53fb9bd3` |
+> | B-33 | đã sửa: lời nhắc lấy số hạng mục từ `MAX_SUBTASKS` | `677fe521` |
+> | B-34 | một phần: người nhận ngoài roster được ghi lại; `?? lead` còn | `39cf2f7c` |
+> | B-35 | đã có mã (`finalTemplateGate`) | `8989e920` |
+> | B-36 | đã có mã (KPI nhất quán, dòng điều phối viên) | `53fb9bd3` |
+> | B-37 | đã sửa hồ sơ (model theo làn) | `677fe521` |
+> | B-38 | **đã làm** (`logic-map-check.mjs`, 0 lệch tại mốc) | `0d70aa06`, `cd25b769` |
+> | B-39 | **đã làm** (mục đường dẫn máy trong `consistency-check.mjs`) | `0d70aa06` |
+> | B-40 | một phần: chữ ký HMAC; WORM còn là hạ tầng, cần giám đốc | `e2b72b23` |
+> | B-41…B-49 | không đổi (thí nghiệm/đo chưa chạy) | — |
 > Số từ `token-analysis.md` dẫn theo **mã bảng** (T-0, T-d…), không chép lại bản S1 đang làm mới.
 > **Mã giả thuyết (từ R8):** hệ chính là **H1–H10 của bộ đo giám đốc** (`bench/vs-claude/analyze.mjs:61-115`), viết `H_i` trong tệp này. Giả thuyết H1–H9 của `preregistration.md` bản 1 đổi mã theo quy ước H_i → ĐK-P_i (bản 2, hạng mục S4; cùng quy ước với `preregistration.md` §3.3, thống nhất ở v2.1). **Trùng mã:** P1–P4 ở cột "Gộp ứng viên", B-02, B-03, B-09 là **bản vá prompt** trong `self-improvement/prompt-patches/`; vì vậy trong tệp này giả thuyết bản 1 ghi là **ĐK-P_i** (= P_i của `preregistration.md` bản 2). Đề nghị S4 ghi chú trùng mã này trong bảng ánh xạ P↔H.
 > Phạm vi: chỉ viết tài liệu. Không sửa `src/`. Các số "kỳ vọng" là **giả thuyết cần kiểm**, không phải kết quả.
@@ -20,7 +48,7 @@
 | Hạng | Mã | Nâng cấp | Gộp ứng viên | Hiệu quả (1–5) | Công sức (1–5) | Ưu tiên = H/E | Giám đốc duyệt lên main | Trạng thái (3/11/2026) | Ghi chú trạng thái |
 |---:|---|---|---|---:|---:|---:|---|---|---|
 | 1 | **B-01** | Làn đơn cho việc nhỏ | "làn đơn" | 5 | 3 | 1,7 | Có | đã làm (`e2a029c`, `994d9c8`) | Bộ chọn làn `e2a029c`, luồng làn đơn `994d9c8`, gộp `630e2b7`. Đo xác nhận đã chạy: TOST bác giả thuyết B-01 (`9b57f5a`); làm gọn tiếp ở B-11 |
-| 2 | **B-02** | Cổng chất lượng (kiểm → sửa → mẫu đầu ra → reviewer có điều kiện) | lệnh đỏ vào vòng sửa (đề bài đòi xanh ⇒ bắt buộc, R8); P3; D-02; G5 (loại) | 4 | 3 | 1,3 | Có | đã làm (`28d041d`) | Gộp `6b84363`; mọi làn `b127308`. `gate.maxFixRounds: 2` (`src/config.ts:295`); P3 `src/prompts.ts:543`; D-02 `src/orchestrator.ts:1981`. Recall của cổng đo qua B-12 |
+| 2 | **B-02** | Cổng chất lượng (kiểm → sửa → mẫu đầu ra → reviewer có điều kiện) | lệnh đỏ vào vòng sửa (đề bài đòi xanh ⇒ bắt buộc, R8); P3; D-02; G5 (loại) | 4 | 3 | 1,3 | Có | đã làm (`28d041d`) | Gộp `6b84363`; mọi làn `b127308`. `gate.maxFixRounds: 2` (`src/config.ts:372` (`gate`)); P3 `src/prompts.ts:557` (`reviewer nhận diff`); D-02 `src/orchestrator.ts:2177` (`D-02: duyệt mà không có kiểm chứng máy`). Recall của cổng đo qua B-12 |
 | 3 | **B-10** | Cổng phủ kế hoạch (phần việc không ai nhận ⇒ chặn; kế hoạch đọc dở ⇒ không chạy) | ca t5 C9 (R8) | 4 | 2 | 2,0 | Có | đã làm (`08a5f6f`) | Gộp `fd35de9`. Ghi quyết định cổng vào `runs.jsonl` thuộc B-12 (D9) |
 | 4 | B-03 | Nhật ký sự cố khi sửa | P4 | 2 | 1 | 2,0 | Có | D9 | `BRIEF-D9.md` mục 3 |
 | 5 | B-04 | Bộ phân tích lệnh shell của hook (nháy, lệnh đọc) | G1, G2 | 3 | 2 | 1,5 | Có (biên bảo mật) | đã làm (`7760ca7`) | Gộp `21502be` |
@@ -79,6 +107,63 @@ Mức bằng chứng (thang dùng cho bảng này, do trưởng phòng đặt): 
 
 ---
 
+### 0.2 Cập nhật BRIEF-22 (R19, 14/11/2026): lỗi sửa được và thí nghiệm từ bảng điểm từng agent
+
+Nguồn: `analysis/decisions/report.md` mục 6. Số lấy từ `scorecard.md` và `effectiveness.md`, do `scorecard.mjs` sinh. Vị trí mã theo `logic-map.md` ở commit `ccc76cc0`.
+
+**(a) Trạng thái các hạng của §0.1 (b) sau ngày 14/11**
+
+| Hạng §0.1 (b) | Trạng thái mới | Căn cứ |
+|---:|---|---|
+| 1 (BRIEF-D15 K1) | đã làm (`e2b6573c`) | `git log` 14/11/2026 |
+| 2 (`authSource`) | đã làm cho runtime `claude-cli` (`a11abf45`, `39b9f166`) | `git log` 14/11/2026 |
+| 7 (đo lại CTO Opus) | chuyển thành **B-42** | `report.md` TN2 |
+| 8 (chia việc theo khả năng chia) | gộp vào **B-41** (E9) | `preregistration.md` §9.x |
+
+**(b) Mục mới B-20…B-49**
+
+| Mã | Việc | Loại | Trạng thái 14/11/2026 | Trùng gói Dev | Report |
+|---|---|---|---|---|---|
+| B-20 | Cổng phủ kế hoạch kiểm hạng mục và vai bắt buộc của đề bài | sửa mã | đang sửa | D17 K1, D16b K4 | FX1 |
+| B-21 | Lời nhắc `research-lead.md:58` (`@peer-reviewer`) có ngoại lệ khi đề bài giao hạng mục reviewer | sửa `agent.md` | chưa giao | — | FX2 |
+| B-22 | Đề bài đòi review thì không bỏ review | sửa mã | đang sửa | D17 K2 | FX3 |
+| B-23 | Review bị bỏ phải để dấu vết và attention | sửa mã | chưa giao | — | FX4 |
+| B-24 | CTO chưa đạt: vòng bổ sung; nhiệm vụ `after` không tự chạy | sửa mã + lời nhắc | đang sửa một phần | D17 K3 (phần a) | FX5 |
+| B-25 | Reviewer chạm trần lượt phải ra kết luận | sửa mã | đang sửa | D16b K2 | FX6 |
+| B-26 | `outside-root-write` trên mọi đường chạy lệnh | sửa mã | đang sửa một phần | D16b K1, K3 (`run_command`) | FX7 |
+| B-27 | Đầu ra bị cắt 27/112 lượt: chẩn đoán rồi sửa | chẩn đoán + cấu hình | chưa giao | — | FX8 |
+| B-28 | Thao tác công cụ lỗi (`security`, `peer-reviewer`) | sửa `agent.md` | chưa giao | — | FX9 |
+| B-29 | `data-scientist` đọc tệp bằng shell | sửa `agent.md` | chưa giao | — | FX10 |
+| B-30 | KPI `no-sources` (`academic-writer`, `methodologist`) | `agent.md` hoặc `kpi.ts` | chưa giao | — | FX11 |
+| B-31 | Gói Nghiên cứu ×2,2 ngân sách: chặn ở bước plan | lời nhắc + mã | chưa giao | — | FX12 |
+| B-32 | Ước lượng có thời gian đường găng | sửa mã | chưa giao | — | FX13 |
+| B-33 | Lời nhắc bóc tách nhất quán; "1–7" theo `MAX_SUBTASKS` | lời nhắc (lỗi vặt) | chưa giao | — | FX14 |
+| B-34 | Giao người lạ không rơi về trưởng phòng | sửa mã | chưa giao | — | FX15 |
+| B-35 | FINAL của trưởng phòng qua cổng mẫu | sửa mã (lỗi vặt) | chưa giao | — | FX16 |
+| B-36 | KPI nhất quán; thêm dòng điều phối viên | sửa mã | chưa giao | — | FX17 |
+| B-37 | Ghi đúng model trưởng phòng theo làn | tài liệu/hồ sơ (lỗi vặt) | chưa giao | — | FX18 |
+| B-38 | Kiểm tự động `tệp:dòng` của `logic-map.md` | script Nghiên cứu | chưa giao | — | FX19 |
+| B-39 | Kiểm tự động đường dẫn máy trong `docs/research/` | script Nghiên cứu | chưa giao | — | FX20 |
+| B-40 | Ký số log (chuỗi băm chưa phải WORM/ký số) | mã + hạ tầng | chưa giao; một phần cần giám đốc | — | FX21 |
+| B-41 | **E9**: chất lượng bóc tách, planner Sonnet/Opus/Haiku | thí nghiệm | đã đăng ký (§9.x), chưa chạy | — | TN1 |
+| B-42 | E7-R2 đo lại với trần lượt cao hơn | thí nghiệm | chưa đăng ký | — | TN2 |
+| B-43 | Độ đúng kết luận reviewer | thí nghiệm | chưa đăng ký | — | TN3 |
+| B-44 | Độ đúng định tuyến (điều phối viên) | thí nghiệm | chưa đăng ký | — | TN4 |
+| B-45 | Chọn làn bằng đếm regex: ma trận nhầm | thí nghiệm không LLM | chưa đặc tả | — | TN5 |
+| B-46 | Phân rã vượt đường găng theo nguyên nhân | phân tích | chưa giao | — | TN6 |
+| B-47 | Tách `acceptance-fail` theo agent | mã KPI + đo | chưa giao | — | TN7 |
+| B-48 | Bench ghi đủ `lane`, `subtasksTimed`, `maxConcSubtasks` | đo | chờ đợt bench mới | — | TN8 |
+| B-49 | **Chấm lại** sau khi Dev sửa xong | đo | chờ Dev | — | TN9 |
+
+**Đã sửa, không mở mục:**
+- F-E9: `c0e66fab`.
+- F-E10: `e2b6573c`, `a11abf45`.
+- F-M3: `d1903029`; phần kiểm tự động là B-39.
+
+**Ngoài tầm, không mở mục:**
+- F-E4: thuộc B-18, cần giám đốc đăng nhập WSL.
+- F-E5: thuộc B-12.
+
 ## 1. Kiểm nhận định N1–N5 bằng CSV
 
 **Nguồn:** `docs/research/context/tool-failures-2026-11-02.csv` (75 dòng dữ liệu, 2 nhiệm vụ: `…112755-181` 39 dòng, `…121636-dd9` 36 dòng).
@@ -101,16 +186,16 @@ Mức bằng chứng (thang dùng cho bảng này, do trưởng phòng đặt): 
 | # | Nhận định | Truy vấn / lệnh | Kết quả | Kết luận |
 |---|---|---|---|---|
 | N1a | Phần lớn `git-read-deny` thực chất chỉ đọc | `failures-count.mjs` (mục "N1: … phân loại tĩnh"): bỏ chuỗi trong nháy, rồi tìm chuyển hướng ra tệp, heredoc, `sed -i`, `rm/mv/cp/mkdir/touch/tee`, `node/python/npm` | **36/44 (81,8 %)** chỉ đọc · 3 chạy `node` (không ghi) · 5 có ghi hoặc heredoc (chặn đúng) | **Đúng** (phân loại tĩnh theo văn bản lệnh, chưa phát lại qua hook) |
-| N1b | Nguyên nhân: tách theo `\|` và `;` không xét nháy | Trong 36 lượt chỉ đọc, đếm lượt có `\|` hoặc `;` nằm **bên trong** chuỗi có nháy; đối chiếu mã `shell-policy.ts:171` (`split(/&&\|;/)`), `:177` (`split('\|')`), `:170` (`[<>]` bất kỳ ⇒ chặn) | **30/36** có dấu tách trong nháy (vd. `grep "a\|b"`, `sed -n '271p;480p;524p'`, regex `^(a\|b)`) | **Đúng** — mã không biết nháy ở 3 chỗ trên. Lưu ý: dòng 170 còn chặn cả `>` trong nháy |
-| N1c | Hook không nhận `echo`, `sed -n` nhiều địa chỉ, `tail -c`, `awk` | Trong 36 lượt chỉ đọc: đếm `echo`, `sed -n`, `awk`, `tail -c`, `for`; đối chiếu `READ_CMD` (`shell-policy.ts:149`), `SED_PRINT` (`:151`) | `echo` **4** · `awk` **1** · `for` **1** · `sed -n` **10** (không đếm riêng được bao nhiêu lượt nhiều địa chỉ) · `tail -c` **0** | **Đúng một phần.** `echo`, `awk` không có trong `READ_CMD` ⇒ đúng. `SED_PRINT` chỉ nhận một địa chỉ `Np`/`N,Mp` ⇒ nhiều địa chỉ bị chặn, đúng. **`tail -c` sai:** `tail` có trong `READ_CMD`; lần `tail -c 400 ../paper/paper.md` (dòng #45) bị chặn do đường dẫn, không do lệnh. Phân loại lại: `tail -c` → N2 |
+| N1b | Nguyên nhân: tách theo `\|` và `;` không xét nháy | Trong 36 lượt chỉ đọc, đếm lượt có `\|` hoặc `;` nằm **bên trong** chuỗi có nháy; đối chiếu mã `shell-policy.ts:737` (`segs`)`), `:177` (`split('\|')`), `:170` (`[<>]` bất kỳ ⇒ chặn) | **30/36** có dấu tách trong nháy (vd. `grep "a\|b"`, `sed -n '271p;480p;524p'`, regex `^(a\|b)`) | **Đúng** — mã không biết nháy ở 3 chỗ trên. Lưu ý: dòng 170 còn chặn cả `>` trong nháy |
+| N1c | Hook không nhận `echo`, `sed -n` nhiều địa chỉ, `tail -c`, `awk` | Trong 36 lượt chỉ đọc: đếm `echo`, `sed -n`, `awk`, `tail -c`, `for`; đối chiếu `READ_NAMES` (`shell-policy.ts:628` (`READ_NAMES`)) và `sedReadOnly` (`shell-policy.ts:637` (`sedReadOnly`)) (hai hằng `READ_CMD`, `SED_PRINT` trong bản ghi lúc đo không còn ở mốc) | `echo` **4** · `awk` **1** · `for` **1** · `sed -n` **10** (không đếm riêng được bao nhiêu lượt nhiều địa chỉ) · `tail -c` **0** | **Đúng một phần.** `echo`, `awk` không có trong `READ_CMD` ⇒ đúng. `SED_PRINT` chỉ nhận một địa chỉ `Np`/`N,Mp` ⇒ nhiều địa chỉ bị chặn, đúng. **`tail -c` sai:** `tail` có trong `READ_CMD`; lần `tail -c 400 ../paper/paper.md` (dòng #45) bị chặn do đường dẫn, không do lệnh. Phân loại lại: `tail -c` → N2 |
 | N1d | (bổ sung) lượt chỉ đọc chưa giải thích | `--ro-other` | 1 lượt (#5, lệnh bị cắt trong CSV) | Không đủ dữ liệu; nhiều khả năng cùng nguyên nhân N1b |
 | N2a | Một số `outside-path` chặn nhầm vì `../` tính từ gốc worktree, trong khi Bash giữ `cwd` | `--list outside-path`; đọc các dòng #21, #45 | #45 `tail -c 400 ../paper/paper.md` chạy sau lệnh `cd docs/research/performance` ở lệnh trước (cùng vai trò) ⇒ nếu `cwd` được giữ thì đường dẫn nằm trong worktree. #21: `../data` nằm trong chuỗi `sed` | **Đúng một phần:** 2/10 lượt có dấu hiệu chặn nhầm; **không chứng minh được** từ CSV vì CSV không có `cwd` thật (đó là lý do cần G3) |
 | N2b | Một lượt chặn Read tệp `tool-results` | `--list outside-path` dòng #33: `read_file` tới `<home>\.claude\projects\…\tool-results\…` | 1 lượt | **Đúng** (1/10) |
-| N2c | (kết quả kiểm) chặn đúng chính sách | dòng #12 (`write_file` vào thư mục Temp), #51 (`cat > /tmp/patch.mjs`) | 2/10 | Đúng chính sách; hướng dẫn của giám đốc cũng cấm `/tmp` |
+| N2c | (kết quả kiểm) chặn đúng chính sách | dòng #12 (`write_file` vào thư mục Temp), #51 (`cat > <thư-mục-tạm>/patch.mjs`) | 2/10 | Đúng chính sách; hướng dẫn của giám đốc cũng cấm `/tmp` |
 | N2d | (không xác định) | dòng #26, #27 (`cd ..; cd ..`, `cd ../../..`), #28, #50, #58 | 5/10 | Không thể kết luận từ CSV (thiếu `cwd` lúc gọi) |
 | N3a | peer-reviewer không chạy được `token-analysis.mjs --check` và `node --test` | `--list git-read-deny`, lọc `agent=peer-reviewer` | 8/8 lượt bị chặn đều là `git-read-deny`; **4/8** (#16, #22, #70, #75) là lệnh `node …token-analysis.mjs` / `--check`; 4/8 còn lại là lệnh đọc bị tách sai (#17 `cat`, #18 `sed -n '271p;480p;524p'`, #20, #71–#72 tổ hợp `grep`/`ls`) | **Đúng một phần:** 50 % số lượt chặn của reviewer là lệnh kiểm tra thật; 50 % là lỗi parser (N1) |
 | N3b | Đây là một nguồn làm điểm Chất lượng của reviewer thấp | Không kiểm được: CSV không chứa cách tính điểm; `kpi.ts` tính Chất lượng từ nhiều tín hiệu | — | **Chưa kiểm được.** Cần `GET /api/kpi?agent=peer-reviewer` kèm chi tiết phần Chất lượng trước/sau khi `checkCommands` chạy. Dùng làm KPI kiểm lại của B-02 |
-| N3c | CCoding tự chạy `checkCommands` trước thực thi, sau thực thi, sau mỗi vòng sửa | Đọc `orchestrator.ts:1326` (baseline), `:2535` (chạy), `:1360` (chạy lại khi `staleAt`), `:1391-1393` (đưa kết quả vào bằng chứng review) | Có ở baseline, sau thực thi, và trước review khi workspace đã đổi | **Đúng**, nhưng reviewer vẫn bị gọi trước khi mã đỏ được xử lý (xem B-02) |
+| N3c | CCoding tự chạy `checkCommands` trước thực thi, sau thực thi, sau mỗi vòng sửa | Đọc `orchestrator.ts:1974` (`task.projectChecks`), `:2535` (chạy), `:1360` (chạy lại khi `staleAt`), `:1391-1393` (đưa kết quả vào bằng chứng review) | Có ở baseline, sau thực thi, và trước review khi workspace đã đổi | **Đúng**, nhưng reviewer vẫn bị gọi trước khi mã đỏ được xử lý (xem B-02) |
 | N4 | Lỗi cuối của academic-writer là số cũ sót ở tệp khác | CSV không chứa nội dung tệp. Gián tiếp: các lệnh #42, #43, #60, #62–#68 của academic-writer là chuỗi `grep` tìm cụm lỗi thời. Kiểm hiện trạng: Grep `C6[^\|\n]{0,40}chưa có\|chưa có dữ liệu` trong `docs/research/*.md` | `paper.md` 0, `challenges.md` 0; còn 33 chỗ ở `CHANGELOG.md` 11, `dev-review.md` 8, `dev-review/verification.md` 13, `context/kpi-…md` 1 (đều là lịch sử hoặc trích dẫn) | **Không kiểm được từ CSV; hiện trạng đã sạch ở 2 tệp bị nêu.** Cơ chế "một số lệch giữa nhiều tệp" hợp lý (R1-xx trong `dev-review.md`) nên giữ B-05 ở mức hỗ trợ, không phải sửa nóng |
 | N5 | Vượt ngân sách vì đề bài lớn | CSV không có token. `kpi-research…md:20-23`: data-scientist 3,9M/hạng mục; phòng 30,4M so với 10M | — | **Chưa kiểm được** từ CSV. Phép kiểm cần: token mỗi nhiệm vụ theo kích thước đề bài (API `kpi`), so gói nhỏ này (6M cho 3 hạng mục) với nhiệm vụ trước. Khớp với B-01: không chia việc nhỏ ra nhiều agent |
 
@@ -136,7 +221,7 @@ Chạy: `node docs/research/context/lane-threshold.mjs` (đọc `bench/vs-claude
 - Cố định trung bình mỗi bài ở C7: 239,5 / 5 ≈ **48 s** (khoảng 38,5–58,6 s; `token-analysis.md:287-291`).
 - Hồi quy thô (5 điểm, mỗi điểm 1 lượt làn nhanh): TG làn nhanh = **87,1 + 0,428 × TG đơn**; giao điểm T* = a/(1−b) = **152 s**. Dưới T*, làn nhanh chậm hơn; trên T*, nhanh hơn. Đây là **khám phá n=5**, không có CI; chính thức hóa bằng ĐK-P4 (hệ số chặn, độ dốc) ở C9.
 - Bài duy nhất làn nhanh thắng về thời gian là t5 (165,5 s đơn). Về **chi phí** làn nhanh đắt hơn ở cả 5 bài (1,99–3,56 lần).
-- Độ dài đề bài của t1–t5 là 372–542 ký tự (`bench/vs-claude/tasks/t*/prompt.txt`) và repo nhỏ, nên quy tắc làn tự chọn hiện có (`config.ts:294`: `maxBriefChars` 4000, `maxRepoFiles` 300; `orchestrator.ts:1115-1136`) chọn làn nhanh cho **cả 5 bài**, trong khi 4/5 bài chậm hơn Sonnet đơn. Tín hiệu hiện có không phân biệt được.
+- Độ dài đề bài của t1–t5 là 372–542 ký tự (`bench/vs-claude/tasks/t*/prompt.txt`) và repo nhỏ, nên quy tắc làn tự chọn hiện có (`config.ts:405` (`fastLane`): `maxBriefChars` 4000, `maxRepoFiles` 300; `orchestrator.ts:1138-1159` (`this.message`)) chọn làn nhanh cho **cả 5 bài**, trong khi 4/5 bài chậm hơn Sonnet đơn. Tín hiệu hiện có không phân biệt được.
 - t2 làn nhanh C7: 52/60 test ẩn, Sonnet đơn 60/60 (`runs.csv`, C7, t2). C8 (sau `c55a249`): 3/3 lượt 60/60 (166, 102, 120 s; $1,22, $0,55, $0,61). n quá nhỏ để kết luận; nhưng chứng minh test ẩn có thể tụt, cổng chất lượng là cần thiết.
 - **(R8) C9, t5 làn nhanh lượt 2:** 95/146 test ẩn trong khi `npm test` vẫn đỏ và review vẫn duyệt (chi tiết và dòng dẫn ở §4.1 bước 2 và §5 B-10). Đây là ca thứ hai sau t2 C7 cho thấy test ẩn tụt ở làn nhanh, lần này do **kế hoạch bỏ sót phần việc**, không do lỗi cài đặt.
 
@@ -147,7 +232,7 @@ Chạy: `node docs/research/context/lane-threshold.mjs` (đọc `bench/vs-claude
 | Trường | Nội dung |
 |---|---|
 | **1. Vấn đề** | Với việc nhỏ, điều phối nhiều bên trả phí cố định mà một agent đơn không phải trả: làn nhanh C7 chậm 1,44 lần và đắt 2,72 lần Sonnet đơn (cùng mô hình). Mục tiêu giám đốc: việc nhỏ dùng agent đơn. |
-| **2. Bằng chứng** | §2: `lane-threshold.mjs` (Σ 619,0 s so với 429,0 s; $3,492 so với $1,286). `token-analysis.md` T-d (3) `:292` (cố định 55,8 %). `PROCESS-REVIEW.md:221-280` (§13): C5 và C6 cùng chiều. Làn tự chọn hiện nay chọn làn nhanh cho cả t1–t5: `orchestrator.ts:1115-1136`, `config.ts:294`. |
+| **2. Bằng chứng** | §2: `lane-threshold.mjs` (Σ 619,0 s so với 429,0 s; $3,492 so với $1,286). `token-analysis.md` T-d (3) `:292` (cố định 55,8 %). `PROCESS-REVIEW.md:221-280` (§13): C5 và C6 cùng chiều. Làn tự chọn hiện nay chọn làn nhanh cho cả t1–t5: `orchestrator.ts:1138-1159` (`this.message`), `config.ts:405` (`fastLane`). |
 | **3. Nguyên nhân gốc** | **Đã kiểm một phần:** phần cố định = kế hoạch (115,6 s) + review (116,8 s) + gộp (7,1 s) trên 5 bài (T-d (3)); mỗi lượt gọi agent là một phiên `claude -p` mới ghi lại tiền tố cache (`PROCESS-REVIEW.md:266`). **Giả thuyết:** execute song song không bù được (execute/Sonnet đơn 48–132 %, `token-analysis.md:287-291`) vì phần việc nhỏ không chia song song được. |
 | **4. Thay đổi đề xuất** | Thêm `lane: 'single'` bên cạnh `'fast'`/`'full'`; chọn tự động theo §3.1; mặc định cho việc nhỏ. Luồng ở §3.2. |
 | **5. Hiệu quả kỳ vọng** | Trên t1–t5: thời gian và chi phí trong **±15 %** Claude Code đơn cùng mô hình (từ 1,44× và 2,72× hiện nay). Kỳ vọng thời gian −30 % và chi phí −60 % so với làn nhanh (C7). **Giả thuyết**. |
@@ -162,7 +247,7 @@ Chạy: `node docs/research/context/lane-threshold.mjs` (đọc `bench/vs-claude
 
 | Tín hiệu | Cách lấy | Giá trị t1–t5 | Dùng để |
 |---|---|---|---|
-| `briefChars` | `task.brief.length` (đã dùng ở `orchestrator.ts:1121`) | 372–542 | Chặn trên (đề dài ⇒ lớn); **không** phân biệt t1–t5 |
+| `briefChars` | `task.brief.length` (đã dùng ở `orchestrator.ts:1144` (`taskId`)) | 372–542 | Chặn trên (đề dài ⇒ lớn); **không** phân biệt t1–t5 |
 | `parts` — số phần độc lập | Đếm mục đánh số/gạch đầu dòng ở cấp cao nhất, hoặc số module được nêu tên trong đề | chưa đo; l1-modules = 5, l2-chain = 4 tầng phụ thuộc | Quyết định chính: cần ≥ 3 phần độc lập thì song song mới có ích |
 | `filesTouched` | Số đường dẫn trong đề bài khớp `git ls-files`, cộng số thư mục được nêu | chưa đo | Phạm vi |
 | `repoFiles`, `repoBytes` | `git ls-files` (đã có, `:1122-1135`) | nhỏ | Chặn trên |
@@ -179,7 +264,7 @@ Chạy: `node docs/research/context/lane-threshold.mjs` (đọc `bench/vs-claude
   4. Ngược lại ⇒ **nhỏ ⇒ làn đơn**.
 - **Nguồn `T̂_đơn` cho giai đoạn 2** (bật khi dự án có ≥ 3 nhiệm vụ làn đơn đã xong): `T̂_đơn` = trung vị `wall` của các nhiệm vụ làn đơn trước đó **cùng dự án** có cùng `parts` (làm tròn lên bậc 1–2, 3–4, ≥ 5); thiếu lịch sử thì dùng quy tắc 1–4. Khi có `T̂_đơn`, thêm điều 5: `T̂_đơn ≥ k × a` ⇒ lớn. Hành vi hệ thống do đó **chỉ đổi theo `k`, `a` ở giai đoạn 2**; ở giai đoạn 1 C9/ĐK-P4 chỉ hiệu chỉnh ngưỡng `parts`/`filesTouched` (cùng ĐK-P5, ĐK-P6).
 - **Mâu thuẫn đã biết, chấp nhận có chủ ý:** t5 (165,5 s đơn) lớn hơn `k₀ × a₀ = 152 s`, nhưng quy tắc 1–4 đưa t5 vào làn đơn (4 phần). Làn đơn trên t5 dự kiến ≈ Claude Code (không thua về thời gian so với Claude Code; chậm hơn làn nhanh C7 127 s) nhưng rẻ hơn nhiều (làn nhanh đắt 2,36× ở t5); mục tiêu giám đốc là tối ưu chi phí. Kiểm bằng giả thuyết B-01 (ĐK-P9) trên t5. Nếu C9 cho thấy giai đoạn 2 xếp t5 vào làn lớn mà đo được lợi, chuyển bằng điều 5. (R8: ca t5 C9 lượt 2 — kế hoạch đa-agent bỏ sót `agg.js`, §5 B-10 — là thêm một lý do giữ t5 ở làn đơn: một agent không có bước chia việc nên không thể "bỏ sót hạng mục".)
-- Nhật ký bắt buộc ghi `signals`, `lane`, `why` (như `⚡ Làn nhanh (${pick.why})`, `orchestrator.ts:1169`) để hiệu chỉnh sau.
+- Nhật ký bắt buộc ghi `signals`, `lane`, `why` (như `⚡ Làn nhanh (${pick.why})`, `orchestrator.ts:1799` (`why`)) để hiệu chỉnh sau.
 
 **Kế hoạch hiệu chỉnh** (S2 viết quy tắc cập nhật chính thức trong `preregistration.md`; phần S3 đề xuất để thống nhất):
 - Với dữ liệu C9 (t1–t5) và l1-modules, l2-chain: hồi quy `TG_đa-agent = a + b × TG_đơn` (đó là ĐK-P4) cho `a` và `b`, từ đó `k = 1/(1−b)`; cập nhật `a₀, k₀` (§3.1) và chỉ có hiệu lực lên quyết định từ giai đoạn 2. Nhầm sang việc lớn rẻ hơn nhầm sang việc nhỏ về chi phí (làn nhanh đắt 2,72× ở C7), nên khi `b` ước lượng có CI rộng, lấy cận trên của `k`.
@@ -188,16 +273,16 @@ Chạy: `node docs/research/context/lane-threshold.mjs` (đọc `bench/vs-claude
 
 ### 3.2 Luồng làn đơn
 
-1. Chọn làn (§3.1), ghi `signals`. Chạy `checkCommands` baseline (đã có `orchestrator.ts:1326`).
+1. Chọn làn (§3.1), ghi `signals`. Chạy `checkCommands` baseline (đã có `orchestrator.ts:1974` (`task.projectChecks`)).
 2. **Một agent đúng vai** (vai chọn theo loại việc; có quyền `exec` nếu dự án có `checkCommands`) chạy pha `execute` trong worktree nhiệm vụ. Không route/plan/discuss/finalize, không họp, không kế hoạch nhiều bên, không worktree con, không tổng hợp bằng LLM.
 3. Gọi qua `Orchestrator.call()` (log, token, chính sách dữ liệu, KPI) — không gọi runtime trực tiếp.
 4. Chạy cổng chất lượng (B-02).
-5. Báo cáo (`FINAL.md`) dựng từ đầu ra theo **mẫu của giám đốc** không gọi LLM, như `finalReport: 'template'` (`orchestrator.ts:1488`); đầu ra của agent phải đủ mục "Mẫu đầu ra" của vai đó (kiểm ở B-02).
+5. Báo cáo (`FINAL.md`) dựng từ đầu ra theo **mẫu của giám đốc** không gọi LLM, như `finalReport: 'template'` (`orchestrator.ts:2206` (`task.lane`)); đầu ra của agent phải đủ mục "Mẫu đầu ra" của vai đó (kiểm ở B-02).
 6. Chi phí cố định kỳ vọng còn lại: 0 pha plan/review/synthesize (trừ khi B-02 yêu cầu reviewer).
 
 ### 3.3 Nâng lên multi-agent
 
-Điều kiện (một trong): (a) còn đỏ sau N vòng sửa của B-02; (b) phạm vi phát sinh vượt ngưỡng: `filesTouched` thực tế (từ diff) > 6 hoặc > 2 × ước lượng ban đầu, hoặc agent phát hiện `parts ≥ 5`; (c) agent đơn tự báo việc lớn (dòng `ESCALATE:` kèm danh sách phần độc lập trong đầu ra). **Giữ worktree** và bàn giao dở dang: diff hiện tại, kết quả `checkCommands` (`pc.baseline`, `pc.latest`), ghi chú của agent; làn đầy/nhanh nhận lại worktree thay vì làm lại từ đầu (cơ chế lưu trạng thái: `this.save(task)`, `run.revising`, `orchestrator.ts:1343-1350`). Sự kiện nâng cấp ghi vào log và vào `Sai lệch`/KPI vì đó là chi phí đã trả. Kế hoạch đa-agent sau nâng cấp phải qua cổng phủ kế hoạch B-10.
+Điều kiện (một trong): (a) còn đỏ sau N vòng sửa của B-02; (b) phạm vi phát sinh vượt ngưỡng: `filesTouched` thực tế (từ diff) > 6 hoặc > 2 × ước lượng ban đầu, hoặc agent phát hiện `parts ≥ 5`; (c) agent đơn tự báo việc lớn (dòng `ESCALATE:` kèm danh sách phần độc lập trong đầu ra). **Giữ worktree** và bàn giao dở dang: diff hiện tại, kết quả `checkCommands` (`pc.baseline`, `pc.latest`), ghi chú của agent; làn đầy/nhanh nhận lại worktree thay vì làm lại từ đầu (cơ chế lưu trạng thái: `this.save(task)`, `run.revising`, `orchestrator.ts:1992-1999` (`run.revising`)). Sự kiện nâng cấp ghi vào log và vào `Sai lệch`/KPI vì đó là chi phí đã trả. Kế hoạch đa-agent sau nâng cấp phải qua cổng phủ kế hoạch B-10.
 
 ### 3.4 Chỉ tiêu nghiệm thu B-01
 
@@ -217,19 +302,19 @@ Chạy: `node docs/research/context/lane-threshold.mjs` (đọc `bench/vs-claude
 
 | Trường | Nội dung |
 |---|---|
-| **1. Vấn đề** | Bỏ điều phối thì mất lớp kiểm. Hiện nay lệnh đỏ chỉ ép "không duyệt" **sau khi reviewer đã chạy** (một lượt LLM đắt): reviewer được gọi trước (`orchestrator.ts:1365`), rồi mới ghi đè bằng `checkRegressions` (`:1380-1388`). Chỉ regression (đạt ở baseline, hỏng sau) mới bị ép; lệnh đỏ từ baseline thì không. Reviewer không có `checkCommands` hay không chạy lệnh (`verified === false`, `:1399-1407`) chỉ cảnh báo. Nội dung đầu ra không được kiểm tuân thủ "Mẫu đầu ra" trước khi nhận (KPI chỉ chấm sau: `kpi.ts:324-327`). t2 làn nhanh C7 chỉ 52/60 test ẩn. **(R8)** C9 t5 làn nhanh lượt 2: đề bài đòi `npm test` xanh, lệnh đỏ từ baseline đến sau thực thi, reviewer LLM vẫn duyệt, 95/146 test ẩn (§4.1 bước 2). |
-| **2. Bằng chứng** | `orchestrator.ts:1326, 1360, 1365, 1380-1388, 1399-1407, 2504-2568`; `kpi.ts:144, 168, 324-327, 608-611`; §1.2 N3c; §2 (52/60). Review là pha dài nhất ở C5 (`kpi-research…md:62`); review + revise = 116,8 s trên 5 bài ở C7 (T-d (3), `token-analysis.md:292`). **(R8)** `bench/vs-claude/results/C9/t5-logq.ccoding-fastlane.2/ccoding-task.json:4, 83, 85-86, 104-109, 173-201`; `…/result.json:14, 39-42`. |
+| **1. Vấn đề** | Bỏ điều phối thì mất lớp kiểm. Hiện nay lệnh đỏ chỉ ép "không duyệt" **sau khi reviewer đã chạy** (một lượt LLM đắt): reviewer được gọi trước (`orchestrator.ts:1463` (`roots`)), rồi mới ghi đè bằng `checkRegressions` (`:1380-1388`). Chỉ regression (đạt ở baseline, hỏng sau) mới bị ép; lệnh đỏ từ baseline thì không. Reviewer không có `checkCommands` hay không chạy lệnh (`verified === false`, `:1399-1407`) chỉ cảnh báo. Nội dung đầu ra không được kiểm tuân thủ "Mẫu đầu ra" trước khi nhận (KPI chỉ chấm sau: `kpi.ts:667-670` (`templateCoverage`)). t2 làn nhanh C7 chỉ 52/60 test ẩn. **(R8)** C9 t5 làn nhanh lượt 2: đề bài đòi `npm test` xanh, lệnh đỏ từ baseline đến sau thực thi, reviewer LLM vẫn duyệt, 95/146 test ẩn (§4.1 bước 2). |
+| **2. Bằng chứng** | `orchestrator.ts:1974 (`task.projectChecks`), 1360, 1365, 1380-1388, 1399-1407, 2504-2568`; `kpi.ts:351 (`templateHeadings`), 168, 324-327, 608-611`; §1.2 N3c; §2 (52/60). Review là pha dài nhất ở C5 (`kpi-research…md:62`); review + revise = 116,8 s trên 5 bài ở C7 (T-d (3), `token-analysis.md:292`). **(R8)** `bench/vs-claude/results/C9/t5-logq.ccoding-fastlane.2/ccoding-task.json:4, 83, 85-86, 104-109, 173-201`; `…/result.json:14, 39-42`. |
 | **3. Nguyên nhân gốc** | Đã kiểm bằng đọc mã: thứ tự gọi reviewer → kiểm tra regression. **(R8) Đã kiểm trên ca t5:** lệnh "đỏ kéo dài" (0/3 → 22/23) không phải regression nên không bị ép; quyết định duyệt rơi vào reviewer LLM, và reviewer duyệt dù chính nhận xét của nó ghi `npm test` exit 1 và `agg.js` còn stub. **Giả thuyết:** reviewer gọi khi mã đã đỏ là lãng phí; chưa đo tỉ lệ lượt rơi vào trường hợp này. |
 | **4. Thay đổi đề xuất** | §4.1–4.4. |
 | **5. Hiệu quả kỳ vọng** | (a) Bỏ 1 lượt review khi mã đỏ: tiết kiệm tối đa phần review của lượt đó (≈ 23 s trung bình mỗi bài ở C7: 116,8/5); (b) làn đơn không reviewer mặc định: bỏ phần review (cùng nguồn) trừ khi điều kiện §4.3 thỏa; (c) P3 (reviewer chỉ nhận diff + kết quả lệnh) trần −2,8 % chi phí CCoding (`dev-review.md:181`, O4 ở bảng T-e) — dưới nhiễu ±15 %, không tách được. (d) Chất lượng: test ẩn không thấp hơn Claude Code đơn (ĐK-P3), 0 đầu ra thiếu mục mẫu, **0 lượt "duyệt" khi lệnh đề bài đòi xanh còn đỏ** (R8). **Giả thuyết.** |
 | **6. Cách kiểm lại** | **Hệ chính:** H8 (`analyze.mjs:96-100`, lỗi phối hợp: thiếu sản phẩm / bỏ yêu cầu; xem giới hạn ở B-10 trường 6), H3 (review tăng recall, `:69-75` — reviewer có đáng gọi không), H7 (độ ổn định, `:92-95`); giả thuyết B-02 mới của bản 2 (cổng chặn ca "đỏ kéo dài + bỏ sót phần việc" — S4). **Bộ cũ:** ĐK-P3 (test ẩn không kém hơn); KPI: `compliance.templateCoverage` = 100 % cho lượt làn đơn, Chất lượng của reviewer (N3b) khi reviewer còn chạy; đếm `checks.run` đỏ → số reviewer bị bỏ qua. Phát lại offline: quy tắc §4.1 bước 2 trên `results/C9/*/ccoding-task.json` phải đẩy `t5-logq.ccoding-fastlane.2` vào vòng sửa. Vòng: cùng vòng với B-01 và C9 làm baseline; t6–t8 (ĐK-P7). |
-| **7. Rủi ro và bảo vệ dữ liệu** | Rủi ro: (a) vòng sửa kéo dài ⇒ giới hạn N; (b) `checkCommands` chạy mã của dự án ⇒ chỉ chạy với quyền `exec` và qua `denyCommands` như `orchestrator.ts:2507`; (c) mẫu đầu ra kiểm cứng ⇒ agent "đệm" tiêu đề rỗng: chỉ chấp nhận tiêu đề có nội dung (xem 4.2). Dữ liệu: không đổi nhãn, hook, `LogStore`; kết quả kiểm (stdout) đi qua `LogStore` che bí mật; không đưa vào đầu vào reviewer những tệp `.env`. Gate dữ liệu: thay đổi chạm bảo mật hay dữ liệu ⇒ bắt buộc reviewer (§4.3). |
+| **7. Rủi ro và bảo vệ dữ liệu** | Rủi ro: (a) vòng sửa kéo dài ⇒ giới hạn N; (b) `checkCommands` chạy mã của dự án ⇒ chỉ chạy với quyền `exec` và qua `denyCommands` như `orchestrator.ts:3550` (`denyCommands`); (c) mẫu đầu ra kiểm cứng ⇒ agent "đệm" tiêu đề rỗng: chỉ chấp nhận tiêu đề có nội dung (xem 4.2). Dữ liệu: không đổi nhãn, hook, `LogStore`; kết quả kiểm (stdout) đi qua `LogStore` che bí mật; không đưa vào đầu vào reviewer những tệp `.env`. Gate dữ liệu: thay đổi chạm bảo mật hay dữ liệu ⇒ bắt buộc reviewer (§4.3). |
 | **8. Ưu tiên** | Hiệu quả 4 / công sức 3 = 1,3. Bắt buộc đứng thứ hai. |
 | **9. Giám đốc duyệt** | **Có** — đổi cách duyệt/ép sửa. |
 
 ### 4.1 Vòng kiểm → sửa
 
-1. `checkCommands` chạy ở **baseline** (đã có) và **sau thực thi** và **sau mỗi vòng sửa** (đã có `runProjectChecks(…, 'baseline' | 'execute' | 'revise')`, `orchestrator.ts:2504`).
+1. `checkCommands` chạy ở **baseline** (đã có) và **sau thực thi** và **sau mỗi vòng sửa** (đã có `runProjectChecks(…, 'baseline' | 'execute' | 'revise')`, `orchestrator.ts:3547` (`runProjectChecks`)).
 2. Phân loại từng lệnh sau thực thi (`baseline` → `sau`):
    - **Hồi quy** (xanh → đỏ, `checkRegressions`, `:2564-2568`) hoặc **đỏ mới** (không có baseline, ví dụ lệnh mới): vào vòng sửa **ngay**, không gọi reviewer.
    - **Đỏ kéo dài mà đề bài yêu cầu lệnh xanh** (đỏ → đỏ; đề bài nêu tên lệnh, hoặc nêu mục tiêu làm xanh nó như "đảm bảo `npm test` xanh", hay `--check` ở R2): **bắt buộc vào vòng sửa**, không gọi reviewer, và **reviewer LLM không có quyền quyết định duyệt** cho lệnh này: `approved` bị ép `false` chừng nào lệnh còn đỏ, bất kể reviewer viết gì. Hết N vòng mà còn đỏ ⇒ nâng cấp (bước 5), không bao giờ kết thúc `done` + `approved`. Nhận biết "đề bài yêu cầu" bằng so khớp chuỗi, không gọi LLM: tên lệnh trong `checkCommands` xuất hiện trong `task.brief` (kể cả trong dấu `` ` ``). Prompt vòng sửa kèm danh sách tệp/module chưa có hạng mục nhận (từ B-10) nếu có.
@@ -245,17 +330,17 @@ Chạy: `node docs/research/context/lane-threshold.mjs` (đọc `bench/vs-claude
    - Hậu quả: 95/146 test ẩn (`result.json:39-42`).
    - Với quy tắc mới: `npm test` có trong đề bài và đỏ → đỏ ⇒ nhánh "đỏ kéo dài mà đề bài yêu cầu" ⇒ vòng sửa thay cho lượt review, `approved` không thể `true`. Phần việc bị bỏ sót (`agg.js`, CLI) còn được B-10 chặn **trước** thực thi.
 3. Prompt vòng sửa nhận: đúng đầu ra của lệnh đỏ (đã cắt theo `maxOutputChars`), không phải toàn bộ lịch sử.
-4. **N ban đầu = 2** vòng sửa theo kiểm tra (`config.defaults.maxRevisions` hiện 1, `config.ts:285`, kẹp tối đa 3 ở `orchestrator.ts:296`; tách tham số mới `gate.maxFixRounds = 2` để không đổi hành vi review). Lý do: một vòng sửa ≈ 50 s (C5 t2, `PROCESS-REVIEW.md:256`), hai vòng giữ chi phí xấu nhất trong +100 s, dưới giao điểm T* ≈ 152 s (§3.1). Hiệu chỉnh lại khi có số vòng sửa thực tế ở C9.
+4. **N ban đầu = 2** vòng sửa theo kiểm tra (`config.defaults.maxRevisions` hiện 1, `config.ts:374` (`defaults`), kẹp tối đa 3 ở `orchestrator.ts:333` (`config.defaults.maxRevisions`); tách tham số mới `gate.maxFixRounds = 2` để không đổi hành vi review). Lý do: một vòng sửa ≈ 50 s (C5 t2, `PROCESS-REVIEW.md:256`), hai vòng giữ chi phí xấu nhất trong +100 s, dưới giao điểm T* ≈ 152 s (§3.1). Hiệu chỉnh lại khi có số vòng sửa thực tế ở C9.
 5. Còn đỏ sau N vòng ⇒ nâng lên multi-agent (§3.3).
 
 ### 4.2 Kiểm "Mẫu đầu ra" bằng đúng phép kiểm của KPI
 
 Dùng nguyên hàm của `src/kpi.ts` để cổng và KPI cho cùng một kết quả:
 
-- Lấy danh sách mục: `templateHeadings(body)` (`kpi.ts:144`) từ hồ sơ `agent.md` của vai chạy.
-- Đo: `templateCoverage(text, headings)` (`kpi.ts:168`), so khóa bằng `headingKey` (`kpi.ts:163`: phần trước `(`, `·`, `:`, `—`, chuẩn hóa, tối đa 28 ký tự).
-- Mở đầu "Tóm tắt": cùng biểu thức `kpi.ts:327` (`/^#{1,3}\s*Tóm tắt/im`).
-- **Cổng đạt khi `coverage === 1` và có "Tóm tắt".** (KPI chỉ cảnh báo khi < 70 %, `kpi.ts:608`; cổng nghiêm hơn có chủ ý, vì tiêu chí của giám đốc là đúng mẫu.) Thiếu ⇒ một lượt "sửa định dạng" ngắn, không dùng công cụ, nêu đúng `missing`; tính vào N.
+- Lấy danh sách mục: `templateHeadings(body)` (`kpi.ts:351` (`templateHeadings`)) từ hồ sơ `agent.md` của vai chạy.
+- Đo: `templateCoverage(text, headings)` (`kpi.ts:375` (`templateCoverage`)), so khóa bằng `headingKey` (`kpi.ts:370` (`headingKey`): phần trước `(`, `·`, `:`, `—`, chuẩn hóa, tối đa 28 ký tự).
+- Mở đầu "Tóm tắt": cùng biểu thức `kpi.ts:670` (`/^#{1,3}\s*Tóm tắt/im`).
+- **Cổng đạt khi `coverage === 1` và có "Tóm tắt".** (KPI chỉ cảnh báo khi < 70 %, `kpi.ts:1130` (`k.compliance.templateCoverage`); cổng nghiêm hơn có chủ ý, vì tiêu chí của giám đốc là đúng mẫu.) Thiếu ⇒ một lượt "sửa định dạng" ngắn, không dùng công cụ, nêu đúng `missing`; tính vào N.
 - Giới hạn đã biết: `templateCoverage` chỉ so tiêu đề (không đo nội dung). Phép kiểm chưa phát hiện tiêu đề rỗng; thêm ngưỡng tối thiểu số dòng dưới tiêu đề là việc của Phòng Dev (đề xuất: ≥ 1 dòng không rỗng), nêu ở rủi ro (c).
 
 ### 4.3 Khi nào cần reviewer
@@ -268,11 +353,11 @@ Reviewer (LLM) chỉ được gọi khi một trong:
 
 Reviewer khi được gọi nhận **diff + kết quả lệnh kiểm** thay vì toàn bộ đầu ra (P3, gộp vào B-02). Đây là phần P3, độ lớn trần −2,8 % (O4); coi như bổ sung rẻ chứ không phải lý do.
 
-**G5 (vai chỉ đọc tự chạy `checkCommands`) — loại.** Lý do: (a) CCoding đã tự chạy `checkCommands` và đưa kết quả cho reviewer (`:1391-1393`, `:2535`), nên reviewer không cần tự chạy; (b) `node --test` và `--check` chạy mã dự án, cho vai "chỉ đọc" chạy chúng làm vỡ bảo đảm đọc-chỉ của hook (`shell-policy.ts:154-189`); (c) N3a cho thấy chỉ 4/8 lượt chặn là lệnh kiểm tra, bù bằng cách trên.
+**G5 (vai chỉ đọc tự chạy `checkCommands`) — loại.** Lý do: (a) CCoding đã tự chạy `checkCommands` và đưa kết quả cho reviewer (`:1391-1393`, `:2535`), nên reviewer không cần tự chạy; (b) `node --test` và `--check` chạy mã dự án, cho vai "chỉ đọc" chạy chúng làm vỡ bảo đảm đọc-chỉ của hook (`shell-policy.ts:705-721` (`PowerShell`)); (c) N3a cho thấy chỉ 4/8 lượt chặn là lệnh kiểm tra, bù bằng cách trên.
 
 ### 4.4 Mọi lượt gọi
 
-Mọi lượt (execute, vòng sửa, sửa định dạng, reviewer) đi qua `Orchestrator.call()` để được ghi log, đếm token, áp chính sách dữ liệu, rồi **được chấm KPI** (`computeKpi`, `kpi.ts:199`). Không gọi runtime trực tiếp (quy ước repo).
+Mọi lượt (execute, vòng sửa, sửa định dạng, reviewer) đi qua `Orchestrator.call()` để được ghi log, đếm token, áp chính sách dữ liệu, rồi **được chấm KPI** (`computeKpi`, `kpi.ts:498` (`computeKpi`)). Không gọi runtime trực tiếp (quy ước repo).
 
 ### 4.5 Chỉ tiêu nghiệm thu B-02
 
@@ -309,7 +394,7 @@ Mọi lượt (execute, vòng sửa, sửa định dạng, reviewer) đi qua `Or
 | Trường | Nội dung |
 |---|---|
 | **1. Vấn đề** | Hook chặn lệnh chỉ đọc hợp lệ; mỗi lượt chặn là một vòng gửi lại hội thoại. |
-| **2. Bằng chứng** | §1.2 N1a–N1c: **36/44** `git-read-deny` chỉ đọc (48 % trong 75 lỗi); 30 có `\|`/`;` trong nháy; `echo` 4, `awk` 1, `sed -n` nhiều địa chỉ trong 10 lượt `sed -n`. Mã: `shell-policy.ts:170, 171, 177, 149, 151`. |
+| **2. Bằng chứng** | §1.2 N1a–N1c: **36/44** `git-read-deny` chỉ đọc (48 % trong 75 lỗi); 30 có `\|`/`;` trong nháy; `echo` 4, `awk` 1, `sed -n` nhiều địa chỉ trong 10 lượt `sed -n`. Mã: `shell-policy.ts:657` (`stmtCheck`), `shell-policy.ts:637` (`sedReadOnly`), `shell-policy.ts:645` (`awkReadOnly`), `shell-policy.ts:628` (`READ_NAMES`). |
 | **3. Nguyên nhân gốc** | **Đã kiểm bằng đọc mã:** tách `&&`/`;` và `\|` bằng `split` không biết nháy; `[<>]` bất kỳ cũng chặn; `READ_CMD` thiếu `echo`, `awk`; `SED_PRINT` một địa chỉ. **Chưa kiểm:** phát lại 36 lệnh qua hàm thật (mã hiện tại có thể khác bản hook lúc xảy ra lỗi, `kpi-research…md:3-4`). Phát lại là bước đầu tiên của Phòng Dev. |
 | **4. Thay đổi đề xuất** | **G1:** tách câu lệnh có xét nháy (đã có `splitArgs` ở `:102`; dùng bộ tách mức câu cho `&&`, `;`, `\|`, bỏ qua trong `"…"`/`'…'`; cấm `$(`, backtick, `>` ngoài nháy). **G2:** thêm `echo` (không chuyển hướng), `awk` không có `system()`/ghi tệp, `sed -n` nhiều địa chỉ `Np;Mp` vào danh sách chỉ đọc; giữ `READ_CMD_FORBIDDEN`. Kiểm bằng test: 36 lệnh chỉ đọc phải qua; 5 lệnh ghi và 3 lệnh chạy mã vẫn bị chặn. |
 | **5. Hiệu quả kỳ vọng** | Bớt tới 36/75 = 48 % lượt lỗi công cụ ở hai nhiệm vụ 2/11. Token tiết kiệm **chưa đo** (CSV không có token). Giả thuyết. |
@@ -337,7 +422,7 @@ Mọi lượt (execute, vòng sửa, sửa định dạng, reviewer) đi qua `Or
 | Trường | Nội dung |
 |---|---|
 | **1. Vấn đề** | Thông báo chặn không nói câu lệnh con nào gây chặn, và hệ thống không đếm chặn đúng/nhầm. |
-| **2. Bằng chứng** | CSV: cột `reason` của `git-read-deny` đều là chuỗi `deny` chung (`shell-policy.ts:168`) ngay cả khi lệnh chỉ đọc; `dev-review.md:173` (I-06; C-46, C-48 "chưa đo"). Bản vá `dev-review/patches/D-03-guard-block-diag.diff` (chưa `--check`, `dev-review.md:227`). |
+| **2. Bằng chứng** | CSV: cột `reason` của `git-read-deny` đều là chuỗi `deny` chung (`shell-policy.ts:805` (`blockMessage`)) ngay cả khi lệnh chỉ đọc; `dev-review.md:173` (I-06; C-46, C-48 "chưa đo"). Bản vá `dev-review/patches/D-03-guard-block-diag.diff` (chưa `--check`, `dev-review.md:227`). |
 | **3. Nguyên nhân gốc** | Đã kiểm: một thông điệp cố định cho mọi lý do (`:168-188`). |
 | **4. Thay đổi đề xuất** | **G6:** trả về câu con và quy tắc vi phạm (vd. `câu 2: "awk" không trong danh sách đọc`). **D-03:** ghi sự kiện chẩn đoán mỗi lần chặn (đi qua `diag`/`LogStore`). Chạy `git apply --ignore-whitespace --check` cho D-03, typecheck, test trước khi áp. |
 | **5. Hiệu quả kỳ vọng** | Agent tự sửa lệnh ở lượt kế (giảm lượt lặp); đo được tỉ lệ chặn nhầm — đó mới là lợi ích chính (số liệu cho B-04, B-08). Chưa định lượng. |
@@ -427,8 +512,8 @@ Mọi đường dẫn tệp kết quả dưới đây tương đối với `benc
 | | (a-skip) Bỏ nghiệm thu CTO (cột này; (a-brief) xem dưới bảng) | (b) Mẫu đầu ra gọn cho làn đơn | (c) Giảm prompt hệ thống, bản đồ repo, tài liệu cho lượt đơn | (d) Bỏ lượt định tuyến LLM khi `ProjectDef.lane` ép làn |
 |---|---|---|---|---|
 | **Trạng thái** | (a-skip) **BỊ CHẶN** (phán quyết B-02 của S2 là "không đủ dữ liệu", không phải "đạt"); (a-brief) **CẦN GIÁM ĐỐC DUYỆT** (xem dưới bảng) | Chờ giám đốc | Đề xuất | **ĐÃ CÓ, ĐÓNG** (R13): `route()` đã bỏ lượt LLM khi ép làn đơn (xem dưới bảng) |
-| **1. Tiết kiệm token/thời gian ước lượng** | Token: pha accept = 47,7 % Δ (48,4k/bài) trên t1–t5; 46,8 % (29,0k/bài) trên B7b (S1 T-5). Là **ước lượng điểm của chính accept** nếu bỏ hẳn; là **cận trên** khi tính phần độc lập vì trùng out/cacheWrite: 14,5 % / 6,0 % (S1 T-5, thứ tự ngược). Trung vị accept mỗi lượt 46,6k (t1–t5), 28,9k (B7b) (S1 T-2). Thời gian: **không đo được** (S1 T-6) | Token: **cận trên** = out vượt A0: 43,6 % Δ (44,3k/bài) t1–t5; 45,4 % (28,1k) B7b (S1 T-5); theo thành phần 50,4 % / 56,1 % (S1 T-4). Không tách mẫu đầu ra khỏi báo cáo bàn giao, cũng không tách out của accept khỏi out của execute (S1 T-7), nên **không có ước lượng điểm**. Thời gian: không phân rã được; chỉ mô tả wall ~ out Spearman 0,97 (S1 T-6) | Token: **cận trên** = cacheWrite vượt A0: 8,7 % Δ (8,9k/bài) t1–t5; 7,8 % (4,9k) B7b (S1 T-5); theo thành phần 36,8 % / 38,0 % (S1 T-4). Prompt không được đo (`prompt.*Chars` chưa có, S1 §Đề xuất SR), nên **không có ước lượng điểm**. B7b yếu hơn: cacheWrite mỗi lượt gọi B7 10,8k < A0 13,2k (S1 T-4) | **Bằng 0 cho B7 và các arm sau nó** (đã nằm trong B7, không còn để tiết kiệm): lượt route LLM bị bỏ khi ép làn đơn, `src/orchestrator.ts:1083-1084`; arm B7 ép `single` thật (`bench/vs-claude/arms.json:80-86`). Chi tiết và cách kiểm ở "(d) ĐÃ CÓ, ĐÓNG" dưới bảng. Lượt định tuyến "không đo được" ở S1 T-6 vì `runs.jsonl` không có pha, không phải vì còn lượt |
-| **2. Rủi ro chất lượng** | Mất lớp bắt lỗi mà reviewer/CTO từng bỏ lọt hoặc bắt được. Cổng B-02 (phát lại S2): bắt 1/1 ca dương (CI 95 % [2,5 %; 100 %]), chặn nhầm 0/53 lượt xanh ([0 %; 6,7 %]). Một ca dương không đủ để thay nghiệm thu. Vòng 3 mọi bài t1–t5 chạm trần điểm (`results-round3.md` §5 (c)) nên **không đo được** chênh chất lượng khi bỏ nghiệm thu | Mất thông tin cần cho KPI hoặc người đọc: `compliance.templateCoverage` phải giữ 100 % (§4.5). Giữ đúng tiêu đề mẫu nên rủi ro định dạng thấp; rủi ro là mục bị rút quá ngắn (vd. "Tệp đã lưu", "Lệnh kiểm chứng") | Thiếu ngữ cảnh ⇒ thêm lượt đọc tệp (đổi cacheWrite sang số lượt/lượt gọi, có thể tăng giờ); mất quy ước repo (`AGENTS.md`) ⇒ sai phong cách. **Không được lược** quy tắc dữ liệu/bảo mật | Thấp: cùng quy tắc chọn làn, chỉ khác "có/không gọi". Rủi ro duy nhất: ép làn đơn cho việc lớn (đã là quyết định của chủ dự án, `lane.ts:126`) |
+| **1. Tiết kiệm token/thời gian ước lượng** | Token: pha accept = 47,7 % Δ (48,4k/bài) trên t1–t5; 46,8 % (29,0k/bài) trên B7b (S1 T-5). Là **ước lượng điểm của chính accept** nếu bỏ hẳn; là **cận trên** khi tính phần độc lập vì trùng out/cacheWrite: 14,5 % / 6,0 % (S1 T-5, thứ tự ngược). Trung vị accept mỗi lượt 46,6k (t1–t5), 28,9k (B7b) (S1 T-2). Thời gian: **không đo được** (S1 T-6) | Token: **cận trên** = out vượt A0: 43,6 % Δ (44,3k/bài) t1–t5; 45,4 % (28,1k) B7b (S1 T-5); theo thành phần 50,4 % / 56,1 % (S1 T-4). Không tách mẫu đầu ra khỏi báo cáo bàn giao, cũng không tách out của accept khỏi out của execute (S1 T-7), nên **không có ước lượng điểm**. Thời gian: không phân rã được; chỉ mô tả wall ~ out Spearman 0,97 (S1 T-6) | Token: **cận trên** = cacheWrite vượt A0: 8,7 % Δ (8,9k/bài) t1–t5; 7,8 % (4,9k) B7b (S1 T-5); theo thành phần 36,8 % / 38,0 % (S1 T-4). Prompt không được đo (`prompt.*Chars` chưa có, S1 §Đề xuất SR), nên **không có ước lượng điểm**. B7b yếu hơn: cacheWrite mỗi lượt gọi B7 10,8k < A0 13,2k (S1 T-4) | **Bằng 0 cho B7 và các arm sau nó** (đã nằm trong B7, không còn để tiết kiệm): lượt route LLM bị bỏ khi ép làn đơn, `src/orchestrator.ts:1354-1355` (`router`); arm B7 ép `single` thật (`bench/vs-claude/arms.json:80-86`). Chi tiết và cách kiểm ở "(d) ĐÃ CÓ, ĐÓNG" dưới bảng. Lượt định tuyến "không đo được" ở S1 T-6 vì `runs.jsonl` không có pha, không phải vì còn lượt |
+| **2. Rủi ro chất lượng** | Mất lớp bắt lỗi mà reviewer/CTO từng bỏ lọt hoặc bắt được. Cổng B-02 (phát lại S2): bắt 1/1 ca dương (CI 95 % [2,5 %; 100 %]), chặn nhầm 0/53 lượt xanh ([0 %; 6,7 %]). Một ca dương không đủ để thay nghiệm thu. Vòng 3 mọi bài t1–t5 chạm trần điểm (`results-round3.md` §5 (c)) nên **không đo được** chênh chất lượng khi bỏ nghiệm thu | Mất thông tin cần cho KPI hoặc người đọc: `compliance.templateCoverage` phải giữ 100 % (§4.5). Giữ đúng tiêu đề mẫu nên rủi ro định dạng thấp; rủi ro là mục bị rút quá ngắn (vd. "Tệp đã lưu", "Lệnh kiểm chứng") | Thiếu ngữ cảnh ⇒ thêm lượt đọc tệp (đổi cacheWrite sang số lượt/lượt gọi, có thể tăng giờ); mất quy ước repo (`AGENTS.md`) ⇒ sai phong cách. **Không được lược** quy tắc dữ liệu/bảo mật | Thấp: cùng quy tắc chọn làn, chỉ khác "có/không gọi". Rủi ro duy nhất: ép làn đơn cho việc lớn (đã là quyết định của chủ dự án, `lane.ts:131` (`s.forced`)) |
 | **3. Điều kiện áp dụng** | Chỉ khi **đồng thời**: (i) phán quyết B-02 = "đạt" (S2 hiện "không đủ dữ liệu"; cần thêm ca dương và dữ liệu B02-G/Q, §4.5); (ii) cổng B-02 xanh ở lượt đó (không còn lệnh đỏ mà đề bài nhắc); (iii) việc không đụng bảo mật/dữ liệu (§6, B-04, B-08); (iv) làn đơn. Phương án rút gọn (thay vì bỏ): nghiệm thu chỉ chạy khi cổng B-02 đỏ hoặc có `ESCALATE:` | Làn đơn; giữ nguyên tiêu đề mẫu (đúng chuỗi mà phép kiểm §4.2 tìm); giới hạn độ dài theo từng mục, mục "không áp dụng" ghi một dòng. **Phương án đề xuất:** mỗi mục tối đa N ký tự, N đặt sau khi có `outputChars` theo mục (SR mới của S1); phần dài (nhật ký chi tiết, liệt kê tệp) chuyển sang tệp trong workspace thay vì nằm trong thân báo cáo. **Không đặt N bây giờ** vì chưa có số đo | Làn đơn; đo `prompt.systemChars/repoMapChars/docsChars` trước (SR mới) rồi mới đặt ngưỡng; bản đồ repo chỉ lược cho việc có tệp nêu trong đề bài; tài liệu dài chuyển sang "đọc khi cần" | **Đã đóng, không triển khai.** Điều kiện duy nhất còn lại: mỗi arm mới phải giữ `options.lane: "single"` (xem B-11.5) |
 | **4. Mục cần giám đốc duyệt** | Có: đổi cổng chất lượng; mở khóa sau khi B-02 "đạt" | **CẦN GIÁM ĐỐC DUYỆT — đụng mẫu đầu ra của giám đốc.** Duyệt: (1) giữ nguyên bộ tiêu đề; (2) có giới hạn độ dài từng mục; (3) giá trị N | Có đối với phần prompt mang quy tắc an toàn/dữ liệu (không lược). Không cần với bản đồ repo và tài liệu, Phòng Dev tự quyết kèm test | Không áp dụng (đã đóng) |
 
@@ -438,8 +523,8 @@ Mọi đường dẫn tệp kết quả dưới đây tương đối với `benc
 - **Rủi ro cần nêu:** (1) CTO bỏ lý do/chứng cứ, nên bước sửa không tái hiện được lỗi; (2) CTO chấp nhận nhiều hơn vì không phải biện minh bằng văn bản (thiên lệch, chưa đo); (3) `templateCoverage` giảm nếu bảng thiếu mục của mẫu; (4) tiết kiệm không chắc: tối đa bằng phần accept, 47,7 % Δ (cận trên, S1 T-5), mà accept gồm cả phần đầu vào (cacheRead) không bị rút; S1 không tách out theo pha nên **không có ước lượng điểm**.
 - **Tiêu chí kiểm trước khi áp dụng** (áp dụng ≠ chạy đo; giám đốc có thể duyệt chạy B7cab để đo chi phí trước): (i) phát lại B-02 với đầu ra brief: mọi ca mà CTO đầy đủ đã bắt (hiện 1) vẫn bị bảng ngắn bắt; (ii) đủ ca dương: nếu 0 bỏ lọt trong n ca dương thì cận trên 95 % của tỷ lệ bỏ lọt ≈ 3/n (quy tắc ba, xấp xỉ, cần data-scientist kiểm), muốn ≤ 20 % cần n ≥ 15, hiện có 1; (iii) chặn nhầm không tăng so với 0/53; (iv) `templateCoverage` 100 %.
 
-**(d) ĐÃ CÓ, ĐÓNG (R13).** Lượt định tuyến LLM nằm ở `route()`, không ở `pickLane`/`chooseLane` (hai hàm này không gọi LLM: `src/orchestrator.ts:1198-1200`). Đã đọc mã và lịch sử, không chạy lại:
-- `src/orchestrator.ts:1083-1084` (HEAD): `// B-01: ép làn đơn → định tuyến bằng từ khóa, không gọi LLM (làn đơn không có lượt route)` rồi `const router = forcedLane(task.options.lane, project?.lane) === 'single' ? undefined : registry.router();`. `forcedLane` ở `src/lane.ts:100-106` trả `'single'` khi `options.lane` (hoặc `ProjectDef.lane`) là `single`.
+**(d) ĐÃ CÓ, ĐÓNG (R13).** Lượt định tuyến LLM nằm ở `route()`, không ở `pickLane`/`chooseLane` (hai hàm này không gọi LLM: `src/orchestrator.ts:1473-1475` (`chooseLane`)). Đã đọc mã và lịch sử, không chạy lại:
+- `src/orchestrator.ts:1354-1355` (`router`): `// B-01: ép làn đơn → định tuyến bằng từ khóa, không gọi LLM (làn đơn không có lượt route)` rồi `const router = forcedLane(task.options.lane, project?.lane) === 'single' ? undefined : registry.router();`. `forcedLane` ở `src/lane.ts:105-111` (`forcedLane`) trả `'single'` khi `options.lane` (hoặc `ProjectDef.lane`) là `single`.
 - Tại `7fb18ba` (hash server chạy B7, §9 V3-02): `git show 7fb18ba:src/orchestrator.ts` dòng 1084 là `const router = task.options.lane === 'single' ? undefined : registry.router();` (chỉ `options.lane`; HEAD thêm `project?.lane`). Lưu ý: `7fb18ba` là commit sửa harness; dòng chú thích "làn đơn không có lượt route" do `994d9c8` đưa vào (`git log -S` chỉ liệt kê commit này), nên "có từ 7fb18ba" đúng về mã ở hash đó nhưng không phải commit gốc.
 - **Cấu hình arm B7 ép `single` thật:** `bench/vs-claude/arms.json:80-86`, B7 có `"options": { "lane": "single" }` (dòng 82-84). `bench/vs-claude/run.mjs:145` truyền `taskOptions: spec.options ?? {}`. `bench/vs-claude/lib/ccoding.mjs:49` dựng `options: { budgetMode: 'complete', planApproval: false, ...opts.taskOptions, variant: opts.variant }` (tệp này không chứa từ `lane`/`single`, chỉ chuyển nguyên). Vậy `task.options.lane === 'single'` ⇒ `router` là `undefined` ⇒ B7 không có lượt route LLM. **Không có phát hiện trái ngược.**
 - Hệ quả: (d) không còn là biện pháp tiết kiệm cho B7 và các arm sau nó (đã bằng 0). **Điều kiện kèm theo:** mỗi arm mới (B7c/B7cb/B7cab) phải sao chép `"lane": "single"`; thiếu dòng đó thì lượt route quay lại và (d) mở lại. Đưa vào kiểm tra trước commit khóa (B-11.5).
@@ -630,7 +715,7 @@ Danh sách ca giao D13 K6, chép từ `results/b14-step2/RUNLOG.md:33-37`: khung
 | Trường | Nội dung |
 |---|---|
 | **1. Vấn đề** | Chưa có số đo về lợi ích hay chi phí của họp. Tài liệu đề xuất bỏ họp với kế hoạch ≤ 3 hạng mục, hoặc lấy ý kiến vòng đầu song song rồi chốt. |
-| **2. Bằng chứng** | Mã trên nhánh perf: phát biểu trong một vòng **đã song song** (`phases.parallelDiscuss` mặc định bật, `orchestrator.ts:1611-1623`). Họp tự bỏ khi kế hoạch < `meetingMinSubtasks` (3) hạng mục hoặc < 2 người tham gia (`:1602-1604`). Mặc định `discussionRounds: 1` (`config.ts:297`). Arm B1 (`discussionRounds: 0`) có ở `arms.json:29-35`, **chưa chạy**. B7 là làn đơn, không họp (T-2). Tài liệu: Debate or Vote (`related-work.md` §2.16). |
+| **2. Bằng chứng** | Mã trên nhánh perf: phát biểu trong một vòng **đã song song** (`phases.parallelDiscuss` mặc định bật, `orchestrator.ts:1890-1902` (`phases.parallelDiscuss`)). Họp tự bỏ khi kế hoạch < `meetingMinSubtasks` (3) hạng mục hoặc < 2 người tham gia (`:1602-1604`). Mặc định `discussionRounds: 1` (`config.ts:374` (`discussionRounds: 1`)). Arm B1 (`discussionRounds: 0`) có ở `arms.json:29-35`, **chưa chạy**. B7 là làn đơn, không họp (T-2). Tài liệu: Debate or Vote (`related-work.md` §2.16). |
 | **3. Nguyên nhân gốc** | Không áp dụng: chưa có vấn đề đo được. Câu "họp chạy nối tiếp 5 lượt" của tài liệu mô tả `main@9e6079b`, không khớp mã trên nhánh perf. |
 | **4. Thay đổi đề xuất** | Chưa đổi mặc định. Đo B1 so với đối chứng (làn đầy đủ, `discussionRounds: 1`) trên bài lớn. **Tiên quyết (đã xong 3/11/2026):** `l1-modules` và `l2-chain` đã có `task.json` (`3ff7df3`, D8; oracle 1,00, null ≤ 0,01). Kiểm trước: lượt đối chứng phải thật sự có pha `discuss`, nếu không thì kết quả rỗng. |
 | **5. Hiệu quả kỳ vọng / cỡ mẫu** | Bỏ một vòng phát biểu song song và một lượt chốt trên đường găng. Độ lớn chưa biết. Cỡ mẫu tham chiếu: 10 lượt × 2 arm × 2 bài = 40 lượt, cộng 6 lượt thí điểm (S2). Với 2 bài, nửa độ rộng CI sẽ rộng hơn 0,218 của phương án A (V-2); con số chính xác chưa mô phỏng. **Giả thuyết.** |
@@ -657,12 +742,12 @@ Danh sách ca giao D13 K6, chép từ `results/b14-step2/RUNLOG.md:33-37`: khung
 | Trường | Nội dung |
 |---|---|
 | **1. Vấn đề** | Tài liệu đề xuất cho CTO nghiệm thu bằng Opus và chuyển bước tổng hợp sang Sonnet. Pha accept đã là phần chênh lớn nhất của làn đơn, và chất lượng phán đoán của CTO (recall) chưa được đo. |
-| **2. Bằng chứng** | T-5: pha accept chiếm 47,7 % phần chênh B7 − A0 trên t1–t5, cận dưới độc lập 14,5 %. C-5: giá Opus 5.5 đúng 2× Sonnet 5.5 ở mọi thành phần, nên USD của accept ×2 nếu token không đổi. `agreement.md` §(c) C-1…C-3: recall của cổng/CTO chưa ước lượng được (4 và 7 lượt lỗi < 10). Mã: `phaseModels` có sẵn (`types.ts:335-339`, `orchestrator.ts:3234`, `VARIANT_PHASES` có `accept` ở `:3776`). Chưa có arm nào đặt `accept: opus`. Làn đơn không có pha tổng hợp (B-01), nên phần "tổng hợp → Sonnet" chỉ áp cho làn đầy đủ. |
+| **2. Bằng chứng** | T-5: pha accept chiếm 47,7 % phần chênh B7 − A0 trên t1–t5, cận dưới độc lập 14,5 %. C-5: giá Opus 5.5 đúng 2× Sonnet 5.5 ở mọi thành phần, nên USD của accept ×2 nếu token không đổi. `agreement.md` §(c) C-1…C-3: recall của cổng/CTO chưa ước lượng được (4 và 7 lượt lỗi < 10). Mã: `phaseModels` có sẵn (`types.ts:359-363` (`phaseModels`), `orchestrator.ts:3687` (`phaseModels`), `VARIANT_PHASES` có `accept` ở `:3776`). Chưa có arm nào đặt `accept: opus`. Làn đơn không có pha tổng hợp (B-01), nên phần "tổng hợp → Sonnet" chỉ áp cho làn đầy đủ. |
 | **3. Nguyên nhân gốc** | **Giả thuyết:** Opus giảm tỉ lệ nghiệm thu sai, còn (a-brief) bù chi phí bằng cách rút đầu ra của accept. Chưa kiểm. |
 | **4. Thay đổi đề xuất** | Hai arm làn đơn, cùng (a-brief), chỉ khác `phaseModels.accept` (Sonnet hoặc Opus). Chạy trên bộ bài cài lỗi B-12, có trường ghi quyết định của CTO (B-12 trường 4(c)). **Thí điểm 12 cặp** để ước lượng ρ, q và tỉ lệ bất đồng, rồi mới tính cỡ mẫu chính thức. Phần "tổng hợp → Sonnet" chỉ là cấu hình `phaseModels.synthesize` cho làn đầy đủ, đo sau khi B-15 có bài lớn. |
 | **5. Hiệu quả kỳ vọng / cỡ mẫu** | Chất lượng: tỉ lệ nghiệm thu sai thấp hơn (độ lớn chưa biết). Chi phí: USD của accept tăng tới ×2 nếu (a-brief) không rút được token; (a-brief) có cận trên là toàn bộ phần accept (B-11.2). Cỡ mẫu một arm: 25–46 lượt lỗi cài (`agreement.md` C-3, B-12 trường 5). **Giả thuyết.** |
 | **6. Cách kiểm lại** | Chỉ số chính: tỉ lệ nghiệm thu sai (CTO "đạt" khi lỗi cài còn nguyên), ghép cặp, McNemar và CI Clopper–Pearson. Chỉ số phụ: token có trọng số (thước đo chính về chi phí, nhưng không so trực tiếp giữa hai model khác giá), USD (phân tích phụ, ngoài họ Holm), thời gian, test ẩn. Có 5 điểm dừng khai báo trước (S2 Phần 3, gồm ngưỡng 2× USD và 0,10; đây là lựa chọn thiết kế, chưa suy ra từ dữ liệu). Đăng ký `preregistration.md` §9 trước lượt đầu. |
-| **7. Rủi ro / dữ liệu** | (a) Lỗi cài không đại diện lỗi tự nhiên (B-12 trường 7). (b) Tên pha và cú pháp `phaseModels` cho bench (`bench.ts:125`) chưa được Phòng Dev xác nhận. (c) Tốn hạn mức vì Opus đắt gấp đôi. Bài tổng hợp, không có dữ liệu thật. |
+| **7. Rủi ro / dữ liệu** | (a) Lỗi cài không đại diện lỗi tự nhiên (B-12 trường 7). (b) Tên pha và cú pháp `phaseModels` cho bench (`bench.ts:141` (`phaseModels`)) chưa được Phòng Dev xác nhận. (c) Tốn hạn mức vì Opus đắt gấp đôi. Bài tổng hợp, không có dữ liệu thật. |
 | **8. Ưu tiên** | Chưa chấm; công sức 3. Đề xuất số 3 cho Phòng Dev, chỉ sau khi giám đốc duyệt (a-brief) và mở đo B-12. |
 | **9. Giám đốc duyệt** | **Có**: duyệt (a-brief) (B-11), mở đo B-12, và chi phí Opus. |
 
@@ -671,7 +756,7 @@ Danh sách ca giao D13 K6, chép từ `results/b14-step2/RUNLOG.md:33-37`: khung
 | Trường | Nội dung |
 |---|---|
 | **1. Vấn đề** | Tài liệu đề xuất bước định tuyến chấm độ khó 1–3, mức 1 dùng Sonnet và mức 3 dùng Opus để lập kế hoạch (dòng 286–287). |
-| **2. Bằng chứng** | Đã có một phần: làn nhanh dùng `fastLane.planModel` cho pha plan (`orchestrator.ts:1399`, `:1520`), nhưng không có thang độ khó. Không có dữ liệu benchmark: ảnh chụp không có `model` (C-0), và B7 không có lượt plan (T-2). |
+| **2. Bằng chứng** | Đã có một phần: làn nhanh dùng `fastLane.planModel` cho pha plan (`orchestrator.ts:1627` (`fastLane.planModel`), `:1520`), nhưng không có thang độ khó. Không có dữ liệu benchmark: ảnh chụp không có `model` (C-0), và B7 không có lượt plan (T-2). |
 | **3. Nguyên nhân gốc** | Không áp dụng: chưa có số đo. |
 | **4. Thay đổi đề xuất** | **D9 (quyết định của giám đốc 3/11):** chọn model lập kế hoạch theo độ khó 1–3 từ tín hiệu tất định của bộ chọn làn, sau công tắc, mặc định tắt (`BRIEF-D9.md` mục 9). Đo hiệu quả khi B-13 đã ghi `model` theo pha và có lượt B-15 trên bài lớn. |
 | **5. Hiệu quả kỳ vọng** | Chưa ước lượng được. |
@@ -707,6 +792,314 @@ Danh sách ca giao D13 K6, chép từ `results/b14-step2/RUNLOG.md:33-37`: khung
 | **7. Rủi ro / dữ liệu** | Nhãn **Nội bộ**; sự cố từ nhiệm vụ Bảo mật/Hạn chế bị loại (§5 của đặc tả). Hai điều kiện chặn của S2a (bài có `starter/` hay `repo/`; cờ `leak` khi chưa có sandbox) cần Dev xử lý trước lần A/B đầu; B-18 giảm rủi ro `leak`. Khi D10 hiện thực hóa thì thêm mục "B-19 Vòng tự cải thiện" vào `data-protection-assessment.md`. |
 | **8. Ưu tiên** | D10; công sức 4. Chưa chấm hiệu quả. |
 | **9. Giám đốc duyệt** | **Có**: bật khóa, chốt ngân sách và ngưỡng, duyệt từng bản vá và từng rollback. |
+
+---
+
+Quy ước chung cho Khối C:
+- Vị trí `src/…` theo commit `ccc76cc0`.
+- Ngưỡng ghi "(đề xuất)" là của trưởng phòng, chờ giám đốc duyệt.
+- "Chấm lại" là B-49.
+- Mọi mục sửa `src/` hay `agents/` thuộc Phòng Dev. Lệnh kiểm tra của dự án: `npm run typecheck`, `npm test`.
+
+### B-20 — Cổng phủ kế hoạch kiểm hạng mục và vai bắt buộc (R19, BRIEF-22; FX1) — **đang sửa (D17 K1, D16b K4)**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | L1: `plan-gate.ts:46` (`SOURCE_EXT`), `plan-gate.ts:130` (`checkPlanCoverage`), `plan-gate.ts:143` (`checkPlanReadable`); quy tắc A chỉ đếm tệp nguồn theo `SOURCE_EXT`. BRIEF-20 bỏ K4 (peer-reviewer) mà cổng vẫn đạt (biên bản người điều phối 14/11, 1/3 ca, [Mô tả]). Văn phòng phụ: độ phủ hạng mục 12/15, độ phủ vai 3/7, cổng chặn 0 lần (`scorecard.md` `leadCover`) |
+| **Chỗ sửa** | `src/plan-gate.ts`, `test/` |
+| **Tiêu chí xong** | Kế hoạch thiếu mã `K\d+` của đề bài, hoặc thiếu vai có trong roster ⇒ chặn với `rule: brief-item`. Hạng mục đề bài ghi "không làm" hoặc "chờ" ⇒ được miễn. Đề bài không có mã ⇒ hành vi không đổi |
+| **Kiểm lại** | Test D17 K1 (3 ca) và D16b K4 (3 ca); chấm lại: độ phủ hạng mục và độ phủ vai = n/n |
+| **Trạng thái** | `4b0437c8` chỉ thêm đề bài D17, chưa có commit mã |
+
+### B-21 — Lời nhắc trưởng phòng không cấm hạng mục reviewer do đề bài giao (R19; FX2) — **chưa giao**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | `agents/research/research-lead.md:58` (`@peer-reviewer`) dặn không tạo hạng mục review cho `@peer-reviewer`, kể cả khi đề bài giao mã riêng cho vai này. Đây là một trong hai nguyên nhân của BRIEF-20 (L1) |
+| **Chỗ sửa** | `agents/research/research-lead.md` (và câu tương ứng ở `agents/dev/dev-lead.md` nếu có). Đổi định dạng `agent.md` ⇒ cập nhật `docs/AGENTS-GUIDE.md`, `test/registry.test.ts` (AGENTS.md) |
+| **Tiêu chí xong** | Câu có ngoại lệ "trừ khi đề bài giao hạng mục có mã cho vai reviewer"; `npm test` xanh |
+| **Kiểm lại** | Chấm lại: mọi kế hoạch có đề bài nêu hạng mục reviewer đều có hạng mục giao reviewer (n/n) |
+| **Trạng thái** | Chưa giao; D17 chỉ sửa mã |
+
+### B-22 — Đề bài đòi review thì không được bỏ review (R19; FX3) — **đang sửa (D17 K2)**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | F-E2: `orch:2008-2050` (`canReview`), `quality-gate.ts:84` (`sensitivePaths`); văn phòng phụ có 2/5 lượt phòng bỏ review; BRIEF-20 |
+| **Chỗ sửa** | `src/quality-gate.ts`, `src/orchestrator.ts` |
+| **Tiêu chí xong** | Đề bài có hạng mục review ⇒ khâu review luôn chạy; lý do ghi vào `gate.decision` |
+| **Kiểm lại** | Test hai nhánh (D17 K2). Chấm lại: số lượt bỏ review khi đề bài đòi review = 0 |
+| **Trạng thái** | Chưa có commit mã |
+
+### B-23 — Review bị bỏ phải để dấu vết (R19; FX4) — **chưa giao**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | L2(b): khi review tắt hoặc không có reviewer, và không có kết quả lệnh nào, `run.review` giữ `undefined`. Vì vậy không có cờ "cần xem" (`orch:2008-2043` (`undefined`), `orch:2175` (`run.review`)) |
+| **Chỗ sửa** | `src/orchestrator.ts` |
+| **Tiêu chí xong** | Nhánh này gán `run.review = {skipped: true, reason}`, đặt `attention` "chưa review" và ghi log sự kiện riêng |
+| **Kiểm lại** | Test orchestrator: `options.review=false`, không có `checkCommands` ⇒ `run.review.skipped === true` và có `attention` |
+| **Trạng thái** | Chưa giao; ngoài phạm vi D17 K2, vì K2 chỉ xử lý ca đề bài đòi review |
+
+### B-24 — CTO chưa đạt thì không đóng như đã xong (R19; FX5) — **đang sửa một phần (D17 K3)**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | L3: `orch:1088-1094` (`prior`) đặt `status='done'` sau `accept()` bất kể kết quả; `orch:897-903` (`accept`) cho nhiệm vụ `after` chạy tiếp. BRIEF-20: 3/9 tiêu chí chưa đạt mà vẫn "hoàn thành, cần xem". Văn phòng phụ: 1/5 lượt phòng được nghiệm thu |
+| **Chỗ sửa** | (a) Vòng bổ sung: lời nhắc nghiệm thu, `parseAcceptance`, `src/orchestrator.ts` (D17 K3). (b) Chặn `after`: `src/orchestrator.ts` (`waitingOn`) |
+| **Tiêu chí xong** | (a) Tiêu chí "trong phạm vi" mở tối đa 1 vòng bổ sung. (b) Hết vòng mà vẫn chưa đạt ⇒ nhiệm vụ `after` giữ chờ, hoặc nhiệm vụ mang trạng thái riêng (ví dụ `needs_review`) |
+| **Kiểm lại** | 4 test D17 K3, cộng 1 test: nhiệm vụ trước có `accepted=false, parsed=true` ⇒ nhiệm vụ `after` không chạy. Chấm lại: tỉ lệ lượt phòng được nghiệm thu (hiện 1/5) |
+| **Trạng thái** | (a) đang sửa (D17); (b) chưa giao |
+
+### B-25 — Reviewer chạm trần lượt phải ra kết luận (R19; FX6) — **đang sửa (D16b K2)**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | L4: `claude-cli.ts:238` (`ev.subtype`), `:389` trả `capped:'turns'` không kèm `error`; pha review không đọc `capped` (`orch:1915` (`this.call`)); `CONTINUE_PHASES` không có `review` (`orch:124` (`review`)). BRIEF-D16. KPI: `peer-reviewer` bị cắt 4/5, `qa-tester` 4/9, `reviewUnparsed` 1 |
+| **Chỗ sửa** | `src/orchestrator.ts`, `src/runtimes/claude-cli.ts` |
+| **Tiêu chí xong** | Ba nhánh: lượt tiếp nối chỉ để trả JSON; vẫn không đọc được thì chạy lại với trần lượt cao hơn; vẫn không được thì attention rõ ràng |
+| **Kiểm lại** | 3 test D16b K2. Chấm lại: `reviewUnparsed` = 0; số lượt reviewer bị cắt ≤ 2/14 (đề xuất; hiện 8/14) |
+| **Trạng thái** | Chưa có commit mã |
+
+### B-26 — Rule `outside-root-write` trên mọi đường chạy lệnh (R19; FX7) — **đang sửa một phần (D16b K1, K3)**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | L5: rule chỉ được gọi ở `claude-guard.ts:110` (`outsideWriteDecision`). Chưa áp ở `workspace.ts:604-612` (`run_command`), `workspace.ts:696` (`runCheckCommand`), `cli-agents.ts`. Rule thêm ở `ce8f217b`/`de4b78fc` |
+| **Chỗ sửa** | `src/tools/workspace.ts`, `src/runtimes/cli-agents.ts`, `src/tools/shell-policy.ts` |
+| **Tiêu chí xong** | Cùng một bảng lệnh cho cùng quyết định qua mọi đường; ≥ 20 lệnh dev thường gặp không bị chặn nhầm |
+| **Kiểm lại** | Test bảng lệnh (D16b K1, K3), mở rộng cho `runCheckCommand` và codex/kimi |
+| **Trạng thái** | `run_command` đang sửa (D16b); `runCheckCommand` và `cli-agents` chưa giao |
+
+### B-27 — Đầu ra bị cắt ở 10/14 agent (R19; FX8) — **chưa giao; chẩn đoán trước**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | F-A1: 27/112 lượt gọi bị cắt (`kpi-office.json` → `truncated`). Cấu hình vòng công cụ: `ccoding.config.json:35`, `src/config.ts:379` (`toolTurns`) |
+| **Chỗ sửa** | Bước 1: bảng nguyên nhân theo pha từ log (chạm trần lượt hay trần token đầu ra). Bước 2: `src/config.ts` (`phases.toolTurns`) hoặc lời nhắc "ghi sớm" |
+| **Tiêu chí xong** | Có bảng nguyên nhân. Sau sửa, tỉ lệ bị cắt ≤ 10 % lượt gọi trên KPI 30 ngày (đề xuất; hiện 24,1 %) |
+| **Kiểm lại** | `scorecard.mjs` trên `kpi-office.json` mới, cột "Bị cắt" |
+| **Trạng thái** | Chưa giao |
+
+### B-28 — Thao tác công cụ lỗi ở `security`, `peer-reviewer` (R19; FX9) — **chưa giao**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | F-A3: KPI `tools-fail`, 22–25 % thao tác lỗi |
+| **Chỗ sửa** | `agents/dev/security.md`, `agents/research/peer-reviewer.md` (bước dò môi trường và lệnh của repo) |
+| **Tiêu chí xong** | Finding `tools-fail` không còn; tỉ lệ thao tác lỗi ≤ 10 % (đề xuất) |
+| **Kiểm lại** | KPI mới; `test/registry.test.ts` |
+| **Trạng thái** | Chưa giao |
+
+### B-29 — `data-scientist` đọc tệp bằng shell (R19; FX10) — **chưa giao**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | F-A4: 88 lệnh shell so với 24 lần dùng công cụ tệp |
+| **Chỗ sửa** | `agents/research/data-scientist.md` |
+| **Tiêu chí xong** | Finding `shell-reads` không còn; lệnh shell để đọc ít hơn số lần dùng công cụ tệp |
+| **Kiểm lại** | KPI mới |
+| **Trạng thái** | Chưa giao |
+
+### B-30 — KPI `no-sources` (R19; FX11) — **chưa giao**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | F-A5: `academic-writer`, `methodologist` có Tuân thủ 70 |
+| **Chỗ sửa** | Trước hết xác định finding đúng hay quy tắc sai (hạng mục thiết kế có thể không cần nguồn ngoài), rồi sửa `agents/research/*.md` hoặc miễn trong `src/kpi.ts` |
+| **Tiêu chí xong** | Finding không còn ở hạng mục có yêu cầu nguồn; hoặc `src/kpi.ts` miễn cho hạng mục không yêu cầu nguồn, kèm test |
+| **Kiểm lại** | KPI mới; test `kpi` |
+| **Trạng thái** | Chưa giao |
+
+### B-31 — Gói Nghiên cứu vượt ngân sách (R19; FX12) — **chưa giao**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | F-A6: phòng dùng 52,17M token so với 24,00M ngân sách (×2,2, `kpi-office.json`) |
+| **Chỗ sửa** | `agents/research/research-lead.md` (giới hạn cỡ gói, tách giai đoạn); `checkEstimate` ở bước plan (`orch:2844` (`checkEstimate`)) |
+| **Tiêu chí xong** | Ước lượng kế hoạch > ngân sách ⇒ cảnh báo hoặc đề xuất tách trước khi chạy; finding `budget` không còn |
+| **Kiểm lại** | Test `checkEstimate`; KPI mới |
+| **Trạng thái** | Chưa giao |
+
+### B-32 — Ước lượng có thời gian đường găng (R19; FX13) — **chưa giao**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | L11: `estimatePlan` chỉ cộng token (`orch:2537-2595` (`estimatePlan`), `src/estimate.ts:15-42` (`tasks`)) |
+| **Chỗ sửa** | `src/estimate.ts` |
+| **Tiêu chí xong** | Trả thêm `criticalPathEstimate` và `parallelism` dự kiến (work/cp) |
+| **Kiểm lại** | Test đơn vị trên kế hoạch mẫu; khi chấm lại, so số dự kiến với `decomp-metrics.mjs` |
+| **Trạng thái** | Chưa giao |
+
+### B-33 — Lời nhắc bóc tách nhất quán (R19; FX14) — **chưa giao; lỗi vặt**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | L8: `planPrompt` bảo tối đa song song; `dev-lead.md:61` (`Hạng mục chạy lệnh`) bảo ít hạng mục lớn; `FAST_LANE_PLAN` bảo chia 2–4; lời nhắc ghi cứng "1–7" trong khi `MAX_SUBTASKS = 8` (`planner.ts:25` (`MAX_SUBTASKS`)) tại `b146b87c`; ở mốc `ccc76cc0` lời nhắc đã dùng hằng này (`prompts.ts:314` (`MAX_SUBTASKS`)) |
+| **Chỗ sửa** | `src/prompts.ts`, `agents/dev/dev-lead.md` |
+| **Tiêu chí xong** | Một quy tắc theo làn; số trong lời nhắc lấy từ hằng `MAX_SUBTASKS` |
+| **Kiểm lại** | Test: chuỗi lời nhắc chứa đúng giá trị `MAX_SUBTASKS`; `npm test` |
+| **Trạng thái** | Chưa giao |
+
+### B-34 — Giao người lạ không rơi về trưởng phòng (R19; FX15) — **chưa giao**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | L9: `matchAssignee(...) ?? lead` (`planner.ts:114` (`used.has`)); trưởng phòng không có `Bash` |
+| **Chỗ sửa** | `src/planner.ts`, `src/plan-gate.ts` (quy tắc B) |
+| **Tiêu chí xong** | Assignee lạ ⇒ cổng B báo; hạng mục cần chạy lệnh không giao cho agent không có `run_command` |
+| **Kiểm lại** | Test `parsePlan`/`planGate` |
+| **Trạng thái** | Chưa giao |
+
+### B-35 — FINAL của trưởng phòng qua cổng mẫu (R19; FX16) — **chưa giao; lỗi vặt**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | L12: `runQualityGate` chỉ kiểm hạng mục (`orch:3270-3277` (`st.mergePending`), `quality-gate.ts:67` (`templateGate`)) |
+| **Chỗ sửa** | `src/orchestrator.ts` |
+| **Tiêu chí xong** | FINAL thiếu mục bắt buộc của mẫu ⇒ có cờ trong `gate.decision` |
+| **Kiểm lại** | Test `templateGate` cho FINAL |
+| **Trạng thái** | Chưa giao |
+
+### B-36 — KPI nhất quán và có dòng cho điều phối viên (R19; FX17) — **chưa giao**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | F-M1: `tasksCounted` = 7 trong khi tổng `tasksByStatus` = 10; điều phối viên không có dòng trong `kpi-office.json` |
+| **Chỗ sửa** | `src/kpi.ts` |
+| **Tiêu chí xong** | Hai trường bằng nhau, hoặc tệp xuất ghi định nghĩa; có dòng cho điều phối viên (chi phí route, tỉ lệ lùi `keywordRoute`) |
+| **Kiểm lại** | Test `kpi`; `scorecard.mjs --check` đọc được dòng mới |
+| **Trạng thái** | Chưa giao |
+
+### B-37 — Ghi đúng model trưởng phòng theo làn (R19; FX18) — **chưa giao; lỗi vặt**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | Hồ sơ `dev-lead`/`research-lead` ghi opus; ở làn nhanh pha `plan` chạy sonnet (`orch:1798` (`plan`), `config.ts:405` (`plan`)), tức 252 lượt fast (`model-per-role.md` §2) |
+| **Chỗ sửa** | `agents/dev/dev-lead.md`, `agents/research/research-lead.md`, `docs/AGENTS-GUIDE.md` |
+| **Tiêu chí xong** | Tài liệu ghi model theo làn. Bài báo không còn câu "trưởng phòng dùng Opus" như quy tắc chung |
+| **Kiểm lại** | `test/registry.test.ts`; thêm mục `stale` vào `facts.json` cho câu sai |
+| **Trạng thái** | Chưa giao |
+
+### B-38 — Kiểm tự động `tệp:dòng` của `logic-map.md` (R19; FX19) — **chưa giao (Phòng Nghiên cứu)**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | `logic-map.md` gắn số dòng với `ccc76cc0`; K1 phải đối chiếu tay và còn một chỗ xấp xỉ (`orch:1165-1172` (`this.save`)) |
+| **Chỗ sửa** | Script mới `docs/research/scripts/logic-map-check.mjs` |
+| **Tiêu chí xong** | Với mỗi tham chiếu `tệp:dòng` có tên ký hiệu đi kèm: kiểm dòng đó ở commit mốc (`git show <mốc>:<tệp>`) có chứa ký hiệu; báo số tham chiếu lệch so với `HEAD` |
+| **Kiểm lại** | exit 0 trên `ccc76cc0`; exit 1 khi cố ý sửa một số dòng; thêm vào danh sách lệnh kiểm tra của dự án |
+| **Trạng thái** | Chưa giao |
+
+### B-39 — Kiểm tự động đường dẫn máy (R19; FX20) — **chưa giao (Phòng Nghiên cứu)**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | F-M3: BRIEF-21 sót đường dẫn máy, đã che tay ở `d1903029` |
+| **Chỗ sửa** | `docs/research/scripts/consistency-check.mjs` hoặc mục `stale` trong `facts.json` |
+| **Tiêu chí xong** | Đường dẫn tuyệt đối dạng ổ đĩa Windows hoặc thư mục home trong `docs/research/**` ⇒ exit 1 |
+| **Kiểm lại** | Tệp tạm có đường dẫn giả ⇒ exit 1; repo hiện tại ⇒ exit 0 |
+| **Trạng thái** | Chưa giao |
+
+### B-40 — Ký số log (R19; FX21) — **chưa giao; một phần cần giám đốc**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | L13: chuỗi băm ở `logger.ts:66-72` (`path.join`) phát hiện sửa nhưng không ký số, không WORM; AGENTS.md đòi log làm chứng cứ phải bất biến |
+| **Chỗ sửa** | `src/logger.ts` (ký HMAC theo đoạn); lưu trữ WORM là việc hạ tầng |
+| **Tiêu chí xong** | Mỗi đoạn log có chữ ký kiểm được; `chainChecker` báo lỗi khi sửa một dòng |
+| **Kiểm lại** | Test `logger`; giám đốc chọn hạ tầng lưu trữ |
+| **Trạng thái** | Chưa giao |
+
+### B-41 — E9: chất lượng bóc tách và planner mạnh (R19; TN1) — **đã đăng ký, chưa chạy**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | F-E7: P có 10/56 lượt với hạng mục dài nhất > 50 %. F-E8: làm lại trung vị 22,5 %. Không có thước đo chất lượng bóc tách (`effectiveness.md` 3e) |
+| **Thiết kế** | `preregistration.md` §9.x: 32 bài chia được + 32 bài không chia được; giai đoạn 1 chỉ lập kế hoạch, 3 arm (Sonnet/Opus/Haiku) × 3 lặp = 576 lượt plan; H1 độ phủ, H2 chia thừa, Holm |
+| **Tiêu chí xong** | Có kết quả H1/H2 theo đăng ký; quyết định giữ hay đổi `phaseModels.plan` |
+| **Kiểm lại** | Độ phủ, tỉ lệ chia thừa; κ giữa hai người gán ≥ 0,6 |
+| **Điều kiện** | Giám đốc duyệt ngân sách token và hai người gán chuẩn; đủ 64 bài chuẩn |
+
+### B-42 — E7-R2 đo lại với trần lượt cao hơn (R19; TN2; thay hạng 7 §0.1 (b)) — **chưa đăng ký**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | F-A9: arm R1 chặn nhầm 42,2 %; arm R2 (Opus) 6,3 % nhưng recall 85,9 % và 13 lượt không đọc được do trần 6 lượt (`e7-cto/report.md`) |
+| **Thiết kế** | Đăng ký §9 trước lượt đầu; cùng 128 mục E7; trần lượt cao hơn, giống nhau mọi arm |
+| **Tiêu chí xong** | Arm R2 có 0 lượt không đọc được do trần; recall và chặn nhầm có CI |
+| **Kiểm lại** | recall, chặn nhầm, USD |
+| **Điều kiện** | Chạy sau B-25; giám đốc duyệt chi phí Opus |
+
+### B-43 — Độ đúng kết luận reviewer (R19; TN3) — **chưa đăng ký**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | `scorecard.md` 1b: chưa có số về độ đúng; bench có `review` = 0 ở mọi lượt có `lane` |
+| **Thiết kế** | Bộ review có đáp án (mở rộng bộ lỗi cài B-12), cùng trần lượt, sonnet so với opus |
+| **Tiêu chí xong** | Có recall và chặn nhầm của reviewer trên ≥ 64 mục mỗi phía |
+| **Kiểm lại** | recall, chặn nhầm |
+| **Điều kiện** | Chạy sau B-25 |
+
+### B-44 — Độ đúng định tuyến (R19; TN4) — **chưa đăng ký**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | Điều phối viên không có KPI. Chi phí route đã đo (3,7 % token), độ đúng chưa đo (`model-per-role.md`) |
+| **Thiết kế** | Bộ nhãn phòng đúng do người gán; phát lại khâu `route` với haiku và sonnet, không chạy nhiệm vụ |
+| **Tiêu chí xong** | Tỉ lệ định tuyến đúng có CI cho hai model |
+| **Kiểm lại** | tỉ lệ đúng, tỉ lệ lùi `keywordRoute` |
+| **Điều kiện** | Có người gán nhãn |
+
+### B-45 — Chọn làn bằng đếm regex (R19; TN5) — **chưa đặc tả**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | L10: `countParts` đếm mục danh sách cấp cao nhất (`lane.ts:55-75` (`declared`), `:99-107`) |
+| **Thiết kế** | Phát lại `chooseLane` (mã thuần, không LLM) trên tập đề bài đã gán làn đúng; đối chiếu `lane` với `score` và `fixRounds` trong `runs.jsonl` |
+| **Tiêu chí xong** | Có ma trận nhầm làn; đếm số đề bị tính thừa "phần" |
+| **Kiểm lại** | tỉ lệ nhầm làn |
+| **Điều kiện** | Không tốn hạn mức LLM |
+
+### B-46 — Phân rã vượt đường găng theo nguyên nhân (R19; TN6) — **chưa giao (Phòng Nghiên cứu)**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | P/dev vượt đường găng 8,1 % (q3 23,3 %); L6 (một hạng mục mỗi người nhận), L7 (không có worktree thì chạy độc quyền); F-E6: xung đột gộp 6/213 |
+| **Thiết kế** | Thêm vào `decomp-metrics.mjs`: thời gian chờ người nhận bận, chờ gộp, setup worktree, chạy độc quyền |
+| **Tiêu chí xong** | Bảng tỉ trọng nguyên nhân trên ≥ 35 lượt Dev |
+| **Kiểm lại** | vượt đường găng theo nguyên nhân |
+| **Điều kiện** | Dữ liệu từng lượt nằm ngoài repo; chỉ đưa số tổng hợp vào repo |
+
+### B-47 — Tách `acceptance-fail` theo agent (R19; TN7) — **chưa giao**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | F-A2: KPI gán tiêu chí trượt cho mọi người thực thi và trưởng phòng của nhiệm vụ |
+| **Thiết kế** | `src/kpi.ts` gán tiêu chí cho hạng mục và agent theo deliverable và `dependsOn`, rồi tính lại |
+| **Tiêu chí xong** | `acceptance-fail` tách theo agent |
+| **Kiểm lại** | KPI `outcome` theo agent; test `kpi` |
+| **Điều kiện** | — |
+
+### B-48 — Bench ghi đủ trường chia việc (R19; TN8) — **chờ đợt bench mới**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | F-M2: chỉ 36/632 lượt CCoding có `subtasksTimed` |
+| **Thiết kế** | Mọi arm CCoding ở đợt mới ghi `lane`, `subtasksTimed`, `maxConcSubtasks` |
+| **Tiêu chí xong** | 100 % lượt CCoding mới có đủ ba trường |
+| **Kiểm lại** | Đếm trường trong `runs.jsonl` |
+| **Điều kiện** | Giám đốc mở đợt bench |
+
+### B-49 — Chấm lại sau khi Dev sửa xong (R19; TN9) — **chờ Dev**
+
+| Trường | Nội dung |
+|---|---|
+| **Bằng chứng** | Bảng điểm hiện tại: `scorecard.md` (KPI 30 ngày tới 14/11/2026) |
+| **Thiết kế** | `run-plan.md` §10.2: KPI 30 ngày mới, `decomp-metrics.mjs`, `scorecard.mjs --write/--check`, phát lại ba ca 14/11 bằng test không gọi LLM. F-A7 (`devops`, n=2) và F-E6 (xung đột gộp) đọc lại khi n đủ |
+| **Tiêu chí xong** | Mỗi mục B-20…B-40 có tiêu chí xong đạt, hoặc ghi lý do chưa đạt |
+| **Kiểm lại** | Các cột của `scorecard.md`; `scorecard.mjs --check` exit 0 |
+| **Điều kiện** | Dev gộp xong D17, D16b và gói lỗi vặt |
 
 ---
 

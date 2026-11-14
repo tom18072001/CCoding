@@ -1245,6 +1245,8 @@ Phòng Nghiên cứu thẩm định lại ở BRIEF-19 K1: chạy lại và đ�
 
 ### 9.x Đăng ký trước E9
 
+*Đăng ký mới, đặt ở §9 để chỉ thêm dòng (không phải sai lệch so với đăng ký trước).*
+
 **E9 — chất lượng bóc tách và lợi ích của planner mạnh (BRIEF-22, K4, 14/11/2026, @methodologist).** Đăng ký **trước** mọi lượt chạy E9; chưa chạy. Căn cứ: `docs/research/analysis/decisions/model-per-role.md`, `effectiveness.md` (không có thước đo chất lượng bóc tách), `docs/research/context/decomposition-sources-2026-11-14.md` (N2, N12, N13, N21). Phân loại dữ liệu: **Nội bộ**; bài tổng hợp, không dữ liệu thật, không DLCN.
 
 **Câu hỏi.** (i) Trưởng phòng bóc tách có phủ đủ việc ở bài chia được và tránh chia thừa ở bài không chia được không? (ii) Planner mạnh hơn (Opus) có bóc tách tốt hơn planner đang chạy ở làn nhanh (Sonnet) không? Thiết kế: thực nghiệm đối chứng, cặp theo bài, đơn vị phân tích là **bài**.

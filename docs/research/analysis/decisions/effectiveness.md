@@ -2,7 +2,7 @@
 
 Phân loại dữ liệu: **Nội bộ**. Chỉ mô tả; không có p-value (các đợt khác nhau không gộp, vận hành thật không có đối chứng). Mọi bảng do `scorecard.mjs` sinh; kiểm bằng `node docs/research/analysis/decisions/scorecard.mjs --check`.
 
-Phân vai: chia việc = **trưởng phòng** (bóc tách, khâu `plan`) + **hàm chọn làn** (`src/lane.ts:129`, không gọi LLM) + lập lịch theo `dependsOn`/`maxParallel` (`src/orchestrator.ts`). `cto` chỉ nghiệm thu; khi giám đốc nói "quyết định của CTO" về chia việc thì đó là ba thành phần trên.
+Phân vai: chia việc = **trưởng phòng** (bóc tách, khâu `plan`) + **hàm chọn làn** (`src/lane.ts:129` (`chooseLane`), không gọi LLM) + lập lịch theo `dependsOn`/`maxParallel` (`src/orchestrator.ts`). `cto` chỉ nghiệm thu; khi giám đốc nói "quyết định của CTO" về chia việc thì đó là ba thành phần trên.
 
 ## 3a. Vận hành thật: giới hạn tốc độ nằm ở cấu trúc kế hoạch hay ở lập lịch
 

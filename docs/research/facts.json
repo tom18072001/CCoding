@@ -7,48 +7,43 @@
       "exceptions": [
         {
           "file": "docs/research/dev-review.md",
-          "line": 200,
+          "anchor": "C6 chưa có trong T-f;",
           "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng lỗi R1-02..R1-12)"
         },
         {
           "file": "docs/research/dev-review.md",
-          "line": 201,
+          "anchor": "C6 chưa có trong T-d\"",
           "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng lỗi R1-02..R1-12)"
         },
         {
           "file": "docs/research/dev-review.md",
-          "line": 202,
+          "anchor": "C6 chưa có trong T-b\"",
           "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng lỗi R1-02..R1-12)"
         },
         {
           "file": "docs/research/dev-review.md",
-          "line": 210,
+          "anchor": "C6 chưa có dữ liệu",
           "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng lỗi R1-02..R1-12)"
         },
         {
           "file": "docs/research/dev-review/verification.md",
-          "line": 69,
+          "anchor": "C6 chưa có trong T-d\"",
           "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng xác minh)"
         },
         {
           "file": "docs/research/dev-review/verification.md",
-          "line": 83,
+          "anchor": "C6 chưa có trong T-f;",
           "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng xác minh)"
         },
         {
           "file": "docs/research/dev-review/verification.md",
-          "line": 84,
+          "anchor": "C6 chưa có trong T-d …\"",
           "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng xác minh)"
         },
         {
           "file": "docs/research/dev-review/verification.md",
-          "line": 85,
+          "anchor": "C6 chưa có trong T-b; … 3,",
           "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng xác minh)"
-        },
-        {
-          "file": "docs/research/improvement-backlog.md",
-          "line": 289,
-          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (mô tả vấn đề B-05; dòng dời 284 → 285 do chèn dòng cập nhật gói 6, rồi 285 → 288 do ghi chú R15 và hai dòng B-18, B-19 ở §0, rồi 288 → 289 do dòng R16)"
         }
       ]
     },
@@ -59,7 +54,7 @@
       "exceptions": [
         {
           "file": "docs/research/BRIEF-2.md",
-          "line": 13,
+          "anchor": "AGENT 2027 (workshop ICSE) là **13/11/2026** (mọi workshop ICSE 2027 cùng hạn — không phải ≈ 27/11",
           "reason": "Dòng nêu rõ \"không phải ≈ 27/11\", đúng là 13/11/2026"
         }
       ]
@@ -71,7 +66,7 @@
       "exceptions": [
         {
           "file": "docs/research/performance/token-analysis.md",
-          "line": 489,
+          "anchor": "review không bắt",
           "reason": "Dòng bác bỏ: BRIEF-2 (\"review không bắt\") không khớp dữ liệu"
         }
       ]
@@ -80,14 +75,12 @@
       "id": "c1c8-single-labeller",
       "pattern": "do một người gán",
       "reason": "Hai bên gán nhãn MAST là hai agent cùng họ mô hình, không phải một người (agreement.md M-1; paper.md §8.1(3))",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": [
         {
           "file": "docs/research/paper/paper.md",
-          "line": 862,
-          "reason": "Trích dẫn câu cũ để ghi nhận đã sửa, không phải khẳng định (dòng dời 513 → 547 do chèn §4.3, → 563 ở gói 6 do viết lại §7.4 và §9, → 573 ở v0.5 do thêm E1, E2 và sai lệch, → 576 ở v0.6 do thêm §6.1 mục (8) và R19, → 667 ở v0.7.1, → 831 ở v0.8 do chèn §4.4 và §6.5, → 862 ở v0.8.1 do gộp §6.3.1–6.3.2 của gói 17)"
+          "anchor": "do một người gán",
+          "reason": "Trích dẫn câu cũ để ghi nhận đã sửa, không phải khẳng định (neo theo cụm, không theo số dòng)"
         }
       ]
     },
@@ -95,34 +88,26 @@
       "id": "l1l2-no-task-json",
       "pattern": "l[12]-[a-z]+[^|\\n]{0,30}chưa có `task\\.json`",
       "reason": "l1-modules và l2-chain đã có task.json từ 3/11/2026 (D8, 3ff7df3; oracle 1,00, null ≤ 0,01); còn thiếu là phép đo A1/A2, không phải bài",
-      "files": [
-        "paper/paper.md",
-        "improvement-backlog.md",
-        "challenges.md"
-      ],
+      "files": ["paper/paper.md", "improvement-backlog.md", "challenges.md"],
       "exceptions": []
     },
     {
       "id": "mast-abstract-only",
       "pattern": "MAST mới đọc",
       "reason": "MAST đã được đọc thân bài bản v3 (related-work.md §2.12, gói 2); chưa đọc phụ lục",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
       "id": "b-open-proposal-label",
       "pattern": "ĐỀ XUẤT, (BỊ CHẶN|CHƯA CHẠY|KHÔNG CHẠY)|\\*\\*HOÃN\\*\\*",
       "reason": "B-09, B-12…B-17 đã chuyển sang D9 hoặc cần đo theo quyết định của giám đốc 3/11/2026 (BRIEF-D9.md, 90cd913); không còn nhãn đề xuất/hoãn",
-      "files": [
-        "improvement-backlog.md"
-      ],
+      "files": ["improvement-backlog.md"],
       "exceptions": []
     }
   ],
   "brief22": {
-    "_note": "v0.8 (BRIEF-22, 14/11/2026): khóa và giá trị chép nguyên từ khối facts ở cuối analysis/decisions/scorecard.md và effectiveness.md (do scorecard.mjs sinh; kiểm bằng scorecard.mjs --check). consistency-check không đọc khóa này; các mục numbers bên dưới khóa giá trị trong paper.md.",
+    "_note": "v0.8 (BRIEF-22, 14/11/2026): khóa và giá trị chép nguyên từ khối facts ở cuối analysis/decisions/scorecard.md và effectiveness.md (do scorecard.mjs sinh; kiểm bằng scorecard.mjs --check). consistency-check không đọc khóa này; các mục numbers bên dưới khóa giá trị trong paper.md. Nhãn P-1/P-2 (BRIEF-22b, M1): hai giá trị cùng tồn tại, mỗi giá trị một định nghĩa. P-1 = 42/54 = 77,8 % (mẫu số 54: lượt có ≥ 2 hạng mục đủ mốc giờ) so với `brief22.eff.P.anyParallel` = 42/56 = 75,0 % (mẫu số 56: mọi lượt phòng). P-2 = 27,5 % (gộp phút, 375 phút) so với `brief22.eff.P.saveStructural` = 29,2 % (nghịch đảo của work/cp trung vị 1,41).",
     "brief22.axis2.full": "30/82",
     "brief22.axis2.fullPct": 36.6,
     "brief22.axis2.gitRead": "82/82",
@@ -492,6 +477,36 @@
       "exceptions": []
     },
     {
+      "id": "brief22-p1-a-ratio",
+      "value": "42/54",
+      "reason": "BRIEF-22b M1, m-r2: P-1 phương án A = 42/54 (mẫu số 54: lượt có ≥ 2 hạng mục đủ mốc giờ); số B 42/56 ở brief22.eff.P.anyParallel",
+      "pattern": "^\\| P-1 [^|]*\\| (42/54) = 77,8 %",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "brief22-p1-a-pct",
+      "value": "77,8",
+      "reason": "BRIEF-22b M1, m-r2: P-1 phương án A = 77,8 % (42/54)",
+      "pattern": "^\\| P-1 [^|]*\\| 42/54 = (77,8) %",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "brief22-p2-a-pct",
+      "value": "27,5",
+      "reason": "BRIEF-22b M1, m-r2: P-2 phương án A = 27,5 % (gộp phút, (1366 − 990)/1366 = 375 phút); số B 29,2 % là nghịch đảo work/cp trung vị 1,41",
+      "pattern": "^\\| P-2 [^|]*\\| Tối đa 375 phút = (27,5) %",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
       "id": "brief22-p-par-allowed",
       "value": "1,41",
       "reason": "v0.8 (BRIEF-22): brief22.decomp.P.parAllowedMedian = 1.412; effectiveness.md 3a",
@@ -528,12 +543,7 @@
       "value": "13/11/2026",
       "reason": "Nguồn: publication-plan.md dòng AGENT'27 (kiểm ngày 2/11/2026) và BRIEF-2.md mục 5",
       "pattern": "AGENT[^\\n]{0,60}?(\\d{1,2}/\\d{1,2}/20\\d\\d)",
-      "files": [
-        "publication-plan.md",
-        "BRIEF-2.md",
-        "paper/paper.md",
-        "presentation-notes.md"
-      ],
+      "files": ["publication-plan.md", "BRIEF-2.md", "paper/paper.md", "presentation-notes.md"],
       "exceptions": []
     },
     {
@@ -541,10 +551,7 @@
       "value": "52/60",
       "reason": "Nguồn: token-analysis.md T-h (kiểm lượt C7 t2) và PROCESS-REVIEW.md:312",
       "pattern": "C7 t2[^\\n]{0,40}?\\((\\d+/60)\\)",
-      "files": [
-        "**/*.md",
-        "../PROCESS-REVIEW.md"
-      ],
+      "files": ["**/*.md", "../PROCESS-REVIEW.md"],
       "exceptions": []
     },
     {
@@ -552,9 +559,7 @@
       "value": "6,58",
       "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
       "pattern": "^\\| B0 \\(đủ phòng\\)[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -562,9 +567,7 @@
       "value": "9,76",
       "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
       "pattern": "^\\| B0 \\(đủ phòng\\)[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -572,9 +575,7 @@
       "value": "1,61",
       "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
       "pattern": "^\\| B5 \\(một agent[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -582,9 +583,7 @@
       "value": "2,59",
       "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
       "pattern": "^\\| B5 \\(một agent[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -592,9 +591,7 @@
       "value": "4,23",
       "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
       "pattern": "^\\| B6 \\(làn nhanh\\)[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -602,9 +599,7 @@
       "value": "6,29",
       "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
       "pattern": "^\\| B6 \\(làn nhanh\\)[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -612,9 +607,7 @@
       "value": "2,61",
       "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
       "pattern": "^\\| B7 \\(làn đơn\\)[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -622,9 +615,7 @@
       "value": "3,96",
       "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
       "pattern": "^\\| B7 \\(làn đơn\\)[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -632,9 +623,7 @@
       "value": "0,96",
       "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
       "pattern": "^\\| A1 \\(Claude[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -642,9 +631,7 @@
       "value": "1,28",
       "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
       "pattern": "^\\| A1 \\(Claude[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -652,9 +639,7 @@
       "value": "2,23",
       "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
       "pattern": "^\\| A2 \\(best-of-3\\)[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -662,9 +647,7 @@
       "value": "2,55",
       "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
       "pattern": "^\\| A2 \\(best-of-3\\)[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -672,9 +655,7 @@
       "value": "2,498",
       "reason": "bench/vs-claude/results/study-cloud-final/prereg-tests-448.md §2 bảng \"Chính\" (A0 r4–9 so với B7 r1–9); khác 2,519 của step4-extra-448.md §2 (A0 r1–11): hai phép so khác nhau",
       "pattern": "^\\| B7; \\*\\*chính\\*\\*[^|]*\\|[^|]*\\| (\\d,\\d{3}) \\[",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -682,9 +663,7 @@
       "value": "2,566",
       "reason": "bench/vs-claude/results/study-cloud-final/prereg-tests-448.md §2 bảng \"Chính\"",
       "pattern": "^\\| B7; \\*\\*chính\\*\\*[^|]*\\|[^|]*\\|[^|]*\\| (\\d,\\d{3}) \\[",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -692,9 +671,7 @@
       "value": "2,519",
       "reason": "bench/vs-claude/results/study-cloud-final/step4-extra-448.md §2 (A0 r1–11)",
       "pattern": "^\\| B7; độ nhạy 3[^|]*\\|[^|]*\\| (\\d,\\d{3}) \\[",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -702,9 +679,7 @@
       "value": "3,921",
       "reason": "bench/vs-claude/results/study-cloud-final/step4-extra-448.md §1 (A0 r1–9 so với B6 r1–9)",
       "pattern": "^\\| B6; \\*\\*chính\\*\\*[^|]*\\|[^|]*\\| (\\d,\\d{3}) \\[",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -712,9 +687,7 @@
       "value": "4,047",
       "reason": "bench/vs-claude/results/study-cloud-final/step4-extra-448.md §1",
       "pattern": "^\\| B6; \\*\\*chính\\*\\*[^|]*\\|[^|]*\\|[^|]*\\| (\\d,\\d{3}) \\[",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -722,9 +695,7 @@
       "value": "2,55",
       "reason": "docs/research/analysis/cache-sensitivity.md C-4 (hệ số cacheRead 0,05, ảnh chụp 276 dòng); Bảng 13, hàng T5",
       "pattern": "^\\| B7/A0, T5 \\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -732,9 +703,7 @@
       "value": "2,73",
       "reason": "docs/research/analysis/cache-sensitivity.md C-4; Bảng 13 (18 bài)",
       "pattern": "^\\| B7/A0, mọi bài[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -742,9 +711,7 @@
       "value": "4,03",
       "reason": "docs/research/analysis/cache-sensitivity.md C-4; Bảng 13 (5 bài)",
       "pattern": "^\\| B6/A0, mọi bài[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -752,9 +719,7 @@
       "value": "0,673",
       "reason": "docs/research/analysis/agreement.md M-1; giữa hai agent cùng họ mô hình, không phải κ người–người",
       "pattern": "κ = (0,\\d{3}) \\(mức chi tiết\\)",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -762,9 +727,7 @@
       "value": "0,881",
       "reason": "docs/research/analysis/agreement.md A-2 (judge so với regex, gộp r1 + a1)",
       "pattern": "đọc PABAK (0,\\d{3})",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -772,9 +735,7 @@
       "value": "440",
       "reason": "bench/vs-claude/results/study-cloud-final/final-extra.md đầu tệp (440 khóa giữ); README.md mục \"Dữ liệu\"",
       "pattern": "giữ (\\d{3}) \\(tệp R2",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -782,9 +743,7 @@
       "value": "432",
       "reason": "bench/vs-claude/results/study-cloud-final/prereg-tests-448.md §0–§1 (16 lượt loại, 432 giữ)",
       "pattern": "đọc 448 dòng, giữ (\\d{3})",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -792,9 +751,7 @@
       "value": "0",
       "reason": "docs/research/analysis/agreement.md C-1 (cổng B-02: 1/1 lượt lỗi thật; 0/50 chặn nhầm)",
       "pattern": "chặn nhầm (\\d+) trong 50 lượt",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -802,9 +759,7 @@
       "value": "2,04",
       "reason": "bench/vs-claude/results/b7prime/RUNLOG.md (Điểm dừng GĐ1); tính lại bằng bootstrapRatio, hạt 20261102, B = 4000, CI 90 %",
       "pattern": "token có trọng số \\*\\*R̂ = (\\d,\\d\\d)\\*\\*",
-      "files": [
-        "improvement-backlog.md"
-      ],
+      "files": ["improvement-backlog.md"],
       "exceptions": []
     },
     {
@@ -812,9 +767,7 @@
       "value": "1,45; 2,99",
       "reason": "bench/vs-claude/results/b7prime/RUNLOG.md (Điểm dừng GĐ1); tính lại bằng bootstrapRatio, hạt 20261102, B = 4000, CI 90 %",
       "pattern": "R̂ = 2,04\\*\\*, CI 90 % \\[(\\d,\\d\\d; \\d,\\d\\d)\\]",
-      "files": [
-        "improvement-backlog.md"
-      ],
+      "files": ["improvement-backlog.md"],
       "exceptions": []
     },
     {
@@ -822,9 +775,7 @@
       "value": "2,16",
       "reason": "bench/vs-claude/results/b7prime/RUNLOG.md (Điểm dừng GĐ1); tính lại bằng bootstrapRatio, hạt 20261102, B = 4000, CI 90 %",
       "pattern": "thời gian thực \\*\\*R̂ = (\\d,\\d\\d)\\*\\*",
-      "files": [
-        "improvement-backlog.md"
-      ],
+      "files": ["improvement-backlog.md"],
       "exceptions": []
     },
     {
@@ -832,9 +783,7 @@
       "value": "1,53; 3,21",
       "reason": "bench/vs-claude/results/b7prime/RUNLOG.md (Điểm dừng GĐ1); tính lại bằng bootstrapRatio, hạt 20261102, B = 4000, CI 90 %",
       "pattern": "R̂ = 2,16\\*\\*, CI 90 % \\[(\\d,\\d\\d; \\d,\\d\\d)\\]",
-      "files": [
-        "improvement-backlog.md"
-      ],
+      "files": ["improvement-backlog.md"],
       "exceptions": []
     },
     {
@@ -842,9 +791,7 @@
       "value": "2",
       "reason": "b7prime/RUNLOG.md: 2 lượt mỗi ô × 5 bài",
       "pattern": "n = (\\d) lượt mỗi ô × 5 bài \\(t1–t5\\)",
-      "files": [
-        "improvement-backlog.md"
-      ],
+      "files": ["improvement-backlog.md"],
       "exceptions": []
     },
     {
@@ -852,9 +799,7 @@
       "value": "1333eef",
       "reason": "b7prime/RUNLOG.md dòng 5",
       "pattern": "server `(\\w{7})`; Claude Code CLI",
-      "files": [
-        "improvement-backlog.md"
-      ],
+      "files": ["improvement-backlog.md"],
       "exceptions": []
     },
     {
@@ -862,9 +807,7 @@
       "value": "2.1.317",
       "reason": "b7prime/RUNLOG.md dòng 7",
       "pattern": "Claude Code CLI (\\d\\.\\d\\.\\d+) \\(W1–W5",
-      "files": [
-        "improvement-backlog.md"
-      ],
+      "files": ["improvement-backlog.md"],
       "exceptions": []
     },
     {
@@ -872,9 +815,7 @@
       "value": "16",
       "reason": "context/merge-main-2026-11-03.md §1: 16 commit của main (e0bd2f4..9e6079b)",
       "pattern": "nhận (\\d+) commit mới của `main`",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -882,9 +823,7 @@
       "value": "37f88b6",
       "reason": "context/merge-main-2026-11-03.md §1: merge commit",
       "pattern": "merge commit `(\\w{7})`, không rebase",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -892,9 +831,7 @@
       "value": "285/285",
       "reason": "Đề bài vòng 4 gói 5 (Phòng Dev báo, Linux); merge-main §6 ghi 282 đạt/0 lỗi/3 bỏ qua ở lần chạy đầu",
       "pattern": "`npm test` (\\d+/\\d+) trên Linux",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -902,9 +839,7 @@
       "value": "1333eef",
       "reason": "b7prime/RUNLOG.md dòng 5; khớp V4-04, backlog B-11.5, paper §6.1(7)",
       "pattern": "máy chủ 7425 ở `(\\w{7})` cho B7′",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -912,9 +847,7 @@
       "value": "2.1.317",
       "reason": "b7prime/RUNLOG.md dòng 7",
       "pattern": "CLI (\\d\\.\\d\\.\\d+) thay cho 2\\.1\\.316",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -922,9 +855,7 @@
       "value": "e0bd2f4",
       "reason": "study-cloud/RUNLOG.md dòng 5, 56: máy chủ 7424 ở origin/main",
       "pattern": "máy chủ 7424 ở `origin/main` `(\\w{7})`",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -932,9 +863,7 @@
       "value": "7fb18ba",
       "reason": "study-cloud/RUNLOG.md dòng 5, 56: máy chủ 7425 ở nhánh",
       "pattern": "máy chủ 7425 ở nhánh `(\\w{7})`",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -942,9 +871,7 @@
       "value": "1333eef",
       "reason": "b7prime/RUNLOG.md dòng 5; khớp backlog B-11.5",
       "pattern": "server `(\\w{7})`, Claude Code CLI",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -952,9 +879,7 @@
       "value": "2",
       "reason": "b7prime/RUNLOG.md: 2 lượt mỗi ô × 5 bài",
       "pattern": "n = (\\d) lượt mỗi ô, 10 lượt mỗi arm",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {
@@ -962,9 +887,7 @@
       "value": "2,04",
       "reason": "như b7prime-rhat-token (backlog B-11.5)",
       "pattern": "token có trọng số là \\*\\*×(\\d,\\d\\d)\\*\\*",
-      "files": [
-        "paper/paper.md"
-      ],
+      "files": ["paper/paper.md"],
       "exceptions": []
     },
     {

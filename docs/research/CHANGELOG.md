@@ -5,6 +5,17 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 16b (T-20261114-214506-fe1, BRIEF-22b, 14/11/2026): đóng C2, FX19, FX20, bảng điểm 20/20
+
+Không gọi LLM, không sửa `src/` hay mã `bench/`. Phần K2 (dữ liệu, S3):
+
+- **Mốc `tệp:dòng` mới:** `analysis/decisions/logic-map.md` có dòng `Mốc: ccc76cc0840110debab2a0e69f64b10bee965533` (trước là `b146b87c`; `src/` đã đổi vì D16, D16b, D17). Cập nhật mọi tham chiếu vào `src/` trong `logic-map.md`, `report.md`, `improvement-backlog.md` (gồm B-20…B-49), `model-per-role.md`, `scorecard.md`, mỗi tham chiếu kèm ký hiệu trong ngoặc.
+- **FX19:** `scripts/logic-map-check.mjs` báo 400 tham chiếu, 359 có ký hiệu, 0 lệch ở mốc (exit 0). 41 tham chiếu không ký hiệu đều trỏ vào `bench/`, `arms.json`, `ccoding.config.json` hoặc kết quả `.json`, ngoài phạm vi kiểm.
+- **FX20:** `consistency-check.mjs` có mục quét đường dẫn máy; 10 đường dẫn thư mục tạm trong `run-plan.md`, `improvement-backlog.md`, `cache-diagnostic-result.md` đổi thành `<thư-mục-tạm>/…`.
+- **`facts.json`:** mọi ngoại lệ `"line"` đổi thành `"anchor"` (gồm `c1c8-single-labeller` và ngoại lệ `paper.md` cũ ở dòng 831, nay 862). Bỏ ngoại lệ `improvement-backlog.md:289` vì cụm cũ không còn trong tệp.
+- **Dọn:** xóa hai tệp chèn `backlog-b20-insert.md`, `run-plan-s10-insert.md` (đã chèn ở S1) và thư mục tạm `.tmpmig/`.
+- Trạng thái "12/34 `tệp:dòng` lệch" (C2) không còn: 0 lệch.
+
 ## Vòng 4, gói 17 (T-20261114-165455-a63, BRIEF-23, 14/11/2026): bài báo v0.7.2, đo lại trục 2 (b) sau vá, cascade E7
 
 Không gọi LLM, không sửa `src/`, mã `bench/`, `preregistration.md` (§9 chỉ thêm, ở bước S1), tệp context hay kết quả cũ. Số mới lấy nguyên từ `bench/vs-claude/results/axis2-guard-postfix/{report.md,results.json}` và `analysis/e7-cascade.md`; không tính lại. Mỗi số mới có khóa `axis2pf-*` hoặc `e7casc-*` trong `facts.json`.
@@ -20,7 +31,14 @@ Không gọi LLM, không sửa `src/`, mã `bench/`, `preregistration.md` (§9 c
 
 Hạng mục K5 (@academic-writer). Không gọi LLM, không chạy benchmark, không sửa `src/` hay mã `bench/`. Nguồn: `analysis/decisions/{logic-map.md, scorecard.md, effectiveness.md, model-per-role.md}`, `context/decomposition-sources-2026-11-14.md`, `preregistration.md` §9.x (E9). Phân loại dữ liệu: **Nội bộ**; chỉ số tổng hợp, "dự án A" ẩn danh, ba ca 14/11 lấy từ biên bản người điều phối (n = 3, [Mô tả]).
 
-**Số đổi giá trị: không có.** Không có đại lượng nào của v0.7.1 có số mới từ script K2, nên không có dòng "số cũ → số mới". Mọi số v0.7.1 giữ nguyên.
+**Số đổi giá trị: không có số nào bị thay; có hai cặp số cùng đại lượng được giữ và định nghĩa (sửa ở BRIEF-22b K1, M1).** Phản biện K7 chỉ ra dòng cũ "không có" chưa nói đến việc bài v0.8 dùng hai số cho P-1/P-2. Nay ghi rõ, mỗi số kèm định nghĩa và mẫu số:
+
+| Đại lượng | Số A | Số B | Khác nhau ở |
+|---|---|---|---|
+| P-1: lượt có ≥ 2 hạng mục chạy cùng lúc | 42/54 = 77,8 % [64,4; 88,0] (Bảng 18) | 42/56 = 75,0 % [61,6; 85,6] (§6.5) | mẫu số: 54 là lượt có ≥ 2 hạng mục đủ mốc giờ; 56 là mọi lượt phòng (bỏ 2 kế hoạch chỉ có 1 hạng mục thì còn 54) |
+| P-2: tiết kiệm tối đa | 27,5 % (375 phút, Bảng 18) | 29,2 % (§6.5) | cách tính: 27,5 % gộp phút trên các lượt chạy chồng; 29,2 % = 1 − 1/1,412, nghịch đảo của work/cp trung vị trên 56 lượt |
+
+Không số nào đổi giá trị so với v0.7.1; không chọn một số làm số duy nhất vì hai số trả lời hai câu hỏi khác nhau. Dùng nhất quán: Bảng 18 và hàng Trục 3 của bảng tổng kết dùng số A, §6.5 và `effectiveness.md` dùng số B, mỗi chỗ ghi định nghĩa.
 
 **Thêm mới trong `paper/paper.md` (v0.8):**
 - Đầu bài: đoạn "So với v0.7.1 (BRIEF-22)".
