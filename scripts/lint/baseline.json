@@ -7,6 +7,2542 @@
       "owner": "Phòng Dev",
       "fixIn": "gói sau D20 (tự host phông hoặc dùng phông hệ thống; public/ ngoài phạm vi D20)",
       "by": "K1a"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t1-duration.ccoding.1/ccoding-task.json",
+      "sha256": "d9ce367a0d60d2ff298383a1ae399262dd277a3032410cd5d781cf93befdfa12",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t1-duration.ccoding.1/result.json",
+      "sha256": "b7664e2a0368927a1a44842c357e9642064cefddb3dde5645f5ad35cfe81b4e8",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t1-duration.ccoding.2/ccoding-task.json",
+      "sha256": "7f8d618b6d35fda3885bb2cbc338ee7b20330d13e3fa7f859b16ed3f72caf85c",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t1-duration.ccoding.2/result.json",
+      "sha256": "1475c126c4a91f5bda45b75e64586bd94fe9c3e7acfd1e78f88a290bd5e9e9bf",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t1-duration.claude.1/result.json",
+      "sha256": "ed410f39385a7a8d7dbceb0d4053dd47d2e988e36ac08b9395607806908aa1a8",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t1-duration.claude.2/grade-hidden.tap",
+      "sha256": "4e4525146f26dfcf250a73093920735da99f4cc6674c15c4098f4bebd00076c3",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t1-duration.claude.2/result.json",
+      "sha256": "c1493a0035326585f464a2baf33ba7adcc955fbf36ef78dee134ec6cb134df29",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t2-orders.ccoding.1/ccoding-task.json",
+      "sha256": "fdddb03ad90bd9ed0e4f013bb7d67b432bd24e3512dbdca5c0749d2e8afee8df",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t2-orders.ccoding.1/result.json",
+      "sha256": "9ecca2905a4aa695b63ac2314aefe10fa4befcc693aeffa64c6590cd5d630b2c",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t2-orders.ccoding.2/ccoding-task.json",
+      "sha256": "5aa66c91a61b352c576ef22018ac8b6b4ba2655a4a06b0f54cd9ec01861f290e",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t2-orders.ccoding.2/result.json",
+      "sha256": "b569726bc8091e36fa1110e85715d9d699b09f4f5c98d4502d29ccbb9fdd5116",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t2-orders.claude.1/result.json",
+      "sha256": "759a2145686ce318b0499b9ff857f406484a680e417ac417397ac06f1cc57d76",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t2-orders.claude.2/result.json",
+      "sha256": "b24edbab5f5e18c78e5e073d4230384c1f7b1017d5b4ac05d4e36ab371cc3808",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t3-api.ccoding.1/ccoding-task.json",
+      "sha256": "da29f464743abdad337507e0894daa716fc745463377463b8e6cdc91a3b7412f",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t3-api.ccoding.1/result.json",
+      "sha256": "ab065eeb25cd1dd5f60283c1a7f7aca0363ed9e134fd3dc05bc7ac1686f0d678",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t3-api.ccoding.2/ccoding-task.json",
+      "sha256": "728de302ff5c7a9f171c0305aec6e185d7bea04e83bec63aa59b2d1586230648",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t3-api.ccoding.2/result.json",
+      "sha256": "6f970314d8dadf4c35b0f4f4fc131534dd6e85468ff3249fbd415f7f974fe776",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t3-api.claude.1/result.json",
+      "sha256": "04328048839640cc3255f96faf7d989fc51eac8646c08f3c71072f3e3132806b",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t3-api.claude.2/result.json",
+      "sha256": "2c506d5932d70e63b77c01ec336df6f0d7d9983e16c1d26f57824de2b5908358",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t4-perf.ccoding.1/ccoding-task.json",
+      "sha256": "fe9985c48896ce33010b8a66c2263d106515172af95f8eb63e73be5e8e478e54",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t4-perf.ccoding.1/result.json",
+      "sha256": "56c51d1669ee03157ea5806d7ce1ea428de0f903e11faeceaf867dca2b190c48",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t4-perf.ccoding.2/ccoding-task.json",
+      "sha256": "d57f5ed6fcc3d1c4ec07d7fee6b906f007ee3b2de495434117a1a79538c1459c",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t4-perf.ccoding.2/result.json",
+      "sha256": "b474d2a6363b4703af5e0a496eb43b59b96c1450532a9e73c0524d683795ca0b",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t4-perf.claude.1/result.json",
+      "sha256": "455af6ed93d714b23ee16f1ea1cb3058cc1fc4ae10f032111bad99dd3777074e",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C1/t4-perf.claude.2/result.json",
+      "sha256": "0806ef1fa520ce91cef78b8a6b6c9d6ebf593af89eca313583c363161d66e121",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C2/t1-duration.ccoding-fast.1/ccoding-task.json",
+      "sha256": "d4317d7d22997d9341da5a68488b57312c53e86bf30986219236006432404bed",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C2/t1-duration.ccoding-fast.1/result.json",
+      "sha256": "95786d5ff4efa5fe2d7fafa73c56b8578bd7b139ad3a401ca8c6b6314bc9e431",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C2/t1-duration.ccoding-sonlead.1/ccoding-task.json",
+      "sha256": "a0f1d5828f970ad86ed74bcf14499ee91635af1175cf05881738f2143b5d8269",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C2/t1-duration.ccoding-sonlead.1/result.json",
+      "sha256": "952a44918161dc297de67fc6daced2ad968c88b3bc7b2d07f5eff45ec54634e3",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C2/t5-logq.ccoding.1/ccoding-task.json",
+      "sha256": "04a966d8923bfae810c0190dae0629043d737bac763c44923717681c8c6dae31",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C2/t5-logq.ccoding.1/result.json",
+      "sha256": "2aa6a99475f207d63308b49a8d40ef1ef79781cdaadae03ef36cafe38b7d0334",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C2/t5-logq.ccoding.2/ccoding-task.json",
+      "sha256": "0e0b3cf2eb2dada2e0e382d51cdff986829d7b6de6078b1d73d240e58bb57372",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C2/t5-logq.ccoding.2/result.json",
+      "sha256": "5ad5fc2ead9a16e5dd2efe00040914f1f825bacf7b48f06170bc5c72f1a0756a",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C2/t5-logq.claude.1/result.json",
+      "sha256": "98cd874cf4c751b10dad528861e14430098927ca88d2878e21277260ae2b4be7",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C2/t5-logq.claude.2/result.json",
+      "sha256": "d36269b6259378d5a7ff96bbbfa4ad1232266129dc157bb9167609936ebdf75b",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C3/t1-duration.ccoding-new.1/ccoding-task.json",
+      "sha256": "73ad74e87967759f4f989e70c11a5040e8694c98dfebefa6244ae0c8d06ab7f3",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C3/t1-duration.ccoding-new.1/result.json",
+      "sha256": "1545f4f774ca9eb6064f4998ac1ff728837f64a08385a707b784601eeae4f21b",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C3/t2-orders.ccoding-new.1/ccoding-task.json",
+      "sha256": "100b189c6b1f2b78f1107cf1cce05a460d7198bbb10e94c88c2468a724ec9d6b",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C3/t2-orders.ccoding-new.1/result.json",
+      "sha256": "7b0ed1f8d2e7c7d5e691389b25235ceeaeacdb57cc42b50adf884ac6235b241e",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C4/t1-duration.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "d128f4b3b02c32d136ebc91940a7f6162f5b5bbf85948efa24689d5ae59e1870",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C4/t1-duration.ccoding-fastlane.1/result.json",
+      "sha256": "ee4190bc9be0fcbe7a77183afa4a91b1fd73dfceacf4682a1f69ab70745ec44d",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C4/t2-orders.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "202e311859ed559ec2b323e4a76cf330f5bf512f3461fd8d745caee637c605e1",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C4/t2-orders.ccoding-fastlane.1/grade-hidden.tap",
+      "sha256": "daff8c5092cee579e2240658c974a1158cb33dfa05f466ad9bf7724fd4ad4b1d",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C4/t2-orders.ccoding-fastlane.1/result.json",
+      "sha256": "7d630a56faece9a915bdb6d37ee93fcb8b3e41191796839e8a6ad5cc627dff84",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C4/t3-api.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "5f81313e7562cc424e190f06cda780ac89e0adfc2cf7f7b25d34aaa39e7b891f",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C4/t3-api.ccoding-fastlane.1/result.json",
+      "sha256": "956ae6f3a73be66400f34c0b81197c824469d8f81a4537d4e77e497828bcd79d",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C4/t4-perf.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "fb15c0f893260d7950826da4c34974530ac760e1dde2841d13dedbcee3f27e97",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C4/t4-perf.ccoding-fastlane.1/result.json",
+      "sha256": "62d9ddaedb7d230e76a089eb64c21b7f9ac58964d6906b91237b06f1bfa1d2e4",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C4/t5-logq.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "39ad6348f2d08a612d1c7b1370e5e982ea83257165a06163f997733f352e4957",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C4/t5-logq.ccoding-fastlane.1/result.json",
+      "sha256": "5ce84020d626c93658c6ccc96b1ad1bb3b7bf9dc67f37a3424a40092af238723",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t1-duration.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "af7c6c79be33a31b38d48594a2c6d9a030409a01e754478ffc8c762e34870987",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t1-duration.ccoding-fastlane.1/result.json",
+      "sha256": "6b8091a47a8e98656004f266b696c276ed243a9f7177fdcf8d7e086d26098568",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t1-duration.ccoding-fastlane.2/ccoding-task.json",
+      "sha256": "f835938212bb42c744b087ba247d2266918107cf0faf46de07569d01cef30684",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t1-duration.ccoding-fastlane.2/result.json",
+      "sha256": "1d2ae17d7b68df121985c43b1776c4c36396f23e244c58a9fbcfaffc9a5d3e3d",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t1-duration.claude.1/grade-hidden.tap",
+      "sha256": "5052bc1981e95db24334ddf83b7fb2e744f7ae43a4d10e1e969cd4086bf9dd8d",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t1-duration.claude.1/result.json",
+      "sha256": "a045b843c890d4a488a0dfb335def840616dce13dc56ef6d22801d118b7a414b",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t1-duration.claude.2/result.json",
+      "sha256": "2fe2b613bf057ac6fc48f9c69d82fcfe186b7fbc27efac8ca57f640b971ddec2",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t2-orders.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "22a2d22c06df37c04ea2b23ad4e5c2da03b48affcbd4a16db26d5a7c330b9d17",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t2-orders.ccoding-fastlane.1/result.json",
+      "sha256": "f707d3cb1923d519e8b3beff8844c768b23747df3a70fd605d32742fca01ab12",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t2-orders.ccoding-fastlane.2/ccoding-task.json",
+      "sha256": "79b818b065d66c8eea099479832817d2e42ccc88cc3a359690cc56a6e5faa3d2",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t2-orders.ccoding-fastlane.2/result.json",
+      "sha256": "a28c8e401566a8fdc8dc5c282cce27bc61870691c5b38b402ff73d5eb4179f0f",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t2-orders.claude.1/result.json",
+      "sha256": "b9f41955281cb4c57653dcbd852c2ee94602b1c635ea19cb8f172c31a218f3cc",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t2-orders.claude.2/result.json",
+      "sha256": "03d819812ea551dac6eab71a40d17874d59614af064dc36721908de06c92f2dc",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t3-api.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "91f8989fa86a103b5d66f933383aa6f88270b17b5a8c3b1e85a1ce869b612794",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t3-api.ccoding-fastlane.1/result.json",
+      "sha256": "b3a36f112cd8cf41dba235c3744e521088c3edc444e7c01ed5cc7ccd03e5175e",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t3-api.ccoding-fastlane.2/ccoding-task.json",
+      "sha256": "934b24ebeb70631bb785eefc152bd627f98dd05221aa684b268da199ad6c71c7",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t3-api.ccoding-fastlane.2/result.json",
+      "sha256": "3cf2208904ef6a6de3569fbafa05b978ed670803dd81a5675bd618ad11066480",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t3-api.claude.1/result.json",
+      "sha256": "ba864c89f72883d4beda2332b47d99979e1ee7d8d4e05cfb3c2f5299f9726c25",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t3-api.claude.2/result.json",
+      "sha256": "8518aae89c158f9af1070fe59a26c2b2f05f05443ca3581add35cfcb6f4c831d",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t4-perf.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "1d8356caba8820d51f9096b9ed12ad0aa8103d12bf94e0be2c0d88cf68ddf68b",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t4-perf.ccoding-fastlane.1/result.json",
+      "sha256": "3039cdcc612ec34c39e4d9167a01983c8104f9be2cbe42e14b5133d46c3ab9c9",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t4-perf.ccoding-fastlane.2/ccoding-task.json",
+      "sha256": "8d1653254c74b3c3565bef5f395aad3339ca0dd9ec358387e22e6edaab77fd84",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t4-perf.ccoding-fastlane.2/result.json",
+      "sha256": "1b2d0e465083010269e19f0baf778272406ed80e3fe845c3f75e2734215ee0cb",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t4-perf.claude.1/result.json",
+      "sha256": "571b43e6405d1e58fe549a89f63fdd9d89e99d81bcb8f9aef12eb8f6fd765e44",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t4-perf.claude.2/result.json",
+      "sha256": "712a8fb08929bc06821698cf8961ad17c622533afbe2ed01c3253231bcc6a853",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t5-logq.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "82b485ebba93cc70fb1cf68849e565d6f497742a75f50adf5119367109d31cf7",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t5-logq.ccoding-fastlane.1/result.json",
+      "sha256": "ffe2ba9df8b1d316a2c467ba7062273a8ebaddc97fe2f9e26ecc9863e46b4b00",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t5-logq.ccoding-fastlane.2/ccoding-task.json",
+      "sha256": "a39133004bd9981e4e6c29c18be6a0f20de45edaebcb99e83da334292b1e89d7",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t5-logq.ccoding-fastlane.2/result.json",
+      "sha256": "dd94e4f936ea5a53df1e7a2ec13db459bdc8f006c4661f8cb993e10350635334",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t5-logq.claude.1/result.json",
+      "sha256": "40fb74f9f4f4e83f5ab7a59c20d70788af8c12e0a6d3fc8d6d9fedc1f3bb2397",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C5/t5-logq.claude.2/result.json",
+      "sha256": "d503f34aa4b31d854dab3bbdea0bd4688d808a46a134afa01ba5294b15828d45",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C6/t3-api.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "8427d97d6f1b77d2ac5cca139698b3b0985c637c16d584f84fae612a6cf89b8f",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C6/t3-api.ccoding-fastlane.1/result.json",
+      "sha256": "3e0109f4b8589f117ea0ca8b792165c016a05857473fd5bded1aceb0987f4c21",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C6/t3-api.ccoding-fastlane.2/ccoding-task.json",
+      "sha256": "e9d6d72fddd202e6c0d963b8d4fe77d11a525eca0eec3910b89cd63c01e5677a",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C6/t3-api.ccoding-fastlane.2/result.json",
+      "sha256": "83ebfe2811d108db99ed77501c0ecca1ebbebf8f84ced36cd5f2cfc47546867b",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C6/t3-api.claude.1/result.json",
+      "sha256": "ce841a5d4dbfa8634dd0208d265089ef2264277df5721bc226d34afe480a164d",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C6/t3-api.claude.2/result.json",
+      "sha256": "4f300a39dfdc8d4e42692e4942a9231941b4ffc14d243a4f744ec0cc1aca38b2",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C6/t5-logq.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "14f048a23751e48e35350261536890105405d54fd0c06231b25a1d806df46b7d",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C6/t5-logq.ccoding-fastlane.1/result.json",
+      "sha256": "2bb41bf9d957c3d370eade856ddf42c879ec59fe9350207eadf2eaf064686cd7",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C6/t5-logq.ccoding-fastlane.2/ccoding-task.json",
+      "sha256": "0c70c7948db9d1928c935b96754ca2f3acc8d7a98638c67f7a6ed8b397107ad9",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C6/t5-logq.ccoding-fastlane.2/result.json",
+      "sha256": "c8b0496fd91674edb4e1015d47be8889256cc14fdf6da0da4543252cb7e097e6",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C6/t5-logq.claude.1/result.json",
+      "sha256": "3d8b7ead97fda91fe886f9464a62b018d883085b357bb80ad44cdaaef9c0f450",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C6/t5-logq.claude.2/result.json",
+      "sha256": "ad3d434d2729673eac7fd96ccabae84df64e58168d49d51be55c90a0f08e57ab",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t1-duration.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "47e31f4c99c918862d06ec386d4b1cd03484ca380f06c2ad1ef85987f205cdaf",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t1-duration.ccoding-fastlane.1/result.json",
+      "sha256": "ae43939e0bdc73e4cc43ad56121f700283e0531199a5b6fd62592186a0c03a3a",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t1-duration.claude-sonnet.1/result.json",
+      "sha256": "6d4d372560879ec15d4e047c8c6e4cb0cce00c042f8c3914a4fb188ff4c787da",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t1-duration.claude-sonnet.2/result.json",
+      "sha256": "2b0ee54bf712067487c8ac422188554f29e7cd93e2e9fe6d627a5623b2a6d835",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t2-orders.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "8e5470b757818676475918e8ee7799d3a9b74e3c768ef37357459617811ad98c",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t2-orders.ccoding-fastlane.1/grade-hidden.tap",
+      "sha256": "1d57b5283f94c51821b812f1ccbf1e7931e6e7c0878b9718d2fada12c8e0e757",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t2-orders.ccoding-fastlane.1/result.json",
+      "sha256": "9d9a2fe0a8b4b34684d4302b1dabff1868d219a09f50d57afd175e84148d4716",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t2-orders.claude-sonnet.1/result.json",
+      "sha256": "68da0ae8d95ef6604a5e230a9c7bc639350233e89c6a17972f43c0cdc4865803",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t2-orders.claude-sonnet.2/result.json",
+      "sha256": "14e725058ae88ba59496af32217459b34399c754357de600e53fc0ebf2aac776",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t3-api.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "ea7f69980ac2884c98591ff290ec256006ead936076e46dc4096db81fa61f4fe",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t3-api.ccoding-fastlane.1/result.json",
+      "sha256": "4b8f22290f25b41fb6202b6e5e4514f650ae51d5e3e5d765d684cb9473129257",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t3-api.claude-sonnet.1/result.json",
+      "sha256": "e9897dff96824a4842ac86a6db6d4591c5c34c595b83b8372ae62295e46697d4",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t3-api.claude-sonnet.2/result.json",
+      "sha256": "1a2e5a99ea0d60e004afb2b64556814a16f7a497c9f4d563f69268419163c201",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t4-perf.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "2663393ff46e5a5e15854dc78437303d80e159e5aac193428f66254618595c99",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t4-perf.ccoding-fastlane.1/result.json",
+      "sha256": "07f6dee89307f5af714a117eb135f85148485b35aafa6190cd39ad77eecb51f6",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t4-perf.claude-sonnet.1/result.json",
+      "sha256": "3c1b37d3ee9b91fa783f10cf620fcc0ad9da43d23323a62834c67f27106de241",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t4-perf.claude-sonnet.2/result.json",
+      "sha256": "7d809c9f3d80d50373a8d7c9db68dd5514259180b5898ce81024c5fbe2c99958",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t5-logq.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "5e4ec44d58e630799749597ae31b2b86af64080ac9b79080a8a59bc64bedae91",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t5-logq.ccoding-fastlane.1/result.json",
+      "sha256": "26ee6034513996fa365c6e3ebee12ea08ddaa9260a9b5b7ebaab9cff791e44a8",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t5-logq.claude-sonnet.1/result.json",
+      "sha256": "c3b20b53e632315a92fa1a9cd23720fa22cfda66d83330a806abe458d717816e",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C7/t5-logq.claude-sonnet.2/result.json",
+      "sha256": "c8874e036a4a8f113e11b7b95964e07b66a3d981a3c1084de028ca6d94093760",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C8/t2-orders.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "6e5b5c6195fdfdd7a9e116e269d45b1ce81b9c6633ef66e2a1b423ced9d727e1",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C8/t2-orders.ccoding-fastlane.1/result.json",
+      "sha256": "a903a79f366335ba02d5b8fc2bc9bbaa8f4999bc83f27f0dc05fdf8c4b12f232",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C8/t2-orders.ccoding-fastlane.2/ccoding-task.json",
+      "sha256": "ed71c5f950985120a065920fc05feb32a3722cafbecb03a7fd00e63df47d965d",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C8/t2-orders.ccoding-fastlane.2/result.json",
+      "sha256": "bc04d853d6b77809d9ae4006e58f3983c1560fe3aba78c4b71b47821bb120a14",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C8/t2-orders.ccoding-fastlane.3/ccoding-task.json",
+      "sha256": "bd2721a38cdfcf29732cea81e29fac904a042a4c9aadbb819677043fde229de4",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C8/t2-orders.ccoding-fastlane.3/result.json",
+      "sha256": "9ea375f15505240cc496adbb91233798e24666994d67e73413d129e179a67e67",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t1-duration.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "448272f51302ea088435c5f297986af49fb227e17bb797cbab9e367fb1a91838",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t1-duration.ccoding-fastlane.1/result.json",
+      "sha256": "5aa54178461b34f4ba5069098dc86e8dfab9801021bf374fb4cf48410f3e4e48",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t1-duration.ccoding-fastlane.2/ccoding-task.json",
+      "sha256": "b2914ad0372d647913940c8d6d3c5eff951fe8d78eb4bea987b4d2b9844bc89a",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t1-duration.ccoding-fastlane.2/result.json",
+      "sha256": "a5049bfe6504fc1f5ab2329218451a713ff635bb1053672cb494b3d23bb4c0e2",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t1-duration.ccoding-fastlane.3/ccoding-task.json",
+      "sha256": "5ff04a524f68cf0f6c2c2a3032c31629bc9869439a04a1b21c8f786aa2f95605",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t1-duration.ccoding-fastlane.3/grade-hidden.tap",
+      "sha256": "3fff9c12bb6234bd8afb5095a6f2b6ef1191abf7437aa52f7e95d23296cbb795",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t1-duration.ccoding-fastlane.3/result.json",
+      "sha256": "620a0efd7195b9ce23d5ac20f7749bc9e5e809076400355ceb9257b313762ffd",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t1-duration.claude-sonnet.1/result.json",
+      "sha256": "dcdbd088ac9b3a3f655e3b8aacbb844c3014161e5cd437a0016d60b2fe5fea0d",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t1-duration.claude-sonnet.2/result.json",
+      "sha256": "84e950d893e07c193a5f9149491fc0944da8364ba7fd1df95f387acc1d4877d7",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t1-duration.claude-sonnet.3/result.json",
+      "sha256": "53eab6078c7fa65da19959cd5c0cd185f736d3a3753f5993b79470e1f6ebc4ec",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t1-duration.claude-sonnet.4/result.json",
+      "sha256": "6ffdc7928b29009ec1b1119758b6132f6d41cbf1528b903ceda91bca538b04f5",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t1-duration.claude-sonnet.5/result.json",
+      "sha256": "b0523b2aa7bfc5370a77c42932520a9592a717b65e3a3b8812736ce26c6974e7",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t1-duration.claude-sonnet.6/result.json",
+      "sha256": "f0d8e8681267352b768c039290b1d61fa26f473fe246011ed7a1c18a94f8232d",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t2-orders.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "57e2245fa651bfc1562aa5b7399c3507f512a978995338c5f8805f7388d6f966",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t2-orders.ccoding-fastlane.1/result.json",
+      "sha256": "5dccd1282cf3f271ddee4463547e63bea5336a4fa061c095b9a03619c3b111fc",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t2-orders.ccoding-fastlane.2/ccoding-task.json",
+      "sha256": "55aab5586f741d38d92ac4446bcd4db6c3cc9fcdf9c3b22e6bd7659c792fe0b8",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t2-orders.ccoding-fastlane.2/result.json",
+      "sha256": "846284c72abf112f7633f5203202a7007cb07ee1bc0384b8892c8bd70a469694",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t2-orders.ccoding-fastlane.3/ccoding-task.json",
+      "sha256": "0c1bb72e4b772b391a0db7572097404c997480af7f9b8e695c407d0cfbad6d70",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t2-orders.ccoding-fastlane.3/result.json",
+      "sha256": "3c037ac7af8fa3f0acd068889883db527186f4d9e8225a7ef5bad83d47ad18cf",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t2-orders.claude-sonnet.1/result.json",
+      "sha256": "96592d976b938cb7798ea385dcfd78e73e9bfe47e64e4203e94f16bbd8887a15",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t2-orders.claude-sonnet.2/result.json",
+      "sha256": "2ec454e3997ad599adacaf436079b1a43814f93d3240d6605f9e87f3c060abe7",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t2-orders.claude-sonnet.3/result.json",
+      "sha256": "af820b43f461c63dff46d1c2072c822fb9ff4256b16a6ed050c4595d81b56f6b",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t2-orders.claude-sonnet.4/result.json",
+      "sha256": "f0c515f745e1e83d04ccfc6ead7de64bea77f62c7691f7ad8aff164430837985",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t2-orders.claude-sonnet.5/result.json",
+      "sha256": "4c246418a5cbbec6b75fe837762051f53ed8ed4ffb8d42a71288663ab3b5b865",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t3-api.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "42ed7c80ad9b36035944d176643a18a584f8006fc565c2fe6e26d61a893e2f09",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t3-api.ccoding-fastlane.1/result.json",
+      "sha256": "f5b5349aaf30ff298fbcc6d659f5211fead4097b7e447b5d9021b4a2657bd78c",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t3-api.ccoding-fastlane.2/ccoding-task.json",
+      "sha256": "afaaf9fc282b3c838d9cdda85b5c1c73ac865b5255d5b554637dbe08a0d4873a",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t3-api.ccoding-fastlane.2/result.json",
+      "sha256": "a06f2bec1dc4b027c966954eaa671c50d82d9431fa1421ac3b228cf5a521f93e",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t3-api.ccoding-fastlane.3/ccoding-task.json",
+      "sha256": "abe7000aad54d97933c71f5b537d2745635185fd17f8f49913f4c1dd0405a16e",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t3-api.ccoding-fastlane.3/result.json",
+      "sha256": "3cdb4bf43e6cf8bd8479b6cd2a44234333e3029473766bddba71b4771d10c001",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t3-api.claude-sonnet.1/result.json",
+      "sha256": "bf803a3b086f986f7cb0c56d39ffd036b7b4390ded4df5bcf0a135def8150213",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t3-api.claude-sonnet.2/result.json",
+      "sha256": "c9c0b912b3d394002317977f8047ca6505d64f33ef840c35fd908d24b8a9dbae",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t3-api.claude-sonnet.3/result.json",
+      "sha256": "a6865ccbb965b910402b93f19bb090900e0326418ef7ecda15a6ce41c2697d44",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t3-api.claude-sonnet.4/result.json",
+      "sha256": "ae67b621e4007d81376d6e1619cdc78b79a48e37f082c99af9af172b689e7e0c",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t3-api.claude-sonnet.5/result.json",
+      "sha256": "5d8d32d692dd5ec109507e5f276d80025f5e499c76aeb066c4e532274950afd9",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t4-perf.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "ab3f43ce4309b569a83219342e4c7d8d8ed24f9b6ecfbaf9761ea9b6f05b20e2",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t4-perf.ccoding-fastlane.1/result.json",
+      "sha256": "e3848e2e36d363e114a16816146585cfb0c466315e7b7527e011c36dd54b5adb",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t4-perf.ccoding-fastlane.2/ccoding-task.json",
+      "sha256": "c7314be142264bc671edbbe53717e1d5484ed992c8fa33e851ed9a5a9544b687",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t4-perf.ccoding-fastlane.2/result.json",
+      "sha256": "c08b2049ec52702326fcead383fcde4910d13329cf08a892fbbae70f796cc7dc",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t4-perf.claude-sonnet.1/result.json",
+      "sha256": "4cfc2df5cd2fac8bfa80de9c250db5fc92e8395283979d15c8a6c897dc04b38b",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t4-perf.claude-sonnet.2/result.json",
+      "sha256": "22cf954e136efec3f7eeca1cc33277fe734560f0cda925e47d7599ca3b62ef58",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t4-perf.claude-sonnet.3/result.json",
+      "sha256": "404cf369cda4226781dac76b623cec3703a3f4fd456d1f134de91782ce9ac235",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t4-perf.claude-sonnet.4/result.json",
+      "sha256": "69bcff112a434ca063a5f0b6bfaf1f26781e59c0eda8d1471c06f284e4885969",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t4-perf.claude-sonnet.5/result.json",
+      "sha256": "69be383bf165f1b79ca105aec7c4005f62d83f8131d9047d4d44ba0c12412bd5",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t5-logq.ccoding-fastlane.1/ccoding-task.json",
+      "sha256": "25dee8ed98891e3839f1fdd9c9fecc9de83c15584589a81760a3a84b82da44ec",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t5-logq.ccoding-fastlane.1/result.json",
+      "sha256": "0abdda5d9210c52642eb754fb62181649950e9e3cdfd81316e940c81a6e2d38e",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t5-logq.ccoding-fastlane.2/ccoding-task.json",
+      "sha256": "a110197765c82972c81f9bff6e727476b3e5d33ec32d57a6e9bae1c32ed430e1",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t5-logq.ccoding-fastlane.2/grade-hidden.tap",
+      "sha256": "432e923b070f9f4054c2d0644644e14cab5227ef0bd32e5b96157f81087003d5",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t5-logq.ccoding-fastlane.2/grade-visible.tap",
+      "sha256": "006c293382a03df56887420e3ef42a86f0827421df90837383c1cab8acb0c1fd",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t5-logq.ccoding-fastlane.2/result.json",
+      "sha256": "ae6ea00a5b4d93479932a5119a9aa4be4326eb2e22b7be2bc52c1a203e1ec02d",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t5-logq.claude-sonnet.1/result.json",
+      "sha256": "c884171da29aec9264d2ce112c465e68ee6aa5d33c6bd5be99f346060d004beb",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t5-logq.claude-sonnet.2/result.json",
+      "sha256": "423074ab8769c59fcc426ca287b5b2c2cbc83d14718f0d6c802f7e3133921c81",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t5-logq.claude-sonnet.3/result.json",
+      "sha256": "bdf2824ccbb972ba81916638864d8ae0f44966167231fdf54d6a52afd3b15222",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t5-logq.claude-sonnet.4/result.json",
+      "sha256": "52ab74c0ee60ae24ebed93fc0bc392e1874971042f6633440603d3dd22e5edf9",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/C9/t5-logq.claude-sonnet.5/result.json",
+      "sha256": "415d03b38ad5a25ef6fcfc8998bc50d10324afb2dd63a55be9f797d92aee3111",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b14-step2/off/artifacts/t2-orders__B7__r2/_FINAL.txt",
+      "sha256": "148136dfc31c24a30021039f4d0e239d1b3df718e3f73a4a8229114218380296",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b14-step2/off/artifacts/t3-api__B7__r10/_FINAL.txt",
+      "sha256": "5d53bc0a01b0f7865700390e125d7ae9c84ff57b7868b6a242f69f5cee8d117f",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b14-step2/off/artifacts/t3-api__B7__r8/_FINAL.txt",
+      "sha256": "d1e569d969ee083e0fb36ccde4fd41e15a69609256b64fd9c74952275a4ab082",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b14-step2/off/artifacts/t4-perf__B7__r11/_FINAL.txt",
+      "sha256": "8d11699286d2cc59ada30f1a8c09fc80c38fb40006bceabbf95f791978cf7fdf",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b14-step2/off/artifacts/t4-perf__B7__r13/_FINAL.txt",
+      "sha256": "9ec47f61c70940e51d31f74c9a8b3c8e6fd9422211a16fcd228d5de16db5a50c",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b14-step2/off/artifacts/t4-perf__B7__r15/_FINAL.txt",
+      "sha256": "c96197b22bc0f16673f57f4b449e2ac0a10104dc369c99449cf2d3f88ec40e86",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b14-step2/off/artifacts/t4-perf__B7__r8/_FINAL.txt",
+      "sha256": "2dbca8927afb0912ac7d9a6b341ac2bcf432100dab7001dfb002aa14b81fc3b8",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b14-step2/on/artifacts/t2-orders__B7__r10/_FINAL.txt",
+      "sha256": "8a0c7793af6a0074e567c10f152de062a85c3f8af04dfd5554dabdc405fe1849",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b14-step2/on/artifacts/t3-api__B7__r2/_FINAL.txt",
+      "sha256": "13729694b1c4a1bd54bb8434bbf2a039d6f2ebf6cb2627c629136bf947e01b23",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b14-step2/on/artifacts/t4-perf__B7__r13/_FINAL.txt",
+      "sha256": "26184ecba38b7c15ce42cf0ec3099ab6a134ad533a6436545c32ea2409c27bf1",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b14-step2/on/artifacts/t4-perf__B7__r15/_FINAL.txt",
+      "sha256": "35ce57249d65bf9d8297c57b0de2ad9f3c04d8e4306ae2ded3922fc6bc350f0c",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b14-step2/on/artifacts/t4-perf__B7__r5/_FINAL.txt",
+      "sha256": "dbdccfca7568384f5abde4e4553ccb6a284a2cd5442a2d371e1161a956c4d249",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b14-step2/setup/b14-run.ps1",
+      "sha256": "042be73d02dbcfb172e9a5b1ee2fad3c0cdb094974c3aaac79897a99177c3358",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b14-step2/setup/b14-run2.ps1",
+      "sha256": "746f05f9ee7a68dded134365493f9b9e01da3089c3b9a0aff6c7023418e0ed53",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b14-step2/setup/b14-setup.ps1",
+      "sha256": "8c3c727c930963237169864e7744c315aced5a9e871d7525f956383b74f6dd3b",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b15f-main/artifacts/l1-modules__B0F__r8/_FINAL.txt",
+      "sha256": "5b98d92717487cee447ca038286c9c2e57e604c74bb549b21165c7ced091ccec",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b15f-main/config-final.json",
+      "sha256": "03910bcece9386090e1c7360c2e4406a01ff62974803ed4ade84e21d0f31d940",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b15f-main/config.json",
+      "sha256": "979522ad443c5e239f53dafe9b7f4de73ebf387bcecba5082b96e2ef62df0bbc",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b15f-main/run3e-c.ps1",
+      "sha256": "df974133b59e2a8c098a9651eaa17210414a77770abe028078238d45fc3ef7f1",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b7prime/RUNLOG.md",
+      "sha256": "54508fb1ec75868a6d3b9b608fd05dad5010dae049f4e9b825bb232bb1db0458",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b7prime/artifacts/t4-perf__B7cab__r1/_FINAL.txt",
+      "sha256": "a58c4ff187b3b18da840b33de239eab483a96ec221465176382cf7f1dec1004a",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b7prime/artifacts/t4-perf__B7cab__r2/_FINAL.txt",
+      "sha256": "fad4036fc898d38be40d89d3d284d4d5e1ddbe87319f0ab8066898c3fa92bf64",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b7prime/config-B7cab-GD1.json",
+      "sha256": "542da8ccce8915ad7695e30b4999e61bb8aee4990fb08040cd16266899209e42",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/b7prime/config.json",
+      "sha256": "542da8ccce8915ad7695e30b4999e61bb8aee4990fb08040cd16266899209e42",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/e7-cto/setup/e78-run.ps1",
+      "sha256": "fc731b8af52f95de4bd44f7b188caaed6bc66ac1236f9415d787ff5d630d6cfa",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/gates-main/artifacts/g1-slug-dedupe__B7cabO__r2/_FINAL.txt",
+      "sha256": "340c5faa1ca70db61569cb5b5cbacc105fecc66e282292429cc82171a243f285",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/gates-main/artifacts/g5-median-stats__B7cabO__r16/_FINAL.txt",
+      "sha256": "e1694cf9e056fabaff33d5d1a486232eb60d3d2fceb5b6e2d9d3254b2eea843e",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/gates-main/artifacts/g5-median-stats__B7cabO__r8/_FINAL.txt",
+      "sha256": "618b694dcfcb144c87afff0b809c1c5db6b76e93ff240a2587048e8bbca81790",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/gates-main/artifacts/g5-median-stats__B7cab__r13/_FINAL.txt",
+      "sha256": "3bb619aa339329edddaac7e3b61019834705e16e1d268fc1f0238ce78865a173",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/gates-main/artifacts/g5-median-stats__B7cab__r16/_FINAL.txt",
+      "sha256": "4923fb4d7de729a983d34c8966415986a4e042dfa1c74b76d5403b389c87225a",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/gates-main/artifacts/g5-median-stats__B7cab__r3/_FINAL.txt",
+      "sha256": "a3d6876ea839edcd8f328f651b0b69476536934ed2daf7a68ac08f42e14e6a5e",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/gates-main/artifacts/g5-median-stats__B7cab__r9/_FINAL.txt",
+      "sha256": "3cc1167b2cc64854698d5ec77448b78a6d08c421d05ba219c3bccd166cf2748a",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/gates-main/config.json",
+      "sha256": "9800edce5ba322f359b57244c58ad8060f163e01af5591be8eea127f4a79c052",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/gates-pilot/RUNLOG.md",
+      "sha256": "77540e2e9806ed16741ab3fe63a2dcf2f956091cb6e9ace9a7b0c4542f1622a1",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/gates-pilot/config.json",
+      "sha256": "0fd22c4d5b30629be758e53bcc66f9a6fbf697ad69cee5f32e878d6cbd8eefa1",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/h6-3e/artifacts/t4-perf__B0__r2/_FINAL.txt",
+      "sha256": "7f93a5fdc95850a692f4784f6a637a6e0f425d605c78f688b0431692a930f885",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/h6-3e/artifacts/t4-perf__B0__r3/_FINAL.txt",
+      "sha256": "cc4f8bc34f01dc8e4ec8236eb1182c320647bcd562597a5d7aa97fb045bebf48",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/h6-3e/config.json",
+      "sha256": "b6cd14098f168011775fc448b38d3395a1eb05410fffb9eb853f1e8fe652a669",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/large-pilot/config.json",
+      "sha256": "d2326593e16acec23f426d1c793ec057d0c67ed01c84feccfa804c500daf2b92",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/local-3e/scripts/run3e-d.ps1",
+      "sha256": "9f57b1c3ac9ecb9062e51490e5d906e0c66b11afdc492303a9800d919172e564",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/local-3e/scripts/run3e-e.ps1",
+      "sha256": "6d30c2c0578b8b5a6dad5f88e97f5e337ca35e6029356d527b1bdd5751d820d1",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/pilot1/artifacts/l1-oncall__B0__r1/_FINAL.txt",
+      "sha256": "ef27aedb231b49938347dddbbd5d79c337bbba295ce68149c9c6efff6741332d",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/pilot1/artifacts/l3-reconcile__B0__r1/_FINAL.txt",
+      "sha256": "fb8d35aea12afaaf95c18ec1ea53780caf46c4243b7f53fac60b2a614da21bc3",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/pilot1/artifacts/l4-startup-order__B0__r1/_FINAL.txt",
+      "sha256": "0937439976e67aad67f00b6cb598f00d17b8164e380270453a2a3ef0fd92c48c",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/pilot1/artifacts/r1-elk-design__A0-sonnet__r1/DESIGN.md",
+      "sha256": "30173bc4c45b22bab2e44eedb68e454ddc435a76b1eb9d229fe5567d175daab8",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/pilot1/artifacts/r1-elk-design__B5__r1/_FINAL.txt",
+      "sha256": "d9f8004bb686187ad6d7f75883ff747ea0948b3b61f1f4621936fc649765ca9f",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/pilot1/artifacts/s1-sec-review__B5__r1/_FINAL.txt",
+      "sha256": "f79c50c981a863d1fb1b04e6c0575c3f47bcd545156eadd827dce42ae11d3dd7",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/pilot1/config.json",
+      "sha256": "866ee99317d265e6ea8810395d597ec0433ec8c762dbf92eed8556184e3f1a3f",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/selftest/config.json",
+      "sha256": "5c874d6b3d8d528d4496e679b57a456a216959096844cce61d5d0d1d3bc10d09",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud-anchor-W3/config-anchor-W3.json",
+      "sha256": "8fdc87f5a3617952362bdd44a6223079dd351de79ea1282e57507cc9839d2a28",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud-anchor-W3/config.json",
+      "sha256": "8fdc87f5a3617952362bdd44a6223079dd351de79ea1282e57507cc9839d2a28",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud-anchor-W4/config-anchor-W4.json",
+      "sha256": "b086585fdb8a1463571695708bdc32d9f62eb6e8245e26c32245eccf5ef84d72",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud-anchor-W4/config.json",
+      "sha256": "b086585fdb8a1463571695708bdc32d9f62eb6e8245e26c32245eccf5ef84d72",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud-anchor-W5/artifacts/l4-startup-order__B0__r2/_FINAL.txt",
+      "sha256": "4b41407591f87b6b0cdc587bb0168b6609ab280c2946d7bbb1ac005025f21948",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud-anchor-W5/config-anchor-W5.json",
+      "sha256": "db3ab0752cd31bd0b9ad8106981a5085a74296a859ed35182553ae356da46b61",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud-anchor-W5/config.json",
+      "sha256": "db3ab0752cd31bd0b9ad8106981a5085a74296a859ed35182553ae356da46b61",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/a1-ambiguous-spec__B5__r2/_FINAL.txt",
+      "sha256": "7b452b4b4756a5d51038c86751d51282a51a8fa7088b5c960e0255e4757c2ce7",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/a1-ambiguous-spec__B6__r1/_FINAL.txt",
+      "sha256": "ef2b6028b9206209a19cf6832703e0bbe0bf05ce6a3ef565602282c1fb436508",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/a1-ambiguous-spec__B6__r2/_FINAL.txt",
+      "sha256": "ad8dc63a3defd5e09ca379488071974cef65505fa8e72e1d761ae1ee6066ffff",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/a1-ambiguous-spec__B6__r3/_FINAL.txt",
+      "sha256": "dcdb10309c33b382afe8a7e9c4c846489343f924fdf5160b98a9160824cabe50",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/a1-ambiguous-spec__B7__r1/_FINAL.txt",
+      "sha256": "7c49412e793bac8d017c69cbd5944ef413542d87944b97e55b994cf287627150",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/a1-ambiguous-spec__B7__r2/_FINAL.txt",
+      "sha256": "a24814d0ffe86ef7ee72aed05d8c5c7232cb3add354ed5cd55d34c7f1f487bd1",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/a1-ambiguous-spec__B7__r3/_FINAL.txt",
+      "sha256": "5bd138646c6f695f2d9d69b46483c31353d0cf704f3b1d1c63b134a9bcbdb596",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/c5-tickets-api__B6__r1/_FINAL.txt",
+      "sha256": "38a9df52710092fb92ac9745751c81dc64cc650fb99ef64b6481d0a178db083e",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/c5-tickets-api__B6__r3/_FINAL.txt",
+      "sha256": "48369cf95aca6d0c13d0a4e6ef71cd721db7fb08e7e516a3608b5ba6dac96ac9",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l1-oncall__A1__r2/_FINAL.txt",
+      "sha256": "8e3798972d721717df352269362dcb05a99b28dfad77fcba92145f9ef5373ae5",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l1-oncall__B0__r3/_FINAL.txt",
+      "sha256": "8954f4efd6f67fd2ac1ef563fa66d2e63515b7619d98d5a4aa8557c55d652c11",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l1-oncall__B5__r2/_FINAL.txt",
+      "sha256": "0d0f9ae3d52ec977441c7438c6fb1d05b622ce57dbff4d78c3cbcf0e12887086",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l1-oncall__B5__r3/_FINAL.txt",
+      "sha256": "856962737091d534d4443f1e93bf842f25d86ae2e9e3e511c2431e1c6150d7c3",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l1-oncall__B6__r1/_FINAL.txt",
+      "sha256": "6636cf33889832be6c1cb7764257778ad73315f2e7639fac2c158beb5a3c37ba",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l1-oncall__B7__r1/_FINAL.txt",
+      "sha256": "3bd00cbad023cc6126664814de7025cb70090da62a4e441dc08951aaa1b14724",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l1-oncall__B7__r2/_FINAL.txt",
+      "sha256": "3227e21369943fba3f97aee6ffa2c7f2e91c12e95c894d98ff80ccedd214bb3a",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l2-knights__B5__r1/_FINAL.txt",
+      "sha256": "87dbbc2c5d7863d9d4fdb4ea468bf631acf82f279d6db3516dd67191c7a7f9a2",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l2-knights__B5__r2/_FINAL.txt",
+      "sha256": "ab64469deaa1abe8995dd66c621a4c15fbe324c54cb378faa65f55236a0965a0",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l2-knights__B5__r3/_FINAL.txt",
+      "sha256": "b3677fad067f608065927f29f189552545f837d215ef9a0f4954876fe507174a",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l2-knights__B6__r1/_FINAL.txt",
+      "sha256": "49c2392955e106fd490ecdfe15a36c82257eff5fcee02a85a2219a116fa9798a",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l2-knights__B6__r2/_FINAL.txt",
+      "sha256": "2398777aad7ff535eac8ae305613c6f1c1b8a5f7e135d175194f552450c419f7",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l2-knights__B6__r3/_FINAL.txt",
+      "sha256": "1e85590f5c34020d86565aa4454e890f80e7e1325095d44d76396dc776aaa65e",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l3-reconcile__B0__r1/_FINAL.txt",
+      "sha256": "082a6e92e5d73e8d52a172b8c3452442f9cdcf9a32f695d2788f5da463d3f99b",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l3-reconcile__B0__r2/_FINAL.txt",
+      "sha256": "03e366d492eaf2aba9b00e388805715d86e09a25aad49a204e3aabda2cf3bb2d",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l3-reconcile__B5__r1/_FINAL.txt",
+      "sha256": "22fdb5300c393d648c3de9557c378cfdca465f5fd2d9a26fb4cc52517f013c72",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l3-reconcile__B6__r1/_FINAL.txt",
+      "sha256": "df9f6ca78893d75812e8b0cfa67f7eca8115a2f56d983ddd83add5ae02b3a9a8",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l3-reconcile__B6__r2/_FINAL.txt",
+      "sha256": "c60437efa293b40a86ff33540a65f8b98bdc82fdf09ab20727929b368a3594df",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l3-reconcile__B6__r3/_FINAL.txt",
+      "sha256": "7c13a270d24c6245b743336c39b8ace804c88432683350cb9538597e642af90e",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l4-startup-order__A0-sonnet__r1/_FINAL.txt",
+      "sha256": "f6a48145b757de2713dc970f17235516445a980af92d85992daf936b0684cf0a",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l4-startup-order__B0__r1/_FINAL.txt",
+      "sha256": "ead013a31821f972e4393a6f6f981b9864a41fe5db2ab12c07bf0c0dc381c23d",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l4-startup-order__B0__r3/_FINAL.txt",
+      "sha256": "4a7d3ed48e696b6b28f0b3c19a25dc0694fdbbcb85a54a0d9640301c76f3beb3",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l4-startup-order__B5__r2/_FINAL.txt",
+      "sha256": "26ce1521893c9c4c3ba199ac0067146ac329e295e7529211bb3b355b484d9a80",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l4-startup-order__B6__r1/_FINAL.txt",
+      "sha256": "0397ff44669f4a09327de47cebf479056359f9353b85cc20db8c59116e0962f0",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l4-startup-order__B6__r2/_FINAL.txt",
+      "sha256": "89f40bea3060bd16138b0da4126c5d130c186c24f8d838e2e7881c93bec02fe6",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/l4-startup-order__B6__r3/_FINAL.txt",
+      "sha256": "a2aea5fe2720f7a258df659053d10bfd54f3543b0fce748e20d26ed102906de4",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/r1-elk-design__A2__r2/_FINAL.txt",
+      "sha256": "d04ccf217ad8ccb62bb6d5dbdc3c9df812eb4ce83c07db406408ec48cb20af75",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/r1-elk-design__B0__r3/DESIGN.md",
+      "sha256": "aabc7a771a29985bae6e3eca4c06f42cb37949e4a806fc67546721c7e85a3957",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/r1-elk-design__B0__r3/_FINAL.txt",
+      "sha256": "47c33ba4aa46293cd2f2c23de715f96e84f35c4327a96c265f4713561d7af03d",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/r1-elk-design__B5__r1/_FINAL.txt",
+      "sha256": "81873e2061e6764c4c0eca977ca27b74e1d6d52aae61925412b2163ce548007f",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/r1-elk-design__B5__r2/_FINAL.txt",
+      "sha256": "1c5f3c8753cb6dde966d5d6a073c1db719eb65989c5b9148f327695bc79aa3b7",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/r1-elk-design__B5__r3/_FINAL.txt",
+      "sha256": "83c9786bf8d17eaa7a465f556ffae401986c8b11d0d2b9e14ebc2a7a28838a6a",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/r1-elk-design__B6__r2/_FINAL.txt",
+      "sha256": "85a5ddbb6adb86456a04710d8c120976f0ee6739cf387e713cc55d1ccb19f2c5",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/re1-lit-synthesis__B6__r1/_FINAL.txt",
+      "sha256": "5b8beb62982c7ea8f49853da9fef0373d0ef2e76592ca193c0cb09aee6ac34ee",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/re1-lit-synthesis__B6__r3/_FINAL.txt",
+      "sha256": "e33f79c1ee930927d245912f53834a73d7a2413ac38e52be7fe378c1ca25b65c",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/re1-lit-synthesis__B7__r1/_FINAL.txt",
+      "sha256": "f1ef19544902ecc3c9ef3fb05d0a35bb72f6ac31edb4c5433cc04ce4934f5be3",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/re1-lit-synthesis__B7__r2/_FINAL.txt",
+      "sha256": "f1200f36ee47e858a0cba0436825e7a13575e2b22eced4fd57898c7030a35f0c",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/s1-sec-review__B6__r1/_FINAL.txt",
+      "sha256": "c7dfea557fe0d921ef3ba34d52ac2160f9fec7a71a95ababe36f160cc988fccc",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/s1-sec-review__B6__r2/_FINAL.txt",
+      "sha256": "e27684795d798aee5cd58adefb90fda62000da0e0f629db5566377e71a23ba8d",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/s1-sec-review__B6__r3/_FINAL.txt",
+      "sha256": "86b0a8b67cb6e87d1d67a85c15ea8806f59a1c75353a5a7e6a56710610990d1e",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/s1-sec-review__B7__r1/_FINAL.txt",
+      "sha256": "96ccd51166df4d35e2adf1d68b0cdfda05d453798515bfcb4f4babb8198e2de2",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/s1-sec-review__B7__r3/_FINAL.txt",
+      "sha256": "07f9d7659d16e9167f6db878f5fe05be7789b0f9da5c53e5e0faa16553bfed01",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/t3-api__B6__r8/_FINAL.txt",
+      "sha256": "8e7ddfa4355c14891bd83681d73c136ac677253fd49ba2aae7fbacefbfeeffb3",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/t3-api__B6__r9/_FINAL.txt",
+      "sha256": "ecfb36d9ffe315da88113c092881e8668fe8fabc710877acc406babe0421b793",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/t4-perf__B6__r2/_FINAL.txt",
+      "sha256": "2bd3ecf6888040c0d9d3ec3aac79f22e57b95758eeb0cd0ab1e4e82bbf071092",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/t4-perf__B6__r3/_FINAL.txt",
+      "sha256": "ae67e8a4d0a6d2eab23a37bf063b44d2f58f95b484a190f2988a2d30f14c4f34",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/t4-perf__B6__r5/_FINAL.txt",
+      "sha256": "a11cdafcdbe069b6855362d2735e8bac857897017194825242a9f26fbe468a1e",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/t4-perf__B6__r7/_FINAL.txt",
+      "sha256": "109160cd492c2650764c45c1406a207064921888133bde9acde6c73d382ced2b",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/t4-perf__B6__r8/_FINAL.txt",
+      "sha256": "1103fa8be4e601354c40a24a93e14bac4ec544af03284990266c71b67fc5fd39",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/t4-perf__B6__r9/_FINAL.txt",
+      "sha256": "6fef081facff7a363c91ce40ddea37fe03a3b5b7372e9e1bcc7cd3bf82c2d255",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/t4-perf__B7__r1/_FINAL.txt",
+      "sha256": "33683d6e4b3b8a3efe4b73b6140ea191641eb2f40e83d1c17182ff220e08b0c3",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/t4-perf__B7__r5/_FINAL.txt",
+      "sha256": "f2443665946a41530c91a4850c2941e26e56cf477fa65c45d0755c06acc5d065",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/artifacts/t5-logq__B6__r7/_FINAL.txt",
+      "sha256": "3320c18c96bde5183f72e68e2c7737480789355ebf4fcb55ba9cea3c1ebcbea2",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/config-A0anchor.json",
+      "sha256": "91a297fc98bb71440754557d595cdbdb86ced9d8c4b9979ee145e68ccc5b7a58",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/config-B6b.json",
+      "sha256": "e8781a5f214e914065892e0573af45312fc00d9217f948be11587db0b61273e7",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/config-B7a.json",
+      "sha256": "e03404b4c9f8ef3bbfdf5994b827410c546dc4053698f55de40bd4c751efa32d",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/config-B7b.json",
+      "sha256": "d5d4ac4edd69c48a5ed97af3dfc1cda7253c14ba25ca64036391a127a4b91eae",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/config-W1.json",
+      "sha256": "29a7cec15cc7d41afd80515036453e76ea8bde171b432f5a5042db91d3236c7a",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/config-W2a.json",
+      "sha256": "a27fb784ba3f4633be79c6c3da8b48b0ddd45db98a394b7b57f8e34849666fad",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/config-W2b.json",
+      "sha256": "3e39821c360461e1c3bb4175d200cba0b084694434aa803239b901fc38d3d44c",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/config-W2c.json",
+      "sha256": "79501de9f68d88c2fc882958cca80a782aca0602f516931ad8fb0487327e21b3",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/config-W3a.json",
+      "sha256": "19dbc39cf9e30bba2e4f958dc3a6fe9d11592da4a2a0b6b880946be7c84e3ae8",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/config-W3b-bu.json",
+      "sha256": "e8c191d0c026ffc76303a333e173ac3743cc81d12483795e6d0e45b2be17e28d",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/config-W3b.json",
+      "sha256": "b5003ed992907014b043d9f28cf518258696ba36f7496cec3f6fc60649c35249",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/config-W4b.json",
+      "sha256": "61b43087597b8f543453fa262de760184e9a8deebc2b985670e4fbb97f0c8779",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/config-W4c.json",
+      "sha256": "e4391fded82616c24fb084e471f991720636cd0dce830e912f83bba2c4f5b235",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/config-W5a.json",
+      "sha256": "adfc3137997e8fc1a9a71005202e39b158bbd50268cb09f2e21158102af78046",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/config-W5b.json",
+      "sha256": "6b5c321a9b7a5d84c35975a8e80bd36a8357ba6c7b3b2c991b75e84f986a5d89",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/config-W5c.json",
+      "sha256": "531e2c074726aff39418115d0195e830bd40c6b2cfa60d633c181f44ce69aca7",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "bench/vs-claude/results/study-cloud/config.json",
+      "sha256": "e8c191d0c026ffc76303a333e173ac3743cc81d12483795e6d0e45b2be17e28d",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "không sửa tệp thô (sửa làm sai mã băm đã ghi; docs/research/CHANGELOG.md, gói 15); xóa mục khi tệp bị thay hoặc bỏ",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "docs/research/analysis/v43f-rerun/h6-analyze-stdout.txt",
+      "sha256": "3f90dcf4821592ee2c65054edce4d081eb1b67c7e3283bf41baa2aba69391746",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "Phòng Nghiên cứu, gói sau D20 (thay bằng <máy-chạy>/<máy-cloud>); D20 không sửa nội dung docs/research/",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "docs/research/context/d11-baseline/b7prime/stdout.txt",
+      "sha256": "3904f68c69d1deadf24e31b7775fcca4101eed501f086297a6b723b2d1f6ac57",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "Phòng Nghiên cứu, gói sau D20 (thay bằng <máy-chạy>/<máy-cloud>); D20 không sửa nội dung docs/research/",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "docs/research/context/d11-baseline/study-cloud/stdout.txt",
+      "sha256": "ecfaef4ba224be2d6dbf32aa6f7f7176b8a60fa8c4344ee964c18439ed6debd0",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "Phòng Nghiên cứu, gói sau D20 (thay bằng <máy-chạy>/<máy-cloud>); D20 không sửa nội dung docs/research/",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "docs/research/context/d12-stats-fixes-2026-11-04.md",
+      "sha256": "ceaddd1c94e832ceb8fbe544b29c028e54e8328ae0b566c9278704b55f76cc61",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "Phòng Nghiên cứu, gói sau D20 (thay bằng <máy-chạy>/<máy-cloud>); D20 không sửa nội dung docs/research/",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "docs/research/context/d9-implementation-2026-11-03.md",
+      "sha256": "8c489c91ab7f49e543571f505e7559c722c1054209281731bf960884a338f02e",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "Phòng Nghiên cứu, gói sau D20 (thay bằng <máy-chạy>/<máy-cloud>); D20 không sửa nội dung docs/research/",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "docs/research/context/tool-failures-2026-11-02.csv",
+      "sha256": "6f5cbb086832c50fd999a5e2275e8c58c1c9add885c34a42c2a0cb4718b9e423",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "Phòng Nghiên cứu, gói sau D20 (thay bằng <máy-chạy>/<máy-cloud>); D20 không sửa nội dung docs/research/",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "docs/research/preregistration.md",
+      "sha256": "06478a92393d40d87444c206e54ad19c18bce2ced2406bc4f03204f178026a92",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "Phòng Nghiên cứu, gói sau D20 (thay bằng <máy-chạy>/<máy-cloud>); D20 không sửa nội dung docs/research/",
+      "by": "K3"
     }
   ]
 }

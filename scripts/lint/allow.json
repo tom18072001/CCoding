@@ -1,3 +1,95 @@
 {
-  "entries": []
+  "entries": [
+    {
+      "rule": "secrets",
+      "file": "test/agent-probes.test.ts",
+      "anchor": "Khách hàng CCCD",
+      "reason": "chuỗi giả để thử bộ che bí mật; không phải khóa thật",
+      "by": "K3"
+    },
+    {
+      "rule": "secrets",
+      "file": "test/process.test.ts",
+      "anchor": "DATABASE password=",
+      "reason": "chuỗi giả để thử bộ che bí mật; không phải khóa thật",
+      "by": "K3"
+    },
+    {
+      "rule": "secrets",
+      "file": "test/sandbox-log-fallback.test.ts",
+      "anchor": "tránh cảnh báo thiếu khóa lẫn vào stderr",
+      "reason": "khóa HMAC giả chỉ dùng cho test, đặt để cảnh báo không lẫn vào stderr",
+      "by": "K3"
+    },
+    {
+      "rule": "secrets",
+      "file": "test/security.test.ts",
+      "anchor": "redact('key=",
+      "reason": "chuỗi giả để thử bộ che bí mật; không phải khóa thật",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "test/claude-guard-paths.test.ts",
+      "anchor": "B-14:",
+      "reason": "chuỗi thử có tên giả trong test của bộ kiểm đường dẫn; không phải đường dẫn máy thật",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "test/claude-guard-paths.test.ts",
+      "anchor": "'C:/Users",
+      "reason": "chuỗi thử có tên giả trong test của bộ kiểm đường dẫn; không phải đường dẫn máy thật",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "test/claude-guard-paths.test.ts",
+      "anchor": "'C:\\\\Users",
+      "reason": "chuỗi thử có tên giả trong test của bộ kiểm đường dẫn; không phải đường dẫn máy thật",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "test/claude-guard.test.ts",
+      "anchor": "path: 'C:/Users",
+      "reason": "chuỗi thử có tên giả trong test của bộ kiểm đường dẫn; không phải đường dẫn máy thật",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "test/claude-tools.test.ts",
+      "anchor": "workhub/.env",
+      "reason": "chuỗi thử có tên giả trong test của bộ kiểm đường dẫn; không phải đường dẫn máy thật",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "test/sandbox-regression.test.ts",
+      "anchor": "toWslPath('C:",
+      "reason": "chuỗi thử có tên giả trong test của bộ kiểm đường dẫn; không phải đường dẫn máy thật",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "test/sandbox-regression.test.ts",
+      "anchor": "toWslPath('/home",
+      "reason": "chuỗi thử có tên giả trong test của bộ kiểm đường dẫn; không phải đường dẫn máy thật",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "test/subagent-mgmt.test.ts",
+      "anchor": "nd57-du-lieu-that",
+      "reason": "chuỗi thử có tên giả trong test của bộ kiểm đường dẫn; không phải đường dẫn máy thật",
+      "by": "K3"
+    },
+    {
+      "rule": "machine-path",
+      "file": "test/subagent-mgmt.test.ts",
+      "anchor": "tool_input: { path: 'C:/Users",
+      "reason": "chuỗi thử có tên giả trong test của bộ kiểm đường dẫn; không phải đường dẫn máy thật",
+      "by": "K3"
+    }
+  ]
 }
