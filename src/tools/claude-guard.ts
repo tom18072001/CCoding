@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { deniedReason } from './workspace.js';
-import { blockMessage, gitReadViolation, outsidePathReason, pathInside, safeCmdName, toolKind } from './shell-policy.js';
+import { blockMessage, gitReadViolation, outsidePathReason, outsideWriteViolation, pathInside, safeCmdName, toolKind } from './shell-policy.js';
 import { LogStore } from '../logger.js';
 import { isOwnToolResult, realInsideRoot, resolveFrom } from './guard-paths.js';
 
@@ -107,6 +107,8 @@ export function guardBlock(input: HookInput, cfg: GuardConfig, env: NodeJS.Proce
     }
     const away = outsidePathReason(cmd, cfg.root);
     if (away) return blk(name, 'outside-root', `CCoding chặn lệnh: ${away}`);
+    const wv = outsideWriteViolation(cmd, cfg.root);
+    if (wv) return blk(name, 'outside-root-write', `CCoding chặn lệnh: ${wv.reason}`, wv.clause, wv.cmd);
     return undefined;
   }
   if (FILE_TOOLS.has(name)) {
