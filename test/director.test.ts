@@ -5,7 +5,7 @@ import { createServer } from '../src/server.js';
 import { systemFor } from '../src/prompts.js';
 import { pickRateHeaders } from '../src/runtimes/api.js';
 import { readJsonl } from '../src/util/fsx.js';
-import { testApp } from './helpers.js';
+import { readJson, testApp } from './helpers.js';
 
 async function serve(app: ReturnType<typeof testApp>) {
   const srv = createServer(app);
@@ -59,8 +59,8 @@ test('góp ý cho agent: lưu, bật/tắt, đưa vào hồ sơ (system prompt) 
     assert.equal((await json('/api/agents/backend-dev/feedback', {})).status, 400);
     const r = await json('/api/agents/backend-dev/feedback', { text: 'Luôn viết test trước khi sửa route', rating: 'up' });
     assert.equal(r.status, 201);
-    const f = await r.json();
-    const list = await (await json('/api/agents/backend-dev/feedback')).json();
+    const f = await readJson<{ id: string }>(r);
+    const list = await readJson<unknown[]>(await json('/api/agents/backend-dev/feedback'));
     assert.equal(list.length, 1);
     assert.deepEqual(app.store.activeFeedback('backend-dev').map((x) => x.text), ['Luôn viết test trước khi sửa route']);
     const sys = systemFor(app.registry.agent('backend-dev'), app.registry.department('dev'), 'internal', 'execute', ['👍 Luôn viết test trước khi sửa route']);
@@ -75,23 +75,23 @@ test('góp ý cho agent: lưu, bật/tắt, đưa vào hồ sơ (system prompt) 
 
     // thư viện prompt
     assert.equal((await json('/api/prompts', { title: '', body: 'x' })).status, 400);
-    const pr = await (await json('/api/prompts', { title: 'Sửa lỗi', body: '## Mục tiêu\nSửa lỗi …', tags: ['dev'], mode: 'agent', agentId: 'backend-dev' })).json();
+    const pr = await readJson<{ id: string; uses: number; createdAt: string }>(await json('/api/prompts', { title: 'Sửa lỗi', body: '## Mục tiêu\nSửa lỗi …', tags: ['dev'], mode: 'agent', agentId: 'backend-dev' }));
     assert.equal(pr.uses, 0);
     const upd = await json('/api/prompts', { id: pr.id, title: 'Sửa lỗi (bản 2)', body: 'mới' });
     assert.equal(upd.status, 200);
-    assert.equal((await (await json(`/api/prompts/${pr.id}/use`, {})).json()).uses, 1);
-    const all = await (await json('/api/prompts')).json();
-    assert.deepEqual(all.map((x: any) => [x.title, x.uses, x.createdAt === pr.createdAt]), [['Sửa lỗi (bản 2)', 1, true]]);
+    assert.equal((await readJson<{ uses: number }>(await json(`/api/prompts/${pr.id}/use`, {}))).uses, 1);
+    const all = await readJson<{ title: string; uses: number; createdAt: string }[]>(await json('/api/prompts'));
+    assert.deepEqual(all.map((x) => [x.title, x.uses, x.createdAt === pr.createdAt]), [['Sửa lỗi (bản 2)', 1, true]]);
     assert.equal((await json(`/api/prompts/${pr.id}`, undefined, 'DELETE')).status, 200);
 
     // hạn mức: theo runtime, không lộ khóa
-    const q = await (await json('/api/quota')).json();
-    assert.ok(q.runtimes.some((x: any) => x.id === 'mock'));
+    const q = await readJson<{ runtimes: { id: string }[] }>(await json('/api/quota'));
+    assert.ok(q.runtimes.some((x) => x.id === 'mock'));
     assert.ok(!JSON.stringify(q).match(/sk-|gsk_|csk-/));
     for (const x of q.runtimes) assert.ok(!('key' in x) && !('apiKey' in x));
 
     // giao việc riêng qua API
-    const t = await (await json('/api/tasks', { brief: 'Viết README', mode: 'agent', agentId: 'devops' })).json();
+    const t = await readJson<{ id: string; agentId: string }>(await json('/api/tasks', { brief: 'Viết README', mode: 'agent', agentId: 'devops' }));
     assert.equal(t.agentId, 'devops');
     await app.orchestrator.waitFor(t.id);
   } finally {
@@ -120,7 +120,7 @@ test('chỉ dẫn bổ sung cho nhiệm vụ đang chạy (vào bối cảnh cá
     assert.ok(app.store.transcript(t.id).some((m) => m.kind === 'note' && m.from === 'director' && m.text.includes('gỡ cài đặt')));
     assert.throws(() => app.orchestrator.addNote(t.id, 'muộn rồi'), /Giao việc tiếp nối/);
     const ctx = { task: done, dept: app.registry.department('dev'), cwd: '/w', roster: app.registry.members('dev') };
-    assert.match(planPrompt(ctx).context, /## Chỉ dẫn bổ sung của giám đốc[^\n]*\n- \([^)]+\) Nhớ thêm mục gỡ cài đặt/);
+    assert.match(planPrompt(ctx, undefined).context, /## Chỉ dẫn bổ sung của giám đốc[^\n]*\n- \([^)]+\) Nhớ thêm mục gỡ cài đặt/);
     // tiếp nối: kế thừa chế độ + agent, báo cáo trước vào inputs
     const f = app.orchestrator.submit({ brief: 'Bổ sung phần cấu hình proxy', followUp: t.id });
     assert.equal(f.mode, 'agent');

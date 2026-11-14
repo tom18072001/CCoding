@@ -231,11 +231,14 @@ export class RuntimeManager {
 
   /**
    * Ghi nhận lỗi và quyết định thời gian nghỉ:
-   * quota → tới lúc nhà cung cấp mở lại (hoặc quotaCooldownMs) · rate → 1 phút · lỗi mạng/timeout → nghỉ 2 phút từ lần thứ 2 liên tiếp ·
+   * quota → tới lúc nhà cung cấp mở lại (hoặc quotaCooldownMs) · rate → 1 phút · lỗi mạng → nghỉ 2 phút từ lần thứ 2 liên tiếp · timeout → không nghỉ (D21) ·
    * auth → 30 phút · model không tồn tại → 6 giờ (chỉ model đó).
    */
   markFailure(runtimeId: string, model: string | undefined, kind: ErrorKind, message: string, retryAt?: number): HealthInfo {
     const now = Date.now();
+    // D21/K1: lượt hết giờ là lỗi của riêng lượt đó (đề quá lớn/agent chạy lâu), KHÔNG phải runtime hỏng hay hết hạn mức:
+    // không ghi sức khỏe, không đặt `until`, không cho nghỉ — nhiệm vụ khác dùng cùng runtime vẫn chạy.
+    if (kind === 'timeout') return { failures: 0, kind, reason: 'quá thời gian', lastError: message.slice(0, 300), lastErrorAt: now };
     const scopeModel = kind === 'quota' || kind === 'rate' || kind === 'model' || kind === 'context' || kind === 'empty';
     // lỗi quota/model gắn với model cụ thể; lỗi mạng/xác thực gắn với cả runtime
     const key = scopeModel && model ? `${runtimeId}::${model}` : runtimeId;
@@ -268,9 +271,8 @@ export class RuntimeManager {
         h.reason = 'phản hồi rỗng';
         break;
       case 'transient':
-      case 'timeout':
         until = h.failures >= 2 ? now + 2 * 60_000 * Math.min(5, h.failures - 1) : undefined;
-        h.reason = kind === 'timeout' ? 'quá thời gian' : 'lỗi kết nối';
+        h.reason = 'lỗi kết nối';
         break;
       default:
         h.reason = 'lỗi';

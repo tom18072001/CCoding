@@ -69,7 +69,7 @@ function instrument(a: Ctx, o: { touch?: string; reply?: string } = {}): AcceptC
   return seen;
 }
 
-async function run(a: Ctx, options: TaskOptions, brief = 'Thêm hàm cộng vào src/a.js') {
+async function run(a: Ctx, options: Partial<TaskOptions>, brief = 'Thêm hàm cộng vào src/a.js') {
   const t = a.orchestrator.submit({ brief, projectId: 'repo', options: { lane: 'single', ...options } });
   const done = await a.orchestrator.waitFor(t.id);
   assert.equal(done.status, 'done', done.error);

@@ -274,6 +274,8 @@ const newApp = (cc) => {
   const base = cc.loadConfig({ root: ROOT });
   const app = cc.createApp({ dataDir: data, workspacesDir: path.join(data, 'workspaces'), runner: 'process', herdr: { ...base.herdr, notify: false, agentPanes: false } }, { root: ROOT });
   app.runtimes.get('claude-cli').available = async () => ({ ok: true, detail: 'giả' });
+  // không phụ thuộc PATH của máy: runtime khác (codex, kimi…) có cài hay không không được đổi danh sách chuyển dự phòng
+  for (const [id, rt] of app.runtimes.runtimes) if (id !== 'claude-cli') rt.available = async () => ({ ok: false, detail: 'tắt trong test' });
   return { app, data };
 };
 const treeSha = (dir) => fs.readdirSync(dir, { recursive: true }).sort().map((f) => { const p = path.join(dir, f); return fs.statSync(p).isFile() ? `${f}:${fs.readFileSync(p, 'hex')}` : f; }).join('|');
@@ -369,7 +371,7 @@ test('runCto: runtime treo → quá hạn chờ thì hủy, ghi hạ tầng "err
   assert.equal(app.store.get(q.taskId).status === 'paused', false, 'không để nhiệm vụ tạm dừng treo lại hàng đợi');
 });
 
-test('13/11 runCto: lượt accept trả lỗi kèm văn bản (403 khi xác thực) → CCoding dùng văn bản lỗi làm nghiệm thu, harness ghi infra', async () => {
+test('13/11 runCto: lượt accept trả lỗi kèm văn bản (403 khi xác thực) → lỗi lượt gọi (D15), không dùng văn bản lỗi làm nghiệm thu; harness ghi infra', async () => {
   const cc = await loadCcoding(ROOT);
   const fx = fixture();
   const { app } = newApp(cc);
@@ -378,7 +380,8 @@ test('13/11 runCto: lượt accept trả lỗi kèm văn bản (403 khi xác th�
   rt.run = async () => ({ text: msg, error: msg, usage: { input: 10, output: 5, cacheRead: 0, cacheWrite: 0 }, model: 'claude-sonnet-5-5', runtime: 'claude-cli', durationMs: 5 });
   const pf = await prepareItem(fx.faulty, { suite: fx.suite, artifacts: path.join(fx.suite, 'artifacts'), workRoot: tmp(), cc });
   const r = await runCto(app, cc, pf, 'R1', { waitTimeoutMs: 20_000 });
-  assert.equal(app.store.get(r.taskId).acceptance?.parsed, false, 'CCoding ghi nghiệm thu không đọc được (không phải lỗi)');
-  assert.deepEqual([r.status, r.infra, r.verdict], ['infra', 'error', null]);
-  assert.match(r.error, /403/);
+  // chỉ còn một tài nguyên và nó lỗi xác thực (nhóm hạn mức) → CCoding tạm dừng nhiệm vụ; harness ghi infra, không có nghiệm thu nào để đọc
+  assert.equal(app.store.get(r.taskId).acceptance, undefined, 'văn bản lỗi không bao giờ thành nghiệm thu');
+  assert.deepEqual([r.status, r.infra, r.verdict], ['infra', 'rate-limit', null]);
+  assert.match(r.error, /auth|403|xác thực|hạn mức/i);
 });

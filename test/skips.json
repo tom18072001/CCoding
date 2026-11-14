@@ -1,0 +1,52 @@
+{
+  "entries": [
+    {
+      "file": "bench/vs-claude/test/cache-diagnostic.test.mjs",
+      "name": "fixture: ra đủ 7 hàng, đúng h, diễn giải khớp G1",
+      "condition": "thiếu thư mục dist/ (chưa chạy npm run build)",
+      "reason": "bài kiểm nạp bản build của CCoding; chạy npm run build trước thì test chạy"
+    },
+    {
+      "file": "bench/vs-claude/test/cache-diagnostic.test.mjs",
+      "name": "fixture thiếu lượt → lỗi rõ",
+      "condition": "thiếu thư mục dist/ (chưa chạy npm run build)",
+      "reason": "như trên: cần bản build trong dist/"
+    },
+    {
+      "file": "test/agent-probes.test.ts",
+      "name": "probe --self-test: đáp án mẫu 1.00; rác, chép đề và câu trả lời đối kháng (gian lận bộ chấm, báo nhầm mồi nhử, đọc khóa) bị chấm thấp",
+      "condition": "thiếu dist/kpi.js (chưa chạy npm run build)",
+      "reason": "probe.mjs import từ dist/; chạy npm run build trước thì test chạy"
+    },
+    {
+      "file": "test/agent-probes.test.ts",
+      "name": "probe: API gốc Ollama đặt num_ctx, kết quả chỉ ghi trong data/ đã che PII/bí mật, lỗi hạ tầng không tính điểm và được chạy lại",
+      "condition": "thiếu dist/kpi.js (chưa chạy npm run build)",
+      "reason": "probe.mjs import từ dist/; chạy npm run build trước thì test chạy"
+    },
+    {
+      "file": "test/bench.test.ts",
+      "name": "claude-cli: bashMaxOutput của nhiệm vụ → BASH_MAX_OUTPUT_LENGTH; không đặt thì giữ mặc định của CLI",
+      "condition": "process.platform === 'win32'",
+      "reason": "claude giả là script shebang (node) không đuôi; Windows không thực thi được qua spawn. Chỉ chạy trên Linux/macOS"
+    },
+    {
+      "file": "test/extract.test.ts",
+      "name": "PDF qua pdftotext (nếu có trên máy)",
+      "condition": "máy không có pdftotext (poppler-utils) trong PATH",
+      "reason": "công cụ ngoài, tùy chọn; mọi nền tảng bỏ qua khi thiếu"
+    },
+    {
+      "file": "test/extract.test.ts",
+      "name": "PDF mã hóa mật khẩu rỗng (RC4/AES qua qpdf, nếu có trên máy)",
+      "condition": "máy không có qpdf trong PATH",
+      "reason": "công cụ ngoài, tùy chọn; mọi nền tảng bỏ qua khi thiếu"
+    },
+    {
+      "file": "test/shell-policy-write-outside.test.ts",
+      "name": "outside-root-write: thư mục hệ thống Windows (khi chạy trên Windows)",
+      "condition": "không có biến môi trường SystemRoot/windir (không phải Windows)",
+      "reason": "cần đường dẫn thư mục hệ thống Windows; chỉ chạy trên Windows"
+    }
+  ]
+}

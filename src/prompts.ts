@@ -743,6 +743,19 @@ Lần thử trước đã thực hiện các thao tác dưới đây TRONG WORKS
 ${lines.join('\n')}${calls.length > 40 ? `\n- … (${calls.length - 40} thao tác trước đó)` : ''}`;
 }
 
+/** D21/K1: lượt execute/revise hết giờ → lời nhắc lần thử 2: nêu việc đã làm trong worktree, yêu cầu làm tiếp (không reset). */
+export function timeoutRetryNote(phase: string, seconds: number, commits: string[], status: string[]): string {
+  const c = commits.length ? commits.slice(0, 20).map((l) => `- ${l}`).join('\n') : '- (chưa có commit mới kể từ đầu lượt)';
+  const st = status.length ? status.slice(0, 40).map((l) => `- ${l}`).join('\n') : '- (worktree sạch, không có tệp sửa dở)';
+  return `## ⚠️ Lượt trước hết giờ (${seconds} giây, pha ${phase}) — LÀM TIẾP
+Lượt trước bị ngắt vì hết giờ. Mọi thay đổi và commit đã làm vẫn còn trong workspace — KHÔNG reset, không xóa commit, không làm lại từ đầu.
+Commit mới kể từ đầu lượt:
+${c}
+Tệp đang sửa dở (git status):
+${st}
+Việc cần làm: xem \`git log\`/\`git status\`/\`git diff\`, làm TIẾP phần còn thiếu, chạy kiểm chứng rồi commit. Việc đã xong thì giữ nguyên và báo cáo ngắn gọn.`;
+}
+
 /** Hạng mục làm song song trong worktree con, gộp vào nhánh nhiệm vụ bị xung đột → lần chạy lại (trong worktree chính) tự gộp. */
 export function mergeConflictNote(branch: string, files: string[], done: boolean, previous?: string): string {
   const list = files.length ? files.slice(0, 20).map((f) => `\`${f}\``).join(', ') : '(git không liệt kê được tệp — xem kết quả lệnh merge)';
@@ -808,7 +821,13 @@ export interface AcceptInput {
  * B-11(a): nghiệm thu rút gọn cho làn đơn. CTO chỉ nhận đề bài, diff (cắt ngắn) và kết quả lệnh kiểm tra — không có báo cáo phòng —
  * và trả bảng tiêu chí đạt/không đạt (mỗi tiêu chí một dòng, bằng chứng ≤ 1 câu, tổng ≤ 600 token) kèm khối JSON mà parseAcceptance đọc.
  */
-export function acceptBriefPrompt(task: Task, opts: { changes?: string; tools?: ToolName[]; projectName?: string } = {}): Built {
+/** K5 — diff chạm tệp ngoại lệ/khóa của lint-CI: CTO phải nêu thay đổi này trong biên bản nghiệm thu. */
+function guardBlock(paths?: string[]): string {
+  if (!paths?.length) return '';
+  return `\n## Thay đổi tệp ngoại lệ/khóa của lint-CI (BẮT BUỘC nêu trong biên bản)\nDiff chạm: ${paths.map((p) => `\`${p}\``).join(', ')}. Biên bản nghiệm thu PHẢI nêu rõ thay đổi này (tệp nào, thêm/bớt gì, lý do) và coi là rủi ro cần giám đốc xem.\n`;
+}
+
+export function acceptBriefPrompt(task: Task, opts: { changes?: string; tools?: ToolName[]; projectName?: string; guardPaths?: string[] } = {}): Built {
   const brief = task.brief.length > BRIEF_MAX.accept ? `${task.brief.slice(0, BRIEF_MAX.accept)}…\n_(Đã rút gọn từ ${task.brief.length.toLocaleString('vi-VN')} ký tự)_` : task.brief;
   const tools = opts.tools ?? [];
   return {
@@ -816,7 +835,7 @@ export function acceptBriefPrompt(task: Task, opts: { changes?: string; tools?: 
     prompt: `## Thay đổi trong workspace (git diff)
 ${opts.changes ? `\`\`\`\n${truncate(opts.changes, 3000)}\n\`\`\`` : '(không có diff)'}
 ${checksBlock(task, 'synthesize').replace('Ghi kết quả các lệnh này (trước/sau) vào báo cáo như bằng chứng kiểm chứng.', 'Đây là bằng chứng chạy thật có độ tin cậy cao nhất.')}
-${tools.length ? `\nCông cụ chỉ đọc (${tools.join(', ')}): chỉ dùng khi cần kiểm một tiêu chí cụ thể.\n` : ''}
+${tools.length ? `\nCông cụ chỉ đọc (${tools.join(', ')}): chỉ dùng khi cần kiểm một tiêu chí cụ thể.\n` : ''}${guardBlock(opts.guardPaths)}
 ## Việc của bạn (CTO): NGHIỆM THU RÚT GỌN
 Rút 3–6 tiêu chí kiểm được từ đề bài, kết luận từng tiêu chí đạt/không đạt (thiếu bằng chứng = "unknown"). Chỉ trả đúng bảng sau, mỗi tiêu chí MỘT dòng, bằng chứng tối đa 1 câu (trỏ tới lệnh hoặc tệp), TỔNG đầu ra ≤ 600 token, không viết thêm đoạn giải thích:
 
@@ -835,7 +854,7 @@ Rồi thêm đúng một khối (JSON ngắn, cùng nội dung bảng):
  * Pha nghiệm thu (UX-4c): CTO đối chiếu đề bài với báo cáo tổng hợp, kết luận review và lệnh kiểm tra CCoding tự chạy,
  * kết luận từng tiêu chí Đạt/Không/Chưa kiểm được kèm bằng chứng. Chỉ đọc (công cụ đọc tệp trong worktree nếu có).
  */
-export function acceptPrompt(task: Task, items: AcceptInput[], opts: { changes?: string; tools?: ToolName[]; projectName?: string } = {}): Built {
+export function acceptPrompt(task: Task, items: AcceptInput[], opts: { changes?: string; tools?: ToolName[]; projectName?: string; guardPaths?: string[] } = {}): Built {
   const per = Math.max(2500, Math.floor(24000 / Math.max(1, items.length)));
   const brief = task.brief.length > BRIEF_MAX.accept ? `${task.brief.slice(0, BRIEF_MAX.accept)}…\n_(Đã rút gọn từ ${task.brief.length.toLocaleString('vi-VN')} ký tự)_` : task.brief;
   const tools = opts.tools ?? [];
@@ -844,7 +863,7 @@ export function acceptPrompt(task: Task, items: AcceptInput[], opts: { changes?:
     prompt: `## Báo cáo tổng hợp của các phòng
 ${items.map((i) => `### ${i.department}\n${truncate(i.final || '(không có báo cáo)', per)}\n\n**Kết luận review:** ${i.review || '(không review)'}`).join('\n\n')}
 ${opts.changes ? `\n## Thay đổi trong workspace (git)\n\`\`\`\n${truncate(opts.changes, 3000)}\n\`\`\`\n` : ''}${checksBlock(task, 'synthesize').replace('Ghi kết quả các lệnh này (trước/sau) vào báo cáo như bằng chứng kiểm chứng.', 'Đây là bằng chứng chạy thật có độ tin cậy cao nhất.')}
-${tools.length ? `\nBạn có công cụ chỉ đọc (${tools.join(', ')}) trong worktree của nhiệm vụ — đọc tệp khi cần kiểm một tiêu chí cụ thể, không đọc tràn lan.\n` : ''}
+${tools.length ? `\nBạn có công cụ chỉ đọc (${tools.join(', ')}) trong worktree của nhiệm vụ — đọc tệp khi cần kiểm một tiêu chí cụ thể, không đọc tràn lan.\n` : ''}${guardBlock(opts.guardPaths)}
 ## Việc của bạn (CTO): NGHIỆM THU
 Rút 3–8 tiêu chí kiểm được từ đề bài (và tiêu chí của BA nếu có), kết luận từng tiêu chí: Đạt / Không / Chưa kiểm được, kèm bằng chứng trỏ tới lệnh, tệp hoặc mục báo cáo cụ thể. Thiếu bằng chứng thì là "Chưa kiểm được", không phải Đạt. Viết Markdown theo đúng "Mẫu đầu ra" của bạn (bắt đầu "## Tóm tắt"; mục "## Tiêu chí nghiệm thu" là bảng | Tiêu chí | Kết quả | Bằng chứng |). Việc tiếp theo chỉ đề xuất, không tự giao.
 

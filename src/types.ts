@@ -89,6 +89,8 @@ export interface ProjectDef {
   setupCommands?: string[];
   /** Lệnh kiểm tra CCoding tự chạy trước khi sửa, sau thực thi/sửa và đưa cho reviewer (vd. test, typecheck). */
   checkCommands?: string[];
+  /** K5: lệnh kiểm tra nào còn đỏ cũng là đỏ bắt buộc — hết vòng sửa mà còn đỏ thì không done, không gọi CTO nghiệm thu. */
+  strictChecks?: boolean;
   createdAt: string;
 }
 
@@ -625,6 +627,8 @@ export interface UsageRecord {
   stopReason?: string;
   /** Chạm trần vòng công cụ (lượt hết lượt/trần token đầu vào) — KPI ưu tiên trường này hơn regex trên diag. */
   turnCapped?: boolean;
+  /** Lần thử của lượt gọi khi hết giờ (1 hoặc 2) — chỉ có ở dòng `stopReason: 'timeout'`. */
+  attempt?: number;
   error?: string;
 }
 

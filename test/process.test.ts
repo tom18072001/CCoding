@@ -9,7 +9,7 @@ import { createApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
 import { parseReview } from '../src/planner.js';
 import { compactHistory, toolName, wantsCacheControl, withCacheMarks } from '../src/runtimes/api.js';
-import { testApp } from './helpers.js';
+import { readJson, testApp } from './helpers.js';
 
 // Các cải tiến quy trình sau đợt đánh giá performance 26/10: chạy lệnh lần lượt trong repo dùng chung, review có bằng chứng,
 // ước lượng/tách nhiệm vụ, ngân sách theo hạng mục, né model vừa bị 429, rút gọn lịch sử theo đợt + điểm cache.
@@ -379,30 +379,30 @@ test('API dự án: lưu baseRef, worktreeCopy rỗng, lệnh cấm; từ chối
   try {
     const ok = await post({ id: 'nd-test', name: 'Thử', baseRef: 'origin/main', worktreeCopy: [], denyCommands: ['\\bdocker\\b', ':5434\\b'] });
     assert.equal(ok.status, 201);
-    const p = await ok.json();
+    const p = await readJson<{ baseRef: string; worktreeCopy: string[]; denyCommands: string[] }>(ok);
     assert.equal(p.baseRef, 'origin/main');
     assert.deepEqual(p.worktreeCopy, []);
     assert.equal(p.denyCommands.length, 2);
     // sửa dự án mà không gửi các trường này → giữ nguyên
-    const again = await (await post({ id: 'nd-test', name: 'Thử 2' })).json();
+    const again = await readJson<{ baseRef: string; worktreeCopy: string[] }>(await post({ id: 'nd-test', name: 'Thử 2' }));
     assert.equal(again.baseRef, 'origin/main');
     assert.deepEqual(again.worktreeCopy, []);
     assert.equal((await post({ id: 'nd-bad', name: 'x', baseRef: '--upload-pack=x' })).status, 400);
     // B-02: lane dự án — hợp lệ lưu và giữ khi sửa không gửi lane; sai → 400; auto xóa ép
     const ln = await post({ id: 'nd-lane', name: 'L', lane: 'single' });
     assert.equal(ln.status, 201);
-    assert.equal((await ln.json()).lane, 'single');
-    assert.equal((await (await post({ id: 'nd-lane', name: 'L2' })).json()).lane, 'single');
+    assert.equal((await readJson<{ lane?: string }>(ln)).lane, 'single');
+    assert.equal((await readJson<{ lane?: string }>(await post({ id: 'nd-lane', name: 'L2' }))).lane, 'single');
     const bad = await post({ id: 'nd-lane', name: 'L', lane: 'turbo' });
     assert.equal(bad.status, 400);
-    assert.match((await bad.json()).error ?? '', /Làn xử lý/);
+    assert.match((await readJson<{ error?: string }>(bad)).error ?? '', /Làn xử lý/);
     const got = (await (await fetch(`http://127.0.0.1:${port}/api/projects`)).json()) as { id: string; lane?: string }[];
     assert.equal(got.find((x) => x.id === 'nd-lane')?.lane, 'single');
-    assert.equal((await (await post({ id: 'nd-lane', name: 'L', lane: 'auto' })).json()).lane, undefined);
+    assert.equal((await readJson<{ lane?: string }>(await post({ id: 'nd-lane', name: 'L', lane: 'auto' }))).lane, undefined);
     assert.equal((await post({ id: 'nd-bad', name: 'x', baseRef: '--upload-pack=x' })).status, 400);
     assert.equal((await post({ id: 'nd-bad', name: 'x', denyCommands: ['(unclosed'] })).status, 400);
     // lệnh chuẩn bị/kiểm tra: lưu được; lệnh bị chặn bởi danh sách cấm (chung hoặc của dự án) → 400
-    const ck = await (await post({ id: 'nd-test', name: 'Thử', setupCommands: ['cd app/server; npm ci'], checkCommands: ['cd app/server; npm test', ' '] })).json();
+    const ck = await readJson<{ checkCommands: string[]; setupCommands: string[] }>(await post({ id: 'nd-test', name: 'Thử', setupCommands: ['cd app/server; npm ci'], checkCommands: ['cd app/server; npm test', ' '] }));
     assert.deepEqual(ck.checkCommands, ['cd app/server; npm test']);
     assert.deepEqual(ck.setupCommands, ['cd app/server; npm ci']);
     assert.equal((await post({ id: 'nd-test', name: 'Thử', checkCommands: ['docker compose up'] })).status, 400, 'docker bị cấm ở dự án');
@@ -921,7 +921,7 @@ test('ước tính hạng mục theo token thực tế gần nhất của agent 
     const backend = real && real.samples >= (cfg.minSamples ?? 2) ? real.median : cfg.perSubtask.write;
     assert.ok(est >= cfg.base + backend, `${est}`);
   } finally {
-    app.close?.();
+    app.cleanup();
   }
 });
 

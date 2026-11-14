@@ -17,7 +17,7 @@
     - Hệ quả trên Linux: khoảng 650 lỗi `machine-path` ở `bench/vs-claude/results/**`, cộng các mục baseline cũ.
     - Thêm 51 mục `research-file-line` không còn khớp gì, vì BRIEF-22c đã sửa hết lỗi đó. Đây là cơ chế chỉ được giảm đang chạy đúng: phải xóa các mục này.
   - **D17(c):** test đỏ khi `claude` không có trong PATH. Tái hiện: bỏ thư mục chứa `claude` khỏi PATH ⇒ `status=paused`, mong `done`. Runner GitHub không có `claude`. Test phụ thuộc runtime thật dù dùng runtime giả.
-  - **Windows trên GitHub:** đường dẫn tạm dạng 8.3 (thư mục người dùng `RUNNER~1\AppData\Local\Temp\…`) trong khi git trả đường dẫn dài. Các phép so đường dẫn sai, vd. `diff.test.ts:62` ra `'branch'` thay vì `'worktree'`, `isWorktreeOf`, gộp worktree con.
+  - **Windows trên GitHub:** đường dẫn tạm dạng 8.3 (tên thư mục người dùng rút gọn kiểu `RUNNER~1`) trong khi git trả đường dẫn dài. Các phép so đường dẫn sai, vd. `diff.test.ts:62` ra `'branch'` thay vì `'worktree'`, `isWorktreeOf`, gộp worktree con.
     - Đây có thể là lỗi thật của sản phẩm với người dùng Windows có tên tài khoản dài hoặc có dấu cách, không chỉ lỗi test.
   - **`test:bench`:** `bench/vs-claude/test/e7.test.mjs:372` đỏ trên nhánh D20 nhưng xanh trên `perf/vs-claude-loop` (`2b9a6cc`) ⇒ hồi quy do D20.
   - **`skip-registry` (Linux):**

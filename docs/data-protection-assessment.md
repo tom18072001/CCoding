@@ -785,3 +785,36 @@ Cổng thiết kế (không phải cổng phát hành). Theo `docs/research/prer
 **Nghĩa vụ pháp lý / lưu giữ.** Không DLCN ⇒ không có nghĩa vụ thông báo sự cố 72 giờ hay hồ sơ đánh giá tác động cho thay đổi này. Nhật ký `guard.block` và RUNLOG của phép đo: giữ ≥ 6 tháng (xử lý dữ liệu quan trọng của dự án) và nhật ký hệ thống ≥ 12 tháng như mục D13 ở trên; log làm chứng cứ giữ chuỗi băm.
 
 **Khuyến nghị cho chủ dự án:** (i) đo lại trục 2 (b) bằng phiên mới sau khi gộp D18a; (ii) giữ nguyên chính sách D11; (iii) không coi bộ kiểm lệnh là ranh giới bảo mật khi sandbox chưa chạy.
+
+## D20/K3 — Lint `secrets`, `machine-path`, `paper-anonymity` chạy trong CI (15/11/2026, đánh giá ngắn, cổng thiết kế)
+
+Cổng thiết kế (không phải cổng phát hành). Căn cứ: yêu cầu chủ dự án 14/11 "đẩy các kiểm lỗi này vào lint rule trong CI, fail là hỏng"; BRIEF-21 tiêu chí 8 (đường dẫn máy còn sót); quyết định 14/11 mục 2 (bài báo không có tên chủ dự án).
+
+**Phân loại.** Nhãn **Nội bộ** (mã lint, `allow.json`, `baseline.json`). Repo được coi là **công khai** khi đánh giá rò rỉ: nội dung đã commit coi như lộ ra ngoài. Không DLCN thật, không dữ liệu thật trên DEV/UAT (GOV-03). Cấp độ ATTT: không đề xuất cấp mới; giả định, cần soát lại nếu dự án được phân loại HTTT.
+
+**Vai trò trong khung.** Lint là kiểm soát **ngăn chặn (PRE)** và **phát hiện (DET)** cho repo công khai: bắt bí mật, đường dẫn máy (có tên người dùng) và tên chủ dự án trước khi vào lịch sử git.
+
+| Mã | Trạng thái | Nhận xét |
+|---|---|---|
+| PRE-04 (không để bí mật/PII lọt ra ngoài) | Cải thiện một phần | `secrets`: khóa Anthropic, `ghp_`/`gho_`/`ghu_`/`ghs_`/`ghr_`, `github_pat_`, `AKIA…`/`ASIA…`, khối `BEGIN … PRIVATE KEY`, `CCODING_LOG_HMAC_KEY=` có giá trị. `machine-path`: ổ đĩa + `Users` + tên (cả hai kiểu gạch), `/home/<tên>/`, `/Users/<tên>/`; thư mục tạm của máy cloud, Windows, macOS chỉ ở tệp không phải mã trong `docs/` và `bench/vs-claude/results/`. Chỗ giữ chỗ (`<bạn>`, `...`, `…`, `x`) không tính. `paper-anonymity`: `docs/research/paper/**` không chứa tên trong `NAMES` của rule |
+| DET-02 (quét PII lọt) | Cải thiện một phần | Quét mọi tệp chữ đã track (`git ls-files`) mỗi lần chạy CI; không thay Presidio trên `data/` và `workspaces/` (nằm ngoài git) |
+| DET-04 (log chẩn đoán) | Không đổi | Thông điệp lỗi của rule không chép giá trị khớp: `secrets` in dòng đã thay đoạn khớp bằng `[ẨN]`; `machine-path` không chép đường dẫn |
+| GOV-03 (không dữ liệu thật DEV/UAT) | Đạt | Khóa/đường dẫn trong test là chuỗi giả, vào `allow.json` theo neo chữ đã làm sạch (không chép khóa hay đường dẫn) |
+
+**Ngoại lệ.** `allow.json`: chuỗi giả trong test (13 mục, mỗi mục có lý do). `baseline.json`: 317 tệp ở `docs/research/` và `bench/vs-claude/results/` còn đường dẫn máy, ghi theo sha256, chủ sửa Phòng Nghiên cứu. Tệp thô trong `results/` không sửa vì sửa làm sai mã băm đã ghi (`docs/research/CHANGELOG.md`, gói 15). Baseline chỉ được giảm; tệp bị đổi nội dung mà vẫn còn lỗi sẽ không khớp sha256 và thành lỗi mới.
+
+**Điều lint KHÔNG bắt được (giới hạn, không coi là đã an toàn):**
+1. Bí mật bị mã hóa (base64, hex, nén) hoặc **tách nhiều dòng/nhiều biến** (ghép chuỗi lúc chạy).
+2. Khóa có định dạng khác danh sách mẫu (nhà cung cấp khác, mật khẩu thường như `password=…`).
+3. **Lịch sử git cũ:** lint chỉ quét cây làm việc hiện tại, không quét commit đã có; bí mật từng lộ phải coi là đã lộ và **xoay khóa** (rewrite lịch sử không đủ).
+4. **Tệp nhị phân** (có byte NUL ở 8 KB đầu) bị bỏ qua; tệp ngoài git (`data/`, `workspaces/`) không được quét.
+5. Đường dẫn máy không theo mẫu (UNC `\máy\…`, đường dẫn tương đối chứa tên), tên chủ dự án viết biến thể (viết tắt, bỏ dấu ngoài danh sách `NAMES`), tên trong tệp ngoài `docs/research/paper/`.
+6. Dương tính giả/âm tính giả do chỗ giữ chỗ: một tên người dùng thật ngắn như `x` bị coi là chỗ giữ chỗ.
+
+**Điều kiện để lint thật sự chặn merge (cần chủ dự án làm, mã không làm thay được):** bật **bảo vệ nhánh** `main` trên GitHub: bắt buộc PR, bắt buộc job lint (và `npm run check`) đạt trước khi gộp, không cho admin bỏ qua, cấm force push. Nếu không, workflow chỉ báo đỏ chứ không ngăn được push thẳng vào `main`. Khuyến nghị thêm: bật secret scanning và push protection của GitHub cho repo (lớp chặn trước khi commit vào lịch sử, bổ sung cho lint).
+
+**Nghĩa vụ pháp lý / lưu giữ.** Không DLCN ⇒ không có nghĩa vụ thông báo sự cố 72 giờ hay hồ sơ đánh giá tác động cho thay đổi này. Nếu lint bắt được khóa thật đã commit: coi là sự cố bí mật, xoay khóa ngay; nếu khóa cho phép truy cập DLCN thì áp quy trình sự cố DLCN (thông báo ≤ 72 giờ).
+
+**Khuyến nghị cho chủ dự án:** (i) bật bảo vệ nhánh + secret scanning/push protection; (ii) chạy một lần công cụ quét lịch sử git bên ngoài (ví dụ gitleaks) rồi xoay mọi khóa tìm thấy, vì lint không quét lịch sử; (iii) xử lý dần 317 mục baseline theo gói của Phòng Nghiên cứu.
+
+**D21/K1 (hết giờ khác hết hạn mức):** chỉ thêm trường số liệu kỹ thuật (`stopReason`, `durationMs`, `attempt`) vào `calls.jsonl`, không có PII/văn bản; lời nhắc thử lại chỉ chứa tên tệp và tiêu đề commit trong worktree nhiệm vụ, đi qua `redact` như mọi lời nhắc; nhãn Nội bộ, không phát sinh nghĩa vụ DLCN; giữ nhật ký ≥ 6 tháng theo mục trên.

@@ -87,3 +87,4 @@ QA Engineer là cổng chất lượng cuối của Phòng Phát triển: kiểm
 - Không báo pass khi chưa chạy.
 - Write/Edit chỉ cho tệp test và báo cáo; không sửa code sản phẩm.
 - Fixture chỉ dữ liệu giả; không `git push`, force, commit vào main; không test tải vào hệ thống thật.
+- Chạy `npm run lint` trước khi báo xong; lint đỏ là chưa xong (xem `docs/LINT.md`).

@@ -316,3 +316,26 @@ mục nên không có vòng sửa. Sửa: chỉ hạng mục thuần kiểm th�
 giao người rảnh; lỗi blocker/major có nhãn lạ được gán hạng mục gần nhất (`assignStrayIssues`) nên vẫn vào vòng sửa. 2 test mới (155/155).
 C8 (t2 làn nhanh × 3 sau sửa): 60/60 cả 3 lượt, 166 / 102 / 120 s (lượt đầu có một vòng sửa theo lỗi thật của review); kế hoạch ở C8 không
 giao việc cho QA nên nhánh sửa được kiểm bằng test đơn vị, chưa gặp lại trong lượt chạy thật.
+
+## 14. D21 K2 — luật A của cổng kế hoạch chỉ lấy đích thật (15/11/2026)
+
+**Vấn đề.** `planTargets` quét toàn văn đề bài, nên tệp chỉ được nhắc (trong mô tả rule, trong "vd.", trong mục Căn cứ) bị coi là đích phải có người nhận. Ví dụ D20: `src/registry.ts`, `test/registry.test.ts` nằm trong mô tả rule `agent-format-cochange` ⇒ `A: chưa có hạng mục nhận …` ⇒ buộc sửa kế hoạch bằng Opus.
+
+**Cách lọc** (`briefEditScope` trong `src/plan-gate.ts`). Với đề bài có hạng mục mã K, chỉ giữ dòng hạng mục + thân hạng mục và dòng `Được sửa:`. Trong phần giữ lại, bỏ thêm: mô tả rule (`- \`tên-rule\` (…): …`), câu `vd.`/`ví dụ` (tới `;`, `)` hoặc hết dòng) và ngoặc dẫn chứng `(theo|xem|nguồn|căn cứ|từ …)`. Đề bài không có hạng mục K giữ hành vi cũ (toàn văn). Đích trong tóm tắt kế hoạch (`planSummary`) không đổi.
+
+**Vì sao chọn cách này.** Dựa vào cấu trúc đề bài (dòng hạng mục, mục Được sửa) thay vì đoán động từ trong câu: ổn định, không phụ thuộc cách diễn đạt, và khớp quy ước BRIEF của văn phòng. Đổi lại, tệp giao sửa mà chỉ được viết trong mô tả rule sẽ không còn là đích; chấp nhận vì rule mô tả hành vi kiểm tra, còn tệp thật được giao nằm ở "Được sửa" hoặc ở bullet của hạng mục.
+
+**Bảng trước/sau** (`planSummary` rỗng, 7 fixture `test/fixtures/brief-item/*.json` ghép với đề bài thật trong `docs/research/`):
+
+| Fixture | Đích trước → sau | Ca A trước → sau | Đích bị bỏ |
+|---|---|---|---|
+| plan-brief20 | 0 → 0 | 0 → 0 | — |
+| plan-brief22 | 1 → 0 | **1 → 0** (`decomp-metrics.mjs`) | `docs/research/analysis/decisions/decomp-metrics.mjs` (chỉ là công cụ tính số ở Căn cứ) |
+| plan-brief22b-first | 3 → 3 | 0 → 0 | — |
+| plan-brief22c-split | 4 → 2 | 0 → 0 | `src/quality-gate.ts` (Căn cứ), `consistency-check.mjs` (lệnh chạy kiểm) |
+| plan-brief23 | 0 → 0 | 0 → 0 | — |
+| plan-d18b-followup | 6 → 5 | 0 → 0 | `test/registry.test.ts` (dòng quy ước AGENTS.md ở Căn cứ) |
+| plan-d20-split | 8 → 1 | **1 ca, 2 đích → 0** (`src/registry.ts`, `test/registry.test.ts`) | mô tả rule, Căn cứ, `src/plan-gate.ts`… (tất cả được hạng mục nhận từ trước, nên không đổi kết quả) |
+| **Tổng ca A** | | **2 → 0** | |
+
+Ghi chú: trước khi sửa, trong 7 fixture chỉ có 2 ca A và cả hai là đích giả; không có ca A đúng nào mất đích. `plan-brief20` không cho ca A nào khi `planSummary` rỗng (đã đo, không phải giả định). Test hồi quy: `test/plan-gate-d21.test.ts` (gồm ca A đúng ở dòng hạng mục vẫn bị chặn).
