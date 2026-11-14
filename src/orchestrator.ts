@@ -3949,6 +3949,8 @@ export class Orchestrator {
       estimated: result.estimated,
       toolCalls: result.toolCalls?.length,
       finishReason: result.finishReason,
+      stopReason: result.stopReason,
+      turnCapped: result.capped !== undefined || /chạm trần/.test(result.diag ?? ''),
       error: result.error,
     };
     if (result.runtime !== 'n/a') usage.record(rec);

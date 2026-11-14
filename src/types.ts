@@ -188,6 +188,8 @@ export interface RunResult {
   errorKind?: ErrorKind;
   /** Lý do dừng của model (stop, length, tool_calls…). */
   finishReason?: string;
+  /** stop_reason nguyên văn của runtime khi có (api: stop_reason/finish_reason; claude-cli: stop_reason của sự kiện result/thông điệp cuối). */
+  stopReason?: string;
   /** Đầu ra bị cắt do chạm giới hạn max_tokens. */
   truncated?: boolean;
   turns?: number;
@@ -592,6 +594,10 @@ export interface UsageRecord {
   estimated: boolean;
   toolCalls?: number;
   finishReason?: string;
+  /** stop_reason nguyên văn của runtime (khi runtime trả về). */
+  stopReason?: string;
+  /** Chạm trần vòng công cụ (lượt hết lượt/trần token đầu vào) — KPI ưu tiên trường này hơn regex trên diag. */
+  turnCapped?: boolean;
   error?: string;
 }
 
