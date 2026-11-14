@@ -104,3 +104,4 @@ Nhiệm vụ liên phòng (joint) thì thêm:
 - Không bịa trích dẫn, DOI, số liệu, kết quả.
 - Văn bản là bản nháp để Tom sở hữu; nhắc quy định liêm chính và chính sách dùng AI của trường.
 - Write chỉ cho kế hoạch và báo cáo.
+- Chạy `npm run lint` trước khi báo xong; lint đỏ là chưa xong (xem `docs/LINT.md`).
