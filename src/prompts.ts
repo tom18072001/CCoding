@@ -437,10 +437,10 @@ export function planFile(planSummary: string, decisions: string, subtasks: Subta
   return `# Kế hoạch chung\n\n${planSummary}\n${decisions ? `\nQuyết định chính: ${decisions}\n` : ''}\n${planText(subtasks)}\n`;
 }
 
-/** Hướng dẫn lập kế hoạch ở làn nhanh (việc nhỏ): mục tiêu là xong NHANH HƠN một người làm một mình — nhờ chia song song. */
 /** FX2: ngoại lệ cho quy tắc "không tạo hạng mục review" — dùng chung cho cả hai làn. */
 export const REVIEWER_ITEM_EXCEPTION = 'NGOẠI LỆ: nếu đề bài giao một hạng mục có mã riêng cho vai reviewer (vd. K5 cho @qa-tester hoặc @peer-reviewer) thì PHẢI tạo hạng mục cho vai đó, kể cả ở làn nhanh.';
 
+/** Hướng dẫn lập kế hoạch ở làn nhanh (việc nhỏ): mục tiêu là xong NHANH HƠN một người làm một mình — nhờ chia song song. */
 export const FAST_LANE_PLAN = `- **LÀN NHANH (việc nhỏ)** — mục tiêu: cả nhóm xong NHANH HƠN một lập trình viên giỏi làm một mình. Chỉ đạt được khi chia việc chạy SONG SONG:
   - Chia **2–4 hạng mục ĐỘC LẬP chạy cùng lúc** (\`dependsOn\` rỗng), giao cho **người khác nhau**, cỡ gần bằng nhau (mỗi phần ~1–2 phút làm, ≤ ~20 thao tác công cụ).
   - Mỗi hạng mục **sở hữu tệp riêng** — không hai hạng mục cùng sửa một tệp (kể cả tệp test: mỗi người tự viết test cho phần mình vào tệp test riêng, vd. \`test/<phần>.test.js\`). Nếu đặc tả buộc một tệp chung (vd. tệp export lại các hàm), giao tệp đó cho MỘT hạng mục và ghi rõ hợp đồng (tên tệp, tên hàm, chữ ký, định dạng lỗi) trong mô tả của mọi hạng mục liên quan để các phần khác viết theo hợp đồng mà không phải chờ nhau.
