@@ -115,6 +115,19 @@ Chi tiết: [`bench/agent-probes/README.md`](../bench/agent-probes/README.md). T
 3. Đặt `contextWindow` khớp `num_ctx`.
 4. Chạy việc thật một tuần, rồi `ccoding kpi --by model --days 7` và xử lý "việc cần sửa".
 
+## Số nhiệm vụ và KPI điều phối viên (FX17)
+
+Lựa chọn: **làm hai số khớp nhau** và ghi định nghĩa vào chính tệp xuất (`definitions` trong `kpi --json`).
+
+- `tasksCounted` = độ dài `tasks` = tổng `tasksByStatus`: mọi nhiệm vụ sau lọc (`--task/--days/--project`), trừ `queued`; gồm cả đang chạy, tạm dừng, hủy, lỗi.
+- `tasksFinished` = số nhiệm vụ `done` — tập duy nhất vào điểm "Kết quả thật" và hiệu chỉnh người duyệt. Trước đây một số đếm riêng (7) lệch với tổng trạng thái (10); nay không còn số nào ngoài ba trường trên.
+- `coordinator` (điều phối viên, lượt `route`): `routed` (nhiệm vụ đã định tuyến), `routeCalls`/`routeTokens`/`avgRouteTokens` (chi phí route, token = input+output+cache), `fallbackToKeywords` (có gọi LLM route nhưng kết quả bị bỏ → `keywordRoute`), `keywordOnly` (định tuyến từ khóa từ đầu, làn đơn ép định tuyến — không tính là lùi), `fallbackRate = fallbackToKeywords / số nhiệm vụ có lượt route` (null khi chưa có). Nguồn: `calls.jsonl` (pha `route`) và `task.routing.by` (`keywords` hay id router); không thêm trường log. `kpiMarkdown` in một dòng tóm tắt.
+- Điểm KPI của agent router vẫn nằm trong `agents` như mọi agent; `coordinator` là phần chi phí/độ tin của việc định tuyến mà điểm agent không nói.
+
+## Ước lượng đường găng (FX13)
+
+`estimatePlanDetail` (`estimatePlan` vẫn trả tổng token): `work` = tổng token các hạng mục chưa xong (không gồm phần cố định `base` và review); `criticalPathEstimate` = chuỗi `dependsOn` tốn token nhất; `parallelism = work / criticalPathEstimate` (làm tròn 2 chữ số; 1 khi không có việc). Ghi vào `run.estimate` và log `plan.estimate`. Dùng để so với song song thực tế khi đo.
+
 ## Giới hạn đã biết
 
 - Nhận diện "khẳng định đã kiểm chứng" bằng biểu thức chính quy (VI/EN); có thể bỏ sót cách viết khác. Chỉnh `CLAIM_RE` trong `src/kpi.ts` sau khi xem dữ liệu thật. Phủ định ("không thể chạy", "chưa chạy", "cần chạy") chỉ xét trong cùng vế câu với khẳng định (tách theo `;`, `.`, "nhưng") — "14/14 đạt; cần chạy lại e2e" vẫn là khẳng định. Dạng "đã chạy <lệnh> … thành công" chỉ tính khi lệnh là lệnh kiểm chứng (test/typecheck/lint/build…), không tính `npm install`/`npm ci`.
