@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { samePath } from './tools/guard-paths.js';
 
 /** Tiện ích git tối thiểu cho worktree của nhiệm vụ (không bao giờ push). */
 
@@ -144,11 +145,6 @@ export function unmergedFiles(wt: string): string[] {
   const u = git(wt, ['diff', '--name-only', '--diff-filter=U'], 30_000);
   return u.ok ? u.out.split('\n').map((s) => s.trim()).filter(Boolean) : [];
 }
-
-const samePath = (a: string, b: string) => {
-  const n = (p: string) => path.resolve(p).replace(/[\\/]+$/, '');
-  return process.platform === 'win32' ? n(a).toLowerCase() === n(b).toLowerCase() : n(a) === n(b);
-};
 
 /**
  * `dir` đúng là một worktree (gốc của chính nó, không phải thư mục con của repo khác) thuộc cùng repo với `peer`.
