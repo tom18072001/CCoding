@@ -1,11 +1,11 @@
 // Tách preregistration.md thành khối theo tiêu đề và so với preregistration.lock.json.
-import crypto from 'node:crypto';
+import { sha256Norm } from './hash.mjs';
 
 export const PREREG = 'docs/research/preregistration.md';
 export const LOCK = 'docs/research/preregistration.lock.json';
 export const HISTORY_KEY = 'Lịch sử bản';
 
-const sha = (s) => crypto.createHash('sha256').update(s, 'utf8').digest('hex');
+const sha = sha256Norm;
 const HEAD_RE = /^(#{1,6})\s+(.*?)\s*$/;
 
 /** Khối = dòng tiêu đề (mọi cấp) + thân tới tiêu đề kế. Bỏ qua "#" trong khối mã rào. Khối mở đầu không có tiêu đề có khóa "(đầu tệp)". */

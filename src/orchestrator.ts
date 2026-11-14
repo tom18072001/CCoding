@@ -3149,7 +3149,9 @@ export class Orchestrator {
     if (!project.setupCommands?.length || wt.setup) return;
     const { config } = this.d;
     const signal = this.controllers.get(task.id)?.signal;
-    const opts = { denyCommands: [...config.tools.denyCommands, ...(project.denyCommands ?? [])], timeoutSec: config.tools.commandTimeoutSec, maxChars: config.tools.maxOutputChars, signal };
+    // worktree con cũng biết mốc của nhiệm vụ (lệnh chuẩn bị có thể gọi lint)
+    const env = task.baseRef ? { CCODING_BASE_REF: task.baseRef } : undefined;
+    const opts = { denyCommands: [...config.tools.denyCommands, ...(project.denyCommands ?? [])], timeoutSec: config.tools.commandTimeoutSec, maxChars: config.tools.maxOutputChars, signal, env };
     const results: CheckResult[] = [];
     for (const cmd of project.setupCommands) {
       this.checkAbort(task);
