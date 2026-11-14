@@ -280,6 +280,21 @@ export function outsideWriteViolation(command: string, root: string): OutsideWri
   return undefined;
 }
 
+/** Quyết định dùng chung cho hook claude-guard và run_command: cùng lệnh + cùng root ⇒ cùng rule/thông điệp. */
+export interface OutsideWriteDecision {
+  rule: 'outside-root-write';
+  clause: number;
+  cmd: string;
+  reason: string;
+  message: string;
+}
+
+export function outsideWriteDecision(command: string, root: string): OutsideWriteDecision | undefined {
+  const v = outsideWriteViolation(command, root);
+  if (!v) return undefined;
+  return { rule: 'outside-root-write', clause: v.clause, cmd: v.cmd, reason: v.reason, message: `CCoding chặn lệnh (outside-root-write): ${v.reason}` };
+}
+
 // ── git chỉ đọc ─────────────────────────────────────────────────────────────
 
 /** Lệnh con git chỉ đọc (không đổi working tree, index, nhánh, cấu hình). */
