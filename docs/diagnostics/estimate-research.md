@@ -55,3 +55,58 @@ D18d, D19, D20, BRIEF-22c, BRIEF-22d (và gói khác xong sau D18d chưa tìm th
 ### Test
 
 `test/estimate-factor.test.ts` đọc JSON, lọc hàng `claude-cli` theo hằng số, tính lại trung vị/IQR/n và khẳng định giá trị trong config khớp quy tắc đổi/giữ; khi bổ sung đủ số liệu mà lệch > 1,5 lần thì test đỏ cho tới khi hệ số được sửa.
+
+## D21b: hiệu chỉnh lại ước lượng bằng dữ liệu thật (K1)
+
+Nhãn dữ liệu: **Nội bộ**; chỉ số tổng. Nguồn: `bench/vs-claude/results/decisions/estimate-vs-actual.json` (17 dòng, chỉ đọc). Tỉ số = `actual.total / estimate.tokens`; phân vị nội suy tuyến tính (cùng hàm `quantile` trong test).
+
+### Bảng từng dòng
+
+| Brief | Phòng | Hạng mục | Basis | Ước lượng | Thật | Tỉ số |
+|---|---|---|---|---|---|---|
+| BRIEF-19 | research | 6 | hằng số | 2390000 | 14611271 | 6,114 |
+| BRIEF-20 | research | 6 | lịch sử | 13395807 | 15302113 | 1,142 |
+| BRIEF-21 | research | 7 | lịch sử | 12465604 | 22127928 | 1,775 |
+| BRIEF-22 | research | 8 | lịch sử | 12687173 | 21430607 | 1,689 |
+| BRIEF-23 | research | 5 | lịch sử | 11413302 | 5166310 | 0,453 |
+| BRIEF-D18a | dev | 6 | lịch sử | 3817147 | 10496316 | 2,750 |
+| BRIEF-D18b | dev | 5 | lịch sử | 4582528 | 3216398 | 0,702 |
+| BRIEF-22b | research | 5 | lịch sử | 10130162 | 22788240 | 2,250 |
+| BRIEF-D18c | dev | 5 | lịch sử | 3753263 | 6192259 | 1,650 |
+| BRIEF-D18d | dev | 4 | lịch sử | 3726040 | 1808782 | 0,485 |
+| BRIEF-D19 | dev | 4 | lịch sử | 3470450 | 10914942 | 3,145 |
+| BRIEF-22c | research | 5 | lịch sử | 10727826 | 14153552 | 1,319 |
+| BRIEF-D20 | dev | 8 | lịch sử | 4493659 | 17402382 | 3,873 |
+| BRIEF-22d | research | 5 | lịch sử | 11863421 | 5286074 | 0,446 |
+| BRIEF-D20b | dev | 4 | lịch sử | 4173968 | 9801138 | 2,348 |
+| BRIEF-D21 | dev | 4 | lịch sử | 4144977 | 2626664 | 0,634 |
+| BRIEF-24 | research | 5 | lịch sử | 11978283 | 7375069 | 0,616 |
+
+### Tổng hợp
+
+| Nhóm | n | Trung vị | Q1 | Q3 | IQR |
+|---|---|---|---|---|---|
+| Hằng số | 1 | 6,114 | 6,114 | 6,114 | 0 |
+| Lịch sử (cả nhóm) | 16 | **1,485** | 0,629 | 2,274 | 1,645 |
+| Lịch sử, Dev | 8 | 1,999 | 0,685 | 2,849 | 2,164 |
+| Lịch sử, Nghiên cứu | 8 | 1,231 | 0,575 | 1,711 | 1,136 |
+| Lịch sử, ≤ 5 hạng mục | 11 | 0,702 | 0,551 | 1,950 | 1,399 |
+| Lịch sử, > 5 hạng mục | 5 | 1,775 | 1,689 | 2,750 | 1,061 |
+
+- Làn: mọi 17 dòng đều `full` ⇒ **không tách được theo làn**.
+- Tỉ số thật/`work` (10 dòng có `work`, cả hai basis): trung vị 1,605, cho thấy cũng lệch lên, tương tự tỉ số thật/ước lượng.
+- Độ phân tán rất lớn (IQR 1,6; tỉ số từ 0,45 tới 3,87): trung vị gần ngưỡng nhưng từng gói lệch cả hai phía.
+
+### Quyết định
+
+Quy tắc khóa ở D21: chỉ đổi khi n ≥ 5 **và** trung vị > 1,5 hoặc < 1/1,5.
+- **Hằng số:** n = 1 < 5 ⇒ **giữ** `runtimeFactor['claude-cli'] = 5` (vẫn chỉ một điểm, BRIEF-19, 6,11).
+- **Lịch sử:** n = 16 ≥ 5 nhưng trung vị = 1,485 < 1,5 (và > 0,667) ⇒ **không đạt** ⇒ **giữ**, không thêm hệ số lịch sử.
+- Nhóm con Dev (1,999) vượt 1,5 nhưng là phát hiện sau khi đã xem dữ liệu (nhiều so sánh, n = 8, IQR 2,2) ⇒ không áp hệ số theo phòng trong gói này.
+
+### Đề xuất bước sau (không làm ở D21b)
+
+1. Ước lượng chỉ lấy run đầu còn số thật gồm mọi run (`note2`): thử tính cả vòng bổ sung và review vào lịch sử vai, rồi so lại.
+2. Ghi `department`/số hạng mục lúc lập ước lượng để kiểm lệch theo phòng (Dev ≈ 2,0) và theo cỡ (> 5 hạng mục ≈ 1,78).
+3. Kiểm lại khi có thêm ≥ 5 dòng mới ở nhóm hằng số, hoặc nhóm lịch sử có trung vị vượt 1,5; test `test/estimate-factor.test.ts` sẽ đỏ nếu điều kiện đạt mà cấu hình chưa chỉnh.
+- Test: `test/estimate-factor.test.ts` kiểm n = 1 và 16 (tổng 17), cấu hình giữ nguyên, và bắt buộc có cách chỉnh nếu nhóm lịch sử đạt điều kiện.

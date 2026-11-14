@@ -39,3 +39,35 @@ test('estimate-vs-actual.json: các hàng gốc BRIEF-19…23 vẫn còn, tổng
   for (const b of ['BRIEF-19', 'BRIEF-20', 'BRIEF-21', 'BRIEF-22', 'BRIEF-23']) assert.ok(names.includes(b), b);
   for (const r of rows) assert.equal(r.actual.total, r.actual.input + r.actual.output + r.actual.cacheRead + r.actual.cacheWrite, r.brief);
 });
+
+// D21b K3: tách theo basis; quy tắc áp cho từng nhóm. Số n khớp docs/diagnostics/estimate-research.md (mục D21b).
+function stats(rows: Row[]): { n: number; median: number } {
+  const s = rows.map((r) => r.actual.total / r.estimate.tokens).sort((a, b) => a - b);
+  return { n: s.length, median: s.length ? quantile(s, 0.5) : NaN };
+}
+const triggers = (st: { n: number; median: number }): boolean => st.n >= 5 && (st.median > 1.5 || st.median < 1 / 1.5);
+
+test('D21b: nhóm hằng số n = 1, nhóm lịch sử n = 16, tổng 17; trung vị khớp tài liệu', () => {
+  const rows = (JSON.parse(fs.readFileSync(FILE, 'utf8')) as { rows: Row[] }).rows;
+  const c = stats(rows.filter((r) => r.estimate.basis.startsWith('theo hằng số')));
+  const h = stats(rows.filter((r) => r.estimate.basis.startsWith('theo lịch sử')));
+  assert.equal(c.n, 1);
+  assert.equal(h.n, 16);
+  assert.equal(c.n + h.n, rows.length);
+  assert.equal(rows.length, 17);
+  assert.equal(h.median.toFixed(3), '1.485');
+  assert.equal(c.median.toFixed(3), '6.114');
+});
+
+test('D21b: cấu hình khớp quy tắc cho nhóm hằng số và nhóm lịch sử', () => {
+  const rows = (JSON.parse(fs.readFileSync(FILE, 'utf8')) as { rows: Row[] }).rows;
+  const c = stats(rows.filter((r) => r.estimate.basis.startsWith('theo hằng số')));
+  const h = stats(rows.filter((r) => r.estimate.basis.startsWith('theo lịch sử')));
+  const est = loadConfig().estimate as { runtimeFactor?: Record<string, number>; historyFactor?: number };
+  // Hằng số: n < 5 ⇒ giữ 5.
+  assert.equal(triggers(c) ? 'đổi' : 'giữ', 'giữ');
+  assert.equal(est.runtimeFactor?.['claude-cli'], BASE_FACTOR);
+  // Lịch sử: đạt điều kiện thì phải có hệ số lịch sử khác 1; không đạt thì không có.
+  if (triggers(h)) assert.ok(est.historyFactor !== undefined && est.historyFactor !== 1, 'điều kiện đạt nhưng chưa chỉnh');
+  else assert.equal(est.historyFactor, undefined);
+});
