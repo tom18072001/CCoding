@@ -8,6 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkArms } from '../lib/queue.mjs';
+import { authSourceOf } from '../lib/ccoding.mjs';
 import { extractFiles, planOnlyRow, planOnlySchedule, slimPlan } from '../lib/plan-only.mjs';
 
 const SUITE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -115,4 +116,17 @@ test('model thật của lượt plan lệch planModel của arm → lượt ghi
   const r = planOnlyRow({ s: { key: 'k', task: 't', arm: 'P-H', rep: 1 }, spec: ARMS['P-H'], meta: { timeoutMin: 1 }, runtime: 'mock', seed: 's',
     r: { status: 'done', plan: { planModel: 'claude-opus-5-5', planRaw: [], planFinal: [], planGate: null, planReplans: 0 } } });
   assert.equal(r.status, 'error'); assert.equal(r.planModel.match, false); assert.match(r.error, /không khớp/);
+});
+
+test('authSource (runtime thật): lấy từ calls.jsonl của CCoding, ghi vào dòng; phiên bản CLI và mã băm cấu hình ổn định', () => {
+  assert.equal(authSourceOf('{"authSource":"none"}\n\nhỏng\n{"authSource":"none"}\n{"phase":"plan"}'), 'none');
+  assert.equal(authSourceOf('{"authSource":"b"}\n{"authSource":"a"}'), 'a+b');
+  assert.equal(authSourceOf(''), null);
+  const mk = (spec) => planOnlyRow({ s: { key: 'k', task: 't', arm: 'P-S', rep: 1 }, spec, meta: { timeoutMin: 1, claudeCliVersion: '9.9.9 (Claude Code)' }, runtime: 'claude-cli', seed: 's',
+    r: { status: 'done', plan: { authSource: 'none', planModel: 'claude-sonnet-5-5', planRaw: [], planFinal: [], planGate: null, planReplans: 0 } } });
+  const a = mk(ARMS['P-S']);
+  assert.equal(a.authSource, 'none'); assert.equal(a.claudeCliVersion, '9.9.9 (Claude Code)'); assert.equal(a.status, 'done');
+  assert.match(a.configHash, /^[0-9a-f]{16}$/);
+  assert.notEqual(a.configHash, mk(ARMS['P-H']).configHash, 'cấu hình khác ⇒ mã băm khác');
+  assert.equal(a.configHash, mk(ARMS['P-S']).configHash, 'ổn định');
 });

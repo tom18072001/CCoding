@@ -73,7 +73,7 @@ export function planOnlyRow({ s, spec, r, meta, runtime, seed, at = new Date().t
     planRaw: slimPlan(p?.planRaw), planFinal: slimPlan(p?.planFinal), planGate: p?.planGate ?? null, replanCount: p?.planReplans ?? null,
     usage: { tokens: r?.tokens ?? null, byPhase: r?.byPhase ?? {}, calls: r?.calls ?? 0 },
     planModel: { arm: armModel, actual, source: p?.planModelSource ?? null, match },
-    authSource: r?.authSource ?? (runtime === 'mock' ? 'mock' : null),
+    authSource: p?.authSource ?? r?.authSource ?? (runtime === 'mock' ? 'mock' : null),
     configHash: configHash(spec, { runtime, seed }),
     ccodingCommit: meta.ccodingCommit ?? null, claudeCliVersion: meta.claudeCliVersion ?? null,
     window: meta.window ?? null, quotaState: meta.quotaState ?? null, timeoutMin: meta.timeoutMin, wallSec: r?.wallSec ?? null,

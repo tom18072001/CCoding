@@ -16,6 +16,16 @@ export function client(baseUrl) {
   };
 }
 
+/** Nhãn đường xác thực CCoding ghi ở calls.jsonl (authSource từng lượt gọi): một nhãn → nhãn đó; nhiều → nối '+'; không có → null. */
+export function authSourceOf(callsText) {
+  const set = new Set();
+  for (const l of String(callsText ?? '').split(/\r?\n/)) {
+    if (!l.trim()) continue;
+    try { const a = JSON.parse(l).authSource; if (typeof a === 'string' && a) set.add(a); } catch { /* dòng hỏng */ }
+  }
+  return set.size ? [...set].sort().join('+') : null;
+}
+
 /**
  * opts: { baseUrl, dataDir (CCoding data dir, for calls.jsonl), runtime, projectId, workdir, brief, title, taskOptions, timeoutMin }
  * Returns the same shape as runClaude() (gồm infra: 'rate-limit' | 'error' | undefined và resetsAt).
@@ -198,7 +208,7 @@ export async function runCcoding(opts) {
     research = researchFields(callsText, final, eventsText);
     // E9-lite (hợp đồng D3): run planOnly cuối cùng của task.json
     const pr = [...(final?.runs ?? [])].reverse().find((x) => x?.planOnly);
-    if (pr) plan = { planModel: pr.planModel ?? null, planModelSource: pr.planModelSource ?? null, planRaw: pr.planRaw ?? null, planFinal: pr.planFinal ?? null, planGate: pr.planGate ?? null, planReplans: pr.planReplans ?? 0 };
+    if (pr) plan = { authSource: authSourceOf(callsText), planModel: pr.planModel ?? null, planModelSource: pr.planModelSource ?? null, planRaw: pr.planRaw ?? null, planFinal: pr.planFinal ?? null, planGate: pr.planGate ?? null, planReplans: pr.planReplans ?? 0 };
   } catch { research = researchFields('', t); }
   tokens.total = tokens.input + tokens.output + tokens.cacheRead + tokens.cacheWrite;
   tokens.weighted = weighted(tokens);
