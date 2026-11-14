@@ -43,7 +43,9 @@ test('giao việc riêng cho một agent: bỏ định tuyến/lập kế hoạc
     const t2 = app.orchestrator.submit({ brief: 'Viết kế hoạch kiểm thử', agentId: 'qa-tester' });
     const d2 = await app.orchestrator.waitFor(t2.id);
     assert.equal(d2.status, 'done');
-    assert.equal(d2.runs[0].review, undefined);
+    // FX4: không tự review nhưng để lại dấu vết "chưa review" thay vì để trống
+    assert.equal(d2.runs[0].review?.skipped, true);
+    assert.equal(d2.runs[0].review?.approved, false);
   } finally {
     app.cleanup();
   }

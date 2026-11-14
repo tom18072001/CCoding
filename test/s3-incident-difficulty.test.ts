@@ -193,7 +193,7 @@ for (const withIncident of [true, false]) {
       const gates = ev.filter((e) => e.kind === 'gate.decision');
       assert.ok(gates.length >= 1);
       for (const g of gates) {
-        assert.ok(['b02', 'b10', 'cto'].includes(g.data.gate));
+        assert.ok(['b02', 'b10', 'cto', 'final-template'].includes(g.data.gate));
         assert.ok(['block', 'pass'].includes(g.data.verdict));
       }
       assert.ok(gates.some((g) => g.data.gate === 'b10' && g.data.verdict === 'pass'), 'b10 pass được ghi');

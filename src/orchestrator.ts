@@ -622,7 +622,7 @@ export class Orchestrator {
           if (o.auto) this.message(t, r.department, 'system', 'system', `⏱ Hết thời gian chờ duyệt — tự duyệt kế hoạch (${r.subtasks.length} hạng mục).`);
         }
     // người dùng chủ động tiếp tục: bỏ điều kiện chờ các nhiệm vụ trước đã lỗi/hủy/không còn
-    if (t.after?.some((a) => ['failed', 'cancelled', undefined].includes(store.get(a)?.status))) t.after = undefined;
+    if (t.after?.some((a) => ['failed', 'cancelled', undefined].includes(store.get(a)?.status)) || this.unacceptedBefore(t).length) t.after = undefined;
     t.status = 'queued';
     t.pause = undefined;
     // người bấm Tiếp tục → đếm lại; tự tiếp tục sau "không còn runtime" thì giữ để giãn/dừng hẳn
@@ -858,6 +858,15 @@ export class Orchestrator {
         continue;
       }
       this.queue.splice(i, 1);
+      if (wait === 'unaccepted') {
+        // FX5b: nhiệm vụ trước xong nhưng CTO chưa nghiệm thu (hết vòng bổ sung) → không tự chạy tiếp trên nền chưa đạt
+        const ids = this.unacceptedBefore(t);
+        t.status = 'paused';
+        t.pause = { reason: 'manual', detail: `Chờ nhiệm vụ trước (${ids.join(', ')}) nhưng CTO chưa nghiệm thu sau khi hết vòng bổ sung — xem kết quả rồi bấm "Tiếp tục" để vẫn chạy`, at: nowIso() };
+        this.d.logs.write({ level: 'warn', kind: 'task.blocked', msg: `${t.id}: ${t.pause.detail}`, taskId: t.id, data: { reason: 'unaccepted', after: ids } });
+        this.save(t, true);
+        continue;
+      }
       if (wait === 'blocked') {
         t.status = 'paused';
         t.pause = { reason: 'manual', detail: `Chờ nhiệm vụ trước (${t.after!.join(', ')}) nhưng nhiệm vụ đó lỗi/đã hủy — bấm "Tiếp tục" để vẫn chạy`, at: nowIso() };
@@ -875,11 +884,19 @@ export class Orchestrator {
     }
   }
 
+  /** FX5b: các nhiệm vụ "after" đã xong nhưng CTO có kết luận đọc được là CHƯA nghiệm thu (accepted=false, parsed=true). */
+  private unacceptedBefore(t: Task): string[] {
+    return (t.after ?? []).filter((a) => {
+      const ac = this.d.store.get(a)?.acceptance;
+      return !!ac && ac.parsed && !ac.accepted && !ac.error;
+    });
+  }
+
   /** Trạng thái chờ của nhiệm vụ có điều kiện "after": chạy được / còn chờ / bị chặn (nhiệm vụ trước lỗi, hủy, không còn). */
-  private waitingOn(t: Task): undefined | 'wait' | 'blocked' {
+  private waitingOn(t: Task): undefined | 'wait' | 'blocked' | 'unaccepted' {
     if (!t.after?.length) return undefined;
     const st = t.after.map((a) => this.d.store.get(a)?.status);
-    if (st.every((s) => s === 'done')) return undefined;
+    if (st.every((s) => s === 'done')) return this.unacceptedBefore(t).length ? 'unaccepted' : undefined;
     if (st.some((s) => s === undefined || s === 'failed' || s === 'cancelled')) return 'blocked';
     return 'wait';
   }
@@ -1673,7 +1690,7 @@ export class Orchestrator {
     }
     if (!reached(run, 'reviewed')) {
       run.stage = 'reviewed';
-      if (run.review && !run.review.approved) task.attention = { reason: 'review', detail: `${dept.short}: ${run.review.summary.slice(0, 280)}`, at: nowIso() };
+      if (run.review && !run.review.approved) task.attention = { reason: 'review', detail: `${dept.short}: ${run.review.skipped ? 'chưa review — ' : ''}${run.review.summary.slice(0, 280)}`, at: nowIso() };
       else if (task.projectChecks?.latest?.some((r) => !r.ok)) task.attention = { reason: 'checks', detail: `Lệnh kiểm tra còn lỗi: ${task.projectChecks.latest.filter((r) => !r.ok).map((r) => r.command).join(', ')}`, at: nowIso() };
       else if (run.review?.approved && !run.review.by && run.review.verified === false) task.attention = { reason: 'review', detail: `${dept.short}: duyệt nhưng chưa có kiểm chứng chạy thật — cần giám đốc xem.`, at: nowIso() };
       this.save(task);
@@ -2009,6 +2026,9 @@ export class Orchestrator {
               run.review = { approved: true, summary, issues: [], checks: gateChecks, verified: true };
               this.d.logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'skip-reviewer', fixRounds: gate.fixRounds, reviewer: false, briefDemandsReview: gate.briefDemandsReview, briefReviewItems: gate.briefReviewItems } });
               this.message(task, dept.id, 'system', 'system', `✅ ${summary}`);
+            } else {
+              // FX4: không review, không lệnh kiểm tra → ghi rõ "chưa review" thay vì để trống
+              this.markReviewSkipped(task, run, dept, !task.options.review ? 'review đang tắt' : 'phòng không có reviewer riêng');
             }
             break;
           }
@@ -2191,6 +2211,7 @@ export class Orchestrator {
       });
       if (fin.error || !fin.text) throw new Error(`Trưởng phòng không viết được báo cáo tổng hợp${fin.error ? `: ${fin.error}` : ''}`);
       finalText = fin.text;
+      this.finalTemplateGate(task, run, dept, lead, finalText);
     }
     const rel = `${safeName(dept.id)}${run.round ? `-R${run.round}` : ""}-FINAL.md`;
     writeText(path.join(this.d.store.runDir(task.id), rel), finalText);
@@ -2202,6 +2223,31 @@ export class Orchestrator {
     this.message(task, dept.id, lead.id, 'final', `Báo cáo tổng hợp đã xong: ${extractSummary(finalText, 240)}`);
     this.save(task);
     return finalText;
+  }
+
+  /** FX16: FINAL do trưởng phòng viết cũng qua cổng "Mẫu đầu ra" của hồ sơ lead; thiếu mục ⇒ cờ trong gate.decision (không chặn cứng). */
+  private finalTemplateGate(task: Task, run: DeptRun, dept: { id: string; short: string }, lead: AgentDef, text: string): { ok: boolean; missing: string[]; coverage: number } {
+    const g = templateGate(text, lead.body);
+    const missing = g.summaryOk ? g.missing : [...g.missing, 'Tóm tắt'];
+    this.d.logs.write({
+      level: g.ok ? 'info' : 'warn',
+      kind: 'gate.decision',
+      msg: `${task.id}: cổng mẫu FINAL ${g.ok ? 'đạt' : `thiếu mục: ${missing.join('; ')}`}`,
+      taskId: task.id,
+      department: dept.id,
+      agentId: lead.id,
+      data: { gate: 'final-template', verdict: g.ok ? 'pass' : 'block', flag: g.ok ? undefined : 'final-missing-sections', coverage: g.coverage, missing, summaryOk: g.summaryOk },
+    });
+    if (!g.ok) this.message(task, dept.id, 'system', 'system', `⚠️ Báo cáo tổng hợp của trưởng phòng thiếu mục bắt buộc trong "Mẫu đầu ra": ${missing.join('; ')}.`);
+    return { ok: g.ok, missing, coverage: g.coverage };
+  }
+
+  /** FX4: review bị bỏ qua mà không có lệnh kiểm tra nào thay thế → dấu vết trong run.review + log riêng (không tự "duyệt"). */
+  private markReviewSkipped(task: Task, run: DeptRun, dept: { id: string; short: string }, reason: string): void {
+    const summary = `Chưa review: ${reason} và dự án không có lệnh kiểm tra — đầu ra chưa có bằng chứng kiểm chứng nào.`;
+    run.review = { approved: false, summary, issues: [], skipped: true, reason };
+    this.d.logs.write({ level: 'warn', kind: 'review.skipped', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { reason } });
+    this.message(task, dept.id, 'system', 'system', `⚠️ ${summary}`);
   }
 
   private async executeAll(task: Task, run: DeptRun, pctx: P.Ctx, base: CallCtx, prior?: string): Promise<void> {
