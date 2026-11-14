@@ -1,4 +1,5 @@
 import { truncate } from './util/fsx.js';
+import { MAX_SUBTASKS } from './planner.js';
 import type { AgentDef, ChatMessage, CheckResult, Classification, DepartmentDef, DeptRun, Phase, ProjectDef, Subtask, Task, ToolCallRecord, ToolName } from './types.js';
 
 /**
@@ -310,9 +311,9 @@ ${truncate(c.dept.body, 3000)}
 ${rosterLines(c.roster, c.caps)}
 ${toolNote(c, tools, 'plan')}
 ## Việc của bạn (Trưởng phòng): LẬP KẾ HOẠCH
-Phân rã yêu cầu thành 1–7 hạng mục rõ ràng, giao cho đúng người theo kỹ năng, quy mô tương xứng với yêu cầu. Quy tắc:
+Phân rã yêu cầu thành 1–${MAX_SUBTASKS} hạng mục rõ ràng, giao cho đúng người theo kỹ năng, quy mô tương xứng với yêu cầu. Quy tắc:
 ${c.lane === 'fast' ? FAST_LANE_PLAN : ''}
-- \`assignee\` phải là một id trong danh sách trên (không có dấu @). Hạn chế tự giao cho bản thân; người review sẽ kiểm tra ở bước sau nên không cần tạo hạng mục "review".${capsRule(c)}
+- \`assignee\` phải là một id trong danh sách trên (không có dấu @). Hạn chế tự giao cho bản thân; người review sẽ kiểm tra ở bước sau nên không cần tạo hạng mục "review". ${REVIEWER_ITEM_EXCEPTION}${capsRule(c)}
 - \`dependsOn\` chỉ trỏ tới id hạng mục khác; tối đa hóa phần chạy song song.${
         c.parallelWriters
           ? ' Hạng mục chạy lệnh (code, test, migration) CŨNG chạy song song — mỗi hạng mục một worktree con, xong thì CCoding gộp vào nhánh nhiệm vụ; chỉ đặt phụ thuộc khi hạng mục sau cần kết quả của hạng mục trước hoặc hai hạng mục sửa cùng một đoạn của cùng tệp (tránh xung đột khi gộp). Mỗi người chỉ làm một hạng mục một lúc nên muốn song song thì giao cho người khác nhau.'
@@ -437,11 +438,15 @@ export function planFile(planSummary: string, decisions: string, subtasks: Subta
 }
 
 /** Hướng dẫn lập kế hoạch ở làn nhanh (việc nhỏ): mục tiêu là xong NHANH HƠN một người làm một mình — nhờ chia song song. */
+/** FX2: ngoại lệ cho quy tắc "không tạo hạng mục review" — dùng chung cho cả hai làn. */
+export const REVIEWER_ITEM_EXCEPTION = 'NGOẠI LỆ: nếu đề bài giao một hạng mục có mã riêng cho vai reviewer (vd. K5 cho @qa-tester hoặc @peer-reviewer) thì PHẢI tạo hạng mục cho vai đó, kể cả ở làn nhanh.';
+
 export const FAST_LANE_PLAN = `- **LÀN NHANH (việc nhỏ)** — mục tiêu: cả nhóm xong NHANH HƠN một lập trình viên giỏi làm một mình. Chỉ đạt được khi chia việc chạy SONG SONG:
   - Chia **2–4 hạng mục ĐỘC LẬP chạy cùng lúc** (\`dependsOn\` rỗng), giao cho **người khác nhau**, cỡ gần bằng nhau (mỗi phần ~1–2 phút làm, ≤ ~20 thao tác công cụ).
   - Mỗi hạng mục **sở hữu tệp riêng** — không hai hạng mục cùng sửa một tệp (kể cả tệp test: mỗi người tự viết test cho phần mình vào tệp test riêng, vd. \`test/<phần>.test.js\`). Nếu đặc tả buộc một tệp chung (vd. tệp export lại các hàm), giao tệp đó cho MỘT hạng mục và ghi rõ hợp đồng (tên tệp, tên hàm, chữ ký, định dạng lỗi) trong mô tả của mọi hạng mục liên quan để các phần khác viết theo hợp đồng mà không phải chờ nhau.
   - KHÔNG tạo hạng mục "tích hợp", "viết test", "rà soát" chạy sau — CCoding tự gộp các phần, chạy lệnh kiểm tra và review.
-  - KHÔNG giao hạng mục cho người review của phòng — họ kiểm tra độc lập ở bước review (hạng mục giao cho họ sẽ được CCoding chuyển thành trọng tâm review).
+  - KHÔNG giao hạng mục cho người review của phòng — họ kiểm tra độc lập ở bước review (hạng mục giao cho họ sẽ được CCoding chuyển thành trọng tâm review). ${REVIEWER_ITEM_EXCEPTION}
+  - Số hạng mục tối đa là ${MAX_SUBTASKS} cho mọi làn; "2–4" ở làn nhanh chỉ là cỡ khuyến nghị nằm trong trần đó.
   - Chỉ để 1 hạng mục khi việc thật sự không chia được (vd. tối ưu một hàm duy nhất) — khi đó vẫn có thể tách "bộ test đối chiếu/kiểm thử độc lập" thành hạng mục song song thứ hai nếu nó dùng tệp riêng.
   - Lập kế hoạch NHANH: đọc vừa đủ (đặc tả + cấu trúc thư mục + tệp sẽ sửa), không khảo sát sâu; mô tả hạng mục ngắn gọn nhưng đủ hợp đồng.`;
 
