@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 // E9-lite [Khám phá] (BRIEF-24 K2): phân tích mô tả runs.jsonl của ba arm planner P-H/P-S/P-O.
 // Luật khớp, thước đo, bootstrap: chép từ docs/research/preregistration.md §9 mục "Sai lệch E9 → E9-lite" (5)(6)(7).
-// Chỉ đọc các trường: key/task/arm/rep, status, error, planRaw, planFinal[].files, planGate, replanCount, usage.tokens, planModel.match, authSource, configHash.
+// Chỉ đọc các trường: key/task/arm/rep, status, error, planRaw, planFinal[].files, planGate, replanCount, usage.tokens, planModel.match, authSource, configHash, ccodingCommit, claudeCliVersion.
 // Dùng: node docs/research/analysis/e9lite.mjs --runs <runs.jsonl> --gold <gold.json> --labels <labels.json> [--seed 20261115] [--tasks-dir bench/vs-claude/tasks] [--boot 4000]
 // Chưa có runs.jsonl (hoặc rỗng) ⇒ không in bảng, exit 0. Cờ dừng ⇒ exit 3, không in bảng.
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { changedFiles, mod2Of } from './e9lite-labels.mjs';
 
 export const ARMS = ['P-H', 'P-S', 'P-O'];
 export const CONTRASTS = [['P-O', 'P-S', 'Opus − Sonnet'], ['P-H', 'P-S', 'Haiku − Sonnet']];
@@ -66,7 +67,8 @@ export function selectRuns(rows) {
   const kept = []; const firstFail = []; const mismatch = []; const noDone = [];
   for (const [k, list] of byKey) {
     const first = list[0];
-    if (first.status !== 'done' || first.planModel?.match === false) firstFail.push({ key: k, arm: first.arm, task: first.task, status: first.status, cause: causeOf(first) });
+    // m3: đếm MỌI dòng không phải done (hoặc model lệch) của khóa, theo arm/nguyên nhân; không chỉ lượt đầu.
+    for (const r of list) if (r.status !== 'done' || r.planModel?.match === false) firstFail.push({ key: k, arm: r.arm, task: r.task, status: r.status, cause: causeOf(r) });
     for (const r of list) if (r.planModel?.match === false) mismatch.push({ key: k, arm: r.arm });
     const dones = list.filter((r) => r.status === 'done' && r.planModel?.match !== false);
     if (dones.length) kept.push(dones[dones.length - 1]); else noDone.push(k);
@@ -83,10 +85,16 @@ function causeOf(r) {
 /** Cờ dừng cả đợt (K1 mục 4 và 7). Trả mảng chuỗi; rỗng = không dừng. */
 export function stopFlags(rows) {
   const flags = [];
-  const auth = new Set(rows.map((r) => (r.authSource == null ? 'null' : String(r.authSource))));
-  const apiKey = [...auth].filter((a) => /key|api/i.test(a));
+  // M1: bỏ null (dòng lỗi hạ tầng/trước khi có lượt gọi không có authSource); chỉ dừng khi có giá trị mang dấu khóa API, hoặc lẫn nhiều giá trị khác null.
+  const auth = new Set(rows.filter((r) => r.authSource != null).map((r) => String(r.authSource)));
+  const apiKey = [...auth].filter((x) => /key|api/i.test(x));
   if (apiKey.length) flags.push(`authSource có khóa API: ${apiKey.join(', ')}`);
   if (auth.size > 1) flags.push(`authSource lẫn nhiều giá trị trong cùng đợt: ${[...auth].sort().join(', ')}`);
+  // M2: K1 (4) — ccodingCommit và claudeCliVersion phải trùng ở mọi dòng (bỏ qua null).
+  for (const fld of ['ccodingCommit', 'claudeCliVersion']) {
+    const v = new Set(rows.filter((r) => r[fld] != null).map((r) => String(r[fld])));
+    if (v.size > 1) flags.push(`${fld} khác nhau giữa các dòng: ${[...v].sort().join(', ')}`);
+  }
   const hashes = new Map();
   for (const r of rows) { if (r.configHash == null) continue; if (!hashes.has(r.arm)) hashes.set(r.arm, new Set()); hashes.get(r.arm).add(r.configHash); }
   for (const [arm, s] of hashes) if (s.size > 1) flags.push(`configHash khác nhau trong cùng arm ${arm}: ${[...s].join(', ')}`);
@@ -99,8 +107,11 @@ export function stopFlags(rows) {
 
 // ---- thước đo theo lượt ----
 export function rowMetrics(row, gold, label, repoDir) {
-  const gf = new Set(gold.files.map((f) => f.path));
-  const gm = new Set(gold.modules ?? gold.files.map((f) => f.module));
+  // B1: G_f = tệp change ∈ {added, modified}; G_m suy từ G_f đó (không dùng gold.modules vì gồm module của tệp deleted).
+  const cf = changedFiles(gold);
+  const gf = new Set(cf.map((f) => f.path));
+  const gm = new Set(cf.map((f) => f.module));
+  const gm2 = new Set(cf.map((f) => mod2Of(f.path))); // độ nhạy §9 (S2)
   const m = { replanCount: typeof row.replanCount === 'number' ? row.replanCount : null, gateFirst: gateFirst(row), tokens: weighted(row.usage?.tokens) };
   for (const [name, plan] of [['raw', row.planRaw], ['final', row.planFinal]]) {
     if (plan == null && name === 'final') { m[`${name}.missing`] = 1; continue; } // planFinal vắng: loại khỏi planFinal
@@ -109,12 +120,14 @@ export function rowMetrics(row, gold, label, repoDir) {
     const pm = new Set([...pf].map(moduleOf));
     m[`${name}.covFile`] = coverage(gf, pf);
     m[`${name}.covMod`] = coverage(gm, pm);
+    m[`${name}.covMod2`] = coverage(gm2, new Set([...pf].map(mod2Of)));
     m[`${name}.items`] = arr.length;
     if (label === 'khong_chia_duoc') m[`${name}.overSplit`] = arr.length > 1 ? 1 : 0;
   }
   return m;
 }
-export const METRICS = ['raw.covFile', 'raw.covMod', 'raw.items', 'raw.overSplit', 'final.covFile', 'final.covMod', 'final.items', 'final.overSplit', 'replanCount', 'gateFirst', 'tokens'];
+export const SENS_METRICS = ['raw.covMod2', 'final.covMod2', 'raw.overSplit', 'final.overSplit'];
+export const METRICS = ['raw.covFile', 'raw.covMod', 'raw.covMod2', 'final.covMod2', 'raw.items', 'raw.overSplit', 'final.covFile', 'final.covMod', 'final.items', 'final.overSplit', 'replanCount', 'gateFirst', 'tokens'];
 
 const mean = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
 
@@ -180,6 +193,20 @@ export function analyze({ rows, gold, labels, seed = DEFAULT_SEED, B = DEFAULT_B
       if (c.n) (result.contrasts[sname] ??= {})[`${name}|${metric}`] = c;
     }
   }
+  // Độ nhạy (§9 S2): nhãn theo mod2Of, báo song song, gắn "độ nhạy"; không thay nhãn chính.
+  const labelsById2 = Object.fromEntries(Object.entries(labels.labels ?? {}).map(([k, v]) => [k, v.sensitivity?.label]));
+  const { out: pt2 } = perTask(sel.kept, goldById, labelsById2, repoDirs);
+  const strata2 = { all: tasks, chia_duoc: tasks.filter((t) => labelsById2[t] === 'chia_duoc'), khong_chia_duoc: tasks.filter((t) => labelsById2[t] === 'khong_chia_duoc') };
+  const degenerate2 = strata2.chia_duoc.length === 0 || strata2.khong_chia_duoc.length === 0;
+  result.sensitivity = { strata: Object.fromEntries(Object.entries(strata2).map(([k, v]) => [k, v.length])), degenerate: degenerate2, contrasts: {} };
+  for (const [sname, ids] of Object.entries(strata2)) {
+    if (!ids.length || (degenerate2 && sname !== 'all')) continue;
+    for (const [A, Bm, name] of CONTRASTS) for (const metric of SENS_METRICS) {
+      if (metric.endsWith('overSplit') && sname !== 'khong_chia_duoc') continue;
+      const c = contrast(pt2, ids, metric, A, Bm, { B, seed });
+      if (c.n) (result.sensitivity.contrasts[sname] ??= {})[`${name}|${metric}`] = c;
+    }
+  }
   result.strata = Object.fromEntries(Object.entries(strata).map(([k, v]) => [k, v.length]));
   return result;
 }
@@ -190,11 +217,16 @@ export function format(res) {
   L.push('E9-lite [Khám phá] — mô tả, không p-value, không Holm. n = số bài; khoảng = bootstrap theo bài 95 % percentile.');
   L.push(`Khóa: ${res.sel.keys}; lượt tính (done cuối): ${res.sel.kept.length}; khóa không có done: ${res.sel.noDone.length}; dòng model lệch bị loại: ${res.sel.mismatch.length}.`);
   const byArm = {}; for (const f of res.sel.firstFail) { const a = (byArm[f.arm] ??= {}); a[f.cause] = (a[f.cause] ?? 0) + 1; }
-  L.push(`Lượt đầu lỗi theo arm/nguyên nhân (vẫn báo): ${JSON.stringify(byArm)}`);
+  L.push(`Dòng lỗi (mọi dòng không phải done) theo arm/nguyên nhân (vẫn báo): ${JSON.stringify(byArm)}`);
   if (Object.keys(res.missingFinal).length) L.push(`Lượt không có planFinal (loại khỏi planFinal): ${JSON.stringify(res.missingFinal)}`);
   L.push(`Tầng: ${JSON.stringify(res.strata)}${res.degenerate ? ' — PHÂN TẦNG SUY BIẾN: không tính chia thừa, không so sánh theo tầng' : ''}`);
-  for (const [s, cs] of Object.entries(res.contrasts)) {
-    L.push('', `## Tầng: ${s}`, '| Cặp | Thước | n | Hiệu TB | KTC 95 % | >0 / =0 / <0 |', '|---|---|---|---|---|---|');
+  const tables = [...Object.entries(res.contrasts).map(([s, cs]) => [`Tầng: ${s}`, cs])];
+  if (res.sensitivity) {
+    L.push(`Độ nhạy (module = mod2Of, §9 S2; không thay nhãn chính) — tầng: ${JSON.stringify(res.sensitivity.strata)}${res.sensitivity.degenerate ? ' — suy biến' : ''}`);
+    for (const [s, cs] of Object.entries(res.sensitivity.contrasts)) tables.push([`Độ nhạy, tầng: ${s}`, cs]);
+  }
+  for (const [title, cs] of tables) {
+    L.push('', `## ${title}`, '| Cặp | Thước | n | Hiệu TB | KTC 95 % | >0 / =0 / <0 |', '|---|---|---|---|---|---|');
     for (const [k, c] of Object.entries(cs)) {
       const [name, metric] = k.split('|');
       const ci = c.boot ? `[${f3(c.boot.lo)}; ${f3(c.boot.hi)}]` : `chỉ liệt kê: ${c.perTask.map((r) => `${r.task}=${f3(r.diff)}`).join(', ')}`;

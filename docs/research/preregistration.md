@@ -1405,6 +1405,45 @@ node bench/vs-claude/run.mjs --arms P-H,P-S,P-O \
 
 **Mã băm khóa chuẩn E9-lite (BRIEF-24, K2; ghi trước lượt chạy đầu).** Lệnh: `cd bench/vs-claude/results/e9lite && sha256sum gold.json labels.json`. `gold.json` sha256 = `ee49fc5da243b1b656c3e2f8fcc9d395c39c3f5a30f325b0f8e1ea7406ed312f` (13 bài; trường `sha256` nội bộ = `a33c08865a433ac2d2b53e0a7eb2001556ae0a782bcb0eedfa666ca6a6c3251d`); `labels.json` sha256 = `602cea5c4f576297d76d2933edb214e10c85a7b7366c211fd8270cfcd1855667` (sinh bởi `docs/research/analysis/e9lite-labels.mjs`, quy tắc chép nguyên văn từ (3)). **Kết quả nhãn: 13/13 "chia được", 0 "không chia được" ⇒ phân tầng suy biến** theo đúng quy tắc ghi trước ở (3): không đổi quy tắc, không tính chia thừa, không so sánh theo tầng. Nguyên nhân (mô tả, không đổi gì): mọi lời giải mẫu đều đổi `package.json` ở gốc (module `.`) cùng `src` và `test`, nên số module ≥ 2 ở cả 13 bài.
 
+#### Sửa chuẩn E9-lite sau khi thấy gold, trước khi thấy kế hoạch — 15/11/2026 (BRIEF-24, K1, sửa theo review @peer-reviewer)
+
+**Trung thực về thời điểm.** Mục này được viết **sau khi đã thấy `gold.json` và kết quả nhãn 13/13 "chia được"** (dòng mã băm K2 ngay trên), và **trước khi có bất kỳ kế hoạch nào** của planner. Mục chỉ thêm, không sửa chữ ở trên; những chỗ bị thay được nêu rõ dưới đây và **mục này thắng** khi có mâu thuẫn với mục (3), (5) ở trên. `gold.json` (và mã băm của nó) **không đổi**; chỉ cách lọc và cách suy nhãn từ nó đổi.
+
+**(S1) Lỗi chuẩn: tệp "deleted" giả.** `gold-from-solution.mjs` so `repoDir` với `solutionDir`; nhưng `solutionDir` là lớp **chép đè** lên starter (`bench/vs-claude/README.md` mục lời giải; `bench/vs-claude/run.mjs` dùng `cpSync`), nên tệp có ở starter mà không có ở lời giải (vd. `package.json`, `SPEC.md`, tệp test ở g1) bị liệt kê là `deleted` dù lời giải **không xóa** gì. Lời giải dạng chép đè **không biểu diễn được việc xóa tệp**. Vì vậy:
+- **Chuẩn tệp đã sửa** `G_f` = tệp trong `gold.json` có `change` ∈ {`added`, `modified`}; tệp `deleted` **không** thuộc chuẩn. Cùng ngữ nghĩa với `requiredFiles` ở `bench/vs-claude/lib/grade.mjs` (tệp ở lời giải khác starter hoặc không có ở starter).
+- **Chuẩn module đã sửa** `G_m` = tập module suy **từ `G_f` đã lọc** bằng hàm `modOf` dưới đây; **không dùng** trường `modules` hay `files[].module` của `gold.json` (chúng tính cả tệp `deleted`).
+- Nhãn "chia được"/"không chia được" tính lại trên `G_f` đã lọc. **Dòng nhãn 13/13 và `labels.json` cũ hết hiệu lực**; mã `docs/research/analysis/e9lite-labels.mjs` và test của nó phải cài lại theo mục này (việc của S2/@data-scientist, trước lượt chạy đầu) và sha256 `labels.json` mới ghi thành một dòng ngay dưới mục này. Nếu `G_f` rỗng thì bài là NA ở thước độ phủ và nhãn "không chia được", báo riêng.
+
+**(S2) Module: nhãn chính và độ nhạy (quyết định M3, ghi trước khi thấy kế hoạch).** Module chính **giữ** như (5): thư mục cấp một, không có `/` thì `.`. Hệ quả đã thấy khi đọc đường dẫn trong `gold.json` (đọc bằng mắt, **số chính thức do mã tính**): sau khi bỏ tệp `deleted`, phần lớn bài chỉ còn tệp dưới `src/` ⇒ "không chia được"; riêng `l1-modules` có nhiều module con dưới `src/` nhưng vẫn cùng module `src`. Nên nhãn chính **chỉ phản ánh bố cục thư mục của lời giải**, không phải độ khó bóc tách. Chọn **cả hai** cách xử lý, không đổi quy tắc chính:
+- **(a) Phân tích độ nhạy bắt buộc:** thêm module thứ hai `mod2Of` (hai đoạn đầu khi đoạn đầu là `src` và đường dẫn có ≥ 3 đoạn; còn lại như `modOf`). Báo **song song** nhãn, độ phủ module và phân tầng theo `mod2Of`, gắn nhãn "độ nhạy"; không thay nhãn chính, không chọn cách nào theo kết quả.
+- **(b) Câu cấm bổ sung:** không diễn giải tầng "chia được"/"không chia được" như độ khó hay khả năng chia việc nói chung; chỉ được nói "theo bố cục thư mục của lời giải mẫu". Đây cũng là một đe dọa tính hợp lệ (module = thư mục là thô).
+
+**Mã chép nguyên văn (thay cho mã ở (3); đường dẫn trong `gold.json` đã dùng `/`):**
+
+```js
+const isChange = (f) => f.change === 'added' || f.change === 'modified';
+const modOf = (p) => { const i = p.indexOf('/'); return i < 0 ? '.' : p.slice(0, i); };
+const mod2Of = (p) => { const s = p.split('/'); return s[0] === 'src' && s.length >= 3 ? `src/${s[1]}` : modOf(p); };
+const goldFiles = (task) => task.files.filter(isChange).map((f) => f.path);   // G_f
+const goldMods = (task, mod = modOf) => new Set(goldFiles(task).map(mod));     // G_m
+const label = (task, mod = modOf) => (goldMods(task, mod).size >= 2 ? 'chia_duoc' : 'khong_chia_duoc');
+```
+
+Nếu sau sửa vẫn cả 13 bài cùng một nhãn ở nhãn chính thì vẫn báo "phân tầng suy biến" và **không đổi quy tắc**; tầng n < 3 xử lý như (6). Hai người cài đặt độc lập từ (S1), (S2) và luật khớp tệp phải ra cùng `G_f`, `G_m` và nhãn.
+
+**(S3) Làm rõ các điểm còn hở (bổ sung cho (5), (6)).**
+- **Bootstrap:** RNG là `mulberry32` hạt 32 bit = 20261115, khởi tạo lại cho **mỗi** (thước, cặp arm, tầng); bài xếp theo `id` tăng dần; mỗi lần rút B lần, mỗi lần rút đủ n bài bằng `Math.floor(rng() * n)` theo thứ tự, thống kê = trung bình hiệu theo bài. Sắp tăng B giá trị; cận dưới = phần tử chỉ số (từ 0) `floor(0,025·B)`, cận trên = chỉ số `ceil(0,975·B) − 1`. Không nội suy.
+
+```js
+const mulberry32 = (a) => () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+```
+
+- **`planFinal` rỗng và `null`:** `[]` là kế hoạch rỗng hợp lệ ⇒ **được tính** (độ phủ 0, số hạng mục 0, chia thừa không); `null` hoặc thiếu trường = không có kế hoạch ⇒ **loại** khỏi tính `planFinal` và báo số lượt loại. `planRaw` `null` hay `[]` ⇒ độ phủ 0 (như (5)).
+- **Cổng đạt lần đầu:** `planGate` là đối tượng có trường `ok` hoặc `null` (`bench/vs-claude/lib/plan-only.mjs` ghi `p?.planGate ?? null`; kiểu thấy ở `bench/vs-claude/test/plan-only-arms.test.mjs`). Lượt "đạt lần đầu" ⇔ `planGate?.ok === true` **và** `replanCount === 0`; `planGate` `null` ⇒ không đạt (báo riêng số `null`). Cần @data-scientist kiểm trên dòng thật đầu tiên rằng `ok` đúng là trường đó; nếu khác thì ghi sai lệch trước khi phân tích, không đổi định nghĩa theo kết quả.
+- **Phạm vi token:** thước chính = `weighted(usage.tokens)` (cả lượt planOnly, vốn không thực thi); báo thêm, mô tả, phần của pha `plan` từ `usage.byPhase` nếu có. Không trộn hai phạm vi trong một bảng.
+- **Đường dẫn tuyệt đối hoặc bắt đầu bằng `/` (kể cả ổ đĩa `X:/`):** sau bước (i)–(iii) của luật khớp, nếu vẫn bắt đầu bằng `/` hoặc `X:/` thì **không cắt đoán**, **không khớp** phần tử chuẩn nào và **không** đóng góp module (đếm riêng thành "tệp ngoài repo"); đường dẫn chứa `..` xử lý tương tự.
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.

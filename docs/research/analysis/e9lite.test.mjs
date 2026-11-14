@@ -128,7 +128,10 @@ test('cờ dừng: authSource lẫn khóa API, configHash khác trong cùng arm,
   const ok = [row({ task: 'a', arm: 'P-H', rep: 1 }), row({ task: 'a', arm: 'P-S', rep: 1 })];
   assert.deepEqual(stopFlags(ok), []);
   assert.match(stopFlags([...ok, row({ task: 'a', arm: 'P-O', rep: 1, authSource: 'ANTHROPIC_API_KEY' })]).join('|'), /khóa API/);
-  assert.match(stopFlags([...ok, row({ task: 'b', arm: 'P-S', rep: 1, authSource: 'none' })]).join('|'), /lẫn/);
+  // M1: null (dòng lỗi hạ tầng) không phải một giá trị riêng; 'none' cùng null không dừng; lẫn hai giá trị khác null thì dừng.
+  assert.deepEqual(stopFlags([...ok, row({ task: 'b', arm: 'P-S', rep: 1, authSource: 'none' })]), []);
+  assert.deepEqual(stopFlags([row({ task: 'a', arm: 'P-H', rep: 1, authSource: 'none' }), row({ task: 'a', arm: 'P-S', rep: 1, authSource: null, status: 'error' })]), []);
+  assert.match(stopFlags([row({ task: 'a', arm: 'P-H', rep: 1, authSource: 'none' }), row({ task: 'a', arm: 'P-S', rep: 1, authSource: 'oauth' })]).join('|'), /lẫn/);
   assert.match(stopFlags([...ok, row({ task: 'b', arm: 'P-S', rep: 1, configHash: 'khác' })]).join('|'), /trong cùng arm P-S/);
   assert.match(stopFlags([row({ task: 'a', arm: 'P-H', rep: 1, configHash: 'z' }), row({ task: 'a', arm: 'P-S', rep: 1, configHash: 'z' })]).join('|'), /trùng configHash/);
 });
@@ -194,4 +197,63 @@ test('CLI: chưa có runs.jsonl ⇒ exit 0 và không in bảng; có cờ dừng
     r = run(); assert.equal(r.status, 0); assert.match(r.stdout, /\| Cặp/);
     assert.equal(parseRuns('{"a":1}\nhỏng\n').malformed, 1);
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+// ---- vòng sửa theo review S5 ----
+const gDel = { id: 'g', modules: ['.', 'src', 'test'], files: [
+  { ...f('src/s.js'), change: 'modified' }, { ...f('lib/n.js'), change: 'added' },
+  { ...f('package.json'), change: 'deleted' }, { ...f('test/s.test.js'), change: 'deleted' }] };
+
+test('B1: tệp deleted không vào G_f và G_m (nhãn)', () => {
+  assert.equal(label(gDel), 'chia_duoc'); // src + lib = 2 module; package.json (.) và test bị bỏ
+  const l = buildLabels({ sha256: 'z', tasks: [gDel, { id: 'h', files: [{ ...f('src/a.js'), change: 'modified' }, { ...f('package.json'), change: 'deleted' }, { ...f('test/a.test.js'), change: 'deleted' }] }] });
+  assert.equal(l.labels.g.moduleCount, 2); assert.equal(l.labels.g.fileCount, 2); assert.equal(l.labels.g.deletedIgnored, 2);
+  assert.deepEqual(l.labels.g.modules, ['lib', 'src']);
+  assert.equal(l.labels.h.label, 'khong_chia_duoc'); // chỉ 1 module sau khi bỏ deleted (trước B1: 3 module ⇒ chia được)
+  assert.deepEqual(l.counts, { chia_duoc: 1, khong_chia_duoc: 1 });
+});
+
+test('B1: tệp deleted không vào G_f và G_m (độ phủ)', () => {
+  // kế hoạch nêu đúng 2 tệp đổi thật ⇒ phủ 1 (tệp) và 1 (module), dù có 2 tệp deleted
+  const m = rowMetrics(row({ task: 'g', arm: 'P-S', rep: 1, planRaw: [item('src/s.js', 'lib/n.js')], planFinal: [item('src/s.js')] }), gDel, 'chia_duoc');
+  assert.equal(m['raw.covFile'], 1); assert.equal(m['raw.covMod'], 1);
+  assert.equal(m['final.covFile'], 0.5); assert.equal(m['final.covMod'], 0.5);
+  // nêu tệp deleted không làm tăng độ phủ
+  const m2 = rowMetrics(row({ task: 'g', arm: 'P-S', rep: 1, planRaw: [item('package.json', 'test/s.test.js')], planFinal: [] }), gDel, 'chia_duoc');
+  assert.equal(m2['raw.covFile'], 0); assert.equal(m2['raw.covMod'], 0);
+  // gold chỉ có deleted ⇒ chuẩn rỗng ⇒ NA
+  assert.equal(rowMetrics(row({ task: 'x', arm: 'P-S', rep: 1, planRaw: [item('a.js')] }), { files: [{ ...f('a.js'), change: 'deleted' }] }, 'khong_chia_duoc')['raw.covFile'], null);
+});
+
+test('M2: ccodingCommit / claudeCliVersion khác nhau giữa các dòng ⇒ cờ dừng; null bị bỏ qua', () => {
+  const a = row({ task: 'a', arm: 'P-H', rep: 1, ccodingCommit: 'c1', claudeCliVersion: 'v1' });
+  assert.deepEqual(stopFlags([a, row({ task: 'a', arm: 'P-S', rep: 1, ccodingCommit: 'c1', claudeCliVersion: 'v1' })]), []);
+  assert.deepEqual(stopFlags([a, row({ task: 'a', arm: 'P-S', rep: 1, ccodingCommit: null, claudeCliVersion: null, status: 'error' })]), []);
+  assert.match(stopFlags([a, row({ task: 'a', arm: 'P-S', rep: 1, ccodingCommit: 'c2', claudeCliVersion: 'v1' })]).join('|'), /ccodingCommit khác nhau/);
+  assert.match(stopFlags([a, row({ task: 'a', arm: 'P-S', rep: 1, ccodingCommit: 'c1', claudeCliVersion: 'v2' })]).join('|'), /claudeCliVersion khác nhau/);
+});
+
+test('m3: mọi dòng không phải done của một khóa được đếm theo arm/nguyên nhân (không chỉ lượt đầu)', () => {
+  const k = { task: 'a', arm: 'P-S', rep: 1 };
+  const s = selectRuns([row({ ...k, status: 'error', error: '403 hạn mức' }), row({ ...k, status: 'error', error: 'lỗi lạ' }), row({ ...k })]);
+  assert.equal(s.kept.length, 1);
+  assert.deepEqual(s.firstFail.map((x) => [x.arm, x.cause]), [['P-S', 'hạ-tầng'], ['P-S', 'lỗi-khác']]);
+});
+
+test('độ nhạy §9 (S2): mod2Of tách module con dưới src; nhãn chính không đổi; độ phủ module độ nhạy', async () => {
+  const { mod2Of, label2, changedModules2 } = await import('./e9lite-labels.mjs');
+  assert.equal(mod2Of('src/slug/a.js'), 'src/slug');
+  assert.equal(mod2Of('src/a.js'), 'src'); // chỉ 2 đoạn ⇒ như modOf
+  assert.equal(mod2Of('test/a/b.js'), 'test');
+  assert.equal(mod2Of('main.js'), '.');
+  const l1 = { id: 'l', files: [{ ...f('src/a/x.js'), change: 'modified' }, { ...f('src/b/y.js'), change: 'added' }, { ...f('package.json'), change: 'deleted' }] };
+  assert.equal(label(l1), 'khong_chia_duoc'); // nhãn chính: chỉ module src
+  assert.equal(label2(l1), 'chia_duoc'); // độ nhạy: src/a, src/b
+  assert.deepEqual(changedModules2(l1), ['src/a', 'src/b']);
+  const b = buildLabels({ sha256: 'q', tasks: [l1] });
+  assert.equal(b.labels.l.label, 'khong_chia_duoc'); assert.equal(b.labels.l.sensitivity.label, 'chia_duoc');
+  assert.deepEqual(b.sensitivityCounts, { chia_duoc: 1, khong_chia_duoc: 0 });
+  // độ phủ module độ nhạy: kế hoạch chỉ nêu src/a/x.js ⇒ 0,5 (chính: 1)
+  const m = rowMetrics(row({ task: 'l', arm: 'P-S', rep: 1, planRaw: [item('src/a/x.js')], planFinal: [item('src/a/x.js', 'src/b/y.js')] }), l1, 'khong_chia_duoc');
+  assert.equal(m['raw.covMod'], 1); assert.equal(m['raw.covMod2'], 0.5); assert.equal(m['final.covMod2'], 1);
 });

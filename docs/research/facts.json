@@ -474,12 +474,12 @@
     "e9lite.arms": 3,
     "e9lite.repeats": 3,
     "e9lite.runsPlanned": 117,
-    "e9lite.labels.chiaDuoc": 13,
-    "e9lite.labels.khongChiaDuoc": 0,
+    "e9lite.labels.chiaDuoc": "chờ K2 sinh lại",
+    "e9lite.labels.khongChiaDuoc": "chờ K2 sinh lại",
     "e9lite.bootstrapB": 4000,
     "e9lite.bootstrapSeed": 20261115,
     "e9lite.goldSha256": "ee49fc5da243b1b656c3e2f8fcc9d395c39c3f5a30f325b0f8e1ea7406ed312f",
-    "e9lite.labelsSha256": "602cea5c4f576297d76d2933edb214e10c85a7b7366c211fd8270cfcd1855667",
+    "e9lite.labelsSha256": "chờ K2 sinh lại (bản 602cea5c… sinh từ chuẩn lỗi, hết hiệu lực)",
     "e9lite.tests": 14
   },
   "numbers": [
@@ -508,26 +508,10 @@
       "exceptions": []
     },
     {
-      "id": "e9lite-labels-chia",
-      "value": "13",
-      "reason": "BRIEF-24 K3b/K2: số bài nhãn chia được trên tổng 13 (khóa e9lite.labels.chiaDuoc)",
-      "pattern": "cả 13 bài đều \"chia được\" \\((\\d+)/13\\)",
-      "files": ["paper/paper.md"],
-      "exceptions": []
-    },
-    {
       "id": "e9lite-gold-sha",
       "value": "ee49fc5d",
       "reason": "BRIEF-24 K2: tiền tố 8 ký tự của sha256 gold.json (đầy đủ ở e9lite.goldSha256 và preregistration.md §9)",
       "pattern": "`gold\\.json` \\(sha256 `([0-9a-f]{8})…",
-      "files": ["paper/paper.md"],
-      "exceptions": []
-    },
-    {
-      "id": "e9lite-labels-sha",
-      "value": "602cea5c",
-      "reason": "BRIEF-24 K2: tiền tố 8 ký tự của sha256 labels.json (đầy đủ ở e9lite.labelsSha256)",
-      "pattern": "`labels\\.json` \\(sha256 `([0-9a-f]{8})…",
       "files": ["paper/paper.md"],
       "exceptions": []
     },
