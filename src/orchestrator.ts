@@ -34,7 +34,7 @@ import type { LogStore } from './logger.js';
 import { assignStrayIssues, blockedSubtasks, keywordRoute, newSubtask, orderJoint, parseAcceptance, parsePlan, parseReview, parseRoute, readySubtasks, skillScore } from './planner.js';
 import { historyText, selectHistory } from './history.js';
 import * as P from './prompts.js';
-import { planGate } from './plan-gate.js';
+import { planGate, planStopAttention } from './plan-gate.js';
 import type { Registry } from './registry.js';
 import { classifyError, parseRetryAt, RuntimeError, shouldFailover, toRuntimeError } from './runtimes/errors.js';
 import type { Candidate, RuntimeManager } from './runtimes/index.js';
@@ -2660,8 +2660,7 @@ export class Orchestrator {
       }
     }
     // vẫn trượt → dừng, không chạy tập con
-    const reason = g.rules.includes('A') ? 'plan-coverage' : 'plan-unreadable';
-    const detail = reason === 'plan-coverage' ? `Kế hoạch ${dept.short} bỏ sót đích: ${g.uncovered.join(', ')} — không ai nhận; chưa chạy hạng mục nào` : `Kế hoạch ${dept.short} đọc dở: ${g.reasons.filter((r) => r.startsWith('B') || g.rules.includes('brief-item') && /^K\d+/.test(r)).join('; ')} — chưa chạy hạng mục nào`;
+    const { reason, detail } = planStopAttention(dept.short, g);
     task.attention = { reason, detail, at: nowIso() };
     run.planGate = { uncovered: g.uncovered, reasons: g.reasons, rules: g.rules, replanned: true };
     logs.write({ level: 'error', kind: 'plan.gate', msg: detail, taskId: task.id, department: dept.id, data: { stage: 'stopped', attention: reason, rules: g.rules, uncovered: g.uncovered, reasons: g.reasons } });

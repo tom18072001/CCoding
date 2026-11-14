@@ -319,3 +319,13 @@ export function planGate(input: PlanGateInput): PlanGateResult {
   }
   return { blocked: rules.length > 0, rules, uncovered, reasons, ...(followupScope ? { followupScope } : {}) };
 }
+
+/** K2: loại attention + thông báo khi cổng chặn sau khi đã sửa kế hoạch. Không nhánh nào ra lý do rỗng. */
+export function planStopAttention(short: string, g: Pick<PlanGateResult, 'rules' | 'uncovered' | 'reasons'>): { reason: 'plan-coverage' | 'plan-brief-items' | 'plan-unreadable'; detail: string } {
+  const itemReasons = g.reasons.filter((r) => r.startsWith('brief-item'));
+  const bReasons = g.reasons.filter((r) => r.startsWith('B'));
+  const codes = [...new Set(itemReasons.map((r) => /^brief-item:\s*(K\d+)/.exec(r)?.[1]).filter((x): x is string => !!x))];
+  if (g.rules.includes('A')) return { reason: 'plan-coverage', detail: `Kế hoạch ${short} bỏ sót đích: ${g.uncovered.join(', ')} — không ai nhận; chưa chạy hạng mục nào` };
+  if (itemReasons.length) return { reason: 'plan-brief-items', detail: `Kế hoạch ${short} thiếu hạng mục đề bài: ${codes.join(', ') || 'xem lý do'} (${itemReasons.map((r) => r.replace(/^brief-item:\s*/, '')).join('; ')}) — chưa chạy hạng mục nào` };
+  return { reason: 'plan-unreadable', detail: `Kế hoạch ${short} đọc dở: ${(bReasons.length ? bReasons : g.reasons).join('; ') || 'không rõ lý do'} — chưa chạy hạng mục nào` };
+}
