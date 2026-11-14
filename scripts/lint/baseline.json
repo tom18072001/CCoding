@@ -2543,6 +2543,510 @@
       "owner": "Phòng Nghiên cứu",
       "fixIn": "Phòng Nghiên cứu, gói sau D20 (thay bằng <máy-chạy>/<máy-cloud>); D20 không sửa nội dung docs/research/",
       "by": "K3"
+    },
+    {
+      "rule": "test-glob",
+      "file": "docs/research/BRIEF-22c.md",
+      "anchor": "node --test docs/research/scripts/",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K2"
+    },
+    {
+      "rule": "test-glob",
+      "file": "docs/research/context/d11-suite-review-2026-11-04.md",
+      "anchor": "node --test bench/vs-claude/test/",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "gói Nghiên cứu sau D20 (phản biện lịch sử, ví dụ lệnh hỏng)",
+      "by": "K2"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "src/tools/workspace.ts:34 (`bash`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "quality-gate.ts:34–157 (`names`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "src/estimate.ts:15–42 (`tasks`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "prompts.ts:300–327 (`prior`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "claude-cli.ts:238 (`error`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "src/lane.ts:130 (`single`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "lane.ts:130–145 (`single`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "lane.ts:140–141 (`single`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "orch:1174–1335 (`accept`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "logger.ts:98–109 (`prev`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "workspace.ts:52 (`route`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "orch:1109–1113 (`accept`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "orch:1337–1349 (`brief`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "orch:3688–3695 (`prefs`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "orch:1188–1195 (`final`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "orch:1588–1589 (`files`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "config.ts:377 (`route`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "lane.ts:130 (`single`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "config.ts:372 (`gate`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "orch:1174 (`accept`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "orch:1351 (`route`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "orch:2447 (`pause`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "orch:3687 (`want`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "orch:3661 (`call`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "orch:3498 (`body`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/logic-map.md",
+      "anchor": "orch:846 (`pump`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/model-per-role.md",
+      "anchor": "config.ts:377 (`route`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/model-per-role.md",
+      "anchor": "config.ts:405 (`plan`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/model-per-role.md",
+      "anchor": "orch:1798 (`plan`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/report.md",
+      "anchor": "quality-gate.ts:34–157 (`names`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/report.md",
+      "anchor": "src/estimate.ts:15–42 (`tasks`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/report.md",
+      "anchor": "orch:1109–1117 (`accept`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/report.md",
+      "anchor": "orch:1188–1195 (`final`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/report.md",
+      "anchor": "orch:1109–1113 (`done`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/report.md",
+      "anchor": "orch:1109–1117 (`done`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/report.md",
+      "anchor": "config.ts:405 (`plan`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/report.md",
+      "anchor": "orch:897–903 (`after`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/report.md",
+      "anchor": "lane.ts:130 (`single`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/report.md",
+      "anchor": "orch:1174 (`accept`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/report.md",
+      "anchor": "orch:1351 (`route`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/analysis/decisions/report.md",
+      "anchor": "orch:3687 (`want`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/improvement-backlog.md",
+      "anchor": "src/estimate.ts:15–42 (`tasks`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/improvement-backlog.md",
+      "anchor": "orchestrator.ts:1463 (`roots`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/improvement-backlog.md",
+      "anchor": "shell-policy.ts:737 (`segs`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/improvement-backlog.md",
+      "anchor": "orchestrator.ts:1799 (`why`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/improvement-backlog.md",
+      "anchor": "src/config.ts:372 (`gate`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/improvement-backlog.md",
+      "anchor": "orch:1088–1094 (`prior`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/improvement-backlog.md",
+      "anchor": "orch:897–903 (`accept`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/improvement-backlog.md",
+      "anchor": "config.ts:405 (`plan`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/improvement-backlog.md",
+      "anchor": "orch:124 (`review`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "research-file-line",
+      "file": "docs/research/improvement-backlog.md",
+      "anchor": "orch:1798 (`plan`)",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "BRIEF-22c",
+      "by": "K4"
+    },
+    {
+      "rule": "placeholders",
+      "file": "docs/research/related-work.md",
+      "anchor": "Tác giả chưa điền",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "gói Nghiên cứu sau D20 (điền tên tác giả từ trang NeurIPS)",
+      "by": "K4"
+    },
+    {
+      "rule": "review-verdict",
+      "file": "docs/research/context/d11-suite-review-2026-11-04.md",
+      "anchor": "băm:ee27c4c97a37",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "khi tệp phản biện được viết lại theo mẫu \"**Kết luận:** Đạt|Sửa nhỏ|Chưa đạt\"; tệp lịch sử, giữ nguyên văn",
+      "by": "K4"
+    },
+    {
+      "rule": "review-verdict",
+      "file": "docs/research/context/d12-stats-fixes-2026-11-04.n2-review.md",
+      "anchor": "băm:62c6bd398659",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "khi tệp phản biện được viết lại theo mẫu \"**Kết luận:** Đạt|Sửa nhỏ|Chưa đạt\"; tệp lịch sử, giữ nguyên văn",
+      "by": "K4"
+    },
+    {
+      "rule": "review-verdict",
+      "file": "docs/research/context/k2-stats-review-2026-11-04.md",
+      "anchor": "băm:040ec15f07af",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "khi tệp phản biện được viết lại theo mẫu \"**Kết luận:** Đạt|Sửa nhỏ|Chưa đạt\"; tệp lịch sử, giữ nguyên văn",
+      "by": "K4"
+    },
+    {
+      "rule": "review-verdict",
+      "file": "docs/research/context/k4-v07-review-2026-11-14.md",
+      "anchor": "băm:d27645aeafb9",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "khi tệp phản biện được viết lại theo mẫu \"**Kết luận:** Đạt|Sửa nhỏ|Chưa đạt\"; tệp lịch sử, giữ nguyên văn",
+      "by": "K4"
+    },
+    {
+      "rule": "review-verdict",
+      "file": "docs/research/context/k7-brief22-review-2026-11-14.md",
+      "anchor": "băm:2c203d0a1d88",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "khi tệp phản biện được viết lại theo mẫu \"**Kết luận:** Đạt|Sửa nhỏ|Chưa đạt\"; tệp lịch sử, giữ nguyên văn",
+      "by": "K4"
+    },
+    {
+      "rule": "review-verdict",
+      "file": "docs/research/context/v43f-review-2026-11-12.md",
+      "anchor": "băm:a4113628d525",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "khi tệp phản biện được viết lại theo mẫu \"**Kết luận:** Đạt|Sửa nhỏ|Chưa đạt\"; tệp lịch sử, giữ nguyên văn",
+      "by": "K4"
+    },
+    {
+      "rule": "review-verdict",
+      "file": "docs/research/dev-review.md",
+      "anchor": "băm:295186f0cd96",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "khi tệp phản biện được viết lại theo mẫu \"**Kết luận:** Đạt|Sửa nhỏ|Chưa đạt\"; tệp lịch sử, giữ nguyên văn",
+      "by": "K4"
+    },
+    {
+      "rule": "review-verdict",
+      "file": "docs/research/suite-review.md",
+      "anchor": "băm:b3549b6c4604",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "khi tệp phản biện được viết lại theo mẫu \"**Kết luận:** Đạt|Sửa nhỏ|Chưa đạt\"; tệp lịch sử, giữ nguyên văn",
+      "by": "K4"
+    },
+    {
+      "rule": "overclaim",
+      "file": "docs/research/paper/v07-axes-threats-draft.md",
+      "anchor": "phần lớn là thiếu lực",
+      "owner": "Phòng Nghiên cứu",
+      "fixIn": "gói Nghiên cứu sau D20 (bản nháp v0.7; phản biện K4 #33 đã yêu cầu sửa ở paper.md, bản nháp còn sót)",
+      "by": "K4"
     }
   ]
 }

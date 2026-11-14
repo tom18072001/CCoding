@@ -1,0 +1,274 @@
+{
+  "version": 1,
+  "source": "docs/research/preregistration.md",
+  "note": "Chỉ thêm, không sửa. Khối mới ở §9: node scripts/lint/prereg-lock.mjs --add-new. Xem docs/LINT.md.",
+  "blocks": [
+    {
+      "key": "Đăng ký trước giả thuyết — bản 2.2 (khóa có điều kiện)",
+      "sha256": "1b0e4cf3ab6db3607c22cda4913915018d343635ff1a780983a9c70dd3dc512d"
+    },
+    {
+      "key": "Tóm tắt",
+      "sha256": "84870156eeb955795969e44e83f97468da6e691e7494c13044ab4831382a0e8f"
+    },
+    {
+      "key": "Tệp đã lưu",
+      "sha256": "43b3ddd1094728f508930744cf5b91eab07148bdb8e88b94596e64b1cacb87c4"
+    },
+    {
+      "key": "1. Thiết kế & RQ",
+      "sha256": "3a71f3bc0091c53fab3133f1410dad3d6ac1235a3693a11faebaca944f3a7a82"
+    },
+    {
+      "key": "2. Đo lường & mẫu",
+      "sha256": "b46ef37d2d097649b74d55f2118b5a4de488440d141c45c15454c5f587e67094"
+    },
+    {
+      "key": "2.1 Biến đo và nguồn",
+      "sha256": "060d5d4d5d91c408800d8b1bf0717e3ae8543db0152948327bfaf2dc1f544d7a"
+    },
+    {
+      "key": "2.2 Mẫu: số lượt mỗi ô",
+      "sha256": "e3cd168ac57e5e216040171ef340c2407fa021eed1213f4bab2d9b7c957a88f7"
+    },
+    {
+      "key": "2.3 Công cụ có và chưa có",
+      "sha256": "76df648ffaaaca82c177e85a7393356e12f4fb14666a38738020971d09ea46ea"
+    },
+    {
+      "key": "2.4 Hợp nhất kết luận (ba trạng thái)",
+      "sha256": "fec48fff9478a9e462bff70aab25d40ef97516d0fe0276a3f82fbe9faf496bad"
+    },
+    {
+      "key": "2.5 Họ giả thuyết chính và Holm",
+      "sha256": "7791053e20ae238d1bb0b4fb81dc18e88f4f3ce57400989f67e5f53ede85c357"
+    },
+    {
+      "key": "2.6 Họ H1′/H2′ sau 5/11 — **dự kiến, chưa khóa**",
+      "sha256": "73047bdee2a77f03671cf075d8282c4c1a106b2caf3a929e610c37de4e3237e4"
+    },
+    {
+      "key": "2.7 Quy tắc trần điểm (thêm ở v2.1)",
+      "sha256": "ff69113da947d2860f3cf768c65892a3c05b3e88d92ba0f1c79d35926f632aa5"
+    },
+    {
+      "key": "3. Kế hoạch phân tích — các giả thuyết",
+      "sha256": "e8c776749d5d9424fe9b249503e88ed0e26cdeb8c5a78a1d0c33ea805ef2d685"
+    },
+    {
+      "key": "3.1 Họ chính: H1–H10 của bộ đo giám đốc",
+      "sha256": "7f14f7048fa0c85d846f3d02283732dbee7b33c90305c60f6dbca0d5131fde43"
+    },
+    {
+      "key": "3.2 Giả thuyết mới: B-01 (làn đơn) và B-02 (cổng chất lượng)",
+      "sha256": "20dba39085f8b4aec2e8f82ac61a1d6587b7d674a36ad2ea41efd488d1d91ab5"
+    },
+    {
+      "key": "B-01 — Làn đơn tương đương ±15 % so với A0-sonnet (thay ĐK-P9 của bản 1)",
+      "sha256": "83c0a12759cdbbc84d789e827c1b6d9c6ccbdb95cd73bf32496377636026ab15"
+    },
+    {
+      "key": "B-02 — Cổng chất lượng chặn ca \"đỏ kéo dài và bỏ sót phần việc\"",
+      "sha256": "56972511c0a455d28019e74acc173b735b1b75f22a29deb2a8a8999f8cea669e"
+    },
+    {
+      "key": "3.3 Bộ phụ: ĐK-P1–P9 (giả thuyết bản 1, t1–t5 và `l1-modules`, `l2-chain`, t6–t8)",
+      "sha256": "dfe0f9a9fbdd5285ce29a191259fa34e3fdb4fe87a5a5a6eee28ba06bacad55e"
+    },
+    {
+      "key": "4. Dữ liệu loại, kiểm soát lượt và quy tắc dừng",
+      "sha256": "53903b661f4f99fe05b218bb5ab5de35e3b048f4d0ab3de5f3548c614022055d"
+    },
+    {
+      "key": "4.1 Nguyên tắc loại (giữ từ bản 1)",
+      "sha256": "63bc05978e24f83bebd4a7f0f93df889121bec5b0f2c8ffb2718f4e11c8e9999"
+    },
+    {
+      "key": "4.2 Bộ phụ ĐK-P1–P9 (harness cũ, `runs.csv`) — giữ nguyên từ bản 1",
+      "sha256": "f5278c556a8e6711575ff52b9bd343378c848efe14718c4a64e8efa82db44753"
+    },
+    {
+      "key": "4.3 Bộ đo giám đốc (H1–H10, B-01, B-02): ba tiêu chí loại mới",
+      "sha256": "4580728b268a2a7afb68d56acc6ce5254f2c47c288464571aaef71ba2c834a30"
+    },
+    {
+      "key": "4.4 Quy tắc dừng",
+      "sha256": "3b31b527915bb074e525104d1abd6596a004ba528abf30e86df70da10425125f"
+    },
+    {
+      "key": "5. Phân tích chính và phân tích khám phá",
+      "sha256": "7cd1af4563444bb22238748214864c5bdc7bf5ba8069e2d8619910b9e521e8ae"
+    },
+    {
+      "key": "5.1 Phân tích phụ/khám phá ngoài họ Holm: bộ chấm và cổng chất lượng như bộ phân loại (thêm ở bản 2.2)",
+      "sha256": "0332e40c55c367ad1b14abb14372ba297a1e20de4d3d4d6c2f0bda6e0fd190b0"
+    },
+    {
+      "key": "6. Đe dọa tính hợp lệ",
+      "sha256": "7ff19aa32a996c17da282879b45f437676efa3d22b21c277da8ae08e734a3d0a"
+    },
+    {
+      "key": "7. Hiệu chỉnh ngưỡng nhỏ/lớn của B-01 (giữ từ bản 1, đổi mã)",
+      "sha256": "17472cd2038700fb7d9182766c5db69323328b18e208d5d2ccf6761f1251c9ca"
+    },
+    {
+      "key": "8. Khóa đăng ký (có điều kiện)",
+      "sha256": "cd85fc8f5ca3b11a2244f256268487a4daf5f8a518a2547d484d5e1e2f838cf6"
+    },
+    {
+      "key": "9. Sai lệch so với đăng ký",
+      "sha256": "0261f8c692f55ef36847dd1be3db6fdd24bce99fb43516488f564407168d908b"
+    },
+    {
+      "key": "Sai lệch vòng 3 gói 3 (phân tích xác nhận B-01 và H5 trên study-cloud; ghi 3/11/2026)",
+      "sha256": "0915e70cc902869640bd431412a0bd05f8c4f8c050a5fe135bc34388048c7bca"
+    },
+    {
+      "key": "Sai lệch vòng 4 gói 1 (đề xuất chỉ tiêu B-01 mới; ghi 3/11/2026)",
+      "sha256": "7fd73ee9de4c368c308f7d3488fee828bc4e167f8ea310fc2c1a8f775cc9d05f"
+    },
+    {
+      "key": "Sai lệch vòng 4 gói 2 (đo bộ chấm và cổng chất lượng; ghi 3/11/2026)",
+      "sha256": "ce60fb203b4a66e142106158459db82826f5f81eb5b4cfbdd18e3cf19c4427d4"
+    },
+    {
+      "key": "Đăng ký trước vòng 4 gói 8: đợt đo 3e (ghi 3/11/2026, trước lượt đầu tiên; chốt ở vòng 4 gói 9 ngày 3/11/2026)",
+      "sha256": "6162da10c3ef0b98043a854ae13f2985c667920e58fad740e26b13aa330e7904"
+    },
+    {
+      "key": "V4-3e-E1 — B-14 chẩn đoán cache",
+      "sha256": "05cef6a8ff18ddae66096a563d731a652e217eddf461975ee685074d9869da76"
+    },
+    {
+      "key": "V4-3e-E2 — Thí điểm B-12/B-16",
+      "sha256": "8c0582dc5585b1cea1c92ec2a3c68f18308ae81f81f7d847bf4e97f9a744e2bc"
+    },
+    {
+      "key": "V4-3e-E3 — Thí điểm bài lớn (B-15)",
+      "sha256": "cef295c811220b9ee0b2cf7c91e1cf806d3a54f14b221c202d9ff39b8a425950"
+    },
+    {
+      "key": "V4-3e-E4 — B-12/B-16 chính",
+      "sha256": "b3bc7b2be3751995c6a9053d1de58373c9a26a85735d5c3d2d70488a8a60bd08"
+    },
+    {
+      "key": "V4-3e-E5 — B-15 chính (họp)",
+      "sha256": "64a115963cc9f2d05ee0a3b15a84674c9a2ec051fe4314dcfa569d0754d5e4bd"
+    },
+    {
+      "key": "V4-3e-E5′ — B-15 chính (họp, làn đầy đủ)",
+      "sha256": "fe821dfa648253c72ad25400eb44f8488afb8464a4173e7806293bf189060a74"
+    },
+    {
+      "key": "V4-3e-K3 — Quy tắc bổ sung (đặt trước dữ liệu)",
+      "sha256": "dc5666d55c1447db9f1d2eb2d7d4bfadb2589a62ca4f9f6853076a795e3d23c5"
+    },
+    {
+      "key": "V4-3e-E6 — H6 cho đủ N",
+      "sha256": "595f228e75e30fc4401d4a9fe39b41b841255e4836d24dee8b2a10f1a86b730e"
+    },
+    {
+      "key": "Sai lệch vòng 4 gói 10 — khóa lại bộ bài giữ lại B-19 (ghi 4/11/2026)",
+      "sha256": "7b1d8d7838db17faa4b9a8022593a93318ca3629a6c245d69d5e64836af83da7"
+    },
+    {
+      "key": "Khối (a) — Công thức chốt N cho E4 (ghi trước mọi lượt của E2; không chặn việc soạn tài liệu)",
+      "sha256": "9a3d427e7a5c70066987872b9d33b0cebde5872a11e9ba7205fb6c530d7f6de1"
+    },
+    {
+      "key": "Khối (b) — Thứ tự ưu tiên khi thiếu credit",
+      "sha256": "ab69a254f4ce0704f79b7583c37ec21f51d96b86973b1c998512de3e022f8dbf"
+    },
+    {
+      "key": "Khối (c) — Lịch cloud/local",
+      "sha256": "15c6092f90321e63d475f05e985d2994b1fd0c2085f1d12307fdea5c39c06fed"
+    },
+    {
+      "key": "Đăng ký trước bước 2 của B-14: A/B `runtimes.claude-cli.stablePrefix` (ghi 4/11/2026, trước lượt đầu tiên)",
+      "sha256": "4314f00ad1599108b7010beab98152cb38e17f18a4fc60d9b666bab6afb480fb"
+    },
+    {
+      "key": "Sai lệch vòng 4 gói 10 — thẩm định thống kê D11 (ghi 4/11/2026)",
+      "sha256": "f1f68efb8154cd737689792c2d097117c9aa4f76f6a6caf6807e97560d72f46a"
+    },
+    {
+      "key": "Phân tích độ nhạy mô tả cho H6: bài có sàn null cao (`t2-orders`, `t4-perf`) — đặt trước dữ liệu E6 (ghi 4/11/2026)",
+      "sha256": "dc0f86a99d0d10aecf6e66d1106ab23786d6a5e431237ca90aa35ed874475b65"
+    },
+    {
+      "key": "Đăng ký trước V4-3f: đo không gọi LLM cho trục nghiệm thu (G) và trục song song (P) (ghi 4/11/2026, commit `f5a31dc` lúc 19:31, trước khi tính bất kỳ kết quả nào; giờ ghi sửa lại theo commit)",
+      "sha256": "c5244e1b75e08f871969906eaf193873f3cfce2df63549ea4a002ef154b5b885"
+    },
+    {
+      "key": "Phân tích E4, E5′, E6 và các quyết định lúc phân tích (ghi 12/11/2026, người điều phối được giám đốc giao quyền tự duyệt)",
+      "sha256": "eb1bb18a720822a87682ead860f8e005ab6ed69e4f34d17baa4023c1a2c71fa9"
+    },
+    {
+      "key": "Bản chốt E7 và E8 (ghi 5/11/2026, trước mọi lượt gọi LLM của E7 và E8)",
+      "sha256": "deea979746512272a05ffc4f1c63f2d83a2fb1b88179453276cda6f5fd2a944e"
+    },
+    {
+      "key": "Thẩm định bản chốt E7/E8 — sai lệch (nếu có) (ghi 13/11/2026, @methodologist, BRIEF-19 K3; chỉ ghi, không sửa bản chốt)",
+      "sha256": "368047645724b69de5b9a583ea2079cdefc08248d4d40b8adc31cca63eb835e1"
+    },
+    {
+      "key": "Sai lệch thực thi E7/E8 trước lượt gọi đầu tiên của mẫu (ghi 13/11/2026, người điều phối)",
+      "sha256": "536ccc674b5965d939c7d50d6e0feda3ad8681f22ffa114074a25848d0841410"
+    },
+    {
+      "key": "Sai lệch thực thi E7: chạm trần lượt và lỗi xác thực bị ghi sai loại (ghi 13/11/2026, người điều phối)",
+      "sha256": "f47649ed845c9baaf7a33962fce5c35298fb48f4ffec1890cb1a20e724919589"
+    },
+    {
+      "key": "Sai lệch phân tích bước 2 của B-14: gom các lần chạy lại cùng khóa (ghi 13/11/2026, người điều phối)",
+      "sha256": "cfca831f32f875cdf12f9b120bb8c44331a28c6e6cfc276c8eb7d3860e399b4b"
+    },
+    {
+      "key": "Đăng ký trước trục 2 (quản trị): đo bộ kiểm lệnh không gọi LLM (ghi 13/11/2026, @methodologist, BRIEF-19 K1b; trước khi tính bất kỳ số nào; giờ chính thức là giờ của commit chứa mục này)",
+      "sha256": "83aabbc1854ccdb9c4198c4f721c16cd17938ac949c8a36a05a19d70e139fc9e"
+    },
+    {
+      "key": "(a) Tỉ lệ chặn nhầm trên lệnh thật agent đã chạy",
+      "sha256": "a1c309721e711c3af245ad14511c10925ec6c80c9863bd4f4073b00bdb727337"
+    },
+    {
+      "key": "(b) Tỉ lệ chặn đúng trên bộ lệnh tấn công do bên ngoài viết",
+      "sha256": "2e1f3d17dd4e3fb599f9a72085d258b9d17ac454167640b667a3116c6e8af7ed"
+    },
+    {
+      "key": "Đe dọa tính hợp lệ (khai trước)",
+      "sha256": "1a6a92de7cf37ed281f42f05be52e0e0d7f278de6079810676c24ce749914045"
+    },
+    {
+      "key": "Đánh giá bảo vệ dữ liệu ngắn (cho tập lệnh thật; theo AGENTS.md; `docs/data-protection-assessment.md` nằm ngoài phạm vi sửa nên ghi tại đây)",
+      "sha256": "04f164c3b83be5237efff59d5ac36ab633f911a7641b115f476d04a97f0b7701"
+    },
+    {
+      "key": "9.x Đăng ký trước E9",
+      "sha256": "0fc6a8244b18d7a6b02a0b4786f3d438ffab8a950aa9daeee134d13dbb213c54"
+    },
+    {
+      "key": "Đo lại trục 2 (b) sau vá — 14/11/2026 (@methodologist, BRIEF-23)",
+      "sha256": "db10c76d1c992d69b447624602f63c970d205e911dbe063e52528983b6ffcf1e"
+    },
+    {
+      "key": "10. Đạo đức & dữ liệu",
+      "sha256": "9ee625f198653fdcf609e5db0c44b454ed76103dfca6746391cb487acc5dc960"
+    },
+    {
+      "key": "Lệnh kiểm chứng cần chạy (tôi không có quyền chạy lệnh)",
+      "sha256": "8d87ed5ffa8959ecfadac1d7f617a7198a4666d2f2d80cbab3d6cecf5b5d2cfe"
+    }
+  ],
+  "history": [
+    "21a28be9c519306e0b075a74ab74832f65340ebca89bd650c0efd87210b0333d",
+    "06732565b66aa5617ef395e8ada8629c69d36ab2694cf90d4a1917fec3f83952",
+    "214d3c0d80b61fbf316a114f681a01c396b9b35006f1c69ff643c6756518e40d",
+    "8663a37fe82b48f6c2074bcd50038021efccadb8d922ea5fdb60bbca4b249f8f",
+    "d25b0f87600cc8f53f57e349c6ed70fc8fe91266ae18371418d5f6f68d4dacaf",
+    "22fe269ef2badb05012673305b940daa585729b87931959ec60f7b95ed23bfec",
+    "8f9b8f71cc9916a7fe8a12bdc67baaafd1641fe894564272cd2cc7da67c4c7b0",
+    "9bd21c455ea427d7c8abe7cc54f5107fbf9fb31c7c4a1bd76ab445044410c89c",
+    "9c41fe3053f4557608ac4f8c81509058f465f06181bafed6a897912ec15d2108"
+  ]
+}

@@ -126,7 +126,7 @@ export function planTargets(brief: string, planSummary: string, repoFiles: strin
 }
 
 /** Hạng mục đòi chạy lệnh thật (test/build/typecheck/migration/script/đo): cần agent có run_command. */
-const NEEDS_CMD_RE = /(?<![\p{L}])chạy\s+(?:lại\s+)?(?:các\s+)?(?:lệnh|test|build|typecheck|lint|migration|script|benchmark|đo|\x60)/iu;
+export const NEEDS_CMD_RE = /(?<![\p{L}])chạy\s+(?:lại\s+)?(?:các\s+)?(?:lệnh|test|build|typecheck|lint|migration|script|benchmark|đo|\x60)/iu;
 
 const subtaskText = (s: GateSubtask): string => norm(`${s.title}\n${s.description}\n${s.deliverable ?? ''}`);
 
