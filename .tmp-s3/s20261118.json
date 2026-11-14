@@ -1,0 +1,285 @@
+{
+  "base": "ccc76cc0840110debab2a0e69f64b10bee965533",
+  "strict": true,
+  "total": 445,
+  "withSymbol": 445,
+  "mismatched": 0,
+  "noSymbol": 0,
+  "weakSymbol": 0,
+  "bad": [],
+  "noSymbolRefs": [],
+  "weakSymbolRefs": [],
+  "seed": 20261118,
+  "sample": [
+    {
+      "where": "docs/research/analysis/decisions/logic-map.md:64",
+      "ref": "orch:2906–2910",
+      "symbol": "parallelWorktrees",
+      "ctx": "- **Điều kiện tách worktree con** — `parallelWorktrees` (`orch:2906-2910` (`parallelWorktrees`)): `exclusiveWrites` đúng, cấu hình khôn",
+      "real": "private parallelWorktrees(task: Task, project?: ProjectDef): boolean {",
+      "status": "ok",
+      "matchedLine": 2906
+    },
+    {
+      "where": "docs/research/analysis/decisions/logic-map.md:100",
+      "ref": "lane.ts:131",
+      "symbol": "s.forced",
+      "ctx": "n hiệu `lane.ts:100-107` (`isSequential`); ngưỡng mặc định `lane.ts:131` (`s.forced`) |",
+      "real": "if (s.forced) return { lane: s.forced, rule: 1, why: 'theo yêu cầu' };",
+      "status": "ok",
+      "matchedLine": 131
+    },
+    {
+      "where": "docs/research/analysis/decisions/logic-map.md:103",
+      "ref": "quality-gate.ts:67",
+      "symbol": "templateGate",
+      "ctx": "u đề của \"Mẫu đầu ra\" phải có nội dung + có `## Tóm tắt` | `quality-gate.ts:67` (`templateGate`) |",
+      "real": "export function templateGate(text: string, agentBody: string): TemplateGateResult {",
+      "status": "ok",
+      "matchedLine": 67
+    },
+    {
+      "where": "docs/research/analysis/decisions/logic-map.md:116",
+      "ref": "claude-cli.ts:271–272",
+      "symbol": "phases.toolTurns",
+      "ctx": "*: `claude-cli` đặt `--max-turns` theo `phases.toolTurns` (`claude-cli.ts:271-272` (`phases.toolTurns`)) và trả `capped: 'turns'` **không kèm `",
+      "real": "// B-07: trần lượt mô hình như vòng công cụ của runtime API (phases.toolTurns); tắt bằng runtimes.claude-cli.maxTurns=false",
+      "status": "ok",
+      "matchedLine": 271
+    },
+    {
+      "where": "docs/research/analysis/decisions/logic-map.md:116",
+      "ref": "claude-cli.ts:238",
+      "symbol": "error_max_turns",
+      "ctx": "olTurns`)) và trả `capped: 'turns'` **không kèm `error`** (`claude-cli.ts:238` (`error_max_turns`), `:389`). Chỉ `runSubtask` xử lý `cappe",
+      "real": "if (ev.subtype === 'error_max_turns') break; // chạm --max-turns: không phải lỗi — run() báo capped để CCoding chạy tiếp (B-07)",
+      "status": "ok",
+      "matchedLine": 238
+    },
+    {
+      "where": "docs/research/analysis/decisions/logic-map.md:120",
+      "ref": "orch:3542",
+      "symbol": "gate.decision",
+      "ctx": "ecision`) CTO, `orch:2625` (`gate.decision`) phủ kế hoạch, `orch:3542` (`gate.decision`) chất lượng B-02). Chuỗi băm phát hiện s",
+      "real": "logs.write({ level: initialRed ? 'warn' : 'info', kind: 'gate.decision', msg: `${task.id}: cổng B-02 ${initialRed ? 'chặn' : 'đạt'} (${fixRounds} vòng sửa)`, taskId: task.id, department: deptId, data: { gate: 'b02', verdict: initialRed ? 'block' : 'pass', rounds: fixRounds, checks: { red: classes.filter(isRed).length, total: classes.length } } });",
+      "status": "ok",
+      "matchedLine": 3542
+    },
+    {
+      "where": "docs/research/analysis/decisions/logic-map.md:137",
+      "ref": "planner.ts:239",
+      "symbol": "followUps",
+      "ctx": "tance`)); không đọc được → `accepted=false, parsed=false` (`planner.ts:239` (`followUps`)); chế độ `skip/brief/full` do `acceptMo",
+      "real": "if (!raw) return { accepted: false, parsed: false, summary: '', criteria: [], risks: [], followUps: [], body };",
+      "status": "ok",
+      "matchedLine": 239
+    },
+    {
+      "where": "docs/research/analysis/decisions/logic-map.md:138",
+      "ref": "orch:1951",
+      "symbol": "planGate",
+      "ctx": "ite` | `parsePlan` + `planGate` (A/B) + một lượt `replan` (`orch:1951` (`planGate`), `2403`); báo cáo tổng hợp không qua `t",
+      "real": "if (!solo && !reached(run, 'executed') && !run.planReview?.approvedAt && (!run.planGate || run.planGate.rules.length)) await this.gatePlan(task, run, dept, roster, lead, reviewer, pctx, base, plan);",
+      "status": "ok",
+      "matchedLine": 1951
+    },
+    {
+      "where": "docs/research/analysis/decisions/logic-map.md:141",
+      "ref": "orch:1566",
+      "symbol": "skillScore",
+      "ctx": "Sửa lỗi gốc, rà mã; được chọn ở làn đơn qua `skillScore` (`orch:1566` (`skillScore`), `planner.ts:27` (`skillScore`)) | mã +",
+      "real": "const pick = pool.map((a) => ({ a, s: skillScore(task.brief, a) })).sort((x, y) => y.s - x.s)[0].a;",
+      "status": "ok",
+      "matchedLine": 1566
+    },
+    {
+      "where": "docs/research/analysis/decisions/logic-map.md:175",
+      "ref": "orch:3687",
+      "symbol": "phaseModels",
+      "ctx": "ls` → `config.phases.models` → hồ sơ agent | Mã/cấu hình | `orch:3687` (`phaseModels`) |",
+      "real": "const want = task.options.phaseModels?.[phase] ?? ctx.project?.models?.[agent.id] ?? config.phases?.models?.[phase] ?? agent.model;",
+      "status": "ok",
+      "matchedLine": 3687
+    },
+    {
+      "where": "docs/research/analysis/decisions/logic-map.md:185",
+      "ref": "plan-gate.ts:130",
+      "symbol": "checkPlanCoverage",
+      "ctx": "ổng cho phép (xem L2). | `plan-gate.ts:46` (`SOURCE_EXT`), `plan-gate.ts:130` (`checkPlanCoverage`), `plan-gate.ts:143-152` (`checkPlanRead",
+      "real": "export function checkPlanCoverage(input: Pick<PlanGateInput, 'brief' | 'planSummary' | 'subtasks' | 'outOfScope' | 'repoFiles'>): { targets: string[]; uncovered: string[] } {",
+      "status": "ok",
+      "matchedLine": 130
+    },
+    {
+      "where": "docs/research/analysis/decisions/logic-map.md:186",
+      "ref": "quality-gate.ts:124",
+      "symbol": "!n.hasCheckCommands",
+      "ctx": "4-2050` (`gate.needReviewer`), `orch:2175` (`run.review`); `quality-gate.ts:124` (`!n.hasCheckCommands` → cần reviewer) | Cao | Mã (Dev): ghi `run.review` \"khô",
+      "real": "if (!n.hasCheckCommands) r.push('dự án không có checkCommands');",
+      "status": "ok",
+      "matchedLine": 124
+    },
+    {
+      "where": "docs/research/analysis/decisions/logic-map.md:192",
+      "ref": "dev-lead.md:61",
+      "symbol": "Hạng mục chạy lệnh",
+      "ctx": "nhau.** `planPrompt` bảo \"tối đa hóa phần chạy song song\"; `dev-lead.md:61` (`Hạng mục chạy lệnh`) bảo \"ưu tiên ít hạng mục code lớn có ph",
+      "real": "7. Hạng mục chạy lệnh trong repo dự án được làm lần lượt (dùng chung worktree) → ưu tiên ít hạng mục code lớn có phụ thuộc rõ thay vì nhiều hạng mục code song song.",
+      "status": "ok",
+      "matchedLine": 61
+    },
+    {
+      "where": "docs/research/analysis/decisions/logic-map.md:205",
+      "ref": "orch:1113",
+      "symbol": "task.status",
+      "ctx": "ter` chờ khi nhiệm vụ trước chưa nghiệm thu | `8989e920` | `orch:1113` (`task.status`); `orch:897-903` (`unaccepted`) |",
+      "real": "task.status = 'done';",
+      "status": "ok",
+      "matchedLine": 1113
+    },
+    {
+      "where": "docs/research/analysis/decisions/report.md:41",
+      "ref": "orch:1120–1147",
+      "symbol": "scheduleResume",
+      "ctx": "uleResume` | không | `orch:3911-3915` (`attempts.length`), `orch:1120-1147` (`scheduleResume`) |",
+      "real": "if (task.pause.resumeAt) this.scheduleResume(task);",
+      "status": "ok",
+      "matchedLine": 1147
+    },
+    {
+      "where": "docs/research/analysis/decisions/report.md:65",
+      "ref": "orch:2254",
+      "symbol": "executeAll",
+      "ctx": "| \"CTO cho chạy song song\" | engine (`executeAll`) | `orch:2254` (`executeAll`) |",
+      "real": "private async executeAll(task: Task, run: DeptRun, pctx: P.Ctx, base: CallCtx, prior?: string): Promise<void> {",
+      "status": "ok",
+      "matchedLine": 2254
+    },
+    {
+      "where": "docs/research/analysis/decisions/report.md:198",
+      "ref": "orch:125",
+      "symbol": "CONTINUE_PHASES",
+      "ctx": "pe`), `:389`, `orch:1915` (`this.call`), `CONTINUE_PHASES` `orch:125` (`CONTINUE_PHASES`); BRIEF-D16; KPI `peer-reviewer` bị cắt",
+      "real": "const CONTINUE_PHASES = new Set<Phase>(['execute', 'revise', 'synthesize']);",
+      "status": "ok",
+      "matchedLine": 125
+    },
+    {
+      "where": "docs/research/analysis/decisions/report.md:206",
+      "ref": "dev-lead.md:61",
+      "symbol": "Hạng mục chạy lệnh",
+      "ctx": "14` (`MAX_SUBTASKS`), `prompts.ts:444` (`FAST_LANE_PLAN`); `dev-lead.md:61` (`Hạng mục chạy lệnh`); `planner.ts:25` (`MAX_SUBTASKS`) | `sr",
+      "real": "7. Hạng mục chạy lệnh trong repo dự án được làm lần lượt (dùng chung worktree) → ưu tiên ít hạng mục code lớn có phụ thuộc rõ thay vì nhiều hạng mục code song song.",
+      "status": "ok",
+      "matchedLine": 61
+    },
+    {
+      "where": "docs/research/improvement-backlog.md:224",
+      "ref": "orchestrator.ts:1138–1159",
+      "symbol": "this.message",
+      "ctx": "5` (`fastLane`): `maxBriefChars` 4000, `maxRepoFiles` 300; `orchestrator.ts:1138-1159` (`this.message`)) chọn làn nhanh cho **cả 5 bài**, trong",
+      "real": "this.message(task, 'office', 'system', 'system', `⏸ Tạm dừng: ${e.message}${task.pause.resumeAt ? `\\nSẽ tự tiếp tục lúc ${new Date(task.pause.resumeAt).toLocaleString('vi-VN')}.` : ''}`);",
+      "status": "ok",
+      "matchedLine": 1138
+    },
+    {
+      "where": "docs/research/improvement-backlog.md:305",
+      "ref": "orchestrator.ts:2052",
+      "symbol": "this.setPhase",
+      "ctx": "wer đã chạy** (một lượt LLM đắt): reviewer được gọi trước (`orchestrator.ts:2052` (`this.setPhase`)), rồi mới ghi đè bằng `checkRegressions",
+      "real": "this.setPhase(task, run, 'review');",
+      "status": "ok",
+      "matchedLine": 2052
+    },
+    {
+      "where": "docs/research/improvement-backlog.md:327",
+      "ref": "bench/vs-claude/results/C9/t5-logq.ccoding-fastlane.2/ccoding-task.json:199–200",
+      "symbol": "Lệnh kiểm tra còn lỗi: npm test",
+      "ctx": "ion.reason = \"checks\"`, \"Lệnh kiểm tra còn lỗi: npm test\" (`bench/vs-claude/results/C9/t5-logq.ccoding-fastlane.2/ccoding-task.json:199-200` (“Lệnh kiểm tra còn lỗi: npm test”)) — nhưng chỉ là cảnh báo.",
+      "real": "\"detail\": \"Lệnh kiểm tra còn lỗi: npm test\",",
+      "status": "ok",
+      "matchedLine": 200
+    },
+    {
+      "where": "docs/research/improvement-backlog.md:483",
+      "ref": "bench/vs-claude/results/C9/t5-logq.ccoding-fastlane.2/ccoding-task.json:203",
+      "symbol": "\"changes\": \"src/parse.js",
+      "ctx": ".ccoding-fastlane.2/result.json:104-109` (`\"changed\": [`); `bench/vs-claude/results/C9/t5-logq.ccoding-fastlane.2/ccoding-task.json:203` (`\"changes\": \"src/parse.js`)). (f) 51 test ẩn hỏng (`bench/vs-claude",
+      "real": "\"changes\": \"src/parse.js       | 118 ++++++++++++++++++++++++++++-\\n src/query.js       | 212 ++++++++++++++++++++++++++++++++++++++++++++++++++++-\\n test/parse.test.js |  93 +++++++++++++++++++++++\\n test/query.test.js | 100 +++++++++++++++++++++++++\\n 4 files changed, 519 insertions(+), 4 deletions(-)\",",
+      "status": "ok",
+      "matchedLine": 203
+    },
+    {
+      "where": "docs/research/improvement-backlog.md:499",
+      "ref": "bench/vs-claude/analyze.mjs:272",
+      "symbol": "Coordination failures",
+      "ctx": "quyết H8 không \"SUPPORTED\" theo chiều CCoding tệ hơn | H8, `bench/vs-claude/analyze.mjs:272` (“Coordination failures”) (sau khi bổ sung chỉ số); trước đó đọc",
+      "real": "H.push(['H8', 'Coordination failures: untouched-file test failures and check-still-red-at-end, paired by task', `${txt}chỉ số phụ formatMiss ${BASE} ${pp(fm(BASE))} vs ${TREAT} ${pp(fm(TREAT))}`, verdict(dR > 0 && dU >= 0, pairs.length < MIN_TASKS) + ' (confirm with transcript review)']);",
+      "status": "ok",
+      "matchedLine": 272
+    },
+    {
+      "where": "docs/research/improvement-backlog.md:527",
+      "ref": "src/orchestrator.ts:1354–1355",
+      "symbol": "router",
+      "ctx": "- `src/orchestrator.ts:1354-1355` (`router`): `// B-01: ép làn đơn → định tuyến bằng",
+      "real": "const router = forcedLane(task.options.lane, project?.lane) === 'single' ? undefined : registry.router();",
+      "status": "ok",
+      "matchedLine": 1355
+    },
+    {
+      "where": "docs/research/improvement-backlog.md:818",
+      "ref": "agents/research/research-lead.md:58",
+      "symbol": "@peer-reviewer",
+      "ctx": "| **Bằng chứng** | `agents/research/research-lead.md:58` (`@peer-reviewer`) dặn không tạo hạng mục review cho `@pee",
+      "real": "6. Không tạo hạng mục \"review\" chung cho `@peer-reviewer` — pha review có sẵn sau thực thi. **Ngoại lệ:** nếu đề bài giao hạng mục có mã riêng cho vai reviewer (vd. K5 cho `@peer-reviewer`/`@qa-tester`) thì PHẢI tạo hạng mục cho vai đó. Ngoài ra chỉ tạo cổng phản biện giữa chừng khi bắt buộc (vd. trước khi đóng băng giao thức), tiêu chí xong là danh sách phát hiện + quyết định.",
+      "status": "ok",
+      "matchedLine": 58
+    },
+    {
+      "where": "docs/research/improvement-backlog.md:868",
+      "ref": "workspace.ts:604–612",
+      "symbol": "run_command",
+      "ctx": "`claude-guard.ts:110` (`outsideWriteDecision`). Chưa áp ở `workspace.ts:604-612` (`run_command`), `workspace.ts:696` (`runCheckCommand`)",
+      "real": "case 'run_command': {",
+      "status": "ok",
+      "matchedLine": 604
+    },
+    {
+      "where": "docs/research/improvement-backlog.md:928",
+      "ref": "src/estimate.ts:14–42",
+      "symbol": "subtaskHistory",
+      "ctx": "tePlan` chỉ cộng token (`orch:2537-2595` (`estimatePlan`), `src/estimate.ts:14-42` (`subtaskHistory`)) |",
+      "real": "export function subtaskHistory(",
+      "status": "ok",
+      "matchedLine": 14
+    },
+    {
+      "where": "docs/research/improvement-backlog.md:938",
+      "ref": "planner.ts:25",
+      "symbol": "MAX_SUBTASKS",
+      "ctx": "2–4; lời nhắc ghi cứng \"1–7\" trong khi `MAX_SUBTASKS = 8` (`planner.ts:25` (`MAX_SUBTASKS`)) tại `b146b87c`; ở mốc `ccc76cc0` lời n",
+      "real": "export const MAX_SUBTASKS = 8;",
+      "status": "ok",
+      "matchedLine": 25
+    },
+    {
+      "where": "docs/research/improvement-backlog.md:948",
+      "ref": "planner.ts:114",
+      "symbol": "used.has",
+      "ctx": "| **Bằng chứng** | L9: `matchAssignee(...) ?? lead` (`planner.ts:114` (`used.has`)); trưởng phòng không có `Bash` |",
+      "real": "while (used.has(id)) id = `${id}b`;",
+      "status": "ok",
+      "matchedLine": 114
+    },
+    {
+      "where": "docs/research/analysis/decisions/scorecard.md:142",
+      "ref": "src/orchestrator.ts:1114",
+      "symbol": "logs.write",
+      "ctx": "đóng \"hoàn thành, cần xem\" (BRIEF-20) | Ca 14/11 [Mô tả]; `src/orchestrator.ts:1114` (`logs.write`) ghi `task.done` kèm `task.attention` th",
+      "real": "logs.write({ level: 'info', kind: 'task.done', msg: `Hoàn thành ${task.id} — ${fmtNum(totalTokens(task.usage))} token${task.attention ? ` · cần xem: ${task.attention.detail}` : ''}`, taskId: task.id, projectId: task.projectId, data: { usage: task.usage } });",
+      "status": "ok",
+      "matchedLine": 1114
+    }
+  ]
+}
