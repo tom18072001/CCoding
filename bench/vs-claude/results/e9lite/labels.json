@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "rule": "chia_duoc ⇔ số module khác nhau của files[] ≥ 2 (tệp ở gốc = module \".\")",
+  "goldSha256": "a33c08865a433ac2d2b53e0a7eb2001556ae0a782bcb0eedfa666ca6a6c3251d",
+  "taskCount": 13,
+  "counts": {
+    "chia_duoc": 13,
+    "khong_chia_duoc": 0
+  },
+  "degenerate": true,
+  "labels": {
+    "g1-slug-dedupe": {
+      "label": "chia_duoc",
+      "moduleCount": 3,
+      "fileCount": 4,
+      "modules": [
+        ".",
+        "src",
+        "test"
+      ]
+    },
+    "g2-cart-coupon": {
+      "label": "chia_duoc",
+      "moduleCount": 3,
+      "fileCount": 5,
+      "modules": [
+        ".",
+        "src",
+        "test"
+      ]
+    },
+    "g3-qty-rename": {
+      "label": "chia_duoc",
+      "moduleCount": 3,
+      "fileCount": 6,
+      "modules": [
+        ".",
+        "src",
+        "test"
+      ]
+    },
+    "g4-gb-unit": {
+      "label": "chia_duoc",
+      "moduleCount": 3,
+      "fileCount": 6,
+      "modules": [
+        ".",
+        "src",
+        "test"
+      ]
+    },
+    "g5-median-stats": {
+      "label": "chia_duoc",
+      "moduleCount": 3,
+      "fileCount": 4,
+      "modules": [
+        ".",
+        "src",
+        "test"
+      ]
+    },
+    "g6-range-merge": {
+      "label": "chia_duoc",
+      "moduleCount": 3,
+      "fileCount": 4,
+      "modules": [
+        ".",
+        "src",
+        "test"
+      ]
+    },
+    "l1-modules": {
+      "label": "chia_duoc",
+      "moduleCount": 3,
+      "fileCount": 12,
+      "modules": [
+        ".",
+        "src",
+        "test"
+      ]
+    },
+    "l2-chain": {
+      "label": "chia_duoc",
+      "moduleCount": 3,
+      "fileCount": 10,
+      "modules": [
+        ".",
+        "src",
+        "test"
+      ]
+    },
+    "t1-duration": {
+      "label": "chia_duoc",
+      "moduleCount": 3,
+      "fileCount": 4,
+      "modules": [
+        ".",
+        "src",
+        "test"
+      ]
+    },
+    "t2-orders": {
+      "label": "chia_duoc",
+      "moduleCount": 3,
+      "fileCount": 12,
+      "modules": [
+        ".",
+        "src",
+        "test"
+      ]
+    },
+    "t3-api": {
+      "label": "chia_duoc",
+      "moduleCount": 4,
+      "fileCount": 15,
+      "modules": [
+        ".",
+        "data",
+        "src",
+        "test"
+      ]
+    },
+    "t4-perf": {
+      "label": "chia_duoc",
+      "moduleCount": 4,
+      "fileCount": 6,
+      "modules": [
+        ".",
+        "bench",
+        "src",
+        "test"
+      ]
+    },
+    "t5-logq": {
+      "label": "chia_duoc",
+      "moduleCount": 4,
+      "fileCount": 7,
+      "modules": [
+        ".",
+        "bin",
+        "src",
+        "test"
+      ]
+    }
+  }
+}
