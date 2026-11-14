@@ -281,6 +281,16 @@ export interface ReviewCheck { command: string; exitCode?: number; ok?: boolean;
 /** Mốc đã hoàn thành của một phòng — dùng để tiếp tục từ checkpoint. */
 export type RunStage = 'planned' | 'finalized' | 'executed' | 'reviewed' | 'done';
 
+/** Bản chụp một hạng mục kế hoạch (planOnly): chỉ các trường mô tả kế hoạch, không có trạng thái chạy. */
+export interface PlanItemSnapshot {
+  id: string;
+  title: string;
+  assignee: string;
+  description: string;
+  dependsOn: string[];
+  deliverable: string;
+}
+
 export interface DeptRun {
   department: string;
   status: 'pending' | 'running' | 'paused' | 'done' | 'failed' | 'cancelled';
@@ -318,6 +328,16 @@ export interface DeptRun {
   escalatedFrom?: 'single';
   /** B-10: kết quả cổng phủ kế hoạch (sau parsePlan, trước execute). */
   planGate?: { uncovered: string[]; reasons: string[]; rules: ('A' | 'B' | 'brief-item')[]; replanned?: boolean };
+  /** Nhiệm vụ `planOnly`: run đã dừng sau cổng kế hoạch (không thực thi). */
+  planOnly?: boolean;
+  /** planOnly: model thật của lượt plan đầu tiên và nguồn chọn model. */
+  planModel?: string;
+  planModelSource?: 'task' | 'phaseModels' | 'fastLane' | 'difficulty' | 'phases' | 'agent';
+  /** planOnly: kế hoạch đúng như planner trả (trước sắp lại làn nhanh, trước cổng) / sau sắp lại và sau cổng. */
+  planRaw?: PlanItemSnapshot[];
+  planFinal?: PlanItemSnapshot[];
+  /** planOnly: số lần sửa kế hoạch do cổng yêu cầu. */
+  planReplans?: number;
   /** Hạng mục còn phải sửa trong vòng hiện tại — tiếp tục sau tạm dừng thì sửa tiếp theo review đã có, không review lại. */
   revising?: string[];
   /** Ước lượng token của kế hoạch (sau khi lập/chốt) để cảnh báo nhiệm vụ quá lớn. */
@@ -368,6 +388,13 @@ export interface TaskOptions {
   variant?: string;
   /** Dừng sau khi chốt kế hoạch, chờ giám đốc duyệt (sửa người làm/phụ thuộc/bỏ hạng mục) rồi mới thực thi. */
   planApproval?: boolean;
+  /**
+   * Chỉ lập kế hoạch (E9-lite): định tuyến → chọn làn → lập kế hoạch → cổng kế hoạch (kể cả sửa) rồi DỪNG, trạng thái `done`.
+   * Không thực thi/review/nghiệm thu/tổng hợp, không FINAL.md. Kế hoạch lưu ở `run.planRaw`/`run.planFinal`.
+   */
+  planOnly?: boolean;
+  /** Ghi đè model của pha `plan` (mọi làn, kể cả lượt sửa kế hoạch) cho riêng nhiệm vụ; ưu tiên hơn `phaseModels.plan`. */
+  planModel?: 'haiku' | 'sonnet' | 'opus';
   /**
    * Làn xử lý: 'fast' — việc nhỏ: điều phối lập kế hoạch nhanh (Sonnet), chia 2–4 phần độc lập chạy SONG SONG, không họp, báo cáo theo
    * mẫu (không gọi model); 'full' — quy trình đầy đủ; 'auto' (mặc định) — tự chọn theo cỡ đề bài và repo (cấu hình `fastLane`).
