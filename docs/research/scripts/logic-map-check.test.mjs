@@ -175,6 +175,61 @@ for (const c of C2R) {
 }
 test('C2-r: đủ 14 ca', () => assert.equal(C2R.length, 14));
 
+// ---- BRIEF-22d K1: đối chiếu với bảng gốc (context/brief22b-k4-c2r-2026-11-14.md). Các ca bảng gốc mà 14 ca trên chưa dựng lại. ----
+// O-11/12: quality-gate.ts:85 (`files.map`) cho ý "không có checkCommands" → đúng :124 (`hasCheckCommands`).
+// O-13: quality-gate.ts:88 (`ReviewerNeed`) cho danh sách đường dẫn nhạy cảm → đúng :82 (`SENSITIVE`).
+// O-14: orch:1649 (`this.save`) cho ý "làn nhanh ghi đè model plan" → đúng :1798 (`fastLane.planModel`).
+// O-15 (hàng 6 của bảng gốc): orch:1860-1899 (`this.setPhase`) → dải đúng 2008-2050 (`canReview`).
+const C2R_ORIG = [
+  // literal = dạng sai nguyên văn của bảng gốc; bad = cùng dòng sai nhưng kèm ký hiệu của ý định (kiểm được).
+  { id: 'O-11', literal: 'src/quality-gate.ts:85 (`files.map`)', bad: 'src/quality-gate.ts:85 (`hasCheckCommands`)', good: 'src/quality-gate.ts:124 (`hasCheckCommands`)' },
+  { id: 'O-13', literal: 'src/quality-gate.ts:88 (`ReviewerNeed`) danh sách nhạy cảm', bad: 'src/quality-gate.ts:88 (`SENSITIVE`) danh sách nhạy cảm', good: 'src/quality-gate.ts:82 (`SENSITIVE`) danh sách nhạy cảm' },
+  { id: 'O-14', literal: 'src/orchestrator.ts:1649 (`this.save`) làn nhanh ghi đè model plan', bad: 'src/orchestrator.ts:1649 (`fastLane.planModel`) làn nhanh ghi đè model plan', good: 'src/orchestrator.ts:1798 (`fastLane.planModel`) làn nhanh ghi đè model plan' },
+  { id: 'O-15', bad: 'src/orchestrator.ts:1860-1899 (`this.setPhase`) + src/quality-gate.ts:84 (`canReview`)', good: 'src/orchestrator.ts:2008-2050 (`canReview`) + src/quality-gate.ts:84 (`sensitivePaths`)' },
+];
+for (const c of C2R_ORIG) {
+  test(`C2-r bảng gốc ${c.id}: tham chiếu sai phải đỏ, dạng đúng phải xanh`, () => {
+    const fb = join(dir, `c2ro-${c.id}-bad.md`); const fg = join(dir, `c2ro-${c.id}-good.md`);
+    writeFileSync(fb, `${c.bad}\n`); writeFileSync(fg, `${c.good}\n`);
+    const rb = run([fb]); const rg = run([fg]);
+    assert.equal(rb.status, 1, `ca sai ${c.id} không đỏ: ${rb.stdout}${rb.stderr}`);
+    assert.equal(rg.status, 0, `dạng đúng ${c.id} không xanh: ${rg.stdout}${rg.stderr}`);
+  });
+}
+
+// Giới hạn đã biết của FX19 (kiểm ký hiệu có trên đúng dòng, không kiểm ý): dạng sai nguyên văn của bảng gốc có ký hiệu nằm đúng
+// trên dòng được dẫn nên phép kiểm xanh. Lỗi loại này chỉ bắt được bằng kiểm ý (BRIEF-22d K3). Test ghi lại giới hạn, không che nó.
+test('C2-r bảng gốc: dạng sai nguyên văn (ký hiệu có trên dòng) ngoài tầm FX19 — ghi nhận giới hạn kiểm ý', () => {
+  for (const c of C2R_ORIG.filter((x) => x.literal)) {
+    const f = join(dir, `c2ro-${c.id}-literal.md`);
+    writeFileSync(f, `${c.literal}\n`);
+    assert.equal(run([f]).status, 0, `${c.id}: FX19 nay bắt được dạng nguyên văn; cập nhật bảng đối chiếu`);
+  }
+});
+
+// ---- BRIEF-22d K1 (m3): --sample in dòng thật mà phép kiểm đã khớp, không in dòng đầu dải ----
+test('--sample: tham chiếu dải in dòng khớp (dòng cuối M), không in dòng đầu N', () => {
+  const f = join(dir, 'range-last.md');
+  writeFileSync(f, 'src/orchestrator.ts:1865-1867 (`parsePlan`)\n');
+  const r = run(['--sample', '1', '--seed', '1', f]);
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /orchestrator\.ts:1865–1867/);
+  assert.match(r.stdout, /dòng thật ở mốc \(dòng 1867\): .*parsePlan\(planRes\.text/);
+  assert.doesNotMatch(r.stdout, /dòng thật ở mốc[^\n]*lượt gọi lỗi/);
+  const j = JSON.parse(run(['--json', '--sample', '1', '--seed', '1', f]).stdout);
+  assert.equal(j.sample[0].matchedLine, 1867);
+  assert.match(j.sample[0].real, /parsePlan\(planRes\.text/);
+  assert.equal(j.sample[0].ref, 'src/orchestrator.ts:1865–1867');
+});
+
+test('--sample: tham chiếu dải có ký hiệu ở dòng đầu N thì in N', () => {
+  const f = join(dir, 'range-first.md');
+  writeFileSync(f, 'src/orchestrator.ts:1867-1869 (`parsePlan`)\n');
+  const j = JSON.parse(run(['--json', '--sample', '1', '--seed', '1', f]).stdout);
+  assert.equal(j.sample[0].matchedLine, 1867);
+  assert.match(j.sample[0].real, /parsePlan\(planRes\.text/);
+});
+
 test('khớp đúng dòng: ký hiệu ở giữa dải không đủ; ở đầu hoặc cuối dải thì đạt', () => {
   const a = pick('src/lane.ts', 'chooseLane');
   const f = join(dir, 'mid.md');
@@ -246,7 +301,7 @@ test('--sample/--seed: cùng seed cho cùng mẫu; khác seed khác mẫu; in đ
   assert.equal((s1.stdout.match(/^- /gm) || []).length, 4);
   assert.match(s1.stdout, /ký hiệu: (chooseLane|runTask)/);
   assert.match(s1.stdout, /trong bài: …/);
-  assert.match(s1.stdout, /dòng thật ở mốc: /);
+  assert.match(s1.stdout, /dòng thật ở mốc \(dòng \d+\): /);
 });
 
 test('--sample không đổi mã thoát; tham số sai ⇒ exit 2', () => {
