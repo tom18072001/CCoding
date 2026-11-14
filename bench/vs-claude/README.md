@@ -206,3 +206,13 @@ Docs: [`harness/README.md`](harness/README.md); results: `results/C1` … `resul
 
 - `nearmiss` (tự kiểm bộ chấm, không gọi LLM, chi phí 0): chạy như `oracle` rồi đè `tasks/<id>/hidden/nearmiss/` lên workspace; mọi bài phải có thư mục này và phải chấm `0 < điểm < 1` (oracle = 1,00). Bài code: lời giải tham chiếu bị đột biến một chỗ; bài khác: đáp án/tham chiếu bỏ hoặc sai một mục. `hidden/nearmiss.note.txt` ghi chỗ đột biến. Kiểm: `node bench/vs-claude/run.mjs --arms oracle,null,nearmiss --repeats 1 --out <tmp>`.
 - Ba bài khám phá `a2-oncall-sms` (requirements), `re2-stream-synthesis` (research, rubric riêng ở `hidden/rubric.json`), `s2-support-review` (review, có decoy): `"set": "exploratory"`, `hypotheses: []`, không có `sizeLegacy`; `analyze.mjs` chỉ đưa vào bảng khám phá (D6).
+
+## E9-lite: chuẩn từ lời giải mẫu
+
+`e9/gold-from-solution.mjs` (công cụ; KHÔNG gán nhãn chia được hay không, KHÔNG chọn bài) liệt kê với mỗi bài có cả `repoDir` và `solutionDir` các tệp thêm/sửa/xóa giữa hai thư mục (đường dẫn tương đối dùng `/`), số dòng thêm/xóa (Myers, sau khi chuẩn hóa CRLF→LF; nhị phân hoặc quá lớn → `null` kèm `flag`), module (thư mục cấp một, tệp ở gốc là `.`), `size` và `sizeBasis` (thiếu → `null`). Tệp chỉ khác CRLF/LF bị bỏ. Bỏ qua `node_modules`, `.git`, `.venv`, `__pycache__`, `.ccoding`. Đầu ra JSON sắp ổn định, có trường `sha256` (băm phần còn lại).
+
+```bash
+node bench/vs-claude/e9/gold-from-solution.mjs [--tasks-dir bench/vs-claude/tasks] [--out gold.json]
+```
+
+Test: `bench/vs-claude/test/e9-gold.test.mjs`, fixture `bench/vs-claude/test/fixtures/e9-gold/`.
