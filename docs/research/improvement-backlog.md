@@ -35,7 +35,7 @@
 > | B-35 | đã có mã (`finalTemplateGate`) | `8989e920` |
 > | B-36 | đã có mã (KPI nhất quán, dòng điều phối viên) | `53fb9bd3` |
 > | B-37 | đã sửa hồ sơ (model theo làn) | `677fe521` |
-> | B-38 | **đã làm, rồi làm cứng ở BRIEF-22c**: bản đầu (`0d70aa06`, `cd25b769`) so chuỗi con trong dải dòng nên không bắt được 55/402 tham chiếu lệch; S1 `48a9cdce` làm cứng (ký hiệu đặc thù, khớp đúng dòng, `--strict` mặc định); S2 `2364a490` sửa tham chiếu, `--strict` 444/444 tại mốc | `0d70aa06`, `cd25b769`, `48a9cdce`, `2364a490` |
+> | B-38 | **đã làm, rồi làm cứng ở BRIEF-22c**: bản đầu (`0d70aa06`, `cd25b769`) so chuỗi con trong dải dòng nên không bắt được 55/402 tham chiếu lệch; S1 `48a9cdce` làm cứng (ký hiệu đặc thù, khớp đúng dòng, `--strict` mặc định); S2 `2364a490` sửa tham chiếu, `--strict` 445/445 ở lần kiểm cuối (mốc `ccc76cc0`); 444/444 ở lần kiểm của S2 BRIEF-22c (`2364a490`) | `0d70aa06`, `cd25b769`, `48a9cdce`, `2364a490` |
 > | B-39 | **đã làm** (mục đường dẫn máy trong `consistency-check.mjs`) | `0d70aa06` |
 > | B-40 | một phần: chữ ký HMAC; WORM còn là hạ tầng, cần giám đốc | `e2b72b23` |
 > | B-41…B-49 | không đổi (thí nghiệm/đo chưa chạy) | — |

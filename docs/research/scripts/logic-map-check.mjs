@@ -227,7 +227,9 @@ for (const [f, text] of texts) {
       const pool = specific.length ? specific : cls;
       // Đúng dòng: dòng đầu hoặc dòng cuối của dải (không khớp theo cả dải).
       const edge = [ls[from - 1], ls[to - 1]];
-      if (!pool.some((c) => edge.some((l) => matchOnLine(c.kind ? c : { ...c, kind: 'phrase' }, l)))) {
+      const hit = [from, to].find((n, i) => pool.some((c) => matchOnLine(c.kind ? c : { ...c, kind: 'phrase' }, edge[i])));
+      if (hit !== undefined) { rec.matchedLine = hit; rec.real = (ls[hit - 1] ?? '').trim(); } // m3: in đúng dòng đã khớp
+      else {
         const c0 = pool[0];
         const near = []; ls.forEach((l, i) => { if (matchOnLine(c0.kind ? c0 : { ...c0, kind: 'phrase' }, l)) near.push(i + 1); });
         fail(`dòng ${from}${to > from ? ` và ${to}` : ''} của ${path} không chứa "${c0.sym}"${near.length ? `; ký hiệu có ở dòng ${near.slice(0, 5).join(', ')}` : ''}`);
@@ -253,7 +255,7 @@ export function sampleIndices(n, k, sd) {
 const sample = sampleN === null ? null : sampleIndices(all.length, sampleN, seed).map((i) => all[i]);
 
 if (asJson) {
-  console.log(JSON.stringify({ base, strict, total, withSymbol, mismatched: bad.length, noSymbol: noSymbol.length, weakSymbol: weak.length, bad, noSymbolRefs: noSymbol, weakSymbolRefs: weak, ...(sample ? { seed, sample: sample.map(({ where, ref, symbol, ctx, real, status }) => ({ where, ref, symbol, ctx, real, status })) } : {}) }, null, 2));
+  console.log(JSON.stringify({ base, strict, total, withSymbol, mismatched: bad.length, noSymbol: noSymbol.length, weakSymbol: weak.length, bad, noSymbolRefs: noSymbol, weakSymbolRefs: weak, ...(sample ? { seed, sample: sample.map(({ where, ref, symbol, ctx, real, status, matchedLine }) => ({ where, ref, symbol, ctx, real, status, matchedLine: matchedLine ?? null })) } : {}) }, null, 2));
 } else {
   console.log(`Mốc: ${base}`);
   console.log(`Chế độ: ${strict ? 'strict (mặc định)' : 'no-strict (chẩn đoán)'}`);
@@ -272,7 +274,7 @@ if (asJson) {
   if (sample) {
     console.log(`\nMẫu ${sample.length}/${all.length} tham chiếu (seed ${seed}):`);
     for (const r of sample) {
-      console.log(`- ${r.ref} tại ${r.where} [${r.status}]\n    ký hiệu: ${r.symbol || '(không)'}\n    trong bài: …${r.ctx}…\n    dòng thật ở mốc: ${r.real || '(không đọc được)'}`);
+      console.log(`- ${r.ref} tại ${r.where} [${r.status}]\n    ký hiệu: ${r.symbol || '(không)'}\n    trong bài: …${r.ctx}…\n    dòng thật ở mốc${r.matchedLine ? ` (dòng ${r.matchedLine})` : ''}: ${r.real || '(không đọc được)'}`);
     }
   }
   console.log(bad.length ? `Không đạt: ${bad.length}/${total} tham chiếu lệch hoặc thiếu ký hiệu đặc thù.` : `Đạt: ${total} tham chiếu khớp đúng dòng ở mốc.`);
