@@ -327,6 +327,10 @@ export interface DeptRun {
   usage: Usage;
   startedAt?: string;
   finishedAt?: string;
+  /** Vòng bổ sung sau nghiệm thu (K3): id phòng của run gốc được làm tiếp. */
+  followupOf?: string;
+  /** Số thứ tự vòng bổ sung (1, 2…); run thường không có. */
+  round?: number;
 }
 
 export interface TaskOptions {
