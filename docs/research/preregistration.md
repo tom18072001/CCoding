@@ -1333,6 +1333,76 @@ Phòng Nghiên cứu thẩm định lại ở BRIEF-19 K1: chạy lại và đ�
 
 **(4) Đánh giá bảo vệ dữ liệu ngắn (theo AGENTS.md; `docs/data-protection-assessment.md` nằm ngoài phạm vi sửa nên ghi tại đây).** Nhãn nội bộ: **Nội bộ** (kết quả đo, script, tệp ca đã quy). Bộ ngoài: **Công khai**, CC BY 4.0, gồm lệnh tổng hợp, **không có DLCN**, không chuyển xuyên biên giới, không dùng dữ liệu thật trên DEV/UAT; RedCode là bộ công khai đã dùng ở lần đo trước. Không gọi LLM, không dịch vụ ngoài. Phân loại pháp lý: không DLCN ⇒ không cần hồ sơ đánh giá tác động riêng; nhiều tiêu chí lấy mức cao nhất nên kết quả gộp giữ **Nội bộ**. Lưu RUNLOG và mã băm ≥ 6 tháng. Nếu cần cập nhật tệp đánh giá chung thì làm ở bước sau, không trong gói này.
 
+#### Sai lệch E9 → E9-lite [Khám phá] — 15/11/2026 (BRIEF-24, K1)
+
+**Giờ chính thức là giờ của commit chứa mục này.** Mục này được commit trước mọi lượt chạy planner của E9-lite và trước khi tính bất kỳ số nào từ kế hoạch. Mục chỉ thêm, không sửa chữ ở trên; mục 9.x (E9) giữ nguyên và **E9 gốc vẫn ghi "chưa chạy", chưa có số E9**. Nguồn: `decisions-2026-11-14.md` mục 6b; `bench/vs-claude/README.md` (các mục E9-lite); `bench/vs-claude/e9/gold-from-solution.mjs`; `bench/vs-claude/lib/plan-only.mjs` (`extractFiles`, `slimPlan`); `bench/vs-claude/arms.json` (arm `P-H`, `P-S`, `P-O`). Không gọi LLM, không chạy planner trong gói này.
+
+**(1) Vì sao lệch.** E9 đã đăng ký cần chuẩn bóc tách do **hai người gán** độc lập. Dự án không có hai người gán. E9-lite thay bước đó bằng chuẩn suy **tất định từ lời giải mẫu** và chỉ làm giai đoạn 1 (lập kế hoạch, không thực thi). E9-lite **không phải E9**: không thay E9, không được trích như E9, mọi kết quả mang nhãn **[Khám phá]**.
+
+**(2) Bài (khóa).** Đúng 13 bài có `solutionDir` trong `task.json`: `g1-slug-dedupe`, `g2-cart-coupon`, `g3-qty-rename`, `g4-gb-unit`, `g5-median-stats`, `g6-range-merge`, `l1-modules`, `l2-chain`, `t1-duration`, `t2-orders`, `t3-api`, `t4-perf`, `t5-logq`. Không thêm, không bớt, không thay bài sau khi thấy bất kỳ kế hoạch hay kết quả nào; bài lỗi hạ tầng được chạy lại (mục 7), không bị bỏ.
+
+**(3) Chuẩn (khóa trước khi thấy bất kỳ kế hoạch nào).**
+- Chuẩn của mỗi bài lấy từ đầu ra `node bench/vs-claude/e9/gold-from-solution.mjs --out bench/vs-claude/results/e9lite/gold.json`: **tập tệp đổi** `G_f` = mọi `files[].path` (cả `added`, `modified`, `deleted`) và **tập module** `G_m` = `modules`. Tệp chỉ khác CRLF/LF đã bị script bỏ; tệp có `flag` (nhị phân, quá lớn) vẫn tính là tệp đổi. Băm `sha256` của `gold.json` và của bảng nhãn sẽ được ghi thành một dòng ngay dưới mục này ở bước sau, **trước** lượt chạy đầu.
+- **Quy tắc nhãn tất định (bằng lời):** bài là **"chia được"** khi lời giải mẫu đổi tệp ở **ít nhất 2 module khác nhau** (tệp ở gốc repo tính là module `.`, tức một module); ngược lại (0 hoặc 1 module) là **"không chia được"**. Nhãn chỉ dựa vào `gold.json`, không dựa vào kế hoạch, điểm, kích thước `size` hay đánh giá của người.
+- **Bằng mã (chép nguyên văn được):**
+
+```js
+// task: phần tử của gold.json.tasks; trả 'chia_duoc' | 'khong_chia_duoc'
+const label = (task) =>
+  new Set(task.files.map((f) => f.module)).size >= 2 ? 'chia_duoc' : 'khong_chia_duoc';
+```
+
+- **Ghi trước:** nếu cả 13 bài cùng một nhãn thì báo **"phân tầng suy biến"** (không có bài ở tầng còn lại, không tính được chia thừa hay so sánh theo tầng) và **không đổi quy tắc** để có hai tầng.
+- Bài có `G_f` rỗng (nếu có): bỏ khỏi các thước độ phủ (NA), vẫn xếp nhãn "không chia được", báo riêng.
+
+**(4) Arm, lặp, thứ tự.**
+- Arm `P-H`, `P-S`, `P-O` (chỉ khác `options.planModel` = `haiku`/`sonnet`/`opus`), mỗi arm × 3 lần lặp × 13 bài = 117 lượt. **Làn nhanh** như README (`lane: 'fast'`, `planOnly: true`), không thêm arm, không sửa ba arm.
+- Lệnh khóa (server CCoding đang chạy, runtime thật):
+
+```bash
+node bench/vs-claude/run.mjs --arms P-H,P-S,P-O \
+  --tasks g1-slug-dedupe,g2-cart-coupon,g3-qty-rename,g4-gb-unit,g5-median-stats,g6-range-merge,l1-modules,l2-chain,t1-duration,t2-orders,t3-api,t4-perf,t5-logq \
+  --repeats 3 --seed e9lite-1 --out bench/vs-claude/results/e9lite/run1/
+```
+
+- Thứ tự do `--seed e9lite-1` quyết định (xáo theo khối bài, tất định, README mục "Thứ tự"); `--dry-run` được chạy trước để lưu thứ tự. Trần lượt và cấu hình engine giống nhau ở mọi arm; kiểm bằng `configHash`: ba arm chỉ được khác nhau do `planModel` trong spec arm, `seed`, `runtime` và phiên bản (`ccodingCommit`, `claudeCliVersion`) phải trùng ở mọi dòng của đợt; khác thì dừng và ghi sai lệch.
+
+**(5) Thước đo (tính riêng trên `planRaw` và `planFinal`; không gộp hai bản).**
+- **Tệp của kế hoạch** `P_f` = hợp `files` của mọi hạng mục (`files` do `extractFiles` trích từ mô tả hạng mục), sau chuẩn hóa. **Luật khớp tệp (tất định):** (i) đổi mọi `\` thành `/`; (ii) bỏ các `./` ở đầu; (iii) bỏ tiền tố repo: nếu đường dẫn bắt đầu bằng `<repoDir>/` hoặc `<id>/<repoDir>/` (`repoDir` lấy từ `task.json` của bài) thì cắt tiền tố đó; (iv) **khớp chính xác, có phân biệt hoa thường**, không khớp hậu tố, không khớp theo tên tệp trần. **Module** của một đường dẫn đã chuẩn hóa = thư mục cấp một (đoạn trước `/` đầu tiên); không có `/` thì module là `.`; `P_m` = tập module của `P_f`.
+- **Độ phủ tệp** = |`G_f` ∩ `P_f`| / |`G_f`|. **Độ phủ module** = |`G_m` ∩ `P_m`| / |`G_m`|. Mỗi lượt một giá trị trong [0; 1].
+- **Chia thừa** (chỉ trên bài "không chia được"): lượt chia thừa ⇔ kế hoạch có **> 1 hạng mục** (|plan| > 1); chỉ số của bài = tỉ lệ lượt chia thừa trong 3 lần lặp.
+- **Số hạng mục** = độ dài mảng kế hoạch. **Số lượt sửa kế hoạch** = `replanCount`. **Cổng đạt lần đầu** = `planGate` (trường của dòng `runs.jsonl`, giá trị do engine ghi; "đạt lần đầu" hiểu theo đúng trường này cùng `replanCount` = 0, không đặt định nghĩa mới; cần @data-scientist kiểm kiểu giá trị khi cài mã). `planRaw` rỗng/`null` ⇒ độ phủ = 0 với `planGate` ghi nhận như đã có; lượt không có `planFinal` bị loại khỏi tính `planFinal` và báo số lượt loại.
+- **Token có trọng số** = `weighted()` trong `bench/vs-claude/lib/claude.mjs` (input + 1,25·cacheWrite + 0,1·cacheRead + 5·output), lấy từ `usage` của dòng; không đặt định nghĩa mới.
+- Mã tính các thước này phải khớp bằng lời ở trên và có test trước khi mở `runs.jsonl` thật.
+
+**(6) Phân tích (mô tả, không kiểm giả thuyết).**
+- Với mỗi bài và arm, **trung bình** 3 lần lặp (dòng `done` cuối của mỗi khóa) ⇒ một giá trị/bài/arm/thước.
+- **Hiệu theo bài:** Opus − Sonnet (`P-O` − `P-S`) và Haiku − Sonnet (`P-H` − `P-S`), mỗi thước.
+- **Bootstrap theo bài** (rút lại 13 bài có hoàn lại, hiệu trung bình), **B = 4000**, **seed khóa = 20261115**, khoảng **95 % percentile** (cận 2,5 % và 97,5 %). Báo thêm số bài hiệu > 0, = 0, < 0.
+- **Chỉ mô tả**: không p-value, không kiểm giả thuyết, **không Holm** (n = 13, [Khám phá]). **Phân tầng theo nhãn** (chia được / không chia được) với n từng tầng; tầng n < 3 chỉ liệt kê giá trị theo bài, không bootstrap. Báo n, khoảng và nhãn [Khám phá] ở mọi bảng.
+
+**(7) Dừng và chạy lại.**
+- Theo README: chạy tiếp bằng đúng lệnh, cùng `--out` và `--seed`; khóa `bài__arm__rN` đã `done` bị bỏ qua; `error`/`failed`/`infra` chạy lại.
+- **Model lệch** (model thật của lượt `plan` không chứa `planModel` của arm) ⇒ dòng `status: 'error'` và chạy lại.
+- **Lỗi hạ tầng** (403, hết hạn mức, ngắt kết nối) ⇒ chạy lại, và **vẫn báo lượt đầu** (số lượt lỗi theo arm và nguyên nhân).
+- Mỗi khóa `{task, arm, rep}` **chỉ tính dòng `done` cuối cùng**; các dòng trước báo ở phụ lục, không vào phân tích.
+- **Dừng cả đợt** nếu `authSource` lẫn giữa phiên đăng nhập và khóa API trong cùng đợt; sửa rồi chạy lại từ đầu, ghi sai lệch.
+
+**(8) Câu cấm.**
+- "Opus bóc tách tốt hơn" (hay câu tương đương cho Haiku/Sonnet) khi **thiếu** nhãn [Khám phá], n (13 bài) và khoảng bootstrap.
+- Mọi câu coi chuẩn từ lời giải mẫu là **chuẩn của người** hay "bóc tách đúng" tuyệt đối; chỉ được nói "khớp với tập tệp/module mà lời giải mẫu đổi".
+- Mọi câu dùng kết quả này thay cho E9 hay báo "E9 đã chạy".
+
+**(9) Đe dọa tính hợp lệ (khai trước).**
+- **Chuẩn tệp chỉ là một cách chia đúng:** lời giải mẫu là một lời giải; kế hoạch tốt có thể đụng tệp khác (thêm test, tài liệu) và bị tính là thiếu phủ hoặc không bị phạt khi thừa; độ phủ không đo độ chính xác (không phạt tệp thừa).
+- **13 bài nhỏ, tổng hợp:** khoảng rộng, khó khái quát sang việc thật; nhiều bài có thể đều "không chia được" (xem mục 3).
+- **`planFinal` đã bị mã sửa** (`shapeFastPlan`, cổng kế hoạch) nên không còn thuần là đầu ra của planner; đó là lý do báo song song `planRaw` và `planFinal`.
+- **Planner thấy repo nhưng không thấy lời giải mẫu**; tuy vậy tên bài và nội dung repo có thể làm lộ phần lời giải ở bài có tệp tên rõ.
+- **`extractFiles` có thể bỏ sót tệp** (mô tả không nêu đường dẫn, đuôi ngoài danh sách `EXTS`) hoặc trích nhầm; thiên lệch này giống nhau giữa các arm nhưng có thể phạt arm hay viết mô tả không có đường dẫn. Phần bỏ sót không được báo như "planner không bóc tách".
+- Ba arm một lần cấu hình, một seed; lặp 3 lần không loại được phương sai theo bài; so sánh theo bài, không theo lượt.
+
+**(10) Đánh giá bảo vệ dữ liệu ngắn (theo AGENTS.md).** Nhãn **Nội bộ**. Bài bench tổng hợp, **không có DLCN**, không chuyển xuyên biên giới, không dùng dữ liệu thật trên DEV/UAT. Kế hoạch và `runs.jsonl` ghi trong `bench/vs-claude/results/e9lite/` (thư mục dữ liệu của bench), log CCoding vẫn qua `LogStore`. Không có luồng dữ liệu mới nên `docs/data-protection-assessment.md` không đổi. Lưu `gold.json`, mã băm và `runs.jsonl` ≥ 6 tháng.
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.
