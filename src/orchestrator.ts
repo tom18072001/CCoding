@@ -2539,7 +2539,9 @@ export class Orchestrator {
     const ls = pctx.cwd ? spawnSync('git', ['ls-files', '-z'], { cwd: pctx.cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, windowsHide: true }) : undefined;
     const repoFiles = ls?.status === 0 ? ls.stdout.split('\0').filter(Boolean) : undefined;
     const agentIds = [...registry.agents.keys()];
-    const evaluate = (oos = parsed?.outOfScope) => planGate({ brief: task.brief, planSummary: run.planSummary ?? '', subtasks: run.subtasks, outOfScope: oos, truncated, repoFiles, agentIds, agentRoles: Object.fromEntries([...registry.agents.values()].map((a) => [a.id.toLowerCase(), { role: a.role, skills: a.skills }])) });
+    // FX15: chỉ kiểm "hạng mục cần lệnh → agent có run_command" khi nhiệm vụ có người chạy lệnh được (cùng nguồn với danh sách năng lực của trưởng phòng)
+    const canRun = Object.values(pctx.caps ?? {}).some((x) => /chạy lệnh/.test(x));
+    const evaluate = (oos = parsed?.outOfScope) => planGate({ brief: task.brief, planSummary: run.planSummary ?? '', subtasks: run.subtasks, outOfScope: oos, truncated, repoFiles, agentIds, agentRoles: Object.fromEntries([...registry.agents.values()].map((a) => [a.id.toLowerCase(), { role: a.role, skills: a.skills, ...(canRun ? { tools: pctx.caps?.[a.id]?.includes('chạy lệnh') ? ['run_command'] : [] } : {}) }])) });
     let truncated = !!parsed?.truncated;
     let g = evaluate();
     if (!run.planGate?.replanned) logs.write({ level: g.blocked ? 'warn' : 'info', kind: 'gate.decision', msg: `${task.id}: cổng phủ kế hoạch ${g.blocked ? 'chặn' : 'đạt'}`, taskId: task.id, department: dept.id, data: { gate: 'b10', verdict: g.blocked ? 'block' : 'pass' } });
