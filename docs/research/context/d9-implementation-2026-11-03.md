@@ -165,7 +165,7 @@ Arm `B7cabO` giữ cấu hình của `B7cab` và thêm `phaseModels: {accept: "o
 **Nguồn:** bàn giao S1 (`36febd9`/`229c032`) và S2 (`9f31fbb`); số liệu ở dưới do S3 chạy trong lượt này trên Windows.
 
 ### 8 test đỏ trên Linux và nguyên nhân
-- Các test: `claude-guard-paths.test.ts:38` (`..\..\ngoai\moi.txt`), `claude-guard.test.ts:29` (Grep `C:/Users/admin`), 5 test B-14b trong `claude-stable-prefix.test.ts` (root `C:/tmp/x`).
+- Các test: `claude-guard-paths.test.ts:38` (`..\..\ngoai\moi.txt`), `claude-guard.test.ts:29` (Grep `<máy-chạy>`), 5 test B-14b trong `claude-stable-prefix.test.ts` (root `C:/tmp/x`).
 - Nguyên nhân: hook giải đường dẫn bằng `path.resolve`/`path.relative` theo nền tảng đang chạy. Trên Linux, `C:/…` và `..\..` bị coi là đường dẫn tương đối nên không bị chặn (hoặc bị chặn nhầm với root `C:/…`).
 - Số 8 lấy từ báo cáo của người điều phối; S3 **chưa tái hiện** trên Linux (xem "Bằng chứng Linux").
 

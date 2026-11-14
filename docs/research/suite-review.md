@@ -13,7 +13,7 @@ Bộ đo đủ dùng làm hệ đánh giá chính, nhưng có 8 lỗi/khoảng t
 - Giám khảo LLM: mù một phần (ngôn ngữ tiếng Việt của arm B lộ danh tính), giám khảo mặc định `opus` trùng model của `A0-opus`, không có đối chiếu người.
 - Hai grader regex (a1, r1) đo chữ khóa nhiều hơn ý (ví dụ `sign` khớp "design"); nên chạy toàn nghiên cứu với `--judge`.
 
-Mọi con số điểm oracle/null lấy từ `results/selftest/summary.csv` (n = 1 lượt, chạy trên máy khác: đường dẫn `/home/claude/...`). Tôi **không chạy lại** selftest (chỉ có quyền đọc). Chỗ nào là suy luận của tôi chứ không phải kết quả chạy thì ghi "suy luận"/"cần kiểm".
+Mọi con số điểm oracle/null lấy từ `results/selftest/summary.csv` (n = 1 lượt, chạy trên máy khác: đường dẫn `<máy-cloud>/...`). Tôi **không chạy lại** selftest (chỉ có quyền đọc). Chỗ nào là suy luận của tôi chứ không phải kết quả chạy thì ghi "suy luận"/"cần kiểm".
 
 ---
 

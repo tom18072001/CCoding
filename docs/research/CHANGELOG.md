@@ -20,6 +20,11 @@ Nguồn phát hiện: `context/k4-v07-review-2026-11-14.md` (Phần A, B, C). **
 
 **Tệp nguồn sửa chữ (không đổi số đo):** `v07-axes-threats-draft.md` (câu cấm #8, #10 sửa; thêm #21–#26); `run-plan.md` (KPI là giả định của phòng, chờ giám đốc duyệt; hai đường dẫn máy → `<tmp>`, `<worktree>`); `bench/vs-claude/results/e8-parallel/report.md` (câu "không giảm token" → "không phát hiện được thay đổi token"; lời khuyên là [Khám phá], một bài); `RUNLOG.md` của `p-parallel`, `e7-cto`, `local-3e`, `b15f-main` (bỏ đường dẫn máy); `context/d11-baseline/{b7prime,study-cloud}/report.md` và `analysis/cache-diagnostic-result.md` (bỏ đường dẫn máy, phát hiện thêm C-12, C-13).
 
+## Sau gói 15 (người điều phối, 14/11/2026): Điều 23 Luật 91/2025/QH15, đường dẫn máy
+
+- **Pháp lý:** Điều 23 khoản 1 Luật Bảo vệ dữ liệu cá nhân có mốc 72 giờ, thông báo cho cơ quan chuyên trách, khi vi phạm có thể gây tổn hại. Hai bản toàn văn thứ cấp và đoạn trích bản Công báo khớp nhau; bản chính thức chưa trích được chữ. `paper.md` §6.3.2 ghi đúng phạm vi đó, nhãn [CHƯA KIỂM CHỨNG với bản gốc]; ghi chú §8.4b.
+- **Đường dẫn máy:** thay đường dẫn người dùng Windows và đường dẫn máy cloud trong 32 tệp Markdown bằng `<máy-chạy>`, `<máy-cloud>` (gồm `analysis/cache-diagnostic-result.md:37` mà CTO nêu). Không sửa tệp dữ liệu thô (`*.json`, `*.jsonl`, `stdout.txt`, cấu hình và script `.ps1` trong `results/`), vì sửa sẽ làm sai mã băm đã ghi. Các tệp đó chỉ chứa đường dẫn thư mục làm việc và tên người dùng Windows mặc định, không chứa bí mật hay DLCN. `preregistration.md` không sửa (văn bản đã đăng ký).
+
 ## Vòng 4, gói 14 (T-20261114-133920-30b, BRIEF-20, 14/11/2026): bài báo v0.7 dựng quanh ba trục, trục 2 (b), kiểm số
 
 Không gọi LLM, không chạy benchmark, không sửa `src/` hay mã `bench/` (chỉ RUNLOG). Bảng kiểm từng số: `analysis/v07-number-check.md`.

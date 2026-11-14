@@ -733,7 +733,7 @@ Danh sách ca giao D13 K6, chép từ `results/b14-step2/RUNLOG.md:33-37`: khung
 - **(R8)** `context/c9-partial-2026-11-02.md` §2 ghi 51 test hỏng đều thuộc nhóm tổng hợp; tạo phẩm cho thấy 37 tổng hợp + 14 CLI (§5 B-10 trường 2f). Kết luận không đổi (cả hai là đích không ai nhận).
 - Số "hiệu quả kỳ vọng" ở B-02…B-10 là giả thuyết; chỉ B-01 có số đo nền, B-02/B-10 có thêm 1 ca chất lượng.
 - Nếu S1 đổi số ở T-d (3) (D2), peer-reviewer sửa tại chỗ; script `lane-threshold.mjs` đọc thẳng `runs.csv`, không phụ thuộc `token-analysis.md`.
-- Bảo vệ dữ liệu: tài liệu này nội bộ, không chứa DLCN hay bí mật; CSV đã thay đường dẫn bằng `<ws>/<home>/<proj>`. Đường dẫn máy cloud trong tạo phẩm C9 (`/home/claude/…`) không được chép vào tệp này. Không cần đánh giá bảo vệ dữ liệu riêng; các mục B-04, B-08 chạm biên bảo mật nên cần giám đốc duyệt và bộ test ác ý.
+- Bảo vệ dữ liệu: tài liệu này nội bộ, không chứa DLCN hay bí mật; CSV đã thay đường dẫn bằng `<ws>/<home>/<proj>`. Đường dẫn máy cloud trong tạo phẩm C9 (`<máy-cloud>/…`) không được chép vào tệp này. Không cần đánh giá bảo vệ dữ liệu riêng; các mục B-04, B-08 chạm biên bảo mật nên cần giám đốc duyệt và bộ test ác ý.
 - **(R18)** Thứ tự ở §0.1 (b) xếp theo mức bằng chứng do trưởng phòng đặt (M1–M4), không phải điểm H/E của §0; hai thang không cộng được với nhau. Kết quả E7 và trục 2 (b) là [Mô tả] ở các phần ngoài phép kiểm chính; không dùng chúng để đổi mặc định khi chưa có đăng ký trước mới. §0.1 không chép tệp từng lượt của P hay lệnh thật chưa che; chỉ số tổng hợp.
 
 ## 7. Tái lập

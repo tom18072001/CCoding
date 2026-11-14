@@ -131,7 +131,7 @@ Oracle đạt 1,00 ở 29/29 bài. Nearmiss < 1,00 ở mọi bài (cao nhất 0,
 
 ## 5. checkCommands của `ccoding-research` (D10)
 
-**Không đọc được cấu hình.** Lý do: hook `claude-guard` chặn đọc đường dẫn ngoài worktree (lệnh tìm trong `/c/Users/admin/CCoding/projects` bị từ chối), và worktree không chứa bản sao cấu hình dự án `ccoding-research` (tìm `checkCommands` chỉ ra mã nguồn và tài liệu, không có giá trị cấu hình). Tôi không đoán lệnh, nên **ba lệnh `checkCommands` chưa chạy**. Hạng mục này đánh **cần người**: người có quyền đọc cấu hình dán nội dung `checkCommands` vào đây rồi chạy ba lệnh.
+**Không đọc được cấu hình.** Lý do: hook `claude-guard` chặn đọc đường dẫn ngoài worktree (lệnh tìm trong `<máy-chạy>/CCoding/projects` bị từ chối), và worktree không chứa bản sao cấu hình dự án `ccoding-research` (tìm `checkCommands` chỉ ra mã nguồn và tài liệu, không có giá trị cấu hình). Tôi không đoán lệnh, nên **ba lệnh `checkCommands` chưa chạy**. Hạng mục này đánh **cần người**: người có quyền đọc cấu hình dán nội dung `checkCommands` vào đây rồi chạy ba lệnh.
 
 ## 6. Kiểm tổng
 

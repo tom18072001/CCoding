@@ -1,6 +1,6 @@
 # CCoding vs single Claude - results
 
-Folder: `C:\Users\admin\CCoding\workspaces\ccoding-research\wt-T-20261103-021358-275--S1\docs\research\analysis\reconcile\all` - 197 runs (0 excluded for touching hidden files, 0 infra rows dropped), arms: B0, A0-sonnet, B6, B7. Baseline **A0-sonnet**, treatment **B7**. Scores are 0-1 per run; deltas in percentage points, 95% two-level bootstrap CI over tasks, p from a paired sign-flip permutation test.
+Folder: `<máy-chạy>\CCoding\workspaces\ccoding-research\wt-T-20261103-021358-275--S1\docs\research\analysis\reconcile\all` - 197 runs (0 excluded for touching hidden files, 0 infra rows dropped), arms: B0, A0-sonnet, B6, B7. Baseline **A0-sonnet**, treatment **B7**. Scores are 0-1 per run; deltas in percentage points, 95% two-level bootstrap CI over tasks, p from a paired sign-flip permutation test.
 
 ## Hypotheses
 

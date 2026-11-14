@@ -44,7 +44,7 @@ Ghi 4/11/2026 (BRIEF-18 K3(b)), chỉ đọc tệp, không chạy test. Danh sá
 
 | Mục | Giá trị |
 |---|---|
-| Commit ghim server và runner (9) | `0d216eb63c0be1ff3c085f5e1f6a5fd881d78049`, worktree `C:\Users\admin\ccoding-vs-claude\ccoding-b14`, detached, `git status` sạch. Có B-14b (`STABLE_TOOLS`, hook `stablePrefix`) và D13 (sửa hook cho phase không phải chuỗi). **Chưa có** `203482e` (luật làn mới) |
+| Commit ghim server và runner (9) | `0d216eb63c0be1ff3c085f5e1f6a5fd881d78049`, worktree `<máy-chạy>\ccoding-vs-claude\ccoding-b14`, detached, `git status` sạch. Có B-14b (`STABLE_TOOLS`, hook `stablePrefix`) và D13 (sửa hook cho phase không phải chuỗi). **Chưa có** `203482e` (luật làn mới) |
 | Build | `npm ci` exit 0, `npm run build` exit 0, lúc 10:15 giờ VN |
 | Server | Cổng 7427, thư mục dữ liệu `ccoding-b14\data`, thư mục làm việc `vbb14`. Không đụng 7420, 7425, 7426 |
 | Cấu hình nhánh tắt | `b14-off.json` (chép từ `ccoding-e5f`, chỉ đổi cổng sang 7427), sha256 `4bc56eafa042a8eb52a26e257af23d0e1d4beef45800d4e73e4856a57739cff0` |

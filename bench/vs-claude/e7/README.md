@@ -5,7 +5,7 @@ Thiết kế và quy tắc ở `docs/research/preregistration.md`, mục "Bản 
 ## Chuẩn bị chung (một lần)
 
 ```powershell
-cd C:\Users\admin\ccoding-vs-claude
+cd <máy-chạy>\ccoding-vs-claude
 git -C ccoding-dev fetch origin perf/vs-claude-loop
 git -C ccoding-dev worktree add ..\ccoding-e78 <commit khóa>     # bản ghim, ghi hash vào RUNLOG
 cd ccoding-e78; npm ci; npm run build
@@ -49,20 +49,20 @@ Cần hai server từ cùng bản ghim. Hai server chỉ khác cấu hình `fast
 
 ```powershell
 # server A (cấu hình mặc định, fastLane.maxParallel 4)
-$env:CCODING_PORT='7428'; $env:CCODING_DATA_DIR='C:\Users\admin\ccoding-vs-claude\e8-data-a'; Remove-Item Env:CCODING_CONFIG -ErrorAction SilentlyContinue
-Start-Process node -ArgumentList 'dist/cli.js','serve' -WorkingDirectory C:\Users\admin\ccoding-vs-claude\ccoding-e78
+$env:CCODING_PORT='7428'; $env:CCODING_DATA_DIR='<máy-chạy>\ccoding-vs-claude\e8-data-a'; Remove-Item Env:CCODING_CONFIG -ErrorAction SilentlyContinue
+Start-Process node -ArgumentList 'dist/cli.js','serve' -WorkingDirectory <máy-chạy>\ccoding-vs-claude\ccoding-e78
 # server B (thêm cấu hình {"fastLane":{"maxParallel":1}})
 Set-Content ..\e8-b.json '{"fastLane":{"maxParallel":1}}'
-$env:CCODING_PORT='7429'; $env:CCODING_DATA_DIR='C:\Users\admin\ccoding-vs-claude\e8-data-b'; $env:CCODING_CONFIG='C:\Users\admin\ccoding-vs-claude\e8-b.json'
-Start-Process node -ArgumentList 'dist/cli.js','serve' -WorkingDirectory C:\Users\admin\ccoding-vs-claude\ccoding-e78
+$env:CCODING_PORT='7429'; $env:CCODING_DATA_DIR='<máy-chạy>\ccoding-vs-claude\e8-data-b'; $env:CCODING_CONFIG='<máy-chạy>\ccoding-vs-claude\e8-b.json'
+Start-Process node -ArgumentList 'dist/cli.js','serve' -WorkingDirectory <máy-chạy>\ccoding-vs-claude\ccoding-e78
 ```
 
 Ghi sha256 của `e8-b.json` vào RUNLOG. Server A không có tệp cấu hình thêm.
 
 ```powershell
 node bench/vs-claude/run.mjs --arms A0-sonnet,B6w4,B6w1 --tasks l1-modules,t2-orders,t3-api --repeats 6 --timeout 30 `
-  --ccoding-url http://127.0.0.1:7428 --ccoding-data C:\Users\admin\ccoding-vs-claude\e8-data-a `
-  --ccoding-url-alt http://127.0.0.1:7429 --ccoding-data-alt C:\Users\admin\ccoding-vs-claude\e8-data-b `
+  --ccoding-url http://127.0.0.1:7428 --ccoding-data <máy-chạy>\ccoding-vs-claude\e8-data-a `
+  --ccoding-url-alt http://127.0.0.1:7429 --ccoding-data-alt <máy-chạy>\ccoding-vs-claude\e8-data-b `
   --out bench\vs-claude\results\e8-parallel
 ```
 

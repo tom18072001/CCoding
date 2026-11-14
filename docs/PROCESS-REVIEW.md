@@ -191,7 +191,7 @@ Chưa làm (đề xuất tiếp, cần số liệu thêm sau vài gói):
 
 ## 11. Kiểm tra chạy song song bằng lượt chạy thật (1/11/2026)
 
-Repo nháp `C:\Users\admin\ccoding-partest` (không dữ liệu, nhãn Công khai), dự án `partest` (`setupCommands: npm ci`, `checkCommands: npm test`), claude-cli, `T-20261101-154016-5fe`: 5 hạng mục — S1 Backend, S2 Data, S3 DevOps chạy lệnh độc lập; S4 Frontend phụ thuộc S1; S5 Kiến trúc sư ghi ADR từ lịch sử git; S1 và S2 cố ý cùng thêm dòng cuối `CHANGELOG.md`.
+Repo nháp `<máy-chạy>\ccoding-partest` (không dữ liệu, nhãn Công khai), dự án `partest` (`setupCommands: npm ci`, `checkCommands: npm test`), claude-cli, `T-20261101-154016-5fe`: 5 hạng mục — S1 Backend, S2 Data, S3 DevOps chạy lệnh độc lập; S4 Frontend phụ thuộc S1; S5 Kiến trúc sư ghi ADR từ lịch sử git; S1 và S2 cố ý cùng thêm dòng cuối `CHANGELOG.md`.
 
 | Tính năng | Kết quả |
 |---|---|

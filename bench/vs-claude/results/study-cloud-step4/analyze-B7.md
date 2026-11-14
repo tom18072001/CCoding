@@ -1,6 +1,6 @@
 # CCoding vs single Claude - results
 
-Folder: `/tmp/claude-0/-home-user-CCoding/d1e1e9dd-fe0c-5909-9d1d-01fccf35645d/scratchpad/ancopy` - 276 runs (0 excluded for touching hidden files, 0 infra rows dropped), arms: B0, A0-sonnet, B6, B7. Baseline **A0-sonnet**, treatment **B7**. Scores are 0-1 per run; deltas in percentage points, 95% two-level bootstrap CI over tasks, p from a paired sign-flip permutation test.
+Folder: `<máy-cloud>/scratchpad/ancopy` - 276 runs (0 excluded for touching hidden files, 0 infra rows dropped), arms: B0, A0-sonnet, B6, B7. Baseline **A0-sonnet**, treatment **B7**. Scores are 0-1 per run; deltas in percentage points, 95% two-level bootstrap CI over tasks, p from a paired sign-flip permutation test.
 
 ## Hypotheses
 

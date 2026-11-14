@@ -1,6 +1,6 @@
 # CCoding vs single Claude - results
 
-Folder: `C:\Users\admin\CCoding\workspaces\ccoding-dev\wt-T-20261102-175855-1e6--S5\bench\vs-claude\results\selftest` - 36 runs (0 excluded for touching hidden files, 0 infra rows dropped), arms: null, oracle. Baseline **null**, treatment **oracle**. Scores are 0-1 per run; deltas in percentage points, 95% two-level bootstrap CI over tasks, p from a paired sign-flip permutation test.
+Folder: `<máy-chạy>\CCoding\workspaces\ccoding-dev\wt-T-20261102-175855-1e6--S5\bench\vs-claude\results\selftest` - 36 runs (0 excluded for touching hidden files, 0 infra rows dropped), arms: null, oracle. Baseline **null**, treatment **oracle**. Scores are 0-1 per run; deltas in percentage points, 95% two-level bootstrap CI over tasks, p from a paired sign-flip permutation test.
 
 ## Hypotheses
 

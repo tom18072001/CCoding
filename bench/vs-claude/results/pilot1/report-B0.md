@@ -1,6 +1,6 @@
 # CCoding vs single Claude - results
 
-Folder: `/home/claude/ccoding-dev/bench/vs-claude/results/pilot1` - 39 runs (0 excluded for touching hidden files, 0 infra rows dropped), arms: B0, B5, A0-sonnet. Baseline **A0-sonnet**, treatment **B0**. Scores are 0-1 per run; deltas in percentage points, 95% two-level bootstrap CI over tasks, p from a paired sign-flip permutation test.
+Folder: `<máy-cloud>/ccoding-dev/bench/vs-claude/results/pilot1` - 39 runs (0 excluded for touching hidden files, 0 infra rows dropped), arms: B0, B5, A0-sonnet. Baseline **A0-sonnet**, treatment **B0**. Scores are 0-1 per run; deltas in percentage points, 95% two-level bootstrap CI over tasks, p from a paired sign-flip permutation test.
 
 ## Hypotheses
 
