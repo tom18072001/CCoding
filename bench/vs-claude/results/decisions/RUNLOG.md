@@ -39,3 +39,16 @@ node docs/research/analysis/decisions/decomp-metrics.mjs --p <tệp trích P> --
 - Phép đo độ phủ hạng mục đề bài dựa trên regex mã `K\d+`, nên có thể sót cách viết khác.
 - `office` chỉ có 5 lượt và đều là việc phát triển chính CCoding.
 - Các đề bài D14–D16 do người điều phối viết có dùng tên vai không có trong roster (`dev-backend`, `code-reviewer`). Những dòng đó không được tính vào mẫu số của độ phủ vai.
+
+## KPI từng agent trên văn phòng phụ (`kpi-office.json`, 14/11/2026 khoảng 16:40 +07)
+
+- **Lệnh:** `node dist/cli.js kpi --json --days 30`. Chạy ở bản đang phục vụ văn phòng phụ (checkout `ccoding-e78`), với thư mục dữ liệu và cấu hình của văn phòng phụ. Chỉ đọc.
+- **Phạm vi:** 10 nhiệm vụ trong 30 ngày.
+  - 6 xong, 1 thất bại, 1 hủy (BRIEF-22 bản đầu, giao lại);
+  - 2 đang chạy (D17, D16b), lúc chạy lệnh ghi trạng thái `paused`.
+  - Lượt gọi của nhiệm vụ đang chạy vẫn được tính, nên điểm sẽ đổi khi chúng xong.
+- **Cách chấm:** KPI v2 theo mẫu của giám đốc (`docs/KPI.md`, trường `method`):
+  - Chất lượng 25 %, Kết quả thật 20 %, Trung thực 15 %, Hiệu quả 15 %, Tin cậy 15 %, Tuân thủ 10 %;
+  - điểm co về 60 theo lượng bằng chứng;
+  - kèm "việc cần sửa" (`findings`) sinh tự động theo ngưỡng.
+- **Đã bỏ khỏi tệp công khai:** tiêu đề nhiệm vụ. Giữ điểm, bằng chứng, `findings` của từng agent.
