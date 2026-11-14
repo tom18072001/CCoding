@@ -200,7 +200,7 @@ export interface AcceptResult {
   accepted: boolean;
   parsed: boolean;
   summary: string;
-  criteria: Array<{ name: string; result: 'pass' | 'fail' | 'unknown'; evidence: string }>;
+  criteria: Array<{ name: string; result: 'pass' | 'fail' | 'unknown'; evidence: string; scope?: 'in' | 'decision' }>;
   risks: string[];
   followUps: Array<{ title: string; brief: string; department?: string }>;
   /** Phần hiển thị: câu trả lời bỏ khối JSON kết luận. */
@@ -234,8 +234,17 @@ export function parseAcceptance(text: string): AcceptResult {
     const t = String(v ?? '').toLowerCase();
     return /^(pass|đạt|dat|ok|yes|true)$/.test(t) ? 'pass' : /^(fail|không|khong|không đạt|no|false)$/.test(t) ? 'fail' : 'unknown';
   };
+  // phân loại phạm vi: chỉ tiêu chí chưa đạt mới có; thiếu hoặc giá trị lạ → decision (an toàn)
+  const scopeOf = (v: unknown): 'in' | 'decision' => {
+    const t = String(v ?? '').trim().toLowerCase().replace(/[\s_]+/g, '-');
+    return /^(in|in-scope|inscope|trong-phạm-vi|trong-pham-vi|trong phạm vi)$/.test(t) ? 'in' : 'decision';
+  };
   const criteria = (Array.isArray(raw.criteria) ? raw.criteria : [])
-    .map((c: any) => ({ name: String(c?.name ?? c?.criterion ?? '').slice(0, 300), result: res(c?.result ?? c?.status), evidence: String(c?.evidence ?? '').slice(0, 500) }))
+    .map((c: any) => {
+      const result = res(c?.result ?? c?.status);
+      const base = { name: String(c?.name ?? c?.criterion ?? '').slice(0, 300), result, evidence: String(c?.evidence ?? '').slice(0, 500) };
+      return result === 'pass' ? base : { ...base, scope: scopeOf(c?.scope) };
+    })
     .filter((c) => c.name)
     .slice(0, 20);
   const risks = (Array.isArray(raw.risks) ? raw.risks : []).map((r) => String(r ?? '').slice(0, 400)).filter(Boolean).slice(0, 12);
