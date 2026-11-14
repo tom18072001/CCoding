@@ -42,6 +42,7 @@ import type { Store } from './store.js';
 import { clearFixedFeedback, kpiMarkdown, kpiReport, templateHeadings } from './kpi.js';
 import { briefDemandsReview, changedFiles, classifyChecks, reviewerReasons, sensitivePaths, templateGate, type ClassifiedCheck, type QualityGateOptions, type QualityGateResult } from './quality-gate.js';
 import { subtaskHistory, type AgentHistory } from './estimate.js';
+import { criteriaTable, followupDecision } from './accept-followup.js';
 import { buildRepoMap } from './repomap.js';
 import { chooseLane, forcedLane, laneSignals, type LaneSignals } from './lane.js';
 import { parseIncidentLog } from './incident.js';
@@ -1086,6 +1087,8 @@ export class Orchestrator {
       } else {
         // CTO nghiệm thu (tạm dừng/hủy giữa chừng thì ném lên như mọi lượt gọi khác)
         await this.accept(task, project);
+        // K3: CTO chưa nghiệm thu → tối đa `acceptFollowupRounds` vòng bổ sung; vòng lặp có chặn cứng, không đệ quy
+        for (let guard = 0; guard < 10 && (await this.runFollowup(task, project)); guard++);
         task.phase = undefined;
         task.status = 'done';
         logs.write({ level: 'info', kind: 'task.done', msg: `Hoàn thành ${task.id} — ${fmtNum(totalTokens(task.usage))} token${task.attention ? ` · cần xem: ${task.attention.detail}` : ''}`, taskId: task.id, projectId: task.projectId, data: { usage: task.usage } });
@@ -1230,6 +1233,81 @@ export class Orchestrator {
       else if (!task.attention.detail.includes('CTO chưa nghiệm thu')) task.attention.detail = `${task.attention.detail} · ${why}`;
     }
     this.save(task);
+  }
+
+  /**
+   * K3: sau nghiệm thu, nếu CTO chưa nghiệm thu mà còn tiêu chí `in` (phòng tự làm được) thì mở một vòng bổ sung rồi nghiệm thu lại.
+   * Trả true khi đã chạy một vòng (nơi gọi lặp có chặn); false khi không mở/không chạy được. Không đệ quy accept().
+   * Điểm kiểm hủy/tạm dừng/abort: (1) `followupDecision` (task.status, pauseRequests, signal abort) trước khi mở vòng;
+   * (2) `checkAbort` ngay trước khi lưu bộ đếm; (3) `checkAbort` sau vòng, trước lượt accept lại; trong vòng, mọi lượt `call()` và
+   * `runDepartment` tự ném PauseSignal/CancelledError (gồm tạm dừng hết hạn mức D16) → runTask xử lý như mọi run khác.
+   */
+  private async runFollowup(task: Task, project?: ProjectDef): Promise<boolean> {
+    const { registry, store, logs } = this.d;
+    const ac = task.acceptance;
+    if (!ac || ac.error || !ac.parsed || ac.accepted || !task.runs.length) return false;
+    this.checkAbort(task); // hủy/tạm dừng thủ công đang chờ → ném lên, không mở vòng
+    const maxRounds = this.d.config.defaults.acceptFollowupRounds ?? 1;
+    const roundsDone = task.acceptFollowups ?? 0;
+    const budgetLeft = Math.max(0, task.options.budgetTokens - totalTokens(task.usage));
+    const last = task.runs[task.runs.length - 1];
+    const dept = registry.departments.get(last.department);
+    const lead = dept ? registry.agents.get(dept.lead) : undefined;
+    // ước lượng thô theo số tiêu chí `in` trước khi có kế hoạch bổ sung
+    const nIn = ac.criteria.filter((c) => c.result !== 'pass' && c.scope === 'in').length;
+    const stub = Array.from({ length: Math.max(1, nIn) }, (_, i) => newSubtask({ id: `F${i + 1}`, title: 'bổ sung', assignee: lead?.id ?? '', description: '', deliverable: '' }));
+    const estimate = this.estimatePlan(task, { ...last, subtasks: stub }, project);
+    const d = followupDecision({
+      acceptance: ac,
+      roundsDone,
+      maxRounds,
+      budgetLeft,
+      estimate,
+      taskStatus: this.pauseRequests.has(task.id) ? 'paused' : task.status,
+      aborted: !!this.controllers.get(task.id)?.signal.aborted,
+    });
+    const names = d.decision.map((c) => c.name);
+    const data = { round: roundsDone, maxRounds, inScope: d.inScope.map((c) => c.name), decision: names, budgetLeft, estimate };
+    if (!d.open || !dept || !lead) {
+      logs.write({ level: 'info', kind: 'accept.followup', msg: `${task.id}: không mở vòng bổ sung — ${d.reason}`, taskId: task.id, projectId: task.projectId, data: { ...data, opened: false, reason: d.reason } });
+      // chưa đạt mà không làm tiếp: nêu tên tiêu chí cần giám đốc quyết định
+      if (names.length && task.attention && !task.attention.detail.includes('cần giám đốc quyết định')) {
+        task.attention.detail = `${task.attention.detail} · cần giám đốc quyết định: ${names.join('; ')}`;
+        this.save(task);
+      }
+      return false;
+    }
+    this.checkAbort(task);
+    const round = roundsDone + 1;
+    task.acceptFollowups = round; // lưu TRƯỚC khi chạy: tiếp tục sau tạm dừng không mở thêm vòng
+    const run: DeptRun = { department: last.department, status: 'pending', subtasks: [], usage: emptyUsage(), followupOf: last.department, round };
+    task.runs.push(run);
+    if (task.attention?.reason === 'acceptance') task.attention = undefined;
+    else if (task.attention) task.attention.detail = task.attention.detail.replace(/ · CTO chưa nghiệm thu:.*$/, '');
+    this.save(task);
+    logs.write({ level: 'info', kind: 'accept.followup', msg: `${task.id}: mở vòng bổ sung ${round}/${maxRounds} cho ${d.inScope.length} tiêu chí trong phạm vi`, taskId: task.id, projectId: task.projectId, agentId: lead.id, department: dept.id, data: { ...data, round, opened: true } });
+    this.message(task, dept.id, 'system', 'system', `🔁 Vòng bổ sung ${round}/${maxRounds}: CTO chưa nghiệm thu, ${dept.short} tự làm tiếp ${d.inScope.length} tiêu chí trong phạm vi.${names.length ? ` ${names.length} tiêu chí cần giám đốc quyết định, không làm.` : ''}`);
+    const lastFinal = last.finalPath ? (store.readRunFile(task.id, last.finalPath) ?? '') : '';
+    const prior = [
+      `# Vòng bổ sung ${round}/${maxRounds} sau nghiệm thu của CTO`,
+      'CTO chưa nghiệm thu. CHỈ lập kế hoạch cho các tiêu chí có phạm vi "in" dưới đây; không làm lại phần đã đạt, không đụng tiêu chí cần quyết định.',
+      criteriaTable(d.inScope),
+      names.length ? `## Không làm (cần giám đốc quyết định)\n${names.map((n) => `- ${n}`).join('\n')}` : '',
+      lastFinal ? `## Báo cáo vòng trước\n${lastFinal}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+    await this.runDepartment(task, run, project, prior);
+    this.checkAbort(task);
+    this.writeFinal(task);
+    const unfinished = run.subtasks.filter((s) => !s.splitTo && (s.status === 'failed' || s.status === 'skipped'));
+    if (unfinished.length) {
+      task.attention = { reason: 'acceptance', detail: `Vòng bổ sung ${round} còn ${unfinished.length} hạng mục chưa xong (${unfinished.map((s) => s.id).join(', ')})`, at: nowIso() };
+      this.save(task);
+      return false;
+    }
+    await this.accept(task, project);
+    return true;
   }
 
   /**
@@ -1605,7 +1683,7 @@ export class Orchestrator {
     this.checkAbort(task);
     const reviewText = run.review ? `${run.review.approved ? 'Đã duyệt' : 'Chưa duyệt hoàn toàn'}: ${run.review.summary}` : '';
     const finalText = P.templateReport(task, dept, run, [this.depInput(task, st)], reviewText, this.workspaceChanges(task), 'Làn đơn: một agent làm trọn đề bài; báo cáo dựng tự động từ bàn giao và kết quả cổng chất lượng (không gọi model).');
-    const rel = `${safeName(dept.id)}-FINAL.md`;
+    const rel = `${safeName(dept.id)}${run.round ? `-R${run.round}` : ""}-FINAL.md`;
     writeText(path.join(store.runDir(task.id), rel), finalText);
     run.finalPath = rel;
     run.status = st.status === 'done' ? 'done' : 'failed';
@@ -2031,7 +2109,7 @@ export class Orchestrator {
       const body = st?.output ? (this.d.store.readRunFile(task.id, st.output) ?? '').replace(/^<!--[\s\S]*?-->\s*/, '') : '';
       const rv = run.review ? `\n\n## Review\n${run.review.approved ? '✅ Đã duyệt' : '⚠️ Chưa duyệt hoàn toàn'}: ${run.review.summary}${run.review.issues.length ? `\n${run.review.issues.map((i) => `- [${i.severity}] ${i.comment}`).join('\n')}` : ''}` : '';
       const finalText = `> Việc giao riêng cho ${solo.name} (@${solo.id})${st?.status === 'done' ? '' : ` — hạng mục ${st?.status ?? 'chưa chạy'}`}\n\n${body || '(chưa có bàn giao)'}${rv}\n`;
-      const rel = `${safeName(dept.id)}-FINAL.md`;
+      const rel = `${safeName(dept.id)}${run.round ? `-R${run.round}` : ""}-FINAL.md`;
       writeText(path.join(this.d.store.runDir(task.id), rel), finalText);
       run.finalPath = rel;
       run.status = run.subtasks.some((s) => s.status === 'failed') ? 'failed' : 'done';
@@ -2058,7 +2136,7 @@ export class Orchestrator {
       if (fin.error || !fin.text) throw new Error(`Trưởng phòng không viết được báo cáo tổng hợp${fin.error ? `: ${fin.error}` : ''}`);
       finalText = fin.text;
     }
-    const rel = `${safeName(dept.id)}-FINAL.md`;
+    const rel = `${safeName(dept.id)}${run.round ? `-R${run.round}` : ""}-FINAL.md`;
     writeText(path.join(this.d.store.runDir(task.id), rel), finalText);
     run.finalPath = rel;
     run.status = run.subtasks.some((s) => s.status === 'failed') ? 'failed' : 'done';
