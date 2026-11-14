@@ -23,6 +23,7 @@ const MSG = "You've hit your 5-hour limit · resets 1am (Asia/Bangkok)";
 
 function setup() {
   const a = testApp();
+  (a.config.defaults as { acceptFollowupRounds?: number }).acceptFollowupRounds = 1; // ghim, không phụ thuộc CCODING_CONFIG của máy
   const dir = fs.mkdtempSync(path.join(fs.realpathSync(process.env.TEMP ?? process.env.TMPDIR ?? '/tmp'), 'ccoding-fup-'));
   const repo = path.join(dir, 'repo');
   fs.mkdirSync(repo, { recursive: true });
