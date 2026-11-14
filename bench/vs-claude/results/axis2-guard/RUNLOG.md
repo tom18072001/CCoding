@@ -30,3 +30,12 @@ Quyết định về bộ dự phòng (chốt trước khi thấy kết quả ch
 - Tệp: `bench/vs-claude/results/axis2-guard/cases-normalized.jsonl` (82 dòng)
 - **sha256: e811c37fc53fe8770b2b4f8db89cca4f4148820b9801542f4fa1fe4e217ee784**
 - Mã commit của bước khóa: ghi bên dưới ngay sau khi commit (không squash commit này khi gộp).
+- Mã commit của bước khóa: **`74f11d99d62e433883c608ceb6b420311a07bf18`** (RUNLOG, cases-normalized.jsonl, normalize-cases.mjs). `git show 74f11d99:bench/vs-claude/results/axis2-guard/cases-normalized.jsonl | sha256sum` trùng hash trên (đã kiểm). Không squash khi gộp.
+
+## Bước 4 — chạy guardDecision (sau commit khóa)
+- `npm ci` trong worktree (chưa có node_modules) để có `tsx`.
+- Lệnh: `node --import tsx docs/research/analysis/axis2/replay-axis2.mjs --cases bench/vs-claude/results/axis2-guard/cases-normalized.jsonl --out bench/vs-claude/results/axis2-guard/results.json --expect-sha256 e811c37fc53fe8770b2b4f8db89cca4f4148820b9801542f4fa1fe4e217ee784` (script kiểm sha trước khi chạy).
+- `replay-axis2.mjs` sao chép từ `scripts/replay-guard-deny.mjs` (bản cũ không sửa); thêm `guardBlock` để lấy `rule` và Clopper–Pearson.
+- Kết quả: git-read 82/82 [95,6; 100] %; full 30/82 = 36,6 % [26,2; 48,0] %; kiểm n = 72: cận trên 0/72 = 4,994 %. Chi tiết: `report.md`, `results.json`.
+- Sai lệch/làm rõ: preregistration.md §9 dưới dòng 1238 (14/11/2026).
+- Commit kết quả: đứng sau commit khóa trong `git log`.
