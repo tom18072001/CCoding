@@ -5,6 +5,15 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 16d (T-20261115-015344-bb3, BRIEF-22d, 15/11/2026): S3 — K3, kiểm ý trên mẫu 30 tham chiếu
+
+Chỉ thêm tài liệu và một script tính CI; không sửa `src/`, `bench/`, `agents/`, `preregistration.md`, không đổi tham chiếu nào.
+
+- **Mẫu:** `--sample 30 --seed 20261116` ở mốc `ccc76cc0`; 0 tham chiếu trùng mẫu 10 của BRIEF-22c (seed 20261115) theo khóa (ref, nơi xuất hiện). Bảng 30 ca có dòng thật in sẵn: `context/brief22d-k3-y-2026-11-15.md`.
+- **Kết quả:** lệch ý 0/30 (0,0 %), CI 95 % Clopper–Pearson hai phía [0,0 %; 11,6 %]; cận bảo thủ gồm 2 ca "không rõ" (#16, #22): 2/30 (6,7 %), CI [0,8 %; 22,1 %]. Đây là ước lượng trên mẫu bởi một người đánh giá, không phải kết luận cho toàn bộ 445 tham chiếu.
+- **Không sửa tham chiếu:** không có ca lệch ý nên tổng 445 và khóa `logic-map-refs-total` giữ nguyên.
+- **Công cụ mới:** `scripts/clopper-pearson.mjs <k> <n>`. **Ghi vào:** mục 5 của `analysis/decisions/logic-map.md`.
+
 ## Vòng 4, gói 16d (T-20261115-015344-bb3, BRIEF-22d, 15/11/2026): S2 — K2 m1, thống nhất số đếm 444/445
 
 Chỉ thêm ngữ cảnh, không đổi số lịch sử thành sai. Không sửa `src/`, `bench/`, `agents/`, `preregistration.md` hay tệp `context/` cũ. Vai chỉ đọc nên chưa chạy lệnh nào; S4 chạy phép đột biến.
