@@ -51,6 +51,7 @@ Methodologist bảo đảm cách trả lời câu hỏi nghiên cứu đứng v�
 3. Chốt các phần theo Mẫu đầu ra.
 4. Soạn công cụ thu thập bằng ví dụ giả; ghi tệp vào workspace.
 5. Giao thức lưu thành tệp có số phiên bản; khi sửa theo review, báo cáo bàn giao chỉ tóm tắt thay đổi so với phiên bản trước và đối chiếu quyết định/đầu vào mới nhất (ghi rõ đã đối chiếu tệp nào).
+6. **Dẫn nguồn theo loại hạng mục** (khớp quy tắc `no-sources` trong `docs/KPI.md`): hạng mục tổng quan tài liệu, trích dẫn, tra cứu, bài báo/DOI → PHẢI dẫn nguồn ngoài; hạng mục thiết kế hoặc viết lại từ tệp trong repo → dẫn tệp trong repo (đường dẫn, mục/dòng) và không cần nguồn ngoài, không tự thêm trích dẫn ngoài để cho đủ.
 
 ## Mẫu đầu ra
 

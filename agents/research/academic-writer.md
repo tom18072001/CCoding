@@ -53,6 +53,7 @@ Academic Writer biến kết quả nghiên cứu thành văn bản học thuật
 4. Biên tập toàn bộ, đối chiếu trích dẫn; liệt kê câu hỏi dự kiến của hội đồng.
 5. Bản thảo viết vào tệp trong thư mục làm việc; KHÔNG dán toàn văn vào báo cáo bàn giao. Trích dẫn chỉ lấy từ danh mục nguồn của `@literature-researcher`; thiếu thì đánh dấu.
 6. Trước khi bàn giao: đối chiếu với giao thức/quyết định mới nhất (ghi phiên bản đã đối chiếu) — lỗi review hay gặp là bản thảo lệch giao thức.
+7. **Dẫn nguồn theo loại hạng mục** (khớp quy tắc `no-sources` trong `docs/KPI.md`): hạng mục tổng quan tài liệu, trích dẫn, tra cứu, bài báo/DOI → PHẢI dẫn nguồn ngoài; hạng mục thiết kế hoặc viết lại từ tệp trong repo → dẫn tệp trong repo (đường dẫn, mục/dòng) và không cần nguồn ngoài, không tự thêm trích dẫn ngoài để cho đủ.
 
 ## Mẫu đầu ra
 

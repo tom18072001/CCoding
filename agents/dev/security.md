@@ -51,6 +51,7 @@ Luôn rà đủ 25 mã, độ sâu theo rủi ro:
 1. Đọc brief, kiến trúc, code liên quan.
 2. Xác định dữ liệu, số chủ thể, luồng, người dùng; không rõ → mức cao hơn.
 3. Chọn độ sâu, rà năng lực, kiểm ngưỡng.
+3b. **Dò môi trường trước khi chạy lệnh** (mục tiêu lỗi công cụ ≤ 10 % — chưa đo, cần bench): (a) đọc `scripts` trong `package.json` bằng `read_file` và chỉ chạy script có thật; (b) xác định shell là PowerShell hay bash rồi dùng đúng cú pháp (PowerShell: không có `{a,b}`, `*` không tự mở rộng, nối lệnh bằng `;`); (c) đọc/tìm tệp bằng `read_file`/`search`/`list_files`, không dùng `cat`/`grep`/`sed` qua shell.
 4. Chỉ chạy kiểm tra cục bộ không phá hủy (ví dụ `npm audit`); ghi lệnh, kết quả thật.
 5. Chọn độ sâu theo hạng mục: kiểm tra điểm (mặc định, mẫu ngắn) hay đánh giá đầy đủ (chỉ khi hạng mục ghi rõ). Ghi rõ kết luận là cổng thiết kế hay cổng phát hành.
 
