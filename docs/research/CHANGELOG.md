@@ -5,6 +5,23 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 16 (T-20261114-162216-35d, BRIEF-22, 14/11/2026): bài báo v0.8, engine và logic từng agent, bảng điểm và chỗ fail
+
+Hạng mục K5 (@academic-writer). Không gọi LLM, không chạy benchmark, không sửa `src/` hay mã `bench/`. Nguồn: `analysis/decisions/{logic-map.md, scorecard.md, effectiveness.md, model-per-role.md}`, `context/decomposition-sources-2026-11-14.md`, `preregistration.md` §9.x (E9). Phân loại dữ liệu: **Nội bộ**; chỉ số tổng hợp, "dự án A" ẩn danh, ba ca 14/11 lấy từ biên bản người điều phối (n = 3, [Mô tả]).
+
+**Số đổi giá trị: không có.** Không có đại lượng nào của v0.7.1 có số mới từ script K2, nên không có dòng "số cũ → số mới". Mọi số v0.7.1 giữ nguyên.
+
+**Thêm mới trong `paper/paper.md` (v0.8):**
+- Đầu bài: đoạn "So với v0.7.1 (BRIEF-22)".
+- §4.4 "Engine và logic từng agent": bảng phân vai (CTO chỉ nghiệm thu; chỗ "CTO" dùng chung được tách ra thành điều phối viên, hàm `chooseLane`, trưởng phòng, engine); Hình 6 (luồng nhiệm vụ) và Hình 7 (lập lịch, gộp) bằng mermaid; Bảng 20 (20 agent, mỗi agent một dòng); tóm tắt lỗ hổng L1–L13.
+- §6.5 "Bảng điểm từng agent và chỗ fail": Bảng 21 (KPI v2 của 14 agent), Bảng 22 (cấu trúc kế hoạch P và văn phòng phụ), đoạn hiệu quả chia việc, số đo theo vai, Bảng 23 (23 chỗ fail theo trạng thái: đã sửa 3 với commit `c0e66fab`, `e2b6573c`/`39b9f166`/`a11abf45`, `d1903029`; đang sửa BRIEF-D17 và BRIEF-D16b; sửa được chưa có commit; cần đo thêm 7; ngoài tầm 2), đoạn model theo vai và E9 (chưa chạy, không số), đoạn đối chiếu tài liệu.
+- §10: thêm 8 nguồn (Crupi et al. 2025; Ding et al. 2024; Dong et al. 2025; Kim et al. 2025; Ong et al. 2025; Prasad et al. 2024; Wang et al. 2024; Zheng et al. 2023). Danh sách tác giả đối chiếu với trang arXiv (14/11/2026); venue ghi [V-thứ cấp], chưa mở trang proceedings. Cemri et al. 2025 và Hadfield et al. 2025 đã có từ trước.
+- Khai báo sử dụng AI: thêm đoạn vòng 4 gói 16.
+
+**`facts.json`:** thêm khóa gốc `brief22` chép nguyên khóa và giá trị từ khối facts của `scorecard.md` và `effectiveness.md` (không đặt tên khác; khóa gốc không dùng bởi `consistency-check.mjs`), cộng 5 mục `numbers` khóa giá trị trong `paper.md`: `brief22-calls-total` (112), `brief22-p-par-allowed` (1,41), `brief22-p-par-achieved` (1,28), `brief22-coord-share` (31,6), `brief22-fail-total` (23). Phần chép khóa được thực hiện bằng tay (vai này không chạy được `node`), nên cần đối chiếu bằng lệnh ở K7a.
+
+**Việc còn lại (ghi để người kiểm):** (1) `scorecard.mjs --check`, `consistency-check.mjs`, `token-analysis.mjs --check`, `stats.test.mjs` chưa chạy trong hạng mục này; (2) đối chiếu máy từng khóa `brief22.*` với hai khối facts; (3) trạng thái F-A8 "đang sửa (gói D16)" và F-E3 "đang sửa (D16b)" lấy từ `scorecard.md`, chưa có commit mã nào trong `git log` cho F-A8; (4) mở lại trang proceedings cho các mục [V-thứ cấp] mới trước khi nộp; (5) mọi trạng thái "đã sửa" chưa được đo lại, bài không nói mức cải thiện.
+
 ## Vòng 4, gói 15 (T-20261114-153056-f45, BRIEF-21, 14/11/2026): bài báo v0.7.1 sửa theo phản biện K4
 
 Nguồn phát hiện: `context/k4-v07-review-2026-11-14.md` (Phần A, B, C). **Không số đo nào đổi giá trị.** Số dòng `paper.md` bên dưới là dòng của v0.7.1 (không đổi so với v0.7, vì mọi sửa nằm trong dòng sẵn có).
