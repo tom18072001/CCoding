@@ -2550,7 +2550,9 @@ export class Orchestrator {
     const access = this.toolAccess(task, project);
     const cls = task.classification;
     const web = this.d.config.tools.web !== false && (cls === 'public' || cls === 'internal');
-    const fixed = e.base + (task.options.review ? e.perReview * (1 + task.options.maxRevisions) : 0);
+    // hằng số (không cache) nhân hệ số theo runtime để cùng đơn vị với token thật (gồm cacheRead); lịch sử thì không nhân
+    const factor = e.runtimeFactor?.[task.options.runtime || this.d.config.runtime.default] ?? 1;
+    const fixed = Math.round(factor * (e.base + (task.options.review ? e.perReview * (1 + task.options.maxRevisions) : 0)));
     const cost = new Map<string, number>();
     for (const st of run.subtasks) {
       if (st.status === 'done') continue;
@@ -2564,6 +2566,7 @@ export class Orchestrator {
       else {
         c = e.perSubtask[lvl] ?? e.perSubtask.none;
         if (tools.some((t) => t === 'search_papers' || t === 'web_search' || t === 'fetch_url')) c += e.web;
+        c = Math.round(c * factor);
       }
       cost.set(st.id, c);
     }
