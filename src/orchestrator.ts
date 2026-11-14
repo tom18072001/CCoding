@@ -40,7 +40,7 @@ import { classifyError, RuntimeError, shouldFailover, toRuntimeError } from './r
 import type { Candidate, RuntimeManager } from './runtimes/index.js';
 import type { Store } from './store.js';
 import { clearFixedFeedback, kpiMarkdown, kpiReport, templateHeadings } from './kpi.js';
-import { changedFiles, classifyChecks, reviewerReasons, sensitivePaths, templateGate, type ClassifiedCheck, type QualityGateOptions, type QualityGateResult } from './quality-gate.js';
+import { briefDemandsReview, changedFiles, classifyChecks, reviewerReasons, sensitivePaths, templateGate, type ClassifiedCheck, type QualityGateOptions, type QualityGateResult } from './quality-gate.js';
 import { subtaskHistory, type AgentHistory } from './estimate.js';
 import { buildRepoMap } from './repomap.js';
 import { chooseLane, forcedLane, laneSignals, type LaneSignals } from './lane.js';
@@ -1570,18 +1570,18 @@ export class Orchestrator {
       if (!gate.needReviewer) {
         const summary = `Cổng chất lượng (làn đơn): lệnh kiểm tra đều xanh${gate.fixRounds ? ` sau ${gate.fixRounds} vòng sửa` : ''}, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.`;
         run.review = { approved: true, summary, issues: [], checks: gateChecks, verified: true };
-        logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'skip-reviewer', fixRounds: gate.fixRounds, lane: 'single' } });
+        logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'skip-reviewer', fixRounds: gate.fixRounds, lane: 'single', briefDemandsReview: gate.briefDemandsReview, briefReviewItems: gate.briefReviewItems } });
         this.message(task, dept.id, 'system', 'system', `✅ ${summary}`);
       } else if (!canReview || !reviewer) {
         // cần reviewer mà không có: ghi kiểm chứng theo cổng, KHÔNG tự gắn approved (D-02); không có lệnh kiểm tra nào thì không có gì để ghi
         if (gateChecks.length) {
         const summary = `Cổng chất lượng (làn đơn): cần reviewer (${gate.reasons.join('; ')}) nhưng phòng không có/không bật — chờ giám đốc xem.`;
         run.review = { approved: false, summary, issues: [], checks: gateChecks, verified: gateChecks.length > 0 };
-        logs.write({ level: 'warn', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'no-reviewer', reasons: gate.reasons, lane: 'single' } });
+        logs.write({ level: 'warn', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'no-reviewer', reasons: gate.reasons, lane: 'single', briefDemandsReview: gate.briefDemandsReview, briefReviewItems: gate.briefReviewItems } });
         this.message(task, dept.id, 'system', 'system', `✋ ${summary}`);
         }
       } else {
-        logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: gọi reviewer — ${gate.reasons.join('; ')}`, taskId: task.id, department: dept.id, data: { decision: 'call-reviewer', reasons: gate.reasons, lane: 'single' } });
+        logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: gọi reviewer — ${gate.reasons.join('; ')}`, taskId: task.id, department: dept.id, data: { decision: 'call-reviewer', reasons: gate.reasons, lane: 'single', briefDemandsReview: gate.briefDemandsReview, briefReviewItems: gate.briefReviewItems } });
         this.setPhase(task, run, 'review');
         const items = [this.depInput(task, st)];
         const res = await this.call(reviewer, 'review', (tools) => P.reviewPrompt({ ...pctx, reviewFocus: run.reviewFocus }, items, tools, this.workspaceChanges(task), checkable), { ...base, hints: { brief: task.brief, subtasks: [stHint(st)], attempt: 0 } });
@@ -1872,12 +1872,12 @@ export class Orchestrator {
               // cần reviewer mà không có: ghi kiểm chứng theo cổng nhưng KHÔNG tự gắn approved (D-02); không có lệnh kiểm tra nào thì không có gì để ghi (như trước)
               const summary = `Cổng chất lượng: cần reviewer (${gate.reasons.join('; ')}) nhưng phòng không có/không bật — chờ giám đốc xem.`;
               run.review = { approved: false, summary, issues: [], checks: gateChecks, verified: gateChecks.length > 0 };
-              this.d.logs.write({ level: 'warn', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'no-reviewer', reasons: gate.reasons, fixRounds: gate.fixRounds } });
+              this.d.logs.write({ level: 'warn', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'no-reviewer', reasons: gate.reasons, fixRounds: gate.fixRounds, briefDemandsReview: gate.briefDemandsReview, briefReviewItems: gate.briefReviewItems } });
               this.message(task, dept.id, 'system', 'system', `✋ ${summary}`);
             } else if (gateChecks.length) {
               const summary = `Cổng chất lượng: lệnh kiểm tra đều xanh${gate.fixRounds ? ` sau ${gate.fixRounds} vòng sửa` : ''}, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.`;
               run.review = { approved: true, summary, issues: [], checks: gateChecks, verified: true };
-              this.d.logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'skip-reviewer', fixRounds: gate.fixRounds, reviewer: false } });
+              this.d.logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'skip-reviewer', fixRounds: gate.fixRounds, reviewer: false, briefDemandsReview: gate.briefDemandsReview, briefReviewItems: gate.briefReviewItems } });
               this.message(task, dept.id, 'system', 'system', `✅ ${summary}`);
             }
             break;
@@ -1893,11 +1893,11 @@ export class Orchestrator {
           if (!gate.needReviewer) {
             const summary = `Cổng chất lượng: lệnh kiểm tra đều xanh${gate.fixRounds ? ` sau ${gate.fixRounds} vòng sửa` : ''}, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.`;
             run.review = { approved: true, summary, issues: [], checks: gateChecks, verified: true };
-            this.d.logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'skip-reviewer', fixRounds: gate.fixRounds } });
+            this.d.logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'skip-reviewer', fixRounds: gate.fixRounds, briefDemandsReview: gate.briefDemandsReview, briefReviewItems: gate.briefReviewItems } });
             this.message(task, dept.id, 'system', 'system', `✅ ${summary}`);
             break;
           }
-          this.d.logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: gọi reviewer — ${gate.reasons.join('; ')}`, taskId: task.id, department: dept.id, data: { decision: 'call-reviewer', reasons: gate.reasons } });
+          this.d.logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: gọi reviewer — ${gate.reasons.join('; ')}`, taskId: task.id, department: dept.id, data: { decision: 'call-reviewer', reasons: gate.reasons, briefDemandsReview: gate.briefDemandsReview, briefReviewItems: gate.briefReviewItems } });
           this.setPhase(task, run, 'review');
           const items = done().map((st) => this.depInput(task, st));
           const changes = this.workspaceChanges(task);
@@ -3307,7 +3307,9 @@ export class Orchestrator {
     // 3) kết luận: có phải gọi reviewer không
     const stillRed = classes.filter((c) => c.cls === 'red-required').map((c) => c.command);
     const exhausted = classes.some(isRed) || !templateOk;
+    const briefReview = briefDemandsReview(task.brief);
     const reasons = reviewerReasons({
+      briefReviewCodes: briefReview.codes,
       hasCheckCommands: checkable,
       changedFiles: changedFiles(task.workspace, task.baseRef),
       classification: task.classification,
@@ -3315,7 +3317,7 @@ export class Orchestrator {
       failedAfterRounds: exhausted,
     });
     logs.write({ level: initialRed ? 'warn' : 'info', kind: 'gate.decision', msg: `${task.id}: cổng B-02 ${initialRed ? 'chặn' : 'đạt'} (${fixRounds} vòng sửa)`, taskId: task.id, department: deptId, data: { gate: 'b02', verdict: initialRed ? 'block' : 'pass', rounds: fixRounds, checks: { red: classes.filter(isRed).length, total: classes.length } } });
-    return { forceUnapproved: stillRed.length > 0, stillRed, classes, fixRounds, templateOk, needReviewer: reasons.length > 0, reasons, exhausted };
+    return { forceUnapproved: stillRed.length > 0, stillRed, classes, fixRounds, templateOk, needReviewer: reasons.length > 0, reasons, exhausted, briefDemandsReview: briefReview.demands, briefReviewItems: briefReview.codes };
   }
 
   /** CCoding tự chạy lệnh chuẩn bị (một lần mỗi worktree) rồi lệnh kiểm tra của dự án — bằng chứng không phụ thuộc agent/model. */
