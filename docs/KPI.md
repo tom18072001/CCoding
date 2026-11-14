@@ -134,3 +134,10 @@ Các mục dưới đây chưa làm vì cần quyết định thiết kế của
 | Chặn mạng trong sandbox probe | Mô hình quyền của Node 22 không chặn mạng; muốn chặn cần container/namespace mạng của hệ điều hành (khác nhau giữa Windows/Linux). Đã giảm rủi ro bằng env tối thiểu (không còn bí mật để lộ) |
 | Ngưỡng `unknown` (quá 50% → không đo được) | Chọn theo lập luận, chưa hiệu chỉnh trên dữ liệu thật; đổi ở `MAX_UNKNOWN_SHARE` trong `src/kpi.ts` |
 | Dữ liệu cũ | Bản ghi trước bản sửa: không có `maxPrompt` (độ đầy ngữ cảnh lượt nhiều vòng vẫn là ước lượng), không có `projectChecks.depts` (nhiệm vụ nhiều phòng không gán lệnh kiểm tra cho ai), không có `reviewerApproved` (nhận ra qua ghi chú "CCoding: … → không duyệt" trong summary) |
+
+## Cờ "cắt" và quy tắc miễn nguồn (FX8, FX11)
+
+- `truncated` = đầu ra bị cắt **thật** (runtime báo `max_tokens`/`length`). Với bản ghi cũ không có cờ, chỉ suy từ output ≥ 98% `maxTokens` khi lượt một vòng, không công cụ, và runtime **không** phải `claude-cli`. `claude-cli` không áp `max_tokens` và cộng dồn output qua các vòng công cụ nên tỉ số đó không nói lên điều gì.
+- `turnCapped` = chạm trần vòng công cụ (`r.turnCapped`, hoặc `diag` chứa "chạm trần"). Khóa việc cần sửa riêng: `turn-capped`.
+- `no-sources` (phòng research): miễn cho sản phẩm của hạng mục **không đòi nguồn ngoài** — mô tả/tiêu đề hạng mục nói thiết kế hoặc viết lại từ tệp trong repo (`viết lại`, `thiết kế`, `từ tệp`, `trong repo`…), không chứa dấu hiệu cần nguồn (`tổng quan`, `literature`, `trích dẫn`, `tra cứu`, `bài báo`, `DOI`…), và lượt có đọc tệp (read_file/list_files/search). Chỉ báo khi còn sản phẩm không được miễn. Hạng mục tổng quan tài liệu vẫn bị báo.
+- Chẩn đoán chi tiết: `docs/diagnostics/fx8-truncated.md`.
