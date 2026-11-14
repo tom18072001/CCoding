@@ -612,7 +612,7 @@ export async function executeTool(name: string, rawArgs: unknown, policy: ToolPo
         const away = outsidePathReason(command, fs.realpathSync(root));
         if (away) throw new ToolError(`Lệnh bị chặn: ${away}.`);
         const wv = outsideWriteDecision(command, fs.realpathSync(root));
-        if (wv) throw new ToolError(`Lệnh bị chặn theo quy tắc ${wv.rule}: ${wv.reason}.`);
+        if (wv) throw new ToolError(`Lệnh bị chặn: ${wv.message}.`);
         const timeout = Math.min(policy.commandTimeoutSec, Math.max(5, Number(args.timeout_sec) || 300));
         // một lệnh tại một thời điểm trong cùng workspace (agent song song có thể ở các tiến trình/pane khác nhau)
         const unlock = await lockWorkspace(fs.realpathSync(root), timeout, signal);

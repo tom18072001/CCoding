@@ -108,7 +108,7 @@ export function guardBlock(input: HookInput, cfg: GuardConfig, env: NodeJS.Proce
     const away = outsidePathReason(cmd, cfg.root);
     if (away) return blk(name, 'outside-root', `CCoding chặn lệnh: ${away}`);
     const wv = outsideWriteDecision(cmd, cfg.root);
-    if (wv) return blk(name, wv.rule, `CCoding chặn lệnh: ${wv.reason}`, wv.clause, wv.cmd);
+    if (wv) return blk(name, wv.rule, wv.message, wv.clause, wv.cmd);
     return undefined;
   }
   if (FILE_TOOLS.has(name)) {

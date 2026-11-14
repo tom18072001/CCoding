@@ -74,8 +74,8 @@ function inject(a: App, phase: string, make: () => RunResult) {
 }
 
 const BRIEF = 'Viết tài liệu API nhỏ cho dịch vụ thanh toán';
-// Báo cáo tổng hợp của phòng = `<phòng>-FINAL.md`. `FINAL.md` ở gốc là bản tạm do writeFinal ghi khi nhiệm vụ tạm dừng
-// (chỉ có phụ lục token/tệp đầu ra) — kiểm riêng bên dưới rằng nó không chứa thông báo lỗi.
+// Báo cáo tổng hợp của phòng = `<phòng>-FINAL.md`. Khi tạm dừng, writeFinal KHÔNG ghi FINAL.md ở gốc: bản tạm (chỉ có phụ lục
+// token/tệp đầu ra) nằm ở `DRAFT-paused.md` — kiểm riêng bên dưới rằng nó không chứa thông báo lỗi.
 const hasFinal = (a: App, id: string) => {
   const dir = a.store.runDir(id);
   return fs.existsSync(dir) && fs.readdirSync(dir).some((f) => /-FINAL\.md$/.test(f));
@@ -139,8 +139,8 @@ test('synthesize: cùng thông báo hạn mức → paused, không ghi FINAL/bá
     assert.equal(done.pause?.reason, 'quota');
     assert.equal(hasFinal(a, t.id), false, 'không có báo cáo tổng hợp của phòng');
     assert.ok(done.runs.every((r) => !r.finalPath), 'run không có finalPath');
-    const interim = a.store.readRunFile(t.id, 'FINAL.md') ?? '';
-    assert.equal(interim.includes('5-hour limit'), false, 'FINAL.md tạm không chứa thông báo lỗi');
+    const interim = a.store.readRunFile(t.id, 'DRAFT-paused.md') ?? '';
+    assert.equal(interim.includes('5-hour limit'), false, 'bản tạm DRAFT-paused.md không chứa thông báo lỗi');
     assert.equal(interim.includes(PARTIAL), false);
     const dir = a.store.runDir(t.id);
     for (const f of fs.existsSync(dir) ? fs.readdirSync(dir) : []) {
@@ -199,6 +199,47 @@ test('K4(a): tiếp tục rồi hoàn thành → FINAL.md được ghi bình th�
     assert.equal(done.finalPath, 'FINAL.md');
     assert.ok(fs.existsSync(path.join(a.store.runDir(t.id), 'FINAL.md')));
     assert.equal(fs.existsSync(path.join(a.store.runDir(t.id), 'DRAFT-paused.md')), false, 'bản tạm đã dọn');
+  } finally {
+    a.cleanup();
+  }
+});
+
+// D7: nhiệm vụ paused CŨ (ghi bởi bản trước) còn FINAL.md tạm mà chưa có finalPath → khi tiếp tục thì đổi tên, không xóa, có log.
+test('D7: paused cũ còn FINAL.md tạm → resume đổi tên thành DRAFT-paused.md, giữ nội dung, ghi log', async () => {
+  const a = testApp();
+  try {
+    inject(a, 'synthesize', () => limitRes());
+    const t = a.orchestrator.submit({ brief: BRIEF, options: { discussionRounds: 0 } });
+    const paused = await a.orchestrator.waitFor(t.id);
+    assert.equal(paused.status, 'paused');
+    const dir = a.store.runDir(t.id);
+    fs.rmSync(path.join(dir, 'DRAFT-paused.md'), { force: true });
+    fs.writeFileSync(path.join(dir, 'FINAL.md'), 'BẢN TẠM CŨ — nội dung cần giữ', 'utf8');
+    (a.orchestrator as unknown as { renameLegacyInterimFinal: (t: unknown) => void }).renameLegacyInterimFinal(paused);
+    assert.equal(fs.existsSync(path.join(dir, 'FINAL.md')), false, 'FINAL.md tạm đã được đổi tên');
+    assert.equal(fs.readFileSync(path.join(dir, 'DRAFT-paused.md'), 'utf8'), 'BẢN TẠM CŨ — nội dung cần giữ', 'nội dung còn nguyên');
+    const logged = a.logs.query({ task: t.id, limit: 500 }).filter((e) => e.kind === 'task.final.legacy-renamed');
+    assert.equal(logged.length, 1, 'có đúng một sự kiện log đổi tên');
+  } finally {
+    a.cleanup();
+  }
+});
+
+test('D7: tên DRAFT-paused.md đã có → đổi thành DRAFT-paused-legacy.md; nhiệm vụ đã có finalPath thì không đụng', async () => {
+  const a = testApp();
+  try {
+    inject(a, 'synthesize', () => limitRes());
+    const t = a.orchestrator.submit({ brief: BRIEF, options: { discussionRounds: 0 } });
+    const paused = await a.orchestrator.waitFor(t.id);
+    const dir = a.store.runDir(t.id);
+    assert.ok(fs.existsSync(path.join(dir, 'DRAFT-paused.md')));
+    fs.writeFileSync(path.join(dir, 'FINAL.md'), 'CŨ', 'utf8');
+    const o = a.orchestrator as unknown as { renameLegacyInterimFinal: (t: unknown) => void };
+    o.renameLegacyInterimFinal({ ...paused, finalPath: 'FINAL.md' });
+    assert.ok(fs.existsSync(path.join(dir, 'FINAL.md')), 'có finalPath: giữ nguyên');
+    o.renameLegacyInterimFinal(paused);
+    assert.equal(fs.readFileSync(path.join(dir, 'DRAFT-paused-legacy.md'), 'utf8'), 'CŨ');
+    assert.equal(fs.existsSync(path.join(dir, 'FINAL.md')), false);
   } finally {
     a.cleanup();
   }

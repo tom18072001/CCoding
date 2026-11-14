@@ -556,6 +556,7 @@ export class Orchestrator {
     if (t.options.budgetMode === 'pause' && totalTokens(t.usage) >= t.options.budgetTokens)
       throw new Error(`Đã dùng ${fmtNum(totalTokens(t.usage))}/${fmtNum(t.options.budgetTokens)} token — hãy tăng ngân sách hoặc chọn "Chạy tới khi hoàn thành"`);
     this.clearResumeTimer(id);
+    this.renameLegacyInterimFinal(t);
     const rerun = o.rerun === 'all' ? 'all' : new Set(o.rerun ?? []);
     for (const r of t.runs) {
       const again = r.subtasks.filter((s) => s.status === 'done' && (rerun === 'all' || rerun.has(s.id)));
@@ -4154,6 +4155,22 @@ export class Orchestrator {
     if (!st.output) return '';
     const t = this.d.store.readRunFile(task.id, st.output) ?? '';
     return t.replace(/^<!--[\s\S]*?-->\s*/, '');
+  }
+
+  /** D7: nhiệm vụ paused CŨ còn FINAL.md tạm (chưa có finalPath) → đổi tên thành DRAFT-paused.md (hoặc -legacy nếu đã có), không xóa, ghi log. */
+  private renameLegacyInterimFinal(task: Task): void {
+    if (task.status !== 'paused' || task.finalPath) return;
+    const { store, logs } = this.d;
+    const from = path.join(store.runDir(task.id), 'FINAL.md');
+    if (!fs.existsSync(from)) return;
+    let name = 'DRAFT-paused.md';
+    if (fs.existsSync(path.join(store.runDir(task.id), name))) name = 'DRAFT-paused-legacy.md';
+    try {
+      fs.renameSync(from, path.join(store.runDir(task.id), name));
+      logs.write({ level: 'info', kind: 'task.final.legacy-renamed', msg: `${task.id}: FINAL.md tạm của nhiệm vụ tạm dừng cũ được đổi tên thành ${name} (không xóa, giữ bằng chứng)`, taskId: task.id, projectId: task.projectId, data: { to: name } });
+    } catch {
+      /* không đổi tên được: để nguyên, writeFinal sẽ ghi đè khi hoàn thành */
+    }
   }
 
   private writeFinal(task: Task): void {
