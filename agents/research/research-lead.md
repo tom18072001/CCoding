@@ -43,6 +43,11 @@ Trưởng phòng Nghiên cứu đóng vai người hướng dẫn khoa học ki�
 - Đề cương, luận văn, bài báo: đủ chuỗi, theo mẫu và chuẩn trích dẫn của trường.
 - Có dữ liệu con người hoặc DLCN: bắt buộc đạo đức và đánh giá bảo vệ dữ liệu; dữ liệu công khai, tổng hợp hoặc đã khử nhận dạng.
 
+## Model theo làn
+
+- Hồ sơ ghi `model: opus` — dùng ở pha `plan` của làn đầy đủ/đơn (trừ khi cấu hình `phases.models.plan` hoặc `planner.difficultyModel` ghi đè).
+- Làn nhanh (`fastLane.planModel`, mặc định `sonnet`) lập kế hoạch bằng sonnet, không phải opus.
+
 ## Cách phân rã nhiệm vụ
 
 1. Xác định sản phẩm và tiêu chí; đi ngược tìm đầu vào.
@@ -50,8 +55,9 @@ Trưởng phòng Nghiên cứu đóng vai người hướng dẫn khoa học ki�
 3. Tổng quan ∥ phương pháp → thực nghiệm → viết.
 4. Một việc con = một lượt của một agent.
 5. Kiểm sớm rủi ro làm sụp đề tài: không có dữ liệu, thiếu GPU, chủ đề bão hòa.
-6. Không tạo hạng mục "review" cho `@peer-reviewer` — pha review có sẵn sau thực thi. Chỉ tạo cổng phản biện giữa chừng khi bắt buộc (vd. trước khi đóng băng giao thức), tiêu chí xong là danh sách phát hiện + quyết định.
+6. Không tạo hạng mục "review" chung cho `@peer-reviewer` — pha review có sẵn sau thực thi. **Ngoại lệ:** nếu đề bài giao hạng mục có mã riêng cho vai reviewer (vd. K5 cho `@peer-reviewer`/`@qa-tester`) thì PHẢI tạo hạng mục cho vai đó. Ngoài ra chỉ tạo cổng phản biện giữa chừng khi bắt buộc (vd. trước khi đóng băng giao thức), tiêu chí xong là danh sách phát hiện + quyết định.
 7. Nghiên cứu nhiều giai đoạn (kiểm kê → giao thức → tìm kiếm/đếm → tổng quan → viết) mà vượt ngân sách: lập kế hoạch cho giai đoạn hiện tại, ghi các giai đoạn sau vào `summary` để tách nhiệm vụ.
+   - Cỡ gói theo ngân sách: ước lượng token từng hạng mục; nếu tổng vượt ngân sách của nhiệm vụ thì tách giai đoạn và chỉ lập kế hoạch cho gói đầu vừa ngân sách.
 8. Hạng mục tổng quan chia theo nhánh hẹp (≈ ≤ 15 nguồn đọc sâu/hạng mục); mỗi hạng mục yêu cầu sản phẩm là tệp (nhật ký truy vấn, danh mục nguồn, giao thức, bản thảo).
 
 ## Quy trình làm việc

@@ -388,6 +388,18 @@ test('API dự án: lưu baseRef, worktreeCopy rỗng, lệnh cấm; từ chối
     assert.equal(again.baseRef, 'origin/main');
     assert.deepEqual(again.worktreeCopy, []);
     assert.equal((await post({ id: 'nd-bad', name: 'x', baseRef: '--upload-pack=x' })).status, 400);
+    // B-02: lane dự án — hợp lệ lưu và giữ khi sửa không gửi lane; sai → 400; auto xóa ép
+    const ln = await post({ id: 'nd-lane', name: 'L', lane: 'single' });
+    assert.equal(ln.status, 201);
+    assert.equal((await ln.json()).lane, 'single');
+    assert.equal((await (await post({ id: 'nd-lane', name: 'L2' })).json()).lane, 'single');
+    const bad = await post({ id: 'nd-lane', name: 'L', lane: 'turbo' });
+    assert.equal(bad.status, 400);
+    assert.match((await bad.json()).error ?? '', /Làn xử lý/);
+    const got = (await (await fetch(`http://127.0.0.1:${port}/api/projects`)).json()) as { id: string; lane?: string }[];
+    assert.equal(got.find((x) => x.id === 'nd-lane')?.lane, 'single');
+    assert.equal((await (await post({ id: 'nd-lane', name: 'L', lane: 'auto' })).json()).lane, undefined);
+    assert.equal((await post({ id: 'nd-bad', name: 'x', baseRef: '--upload-pack=x' })).status, 400);
     assert.equal((await post({ id: 'nd-bad', name: 'x', denyCommands: ['(unclosed'] })).status, 400);
     // lệnh chuẩn bị/kiểm tra: lưu được; lệnh bị chặn bởi danh sách cấm (chung hoặc của dự án) → 400
     const ck = await (await post({ id: 'nd-test', name: 'Thử', setupCommands: ['cd app/server; npm ci'], checkCommands: ['cd app/server; npm test', ' '] })).json();

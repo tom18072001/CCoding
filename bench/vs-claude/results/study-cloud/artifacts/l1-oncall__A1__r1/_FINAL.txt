@@ -1,0 +1,15 @@
+**Stage 4: FIX and final report.** I wrote `answer.json` in the repo root. I got the numbers by checking all 120 possible rotas with a script. I also checked the schedule against each rule by hand.
+
+- **Schedule:** the unique rota is Mon Dung, Tue Chi, Wed Binh, Thu An, Fri Em.
+- **`count_without_rule_2`:** 10 rotas satisfy every rule except rule 2.
+- **`most_permissive_rule`:** 2. Removing rule 2 allows 10 rotas. Removing any other rule allows at most 4.
+
+Counts when each rule is removed alone:
+
+| Rule removed | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+|---|---|---|---|---|---|---|---|
+| Valid rotas | 2 | 10 | 4 | 2 | 2 | 2 | 3 |
+
+I treated "consecutive" as adjacent weekdays, with no wrap from Friday to Monday. The most permissive rule is not tied, so the tie-break assumption didn't matter.
+
+The only fix after review was reordering the `schedule` keys to Mon through Fri. I left the helper script in `/tmp`, outside the repo.

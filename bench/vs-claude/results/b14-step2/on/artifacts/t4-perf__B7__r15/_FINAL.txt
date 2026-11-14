@@ -1,0 +1,124 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t4-perf__B7__r15] Tối ưu buildReport dưới 1 giây trên 200.000 dòng, giữ nguyên hành vi
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Bản viết lại buildReport đã có trong worktree (bench 224 ms, npm test xanh 4/4). Phần còn thiếu là đối chiếu với bản cũ ở quy mô 200.000 dòng và với đầu vào bất thường (ngày không hợp lệ, qty/unitPrice không phải số). Kế hoạch giữ nguyên code hiện có, chia 2 hạng mục song song: một rà soát và vá src/report.js, một viết bộ test đối chiếu quy mô lớn trong tệp riêng.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Rà soát tương đương hành vi và vá src/report.js (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã rà soát `src/report.js` với bản cũ và tìm thấy 2 nhóm khác biệt. Cả hai đã được vá trong `src/report.js`, giữ nguyên bản viết lại. Sau khi vá, fuzz 3000 bộ dữ liệu bất thường cho kết quả giống hệt bản cũ (`deepStrictEqual`), `npm test` xanh 4/4 và bench 224 ms (< 1000 ms). Chưa đối chiếu trực tiếp với bản cũ ở 200.000 dòng, vì bản cũ chạy rất chậm.
+
+## Tệp đã tạo/sửa
+- `src/report.js` · thêm hàm `jsonVal`, dùng cho `category`, `name`, `sku`, `customerId`, `id`, `qtySigned`. Sửa cách tra product khi `sku` là NaN.
+- Không sửa tệp test, vì S2 sở hữu chúng. Script fuzz nằm ở thư mục tạm `/tmp/fz.js`, chưa đưa vào repo.
+
+## Kiểm chứng
+- `node /tmp/fz.js` → `ok 3000`. Trước khi vá nó báo `AssertionError` ở một bộ dữ liệu (lỗi NaN sku, xem bên dưới); nhóm lỗi `qty` chuỗi, tôi tìm ra qua đọc mã và vá cùng lúc nên không có lần chạy đỏ riêng.
+  - 3000 bộ dữ liệu bất thường gồm: qty/unitPrice kiểu NaN, Infinity, `-0`, chuỗi, null, undefined; sku/customerId/id/category/name kiểu NaN, null, undefined, `-0`; date null, số hoặc Date; status lạ; options thiếu hoặc `topN` không nguyên.
+  - Mỗi bộ so sánh kết quả hoặc loại lỗi ném ra với bản cũ, và kiểm tra đầu vào không bị mutate.
+- `npm test` → exit 0; tests 4, pass 4, fail 0.
+- `npm run bench` → `200000 dòng: 224 ms · 13 tháng · 11 danh mục · tổng 11445199250`. Tôi chỉ đọc dòng cuối của output, chưa ghi nhận exit code của riêng lệnh này.
+
+## Quyết định thiết kế
+Khác biệt đã vá:
+1. **`qty` không phải số** (chuỗi, null, undefined). Bản mới ép về null, còn bản cũ giữ nguyên qua JSON, nên `qty` tổng hợp thành chuỗi như `'02'`. Giờ chỉ số mới được chuẩn hóa NaN/Infinity thành null và `-0` thành 0. Giá trị khác giữ nguyên.
+2. **`sku` là NaN.** Bản cũ dùng `Array.find` với `===` nên không khớp product nào và rơi vào `'unknown'`. `Map.get` khớp NaN, nên bản mới gán nhầm category. Đã thêm điều kiện `o.sku === o.sku`.
+3. **`category`, `name`, `sku`, `customerId`, `id` kiểu NaN hoặc `-0`.** Bản cũ đổi chúng thành null hoặc 0 do round-trip JSON. Giờ đi qua `jsonVal`.
+
+Các điểm đã đối chiếu và xác nhận không khác biệt:
+- Date không hợp lệ hoặc thiếu: cả hai bản đều ném `RangeError` tại `toISOString`. `date` là null hoặc số vẫn chạy giống nhau.
+- Lọc `from`/`to` và gom tháng.
+- Thứ tự cộng, thứ tự phần tử đầu tiên và comparator sort.
+- Options undefined, `topN` null hoặc không nguyên.
+- Đầu vào không bị mutate.
+- `-0` được chuẩn hóa.
+
+## Rủi ro & việc còn mở
+- Đầu vào là object hoặc mảng cho `sku`/`customerId`/`id`: bản cũ clone qua JSON nên mất identity, bản mới giữ tham chiếu. Tôi coi đây là đầu vào không hợp lệ.
+- Đầu vào BigInt: bản cũ ném lỗi ở `JSON.stringify`, bản mới không. Cũng coi là không hợp lệ.
+- Chưa đối chiếu với bản cũ ở 200.000 dòng. Việc này thuộc S2.
+- Chưa commit; thay đổi nằm trong working tree.
+
+Bản đầy đủ: `.ccoding/T-20261113-055335-bbd/outputs/dev-S1-senior-swe.md`
+
+### S2 — Test đối chiếu quy mô lớn và đầu vào bất thường (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã tạo `test/report.large.test.js` gồm 6 test. Chúng so sánh `buildReport` với `buildReportReference` trên 20.000 dòng, trên các đầu vào bất thường và trên việc đầu vào có bị mutate hay không. `npm test` xanh 11/11, tổng khoảng 7,9 giây. Không có ca nào khác biệt giữa bản mới và bản cũ, nên không có gì cần chuyển cho S1.
+
+## Tệp đã tạo/sửa
+- `test/report.large.test.js` (mới). Tôi không sửa `src/report.js`, `test/report.compare.test.js` hay `test/report.reference.js`.
+  - Test dùng cùng kiểu import `require` và `node:test` như `test/report.compare.test.js`.
+  - Hàm so sánh `same()` chạy cả hai bản. Nếu bản cũ ném lỗi, test kiểm tra bản mới cũng ném lỗi và cùng constructor. Nếu không, test dùng `deepStrictEqual`.
+  - **Quy mô lớn, từ `src/gen`:** 2 seed (101, 202), mỗi seed 20.000 dòng, chạy với 8 bộ options.
+  - **Quy mô lớn, tự dựng:** 20.000 dòng với seed cố định. Có đủ các status paid, refunded, cancelled, pending. Có 6 mốc ngày với các múi giờ từ -05:00 đến +14:00. Có sku trùng và sku không có trong products. Chạy với 5 bộ options.
+  - **Ngày bất thường:** chuỗi rác, `''`, null, undefined, `NaN`, `{}`, `'2025-13-45'`, timestamp số, đối tượng `Date`, ngày không có múi giờ. Mỗi ca chạy thêm với `from`/`to`.
+  - **qty/unitPrice bất thường:** các giá trị chuỗi số, chuỗi rỗng, `'abc'`, null, undefined, `NaN`, ±Infinity, 1.5, `-0`, true, `[]`, nhân với 3 status.
+  - **Trường thiếu hoặc lạ:** id, customerId, sku, status nhận undefined, null, `''`, 0, `NaN`, số, chuỗi, false. Thêm ca xóa hẳn `customerId`, và product thiếu name hoặc category.
+  - **Options và tham số:** options bỏ trống, undefined, null, `topN` lớn hơn số phần tử, âm, lẻ, chuỗi, null, `from > to`, `from`/`to` rỗng, `from` là số, orders hoặc products là undefined hoặc null, mảng rỗng.
+  - **Mutate:** so sánh bản sao sâu của orders, products, options trước và sau khi gọi. Gọi lặp lại cho cùng kết quả. Chạy cả với đầu vào `Object.freeze`.
+
+## Hợp đồng API
+Không áp dụng.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0. Tests 11, pass 11, fail 0, duration khoảng 7,9 giây. Test 20.000 dòng chiếm khoảng 6,4 giây và 1,2 giây, nên không cần giảm cỡ.
+- Danh sách ca đang khác biệt: không có. Chuỗi ngày không hợp lệ làm cả hai bản cùng ném lỗi, và test xác nhận cùng loại lỗi.
+- Tôi chưa chạy bản cũ ở 200.000 dòng. Bản cũ khoảng 15 giây theo `PERF.md`, nên tôi dừng ở 20.000 dòng.
+
+## Việc còn lại
+- Không có biến môi trường mới.
+- Chưa commit. Tệp mới nằm trong working tree.
+
+Bản đầy đủ: `.ccoding/T-20261113-055335-bbd/outputs/dev-S2-backend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261113-055335-bbd` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **26 in / 21.3k out**, cache đọc 196.7k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 18 | 14234 | 149323 | 2 |
+| Backend Developer (@backend-dev) | dev | 6 | 5365 | 40520 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 2 | 1677 | 6860 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Rà soát tương đương hành vi và vá src/report.js (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Test đối chiếu quy mô lớn và đầu vào bất thường (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 11 · ℹ suites 0 · ℹ pass 11 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 66 | 94 | 100 | 1 | 1 | 164k | 1/14 | — |
+| Backend Developer (@backend-dev) | dev | **65** B | thấp | — | — | — | 100 | 100 | 100 | 1 | 1 | 46k | 0/4 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 9k | — | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

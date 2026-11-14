@@ -1,0 +1,15 @@
+`src/duration.js` đã được hiện thực đủ `parseDuration` và `formatDuration` theo SPEC.md. `npm test` xanh, 12/12 test pass (3 test có sẵn và 9 test mới trong `test/edge.test.js`). Tôi chưa commit gì.
+
+**Self-review:** Tôi đối chiếu từng mục của SPEC với code và test, và tìm thấy một lỗi khi implement: các chuỗi regex bị mất dấu `\` do shell xử lý nên regex sai. Tôi đã sửa bằng `String.raw`. Sau khi sửa, tất cả test đều pass, không còn lỗi nào khác.
+
+**Test biên mới** (`test/edge.test.js`) gồm:
+- Dấu `±`, `-0`, các chuỗi sai định dạng, thứ tự và trùng đơn vị, ISO 8601 (dấu `,`, `P`, `PT`, `P1M`, `P1W1D`).
+- Làm tròn half-away-from-zero, `largest` kèm nhớ lên đơn vị lớn hơn (`6d 23h 59m 31s` với `largest: 2` ra `1w`).
+- Số rất lớn và kiểm tra round-trip cho khoảng 300 số ngẫu nhiên.
+
+**Các giả định tôi chọn** (spec chưa nói rõ):
+- Số thập phân trong chuỗi được tính chính xác bằng BigInt, nên `"1.0005s"` ra 1001 chứ không bị sai số float.
+- `options` là `null`/`undefined` thì dùng mặc định. `style`/`largest` là `undefined` thì dùng mặc định, còn `null` thì ném lỗi.
+- Chữ thường như `pt1h` vẫn hợp lệ, vì spec nói không phân biệt hoa/thường.
+
+Tôi chỉ chạy test trên máy này, chưa chạy bộ nghiệm thu ẩn.

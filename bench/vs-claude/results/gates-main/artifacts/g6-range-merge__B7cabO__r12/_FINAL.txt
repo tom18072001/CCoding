@@ -1,0 +1,80 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g6-range-merge__B7cabO__r12] Gộp khoảng thời gian nửa mở dùng overlaps có sẵn (overlaps tính cả điểm chạm, te
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Bản làm dở đã khớp SPEC.md: diff hiện có sửa `overlaps` sang `<` chặt, thêm `mergeRanges` và 7 test. Tôi đọc `SPEC.md` và `git diff`, chưa chạy `npm test`. Kế hoạch giữ nguyên phần đó, chỉ giao một hạng mục xác minh nhỏ rồi chốt. Việc chia song song không có lợi vì chỉ còn kiểm tra trên hai tệp đã sửa. Ghi chú bàn giao nói 'chưa có thay đổi' nhưng `git status` và `git diff` cho thấy `src/range.js` và `test/range.test.js` đã sửa. Tôi tin diff thật. Ghi chú bàn giao cũng gọi việc đổi `overlaps` là rủi ro hành vi, nhưng SPEC quy định chạm đầu mút KHÔNG chồng, nên đó là sửa theo SPEC.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Xác minh và chốt mergeRanges + overlaps theo SPEC (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã đối chiếu `src/range.js` với SPEC.md và thấy khớp từng điểm, nên không cần vá gì thêm. `npm test` cho kết quả 9 test, 9 pass, 0 fail, exit 0. `git grep overlaps` cho thấy không nơi nào khác dựa vào ngữ nghĩa cũ `<=`.
+
+## Tệp đã tạo/sửa
+- `src/range.js`: giữ nguyên diff có sẵn, chưa commit. `overlaps` dùng `<` chặt, `mergeRanges` đã được thêm.
+- `test/range.test.js`: giữ nguyên diff có sẵn, chưa commit. Có 7 test mới.
+- Hạng mục này không sửa thêm gì.
+
+## Kiểm chứng
+- `npm test` → exit 0 (tests 9, pass 9, fail 0). Exit code lấy từ lần chạy riêng không qua pipe.
+- Đối chiếu SPEC:
+  - `overlaps` chạm đầu mút trả false: đạt (`a.start < b.end && b.start < a.end`), có test.
+  - `mergeRanges` trả mảng mới sắp theo start: đạt, sao chép phần tử rồi mới sort.
+  - Gộp khoảng chồng thành khoảng lớn nhất: đạt, lấy `max` của end, nên khoảng chứa trong khoảng khác cũng đúng, có test.
+  - Khoảng chạm đầu mút giữ riêng: đạt, có test.
+  - Ném `RangeError` khi `!(start < end)`: đạt, gồm cả start > end và start == end. Test hiện có chỉ kiểm tra một số ca, tôi chưa kiểm tra riêng từng ca.
+  - Mảng rỗng trả `[]`: đạt, có test.
+  - Không đổi mảng hoặc đối tượng đầu vào: đạt, có test.
+- `git grep -n overlaps`: chỉ có SPEC.md:5, `src/range.js` (định nghĩa, một chỗ gọi trong `mergeRanges`, export) và `test/range.test.js`. Không có caller nào khác.
+
+## Quyết định thiết kế
+- Việc đổi `overlaps` sang `<` là sửa theo SPEC, không phải thay đổi hành vi ngoài phạm vi.
+- Không thêm test mới. Chuỗi bắc cầu và giá trị âm vẫn đúng theo logic: sau khi sort, mỗi khoảng chỉ cần so với khoảng gộp cuối, và so sánh số nguyên không phụ thuộc dấu. Hai ca này chưa có test riêng.
+
+## Rủi ro & việc còn mở
+Không có rủi ro đáng kể. Hai ca bắc cầu và giá trị âm chưa có test riêng. Có thể thêm sau nếu muốn, không bắt buộc theo SPEC.
+
+Bản đầy đủ: `.ccoding/T-20261104-171231-7b0/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-171231-7b0` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **16 in / 4,970 out**, cache đọc 90.2k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 12 | 3779 | 68649 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 1191 | 21535 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Xác minh và chốt mergeRanges + overlaps theo SPEC (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 9 · ℹ suites 0 · ℹ pass 9 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 100 | 100 | 100 | 1 | 1 | 72k | 0/8 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 23k | 0/1 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

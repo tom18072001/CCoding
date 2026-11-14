@@ -1,0 +1,101 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t4-perf__B7__r6] Tối ưu buildReport dưới 1 giây trên 200.000 dòng, giữ nguyên hành vi
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Bản viết lại một lượt duyệt đã có sẵn trong worktree (src/report.js, test/report.legacy.js, test/equivalence.test.js; bench 260 ms, npm test 5/5 theo bàn giao). Phần còn lại chỉ là một hạng mục xác minh và làm chặt độ tương đương với bản cũ, ở các đầu vào biên mà bàn giao chưa kiểm tra. Không làm lại từ đầu.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Xác minh và làm chặt tương đương với bản cũ, rồi đo lại bench (@senior-swe, done)
+
+## Tóm tắt
+Tôi không phải sửa `src/report.js`. Đọc kỹ so với bản cũ, tôi không tìm thấy chỗ nào khác hành vi. Tôi đã bổ sung 3 test vào `test/equivalence.test.js`. `npm test` pass 8/8 và `npm run bench` chạy 200.000 dòng trong 279–404 ms, cả 3 lần đều dưới 1 giây. Phần chưa kiểm tra: đầu vào lệch hợp đồng như NaN, Infinity, qty dạng chuỗi.
+
+## Tệp đã tạo/sửa
+- `test/equivalence.test.js`: thêm 3 test (liệt kê bên dưới).
+- `src/report.js`: không đổi.
+
+## Kiểm chứng
+| Lần | `npm test` | `npm run bench` (200.000 dòng) |
+|---|---|---|
+| 1 | exit 0, 8 pass / 0 fail | 282 ms |
+| 2 | exit 0, 8 pass / 0 fail | 279 ms |
+| 3 | exit 0, 8 pass / 0 fail | 404 ms |
+
+Mỗi lần bench cho 13 tháng, 11 danh mục, tổng 11445199250. Tôi chưa chạy lại `git diff` hay lệnh nào khác ngoài hai lệnh trên.
+
+**Các trường hợp biên đã so với bản cũ (đều khớp):**
+- **Dữ liệu ngẫu nhiên nhiều seed:** 60 seed × 13 bộ options trên dữ liệu nhỏ, nhiều trường hợp hòa điểm. Thêm 5 seed × 8 options trên dữ liệu sinh bằng `generate` (có từ trước).
+- **Options:**
+  - `topN`: 0, 1, 100 (lớn hơn số phần tử), `null`, `undefined`.
+  - `from`/`to`: biên bao gồm hai đầu, `from` > `to`, chuỗi rỗng, khoảng rộng hơn dữ liệu.
+- **Dữ liệu:**
+  - Mảng đơn hàng rỗng.
+  - `sku` trùng trong `products` (lấy dòng đầu tiên), `sku` không có trong `products`, `sku` là `undefined`.
+  - `name` hoặc `category` là `undefined`.
+  - `customerId` là `undefined`, `id` là `null`.
+  - Dòng bị hủy, hoàn tiền, `status` lạ ("other").
+  - `qty` bằng 0 hoặc âm, `unitPrice` bằng 0.
+  - Trường thừa trong dòng đơn.
+  - Múi giờ đổi tháng theo UTC, ranh giới tháng.
+  - Ngày không hợp lệ ném `RangeError`.
+- **Cách so sánh:** `deepStrictEqual` (phân biệt `-0` và `0`), `JSON.stringify` giống nhau, thứ tự khóa của kết quả và của `byMonth` giống nhau. Có thêm một test riêng khẳng định không có `-0` trong `grandTotal`, `revenue` của tháng và của khách hàng.
+- **Đầu vào không bị sửa:** deep-freeze `orders`, `products` và `options`, gọi hai lần cho kết quả như nhau và như bản cũ. `JSON.stringify` của đầu vào không đổi.
+
+## Quyết định thiết kế
+- Không sửa `src/report.js` vì không có chênh lệch nào để sửa.
+- Các điểm tôi đối chiếu từ mã nguồn:
+  - Thứ tự cộng dồn giống bản cũ.
+  - Thứ tự xuất hiện đầu tiên được giữ.
+  - Các comparator giống hệt.
+  - `+ 0` bỏ `-0` giống JSON round-trip.
+  - Tháng vẫn tính cho cả dòng bị lọc nên ngày sai vẫn ném lỗi.
+  - `monthCache` chỉ sống trong một lần gọi, không cache giữa các lần gọi.
+
+## Rủi ro & việc còn mở
+- Đầu vào lệch hợp đồng (NaN, Infinity, `qty` dạng chuỗi) không được so, vì bản cũ biến chúng qua JSON thành `null` và đây ngoài "đầu vào hợp lệ".
+- Thời gian bench dao động 279–404 ms giữa các lần chạy, vẫn còn dư xa so với ngưỡng 1 giây.
+
+Bản đầy đủ: `.ccoding/T-20261102-180635-e77/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-180635-e77` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **24 in / 16.3k out**, cache đọc 180.4k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 20 | 15198 | 158140 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 1064 | 22243 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Xác minh và làm chặt tương đương với bản cũ, rồi đo lại bench (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 2 · # suites 0 · # pass 2 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 8 · # suites 0 · # pass 8 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **97** A | — | 100 | 92 | 100 | 1 | 1 | 173k | 1/10 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 23k | 0/1 |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

@@ -1,0 +1,96 @@
+# Báo cáo tổng hợp T-20261103-044256-c21: thêm 4 tính năng cho API quản lý nhiệm vụ
+
+## Tóm tắt
+Bốn tính năng trong FEATURES.md đã hiện thực xong: xác thực và phân quyền, lọc/tìm/sắp xếp/phân trang, xuất CSV, nhật ký thao tác. Kết quả được chia thành 3 hạng mục làm lần lượt trong cùng worktree. Không thêm thư viện ngoài và không đổi chữ ký `createServer({ seed?, now? })`. CCoding tự chạy `npm test`: trước khi sửa là **2/2 pass**, sau khi sửa là **59/59 pass, 0 fail**, cả hai lần exit 0. Review cuối của @qa-tester kết luận **Đạt**, không có blocker hay major. Còn 6 phát hiện minor, đều là chỗ đặc tả mơ hồ và đã chốt thành giả định ở phần dưới. Chưa commit, chưa push; thay đổi đang nằm trong worktree, trên commit `563a5fc base`.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Xác thực `X-User`, phân quyền theo vai trò, nhật ký thao tác, `GET /audit` | @backend-dev | Đạt | Tệp mới: `src/auth.js`, `src/handlers/audit.js`. Tệp sửa: `src/store.js`, `src/server.js`, `src/handlers/tasks.js`, `test/helpers.js`. Đã gọi HTTP thật cho các ca 401/403/404/400 của từng vai trò và cho `/audit`. Chi tiết: `.ccoding/T-20261103-044256-c21/outputs/dev-S1-backend-dev.md` |
+| S2 | `GET /tasks` trả `{items,total,page,pageSize}` kèm lọc/tìm/sắp xếp/phân trang; `GET /tasks/export.csv` | @senior-swe | Đạt | Tệp mới: `src/query.js`, `src/csv.js`, `test/query-csv.test.js`. Tệp sửa: `src/handlers/tasks.js`, `test/tasks.test.js` (đổi sang `.items`/`.total`). Lúc bàn giao `npm test` 8/8; có gọi HTTP thật. Chi tiết: `.ccoding/T-20261103-044256-c21/outputs/dev-S2-senior-swe.md` |
+| S3 | Bộ test tích hợp HTTP cho 4 tính năng và review cuối | @qa-tester | Đạt | Tệp mới: `test/auth.test.js` (17 test), `test/list.test.js` (12), `test/export.test.js` (12), `test/audit.test.js` (10), `test/_util.js`. Đã thử làm hỏng mã ở 4 chỗ, lần nào test cũng đỏ (2, 2, 3 và 4 test). Khôi phục xong thì xanh lại 59/59. Chi tiết: `.ccoding/T-20261103-044256-c21/outputs/dev-S3-qa-tester.md` |
+
+Hai lần CCoding tự chạy `npm test` (không qua agent):
+- Trước khi sửa: exit 0, tests 2, pass 2, fail 0.
+- Sau khi sửa: exit 0, tests 59, pass 59, fail 0, skipped 0.
+
+## Quyết định
+- **D1:** Thứ tự làm là S1 → S2 → S3. Test được viết sau, nhưng kỳ vọng lấy nguyên văn từ FEATURES.md và mỗi test ghi rõ mục đặc tả nó kiểm.
+- **D2:** Không sửa FEATURES.md.
+- **D3:** `GET /tasks` xử lý theo thứ tự: giới hạn nhóm theo quyền → bộ lọc query → sắp xếp → phân trang. `total` là số mục khớp tính trước khi phân trang.
+- **D5:** `/tasks/export.csv` được đăng ký trước `/tasks/:id`.
+- **D7:** Thứ tự kiểm tra theo route:
+  - GET: 401 → 404.
+  - PATCH: 401 → 404 → đọc JSON → 403 → validate.
+  - DELETE: 401 → 404 → 403.
+- **D8:** 403 được xét theo các khóa có trong body và xét trước validate. Member POST luôn bị 403, và bị chặn trước khi đọc body.
+- **D9:** Chỉ ghi nhật ký khi thao tác thành công. PATCH không đổi giá trị nào vẫn ghi một mục với `changes: []`. Mục `create` chỉ ghi các khóa có trong body. Mục `delete` giữ lại `taskId`.
+- **D10:** Không thêm thư viện ngoài, không commit, không push.
+
+## Kết quả review
+- @qa-tester kết luận **Đạt** sau khi đọc toàn bộ `src` mới, đối chiếu từng quy tắc với FEATURES.md và tự chạy lại `npm test` (59/59).
+- Không có blocker hay major. Có 6 minor, đều được chấp nhận và ghi thành giả định ở mục dưới.
+- Giới hạn của review:
+  - Reviewer không tự gọi lại HTTP. Bằng chứng HTTP đến từ script của dev và từ bộ test tích hợp, vốn chạy server thật và gọi qua `fetch`.
+  - Reviewer không chạy lại 4 lần làm hỏng thử mà dựa vào báo cáo S3.
+
+## Việc còn mở & rủi ro
+Các giả định dưới đây do đặc tả không nói rõ. Nếu bộ nghiệm thu ẩn hiểu khác thì đây là chỗ dễ lệch:
+1. Query string chỉ được kiểm (400 `INVALID_QUERY`) ở `GET /tasks`, `/tasks/export.csv` và `/audit`. `/tasks/:id` và các route POST bỏ qua query string (D6).
+2. Manager POST không có `team` nhận 400 `VALIDATION`, không phải 403 (D8).
+3. Body không phải JSON nhận 400 `INVALID_JSON`. Lỗi này nằm sau 404 và trước 403.
+4. Với tham số rỗng:
+   - `assignee=<id lạ>` và `assignee=` trả 200 với danh sách rỗng, không báo lỗi.
+   - `status=`, `team=`, `sort=`, `sort=-`, `dueBefore=` nhận 400.
+   - `q=` không lọc gì.
+5. `/audit?taskId=` (rỗng) trả `items: []`, không phải "không lọc".
+6. Khóa query lặp lại bị báo lỗi tại lần xuất hiện thứ hai, nên lỗi đứng trước nó trong URL vẫn được báo trước.
+7. Sắp xếp theo `title` dùng `localeCompare('vi')`, nên phụ thuộc ICU của Node. Test tính kỳ vọng bằng chính `localeCompare`, vì vậy sẽ không bắt được lỗi nếu Node thiếu ICU. Chưa thử trên phiên bản Node khác.
+
+Thay đổi chưa được commit. Có 5 tệp sửa và 10 tệp mới; xem bằng `git status --short`.
+
+## Bước tiếp theo
+1. **Việc của @orchestrator:** review diff rồi commit trên nhánh riêng, không commit vào main. Xong khi `git status` sạch và `npm test` vẫn 59/59.
+2. **Nhiệm vụ riêng, tùy chọn: chốt giả định với Tom.** Tom xác nhận hoặc sửa 7 giả định ở trên. Nếu có điểm cần đổi, giao một gói nhỏ cho @backend-dev và @senior-swe, kèm test tương ứng. Xong khi mỗi giả định có quyết định và có test khóa hành vi đó.
+3. **Nhiệm vụ riêng, tùy chọn: kiểm tính di động.** Chạy `npm test` trên Node LTS cũ hơn và trên bản Node `small-icu`, rồi thêm một test sắp xếp `title` dùng kỳ vọng viết cứng. Xong khi test xanh trên ít nhất 2 phiên bản Node.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-044256-c21` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **76 in / 67.2k out**, cache đọc 837.2k, 11 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| QA Engineer (@qa-tester) | dev | 28 | 24940 | 401681 | 3 |
+| Senior Software Engineer (@senior-swe) | dev | 16 | 14079 | 184400 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 16 | 16604 | 116328 | 3 |
+| Backend Developer (@backend-dev) | dev | 14 | 11194 | 132585 | 2 |
+| Điều phối viên (@orchestrator) | office | 2 | 371 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Xác thực X-User, phân quyền theo vai trò, nhật ký thao tác và GET /audit (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 GET /tasks lọc/tìm/sắp xếp/phân trang và GET /tasks/export.csv (@senior-swe)
+- `outputs/dev-S3-qa-tester.md` — S3 Bộ test tích hợp HTTP cho 4 tính năng và review cuối (@qa-tester)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 2 · # suites 0 · # pass 2 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 59 · # suites 0 · # pass 59 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| QA Engineer (@qa-tester) | dev | **86** A | 100 | 53 | 87 | 100 | 1 | 1 | 427k | 2/12 |
+| Senior Software Engineer (@senior-swe) | dev | **98** A | 100 | 100 | 92 | 100 | 1 | 1 | 198k | 1/10 |
+| Backend Developer (@backend-dev) | dev | **93** A | 100 | 100 | 93 | 60 | 1 | 1 | 144k | 1/12 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | 100 | 100 | 100 | 100 | 0 | — | 133k | 0/5 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Backend Developer** (@backend-dev, 93 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

@@ -1,0 +1,181 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t5-logq__B7__r4] Xây công cụ logq (thư viện + CLI) theo đặc tả
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Mã và test đã có trong worktree (git status: 4 tệp nguồn sửa, 4 test thêm; bàn giao ghi `npm test` xanh 29/29, tôi chưa chạy lại). Không làm lại từ đầu. Đối chiếu từng quy tắc SPEC.md với mã theo ba mảng độc lập, mỗi mảng sở hữu tệp riêng, và sửa các điểm lệch, nhất là những điểm bàn giao ghi là suy đoán.
+
+Kết quả: 3/3 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Đối chiếu SPEC cho parse.js (@senior-swe, done)
+
+## Tóm tắt
+Tôi đối chiếu `src/parse.js` với SPEC §1 và không thấy điểm lệch nào, nên không sửa mã. Tôi chỉ thêm một test ca biên vào `test/parse.test.js`. `node --test test/parse.test.js` và `npm test` đều xanh.
+
+## Tệp đã tạo/sửa
+- `test/parse.test.js` · thêm test "ca biên bổ sung theo SPEC".
+- `src/parse.js` · không đổi, đã xác nhận đúng.
+
+## Kiểm chứng
+- `node --test test/parse.test.js` → 7 test, pass 7, fail 0.
+- `npm test` → 30 test, pass 30, fail 0, exit 0.
+
+## Quyết định thiết kế
+Các điểm đã đối chiếu và xác nhận đúng:
+- **Dòng rỗng và `\r`:** `\r` cuối dòng được bỏ, dòng rỗng hoặc chỉ có khoảng trắng trả `ok:false`.
+- **JSON:** nhận khi ký tự khác khoảng trắng đầu tiên là `{`. Kết quả không phải đối tượng, hoặc còn ký tự thừa sau JSON, trả `ok:false`. Đối tượng lồng được làm phẳng bằng dấu chấm, mảng giữ nguyên, đối tượng rỗng lồng bị bỏ, và `{}` ở ngoài cùng cho `{}`. Key `__proto__` được ghi đúng nhờ `defineProperty`.
+- **logfmt:** key chặt theo regex. Giá trị trần được nhận dạng số, `true`, `false`, `null`, còn `1.`, `+1`, `.5` giữ là chuỗi. Giá trị trong ngoặc kép luôn là chuỗi, thoát `\"`, `\\`, `\n`, `\t`, các thoát khác giữ nguyên cả `\`. Ngoặc kép không đóng, ký tự liền sau ngoặc kép đóng, `"` giữa giá trị trần, từ không có `=` đều trả `ok:false`. Key trùng thì giá trị sau thắng.
+- **`@t`:** xét `@timestamp`, `ts`, `time` theo thứ tự và chỉ lấy trường đầu tiên có mặt. Giá trị `null`, số, hoặc chuỗi không parse được thì không có `@t` và không xét trường sau.
+- **Điểm bàn giao ghi là suy đoán:** việc `@t` chỉ nhận chuỗi dạng `YYYY-MM-DDTHH:MM…` khớp "ISO 8601 có ngày và giờ", và SPEC không nói rõ khác nên tôi giữ nguyên. Dòng rỗng tính là malformed và `msg`/`message` null thuộc về CLI và query (S2, S3), không thuộc parse.
+
+## Rủi ro & việc còn mở
+- Dạng ngày giờ dùng dấu cách thay `T` (`2024-01-02 03:04:05`) hiện không có `@t`. SPEC nói "ISO 8601" nên đây là cách đọc hợp lý nhất, nhưng bộ nghiệm thu ẩn có thể đọc khác.
+- Bản ghi JSON tự mang key `@t` mà không có trường thời gian hợp lệ thì giữ nguyên `@t` đó. SPEC không nói gì về trường hợp này.
+
+Bản đầy đủ: `.ccoding/T-20261102-173237-a20/outputs/dev-S1-senior-swe.md`
+
+### S2 — Đối chiếu SPEC cho query.js (@backend-dev, done)
+
+## Tóm tắt
+Tôi đối chiếu `src/query.js` với SPEC §2 và không tìm thấy điểm nào lệch, nên không sửa mã nguồn. Tôi bổ sung hai test ca biên vào `test/query.test.js`. `node --test test/query.test.js` đạt 10/10 và `npm test` đạt 32/32.
+
+## Tệp đã tạo/sửa
+- `test/query.test.js`: thêm 2 test.
+  - Ca biên vị trí lỗi: khoảng trắng cuối, lỗi đầu tiên từ trái sang phải, thoát `\"` và `\\`.
+  - Độ ưu tiên NOT > AND > OR kết hợp với AND ngầm.
+- `src/query.js`: không đổi.
+
+Danh sách điểm lệch đã sửa: không có. Tôi đã kiểm tra các điểm sau, và mã đều khớp SPEC:
+- Vị trí lỗi tính từ 0.
+- Thiếu `)` trả về `query.length`.
+- Thừa `)` và `()` trả về vị trí của `)`.
+- Thiếu toán hạng ở cuối trả về `query.length`.
+- `AND`/`OR` đặt sai chỗ trả về vị trí của từ khóa đó.
+- So sánh sai vế phải trả về vị trí ngay sau toán tử, và `field:` thiếu giá trị trả về vị trí ngay sau `:`.
+- Ngoặc kép không đóng trả về vị trí của `"` mở.
+- Từ khóa chỉ nhận chữ HOA.
+- Wildcard không phân biệt hoa/thường và khớp toàn bộ chuỗi.
+- Giá trị trong ngoặc kép khớp chính xác, không có ký tự đại diện.
+- `msg` được ưu tiên hơn `message`.
+
+## Hợp đồng API
+Không áp dụng.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `node --test test/query.test.js` → exit 0, tests 10, pass 10, fail 0.
+- `npm test` → exit 0, tests 32, pass 32, fail 0.
+- Lần chạy đầu có 1 test đỏ do tôi đếm sai vị trí trong test mới (kỳ vọng 18, đúng là 19). Tôi đã sửa test, mã không có lỗi.
+
+## Việc còn lại
+Một số điểm SPEC không quy định rõ nên tôi giữ nguyên cách hiện thực (đây là giả định, bộ nghiệm thu ẩn có thể kiểm tra khác):
+- `a >= 3` có khoảng trắng được tách thành 3 từ tìm kiếm, không báo lỗi.
+- `(NOT)` và `a OR )` báo lỗi tại vị trí của `)`, không phải `query.length`.
+- Trường `msg` có giá trị `null` được coi như không có, nên rơi về `message`.
+
+Không có biến môi trường mới. Không cần bàn giao thêm cho người khác.
+
+Bản đầy đủ: `.ccoding/T-20261102-173237-a20/outputs/dev-S2-backend-dev.md`
+
+### S3 — Đối chiếu SPEC cho agg.js và CLI (@frontend-dev, done)
+
+## Tóm tắt
+Tôi đã đối chiếu `src/agg.js` và `bin/logq.js` với SPEC.md. Chỉ một chỗ lệch: vòng điền mốc trống của `histogram` không có giới hạn trên, nên tôi đã thêm giới hạn. Còn lại khớp SPEC. `npm test` xanh 33/33 (bàn giao trước ghi 29, tôi thêm 4 test mới).
+
+## Tệp đã tạo/sửa
+- `src/agg.js`:
+  - Thêm `MAX_BUCKETS = 1_000_000` cho histogram.
+  - Khi số mốc vượt giới hạn, hàm ném `Error` với message `invalid aggregation: <spec> (too many buckets, limit …)`.
+  - Chỗ này SPEC không quy định, nên tôi chọn cách ném lỗi `invalid aggregation`. Lỗi này đi qua CLI ra mã 2, nhưng chỉ khi dữ liệu đã đọc xong. Các lỗi spec khác được bắt sớm hơn, trước khi đọc tệp.
+- `test/agg.test.js`: thêm test cho giới hạn (khoảng 4e12 ms với bước `1s` thì ném lỗi, với bước `1d` thì ra đúng 46297 mốc).
+- `bin/logq.js`, `test/cli.test.js`: không cần sửa.
+
+Các điểm đã đối chiếu và thấy khớp SPEC:
+- **`top`, `count by`:** sắp xếp đúng, giữ kiểu key, bỏ `null`.
+- **`avg`:** làm tròn 4 chữ số thập phân.
+- **Percentile:** nearest-rank đúng công thức `Math.ceil(p/100×n)`.
+- **Histogram:** mốc `floor`, có điền mốc trống, rỗng thì `[]`.
+- **CLI:** bảng căn cột theo độ rộng lớn nhất cộng hai dấu cách, `--stats` ra stderr, stdin và `-` đều đọc được, tùy chọn đứng trước hay sau tệp đều được.
+- **Khi lỗi:** stdout trống.
+
+## Màn hình & trạng thái
+Không áp dụng, đây là CLI. Bảng mã thoát đã kiểm bằng CLI thật:
+
+| Tình huống | Lệnh | Mã thoát | stderr |
+|---|---|---|---|
+| Thành công, có `--stats` | `logq <tệp> --stats` | 0 | `lines=4 matched=2 malformed=2` |
+| Thành công, `--format table` | `logq --agg 'count by a' --format table <tệp>` | 0 | (trống) |
+| Thành công, đọc stdin | `logq --agg 'histogram 1m' --format table < <tệp>` | 0 | (trống) |
+| Thành công, đọc `-` | `logq --agg 'p95 n' - < <tệp>` | 0 | (trống) |
+| Lỗi cú pháp truy vấn | `logq --query 'a:(' <tệp>` | 2 | `syntax error at position 2` |
+| Spec tổng hợp sai | `logq --agg bogus <tệp>` | 2 | `invalid aggregation: bogus` |
+| `--format table` thiếu `--agg` | `logq --format table <tệp>` | 2 | thông báo dùng sai |
+| Tùy chọn lạ | `logq --zzz` | 2 | `unknown option --zzz` |
+| Tệp không đọc được | `logq nofile.log` | 1 | `cannot read nofile.log` |
+| Truy vấn sai và tệp không tồn tại | `logq --agg count nofile.log --query '('` | 2 | `syntax error at position 1` |
+
+Dòng cuối cho thấy lỗi truy vấn (mã 2) được báo trước lỗi tệp (mã 1). Các trường hợp lỗi đều có stdout trống.
+
+## API sử dụng
+Không áp dụng. `aggregate(records, spec)` và CLI `logq` theo SPEC §3 và §4.
+
+## Kiểm chứng
+- `npm test` → exit 0, `# tests 33 · # pass 33 · # fail 0`.
+- Các lệnh `node bin/logq.js` thủ công ở bảng trên đều ra đúng mã thoát và đúng stdout/stderr theo SPEC.
+
+## Việc còn lại
+- **Quyết định thiết kế vẫn là suy đoán:** việc từ khóa `agg` phải viết thường (`COUNT` bị coi là spec sai) và `top 0 f`, `top 1.5 f` bị từ chối đều nhất quán với SPEC nhưng chưa được SPEC xác nhận rõ. Giới hạn `MAX_BUCKETS` cũng là lựa chọn của tôi.
+- **Thông báo khi `-` đọc lỗi:** CLI in `cannot read stdin` thay vì `cannot read -`. Trường hợp này hiếm.
+- **a11y:** không áp dụng, đây là CLI.
+
+Bản đầy đủ: `.ccoding/T-20261102-173237-a20/outputs/dev-S3-frontend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-173237-a20` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **52 in / 38.4k out**, cache đọc 558.0k, 5 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 28 | 28034 | 344765 | 2 |
+| Backend Developer (@backend-dev) | dev | 12 | 4895 | 124169 | 1 |
+| Frontend Developer (@frontend-dev) | dev | 8 | 3869 | 66769 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 1616 | 22332 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Đối chiếu SPEC cho parse.js (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Đối chiếu SPEC cho query.js (@backend-dev)
+- `outputs/dev-S3-frontend-dev.md` — S3 Đối chiếu SPEC cho agg.js và CLI (@frontend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 3 · # suites 0 · # pass 0 · # fail 3 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 33 · # suites 0 · # pass 33 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **72** B | — | 35 | 96 | 100 | 1 | 1 | 373k | 1/18 |
+| Backend Developer (@backend-dev) | dev | **100** A | — | 100 | 100 | 100 | 1 | 1 | 129k | 0/6 |
+| Frontend Developer (@frontend-dev) | dev | **100** A | — | 100 | 100 | 100 | 1 | 1 | 71k | 0/7 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 24k | 0/1 |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 72 B):
+  - Tốn token gấp 2.9 lần trung vị phòng cho mỗi hạng mục (373k so với 129k).
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

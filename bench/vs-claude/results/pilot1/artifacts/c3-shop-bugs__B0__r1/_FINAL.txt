@@ -1,0 +1,84 @@
+# Báo cáo tổng hợp: sửa 3 lỗi giỏ hàng (coupon, tồn kho âm, mua đúng mức tối đa)
+
+## Tóm tắt
+Cả ba lỗi đã được sửa tận gốc trong `src/` (`money.js`, `cart.js`, `stock.js`), tổng cộng 6 dòng thêm và 5 dòng xóa. Tên và chữ ký các hàm export không đổi. Bộ test mới `test/regression.test.js` có 6 test hồi quy. CCoding tự chạy `npm test` hai lần: trước khi sửa exit 1 (pass 1/2), sau khi sửa exit 0 (pass 8/8). Reviewer đã duyệt, không có blocker; chỉ còn 2 điểm minor nằm ngoài phạm vi yêu cầu. Thay đổi chưa commit: `src/` đang ở trạng thái sửa, tệp test mới chưa được track.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Sửa nguyên nhân gốc 3 lỗi trong `src/` | @senior-swe | Đạt | `src/money.js`, `src/cart.js`, `src/stock.js`. Reviewer đọc diff và chạy lại `npm test` (đạt). Chi tiết ở `.ccoding/T-20261102-180430-b98/outputs/dev-S1-senior-swe.md` |
+| S2 | Test hồi quy cho 3 lỗi | @backend-dev | Đạt | `test/regression.test.js` (mới, 6 test). Trên bản sửa: pass 8/8. Trên mã gốc (S2 tự đối chiếu bằng `git stash`): fail 5/8, gồm (a), (b), (d), (e) và test cũ. Chi tiết ở `.ccoding/T-20261102-180430-b98/outputs/dev-S2-backend-dev.md` |
+
+**Kết quả `npm test` do CCoding tự chạy:**
+- Trước khi sửa: exit 1, 2 test, pass 1, fail 1.
+- Sau khi sửa: exit 0, 8 test, pass 8, fail 0.
+
+**Nguyên nhân gốc và cách sửa:**
+1. **Coupon tính sai.** Có hai nguyên nhân:
+   - `total()` áp % trên từng dòng rồi áp thêm lần nữa trên subtotal, nên coupon bị trừ hai lần và tổng lệch nhiều.
+   - `applyPercent` không làm tròn, nên ra tiền lẻ.
+   - Cách sửa: coupon chỉ áp một lần trên subtotal. Phần giảm được làm tròn half-up bằng số học nguyên: `Math.floor((amount*pct + 50)/100)`.
+2. **Tồn kho âm.** `reserve()` chỉ kiểm tra `have < 0` mà không so với `qty`. Đã đổi thành `have < qty`. Khi ném lỗi thì kho không bị thay đổi.
+3. **Không mua được đúng mức tối đa.** `addItem()` dùng `>=` nên chặn luôn trường hợp mua đúng `MAX_QTY_PER_LINE`. Đã đổi thành `>`.
+
+## Quyết định
+- Quy mô nhỏ nên chia 2 hạng mục chạy lần lượt (sửa mã, rồi viết test). Không cần kiến trúc, BA hay cổng bảo vệ dữ liệu vì không đổi schema hay luồng dữ liệu.
+- Làm tròn half-up áp cho **số tiền giảm**, tổng phải trả bằng subtotal trừ phần giảm. Ví dụ: 5 đồng, giảm 10% thì phần giảm 0,5 được làm tròn thành 1, phải trả 4.
+- Dùng số học nguyên thay cho float để tránh sai số.
+- Giữ nguyên thứ tự kiểm tra trong `addItem`: `QTY_LIMIT`, rồi `reserve`, rồi mới đổi dòng giỏ. Nhờ vậy khi một bước ném lỗi thì cả kho lẫn giỏ đều không đổi.
+
+## Kết quả review
+- Đã duyệt. Reviewer đọc diff của `src/` và `test/regression.test.js`, rồi tự chạy `npm test` (đạt).
+- Reviewer không tự chạy lại việc đối chiếu test trên mã gốc. Họ dựa vào báo cáo S2, và báo cáo này khớp với kết quả trước khi sửa do CCoding chạy.
+- Không có blocker hay major. Có 2 điểm minor, được chấp nhận vì nằm ngoài phạm vi yêu cầu (xem mục dưới).
+
+## Việc còn mở & rủi ro
+- **Minor:** `applyCoupon` chưa kiểm tra `pct` nằm trong 0–100. Nếu `pct` âm hoặc lớn hơn 100, tổng có thể tăng lên hoặc âm.
+- **Giả định:** `amount` và `pct` là số nguyên. Với `pct` lẻ (ví dụ 12,5%), công thức vẫn chạy nhưng chưa được kiểm chứng.
+- **Rủi ro test:** tồn kho nằm trong một `Map` dùng chung cấp module. Các test tránh đụng nhau bằng cách dùng sku riêng, nhưng nếu sau này viết test dùng chung sku thì dễ chạy chập chờn.
+- **Chưa commit hay push.** Việc đó chờ Tom quyết định.
+
+## Bước tiếp theo
+1. Tom xem diff, rồi commit trên một nhánh riêng (không commit vào main).
+2. (Tùy chọn, nhiệm vụ riêng, cỡ S) Kiểm tra đầu vào cho `applyCoupon`: ném `BAD_PCT` khi `pct` không phải số nguyên hoặc nằm ngoài 0–100. Xong khi có test cho các giá trị -1, 101, 12.5 và `npm test` pass.
+3. (Tùy chọn, nhiệm vụ riêng, cỡ S) Thêm hàm reset tồn kho dùng cho test để mỗi test tách biệt. Phải cân nhắc vì việc này thêm một export mới vào `stock.js`. Xong khi các test không còn phụ thuộc vào việc chọn sku riêng.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-180430-b98` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **32 in / 13.3k out**, cache đọc 378.2k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | 12 | 5547 | 145267 | 2 |
+| Backend Developer (@backend-dev) | dev | 8 | 4570 | 102989 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 6 | 1676 | 70686 | 1 |
+| QA Engineer (@qa-tester) | dev | 4 | 1064 | 44555 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 406 | 14680 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Sửa nguyên nhân gốc 3 lỗi trong src/ (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Test hồi quy cho 3 lỗi (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 2 · # suites 0 · # pass 1 · # fail 1 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 8 · # suites 0 · # pass 8 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | **96** A | 100 | 100 | 80 | 100 | 0 | — | 151k | 1/4 |
+| Backend Developer (@backend-dev) | dev | **92** A | 100 | 84 | 80 | 100 | 1 | 1 | 108k | 1/4 |
+| Senior Software Engineer (@senior-swe) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 72k | 0/2 |
+| QA Engineer (@qa-tester) | dev | **100** A | — | — | 100 | 100 | 0 | — | 46k | 0/1 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 15k | — |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

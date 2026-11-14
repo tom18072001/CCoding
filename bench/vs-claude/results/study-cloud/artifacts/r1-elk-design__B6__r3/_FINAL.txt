@@ -1,0 +1,118 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude r1-elk-design__B6__r3] ELK audit platform sizing and design
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Việc là một tài liệu duy nhất (DESIGN.md), không chia song song được vì chỉ có một tệp. Giao toàn bộ cho @solution-architect, kèm các điểm bắt buộc và số liệu tính sẵn để tránh sai số học. @qa-tester sẽ review độc lập ở bước sau, nên không tạo hạng mục review.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Viết DESIGN.md: kiến trúc và sizing nền tảng audit-log Elastic Stack (@solution-architect, done)
+
+## Tóm tắt
+Tôi đã viết `DESIGN.md` ở thư mục gốc, gồm đủ 7 phần bắt buộc. Kiến trúc đề xuất: Filebeat/Agent đẩy log vào Kafka, từ đó chia hai nhánh. Nhánh thứ nhất lưu bản gốc chưa che lên kho WORM, có hash chain, chữ ký và mốc thời gian RFC 3161; đây là bằng chứng pháp lý. Nhánh thứ hai qua Logstash che PII, nếu che lỗi thì không index mà chuyển sang hàng cách ly, rồi mới ghi vào Elasticsearch. Elasticsearch giữ 30 ngày (hot 7 ngày + warm 23 ngày). Dữ liệu 12 tháng nằm trong snapshot thường, cần thì restore vào nhóm warm.
+
+Rủi ro lớn nhất có hai. Gợi ý searchable snapshots của khách cần giấy phép Enterprise, xung đột với ràng buộc chỉ dùng Basic. Che PII trước khi index lại mâu thuẫn với yêu cầu bằng chứng nguyên vẹn. Khách và pháp chế phải chọn chính sách.
+
+## Bối cảnh & NFR
+- **Số học**, tôi đã tự kiểm tay hai lần:
+  - 20.000 eps × 800 B = 16 MB/s.
+  - Mỗi ngày 1,728 tỷ event, 1,3824 TB (≈1,257 TiB).
+  - Mỗi năm 504,576 TB (≈458,9 TiB). 30 ngày là 41,472 TB.
+  - Dùng TB (10¹²) xuyên suốt; TiB chỉ ghi trong ngoặc.
+- **Giả định nén k = 0,6 × raw** (khoảng 0,5–0,7). Đây là giả định chưa đo, cần PoC.
+- **Dung lượng cần cấp** (đã cộng headroom 25 % và giữ dưới watermark 85 %, tức nhân 1,4706):
+
+  | Hạng mục | Dung lượng |
+  |---|---|
+  | Hot | 17,08 TB |
+  | Warm, gồm cả restore pool | 92,70 TB |
+  | Snapshot | 435,20 TB mỗi site (870,39 TB nếu 2 site) |
+  | Kho raw | 126,14 TB mỗi site |
+  | Phương án bị loại: giữ online cả 11 tháng | 817,24 TB |
+
+- **Cấp độ ATTT:** brief không nêu chủ quản hay loại hệ thống, nên tôi ghi là giả định. Nếu đây là hệ thống của cơ quan nhà nước thì phải xác định cấp độ theo NĐ 85/2016 và TT 12/2022.
+
+## Kiến trúc & luồng dữ liệu
+- **Cụm Elasticsearch:**
+  - 3 master chuyên dụng.
+  - 6 node hot: 16 vCPU, 64 GB RAM, 4 TB NVMe.
+  - 7 node warm: 8 vCPU, 64 GB RAM, 16 TB; cần 8 node nếu k = 0,7.
+  - 2 node coordinating và 2 Kibana.
+- **Hạ tầng khác:** 4 Logstash, 3 Kafka, 2 archiver.
+- **Snapshot:** lưu trên object storage có Object Lock.
+- **Shard:** rollover khi shard đạt 25 GB, warm shrink từ 6 xuống 3 shard (≈50 GB/shard).
+- **Kiểm tra mất 1 node:** hot còn 58 % dung lượng, warm còn 66 %, đều dưới ngưỡng 85 %.
+- **Restore ước lượng:**
+  - 30 ngày dữ liệu mất ≈6,6 giờ.
+  - Toàn bộ 11 tháng (≈463 TB raw) mất ≈73,5 giờ.
+  - Ở tốc độ restore mặc định, riêng 30 ngày đã mất ≈24,7 giờ, vượt SLA. Vì vậy phải nâng giới hạn tốc độ và giới hạn mỗi yêu cầu ở ≤ 30 ngày dữ liệu.
+- **Tài liệu có các cấu hình mẫu:** index template, Logstash pipeline, ILM hot/warm/delete, ILM cho index restore, và hai chính sách SLM.
+
+## ADR
+- **ADR-1:** dùng Kafka thay vì chỉ persistent queue, để chia hai nhánh và phát lại được.
+- **ADR-2:** dữ liệu cũ nằm trong snapshot và restore theo yêu cầu. Đã loại hai phương án: giữ warm online (817 TB) và searchable snapshots (cần Enterprise).
+- **ADR-3:** trường có cấu trúc dùng HMAC có khóa; văn bản tự do thì xóa hẳn (redact); che lỗi thì không index.
+- **ADR-4:** bằng chứng nằm ngoài Elasticsearch.
+- **ADR-5:** tách hot 7 ngày và warm 23 ngày.
+
+## Phát hiện
+Các xung đột ghi ở mục §7 của tài liệu:
+- **C1 (Cao):** searchable snapshots cần Enterprise.
+- **C2 (Cao):** che PII mâu thuẫn với bằng chứng. Có ba chính sách để chọn: P1 giữ bản gốc trên WORM, P2 chỉ chứng minh bản đã che, P3 crypto-shredding.
+- **C3:** Basic không có audit log và field/document-level security.
+- **C4:** khóa WORM 12 tháng mâu thuẫn với quyền yêu cầu xóa dữ liệu cá nhân.
+- **C5:** SLA 24 giờ không đạt được cho khối lượng 11 tháng.
+- **C6:** không có Watcher.
+
+Ngoài ra có 10 rủi ro vận hành (R-01..R-10), gồm tải đỉnh, mất log trước Kafka, lệch đồng hồ, lọt PII, và việc repository S3 có chạy ổn với Object Lock hay không.
+
+**Phần chưa kiểm chứng:** môi trường không cho truy cập mạng, nên tôi chưa mở được trang https://www.elastic.co/subscriptions. Các kết luận về giấy phép đều được đánh dấu [CHƯA KIỂM CHỨNG] kèm URL; cần mở hai URL trong tài liệu để xác nhận trước khi gửi khách.
+
+## Câu hỏi mở
+Tài liệu §10 có 10 câu hỏi
+…[đã cắt 663 ký tự]
+
+Bản đầy đủ: `.ccoding/T-20261103-051043-51e/outputs/dev-S1-solution-architect.md`
+
+## Review
+
+Đã duyệt: DESIGN.md (664 dòng, tiếng Việt có dấu) đủ 7 phần bắt buộc. Tôi tự tính lại toàn bộ số học và đều khớp: 16 MB/s; 1,728 tỷ event và 1,3824 TB mỗi ngày; 504,576 TB mỗi năm; 41,472 TB cho 30 ngày; 463,104 TB cho 335 ngày. Hệ số cấp phát ×1,4706 cho ra hot 17,08 TB, warm 56,11 TB, restore pool 36,59 TB, snapshot 435,20 TB mỗi site, raw archive 126,14 TB mỗi site, Kafka 18,30 TB. Thời gian restore 6,6 giờ, 73,5 giờ và 24,7 giờ ở throttle mặc định đều đúng. Đơn vị TB nhất quán và hệ số nén 0,6 được ghi rõ là giả định A-01 cần PoC. Phần ILM chỉ dùng tính năng Basic. Phần toàn vẹn chặt chẽ: raw WORM, hash chain, chữ ký, RFC 3161, và nêu thẳng rằng Elasticsearch không chống sửa đổi. Kết luận về giấy phép (searchable snapshots, audit log, FLS/DLS cần bản trả phí) khớp hiểu biết của tôi. Chúng được đánh dấu [CHƯA KIỂM CHỨNG] kèm URL, và tôi cũng không mở được trang Elastic (proxy trả 403). Không có secret hay dữ liệu thật trong tài liệu. Chỉ còn một số góp ý nhỏ.
+(Reviewer KHÔNG chạy lệnh kiểm tra nào — kết luận chưa có bằng chứng chạy thật; nêu rõ trong báo cáo.)
+
+
+---
+
+> ⚠ **Cần xem lại:** Phát triển: duyệt nhưng chưa có kiểm chứng chạy thật (không có lệnh kiểm tra của dự án, reviewer không chạy lệnh) — cần giám đốc xem.
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-051043-51e` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **22 in / 55.8k out**, cache đọc 222.2k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Kiến trúc sư giải pháp (@solution-architect) | dev | 10 | 48198 | 126377 | 1 |
+| QA Engineer (@qa-tester) | dev | 8 | 4042 | 88248 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 2 | 3057 | 5359 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 492 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-solution-architect.md` — S1 Viết DESIGN.md: kiến trúc và sizing nền tảng audit-log Elastic Stack (@solution-architect)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Kiến trúc sư giải pháp (@solution-architect) | dev | **97** A | 100 | 100 | 87 | 100 | 1 | 1 | 175k | 1/6 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 92k | 0/4 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | 100 | 100 | 100 | — | 0 | — | 8k | — |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

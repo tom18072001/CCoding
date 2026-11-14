@@ -1,0 +1,106 @@
+TAP version 13
+# Subtest: parse: message lỗi chính xác theo kiểu đầu vào
+ok 1 - parse: message lỗi chính xác theo kiểu đầu vào
+  ---
+  duration_ms: 2.138957
+  type: 'test'
+  ...
+# Subtest: parse: số (number)
+ok 2 - parse: số (number)
+  ---
+  duration_ms: 0.492015
+  type: 'test'
+  ...
+# Subtest: parse: trim, hoa/thường, dấu
+ok 3 - parse: trim, hoa/thường, dấu
+  ---
+  duration_ms: 1.488282
+  type: 'test'
+  ...
+# Subtest: parse: số thuần
+ok 4 - parse: số thuần
+  ---
+  duration_ms: 0.367959
+  type: 'test'
+  ...
+# Subtest: parse: mọi bí danh của 6 đơn vị
+ok 5 - parse: mọi bí danh của 6 đơn vị
+  ---
+  duration_ms: 1.046368
+  type: 'test'
+  ...
+# Subtest: parse: dạng đơn vị – khoảng trắng, phân số, thứ tự, trùng lặp, trộn, ký tự lạ
+ok 6 - parse: dạng đơn vị – khoảng trắng, phân số, thứ tự, trùng lặp, trộn, ký tự lạ
+  ---
+  duration_ms: 0.567216
+  type: 'test'
+  ...
+# Subtest: parse: ISO 8601
+ok 7 - parse: ISO 8601
+  ---
+  duration_ms: 1.680575
+  type: 'test'
+  ...
+# Subtest: format: input không hợp lệ → message dùng ms
+ok 8 - format: input không hợp lệ → message dùng ms
+  ---
+  duration_ms: 0.50507
+  type: 'test'
+  ...
+# Subtest: format: options sai → TypeError
+ok 9 - format: options sai → TypeError
+  ---
+  duration_ms: 0.517948
+  type: 'test'
+  ...
+# Subtest: format: options mặc định
+ok 10 - format: options mặc định
+  ---
+  duration_ms: 0.489459
+  type: 'test'
+  ...
+# Subtest: format: bảng ca cơ bản (short/long, số ít/nhiều, âm, bỏ đơn vị 0)
+ok 11 - format: bảng ca cơ bản (short/long, số ít/nhiều, âm, bỏ đơn vị 0)
+  ---
+  duration_ms: 1.51036
+  type: 'test'
+  ...
+# Subtest: format: largest
+ok 12 - format: largest
+  ---
+  duration_ms: 0.434873
+  type: 'test'
+  ...
+# Subtest: round-trip: parse(format(x)) === parse(x) trên ≥200 số
+ok 13 - round-trip: parse(format(x)) === parse(x) trên ≥200 số
+  ---
+  duration_ms: 6.326753
+  type: 'test'
+  ...
+# Subtest: parse cơ bản
+ok 14 - parse cơ bản
+  ---
+  duration_ms: 1.627082
+  type: 'test'
+  ...
+# Subtest: format cơ bản
+ok 15 - format cơ bản
+  ---
+  duration_ms: 0.353777
+  type: 'test'
+  ...
+# Subtest: lỗi
+ok 16 - lỗi
+  ---
+  duration_ms: 0.465324
+  type: 'test'
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 148.519942

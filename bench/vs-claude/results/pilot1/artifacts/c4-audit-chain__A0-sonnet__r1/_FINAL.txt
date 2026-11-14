@@ -1,0 +1,10 @@
+I implemented `canonicalize`, `redact`, `append` and `verify` in `src/index.js`, and `npm test` passes (8 tests, 0 failures). I added `test/audit.test.js`, and the existing smoke test still passes.
+
+- **PII handling:** `append` redacts the entry before it computes the hash, so only the redacted entry is ever hashed or stored.
+- **Key order:** `canonicalize` sorts keys by Unicode code point, not JavaScript's default UTF-16 order. The two differ for emoji versus characters like `～`, and a test covers that.
+- **Odd keys:** `redact` copies keys like `__proto__` as plain data instead of letting them change the copy's prototype.
+- **Phone numbers:** `+84912345678` is replaced, but `1+84912345678` is not. A digit directly before the `+` counts as "preceded by another digit", which is how I read the brief. Say if you'd rather match it.
+- **Not redacted:** numbers written with spaces, such as `+84 912345678` or `090 123 4567`, are left alone, because the brief defines a number as contiguous digits. Keys are never redacted, as specified.
+- **`verify` on bad records:** it returns `{ ok: false, index }` for a malformed or non-object record instead of throwing.
+
+I haven't committed anything.

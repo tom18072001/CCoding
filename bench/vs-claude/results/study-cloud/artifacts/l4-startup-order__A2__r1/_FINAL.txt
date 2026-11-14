@@ -1,0 +1,7 @@
+I wrote `answer.json` in the repository root.
+
+- **Cycle:** `reporting`, `warehouse` and `etl` depend on each other in a loop (`reporting` → `warehouse` → `etl` → `reporting`), so none of them can start. These three are the `cycle_members`.
+- **Blocked:** `admin-ui` is also blocked, because it needs `reporting`. So `blocked` is `admin-ui`, `etl`, `reporting` and `warehouse`.
+- **Startup order:** every other service is in `startup_order`, picking the alphabetically smallest ready service at each step.
+
+Every dependency named in `services.txt` is itself listed as a service, so nothing was blocked by a missing service. I didn't re-read the file by hand; I generated it with a short script and checked only the printed `blocked` and `cycle_members` lists.

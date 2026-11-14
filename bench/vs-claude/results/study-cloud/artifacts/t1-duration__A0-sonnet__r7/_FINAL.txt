@@ -1,0 +1,15 @@
+`src/duration.js` đã được hiện thực đầy đủ theo SPEC.md (cả `parseDuration` và `formatDuration`), và `npm test` xanh: 10 test pass, 0 fail. Tôi không dùng thư viện ngoài. Chưa có kiểm tra nào ngoài bộ test trong `test/`, vì bộ nghiệm thu ẩn thì tôi không có.
+
+Tôi tính bằng số nguyên lớn (`BigInt`) cho cả hai hàm, nên làm tròn nửa-ra-xa-0 chính xác. Ví dụ `"0.0005s"` ra 1 chứ không bị lệch do sai số dấu phẩy động.
+
+Tôi bổ sung các test biên vào `test/duration.test.js`. Chúng gồm:
+- **Làm tròn và `-0`:** các giá trị nửa mili giây, số âm làm tròn về 0.
+- **Chuỗi hợp lệ:** dấu và khoảng trắng, bí danh đơn vị, không phân biệt hoa/thường.
+- **Chuỗi lỗi:** `".5"`, `"5."`, `"1e3"`, `"1h-30m"`, `"1h 30"`, sai thứ tự, trùng đơn vị, đầu vào không phải chuỗi/số, và nội dung message lỗi.
+- **ISO 8601:** dấu phẩy thập phân, `P`/`PT` rỗng, `P1Y`, `P1M`, `P1W1D`, sai thứ tự.
+- **`formatDuration`:** `largest` kèm nhớ (`6d 23h 59m 31s` với `largest: 2` ra `1w`), style `long`, số âm, các giá trị `style`/`largest` không hợp lệ.
+- **Tính chất round-trip:** `parseDuration(formatDuration(x))` bằng `parseDuration(x)`.
+
+Có hai chỗ spec để ngỏ, tôi chọn như sau:
+- `options` là `null` thì coi như không truyền.
+- Chỉ `undefined` mới được hiểu là "dùng mặc định" cho `style` và `largest`. `null` hay giá trị khác thì ném lỗi.

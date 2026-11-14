@@ -1,0 +1,74 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude c4-audit-chain__B7__r2] Hash-chained audit log with PII redaction
+
+_Làn đơn: một agent làm trọn đề bài; báo cáo dựng tự động từ bàn giao và kết quả cổng chất lượng (không gọi model)._
+
+## Tóm tắt
+
+Làn đơn: Senior Software Engineer (@senior-swe) làm trọn đề bài trong worktree nhiệm vụ
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — [vs-claude c4-audit-chain__B7__r2] Hash-chained audit log with PII redaction (@senior-swe, done)
+
+## Tóm tắt
+Đã cài đặt đủ bốn hàm `canonicalize`, `redact`, `append` và `verify` trong `src/index.js`, chỉ dùng module có sẵn của Node. Đã thêm 6 test mới. `npm test` báo 7 test pass, 0 fail (gồm cả smoke test cũ, vốn đỏ ở baseline). Chưa có rủi ro nào cần xử lý ngay.
+
+## Tệp đã tạo/sửa
+- `src/index.js` · cài đặt cả bốn hàm.
+- `test/audit.test.js` · tạo mới, 6 test: canonicalize (sắp xếp theo code point, bỏ `undefined`), redact (sâu, không đổi input, giữ nguyên key, biên số điện thoại), append (PII không vào hash), verify (phát hiện giả mạo).
+
+## Kiểm chứng
+- `npm test` → 7 test, 7 pass, 0 fail. Exit code thực của `npm test` chưa đo trực tiếp: tôi pipe qua `tail` nên số `exit=0` in ra là của `tail`, không phải của npm. Kết quả `fail 0` cho thấy lệnh đã thành công.
+- Lần chạy heredoc đầu bị hook chặn vì chuỗi `../src` trong test; tôi ghi lại bằng công cụ Write và chạy lại.
+
+## Quyết định thiết kế
+- **Sắp xếp key:** so sánh theo code point, không dùng `sort()` mặc định (so theo đơn vị UTF-16). Hai cách khác nhau với ký tự ngoài BMP.
+- **Tương đương `JSON.stringify`:** `canonicalize` xử lý `toJSON` (ví dụ `Date`), phần tử `undefined` hoặc hàm trong mảng thành `null`, và bỏ thuộc tính `undefined`.
+- **Chống lọt PII:** `redact` cũng gọi `toJSON` trước khi che, để chuỗi sinh ra từ `toJSON` không lọt PII vào hash. Email được che trước số điện thoại, nên local-part kiểu `0912345678@x.com` thành `[EMAIL]`.
+- **Regex số điện thoại:** `(?<!\d)(?:0|\+84)[35789]\d{8}(?!\d)`.
+- **`verify`:** kiểm tra `seq === index`, `prev` khớp record trước, `hash` là chuỗi và bằng hash tính lại.
+
+## Rủi ro & việc còn mở
+- Regex email là bản thực dụng, không theo RFC đầy đủ: nó không bắt địa chỉ có dấu ngoặc kép hoặc tên miền Unicode.
+- `verify` không kiểm tra lại PII trong `entry` của record đã có sẵn trong chain.
+- `canonicalize` không xử lý tham chiếu vòng, và `append` không tự đồng bộ khi nhiều luồng ghi vào cùng một chain.
+
+Bản đầy đủ: `.ccoding/T-20261102-195335-4fd/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng (làn đơn): lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-195335-4fd` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **8 in / 7,417 out**, cache đọc 49.4k, 1 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 8 | 7417 | 49372 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude c4-audit-chain__B7__r2] Hash-chained audit log with PII redaction (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 1 · # suites 0 · # pass 0 · # fail 1 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 7 · # suites 0 · # pass 7 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **95** A | — | 100 | 84 | 100 | 1 | 1 | 57k | 1/5 |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 95 A):
+  - Thao tác công cụ lỗi nhiều (1/5, 20%; nhiều nhất ở run_command 1/3) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

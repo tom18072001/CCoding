@@ -1,0 +1,76 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g6-range-merge__B7cabO__r3] Gộp khoảng thời gian nửa mở dùng overlaps có sẵn (overlaps tính cả điểm chạm, tes
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Việc đã làm xong trong worktree (src/range.js có mergeRanges dùng overlaps; test/range.test.js có 9 test). Tôi đã đối chiếu SPEC.md với mã và không thấy sai lệch. SPEC ghi rõ chạm đầu mút KHÔNG chồng, nên việc sửa overlaps từ `<=` sang `<` là đúng. Chỉ còn bước xác minh độc lập bằng `npm test`, không có việc code mới.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Xác minh mergeRanges và overlaps theo SPEC bằng npm test (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã xác minh `mergeRanges` và `overlaps` trong `src/range.js` với SPEC.md và không thấy sai lệch nào nên không sửa gì. `npm test` chạy trực tiếp cho kết quả 9 test pass, 0 fail, exit code 0. `package.json` không có dependency nào.
+
+## Tệp đã tạo/sửa
+Không áp dụng. Tôi giữ nguyên diff có sẵn trong `src/range.js` và `test/range.test.js`.
+
+## Kiểm chứng
+`npm test` (không pipe) → exit code 0. Kết quả: tests 9, pass 9, fail 0, cancelled 0, skipped 0.
+
+Đối chiếu với SPEC, đều khớp:
+- **`overlaps`:** hàm dùng `<` nên hai khoảng chỉ chạm đầu mút trả false. Test "chạm đầu mút không chồng" xác nhận điều này.
+- **Gộp, sắp xếp và giữ riêng:** `mergeRanges` gộp các khoảng chồng qua `overlaps` và sắp theo start. Khoảng chỉ chạm đầu mút được giữ riêng. Mảng trả về là mảng mới.
+- **Lỗi và mảng rỗng:** `start >= end` ném `RangeError`. Mảng rỗng trả `[]`.
+- **Không đổi đầu vào:** hàm sao chép từng phần tử thành object mới trước khi sắp xếp, nên mảng và object đầu vào không bị sửa. Object trả về cũng không phải object đầu vào. Test "không đổi đầu vào" bao phần này.
+
+## Quyết định thiết kế
+Giữ nguyên thiết kế của bàn giao trước: `overlaps` đổi từ `<=` sang `<` và `mergeRanges` dùng lại nó. Đổi này đúng theo SPEC.
+
+## Rủi ro & việc còn mở
+- Không kiểm tra kiểu số nguyên, vì SPEC không yêu cầu.
+- Một khoảng không hợp lệ ném lỗi dù nằm cuối mảng, vì hàm kiểm tra toàn bộ đầu vào trước khi gộp.
+- Git cảnh báo về việc đổi LF sang CRLF ở hai tệp. Cảnh báo này không ảnh hưởng test.
+
+Bản đầy đủ: `.ccoding/T-20261104-123814-d27/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-123814-d27` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **14 in / 4,423 out**, cache đọc 74.4k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 10 | 3522 | 52790 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 901 | 21612 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Xác minh mergeRanges và overlaps theo SPEC bằng npm test (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 9 · ℹ suites 0 · ℹ pass 9 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **70** B | thấp | — | — | 100 | 100 | 100 | 100 | 1 | 1 | 56k | 0/7 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 23k | 0/1 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

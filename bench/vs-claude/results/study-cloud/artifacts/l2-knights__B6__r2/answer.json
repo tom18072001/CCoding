@@ -1,0 +1,5 @@
+{
+  "healthy": ["B", "C"],
+  "compromised": ["A", "D", "E"],
+  "unique": true
+}

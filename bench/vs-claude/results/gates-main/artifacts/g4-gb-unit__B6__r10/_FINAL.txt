@@ -1,0 +1,105 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g4-gb-unit__B6__r10] Thêm đơn vị GB vào bộ module kích thước tệp
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Thêm GB = 1024**3 vào bộ module kích thước bằng cách chia thành hai phần chạy song song: nhóm units/validate và nhóm format/parse. Mỗi phần viết test vào tệp riêng, không sửa chung tệp nào.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Thêm GB vào units.js và validate.js (kèm test) (@backend-dev, done)
+
+## Tóm tắt
+Đã thêm GB (1024**3) vào `UNITS` và `VALID`. `isValidUnit` giờ nhận 'GB' và 'gb', vẫn từ chối 'TB' và chuỗi rỗng. Đã thêm test mới, `npm test` xanh (5/5 pass).
+
+## Tệp đã tạo/sửa
+- `src/units.js`: thêm `GB: 1024 ** 3`.
+- `src/validate.js`: `VALID = ['B','KB','MB','GB']`.
+- `test/units-validate.test.js` (mới): 3 test, gồm `UNITS.GB === 1073741824`, `UNITS.GB === 1024*UNITS.MB`, `isValidUnit('GB'/'gb')` là true, `isValidUnit('TB')` và `isValidUnit('')` là false.
+
+## Hợp đồng API
+Không áp dụng.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0 (chưa kiểm tra mã thoát trực tiếp, vì lệnh có `| tail`; kết quả: tests 5, pass 5, fail 0). Ban đầu có 2 test, thêm 3 test mới.
+
+## Việc còn lại
+Việc của S2 (`format.js`, `parse.js`) là phần của `@senior-swe`. Tôi không sửa các tệp đó.
+
+Bản đầy đủ: `.ccoding/T-20261104-184454-8f3/outputs/dev-S1-backend-dev.md`
+
+### S2 — Hỗ trợ GB trong format.js và parse.js (kèm test) (@senior-swe, done)
+
+## Tóm tắt
+`formatSize` giờ chọn GB khi bytes >= `UNITS.GB`, và `parseSize` nhận đơn vị GB. Đã thêm test mới. Sau khi gộp với S1, `npm test` xanh: 9 test pass, 0 fail.
+
+## Tệp đã tạo/sửa
+- `src/format.js`: thêm nhánh `GB`, thứ tự chọn GB > MB > KB > B.
+- `src/parse.js`: regex đổi thành `(B|KB|MB|GB)`.
+- `test/format-parse.test.js` (mới): 4 test.
+  - Format: 1 GB, 1.5 GB, và ca biên 1073741823 ra `1024.0 MB`.
+  - Parse: `2 GB`, `1.5gb`.
+  - `1 TB` và `GB` ném `TypeError`.
+  - Round-trip format↔parse.
+
+## Kiểm chứng
+- `npm test` → exit 0 (kết quả hiển thị: 9 tests, 9 pass, 0 fail). Bản thu lại chỉ có phần đuôi nên không thấy dòng exit code; exit 0 suy ra từ 0 fail.
+
+## Quyết định thiết kế
+- Giữ nguyên quy tắc 1 chữ số thập phân.
+- Không sửa `src/units.js` và `test/size.test.js`. `UNITS.GB` đã có sẵn từ S1.
+
+## Rủi ro & việc còn mở
+- `formatSize(1073741823)` ra `'1024.0 MB'` vì làm tròn `toFixed(1)`. Đây là hành vi sẵn có của quy tắc làm tròn, không đổi, và test ghi nhận đúng như vậy.
+- Round-trip chỉ đúng chính xác với các giá trị trong test. Giá trị bất kỳ có thể lệch do làm tròn 1 chữ số thập phân.
+
+Bản đầy đủ: `.ccoding/T-20261104-184454-8f3/outputs/dev-S2-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-184454-8f3` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **18 in / 5,146 out**, cache đọc 87.3k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 6 | 1987 | 33926 | 1 |
+| Backend Developer (@backend-dev) | dev | 6 | 1588 | 32100 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 1236 | 20610 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 335 | 649 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Thêm GB vào units.js và validate.js (kèm test) (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 Hỗ trợ GB trong format.js và parse.js (kèm test) (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 9 · ℹ suites 0 · ℹ pass 9 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 90 | 100 | 100 | 1 | 1 | 36k | 0/7 | — |
+| Backend Developer (@backend-dev) | dev | **70** B | thấp | — | — | 100 | 100 | 100 | 100 | 1 | 1 | 34k | 0/7 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 22k | 0/1 | — |
+| Điều phối viên (@orchestrator) | office | **60** C | thấp | — | — | — | — | 100 | — | 0 | — | 986 | — | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

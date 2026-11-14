@@ -1,0 +1,10 @@
+Cả 6 lỗi trong ISSUES.md đã được sửa và `npm test` xanh (13/13 test). Test hồi quy nằm ở `test/regression.test.js`, mỗi lỗi có một test. API công khai không đổi.
+
+1. **Làm tròn xu**: `toCents` nhân 100 rồi làm tròn bị lệch do dấu phẩy động. Giờ `toCents` chuẩn hóa độ chính xác rồi làm tròn trên giá trị tuyệt đối, nên `1.005` → 101 và `-1.005` → -101. Mã giảm cố định trong `checkout.js` giờ cũng dùng `toCents`. Giá trị đơn tối thiểu vốn đã dùng `toCents` nên được sửa theo.
+2. **Tổng giảm giá hụt**: `allocate` chỉ lấy phần nguyên và bỏ phần dư. Giờ nó chia phần dư theo phương pháp phần dư lớn nhất, bằng nhau thì dòng đứng trước được trước, nên tổng các dòng khớp đúng số tiền giảm.
+3. **Mua X tặng Y**: `freeUnits` tính theo nhóm `buy` thay vì `buy + free`. Giờ là `floor(qty / (buy + free)) * free`: 2 hộp → 0, 3 → 1, 5 → 1, 6 → 2.
+4. **Hết hạn sai**: `endsAt` dạng `YYYY-MM-DD` bị coi là 00:00 UTC của chính ngày đó. Giờ mã dùng được tới hết ngày đó và bị từ chối từ `2026-12-01T00:00:00Z`.
+5. **Giữ chỗ kho**: `updateQty` giữ chỗ toàn bộ số lượng mới thay vì phần chênh lệch, còn `removeItem` không trả hàng về kho. Giờ cả hai chỉ giữ hoặc trả đúng phần chênh lệch, nên số đang giữ luôn bằng tổng số lượng trong các giỏ.
+6. **Thuế**: `computeTotals` tính thuế trên `gross`, giờ tính trên `net`. Tôi cũng đổi `lineTax` sang tính nguyên để tránh sai số khi nhân với `0.05` hoặc `0.1`.
+
+Với mua X tặng Y, tôi chỉ tặng khi đủ cả nhóm `buy + free`, không tặng một phần nhóm. Ví dụ mua 2 tặng 2 với 3 hộp thì tặng 0. Cách này đúng với các ví dụ trong báo cáo, nhưng báo cáo không nói rõ trường hợp nhóm dở dang.

@@ -1,0 +1,71 @@
+# CCoding vs single Claude - results
+
+Folder: `bench/vs-claude/results/h6-3e` - 56 runs (0 excluded for touching hidden files, 4 infra rows dropped), arms: A1, A2, B0. Baseline **A1**, treatment **B0**. Scores are 0-1 per run; deltas in percentage points, 95% two-level bootstrap CI over tasks, p from a paired sign-flip permutation test.
+
+Đã loại 0 lượt excluded (SR-01c; theo arm: không). Giám khảo: không ghi (regex hoặc dữ liệu cũ) (SR-07). RNG: mulberry32, hạt 20261102 (hạt gốc); compare và hoán vị của H1, H2, H4, H6, H10 dùng luồng riêng mulberry32(20261102 ^ fnv1a32(mã giả thuyết)) (A-5, chờ đăng ký); H3, H7, H10-coding/adj dùng hạt cố định riêng (gốc + 31/32, 71, 91, 92); tost, bootP, permStratified dùng hạt mặc định 20261102; xáo H10 Fisher-Yates; luồng chung cũ chỉ ở mục độ nhạy (SR-20).
+
+## Hypotheses
+
+| ID | Test | Result | Verdict |
+| --- | --- | --- | --- |
+| H1 | Decomposable work (danh sách cố định c3, c4, c5, r1): B0 - A1 | n/a [n/a, n/a], p=n/a, tasks=0 | insufficient data |
+| H2 | Coupled reasoning (logic) is not better: B0 - A1 (90% CI upper bound ≤ +5 pp) | n/a [n/a, n/a], p=n/a, tasks=0; TOST90 [n/a, n/a] | insufficient data |
+| H3 | Seeded-issue recall/precision of B0 vs A1 (B2 vắng nên KHÔNG cô lập hiệu ứng review; SR-10) (exact two-sample permutation, s1, margins recall −0.15 / precision +0.05) | B0 vs A1: recall n/a [n/a, n/a], precision n/a [n/a, n/a]; s1 chưa đủ dữ liệu cho hoán vị | insufficient data |
+| H4 | Planted-ambiguity detection (requirements) | n/a [n/a, n/a], tasks=0 | insufficient data |
+| H5 | Cost ratio B0/A1 | weighted tokens median x1.7, wall time median x1.6; tasks meeting both thresholds 0% | not supported — không kết luận |
+| H6 | Compute-matched single agent matches CCoding (null); both A1 and A2 within ±5 pp (TOST 90% CI) | B0 - A1: -0.0 pp [-0.3 pp, +0.1 pp]; B0 - A2: -0.1 pp [-0.3 pp, +0.0 pp] (mọi bài, mô tả); tập khai báo: A1: n=1, bỏ trần [l1-modules, l2-chain, t1-duration, t3-api, t4-perf, t5-logq], TOST90 [+0.0 pp, +1.1 pp] trong biên; A2: n=1, bỏ trần [l1-modules, l2-chain, t1-duration, t3-api, t4-perf, t5-logq], TOST90 [+0.0 pp, +1.1 pp] trong biên; token có trọng số A2/B0 x1.55, A1/B0 x0.62 (mọi bài); bootstrap ước lượng (ít bài) (CI một tầng (chỉ lấy lại lượt trong ô, bài cố định); không phản ánh biến thiên giữa bài, kết luận chính theo CI hai tầng của tost): ngoài họ Holm (ước lượng) | insufficient data |
+| H7 | Run-to-run stability (pooled SD ratio treatment/baseline, per-task variance pooled; r ≥ 5 và ≥ 3 bài, P:174) | pooled SD ratio n/a [n/a, n/a] over 0 tasks (0 có sd(A1) = 0); 7 bài loại vì r < 5 | insufficient data |
+| H8 | Coordination failures: untouched-file test failures and check-still-red-at-end, paired by task | cặp theo 7 bài: untouchedFileFailures B0 − A1 = +0.00 test/lượt, redAtEnd +0.0 pp; chỉ số phụ formatMiss A1 +0.0 pp vs B0 +0.0 pp | not supported — không kết luận (confirm with transcript review) |
+| H9 | Grounding: citation precision and correct refusal | citation precision n/a, correct refusal n/a | insufficient data |
+| H10 | Advantage grows with task size (slope of delta vs parts) | slope -0.0 pp per extra part, permutation p=0.741, tasks=7 | not supported — không kết luận |
+| H10-coding | Slope of delta vs size, coding tasks only (SR-05) | slope -0.0 pp per extra part [-0.1 pp, +0.2 pp] (95% bootstrap over tasks), tasks=7 | not supported — không kết luận |
+| H10-adj | Slope of delta vs size adjusted for task category (within-category pooled) (SR-05) | slope -0.0 pp per extra part [-0.1 pp, +0.1 pp] (95% bootstrap over tasks), tasks=7 | not supported — không kết luận |
+| Holm {H3, H6} | K=0, ngưỡng 0.025/(K−i+1), H6 ra khỏi họ khi < 3 bài (§2.5) | họ rỗng | không có giả thuyết xác nhận |
+| H1′ | Decomposable (l1-modules, t1–t5): B0 > A1, margin 0 | T=-0.1 pp, p=0.7520, p_min=1.00e-4, bài=6, Monte Carlo (10000), confirmable=có (ngưỡng 0,0125) | dự kiến, chưa khóa (§2.6); quy tắc trần/suy biến bảo thủ chờ đăng ký (S-1) |
+| H2′ | Dependency chain (l2-chain): B0 not better than A1, margin 0,05 | chưa có bài nào đủ lượt cả hai arm | dự kiến, chưa khóa (§2.6); quy tắc trần/suy biến bảo thủ chờ đăng ký (S-1) |
+| B-01a | token có trọng số: SL/A1 trong [0,85; 1,15] (TOST 90% CI, trung bình theo bài của log-tỉ số) | không có dữ liệu SL trên t1–t5 | insufficient data |
+| B-01b | thời gian thực: SL/A1 trong [0,85; 1,15] (TOST 90% CI, trung bình theo bài của log-tỉ số) | không có dữ liệu SL trên t1–t5 | insufficient data |
+| B-01c | điểm tương đối: SL/A1 trong [0,85; 1,15] (TOST 90% CI, trung bình theo bài của log-tỉ số) | không có dữ liệu SL trên t1–t5 | insufficient data |
+
+Nhãn: `not supported — bác bỏ` = CI hẳn ngoài vùng ủng hộ/biên; `not supported — không kết luận` (gồm suy biến) KHÔNG phải bác bỏ (A-4). H1′/H2′ dùng quy tắc trần/suy biến bảo thủ CHỜ Phòng Nghiên cứu đăng ký (S-1).
+
+## Độ nhạy (cách cũ, chỉ đối chiếu; không phán quyết)
+
+| ID | Cách cũ | Kết quả |
+| --- | --- | --- |
+| H1 (độ nhạy) | lọc cũ coding/design size ≥ 3 (SR-05) + luồng chung cũ | -0.1 pp [-0.4 pp, +0.0 pp], p=1.000, tasks=5 |
+| H2/H4/H6/H10 (độ nhạy) | luồng chung cũ, đúng thứ tự gọi cũ (H1, H2, H4, H6, H10) | H2 n/a; H4 n/a; H6 B0 - A1: -0.0 pp [-0.3 pp, +0.1 pp], p=1.000, tasks=7; B0 - A2: -0.1 pp [-0.3 pp, +0.0 pp], p=1.000, tasks=7; H10 delta -0.0 pp [-0.3 pp, +0.1 pp], p=1.000, tasks=7 |
+| H7 (độ nhạy) | phép cũ: mọi bài có > 1 lượt, 0/0 := 1, không cổng r ≥ 5 | pooled SD ratio 2.48 over 7 tasks; median per-task ratio 1.00 over 6; nhãn cũ not supported |
+
+## Mean score by category
+
+Overall = trung bình theo lượt (loại nhiều bài như coding nặng hơn); Overall theo loại = trung bình có trọng số bằng nhau giữa các loại (SR-22).
+
+| Arm | coding | Overall | Overall theo loại | Weighted tok (mean) | Wall s (median) |
+| --- | --- | --- | --- | --- | --- |
+| A1 | 1.00 | 1.00 | 1.00 | 276,605 | 159 |
+| A2 | 1.00 | 1.00 | 1.00 | 687,109 | 487 |
+| B0 | 1.00 | 1.00 | 1.00 | 442,671 | 270 |
+
+## Cost-quality frontier
+
+| Arm | Mean score | Mean weighted tokens | Mean USD | Median wall s | Score per 1M weighted tokens |
+| --- | --- | --- | --- | --- | --- |
+| A1 | 1.00 | 276,605 | 0.57 | 159 | 3.61 |
+| A2 | 1.00 | 687,109 | 1.42 | 487 | 1.46 |
+| B0 | 1.00 | 442,671 | 0.00 | 270 | 2.26 |
+
+## Per task (B0 - A1)
+
+| Task | Category | Size | A1 | B0 | Delta |
+| --- | --- | --- | --- | --- | --- |
+| l1-modules | coding | 5 | 1.00 | 1.00 | +0.0 pp |
+| l2-chain | coding | 7 | 1.00 | 1.00 | +0.0 pp |
+| t1-duration | coding | 1 | 1.00 | 1.00 | +0.2 pp |
+| t2-orders | coding | 4 | 1.00 | 0.99 | -0.6 pp |
+| t3-api | coding | 6 | 1.00 | 1.00 | +0.0 pp |
+| t4-perf | coding | 1 | 1.00 | 1.00 | +0.0 pp |
+| t5-logq | coding | 4 | 1.00 | 1.00 | +0.0 pp |
+
+Errors / non-done runs: none.
+Leaked runs: none.

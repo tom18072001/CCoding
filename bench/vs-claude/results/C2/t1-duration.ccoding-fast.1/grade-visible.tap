@@ -1,0 +1,112 @@
+TAP version 13
+# Subtest: (a) lỗi và message chính xác
+ok 1 - (a) lỗi và message chính xác
+  ---
+  duration_ms: 1.794071
+  type: 'test'
+  ...
+# Subtest: (b) number
+ok 2 - (b) number
+  ---
+  duration_ms: 0.22525
+  type: 'test'
+  ...
+# Subtest: (c) số thuần dạng chuỗi
+ok 3 - (c) số thuần dạng chuỗi
+  ---
+  duration_ms: 0.723866
+  type: 'test'
+  ...
+# Subtest: (d) dấu
+ok 4 - (d) dấu
+  ---
+  duration_ms: 1.25781
+  type: 'test'
+  ...
+# Subtest: (e) đơn vị
+ok 5 - (e) đơn vị
+  ---
+  duration_ms: 0.755665
+  type: 'test'
+  ...
+# Subtest: (f) ISO 8601
+ok 6 - (f) ISO 8601
+  ---
+  duration_ms: 0.764936
+  type: 'test'
+  ...
+# Subtest: (g) làm tròn ở kết quả cuối
+ok 7 - (g) làm tròn ở kết quả cuối
+  ---
+  duration_ms: 0.288047
+  type: 'test'
+  ...
+# Subtest: (h) formatDuration cơ bản
+ok 8 - (h) formatDuration cơ bản
+  ---
+  duration_ms: 0.595598
+  type: 'test'
+  ...
+# Subtest: (i) largest
+ok 9 - (i) largest
+  ---
+  duration_ms: 0.456255
+  type: 'test'
+  ...
+# Subtest: (j) options/ms không hợp lệ
+ok 10 - (j) options/ms không hợp lệ
+  ---
+  duration_ms: 0.60839
+  type: 'test'
+  ...
+# Subtest: (k) round-trip
+ok 11 - (k) round-trip
+  ---
+  duration_ms: 13.237657
+  type: 'test'
+  ...
+# Subtest: parse cơ bản
+ok 12 - parse cơ bản
+  ---
+  duration_ms: 2.375101
+  type: 'test'
+  ...
+# Subtest: format cơ bản
+ok 13 - format cơ bản
+  ---
+  duration_ms: 0.819751
+  type: 'test'
+  ...
+# Subtest: lỗi
+ok 14 - lỗi
+  ---
+  duration_ms: 1.028223
+  type: 'test'
+  ...
+# Subtest: ví dụ trong SPEC
+ok 15 - ví dụ trong SPEC
+  ---
+  duration_ms: 1.433645
+  type: 'test'
+  ...
+# Subtest: lỗi biên
+ok 16 - lỗi biên
+  ---
+  duration_ms: 2.911283
+  type: 'test'
+  ...
+# Subtest: format biên
+ok 17 - format biên
+  ---
+  duration_ms: 0.442423
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 159.123374

@@ -1,0 +1,1502 @@
+{
+  "stale": [
+    {
+      "id": "C6-no-data",
+      "pattern": "C6 chưa có (dữ liệu|trong)",
+      "reason": "Đã có dữ liệu C6: docs/research/performance/c6-extract/ (C6-runs.csv, C6-calls.csv…); cập nhật bằng số C6 (dev-review.md R1-02..R1-12)",
+      "exceptions": [
+        {
+          "file": "docs/research/dev-review.md",
+          "anchor": "C6 chưa có trong T-f;",
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng lỗi R1-02..R1-12)"
+        },
+        {
+          "file": "docs/research/dev-review.md",
+          "anchor": "C6 chưa có trong T-d\"",
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng lỗi R1-02..R1-12)"
+        },
+        {
+          "file": "docs/research/dev-review.md",
+          "anchor": "C6 chưa có trong T-b\"",
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng lỗi R1-02..R1-12)"
+        },
+        {
+          "file": "docs/research/dev-review.md",
+          "anchor": "C6 chưa có dữ liệu",
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng lỗi R1-02..R1-12)"
+        },
+        {
+          "file": "docs/research/dev-review/verification.md",
+          "anchor": "C6 chưa có trong T-d\"",
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng xác minh)"
+        },
+        {
+          "file": "docs/research/dev-review/verification.md",
+          "anchor": "C6 chưa có trong T-f;",
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng xác minh)"
+        },
+        {
+          "file": "docs/research/dev-review/verification.md",
+          "anchor": "C6 chưa có trong T-d …\"",
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng xác minh)"
+        },
+        {
+          "file": "docs/research/dev-review/verification.md",
+          "anchor": "C6 chưa có trong T-b; … 3,",
+          "reason": "Trích dẫn cụm cũ để sửa/ghi nhận lỗi, không phải khẳng định (bảng xác minh)"
+        }
+      ]
+    },
+    {
+      "id": "agent-deadline-27-11",
+      "pattern": "AGENT[^\\n]{0,120}27/11|27/11[^\\n]{0,120}AGENT",
+      "reason": "Hạn AGENT'27 là 13/11/2026, không phải 27/11 (BRIEF-2.md mục 5; publication-plan.md dòng AGENT'27)",
+      "exceptions": [
+        {
+          "file": "docs/research/BRIEF-2.md",
+          "anchor": "AGENT 2027 (workshop ICSE) là **13/11/2026** (mọi workshop ICSE 2027 cùng hạn — không phải ≈ 27/11",
+          "reason": "Dòng nêu rõ \"không phải ≈ 27/11\", đúng là 13/11/2026"
+        }
+      ]
+    },
+    {
+      "id": "c7t2-review-missed",
+      "pattern": "review không bắt",
+      "reason": "Lượt C7 t2 (52/60): reviewer bắt được, lỗi ở điều phối (hạng mục thứ ba không chạy) — token-analysis.md:489, publication-plan.md:28, PROCESS-REVIEW.md:312",
+      "exceptions": [
+        {
+          "file": "docs/research/performance/token-analysis.md",
+          "anchor": "review không bắt",
+          "reason": "Dòng bác bỏ: BRIEF-2 (\"review không bắt\") không khớp dữ liệu"
+        }
+      ]
+    },
+    {
+      "id": "c1c8-single-labeller",
+      "pattern": "do một người gán",
+      "reason": "Hai bên gán nhãn MAST là hai agent cùng họ mô hình, không phải một người (agreement.md M-1; paper.md §8.1(3))",
+      "files": ["paper/paper.md"],
+      "exceptions": [
+        {
+          "file": "docs/research/paper/paper.md",
+          "anchor": "do một người gán",
+          "reason": "Trích dẫn câu cũ để ghi nhận đã sửa, không phải khẳng định (neo theo cụm, không theo số dòng)"
+        }
+      ]
+    },
+    {
+      "id": "l1l2-no-task-json",
+      "pattern": "l[12]-[a-z]+[^|\\n]{0,30}chưa có `task\\.json`",
+      "reason": "l1-modules và l2-chain đã có task.json từ 3/11/2026 (D8, 3ff7df3; oracle 1,00, null ≤ 0,01); còn thiếu là phép đo A1/A2, không phải bài",
+      "files": ["paper/paper.md", "improvement-backlog.md", "challenges.md"],
+      "exceptions": []
+    },
+    {
+      "id": "mast-abstract-only",
+      "pattern": "MAST mới đọc",
+      "reason": "MAST đã được đọc thân bài bản v3 (related-work.md §2.12, gói 2); chưa đọc phụ lục",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b-open-proposal-label",
+      "pattern": "ĐỀ XUẤT, (BỊ CHẶN|CHƯA CHẠY|KHÔNG CHẠY)|\\*\\*HOÃN\\*\\*",
+      "reason": "B-09, B-12…B-17 đã chuyển sang D9 hoặc cần đo theo quyết định của giám đốc 3/11/2026 (BRIEF-D9.md, 90cd913); không còn nhãn đề xuất/hoãn",
+      "files": ["improvement-backlog.md"],
+      "exceptions": []
+    }
+  ],
+  "brief22": {
+    "_note": "v0.8 (BRIEF-22, 14/11/2026): khóa và giá trị chép nguyên từ khối facts ở cuối analysis/decisions/scorecard.md và effectiveness.md (do scorecard.mjs sinh; kiểm bằng scorecard.mjs --check). consistency-check không đọc khóa này; các mục numbers bên dưới khóa giá trị trong paper.md. Nhãn P-1/P-2 (BRIEF-22b, M1): hai giá trị cùng tồn tại, mỗi giá trị một định nghĩa. P-1 = 42/54 = 77,8 % (mẫu số 54: lượt có ≥ 2 hạng mục đủ mốc giờ) so với `brief22.eff.P.anyParallel` = 42/56 = 75,0 % (mẫu số 56: mọi lượt phòng). P-2 = 27,5 % (gộp phút, 375 phút) so với `brief22.eff.P.saveStructural` = 29,2 % (nghịch đảo của work/cp trung vị 1,41).",
+    "brief22.axis2.full": "30/82",
+    "brief22.axis2.fullPct": 36.6,
+    "brief22.axis2.gitRead": "82/82",
+    "brief22.decomp.P.dev.runs": 35,
+    "brief22.decomp.P.longestShareMedian": 0.357,
+    "brief22.decomp.P.longestShareOver50": 10,
+    "brief22.decomp.P.parAchievedMedian": 1.283,
+    "brief22.decomp.P.parAllowedMedian": 1.412,
+    "brief22.decomp.P.plansWithAnyParallel": 42,
+    "brief22.decomp.P.research.runs": 21,
+    "brief22.decomp.P.reworkShareMedian": 0.225,
+    "brief22.decomp.P.runs": 56,
+    "brief22.decomp.P.singleSubtaskPlans": 2,
+    "brief22.decomp.P.slackMedian": 0.027,
+    "brief22.decomp.P.slackQ3": 0.17,
+    "brief22.decomp.P.subtasksMedian": 5,
+    "brief22.decomp.office.acceptedTasks": 1,
+    "brief22.decomp.office.briefItems": 15,
+    "brief22.decomp.office.briefItemsCovered": 12,
+    "brief22.decomp.office.briefRoleItems": 7,
+    "brief22.decomp.office.briefRoleItemsCovered": 3,
+    "brief22.decomp.office.coverageBrief": "12/15",
+    "brief22.decomp.office.coverageRole": "3/7",
+    "brief22.decomp.office.longestShareMedian": 0.513,
+    "brief22.decomp.office.longestShareOver50": 3,
+    "brief22.decomp.office.notAcceptedTasks": 4,
+    "brief22.decomp.office.parAchievedMedian": 1.538,
+    "brief22.decomp.office.parAllowedMedian": 1.616,
+    "brief22.decomp.office.planGateBlocked": 0,
+    "brief22.decomp.office.planModels": "claude-opus-5-5 ×5",
+    "brief22.decomp.office.plansWithAnyParallel": 5,
+    "brief22.decomp.office.replanned": 2,
+    "brief22.decomp.office.reviewSkipped": 2,
+    "brief22.decomp.office.reworkShareMedian": 0,
+    "brief22.decomp.office.runs": 5,
+    "brief22.decomp.office.singleSubtaskPlans": 0,
+    "brief22.decomp.office.slackMedian": 0.05,
+    "brief22.decomp.office.slackQ3": 0.075,
+    "brief22.decomp.office.subtasksMedian": 4,
+    "brief22.e7.R1.falseBlock": "27/64",
+    "brief22.e7.R1.recall": "63/64",
+    "brief22.e7.R1.unread": 0,
+    "brief22.e7.R2.falseBlock": "4/64",
+    "brief22.e7.R2.recall": "55/64",
+    "brief22.e7.R2.unread": 13,
+    "brief22.e7.R3.falseBlock": "30/64",
+    "brief22.e7.R3.recall": "61/64",
+    "brief22.e7.R3.unread": 1,
+    "brief22.engine.mergeConflicts": "6/213",
+    "brief22.engine.mergeConflictsPct": "2,8",
+    "brief22.engine.newRed": "2/47",
+    "brief22.fail.fix": 14,
+    "brief22.fail.fixedAlready": 3,
+    "brief22.fail.measure": 7,
+    "brief22.fail.out": 2,
+    "brief22.fail.total": 23,
+    "brief22.gate.g3.escaped": 194,
+    "brief22.gate.g3.recall": "1903/2097",
+    "brief22.gate.g3.recallPct": "90,7",
+    "brief22.kpi.academic-writer.calls": 5,
+    "brief22.kpi.academic-writer.compliance": 70,
+    "brief22.kpi.academic-writer.confidence": "medium",
+    "brief22.kpi.academic-writer.efficiency": 85,
+    "brief22.kpi.academic-writer.evidenceN": 5,
+    "brief22.kpi.academic-writer.failedCalls": 0,
+    "brief22.kpi.academic-writer.findings": 3,
+    "brief22.kpi.academic-writer.grade": "B",
+    "brief22.kpi.academic-writer.honesty": 100,
+    "brief22.kpi.academic-writer.outcome": 83,
+    "brief22.kpi.academic-writer.reliability": 67,
+    "brief22.kpi.academic-writer.total": 74,
+    "brief22.kpi.academic-writer.truncated": 3,
+    "brief22.kpi.agents": 14,
+    "brief22.kpi.agentsWithTruncated": 10,
+    "brief22.kpi.backend-dev.calls": 13,
+    "brief22.kpi.backend-dev.compliance": 100,
+    "brief22.kpi.backend-dev.confidence": "high",
+    "brief22.kpi.backend-dev.efficiency": 93,
+    "brief22.kpi.backend-dev.evidenceN": 11,
+    "brief22.kpi.backend-dev.failedCalls": 0,
+    "brief22.kpi.backend-dev.findings": 2,
+    "brief22.kpi.backend-dev.grade": "A",
+    "brief22.kpi.backend-dev.outcome": 88,
+    "brief22.kpi.backend-dev.quality": 100,
+    "brief22.kpi.backend-dev.reliability": 76,
+    "brief22.kpi.backend-dev.total": 85,
+    "brief22.kpi.backend-dev.truncated": 2,
+    "brief22.kpi.callsTotal": 112,
+    "brief22.kpi.cto.calls": 6,
+    "brief22.kpi.cto.confidence": "medium",
+    "brief22.kpi.cto.evidenceN": 6,
+    "brief22.kpi.cto.failedCalls": 0,
+    "brief22.kpi.cto.findings": 0,
+    "brief22.kpi.cto.grade": "B",
+    "brief22.kpi.cto.quality": 100,
+    "brief22.kpi.cto.reliability": 93,
+    "brief22.kpi.cto.total": 73,
+    "brief22.kpi.cto.truncated": 0,
+    "brief22.kpi.data-scientist.calls": 13,
+    "brief22.kpi.data-scientist.compliance": 100,
+    "brief22.kpi.data-scientist.confidence": "high",
+    "brief22.kpi.data-scientist.efficiency": 79,
+    "brief22.kpi.data-scientist.evidenceN": 12,
+    "brief22.kpi.data-scientist.failedCalls": 0,
+    "brief22.kpi.data-scientist.findings": 3,
+    "brief22.kpi.data-scientist.grade": "B",
+    "brief22.kpi.data-scientist.honesty": 100,
+    "brief22.kpi.data-scientist.outcome": 81,
+    "brief22.kpi.data-scientist.reliability": 61,
+    "brief22.kpi.data-scientist.total": 78,
+    "brief22.kpi.data-scientist.truncated": 3,
+    "brief22.kpi.dept.dev.score": 81,
+    "brief22.kpi.dept.dev.tokens": 9367248,
+    "brief22.kpi.dept.office.score": 73,
+    "brief22.kpi.dept.research.score": 76,
+    "brief22.kpi.dept.research.tokens": 49235709,
+    "brief22.kpi.dev-lead.calls": 16,
+    "brief22.kpi.dev-lead.compliance": 100,
+    "brief22.kpi.dev-lead.confidence": "high",
+    "brief22.kpi.dev-lead.efficiency": 100,
+    "brief22.kpi.dev-lead.evidenceN": 14,
+    "brief22.kpi.dev-lead.failedCalls": 1,
+    "brief22.kpi.dev-lead.findings": 1,
+    "brief22.kpi.dev-lead.grade": "A",
+    "brief22.kpi.dev-lead.honesty": 100,
+    "brief22.kpi.dev-lead.outcome": 75,
+    "brief22.kpi.dev-lead.quality": 100,
+    "brief22.kpi.dev-lead.reliability": 93,
+    "brief22.kpi.dev-lead.total": 88,
+    "brief22.kpi.dev-lead.truncated": 0,
+    "brief22.kpi.devops.calls": 2,
+    "brief22.kpi.devops.compliance": 92,
+    "brief22.kpi.devops.confidence": "low",
+    "brief22.kpi.devops.efficiency": 60,
+    "brief22.kpi.devops.evidenceN": 2,
+    "brief22.kpi.devops.failedCalls": 0,
+    "brief22.kpi.devops.findings": 1,
+    "brief22.kpi.devops.grade": "B",
+    "brief22.kpi.devops.honesty": 100,
+    "brief22.kpi.devops.outcome": 81,
+    "brief22.kpi.devops.quality": 100,
+    "brief22.kpi.devops.reliability": 92,
+    "brief22.kpi.devops.total": 71,
+    "brief22.kpi.devops.truncated": 0,
+    "brief22.kpi.failedCallsTotal": 1,
+    "brief22.kpi.literature-researcher.calls": 7,
+    "brief22.kpi.literature-researcher.compliance": 100,
+    "brief22.kpi.literature-researcher.confidence": "medium",
+    "brief22.kpi.literature-researcher.efficiency": 100,
+    "brief22.kpi.literature-researcher.evidenceN": 7,
+    "brief22.kpi.literature-researcher.failedCalls": 0,
+    "brief22.kpi.literature-researcher.findings": 2,
+    "brief22.kpi.literature-researcher.grade": "B",
+    "brief22.kpi.literature-researcher.outcome": 81,
+    "brief22.kpi.literature-researcher.reliability": 61,
+    "brief22.kpi.literature-researcher.total": 77,
+    "brief22.kpi.literature-researcher.truncated": 3,
+    "brief22.kpi.lowConfidenceAgents": "devops, security, tech-writer, peer-reviewer",
+    "brief22.kpi.methodologist.calls": 9,
+    "brief22.kpi.methodologist.compliance": 70,
+    "brief22.kpi.methodologist.confidence": "high",
+    "brief22.kpi.methodologist.efficiency": 100,
+    "brief22.kpi.methodologist.evidenceN": 9,
+    "brief22.kpi.methodologist.failedCalls": 0,
+    "brief22.kpi.methodologist.findings": 3,
+    "brief22.kpi.methodologist.grade": "B",
+    "brief22.kpi.methodologist.outcome": 81,
+    "brief22.kpi.methodologist.reliability": 58,
+    "brief22.kpi.methodologist.total": 74,
+    "brief22.kpi.methodologist.truncated": 3,
+    "brief22.kpi.peer-reviewer.calls": 5,
+    "brief22.kpi.peer-reviewer.compliance": 100,
+    "brief22.kpi.peer-reviewer.confidence": "low",
+    "brief22.kpi.peer-reviewer.efficiency": 95,
+    "brief22.kpi.peer-reviewer.evidenceN": 2,
+    "brief22.kpi.peer-reviewer.failedCalls": 0,
+    "brief22.kpi.peer-reviewer.findings": 2,
+    "brief22.kpi.peer-reviewer.grade": "B",
+    "brief22.kpi.peer-reviewer.outcome": 83,
+    "brief22.kpi.peer-reviewer.reliability": 53,
+    "brief22.kpi.peer-reviewer.total": 68,
+    "brief22.kpi.peer-reviewer.truncated": 4,
+    "brief22.kpi.qa-tester.calls": 9,
+    "brief22.kpi.qa-tester.compliance": 100,
+    "brief22.kpi.qa-tester.confidence": "high",
+    "brief22.kpi.qa-tester.efficiency": 100,
+    "brief22.kpi.qa-tester.evidenceN": 8,
+    "brief22.kpi.qa-tester.failedCalls": 0,
+    "brief22.kpi.qa-tester.findings": 1,
+    "brief22.kpi.qa-tester.grade": "B",
+    "brief22.kpi.qa-tester.honesty": 100,
+    "brief22.kpi.qa-tester.outcome": 81,
+    "brief22.kpi.qa-tester.quality": 90,
+    "brief22.kpi.qa-tester.reliability": 39,
+    "brief22.kpi.qa-tester.total": 78,
+    "brief22.kpi.qa-tester.truncated": 4,
+    "brief22.kpi.research-lead.calls": 14,
+    "brief22.kpi.research-lead.compliance": 100,
+    "brief22.kpi.research-lead.confidence": "high",
+    "brief22.kpi.research-lead.efficiency": 77,
+    "brief22.kpi.research-lead.evidenceN": 13,
+    "brief22.kpi.research-lead.failedCalls": 0,
+    "brief22.kpi.research-lead.findings": 3,
+    "brief22.kpi.research-lead.grade": "B",
+    "brief22.kpi.research-lead.honesty": 100,
+    "brief22.kpi.research-lead.outcome": 67,
+    "brief22.kpi.research-lead.reliability": 70,
+    "brief22.kpi.research-lead.total": 77,
+    "brief22.kpi.research-lead.truncated": 2,
+    "brief22.kpi.scoreMax": 88,
+    "brief22.kpi.scoreMedian": 75.5,
+    "brief22.kpi.scoreMin": 65,
+    "brief22.kpi.security.calls": 2,
+    "brief22.kpi.security.compliance": 100,
+    "brief22.kpi.security.confidence": "low",
+    "brief22.kpi.security.efficiency": 77,
+    "brief22.kpi.security.evidenceN": 2,
+    "brief22.kpi.security.failedCalls": 0,
+    "brief22.kpi.security.findings": 2,
+    "brief22.kpi.security.grade": "B",
+    "brief22.kpi.security.outcome": 81,
+    "brief22.kpi.security.reliability": 70,
+    "brief22.kpi.security.total": 68,
+    "brief22.kpi.security.truncated": 1,
+    "brief22.kpi.senior-swe.calls": 10,
+    "brief22.kpi.senior-swe.compliance": 100,
+    "brief22.kpi.senior-swe.confidence": "high",
+    "brief22.kpi.senior-swe.efficiency": 86,
+    "brief22.kpi.senior-swe.evidenceN": 8,
+    "brief22.kpi.senior-swe.failedCalls": 0,
+    "brief22.kpi.senior-swe.findings": 2,
+    "brief22.kpi.senior-swe.grade": "A",
+    "brief22.kpi.senior-swe.outcome": 88,
+    "brief22.kpi.senior-swe.quality": 100,
+    "brief22.kpi.senior-swe.reliability": 74,
+    "brief22.kpi.senior-swe.total": 82,
+    "brief22.kpi.senior-swe.truncated": 2,
+    "brief22.kpi.tasksByStatus": "cancelled 1, paused 2, done 6, failed 1",
+    "brief22.kpi.tasksByStatusSum": 10,
+    "brief22.kpi.tasksCountedField": 7,
+    "brief22.kpi.tech-writer.calls": 1,
+    "brief22.kpi.tech-writer.confidence": "low",
+    "brief22.kpi.tech-writer.efficiency": 100,
+    "brief22.kpi.tech-writer.evidenceN": 1,
+    "brief22.kpi.tech-writer.failedCalls": 0,
+    "brief22.kpi.tech-writer.findings": 0,
+    "brief22.kpi.tech-writer.grade": "B",
+    "brief22.kpi.tech-writer.reliability": 100,
+    "brief22.kpi.tech-writer.total": 65,
+    "brief22.kpi.tech-writer.truncated": 0,
+    "brief22.kpi.truncatedTotal": 27,
+    "brief22.reviewer.peer.truncated": "4/5",
+    "brief22.reviewer.qa.truncated": "4/9",
+    "brief22.route.models": "claude-haiku-5-5 ×169",
+    "brief22.route.runsCCoding": 632,
+    "brief22.route.runsWithRoute": 331,
+    "brief22.route.shareMedian": 0.037,
+    "brief22.route.tokensMedian": 9329,
+    "brief22.bench.ccodingRuns": 632,
+    "brief22.bench.ccodingRunsWithLane": 334,
+    "brief22.bench.escalatedFrom": 143,
+    "brief22.bench.escalatedFromDetail": "single 143",
+    "brief22.bench.lane.fast.runs": 252,
+    "brief22.bench.lane.fast.withReview": 0,
+    "brief22.bench.lane.full.runs": 40,
+    "brief22.bench.lane.full.withReview": 0,
+    "brief22.bench.lane.single.runs": 42,
+    "brief22.bench.lane.single.withReview": 0,
+    "brief22.eff.P.anyParallel": "42/56",
+    "brief22.eff.P.anyParallelCi": "61,6–85,6 %",
+    "brief22.eff.P.gapPp": 7.1,
+    "brief22.eff.P.longestOver50": "10/56",
+    "brief22.eff.P.longestOver50Ci": "8,9–30,4 %",
+    "brief22.eff.P.saveAchieved": 22.1,
+    "brief22.eff.P.saveAchievedHi": 37.7,
+    "brief22.eff.P.saveAchievedLo": 0,
+    "brief22.eff.P.saveStructural": 29.2,
+    "brief22.eff.P.saveStructuralHi": 40.9,
+    "brief22.eff.P.saveStructuralIqr": "15,3–40,9 %",
+    "brief22.eff.P.saveStructuralLo": 15.3,
+    "brief22.eff.agentsUsed.n": 586,
+    "brief22.eff.agentsUsed.rhoTokens": 0.62,
+    "brief22.eff.agentsUsed.rhoWall": 0.59,
+    "brief22.eff.ccoding.failPass": "26/632",
+    "brief22.eff.e8.B6w1.n": 18,
+    "brief22.eff.e8.B6w1.rhoConcWall": "—",
+    "brief22.eff.e8.B6w1.rhoSubTokens": 0.83,
+    "brief22.eff.e8.B6w1.rhoSubWall": 0.83,
+    "brief22.eff.e8.B6w4.n": 18,
+    "brief22.eff.e8.B6w4.rhoConcWall": -0.04,
+    "brief22.eff.e8.B6w4.rhoSubTokens": 0.78,
+    "brief22.eff.e8.B6w4.rhoSubWall": 0.32,
+    "brief22.eff.e8.all.n": 36,
+    "brief22.eff.e8.all.rhoConcWall": -0.5,
+    "brief22.eff.e8.all.rhoSubTokens": 0.8,
+    "brief22.eff.e8.all.rhoSubWall": 0.44,
+    "brief22.eff.e8.w4w1.tasks": 3,
+    "brief22.eff.e8.w4w1.tokens": 0.99,
+    "brief22.eff.e8.w4w1.wall": 0.55,
+    "brief22.eff.fixRounds.runsWithFix": "6/334",
+    "brief22.eff.office.longestOver50Ci": "14,7–94,7 %",
+    "brief22.eff.phase.acceptShare": 12.1,
+    "brief22.eff.phase.arm.B0.coordShare": 39.5,
+    "brief22.eff.phase.arm.B0F.coordShare": 21.8,
+    "brief22.eff.phase.arm.B1F.coordShare": 14.7,
+    "brief22.eff.phase.arm.B5.coordShare": 34.3,
+    "brief22.eff.phase.arm.B6.coordShare": 41,
+    "brief22.eff.phase.arm.B6w1.coordShare": 19,
+    "brief22.eff.phase.arm.B6w4.coordShare": 18.6,
+    "brief22.eff.phase.arm.B7.coordShare": 32.2,
+    "brief22.eff.phase.arm.B7cab.coordShare": 38.5,
+    "brief22.eff.phase.arm.B7cabO.coordShare": 49.7,
+    "brief22.eff.phase.coordShare": 31.6,
+    "brief22.eff.phase.coordShareRunIqr": "30,6–52,0 %",
+    "brief22.eff.phase.coordShareRunMedian": 43.7,
+    "brief22.eff.phase.discussShare": 1,
+    "brief22.eff.phase.executeShare": 67.8,
+    "brief22.eff.phase.lane.fast.coordShare": 30.2,
+    "brief22.eff.phase.lane.full.coordShare": 18.8,
+    "brief22.eff.phase.lane.single.coordShare": 33.4,
+    "brief22.eff.phase.planShare": 9.5,
+    "brief22.eff.phase.reviewShare": 3.1,
+    "brief22.eff.phase.routeShare": 2,
+    "brief22.eff.phase.runs": 632,
+    "brief22.eff.phase.synthesizeShare": 2.7,
+    "brief22.eff.ratio.b7prime.B7cab.tasks": 5,
+    "brief22.eff.ratio.b7prime.B7cab.tokens": 1.6,
+    "brief22.eff.ratio.b7prime.B7cab.wall": 1.65,
+    "brief22.eff.ratio.e8-parallel.B6w1.tasks": 3,
+    "brief22.eff.ratio.e8-parallel.B6w1.tokens": 2.03,
+    "brief22.eff.ratio.e8-parallel.B6w1.wall": 2.1,
+    "brief22.eff.ratio.e8-parallel.B6w4.tasks": 3,
+    "brief22.eff.ratio.e8-parallel.B6w4.tokens": 2.11,
+    "brief22.eff.ratio.e8-parallel.B6w4.wall": 1.39,
+    "brief22.eff.ratio.large-pilot.B0.tasks": 2,
+    "brief22.eff.ratio.large-pilot.B0.tokens": 1.7,
+    "brief22.eff.ratio.large-pilot.B0.wall": 2.09,
+    "brief22.eff.ratio.large-pilot.B1.tasks": 2,
+    "brief22.eff.ratio.large-pilot.B1.tokens": 1.69,
+    "brief22.eff.ratio.large-pilot.B1.wall": 1.66,
+    "brief22.eff.ratio.pilot1.B0.tasks": 13,
+    "brief22.eff.ratio.pilot1.B0.tokens": 5.9,
+    "brief22.eff.ratio.pilot1.B0.wall": 9.97,
+    "brief22.eff.ratio.pilot1.B5.tasks": 13,
+    "brief22.eff.ratio.pilot1.B5.tokens": 1.48,
+    "brief22.eff.ratio.pilot1.B5.wall": 2.32,
+    "brief22.eff.ratio.study-cloud.B0.tasks": 18,
+    "brief22.eff.ratio.study-cloud.B0.tokens": 6.34,
+    "brief22.eff.ratio.study-cloud.B0.wall": 9.06,
+    "brief22.eff.ratio.study-cloud.B5.tasks": 13,
+    "brief22.eff.ratio.study-cloud.B5.tokens": 1.53,
+    "brief22.eff.ratio.study-cloud.B5.wall": 2.44,
+    "brief22.eff.ratio.study-cloud.B6.tasks": 18,
+    "brief22.eff.ratio.study-cloud.B6.tokens": 4.01,
+    "brief22.eff.ratio.study-cloud.B6.wall": 5.2,
+    "brief22.eff.ratio.study-cloud.B7.tasks": 18,
+    "brief22.eff.ratio.study-cloud.B7.tokens": 2.4,
+    "brief22.eff.ratio.study-cloud.B7.wall": 3.07
+  },
+  "numbers": [
+    {
+      "id": "brief22-calls-total",
+      "value": "112",
+      "reason": "v0.8 (BRIEF-22): brief22.kpi.callsTotal; scorecard.md §1a (tổng lượt gọi 14 agent)",
+      "pattern": "Trên (112) lượt gọi của 14 agent",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "brief22-p1-a-ratio",
+      "value": "42/54",
+      "reason": "BRIEF-22b M1, m-r2: P-1 phương án A = 42/54 (mẫu số 54: lượt có ≥ 2 hạng mục đủ mốc giờ); số B 42/56 ở brief22.eff.P.anyParallel",
+      "pattern": "^\\| P-1 [^|]*\\| (42/54) = 77,8 %",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "brief22-p1-a-pct",
+      "value": "77,8",
+      "reason": "BRIEF-22b M1, m-r2: P-1 phương án A = 77,8 % (42/54)",
+      "pattern": "^\\| P-1 [^|]*\\| 42/54 = (77,8) %",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "brief22-p2-a-pct",
+      "value": "27,5",
+      "reason": "BRIEF-22b M1, m-r2: P-2 phương án A = 27,5 % (gộp phút, (1366 − 990)/1366 = 375 phút); số B 29,2 % là nghịch đảo work/cp trung vị 1,41",
+      "pattern": "^\\| P-2 [^|]*\\| Tối đa 375 phút = (27,5) %",
+      "files": [
+        "paper/paper.md"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "brief22-p-par-allowed",
+      "value": "1,41",
+      "reason": "v0.8 (BRIEF-22): brief22.decomp.P.parAllowedMedian = 1.412; effectiveness.md 3a",
+      "pattern": "^\\| P \\(server chính\\) \\| 56 \\| 5,0 \\| (1,41) \\|",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "brief22-p-par-achieved",
+      "value": "1,28",
+      "reason": "v0.8 (BRIEF-22): brief22.decomp.P.parAchievedMedian = 1.283; effectiveness.md 3a",
+      "pattern": "^\\| P \\(server chính\\) \\| 56 \\| 5,0 \\| 1,41 \\| (1,28) \\|",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "brief22-coord-share",
+      "value": "31,6",
+      "reason": "v0.8 (BRIEF-22): brief22.eff.phase.coordShare = 31.6; effectiveness.md 3c",
+      "pattern": "chiếm ≈ (31,6) % token có trọng số trên 632",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "brief22-fail-total",
+      "value": "23",
+      "reason": "v0.8 (BRIEF-22): brief22.fail.total; scorecard.md mục 2",
+      "pattern": "phân loại (23) chỗ fail",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "agent-deadline",
+      "value": "13/11/2026",
+      "reason": "Nguồn: publication-plan.md dòng AGENT'27 (kiểm ngày 2/11/2026) và BRIEF-2.md mục 5",
+      "pattern": "AGENT[^\\n]{0,60}?(\\d{1,2}/\\d{1,2}/20\\d\\d)",
+      "files": ["publication-plan.md", "BRIEF-2.md", "paper/paper.md", "presentation-notes.md"],
+      "exceptions": []
+    },
+    {
+      "id": "c7t2-score",
+      "value": "52/60",
+      "reason": "Nguồn: token-analysis.md T-h (kiểm lượt C7 t2) và PROCESS-REVIEW.md:312",
+      "pattern": "C7 t2[^\\n]{0,40}?\\((\\d+/60)\\)",
+      "files": ["**/*.md", "../PROCESS-REVIEW.md"],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-token-B0-vs-A0",
+      "value": "6,58",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
+      "pattern": "^\\| B0 \\(đủ phòng\\)[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-time-B0-vs-A0",
+      "value": "9,76",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
+      "pattern": "^\\| B0 \\(đủ phòng\\)[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-token-B5-vs-A0",
+      "value": "1,61",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
+      "pattern": "^\\| B5 \\(một agent[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-time-B5-vs-A0",
+      "value": "2,59",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
+      "pattern": "^\\| B5 \\(một agent[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-token-B6-vs-A0",
+      "value": "4,23",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
+      "pattern": "^\\| B6 \\(làn nhanh\\)[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-time-B6-vs-A0",
+      "value": "6,29",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
+      "pattern": "^\\| B6 \\(làn nhanh\\)[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-token-B7-vs-A0",
+      "value": "2,61",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
+      "pattern": "^\\| B7 \\(làn đơn\\)[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-time-B7-vs-A0",
+      "value": "3,96",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
+      "pattern": "^\\| B7 \\(làn đơn\\)[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-token-A1-vs-A0",
+      "value": "0,96",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
+      "pattern": "^\\| A1 \\(Claude[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-time-A1-vs-A0",
+      "value": "1,28",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
+      "pattern": "^\\| A1 \\(Claude[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-token-A2-vs-A0",
+      "value": "2,23",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (token ×A0-sonnet, trung bình hình học theo bài, R13 r1–3); Bảng 8 của paper",
+      "pattern": "^\\| A2 \\(best-of-3\\)[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "ratio-time-A2-vs-A0",
+      "value": "2,55",
+      "reason": "Nguồn: bench/vs-claude/results/study-cloud-final/final-extra.md, bảng đầu (thời gian ×A0-sonnet); Bảng 8 của paper",
+      "pattern": "^\\| A2 \\(best-of-3\\)[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b01-b7-main-token",
+      "value": "2,498",
+      "reason": "bench/vs-claude/results/study-cloud-final/prereg-tests-448.md §2 bảng \"Chính\" (A0 r4–9 so với B7 r1–9); khác 2,519 của step4-extra-448.md §2 (A0 r1–11): hai phép so khác nhau",
+      "pattern": "^\\| B7; \\*\\*chính\\*\\*[^|]*\\|[^|]*\\| (\\d,\\d{3}) \\[",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b01-b7-main-time",
+      "value": "2,566",
+      "reason": "bench/vs-claude/results/study-cloud-final/prereg-tests-448.md §2 bảng \"Chính\"",
+      "pattern": "^\\| B7; \\*\\*chính\\*\\*[^|]*\\|[^|]*\\|[^|]*\\| (\\d,\\d{3}) \\[",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b01-b7-sens3-token",
+      "value": "2,519",
+      "reason": "bench/vs-claude/results/study-cloud-final/step4-extra-448.md §2 (A0 r1–11)",
+      "pattern": "^\\| B7; độ nhạy 3[^|]*\\|[^|]*\\| (\\d,\\d{3}) \\[",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b01-b6-main-token",
+      "value": "3,921",
+      "reason": "bench/vs-claude/results/study-cloud-final/step4-extra-448.md §1 (A0 r1–9 so với B6 r1–9)",
+      "pattern": "^\\| B6; \\*\\*chính\\*\\*[^|]*\\|[^|]*\\| (\\d,\\d{3}) \\[",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b01-b6-main-time",
+      "value": "4,047",
+      "reason": "bench/vs-claude/results/study-cloud-final/step4-extra-448.md §1",
+      "pattern": "^\\| B6; \\*\\*chính\\*\\*[^|]*\\|[^|]*\\|[^|]*\\| (\\d,\\d{3}) \\[",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "cache-sens-b7-t5",
+      "value": "2,55",
+      "reason": "docs/research/analysis/cache-sensitivity.md C-4 (hệ số cacheRead 0,05, ảnh chụp 276 dòng); Bảng 13, hàng T5",
+      "pattern": "^\\| B7/A0, T5 \\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "cache-sens-b7-all",
+      "value": "2,73",
+      "reason": "docs/research/analysis/cache-sensitivity.md C-4; Bảng 13 (18 bài)",
+      "pattern": "^\\| B7/A0, mọi bài[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "cache-sens-b6-all",
+      "value": "4,03",
+      "reason": "docs/research/analysis/cache-sensitivity.md C-4; Bảng 13 (5 bài)",
+      "pattern": "^\\| B6/A0, mọi bài[^|]*\\|[^|]*\\|[^|]*\\| ×(\\d,\\d\\d) ",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "kappa-mast-detail",
+      "value": "0,673",
+      "reason": "docs/research/analysis/agreement.md M-1; giữa hai agent cùng họ mô hình, không phải κ người–người",
+      "pattern": "κ = (0,\\d{3}) \\(mức chi tiết\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "pabak-judge-regex",
+      "value": "0,881",
+      "reason": "docs/research/analysis/agreement.md A-2 (judge so với regex, gộp r1 + a1)",
+      "pattern": "đọc PABAK (0,\\d{3})",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "prereg-keys-kept",
+      "value": "440",
+      "reason": "bench/vs-claude/results/study-cloud-final/final-extra.md đầu tệp (440 khóa giữ); README.md mục \"Dữ liệu\"",
+      "pattern": "giữ (\\d{3}) \\(tệp R2",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "prereg-rows-kept-tests",
+      "value": "432",
+      "reason": "bench/vs-claude/results/study-cloud-final/prereg-tests-448.md §0–§1 (16 lượt loại, 432 giữ)",
+      "pattern": "đọc 448 dòng, giữ (\\d{3})",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "gate-false-block",
+      "value": "0",
+      "reason": "docs/research/analysis/agreement.md C-1 (cổng B-02: 1/1 lượt lỗi thật; 0/50 chặn nhầm)",
+      "pattern": "chặn nhầm (\\d+) trong 50 lượt",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-rhat-token",
+      "value": "2,04",
+      "reason": "bench/vs-claude/results/b7prime/RUNLOG.md (Điểm dừng GĐ1); tính lại bằng bootstrapRatio, hạt 20261102, B = 4000, CI 90 %",
+      "pattern": "token có trọng số \\*\\*R̂ = (\\d,\\d\\d)\\*\\*",
+      "files": ["improvement-backlog.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-ci-token",
+      "value": "1,45; 2,99",
+      "reason": "bench/vs-claude/results/b7prime/RUNLOG.md (Điểm dừng GĐ1); tính lại bằng bootstrapRatio, hạt 20261102, B = 4000, CI 90 %",
+      "pattern": "R̂ = 2,04\\*\\*, CI 90 % \\[(\\d,\\d\\d; \\d,\\d\\d)\\]",
+      "files": ["improvement-backlog.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-rhat-time",
+      "value": "2,16",
+      "reason": "bench/vs-claude/results/b7prime/RUNLOG.md (Điểm dừng GĐ1); tính lại bằng bootstrapRatio, hạt 20261102, B = 4000, CI 90 %",
+      "pattern": "thời gian thực \\*\\*R̂ = (\\d,\\d\\d)\\*\\*",
+      "files": ["improvement-backlog.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-ci-time",
+      "value": "1,53; 3,21",
+      "reason": "bench/vs-claude/results/b7prime/RUNLOG.md (Điểm dừng GĐ1); tính lại bằng bootstrapRatio, hạt 20261102, B = 4000, CI 90 %",
+      "pattern": "R̂ = 2,16\\*\\*, CI 90 % \\[(\\d,\\d\\d; \\d,\\d\\d)\\]",
+      "files": ["improvement-backlog.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-n-per-cell",
+      "value": "2",
+      "reason": "b7prime/RUNLOG.md: 2 lượt mỗi ô × 5 bài",
+      "pattern": "n = (\\d) lượt mỗi ô × 5 bài \\(t1–t5\\)",
+      "files": ["improvement-backlog.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-server",
+      "value": "1333eef",
+      "reason": "b7prime/RUNLOG.md dòng 5",
+      "pattern": "server `(\\w{7})`; Claude Code CLI",
+      "files": ["improvement-backlog.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-cli",
+      "value": "2.1.317",
+      "reason": "b7prime/RUNLOG.md dòng 7",
+      "pattern": "Claude Code CLI (\\d\\.\\d\\.\\d+) \\(W1–W5",
+      "files": ["improvement-backlog.md"],
+      "exceptions": []
+    },
+    {
+      "id": "s43-main-commits",
+      "value": "16",
+      "reason": "context/merge-main-2026-11-03.md §1: 16 commit của main (e0bd2f4..9e6079b)",
+      "pattern": "nhận (\\d+) commit mới của `main`",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "s43-merge-hash",
+      "value": "37f88b6",
+      "reason": "context/merge-main-2026-11-03.md §1: merge commit",
+      "pattern": "merge commit `(\\w{7})`, không rebase",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "s43-tests-linux",
+      "value": "285/285",
+      "reason": "Đề bài vòng 4 gói 5 (Phòng Dev báo, Linux); merge-main §6 ghi 282 đạt/0 lỗi/3 bỏ qua ở lần chạy đầu",
+      "pattern": "`npm test` (\\d+/\\d+) trên Linux",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "s43-b7prime-server",
+      "value": "1333eef",
+      "reason": "b7prime/RUNLOG.md dòng 5; khớp V4-04, backlog B-11.5, paper §6.1(7)",
+      "pattern": "máy chủ 7425 ở `(\\w{7})` cho B7′",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "s43-b7prime-cli",
+      "value": "2.1.317",
+      "reason": "b7prime/RUNLOG.md dòng 7",
+      "pattern": "CLI (\\d\\.\\d\\.\\d+) thay cho 2\\.1\\.316",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "s43-w-main-server",
+      "value": "e0bd2f4",
+      "reason": "study-cloud/RUNLOG.md dòng 5, 56: máy chủ 7424 ở origin/main",
+      "pattern": "máy chủ 7424 ở `origin/main` `(\\w{7})`",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "s43-w-branch-server",
+      "value": "7fb18ba",
+      "reason": "study-cloud/RUNLOG.md dòng 5, 56: máy chủ 7425 ở nhánh",
+      "pattern": "máy chủ 7425 ở nhánh `(\\w{7})`",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-server-paper",
+      "value": "1333eef",
+      "reason": "b7prime/RUNLOG.md dòng 5; khớp backlog B-11.5",
+      "pattern": "server `(\\w{7})`, Claude Code CLI",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-n-paper",
+      "value": "2",
+      "reason": "b7prime/RUNLOG.md: 2 lượt mỗi ô × 5 bài",
+      "pattern": "n = (\\d) lượt mỗi ô, 10 lượt mỗi arm",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b7prime-rhat-token-paper",
+      "value": "2,04",
+      "reason": "như b7prime-rhat-token (backlog B-11.5)",
+      "pattern": "token có trọng số là \\*\\*×(\\d,\\d\\d)\\*\\*",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e1-h-same",
+      "value": "0,98",
+      "reason": "bench/vs-claude/results/b14-diag/RUNLOG.md, cặp (a) giống hệt, h lượt 2",
+      "pattern": "giữ nguyên mọi thứ: h = (\\d,\\d\\d)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e1-h-tools",
+      "value": "0,00",
+      "reason": "b14-diag/RUNLOG.md, cặp (b) khác bộ công cụ",
+      "pattern": "đổi bộ công cụ: h = (\\d,\\d\\d)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e1-cw-tools",
+      "value": "41 464",
+      "reason": "b14-diag/RUNLOG.md, cặp (b), CW lượt 2",
+      "pattern": "\\(ghi (41 464), đọc 0\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e1-h-cwd",
+      "value": "0,98",
+      "reason": "b14-diag/RUNLOG.md, cặp (c) khác cwd",
+      "pattern": "\\(`cwd`\\): h = (\\d,\\d\\d)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e1-runs",
+      "value": "7",
+      "reason": "b14-diag/RUNLOG.md, lần 2: 7 lượt claude -p (1 khởi động + 6 đo)",
+      "pattern": "Phép chẩn đoán gồm (\\d+) lượt `claude -p`",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e1-cli-version",
+      "value": "2.1.318",
+      "reason": "b14-diag/RUNLOG.md, bảng đầu",
+      "pattern": "Claude Code CLI (2\\.1\\.318) với mô hình Sonnet",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-runs",
+      "value": "28",
+      "reason": "gates-pilot/RUNLOG.md: 24 + 4 lượt done",
+      "pattern": "Một thí điểm (\\d+) lượt, tất cả hoàn tất",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-runs-b7",
+      "value": "12",
+      "reason": "gates-pilot/RUNLOG.md, bảng 'Kết quả chạy'",
+      "pattern": "B7cab và B7cabO có (\\d+) lượt mỗi arm",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-runs-b6",
+      "value": "4",
+      "reason": "gates-pilot/RUNLOG.md, bảng 'Kết quả chạy'",
+      "pattern": "B6 có (\\d+) lượt\\.",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-qhat-ci-hi-pooled",
+      "value": "0,60",
+      "reason": "gates-pilot/RUNLOG.md (K4): q̂ 0/4, CP 95 % [0,00; 0,60]",
+      "pattern": "q̂ = 0/4 = 0,00 ở cả B7cab và B7cabO, khoảng CP 95 % \\[0,00; (\\d,\\d\\d)\\]",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-qhat-ci-hi-excl",
+      "value": "0,71",
+      "reason": "gates-pilot/RUNLOG.md (K4): bỏ 6 lượt, q̂ 0/3, CP 95 % [0,00; 0,71]",
+      "pattern": "q̂ = 0/3 \\[0,00; (\\d,\\d\\d)\\]",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-excluded-runs",
+      "value": "6",
+      "reason": "gates-pilot/RUNLOG.md, mục 'Sai lệch quy trình': 6 lượt đầu của lệnh 1",
+      "pattern": "Khi bỏ (\\d+) lượt \"lỡ thấy điểm\"",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-b10-block",
+      "value": "1",
+      "reason": "gates-pilot/RUNLOG.md (K4): b10 chặn 1/4 ở mỗi arm B7",
+      "pattern": "cổng chặn (\\d)/4 lượt ở mỗi arm B7",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-cost-b7cab",
+      "value": "77 657",
+      "reason": "gates-pilot/RUNLOG.md (K4): token có trọng số TB/lượt, gộp 12 lượt",
+      "pattern": "B7cab (77 657), B7cabO",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-cost-b7cabo",
+      "value": "102 742",
+      "reason": "gates-pilot/RUNLOG.md (K4): gộp 12 lượt",
+      "pattern": "B7cabO (102 742), B6",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-cost-b6",
+      "value": "132 925",
+      "reason": "gates-pilot/RUNLOG.md (K4): 4 lượt",
+      "pattern": "B6 (132 925); test ẩn",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-cost-b7cab-excl",
+      "value": "78 182",
+      "reason": "gates-pilot/RUNLOG.md (K4): bỏ 6 lượt, còn 9",
+      "pattern": "B7cab (78 182) \\(9/9\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-cost-b7cabo-excl",
+      "value": "105 915",
+      "reason": "gates-pilot/RUNLOG.md (K4): bỏ 6 lượt, còn 9",
+      "pattern": "B7cabO (105 915) \\(8/9\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-hidden-b7cab",
+      "value": "12/12",
+      "reason": "gates-pilot/RUNLOG.md (K4): test ẩn đạt, gộp",
+      "pattern": "test ẩn đạt (12/12), 11/12 và 4/4",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e2-hidden-b7cabo",
+      "value": "11/12",
+      "reason": "gates-pilot/RUNLOG.md (K4): test ẩn đạt, gộp",
+      "pattern": "test ẩn đạt 12/12, (11/12) và 4/4",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "h2-estimate",
+      "value": "2,8",
+      "reason": "k2-stats-review-2026-11-04.md mục 8 và S3b: analyze.mjs, H2 +2,8 pp",
+      "pattern": "Ước lượng \\+(\\d,\\d) pp, TOST 90 %",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "h2-ci-upper",
+      "value": "8,3",
+      "reason": "k2-stats-review-2026-11-04.md mục 8 và S3b: TOST 90 % [0,0; +8,3 pp]",
+      "pattern": "TOST 90 % \\[0,0; \\+(\\d,\\d) pp\\]",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "h7-pooled-sd-ratio",
+      "value": "0,00; 1,00",
+      "reason": "k2-stats-review-2026-11-04.md mục 4; S3b: tỉ số SD gộp 0,00, CI 90 % [0,00; 1,00], 13 bài; số đối chiếu, không phải kết luận",
+      "pattern": "cho 0,00 \\[(0,00; 1,00)\\] trên 13 bài",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "h7-zero-branch-count",
+      "value": "139",
+      "reason": "S3b, V1: 139/4000 mẫu bootstrap rơi vào nhánh 0/0 := 1",
+      "pattern": "(139)/4000 mẫu bootstrap",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "h7-zero-branch-pct",
+      "value": "3,48",
+      "reason": "S3b, V1: 139/4000 = 3,48 %",
+      "pattern": "139/4000 mẫu bootstrap \\((\\d,\\d\\d) %\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b01-b7-token-analyze",
+      "value": "2,460",
+      "reason": "S3b: analyze.mjs cho B7 phép (a) token; prereg-tests.mjs cho 2,498",
+      "pattern": "(2,460) so với 2,498 \\(token\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b01-b7-time-analyze",
+      "value": "2,482",
+      "reason": "S3b: analyze.mjs cho B7 phép (b) thời gian; prereg-tests.mjs cho 2,566",
+      "pattern": "(2,482) so với 2,566 \\(thời gian\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-b01-b7-token",
+      "value": "2,519",
+      "reason": "v0.6, mã T-2/T-3/T-6/B-2: docs/research/context/d12-stats-fixes-2026-11-04.md mục 2.1, hàng 'study-cloud B0 --b01-arm B7' B-01a: R=2,519 [2,052; 3,131] (trước D12: 2,460 [2,070; 3,023])",
+      "pattern": "--b01-arm B7` cho (2,519) \\[2,052; 3,131\\] \\(token\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-b01-b7-time",
+      "value": "2,580",
+      "reason": "v0.6, mã T-2/B-2: d12-stats-fixes-2026-11-04.md mục 2.1, B-01b B7: R=2,580 [2,097; 3,242] (trước D12: 2,482 [2,079; 3,140])",
+      "pattern": "và (2,580) \\[2,097; 3,242\\] \\(thời gian\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-b01-b6-token",
+      "value": "3,934",
+      "reason": "v0.6, mã T-2/B-2: d12-stats-fixes-2026-11-04.md mục 2.1, B-01a với --b01-arm B6: R=3,934 [3,514; 4,392] (trước D12: 3,752 [3,415; 4,290])",
+      "pattern": "`--b01-arm B6`: (3,934) \\[3,514; 4,392\\]",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-b01-b6-time",
+      "value": "4,074",
+      "reason": "v0.6, mã T-2/B-2: d12-stats-fixes-2026-11-04.md mục 2.1, B-01b với --b01-arm B6: R=4,074 [3,468; 4,753] (trước D12: 3,798 [3,297; 4,622])",
+      "pattern": "và (4,074) \\[3,468; 4,753\\], \"bác bỏ\"",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-b01c-b6",
+      "value": "0,987",
+      "reason": "v0.6, mã T-3/T-6/T-2: d12-stats-fixes-2026-11-04.md mục 2.1, B-01c B6: R=0,987, 1 bài sau khi bỏ trần (trước D12: 0,998 SUPPORTED, 5 bài)",
+      "pattern": "phép \\(c\\) (0,987), 1 bài sau khi bỏ trần",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h7-b0-ratio",
+      "value": "0,00; 0,00",
+      "reason": "v0.6, mã A-1: d12-stats-fixes-2026-11-04.md mục 2.1, H7: B0 tỉ số SD gộp 0,00 [0,00; 0,00], 2 bài (trước D12: SD gộp 0,00 trên 13 bài, SUPPORTED)",
+      "pattern": "SD gộp là 0,00 \\[(0,00; 0,00)\\] trên 2 bài",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h7-b0-dropped",
+      "value": "16",
+      "reason": "v0.6, mã A-1: d12-stats-fixes-2026-11-04.md mục 2.1, H7 B0: 16 bài bị loại vì r < 5",
+      "pattern": "(16) bài bị loại vì r < 5",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h7-b6",
+      "value": "5,87",
+      "reason": "v0.6, mã A-1: d12-stats-fixes-2026-11-04.md mục 2.1, H7 B6: 5,87 [0,00; 10,17], 5 bài, không kết luận",
+      "pattern": "Số B6 \\((5,87) \\[0,00; 10,17\\], 5 bài\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h7-b7",
+      "value": "1,55",
+      "reason": "v0.6, mã A-1: d12-stats-fixes-2026-11-04.md mục 2.1, H7 B7: 1,55 [1,55; 1,55], 5 bài, không kết luận",
+      "pattern": "B7 \\((1,55) \\[1,55; 1,55\\], 5 bài\\)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h3-recall-p",
+      "value": "1,0000",
+      "reason": "v0.6, mã P-1: d12-stats-fixes-2026-11-04.md mục 2.1, H3: p recall 1,0000; dòng Holm K=1, H3 p=1,0000",
+      "pattern": "p recall = (1,0000); dòng Holm",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-holm-k",
+      "value": "1",
+      "reason": "v0.6, mã P-1: d12-stats-fixes-2026-11-04.md mục 2.1, dòng Holm {H3, H6}: trước D12 K=0 'họ rỗng', sau D12 K=1",
+      "pattern": "Mã sau D12 ghi K = (1) \\(chỉ H3",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h1-b0-after",
+      "value": "4,2",
+      "reason": "v0.6, mã A-2/A-4: d12-stats-fixes-2026-11-04.md mục 2.1, H1 study-cloud B0: danh sách cố định c3, c4, c5, r1, 4 bài, +4,2 [0,0; 12,5], NK",
+      "pattern": "\\(4 bài đủ lượt\\): \\+(4,2) pp \\[0,0; 12,5\\]",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h1-b0-before",
+      "value": "2,8",
+      "reason": "d12-stats-fixes-2026-11-04.md mục 2.1 và 2.3: H1 cách cũ (lọc size ≥ 3, 6 bài) B0 +2,8 pp [0,0; 9,0], p=1,000; giữ làm dòng độ nhạy",
+      "pattern": "trên 6 bài: \\+(2,8) pp \\[0,0; 9,0\\], p = 1,000",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-h10-b0-p",
+      "value": "0,132",
+      "reason": "v0.6, mã A-5: d12-stats-fixes-2026-11-04.md mục 2.2, H10 p hoán vị B0: 0,129 → 0,132",
+      "pattern": "p hoán vị 0,129 → (0,132) do",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "d12-test-bench",
+      "value": "245",
+      "reason": "d12-stats-fixes-2026-11-04.md mục 'Hash và kiểm cuối': npm run test:bench exit 0, tests 245, pass 245",
+      "pattern": "`npm run test:bench`\\) (245)/245",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e5p-runs",
+      "value": "40",
+      "reason": "v0.6: preregistration.md §9 V4-3e-E5′ (2) dòng 571: 2 arm × 2 bài × 10 = 40 lượt",
+      "pattern": "10 lượt mỗi ô, tức (40) lượt",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e5p-stop2",
+      "value": "3",
+      "reason": "v0.6: preregistration.md §9 V4-3e-E5′ (3) 'Dừng 2' dòng 578: từ 3/10 cặp trở lên bị loại thì dừng",
+      "pattern": "có từ (3)/10 cặp trở lên bị loại",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "g3d-ci-v07",
+      "value": "[−5,4; +8,8]",
+      "reason": "v0.7 (S6, 14/11/2026): analysis/v43f-rerun.md:237 (CI G-3Δ sau BRIEF-19 S1; CI cũ [−4,7; +7,4] đã thay)",
+      "pattern": "\\*\\*CI (\\[−5,4; \\+8,8\\])\\*\\*",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7-recall-r1",
+      "value": "63/64",
+      "reason": "v0.7 (S6, 14/11/2026): e7-cto/report.md:20",
+      "pattern": "(63/64) = 98,4 %",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7-recall-r3",
+      "value": "61/64",
+      "reason": "v0.7 (S6, 14/11/2026): e7-cto/report.md:22",
+      "pattern": "(61/64) = 95,3 % \\[86,9",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7-fp-r1",
+      "value": "27/64",
+      "reason": "v0.7 (S6, 14/11/2026): e7-cto/report.md:20",
+      "pattern": "(27/64) = 42,2 %",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7-mcnemar-p",
+      "value": "0,625",
+      "reason": "v0.7 (S6, 14/11/2026): e7-cto/report.md:24 (4 cặp bất đồng < 10 nên p chỉ mô tả)",
+      "pattern": "\\*\\*p = (0,625)\\*\\*",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7-reclassified-pairs",
+      "value": "16",
+      "reason": "v0.7 (S6, 14/11/2026): e7-cto/report.md:37, :68 (phân loại lại SAU khi đã thấy kết quả)",
+      "pattern": "(16) cặp được phân loại lại",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e8-walltask",
+      "value": "0,520",
+      "reason": "v0.7 (S6, 14/11/2026): e8-parallel/report.md:21",
+      "pattern": "\\*\\*(0,520) \\[0,488; 0,552\\]\\*\\*",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e8-token",
+      "value": "1,008",
+      "reason": "v0.7 (S6, 14/11/2026): e8-parallel/report.md:23",
+      "pattern": "(1,008) \\[0,942; 1,075\\]",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e8-overlap-b6w4",
+      "value": "17/18",
+      "reason": "v0.7 (S6, 14/11/2026): e8-parallel/report.md:33",
+      "pattern": "B6w4 chạy chồng (17/18)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b14s2-ratio",
+      "value": "0,999",
+      "reason": "v0.7 (S6, 14/11/2026): b14-step2/report.md:17–18",
+      "pattern": "R̂ \\*\\*(0,999) \\[0,886; 1,127\\]\\*\\*",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b14s2-power10",
+      "value": "0,38",
+      "reason": "v0.7 (S6, 14/11/2026): b14-step2/report.md:27",
+      "pattern": "Power ở mức 10 % ≈ \\*\\*(0,38)\\*\\*",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e5p-token",
+      "value": "0,722",
+      "reason": "v0.7 (S6, 14/11/2026): b15f-main/report.md:9",
+      "pattern": "R̂ \\*\\*(0,722) \\[0,668; 0,790\\]\\*\\*",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e6-h6-verdict",
+      "value": "insufficient data",
+      "reason": "v0.7 (S6, 14/11/2026): h6-3e/report.md:46–48 (E6)",
+      "pattern": "verdict H6: \\*\\*(insufficient data)\\*\\*",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "p-critical-path",
+      "value": "771 so 717 phút",
+      "reason": "v0.7 (S6, 14/11/2026): p-parallel/RUNLOG.md:57 (chạy lại 13/11)",
+      "pattern": "\\*\\*(771 so 717 phút)\\*\\*",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "axis2b-gitread",
+      "value": "82/82",
+      "reason": "v0.7 (S6, 14/11/2026): axis2-guard/report.md:23 (trục 2 (b); chủ yếu do vai chỉ-đọc, 52/82)",
+      "pattern": "chặn (82/82) ca RedCode-Exec",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "axis2b-full",
+      "value": "30/82 = 36,6 %",
+      "reason": "v0.7 (S6, 14/11/2026): axis2-guard/report.md:24 (trục 2 (b))",
+      "pattern": "(30/82 = 36,6 %) \\[26,2; 48,0\\]",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "law-356-effective",
+      "value": "01/01/2026",
+      "reason": "v0.7 (14/11/2026): context/nd356-2025-note.md §0 (Điều 42 khoản 1, toàn văn trên vbpl.moj.gov.vn) và §2 (siêu dữ liệu chính thức)",
+      "pattern": "Nghị định 356/2025/NĐ-CP ngày 31/12/2025[^.]{0,200}?có hiệu lực từ (01/01/2026)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "law-91-2025-effective",
+      "value": "91/2025/QH15",
+      "reason": "v0.7.1 (14/11/2026): context/nd356-2025-note.md §8 (số hiệu, ban hành 26/06/2025, hiệu lực 01/01/2026; điều thông báo vi phạm vẫn [CHƯA KIỂM CHỨNG])",
+      "pattern": "Luật số (91/2025/QH15), ban hành 26/06/2025, có hiệu lực từ 01/01/2026",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "axis2pf-full-after",
+      "value": "82/82 = 100,0 %",
+      "reason": "v0.7.2 (BRIEF-23, 14/11/2026): bench/vs-claude/results/axis2-guard-postfix/report.md (bảng chặn đúng theo tầng, sau vá; hồi quy sau vá)",
+      "pattern": "`full`, tổng \\| 30/82 = 36,6 % \\[26,2; 48,0\\] \\| (82/82 = 100,0 %)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "axis2pf-outside-root-write",
+      "value": "52/82 = 63,4 %",
+      "reason": "v0.7.2: axis2-guard-postfix/report.md (theo rule, full, outside-root-write, sau vá)",
+      "pattern": "`outside-root-write` \\| 0 \\| (52/82 = 63,4 %)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "axis2pf-ext-n",
+      "value": "15",
+      "reason": "v0.7.2: axis2-guard-postfix/report.md (bộ ngoài, n đo = 15, sau quy ca 1–7; results.json)",
+      "pattern": "còn \\*\\*(15) ca đo\\*\\*",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "axis2pf-ext-tp-full-before",
+      "value": "2/6 = 33,3 %",
+      "reason": "v0.7.2: axis2-guard-postfix/report.md (bộ ngoài [Khám phá], chặn đúng full, trước vá)",
+      "pattern": "Chặn đúng \\(n = 6\\) \\| `full` \\| (2/6 = 33,3 %)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "axis2pf-ext-tp-full-after",
+      "value": "3/6 = 50,0 %",
+      "reason": "v0.7.2: axis2-guard-postfix/report.md (bộ ngoài [Khám phá], chặn đúng full, sau vá)",
+      "pattern": "Chặn đúng \\(n = 6\\) \\| `full` \\| 2/6 = 33,3 % \\[4,3; 77,7\\] \\| (3/6 = 50,0 %)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "axis2pf-ext-fp-full",
+      "value": "1/7 = 14,3 %",
+      "reason": "v0.7.2: axis2-guard-postfix/report.md (bộ ngoài [Khám phá], chặn nhầm full; phép đo chặn nhầm đầu tiên của trục 2)",
+      "pattern": "\\*\\*Chặn nhầm\\*\\* \\(n = 7\\) \\| `full` \\| (1/7 = 14,3 %)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "axis2pf-ext-fp-gitread",
+      "value": "6/7 = 85,7 %",
+      "reason": "v0.7.2: axis2-guard-postfix/report.md (bộ ngoài [Khám phá], chặn nhầm git-read)",
+      "pattern": "\\*\\*Chặn nhầm\\*\\* \\(ca `approved`, n = 7\\) \\| `git-read` \\| (6/7 = 85,7 %)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7casc-recall",
+      "value": "55/64",
+      "reason": "v0.7.2 (BRIEF-23): analysis/e7-cascade.md Bảng 1 (cascade recall mục lỗi) [Khám phá]",
+      "pattern": "Cascade \\(R1 chấm mọi mục[^:]*: recall mục lỗi (55/64) = 85,9 %",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7casc-fp",
+      "value": "3/64",
+      "reason": "v0.7.2: analysis/e7-cascade.md Bảng 1 (cascade chặn nhầm) [Khám phá]",
+      "pattern": "chặn nhầm (3/64) = 4,7 % \\[1,0; 13,1\\]",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7casc-cost-cascade",
+      "value": "33,78",
+      "reason": "v0.7.2: analysis/e7-cascade.md Bảng 1 (USD costUsd, cascade) [Khám phá]",
+      "pattern": "\\[1,0; 13,1\\]; (33,78) USD",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7casc-cost-r2",
+      "value": "31,34",
+      "reason": "v0.7.2: analysis/e7-cascade.md Bảng 1 (USD costUsd, R2 đơn) [Khám phá]",
+      "pattern": "\\[1,7; 15,2\\]; (31,34) USD",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7casc-s1-cascade-recall",
+      "value": "60/64",
+      "reason": "v0.7.2: analysis/e7-cascade.md Bảng 2 (độ nhạy i, cascade) [Khám phá]",
+      "pattern": "độ nhạy \\(i\\)[^|]*\\| Cascade (60/64) = 93,8 %",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7casc-s1-r2-fp",
+      "value": "11/64",
+      "reason": "v0.7.2: analysis/e7-cascade.md Bảng 2 (độ nhạy i, R2 đơn chặn nhầm) [Khám phá]",
+      "pattern": "R2 đơn 61/64 = 95,3 % \\[86,9; 99,0\\] và (11/64) = 17,2 %",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7casc-s2-cost-cascade",
+      "value": "31,70",
+      "reason": "v0.7.2: analysis/e7-cascade.md Bảng 3 (độ nhạy ii, cascade USD) [Khám phá]",
+      "pattern": "Cascade 54/62 = 87,1 % \\[76,1; 94,3\\] và 3/57 = 5,3 % \\[1,1; 14,6\\], (31,70) USD",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    }
+  ]
+}

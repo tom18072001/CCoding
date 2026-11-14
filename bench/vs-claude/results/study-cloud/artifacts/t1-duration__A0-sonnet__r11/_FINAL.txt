@@ -1,0 +1,10 @@
+Mình đã hiện thực `src/duration.js` theo `SPEC.md`, và `npm test` xanh (11 test pass, 0 fail). Mình chưa chạy bộ nghiệm thu ẩn, nên các trường hợp biên trong đó chỉ được kiểm bằng test mình tự viết.
+
+- **Không thêm thư viện:** module chỉ dùng JavaScript thuần.
+- **Làm tròn chính xác:** phần thập phân được tính bằng `BigInt`, không dùng số thực. Ví dụ `"1.0005s"` ra đúng 1001, và kết quả `-0` trả về `0`.
+- **`largest`:** đã xử lý việc nhớ lên đơn vị lớn hơn, ví dụ `6d 23h 59m 31s` với `largest: 2` ra `1w`.
+- **Test mới:** mình thêm vào `test/duration.test.js` các test cho làm tròn, dấu, ISO 8601, chuỗi không hợp lệ, thông điệp lỗi, `largest` và `style`, cùng tính chất `parseDuration(formatDuration(x)) === parseDuration(x)`.
+
+Có hai chỗ spec chưa nói rõ nên mình tự chọn:
+- `"- P1D"` (có khoảng trắng giữa dấu và `P`) được chấp nhận, vì mục 4 cho phép khoảng trắng sau dấu.
+- `formatDuration(ms, null)` được coi như không có `options`.

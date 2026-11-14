@@ -1,0 +1,1 @@
+Sửa toàn bộ các lỗi khách hàng báo trong ISSUES.md của thư viện tính tiền giỏ hàng này. Với mỗi lỗi: tìm nguyên nhân gốc, sửa, và thêm test hồi quy vào test/. Không đổi API công khai (tên hàm/lớp, tham số, dạng kết quả). Bộ nghiệm thu ẩn sẽ kiểm tra từng lỗi và cả các hành vi đang đúng. Đảm bảo `npm test` xanh.

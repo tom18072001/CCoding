@@ -1,0 +1,142 @@
+TAP version 13
+# Subtest: tính tiền không mã giảm giá
+ok 1 - tính tiền không mã giảm giá
+  ---
+  duration_ms: 1.191739
+  type: 'test'
+  ...
+# Subtest: giữ chỗ tồn kho khi thêm
+ok 2 - giữ chỗ tồn kho khi thêm
+  ---
+  duration_ms: 0.167402
+  type: 'test'
+  ...
+# Subtest: mã không tồn tại
+ok 3 - mã không tồn tại
+  ---
+  duration_ms: 0.512413
+  type: 'test'
+  ...
+# Subtest: thêm 2 rồi sửa thành 3 khi kho 4: chỉ giữ thêm chênh lệch
+ok 4 - thêm 2 rồi sửa thành 3 khi kho 4: chỉ giữ thêm chênh lệch
+  ---
+  duration_ms: 0.965154
+  type: 'test'
+  ...
+# Subtest: sửa vượt kho thì báo hết hàng và không đổi giữ chỗ
+ok 5 - sửa vượt kho thì báo hết hàng và không đổi giữ chỗ
+  ---
+  duration_ms: 0.710077
+  type: 'test'
+  ...
+# Subtest: giảm số lượng trả bớt giữ chỗ
+ok 6 - giảm số lượng trả bớt giữ chỗ
+  ---
+  duration_ms: 1.006198
+  type: 'test'
+  ...
+# Subtest: xóa món (và sửa về 0) trả lại giữ chỗ cho khách khác
+ok 7 - xóa món (và sửa về 0) trả lại giữ chỗ cho khách khác
+  ---
+  duration_ms: 0.176516
+  type: 'test'
+  ...
+# Subtest: thuế tính trên net sau giảm (mã giảm cố định)
+ok 8 - thuế tính trên net sau giảm (mã giảm cố định)
+  ---
+  duration_ms: 0.642312
+  type: 'test'
+  ...
+# Subtest: thuế theo net với mã giảm danh mục; dòng không giảm giữ nguyên
+ok 9 - thuế theo net với mã giảm danh mục; dòng không giảm giữ nguyên
+  ---
+  duration_ms: 0.245523
+  type: 'test'
+  ...
+# Subtest: mã giảm cố định 1.005 làm tròn đúng thành 101 xu (không lệch nhị phân)
+ok 10 - mã giảm cố định 1.005 làm tròn đúng thành 101 xu (không lệch nhị phân)
+  ---
+  duration_ms: 0.169465
+  type: 'test'
+  ...
+# Subtest: mã giảm % thập phân làm tròn half up ở biên .5
+ok 11 - mã giảm % thập phân làm tròn half up ở biên .5
+  ---
+  duration_ms: 0.161853
+  type: 'test'
+  ...
+# Subtest: toCents làm tròn half away from zero, không lệch nhị phân
+ok 12 - toCents làm tròn half away from zero, không lệch nhị phân
+  ---
+  duration_ms: 0.947442
+  type: 'test'
+  ...
+# Subtest: Catalog dùng toCents đúng
+ok 13 - Catalog dùng toCents đúng
+  ---
+  duration_ms: 0.192659
+  type: 'test'
+  ...
+# Subtest: allocate: phần dư lớn nhất, tổng bằng gốc
+ok 14 - allocate: phần dư lớn nhất, tổng bằng gốc
+  ---
+  duration_ms: 0.788993
+  type: 'test'
+  ...
+# Subtest: toCents cơ bản
+ok 15 - toCents cơ bản
+  ---
+  duration_ms: 1.041013
+  type: 'test'
+  ...
+# Subtest: formatMoney
+ok 16 - formatMoney
+  ---
+  duration_ms: 0.24445
+  type: 'test'
+  ...
+# Subtest: allocate chia đều
+ok 17 - allocate chia đều
+  ---
+  duration_ms: 0.677499
+  type: 'test'
+  ...
+# Subtest: freeUnits mua 2 tặng 1: cần đủ nhóm 3
+ok 18 - freeUnits mua 2 tặng 1: cần đủ nhóm 3
+  ---
+  duration_ms: 1.327133
+  type: 'test'
+  ...
+# Subtest: freeUnits mọi cấu hình X, Y
+ok 19 - freeUnits mọi cấu hình X, Y
+  ---
+  duration_ms: 0.421312
+  type: 'test'
+  ...
+# Subtest: endsAt: dùng được tới hết ngày theo UTC
+ok 20 - endsAt: dùng được tới hết ngày theo UTC
+  ---
+  duration_ms: 0.550137
+  type: 'test'
+  ...
+# Subtest: startsAt: hiệu lực từ 00:00Z
+ok 21 - startsAt: hiệu lực từ 00:00Z
+  ---
+  duration_ms: 0.218688
+  type: 'test'
+  ...
+# Subtest: minSubtotal đổi xu half away from zero
+ok 22 - minSubtotal đổi xu half away from zero
+  ---
+  duration_ms: 0.222532
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 259.092163

@@ -1,0 +1,107 @@
+# Thư viện cfgchain: bốn tầng đã hiện thực, `npm test` xanh 107/107
+
+## Tóm tắt
+Cả bốn tầng (lexer/parser, check, evaluate, diff) và `compile` đã được hiện thực theo SPEC.md. `npm test` chạy cho kết quả exit 0, 107/107 pass, trong khi baseline trước khi sửa là exit 1. Review của @qa-tester: **đạt**, không có blocker hay major. Còn hai góp ý minor và vài giả định đọc SPEC chưa được bộ nghiệm thu ẩn xác nhận. Chưa commit.
+
+Tôi không chạy lệnh nào trong phiên này. Các số liệu dưới đây lấy từ báo cáo của S1–S6 và từ kết quả `npm test` do CCoding tự chạy.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng | Tệp |
+|---|---|---|---|---|---|
+| S1 | Tầng 1: tokenize, parse, parseProject | @backend-dev | Đạt | Test lexer + parser: 45/45 pass; Node v24.14.0 | `src/lexer.js`, `src/parser.js`, `test/lexer.test.js`, `test/parser.test.js` |
+| S2 | Tầng 4: diff, pointer, applyDiff, định dạng | @backend-dev | Đạt | `test/diff.test.js` 9/9 pass | `src/diff.js`, `test/diff.test.js` |
+| S3 | `merge.js` (hợp đồng chung) và evaluate | @senior-swe | Đạt | `test/evaluate.test.js` 13/13 pass | `src/merge.js`, `src/evaluate.js`, `test/evaluate.test.js` |
+| S4a | Check pha A (cấu trúc theo tệp) | @senior-swe | Đạt | `test/check.test.js` 11/11 pass | `src/check.js`, `test/check.test.js` |
+| S4b | Check pha B, C (tham chiếu, schema) | @senior-swe | Đạt | check + evaluate: 37/37 pass | `src/check.js`, `test/check.test.js` |
+| S5 | `compile` và test đầu cuối | @backend-dev | Đạt | `test/e2e.test.js` 9 test; `npm test` 107/107 | `src/index.js`, `test/e2e.test.js` |
+| S6 | Review cuối và mutation | @qa-tester | Đạt | 10/12 mutation làm test đỏ; hai mutation còn lại tương đương hành vi; mã khôi phục giống hệt bản gốc | `.ccoding/T-20261105-031017-c3e/outputs/dev-S6-qa-tester.md` |
+
+Kiểm chứng của dự án (CCoding tự chạy):
+- Trước khi sửa: `npm test` → exit 1.
+- Sau khi thực thi: `npm test` → exit 0, 107 test, 107 pass, 0 fail.
+
+## Quyết định
+- **Không cần BA, kiến trúc hay cổng dữ liệu.** Đây là thư viện thuần JS, dữ liệu internal, không có I/O.
+- **Tách check thành S4a và S4b.** Pha A chạy song song với S3, pha B và C chạy sau S3. Mỗi hạng mục vừa một lượt.
+- **`merge.js` là hợp đồng chung.** Siêu dữ liệu nằm ngoài cây giá trị (Map/WeakMap), nên `evaluate` trả JSON thuần.
+- **Giữ nguyên `test/smoke.test.js`, `package.json`, và không thêm thư viện ngoài.** Cả ba điều này được tôn trọng (S6 xác nhận qua `git status`).
+- **Không commit hay push.**
+
+## Kết quả review
+- **Kết luận:** đạt, không có blocker hay major.
+- **Minor 1:** `src/check.js:53` và `:171` có hai lệnh sort theo (line, column) mà không test nào bảo vệ. Chúng tương đương về hành vi, vì lỗi đã sinh theo thứ tự tài liệu. Chấp nhận giữ để an toàn.
+- **Minor 2:** `src/diff.js:77` cho `applyDiff` nhận chỉ số `-` để thêm vào cuối mảng. SPEC không nêu, nhưng cũng không mâu thuẫn. Chấp nhận, vì đây là hành vi theo RFC 6901 và đầu ra của `diff` không dùng `-`.
+- **Giới hạn review:** @qa-tester chưa đọc kỹ `lexer.js`, `parser.js` và `merge.js`. Ba tệp này chỉ được kiểm qua mutation và test, chưa qua đọc mã.
+
+## Việc còn mở & rủi ro
+Những điểm dưới đây là cách đọc SPEC của người làm, bộ nghiệm thu ẩn chưa xác nhận:
+- **G1 (check, pha C):** `closed` và `required` chỉ có tác dụng khi schema có `fields`. Schema `{closed:true}` không có `fields` thì không báo `SEM_UNKNOWN_KEY`.
+- **G2 (check, pha C):** `SEM_UNKNOWN_KEY` luôn dùng vị trí của `Assign`/`Block` thắng của khóa, kể cả khi đối tượng đến từ chuỗi thuần tham chiếu.
+- **G3 (check, pha C):** `enum` chỉ kiểm khi giá trị là vô hướng, sau khi đã qua `type`.
+- **Khóa có nhiều Block trộn:** `Entry.node` và `Entry.file` là Block xử lý sau cùng, không phải Block đầu. Nếu bộ nghiệm thu kỳ vọng Block đầu thì chỉ cần sửa ở `merge.js`.
+- **Lexer:** `${true}` hợp lệ về mặt từ pháp, và tầng check báo `SEM_UNDEFINED_REF`.
+- **Parser:** dùng đệ quy, nên đầu vào lồng hàng chục nghìn cấp có thể tràn stack.
+- **`SEM_INTERNAL`:** mã này nằm ngoài SPEC, chỉ là lưới an toàn để `check` không ném ngoại lệ.
+- **`evaluate`:** với chương trình chưa qua check, hàm ném `Error` có `code` `EVAL_CYCLE` hoặc `EVAL_UNDEFINED_REF`. SPEC coi hành vi này là không xác định.
+- **Chưa đạt:** mọi thứ trên chưa được đối chiếu với bộ nghiệm thu ẩn. Chỉ có test của chính các tầng và smoke xác nhận.
+
+## Bước tiếp theo
+Phạm vi gốc đã giao đủ, không cần tách nhiệm vụ lớn. Đề xuất ba việc nhỏ, làm khi Tom đồng ý:
+1. **Rà soát mã ba tệp chưa được đọc** (`lexer.js`, `parser.js`, `merge.js`) cho @qa-tester hoặc @senior-swe. Xong khi có danh sách phát hiện kèm `npm test` vẫn xanh.
+2. **Chốt các giả định G1–G3 và thứ tự Block trộn** bằng cách đối chiếu lại với từng câu trong SPEC mục 5 và ví dụ mục 9. Xong khi mỗi giả định có test trích dẫn đúng quy tắc, hoặc được sửa nếu đọc sai.
+3. **Dọn hai góp ý minor:** thêm test cho sort, hoặc bỏ sort có ghi chú; và quyết định có giữ nhánh `-` của `applyDiff` hay không. Xong khi `npm test` vẫn xanh.
+
+Chưa commit. Nếu Tom muốn commit, hãy nói rõ để tạo commit trên một nhánh phù hợp.
+
+Chi tiết từng hạng mục nằm trong `.ccoding/T-20261105-031017-c3e/outputs/dev-S1-backend-dev.md` đến `dev-S6-qa-tester.md`.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261105-031017-c3e` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **134 in / 109.0k out**, cache đọc 1.69M, 14 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 50 | 44185 | 755349 | 4 |
+| Backend Developer (@backend-dev) | dev | 48 | 42719 | 571631 | 4 |
+| QA Engineer (@qa-tester) | dev | 18 | 6708 | 241504 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 16 | 15020 | 118266 | 3 |
+| Điều phối viên (@orchestrator) | office | 2 | 345 | 3029 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Tầng 1: tokenize, parse, parseProject và test (@backend-dev)
+- `outputs/dev-S2-backend-dev.md` — S2 Tầng 4: diff, JSON Pointer, applyDiff, định dạng và test (@backend-dev)
+- `outputs/dev-S3-senior-swe.md` — S3 Tầng 3: src/merge.js (hợp đồng chung) và evaluate, kèm test (@senior-swe)
+- `outputs/dev-S4a-senior-swe.md` — S4a Tầng 2 pha A: kiểm tra cấu trúc theo tệp (@senior-swe)
+- `outputs/dev-S4b-senior-swe.md` — S4b Tầng 2 pha B và C: tham chiếu và lược đồ (@senior-swe)
+- `outputs/dev-S5-backend-dev.md` — S5 compile và test đầu cuối qua API công khai (@backend-dev)
+- `outputs/dev-S6-qa-tester.md` — S6 Review cuối và kiểm độ nhạy của test (@qa-tester)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) · at Test.run (node:internal/test_runner/test:1118:25) · at Test.processPendingSubte |
+| sau thực thi | `npm test` | 0 | ℹ tests 107 · ℹ suites 0 · ℹ pass 107 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **76** B | vừa | — | — | 100 | 91 | 75 | 100 | 3 | 1 | 800k | 5/26 | — |
+| Backend Developer (@backend-dev) | dev | **78** B | vừa | — | — | 100 | 100 | 82 | 100 | 3 | 1 | 614k | 3/29 | — |
+| QA Engineer (@qa-tester) | dev | **65** B | thấp | — | — | — | 100 | 90 | 100 | 1 | 1 | 248k | 0/9 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **71** B | thấp | — | — | 100 | 71 | 84 | 100 | 0 | — | 133k | 1/5 | — |
+| Điều phối viên (@orchestrator) | office | **60** C | thấp | — | — | — | — | 100 | — | 0 | — | 3k | — | — |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 76 B):
+  - 1 lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp.
+- **Backend Developer** (@backend-dev, 78 B):
+  - 1 lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp.
+- **QA Engineer** (@qa-tester, 65 B):
+  - 1 lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp.
+- **Trưởng phòng Phát triển** (@dev-lead, 71 B):
+  - Thao tác công cụ lỗi nhiều (1/5, 20%; nhiều nhất ở run_command 1/5) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

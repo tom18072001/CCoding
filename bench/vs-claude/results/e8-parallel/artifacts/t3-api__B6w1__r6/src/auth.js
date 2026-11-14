@@ -1,0 +1,25 @@
+'use strict';
+const { HttpError } = require('./http');
+
+/** Xác thực qua header X-User; trả về user trong seed hoặc ném 401. */
+function authenticate(req, store) {
+  const id = req.headers['x-user'];
+  const user = typeof id === 'string' ? store.user(id) : undefined;
+  if (!user) throw new HttpError(401, 'UNAUTHENTICATED', 'Thiếu hoặc sai X-User');
+  return user;
+}
+
+function forbidden() {
+  return new HttpError(403, 'FORBIDDEN', 'Không đủ quyền');
+}
+
+/** Nhóm mà member bị giới hạn xem; null nếu không giới hạn. */
+function forceTeam(user) {
+  return user.role === 'member' ? user.team : null;
+}
+
+function canSee(user, task) {
+  return user.role !== 'member' || task.team === user.team;
+}
+
+module.exports = { authenticate, forbidden, forceTeam, canSee };

@@ -1,0 +1,9 @@
+Mình đã hiện thực xong `src/parse.js`, `src/query.js`, `src/agg.js` và CLI `bin/logq.js` theo SPEC.md, không dùng thư viện ngoài. `npm test` xanh, 8 test pass và 0 fail. Test mới nằm trong `test/logq.test.js`, gồm test các module qua API và test CLI thật.
+
+Mình chưa chạy thử CLI với các tệp lớn hay đầu vào lạ ngoài những ca trong test.
+
+Một số chỗ SPEC chưa nói rõ, mình chọn như sau:
+- **Từ khóa tổng hợp:** `aggregate` chỉ nhận từ khóa viết thường, nên `COUNT` hay `5M` đều báo `invalid aggregation`.
+- **Truy vấn lỗi cả hai chỗ:** lỗi được báo theo thứ tự từ trái sang phải. Nếu một truy vấn vừa thiếu `)` vừa có ngoặc kép không đóng, lỗi nào gặp trước thì được báo.
+- **Thứ tự kiểm tra của CLI:** CLI kiểm tra tùy chọn, truy vấn và spec trước khi đọc tệp. Khi vừa sai cú pháp truy vấn vừa có tệp không đọc được, mã thoát là 2, không phải 1.
+- **`msg` bằng `null`:** trường `msg` có giá trị `null` được coi như không có, nên tìm kiếm từ khóa sẽ chuyển sang `message`.

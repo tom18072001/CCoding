@@ -1,0 +1,62 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261102-140320-3a1",
+  "wallSec": 256,
+  "wallSecHarness": 270,
+  "costUsd": 0.8273860000000001,
+  "tokens": {
+   "input": 54,
+   "output": 30624,
+   "cacheRead": 770701,
+   "cacheWrite": 109674
+  },
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "Hiện thực parseDuration + test biên"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "Hiện thực formatDuration + duration.js re-export + test biên"
+   }
+  ],
+  "workdir": "/home/claude/ccoding-dev/workspaces/b-c9-t1-fastla-3/wt-T-20261102-140320-3a1",
+  "branch": "ccoding/t-20261102-140320-3a1"
+ },
+ "task": "t1-duration",
+ "system": "ccoding-fastlane",
+ "rep": 3,
+ "key": "t1-duration.ccoding-fastlane.3",
+ "env": "cloud",
+ "startedAt": "2026-11-02T07:03:20.861Z",
+ "finishedAt": "2026-11-02T07:07:51.793Z",
+ "grade": {
+  "hidden": {
+   "pass": 148,
+   "fail": 1,
+   "total": 149,
+   "failed": [
+    "đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \\#76"
+   ],
+   "ms": 223,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 148,
+   "fail": 0,
+   "total": 148
+  },
+  "changed": [
+   "~src/duration.js",
+   "+src/format.js",
+   "+src/parse.js",
+   "+test/format.test.js",
+   "+test/parse.test.js"
+  ]
+ },
+ "audit": []
+}

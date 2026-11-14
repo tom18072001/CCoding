@@ -1,0 +1,4 @@
+lượt: 203, starter đỏ trên base (loại): 30; lệch vị trí: 0
+tất cả: 884/1798 chỉ starter; 1623/1798 cổng đầy đủ
+A0-sonnet: 221/494 chỉ starter; 452/494 cổng đầy đủ
+CCoding (B0,B5,B6,B7): 529/1054 chỉ starter; 957/1054 cổng đầy đủ

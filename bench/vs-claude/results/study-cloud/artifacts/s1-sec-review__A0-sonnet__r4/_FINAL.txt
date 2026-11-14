@@ -1,0 +1,16 @@
+I reviewed `src/server.js` and wrote seven findings to `findings.json` in the repository root. I didn't modify the source or run anything.
+
+| Line | Type | Severity | Issue |
+|---|---|---|---|
+| 11 | `hardcoded-secret` | high | The JWT secret is hardcoded in the source. |
+| 30 | `sqli` | critical | The search query `q` is interpolated straight into the SQL string. |
+| 42 | `path-traversal` | high | The report name from the URL goes into `path.join` and `sendFile` with no check that the result stays inside `/srv/reports`. |
+| 58 | `weak-crypto` | high | Passwords are hashed with unsalted MD5. |
+| 65 | `ssrf` | high | The server fetches any URL a user supplies, so it can reach internal addresses. |
+| 70 | `missing-authz` | high | Any logged-in user can delete any ticket; the comment says "Delete any ticket" and there is no admin or ownership check. |
+| 84 | `command-injection` | critical | `req.body.format` is interpolated into an `exec` shell command. |
+
+I left some things out because I couldn't confirm they were exploitable:
+- **Line 18:** `verifyJwt` is called but never imported or defined, so `requireUser` would throw a `ReferenceError` when it runs. That is a functional bug rather than a clean security finding, so I didn't list it.
+- **Ping endpoint (line 79):** the regex allows a leading `-`, so a host could be read as a ping option. It is admin-only and `execFile` avoids a shell, so I judged it too weak to report.
+- **Attachments and statuses (lines 36 and 48):** the status table name is a server-side constant and the attachment lookup uses `path.basename`, an extension allow-list and an owner check, so those are fine.

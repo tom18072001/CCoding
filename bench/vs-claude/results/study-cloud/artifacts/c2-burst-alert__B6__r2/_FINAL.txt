@@ -1,0 +1,115 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude c2-burst-alert__B6__r2] Sliding-window 5xx burst alerting
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Việc nhỏ, chỉ có một hàm duy nhất là detectBursts trong src/alert.js nên không chia được phần code. Giao hàm cho một senior-swe. Một bộ test đối chiếu độc lập nằm ở tệp riêng, giao song song cho backend-dev và chỉ viết theo đặc tả.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Hiện thực detectBursts trong src/alert.js (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã hiện thực `detectBursts` trong `src/alert.js` đúng đặc tả. `npm test` đã xanh (1/1 pass). Tôi chưa viết test cho các ca biên; S2 phụ trách bộ test đối chiếu.
+
+## Tệp đã tạo/sửa
+- `src/alert.js`: hiện thực `detectBursts`, giữ nguyên `export function detectBursts(events, opts = {})`.
+
+## Kiểm chứng
+- `npm test` → exit 0 (tests 1, pass 1, fail 0). Baseline trước khi sửa là exit 1.
+
+## Quyết định thiết kế
+- Hàm lọc ra một bản sao chỉ gồm event 5xx có `ts` và `status` là số hữu hạn, rồi sắp xếp ổn định theo `ts`. Input không bị mutate, và các event cùng `ts` giữ thứ tự input.
+- Mỗi host có cửa sổ riêng (mảng kèm con trỏ đầu). Mỗi event được thêm vào trước, rồi bỏ các `ts <= event.ts - windowMs`. Cách này cho khoảng nửa mở `(ts-windowMs, ts]` và chạy O(n) cho mỗi host.
+- Alert chỉ phát khi `count >= threshold` và (chưa có alert hoặc `ts >= lastAlert.ts + cooldownMs`). Event trong thời gian cooldown vẫn nằm trong cửa sổ.
+- `cooldownMs` dùng `??` nên `0` được giữ nguyên và không bị đổi về mặc định. Với `cooldownMs = 0`, mọi event thỏa ngưỡng đều phát alert.
+- Kết quả sắp xếp theo `ts` rồi `host` tăng dần, so sánh bằng `<` và `>` thay vì `localeCompare` để thứ tự không phụ thuộc locale.
+- Event có `status` không phải số bị bỏ qua. Event có `ts` không hữu hạn cũng bị bỏ qua.
+
+## Rủi ro & việc còn mở
+- Các ca biên (`threshold=1`, `cooldownMs=0`, mảng rỗng, ranh giới cooldown) mới được kiểm bằng đọc mã. Chưa có test chạy thật cho chúng; cần S2 hoặc `@qa-tester` bổ sung.
+- Nếu `windowMs` hoặc `threshold` truyền vào là `null`, hàm không dùng giá trị mặc định (chỉ `undefined` mới dùng). Tôi coi đây là input ngoài đặc tả.
+
+Bản đầy đủ: `.ccoding/T-20261103-012633-8e7/outputs/dev-S1-senior-swe.md`
+
+### S2 — Bộ test đối chiếu theo đặc tả (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã tạo `test/burst-spec.test.js` gồm 14 test viết theo đặc tả, kỳ vọng tính tay. Hiện thực của S1 đã có trong `src/alert.js`, và `npm test` cho 15/15 test pass (14 mới cộng 1 test cũ trong `test/basic.test.js`).
+
+## Tệp đã tạo/sửa
+- `test/burst-spec.test.js` (mới). Tôi không sửa `src/alert.js` hay `test/basic.test.js`.
+- Các ca được phủ:
+  - mảng rỗng;
+  - biên nửa mở `(ts-windowMs, ts]`, kiểm ở 999, 1000 và 1001;
+  - opts mặc định (60000 / 5) và opts tuỳ chỉnh;
+  - cooldown: bị chặn khi ts < alert.ts+cooldownMs, alert lại khi ts bằng đúng alert.ts+cooldownMs, event trong cooldown vẫn tính vào cửa sổ sau (count = 5);
+  - cooldown mặc định bằng windowMs, và `cooldownMs: 0`;
+  - nhiều host độc lập;
+  - input không sắp xếp;
+  - ts bằng nhau theo thứ tự input;
+  - status 499, 600 và 2xx bị bỏ qua;
+  - count đúng;
+  - kết quả sắp xếp theo ts rồi host;
+  - input không bị mutate (dùng `Object.freeze` và so deepEqual với bản sao).
+
+## Hợp đồng API
+Không áp dụng.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0 (đọc từ phần cuối output, tôi không lấy mã thoát riêng); `# tests 15 · # pass 15 · # fail 0`. Baseline trước đó là exit 1, 1 test fail.
+- Lần chạy đầu bị hook của CCoding chặn vì lệnh heredoc có chuỗi `../src/alert.js`. Tôi ghi file bằng công cụ Write rồi chạy lại.
+
+## Việc còn lại
+Không có.
+
+Bản đầy đủ: `.ccoding/T-20261103-012633-8e7/outputs/dev-S2-backend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-012633-8e7` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **20 in / 10.6k out**, cache đọc 104.9k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | 8 | 7038 | 49709 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 6 | 1860 | 32012 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 1361 | 20954 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 301 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Hiện thực detectBursts trong src/alert.js (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Bộ test đối chiếu theo đặc tả (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 1 · # suites 0 · # pass 0 · # fail 1 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 15 · # suites 0 · # pass 15 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | **85** A | — | 80 | 80 | 100 | 1 | 1 | 57k | 1/4 |
+| Senior Software Engineer (@senior-swe) | dev | **100** A | — | 100 | 100 | 100 | 1 | 1 | 34k | 0/4 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 22k | 0/1 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

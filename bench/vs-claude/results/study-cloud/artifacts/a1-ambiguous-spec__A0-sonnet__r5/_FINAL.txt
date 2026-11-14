@@ -1,0 +1,11 @@
+I wrote the spec to `SPEC.md` at the repo root. It includes the required `## Open questions and assumptions` section, which has 14 items. Each one has a default I'd build on until the customer answers. Nothing is built yet, and I didn't commit anything.
+
+The request contradicts itself in several places. The spec picks a conservative default for each:
+
+- **Full IPs and usernames vs. no unmasked personal data:** the self-service button always exports masked data. Full data comes only from a separate forensic export. That export needs a distinct role, a written justification, a second approver, and delivery inside the bank's controlled environment.
+- **"Everything they can see" vs. "last month":** the export covers the previous calendar month, in Vietnam time. Row-level access limits what a manager can export.
+- **5 seconds vs. no size limit:** exports up to an assumed 50,000 rows run synchronously with a 5-second target. Larger ones run asynchronously. The 50,000 figure is my placeholder, not a customer number.
+- **Kept forever vs. delete after 12 months:** files that contain personal data are deleted after 12 months. The "forever" requirement is met by a permanent audit record of each export, which holds metadata only and no log content.
+- **"Make it simple":** I treated this as simple for the user only. Audit, authorization, masking and retention stay.
+
+The spec also covers CSV format and injection protection, performance and rate limits, the retention job, acceptance criteria and API notes. Two things block build: the old system's CSV format is unknown, so the columns are a placeholder. And I flagged the legal and regulatory points for the bank's compliance and data-protection officer, since I can't confirm them. These include the Vietnamese data-protection rules and any regulator minimum for log retention that could conflict with the 12-month rule.

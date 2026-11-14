@@ -1,0 +1,10 @@
+Cả 6 lỗi trong `ISSUES.md` đã được sửa, kèm test hồi quy trong `test/regression.test.js`. `npm test` xanh (14 test đạt, 0 lỗi). API công khai không đổi.
+
+1. **Sai 1 xu:** `toCents` (`src/money.js`) nhân 100 rồi làm tròn thẳng nên `1.005 * 100` ra `100.49999…`. Giờ nó chuẩn hóa sai số dấu phẩy động trước khi làm tròn half away from zero, cả số âm. Mã giảm cố định trong `checkout.js` trước đây tự làm tròn bằng `Math.round(amount*100)`, giờ gọi `toCents`. Giá sản phẩm và giá trị đơn tối thiểu vốn đã dùng `toCents` nên được sửa theo.
+2. **Tổng giảm bị hụt:** `allocate` chỉ lấy phần nguyên, bỏ phần dư. Giờ nó chia số xu dư theo phương pháp phần dư lớn nhất, phần lẻ bằng nhau thì phần đứng trước được trước. Số âm cũng được xử lý.
+3. **Mua X tặng Y:** `freeUnits` dùng `floor(qty/buy)*free`. Giờ là `floor(qty/(buy+free))*free`.
+4. **Mã hết hạn sớm:** `endsAt` dạng `YYYY-MM-DD` được hiểu là 00:00 UTC của ngày đó. Giờ mã dùng được tới hết ngày đó và bị từ chối từ 00:00 UTC ngày hôm sau.
+5. **Kho:** `updateQty` giữ chỗ thêm nguyên số lượng mới thay vì chỉ phần chênh lệch. `removeItem` thì không trả chỗ. Giờ `updateQty` chỉ giữ thêm hoặc trả phần chênh lệch, và `removeItem` trả lại toàn bộ số lượng của dòng.
+6. **Thuế:** `checkout.js` tính thuế trên `gross`, giờ tính trên `net`.
+
+Phần giảm % tính theo từng dòng (mã `category`) và tổng giảm của mã `percent` vẫn dùng `Math.round` thông thường; tôi không đụng vào vì báo cáo không nhắc tới.

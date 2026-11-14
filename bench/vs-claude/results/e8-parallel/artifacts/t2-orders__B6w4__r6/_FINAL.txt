@@ -1,0 +1,220 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t2-orders__B6w4__r6] Sửa 6 lỗi trong thư viện tính tiền giỏ hàng
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Repo nhỏ (8 tệp nguồn), chia theo tệp sở hữu thành 4 hạng mục độc lập chạy song song, mỗi hạng mục có tệp test riêng. Nguyên nhân gốc đã định vị sơ bộ: float trong toCents, allocate không chia phần dư, freeUnits, checkValidity, Inventory/Cart, và checkout.js tính thuế trên gross.
+
+Kết quả: 4/4 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Lỗi 1+2: làm tròn xu và allocate (money.js) (@backend-dev, done)
+
+## Tóm tắt
+Đã sửa lỗi 1 và 2 trong `src/money.js`. `toCents` giờ làm tròn half away from zero theo giá trị thập phân. `allocate` dùng phương pháp phần dư lớn nhất nên tổng các phần luôn bằng total. Đã thêm test hồi quy, và `npm test` xanh (11/11 pass, trong đó 5 test mới).
+
+## Tệp đã tạo/sửa
+- `src/money.js`:
+  - `toCents` dịch dấu thập phân bằng chuỗi mũ (`Number(m + 'e' + (exp + 2))`) rồi `Math.round` trên giá trị tuyệt đối, sau đó khôi phục dấu. Cách này cũng đúng với số dạng mũ như `1e-7`. Kết quả `-0` được đổi thành `0`. Kiểu `TypeError` giữ nguyên.
+  - `allocate`:
+    - Mỗi phần lấy floor. Số xu dư chia cho các phần có phần lẻ lớn nhất, bằng nhau thì phần đứng trước được trước.
+    - Với trọng số và total là số nguyên, phép tính dùng `BigInt` để không sai số. Nếu không, hàm dùng số thực.
+    - Total âm được xử lý theo giá trị tuyệt đối rồi khôi phục dấu. Trường hợp sum=0 vẫn trả toàn 0. Chữ ký hàm không đổi.
+- `test/money-rounding.test.js` (mới), kiểm tra các trường hợp sau:
+  - `toCents`: 1.005→101, -1.005→-101, 2.675→268, 0.1+0.2→30, số âm, số nguyên, `±1e-7`→0, `TypeError`.
+  - `allocate`: `allocate(1000,[1,1,1])`=[334,333,333], tổng luôn bằng total, thứ tự khi phần lẻ bằng nhau, total âm, sum=0.
+
+## Hợp đồng API
+Không áp dụng. API công khai không đổi.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0 (lấy từ phần cuối của output): tests 11, pass 11, fail 0. Baseline trước khi sửa là 6 test, tất cả pass.
+- Lần chạy đầu bị hook chặn vì lệnh có đường dẫn `../src/money`. Tôi đã ghi tệp bằng công cụ Edit/Write thay thế.
+
+## Việc còn lại
+- Không có biến môi trường mới.
+- S2 (`checkout.js`, `tax.js`) cần dùng `toCents`/`allocate` đã sửa cho lỗi 1 và lỗi 6. Tôi chưa chạy kiểm tra tích hợp phần đó.
+
+Bản đầy đủ: `.ccoding/T-20261113-221444-a0e/outputs/dev-S1-backend-dev.md`
+
+### S2 — Lỗi 1 (các chỗ đổi sang xu) + lỗi 6: checkout.js và tax.js (@senior-swe, done)
+
+Hai test còn đỏ do `allocate` không chia phần dư (999 thay vì 1000) và `toCents` còn dùng float (28 thay vì 29), cả hai đều thuộc S1. Đây không phải lỗi trong phần của tôi.
+
+## Tóm tắt
+Tôi đã sửa lỗi 6 trong `checkout.js`: thuế giờ tính trên `l.net` thay vì `l.gross`. Với lỗi 1, mã giảm cố định dùng `toCents(promo.amount)` thay cho `Math.round(x*100)`. `catalog.js` vốn đã gọi `toCents` nên không cần sửa. `npm test` hiện có 9 pass và 2 fail. Cả 2 test đỏ đều do `money.js` (S1) chưa được sửa, không phải do phần của S2.
+
+## Tệp đã tạo/sửa
+- `src/checkout.js`: import `toCents`, dùng `toCents(promo.amount)` cho mã cố định, và `lineTax(l.net, ...)`.
+- `src/tax.js`: `lineTax` làm tròn qua basis points (`Math.round(rate*10000)`) để tránh sai số float. API và `RATES` giữ nguyên.
+- `test/checkout-tax.test.js`: tệp mới, 5 test hồi quy:
+  - thuế bằng `lineTax` trên net với mã %, mã cố định và mã bxgy;
+  - mã cố định 10.00 giảm đúng 1000 xu;
+  - mã cố định 0.29 giảm đúng 29 xu;
+  - `lineTax` làm tròn half up.
+- `src/catalog.js`: không đổi.
+
+## Kiểm chứng
+- `npm test` → 11 test, 9 pass, 2 fail. Lệnh này chưa chạy lại sau khi S1 sửa `money.js`, nên chưa có exit code xanh.
+- Hai test đỏ:
+  - "mã cố định 10.00 giảm đúng 1000 xu" nhận 999. Nguyên nhân là `allocate` ở `src/money.js:30-31` dùng `Math.floor` mà không chia phần dư (S1, lỗi 2).
+  - "mã cố định 0.29 giảm đúng 29 xu" nhận 28. Nguyên nhân là `toCents` ở `src/money.js:8` vẫn là `Math.round(amount*100)` (S1, lỗi 1).
+- Hai test này sẽ xanh sau khi gộp bản sửa của S1. Tôi chưa kiểm chứng lại sau khi gộp.
+
+## Quyết định thiết kế
+- Với `lineTax`, tôi chọn tính theo basis points (số nguyên) thay vì nhân trực tiếp với 0.05 hoặc 0.1.
+- Phần giảm % toàn giỏ giữ nguyên vì là phép số nguyên.
+- Test mã % chỉ kiểm tra tax = `lineTax` trên net, không phụ thuộc kết quả `allocate`.
+
+## Rủi ro & việc còn mở
+- Ghi chú cho S3: `src/promotions.js:27` đã gọi `toCents(promo.minSubtotal)` nên sẽ đúng khi S1 sửa `toCents`. Tôi không thấy chỗ nào khác trong tệp này cần đổi sang `toCents`.
+- Sau khi gộp S1, cần chạy lại `npm test` để xác nhận 2 test đỏ chuyển xanh.
+- `AGENTS.md` mà `CLAUDE.md` tham chiếu không tồn tại trong repo, nên tôi không có quy tắc bổ sung nào để tuân theo.
+
+Bản đầy đủ: `.ccoding/T-20261113-221444-a0e/outputs/dev-S2-senior-swe.md`
+
+### S3 — Lỗi 3+4: freeUnits và hết hạn mã (promotions.js) (@frontend-dev, done)
+
+## Tóm tắt
+Đã sửa lỗi 3 (`freeUnits`) và lỗi 4 (hết hạn mã trong `checkValidity`) trong `src/promotions.js`, và thêm test hồi quy. `npm test` xanh: 12 test, 12 pass, 0 fail. Export và `PromotionError` giữ nguyên.
+
+## Tệp đã tạo/sửa
+- `src/promotions.js` (sửa):
+  - `freeUnits` tính theo nhóm `buy+free`: `floor(qty/(buy+free))*free`, cộng `(dư − buy)` khi phần dư vượt `buy`. Trả về 0 nếu `qty<=0`, `buy<0` hoặc `free<=0`.
+  - Thêm hàm nội bộ `endExclusive`: `endsAt` dạng `YYYY-MM-DD` được cộng `DAY_MS`, tức hết hạn lúc 00:00Z ngày kế tiếp. `endsAt` có kèm giờ giữ nguyên như cũ. `startsAt` không đổi.
+- `test/promotions.test.js` (tạo mới), 6 test:
+  - `freeUnits` với mua 2 tặng 1 (2→0, 3→1, 5→1, 6→2) và mua 3 tặng 2.
+  - `freeUnits` với đầu vào không hợp lệ.
+  - `endsAt` date-only: `2026-11-30T23:59:59.999Z` còn dùng được, `2026-12-01T00:00:00Z` bị từ chối.
+  - `startsAt` ở hai phía biên.
+  - `endsAt` có kèm giờ.
+
+## Màn hình & trạng thái
+Không áp dụng (thư viện không có giao diện).
+
+## API sử dụng
+Không áp dụng. API công khai không đổi.
+
+## Kiểm chứng
+- `npm test` → exit 0, tests 12 · pass 12 · fail 0. Baseline là 6 test, nên có thêm 6 test mới.
+- Lệnh Bash đầu tiên của tôi bị hook chặn vì đường dẫn `/tmp` và `../src`. Tôi chuyển sang dùng công cụ Edit/Write và chạy lại `npm test`.
+
+## Việc còn lại
+- Không có phần nào chưa làm trong hạng mục S3. Phần a11y không áp dụng.
+- `freeUnits` với `buy=0` vẫn chạy được: mỗi nhóm có `free` món, tất cả đều được tặng. Brief không nói rõ trường hợp này, nên đây là cách tôi hiểu.
+- `checkout.js` hiện không có test dùng `freeUnits`, nên tôi chưa kiểm tra nó khi gọi từ đó.
+
+Bản đầy đủ: `.ccoding/T-20261113-221444-a0e/outputs/dev-S3-frontend-dev.md`
+
+### S4 — Lỗi 5: giữ chỗ tồn kho (inventory.js, cart.js) (@data-engineer, done)
+
+## Tóm tắt
+Đã sửa lỗi 5 (giữ chỗ tồn kho) trong `src/cart.js`. Nguyên nhân gốc: `updateQty` gọi `reserve(sku, qty)` với toàn bộ số lượng mới thay vì phần chênh lệch, nên kho 4, giỏ đang giữ 2, sửa lên 3 bị tính cần 3 trên 2 còn lại và báo hết hàng. `removeItem` chỉ xóa dòng khỏi giỏ mà không gọi `release`. `npm test` xanh với 10/10 test đạt, gồm 4 test hồi quy mới.
+
+## Tệp đã tạo/sửa
+- `src/cart.js`:
+  - `updateQty` tính `delta = qty - số lượng hiện tại`. Nếu `delta > 0` thì `reserve(delta)`, nếu `delta < 0` thì `release(-delta)`. `reserve` ném lỗi trước khi `lines.set` nên giỏ và giữ chỗ không đổi khi hết hàng.
+  - `removeItem` gọi `release` với số lượng đang giữ trước khi xóa dòng. Nếu sku không có trong giỏ thì bỏ qua. `updateQty` về 0 đi qua `removeItem` nên cũng giải phóng.
+  - `addItem` không cần sửa: nó đã reserve phần thêm vào trước khi cộng dồn, nên add trùng sku vẫn đúng.
+- `src/inventory.js`: không đổi. API công khai và `OutOfStockError` giữ nguyên.
+- `test/inventory.test.js` (mới), 4 test:
+  - Kịch bản ISSUES.md mục 5: kho 4, thêm 2 rồi sửa thành 3.
+  - Xóa món ở giỏ này thì giỏ khác mua được.
+  - Giảm số lượng, về 0 và add trùng sku.
+  - Hai giỏ cùng giữ chỗ, thao tác hết hàng không đổi trạng thái.
+
+## Luồng dữ liệu
+Cart (`lines`: sku → qty) → `Inventory.reserved` (sku → tổng qty), chỉ trong bộ nhớ. Giữ chỗ luôn bằng tổng qty các giỏ vì mọi thay đổi `lines` đều đi kèm `reserve` hoặc `release` đúng phần chênh lệch. Nguồn: dữ liệu giả trong test, nhãn internal.
+
+## Dữ liệu nhạy cảm
+Không áp dụng: chỉ có sku và số lượng giả, không có PII, không có lưu trữ hay log.
+
+## Kiểm chứng
+- `npm test` → exit 0 (đọc từ phần cuối output, không xem trực tiếp mã thoát): tests 10, pass 10, fail 0, cancelled 0, skipped 0. Baseline là 6 test đạt, cộng thêm 4 test mới.
+- Một lần chạy đầu tiên bị hook chặn vì heredoc chứa chuỗi đường dẫn tương đối, nên tôi ghi lại bằng công cụ Edit/Write. Kết quả trên là từ lần chạy lại sau đó.
+
+Bản đầy đủ: `.ccoding/T-20261113-221444-a0e/outputs/dev-S4-data-engineer.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+## Thay đổi trong repo
+
+src/cart.js                 |  7 +++++-
+ src/checkout.js             |  6 ++---
+ src/money.js                | 30 ++++++++++++++++++++--
+ src/promotions.js           | 13 ++++++++--
+ src/tax.js                  |  3 ++-
+ test/checkout-tax.test.js   | 56 +++++++++++++++++++++++++++++++++++++++++
+ test/inventory.test.js      | 61 +++++++++++++++++++++++++++++++++++++++++++++
+ test/money-rounding.test.js | 41 ++++++++++++++++++++++++++++++
+ test/promotions.test.js     | 32 ++++++++++++++++++++++++
+ 9 files changed, 240 insertions(+), 9 deletions(-)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261113-221444-a0e` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **44 in / 22.3k out**, cache đọc 302.5k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 10 | 4445 | 76952 | 1 |
+| Backend Developer (@backend-dev) | dev | 10 | 5260 | 74187 | 1 |
+| Data Engineer (@data-engineer) | dev | 8 | 4479 | 57178 | 1 |
+| Frontend Developer (@frontend-dev) | dev | 8 | 4652 | 53567 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 6 | 3069 | 40011 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 390 | 649 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Lỗi 1+2: làm tròn xu và allocate (money.js) (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 Lỗi 1 (các chỗ đổi sang xu) + lỗi 6: checkout.js và tax.js (@senior-swe)
+- `outputs/dev-S3-frontend-dev.md` — S3 Lỗi 3+4: freeUnits và hết hạn mã (promotions.js) (@frontend-dev)
+- `outputs/dev-S4-data-engineer.md` — S4 Lỗi 5: giữ chỗ tồn kho (inventory.js, cart.js) (@data-engineer)
+
+### Thay đổi trong repo
+- Worktree: `<root>\ccoding-e78\workspaces\vb-df2cc22ac2f5\wt-T-20261113-221444-a0e` · nhánh: `ccoding/t-20261113-221444-a0e` · commit: 3ad5058340 — 8 commit trên nhánh từ 5db5a1a48c (gồm gộp worktree con)
+- Xem thay đổi: `git diff 5db5a1a48c..ccoding/t-20261113-221444-a0e` · gộp sau khi review: `git merge ccoding/t-20261113-221444-a0e` · dọn worktree: `git worktree remove "<root>\ccoding-e78\workspaces\vb-df2cc22ac2f5\wt-T-20261113-221444-a0e"`
+
+```
+src/cart.js                 |  7 +++++-
+ src/checkout.js             |  6 ++---
+ src/money.js                | 30 ++++++++++++++++++++--
+ src/promotions.js           | 13 ++++++++--
+ src/tax.js                  |  3 ++-
+ test/checkout-tax.test.js   | 56 +++++++++++++++++++++++++++++++++++++++++
+ test/inventory.test.js      | 61 +++++++++++++++++++++++++++++++++++++++++++++
+ test/money-rounding.test.js | 41 ++++++++++++++++++++++++++++++
+ test/promotions.test.js     | 32 ++++++++++++++++++++++++
+ 9 files changed, 240 insertions(+), 9 deletions(-)
+```
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 6 · ℹ suites 0 · ℹ pass 6 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 26 · ℹ suites 0 · ℹ pass 26 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 91 | 87 | 100 | 1 | 1 | 81k | 1/6 | — |
+| Backend Developer (@backend-dev) | dev | **69** B | thấp | — | — | 100 | 89 | 89 | 100 | 1 | 1 | 79k | 1/7 | — |
+| Data Engineer (@data-engineer) | dev | **69** B | thấp | — | — | 100 | 100 | 89 | 100 | 1 | 1 | 62k | 1/7 | — |
+| Frontend Developer (@frontend-dev) | dev | **65** B | thấp | — | — | — | 100 | 90 | 100 | 1 | 1 | 58k | 1/8 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 43k | 0/2 | — |
+| Điều phối viên (@orchestrator) | office | **60** C | thấp | — | — | — | — | 100 | — | 0 | — | 1k | — | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

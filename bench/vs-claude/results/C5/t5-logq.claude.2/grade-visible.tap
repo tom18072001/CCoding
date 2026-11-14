@@ -1,0 +1,232 @@
+TAP version 13
+# Subtest: count
+ok 1 - count
+  ---
+  duration_ms: 1.422254
+  type: 'test'
+  ...
+# Subtest: count by: bỏ thiếu/null, giữ kiểu, sắp count giảm rồi String(key) tăng
+ok 2 - count by: bỏ thiếu/null, giữ kiểu, sắp count giảm rồi String(key) tăng
+  ---
+  duration_ms: 0.498809
+  type: 'test'
+  ...
+# Subtest: top n
+ok 3 - top n
+  ---
+  duration_ms: 0.302237
+  type: 'test'
+  ...
+# Subtest: sum/avg/min/max trên giá trị số
+ok 4 - sum/avg/min/max trên giá trị số
+  ---
+  duration_ms: 0.504687
+  type: 'test'
+  ...
+# Subtest: percentile nearest-rank
+ok 5 - percentile nearest-rank
+  ---
+  duration_ms: 1.109555
+  type: 'test'
+  ...
+# Subtest: histogram: mốc, điền mốc trống, sắp theo thời gian
+ok 6 - histogram: mốc, điền mốc trống, sắp theo thời gian
+  ---
+  duration_ms: 0.876647
+  type: 'test'
+  ...
+# Subtest: spec không hợp lệ
+ok 7 - spec không hợp lệ
+  ---
+  duration_ms: 0.936133
+  type: 'test'
+  ...
+# Subtest: in bản ghi khớp dạng JSON, không có @t, theo thứ tự đọc
+ok 8 - in bản ghi khớp dạng JSON, không có @t, theo thứ tự đọc
+  ---
+  duration_ms: 30.916091
+  type: 'test'
+  ...
+# Subtest: stdin, "-" và tùy chọn sau tệp
+ok 9 - stdin, "-" và tùy chọn sau tệp
+  ---
+  duration_ms: 59.617705
+  type: 'test'
+  ...
+# Subtest: không khớp gì → mã 0, stdout rỗng
+ok 10 - không khớp gì → mã 0, stdout rỗng
+  ---
+  duration_ms: 31.883568
+  type: 'test'
+  ...
+# Subtest: --stats ra stderr
+ok 11 - --stats ra stderr
+  ---
+  duration_ms: 30.905897
+  type: 'test'
+  ...
+# Subtest: --agg json (mặc định)
+ok 12 - --agg json (mặc định)
+  ---
+  duration_ms: 117.616573
+  type: 'test'
+  ...
+# Subtest: --format table
+ok 13 - --format table
+  ---
+  duration_ms: 189.796859
+  type: 'test'
+  ...
+# Subtest: mã thoát 2: lỗi cú pháp truy vấn
+ok 14 - mã thoát 2: lỗi cú pháp truy vấn
+  ---
+  duration_ms: 32.74328
+  type: 'test'
+  ...
+# Subtest: mã thoát 2: spec sai, dùng sai tùy chọn
+ok 15 - mã thoát 2: spec sai, dùng sai tùy chọn
+  ---
+  duration_ms: 221.285015
+  type: 'test'
+  ...
+# Subtest: mã thoát 1: không đọc được tệp, stdout rỗng
+ok 16 - mã thoát 1: không đọc được tệp, stdout rỗng
+  ---
+  duration_ms: 27.845104
+  type: 'test'
+  ...
+# Subtest: dòng rỗng / chỉ khoảng trắng / \\r
+ok 17 - dòng rỗng / chỉ khoảng trắng / \\r
+  ---
+  duration_ms: 1.784147
+  type: 'test'
+  ...
+# Subtest: JSON: làm phẳng, mảng giữ nguyên, đối tượng rỗng lồng bị bỏ
+ok 18 - JSON: làm phẳng, mảng giữ nguyên, đối tượng rỗng lồng bị bỏ
+  ---
+  duration_ms: 0.470208
+  type: 'test'
+  ...
+# Subtest: JSON lỗi hoặc không phải đối tượng
+ok 19 - JSON lỗi hoặc không phải đối tượng
+  ---
+  duration_ms: 0.205139
+  type: 'test'
+  ...
+# Subtest: logfmt: kiểu giá trị trần
+ok 20 - logfmt: kiểu giá trị trần
+  ---
+  duration_ms: 0.273568
+  type: 'test'
+  ...
+# Subtest: logfmt: nhiều khoảng trắng / tab, key hợp lệ
+ok 21 - logfmt: nhiều khoảng trắng / tab, key hợp lệ
+  ---
+  duration_ms: 0.136603
+  type: 'test'
+  ...
+# Subtest: logfmt: ngoặc kép và thoát
+ok 22 - logfmt: ngoặc kép và thoát
+  ---
+  duration_ms: 0.9539
+  type: 'test'
+  ...
+# Subtest: logfmt: sai dạng → cả dòng không ok
+ok 23 - logfmt: sai dạng → cả dòng không ok
+  ---
+  duration_ms: 0.220031
+  type: 'test'
+  ...
+# Subtest: logfmt: key trùng → giá trị sau thắng
+ok 24 - logfmt: key trùng → giá trị sau thắng
+  ---
+  duration_ms: 0.123547
+  type: 'test'
+  ...
+# Subtest: thời gian: @timestamp > ts > time, chỉ trường đầu tiên có mặt
+ok 25 - thời gian: @timestamp > ts > time, chỉ trường đầu tiên có mặt
+  ---
+  duration_ms: 0.571222
+  type: 'test'
+  ...
+# Subtest: truy vấn rỗng khớp mọi thứ
+ok 26 - truy vấn rỗng khớp mọi thứ
+  ---
+  duration_ms: 0.968972
+  type: 'test'
+  ...
+# Subtest: field:value — không phân biệt hoa/thường, khớp toàn bộ, ký tự đại diện
+ok 27 - field:value — không phân biệt hoa/thường, khớp toàn bộ, ký tự đại diện
+  ---
+  duration_ms: 1.152352
+  type: 'test'
+  ...
+# Subtest: field:"quoted" — so khớp chính xác, không ký tự đại diện
+ok 28 - field:"quoted" — so khớp chính xác, không ký tự đại diện
+  ---
+  duration_ms: 0.220362
+  type: 'test'
+  ...
+# Subtest: so sánh số
+ok 29 - so sánh số
+  ---
+  duration_ms: 1.713108
+  type: 'test'
+  ...
+# Subtest: _exists_
+ok 30 - _exists_
+  ---
+  duration_ms: 0.17947
+  type: 'test'
+  ...
+# Subtest: từ/chuỗi tự do tìm trong msg rồi message
+ok 31 - từ/chuỗi tự do tìm trong msg rồi message
+  ---
+  duration_ms: 0.312519
+  type: 'test'
+  ...
+# Subtest: toán tử boolean, AND ngầm, ưu tiên
+ok 32 - toán tử boolean, AND ngầm, ưu tiên
+  ---
+  duration_ms: 0.624768
+  type: 'test'
+  ...
+# Subtest: and/or/not viết thường là từ tìm kiếm
+ok 33 - and/or/not viết thường là từ tìm kiếm
+  ---
+  duration_ms: 0.122308
+  type: 'test'
+  ...
+# Subtest: vị trí lỗi cú pháp
+ok 34 - vị trí lỗi cú pháp
+  ---
+  duration_ms: 1.239023
+  type: 'test'
+  ...
+# Subtest: parse JSON và logfmt
+ok 35 - parse JSON và logfmt
+  ---
+  duration_ms: 2.557483
+  type: 'test'
+  ...
+# Subtest: truy vấn cơ bản
+ok 36 - truy vấn cơ bản
+  ---
+  duration_ms: 1.698025
+  type: 'test'
+  ...
+# Subtest: tổng hợp count by
+ok 37 - tổng hợp count by
+  ---
+  duration_ms: 0.817739
+  type: 'test'
+  ...
+1..37
+# tests 37
+# suites 0
+# pass 37
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1050.990275

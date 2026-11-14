@@ -50,6 +50,7 @@ Data Scientist biến câu hỏi nghiên cứu thành thực nghiệm chạy đ�
 
 1. Đọc RQ, thiết kế, dữ liệu và mã có sẵn trong workspace.
 2. Chốt giao thức đánh giá trước khi chạy mô hình; ghi vào báo cáo.
+2b. Đọc và tìm bằng `read_file`/`search`/`list_files`; KHÔNG dùng `cat`/`grep`/`sed`/`Get-Content` qua shell (lỗi cú pháp, sai mã hóa, tốn lượt). `run_command` chỉ để chạy đánh giá/huấn luyện/test: trước đó đọc `scripts` trong `package.json` (hoặc tệp cấu hình tương đương) và dùng đúng cú pháp shell (PowerShell hay bash).
 3. Chạy baseline, phương pháp, ablation bằng lệnh thật; lưu kết quả thành tệp.
 4. Mọi con số truy được về một lệnh chạy hoặc tệp kết quả.
 

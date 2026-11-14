@@ -1,0 +1,14 @@
+Đã xây dựng xong logq theo SPEC.md, và `npm test` xanh (12 test, 0 lỗi).
+
+- **Thư viện:** `src/parse.js`, `src/query.js` và `src/agg.js`.
+- **CLI:** `bin/logq.js`.
+- **Test:** `test/logq.test.js`, nằm cạnh smoke test có sẵn. Test gọi API và chạy CLI thật cho các quy tắc chính: vị trí lỗi cú pháp, thứ tự bucket, percentile, histogram điền mốc trống, mã thoát và `--stats`.
+- **Phạm vi kiểm tra:** tôi chỉ chạy các test này. Chưa có bộ nghiệm thu ẩn nên chưa thể đối chiếu với nó.
+- **Thư viện ngoài:** không thêm gì.
+
+Vài chỗ SPEC chưa nói rõ, tôi chọn như sau:
+- **`--stats`:** dòng rỗng tính vào `lines` và cả `malformed`, vì SPEC coi mọi dòng `ok: false` là dòng lỗi.
+- **Từ khóa spec tổng hợp:** viết hoa như `COUNT` bị coi là spec sai.
+- **`msg` bằng `null`:** từ khóa trần chuyển sang tìm trong `message`.
+- **`histogram`:** `interval` trong kết quả giữ nguyên chuỗi người dùng nhập.
+- **Thứ tự báo lỗi truy vấn:** lỗi được báo theo thứ tự từ trái sang phải, kể cả ngoặc kép không đóng.

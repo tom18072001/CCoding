@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: trùng khớp trên dữ liệu sinh ngẫu nhiên
+ok 1 - trùng khớp trên dữ liệu sinh ngẫu nhiên
+  ---
+  duration_ms: 3724.591489
+  type: 'test'
+  ...
+# Subtest: trùng khớp trên dữ liệu lớn (20.000 dòng)
+ok 2 - trùng khớp trên dữ liệu lớn (20.000 dòng)
+  ---
+  duration_ms: 1092.850728
+  type: 'test'
+  ...
+# Subtest: trùng khớp trên dữ liệu biên ngẫu nhiên
+ok 3 - trùng khớp trên dữ liệu biên ngẫu nhiên
+  ---
+  duration_ms: 115.644752
+  type: 'test'
+  ...
+# Subtest: các hành vi lạ cụ thể
+ok 4 - các hành vi lạ cụ thể
+  ---
+  duration_ms: 3.506092
+  type: 'test'
+  ...
+# Subtest: báo cáo nhỏ
+ok 5 - báo cáo nhỏ
+  ---
+  duration_ms: 3.192113
+  type: 'test'
+  ...
+# Subtest: dữ liệu sinh ngẫu nhiên chạy được
+ok 6 - dữ liệu sinh ngẫu nhiên chạy được
+  ---
+  duration_ms: 13.603715
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5094.001714

@@ -1,0 +1,1 @@
+SR-24: SPEC.md: bỏ dòng "6. SMS cost limit. "Keep SMS costs low" …" (một mục checklist)

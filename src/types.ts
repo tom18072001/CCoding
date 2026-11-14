@@ -1,4 +1,6 @@
 // Kiểu dữ liệu dùng chung cho toàn bộ CCoding.
+import type { AcceptMode, Slim } from './slim.js';
+export type { AcceptMode, Slim } from './slim.js';
 
 /** cto: nghiệm thu kết quả của các phòng sau khi tổng hợp (pha `accept`), không thuộc phòng ban làm việc nào. */
 export type Role = 'lead' | 'member' | 'reviewer' | 'router' | 'cto';
@@ -69,6 +71,10 @@ export interface ProjectDef {
   toolAccess?: ToolAccess;
   /** "worktree": nếu workspace là repo git, mỗi nhiệm vụ làm trên git worktree + nhánh ccoding/<task> riêng. */
   isolation?: 'none' | 'worktree';
+  /** Ép làn xử lý cho mọi nhiệm vụ của dự án (B-02): 'auto' hoặc bỏ trống = không ép; options.lane của nhiệm vụ ưu tiên hơn. */
+  lane?: 'auto' | 'single' | 'fast' | 'full';
+  /** B-11: ghi đè công tắc làm gọn làn đơn cho dự án (thấp hơn options.slim của nhiệm vụ). */
+  slim?: Partial<Slim>;
   /** Điểm xuất phát của nhánh worktree (vd. origin/main); mặc định HEAD hiện tại của repo. */
   baseRef?: string;
   /** File chưa track (vd. .env) cần chép vào worktree để chạy test/migration ([] = không chép gì). */
@@ -123,6 +129,8 @@ export interface ToolPolicy {
   guardState?: string;
   /** Runtime CLI (claude-cli): cắt đầu ra lệnh shell ở N ký tự (biến BASH_MAX_OUTPUT_LENGTH của Claude Code); bỏ trống = mặc định của CLI. */
   bashMaxOutput?: number;
+  /** B-08: công tắc hook claude-guard (config.guard) — undefined = mặc định bật. */
+  guard?: { useEventCwd?: boolean; allowOwnToolResults?: boolean };
 }
 
 export interface ToolCallRecord {
@@ -170,12 +178,18 @@ export interface RunResult {
   usage: Omit<Usage, 'calls' | 'estimatedCalls'>;
   estimated: boolean;
   model: string;
+  /** Nhãn đường xác thực của claude-cli (apiKeySource, đã lọc — D4). Không bao giờ chứa khóa. */
+  authSource?: string;
+  /** claude-cli: nhãn xác thực là khóa API trong khi useApiKey không bật (để call() ghi cảnh báo). */
+  authSourceUnexpected?: boolean;
   runtime: string;
   durationMs: number;
   error?: string;
   errorKind?: ErrorKind;
   /** Lý do dừng của model (stop, length, tool_calls…). */
   finishReason?: string;
+  /** stop_reason nguyên văn của runtime khi có (api: stop_reason/finish_reason; claude-cli: stop_reason của sự kiện result/thông điệp cuối). */
+  stopReason?: string;
   /** Đầu ra bị cắt do chạm giới hạn max_tokens. */
   truncated?: boolean;
   turns?: number;
@@ -218,6 +232,8 @@ export interface Subtask {
   title: string;
   description: string;
   assignee: string;
+  /** Tên người nhận LLM viết nhưng không khớp roster (assignee đã rơi về agent khác) — cổng B báo. */
+  assigneeUnmatched?: string;
   dependsOn: string[];
   deliverable?: string;
   status: SubtaskStatus;
@@ -274,11 +290,16 @@ export interface DeptRun {
   phase?: Phase;
   planSummary?: string;
   decisions?: string;
+  /** Làn nhanh: hạng mục kiểm thử riêng của người review được chuyển thành trọng tâm review (không nằm trên đường găng). */
+  reviewFocus?: string;
   subtasks: Subtask[];
   review?: {
     approved: boolean;
     summary: string;
     issues: ReviewIssue[];
+    /** FX4: không có review nào (tắt/không có reviewer) và không có lệnh kiểm tra — không có bằng chứng gì để duyệt. */
+    skipped?: boolean;
+    reason?: string;
     /** Lệnh kiểm tra reviewer khai báo + lệnh thực sự chạy qua công cụ. */
     checks?: ReviewCheck[];
     /** false: reviewer có quyền chạy lệnh nhưng không chạy lệnh nào → kết luận chưa có bằng chứng chạy thật. */
@@ -293,10 +314,16 @@ export interface DeptRun {
   };
   /** Vòng review hiện tại (0 = review đầu) — giữ qua tạm dừng/tiếp tục để không vượt maxRevisions. */
   reviewRound?: number;
+  /** B-02: số vòng sửa của cổng chất lượng đã dùng (gồm sửa định dạng) — gate.maxFixRounds là ngân sách cho cả nhiệm vụ, lưu trước mỗi vòng. */
+  gateFixRoundsUsed?: number;
+  /** B-02: run đã nâng từ làn đơn lên fast/full — tiếp tục sau tạm dừng thì nạp lại LANE-HANDOVER.md vào `prior`. */
+  escalatedFrom?: 'single';
+  /** B-10: kết quả cổng phủ kế hoạch (sau parsePlan, trước execute). */
+  planGate?: { uncovered: string[]; reasons: string[]; rules: ('A' | 'B' | 'brief-item')[]; replanned?: boolean };
   /** Hạng mục còn phải sửa trong vòng hiện tại — tiếp tục sau tạm dừng thì sửa tiếp theo review đã có, không review lại. */
   revising?: string[];
   /** Ước lượng token của kế hoạch (sau khi lập/chốt) để cảnh báo nhiệm vụ quá lớn. */
-  estimate?: { tokens: number; budget: number; at: string; basis?: string };
+  estimate?: { tokens: number; budget: number; at: string; basis?: string; work?: number; criticalPathEstimate?: number; parallelism?: number };
   /** Duyệt kế hoạch trước khi thực thi: nhân sự được chọn (kèm năng lực công cụ) lúc chờ duyệt, ai/khi nào duyệt. */
   planReview?: {
     at: string;
@@ -311,6 +338,12 @@ export interface DeptRun {
   usage: Usage;
   startedAt?: string;
   finishedAt?: string;
+  /** Vòng bổ sung sau nghiệm thu (K3): id phòng của run gốc được làm tiếp. */
+  followupOf?: string;
+  /** Số thứ tự vòng bổ sung (1, 2…); run thường không có. */
+  round?: number;
+  /** Tiêu chí 'in' của vòng bổ sung (cổng kế hoạch và resume đọc lại). */
+  followupCriteria?: { name: string; detail: string }[];
 }
 
 export interface TaskOptions {
@@ -339,14 +372,23 @@ export interface TaskOptions {
   variant?: string;
   /** Dừng sau khi chốt kế hoạch, chờ giám đốc duyệt (sửa người làm/phụ thuộc/bỏ hạng mục) rồi mới thực thi. */
   planApproval?: boolean;
+  /**
+   * Làn xử lý: 'fast' — việc nhỏ: điều phối lập kế hoạch nhanh (Sonnet), chia 2–4 phần độc lập chạy SONG SONG, không họp, báo cáo theo
+   * mẫu (không gọi model); 'full' — quy trình đầy đủ; 'auto' (mặc định) — tự chọn theo cỡ đề bài và repo (cấu hình `fastLane`).
+   */
+  lane?: 'auto' | 'single' | 'fast' | 'full';
   /** CTO nghiệm thu sau khi các phòng tổng hợp xong (mặc định theo cấu hình; việc giao riêng một agent thì bỏ qua). */
   acceptance?: boolean;
+  /** B-11: ghi đè công tắc làm gọn làn đơn cho riêng nhiệm vụ (ưu tiên cao nhất, xem src/slim.ts). */
+  slim?: Partial<Slim>;
 }
 
 export interface AcceptanceCriterion {
   name: string;
   result: 'pass' | 'fail' | 'unknown';
   evidence: string;
+  /** Tiêu chí fail/unknown: in = phòng tự làm tiếp được; decision = cần giám đốc/người ngoài/quyền mới (thiếu = decision). */
+  scope?: 'in' | 'decision';
 }
 
 export interface Acceptance {
@@ -356,6 +398,8 @@ export interface Acceptance {
   accepted: boolean;
   /** Đọc được khối JSON kết luận của CTO. */
   parsed: boolean;
+  /** B-11: chế độ nghiệm thu đã dùng ở làn đơn (bỏ trống = full). */
+  mode?: AcceptMode;
   summary: string;
   criteria: AcceptanceCriterion[];
   risks: string[];
@@ -420,6 +464,8 @@ export interface Task {
   agentId?: string;
   /** Số lần liên tiếp tạm dừng vì "không còn runtime" (tự tiếp tục giãn dần, quá 5 lần thì dừng hẳn). */
   noRuntimeStreak?: number;
+  /** Số vòng bổ sung sau nghiệm thu đã mở (lưu bền, chống lặp vô hạn). */
+  acceptFollowups?: number;
   /** Chỉ dẫn bổ sung người dùng gửi trong lúc nhiệm vụ chạy — đưa vào bối cảnh các lượt gọi sau. */
   notes?: Array<{ id: string; at: string; text: string }>;
   /** Nhiệm vụ này tiếp nối nhiệm vụ trước (giao việc tiếp nối từ màn hình nhiệm vụ). */
@@ -458,10 +504,12 @@ export interface Task {
   splitInto?: string[];
   /** Chỉ bắt đầu khi các nhiệm vụ này đã xong (thứ tự phụ thuộc giữa các nhiệm vụ đã tách). */
   after?: string[];
+  /** Làn đã chọn khi bắt đầu chạy (xem TaskOptions.lane). */
+  lane?: 'single' | 'fast' | 'full';
   /** Lệnh kiểm tra của dự án do CCoding tự chạy: trước khi sửa (baseline) và sau thực thi/sửa (latest). */
   projectChecks?: ProjectChecks;
   /** Nhiệm vụ đã chạy xong nhưng cần người xem lại (vd. review cuối chưa duyệt). */
-  attention?: { reason: 'review' | 'checks' | 'acceptance'; detail: string; at: string };
+  attention?: { reason: 'review' | 'checks' | 'acceptance' | 'plan-coverage' | 'plan-brief-items' | 'plan-unreadable'; detail: string; at: string };
   /** Kết luận nghiệm thu của CTO sau khi các phòng tổng hợp xong (UX-4c). */
   acceptance?: Acceptance;
   createdAt: string;
@@ -471,6 +519,11 @@ export interface Task {
 }
 
 /** Kết quả một lệnh kiểm tra của dự án (CCoding tự chạy, không qua agent). */
+/** B-02: cổng chất lượng — số vòng sửa theo kiểm tra tối đa (tách khỏi maxRevisions của review). */
+export interface GateConfig {
+  maxFixRounds: number;
+}
+
 export interface CheckResult {
   command: string;
   code: number | null;
@@ -530,6 +583,8 @@ export interface UsageRecord {
   model: string;
   /** Model đã yêu cầu (id trong cấu hình) — dùng đếm hạn mức theo ngày. */
   requestedModel?: string;
+  /** Nhãn đường xác thực (claude-cli apiKeySource đã lọc). */
+  authSource?: string;
   input: number;
   output: number;
   cacheRead: number;
@@ -539,6 +594,10 @@ export interface UsageRecord {
   estimated: boolean;
   toolCalls?: number;
   finishReason?: string;
+  /** stop_reason nguyên văn của runtime (khi runtime trả về). */
+  stopReason?: string;
+  /** Chạm trần vòng công cụ (lượt hết lượt/trần token đầu vào) — KPI ưu tiên trường này hơn regex trên diag. */
+  turnCapped?: boolean;
   error?: string;
 }
 

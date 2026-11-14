@@ -1,0 +1,62 @@
+> Việc giao riêng cho Senior Software Engineer (@senior-swe)
+
+## Tóm tắt
+Tôi đã cài đặt `detectBursts` trong `src/alert.js`. `npm test` đã chuyển từ đỏ (baseline: 1 fail) sang xanh (1 pass, 0 fail). Tôi chưa thêm test mới. Ngoài test visible, tôi chỉ chạy thêm một lần kiểm tra nhanh thủ công.
+
+## Tệp đã tạo/sửa
+- `src/alert.js`: cài đặt `detectBursts`, vẫn dùng ES module export có sẵn.
+
+## Kiểm chứng
+- `npm test` → exit 0 (tests 1, pass 1, fail 0). Tôi lấy exit code từ phần tóm tắt của test runner, không đọc trực tiếp.
+- Script thủ công: 6 event 500 của host `a` cách nhau 1 giây, `threshold:3`. Kết quả đúng như mong đợi: một alert `{host:"a", ts:2000, count:3}`. Các event sau đó nằm trong cooldown nên không có alert thứ hai.
+
+## Quyết định thiết kế
+- Chỉ giữ event 5xx (500–599) và nhóm theo host.
+- Mỗi host: sort ts tăng dần bằng sort ổn định, nên event cùng `ts` giữ đúng thứ tự input. Cửa sổ `(ts-windowMs, ts]` dùng two-pointer.
+- `count` tính theo vị trí event trong danh sách đã sort. Vì vậy một event cùng `ts` nhưng đứng sau trong input chưa được tính khi xử lý event trước.
+- Cooldown chỉ chặn alert khi `ts < lastAlert + cooldownMs`. Event trong cooldown vẫn được tính vào cửa sổ của các lần sau.
+- Kết quả sort theo `ts`, rồi `host` tăng dần. Input không bị mutate, vì tôi sort trên bản sao.
+- Độ phức tạp O(n log n).
+
+## Rủi ro & việc còn mở
+- Test visible chỉ có 1 ca. Các trường hợp biên chưa có test tự động: `ts` bằng nhau, ranh giới cửa sổ, `cooldownMs=0`, input không sort.
+- Khi `cooldownMs=0`, nhiều alert có thể trùng `ts` và cùng host. Tôi suy ra điều này từ code, chưa chạy kiểm chứng.
+
+## Review
+✅ Đã duyệt: Tôi đã đọc src/alert.js và thấy nó khớp đặc tả. Chỉ tính 5xx (500–599), nhóm theo host, sort ổn định theo ts nên các event cùng ts giữ thứ tự input. Cửa sổ nửa mở (ts-windowMs, ts] được xử lý bằng điều kiện `sorted[start] <= ts - windowMs`. Cooldown chặn alert khi ts < lastAlert + cooldownMs, và event trong cooldown vẫn được tính vào cửa sổ sau. Kết quả sort theo ts rồi host, và input không bị mutate vì sort trên bản sao. Tôi chưa chạy riêng các ca biên, nên phần này dựa trên đọc code. Còn một điểm cần lưu ý: repo chưa có test cho các ca biên.
+- [minor] Test tự động mới có 1 ca. Nên thêm test cho các ca sau: ranh giới cửa sổ (event đúng tại ts-windowMs không được tính), ts bằng nhau, input không sort, cooldown (ranh giới ts = alert.ts + cooldownMs thì được alert lại), nhiều host với thứ tự sort theo host, và input không bị mutate.
+- [minor] Với cooldownMs=0, mỗi event có ts >= alert.ts đều có thể alert, kể cả các event cùng ts. Điều này khớp đặc tả theo nghĩa đen. Nên ghi chú hành vi này trong tài liệu hoặc test.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-002354-7ae` · chế độ: agent · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **10 in / 2,746 out**, cache đọc 49.1k, 2 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 6 | 1894 | 31569 | 1 |
+| QA Engineer (@qa-tester) | dev | 4 | 852 | 17510 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude c2-burst-alert__B5__r3] Sliding-window 5xx burst alerting (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 1 · # suites 0 · # pass 0 · # fail 1 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 1 · # suites 0 · # pass 1 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 33k | 0/2 |
+| QA Engineer (@qa-tester) | dev | **100** A | — | — | 100 | 100 | 0 | — | 18k | 0/1 |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

@@ -1,0 +1,9 @@
+Mình đã hiện thực xong `src/parse.js`, `src/query.js`, `src/agg.js` và `bin/logq.js` theo `SPEC.md`, không dùng thư viện ngoài. `npm test` xanh: 18 test đạt, 0 lỗi. Test mới nằm trong `test/parse.test.js`, `test/query.test.js`, `test/agg.test.js` và `test/cli.test.js`. Bộ nghiệm thu ẩn thì mình chưa có để chạy.
+
+Có vài chỗ đặc tả không nói rõ, mình tự chọn như sau:
+- **Giá trị `msg`:** nếu `msg` là `null`, tìm từ khóa sẽ chuyển sang `message`.
+- **Thời gian:** `@t` chỉ được thêm khi chuỗi có dạng ngày + giờ (`YYYY-MM-DD` rồi `T` hoặc dấu cách rồi `hh:mm`). Chuỗi chỉ có ngày như `2024-01-01` thì không có `@t`.
+- **Tên trường trong `--agg`:** mình nhận mọi token không rỗng, không kiểm tra theo dạng `FIELD`.
+- **Thứ tự lỗi trong CLI:** lỗi dùng sai và lỗi cú pháp truy vấn hoặc spec (mã 2) được kiểm tra trước khi đọc tệp. Vì vậy truy vấn sai kèm tệp không tồn tại sẽ thoát mã 2, không phải mã 1.
+- **Lỗi truy vấn:** lỗi được báo theo thứ tự từ trái sang phải. Ví dụ `a) "x` báo vị trí của `)`, không báo dấu `"` chưa đóng.
+- **Dạng tùy chọn:** CLI nhận cả `--query=x` lẫn `--query x`.

@@ -1,0 +1,88 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t4-perf__B7__r4] Tối ưu buildReport dưới 1 giây trên 200.000 dòng, giữ nguyên hành vi
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Phần hiện thực (viết lại buildReport một lượt với Map/Set, bench 199 ms, npm test xanh 3/3 gồm test so sánh với bản cũ) đã nằm sẵn trong worktree từ làn đơn. Chỉ còn một hạng mục xác minh và vá rủi ro đã nêu trên nền đó, không làm lại từ đầu.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Xác minh tương đương với bản cũ, vá các trường hợp biên còn hở (@senior-swe, done)
+
+## Tóm tắt
+Tôi đối chiếu lại từng nhánh của `src/report.js` với bản cũ và vá ba chỗ lệch thật. Hai rủi ro đã nêu hoá ra không đơn giản như ghi chú trước: `qty` chuỗi bản cũ vẫn chạy (nối chuỗi), và `qty` undefined cũng lệch. Cả hai giờ đã mô phỏng đúng với chi phí gần bằng 0. `npm test` xanh (5/5) và `npm run bench` đạt 323 ms với 200.000 dòng. Chưa commit.
+
+## Tệp đã tạo/sửa
+- `src/report.js`: thêm hàm `norm()` mô phỏng bước `JSON.parse(JSON.stringify())` của bản cũ. Hàm này đổi số không hữu hạn thành `null` và `-0` thành `0`, còn kiểu khác giữ nguyên. Áp dụng cho `sku`, `customerId`, `id` (dùng làm khoá và giá trị xuất ra) và `qtySigned`. `amount` vẫn đổi không hữu hạn thành 0, vì nó luôn là số. Lúc tra sản phẩm vẫn dùng `o.sku` gốc, như `find` của bản cũ.
+- `test/report.test.js`: thêm 2 test, "giống hệt bản cũ trên các trường hợp biên" và "không giữ cache giữa các lần gọi".
+
+## Kiểm chứng
+- `npm test` → exit 0 (tôi chỉ đọc được mã thoát của `tail`, nên 0 dựa vào dòng tóm tắt). Kết quả: tests 5, pass 5, fail 0, cancelled 0, skipped 0.
+- `npm run bench` → `200000 dòng: 323 ms · 13 tháng · 11 danh mục · tổng 11445199250`. Lần chạy trước của làn đơn là 199 ms; lần này chậm hơn nhưng vẫn dưới 1000 ms.
+
+Đối chiếu từng hành vi lạ (có test `deepStrictEqual` với bản tham chiếu):
+- **SKU trùng lấy bản ghi đầu:** giống. Map chỉ giữ bản ghi đầu, và test có cả trường hợp `products` rỗng.
+- **Thứ tự xuất hiện đầu tiên:** giống nhờ thứ tự chèn của Map.
+- **Comparator sort:** nguyên văn bản cũ, trên mảng cùng thứ tự.
+- **`refunds` cộng mọi dòng `amount < 0`:** giống. `-0 < 0` là false ở cả hai bản.
+- **`orders`/`customers` theo tháng chỉ đếm dòng `paid`:** giống.
+- **`byMonth` đủ mọi tháng:** giống.
+- **Làm tròn `share`:** giống công thức.
+- **`RangeError` khi ngày sai:** giống. Test dùng một dòng `cancelled` có ngày sai, vì bản cũ vẫn ném lỗi ở trường hợp này.
+- **Thứ tự cộng số thực:** giống, vì mọi tổng cộng theo cùng thứ tự dòng.
+
+## Quyết định thiết kế
+- **`customerId`/`id`/`sku` là NaN hoặc Infinity:** đã mô phỏng, xuất ra `null` như bản cũ. Chi phí thấp.
+- **`-0`:** `customerId` hoặc `sku` bằng `-0` xuất ra `0` như bản cũ. Điều này lộ ra vì `deepStrictEqual` phân biệt `-0` và `0`.
+- **`qty` chuỗi:** bản bàn giao trước đổi nó thành 0, và đó là lỗi. Bản cũ giữ chuỗi nên `qty` cộng dồn thành chuỗi nối (ví dụ `"02"`). Giờ đã khớp.
+- **`qty` undefined hoặc null:** bản cũ ra `NaN` ở `qty` của SKU (do JSON làm rơi trường undefined). Bản trước ra 0. Giờ đã khớp.
+- **Ranh giới:** PERF.md chỉ nói "đầu vào hợp lệ" và không định nghĩa chặt. Mô tả kiểu trong `src/report.js` (`qty` là số, `customerId` là chuỗi) thì loại các ca trên khỏi đầu vào hợp lệ. Vì mô phỏng gần như miễn phí, tôi vẫn làm cho khớp.
+- **Cache `date → month`:** là biến cục bộ trong `buildReport`, tạo mới mỗi lần gọi, không giữ giữa các lần gọi. Test "không giữ cache giữa các lần gọi" kiểm tra hai lần gọi độc lập.
+
+## Rủi ro & việc còn mở
+- Còn một chỗ lệch tôi cố ý không mô phỏng: `name` hoặc `category` của sản phẩm là NaN, hay giá trị là object (ví dụ `Date`). Cả hai đều ngoài đầu vào hợp lệ.
+- `sku` hoặc `customerId` là `Date`/object: bản cũ đổi qua JSON thành chuỗi, bản mới giữ nguyên. Tôi không mô phỏng vì không hợp lệ theo mô tả kiểu dữ liệu.
+- `sku` là NaN: tôi giữ việc tra sản phẩm bằng `o.sku` gốc nên ra "unknown" như bản cũ, và sku xuất ra là `null`. Đã có trong test.
+
+Bản đầy đủ: `.ccoding/T-20261113-001458-8a6/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261113-001458-8a6` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **22 in / 16.7k out**, cache đọc 184.2k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 20 | 15734 | 177389 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 2 | 995 | 6860 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Xác minh tương đương với bản cũ, vá các trường hợp biên còn hở (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 5 · ℹ suites 0 · ℹ pass 5 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 100 | 96 | 100 | 1 | 1 | 193k | 1/19 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 8k | — | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

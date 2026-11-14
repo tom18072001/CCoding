@@ -1,0 +1,82 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude c3-shop-bugs__B7__r2] Multi-file bug hunt in a cart module
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Repo thực tế đã có sửa đổi chưa commit ở 4 tệp (money.js, cart.js, stock.js, test/cart.test.js), khớp ghi chú của làn đơn. Dù phần bàn giao ghi diff trống, tôi đã đọc mã và xác nhận 3 lỗi gốc đã được sửa. Kế hoạch này chỉ có một hạng mục xác minh và chốt, không làm lại từ đầu.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Xác minh bản sửa trong worktree và bổ sung test biên còn thiếu (@senior-swe, done)
+
+## Tóm tắt
+Tôi giữ nguyên các bản sửa trong `src/` và đã đối chiếu từng bản với 3 lỗi được báo: đều đúng. Tôi chỉ thêm 5 test biên vào `test/cart.test.js`. `npm test` có exit 0, 11 test pass, 0 fail. Rủi ro còn mở là `applyCoupon` chưa kiểm `pct`.
+
+## Tệp đã tạo/sửa
+- `test/cart.test.js`: thêm 5 test biên (bản sửa của làn đơn đã có 4 test hồi quy, tôi giữ nguyên):
+  - half-up đúng 0,5 dong: `applyPercent(1,50)=0` và `applyPercent(5,10)=4`;
+  - coupon 0% giữ nguyên tổng;
+  - giỏ rỗng có tổng 0, kể cả khi có coupon;
+  - `addItem` cùng sku cộng dồn 4+6 đúng 10, thêm 1 nữa ném `QTY_LIMIT`;
+  - `reserve` với qty bằng đúng tồn kho thì còn 0, lần reserve tiếp theo ném `INSUFFICIENT_STOCK`.
+- `src/cart.js`, `src/money.js`, `src/stock.js`: không sửa thêm trong lượt này, chỉ giữ nguyên bản sửa của làn đơn.
+
+## Kiểm chứng
+- `npm test` (không pipe, ghi ra tệp tạm rồi xóa) → exit 0, tests 11, pass 11, fail 0.
+- `git diff --stat` → chỉ gồm `src/cart.js`, `src/money.js`, `src/stock.js`, `test/cart.test.js` (76 dòng thêm, 5 dòng xóa).
+- Đối chiếu mã:
+  - `total` cộng `unitPrice*qty` rồi áp coupon một lần.
+  - `applyPercent` dùng `Math.floor((amount*pct+50)/100)`, kết quả là số nguyên.
+  - `reserve` từ chối khi `have < qty` hoặc qty không hợp lệ.
+  - `addItem` dùng `>` nên mua đúng 10 được, 11 ném `QTY_LIMIT`.
+- Lần ghi test đầu bằng heredoc bị hook chặn và không ghi gì. Tôi làm lại bằng công cụ Edit.
+
+## Quyết định thiết kế
+Không đổi tên hay signature của hàm export nào. Test mới nằm trong cùng tệp test, import `reserve` ở giữa tệp, theo kiểu import rải rác sẵn có.
+
+## Rủi ro & việc còn mở
+- `applyCoupon` chưa kiểm `pct` nằm trong khoảng 0–100. Pct âm hoặc lớn hơn 100 vẫn cho tổng sai. Việc này nằm ngoài phạm vi 3 lỗi được báo nên tôi không sửa.
+- `reserve` chưa kiểm `sku` hợp lệ. Sku không tồn tại có tồn kho 0 nên bị từ chối, đây là hành vi chấp nhận được.
+
+Bản đầy đủ: `.ccoding/T-20261102-195455-f9b/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-195455-f9b` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **26 in / 8,465 out**, cache đọc 168.4k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 22 | 7369 | 146246 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 1096 | 22177 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Xác minh bản sửa trong worktree và bổ sung test biên còn thiếu (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 2 · # suites 0 · # pass 1 · # fail 1 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 11 · # suites 0 · # pass 11 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **96** A | — | 100 | 89 | 100 | 1 | 1 | 154k | 2/15 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 23k | 0/1 |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

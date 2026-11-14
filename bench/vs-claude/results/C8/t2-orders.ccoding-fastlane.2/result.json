@@ -1,0 +1,67 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261102-130551-d47",
+  "wallSec": 102,
+  "wallSecHarness": 105,
+  "costUsd": 0.5490179,
+  "tokens": {
+   "input": 40,
+   "output": 19156,
+   "cacheRead": 525220,
+   "cacheWrite": 74926
+  },
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "Tiền tệ, phân bổ giảm giá, thuế (lỗi 1, 2, 6)"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "Khuyến mãi: mua X tặng Y, hạn dùng, giá trị tối thiểu (lỗi 3, 4, 1 phần minSubtotal)"
+   },
+   {
+    "id": "S3",
+    "status": "done",
+    "title": "Giữ chỗ tồn kho nhất quán với giỏ hàng (lỗi 5)"
+   }
+  ],
+  "workdir": "/home/claude/ccoding-dev/workspaces/b-c8-t2-fastla-2/wt-T-20261102-130551-d47",
+  "branch": "ccoding/t-20261102-130551-d47"
+ },
+ "task": "t2-orders",
+ "system": "ccoding-fastlane",
+ "rep": 2,
+ "key": "t2-orders.ccoding-fastlane.2",
+ "env": "cloud",
+ "startedAt": "2026-11-02T06:05:51.025Z",
+ "finishedAt": "2026-11-02T06:07:36.655Z",
+ "grade": {
+  "hidden": {
+   "pass": 60,
+   "fail": 0,
+   "total": 60,
+   "failed": [],
+   "ms": 191,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 22,
+   "fail": 0,
+   "total": 22
+  },
+  "changed": [
+   "~src/cart.js",
+   "~src/checkout.js",
+   "~src/money.js",
+   "~src/promotions.js",
+   "+test/inventory.test.js",
+   "+test/money-checkout.test.js",
+   "+test/promotions.test.js"
+  ]
+ },
+ "audit": []
+}

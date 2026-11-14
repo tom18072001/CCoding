@@ -1,0 +1,14 @@
+Mình đã hiện thực `parseDuration` và `formatDuration` trong `src/duration.js` theo SPEC.md, không thêm thư viện ngoài. `npm test` xanh: 8/8 test pass, gồm 3 test có sẵn và 5 test biên mới thêm vào `test/duration.test.js`.
+
+Các test mới kiểm tra:
+- **Số và số thuần:** làm tròn half away from zero, `-0` trả về `0`, và các chuỗi bị từ chối như `".5"`, `"5."`, `"1e3"`, `"--5"`.
+- **Dạng đơn vị:** dấu, khoảng trắng, các bí danh đơn vị, thứ tự giảm dần, đơn vị trùng lặp, và trộn số thuần với đơn vị.
+- **ISO 8601:** dấu phẩy thập phân, `P1W` đứng riêng, và các dạng sai như `P`, `PT`, `P1DT`, `P1Y`, `P1M`.
+- **`formatDuration`:** `largest` kèm nhớ lên đơn vị lớn hơn (ví dụ `6d 23h 59m 31s` với `largest: 2` ra `1w`), số ít/số nhiều ở dạng long, dấu âm, và các `options` không hợp lệ.
+- **Round-trip:** `parseDuration(formatDuration(x))` bằng `parseDuration(x)` ở cả hai kiểu `short` và `long`.
+
+Chuỗi được cộng và làm tròn bằng BigInt thay vì số thực, để các giá trị như `"1.0005s"` và `"0.0005s"` làm tròn đúng.
+
+SPEC không nói rõ hai chỗ, nên mình chọn như sau:
+- **Dấu và `P`:** `"- PT1S"` được chấp nhận, vì khoảng trắng sau dấu được phép chung cho mọi dạng.
+- **`options`:** `null` được coi như không có options.

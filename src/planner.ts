@@ -6,6 +6,10 @@ export interface PlanResult {
   decisions: string[];
   subtasks: Subtask[];
   parsed: boolean;
+  /** B-10: JSON kế hoạch bị cắt cụt/không đóng (có "subtasks" nhưng không đọc hết được). */
+  truncated?: boolean;
+  /** B-10: đích kế hoạch khai ngoài phạm vi kèm lý do. */
+  outOfScope?: Array<{ target: string; reason: string }>;
 }
 
 interface RawSubtask {
@@ -18,22 +22,27 @@ interface RawSubtask {
   deliverable?: unknown;
 }
 
-const MAX_SUBTASKS = 8;
+export const MAX_SUBTASKS = 8;
 
-function skillScore(text: string, a: AgentDef): number {
+export function skillScore(text: string, a: AgentDef): number {
   const t = text.toLowerCase();
   return a.skills.reduce((n, s) => (t.includes(s.replace(/-/g, ' ')) || t.includes(s) ? n + 2 : n), 0) + (t.includes(a.id) ? 3 : 0);
 }
 
+/** Khớp trực tiếp tên người nhận với roster (id, @id, tên, chức danh) — không đoán theo kỹ năng. */
+export function matchAssigneeDirect(raw: string, roster: AgentDef[]): AgentDef | undefined {
+  const r = raw.trim().replace(/^@/, '').toLowerCase();
+  if (!r) return undefined;
+  return (
+    roster.find((a) => a.id.toLowerCase() === r || a.name.toLowerCase() === r) ??
+    roster.find((a) => r.includes(a.id.toLowerCase()) || a.title.toLowerCase().includes(r) || r.includes(a.name.toLowerCase()))
+  );
+}
+
 /** Ghép tên người giao việc mà LLM viết (id, @id, tên, chức danh) về id agent hợp lệ. */
 export function matchAssignee(raw: string, roster: AgentDef[], context = ''): AgentDef | undefined {
-  const r = raw.trim().replace(/^@/, '').toLowerCase();
-  if (r) {
-    const exact = roster.find((a) => a.id.toLowerCase() === r || a.name.toLowerCase() === r);
-    if (exact) return exact;
-    const partial = roster.find((a) => r.includes(a.id.toLowerCase()) || a.title.toLowerCase().includes(r) || r.includes(a.name.toLowerCase()));
-    if (partial) return partial;
-  }
+  const direct = matchAssigneeDirect(raw, roster);
+  if (direct) return direct;
   const scored = roster
     .filter((a) => a.role !== 'lead')
     .map((a) => ({ a, s: skillScore(`${raw} ${context}`, a) }))
@@ -89,8 +98,13 @@ export function fallbackPlan(brief: string, roster: AgentDef[], lead: AgentDef):
 }
 
 export function parsePlan(text: string, roster: AgentDef[], lead: AgentDef, brief: string): PlanResult {
-  const raw = extractJson<{ summary?: unknown; decisions?: unknown; subtasks?: RawSubtask[] }>(text);
-  if (!raw || !Array.isArray(raw.subtasks) || raw.subtasks.length === 0) return fallbackPlan(brief, roster, lead);
+  const raw = extractJson<{ summary?: unknown; decisions?: unknown; subtasks?: RawSubtask[]; outOfScope?: unknown; out_of_scope?: unknown }>(text);
+  if (!raw || !Array.isArray(raw.subtasks) || raw.subtasks.length === 0) {
+    const fb = fallbackPlan(brief, roster, lead);
+    return text.includes('"subtasks"') ? { ...fb, truncated: true } : fb;
+  }
+  // còn nhiều "assignee" trong văn bản hơn số hạng mục đọc được → JSON bị cắt giữa chừng
+  const truncated = (text.match(/"assignee"\s*:/g)?.length ?? 0) > raw.subtasks.length;
   const used = new Set<string>();
   const idMap = new Map<string, string>();
   const subtasks: Subtask[] = [];
@@ -102,13 +116,26 @@ export function parsePlan(text: string, roster: AgentDef[], lead: AgentDef, brie
     idMap.set(String(r.id ?? id), id);
     const title = String(r.title ?? `Hạng mục ${i + 1}`).slice(0, 160);
     const description = String(r.description ?? '');
-    const who = matchAssignee(String(r.assignee ?? ''), roster, `${title} ${description}`) ?? lead;
+    const rawWho = String(r.assignee ?? '').trim();
+    const who = matchAssignee(rawWho, roster, `${title} ${description}`) ?? lead;
+    const unmatched = rawWho && !matchAssigneeDirect(rawWho, roster) ? rawWho.slice(0, 80) : undefined;
     const deps = (Array.isArray(r.dependsOn) ? r.dependsOn : Array.isArray(r.depends_on) ? r.depends_on : []).map(String);
-    subtasks.push(newSubtask({ id, title, assignee: who.id, description, dependsOn: deps, deliverable: r.deliverable ? String(r.deliverable) : undefined }));
+    subtasks.push(newSubtask({ id, title, assignee: who.id, description, dependsOn: deps, deliverable: r.deliverable ? String(r.deliverable) : undefined, ...(unmatched ? { assigneeUnmatched: unmatched } : {}) }));
   });
   for (const s of subtasks) s.dependsOn = s.dependsOn.map((d) => idMap.get(d) ?? d);
   const decisions = Array.isArray(raw.decisions) ? raw.decisions.map(String) : typeof raw.decisions === 'string' ? [raw.decisions] : [];
-  return { summary: String(raw.summary ?? '').slice(0, 1000), decisions, subtasks: breakCycles(subtasks), parsed: true };
+  const oosRaw = raw.outOfScope ?? raw.out_of_scope;
+  const outOfScope = (Array.isArray(oosRaw) ? oosRaw : [])
+    .map((o: any) => ({ target: String(typeof o === 'string' ? o.split(/\s+[—–-]\s+|:\s+/)[0] : (o?.target ?? o?.path ?? o?.file ?? '')).trim(), reason: String(typeof o === 'string' ? o.split(/\s+[—–-]\s+|:\s+/).slice(1).join(' — ') : (o?.reason ?? o?.why ?? '')).trim() }))
+    .filter((o) => o.target);
+  return {
+    summary: String(raw.summary ?? '').slice(0, 1000),
+    decisions,
+    subtasks: breakCycles(subtasks),
+    parsed: true,
+    ...(truncated ? { truncated } : {}),
+    ...(outOfScope.length ? { outOfScope } : {}),
+  };
 }
 
 export interface ReviewResult {
@@ -118,6 +145,34 @@ export interface ReviewResult {
   /** Lệnh kiểm tra reviewer khai báo đã chạy ("checks" trong JSON). */
   checks: ReviewCheck[];
   parsed: boolean;
+}
+
+/**
+ * Lỗi review không trỏ đúng mã hạng mục (vd. "Lỗi 3/4 (src/promotions.js)") trước đây không vào vòng sửa nào → nhiệm vụ xong mà lỗi
+ * còn nguyên (benchtest C7 t2, 2/11: 52/60 test ẩn). Gán mỗi lỗi blocker/major như vậy cho hạng mục gần nhất theo từ chung (tên tệp,
+ * từ khóa) — hòa thì lấy hạng mục đầu; giữ nhãn gốc trong nội dung. Trả về số lỗi đã gán.
+ */
+export function assignStrayIssues(issues: ReviewIssue[], subtasks: Array<Pick<Subtask, 'id' | 'title' | 'description'>>): number {
+  if (!subtasks.length) return 0;
+  const ids = new Set(subtasks.map((s) => s.id));
+  const words = (t: string) => new Set((t.toLowerCase().match(/[\p{L}\p{N}_./-]{3,}/gu) ?? []).flatMap((w) => [w, ...w.split(/[./-]/).filter((x) => x.length >= 3)]));
+  let n = 0;
+  for (const i of issues) {
+    if (i.severity === 'minor' || ids.has(i.subtask)) continue;
+    const want = words(`${i.subtask} ${i.comment}`);
+    let best = subtasks[0];
+    let bestScore = -1;
+    for (const s of subtasks) {
+      const have = words(`${s.id} ${s.title} ${s.description}`);
+      let score = 0;
+      for (const w of want) if (have.has(w)) score++;
+      if (score > bestScore) [best, bestScore] = [s, score];
+    }
+    i.comment = `(${i.subtask || 'không ghi hạng mục'}) ${i.comment}`;
+    i.subtask = best.id;
+    n++;
+  }
+  return n;
 }
 
 export function parseReview(text: string, subtaskIds: string[]): ReviewResult {
@@ -152,7 +207,7 @@ export interface AcceptResult {
   accepted: boolean;
   parsed: boolean;
   summary: string;
-  criteria: Array<{ name: string; result: 'pass' | 'fail' | 'unknown'; evidence: string }>;
+  criteria: Array<{ name: string; result: 'pass' | 'fail' | 'unknown'; evidence: string; scope?: 'in' | 'decision' }>;
   risks: string[];
   followUps: Array<{ title: string; brief: string; department?: string }>;
   /** Phần hiển thị: câu trả lời bỏ khối JSON kết luận. */
@@ -186,8 +241,17 @@ export function parseAcceptance(text: string): AcceptResult {
     const t = String(v ?? '').toLowerCase();
     return /^(pass|đạt|dat|ok|yes|true)$/.test(t) ? 'pass' : /^(fail|không|khong|không đạt|no|false)$/.test(t) ? 'fail' : 'unknown';
   };
+  // phân loại phạm vi: chỉ tiêu chí chưa đạt mới có; thiếu hoặc giá trị lạ → decision (an toàn)
+  const scopeOf = (v: unknown): 'in' | 'decision' => {
+    const t = String(v ?? '').trim().toLowerCase().replace(/[\s_]+/g, '-');
+    return /^(in|in-scope|inscope|trong-phạm-vi|trong-pham-vi|trong phạm vi)$/.test(t) ? 'in' : 'decision';
+  };
   const criteria = (Array.isArray(raw.criteria) ? raw.criteria : [])
-    .map((c: any) => ({ name: String(c?.name ?? c?.criterion ?? '').slice(0, 300), result: res(c?.result ?? c?.status), evidence: String(c?.evidence ?? '').slice(0, 500) }))
+    .map((c: any) => {
+      const result = res(c?.result ?? c?.status);
+      const base = { name: String(c?.name ?? c?.criterion ?? '').slice(0, 300), result, evidence: String(c?.evidence ?? '').slice(0, 500) };
+      return result === 'pass' ? base : { ...base, scope: scopeOf(c?.scope) };
+    })
     .filter((c) => c.name)
     .slice(0, 20);
   const risks = (Array.isArray(raw.risks) ? raw.risks : []).map((r) => String(r ?? '').slice(0, 400)).filter(Boolean).slice(0, 12);

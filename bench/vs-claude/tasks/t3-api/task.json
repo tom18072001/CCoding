@@ -1,0 +1,18 @@
+{
+  "id": "t3-api",
+  "category": "coding",
+  "size": 6,
+  "sizeBasis": "files: src/auth.js, csv.js, handlers/audit.js, handlers/tasks.js, query.js, server.js",
+  "sizeLegacy": 4,
+  "sizeReason": "Bốn tính năng độc lập trong FEATURES.md: xác thực/phân quyền, lọc-tìm-sắp xếp-phân trang, xuất CSV, nhật ký thao tác",
+  "title": "Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật",
+  "hypotheses": [
+    "H1",
+    "H10"
+  ],
+  "deliverable": "src/",
+  "brief": "Hiện thực đầy đủ 4 tính năng trong FEATURES.md cho API quản lý nhiệm vụ này (xác thực & phân quyền, lọc/tìm/sắp xếp/phân trang, xuất CSV, nhật ký thao tác). Bám sát từng quy tắc của đặc tả (mã lỗi, thứ tự kiểm tra, định dạng CSV) — bộ nghiệm thu ẩn sẽ gọi API thật qua HTTP để kiểm tra. Cập nhật test có sẵn cho hợp với dạng kết quả mới, thêm test cho từng tính năng, đảm bảo `npm test` xanh. Không thêm thư viện ngoài.",
+  "grader": "code",
+  "repoDir": "starter",
+  "solutionDir": "ref"
+}

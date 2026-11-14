@@ -1,0 +1,36 @@
+{
+  "env": "cloud",
+  "benchRoot": "<đường dẫn tới bench/vs-claude>",
+  "workRoot": "<thư mục tạm ngoài repo>",
+  "claudeCmd": "claude",
+  "ccodingUrl": "http://127.0.0.1:7420",
+  "baselineModel": "opus",
+  "dropEnv": [
+    "CLAUDE_EFFORT"
+  ],
+  "scrubKeys": false,
+  "maxCostUsd": 200,
+  "claudeTimeoutMin": 45,
+  "ccodingTimeoutMin": 60,
+  "variants": {
+    "ccoding-fast": {
+      "discussionRounds": 0,
+      "phaseModels": {
+        "synthesize": "sonnet"
+      }
+    },
+    "ccoding-sonlead": {
+      "phaseModels": {
+        "plan": "sonnet",
+        "finalize": "sonnet",
+        "synthesize": "sonnet"
+      }
+    },
+    "ccoding-new": {
+      "_url": "http://127.0.0.1:7422"
+    },
+    "ccoding-fastlane": {
+      "_url": "http://127.0.0.1:7422"
+    }
+  }
+}

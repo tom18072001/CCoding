@@ -1,0 +1,18 @@
+I reviewed `src/server.js` and wrote `findings.json` in the repository root with seven findings. I didn't modify the source or run the app.
+
+| Line | Type | Severity | Issue |
+|---|---|---|---|
+| 11 | hardcoded-secret | high | The JWT secret is hardcoded in the source. |
+| 30 | sqli | critical | `req.query.q` is interpolated straight into the SQL string. |
+| 42 | path-traversal | high | `req.params.name` is joined onto `REPORT_DIR` with no containment check. |
+| 58 | weak-crypto | high | Passwords are hashed with unsalted MD5. |
+| 65 | ssrf | high | The server fetches a user-supplied URL with no restrictions. |
+| 70 | missing-authz | high | Any authenticated user can delete any ticket. |
+| 84 | command-injection | critical | `req.body.format` is interpolated into a shell command passed to `exec`. |
+
+I left out several things that looked suspicious but didn't hold up as exploitable issues:
+- **`/api/statuses` (line 36):** the table name is a server-side constant, so the query isn't injectable.
+- **`/api/attachments/:id` (lines 47–53):** the query is parameterised, the name goes through `path.basename`, and only `.pdf`, `.png` and `.jpg` files are served.
+- **`/api/diag/ping` (line 76):** it uses `execFile` with an argument array, an admin check and a hostname regex. The regex still allows a leading `-`, but I didn't count that as a real finding.
+- **`verifyJwt` (line 18):** it is never imported or defined, so the code would throw as written. I treated that as a functional bug rather than a security finding.
+- **Line 66:** the preview response is sent back unescaped. I judged that as a consequence of the SSRF finding rather than a separate XSS issue.

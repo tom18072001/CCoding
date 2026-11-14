@@ -1,0 +1,74 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude c5-tickets-api__B7__r1] Filtering, sorting and cursor pagination for a tickets API
+
+_Làn đơn: một agent làm trọn đề bài; báo cáo dựng tự động từ bàn giao và kết quả cổng chất lượng (không gọi model)._
+
+## Tóm tắt
+
+Làn đơn: Senior Software Engineer (@senior-swe) làm trọn đề bài trong worktree nhiệm vụ
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — [vs-claude c5-tickets-api__B7__r1] Filtering, sorting and cursor pagination for a tickets API (@senior-swe, done)
+
+## Tóm tắt
+`GET /tickets` trong `src/handler.js` giờ hỗ trợ `status`, `assignee`, `sort`, `limit` và `cursor`, kèm validation trả 400. Gọi không có tham số vẫn trả về mảng thuần sắp theo id như trước. Cursor dùng keyset pagination. `npm test` chạy 15 test, đều pass.
+
+## Tệp đã tạo/sửa
+- `src/handler.js` · thêm hàm `list()`, mã hoá/giải mã cursor và validation. Route `/tickets/:id` giữ nguyên.
+- `test/list.test.js` · file mới, 14 test (baseline có 1 test trong `test/existing.test.js`, không đổi).
+
+## Kiểm chứng
+- `npm test` → exit 0, `# tests 15`, `# pass 15`, `# fail 0`.
+- Lần chạy đầu có 1 test fail, do test của tôi: bộ lọc chỉ khớp 2 ticket nên không có trang thứ hai. Đã nới bộ lọc trong test rồi chạy lại. Không sửa code.
+
+## Quyết định thiết kế
+- Cursor là base64url của `{f, k}`. `f` là fingerprint của `status`, `assignee`, `sort` (giá trị chuỗi gốc). `k` là `[giá trị trường sort, id]` của phần tử cuối trang.
+- Trang kế tiếp lấy các phần tử đứng sau `k` theo đúng comparator. Cách này không bị lệch khi dữ liệu có đồng hạng ở `priority` hoặc `createdAt`.
+- Fingerprint so khớp theo chuỗi gốc, nên `status=open,closed` và `status=closed,open` bị coi là khác nhau và cursor cũ bị từ chối. Đây là cách hiểu chặt của "same values".
+- Tham số có giá trị rỗng (`status=`, `assignee=`, `limit=`, `sort=`) hoặc phần tử rỗng trong danh sách (`open,`) đều trả `invalid_<param>`.
+- `limit` chỉ nhận chuỗi toàn chữ số (`1.5`, `-1`, `abc` bị từ chối). `sort=--id` bị từ chối.
+- Thứ tự kiểm tra: `status`, `assignee`, `sort`, `limit`, rồi `cursor`. Khi có nhiều tham số sai cùng lúc, lỗi trả về là của tham số đầu tiên theo thứ tự này.
+
+## Rủi ro & việc còn mở
+- Cursor không được ký, nên client sửa được nội dung nhưng chỉ ảnh hưởng vị trí trang của chính họ. Giá trị trong cursor được kiểm tra kiểu nên không gây lỗi.
+- Cursor lưu theo vị trí chứ không theo snapshot. Nếu ticket bị sửa hoặc xoá giữa các trang thì trang sau có thể sót hoặc lặp. Đây là hành vi thông thường của keyset pagination.
+- Không áp dụng ESCALATE.
+
+Bản đầy đủ: `.ccoding/T-20261102-192041-2e9/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng (làn đơn): lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-192041-2e9` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **16 in / 9,125 out**, cache đọc 135.7k, 1 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 16 | 9125 | 135694 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude c5-tickets-api__B7__r1] Filtering, sorting and cursor pagination for a tickets API (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 1 · # suites 0 · # pass 1 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 15 · # suites 0 · # pass 15 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **97** A | — | 100 | 91 | 100 | 1 | 1 | 145k | 1/9 |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

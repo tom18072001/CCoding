@@ -1,0 +1,10 @@
+Đã sửa cả 6 lỗi trong `ISSUES.md`, và `npm test` xanh: 14 test pass, 0 fail. API công khai giữ nguyên, nhưng `money.js` có thêm export `roundHalfAway`.
+
+1. **Làm tròn sai xu.** `1.005 * 100` ra `100.4999…` nên `Math.round` làm tròn xuống. `toCents` giờ dùng hàm `roundHalfAway` mới (thêm vào `money.js`), làm tròn half away from zero. Mã giảm cố định, giảm %, giảm theo danh mục và thuế dùng chung hàm này.
+2. **Giảm giá bị hụt.** `allocate` chỉ lấy phần nguyên và bỏ phần dư. Giờ nó chia theo phương pháp phần dư lớn nhất, phần bằng nhau thì dòng đứng trước được trước, nên tổng các dòng đúng bằng số tiền giảm.
+3. **Mua X tặng Y.** Công thức cũ là `floor(qty/buy)*free`. Đã đổi thành `floor(qty/(buy+free))*free`.
+4. **Mã hết hạn sớm.** `endsAt` bị hiểu là 00:00 UTC của ngày đó. Giờ mã dùng được tới hết ngày `endsAt` và bị từ chối từ 00:00 UTC ngày hôm sau.
+5. **Kho.** `updateQty` giữ chỗ cả số lượng mới thay vì phần chênh lệch, và `removeItem` không trả kho. Giờ nó chỉ giữ hoặc trả phần chênh lệch, và `removeItem` trả lại toàn bộ số lượng của dòng đó. Nếu `updateQty` báo hết hàng thì trạng thái giỏ và kho không đổi.
+6. **Thuế.** Thuế giờ tính trên `net` của từng dòng thay vì `gross`.
+
+Test hồi quy nằm trong `test/regression.test.js`, mỗi lỗi có ít nhất một test.

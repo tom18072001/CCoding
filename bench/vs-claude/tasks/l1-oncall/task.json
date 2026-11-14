@@ -1,0 +1,14 @@
+{
+  "id": "l1-oncall",
+  "category": "logic",
+  "size": 3,
+  "sizeBasis": "answers: schedule, count_without_rule_2, most_permissive_rule",
+  "sizeLegacy": 1,
+  "title": "On-call rota constraint puzzle",
+  "hypotheses": [
+    "H2"
+  ],
+  "deliverable": "answer.json",
+  "brief": "Five engineers - An, Binh, Chi, Dung, Em - each take exactly one on-call day, Monday to Friday, one person per day.\n\nRules:\n1. An is not on call on Monday or Friday.\n2. Binh is on call the day immediately after Chi.\n3. Dung is on call earlier in the week than An.\n4. Em and Binh are not on consecutive days.\n5. Chi is not on call on Monday.\n6. Em is not on call on Wednesday.\n7. Dung and Em are not on consecutive days.\n\nAnswer three questions and write them to `answer.json` in the repository root, exactly in this shape:\n`{ \"schedule\": { \"Mon\": \"...\", \"Tue\": \"...\", \"Wed\": \"...\", \"Thu\": \"...\", \"Fri\": \"...\" }, \"count_without_rule_2\": <integer>, \"most_permissive_rule\": <integer 1-7> }`\n\n- `schedule`: the unique rota satisfying all seven rules.\n- `count_without_rule_2`: how many rotas satisfy every rule except rule 2.\n- `most_permissive_rule`: the rule whose removal (alone) allows the largest number of valid rotas.",
+  "grader": "exact"
+}

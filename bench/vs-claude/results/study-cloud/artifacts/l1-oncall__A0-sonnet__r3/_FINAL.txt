@@ -1,0 +1,7 @@
+I brute-forced all 120 possible rotas and wrote the results to `answer.json` in the repository root.
+
+- **Schedule:** exactly one rota satisfies all seven rules: Mon Dung, Tue Chi, Wed Binh, Thu An, Fri Em.
+- **`count_without_rule_2`:** 10 rotas satisfy every rule except rule 2.
+- **`most_permissive_rule`:** 2. Removing rule 2 allows 10 rotas, more than removing any other single rule (the others allow between 2 and 4).
+
+The JSON key order in the file is Thu, Wed, Tue, Mon, Fri rather than Mon to Fri. The shape is correct, but say if you want the days in weekday order.

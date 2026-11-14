@@ -1,0 +1,166 @@
+TAP version 13
+# Subtest: 401: thiếu hoặc sai X-User trên mọi route
+ok 1 - 401: thiếu hoặc sai X-User trên mọi route
+  ---
+  duration_ms: 108.552395
+  type: 'test'
+  ...
+# Subtest: GET /tasks/:id: member nhóm khác → 404, manager/admin thấy
+ok 2 - GET /tasks/:id: member nhóm khác → 404, manager/admin thấy
+  ---
+  duration_ms: 28.609917
+  type: 'test'
+  ...
+# Subtest: POST: ma trận vai trò
+ok 3 - POST: ma trận vai trò
+  ---
+  duration_ms: 39.647438
+  type: 'test'
+  ...
+# Subtest: PATCH: ma trận vai trò
+ok 4 - PATCH: ma trận vai trò
+  ---
+  duration_ms: 52.03335
+  type: 'test'
+  ...
+# Subtest: DELETE: ma trận vai trò
+ok 5 - DELETE: ma trận vai trò
+  ---
+  duration_ms: 12.008987
+  type: 'test'
+  ...
+# Subtest: audit: nội dung, thứ tự, lọc, chỉ ghi khi thành công
+ok 6 - audit: nội dung, thứ tự, lọc, chỉ ghi khi thành công
+  ---
+  duration_ms: 16.418042
+  type: 'test'
+  ...
+# Subtest: GET /audit: quyền và query
+ok 7 - GET /audit: quyền và query
+  ---
+  duration_ms: 9.201239
+  type: 'test'
+  ...
+# Subtest: danh sách rỗng chỉ có BOM + tiêu đề
+ok 8 - danh sách rỗng chỉ có BOM + tiêu đề
+  ---
+  duration_ms: 0.877769
+  type: 'test'
+  ...
+# Subtest: t7: công thức + dấu phẩy + ngoặc kép
+ok 9 - t7: công thức + dấu phẩy + ngoặc kép
+  ---
+  duration_ms: 0.324238
+  type: 'test'
+  ...
+# Subtest: t8: xuống dòng được bọc ngoặc kép
+ok 10 - t8: xuống dòng được bọc ngoặc kép
+  ---
+  duration_ms: 0.181783
+  type: 'test'
+  ...
+# Subtest: t11: bắt đầu bằng "-" được thêm dấu nháy; assignee null để trống
+ok 11 - t11: bắt đầu bằng "-" được thêm dấu nháy; assignee null để trống
+  ---
+  duration_ms: 0.111117
+  type: 'test'
+  ...
+# Subtest: task có nhiều trường null/undefined
+ok 12 - task có nhiều trường null/undefined
+  ---
+  duration_ms: 0.167349
+  type: 'test'
+  ...
+# Subtest: escapeCell: các ký tự đầu nguy hiểm, số giữ nguyên
+ok 13 - escapeCell: các ký tự đầu nguy hiểm, số giữ nguyên
+  ---
+  duration_ms: 0.120096
+  type: 'test'
+  ...
+# Subtest: parseQuery: mặc định
+ok 14 - parseQuery: mặc định
+  ---
+  duration_ms: 1.188885
+  type: 'test'
+  ...
+# Subtest: parseQuery: giá trị không hợp lệ
+ok 15 - parseQuery: giá trị không hợp lệ
+  ---
+  duration_ms: 1.311302
+  type: 'test'
+  ...
+# Subtest: parseQuery: tham số lạ, lặp, và lỗi đầu tiên theo thứ tự URL
+ok 16 - parseQuery: tham số lạ, lặp, và lỗi đầu tiên theo thứ tự URL
+  ---
+  duration_ms: 0.231824
+  type: 'test'
+  ...
+# Subtest: parseQuery: allowPaging=false coi page/pageSize là tham số lạ
+ok 17 - parseQuery: allowPaging=false coi page/pageSize là tham số lạ
+  ---
+  duration_ms: 0.236305
+  type: 'test'
+  ...
+# Subtest: applyQuery: lọc status/assignee/team/dueBefore
+ok 18 - applyQuery: lọc status/assignee/team/dueBefore
+  ---
+  duration_ms: 1.170366
+  type: 'test'
+  ...
+# Subtest: applyQuery: q không phân biệt dấu/hoa thường, đ→d, rỗng = không lọc
+ok 19 - applyQuery: q không phân biệt dấu/hoa thường, đ→d, rỗng = không lọc
+  ---
+  duration_ms: 0.554062
+  type: 'test'
+  ...
+# Subtest: applyQuery: sắp xếp
+ok 20 - applyQuery: sắp xếp
+  ---
+  duration_ms: 7.977464
+  type: 'test'
+  ...
+# Subtest: applyQuery: id so theo số (t2 < t10)
+ok 21 - applyQuery: id so theo số (t2 < t10)
+  ---
+  duration_ms: 1.672539
+  type: 'test'
+  ...
+# Subtest: applyQuery: phân trang
+ok 22 - applyQuery: phân trang
+  ---
+  duration_ms: 0.54431
+  type: 'test'
+  ...
+# Subtest: HTTP: GET /tasks xác thực → query → quyền
+ok 23 - HTTP: GET /tasks xác thực → query → quyền
+  ---
+  duration_ms: 62.834568
+  type: 'test'
+  ...
+# Subtest: HTTP: GET /tasks/export.csv
+ok 24 - HTTP: GET /tasks/export.csv
+  ---
+  duration_ms: 17.682712
+  type: 'test'
+  ...
+# Subtest: CRUD cơ bản
+ok 25 - CRUD cơ bản
+  ---
+  duration_ms: 66.916376
+  type: 'test'
+  ...
+# Subtest: validate
+ok 26 - validate
+  ---
+  duration_ms: 10.509786
+  type: 'test'
+  ...
+1..26
+# tests 26
+# suites 0
+# pass 26
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 778.13612

@@ -1,0 +1,8 @@
+**Stage 3: Self-review**
+- By hand: if A were healthy, B would be compromised, which forces E compromised, D healthy and C compromised. That makes exactly three compromised (B, C, E), so C's statement would be true, which contradicts C being compromised.
+- So A is compromised and B is healthy. That makes A and E match, so E is compromised. Then D's state is the opposite of C's, which makes exactly three compromised, so C is healthy and D is compromised. This matches the brute-force result.
+- The file has the required keys, the letters are sorted, and exactly one assignment is consistent.
+
+**Stage 4: Fix.** The review found nothing to fix.
+
+**Report:** Healthy servers are B and C. Compromised servers are A, D and E. The solution is unique, and `answer.json` is written in the repo root.

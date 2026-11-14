@@ -517,3 +517,160 @@ test('KPI v2 (sửa 4): số bằng chứng n không đếm trùng hạng mục/
     app.cleanup();
   }
 });
+
+test('KPI v2 (FX8): tách truncated (cắt thật) và turnCapped; output cộng dồn của claude-cli không phải cắt', () => {
+  const app = testApp();
+  try {
+    const calls = {
+      T8: [
+        // discuss: runtime áp trần 700 và báo cắt thật
+        call({ taskId: 'T8', agentId: 'backend-dev', phase: 'discuss', runtime: 'api', output: 700, truncated: true, maxTokens: 700 }),
+        // execute claude-cli: output cộng dồn 4,8 lần maxTokens, không cờ cắt → KHÔNG truncated
+        call({ taskId: 'T8', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S1', runtime: 'claude-cli', output: 153_000, maxTokens: 32_000, turns: 20, tools: [tool('read_file', 'a')], text: 'x'.repeat(50) }),
+        // chạm trần vòng công cụ → turnCapped, không truncated
+        call({ taskId: 'T8', agentId: 'backend-dev', phase: 'revise', subtaskId: 'S1', runtime: 'claude-cli', output: 500, maxTokens: 32_000, turns: 16, diag: 'chạm trần 16 lượt (--max-turns của claude-cli)', tools: [tool('read_file', 'a')], text: 'y'.repeat(50) }),
+        call({ taskId: 'T8', agentId: 'backend-dev', phase: 'revise', subtaskId: 'S2', runtime: 'api', output: 100, turnCapped: true, text: 'z'.repeat(50) }),
+      ],
+    };
+    const be = computeKpi(source(app, [task('T8')], calls)).agents.find((a) => a.agentId === 'backend-dev')!;
+    assert.equal(be.truncated, 1);
+    assert.equal(be.turnCapped, 2);
+    assert.ok(be.findingKeys.includes('truncated'));
+    assert.ok(be.findingKeys.includes('turn-capped'));
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('KPI v2 (D18c K4): ưu tiên turnCapped/stopReason; chỉ lùi về regex diag khi bản ghi cũ thiếu trường', () => {
+  const app = testApp();
+  try {
+    const calls = {
+      T9: [
+        // bản ghi mới: turnCapped=true, diag không cần chứa regex
+        call({ taskId: 'T9', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S1', runtime: 'claude-cli', output: 500, turns: 16, turnCapped: true, stopReason: 'tool_use', tools: [tool('read_file', 'a')], text: 'a'.repeat(50) }),
+        // bản ghi mới: turnCapped=false thắng diag có chữ "chạm trần" (không đếm)
+        call({ taskId: 'T9', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S2', runtime: 'claude-cli', output: 500, turns: 3, turnCapped: false, stopReason: 'end_turn', diag: 'chạm trần 16 lượt', tools: [tool('read_file', 'a')], text: 'b'.repeat(50) }),
+        // bản ghi cũ: không có turnCapped → lùi về regex diag
+        call({ taskId: 'T9', agentId: 'backend-dev', phase: 'execute', subtaskId: 'S3', runtime: 'claude-cli', output: 500, turns: 16, diag: 'chạm trần 16 lượt (--max-turns của claude-cli)', tools: [tool('read_file', 'a')], text: 'c'.repeat(50) }),
+        // stopReason max_tokens ⇒ cắt thật
+        call({ taskId: 'T9', agentId: 'backend-dev', phase: 'discuss', runtime: 'api', output: 100, stopReason: 'max_tokens' }),
+      ],
+    };
+    const be = computeKpi(source(app, [task('T9')], calls)).agents.find((a) => a.agentId === 'backend-dev')!;
+    assert.equal(be.turnCapped, 2);
+    assert.equal(be.truncated, 1);
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('KPI v2 (FX11): viết lại từ repo / thiết kế được miễn no-sources; tổng quan tài liệu vẫn bị báo', () => {
+  const app = testApp();
+  try {
+    const mk = (id: string, title: string, description: string, tools: ReturnType<typeof tool>[]) => {
+      const t = task(id, { runs: [{ department: 'research', usage: { input: 0, output: 0, cacheRead: 0 }, subtasks: [{ id: 'S1', assignee: 'academic-writer', title, description, attempts: 1, output: 'x' }], review: { approved: true, summary: '', issues: [] } }] });
+      const c = call({ taskId: id, agentId: 'academic-writer', department: 'research', phase: 'execute', subtaskId: 'S1', tools, text: '## Tóm tắt\nXong, không có nguồn ngoài.' });
+      return computeKpi(source(app, [t], { [id]: [c] })).agents.find((a) => a.agentId === 'academic-writer')!;
+    };
+    const rewrite = mk('TA', 'Viết lại mục 3', 'Viết lại từ các tệp trong repo, không cần nguồn ngoài', [tool('read_file', 'docs/a.md')]);
+    assert.ok(!rewrite.findingKeys.includes('no-sources'));
+    const review = mk('TB', 'Tổng quan tài liệu', 'Tổng quan tài liệu về chủ đề X', [tool('read_file', 'docs/a.md')]);
+    assert.ok(review.findingKeys.includes('no-sources'));
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('FX17: tasksCounted = tổng tasksByStatus = số dòng tasks; có định nghĩa; tasksFinished chỉ đếm done', () => {
+  const app = testApp();
+  try {
+    const ts = [task('T1'), task('T2', { status: 'paused' }), task('T3', { status: 'failed' }), task('T4', { status: 'cancelled' }), task('T5', { status: 'running' })];
+    const r = computeKpi(source(app, ts, {}));
+    assert.equal(r.tasksCounted, 5);
+    assert.equal(r.tasks.length, r.tasksCounted);
+    assert.deepEqual(r.tasksByStatus, { done: 1, paused: 1, failed: 1, cancelled: 1, running: 1 });
+    assert.equal(Object.values(r.tasksByStatus).reduce((s, v) => s + v, 0), r.tasksCounted, 'hai số khớp nhau');
+    assert.equal(r.tasksFinished, 1);
+    for (const k of ['tasksCounted', 'tasksByStatus', 'tasksFinished']) assert.ok(r.definitions[k]?.length > 10, `có định nghĩa ${k}`);
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('FX17: KPI điều phối viên — token route, lùi về keywordRoute, từ khóa từ đầu', () => {
+  const app = testApp();
+  try {
+    const route = (taskId: string, input: number, output: number) => call({ taskId, agentId: 'router', department: 'office', phase: 'route', input, output });
+    const ts = [
+      task('T1', { routing: { departments: ['dev'], reason: '', by: 'router' } }), // LLM route dùng được
+      task('T2', { routing: { departments: ['dev'], reason: '', by: 'keywords' } }), // gọi LLM route nhưng lùi về từ khóa
+      task('T3', { routing: { departments: ['dev'], reason: '', by: 'keywords' } }), // ép làn đơn: không gọi LLM
+      task('T4'), // chưa định tuyến
+    ];
+    const calls = { T1: [route('T1', 1000, 100)], T2: [route('T2', 800, 0)], T3: [], T4: [] };
+    const c = computeKpi(source(app, ts, calls)).coordinator;
+    assert.equal(c.routed, 3);
+    assert.equal(c.routeCalls, 2);
+    assert.equal(c.routeTokens, 1900);
+    assert.equal(c.tasksWithRouteCall, 2);
+    assert.equal(c.avgRouteTokens, 950);
+    assert.equal(c.fallbackToKeywords, 1);
+    assert.equal(c.keywordOnly, 1);
+    assert.equal(c.fallbackRate, 0.5);
+    const none = computeKpi(source(app, [task('T9')], {})).coordinator;
+    assert.equal(none.fallbackRate, null);
+    assert.equal(none.avgRouteTokens, null);
+    assert.match(kpiMarkdown(computeKpi(source(app, ts, calls))), /Điều phối viên: 3 nhiệm vụ định tuyến · 2 lượt route/);
+  } finally {
+    app.cleanup();
+  }
+});
+
+test('FX13: estimatePlanDetail — đường găng và song song dự kiến trên kế hoạch rẽ nhánh', () => {
+  const app = testApp();
+  try {
+    // người nhận không có trong roster → không có công cụ → mức "none"; đặt none = 100, tắt lịch sử để số tính tay được
+    const cfg = app.config.estimate as { base: number; perReview: number; historyDays?: number; web: number; perSubtask: Record<string, number> };
+    cfg.base = 50;
+    cfg.historyDays = 0;
+    cfg.perSubtask.none = 100;
+    const mk = (id: string, dependsOn: string[], status = 'pending') => ({ id, title: id, description: '', assignee: 'ghost', dependsOn, status, attempts: 0 });
+    const tk = { classification: 'internal', options: { review: false, maxRevisions: 0 } } as never;
+    // S1 → S2, S1 → S3, (S2, S3) → S4; S5 độc lập.
+    // work = 5 × 100 = 500; đường găng = S1 + S2 + S4 = 300 (S2 và S3 song song, đi theo một nhánh); song song = 500 / 300 = 1,67; total = 50 + 500.
+    const run = { department: 'dev', status: 'pending', usage: {}, subtasks: [mk('S1', []), mk('S2', ['S1']), mk('S3', ['S1']), mk('S4', ['S2', 'S3']), mk('S5', [])] } as never;
+    const d = app.orchestrator.estimatePlanDetail(tk, run);
+    assert.deepEqual(d, { total: 550, work: 500, criticalPathEstimate: 300, parallelism: 1.67 });
+    assert.equal(app.orchestrator.estimatePlan(tk, run), 550, 'estimatePlan vẫn trả tổng token');
+    // chuỗi thẳng S1→S2→S3: không song song được → cp = work, parallelism = 1
+    const chain = { department: 'dev', status: 'pending', usage: {}, subtasks: [mk('S1', []), mk('S2', ['S1']), mk('S3', ['S2'])] } as never;
+    assert.deepEqual(app.orchestrator.estimatePlanDetail(tk, chain), { total: 350, work: 300, criticalPathEstimate: 300, parallelism: 1 });
+    // hạng mục đã xong không tính; phụ thuộc vào hạng mục đã xong / không tồn tại bị bỏ qua; vòng phụ thuộc không treo
+    const odd = { department: 'dev', status: 'pending', usage: {}, subtasks: [mk('S1', [], 'done'), mk('S2', ['S1', 'S9']), mk('S3', ['S4']), mk('S4', ['S3'])] } as never;
+    const o = app.orchestrator.estimatePlanDetail(tk, odd);
+    assert.equal(o.work, 300);
+    assert.equal(o.criticalPathEstimate, 200);
+    assert.equal(app.orchestrator.estimatePlanDetail(tk, { department: 'dev', status: 'pending', usage: {}, subtasks: [] } as never).parallelism, 1);
+  } finally {
+    app.close?.();
+  }
+});
+
+test('FX13: log plan.estimate ghi criticalPathEstimate và parallelism, run.estimate lưu cùng số', async () => {
+  const app = testApp();
+  try {
+    const t = app.orchestrator.submit({ brief: 'Viết tài liệu API nhỏ cho dịch vụ thanh toán', options: { discussionRounds: 0 } });
+    const done = await app.orchestrator.waitFor(t.id);
+    const ev = app.logs.query({ task: t.id }).filter((e) => e.kind === 'plan.estimate');
+    assert.ok(ev.length >= 1, 'có log plan.estimate');
+    const d = ev[0].data as { estimate: number; work: number; criticalPathEstimate: number; parallelism: number };
+    assert.ok(d.criticalPathEstimate > 0 && d.criticalPathEstimate <= d.work);
+    assert.equal(d.parallelism, Math.round((d.work / d.criticalPathEstimate) * 100) / 100);
+    const est = done.runs[0].estimate;
+    assert.equal(est?.criticalPathEstimate, d.criticalPathEstimate);
+    assert.equal(est?.parallelism, d.parallelism);
+  } finally {
+    app.close?.();
+  }
+});

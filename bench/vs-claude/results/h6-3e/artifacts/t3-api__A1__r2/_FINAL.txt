@@ -1,0 +1,18 @@
+Cả 4 tính năng trong `FEATURES.md` đã xong và `npm test` xanh (15/15). Tôi chưa chạy bộ nghiệm thu ẩn nên chưa biết nó có khớp hết không. Chưa commit gì.
+
+**Đã làm**
+- **Xác thực và phân quyền:** server trả 401 cho mọi đường dẫn `/tasks…` và `/audit` khi thiếu hoặc sai `X-User`, kể cả trước 404/405. Luật admin/manager/member nằm trong `src/handlers/tasks.js`. Thứ tự kiểm tra là 401 → query 400 → 404 → 403 → validate body.
+- **Lọc/tìm/sắp xếp/phân trang:** `src/query.js` phân tích tham số theo thứ tự xuất hiện trên URL và báo tham số lỗi đầu tiên. `GET /tasks` trả `{items,total,page,pageSize}`.
+- **CSV:** `src/csv.js` làm phần xuất, và `GET /tasks/export.csv` được đăng ký trước `/tasks/:id`. Chuẩn CSV theo đúng đặc tả (BOM, `\r\n`, nháy kép RFC 4180, thêm `'` chống công thức).
+- **Nhật ký:** `Store.addAudit` ghi mỗi thao tác ghi thành công, và `src/handlers/audit.js` phục vụ `GET /audit`.
+- **Ngoài đặc tả:** đường dẫn có `%` sai (ví dụ `/tasks/%E0%A4%A`) trước đây gây 500, nay trả 404; `package.json` lên 0.4.0.
+- **Test:** `test/tasks.test.js` được cập nhật cho dạng kết quả mới và header `X-User`. Tôi thêm test cho từng tính năng: phân quyền, lọc, tìm, sắp xếp, phân trang, các lỗi `INVALID_QUERY`, CSV, nhật ký.
+
+Tôi tự kiểm lại đặc tả từng dòng và thấy hai lỗi trong quá trình làm. Sửa router lúc đầu không ăn vì file dùng CRLF, đã sửa lại. Một test CSV có biểu thức kiểm tra vô nghĩa, đã sửa.
+
+**Chỗ đặc tả không nói rõ, tôi tự chọn**
+- Tham số lặp bị báo lỗi tại lần xuất hiện thứ hai trên URL.
+- `assignee=` và `taskId=` rỗng được xem là bộ lọc đúng nghĩa đen (kết quả rỗng), khác với `q=` rỗng là không lọc.
+- Body JSON hỏng cho 400 `INVALID_JSON`, vì không đọc được body thì không xét được các luật 403 phụ thuộc body.
+- PATCH không đổi gì vẫn được ghi vào nhật ký với `changes: []`.
+- Validate `dueDate` trong body POST/PATCH vẫn chỉ kiểm dạng `YYYY-MM-DD`, như code cũ. Ngày không có thật như `2026-02-30` vẫn được nhận ở body, chỉ query mới bị từ chối.

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { killTree } from '../runtimes/spawn.js';
 import { redact } from '../util/redact.js';
 import { fetchUrl, searchPapers, WebError, webSearch } from './web.js';
-import { gitReadArgsReason, outsidePathReason, splitArgs } from './shell-policy.js';
+import { gitReadArgsReason, outsidePathReason, outsideWriteDecision, splitArgs } from './shell-policy.js';
 import type { CheckResult, Phase, ToolAccess, ToolName, ToolPolicy } from '../types.js';
 
 /**
@@ -611,6 +611,8 @@ export async function executeTool(name: string, rawArgs: unknown, policy: ToolPo
         if (reader) throw new ToolError(`Không dùng run_command để ${reader}.`);
         const away = outsidePathReason(command, fs.realpathSync(root));
         if (away) throw new ToolError(`Lệnh bị chặn: ${away}.`);
+        const wv = outsideWriteDecision(command, fs.realpathSync(root));
+        if (wv) throw new ToolError(`Lệnh bị chặn: ${wv.message}.`);
         const timeout = Math.min(policy.commandTimeoutSec, Math.max(5, Number(args.timeout_sec) || 300));
         // một lệnh tại một thời điểm trong cùng workspace (agent song song có thể ở các tiến trình/pane khác nhau)
         const unlock = await lockWorkspace(fs.realpathSync(root), timeout, signal);

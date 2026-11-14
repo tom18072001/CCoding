@@ -1,0 +1,89 @@
+# Báo cáo tổng hợp: SPEC.md cho tính năng Log Export (T-20261103-021735-8c0)
+
+## Tóm tắt
+`SPEC.md` đã có ở gốc repo, dài 236 dòng, viết bằng tiếng Anh. Tiêu đề `## Open questions and assumptions` xuất hiện đúng một lần, ở dòng 201. Mục này có 16 điểm (Q-a đến Q-p), điểm nào cũng ghi mâu thuẫn, giả định tạm dùng và tác động nếu giả định sai. Các mâu thuẫn của đề bài được xử lý thẳng, không bỏ qua: mặc định xuất bản đã che; bản không che (FR-8) tắt cho đến khi DPO xác nhận; lưu giữ được tách thành bảng riêng; yêu cầu 5 giây gắn với giới hạn số dòng giả định. Còn hai lỗi nhỏ về tính nhất quán cần sửa (xem mục Kết quả review). Tệp chưa được commit.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Viết SPEC.md: FR-1 đến FR-10, NFR, retention, AC, mục Open questions | @business-analyst | Đạt | `SPEC.md`; báo cáo `.ccoding/T-20261103-021735-8c0/outputs/dev-S1-business-analyst.md`. Có 9 mục nội dung (1–8 và Traceability) cùng mục Open questions. |
+| S2 | Rà soát bảo vệ dữ liệu, retention, kiểm soát truy cập | @security | Đạt có điều kiện (cổng thiết kế) | `SPEC.md`; báo cáo `.ccoding/T-20261103-021735-8c0/outputs/dev-S2-security.md`. Đã thêm AC-S.1 đến AC-S.7, Q-o và Q-p. |
+
+Reviewer chỉ đọc tệp, không chạy lệnh nào. Tôi đã tự kiểm lại bằng lệnh chỉ đọc:
+- Grep `^## ` cho thấy tiêu đề Open questions nằm ở dòng 201.
+- Grep `^\| Q-[a-z] ` cho ra 16 dòng, từ Q-a đến Q-p.
+- `wc -l SPEC.md` ra 236.
+- `git status` cho thấy `?? SPEC.md`, tức tệp chưa được theo dõi.
+
+## Quyết định
+- **Chỉ làm spec.** Repo trống và đề bài chỉ yêu cầu spec, nên không làm kiến trúc, ADR hay code.
+- **Che dữ liệu theo mặc định.** IP bị che về /24. Username được bí danh hóa bằng HMAC có khóa ≥256 bit lấy từ key store; hash không khóa bị cấm.
+- **Bản không che (FR-8) phát hành ở trạng thái tắt.** Khi bật, phải có hai người: DPO hoặc Security duyệt, khác người yêu cầu. Bắt buộc có mã case. Link tải dùng một lần và hết hạn trong ≤24 giờ. Audit ghi theo kiểu append-only.
+- **"Lưu mãi" và "xóa sau 12 tháng".** Phần lưu vĩnh viễn để audit là metadata cùng checksum, không phải tệp chứa dữ liệu cá nhân. Tệp đã che giữ 7 ngày; tệp không che giữ 24 giờ hoặc đến lần tải đầu. User ID trong audit chỉ được giữ mãi nếu DPO đồng ý, nếu không thì sau 12 tháng sẽ được token hóa không đảo ngược.
+- **Phạm vi dữ liệu.** Lấy phần giao giữa "đội của mình" và những gì RBAC cho phép thấy. Phạm vi chỉ lấy từ session ở backend, có chống IDOR khi tải.
+- **Yêu cầu 5 giây.** Tính theo p95, áp cho tối đa 50.000 dòng xuất đồng bộ. Từ đó đến 2.000.000 dòng thì chạy async, trên mức đó thì từ chối. Tất cả là con số giả định.
+- **Giới hạn tần suất:** 2 export đồng thời và 10 lượt mỗi ngày cho mỗi user, vượt thì trả HTTP 429.
+
+## Kết quả review
+- **Blocker:** không có.
+- **Nhỏ 1 (chưa sửa):** Q-m (dòng 217) vẫn ghi "retention windows (30 days, 7 days, 24 h)". S2 đã thống nhất thời hạn giữ tệp đã che là 7 ngày, nên con số 30 ngày đã lỗi thời. Cần bỏ "30 days".
+- **Nhỏ 2 (chưa sửa):** Q-k ghi khóa bí danh hóa "not rotated in MVP". Trong khi đó, bảng ở mục 6 (dòng 118) yêu cầu hủy khóa khi dữ liệu quá 12 tháng cộng 7 ngày, nghĩa là ngầm phải có xoay hoặc hủy khóa theo kỳ. Cần chốt một cách diễn đạt, ví dụ khóa theo từng tháng dữ liệu.
+- **Nhỏ 3:** số mục bị lệch, vì mục Open questions không đánh số nhưng ngay sau đó lại là "## 10. Traceability". Chỉ ảnh hưởng thẩm mỹ.
+- **Kết luận của @security:** đạt có điều kiện. Đây mới là cổng thiết kế, chưa phải cổng phát hành.
+
+## Việc còn mở & rủi ro
+- **Ba điểm phải khách xác nhận trước khi xây:**
+  - Q-o: căn cứ pháp lý theo NĐ 13/2023 và đánh giá tác động. Đây là điều kiện để bật FR-8.
+  - Q-n: NHNN hoặc quy định ngành có đặt mức lưu log tối thiểu không. Chưa kiểm chứng được nên spec không trích điều khoản nào.
+  - Q-p: vòng đời backup.
+- **Rủi ro thiết kế lại lớn:**
+  - Q-a: khách vẫn đòi IP đầy đủ cho mọi export.
+  - Q-e: khách đòi giữ chính các tệp export mãi mãi.
+  - Q-d: khối lượng thật lớn hơn nhiều so với giả định.
+  - Q-f: chưa có mẫu CSV của hệ thống cũ.
+- **Mọi con số trong spec đều là giả định,** chưa đo trên hệ thống thật.
+- **Chưa chạy:** chưa có kiểm thử hành vi nào vì không có code. `SPEC.md` chưa được commit.
+
+## Bước tiếp theo
+1. **Sửa nhỏ SPEC.md** (@business-analyst, cỡ S): xử lý ba điểm nhỏ ở mục Kết quả review. Xong khi grep `30 days` chỉ còn khớp ở Q-c, Q-k và mục 6 nói cùng một chính sách khóa, và số thứ tự các mục liền mạch.
+2. **Gửi bộ câu hỏi cho khách** (@business-analyst, cỡ S): chuyển Q-a đến Q-p thành bảng câu hỏi gửi khách, ưu tiên Q-a, Q-e, Q-o, Q-n, Q-d, Q-f. Xong khi có biên bản trả lời và SPEC.md được cập nhật theo đó.
+3. **Commit** (Tom quyết định): commit `SPEC.md` lên một nhánh riêng, không commit thẳng vào main.
+4. **Nhiệm vụ riêng sau khi khách trả lời:** ADR và kiến trúc cho luồng export, gồm sync/async, key store và purge (@solution-architect cùng @security), rồi mới đến hiện thực và bộ test AC-S.x, AC-8.x, AC-10.x. Nên tách thành từng gói riêng.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-021735-8c0` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **48 in / 33.5k out**, cache đọc 409.1k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Business Analyst (@business-analyst) | dev | 16 | 11783 | 155558 | 1 |
+| Chuyên viên ATTT (@security) | dev | 12 | 11631 | 135185 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 12 | 7616 | 76869 | 2 |
+| QA Engineer (@qa-tester) | dev | 6 | 1640 | 39262 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 788 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-business-analyst.md` — S1 Viết SPEC.md cho tính năng Log Export (@business-analyst)
+- `outputs/dev-S2-security.md` — S2 Rà và sửa phần bảo vệ dữ liệu, retention, kiểm soát truy cập trong SPEC.md (@security)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Business Analyst (@business-analyst) | dev | **95** A | 100 | 94 | 82 | 100 | 1 | 1 | 167k | 2/9 |
+| Chuyên viên ATTT (@security) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 147k | 0/5 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **97** A | 100 | 100 | 87 | 100 | 0 | — | 84k | 1/6 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 41k | 0/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Business Analyst** (@business-analyst, 95 A):
+  - Thao tác công cụ lỗi nhiều (2/9, 22%; nhiều nhất ở run_command 2/4) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+- **Chuyên viên ATTT** (@security, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

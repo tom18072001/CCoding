@@ -1,0 +1,91 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t3-api__B7__r5] Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Bốn tính năng đã được hiện thực đầy đủ trong worktree và `npm test` xanh (9/9) theo bàn giao của @senior-swe. Tôi chưa tự đọc lại mã hay chạy lệnh trong lượt này. Kế hoạch giữ nguyên phần đã làm: chỉ giao một hạng mục rà soát độc lập đối chiếu từng quy tắc FEATURES.md, kèm sửa các sai lệch tìm thấy.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Đối chiếu và vá sai lệch so với FEATURES.md qua HTTP thật (@senior-swe, done)
+
+## Tóm tắt
+Tôi đối chiếu mã hiện có với FEATURES.md bằng server thật. Một sai lệch duy nhất: đường dẫn có mã hóa `%` hỏng trả 500, đã sửa thành 404 và có test. Các quy tắc còn lại khớp đặc tả. `npm test` xanh, 10/10.
+
+## Tệp đã tạo/sửa
+- `src/router.js`: `decodeURIComponent` hỏng (ví dụ `/tasks/%E0%A4%A`) trước đây ném `URIError` và trả 500. Giờ trả 404 `NOT_FOUND`.
+- `test/tasks.test.js`: thêm 1 test cho trường hợp trên.
+
+## Kiểm chứng
+- Smoke script qua HTTP thật (server trên cổng ngẫu nhiên, gọi bằng fetch):
+  - Query lạ, lặp, hoặc lỗi: `a=1`, `status` lặp, `page=1.5&zz=1`, `zz=1&page=0`, `pageSize=101`, `dueBefore=2026-02-30` đều 400 `INVALID_QUERY`. Trường `field` đúng tham số đầu tiên theo thứ tự trên URL.
+  - `page=999` → 200, `items: []`, `total: 12`.
+  - `assignee=` → 200 với kết quả rỗng. `q=` → không lọc.
+  - `/tasks/export.csv?page=1` → 400 `INVALID_QUERY`.
+  - `/audit?x=1` → 400.
+  - Body JSON hỏng: member → 403, manager → 400 `INVALID_JSON`, admin → 400 `INVALID_JSON`.
+  - CSV: header HTTP đúng (`text/csv; charset=utf-8`, `attachment; filename="tasks.csv"`), tiêu đề và `\r\n` đúng.
+- Đã đọc mã và thấy khớp đặc tả ở các điểm sau (chưa chạy thử riêng từng điểm):
+  - Thứ tự kiểm tra 401 → 400 query → 404 → 403 → 400 body.
+  - `dueDate` rỗng nằm cuối ở cả hai chiều sắp xếp.
+  - Hòa sắp xếp theo `id` số tăng dần.
+  - Quyền của member và manager trên PATCH, POST, DELETE.
+  - Audit `changes` đã sắp xếp, và `GET /audit` chỉ admin.
+- `npm test` → exit 0, tests 10, pass 10, fail 0. Baseline là 2 test đạt.
+
+## Quyết định thiết kế
+- Dùng cách đọc sát chữ cho các điểm đặc tả không nói rõ:
+  - `assignee=` rỗng là giá trị hợp lệ và không khớp nhiệm vụ nào.
+  - PATCH không đổi gì vẫn ghi audit với `changes: []`.
+  - Body JSON hỏng chỉ trả 400 sau khi các kiểm tra 403 đã qua.
+- `dueDate` trong body POST/PATCH chỉ kiểm dạng, không kiểm ngày có thật. Đặc tả chỉ yêu cầu kiểm ngày hợp lệ ở tham số query `dueBefore`.
+
+## Rủi ro & việc còn mở
+- Chưa chạy bộ nghiệm thu ẩn.
+- `page=01` được chấp nhận và hiểu là 1. Đặc tả không cấm.
+
+## Phát hiện
+- Thấp · `src/router.js:24` · `decodeURIComponent` ném lỗi với `%` hỏng và gây 500 · đã sửa bằng try/catch, trả 404.
+
+Bản đầy đủ: `.ccoding/T-20261113-002401-a44/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261113-002401-a44` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **32 in / 28.8k out**, cache đọc 373.2k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 30 | 27962 | 366355 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 2 | 811 | 6859 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Đối chiếu và vá sai lệch so với FEATURES.md qua HTTP thật (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 10 · ℹ suites 0 · ℹ pass 10 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 100 | 90 | 100 | 1 | 1 | 394k | 4/33 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 8k | — | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

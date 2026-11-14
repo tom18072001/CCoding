@@ -1,0 +1,10 @@
+Tôi đã hiện thực xong cả bốn tầng và hàm `compile`, và `npm test` xanh: 33 test đạt, 0 lỗi. Tôi chưa commit.
+
+Mọi file nằm đúng chỗ đặc tả nêu, không thêm thư viện. Có thêm một file nội bộ `src/model.js`, là phần hợp nhất, phân giải và đánh giá chuỗi dùng chung cho `check.js` và `evaluate.js`. Test mới nằm ở `test/layers.test.js`, cạnh `test/smoke.test.js` có sẵn.
+
+Có ba chỗ đặc tả chưa nói rõ, tôi chọn như sau:
+- **Từ khóa trong nội suy:** `${true}` hay `${include}` được coi là hợp lệ về mặt lexer (khớp mẫu định danh) và sẽ cho `SEM_UNDEFINED_REF`, không phải `LEX_BAD_INTERPOLATION`.
+- **Vị trí `SEM_UNKNOWN_KEY` với khối đã trộn:** tôi lấy vị trí khóa của câu lệnh `Assign`/`Block` cuối cùng đặt khóa đó. Vị trí của chính đối tượng vẫn là `Block` đã tạo ra nó, như mục 6.2.
+- **Giá trị đến từ chuỗi thuần tham chiếu:** `SEM_UNKNOWN_KEY` bên trong giá trị đó cũng báo tại vị trí của chuỗi.
+
+Ngoài ra, `applyDiff` chấp nhận thêm chỉ số `-` (nối vào cuối mảng) cho `add`, dù đặc tả không yêu cầu.

@@ -6,6 +6,7 @@ import { createApp } from './app.js';
 import { loadConfig, type Config } from './config.js';
 import { Herdr, type LogGroup } from './herdr.js';
 import { LogStore, verifyChain } from './logger.js';
+import { runLogRetention, sealRotated, verifySeal } from './log-retention.js';
 import { Registry } from './registry.js';
 import { RuntimeManager } from './runtimes/index.js';
 import { toRuntimeError } from './runtimes/errors.js';
@@ -17,6 +18,7 @@ import { createBench, loadState, parseSpec, reportMarkdown, runBench, runInput, 
 import { levelFilter, logFiles, pickLatestTask, recentTasks } from './logview.js';
 import { c, fmtDuration, fmtNum, fmtUsd, hexColor, table } from './util/format.js';
 import { readJsonFile, readJsonl, writeJsonAtomic } from './util/fsx.js';
+import { runRetention } from './selfimprove.js';
 import { totalTokens, type ChatMessage, type LogEntry, type RunRequest, type RunResult, type Task, type TaskMode } from './types.js';
 
 const HELP = `
@@ -49,7 +51,9 @@ ${c.bold('Giao việc')}
 ${c.bold('Log & token')}
   logs [-f] [--agent id] [--dept id] [--task id|latest] [--level warn+] [-n 50]   Xem / theo dõi log
   logs ls                                   Danh sách tệp log (hệ thống, phòng ban, agent, nhiệm vụ gần nhất)
-  logs verify                               Kiểm tra chuỗi băm (log có bị sửa không)
+  logs verify [--require-signed|--allow-unsigned]  Kiểm tra chuỗi băm (log có bị sửa không); có khóa HMAC thì mặc định bắt buộc chữ ký, --allow-unsigned cho log cũ chưa ký
+  logs seal                                 Niêm phong tệp log đã xoay vòng vào data/logs/seal-ledger.jsonl
+  logs verify-seal                          Kiểm sổ niêm phong (exit 2 nếu tệp bị sửa/mất hoặc chuỗi sổ đứt)
   usage [--by agent|department|task|project|model|runtime|day|phase] [--task id] [--dept id] [--watch] [--json]
   kpi [--task id,id] [--days 7] [--dept id] [--project id] [--by agent|model] [--json]   KPI v2 từng sub-agent (chất lượng, kết quả thật, trung thực, hiệu quả, tin cậy, tuân thủ) + việc cần sửa; --by model tách theo agent × model
 
@@ -133,6 +137,7 @@ async function cmdServe(args: string[]): Promise<void> {
   if (values.runtime) overrides.runtime = { ...config.runtime, default: values.runtime };
   const app = createApp(overrides);
   const srv = createServer(app);
+  let retentionTimer: NodeJS.Timeout | undefined;
   const { host, port } = app.config.server;
   srv.listen(port, host, () => {
     console.log(`\n${c.bold('🏢 CCoding Office')} đang chạy tại ${c.cyan(`http://${host === '0.0.0.0' ? '127.0.0.1' : host}:${port}`)}`);
@@ -141,6 +146,15 @@ async function cmdServe(args: string[]): Promise<void> {
     app.logs.write({ level: 'info', kind: 'server.start', msg: `Server khởi động tại ${host}:${port} (runner ${app.orchestrator.runner})` });
     // việc định kỳ: chỉ tiến trình server lập lịch (CLI đọc dữ liệu không giao việc)
     app.routines.start();
+    try { runRetention({ cfg: app.config.selfImprove, logs: app.logs, dataDir: app.config.dataDir }); } catch (e) { console.error(c.yellow(`   ⚠ dọn data/self-improve lỗi: ${(e as NodeJS.ErrnoException).code ?? 'unknown'}`)); }
+    if (app.config.logs.retention.enabled) {
+      const tick = (): void => {
+        try { runLogRetention({ cfg: app.config.logs.retention, logs: app.logs, dataDir: app.config.dataDir }); } catch (e) { console.error(c.yellow(`   ⚠ dọn data/logs lỗi: ${(e as NodeJS.ErrnoException).code ?? 'unknown'}`)); }
+      };
+      tick();
+      retentionTimer = setInterval(tick, Math.max(1, Number(app.config.logs.retention.intervalHours) || 24) * 3_600_000);
+      retentionTimer.unref();
+    }
     if (app.routines.all().length) console.log(`   việc định kỳ: ${app.routines.all().filter((r) => r.enabled).length}/${app.routines.all().length} đang bật`);
     void app.runtimes.status().then((list) => {
       for (const r of list) console.log(`   ${r.ok ? c.green('●') : c.gray('○')} ${r.id.padEnd(14)} ${c.gray(r.detail)}`);
@@ -152,6 +166,7 @@ async function cmdServe(args: string[]): Promise<void> {
     process.exit(1);
   });
   const stop = () => {
+    if (retentionTimer) clearInterval(retentionTimer);
     app.routines.stop();
     app.store.flush();
     app.logs.write({ level: 'info', kind: 'server.stop', msg: 'Server dừng' });
@@ -349,6 +364,18 @@ function cmdLogLs(): void {
 
 async function cmdLogs(args: string[]): Promise<void> {
   if (args[0] === 'verify') return cmdVerify();
+  if (args[0] === 'seal') {
+    const done = sealRotated(config.dataDir);
+    console.log(done.length ? c.green(`Đã niêm phong ${done.length} tệp:\n${done.map((f) => `  ${f}`).join('\n')}`) : c.gray('Không có tệp xoay vòng mới cần niêm phong'));
+    return;
+  }
+  if (args[0] === 'verify-seal') {
+    const r = verifySeal(config.dataDir);
+    for (const p of r.problems) console.log(c.red(`✗ ${p}`));
+    console.log(r.ok ? c.green(`Sổ niêm phong hợp lệ (${r.entries} dòng)`) : c.red(`\n${r.problems.length} vấn đề — log hoặc sổ có dấu hiệu bị sửa/mất`));
+    if (!r.ok) process.exitCode = 2;
+    return;
+  }
   if (args[0] === 'ls' || args[0] === 'list') return cmdLogLs();
   const { values } = parseArgs({
     args,
@@ -440,7 +467,7 @@ function cmdVerify(): void {
   walk(config.dataDir);
   let bad = 0;
   for (const f of files) {
-    const r = verifyChain(f);
+    const r = verifyChain(f, { requireSigned: process.argv.includes('--require-signed') ? true : undefined, allowUnsigned: process.argv.includes('--allow-unsigned') });
     if (!r.ok) bad++;
     console.log(`${r.ok ? c.green('✓') : c.red('✗')} ${path.relative(config.dataDir, f)} — ${r.lines} dòng${r.ok ? '' : c.red(` · lỗi ở dòng ${r.brokenAt}: ${r.reason}`)}`);
   }

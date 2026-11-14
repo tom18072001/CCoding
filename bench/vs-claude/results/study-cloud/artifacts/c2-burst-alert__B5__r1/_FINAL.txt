@@ -1,0 +1,67 @@
+> Việc giao riêng cho Senior Software Engineer (@senior-swe)
+
+## Tóm tắt
+Tôi đã cài `detectBursts` trong `src/alert.js` và bổ sung 3 test. `npm test` chạy 4 test, cả 4 đều pass (exit 0). Lỗi baseline là do hàm chưa được cài. Tôi không thấy rủi ro nào còn lại.
+
+## Tệp đã tạo/sửa
+- `src/alert.js`: cài `detectBursts`.
+- `test/basic.test.js`: thêm 3 test.
+
+## Kiểm chứng
+- `npm test` → exit 0, 4 tests, 4 pass, 0 fail. Baseline trước khi sửa là exit 1.
+- Lần chạy đầu sau khi thêm test có 1 test fail, do tôi viết sai kỳ vọng trong test mới. Sự kiện host `b` ở ts 100 đã qua cooldown 50 nên phải báo động. Tôi sửa test và chạy lại thì pass. Code không phải sửa.
+- Các test mới kiểm tra:
+  - cửa sổ nửa mở `(ts - windowMs, ts]`;
+  - input chưa sắp xếp;
+  - bỏ qua sự kiện không phải 5xx;
+  - không mutate input;
+  - cooldown, trong đó sự kiện trong cooldown vẫn được đếm cho các cửa sổ sau;
+  - các host độc lập, thứ tự kết quả;
+  - các `ts` bằng nhau được xử lý lần lượt theo thứ tự đầu vào.
+
+## Quyết định thiết kế
+- Lọc 5xx, rồi sắp xếp ổn định theo `ts` trên bản sao, nên các `ts` bằng nhau giữ thứ tự đầu vào.
+- Mỗi host có một mảng thời điểm và một con trỏ đầu cửa sổ, nên độ phức tạp là O(n log n) cho phần sắp xếp và O(n) cho phần còn lại.
+- Báo động chỉ khi `count >= threshold` và (chưa có báo động nào cho host đó, hoặc `ts >= lastAlert + cooldownMs`).
+- `cooldownMs` mặc định bằng `windowMs`, dùng `??` nên giá trị 0 vẫn hợp lệ.
+- Kết quả sắp xếp theo `ts`, rồi theo `host` bằng so sánh chuỗi thuần, không dùng `localeCompare` nên không phụ thuộc locale.
+
+## Rủi ro & việc còn mở
+Không có đầu vào bất thường nào được kiểm tra, ví dụ `ts` không phải số, `threshold <= 0` hoặc `windowMs <= 0`. Brief không yêu cầu nên tôi không xử lý.
+
+## Review
+✅ Đã duyệt: Tôi đã đọc src/alert.js và đối chiếu từng điều khoản trong brief; code đúng. Hàm lọc 5xx (500–599) rồi sắp xếp ổn định trên bản sao, nên input không bị mutate và các ts bằng nhau giữ thứ tự đầu vào. Cửa sổ nửa mở (ts-windowMs, ts] được cài bằng con trỏ đầu cửa sổ (`<= ts - windowMs` thì loại). Cooldown kiểm bằng `ts >= lastAlert + cooldownMs`, và các sự kiện trong cooldown vẫn nằm trong mảng times nên vẫn được đếm cho các cửa sổ sau. Mỗi host có state riêng. `cooldownMs` dùng `??` nên giá trị 0 hợp lệ. Kết quả sắp xếp theo ts rồi host bằng so sánh chuỗi thuần. Tôi chỉ đọc code và chạy lại `npm test`; không viết thêm test kiểm bộ kiểm. Minor: không kiểm tra đầu vào bất thường (ts không phải số, threshold <= 0, windowMs <= 0), nhưng brief không yêu cầu.
+- [minor] src/alert.js:3-4: không validate opts. Ví dụ windowMs <= 0 hoặc threshold <= 0 cho kết quả không có ý nghĩa. Có thể thêm kiểm tra nếu sau này cần; brief không đòi hỏi.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-235721-d73` · chế độ: agent · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **14 in / 3,947 out**, cache đọc 79.2k, 2 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 10 | 3082 | 61613 | 1 |
+| QA Engineer (@qa-tester) | dev | 4 | 865 | 17611 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude c2-burst-alert__B5__r1] Sliding-window 5xx burst alerting (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 1 · # suites 0 · # pass 0 · # fail 1 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 4 · # suites 0 · # pass 4 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **100** A | 100 | 100 | 100 | 100 | 1 | 1 | 65k | 0/4 |
+| QA Engineer (@qa-tester) | dev | **100** A | — | — | 100 | 100 | 0 | — | 18k | 0/1 |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

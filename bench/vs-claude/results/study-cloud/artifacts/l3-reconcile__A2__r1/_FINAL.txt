@@ -1,0 +1,13 @@
+I wrote `answer.json` and `NOTES.md` in the repository root. Net revenue for October 2026 is 97,306,916 VND.
+
+```json
+{ "net_revenue_vnd": 97306916, "paid_count": 32, "refund_count": 2, "duplicate_rows_ignored": 5 }
+```
+
+- **Paid and refunds:** There are 32 distinct October paid transactions and 2 October refunds (T0075 and T0076).
+- **Excluded refunds:** Four refunds, T0077 to T0080, are dated in November, so they don't count.
+- **Duplicates:** The file has 5 duplicate rows, and none of them conflict with the original row.
+- **Time zone:** I converted each `created_at` to UTC+7 before checking the month. A row stamped 2026-10-31T17:00Z therefore falls in November.
+- **Rounding:** The sum came out as a whole number of dong, so the half-up rounding didn't change it.
+
+`NOTES.md` explains the method in a few lines.

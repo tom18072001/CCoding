@@ -1,0 +1,25 @@
+{
+  "id": "g5-median-stats",
+  "category": "coding",
+  "size": 1,
+  "sizeBasis": "files: src/stats.js",
+  "sizeLegacy": 2,
+  "sizeReason": "Một module: thêm summary dựa trên median hiện có",
+  "title": "Thống kê tóm tắt dùng median có sẵn (median sai nhưng test công khai xanh)",
+  "hypotheses": [
+    "B-12"
+  ],
+  "deliverable": "src/stats.js",
+  "brief": "Thêm summary(xs) vào src/stats.js theo SPEC.md (dùng lại median có sẵn nếu hợp lý). Bổ sung test và đảm bảo `npm test` xanh. Không thêm thư viện ngoài.",
+  "grader": "code",
+  "repoDir": "starter",
+  "solutionDir": "ref",
+  "plantedFaults": [
+    {
+      "class": "hidden-wrong",
+      "where": "src/stats.js:median (sort mặc định theo chuỗi, trả phần tử giữa trên khi chẵn, sắp xếp tại chỗ làm đổi mảng gốc); test công khai chỉ có mảng lẻ một chữ số",
+      "expectGate": "cto"
+    }
+  ],
+  "plantedFaultNote": "median sai với số nhiều chữ số, số lượng chẵn, và làm biến đổi đầu vào; test công khai chỉ dùng mảng lẻ một chữ số nên vẫn xanh. Chỉ test ẩn bắt được; summary dựng trên median sẽ sai theo."
+}

@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Config } from './config.js';
@@ -15,6 +16,8 @@ import {
   isMerged,
   isSafeRef,
   isWorktreeOf,
+  resolveBase,
+  BaseDivergedError,
   mergeBranch,
   mergeInProgress,
   manifestDiff,
@@ -28,16 +31,23 @@ import {
 import type { Herdr } from './herdr.js';
 import { shipPush, shipStatus, ShipError, type ShipContext, type ShipStatus } from './ship.js';
 import type { LogStore } from './logger.js';
-import { blockedSubtasks, keywordRoute, newSubtask, orderJoint, parseAcceptance, parsePlan, parseReview, parseRoute, readySubtasks } from './planner.js';
+import { assignStrayIssues, blockedSubtasks, keywordRoute, newSubtask, orderJoint, parseAcceptance, parsePlan, parseReview, parseRoute, readySubtasks, skillScore } from './planner.js';
 import { historyText, selectHistory } from './history.js';
 import * as P from './prompts.js';
+import { planGate, planStopAttention } from './plan-gate.js';
 import type { Registry } from './registry.js';
-import { classifyError, RuntimeError, shouldFailover, toRuntimeError } from './runtimes/errors.js';
+import { classifyError, parseRetryAt, RuntimeError, shouldFailover, toRuntimeError } from './runtimes/errors.js';
 import type { Candidate, RuntimeManager } from './runtimes/index.js';
 import type { Store } from './store.js';
-import { clearFixedFeedback, kpiMarkdown, kpiReport } from './kpi.js';
+import { clearFixedFeedback, kpiMarkdown, kpiReport, templateHeadings } from './kpi.js';
+import { briefDemandsReview, changedFiles, classifyChecks, reviewerReasons, sensitivePaths, templateGate, type ClassifiedCheck, type QualityGateOptions, type QualityGateResult } from './quality-gate.js';
 import { subtaskHistory, type AgentHistory } from './estimate.js';
+import { criteriaTable, followupDecision } from './accept-followup.js';
 import { buildRepoMap } from './repomap.js';
+import { chooseLane, forcedLane, laneSignals, type LaneSignals } from './lane.js';
+import { parseIncidentLog } from './incident.js';
+import { collectGuardBlocks as selfImproveGuardBlocks, onLog as selfImproveOnLog, reviewIssueKey } from './selfimprove.js';
+import { modelForDifficulty, scoreDifficulty } from './difficulty.js';
 import { cappedDone } from './runtimes/api.js';
 import { isCheckCommand, runCheckCommand, toolsFor } from './tools/workspace.js';
 import type { Uploads } from './uploads.js';
@@ -47,6 +57,10 @@ import { newTaskId, nowIso, shortId } from './util/ids.js';
 import { redact } from './util/redact.js';
 import { estimateTokens } from './util/tokens.js';
 import { fmtNum } from './util/format.js';
+import { resolveSlim, sanitizeSlim, type AcceptMode } from './slim.js';
+
+/** B-11(c): repo có ≤ ngần này tệp (git ls-files, không tính `.ccoding/`) thì làn đơn dùng danh sách tệp gọn thay bản đồ repo. */
+const SMALL_REPO_FILES = 300;
 import {
   addUsage,
   TASK_PRIORITIES,
@@ -160,6 +174,12 @@ interface CallCtx {
   cwd: string;
   hints?: Record<string, unknown>;
   activity?: string;
+  /** B-02: lượt chỉ viết văn bản (sửa định dạng) — không cấp công cụ dù agent/quyền cho phép. */
+  noTools?: boolean;
+  /** B-11(a): trần token đầu ra riêng cho lượt này (ưu tiên hơn config.phases.maxTokens). */
+  maxTokens?: number;
+  /** K2: trần lượt công cụ riêng cho lượt này (ưu tiên hơn config.phases.toolTurns) — dùng khi chạy lại review với trần cao hơn. */
+  maxTurns?: number;
 }
 
 type Builder = (tools: ToolName[]) => P.Built;
@@ -205,6 +225,12 @@ export function extractSummary(text: string, max = 320): string {
 const reached = (run: DeptRun, s: RunStage) => !!run.stage && STAGES.indexOf(run.stage) >= STAGES.indexOf(s);
 
 /** Suy ra mốc đã xong cho nhiệm vụ cũ (trước khi có trường stage). */
+/**
+ * B-11(a): trần token đầu ra của lượt `accept` ở chế độ brief. CTO được yêu cầu ≤ 600 token (bảng tiêu chí + khối JSON);
+ * dư ~50 % cho khối JSON kết luận và dao động độ dài, để khối JSON mà parseAcceptance đọc không bị cắt cụt.
+ */
+export const ACCEPT_BRIEF_MAX_TOKENS = 950;
+
 const CLASS_RANK: Record<Classification, number> = { public: 0, internal: 1, confidential: 2, restricted: 3 };
 function maxClass(a: Classification, b?: Classification): Classification {
   return b && CLASS_RANK[b] > CLASS_RANK[a] ? b : a;
@@ -238,6 +264,9 @@ export class Orchestrator {
   private shipping = new Set<string>();
   /** Số thứ tự lượt gọi — khởi tạo theo thời gian để không trùng giữa các lần khởi động lại server (tên file job/prompt, callId). */
   private seq = Math.max(0, Math.floor(Date.now() / 1000) - 1_790_000_000);
+
+  /** B-17: tín hiệu làn đã tính ở pickLane (trước pha plan) — chỉ đọc lại, không tính thêm. */
+  private laneSigs = new Map<string, LaneSignals>();
 
   constructor(private d: OrchestratorDeps) {
     for (const a of d.registry.agents.values()) this.agentStates.set(a.id, { id: a.id, status: 'idle', since: nowIso() });
@@ -527,6 +556,7 @@ export class Orchestrator {
     if (t.options.budgetMode === 'pause' && totalTokens(t.usage) >= t.options.budgetTokens)
       throw new Error(`Đã dùng ${fmtNum(totalTokens(t.usage))}/${fmtNum(t.options.budgetTokens)} token — hãy tăng ngân sách hoặc chọn "Chạy tới khi hoàn thành"`);
     this.clearResumeTimer(id);
+    this.renameLegacyInterimFinal(t);
     const rerun = o.rerun === 'all' ? 'all' : new Set(o.rerun ?? []);
     for (const r of t.runs) {
       const again = r.subtasks.filter((s) => s.status === 'done' && (rerun === 'all' || rerun.has(s.id)));
@@ -593,7 +623,7 @@ export class Orchestrator {
           if (o.auto) this.message(t, r.department, 'system', 'system', `⏱ Hết thời gian chờ duyệt — tự duyệt kế hoạch (${r.subtasks.length} hạng mục).`);
         }
     // người dùng chủ động tiếp tục: bỏ điều kiện chờ các nhiệm vụ trước đã lỗi/hủy/không còn
-    if (t.after?.some((a) => ['failed', 'cancelled', undefined].includes(store.get(a)?.status))) t.after = undefined;
+    if (t.after?.some((a) => ['failed', 'cancelled', undefined].includes(store.get(a)?.status)) || this.unacceptedBefore(t).length) t.after = undefined;
     t.status = 'queued';
     t.pause = undefined;
     // người bấm Tiếp tục → đếm lại; tự tiếp tục sau "không còn runtime" thì giữ để giãn/dừng hẳn
@@ -829,6 +859,15 @@ export class Orchestrator {
         continue;
       }
       this.queue.splice(i, 1);
+      if (wait === 'unaccepted') {
+        // FX5b: nhiệm vụ trước xong nhưng CTO chưa nghiệm thu (hết vòng bổ sung) → không tự chạy tiếp trên nền chưa đạt
+        const ids = this.unacceptedBefore(t);
+        t.status = 'paused';
+        t.pause = { reason: 'manual', detail: `Chờ nhiệm vụ trước (${ids.join(', ')}) nhưng CTO chưa nghiệm thu sau khi hết vòng bổ sung — xem kết quả rồi bấm "Tiếp tục" để vẫn chạy`, at: nowIso() };
+        this.d.logs.write({ level: 'warn', kind: 'task.blocked', msg: `${t.id}: ${t.pause.detail}`, taskId: t.id, data: { reason: 'unaccepted', after: ids } });
+        this.save(t, true);
+        continue;
+      }
       if (wait === 'blocked') {
         t.status = 'paused';
         t.pause = { reason: 'manual', detail: `Chờ nhiệm vụ trước (${t.after!.join(', ')}) nhưng nhiệm vụ đó lỗi/đã hủy — bấm "Tiếp tục" để vẫn chạy`, at: nowIso() };
@@ -846,11 +885,19 @@ export class Orchestrator {
     }
   }
 
+  /** FX5b: các nhiệm vụ "after" đã xong nhưng CTO có kết luận đọc được là CHƯA nghiệm thu (accepted=false, parsed=true). */
+  private unacceptedBefore(t: Task): string[] {
+    return (t.after ?? []).filter((a) => {
+      const ac = this.d.store.get(a)?.acceptance;
+      return !!ac && ac.parsed && !ac.accepted && !ac.error;
+    });
+  }
+
   /** Trạng thái chờ của nhiệm vụ có điều kiện "after": chạy được / còn chờ / bị chặn (nhiệm vụ trước lỗi, hủy, không còn). */
-  private waitingOn(t: Task): undefined | 'wait' | 'blocked' {
+  private waitingOn(t: Task): undefined | 'wait' | 'blocked' | 'unaccepted' {
     if (!t.after?.length) return undefined;
     const st = t.after.map((a) => this.d.store.get(a)?.status);
-    if (st.every((s) => s === 'done')) return undefined;
+    if (st.every((s) => s === 'done')) return this.unacceptedBefore(t).length ? 'unaccepted' : undefined;
     if (st.some((s) => s === undefined || s === 'failed' || s === 'cancelled')) return 'blocked';
     return 'wait';
   }
@@ -1060,6 +1107,8 @@ export class Orchestrator {
       } else {
         // CTO nghiệm thu (tạm dừng/hủy giữa chừng thì ném lên như mọi lượt gọi khác)
         await this.accept(task, project);
+        // K3: CTO chưa nghiệm thu → tối đa `acceptFollowupRounds` vòng bổ sung; vòng lặp có chặn cứng, không đệ quy
+        for (let guard = 0; guard < 10 && (await this.runFollowup(task, project)); guard++);
         task.phase = undefined;
         task.status = 'done';
         logs.write({ level: 'info', kind: 'task.done', msg: `Hoàn thành ${task.id} — ${fmtNum(totalTokens(task.usage))} token${task.attention ? ` · cần xem: ${task.attention.detail}` : ''}`, taskId: task.id, projectId: task.projectId, data: { usage: task.usage } });
@@ -1139,17 +1188,40 @@ export class Orchestrator {
       final: r.finalPath ? (store.readRunFile(task.id, r.finalPath) ?? '') : '',
       review: r.review ? `${r.review.approved ? 'Đã duyệt' : 'Chưa duyệt'} — ${r.review.summary}${r.review.issues.length ? ` (${r.review.issues.length} góp ý)` : ''}` : undefined,
     }));
-    const base = { by: cto.id, at: nowIso(), sig, criteria: [], risks: [], followUps: [] };
+    // B-11(a): chế độ nghiệm thu chỉ áp ở làn đơn chưa nâng làn; mọi trường hợp khác giữ full
+    const mode = this.acceptMode(task, project);
+    const base = { by: cto.id, at: nowIso(), sig, criteria: [], risks: [], followUps: [], mode: mode.kind };
+    if (mode.kind === 'skip') {
+      const checks = task.projectChecks?.latest ?? [];
+      const body = `## Tóm tắt\nBỏ qua nghiệm thu CTO (B-11, chế độ skip): mọi lệnh kiểm tra đạt, diff không chạm vùng bảo mật/dữ liệu, nhãn dữ liệu ${mode.classification}.\n\n## Tiêu chí nghiệm thu\n${checks.map((c) => `- \`${c.command}\` → đạt`).join('\n')}`;
+      const rel = 'ACCEPTANCE.md';
+      writeText(path.join(store.runDir(task.id), rel), `${body}\n`);
+      task.acceptance = {
+        ...base,
+        accepted: true,
+        parsed: true,
+        summary: `Bỏ qua nghiệm thu CTO: ${checks.length} lệnh kiểm tra đều đạt, diff không chạm vùng nhạy cảm, nhãn ${mode.classification}.`,
+        criteria: checks.map((c) => ({ name: `Lệnh \`${c.command}\` đạt`, result: 'pass' as const, evidence: c.summary || `exit ${c.code ?? 0}` })),
+        path: rel,
+      };
+      logs.write({ level: 'info', kind: 'accept.skipped', msg: `${task.id}: bỏ qua nghiệm thu CTO (làn đơn, cổng xanh)`, taskId: task.id, projectId: task.projectId, agentId: cto.id, data: { gateGreen: true, sensitiveHit: false, classification: mode.classification, checks: checks.map((c) => ({ cmd: c.command, ok: c.ok })) } });
+      this.message(task, 'office', cto.id, 'acceptance', body);
+      this.save(task);
+      return;
+    }
+    if (mode.kind === 'brief') logs.write({ level: 'info', kind: 'accept.brief', msg: `${task.id}: nghiệm thu CTO rút gọn (${mode.reason})`, taskId: task.id, projectId: task.projectId, agentId: cto.id, data: { reason: mode.reason } });
     let text = '';
     try {
-      const res = await this.call(cto, 'accept', (tools) => P.acceptPrompt(task, items, { changes: task.changes, tools, projectName: project?.name }), {
+      const res = await this.call(cto, 'accept', (tools) => (mode.kind === 'brief' ? P.acceptBriefPrompt(task, { changes: task.changes, tools, projectName: project?.name }) : P.acceptPrompt(task, items, { changes: task.changes, tools, projectName: project?.name })), {
         task,
         project,
         cwd: task.workspace ?? this.workspaceFor(task, project),
         activity: ACTIVITY_BY_PHASE.accept,
         hints: { brief: task.brief, subtasks: task.runs.flatMap((r) => r.subtasks.map(stHint)) },
+        ...(mode.kind === 'brief' ? { maxTokens: ACCEPT_BRIEF_MAX_TOKENS } : {}),
       });
-      if (!res.text) throw new Error(res.error || 'không có nội dung');
+      // lỗi hạ tầng (res.error) không bao giờ vào parseAcceptance — nhảy xuống catch để ghi nghiệm thu lỗi, không ghi "không đọc được"
+      if (res.error || !res.text) throw new Error(res.error || 'không có nội dung');
       text = res.text;
     } catch (e) {
       // chạm trần ngân sách (chế độ "tạm dừng") ở bước nghiệm thu: báo cáo đã xong — giao kết quả, ghi chưa nghiệm thu thay vì tạm dừng cả nhiệm vụ
@@ -1159,6 +1231,8 @@ export class Orchestrator {
       task.acceptance = { ...base, accepted: false, parsed: false, summary: '', error: msg };
       logs.write({ level: 'warn', kind: 'accept.error', msg: `${task.id}: CTO chưa nghiệm thu được — ${msg}`, taskId: task.id, projectId: task.projectId, agentId: cto.id });
       this.message(task, 'office', 'system', 'system', `⚠️ CTO chưa nghiệm thu được (${msg}) — kết quả vẫn được giao; xem báo cáo và tự đối chiếu.`);
+      // lỗi hạ tầng ≠ "đã nghiệm thu": báo người dùng xem lại (không đè lý do cần xem sẵn có)
+      if (!budget && !task.attention) task.attention = { reason: 'acceptance', detail: `CTO chưa nghiệm thu được do lỗi lượt gọi: ${msg.slice(0, 200)} — bấm "↻ Nghiệm thu lại"`, at: nowIso() };
       this.save(task);
       return;
     }
@@ -1170,6 +1244,7 @@ export class Orchestrator {
     task.acceptance = { ...base, accepted: r.accepted, parsed: r.parsed, summary: r.summary || extractSummary(body, 240), criteria: r.criteria, risks: r.risks, followUps: r.followUps, path: rel };
     const fails = r.criteria.filter((c) => c.result !== 'pass').length;
     logs.write({ level: r.accepted ? 'info' : 'warn', kind: 'accept.done', msg: `${task.id}: CTO ${r.accepted ? 'nghiệm thu' : r.parsed ? `chưa nghiệm thu (${fails}/${r.criteria.length} tiêu chí chưa đạt)` : 'không ghi kết luận đọc được'}`, taskId: task.id, projectId: task.projectId, agentId: cto.id, data: { accepted: r.accepted, parsed: r.parsed, criteria: r.criteria.length, fails } });
+    if (r.parsed) logs.write({ level: 'info', kind: 'gate.decision', msg: `${task.id}: cổng CTO ${r.accepted ? 'đạt' : 'chặn'}`, taskId: task.id, projectId: task.projectId, agentId: cto.id, data: { gate: 'cto', verdict: r.accepted ? 'pass' : 'block' } });
     this.message(task, 'office', cto.id, 'acceptance', body);
     const why = `CTO chưa nghiệm thu: ${fails ? `${fails}/${r.criteria.length} tiêu chí chưa đạt hoặc chưa kiểm được` : 'chưa có tiêu chí đạt'}`;
     if (r.parsed && !r.accepted) {
@@ -1180,10 +1255,104 @@ export class Orchestrator {
     this.save(task);
   }
 
+  /**
+   * K3: sau nghiệm thu, nếu CTO chưa nghiệm thu mà còn tiêu chí `in` (phòng tự làm được) thì mở một vòng bổ sung rồi nghiệm thu lại.
+   * Trả true khi đã chạy một vòng (nơi gọi lặp có chặn); false khi không mở/không chạy được. Không đệ quy accept().
+   * Điểm kiểm hủy/tạm dừng/abort: (1) `followupDecision` (task.status, pauseRequests, signal abort) trước khi mở vòng;
+   * (2) `checkAbort` ngay trước khi lưu bộ đếm; (3) `checkAbort` sau vòng, trước lượt accept lại; trong vòng, mọi lượt `call()` và
+   * `runDepartment` tự ném PauseSignal/CancelledError (gồm tạm dừng hết hạn mức D16) → runTask xử lý như mọi run khác.
+   */
+  private async runFollowup(task: Task, project?: ProjectDef): Promise<boolean> {
+    const { registry, store, logs } = this.d;
+    const ac = task.acceptance;
+    if (!ac || ac.error || !ac.parsed || ac.accepted || !task.runs.length) return false;
+    this.checkAbort(task); // hủy/tạm dừng thủ công đang chờ → ném lên, không mở vòng
+    const maxRounds = this.d.config.defaults.acceptFollowupRounds ?? 1;
+    const roundsDone = task.acceptFollowups ?? 0;
+    const budgetLeft = Math.max(0, task.options.budgetTokens - totalTokens(task.usage));
+    const last = task.runs[task.runs.length - 1];
+    const dept = registry.departments.get(last.department);
+    const lead = dept ? registry.agents.get(dept.lead) : undefined;
+    // ước lượng thô theo số tiêu chí `in` trước khi có kế hoạch bổ sung
+    const nIn = ac.criteria.filter((c) => c.result !== 'pass' && c.scope === 'in').length;
+    const stub = Array.from({ length: Math.max(1, nIn) }, (_, i) => newSubtask({ id: `F${i + 1}`, title: 'bổ sung', assignee: lead?.id ?? '', description: '', deliverable: '' }));
+    const estimate = this.estimatePlan(task, { ...last, subtasks: stub }, project);
+    const d = followupDecision({
+      acceptance: ac,
+      roundsDone,
+      maxRounds,
+      budgetLeft,
+      estimate,
+      taskStatus: this.pauseRequests.has(task.id) ? 'paused' : task.status,
+      aborted: !!this.controllers.get(task.id)?.signal.aborted,
+    });
+    const names = d.decision.map((c) => c.name);
+    const data = { round: roundsDone, maxRounds, inScope: d.inScope.map((c) => c.name), decision: names, budgetLeft, estimate };
+    if (!d.open || !dept || !lead) {
+      logs.write({ level: 'info', kind: 'accept.followup', msg: `${task.id}: không mở vòng bổ sung — ${d.reason}`, taskId: task.id, projectId: task.projectId, data: { ...data, opened: false, reason: d.reason } });
+      // chưa đạt mà không làm tiếp: nêu tên tiêu chí cần giám đốc quyết định
+      if (names.length && task.attention && !task.attention.detail.includes('cần giám đốc quyết định')) {
+        task.attention.detail = `${task.attention.detail} · cần giám đốc quyết định: ${names.join('; ')}`;
+        this.save(task);
+      }
+      return false;
+    }
+    this.checkAbort(task);
+    const round = roundsDone + 1;
+    task.acceptFollowups = round; // lưu TRƯỚC khi chạy: tiếp tục sau tạm dừng không mở thêm vòng
+    const run: DeptRun = { department: last.department, status: 'pending', subtasks: [], usage: emptyUsage(), followupOf: last.department, round, followupCriteria: d.inScope.map((c) => ({ name: c.name, detail: c.evidence })) };
+    task.runs.push(run);
+    if (task.attention?.reason === 'acceptance') task.attention = undefined;
+    else if (task.attention) task.attention.detail = task.attention.detail.replace(/ · CTO chưa nghiệm thu:.*$/, '');
+    this.save(task);
+    logs.write({ level: 'info', kind: 'accept.followup', msg: `${task.id}: mở vòng bổ sung ${round}/${maxRounds} cho ${d.inScope.length} tiêu chí trong phạm vi`, taskId: task.id, projectId: task.projectId, agentId: lead.id, department: dept.id, data: { ...data, round, opened: true } });
+    this.message(task, dept.id, 'system', 'system', `🔁 Vòng bổ sung ${round}/${maxRounds}: CTO chưa nghiệm thu, ${dept.short} tự làm tiếp ${d.inScope.length} tiêu chí trong phạm vi.${names.length ? ` ${names.length} tiêu chí cần giám đốc quyết định, không làm.` : ''}`);
+    const lastFinal = last.finalPath ? (store.readRunFile(task.id, last.finalPath) ?? '') : '';
+    const prior = [
+      `# Vòng bổ sung ${round}/${maxRounds} sau nghiệm thu của CTO`,
+      'CTO chưa nghiệm thu. CHỈ lập kế hoạch cho các tiêu chí có phạm vi "in" dưới đây; không làm lại phần đã đạt, không đụng tiêu chí cần quyết định.',
+      criteriaTable(d.inScope),
+      names.length ? `## Không làm (cần giám đốc quyết định)\n${names.map((n) => `- ${n}`).join('\n')}` : '',
+      lastFinal ? `## Báo cáo vòng trước\n${lastFinal}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+    await this.runDepartment(task, run, project, prior);
+    this.checkAbort(task);
+    this.writeFinal(task);
+    const unfinished = run.subtasks.filter((s) => !s.splitTo && (s.status === 'failed' || s.status === 'skipped'));
+    if (unfinished.length) {
+      task.attention = { reason: 'acceptance', detail: `Vòng bổ sung ${round} còn ${unfinished.length} hạng mục chưa xong (${unfinished.map((s) => s.id).join(', ')})`, at: nowIso() };
+      this.save(task);
+      return false;
+    }
+    await this.accept(task, project);
+    return true;
+  }
+
+  /**
+   * B-11(a): chọn chế độ nghiệm thu. Chỉ làn đơn chưa nâng làn mới theo `slim.accept`; còn lại luôn full.
+   * skip cần đủ ba điều kiện (mọi lệnh kiểm tra xanh, diff không chạm vùng nhạy cảm, nhãn dữ liệu < Bảo mật); thiếu điều kiện nào thì lùi về brief.
+   */
+  private acceptMode(task: Task, project?: ProjectDef): { kind: 'full' } | { kind: 'brief'; reason: string } | { kind: 'skip'; classification: Classification } {
+    if (task.lane !== 'single' || task.runs.some((r) => r.escalatedFrom === 'single')) return { kind: 'full' };
+    const want: AcceptMode = resolveSlim(this.d.config, project, task.options).accept;
+    if (want === 'full') return { kind: 'full' };
+    if (want === 'brief') return { kind: 'brief', reason: 'configured' };
+    const latest = task.projectChecks?.latest ?? [];
+    const classification = maxClass((project?.classification ?? task.classification) as Classification, task.classification);
+    const missing: string[] = [];
+    if (!latest.length || latest.some((c) => !c.ok)) missing.push('cổng lệnh kiểm tra chưa xanh');
+    if (sensitivePaths(changedFiles(task.workspace, task.baseRef).filter((f) => !f.startsWith('.ccoding/'))).length) missing.push('diff chạm vùng bảo mật/dữ liệu');
+    if (CLASS_RANK[classification] >= CLASS_RANK.confidential) missing.push(`nhãn dữ liệu ${classification}`);
+    return missing.length ? { kind: 'brief', reason: `fallback:${missing.join('; ')}` } : { kind: 'skip', classification };
+  }
+
   private async route(task: Task, project?: ProjectDef): Promise<string[]> {
     const { registry } = this.d;
     const depts = [...registry.departments.values()];
-    const router = registry.router();
+    // B-01: ép làn đơn → định tuyến bằng từ khóa, không gọi LLM (làn đơn không có lượt route)
+    const router = forcedLane(task.options.lane, project?.lane) === 'single' ? undefined : registry.router();
     task.phase = 'route';
     this.save(task);
     let result = undefined as ReturnType<typeof parseRoute>;
@@ -1195,7 +1364,9 @@ export class Orchestrator {
         cwd: task.workspace ?? this.workspaceFor(task, project),
         hints: { brief: task.brief, departments: depts.map((d) => ({ id: d.id, name: d.name, keywords: d.keywords })) },
       });
-      result = parseRoute(res.text, depts.map((d) => d.id));
+      // lượt route lỗi → không đọc text lỗi như kết quả định tuyến; lùi về định tuyến bằng từ khóa (có log)
+      if (res.error) this.d.logs.write({ level: 'warn', kind: 'route.error', msg: `${task.id}: lượt định tuyến lỗi (${res.error.slice(0, 200)}) — dùng định tuyến từ khóa`, taskId: task.id, agentId: router.id });
+      result = res.error ? undefined : parseRoute(res.text, depts.map((d) => d.id));
       if (result) by = router.id;
     }
     result ??= keywordRoute(task.brief, depts);
@@ -1231,7 +1402,367 @@ export class Orchestrator {
       parallelWriters: this.parallelWorktrees(task, project),
       repoMap: this.repoMaps.get(task.id),
       caps: access === 'none' ? undefined : this.capabilities(roster, access, this.gitReadable(task, project)),
+      // B-09 (outputCap, stopSurveyHint: mặc định tắt), B-03 (incidentLog: mặc định bật)
+      flags: { outputCap: !!this.d.config.phases.outputCap, stopSurvey: !!this.d.config.phases.stopSurveyHint, incidentLog: this.d.config.phases.incidentLog !== false },
     };
+  }
+
+  /**
+   * Điều phối làn nhanh sau khi lập kế hoạch (luật cứng, không gọi model): (1) hạng mục giao cho người review: thuần kiểm thử (mọi tệp nêu
+   * tên là tệp test) → trọng tâm review (benchtest 2/11: các hạng mục này dài nhất, nằm trên đường găng); có sửa mã nguồn → giao người khác
+   * (C7 2/11: bỏ nhầm "sửa lỗi trong src/promotions.js" khiến lỗi không ai sửa); (2) hạng mục độc lập trùng người làm → chia cho người khác
+   * cùng năng lực công cụ để chạy song song (mỗi người chỉ làm một hạng mục một lúc).
+   */
+  private shapeFastPlan(task: Task, run: DeptRun, roster: AgentDef[], lead: AgentDef, reviewer: AgentDef | undefined, pctx: P.Ctx): void {
+    const notes: string[] = [];
+    const pool = roster.filter((a) => a.id !== lead.id && a.id !== reviewer?.id);
+    const used = new Set(run.subtasks.filter((s) => s.assignee !== reviewer?.id).map((s) => s.assignee));
+    if (task.options.review && reviewer && run.subtasks.length > 1) {
+      const mine = run.subtasks.filter((s) => s.assignee === reviewer.id);
+      // chỉ hạng mục THUẦN kiểm thử (mọi tệp nêu tên là tệp test) mới thành trọng tâm review; hạng mục có sửa mã nguồn giao cho người
+      // khác — benchtest C7 t2 (2/11): "sửa lỗi 3, 4 trong src/promotions.js" giao nhầm cho QA bị bỏ khỏi thực thi → lỗi không ai sửa
+      const testOnly = (s: Subtask) => {
+        const files = `${s.title}\n${s.description}`.match(/[\w./-]+\.(?:[cm]?[jt]sx?|py|go|rs|java|kt|cs|rb|php|sql|json|ya?ml|md)\b/gi) ?? [];
+        const testPath = (f: string) => /(^|[\/._-])(tests?|specs?|__tests__)([\/._-]|$)/i.test(f);
+        if (!/test|kiểm thử/i.test(s.title)) return false;
+        return files.length ? files.every(testPath) : /viết (bộ )?test|bộ test|kiểm thử/i.test(s.title);
+      };
+      const focus = mine.filter(testOnly);
+      if (focus.length && focus.length < run.subtasks.length) {
+        const ids = new Set(focus.map((s) => s.id));
+        run.subtasks = run.subtasks.filter((s) => !ids.has(s.id));
+        for (const s of run.subtasks) if (s.dependsOn?.length) s.dependsOn = s.dependsOn.filter((d) => !ids.has(d));
+        run.reviewFocus = focus.map((s) => `- ${s.title}: ${s.description.slice(0, 600)}`).join('\n');
+        notes.push(`${[...ids].join(', ')} (@${reviewer.id}) chuyển thành trọng tâm review, không nằm trên đường găng`);
+      }
+      for (const s of mine.filter((x) => !testOnly(x))) {
+        const cap = pctx.caps?.[reviewer.id];
+        const alt = pool.find((a) => !used.has(a.id) && pctx.caps?.[a.id] === cap) ?? pool.find((a) => !used.has(a.id)) ?? pool.find((a) => pctx.caps?.[a.id] === cap) ?? pool[0];
+        if (!alt) continue;
+        notes.push(`${s.id} chuyển @${reviewer.id} → @${alt.id} (người review không tự làm việc mình sẽ review)`);
+        s.assignee = alt.id;
+        used.add(alt.id);
+      }
+    }
+    const seen = new Set<string>();
+    for (const s of run.subtasks) {
+      if (!seen.has(s.assignee)) {
+        seen.add(s.assignee);
+        continue;
+      }
+      if (s.dependsOn?.length) continue;
+      const cap = pctx.caps?.[s.assignee];
+      const alt = pool.find((a) => !used.has(a.id) && !seen.has(a.id) && pctx.caps?.[a.id] === cap);
+      if (!alt) continue;
+      notes.push(`${s.id} chuyển @${s.assignee} → @${alt.id} để chạy song song`);
+      s.assignee = alt.id;
+      used.add(alt.id);
+      seen.add(alt.id);
+    }
+    // kế hoạch làn nhanh có tới 4 hạng mục độc lập; maxParallel mặc định 3 → hạng mục thứ 4 phải chờ một chỗ trống (đo 2/11: +30 s đường găng)
+    const roots = run.subtasks.filter((s) => !s.dependsOn?.length).length;
+    const want = Math.min(roots, this.d.config.fastLane.maxParallel ?? 4);
+    if (want > task.options.maxParallel) {
+      notes.push(`chạy cùng lúc ${want} hạng mục (thay vì ${task.options.maxParallel})`);
+      task.options.maxParallel = want;
+    }
+    if (notes.length) this.message(task, run.department, 'system', 'system', `⚡ Điều phối làn nhanh: ${notes.join('; ')}.`);
+  }
+
+  /**
+   * Làn xử lý của nhiệm vụ (B-01, backlog §3.1): options.lane 'single'/'fast'/'full' ghi đè; 'auto' → chooseLane (src/lane.ts, quy tắc 1–4,
+   * không gọi LLM) theo tín hiệu briefChars/parts/filesTouched/repoFiles/repoBytes. Việc lớn: làn nhanh khi bật fastLane và repo/đề nằm trong ngưỡng, ngược lại làn đầy.
+   * Ghi signals, lane, why vào log 'lane.pick'. Làn đơn chạy bằng runSingleLane.
+   */
+  private pickLane(task: Task, project: ProjectDef | undefined, pctx: P.Ctx): { lane: 'single' | 'fast' | 'full'; why: string } {
+    const forced = forcedLane(task.options.lane, project?.lane);
+    const cfg = this.d.config;
+    const fl = cfg.fastLane;
+    let signals: LaneSignals | undefined;
+    let pick: { lane: 'single' | 'fast' | 'full'; why: string } = { lane: 'full', why: '' };
+    if (forced) {
+      signals = laneSignals(task.brief, [], 0, forced);
+      pick = { lane: forced, why: 'theo yêu cầu' };
+    } else if (!fl?.enabled || task.mode === 'agent' || task.mode === 'joint' || !project?.workspace || !pctx.filesAccessible) {
+      pick = { lane: 'full', why: '' };
+    } else {
+      const ls = spawnSync('git', ['ls-files', '-z'], { cwd: pctx.cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, windowsHide: true });
+      if (ls.status === 0) {
+        const files = ls.stdout.split('\0').filter(Boolean);
+        let bytes = 0;
+        for (const f of files) {
+          try {
+            bytes += fs.statSync(path.join(pctx.cwd, f)).size;
+          } catch {
+            /* tệp đã xóa trong worktree */
+          }
+          if (bytes > fl.maxRepoBytes) break;
+        }
+        signals = laneSignals(task.brief, files, bytes);
+        // V4-3f khối B: không có worktree con ⇒ hạng mục chạy lệnh làm lần lượt (executeAll: exclusive) ⇒ chia việc không nhanh hơn
+        if (pctx.serialWriters && !pctx.parallelWriters) signals.serialWriters = true;
+        const ch = chooseLane(signals, cfg);
+        pick = { lane: ch.lane, why: ch.why };
+      }
+    }
+    if (signals) this.laneSigs.set(task.id, signals);
+    this.d.logs.write({
+      level: 'info',
+      kind: 'lane.pick',
+      msg: `${task.id}: làn ${pick.lane}${pick.why ? ` — ${pick.why}` : ''}`,
+      taskId: task.id,
+      projectId: task.projectId,
+      data: { lane: pick.lane, why: pick.why, signals },
+    });
+    if (signals) {
+      const sg = signals;
+      this.message(task, task.departments?.[0] ?? 'system', 'system', 'system', `🧭 Chọn làn ${pick.lane}${pick.why ? ` (${pick.why})` : ''} — tín hiệu: đề ${sg.briefChars} ký tự, ${sg.parts} phần, ${sg.filesTouched} tệp/thư mục nêu, repo ${sg.repoFiles} tệp / ${Math.round(sg.repoBytes / 1024)} KB${sg.sequential ? ', nối tiếp' : ''}${sg.serialWriters ? ', không chạy song song được' : ''}${sg.forced ? `, ép ${sg.forced}` : ''}.`);
+    }
+    return pick;
+  }
+
+  /**
+   * B-01 làn đơn (backlog §3.2–§3.3): một agent đúng vai làm trọn đề bài ở pha execute trong worktree nhiệm vụ — không route, plan, họp,
+   * worktree con hay tổng hợp bằng LLM. Sau đó chạy cổng B-02 (`runQualityGate`) và dựng FINAL.md từ mẫu. Bản ghi run có đúng 1 hạng mục
+   * nên KPI, lịch sử và pha CTO nghiệm thu (`accept`) chạy như các làn khác. Nâng lên multi-agent (task.lane → fast/full, giữ worktree,
+   * bàn giao dở dang làm `prior` cho pha plan, đi qua cổng B-10) khi: còn đỏ sau gate.maxFixRounds, phạm vi thực tế vượt ngưỡng, hoặc đầu ra có dòng `ESCALATE:`.
+   */
+  private async runSingleLane(
+    task: Task,
+    run: DeptRun,
+    project: ProjectDef | undefined,
+    dept: DepartmentDef,
+    roster: AgentDef[],
+    lead: AgentDef,
+    reviewer: AgentDef | undefined,
+    pctx: P.Ctx,
+    base: CallCtx,
+    prior: string | undefined,
+  ): Promise<{ final: string; prior?: undefined } | { final?: undefined; prior: string | undefined }> {
+    const { registry, config, logs, store } = this.d;
+    run.status = 'running';
+    run.startedAt ??= nowIso();
+    const checkable = this.projectCheckable(task, project);
+
+    // B-11 (b)(c): làm gọn prompt thực thi làn đơn — chưa nâng làn; nâng làn thì xóa (prompt đầy đủ trở lại)
+    const slim = resolveSlim(config, project, task.options);
+    if (run.escalatedFrom !== 'single' && (slim.promptDiet || slim.compactTemplate)) {
+      const files = slim.promptDiet ? this.smallRepoFiles(pctx.cwd) : undefined;
+      pctx.singleSlim = { diet: slim.promptDiet, compact: slim.compactTemplate, files };
+      logs.write({ level: 'info', kind: 'slim.prompt', msg: `${task.id}: làm gọn prompt làn đơn (promptDiet=${slim.promptDiet}, compactTemplate=${slim.compactTemplate}${files ? `, danh sách ${files.length} tệp thay bản đồ repo` : ''})`, taskId: task.id, department: dept.id, data: { promptDiet: slim.promptDiet, compactTemplate: slim.compactTemplate, fileList: files?.length } });
+    } else pctx.singleSlim = undefined;
+
+    // 1) baseline lệnh kiểm tra của dự án
+    if (checkable && !task.projectChecks?.baseline && !run.subtasks.some((s) => s.attempts > 0 || s.status === 'done')) {
+      this.setPhase(task, run, 'execute');
+      await this.runProjectChecks(task, project, dept.id, 'baseline');
+    }
+
+    // 2) một hạng mục, một agent đúng vai (khớp kỹ năng; có quyền chạy lệnh nếu dự án có lệnh kiểm tra)
+    if (!run.subtasks.length) {
+      let pool = roster.filter((a) => a.role === 'member');
+      if (!pool.length) pool = [lead];
+      if (checkable && pool.some((a) => this.isWriter(a, task, project))) pool = pool.filter((a) => this.isWriter(a, task, project));
+      const pick = pool.map((a) => ({ a, s: skillScore(task.brief, a) })).sort((x, y) => y.s - x.s)[0].a;
+      run.subtasks = [
+        newSubtask({
+          id: 'S1',
+          title: task.title,
+          assignee: pick.id,
+          description: `${task.brief}\n\n(Làn đơn) Bạn làm trọn đề bài này một mình. Nếu thấy việc vượt phạm vi (cần chia việc nhiều người, đụng nhiều tệp/phần hơn đề bài nêu), dừng và ghi một dòng \`ESCALATE: <lý do>\` trong bàn giao để CCoding nâng lên đội đa tác tử.`,
+          deliverable: 'Sản phẩm theo yêu cầu, báo cáo bàn giao theo mẫu đầu ra',
+        }),
+      ];
+      run.planSummary = `Làn đơn: ${pick.name} (@${pick.id}) làm trọn đề bài trong worktree nhiệm vụ`;
+      run.decisions = '';
+      run.stage = 'finalized';
+      this.message(task, dept.id, 'system', 'system', `🎯 Làn đơn: ${pick.name} (@${pick.id}) làm trọn đề bài — không lập kế hoạch, không họp, không tổng hợp bằng model.`);
+      this.save(task);
+    }
+    const st = run.subtasks[0];
+    const agent = registry.agent(st.assignee);
+
+    const scopeExceeded = (): string | undefined => {
+      // V4-3f khối B: hạng mục chạy lệnh sẽ làm lần lượt ⇒ nâng lên đội chỉ vì phạm vi rộng không nhanh hơn mà tốn thêm (còn đỏ / ESCALATE vẫn nâng)
+      if (pctx.serialWriters && !pctx.parallelWriters && config.fastLane?.requireParallel !== false) return undefined;
+      const files = changedFiles(task.workspace, task.baseRef).filter((f) => !f.startsWith('.ccoding/'));
+      const max = config.lanes?.single?.maxFilesTouched ?? 6;
+      const est = laneSignals(task.brief, [], 0).filesTouched;
+      if (files.length > max) return `diff thực tế chạm ${files.length} tệp (> ${max})`;
+      if (est > 0 && files.length > 2 * est) return `diff thực tế chạm ${files.length} tệp (> 2 × ước lượng ${est})`;
+      return undefined;
+    };
+    const escalateMark = (): string | undefined => {
+      const m = /^[ \t>*-]*ESCALATE:[ \t]*(.*)$/m.exec(this.readOutput(task, st));
+      return m ? m[1].trim() || 'agent yêu cầu nâng cấp' : undefined;
+    };
+    /** Giữ worktree, chuyển task.lane sang fast/full và bàn giao dở dang cho luồng có plan. */
+    const escalate = (reason: string, trigger: 'red' | 'scope' | 'agent'): { prior: string | undefined } => {
+      const signals = laneSignals(task.brief, [], 0);
+      const target: 'fast' | 'full' = config.fastLane?.enabled && task.mode !== 'joint' && signals.briefChars <= config.fastLane.maxBriefChars ? 'fast' : 'full';
+      const pc = task.projectChecks;
+      const fmt = (rs?: CheckResult[]) => (rs?.length ? rs.map((r) => `- \`${r.command}\` → ${r.ok ? 'đạt' : `đỏ (exit ${r.code ?? '?'})${r.summary ? `: ${r.summary.slice(0, 160)}` : ''}`}`).join('\n') : '(chưa chạy)');
+      const handover = [
+        `# Bàn giao dở dang từ làn đơn (@${agent.id}) — lý do nâng cấp: ${reason}`,
+        'Worktree nhiệm vụ được giữ nguyên: phần đã làm vẫn nằm trong repo. Lập kế hoạch trên nền đó, KHÔNG làm lại từ đầu.',
+        '',
+        '## Thay đổi hiện có (diff)',
+        (this.workspaceChanges(task) || '(chưa có thay đổi)').slice(0, 3000),
+        '',
+        '## Lệnh kiểm tra — baseline',
+        fmt(pc?.baseline),
+        '',
+        '## Lệnh kiểm tra — mới nhất',
+        fmt(pc?.latest),
+        '',
+        '## Ghi chú của agent',
+        (this.readOutput(task, st) || '(không có bàn giao)').slice(0, 3000),
+      ].join('\n');
+      writeText(path.join(store.runDir(task.id), 'LANE-HANDOVER.md'), `${handover}\n`);
+      logs.write({ level: 'warn', kind: 'lane.escalate', msg: `${task.id}: nâng cấp làn đơn → ${target} (${reason})`, taskId: task.id, projectId: task.projectId, department: dept.id, agentId: agent.id, data: { from: 'single', to: target, trigger, reason, fixRounds: config.gate?.maxFixRounds } });
+      this.message(task, dept.id, 'system', 'system', `⬆️ Nâng cấp làn đơn → làn ${target === 'fast' ? 'nhanh' : 'đầy'} (${reason}). Worktree được giữ; phần làm dở của @${agent.id} chuyển cho trưởng phòng lập kế hoạch.`);
+      task.lane = target;
+      pctx.singleSlim = undefined;
+      run.escalatedFrom = 'single'; // LANE-HANDOVER.md đã ghi TRƯỚC this.save() bên dưới → resume nạp lại được
+      if (target === 'fast' && !task.options.phaseModels?.plan && config.fastLane.planModel) task.options.phaseModels = { ...task.options.phaseModels, plan: config.fastLane.planModel };
+      run.subtasks = [];
+      run.stage = undefined;
+      run.review = undefined;
+      run.planSummary = undefined;
+      run.decisions = undefined;
+      this.save(task);
+      return { prior: `${prior ? `${prior}\n\n` : ''}${handover}` };
+    };
+
+    // 3) thực thi
+    if (!reached(run, 'executed')) {
+      this.setPhase(task, run, 'execute');
+      st.status = 'running';
+      try {
+        await this.runSubtask(task, run, st, pctx, base, prior);
+      } catch (e) {
+        if (st.status === 'running') st.status = 'pending';
+        throw e;
+      }
+      run.stage = 'executed';
+      if (checkable && (st.status as string) === 'done') await this.runProjectChecks(task, project, dept.id, 'execute');
+      this.save(task);
+    }
+
+    // 4) cổng B-02 (+ nâng cấp §3.3)
+    if (!reached(run, 'reviewed') && st.status === 'done') {
+      const early = escalateMark();
+      if (early) return escalate(`agent ghi ESCALATE: ${early}`, 'agent');
+      const wide = scopeExceeded();
+      if (wide) return escalate(wide, 'scope');
+      const gate = await this.runQualityGate(task, run, project, agent, { dept: dept.id, pctx, base });
+      const stillRed = gate.classes.filter((c) => c.cls === 'regression-or-new' || c.cls === 'red-required').map((c) => c.command);
+      if (stillRed.length) return escalate(`còn đỏ sau ${gate.fixRounds} vòng sửa theo kiểm tra: ${stillRed.map((c) => `\`${c}\``).join(', ')}`, 'red');
+      const late = escalateMark();
+      if (late) return escalate(`agent ghi ESCALATE: ${late}`, 'agent');
+      const wide2 = scopeExceeded();
+      if (wide2) return escalate(wide2, 'scope');
+      const sysNow = task.projectChecks?.latest ?? [];
+      const gateChecks = sysNow.map((r) => ({ command: r.command, exitCode: r.code ?? undefined, ok: r.ok, note: `CCoding tự chạy${r.summary ? ` — ${r.summary.slice(0, 120)}` : ''}` }));
+      const canReview = !!(task.options.review && reviewer && reviewer.id !== agent.id);
+      if (!gate.needReviewer) {
+        const summary = `Cổng chất lượng (làn đơn): lệnh kiểm tra đều xanh${gate.fixRounds ? ` sau ${gate.fixRounds} vòng sửa` : ''}, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.`;
+        run.review = { approved: true, summary, issues: [], checks: gateChecks, verified: true };
+        logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'skip-reviewer', fixRounds: gate.fixRounds, lane: 'single', briefDemandsReview: gate.briefDemandsReview, briefReviewItems: gate.briefReviewItems } });
+        this.message(task, dept.id, 'system', 'system', `✅ ${summary}`);
+      } else if (!canReview || !reviewer) {
+        // cần reviewer mà không có: ghi kiểm chứng theo cổng, KHÔNG tự gắn approved (D-02); không có lệnh kiểm tra nào thì không có gì để ghi
+        if (gateChecks.length) {
+        const summary = `Cổng chất lượng (làn đơn): cần reviewer (${gate.reasons.join('; ')}) nhưng phòng không có/không bật — chờ giám đốc xem.`;
+        run.review = { approved: false, summary, issues: [], checks: gateChecks, verified: gateChecks.length > 0 };
+        logs.write({ level: 'warn', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'no-reviewer', reasons: gate.reasons, lane: 'single', briefDemandsReview: gate.briefDemandsReview, briefReviewItems: gate.briefReviewItems } });
+        this.message(task, dept.id, 'system', 'system', `✋ ${summary}`);
+        }
+      } else {
+        logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: gọi reviewer — ${gate.reasons.join('; ')}`, taskId: task.id, department: dept.id, data: { decision: 'call-reviewer', reasons: gate.reasons, lane: 'single', briefDemandsReview: gate.briefDemandsReview, briefReviewItems: gate.briefReviewItems } });
+        this.setPhase(task, run, 'review');
+        const items = [this.depInput(task, st)];
+        const { res, review } = await this.reviewWithVerdict(task, dept.id, run, reviewer, { ...pctx, reviewFocus: run.reviewFocus }, items, (tools) => P.reviewPrompt({ ...pctx, reviewFocus: run.reviewFocus }, items, tools, this.workspaceChanges(task), checkable), { ...base, hints: { brief: task.brief, subtasks: [stHint(st)], attempt: 0 } });
+        if (assignStrayIssues(review.issues, [st])) review.approved = false;
+        run.review = { approved: review.approved, summary: review.summary, issues: review.issues, checks: gateChecks, verified: gateChecks.length > 0 || (res.toolCalls ?? []).some((tc) => tc.name === 'run_command') };
+      }
+      run.reviewRound = 0;
+      this.save(task);
+    }
+    if (!reached(run, 'reviewed')) {
+      run.stage = 'reviewed';
+      if (run.review && !run.review.approved) task.attention = { reason: 'review', detail: `${dept.short}: ${run.review.skipped ? 'chưa review — ' : ''}${run.review.summary.slice(0, 280)}`, at: nowIso() };
+      else if (task.projectChecks?.latest?.some((r) => !r.ok)) task.attention = { reason: 'checks', detail: `Lệnh kiểm tra còn lỗi: ${task.projectChecks.latest.filter((r) => !r.ok).map((r) => r.command).join(', ')}`, at: nowIso() };
+      else if (run.review?.approved && !run.review.by && run.review.verified === false) task.attention = { reason: 'review', detail: `${dept.short}: duyệt nhưng chưa có kiểm chứng chạy thật — cần giám đốc xem.`, at: nowIso() };
+      this.save(task);
+    }
+
+    // 5) FINAL.md dựng từ mẫu — không gọi LLM
+    this.checkAbort(task);
+    const reviewText = run.review ? `${run.review.approved ? 'Đã duyệt' : 'Chưa duyệt hoàn toàn'}: ${run.review.summary}` : '';
+    const finalText = P.templateReport(task, dept, run, [this.depInput(task, st)], reviewText, this.workspaceChanges(task), 'Làn đơn: một agent làm trọn đề bài; báo cáo dựng tự động từ bàn giao và kết quả cổng chất lượng (không gọi model).');
+    const rel = `${safeName(dept.id)}${run.round ? `-R${run.round}` : ""}-FINAL.md`;
+    writeText(path.join(store.runDir(task.id), rel), finalText);
+    run.finalPath = rel;
+    run.status = st.status === 'done' ? 'done' : 'failed';
+    run.stage = 'done';
+    run.finishedAt = nowIso();
+    run.phase = undefined;
+    this.message(task, dept.id, agent.id, 'final', `Báo cáo làn đơn đã xong: ${extractSummary(finalText, 240)}`);
+    this.save(task);
+    return { final: finalText };
+  }
+
+  /**
+   * K2: một lượt review + lấy kết luận khi chạm trần lượt. Thứ tự: (1) không đọc được JSON và `capped` ⇒ một lượt tiếp nối
+   * không công cụ chỉ để trả JSON kết luận; (2) vẫn không ⇒ chạy lại review đúng một lần với trần lượt gấp đôi;
+   * (3) vẫn không ⇒ attention rõ "review chưa có kết luận", không bao giờ approved. Mọi lượt đi qua `call()`.
+   * Review bình thường (đọc được JSON ngay) không phát sinh lượt gọi thêm.
+   */
+  private async reviewWithVerdict(
+    task: Task,
+    deptId: string,
+    run: DeptRun,
+    reviewer: AgentDef,
+    pctx: P.Ctx,
+    items: Parameters<typeof P.reviewPrompt>[1],
+    build: Builder,
+    ctx: CallCtx,
+  ): Promise<{ res: RunResult; review: ReturnType<typeof parseReview> }> {
+    const ids = items.map((i) => i.st.id);
+    const { logs } = this.d;
+    let res = await this.call(reviewer, 'review', build, ctx);
+    if (res.error) throw new Error(`Không review được: ${res.error}`);
+    let review = parseReview(res.text, ids);
+    if (review.parsed || !res.capped) return { res, review };
+
+    const why = res.capped === 'input' ? 'hết trần token công cụ' : 'hết lượt công cụ';
+    // (1) lượt tiếp nối chỉ để trả kết luận — không công cụ (trần = 0)
+    logs.write({ level: 'warn', kind: 'review.verdict', msg: `${task.id}: review ${why} mà chưa có kết luận JSON — gọi lượt tiếp nối chỉ để trả kết luận`, taskId: task.id, department: deptId, agentId: reviewer.id, phase: 'review', data: { step: 'followup', capped: res.capped } });
+    this.message(task, deptId, 'system', 'system', `↻ Review ${why} mà chưa có kết luận — yêu cầu @${reviewer.id} trả kết luận theo mẫu JSON dựa trên những gì đã kiểm.`);
+    const first = res;
+    const fu = await this.call(reviewer, 'review', () => P.reviewVerdictPrompt(pctx, items, first.text), { ...ctx, noTools: true, activity: 'Review: trả kết luận sau khi chạm trần' });
+    if (!fu.error) {
+      const r = parseReview(fu.text, ids);
+      if (r.parsed) return { res: { ...first, text: fu.text }, review: r };
+    }
+    // (2) chạy lại review một lần với trần lượt công cụ gấp đôi
+    const turns = (this.d.config.phases?.toolTurns?.review ?? 8) * 2;
+    logs.write({ level: 'warn', kind: 'review.verdict', msg: `${task.id}: lượt tiếp nối không ra kết luận — chạy lại review với trần ${turns} lượt công cụ`, taskId: task.id, department: deptId, agentId: reviewer.id, phase: 'review', data: { step: 'rerun', maxTurns: turns } });
+    this.message(task, deptId, 'system', 'system', `↻ Lượt tiếp nối chưa ra kết luận — chạy lại review một lần với trần ${turns} lượt công cụ.`);
+    const again = await this.call(reviewer, 'review', build, { ...ctx, maxTurns: turns, activity: 'Review: chạy lại với trần lượt cao hơn' });
+    if (!again.error) {
+      res = again;
+      review = parseReview(again.text, ids);
+      if (review.parsed) return { res, review };
+    }
+    // (3) không im lặng đi tiếp
+    const summary = 'Review chưa có kết luận: reviewer chạm trần lượt công cụ, lượt tiếp nối và lần chạy lại đều không trả JSON kết luận — chưa duyệt, cần giám đốc xem.';
+    logs.write({ level: 'warn', kind: 'review.verdict', msg: `${task.id}: ${summary}`, taskId: task.id, department: deptId, agentId: reviewer.id, phase: 'review', data: { step: 'none' } });
+    this.message(task, deptId, 'system', 'system', `⛔ ${summary}`);
+    task.attention = { reason: 'review', detail: summary, at: nowIso() };
+    this.save(task);
+    return { res, review: { approved: false, summary, issues: [], checks: [], parsed: false } };
   }
 
   /** Năng lực công cụ ở pha thực thi của từng người (với quyền của nhiệm vụ) — trưởng phòng giao việc theo đó. */
@@ -1259,6 +1790,31 @@ export class Orchestrator {
     const reviewer = dept.reviewer ? registry.agents.get(dept.reviewer) : undefined;
     const pctx = this.pctx(task, dept, project, roster);
     const base: CallCtx = { task, dept, run, project, cwd: pctx.cwd };
+    // Làn nhanh (việc nhỏ): điều phối nhanh, chia song song, không họp, báo cáo theo mẫu — chọn một lần, lưu vào nhiệm vụ
+    if (!task.lane) {
+      const pick = this.pickLane(task, project, pctx);
+      task.lane = pick.lane;
+      if (task.lane === 'fast') {
+        if (!task.options.phaseModels?.plan && this.d.config.fastLane.planModel) task.options.phaseModels = { ...task.options.phaseModels, plan: this.d.config.fastLane.planModel };
+        this.message(task, dept.id, 'system', 'system', `⚡ Làn nhanh (${pick.why}): lập kế hoạch nhanh, chia việc song song, không họp${this.d.config.fastLane.finalReport === 'template' ? ', báo cáo dựng từ bàn giao' : ''}.`);
+      }
+      this.save(task);
+    }
+    pctx.lane = task.lane === 'single' ? 'fast' : task.lane;
+    // B-01: làn đơn — một agent, không route/plan/họp/worktree con/tổng hợp LLM; nâng lên multi-agent thì chạy tiếp luồng có plan bên dưới
+    if (task.lane === 'single' && !(task.mode === 'agent' && task.agentId)) {
+      const r = await this.runSingleLane(task, run, project, dept, roster, lead, reviewer, pctx, base, prior);
+      if (r.final !== undefined) return r.final;
+      prior = r.prior;
+      pctx.singleSlim = undefined;
+      pctx.lane =task.lane === 'single' ? 'fast' : task.lane;
+    }
+    // tiếp tục sau tạm dừng giữa lúc nâng làn (plan/execute chưa xong): `prior` của lần nâng đã mất → nạp lại bàn giao dở dang
+    if (run.escalatedFrom === 'single' && task.lane !== 'single' && !reached(run, 'executed') && !prior?.includes('# Bàn giao dở dang từ làn đơn')) {
+      const handover = this.d.store.readRunFile(task.id, 'LANE-HANDOVER.md');
+      if (handover) prior = `${prior ? `${prior}\n\n` : ''}${handover}`;
+      else this.d.logs.write({ level: 'warn', kind: 'lane.handover', msg: `${task.id}: tiếp tục sau nâng làn nhưng không thấy LANE-HANDOVER.md`, taskId: task.id, department: dept.id });
+    }
     const names = new Map([...registry.agents.values()].map((a) => [a.id, a.name]));
     const rosterHints = roster.map((a) => ({ id: a.id, name: a.name, title: a.title, role: a.role, skills: a.skills }));
     run.status = 'running';
@@ -1304,11 +1860,13 @@ export class Orchestrator {
       if (!reached(run, 'planned')) {
         this.setPhase(task, run, 'plan');
         pctx.projectHistory = this.projectHistory(task, pctx);
+        this.applyPlanDifficulty(task);
         const planRes = await this.call(lead, 'plan', (tools) => P.planPrompt(pctx, prior, tools), { ...base, hints: { brief: task.brief, roster: rosterHints, department: dept.name } });
         // lượt gọi lỗi → dừng (tiếp tục được) thay vì làm theo kế hoạch dự phòng đoán mò
-        if (planRes.error && !planRes.text) throw new Error(`Trưởng phòng không lập được kế hoạch: ${planRes.error}`);
+        if (planRes.error) throw new Error(`Trưởng phòng không lập được kế hoạch: ${planRes.error}`);
         plan = parsePlan(planRes.text, roster, lead, task.brief);
         run.subtasks = plan.subtasks;
+        if (task.lane === 'fast') this.shapeFastPlan(task, run, roster, lead, reviewer, pctx);
         run.planSummary = plan.summary;
         run.stage = 'planned';
         this.message(task, dept.id, lead.id, 'plan', `${plan.summary || 'Kế hoạch dự thảo'}\n${P.planText(plan.subtasks)}${plan.parsed ? '' : '\n(_kế hoạch dự phòng — trả lời của trưởng phòng không đúng định dạng_)'}`);
@@ -1320,19 +1878,36 @@ export class Orchestrator {
         const rounds = task.options.discussionRounds;
         const assignees = [...new Set(run.subtasks.map((s) => s.assignee))].filter((x) => x !== lead.id);
         const participantIds = [...new Set([...assignees, task.options.review ? reviewer?.id : undefined].filter((x): x is string => !!x && x !== lead.id))].slice(0, 5);
-        const small = run.subtasks.length <= 2 || participantIds.length < 2;
-        if (rounds > 0 && !small) {
+        // kế hoạch nhỏ → bỏ họp: ít hơn phases.meetingMinSubtasks hạng mục (mặc định 3) hoặc chưa tới 2 người tham gia
+        const minSubtasks = Math.max(1, this.d.config.phases.meetingMinSubtasks ?? 3);
+        const small = run.subtasks.length < minSubtasks || participantIds.length < 2;
+        if (rounds > 0 && !small && task.lane !== 'fast') {
           this.setPhase(task, run, 'discuss');
           const participants = participantIds.map((id) => registry.agent(id));
           const meeting = [lead, ...participants];
           for (const a of meeting) this.hold(a.id, { status: 'discussing', activity: 'Đang họp phòng', taskId: task.id, phase: 'discuss' });
           try {
+            // Họp song song trong một vòng (phases.parallelDiscuss, mặc định bật): mọi người cùng phát biểu dựa trên biên bản tới đầu vòng —
+            // đo trên benchtest 1/11: 3 lượt phát biểu nối tiếp ~20–31 giây trên đường găng mỗi nhiệm vụ; vòng sau vẫn thấy ý kiến vòng trước
+            const parallel = this.d.config.phases.parallelDiscuss !== false;
+            const transcriptNow = () => P.transcriptText(this.d.store.transcript(task.id).filter((m) => m.department === dept.id && m.kind !== 'final'), names, 6000);
             for (let r = 1; r <= rounds; r++) {
+              if (parallel) {
+                this.checkAbort(task);
+                const transcript = transcriptNow();
+                const said = await Promise.all(
+                  participants.map((a) =>
+                    this.call(a, 'discuss', () => P.discussPrompt(pctx, a, run.planSummary ?? '', run.subtasks, transcript, r, rounds, true), { ...base, hints: { brief: task.brief } }).then((res) => ({ a, res })),
+                  ),
+                );
+                for (const { a, res } of said) if (res.text && !res.error) this.message(task, dept.id, a.id, 'discussion', res.text.slice(0, 1500), { round: r });
+                continue;
+              }
               for (const a of participants) {
                 this.checkAbort(task);
-                const transcript = P.transcriptText(this.d.store.transcript(task.id).filter((m) => m.department === dept.id && m.kind !== 'final'), names, 6000);
+                const transcript = transcriptNow();
                 const res = await this.call(a, 'discuss', () => P.discussPrompt(pctx, a, run.planSummary ?? '', run.subtasks, transcript, r, rounds), { ...base, hints: { brief: task.brief } });
-                if (res.text) this.message(task, dept.id, a.id, 'discussion', res.text.slice(0, 1500), { round: r });
+                if (res.text && !res.error) this.message(task, dept.id, a.id, 'discussion', res.text.slice(0, 1500), { round: r });
               }
             }
             this.setPhase(task, run, 'finalize');
@@ -1352,6 +1927,8 @@ export class Orchestrator {
           } finally {
             for (const a of meeting) this.release(a.id, task.id);
           }
+        } else if (rounds > 0 && task.lane === 'fast') {
+          run.decisions ??= '';
         } else if (rounds > 0) {
           this.message(task, dept.id, 'system', 'system', `Bỏ qua họp: kế hoạch nhỏ (${run.subtasks.length} hạng mục, ${participantIds.length} người) — vào thực thi luôn để tiết kiệm token.`);
           run.decisions ??= '';
@@ -1369,6 +1946,9 @@ export class Orchestrator {
           this.checkEstimate(task, run, project);
         }
       }
+
+      // B-10: cổng phủ kế hoạch (làn nhanh và đầy) — chặn kế hoạch bỏ sót đích hoặc đọc dở TRƯỚC khi thực thi
+      if (!solo && !reached(run, 'executed') && !run.planReview?.approvedAt && (!run.planGate || run.planGate.rules.length)) await this.gatePlan(task, run, dept, roster, lead, reviewer, pctx, base, plan);
 
     } catch (e) {
       // lập kế hoạch/họp dừng (tạm dừng, hủy, lỗi): chờ lệnh chuẩn bị/baseline đang chạy kết thúc để không bỏ tiến trình mồ côi
@@ -1404,7 +1984,8 @@ export class Orchestrator {
       const canReview = !!(task.options.review && reviewer && reviewer.id !== solo?.id);
       // giám đốc yêu cầu sửa: chạy vòng sửa kể cả khi phòng không bật review / không có reviewer riêng
       const directorRedo = !!run.revising?.length && run.review?.by === 'director' && !run.review.approved;
-      if ((canReview && done().length) || directorRedo) {
+      // B-02: cổng chất lượng chạy ở mọi làn — kể cả khi không có reviewer / review tắt / việc giao riêng
+      if (done().length || directorRedo) {
         for (let attempt = Math.min(run.reviewRound ?? 0, task.options.maxRevisions); attempt <= task.options.maxRevisions; attempt++) {
           this.checkAbort(task);
           run.reviewRound = attempt;
@@ -1417,35 +1998,83 @@ export class Orchestrator {
             targets = pending;
             this.message(task, dept.id, 'system', 'system', run.review!.by === 'director' ? `✋ Sửa theo yêu cầu của giám đốc: ${pending.map((s) => s.id).join(', ')}` : `↻ Tiếp tục vòng sửa ${attempt + 1}: ${pending.map((s) => s.id).join(', ')} (theo review đã có)`);
           } else {
-          if (!canReview || !reviewer) {
-            // đã sửa theo yêu cầu của giám đốc nhưng không có reviewer để duyệt lại → giám đốc xem rồi duyệt / yêu cầu sửa tiếp
-            run.review = { approved: false, summary: 'Đã sửa theo yêu cầu của giám đốc — không có reviewer duyệt lại, chờ giám đốc xem', issues: [], by: 'director' };
-            this.message(task, dept.id, 'system', 'system', '✋ Đã sửa theo yêu cầu của giám đốc — phòng không có reviewer duyệt lại; giám đốc xem rồi bấm Duyệt hoặc Yêu cầu sửa tiếp.');
-            break;
-          }
           // lần sửa trước (có thể dở dang do tạm dừng) đã đổi workspace sau lần kiểm tra gần nhất → chạy lại lệnh kiểm tra trước review
           const pcs = task.projectChecks;
           if (this.projectCheckable(task, project) && pcs?.staleAt && (!pcs.latestAt || pcs.latestAt < pcs.staleAt)) await this.runProjectChecks(task, project, dept.id, 'revise');
+          // B-02: cổng chất lượng chạy TRƯỚC reviewer — lệnh đỏ/hồi quy vào vòng sửa theo kiểm tra, sai mẫu vào lượt sửa định dạng
+          const gate = await this.runQualityGate(task, run, project, reviewer ?? solo ?? lead, { dept: dept.id, pctx, base });
+          const sysNow = task.projectChecks?.latest ?? [];
+          const gateChecks = sysNow.map((r) => ({ command: r.command, exitCode: r.code ?? undefined, ok: r.ok, note: `CCoding tự chạy${r.summary ? ` — ${r.summary.slice(0, 120)}` : ''}` }));
+          if (!canReview || !reviewer) {
+            // không có reviewer: cổng vẫn quyết định — đỏ mà đề bài đòi xanh thì không bao giờ approved
+            if (gate.forceUnapproved) {
+              const summary = `Cổng chất lượng: ${gate.stillRed.map((c) => `\`${c}\``).join(', ')} đề bài yêu cầu xanh nhưng còn đỏ sau ${gate.fixRounds} vòng sửa theo kiểm tra — không có reviewer, không duyệt.`;
+              run.review = { approved: false, summary, issues: [], checks: gateChecks, verified: true };
+              this.d.logs.write({ level: 'warn', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'forced-unapproved', stillRed: gate.stillRed, fixRounds: gate.fixRounds, reviewer: false } });
+              this.message(task, dept.id, 'system', 'system', `⛔ ${summary}`);
+            } else if (run.review?.by === 'director' || directorRedo) {
+              // đã sửa theo yêu cầu của giám đốc nhưng không có reviewer để duyệt lại → giám đốc xem rồi duyệt / yêu cầu sửa tiếp
+              run.review = { approved: false, summary: 'Đã sửa theo yêu cầu của giám đốc — không có reviewer duyệt lại, chờ giám đốc xem', issues: [], by: 'director', checks: gateChecks, verified: gateChecks.length > 0 || undefined };
+              this.message(task, dept.id, 'system', 'system', '✋ Đã sửa theo yêu cầu của giám đốc — phòng không có reviewer duyệt lại; giám đốc xem rồi bấm Duyệt hoặc Yêu cầu sửa tiếp.');
+            } else if (gate.needReviewer && gateChecks.length) {
+              // cần reviewer mà không có: ghi kiểm chứng theo cổng nhưng KHÔNG tự gắn approved (D-02); không có lệnh kiểm tra nào thì không có gì để ghi (như trước)
+              const summary = `Cổng chất lượng: cần reviewer (${gate.reasons.join('; ')}) nhưng phòng không có/không bật — chờ giám đốc xem.`;
+              run.review = { approved: false, summary, issues: [], checks: gateChecks, verified: gateChecks.length > 0 };
+              this.d.logs.write({ level: 'warn', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'no-reviewer', reasons: gate.reasons, fixRounds: gate.fixRounds, briefDemandsReview: gate.briefDemandsReview, briefReviewItems: gate.briefReviewItems } });
+              this.message(task, dept.id, 'system', 'system', `✋ ${summary}`);
+            } else if (gateChecks.length) {
+              const summary = `Cổng chất lượng: lệnh kiểm tra đều xanh${gate.fixRounds ? ` sau ${gate.fixRounds} vòng sửa` : ''}, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.`;
+              run.review = { approved: true, summary, issues: [], checks: gateChecks, verified: true };
+              this.d.logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'skip-reviewer', fixRounds: gate.fixRounds, reviewer: false, briefDemandsReview: gate.briefDemandsReview, briefReviewItems: gate.briefReviewItems } });
+              this.message(task, dept.id, 'system', 'system', `✅ ${summary}`);
+            } else {
+              // FX4: không review, không lệnh kiểm tra → ghi rõ "chưa review" thay vì để trống
+              this.markReviewSkipped(task, run, dept, !task.options.review ? 'review đang tắt' : 'phòng không có reviewer riêng');
+            }
+            break;
+          }
+          if (gate.forceUnapproved) {
+            // đỏ kéo dài mà đề bài yêu cầu xanh: không gọi reviewer, không bao giờ approved (nâng cấp là việc của luồng gọi)
+            const summary = `Cổng chất lượng: ${gate.stillRed.map((c) => `\`${c}\``).join(', ')} đề bài yêu cầu xanh nhưng còn đỏ sau ${gate.fixRounds} vòng sửa theo kiểm tra — không gọi reviewer, không duyệt.`;
+            run.review = { approved: false, summary, issues: [], checks: gateChecks, verified: true };
+            this.d.logs.write({ level: 'warn', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'forced-unapproved', stillRed: gate.stillRed, fixRounds: gate.fixRounds } });
+            this.message(task, dept.id, 'system', 'system', `⛔ ${summary}`);
+            break;
+          }
+          if (!gate.needReviewer) {
+            const summary = `Cổng chất lượng: lệnh kiểm tra đều xanh${gate.fixRounds ? ` sau ${gate.fixRounds} vòng sửa` : ''}, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.`;
+            run.review = { approved: true, summary, issues: [], checks: gateChecks, verified: true };
+            this.d.logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { decision: 'skip-reviewer', fixRounds: gate.fixRounds, briefDemandsReview: gate.briefDemandsReview, briefReviewItems: gate.briefReviewItems } });
+            this.message(task, dept.id, 'system', 'system', `✅ ${summary}`);
+            break;
+          }
+          this.d.logs.write({ level: 'info', kind: 'gate.review', msg: `${task.id}: gọi reviewer — ${gate.reasons.join('; ')}`, taskId: task.id, department: dept.id, data: { decision: 'call-reviewer', reasons: gate.reasons, briefDemandsReview: gate.briefDemandsReview, briefReviewItems: gate.briefReviewItems } });
           this.setPhase(task, run, 'review');
           const items = done().map((st) => this.depInput(task, st));
           const changes = this.workspaceChanges(task);
           let reviewTools: ToolName[] = [];
-          const res = await this.call(
+          // review lỗi KHÔNG được coi là "duyệt"; chạm trần lượt mà chưa có kết luận → lấy kết luận (K2)
+          const rv = await this.reviewWithVerdict(
+            task,
+            dept.id,
+            run,
             reviewer,
-            'review',
+            { ...pctx, reviewFocus: run.reviewFocus },
+            items,
             (tools) => {
               reviewTools = tools;
-              return P.reviewPrompt(pctx, items, tools, changes);
+              return P.reviewPrompt({ ...pctx, reviewFocus: run.reviewFocus }, items, tools, changes, this.projectCheckable(task, project));
             },
             { ...base, hints: { brief: task.brief, subtasks: items.map((i) => stHint(i.st)), attempt } },
           );
-          // review lỗi KHÔNG được coi là "duyệt"
-          if (res.error && !res.text) throw new Error(`Không review được: ${res.error}`);
-          review = parseReview(res.text, items.map((i) => i.st.id));
+          const res = rv.res;
+          review = rv.review;
           // kết luận GỐC của reviewer — KPI chấm độ đúng của reviewer theo trường này (approved có thể bị ép ngay dưới đây)
           const reviewerApproved = review.approved;
+          const stray = assignStrayIssues(review.issues, done());
+          if (stray) review.approved = false;
           // lệnh kiểm tra của dự án đạt trước khi sửa mà hỏng sau khi sửa → không duyệt, dù reviewer nói gì
-          const regressed = this.checkRegressions(task);
+          const regressed = [...new Set([...this.checkRegressions(task), ...gate.classes.filter((c) => c.cls === 'regression-or-new').map((c) => c.command)])];
           if (regressed.length) {
             if (review.approved) review.summary = `${review.summary} (CCoding: lệnh kiểm tra hỏng sau khi sửa → không duyệt)`;
             review.approved = false;
@@ -1453,6 +2082,18 @@ export class Orchestrator {
               const target = [...done()].reverse().find((s) => this.isWriter(registry.agent(s.assignee), task, project)) ?? done().at(-1);
               if (target) review.issues.push({ subtask: target.id, severity: 'blocker', comment: `Lệnh ${regressed.map((c) => `\`${c}\``).join(', ')} đạt trước khi sửa nhưng lỗi sau khi sửa — sửa cho đạt lại (đầu ra ở mục "Lệnh kiểm tra của dự án").` });
             }
+          }
+          // B-19 bước 1: issue blocker/major, regressed, guard.block (chỉ khi selfImprove.enabled && collect; comment không vào sự kiện)
+          if (this.d.config.selfImprove?.enabled && this.d.config.selfImprove.collect) {
+            const si = { cfg: this.d.config.selfImprove, logs: this.d.logs, dataDir: this.d.config.dataDir, root: this.d.config.root };
+            const serious = review.issues.filter((i) => i.severity === 'blocker' || i.severity === 'major');
+            if (serious.length) {
+              const untrusted = Object.fromEntries(serious.map((i) => [reviewIssueKey(i.subtask, i.comment), i.comment]));
+              const ev = this.d.logs.write({ level: 'info', kind: 'review.incident', msg: `${task.id}: review nêu ${serious.length} lỗi blocker/major vòng ${attempt + 1}`, taskId: task.id, department: dept.id, agentId: reviewer.id, phase: 'review', data: { taskId: task.id, round: attempt + 1, issues: serious.map((i) => ({ subtask: i.subtask, severity: i.severity, key: reviewIssueKey(i.subtask, i.comment) })) } });
+              selfImproveOnLog(ev, task, si, untrusted);
+            }
+            if (regressed.length) selfImproveOnLog(this.d.logs.write({ level: 'info', kind: 'checks.regressed', msg: `${task.id}: ${regressed.length} lệnh kiểm tra hỏng sau khi sửa`, taskId: task.id, department: dept.id, agentId: reviewer.id, phase: 'review', data: { taskId: task.id, round: attempt + 1, commands: regressed.length } }), task, si);
+            selfImproveGuardBlocks(task, si);
           }
           // bằng chứng: lệnh reviewer thực sự chạy qua công cụ (không chỉ lời khai trong JSON)
           const ran = (res.toolCalls ?? []).filter((tc) => tc.name === 'run_command');
@@ -1499,10 +2140,17 @@ export class Orchestrator {
                 activity: `Sửa ${st.id} theo review`,
                 hints: { brief: task.brief, subtask: stHint(st) },
               });
-              if (r.text) {
+              if (r.text && !r.error) {
                 st.attempts++;
                 this.writeOutput(task, run, st, agent, r);
                 this.message(task, dept.id, agent.id, 'handoff', `Đã sửa ${st.id} theo review: ${extractSummary(r.text, 200)}`, { subtaskId: st.id });
+                if (this.d.config.phases.incidentLog !== false) {
+                  // B-03: nhật ký sự cố có cấu trúc → LogStore (che PII/bí mật ở đó); không có mục thì parsed=false, items=[] và không ném lỗi
+                  const inc = parseIncidentLog(r.text);
+                  const rounds = run.gateFixRoundsUsed ?? 0;
+                  const incEntry = this.d.logs.write({ level: 'info', kind: 'revise.incident', msg: `${task.id} ${st.id}: nhật ký sự cố vòng ${attempt + 1} — ${inc.parsed ? `${inc.items.length} mục` : 'không có mục đọc được'}`, taskId: task.id, department: dept.id, agentId: agent.id, subtaskId: st.id, phase: 'revise', data: { taskId: task.id, subtaskId: st.id, round: attempt + 1, items: inc.items, b02: { blocked: rounds > 0, rounds }, parsed: inc.parsed } });
+                  if (this.d.config.selfImprove?.enabled) selfImproveOnLog(incEntry, task, { cfg: this.d.config.selfImprove, logs: this.d.logs, dataDir: this.d.config.dataDir, root: this.d.config.root }); // B-19 bước 1
+                }
               }
               run.revising = run.revising?.filter((id) => id !== st.id);
           };
@@ -1526,6 +2174,8 @@ export class Orchestrator {
       // review cuối chưa duyệt / lệnh kiểm tra còn hỏng → nhiệm vụ vẫn chạy xong nhưng gắn cờ "cần xem"
       if (run.review && !run.review.approved) task.attention = { reason: 'review', detail: `${dept.short}: ${run.review.summary.slice(0, 280)}`, at: nowIso() };
       else if (task.projectChecks?.latest?.some((r) => !r.ok)) task.attention = { reason: 'checks', detail: `Lệnh kiểm tra còn lỗi: ${task.projectChecks.latest.filter((r) => !r.ok).map((r) => r.command).join(', ')}`, at: nowIso() };
+      // D-02: duyệt mà không có kiểm chứng máy (CCoding không có lệnh kiểm tra để chạy) và reviewer có quyền chạy lệnh nhưng không chạy → cần người xem
+      else if (run.review?.approved && !run.review.by && run.review.verified === false) task.attention = { reason: 'review', detail: `${dept.short}: duyệt nhưng chưa có kiểm chứng chạy thật (không có lệnh kiểm tra của dự án, reviewer không chạy lệnh) — cần giám đốc xem.`, at: nowIso() };
       this.save(task);
     }
 
@@ -1536,7 +2186,7 @@ export class Orchestrator {
       const body = st?.output ? (this.d.store.readRunFile(task.id, st.output) ?? '').replace(/^<!--[\s\S]*?-->\s*/, '') : '';
       const rv = run.review ? `\n\n## Review\n${run.review.approved ? '✅ Đã duyệt' : '⚠️ Chưa duyệt hoàn toàn'}: ${run.review.summary}${run.review.issues.length ? `\n${run.review.issues.map((i) => `- [${i.severity}] ${i.comment}`).join('\n')}` : ''}` : '';
       const finalText = `> Việc giao riêng cho ${solo.name} (@${solo.id})${st?.status === 'done' ? '' : ` — hạng mục ${st?.status ?? 'chưa chạy'}`}\n\n${body || '(chưa có bàn giao)'}${rv}\n`;
-      const rel = `${safeName(dept.id)}-FINAL.md`;
+      const rel = `${safeName(dept.id)}${run.round ? `-R${run.round}` : ""}-FINAL.md`;
       writeText(path.join(this.d.store.runDir(task.id), rel), finalText);
       run.finalPath = rel;
       run.status = run.subtasks.some((s) => s.status === 'failed') ? 'failed' : 'done';
@@ -1552,13 +2202,19 @@ export class Orchestrator {
       ? `${run.review.approved ? 'Đã duyệt' : 'Chưa duyệt hoàn toàn'}: ${run.review.summary}${run.review.verified === false ? '\n(Reviewer KHÔNG chạy lệnh kiểm tra nào — kết luận chưa có bằng chứng chạy thật; nêu rõ trong báo cáo.)' : run.review.checks?.length ? `\nLệnh kiểm tra reviewer đã chạy: ${run.review.checks.map((c) => `${c.command}${c.ok === false ? ' (lỗi)' : c.ok ? ' (đạt)' : ''}`).join('; ')}` : ''}`
       : '';
     const changes = this.workspaceChanges(task);
-    const fin = await this.call(lead, 'synthesize', (tools) => P.synthesizePrompt(pctx, run.planSummary ?? '', run.decisions ?? '', items, reviewText, prior, changes, tools), {
-      ...base,
-      hints: { brief: task.brief, subtasks: run.subtasks.map(stHint), departmentName: dept.name },
-    });
-    if (!fin.text) throw new Error(`Trưởng phòng không viết được báo cáo tổng hợp${fin.error ? `: ${fin.error}` : ''}`);
-    const finalText = fin.text;
-    const rel = `${safeName(dept.id)}-FINAL.md`;
+    let finalText: string;
+    if (task.lane === 'fast' && this.d.config.fastLane.finalReport === 'template') {
+      finalText = P.templateReport(task, dept, run, items, reviewText, changes);
+    } else {
+      const fin = await this.call(lead, 'synthesize', (tools) => P.synthesizePrompt(pctx, run.planSummary ?? '', run.decisions ?? '', items, reviewText, prior, changes, tools), {
+        ...base,
+        hints: { brief: task.brief, subtasks: run.subtasks.map(stHint), departmentName: dept.name },
+      });
+      if (fin.error || !fin.text) throw new Error(`Trưởng phòng không viết được báo cáo tổng hợp${fin.error ? `: ${fin.error}` : ''}`);
+      finalText = fin.text;
+      this.finalTemplateGate(task, run, dept, lead, finalText);
+    }
+    const rel = `${safeName(dept.id)}${run.round ? `-R${run.round}` : ""}-FINAL.md`;
     writeText(path.join(this.d.store.runDir(task.id), rel), finalText);
     run.finalPath = rel;
     run.status = run.subtasks.some((s) => s.status === 'failed') ? 'failed' : 'done';
@@ -1568,6 +2224,31 @@ export class Orchestrator {
     this.message(task, dept.id, lead.id, 'final', `Báo cáo tổng hợp đã xong: ${extractSummary(finalText, 240)}`);
     this.save(task);
     return finalText;
+  }
+
+  /** FX16: FINAL do trưởng phòng viết cũng qua cổng "Mẫu đầu ra" của hồ sơ lead; thiếu mục ⇒ cờ trong gate.decision (không chặn cứng). */
+  private finalTemplateGate(task: Task, run: DeptRun, dept: { id: string; short: string }, lead: AgentDef, text: string): { ok: boolean; missing: string[]; coverage: number } {
+    const g = templateGate(text, lead.body);
+    const missing = g.summaryOk ? g.missing : [...g.missing, 'Tóm tắt'];
+    this.d.logs.write({
+      level: g.ok ? 'info' : 'warn',
+      kind: 'gate.decision',
+      msg: `${task.id}: cổng mẫu FINAL ${g.ok ? 'đạt' : `thiếu mục: ${missing.join('; ')}`}`,
+      taskId: task.id,
+      department: dept.id,
+      agentId: lead.id,
+      data: { gate: 'final-template', verdict: g.ok ? 'pass' : 'block', flag: g.ok ? undefined : 'final-missing-sections', coverage: g.coverage, missing, summaryOk: g.summaryOk },
+    });
+    if (!g.ok) this.message(task, dept.id, 'system', 'system', `⚠️ Báo cáo tổng hợp của trưởng phòng thiếu mục bắt buộc trong "Mẫu đầu ra": ${missing.join('; ')}.`);
+    return { ok: g.ok, missing, coverage: g.coverage };
+  }
+
+  /** FX4: review bị bỏ qua mà không có lệnh kiểm tra nào thay thế → dấu vết trong run.review + log riêng (không tự "duyệt"). */
+  private markReviewSkipped(task: Task, run: DeptRun, dept: { id: string; short: string }, reason: string): void {
+    const summary = `Chưa review: ${reason} và dự án không có lệnh kiểm tra — đầu ra chưa có bằng chứng kiểm chứng nào.`;
+    run.review = { approved: false, summary, issues: [], skipped: true, reason };
+    this.d.logs.write({ level: 'warn', kind: 'review.skipped', msg: `${task.id}: ${summary}`, taskId: task.id, department: dept.id, data: { reason } });
+    this.message(task, dept.id, 'system', 'system', `⚠️ ${summary}`);
   }
 
   private async executeAll(task: Task, run: DeptRun, pctx: P.Ctx, base: CallCtx, prior?: string): Promise<void> {
@@ -1854,13 +2535,23 @@ export class Orchestrator {
   }
 
   estimatePlan(task: Task, run: DeptRun, project?: ProjectDef): number {
+    return this.estimatePlanDetail(task, run, project).total;
+  }
+
+  /**
+   * FX13: ước lượng kèm đường găng. `work` = tổng token các hạng mục chưa xong (không gồm phần cố định `base` và review);
+   * `criticalPathEstimate` = chuỗi phụ thuộc (dependsOn) tốn token nhất trong số đó; `parallelism` = work / cp (≥ 1; 1 khi không có việc).
+   * Phụ thuộc vào hạng mục đã xong hoặc không có trong kế hoạch bị bỏ qua; vòng phụ thuộc không làm treo (cạnh quay lại bị cắt).
+   */
+  estimatePlanDetail(task: Task, run: DeptRun, project?: ProjectDef): { total: number; work: number; criticalPathEstimate: number; parallelism: number } {
     const e = this.d.config.estimate;
     const hist = this.history(task);
     const min = e.minSamples ?? 2;
     const access = this.toolAccess(task, project);
     const cls = task.classification;
     const web = this.d.config.tools.web !== false && (cls === 'public' || cls === 'internal');
-    let total = e.base + (task.options.review ? e.perReview * (1 + task.options.maxRevisions) : 0);
+    const fixed = e.base + (task.options.review ? e.perReview * (1 + task.options.maxRevisions) : 0);
+    const cost = new Map<string, number>();
     for (const st of run.subtasks) {
       if (st.status === 'done') continue;
       const agent = this.d.registry.agents.get(st.assignee);
@@ -1868,14 +2559,113 @@ export class Orchestrator {
       const lvl: ToolAccess = tools.includes('run_command') ? 'exec' : tools.includes('write_file') || tools.includes('edit_file') ? 'write' : tools.includes('read_file') ? 'read' : 'none';
       // có đủ lịch sử của agent → dùng token thực tế (đã gồm tra cứu web, sửa theo review); chưa có → hằng số theo quyền công cụ
       const h = hist.get(st.assignee);
-      if (h && h.samples >= min) {
-        total += h.median;
-        continue;
+      let c: number;
+      if (h && h.samples >= min) c = h.median;
+      else {
+        c = e.perSubtask[lvl] ?? e.perSubtask.none;
+        if (tools.some((t) => t === 'search_papers' || t === 'web_search' || t === 'fetch_url')) c += e.web;
       }
-      total += e.perSubtask[lvl] ?? e.perSubtask.none;
-      if (tools.some((t) => t === 'search_papers' || t === 'web_search' || t === 'fetch_url')) total += e.web;
+      cost.set(st.id, c);
     }
-    return total;
+    const deps = new Map(run.subtasks.map((s) => [s.id, s.dependsOn ?? []] as const));
+    const memo = new Map<string, number>();
+    const longest = (id: string, seen: Set<string>): number => {
+      const m = memo.get(id);
+      if (m !== undefined) return m;
+      if (seen.has(id)) return 0;
+      seen.add(id);
+      let best = 0;
+      for (const d of deps.get(id) ?? []) if (cost.has(d)) best = Math.max(best, longest(d, seen));
+      seen.delete(id);
+      const v = (cost.get(id) ?? 0) + best;
+      memo.set(id, v);
+      return v;
+    };
+    let work = 0;
+    let cp = 0;
+    for (const [id, c] of cost) {
+      work += c;
+      cp = Math.max(cp, longest(id, new Set()));
+    }
+    return { total: fixed + work, work, criticalPathEstimate: cp, parallelism: cp ? Math.round((work / cp) * 100) / 100 : 1 };
+  }
+
+  /**
+   * B-17 (planner.difficultyModel, mặc định tắt): chấm độ khó 1–3 từ LaneSignals đã có (không thêm lượt LLM) rồi chọn model cho pha plan.
+   * Không ghi đè model do người dùng chọn (options.phaseModels.plan); model mặc định của làn nhanh thì được thay. Không có tín hiệu → mức 2.
+   */
+  private applyPlanDifficulty(task: Task): void {
+    const pd = this.d.config.planner?.difficultyModel;
+    if (!pd?.enabled) return;
+    const sig = this.laneSigs.get(task.id);
+    const d = scoreDifficulty(sig);
+    const model = modelForDifficulty(d.level, pd.models);
+    const cur = task.options.phaseModels?.plan;
+    const fastDefault = task.lane === 'fast' ? this.d.config.fastLane.planModel : undefined;
+    const applied = !!model && (!cur || cur === fastDefault);
+    if (applied) task.options.phaseModels = { ...task.options.phaseModels, plan: model };
+    this.d.logs.write({ level: 'info', kind: 'plan.difficulty', msg: `${task.id}: độ khó kế hoạch ${d.level} (${d.reason})${applied ? ` → model ${model}` : ''}`, taskId: task.id, projectId: task.projectId, data: { level: d.level, points: d.points, reason: d.reason, signals: sig ?? null, model: model ?? null, applied, previous: cur ?? null } });
+  }
+
+  /**
+   * B-10 — cổng phủ kế hoạch: chạy sau parsePlan/họp chốt, trước execute (làn nhanh và đầy). Hàm thuần `planGate` không gọi LLM;
+   * trượt A → một lượt "sửa kế hoạch", trượt B → lập lại một lần (cả hai đều qua this.call). Vẫn trượt → dừng với attention,
+   * KHÔNG chạy tập con hạng mục.
+   */
+  private async gatePlan(task: Task, run: DeptRun, dept: DepartmentDef, roster: AgentDef[], lead: AgentDef, reviewer: AgentDef | undefined, pctx: P.Ctx, base: CallCtx, parsed?: { outOfScope?: Array<{ target: string; reason: string }>; truncated?: boolean }): Promise<void> {
+    const { logs, registry } = this.d;
+    const ls = pctx.cwd ? spawnSync('git', ['ls-files', '-z'], { cwd: pctx.cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, windowsHide: true }) : undefined;
+    const repoFiles = ls?.status === 0 ? ls.stdout.split('\0').filter(Boolean) : undefined;
+    const agentIds = [...registry.agents.keys()];
+    // FX15: chỉ kiểm "hạng mục cần lệnh → agent có run_command" khi nhiệm vụ có người chạy lệnh được (cùng nguồn với danh sách năng lực của trưởng phòng)
+    const canRun = Object.values(pctx.caps ?? {}).some((x) => /chạy lệnh/.test(x));
+    const evaluate = (oos = parsed?.outOfScope) => planGate({ brief: task.brief, planSummary: run.planSummary ?? '', subtasks: run.subtasks, outOfScope: oos, truncated, ...(run.followupOf ? { followup: { criteria: (run.followupCriteria ?? []).map((c) => `${c.name}\n${c.detail}`) } } : {}), repoFiles, agentIds, agentRoles: Object.fromEntries([...registry.agents.values()].map((a) => [a.id.toLowerCase(), { role: a.role, skills: a.skills, ...(canRun ? { tools: pctx.caps?.[a.id]?.includes('chạy lệnh') ? ['run_command'] : [] } : {}) }])) });
+    let truncated = !!parsed?.truncated;
+    let g = evaluate();
+    if (!run.planGate?.replanned) logs.write({ level: g.blocked ? 'warn' : 'info', kind: 'gate.decision', msg: `${task.id}: cổng phủ kế hoạch ${g.blocked ? 'chặn' : 'đạt'}`, taskId: task.id, department: dept.id, data: { gate: 'b10', verdict: g.blocked ? 'block' : 'pass', ...(g.followupScope ? { followupScope: { round: run.round, ...g.followupScope } } : {}) } });
+    const record = (replanned: boolean) => {
+      run.planGate = { uncovered: g.uncovered, reasons: g.reasons, rules: g.rules, ...(replanned ? { replanned: true } : {}) };
+      this.save(task);
+    };
+    if (!g.blocked) {
+      record(!!run.planGate?.replanned);
+      return;
+    }
+    const first = g;
+    // sửa kế hoạch tối đa một lần cho mỗi lượt chạy (resume sau khi đã dừng thì dừng luôn, không đốt thêm lượt plan)
+    if (!run.planGate?.replanned) {
+      logs.write({ level: 'warn', kind: 'plan.gate', msg: `${dept.short}: cổng phủ kế hoạch chặn (${g.rules.join('+')}) — ${g.reasons.join('; ')}`, taskId: task.id, department: dept.id, data: { stage: 'blocked', ...(g.followupScope ? { followupScope: { round: run.round, ...g.followupScope } } : {}), rules: g.rules, uncovered: g.uncovered, reasons: g.reasons, subtasks: run.subtasks.length } });
+      this.message(task, dept.id, 'system', 'system', `🚧 Cổng phủ kế hoạch chặn trước khi thực thi (quy tắc ${g.rules.join('+')}):\n${g.reasons.map((r) => `- ${r}`).join('\n')}\nYêu cầu trưởng phòng sửa kế hoạch một lần; không chạy kế hoạch dở.`);
+      this.setPhase(task, run, 'plan');
+      const res = await this.call(lead, 'plan', (tools) => P.replanPrompt(pctx, task.brief, run.planSummary ?? '', run.subtasks, g, tools), {
+        ...base,
+        hints: { brief: task.brief, roster: roster.map((a) => ({ id: a.id, name: a.name, title: a.title, role: a.role, skills: a.skills })), department: dept.name, replan: true },
+      });
+      if (res.error) throw new Error(`Trưởng phòng không sửa được kế hoạch: ${res.error}`);
+      const revised = parsePlan(res.text, roster, lead, task.brief);
+      let again = g;
+      if (revised.parsed) {
+        run.subtasks = revised.subtasks;
+        run.planSummary = revised.summary || run.planSummary;
+        if (task.lane === 'fast') this.shapeFastPlan(task, run, roster, lead, reviewer, pctx);
+        truncated = !!revised.truncated;
+        again = evaluate(revised.outOfScope);
+      } else truncated = !!revised.truncated;
+      g = revised.parsed ? again : { ...g, blocked: true, reasons: [...g.reasons, 'B (iv) lượt sửa kế hoạch không trả JSON đọc được'], rules: g.rules.includes('B') ? g.rules : [...g.rules, 'B'] };
+      record(true);
+      logs.write({ level: g.blocked ? 'warn' : 'info', kind: 'plan.gate', msg: `${dept.short}: sau khi sửa kế hoạch — ${g.blocked ? `vẫn bị chặn (${g.rules.join('+')})` : 'đạt'}`, taskId: task.id, department: dept.id, data: { stage: 'replanned', blocked: g.blocked, rules: g.rules, uncovered: g.uncovered, reasons: g.reasons, before: first.rules } });
+      if (!g.blocked) {
+        this.message(task, dept.id, lead.id, 'plan', `Kế hoạch đã sửa (cổng phủ kế hoạch đạt):\n${P.planText(run.subtasks)}`);
+        return;
+      }
+    }
+    // vẫn trượt → dừng, không chạy tập con
+    const { reason, detail } = planStopAttention(dept.short, g);
+    task.attention = { reason, detail, at: nowIso() };
+    run.planGate = { uncovered: g.uncovered, reasons: g.reasons, rules: g.rules, replanned: true };
+    logs.write({ level: 'error', kind: 'plan.gate', msg: detail, taskId: task.id, department: dept.id, data: { stage: 'stopped', attention: reason, rules: g.rules, uncovered: g.uncovered, reasons: g.reasons } });
+    this.save(task);
+    throw new Error(`${detail}. Sửa kế hoạch hoặc đề bài rồi bấm "Tiếp tục".`);
   }
 
   /**
@@ -2051,11 +2841,20 @@ export class Orchestrator {
 
   /** Kế hoạch vừa chốt: ước lượng ≫ phần ngân sách còn lại → nhắn + cảnh báo; chế độ "pause" thì dừng chờ quyết định. */
   private checkEstimate(task: Task, run: DeptRun, project?: ProjectDef, warn = true): void {
-    const est = this.estimatePlan(task, run, project);
+    const detail = this.estimatePlanDetail(task, run, project);
+    const est = this.estimatePlan(task, run, project); // qua estimatePlan (điểm móc cho test/ghi đè); detail chỉ để lấy đường găng
     const remaining = Math.max(0, task.options.budgetTokens - totalTokens(task.usage));
     const basis = this.estimateBasis(run, task);
-    run.estimate = { tokens: est, budget: remaining, at: nowIso(), basis };
+    run.estimate = { tokens: est, budget: remaining, at: nowIso(), basis, work: detail.work, criticalPathEstimate: detail.criticalPathEstimate, parallelism: detail.parallelism };
     this.save(task);
+    // FX13: ghi đường găng dự kiến vào log kế hoạch (chỉ số này so với song song thực tế khi đo)
+    this.d.logs.write({ level: 'info', kind: 'plan.estimate', msg: `${task.id}: ước lượng kế hoạch ${run.department} ~${fmtNum(est)} token, đường găng ~${fmtNum(detail.criticalPathEstimate)}, song song dự kiến ×${String(detail.parallelism).replace('.', ',')}`, taskId: task.id, department: run.department, data: { estimate: est, work: detail.work, criticalPathEstimate: detail.criticalPathEstimate, parallelism: detail.parallelism, subtasks: run.subtasks.length } });
+    // K3: vòng bổ sung là việc tự mở, không được vượt phần ngân sách còn lại dù ở chế độ "complete" → dừng chờ giám đốc tăng ngân sách
+    if (warn && run.followupOf && est > remaining) {
+      const m = `Vòng bổ sung ${run.round ?? ''} ước tính ~${fmtNum(est)} token, vượt phần ngân sách còn lại (${fmtNum(remaining)}) — tăng ngân sách rồi tiếp tục.`.replace('  ', ' ');
+      this.d.logs.write({ level: 'warn', kind: 'accept.followup', msg: `${task.id}: ${m}`, taskId: task.id, department: run.department, data: { opened: true, overBudget: true, round: run.round, estimate: est, remaining } });
+      throw new PauseSignal('budget', m);
+    }
     if (!warn || est <= remaining * (this.d.config.estimate.warnRatio || 1)) return;
     const mode = task.options.budgetMode ?? this.d.config.defaults.budgetMode ?? 'complete';
     const msg = `Kế hoạch ${run.subtasks.length} hạng mục ước tính ~${fmtNum(est)} token (${basis}), ${remaining ? `gấp ${(est / remaining).toFixed(1).replace('.', ',')} lần phần ngân sách còn lại (${fmtNum(remaining)})` : 'trong khi ngân sách đã hết'}. Nên tách mỗi gói việc thành một nhiệm vụ riêng (nút "Tách thành nhiệm vụ") hoặc tăng ngân sách.`;
@@ -2495,20 +3294,40 @@ export class Orchestrator {
           task.notes = [...(task.notes ?? []), { id: shortId('n'), at: nowIso(), text: why }].slice(-30);
           task.startFrom = undefined;
         }
-        const from = task.startFrom || project.baseRef || 'HEAD';
-        const r = addWorktree(base, wt, branch, from);
+        // K5: nhánh cục bộ của baseRef có thể cũ hơn origin → resolveBase fetch rồi chọn base mới nhất (nối từ startFrom thì giữ nguyên)
+        let from = task.startFrom || project.baseRef || 'HEAD';
+        let baseNote = '';
+        let r: { ok: boolean; out: string };
+        try {
+          const rb = task.startFrom ? undefined : resolveBase(base, project.baseRef);
+          if (rb) from = rb.ref;
+          if (rb) baseNote = ` · base ${rb.ref} @ ${rb.commit ?? '?'} (nguồn: ${rb.source === 'remote' ? 'origin — nhánh cục bộ đi sau' : 'nhánh cục bộ'})`;
+          if (rb?.warning) {
+            baseNote += ` · CẢNH BÁO: ${rb.warning}`;
+            logs.write({ level: 'warn', kind: 'workspace.base', msg: rb.warning, taskId: task.id, projectId: project.id });
+          }
+          r = addWorktree(base, wt, branch, from);
+        } catch (e) {
+          // K5: lệch hai chiều → dừng nhiệm vụ (lỗi lên prepareWorkspace → catch ngoài đặt status 'failed'), không làm việc trên base không rõ
+          if (e instanceof BaseDivergedError) {
+            logs.write({ level: 'error', kind: 'workspace.base', msg: e.message, taskId: task.id, projectId: project.id });
+            task.workspace = undefined;
+            throw e;
+          }
+          r = { ok: false, out: e instanceof Error ? e.message : String(e) };
+        }
         if (r.ok) {
           const copied = copyUntracked(base, wt, project.worktreeCopy ?? config.tools.worktreeCopy);
           task.workspace = wt;
           task.branch = branch;
           task.baseRef = headCommit(wt);
-          logs.write({ level: 'info', kind: 'workspace.worktree', msg: `Worktree ${wt} (nhánh ${branch} từ ${from})${copied.length ? ` · chép ${copied.join(', ')}` : ''}`, taskId: task.id, projectId: project.id });
+          logs.write({ level: 'info', kind: 'workspace.worktree', msg: `Worktree ${wt} (nhánh ${branch} từ ${from})${baseNote}${copied.length ? ` · chép ${copied.join(', ')}` : ''}`, taskId: task.id, projectId: project.id });
           this.message(
             task,
             'office',
             'system',
             'system',
-            `🌿 Làm việc trên git worktree riêng \`${wt}\` (nhánh \`${branch}\`${task.startFrom ? ` tách từ nhánh của nhiệm vụ trước \`${task.startFrom}\`` : project.baseRef ? ` tách từ \`${project.baseRef}\`` : ''}) — nhánh chính của repo không bị đụng tới.`,
+            `🌿 Làm việc trên git worktree riêng \`${wt}\` (nhánh \`${branch}\`${task.startFrom ? ` tách từ nhánh của nhiệm vụ trước \`${task.startFrom}\`` : project.baseRef ? ` tách từ \`${from}\`` : ''}${baseNote}) — nhánh chính của repo không bị đụng tới.`,
           );
         } else {
           logs.write({ level: 'warn', kind: 'workspace.worktree', msg: `Không tạo được worktree: ${r.out.slice(0, 300)} — làm trực tiếp trong ${base}`, taskId: task.id, projectId: project.id });
@@ -2586,9 +3405,141 @@ export class Orchestrator {
     }
   }
 
+  /** B-11(c): repo nhỏ (≤ SMALL_REPO_FILES tệp theo `git ls-files`, không tính `.ccoding/`) → danh sách tệp gọn; lớn/không phải repo git → undefined (giữ bản đồ repo). */
+  private smallRepoFiles(cwd: string | undefined): string[] | undefined {
+    if (!cwd) return undefined;
+    const ls = spawnSync('git', ['ls-files', '-z'], { cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, windowsHide: true });
+    if (ls.status !== 0 || typeof ls.stdout !== 'string') return undefined;
+    const files = ls.stdout.split('\0').filter((f) => f && !f.startsWith('.ccoding/'));
+    return files.length > 0 && files.length <= SMALL_REPO_FILES ? files : undefined;
+  }
+
   /** Dự án có lệnh kiểm tra và nhiệm vụ được chạy lệnh trong workspace (quyền exec). */
   private projectCheckable(task: Task, project?: ProjectDef): project is ProjectDef {
     return !!project?.workspace && !!project.checkCommands?.length && this.toolAccess(task, project) === 'exec' && !!task.workspace && fs.existsSync(task.workspace);
+  }
+
+  /**
+   * B-02 cổng chất lượng (backlog §4.1–§4.3). Không gọi reviewer. Chạy: phân loại lệnh kiểm → vòng sửa theo kiểm tra (≤ gate.maxFixRounds,
+   * chung với lượt sửa định dạng) → kiểm "Mẫu đầu ra" → quyết định có cần reviewer. Mọi lượt LLM đi qua `this.call()`.
+   * Dùng cho mọi làn: nhanh/đầy gọi trong vòng review; làn đơn (S4) gọi trực tiếp rồi nâng cấp khi `exhausted`.
+   */
+  async runQualityGate(task: Task, run: DeptRun, project: ProjectDef | undefined, agent: AgentDef, o: QualityGateOptions & { pctx: P.Ctx; base: CallCtx }): Promise<QualityGateResult> {
+    const { config, registry, logs } = this.d;
+    const max = Math.max(0, config.gate?.maxFixRounds ?? 2);
+    const checkable = this.projectCheckable(task, project);
+    const deptId = o.dept;
+    const done = () => run.subtasks.filter((s) => s.status === 'done' && s.output);
+    // gate.maxFixRounds là ngân sách cho CẢ NHIỆM VỤ (qua nhiều lần gọi cổng, nâng làn, tạm dừng/tiếp tục): đếm từ số vòng đã dùng
+    let fixRounds = Math.max(0, run.gateFixRoundsUsed ?? 0);
+    let classes: ClassifiedCheck[] = [];
+    const classify = () => {
+      const pc = task.projectChecks;
+      classes = checkable ? classifyChecks(pc?.baseline, pc?.latest, task.brief, project!.checkCommands) : [];
+      if (checkable) logs.write({ level: classes.every((c) => c.cls === 'green') ? 'info' : 'warn', kind: 'gate.classify', msg: `${task.id}: ${classes.map((c) => `${c.command} → ${c.cls}`).join('; ')}`, taskId: task.id, department: deptId, data: { classes, fixRounds } });
+    };
+    const isRed = (c: ClassifiedCheck) => c.cls === 'regression-or-new' || c.cls === 'red-required';
+    const pickTarget = () => {
+      const all = done();
+      return (o.target ? all.find((s) => s.id === o.target) : undefined) ?? [...all].reverse().find((s) => this.isWriter(registry.agent(s.assignee), task, project)) ?? all.at(-1);
+    };
+
+    // 1) vòng sửa theo kiểm tra
+    classify();
+    const initialRed = classes.some(isRed);
+    while (classes.some(isRed) && fixRounds < max) {
+      const st = pickTarget();
+      if (!st) break;
+      this.checkAbort(task);
+      fixRounds++;
+      run.gateFixRoundsUsed = fixRounds;
+      this.save(task); // lưu TRƯỚC khi gọi LLM: tạm dừng/tiếp tục không cấp lại ngân sách
+      const red = classes.filter(isRed);
+      const results = (task.projectChecks?.latest ?? []).filter((r) => red.some((c) => c.command === r.command));
+      const fixer = st.assignee ? registry.agent(st.assignee) : agent;
+      this.setPhase(task, run, 'revise');
+      this.message(task, deptId, 'system', 'system', `🔁 Cổng chất lượng — vòng sửa ${fixRounds}/${max}: ${red.map((c) => `\`${c.command}\` (${c.cls === 'red-required' ? 'đề bài yêu cầu xanh' : 'hồi quy/đỏ mới'})`).join(', ')} — không gọi reviewer.`);
+      logs.write({ level: 'warn', kind: 'gate.fix', msg: `${task.id}: vòng sửa ${fixRounds}/${max} ${st.id} — ${red.map((c) => c.command).join(', ')}`, taskId: task.id, agentId: fixer.id, department: deptId, subtaskId: st.id, data: { round: fixRounds, max, commands: red } });
+      this.noteAttempt(task, run, st);
+      if (task.projectChecks) task.projectChecks.staleAt = nowIso();
+      const prev = this.depInput(task, st);
+      const uncovered = (run as { planGate?: { uncovered?: string[] } }).planGate?.uncovered ?? [];
+      const r = await this.call(
+        fixer,
+        'revise',
+        (tools) =>
+          P.gateFixPrompt(
+            o.pctx,
+            st,
+            prev.text,
+            results.map((x) => ({ command: x.command, code: x.code, tail: x.tail || x.summary, required: classes.find((c) => c.command === x.command)?.cls === 'red-required' })),
+            uncovered,
+            tools,
+            fixRounds,
+            config.tools.maxOutputChars,
+          ),
+        { ...o.base, subtask: st, activity: `Sửa ${st.id} theo kiểm tra (${fixRounds}/${max})`, hints: { brief: task.brief, subtask: stHint(st), gateFix: fixRounds } },
+      );
+      if (r.text && !r.error) {
+        st.attempts++;
+        this.writeOutput(task, run, st, fixer, r);
+        this.message(task, deptId, fixer.id, 'handoff', `Đã sửa ${st.id} theo kiểm tra: ${extractSummary(r.text, 200)}`, { subtaskId: st.id });
+      }
+      if (checkable) await this.runProjectChecks(task, project!, deptId, 'revise');
+      classify();
+    }
+
+    // 2) kiểm "Mẫu đầu ra" (cùng phép kiểm với KPI); lượt sửa định dạng tính vào N
+    let templateOk = true;
+    if (!o.skipTemplate) {
+      for (const st of done()) {
+        const owner = registry.agent(st.assignee);
+        let g = templateGate(this.readOutput(task, st), owner.body);
+        logs.write({ level: g.ok ? 'info' : 'warn', kind: 'gate.template', msg: `${task.id} ${st.id}: coverage ${Math.round(g.coverage * 100)}%${g.missing.length ? `, thiếu: ${g.missing.join('; ')}` : ''}${g.summaryOk ? '' : ', thiếu "Tóm tắt"'}`, taskId: task.id, agentId: owner.id, department: deptId, subtaskId: st.id, data: { ok: g.ok, coverage: g.coverage, missing: g.missing, summaryOk: g.summaryOk, fixRounds } });
+        if (g.ok) continue;
+        if (fixRounds < max) {
+          this.checkAbort(task);
+          fixRounds++;
+          run.gateFixRoundsUsed = fixRounds;
+          this.save(task);
+          const headings = templateHeadings(owner.body);
+          const prev = this.readOutput(task, st);
+          const miss = g;
+          const r = await this.call(owner, 'revise', () => P.formatFixPrompt(o.pctx, prev, headings, miss.missing, miss.summaryOk), {
+            ...o.base,
+            subtask: st,
+            noTools: true,
+            activity: `Sửa định dạng ${st.id} (${fixRounds}/${max})`,
+            hints: { brief: task.brief, subtask: stHint(st), formatFix: fixRounds },
+          });
+          if (r.text && !r.error) {
+            // chỉ thay bản cũ khi bản viết lại ĐẠT mẫu — tránh mất nội dung (vd. mục CCoding thêm vào sau xung đột) khi model viết lại kém
+            const fixed = templateGate(r.text, owner.body);
+            if (fixed.ok) {
+              this.writeOutput(task, run, st, owner, r);
+              g = fixed;
+            }
+            logs.write({ level: fixed.ok ? 'info' : 'warn', kind: 'gate.template', msg: `${task.id} ${st.id}: sau sửa định dạng coverage ${Math.round(fixed.coverage * 100)}%${fixed.ok ? '' : ' — giữ bản cũ'}`, taskId: task.id, agentId: owner.id, department: deptId, subtaskId: st.id, data: { ok: fixed.ok, coverage: fixed.coverage, missing: fixed.missing, afterFix: true, fixRounds } });
+          }
+        }
+        if (!g.ok) templateOk = false;
+      }
+    }
+
+    // 3) kết luận: có phải gọi reviewer không
+    const stillRed = classes.filter((c) => c.cls === 'red-required').map((c) => c.command);
+    const exhausted = classes.some(isRed) || !templateOk;
+    const briefReview = briefDemandsReview(task.brief);
+    const reasons = reviewerReasons({
+      briefReviewCodes: briefReview.codes,
+      hasCheckCommands: checkable,
+      changedFiles: changedFiles(task.workspace, task.baseRef),
+      classification: task.classification,
+      classes: classes.map((c) => c.cls),
+      failedAfterRounds: exhausted,
+    });
+    logs.write({ level: initialRed ? 'warn' : 'info', kind: 'gate.decision', msg: `${task.id}: cổng B-02 ${initialRed ? 'chặn' : 'đạt'} (${fixRounds} vòng sửa)`, taskId: task.id, department: deptId, data: { gate: 'b02', verdict: initialRed ? 'block' : 'pass', rounds: fixRounds, checks: { red: classes.filter(isRed).length, total: classes.length } } });
+    return { forceUnapproved: stillRed.length > 0, stillRed, classes, fixRounds, templateOk, needReviewer: reasons.length > 0, reasons, exhausted, briefDemandsReview: briefReview.demands, briefReviewItems: briefReview.codes };
   }
 
   /** CCoding tự chạy lệnh chuẩn bị (một lần mỗi worktree) rồi lệnh kiểm tra của dự án — bằng chứng không phụ thuộc agent/model. */
@@ -2769,14 +3720,16 @@ export class Orchestrator {
         // tra cứu web chỉ với dữ liệu Công khai/Nội bộ (truy vấn đi ra máy tìm kiếm bên ngoài)
         const web = config.tools.web !== false && (cls === 'public' || cls === 'internal');
         const gitRead = this.gitReadable(task, ctx.project, ctx.cwd);
-        const allow = rt.supportsTools && rt.id !== 'mock' ? toolsFor(agent.tools, access, phase, web, gitRead) : [];
+        const allow = rt.supportsTools && rt.id !== 'mock' && !ctx.noTools ? toolsFor(agent.tools, access, phase, web, gitRead) : [];
         const built = build(allow);
         if (handover && allow.length) built.prompt = `${built.prompt}\n\n${handover}`;
         const fb = this.d.store.activeFeedback(agent.id).map((f) => `${f.rating === 'up' ? '👍 ' : f.rating === 'down' ? '👎 ' : ''}${f.text}`);
         const system = P.systemFor(agent, ctx.dept, cls, phase, fb);
         const piiOut = cls === 'confidential' || cls === 'restricted';
         const outbound = (s: string) => (rt.local ? s : redact(s, { secrets: config.dataProtection.redactSecrets, pii: piiOut }));
-        ensureDir(ctx.cwd);
+        // B-14b: stablePrefix (claude-cli) — pha không sửa tệp chạy ở thư mục gốc nhiệm vụ để cwd (nằm trong tiền tố) không đổi giữa các hạng mục
+        const reqCwd = rt.id === 'claude-cli' && config.runtimes['claude-cli']?.stablePrefix === true && phase !== 'execute' && phase !== 'revise' ? task.workspace ?? this.workspaceFor(task, ctx.project) : ctx.cwd;
+        ensureDir(reqCwd);
         req = {
           agent,
           phase,
@@ -2784,16 +3737,17 @@ export class Orchestrator {
           context: built.context ? outbound(built.context) : undefined,
           prompt: outbound(built.prompt),
           model: cand.model,
-          cwd: ctx.cwd,
-          tools: cliTools(agent.tools, access, phase, gitRead),
-          allowTools: allow.length > 0 || (rt.supportsTools && cliTools(agent.tools, access, phase, gitRead).length > 0),
+          cwd: reqCwd,
+          tools: ctx.noTools ? [] : cliTools(agent.tools, access, phase, gitRead),
+          allowTools: allow.length > 0 || (rt.supportsTools && !ctx.noTools && cliTools(agent.tools, access, phase, gitRead).length > 0),
           timeoutMs: config.defaults.timeoutMs,
-          maxTokens: config.phases?.maxTokens?.[phase],
+          maxTokens: ctx.maxTokens ?? config.phases?.maxTokens?.[phase],
           toolPolicy: allow.length
             ? {
-                root: ctx.cwd,
+                root: reqCwd,
                 allow,
-                maxTurns: config.phases?.toolTurns?.[phase] ?? 8,
+                guard: config.guard, // B-08
+                maxTurns: ctx.maxTurns ?? config.phases?.toolTurns?.[phase] ?? 8,
                 maxInputTokens: config.phases?.toolInputBudget?.[phase],
                 commandTimeoutSec: config.tools.commandTimeoutSec,
                 maxOutputChars: config.tools.maxOutputChars,
@@ -2864,12 +3818,17 @@ export class Orchestrator {
           } else {
             r = await rt.run(req, hooks);
           }
-          if (r.error && !r.text)
+          // K2: dùng khóa API ngoài cấu hình (useApiKey tắt) → cảnh báo, chỉ ghi nhãn đã lọc
+          if (r.authSourceUnexpected)
+            logs.write({ level: 'warn', kind: 'runtime.auth-source', msg: `${agent.name} · ${cand.label}: đường xác thực "${r.authSource}" không phải đăng nhập, trong khi runtimes.claude-cli.useApiKey không bật`, taskId: task.id, agentId: agent.id, department: deptId, subtaskId: ctx.subtask?.id, phase, data: { callId, authSource: r.authSource } });
+          // D15: lượt gọi có `error` (kể cả khi runtime kèm `text` là chính thông báo lỗi, vd. claude-cli is_error) LUÔN là lỗi:
+          // đi vào thử lại/chuyển runtime/tạm dừng và không bao giờ để nơi gọi đọc `text` như sản phẩm. Chạm trần lượt (`capped`) không có `error`.
+          if (r.error)
             throw new RuntimeError(
               r.error,
               r.errorKind ?? classifyError(undefined, r.error),
               undefined,
-              r.retryAt,
+              r.retryAt ?? parseRetryAt(undefined, r.error), // K1: "resets 1am (Asia/Bangkok)" → giờ tự tiếp tục
               r.usage.input || r.usage.output ? { input: r.usage.input, output: r.usage.output, cacheRead: r.usage.cacheRead, turns: r.turns ?? 0, toolCalls: r.toolCalls, model: r.model } : undefined,
             );
           if (r.truncated && r.text && CONTINUE_PHASES.has(phase)) r = await this.continueTruncated(rt, req, r, hooks, task, agent);
@@ -2948,7 +3907,7 @@ export class Orchestrator {
         }
       }
       // mọi tài nguyên đều lỗi do hạn mức/kết nối → tạm dừng nhiệm vụ và hẹn tự tiếp tục
-      if (result?.error && !result.text && attempts.length && attempts.every((a) => CAPACITY_KINDS.has(a.kind))) {
+      if (result?.error && attempts.length && attempts.every((a) => CAPACITY_KINDS.has(a.kind))) {
         const onlyNet = attempts.every((a) => a.kind === 'transient' || a.kind === 'timeout' || a.kind === 'empty');
         const at = onlyNet ? Date.now() + 2 * 60_000 : (runtimes.earliestRecovery() ?? Date.now() + config.runtime.quotaCooldownMs);
         keepHandover();
@@ -2979,6 +3938,7 @@ export class Orchestrator {
       runtime: result.runtime,
       model: result.model,
       requestedModel: cand?.model,
+      authSource: result.authSource,
       input: result.usage.input,
       output: result.usage.output,
       cacheRead: result.usage.cacheRead,
@@ -2988,6 +3948,8 @@ export class Orchestrator {
       estimated: result.estimated,
       toolCalls: result.toolCalls?.length,
       finishReason: result.finishReason,
+      stopReason: result.stopReason,
+      turnCapped: result.capped !== undefined || /chạm trần/.test(result.diag ?? ''),
       error: result.error,
     };
     if (result.runtime !== 'n/a') usage.record(rec);
@@ -3042,7 +4004,7 @@ export class Orchestrator {
       text: result.text.slice(0, 200_000),
     });
     this.save(task);
-    if (result.error && !result.text) this.setAgent(agent.id, { status: 'error', activity: result.error.slice(0, 80) });
+    if (result.error) this.setAgent(agent.id, { status: 'error', activity: result.error.slice(0, 80) });
     return result;
   }
 
@@ -3054,7 +4016,7 @@ export class Orchestrator {
     for (let k = 1; k <= 2 && res.truncated; k++) {
       this.d.logs.write({ level: 'info', kind: 'call.continue', msg: `${agent.name}: đầu ra bị cắt — viết tiếp (lần ${k})`, taskId: task.id, agentId: agent.id });
       const r2 = await rt.run({ ...req, prompt: P.continuePrompt(req.prompt, text), toolPolicy: undefined, allowTools: false, tools: [], meta: { ...req.meta, callId: `${req.meta.callId}-c${k}` } }, hooks);
-      if (!r2.text) break;
+      if (r2.error || !r2.text) break;
       text += r2.text;
       usage.input += r2.usage.input;
       usage.output += r2.usage.output;
@@ -3196,6 +4158,22 @@ export class Orchestrator {
     return t.replace(/^<!--[\s\S]*?-->\s*/, '');
   }
 
+  /** D7: nhiệm vụ paused CŨ còn FINAL.md tạm (chưa có finalPath) → đổi tên thành DRAFT-paused.md (hoặc -legacy nếu đã có), không xóa, ghi log. */
+  private renameLegacyInterimFinal(task: Task): void {
+    if (task.status !== 'paused' || task.finalPath) return;
+    const { store, logs } = this.d;
+    const from = path.join(store.runDir(task.id), 'FINAL.md');
+    if (!fs.existsSync(from)) return;
+    let name = 'DRAFT-paused.md';
+    if (fs.existsSync(path.join(store.runDir(task.id), name))) name = 'DRAFT-paused-legacy.md';
+    try {
+      fs.renameSync(from, path.join(store.runDir(task.id), name));
+      logs.write({ level: 'info', kind: 'task.final.legacy-renamed', msg: `${task.id}: FINAL.md tạm của nhiệm vụ tạm dừng cũ được đổi tên thành ${name} (không xóa, giữ bằng chứng)`, taskId: task.id, projectId: task.projectId, data: { to: name } });
+    } catch {
+      /* không đổi tên được: để nguyên, writeFinal sẽ ghi đè khi hoàn thành */
+    }
+  }
+
   private writeFinal(task: Task): void {
     const { registry, usage, store } = this.d;
     const parts: string[] = [];
@@ -3237,8 +4215,20 @@ export class Orchestrator {
         : '';
     const attention = task.attention ? `\n> ⚠ **Cần xem lại:** ${task.attention.detail}\n` : '';
     const appendix = `\n\n---\n${attention}\n## Phụ lục: token & sản phẩm (CCoding)\n\n- Nhiệm vụ: \`${task.id}\` · chế độ: ${task.mode} · phòng: ${task.departments.join(' → ')} · phân loại dữ liệu: ${task.classification}${paused ? ' · **đang tạm dừng**' : ''}\n- Tổng: **${fmtNum(task.usage.input)} in / ${fmtNum(task.usage.output)} out**, cache đọc ${fmtNum(task.usage.cacheRead)}, ${task.usage.calls} lượt gọi${task.usage.estimatedCalls ? ` (${task.usage.estimatedCalls} lượt ước lượng)` : ''} · ngân sách ${fmtNum(task.options.budgetTokens)} (${task.options.budgetMode === 'pause' ? 'dừng khi chạm trần' : 'chạy tới khi hoàn thành'})\n\n| Agent | Phòng | Input | Output | Cache đọc | Lượt |\n|---|---|---:|---:|---:|---:|\n${rows}\n\n### File đầu ra\n${outputs.join('\n') || '(không có)'}\n${scratch}${git}${checks}${kpi}`;
-    writeText(path.join(store.runDir(task.id), 'FINAL.md'), (task.runs.length > 1 ? `# Báo cáo liên phòng — ${task.title}\n\n` : '') + parts.join('\n\n---\n\n') + appendix);
+    const bodyText = (task.runs.length > 1 ? `# Báo cáo liên phòng — ${task.title}\n\n` : '') + parts.join('\n\n---\n\n') + appendix;
+    if (paused) {
+      // Tạm dừng (hết hạn mức/ngân sách/thủ công): chưa có báo cáo cuối → không ghi FINAL.md, không gán finalPath.
+      // Bản tạm dùng tên khác (artifacts.ts chỉ nhận FINAL.md là "Báo cáo tổng hợp") và nói rõ là bản tạm ở dòng đầu.
+      writeText(path.join(store.runDir(task.id), 'DRAFT-paused.md'), `> **BẢN TẠM khi tạm dừng — không phải báo cáo cuối.** FINAL.md sẽ được ghi khi nhiệm vụ tiếp tục và hoàn thành.\n\n${bodyText}`);
+      return;
+    }
+    writeText(path.join(store.runDir(task.id), 'FINAL.md'), bodyText);
     task.finalPath = 'FINAL.md';
+    try {
+      fs.rmSync(path.join(store.runDir(task.id), 'DRAFT-paused.md'), { force: true });
+    } catch {
+      /* không xóa được bản tạm: bỏ qua */
+    }
   }
 
   private checkAbort(task: Task): void {
@@ -3291,6 +4281,9 @@ export function variantOptions(o: Partial<TaskOptions>): Partial<TaskOptions> {
     if (Object.keys(pm).length) out.phaseModels = pm as TaskOptions['phaseModels'];
   }
   if (typeof o.variant === 'string' && o.variant.trim()) out.variant = o.variant.trim().slice(0, 60);
+  if (o.lane === 'auto' || o.lane === 'single' || o.lane === 'fast' || o.lane === 'full') out.lane = o.lane;
+  const slim = sanitizeSlim(o.slim);
+  if (Object.keys(slim).length) out.slim = slim;
   return out;
 }
 

@@ -1,0 +1,10 @@
+{
+  "name": "sales-report",
+  "version": "2.1.0",
+  "private": true,
+  "main": "src/report.js",
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\"",
+    "bench": "node bench/run.js"
+  }
+}

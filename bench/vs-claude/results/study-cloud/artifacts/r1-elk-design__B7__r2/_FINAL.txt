@@ -1,0 +1,107 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude r1-elk-design__B7__r2] ELK audit platform sizing and design
+
+_Làn đơn: một agent làm trọn đề bài; báo cáo dựng tự động từ bàn giao và kết quả cổng chất lượng (không gọi model)._
+
+## Tóm tắt
+
+Làn đơn: Kiến trúc sư giải pháp (@solution-architect) làm trọn đề bài trong worktree nhiệm vụ
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — [vs-claude r1-elk-design__B7__r2] ELK audit platform sizing and design (@solution-architect, done)
+
+## Tóm tắt
+Tôi đã viết `DESIGN.md` ở gốc repo, chưa commit. Thiết kế dùng Kafka làm điểm nhận log duy nhất, rồi chia hai luồng. Luồng thứ nhất giữ **bản gốc đã mã hóa trong kho ghi một lần, không sửa xóa được (WORM)**, kèm chuỗi băm, chữ ký số và dấu thời gian. Đây là bằng chứng pháp lý. Luồng thứ hai che dữ liệu cá nhân ở Logstash rồi mới đưa vào Elasticsearch: 3 node master, 12 node hot (NVMe, 0–30 ngày) và 14 node warm (HDD RAID6, 31–365 ngày). Rủi ro lớn nhất là mâu thuẫn giữa "bằng chứng chưa bị sửa" và "che dữ liệu cá nhân trước khi index", cùng với tỷ lệ nén chưa đo được: số node có thể lệch khoảng ±50%. Ngoài ra, gợi ý dùng searchable snapshots của khách hàng **bị bác**, vì tính năng này cần giấy phép Enterprise, trái với ràng buộc chỉ dùng Basic.
+
+## Bối cảnh & NFR
+- **Dữ liệu**: nội bộ, có dữ liệu cá nhân dạng thô ở hai chặng nhạy cảm là Kafka (giữ 72 h) và kho bằng chứng.
+- **Cấp độ ATTT**: chưa có phân loại hệ thống thông tin của chủ quản. Tôi giả định nền tảng log nhận cấp độ của hệ thống cao nhất mà nó thu log; câu hỏi Q7 chờ khách hàng xác nhận.
+- **Khối lượng thô**: 16 MB/s → 1,3824 TB/ngày → 504,58 TB/năm.
+- **Giả định nén**: 1,0 khi mới ghi; 0,75 sau forcemerge với `best_compression`. Cả hai đều là giả định, phải đo trong PoC.
+- **Dung lượng theo tầng**:
+
+| Tầng | Dữ liệu | Đĩa cần |
+|---|---|---|
+| Hot, gồm 1 replica | ≈ 64 TB | ≈ 85 TB (lấp tối đa 75%) |
+| Warm, 0 replica | 347,3 TB | ≈ 463 TB |
+| Kho snapshot | ≈ 420 TB | — |
+| Kho bằng chứng WORM | ≈ 82 TB | — |
+| Kafka | ≈ 12,4 TB | — |
+
+  Tài liệu có thêm bảng độ nhạy với hệ số nén 0,5 / 0,75 / 1,0 / 1,2.
+
+## Kiến trúc & luồng dữ liệu
+Nguồn → Filebeat/Agent → Kafka, rồi tách thành:
+- **Sealer → kho WORM**: một dịch vụ nhỏ phải tự viết. Nó gom log theo lô, băm SHA-256 và ghi vào bucket bật Object Lock chế độ compliance. Mỗi giờ tạo một manifest nối chuỗi với manifest trước, ký bằng khóa trong HSM và đóng dấu thời gian RFC 3161.
+- **Logstash → Elasticsearch**: Logstash thay username, e-mail và số điện thoại bằng mã HMAC có khóa và lọc thêm bằng regex trên văn bản tự do. Nếu nghi còn sót, sự kiện bị cách ly, không index. Mỗi tài liệu mang thêm các trường `event.id`, `raw_ref`, `event.hash` để đối chiếu với bản gốc.
+
+Tài liệu cũng có chính sách ILM (rollover 50 GB → readonly → forcemerge `best_compression` → warm sau 30 ngày với 0 replica → chờ snapshot rồi xóa ở 365 ngày), index template, SLM, bảng bố trí node, các lớp bảo vệ toàn vẹn (L1–L8) và quy trình giám định khi cần trình bằng chứng.
+
+## ADR
+- **ADR-1: Kafka và hai luồng tách biệt.** Bác phương án đẩy log thẳng vào ES vì ES không tự chứng minh được toàn vẹn. Nếu bộ phận bảo vệ dữ liệu không cho lưu bản gốc, phương án dự phòng là chỉ giữ bản đã che làm bằng chứng.
+- **ADR-2: Tầng warm trên đĩa thay cho searchable snapshots.** Searchable snapshots cần Enterprise.
+  - Phương án rẻ hơn là chỉ giữ snapshot và khôi phục khi có yêu cầu. Cách này chỉ kịp hạn 24 h nếu phạm vi yêu cầu khoảng 1 tháng dữ liệu, với giả định tốc độ khôi phục 500 MB/s.
+- **ADR-3: Warm không replica, dựa vào RAID6 và snapshot.** Nếu mất một node, khôi phục mất khoảng 14 h (giả định), vẫn trong hạn 24 h.
+- **ADR-4: Che bằng HMAC có khóa và đánh số phiên bản.** Bác cách xóa trắng (mất khả năng lần theo cùng một người), mã hóa thuận nghịch (ES vẫn chứa dữ liệu cá nhân) và băm không khóa (dò ngược được).
+
+## Phát hiện
+- **Cao** — Searchable snapshots xung đột với ràng buộc chỉ dùng Basic.
+- **Cao** — Yêu cầu bằng chứng gốc mâu thuẫn với yêu cầu che dữ liệu cá nhân.
+- **Cao** — Nếu lưu hash bản gốc cạnh bản đã che, có thể dò ngược ra dữ liệu cá nhân. Thiết kế chỉ để hash bản gốc trong kho WORM.
+- **Cao** — Tỷ lệ nén chưa đo.
+- **Trung bình** — Bản Basic không có audit log của ES và không có phân quyền theo trường/tài liệu, nên phải ghi log truy cập ở reverse proxy.
+- **Trung bình** — "Tra cứu được trong 24 h" chưa rõ phạm vi.
+- **Trung bình** — Chưa biết hệ số đỉnh.
+- **Trung bình** — Regex có thể bỏ sót dữ liệu cá nhân.
+- **Trung bình*
+…[đã cắt 1586 ký tự]
+
+Bản đầy đủ: `.ccoding/T-20261102-193703-1e2/outputs/dev-S1-solution-architect.md`
+
+## Review
+
+Đã duyệt: DESIGN.md (387 dòng) đáp ứng đủ các hạng mục đề bài yêu cầu. Tôi chỉ chạy `wc -l`, `git status` và đọc/tự tính lại các số; không chạy test vì đây là tài liệu, repo không có test hay CI. Về số liệu:
+- Khối lượng thô 16 MB/s → 1,3824 TB/ngày → 504,58 TB/năm: đúng.
+- Hot: 41,47 × 0,75 × 2 = 62,2 TB, chia 0,75 ≈ 85 TB: đúng.
+- Warm: 335 ngày × 1,3824 × 0,75 = 347,3 TB, chia 0,75 ≈ 463 TB: đúng.
+- Snapshot 378 TB cộng phần dư ≈ 420 TB: hợp lý.
+- Khôi phục 25 TB ở 500 MB/s ≈ 14 giờ: đúng.
+
+Về thiết kế:
+- Gợi ý searchable snapshots bị bác đúng lý do (cần Enterprise, trái ràng buộc Basic). Phương án thay thế có ADR so sánh rõ.
+- Mâu thuẫn giữa bằng chứng gốc và che PII được nêu rõ.
+- Giả định nén được đánh dấu [GĐ], có bảng độ nhạy theo hệ số nén.
+- ILM hợp lệ về cú pháp.
+- Chuỗi toàn vẹn (WORM + hash chain + HSM + RFC 3161) hợp lý.
+
+Không có blocker hay major.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-193703-1e2` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **16 in / 38.2k out**, cache đọc 156.8k, 2 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Kiến trúc sư giải pháp (@solution-architect) | dev | 10 | 35924 | 119240 | 1 |
+| QA Engineer (@qa-tester) | dev | 6 | 2259 | 37599 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-solution-architect.md` — S1 [vs-claude r1-elk-design__B7__r2] ELK audit platform sizing and design (@solution-architect)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Kiến trúc sư giải pháp (@solution-architect) | dev | **93** A | — | 100 | 80 | 100 | 1 | 1 | 155k | 1/4 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 40k | 0/2 |
+
+### Việc cần sửa theo agent
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

@@ -1,0 +1,5 @@
+I wrote `answer.json` in the repository root. I generated it with a script that starts the alphabetically smallest ready service each time, and I did not check it by hand.
+
+- **Startup order:** 18 services can start, beginning with `cache`, `db-catalog`, `db-orders` and `db-users`. `notifier` comes last.
+- **Cycle members:** `etl`, `reporting` and `warehouse` form a loop, because `reporting` needs `warehouse`, `warehouse` needs `etl`, and `etl` needs `reporting`.
+- **Blocked:** those three plus `admin-ui`, which can never start because it depends on `reporting`.

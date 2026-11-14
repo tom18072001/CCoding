@@ -1,0 +1,6 @@
+# Kết quả benchtest được commit (bài tổng hợp, nhãn Công khai, không có DLCN). Transcript thô của Claude Code (claude.jsonl) thì không:
+# số liệu từng lượt mô hình đã rút vào results/claude_turns.csv bằng harness/export.py.
+!result.json
+!grade-hidden.tap
+!grade-visible.tap
+claude.jsonl

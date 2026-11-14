@@ -1,0 +1,12 @@
+`logq` đã xong theo SPEC.md. `npm test` xanh: 17/17 test đạt, gồm 14 test mới trong `test/logq.test.js` và 3 test smoke có sẵn. Test đều chạy qua API và qua CLI thật (gọi bằng `spawnSync`).
+
+Các file đã viết: `src/parse.js`, `src/query.js`, `src/agg.js`, `bin/logq.js`, không dùng thư viện ngoài. Tôi chưa commit gì.
+
+Trong lúc kiểm tra tôi sửa một lỗi: `msg:"a*"` (dấu ngoặc kép dính ngay sau `:`) ban đầu bị tách token sai và không khớp.
+
+Những chỗ SPEC không nói rõ, tôi tự chọn như sau. Nếu bộ nghiệm thu hiểu khác thì cần chỉnh:
+- **`@t`:** chỉ nhận chuỗi có chữ `T` giữa ngày và giờ, ví dụ `2024-01-01T00:00:00Z`. Dạng cách bằng dấu cách (`2024-01-01 10:00:00`) không được nhận.
+- **Bucket `count by`:** gom theo giá trị gốc, nên `1` và `"1"` là hai bucket riêng.
+- **`msg` bằng `null`:** coi như không có `msg`, rồi rơi về `message`.
+- **Lỗi truy vấn kiểu khác:** token như `:foo` hoặc `_exists_:` kèm tên trường sai báo lỗi tại đầu token (`_exists_:` thì tại vị trí ngay sau dấu `:`), vì SPEC không chỉ định vị trí.
+- **CLI:** kiểm tra cú pháp truy vấn, spec tổng hợp và tùy chọn trước khi đọc tệp, nên lỗi cú pháp luôn ra mã 2 dù tệp có đọc được hay không. Ngoài ra CLI chấp nhận thêm dạng `--query=...` và `--`, và bỏ BOM đầu tệp.

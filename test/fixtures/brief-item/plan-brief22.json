@@ -1,0 +1,13 @@
+{
+ "source": "DỰNG TAY (không phải kế hoạch thật của văn phòng): tiêu đề/người nhận viết độc lập theo các hạng mục K1–K7 của docs/research/BRIEF-22.md, không sinh từ briefItems. Chưa có kế hoạch thật của BRIEF-22 trong repo; thay bằng bản thật khi có.",
+ "brief": "docs/research/BRIEF-22.md",
+ "subtasks": [
+  { "id": "S1", "title": "K1: đọc mã engine, ghi tệp:dòng", "description": "Đọc engine và logic từng agent.", "assignee": "methodologist", "deps": [] },
+  { "id": "S2", "title": "K2: bảng điểm từng agent", "description": "Kết quả và chỗ fail.", "assignee": "data-scientist", "deps": [] },
+  { "id": "S3", "title": "K3: đối chiếu tài liệu", "description": "Tổng hợp tài liệu liên quan.", "assignee": "methodologist", "deps": [] },
+  { "id": "S4", "title": "K4: model cho từng vai và E9", "description": "Phân tích chọn model.", "assignee": "methodologist", "deps": ["S1"] },
+  { "id": "S5", "title": "K5: đưa vào bài báo v0.8", "description": "Viết bài, data-scientist kiểm số.", "assignee": "academic-writer", "deps": ["S2", "S3"] },
+  { "id": "S6", "title": "K6: báo cáo cho giám đốc, danh sách lỗi sửa được", "description": "Báo cáo tổng hợp.", "assignee": "methodologist", "deps": ["S4", "S5"] },
+  { "id": "S7", "title": "K7: review phản biện K1–K6", "description": "Phản biện toàn bộ K1–K6.", "assignee": "peer-reviewer", "deps": ["S6"] }
+ ]
+}

@@ -1,0 +1,79 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t3-api__B7__r9] Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật
+
+_Làn đơn: một agent làm trọn đề bài; báo cáo dựng tự động từ bàn giao và kết quả cổng chất lượng (không gọi model)._
+
+## Tóm tắt
+
+Làn đơn: Senior Software Engineer (@senior-swe) làm trọn đề bài trong worktree nhiệm vụ
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — [vs-claude t3-api__B7__r9] Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật (@senior-swe, done)
+
+## Tóm tắt
+Đã hiện thực đủ 4 tính năng trong FEATURES.md: xác thực và phân quyền, lọc/tìm/sắp xếp/phân trang, xuất CSV, nhật ký thao tác. `npm test` xanh: 9/9 test đạt (baseline là 2 test). Không thêm thư viện. Chưa commit.
+
+## Tệp đã tạo/sửa
+- `src/handlers/tasks.js` · sửa: thêm `authenticate` và kiểm tra quyền theo vai trò; `GET /tasks` trả dạng `{items,total,page,pageSize}`; thêm route `/tasks/export.csv` (đăng ký trước `/tasks/:id`) và `/audit`; ghi nhật ký sau mỗi thao tác ghi thành công.
+- `src/handlers/query.js` · mới: phân tích tham số truy vấn, lọc/sắp xếp, hàm `fold` và `toCsv`.
+- `src/store.js` · sửa: thêm `audit[]` và `logAudit()`.
+- `test/tasks.test.js` · sửa: thêm header `X-User` và dùng `total` cho dạng kết quả mới.
+- `test/features.test.js` · mới: 7 test cho xác thực, member, manager, lọc/sắp xếp/phân trang, tham số lỗi, CSV, nhật ký.
+
+## Kiểm chứng
+- `npm test` → exit 0; `# tests 9 · # pass 9 · # fail 0`.
+- Chưa chạy thử bằng tay ngoài bộ test, và không có typecheck/lint trong dự án.
+
+## Quyết định thiết kế
+- **Thứ tự kiểm tra:** xác thực (401) → tham số truy vấn (400) → 404 → 403 → validate body (400).
+- **Tham số truy vấn:** duyệt theo thứ tự xuất hiện trên URL. Tham số lạ hoặc lặp báo lỗi ngay tại tham số đó.
+- **PATCH của member:** kiểm tra nhiệm vụ có giao cho mình trước khi đọc body, rồi mới kiểm tra body chỉ có `status`.
+- **POST của manager:** `team` khác nhóm mình → 403. Thiếu `team` thì vẫn đi tới validate và trả 400.
+- **`changes` của update:** tính trước khi áp patch.
+- **`q`:** chuẩn hóa NFD, bỏ dấu kết hợp, `đ` → `d`, hạ chữ thường.
+- **Sắp xếp:** hòa → id tăng theo số. `dueDate` rỗng luôn nằm cuối. `title` dùng `localeCompare('vi')`.
+
+## Rủi ro & việc còn mở
+- `fetch().text()` tự bỏ BOM, nên test kiểm tra BOM qua `arrayBuffer`. Bộ nghiệm thu ẩn nếu đọc bằng `.text()` sẽ không thấy BOM dù server đã gửi đúng.
+- Đặc tả không nêu `assignee=` (rỗng), nên tôi coi là bộ lọc khớp chuỗi rỗng, không phải lỗi.
+- Đặc tả không nêu `dueDate` trong body có cần là ngày thật theo lịch hay không. Tôi giữ validate cũ (chỉ kiểm tra dạng chuỗi).
+- Nhật ký chỉ lưu trong bộ nhớ.
+
+Bản đầy đủ: `.ccoding/T-20261102-185925-fe3/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng (làn đơn): lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-185925-fe3` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **36 in / 20.5k out**, cache đọc 560.7k, 1 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 36 | 20480 | 560656 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude t3-api__B7__r9] Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 2 · # suites 0 · # pass 2 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 9 · # suites 0 · # pass 9 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **97** A | — | 100 | 92 | 100 | 1 | 1 | 581k | 2/19 |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

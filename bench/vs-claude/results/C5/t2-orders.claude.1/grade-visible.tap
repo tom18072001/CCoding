@@ -1,0 +1,136 @@
+TAP version 13
+# Subtest: tính tiền không mã giảm giá
+ok 1 - tính tiền không mã giảm giá
+  ---
+  duration_ms: 1.135963
+  type: 'test'
+  ...
+# Subtest: giữ chỗ tồn kho khi thêm
+ok 2 - giữ chỗ tồn kho khi thêm
+  ---
+  duration_ms: 0.136256
+  type: 'test'
+  ...
+# Subtest: mã không tồn tại
+ok 3 - mã không tồn tại
+  ---
+  duration_ms: 0.399776
+  type: 'test'
+  ...
+# Subtest: toCents cơ bản
+ok 4 - toCents cơ bản
+  ---
+  duration_ms: 1.044599
+  type: 'test'
+  ...
+# Subtest: formatMoney
+ok 5 - formatMoney
+  ---
+  duration_ms: 0.232206
+  type: 'test'
+  ...
+# Subtest: allocate chia đều
+ok 6 - allocate chia đều
+  ---
+  duration_ms: 0.794596
+  type: 'test'
+  ...
+# Subtest: \#1 toCents làm tròn half away from zero với 3 chữ số thập phân
+ok 7 - \#1 toCents làm tròn half away from zero với 3 chữ số thập phân
+  ---
+  duration_ms: 2.532926
+  type: 'test'
+  ...
+# Subtest: \#1 giá sản phẩm 3 chữ số thập phân
+ok 8 - \#1 giá sản phẩm 3 chữ số thập phân
+  ---
+  duration_ms: 0.192095
+  type: 'test'
+  ...
+# Subtest: \#1 mã giảm cố định 3 chữ số thập phân
+ok 9 - \#1 mã giảm cố định 3 chữ số thập phân
+  ---
+  duration_ms: 0.648998
+  type: 'test'
+  ...
+# Subtest: \#1 giá trị đơn tối thiểu 3 chữ số thập phân
+ok 10 - \#1 giá trị đơn tối thiểu 3 chữ số thập phân
+  ---
+  duration_ms: 0.503019
+  type: 'test'
+  ...
+# Subtest: \#2 allocate: tổng các phần bằng total, phần dư lớn nhất
+ok 11 - \#2 allocate: tổng các phần bằng total, phần dư lớn nhất
+  ---
+  duration_ms: 0.884958
+  type: 'test'
+  ...
+# Subtest: \#2 mã giảm cố định 10.00 trên giỏ 3 món giảm đúng 10.00
+ok 12 - \#2 mã giảm cố định 10.00 trên giỏ 3 món giảm đúng 10.00
+  ---
+  duration_ms: 0.252512
+  type: 'test'
+  ...
+# Subtest: \#2 mã giảm cố định không làm giỏ âm
+ok 13 - \#2 mã giảm cố định không làm giỏ âm
+  ---
+  duration_ms: 0.199857
+  type: 'test'
+  ...
+# Subtest: \#2 mã giảm % chia đủ cho các dòng
+ok 14 - \#2 mã giảm % chia đủ cho các dòng
+  ---
+  duration_ms: 0.242093
+  type: 'test'
+  ...
+# Subtest: \#3 freeUnits cần đủ nhóm buy + free
+ok 15 - \#3 freeUnits cần đủ nhóm buy + free
+  ---
+  duration_ms: 0.337566
+  type: 'test'
+  ...
+# Subtest: \#3 mua 2 tặng 1 trong giỏ
+ok 16 - \#3 mua 2 tặng 1 trong giỏ
+  ---
+  duration_ms: 0.564887
+  type: 'test'
+  ...
+# Subtest: \#4 mã dùng được tới hết ngày endsAt theo UTC
+ok 17 - \#4 mã dùng được tới hết ngày endsAt theo UTC
+  ---
+  duration_ms: 0.318669
+  type: 'test'
+  ...
+# Subtest: \#4 applyCoupon trong ngày endsAt
+ok 18 - \#4 applyCoupon trong ngày endsAt
+  ---
+  duration_ms: 0.126607
+  type: 'test'
+  ...
+# Subtest: \#5 sửa số lượng chỉ giữ chỗ phần chênh lệch
+ok 19 - \#5 sửa số lượng chỉ giữ chỗ phần chênh lệch
+  ---
+  duration_ms: 0.211089
+  type: 'test'
+  ...
+# Subtest: \#5 xóa món / sửa về 0 trả lại tồn kho cho khách khác
+ok 20 - \#5 xóa món / sửa về 0 trả lại tồn kho cho khách khác
+  ---
+  duration_ms: 0.195915
+  type: 'test'
+  ...
+# Subtest: \#6 thuế tính trên giá sau giảm của từng dòng
+ok 21 - \#6 thuế tính trên giá sau giảm của từng dòng
+  ---
+  duration_ms: 0.234419
+  type: 'test'
+  ...
+1..21
+# tests 21
+# suites 0
+# pass 21
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 201.979152

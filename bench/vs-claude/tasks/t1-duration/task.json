@@ -1,0 +1,17 @@
+{
+  "id": "t1-duration",
+  "category": "coding",
+  "size": 1,
+  "sizeBasis": "files: src/duration.js",
+  "sizeLegacy": 2,
+  "sizeReason": "Hai hàm độc lập trong SPEC.md: parseDuration và formatDuration (cùng một module nhỏ, không phụ thuộc nhau)",
+  "title": "Duration parse/format theo đặc tả, nhiều trường hợp biên",
+  "hypotheses": [
+    "H8"
+  ],
+  "deliverable": "src/duration.js",
+  "brief": "Hiện thực module src/duration.js theo đúng đặc tả trong SPEC.md (parseDuration và formatDuration). Bộ nghiệm thu ẩn sẽ kiểm tra rất nhiều trường hợp biên của đặc tả, không chỉ test có sẵn trong test/. Bổ sung test cho các trường hợp biên vào test/, và đảm bảo `npm test` xanh. Không thêm thư viện ngoài.",
+  "grader": "code",
+  "repoDir": "starter",
+  "solutionDir": "ref"
+}

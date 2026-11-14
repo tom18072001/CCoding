@@ -42,6 +42,11 @@ export function classifyError(status: number | undefined, text: string): ErrorKi
   if (inner && inner !== status && (status === undefined || status >= 500)) {
     if (inner === 429 || inner === 402 || inner === 401 || inner === 403 || inner === 529 || inner === 400 || inner === 404) return classifyError(inner, t.replace(/\]\s*\[\d{3}\]\s*:/g, ']:'));
   }
+  // claude-cli báo lỗi API dạng chuỗi "Failed to authenticate. API Error: 403 …" không kèm mã HTTP → lấy mã từ chuỗi (chỉ phân loại)
+  if (status === undefined) {
+    const api = /API Error:\s*([1-5]\d{2})\b/i.exec(t);
+    if (api) status = Number(api[1]);
+  }
   if (LOGIN_RE.test(t) && !QUOTA_RE.test(t) && (!status || status === 401 || status === 403 || status === 400)) return 'auth';
   if (status === 402) return 'quota';
   if (status === 401 || status === 403) return QUOTA_RE.test(t) ? 'quota' : 'auth';
@@ -72,6 +77,37 @@ export function shouldFailover(kind: ErrorKind): boolean {
   return kind !== 'fatal';
 }
 
+/** Giờ-tường (y,m,d,h,min) của `ts` trong múi giờ `tz`, dạng ms "UTC giả" — hiệu với `ts` là độ lệch múi giờ. */
+function wallAsUtc(ts: number, tz: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' }).formatToParts(new Date(ts));
+  const g = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+  return Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'), g('second'));
+}
+
+/** "1am" / "1:30pm" / "13:00" + múi giờ IANA → mốc ms kế tiếp (đã qua trong ngày thì ngày hôm sau). Múi giờ/giờ sai → undefined. */
+function clockResetAt(hour: number, minute: number, ampm: string | undefined, tz: string, now: number): number | undefined {
+  if (!Number.isFinite(hour) || minute > 59) return undefined;
+  if (ampm) {
+    if (hour < 1 || hour > 12) return undefined;
+    hour = (hour % 12) + (ampm === 'pm' ? 12 : 0);
+  } else if (hour > 23) return undefined;
+  try {
+    const nowWall = wallAsUtc(now, tz);
+    const d = new Date(nowWall);
+    const toEpoch = (dayOffset: number): number => {
+      const wall = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + dayOffset, hour, minute);
+      let guess = wall - (nowWall - now);
+      guess = wall - (wallAsUtc(guess, tz) - guess); // hiệu chỉnh khi qua mốc đổi giờ mùa
+      return guess;
+    };
+    let at = toEpoch(0);
+    if (at <= now) at = toEpoch(1);
+    return at;
+  } catch {
+    return undefined; // múi giờ IANA không hợp lệ
+  }
+}
+
 /** Đọc thời điểm mở lại từ header Retry-After hoặc nội dung thông báo (vd. "usage limit reached|1730000000"). */
 export function parseRetryAt(headers: Headers | undefined, text: string, now = Date.now()): number | undefined {
   const ra = headers?.get('retry-after');
@@ -92,6 +128,12 @@ export function parseRetryAt(headers: Headers | undefined, text: string, now = D
   if (epoch) return Number(epoch[1]) * 1000;
   const iso = /(?:reset|resets|available)[^0-9]{0,20}(\d{4}-\d{2}-\d{2}T[\d:.]+Z?)/i.exec(text);
   if (iso && Number.isFinite(Date.parse(iso[1]))) return Date.parse(iso[1]);
+  // claude-cli: "You've hit your 5-hour limit · resets 1am (Asia/Bangkok)"
+  const clock = /resets?\s+(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*\(([A-Za-z][A-Za-z0-9_+\-/]*)\)/i.exec(text);
+  if (clock) {
+    const at = clockResetAt(Number(clock[1]), Number(clock[2] ?? 0), clock[3]?.toLowerCase(), clock[4], now);
+    if (at !== undefined) return at;
+  }
   // 9router: "(reset after 1h23m4s)" / "reset after 42s"
   const ra2 = /reset (?:after|in)\s+((?:\d+(?:\.\d+)?\s*(?:ms|h|m|s)\s*)+)/i.exec(text);
   if (ra2) {

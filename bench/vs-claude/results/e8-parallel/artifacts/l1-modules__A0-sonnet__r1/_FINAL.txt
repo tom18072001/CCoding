@@ -1,0 +1,14 @@
+Cả năm module đã xong và `npm test` xanh: 57 test, 57 đạt, gồm cả test mẫu có sẵn. Tôi chưa commit gì.
+
+Mã nằm ở `src/<tên>/index.js` cho `money`, `calendar`, `csvcheck`, `slug` và `ratelimit`. Các module không import lẫn nhau và không dùng thư viện ngoài. Test mới là các tệp `test/<tên>.spec.test.js`; tôi không sửa test mẫu.
+
+Test mới bám theo các ví dụ trong đặc tả cùng các mã lỗi. Chúng cũng kiểm tra vòng format rồi parse của `money` và vòng `isoWeek` rồi `isoWeekToDate` của `calendar`.
+
+Đặc tả để ngỏ một số chỗ, tôi đã chọn như sau:
+- **`convert`:** kiểm `to` trước rồi mới kiểm `m`, theo câu "kiểm trước" trong đặc tả.
+- **Lược đồ `csvcheck`:** `name` rỗng bị coi là lược đồ sai (`CSV_INVALID_SCHEMA`). Lược đồ được kiểm trước cả kiểu của `text`.
+- **`min`/`max` của cột `string`/`bool`:** không bị kiểm tra là lược đồ sai, vì đặc tả nói chúng bị bỏ qua.
+
+Hai lần đầu, tôi ghi tệp bằng heredoc trong Bash bị lỗi cú pháp và chưa ghi gì. Sau đó tôi ghi bằng công cụ Write.
+
+Hai chỗ trong test ratelimit mà tôi tự đoán sai lúc đầu đã sửa lại: `retryAfterMs` là 90 và `remaining` là 2. Cả hai là lỗi trong test, không phải trong mã.

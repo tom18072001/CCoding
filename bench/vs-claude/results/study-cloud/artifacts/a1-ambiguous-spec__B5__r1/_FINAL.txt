@@ -1,0 +1,70 @@
+> Việc giao riêng cho Senior Software Engineer (@senior-swe)
+
+## Tóm tắt
+Tôi đã viết `SPEC.md` ở thư mục gốc. Repo trống (chỉ có `.gitkeep`) nên spec không dựa trên mã nguồn nào. Brief tự mâu thuẫn ở 4 điểm, và spec chọn cách hiểu an toàn hơn cho từng điểm: IP/username mặc định được che, file export chứa PII bị xóa theo hạn, 5 giây áp dụng cho tối đa 50.000 dòng còn lại chạy async, và phạm vi là giao của quyền xem, team và tháng trước. Mục `## Open questions and assumptions` có 16 câu hỏi, mỗi câu kèm giả định tạm dùng. Q1 và Q2 là điểm chặn (BLOCKER) vì thay đổi thiết kế và pháp lý.
+
+## Tệp đã tạo/sửa
+- `SPEC.md` · tạo mới. Gồm các phần sau:
+  - Bảng mâu thuẫn C1–C5.
+  - Phạm vi và vai trò.
+  - Yêu cầu chức năng FR-1 đến FR-11.
+  - API đề xuất, cột CSV, audit record, yêu cầu phi chức năng.
+  - 10 tiêu chí nghiệm thu.
+  - Mục Open questions and assumptions, và decision log.
+
+## Kiểm chứng
+- Tôi chỉ chạy lệnh `ls`, đọc README/CLAUDE.md/AGENTS.md (không có file nào) và xem `git log` để khảo sát repo. Không chạy test hay typecheck vì repo không có mã.
+- Chưa chạy: kiểm tra chính tả hoặc lint markdown.
+- Chưa commit.
+
+## Quyết định thiết kế
+- **C1 (IP/username đầy đủ vs không để lộ PII):** export mặc định che IP (octet cuối) và dùng pseudonym HMAC ổn định cho username, nên vẫn đối chiếu được giữa các lần export. Bản không che nằm sau feature flag tắt mặc định, cần role riêng, lý do, người duyệt khác người yêu cầu, mã hóa và hết hạn sau 24 giờ.
+- **C4 (giữ file mãi mãi vs xóa PII sau 12 tháng):** quy tắc xóa PII thắng. Chỉ audit record của lần export (không chứa PII của log) được giữ lâu dài.
+- **C3 (5 giây):** đồng bộ tới 50.000 dòng, trên mức đó trả `202` và chạy job nền, trần cứng 2 triệu dòng.
+- **C2 ("mọi thứ họ thấy" vs "team, tháng trước"):** lấy giao của hai phạm vi, không bao giờ rộng hơn quyền xem trên UI.
+- **Định dạng CSV:** UTF-8 BOM cho Excel, chống CSV formula injection.
+
+## Rủi ro & việc còn mở
+- Các giá trị cụ thể là giả định chưa được khách xác nhận, gồm 50.000 dòng, thời hạn lưu 30 ngày/24 giờ/5 năm, múi giờ UTC+7 và cột CSV.
+- Hai điểm cần bên pháp lý hoặc DPO của ngân hàng trả lời trước khi build: có được export không che hay không (Q1), và thứ tự ưu tiên giữa "giữ mãi mãi" và "xóa sau 12 tháng" (Q2).
+- Tôi không trích dẫn điều luật cụ thể vì chưa kiểm chứng.
+- "Như hệ thống cũ" chưa có mẫu để đối chiếu (Q4).
+
+## Review
+✅ Đã duyệt: SPEC.md có ở thư mục gốc và có đúng mục `## Open questions and assumptions` với 16 câu hỏi, mỗi câu kèm giả định tạm dùng. Spec xử lý đúng các mâu thuẫn chính của brief: IP/username đầy đủ so với không để lộ PII, giữ file mãi mãi so với xóa sau 12 tháng, 5 giây so với "mọi thứ họ thấy", và "đơn giản" so với các kiểm soát cần có. Cách giải quyết mặc định thiên về bảo vệ dữ liệu và có tiêu chí nghiệm thu kiểm thử được. Tôi chỉ đọc và khảo sát bằng `ls`, `git status`, `grep`, đọc `SPEC.md`. Không chạy test hay typecheck vì repo không có mã (chỉ có `.gitkeep`). Chưa commit. Không có blocker hay major; còn một số góp ý minor về tính nhất quán nội bộ.
+- [minor] SPEC.md:7 ghi "four direct contradictions" nhưng bảng ở mục 2 liệt kê C1–C5 (5 dòng). C5 ("Make it simple") là căng thẳng về thiết kế, không phải mâu thuẫn trực tiếp. Sửa thành "four contradictions and one design tension" hoặc đổi cách đếm cho khớp báo cáo.
+- [minor] SPEC.md:16 (C4) nói file bị xóa "12 tháng sau ngày row mới nhất" rồi lại rút gọn thành "12 tháng sau khi tạo". FR-11 (dòng 48) lại nói mặc định 30 ngày/24 giờ. Ba cách diễn đạt khác nhau cho cùng một quy tắc. Nên thống nhất một quy tắc duy nhất: hết hạn = min(thời hạn lưu cấu hình, ngày row cũ nhất + 12 tháng).
+- [minor] SPEC.md:62-64: audit record giữ 5 năm có chứa requester_id, approver_id, justification — đây là dữ liệu cá nhân của nhân viên. Spec khẳng định record "no log PII" nhưng chưa nêu câu hỏi liệu quy tắc xóa 12 tháng có áp dụng cho các trường này không. Nên thêm vào Q2 hoặc Q6.
+- [minor] Pseudonym HMAC và IP bị che vẫn có thể là dữ liệu cá nhân (đã pseudonymise). Q1 có hỏi "reversible hay không" nhưng giả định mặc định chưa nói rõ file masked vẫn được coi là PII và vẫn chịu retention. FR-11 đã xử lý ngầm bằng cách purge, nhưng nên nêu rõ.
+- [minor] SPEC.md:102 (Q11) viết "the file carries a footer-free CSV" — câu khó hiểu. Viết lại gọn, ví dụ: "không watermark/footer trong CSV; UI hiển thị cảnh báo".
+- [minor] SPEC.md:44 và Q8: FR-7 cho phép hạ xuống async khi vượt 50.000 dòng, nghĩa là yêu cầu "hoàn tất trong 5 giây" của khách chỉ được đáp ứng một phần. Điều này được nêu ở C3/Q8 nên không chặn, nhưng cần nhấn mạnh đây là điểm khách phải duyệt trước khi build.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-235215-b2e` · chế độ: agent · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **12 in / 9,300 out**, cache đọc 58.9k, 2 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 6 | 7035 | 29784 | 1 |
+| QA Engineer (@qa-tester) | dev | 6 | 2265 | 29081 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude a1-ambiguous-spec__B5__r1] Spec from an ambiguous, self-contradicting brief (@senior-swe)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 37k | 0/2 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 31k | 0/2 |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

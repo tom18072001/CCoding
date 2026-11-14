@@ -1,0 +1,91 @@
+# Thư viện cfgchain: bốn tầng đã hiện thực, `npm test` xanh
+
+## Tóm tắt
+Cả bốn tầng (lexer/parser, check, evaluate, diff) và `compile` trong `src/index.js` đã được hiện thực theo SPEC.md. Lệnh `npm test` do CCoding chạy sau thực thi cho kết quả exit 0 (111 test, 111 đạt, 0 lỗi); trước khi sửa là exit 1. Không thêm thư viện ngoài. Còn mở một số điểm SPEC chưa rõ mà các thành viên tự phán đoán, chưa được bộ nghiệm thu ẩn xác nhận (xem "Việc còn mở & rủi ro"). Tôi tổng hợp từ báo cáo của các thành viên và kết quả lệnh do CCoding chạy. Tôi không tự chạy lại test.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Tầng 1: lexer, parser, `parseProject` | @senior-swe | Đạt. Review đã duyệt chung và `npm test` cuối xanh. | `src/lexer.js`, `src/parser.js`, `test/lexer.test.js` (15 ca), `test/parser.test.js` (18 ca). Đầu ra: `.ccoding/T-20261105-122859-5b6/outputs/dev-S1-senior-swe.md` |
+| S2 | Tầng 4: diff, JSON Pointer, `applyDiff`, định dạng | @backend-dev | Đạt. `node --test test/diff.test.js` có 10/10 đạt. | `src/diff.js`, `test/diff.test.js`. Đầu ra: `dev-S2-backend-dev.md` |
+| S3 | Tầng 3: hợp nhất có vị trí và `evaluate` | @senior-swe | Đạt. `node --test test/evaluate.test.js` có 21/21 đạt. | `src/merge.js` (mới, nội bộ), `src/evaluate.js`, `test/evaluate.test.js`. Đầu ra: `dev-S3-senior-swe.md` |
+| S4 | Tầng 2: `check` ba pha A/B/C | @senior-swe | Đạt. `node --test test/check.test.js` có 32/32 đạt. | `src/check.js`, `test/check.test.js`. Đầu ra: `dev-S4-senior-swe.md` |
+| S5 | `compile` và test đầu cuối | @backend-dev | Đạt. `npm test` toàn bộ exit 0. | `src/index.js`, `test/index.test.js` (8 ca). Đầu ra: `dev-S5-backend-dev.md` |
+
+Kiểm chứng của CCoding (không qua agent):
+- Baseline: `npm test` → exit 1.
+- Sau thực thi: `npm test` → exit 0 (tests 111, pass 111, fail 0, skipped 0).
+- `package.json` không đổi (`git diff --stat` rỗng).
+
+Review cuối: đã duyệt, reviewer chạy `npm test` và đạt. Diff không chạm vùng bảo mật nên không cần review bảo mật.
+
+## Quyết định
+- **A1:** thêm module nội bộ `src/merge.js`, dùng chung cho evaluate và check, không xuất qua `index.js`. Mục đích là tránh lệch logic hợp nhất và phân giải đường dẫn giữa hai tầng.
+- **A2:** mỗi tầng có một tệp test riêng, giữ nguyên `smoke.test.js`.
+- Thứ tự thực hiện: tầng 3 trước tầng 2, vì pha B và pha C của check cần cấu hình đã hợp nhất, có vị trí.
+- Chấp nhận các phán đoán thiết kế của thành viên để làm tiếp, kèm cảnh báo ở phần rủi ro.
+
+## Kết quả review
+- Cổng chất lượng đạt: lệnh kiểm tra xanh, mẫu đầu ra đạt.
+- Chưa có review độc lập về mức độ khớp SPEC từng điều khoản. Bằng chứng khớp SPEC chủ yếu là test do chính người hiện thực viết.
+- Có hai lần test của thành viên sai kỳ vọng (S1 tính sai cột, S5 sai định dạng `remove`). Cả hai đều sửa test, không sửa mã, sau khi đối chiếu SPEC.
+
+## Việc còn mở & rủi ro
+Các điểm sau là phán đoán khi SPEC chưa rõ. Bộ nghiệm thu ẩn có thể hiểu khác:
+1. **Từ khóa trong nội suy** (S1): `${include}` qua lexer, tầng 2 báo `SEM_UNDEFINED_REF`. Chưa có test.
+2. **`\` ngay trước hết tệp** (S1): báo `LEX_BAD_ESCAPE`. Chưa có test.
+3. **"Định nghĩa thắng" khi Block trộn nhau** (S3): `def` cập nhật sang Block sau, còn `pos` giữ Block khởi tạo. Điều này ảnh hưởng vị trí lỗi của check.
+4. **Cạnh trong đồ thị vòng** (S4): gồm cả Ref nằm trong `const` bị lỗi `SEM_CONST_CONFIG_REF`, miễn là Ref phân giải được.
+5. **Vị trí `SEM_UNKNOWN_KEY` bên trong đối tượng tham chiếu qua `"${x}"`** (S4): dùng vị trí chuỗi, không dùng token khóa.
+6. **`closed: true` mà không có `fields`** (S4): không báo lỗi.
+7. **Ngoài SPEC:** `SEM_INTERNAL` (S4) và `applyDiff` chấp nhận chỉ số `-` khi `add` vào mảng (S2). Cả hai không gây lỗi với đầu vào đúng đặc tả, nhưng là hành vi thừa so với SPEC.
+8. **Giới hạn đã biết:** tên tệp là chuỗi số nguyên làm thứ tự khóa của `program.files` đổi vì cách JS sắp khóa nguyên.
+
+Rủi ro chung: các điểm 3 đến 6 ảnh hưởng thứ tự và vị trí lỗi, là phần bộ nghiệm thu ẩn kiểm chặt nhất.
+
+## Bước tiếp theo
+Phần còn lại nhỏ, đề xuất hai nhiệm vụ riêng:
+1. **Rà soát SPEC theo điều khoản (@qa-tester).** Lập bảng đối chiếu từng quy tắc của SPEC mục 3 đến 8 với test. Viết thêm test cho tám điểm phán đoán ở trên và đối chiếu lại chữ của SPEC. Xong khi: mỗi điểm có test, và mỗi điểm hoặc được xác nhận theo SPEC hoặc được sửa mã kèm test. `npm test` xanh.
+2. **Dọn hành vi ngoài SPEC (@senior-swe).** Quyết định giữ hay bỏ chỉ số `-` trong `applyDiff` và mã `SEM_INTERNAL`. Xong khi: hành vi được ghi rõ trong comment hoặc README, hoặc bị gỡ, và `npm test` xanh.
+
+Chưa có thay đổi nào được commit. Branch hiện tại là `master`, còn nhánh chính là `main`. Khi commit cần quyết định nhánh đích.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261105-122859-5b6` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **106 in / 82.9k out**, cache đọc 1.66M, 8 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 64 | 59519 | 1287925 | 3 |
+| Backend Developer (@backend-dev) | dev | 32 | 14296 | 325587 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 8 | 8530 | 41038 | 2 |
+| Điều phối viên (@orchestrator) | office | 2 | 511 | 649 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Tầng 1: lexer + parser + parseProject (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Tầng 4: diff, JSON Pointer, applyDiff, định dạng (@backend-dev)
+- `outputs/dev-S3-senior-swe.md` — S3 Tầng 3: hợp nhất có vị trí (src/merge.js) + evaluate (@senior-swe)
+- `outputs/dev-S4-senior-swe.md` — S4 Tầng 2: check ba pha A/B/C (@senior-swe)
+- `outputs/dev-S5-backend-dev.md` — S5 compile + test đầu cuối, chạy toàn bộ `npm test` (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) · at Test.run (node:internal/test_runner/test:1118:25) · at Test.processPendingSubte |
+| sau thực thi | `npm test` | 0 | ℹ tests 111 · ℹ suites 0 · ℹ pass 111 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **75** B | vừa | — | — | 100 | 69 | 91 | 100 | 3 | 1 | 1.35M | 5/44 | — |
+| Backend Developer (@backend-dev) | dev | **75** B | thấp | — | — | 100 | 100 | 92 | 100 | 2 | 1 | 340k | 2/21 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **73** B | thấp | — | — | 100 | 76 | 100 | 100 | 0 | — | 50k | 0/2 | — |
+| Điều phối viên (@orchestrator) | office | **60** C | thấp | — | — | — | — | 100 | — | 0 | — | 1k | — | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

@@ -1,0 +1,25 @@
+I wrote `/tmp/vb/r1-elk-design__A2__r2__c2/DESIGN.md`. I haven't committed it. The sizing figures are arithmetic on the assumptions in the document, and none of it has been tested against a real cluster.
+
+- **Searchable snapshots:** they need an Enterprise license, so the customer's suggestion doesn't work on Basic. The same goal is met differently: days 0–31 stay online, and days 31–365 live only as regular snapshots in object storage. That older data is restored on request into a small on-demand cold tier. A 30-day restore takes about 10 hours with the restore throttles raised, which fits the 24-hour requirement.
+- **Volume:** 1.728 billion events per day is 1.38 TB/day and 504.6 TB/year raw.
+- **Compression assumption:** indexed size is 0.5× raw, which is my assumption rather than a measurement. The document includes a table showing how the totals move if the ratio is 0.35× or 0.7×.
+- **Storage:**
+  - **Online (31 days, with replicas):** about 42.9 TB, split into 11.1 TB on hot and 31.8 TB on warm.
+  - **Snapshot repository:** about 252 TB for 365 days.
+  - **Evidence archive:** about 63 TB.
+- **Nodes:**
+  - **Hot:** 6 nodes.
+  - **Warm:** 6 nodes.
+  - **Restore tier:** 3 nodes, powered on only for requests.
+  - **Supporting nodes:** 3 masters, 2 coordinating, 2 Kibana, plus the Logstash, Kafka and sealer nodes.
+- **Integrity:** Elasticsearch on Basic can't enforce immutability, so the proof of "unaltered" lives outside it. A custom sealer service hashes each event and writes signed, chained batch manifests plus the masked events to a write-once (object-lock) bucket, with an external timestamp. Daily and on-restore jobs check Elasticsearch against those manifests.
+- **Masking:** done in Logstash before anything reaches Kafka or Elasticsearch, using a keyed hash. A plain hash of a phone number can be brute-forced.
+- **Retention setting:** the snapshot retention is 335 days, not 365. Daily snapshots overlap, so 365 would silently keep data about 30 days too long.
+
+The main risks and conflicts in the customer's inputs are listed in the document, with one item per risk:
+- The unmasked originals aren't kept, so the hash proves the masked record is unaltered, not that it matches the source. Whether that is acceptable as evidence is a legal decision.
+- Write-once retention conflicts with erasure rights.
+- Basic has no Elasticsearch audit log, no disaster-recovery replication and no vendor support.
+- The snapshot repository can't sit in an object-lock bucket, so it needs a separate ordinary bucket.
+
+Before relying on it, check the Basic feature matrix for your exact Elastic version, and measure the compression ratio on real data.

@@ -1,0 +1,112 @@
+TAP version 13
+# Subtest: nhiều seed ngẫu nhiên với PRNG tự viết
+ok 1 - nhiều seed ngẫu nhiên với PRNG tự viết
+  ---
+  duration_ms: 287.067739
+  type: 'test'
+  ...
+# Subtest: orders rỗng
+ok 2 - orders rỗng
+  ---
+  duration_ms: 0.417339
+  type: 'test'
+  ...
+# Subtest: toàn bộ cancelled
+ok 3 - toàn bộ cancelled
+  ---
+  duration_ms: 0.193191
+  type: 'test'
+  ...
+# Subtest: toàn bộ refunded: grandTotal < 0 và = 0
+ok 4 - toàn bộ refunded: grandTotal < 0 và = 0
+  ---
+  duration_ms: 0.461872
+  type: 'test'
+  ...
+# Subtest: sku không có trong products
+ok 5 - sku không có trong products
+  ---
+  duration_ms: 0.364194
+  type: 'test'
+  ...
+# Subtest: products trùng sku lấy phần tử đầu
+ok 6 - products trùng sku lấy phần tử đầu
+  ---
+  duration_ms: 0.262856
+  type: 'test'
+  ...
+# Subtest: cùng id nhiều dòng; đơn có cả paid và refunded
+ok 7 - cùng id nhiều dòng; đơn có cả paid và refunded
+  ---
+  duration_ms: 0.367241
+  type: 'test'
+  ...
+# Subtest: khách chỉ có refunded
+ok 8 - khách chỉ có refunded
+  ---
+  duration_ms: 0.26331
+  type: 'test'
+  ...
+# Subtest: sản phẩm revenue <= 0 bị loại khỏi topProducts
+ok 9 - sản phẩm revenue <= 0 bị loại khỏi topProducts
+  ---
+  duration_ms: 0.416188
+  type: 'test'
+  ...
+# Subtest: hòa revenue/qty: tie-break theo sku
+ok 10 - hòa revenue/qty: tie-break theo sku
+  ---
+  duration_ms: 0.756821
+  type: 'test'
+  ...
+# Subtest: topN = 0, 1, 10, bỏ trống, undefined, null, âm
+ok 11 - topN = 0, 1, 10, bỏ trống, undefined, null, âm
+  ---
+  duration_ms: 29.52823
+  type: 'test'
+  ...
+# Subtest: lọc from/to
+ok 12 - lọc from/to
+  ---
+  duration_ms: 52.660329
+  type: 'test'
+  ...
+# Subtest: múi giờ và biên tháng UTC
+ok 13 - múi giờ và biên tháng UTC
+  ---
+  duration_ms: 1.545228
+  type: 'test'
+  ...
+# Subtest: dữ liệu từ src/gen.js kích thước nhỏ
+ok 14 - dữ liệu từ src/gen.js kích thước nhỏ
+  ---
+  duration_ms: 134.495468
+  type: 'test'
+  ...
+# Subtest: thứ tự khóa byMonth giữ nguyên (JSON.stringify)
+ok 15 - thứ tự khóa byMonth giữ nguyên (JSON.stringify)
+  ---
+  duration_ms: 0.528475
+  type: 'test'
+  ...
+# Subtest: báo cáo nhỏ
+ok 16 - báo cáo nhỏ
+  ---
+  duration_ms: 1.835709
+  type: 'test'
+  ...
+# Subtest: dữ liệu sinh ngẫu nhiên chạy được
+ok 17 - dữ liệu sinh ngẫu nhiên chạy được
+  ---
+  duration_ms: 9.019715
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 636.715105

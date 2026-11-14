@@ -1,0 +1,15 @@
+Mình đã hiện thực `src/duration.js` với `parseDuration` và `formatDuration` theo SPEC.md. `npm test` xanh, 10/10 test pass. Mình chưa có bộ nghiệm thu ẩn nên chưa chạy thử với nó.
+
+- **Độ chính xác:** phần số thập phân và việc làm tròn half away from zero dùng `BigInt`, nên `"1.0005s"` ra đúng 1001. Số rất lớn như `1e21` cũng không bị in ra dạng mũ.
+- **Test bổ sung:** thêm vào `test/duration.test.js` các ca biên:
+  - làm tròn và `-0`;
+  - các chuỗi lỗi (dấu, thứ tự đơn vị, ISO sai dạng);
+  - dạng đơn vị và ISO 8601;
+  - `largest` với nhớ lên đơn vị lớn hơn (ví dụ `6d 23h 59m 31s` với `largest: 2` ra `1w`);
+  - chuỗi long, số âm, lỗi của `formatDuration`;
+  - tính chất `parseDuration(formatDuration(x)) === parseDuration(x)`.
+- **Điểm SPEC không nói rõ:**
+  - `options = null` được coi như không truyền options.
+  - `{ largest: undefined }` được coi như không giới hạn.
+
+Không thêm thư viện ngoài, và mình chưa commit gì.

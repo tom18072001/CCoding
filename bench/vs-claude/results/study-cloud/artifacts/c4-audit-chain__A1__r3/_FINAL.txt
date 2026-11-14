@@ -1,0 +1,20 @@
+**Stage 3: Self-review.** I re-read each requirement against the code and ran `npm test`. All 10 tests pass: the existing smoke test plus 9 new ones in `test/audit.test.js`.
+
+- **`canonicalize`:**
+  - Keys sort by code point, which a test checks with an astral character against `U+FFFF`.
+  - It follows `JSON.stringify` for `undefined`, functions, `toJSON`/`Date`, and cycles.
+  - Top-level `undefined` returns `undefined`, as `JSON.stringify` does.
+- **`redact`:**
+  - It deep-copies without mutating the input, and redacts strings inside arrays and nested objects.
+  - Emails are replaced before phones.
+  - Phone digit boundaries are tested: 10-digit and 11-digit numbers, a leading digit, a bad first digit (2 or 4), and `+84` forms.
+  - A `__proto__` key stays an own property.
+- **`append` and `verify`:** The hash covers only the redacted entry, and a test confirms the raw email never appears in the chain. Verify returns the first bad index for a changed entry, `prev`, `seq`, or `hash`, for a deleted record, and for a malformed record.
+
+**Stage 4: Fix.** The review found no defects, so I changed nothing.
+
+**Assumptions and limits:**
+- Phone numbers are matched only as contiguous digits. Formatted numbers such as `0912 345 678` or `091-234-5678` are not redacted.
+- Keys are never redacted, as the brief says. PII placed in a key would still reach the hash.
+- Values with `toJSON`, such as `Date`, are converted to their JSON form during redaction. This means PII can't slip through at hash time.
+- The email pattern is a practical one, not full RFC 5322. On very long runs of alphanumeric characters with no `@`, it can be slow (quadratic).

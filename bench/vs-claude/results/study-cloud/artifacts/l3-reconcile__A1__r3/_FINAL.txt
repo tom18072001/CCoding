@@ -1,0 +1,10 @@
+I wrote `answer.json` and `NOTES.md` in the repository root. October 2026 net revenue is **97,306,916 VND**. The script's own checks passed, but I did not check the result against any independent figure.
+
+```json
+{"net_revenue_vnd": 97306916, "paid_count": 32, "refund_count": 2, "duplicate_rows_ignored": 5}
+```
+
+- **Duplicates:** the 5 duplicate rows are exact copies, so deduplicating by `txn_id` loses nothing.
+- **Month boundaries:** the Vietnam-time window runs from 2026-09-30 17:00 UTC up to, but not including, 2026-10-31 17:00 UTC. Two transactions sit right on the edges and are both counted: `T0071` (Oct 1 00:00 local) and `T0074` (Oct 31 23:59 local).
+- **Refunds:** the 2 October refunds are counted by their own timestamp. Refunds `T0078` and `T0079` fall on Nov 1 local time, and `T0080` is later in November, so all three are excluded.
+- **Rounding:** the exact total was already a whole number, so rounding half-up at the end changed nothing.

@@ -1,0 +1,268 @@
+TAP version 13
+# Subtest: audit: rỗng ban đầu, chỉ admin
+ok 1 - audit: rỗng ban đầu, chỉ admin
+  ---
+  duration_ms: 52.293503
+  type: 'test'
+  ...
+# Subtest: audit: thứ tự 401 → 400 → 403
+ok 2 - audit: thứ tự 401 → 400 → 403
+  ---
+  duration_ms: 13.279133
+  type: 'test'
+  ...
+# Subtest: audit: ghi sau create/update/delete, mới nhất trước
+ok 3 - audit: ghi sau create/update/delete, mới nhất trước
+  ---
+  duration_ms: 14.318825
+  type: 'test'
+  ...
+# Subtest: audit: lọc theo taskId
+ok 4 - audit: lọc theo taskId
+  ---
+  duration_ms: 8.70967
+  type: 'test'
+  ...
+# Subtest: audit: update không đổi giá trị → changes rỗng
+ok 5 - audit: update không đổi giá trị → changes rỗng
+  ---
+  duration_ms: 6.145664
+  type: 'test'
+  ...
+# Subtest: audit: thao tác lỗi không ghi
+ok 6 - audit: thao tác lỗi không ghi
+  ---
+  duration_ms: 21.140954
+  type: 'test'
+  ...
+# Subtest: authenticate
+ok 7 - authenticate
+  ---
+  duration_ms: 1.683948
+  type: 'test'
+  ...
+# Subtest: canSee / visibleTeam
+ok 8 - canSee / visibleTeam
+  ---
+  duration_ms: 0.261056
+  type: 'test'
+  ...
+# Subtest: assertCanCreate
+ok 9 - assertCanCreate
+  ---
+  duration_ms: 0.488595
+  type: 'test'
+  ...
+# Subtest: assertCanUpdate
+ok 10 - assertCanUpdate
+  ---
+  duration_ms: 0.390031
+  type: 'test'
+  ...
+# Subtest: assertCanDelete / assertAdmin
+ok 11 - assertCanDelete / assertAdmin
+  ---
+  duration_ms: 0.314155
+  type: 'test'
+  ...
+# Subtest: hằng số
+ok 12 - hằng số
+  ---
+  duration_ms: 0.665882
+  type: 'test'
+  ...
+# Subtest: danh sách rỗng: BOM + tiêu đề + CRLF
+ok 13 - danh sách rỗng: BOM + tiêu đề + CRLF
+  ---
+  duration_ms: 0.176274
+  type: 'test'
+  ...
+# Subtest: tiêu đề có dấu phẩy, ngoặc kép, xuống dòng
+ok 14 - tiêu đề có dấu phẩy, ngoặc kép, xuống dòng
+  ---
+  duration_ms: 0.278957
+  type: 'test'
+  ...
+# Subtest: tiền tố công thức kèm dấu phẩy
+ok 15 - tiền tố công thức kèm dấu phẩy
+  ---
+  duration_ms: 0.132548
+  type: 'test'
+  ...
+# Subtest: tiếng Việt và null/undefined
+ok 16 - tiếng Việt và null/undefined
+  ---
+  duration_ms: 0.187359
+  type: 'test'
+  ...
+# Subtest: số giữ nguyên, kể cả âm
+ok 17 - số giữ nguyên, kể cả âm
+  ---
+  duration_ms: 0.105109
+  type: 'test'
+  ...
+# Subtest: CSV: header HTTP, BOM, tiêu đề, CRLF
+ok 18 - CSV: header HTTP, BOM, tiêu đề, CRLF
+  ---
+  duration_ms: 45.367813
+  type: 'test'
+  ...
+# Subtest: CSV: chống công thức và RFC 4180 trên dữ liệu seed
+ok 19 - CSV: chống công thức và RFC 4180 trên dữ liệu seed
+  ---
+  duration_ms: 7.607146
+  type: 'test'
+  ...
+# Subtest: CSV: dùng cùng bộ lọc/sắp xếp, member bị ép nhóm
+ok 20 - CSV: dùng cùng bộ lọc/sắp xếp, member bị ép nhóm
+  ---
+  duration_ms: 8.57876
+  type: 'test'
+  ...
+# Subtest: CSV: page/pageSize → 400, thiếu X-User → 401 (đi trước), không bị nhầm với /tasks/:id
+ok 21 - CSV: page/pageSize → 400, thiếu X-User → 401 (đi trước), không bị nhầm với /tasks/:id
+  ---
+  duration_ms: 13.57402
+  type: 'test'
+  ...
+# Subtest: parseQuery mặc định
+ok 22 - parseQuery mặc định
+  ---
+  duration_ms: 1.420889
+  type: 'test'
+  ...
+# Subtest: parseQuery giá trị hợp lệ
+ok 23 - parseQuery giá trị hợp lệ
+  ---
+  duration_ms: 0.399102
+  type: 'test'
+  ...
+# Subtest: parseQuery lỗi và thứ tự
+ok 24 - parseQuery lỗi và thứ tự
+  ---
+  duration_ms: 0.779017
+  type: 'test'
+  ...
+# Subtest: allowPaging=false
+ok 25 - allowPaging=false
+  ---
+  duration_ms: 1.289781
+  type: 'test'
+  ...
+# Subtest: normalizeText
+ok 26 - normalizeText
+  ---
+  duration_ms: 0.31271
+  type: 'test'
+  ...
+# Subtest: lọc q không dấu, assignee=none, dueBefore, forceTeam
+ok 27 - lọc q không dấu, assignee=none, dueBefore, forceTeam
+  ---
+  duration_ms: 0.719731
+  type: 'test'
+  ...
+# Subtest: sắp xếp: hòa theo số id, dueDate null cuối
+ok 28 - sắp xếp: hòa theo số id, dueDate null cuối
+  ---
+  duration_ms: 9.224085
+  type: 'test'
+  ...
+# Subtest: phân trang
+ok 29 - phân trang
+  ---
+  duration_ms: 0.251329
+  type: 'test'
+  ...
+# Subtest: CRUD cơ bản (admin)
+ok 30 - CRUD cơ bản (admin)
+  ---
+  duration_ms: 67.773773
+  type: 'test'
+  ...
+# Subtest: validate body
+ok 31 - validate body
+  ---
+  duration_ms: 6.915786
+  type: 'test'
+  ...
+# Subtest: 401: thiếu hoặc sai X-User, mọi route
+ok 32 - 401: thiếu hoặc sai X-User, mọi route
+  ---
+  duration_ms: 20.780236
+  type: 'test'
+  ...
+# Subtest: 401 đi trước 400 (query lỗi) và 404
+ok 33 - 401 đi trước 400 (query lỗi) và 404
+  ---
+  duration_ms: 5.105244
+  type: 'test'
+  ...
+# Subtest: member: danh sách tự lọc theo nhóm, team khác → rỗng
+ok 34 - member: danh sách tự lọc theo nhóm, team khác → rỗng
+  ---
+  duration_ms: 4.690125
+  type: 'test'
+  ...
+# Subtest: manager đọc được mọi nhóm
+ok 35 - manager đọc được mọi nhóm
+  ---
+  duration_ms: 4.395376
+  type: 'test'
+  ...
+# Subtest: member: 404 với task nhóm khác (GET/PATCH/DELETE) và task không tồn tại; 404 đi trước 403
+ok 36 - member: 404 với task nhóm khác (GET/PATCH/DELETE) và task không tồn tại; 404 đi trước 403
+  ---
+  duration_ms: 7.72726
+  type: 'test'
+  ...
+# Subtest: 403: member không tạo/xóa; chỉ sửa status task của mình
+ok 37 - 403: member không tạo/xóa; chỉ sửa status task của mình
+  ---
+  duration_ms: 7.878374
+  type: 'test'
+  ...
+# Subtest: 403: manager chỉ tạo/sửa nhóm mình, không xóa
+ok 38 - 403: manager chỉ tạo/sửa nhóm mình, không xóa
+  ---
+  duration_ms: 12.358654
+  type: 'test'
+  ...
+# Subtest: thứ tự lỗi: 403 trước validate body
+ok 39 - thứ tự lỗi: 403 trước validate body
+  ---
+  duration_ms: 9.520733
+  type: 'test'
+  ...
+# Subtest: thứ tự lỗi: 400 query trước 404
+ok 40 - thứ tự lỗi: 400 query trước 404
+  ---
+  duration_ms: 2.36743
+  type: 'test'
+  ...
+# Subtest: lọc, tìm, sắp xếp, phân trang qua HTTP
+ok 41 - lọc, tìm, sắp xếp, phân trang qua HTTP
+  ---
+  duration_ms: 7.394989
+  type: 'test'
+  ...
+# Subtest: query không hợp lệ → 400 INVALID_QUERY, báo tham số đầu tiên trên URL
+ok 42 - query không hợp lệ → 400 INVALID_QUERY, báo tham số đầu tiên trên URL
+  ---
+  duration_ms: 11.69064
+  type: 'test'
+  ...
+# Subtest: route lạ → 404, sai method → 405
+ok 43 - route lạ → 404, sai method → 405
+  ---
+  duration_ms: 2.956034
+  type: 'test'
+  ...
+1..43
+# tests 43
+# suites 0
+# pass 43
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 745.991848

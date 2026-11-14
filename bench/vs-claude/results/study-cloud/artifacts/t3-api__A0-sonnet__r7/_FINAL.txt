@@ -1,0 +1,16 @@
+Cả 4 tính năng trong `FEATURES.md` đã được hiện thực, và `npm test` xanh (12 test, 0 lỗi). Các test gọi API qua HTTP thật. Tôi chưa chạy server riêng ngoài bộ test.
+
+**Mã mới trong `src/`:**
+- **Xác thực & phân quyền:** `auth.js` kiểm tra header `X-User` (401), còn `handlers/tasks.js` xử lý 404/403 theo vai trò. Thứ tự kiểm tra là 401, rồi 400 tham số truy vấn, rồi 404, rồi 403, rồi 400 body.
+- **Lọc/tìm/sắp xếp/phân trang:** `query.js` phân tích và kiểm tra tham số. Tham số lạ, trùng, hoặc giá trị sai trả 400 `INVALID_QUERY` với `field` là tham số đầu tiên theo thứ tự trên URL.
+- **Xuất CSV:** `csv.js`, route `GET /tasks/export.csv` đăng ký trước `/tasks/:id`. File có BOM, xuống dòng `\r\n`, quote theo RFC 4180 và thêm `'` để chống chèn công thức.
+- **Nhật ký thao tác:** `store.logAudit` và `handlers/audit.js` cho `GET /audit` (chỉ admin).
+
+**Test:** `test/tasks.test.js` được sửa cho dạng `{items, total, …}` và có header `X-User`. Có thêm `auth.test.js`, `list.test.js`, `export.test.js`, `audit.test.js`.
+
+**Điểm đặc tả chưa nói rõ, tôi tự chọn:**
+- Khi tạo nhiệm vụ, nếu manager truyền `team` khác nhóm mình thì trả 403, kể cả khi body còn lỗi khác. Nếu manager không truyền `team` thì trả 400 thiếu `team`.
+- Một lần PATCH thành công mà không đổi giá trị nào (ví dụ member gửi lại đúng `status` cũ) vẫn được ghi vào nhật ký, với `changes: []`.
+- `assignee=` (rỗng) không bị coi là lỗi, chỉ cho kết quả rỗng.
+
+Khi kiểm tra BOM trong test, `fetch().text()` tự bỏ BOM, nên test đọc byte thô để xác nhận BOM có trong response.

@@ -1,0 +1,130 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t4-perf__B7__r9] Tối ưu buildReport dưới 1 giây trên 200.000 dòng, giữ nguyên hành vi
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Bản viết lại single-pass của buildReport đã có trong working tree (bench 567 ms, npm test xanh). Kế hoạch chỉ gồm hai hạng mục song song, mỗi hạng mục sở hữu tệp riêng: tăng dư địa hiệu năng và rà lại tương đương hành vi, kèm bộ test đối chiếu ngẫu nhiên độc lập với bản cũ.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Tăng dư địa hiệu năng và rà tương đương hành vi trong src/report.js (@senior-swe, done)
+
+## Tóm tắt
+Tôi chỉ thêm một cache cục bộ theo chuỗi ngày vào `buildReport` trong `src/report.js`. Bench 200.000 dòng giảm từ ~561 ms xuống 211–235 ms, thấp hơn mục tiêu ~400 ms, và tổng vẫn là 11445199250. `npm test` xanh (3 pass, 0 fail). Rà lại các hành vi lạ của bản cũ không thấy khác biệt với đầu vào hợp lệ, nên tôi không khôi phục gì. Phần rà này tôi đọc code đối chiếu, chưa chạy thêm test ngẫu nhiên riêng.
+
+## Tệp đã tạo/sửa
+- `src/report.js`: thêm `monthOfDate` (`Map` tạo mới trong mỗi lần gọi). Khi `o.date` là chuỗi, tháng được lấy từ cache. Lần đầu gặp chuỗi đó vẫn chạy `new Date(d).toISOString().slice(0, 7)`. Nếu `o.date` không phải chuỗi thì đi đúng đường cũ, không qua cache.
+
+## Kiểm chứng
+- `npm test` → exit 0, 3 pass, 0 fail.
+- `npm run bench` (3 lần) → 211 ms, 214 ms, 235 ms. Cả ba lần đều in 13 tháng · 11 danh mục · tổng 11445199250.
+- Trước khi sửa, bench đo được 561 ms.
+
+Các hành vi đã đối chiếu với `test/report.legacy.js`:
+- **Ngày không hợp lệ:** vẫn ném lỗi như cũ. Lỗi xảy ra ở `toISOString` trước khi gọi `set`, nên giá trị lỗi không bao giờ vào cache. `toISOString` vẫn chạy trước mọi bộ lọc.
+- **Bỏ `JSON.parse(JSON.stringify(row))`:**
+  - Số -0 (refunded với qty 0) không lộ ra, vì mọi tổng đều bắt đầu từ 0 và `0 + -0` bằng `+0`. `amount < 0` với -0 cũng là false, giống bản cũ.
+  - Trường `undefined` bị JSON bỏ đi nhưng đọc lại vẫn là `undefined`. Với `sku` và `customerId` là `undefined`, `Map` cho cùng kết quả gom nhóm như `includes`.
+  - Số thực lớn không bị JSON làm đổi giá trị.
+  - Chỉ `NaN` hoặc `Infinity` (đầu vào không hợp lệ) mới khác, vì JSON biến chúng thành `null`.
+- **Các hành vi còn lại:**
+  - Sku trùng lấy sản phẩm đầu tiên.
+  - `refunds` tính theo `amount < 0`.
+  - Status lạ vẫn tính vào doanh thu nhưng không tính là `paid`.
+  - `byMonth` điền đủ mọi tháng, tháng không có dữ liệu bằng 0.
+  - Thứ tự nhóm theo lần xuất hiện đầu, comparator sort và thứ tự cộng dồn đều giữ nguyên.
+  - Mỗi sku trong một danh mục lấy `name` của dòng đầu, khớp `rs[0].name` của bản cũ.
+
+## Quyết định thiết kế
+- Cache chỉ sống trong một lần gọi, nên không vi phạm điều cấm "bộ nhớ đệm giữa các lần gọi" trong PERF.md.
+- Tôi không viết fast path tự parse chuỗi ISO. Cache theo chuỗi gọn hơn và không có rủi ro lệch hành vi với các định dạng ngày lạ.
+
+## Rủi ro & việc còn mở
+- Cache chỉ có tác dụng khi số chuỗi ngày khác nhau ít so với số dòng. Dữ liệu bench có khoảng 8.000 chuỗi khác nhau. Nếu mọi dòng có ngày khác nhau thì thời gian về mức ~560 ms của bản trước, vẫn dưới 1 giây.
+- Với đầu vào không hợp lệ (`qty` là `NaN`) bản mới có thể khác bản cũ. PERF.md chỉ yêu cầu giống hệt với đầu vào hợp lệ.
+- Chưa commit, thay đổi nằm trong working tree.
+
+Bản đầy đủ: `.ccoding/T-20261113-044538-5de/outputs/dev-S1-senior-swe.md`
+
+### S2 — Bộ test đối chiếu ngẫu nhiên và ca biên với bản cũ (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã tạo `test/report.compare.test.js` gồm 7 test. Test so `buildReport` trong `src/report.js` với bản cũ trong `test/report.legacy.js` bằng `assert.deepStrictEqual`. `npm test` hiện xanh: 10 test, 10 pass, 0 fail. Bản mới giống bản cũ trên mọi dữ liệu và option test đã thử, nên không phát hiện khác biệt hành vi nào.
+
+## Tệp đã tạo/sửa
+- `test/report.compare.test.js` (mới). Không sửa `src/report.js`, `test/report.legacy.js` hay `test/report.test.js`.
+- Điểm chính của test:
+  - **Hai bản khác nhau:** test đầu tiên xác nhận hai hàm khác nhau (`notStrictEqual`), `require.resolve` ra hai tệp khác nhau và `toString()` khác nhau.
+  - **Ngẫu nhiên có seed:** 30 seed, kích thước 0 đến 4000 dòng, mỗi seed chạy 18 tổ hợp option.
+    - Options gồm: `topN` 0/1/2/1000/null, `from`/`to` riêng lẻ và kết hợp, `from > to`, `from`/`to` ngoài khoảng dữ liệu, chuỗi rỗng, không truyền options.
+    - Dữ liệu gồm: nhiều năm, tháng và múi giờ, qty 0, số thực lẻ, status lạ (`pending`, `weird`), sku trùng, sku không có trong products.
+  - **Đầu vào rỗng:** orders rỗng, products rỗng, và cả hai rỗng.
+  - **Hòa điểm:** danh mục, sản phẩm và khách hàng cùng doanh thu, có chữ hoa/thường và tiếng Việt, kiểm tra tie-break của sort. Có thêm lần chạy với đầu vào đảo ngược thứ tự.
+  - **Ca đặc biệt:** refunded với qty 0, `grandTotal` bằng 0 và âm, cộng số thực (0.1 × 0.2).
+  - **Ném lỗi:** ngày không hợp lệ (`'not-a-date'`, `''`, `'2025-13-45…'`, `undefined`, `{}`) phải ném cùng constructor, name và message ở cả hai bản. Test thử lỗi ở đầu, giữa, cuối mảng, với status `paid` và `cancelled`, và với các bộ lọc khác nhau.
+  - **Ngày hợp lệ dạng khác:** timestamp số và chuỗi ngày lặp lại, để phủ cache ngày của bản mới.
+  - **Đầu vào không bị biến đổi:** so `structuredClone` của orders, products và options trước và sau mỗi lần gọi.
+- Lần chạy đầu có 1 test lỗi do test của tôi sai: `null` làm `new Date(null)` thành epoch hợp lệ, nên bản cũ không ném. Tôi bỏ `null` khỏi danh sách ngày không hợp lệ.
+
+## Hợp đồng API
+Không áp dụng.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0. Kết quả: tests 10, pass 10, fail 0, skipped 0. Thời gian khoảng 5,7 giây, trong đó test ngẫu nhiên chiếm khoảng 5,5 giây.
+- `npm test` lần đầu → 9 pass, 1 fail, do lỗi test của tôi nêu ở trên. Lần chạy sau khi sửa không còn lỗi.
+- Trạng thái git: `test/report.compare.test.js` chưa được add hay commit.
+- Sau khi tôi chạy xong, hệ thống báo tệp này bị đổi trên đĩa so với lần tôi đọc cuối. Tôi chưa đọc lại nội dung và không biết thay đổi đó là gì. Kết quả `npm test` ở trên là của lần chạy gần nhất, chạy sau khi tôi sửa bằng `sed`.
+
+## Việc còn lại
+- Không có biến môi trường mới.
+- Test này chỉ phủ đầu vào hợp lệ và ngày không hợp lệ. Nó không phủ `qty` không phải số, vì bản cũ biến `NaN` thành `null` qua JSON còn bản mới giữ `NaN`, như bàn giao trước đã ghi.
+- Nếu S1 sửa `src/report.js` để tăng dư địa hiệu năng, người nhận (@senior-swe hoặc @qa-tester) nên chạy lại `npm test`.
+
+Bản đầy đủ: `.ccoding/T-20261113-044538-5de/outputs/dev-S2-backend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261113-044538-5de` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **26 in / 18.5k out**, cache đọc 197.2k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 16 | 9246 | 121746 | 2 |
+| Backend Developer (@backend-dev) | dev | 8 | 7373 | 68586 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 2 | 1866 | 6860 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Tăng dư địa hiệu năng và rà tương đương hành vi trong src/report.js (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Bộ test đối chiếu ngẫu nhiên và ca biên với bản cũ (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 10 · ℹ suites 0 · ℹ pass 10 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 77 | 100 | 100 | 1 | 1 | 131k | 0/12 | — |
+| Backend Developer (@backend-dev) | dev | **65** B | thấp | — | — | — | 100 | 100 | 100 | 1 | 1 | 76k | 0/6 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 9k | — | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

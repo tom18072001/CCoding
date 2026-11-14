@@ -1,5 +1,7 @@
 import { truncate } from './util/fsx.js';
-import type { AgentDef, ChatMessage, CheckResult, Classification, DepartmentDef, Phase, ProjectDef, Subtask, Task, ToolCallRecord, ToolName } from './types.js';
+import { MAX_SUBTASKS } from './planner.js';
+import { briefItems } from './plan-gate.js';
+import type { AgentDef, ChatMessage, CheckResult, Classification, DepartmentDef, DeptRun, Phase, ProjectDef, Subtask, Task, ToolCallRecord, ToolName } from './types.js';
 
 /**
  * Prompt cho từng pha. Mỗi lượt gọi gồm 3 phần:
@@ -58,15 +60,33 @@ export interface Ctx {
   serialWriters?: boolean;
   /** Hạng mục chạy lệnh chạy song song, mỗi hạng mục một worktree con (CCoding gộp lại vào nhánh nhiệm vụ). */
   parallelWriters?: boolean;
+  /** Làn nhanh: kế hoạch chia song song tối đa, không họp. */
+  lane?: 'fast' | 'full';
+  /** Làn nhanh: trọng tâm kiểm thử độc lập cho người review. */
+  reviewFocus?: string;
   /** Lượt này chạy trong worktree con của hạng mục: nhánh nhiệm vụ mà CCoding sẽ gộp vào. */
   subWorktree?: { taskBranch?: string };
   /** Bản đồ repo do CCoding tạo (đường dẫn tương đối workspace) + các tệp nguồn lớn. */
   repoMap?: { rel: string; index?: string; large: string[] };
+  /**
+   * B-11: làm gọn lượt thực thi làn đơn (chỉ đặt khi task.lane==='single' và chưa nâng làn; runSingleLane đặt, nâng làn thì xóa).
+   * diet = bỏ phần chỉ dành cho đa-agent; files = danh sách tệp gọn thay bản đồ repo (repo nhỏ); compact = báo cáo gọn.
+   */
+  singleSlim?: { diet: boolean; compact: boolean; files?: string[] };
   /** P8: các nhiệm vụ trước của cùng dự án (pha lập kế hoạch) + tệp chi tiết. */
   projectHistory?: { text: string; rel?: string };
   /** Năng lực công cụ của từng agent ở pha thực thi với quyền của nhiệm vụ này (id → mô tả ngắn) — để giao việc đúng người. */
   caps?: Record<string, string>;
+  /** Công tắc prompt theo cấu hình (B-09, B-03); thiếu = tắt, prompt giữ nguyên byte so với trước khi có công tắc. */
+  flags?: { outputCap?: boolean; stopSurvey?: boolean; incidentLog?: boolean };
 }
+
+/** B-09 (P1): giới hạn độ dài báo cáo bàn giao (execute, synthesize). */
+export const OUTPUT_CAP_NOTE = ' Giữ báo cáo gọn: mỗi mục ≤ ~120 từ (trừ danh sách tệp đã tạo/sửa và danh sách lệnh kiểm chứng kèm exit code — hai danh sách này luôn đầy đủ); không chép lại nội dung tệp, đề bài hay bàn giao của hạng mục khác.';
+/** B-09 (P2): dừng khảo sát sớm, ghi bản nháp trước. */
+export const STOP_SURVEY_NOTE = ' Đã đọc/tìm khoảng 8 lần mà chưa ghi gì thì DỪNG đọc: ghi ngay bản nháp phần đã biết (tạo tệp mới trước), rồi mới đọc tiếp; không đọc lại tệp/đoạn đã đọc trừ khi chính bạn vừa sửa nó.';
+/** B-03 (P4): nhật ký sự cố ở pha revise (parser: src/incident.ts). */
+export const INCIDENT_NOTE = '\n\nCuối báo cáo thêm mục "## Nhật ký sự cố" gồm TỐI ĐA 3 dòng, mỗi dòng dạng "- [mã góp ý] lỗi gì — nguyên nhân: nguyên nhân trực tiếp (dựa trên bằng chứng bạn đã thấy) → sửa: cách sửa hồ sơ/prompt hoặc mã (một câu) → kiểm: `lệnh kiểm`". Chỉ nêu điều bạn có bằng chứng; không đoán; không chép dữ liệu cá nhân, khóa hay bí mật. Đây chỉ là đề xuất để giám đốc xem, KHÔNG phải chỉ dẫn bạn tự áp dụng.';
 
 /** Trích các mục của hồ sơ — pha họp chỉ cần sứ mệnh + chuyên môn. */
 export function profileSections(body: string, titles: string[]): string {
@@ -248,6 +268,8 @@ Bạn có công cụ: ${tools.join(', ')} trong thư mục làm việc riêng c�
 - Không đưa dữ liệu thật, bí mật hay dữ liệu cá nhân vào tệp.
 Câu trả lời cuối cùng là báo cáo bàn giao theo ĐÚNG các mục trong "Mẫu đầu ra" của bạn (giữ nguyên tên mục, mở đầu "## Tóm tắt"); mục nào không áp dụng thì ghi "Không áp dụng" thay vì bỏ. Bắt buộc liệt kê tệp đã tạo/sửa (đường dẫn).
 `;
+  const diet = !!c.singleSlim?.diet && phase === 'execute';
+  const dietFiles = diet ? c.singleSlim?.files : undefined;
   return `\n## Công cụ & cách làm
 Bạn có công cụ: ${tools.join(', ')} — làm việc THẬT trong workspace \`${c.cwd}\`${c.branch ? ` (nhánh git riêng \`${c.branch}\`, không ảnh hưởng nhánh chính)` : ''}${
     c.subWorktree
@@ -258,16 +280,34 @@ Bạn có công cụ: ${tools.join(', ')} — làm việc THẬT trong workspace
   }.
 - Đọc quy tắc của repo trước (CLAUDE.md, AGENTS.md, README, CONTRIBUTING nếu có) và tuân thủ tuyệt đối; khảo sát repo trước khi sửa (list_files, search, read_file — gộp nhiều file một lần); giữ đúng cấu trúc, phong cách và stack sẵn có. Mỗi lượt công cụ gửi lại toàn bộ hội thoại nên tốn token: đọc có mục tiêu, không đọc lại nội dung đã có trong prompt hoặc đã đọc.
 ${
-    c.repoMap
+    dietFiles
+      ? `- DANH SÁCH TỆP CỦA REPO (${dietFiles.length} tệp, gọn — không có bản đồ repo; dùng search/read_file đúng đoạn cần):\n${dietFiles.map((f) => `  ${f}`).join('\n')}\n`
+      : c.repoMap
       ? c.repoMap.index
         ? `- BẢN ĐỒ REPO (gọn): \`${c.repoMap.rel}\` — thư mục, tệp lớn, tệp có route/schema; đọc nó ĐẦU TIÊN. Tra hàm/route/model cụ thể bằng search từ khóa trong \`${c.repoMap.index}\` (mỗi dòng \`tệp:dòng loại tên\`) — KHÔNG đọc cả tệp chỉ mục; rồi read_file đúng đoạn (offset theo số dòng, limit vừa đủ); không đọc cả tệp lớn.\n`
         : `- BẢN ĐỒ REPO: \`${c.repoMap.rel}\` liệt kê tệp + số dòng, route, model, hàm kèm số dòng — đọc nó ĐẦU TIÊN để định vị, rồi read_file đúng đoạn (offset theo số dòng, limit vừa đủ); không đọc cả tệp lớn.\n`
       : ''
   }- Đọc/tìm code bằng read_file/search/list_files — KHÔNG dùng Get-Content/cat/rg/grep qua run_command (lỗi cú pháp shell, sai mã hóa, tốn lượt). run_command chỉ để cài đặt, build, typecheck, test, migration, git.${tools.includes('run_command') && process.platform === 'win32' ? ' Shell là PowerShell: không có {a,b}, dấu * trong đường dẫn không tự mở rộng.' : ''}
-- Tạo/sửa file thật bằng write_file/edit_file; không dán toàn bộ code vào câu trả lời cuối — chỉ liệt kê file và điểm chính. GHI SỚM: đọc đủ đoạn cần sửa là sửa ngay; khảo sát không dùng quá ~1/3 số lượt công cụ — hết lượt mà chưa ghi gì là hạng mục thất bại.
-${tools.includes('run_command') ? '- Test/typecheck đã ĐỎ TRƯỚC khi bạn sửa (baseline): chỉ MỘT lệnh để ghi nhận tên test lỗi rồi làm tiếp — KHÔNG đọc file/chạy lệnh để điều tra hay sửa lỗi có sẵn ngoài phạm vi hạng mục (kể cả khi nghi do môi trường); tiêu chí là không phát sinh lỗi MỚI so với baseline (so sánh danh sách test lỗi trước/sau). Bàn giao trước đã ghi baseline thì dùng luôn, không đo lại.\n' : ''}${tools.includes('run_command') ? '- Chạy kiểm tra thật bằng run_command (cài dependency nếu thiếu, typecheck, test, lint, migration trên DB dev) và báo kết quả THẬT: lệnh, exit code, tóm tắt lỗi. Lệnh nào không chạy được thì ghi rõ lý do — không bịa kết quả.\n' : `- Không có quyền chạy lệnh: ghi rõ lệnh kiểm tra cần chạy để người khác thực hiện.${tools.includes('git_read') ? ` ${GIT_READ_NOTE}` : ''}\n`}${c.ccDir ? `- Tài liệu đầu vào: \`${c.ccDir}/inputs/\` · sản phẩm các hạng mục khác: \`${c.ccDir}/outputs/\`.\n` : ''}- Làm và commit (nếu cần) ngay trên nhánh hiện tại của worktree — KHÔNG tạo/chuyển/xóa nhánh (các đồng nghiệp đang làm song song trong cùng worktree); cần hợp nhất nhánh khác thì \`git merge <nhánh>\` vào nhánh hiện tại. Không push, không xóa hàng loạt; không đưa dữ liệu thật hay bí mật vào code, seed, test, fixture.
+- Tạo/sửa file thật bằng write_file/edit_file; không dán toàn bộ code vào câu trả lời cuối — chỉ liệt kê file và điểm chính. GHI SỚM: đọc đủ đoạn cần sửa là sửa ngay; khảo sát không dùng quá ~1/3 số lượt công cụ — hết lượt mà chưa ghi gì là hạng mục thất bại.${c.flags?.stopSurvey ? STOP_SURVEY_NOTE : ''}
+${tools.includes('run_command') ? '- Test/typecheck đã ĐỎ TRƯỚC khi bạn sửa (baseline): chỉ MỘT lệnh để ghi nhận tên test lỗi rồi làm tiếp — KHÔNG đọc file/chạy lệnh để điều tra hay sửa lỗi có sẵn ngoài phạm vi hạng mục (kể cả khi nghi do môi trường); tiêu chí là không phát sinh lỗi MỚI so với baseline (so sánh danh sách test lỗi trước/sau). Bàn giao trước đã ghi baseline thì dùng luôn, không đo lại.\n' : ''}${tools.includes('run_command') ? '- Chạy kiểm tra thật bằng run_command (cài dependency nếu thiếu, typecheck, test, lint, migration trên DB dev) và báo kết quả THẬT: lệnh, exit code, tóm tắt lỗi. Lệnh nào không chạy được thì ghi rõ lý do — không bịa kết quả.\n' : `- Không có quyền chạy lệnh: ghi rõ lệnh kiểm tra cần chạy để người khác thực hiện.${tools.includes('git_read') ? ` ${GIT_READ_NOTE}` : ''}\n`}${c.ccDir ? `- Tài liệu đầu vào: \`${c.ccDir}/inputs/\` · sản phẩm các hạng mục khác: \`${c.ccDir}/outputs/\`.\n` : ''}- ${
+    diet
+      ? 'Làm và commit (nếu cần) ngay trên nhánh hiện tại của worktree — KHÔNG tạo/chuyển/xóa nhánh. Không push, không xóa hàng loạt; không đưa dữ liệu thật hay bí mật vào code, seed, test, fixture.'
+      : 'Làm và commit (nếu cần) ngay trên nhánh hiện tại của worktree — KHÔNG tạo/chuyển/xóa nhánh (các đồng nghiệp đang làm song song trong cùng worktree); cần hợp nhất nhánh khác thì `git merge <nhánh>` vào nhánh hiện tại. Không push, không xóa hàng loạt; không đưa dữ liệu thật hay bí mật vào code, seed, test, fixture.'
+  }
 Câu trả lời cuối cùng là báo cáo bàn giao theo ĐÚNG các mục trong "Mẫu đầu ra" của bạn (giữ nguyên tên mục, mở đầu "## Tóm tắt"); mục nào không áp dụng thì ghi "Không áp dụng" thay vì bỏ. Bắt buộc có: tệp đã tạo/sửa (đường dẫn) và lệnh kiểm chứng đã chạy (lệnh → exit code/kết quả thật, hoặc lý do chưa chạy).
 `;
+}
+
+/** K2: danh sách mã hạng mục của đề bài + vai bắt buộc, đưa vào lời nhắc lập kế hoạch (cả làn nhanh lẫn đầy đủ). */
+export function briefItemsBlock(brief: string): string {
+  const items = briefItems(brief);
+  if (!items.length) return '';
+  const lines = items.map((i) => {
+    const role = i.roles?.length ? i.roles.join(', ') : i.role;
+    const mark = i.exempt ? ' — MIỄN (không làm/chờ, không cần hạng mục)' : i.review ? ' — REVIEW: phải giao cho đúng vai review' : '';
+    return `- ${i.code}${role ? ` (vai ${role})` : ''}${mark}`;
+  });
+  return `\n- Đề bài có các hạng mục đánh mã; MỖI mã (trừ mã miễn) phải có ít nhất một hạng mục kế hoạch ghi mã ĐÚNG Ở ĐẦU \`title\` (ví dụ "K2 — …"), không đặt tiêu đề theo mã khác (C1, M1…); hạng mục review giao cho đúng vai nêu:\n${lines.join('\n')}`;
 }
 
 export function planPrompt(c: Ctx, priorContext: string | undefined, tools: ToolName[] = []): Built {
@@ -284,8 +324,9 @@ ${truncate(c.dept.body, 3000)}
 ${rosterLines(c.roster, c.caps)}
 ${toolNote(c, tools, 'plan')}
 ## Việc của bạn (Trưởng phòng): LẬP KẾ HOẠCH
-Phân rã yêu cầu thành 2–7 hạng mục rõ ràng, giao cho đúng người theo kỹ năng, quy mô tương xứng với yêu cầu (việc nhỏ thì ít hạng mục). Quy tắc:
-- \`assignee\` phải là một id trong danh sách trên (không có dấu @). Hạn chế tự giao cho bản thân; người review sẽ kiểm tra ở bước sau nên không cần tạo hạng mục "review".${capsRule(c)}
+Phân rã yêu cầu thành 1–${MAX_SUBTASKS} hạng mục rõ ràng, giao cho đúng người theo kỹ năng, quy mô tương xứng với yêu cầu. Quy tắc:
+${c.lane === 'fast' ? FAST_LANE_PLAN : ''}
+- \`assignee\` phải là một id trong danh sách trên (không có dấu @). Hạn chế tự giao cho bản thân; người review sẽ kiểm tra ở bước sau nên không cần tạo hạng mục "review". ${REVIEWER_ITEM_EXCEPTION}${capsRule(c)}${briefItemsBlock(c.task.brief)}
 - \`dependsOn\` chỉ trỏ tới id hạng mục khác; tối đa hóa phần chạy song song.${
         c.parallelWriters
           ? ' Hạng mục chạy lệnh (code, test, migration) CŨNG chạy song song — mỗi hạng mục một worktree con, xong thì CCoding gộp vào nhánh nhiệm vụ; chỉ đặt phụ thuộc khi hạng mục sau cần kết quả của hạng mục trước hoặc hai hạng mục sửa cùng một đoạn của cùng tệp (tránh xung đột khi gộp). Mỗi người chỉ làm một hạng mục một lúc nên muốn song song thì giao cho người khác nhau.'
@@ -295,6 +336,57 @@ Phân rã yêu cầu thành 2–7 hạng mục rõ ràng, giao cho đúng ngư�
 
 Trả lời bằng một khối JSON theo mẫu:
 ${PLAN_SCHEMA}`,
+  };
+}
+
+/**
+ * B-10: yêu cầu trưởng phòng SỬA kế hoạch khi cổng phủ kế hoạch chặn. Nêu đúng danh sách đích chưa có hạng mục nhận (quy tắc A)
+ * và/hoặc lý do kế hoạch đọc dở (quy tắc B); đòi kế hoạch ĐẦY ĐỦ, không chỉ phần thiếu.
+ */
+export function replanPrompt(c: Ctx, brief: string, planSummary: string, subtasks: Subtask[], gate: { uncovered: string[]; reasons: string[] }, tools: ToolName[] = []): Built {
+  const missing = gate.uncovered.length
+    ? [
+        '### Đích CHƯA có hạng mục nhận (bắt buộc xử lý)',
+        ...gate.uncovered.map((t) => `- \`${t}\``),
+        'Mỗi đích trên phải xuất hiện trong `title`, `description` hoặc `deliverable` của ít nhất một hạng mục; hoặc ghi vào `outOfScope` kèm lý do (vd. "đã có sẵn, không ai sửa").',
+        '',
+      ].join('\n')
+    : '';
+  const itemReasons = gate.reasons.filter((r) => r.startsWith('brief-item'));
+  const itemCodes = [...new Set(itemReasons.map((r) => /^brief-item:\s*(K\d+)/.exec(r)?.[1]).filter((x): x is string => !!x))];
+  const itemBlock = itemReasons.length
+    ? [
+        '### Hạng mục của đề bài CHƯA được kế hoạch phủ (bắt buộc xử lý)',
+        ...itemReasons.map((r) => `- ${r}`),
+        `Ghi mã hạng mục ĐÚNG Ở ĐẦU \`title\` (ví dụ "${itemCodes[0] ?? 'K1'} — …") cho mỗi mã thiếu: ${itemCodes.join(', ') || '(xem lý do trên)'}; hạng mục review phải giao cho đúng vai nêu trong lý do. Không đổi tiêu đề sang mã khác.`,
+        '',
+      ].join('\n')
+    : '';
+  const reasonsBlock = gate.reasons.length ? ['### Lý do của cổng (nguyên văn)', ...gate.reasons.map((r) => `- ${r}`), ''].join('\n') : '';
+  const unreadable = gate.reasons.filter((r) => r.startsWith('B'));
+  const partial = unreadable.length ? ['### Kế hoạch bị đọc dở', ...unreadable.map((r) => `- ${r}`), ''].join('\n') : '';
+  const schema = PLAN_SCHEMA.replace('"subtasks": [', '"outOfScope": [{ "target": "đường/dẫn/tệp", "reason": "lý do không làm" }],\n  "subtasks": [');
+  return {
+    context: header(c, 'plan'),
+    prompt: `## Đề bài
+${truncate(brief, 4000)}
+
+## Kế hoạch trước (bị cổng kiểm tra chặn — CHƯA được chạy)
+${planSummary || '(không có tóm tắt)'}
+${planText(subtasks)}
+
+${reasonsBlock}${missing}${itemBlock}${partial}
+## Nhân sự có thể giao việc
+${rosterLines(c.roster, c.caps)}
+${toolNote(c, tools, 'plan')}
+## Việc của bạn (Trưởng phòng): SỬA KẾ HOẠCH
+Lập lại kế hoạch ĐẦY ĐỦ (mọi hạng mục, không chỉ phần thiếu) để không đích nào bị bỏ sót. Quy tắc:
+- Số hạng mục trong \`summary\` (nếu nêu) phải bằng số phần tử trong \`subtasks\`.
+- Mỗi hạng mục có \`assignee\` là id trong danh sách (không có dấu @), \`description\` nhất quán với \`assignee\` (không nhắc người khác như người làm), \`deliverable\` là sản phẩm bàn giao cụ thể.
+- Giữ JSON gọn để không bị cắt cụt; đóng đủ khối \`\`\`json.
+
+Trả lời bằng một khối JSON theo mẫu (\`outOfScope\` chỉ dùng khi có đích cố ý không làm):
+${schema}`,
   };
 }
 
@@ -312,7 +404,7 @@ export function planText(subtasks: Subtask[]): string {
     .join('\n');
 }
 
-export function discussPrompt(c: Ctx, agent: AgentDef, planSummary: string, subtasks: Subtask[], transcript: string, round: number, rounds: number): Built {
+export function discussPrompt(c: Ctx, agent: AgentDef, planSummary: string, subtasks: Subtask[], transcript: string, round: number, rounds: number, parallel = false): Built {
   const mine = subtasks.filter((s) => s.assignee === agent.id).map((s) => `${s.id} ${s.title}`);
   return {
     context: `${header(c, 'discuss')}
@@ -325,7 +417,7 @@ ${transcript}
 
 ## Việc của bạn: PHÁT BIỂU TRONG CUỘC HỌP (vòng ${round}/${rounds})
 ${mine.length ? `Phần việc dự kiến của bạn: ${mine.join('; ')}.` : 'Bạn chưa được giao hạng mục nào — góp ý từ góc nhìn chuyên môn của mình.'}
-Phát biểu ngắn (≤ 100 từ) như trong một cuộc họp thật: đồng ý/không đồng ý, rủi ro, đề xuất chỉnh phân công hoặc phụ thuộc, câu hỏi cần làm rõ. Có thể @nhắc đồng nghiệp. Không lặp lại ý người khác đã nói. Chỉ trả về lời phát biểu, không tiêu đề.`,
+Phát biểu ngắn (≤ 100 từ) như trong một cuộc họp thật: đồng ý/không đồng ý, rủi ro, đề xuất chỉnh phân công hoặc phụ thuộc, câu hỏi cần làm rõ. Có thể @nhắc đồng nghiệp. Không lặp lại ý người khác đã nói.${parallel ? ' Các thành viên khác phát biểu cùng lúc với bạn trong vòng này — bạn chỉ thấy biên bản tới đầu vòng; câu hỏi cho đồng nghiệp sẽ do trưởng phòng trả lời khi chốt kế hoạch.' : ''} Chỉ trả về lời phát biểu, không tiêu đề.`,
   };
 }
 
@@ -367,6 +459,44 @@ export function planLines(subtasks: Subtask[]): string {
 /** Nội dung `.ccoding/<task>/PLAN.md` — kế hoạch đầy đủ cho agent đọc khi cần. */
 export function planFile(planSummary: string, decisions: string, subtasks: Subtask[]): string {
   return `# Kế hoạch chung\n\n${planSummary}\n${decisions ? `\nQuyết định chính: ${decisions}\n` : ''}\n${planText(subtasks)}\n`;
+}
+
+/** FX2: ngoại lệ cho quy tắc "không tạo hạng mục review" — dùng chung cho cả hai làn. */
+export const REVIEWER_ITEM_EXCEPTION = 'NGOẠI LỆ: nếu đề bài giao một hạng mục có mã riêng cho vai reviewer (vd. K5 cho @qa-tester hoặc @peer-reviewer) thì PHẢI tạo hạng mục cho vai đó, kể cả ở làn nhanh.';
+
+/** Hướng dẫn lập kế hoạch ở làn nhanh (việc nhỏ): mục tiêu là xong NHANH HƠN một người làm một mình — nhờ chia song song. */
+export const FAST_LANE_PLAN = `- **LÀN NHANH (việc nhỏ)** — mục tiêu: cả nhóm xong NHANH HƠN một lập trình viên giỏi làm một mình. Chỉ đạt được khi chia việc chạy SONG SONG:
+  - Chia **2–4 hạng mục ĐỘC LẬP chạy cùng lúc** (\`dependsOn\` rỗng), giao cho **người khác nhau**, cỡ gần bằng nhau (mỗi phần ~1–2 phút làm, ≤ ~20 thao tác công cụ).
+  - Mỗi hạng mục **sở hữu tệp riêng** — không hai hạng mục cùng sửa một tệp (kể cả tệp test: mỗi người tự viết test cho phần mình vào tệp test riêng, vd. \`test/<phần>.test.js\`). Nếu đặc tả buộc một tệp chung (vd. tệp export lại các hàm), giao tệp đó cho MỘT hạng mục và ghi rõ hợp đồng (tên tệp, tên hàm, chữ ký, định dạng lỗi) trong mô tả của mọi hạng mục liên quan để các phần khác viết theo hợp đồng mà không phải chờ nhau.
+  - KHÔNG tạo hạng mục "tích hợp", "viết test", "rà soát" chạy sau — CCoding tự gộp các phần, chạy lệnh kiểm tra và review.
+  - KHÔNG giao hạng mục cho người review của phòng — họ kiểm tra độc lập ở bước review (hạng mục giao cho họ sẽ được CCoding chuyển thành trọng tâm review). ${REVIEWER_ITEM_EXCEPTION}
+  - Số hạng mục tối đa là ${MAX_SUBTASKS} cho mọi làn; "2–4" ở làn nhanh chỉ là cỡ khuyến nghị nằm trong trần đó.
+  - Chỉ để 1 hạng mục khi việc thật sự không chia được (vd. tối ưu một hàm duy nhất) — khi đó vẫn có thể tách "bộ test đối chiếu/kiểm thử độc lập" thành hạng mục song song thứ hai nếu nó dùng tệp riêng.
+  - Lập kế hoạch NHANH: đọc vừa đủ (đặc tả + cấu trúc thư mục + tệp sẽ sửa), không khảo sát sâu; mô tả hạng mục ngắn gọn nhưng đủ hợp đồng.`;
+
+/** Báo cáo làn nhanh dựng từ kế hoạch, bàn giao từng hạng mục, review và thay đổi — không gọi model (tiết kiệm ~30 giây cuối nhiệm vụ). */
+export function templateReport(task: Task, dept: DepartmentDef, run: DeptRun, items: DepInput[], review: string, changes: string, laneNote = 'Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model).'): string {
+  const failed = run.subtasks.filter((s) => s.status === 'failed');
+  const lines = [
+    `# Báo cáo ${dept.name} — ${task.title}`,
+    '',
+    `_${laneNote}_`,
+    '',
+    '## Tóm tắt',
+    '',
+    run.planSummary?.trim() || '(không có tóm tắt kế hoạch)',
+    '',
+    `Kết quả: ${run.subtasks.length - failed.length}/${run.subtasks.length} hạng mục xong${failed.length ? ` — lỗi: ${failed.map((s) => s.id).join(', ')}` : ''}.`,
+    '',
+    '## Từng hạng mục',
+  ];
+  for (const it of items) {
+    lines.push('', `### ${it.st.id} — ${it.st.title} (@${it.st.assignee}, ${it.st.status})`, '', truncate(it.text.trim() || '(không có bàn giao)', 4000));
+    if (it.wsPath) lines.push('', `Bản đầy đủ: \`${it.wsPath}\``);
+  }
+  if (review) lines.push('', '## Review', '', review);
+  if (changes) lines.push('', '## Thay đổi trong repo', '', truncate(changes, 6000));
+  return lines.join('\n') + '\n';
 }
 
 export interface DepInput {
@@ -423,28 +553,35 @@ ${truncate(continuation.previous, 7000)}
 ${continuation.changes ? '```\n' + truncate(continuation.changes, 3000) + '\n```' : '(chưa có thay đổi nào được ghi)'}
 `
     : '';
+  const diet = !!c.singleSlim?.diet;
+  const compactNote = c.singleSlim?.compact ? `\n${COMPACT_REPORT_NOTE}\n` : '';
   return {
     context: `${header(c, 'execute')}
 ${priorContext ? `\n## Kết quả từ phòng trước (liên phòng)\n${truncate(priorContext, 8000)}\n` : ''}
-${planBlock(planSummary, decisions, subtasks, c.filesAccessible && c.ccDir ? `${c.ccDir}/PLAN.md` : undefined)}`,
+${diet ? '' : planBlock(planSummary, decisions, subtasks, c.filesAccessible && c.ccDir ? `${c.ccDir}/PLAN.md` : undefined)}`,
     prompt: `## Hạng mục của bạn: ${st.id} — ${st.title}
 ${st.description}
 ${st.deliverable ? `Sản phẩm bàn giao: ${st.deliverable}` : ''}
-
+${diet && !deps.length ? '' : `
 ## Đầu vào từ các hạng mục trước
 ${depsText(c, deps, c.filesAccessible ? 3500 : 16000)}
-${draftBlock}${contBlock}${checksBlock(c.task, 'execute')}${toolNote(c, tools, 'execute')}${
+`}${draftBlock}${contBlock}${checksBlock(c.task, 'execute')}${toolNote(c, tools, 'execute')}${
       canWrite
         ? ''
         : `\n## Cách làm\nBạn trả lời bằng văn bản. Nếu cần tạo file, đưa nội dung đầy đủ trong khối code và ghi rõ tên file ngay phía trên khối đó.\n`
-    }
-Câu trả lời CUỐI CÙNG phải là sản phẩm bàn giao hoàn chỉnh theo "Mẫu đầu ra" trong hồ sơ vị trí của bạn, mở đầu bằng mục "## Tóm tắt" (2–4 câu).`,
+    }${compactNote}
+Câu trả lời CUỐI CÙNG phải là sản phẩm bàn giao hoàn chỉnh theo "Mẫu đầu ra" trong hồ sơ vị trí của bạn, mở đầu bằng mục "## Tóm tắt" (2–4 câu).${c.flags?.outputCap ? OUTPUT_CAP_NOTE : ''}`,
   };
 }
 
-export function reviewPrompt(c: Ctx, items: DepInput[], tools: ToolName[] = [], changes = ''): Built {
+/** B-11(b): chỉ dẫn báo cáo gọn ở làn đơn — vẫn đủ mọi tiêu đề của "Mẫu đầu ra" (templateCoverage 100 %), trần ~800 token đặt bằng chỉ dẫn. */
+export const COMPACT_REPORT_NOTE = `## Báo cáo gọn (làn đơn)
+Báo cáo cuối vẫn phải có ĐỦ MỌI tiêu đề trong "Mẫu đầu ra" của vai trò (giữ nguyên tên và thứ tự, mục không áp dụng ghi "Không áp dụng"), nhưng mỗi mục chỉ 1–3 dòng. KHÔNG chép lại mã hay diff vào báo cáo — chỉ nêu đường dẫn tệp và điểm chính. Toàn bộ báo cáo tối đa khoảng 800 token.`;
+
+/** compact (P3, B-02): reviewer nhận diff + kết quả lệnh kiểm, mỗi bàn giao chỉ giữ phần đầu thay vì toàn bộ đầu ra. */
+export function reviewPrompt(c: Ctx, items: DepInput[], tools: ToolName[] = [], changes = '', compact = false): Built {
   const canRead = tools.includes('read_file');
-  const per = Math.max(4000, Math.floor(60000 / Math.max(1, items.length)));
+  const per = compact ? 1500 : Math.max(4000, Math.floor(60000 / Math.max(1, items.length)));
   const body = (i: DepInput) => {
     if (i.text.length <= per) return i.text;
     const rest = (i.text.length - per).toLocaleString('vi-VN');
@@ -454,13 +591,43 @@ export function reviewPrompt(c: Ctx, items: DepInput[], tools: ToolName[] = [], 
     context: header(c, 'review'),
     prompt: `## Các sản phẩm cần review
 ${items.map((i) => `### ${i.st.id} — ${i.st.title} (@${i.st.assignee})${i.wsPath && c.filesAccessible ? ` — bản đầy đủ: \`${i.wsPath}\`` : ''}\nTiêu chí: ${i.st.description}\n\n${body(i)}`).join('\n\n---\n\n')}
-${changes ? `\n## Thay đổi trong workspace (git)\n\`\`\`\n${truncate(changes, 4000)}\n\`\`\`\n` : ''}${checksBlock(c.task, 'review')}${toolNote(c, tools, 'review')}
+${changes ? `\n## Thay đổi trong workspace (git)\n\`\`\`\n${truncate(changes, compact ? 8000 : 4000)}\n\`\`\`\n` : ''}${checksBlock(c.task, 'review')}${toolNote(c, tools, 'review')}${
+      c.reviewFocus
+        ? `\n## Trọng tâm kiểm thử độc lập (làn nhanh — thay cho hạng mục kiểm thử riêng)\n${c.reviewFocus}\nTự viết và chạy nhanh các ca biên quan trọng nhất theo trọng tâm này (tệp tạm trong \`${c.ccDir ?? '.ccoding'}\` hoặc \`node -e\`), đối chiếu với đặc tả; không cần bộ test đầy đủ.\n`
+        : ''
+    }
 ## Việc của bạn: REVIEW CHẤT LƯỢNG
 Đánh giá từng hạng mục theo tiêu chí review trong hồ sơ của bạn, tương xứng với quy mô và yêu cầu của nhiệm vụ.${c.task.branch ? ` Thay đổi CHƯA COMMIT không phải lỗi: khi nhiệm vụ kết thúc CCoding tự commit toàn bộ workspace lên nhánh \`${c.task.branch}\` — đánh giá nội dung thay đổi (git diff, tệp), không nêu lỗi "chưa commit" và không yêu cầu agent không có công cụ git tự commit.` : ''} Mức độ: "blocker" (sai/thiếu nghiêm trọng, không thể bàn giao), "major" (cần sửa trước khi bàn giao), "minor" (góp ý thêm). Chỉ đặt "approved": false khi có blocker/major.
 
 Trả lời bằng một khối JSON${tools.includes('run_command') ? ' ("checks" là các lệnh bạn ĐÃ chạy thật)' : ''}:
 \`\`\`json
 { "approved": true, "summary": "nhận xét chung", "issues": [ { "subtask": "S1", "severity": "major", "comment": "vấn đề + cách sửa" } ]${tools.includes('run_command') ? ', "checks": [ { "command": "npm test", "exitCode": 0, "note": "148/148 đạt" } ]' : ''} }
+\`\`\``,
+  };
+}
+
+/**
+ * K2 (D16b): lượt tiếp nối khi review chạm trần lượt mà chưa có JSON kết luận — KHÔNG cấp công cụ, chỉ trả kết luận
+ * theo mẫu review dựa trên những gì reviewer đã kiểm (`previous` = văn bản reviewer đã viết).
+ */
+export function reviewVerdictPrompt(c: Ctx, items: DepInput[], previous: string): Built {
+  return {
+    context: header(c, 'review'),
+    prompt: `## Review của bạn bị dừng vì hết lượt công cụ
+Bạn đã dùng hết lượt công cụ cho phép mà chưa trả kết luận. Lượt này KHÔNG có công cụ: đừng chạy thêm lệnh, đừng đọc thêm tệp.
+
+## Các hạng mục đã review
+${items.map((i) => `- ${i.st.id} — ${i.st.title} (@${i.st.assignee})`).join('\n')}
+
+## Những gì bạn đã viết/kiểm cho tới lúc dừng
+${truncate(previous.trim() || '(không có nội dung)', 6000)}
+
+## Việc của bạn
+Chỉ dựa trên những gì ĐÃ kiểm ở trên, trả NGAY kết luận review. Điều gì chưa kiểm thì nói rõ là chưa kiểm trong "summary", không bịa kết quả chạy. Chỉ đặt "approved": false khi có blocker/major.
+
+Trả lời bằng đúng một khối JSON:
+\`\`\`json
+{ "approved": true, "summary": "nhận xét chung", "issues": [ { "subtask": "${items[0]?.st.id ?? 'S1'}", "severity": "major", "comment": "vấn đề + cách sửa" } ], "checks": [ { "command": "npm test", "exitCode": 0, "note": "đã chạy ở lượt trước" } ] }
 \`\`\``,
   };
 }
@@ -478,7 +645,50 @@ ${truncate(previous, c.filesAccessible ? 8000 : 16000)}
 ${issues}
 ${toolNote(c, tools, 'revise')}
 ## Việc của bạn: SỬA THEO REVIEW
-Xử lý triệt để từng góp ý (sửa file thật nếu có công cụ). Trả về BẢN HOÀN CHỈNH MỚI của báo cáo bàn giao (không chỉ phần thay đổi), mở đầu bằng "## Tóm tắt" và thêm mục "## Đã sửa theo review".`,
+Xử lý triệt để từng góp ý (sửa file thật nếu có công cụ). Trả về BẢN HOÀN CHỈNH MỚI của báo cáo bàn giao (không chỉ phần thay đổi), mở đầu bằng "## Tóm tắt" và thêm mục "## Đã sửa theo review".${c.flags?.incidentLog ? INCIDENT_NOTE : ''}`,
+  };
+}
+
+/** B-02: vòng sửa theo kiểm tra — nhận đúng đầu ra của lệnh đỏ (đã cắt) + đích chưa có hạng mục nhận (B-10). */
+export function gateFixPrompt(
+  c: Ctx,
+  st: Subtask,
+  previous: string,
+  red: Array<{ command: string; code: number | null; tail: string; required: boolean }>,
+  uncovered: string[] = [],
+  tools: ToolName[] = [],
+  round = 1,
+  maxOutputChars = 8000,
+): Built {
+  const reds = red
+    .map((r) => `### \`${r.command}\` → exit ${r.code}${r.required ? ' — đề bài yêu cầu lệnh này phải xanh' : ' — đạt trước khi sửa hoặc là lệnh mới, nay lỗi'}\n\`\`\`\n${r.tail.slice(-maxOutputChars)}\n\`\`\``)
+    .join('\n\n');
+  return {
+    context: header(c, 'revise'),
+    prompt: `## Hạng mục: ${st.id} — ${st.title}
+${st.description}
+
+## Bản trước của bạn
+${truncate(previous, c.filesAccessible ? 4000 : 12000)}
+
+## Lệnh kiểm tra còn đỏ (CCoding tự chạy; vòng sửa theo kiểm tra ${round})
+${reds}
+${uncovered.length ? `\n## Đích của kế hoạch chưa có hạng mục nhận\n${uncovered.map((u) => `- ${u}`).join('\n')}\nNếu đây là nguyên nhân lệnh đỏ thì làm nốt các phần này.\n` : ''}${toolNote(c, tools, 'revise')}
+## Việc của bạn: SỬA CHO LỆNH XANH
+Sửa mã nguồn thật (không sửa test cho qua, không tắt kiểm tra) rồi chạy lại đúng lệnh trên để xác nhận. Trả về BẢN HOÀN CHỈNH MỚI của báo cáo bàn giao, mở đầu bằng "## Tóm tắt" và thêm mục "## Đã sửa theo kiểm tra".`,
+  };
+}
+
+/** B-02: sửa định dạng — chỉ viết lại văn bản đúng "Mẫu đầu ra", không dùng công cụ. */
+export function formatFixPrompt(c: Ctx, previous: string, headings: string[], missing: string[], summaryOk: boolean): Built {
+  return {
+    context: header(c, 'revise'),
+    prompt: `## Bản bàn giao hiện tại
+${truncate(previous, 16000)}
+
+## Việc của bạn: SỬA ĐỊNH DẠNG (không dùng công cụ, không làm lại việc)
+Bản trên chưa đúng "Mẫu đầu ra" trong hồ sơ của bạn.${missing.length ? ` Mục thiếu hoặc không có nội dung: ${missing.map((m) => `"${m}"`).join(', ')}.` : ''}${summaryOk ? '' : ' Phải mở đầu bằng "## Tóm tắt".'}
+Viết lại ĐÚNG các mục theo thứ tự: ${headings.map((h) => `"## ${h}"`).join(', ')}. Mỗi mục có ít nhất một dòng nội dung thật (ghi "Không áp dụng" nếu không liên quan); giữ nguyên nội dung đã có, không bịa thêm.`,
   };
 }
 
@@ -510,7 +720,7 @@ Viết báo cáo cuối cùng gửi Tom bằng Markdown: dòng đầu "# <tiêu 
 - bảng kết quả theo hạng mục: mã · hạng mục · phụ trách · kết quả (đạt/chưa đạt theo review, kèm bằng chứng) · tệp;
 - quyết định chính, rủi ro/giả định, việc còn mở;
 - bước tiếp theo đề xuất — phần còn lớn so với một nhiệm vụ thì đề xuất tách thành các nhiệm vụ riêng (mỗi nhiệm vụ một gói việc, có tiêu chí xong).
-Không lặp nguyên văn sản phẩm; tóm lược và dẫn tới file đầu ra${changes ? '; nêu rõ nhánh git và cách review/merge thay đổi' : ''}.`,
+Không lặp nguyên văn sản phẩm; tóm lược và dẫn tới file đầu ra${changes ? '; nêu rõ nhánh git và cách review/merge thay đổi' : ''}.${c.flags?.outputCap ? OUTPUT_CAP_NOTE : ''}`,
   };
 }
 
@@ -583,11 +793,42 @@ export function checksBlock(task: Task, phase: 'execute' | 'review' | 'synthesiz
   return `${parts.join('\n')}\n`;
 }
 
+/** Hướng dẫn phân loại "scope" cho tiêu chí chưa đạt (đọc bởi parseAcceptance, dùng cho vòng bổ sung). */
+const SCOPE_GUIDE =
+  'Mỗi tiêu chí "fail" hoặc "unknown" PHẢI có "scope": "in" = phòng tự làm được với quyền và đề bài hiện có; "decision" = cần giám đốc, người ngoài, quyền mới, hoặc đề bài cấm. Không chắc thì chọn "decision". Tiêu chí "pass" không cần scope.';
+
 /** Phần một phòng đưa CTO nghiệm thu: báo cáo tổng hợp + kết luận review. */
 export interface AcceptInput {
   department: string;
   final: string;
   review?: string;
+}
+
+/**
+ * B-11(a): nghiệm thu rút gọn cho làn đơn. CTO chỉ nhận đề bài, diff (cắt ngắn) và kết quả lệnh kiểm tra — không có báo cáo phòng —
+ * và trả bảng tiêu chí đạt/không đạt (mỗi tiêu chí một dòng, bằng chứng ≤ 1 câu, tổng ≤ 600 token) kèm khối JSON mà parseAcceptance đọc.
+ */
+export function acceptBriefPrompt(task: Task, opts: { changes?: string; tools?: ToolName[]; projectName?: string } = {}): Built {
+  const brief = task.brief.length > BRIEF_MAX.accept ? `${task.brief.slice(0, BRIEF_MAX.accept)}…\n_(Đã rút gọn từ ${task.brief.length.toLocaleString('vi-VN')} ký tự)_` : task.brief;
+  const tools = opts.tools ?? [];
+  return {
+    context: `# Nhiệm vụ: ${task.title}\nChế độ: ${task.mode}${opts.projectName ? ` · dự án: ${opts.projectName}` : ''} · nhãn dữ liệu: ${task.classification}\n\n## Đề bài của giám đốc\n${brief}`,
+    prompt: `## Thay đổi trong workspace (git diff)
+${opts.changes ? `\`\`\`\n${truncate(opts.changes, 3000)}\n\`\`\`` : '(không có diff)'}
+${checksBlock(task, 'synthesize').replace('Ghi kết quả các lệnh này (trước/sau) vào báo cáo như bằng chứng kiểm chứng.', 'Đây là bằng chứng chạy thật có độ tin cậy cao nhất.')}
+${tools.length ? `\nCông cụ chỉ đọc (${tools.join(', ')}): chỉ dùng khi cần kiểm một tiêu chí cụ thể.\n` : ''}
+## Việc của bạn (CTO): NGHIỆM THU RÚT GỌN
+Rút 3–6 tiêu chí kiểm được từ đề bài, kết luận từng tiêu chí đạt/không đạt (thiếu bằng chứng = "unknown"). Chỉ trả đúng bảng sau, mỗi tiêu chí MỘT dòng, bằng chứng tối đa 1 câu (trỏ tới lệnh hoặc tệp), TỔNG đầu ra ≤ 600 token, không viết thêm đoạn giải thích:
+
+| Tiêu chí | Kết quả | Bằng chứng |
+|---|---|---|
+
+Rồi thêm đúng một khối (JSON ngắn, cùng nội dung bảng):
+\`\`\`json
+{"accepted": true, "summary": "<1 câu>", "criteria": [{"name": "<tiêu chí>", "result": "pass|fail|unknown", "scope": "in|decision", "evidence": "<≤ 1 câu>"}], "risks": [], "followUps": []}
+\`\`\`
+"accepted" chỉ true khi mọi tiêu chí là "pass". ${SCOPE_GUIDE}`,
+  };
 }
 
 /**
@@ -609,8 +850,8 @@ Rút 3–8 tiêu chí kiểm được từ đề bài (và tiêu chí của BA n
 
 Cuối câu trả lời thêm đúng một khối:
 \`\`\`json
-{"accepted": true, "summary": "<1–2 câu>", "criteria": [{"name": "<tiêu chí>", "result": "pass|fail|unknown", "evidence": "<bằng chứng>"}], "risks": ["<rủi ro/việc còn mở>"], "followUps": [{"title": "<tiêu đề ngắn>", "brief": "<đề bài đủ để giao ngay>", "department": "dev|research"}]}
+{"accepted": true, "summary": "<1–2 câu>", "criteria": [{"name": "<tiêu chí>", "result": "pass|fail|unknown", "scope": "in|decision", "evidence": "<bằng chứng>"}], "risks": ["<rủi ro/việc còn mở>"], "followUps": [{"title": "<tiêu đề ngắn>", "brief": "<đề bài đủ để giao ngay>", "department": "dev|research"}]}
 \`\`\`
-"accepted" chỉ true khi mọi tiêu chí là "pass".`,
+"accepted" chỉ true khi mọi tiêu chí là "pass". ${SCOPE_GUIDE}`,
   };
 }

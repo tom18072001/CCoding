@@ -1,0 +1,11 @@
+I wrote `SPEC.md` at the repository root. It ends with the `## Open questions and assumptions` section: 13 questions, each with the assumption I used in the meantime. I haven't committed it.
+
+The request contradicts itself in several places, so the spec picks the safest reading of each and lists it for the customer to confirm:
+- **Full IPs and usernames vs. nothing unmasked:** the self-service export is masked. Usernames become stable pseudonyms and IPs are truncated. Unmasked export is left out of v1. If the customer confirms they want it, the spec proposes a separate approval-gated forensic flow.
+- **"Team's logs from last month" vs. "everything they can see":** the scope is the intersection of the two. That means the manager's branch, the previous calendar month in `Asia/Ho_Chi_Minh`, and only rows the existing viewer would show.
+- **5 seconds:** this is met for exports up to an assumed 50,000 rows. Larger exports run in the background and the user gets a download link.
+- **Keep forever vs. delete at 12 months:** masked files are kept for the audit period, and anything containing personal data is deleted at 12 months.
+- **"Like the old system":** the old CSV format wasn't provided, so I assumed a column set. It is not byte-compatible with the old system.
+- **"Make it simple":** the UI is one button with no options. Authorization, masking, audit and retention still sit behind it.
+
+The spec also covers acceptance criteria and what is out of v1. The assumptions to check first are the 50,000-row threshold, the 10-year audit retention default and the 35-day backup expiry. Legal also needs to confirm whether any rule requires keeping logs longer than 12 months.

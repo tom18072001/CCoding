@@ -1,0 +1,13 @@
+**Stage 3: SELF-REVIEW**
+- The JSON parses and has 7 entries. The line numbers match the source (11, 30, 42, 58, 65, 70, 84), and every type is on the allowed list.
+- The source is untouched. `git status` shows only the new `findings.json`.
+- I left out the following because they aren't exploitable issues:
+  - Line 36 interpolates `STATUS_TABLE`, but it's a constant.
+  - The attachment route (lines 47–53) is safe: it uses `basename`, an extension allow-list and an owner check.
+  - The ping route (lines 76–80) is safe: it uses `execFile` with a regex check on the host.
+  - `verifyJwt` is never defined or imported (line 18), which is a functional bug rather than a security flaw.
+
+**Stage 4: FIX**
+The review found nothing to correct.
+
+**Final report:** I wrote `findings.json` with 7 findings: 2 critical (SQL injection at line 30, command injection at line 84) and 5 high (hardcoded JWT secret, path traversal in reports, MD5 password hashing, SSRF in the preview endpoint, and ticket deletion with no authorization check). I only read the code and didn't run the server or test any of these.

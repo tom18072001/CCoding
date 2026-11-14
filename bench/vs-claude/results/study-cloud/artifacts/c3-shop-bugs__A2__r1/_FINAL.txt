@@ -1,0 +1,11 @@
+I fixed all three problems, and `npm test` passes with 6 tests (2 existing, 4 new).
+
+1. **Wrong totals with a coupon.** There were two causes:
+   - `total` in `src/cart.js` applied the coupon to every line and then to the subtotal, so it was discounted twice. It now sums the lines and applies the coupon once.
+   - `applyPercent` in `src/money.js` returned `amount - amount*pct/100`, which produced fractional dong. It now rounds the discount half-up using integer math.
+2. **Negative stock.** `reserve` in `src/stock.js` only rejected stock that was already below zero. It now throws `INSUFFICIENT_STOCK` whenever the available quantity is less than what was asked for. It also rejects a non-positive or non-integer quantity.
+3. **Can't buy the maximum on one line.** `addItem` in `src/cart.js` used `>=` against `MAX_QTY_PER_LINE`, so a line could only reach 9. It now uses `>`, so exactly 10 is allowed and 11 is not.
+
+The new tests in `test/cart.test.js` cover the single coupon application, half-up rounding, the stock check, and the exact-maximum quantity.
+
+Your brief didn't say what "round half-up" applies to, so I rounded the discount amount, not the discounted total. The two differ by 1 dong only when the discount lands exactly on .5. For example, a 10% coupon on 5 dong gives a discount of 0.5, which rounds to 1, so the total is 4. Say so if you want the total rounded instead.

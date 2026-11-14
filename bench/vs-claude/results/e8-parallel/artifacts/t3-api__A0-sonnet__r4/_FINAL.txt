@@ -1,0 +1,21 @@
+Cả 4 tính năng trong `FEATURES.md` đã xong và `npm test` xanh (14 test đạt, 0 lỗi). Tôi chưa chạy `npm start` để thử bằng tay. Việc kiểm tra chỉ qua các test gọi server thật qua HTTP.
+
+**Code**
+- **Xác thực:** `src/server.js` kiểm `X-User` cho mọi route `/tasks…` và `/audit` trước khi vào router, nên 401 luôn đứng đầu, kể cả trước 400 và 405.
+- **Phân quyền:** nằm trong `src/handlers/tasks.js`, theo đúng thứ tự 404 → 403 → validate body. Ví dụ member sửa nhiệm vụ nhóm khác nhận 404, nhiệm vụ không giao cho mình nhận 403, và 403 đến trước lỗi validate.
+- **Danh sách:** `src/handlers/query.js` kiểm tham số theo thứ tự xuất hiện trên URL, trả `INVALID_QUERY` kèm `field`. Tham số lạ hoặc lặp đều bị 400. Phần lọc, tìm không dấu và sắp xếp cũng nằm ở đây.
+- **CSV:** `src/handlers/csv.js`, route `/tasks/export.csv` được đăng ký trước `/tasks/:id`. Route này không nhận `page`/`pageSize`.
+- **Nhật ký:** `src/handlers/audit.js` cho `GET /audit`. `src/store.js` thêm `store.audit` và `store.log()`, ghi ngay sau thao tác thành công.
+
+**Test**
+- `test/tasks.test.js` đã cập nhật cho dạng `{items, total, page, pageSize}` và có `X-User`.
+- Thêm `auth.test.js`, `list.test.js`, `export_audit.test.js`.
+- `test/helpers.js` giờ trả thêm `buf` (byte thô). Lý do: `fetch().text()` tự bỏ BOM nên test không kiểm được BOM nếu chỉ dùng `text`.
+
+**Các chỗ đặc tả không nói rõ, tôi tự chọn:**
+- `assignee=` hoặc `assignee=xyz` được coi là id bình thường, kết quả rỗng chứ không báo lỗi.
+- `status=`, `team=`, `dueBefore=`, `sort=` để trống bị 400.
+- Với POST, manager gửi thiếu `team` thì qua bước quyền và nhận 400 validate. Gửi `team` khác nhóm mình thì 403.
+- Member gửi PATCH body `{}` được chấp nhận và vẫn ghi một mục `update` với `changes: []`.
+
+Tôi chưa commit gì.

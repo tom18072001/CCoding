@@ -1,0 +1,84 @@
+{
+ "run": {
+  "exitCode": 0,
+  "status": "done",
+  "wallSec": 81,
+  "costUsd": 0.1663464,
+  "turns": 4,
+  "tokens": {
+   "input": 8,
+   "output": 8028,
+   "cacheRead": 164623,
+   "cacheWrite": 17281
+  },
+  "models": [
+   "claude-haiku-5-5",
+   "claude-sonnet-5-5"
+  ],
+  "modelUsage": {
+   "claude-haiku-5-5": {
+    "inputTokens": 1366,
+    "outputTokens": 655,
+    "cacheReadInputTokens": 0,
+    "cacheCreationInputTokens": 0,
+    "webSearchRequests": 0,
+    "costUSD": 0.0004641,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000,
+    "thinkingTokens": 635,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 0,
+    "canonicalModel": "claude-haiku-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   },
+   "claude-sonnet-5-5": {
+    "inputTokens": 8,
+    "outputTokens": 8028,
+    "cacheReadInputTokens": 164623,
+    "cacheCreationInputTokens": 17281,
+    "webSearchRequests": 0,
+    "costUSD": 0.1658823,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 64000,
+    "thinkingTokens": 2464,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 17281,
+    "canonicalModel": "claude-sonnet-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   }
+  },
+  "finalText": "`buildReport` giờ chạy 200.000 dòng trong khoảng 214 ms (`npm run bench`), trước đây khoảng 15 giây. `npm test` xanh, 5 test đều qua.\n\nVới dữ liệu bench đầy đủ (200.000 dòng, seed 42, `topN: 5`), kết quả của bản mới và bản cũ trùng khớp ở mức JSON string.\n\n**Cách làm (`src/report.js`):** bản cũ lọc lại toàn bộ mảng và dùng `includes`/`find` lồng nhau. Bản mới chỉ duyệt `orders` một lần, gom số liệu bằng `Map`/`Set`, và tìm sản phẩm theo `sku` bằng `Map` (giữ sản phẩm đầu tiên khớp). Các hành vi lạ của bản cũ được giữ nguyên:\n- **Làm tròn qua JSON:** bản cũ cho mỗi dòng đi qua `JSON.parse(JSON.stringify(...))`. Vì vậy số không hữu hạn (NaN, Infinity) thành `null`, coi như 0 trong phép cộng, và `-0` thành `0`. Bản mới làm tương tự.\n- **Thứ tự phần tử và hàm so sánh:** thứ tự xuất hiện đầu tiên, các hàm so sánh khi sắp xếp và `topN` qua `slice` đều giữ nguyên.\n- **Chỉ tiêu \"đơn\" và \"khách\":** chỉ tính từ các dòng `paid`.\n- **Trạng thái lạ:** trạng thái ngoài ba giá trị quy định được tính như đơn thường.\n- **Tháng và bộ lọc:** tháng tính theo UTC, ngày không hợp lệ vẫn ném `RangeError`, và `from`/`to` lọc trước khi bỏ `cancelled`.\n- **SKU trùng và không rõ:** sản phẩm trùng `sku` lấy bản đầu, `sku` không có trong danh sách thành danh mục `unknown`.\n\n**Test:**\n- **Bản gốc làm đặc tả:** tôi lưu bản gốc ở `test/fixtures/report.reference.js` (đổi tên hàm thành `buildReportReference`).\n- **Các test mới:** thêm vào `test/report.test.js`. Chúng so sánh bản mới với bản gốc bằng `deepEqual` và so chuỗi JSON, nên bắt được cả lệch thứ tự khóa và `-0`. Chúng cũng kiểm tra đầu vào không bị sửa.\n- **Dữ liệu được so sánh:** dữ liệu sinh với nhiều seed, các tổ hợp `topN`/`from`/`to`, các trường hợp biên và 200 bộ dữ liệu lộn xộn ngẫu nhiên.\n\n**Chưa kiểm tra:**\n- **Kiểu dữ liệu ngoài đặc tả:** tôi chưa thử các trường hợp như `category` là NaN hay `id` là object. Đầu vào hợp lệ theo mô tả không có những giá trị này.\n- **Chạy lại `npm test`:** nếu bạn muốn chạy lại, mỗi lần sẽ so sánh với bản cũ trên toàn bộ dữ liệu test, chạy mất khoảng 1 giây.",
+  "workdir": "/tmp/bw/C9-t4-perf.claude-sonnet.2-29tka8/repo"
+ },
+ "task": "t4-perf",
+ "system": "claude-sonnet",
+ "rep": 2,
+ "key": "t4-perf.claude-sonnet.2",
+ "env": "cloud",
+ "startedAt": "2026-11-02T06:46:05.460Z",
+ "finishedAt": "2026-11-02T06:47:29.776Z",
+ "grade": {
+  "hidden": {
+   "pass": 19,
+   "fail": 0,
+   "total": 19,
+   "failed": [],
+   "ms": 2202,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 5,
+   "fail": 0,
+   "total": 5
+  },
+  "changed": [
+   "~src/report.js",
+   "+test/fixtures/report.reference.js",
+   "~test/report.test.js"
+  ],
+  "perfMs": 128
+ },
+ "audit": []
+}

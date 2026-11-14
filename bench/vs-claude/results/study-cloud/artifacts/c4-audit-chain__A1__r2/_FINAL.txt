@@ -1,0 +1,14 @@
+The audit log is in `src/index.js` with all four functions, and `npm test` passes (9 tests, 0 failures).
+
+**Assumptions**
+- Object keys are never redacted, as the brief says. If a key contains an e-mail or phone number, it still goes into the hash.
+- Values with a `toJSON` method, such as `Date`, are resolved before redaction. This stops a custom `toJSON` from slipping PII past it.
+- `append` throws if the entry can't be serialized, for example `undefined`.
+- `verify` treats a non-array chain or a malformed record (null, wrong types) as bad, and `verify` checks hashes exactly. An uppercase hash is flagged as bad, and `verify` never throws.
+
+**Review fix**
+My self-review found that the e-mail regex took about 10 seconds on a 100,000-character string with no `@`. I fixed it by anchoring matches at a local-part boundary, and a regression test now covers it.
+
+**Not checked**
+- `verify` doesn't check that stored entries are free of PII, only that the hashes are consistent.
+- E-mail matching is a practical pattern, not full RFC 5322.

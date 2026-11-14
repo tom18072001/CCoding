@@ -1,0 +1,10 @@
+`GET /tickets` now takes `status`, `assignee`, `sort`, `limit` and `cursor`, and a call with no parameters returns the same bare array sorted by id. `npm test` passes (10 tests: the existing one plus new ones in `test/list.test.js`).
+
+- **Filters and sort:** these apply with or without `limit`. Without `limit` the body stays a bare array. Ties are broken by `id` ascending whichever direction you sort.
+- **Pagination:** with `limit`, the body is `{ items, nextCursor }`. `nextCursor` is `null` on the last page, including when the result fits exactly.
+- **Validation:** bad input returns 400 with `invalid_<param>`. That covers unknown status, bad sort, `limit` outside 1–100 or non-integer (`1.5`, `1e1`, empty), malformed or mismatched cursor, and `cursor` without `limit`.
+- **Strict parsing:** I treated empty list entries (`status=open,` or `assignee=an,,x`) as invalid. Unknown query parameters are ignored.
+- **Cursor contents:** a cursor is a base64url string holding the last item's sort value and id, plus the `status`, `assignee` and `sort` it was issued for. It is checked against those three values as typed, so `status=open,closed` and `status=closed,open` count as different.
+- **Edits between pages:** paging continues from the last item's position rather than an offset, so changes to the data between page requests won't skip or repeat tickets.
+
+The code change is in `src/handler.js`.

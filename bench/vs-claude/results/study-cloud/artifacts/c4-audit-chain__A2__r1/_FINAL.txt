@@ -1,0 +1,12 @@
+I've implemented `canonicalize`, `redact`, `append` and `verify` in `src/index.js`. I added tests in `test/audit.test.js`, and all 8 tests pass under `npm test`, including the existing smoke test.
+
+- **`canonicalize`**: Keys are sorted by Unicode code point, not UTF-16 unit, so a key like `～` sorts before an emoji, unlike with a plain `.sort()`. Other behaviour follows `JSON.stringify`, including `toJSON` (so a `Date` serializes as an ISO string) and `undefined` array items becoming `null`.
+- **`redact`**:
+  - **Email first:** E-mails are replaced before phone numbers. Otherwise an address like `0912345678@x.com` would leave `[PHONE]@x.com` behind.
+  - **Phone rule:** The phone rule needs a leading `0` or `+84`, then 9 digits starting with 3, 5, 7, 8 or 9, with no digit on either side.
+  - **`toJSON` values:** A `toJSON` value is converted before redacting, so the redacted copy holds what would actually be hashed.
+  - **Input and keys:** The input is never mutated, and keys are left unchanged, as the brief says.
+- **`append`**: It redacts first, so only the redacted entry reaches the hash. The tests assert that no raw e-mail appears in the chain.
+- **`verify`**: It checks seq against position, `prev` linkage and the recomputed hash. It returns `{ ok: false, index }` for the first bad record, including malformed records or a deleted record.
+
+The e-mail pattern is ASCII-only, so addresses with non-ASCII characters in them won't be redacted.

@@ -1,0 +1,208 @@
+TAP version 13
+# Subtest: 401: thiếu hoặc sai X-User trên mọi route
+ok 1 - 401: thiếu hoặc sai X-User trên mọi route
+  ---
+  duration_ms: 72.682957
+  type: 'test'
+  ...
+# Subtest: admin: đọc/tạo/sửa/xóa mọi nhiệm vụ
+ok 2 - admin: đọc/tạo/sửa/xóa mọi nhiệm vụ
+  ---
+  duration_ms: 14.270334
+  type: 'test'
+  ...
+# Subtest: manager: đọc mọi nhóm, ghi chỉ nhóm mình, không xóa
+ok 3 - manager: đọc mọi nhóm, ghi chỉ nhóm mình, không xóa
+  ---
+  duration_ms: 18.757679
+  type: 'test'
+  ...
+# Subtest: member: chỉ thấy nhóm mình, 404 ẩn nhóm khác
+ok 4 - member: chỉ thấy nhóm mình, 404 ẩn nhóm khác
+  ---
+  duration_ms: 16.407562
+  type: 'test'
+  ...
+# Subtest: member: ghi — 403 tạo/xóa, chỉ sửa status của việc giao cho mình
+ok 5 - member: ghi — 403 tạo/xóa, chỉ sửa status của việc giao cho mình
+  ---
+  duration_ms: 8.469414
+  type: 'test'
+  ...
+# Subtest: thứ tự lỗi: 401 → 400 query → 404 → 403 → 400 body
+ok 6 - thứ tự lỗi: 401 → 400 query → 404 → 403 → 400 body
+  ---
+  duration_ms: 10.571601
+  type: 'test'
+  ...
+# Subtest: GET /tasks: lọc, tìm, sắp xếp, phân trang qua HTTP
+ok 7 - GET /tasks: lọc, tìm, sắp xếp, phân trang qua HTTP
+  ---
+  duration_ms: 18.764665
+  type: 'test'
+  ...
+# Subtest: GET /tasks: tham số không hợp lệ → 400 INVALID_QUERY, báo tham số đầu tiên trên URL
+ok 8 - GET /tasks: tham số không hợp lệ → 400 INVALID_QUERY, báo tham số đầu tiên trên URL
+  ---
+  duration_ms: 14.300127
+  type: 'test'
+  ...
+# Subtest: GET /tasks/export.csv: header HTTP, BOM, CRLF, escape, chống công thức
+ok 9 - GET /tasks/export.csv: header HTTP, BOM, CRLF, escape, chống công thức
+  ---
+  duration_ms: 7.387938
+  type: 'test'
+  ...
+# Subtest: export.csv của member chỉ gồm nhóm mình
+ok 10 - export.csv của member chỉ gồm nhóm mình
+  ---
+  duration_ms: 2.609126
+  type: 'test'
+  ...
+# Subtest: audit: ghi create/update/delete, chỉ thao tác thành công
+ok 11 - audit: ghi create/update/delete, chỉ thao tác thành công
+  ---
+  duration_ms: 16.836739
+  type: 'test'
+  ...
+# Subtest: audit: chỉ admin, tham số lạ → 400 (kiểm tra trước 403)
+ok 12 - audit: chỉ admin, tham số lạ → 400 (kiểm tra trước 403)
+  ---
+  duration_ms: 5.499303
+  type: 'test'
+  ...
+# Subtest: record: seq từ 1, at ISO, list giảm dần và lọc taskId
+ok 13 - record: seq từ 1, at ISO, list giảm dần và lọc taskId
+  ---
+  duration_ms: 2.228542
+  type: 'test'
+  ...
+# Subtest: diffFields: chỉ trường khác, sắp a→z
+ok 14 - diffFields: chỉ trường khác, sắp a→z
+  ---
+  duration_ms: 1.062617
+  type: 'test'
+  ...
+# Subtest: createFields: keys sắp a→z
+ok 15 - createFields: keys sắp a→z
+  ---
+  duration_ms: 0.222556
+  type: 'test'
+  ...
+# Subtest: authenticate
+ok 16 - authenticate
+  ---
+  duration_ms: 1.449715
+  type: 'test'
+  ...
+# Subtest: canSee
+ok 17 - canSee
+  ---
+  duration_ms: 0.187423
+  type: 'test'
+  ...
+# Subtest: assertCanCreate
+ok 18 - assertCanCreate
+  ---
+  duration_ms: 0.170715
+  type: 'test'
+  ...
+# Subtest: assertCanUpdate
+ok 19 - assertCanUpdate
+  ---
+  duration_ms: 0.430346
+  type: 'test'
+  ...
+# Subtest: assertCanDelete
+ok 20 - assertCanDelete
+  ---
+  duration_ms: 0.229892
+  type: 'test'
+  ...
+# Subtest: csv: BOM, header, CRLF cuối, null trống, số giữ nguyên
+ok 21 - csv: BOM, header, CRLF cuối, null trống, số giữ nguyên
+  ---
+  duration_ms: 1.151182
+  type: 'test'
+  ...
+# Subtest: csv: RFC 4180 bọc và nhân đôi ngoặc kép
+ok 22 - csv: RFC 4180 bọc và nhân đôi ngoặc kép
+  ---
+  duration_ms: 0.256194
+  type: 'test'
+  ...
+# Subtest: csv: chống chèn công thức trước khi bọc
+ok 23 - csv: chống chèn công thức trước khi bọc
+  ---
+  duration_ms: 0.271616
+  type: 'test'
+  ...
+# Subtest: parse: mặc định
+ok 24 - parse: mặc định
+  ---
+  duration_ms: 1.332214
+  type: 'test'
+  ...
+# Subtest: parse: giá trị hợp lệ
+ok 25 - parse: giá trị hợp lệ
+  ---
+  duration_ms: 0.622035
+  type: 'test'
+  ...
+# Subtest: parse: lỗi 400 INVALID_QUERY
+ok 26 - parse: lỗi 400 INVALID_QUERY
+  ---
+  duration_ms: 0.76909
+  type: 'test'
+  ...
+# Subtest: parse: báo tham số đầu tiên theo thứ tự URL
+ok 27 - parse: báo tham số đầu tiên theo thứ tự URL
+  ---
+  duration_ms: 1.222512
+  type: 'test'
+  ...
+# Subtest: parse: paging:false coi page/pageSize là lạ
+ok 28 - parse: paging:false coi page/pageSize là lạ
+  ---
+  duration_ms: 0.289281
+  type: 'test'
+  ...
+# Subtest: apply: lọc
+ok 29 - apply: lọc
+  ---
+  duration_ms: 0.805356
+  type: 'test'
+  ...
+# Subtest: apply: sắp xếp, hòa theo id số, dueDate null cuối
+ok 30 - apply: sắp xếp, hòa theo id số, dueDate null cuối
+  ---
+  duration_ms: 6.583221
+  type: 'test'
+  ...
+# Subtest: apply: phân trang và total
+ok 31 - apply: phân trang và total
+  ---
+  duration_ms: 0.248738
+  type: 'test'
+  ...
+# Subtest: CRUD cơ bản
+ok 32 - CRUD cơ bản
+  ---
+  duration_ms: 61.41443
+  type: 'test'
+  ...
+# Subtest: validate
+ok 33 - validate
+  ---
+  duration_ms: 11.131903
+  type: 'test'
+  ...
+1..33
+# tests 33
+# suites 0
+# pass 33
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 666.600021

@@ -1,0 +1,63 @@
+{
+  "argv": [
+    "--arms",
+    "A0-sonnet,B6w4,B6w1",
+    "--tasks",
+    "l1-modules,t2-orders,t3-api",
+    "--repeats",
+    "6",
+    "--timeout",
+    "30",
+    "--out",
+    "bench\\vs-claude\\results\\e8-parallel",
+    "--runtime",
+    "claude-cli",
+    "--ccoding-url",
+    "http://127.0.0.1:7428",
+    "--ccoding-data",
+    "<root>\\e8-data-a",
+    "--ccoding-url-alt",
+    "http://127.0.0.1:7429",
+    "--ccoding-data-alt",
+    "<root>\\e8-data-b",
+    "--work",
+    "<root>\\vbe8"
+  ],
+  "cfg": {
+    "ccodingUrl": "http://127.0.0.1:7428",
+    "ccodingData": "<root>\\e8-data-a",
+    "ccodingUrlAlt": "http://127.0.0.1:7429",
+    "ccodingDataAlt": "<root>\\e8-data-b",
+    "runtime": "claude-cli",
+    "timeoutMin": 30,
+    "claudeBin": "claude",
+    "judge": {
+      "enabled": false,
+      "model": "opus"
+    },
+    "seed": "ccvb",
+    "window": null,
+    "quotaState": null,
+    "workRoot": "<root>\\vbe8",
+    "isolation": "none"
+  },
+  "meta": {
+    "ccodingCommit": "970f2be228e3ff810c3505133fc92ddbcef94234",
+    "claudeCliVersion": "2.1.318 (Claude Code)",
+    "window": null,
+    "quotaState": null,
+    "timeoutMin": 30
+  },
+  "armIds": [
+    "A0-sonnet",
+    "B6w4",
+    "B6w1"
+  ],
+  "taskIds": [
+    "l1-modules",
+    "t2-orders",
+    "t3-api"
+  ],
+  "repeats": 6,
+  "startedAt": "2026-11-13T13:15:07.625Z"
+}

@@ -1,0 +1,64 @@
+TAP version 13
+# Subtest: xác thực: thiếu/sai X-User → 401
+ok 1 - xác thực: thiếu/sai X-User → 401
+  ---
+  duration_ms: 93.48375
+  type: 'test'
+  ...
+# Subtest: phân quyền: member
+ok 2 - phân quyền: member
+  ---
+  duration_ms: 39.665119
+  type: 'test'
+  ...
+# Subtest: phân quyền: manager
+ok 3 - phân quyền: manager
+  ---
+  duration_ms: 27.586672
+  type: 'test'
+  ...
+# Subtest: danh sách: lọc, tìm, sắp xếp, phân trang
+ok 4 - danh sách: lọc, tìm, sắp xếp, phân trang
+  ---
+  duration_ms: 44.649287
+  type: 'test'
+  ...
+# Subtest: danh sách: INVALID_QUERY
+ok 5 - danh sách: INVALID_QUERY
+  ---
+  duration_ms: 16.510277
+  type: 'test'
+  ...
+# Subtest: xuất CSV
+ok 6 - xuất CSV
+  ---
+  duration_ms: 8.502035
+  type: 'test'
+  ...
+# Subtest: nhật ký thao tác
+ok 7 - nhật ký thao tác
+  ---
+  duration_ms: 21.098956
+  type: 'test'
+  ...
+# Subtest: CRUD cơ bản
+ok 8 - CRUD cơ bản
+  ---
+  duration_ms: 63.155699
+  type: 'test'
+  ...
+# Subtest: validate
+ok 9 - validate
+  ---
+  duration_ms: 11.205951
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 477.369094

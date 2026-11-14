@@ -1,0 +1,683 @@
+{
+  "generatedAt": "2026-11-14T09:06:54.002Z",
+  "script": "docs/research/analysis/decisions/decomp-metrics.mjs",
+  "note": "Chỉ số tổng hợp; không có đề bài, tiêu đề hay mã nhiệm vụ. Dữ liệu từng lượt không nằm trong repo.",
+  "groups": {
+    "P": {
+      "runs": 56,
+      "subtasksPerPlan": {
+        "n": 56,
+        "median": 5,
+        "q1": 3,
+        "q3": 6.25,
+        "min": 1,
+        "max": 8
+      },
+      "subtasksDistribution": {
+        "1": 2,
+        "2": 3,
+        "3": 10,
+        "4": 8,
+        "5": 16,
+        "6": 3,
+        "7": 9,
+        "8": 5
+      },
+      "singleSubtaskPlans": 2,
+      "roots": {
+        "n": 56,
+        "median": 3,
+        "q1": 1,
+        "q3": 4,
+        "min": 1,
+        "max": 5
+      },
+      "maxDepth": {
+        "n": 56,
+        "median": 3,
+        "q1": 2,
+        "q3": 3,
+        "min": 1,
+        "max": 7
+      },
+      "structuralWidth": {
+        "n": 56,
+        "median": 1.667,
+        "q1": 1.333,
+        "q3": 2.333,
+        "min": 1,
+        "max": 3.5
+      },
+      "maxConc": {
+        "n": 56,
+        "median": 2,
+        "q1": 1.75,
+        "q3": 3,
+        "min": 1,
+        "max": 4
+      },
+      "achievedSpeedup": {
+        "n": 56,
+        "median": 1.283,
+        "q1": 1,
+        "q3": 1.605,
+        "min": 0.167,
+        "max": 2.384
+      },
+      "potentialSpeedup": {
+        "n": 56,
+        "median": 1.412,
+        "q1": 1.181,
+        "q3": 1.691,
+        "min": 1,
+        "max": 2.951
+      },
+      "slackOverCp": {
+        "n": 56,
+        "median": 0.027,
+        "q1": 0.006,
+        "q3": 0.17,
+        "min": 0,
+        "max": 10.602
+      },
+      "longestShare": {
+        "n": 56,
+        "median": 0.357,
+        "q1": 0.279,
+        "q3": 0.469,
+        "min": 0.187,
+        "max": 1
+      },
+      "imbalance": {
+        "n": 56,
+        "median": 1.652,
+        "q1": 1.47,
+        "q3": 2.14,
+        "min": 1,
+        "max": 6.11
+      },
+      "reworkShare": {
+        "n": 56,
+        "median": 0.225,
+        "q1": 0,
+        "q3": 0.4,
+        "min": 0,
+        "max": 1
+      },
+      "failedShare": {
+        "n": 56,
+        "median": 0,
+        "q1": 0,
+        "q3": 0,
+        "min": 0,
+        "max": 0
+      },
+      "conflicts": 0,
+      "plansWithLongestShareOver50pct": 10,
+      "plansWithAnyParallel": 42
+    },
+    "P/dev": {
+      "runs": 35,
+      "subtasksPerPlan": {
+        "n": 35,
+        "median": 5,
+        "q1": 4,
+        "q3": 7,
+        "min": 1,
+        "max": 8
+      },
+      "subtasksDistribution": {
+        "1": 2,
+        "2": 1,
+        "3": 3,
+        "4": 4,
+        "5": 12,
+        "6": 2,
+        "7": 7,
+        "8": 4
+      },
+      "singleSubtaskPlans": 2,
+      "roots": {
+        "n": 35,
+        "median": 3,
+        "q1": 1,
+        "q3": 4,
+        "min": 1,
+        "max": 5
+      },
+      "maxDepth": {
+        "n": 35,
+        "median": 3,
+        "q1": 2,
+        "q3": 3,
+        "min": 1,
+        "max": 7
+      },
+      "structuralWidth": {
+        "n": 35,
+        "median": 2,
+        "q1": 1.292,
+        "q3": 2.5,
+        "min": 1,
+        "max": 3.5
+      },
+      "maxConc": {
+        "n": 35,
+        "median": 3,
+        "q1": 1,
+        "q3": 3,
+        "min": 1,
+        "max": 4
+      },
+      "achievedSpeedup": {
+        "n": 35,
+        "median": 1.283,
+        "q1": 1,
+        "q3": 1.611,
+        "min": 0.167,
+        "max": 2.331
+      },
+      "potentialSpeedup": {
+        "n": 35,
+        "median": 1.485,
+        "q1": 1.185,
+        "q3": 1.827,
+        "min": 1,
+        "max": 2.951
+      },
+      "slackOverCp": {
+        "n": 35,
+        "median": 0.081,
+        "q1": 0.01,
+        "q3": 0.233,
+        "min": 0,
+        "max": 10.602
+      },
+      "longestShare": {
+        "n": 35,
+        "median": 0.342,
+        "q1": 0.262,
+        "q3": 0.4,
+        "min": 0.187,
+        "max": 1
+      },
+      "imbalance": {
+        "n": 35,
+        "median": 1.65,
+        "q1": 1.5,
+        "q3": 2.093,
+        "min": 1,
+        "max": 6.11
+      },
+      "reworkShare": {
+        "n": 35,
+        "median": 0.2,
+        "q1": 0,
+        "q3": 0.367,
+        "min": 0,
+        "max": 1
+      },
+      "failedShare": {
+        "n": 35,
+        "median": 0,
+        "q1": 0,
+        "q3": 0,
+        "min": 0,
+        "max": 0
+      },
+      "conflicts": 0,
+      "plansWithLongestShareOver50pct": 4,
+      "plansWithAnyParallel": 25
+    },
+    "P/research": {
+      "runs": 21,
+      "subtasksPerPlan": {
+        "n": 21,
+        "median": 4,
+        "q1": 3,
+        "q3": 5,
+        "min": 2,
+        "max": 8
+      },
+      "subtasksDistribution": {
+        "2": 2,
+        "3": 7,
+        "4": 4,
+        "5": 4,
+        "6": 1,
+        "7": 2,
+        "8": 1
+      },
+      "singleSubtaskPlans": 0,
+      "roots": {
+        "n": 21,
+        "median": 2,
+        "q1": 2,
+        "q3": 3,
+        "min": 1,
+        "max": 3
+      },
+      "maxDepth": {
+        "n": 21,
+        "median": 3,
+        "q1": 2,
+        "q3": 3,
+        "min": 1,
+        "max": 6
+      },
+      "structuralWidth": {
+        "n": 21,
+        "median": 1.5,
+        "q1": 1.333,
+        "q3": 1.75,
+        "min": 1,
+        "max": 3
+      },
+      "maxConc": {
+        "n": 21,
+        "median": 2,
+        "q1": 2,
+        "q3": 3,
+        "min": 1,
+        "max": 3
+      },
+      "achievedSpeedup": {
+        "n": 21,
+        "median": 1.283,
+        "q1": 1.142,
+        "q3": 1.514,
+        "min": 0.188,
+        "max": 2.384
+      },
+      "potentialSpeedup": {
+        "n": 21,
+        "median": 1.331,
+        "q1": 1.182,
+        "q3": 1.531,
+        "min": 1,
+        "max": 2.398
+      },
+      "slackOverCp": {
+        "n": 21,
+        "median": 0.011,
+        "q1": 0.006,
+        "q3": 0.029,
+        "min": 0.002,
+        "max": 5.444
+      },
+      "longestShare": {
+        "n": 21,
+        "median": 0.433,
+        "q1": 0.336,
+        "q3": 0.557,
+        "min": 0.22,
+        "max": 0.751
+      },
+      "imbalance": {
+        "n": 21,
+        "median": 1.653,
+        "q1": 1.405,
+        "q3": 2.195,
+        "min": 1.1,
+        "max": 4.37
+      },
+      "reworkShare": {
+        "n": 21,
+        "median": 0.333,
+        "q1": 0.167,
+        "q3": 0.5,
+        "min": 0,
+        "max": 1
+      },
+      "failedShare": {
+        "n": 21,
+        "median": 0,
+        "q1": 0,
+        "q3": 0,
+        "min": 0,
+        "max": 0
+      },
+      "conflicts": 0,
+      "plansWithLongestShareOver50pct": 6,
+      "plansWithAnyParallel": 17
+    },
+    "office": {
+      "runs": 5,
+      "subtasksPerPlan": {
+        "n": 5,
+        "median": 4,
+        "q1": 3,
+        "q3": 6,
+        "min": 2,
+        "max": 6
+      },
+      "subtasksDistribution": {
+        "2": 1,
+        "3": 1,
+        "4": 1,
+        "6": 2
+      },
+      "singleSubtaskPlans": 0,
+      "roots": {
+        "n": 5,
+        "median": 3,
+        "q1": 3,
+        "q3": 3,
+        "min": 2,
+        "max": 4
+      },
+      "maxDepth": {
+        "n": 5,
+        "median": 2,
+        "q1": 1,
+        "q3": 3,
+        "min": 1,
+        "max": 3
+      },
+      "structuralWidth": {
+        "n": 5,
+        "median": 2,
+        "q1": 2,
+        "q3": 2,
+        "min": 2,
+        "max": 3
+      },
+      "maxConc": {
+        "n": 5,
+        "median": 3,
+        "q1": 3,
+        "q3": 3,
+        "min": 2,
+        "max": 3
+      },
+      "achievedSpeedup": {
+        "n": 5,
+        "median": 1.538,
+        "q1": 1.492,
+        "q3": 1.573,
+        "min": 1.161,
+        "max": 1.629
+      },
+      "potentialSpeedup": {
+        "n": 5,
+        "median": 1.616,
+        "q1": 1.609,
+        "q3": 1.691,
+        "min": 1.604,
+        "max": 1.699
+      },
+      "slackOverCp": {
+        "n": 5,
+        "median": 0.05,
+        "q1": 0.038,
+        "q3": 0.075,
+        "min": 0.023,
+        "max": 0.464
+      },
+      "longestShare": {
+        "n": 5,
+        "median": 0.513,
+        "q1": 0.447,
+        "q3": 0.619,
+        "min": 0.421,
+        "max": 0.623
+      },
+      "imbalance": {
+        "n": 5,
+        "median": 2.895,
+        "q1": 1.854,
+        "q3": 3.809,
+        "min": 1.238,
+        "max": 7.907
+      },
+      "reworkShare": {
+        "n": 5,
+        "median": 0,
+        "q1": 0,
+        "q3": 0.25,
+        "min": 0,
+        "max": 1
+      },
+      "failedShare": {
+        "n": 5,
+        "median": 0,
+        "q1": 0,
+        "q3": 0,
+        "min": 0,
+        "max": 0
+      },
+      "conflicts": 0,
+      "plansWithLongestShareOver50pct": 3,
+      "plansWithAnyParallel": 5
+    },
+    "office/dev": {
+      "runs": 3,
+      "subtasksPerPlan": {
+        "n": 3,
+        "median": 3,
+        "q1": 2.5,
+        "q3": 3.5,
+        "min": 2,
+        "max": 4
+      },
+      "subtasksDistribution": {
+        "2": 1,
+        "3": 1,
+        "4": 1
+      },
+      "singleSubtaskPlans": 0,
+      "roots": {
+        "n": 3,
+        "median": 3,
+        "q1": 2.5,
+        "q3": 3,
+        "min": 2,
+        "max": 3
+      },
+      "maxDepth": {
+        "n": 3,
+        "median": 1,
+        "q1": 1,
+        "q3": 1.5,
+        "min": 1,
+        "max": 2
+      },
+      "structuralWidth": {
+        "n": 3,
+        "median": 2,
+        "q1": 2,
+        "q3": 2.5,
+        "min": 2,
+        "max": 3
+      },
+      "maxConc": {
+        "n": 3,
+        "median": 3,
+        "q1": 2.5,
+        "q3": 3,
+        "min": 2,
+        "max": 3
+      },
+      "achievedSpeedup": {
+        "n": 3,
+        "median": 1.538,
+        "q1": 1.515,
+        "q3": 1.555,
+        "min": 1.492,
+        "max": 1.573
+      },
+      "potentialSpeedup": {
+        "n": 3,
+        "median": 1.609,
+        "q1": 1.607,
+        "q3": 1.613,
+        "min": 1.604,
+        "max": 1.616
+      },
+      "slackOverCp": {
+        "n": 3,
+        "median": 0.05,
+        "q1": 0.037,
+        "q3": 0.063,
+        "min": 0.023,
+        "max": 0.075
+      },
+      "longestShare": {
+        "n": 3,
+        "median": 0.619,
+        "q1": 0.52,
+        "q3": 0.621,
+        "min": 0.421,
+        "max": 0.623
+      },
+      "imbalance": {
+        "n": 3,
+        "median": 1.854,
+        "q1": 1.546,
+        "q3": 2.375,
+        "min": 1.238,
+        "max": 2.895
+      },
+      "reworkShare": {
+        "n": 3,
+        "median": 0.25,
+        "q1": 0.125,
+        "q3": 0.625,
+        "min": 0,
+        "max": 1
+      },
+      "failedShare": {
+        "n": 3,
+        "median": 0,
+        "q1": 0,
+        "q3": 0,
+        "min": 0,
+        "max": 0
+      },
+      "conflicts": 0,
+      "plansWithLongestShareOver50pct": 2,
+      "plansWithAnyParallel": 3
+    },
+    "office/research": {
+      "runs": 2,
+      "subtasksPerPlan": {
+        "n": 2,
+        "median": 6,
+        "q1": 6,
+        "q3": 6,
+        "min": 6,
+        "max": 6
+      },
+      "subtasksDistribution": {
+        "6": 2
+      },
+      "singleSubtaskPlans": 0,
+      "roots": {
+        "n": 2,
+        "median": 3.5,
+        "q1": 3.25,
+        "q3": 3.75,
+        "min": 3,
+        "max": 4
+      },
+      "maxDepth": {
+        "n": 2,
+        "median": 3,
+        "q1": 3,
+        "q3": 3,
+        "min": 3,
+        "max": 3
+      },
+      "structuralWidth": {
+        "n": 2,
+        "median": 2,
+        "q1": 2,
+        "q3": 2,
+        "min": 2,
+        "max": 2
+      },
+      "maxConc": {
+        "n": 2,
+        "median": 3,
+        "q1": 3,
+        "q3": 3,
+        "min": 3,
+        "max": 3
+      },
+      "achievedSpeedup": {
+        "n": 2,
+        "median": 1.395,
+        "q1": 1.278,
+        "q3": 1.512,
+        "min": 1.161,
+        "max": 1.629
+      },
+      "potentialSpeedup": {
+        "n": 2,
+        "median": 1.695,
+        "q1": 1.693,
+        "q3": 1.697,
+        "min": 1.691,
+        "max": 1.699
+      },
+      "slackOverCp": {
+        "n": 2,
+        "median": 0.251,
+        "q1": 0.145,
+        "q3": 0.358,
+        "min": 0.038,
+        "max": 0.464
+      },
+      "longestShare": {
+        "n": 2,
+        "median": 0.48,
+        "q1": 0.464,
+        "q3": 0.497,
+        "min": 0.447,
+        "max": 0.513
+      },
+      "imbalance": {
+        "n": 2,
+        "median": 5.858,
+        "q1": 4.834,
+        "q3": 6.883,
+        "min": 3.809,
+        "max": 7.907
+      },
+      "reworkShare": {
+        "n": 2,
+        "median": 0,
+        "q1": 0,
+        "q3": 0,
+        "min": 0,
+        "max": 0
+      },
+      "failedShare": {
+        "n": 2,
+        "median": 0,
+        "q1": 0,
+        "q3": 0,
+        "min": 0,
+        "max": 0
+      },
+      "conflicts": 0,
+      "plansWithLongestShareOver50pct": 1,
+      "plansWithAnyParallel": 2
+    }
+  },
+  "office": {
+    "runs": 5,
+    "planModels": {
+      "claude-opus-5-5": 5
+    },
+    "planGateBlocked": 0,
+    "replanned": 2,
+    "reviewSkipped": 2,
+    "acceptedTasks": 1,
+    "notAcceptedTasks": 4,
+    "briefItems": 15,
+    "briefItemsCovered": 12,
+    "briefRoleItems": 7,
+    "briefRoleItemsCovered": 3
+  }
+}

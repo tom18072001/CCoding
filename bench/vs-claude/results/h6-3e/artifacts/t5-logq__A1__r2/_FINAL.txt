@@ -1,0 +1,27 @@
+## Stage 4 — FIX and report
+
+The self-review found no code bugs beyond what I fixed while testing. Along the way I fixed lost regex backslashes in `src/agg.js` and two wrong expectations in my own tests. `npm test` is now green with 24 tests passing and 0 failing. I did not commit.
+
+**What was built**
+- `src/parse.js`, `src/query.js` and `src/agg.js` implement the spec, with no external libraries.
+- `bin/logq.js` is the CLI, with the behaviour described in the plan above.
+- Tests are in `test/parse.test.js`, `test/query.test.js`, `test/agg.test.js` and `test/cli.test.js`, next to the existing smoke test. They cover every error-position rule, bucket ordering, nearest-rank percentiles, histogram gap-filling, table alignment, and exit codes 0, 1 and 2.
+
+**Assumptions the spec left open** (change them if your acceptance suite differs)
+- **Timestamps:** a `T` separator is required, so date-only strings and `"2024-01-01 10:00"` don't produce `@t`.
+- **`msg` fallback:** a `msg` that is `null` counts as absent, so `message` is used.
+- **Error positions the spec doesn't cover:**
+  - An invalid field name before `:` reports the token start.
+  - A `)` where an operand is expected reports that `)`.
+  - Errors are reported leftmost-first.
+- **Bucket keys:** `1` and `"1"` are separate buckets in `count by`.
+- **Aggregation specs:**
+  - The field name must match the field regex, otherwise the spec is invalid.
+  - Histogram intervals are normalized, so `05m` becomes `5m`.
+- **CLI:**
+  - `--opt=value` is accepted.
+  - `--` ends option parsing.
+  - Usage and query errors (exit 2) are detected before any file is read, so they win over a missing file (exit 1).
+  - A leading BOM in input is stripped.
+
+**Not verified:** I only ran the CLI on Windows, with stdin supplied by pipe or by the test harness. I did not try an interactive terminal.

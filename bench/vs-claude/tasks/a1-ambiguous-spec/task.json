@@ -1,0 +1,15 @@
+{
+  "id": "a1-ambiguous-spec",
+  "category": "requirements",
+  "size": 2,
+  "sizeBasis": "sections: phần thân SPEC.md; mục \"Open questions and assumptions\"",
+  "sizeLegacy": 3,
+  "title": "Spec from an ambiguous, self-contradicting brief",
+  "hypotheses": [
+    "H4",
+    "H8"
+  ],
+  "deliverable": "SPEC.md",
+  "brief": "Our customer (a Vietnamese bank) sent this request for the log platform. Turn it into an implementation-ready specification in `SPEC.md` at the repository root. The spec must include a section headed `## Open questions and assumptions` listing every point that must be confirmed with the customer before building, each with the assumption you would use meanwhile.\n\nCustomer request (verbatim):\n> We need a self-service \"Log Export\" button. Branch managers can export their team's access logs from last month as CSV like the old system. Exports must contain full client IP addresses and usernames for forensic use. In line with our data-protection policy, no personal data may leave the platform unmasked. Users should be able to export everything they can see; the export must complete within 5 seconds. Exported files are kept forever for audit, and the platform must delete personal data older than 12 months. Make it simple.",
+  "grader": "checklist"
+}

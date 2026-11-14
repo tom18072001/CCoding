@@ -1,0 +1,5 @@
+I wrote `answer.json` in the repository root. I generated it with a script and didn't check it by hand beyond reading the output.
+
+- **Startup order:** 18 services can start. The order starts with `cache`, `db-catalog`, `db-orders` and `db-users`, then `auth`, and ends with `gateway`, `templates` and `notifier`. At each step I picked the alphabetically smallest service whose dependencies had all started.
+- **Cycle:** `reporting` needs `warehouse`, `warehouse` needs `etl`, and `etl` needs `reporting`. These three are the `cycle_members`.
+- **Blocked:** the three cycle services can never start. `admin-ui` is also blocked because it depends on `reporting`, even though it isn't part of the cycle. So `blocked` has those four.

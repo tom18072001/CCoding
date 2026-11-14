@@ -1,0 +1,94 @@
+TAP version 13
+# Subtest: fuzz seed cố định: 400 bộ nhỏ
+ok 1 - fuzz seed cố định: 400 bộ nhỏ
+  ---
+  duration_ms: 420.506131
+  type: 'test'
+  ...
+# Subtest: fuzz: oracle trả kết quả (không phải toàn lỗi) trên phần lớn bộ
+ok 2 - fuzz: oracle trả kết quả (không phải toàn lỗi) trên phần lớn bộ
+  ---
+  duration_ms: 30.693286
+  type: 'test'
+  ...
+# Subtest: hòa doanh thu: thứ tự categories, topProducts, topCustomers
+ok 3 - hòa doanh thu: thứ tự categories, topProducts, topCustomers
+  ---
+  duration_ms: 4.182855
+  type: 'test'
+  ...
+# Subtest: grand total = 0 → share = 0
+ok 4 - grand total = 0 → share = 0
+  ---
+  duration_ms: 0.37605
+  type: 'test'
+  ...
+# Subtest: date không hợp lệ: cùng lỗi, kể cả dòng cancelled / ngoài khoảng lọc
+ok 5 - date không hợp lệ: cùng lỗi, kể cả dòng cancelled / ngoài khoảng lọc
+  ---
+  duration_ms: 3.001752
+  type: 'test'
+  ...
+# Subtest: date null / Date object / số: cùng kết quả
+ok 6 - date null / Date object / số: cùng kết quả
+  ---
+  duration_ms: 0.299158
+  type: 'test'
+  ...
+# Subtest: amount tràn Infinity/NaN → null theo JSON round-trip
+ok 7 - amount tràn Infinity/NaN → null theo JSON round-trip
+  ---
+  duration_ms: 1.6393
+  type: 'test'
+  ...
+# Subtest: generate(): nhiều seed và kích thước
+ok 8 - generate(): nhiều seed và kích thước
+  ---
+  duration_ms: 954.077368
+  type: 'test'
+  ...
+# Subtest: generate(): tổ hợp topN và from/to
+ok 9 - generate(): tổ hợp topN và from/to
+  ---
+  duration_ms: 1511.16065
+  type: 'test'
+  ...
+# Subtest: bộ thủ công: sku trùng, thiếu product, status lạ, qty 0, rỗng
+ok 10 - bộ thủ công: sku trùng, thiếu product, status lạ, qty 0, rỗng
+  ---
+  duration_ms: 1.478633
+  type: 'test'
+  ...
+# Subtest: date không hợp lệ ném RangeError, kể cả dòng cancelled
+ok 11 - date không hợp lệ ném RangeError, kể cả dòng cancelled
+  ---
+  duration_ms: 0.538445
+  type: 'test'
+  ...
+# Subtest: đầu vào không bị sửa
+ok 12 - đầu vào không bị sửa
+  ---
+  duration_ms: 6.455246
+  type: 'test'
+  ...
+# Subtest: báo cáo nhỏ
+ok 13 - báo cáo nhỏ
+  ---
+  duration_ms: 2.204697
+  type: 'test'
+  ...
+# Subtest: dữ liệu sinh ngẫu nhiên chạy được
+ok 14 - dữ liệu sinh ngẫu nhiên chạy được
+  ---
+  duration_ms: 10.446959
+  type: 'test'
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3134.107263

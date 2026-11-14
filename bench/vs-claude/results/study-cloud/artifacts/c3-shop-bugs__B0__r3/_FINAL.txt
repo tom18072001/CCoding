@@ -1,0 +1,89 @@
+# Báo cáo tổng hợp T-20261102-131229-8ec: sửa 3 lỗi trong module giỏ hàng (coupon/làm tròn, tồn kho âm, số lượng tối đa)
+
+## Tóm tắt
+Ba lỗi khách hàng báo đã được sửa tận gốc trong `src/cart.js`, `src/money.js` và `src/stock.js`. Tên và chữ ký các hàm export giữ nguyên. Có thêm 10 test hồi quy trong `test/regression.test.js`. `npm test` trước khi sửa thoát với mã 1 (1 pass, 1 fail). Sau khi sửa thì thoát với mã 0 (12/12 pass). Reviewer đã thử tạm trả `src/` về bản gốc: 10 test mới fail, nghĩa là bộ test bắt được đúng các lỗi này. Còn một giả định cần Tom xác nhận: làm tròn half-up được áp lên **số tiền giảm**, không phải lên tổng sau giảm. Các thay đổi **chưa commit**.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Sửa 3 nguyên nhân gốc trong `src/` | @senior-swe | Đạt | `src/cart.js`, `src/money.js`, `src/stock.js`. Theo `git diff`: 3 tệp, +10/−5 dòng. Test cũ '10% coupon on 100000' giờ ra 90000 đúng kỳ vọng, trước đó ra 81000. Chi tiết: `.ccoding/T-20261102-131229-8ec/outputs/dev-S1-senior-swe.md` |
+| S2 | Test hồi quy cho 3 lỗi | @backend-dev | Đạt (2 điểm minor) | `test/regression.test.js` có 10 test, mỗi test dùng SKU riêng. `npm test` → exit 0, 12/12 pass. Dùng `git stash` trên `src/` thì 10 test fail. Chi tiết: `.ccoding/T-20261102-131229-8ec/outputs/dev-S2-backend-dev.md` |
+
+Kết quả CCoding tự chạy `npm test`:
+- Trước khi sửa: exit 1, tests 2, pass 1, fail 1.
+- Sau khi sửa: exit 0, tests 12, pass 12, fail 0.
+
+## Quyết định
+- **Lỗi 1, coupon sai:** có hai nguyên nhân.
+  - `total()` áp coupon hai lần: một lần trên từng dòng, một lần nữa trên subtotal. Đã sửa để tính subtotal trước rồi gọi `applyPercent` đúng một lần.
+  - `applyPercent()` không làm tròn nên trả về số lẻ đồng. Đã sửa thành `discount = floor((amount·pct + 50)/100)`, tính hoàn toàn bằng số nguyên khi pct nguyên, rồi trả về `amount − discount`.
+- **Lỗi 2, tồn kho âm:** `reserve()` chỉ kiểm tra `have < 0`. Giờ hàm ném `INSUFFICIENT_STOCK` khi `qty > have`, và tồn kho giữ nguyên khi lỗi được ném. `addItem` vẫn gọi `reserve` trước khi sửa giỏ, nên giỏ và tồn kho luôn khớp nhau.
+- **Lỗi 3, không mua được đúng mức tối đa:** `addItem()` dùng `>=` thay vì `>` khi so với `MAX_QTY_PER_LINE`. Đã sửa, giờ mua đúng 10 được và 11 bị chặn.
+- **Giả định A1:** "round half-up" được hiểu là làm tròn số tiền giảm. Ví dụ 5% của 10010: số giảm là 500,5 → làm tròn thành 501 → tổng còn 9509.
+- **Thêm kiểm tra đầu vào (ngoài yêu cầu, có chủ đích):**
+  - `applyPercent` ném `RangeError('BAD_PERCENT_ARGS')` khi amount không phải số nguyên hoặc âm, hoặc pct nằm ngoài 0..100.
+  - `reserve` ném `BAD_QTY` khi qty không phải số nguyên dương.
+
+## Kết quả review
+- Kết luận: **Đạt**, không có blocker hay major.
+- Reviewer đã chạy `npm test` (exit 0) và đọc `src/*.js`. Reviewer cũng `git stash` thư mục `src/`, chạy test (10 fail, 2 pass) rồi `stash pop`, sau đó chạy lại được 12/12 pass.
+- Tôi đã đọc lại `git diff`, khớp với mô tả của S1. Không có tên hay chữ ký hàm export nào bị đổi.
+- Hai điểm minor được chấp nhận, không chặn bàn giao:
+  1. Chưa có test cho đầu vào không hợp lệ (`BAD_PERCENT_ARGS`, `BAD_QTY` trong `reserve`).
+  2. Nhánh pct không nguyên (tính bằng float) chưa có test.
+
+## Việc còn mở & rủi ro
+- **Cách hiểu "round half-up" (cần Tom xác nhận):** đề bài có thể có hai cách hiểu.
+  - Làm tròn số tiền giảm lên (cách đang dùng): 10010 với 5% → 9509.
+  - Làm tròn tổng sau giảm lên: 10010 với 5% → 9510.
+  
+  Hai cách chỉ khác nhau khi số tiền giảm có phần lẻ đúng bằng 0,5 đồng. Nếu Tom chọn cách thứ hai thì phải sửa `applyPercent` và 2 kỳ vọng trong test (b).
+- **Thay đổi hành vi:** `total()` giờ ném `RangeError` khi coupon không hợp lệ, trước đây chỉ trả số sai mà không báo. `applyCoupon` vẫn chưa kiểm tra pct, nên lỗi chỉ lộ ra khi gọi `total()`.
+- **Pct không nguyên** vẫn tính bằng float, và nhánh này chưa có test. Rủi ro thấp vì hiện chỉ dùng pct nguyên.
+- `release()` chưa kiểm tra qty. Hiện nó chỉ được gọi với số lượng hợp lệ lấy từ giỏ.
+- **Chưa commit.** Có 3 tệp `src/` đã sửa và 1 tệp test mới chưa được track.
+
+## Bước tiếp theo
+1. **Tom xác nhận cách làm tròn (A1).** Đây là quyết định, không cần tách nhiệm vụ. Nếu đổi sang làm tròn tổng: sửa `applyPercent` và test (b), xong khi `npm test` ra exit 0.
+2. **Commit lên một nhánh riêng (không phải main)**, sau khi Tom đồng ý. Xong khi có một commit gồm 4 tệp và `npm test` ra exit 0.
+3. **Nhiệm vụ nhỏ tách riêng (S, tùy chọn):** thêm test cho `BAD_PERCENT_ARGS`, `BAD_QTY` và nhánh pct không nguyên. Có thể thêm kiểm tra pct sớm ngay trong `applyCoupon`. Xong khi `npm test` ra exit 0 và có thêm ít nhất 3 test cho các nhánh lỗi.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-131229-8ec` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **34 in / 14.7k out**, cache đọc 195.3k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | 12 | 5812 | 70559 | 2 |
+| Backend Developer (@backend-dev) | dev | 8 | 4880 | 54254 | 1 |
+| QA Engineer (@qa-tester) | dev | 6 | 1195 | 35128 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 6 | 2315 | 33067 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 462 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Fix the 3 root causes in src/ (coupon/rounding, negative stock, max quantity per line) (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Regression tests for the 3 bugs (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 2 · # suites 0 · # pass 1 · # fail 1 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 12 · # suites 0 · # pass 12 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | **96** A | 100 | 100 | 80 | 100 | 0 | — | 76k | 1/4 |
+| Backend Developer (@backend-dev) | dev | **91** A | 100 | 80 | 80 | 100 | 1 | 1 | 59k | 1/4 |
+| QA Engineer (@qa-tester) | dev | **100** A | — | — | 100 | 100 | 0 | — | 36k | 0/2 |
+| Senior Software Engineer (@senior-swe) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 35k | 0/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

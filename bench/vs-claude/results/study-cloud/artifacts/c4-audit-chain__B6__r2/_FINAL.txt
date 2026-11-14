@@ -1,0 +1,116 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude c4-audit-chain__B6__r2] Hash-chained audit log with PII redaction
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Việc nhỏ, chỉ có một tệp nguồn (src/index.js hiện là stub, test/smoke.test.js đã có). Tách thành 2 hạng mục song song theo hợp đồng export: một người viết hiện thực, một người viết bộ test độc lập trong tệp riêng. CCoding sẽ tự gộp, chạy `npm test` và review.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Hiện thực canonicalize/redact/append/verify trong src/index.js (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã hiện thực đủ 4 hàm `canonicalize`, `redact`, `append`, `verify` trong `src/index.js`, chỉ dùng `node:crypto`. `npm test` pass 1/1, và các ví dụ kiểm tra nhanh bằng `node -e` cho kết quả đúng.
+
+## Tệp đã tạo/sửa
+- `src/index.js`: hiện thực mới, giữ nguyên 4 export.
+  - **canonicalize:** đệ quy, gọi `toJSON` trước. Khóa sắp theo code point nên 😀 (U+1F600) đứng sau ～ (U+FF5E). Thuộc tính `undefined` bị bỏ; `undefined` trong mảng thành `null`.
+  - **redact:** deep copy, thay email trước rồi mới thay số điện thoại, không đổi khóa và không sửa input. `Date` và các kiểu có `toJSON` được chuyển qua `toJSON` rồi redact.
+  - **append:** redact trước, sau đó mới tính hash trên entry đã redact, nên PII không vào đầu vào hash.
+  - **verify:** kiểm tra `seq`, `prev` và hash tính lại. Record sai dạng (`null`, thiếu trường) hoặc lỗi khi canonicalize trả `{ ok: false, index }`, không ném lỗi.
+
+## Hợp đồng API
+Không áp dụng. Đây là thư viện, không có endpoint.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0, pass 1, fail 0. Baseline trước đó là fail 1.
+- `node -e` kiểm tra nhanh:
+  - Khóa sắp xếp đúng, kể cả ký tự ngoài BMP.
+  - `+84912345678` → `[PHONE]`, `0912345678` → `[PHONE]`.
+  - `0212345678`, `1234567890` và `90912345678` giữ nguyên (số đứng sau chữ số khác không bị thay).
+  - Email → `[EMAIL]`.
+  - `verify` trên chain hợp lệ trả `ok: true`. Sau khi sửa `entry` của record 0, nó trả `{ ok: false, index: 0 }`.
+  - `verify([null])` trả `{ ok: false, index: 0 }`.
+
+## Việc còn lại
+- Không có biến môi trường mới.
+- Bộ test chi tiết nằm ở `test/audit.test.js` (hạng mục S2, @senior-swe), tôi chưa chạy file đó.
+
+Bản đầy đủ: `.ccoding/T-20261103-012823-bbb/outputs/dev-S1-backend-dev.md`
+
+### S2 — Bộ test cho canonicalize/redact/append/verify trong test/audit.test.js (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã tạo `test/audit.test.js` với 29 test node:test, phủ các ca canonicalize, redact, append và verify trong đặc tả. Tôi chạy trên `src/index.js` hiện có (hiện thực của S1 đã có trong worktree): cả 29 test đều pass, `npm test` pass 30/30. Tôi viết test theo đặc tả chứ không theo mã của S1.
+
+## Tệp đã tạo/sửa
+- `test/audit.test.js` · tạo mới. Tôi không sửa `src/index.js` và `test/smoke.test.js`.
+
+## Kiểm chứng
+- `node --test test/audit.test.js` → exit 0, 29 tests, 29 pass, 0 fail.
+- `npm test` → 30 tests (29 của tôi + 1 smoke), 30 pass, 0 fail. Tôi chỉ đọc dòng tổng kết của lệnh này nên không có exit code riêng.
+- Baseline ban đầu là `npm test` exit 1 (1 test fail). Bây giờ không còn test nào fail.
+
+## Quyết định thiết kế
+- Mỗi tệp test dùng helper `build(n)` để tạo chain nhỏ.
+- Các ca verify kiểm tra chỉ số lỗi đầu tiên:
+  - Xóa record giữa chain: index là vị trí vừa bị xóa.
+  - Đổi thứ tự hai record liền kề: index là vị trí nhỏ hơn.
+  - Nhiều chỗ lỗi: index nhỏ nhất.
+- Ca chốt PII: hash khác hash tính trên entry gốc, và `JSON.stringify(chain)` không chứa email hay số điện thoại gốc.
+- Lệnh heredoc đầu tiên bị hook chặn vì chuỗi `../src/index.js` trong lệnh. Tôi ghi tệp bằng công cụ Write thì được.
+
+## Rủi ro & việc còn mở
+- Không có test nào fail nên không có nghi vấn spec hay mã.
+- Tôi chưa kiểm các ca biên ngoài danh sách đặc tả, ví dụ `+84` đứng sau một chữ số, hay email có ký tự Unicode.
+
+Bản đầy đủ: `.ccoding/T-20261103-012823-bbb/outputs/dev-S2-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-012823-bbb` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **22 in / 13.7k out**, cache đọc 124.8k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 8 | 7463 | 51371 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 6 | 3006 | 37160 | 1 |
+| Backend Developer (@backend-dev) | dev | 6 | 2884 | 34027 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 393 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Hiện thực canonicalize/redact/append/verify trong src/index.js (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 Bộ test cho canonicalize/redact/append/verify trong test/audit.test.js (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 1 · # suites 0 · # pass 0 · # fail 1 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 30 · # suites 0 · # pass 30 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **85** A | — | 81 | 80 | 100 | 1 | 1 | 59k | 1/4 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 40k | 0/2 |
+| Backend Developer (@backend-dev) | dev | **100** A | — | 100 | 100 | 100 | 1 | 1 | 37k | 0/4 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

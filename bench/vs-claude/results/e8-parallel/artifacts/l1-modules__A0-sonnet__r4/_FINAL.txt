@@ -1,0 +1,14 @@
+Cả năm module đã có trong `src/<tên>/index.js` và `npm test` xanh (53 test, 0 lỗi). Bộ nghiệm thu ẩn thì tôi không chạy được, nên chỉ kiểm được các ví dụ trong SPEC.md cùng một số trường hợp biên tôi tự thêm.
+
+Test tôi viết nằm ở `test/spec.<tên>.test.js`, cạnh các test mẫu có sẵn. Không thêm thư viện ngoài.
+
+Những chỗ SPEC.md không nói rõ, tôi tự chọn như sau:
+- **`convert`:** kiểm giá trị tiền `m` trước, rồi loại tiền đích `to`. Nếu cả hai cùng sai thì mã lỗi là của `m`.
+- **`validateCsv`:** kiểm lược đồ trước, rồi mới phân tích văn bản. Lược đồ sai thì ném `CSV_INVALID_SCHEMA` dù `text` cũng sai.
+- **Tên cột:** tôi coi tên cột rỗng là lược đồ sai.
+- **`min`/`max` của cột `string`/`bool`:** không kiểm tra, chỉ bỏ qua.
+- **Số hàng khi `parseCsv` gặp lỗi nháy:** là số thứ tự bản ghi đang đọc, không tính dòng trống.
+
+Nếu bộ ẩn hiểu khác ở một trong các điểm này thì đó là chỗ cần xem lại đầu tiên.
+
+Tôi chưa commit gì.
