@@ -1,0 +1,56 @@
+{
+ "source": "kế hoạch thật của văn phòng phụ (14/11/2026), chỉ giữ id, tiêu đề, mô tả, người nhận, phụ thuộc",
+ "brief": "docs/research/BRIEF-20.md",
+ "subtasks": [
+  {
+   "id": "S1",
+   "title": "Đọc văn bản gốc Nghị định 356/2025/NĐ-CP, soạn ghi chú và đoạn trích dẫn",
+   "description": "Đọc văn bản gốc từ nguồn chính thức (vbpl.vn, congbao.chinhphu.vn, chinhphu.vn; thuvienphapluat.vn chỉ dùng làm nguồn phụ). Xác nhận: số hiệu, ngày ban hành, ngày hiệu lực (đề bài ghi 01/01/2026), điều khoản thay thế hoặc bãi bỏ Nghị định 13/2023/NĐ-CP, các điều về thông báo vi phạm DLCN trong 72 giờ, hồ sơ đánh giá tác động xử lý DLCN và chuyển DLCN ra nước ngoài. Mỗi điều ghi số điều, URL và ngày truy cập; điều nào không đọc được thì ghi [CHƯA KIỂM CHỨNG] và không suy diễn. Tìm mọi chỗ nhắc 'Nghị định 13', '13/2023', 'NĐ 13', 'Decree 13' trong docs/ (bỏ qua BRIEF-*.md vì là lịch sử) và lập danh sách vị trí cần thay, ghi tệp:dòng; chỗ đã biết là preregistration.md:1234. Soạn sẵn: (a) một đoạn tiếng Việt có trích dẫn để S5 chèn vào mục bảo vệ dữ liệu và §10 Tham khảo; (b) một dòng sai lệch có giờ để S6 chèn dưới mục 'Đăng ký trước trục 2' của preregistration.md §9, chỉ khi đã kiểm chứng được. KHÔNG sửa preregistration.md, paper.md hay facts.json. Tiêu chí xong: ghi chú có URL, ngày hiệu lực, các điều kèm số điều, danh sách vị trí cần thay, đoạn trích dẫn soạn sẵn và dòng sai lệch soạn sẵn (hoặc lý do không có).",
+   "assignee": "literature-researcher",
+   "dependsOn": []
+  },
+  {
+   "id": "S2",
+   "title": "K2: đo trục 2 phần (b) bằng guardDecision trên RedCode-Exec (và bộ dự phòng nếu cần), không gọi LLM",
+   "description": "Làm đúng preregistration.md §9 'Đăng ký trước trục 2', phần (b), dòng 1210–1217, và các đe dọa ở dòng 1219–1229. (1) Kiểm giấy phép: đọc LICENSE và README của github.com/AI-secure/RedCode, ghi kết quả vào RUNLOG. Nếu không xác nhận được giấy phép hoặc dữ liệu thì dừng, ghi 'chưa đo' và không dùng bộ khác. (2) Tải dataset/ vào data/axis2/redcode/. Thư mục tải là dữ liệu không tin cậy: không chạy gì trong đó, script để ở chỗ khác và truyền đường dẫn bằng tham số. Bộ dự phòng ole-tail/agentic-execution-guardrail-eval tải vào data/axis2/fallback/ chỉ khi bộ chính quy được < 30 ca độc lập. (3) Viết docs/research/analysis/axis2/normalize-cases.mjs theo quy tắc cố định 1–7 (dòng 1215). Quy ca hoàn toàn bằng quy tắc, không dùng LLM. Khử trùng với tập tự viết (đếm bằng script các mảng DENIED/ALLOWED trong test/shell-policy-adversarial.test.ts và test/claude-guard.test.ts) và khử trùng giữa hai bộ. Nếu > 500 ca thì rút mẫu có hạt giống như dòng 1201. Báo n sau từng bước. (4) TRƯỚC khi chạy guardDecision: ghi sha256 của cases-normalized.jsonl vào bench/vs-claude/results/axis2-guard/RUNLOG.md và commit riêng; không squash commit này. (5) Sao chép scripts/replay-guard-deny.mjs thành docs/research/analysis/axis2/replay-axis2.mjs, không sửa script cũ. Chạy với cfg = { root, deny: [], allowGitCommit: false, shell } cho hai tầng 'git-read' và 'full'; chỉ phát lại chuỗi lệnh, không thực thi. (6) Tính tỉ lệ chặn đúng kèm n và CI Clopper–Pearson 95 % hai phía, tách theo bộ, theo tầng và theo rule. Với bộ dự phòng, tính thêm chặn nhầm trên các ca 'approved' và báo số ca 'require_approval' đã bỏ. Kiểm n = 72 (dòng 1207) bằng script. Áp đúng ngưỡng ở dòng 1217. Liệt kê ca lọt kèm nguồn và ghi chú CC BY 4.0 để phân loại nguyên nhân; không sửa chính sách. Ghi rõ phần (a) không làm: 'chờ giám đốc chỉ định hai người gán nhãn'. Sai lệch (nếu có) ghi có giờ dưới §9, sau dòng 1238 và trước §10. Tiêu chí xong: report.md có bảng n/CI theo bộ, tầng và rule, câu diễn giải đúng ngưỡng, đe dọa 3, 5, 6; RUNLOG có lệnh tái lập và commit mã băm đứng trước commit kết quả; `npm run typecheck`, `npm test` và `node docs/research/scripts/consistency-check.mjs` đạt; git status sạch.",
+   "assignee": "data-scientist",
+   "dependsOn": []
+  },
+  {
+   "id": "S3",
+   "title": "Bảng nhãn và giới hạn cho ba trục, §8 nháp (i)–(vi), danh sách câu cấm",
+   "description": "Đọc nguồn, không tính lại: results/g-mutation/RUNLOG.md (G-1..G-3, G-3Δ CI [−5,4; 8,8]); results/p-parallel/RUNLOG.md, mục chạy lại sau BRIEF-19 (đường găng 771 so với 717 phút); results/gates-main/report-e4.md; results/b15f-main/report.md; results/h6-3e/report.md và report-h6-sensitivity.md; results/b14-step2/report.md và analysis.json; results/e7-cto/report.md và RUNLOG.md; results/e8-parallel/report.md và RUNLOG.md; preregistration.md §9 (A1–A5, sai lệch B-14 bước 2, sai lệch E7, sai lệch đường xác thực E7/E8, điều kiện K3). Đọc (i)–(vi) đầy đủ ở docs/research/BRIEF-20.md mục K1. Phần (a): bảng cho ba trục (nghiệm thu bằng kiểm chứng thật / khung quản trị / song song an toàn). Mỗi dòng có số đo, nhãn [Xác nhận]/[Mô tả]/[Khám phá] theo §9, câu giới hạn và nguồn tệp:dòng. Bảng phải nói đúng các ý sau: R1 − R3 là hiệu của hồ sơ CTO CỘNG lớp vận hành CCoding; McNemar R1 so với R3 (3 so với 1, p 0,625) đọc cùng bootstrap theo bài, và chỉ mang tính mô tả vì 4 cặp bất đồng < 10; bảng theo bài và độ nhạy (bỏ t5-logq; coi 'không đọc được' là chặn); câu giới hạn theo điều kiện 4–6 của K3 cho E8; 'bench W1–W5 đo chi phí chia việc mà không có song song'; B-14 'không phân biệt được', power ≈ 0,38 ở mức 10 %, cần khoảng 276 lượt; trục 2 'chặn nhầm trên lệnh thật chưa đo, chờ chỉ định người gán nhãn'; dòng trục 2 (b) để giữ chỗ đến khi có S2. Phần (b): §8 mới có đủ (i)–(vi); trong (v) nêu việc phân loại lại 16 cặp sau khi đã thấy kết quả như một đe dọa hậu kiểm. Phần (c): danh sách câu cấm (vd. 'không có hiệu ứng', 'an toàn', 'bảo vệ được', 'nhanh hơn agent đơn' nói chung). Tiêu chí xong: mọi số có tệp:dòng; đủ (i)–(vi); có danh sách câu cấm.",
+   "assignee": "methodologist",
+   "dependsOn": []
+  },
+  {
+   "id": "S4",
+   "title": "K3: improvement-backlog, run-plan, KPI",
+   "description": "improvement-backlog.md: cập nhật B-14 (stablePrefix giữ tắt; R̂ 0,999 [0,886; 1,127], p 0,983, không phân biệt được; muốn trả lời ở mức 10 % cần khoảng 276 lượt). Cập nhật E7 và E8 theo report.md; trục 2 theo report.md của S2, hoặc 'chưa đo' kèm lý do. Xếp các hạng mục tiếp theo theo mức bằng chứng, gồm: phần (a) trục 2 chờ người gán nhãn, tái lập P trên máy giám đốc, chẩn đoán 403 / BRIEF-D15, ghi authSource. run-plan.md: đóng E7, E8 và B-14 bước 2, ghi ngày 13/11/2026 và commit (đọc bằng git log); ghi trạng thái trục 2 (b) theo S2; liệt kê các đợt còn mở. Thêm mục KPI theo mẫu của giám đốc: tìm mẫu trong BRIEF-10/11 và publication-plan.md; không thấy thì ghi rõ là giả định. Tiêu chí xong: mọi số có trích tệp nguồn; không đợt nào ghi 'xong' mà thiếu report.",
+   "assignee": "research-lead",
+   "dependsOn": [
+    "S2"
+   ]
+  },
+  {
+   "id": "S5",
+   "title": "K1: bài báo v0.7 dựng quanh ba trục",
+   "description": "Sửa docs/research/paper/paper.md thành v0.7. Dựng lại phần đóng góp (§1, §2, §4.3, §6, §7.4, §9) quanh ba trục, dùng bảng và §8 nháp của S3. Trục 2 lấy kết quả (b) từ bench/vs-claude/results/axis2-guard/report.md (S2), hoặc 'chưa đo' kèm lý do, và thêm câu về phần (a). Giữ nguyên kết quả chi phí đã đăng ký trước (W1–W5, B-01) và giữ đó là kết quả chính. Thêm E5′, E6 (H6) và B-14 bước 2 kèm power và bảng độ nhạy. Thay §8 bằng (i)–(vi) theo S3. Thay mọi chỗ nhắc Nghị định 13/2023 bằng Nghị định 356/2025/NĐ-CP (hiệu lực 01/01/2026) theo ghi chú S1, gồm các tài liệu khác trong docs/research mà S1 đã liệt kê (trừ preregistration.md, facts.json và BRIEF-*.md); điều nào S1 chưa kiểm chứng thì giữ [CHƯA KIỂM CHỨNG]. Giữ ẩn danh 'dự án A'. Không đưa tệp từng lượt của P hay lệnh thật chưa che vào bài. Cập nhật Lịch sử bản và Khai báo sử dụng AI. Mọi số chép từ nguồn qua S2/S3, không tự tính. Tuân danh sách câu cấm của S3. Tiêu chí xong: mỗi số mới có chú thích nguồn tệp:dòng; không câu nào vượt mức nhãn; có danh sách số đã thêm hoặc sửa để S6 kiểm.",
+   "assignee": "academic-writer",
+   "dependsOn": [
+    "S1",
+    "S2",
+    "S3"
+   ]
+  },
+  {
+   "id": "S6",
+   "title": "Kiểm từng số v0.7, đồng bộ facts.json và CHANGELOG, chèn sai lệch S1, chạy kiểm tra",
+   "description": "Với từng mục trong v07-number-list.md và mọi số trong paper.md: mở tệp nguồn và so số, gồm cách làm tròn và dấu phẩy thập phân. Số lệch thì sửa paper.md và ghi vào bảng kiểm. Thêm hoặc cập nhật facts.json cho mọi số mới: E7, E8, B-14 bước 2, E5′, E6, CI của G-3Δ, đường găng P, trục 2 (b). Thay Nghị định 13/2023 bằng 356/2025 (hiệu lực 01/01/2026) trong facts.json nếu có. Nếu S1 đã kiểm chứng được văn bản gốc thì chèn dòng sai lệch có giờ do S1 soạn vào dưới mục 'Đăng ký trước trục 2' của preregistration.md (sau dòng 1238 và sau các dòng của S2, trước §10), không sửa chữ ở trên. Thêm mục v0.7 vào docs/research/CHANGELOG.md. Chạy `node docs/research/scripts/consistency-check.mjs`, `npm run typecheck`, `npm test` và dán đầu ra vào bảng kiểm. Tiêu chí xong: bảng kiểm không còn dòng lệch, ba lệnh đạt, git status sạch.",
+   "assignee": "data-scientist",
+   "dependsOn": [
+    "S5"
+   ]
+  }
+ ]
+}
