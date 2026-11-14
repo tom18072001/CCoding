@@ -1049,7 +1049,7 @@
     {
       "id": "law-356-effective",
       "value": "01/01/2026",
-      "reason": "v0.7 (S6, 14/11/2026): context/nd356-2025-note.md §2 (siêu dữ liệu chính thức; thay Nghị định 13/2023; nội dung điều khoản [CHƯA KIỂM CHỨNG])",
+      "reason": "v0.7 (14/11/2026): context/nd356-2025-note.md §0 (Điều 42 khoản 1, toàn văn trên vbpl.moj.gov.vn) và §2 (siêu dữ liệu chính thức)",
       "pattern": "Nghị định 356/2025/NĐ-CP ngày 31/12/2025[^.]{0,200}?có hiệu lực từ (01/01/2026)",
       "files": ["paper/paper.md"],
       "exceptions": []

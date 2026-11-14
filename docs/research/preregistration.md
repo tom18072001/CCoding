@@ -1241,6 +1241,8 @@ Phòng Nghiên cứu thẩm định lại ở BRIEF-19 K1: chạy lại và đ�
 
 **Sai lệch tham chiếu pháp lý — Nghị định 356/2025/NĐ-CP (14/11/2026 13:59, S1 soạn, S6 chèn).** Dòng "Căn cứ pháp lý" ở trên (đăng ký 12/11) ghi Nghị định 356/2025/NĐ-CP chưa đọc lại văn bản gốc. Trong BRIEF-20 S1, số hiệu, ngày ban hành 31/12/2025 và ngày hiệu lực 01/01/2026 được xác nhận từ cổng chính thức (vanban.chinhphu.vn, congbao.chinhphu.vn); **nội dung điều khoản vẫn chưa đọc được từ bản chính thức** (PDF không có lớp chữ), nên việc thay thế Nghị định 13/2023/NĐ-CP và số điều (42, 8, 29, 19–20, 17–18) lấy từ nguồn thứ cấp và giữ [CHƯA KIỂM CHỨNG]. Không thay đổi thiết kế, ngưỡng hay kết quả đo; chỉ thay nhãn pháp lý của đoạn bảo vệ dữ liệu. Chi tiết: `docs/research/context/nd356-2025-note.md`.
 
+**Cập nhật tham chiếu pháp lý — Nghị định 356/2025/NĐ-CP (14/11/2026, người điều phối, sau khi gộp BRIEF-20).** Toàn văn có lớp chữ trên Cơ sở dữ liệu quốc gia về văn bản pháp luật (vbpl.moj.gov.vn) được đọc: Điều 42 khoản 1 (hiệu lực 01/01/2026), Điều 42 khoản 2 (Nghị định 13/2023/NĐ-CP hết hiệu lực), Điều 8 khoản 3 và Điều 29 khoản 1 điểm a (72 giờ, hai trường hợp), Điều 17, 18, 19 khớp nguồn thứ cấp. Nhãn [CHƯA KIỂM CHỨNG] của các số điều này được gỡ trong bài báo; chưa đối chiếu bản ký số đăng Công báo. Dòng "Căn cứ pháp lý" đã đăng ký ở trên giữ nguyên chữ. Không thay đổi thiết kế, ngưỡng hay kết quả đo. Chi tiết: `docs/research/context/nd356-2025-note.md` §0.
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.
