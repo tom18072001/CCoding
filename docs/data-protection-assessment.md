@@ -785,3 +785,5 @@ Cổng thiết kế (không phải cổng phát hành). Theo `docs/research/prer
 **Nghĩa vụ pháp lý / lưu giữ.** Không DLCN ⇒ không có nghĩa vụ thông báo sự cố 72 giờ hay hồ sơ đánh giá tác động cho thay đổi này. Nhật ký `guard.block` và RUNLOG của phép đo: giữ ≥ 6 tháng (xử lý dữ liệu quan trọng của dự án) và nhật ký hệ thống ≥ 12 tháng như mục D13 ở trên; log làm chứng cứ giữ chuỗi băm.
 
 **Khuyến nghị cho chủ dự án:** (i) đo lại trục 2 (b) bằng phiên mới sau khi gộp D18a; (ii) giữ nguyên chính sách D11; (iii) không coi bộ kiểm lệnh là ranh giới bảo mật khi sandbox chưa chạy.
+
+**D21/K1 (hết giờ khác hết hạn mức):** chỉ thêm trường số liệu kỹ thuật (`stopReason`, `durationMs`, `attempt`) vào `calls.jsonl`, không có PII/văn bản; lời nhắc thử lại chỉ chứa tên tệp và tiêu đề commit trong worktree nhiệm vụ, đi qua `redact` như mọi lời nhắc; nhãn Nội bộ, không phát sinh nghĩa vụ DLCN; giữ nhật ký ≥ 6 tháng theo mục trên.
