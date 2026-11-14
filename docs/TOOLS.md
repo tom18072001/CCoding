@@ -249,7 +249,7 @@ Bảng dưới là kết quả kiểm chặn nhầm độc lập, khớp `test/o
 | `tee log.txt`, `echo x \| tee -a log.txt` | Bash | Qua | Qua | |
 | `curl -o vendor/x.js https://example.invalid/x.js` | Bash | Qua | Qua | không thực thi |
 | `wget -O vendor/x.js https://example.invalid/x.js` | Bash | Qua | Qua | không thực thi |
-| `echo x > <thư mục tạm>/ccoding-out.txt`, `/tmp/out.txt` | Bash | Qua | Qua | `$TMPDIR` (Linux) hoặc `%TEMP%` (Windows) có ca riêng |
+| `echo x > <thư mục tạm>/ccoding-out.txt`, `<thư mục tạm>/out.txt` | Bash | Qua | Qua | `$TMPDIR` (Linux) hoặc `%TEMP%` (Windows) có ca riêng |
 | `cd sub && mkdir -p dist` | Bash | Qua | Qua | |
 | `Get-ChildItem` | PowerShell | Qua | Qua | |
 | `Set-Content out.txt x` | PowerShell | Qua | Qua | |

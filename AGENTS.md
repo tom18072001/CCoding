@@ -14,9 +14,10 @@
 ## Kiểm tra trước khi commit
 
 ```bash
-npm run typecheck
-npm test
+npm run check
 ```
+
+`npm run check` chạy kiểm kiểu, lint, test và các bộ test bench/nghiên cứu; lint đỏ là hỏng. Luật và cách thêm ngoại lệ: `docs/LINT.md`.
 
 ## Data Protection Gate (bắt buộc)
 

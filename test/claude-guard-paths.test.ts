@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { guardDecision } from '../src/tools/claude-guard.js';
+import { guardDecision, type GuardConfig } from '../src/tools/claude-guard.js';
 import { pathImplFor, realInsideRoot, resolveFrom } from '../src/tools/guard-paths.js';
 import { pathInside } from '../src/tools/shell-policy.js';
 
@@ -26,7 +26,7 @@ fs.mkdirSync(path.join(cfgDir, 'projects', 'slug', SID, 'khac'), { recursive: tr
 fs.writeFileSync(path.join(cfgDir, 'projects', 'slug', SID, 'khac', 'x.txt'), 'x');
 fs.writeFileSync(path.join(cfgDir, 'settings.json'), '{}');
 const env = { CLAUDE_CONFIG_DIR: cfgDir } as NodeJS.ProcessEnv;
-const cfg = { root, deny: [], allowGitCommit: false };
+const cfg: GuardConfig = { root, deny: [], allowGitCommit: false };
 const dec = (tool: string, p: string, extra: Record<string, unknown> = {}, c = cfg) =>
   guardDecision({ tool_name: tool, tool_input: { file_path: p }, ...extra }, c, env);
 

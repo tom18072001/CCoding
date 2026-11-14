@@ -18,3 +18,8 @@ export function testApp(extra: { reviewRejectRate?: number; acceptRejectRate?: n
   });
   return Object.assign(app, { cleanup: () => fs.rmSync(dataDir, { recursive: true, force: true }) });
 }
+
+/** Đọc thân JSON của phản hồi với kiểu do test khai báo (Response.json() trả unknown). */
+export async function readJson<T>(res: Response): Promise<T> {
+  return (await res.json()) as T;
+}

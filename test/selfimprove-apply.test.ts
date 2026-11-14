@@ -169,7 +169,7 @@ test('CT-17: đủ 7 bước (mock) ⇒ chuỗi băm không broken; rollback có
   const before = fs.readFileSync(path.join(root, 'src', 'prompts.ts'), 'utf8');
   recordProposed('P-1', PROMPT_PATCH(root), meta, d); // bước 3
   recordAbStarted({ pid: 'P-1', phase: 'confirm', lockSha256: 'l', tasks: [], repeats: 8, runs: 160, runner: 'data-scientist', seed: 's', tokenBudget: 1, startDirs: {}, commands: { A: [], B: [] } }, d); // bước 4
-  recordAbDecision('P-1', { decision: 'pass', token: { est: 0.9, lo: 0.8, hi: 0.93 }, time: { est: 1, lo: 0.9, hi: 1 }, safety: { est: 0, lo: -0.01, hi: 0.01 }, nConfirm: 160, dropped: { A: 0, B: 0 }, reasons: [] }, d);
+  recordAbDecision('P-1', { decision: 'pass', token: { est: 0.9, lo: 0.8, hi: 0.93 }, time: { est: 1, lo: 0.9, hi: 1 }, safety: { est: 0, lo: -0.01, hi: 0.01 }, pRaw: { token: 0.01, time: 0.01, safety: 0.01 }, pHolm: { token: 0.01, time: 0.01, safety: 0.01 }, nConfirm: 160, dropped: { A: 0, B: 0 }, reasons: [] }, d);
   recordDirector('approved', 'P-1', d, ACTOR); // bước 5
   const { tag } = applyApproved('P-1', d, { verify: pass, actor: ACTOR }); // bước 6
   assert.equal(tag, 'prompts-v1');

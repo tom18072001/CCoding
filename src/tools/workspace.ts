@@ -351,7 +351,7 @@ function walk(root: string, dir: string, depth: number, out: string[], limit: nu
   }
 }
 
-async function runShell(command: string, cwd: string, timeoutSec: number, maxChars: number, signal?: AbortSignal): Promise<{ code: number | null; out: string; timedOut: boolean }> {
+async function runShell(command: string, cwd: string, timeoutSec: number, maxChars: number, signal?: AbortSignal, extraEnv?: Record<string, string>): Promise<{ code: number | null; out: string; timedOut: boolean }> {
   const [file, args] = isWin
     ? [
         'powershell.exe',
@@ -366,7 +366,7 @@ async function runShell(command: string, cwd: string, timeoutSec: number, maxCha
         ],
       ]
     : [fs.existsSync('/bin/bash') ? '/bin/bash' : '/bin/sh', ['-c', command]];
-  return runProc(file, args as string[], cwd, timeoutSec, maxChars, signal);
+  return runProc(file, args as string[], cwd, timeoutSec, maxChars, signal, extraEnv);
 }
 
 /** Chạy một chương trình (không qua shell khi gọi trực tiếp) — gộp stdout/stderr, cắt đầu ra, hết giờ/hủy thì dừng cả cây tiến trình. */
@@ -696,7 +696,7 @@ export function checkSummary(out: string): string {
 export async function runCheckCommand(
   command: string,
   root: string,
-  o: { denyCommands: string[]; timeoutSec: number; maxChars: number; signal?: AbortSignal },
+  o: { denyCommands: string[]; timeoutSec: number; maxChars: number; signal?: AbortSignal; env?: Record<string, string> },
 ): Promise<CheckResult> {
   const t0 = Date.now();
   const why = deniedReason(command, o.denyCommands, false);
@@ -704,7 +704,7 @@ export async function runCheckCommand(
   const real = fs.realpathSync(root);
   const unlock = await lockWorkspace(real, o.timeoutSec, o.signal);
   try {
-    const r = await runShell(command, real, o.timeoutSec, o.maxChars, o.signal);
+    const r = await runShell(command, real, o.timeoutSec, o.maxChars, o.signal, o.env);
     const out = r.out.trim();
     return {
       command,

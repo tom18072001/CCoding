@@ -60,7 +60,7 @@ test('P8: pha lập kế hoạch của dự án kèm nhiệm vụ trước; th�
     // prompt lập kế hoạch có khối nhiệm vụ trước
     const reg = app.registry;
     const dept = reg.department('dev');
-    const built = planPrompt({ task: app.store.get(t2.id)!, dept, cwd: ws, roster: reg.members('dev'), projectHistory: { text: '### T-1 — Việc cũ (xong)', rel: '.ccoding/x/inputs/PROJECT-HISTORY.md' } });
+    const built = planPrompt({ task: app.store.get(t2.id)!, dept, cwd: ws, roster: reg.members('dev'), projectHistory: { text: '### T-1 — Việc cũ (xong)', rel: '.ccoding/x/inputs/PROJECT-HISTORY.md' } }, undefined);
     assert.match(built.prompt, /## Nhiệm vụ trước của dự án \(mới nhất trước\) — chi tiết: `\.ccoding\/x\/inputs\/PROJECT-HISTORY\.md`/);
   } finally {
     app.cleanup();

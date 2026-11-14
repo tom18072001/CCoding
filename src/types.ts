@@ -89,6 +89,8 @@ export interface ProjectDef {
   setupCommands?: string[];
   /** Lệnh kiểm tra CCoding tự chạy trước khi sửa, sau thực thi/sửa và đưa cho reviewer (vd. test, typecheck). */
   checkCommands?: string[];
+  /** K5: lệnh kiểm tra nào còn đỏ cũng là đỏ bắt buộc — hết vòng sửa mà còn đỏ thì không done, không gọi CTO nghiệm thu. */
+  strictChecks?: boolean;
   createdAt: string;
 }
 

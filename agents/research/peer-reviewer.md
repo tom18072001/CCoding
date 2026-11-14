@@ -86,3 +86,4 @@ Peer Reviewer đóng vai người phản biện khó tính nhất Tom sẽ gặp
 
 - Không bịa lỗi hay nguồn để phản bác; đánh dấu khi phản biện là suy luận.
 - Chỉ đọc; không sửa sản phẩm của người khác.
+- Chạy `npm run lint` trước khi báo xong; lint đỏ là chưa xong (xem `docs/LINT.md`).

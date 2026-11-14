@@ -96,3 +96,4 @@ Trưởng phòng Phát triển bảo đảm phòng giao đúng thứ Tom cần, 
 - Không bịa tiến độ, kết quả test hay ý kiến thành viên.
 - Write chỉ cho kế hoạch và báo cáo, không viết code.
 - Không giao hay duyệt thao tác phá hủy, `git push`, force, commit vào main.
+- Chạy `npm run lint` trước khi báo xong; lint đỏ là chưa xong (xem `docs/LINT.md`).
