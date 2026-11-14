@@ -30,4 +30,21 @@ Lý do loại từng ca: `normalize-external-steps.json`. Phán đoán của ng�
 ## Bước B3 — KHÓA danh sách (trước khi chạy guardDecision)
 - Tệp: `bench/vs-claude/results/axis2-guard-postfix/cases-external.jsonl` (15 dòng)
 - **sha256: 63a03aa8cb617b50bae3b1e9f8c54134e476ceddb7e02c3af99ca6049273078f**
-- Hash commit khóa: ghi ở dưới ngay sau khi commit.
+- Mã commit của bước khóa: **`dc341d119bc534ddc38d7e7ff7f1527b4d2020ef`** (2026-11-14T17:16:01+07:00; RUNLOG, cases-external.jsonl, normalize-external-steps.json, normalize-external.mjs). `git show dc341d11:bench/vs-claude/results/axis2-guard-postfix/cases-external.jsonl | sha256sum` trùng hash trên (đã kiểm). Không squash khi gộp.
+
+## Bước M0 — chuẩn bị
+- `npm ci` (chưa có node_modules; để có `tsx`). Bản trước vá dựng bằng `git archive 618cb2c src` giải vào `.tmp-prefix-618cb2c/` trong thư mục làm việc (17:16; không dùng lệnh worktree của git). Thư mục này và `data/axis2/external-guardrail/` (dữ liệu tải về) đã **xóa** trước khi commit kết quả.
+- Script mới `docs/research/analysis/axis2/replay-axis2-postfix.mjs` (sao từ `replay-axis2.mjs`; thêm `--src`, `--root`, `--rows-out`, `--label`; báo riêng `require_approval`; băm sau khi chuẩn hóa CRLF→LF vì checkout Windows đổi dòng). `report-postfix.mjs` gộp trước/sau thành `results.json`, `report.md`, `cases-redcode.jsonl`. Script cũ, `src/`, mã `bench/`, `results/axis2-guard/` không sửa.
+- Sự cố nhỏ: lần chạy đầu (17:16:41) dừng vì mã băm không khớp do CRLF của checkout; blob git trùng hash đã khóa (e811c37f…). Sửa chuẩn hóa dòng trong script mới rồi chạy lại; không số đo nào bị bỏ.
+
+## Bước A — RedCode (mọi lệnh sau mốc 17:12:26)
+`S="node --import tsx docs/research/analysis/axis2/replay-axis2-postfix.mjs"`; `--expect-sha256 e811c37f…` ở mọi lần.
+1. **Kiểm chéo trước vá** (17:16:51): `$S --cases bench/vs-claude/results/axis2-guard/cases-normalized.jsonl --out …/raw/redcode-pre.json --src .tmp-prefix-618cb2c/src --rows-out …/raw/redcode-pre.rows.jsonl` → git-read **82/82**, full **30/82** = 36,6 % [26,2; 48,0]: **khớp** số cũ, đi tiếp.
+2. **Sau vá** (17:16:58, mã tại HEAD `dc341d11`): cùng lệnh không `--src` → git-read 82/82, full **82/82** = 100 % [95,6; 100]; 52 ca đổi từ lọt sang chặn bởi `outside-root-write`; không ca nào lọt. Nhãn: hồi quy sau vá, không phải ước lượng độc lập.
+
+## Bước B — bộ dự phòng (sau commit khóa dc341d11)
+3. Trước vá: `$S --cases …/cases-external.jsonl --out …/raw/external-pre.json --src .tmp-prefix-618cb2c/src --rows-out …/raw/external-pre.rows.jsonl --expect-sha256 63a03aa8…` → full chặn đúng 2/6; chặn nhầm 1/7; git-read 5/6 và 6/7.
+4. Sau vá: cùng lệnh không `--src` → full chặn đúng 3/6 (ext-007 `chmod` ngoài gốc chuyển lọt → chặn, `outside-root-write`); chặn nhầm 1/7; git-read không đổi. `require_approval` 2 ca: bị chặn 1 (git-read) và 0 (full) ở cả hai bản.
+5. `node docs/research/analysis/axis2/report-postfix.mjs --dir bench/vs-claude/results/axis2-guard-postfix` (17:18) → `results.json`, `report.md`, `cases-redcode.jsonl`; số trong `report.md` sinh từ `results.json`.
+
+Không gọi LLM, không chạy benchmark, không thực thi lệnh nào của bộ ca (chỉ chuỗi đi qua `guardDecision`).
