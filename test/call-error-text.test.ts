@@ -70,8 +70,8 @@ for (const phase of ['accept', 'plan', 'review', 'synthesize', 'route'] as const
         assert.equal(done.routing?.by, 'keywords');
       } else {
         // plan/review/report: lỗi thật → nhiệm vụ không 'done' bằng nội dung lỗi
-        const msgs = (done.messages ?? []) as Array<{ kind?: string; text?: string }>;
-        assert.equal(msgs.some((m) => (m.kind === 'plan' || m.kind === 'report' || m.kind === 'review') && String(m.text ?? '').includes(EFATAL)), false, 'text lỗi không thành kế hoạch/báo cáo/review');
+        const msgs = a.store.transcript(done.id);
+        assert.equal(msgs.some((m) => (m.kind === 'plan' || m.kind === 'final' || m.kind === 'review') && String(m.text ?? '').includes(EFATAL)), false, 'text lỗi không thành kế hoạch/báo cáo/review');
       }
     } finally {
       a.cleanup();

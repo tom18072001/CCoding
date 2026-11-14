@@ -5,7 +5,7 @@ import path from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { createServer } from '../src/server.js';
 import { fileSafeName } from '../src/uploads.js';
-import { testApp } from './helpers.js';
+import { readJson, testApp } from './helpers.js';
 
 test('tải tệp lên qua API → đính kèm nhiệm vụ → nội dung vào prompt lập kế hoạch, tệp tạm bị xóa', async () => {
   const app = testApp();
@@ -25,7 +25,7 @@ test('tải tệp lên qua API → đính kèm nhiệm vụ → nội dung vào 
       body: '# Yêu cầu\nMô-đun báo cáo tuần phải có bộ lọc theo phòng ban. MÃ-KIỂM-TRA-4711\n',
     });
     assert.equal(up.status, 201);
-    const meta = await up.json();
+    const meta = await readJson<{ id: string; kind: string; chars: number }>(up);
     assert.equal(meta.kind, 'text');
     assert.ok(meta.chars > 20);
     assert.equal((await fetch(`${base}/api/uploads`, { method: 'POST', headers: { 'content-type': 'text/plain' }, body: 'x' })).status, 400, 'thiếu tên tệp');
@@ -35,7 +35,7 @@ test('tải tệp lên qua API → đính kèm nhiệm vụ → nội dung vào 
       body: JSON.stringify({ brief: 'Lập kế hoạch theo tài liệu đính kèm', mode: 'department', department: 'dev', options: { review: false, discussionRounds: 0 }, attachments: [meta.id] }),
     });
     assert.equal(res.status, 201);
-    const t = await res.json();
+    const t = await readJson<{ id: string; attachments: { textPath: string }[] }>(res);
     assert.equal(t.attachments.length, 1);
     const done = await app.orchestrator.waitFor(t.id);
     assert.equal(done.status, 'done', done.error);
@@ -47,9 +47,9 @@ test('tải tệp lên qua API → đính kèm nhiệm vụ → nội dung vào 
     const text = fs.readFileSync(path.join(dir, 'prompts', plan), 'utf8');
     assert.ok(text.includes('Tài liệu đính kèm') && text.includes('MÃ-KIỂM-TRA-4711'));
     assert.ok(fs.existsSync(path.join(dir, 'inputs', 'BRIEF.md')));
-    const ev = await (await fetch(`${base}/api/tasks/${t.id}/events?limit=50`)).json();
+    const ev = await readJson<unknown[]>(await fetch(`${base}/api/tasks/${t.id}/events?limit=50`));
     assert.ok(Array.isArray(ev) && ev.length > 0);
-    const calls = await (await fetch(`${base}/api/tasks/${t.id}/calls`)).json();
+    const calls = await readJson<object[]>(await fetch(`${base}/api/tasks/${t.id}/calls`));
     assert.ok(calls.length >= 2 && 'sizes' in calls[0]);
   } finally {
     srv.close();

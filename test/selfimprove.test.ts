@@ -12,7 +12,7 @@ import {
   buildAbSpec, clusterIncidents, collectGuardBlocks, reviewIssueKey, confirmRunsOnLock, decide, loadIncidents, onLog, openAnalysisTask, openPatchTask, persistClusters, recordAbStarted, toIncident, verifyHoldout,
   type AbRun, type Cluster, type Deps, type Incident,
 } from '../src/selfimprove.js';
-import type { LogEntry, NewTaskInput, Task } from '../src/types.js';
+import type { Classification, LogEntry, NewTaskInput, Task, TaskOptions } from '../src/types.js';
 
 const tmp = (p: string) => fs.mkdtempSync(path.join(os.tmpdir(), `ccoding-${p}-`));
 const mkDeps = (over: Partial<Deps['cfg']> = {}): Deps & { dir: string } => {
@@ -24,7 +24,11 @@ const events = (d: Deps, prefix: string) => {
   const f = d.logs.fileFor('system');
   return (fs.existsSync(f) ? fs.readFileSync(f, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : []).filter((e) => String(e.kind).startsWith(prefix));
 };
-const mkTask = (classification = 'internal', options: Record<string, unknown> = {}) => ({ id: 'T-1', classification, options }) as Pick<Task, 'id' | 'classification' | 'options'>;
+const mkTask = (classification: Classification = 'internal', options: Partial<TaskOptions> = {}): Pick<Task, 'id' | 'classification' | 'options'> => ({
+  id: 'T-1',
+  classification,
+  options: { discussionRounds: 0, review: false, maxParallel: 1, maxRevisions: 0, budgetTokens: 0, budgetMode: 'pause', ...options },
+});
 const revEntry = (items: { error?: string; cause?: string; fix?: string; verifyCmd?: string }[], taskId = 'T-1'): LogEntry => ({
   ts: '2026-11-03T10:00:00.000Z', level: 'info', kind: 'revise.incident', msg: 'x', taskId, agentId: 'senior-swe', department: 'dev', phase: 'revise',
   data: { taskId, subtaskId: 'S1', round: 1, items, b02: { blocked: false, rounds: 0 }, parsed: true },
@@ -59,7 +63,7 @@ test('CT-02: lỗi 429/hạn mức → null và ghi incident.skipped {reason:inf
 });
 
 test('CT-03: task confidential/restricted bị loại; log skip không có symptom/agentProposal', () => {
-  for (const cls of ['confidential', 'restricted']) {
+  for (const cls of ['confidential', 'restricted'] as const) {
     const d = mkDeps();
     assert.equal(toIncident(revEntry([{ error: 'e', cause: 'c', fix: 'SECRET-FIX-TEXT' }]), mkTask(cls), d), null);
     assert.equal(loadIncidents(d.dataDir).length, 0);
@@ -307,7 +311,7 @@ test('CT-10: selfImprove.enabled=false → băm prompt execute/revise/synthesize
     SNAPSHOT,
   );
   // móc orchestrator khi tắt: onLog và các bước chủ động đều no-op/từ chối, không ghi sự kiện
-  const d = { ...mkDeps(), cfg };
+  const d = { ...mkDeps(), cfg: cfg.selfImprove };
   onLog(revEntry([{ error: 'e', cause: 'c', fix: 'f' }]), mkTask(), d);
   assert.throws(() => openAnalysisTask({ key: { category: 'FM-3' } } as Cluster, { ...d, submit: () => ({ id: 'x' }) }));
   assert.throws(() => buildAbSpec('P1', 'screen', d));
@@ -382,7 +386,7 @@ test('S3: công tắc tắt (enabled/collect=false) → không ghi bất kỳ ng
 });
 
 test('S3: task confidential/restricted → bỏ qua cả ba nguồn mới và ghi incident.skipped', () => {
-  for (const cls of ['confidential', 'restricted']) {
+  for (const cls of ['confidential', 'restricted'] as const) {
     const d = mkDeps();
     for (const e of [reviewEv([{ subtask: 'S1', severity: 'blocker', key: 'k' }]), srcEntry('checks.regressed', { round: 1, commands: 1 }), srcEntry('guard.block', { tool: 't', rule: 'R' })]) assert.equal(toIncident(e, mkTask(cls), d), null);
     assert.equal(loadIncidents(d.dataDir).length, 0);

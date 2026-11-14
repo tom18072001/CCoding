@@ -256,6 +256,7 @@ test('vai trò không có quyền chạy lệnh (Kiến trúc sư) vẫn giải 
     const done = await a.orchestrator.waitFor(t.id);
     assert.equal(done.status, 'done', done.error);
     assert.equal(done.runs[0].subtasks.find((s) => s.id === 'S2')?.attempts, 2, 'Kiến trúc sư gộp sau nên là người giải quyết xung đột');
+    assert.ok(done.branch, 'nhiệm vụ có nhánh');
     assert.equal(gitc(repo, 'show', `${done.branch}:shared.txt`), 'tu backend-dev\ntu solution-architect');
     assert.match(gitc(repo, 'log', '--format=%s', done.branch), /gộp lại ccoding\/[^ ]+-xd1 \(S2\)/, 'CCoding tự hoàn tất merge');
   } finally {
@@ -281,7 +282,7 @@ test('lượt giải quyết xung đột để lại dấu xung đột → KHÔN
     const done = await a.orchestrator.waitFor(t.id);
     const run = done.runs[0];
     const redo = run.subtasks.find((s) => s.conflict);
-    assert.ok(redo, 'có hạng mục xung đột');
+    assert.ok(redo?.conflict, 'có hạng mục xung đột');
     assert.equal(redo.status, 'failed');
     assert.match(redo.error ?? '', /còn dấu xung đột/);
     assert.match(redo.conflict.branch, /-xd1$/);
@@ -454,6 +455,7 @@ test('hạng mục chỉ ghi tài liệu cũng làm trong worktree con (không b
     const done = await a.orchestrator.waitFor(t.id);
     assert.equal(done.status, 'done', done.error);
     assert.equal(gw.stats.subPrompts, 2, 'cả hai hạng mục làm trong worktree con');
+    assert.ok(done.branch, 'nhiệm vụ có nhánh');
     assert.equal(gitc(repo, 'show', `${done.branch}:docs/adr.md`), 'ban cuoi');
     const log = gitc(repo, 'log', '--format=%s', done.branch);
     assert.doesNotMatch(log, /phần đã làm trước khi gộp/, log);
