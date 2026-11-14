@@ -5,6 +5,17 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 16b (T-20261114-214506-fe1, BRIEF-22b, 14/11/2026): đóng C2, FX19, FX20, bảng điểm 20/20
+
+Không gọi LLM, không sửa `src/` hay mã `bench/`. Phần K2 (dữ liệu, S3):
+
+- **Mốc `tệp:dòng` mới:** `analysis/decisions/logic-map.md` có dòng `Mốc: ccc76cc0840110debab2a0e69f64b10bee965533` (trước là `b146b87c`; `src/` đã đổi vì D16, D16b, D17). Cập nhật mọi tham chiếu vào `src/` trong `logic-map.md`, `report.md`, `improvement-backlog.md` (gồm B-20…B-49), `model-per-role.md`, `scorecard.md`, mỗi tham chiếu kèm ký hiệu trong ngoặc.
+- **FX19:** `scripts/logic-map-check.mjs` báo 400 tham chiếu, 359 có ký hiệu, 0 lệch ở mốc (exit 0). 41 tham chiếu không ký hiệu đều trỏ vào `bench/`, `arms.json`, `ccoding.config.json` hoặc kết quả `.json`, ngoài phạm vi kiểm.
+- **FX20:** `consistency-check.mjs` có mục quét đường dẫn máy; 10 đường dẫn thư mục tạm trong `run-plan.md`, `improvement-backlog.md`, `cache-diagnostic-result.md` đổi thành `<thư-mục-tạm>/…`.
+- **`facts.json`:** mọi ngoại lệ `"line"` đổi thành `"anchor"` (gồm `c1c8-single-labeller` và ngoại lệ `paper.md` cũ ở dòng 831, nay 862). Bỏ ngoại lệ `improvement-backlog.md:289` vì cụm cũ không còn trong tệp.
+- **Dọn:** xóa hai tệp chèn `backlog-b20-insert.md`, `run-plan-s10-insert.md` (đã chèn ở S1) và thư mục tạm `.tmpmig/`.
+- Trạng thái "12/34 `tệp:dòng` lệch" (C2) không còn: 0 lệch.
+
 ## Vòng 4, gói 17 (T-20261114-165455-a63, BRIEF-23, 14/11/2026): bài báo v0.7.2, đo lại trục 2 (b) sau vá, cascade E7
 
 Không gọi LLM, không sửa `src/`, mã `bench/`, `preregistration.md` (§9 chỉ thêm, ở bước S1), tệp context hay kết quả cũ. Số mới lấy nguyên từ `bench/vs-claude/results/axis2-guard-postfix/{report.md,results.json}` và `analysis/e7-cascade.md`; không tính lại. Mỗi số mới có khóa `axis2pf-*` hoặc `e7casc-*` trong `facts.json`.
