@@ -71,3 +71,54 @@ test('D21b: cấu hình khớp quy tắc cho nhóm hằng số và nhóm lịch 
   if (triggers(h)) assert.ok(est.historyFactor !== undefined && est.historyFactor !== 1, 'điều kiện đạt nhưng chưa chỉnh');
   else assert.equal(est.historyFactor, undefined);
 });
+
+// D21b (vòng bổ sung): nhóm con của nhóm lịch sử và đối chiếu bảng tài liệu với JSON.
+interface RowX extends Row { department: string; lane: string; subtasks: number; estimate: Row['estimate'] & { work?: number } }
+const DOC = 'docs/diagnostics/estimate-research.md';
+const rowsX = (): RowX[] => (JSON.parse(fs.readFileSync(FILE, 'utf8')) as { rows: RowX[] }).rows;
+const isHist = (r: RowX): boolean => r.estimate.basis.startsWith('theo lịch sử');
+const vi = (x: number): string => x.toFixed(3).replace('.', ',');
+const ratio = (r: RowX): number => r.actual.total / r.estimate.tokens;
+function line(label: string, vals: number[]): string {
+  const s = [...vals].sort((a, b) => a - b);
+  const q1 = quantile(s, 0.25), q3 = quantile(s, 0.75);
+  return `| ${label} | ${s.length} | ${vi(quantile(s, 0.5))} | ${vi(q1)} | ${vi(q3)} | ${vi(q3 - q1)} |`;
+}
+function docSection(from: string, to: string): string[] {
+  const text = fs.readFileSync(DOC, 'utf8').replace(/\r\n/g, '\n');
+  const d21b = text.slice(text.indexOf('## D21b'));
+  const a = d21b.indexOf(from);
+  assert.ok(a >= 0, `thiếu mục ${from}`);
+  const b = d21b.indexOf(to, a + from.length);
+  return d21b.slice(a, b < 0 ? undefined : b).split('\n');
+}
+
+test('D21b: nhóm con lịch sử (phòng, số hạng mục, thật/work) khớp bảng Tổng hợp; mọi dòng lane = full', () => {
+  const rows = rowsX();
+  assert.ok(rows.every((r) => r.lane === 'full'), 'có dòng không phải full: tài liệu phải đổi kết luận về làn');
+  const h = rows.filter(isHist);
+  const work = rows.filter((r) => r.estimate.work !== undefined);
+  const expected = [
+    line('Lịch sử (cả nhóm)', h.map(ratio)),
+    line('Lịch sử, Dev', h.filter((r) => r.department === 'dev').map(ratio)),
+    line('Lịch sử, Nghiên cứu', h.filter((r) => r.department === 'research').map(ratio)),
+    line('Lịch sử, ≤ 5 hạng mục', h.filter((r) => r.subtasks <= 5).map(ratio)),
+    line('Lịch sử, > 5 hạng mục', h.filter((r) => r.subtasks > 5).map(ratio)),
+    line('Thật/work (dòng có work)', work.map((r) => r.actual.total / r.estimate.work!)),
+  ];
+  const n = expected.map((e) => Number(e.split('|')[2]));
+  assert.deepEqual(n, [16, 8, 8, 11, 5, 10]);
+  const doc = docSection('### Tổng hợp', '### Quyết định').map((l) => l.replace(/\*\*/g, ''));
+  for (const e of expected) assert.ok(doc.includes(e), `bảng Tổng hợp thiếu/lệch dòng: ${e}`);
+});
+
+test('D21b: bảng từng dòng trong tài liệu khớp JSON hai chiều (đủ 17 dòng, không thừa)', () => {
+  const rows = rowsX();
+  const lines = docSection('### Bảng từng dòng', '### Tổng hợp').filter((l) => /^\| BRIEF-/.test(l));
+  const want = rows.map((r) =>
+    `| ${r.brief} | ${r.department} | ${r.subtasks} | ${isHist(r) ? 'lịch sử' : 'hằng số'} | ${r.estimate.tokens} | ${r.actual.total} | ${vi(ratio(r))} |`);
+  assert.equal(rows.length, 17);
+  assert.equal(lines.length, want.length, 'số dòng bảng khác số dòng JSON');
+  for (const w of want) assert.ok(lines.includes(w), `JSON có dòng mà bảng thiếu/lệch: ${w}`);
+  for (const l of lines) assert.ok(want.includes(l), `bảng có dòng thừa/lệch so với JSON: ${l}`);
+});
