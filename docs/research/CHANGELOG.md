@@ -33,6 +33,11 @@ Hạng mục K5 (@academic-writer). Không gọi LLM, không chạy benchmark, k
 
 **Việc còn lại (ghi để người kiểm):** (1) `scorecard.mjs --check`, `consistency-check.mjs`, `token-analysis.mjs --check`, `stats.test.mjs` chưa chạy trong hạng mục này; (2) đối chiếu máy từng khóa `brief22.*` với hai khối facts; (3) trạng thái F-A8 "đang sửa (gói D16)" và F-E3 "đang sửa (D16b)" lấy từ `scorecard.md`, chưa có commit mã nào trong `git log` cho F-A8; (4) mở lại trang proceedings cho các mục [V-thứ cấp] mới trước khi nộp; (5) mọi trạng thái "đã sửa" chưa được đo lại, bài không nói mức cải thiện.
 
+## Sau gói 15 (người điều phối, 14/11/2026): Điều 23 Luật 91/2025/QH15, đường dẫn máy
+
+- **Pháp lý:** Điều 23 khoản 1 Luật Bảo vệ dữ liệu cá nhân có mốc 72 giờ, thông báo cho cơ quan chuyên trách, khi vi phạm có thể gây tổn hại. Hai bản toàn văn thứ cấp và đoạn trích bản Công báo khớp nhau; bản chính thức chưa trích được chữ. `paper.md` §6.3.2 ghi đúng phạm vi đó, nhãn [CHƯA KIỂM CHỨNG với bản gốc]; ghi chú §8.4b.
+- **Đường dẫn máy:** thay đường dẫn người dùng Windows và đường dẫn máy cloud trong 32 tệp Markdown bằng `<máy-chạy>`, `<máy-cloud>` (gồm `analysis/cache-diagnostic-result.md:37` mà CTO nêu). Không sửa tệp dữ liệu thô (`*.json`, `*.jsonl`, `stdout.txt`, cấu hình và script `.ps1` trong `results/`), vì sửa sẽ làm sai mã băm đã ghi. Các tệp đó chỉ chứa đường dẫn thư mục làm việc và tên người dùng Windows mặc định, không chứa bí mật hay DLCN. `preregistration.md` không sửa (văn bản đã đăng ký).
+
 ## Vòng 4, gói 15 (T-20261114-153056-f45, BRIEF-21, 14/11/2026): bài báo v0.7.1 sửa theo phản biện K4
 
 Nguồn phát hiện: `context/k4-v07-review-2026-11-14.md` (Phần A, B, C). **Không số đo nào đổi giá trị.** Số dòng `paper.md` bên dưới là dòng của v0.7.1 (không đổi so với v0.7, vì mọi sửa nằm trong dòng sẵn có).
@@ -47,11 +52,6 @@ Nguồn phát hiện: `context/k4-v07-review-2026-11-14.md` (Phần A, B, C). **
 **Chữ và nhãn (không đổi số):** §1 VI/EN (nhãn token E8 là thước đo phụ; giới hạn 52/82 của `git-read`; "đo ở trạng thái cuối" của G-1; nhãn và phạm vi E5′; tên trục 3 "tên câu hỏi, không phải kết luận"); §2 (C7 là vòng thăm dò); quy ước nhãn ở đầu bài và §6; §6.2 (C6 "chất lượng như nhau ở 8/8 lượt"); §6.2.5 (tiêu đề và câu chẩn đoán cache hạ về [Mô tả], n = 1; bước 2 đã chạy); §6.3.1 (Bảng 16 hàng E7 Youden; "đi kèm" thay "đến từ"); §6.3.2 (Bảng 17 hàng `git-read`; đoạn Luật Bảo vệ dữ liệu cá nhân theo `context/nd356-2025-note.md` §8: Luật 91/2025/QH15, hiệu lực 01/01/2026, điều về thông báo vi phạm **[CHƯA KIỂM CHỨNG]**, vẫn không khẳng định mốc 72 giờ chung); §6.3.3 (Bảng 18: P-2, E8 token; "máy chủ lẫn với arm"); §6.4 ("Đọc đúng mức": điểm "không phân biệt được", power 0,38); §7 (điểm chạm trần không phải "không có lợi thế"; B-14, B-16, E4 cập nhật; C7 t2 chỉ minh họa); §8.3 (P chưa được người ngoài tái lập); §9 (hàng RQ2/trục 2, E8, RQ4, RQ5 chẩn đoán cache, việc còn lại); §10 (thêm Guo et al., 2024 và Quốc hội, 2025); Phụ lục A (nhãn R1–R32); Khai báo AI (vòng 4 gói 15).
 
 **Tệp nguồn sửa chữ (không đổi số đo):** `v07-axes-threats-draft.md` (câu cấm #8, #10 sửa; thêm #21–#26); `run-plan.md` (KPI là giả định của phòng, chờ giám đốc duyệt; hai đường dẫn máy → `<tmp>`, `<worktree>`); `bench/vs-claude/results/e8-parallel/report.md` (câu "không giảm token" → "không phát hiện được thay đổi token"; lời khuyên là [Khám phá], một bài); `RUNLOG.md` của `p-parallel`, `e7-cto`, `local-3e`, `b15f-main` (bỏ đường dẫn máy); `context/d11-baseline/{b7prime,study-cloud}/report.md` và `analysis/cache-diagnostic-result.md` (bỏ đường dẫn máy, phát hiện thêm C-12, C-13).
-
-## Sau gói 15 (người điều phối, 14/11/2026): Điều 23 Luật 91/2025/QH15, đường dẫn máy
-
-- **Pháp lý:** Điều 23 khoản 1 Luật Bảo vệ dữ liệu cá nhân có mốc 72 giờ, thông báo cho cơ quan chuyên trách, khi vi phạm có thể gây tổn hại. Hai bản toàn văn thứ cấp và đoạn trích bản Công báo khớp nhau; bản chính thức chưa trích được chữ. `paper.md` §6.3.2 ghi đúng phạm vi đó, nhãn [CHƯA KIỂM CHỨNG với bản gốc]; ghi chú §8.4b.
-- **Đường dẫn máy:** thay đường dẫn người dùng Windows và đường dẫn máy cloud trong 32 tệp Markdown bằng `<máy-chạy>`, `<máy-cloud>` (gồm `analysis/cache-diagnostic-result.md:37` mà CTO nêu). Không sửa tệp dữ liệu thô (`*.json`, `*.jsonl`, `stdout.txt`, cấu hình và script `.ps1` trong `results/`), vì sửa sẽ làm sai mã băm đã ghi. Các tệp đó chỉ chứa đường dẫn thư mục làm việc và tên người dùng Windows mặc định, không chứa bí mật hay DLCN. `preregistration.md` không sửa (văn bản đã đăng ký).
 
 ## Vòng 4, gói 14 (T-20261114-133920-30b, BRIEF-20, 14/11/2026): bài báo v0.7 dựng quanh ba trục, trục 2 (b), kiểm số
 

@@ -43,6 +43,8 @@
   - Phạm vi: `docs/research/**/*.md` (trừ tệp dữ liệu thô đã ghi ngoại lệ trong `CHANGELOG.md` gói 15).
   - Có đường dẫn ⇒ exit 1. Test bằng tệp tạm.
 
+- **Ngoại lệ dùng số dòng cứng trong `facts.json`:** khóa `c1c8-single-labeller` (và mọi ngoại lệ dạng `"line": N`) lệch mỗi lần bài thêm mục. Đổi `consistency-check.mjs` để ngoại lệ neo theo đoạn chữ (vd. `"anchor": "<cụm duy nhất>"`) thay cho số dòng; giữ tương thích với dạng cũ. Có test.
+
 **K3 — data-scientist: bảng điểm đủ 20/20 agent**
 - `scorecard.md` và `scorecard.mjs` thêm dòng cho 6 agent không có trong `kpi-office.json`: điều phối viên, `solution-architect`, `frontend-dev`, `data-engineer`, `business-analyst`, `ba-presales`.
 - Ghi "không có dữ liệu trong 30 ngày", không cho điểm.

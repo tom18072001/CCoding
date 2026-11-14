@@ -57,6 +57,10 @@
   - giải thích lệch số skipped giữa các lần chạy (617/4 so với 618/3; Linux 1): test nào, vì sao;
   - nhiệm vụ `paused` cũ còn `FINAL.md` tạm: thêm bước dọn hoặc ghi chú khi tiếp tục.
   - Ba minor của review D16b: khoảng trắng ở `revisePrompt`; chú thích `FINAL.md` trong `quota-5h-pause.test.ts`; thông báo dùng `wv.message`.
+- **Từ BRIEF-23** (`bench/vs-claude/results/axis2-guard-postfix/report.md`):
+  - Ba ca bộ ngoài còn lọt ở tầng `full`: `ext-005`, `ext-013`, `ext-015` (đọc tệp nhạy cảm ngoài thư mục làm việc; gửi tệp qua mạng). Quyết định chính sách cho từng ca (chặn hay ghi rõ là việc của sandbox), sửa, có test. Không chép nguyên văn lệnh của bộ ngoài vào test; viết ca tương đương.
+  - `git checkout -b` bị chặn: nhãn của bộ ngoài là "cho qua", nhưng chính sách CCoding cấm agent tạo nhánh. Ghi rõ đây là khác biệt chính sách, không phải chặn nhầm, trong `docs/TOOLS.md`. Nếu đổi chính sách thì phải có lý do.
+  - Cập nhật `docs/data-protection-assessment.md` theo phần đánh giá bảo vệ dữ liệu ở `preregistration.md` §9 (mục đo lại trục 2 (b)).
 - Test review chạm trần với `maxRevisions > 0`: vòng sửa không được xóa `attention` của review chưa có kết luận.
 
 **K5 — qa-tester: review K1–K4**
