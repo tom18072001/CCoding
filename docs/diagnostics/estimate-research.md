@@ -36,3 +36,22 @@ Hành vi hiện tại, **không đổi** (không có lỗi):
 - Ngoại lệ: vòng bổ sung (`run.followupOf`) vượt phần còn lại thì luôn dừng (log `accept.followup`, `overBudget: true`), kể cả `complete`.
 - Test: `checkEstimate … chế độ complete chỉ cảnh báo` và `budgetMode complete: …` (mới) trong `test/estimate-check.test.ts`; `pause` được kiểm ở 4 test `checkEstimate (…)` cùng tệp.
 - Lưu ý: BRIEF-19 có ước lượng (2,39M) **dưới** budget nên không cảnh báo, nhưng thật 14,6M — chính là ca hằng số bị sửa ở trên.
+
+## Hiệu chỉnh lại `runtimeFactor['claude-cli']` (D21 K3)
+
+Nhãn dữ liệu: **Nội bộ**; chỉ số tổng.
+
+**Quyết định: giữ hệ số 5, không đổi `src/config.ts`.**
+
+- Quy tắc (BRIEF-D21): chỉ đổi khi n ≥ 5 **và** lệch hệ thống quá 1,5 lần. Hệ số chỉ nhân vào phần ước lượng theo hằng số, nên n đếm các gói dưới `claude-cli` có `basis` "theo hằng số".
+- Số liệu có trong worktree: 5 hàng BRIEF-19…23 (đều `claude-cli`; chỉ BRIEF-19 theo hằng số). Thống kê tỉ số thật/ước theo hằng số: **n = 1**, trung vị = 6,11 (tỉ số trước khi có hệ số), IQR = 0 (không có ý nghĩa với n = 1). n < 5 ⇒ giữ 5.
+- Với cả 5 hàng (gồm ước theo lịch sử, không chịu hệ số, chỉ để tham khảo): n = 5 (tỉ số 6,11; 1,14; 1,78; 1,69; 0,45 ⇒ trung vị 1,69; Q1 1,14; Q3 1,78; IQR 0,64), không dùng để đổi hệ số.
+- **Không thêm hàng mới** vào `estimate-vs-actual.json`: số ước lượng lúc lập kế hoạch và token thật của các gói sau D18d nằm ở dữ liệu văn phòng phụ (`office-data`), hook chặn đọc từ worktree này; không bịa số.
+
+### Thiếu số liệu (cần người điều phối bổ sung, rồi chạy lại `test/estimate-factor.test.ts`)
+
+D18d, D19, D20, BRIEF-22c, BRIEF-22d (và gói khác xong sau D18d chưa tìm thấy). Mỗi hàng cần: `brief, department, lane, subtasks, budgetTokens, estimate{tokens,basis,at}, actual{input,output,cacheRead,cacheWrite,total,calls}, runtime`.
+
+### Test
+
+`test/estimate-factor.test.ts` đọc JSON, lọc hàng `claude-cli` theo hằng số, tính lại trung vị/IQR/n và khẳng định giá trị trong config khớp quy tắc đổi/giữ; khi bổ sung đủ số liệu mà lệch > 1,5 lần thì test đỏ cho tới khi hệ số được sửa.
