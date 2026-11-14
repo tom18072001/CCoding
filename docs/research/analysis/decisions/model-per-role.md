@@ -24,7 +24,7 @@ Thang mức bằng chứng (của K4, không trùng M1–M4 của backlog): **V�
 
 ## 2. Hai việc đáng ghi, ngoài chọn model
 
-1. **Hồ sơ nói opus nhưng ở làn nhanh chạy sonnet** (`logic-map.md` §3, `orch:1798` (`fastLane.planModel`)). Trên bench (252 lượt làn nhanh), báo cáo hay bài báo nêu "trưởng phòng dùng Opus" sẽ sai với phần lớn lượt; ở văn phòng phụ thì khác, khâu `plan` chạy Opus ở 5/5 lượt phòng (`paper.md` §6.5). E9 dùng chính chỗ này làm biến: chỉ đổi `phaseModels.plan`.
+1. **Hồ sơ nói opus nhưng ở làn nhanh chạy sonnet** (`logic-map.md` §3, `orch:1798` (`fastLane.planModel`)). Trên bench (252 lượt làn nhanh), báo cáo hay bài báo nêu "trưởng phòng dùng Opus" sẽ sai với phần lớn lượt; ở văn phòng phụ thì khác, theo `decomp-agg.json` (`office.planModels`) khâu `plan` chạy Opus ở 5/5 lượt phòng có `calls.jsonl` (5 lượt phòng, không phải 5 lượt gọi; `paper.md` §6.5). Giới hạn: `kpi-office.json` (14 lượt `plan`) và `calls-limits.json` (15 lượt `plan`) không tách lượt theo model nên không xác nhận được số này. E9 dùng chính chỗ này làm biến: chỉ đổi `phaseModels.plan`.
 2. **Trần lượt che phép đo model** ở hai vai (CTO opus ở E7: 13 lượt; reviewer ở BRIEF-D16). Đổi model trước khi sửa trần sẽ tạo kết luận sai về model. Gắn vào backlog (K6).
 
 ## 3. Giới hạn

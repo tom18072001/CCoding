@@ -17,14 +17,14 @@
 >
 > | B | Trạng thái tại `ccc76cc0` | Commit |
 > |---|---|---|
-> | B-20 | đã có mã (rule `brief-item`) | `39bd9fe3`, `39cf2f7c` |
+> | B-20 | đã có mã (rule `brief-item`; D17 `39bd9fe3`, D18a `39cf2f7c`); phần `attention plan-brief-items` đã sửa ở D18c, commit `92095b75`, **sau mốc** nên chưa có ở mốc | `39bd9fe3`, `39cf2f7c` |
 > | B-21 | đã sửa hồ sơ (ngoại lệ reviewer ở `research-lead.md:58` (`Ngoại lệ`)) | `677fe521` |
 > | B-22 | đã có mã | `179da24b` |
 > | B-23 | đã có mã (review bị bỏ có `run.review` kèm dấu vết) | `8989e920` |
 > | B-24 | một phần: `after` chờ khi nhiệm vụ trước chưa nghiệm thu; `status` vẫn `done` kèm `attention`; vòng bổ sung sau nghiệm thu | `8989e920`, `6ee72e43` |
 > | B-25 | đã có mã | `2579e012`, `8989e920` |
-> | B-26 | một phần: `run_command` nối `outsideWriteDecision`; `runCheckCommand`, `cli-agents.ts` chưa kiểm lại | `78ad5179`, `ae953e07` |
-> | B-27 | đã có mã chẩn đoán/sửa cờ "đầu ra bị cắt"; chưa đo lại | `b6c08171` |
+> | B-26 | một phần: `run_command` nối `outsideWriteDecision`; `runCheckCommand`, `cli-agents.ts` ở mốc chưa gọi `outsideWriteDecision` (đọc dòng; chưa đọc diff của `ae953e07`, D18a) | `78ad5179` (D16b), `ae953e07` |
+> | B-27 | đã có mã chẩn đoán/sửa cờ "đầu ra bị cắt" (D18b; `ab179068` nêu tách `truncated`/`turnCapped`); chưa đo lại. `turnCapped`/`stopReason` trong bản ghi lượt là phần D18c, commit `92095b75`, sau mốc | `b6c08171` |
 > | B-28 | đã sửa hồ sơ `security`, `peer-reviewer` | `93b9b252` |
 > | B-29 | đã sửa hồ sơ `data-scientist` | `93b9b252` |
 > | B-30 | đã sửa: miễn `no-sources` trong `kpi.ts`, bổ sung hồ sơ | `b6c08171`, `93b9b252` |
@@ -35,7 +35,7 @@
 > | B-35 | đã có mã (`finalTemplateGate`) | `8989e920` |
 > | B-36 | đã có mã (KPI nhất quán, dòng điều phối viên) | `53fb9bd3` |
 > | B-37 | đã sửa hồ sơ (model theo làn) | `677fe521` |
-> | B-38 | **đã làm** (`logic-map-check.mjs`, 0 lệch tại mốc) | `0d70aa06`, `cd25b769` |
+> | B-38 | **đã làm, rồi làm cứng ở BRIEF-22c**: bản đầu (`0d70aa06`, `cd25b769`) so chuỗi con trong dải dòng nên không bắt được 55/402 tham chiếu lệch; S1 `48a9cdce` làm cứng (ký hiệu đặc thù, khớp đúng dòng, `--strict` mặc định); S2 `2364a490` sửa tham chiếu, `--strict` 444/444 tại mốc | `0d70aa06`, `cd25b769`, `48a9cdce`, `2364a490` |
 > | B-39 | **đã làm** (mục đường dẫn máy trong `consistency-check.mjs`) | `0d70aa06` |
 > | B-40 | một phần: chữ ký HMAC; WORM còn là hạ tầng, cần giám đốc | `e2b72b23` |
 > | B-41…B-49 | không đổi (thí nghiệm/đo chưa chạy) | — |
@@ -484,7 +484,7 @@ Mọi đường dẫn tệp kết quả dưới đây tương đối với `benc
 | **3. Nguyên nhân gốc** | **Đã kiểm (từ tạo phẩm):** không hạng mục nào nhận `src/agg.js` và `bin/logq.js`; số hạng mục (2) khác số tóm tắt kế hoạch tự khai (4); hạng mục S2 có trường mâu thuẫn nhau. **Giả thuyết, chưa kiểm:** đầu ra pha plan hỏng một phần và `parsePlan` chỉ lấy được 2 mục (mô tả S2 giống phần chú thích lọt vào trường `description`). Kiểm cần `data/runs/T-20261102-140019-8c2/calls.jsonl` trên server cloud (cổng 7422) — **không có trong repo**, chưa đọc được. Dù nguyên nhân là LLM lập kế hoạch thiếu hay bộ phân tích cắt mất, cổng phủ dưới đây bắt được cả hai vì nó so **kết quả đã phân tích** với đề bài và tóm tắt. |
 | **4. Thay đổi đề xuất** | Thêm một bước kiểm tất định (không gọi LLM) **sau `parsePlan`, trước pha execute**, áp cho làn nhanh và làn đầy (và cho kế hoạch sau nâng cấp ở §3.3). **Quy tắc A — phần việc không ai nhận ⇒ chặn trước khi thực thi.** Tập đích `D` = các đường dẫn tệp/module nêu trong `task.brief` hoặc `planSummary` (so khớp mẫu đường dẫn có đuôi tệp hoặc tên khớp `git ls-files`, kể cả tên rút gọn như `agg.js` ↔ `src/agg.js`). Một đích được **phủ** khi xuất hiện trong `title`, `description` hoặc `deliverable` của ít nhất một hạng mục, hoặc trong danh sách `outOfScope` mà kế hoạch khai kèm lý do (vd. `src/index.js` "đã có sẵn nên không ai sửa", `:75`). `D` còn đích chưa phủ ⇒ không chạy execute; một lượt "sửa kế hoạch" (qua `Orchestrator.call()`) nhận đúng danh sách đích thiếu; vẫn thiếu ⇒ dừng, `attention = "plan-coverage"`, không chạy kế hoạch thiếu. **Quy tắc B — kế hoạch không đọc được đầy đủ ⇒ không chạy kế hoạch dở.** Kế hoạch bị coi là đọc dở khi một trong: (i) số hạng mục phân tích được khác số hạng mục tóm tắt kế hoạch tự khai (số đếm bằng chữ hoặc số: "Bốn hạng mục" ⇒ 4, ở t5 phân tích ra 2); (ii) hạng mục có `deliverable` rỗng hoặc giữ chỗ ("(không dùng)", "—"); (iii) trường mâu thuẫn trong cùng hạng mục (tên vai trong `description` khác `assignee`, như `:41` so với `:56`); (iv) bộ phân tích báo cắt cụt/JSON không đóng. Khi đó: gọi lại pha plan **một** lần; vẫn dở ⇒ dừng với `attention = "plan-unreadable"`. Không bao giờ chạy tập con hạng mục đã đọc được. |
 | **5. Hiệu quả kỳ vọng** | Ca t5 C9 lượt 2 bị chặn bởi cả A (`src/agg.js`, `bin/logq.js` chưa phủ) và B (i: 4 ≠ 2; ii: `(không dùng)`; iii: `data-engineer`/`frontend-dev`). Không chặn nhầm t1 C9 lượt 3: đề bài nêu `src/duration.js` (`bench/vs-claude/results/C9/t1-duration.ccoding-fastlane.3/ccoding-task.json:4` (“src/duration.js”)), tóm tắt kế hoạch nêu `src/parse.js`, `src/format.js`, `src/duration.js` (`bench/vs-claude/results/C9/t1-duration.ccoding-fastlane.3/ccoding-task.json:75` (“Tách module thành hai phần”)), hai hạng mục nhận đủ (`…:32, :55`); lượt đó 148/149 test ẩn với một lỗi cài đặt riêng lẻ (`bench/vs-claude/results/C9/t1-duration.ccoding-fastlane.3/result.json:39-41` (`"total": 149`)), `npm test` cuối xanh (`bench/vs-claude/results/C9/t1-duration.ccoding-fastlane.3/ccoding-task.json:171-175` (“# tests 148 · # suites 0”)) — tức **không** cùng nguyên nhân với t5. Chi phí: phép kiểm không gọi LLM; chỉ tốn một lượt plan khi bị chặn. Độ lớn về chất lượng trên bộ đo chưa biết: n = 1 ca. **Giả thuyết.** |
-| **6. Cách kiểm lại** | **(a) Phát lại offline** (không cần LLM, không tốn hạn mức): chạy hàm cổng trên mọi `bench/vs-claude/results/C*/*/ccoding-task.json` (`brief`, `runs[].planSummary`, `runs[].subtasks`). **(b) Nơi đo trên bộ đo giám đốc: H8** "Coordination failures (deliverable missing / requirements dropped)" (`bench/vs-claude/analyze.mjs:272` (“Coordination failures”)). Tên H8 mô tả **đúng loại lỗi này** ("requirements dropped" = phần việc của đề bài không ai làm), nên H8 là giả thuyết chính để kiểm B-10. **Giới hạn đã kiểm bằng đọc mã:** phán quyết H8 chỉ dựa vào tỉ lệ `formatMiss` (`bench/vs-claude/analyze.mjs:262` (`fmOf`), `bench/vs-claude/analyze.mjs:272` (“Coordination failures”)) [tại thời điểm viết B-10; ở mốc `ccc76cc0` phán quyết H8 đã chuyển sang `untouchedFileFailures`/`redAtEnd` — xem M-r1]; grader coding `gradeCode` không trả `formatMiss` (`bench/vs-claude/lib/grade.mjs:146` (`formatMiss: missing.length > 0`)) [tại thời điểm viết; ở mốc, `gradeCode` trả `formatMiss` khi có `task` — xem M-r1], nên với bài coding `fm` luôn 0 và **ca kiểu t5 không làm đổi phán quyết H8**; nó chỉ hiện ở chỉ số mô tả "failed hidden-test share" (`bench/vs-claude/analyze.mjs:262` (`fmOf`)), vốn không phân biệt "bỏ sót phần việc" với "lỗi cài đặt rải rác". Ngoài ra đối số `unknown` luôn `false` (`:99`) nên H8 không bao giờ báo "insufficient data". Đề nghị (không sửa mã; chuyển S1 ghi vào `suite-review.md` và S4 quyết định có khóa có điều kiện hay không): thêm chỉ số "bỏ yêu cầu" = tỉ lệ lượt coding có **một nhóm test ẩn hỏng toàn bộ** (nhóm = tiền tố trước `:` của tên test; t5: "tổng hợp" 37/37), và đưa chỉ số này vào phán quyết H8. **(c)** t1–t5 chưa có `task.json` trong bộ đo mới (Phòng Dev đang thêm), nên H8 trên t5 chỉ đo được sau khi Phòng Dev merge (nhánh 2 của `run-plan.md`). |
+| **6. Cách kiểm lại** | **(a) Phát lại offline** (không cần LLM, không tốn hạn mức): chạy hàm cổng trên mọi `bench/vs-claude/results/C*/*/ccoding-task.json` (`brief`, `runs[].planSummary`, `runs[].subtasks`). **(b) Nơi đo trên bộ đo giám đốc: H8** "Coordination failures (deliverable missing / requirements dropped)" (`bench/vs-claude/analyze.mjs:272` (“Coordination failures”)). Tên H8 mô tả **đúng loại lỗi này** ("requirements dropped" = phần việc của đề bài không ai làm), nên H8 là giả thuyết chính để kiểm B-10. **Giới hạn đã kiểm bằng đọc mã:** khi viết B-10, phán quyết H8 chỉ dựa vào tỉ lệ `formatMiss`; tại mốc `ccc76cc0` H8 dùng `dR` (SR-13: `untouchedFileFailures`, `redAtEnd`) còn `formatMiss` là chỉ số phụ (`bench/vs-claude/analyze.mjs:262` (`fmOf`), `bench/vs-claude/analyze.mjs:272` (“Coordination failures”)) [đã đối chiếu với mã ở mốc, M-r1]; khi viết, grader coding `gradeCode` không trả `formatMiss` (`bench/vs-claude/lib/grade.mjs:146` (`formatMiss: missing.length > 0`)) [ở mốc, `gradeCode` trả `formatMiss` khi có `task`, nhưng phán quyết H8 không dùng nó], nên **ca kiểu t5 không đi qua `formatMiss` để làm đổi phán quyết H8**; nó chỉ hiện ở chỉ số phụ `fmOf` (`bench/vs-claude/analyze.mjs:262` (`fmOf`)), vốn không phân biệt "bỏ sót phần việc" với "lỗi cài đặt rải rác". Ngoài ra đối số `unknown` luôn `false` (`:99`) nên H8 không bao giờ báo "insufficient data". Đề nghị (không sửa mã; chuyển S1 ghi vào `suite-review.md` và S4 quyết định có khóa có điều kiện hay không): thêm chỉ số "bỏ yêu cầu" = tỉ lệ lượt coding có **một nhóm test ẩn hỏng toàn bộ** (nhóm = tiền tố trước `:` của tên test; t5: "tổng hợp" 37/37), và đưa chỉ số này vào phán quyết H8. **(c)** t1–t5 chưa có `task.json` trong bộ đo mới (Phòng Dev đang thêm), nên H8 trên t5 chỉ đo được sau khi Phòng Dev merge (nhánh 2 của `run-plan.md`). |
 | **7. Rủi ro / dữ liệu** | (a) Chặn nhầm khi đề bài nhắc tệp chỉ để tham khảo ⇒ cơ chế `outOfScope` có lý do, và đo tỉ lệ chặn nhầm ở phát lại (a). (b) Bỏ lọt khi đề bài nêu phần việc không bằng đường dẫn ("thêm CLI") ⇒ quy tắc B (i) vẫn bắt nếu tóm tắt tự khai số phần; đích không có tên tệp nằm ngoài phạm vi bản đầu. (c) Vòng plan lặp ⇒ tối đa 1 lượt lại cho mỗi quy tắc. Dữ liệu: chỉ đọc `brief`, `planSummary`, `subtasks` đã có trong trạng thái nhiệm vụ; sự kiện chặn ghi qua `LogStore`; không thêm đường ghi ngoài `data/`, không đổi nhãn dữ liệu. |
 | **8. Ưu tiên** | Hiệu quả 4 / công sức 2 = 2,0. Hạng 3 (§0): ngay sau B-01/B-02, triển khai cùng B-02. |
 | **9. Giám đốc duyệt** | **Có** — thêm điểm chặn vào pipeline kế hoạch. |
@@ -801,7 +801,7 @@ Quy ước chung cho Khối C:
 - "Chấm lại" là B-49.
 - Mọi mục sửa `src/` hay `agents/` thuộc Phòng Dev. Lệnh kiểm tra của dự án: `npm run typecheck`, `npm test`.
 
-### B-20 — Cổng phủ kế hoạch kiểm hạng mục và vai bắt buộc (R19, BRIEF-22; FX1) — **đang sửa (D17 K1, D16b K4)**
+### B-20 — Cổng phủ kế hoạch kiểm hạng mục và vai bắt buộc (R19, BRIEF-22; FX1) — **đang sửa (D17 K1, D16b K4)** *[tiêu đề và các dòng "Trạng thái" của B-20…B-40 dưới đây là lúc viết (R19); trạng thái tại `ccc76cc0` ở bảng đầu tệp; đã sửa sau mốc ở D18c, commit `92095b75`]*
 
 | Trường | Nội dung |
 |---|---|
@@ -809,7 +809,7 @@ Quy ước chung cho Khối C:
 | **Chỗ sửa** | `src/plan-gate.ts`, `test/` |
 | **Tiêu chí xong** | Kế hoạch thiếu mã `K\d+` của đề bài, hoặc thiếu vai có trong roster ⇒ chặn với `rule: brief-item`. Hạng mục đề bài ghi "không làm" hoặc "chờ" ⇒ được miễn. Đề bài không có mã ⇒ hành vi không đổi |
 | **Kiểm lại** | Test D17 K1 (3 ca) và D16b K4 (3 ca); chấm lại: độ phủ hạng mục và độ phủ vai = n/n |
-| **Trạng thái** | `4b0437c8` chỉ thêm đề bài D17, chưa có commit mã |
+| **Trạng thái** | (lúc viết) `4b0437c8` chỉ thêm đề bài D17, chưa có commit mã. Tại mốc `ccc76cc0`: đã có mã, D17 `39bd9fe3`, D18a `39cf2f7c` |
 
 ### B-21 — Lời nhắc trưởng phòng không cấm hạng mục reviewer do đề bài giao (R19; FX2) — **chưa giao**
 
@@ -819,7 +819,7 @@ Quy ước chung cho Khối C:
 | **Chỗ sửa** | `agents/research/research-lead.md` (và câu tương ứng ở `agents/dev/dev-lead.md` nếu có). Đổi định dạng `agent.md` ⇒ cập nhật `docs/AGENTS-GUIDE.md`, `test/registry.test.ts` (AGENTS.md) |
 | **Tiêu chí xong** | Câu có ngoại lệ "trừ khi đề bài giao hạng mục có mã cho vai reviewer"; `npm test` xanh |
 | **Kiểm lại** | Chấm lại: mọi kế hoạch có đề bài nêu hạng mục reviewer đều có hạng mục giao reviewer (n/n) |
-| **Trạng thái** | Chưa giao; D17 chỉ sửa mã |
+| **Trạng thái** | (lúc viết) Chưa giao; D17 chỉ sửa mã. Tại mốc `ccc76cc0`: đã sửa ở D18b, commit `677fe521` |
 
 ### B-22 — Đề bài đòi review thì không được bỏ review (R19; FX3) — **đang sửa (D17 K2)**
 
@@ -849,7 +849,7 @@ Quy ước chung cho Khối C:
 | **Chỗ sửa** | (a) Vòng bổ sung: lời nhắc nghiệm thu, `parseAcceptance`, `src/orchestrator.ts` (D17 K3). (b) Chặn `after`: `src/orchestrator.ts` (`waitingOn`) |
 | **Tiêu chí xong** | (a) Tiêu chí "trong phạm vi" mở tối đa 1 vòng bổ sung. (b) Hết vòng mà vẫn chưa đạt ⇒ nhiệm vụ `after` giữ chờ, hoặc nhiệm vụ mang trạng thái riêng (ví dụ `needs_review`) |
 | **Kiểm lại** | 4 test D17 K3, cộng 1 test: nhiệm vụ trước có `accepted=false, parsed=true` ⇒ nhiệm vụ `after` không chạy. Chấm lại: tỉ lệ lượt phòng được nghiệm thu (hiện 1/5) |
-| **Trạng thái** | (a) đang sửa (D17); (b) chưa giao |
+| **Trạng thái** | (lúc viết) (a) đang sửa (D17); (b) chưa giao. Tại mốc `ccc76cc0`: sửa một phần ở D18a, commit `8989e920` (`after` chờ khi nhiệm vụ trước chưa nghiệm thu) |
 
 ### B-25 — Reviewer chạm trần lượt phải ra kết luận (R19; FX6) — **đang sửa (D16b K2)**
 
@@ -869,7 +869,7 @@ Quy ước chung cho Khối C:
 | **Chỗ sửa** | `src/tools/workspace.ts`, `src/runtimes/cli-agents.ts`, `src/tools/shell-policy.ts` |
 | **Tiêu chí xong** | Cùng một bảng lệnh cho cùng quyết định qua mọi đường; ≥ 20 lệnh dev thường gặp không bị chặn nhầm |
 | **Kiểm lại** | Test bảng lệnh (D16b K1, K3), mở rộng cho `runCheckCommand` và codex/kimi |
-| **Trạng thái** | `run_command` đang sửa (D16b); `runCheckCommand` và `cli-agents` chưa giao |
+| **Trạng thái** | (lúc viết) `run_command` đang sửa (D16b); `runCheckCommand` và `cli-agents` chưa giao. Tại mốc `ccc76cc0`: `run_command` đã sửa ở D16b, commit `78ad5179`; `runCheckCommand` và `cli-agents` vẫn chưa gọi `outsideWriteDecision` |
 
 ### B-27 — Đầu ra bị cắt ở 10/14 agent (R19; FX8) — **chưa giao; chẩn đoán trước**
 
