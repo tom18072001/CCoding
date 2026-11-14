@@ -78,6 +78,7 @@ import {
   type Classification,
   type DepartmentDef,
   type DeptRun,
+  type PlanItemSnapshot,
   type ErrorKind,
   type NewTaskInput,
   type PauseInfo,
@@ -1094,6 +1095,14 @@ export class Orchestrator {
         else final = await this.runDepartment(task, run, project, prior);
         prior = `# Từ ${registry.department(run.department).name}\n\n${final}`;
       }
+      // planOnly (điểm chặn 4): mọi run đã dừng sau cổng kế hoạch → done ngay; không worktree/FINAL.md/nghiệm thu/vòng bổ sung/attention
+      if (task.options.planOnly) {
+        task.phase = undefined;
+        task.pause = undefined;
+        task.status = 'done';
+        logs.write({ level: 'info', kind: 'task.done', msg: `Hoàn thành ${task.id} (planOnly) — ${fmtNum(totalTokens(task.usage))} token`, taskId: task.id, projectId: task.projectId, data: { usage: task.usage, planOnly: true } });
+        return;
+      }
       this.finishWorkspace(task);
       this.writeFinal(task);
       task.phase = undefined;
@@ -1505,6 +1514,8 @@ export class Orchestrator {
         pick = { lane: ch.lane, why: ch.why };
       }
     }
+    // planOnly: làn đơn không có bước lập kế hoạch → dùng làn nhanh (cùng cách lập kế hoạch với làn nhanh)
+    if (task.options.planOnly && pick.lane === 'single') pick = { lane: 'fast', why: 'planOnly không dùng làn đơn' };
     if (signals) this.laneSigs.set(task.id, signals);
     this.d.logs.write({
       level: 'info',
@@ -1624,7 +1635,10 @@ export class Orchestrator {
       task.lane = target;
       pctx.singleSlim = undefined;
       run.escalatedFrom = 'single'; // LANE-HANDOVER.md đã ghi TRƯỚC this.save() bên dưới → resume nạp lại được
-      if (target === 'fast' && !task.options.phaseModels?.plan && config.fastLane.planModel) task.options.phaseModels = { ...task.options.phaseModels, plan: config.fastLane.planModel };
+      if (target === 'fast' && !task.options.phaseModels?.plan && config.fastLane.planModel) {
+        task.options.phaseModels = { ...task.options.phaseModels, plan: config.fastLane.planModel };
+        this.planSrc.set(task.id, 'fastLane');
+      }
       run.subtasks = [];
       run.stage = undefined;
       run.review = undefined;
@@ -1784,6 +1798,8 @@ export class Orchestrator {
 
   private async runDepartment(task: Task, run: DeptRun, project: ProjectDef | undefined, prior?: string): Promise<string> {
     const { registry } = this.d;
+    // planOnly (điểm chặn 1): run đã dừng sau cổng kế hoạch (resume/tiếp tục/vòng bổ sung) → không chạy lại gì
+    if (task.options.planOnly && run.planOnly) return '';
     const dept = registry.department(run.department);
     const roster = registry.members(dept.id, project?.agents);
     const lead = registry.agent(dept.lead);
@@ -1795,7 +1811,10 @@ export class Orchestrator {
       const pick = this.pickLane(task, project, pctx);
       task.lane = pick.lane;
       if (task.lane === 'fast') {
-        if (!task.options.phaseModels?.plan && this.d.config.fastLane.planModel) task.options.phaseModels = { ...task.options.phaseModels, plan: this.d.config.fastLane.planModel };
+        if (!task.options.phaseModels?.plan && this.d.config.fastLane.planModel) {
+          task.options.phaseModels = { ...task.options.phaseModels, plan: this.d.config.fastLane.planModel };
+          this.planSrc.set(task.id, 'fastLane');
+        }
         this.message(task, dept.id, 'system', 'system', `⚡ Làn nhanh (${pick.why}): lập kế hoạch nhanh, chia việc song song, không họp${this.d.config.fastLane.finalReport === 'template' ? ', báo cáo dựng từ bàn giao' : ''}.`);
       }
       this.save(task);
@@ -1838,6 +1857,7 @@ export class Orchestrator {
     let early: Promise<unknown> | undefined;
     if (
       this.d.config.tools.earlyBaseline !== false &&
+      !task.options.planOnly &&
       !reached(run, 'finalized') &&
       this.projectCheckable(task, project) &&
       !task.projectChecks?.baseline &&
@@ -1866,6 +1886,12 @@ export class Orchestrator {
         if (planRes.error) throw new Error(`Trưởng phòng không lập được kế hoạch: ${planRes.error}`);
         plan = parsePlan(planRes.text, roster, lead, task.brief);
         run.subtasks = plan.subtasks;
+        if (task.options.planOnly) {
+          // D3: planRaw = bản sao sâu kết quả parsePlan, chụp TRƯỚC khi làn nhanh sắp lại và trước cổng; model thật của lượt plan đầu tiên
+          run.planRaw = snapshotPlan(plan.subtasks);
+          run.planModel = planRes.model;
+          run.planModelSource = this.resolvePlanModel(task, project, lead).source;
+        }
         if (task.lane === 'fast') this.shapeFastPlan(task, run, roster, lead, reviewer, pctx);
         run.planSummary = plan.summary;
         run.stage = 'planned';
@@ -1937,7 +1963,10 @@ export class Orchestrator {
         this.save(task);
         // giám đốc duyệt kế hoạch trước khi thực thi → đánh dấu chờ duyệt (dừng ở cổng trước pha thực thi, bên dưới);
         // ước tính vẫn tính để hiện trên màn duyệt, cảnh báo ngân sách chạy SAU khi duyệt
-        if (task.options.planApproval && !solo) {
+        if (task.options.planOnly) {
+          // planOnly (điểm chặn 2): không chờ duyệt kế hoạch, không cảnh báo ngân sách ước tính — chỉ dừng sau cổng
+          if (task.options.planApproval) this.d.logs.write({ level: 'info', kind: 'task.planOnly', msg: `${task.id}: planOnly — bỏ qua chờ duyệt kế hoạch (planApproval)`, taskId: task.id, projectId: task.projectId, department: dept.id });
+        } else if (task.options.planApproval && !solo) {
           this.checkEstimate(task, run, project, false);
           run.planReview = { at: nowIso(), roster: [] };
           this.save(task);
@@ -1948,7 +1977,15 @@ export class Orchestrator {
       }
 
       // B-10: cổng phủ kế hoạch (làn nhanh và đầy) — chặn kế hoạch bỏ sót đích hoặc đọc dở TRƯỚC khi thực thi
-      if (!solo && !reached(run, 'executed') && !run.planReview?.approvedAt && (!run.planGate || run.planGate.rules.length)) await this.gatePlan(task, run, dept, roster, lead, reviewer, pctx, base, plan);
+      if (!solo && !reached(run, 'executed') && !run.planReview?.approvedAt && (!run.planGate || run.planGate.rules.length)) {
+        try {
+          await this.gatePlan(task, run, dept, roster, lead, reviewer, pctx, base, plan);
+        } finally {
+          // planOnly: chụp kế hoạch cuối kể cả khi cổng chặn/dừng (bench vẫn đo được kế hoạch bị chặn)
+          if (task.options.planOnly) run.planFinal = snapshotPlan(run.subtasks);
+        }
+      }
+      if (task.options.planOnly) run.planFinal = snapshotPlan(run.subtasks);
 
     } catch (e) {
       // lập kế hoạch/họp dừng (tạm dừng, hủy, lỗi): chờ lệnh chuẩn bị/baseline đang chạy kết thúc để không bỏ tiến trình mồ côi
@@ -1956,6 +1993,17 @@ export class Orchestrator {
       throw e;
     }
     await settleEarly();
+
+    // planOnly (điểm chặn 3, DUY NHẤT trước mọi lối vào execute của luồng này): dừng sau cổng kế hoạch — không execute/review/tổng hợp/FINAL.md
+    if (task.options.planOnly) {
+      run.planOnly = true;
+      run.status = 'done';
+      run.finishedAt ??= nowIso();
+      run.phase = undefined;
+      this.d.logs.write({ level: 'info', kind: 'task.planOnly', msg: `${dept.short}: planOnly — dừng sau cổng kế hoạch (${run.subtasks.length} hạng mục, sửa ${run.planReplans ?? 0} lần)`, taskId: task.id, projectId: task.projectId, department: dept.id, data: { subtasks: run.subtasks.length, replans: run.planReplans ?? 0, model: run.planModel, source: run.planModelSource } });
+      this.save(task);
+      return '';
+    }
 
     // 2b) Cổng duyệt kế hoạch: kế hoạch đang chờ duyệt thì KHÔNG thực thi, dù tiếp tục bằng đường nào (hủy rồi tiếp tục,
     // giám đốc yêu cầu sửa phòng khác của nhiệm vụ liên phòng…) — chỉ updatePlan(approve) / Tiếp tục khi đang chờ duyệt mới mở cổng
@@ -2594,16 +2642,34 @@ export class Orchestrator {
    * B-17 (planner.difficultyModel, mặc định tắt): chấm độ khó 1–3 từ LaneSignals đã có (không thêm lượt LLM) rồi chọn model cho pha plan.
    * Không ghi đè model do người dùng chọn (options.phaseModels.plan); model mặc định của làn nhanh thì được thay. Không có tín hiệu → mức 2.
    */
+  /** Nguồn model plan do fastLane/difficulty đặt vào options.phaseModels.plan (không bền qua khởi động lại → 'phaseModels'). */
+  private planSrc = new Map<string, 'fastLane' | 'difficulty'>();
+
+  /** D2: model của pha plan và nguồn của nó — dùng chung cho ba làn và lượt sửa kế hoạch. */
+  private resolvePlanModel(task: Task, project: ProjectDef | undefined, agent: AgentDef): { model: string; source: NonNullable<DeptRun['planModelSource']> } {
+    const o = task.options;
+    if (o.planModel) return { model: o.planModel, source: 'task' };
+    if (o.phaseModels?.plan) return { model: o.phaseModels.plan, source: this.planSrc.get(task.id) ?? 'phaseModels' };
+    const pj = project?.models?.[agent.id];
+    if (pj) return { model: pj, source: 'agent' };
+    const ph = this.d.config.phases?.models?.plan;
+    if (ph) return { model: ph, source: 'phases' };
+    return { model: agent.model, source: 'agent' };
+  }
+
   private applyPlanDifficulty(task: Task): void {
     const pd = this.d.config.planner?.difficultyModel;
-    if (!pd?.enabled) return;
+    if (!pd?.enabled || task.options.planModel) return;
     const sig = this.laneSigs.get(task.id);
     const d = scoreDifficulty(sig);
     const model = modelForDifficulty(d.level, pd.models);
     const cur = task.options.phaseModels?.plan;
     const fastDefault = task.lane === 'fast' ? this.d.config.fastLane.planModel : undefined;
     const applied = !!model && (!cur || cur === fastDefault);
-    if (applied) task.options.phaseModels = { ...task.options.phaseModels, plan: model };
+    if (applied) {
+      task.options.phaseModels = { ...task.options.phaseModels, plan: model };
+      this.planSrc.set(task.id, 'difficulty');
+    }
     this.d.logs.write({ level: 'info', kind: 'plan.difficulty', msg: `${task.id}: độ khó kế hoạch ${d.level} (${d.reason})${applied ? ` → model ${model}` : ''}`, taskId: task.id, projectId: task.projectId, data: { level: d.level, points: d.points, reason: d.reason, signals: sig ?? null, model: model ?? null, applied, previous: cur ?? null } });
   }
 
@@ -2637,6 +2703,7 @@ export class Orchestrator {
       logs.write({ level: 'warn', kind: 'plan.gate', msg: `${dept.short}: cổng phủ kế hoạch chặn (${g.rules.join('+')}) — ${g.reasons.join('; ')}`, taskId: task.id, department: dept.id, data: { stage: 'blocked', rules: g.rules, uncovered: g.uncovered, reasons: g.reasons, subtasks: run.subtasks.length } });
       this.message(task, dept.id, 'system', 'system', `🚧 Cổng phủ kế hoạch chặn trước khi thực thi (quy tắc ${g.rules.join('+')}):\n${g.reasons.map((r) => `- ${r}`).join('\n')}\nYêu cầu trưởng phòng sửa kế hoạch một lần; không chạy kế hoạch dở.`);
       this.setPhase(task, run, 'plan');
+      if (task.options.planOnly) run.planReplans = (run.planReplans ?? 0) + 1;
       const res = await this.call(lead, 'plan', (tools) => P.replanPrompt(pctx, task.brief, run.planSummary ?? '', run.subtasks, g, tools), {
         ...base,
         hints: { brief: task.brief, roster: roster.map((a) => ({ id: a.id, name: a.name, title: a.title, role: a.role, skills: a.skills })), department: dept.name, replan: true },
@@ -3684,7 +3751,10 @@ export class Orchestrator {
       this.checkPolicies(task, agent);
       if (ctx.subtask && ctx.run) this.checkSubtaskBudget(task, ctx.run, ctx.subtask);
       const cls = task.classification;
-      const want = task.options.phaseModels?.[phase] ?? ctx.project?.models?.[agent.id] ?? config.phases?.models?.[phase] ?? agent.model;
+      // D2: model pha plan chọn bằng MỘT hàm cho mọi làn (planModel > phaseModels.plan > project > phases > agent); pha khác giữ nguyên
+      const pm = phase === 'plan' ? this.resolvePlanModel(task, ctx.project, agent) : undefined;
+      if (pm && (task.options.planOnly || task.options.planModel)) logs.write({ level: 'info', kind: 'task.planModel', msg: `${task.id}: model pha plan = ${pm.model} (nguồn: ${pm.source})`, taskId: task.id, projectId: task.projectId, agentId: agent.id, phase, data: { model: pm.model, source: pm.source } });
+      const want = pm?.model ?? task.options.phaseModels?.[phase] ?? ctx.project?.models?.[agent.id] ?? config.phases?.models?.[phase] ?? agent.model;
       const prefs = [task.options.runtime, ctx.project?.runtime, agent.runtime, config.runtime.default];
       const { list, notes, skipped, deferred } = await runtimes.candidates(prefs, cls, want);
       if (notes.length) logs.write({ level: 'warn', kind: 'runtime.fallback', msg: `${notes.join('; ')}${list[0] ? ` → dùng ${list[0].label}` : ''}`, taskId: task.id, agentId: agent.id, department: deptId });
@@ -4270,6 +4340,16 @@ export function cliTools(agentTools: string[], access: ToolAccess, phase: Phase,
 
 const VARIANT_PHASES = new Set(['route', 'plan', 'discuss', 'finalize', 'execute', 'review', 'revise', 'synthesize', 'accept']);
 
+/** D3: bản sao sâu các trường mô tả kế hoạch của hạng mục (không kèm trạng thái chạy). */
+export function snapshotPlan(subtasks: Array<{ id: string; title: string; assignee: string; description: string; dependsOn: string[]; deliverable?: string }>): PlanItemSnapshot[] {
+  return subtasks.map((s) => ({ id: s.id, title: s.title, assignee: s.assignee, description: s.description, dependsOn: [...(s.dependsOn ?? [])], deliverable: s.deliverable ?? '' }));
+}
+
+/** D1: planModel chỉ nhận haiku | sonnet | opus. */
+export function isPlanModel(v: unknown): v is NonNullable<TaskOptions['planModel']> {
+  return v === 'haiku' || v === 'sonnet' || v === 'opus';
+}
+
 /** Tùy chọn biến thể (benchtest) hợp lệ từ yêu cầu giao việc — chỉ nhận đúng kiểu, bỏ phần lạ. */
 export function variantOptions(o: Partial<TaskOptions>): Partial<TaskOptions> {
   const out: Partial<TaskOptions> = {};
@@ -4280,6 +4360,8 @@ export function variantOptions(o: Partial<TaskOptions>): Partial<TaskOptions> {
     if (Object.keys(pm).length) out.phaseModels = pm as TaskOptions['phaseModels'];
   }
   if (typeof o.variant === 'string' && o.variant.trim()) out.variant = o.variant.trim().slice(0, 60);
+  if (o.planOnly === true) out.planOnly = true;
+  if (isPlanModel(o.planModel)) out.planModel = o.planModel;
   if (o.lane === 'auto' || o.lane === 'single' || o.lane === 'fast' || o.lane === 'full') out.lane = o.lane;
   const slim = sanitizeSlim(o.slim);
   if (Object.keys(slim).length) out.slim = slim;
