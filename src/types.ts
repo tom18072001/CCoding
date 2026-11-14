@@ -370,6 +370,8 @@ export interface AcceptanceCriterion {
   name: string;
   result: 'pass' | 'fail' | 'unknown';
   evidence: string;
+  /** Tiêu chí fail/unknown: in = phòng tự làm tiếp được; decision = cần giám đốc/người ngoài/quyền mới (thiếu = decision). */
+  scope?: 'in' | 'decision';
 }
 
 export interface Acceptance {
@@ -445,6 +447,8 @@ export interface Task {
   agentId?: string;
   /** Số lần liên tiếp tạm dừng vì "không còn runtime" (tự tiếp tục giãn dần, quá 5 lần thì dừng hẳn). */
   noRuntimeStreak?: number;
+  /** Số vòng bổ sung sau nghiệm thu đã mở (lưu bền, chống lặp vô hạn). */
+  acceptFollowups?: number;
   /** Chỉ dẫn bổ sung người dùng gửi trong lúc nhiệm vụ chạy — đưa vào bối cảnh các lượt gọi sau. */
   notes?: Array<{ id: string; at: string; text: string }>;
   /** Nhiệm vụ này tiếp nối nhiệm vụ trước (giao việc tiếp nối từ màn hình nhiệm vụ). */
