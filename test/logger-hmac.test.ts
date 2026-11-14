@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { LogStore, verifyChain, resetHmacWarning } from '../src/logger.js';
+import { LogStore, verifyChain, verifyChainStream, resetHmacWarning } from '../src/logger.js';
 
 const ENV = 'CCODING_LOG_HMAC_KEY';
 const FAKE_KEY = 'khoa-gia-chi-dung-cho-test-0001';
@@ -102,7 +102,8 @@ test('thiếu khóa → cảnh báo một lần, chuỗi băm vẫn đúng; log 
   withKey(FAKE_KEY, () => {
     const s2 = new LogStore(path.dirname(file), { redactSecrets: true, redactPii: true, hashChain: true });
     s2.append(file, { msg: 'moi' });
-    assert.deepEqual(verifyChain(file), { ok: true, lines: 4 });
+    assert.deepEqual(verifyChain(file, { allowUnsigned: true }), { ok: true, lines: 4 });
+    assert.equal(verifyChain(file).reason, 'thiếu chữ ký'); // mặc định có khóa: bắt buộc ký
   });
 });
 
@@ -112,4 +113,59 @@ test('nội dung log không chứa khóa', () => {
     fill(store, file);
     assert.equal(fs.readFileSync(file, 'utf8').includes(FAKE_KEY), false);
   });
+});
+
+/** Gỡ sig/kid mọi dòng rồi tính lại chuỗi băm (kẻ tấn công không có khóa). */
+function stripAndRehash(file: string): void {
+  let prev = 'genesis';
+  const out = fs.readFileSync(file, 'utf8').split(String.fromCharCode(10)).filter((l) => l.trim()).map((l) => {
+    const { hash: _h, sig: _s, kid: _k, ...rest } = JSON.parse(l);
+    rest.prev = prev;
+    const hash = crypto.createHash('sha256').update(prev).update(JSON.stringify(rest)).digest('hex').slice(0, 32);
+    prev = hash;
+    return JSON.stringify({ ...rest, hash });
+  });
+  fs.writeFileSync(file, out.join(String.fromCharCode(10)) + String.fromCharCode(10));
+}
+
+test('(a) có khóa, gỡ sig mọi dòng rồi tính lại hash → lỗi ở dòng 1, thiếu chữ ký', () => {
+  const { store, file } = mk();
+  withKey(FAKE_KEY, () => fill(store, file, 3));
+  stripAndRehash(file);
+  const r = withKey(FAKE_KEY, () => verifyChain(file));
+  assert.equal(r.ok, false);
+  assert.equal(r.brokenAt, 1);
+  assert.equal(r.reason, 'thiếu chữ ký');
+});
+
+test('(b) không khóa nhưng requireSigned → lỗi', () => {
+  const { store, file } = mk();
+  withKey(FAKE_KEY, () => fill(store, file, 2));
+  const r = withKey(undefined, () => verifyChain(file, { requireSigned: true }));
+  assert.equal(r.ok, false);
+  assert.equal(r.brokenAt, 1);
+  assert.match(r.reason!, /không có khóa HMAC/);
+});
+
+test('(c) không khóa, không cờ → hành vi cũ (chỉ kiểm hash)', () => {
+  const { store, file } = mk();
+  withKey(FAKE_KEY, () => fill(store, file, 3));
+  stripAndRehash(file);
+  assert.deepEqual(withKey(undefined, () => verifyChain(file)), { ok: true, lines: 3 });
+});
+
+test('(d) có khóa + allowUnsigned → log cũ chưa ký qua; stream cũng theo cờ', async () => {
+  const { store, file } = mk();
+  withKey(FAKE_KEY, () => fill(store, file, 3));
+  stripAndRehash(file);
+  assert.deepEqual(withKey(FAKE_KEY, () => verifyChain(file, { allowUnsigned: true })), { ok: true, lines: 3 });
+  const old = process.env[ENV];
+  process.env[ENV] = FAKE_KEY;
+  try {
+    assert.equal((await verifyChainStream(file)).reason, 'thiếu chữ ký');
+    assert.equal((await verifyChainStream(file, { allowUnsigned: true })).ok, true);
+  } finally {
+    if (old === undefined) delete process.env[ENV];
+    else process.env[ENV] = old;
+  }
 });

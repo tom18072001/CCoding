@@ -88,7 +88,7 @@ GitHub ◀── chỉ mã nguồn (data/, workspaces/, ccoding.local.json bị 
 4. **[Bắt buộc]** Khóa API chỉ để trong biến môi trường hoặc `ccoding.local.json` (đã `.gitignore`); không commit.
 5. **[Bắt buộc]** Dùng nhà cung cấp/gói có cam kết không huấn luyện trên dữ liệu; ghi nhà cung cấp theo dự án.
 6. **[Nên có]** Cài Ollama và đặt `openai-api.local: true` (hoặc một runtime cục bộ khác) để làm việc với dự án *Bảo mật* bằng model thật.
-7. **[Nên có]** Đẩy `data/logs` vào ELK nội bộ; chạy `ccoding logs verify` định kỳ.
+7. **[Nên có]** Đẩy `data/logs` vào ELK nội bộ; chạy `ccoding logs verify` định kỳ. (D18c/K3: khi có khóa HMAC, `verify` mặc định bắt buộc mọi dòng có chữ ký — dòng thiếu báo `thiếu chữ ký`, chặn việc gỡ `sig` rồi tính lại băm; `--require-signed` ép bắt buộc cả khi chưa nạp khóa (lỗi nếu không có khóa); `--allow-unsigned` là đường tường minh cho log cũ chưa ký.)
 8. **[Nên có]** Bật `CCODING_TOKEN` nếu mở server ra ngoài `127.0.0.1`.
 9. **[Nâng cao]** Presidio/NER tiếng Việt cho PII; WORM + ký số cho log nếu cần giá trị chứng cứ.
 
