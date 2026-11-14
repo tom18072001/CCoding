@@ -42,3 +42,17 @@ test('agent.md và hồ sơ phòng ban hợp lệ', () => {
       assert.ok(heads.includes('Tệp đã tạo/sửa') || heads.includes('Tệp đã ghi'), `${a.id} thiếu mục liệt kê tệp`);
   }
 });
+
+test('FX2/FX12/FX18: hồ sơ trưởng phòng có ngoại lệ reviewer, cỡ gói theo ngân sách, model theo làn', async () => {
+  const fs = await import('node:fs');
+  const rl = fs.readFileSync(path.join(ROOT, 'agents/research/research-lead.md'), 'utf8');
+  assert.ok(rl.includes('Ngoại lệ:** nếu đề bài giao hạng mục có mã riêng cho vai reviewer'));
+  assert.ok(rl.includes('Cỡ gói theo ngân sách'));
+  for (const f of ['agents/research/research-lead.md', 'agents/dev/dev-lead.md']) {
+    const txt = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    assert.ok(txt.includes('## Model theo làn') && txt.includes('fastLane.planModel'));
+  }
+  const reg = new Registry(path.join(ROOT, 'agents'), path.join(ROOT, 'departments'));
+  assert.deepEqual(reg.errors, []);
+  assert.ok(reg.agent('research-lead') && reg.agent('dev-lead'));
+});
