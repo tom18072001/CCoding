@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "rule": "public-no-cdn",
+      "file": "public/index.html",
+      "anchor": "fonts.googleapis.com/css2",
+      "owner": "Phòng Dev",
+      "fixIn": "gói sau D20 (tự host phông hoặc dùng phông hệ thống; public/ ngoài phạm vi D20)",
+      "by": "K1a"
+    }
+  ]
+}
