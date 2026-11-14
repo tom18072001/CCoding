@@ -92,7 +92,7 @@ export function productFiles(dir, deliverable) {
 function execP(cmd, args, cwd, timeoutMs, env = {}) {
   return new Promise((resolve) => {
     const t0 = Date.now();
-    const p = spawn(cmd, args, { cwd, detached: true, env: { ...process.env, NODE_TEST_CONTEXT: undefined, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
+    const p = spawn(cmd, args, { cwd, detached: process.platform !== 'win32', shell: process.platform === 'win32' && cmd === 'npm', env: { ...process.env, NODE_TEST_CONTEXT: undefined, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
     let out = ''; const cap = (b) => { if (out.length < 4 << 20) out += b; };
     p.stdout.on('data', cap); p.stderr.on('data', cap);
     let timedOut = false;

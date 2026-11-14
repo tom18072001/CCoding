@@ -1,56 +1,93 @@
 #!/usr/bin/env node
-// FX19 — kiểm tự động tham chiếu `tệp:dòng` trong bản đồ logic, báo cáo và backlog.
+// FX19 (làm cứng, BRIEF-22c K1) — kiểm tự động tham chiếu `tệp:dòng` trong bản đồ logic, báo cáo, backlog và bài.
 // Dùng: node docs/research/scripts/logic-map-check.mjs [--base <commit>] [--root <thư-mục-repo>]
-//                                                      [--no-default] [--json] [tệp.md ...]
+//        [--no-default] [--json] [--no-strict] [--sample N [--seed S]] [tệp.md ...]
 // Mốc (commit) lấy từ --base, hoặc từ dòng `Mốc: <hash 40 ký tự>` trong 10 dòng đầu của logic-map.md
 // (chấp nhận bọc ** hoặc dấu backtick quanh hash).
-// Mặc định quét: analysis/decisions/logic-map.md, analysis/decisions/report.md, improvement-backlog.md
-// (đều dưới docs/research/); tệp thêm qua tham số; --no-default bỏ danh sách mặc định.
-// Tham chiếu hợp lệ: `đường/dẫn.ts:N` hoặc `:N–M` (cũng nhận bí danh khai báo dạng `orch` = `src/orchestrator.ts`
-// và tên tệp trần như lane.ts nếu duy nhất dưới src/), kèm ký hiệu trong ngoặc ngay sau, vd. lane.ts:129 (`chooseLane`).
-// Kiểm: git show <mốc>:<tệp> — dòng (hoặc dải) phải chứa ký hiệu. Tham chiếu không kèm ký hiệu đếm riêng, chỉ cảnh báo.
-// Cũng kiểm tham chiếu hồ sơ agent (agents/cto.md:47-53 hoặc cto.md:47-53): bắt buộc kèm cụm trích (`cụm` hoặc “cụm”).
-// Ký hiệu < 6 ký tự hoặc từ chung (single, accept, plan, gate, final…) ⇒ cảnh báo; --strict ⇒ lỗi.
-// Exit 0 khi không lệch; 1 khi có lệch; 2 khi lỗi cấu hình (không có mốc, không đọc được tệp).
+//
+// Quy tắc (mặc định là --strict; --no-strict chỉ để chẩn đoán):
+//  1. Mỗi tham chiếu `đường/dẫn.ext:N` (hoặc `:N–M`) phải kèm ký hiệu ĐẶC THÙ ngay sau, trong ngoặc: (`ký hiệu`) hoặc (“cụm”).
+//  2. Ký hiệu đặc thù là một trong ba loại:
+//       a. định danh (tên hàm, hằng, khóa cấu hình): ≥ 4 ký tự, chỉ gồm chữ/số/_/$/./-, không thuộc danh sách từ chung;
+//       b. tiêu đề mục Markdown: dòng đích bắt đầu bằng `#` và chứa chữ của tiêu đề (≥ 4 ký tự);
+//       c. cụm chữ ≥ 12 ký tự (có thể gồm khoảng trắng).
+//  3. Ký hiệu phải có trên ĐÚNG dòng ở mốc (`git show <mốc>:<tệp>`). Định danh khớp theo ranh giới từ.
+//     Tham chiếu dải N–M: ký hiệu phải có trên dòng N hoặc dòng M (đầu hoặc cuối dải), không khớp theo cả dải.
+//  4. Thiếu ký hiệu đặc thù, hoặc chỉ có ký hiệu ngắn/chung ⇒ lỗi (strict) hay cảnh báo (--no-strict).
+//  5. Phạm vi tệp đích: agents/*.md (bắt buộc kèm cụm trích), src/**, bench/**, tệp cấu hình gốc đã theo dõi
+//     (vd. ccoding.config.json). .md ngoài agents/ không được quét. Bí danh `orch` = `src/orchestrator.ts` khai báo
+//     dạng `orch` = `src/orchestrator.ts` trong tệp quét; tên trần như lane.ts nếu duy nhất dưới src/ (agents/ với .md).
+// Tệp quét mặc định (dưới docs/research/): analysis/decisions/{logic-map,report,model-per-role,scorecard}.md,
+// improvement-backlog.md (từ khối B-20 trở đi), paper/paper.md (chỉ §4.4). Tệp thêm qua tham số; --no-default bỏ mặc định.
+// --sample N --seed S: chọn N tham chiếu bằng PRNG có seed (mulberry32), cùng seed ⇒ cùng mẫu; in tệp:dòng, ký hiệu,
+// đoạn chữ quanh tham chiếu trong bài và dòng thật ở mốc để người đọc kiểm bằng mắt. Không đổi mã thoát.
+// Exit 0 khi không lệch; 1 khi có lệch; 2 khi lỗi cấu hình (không có mốc, không đọc được tệp, tham số sai).
 import { readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, resolve, relative } from 'node:path';
 
+// Phần của tệp được quét: from/to là regex trên từng dòng. `to` là dòng đầu tiên NGOÀI phần (không quét).
 const DEFAULT_FILES = [
-  'docs/research/analysis/decisions/logic-map.md',
-  'docs/research/analysis/decisions/report.md',
-  'docs/research/improvement-backlog.md',
-  'docs/research/analysis/decisions/model-per-role.md',
-  'docs/research/analysis/decisions/scorecard.md',
+  { f: 'docs/research/analysis/decisions/logic-map.md' },
+  { f: 'docs/research/analysis/decisions/report.md' },
+  { f: 'docs/research/improvement-backlog.md', from: /^\*\*\(b\) Mục mới B-20/ },
+  { f: 'docs/research/analysis/decisions/model-per-role.md' },
+  { f: 'docs/research/analysis/decisions/scorecard.md' },
+  { f: 'docs/research/paper/paper.md', from: /^### 4\.4 /, to: /^#{1,3} (?!4\.4 )/ },
 ];
 
-// Ký hiệu ngắn/chung dễ khớp nhầm ở dòng bất kỳ: < WEAK_MIN_LEN ký tự hoặc thuộc danh sách này
-// ⇒ cảnh báo (stderr); có --strict ⇒ tính là lệch.
-const WEAK_MIN_LEN = 6;
-const GENERIC_SYMBOLS = new Set(['single', 'accept', 'plan', 'gate', 'final', 'route', 'skip', 'brief', 'full', 'run', 'main', 'task', 'step', 'lane', 'mode', 'agent', 'model', 'error', 'result', 'report', 'review']);
+export const MIN_IDENT_LEN = 4;
+export const MIN_PHRASE_LEN = 12;
+// Từ chung: có thể khớp ở nhiều dòng/ngữ cảnh nên không đủ làm ký hiệu đặc thù.
+export const GENERIC_SYMBOLS = new Set([
+  'single', 'accept', 'plan', 'gate', 'final', 'route', 'skip', 'brief', 'full', 'run', 'main', 'task', 'step', 'lane', 'mode',
+  'agent', 'model', 'error', 'result', 'report', 'review', 'names', 'tasks', 'want', 'call', 'prev', 'body', 'files', 'roots',
+  'why', 'after', 'prior', 'done', 'pause', 'prefs', 'bash', 'true', 'false', 'null', 'this', 'const', 'return', 'from', 'with',
+  'data', 'text', 'path', 'name', 'type', 'list', 'item', 'line', 'file', 'value', 'state', 'args', 'opts', 'options', 'config',
+  'input', 'output', 'rule', 'rules', 'check', 'tool', 'tools', 'diff', 'code', 'cwd', 'env', 'note', 'notes', 'key', 'keys',
+]);
 
 const args = process.argv.slice(2);
-let base; let root = process.cwd(); let noDefault = false; let asJson = false; let strict = false;
+let base; let root = process.cwd(); let noDefault = false; let asJson = false; let strict = true;
+let sampleN = null; let seed = 1;
 const extra = [];
+const dieEarly = (m) => { console.error(`logic-map-check: ${m}`); process.exit(2); };
 for (let i = 0; i < args.length; i++) {
   const a = args[i];
   if (a === '--strict') strict = true;
+  else if (a === '--no-strict') strict = false;
   else if (a === '--base') base = args[++i];
   else if (a === '--root') root = resolve(args[++i]);
   else if (a === '--no-default') noDefault = true;
   else if (a === '--json') asJson = true;
+  else if (a === '--sample') { sampleN = Number(args[++i]); if (!Number.isInteger(sampleN) || sampleN < 0) dieEarly('--sample cần số nguyên ≥ 0'); }
+  else if (a === '--seed') { seed = Number(args[++i]); if (!Number.isInteger(seed)) dieEarly('--seed cần số nguyên'); }
+  else if (a.startsWith('--')) dieEarly(`tham số không hợp lệ: ${a}`);
   else extra.push(a);
 }
-const die = (m) => { console.error(`logic-map-check: ${m}`); process.exit(2); };
+const die = dieEarly;
 
 const nfc = (s) => s.normalize('NFC');
 const git = (...a) => execFileSync('git', ['-C', root, ...a], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
 
-const files = [...(noDefault ? [] : DEFAULT_FILES.map((f) => join(root, f))), ...extra.map((f) => resolve(f))];
-const texts = new Map();
-for (const f of files) {
-  if (!existsSync(f)) { if (noDefault || extra.includes(f)) die(`không thấy ${f}`); continue; }
-  texts.set(f, nfc(readFileSync(f, 'utf8')));
+// files: {abs, from, to}
+const entries = [
+  ...(noDefault ? [] : DEFAULT_FILES.map((e) => ({ abs: join(root, e.f), from: e.from, to: e.to }))),
+  ...extra.map((f) => ({ abs: resolve(f) })),
+];
+const texts = new Map(); const scope = new Map();
+for (const e of entries) {
+  if (!existsSync(e.abs)) { if (noDefault || extra.some((x) => resolve(x) === e.abs)) die(`không thấy ${e.abs}`); continue; }
+  texts.set(e.abs, nfc(readFileSync(e.abs, 'utf8')));
+  scope.set(e.abs, e);
+}
+// Phạm vi dòng quét [lo, hi) (chỉ số 0-based) cho một tệp.
+function scanRange(abs, lines) {
+  const e = scope.get(abs);
+  let lo = 0; let hi = lines.length;
+  if (e?.from) { lo = lines.findIndex((l) => e.from.test(l)); if (lo < 0) lo = lines.length; }
+  if (e?.to) { const k = lines.findIndex((l, i) => i > lo && e.to.test(l)); if (k >= 0) hi = k; }
+  return [lo, hi];
 }
 
 if (!base) {
@@ -69,6 +106,7 @@ for (const t of texts.values()) {
   for (const m of t.matchAll(/`([A-Za-z][\w-]*)`\s*=\s*`([\w./-]+\.(?:ts|mjs|js))`/g)) aliases.set(m[1], m[2]);
 }
 const tracked = git('ls-tree', '-r', '--name-only', base).split(/\r?\n/).filter(Boolean);
+const trackedSet = new Set(tracked);
 const byBase = new Map();
 for (const p of tracked) {
   if (!p.startsWith('src/')) continue;
@@ -77,7 +115,7 @@ for (const p of tracked) {
 }
 function resolvePath(p) {
   if (aliases.has(p)) return aliases.get(p);
-  if (tracked.includes(p)) return p;
+  if (trackedSet.has(p)) return p;
   if (!p.includes('/') && byBase.get(p)) return byBase.get(p);
   return null;
 }
@@ -89,7 +127,7 @@ for (const p of tracked) {
   byBaseAgent.set(b, byBaseAgent.has(b) ? null : p);
 }
 function resolveAgentMd(p) {
-  if (tracked.includes(p) && p.startsWith('agents/')) return p;
+  if (trackedSet.has(p) && p.startsWith('agents/')) return p;
   if (!p.includes('/') && byBaseAgent.get(p)) return byBaseAgent.get(p);
   return null;
 }
@@ -102,17 +140,42 @@ function linesAt(path) {
   return cache.get(path);
 }
 
-const aliasKeys = [...aliases.keys()].map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+// ---- Phân loại ký hiệu ----
+const IDENT_RE = /^[A-Za-z_$][\w$.-]*$/;
+const escRe = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// kind: 'ident' | 'phrase' | 'heading' | null (yếu). Heading chỉ xác định được khi biết dòng đích: xử lý ở matchOnLine.
+export function classify(sym) {
+  const s = sym.trim().replace(/\(\)$/, '');
+  if (IDENT_RE.test(s)) {
+    if (s.length >= MIN_IDENT_LEN && !GENERIC_SYMBOLS.has(s.toLowerCase())) return { sym: s, kind: 'ident' };
+    return { sym: s, kind: null };
+  }
+  if (s.length >= MIN_PHRASE_LEN) return { sym: s, kind: 'phrase' };
+  if (s.length >= MIN_IDENT_LEN) return { sym: s, kind: 'maybe-heading' }; // chỉ đặc thù nếu là tiêu đề mục
+  return { sym: s, kind: null };
+}
+function matchOnLine(c, line) {
+  if (c.kind === 'ident') return new RegExp(`(?<![\\w$])${escRe(c.sym)}(?![\\w$])`).test(line);
+  if (c.kind === 'phrase') return line.includes(c.sym);
+  if (c.kind === 'maybe-heading') return /^\s{0,3}#{1,6}\s/.test(line) && line.includes(c.sym);
+  return false;
+}
+
+const aliasKeys = [...aliases.keys()].map(escRe);
 const pathPart = `(?:[A-Za-z0-9_./-]+\\.(?:ts|mjs|js|json|md)${aliasKeys.length ? `|${aliasKeys.join('|')}` : ''})`;
 const refRe = new RegExp(`(?<![\\w./-])(${pathPart}):(\\d+)(?:[–-](\\d+))?(?!\\d)(\`?)(?:[ \\t]*\\(([^)\\n]*)\\))?`, 'gu');
 
-let total = 0; let withSymbol = 0;
+const all = []; // mọi tham chiếu
 const bad = []; const noSymbol = []; const weak = [];
+let total = 0; let withSymbol = 0;
 for (const [f, text] of texts) {
   const rel = relative(root, f).split('\\').join('/');
-  text.split(/\r?\n/).forEach((line, idx) => {
+  const lines = text.split(/\r?\n/);
+  const [lo, hi] = scanRange(f, lines);
+  for (let idx = lo; idx < hi; idx++) {
+    const line = lines[idx];
     for (const m of line.matchAll(refRe)) {
-      const [, rawPath, a, b, , paren] = m;
+      const [whole, rawPath, a, b, , paren] = m;
       const isMd = /\.md$/.test(rawPath);
       let path = isMd ? resolveAgentMd(rawPath) : resolvePath(rawPath);
       if (isMd && !path) continue; // .md ngoài agents/ không thuộc phạm vi kiểm
@@ -120,51 +183,98 @@ for (const [f, text] of texts) {
       const where = `${rel}:${idx + 1}`;
       const from = Number(a); const to = b ? Number(b) : from;
       const ref = `${rawPath}:${a}${b ? `–${b}` : ''}`;
-      let sym;
+      const ctx = line.slice(Math.max(0, m.index - 60), m.index + whole.length + 40).trim();
+      const rec = { where, ref, symbol: '', path: path || null, from, to, ctx, status: 'ok', real: '' };
+      all.push(rec);
+      const fail = (reason, kind = 'bad') => { rec.status = kind; rec.reason = reason; bad.push({ where, ref, symbol: rec.symbol, reason }); };
+
+      // Ký hiệu: mọi mục trong `…` hoặc “…” của ngoặc ngay sau; hoặc cả ngoặc nếu trông như định danh.
+      const cands = [];
       if (paren !== undefined) {
-        const bt = paren.match(/`([^`]+)`/);
-        const q = paren.match(/[“"]([^”"]+)[”"]/); // cụm trích nguyên văn
-        const cand = (bt ? bt[1] : q ? q[1] : paren).trim().replace(/\(\)$/, '');
-        if (bt || q || (!isMd && /^[A-Za-z_$][\w$]*[A-Z_.][\w$.]*$/.test(cand))) sym = cand; // ngoặc chữ thường thuần không phải ký hiệu
+        for (const x of paren.matchAll(/`([^`]+)`|[“"]([^”"]+)[”"]/g)) cands.push((x[1] ?? x[2]).trim());
+        if (!cands.length) {
+          const cand = paren.trim().replace(/\(\)$/, '');
+          if (!isMd && /^[A-Za-z_$][\w$]*[A-Z_.][\w$.]*$/.test(cand)) cands.push(cand); // ngoặc chữ thường thuần không phải ký hiệu
+        }
       }
-      if (!sym) {
-        if (isMd) { withSymbol++; bad.push({ where, ref, symbol: '', reason: `tham chiếu hồ sơ agent bắt buộc kèm cụm trích (\`cụm\` hoặc “cụm”) ngay sau` }); }
-        else noSymbol.push({ where, ref });
+      rec.symbol = cands.join(' | ');
+      if (!cands.length) {
+        if (isMd) { withSymbol++; fail('tham chiếu hồ sơ agent bắt buộc kèm cụm trích (`cụm` hoặc “cụm”) ngay sau'); }
+        else {
+          noSymbol.push({ where, ref }); rec.status = 'nosymbol';
+          if (strict) fail('thiếu ký hiệu đặc thù trong ngoặc ngay sau tham chiếu (--strict): thêm (`tên hàm/hằng`) hoặc (“cụm ≥ 12 ký tự”)', 'nosymbol');
+        }
         continue;
       }
       withSymbol++;
-      if (sym.length < WEAK_MIN_LEN || GENERIC_SYMBOLS.has(sym.toLowerCase())) {
-        weak.push({ where, ref, symbol: sym });
-        if (strict) { bad.push({ where, ref, symbol: sym, reason: `ký hiệu quá ngắn/chung (< ${WEAK_MIN_LEN} ký tự hoặc từ chung), dễ khớp nhầm — chọn ký hiệu đặc thù (--strict)` }); continue; }
-      }
+      const cls = cands.map(classify);
+      const real = cls.filter((c) => c.kind);
       if (!path) path = resolvePath(rawPath);
-      if (!path) { bad.push({ where, ref, symbol: sym, reason: `không thấy tệp ${rawPath} ở mốc` }); continue; }
+      if (!path) { fail(`không thấy tệp ${rawPath} ở mốc`); continue; }
+      rec.path = path;
       const ls = linesAt(path);
-      if (!ls) { bad.push({ where, ref, symbol: sym, reason: `không đọc được ${path} ở mốc` }); continue; }
-      if (from < 1 || to > ls.length || to < from) { bad.push({ where, ref, symbol: sym, reason: `dòng ngoài tệp (${path} có ${ls.length} dòng)` }); continue; }
-      const hit = ls.slice(from - 1, to).some((l) => l.includes(sym));
-      if (!hit) {
-        const near = []; ls.forEach((l, i) => { if (l.includes(sym)) near.push(i + 1); });
-        bad.push({ where, ref, symbol: sym, reason: `dòng ${from}${to > from ? `–${to}` : ''} của ${path} không chứa "${sym}"${near.length ? `; ký hiệu có ở dòng ${near.slice(0, 5).join(', ')}` : ''}` });
+      if (!ls) { fail(`không đọc được ${path} ở mốc`); continue; }
+      if (from < 1 || to > ls.length || to < from) { fail(`dòng ngoài tệp (${path} có ${ls.length} dòng)`); continue; }
+      rec.real = (ls[from - 1] ?? '').trim();
+      // Ký hiệu yếu: không có ứng viên đặc thù nào. maybe-heading chỉ tính khi dòng đích là tiêu đề.
+      const specific = real.filter((c) => c.kind !== 'maybe-heading' || /^\s{0,3}#{1,6}\s/.test(ls[from - 1] ?? '') || /^\s{0,3}#{1,6}\s/.test(ls[to - 1] ?? ''));
+      if (!specific.length) {
+        weak.push({ where, ref, symbol: rec.symbol });
+        rec.status = 'weak';
+        if (strict) fail(`ký hiệu không đặc thù (định danh < ${MIN_IDENT_LEN} ký tự hoặc từ chung, cụm < ${MIN_PHRASE_LEN} ký tự) — chọn tên hàm/hằng, tiêu đề mục hoặc cụm ≥ ${MIN_PHRASE_LEN} ký tự (--strict)`, 'weak');
+        if (strict) continue;
+      }
+      const pool = specific.length ? specific : cls;
+      // Đúng dòng: dòng đầu hoặc dòng cuối của dải (không khớp theo cả dải).
+      const edge = [ls[from - 1], ls[to - 1]];
+      if (!pool.some((c) => edge.some((l) => matchOnLine(c.kind ? c : { ...c, kind: 'phrase' }, l)))) {
+        const c0 = pool[0];
+        const near = []; ls.forEach((l, i) => { if (matchOnLine(c0.kind ? c0 : { ...c0, kind: 'phrase' }, l)) near.push(i + 1); });
+        fail(`dòng ${from}${to > from ? ` và ${to}` : ''} của ${path} không chứa "${c0.sym}"${near.length ? `; ký hiệu có ở dòng ${near.slice(0, 5).join(', ')}` : ''}`);
       }
     }
-  });
+  }
 }
 
+// ---- Mẫu có seed ----
+function mulberry32(a) {
+  return () => {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+export function sampleIndices(n, k, sd) {
+  const rnd = mulberry32(sd); const idx = Array.from({ length: n }, (_, i) => i);
+  for (let i = n - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+  return idx.slice(0, Math.min(k, n)).sort((x, y) => x - y);
+}
+const sample = sampleN === null ? null : sampleIndices(all.length, sampleN, seed).map((i) => all[i]);
+
 if (asJson) {
-  console.log(JSON.stringify({ base, total, withSymbol, mismatched: bad.length, noSymbol: noSymbol.length, weakSymbol: weak.length, bad, noSymbolRefs: noSymbol, weakSymbolRefs: weak }, null, 2));
+  console.log(JSON.stringify({ base, strict, total, withSymbol, mismatched: bad.length, noSymbol: noSymbol.length, weakSymbol: weak.length, bad, noSymbolRefs: noSymbol, weakSymbolRefs: weak, ...(sample ? { seed, sample: sample.map(({ where, ref, symbol, ctx, real, status }) => ({ where, ref, symbol, ctx, real, status })) } : {}) }, null, 2));
 } else {
   console.log(`Mốc: ${base}`);
+  console.log(`Chế độ: ${strict ? 'strict (mặc định)' : 'no-strict (chẩn đoán)'}`);
   console.log(`Tổng tham chiếu tệp:dòng: ${total} (có ký hiệu: ${withSymbol}, không ký hiệu: ${noSymbol.length}); lệch: ${bad.length}.`);
   for (const r of bad) console.log(`LỆCH ${r.where} — ${r.ref}${r.symbol ? ` (\`${r.symbol}\`)` : ''}: ${r.reason}`);
-  if (weak.length && !strict) {
-    console.error(`Cảnh báo: ${weak.length} tham chiếu có ký hiệu quá ngắn/chung (dễ khớp nhầm; dùng --strict để coi là lỗi):`);
-    for (const r of weak) console.error(`  ${r.where} — ${r.ref} (\`${r.symbol}\`)`);
+  if (!strict) {
+    if (weak.length) {
+      console.error(`Cảnh báo: ${weak.length} tham chiếu có ký hiệu không đặc thù (strict coi là lỗi):`);
+      for (const r of weak) console.error(`  ${r.where} — ${r.ref} (\`${r.symbol}\`)`);
+    }
+    if (noSymbol.length) {
+      console.error(`Cảnh báo: ${noSymbol.length} tham chiếu không kèm ký hiệu trong ngoặc, chưa kiểm được (strict coi là lỗi):`);
+      for (const r of noSymbol) console.error(`  ${r.where} — ${r.ref}`);
+    }
   }
-  if (noSymbol.length) {
-    console.error(`Cảnh báo: ${noSymbol.length} tham chiếu không kèm ký hiệu trong ngoặc, chưa kiểm được:`);
-    for (const r of noSymbol) console.error(`  ${r.where} — ${r.ref}`);
+  if (sample) {
+    console.log(`\nMẫu ${sample.length}/${all.length} tham chiếu (seed ${seed}):`);
+    for (const r of sample) {
+      console.log(`- ${r.ref} tại ${r.where} [${r.status}]\n    ký hiệu: ${r.symbol || '(không)'}\n    trong bài: …${r.ctx}…\n    dòng thật ở mốc: ${r.real || '(không đọc được)'}`);
+    }
   }
-  console.log(bad.length ? `Không đạt: ${bad.length}/${withSymbol} tham chiếu có ký hiệu bị lệch.` : `Đạt: ${withSymbol} tham chiếu có ký hiệu khớp ở mốc.`);
+  console.log(bad.length ? `Không đạt: ${bad.length}/${total} tham chiếu lệch hoặc thiếu ký hiệu đặc thù.` : `Đạt: ${total} tham chiếu khớp đúng dòng ở mốc.`);
 }
 process.exit(bad.length ? 1 : 0);
