@@ -5,6 +5,17 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 17 (T-20261115-042813-dc1, BRIEF-24, 15/11/2026): đăng ký và chuẩn bị E9-lite [Khám phá], chưa chạy
+
+Chỉ thêm tài liệu, script phân tích và dữ liệu chuẩn. Không sửa `src/` hay mã `bench/`, không chạy planner, không gọi LLM để đo; không có số kết quả E9-lite. E9-lite không phải E9: E9 (§9.x) vẫn ghi "chưa chạy". Người điều phối chạy bench sau khi gói được nghiệm thu và gộp.
+
+- **K1 (S1, @methodologist):** `preregistration.md` §9 thêm mục "Sai lệch E9 → E9-lite [Khám phá] — 15/11/2026 (BRIEF-24, K1)" (chỉ thêm dòng): lý do lệch, 13 bài khóa, chuẩn từ `gold-from-solution.mjs` và quy tắc nhãn tất định bằng lời và mã, arm `P-H`/`P-S`/`P-O` × 3 lặp, `--seed e9lite-1`, thước đo trên `planRaw` và `planFinal`, phân tích mô tả (bootstrap B = 4000, seed 20261115), điều kiện dừng, câu cấm, đe dọa tính hợp lệ.
+- **K2 (S2, @data-scientist):** `bench/vs-claude/results/e9lite/gold.json`, `labels.json`, `README.md`; `analysis/e9lite-labels.mjs`, `analysis/e9lite.mjs`, `analysis/e9lite.test.mjs` (14 test trên `runs.jsonl` giả); `preregistration.md` §9 thêm dòng mã băm sha256 của `gold.json` và `labels.json` (ghi trước lượt chạy đầu). Nhãn: 13/13 "chia được", 0 "không chia được" ⇒ phân tầng suy biến, quy tắc không đổi. `scripts/consistency-check.test.mjs` thêm 5 test đột biến; `context/brief22d-k3-y-2026-11-15.md` thêm phụ lục đầu ra `clopper-pearson`.
+- **K3a (S3, @academic-writer):** hai việc nhỏ BRIEF-22d: viết lại câu ở dòng 41 cũ của `CHANGELOG.md` (nay lùi xuống do mục này) thành hai câu hoàn chỉnh (số 444/445/438 và commit giữ nguyên); thêm cột "Dạng nguyên văn" vào bảng 14 ca ở `context/brief22d-k1-14ca-2026-11-15.md`.
+- **K3b (S4, @academic-writer):** `paper/paper.md` thêm §6.6 "E9-lite [Khám phá]: khung thiết kế, chưa chạy" (thiết kế, chuẩn đã khóa, đe dọa, câu được phép và câu cấm; không số kết quả); `facts.json` chỉ thêm đối tượng `e9lite` (số thiết kế, trạng thái, hai mã băm, số test) và 7 mục `numbers` (`e9lite-*`) để `consistency-check.mjs` đối chiếu với §6.6. Không đổi, không xóa khóa sẵn có, nhất là `brief22.*` mà `scorecard.mjs` đọc; không sửa `scorecard.mjs` hay khối BEGIN/END. `CHANGELOG.md` mục này.
+- **K4 (S5, @peer-reviewer):** phản biện thiết kế, chỉ đọc; kết quả ở biên bản riêng.
+- **Giới hạn:** vai S4 không chạy được `node` nên bốn lệnh kiểm chưa chạy ở bước này; CCoding chạy trước review.
+
 ## Vòng 4, gói 16d (T-20261115-015344-bb3, BRIEF-22d, 15/11/2026): S3 — K3, kiểm ý trên mẫu 30 tham chiếu
 
 Chỉ thêm tài liệu và một script tính CI; không sửa `src/`, `bench/`, `agents/`, `preregistration.md`, không đổi tham chiếu nào.
