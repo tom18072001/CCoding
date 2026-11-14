@@ -603,7 +603,7 @@ Trả lời bằng đúng một khối JSON:
   };
 }
 
-export function revisePrompt(c: Ctx,st: Subtask, previous: string, issues: string, tools: ToolName[] = [], wsPath?: string): Built {
+export function revisePrompt(c: Ctx, st: Subtask, previous: string, issues: string, tools: ToolName[] = [], wsPath?: string): Built {
   return {
     context: header(c, 'revise'),
     prompt: `## Hạng mục: ${st.id} — ${st.title}
