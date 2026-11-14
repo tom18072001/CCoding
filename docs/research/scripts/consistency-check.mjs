@@ -6,7 +6,11 @@
 //   stale:   [{id, pattern, reason, files?, exceptions?}]  — cụm đã lỗi thời, khớp là lỗi.
 //   numbers: [{id, value, pattern, files, exceptions}]     — nhóm bắt đầu tiên của pattern (hoặc cả khớp)
 //                                                            phải bằng value.
-//   exceptions: [{file, line?, reason}] — bỏ qua khi khớp tệp (và dòng nếu có); reason bắt buộc.
+//   exceptions: [{file, line? | anchor?, reason}] — bỏ qua khi khớp tệp (và dòng nếu có); reason bắt buộc.
+//     "anchor": "<cụm duy nhất>" thay cho "line": dòng được tính từ nơi cụm xuất hiện trong tệp; không thấy
+//     hoặc xuất hiện hơn một lần ⇒ lỗi (exit 2). Dạng "line": N vẫn dùng được (tương thích cũ).
+// Mục quét đường dẫn máy (FX20): mọi .md dưới docs/research/ không được chứa đường dẫn người dùng/tạm của máy
+// (ổ Windows kèm Users, /home/<tên>/, /Users/<tên>/, /tmp/, /var/folders/, AppData\Local\Temp); có ⇒ exit 1.
 // Exit 1 nếu có lỗi; --json in mảng [{file, line, id, kind, message}].
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
@@ -22,6 +26,21 @@ for (let i = 0; i < args.length; i++) {
 }
 const root = positional[0] ?? process.cwd();
 const factsPath = factsArg ?? join(root, 'docs', 'research', 'facts.json');
+
+// Tệp được miễn quét đường dẫn máy (FX20). Nguồn: docs/research/CHANGELOG.md, mục "Sau gói 15":
+// tệp dữ liệu thô trong results/ (*.json, *.jsonl, stdout.txt, cấu hình, .ps1) không sửa vì sẽ sai mã băm
+// (các loại này không phải .md nên không bị quét); preregistration.md là văn bản đã đăng ký, không sửa.
+const MACHINE_PATH_EXEMPT = [
+  'docs/research/preregistration.md',
+];
+const MACHINE_PATH_PATTERNS = [
+  { id: 'windows-users', re: /[A-Za-z]:[\\/]+Users[\\/]/ },
+  { id: 'home-linux', re: /(?<![\w.\-/])\/home\/[^\s/`)"'<>]+\// },
+  { id: 'home-mac', re: /(?<![\w.\-/])\/Users\/[^\s/`)"'<>]+\// },
+  { id: 'tmp', re: /(?<![\w.\-/])\/tmp\// },
+  { id: 'var-folders', re: /(?<![\w.\-/])\/var\/folders\// },
+  { id: 'appdata-temp', re: /AppData[\\/]+Local[\\/]+Temp/i },
+];
 
 const nfc = (s) => s.normalize('NFC');
 const toPosix = (p) => p.split(sep).join('/');
@@ -77,6 +96,31 @@ walk(join(root, 'docs', 'research'), files);
 const review = join(root, 'docs', 'PROCESS-REVIEW.md');
 if (existsSync(review)) files.push(review);
 
+// Giải anchor thành số dòng (một lần cho mỗi exception).
+for (const item of [...stale, ...numbers]) {
+  for (const ex of item.exceptions ?? []) {
+    if (ex.anchor === undefined) continue;
+    if (ex.line !== undefined) fail(`mục ${item.id}: exception ${ex.file} có cả line và anchor`);
+    const abs = join(root, ex.file);
+    if (!existsSync(abs)) fail(`mục ${item.id}: exception anchor — không thấy tệp ${ex.file}`);
+    const anchor = nfc(ex.anchor);
+    const hits = [];
+    nfc(readFileSync(abs, 'utf8')).split(/\r?\n/).forEach((t, i) => {
+      let from = 0;
+      for (;;) {
+        const k = t.indexOf(anchor, from);
+        if (k < 0) break;
+        hits.push(i + 1);
+        from = k + Math.max(anchor.length, 1);
+      }
+    });
+    if (hits.length !== 1) {
+      fail(`mục ${item.id}: anchor "${ex.anchor}" trong ${ex.file} ${hits.length === 0 ? 'không tìm thấy' : `xuất hiện ${hits.length} lần (dòng ${hits.join(', ')}), cần duy nhất`}`);
+    }
+    ex.line = hits[0];
+  }
+}
+
 const excepted = (item, rel, line) =>
   (item.exceptions ?? []).some((ex) => nfc(ex.file) === rel && (ex.line === undefined || ex.line === line));
 
@@ -90,6 +134,16 @@ for (const abs of files.sort()) {
     lines.forEach((text, i) => {
       if (s.re.test(text) && !excepted(s, rel, i + 1)) {
         results.push({ file: rel, line: i + 1, id: s.id, kind: 'stale', message: `cụm lỗi thời — ${s.reason}` });
+      }
+    });
+  }
+  if (!MACHINE_PATH_EXEMPT.includes(rel)) {
+    lines.forEach((text, i) => {
+      for (const p of MACHINE_PATH_PATTERNS) {
+        if (p.re.test(text)) {
+          results.push({ file: rel, line: i + 1, id: 'machine-path', kind: 'machine-path', message: `đường dẫn máy (${p.id}) — thay bằng <máy-chạy>/<máy-cloud>` });
+          break;
+        }
       }
     });
   }
