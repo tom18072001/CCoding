@@ -1,0 +1,115 @@
+{
+ "note": "Ước lượng (run.estimate lúc lập kế hoạch) so với token thật của 5 gói Nghiên cứu trên văn phòng phụ; chỉ số tổng, không có văn bản. Trích 14/11/2026 bởi người điều phối cho D18d K4b.",
+ "rows": [
+  {
+   "brief": "BRIEF-19",
+   "department": "research",
+   "lane": "full",
+   "subtasks": 6,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 2390000,
+    "budget": 5822029,
+    "at": "2026-11-12T16:59:57.502Z",
+    "basis": "theo hằng số cấu hình (chưa đủ lịch sử)"
+   },
+   "actual": {
+    "input": 322,
+    "output": 260662,
+    "cacheRead": 13564213,
+    "cacheWrite": 786074,
+    "total": 14611271,
+    "costUsd": 7.36,
+    "calls": 15
+   }
+  },
+  {
+   "brief": "BRIEF-20",
+   "department": "research",
+   "lane": "full",
+   "subtasks": 6,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 13395807,
+    "budget": 5660148,
+    "at": "2026-11-14T06:43:26.871Z",
+    "basis": "theo lịch sử: @data-scientist ~5.80M/hạng mục (2 mẫu), @methodologist ~513.8k/hạng mục (3 mẫu)"
+   },
+   "actual": {
+    "input": 324,
+    "output": 339126,
+    "cacheRead": 13913149,
+    "cacheWrite": 1049514,
+    "total": 15302113,
+    "costUsd": 12.58,
+    "calls": 15
+   }
+  },
+  {
+   "brief": "BRIEF-21",
+   "department": "research",
+   "lane": "full",
+   "subtasks": 7,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 12465604,
+    "budget": 5817189,
+    "at": "2026-11-14T08:34:19.300Z",
+    "basis": "theo lịch sử: @data-scientist ~3.51M/hạng mục (4 mẫu), @literature-researcher ~365.3k/hạng mục (2 mẫu), @methodologist ~670.3k/hạng mục (4 mẫu)"
+   },
+   "actual": {
+    "input": 442,
+    "output": 256551,
+    "cacheRead": 20885219,
+    "cacheWrite": 985716,
+    "total": 22127928,
+    "costUsd": 9.92,
+    "calls": 18
+   }
+  },
+  {
+   "brief": "BRIEF-22",
+   "department": "research",
+   "lane": "full",
+   "subtasks": 8,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 12687173,
+    "budget": 5685803,
+    "at": "2026-11-14T09:39:33.393Z",
+    "basis": "theo lịch sử: @methodologist ~513.8k/hạng mục (5 mẫu), @data-scientist ~2.68M/hạng mục (7 mẫu), @literature-researcher ~316.4k/hạng mục (3 mẫu), @academic-writer ~5.08M/hạng mục (2 mẫu)"
+   },
+   "actual": {
+    "input": 484,
+    "output": 376901,
+    "cacheRead": 19853737,
+    "cacheWrite": 1199485,
+    "total": 21430607,
+    "costUsd": 14.69,
+    "calls": 18
+   }
+  },
+  {
+   "brief": "BRIEF-23",
+   "department": "research",
+   "lane": "full",
+   "subtasks": 5,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 11413302,
+    "budget": 5689959,
+    "at": "2026-11-14T10:10:43.775Z",
+    "basis": "theo lịch sử: @methodologist ~513.8k/hạng mục (7 mẫu), @data-scientist ~1.97M/hạng mục (8 mẫu), @academic-writer ~4.61M/hạng mục (3 mẫu)"
+   },
+   "actual": {
+    "input": 216,
+    "output": 127230,
+    "cacheRead": 4619009,
+    "cacheWrite": 419855,
+    "total": 5166310,
+    "costUsd": 3.52,
+    "calls": 13
+   }
+  }
+ ]
+}
