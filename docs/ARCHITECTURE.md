@@ -236,6 +236,10 @@ Khi CTO chưa nghiệm thu, nhiệm vụ không dừng ngay ở "cần xem". Ph�
 
 **Log `accept.followup`.** Ghi qua `LogStore` với các trường `opened`, `round`, `maxRounds`, `inScope` (tên tiêu chí), `decision` (tên tiêu chí), `budgetLeft`, `estimate`, và `reason` khi không mở.
 
+**Luồng tóm tắt (D18c/D18d).** `accept` (CTO chưa nghiệm thu) → `followupDecision` mở vòng bổ sung → run mới có `followupOf` và `round` → trưởng phòng lập kế hoạch cho tiêu chí `in` → cổng kế hoạch (chế độ vòng bổ sung) → thực thi → `accept` lại.
+
+**Cổng kế hoạch ở vòng bổ sung.** Ở vòng bổ sung, quy tắc `brief-item` chỉ kiểm các mã hạng mục (`K1`, `K2`…) xuất hiện trong tên các tiêu chí của vòng (hàm `followupCodes`), không kiểm mọi mã của đề bài gốc. Kết quả nằm ở `followupScope = { codes, skipped }`. Nếu tên tiêu chí không chứa mã nào thì `codes` rỗng và `skipped: true`: quy tắc `brief-item` được bỏ qua cho vòng đó, còn quy tắc A/B vẫn áp. Log `plan.gate` và `gate.decision` của vòng mang `followupScope: { round, codes, skipped }`; từ D18d, cả hai giai đoạn `blocked` và `replanned` đều mang trường này khi là vòng bổ sung (giai đoạn `stopped` thì không).
+
 ### Cổng phủ kế hoạch (B-10)
 
 Cổng phủ kế hoạch chạy sau khi có kế hoạch và trước khi thực thi. Nó chặn kế hoạch bỏ sót đích hoặc dở dang, vì lỗi này không thể sửa ở các pha sau. Logic ở `src/plan-gate.ts` (hàm `planGate`, `checkPlanCoverage`, `checkPlanReadable`, `checkBriefItems`, `briefItems`, `planTargets`), nối vào orchestrator qua `gatePlan`, đặt trước bước duyệt kế hoạch. Cổng áp cho cả làn nhanh và làn đầy; việc giao riêng cho một agent thì bỏ qua. Làn đơn không đi qua cổng này vì không có bước chia việc; kế hoạch sau khi nâng cấp thì có.
@@ -262,6 +266,8 @@ Khi kế hoạch trượt A, B hoặc `brief-item`, cổng chạy đúng một l
 
 Tên `brief-item` nằm trong mảng `rules` của log `plan.gate` và của `run.planGate`, nên log tách được quy tắc này khỏi A và B. Lý do chi tiết có tiền tố `brief-item:` trong `reasons`. Khi vẫn trượt mà không có quy tắc A, `attention.reason` là `plan-unreadable`, kể cả khi chỉ `brief-item` trượt.
 
+Luồng cổng: **blocked** (log `plan.gate` stage `blocked`, kèm `gate.decision` ghi cổng chặn; trưởng phòng được gọi `replanPrompt` một lần) → **replanned** (log `plan.gate` stage `replanned` với `blocked: false` nếu đạt hoặc `true` nếu vẫn trượt) → nếu vẫn trượt thì **stopped** (log `plan.gate` stage `stopped` mức `error`, kèm `attention`). Kế hoạch đạt ngay chỉ ghi `gate.decision`.
+
 Log `plan.gate` ghi ở ba giai đoạn `blocked`, `replanned`, `stopped`. Kết quả lưu ở `run.planGate` (`uncovered`, `reasons`, `rules`, `replanned`); kế hoạch đạt lưu `rules: []`.
 
 **Phát lại offline.** Công cụ `scripts/replay-plan-gate.mjs` chạy cổng trên kế hoạch đã ghi của bộ đo mà không gọi LLM. Nó đọc `bench/vs-claude/results/C*/*/ccoding-task.json` và danh sách vai từ `agents/**`, rồi in kết quả ra stdout, không ghi tệp nào.
@@ -283,6 +289,8 @@ Chủ dự án muốn lỗi đã lặp lại thì máy tự chặn, không dựa
 - **Tệp ngoại lệ/khóa của lint-CI bắt buộc reviewer:** `lintGuardPaths()` khớp `scripts/lint/allow.json`, `baseline.json`, `overclaim.json`, `.github/workflows/` và `preregistration.lock.json`. Diff chạm một trong các tệp này thì `reviewerReasons()` thêm lý do "diff chạm tệp ngoại lệ/khóa của lint-CI" (cần reviewer, không bỏ qua dù cổng xanh). `acceptPrompt`/`acceptBriefPrompt` thêm khối bắt buộc CTO nêu thay đổi này trong biên bản nghiệm thu.
 
 Giới hạn: `strictChecks` chỉ áp khi dự án có `checkCommands` và nhiệm vụ có quyền `exec` trong workspace. Vòng bổ sung sau nghiệm thu của CTO không chạy khi biên bản này được ghi. Test: `test/strict-checks.test.ts`.
+
+**Xác minh chuỗi băm và `allowUnsigned`.** Khi có khóa HMAC (`CCODING_LOG_HMAC_KEY`), `verifyChain`/`verifyChainStream` mặc định bắt buộc mọi dòng có chữ ký; log cũ chưa ký báo `thiếu chữ ký`. Tùy chọn `allowUnsigned` cho phép phần log cũ chưa ký (chỉ kiểm hash; sau dòng có chữ ký đầu tiên các dòng sau vẫn bắt buộc ký). CLI: `ccoding logs verify --allow-unsigned`. API: `GET /api/audit/verify?allowUnsigned=1` (hoặc `true`); không truyền thì giữ hành vi chặt. Quyền truy cập của route không đổi.
 
 ## Sự kiện chẩn đoán của hook (`guard.block`)
 

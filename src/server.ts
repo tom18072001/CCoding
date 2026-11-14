@@ -733,9 +733,9 @@ export function createServer(app: App): http.Server {
     }
 
     if (p === '/api/audit/verify') {
-      // kiểm chuỗi băm của nhật ký hệ thống (đọc luồng toàn tệp — chỉ chạy khi bấm, không chặn server)
+      // kiểm chuỗi băm của nhật ký hệ thống; ?allowUnsigned=1 cho phép log cũ chưa ký như CLI --allow-unsigned (đọc luồng toàn tệp — chỉ chạy khi bấm, không chặn server)
       const file = logs.fileFor('system');
-      return send(res, 200, { file: path.join('data', path.relative(config.dataDir, file)).replace(/\\/g, '/'), ...(await verifyChainStream(file)) });
+      return send(res, 200, { file: path.join('data', path.relative(config.dataDir, file)).replace(/\\/g, '/'), ...(await verifyChainStream(file, { allowUnsigned: ['1', 'true'].includes((q('allowUnsigned') ?? '').toLowerCase()) })) });
     }
     if (p === '/api/audit') {
       const rows = scanJsonl(logs.fileFor('system'), (e) => auditOf(e) ?? undefined, auditCache);
