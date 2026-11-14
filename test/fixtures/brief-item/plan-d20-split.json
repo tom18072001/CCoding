@@ -1,0 +1,86 @@
+{
+ "source": "kế hoạch thật của D20 (14/11/2026 23:30): tách K1 thành K1a, K1b",
+ "brief": "docs/research/BRIEF-D20.md",
+ "run": 0,
+ "followupCriteria": null,
+ "subtasks": [
+  {
+   "id": "K1a",
+   "title": "K1a — Bộ chạy lint scripts/lint/run.mjs, allow/baseline và 6 rule từ AGENTS.md",
+   "description": "Làm theo giao kèo rule trong BRIEF-D20.\n(1) scripts/lint/run.mjs:\n- nạp mọi tệp scripts/lint/rules/*.mjs;\n- dựng ctx { root, files (git ls-files, dấu /), read(file), base, git(args) };\n- áp allow.json (rule, file, anchor, reason) và baseline.json (rule, file, anchor|sha256, owner, fixIn). Mục không còn khớp gì là lỗi. Khi có mốc, baseline.json có nhiều mục hơn bản ở mốc (`git show <base>:scripts/lint/baseline.json`) thì lỗi;\n- in theo rule dạng `tệp:dòng — lỗi` cùng tổng số, có lỗi thì exit 1;\n- tùy chọn --rule <id>, --json, --base <ref>. Mốc lấy theo thứ tự --base, LINT_BASE, CCODING_BASE_REF. Thiếu mốc thì rule needsBase báo LỖI, trừ khi --rule chọn một rule không cần mốc;\n- không có cờ hay biến môi trường bỏ qua, không có mức cảnh báo.\nTạo allow.json và baseline.json dạng { entries: [] }, mỗi mục có trường `by`.\n(2) Sáu rule:\n- deps-allowlist;\n- llm-boundary: danh sách lấy từ hiện trạng, mỗi mục một lý do;\n- exec-boundary: mỗi module được import child_process ghi kèm hàm kiểm lệnh bắt buộc. Xác minh run_command đã nối hàm kiểm sau D16; nếu chưa, ghi vào baseline (owner Phòng Dev) và báo rõ trong bàn giao;\n- log-boundary;\n- public-no-cdn;\n- agent-format-cochange (needsBase).\n(3) package.json: chỉ thêm `\"lint\": \"node scripts/lint/run.mjs\"` vào cuối khối scripts.\n(4) test/lint-runner.test.ts dùng repo git tạm, kiểu chặt, không any và không @ts-ignore. Các ca: ngoại lệ không khớp ⇒ exit 1; baseline tăng so với mốc ⇒ exit 1; rule needsBase thiếu mốc ⇒ exit 1; `--rule deps-allowlist` không có mốc ⇒ exit 0.\nKiểm chứng: `node scripts/lint/run.mjs --base HEAD` exit 0; `npm run typecheck`; `npm test`. Không sửa docs/research/ và src/plan-gate.ts.",
+   "assignee": "senior-swe",
+   "dependsOn": []
+  },
+  {
+   "id": "K1b",
+   "title": "K1b — tsconfig.test.json và sửa lỗi kiểu trong test/",
+   "description": "(1) tsconfig.test.json: extends tsconfig.json, noEmit, include test/**/*.ts (thêm src nếu test import).\n(2) package.json: CHỈ sửa dòng `typecheck` thành `tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json`.\n(3) Sửa hết lỗi kiểu hiện có trong test/ (khoảng 30). Không dùng any, `as any`, @ts-ignore hay @ts-expect-error. Lỗi lộ ra kiểu sai ở src/ thì sửa ở src/ và ghi lý do, TRỪ src/plan-gate.ts (K4 sở hữu): lỗi ở tệp này thì ghi vào bàn giao.\nKiểm chứng: `npx tsc -p tsconfig.test.json` exit 0; `npm run typecheck` exit 0; `npm test` 0 fail. Ghi số lỗi trước và sau. Dán kết quả grep chứng minh test/ không có any hay @ts-ignore mới.",
+   "assignee": "frontend-dev",
+   "dependsOn": []
+  },
+  {
+   "id": "K2",
+   "title": "K2 — CI ma trận và 6 rule về test (no-only, skip-registry, orphan-tests, test-glob, ci-integrity, stray-files)",
+   "description": "(1) package.json:\n- thêm `test:research` ngay sau `test:bench`: `node --test` với glob đặt trong ngoặc kép, gồm docs/research/** và bench/vs-claude/harness/, không truyền thư mục;\n- thêm `check` chạy lần lượt typecheck, lint, test, test:bench, test:research.\n(2) .github/workflows/ci.yml:\n- trigger: push `branches: ['**']` và pull_request;\n- ma trận ubuntu-latest/windows-latest × Node 22/24, chạy đủ năm bước;\n- fetch-depth 0;\n- LINT_BASE: PR lấy base ref; push lấy github.event.before; before toàn số 0 thì lấy `git merge-base origin/main HEAD`. Không tính được mốc thì bước đó fail;\n- bước cuối: `git status --porcelain` rỗng, nếu không thì fail;\n- không continue-on-error, không `|| true`.\n(3) Sáu rule:\n- no-only;\n- skip-registry: tạo test/skips.json cho mọi skip hiện có, đối chiếu docs/diagnostics/skipped-tests.md nếu có;\n- orphan-tests: trừ bench/vs-claude/tasks/ và results/;\n- test-glob;\n- ci-integrity;\n- stray-files: xóa tệp bị bắt trong docs/research/ (đề bài cho phép) và ghi danh sách tệp đã xóa.\nKHÔNG ghi allow.json/baseline.json. Ngoại lệ cần thiết thì ghi đủ trường trong bàn giao để K4 thêm.\nKiểm chứng:\n- `node scripts/lint/run.mjs --rule <id>` exit 0 cho từng rule;\n- `npm run test:research` và `npm run test:bench` exit 0;\n- chạy ci-integrity trên bản sao ci.yml có `|| true` để chứng minh rule bắt được, rồi xóa bản sao.\nKhông sửa docs/research/scripts/ và bench/vs-claude/results/.",
+   "assignee": "devops",
+   "dependsOn": [
+    "K1a"
+   ]
+  },
+  {
+   "id": "K3",
+   "title": "K3 — Rule secrets, machine-path, paper-anonymity và cập nhật đánh giá bảo vệ dữ liệu",
+   "description": "(1) secrets: quét mọi tệp chữ đã track. Mẫu gồm khóa Anthropic, ghp_/gho_/github_pat_, AKIA…, khối BEGIN … PRIVATE KEY, `CCODING_LOG_HMAC_KEY=` có giá trị. Khóa giả trong test thì vào allow.json theo neo chữ đã làm sạch.\n(2) machine-path:\n- bắt ổ đĩa kèm Users và tên người dùng (cả hai kiểu dấu gạch), /home/<tên>/, /Users/<tên>/, đường dẫn tạm của máy cloud;\n- không tính chỗ giữ chỗ (<bạn>, ..., …, x);\n- tệp hiện có trong bench/vs-claude/results/ và tệp thô đã ghi ngoại lệ ở CHANGELOG gói 15 vào baseline theo sha256 (owner Phòng Nghiên cứu);\n- vi phạm ở docs/ ngoài docs/research/ thì sửa trực tiếp; trong docs/research/ thì vào baseline.\n(3) paper-anonymity: danh sách tên nằm trong cấu hình rule. Bỏ '(Tom)' ở docs/research/paper/paper.md.\n(4) docs/data-protection-assessment.md:\n- lint là kiểm soát PRE và DET cho repo công khai;\n- phạm vi quét;\n- điều không bắt được: bí mật mã hóa hay tách dòng, lịch sử git cũ, tệp nhị phân;\n- việc thật sự chặn merge cần chủ dự án bật bảo vệ nhánh.\nMục mới thêm vào cuối mảng, ghi `by: 'K3'`. Không ghi đường dẫn máy hay khóa thật vào bất kỳ tệp nào, kể cả bàn giao.\nKiểm chứng:\n- `--rule secrets|machine-path|paper-anonymity` exit 0;\n- tệp tạm có đường dẫn máy ⇒ exit 1, xóa tệp tạm sau khi thử;\n- `npm test`.",
+   "assignee": "security",
+   "dependsOn": [
+    "K1a"
+   ]
+  },
+  {
+   "id": "K4",
+   "title": "K4 — Rule cho tài liệu Nghiên cứu và đề bài (research-*, prereg-lock, overclaim, placeholders, review-verdict, brief-lint)",
+   "description": "(1) Bốn rule gọi script có sẵn, KHÔNG sửa docs/research/scripts/:\n- research-file-line (logic-map-check.mjs --strict);\n- research-facts (consistency-check.mjs);\n- research-token (token-analysis.mjs --check …);\n- research-scorecard (scorecard.mjs --check).\nScript exit khác 0 thì rule lỗi, kèm dòng cuối đầu ra.\n(2) prereg-lock:\n- docs/research/preregistration.lock.json giữ sha256 từng khối tiêu đề;\n- khối đã khóa đổi hoặc mất ⇒ lỗi;\n- khối mới chỉ được thêm trong §9, qua `--add-new` (chỉ thêm, không ghi đè);\n- 'Lịch sử bản' chỉ được thêm dòng; sửa hay xóa dòng cũ ⇒ lỗi.\n(3) overclaim: scripts/lint/overclaim.json (mẫu, lý do, nguồn) từ BRIEF-21, BRIEF-22b và phản biện K4 của v0.7. Áp cho paper/**, analysis/**/report.md, improvement-backlog.md, bench/vs-claude/results/*/report.md. Bỏ qua chữ trong ngoặc kép hoặc backtick.\n(4) placeholders: sửa tiêu đề '(pha review điền)' ở docs/research/context/v43f-review-2026-11-12.md.\n(5) review-verdict: tệp cũ vào baseline.\n(6) brief-lint:\n- export NEEDS_CMD_RE ở src/plan-gate.ts;\n- import briefItems() và NEEDS_CMD_RE, không chép;\n- vai có trong agents/<phòng>/ và được briefItems nhận ra;\n- vai không có công cụ chạy lệnh thì thân K không đòi chạy lệnh;\n- có Phạm vi, dòng Dữ liệu kèm một nhãn, dòng ngân sách;\n- BRIEF-*.md cũ vào allow.json (kể cả BRIEF-D20.md nếu đỏ).\n(7) Thêm vào cuối mảng các ngoại lệ K2 đề nghị trong bàn giao (ghi `by: 'K2'`). Mục của K4 ghi `by: 'K4'`. Lỗi nội dung khác ở docs/research/ vào baseline (owner Phòng Nghiên cứu). research-file-line đỏ vì BRIEF-22c thì vào baseline theo neo (fixIn BRIEF-22c) và ghi số lỗi.\nKiểm chứng:\n- `--rule <id>` exit 0 cho cả 10 rule;\n- test/brief-lint.test.ts có ca vai chỉ đọc bị đòi chạy lệnh (mẫu BRIEF-22c lần 1) ⇒ lỗi;\n- `npm run typecheck`; `npm test`.",
+   "assignee": "data-engineer",
+   "dependsOn": [
+    "K1a",
+    "K2",
+    "K3"
+   ]
+  },
+  {
+   "id": "K5",
+   "title": "K5 — Văn phòng coi kiểm tra đỏ là hỏng: strictChecks, CCODING_BASE_REF, reviewer bắt buộc",
+   "description": "(1) Tùy chọn dự án `strictChecks: true`:\n- trong classifyChecks (src/quality-gate.ts:33) và nơi gọi nó, `red-unrelated` thành `red-required`;\n- hết vòng sửa mà còn đỏ thì không `done`, không gọi CTO nghiệm thu. Ghi biên bản 'Chưa nghiệm thu: còn đỏ <lệnh>' kèm đầu ra cuối của lệnh.\n(2) Khi chạy lệnh kiểm tra của dự án, đặt env CCODING_BASE_REF bằng mốc của nhiệm vụ.\n(3) Diff chạm scripts/lint/allow.json, baseline.json, overclaim.json, .github/workflows/ hoặc preregistration.lock.json ⇒ bắt buộc reviewer, và lời nhắc CTO phải nêu thay đổi này trong biên bản.\n(4) Ghi vào docs/ARCHITECTURE.md.\n(5) Test bằng runtime giả, cô lập CCODING_CONFIG:\n- đỏ từ mốc và strictChecks bật ⇒ không done, không gọi CTO;\n- strictChecks tắt ⇒ hành vi cũ;\n- diff chạm allow.json ⇒ có reviewer;\n- lệnh kiểm tra nhận được CCODING_BASE_REF.\nKhông sửa src/plan-gate.ts. Test mới không dùng any hay @ts-ignore; tự kiểm bằng một tsconfig tạm ngoài repo và xóa sau khi kiểm.\nKiểm chứng: `npm run typecheck`, `npm test` 0 fail.",
+   "assignee": "backend-dev",
+   "dependsOn": []
+  },
+  {
+   "id": "K6",
+   "title": "K6 — docs/LINT.md là nguồn duy nhất cho luật; cập nhật AGENTS.md và 4 hồ sơ agent",
+   "description": "Lấy danh sách rule từ scripts/lint/rules/*.mjs đã gộp (trường id, source) và từ bàn giao của K1a, K2, K3, K4, K5. Không bịa rule.\n(1) docs/LINT.md:\n- bảng rule → lỗi lặp sinh ra nó → điều kiểm → cách sửa khi đỏ → cách thêm ngoại lệ (allow.json hay baseline.json, các trường, ai review: diff chạm các tệp này bắt buộc reviewer, CTO nêu trong biên bản);\n- cách chạy: npm run lint, npm run check, --rule, --json, --base, LINT_BASE/CCODING_BASE_REF;\n- không có mức cảnh báo, không có cờ bỏ qua;\n- strictChecks (lấy từ docs/ARCHITECTURE.md của K5);\n- bảo vệ nhánh GitHub do chủ dự án bật (khớp với docs/data-protection-assessment.md của K3).\n(2) AGENTS.md mục 'Kiểm tra trước khi commit': thay khối lệnh bằng `npm run check`.\n(3) Thêm đúng một dòng 'Chạy `npm run lint` trước khi báo xong; lint đỏ là chưa xong (xem `docs/LINT.md`).' vào agents/dev/dev-lead.md, agents/dev/qa-tester.md, agents/research/research-lead.md, agents/research/peer-reviewer.md. Không xóa quy tắc cũ.\nTiêu chí: mỗi rule trong scripts/lint/rules/ có đúng một dòng trong bảng; không đường dẫn máy.",
+   "assignee": "tech-writer",
+   "dependsOn": [
+    "K1a",
+    "K2",
+    "K3",
+    "K4",
+    "K5"
+   ]
+  },
+  {
+   "id": "K7",
+   "title": "K7 — Review và thử sức bắt lỗi của từng rule, npm run check, cây sạch",
+   "description": "Kết luận theo mẫu JSON (blocker/major/minor).\n(1) Với từng rule trong scripts/lint/rules/: tạo một vi phạm mẫu, chạy `npm run lint` với LINT_BASE=HEAD, ghi exit code, rồi hoàn tác. Mọi rule phải ra 1. Ghi bảng rule → vi phạm → exit.\n(2) Ba phép thử:\n- thêm một mục vào baseline.json ⇒ exit 1 khi có mốc;\n- xóa nội dung mà một ngoại lệ trong allow.json trỏ tới ⇒ exit 1;\n- chạy lint không có mốc (bỏ LINT_BASE và CCODING_BASE_REF) ⇒ exit 1.\n(3) `npm run check` phải xanh. Ghi số lỗi research-file-line đã vào baseline do BRIEF-22c.\n(4) Rà:\n- không có cờ hay biến môi trường bỏ qua lint;\n- ci.yml không có continue-on-error hay `|| true`;\n- test/ không có any hay @ts-ignore mới;\n- NEEDS_CMD_RE và briefItems được import chứ không chép;\n- mỗi rule có đúng một dòng trong docs/LINT.md;\n- allow.json và baseline.json không chứa đường dẫn máy hay khóa;\n- typecheck đầy đủ xanh sau khi gộp K1b và K5.\n(5) `git status --porcelain` rỗng ở cuối.\nKhông sửa mã trừ khi cần hoàn tác vi phạm mẫu. Dán exit code thật và dòng tổng của từng lệnh.",
+   "assignee": "qa-tester",
+   "dependsOn": [
+    "K1a",
+    "K1b",
+    "K2",
+    "K3",
+    "K4",
+    "K5",
+    "K6"
+   ]
+  }
+ ]
+}

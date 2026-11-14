@@ -255,7 +255,8 @@ export function followupCodes(brief: string, criteria: string[]): string[] {
   return briefItems(brief).map((i) => i.code).filter((c) => codeRe(c).test(text));
 }
 
-const codeRe = (code: string): RegExp => new RegExp(`(?<![\\p{L}\\d])${code}(?![\\p{L}\\d])`, 'iu');
+/** Mã hạng mục trong kế hoạch: `K1` hoặc phần tách của nó (`K1a`, `K1b` — một chữ cái thường ngay sau). Không khớp `K10`, `K1ab`. */
+const codeRe = (code: string): RegExp => new RegExp(`(?<![\\p{L}\\d])${code.replace(/^k/i, '[Kk]')}[a-z]?(?![\\p{L}\\d])`, 'u');
 const sortedParts = (id: string): string => id.split('-').sort().join('-');
 
 function roleMatches(role: string, assignee: string, roles?: PlanGateInput['agentRoles']): boolean {
