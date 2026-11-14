@@ -469,6 +469,14 @@
   },
   "numbers": [
     {
+      "id": "logic-map-refs-total",
+      "value": "445",
+      "reason": "BRIEF-22d K2 (m1): tổng tham chiếu tệp:dòng khớp ở logic-map-check.mjs --strict tại mốc ccc76cc0 = 445 (lần kiểm của S2 BRIEF-22c ra 444, chỉ ghi kèm ngữ cảnh đó; CHANGELOG.md bị consistency-check bỏ qua nên không nằm trong files). Chỉ bắt 'N/N' sau --strict và 'N tham chiếu khớp', không quét số trần",
+      "pattern": "(?<=--strict`? )\\d+(?=/\\d+)|\\d+(?= tham chiếu khớp)",
+      "files": ["improvement-backlog.md", "analysis/decisions/logic-map.md"],
+      "exceptions": []
+    },
+    {
       "id": "brief22-calls-total",
       "value": "112",
       "reason": "v0.8 (BRIEF-22): brief22.kpi.callsTotal; scorecard.md §1a (tổng lượt gọi 14 agent)",
