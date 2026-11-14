@@ -2653,7 +2653,7 @@ export class Orchestrator {
       } else truncated = !!revised.truncated;
       g = revised.parsed ? again : { ...g, blocked: true, reasons: [...g.reasons, 'B (iv) lượt sửa kế hoạch không trả JSON đọc được'], rules: g.rules.includes('B') ? g.rules : [...g.rules, 'B'] };
       record(true);
-      logs.write({ level: g.blocked ? 'warn' : 'info', kind: 'plan.gate', msg: `${dept.short}: sau khi sửa kế hoạch — ${g.blocked ? `vẫn bị chặn (${g.rules.join('+')})` : 'đạt'}`, taskId: task.id, department: dept.id, data: { stage: 'replanned', blocked: g.blocked, rules: g.rules, uncovered: g.uncovered, reasons: g.reasons, before: first.rules } });
+      logs.write({ level: g.blocked ? 'warn' : 'info', kind: 'plan.gate', msg: `${dept.short}: sau khi sửa kế hoạch — ${g.blocked ? `vẫn bị chặn (${g.rules.join('+')})` : 'đạt'}`, taskId: task.id, department: dept.id, data: { stage: 'replanned', ...(g.followupScope ? { followupScope: { round: run.round, ...g.followupScope } } : {}), blocked: g.blocked, rules: g.rules, uncovered: g.uncovered, reasons: g.reasons, before: first.rules } });
       if (!g.blocked) {
         this.message(task, dept.id, lead.id, 'plan', `Kế hoạch đã sửa (cổng phủ kế hoạch đạt):\n${P.planText(run.subtasks)}`);
         return;

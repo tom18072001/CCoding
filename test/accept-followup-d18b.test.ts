@@ -34,7 +34,7 @@ function setup() {
 }
 type Ctx = ReturnType<typeof setup>;
 
-async function flow(a: Ctx, critName: string) {
+async function flow(a: Ctx, critName: string, followupTexts?: string[]) {
   let accepts = 0;
   let followupPlans = 0;
   const orch = a.orchestrator as unknown as { call: (...x: unknown[]) => Promise<{ text: string; error?: string }> };
@@ -49,7 +49,7 @@ async function flow(a: Ctx, critName: string) {
         const subtasks = briefItems(BRIEF).map((it, i) => ({ id: `S${i + 1}`, title: `${it.code} — hạng mục`, description: BRIEF, assignee: it.role ?? 'backend-dev', dependsOn: [] as string[] }));
         r.text = `\`\`\`json\n${JSON.stringify({ summary: 'Kế hoạch vòng đầu', subtasks })}\n\`\`\``;
       }
-      if (t && t.runs.length === 2 && t.runs[1].followupOf) { followupPlans++; r.text = `\`\`\`json\n${FIXTURE}\n\`\`\``; }
+      if (t && t.runs.length === 2 && t.runs[1].followupOf) { followupPlans++; r.text = followupTexts ? followupTexts[Math.min(followupPlans - 1, followupTexts.length - 1)] : `\`\`\`json\n${FIXTURE}\n\`\`\``; }
     }
     if (phase === 'accept') {
       accepts++;
@@ -86,6 +86,24 @@ test('K5 luồng D18b: tiêu chí không mã → cổng bổ sung đạt (follow
     assert.equal(scope.skipped, true);
     assert.equal(fu.every((e) => (e.data as { verdict?: string }).verdict !== 'block'), true, 'cổng vòng bổ sung không chặn');
     assert.equal(logs.some((e) => e.kind === 'plan.gate' && (e.data as { stage?: string }).stage === 'stopped'), false);
+  } finally {
+    a.cleanupAll();
+  }
+});
+
+test('m1 (D18d): vòng bổ sung bị chặn rồi replanned → log plan.gate replanned mang followupScope.round', async () => {
+  const a = setup();
+  try {
+    const plan = (title: string) => '```json\n' + JSON.stringify({ summary: 'Kế hoạch bổ sung', subtasks: [{ id: 'S1', title, description: BRIEF.replace(/\bK(\d)/g, 'X$1'), assignee: 'backend-dev', dependsOn: [] }] }) + '\n```';
+    const { done } = await flow(a, 'K2 — thiếu log followupScope', [plan('Việc không nhắc mã nào'), plan('K2 — sửa log followupScope')]);
+    assert.equal(done.status, 'done', done.error);
+    const gl = a.logs.query({ task: done.id, kind: 'plan.gate' }).map((e) => e.data as { stage?: string; followupScope?: { round: number; codes: string[] } });
+    const blocked = gl.find((d) => d?.stage === 'blocked' && d.followupScope);
+    const re = gl.find((d) => d?.stage === 'replanned');
+    assert.ok(blocked, 'log blocked có followupScope');
+    assert.ok(re, 'có log replanned');
+    assert.equal(re.followupScope?.round, 1, 'log replanned mang followupScope.round');
+    assert.deepEqual(re.followupScope?.codes, ['K2']);
   } finally {
     a.cleanupAll();
   }
