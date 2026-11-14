@@ -4,7 +4,7 @@ Phân loại dữ liệu: **Nội bộ**. Chỉ có chỉ số tổng hợp; d�
 Nhãn: **[Mô tả]** = số quan sát, không đối chứng, không nhân quả. Mọi số trong các khối bảng do script sinh ra.
 
 - Sinh lại bảng: `node docs/research/analysis/decisions/scorecard.mjs --write`
-- Kiểm bảng trong md khớp đầu ra và đủ 14 agent: `node docs/research/analysis/decisions/scorecard.mjs --check`
+- Kiểm bảng trong md khớp đầu ra và đủ 20/20 dòng agent: `node docs/research/analysis/decisions/scorecard.mjs --check`
 - Nguồn: `bench/vs-claude/results/decisions/{kpi-office.json, decomp-agg.json, RUNLOG.md}`, `bench/vs-claude/results/p-parallel/RUNLOG.md`, `g-mutation/report.md`, `e7-cto/report.md`, `axis2-guard/results.json`, mọi `*/runs.jsonl` (cấu trúc kế hoạch tính bằng `decomp-metrics.mjs`).
 - Phạm vi KPI: văn phòng phụ, 30 ngày tới 14/11/2026; nhiệm vụ đang chạy vẫn được tính nên điểm sẽ đổi khi chúng xong.
 
@@ -12,14 +12,14 @@ Nhãn: **[Mô tả]** = số quan sát, không đối chứng, không nhân qu�
 
 | Việc | Ai làm trong mã | Dòng trong bảng điểm |
 |---|---|---|
-| Định tuyến nhiệm vụ | điều phối viên (`agents/orchestrator.md`); khâu `route` | không có dòng KPI; chi phí route ở mục 1b |
+| Định tuyến nhiệm vụ | điều phối viên (`agents/orchestrator.md`); khâu `route` | dòng KPI "không có dữ liệu trong 30 ngày"; chi phí route ở mục 1b |
 | Chọn làn (single/fast/full) | hàm quy tắc `chooseLane` (`src/lane.ts:129`), không gọi LLM | không có KPI; đếm làn ở `effectiveness.md` |
 | Bóc tách thành hạng mục song song | trưởng phòng `dev-lead`, `research-lead` (khâu `plan`, model Opus ở văn phòng phụ) | dòng `dev-lead`, `research-lead` + mục 1b |
 | Nghiệm thu | `cto` (`agents/cto.md`), **chỉ** nghiệm thu | dòng `cto` |
 
 Khi giám đốc nói "quyết định của CTO" về chia việc, số liệu tương ứng là của **trưởng phòng** (bóc tách) và **hàm chọn làn** (làn), không phải của `cto`. Phần "CTO" trong bảng điểm chỉ nói về nghiệm thu.
 
-## 1a. KPI v2 từng agent (đủ 14 agent của `kpi-office.json`)
+## 1a. KPI v2 từng agent (đủ 20/20 agent: 14 có KPI + 6 không có dữ liệu)
 
 <!-- BEGIN:kpi -->
 | Agent | Vai | Phòng | Điểm (hạng) | Thô | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Mức bằng chứng | Findings | Lượt hỏng | Bị cắt |
@@ -38,14 +38,21 @@ Khi giám đốc nói "quyết định của CTO" về chia việc, số liệu 
 | `methodologist` | member | research | **74** (B) | 78 | n/a | 81 | n/a | 100 | 58 | 70 | high (n=9) | 3 | 0/9 | 3/9 |
 | `peer-reviewer` | reviewer | research | **68** (B) | 81 | n/a | 83 | n/a | 95 | 53 | 100 | low (n=2) | 2 | 0/5 | 4/5 |
 | `literature-researcher` | member | research | **77** (B) | 84 | n/a | 81 | n/a | 100 | 61 | 100 | medium (n=7) | 2 | 0/7 | 3/7 |
+| `orchestrator` | router | office | — | — | — | — | — | — | — | — | không có dữ liệu trong 30 ngày; chi phí route (bench): 331/632 lượt CCoding có khâu route, trung vị 9329 token có trọng số = 3,7 % tổng (mục 1b, "Điều phối viên") | — | — | — |
+| `solution-architect` | member | dev | — | — | — | — | — | — | — | — | không có dữ liệu trong 30 ngày | — | — | — |
+| `frontend-dev` | member | dev | — | — | — | — | — | — | — | — | không có dữ liệu trong 30 ngày | — | — | — |
+| `data-engineer` | member | dev | — | — | — | — | — | — | — | — | không có dữ liệu trong 30 ngày | — | — | — |
+| `business-analyst` | member | dev | — | — | — | — | — | — | — | — | không có dữ liệu trong 30 ngày | — | — | — |
+| `ba-presales` | member | dev | — | — | — | — | — | — | — | — | không có dữ liệu trong 30 ngày | — | — | — |
 <!-- END:kpi -->
 
 <!-- BEGIN:kpiNotes -->
 - Nguồn: `bench/vs-claude/results/decisions/kpi-office.json` (`generatedAt` 2026-11-14T09:20:25.268Z); trường `tasksByStatus`: cancelled 1, paused 2, done 6, failed 1 (tổng 10); trường `tasksCounted` = 7. Hai con số lệch nhau, tệp không giải thích (xem mục chỗ fail F-M1).
-- Số dòng agent: 14 (dev 7, research 6, office 1). Điểm phòng: dev 81, office 73, research 76.
+- Số dòng agent có KPI: 14 (dev 7, research 6, office 1). Điểm phòng: dev 81, office 73, research 76.
 - **Lượt hỏng** (cột "Lượt hỏng") = `failedCalls`/`calls` của agent: lượt hỏng do agent, công cụ lỗi, chạm trần, kết luận không đọc được, sản phẩm rỗng theo trường `method` (nhóm Tin cậy); lỗi hạ tầng (`infraFailedCalls`) không tính điểm, chỉ báo. **Đầu ra bị cắt** (cột "Bị cắt") = `truncated`/`calls`: lượt đầu ra chạm giới hạn độ dài. Hai định nghĩa giữ đúng như `kpi-office.json`, không định nghĩa lại. `failedCalls` của mọi agent đều 0 trừ `dev-lead` (1); `infraFailedCalls` = 0 ở cả 14 agent.
 - "n/a" = nhóm không có dữ liệu nên bị bỏ khỏi điểm (theo `method`: nhóm không có dữ liệu bỏ qua; điểm co về 60 theo lượng bằng chứng `evidenceN`).
-- **Điều phối viên không có dòng nào trong `kpi-office.json`** (14 agent: 7 dev, 6 research, `cto`). Chi phí khâu route được đo riêng ở mục 1c.
+- **6 agent không có trong `kpi-office.json`** (điều phối viên `orchestrator`, `solution-architect`, `frontend-dev`, `data-engineer`, `business-analyst`, `ba-presales`): dòng ghi "không có dữ liệu trong 30 ngày", ô điểm là "—" (không cho điểm, không phải 0). Roster `agents/` có 20 agent = 14 có KPI + 6 không có.
+- **Điều phối viên — chi phí khâu route (thay cho KPI).** Nguồn: `byPhase.route` trong `bench/vs-claude/results/*/runs.jsonl` (trừ `e7-cto`, `selftest`), chỉ lượt CCoding `done` có `byPhase` (bỏ arm A*). Cách tính: với mỗi lượt có `byPhase.route`, chi phí = token có trọng số của khâu route; tỉ trọng = route ÷ tổng `byPhase` của lượt; báo trung vị. Không chạy benchmark mới; số cụ thể ở mục 1b (dòng "Điều phối viên") và khóa `brief22.route.*`.
 <!-- END:kpiNotes -->
 
 Đọc điểm: điểm hiển thị đã co về 60 theo lượng bằng chứng; agent mức bằng chứng `low` (`devops`, `security`, `tech-writer`, `peer-reviewer`) chỉ có 1–2 mục để chấm, nên thứ hạng giữa các agent không đáng tin ở khoảng cách vài điểm. Không có agent nào có `Lượt hỏng` > 0 ngoài `dev-lead`; cột đáng chú ý là `Bị cắt` và nhóm Tin cậy (`qa-tester` 39, `peer-reviewer` 53, `methodologist` 58). **[Mô tả]**
@@ -248,6 +255,7 @@ K5 chép đúng khóa và giá trị dưới đây; phần bench/hiệu quả �
 | `brief22.kpi.academic-writer.total` | 74 |
 | `brief22.kpi.academic-writer.truncated` | 3 |
 | `brief22.kpi.agents` | 14 |
+| `brief22.kpi.agentsNoData` | 6 |
 | `brief22.kpi.agentsWithTruncated` | 10 |
 | `brief22.kpi.backend-dev.calls` | 13 |
 | `brief22.kpi.backend-dev.compliance` | 100 |
@@ -384,6 +392,7 @@ K5 chép đúng khóa và giá trị dưới đây; phần bench/hiệu quả �
 | `brief22.kpi.research-lead.reliability` | 70 |
 | `brief22.kpi.research-lead.total` | 77 |
 | `brief22.kpi.research-lead.truncated` | 2 |
+| `brief22.kpi.rosterAgents` | 20 |
 | `brief22.kpi.scoreMax` | 88 |
 | `brief22.kpi.scoreMedian` | 75.5 |
 | `brief22.kpi.scoreMin` | 65 |
