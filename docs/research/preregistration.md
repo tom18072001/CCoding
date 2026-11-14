@@ -1333,6 +1333,153 @@ Phòng Nghiên cứu thẩm định lại ở BRIEF-19 K1: chạy lại và đ�
 
 **(4) Đánh giá bảo vệ dữ liệu ngắn (theo AGENTS.md; `docs/data-protection-assessment.md` nằm ngoài phạm vi sửa nên ghi tại đây).** Nhãn nội bộ: **Nội bộ** (kết quả đo, script, tệp ca đã quy). Bộ ngoài: **Công khai**, CC BY 4.0, gồm lệnh tổng hợp, **không có DLCN**, không chuyển xuyên biên giới, không dùng dữ liệu thật trên DEV/UAT; RedCode là bộ công khai đã dùng ở lần đo trước. Không gọi LLM, không dịch vụ ngoài. Phân loại pháp lý: không DLCN ⇒ không cần hồ sơ đánh giá tác động riêng; nhiều tiêu chí lấy mức cao nhất nên kết quả gộp giữ **Nội bộ**. Lưu RUNLOG và mã băm ≥ 6 tháng. Nếu cần cập nhật tệp đánh giá chung thì làm ở bước sau, không trong gói này.
 
+#### Sai lệch E9 → E9-lite [Khám phá] — 15/11/2026 (BRIEF-24, K1)
+
+**Giờ chính thức là giờ của commit chứa mục này.** Mục này được commit trước mọi lượt chạy planner của E9-lite và trước khi tính bất kỳ số nào từ kế hoạch. Mục chỉ thêm, không sửa chữ ở trên; mục 9.x (E9) giữ nguyên và **E9 gốc vẫn ghi "chưa chạy", chưa có số E9**. Nguồn: `decisions-2026-11-14.md` mục 6b; `bench/vs-claude/README.md` (các mục E9-lite); `bench/vs-claude/e9/gold-from-solution.mjs`; `bench/vs-claude/lib/plan-only.mjs` (`extractFiles`, `slimPlan`); `bench/vs-claude/arms.json` (arm `P-H`, `P-S`, `P-O`). Không gọi LLM, không chạy planner trong gói này.
+
+**(1) Vì sao lệch.** E9 đã đăng ký cần chuẩn bóc tách do **hai người gán** độc lập. Dự án không có hai người gán. E9-lite thay bước đó bằng chuẩn suy **tất định từ lời giải mẫu** và chỉ làm giai đoạn 1 (lập kế hoạch, không thực thi). E9-lite **không phải E9**: không thay E9, không được trích như E9, mọi kết quả mang nhãn **[Khám phá]**.
+
+**(2) Bài (khóa).** Đúng 13 bài có `solutionDir` trong `task.json`: `g1-slug-dedupe`, `g2-cart-coupon`, `g3-qty-rename`, `g4-gb-unit`, `g5-median-stats`, `g6-range-merge`, `l1-modules`, `l2-chain`, `t1-duration`, `t2-orders`, `t3-api`, `t4-perf`, `t5-logq`. Không thêm, không bớt, không thay bài sau khi thấy bất kỳ kế hoạch hay kết quả nào; bài lỗi hạ tầng được chạy lại (mục 7), không bị bỏ.
+
+**(3) Chuẩn (khóa trước khi thấy bất kỳ kế hoạch nào).**
+- Chuẩn của mỗi bài lấy từ đầu ra `node bench/vs-claude/e9/gold-from-solution.mjs --out bench/vs-claude/results/e9lite/gold.json`: **tập tệp đổi** `G_f` = mọi `files[].path` (cả `added`, `modified`, `deleted`) và **tập module** `G_m` = `modules`. Tệp chỉ khác CRLF/LF đã bị script bỏ; tệp có `flag` (nhị phân, quá lớn) vẫn tính là tệp đổi. Băm `sha256` của `gold.json` và của bảng nhãn sẽ được ghi thành một dòng ngay dưới mục này ở bước sau, **trước** lượt chạy đầu.
+- **Quy tắc nhãn tất định (bằng lời):** bài là **"chia được"** khi lời giải mẫu đổi tệp ở **ít nhất 2 module khác nhau** (tệp ở gốc repo tính là module `.`, tức một module); ngược lại (0 hoặc 1 module) là **"không chia được"**. Nhãn chỉ dựa vào `gold.json`, không dựa vào kế hoạch, điểm, kích thước `size` hay đánh giá của người.
+- **Bằng mã (chép nguyên văn được):**
+
+```js
+// task: phần tử của gold.json.tasks; trả 'chia_duoc' | 'khong_chia_duoc'
+const label = (task) =>
+  new Set(task.files.map((f) => f.module)).size >= 2 ? 'chia_duoc' : 'khong_chia_duoc';
+```
+
+- **Ghi trước:** nếu cả 13 bài cùng một nhãn thì báo **"phân tầng suy biến"** (không có bài ở tầng còn lại, không tính được chia thừa hay so sánh theo tầng) và **không đổi quy tắc** để có hai tầng.
+- Bài có `G_f` rỗng (nếu có): bỏ khỏi các thước độ phủ (NA), vẫn xếp nhãn "không chia được", báo riêng.
+
+**(4) Arm, lặp, thứ tự.**
+- Arm `P-H`, `P-S`, `P-O` (chỉ khác `options.planModel` = `haiku`/`sonnet`/`opus`), mỗi arm × 3 lần lặp × 13 bài = 117 lượt. **Làn nhanh** như README (`lane: 'fast'`, `planOnly: true`), không thêm arm, không sửa ba arm.
+- Lệnh khóa (server CCoding đang chạy, runtime thật):
+
+```bash
+node bench/vs-claude/run.mjs --arms P-H,P-S,P-O \
+  --tasks g1-slug-dedupe,g2-cart-coupon,g3-qty-rename,g4-gb-unit,g5-median-stats,g6-range-merge,l1-modules,l2-chain,t1-duration,t2-orders,t3-api,t4-perf,t5-logq \
+  --repeats 3 --seed e9lite-1 --out bench/vs-claude/results/e9lite/run1/
+```
+
+- Thứ tự do `--seed e9lite-1` quyết định (xáo theo khối bài, tất định, README mục "Thứ tự"); `--dry-run` được chạy trước để lưu thứ tự. Trần lượt và cấu hình engine giống nhau ở mọi arm; kiểm bằng `configHash`: ba arm chỉ được khác nhau do `planModel` trong spec arm, `seed`, `runtime` và phiên bản (`ccodingCommit`, `claudeCliVersion`) phải trùng ở mọi dòng của đợt; khác thì dừng và ghi sai lệch.
+
+**(5) Thước đo (tính riêng trên `planRaw` và `planFinal`; không gộp hai bản).**
+- **Tệp của kế hoạch** `P_f` = hợp `files` của mọi hạng mục (`files` do `extractFiles` trích từ mô tả hạng mục), sau chuẩn hóa. **Luật khớp tệp (tất định):** (i) đổi mọi `\` thành `/`; (ii) bỏ các `./` ở đầu; (iii) bỏ tiền tố repo: nếu đường dẫn bắt đầu bằng `<repoDir>/` hoặc `<id>/<repoDir>/` (`repoDir` lấy từ `task.json` của bài) thì cắt tiền tố đó; (iv) **khớp chính xác, có phân biệt hoa thường**, không khớp hậu tố, không khớp theo tên tệp trần. **Module** của một đường dẫn đã chuẩn hóa = thư mục cấp một (đoạn trước `/` đầu tiên); không có `/` thì module là `.`; `P_m` = tập module của `P_f`.
+- **Độ phủ tệp** = |`G_f` ∩ `P_f`| / |`G_f`|. **Độ phủ module** = |`G_m` ∩ `P_m`| / |`G_m`|. Mỗi lượt một giá trị trong [0; 1].
+- **Chia thừa** (chỉ trên bài "không chia được"): lượt chia thừa ⇔ kế hoạch có **> 1 hạng mục** (|plan| > 1); chỉ số của bài = tỉ lệ lượt chia thừa trong 3 lần lặp.
+- **Số hạng mục** = độ dài mảng kế hoạch. **Số lượt sửa kế hoạch** = `replanCount`. **Cổng đạt lần đầu** = `planGate` (trường của dòng `runs.jsonl`, giá trị do engine ghi; "đạt lần đầu" hiểu theo đúng trường này cùng `replanCount` = 0, không đặt định nghĩa mới; cần @data-scientist kiểm kiểu giá trị khi cài mã). `planRaw` rỗng/`null` ⇒ độ phủ = 0 với `planGate` ghi nhận như đã có; lượt không có `planFinal` bị loại khỏi tính `planFinal` và báo số lượt loại.
+- **Token có trọng số** = `weighted()` trong `bench/vs-claude/lib/claude.mjs` (input + 1,25·cacheWrite + 0,1·cacheRead + 5·output), lấy từ `usage` của dòng; không đặt định nghĩa mới.
+- Mã tính các thước này phải khớp bằng lời ở trên và có test trước khi mở `runs.jsonl` thật.
+
+**(6) Phân tích (mô tả, không kiểm giả thuyết).**
+- Với mỗi bài và arm, **trung bình** 3 lần lặp (dòng `done` cuối của mỗi khóa) ⇒ một giá trị/bài/arm/thước.
+- **Hiệu theo bài:** Opus − Sonnet (`P-O` − `P-S`) và Haiku − Sonnet (`P-H` − `P-S`), mỗi thước.
+- **Bootstrap theo bài** (rút lại 13 bài có hoàn lại, hiệu trung bình), **B = 4000**, **seed khóa = 20261115**, khoảng **95 % percentile** (cận 2,5 % và 97,5 %). Báo thêm số bài hiệu > 0, = 0, < 0.
+- **Chỉ mô tả**: không p-value, không kiểm giả thuyết, **không Holm** (n = 13, [Khám phá]). **Phân tầng theo nhãn** (chia được / không chia được) với n từng tầng; tầng n < 3 chỉ liệt kê giá trị theo bài, không bootstrap. Báo n, khoảng và nhãn [Khám phá] ở mọi bảng.
+
+**(7) Dừng và chạy lại.**
+- Theo README: chạy tiếp bằng đúng lệnh, cùng `--out` và `--seed`; khóa `bài__arm__rN` đã `done` bị bỏ qua; `error`/`failed`/`infra` chạy lại.
+- **Model lệch** (model thật của lượt `plan` không chứa `planModel` của arm) ⇒ dòng `status: 'error'` và chạy lại.
+- **Lỗi hạ tầng** (403, hết hạn mức, ngắt kết nối) ⇒ chạy lại, và **vẫn báo lượt đầu** (số lượt lỗi theo arm và nguyên nhân).
+- Mỗi khóa `{task, arm, rep}` **chỉ tính dòng `done` cuối cùng**; các dòng trước báo ở phụ lục, không vào phân tích.
+- **Dừng cả đợt** nếu `authSource` lẫn giữa phiên đăng nhập và khóa API trong cùng đợt; sửa rồi chạy lại từ đầu, ghi sai lệch.
+
+**(8) Câu cấm.**
+- "Opus bóc tách tốt hơn" (hay câu tương đương cho Haiku/Sonnet) khi **thiếu** nhãn [Khám phá], n (13 bài) và khoảng bootstrap.
+- Mọi câu coi chuẩn từ lời giải mẫu là **chuẩn của người** hay "bóc tách đúng" tuyệt đối; chỉ được nói "khớp với tập tệp/module mà lời giải mẫu đổi".
+- Mọi câu dùng kết quả này thay cho E9 hay báo "E9 đã chạy".
+
+**(9) Đe dọa tính hợp lệ (khai trước).**
+- **Chuẩn tệp chỉ là một cách chia đúng:** lời giải mẫu là một lời giải; kế hoạch tốt có thể đụng tệp khác (thêm test, tài liệu) và bị tính là thiếu phủ hoặc không bị phạt khi thừa; độ phủ không đo độ chính xác (không phạt tệp thừa).
+- **13 bài nhỏ, tổng hợp:** khoảng rộng, khó khái quát sang việc thật; nhiều bài có thể đều "không chia được" (xem mục 3).
+- **`planFinal` đã bị mã sửa** (`shapeFastPlan`, cổng kế hoạch) nên không còn thuần là đầu ra của planner; đó là lý do báo song song `planRaw` và `planFinal`.
+- **Planner thấy repo nhưng không thấy lời giải mẫu**; tuy vậy tên bài và nội dung repo có thể làm lộ phần lời giải ở bài có tệp tên rõ.
+- **`extractFiles` có thể bỏ sót tệp** (mô tả không nêu đường dẫn, đuôi ngoài danh sách `EXTS`) hoặc trích nhầm; thiên lệch này giống nhau giữa các arm nhưng có thể phạt arm hay viết mô tả không có đường dẫn. Phần bỏ sót không được báo như "planner không bóc tách".
+- Ba arm một lần cấu hình, một seed; lặp 3 lần không loại được phương sai theo bài; so sánh theo bài, không theo lượt.
+
+**(10) Đánh giá bảo vệ dữ liệu ngắn (theo AGENTS.md).** Nhãn **Nội bộ**. Bài bench tổng hợp, **không có DLCN**, không chuyển xuyên biên giới, không dùng dữ liệu thật trên DEV/UAT. Kế hoạch và `runs.jsonl` ghi trong `bench/vs-claude/results/e9lite/` (thư mục dữ liệu của bench), log CCoding vẫn qua `LogStore`. Không có luồng dữ liệu mới nên `docs/data-protection-assessment.md` không đổi. Lưu `gold.json`, mã băm và `runs.jsonl` ≥ 6 tháng.
+
+**Mã băm khóa chuẩn E9-lite (BRIEF-24, K2; ghi trước lượt chạy đầu).** Lệnh: `cd bench/vs-claude/results/e9lite && sha256sum gold.json labels.json`. `gold.json` sha256 = `ee49fc5da243b1b656c3e2f8fcc9d395c39c3f5a30f325b0f8e1ea7406ed312f` (13 bài; trường `sha256` nội bộ = `a33c08865a433ac2d2b53e0a7eb2001556ae0a782bcb0eedfa666ca6a6c3251d`); `labels.json` sha256 = `602cea5c4f576297d76d2933edb214e10c85a7b7366c211fd8270cfcd1855667` (sinh bởi `docs/research/analysis/e9lite-labels.mjs`, quy tắc chép nguyên văn từ (3)). **Kết quả nhãn: 13/13 "chia được", 0 "không chia được" ⇒ phân tầng suy biến** theo đúng quy tắc ghi trước ở (3): không đổi quy tắc, không tính chia thừa, không so sánh theo tầng. Nguyên nhân (mô tả, không đổi gì): mọi lời giải mẫu đều đổi `package.json` ở gốc (module `.`) cùng `src` và `test`, nên số module ≥ 2 ở cả 13 bài.
+
+#### Sửa chuẩn E9-lite sau khi thấy gold, trước khi thấy kế hoạch — 15/11/2026 (BRIEF-24, K1, sửa theo review @peer-reviewer)
+
+**Trung thực về thời điểm.** Mục này được viết **sau khi đã thấy `gold.json` và kết quả nhãn 13/13 "chia được"** (dòng mã băm K2 ngay trên), và **trước khi có bất kỳ kế hoạch nào** của planner. Mục chỉ thêm, không sửa chữ ở trên; những chỗ bị thay được nêu rõ dưới đây và **mục này thắng** khi có mâu thuẫn với mục (3), (5) ở trên. `gold.json` (và mã băm của nó) **không đổi**; chỉ cách lọc và cách suy nhãn từ nó đổi.
+
+**(S1) Lỗi chuẩn: tệp "deleted" giả.** `gold-from-solution.mjs` so `repoDir` với `solutionDir`; nhưng `solutionDir` là lớp **chép đè** lên starter (`bench/vs-claude/README.md` mục lời giải; `bench/vs-claude/run.mjs` dùng `cpSync`), nên tệp có ở starter mà không có ở lời giải (vd. `package.json`, `SPEC.md`, tệp test ở g1) bị liệt kê là `deleted` dù lời giải **không xóa** gì. Lời giải dạng chép đè **không biểu diễn được việc xóa tệp**. Vì vậy:
+- **Chuẩn tệp đã sửa** `G_f` = tệp trong `gold.json` có `change` ∈ {`added`, `modified`}; tệp `deleted` **không** thuộc chuẩn. Cùng ngữ nghĩa với `requiredFiles` ở `bench/vs-claude/lib/grade.mjs` (tệp ở lời giải khác starter hoặc không có ở starter).
+- **Chuẩn module đã sửa** `G_m` = tập module suy **từ `G_f` đã lọc** bằng hàm `modOf` dưới đây; **không dùng** trường `modules` hay `files[].module` của `gold.json` (chúng tính cả tệp `deleted`).
+- Nhãn "chia được"/"không chia được" tính lại trên `G_f` đã lọc. **Dòng nhãn 13/13 và `labels.json` cũ hết hiệu lực**; mã `docs/research/analysis/e9lite-labels.mjs` và test của nó phải cài lại theo mục này (việc của S2/@data-scientist, trước lượt chạy đầu) và sha256 `labels.json` mới ghi thành một dòng ngay dưới mục này. Nếu `G_f` rỗng thì bài là NA ở thước độ phủ và nhãn "không chia được", báo riêng.
+
+**(S2) Module: nhãn chính và độ nhạy (quyết định M3, ghi trước khi thấy kế hoạch).** Module chính **giữ** như (5): thư mục cấp một, không có `/` thì `.`. Hệ quả đã thấy khi đọc đường dẫn trong `gold.json` (đọc bằng mắt, **số chính thức do mã tính**): sau khi bỏ tệp `deleted`, phần lớn bài chỉ còn tệp dưới `src/` ⇒ "không chia được"; riêng `l1-modules` có nhiều module con dưới `src/` nhưng vẫn cùng module `src`. Nên nhãn chính **chỉ phản ánh bố cục thư mục của lời giải**, không phải độ khó bóc tách. Chọn **cả hai** cách xử lý, không đổi quy tắc chính:
+- **(a) Phân tích độ nhạy bắt buộc:** thêm module thứ hai `mod2Of` (hai đoạn đầu khi đoạn đầu là `src` và đường dẫn có ≥ 3 đoạn; còn lại như `modOf`). Báo **song song** nhãn, độ phủ module và phân tầng theo `mod2Of`, gắn nhãn "độ nhạy"; không thay nhãn chính, không chọn cách nào theo kết quả.
+- **(b) Câu cấm bổ sung:** không diễn giải tầng "chia được"/"không chia được" như độ khó hay khả năng chia việc nói chung; chỉ được nói "theo bố cục thư mục của lời giải mẫu". Đây cũng là một đe dọa tính hợp lệ (module = thư mục là thô).
+
+**Mã chép nguyên văn (thay cho mã ở (3); đường dẫn trong `gold.json` đã dùng `/`):**
+
+```js
+const isChange = (f) => f.change === 'added' || f.change === 'modified';
+const modOf = (p) => { const i = p.indexOf('/'); return i < 0 ? '.' : p.slice(0, i); };
+const mod2Of = (p) => { const s = p.split('/'); return s[0] === 'src' && s.length >= 3 ? `src/${s[1]}` : modOf(p); };
+const goldFiles = (task) => task.files.filter(isChange).map((f) => f.path);   // G_f
+const goldMods = (task, mod = modOf) => new Set(goldFiles(task).map(mod));     // G_m
+const label = (task, mod = modOf) => (goldMods(task, mod).size >= 2 ? 'chia_duoc' : 'khong_chia_duoc');
+```
+
+Nếu sau sửa vẫn cả 13 bài cùng một nhãn ở nhãn chính thì vẫn báo "phân tầng suy biến" và **không đổi quy tắc**; tầng n < 3 xử lý như (6). Hai người cài đặt độc lập từ (S1), (S2) và luật khớp tệp phải ra cùng `G_f`, `G_m` và nhãn.
+
+**(S3) Làm rõ các điểm còn hở (bổ sung cho (5), (6)).**
+- **Bootstrap:** RNG là `mulberry32` hạt 32 bit = 20261115, khởi tạo lại cho **mỗi** (thước, cặp arm, tầng); bài xếp theo `id` tăng dần; mỗi lần rút B lần, mỗi lần rút đủ n bài bằng `Math.floor(rng() * n)` theo thứ tự, thống kê = trung bình hiệu theo bài. Sắp tăng B giá trị; cận dưới = phần tử chỉ số (từ 0) `floor(0,025·B)`, cận trên = chỉ số `ceil(0,975·B) − 1`. Không nội suy.
+
+```js
+const mulberry32 = (a) => () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+```
+
+- **`planFinal` rỗng và `null`:** `[]` là kế hoạch rỗng hợp lệ ⇒ **được tính** (độ phủ 0, số hạng mục 0, chia thừa không); `null` hoặc thiếu trường = không có kế hoạch ⇒ **loại** khỏi tính `planFinal` và báo số lượt loại. `planRaw` `null` hay `[]` ⇒ độ phủ 0 (như (5)).
+- **Cổng đạt lần đầu:** `planGate` là đối tượng có trường `ok` hoặc `null` (`bench/vs-claude/lib/plan-only.mjs` ghi `p?.planGate ?? null`; kiểu thấy ở `bench/vs-claude/test/plan-only-arms.test.mjs`). Lượt "đạt lần đầu" ⇔ `planGate?.ok === true` **và** `replanCount === 0`; `planGate` `null` ⇒ không đạt (báo riêng số `null`). Cần @data-scientist kiểm trên dòng thật đầu tiên rằng `ok` đúng là trường đó; nếu khác thì ghi sai lệch trước khi phân tích, không đổi định nghĩa theo kết quả.
+- **Phạm vi token:** thước chính = `weighted(usage.tokens)` (cả lượt planOnly, vốn không thực thi); báo thêm, mô tả, phần của pha `plan` từ `usage.byPhase` nếu có. Không trộn hai phạm vi trong một bảng.
+- **Đường dẫn tuyệt đối hoặc bắt đầu bằng `/` (kể cả ổ đĩa `X:/`):** sau bước (i)–(iii) của luật khớp, nếu vẫn bắt đầu bằng `/` hoặc `X:/` thì **không cắt đoán**, **không khớp** phần tử chuẩn nào và **không** đóng góp module (đếm riêng thành "tệp ngoài repo"); đường dẫn chứa `..` xử lý tương tự.
+
+#### Đính chính gateFirst (BRIEF-24b, K2; ghi trước lượt chạy đầu) — 15/11/2026
+
+**Thời điểm.** Viết **trước khi có `runs.jsonl` nào** của E9-lite (chưa có thư mục `run1/`, chưa chạy planner). Mục chỉ thêm, không sửa chữ cũ; **mục này thắng** khi mâu thuẫn với một chỗ cũ, và chỉ thay đúng **một** chỗ: gạch đầu dòng "**Cổng đạt lần đầu**" của mục (S3) ngay trên (câu "Lượt đạt lần đầu ⇔ `planGate?.ok === true` **và** `replanCount === 0`; `planGate` `null` ⇒ không đạt"). Câu "Cổng đạt lần đầu = `planGate` ... không đặt định nghĩa mới" ở (5) giữ nguyên nghĩa là chưa có định nghĩa riêng ngoài mục này.
+
+**Vì sao (kiểm trước khi chạy, không dựa vào kết quả).** Mục (S3) tự đặt điều kiện "cần kiểm trên dòng thật rằng `ok` đúng là trường đó". Kiểu `planGate` ở `src/types.ts:334` là `{ uncovered: string[]; reasons: string[]; rules: ('A'|'B'|'brief-item')[]; replanned?: boolean }`; engine gán nó ở `src/orchestrator.ts:2739` và `:2778`. **Không có trường `ok`.** `{ ok: true }` chỉ có trong runtime giả của `bench/vs-claude/test/plan-only-arms.test.mjs:64`. Áp nguyên văn `planGate?.ok === true` vào dòng thật thì mọi lượt đều "không đạt" (`undefined !== true`), tức thước vô nghĩa. Đây là chỗ §9 cũ **không cài được**, không phải chuyện chọn định nghĩa theo kết quả.
+
+**Định nghĩa thay thế (tất định, chỉ dùng trường engine thật).** Với một dòng `runs.jsonl`:
+
+```js
+// 1 = cổng đạt lần đầu; 0 = không. Không bao giờ trả null.
+const gateFirst = (row) => {
+  const g = row.planGate;
+  if (g == null || typeof g !== 'object') return 0;       // null/thiếu: không đạt (giữ ý của (S3)), đếm riêng
+  if (g.replanned === true) return 0;                     // engine đã sửa kế hoạch sau cổng
+  return row.replanCount === 0 ? 1 : 0;                   // replanCount phải đúng là số 0; null/thiếu/>0: không đạt
+};
+```
+
+- Trường `ok` (nếu có) và `rules`, `uncovered`, `reasons` **không** tham gia. `rules` rỗng hay không không đổi kết quả.
+- **Báo riêng, mô tả:** `nGateNull` (số dòng `planGate` null hoặc không phải đối tượng) và `nReplanCountMissing` (số dòng `replanCount` không phải số), cùng số dòng `replanned === true`.
+- Chỉ số của bài = trung bình 0/1 của các dòng `done` được chọn trong 3 lần lặp (như (6)); không còn giá trị NA do định nghĩa này.
+- Không đổi theo kết quả: nếu dòng thật đầu tiên cho thấy hình dạng `planGate` khác `src/types.ts:334` thì dừng, ghi sai lệch bằng một khối mới, không tự sửa công thức.
+
+#### Đặc tả bàn giao cho mã
+
+Đặc tả cài đặt và ví dụ kiểm thử: `docs/research/context/brief24b-k2-gatefirst-2026-11-15.md`. Mã (`e9lite.mjs`) và test phải khớp khối này, không khớp định nghĩa `ok` ở (S3).
+
+#### Mã băm khóa chuẩn E9-lite — bản thay thế (BRIEF-24b, K1; ghi trước lượt chạy đầu) — 15/11/2026
+
+**Dòng sha256 của khối "Mã băm khóa chuẩn E9-lite (BRIEF-24, K2…)" ở trên (nhãn 13/13, `labels.json` = `602cea5c…`) đã lỗi thời; khối đó không bị sửa chữ.** Từ đây giá trị hiệu lực là của khối này.
+- **Lệnh sinh:** `node bench/vs-claude/e9/gold-from-solution.mjs --out bench/vs-claude/results/e9lite/gold.json` rồi `node docs/research/analysis/e9lite-labels.mjs`. Sinh lại bằng hai lệnh này cho đúng cùng byte với tệp đã commit (không có thay đổi cần commit).
+- **Cách tính:** `sha256sum` trên bản làm việc **và** `git show HEAD:<đường dẫn> | sha256sum` (byte của blob đã commit). Hai giá trị trùng, không lệch do EOL.
+- `bench/vs-claude/results/e9lite/gold.json`: sha256 = `ee49fc5da243b1b656c3e2f8fcc9d395c39c3f5a30f325b0f8e1ea7406ed312f` (13 bài; trường `sha256` nội bộ = `a33c08865a433ac2d2b53e0a7eb2001556ae0a782bcb0eedfa666ca6a6c3251d`). Không đổi so với khối cũ.
+- `bench/vs-claude/results/e9lite/labels.json`: sha256 = `4059699277ab7df1b6b55dec5876b81feaea6352b59350a1b2807ef543694025`.
+- **Số nhãn thật do script sinh ra (nhãn chính, sau B1):** 3 "chia được", 10 "không chia được"; phân tầng không suy biến. Độ nhạy (mod2Of): 4 "chia được", 9 "không chia được".
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.

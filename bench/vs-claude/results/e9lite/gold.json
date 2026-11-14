@@ -1,0 +1,926 @@
+{
+  "version": 1,
+  "taskCount": 13,
+  "tasks": [
+    {
+      "id": "g1-slug-dedupe",
+      "size": 1,
+      "sizeBasis": "files: src/slug.js",
+      "modules": [
+        ".",
+        "src",
+        "test"
+      ],
+      "files": [
+        {
+          "path": "SPEC.md",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 4,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "package.json",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 8,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "src/slug.js",
+          "change": "modified",
+          "linesAdded": 14,
+          "linesRemoved": 2,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "test/slug.test.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 13,
+          "module": "test",
+          "flag": null
+        }
+      ]
+    },
+    {
+      "id": "g2-cart-coupon",
+      "size": 2,
+      "sizeBasis": "files: src/cart.js, src/money.js",
+      "modules": [
+        ".",
+        "src",
+        "test"
+      ],
+      "files": [
+        {
+          "path": "SPEC.md",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 8,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "package.json",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 8,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "src/cart.js",
+          "change": "modified",
+          "linesAdded": 15,
+          "linesRemoved": 1,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/money.js",
+          "change": "modified",
+          "linesAdded": 1,
+          "linesRemoved": 1,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "test/cart.test.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 9,
+          "module": "test",
+          "flag": null
+        }
+      ]
+    },
+    {
+      "id": "g3-qty-rename",
+      "size": 4,
+      "sizeBasis": "files: src/export.js, order.js, report.js, stock.js",
+      "modules": [
+        ".",
+        "src",
+        "test"
+      ],
+      "files": [
+        {
+          "path": "package.json",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 8,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "src/export.js",
+          "change": "modified",
+          "linesAdded": 2,
+          "linesRemoved": 2,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/order.js",
+          "change": "modified",
+          "linesAdded": 1,
+          "linesRemoved": 1,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/report.js",
+          "change": "modified",
+          "linesAdded": 1,
+          "linesRemoved": 1,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/stock.js",
+          "change": "modified",
+          "linesAdded": 2,
+          "linesRemoved": 2,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "test/order.test.js",
+          "change": "modified",
+          "linesAdded": 1,
+          "linesRemoved": 1,
+          "module": "test",
+          "flag": null
+        }
+      ]
+    },
+    {
+      "id": "g4-gb-unit",
+      "size": 4,
+      "sizeBasis": "files: src/format.js, parse.js, units.js, validate.js",
+      "modules": [
+        ".",
+        "src",
+        "test"
+      ],
+      "files": [
+        {
+          "path": "package.json",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 8,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "src/format.js",
+          "change": "modified",
+          "linesAdded": 1,
+          "linesRemoved": 1,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/parse.js",
+          "change": "modified",
+          "linesAdded": 1,
+          "linesRemoved": 1,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/units.js",
+          "change": "modified",
+          "linesAdded": 1,
+          "linesRemoved": 1,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/validate.js",
+          "change": "modified",
+          "linesAdded": 1,
+          "linesRemoved": 1,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "test/size.test.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 8,
+          "module": "test",
+          "flag": null
+        }
+      ]
+    },
+    {
+      "id": "g5-median-stats",
+      "size": 1,
+      "sizeBasis": "files: src/stats.js",
+      "modules": [
+        ".",
+        "src",
+        "test"
+      ],
+      "files": [
+        {
+          "path": "SPEC.md",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 4,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "package.json",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 8,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "src/stats.js",
+          "change": "modified",
+          "linesAdded": 10,
+          "linesRemoved": 3,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "test/stats.test.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 10,
+          "module": "test",
+          "flag": null
+        }
+      ]
+    },
+    {
+      "id": "g6-range-merge",
+      "size": 1,
+      "sizeBasis": "files: src/range.js",
+      "modules": [
+        ".",
+        "src",
+        "test"
+      ],
+      "files": [
+        {
+          "path": "SPEC.md",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 6,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "package.json",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 8,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "src/range.js",
+          "change": "modified",
+          "linesAdded": 14,
+          "linesRemoved": 2,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "test/range.test.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 7,
+          "module": "test",
+          "flag": null
+        }
+      ]
+    },
+    {
+      "id": "l1-modules",
+      "size": 5,
+      "sizeBasis": "files: src/{calendar,csvcheck,money,ratelimit,slug}/index.js",
+      "modules": [
+        ".",
+        "src",
+        "test"
+      ],
+      "files": [
+        {
+          "path": "SPEC.md",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 508,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "package.json",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 1,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "src/calendar/index.js",
+          "change": "modified",
+          "linesAdded": 197,
+          "linesRemoved": 19,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/csvcheck/index.js",
+          "change": "modified",
+          "linesAdded": 176,
+          "linesRemoved": 3,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/money/index.js",
+          "change": "modified",
+          "linesAdded": 197,
+          "linesRemoved": 13,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/ratelimit/index.js",
+          "change": "modified",
+          "linesAdded": 129,
+          "linesRemoved": 3,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/slug/index.js",
+          "change": "modified",
+          "linesAdded": 79,
+          "linesRemoved": 8,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "test/calendar.test.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 23,
+          "module": "test",
+          "flag": null
+        },
+        {
+          "path": "test/csvcheck.test.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 32,
+          "module": "test",
+          "flag": null
+        },
+        {
+          "path": "test/money.test.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 22,
+          "module": "test",
+          "flag": null
+        },
+        {
+          "path": "test/ratelimit.test.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 53,
+          "module": "test",
+          "flag": null
+        },
+        {
+          "path": "test/slug.test.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 29,
+          "module": "test",
+          "flag": null
+        }
+      ]
+    },
+    {
+      "id": "l2-chain",
+      "size": 7,
+      "sizeBasis": "files: src/check.js, core.js, diff.js, evaluate.js, index.js, lexer.js, parser.js",
+      "modules": [
+        ".",
+        "src",
+        "test"
+      ],
+      "files": [
+        {
+          "path": "SPEC.md",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 309,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "package.json",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 6,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "src/check.js",
+          "change": "modified",
+          "linesAdded": 155,
+          "linesRemoved": 3,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/core.js",
+          "change": "added",
+          "linesAdded": 127,
+          "linesRemoved": 0,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/diff.js",
+          "change": "modified",
+          "linesAdded": 101,
+          "linesRemoved": 11,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/evaluate.js",
+          "change": "modified",
+          "linesAdded": 3,
+          "linesRemoved": 4,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/index.js",
+          "change": "modified",
+          "linesAdded": 8,
+          "linesRemoved": 2,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/lexer.js",
+          "change": "modified",
+          "linesAdded": 110,
+          "linesRemoved": 3,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/parser.js",
+          "change": "modified",
+          "linesAdded": 112,
+          "linesRemoved": 4,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "test/smoke.test.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 54,
+          "module": "test",
+          "flag": null
+        }
+      ]
+    },
+    {
+      "id": "t1-duration",
+      "size": 1,
+      "sizeBasis": "files: src/duration.js",
+      "modules": [
+        ".",
+        "src",
+        "test"
+      ],
+      "files": [
+        {
+          "path": "SPEC.md",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 42,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "package.json",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 7,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "src/duration.js",
+          "change": "modified",
+          "linesAdded": 126,
+          "linesRemoved": 3,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "test/duration.test.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 20,
+          "module": "test",
+          "flag": null
+        }
+      ]
+    },
+    {
+      "id": "t2-orders",
+      "size": 4,
+      "sizeBasis": "files: src/cart.js, checkout.js, money.js, promotions.js",
+      "modules": [
+        ".",
+        "src",
+        "test"
+      ],
+      "files": [
+        {
+          "path": "ISSUES.md",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 10,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "package.json",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 7,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "src/cart.js",
+          "change": "modified",
+          "linesAdded": 5,
+          "linesRemoved": 1,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/catalog.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 23,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/checkout.js",
+          "change": "modified",
+          "linesAdded": 3,
+          "linesRemoved": 3,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/index.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 10,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/inventory.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 36,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/money.js",
+          "change": "modified",
+          "linesAdded": 14,
+          "linesRemoved": 2,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/promotions.js",
+          "change": "modified",
+          "linesAdded": 2,
+          "linesRemoved": 2,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/tax.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 12,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "test/checkout.test.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 34,
+          "module": "test",
+          "flag": null
+        },
+        {
+          "path": "test/money.test.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 18,
+          "module": "test",
+          "flag": null
+        }
+      ]
+    },
+    {
+      "id": "t3-api",
+      "size": 6,
+      "sizeBasis": "files: src/auth.js, csv.js, handlers/audit.js, handlers/tasks.js, query.js, server.js",
+      "modules": [
+        ".",
+        "data",
+        "src",
+        "test"
+      ],
+      "files": [
+        {
+          "path": "FEATURES.md",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 49,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "data/seed.json",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 162,
+          "module": "data",
+          "flag": null
+        },
+        {
+          "path": "package.json",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 10,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "src/auth.js",
+          "change": "added",
+          "linesAdded": 18,
+          "linesRemoved": 0,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/csv.js",
+          "change": "added",
+          "linesAdded": 18,
+          "linesRemoved": 0,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/handlers/audit.js",
+          "change": "added",
+          "linesAdded": 27,
+          "linesRemoved": 0,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/handlers/tasks.js",
+          "change": "modified",
+          "linesAdded": 45,
+          "linesRemoved": 10,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/http.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 42,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/main.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 4,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/query.js",
+          "change": "added",
+          "linesAdded": 110,
+          "linesRemoved": 0,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/router.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 31,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/server.js",
+          "change": "modified",
+          "linesAdded": 5,
+          "linesRemoved": 1,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/store.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 48,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "test/helpers.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 27,
+          "module": "test",
+          "flag": null
+        },
+        {
+          "path": "test/tasks.test.js",
+          "change": "modified",
+          "linesAdded": 8,
+          "linesRemoved": 18,
+          "module": "test",
+          "flag": null
+        }
+      ]
+    },
+    {
+      "id": "t4-perf",
+      "size": 1,
+      "sizeBasis": "files: src/report.js",
+      "modules": [
+        ".",
+        "bench",
+        "src",
+        "test"
+      ],
+      "files": [
+        {
+          "path": "PERF.md",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 7,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "bench/run.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 10,
+          "module": "bench",
+          "flag": null
+        },
+        {
+          "path": "package.json",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 10,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "src/gen.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 52,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/report.js",
+          "change": "modified",
+          "linesAdded": 86,
+          "linesRemoved": 68,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "test/report.test.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 28,
+          "module": "test",
+          "flag": null
+        }
+      ]
+    },
+    {
+      "id": "t5-logq",
+      "size": 4,
+      "sizeBasis": "files: bin/logq.js, src/agg.js, parse.js, query.js",
+      "modules": [
+        ".",
+        "bin",
+        "src",
+        "test"
+      ],
+      "files": [
+        {
+          "path": "SPEC.md",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 79,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "bin/logq.js",
+          "change": "modified",
+          "linesAdded": 89,
+          "linesRemoved": 1,
+          "module": "bin",
+          "flag": null
+        },
+        {
+          "path": "package.json",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 8,
+          "module": ".",
+          "flag": null
+        },
+        {
+          "path": "src/agg.js",
+          "change": "modified",
+          "linesAdded": 81,
+          "linesRemoved": 2,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/parse.js",
+          "change": "modified",
+          "linesAdded": 97,
+          "linesRemoved": 2,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "src/query.js",
+          "change": "modified",
+          "linesAdded": 186,
+          "linesRemoved": 2,
+          "module": "src",
+          "flag": null
+        },
+        {
+          "path": "test/smoke.test.js",
+          "change": "deleted",
+          "linesAdded": 0,
+          "linesRemoved": 19,
+          "module": "test",
+          "flag": null
+        }
+      ]
+    }
+  ],
+  "sha256": "a33c08865a433ac2d2b53e0a7eb2001556ae0a782bcb0eedfa666ca6a6c3251d"
+}
