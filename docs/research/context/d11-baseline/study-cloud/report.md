@@ -1,6 +1,6 @@
 # CCoding vs single Claude - results
 
-Folder: `C:\Users\admin\AppData\Local\Temp\tmp.Sp2ZGoCy7Q\study-cloud` - 440 runs (0 excluded for touching hidden files, 8 infra rows dropped), arms: B0, A0-sonnet, B6, B7, B5, A1, A2. Baseline **A0-sonnet**, treatment **B0**. Scores are 0-1 per run; deltas in percentage points, 95% two-level bootstrap CI over tasks, p from a paired sign-flip permutation test.
+Folder: `<tmp>\study-cloud` - 440 runs (0 excluded for touching hidden files, 8 infra rows dropped), arms: B0, A0-sonnet, B6, B7, B5, A1, A2. Baseline **A0-sonnet**, treatment **B0**. Scores are 0-1 per run; deltas in percentage points, 95% two-level bootstrap CI over tasks, p from a paired sign-flip permutation test.
 
 ## Hypotheses
 

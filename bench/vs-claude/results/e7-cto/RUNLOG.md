@@ -21,7 +21,7 @@ _(người chạy ghi: hash commit bản ghim, sha256 từng script, phiên bả
 
 ### Dựng bản ghim và kịch bản nối tiếp (12/11/2026, người điều phối, được giám đốc giao quyền tự duyệt lúc 22:57)
 
-- **Bản ghim:** `C:\Users\admin\ccoding-vs-claude\ccoding-e78`, detached ở `d70959c0611ad1237f03007576e0d31b344c6fe3`. Từ `cd90988` (mốc khóa E7/E8) tới bản này chỉ thêm dữ liệu và RUNLOG; không đổi `src/` hay `bench/vs-claude/e7`, `e8`.
+- **Bản ghim:** worktree `ccoding-e78` (đường dẫn không công bố), detached ở `d70959c0611ad1237f03007576e0d31b344c6fe3`. Từ `cd90988` (mốc khóa E7/E8) tới bản này chỉ thêm dữ liệu và RUNLOG; không đổi `src/` hay `bench/vs-claude/e7`, `e8`.
   - `npm ci` và `npm run build` xong (`npm-setup.log` có SETUP-OK).
   - `ccoding.local.json` chép từ `ccoding-3e`, sha256 `0ee7b0a6…`.
   - CLI 2.1.318.

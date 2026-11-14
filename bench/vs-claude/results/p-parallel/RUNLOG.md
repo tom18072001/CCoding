@@ -2,7 +2,7 @@
 
 Mốc khóa đăng ký trước: `f5a31dc` (§9 "Đăng ký trước V4-3f").
 
-Phân loại dữ liệu: **Nội bộ**. **Repo này công khai, nên tệp từng lượt (`prod-parallel.json`) không commit.** Tệp nằm trên máy giám đốc ở `C:\Users\admin\ccoding-vs-claude\ops\prod-parallel-b.json`; sha256 ghi ở bảng dưới để đối chiếu. Ở đây chỉ có số tổng hợp. Tệp chỉ có metadata: mốc thời gian, trạng thái, phụ thuộc, cờ gộp/xung đột, số lệnh đỏ, và số đếm ba mẫu tin nhắn hệ thống. Không có đề bài, tiêu đề, đầu ra hay nội dung tin nhắn. Mã nhiệm vụ băm kèm muối ngẫu nhiên không lưu; mã dự án đổi thành P1–P6. Đã kiểm danh sách khóa của tệp: chỉ có các trường trên.
+Phân loại dữ liệu: **Nội bộ**. **Repo này công khai, nên tệp từng lượt (`prod-parallel.json`) không commit.** Tệp nằm trên máy giám đốc, ngoài repo (đường dẫn không công bố); sha256 ghi ở bảng dưới để đối chiếu. Ở đây chỉ có số tổng hợp. Tệp chỉ có metadata: mốc thời gian, trạng thái, phụ thuộc, cờ gộp/xung đột, số lệnh đỏ, và số đếm ba mẫu tin nhắn hệ thống. Không có đề bài, tiêu đề, đầu ra hay nội dung tin nhắn. Mã nhiệm vụ băm kèm muối ngẫu nhiên không lưu; mã dự án đổi thành P1–P6. Đã kiểm danh sách khóa của tệp: chỉ có các trường trên.
 
 | Mục | Giá trị |
 |---|---|

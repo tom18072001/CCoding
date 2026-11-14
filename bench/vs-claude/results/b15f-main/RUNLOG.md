@@ -9,7 +9,7 @@ Sổ này ghi **trước lượt đầu**, lúc 4/11/2026 13:55 giờ VN. Khi đ
 | Đăng ký | `docs/research/preregistration.md` §9, mục V4-3e-E5′, đặt trước dữ liệu, gộp ở `f36a1d9` |
 | Duyệt | Giám đốc duyệt lúc 12:50 ngày 4/11 (`local-3e/RUNLOG.md`, commit `9e3c410`) |
 | Cổng (3) | **(i)** D12 đã gộp ở `57148de026103e5fe9451ffc068650580bb4c399`. **(ii)** Test runtime giả "ép làn đầy đủ thì có `discuss`, thêm `discussionRounds: 0` thì không" (`bench/vs-claude/test/arms-full-lane.test.mjs`) xanh trong `npm run test:bench` 245/245. **(iii)** E6 xong: kịch bản chờ dòng "XONG phan sau" của `run3e-b.ps1`. **(iv)** Đã duyệt |
-| Hash server và runner (9) | Worktree mới `C:\Users\admin\ccoding-vs-claude\ccoding-e5f`, detached ở `57148de`. `npm ci` và `npm run build` xong. Server và runner chạy chung worktree này, vì `ccodingCommit` lấy theo runner |
+| Hash server và runner (9) | Worktree mới `ccoding-e5f`, detached ở `57148de`. `npm ci` và `npm run build` xong. Server và runner chạy chung worktree này, vì `ccodingCommit` lấy theo runner |
 | Server | Cổng **7426**. `ccoding.local.json` chép từ `ccoding-3e` và chỉ đổi cổng; sha256 `D9B87197A3A687EDDDB6A7BA0C67D4DE5DD6C3878DA867C737D09B935D0867EA`. Thư mục dữ liệu `ccoding-e5f\data`. Không đụng 7420, 7425 |
 | Claude Code CLI | 2.1.312 lúc ghi sổ. **Khi chạy là 2.1.318**: CLI đã tự cập nhật từ lúc bắt đầu E4b. Server log ghi `cli 2.1.318` lúc 5/11 02:07 |
 | Lệnh | `run.mjs --arms B0F,B1F --tasks l1-modules,l2-chain --repeats k --timeout 40 --out bench\vs-claude\results\b15f-main`, chạy với k = 1, 2, …, 10. Runner bỏ qua khóa đã `done`, nên mỗi k chỉ chạy thêm lượt r_k |

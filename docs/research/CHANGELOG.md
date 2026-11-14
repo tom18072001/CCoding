@@ -5,6 +5,21 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 15 (T-20261114-153056-f45, BRIEF-21, 14/11/2026): bài báo v0.7.1 sửa theo phản biện K4
+
+Nguồn phát hiện: `context/k4-v07-review-2026-11-14.md` (Phần A, B, C). **Không số đo nào đổi giá trị.** Số dòng `paper.md` bên dưới là dòng của v0.7.1 (không đổi so với v0.7, vì mọi sửa nằm trong dòng sẵn có).
+
+**Số và trích dẫn sửa theo nguồn (mỗi dòng: vị trí, giá trị cũ → mới, nguồn):**
+
+- `paper.md:505` (Bảng 16, G-3, cột Nguồn): "R20:57, :67, :118" → "R20:57, :67". Nguồn: `results/g-mutation/RUNLOG.md:57`, `:67`; `:118` là hàng "Tất cả" (A-F1).
+- `paper.md:558` (E8, giới hạn (5)): "R27:61, :5" → "R27:33–35, :5". Nguồn: `results/e8-parallel/report.md:33–35` (17/18, 0/18, 0 lượt chia dưới 2) (A-F2).
+- `paper.md:558` (E8, giới hạn (6)): "R27:62" → "R27:61". Nguồn: `results/e8-parallel/report.md:61` (máy chủ lẫn với arm) (A-F2).
+- Số đã có trong nguồn, thêm vào chỗ chưa ghi (không phải số mới): 52/82 do `not-read-only` (`results/axis2-guard/report.md:26–33`); G-1 0/239 CP [0; 1,5 %] (`results/g-mutation/RUNLOG.md:55`, `:92`); E5′ Δ điểm −0,000, pass 20/20 và 19/20 (`results/b15f-main/report.md:11`, `:15–16`); B-16 0/0, 23/64 so 1/64, USD ×1,49 (`results/gates-main/report-e4.md:29–31`); B-14 R̂ 0,999 [0,886; 1,127], power 0,38 (`results/b14-step2/report.md:17–22`).
+
+**Chữ và nhãn (không đổi số):** §1 VI/EN (nhãn token E8 là thước đo phụ; giới hạn 52/82 của `git-read`; "đo ở trạng thái cuối" của G-1; nhãn và phạm vi E5′; tên trục 3 "tên câu hỏi, không phải kết luận"); §2 (C7 là vòng thăm dò); quy ước nhãn ở đầu bài và §6; §6.2 (C6 "chất lượng như nhau ở 8/8 lượt"); §6.2.5 (tiêu đề và câu chẩn đoán cache hạ về [Mô tả], n = 1; bước 2 đã chạy); §6.3.1 (Bảng 16 hàng E7 Youden; "đi kèm" thay "đến từ"); §6.3.2 (Bảng 17 hàng `git-read`; đoạn Luật Bảo vệ dữ liệu cá nhân theo `context/nd356-2025-note.md` §8: Luật 91/2025/QH15, hiệu lực 01/01/2026, điều về thông báo vi phạm **[CHƯA KIỂM CHỨNG]**, vẫn không khẳng định mốc 72 giờ chung); §6.3.3 (Bảng 18: P-2, E8 token; "máy chủ lẫn với arm"); §6.4 ("Đọc đúng mức": điểm "không phân biệt được", power 0,38); §7 (điểm chạm trần không phải "không có lợi thế"; B-14, B-16, E4 cập nhật; C7 t2 chỉ minh họa); §8.3 (P chưa được người ngoài tái lập); §9 (hàng RQ2/trục 2, E8, RQ4, RQ5 chẩn đoán cache, việc còn lại); §10 (thêm Guo et al., 2024 và Quốc hội, 2025); Phụ lục A (nhãn R1–R32); Khai báo AI (vòng 4 gói 15).
+
+**Tệp nguồn sửa chữ (không đổi số đo):** `v07-axes-threats-draft.md` (câu cấm #8, #10 sửa; thêm #21–#26); `run-plan.md` (KPI là giả định của phòng, chờ giám đốc duyệt; hai đường dẫn máy → `<tmp>`, `<worktree>`); `bench/vs-claude/results/e8-parallel/report.md` (câu "không giảm token" → "không phát hiện được thay đổi token"; lời khuyên là [Khám phá], một bài); `RUNLOG.md` của `p-parallel`, `e7-cto`, `local-3e`, `b15f-main` (bỏ đường dẫn máy); `context/d11-baseline/{b7prime,study-cloud}/report.md` và `analysis/cache-diagnostic-result.md` (bỏ đường dẫn máy, phát hiện thêm C-12, C-13).
+
 ## Vòng 4, gói 14 (T-20261114-133920-30b, BRIEF-20, 14/11/2026): bài báo v0.7 dựng quanh ba trục, trục 2 (b), kiểm số
 
 Không gọi LLM, không chạy benchmark, không sửa `src/` hay mã `bench/` (chỉ RUNLOG). Bảng kiểm từng số: `analysis/v07-number-check.md`.
