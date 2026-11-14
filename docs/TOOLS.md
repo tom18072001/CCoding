@@ -156,6 +156,23 @@ Mục này mô tả cách hook `claude-guard` quyết định một lệnh Bash 
 | `for`, `while` | `loop` |
 | Đọc tệp `.env`, kể cả dạng nối nháy như `.e""nv` | `env-file` |
 | Đường dẫn ngoài thư mục làm việc | `outside-root` |
+| Ghi, xóa, đổi quyền vào đường dẫn POSIX tuyệt đối hoặc thư mục hệ thống Windows | `outside-root-write` |
+
+### Chặn ghi ngoài thư mục làm việc (`outside-root-write`)
+
+Áp cho mọi tầng shell (kể cả `full`), sau kiểm tra `outside-root`. Mã: `outsideWriteViolation` trong `src/tools/shell-policy.ts`, hook gọi ở `guardBlock`. Mỗi câu con được phân tích riêng (tách theo `; && || | &`, ngoài nháy). Đích ghi nằm ngoài thư mục làm việc ở dạng đường dẫn POSIX tuyệt đối (`/etc/…`, `/opt/…`) hoặc trong thư mục hệ thống Windows (`SystemRoot`, `ProgramFiles`, thư mục cài Node) thì bị chặn. Ổ đĩa hay thư mục khác trên Windows vẫn do `outside-root` chặn.
+
+| Dạng được phân tích | Ví dụ (Bash / PowerShell) |
+|---|---|
+| Xóa: `rm`, `del`, `rmdir`, `Remove-Item` | `rm /etc/x` / `Remove-Item /etc/x` |
+| Đích của `cp`, `mv`, `Copy-Item`, `Move-Item` (đối số cuối, `-t`, `-Destination`) | `cp a /opt/a` / `Copy-Item a -Destination /opt/a` |
+| Chuyển hướng `>`, `>>` ngoài nháy; `tee` | `echo x > /etc/x` |
+| Tải về: `wget -O`, `--output-document`, `curl -o`, `--output`, `Invoke-WebRequest`/`iwr -OutFile` | `curl -o /opt/x URL` / `iwr URL -OutFile /opt/x` |
+| Đổi quyền, liên kết: `chmod`, `chown`, `icacls`, `takeown`, `ln`, `dd of=` | `chmod 777 /etc/x` |
+
+Ngoại lệ vẫn được ghi: `/dev/null`, `$null`, `/tmp`, `/var/tmp` và thư mục tạm của hệ điều hành. Vẫn được qua: đọc và chạy từ thư mục hệ thống (`ls /usr/bin`, `cat /etc/os-release`, `/usr/bin/env node x.js`, gọi `node`/`git` bằng đường dẫn tuyệt đối) và mọi thao tác trong thư mục làm việc, kể cả `wget -O vendor/x.js URL`, `curl -o vendor/x.js URL`, `iwr URL -OutFile vendor\x.js`. Không đổi tầng `git-read` và `denyCommands`.
+
+**Giới hạn (quan trọng).** Đây là lớp phân tích chuỗi lệnh, chặn các dạng ghi ra ngoài phổ biến; nó không phải ranh giới bảo mật. Các dạng sau vẫn ghi được ra ngoài và không bị phân tích: `node -e "…"` và các trình thông dịch khác, script npm, biến (`$X`), `eval`, lệnh lồng (`$(…)`, backtick), `xargs`, `find -exec`/`-delete`. Lớp bảo vệ chính là sandbox hệ điều hành (B-18). Trạng thái B-18 trong cấu hình/tài liệu hiện có: chưa xác minh được trong phạm vi hạng mục này (không tự bật); việc bật B-18 không chặn việc đóng K3. Test: `test/shell-policy-write-outside.test.ts`.
 
 Lệnh gộp có `cd` sang thư mục khác cũng có thể bị chặn. Hook không nhớ thư mục hiện tại giữa các lượt Bash, nên `cd ../paper` từ gốc workspace bị coi là đi ra ngoài.
 
@@ -173,7 +190,7 @@ Khi chặn, hook nêu câu lệnh con vi phạm và quy tắc bị vi phạm, th
 
 Thông báo có dạng `CCoding chặn câu N: \`lệnh\` <quy tắc> — <gợi ý>` và dài tối đa 300 ký tự. Ví dụ, khi câu thứ 2 là `python3`: "CCoding chặn câu 2: `python3` không phải lệnh chỉ đọc (chạy mã) — đọc/tìm bằng Read/Grep/Glob…". Thông báo chỉ giữ tên lệnh hoặc toán tử. Tên dài hơn 24 ký tự, có ký tự lạ hoặc giống khóa, token thì được thay bằng `?`, nên không lộ tham số hay bí mật.
 
-Các mã quy tắc: `not-read-only`, `redirect`, `subst`, `heredoc`, `loop`, `interpreter`, `env-file`, `outside-root`, `deny-list`, `git-branch`, `read-limit`. Lệnh khớp danh sách cấm mặc định (ví dụ `rm -r`) bị chặn trước khi tách câu, nên sự kiện của chúng có `rule: deny-list` và `clause: 1`.
+Các mã quy tắc: `not-read-only`, `redirect`, `subst`, `heredoc`, `loop`, `interpreter`, `env-file`, `outside-root`, `outside-root-write`, `deny-list`, `git-branch`, `read-limit`. Lệnh khớp danh sách cấm mặc định (ví dụ `rm -r`) bị chặn trước khi tách câu, nên sự kiện của chúng có `rule: deny-list` và `clause: 1`.
 
 **Sự kiện `guard.block`.** Mỗi lần chặn, hook ghi một sự kiện mức `warn` qua `LogStore` (che PII và bí mật, có chuỗi băm).
 

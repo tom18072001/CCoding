@@ -85,6 +85,201 @@ export function outsidePathReason(command: string, root: string, extraAllowed: s
   return undefined;
 }
 
+// ── Ghi/xóa/đổi quyền ngoài thư mục làm việc (rule `outside-root-write`, K3/D16) ──────────────────────────
+// Lớp PHÂN TÍCH CHUỖI LỆNH, chặn các dạng ghi ra ngoài phổ biến — KHÔNG phải ranh giới bảo mật (xem docs/TOOLS.md, mục giới hạn):
+// `node -e`, script npm, biến, `eval`, lệnh lồng, `xargs`, `find -exec/-delete` vẫn có thể ghi ra ngoài; lớp chính là sandbox hệ điều hành (B-18).
+
+interface WriteStmt {
+  words: string[];
+  redirects: string[];
+}
+
+/** Tách lệnh thành các câu (theo `; && || | & ( )` và xuống dòng ngoài nháy), mỗi câu gồm từ + đích chuyển hướng `>`/`>>`. Không bỏ cuộc khi gặp `>`. */
+function writeStmts(s: string): WriteStmt[] {
+  const out: WriteStmt[] = [];
+  let words: string[] = [];
+  let redirects: string[] = [];
+  let cur = '';
+  let has = false;
+  let q: '"' | "'" | null = null;
+  let pending: 'redirect' | 'skip' | null = null;
+  const word = () => {
+    if (!cur && !has) return;
+    if (pending === 'redirect') redirects.push(cur);
+    else if (pending !== 'skip') words.push(cur);
+    pending = null;
+    cur = '';
+    has = false;
+  };
+  const stmt = () => {
+    word();
+    pending = null;
+    if (words.length || redirects.length) out.push({ words, redirects });
+    words = [];
+    redirects = [];
+  };
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (q === "'") {
+      if (ch === "'") q = null;
+      else cur += ch;
+      continue;
+    }
+    if (q === '"') {
+      if (ch === '\\' && s[i + 1] === '"') cur += s[++i];
+      else if (ch === '"') q = null;
+      else cur += ch;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      q = ch;
+      has = true;
+      continue;
+    }
+    if (ch === '\\') {
+      cur += ch + (s[i + 1] ?? '');
+      i++;
+      continue;
+    }
+    if (ch === '>' || (ch === '&' && s[i + 1] === '>')) {
+      if (/^\d$/.test(cur) && !has) cur = '';
+      word();
+      if (ch === '&') i++;
+      while (s[i + 1] === '>' || s[i + 1] === '|') i++;
+      if (s[i + 1] === '&') {
+        pending = 'skip'; // 2>&1: nhân bản fd, không phải tệp
+        i++;
+      } else pending = 'redirect';
+      continue;
+    }
+    if (ch === '<') {
+      word();
+      while (s[i + 1] === '<' || s[i + 1] === '-') i++;
+      pending = 'skip';
+      continue;
+    }
+    if (ch === ';' || ch === '\n' || ch === '\r' || ch === '|' || ch === '&' || ch === '(' || ch === ')') {
+      stmt();
+      continue;
+    }
+    if (/\s/.test(ch)) {
+      word();
+      continue;
+    }
+    cur += ch;
+  }
+  stmt();
+  return out;
+}
+
+const TMP_POSIX = /^\/(?:var\/)?tmp(?:\/|$)/;
+const NULL_SINK = /^(\/dev\/(null|stdout|stderr)|nul|\$null)$/i;
+const WRITE_PREFIX = new Set(['sudo', 'doas', 'command', 'nohup', 'time', 'builtin']);
+const WRITE_GENERIC = new Set([
+  'rm', 'del', 'erase', 'rmdir', 'rd', 'remove-item', 'ri', 'chmod', 'chown', 'chgrp', 'icacls', 'takeown', 'attrib', 'set-acl', 'touch', 'truncate', 'mkdir', 'md',
+  'tee', 'set-content', 'add-content', 'out-file', 'new-item', 'clear-content', 'shred',
+]);
+const WRITE_COPY = new Set(['cp', 'mv', 'copy', 'move', 'copy-item', 'cpi', 'move-item', 'mi', 'install', 'xcopy', 'robocopy']);
+
+/** Đích ghi của một câu lệnh (đã bỏ nháy). */
+function writeTargets(words: string[]): { name: string; targets: string[] } {
+  let i = 0;
+  while (i < words.length && (WRITE_PREFIX.has(words[i].toLowerCase()) || /^[A-Za-z_]\w*=/.test(words[i]))) i++;
+  const w = words.slice(i);
+  if (!w.length) return { name: '', targets: [] };
+  const name = w[0].replace(/\.exe$/i, '').replace(/^.*[\\/]/, '').toLowerCase();
+  const args = w.slice(1);
+  const targets: string[] = [];
+  const cmdFlag = /^(del|erase|rd|rmdir|copy|move|xcopy)$/.test(name) ? /^\/[A-Za-z?]$/ : /^$/;
+  const positional = args.filter((a) => !a.startsWith('-') && !cmdFlag.test(a));
+  const take = (k: number) => {
+    if (args[k + 1] !== undefined) targets.push(args[k + 1]);
+  };
+  if (WRITE_GENERIC.has(name)) {
+    targets.push(...positional);
+  } else if (WRITE_COPY.has(name)) {
+    let named = false;
+    for (let k = 0; k < args.length; k++) {
+      const a = args[k];
+      if (/^-(dest|destination|t)$/i.test(a) && args[k + 1] !== undefined) {
+        take(k);
+        named = true;
+      } else if (/^--target-directory=/.test(a)) {
+        targets.push(a.slice(a.indexOf('=') + 1));
+        named = true;
+      }
+    }
+    if (!named && positional.length >= 2) targets.push(positional[positional.length - 1]);
+  } else if (name === 'ln') {
+    if (positional.length >= 1) targets.push(positional[positional.length - 1]);
+  } else if (name === 'dd') {
+    for (const a of args) if (/^of=/i.test(a)) targets.push(a.slice(3));
+  } else if (name === 'wget') {
+    for (let k = 0; k < args.length; k++) {
+      const a = args[k];
+      if (/^(-O|--output-document|-P|--directory-prefix)$/.test(a)) take(k);
+      else if (/^--(output-document|directory-prefix)=/.test(a)) targets.push(a.slice(a.indexOf('=') + 1));
+      else if (/^-O./.test(a)) targets.push(a.slice(2));
+    }
+  } else if (/^(curl|invoke-webrequest|iwr|invoke-restmethod|irm)$/.test(name)) {
+    for (let k = 0; k < args.length; k++) {
+      const a = args[k];
+      if (/^(-o|--output|--output-dir|-outfile)$/i.test(a)) take(k);
+      else if (/^--output(-dir)?=/.test(a)) targets.push(a.slice(a.indexOf('=') + 1));
+      else if (name === 'curl' && /^-o\//.test(a)) targets.push(a.slice(2));
+    }
+  }
+  // tham số có tên của cmdlet PowerShell (-Path/-LiteralPath/-FilePath) cho nhóm ghi chung
+  if (WRITE_GENERIC.has(name)) for (let k = 0; k < args.length; k++) if (/^-(path|literalpath|filepath)$/i.test(args[k])) take(k);
+  return { name, targets };
+}
+
+/** Đích ghi này có nằm ngoài workspace theo dạng bị chặn (POSIX tuyệt đối, hoặc thư mục hệ thống Windows) không. */
+function writeTargetOutside(raw: string, root: string): boolean {
+  const t = raw.trim();
+  if (!t || NULL_SINK.test(t)) return false;
+  const tmps = [os.tmpdir(), process.env.TEMP, process.env.TMP].filter((x): x is string => !!x);
+  const insideTmp = (p: string) => tmps.some((d) => pathInside(d, p));
+  if (isWinAbs(t) || /^\/[A-Za-z](\/|$)/.test(t)) {
+    const abs = msysToWin(t.replace(/[\\/]+$/, '') || t);
+    if (pathInside(root, abs) || insideTmp(abs)) return false;
+    return systemDirs().some((d) => pathInside(d, abs)); // ổ đĩa/thư mục khác đã do `outside-root` chặn
+  }
+  if (/^\/(?!\/)/.test(t) || /^\\(?!\\)/.test(t)) {
+    if (TMP_POSIX.test(t) || pathInside(root, t)) return false;
+    return !insideTmp(t);
+  }
+  return false;
+}
+
+export interface OutsideWriteViolation {
+  clause: number;
+  /** Chỉ tên lệnh (hoặc `>` với chuyển hướng) — không chép đường dẫn. */
+  cmd: string;
+  reason: string;
+}
+
+/**
+ * Câu con ghi/xóa/đổi quyền vào đường dẫn POSIX tuyệt đối hoặc thư mục hệ thống Windows (ngoài thư mục làm việc/thư mục tạm) → vi phạm `outside-root-write`.
+ * Phủ: rm/del/rmdir/Remove-Item, đích cp/mv/Copy-Item/Move-Item, `>`/`>>`, tee, wget -O, curl -o, Invoke-WebRequest/iwr -OutFile, chmod/chown, ln, dd of=.
+ * Đọc/chạy từ thư mục hệ thống (`ls /usr/bin`, `/usr/bin/env node x.js`) và mọi thao tác trong workspace vẫn được qua.
+ */
+export function outsideWriteViolation(command: string, root: string): OutsideWriteViolation | undefined {
+  const stmts = writeStmts(command);
+  for (let i = 0; i < stmts.length; i++) {
+    const st = stmts[i];
+    const hit = (cmd: string, t: string): OutsideWriteViolation => ({
+      clause: i + 1,
+      cmd,
+      reason: `ghi/xóa/đổi quyền ngoài thư mục làm việc của nhiệm vụ (\`${t.slice(0, 80)}\`) — chỉ ghi trong ${root} hoặc thư mục tạm`,
+    });
+    for (const t of st.redirects) if (writeTargetOutside(t, root)) return hit('>', t);
+    const { name, targets } = writeTargets(st.words);
+    for (const t of targets) if (writeTargetOutside(t, root)) return hit(safeCmdName(name), t);
+  }
+  return undefined;
+}
+
 // ── git chỉ đọc ─────────────────────────────────────────────────────────────
 
 /** Lệnh con git chỉ đọc (không đổi working tree, index, nhánh, cấu hình). */
@@ -143,7 +338,7 @@ export function gitReadArgsReason(argv: string[]): string | undefined {
 // ── Bộ tách lệnh shell có xét nháy (B-04) ───────────────────────────────────
 
 /** Mã quy tắc vi phạm (hợp đồng với sự kiện `guard.block` của B-06). */
-export type ShellRule = 'not-read-only' | 'redirect' | 'subst' | 'heredoc' | 'loop' | 'interpreter' | 'env-file' | 'outside-root';
+export type ShellRule = 'not-read-only' | 'redirect' | 'subst' | 'heredoc' | 'loop' | 'interpreter' | 'env-file' | 'outside-root' | 'outside-root-write';
 
 export interface ShellViolation {
   /** Số thứ tự câu lệnh con (bắt đầu từ 1). */
@@ -402,6 +597,7 @@ const RULE_TEXT: Record<string, string> = {
   interpreter: 'không phải lệnh chỉ đọc (chạy mã) — đọc/tìm bằng Read/Grep/Glob; vai trò này không chạy python/node…',
   'env-file': 'tệp .env là bí mật — không đọc/ghi',
   'outside-root': 'ngoài thư mục làm việc — chỉ thao tác trong workspace của nhiệm vụ',
+  'outside-root-write': 'ghi/xóa/đổi quyền ngoài thư mục làm việc (đường dẫn tuyệt đối hay thư mục hệ thống) — chỉ ghi trong workspace hoặc thư mục tạm',
   'deny-list': 'khớp danh sách lệnh cấm của dự án',
   'git-branch': 'không được tạo/chuyển nhánh, rebase, reset --hard hay push',
 };
