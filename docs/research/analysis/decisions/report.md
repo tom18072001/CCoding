@@ -11,7 +11,7 @@
 ## 0. Trả lời ngắn
 
 1. **"CTO" trong câu hỏi của giám đốc là bốn thành phần khác nhau.** Điều phối viên (LLM) định tuyến. Hàm quy tắc `chooseLane` chọn làn (mã, không LLM). Trưởng phòng bóc tách (LLM, mã chỉnh lại sau). Engine lập lịch và gộp (mã). Vai `cto` **chỉ nghiệm thu**. Mức chắc chắn: **Cao** (đọc mã).
-2. **Chia việc có lợi về thời gian bên trong hệ thống, chưa có lợi so với một agent.** Trên 56 lượt P, chạy song song tiết kiệm khoảng 22 % thời gian so với chạy lần lượt cùng kế hoạch, trong trần cấu trúc khoảng 29 % [Mô tả]. Trên bench, mọi arm CCoding tốn ×1,5–×6,3 token so với một agent (A0), còn điểm ngang nhau vì cả hai đều chạm trần [Mô tả]. Mức chắc chắn: **Vừa** về thời gian, **Thấp** về chất lượng chia.
+2. **Chia việc có lợi về thời gian bên trong hệ thống, chưa có lợi so với một agent.** Trên 56 lượt P, chạy song song tiết kiệm khoảng 22 % thời gian so với chạy lần lượt cùng kế hoạch (xấp xỉ, theo giả định thời lượng hạng mục không đổi khi chạy lần lượt; là nghịch đảo của tỉ số tổng thời gian làm việc trên thời gian thực), trong trần cấu trúc khoảng 29 % (nghịch đảo của work/cp trung vị 1,41) [Mô tả]. Trên bench, mọi arm CCoding tốn ×1,5–×6,3 token so với một agent (A0; cận trên ×6,34 của `study-cloud` B0 có thể khác cửa sổ chạy với arm A0, theo `effectiveness.md`), còn điểm ngang nhau vì cả hai đều chạm trần [Mô tả]. Mức chắc chắn: **Vừa** về thời gian, **Thấp** về chất lượng chia.
 3. **Model:** chưa đủ bằng chứng để đổi mặc định của vai nào. Vai quyết định chia việc là trưởng phòng ở khâu `plan`. Vai này **chưa có số nào về chất lượng bóc tách**, nên E9 được đăng ký trước để đo. Mức chắc chắn: **Vừa** cho CTO (E7), **Yếu/Không có** cho các vai khác.
 4. **Chia kém làm mất bao nhiêu: chưa có con số trực tiếp.** Các cận đo được: lập lịch mất khoảng 7 điểm % thời gian so với trần cấu trúc; 17,9 % lượt P có một hạng mục chiếm quá nửa thời lượng; khâu phối hợp chiếm 31,6 % token. Mức chắc chắn: **Thấp**.
 5. **Bảng điểm:** đủ 14/14 agent của KPI. Điểm từ 65 (`tech-writer`) đến 88 (`dev-lead`). Chỗ yếu chung là **đầu ra bị cắt** (27/112 lượt gọi, 10/14 agent) và nhóm **Tin cậy** của reviewer. K2 xác định 23 chỗ fail: 14 sửa được, 7 cần đo thêm, 2 ngoài tầm. Mục 6 gom thành **21 lỗi sửa được (FX1–FX21)** và **9 thí nghiệm (TN1–TN9)**, mỗi mục có đủ bốn trường.
@@ -27,7 +27,7 @@ Nguồn: `logic-map.md` (K1, commit `b146b87c`), gồm hai sơ đồ mermaid, b�
 | Khâu | Ai/cái gì quyết | LLM? | Vị trí |
 |---|---|---|---|
 | Định tuyến | điều phối viên; lỗi thì `keywordRoute` | có | `orch:1253-1279` |
-| Chọn làn single/fast/full | hàm `chooseLane` | **không** | `src/lane.ts:130-148` |
+| Chọn làn single/fast/full | hàm `chooseLane` | **không** | `src/lane.ts:129-148` |
 | Bóc tách | trưởng phòng; sau đó `parsePlan`, `shapeFastPlan` (làn nhanh), `planGate` | có + mã | `orch:1700-1717`, `planner.ts:95`, `plan-gate.ts:158` |
 | Họp (discuss/finalize) | chỉ làn đầy, ≥ 3 hạng mục và ≥ 2 người | có | `orch:1719-1790` |
 | Cổng phủ kế hoạch | `planGate`: chặn thì lập lại kế hoạch đúng 1 lần, vẫn chặn thì dừng | không | `orch:2403-2460` |
@@ -60,7 +60,7 @@ Sáu agent không có dòng KPI: orchestrator, solution-architect, frontend-dev,
 | Câu hỏi của giám đốc | Thành phần trả lời đúng | Bằng chứng |
 |---|---|---|
 | "CTO định tuyến / chọn phòng" | điều phối viên | `orch:1253` |
-| "CTO quyết định làm một mình hay chia" | hàm `chooseLane` (mã, không model) | `lane.ts:130` |
+| "CTO quyết định làm một mình hay chia" | hàm `chooseLane` (mã, không model) | `lane.ts:129` |
 | "CTO chia việc, bóc tách song song" | trưởng phòng, sau đó mã `shapeFastPlan`/`planGate` | `orch:1700`, `plan-gate.ts:158` |
 | "CTO cho chạy song song" | engine (`executeAll`) | `orch:2073` |
 | "CTO duyệt từng phần" | cổng chất lượng (mã) + reviewer | `orch:1836-1960` |
@@ -81,17 +81,17 @@ Nguồn: `effectiveness.md` mục 3a–3d, `scorecard.md` mục 1b. Số nào c�
 | Trưởng phòng có chia không? | 54/56 lượt P chia ≥ 2 hạng mục; trung vị 5 hạng mục (1–8) | `brief22.decomp.P.*` | Hầu như luôn chia |
 | Cấu trúc kế hoạch cho phép song song bao nhiêu? | work/cp trung vị 1,41 (IQR 1,18–1,69) | `effectiveness.md` 3a | Kế hoạch có nhiều phụ thuộc nối tiếp, mức song song thấp |
 | Lập lịch đạt bao nhiêu? | work/span 1,28 (1,00–1,60); vượt đường găng trung vị 2,7 % (q3 17,0 %) | 3a | **Giới hạn tốc độ chủ yếu nằm ở cấu trúc kế hoạch, không ở lập lịch** |
-| Phòng nào có đuôi lập lịch? | P/dev vượt đường găng 8,1 % (q3 23,3 %); P/research 1,1 % | 3a | Phòng Dev mất thêm ở lập lịch, chờ gộp hoặc giới hạn người nhận (L6, L7) |
-| Lượt có lợi thật từ song song | 42/56 = 75,0 % [61,6; 85,6] có ≥ 2 hạng mục chạy cùng lúc | `opsDetail` | |
+| Phòng nào có đuôi lập lịch? | P/dev vượt đường găng 8,1 % (q3 23,3 %); P/research 1,1 % | 3a | Giả thuyết, chờ TN6: Phòng Dev có thể mất thêm ở lập lịch, chờ gộp hoặc giới hạn người nhận (L6, L7; suy từ đọc mã, chưa đo nguyên nhân) |
+| Lượt có chạy chồng (≥ 2 hạng mục chạy cùng lúc; chạy chồng chưa có nghĩa là có lợi) | 42/56 = 75,0 % [61,6; 85,6]; mẫu số 56 là mọi lượt phòng. Trên các lượt có ≥ 2 hạng mục (54, bỏ 2 kế hoạch chỉ có 1 hạng mục): 42/54 = 77,8 % | `opsDetail` | |
 | Kế hoạch lệch | 10/56 = 17,9 % [8,9; 30,4] lượt có hạng mục dài nhất > 50 % tổng thời lượng; văn phòng phụ 3/5 | 3a | Ở các lượt này song song không thể nhanh hơn 2 lần |
 | Làm lại | trung vị 22,5 % hạng mục (q3 40,0 %) | 3a | Chưa tách được làm lại do kế hoạch hay do thực thi |
-| Song song có worktree so với tuần tự, cùng kế hoạch (E8) | `wallSecTask` B6w4/B6w1 = 0,520 [0,488; 0,552]; token 1,008 [0,942; 1,075] | `results/e8-parallel/report.md` | **[Đăng ký trước]**: song song gần như giảm nửa thời gian mà không tốn thêm token |
+| Song song có worktree so với tuần tự, cùng kế hoạch (E8) | `wallSecTask` B6w4/B6w1 = 0,520 [0,488; 0,552]; token 1,008 [0,942; 1,075] | `results/e8-parallel/report.md` | **[Đăng ký trước]**: giảm khoảng nửa thời gian (0,520 [0,488; 0,552]); token là thước đo phụ, chỉ mô tả: 1,008 [0,942; 1,075], CI chứa 1, không thấy thay đổi phát hiện được |
 | So với một agent (A0) trên bench | token ×1,48 (B5) đến ×6,34 (B0 study-cloud); wall ×1,39 đến ×9,97; điểm lệch ≤ 0,016 | 3b | Mọi arm CCoding đắt hơn; điểm chạm trần nên không thấy lợi chất lượng |
 | E8 so với A0 | B6w4 nhanh hơn A0 chỉ ở 1/3 bài (`l1-modules` 0,59) | backlog §0.1 (a) | Có lợi khi bài chia được thành phần độc lập |
 | Tỉ trọng token khâu phối hợp | 31,6 % trên 632 lượt CCoding; làn fast 30,2 %, full 18,8 %, single 33,4 % | 3c | Khâu `accept` lớn nhất (12,1 %), `plan` 9,5 %, `route` 2,0 % |
 | Số hạng mục với chi phí (e8, 36 lượt) | ρ(số hạng mục, token) = 0,80; ρ(số hạng mục, wall) 0,83 ở B6w1, 0,32 ở B6w4 | 3d | Thêm hạng mục thì tốn token; chạy chồng thì thời gian tăng ít hơn. ρ lẫn hiệu ứng bài |
 
-**Kết luận.** Khi hệ thống đã chọn chạy nhiều agent, chia song song có hiệu quả về thời gian: E8 có đăng ký trước, P cho kết quả mô tả cùng chiều. Phần lợi bị giới hạn bởi **cấu trúc kế hoạch** (1,41), không bởi lập lịch. So với một agent làm cả bài, chia việc **chưa có lợi** trên bench hiện có: tốn hơn, điểm ngang. Tài liệu ngoài cùng chiều: đa agent chỉ có lợi trên việc tách được, còn trên việc tuần tự thì làm hỏng kết quả 39–70 % (K3, S1, preprint).
+**Kết luận.** Khi hệ thống đã chọn chạy nhiều agent, chia song song có hiệu quả về thời gian: E8 có đăng ký trước, P cho kết quả mô tả cùng chiều. Phần lợi bị giới hạn bởi **cấu trúc kế hoạch** (1,41), không bởi lập lịch. So với một agent làm cả bài, chia việc **chưa có lợi** trên bench hiện có: tốn hơn, điểm ngang. Tài liệu ngoài cùng chiều: đa agent chỉ có lợi trên việc tách được, còn trên việc tuần tự thì làm hỏng kết quả 39–70 % ở một benchmark lập kế hoạch (K3, S1, preprint).
 **Mức chắc chắn:** **Vừa** về thời gian bên trong hệ thống; **Vừa** về chi phí so với A0 (nhiều đợt cùng chiều, không gộp p); **Chưa trả lời được** về chất lượng bóc tách, vì chưa có thước đo, cần E9 (TN1).
 
 ---
@@ -120,12 +120,12 @@ Nguồn: `effectiveness.md` mục 3e. **Chưa có con số "mất X % vì chia k
 | Kênh | Ước lượng [Mô tả] | Ý nghĩa cho giám đốc |
 |---|---|---|
 | Trần thời gian theo cấu trúc kế hoạch (P) | tiết kiệm tối đa ≈ 29,2 % (IQR 15,3–40,9 %) so với chạy lần lượt | Kế hoạch hiện có không cho phép nhanh hơn mức này, dù lập lịch hoàn hảo |
-| Thời gian tiết kiệm đạt được (P) | ≈ 22,1 % (IQR 0,0–37,7 %) | Phần lợi thật hiện nay |
+| Thời gian tiết kiệm đạt được (P) | ≈ 22,1 % (IQR 0,0–37,7 %); xấp xỉ, theo giả định thời lượng hạng mục không đổi khi chạy lần lượt | Phần lợi ước lượng hiện nay |
 | Mất do lập lịch | ≈ 7,1 điểm % (hiệu hai trung vị, xấp xỉ); vượt đường găng trung vị 2,7 %, q3 17,0 % | Phần engine sửa được (FX13, TN6) |
 | Lượt có cấu trúc lệch rõ | 10/56 = 17,9 % [8,9; 30,4] | Khoảng 1/6 lượt bị một hạng mục kéo dài |
 | Token phối hợp (bench) | 31,6 % token có trọng số | Gồm cả accept/review vốn có giá trị riêng; không tách được phần do chia kém |
 | So với một agent (bench) | ×1,5–×6,3 token, điểm ngang | Khi bài không chia được, chia chỉ thêm chi phí (E8: chỉ 1/3 bài nhanh hơn A0) |
-| Chia sai làm hỏng kết quả | ngoài: −39 đến −70 % trên việc tuần tự (S1, preprint, không phải sửa mã) | Rủi ro chất lượng, chưa đo trong CCoding |
+| Chia sai làm hỏng kết quả | ngoài: −39 đến −70 % trên việc tuần tự, ở một benchmark lập kế hoạch (S1, preprint, không phải sửa mã) | Rủi ro chất lượng, chưa đo trong CCoding |
 
 **Kết luận.** Trên vận hành thật, phần thời gian có thể lấy thêm bằng **lập lịch tốt hơn** là cỡ vài điểm %. Phần lớn hơn phụ thuộc vào **kế hoạch có hạng mục độc lập hay không**, tức chất lượng bóc tách. Phần này chưa đo được. Về chi phí, chia việc trên bài không chia được là lỗ rõ (×1,5 trở lên).
 **Mức chắc chắn: Thấp** (cận mô tả, phép nghịch đảo trung vị). Thí nghiệm cần chạy: **E9** (TN1) và phân rã vượt đường găng theo nguyên nhân (TN6).
@@ -173,7 +173,7 @@ Cách đọc: agent mức `low` chỉ có 1–2 mục để chấm, nên **chên
 | Hạ tầng | tầng `full` chặn 30/82 lệnh nguy hiểm; `npm test` lọt 9,3 % lỗi cài | F-E4, F-E5 | ngoài tầm (B-18, B-12) |
 | Đã sửa | hết hạn mức thành `paused` (`c0e66fab`); lỗi 403 không thành kết luận (`e2b6573c`), `authSource` (`a11abf45`); Điều 23 và đường dẫn máy (`d1903029`) | F-E9, F-E10, F-M3 | xong; còn kiểm tự động (FX20) |
 
-**Ba ca 14/11** (biên bản người điều phối, n = 3, [Mô tả]): cả 3/3 ca đều có tín hiệu ở khâu CTO, nhưng nguyên nhân gốc nằm ở khâu khác: kế hoạch và cổng (BRIEF-20), trần lượt của reviewer (BRIEF-D16), nội dung nguồn (BRIEF-21). Như vậy CTO **phát hiện đúng**; chỗ fail là engine không biến kết luận của CTO thành việc tiếp theo (L3, D17 K3).
+**Ba ca 14/11** (biên bản người điều phối, n = 3, [Mô tả]): cả 3/3 ca đều có tín hiệu ở khâu CTO, nhưng nguyên nhân gốc nằm ở khâu khác: kế hoạch và cổng (BRIEF-20), trần lượt của reviewer (BRIEF-D16), nội dung nguồn (BRIEF-21). Như vậy có tín hiệu từ CTO, còn nguyên nhân gốc ở khâu khác (n = 3, không đủ để kết luận CTO đúng hay sai; E7 ghi CTO chặn nhầm 42,2 % ở arm R1); chỗ fail là engine không biến kết luận của CTO thành việc tiếp theo (L3, D17 K3).
 **Mức chắc chắn:** **Vừa** cho KPI của agent mức high; **Thấp** cho agent mức low và ba ca 14/11.
 
 ---
@@ -184,7 +184,7 @@ Quy ước:
 - Tệp `src/…` theo commit `b146b87c`.
 - Trạng thái đọc bằng `git log` ngày 14/11/2026. Từ `b146b87c` trở về trước, commit chạm `src/` mới nhất là `a11abf45`. Đề bài D17 (`4b0437c8`) và D16b chỉ có tệp đề bài, chưa có commit mã.
 - "Tiêu chí xong" là điều kiện đo được. Ngưỡng nào là đề xuất của trưởng phòng thì ghi "(đề xuất)", chờ giám đốc duyệt.
-- Mã backlog ở cột cuối khớp `improvement-backlog.md` §0.2 và §5. Văn bản chèn nằm ở `analysis/decisions/backlog-b20-insert.md`; xem mục 8.
+- Mã backlog ở cột cuối khớp `improvement-backlog.md` §0.2 và §5. Đã chèn nguyên văn vào `improvement-backlog.md` (đầu tệp, §0.2, §5) và `run-plan.md` (§10); xem mục 8.
 
 ### 6.1 Lỗi sửa được: FX1–FX21
 
@@ -251,7 +251,7 @@ Phần còn lại của FX5 và FX7, cùng FX2, FX4, FX8–FX21, chưa có đề
 | K2 | Bảng điểm, chỗ fail, hiệu quả chia việc | @data-scientist | Chờ K7; `scorecard.mjs --check` exit 0 (K2 báo) | `scorecard.mjs`, `scorecard.md`, `effectiveness.md` |
 | K3 | Đối chiếu tài liệu | @literature-researcher | Chờ K7 | `context/decomposition-sources-2026-11-14.md` |
 | K4 | Model theo vai, E9 | @methodologist | Chờ K7 | `model-per-role.md`, `preregistration.md` §9.x |
-| K6 | Báo cáo này, backlog, run-plan | @research-lead | Chờ K7; phần chèn backlog/run-plan chưa vào tệp đích (mục 8) | `report.md`, `backlog-b20-insert.md`, `run-plan-s10-insert.md` |
+| K6 | Báo cáo này, backlog, run-plan | @research-lead | Chờ K7; phần chèn backlog/run-plan đã vào tệp đích ở BRIEF-22b K1 (mục 8) | `report.md`, `improvement-backlog.md` (§0.2, B-20…B-49), `run-plan.md` (§10) |
 
 ## 8. Phương pháp và giới hạn
 
@@ -259,14 +259,14 @@ Phần còn lại của FX5 và FX7, cùng FX2, FX4, FX8–FX21, chưa có đề
 - **Số liệu** chép từ bảng do script sinh của K2. Không tính lại.
 - **Hai chỗ lệch nhỏ giữa báo cáo bàn giao và tệp:**
   - Báo cáo bàn giao của K2 ghi "28 lượt bị cắt trên 124". Bảng `scorecard.md` (do script sinh) cho 27/112. Báo cáo này dùng số của bảng.
-  - Vị trí `chooseLane` ghi `lane.ts:130` (K1) và `lane.ts:129` (K2). Báo cáo này theo `logic-map.md`.
+  - Vị trí `chooseLane` ghi `lane.ts:130` (K1) và `lane.ts:129` (K2). `:129` là dòng khai báo hàm, `:130` là dòng đầu thân hàm; báo cáo này dùng `:129` (đã sửa ở BRIEF-22b).
 - **Ca 14/11:** chỉ n = 3, lấy từ biên bản người điều phối, không có trong `runs.jsonl`. Không suy ra tỉ lệ chung.
 - **Văn phòng phụ** chỉ có 5 lượt phòng. KPI có 4 agent mức `low`.
 - **Ngưỡng** ghi "(đề xuất)" ở mục 6 chưa được giám đốc duyệt.
-- **Chưa chèn được vào `improvement-backlog.md` (≈ 165 KB) và `run-plan.md` (≈ 87 KB).** Vai này chỉ có công cụ ghi đè cả tệp, còn shell chỉ được đọc. Ghi đè nguyên văn hai tệp lớn có rủi ro làm hỏng nội dung cũ. Vì vậy phần thêm nằm trong hai tệp chèn, có ghi điểm neo:
-  - `analysis/decisions/backlog-b20-insert.md`: Khối A (dòng cập nhật đầu tệp), Khối B (§0.2), Khối C (B-20…B-49).
-  - `analysis/decisions/run-plan-s10-insert.md`: dòng cập nhật, dòng Tóm tắt, §10.
-  - Vai có `edit_file` cần chèn nguyên văn, rồi kiểm `git diff --numstat` để cột xóa bằng 0. Việc này nên làm ở K7a hoặc pha revise.
+- **Việc chèn vào `improvement-backlog.md` (≈ 165 KB) và `run-plan.md` (≈ 87 KB):** ở BRIEF-22 K6 vai chỉ có công cụ ghi đè cả tệp nên phần thêm nằm trong hai tệp chèn có điểm neo. Ở BRIEF-22b K1 (14/11/2026) đã chèn nguyên văn:
+  - `improvement-backlog.md`: dòng cập nhật R19 (đầu tệp), §0.2, B-20…B-49 (§5). `git diff --numstat`: 366 dòng thêm, 0 xóa.
+  - `run-plan.md`: dòng cập nhật, dòng Tóm tắt, §10. `git diff --numstat`: 68 dòng thêm, 0 xóa.
+  - Hai tệp chèn thôi làm nguồn; người điều phối xóa bằng `git rm` vì vai này không có quyền xóa tệp.
 - **Data Protection Gate:** gói chỉ thêm tài liệu và chỉ số tổng hợp, không đổi luồng dữ liệu, nên không cập nhật `docs/data-protection-assessment.md`. FX21 (ký số log) là việc theo đúng yêu cầu "log làm chứng cứ phải bất biến" của khung.
 
 ## 9. Phản biện đã xử lý

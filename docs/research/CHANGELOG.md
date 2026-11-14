@@ -20,7 +20,14 @@ Không gọi LLM, không sửa `src/`, mã `bench/`, `preregistration.md` (§9 c
 
 Hạng mục K5 (@academic-writer). Không gọi LLM, không chạy benchmark, không sửa `src/` hay mã `bench/`. Nguồn: `analysis/decisions/{logic-map.md, scorecard.md, effectiveness.md, model-per-role.md}`, `context/decomposition-sources-2026-11-14.md`, `preregistration.md` §9.x (E9). Phân loại dữ liệu: **Nội bộ**; chỉ số tổng hợp, "dự án A" ẩn danh, ba ca 14/11 lấy từ biên bản người điều phối (n = 3, [Mô tả]).
 
-**Số đổi giá trị: không có.** Không có đại lượng nào của v0.7.1 có số mới từ script K2, nên không có dòng "số cũ → số mới". Mọi số v0.7.1 giữ nguyên.
+**Số đổi giá trị: không có số nào bị thay; có hai cặp số cùng đại lượng được giữ và định nghĩa (sửa ở BRIEF-22b K1, M1).** Phản biện K7 chỉ ra dòng cũ "không có" chưa nói đến việc bài v0.8 dùng hai số cho P-1/P-2. Nay ghi rõ, mỗi số kèm định nghĩa và mẫu số:
+
+| Đại lượng | Số A | Số B | Khác nhau ở |
+|---|---|---|---|
+| P-1: lượt có ≥ 2 hạng mục chạy cùng lúc | 42/54 = 77,8 % [64,4; 88,0] (Bảng 18) | 42/56 = 75,0 % [61,6; 85,6] (§6.5) | mẫu số: 54 là lượt có ≥ 2 hạng mục đủ mốc giờ; 56 là mọi lượt phòng (bỏ 2 kế hoạch chỉ có 1 hạng mục thì còn 54) |
+| P-2: tiết kiệm tối đa | 27,5 % (375 phút, Bảng 18) | 29,2 % (§6.5) | cách tính: 27,5 % gộp phút trên các lượt chạy chồng; 29,2 % = 1 − 1/1,412, nghịch đảo của work/cp trung vị trên 56 lượt |
+
+Không số nào đổi giá trị so với v0.7.1; không chọn một số làm số duy nhất vì hai số trả lời hai câu hỏi khác nhau. Dùng nhất quán: Bảng 18 và hàng Trục 3 của bảng tổng kết dùng số A, §6.5 và `effectiveness.md` dùng số B, mỗi chỗ ghi định nghĩa.
 
 **Thêm mới trong `paper/paper.md` (v0.8):**
 - Đầu bài: đoạn "So với v0.7.1 (BRIEF-22)".
