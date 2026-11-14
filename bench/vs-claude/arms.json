@@ -77,6 +77,21 @@
     },
     "label": "CCoding làn nhanh"
   },
+  "P-H": {
+    "kind": "ccoding",
+    "options": { "lane": "fast", "planOnly": true, "planModel": "haiku" },
+    "label": "CCoding chỉ lập kế hoạch, planModel haiku (ép làn fast như B6) (E9-lite)"
+  },
+  "P-S": {
+    "kind": "ccoding",
+    "options": { "lane": "fast", "planOnly": true, "planModel": "sonnet" },
+    "label": "CCoding chỉ lập kế hoạch, planModel sonnet (ép làn fast như B6) (E9-lite)"
+  },
+  "P-O": {
+    "kind": "ccoding",
+    "options": { "lane": "fast", "planOnly": true, "planModel": "opus" },
+    "label": "CCoding chỉ lập kế hoạch, planModel opus (ép làn fast như B6) (E9-lite)"
+  },
   "B7": {
     "kind": "ccoding",
     "options": {

@@ -9,6 +9,7 @@ import { readJsonl, scanJsonl, type JsonlCache } from './util/fsx.js';
 import { MAX_UPLOAD_BYTES } from './uploads.js';
 import { cacheReport, clearFixedFeedback, FINDING_LABELS, kpiReport, type CallRow } from './kpi.js';
 import { isSafeRef } from './git.js';
+import { isPlanModel } from './orchestrator.js';
 import { DiffError, diffSummary, fileDiff, isSha, locate as locateDiff, ownersOf, repoDirFor } from './diff.js';
 import { ShipError } from './ship.js';
 import { buildTimeline } from './timeline.js';
@@ -208,6 +209,9 @@ export function createServer(app: App): http.Server {
       // String({...}) = "[object Object]" — 28/10 một nhiệm vụ mất trọn đề bài vì client gửi brief dạng đối tượng
       if (typeof b.brief !== 'string' || !b.brief.trim()) throw new HttpError(400, 'brief phải là chuỗi văn bản, không rỗng');
       if (b.title !== undefined && typeof b.title !== 'string') throw new HttpError(400, 'title phải là chuỗi');
+      // D1: nhãn arm đo theo model — không để planModel sai rơi lặng lẽ về model mặc định
+      if (b.options && typeof b.options === 'object' && (b.options as Record<string, unknown>).planModel !== undefined && !isPlanModel((b.options as Record<string, unknown>).planModel))
+        throw new HttpError(400, 'options.planModel không hợp lệ: chỉ nhận "haiku", "sonnet" hoặc "opus"');
       try {
         const t = orchestrator.submit({
           brief: String(b.brief ?? ''),

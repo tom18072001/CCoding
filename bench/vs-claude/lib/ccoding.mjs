@@ -16,6 +16,16 @@ export function client(baseUrl) {
   };
 }
 
+/** Nhãn đường xác thực CCoding ghi ở calls.jsonl (authSource từng lượt gọi): một nhãn → nhãn đó; nhiều → nối '+'; không có → null. */
+export function authSourceOf(callsText) {
+  const set = new Set();
+  for (const l of String(callsText ?? '').split(/\r?\n/)) {
+    if (!l.trim()) continue;
+    try { const a = JSON.parse(l).authSource; if (typeof a === 'string' && a) set.add(a); } catch { /* dòng hỏng */ }
+  }
+  return set.size ? [...set].sort().join('+') : null;
+}
+
 /**
  * opts: { baseUrl, dataDir (CCoding data dir, for calls.jsonl), runtime, projectId, workdir, brief, title, taskOptions, timeoutMin }
  * Returns the same shape as runClaude() (gồm infra: 'rate-limit' | 'error' | undefined và resetsAt).
@@ -189,20 +199,23 @@ export async function runCcoding(opts) {
       byAgent[row.key] = weighted(row);
     }
   }
-  let research, final;
+  let research, final, plan;
   try {
     const callsText = opts.dataDir && fs.existsSync(callsFile) ? fs.readFileSync(callsFile, 'utf8') : '';
     const evFile = path.join(opts.dataDir ?? '', 'runs', task.id, 'events.jsonl');
     const eventsText = opts.dataDir && fs.existsSync(evFile) ? fs.readFileSync(evFile, 'utf8') : '';
     final = (await api(`/api/tasks/${task.id}`)).task ?? t;
     research = researchFields(callsText, final, eventsText);
+    // E9-lite (hợp đồng D3): run planOnly cuối cùng của task.json
+    const pr = [...(final?.runs ?? [])].reverse().find((x) => x?.planOnly);
+    if (pr) plan = { authSource: authSourceOf(callsText), planModel: pr.planModel ?? null, planModelSource: pr.planModelSource ?? null, planRaw: pr.planRaw ?? null, planFinal: pr.planFinal ?? null, planGate: pr.planGate ?? null, planReplans: pr.planReplans ?? 0 };
   } catch { research = researchFields('', t); }
   tokens.total = tokens.input + tokens.output + tokens.cacheRead + tokens.cacheWrite;
   tokens.weighted = weighted(tokens);
   return {
     status: t.status === 'done' ? 'done' : 'failed', wallSec, tokens, costUsd, turns, calls,
     finalText, taskId: task.id, byPhase, agentsUsed: Object.keys(byAgent).length, byAgent,
-    department: t.department, attention: t.attention,
+    department: t.department, attention: t.attention, ...(plan ? { plan } : {}),
     research: { ...research, isolation, ...taskTimes(final ?? t), pausedSecObserved: +(pausedMs / 1000).toFixed(1), pauseCount, ...(checkout ? { checkout } : {}) }, infra, ...(checkoutError ? { error: checkoutError } : {}), ...(resetsAt ? { resetsAt } : {}),
   };
 }
