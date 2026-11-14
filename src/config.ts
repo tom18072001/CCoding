@@ -300,6 +300,12 @@ export interface Config {
     historyDays?: number;
     /** Số hạng mục tối thiểu của một agent để dùng lịch sử thay hằng số. */
     minSamples?: number;
+    /**
+     * Hệ số nhân cho phần ước lượng theo HẰNG SỐ (base, review, perSubtask, web) theo runtime. Hằng số đo token mới (không cache);
+     * runtime đọc cache nhiều (claude-cli) tính `cacheRead` vào tổng (totalTokens) nên thật gấp nhiều lần. Lịch sử theo vai đã cùng đơn vị với
+     * thực tế nên KHÔNG nhân. Xem docs/diagnostics/estimate-research.md.
+     */
+    runtimeFactor?: Record<string, number>;
   };
   herdr: {
     session: string;
@@ -427,6 +433,7 @@ const BUILTIN: Omit<Config, 'root'> = {
     warnRatio: 1.2,
     historyDays: 30,
     minSamples: 2,
+    runtimeFactor: { 'claude-cli': 5 },
   },
   herdr: { session: 'ccoding', workspaceLabel: 'CCoding Office', agentPanes: true, closeAgentPanes: false, notify: true, services: [], logSpaces: { enabled: true, agents: true } },
   runtimes: {},
