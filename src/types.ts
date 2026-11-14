@@ -321,7 +321,7 @@ export interface DeptRun {
   /** Hạng mục còn phải sửa trong vòng hiện tại — tiếp tục sau tạm dừng thì sửa tiếp theo review đã có, không review lại. */
   revising?: string[];
   /** Ước lượng token của kế hoạch (sau khi lập/chốt) để cảnh báo nhiệm vụ quá lớn. */
-  estimate?: { tokens: number; budget: number; at: string; basis?: string };
+  estimate?: { tokens: number; budget: number; at: string; basis?: string; work?: number; criticalPathEstimate?: number; parallelism?: number };
   /** Duyệt kế hoạch trước khi thực thi: nhân sự được chọn (kèm năng lực công cụ) lúc chờ duyệt, ai/khi nào duyệt. */
   planReview?: {
     at: string;

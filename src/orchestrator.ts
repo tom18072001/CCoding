@@ -2534,13 +2534,23 @@ export class Orchestrator {
   }
 
   estimatePlan(task: Task, run: DeptRun, project?: ProjectDef): number {
+    return this.estimatePlanDetail(task, run, project).total;
+  }
+
+  /**
+   * FX13: ước lượng kèm đường găng. `work` = tổng token các hạng mục chưa xong (không gồm phần cố định `base` và review);
+   * `criticalPathEstimate` = chuỗi phụ thuộc (dependsOn) tốn token nhất trong số đó; `parallelism` = work / cp (≥ 1; 1 khi không có việc).
+   * Phụ thuộc vào hạng mục đã xong hoặc không có trong kế hoạch bị bỏ qua; vòng phụ thuộc không làm treo (cạnh quay lại bị cắt).
+   */
+  estimatePlanDetail(task: Task, run: DeptRun, project?: ProjectDef): { total: number; work: number; criticalPathEstimate: number; parallelism: number } {
     const e = this.d.config.estimate;
     const hist = this.history(task);
     const min = e.minSamples ?? 2;
     const access = this.toolAccess(task, project);
     const cls = task.classification;
     const web = this.d.config.tools.web !== false && (cls === 'public' || cls === 'internal');
-    let total = e.base + (task.options.review ? e.perReview * (1 + task.options.maxRevisions) : 0);
+    const fixed = e.base + (task.options.review ? e.perReview * (1 + task.options.maxRevisions) : 0);
+    const cost = new Map<string, number>();
     for (const st of run.subtasks) {
       if (st.status === 'done') continue;
       const agent = this.d.registry.agents.get(st.assignee);
@@ -2548,14 +2558,35 @@ export class Orchestrator {
       const lvl: ToolAccess = tools.includes('run_command') ? 'exec' : tools.includes('write_file') || tools.includes('edit_file') ? 'write' : tools.includes('read_file') ? 'read' : 'none';
       // có đủ lịch sử của agent → dùng token thực tế (đã gồm tra cứu web, sửa theo review); chưa có → hằng số theo quyền công cụ
       const h = hist.get(st.assignee);
-      if (h && h.samples >= min) {
-        total += h.median;
-        continue;
+      let c: number;
+      if (h && h.samples >= min) c = h.median;
+      else {
+        c = e.perSubtask[lvl] ?? e.perSubtask.none;
+        if (tools.some((t) => t === 'search_papers' || t === 'web_search' || t === 'fetch_url')) c += e.web;
       }
-      total += e.perSubtask[lvl] ?? e.perSubtask.none;
-      if (tools.some((t) => t === 'search_papers' || t === 'web_search' || t === 'fetch_url')) total += e.web;
+      cost.set(st.id, c);
     }
-    return total;
+    const deps = new Map(run.subtasks.map((s) => [s.id, s.dependsOn ?? []] as const));
+    const memo = new Map<string, number>();
+    const longest = (id: string, seen: Set<string>): number => {
+      const m = memo.get(id);
+      if (m !== undefined) return m;
+      if (seen.has(id)) return 0;
+      seen.add(id);
+      let best = 0;
+      for (const d of deps.get(id) ?? []) if (cost.has(d)) best = Math.max(best, longest(d, seen));
+      seen.delete(id);
+      const v = (cost.get(id) ?? 0) + best;
+      memo.set(id, v);
+      return v;
+    };
+    let work = 0;
+    let cp = 0;
+    for (const [id, c] of cost) {
+      work += c;
+      cp = Math.max(cp, longest(id, new Set()));
+    }
+    return { total: fixed + work, work, criticalPathEstimate: cp, parallelism: cp ? Math.round((work / cp) * 100) / 100 : 1 };
   }
 
   /**
@@ -2810,11 +2841,14 @@ export class Orchestrator {
 
   /** Kế hoạch vừa chốt: ước lượng ≫ phần ngân sách còn lại → nhắn + cảnh báo; chế độ "pause" thì dừng chờ quyết định. */
   private checkEstimate(task: Task, run: DeptRun, project?: ProjectDef, warn = true): void {
-    const est = this.estimatePlan(task, run, project);
+    const detail = this.estimatePlanDetail(task, run, project);
+    const est = this.estimatePlan(task, run, project); // qua estimatePlan (điểm móc cho test/ghi đè); detail chỉ để lấy đường găng
     const remaining = Math.max(0, task.options.budgetTokens - totalTokens(task.usage));
     const basis = this.estimateBasis(run, task);
-    run.estimate = { tokens: est, budget: remaining, at: nowIso(), basis };
+    run.estimate = { tokens: est, budget: remaining, at: nowIso(), basis, work: detail.work, criticalPathEstimate: detail.criticalPathEstimate, parallelism: detail.parallelism };
     this.save(task);
+    // FX13: ghi đường găng dự kiến vào log kế hoạch (chỉ số này so với song song thực tế khi đo)
+    this.d.logs.write({ level: 'info', kind: 'plan.estimate', msg: `${task.id}: ước lượng kế hoạch ${run.department} ~${fmtNum(est)} token, đường găng ~${fmtNum(detail.criticalPathEstimate)}, song song dự kiến ×${String(detail.parallelism).replace('.', ',')}`, taskId: task.id, department: run.department, data: { estimate: est, work: detail.work, criticalPathEstimate: detail.criticalPathEstimate, parallelism: detail.parallelism, subtasks: run.subtasks.length } });
     // K3: vòng bổ sung là việc tự mở, không được vượt phần ngân sách còn lại dù ở chế độ "complete" → dừng chờ giám đốc tăng ngân sách
     if (warn && run.followupOf && est > remaining) {
       const m = `Vòng bổ sung ${run.round ?? ''} ước tính ~${fmtNum(est)} token, vượt phần ngân sách còn lại (${fmtNum(remaining)}) — tăng ngân sách rồi tiếp tục.`.replace('  ', ' ');
