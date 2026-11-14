@@ -90,6 +90,307 @@
       "anchor": "tool_input: { path: 'C:/Users",
       "reason": "chuỗi thử có tên giả trong test của bộ kiểm đường dẫn; không phải đường dẫn máy thật",
       "by": "K3"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-10.md",
+      "anchor": "(đề bài BRIEF-10.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-11.md",
+      "anchor": "(đề bài BRIEF-11.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-12.md",
+      "anchor": "(đề bài BRIEF-12.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-13.md",
+      "anchor": "(đề bài BRIEF-13.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-14.md",
+      "anchor": "(đề bài BRIEF-14.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-15.md",
+      "anchor": "(đề bài BRIEF-15.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-16.md",
+      "anchor": "(đề bài BRIEF-16.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-17.md",
+      "anchor": "(đề bài BRIEF-17.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-18.md",
+      "anchor": "(đề bài BRIEF-18.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-19.md",
+      "anchor": "(đề bài BRIEF-19.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-2.md",
+      "anchor": "(đề bài BRIEF-2.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-20.md",
+      "anchor": "(đề bài BRIEF-20.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-21.md",
+      "anchor": "(đề bài BRIEF-21.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-22.md",
+      "anchor": "(đề bài BRIEF-22.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-22b.md",
+      "anchor": "(đề bài BRIEF-22b.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-23.md",
+      "anchor": "(đề bài BRIEF-23.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-3.md",
+      "anchor": "(đề bài BRIEF-3.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-4.md",
+      "anchor": "(đề bài BRIEF-4.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-4b.md",
+      "anchor": "(đề bài BRIEF-4b.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-4c.md",
+      "anchor": "(đề bài BRIEF-4c.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-5.md",
+      "anchor": "(đề bài BRIEF-5.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-6.md",
+      "anchor": "(đề bài BRIEF-6.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-7.md",
+      "anchor": "(đề bài BRIEF-7.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-8.md",
+      "anchor": "(đề bài BRIEF-8.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-9.md",
+      "anchor": "(đề bài BRIEF-9.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-D10.md",
+      "anchor": "(đề bài BRIEF-D10.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-D10b.md",
+      "anchor": "(đề bài BRIEF-D10b.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-D11.md",
+      "anchor": "(đề bài BRIEF-D11.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-D12.md",
+      "anchor": "(đề bài BRIEF-D12.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-D13.md",
+      "anchor": "(đề bài BRIEF-D13.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-D14.md",
+      "anchor": "(đề bài BRIEF-D14.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-D15.md",
+      "anchor": "(đề bài BRIEF-D15.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-D16.md",
+      "anchor": "(đề bài BRIEF-D16.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-D16b.md",
+      "anchor": "(đề bài BRIEF-D16b.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-D17.md",
+      "anchor": "(đề bài BRIEF-D17.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-D18a.md",
+      "anchor": "(đề bài BRIEF-D18a.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-D18b.md",
+      "anchor": "(đề bài BRIEF-D18b.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-D18c.md",
+      "anchor": "(đề bài BRIEF-D18c.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-D20.md",
+      "anchor": "(đề bài BRIEF-D20.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-D8.md",
+      "anchor": "(đề bài BRIEF-D8.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "brief-lint",
+      "file": "docs/research/BRIEF-D9.md",
+      "anchor": "(đề bài BRIEF-D9.md)",
+      "reason": "đề bài lịch sử, giữ nguyên văn (bản ghi những gì đã giao); rule brief-lint chỉ áp cho đề bài mới",
+      "by": "K4"
+    },
+    {
+      "rule": "placeholders",
+      "file": "docs/research/BRIEF-D20.md",
+      "anchor": "sửa tiêu đề \"(pha review điền)\"",
+      "reason": "đề bài D20 nhắc nguyên văn cụm cấm để mô tả rule; không phải chỗ giữ chưa điền",
+      "by": "K4"
+    },
+    {
+      "rule": "placeholders",
+      "file": "docs/research/BRIEF-D20.md",
+      "anchor": "\"(pha review điền)\", \"chưa điền\"",
+      "reason": "đề bài D20 nhắc nguyên văn cụm cấm để mô tả rule; không phải chỗ giữ chưa điền",
+      "by": "K4"
     }
   ]
 }
