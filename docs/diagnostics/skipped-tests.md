@@ -17,6 +17,8 @@ Quét `test/` tìm `{ skip: … }`, `t.skip(…)`, `test.skip`, `todo`. Không c
 | `test/claude-guard-paths.test.ts:77` | symlink/junction trong worktree trỏ ra ngoài bị chặn | `tryLink` ném lỗi (thiếu quyền, hệ tệp không hỗ trợ) | mọi nền tảng; Windows dùng junction (không cần quyền admin) | không tạo được liên kết | Linux/macOS hoặc Windows thường tạo được; nếu skip, kiểm quyền/hệ tệp của thư mục tạm |
 | `test/claude-guard-paths.test.ts:121` | junction trong tool-results trỏ ra ngoài | như trên | như trên | như trên | như trên |
 | `test/shell-policy-write-outside.test.ts:40` | thư mục hệ thống Windows | `SystemRoot`/`windir` không đặt | thực tế chỉ Windows (biến này có sẵn); Linux skip | cần dựng đường dẫn thư mục hệ thống Windows | Chạy trên Windows, hoặc đặt `SystemRoot=C:\Windows` (chỉ dùng làm chuỗi, không chạm đĩa) |
+| `test/diff-read-inside.test.ts` | readInside: symlink/junction thư mục trong worktree trỏ ra ngoài bị chặn | không tạo được symlink/junction | mọi nền tảng (Windows dùng junction) | cần liên kết thật | Kiểm quyền/hệ tệp của thư mục tạm |
+| `test/diff-read-inside.test.ts` | readInside: Windows — khác hoa/thường vẫn là cùng thư mục | `process.platform !== 'win32'` | chỉ chạy Windows | Linux/macOS phân biệt hoa/thường nên ca không có nghĩa | Chạy trên Windows |
 
 ## Lần chạy thật trên máy này (Windows 11, Node ≥ 22)
 
@@ -61,3 +63,19 @@ Kết luận:
 - **Số 1** trên Linux: giả định của K3 (thiếu qpdf hoặc pdftotext) **sai**. Máy Linux có cả hai công cụ; test bị bỏ qua là `shell-policy-write-outside` vì không có `SystemRoot`.
 - **Số 3** của reviewer: khớp phiên `cmd` tương tác (có pdftotext, không có qpdf).
 - Một lần chạy toàn bộ trong phiên `cmd` (văn phòng đang chạy hai nhiệm vụ cùng lúc) có 1 test đỏ: `followup-paths.test.ts:139` "D17(c) vòng bổ sung ở làn đầy", nhiệm vụ dừng ở `paused` thay vì `done` sau 15 giây. Chạy riêng tệp đó hai lần đều xanh (khoảng 11 giây), và lần chạy kiểu WMI ở bảng trên cũng xanh. Đây là test chập chờn khi máy tải nặng; giao Dev xử lý ở gói sau.
+
+## Đính chính D17(c) (D22, 15/11/2026)
+
+Người điều phối từng ghi test D17(c) (`followup-paths.test.ts:139`, "vòng bổ sung ở làn đầy") "đỏ khi không có `claude` trong PATH". **Ghi nhận đó sai.** Chạy lại với thư mục bin riêng không chứa `claude` thì test vẫn xanh, nên PATH không phải nguyên nhân. Nguyên nhân thật là **ngân sách** (nhiệm vụ dừng ở `paused` vì hết ngân sách thay vì `done`); D20b đã ghim `budgetTokens` cho test này (commit `242a5b5f`, "BRIEF-D20b: bỏ chuỗi giống đường dẫn máy…", và gộp ở `187f498d`; tra bằng `git log --grep=D20b`). Không còn phụ thuộc môi trường.
+
+### Số bỏ qua 4 so với 3
+
+Theo bảng "Đo lại của người điều phối": số test bỏ qua phụ thuộc môi trường chỉ ở hai công cụ ngoài trong PATH.
+- **3**: Windows, phiên `cmd` tương tác. Hai test cố định theo nền tảng (`bench.test.ts` win32, `logview.test.ts` win32) cộng `extract.test.ts` qpdf (không có qpdf). `pdftotext` có vì PATH chứa `Git\mingw64in`.
+- **4**: Windows, tiến trình tạo như máy chủ văn phòng. Ba test trên cộng `extract.test.ts` pdftotext, vì PATH hệ thống không có `Git\mingw64in`.
+- Chênh 1 test = điều kiện skip "`pdftotext -v` không chạy được trong PATH", phụ thuộc PATH của tiến trình chạy test, không phải lỗi mã.
+- Lần chạy `npm test` trong worktree này (Windows): `tests 867 · pass 864 · fail 0 · skipped 3` (pdftotext có trong PATH của phiên này, khớp dòng "3").
+
+### Thư mục mô phỏng (D20b còn mở)
+
+`git ls-files .ccoding | grep -E 'sim-a|scratch'` → không có tệp nào bị commit; không cần `git rm`. Thư mục chưa track (`.ccoding/sim-a`, `.ccoding/sim-a-s4`, `scratch-2b9`) nếu còn ở worktree chính thì người điều phối dọn tay vì hook chặn xóa.
