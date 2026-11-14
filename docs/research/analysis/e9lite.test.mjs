@@ -2,11 +2,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { normPath, moduleOf, coverage, rowMetrics, weighted, gateFirst, parseRuns, selectRuns, stopFlags, perTask, bootstrapMean, analyze, format } from './e9lite.mjs';
+import { gateCounters, stopWarnings, normPath, moduleOf, coverage, rowMetrics, weighted, gateFirst, parseRuns, selectRuns, stopFlags, perTask, bootstrapMean, analyze, format } from './e9lite.mjs';
 import { label, buildLabels } from './e9lite-labels.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -95,7 +95,21 @@ test('token có trọng số, cổng đạt lần đầu', () => {
   assert.equal(gateFirst({ planGate: { rules: [] }, replanCount: 0 }), 1);
   assert.equal(gateFirst({ planGate: { rules: ['A'], replanned: true }, replanCount: 1 }), 0);
   assert.equal(gateFirst({ planGate: { rules: [] }, replanCount: 1 }), 0);
-  assert.equal(gateFirst({ planGate: null, replanCount: 0 }), null);
+  // Đặc tả K2 (khối "Đính chính gateFirst" ở §9): 8 ví dụ; luôn 0 hoặc 1, không bao giờ null.
+  assert.equal(gateFirst({ planGate: { uncovered: [], reasons: [], rules: [] }, replanCount: 0 }), 1); // 1
+  assert.equal(gateFirst({ planGate: { uncovered: ['x'], reasons: ['r'], rules: ['A'], replanned: true }, replanCount: 1 }), 0); // 2
+  assert.equal(gateFirst({ planGate: { rules: [] }, replanCount: 1 }), 0); // 3
+  assert.equal(gateFirst({ planGate: null, replanCount: 0 }), 0); // 4
+  assert.equal(gateFirst({ planGate: { rules: [] }, replanCount: null }), 0); // 5
+  assert.equal(gateFirst({ planGate: { ok: false, rules: [] }, replanCount: 0 }), 1); // 6: ok bị bỏ qua
+  assert.equal(gateFirst({ planGate: { rules: [] } }), 0); // 7: thiếu replanCount
+  assert.equal(gateFirst({ planGate: 'x', replanCount: 0 }), 0); // chuỗi ⇒ 0
+  // 8: ba lượt lặp 1, 0, 1 ⇒ chỉ số bài 2/3
+  const reps = [{ planGate: { rules: [] }, replanCount: 0 }, { planGate: { rules: [] }, replanCount: 1 }, { planGate: { rules: [] }, replanCount: 0 }];
+  const kept = reps.map((r, i) => row({ task: 'a', arm: 'P-S', rep: i + 1, ...r }));
+  const { out } = perTask(kept, { a: gold.tasks[0] }, { a: 'chia_duoc' });
+  assert.ok(Math.abs(out.a['P-S'].gateFirst.mean - 2 / 3) < 1e-12);
+  assert.deepEqual(gateCounters([{ planGate: null, replanCount: 0 }, { planGate: { rules: [] }, replanCount: null }, { planGate: { replanned: true }, replanCount: 1 }]), { nGateNull: 1, nReplanCountMissing: 1, nReplanned: 1 });
 });
 
 test('dòng model lệch bị loại, kể cả khi status done; vẫn được báo là lượt đầu lỗi', () => {
@@ -225,10 +239,15 @@ test('B1: tệp deleted không vào G_f và G_m (độ phủ)', () => {
   assert.equal(rowMetrics(row({ task: 'x', arm: 'P-S', rep: 1, planRaw: [item('a.js')] }), { files: [{ ...f('a.js'), change: 'deleted' }] }, 'khong_chia_duoc')['raw.covFile'], null);
 });
 
-test('M2: ccodingCommit / claudeCliVersion khác nhau giữa các dòng ⇒ cờ dừng; null bị bỏ qua', () => {
+test('M2: ccodingCommit / claudeCliVersion khác nhau giữa các dòng ⇒ cờ dừng; null tính là một giá trị riêng', () => {
   const a = row({ task: 'a', arm: 'P-H', rep: 1, ccodingCommit: 'c1', claudeCliVersion: 'v1' });
   assert.deepEqual(stopFlags([a, row({ task: 'a', arm: 'P-S', rep: 1, ccodingCommit: 'c1', claudeCliVersion: 'v1' })]), []);
-  assert.deepEqual(stopFlags([a, row({ task: 'a', arm: 'P-S', rep: 1, ccodingCommit: null, claudeCliVersion: null, status: 'error' })]), []);
+  assert.match(stopFlags([a, row({ task: 'a', arm: 'P-S', rep: 1, ccodingCommit: null, claudeCliVersion: 'v1', status: 'error' })]).join('|'), /ccodingCommit khác nhau/);
+  assert.match(stopFlags([a, row({ task: 'a', arm: 'P-S', rep: 1, ccodingCommit: 'c1', claudeCliVersion: null })]).join('|'), /claudeCliVersion khác nhau/);
+  // toàn null ⇒ không dừng, chỉ cảnh báo
+  const allNull = [row({ task: 'a', arm: 'P-H', rep: 1 }), row({ task: 'a', arm: 'P-S', rep: 1 })];
+  assert.deepEqual(stopFlags(allNull), []);
+  assert.match(stopWarnings(allNull).join('|'), /ccodingCommit null ở mọi dòng/);
   assert.match(stopFlags([a, row({ task: 'a', arm: 'P-S', rep: 1, ccodingCommit: 'c2', claudeCliVersion: 'v1' })]).join('|'), /ccodingCommit khác nhau/);
   assert.match(stopFlags([a, row({ task: 'a', arm: 'P-S', rep: 1, ccodingCommit: 'c1', claudeCliVersion: 'v2' })]).join('|'), /claudeCliVersion khác nhau/);
 });
@@ -256,4 +275,40 @@ test('độ nhạy §9 (S2): mod2Of tách module con dưới src; nhãn chính k
   // độ phủ module độ nhạy: kế hoạch chỉ nêu src/a/x.js ⇒ 0,5 (chính: 1)
   const m = rowMetrics(row({ task: 'l', arm: 'P-S', rep: 1, planRaw: [item('src/a/x.js')], planFinal: [item('src/a/x.js', 'src/b/y.js')] }), l1, 'khong_chia_duoc');
   assert.equal(m['raw.covMod'], 1); assert.equal(m['raw.covMod2'], 0.5); assert.equal(m['final.covMod2'], 1);
+});
+
+// ---- BRIEF-24b K1: cờ dừng M1/M2 trên runs.jsonl giả (fixtures/e9lite) ----
+const fx = (n) => parseRuns(readFileSync(join(here, 'fixtures', 'e9lite', n), 'utf8')).rows;
+const runCli = (n) => spawnSync(process.execPath, [join(here, 'e9lite.mjs'), '--runs', join(here, 'fixtures', 'e9lite', n), '--gold', join(here, 'fixtures', 'e9lite', 'gold.json'), '--labels', join(here, 'fixtures', 'e9lite', 'labels.json'), '--tasks-dir', here], { encoding: 'utf8' });
+
+test('K1 (a) M1: authSource null ở dòng done của runtime thật ⇒ cảnh báo, không dừng, không bỏ qua', () => {
+  const rows = fx('runs-m1-null-auth.jsonl');
+  assert.deepEqual(stopFlags(rows), []);
+  assert.equal(stopWarnings(rows).length, 1);
+  assert.match(stopWarnings(rows)[0], /authSource null ở 1 dòng done \(runtime thật\): a__P-S__r1/);
+  // dòng lỗi và dòng runtime giả không bị cảnh báo
+  assert.deepEqual(stopWarnings(rows.map((r) => (r.arm === 'P-S' ? { ...r, status: 'error' } : r))), []);
+  assert.deepEqual(stopWarnings(rows.map((r) => (r.arm === 'P-S' ? { ...r, authSource: 'none', planModel: { actual: 'mock-x' } } : r))), []);
+  const r = runCli('runs-m1-null-auth.jsonl');
+  assert.equal(r.status, 0); assert.match(r.stdout, /CẢNH BÁO: authSource null/);
+});
+
+test('K1 (b) M2: ccodingCommit khác nhau giữa các lượt ⇒ dừng phân tích (exit 3)', () => {
+  assert.match(stopFlags(fx('runs-m2-commit-differs.jsonl')).join('|'), /ccodingCommit khác nhau/);
+  const r = runCli('runs-m2-commit-differs.jsonl');
+  assert.equal(r.status, 3); assert.match(r.stdout, /CỜ DỪNG/); assert.doesNotMatch(r.stdout, /\| Cặp/);
+});
+
+test('K1 (c) M2: claudeCliVersion khác nhau giữa các lượt ⇒ dừng phân tích (exit 3)', () => {
+  assert.match(stopFlags(fx('runs-m2-cli-differs.jsonl')).join('|'), /claudeCliVersion khác nhau/);
+  const r = runCli('runs-m2-cli-differs.jsonl');
+  assert.equal(r.status, 3); assert.match(r.stdout, /CỜ DỪNG/);
+});
+
+test('K1 (d) đối chứng: mọi trường đồng nhất ⇒ không cờ, không cảnh báo, có bảng', () => {
+  const rows = fx('runs-uniform.jsonl');
+  assert.deepEqual(stopFlags(rows), []); assert.deepEqual(stopWarnings(rows), []);
+  const r = runCli('runs-uniform.jsonl');
+  assert.equal(r.status, 0); assert.match(r.stdout, /\| Cặp/); assert.doesNotMatch(r.stdout, /CẢNH BÁO/);
+  assert.match(r.stdout, /bố cục thư mục của lời giải mẫu/); assert.match(r.stdout, /\[Khám phá\]/); assert.match(r.stdout, /gateFirst — planGate null/);
 });

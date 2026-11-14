@@ -391,6 +391,13 @@
       "anchor": "\"(pha review điền)\", \"chưa điền\"",
       "reason": "đề bài D20 nhắc nguyên văn cụm cấm để mô tả rule; không phải chỗ giữ chưa điền",
       "by": "K4"
+    },
+    {
+      "rule": "machine-path",
+      "file": "docs/research/preregistration.md",
+      "anchor": "Đường dẫn máy cloud trong tạo phẩm C9",
+      "reason": "câu nhắc tới đường dẫn để cấm chép, nằm trong khối đã khóa (§10), không sửa chữ",
+      "by": "K1"
     }
   ]
 }

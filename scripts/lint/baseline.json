@@ -2537,14 +2537,6 @@
       "by": "K3"
     },
     {
-      "rule": "machine-path",
-      "file": "docs/research/preregistration.md",
-      "sha256": "108c5f138c7e14ae4e1299ebdde86173a0190f3bf15ce5e1d6175b2b4a93fe58",
-      "owner": "Phòng Nghiên cứu",
-      "fixIn": "Phòng Nghiên cứu, gói sau D20 (thay bằng <máy-chạy>/<máy-cloud>); D20 không sửa nội dung docs/research/",
-      "by": "K3"
-    },
-    {
       "rule": "test-glob",
       "file": "docs/research/BRIEF-22c.md",
       "anchor": "node --test docs/research/scripts/",

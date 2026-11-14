@@ -41,12 +41,23 @@ export function coverage(goldSet, planSet) {
 
 export const weighted = (t) => (t ? Math.round((t.input ?? 0) + 1.25 * (t.cacheWrite ?? 0) + 0.1 * (t.cacheRead ?? 0) + 5 * (t.output ?? 0)) : null);
 
-/** Cổng đạt lần đầu: planGate là đối tượng, không bị sửa (replanned) và replanCount không > 0. planGate null ⇒ null (không rõ). */
+/** Cổng đạt lần đầu — theo khối "Đính chính gateFirst" (§9, BRIEF-24b K2). Trả 0 hoặc 1, không bao giờ null.
+ *  planGate không phải đối tượng ⇒ 0; planGate.replanned === true ⇒ 0; còn lại 1 ⇔ replanCount === 0. `ok`, rules, uncovered, reasons không tham gia. */
 export function gateFirst(row) {
-  if (row.planGate == null || typeof row.planGate !== 'object') return null;
-  if (row.planGate.replanned === true) return 0;
-  if (typeof row.replanCount === 'number' && row.replanCount > 0) return 0;
-  return 1;
+  const g = row.planGate;
+  if (g == null || typeof g !== 'object') return 0;
+  if (g.replanned === true) return 0;
+  return row.replanCount === 0 ? 1 : 0;
+}
+/** Bộ đếm báo riêng cho gateFirst, trên các dòng đã chọn. */
+export function gateCounters(kept) {
+  let nGateNull = 0, nReplanCountMissing = 0, nReplanned = 0;
+  for (const r of kept) {
+    if (r.planGate == null || typeof r.planGate !== 'object') nGateNull++;
+    else if (r.planGate.replanned === true) nReplanned++;
+    if (typeof r.replanCount !== 'number') nReplanCountMissing++;
+  }
+  return { nGateNull, nReplanCountMissing, nReplanned };
 }
 
 // ---- đọc runs.jsonl ----
@@ -90,10 +101,10 @@ export function stopFlags(rows) {
   const apiKey = [...auth].filter((x) => /key|api/i.test(x));
   if (apiKey.length) flags.push(`authSource có khóa API: ${apiKey.join(', ')}`);
   if (auth.size > 1) flags.push(`authSource lẫn nhiều giá trị trong cùng đợt: ${[...auth].sort().join(', ')}`);
-  // M2: K1 (4) — ccodingCommit và claudeCliVersion phải trùng ở mọi dòng (bỏ qua null).
+  // M2 (K2 mục 4): ccodingCommit và claudeCliVersion phải trùng ở mọi dòng; null tính là một giá trị riêng.
   for (const fld of ['ccodingCommit', 'claudeCliVersion']) {
-    const v = new Set(rows.filter((r) => r[fld] != null).map((r) => String(r[fld])));
-    if (v.size > 1) flags.push(`${fld} khác nhau giữa các dòng: ${[...v].sort().join(', ')}`);
+    const v = new Set(rows.map((r) => (r[fld] == null ? 'null' : `"${r[fld]}"`)));
+    if (v.size > 1) flags.push(`${fld} khác nhau giữa các dòng (null tính là một giá trị): ${[...v].sort().join(', ')}`);
   }
   const hashes = new Map();
   for (const r of rows) { if (r.configHash == null) continue; if (!hashes.has(r.arm)) hashes.set(r.arm, new Set()); hashes.get(r.arm).add(r.configHash); }
@@ -103,6 +114,16 @@ export function stopFlags(rows) {
   const seen = new Map();
   for (const [a, h] of per) { if (seen.has(h)) flags.push(`arm ${a} và ${seen.get(h)} trùng configHash (planModel phải khác nhau)`); else seen.set(h, a); }
   return flags;
+}
+
+const isMockRow = (r) => /^mock-/.test(String(r.planModel?.actual ?? ''));
+/** M1/M2 cảnh báo (không dừng, exit vẫn 0): authSource null ở dòng done của runtime thật; ccodingCommit/claudeCliVersion null ở mọi dòng. */
+export function stopWarnings(rows) {
+  const w = [];
+  const nullDone = rows.filter((r) => r.status === 'done' && !isMockRow(r) && r.authSource == null);
+  if (nullDone.length) w.push(`authSource null ở ${nullDone.length} dòng done (runtime thật): ${[...new Set(nullDone.map(keyOf))].sort().join(', ')}`);
+  for (const fld of ['ccodingCommit', 'claudeCliVersion']) if (rows.length && rows.every((r) => r[fld] == null)) w.push(`${fld} null ở mọi dòng: đợt không ghi phiên bản`);
+  return w;
 }
 
 // ---- thước đo theo lượt ----
@@ -182,7 +203,7 @@ export function analyze({ rows, gold, labels, seed = DEFAULT_SEED, B = DEFAULT_B
   const tasks = Object.keys(goldById).sort();
   const strata = { all: tasks, chia_duoc: tasks.filter((t) => labelsById[t] === 'chia_duoc'), khong_chia_duoc: tasks.filter((t) => labelsById[t] === 'khong_chia_duoc') };
   const degenerate = strata.chia_duoc.length === 0 || strata.khong_chia_duoc.length === 0;
-  const result = { flags, sel, missingFinal, degenerate, perTask: pt, contrasts: {} };
+  const result = { flags, warnings: stopWarnings(rows), gate: gateCounters(sel.kept), sel, missingFinal, degenerate, perTask: pt, contrasts: {} };
   for (const [sname, ids] of Object.entries(strata)) {
     if (!ids.length) continue;
     // Phân tầng suy biến: không so sánh theo tầng (chỉ tầng "all"); chia thừa chỉ trên bài không chia được.
@@ -215,9 +236,12 @@ const f3 = (x) => (x == null ? 'NA' : x.toFixed(3).replace('.', ','));
 export function format(res) {
   const L = [];
   L.push('E9-lite [Khám phá] — mô tả, không p-value, không Holm. n = số bài; khoảng = bootstrap theo bài 95 % percentile.');
+  for (const w of res.warnings ?? []) L.push(`CẢNH BÁO: ${w}`);
+  L.push('Lưu ý: kết quả chỉ nói về độ phủ theo bố cục thư mục của lời giải mẫu, không kết luận về chất lượng bóc tách.');
   L.push(`Khóa: ${res.sel.keys}; lượt tính (done cuối): ${res.sel.kept.length}; khóa không có done: ${res.sel.noDone.length}; dòng model lệch bị loại: ${res.sel.mismatch.length}.`);
   const byArm = {}; for (const f of res.sel.firstFail) { const a = (byArm[f.arm] ??= {}); a[f.cause] = (a[f.cause] ?? 0) + 1; }
   L.push(`Dòng lỗi (mọi dòng không phải done) theo arm/nguyên nhân (vẫn báo): ${JSON.stringify(byArm)}`);
+  if (res.gate) L.push(`gateFirst — planGate null/không phải đối tượng: ${res.gate.nGateNull}; replanCount thiếu: ${res.gate.nReplanCountMissing}; dòng replanned: ${res.gate.nReplanned}.`);
   if (Object.keys(res.missingFinal).length) L.push(`Lượt không có planFinal (loại khỏi planFinal): ${JSON.stringify(res.missingFinal)}`);
   L.push(`Tầng: ${JSON.stringify(res.strata)}${res.degenerate ? ' — PHÂN TẦNG SUY BIẾN: không tính chia thừa, không so sánh theo tầng' : ''}`);
   const tables = [...Object.entries(res.contrasts).map(([s, cs]) => [`Tầng: ${s}`, cs])];
