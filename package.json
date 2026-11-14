@@ -23,7 +23,8 @@
     "test:bench": "node --test \"bench/vs-claude/test/*.test.mjs\"",
     "herdr:up": "node dist/cli.js herdr up",
     "doctor": "node dist/cli.js doctor",
-    "demo": "node dist/cli.js task \"Thiết kế API quản lý hồ sơ nhân sự bằng Node.js/TypeScript, có phân quyền và log kiểm toán\" --mode auto --runtime mock --wait"
+    "demo": "node dist/cli.js task \"Thiết kế API quản lý hồ sơ nhân sự bằng Node.js/TypeScript, có phân quyền và log kiểm toán\" --mode auto --runtime mock --wait",
+    "lint": "node scripts/lint/run.mjs"
   },
   "dependencies": {
     "yaml": "^2.8.1"
