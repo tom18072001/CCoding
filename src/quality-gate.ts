@@ -1,6 +1,7 @@
 import type { CheckResult, Classification } from './types.js';
 import { headingKey, templateCoverage, templateHeadings } from './kpi.js';
 import { git } from './git.js';
+import { briefItems } from './plan-gate.js';
 
 /**
  * B-02 — Cổng chất lượng (backlog §4). Các hàm thuần, không gọi LLM; Orchestrator nối vào vòng review/sửa.
@@ -91,6 +92,26 @@ export interface ReviewerNeed {
   classes: CheckClass[];
   /** Hết N vòng sửa mà cổng (lệnh hoặc mẫu) vẫn chưa đạt. */
   failedAfterRounds?: boolean;
+  /** Đề bài có hạng mục review (briefDemandsReview) — mã hạng mục hoặc dòng nhắc vai. */
+  briefReviewCodes?: string[];
+}
+
+/**
+ * K2 — đề bài đòi review thì cổng không được bỏ review. Dùng briefItems: có mục `review` và không được miễn.
+ * Đề bài không có mã hạng mục: xét các dòng nhắc @peer-reviewer/@code-reviewer/@qa-tester.
+ */
+export function briefDemandsReview(brief: string): { demands: boolean; codes: string[] } {
+  const items = briefItems(brief ?? '');
+  if (items.length) {
+    const codes = items.filter((i) => i.review && !i.exempt).map((i) => i.code);
+    return { demands: codes.length > 0, codes };
+  }
+  const roles: string[] = [];
+  for (const l of (brief ?? '').split('\n')) {
+    const m = /@(peer-reviewer|code-reviewer|qa-tester)(?![\w-])/i.exec(l);
+    if (m && !/không làm|chờ/i.test(l)) roles.push(m[1].toLowerCase());
+  }
+  return { demands: roles.length > 0, codes: [...new Set(roles)] };
 }
 
 /** §4.3 — true nếu phải gọi reviewer; `reasons` để ghi log. */
@@ -106,6 +127,7 @@ export function reviewerReasons(n: ReviewerNeed): string[] {
   if (n.classification === 'confidential' || n.classification === 'restricted') r.push(`nhãn dữ liệu ${n.classification}`);
   if (n.classes.includes('red-unrelated')) r.push('có lệnh đỏ kéo dài không liên quan đề bài');
   if (n.failedAfterRounds) r.push('chưa đạt sau các vòng sửa');
+  if (n.briefReviewCodes?.length) r.push(`đề bài đòi review (${n.briefReviewCodes.join(', ')})`);
   return r;
 }
 
@@ -139,4 +161,7 @@ export interface QualityGateResult {
   reasons: string[];
   /** Hết N vòng sửa mà còn đỏ/lệch mẫu — người gọi (làn đơn) nâng lên multi-agent (§3.3). */
   exhausted: boolean;
+  /** K2 — đề bài đòi review (đưa vào reasons) và các mã/vai tương ứng, để ghi log. */
+  briefDemandsReview?: boolean;
+  briefReviewItems?: string[];
 }
