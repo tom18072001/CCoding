@@ -169,6 +169,7 @@ export interface BriefItem { code: string; line: string; role?: string; review: 
 const ITEM_RE = /^\s*(?:[#>*+-]+\s*)*(?:\*\*)?(K\d+)(?![\p{L}\d])\s*(?:\*\*)?\s*([—–:-])\s*(.*)$/u;
 const REVIEW_ROLES = new Set(['peer-reviewer', 'code-reviewer', 'qa-tester']);
 const SKIP_RE = /(?<![\p{L}])(?:không làm|chờ)(?![\p{L}])/iu;
+const BELOW_SKIP_RE = /^\s*(?:[#>*+-]+\s*)*(?:\*\*)?(?:Phần\s*[^:\n]{1,20}:\s*)?(?:không làm|chờ)(?![\p{L}])/iu;
 const ROLE_AFTER_RE = /^\*{0,2}\s*([a-z][a-z0-9]*(?:-[a-z0-9]+)+)\s*\*{0,2}\s*(?::|—|–|$)/i;
 
 /** Hạng mục có mã (K1, K2…) của đề bài: dòng/tiêu đề bắt đầu bằng mã + dấu —/–/-/:. Mỗi mã lấy lần xuất hiện đầu. */
@@ -188,7 +189,9 @@ export function briefItems(brief: string): BriefItem[] {
     const after = ROLE_AFTER_RE.exec(h.rest.trim());
     const role = (at?.[1] ?? after?.[1])?.toLowerCase();
     const review = (!!role && REVIEW_ROLES.has(role)) || /review|phản biện/iu.test(line);
-    const exempt = SKIP_RE.test(lines.slice(h.idx, end).join('\n'));
+    // chỉ xét dòng hạng mục, hoặc dòng ngay dưới mà cụm "không làm"/"chờ" đứng đầu dòng / sau nhãn "Phần …:" (không xét câu ví dụ giữa thân)
+    const below = lines.slice(h.idx + 1, end).filter((l) => BELOW_SKIP_RE.test(l));
+    const exempt = SKIP_RE.test(h.rest) || below.length > 0;
     return { code: h.code, line, ...(role ? { role } : {}), review, exempt };
   });
 }
@@ -198,6 +201,8 @@ const sortedParts = (id: string): string => id.split('-').sort().join('-');
 
 function roleMatches(role: string, assignee: string, roles?: PlanGateInput['agentRoles']): boolean {
   const a = assignee.toLowerCase();
+  // chỉ ép chặt vai review/qa; vai thực thi (dev-backend…) chỉ là gợi ý — mã đã được nhắc là đủ
+  if (!REVIEW_ROLES.has(role) && role !== 'reviewer') return true;
   if (a === role || sortedParts(a) === sortedParts(role)) return true;
   const info = roles?.[a] ?? roles?.[assignee];
   if (!info) return false;

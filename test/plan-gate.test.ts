@@ -259,7 +259,7 @@ test('briefItems: đọc các dạng dòng, vai và cờ review/exempt', () => {
 });
 
 test('briefItems: "không làm" ở phần ngay dưới dòng mã cũng được miễn', () => {
-  const it = briefItems('K1 — việc a\nK2 — việc b\nPhần này không làm trong gói này.\nK3 — việc c');
+  const it = briefItems('K1 — việc a\nK2 — việc b\nKhông làm trong gói này.\nK3 — việc c');
   assert.deepEqual(it.map((x) => x.exempt), [false, true, false]);
 });
 
@@ -291,4 +291,24 @@ test('brief-item: đề bài không có mã → không đổi hành vi; K1 khôn
   assert.equal(gate('Làm việc bình thường', [st('S1')]).rules.includes('brief-item'), false);
   const g = gate('K1 — việc a', [st('S1', { title: 'K10 việc khác' })]);
   assert.ok(g.rules.includes('brief-item'));
+});
+
+const D17_FULL = [
+  '**K1 — dev-backend: cổng phủ kế hoạch**',
+  '- Khi đề bài nói một hạng mục không làm hay chờ (vd. "Phần (a): không làm"), hạng mục đó được miễn.',
+  '**K2 — dev-backend: không bỏ review**',
+  '**K3 — dev-backend: vòng bổ sung**',
+  '**K4 — code-reviewer: review K1–K3**',
+].join('\n');
+
+test('briefItems: câu ví dụ "không làm" trong thân K1 không miễn K1; bỏ K1 → chặn', () => {
+  assert.equal(briefItems(D17_FULL)[0].exempt, false);
+  const g = gate(D17_FULL, [st('S2', { title: 'K2' }), st('S3', { title: 'K3' }), st('S4', { title: 'K4 review', assignee: 'qa-tester' })]);
+  assert.equal(g.blocked, true);
+  assert.ok(g.reasons.some((r) => r.includes('K1')));
+});
+
+test('brief-item: D17 đầy đủ, K3 giao senior-swe, K4 giao qa-tester → đạt (vai dev-* chỉ là gợi ý)', () => {
+  const g = gate(D17_FULL, [st('S1', { title: 'K1' }), st('S2', { title: 'K2' }), st('S3', { title: 'K3', assignee: 'senior-swe' }), st('S4', { title: 'K4 review', assignee: 'qa-tester' })]);
+  assert.equal(g.blocked, false);
 });

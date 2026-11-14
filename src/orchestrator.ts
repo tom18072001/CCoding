@@ -2525,7 +2525,7 @@ export class Orchestrator {
     }
     // vẫn trượt → dừng, không chạy tập con
     const reason = g.rules.includes('A') ? 'plan-coverage' : 'plan-unreadable';
-    const detail = reason === 'plan-coverage' ? `Kế hoạch ${dept.short} bỏ sót đích: ${g.uncovered.join(', ')} — không ai nhận; chưa chạy hạng mục nào` : `Kế hoạch ${dept.short} đọc dở: ${g.reasons.filter((r) => r.startsWith('B')).join('; ')} — chưa chạy hạng mục nào`;
+    const detail = reason === 'plan-coverage' ? `Kế hoạch ${dept.short} bỏ sót đích: ${g.uncovered.join(', ')} — không ai nhận; chưa chạy hạng mục nào` : `Kế hoạch ${dept.short} đọc dở: ${g.reasons.filter((r) => r.startsWith('B') || g.rules.includes('brief-item') && /^K\d+/.test(r)).join('; ')} — chưa chạy hạng mục nào`;
     task.attention = { reason, detail, at: nowIso() };
     run.planGate = { uncovered: g.uncovered, reasons: g.reasons, rules: g.rules, replanned: true };
     logs.write({ level: 'error', kind: 'plan.gate', msg: detail, taskId: task.id, department: dept.id, data: { stage: 'stopped', attention: reason, rules: g.rules, uncovered: g.uncovered, reasons: g.reasons } });
@@ -2711,6 +2711,12 @@ export class Orchestrator {
     const basis = this.estimateBasis(run, task);
     run.estimate = { tokens: est, budget: remaining, at: nowIso(), basis };
     this.save(task);
+    // K3: vòng bổ sung là việc tự mở, không được vượt phần ngân sách còn lại dù ở chế độ "complete" → dừng chờ giám đốc tăng ngân sách
+    if (warn && run.followupOf && est > remaining) {
+      const m = `Vòng bổ sung ${run.round ?? ''} ước tính ~${fmtNum(est)} token, vượt phần ngân sách còn lại (${fmtNum(remaining)}) — tăng ngân sách rồi tiếp tục.`.replace('  ', ' ');
+      this.d.logs.write({ level: 'warn', kind: 'accept.followup', msg: `${task.id}: ${m}`, taskId: task.id, department: run.department, data: { opened: true, overBudget: true, round: run.round, estimate: est, remaining } });
+      throw new PauseSignal('budget', m);
+    }
     if (!warn || est <= remaining * (this.d.config.estimate.warnRatio || 1)) return;
     const mode = task.options.budgetMode ?? this.d.config.defaults.budgetMode ?? 'complete';
     const msg = `Kế hoạch ${run.subtasks.length} hạng mục ước tính ~${fmtNum(est)} token (${basis}), ${remaining ? `gấp ${(est / remaining).toFixed(1).replace('.', ',')} lần phần ngân sách còn lại (${fmtNum(remaining)})` : 'trong khi ngân sách đã hết'}. Nên tách mỗi gói việc thành một nhiệm vụ riêng (nút "Tách thành nhiệm vụ") hoặc tăng ngân sách.`;

@@ -54,8 +54,8 @@ function instrument(a: Ctx, next: (n: number) => { text?: string; error?: string
   return { accepts: () => n };
 }
 
-async function run(a: Ctx, wait = 'done') {
-  const t = a.orchestrator.submit({ brief: 'Thêm hàm cộng vào a.js', projectId: 'repo', options: { lane: 'single', slim: { accept: 'brief' }, review: false } });
+async function run(a: Ctx, wait = 'done', lane: 'single' | 'fast' | 'full' = 'single') {
+  const t = a.orchestrator.submit({ brief: 'Thêm hàm cộng vào a.js', projectId: 'repo', options: { lane, slim: { accept: 'brief' }, review: false } });
   const done = await a.orchestrator.waitFor(t.id);
   assert.equal(done.status, wait, done.error);
   return done;
@@ -168,6 +168,48 @@ test('K3 task bị hủy giữa lượt nghiệm thu → không mở vòng', asy
     assert.equal(t.runs.length, 1);
     assert.equal(t.acceptFollowups, undefined);
     assert.equal(kinds(a, t.id).includes('accept.followup'), false);
+  } finally {
+    a.cleanupAll();
+  }
+});
+
+test('K3 kế hoạch bổ sung vượt ngân sách còn lại → tạm dừng chờ tăng ngân sách, không chạy hạng mục', async () => {
+  const a = setup();
+  const acc = instrument(a, () => ({ text: reply(false, IN2) }));
+  const orch = a.orchestrator as unknown as { estimatePlan: (t: unknown, r: { followupOf?: string }, p?: unknown) => number };
+  const orig = orch.estimatePlan.bind(orch);
+  // ước lượng thô (chưa có followupOf) nhỏ để vòng được mở; kế hoạch bổ sung thật thì rất lớn
+  orch.estimatePlan = (t, r, p) => (r.followupOf ? 1e12 : orig(t, r, p));
+  try {
+    const t = await run(a, 'paused', 'fast');
+    assert.equal(acc.accepts(), 1, 'không nghiệm thu lại vì vòng bổ sung dừng ở cổng ngân sách');
+    assert.equal(t.runs.length, 2);
+    assert.equal(t.acceptFollowups, 1);
+    assert.equal(t.runs[1].subtasks.every((s) => s.status === 'pending'), true, 'chưa thực thi hạng mục nào');
+    assert.ok(followLogs(a, t.id).some((e) => (e.data as { overBudget?: boolean }).overBudget));
+  } finally {
+    a.cleanupAll();
+  }
+});
+
+test('K3 hủy giữa vòng bổ sung → không nghiệm thu lại', async () => {
+  const a = setup();
+  const acc = instrument(a, () => ({ text: reply(false, IN2) }));
+  const orch = a.orchestrator as unknown as { call: (...x: unknown[]) => Promise<unknown> };
+  const orig = orch.call.bind(orch);
+  let cancelled = false;
+  orch.call = async (agent, phase, build, ctx) => {
+    const t = [...a.store.tasks.values()].find((x) => x.status === 'running');
+    if (!cancelled && t && t.runs.length === 2 && phase !== 'accept') {
+      cancelled = true;
+      a.orchestrator.cancel(t.id);
+    }
+    return orig(agent, phase, build, ctx);
+  };
+  try {
+    const t = await run(a, 'cancelled');
+    assert.equal(cancelled, true);
+    assert.equal(acc.accepts(), 1);
   } finally {
     a.cleanupAll();
   }
