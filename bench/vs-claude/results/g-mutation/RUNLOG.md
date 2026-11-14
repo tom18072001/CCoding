@@ -55,7 +55,7 @@ Phân loại dữ liệu: **Nội bộ**. Bài tổng hợp, không có dữ li�
 | **G-1, chặn nhầm** | **0/239** sản phẩm đúng có `npm test` đỏ (Clopper–Pearson 95 % [0; 1,5 %]) |
 | **G-2, giao khi lệnh còn đỏ** | **0/250** lượt ở mọi arm. Agent đơn 0/70 [0; 5,1 %]; làn nhanh 0/60; làn đơn 0/60 |
 | **G-3, recall của cổng** | **1 903/2 097 = 90,7 %** (bootstrap hai tầng 95 % [84,3; 95,9]). Nhóm A (agent đơn) 550/601 = 91,5 % [84,9; 96,8]; nhóm C (CCoding) 1 139/1 246 = 91,4 % [84,9; 96,5] |
-| **G-3Δ, C − A** | **+0,8 điểm %** (bootstrap 95 % [−4,7; +7,4]), p hoán vị hai phía = **0,74**, 9 bài. **Không phân biệt được** |
+| **G-3Δ, C − A** | **+0,8 điểm %** (bootstrap hai tầng 95 % [−5,4; +8,8]; bản đầu [−4,7; +7,4] đã thay sau BRIEF-19 S1, xem `docs/research/analysis/v43f-rerun.md`:237), p hoán vị hai phía = **0,74**, 9 bài. **Không phân biệt được** |
 | Theo bài | thấp nhất `c2-burst-alert` 73,2 %, `t2-orders` 78,4 %, `c5-tickets-api` 83,0 %; cao nhất `c4-audit-chain` 100 % |
 | Theo toán tử | thấp nhất CRP (đổi hằng số) 82,1 %; cao nhất UOI 98,3 % |
 | **G-4, lỗi lọt cổng** | **194** lỗi ở 95 lượt, 8 bài: `t2-orders` 57, `c2-burst-alert` 49, `c5-tickets-api` 35, `t3-api` 19, `c3-shop-bugs` 14, `t5-logq` 13, `t1-duration` 4, `c1-iis-ecs` 3 |

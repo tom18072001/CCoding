@@ -23,7 +23,7 @@
 | A13 | E7 không đọc được: R1 0, R2 13, R3 1; R2 coi là chặn 61/64 = 95,3 %, chặn nhầm 11/64 = 17,2 % | Mô tả | `report.md:42`, `:65` | |
 | A14 | E7 Youden J R1 0,56; R2 0,80; R3 0,48; USD ≈ ×2,6; R1 so R2 trên mục đúng 24 so 1 | Khám phá | `report.md:74` | Báo cáo ghi "mô tả"; S3 đề xuất [Khám phá]; **S6 kiểm nhãn** |
 | A15 | E7 theo bài (8 bài): bất đồng ở `c3-shop-bugs`, `c5-tickets-api`, `t2-orders` (R1 hơn), `t3-api` (R3 hơn); chặn nhầm dồn ở `c2-burst-alert`, `t3-api`, `t2-orders`, `t5-logq` | Mô tả | `report.md:48–55`, `:75` | |
-| A16 | E7: 16 cặp phân loại lại sau khi thấy kết quả; 16/128 mục; 2 cặp R3 chạm trần (`0bb51824b9`, `e59884e561`); 403 ở 09:47–09:51 và 10:17–10:20 UTC; phát hiện 10:37, ghim 10:43 | Mô tả / đe dọa (v) | `report.md:26`, `:35–42`, `:65–68`, `:79–83`; prereg:1163–1173; `results/e7-cto/RUNLOG.md:89–91`, `:107–113` | Giờ và mã lượt chép từ S3 §8 (v), chưa đối chiếu với RUNLOG |
+| A16 | E7: 16 cặp phân loại lại sau khi thấy kết quả; 16/128 mục; 2 cặp R3 chạm trần (`0bb51824b9`, `e59884e561`); 403 ở 09:47–09:51 và 10:17–10:20 UTC; phát hiện 10:37 (RUNLOG không ghi giờ ghim; S6 bỏ "10:43" ở 14/11) | Mô tả / đe dọa (v) | `report.md:26`, `:35–42`, `:65–68`, `:79–83`; prereg:1163–1173; `results/e7-cto/RUNLOG.md:89–91`, `:107–113` | Giờ và mã lượt chép từ S3 §8 (v), chưa đối chiếu với RUNLOG |
 
 ## B. Số mới (Bảng 17: trục 2, §6.3.2; cũng ở §1, §9)
 

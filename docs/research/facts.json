@@ -86,7 +86,7 @@
       "exceptions": [
         {
           "file": "docs/research/paper/paper.md",
-          "line": 576,
+          "line": 667,
           "reason": "Trích dẫn câu cũ để ghi nhận đã sửa, không phải khẳng định (dòng dời 513 → 547 do chèn §4.3, → 563 ở gói 6 do viết lại §7.4 và §9, → 573 ở v0.5 do thêm E1, E2 và sai lệch, → 576 ở v0.6 do thêm §6.1 mục (8) và R19)"
         }
       ]
@@ -915,6 +915,142 @@
       "value": "3",
       "reason": "v0.6: preregistration.md §9 V4-3e-E5′ (3) 'Dừng 2' dòng 578: từ 3/10 cặp trở lên bị loại thì dừng",
       "pattern": "có từ (3)/10 cặp trở lên bị loại",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "g3d-ci-v07",
+      "value": "[−5,4; +8,8]",
+      "reason": "v0.7 (S6, 14/11/2026): analysis/v43f-rerun.md:237 (CI G-3Δ sau BRIEF-19 S1; CI cũ [−4,7; +7,4] đã thay)",
+      "pattern": "\\*\\*CI (\\[−5,4; \\+8,8\\])\\*\\*",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7-recall-r1",
+      "value": "63/64",
+      "reason": "v0.7 (S6, 14/11/2026): e7-cto/report.md:20",
+      "pattern": "(63/64) = 98,4 %",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7-recall-r3",
+      "value": "61/64",
+      "reason": "v0.7 (S6, 14/11/2026): e7-cto/report.md:22",
+      "pattern": "(61/64) = 95,3 % \\[86,9",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7-fp-r1",
+      "value": "27/64",
+      "reason": "v0.7 (S6, 14/11/2026): e7-cto/report.md:20",
+      "pattern": "(27/64) = 42,2 %",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7-mcnemar-p",
+      "value": "0,625",
+      "reason": "v0.7 (S6, 14/11/2026): e7-cto/report.md:24 (4 cặp bất đồng < 10 nên p chỉ mô tả)",
+      "pattern": "\\*\\*p = (0,625)\\*\\*",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e7-reclassified-pairs",
+      "value": "16",
+      "reason": "v0.7 (S6, 14/11/2026): e7-cto/report.md:37, :68 (phân loại lại SAU khi đã thấy kết quả)",
+      "pattern": "(16) cặp được phân loại lại",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e8-walltask",
+      "value": "0,520",
+      "reason": "v0.7 (S6, 14/11/2026): e8-parallel/report.md:21",
+      "pattern": "\\*\\*(0,520) \\[0,488; 0,552\\]\\*\\*",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e8-token",
+      "value": "1,008",
+      "reason": "v0.7 (S6, 14/11/2026): e8-parallel/report.md:23",
+      "pattern": "(1,008) \\[0,942; 1,075\\]",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e8-overlap-b6w4",
+      "value": "17/18",
+      "reason": "v0.7 (S6, 14/11/2026): e8-parallel/report.md:33",
+      "pattern": "B6w4 chạy chồng (17/18)",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b14s2-ratio",
+      "value": "0,999",
+      "reason": "v0.7 (S6, 14/11/2026): b14-step2/report.md:17–18",
+      "pattern": "R̂ \\*\\*(0,999) \\[0,886; 1,127\\]\\*\\*",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "b14s2-power10",
+      "value": "0,38",
+      "reason": "v0.7 (S6, 14/11/2026): b14-step2/report.md:27",
+      "pattern": "Power ở mức 10 % ≈ \\*\\*(0,38)\\*\\*",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e5p-token",
+      "value": "0,722",
+      "reason": "v0.7 (S6, 14/11/2026): b15f-main/report.md:9",
+      "pattern": "R̂ \\*\\*(0,722) \\[0,668; 0,790\\]\\*\\*",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "e6-h6-verdict",
+      "value": "insufficient data",
+      "reason": "v0.7 (S6, 14/11/2026): h6-3e/report.md:46–48 (E6)",
+      "pattern": "verdict H6: \\*\\*(insufficient data)\\*\\*",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "p-critical-path",
+      "value": "771 so 717 phút",
+      "reason": "v0.7 (S6, 14/11/2026): p-parallel/RUNLOG.md:57 (chạy lại 13/11)",
+      "pattern": "\\*\\*(771 so 717 phút)\\*\\*",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "axis2b-gitread",
+      "value": "82/82",
+      "reason": "v0.7 (S6, 14/11/2026): axis2-guard/report.md:23 (trục 2 (b); chủ yếu do vai chỉ-đọc, 52/82)",
+      "pattern": "chặn (82/82) ca RedCode-Exec",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "axis2b-full",
+      "value": "30/82 = 36,6 %",
+      "reason": "v0.7 (S6, 14/11/2026): axis2-guard/report.md:24 (trục 2 (b))",
+      "pattern": "(30/82 = 36,6 %) \\[26,2; 48,0\\]",
+      "files": ["paper/paper.md"],
+      "exceptions": []
+    },
+    {
+      "id": "law-356-effective",
+      "value": "01/01/2026",
+      "reason": "v0.7 (S6, 14/11/2026): context/nd356-2025-note.md §2 (siêu dữ liệu chính thức; thay Nghị định 13/2023; nội dung điều khoản [CHƯA KIỂM CHỨNG])",
+      "pattern": "Nghị định 356/2025/NĐ-CP ngày 31/12/2025[^.]{0,200}?có hiệu lực từ (01/01/2026)",
       "files": ["paper/paper.md"],
       "exceptions": []
     }
