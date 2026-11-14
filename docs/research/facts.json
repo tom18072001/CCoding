@@ -474,13 +474,13 @@
     "e9lite.arms": 3,
     "e9lite.repeats": 3,
     "e9lite.runsPlanned": 117,
-    "e9lite.labels.chiaDuoc": "chờ K2 sinh lại",
-    "e9lite.labels.khongChiaDuoc": "chờ K2 sinh lại",
+    "e9lite.labels.chiaDuoc": 3,
+    "e9lite.labels.khongChiaDuoc": 10,
     "e9lite.bootstrapB": 4000,
     "e9lite.bootstrapSeed": 20261115,
     "e9lite.goldSha256": "ee49fc5da243b1b656c3e2f8fcc9d395c39c3f5a30f325b0f8e1ea7406ed312f",
-    "e9lite.labelsSha256": "chờ K2 sinh lại (bản 602cea5c… sinh từ chuẩn lỗi, hết hiệu lực)",
-    "e9lite.tests": 14
+    "e9lite.labelsSha256": "4059699277ab7df1b6b55dec5876b81feaea6352b59350a1b2807ef543694025",
+    "e9lite.tests": 23
   },
   "numbers": [
     {
@@ -517,9 +517,9 @@
     },
     {
       "id": "e9lite-tests",
-      "value": "14",
-      "reason": "BRIEF-24 K2: số test của e9lite.test.mjs (khóa e9lite.tests)",
-      "pattern": "\\((14) test trên `runs\\.jsonl` giả\\)",
+      "value": "23",
+      "reason": "BRIEF-24b K3: số test của e9lite.test.mjs (khóa e9lite.tests; 14 ở BRIEF-24, 23 sau K1 của 24b)",
+      "pattern": "\\((23) test trên `runs\\.jsonl` giả\\)",
       "files": ["paper/paper.md"],
       "exceptions": []
     },
