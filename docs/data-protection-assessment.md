@@ -705,3 +705,56 @@ Hai đợt đo dùng lại bài tổng hợp của bench. Nhãn **Nội bộ**. 
 | E8: hai server bench từ cùng bản ghim, data riêng (`e8-data-a`, `e8-data-b`) | GOV-01, RES-01 | Không đụng server 7420 hay `data/` chính. Repo của lượt là bài tổng hợp | Đạt |
 
 **Khuyến nghị cho chủ dự án:** giữ thư mục data của E7 và hai server E8 trên máy ít nhất 6 tháng (nhật ký xử lý), như các đợt đo trước. Chỉ commit số tổng hợp, `runs.jsonl` và văn bản đã thay đường dẫn.
+
+## D18b/S3 — K4 (FX21): chữ ký HMAC cho log và kiểm tra dòng bị sửa (14/11/2026)
+
+**Loại kết luận:** cổng thiết kế (kiểm tra điểm). **Dữ liệu:** log vận hành — **Nội bộ**; không thêm tập dữ liệu mới, không thêm DLCN (log vẫn che PII/bí mật trước khi ghi). **Cấp độ ATTT:** giữ nguyên giả định hiện có của dự án (không nâng cấp).
+
+### Vấn đề
+Chuỗi băm SHA-256 (DET-05) chỉ phát hiện sửa *vụng*: ai sửa một dòng rồi tính lại hash toàn bộ các dòng sau vẫn qua được kiểm tra. Cần một bí mật mà kẻ sửa log không có.
+
+### Thay đổi (`src/logger.ts`)
+- Mỗi dòng có khóa: thêm `"kid"` và `"sig"` sau `"hash"`. `sig = HMAC-SHA256(khóa, hash)` — ký trên hash của chuỗi nên phủ cả nội dung lẫn thứ tự dòng.
+- `kid` = 8 ký tự đầu của `HMAC(khóa, "ccoding-log-kid-v1")`: dấu vân tay để nhận biết khóa nào đã ký, **không phải khóa** và không suy ngược được khóa.
+- Khóa chỉ đọc từ biến môi trường `CCODING_LOG_HMAC_KEY`. Không có trường trong `config`, không vào repo, config mẫu, log, thông báo lỗi hay output của checker.
+- Thiếu khóa: cảnh báo **một lần mỗi tiến trình** ra stderr; chuỗi băm vẫn chạy như cũ.
+- Checker (`verifyChain`, `verifyChainStream`) báo `brokenAt` kèm lý do:
+  - `hash sai — nội dung đã bị sửa`;
+  - `chữ ký sai` (hash khớp nhưng sig không khớp — dấu hiệu tính lại hash khi không có khóa);
+  - `khóa khác/không có khóa` (`kid` lệch khóa hiện tại, hoặc mất chữ ký sau khi đã có dòng ký).
+- Có khóa: kiểm hash + chữ ký. Không khóa: chỉ kiểm hash (dòng có chữ ký vẫn kiểm được phần hash).
+- Tương thích ngược: log cũ không ký vẫn kiểm được. Với khóa, phần đầu chưa ký (di sản) được chấp nhận; **sau dòng ký đầu tiên mọi dòng phải ký**, nên xóa chữ ký khỏi dòng sau bị phát hiện.
+
+### Rà năng lực liên quan
+| Mã | Trạng thái | Ghi chú |
+|---|---|---|
+| DET-05 (toàn vẹn log) | Cải thiện | Thêm chữ ký HMAC; còn phụ thuộc bảo quản khóa |
+| GOV-03/GOV-04 | Có khuyến nghị | Khóa thuộc quyền chủ dự án; ghi người giữ khóa |
+| PRI (PII trong log) | Không đổi | `kid`/`sig` không chứa DLCN |
+| RES (lưu giữ) | Không đổi | Lưu ≥ 6 tháng (cốt lõi), ≥ 12 tháng (truy xuất hệ thống) theo `log-retention` |
+| Các mã còn lại | N/A | Không ảnh hưởng bởi thay đổi này |
+
+### Đặt, lưu và xoay khóa
+- **Đặt:** tạo khóa ngẫu nhiên ≥ 32 byte (ví dụ `openssl rand -hex 32`), đặt vào biến môi trường `CCODING_LOG_HMAC_KEY` của tiến trình chạy CCoding **và** của tiến trình chạy checker.
+- **Lưu:** trong trình quản lý bí mật của hạ tầng (hoặc biến môi trường hệ điều hành với quyền hạn chế). Không commit, không dán vào `ccoding.config.*`, không in ra log. Người có quyền ghi log không nên giữ khóa riêng ở cùng máy nếu có thể tách.
+- **Xoay:** đặt khóa mới → dòng mới mang `kid` mới. Giữ khóa cũ để kiểm các tệp cũ (checker hiện kiểm theo *một* khóa: kiểm tệp cũ bằng khóa cũ, tệp mới bằng khóa mới; tệp có lẫn hai `kid` sẽ báo `khóa khác/không có khóa` ở chỗ đổi khóa — đây là hạn chế đã biết). Nên xoay khi niêm phong/xoay tệp log (`logs seal`) để mỗi tệp một khóa. Khóa nghi lộ → xoay ngay, coi log ký bằng khóa đó từ thời điểm lộ là chưa chứng minh được.
+- **Mất khóa:** log đã ký không còn kiểm được chữ ký, chỉ kiểm được hash.
+
+### Log không ký thì không chứng minh được toàn vẹn
+Khi chưa đặt khóa, chuỗi băm chỉ chứng minh log **không bị sửa vụng**; kẻ có quyền ghi tệp có thể sửa và tính lại toàn bộ chuỗi. Log dùng làm chứng cứ (sự cố, tranh chấp) phải ký, và nên có thêm WORM bên dưới.
+
+### Cách chạy checker
+```bash
+CCODING_LOG_HMAC_KEY=<khóa> node dist/cli.js logs verify    # sau npm run build; hoặc: npx tsx src/cli.ts logs verify
+```
+Duyệt mọi `*.jsonl` trong `data/`, in `✓/✗` từng tệp kèm dòng lỗi và lý do; thoát mã 2 nếu có tệp lỗi. Không đặt khóa thì checker chỉ kiểm hash. `logs verify-seal` kiểm sổ niêm phong tệp đã xoay (cơ chế riêng, bổ sung).
+
+### WORM — ngoài tầm mã (cần hạ tầng)
+Mã **không** triển khai WORM. Khi có hạ tầng:
+1. Đẩy tệp log đã xoay/niêm phong lên object storage bật **Object Lock** (chế độ compliance, thời hạn ≥ thời hạn lưu giữ 6/12 tháng).
+2. **Ký số theo lô**: định kỳ (ví dụ mỗi ngày) băm các tệp đã niêm phong, ký bằng khóa/chứng thư số tổ chức, lưu chữ ký cạnh lô trong cùng kho WORM.
+3. Kiểm định kỳ: `logs verify` + `logs verify-seal` + đối chiếu chữ ký lô.
+Nếu chưa có hạ tầng, ghi nhận đây là rủi ro tồn dư: người có quyền xóa tệp vẫn xóa được log.
+
+### Kiểm chứng
+`test/logger-hmac.test.ts` (khóa giả, thư mục tạm): ghi có khóa rồi kiểm; sửa một dòng báo đúng dòng; sửa + tính lại hash không khóa → `chữ ký sai`; khóa khác; thiếu khóa → cảnh báo một lần, hash vẫn đúng, log cũ kiểm được; nội dung log không chứa khóa. `test/sandbox-log-fallback.test.ts` đặt khóa giả để cảnh báo không lẫn vào kiểm tra stderr.
