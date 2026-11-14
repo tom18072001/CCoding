@@ -47,6 +47,18 @@
       "name": "outside-root-write: thư mục hệ thống Windows (khi chạy trên Windows)",
       "condition": "không có biến môi trường SystemRoot/windir (không phải Windows)",
       "reason": "cần đường dẫn thư mục hệ thống Windows; chỉ chạy trên Windows"
+    },
+    {
+      "file": "test/diff-read-inside.test.ts",
+      "name": "readInside: symlink/junction thư mục trong worktree trỏ ra ngoài bị chặn",
+      "condition": "không tạo được symlink/junction (thiếu quyền hoặc hệ tệp không hỗ trợ)",
+      "reason": "cần liên kết thật để chứng minh chặn thoát ra ngoài"
+    },
+    {
+      "file": "test/diff-read-inside.test.ts",
+      "name": "readInside: Windows — khác hoa/thường vẫn là cùng thư mục",
+      "condition": "process.platform !== 'win32'",
+      "reason": "hệ tệp Linux/macOS phân biệt hoa/thường; ca chỉ có nghĩa trên Windows"
     }
   ]
 }
