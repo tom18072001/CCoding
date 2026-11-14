@@ -308,7 +308,7 @@ export interface DeptRun {
   /** B-02: run đã nâng từ làn đơn lên fast/full — tiếp tục sau tạm dừng thì nạp lại LANE-HANDOVER.md vào `prior`. */
   escalatedFrom?: 'single';
   /** B-10: kết quả cổng phủ kế hoạch (sau parsePlan, trước execute). */
-  planGate?: { uncovered: string[]; reasons: string[]; rules: ('A' | 'B')[]; replanned?: boolean };
+  planGate?: { uncovered: string[]; reasons: string[]; rules: ('A' | 'B' | 'brief-item')[]; replanned?: boolean };
   /** Hạng mục còn phải sửa trong vòng hiện tại — tiếp tục sau tạm dừng thì sửa tiếp theo review đã có, không review lại. */
   revising?: string[];
   /** Ước lượng token của kế hoạch (sau khi lập/chốt) để cảnh báo nhiệm vụ quá lớn. */

@@ -30,11 +30,13 @@ export interface PlanGateInput {
   repoFiles?: string[];
   /** id mọi agent có thể được nhắc trong mô tả (quy tắc B-iii). Mặc định: assignee của kế hoạch. */
   agentIds?: string[];
+  /** id → role + skills (từ registry) để khớp vai của đề bài với assignee. Thiếu thì chỉ khớp theo id. */
+  agentRoles?: Record<string, { role: string; skills: string[] }>;
 }
 
 export interface PlanGateResult {
   blocked: boolean;
-  rules: ('A' | 'B')[];
+  rules: ('A' | 'B' | 'brief-item')[];
   uncovered: string[];
   reasons: string[];
 }
@@ -162,10 +164,68 @@ export function checkPlanReadable(input: Pick<PlanGateInput, 'planSummary' | 'su
   return reasons;
 }
 
+export interface BriefItem { code: string; line: string; role?: string; review: boolean; exempt: boolean }
+
+const ITEM_RE = /^\s*(?:[#>*+-]+\s*)*(?:\*\*)?(K\d+)(?![\p{L}\d])\s*(?:\*\*)?\s*([—–:-])\s*(.*)$/u;
+const REVIEW_ROLES = new Set(['peer-reviewer', 'code-reviewer', 'qa-tester']);
+const SKIP_RE = /(?<![\p{L}])(?:không làm|chờ)(?![\p{L}])/iu;
+const ROLE_AFTER_RE = /^\*{0,2}\s*([a-z][a-z0-9]*(?:-[a-z0-9]+)+)\s*\*{0,2}\s*(?::|—|–|$)/i;
+
+/** Hạng mục có mã (K1, K2…) của đề bài: dòng/tiêu đề bắt đầu bằng mã + dấu —/–/-/:. Mỗi mã lấy lần xuất hiện đầu. */
+export function briefItems(brief: string): BriefItem[] {
+  const lines = brief.split(/\r?\n/);
+  const heads: { idx: number; code: string; rest: string }[] = [];
+  lines.forEach((ln, idx) => {
+    const m = ITEM_RE.exec(ln);
+    if (!m || /^K\d+(?![\p{L}\d])/iu.test(m[3])) return; // "K1–K3" là dải, không phải định nghĩa
+    if (heads.some((h) => h.code === m[1])) return;
+    heads.push({ idx, code: m[1], rest: m[3] });
+  });
+  return heads.map((h) => {
+    const line = lines[h.idx].trim();
+    const end = Math.min(...[...lines.keys()].filter((k) => k > h.idx && ITEM_RE.test(lines[k])), lines.length);
+    const at = /@([a-z][a-z0-9]*(?:-[a-z0-9]+)*)/i.exec(line);
+    const after = ROLE_AFTER_RE.exec(h.rest.trim());
+    const role = (at?.[1] ?? after?.[1])?.toLowerCase();
+    const review = (!!role && REVIEW_ROLES.has(role)) || /review|phản biện/iu.test(line);
+    const exempt = SKIP_RE.test(lines.slice(h.idx, end).join('\n'));
+    return { code: h.code, line, ...(role ? { role } : {}), review, exempt };
+  });
+}
+
+const codeRe = (code: string): RegExp => new RegExp(`(?<![\\p{L}\\d])${code}(?![\\p{L}\\d])`, 'iu');
+const sortedParts = (id: string): string => id.split('-').sort().join('-');
+
+function roleMatches(role: string, assignee: string, roles?: PlanGateInput['agentRoles']): boolean {
+  const a = assignee.toLowerCase();
+  if (a === role || sortedParts(a) === sortedParts(role)) return true;
+  const info = roles?.[a] ?? roles?.[assignee];
+  if (!info) return false;
+  const skills = info.skills.map((x) => x.toLowerCase());
+  if (/^(?:code-reviewer|peer-reviewer|reviewer)$/.test(role)) return info.role === 'reviewer' || skills.includes('code-review');
+  if (role === 'qa-tester') return skills.includes('testing');
+  return false;
+}
+
+/** Quy tắc brief-item: trả lý do cho mỗi mã hạng mục của đề bài chưa có subtask nhắc/giao đúng vai. */
+export function checkBriefItems(input: Pick<PlanGateInput, 'brief' | 'subtasks' | 'agentRoles'>): string[] {
+  const out: string[] = [];
+  for (const it of briefItems(input.brief)) {
+    if (it.exempt) continue;
+    const re = codeRe(it.code);
+    const hit = input.subtasks.filter((s) => re.test(`${s.title}
+${s.description}`));
+    if (!hit.length) { out.push(`${it.code}${it.role ? ` (vai ${it.role})` : ''}: không hạng mục kế hoạch nào nhắc mã này`); continue; }
+    if (it.role && !hit.some((s) => roleMatches(it.role!, s.assignee, input.agentRoles))) out.push(`${it.code}: không hạng mục nào nhắc mã này được giao cho vai ${it.role}`);
+  }
+  return out;
+}
+
 export function planGate(input: PlanGateInput): PlanGateResult {
   const { uncovered } = checkPlanCoverage(input);
   const readable = checkPlanReadable(input);
-  const rules: ('A' | 'B')[] = [];
+  const items = checkBriefItems(input);
+  const rules: ('A' | 'B' | 'brief-item')[] = [];
   const reasons: string[] = [];
   if (uncovered.length) {
     rules.push('A');
@@ -174,6 +234,10 @@ export function planGate(input: PlanGateInput): PlanGateResult {
   if (readable.length) {
     rules.push('B');
     for (const r of readable) reasons.push(`B ${r}`);
+  }
+  if (items.length) {
+    rules.push('brief-item');
+    for (const r of items) reasons.push(`brief-item: ${r}`);
   }
   return { blocked: rules.length > 0, rules, uncovered, reasons };
 }

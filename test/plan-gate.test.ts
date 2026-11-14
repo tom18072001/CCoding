@@ -8,7 +8,7 @@ import { createApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
 import { MockRuntime } from '../src/runtimes/mock.js';
 import { parsePlan } from '../src/planner.js';
-import { checkPlanCoverage, checkPlanReadable, planGate, planTargets, type GateSubtask } from '../src/plan-gate.js';
+import { briefItems, checkPlanCoverage, checkPlanReadable, planGate, planTargets, type GateSubtask } from '../src/plan-gate.js';
 
 const IDS = ['backend-dev', 'frontend-dev', 'data-engineer', 'senior-swe'];
 const st = (id: string, over: Partial<GateSubtask> = {}): GateSubtask => ({ id, title: `Việc ${id}`, description: `Mô tả ${id}`, assignee: 'backend-dev', deliverable: `sản phẩm ${id}`, ...over });
@@ -223,4 +223,72 @@ test('cổng nối orchestrator: kế hoạch đạt thì không tốn thêm lư
     s.restore();
     a.cleanup();
   }
+});
+
+// ── brief-item: hạng mục có mã của đề bài (fixture: đề bài D17) ──
+const D17_BRIEF = [
+  '# Phòng Dev, gói D17',
+  '',
+  '**K1 — dev-backend: cổng phủ kế hoạch kiểm cả hạng mục của đề bài**',
+  '- Nhận diện hạng mục có mã.',
+  '**K2 — dev-backend: đề bài đòi review thì không được bỏ review**',
+  '**K3 — dev-backend: CTO chưa nghiệm thu thì tự làm một vòng bổ sung**',
+  '**K4 — code-reviewer: review K1–K3**',
+].join('\n');
+const ROLES = {
+  'backend-dev': { role: 'developer', skills: ['backend'] },
+  'senior-swe': { role: 'developer', skills: ['backend'] },
+  'qa-tester': { role: 'reviewer', skills: ['code-review', 'testing'] },
+};
+const d17 = (extra: GateSubtask[]): GateSubtask[] => [
+  st('S1', { title: 'K1 cổng phủ' }), st('S2', { title: 'K2 review' }), st('S3', { title: 'K3 vòng bổ sung' }), ...extra,
+];
+const gate = (brief: string, subtasks: GateSubtask[]) => planGate({ brief, planSummary: '', subtasks, agentIds: IDS, agentRoles: ROLES });
+
+test('briefItems: đọc các dạng dòng, vai và cờ review/exempt', () => {
+  const it = briefItems(['**K1 — dev-backend: a**', 'K2 — b', 'K3: c @qa-tester', 'K4 - d review kỹ', '## K5 – e', 'K6 — chờ quyết định', 'Dải K1–K3 trong mô tả'].join('\n'));
+  assert.deepEqual(it.map((x) => x.code), ['K1', 'K2', 'K3', 'K4', 'K5', 'K6']);
+  assert.equal(it[0].role, 'dev-backend');
+  assert.equal(it[2].role, 'qa-tester');
+  assert.equal(it[2].review, true);
+  assert.equal(it[3].review, true);
+  assert.equal(it[1].review, false);
+  assert.equal(it[5].exempt, true);
+  assert.equal(it[4].exempt, false);
+  assert.deepEqual(briefItems(D17_BRIEF).map((x) => [x.code, x.role]), [['K1', 'dev-backend'], ['K2', 'dev-backend'], ['K3', 'dev-backend'], ['K4', 'code-reviewer']]);
+});
+
+test('briefItems: "không làm" ở phần ngay dưới dòng mã cũng được miễn', () => {
+  const it = briefItems('K1 — việc a\nK2 — việc b\nPhần này không làm trong gói này.\nK3 — việc c');
+  assert.deepEqual(it.map((x) => x.exempt), [false, true, false]);
+});
+
+test('brief-item: kế hoạch bỏ K4 → chặn', () => {
+  const g = gate(D17_BRIEF, d17([]));
+  assert.equal(g.blocked, true);
+  assert.ok(g.rules.includes('brief-item'));
+  assert.ok(g.reasons.some((r) => r.includes('K4')));
+});
+
+test('brief-item: K4 giao qa-tester (role reviewer / skill code-review) → đạt', () => {
+  const g = gate(D17_BRIEF, d17([st('S4', { title: 'K4 review', assignee: 'qa-tester' })]));
+  assert.equal(g.blocked, false);
+  assert.deepEqual(g.rules, []);
+});
+
+test('brief-item: K4 nhắc nhưng giao sai vai → chặn, nêu vai thiếu', () => {
+  const g = gate(D17_BRIEF, d17([st('S4', { title: 'K4 review', assignee: 'senior-swe' })]));
+  assert.equal(g.blocked, true);
+  assert.ok(g.reasons.some((r) => r.includes('K4') && r.includes('code-reviewer')));
+});
+
+test('brief-item: mục "không làm" được miễn', () => {
+  const brief = 'K1 — việc a\nK2 — Phần (a): không làm';
+  assert.equal(gate(brief, [st('S1', { title: 'K1 việc a' })]).blocked, false);
+});
+
+test('brief-item: đề bài không có mã → không đổi hành vi; K1 không khớp K10', () => {
+  assert.equal(gate('Làm việc bình thường', [st('S1')]).rules.includes('brief-item'), false);
+  const g = gate('K1 — việc a', [st('S1', { title: 'K10 việc khác' })]);
+  assert.ok(g.rules.includes('brief-item'));
 });
