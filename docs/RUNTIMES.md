@@ -55,6 +55,7 @@ Runtime API tương thích OpenAI có `supportsTools` (mặc định bật; Olla
 - Pha thực thi/sửa: `--tools <tools trong agent.md> --permission-mode acceptEdits` (đổi bằng `runtimes.claude-cli.permissionMode`); pha họp/định tuyến: không công cụ; pha kế hoạch/review/tổng hợp/nghiệm thu: chỉ công cụ đọc.
 - Token & chi phí **chính xác** từ sự kiện `result` (input, output, cache đọc/ghi, `total_cost_usd`).
 - Model: `opus` / `sonnet` / `haiku` dùng thẳng alias.
+- Chẩn đoán lỗi `403 Cloudflare` chỉ xảy ra trên đường runtime này: [docs/diagnostics/claude-cli-403.md](diagnostics/claude-cli-403.md).
 
 ### `codex-cli` — OpenAI Codex
 - `codex exec --json --skip-git-repo-check --sandbox workspace-write|read-only [-m model] -`.
