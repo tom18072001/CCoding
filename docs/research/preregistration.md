@@ -1444,6 +1444,33 @@ const mulberry32 = (a) => () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math
 - **Phạm vi token:** thước chính = `weighted(usage.tokens)` (cả lượt planOnly, vốn không thực thi); báo thêm, mô tả, phần của pha `plan` từ `usage.byPhase` nếu có. Không trộn hai phạm vi trong một bảng.
 - **Đường dẫn tuyệt đối hoặc bắt đầu bằng `/` (kể cả ổ đĩa `X:/`):** sau bước (i)–(iii) của luật khớp, nếu vẫn bắt đầu bằng `/` hoặc `X:/` thì **không cắt đoán**, **không khớp** phần tử chuẩn nào và **không** đóng góp module (đếm riêng thành "tệp ngoài repo"); đường dẫn chứa `..` xử lý tương tự.
 
+#### Đính chính gateFirst (BRIEF-24b, K2; ghi trước lượt chạy đầu) — 15/11/2026
+
+**Thời điểm.** Viết **trước khi có `runs.jsonl` nào** của E9-lite (chưa có thư mục `run1/`, chưa chạy planner). Mục chỉ thêm, không sửa chữ cũ; **mục này thắng** khi mâu thuẫn với một chỗ cũ, và chỉ thay đúng **một** chỗ: gạch đầu dòng "**Cổng đạt lần đầu**" của mục (S3) ngay trên (câu "Lượt đạt lần đầu ⇔ `planGate?.ok === true` **và** `replanCount === 0`; `planGate` `null` ⇒ không đạt"). Câu "Cổng đạt lần đầu = `planGate` ... không đặt định nghĩa mới" ở (5) giữ nguyên nghĩa là chưa có định nghĩa riêng ngoài mục này.
+
+**Vì sao (kiểm trước khi chạy, không dựa vào kết quả).** Mục (S3) tự đặt điều kiện "cần kiểm trên dòng thật rằng `ok` đúng là trường đó". Kiểu `planGate` ở `src/types.ts:334` là `{ uncovered: string[]; reasons: string[]; rules: ('A'|'B'|'brief-item')[]; replanned?: boolean }`; engine gán nó ở `src/orchestrator.ts:2739` và `:2778`. **Không có trường `ok`.** `{ ok: true }` chỉ có trong runtime giả của `bench/vs-claude/test/plan-only-arms.test.mjs:64`. Áp nguyên văn `planGate?.ok === true` vào dòng thật thì mọi lượt đều "không đạt" (`undefined !== true`), tức thước vô nghĩa. Đây là chỗ §9 cũ **không cài được**, không phải chuyện chọn định nghĩa theo kết quả.
+
+**Định nghĩa thay thế (tất định, chỉ dùng trường engine thật).** Với một dòng `runs.jsonl`:
+
+```js
+// 1 = cổng đạt lần đầu; 0 = không. Không bao giờ trả null.
+const gateFirst = (row) => {
+  const g = row.planGate;
+  if (g == null || typeof g !== 'object') return 0;       // null/thiếu: không đạt (giữ ý của (S3)), đếm riêng
+  if (g.replanned === true) return 0;                     // engine đã sửa kế hoạch sau cổng
+  return row.replanCount === 0 ? 1 : 0;                   // replanCount phải đúng là số 0; null/thiếu/>0: không đạt
+};
+```
+
+- Trường `ok` (nếu có) và `rules`, `uncovered`, `reasons` **không** tham gia. `rules` rỗng hay không không đổi kết quả.
+- **Báo riêng, mô tả:** `nGateNull` (số dòng `planGate` null hoặc không phải đối tượng) và `nReplanCountMissing` (số dòng `replanCount` không phải số), cùng số dòng `replanned === true`.
+- Chỉ số của bài = trung bình 0/1 của các dòng `done` được chọn trong 3 lần lặp (như (6)); không còn giá trị NA do định nghĩa này.
+- Không đổi theo kết quả: nếu dòng thật đầu tiên cho thấy hình dạng `planGate` khác `src/types.ts:334` thì dừng, ghi sai lệch bằng một khối mới, không tự sửa công thức.
+
+#### Đặc tả bàn giao cho mã
+
+Đặc tả cài đặt và ví dụ kiểm thử: `docs/research/context/brief24b-k2-gatefirst-2026-11-15.md`. Mã (`e9lite.mjs`) và test phải khớp khối này, không khớp định nghĩa `ok` ở (S3).
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.
