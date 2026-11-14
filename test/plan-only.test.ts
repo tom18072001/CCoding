@@ -166,3 +166,27 @@ test('planOnly (g): resume nhiệm vụ planOnly đã tạm dừng giữa chừn
     a.cleanup();
   }
 });
+
+test('planOnly (h): resume run đã planOnly (điểm chặn 1) → không chạy lại gì, không ghi thêm log dừng, không thêm lượt', async () => {
+  const a = testApp();
+  let again: App | undefined;
+  try {
+    const t = a.orchestrator.submit({ brief: BRIEF, mode: 'department', department: 'dev', options: { planOnly: true, lane: 'full', discussionRounds: 0 } });
+    await a.orchestrator.waitFor(t.id);
+    const saved = a.store.get(t.id)!;
+    saved.status = 'running';
+    saved.runs[0].status = 'running';
+    a.store.put(saved, true);
+    again = testApp({ dataDir: a.config.dataDir });
+    const before = { stops: kinds(again, t.id, 'task.planOnly').length, rows: rows(again, t.id).length };
+    assert.equal(before.stops, 1);
+    again.orchestrator.resume(t.id);
+    const done = await again.orchestrator.waitFor(t.id);
+    assertStopped(again, done);
+    assert.equal(kinds(again, t.id, 'task.planOnly').length, before.stops, 'run đã dừng: không chạy lại điểm dừng');
+    assert.equal(rows(again, t.id).length, before.rows, 'không phát sinh lượt LLM nào');
+  } finally {
+    again?.cleanup();
+    a.cleanup();
+  }
+});
