@@ -106,6 +106,20 @@ Ai review: khi diff chạm một trong năm tệp ngoại lệ hoặc khóa củ
 
 Dự án đặt `strictChecks: true` thì mọi lệnh kiểm tra còn đỏ đều bị coi là bắt buộc phải xanh, kể cả lệnh đỏ từ mốc mà đề bài không nhắc. Hết vòng sửa mà còn đỏ thì nhiệm vụ ở trạng thái `failed`, CTO không được gọi, và biên bản ghi "Chưa nghiệm thu: còn đỏ <lệnh>" kèm đầu ra cuối của lệnh. Chi tiết nằm ở `docs/ARCHITECTURE.md`, mục "Kiểm tra đỏ là hỏng".
 
+### 5.1. Chạy lint ngoài CCoding
+
+`npm run lint` chạy trần sẽ đỏ ở rule `agent-format-cochange`. Rule này có `needsBase`: cần một mốc git để so diff, mà ngoài CCoding không có `LINT_BASE` hay `CCODING_BASE_REF`. Thiếu mốc là lỗi có chủ đích (không âm thầm bỏ qua rule), và `test/lint-runner.test.ts` khóa hành vi này (thiếu mốc ⇒ exit 1). Vì vậy hãy đặt mốc khi chạy:
+
+```bash
+LINT_BASE=$(git merge-base main HEAD) npm run lint
+```
+
+```powershell
+$env:LINT_BASE = git merge-base main HEAD; npm run lint
+```
+
+Hoặc truyền `--base <ref>` cho `node scripts/lint/run.mjs`. Kết quả mong đợi: "24 rule, 0 lỗi".
+
 ## 6. Bảo vệ nhánh GitHub
 
 Lint trong CI chỉ báo đỏ, không tự chặn push thẳng. Chủ dự án cần bật bảo vệ nhánh `main` trên GitHub: bắt buộc PR, bắt buộc job lint và `npm run check` đạt trước khi gộp, không cho admin bỏ qua, cấm force push. Nên bật thêm secret scanning và push protection. Lý do và phạm vi nằm ở `docs/data-protection-assessment.md`.

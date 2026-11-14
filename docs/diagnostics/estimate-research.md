@@ -92,10 +92,21 @@ Nhãn dữ liệu: **Nội bộ**; chỉ số tổng. Nguồn: `bench/vs-claude/
 | Lịch sử, Nghiên cứu | 8 | 1,231 | 0,575 | 1,711 | 1,136 |
 | Lịch sử, ≤ 5 hạng mục | 11 | 0,702 | 0,551 | 1,950 | 1,399 |
 | Lịch sử, > 5 hạng mục | 5 | 1,775 | 1,689 | 2,750 | 1,061 |
+| Thật/work (dòng có work) | 10 | 1,605 | 0,652 | 2,528 | 1,875 |
 
 - Làn: mọi 17 dòng đều `full` ⇒ **không tách được theo làn**.
 - Tỉ số thật/`work` (10 dòng có `work`, cả hai basis): trung vị 1,605, cho thấy cũng lệch lên, tương tự tỉ số thật/ước lượng.
 - Độ phân tán rất lớn (IQR 1,6; tỉ số từ 0,45 tới 3,87): trung vị gần ngưỡng nhưng từng gói lệch cả hai phía.
+
+### Kiểm lệch của nhóm lịch sử (n nhỏ, phân tán lớn)
+
+Các kiểm dưới đây chỉ mô tả, không cái nào đủ căn cứ để đổi hệ số. `test/estimate-factor.test.ts` tính lại từ JSON và khóa các số trong bảng Tổng hợp, kể cả kết luận về làn.
+
+- **Theo phòng:** Dev trung vị 1,999 (n = 8, IQR 2,164) so với Nghiên cứu 1,231 (n = 8, IQR 1,136). Dev lệch lên rõ hơn nhưng phân tán lớn (có dòng 0,485 và dòng 3,873) và khoảng tứ phân vị hai phòng chồng nhau. Chỉ là gợi ý.
+- **Theo số hạng mục:** ≤ 5 hạng mục trung vị 0,702 (n = 11); > 5 hạng mục trung vị 1,775 (n = 5). Hai nhóm lệch ngược chiều, nhưng nhóm > 5 chỉ có 5 dòng (3 Nghiên cứu, 2 Dev) nên khó tách khỏi hiệu ứng phòng.
+- **Theo làn:** **không kiểm được**, cả 17 dòng đều `full`. Test khẳng định điều này; có dòng khác `full` thì test đỏ để cập nhật kết luận.
+- **Thật/work:** 10 dòng có `work` (đều thuộc nhóm lịch sử), trung vị 1,605, IQR 1,875; lệch lên cùng chiều với thật/ước lượng.
+- Quyết định bên dưới giữ nguyên: giữ `runtimeFactor['claude-cli'] = 5`, không thêm hệ số lịch sử.
 
 ### Quyết định
 
