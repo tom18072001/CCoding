@@ -57,7 +57,16 @@ test('DET-04: dataDir trỏ vào một tệp (không ghi được) → có cản
 
 test('DET-04: bình thường → sự kiện vào system.jsonl, stderr trống', async () => {
   const data = tmp();
-  const { result, lines } = await captureStderr(() => logSandboxDeny(deny, { dataDir: data }, {}));
+  const oldKey = process.env.CCODING_LOG_HMAC_KEY;
+  process.env.CCODING_LOG_HMAC_KEY = 'khoa-gia-chi-dung-cho-test'; // tránh cảnh báo thiếu khóa lẫn vào stderr
+  let captured;
+  try {
+    captured = await captureStderr(() => logSandboxDeny(deny, { dataDir: data }, {}));
+  } finally {
+    if (oldKey === undefined) delete process.env.CCODING_LOG_HMAC_KEY;
+    else process.env.CCODING_LOG_HMAC_KEY = oldKey;
+  }
+  const { result, lines } = captured;
   assert.equal(result.ok, true);
   assert.deepEqual(lines, []);
   const rows = fs.readFileSync(path.join(data, 'logs', 'system.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));

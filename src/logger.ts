@@ -16,6 +16,38 @@ import type { LogEntry } from './types.js';
  *   data/logs/departments/<dept>.jsonl      — log từng phòng ban
  *   data/runs/<taskId>/events.jsonl         — log từng nhiệm vụ
  */
+const KEY_ENV = 'CCODING_LOG_HMAC_KEY';
+let warnedNoKey = false;
+
+/** Chỉ dùng cho test: cho phép cảnh báo thiếu khóa phát lại. */
+export function resetHmacWarning(): void {
+  warnedNoKey = false;
+}
+
+/** Khóa ký log, chỉ đọc từ biến môi trường; không bao giờ ghi ra log/thông báo. */
+function hmacKey(): string | undefined {
+  const k = process.env[KEY_ENV];
+  return k && k.length > 0 ? k : undefined;
+}
+
+/** kid: dấu vân tay ngắn suy từ HMAC(khóa, hằng) — không phải khóa, không suy ngược được khóa. */
+function keyId(key: string): string {
+  return crypto.createHmac('sha256', key).update('ccoding-log-kid-v1').digest('hex').slice(0, 8);
+}
+
+function signHash(key: string, hash: string): string {
+  return crypto.createHmac('sha256', key).update(hash).digest('hex');
+}
+
+function warnNoKeyOnce(): void {
+  if (warnedNoKey) return;
+  warnedNoKey = true;
+  process.stderr.write(
+    `[cảnh báo] Chưa đặt ${KEY_ENV}: log vẫn có chuỗi băm nhưng KHÔNG ký HMAC, nên không chứng minh được toàn vẹn (xem docs/data-protection-assessment.md).
+`,
+  );
+}
+
 export class LogStore {
   private lastHash = new Map<string, { seq: number; hash: string }>();
 
@@ -68,7 +100,12 @@ export class LogStore {
       const seq = prev.seq + 1;
       const body = JSON.stringify({ ...record, seq, prev: prev.hash });
       const hash = crypto.createHash('sha256').update(prev.hash).update(body).digest('hex').slice(0, 32);
-      line = `${body.slice(0, -1)},"hash":"${hash}"}`;
+      const key = hmacKey();
+      if (key) line = `${body.slice(0, -1)},"hash":"${hash}","kid":"${keyId(key)}","sig":"${signHash(key, hash)}"}`;
+      else {
+        warnNoKeyOnce();
+        line = `${body.slice(0, -1)},"hash":"${hash}"}`;
+      }
       this.lastHash.set(file, { seq, hash });
     } else {
       line = JSON.stringify(record);
@@ -124,6 +161,9 @@ function chainChecker() {
   let expectedSeq: number | undefined;
   let n = 0;
   let broken: { brokenAt: number; reason: string } | undefined;
+  const key = hmacKey();
+  const kid = key ? keyId(key) : undefined;
+  let sawSigned = false; // đã gặp dòng có chữ ký: các dòng sau bắt buộc có ký
   return {
     line(l: string): void {
       if (!l.trim()) return;
@@ -136,12 +176,21 @@ function chainChecker() {
         broken = { brokenAt: n, reason: 'JSON hỏng' };
         return;
       }
-      const { hash, ...rest } = o;
+      const { hash, sig, kid: lineKid, ...rest } = o;
       if (typeof hash !== 'string') broken = { brokenAt: n, reason: 'thiếu hash' };
       else if (rest.prev !== prev) broken = { brokenAt: n, reason: 'prev không khớp dòng trước' };
       else if (expectedSeq !== undefined && rest.seq !== expectedSeq) broken = { brokenAt: n, reason: 'seq không liên tục' };
       else if (crypto.createHash('sha256').update(prev).update(JSON.stringify(rest)).digest('hex').slice(0, 32) !== hash) broken = { brokenAt: n, reason: 'hash sai — nội dung đã bị sửa' };
-      else {
+      else if (key && (sig !== undefined || sawSigned)) {
+        if (typeof sig !== 'string' || lineKid !== kid) broken = { brokenAt: n, reason: 'khóa khác/không có khóa' };
+        else if (signHash(key, hash) !== sig) broken = { brokenAt: n, reason: 'chữ ký sai' };
+        else {
+          sawSigned = true;
+          prev = hash;
+          expectedSeq = (rest.seq as number) + 1;
+        }
+      } else {
+        if (sig !== undefined) sawSigned = true;
         prev = hash;
         expectedSeq = (rest.seq as number) + 1;
       }
