@@ -2,6 +2,8 @@
 
 **Gói vừa: 4 hạng mục. Ngân sách 8M token.** Giao 14/11/2026.
 
+**Giao lại (lần 2), 14/11/2026 23:35.** Lần 1 (T-20261114-224730-25a) dừng ở cổng kế hoạch: K4 bắt `peer-reviewer` chạy lệnh, mà vai này chỉ có công cụ đọc. Bản này chuyển mọi việc chạy lệnh sang `data-scientist` (K3); `peer-reviewer` chỉ đọc đầu ra đã lưu.
+
 **Căn cứ:** biên bản nghiệm thu của CTO cho BRIEF-22b (chưa nghiệm thu).
 - **C2-r (chặn):** còn 14/24 tham chiếu `tệp:dòng` sai vào `agents/*.md` và `src/quality-gate.ts`, đối chiếu với mốc `ccc76cc0`.
   - Vd. `research-lead.md:51` phải là `:58`; `dev-lead.md:57` phải là `:61`.
@@ -16,6 +18,12 @@
 - Dữ liệu: **Nội bộ**; không ghi đường dẫn máy.
 
 **Kế hoạch:** mỗi hạng mục kế hoạch ghi mã K ở đầu tiêu đề. K4 giao cho `@peer-reviewer`.
+
+**Lệnh kiểm tra phải xanh** (CCoding tự chạy trước và sau, và đưa kết quả cho reviewer):
+- `node docs/research/scripts/logic-map-check.mjs --strict` (ở mốc giao gói: đỏ, 55/402 tham chiếu lệch)
+- `node docs/research/scripts/consistency-check.mjs`
+- `node docs/research/analysis/decisions/scorecard.mjs --check`
+- `node --test "docs/research/scripts/*.test.mjs" "docs/research/analysis/*.test.mjs"`
 
 ## Hạng mục
 
@@ -42,10 +50,15 @@
 **K3 — data-scientist: lệnh kiểm tra dạng glob**
 - `node --test docs/research/scripts/` cho exit 1 trên Node 24 Windows. Ghi lệnh chuẩn dạng glob (`node --test docs/research/scripts/*.test.mjs`) vào `docs/research/README.md` hoặc chỗ đang ghi lệnh kiểm tra của dự án Nghiên cứu.
 - Chạy `scorecard.mjs --check` và ghi kết quả.
+- **Chạy hộ phản biện (K4 chỉ đọc):**
+  - thêm `--sample N --seed S` vào `logic-map-check.mjs`: in N tham chiếu chọn ngẫu nhiên, mỗi tham chiếu kèm dòng thật ở mốc `ccc76cc0` (lấy bằng `git show`);
+  - chạy với N = 10, seed ghi trong tệp, cùng ba lệnh kiểm tra ở trên và `git status --short`;
+  - lưu nguyên văn đầu ra vào `docs/research/context/brief22c-checks-2026-11-14.md`.
 
-**K4 — peer-reviewer: phản biện lại, gọn trong trần lượt**
-- **Viết kết luận trước** theo mẫu (**Đạt** / **Sửa nhỏ** / **Chưa đạt**) ở đầu tệp, rồi mới bổ sung chi tiết. Không đọc lại toàn bộ bài.
-- Kiểm bằng lệnh, không đọc tay từng dòng:
-  - `logic-map-check.mjs --strict`, `consistency-check.mjs`, `scorecard.mjs --check` exit 0;
-  - lấy ngẫu nhiên 10 tham chiếu (seed ghi trong báo cáo), đối chiếu tay với `git show ccc76cc0:<tệp>`.
-- `git status` sạch.
+**K4 — peer-reviewer: phản biện lại, gọn trong trần lượt (chỉ đọc)**
+- **Viết kết luận trước**, ở dòng đầu câu trả lời: `**Kết luận:** Đạt`, `Sửa nhỏ` hoặc `Chưa đạt`. Sau đó mới bổ sung chi tiết. Không đọc lại toàn bộ bài.
+- Đọc `context/brief22c-checks-2026-11-14.md` (do K3 lưu) và kết quả lệnh kiểm tra CCoding đưa:
+  - ba lệnh kiểm phải exit 0;
+  - với 10 tham chiếu mẫu: đối chiếu dòng thật in ra với ký hiệu và ý mà bài nêu;
+  - `git status --short` rỗng.
+- Còn chặn thì nêu rõ để vòng bổ sung sửa.

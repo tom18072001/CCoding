@@ -22,6 +22,7 @@
 | Test nghiên cứu không lệnh nào chạy | lệnh kiểm tra dự án Nghiên cứu thiếu `analysis/*.test.mjs` | `orphan-tests` |
 | Tên vai trong đề bài không có trong danh sách agent | BRIEF-D14 đến D16 | `brief-lint` |
 | Tên chủ dự án trong bài báo | quyết định 14/11 mục 2; `paper.md` vẫn còn | `paper-anonymity` |
+| Đề bài bắt vai chỉ đọc chạy lệnh | BRIEF-22c lần 1 (dừng ở cổng kế hoạch) | `brief-lint` |
 
 **Nguyên tắc:**
 - Lint **không có mức cảnh báo**. Có lỗi thì exit 1. Không có biến môi trường hay cờ nào để bỏ qua.
@@ -124,6 +125,7 @@ export default {
 - `brief-lint`, cho `docs/research/BRIEF-*.md` mới. Đề bài cũ là bản ghi lịch sử, giữ nguyên văn, vào `allow.json`.
   - Có ít nhất một hạng mục K theo `briefItems()`.
   - Mỗi K ghi đúng một vai có trong `agents/<phòng>/` của phòng ghi ở tiêu đề. Vai phải được `briefItems()` nhận ra; vai một từ (vd. `devops`) chỉ được nhận khi viết `@devops`, nên K không nhận ra vai là lỗi.
+  - Vai không có công cụ chạy lệnh (vd. `peer-reviewer`) thì thân K không được đòi chạy lệnh. Dùng đúng phép kiểm (vi) của `checkPlanReadable` (export `NEEDS_CMD_RE`, không chép). Bằng chứng: BRIEF-22c lần 1 (T-20261114-224730-25a) dừng ở cổng kế hoạch vì lỗi này, tốn một lượt lập kế hoạch Opus.
   - Có `**Phạm vi:**`, dòng "Dữ liệu:" với một nhãn (Công khai, Nội bộ, Bảo mật, Hạn chế), và dòng ngân sách.
 
 **K5 — backend-dev: văn phòng coi kiểm tra đỏ là hỏng**
