@@ -507,7 +507,7 @@ export interface Task {
   /** Lệnh kiểm tra của dự án do CCoding tự chạy: trước khi sửa (baseline) và sau thực thi/sửa (latest). */
   projectChecks?: ProjectChecks;
   /** Nhiệm vụ đã chạy xong nhưng cần người xem lại (vd. review cuối chưa duyệt). */
-  attention?: { reason: 'review' | 'checks' | 'acceptance' | 'plan-coverage' | 'plan-unreadable'; detail: string; at: string };
+  attention?: { reason: 'review' | 'checks' | 'acceptance' | 'plan-coverage' | 'plan-brief-items' | 'plan-unreadable'; detail: string; at: string };
   /** Kết luận nghiệm thu của CTO sau khi các phòng tổng hợp xong (UX-4c). */
   acceptance?: Acceptance;
   createdAt: string;
