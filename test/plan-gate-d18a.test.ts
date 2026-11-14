@@ -35,12 +35,13 @@ test('brief-item K1: BRIEF-23 "K4 — academic-writer, peer-reviewer:" đọc đ
   assert.equal(g.reasons.some((r) => r.startsWith('brief-item: K4')), true);
 });
 
-test('brief-item K1: BRIEF-22 có K7 peer-reviewer giao đúng vai → không chặn brief-item', () => {
-  const items = briefItems(readBrief('22'));
-  assert.equal(items.find((x) => x.code === 'K7')!.exempt, false);
-  const subtasks = items.map((x, i) => st(`S${i + 1}`, { title: `${x.code}: việc`, assignee: x.code === 'K7' ? 'peer-reviewer' : 'methodologist' }));
-  const g = planGate({ brief: readBrief('22'), planSummary: '', subtasks, agentRoles: ROLES });
-  assert.equal(g.rules.includes('brief-item'), false);
+test('brief-item K1: BRIEF-22 + kế hoạch dựng tay độc lập (có K7 đúng vai) → không chặn; bỏ K7 → chặn K7', () => {
+  assert.equal(briefItems(readBrief('22')).find((x) => x.code === 'K7')!.exempt, false);
+  const plan = readPlan('22');
+  const ok = planGate({ brief: readBrief('22'), planSummary: '', subtasks: plan, agentRoles: ROLES });
+  assert.equal(ok.rules.includes('brief-item'), false);
+  const bad = planGate({ brief: readBrief('22'), planSummary: '', subtasks: plan.filter((x) => x.assignee !== 'peer-reviewer'), agentRoles: ROLES });
+  assert.equal(bad.reasons.some((r) => r.startsWith('brief-item: K7')), true);
 });
 
 test('brief-item K1: mục "Không làm" thật ở cuối đề không tạo hạng mục ảo và không miễn hạng mục cuối', () => {

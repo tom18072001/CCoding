@@ -322,3 +322,12 @@ Kết quả: 0 chặn nhầm trên bảng này, ngoại trừ `git checkout -b`/
 ### Giới hạn còn lại (không đổi tính chất của lớp này)
 
 Như mục "Chặn ghi ngoài thư mục làm việc": đây là phân tích chuỗi lệnh, không phải ranh giới bảo mật. Vẫn lọt: `find /etc -exec grep …`, `xargs`, `node -e`/`python -c` tự đọc và gửi tệp, `cat <tệp> | curl -d @-`, biến/`eval`, `Get-ChildItem -Recurse | Select-String` trên PowerShell, `curl --config`. Lớp chính là sandbox hệ điều hành (B-18).
+
+### Build lại `dist/` trước khi đo lại trục 2 (b) (D18a/S4, theo review)
+
+Hook `claude-guard` của runtime `claude-cli` chạy từ **`dist/tools/claude-guard.js`** (`src/runtimes/claude-cli.ts:276`), không chạy từ `src/`. `dist/` nằm trong `.gitignore`, nên một bản dist cũ vẫn chặn nhầm lệnh khôi phục tệp bằng `checkout --` và heredoc chứa đường dẫn `../src/…`, và không có rule `outside-root-read`. Mọi số đo trục 2 (b) trước bản vá này không phản ánh các thay đổi của D18a/S4.
+
+Trước khi đo lại theo preregistration §9:
+1. `npm run build` (exit 0).
+2. Kiểm dist có bản vá: `grep -c "outside-root-read" dist/tools/shell-policy.js` và `grep -c "stripHeredocBodies" dist/tools/shell-policy.js` phải > 0.
+3. Ghi commit và thời điểm build vào RUNLOG của lần đo.

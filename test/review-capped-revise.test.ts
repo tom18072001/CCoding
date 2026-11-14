@@ -32,6 +32,11 @@ test('D6 review chạm trần, maxRevisions=1 → attention review còn nguyên,
     assert.equal(rv.approved, false);
     assert.equal(done.attention?.reason, 'review');
     assert.match(done.attention?.detail ?? '', /chưa có kết luận/);
+    // attention phải do review CUỐI (sau vòng sửa) quyết định, không phải dấu vết của vòng từ chối đầu
+    const reviseAt = a.usage.all({ task: t.id }).filter((c) => c.phase === 'revise').length;
+    assert.ok(reviseAt >= 1);
+    assert.doesNotMatch(done.attention?.detail ?? '', /Cần sửa|từ chối/i);
+    assert.match(rv.summary, /chưa có kết luận/);
   } finally {
     a.cleanup();
   }
