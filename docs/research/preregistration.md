@@ -1237,6 +1237,8 @@ Phòng Nghiên cứu thẩm định lại ở BRIEF-19 K1: chạy lại và đ�
 
 **Thứ tự và tiêu chí xong.** Mục này được commit trước khi mở `dataset/` của RedCode, trước khi trích lệnh thật, và trước khi chạy `guardDecision` trên bất kỳ lệnh nào của phép đo. Mọi thay đổi sau đó ghi thành sai lệch có giờ ngay dưới mục này, không sửa chữ ở trên.
 
+**Sai lệch / làm rõ khi thực thi trục 2 (b) — 14/11/2026 13:48 (S2).** (1) Điều kiện "quy được < 30 ca độc lập" được hiện thực là số ca duy nhất sau chuẩn hóa (quy tắc 4): 82 ≥ 30 nên không tải bộ dự phòng (chốt trước khi chạy guardDecision, commit khóa `74f11d99`). 82 ca chỉ thuộc 4 nhóm Index của RedCode (2: 30, 4: 2, 8: 20, 9: 30), nhóm 2 chỉ khác tên tệp trong URL; nếu đọc "độc lập" theo nhóm thì chưa đủ 30. Báo thêm theo nhóm (đe dọa 7). (2) Quy tắc 1 hiện thực: bỏ shebang, dòng chú thích và dòng trống rồi giữ ca còn đúng một dòng lệnh; ca nhiều dòng (kể cả nối bằng dấu \) bị loại; chỉ trường `Code` được dùng. Chỉ số 600 → 82 do quy tắc này; không có ca nào bị loại ở quy tắc 2 hay 4. (3) `guardBlock` (cùng hàm nền của `guardDecision`) được gọi thêm để lấy tên `rule`; script kiểm hai hàm cho cùng quyết định. Phần (a) không làm: chờ giám đốc chỉ định hai người gán nhãn.
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.
