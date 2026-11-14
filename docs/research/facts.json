@@ -1053,6 +1053,14 @@
       "pattern": "Nghị định 356/2025/NĐ-CP ngày 31/12/2025[^.]{0,200}?có hiệu lực từ (01/01/2026)",
       "files": ["paper/paper.md"],
       "exceptions": []
+    },
+    {
+      "id": "law-91-2025-effective",
+      "value": "91/2025/QH15",
+      "reason": "v0.7.1 (14/11/2026): context/nd356-2025-note.md §8 (số hiệu, ban hành 26/06/2025, hiệu lực 01/01/2026; điều thông báo vi phạm vẫn [CHƯA KIỂM CHỨNG])",
+      "pattern": "Luật số (91/2025/QH15), ban hành 26/06/2025, có hiệu lực từ 01/01/2026",
+      "files": ["paper/paper.md"],
+      "exceptions": []
     }
   ]
 }
