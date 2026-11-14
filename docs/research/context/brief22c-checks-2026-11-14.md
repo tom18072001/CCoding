@@ -353,3 +353,50 @@ exit 1
 ```
 
 Ghi chú: dòng `exit` do tôi thêm để ghi mã thoát. Mục "test" chỉ chép dòng tổng kết; lệnh thoát 1 do 3 tệp đỏ có sẵn từ baseline (`e-analyses.test.mjs`, `g-analyze.test.mjs`, `g-mutation.test.mjs`), không phải lỗi mới. Ba lệnh kiểm còn lại exit 0. Dòng `(hết)` là dấu kết của khối `git status --short`: khối rỗng.
+
+### Chạy lại sau npm ci (BRIEF-22d, đính chính khối "## test" ở trên)
+
+Đính chính: khối "## test" ở Bước 2 phía trên (exit 1, tests 136, fail 3) và câu "có sẵn từ baseline, không phải lỗi mới" trong ghi chú cuối là **sai về nguyên nhân**. Ba tệp đỏ (`e-analyses.test.mjs`, `g-analyze.test.mjs`, `g-mutation.test.mjs`) lỗi `ERR_MODULE_NOT_FOUND: Cannot find package 'typescript'` tại `g-mutation.mjs:18`, vì worktree chưa có `node_modules` (`package.json:34` đã khai `typescript ^5.9.0`). Đó là lỗi môi trường, không phải lỗi mã hay baseline. Cách xử lý: chạy `npm ci` (không sửa mã, không sửa test, không tắt kiểm tra nào); `node_modules` nằm ngoài theo dõi của git nên `git status --short` vẫn rỗng. Các khối cũ giữ nguyên.
+
+Chạy lại theo đúng thứ tự Bước 2, ở HEAD sau khi gỡ `.tmp-s3` (commit `c60a018f`) và ghi chú logic-map §5 (`bfdb50b5`). Dòng `exit` do tôi thêm. Mục `sample` đã rút phần giữa (9 tham chiếu khác, cùng dạng `[ok]`); dòng dải được chép nguyên văn. Đường dẫn máy không xuất hiện trong đầu ra nên không phải thay.
+
+```
+## HEAD
+bfdb50b5
+## sample (rút gọn: dòng đầu và tham chiếu dải)
+Mốc: ccc76cc0840110debab2a0e69f64b10bee965533
+Chế độ: strict (mặc định)
+Tổng tham chiếu tệp:dòng: 445 (có ký hiệu: 445, không ký hiệu: 0); lệch: 0.
+
+Mẫu 10/445 tham chiếu (seed 20261115):
+- orch:1865–1867 tại docs/research/analysis/decisions/report.md:31 [ok]
+    ký hiệu: parsePlan
+    trong bài: …Plan`, `shapeFastPlan` (làn nhanh), `planGate` | có + mã | `orch:1865-1867` (`parsePlan`), `planner.ts:100` (`parsePlan`), `plan-…
+    dòng thật ở mốc (dòng 1867): plan = parsePlan(planRes.text, roster, lead, task.brief);
+Đạt: 445 tham chiếu khớp đúng dòng ở mốc.
+exit 0
+## strict
+Mốc: ccc76cc0840110debab2a0e69f64b10bee965533
+Chế độ: strict (mặc định)
+Tổng tham chiếu tệp:dòng: 445 (có ký hiệu: 445, không ký hiệu: 0); lệch: 0.
+Đạt: 445 tham chiếu khớp đúng dòng ở mốc.
+exit 0
+## consistency
+Đạt: 60 tệp, không lệch số liệu.
+exit 0
+## scorecard
+OK: 20/20 dòng agent trong scorecard.md (14 có KPI + 6 không có dữ liệu trong 30 ngày); 18 khối bảng trong scorecard.md và effectiveness.md trùng đầu ra script; 360 khóa brief22.*
+exit 0
+## test
+ℹ tests 149
+ℹ suites 0
+ℹ pass 149
+ℹ fail 0
+ℹ skipped 0
+ℹ todo 0
+exit 0
+## status
+(hết)
+```
+
+Ghi chú: test 149/149, exit 0 sau `npm ci`; bốn lệnh kiểm tra đều exit 0; `git status --short` rỗng ở HEAD `bfdb50b5`.
