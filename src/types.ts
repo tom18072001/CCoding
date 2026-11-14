@@ -340,6 +340,8 @@ export interface DeptRun {
   followupOf?: string;
   /** Số thứ tự vòng bổ sung (1, 2…); run thường không có. */
   round?: number;
+  /** Tiêu chí 'in' của vòng bổ sung (cổng kế hoạch và resume đọc lại). */
+  followupCriteria?: { name: string; detail: string }[];
 }
 
 export interface TaskOptions {
