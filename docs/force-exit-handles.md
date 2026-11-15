@@ -171,3 +171,48 @@ Không có. `selfimprove-route-auth.test.ts` (`done`) và `quality-gate.test.ts`
 
 ## Kiểm
 `grep -rnE "\.close\(" test | grep -v closeServer` chỉ còn dòng trong `closeServer` (helpers.ts).
+
+## Đo D28b/S2 — bật `--test-force-exit` cho `npm test` (Windows 11, Node v24.14.0, tuần tự, không chạy song song lệnh khác)
+
+Lệnh: `tsx --test --test-force-exit --test-timeout=300000 --test-reporter=spec "test/**/*.test.ts"`. Cột "đỏ thật" bỏ qua 1 ca bảo vệ
+`script "test" chưa bật --test-force-exit…` của `force-exit.test.ts` (đỏ có chủ ý vì cờ đang bật tạm trong lúc đo).
+
+| Lần | Thời gian | Exit | pass/fail | Lỗi nguyên văn · tệp đang chạy |
+|---|---|---|---|---|
+| 1 | 93 s | 1 | 950/2 | `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), file src\win\async.c, line 76` · `test\selfimprove-route.test.ts` |
+| 2 | 91 s | 1 | 950/2 | như lần 1 |
+| 3 | 91 s | 1 | 950/2 | như lần 1 |
+| 4 | 91 s | 1 | 950/2 | như lần 1 |
+| 5 | 91 s | 1 | 950/1 | không sập libuv (chỉ ca bảo vệ đỏ) |
+| 6 | 92 s | 1 | 950/2 | như lần 1 |
+| 7 | 94 s | 1 | 950/2 | như lần 1 |
+| 8 | 93 s | 1 | 950/1 | không sập libuv (chỉ ca bảo vệ đỏ) |
+| 9 | 92 s | 1 | 950/2 | như lần 1 |
+| 10 | 92 s | 1 | 950/2 | như lần 1 |
+
+**Kết quả: libuv sập 8/10 lần, luôn ở `test\selfimprove-route.test.ts` ⇒ KHÔNG đạt 10/10.** Quyết định: gỡ cờ khỏi script `test`,
+giữ `test` trong `NO_FORCE_EXIT` (`test/force-exit.test.ts`). Đây là kết quả đo trên một máy; chưa kiểm trên CI Node 22.
+Nguyên nhân gốc chưa xác định: tệp chạy riêng thì không sập (bảng dưới), chỉ sập khi chạy cùng cả bộ (nhiều tệp song song); handle nghi vấn là
+cặp `createServer` ở `test/selfimprove-route.test.ts:21-27` (cổng dò rồi mở lại) và kết nối `fetch` keep-alive ở dòng 32 và 68, đóng ở dòng 24 và 71.
+Chưa chứng minh đây là handle gây sập, nên không ghi là nguyên nhân.
+Việc còn mở: tìm handle gây sập trong ngữ cảnh chạy cả bộ rồi mới bật lại cờ.
+
+## Chạy riêng 4 tệp × 12 lần: `npx tsx --test --test-force-exit test/<tệp>.test.ts`
+
+Tên tệp đã xác minh bằng `ls test`: `web.test.ts`, `ux3.test.ts`, `ux4.test.ts`, `selfimprove-route.test.ts`
+(khác `selfimprove-route-auth.test.ts`). Mọi lần: exit 0, 0 lần `Assertion failed`.
+
+| Tệp | Số ca pass/fail | Lần 1–12 (ms) | Exit 0 | Sập libuv |
+|---|---|---|---|---|
+| web | 2/0 | 2473, 2282, 2260, 2286, 2244, 2315, 2285, 2321, 2250, 2293, 2350, 2409 | 12/12 | 0/12 |
+| ux3 | 7/0 | 3201, 3460, 3392, 3280, 3445, 3476, 3315, 3411, 3540, 3578, 3366, 3255 | 12/12 | 0/12 |
+| ux4 | 3/0 | 3904, 3851, 3767, 3627, 3840, 3815, 3659, 3701, 3872, 3957, 3803, 3862 | 12/12 | 0/12 |
+| selfimprove-route | 1/0 | 2751, 2562, 2495, 2430, 2445, 2501, 2506, 2541, 2435, 2439, 2450, 2519 | 12/12 | 0/12 |
+
+Kết luận: cờ an toàn khi chạy riêng từng tệp (48/48), nhưng không đủ để bật cho cả bộ `npm test`.
+
+## Handle còn tồn tại (tệp:dòng)
+Sau S1 không còn `srv.close()` trần trong `test/` (xem mục "Sau"). Handle liên quan còn lại, theo số đo ở trên:
+- `test/selfimprove-route.test.ts:21-27` và `:71`: server mở lại cùng cổng, `closeServer` đã chờ sự kiện `close`; vẫn là tệp duy nhất sập khi chạy cả bộ.
+- `test/selfimprove-route.test.ts:32`, `:68`: `fetch` (undici keep-alive); `closeServer` gọi `closeAllConnections()` phía server nhưng không đóng pool của client.
+- `test/helpers.ts`: nhịp đệm `setTimeout` 50 ms sau `close` (số đo ở đầu tệp) là biện pháp giảm xác suất, chưa phải nguyên nhân gốc đã xử lý.
