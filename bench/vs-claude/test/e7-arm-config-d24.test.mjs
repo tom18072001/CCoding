@@ -103,7 +103,7 @@ test('--arm-config + --selected: hai app trong một tiến trình, trần lư�
     assert.equal(files.length, 2, `${dir}: mỗi mục một calls.jsonl`);
   }
   // trường lượt accept trên dòng chạy
-  for (const x of rows) { assert.equal(x.acceptCalls, 1); assert.ok(Array.isArray(x.acceptAuthSources)); assert.equal(typeof x.acceptTurnCapped, 'boolean'); assert.equal(typeof x.acceptToolCalls, 'number'); assert.ok('acceptTurns' in x); }
+  for (const x of rows) { assert.equal(x.acceptCalls, 1); assert.ok(Array.isArray(x.acceptAuthSources)); assert.equal(typeof x.acceptTurnCapped, 'boolean'); assert.equal(typeof x.acceptToolCalls, 'number'); assert.equal(x.acceptTurns, 3, 'runtime giả trả turns 3 ⇒ calls.jsonl có turns ⇒ acceptTurns 3'); }
   // --selected: không có selected.json hay prep.jsonl mới trong --out; config-*.json ghi bảng sha256
   assert.equal(fs.existsSync(path.join(out, 'selected.json')), false);
   assert.equal(fs.existsSync(path.join(out, 'prep.jsonl')), false);
