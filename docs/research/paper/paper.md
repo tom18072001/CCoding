@@ -1,5 +1,7 @@
 # Hệ thống multi-agent CCoding cho lập trình: thiết kế, giới hạn sub-agent và đo chi phí–thời gian–cache so với một coding agent đơn
 
+> **Bản thảo v0.8.3 (15/11/2026, BRIEF-27; v0.8.2 + BRIEF-27):** (1) §6.7 điền kết quả E7b từ `bench/vs-claude/results/e7b-cto/report.md` (khóa `e7b.*` ở `facts.json`): nhánh (h) là F, "Chưa kết luận", ở cả năm cách tính; bảy sai lệch thực thi và phân tích; đe dọa còn áp dụng; câu trả lời "model nào hợp với vai CTO" ở mức chắc chắn thấp, không đề xuất đổi model; (2) dòng "Model theo vai" ở §6.5 cập nhật chỗ CTO theo E7b; (3) §8 và §9 Kết luận **không chạm** (không có câu nào ở đó nêu kết luận cho vai CTO); (4) Phụ lục A thêm R35 (báo cáo E7b). **Không số cũ nào đổi.** Bản đã đối chiếu: `preregistration.md` §9 (khối E7b, phụ lục (1), (2), khối sai lệch BRIEF-27), `analysis/e7b-verify.md` v1.0, `analysis/decisions/model-per-role.md` mục "Cập nhật BRIEF-27 (E7b)".
+>
 > **Cập nhật 15/11/2026 (BRIEF-25), chỉ §6.6 và dòng "Model theo vai":** E9-lite đã chạy run1; thêm kết quả [Khám phá] n = 13 (số lấy từ `bench/vs-claude/results/e9lite/report.md`, khóa `e9lite.*` ở `facts.json`), đe dọa thiên lệch chọn lọc do chạy lại sau cổng chặn, và hai cách đếm lượt không `done`. E9 vẫn chưa chạy. Không số cũ nào đổi.
 >
 > **Cập nhật 15/11/2026 (BRIEF-25b, v0.8.2), chỉ §6.6 và `model-per-role.md`:** (1) đính chính nguồn của 415 205 / 105 551 / 309 654 (nay `report-cost.md` §3 và audit mục 2, không phải `report.md`; câu "không có `usage`" ở `report.md:134` đã sửa); (2) thêm bảng độ phủ tuyệt đối theo arm và chi phí bằng tiền [Khám phá, sau khi thấy dữ liệu] (đe dọa 8, đe dọa 9); (3) "rẻ hơn" ở khâu `plan` đổi thành "ít token có trọng số hơn". Không số cũ nào bị đổi.
@@ -769,7 +771,7 @@ Hai ghi chú trạng thái. Thứ nhất, "đang sửa" **chưa phải đã sử
 
 *Giới hạn của mục này.* KPI v2 nhiều agent chỉ có 1–14 điểm bằng chứng, thứ hạng không có CI; `acceptance-fail` gán cho mọi người thực thi và trưởng phòng của nhiệm vụ nên không tách được lỗi từng agent (F-A2); thời lượng P gồm cả thời gian chờ hạn mức nếu có, P không có token; tỉ số bench là so chéo đợt, không đối chứng; chưa có thước đo độ đúng của reviewer và chất lượng bóc tách. Các sửa chữa nêu ở trên **chưa được đo lại**, nên bài không nói chúng cải thiện bao nhiêu.
 
-**Model theo vai và E9 (K4) [Đề xuất, chưa đo].** `analysis/decisions/model-per-role.md` đề xuất, không đổi mặc định nào trong mã: giữ haiku cho định tuyến (chi phí nhỏ, độ đúng chưa đo); giữ sonnet cho thành viên và cho CTO (R1) cho tới khi đo lại R2 với trần lượt cao hơn; không đổi model reviewer trước khi sửa trần lượt (đổi model khi trần còn cắt thì không đo được gì); trưởng phòng ở khâu `plan` là vai quyết định chia việc nhưng **chưa có số nào về chất lượng bóc tách**. Chỉ CTO có phép đo model đăng ký trước (E7), và mức bằng chứng cũng chỉ "vừa" vì Opus bị trần lượt che. Vì vậy `preregistration.md` §9.x đăng ký **E9** (chưa chạy, không có số; bản rút gọn E9-lite đã chạy run1, kết quả ở §6.6, [Khám phá], n = 13): trên 32 bài chia được và 32 bài không chia được, đổi đúng một biến `phaseModels.plan` (Sonnet, Opus, Haiku làm tham chiếu), giai đoạn 1 chỉ lập kế hoạch, giả thuyết H1 (độ phủ) và H2 (chia thừa) theo Holm; chuẩn là kết quả chạy test, không phải bộ chấm LLM. Hồ sơ nói opus cho trưởng phòng nhưng ở làn nhanh khâu `plan` chạy sonnet; trên bench (252 lượt làn nhanh), nói "trưởng phòng dùng Opus" sẽ sai với phần lớn lượt. Ở văn phòng phụ thì khác: theo `decomp-agg.json` (`office.planModels`), khâu `plan` chạy Opus ở 5/5 lượt phòng có `calls.jsonl` (5 lượt phòng, không phải 5 lượt gọi). Giới hạn: `kpi-office.json` (14 lượt `plan`, 7 nhiệm vụ) và `calls-limits.json` (15 lượt `plan`, 10 nhiệm vụ) không tách lượt theo model nên không xác nhận được con số này; `calls.jsonl` gốc không có trong kho, chỉ có số tổng hợp.
+**Model theo vai và E9 (K4) [Đề xuất, chưa đo].** `analysis/decisions/model-per-role.md` đề xuất, không đổi mặc định nào trong mã: giữ haiku cho định tuyến (chi phí nhỏ, độ đúng chưa đo); giữ sonnet cho thành viên và cho CTO (R1) (bản 14/11 ghi "cho tới khi đo lại R2 với trần lượt cao hơn"; E7b ở §6.7 đã đo lại với trần 16 và cho nhánh F, "chưa kết luận", nên không đề xuất đổi model CTO, mức chắc chắn thấp); không đổi model reviewer trước khi sửa trần lượt (đổi model khi trần còn cắt thì không đo được gì); trưởng phòng ở khâu `plan` là vai quyết định chia việc nhưng **chưa có số nào về chất lượng bóc tách**. Chỉ CTO có phép đo model đăng ký trước (E7, và E7b ở §6.7), và mức bằng chứng cũng chỉ "vừa" vì ở E7 Opus bị trần lượt che, còn ở E7b hai gói khác nhau ở cả model lẫn trần. Vì vậy `preregistration.md` §9.x đăng ký **E9** (chưa chạy, không có số; bản rút gọn E9-lite đã chạy run1, kết quả ở §6.6, [Khám phá], n = 13): trên 32 bài chia được và 32 bài không chia được, đổi đúng một biến `phaseModels.plan` (Sonnet, Opus, Haiku làm tham chiếu), giai đoạn 1 chỉ lập kế hoạch, giả thuyết H1 (độ phủ) và H2 (chia thừa) theo Holm; chuẩn là kết quả chạy test, không phải bộ chấm LLM. Hồ sơ nói opus cho trưởng phòng nhưng ở làn nhanh khâu `plan` chạy sonnet; trên bench (252 lượt làn nhanh), nói "trưởng phòng dùng Opus" sẽ sai với phần lớn lượt. Ở văn phòng phụ thì khác: theo `decomp-agg.json` (`office.planModels`), khâu `plan` chạy Opus ở 5/5 lượt phòng có `calls.jsonl` (5 lượt phòng, không phải 5 lượt gọi). Giới hạn: `kpi-office.json` (14 lượt `plan`, 7 nhiệm vụ) và `calls-limits.json` (15 lượt `plan`, 10 nhiệm vụ) không tách lượt theo model nên không xác nhận được con số này; `calls.jsonl` gốc không có trong kho, chỉ có số tổng hợp.
 
 **Đối chiếu tài liệu (K3) [Tổng quan có mục tiêu, không phải tổng quan hệ thống].** `context/decomposition-sources-2026-11-14.md` đọc 10 nguồn (6 bình duyệt, 3 preprint, 1 blog nhà cung cấp) phủ 5 nhánh; 5 nguồn khác chỉ thấy trong kết quả tìm, chưa đọc, không dùng làm căn cứ số. Ba điểm nhất quán: (1) đa agent chỉ có lợi khi việc tách song song được; trên việc tuần tự nó làm kết quả kém đi 39–70 % ở một benchmark lập kế hoạch, và trung bình mọi cấu hình là −3,5 % (Kim et al., 2025), điều khớp với việc đo "song song cho phép" ở Bảng 22 nhưng khác loại việc (tài chính, lập kế hoạch, không phải sửa mã); Anthropic tự báo cáo lợi ở việc nghiên cứu và nêu rõ phần lớn việc lập trình không hợp (Hadfield et al., 2025; blog, tự báo cáo); (2) bóc tách tĩnh một lần dễ hỏng khi bước giữa thất bại, và bóc tách thích ứng cải thiện rõ (Prasad et al., 2024), nên thước đo chất lượng bóc tách nên gồm việc kế hoạch có được chỉnh hay không, không chỉ độ phủ; (3) planner mạnh với executor rẻ là hướng hợp lý (Dong et al., 2025) nhưng bằng chứng đến từ việc gọi công cụ, không phải sửa mã, nên với CCoding chỉ là giả thuyết cho E9. Về định tuyến theo độ khó, nguồn là định tuyến từng câu hỏi (Ong et al., 2025; Ding et al., 2024), chỉ tương tự với chọn làn. Về bộ chấm LLM, đồng thuận với người rất khác nhau theo loại việc: với mã sinh, κ so với kết quả chạy test chỉ khoảng 0,10–0,21 (Crupi et al., 2025), nên chuẩn là kết quả chạy test. Hai nghiên cứu về bộ chấm LLM trên câu trả lời mở chỉ cho ý chung rằng bộ chấm LLM có thiên lệch vị trí và độ dài (Zheng et al., 2023; Wang et al., 2024); chúng không đo kết quả chạy test. Lỗi hệ đa agent thường nằm ở thiết kế, lệch giữa agent và xác minh, và thêm bước xác minh mục tiêu cấp cao cải thiện thêm 15,6 % trên một hệ (Cemri et al., 2025). Chưa nguồn nào đã đọc đo trực tiếp chất lượng bóc tách cho sửa mã hay model nghiệm thu: đó là khoảng trống mà E9 nhắm tới.
 
@@ -838,9 +840,11 @@ Cách đọc (mô tả, không suy diễn):
 
 **Câu được phép và câu cấm.** Được nói: "kế hoạch của arm X khớp Y % tập tệp/module mà lời giải mẫu đổi, trên 13 bài, [Khám phá], khoảng bootstrap …" khi có số; với hiệu theo bài, nói "hiệu … [khoảng], 13 bài, [Khám phá]", và khoảng chứa 0 thì viết "chưa phân biệt được". Cấm: gọi E9-lite là E9 hay báo "E9 đã chạy"; gọi chuẩn là chuẩn của người hay "bóc tách đúng"; nói một model "bóc tách tốt hơn" khi thiếu nhãn [Khám phá], n và khoảng bootstrap; suy ra độ khó của bài từ nhãn tầng; báo p-value. Tái lập và lệnh chạy: `bench/vs-claude/results/e9lite/README.md`; mã phân tích: `analysis/e9lite.mjs` (23 test trên `runs.jsonl` giả).
 
-### 6.7 E7b: đo lại CTO nghiệm thu trên bản mã hiện tại (BRIEF-26) — **đã đăng ký, chưa chạy**
+### 6.7 E7b: đo lại CTO nghiệm thu trên bản mã hiện tại (BRIEF-26, BRIEF-27) — **đã chạy; nhánh (h) = F, "Chưa kết luận"**
 
-**Trạng thái: E7b đã đăng ký, chưa chạy.** Chưa có dữ liệu E7b; mọi chỗ kết quả dưới đây ghi `[chưa chạy]`. Thiết kế khóa ở `preregistration.md` §9, khối "Đăng ký trước E7b" (15/11/2026, BRIEF-26 K1) cùng "Phụ lục sai lệch E7b (1)" và "(2)" (15/11/2026, BRIEF-26b K1); mục này chỉ tóm tắt, nếu lệch thì §9 là bản đúng, và phụ lục (2) thắng khi mâu thuẫn với khối chính hay phụ lục (1). Bản đã đối chiếu: khối E7b (a)–(l), phụ lục (1), phụ lục (2) với bảng Quy tắc hiệu lực QH1–QH36, và khóa `e7b.*` ở `facts.json`.
+**Kết luận trước (BLUF).** E7b đã chạy xong đúng thiết kế khóa trước: 128 mục × 2 arm, 256 cặp hoàn tất, 0 cặp thiếu. R1b (Sonnet, trần 6): recall 61/64 = 95,3 %, chặn nhầm 13/64 = 20,3 %. R2b (Opus, trần 16): recall 60/64 = 93,8 %, chặn nhầm 4/64 = 6,3 %. Nhãn P1 (recall) là "chưa phân biệt được"; nhãn P2 (chặn nhầm) là "chưa kết luận" vì p Holm 0,0234 nhưng CI bootstrap [-34,8; 2,9] chứa 0. Nhánh (h) là **F** ở cả năm cách tính: điều kiện (1) và (2) của nhánh A thỏa, điều kiện (3) không thỏa. **E7b không đưa ra đề xuất đổi model CTO**; câu trả lời đầy đủ cho "model nào hợp với vai CTO" ở cuối mục này, kèm mức chắc chắn.
+
+**Trạng thái: E7b đã chạy** (15/11/2026, 06:59–10:07 UTC, một lần gọi `run.mjs`, bản ghim `5911bf0c`, CLI `2.1.318`). Thiết kế khóa ở `preregistration.md` §9, khối "Đăng ký trước E7b" (15/11/2026, BRIEF-26 K1) cùng "Phụ lục sai lệch E7b (1)" và "(2)" (15/11/2026, BRIEF-26b K1) và khối "Sai lệch thực thi và phân tích E7b" (15/11/2026, BRIEF-27 K2); mục này chỉ tóm tắt, nếu lệch thì §9 là bản đúng, và phụ lục (2) thắng khi mâu thuẫn với khối chính hay phụ lục (1). Số trong mục này chép nguyên văn từ `results/e7b-cto/report.md` (đầu ra của `analysis/e7b-analyze.mjs` đã khóa trước khi chạy, không sửa; chạy hai lần ra cùng byte, `report-provenance.md`); khóa `e7b.*` ở `facts.json`. Người điều phối không xem kết luận hay số đo trong lúc chạy (chỉ đếm dòng và đọc trường hạ tầng); bản phân tích sau đó được tính tay lại và đối chiếu RUNLOG ở `analysis/e7b-verify.md`. Bản đã đối chiếu: khối E7b (a)–(l), phụ lục (1), phụ lục (2), khối sai lệch BRIEF-27 với bảng Quy tắc hiệu lực QH1–QH36.
 
 **Vì sao đo lại.** Ở E7 (`results/e7-cto/report.md`, 64 mục lỗi lọt cổng và 64 mục đúng), CTO bằng Sonnet (R1) chặn nhầm nhiều và CTO bằng Opus (R2) chặn nhầm ít, nhưng 13 lượt R2 không đọc được vì chạm trần 6 lượt công cụ ở pha `accept`, nên recall của R2 ở E7 chưa đọc sạch. Từ lúc đo E7 (13/11/2026), mã đã đổi ở D15–D23 (lượt có `error` không dùng văn bản làm kết quả, vòng bổ sung, trần lượt theo pha, hết giờ khác hết hạn mức…). **Không so trực tiếp với E7 vì khác bản mã**; số E7 chỉ đặt cạnh E7b ở một bảng mô tả riêng, không có phép kiểm hay khoảng tin cậy chung.
 
@@ -850,8 +854,8 @@ Cách đọc (mô tả, không suy diễn):
 
 | Arm | Model pha `accept` | `phases.toolTurns.accept` | Kết quả |
 |---|---|---|---|
-| `R1b` | Sonnet | 6 (cấu hình hiện hành) | `[chưa chạy]` |
-| `R2b` | Opus | 16 (khóa trước) | `[chưa chạy]` |
+| `R1b` | Sonnet | 6 (cấu hình hiện hành) | Bảng kết quả bên dưới |
+| `R2b` | Opus | 16 (khóa trước) | Bảng kết quả bên dưới |
 
 Trần 16 suy từ mốc thay thế (số lượt của R3 ở E7: phân vị 90 % bằng 8, lớn nhất bằng 11), vì E7 không ghi số lượt của R1/R2; lý do và giới hạn ở §9 (b). Hai arm khác nhau ở cả model lẫn trần, nên so R2b với R1b là so gói "Opus + trần 16" với gói "Sonnet + trần hiện hành", không tách tác động riêng của model (QH2).
 
@@ -861,11 +865,96 @@ Trần 16 suy từ mốc thay thế (số lượt của R3 ở E7: phân vị 90
 
 **Thước đo.** Recall trên 64 mục lỗi; tỉ lệ chặn nhầm trên 64 mục đúng; số lượt không đọc được (`unread`) và chạm trần (`capped`, hoặc `capped (suy ra)`) theo arm; chi phí USD theo `pricing.mjs`. Youden J chỉ mô tả. Lượt `unread` tính là không chặn (cách chính), kèm ba độ nhạy: S1 tính là chặn, S2 bỏ cặp, S3 giữ lại cặp thiếu do hết giờ (QH13–QH15). Phân bố `acceptTurns` và `acceptToolCalls` chỉ mô tả (QH29).
 
-**Phép kiểm khóa trước.** McNemar chính xác ghép cặp theo mục, tách hai phép (P1 recall, P2 chặn nhầm), Holm hai phép; bootstrap hai tầng theo bài (B = 4000, hạt giống 20261104). Nhãn kết luận có ba giá trị: "khác nhau", "chưa phân biệt được" và "chưa kết luận" (khi hai phép khác chiều hoặc chỉ một phép có ý nghĩa, QH19); không có "tương đương". Một arm có hơn 3 cặp thiếu, hoặc hai arm chênh từ 3 cặp thiếu, thì nhãn và nhánh là "chưa kết luận" (QH21, QH22). Kết quả P1, P2: `[chưa chạy]`.
+**Phép kiểm khóa trước.** McNemar chính xác ghép cặp theo mục, tách hai phép (P1 recall, P2 chặn nhầm), Holm hai phép; bootstrap hai tầng theo bài (B = 4000, hạt giống 20261104). Nhãn kết luận có ba giá trị: "khác nhau", "chưa phân biệt được" và "chưa kết luận" (khi hai phép khác chiều hoặc chỉ một phép có ý nghĩa, QH19); không có "tương đương". Một arm có hơn 3 cặp thiếu, hoặc hai arm chênh từ 3 cặp thiếu, thì nhãn và nhánh là "chưa kết luận" (QH21, QH22). Kết quả P1, P2 ở bảng "Phép kiểm" bên dưới.
 
-**Ngưỡng diễn giải khóa trước** (§9 (h), thứ tự D → E → A → B → C → F): đề xuất đổi model CTO chỉ ở nhánh A, khi đồng thời chặn nhầm R2b ≤ 6/64, recall R2b ≥ 58/64 và R1b − R2b ≤ 6 mục lỗi, P2 mang nhãn "khác nhau" theo chiều R2b < R1b, và đứng được ở cả cách chính lẫn ba độ nhạy S1–S3 (QH16, QH27). Nếu `capped` của R2b > 6/128 (nhánh D) thì recall chưa đọc sạch và không đề xuất đổi. Nhánh đạt: `[chưa chạy]`. Chi phí báo bên cạnh, không là tiêu chí.
+**Ngưỡng diễn giải khóa trước** (§9 (h), thứ tự D → E → A → B → C → F): đề xuất đổi model CTO chỉ ở nhánh A, khi đồng thời chặn nhầm R2b ≤ 6/64, recall R2b ≥ 58/64 và R1b − R2b ≤ 6 mục lỗi, P2 mang nhãn "khác nhau" theo chiều R2b < R1b, và đứng được ở cả cách chính lẫn ba độ nhạy S1–S3 (QH16, QH27). Nếu `capped` của R2b > 6/128 (nhánh D) thì recall chưa đọc sạch và không đề xuất đổi. Nhánh đạt: F, "Chưa kết luận" (bên dưới). Chi phí báo bên cạnh, không là tiêu chí.
 
-**Giới hạn đã biết trước khi chạy.** Mẫu nhỏ (64 mỗi phía); lỗi cài bằng máy, chỉ lọt `npm test`; 8 bài, một nhà cung cấp, bàn giao trung tính; cùng 128 mục với E7 nên ngưỡng có thể chịu ảnh hưởng ngầm từ số E7; mô hình có thể trôi giữa 13/11 và lúc chạy (§9 (l)); hai app trong một tiến trình vẫn chung đăng nhập và hạn mức (phụ lục (2) (a)). Câu cấm của §9 (k) áp dụng cho mục này, kể cả sau khi có số.
+**Kết quả.** Mọi số dưới đây chép nguyên văn từ `results/e7b-cto/report.md`, nhãn **[Mô tả]**: P1 và P2 là hai phép kiểm đăng ký trước, nhãn kết luận theo §9 (g) và (P5). Mục chốt 128 (lỗi 64, đúng 64, 0 mục không dựng lại được). Cặp thiếu 0 ở R1b và 0 ở R2b; 256/256 cặp `done`, 0 dòng `infra`, không chạm hạn mức. Mọi lượt `accept` có `authSource` đúng `["none"]` (phiên đăng nhập claude.ai, không khóa API).
+
+**Bảng E7b-1.** Thước đo chính (unread = không chặn; CI Clopper–Pearson 95 %; USD theo `pricing.mjs`, giá niêm yết 2026-11-04, không phải hóa đơn; chỉ mô tả, không là tiêu chí).
+
+| Arm | Model, trần | Recall | CP 95 % | Chặn nhầm | CP 95 % | unread | capped | USD |
+|---|---|---|---|---|---|---|---|---|
+| R1b | Sonnet, trần 6 | 61/64 = 95,3 % | [86,9; 99,0] | 13/64 = 20,3 % | [11,3; 32,2] | 0 | 0 (ghi) | 12,07 |
+| R2b | Opus, trần 16 | 60/64 = 93,8 % | [84,8; 98,3] | 4/64 = 6,3 % | [1,7; 15,2] | 1 | 0 (ghi) | 33,08 |
+
+Tỉ số USD R2b/R1b là 2,74 (mô tả; gói R2b khác R1b ở cả model lẫn trần, nên chênh chi phí cũng không gán riêng cho model). Cận dưới Clopper–Pearson 95 % của chặn nhầm R1b là 11,3 %, lớn hơn mốc 10 % của nhánh E (§9 (h)). Lượt `unread` duy nhất (R2b, một mục lỗi của bài `c3-shop-bugs`) là lỗi định dạng JSON ở khối kết luận (dấu phẩy toàn chiều), không phải chạm trần lượt; theo S1 (unread tính là chặn) hiệu recall là 0,0 (Bảng E7b-3). Chặn nhầm của R1b dồn ở `t5-logq`: 6/9 mục đúng của bài này bị chặn, trong 13 mục chặn nhầm của arm.
+
+**Bảng E7b-2.** Lượt `accept` (QH29; mô tả, không vào phép kiểm hay nhánh).
+
+| Arm | `acceptTurns`: trung vị / max | `acceptToolCalls`: trung vị / max |
+|---|---|---|
+| R1b (lượt) | 4 / 10 | 3 / 9 |
+| R2b (lượt) | 5,5 / 17 | 4,5 / 16 |
+
+Max `acceptTurns` của R2b là 17, lớn hơn trần 16: `acceptTurns` là `num_turns` của CLI, không cùng thang với `--max-turns` (§9 (b)); `acceptTurnCapped` là false ở 256/256 dòng. Đây là quan sát mô tả, không phải lỗi hạ tầng.
+
+**Bảng E7b-3.** Phép kiểm (McNemar chính xác hai phía, R2b so với R1b; Holm hai phép; bootstrap theo bài, B = 4000; QH17, QH18).
+
+| Cách tính | Phép | n | chỉ R1b chặn | chỉ R2b chặn | p thô | p Holm | hiệu R2b − R1b (điểm %) [CI bootstrap] | nhãn |
+|---|---|--:|--:|--:|--:|--:|---|---|
+| chính | P1 recall | 64 | 3 | 2 | 1,0000 | 1,0000 | -1,6 [-10,1; 8,5] | chưa phân biệt được |
+| chính | P2 chặn nhầm | 64 | 10 | 1 | 0,0117 | 0,0234 | -14,1 [-34,8; 2,9] | chưa kết luận |
+| S1 | P1 recall | 64 | 2 | 2 | 1,0000 | 1,0000 | 0,0 [-8,2; 9,2] | chưa phân biệt được |
+| S1 | P2 chặn nhầm | 64 | 10 | 1 | 0,0117 | 0,0234 | -14,1 [-34,8; 2,9] | chưa kết luận |
+| S2 | P1 recall | 63 | 2 | 2 | 1,0000 | 1,0000 | 0,0 [-8,3; 9,5] | chưa phân biệt được |
+| S2 | P2 chặn nhầm | 64 | 10 | 1 | 0,0117 | 0,0234 | -14,1 [-34,8; 2,9] | chưa kết luận |
+| S3a | P1 recall | 64 | 3 | 2 | 1,0000 | 1,0000 | -1,6 [-10,1; 8,5] | chưa phân biệt được |
+| S3a | P2 chặn nhầm | 64 | 10 | 1 | 0,0117 | 0,0234 | -14,1 [-34,8; 2,9] | chưa kết luận |
+| S3b | P1 recall | 64 | 2 | 2 | 1,0000 | 1,0000 | 0,0 [-8,2; 9,2] | chưa phân biệt được |
+| S3b | P2 chặn nhầm | 64 | 10 | 1 | 0,0117 | 0,0234 | -14,1 [-34,8; 2,9] | chưa kết luận |
+
+Năm cách tính: chính (unread = không chặn), S1 (unread = chặn), S2 (bỏ cặp có unread ở bất kỳ arm nào), S3a và S3b (giữ cặp thiếu do hết giờ; không có cặp hết giờ nên S3a trùng chính và S3b trùng S1, QH15). Nhãn P1: **chưa phân biệt được**; nhãn P2: **chưa kết luận**, ở cả năm cách tính. P1 có 5 cặp bất đồng (3 + 2) và P2 có 11 cặp bất đồng (10 + 1); số cặp bất đồng < 10 thì p chỉ mô tả (QH20), nên p của P1 chỉ mô tả. P2 là "chưa kết luận" vì p Holm 0,0234 nhưng CI bootstrap chứa 0, không phải vì hai phép ngược chiều (cả hai cùng chiều R2b < R1b). Đây là tả số của hai gói (Sonnet + trần 6, Opus + trần 16), không phải hiệu của riêng model.
+
+**Nhánh diễn giải (§9 (h); QH24–QH28).** Cả năm cách tính cùng một kết quả: **F. Chưa kết luận** (thỏa (1), (2) nhưng không thỏa (3) hoặc (4)); ngưỡng quy theo n là chặn nhầm ≤ 6, recall ≥ 58 (S2, n = 63: recall ≥ 57), R1b − R2b ≤ 6. Đọc theo thứ tự D → E → A → B → C → F:
+- D không thỏa: `capped` của R2b là 0, không vượt 6/128; recall R2b đọc sạch ở nghĩa trần lượt.
+- E không thỏa: cận dưới Clopper–Pearson của chặn nhầm R1b là 11,3 %, lớn hơn 10 %.
+- A thỏa (1) (chặn nhầm R2b 4/64 ≤ 6) và (2) (recall R2b 60/64 ≥ 58; R1b − R2b = 1 mục ≤ 6) nhưng không thỏa (3): nhãn P2 là "chưa kết luận", không phải "khác nhau"; (4) không đặt ra vì (3) không thỏa ở cả năm cách tính.
+- B không thỏa ((2) thỏa); C không thỏa (chặn nhầm R2b không vượt 6/64).
+
+**Kết luận nhánh: F.** Chỉ đứng được khi cả năm cách tính cùng nhánh (QH16). "Ba/bốn/năm cách tính" của QH16, (f) gốc, (P4) và QH27 đọc thành năm cách của `report.md` ("S3" gồm S3a và S3b); F đứng được ở mọi cách đọc. Nhánh F chủ yếu do CI bootstrap rộng, trong khi p thô của P2 nhỏ; vì thế nhãn "chưa kết luận" không có nghĩa "không có chênh lệch", và cũng không đủ để đề xuất đổi.
+
+**So với E7 (chỉ mô tả, KHÁC BẢN MÃ; không gộp, không p hay CI giữa hai đợt; QH29).**
+
+| | E7 (bản mã trước D15–D23, 13/11/2026) | E7b (bản ghim hiện tại) |
+|---|---|---|
+| Sonnet, trần 6 (R1 / R1b): chặn nhầm; recall | 42,2 %; 98,4 % | 20,3 %; 95,3 % |
+| Opus (R2: trần 6 / R2b: trần 16): chặn nhầm; recall | 6,3 %; 85,9 % | 6,3 %; 93,8 % |
+
+Hai cột khác bản mã, và với Opus còn khác trần (6 và 16); E7b không được đọc như cùng đợt với E7. Chênh lệch có thể đến từ mã, trần, trôi mô hình hoặc nhiễu; không tách được (§9 E7b (i), (k)). Hai lượt E7 từng bị phân loại lại (lỗi 403) không dùng ở đây.
+
+**Sai lệch thực thi và phân tích** (khối "Sai lệch thực thi và phân tích E7b", `preregistration.md` §9; đối chiếu ở `analysis/e7b-verify.md`). Đã đối chiếu và khớp: bản ghim, CLI, một tiến trình `--arms R1,R2 --arm-config … --selected …`, thứ tự Latin đủ 128 mục, `maxTurns` 6 và 16, `acceptCalls` 1, `extraConfigSha256` khớp `SHA256SUMS`, 0 dòng `infra`, 0 lỗi 403. Bảy điểm lệch hoặc cần báo, đều không đổi số chính:
+1. Đối chiếu `calls.jsonl` dùng bản rút gọn chỉ gồm lượt `accept` thay cho thư mục dữ liệu app đầy đủ ghi ở RUNBOOK; kết quả đối chiếu là "không lệch".
+2. Lượt `unread` của R2b là lỗi định dạng JSON, không phải trần lượt (nêu cả hai cách tính ở Bảng E7b-3).
+3. Nhãn P2 "chưa kết luận" do McNemar và bootstrap không cùng ý nghĩa; viết "p Holm 0,0234, CI bootstrap chứa 0", không viết "ngược chiều".
+4. Cách đọc "ba/bốn/năm cách tính" như trên.
+5. Max `acceptTurns` của R2b lớn hơn trần (Bảng E7b-2).
+6. `responses/` không chứa khối JSON của dòng đã đọc được (kết luận lấy từ kết quả nghiệm thu đã phân tích của CCoding): đối chiếu ba mục chỉ so được phần văn bản với kết luận, nên bài không nói "đã đọc khối JSON từng lượt".
+7. Số trường của bản rút gọn khác mô tả ban đầu (có `stopReason`, không có `errorKind`; chỉ xem một bản ghi), không ảnh hưởng số.
+Phép tính tay (`e7b-verify.md`) khớp recall, chặn nhầm, số cặp bất đồng, p McNemar và p Holm; CI bootstrap và Clopper–Pearson không tính tay được, chỉ có kiểm chạy hai lần ra cùng byte (không phải kiểm độc lập).
+
+**Đe dọa tính hợp lệ còn áp dụng** (§9 (l) sau Phụ lục (2); (P6); sai lệch trên).
+- **Trần bất cân xứng (6 so với 16):** model và trần lẫn nhau; không tách; mọi câu về R2b nói "gói Opus + trần 16". Trần cao có thể làm Opus đọc nhiều hơn và đổi hành vi kết luận, không chỉ "không bị cắt".
+- **Hai app trong một tiến trình chung đăng nhập và hạn mức:** bảng Latin cân bằng thứ tự arm; thực tế không chạm hạn mức. Phương án hai tiến trình song song không còn áp dụng và không được gọi là xen kẽ.
+- **Mô hình trôi:** E7 chạy ngày 13/11, E7b chạy ngày 15/11 (06:59–10:07 UTC); hai arm cùng cửa sổ; so với E7 chỉ mô tả.
+- **n = 64 mỗi phía:** khoảng Clopper–Pearson của chặn nhầm R1b trải rộng (Bảng E7b-1); ngưỡng 6/64 và 58/64 nằm gần nhiễu mẫu.
+- **Nhãn chuẩn từ E7:** lỗi là đột biến cài bằng máy chỉ những lỗi lọt `npm test`; "đúng" là đạt test ẩn. Chặn một sản phẩm đạt test ẩn là chặn nhầm theo nhãn, kể cả khi CTO nêu rủi ro có cơ sở: ở mục `ce08766025` (`t1-duration`), R2b chặn vì phép vòng `parse(format(x))` không giữ với `1e300`, và nhãn vẫn là chặn nhầm.
+- **Cùng 128 mục với E7:** tác giả đã thấy kết quả E7 trước khi khóa ngưỡng; ngưỡng ở (h) có thể chịu ảnh hưởng ngầm.
+- **Nhiễu theo bài:** 8 bài; chặn nhầm của R1b dồn ở `t5-logq` (6/9 mục đúng bị chặn).
+- **Cấu trúc `unread`:** chỉ một lượt, đã nêu cả hai cách tính; F đứng ở cả năm.
+- **Chỉ đo kết luận nghiệm thu đầu tiên** (`acceptFollowupRounds` = 0, mỗi dòng `acceptCalls` = 1): không đo vòng bổ sung.
+- **Cặp thiếu lệch theo arm:** không xảy ra (0 và 0), nên S3a, S3b trùng cách chính và S1.
+- **Bàn giao trung tính** và **phạm vi:** lớp CTO trên lỗi cài bằng máy đã lọt `npm test`, 8 bài, một nhà cung cấp; không nói chất lượng "cổng nghiệm thu" nói chung.
+- **Rút:** đe dọa "trần token cắt R2b trước 16 lượt" không áp cho E7b (runtime `claude-cli` chỉ có trần lượt; kết luận từ đọc mã, không phải đo; `capped` là 0).
+- **Số đo đã được xem khi viết khối sai lệch** (sau khi có `report.md`); khối ghi chỉ thêm, không đổi phép tính.
+Câu cấm của §9 (k) áp dụng cho mục này.
+
+**Trả lời "logic nghiệm thu và model nào hợp với vai CTO" (trong giới hạn nhánh F).** Mức chắc chắn: **thấp**.
+- **E7b chưa chọn được model; không đề xuất đổi.** Nhánh F nghĩa là "chưa kết luận; báo số, không đề xuất" (§9 (h)). Cấu hình hiện hành (Sonnet, trần 6) giữ nguyên vì không có nhánh nào cho phép đổi, không phải vì E7b cho thấy Sonnet đủ tốt.
+- **Điều số cho thấy (mô tả, hai gói khác nhau ở model lẫn trần):** gói Sonnet + trần 6 chặn nhầm 13/64 với cận dưới 11,3 % (> 10 %), nên điều kiện "Sonnet không còn chặn nhầm nhiều" (nhánh E) không đứng trên bản mã này; gói Opus + trần 16 chặn nhầm 4/64; recall hai gói chưa phân biệt được. Chi phí gói Opus + trần 16 bằng 2,74 lần.
+- **Logic nghiệm thu, theo E7b:** cả hai gói bắt gần hết lỗi lọt `npm test` (recall 61/64 và 60/64); chênh lệch chính nằm ở chặn nhầm, tức ở việc chặn thêm sản phẩm đạt test ẩn. E7b đo kết luận đầu tiên của lớp CTO, chưa đo vòng bổ sung.
+- **Việc tiếp theo (đề xuất, chưa đăng ký):** (i) tách model khỏi trần bằng arm đối chứng (Sonnet + trần 16 hoặc Opus + trần 6), đăng ký riêng như E7c; (ii) tăng số mục hoặc số bài vì CI bootstrap rộng là lý do chính của nhánh F; (iii) với chuyện lỗi định dạng JSON làm mất một kết luận ở R2b, ghi vào backlog cho phòng Phát triển (ngoài phạm vi E7b, không sửa `src/`).
+- Vai CTO ở đây chỉ nghiệm thu; "model của CTO" trong chuyện chia việc là model của trưởng phòng ở khâu `plan` (§6.6), không phải E7b.
 
 ## 7. Thảo luận
 
@@ -1144,6 +1233,7 @@ Các tệp dưới đây là nguồn nội bộ, không phải tài liệu công
 | R23, R24 | Báo cáo và sổ chạy E7, CTO nghiệm thu trên lỗi lọt cổng (`e7-cto/report.md`, `e7-cto/RUNLOG.md`) |
 | R25, R32 | Báo cáo và sổ chạy trục 2 phần (b) (`axis2-guard/report.md`, `axis2-guard/RUNLOG.md`; commit khóa danh sách `74f11d99`, commit kết quả `6dac52c8`) |
 | R33 | Báo cáo và sổ chạy đo lại trục 2 (b) sau vá (`axis2-guard-postfix/report.md`, `RUNLOG.md`, `results.json`; §9 đăng ký trước ở commit `68c54086`, commit khóa danh sách `dc341d11`, commit kết quả `d10bf407`). Bộ ngoài: Agentic Execution Guardrail Eval, Hugging Face `ole-tail/agentic-execution-guardrail-eval`, CC BY 4.0 |
+| R35 | Báo cáo và sổ chạy E7b, đo lại CTO nghiệm thu (`e7b-cto/report.md`, `report.json`, `report-provenance.md`, `RUNLOG.md`) và đối chiếu thực thi (`docs/research/analysis/e7b-verify.md`); bản ghim `5911bf0c` |
 | R34 | Cascade nghiệm thu E7 [Khám phá] (`docs/research/analysis/e7-cascade.md`, `e7-cascade.mjs`; commit `f025fdef`; dữ liệu `e7-cto/`) |
 | R26 | Sổ chạy P, song song trong vận hành thật (`p-parallel/RUNLOG.md`; tệp từng lượt không công bố) |
 | R27, R28 | Báo cáo và sổ chạy E8, song song có worktree (`e8-parallel/report.md`, `e8-parallel/RUNLOG.md`) |
@@ -1151,7 +1241,7 @@ Các tệp dưới đây là nguồn nội bộ, không phải tài liệu công
 | R30 | Báo cáo E6 (H6) và độ nhạy (`h6-3e/report.md`, `h6-3e/report-h6-sensitivity.md`) |
 | R31 | Báo cáo B-14 bước 2 (`b14-step2/report.md`) |
 
-Thư mục R20–R33 (trừ R21) nằm dưới `bench/vs-claude/results/`; R21 và R34 dưới `docs/research/`. R17 cũng gồm các dòng ghi số (ví dụ R17:1190–1238) của phần "Đăng ký trước trục 2" và các sai lệch §9 của giai đoạn này.
+Thư mục R20–R33 và R35 (trừ R21) nằm dưới `bench/vs-claude/results/`, riêng tệp `e7b-verify.md` của R35 dưới `docs/research/analysis/`; R21 và R34 dưới `docs/research/`. R17 cũng gồm các dòng ghi số (ví dụ R17:1190–1238) của phần "Đăng ký trước trục 2" và các sai lệch §9 của giai đoạn này.
 
 ---
 
