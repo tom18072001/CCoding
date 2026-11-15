@@ -8,8 +8,8 @@ Quét `test/` tìm `{ skip: … }`, `t.skip(…)`, `test.skip`, `todo`. Không c
 |---|---|---|---|---|---|
 | `test/agent-probes.test.ts:36` | probe `--self-test` | `dist/kpi.js` không có **và** tự build thất bại | mọi nền tảng | `bench/agent-probes/probe.mjs` import từ `dist/` | Đã sửa (xem dưới): test tự build. Thủ công: `npm run build` |
 | `test/agent-probes.test.ts:43` | probe: API gốc Ollama, `num_ctx`, che PII | như trên | mọi nền tảng | như trên | như trên |
-| `bench/vs-claude/test/cache-diagnostic.test.mjs:29` | fixture: ra đủ 7 hàng, đúng h, diễn giải khớp G1 | thiếu thư mục `dist/` | mọi nền tảng | bài kiểm nạp bản build của CCoding | `npm run build` rồi chạy lại `npm run test:bench` |
-| `bench/vs-claude/test/cache-diagnostic.test.mjs:46` | fixture thiếu lượt → lỗi rõ | như trên | mọi nền tảng | như trên | như trên |
+| `bench/vs-claude/test/cache-diagnostic.test.mjs:30` | fixture: ra đủ 7 hàng, đúng h, diễn giải khớp G1 | thiếu thư mục `dist/` | mọi nền tảng | bài kiểm nạp bản build của CCoding | `npm run build` rồi chạy lại `npm run test:bench` |
+| `bench/vs-claude/test/cache-diagnostic.test.mjs:47` | fixture thiếu lượt → lỗi rõ | như trên | mọi nền tảng | như trên | như trên |
 | `test/bench.test.ts:248` | claude-cli: bashMaxOutput → `BASH_MAX_OUTPUT_LENGTH` | `process.platform === 'win32'` | chỉ chạy Linux/macOS | `claude` giả là script shebang (node); Windows không spawn được tệp không đuôi | Chạy trên Linux/macOS/WSL (`npm test`) |
 | `test/extract.test.ts:504` | PDF qua pdftotext | `pdftotext -v` không chạy được trong PATH | mọi nền tảng | thiếu poppler-utils | Cài poppler (Windows: MSYS2 `mingw-w64-*-poppler`, Linux: `apt install poppler-utils`), đưa vào PATH |
 | `test/extract.test.ts:514` | PDF mã hóa mật khẩu rỗng (qpdf) | `qpdf --version` không chạy được | mọi nền tảng | thiếu qpdf | Cài qpdf (`apt install qpdf` / `winget install qpdf`), đưa vào PATH |

@@ -93,3 +93,9 @@ test('test-writes-repo D23: giới hạn còn lại — tham số hàm và thu�
   const r = lint({ 'a/x.test.mjs': `${HEAD}function w(d) { fs.rmSync(d, { recursive: true }); }\nw(HERE);\nconst o = { dir: HERE };\nfs.rmSync(o.dir);\n` });
   assert.equal(r.code, 0, r.out);
 });
+
+test('test-writes-repo D23: giới hạn còn lại — regex ngay sau ")" bị coi là phép chia (cố định hành vi hiện tại; nới heuristic thì cập nhật test)', () => {
+  const r = lint({ 'a/x.test.mjs': `${HEAD}if (ok) /'/.test(s); fs.rmSync(path.join(HERE, 'q')); const z = 'x';
+` });
+  assert.equal(r.code, 0, r.out); // bỏ sót do lệch trạng thái; khi sửa được thì đổi thành 1
+});
