@@ -255,3 +255,16 @@ Nhịp 50 ms chỉ giảm xác suất của một cuộc đua runtime, không lo
 ## Trạng thái cờ của `npm test`
 Không đạt 10/10 ⇒ script `test` **không** có `--test-force-exit`; `test` vẫn ở `NO_FORCE_EXIT`. Việc còn mở: thử chuỗi 10 lần với `--no-wasm-dynamic-tiering`
 (hoặc tránh `fetch` toàn cục trong test, dùng `http.request` với agent riêng), chạy một vòng mỗi lần.
+
+### Bổ sung theo review: `--test-concurrency=1` (D30/K1, bước tuần tự hóa)
+Giả thuyết của review: sập chỉ xuất hiện khi các tệp chạy song song. Đo: `npx tsx --test --test-force-exit --test-concurrency=1 --test-timeout=300000 "test/**/*.test.ts"`, cả bộ, có nhịp 50 ms, chạy tuần tự từng lượt.
+
+| Lượt | Kết quả | Thời gian | `UV_HANDLE_CLOSING` trong log |
+|---|---|---|---|
+| 1 | exit 0, pass 977, fail 0 | 556 s | 0 |
+| 2 | exit 0, pass 977, fail 0 | ~540 s | 0 |
+| 3 | **không có kết quả**: hệ thống dừng lệnh nền khi hết thời hạn 10 phút giữa chừng (log cụt, 87 "fail" là do bị dừng) | — | — |
+
+Kết luận: 2/2 lượt hoàn tất không sập (so với 2/3 và 8/10 khi chạy song song) ⇒ nghiêng về cuộc đua giữa các tệp chạy song song cộng `fetch`/undici,
+nhưng **chưa chứng minh** và **chưa đạt 10/10**. Mỗi lượt ~9 phút nên chuỗi 10 lượt ≈ 90 phút, đắt gấp 6 lần hiện tại (~90 s); không bật cờ kèm `--test-concurrency=1`.
+Script `test` vẫn không có cờ. Việc còn mở cho gói sau: chia theo tổ hợp (`--test-concurrency=2`, 4) để tìm cặp tệp song song gây sập.
