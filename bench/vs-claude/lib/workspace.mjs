@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 /** Where a task's starting repo and (optional) oracle solution live. Defaults keep the original layout (`repo/`). */
-export function taskDirs(suite, task) {
-  const root = path.join(suite, 'tasks', task.id);
+export function taskDirs(suite, task, tasksDir = path.join(suite, 'tasks')) {
+  const root = path.join(tasksDir, task.id);
   return {
     root,
     hiddenDir: path.join(root, 'hidden'),
