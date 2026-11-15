@@ -11,12 +11,12 @@ Dữ liệu: Nội bộ. Hạng mục K1 (S1, `@data-scientist`). Chỉ sửa `p
 
 | # | Minor | Sửa ở |
 |---|---|---|
-| 1 | Căn cứ "16 lượt (R1 8, R2 8)" dẫn `preregistration.md` dòng 1169 và 1171 (đã mở: 1169 nêu 16 lượt R1 8, R2 8; 1171 nêu luật phân loại lại `infra`); bỏ dòng 1606 | `paper.md:924` |
+| 1 | Căn cứ "16 lượt (R1 8, R2 8)" dẫn `preregistration.md` dòng 1169 và 1171 (đã mở: 1169 nêu 16 lượt R1 8, R2 8; 1171 nêu cách tính chính dùng lượt chạy lại; luật phân loại lại `infra` ở dòng 1170); bỏ dòng 1606 | `paper.md:924` |
 | 2 | Cặp recall 61/64 và 60/64 chỉ nêu một lần, kèm nhãn P1 "chưa phân biệt được" | `paper.md:959` |
 | 3 | Ghi rõ gói "Sonnet (R1b, trần 6)" ở chỗ nói cận dưới 11,3 % của chặn nhầm R1b | `paper.md:955` |
 | 4 | Thêm khóa `e7b-t5logq-r2b` (0/9; `report.md:71`) và `e7b-p2-r1b-only-t5logq` (6 trong 10; suy từ `report.md:71`, `:37`, ghi rõ trong `reason`) | `facts.json:2005–2006` |
 
-Dẫn nguồn câu "bootstrap lấy mẫu theo 8 bài": `preregistration.md` §9 E7b (g) dòng 1582 và QH18 dòng 1750; hàm `bootDiff` ở `bench/vs-claude/e7/analyze.mjs:60`, nhập ở `e7b-analyze.mjs:19`, gọi ở `:185` (`paper.md:915`, `:960`).
+Dẫn nguồn câu "bootstrap lấy mẫu theo 8 bài": `preregistration.md` §9 E7b (g) dòng 1587 và QH18 dòng 1750; hàm `bootDiff` ở `bench/vs-claude/e7/analyze.mjs:60`, nhập ở `e7b-analyze.mjs:19`, gọi ở `:185` (`paper.md:915`, `:960`).
 
 `node docs/research/scripts/consistency-check.mjs`: "Đạt: 62 tệp, không lệch số liệu."
 
