@@ -2,7 +2,7 @@
 // E7, điều kiện đọc 2 của Phòng Nghiên cứu (BRIEF-19 K3): số lần test ẩn trượt trên 3 lần chạy (0/3 … 3/3) của từng mục
 // trong danh sách chốt. Không gọi LLM, không đọc kết luận của arm. Dựng sản phẩm đúng như prepareItem (artifact, tìm vị trí
 // đột biến theo artifact rồi overlay, chép tệp starter thiếu, áp đột biến) nhưng chạy đủ `--trials` lần, không dừng ở lần trượt đầu.
-//   node bench/vs-claude/e7/label-trials.mjs --out bench/vs-claude/results/e7-cto [--trials 3] [--kinds faulty,clean] [--artifacts <dir>]
+//   node bench/vs-claude/e7/label-trials.mjs --out bench/vs-claude/results/e7-cto [--trials 3] [--kinds faulty,clean] [--artifacts <dir>] [--tasks-dir <dir> | VSC_TASKS_DIR]
 // Ghi <out>/label-trials.jsonl (một dòng mỗi mục, chạy lại được: mục đã có thì bỏ qua) và in bảng đếm theo bài.
 import fs from 'node:fs';
 import os from 'node:os';
@@ -13,9 +13,9 @@ import { taskDirs } from '../lib/workspace.mjs';
 import { copyTree, hiddenPass, locateSite } from './lib.mjs';
 
 /** Dựng thư mục sản phẩm của một mục như prepareItem (không chạy `npm test`). Trả { dir, siteMode } hoặc { reason }. */
-export function buildProduct(item, { suite, artifacts }) {
-  const task = JSON.parse(fs.readFileSync(path.join(suite, 'tasks', item.task, 'task.json'), 'utf8'));
-  const { repoDir: starterDir, hiddenDir } = taskDirs(suite, task);
+export function buildProduct(item, { suite, artifacts, tasksDir = path.join(suite, 'tasks') }) {
+  const task = JSON.parse(fs.readFileSync(path.join(tasksDir, item.task, 'task.json'), 'utf8'));
+  const { repoDir: starterDir, hiddenDir } = taskDirs(suite, task, tasksDir);
   const artifactDir = path.join(artifacts, item.key);
   if (!fs.existsSync(artifactDir)) return { reason: 'missing-artifact' };
   let siteMode = null;
@@ -59,6 +59,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   const argv = process.argv.slice(2);
   const flag = (k, d) => { const i = argv.indexOf(`--${k}`); return i < 0 ? d : argv[i + 1]; };
   const out = path.resolve(flag('out', path.join(SUITE, 'results', 'e7-cto')));
+  const tasksDir = path.resolve(flag('tasks-dir', process.env.VSC_TASKS_DIR || path.join(SUITE, 'tasks'))); // mặc định <suite>/tasks
   const trials = Number(flag('trials', '3'));
   const kinds = new Set(flag('kinds', 'faulty,clean').split(','));
   const artifacts = path.resolve(flag('artifacts', path.join(SUITE, 'results', 'study-cloud', 'artifacts')));
@@ -70,7 +71,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   let k = 0;
   for (const item of sel) {
     if (have.has(item.id)) continue;
-    const b = buildProduct(item, { suite: SUITE, artifacts });
+    const b = buildProduct(item, { suite: SUITE, artifacts, tasksDir });
     let row;
     if (!b.dir) row = { id: item.id, task: item.task, kind: item.kind, fails: null, reason: b.reason };
     else {

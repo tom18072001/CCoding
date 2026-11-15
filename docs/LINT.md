@@ -65,6 +65,11 @@ Rule `agent-format-cochange` cần mốc git. Nó khớp quy ước trong `AGENT
 | `test-writes-repo` | D22: `analyze-sr.test.mjs` tạo bài tạm trong `bench/vs-claude/tasks/`, đua với `isolation-v43f.test.mjs` ⇒ ENOENT chập chờn; test còn làm bẩn worktree | Trong `*.test.{ts,mjs}`, lệnh ghi (`writeFileSync`, `mkdirSync`, `rmSync`, `cpSync`, `renameSync`…; với `cpSync`/`copyFileSync` là đối số đích) không có đường dẫn ghép từ `HERE`, `ROOT`, `__dirname`, `import.meta.dirname` (hay biến một lần khai báo suy từ chúng bằng `path.join/resolve`) mà không qua `mkdtemp`/`os.tmpdir()`. Chỉ ĐỌC từ repo thì được | Ghi vào `fs.mkdtempSync(path.join(os.tmpdir(), …))`; `run.mjs`/`analyze.mjs` nhận thư mục bài qua `--tasks-dir` hoặc `VSC_TASKS_DIR`. Ngoại lệ có lý do: `scripts/lint/allow.json` (rule `test-writes-repo`, neo = đoạn dòng). |
 | `stray-files` | BRIEF-22 (C1), D18a: tệp chèn chưa gộp, bản nháp để lại | Không track `*-insert.md`, `DRAFT-*`, `*.orig`, `*.rej`, `*.bak`, `*~`; `FINAL.md` và `ACCEPTANCE.md` chỉ khi được liệt kê | Xóa tệp, hoặc gộp nội dung vào đúng chỗ. |
 
+**`test-writes-repo` — phạm vi nhận diện và giới hạn còn lại (D23).** Rule phân tích văn bản, không phải trình phân tích cú pháp.
+
+- Đã nhận: lời gọi ghi nằm trong chuỗi, template, comment hoặc **regex literal** (kể cả `/'/`, `/"/`, lớp `[...]`, ký tự thoát) thì không tính và không làm lệch trạng thái các lời gọi phía sau; `a / b / c` là phép chia (xét token đứng trước dấu `/`). Biến khai báo đúng một lần, gán từ `HERE`/`ROOT`/`__dirname`/`import.meta.dirname`/`import.meta.url` (trực tiếp, hoặc qua `path.join/resolve/dirname`, `fileURLToPath(…)`, hoặc gán thẳng từ biến đã nhiễm) bị coi là đường dẫn repo; biến gán từ `mkdtemp`/`os.tmpdir()` thì không.
+- **Chưa nhận** (vẫn phải tự giữ quy ước thư mục tạm): (1) đường dẫn repo truyền qua **tham số hàm** (`function w(d) { fs.rmSync(d) }` rồi `w(HERE)`); (2) **thuộc tính đối tượng** và destructuring (`o.dir = HERE; fs.mkdirSync(o.dir)`); (3) giá trị **import từ tệp khác** (`import { repoDir } from './x.mjs'`); (4) tên biến khai báo nhiều lần trong tệp bị bỏ qua; (5) regex đứng ngay sau `)` hoặc `}` bị coi là phép chia. Các ca này có test ghi nhận trong `test/lint-test-writes-repo.test.ts`.
+
 ### 3.4. Tài liệu Nghiên cứu và đề bài
 
 | Rule | Lỗi lặp sinh ra nó | Điều kiểm | Cách sửa khi đỏ |
