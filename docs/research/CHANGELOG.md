@@ -5,6 +5,25 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 20b (T-20261115-183600-9c6, BRIEF-27b, 15/11/2026): sửa 8 minor của phản biện K4 về E7b, lưu biên bản
+
+Dữ liệu: Nội bộ. Hạng mục K1 (S1, `@academic-writer`). Không sửa `preregistration.md`, `preregistration.lock.json`, `e7b-analyze.mjs`, `bench/`, `src/`; không gọi LLM; **không đổi số nào của `report.md`** (số dời chỗ chỉ lấy từ `report.md`, `report.json`, `e7b-verify.md`).
+
+| # | Minor | Sửa ở |
+|---|---|---|
+| 1 | "Hai lượt E7 bị phân loại lại" → 16 lượt (R1 8, R2 8); cột E7 dùng lượt chạy lại, chỉ không dùng bản ghi ban đầu | `paper.md:924` |
+| 2 | Mức bằng chứng vai CTO thống nhất là **Vừa** (thang `model-per-role.md:9`); bỏ "Thấp" làm mức bằng chứng; mức chắc chắn của câu trả lời ghi riêng | `paper.md:774`, `:953`; `model-per-role.md:21` |
+| 3 | Câu "chênh lệch chính nằm ở chặn nhầm" → mô tả số quan sát được kèm nhãn P1 và P2 "chưa kết luận" | `paper.md:959` |
+| 4 | 6/10 cặp "chỉ R1b chặn" ở `t5-logq`; bootstrap theo 8 bài; ưu tiên tăng số bài; bỏ `t5-logq` chỉ [Khám phá], đăng ký riêng | `paper.md:915`, `:960`; `model-per-role.md:76` |
+| 5 | Trả lời trực tiếp (a)(i) và (a)(ii) (`preregistration.md:1521–1523`), cả hai là câu trả lời mô tả; (ii) nói về gói "Opus + trần 16" | `paper.md:954–957` |
+| 6 | `preregistration.md:1804` ghi khối "Sai lệch thực thi và phân tích E7b" là "chưa vào lock", nhưng khối **đã được khóa** ở BRIEF-27 S4 (sha `7d114203…`). Khối đã khóa không sửa được nên giữ nguyên, ghi ở đây | CHANGELOG |
+| 7 | Nêu ba khoảng còn mở của `e7b-verify.md:105–106` | `paper.md:934` |
+| 8 | Cách suy "13 − 3 = 10" viết lại: R1b chặn 13 mục đúng, cả hai chặn 3, chỉ R1b chặn 10 | `analysis/e7b-verify.md:38` |
+
+- **Lưu biên bản K4:** tạo `context/e7b-peer-review-2026-11-15.md` (tên mới theo BRIEF-27b, thay cho `k4-e7b-review-2026-11-15.md` ở `NHIEM-VU-TRUOC.md:136`). Bản gốc `.ccoding/T-20261115-172258-bab/outputs/research-S5-peer-reviewer.md` **không đọc được** trong worktree nên tệp chỉ ghi kết luận "Sửa nhỏ (0 blocker, 0 major, 8 minor)" và 8 minor như BRIEF-27b, nhãn "chưa phải nguyên văn, chờ chép từ bản gốc". Việc còn mở.
+- **Chưa kiểm bằng lệnh ở vai này:** `npm run lint`, `npm run test:research`, `node docs/research/scripts/consistency-check.mjs`.
+- **`facts.json`:** không đổi (không có số nào đổi hoặc dời chỗ trong `numbers`; đã tìm các câu bị sửa, không có mẫu khớp).
+
 ## Vòng 4, gói 20 (T-20261115-172258-bab, BRIEF-27, 15/11/2026): E7b điền vào bài (§6.7), nhánh (h) = F, trả lời câu hỏi vai CTO, v0.8.3
 
 Dữ liệu: Nội bộ. Hạng mục K3 (S3, `@academic-writer`). Không sửa `src/`, mã `bench/`, `preregistration.md`, `e7b-analyze.mjs`, `run/`, `calls-accept/`; không chạy lại E7b, không gọi LLM. Số chép nguyên văn từ `bench/vs-claude/results/e7b-cto/report.md` (sha256 `1ea7deea…694e`, `report-provenance.md`); không tính lại.

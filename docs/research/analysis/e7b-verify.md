@@ -35,7 +35,7 @@ Lệnh đã dùng cho `report.md`: `node docs/research/analysis/e7b-analyze.mjs 
 Nguồn: 256 dòng `runs.jsonl` (R1: 74 `block`, 54 `pass`; R2: 64 `block`, 63 `pass`, 1 `unparsed`; tổng 138 + 117 + 1 = 256), và nhãn `kind` từ `items.json`.
 
 **Mục lỗi không bị chặn** (đối chiếu từng id): R1 `pass`: `bba88b7b48` (c5), `12e71b2f74` (t1), `83a50beb23` (t3). R2 không chặn: `62f9187905` (c3, `unparsed`), `ae511c6caf` (t2), `83a50beb23` (t3), `a3b75ec1ff` (t3).
-**Mục đúng bị chặn:** suy từ tập `pass`: R1 54 pass − 3 lỗi = 51 đúng qua ⇒ 64 − 51 = 13 chặn nhầm. R2 non-block 64 − 4 lỗi = 60 đúng qua ⇒ 64 − 60 = 4 chặn nhầm. Mục đúng R1 qua mà R2 chặn: `ce08766025` (1 mục). Mục đúng R2 qua mà R1 chặn: 13 R2-only non-block − 3 lỗi = 10.
+**Mục đúng bị chặn:** suy từ tập `pass`: R1 54 pass − 3 lỗi = 51 đúng qua ⇒ 64 − 51 = 13 chặn nhầm. R2 non-block 64 − 4 lỗi = 60 đúng qua ⇒ 64 − 60 = 4 chặn nhầm. Mục đúng R1 qua mà R2 chặn: `ce08766025` (1 mục). Mục đúng R2 qua mà R1 chặn (chỉ R1b chặn): R1b chặn 13 mục đúng, cả hai arm cùng chặn 3, vậy chỉ R1b chặn 10 (khớp chéo: R2b chặn 4 mục đúng, trong đó 3 cả hai cùng chặn và 1 chỉ R2b chặn).
 
 | Số | Tính tay | `report.md` | Kết luận |
 |---|---|---|---|
