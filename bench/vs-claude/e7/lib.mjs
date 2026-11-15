@@ -211,6 +211,21 @@ export function verdictOf(parsed, accepted) {
   return !parsed ? 'unparsed' : accepted ? 'pass' : 'block';
 }
 
+/**
+ * D24: trường hạ tầng của lượt `accept`, tính từ bản ghi calls.jsonl của nhiệm vụ. `acceptTurns` = tổng `turns` nếu MỌI bản ghi
+ * accept có `turns` là số, không thì null (dữ liệu trước K2 không có `turns`: null = thiếu dữ liệu, không phải 0 vòng).
+ */
+export function acceptStats(calls) {
+  const acc = calls.filter((c) => c.phase === 'accept');
+  return {
+    acceptCalls: acc.length,
+    acceptAuthSources: [...new Set(acc.map((c) => c.authSource).filter(Boolean))],
+    acceptTurnCapped: acc.some((c) => c.turnCapped === true),
+    acceptToolCalls: acc.reduce((n, c) => n + (Number.isFinite(c.toolCalls) ? c.toolCalls : 0), 0),
+    acceptTurns: acc.every((c) => typeof c.turns === 'number' && Number.isFinite(c.turns)) && acc.length ? acc.reduce((n, c) => n + c.turns, 0) : null,
+  };
+}
+
 /** R1/R2: một nhiệm vụ CCoding "đã xong thực thi", chạy lại đúng bước CTO nghiệm thu. */
 export async function runCto(app, cc, prep, arm, { runtime = 'claude-cli', capture, waitTimeoutMs = 90 * 60_000 } = {}) {
   const { store, orchestrator, registry } = app;
@@ -262,7 +277,7 @@ export async function runCto(app, cc, prep, arm, { runtime = 'claude-cli', captu
     taskId: task.id, status: infra ? 'infra' : 'done', infra, ...(rl.resetsAt ? { resetsAt: rl.resetsAt } : {}), error: infra ? String(timedOut ? `quá hạn chờ ${Math.round(waitTimeoutMs / 1000)}s` : (acc?.error || pausedDetail || t.error || callErr || (() => { const e = callErrors(callsText).at(-1); return e ? [e.errorKind, e.error ?? e.attempts?.map((a) => a.error ?? a.kind).filter(Boolean).join('; ')].filter(Boolean).join(': ') : ''; })() || '')).slice(0, 300) : undefined,
     verdict: infra ? null : verdictOf(acc.parsed, acc.accepted), accepted: acc?.accepted ?? null, parsed: acc?.parsed ?? null, acceptMode: acc?.mode ?? null,
     criteria: acc?.criteria?.length ?? 0, fails: acc?.criteria?.filter((c) => c.result === 'fail').length ?? 0, unknowns: acc?.criteria?.filter((c) => c.result === 'unknown').length ?? 0,
-    tokens, calls: calls.length, turns: calls.reduce((n, c) => n + (c.turns ?? 0), 0), models: [...new Set(calls.map((c) => c.model).filter(Boolean))], ...costOfCalls(callsText),
+    tokens, calls: calls.length, turns: calls.reduce((n, c) => n + (c.turns ?? 0), 0), models: [...new Set(calls.map((c) => c.model).filter(Boolean))], ...costOfCalls(callsText), ...acceptStats(calls),
     wallSec, durationMs: calls.reduce((n, c) => n + (c.durationMs ?? 0), 0),
     promptSha: cap ? sha(cc.userPrompt(cap)) : null, tools: cap?.tools ?? null, maxTurns: cap?.maxTurns ?? null, text,
   };
