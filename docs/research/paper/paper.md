@@ -838,6 +838,31 @@ Cách đọc (mô tả, không suy diễn):
 
 **Câu được phép và câu cấm.** Được nói: "kế hoạch của arm X khớp Y % tập tệp/module mà lời giải mẫu đổi, trên 13 bài, [Khám phá], khoảng bootstrap …" khi có số; với hiệu theo bài, nói "hiệu … [khoảng], 13 bài, [Khám phá]", và khoảng chứa 0 thì viết "chưa phân biệt được". Cấm: gọi E9-lite là E9 hay báo "E9 đã chạy"; gọi chuẩn là chuẩn của người hay "bóc tách đúng"; nói một model "bóc tách tốt hơn" khi thiếu nhãn [Khám phá], n và khoảng bootstrap; suy ra độ khó của bài từ nhãn tầng; báo p-value. Tái lập và lệnh chạy: `bench/vs-claude/results/e9lite/README.md`; mã phân tích: `analysis/e9lite.mjs` (23 test trên `runs.jsonl` giả).
 
+### 6.7 E7b: đo lại CTO nghiệm thu trên bản mã hiện tại (BRIEF-26) — **đã đăng ký, chưa chạy**
+
+**Trạng thái: E7b đã đăng ký, chưa chạy.** Chưa có dữ liệu E7b; mọi chỗ kết quả dưới đây ghi `[chưa chạy]`. Thiết kế khóa ở `preregistration.md` §9, khối "Đăng ký trước E7b" (15/11/2026, BRIEF-26 K1); mục này chỉ tóm tắt, nếu lệch thì §9 là bản đúng. Bản đã đối chiếu: khối E7b (a)–(l) ở §9 và khóa `e7b.*` ở `facts.json`.
+
+**Vì sao đo lại.** Ở E7 (`results/e7-cto/report.md`, 64 mục lỗi lọt cổng và 64 mục đúng), CTO bằng Sonnet (R1) chặn nhầm nhiều và CTO bằng Opus (R2) chặn nhầm ít, nhưng 13 lượt R2 không đọc được vì chạm trần 6 lượt công cụ ở pha `accept`, nên recall của R2 ở E7 chưa đọc sạch. Từ lúc đo E7 (13/11/2026), mã đã đổi ở D15–D23 (lượt có `error` không dùng văn bản làm kết quả, vòng bổ sung, trần lượt theo pha, hết giờ khác hết hạn mức…). **Không so trực tiếp với E7 vì khác bản mã**; số E7 chỉ đặt cạnh E7b ở một bảng mô tả riêng, không có phép kiểm hay khoảng tin cậy chung.
+
+**Câu hỏi.** Trên bản mã hiện tại: (i) CTO bằng Sonnet có còn chặn nhầm nhiều không (nhãn mô tả: cận dưới Clopper–Pearson 95 % của tỉ lệ chặn nhầm R1b > 10 %); (ii) CTO bằng Opus với trần lượt `accept` cao hơn có giữ chặn nhầm thấp mà recall không thấp hơn Sonnet nhiều không.
+
+**Hai arm** (cùng 128 mục của `selected.json`, 64 lỗi và 64 đúng; cùng bản ghim):
+
+| Arm | Model pha `accept` | `phases.toolTurns.accept` | Kết quả |
+|---|---|---|---|
+| `R1b` | Sonnet | 6 (cấu hình hiện hành) | `[chưa chạy]` |
+| `R2b` | Opus | 16 (khóa trước) | `[chưa chạy]` |
+
+Trần 16 suy từ mốc thay thế (số lượt của R3 ở E7: phân vị 90 % bằng 8, lớn nhất bằng 11), vì E7 không ghi số lượt của R1/R2; lý do và giới hạn ở §9 (b). Hai arm khác nhau ở cả model lẫn trần, nên so R2b với R1b là so gói "Opus + trần 16" với gói "Sonnet + trần hiện hành", không tách tác động riêng của model. **Cách chạy:** hai tiến trình song song, cùng seed thứ tự `20261104|e7|order`, mỗi tiến trình một tệp cấu hình; đây **không** phải chạy xen kẽ (§9 (c)). Không chạy lại R3 (Claude Code đơn): không giả thuyết nào của E7b dùng R3 (§9, mục "Có chạy lại R3").
+
+**Thước đo.** Recall trên 64 mục lỗi; tỉ lệ chặn nhầm trên 64 mục đúng; số lượt không đọc được (`unread`) và chạm trần (`capped`, hoặc `capped (suy ra)`) theo arm; chi phí USD theo `pricing.mjs`. Youden J chỉ mô tả. Lượt `unread` tính là không chặn (cách chính), kèm hai độ nhạy: tính là chặn, và bỏ cặp.
+
+**Phép kiểm khóa trước.** McNemar chính xác ghép cặp theo mục, tách hai phép (P1 recall, P2 chặn nhầm), Holm hai phép; bootstrap hai tầng theo bài (B = 4000, hạt giống 20261104). Nhãn kết luận chỉ có "khác nhau" hoặc "chưa phân biệt được" (không phải "tương đương"). Kết quả P1, P2: `[chưa chạy]`.
+
+**Ngưỡng diễn giải khóa trước** (§9 (h), thứ tự D → E → A → B → C → F): đề xuất đổi model CTO chỉ ở nhánh A, khi đồng thời chặn nhầm R2b ≤ 6/64, recall R2b ≥ 58/64 và R1b − R2b ≤ 6 mục lỗi, P2 mang nhãn "khác nhau" theo chiều R2b < R1b, và đứng được ở cả ba cách tính `unread`. Nếu `capped` của R2b > 6/128 (nhánh D) thì recall chưa đọc sạch và không đề xuất đổi. Nhánh đạt: `[chưa chạy]`. Chi phí báo bên cạnh, không là tiêu chí.
+
+**Giới hạn đã biết trước khi chạy.** Mẫu nhỏ (64 mỗi phía); lỗi cài bằng máy, chỉ lọt `npm test`; 8 bài, một nhà cung cấp, bàn giao trung tính; cùng 128 mục với E7 nên ngưỡng có thể chịu ảnh hưởng ngầm từ số E7; mô hình có thể trôi giữa 13/11 và lúc chạy (§9 (l)). Câu cấm của §9 (k) áp dụng cho mục này, kể cả sau khi có số.
+
 ## 7. Thảo luận
 
 **Đọc kết quả chính.** Nghiên cứu đăng ký trước cho câu trả lời âm tính rõ hơn vòng thăm dò. Trên T5, cả làn đơn B7 lẫn làn nhanh B6 đều tốn hơn Claude Code một mình bằng Sonnet ở mức nằm ngoài biên ±15 %. Về token, B7 là 2,498 [2,02; 3,18] và B6 là 3,921 [3,49; 4,43]; về thời gian, B7 là 2,566 [2,09; 3,25] và B6 là 4,047 [3,45; 4,76] (Bảng 9). Điểm chạm trần nên bộ đo không phát hiện được lợi thế chất lượng nào để bù cho chi phí (Bảng 8, Bảng 10). Mục 7.1–7.2 rút gọn phần RQ4–RQ5 của bản trước. Mục 7.3 đặt kết quả cạnh các công bố đã có, gồm Anthropic, Cognition, MAST, Debate or Vote, CAID và TeamBench. Mục 7.4 nêu hàm ý thiết kế.
