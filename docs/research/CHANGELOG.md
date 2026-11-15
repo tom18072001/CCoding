@@ -5,6 +5,67 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 20c (T-20261115-191403-1db, BRIEF-27c, 15/11/2026): đóng 4 minor của phản biện 27b
+
+Dữ liệu: Nội bộ. Hạng mục K1 (S1, `@data-scientist`). Chỉ sửa `paper.md`, `facts.json`, `CHANGELOG.md`; không đổi số nào của `report.md`; không gọi LLM. Số dòng là sau sửa (số dòng không đổi vì mỗi sửa nằm trong dòng cũ).
+
+| # | Minor | Sửa ở |
+|---|---|---|
+| 1 | Căn cứ "16 lượt (R1 8, R2 8)" dẫn `preregistration.md` dòng 1169 và 1171 (đã mở: 1169 nêu 16 lượt R1 8, R2 8; 1171 nêu cách tính chính dùng lượt chạy lại; luật phân loại lại `infra` ở dòng 1170); bỏ dòng 1606 | `paper.md:924` |
+| 2 | Cặp recall 61/64 và 60/64 chỉ nêu một lần, kèm nhãn P1 "chưa phân biệt được" | `paper.md:959` |
+| 3 | Ghi rõ gói "Sonnet (R1b, trần 6)" ở chỗ nói cận dưới 11,3 % của chặn nhầm R1b | `paper.md:955` |
+| 4 | Thêm khóa `e7b-t5logq-r2b` (0/9; `report.md:71`) và `e7b-p2-r1b-only-t5logq` (6 trong 10; suy từ `report.md:71`, `:37`, ghi rõ trong `reason`) | `facts.json:2005–2006` |
+
+Dẫn nguồn câu "bootstrap lấy mẫu theo 8 bài": `preregistration.md` §9 E7b (g) dòng 1587 và QH18 dòng 1750; hàm `bootDiff` ở `bench/vs-claude/e7/analyze.mjs:60`, nhập ở `e7b-analyze.mjs:19`, gọi ở `:185` (`paper.md:915`, `:960`).
+
+`node docs/research/scripts/consistency-check.mjs`: "Đạt: 62 tệp, không lệch số liệu."
+
+## Vòng 4, gói 20b (T-20261115-183600-9c6, BRIEF-27b, 15/11/2026): sửa 8 minor của phản biện K4 về E7b, lưu biên bản
+
+Dữ liệu: Nội bộ. Hạng mục K1 (S1, `@academic-writer`). Không sửa `preregistration.md`, `preregistration.lock.json`, `e7b-analyze.mjs`, `bench/`, `src/`; không gọi LLM; **không đổi số nào của `report.md`** (số dời chỗ chỉ lấy từ `report.md`, `report.json`, `e7b-verify.md`).
+
+| # | Minor | Sửa ở |
+|---|---|---|
+| 1 | "Hai lượt E7 bị phân loại lại" → 16 lượt (R1 8, R2 8); cột E7 dùng lượt chạy lại, chỉ không dùng bản ghi ban đầu | `paper.md:924` |
+| 2 | Mức bằng chứng vai CTO thống nhất là **Vừa** (thang `model-per-role.md:9`); bỏ "Thấp" làm mức bằng chứng; mức chắc chắn của câu trả lời ghi riêng | `paper.md:774`, `:953`; `model-per-role.md:21` |
+| 3 | Câu "chênh lệch chính nằm ở chặn nhầm" → mô tả số quan sát được kèm nhãn P1 và P2 "chưa kết luận" | `paper.md:959` |
+| 4 | 6/10 cặp "chỉ R1b chặn" ở `t5-logq`; bootstrap theo 8 bài; ưu tiên tăng số bài; bỏ `t5-logq` chỉ [Khám phá], đăng ký riêng | `paper.md:915`, `:960`; `model-per-role.md:76` |
+| 5 | Trả lời trực tiếp (a)(i) và (a)(ii) (`preregistration.md:1521–1523`), cả hai là câu trả lời mô tả; (ii) nói về gói "Opus + trần 16" | `paper.md:954–957` |
+| 6 | `preregistration.md:1804` ghi khối "Sai lệch thực thi và phân tích E7b" là "chưa vào lock", nhưng khối **đã được khóa** ở BRIEF-27 S4 (sha `7d114203…`). Khối đã khóa không sửa được nên giữ nguyên, ghi ở đây | CHANGELOG |
+| 7 | Nêu ba khoảng còn mở của `e7b-verify.md:105–106` | `paper.md:934` |
+| 8 | Cách suy "13 − 3 = 10" viết lại: R1b chặn 13 mục đúng, cả hai chặn 3, chỉ R1b chặn 10 | `analysis/e7b-verify.md:38` |
+
+- **Lưu biên bản K4:** tạo `context/e7b-peer-review-2026-11-15.md` (tên mới theo BRIEF-27b, thay cho `k4-e7b-review-2026-11-15.md` ở `NHIEM-VU-TRUOC.md:136`). Bản gốc `.ccoding/T-20261115-172258-bab/outputs/research-S5-peer-reviewer.md` **không đọc được** trong worktree nên tệp chỉ ghi kết luận "Sửa nhỏ (0 blocker, 0 major, 8 minor)" và 8 minor như BRIEF-27b, nhãn "chưa phải nguyên văn, chờ chép từ bản gốc". Việc còn mở.
+- **Chưa kiểm bằng lệnh ở vai này:** `npm run lint`, `npm run test:research`, `node docs/research/scripts/consistency-check.mjs`.
+- **`facts.json`:** không đổi (không có số nào đổi hoặc dời chỗ trong `numbers`; đã tìm các câu bị sửa, không có mẫu khớp).
+
+## Vòng 4, gói 20 (T-20261115-172258-bab, BRIEF-27, 15/11/2026): E7b điền vào bài (§6.7), nhánh (h) = F, trả lời câu hỏi vai CTO, v0.8.3
+
+Dữ liệu: Nội bộ. Hạng mục K3 (S3, `@academic-writer`). Không sửa `src/`, mã `bench/`, `preregistration.md`, `e7b-analyze.mjs`, `run/`, `calls-accept/`; không chạy lại E7b, không gọi LLM. Số chép nguyên văn từ `bench/vs-claude/results/e7b-cto/report.md` (sha256 `1ea7deea…694e`, `report-provenance.md`); không tính lại.
+
+- **`paper/paper.md` §6.7 (v0.8.3):** đổi tiêu đề và bỏ "đã đăng ký, chưa chạy"; thay mọi `[chưa chạy]` bằng số của `report.md` (Bảng E7b-1 recall, chặn nhầm, CI Clopper–Pearson, unread, capped, USD; E7b-2 lượt `accept`; E7b-3 mười hàng phép kiểm với p thô, p Holm, CI bootstrap và nhãn); nhánh (h) là F ở cả năm cách tính, ghi như `e7b-verify.md` mục 4; bảng so với E7 ghi "KHÁC BẢN MÃ", không so như cùng đợt; bảy sai lệch của khối BRIEF-27 K2; đe dọa §9 (l) còn áp dụng sau Phụ lục (2), mục (P6) và sai lệch mới; câu trả lời "model nào hợp với vai CTO". Đầu tệp thêm khối "Bản thảo v0.8.3"; dòng "Model theo vai" ở §6.5 cập nhật câu về CTO; Phụ lục A thêm R35. §8 và §9 **không chạm** (không có câu nào ở đó về model hay kết luận cho vai CTO; đã tìm "E7b" và câu "đo lại R2"). **Không số cũ nào đổi.**
+- **`analysis/decisions/model-per-role.md`:** dòng CTO ở mục 1 (giữ Sonnet, không đổi; mức "Thấp"; thí nghiệm tiếp theo: tách model khỏi trần); thêm mục 5 "Cập nhật BRIEF-27 (E7b)" (nhánh F, mức chắc chắn, việc tiếp theo). Giữ câu phân biệt CTO (nghiệm thu) với trưởng phòng ở khâu `plan` (đầu tệp, và mục 5 dòng 64).
+- **`facts.json`:** khóa `e7b.*` (kết quả, nhánh, CI, p, sha256 của `report.md` và `report.json`) và 59 mục `numbers` có id `e7b-*`, pattern khớp chữ của `report.md` (bảng của bài giữ đúng định dạng script in, dấu trừ ASCII). Mục `e7b.status` đổi sang "đã chạy".
+- **Chưa kiểm bằng lệnh ở vai này** (không có quyền chạy): `node docs/research/scripts/consistency-check.mjs`, `npm run lint`, `npm run test:research` thuộc S4.
+
+**Danh sách mọi câu về model hoặc kết luận cho vai CTO (để K4 đối chiếu với nhánh (h) = F).** Số dòng tính tại bản giao.
+
+| Tệp:dòng | Câu (rút gọn) | Ghi chú |
+|---|---|---|
+| `paper/paper.md:3` | "§6.7 … nhánh (h) là F … không đề xuất đổi model" (khối v0.8.3) | Theo nhánh F |
+| `paper/paper.md:774` | "giữ sonnet cho … CTO (R1) … E7b … nhánh F … không đề xuất đổi model CTO, mức chắc chắn thấp" (§6.5, "Model theo vai") | Sửa câu cũ "cho tới khi đo lại R2…" |
+| `paper/paper.md:845` | "E7b không đưa ra đề xuất đổi model CTO" (BLUF) | Theo nhánh F |
+| `paper/paper.md:860` | "so R2b với R1b là so gói Opus + trần 16 với gói Sonnet + trần hiện hành…" | Câu thiết kế cũ, giữ |
+| `paper/paper.md:870` | "đề xuất đổi model CTO chỉ ở nhánh A … Nhánh đạt: F" | Câu thiết kế cũ + nhánh đạt |
+| `paper/paper.md:907` | "tả số của hai gói …, không phải hiệu của riêng model" | Theo QH36 |
+| `paper/paper.md:915` | "**Kết luận nhánh: F.**" và đoạn sau (không đủ để đề xuất đổi) | Theo `report.md` |
+| `paper/paper.md:937` | "Trần bất cân xứng: … mọi câu về R2b nói 'gói Opus + trần 16'" | Đe dọa |
+| `paper/paper.md:952–957` | Trả lời "logic nghiệm thu và model nào hợp với vai CTO": chưa chọn được model; giữ cấu hình hiện hành vì không nhánh nào cho phép đổi; việc tiếp theo (i)–(iii); phân biệt CTO với trưởng phòng | Mức chắc chắn thấp |
+| `analysis/decisions/model-per-role.md:21` | "Giữ sonnet (R1); không đổi (E7b … nhánh F …)", mức "Thấp", thí nghiệm tiếp theo | Dòng CTO ở §1 |
+| `analysis/decisions/model-per-role.md:62–78` | Mục 5: trả lời, nhánh F, điều số cho thấy, tác động lên cấu hình, việc tiếp theo, "không được rút ra" | Theo nhánh F |
+
+Các dòng này không dùng "đã chứng minh", "xác nhận", "tái lập", "lặp lại" về E7b; không viết hiệu của riêng model; không "nên đổi model" (chỉ nhắc nhánh A để nói điều kiện chưa thỏa).
+
 ## Vòng 4, gói 19d (T-20261115-130950-674, BRIEF-26d, 15/11/2026): chỗ dẫn mã theo bản có D24, nhãn QH11, ca P5 chiều ngược
 
 Không đổi luật hay phép tính; không sửa `preregistration.md`, `preregistration.lock.json`, `src/`, mã `bench/`; không gọi LLM; không có số kết quả. Dữ liệu: Nội bộ. Diff của `e7b-analyze.mjs` chỉ chạm chú thích và chuỗi in của QH11.

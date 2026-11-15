@@ -1,0 +1,700 @@
+{
+ "status": "ok",
+ "nSelected": 128,
+ "prepExcluded": [],
+ "planned": {
+  "faulty": 64,
+  "clean": 64
+ },
+ "per": {
+  "R1b": {
+   "arm": "R1b",
+   "done": 128,
+   "unread": 0,
+   "capped": 0,
+   "cappedBasis": "ghi",
+   "missing": 0,
+   "timeoutMissing": {
+    "total": 0,
+    "byCond": [
+     0,
+     0,
+     0
+    ],
+    "rowsByCond": [
+     0,
+     0,
+     0
+    ]
+   },
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "maxTurns": [
+    6
+   ],
+   "unread_faulty": 0,
+   "unread_clean": 0,
+   "acceptTurns": {
+    "n": 128,
+    "nNull": 0,
+    "sum": 569,
+    "min": 2,
+    "median": 4,
+    "max": 10
+   },
+   "acceptToolCalls": {
+    "n": 128,
+    "nNull": 0,
+    "sum": 441,
+    "min": 1,
+    "median": 3,
+    "max": 9
+   },
+   "usd": 12.069358000000003,
+   "usdMean": 0.09429185937500002,
+   "wtokMean": 38904.703125,
+   "wallSecMean": 29.114093750000002
+  },
+  "R2b": {
+   "arm": "R2b",
+   "done": 128,
+   "unread": 1,
+   "capped": 0,
+   "cappedBasis": "ghi",
+   "missing": 0,
+   "timeoutMissing": {
+    "total": 0,
+    "byCond": [
+     0,
+     0,
+     0
+    ],
+    "rowsByCond": [
+     0,
+     0,
+     0
+    ]
+   },
+   "models": [
+    "claude-opus-5-5"
+   ],
+   "maxTurns": [
+    16
+   ],
+   "unread_faulty": 1,
+   "unread_clean": 0,
+   "acceptTurns": {
+    "n": 128,
+    "nNull": 0,
+    "sum": 741,
+    "min": 3,
+    "median": 5.5,
+    "max": 17
+   },
+   "acceptToolCalls": {
+    "n": 128,
+    "nNull": 0,
+    "sum": 613,
+    "min": 2,
+    "median": 4.5,
+    "max": 16
+   },
+   "usd": 33.07899139999999,
+   "usdMean": 0.25842962031249994,
+   "wtokMean": 55635.15625,
+   "wallSecMean": 55.418968750000005
+  }
+ },
+ "miss": {
+  "R1b": 0,
+  "R2b": 0
+ },
+ "byMode": {
+  "chính": {
+   "mode": "chính",
+   "faulty": {
+    "n": 64,
+    "planned": 64,
+    "R1b": {
+     "k": 61,
+     "rate": 0.953125,
+     "cp": [
+      0.8690642627585943,
+      0.9902269250455435
+     ]
+    },
+    "R2b": {
+     "k": 60,
+     "rate": 0.9375,
+     "cp": [
+      0.8476365265773045,
+      0.9827099726189448
+     ]
+    },
+    "aOnly": 3,
+    "bOnly": 2,
+    "p": 0.9999999999999999,
+    "diff": -0.015625,
+    "diffBoot": [
+     -0.10126582278481013,
+     0.0847457627118644
+    ],
+    "pAdj": 0.9999999999999999,
+    "label": "chưa phân biệt được"
+   },
+   "clean": {
+    "n": 64,
+    "planned": 64,
+    "R1b": {
+     "k": 13,
+     "rate": 0.203125,
+     "cp": [
+      0.11282885947083993,
+      0.32226430670804007
+     ]
+    },
+    "R2b": {
+     "k": 4,
+     "rate": 0.0625,
+     "cp": [
+      0.017290027381055284,
+      0.1523634734226968
+     ]
+    },
+    "aOnly": 10,
+    "bOnly": 1,
+    "p": 0.01171875,
+    "diff": -0.140625,
+    "diffBoot": [
+     -0.34782608695652173,
+     0.02857142857142857
+    ],
+    "pAdj": 0.0234375,
+    "label": "chưa kết luận"
+   },
+   "youden": {
+    "R1b": 0.75,
+    "R2b": 0.875
+   },
+   "branch": {
+    "id": "F",
+    "text": "F. Chưa kết luận (thỏa (1), (2) nhưng không thỏa (3) hoặc (4))",
+    "thr": {
+     "maxFp": 6,
+     "minRecall": 58,
+     "maxDrop": 6
+    }
+   }
+  },
+  "S1": {
+   "mode": "S1",
+   "faulty": {
+    "n": 64,
+    "planned": 64,
+    "R1b": {
+     "k": 61,
+     "rate": 0.953125,
+     "cp": [
+      0.8690642627585943,
+      0.9902269250455435
+     ]
+    },
+    "R2b": {
+     "k": 61,
+     "rate": 0.953125,
+     "cp": [
+      0.8690642627585943,
+      0.9902269250455435
+     ]
+    },
+    "aOnly": 2,
+    "bOnly": 2,
+    "p": 1,
+    "diff": 0,
+    "diffBoot": [
+     -0.0821917808219178,
+     0.09230769230769231
+    ],
+    "pAdj": 1,
+    "label": "chưa phân biệt được"
+   },
+   "clean": {
+    "n": 64,
+    "planned": 64,
+    "R1b": {
+     "k": 13,
+     "rate": 0.203125,
+     "cp": [
+      0.11282885947083993,
+      0.32226430670804007
+     ]
+    },
+    "R2b": {
+     "k": 4,
+     "rate": 0.0625,
+     "cp": [
+      0.017290027381055284,
+      0.1523634734226968
+     ]
+    },
+    "aOnly": 10,
+    "bOnly": 1,
+    "p": 0.01171875,
+    "diff": -0.140625,
+    "diffBoot": [
+     -0.34782608695652173,
+     0.02857142857142857
+    ],
+    "pAdj": 0.0234375,
+    "label": "chưa kết luận"
+   },
+   "youden": {
+    "R1b": 0.75,
+    "R2b": 0.890625
+   },
+   "branch": {
+    "id": "F",
+    "text": "F. Chưa kết luận (thỏa (1), (2) nhưng không thỏa (3) hoặc (4))",
+    "thr": {
+     "maxFp": 6,
+     "minRecall": 58,
+     "maxDrop": 6
+    }
+   }
+  },
+  "S2": {
+   "mode": "S2",
+   "faulty": {
+    "n": 63,
+    "planned": 64,
+    "R1b": {
+     "k": 60,
+     "rate": 0.9523809523809523,
+     "cp": [
+      0.8670815992518501,
+      0.9900700488492666
+     ]
+    },
+    "R2b": {
+     "k": 60,
+     "rate": 0.9523809523809523,
+     "cp": [
+      0.8670815992518501,
+      0.9900700488492666
+     ]
+    },
+    "aOnly": 2,
+    "bOnly": 2,
+    "p": 1,
+    "diff": 0,
+    "diffBoot": [
+     -0.08333333333333333,
+     0.09523809523809523
+    ],
+    "pAdj": 1,
+    "label": "chưa phân biệt được"
+   },
+   "clean": {
+    "n": 64,
+    "planned": 64,
+    "R1b": {
+     "k": 13,
+     "rate": 0.203125,
+     "cp": [
+      0.11282885947083993,
+      0.32226430670804007
+     ]
+    },
+    "R2b": {
+     "k": 4,
+     "rate": 0.0625,
+     "cp": [
+      0.017290027381055284,
+      0.1523634734226968
+     ]
+    },
+    "aOnly": 10,
+    "bOnly": 1,
+    "p": 0.01171875,
+    "diff": -0.140625,
+    "diffBoot": [
+     -0.34782608695652173,
+     0.02857142857142857
+    ],
+    "pAdj": 0.0234375,
+    "label": "chưa kết luận"
+   },
+   "youden": {
+    "R1b": 0.7492559523809523,
+    "R2b": 0.8898809523809523
+   },
+   "branch": {
+    "id": "F",
+    "text": "F. Chưa kết luận (thỏa (1), (2) nhưng không thỏa (3) hoặc (4))",
+    "thr": {
+     "maxFp": 6,
+     "minRecall": 57,
+     "maxDrop": 6
+    }
+   }
+  },
+  "S3a": {
+   "mode": "S3a",
+   "faulty": {
+    "n": 64,
+    "planned": 64,
+    "R1b": {
+     "k": 61,
+     "rate": 0.953125,
+     "cp": [
+      0.8690642627585943,
+      0.9902269250455435
+     ]
+    },
+    "R2b": {
+     "k": 60,
+     "rate": 0.9375,
+     "cp": [
+      0.8476365265773045,
+      0.9827099726189448
+     ]
+    },
+    "aOnly": 3,
+    "bOnly": 2,
+    "p": 0.9999999999999999,
+    "diff": -0.015625,
+    "diffBoot": [
+     -0.10126582278481013,
+     0.0847457627118644
+    ],
+    "pAdj": 0.9999999999999999,
+    "label": "chưa phân biệt được"
+   },
+   "clean": {
+    "n": 64,
+    "planned": 64,
+    "R1b": {
+     "k": 13,
+     "rate": 0.203125,
+     "cp": [
+      0.11282885947083993,
+      0.32226430670804007
+     ]
+    },
+    "R2b": {
+     "k": 4,
+     "rate": 0.0625,
+     "cp": [
+      0.017290027381055284,
+      0.1523634734226968
+     ]
+    },
+    "aOnly": 10,
+    "bOnly": 1,
+    "p": 0.01171875,
+    "diff": -0.140625,
+    "diffBoot": [
+     -0.34782608695652173,
+     0.02857142857142857
+    ],
+    "pAdj": 0.0234375,
+    "label": "chưa kết luận"
+   },
+   "youden": {
+    "R1b": 0.75,
+    "R2b": 0.875
+   },
+   "branch": {
+    "id": "F",
+    "text": "F. Chưa kết luận (thỏa (1), (2) nhưng không thỏa (3) hoặc (4))",
+    "thr": {
+     "maxFp": 6,
+     "minRecall": 58,
+     "maxDrop": 6
+    }
+   }
+  },
+  "S3b": {
+   "mode": "S3b",
+   "faulty": {
+    "n": 64,
+    "planned": 64,
+    "R1b": {
+     "k": 61,
+     "rate": 0.953125,
+     "cp": [
+      0.8690642627585943,
+      0.9902269250455435
+     ]
+    },
+    "R2b": {
+     "k": 61,
+     "rate": 0.953125,
+     "cp": [
+      0.8690642627585943,
+      0.9902269250455435
+     ]
+    },
+    "aOnly": 2,
+    "bOnly": 2,
+    "p": 1,
+    "diff": 0,
+    "diffBoot": [
+     -0.0821917808219178,
+     0.09230769230769231
+    ],
+    "pAdj": 1,
+    "label": "chưa phân biệt được"
+   },
+   "clean": {
+    "n": 64,
+    "planned": 64,
+    "R1b": {
+     "k": 13,
+     "rate": 0.203125,
+     "cp": [
+      0.11282885947083993,
+      0.32226430670804007
+     ]
+    },
+    "R2b": {
+     "k": 4,
+     "rate": 0.0625,
+     "cp": [
+      0.017290027381055284,
+      0.1523634734226968
+     ]
+    },
+    "aOnly": 10,
+    "bOnly": 1,
+    "p": 0.01171875,
+    "diff": -0.140625,
+    "diffBoot": [
+     -0.34782608695652173,
+     0.02857142857142857
+    ],
+    "pAdj": 0.0234375,
+    "label": "chưa kết luận"
+   },
+   "youden": {
+    "R1b": 0.75,
+    "R2b": 0.890625
+   },
+   "branch": {
+    "id": "F",
+    "text": "F. Chưa kết luận (thỏa (1), (2) nhưng không thỏa (3) hoặc (4))",
+    "thr": {
+     "maxFp": 6,
+     "minRecall": 58,
+     "maxDrop": 6
+    }
+   }
+  }
+ },
+ "decision": {
+  "branch": "F",
+  "stable": true,
+  "branches": {
+   "chính": "F",
+   "S1": "F",
+   "S2": "F",
+   "S3a": "F",
+   "S3b": "F"
+  },
+  "labels": {
+   "P1": "chưa phân biệt được",
+   "P2": "chưa kết luận"
+  },
+  "forcedBy": []
+ },
+ "perTask": [
+  {
+   "task": "c1-iis-ecs",
+   "R1b|faulty": {
+    "blocked": 1,
+    "n": 1,
+    "unread": 0
+   },
+   "R1b|clean": {
+    "blocked": 0,
+    "n": 1,
+    "unread": 0
+   },
+   "R2b|faulty": {
+    "blocked": 1,
+    "n": 1,
+    "unread": 0
+   },
+   "R2b|clean": {
+    "blocked": 0,
+    "n": 1,
+    "unread": 0
+   }
+  },
+  {
+   "task": "c2-burst-alert",
+   "R1b|faulty": {
+    "blocked": 10,
+    "n": 10,
+    "unread": 0
+   },
+   "R1b|clean": {
+    "blocked": 2,
+    "n": 10,
+    "unread": 0
+   },
+   "R2b|faulty": {
+    "blocked": 10,
+    "n": 10,
+    "unread": 0
+   },
+   "R2b|clean": {
+    "blocked": 0,
+    "n": 10,
+    "unread": 0
+   }
+  },
+  {
+   "task": "c3-shop-bugs",
+   "R1b|faulty": {
+    "blocked": 10,
+    "n": 10,
+    "unread": 0
+   },
+   "R1b|clean": {
+    "blocked": 0,
+    "n": 10,
+    "unread": 0
+   },
+   "R2b|faulty": {
+    "blocked": 9,
+    "n": 10,
+    "unread": 1
+   },
+   "R2b|clean": {
+    "blocked": 0,
+    "n": 10,
+    "unread": 0
+   }
+  },
+  {
+   "task": "c5-tickets-api",
+   "R1b|faulty": {
+    "blocked": 9,
+    "n": 10,
+    "unread": 0
+   },
+   "R1b|clean": {
+    "blocked": 0,
+    "n": 10,
+    "unread": 0
+   },
+   "R2b|faulty": {
+    "blocked": 10,
+    "n": 10,
+    "unread": 0
+   },
+   "R2b|clean": {
+    "blocked": 0,
+    "n": 10,
+    "unread": 0
+   }
+  },
+  {
+   "task": "t1-duration",
+   "R1b|faulty": {
+    "blocked": 3,
+    "n": 4,
+    "unread": 0
+   },
+   "R1b|clean": {
+    "blocked": 2,
+    "n": 4,
+    "unread": 0
+   },
+   "R2b|faulty": {
+    "blocked": 4,
+    "n": 4,
+    "unread": 0
+   },
+   "R2b|clean": {
+    "blocked": 3,
+    "n": 4,
+    "unread": 0
+   }
+  },
+  {
+   "task": "t2-orders",
+   "R1b|faulty": {
+    "blocked": 10,
+    "n": 10,
+    "unread": 0
+   },
+   "R1b|clean": {
+    "blocked": 1,
+    "n": 10,
+    "unread": 0
+   },
+   "R2b|faulty": {
+    "blocked": 9,
+    "n": 10,
+    "unread": 0
+   },
+   "R2b|clean": {
+    "blocked": 0,
+    "n": 10,
+    "unread": 0
+   }
+  },
+  {
+   "task": "t3-api",
+   "R1b|faulty": {
+    "blocked": 9,
+    "n": 10,
+    "unread": 0
+   },
+   "R1b|clean": {
+    "blocked": 2,
+    "n": 10,
+    "unread": 0
+   },
+   "R2b|faulty": {
+    "blocked": 8,
+    "n": 10,
+    "unread": 0
+   },
+   "R2b|clean": {
+    "blocked": 1,
+    "n": 10,
+    "unread": 0
+   }
+  },
+  {
+   "task": "t5-logq",
+   "R1b|faulty": {
+    "blocked": 9,
+    "n": 9,
+    "unread": 0
+   },
+   "R1b|clean": {
+    "blocked": 6,
+    "n": 9,
+    "unread": 0
+   },
+   "R2b|faulty": {
+    "blocked": 9,
+    "n": 9,
+    "unread": 0
+   },
+   "R2b|clean": {
+    "blocked": 0,
+    "n": 9,
+    "unread": 0
+   }
+  }
+ ],
+ "checks": [],
+ "usdRatio": 2.740741587083587,
+ "reconcile": []
+}
