@@ -128,6 +128,20 @@ Lựa chọn: **làm hai số khớp nhau** và ghi định nghĩa vào chính t
 
 `estimatePlanDetail` (`estimatePlan` vẫn trả tổng token): `work` = tổng token các hạng mục chưa xong (không gồm phần cố định `base` và review); `criticalPathEstimate` = chuỗi `dependsOn` tốn token nhất; `parallelism = work / criticalPathEstimate` (làm tròn 2 chữ số; 1 khi không có việc). Ghi vào `run.estimate` và log `plan.estimate`. Dùng để so với song song thực tế khi đo.
 
+## Độ đầy ngữ cảnh và số vòng (`turns`)
+
+Từ đợt D24 (T-20261115-103458-b90) lượt `claude-cli` ghi `turns` (số vòng model, `num_turns`) vào `calls.jsonl`; bản ghi không có số này thì không có khóa `turns`. `src/kpi.ts` (khoảng dòng 602–624) tính độ đầy ngữ cảnh của một lượt = prompt của một vòng / cửa sổ ngữ cảnh, với `prompt = input + cacheRead + cacheWrite`:
+
+1. Bản ghi có `maxPrompt` (prompt lớn nhất của một vòng, runtime báo): dùng `maxPrompt`.
+2. Không có `maxPrompt`, bản ghi có `turns > 1`: dùng **prompt chia số vòng** (prompt cộng dồn của mọi vòng chia `turns`).
+3. Không có `maxPrompt` lẫn `turns` (bản ghi trước D24): dùng **prompt cộng dồn** như một vòng — cách tính cũ, phóng đại độ đầy với `claude-cli` nhiều vòng vì cộng prompt lặp lại của từng vòng.
+
+Chia số vòng cho ra giá trị trung bình, thường thấp hơn vòng cuối (vòng cuối lớn nhất), nên là ước lượng thấp thay vì phóng đại.
+
+`avgTurns` / `maxTurns` (`tools` của từng agent) chỉ tính trên bản ghi có `turns > 1`; bản ghi một vòng, `turns = 0` hoặc không có `turns` không vào trung bình, nên không có bản ghi nào như vậy thì cả hai bằng 0. `avgTurns` làm tròn một chữ số thập phân.
+
+**Lưu ý khi so sánh:** độ đầy ngữ cảnh (`maxFillPct`, `nearLimit`, `overLimit`) của đợt trước D24 và sau D24 dùng hai cách tính khác nhau (cộng dồn so với chia số vòng). Khi so hai đợt phải nêu rõ điều này; không đọc mức giảm là cải thiện thật nếu chưa loại phần do đổi cách tính.
+
 ## Giới hạn đã biết
 
 - Nhận diện "khẳng định đã kiểm chứng" bằng biểu thức chính quy (VI/EN); có thể bỏ sót cách viết khác. Chỉnh `CLAIM_RE` trong `src/kpi.ts` sau khi xem dữ liệu thật. Phủ định ("không thể chạy", "chưa chạy", "cần chạy") chỉ xét trong cùng vế câu với khẳng định (tách theo `;`, `.`, "nhưng") — "14/14 đạt; cần chạy lại e2e" vẫn là khẳng định. Dạng "đã chạy <lệnh> … thành công" chỉ tính khi lệnh là lệnh kiểm chứng (test/typecheck/lint/build…), không tính `npm install`/`npm ci`.
