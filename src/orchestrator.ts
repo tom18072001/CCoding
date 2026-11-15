@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Config } from './config.js';
@@ -255,6 +256,8 @@ export class Orchestrator {
   readonly agentStates = new Map<string, AgentState>();
   readonly runner: 'process' | 'herdr';
   readonly alerts: Alert[] = [];
+  /** Mã phiên của tiến trình server này; ghi lên nhiệm vụ khi chuyển sang running/queued để phân biệt với phiên trước. */
+  readonly bootId: string = randomUUID();
   private controllers = new Map<string, AbortController>();
   private queue: string[] = [];
   private active = new Set<string>();
@@ -326,6 +329,7 @@ export class Orchestrator {
       // tiếp nối: không hạ nhãn dữ liệu so với nhiệm vụ trước
       classification: maxClass((project?.classification ?? config.dataProtection.defaultClassification) as Classification, prev?.classification),
       status: 'queued',
+      serverBootId: this.bootId,
       departments: [],
       runs: [],
       options: {
@@ -627,6 +631,7 @@ export class Orchestrator {
     // người dùng chủ động tiếp tục: bỏ điều kiện chờ các nhiệm vụ trước đã lỗi/hủy/không còn
     if (t.after?.some((a) => ['failed', 'cancelled', undefined].includes(store.get(a)?.status)) || this.unacceptedBefore(t).length) t.after = undefined;
     t.status = 'queued';
+    t.serverBootId = this.bootId;
     t.pause = undefined;
     // người bấm Tiếp tục → đếm lại; tự tiếp tục sau "không còn runtime" thì giữ để giãn/dừng hẳn
     if (!o.auto) t.noRuntimeStreak = undefined;
@@ -739,6 +744,7 @@ export class Orchestrator {
     }
     if (!picked.length) throw new Error(want ? 'Hạng mục chọn chưa xong hoặc không tồn tại' : 'Không có hạng mục đã xong để sửa');
     t.status = 'queued';
+    t.serverBootId = this.bootId;
     t.pause = undefined;
     t.error = undefined;
     t.attention = undefined;
@@ -1068,6 +1074,7 @@ export class Orchestrator {
     this.controllers.set(task.id, ctrl);
     this.pauseRequests.delete(task.id);
     task.status = 'running';
+    task.serverBootId = this.bootId;
     task.startedAt ??= nowIso();
     this.save(task, true);
     logs.write({ level: 'info', kind: 'task.start', msg: `${task.resumes ? 'Tiếp tục' : 'Bắt đầu'} ${task.id} (${task.mode})`, taskId: task.id, projectId: task.projectId });
@@ -4411,6 +4418,33 @@ export class Orchestrator {
   private checkStop(task: Task): void {
     this.checkAbort(task);
     if (this.pauseRequests.has(task.id)) throw new PauseSignal('manual', 'Tạm dừng theo yêu cầu');
+  }
+
+  /**
+   * Chỉ gọi từ đường khởi động server (không gọi trong constructor Store/Orchestrator để CLI không ghi đĩa).
+   * Nhiệm vụ running/queued của phiên trước (serverBootId khác hoặc thiếu) → paused/interrupted, ghi đĩa + nhật ký task.orphaned.
+   * Không tự chạy lại; người dùng bấm Tiếp tục (resume). Trả danh sách mã nhiệm vụ đã khôi phục.
+   */
+  recoverOrphans(bootId: string = this.bootId): string[] {
+    const { store, logs } = this.d;
+    const done: string[] = [];
+    const finish = (t: Task, info: { from: 'running' | 'queued'; returned: number }): void => {
+      t.updatedAt = nowIso();
+      store.put(t, true);
+      logs.write({ level: 'warn', kind: 'task.orphaned', msg: `Nhiệm vụ ${t.id} mồ côi sau khi server dừng (${info.from} → paused), ${info.returned} hạng mục về pending`, taskId: t.id, projectId: t.projectId, data: { taskId: t.id, from: info.from, returned: info.returned } });
+      this.emitTask(t);
+      done.push(t.id);
+    };
+    const pending = [...store.pendingOrphans];
+    store.pendingOrphans.clear();
+    for (const [id, info] of pending) {
+      const t = store.get(id);
+      if (t && t.status === 'paused' && t.pause?.reason === 'interrupted' && t.serverBootId !== bootId) finish(t, info);
+    }
+    for (const t of store.list()) {
+      if ((t.status === 'running' || t.status === 'queued') && t.serverBootId !== bootId) finish(t, store.markOrphan(t));
+    }
+    return done;
   }
 
   private save(task: Task, immediate = false): void {
