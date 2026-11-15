@@ -22,7 +22,19 @@ Mục này liệt kê lệnh chạy lint ở máy của bạn và trong CI.
 | `npm run lint -- --json` | In kết quả dạng JSON (`ok`, `total`, `errors`). |
 | `npm run lint -- --base <ref>` | Đặt mốc git cho rule cần so với mốc và cho kiểm "baseline chỉ giảm". |
 
-Mốc lấy theo thứ tự: `--base`, biến `LINT_BASE`, biến `CCODING_BASE_REF`. Không có mốc thì rule cần mốc báo lỗi, không bị bỏ qua. Chạy `--rule` với một rule không cần mốc thì không đòi mốc. Mốc không phân giải được thành commit cũng là lỗi.
+Mốc lấy theo thứ tự, nguồn đầu tiên có giá trị thì dùng:
+
+1. `--base <ref>`;
+2. biến `LINT_BASE`;
+3. biến `CCODING_BASE_REF`;
+4. `git merge-base HEAD @{upstream}` (nhánh upstream của nhánh hiện tại);
+5. `git merge-base HEAD origin/main`.
+
+Mốc tường minh (1–3) mà không phân giải được thành commit thì lỗi, không chuyển sang nguồn khác. Không tìm được mốc nào thì rule cần mốc (`agent-format-cochange`) vẫn báo lỗi, không bị bỏ qua, và thông báo liệt kê các nguồn đã thử. Chạy `--rule` với một rule không cần mốc thì không đòi mốc.
+
+Khi có mốc, bộ chạy in một dòng ở đầu đầu ra, vd. `Lint: mốc origin/main (nguồn: merge-base HEAD với origin/main (mặc định)) → abc1234` (sha ngắn của commit mốc). Chế độ `--json` thêm trường `baseSource`.
+
+**Danh sách tệp:** mọi rule dùng danh sách tệp gồm tệp đã track (`git ls-files`) và tệp chưa track nhưng không bị ignore (`git ls-files --others --exclude-standard`), nên tệp mới chưa `git add` vẫn bị quét. `ctx.changed()` cũng tính cả tệp chưa track. Rác chưa track không nằm trong `.gitignore` có thể làm các rule duyệt mọi tệp (`stray-files`, `secrets`, `machine-path`, `orphan-tests`) đỏ; đó là hành vi đúng, hãy xóa hoặc ignore tệp đó. Các script nghiên cứu do `lib/script-rule.mjs` gọi không tự liệt kê tệp bằng git nên không đổi.
 
 Trong CI (`.github/workflows/ci.yml`) bước đầu tính `LINT_BASE`. Pull request lấy `origin/<nhánh đích>`. Đẩy nhánh thường lấy `before` của sự kiện. Nhánh mới lấy `git merge-base origin/main HEAD`. Không tính được mốc thì bước đó đỏ. CI checkout `fetch-depth: 0` để có lịch sử.
 
@@ -109,7 +121,7 @@ Dự án đặt `strictChecks: true` thì mọi lệnh kiểm tra còn đỏ đ�
 
 ### 5.1. Chạy lint ngoài CCoding
 
-`npm run lint` chạy trần sẽ đỏ ở rule `agent-format-cochange`. Rule này có `needsBase`: cần một mốc git để so diff, mà ngoài CCoding không có `LINT_BASE` hay `CCODING_BASE_REF`. Thiếu mốc là lỗi có chủ đích (không âm thầm bỏ qua rule), và `test/lint-runner.test.ts` khóa hành vi này (thiếu mốc ⇒ exit 1). Vì vậy hãy đặt mốc khi chạy:
+Chạy tay `npm run lint` không cần biến môi trường: bộ chạy tự tìm mốc (`@{upstream}`, rồi `origin/main`). Chỉ khi nhánh không có upstream và kho không có `origin/main` thì `agent-format-cochange` đỏ (có `needsBase`, thiếu mốc là lỗi có chủ đích) kèm danh sách nguồn đã thử; khi đó đặt mốc tường minh:
 
 ```bash
 LINT_BASE=$(git merge-base main HEAD) npm run lint
@@ -119,7 +131,7 @@ LINT_BASE=$(git merge-base main HEAD) npm run lint
 $env:LINT_BASE = git merge-base main HEAD; npm run lint
 ```
 
-Hoặc truyền `--base <ref>` cho `node scripts/lint/run.mjs`. Kết quả mong đợi: "24 rule, 0 lỗi".
+Hoặc truyền `--base <ref>` cho `node scripts/lint/run.mjs`. `test/lint-runner.test.ts` khóa: có upstream ⇒ tự tìm được mốc; không có nguồn nào ⇒ exit 1; tệp vi phạm chưa track ⇒ exit 1. Kết quả mong đợi: "25 rule, 0 lỗi".
 
 ## 6. Bảo vệ nhánh GitHub
 
