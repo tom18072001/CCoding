@@ -331,3 +331,27 @@ Trước khi đo lại theo preregistration §9:
 1. `npm run build` (exit 0).
 2. Kiểm dist có bản vá: `grep -c "outside-root-read" dist/tools/shell-policy.js` và `grep -c "stripHeredocBodies" dist/tools/shell-policy.js` phải > 0.
 3. Ghi commit và thời điểm build vào RUNLOG của lần đo.
+
+## Diệt tiến trình theo tên (D29/K1, 16/11/2026)
+
+**Căn cứ:** sự cố 15/11/2026 khoảng 15:29 UTC — khi một agent chạy hai vòng lặp `npm test`, mọi `node.exe` trên máy văn phòng chết cùng lúc (server cổng 7430, tiến trình `claude` của lượt gọi, các lượt test); văn phòng dừng khoảng 70 phút. Kiểu chết khớp lệnh diệt theo tên ảnh. Không có nhật ký lệnh để xác nhận (lượt gọi chết cùng server), nên đây là suy luận, không phải bằng chứng trực tiếp.
+
+`DEFAULT_DENY` (`src/tools/workspace.ts`) chặn, qua `run_command` và hook `claude-guard` (cùng gọi `deniedReason`):
+
+| Nhóm | Ví dụ bị chặn |
+|---|---|
+| `taskkill` có `/IM` hoặc `/FI` (cả `-im`, có/không `.exe`) | `taskkill /F /IM node.exe` |
+| `Stop-Process -Name`/`-ProcessName` và tham số viết tắt (`-N`, `-Na`, `-Pro…`) | `Stop-Process -N node` |
+| `Get-Process`/`gps` … `\| Stop-Process`/`kill`/`spps` | `gps node \| kill` |
+| `killall`, `pkill` (ở vị trí lệnh) | `pkill -f node` |
+| `wmic process … delete`/`terminate`/`call terminate` | `wmic process where name="node.exe" delete` |
+| `kill -1` (cả `kill -9 -1`, `kill -s KILL -1`) | `kill -9 -1` |
+
+Vẫn được phép (diệt theo PID của tiến trình mình chạy): `taskkill /PID n /T /F`, `kill n`, `kill -9 n`, `Stop-Process -Id n`. Thông báo chặn nêu rõ điều này.
+
+**Giới hạn đã biết** (phân tích chuỗi lệnh, không phải ranh giới bảo mật):
+- `killall`/`pkill` chỉ bị chặn ở vị trí lệnh (đầu dòng hoặc sau `;`, `&`, `|`, `(`, dấu nháy, `sudo`); `grep -rn killall src` không bị chặn, nhưng `xargs pkill`, `env pkill` lọt.
+- `Get-Process -Id n | Stop-Process` (diệt theo PID qua pipeline) bị chặn nhầm.
+- `ps node | kill`, `node -e "process.kill(...)"`, `Invoke-CimMethod -MethodName Terminate`, biến/`eval` lọt.
+- `taskkill` khớp `/IM`/`/FI` ở bất kỳ đâu trong dòng, kể cả trong chuỗi `echo` (chặn nhầm lệnh vô hại).
+- Test (`test/deny-kill-by-name.test.ts`) chỉ kiểm regex qua `deniedReason` và `guardDecision`, không spawn lệnh diệt.
