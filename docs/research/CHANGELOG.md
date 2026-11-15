@@ -5,6 +5,15 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 19d (T-20261115-130950-674, BRIEF-26d, 15/11/2026): chỗ dẫn mã theo bản có D24, nhãn QH11, ca P5 chiều ngược
+
+Không đổi luật hay phép tính; không sửa `preregistration.md`, `preregistration.lock.json`, `src/`, mã `bench/`; không gọi LLM; không có số kết quả. Dữ liệu: Nội bộ. Diff của `e7b-analyze.mjs` chỉ chạm chú thích và chuỗi in của QH11.
+
+- **Chỗ dẫn mã:** `RUNBOOK.md` (mục 2, 3, 5, 6) và `e7b-analyze.mjs` (đầu tệp, `timeoutCond`) dẫn theo bản có D24, mỗi chỗ ghi tên ký hiệu: `runCto` `lib.mjs:215 → 230` (mặc định `waitTimeoutMs`) và `lib.mjs:262 → 277` (chuỗi `quá hạn chờ`, ghép `errorKind: error`); `phaseModels.accept` `lib.mjs:222 → 236-237`; `run.mjs` `--config` `:35 → 64`, thứ tự mục và `latinOrders` `:84-85 → 122-123`, `EXIT_RATE_LIMIT` `:130 → 173`, dòng in `:129 → 172`; `claude-cli.ts` `Hết thời gian (` `:384 → 387`. Không đổi: `ARM_DIR` `lib.mjs:26`, `ARMS` `lib.mjs:20-24`, `src/config.ts` `:380`, `:385`, `:467-471`. `preregistration.md` giữ nguyên chỗ dẫn ở thời điểm ghi.
+- **Chỗ dẫn bổ sung (RUNBOOK dòng 19, mục 2):** `api.ts:378` → `src/runtimes/api.ts:378` (`inputCap`, đọc `maxInputTokens`); `claude-cli.ts:276` → `src/runtimes/claude-cli.ts:279` (đẩy `--max-turns`); `claude-cli.ts:393` → `src/runtimes/claude-cli.ts:396` (`capped` chỉ là `'turns'`).
+- **QH11:** dòng `done` không xác nhận được in giá trị thật thay cho nhãn cố định `(thiếu)`: mảng rỗng in `[[]]`, không có trường in `[null]` (quy ước ghi trong chú thích `e7b-analyze.mjs`). Điều kiện, thông điệp kiểm và luật dừng giữ nguyên. Test mới cho cả hai ca (`e7b-analyze.test.mjs`).
+- **P5 chiều ngược:** thêm ca xuyên suốt qua `analyzeE7b`: CI bootstrap không chứa 0 (`[−0,667; −0,083]`, cách 0 là 0,083) mà McNemar không có ý nghĩa (11–3, p = 0,057, p Holm = 0,115) ⇒ nhãn "chưa kết luận", nhánh F, ở cả năm cách tính.
+
 ## Vòng 4, gói 19c (T-20261115-123731-90f, BRIEF-26c, 15/11/2026): đóng m1–m7 của phản biện 26b
 
 Chỉ sửa mã theo luật đã khóa; không sửa `preregistration.md`, `preregistration.lock.json`, `src/`, mã `bench/`; không gọi LLM; không có số kết quả. Dữ liệu: Nội bộ. Tên cờ và tên trường của D24 (`perf/vs-claude-loop`: `--arm-config`, `--selected`, `acceptCalls`, `acceptAuthSources`, `acceptTurnCapped`, `acceptToolCalls`, `acceptTurns`, `extraConfigSha256` theo arm) khớp với tên script đọc; không phải sửa.

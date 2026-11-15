@@ -10,24 +10,24 @@ Thiết kế khóa: `docs/research/preregistration.md` §9, khối "Đăng ký t
 
 | Câu hỏi | Kết luận | Căn cứ |
 |---|---|---|
-| Đặt trần `accept` khác nhau theo arm trong **một** tiến trình? | **Được, nhờ D24.** | `--arm-config R1=<tệp>,R2=<tệp>`: mỗi arm một app riêng nạp tệp của arm, dữ liệu app ở `<--ccoding-data>\w1` (R1) và `\w2` (R2) (`ARM_DIR` ở `bench/vs-claude/e7/lib.mjs:26`). Trước D24: một `--config` mỗi tiến trình (`run.mjs:35`), không đủ. |
+| Đặt trần `accept` khác nhau theo arm trong **một** tiến trình? | **Được, nhờ D24.** | `--arm-config R1=<tệp>,R2=<tệp>`: mỗi arm một app riêng nạp tệp của arm, dữ liệu app ở `<--ccoding-data>\w1` (R1) và `\w2` (R2) (`ARM_DIR` ở `bench/vs-claude/e7/lib.mjs:26`). Trước D24: một `--config` mỗi tiến trình (nhánh `--config` đặt `CCODING_CONFIG`, `bench/vs-claude/e7/run.mjs:64`), không đủ. |
 | Cấu hình thêm chỉ cần khóa `phases.toolTurns.accept`? | **Được.** | `src/config.ts:467-471`: cấu hình thêm được `deepMerge` lên mặc định; các khóa khác của `toolTurns` giữ nguyên. |
-| Model của arm nằm ở đâu? | **Không nằm trong tệp cấu hình.** | `ARMS` ở `lib.mjs:20-24`: R1 dùng model mặc định của CTO (Sonnet), R2 đặt `phaseModels.accept = 'opus'` (`lib.mjs:222`). Lượt thử (mục 4) kiểm `models` của từng arm (QH2). |
-| Danh sách chốt dùng chung, không chạy lại bước 1? | **Được, nhờ D24 `--selected`.** | `--selected <tệp>` dùng danh sách từ tệp, không chạy bước 1, không tạo `selected.json` trong `--out` (QH1). Thứ tự: `sample(sel.items, …, rng(`${doc.seed}|e7|order`))` (`run.mjs:84`), phụ thuộc `items.json` (seed `20261104`) và `selected.json`. `--items` bắt buộc trỏ `results\e7-cto\items.json`. |
+| Model của arm nằm ở đâu? | **Không nằm trong tệp cấu hình.** | `ARMS` ở `bench/vs-claude/e7/lib.mjs:20-24`: R1 dùng model mặc định của CTO (Sonnet), R2 đặt `phaseModels.accept = 'opus'` (`runCto`, `lib.mjs:236-237`). Lượt thử (mục 4) kiểm `models` của từng arm (QH2). |
+| Danh sách chốt dùng chung, không chạy lại bước 1? | **Được, nhờ D24 `--selected`.** | `--selected <tệp>` dùng danh sách từ tệp, không chạy bước 1, không tạo `selected.json` trong `--out` (QH1). Thứ tự: `sample(sel.items, …, rng(`${doc.seed}|e7|order`))` (`bench/vs-claude/e7/run.mjs:122`, biến `order`), phụ thuộc `items.json` (seed `20261104`) và `selected.json`. `--items` bắt buộc trỏ `results\e7-cto\items.json`. |
 | Có phải sửa `src/` hoặc `bench/` ở gói này? | **Không.** | Phần mã là việc của D24 (mục 7). |
 
-**Đã đính chính ở Phụ lục (2) (c):** trần token công cụ `toolInputBudget` không áp cho E7b (chỉ runtime `api` đọc, `api.ts:378`; `claude-cli` chỉ nhận `--max-turns`, `claude-cli.ts:276`, và `capped` chỉ là `'turns'`, `claude-cli.ts:393`). Vì thế `acceptTurnCapped = true` ở E7b là chạm trần **lượt** (QH10); lượt thử không cần dò trần token.
+**Đã đính chính ở Phụ lục (2) (c):** trần token công cụ `toolInputBudget` không áp cho E7b (chỉ runtime `api` đọc, `inputCap` đọc `maxInputTokens`, `src/runtimes/api.ts:378`; `claude-cli` chỉ nhận `--max-turns`, `src/runtimes/claude-cli.ts:279`, và `capped` chỉ là `'turns'`, `src/runtimes/claude-cli.ts:396`). Vì thế `acceptTurnCapped = true` ở E7b là chạm trần **lượt** (QH10); lượt thử không cần dò trần token.
 
 `--ccoding-data` mặc định nằm trong `--work` (thư mục tạm). Luôn đặt tường minh như dưới đây và **giữ** nó đến hết phân tích: nguồn chính của kiểm hạ tầng là các trường trên dòng `runs.jsonl`; `calls.jsonl` trong `w1`/`w2` chỉ để đối chiếu (Phụ lục (2) (b)).
 
 ## 2. Tệp cấu hình và SHA256SUMS (QH2, QH4, QH6)
 
 - `config-R1b.json`: `{ "defaults": { "acceptFollowupRounds": 0 }, "phases": { "toolTurns": { "accept": 6 } } }`. `config-R2b.json`: cùng cấu trúc, `accept` = **16**.
-- `acceptFollowupRounds: 0` ở **cả hai** tệp (QH4): tắt vòng bổ sung sau nghiệm thu (mặc định 1, `src/config.ts:380`). E7b đo kết luận nghiệm thu **đầu tiên**, tức đúng một lượt `accept` mỗi mục. Kiểm bằng dữ liệu: dòng `done` phải có `acceptCalls` = 1 (QH5); khác 1 là lỗi kiểm. Thiếu khóa này trong tệp thì dừng, không chạy.
+- `acceptFollowupRounds: 0` ở **cả hai** tệp (QH4): tắt vòng bổ sung sau nghiệm thu (mặc định 1, `acceptFollowupRounds`, `src/config.ts:380`). E7b đo kết luận nghiệm thu **đầu tiên**, tức đúng một lượt `accept` mỗi mục. Kiểm bằng dữ liệu: dòng `done` phải có `acceptCalls` = 1 (QH5); khác 1 là lỗi kiểm. Thiếu khóa này trong tệp thì dừng, không chạy.
 - **Hai tệp chỉ khác đúng giá trị `phases.toolTurns.accept`** (6 so với 16). Không có khóa nào khác, không có khóa API, token hay đường dẫn máy.
 - `SHA256SUMS` (tính trên blob git, LF): R1b `91cc507d…`, R2b `3f62d742…`. Kiểm bằng `Get-FileHash -Algorithm SHA256` ở mục 3. Tệp JSON đã commit với LF; nếu checkout trên Windows ra CRLF thì sha lệch: dùng `git show HEAD:<đường dẫn>` để đối chiếu.
 - Cấu hình chồng lên `ccoding.config.json` và `ccoding.local.json` của bản ghim (giống server bench 3e: chỉ `claude-cli`, chặn web). Runner ghi `localConfigSha256` và `extraConfigSha256` ở mỗi dòng; `extraConfigSha256` là sha256 tệp của **chính arm** (QH6).
-- Trần 6 = mặc định hiện hành (`src/config.ts:385`); R1b vẫn đặt tường minh để `extraConfigSha256` của hai arm khác nhau và truy được.
+- Trần 6 = mặc định hiện hành (`toolTurns.accept`, `src/config.ts:385`); R1b vẫn đặt tường minh để `extraConfigSha256` của hai arm khác nhau và truy được.
 
 ## 3. Chuẩn bị (không gọi LLM)
 
@@ -82,7 +82,7 @@ Một lỗi `LỖI` bất kỳ → dừng, ghi khối "Sai lệch", không chạ
 
 ## 5. Chạy chính: MỘT tiến trình (QH3)
 
-Một lệnh, hai arm xen kẽ theo bảng Latin, thứ tự mục theo `rng("20261104|e7|order")`. Ghi giờ bắt đầu vào RUNLOG. Không đặt `--timeout` (chỉ áp cho arm R3, không chạy ở đây); R1/R2 dùng `waitTimeoutMs` là giá trị mặc định của `runCto` (90 phút, `bench/vs-claude/e7/lib.mjs:215`; `run.mjs` không truyền giá trị này) và `timeoutMsByPhase` của cấu hình.
+Một lệnh, hai arm xen kẽ theo bảng Latin, thứ tự mục theo `rng("20261104|e7|order")`. Ghi giờ bắt đầu vào RUNLOG. Không đặt `--timeout` (chỉ áp cho arm R3, không chạy ở đây); R1/R2 dùng `waitTimeoutMs` là giá trị mặc định của `runCto` (90 phút, `runCto`, `bench/vs-claude/e7/lib.mjs:230`; `run.mjs` không truyền giá trị này) và `timeoutMsByPhase` của cấu hình.
 
 ```powershell
 node bench/vs-claude/e7/run.mjs --arms R1,R2 --arm-config R1=$B\config-R1b.json,R2=$B\config-R2b.json --selected bench\vs-claude\results\e7-cto\selected.json --items $E\items.json --out $B\run --work ..\e7b-work --ccoding-data ..\e7b-data
@@ -107,10 +107,10 @@ Kiểm hạ tầng (đây không phải kết luận). Script phân tích chạy
 - không có arm ngoài R1/R2 (QH34); không có dòng `done` mang văn bản 403 (QH31).
 
 **Quy tắc thi hành ngoài bộ phân tích** (script không kiểm; người điều phối thi hành, chỗ thi hành như sau):
-- **QH3** (một tiến trình, `--arms R1,R2`, `--arm-config`, bảng Latin): lệnh chính ở mục 5; thứ tự mục và bảng Latin ở `bench/vs-claude/e7/run.mjs:84-85` (`rng(`${doc.seed}|e7|order`)`, `latinOrders`); `--arm-config` thuộc D24, kiểm bằng `git grep` ở mục 3 và lượt thử ở mục 4.
+- **QH3** (một tiến trình, `--arms R1,R2`, `--arm-config`, bảng Latin): lệnh chính ở mục 5; thứ tự mục và bảng Latin ở `bench/vs-claude/e7/run.mjs:122-123` (`rng(`${doc.seed}|e7|order`)`, `latinOrders`); `--arm-config` thuộc D24, kiểm bằng `git grep` ở mục 3 và lượt thử ở mục 4.
 - **QH4** (`acceptFollowupRounds = 0` ở cả hai tệp): mục 2 (thiếu khóa thì dừng); test `QH2/QH4/QH6` trong `docs/research/analysis/e7b-analyze.test.mjs`. Trên dữ liệu chỉ kiểm được hệ quả `acceptCalls` = 1 (QH5).
-- **QH32** (hết hạn mức: dừng, chạy lại đúng lệnh cũ): `bench/vs-claude/e7/run.mjs:130` (`EXIT_RATE_LIMIT`, thoát mã 3) và mục 5.
-- **QH33** (không dừng/chạy lại vì kết quả, runner không in kết luận): `bench/vs-claude/e7/run.mjs:129` (chỉ in giây và wtok hoặc "HẠ TẦNG") và mục 5 ("Chỉ in đếm").
+- **QH32** (hết hạn mức: dừng, chạy lại đúng lệnh cũ): `bench/vs-claude/e7/run.mjs:173` (`EXIT_RATE_LIMIT`, thoát mã 3; nhập ở `run.mjs:18`) và mục 5.
+- **QH33** (không dừng/chạy lại vì kết quả, runner không in kết luận): `bench/vs-claude/e7/run.mjs:172` (chỉ in giây và wtok hoặc "HẠ TẦNG") và mục 5 ("Chỉ in đếm").
 
 Thiếu `acceptTurnCapped` **không** là lỗi kiểm: `capped` chuyển sang "suy ra" = `unread` và nhãn đó hiện ở bảng (QH10).
 
