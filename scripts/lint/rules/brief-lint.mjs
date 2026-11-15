@@ -1,4 +1,4 @@
-// Đề bài mới (docs/research/BRIEF-*.md) phải qua được cổng kế hoạch. Dùng briefItems() và NEEDS_CMD_RE của src/plan-gate.ts (không chép).
+// Đề bài mới (docs/research/BRIEF-*.md) phải qua được cổng kế hoạch. Dùng briefItems() và needsCommand() của src/plan-gate.ts (không chép; có xét phủ định "không cần chạy lệnh").
 //  - có ít nhất một hạng mục K;
 //  - mỗi K ghi đúng một vai, có trong agents/<phòng>/ của phòng ghi ở tiêu đề, và briefItems() nhận ra vai đó
 //    (vai một từ như devops chỉ được nhận khi viết @devops);
@@ -23,7 +23,7 @@ export default {
   source: 'BRIEF-D14…D16 (vai không có trong danh sách), BRIEF-22c lần 1 (vai chỉ đọc bị đòi chạy lệnh)',
   needsBase: false,
   async run(ctx) {
-    const { briefItems, briefItemBodies, NEEDS_CMD_RE } = await loadTs(ctx.root, 'src/plan-gate.ts');
+    const { briefItems, briefItemBodies, needsCommand } = await loadTs(ctx.root, 'src/plan-gate.ts');
     const out = [];
     for (const file of ctx.files.filter((f) => /^docs\/research\/BRIEF-[^/]+\.md$/.test(f))) {
       const text = ctx.read(file);
@@ -51,7 +51,7 @@ export default {
           err(`${it.code}: vai "${role}" không có trong agents/${dept}/`, at);
           continue;
         }
-        if (!toolsOf(ctx.read(agentFile)).includes('bash') && NEEDS_CMD_RE.test(bodies[it.code] ?? it.line)) {
+        if (!toolsOf(ctx.read(agentFile)).includes('bash') && needsCommand(bodies[it.code] ?? it.line)) {
           err(`${it.code}: vai ${role} không có công cụ chạy lệnh (agents/${dept}/${role}.md) nhưng thân hạng mục đòi chạy lệnh — chuyển việc chạy lệnh cho vai có Bash`, at);
         }
       }

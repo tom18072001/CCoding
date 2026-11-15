@@ -80,6 +80,18 @@ test('brief-lint: vai chỉ đọc bị đòi chạy lệnh (mẫu BRIEF-22c l�
   }
 });
 
+test('brief-lint: đề bài có câu phủ định cho vai chỉ đọc ("không cần chạy lệnh") ⇒ exit 0', () => {
+  const t = setup(`${HEAD}**K1 — peer-reviewer: phản biện (chỉ đọc)**
+- Chỉ đọc và ghi tệp, không cần chạy lệnh. Đọc mã bằng read_file.
+`);
+  try {
+    const r = lint(t.dir);
+    assert.equal(r.code, 0, r.out);
+  } finally {
+    t.cleanup();
+  }
+});
+
 test('brief-lint: vai không có trong agents/<phòng>/ ⇒ exit 1', () => {
   const t = setup(`${HEAD}**K1 — dev-backend: làm việc**\n- Đọc tệp.\n`);
   try {
