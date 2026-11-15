@@ -1,4 +1,5 @@
 {
+ "brief": "docs/research/BRIEF-26b.md",
  "planSummary": "Bốn hạng mục làm tiếp trên nhánh của BRIEF-26. S1 (K1) chỉ đọc mã và thêm khối 'Phụ lục sai lệch E7b (2)' cùng bảng QH-xx vào §9. S3 (K3) chạy song song với S1 vì tiêu đề khối và nội dung đã được chốt. S2 (K2) chờ S1, làm mọi việc cần chạy lệnh: kiểm diff, khóa lock, viết script, test, RUNBOOK, chạy lint và test:research. S4 (K4) phản biện chỉ đọc, chạy sau cùng. Không gọi LLM, không sửa src/ hay mã bench/.",
  "subtasks": [
   {
