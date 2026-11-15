@@ -350,8 +350,20 @@ Trước khi đo lại theo preregistration §9:
 Vẫn được phép (diệt theo PID của tiến trình mình chạy): `taskkill /PID n /T /F`, `kill n`, `kill -9 n`, `Stop-Process -Id n`. Thông báo chặn nêu rõ điều này.
 
 **Giới hạn đã biết** (phân tích chuỗi lệnh, không phải ranh giới bảo mật):
-- `killall`/`pkill` chỉ bị chặn ở vị trí lệnh (đầu dòng hoặc sau `;`, `&`, `|`, `(`, dấu nháy, `sudo`); `grep -rn killall src` không bị chặn, nhưng `xargs pkill`, `env pkill` lọt.
+- `killall`/`pkill` chỉ bị chặn ở vị trí lệnh (đầu dòng hoặc sau `;`, `&`, `|`, `(`, dấu nháy, `sudo`); `grep -rn killall src` không bị chặn. `env pkill` lọt (`xargs pkill` đã chặn ở D30/K3).
 - `Get-Process -Id n | Stop-Process` (diệt theo PID qua pipeline) bị chặn nhầm.
-- `ps node | kill`, `node -e "process.kill(...)"`, `Invoke-CimMethod -MethodName Terminate`, biến/`eval` lọt.
+- `ps node | kill`, biến/`eval` lọt.
 - `taskkill` khớp `/IM`/`/FI` ở bất kỳ đâu trong dòng, kể cả trong chuỗi `echo` (chặn nhầm lệnh vô hại).
 - Test (`test/deny-kill-by-name.test.ts`) chỉ kiểm regex qua `deniedReason` và `guardDecision`, không spawn lệnh diệt.
+
+### Lối lách bổ sung đã chặn (D30/K3, 16/11/2026)
+
+| Lối | Ví dụ bị chặn | Vẫn được phép |
+|---|---|---|
+| `spps` (bí danh `Stop-Process`) với `-Name`/`-ProcessName` | `spps -Name node` | `spps -Id 1234` |
+| `kill` kèm thay thế lệnh con `pgrep`/`pidof` (cả `$(…)` và dấu backtick) | `kill $(pgrep node)` | `kill 1234`, `kill $(cat server.pid)` |
+| `xargs` tới lệnh diệt theo tên; `pgrep`/`pidof` qua `xargs … kill` | `pgrep node \| xargs kill` | `xargs -n1 echo` |
+| `Invoke-CimMethod`/`Invoke-WmiMethod`/`Get-CimInstance`/`Get-WmiObject` … `Terminate`; `Win32_Process` … `Remove-CimInstance`/`Remove-WmiObject` | `… \| Invoke-CimMethod -MethodName Terminate` | `Get-CimInstance Win32_Process` (chỉ đọc) |
+| `node -e`/`-p`/`--eval` chứa `process.kill(` mà đối số đầu không phải số nguyên | `node -e "process.kill(pid)"` | `node -e "process.kill(1234)"` |
+
+**Giới hạn của lớp chặn theo chuỗi lệnh (không phải biên bảo vệ).** Các lối sau không chặn được bằng regex trên chuỗi lệnh và vẫn lọt: tên ghép từ biến hoặc dựng lúc chạy (`& ("Stop-"+"Process") …`, `& $cmd`, `eval`, `bash -c "$cmd"`); script ghi ra tệp rồi chạy (`node kill.js`, `.ps1`, `.bat`); `env pkill`; `process.kill(1234)` với số là PID của tiến trình không phải của mình. Ngược lại, `process.kill(pid)` với biến bị chặn kể cả khi biến là PID đúng. Biên bảo vệ thật là sandbox hệ điều hành (tài khoản, job object hoặc container tách riêng cho agent), không phải danh sách này.
