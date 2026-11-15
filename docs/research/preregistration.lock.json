@@ -282,6 +282,10 @@
     {
       "key": "Sai lệch được báo minh bạch: lượt `failed` do cổng kế hoạch chặn, rồi chạy lại cùng khóa (BRIEF-25, K2) — 15/11/2026",
       "sha256": "150d8aefc316cbe4a500872f8ecac3cbda89b674a7ad2e8598b3c24c29c9acdd"
+    },
+    {
+      "key": "Phân tích khám phá bổ sung sau phản biện E9-lite: bảng độ phủ tuyệt đối và chi phí bằng tiền (BRIEF-25b, K1) — 15/11/2026",
+      "sha256": "4d63ce751b878d92fc9d3f3c57fd797a7b0bbdd2b7c5005f44d9eaf835b7e86c"
     }
   ],
   "history": [

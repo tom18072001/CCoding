@@ -1497,6 +1497,17 @@ const gateFirst = (row) => {
 
 **(e) Ngưỡng diễn giải: chỉ mô tả.** Không đặt ngưỡng loại bỏ hay hiệu chỉnh. Đây là **đe dọa tính hợp lệ (thiên lệch chọn lọc)**, nặng nhất với arm Opus (2/39 khóa, 3 dòng): chỉ lượt qua được cổng mới được tính, và lượt chạy lại có thể cho kế hoạch khác lượt đầu, nên tập lượt được tính có thể thiên về kế hoạch dễ qua cổng (số hạng mục khớp tóm tắt). Không dùng khối này để chỉnh số, để loại khóa, hay để kết luận về nguyên nhân; mọi câu về arm Opus phải kèm (c1), (c2) và nhãn [Khám phá].
 
+#### Phân tích khám phá bổ sung sau phản biện E9-lite: bảng độ phủ tuyệt đối và chi phí bằng tiền (BRIEF-25b, K1) — 15/11/2026
+
+**Đây là phân tích khám phá, sau khi thấy dữ liệu, không thuộc đăng ký, chỉ mô tả.** Dữ liệu `bench/vs-claude/results/e9lite/run1/runs.jsonl` đã được xem và đã được phân tích ở các khối trên; khối này được ghi trước khi viết hay chạy script mới. Không đổi giả thuyết, thước đo, luật chọn dòng hay phân tích chính nào đã khóa. Không gọi LLM, không chạy lại planner. Script: `docs/research/analysis/e9lite-cost.mjs`; đầu ra: `bench/vs-claude/results/e9lite/report-cost.md`.
+
+- **(a) Bảng giá trị tuyệt đối theo arm (S/O/H).** Trên dòng `done` được chọn như `selectRuns()` của `e9lite.mjs`, gộp 3 lần lặp thành một giá trị theo bài (như (6)). Bốn đại lượng: độ phủ tệp `raw.covFile`, độ phủ module `raw.covMod`, số hạng mục `raw.items`, token có trọng số pha `plan` (`weighted()` trên `usage.tokens`, giữ nguyên định nghĩa của `e9lite.mjs`). Mỗi ô: trung bình theo bài, trung vị, min–max; với hai cột độ phủ thêm số bài đạt 1,0. Mục đích: trả lời độ phủ có đang ở mức trần (bão hòa) hay không, và đếm số bài có hiệu `covMod` bằng 0 cho O − S và H − S.
+- **(b) Chi phí bằng USD theo arm.** Tính trên `usage.tokens` của dòng `done` được chọn, giá theo `planModel.actual` của từng dòng, bằng `costOf()` trong `bench/vs-claude/lib/pricing.mjs`, cache ghi 1 giờ (mặc định của tệp). Báo trung bình và trung vị theo arm; hiệu O − S và H − S theo bài (gộp lần lặp rồi trừ), bootstrap theo bài như (6): B = 4000, seed 20261115, percentile 2,5/97,5, khoảng 95 %. Chỉ dùng "rẻ hơn"/"đắt hơn" khi khoảng tách 0 ở cả hai bậc giá; còn lại ghi "chưa phân biệt được về chi phí bằng tiền". Không báo p.
+- **(c) Haiku báo cả hai bậc giá.** `usage.tokens` là số cộng dồn của cả phiên, không biết bậc của từng request, nên Haiku 5.5 báo cả `costUsdLow` (bậc ≤ 100K prompt, cận dưới) và `costUsd` (bậc > 100K, cận trên). Sonnet và Opus không có bậc. Hiệu H − S được tính ở cả hai cận; O − S giống nhau ở hai cận.
+- **(d) Dòng `failed`.** Không vào phép so. Báo riêng số dòng, tổng token có trọng số (đối chiếu 415 205 / 105 551 / 309 654 đã ghi ở khối BRIEF-25) và USD của chúng.
+- **Nguồn giá.** Tệp `bench/vs-claude/lib/pricing.mjs`, `PRICING_VERSION = '2026-11-04'` (giá Sonnet/Opus: đề bài D11, 3/11/2026; Haiku 5.5: trang `platform.claude.com/docs/en/models/haiku-5-5/overview`, truy cập 4/11/2026, theo chú thích trong tệp). Ngày đọc tệp để khối này: 15/11/2026. Giá là niêm yết theo phiên bản trên; không phải hóa đơn thực.
+- **Giới hạn đã biết.** Chi phí chỉ của pha `route` + `plan` (planOnly); không gồm phần thực thi. Số bài n = 13, bootstrap theo bài; không hiệu chỉnh so sánh bội vì là mô tả.
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.
