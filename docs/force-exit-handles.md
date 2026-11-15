@@ -216,3 +216,42 @@ Sau S1 không còn `srv.close()` trần trong `test/` (xem mục "Sau"). Handle 
 - `test/selfimprove-route.test.ts:21-27` và `:71`: server mở lại cùng cổng, `closeServer` đã chờ sự kiện `close`; vẫn là tệp duy nhất sập khi chạy cả bộ.
 - `test/selfimprove-route.test.ts:32`, `:68`: `fetch` (undici keep-alive); `closeServer` gọi `closeAllConnections()` phía server nhưng không đóng pool của client.
 - `test/helpers.ts`: nhịp đệm `setTimeout` 50 ms sau `close` (số đo ở đầu tệp) là biện pháp giảm xác suất, chưa phải nguyên nhân gốc đã xử lý.
+
+## D30/K1 — khoanh vùng handle làm libuv sập (Windows 11, Node v24.14.0, tuần tự; log trong `.scratch/k1/`)
+
+Lệnh: `npx tsx --test --test-force-exit --test-timeout=300000 <tập tệp>`. Dòng lỗi nguyên văn ở mọi lần sập:
+`Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), file src\win\async.c, line 76` (log mẫu: `.scratch/k1/full-2.log`, `full-3.log`).
+
+| Bước | Tập tệp | Lần | Sập libuv | Thời gian |
+|---|---|---|---|---|
+| h0 | nửa đầu `test/**/*.test.ts` | 3 | 0/3 | 53, 51, 52 s |
+| h1 | nửa sau | 3 | 0/3 | 68, 69, 68 s |
+| full | cả bộ (bản 50 ms) | 3 | 2/3 (lần 2, 3) | 92, 93, 93 s |
+| pair | `selfimprove-route` + `ux4`, bỏ nhịp 50 ms | 4 | 4/4 | 3–4 s |
+| ux4 | `ux4.test.ts` riêng, bỏ nhịp | 4 | 4/4 | 4 s |
+| sir | `selfimprove-route.test.ts` riêng, bỏ nhịp | 4 | 4/4 | 2–3 s |
+| ux4 + `Connection: close` | `ux4.test.ts`, bỏ nhịp | 4 | 4/4 | 4 s |
+
+Chia nửa đầu/sau không sập, chỉ cả bộ sập, nên việc chia đôi không thu về một cặp tệp ổn định; nhưng thử bỏ nhịp thì từng tệp riêng (có `fetch`) sập 4/4.
+Thí nghiệm tối thiểu `exp/k.test.mjs` (chỉ `node:http` trần + vài `fetch`, **không có mã repo**) cũng sập, `exp-l`, `exp-j4` sập khi dùng server của repo;
+còn thí nghiệm không dùng `fetch` (`exp-m`: chỉ cấp phát rác; `exp-n` chế độ http.Agent) không sập.
+**Kết luận:** handle không nằm trong mã test hay mã sản phẩm. Đây là cuộc đua của runtime (`fetch`/undici nạp llhttp WASM; tác vụ nền của V8 gửi tín hiệu
+vào handle async của libuv khi `--test-force-exit` đang đóng vòng lặp). Đóng server/socket đúng cách chỉ lùi thời điểm đua. Không có bản sửa handle để commit; không sửa `src/`.
+Thử cờ V8 `--no-wasm-dynamic-tiering`: tập cặp 5/5 không sập, cả bộ 2/2 lần đầu không sập, lần 3 đỏ ở giây 20 với hàng loạt ca không liên quan
+(nghi chạy trùng với lệnh chẩn đoán của tôi, chưa chứng minh) và chuỗi bị dừng theo PID ⇒ **chưa có chuỗi 10 lần**, không đưa cờ này vào script.
+
+## Ngoại lệ đã đo: nhịp 50 ms của `closeServer`
+Giữ nguyên. Bỏ nhịp: cặp `selfimprove-route` + `ux4` sập 4/4 (và từng tệp riêng 4/4), nên không chạy tiếp 10 lần cả bộ.
+
+| Sau sự kiện `close` | Sập libuv |
+|---|---|
+| không nhịp (số mới, D30) | 4/4 (cặp), 4/4 (từng tệp) |
+| `setImmediate` (cũ) | 8/8 |
+| `setTimeout` 20 ms (cũ) | 1/6 |
+| `setTimeout` 50 ms (cũ) | 0/8 |
+
+Nhịp 50 ms chỉ giảm xác suất của một cuộc đua runtime, không loại bỏ: cả bộ có nhịp vẫn sập 2/3 lần ở D30 (và 8/10 ở D28b/S2).
+
+## Trạng thái cờ của `npm test`
+Không đạt 10/10 ⇒ script `test` **không** có `--test-force-exit`; `test` vẫn ở `NO_FORCE_EXIT`. Việc còn mở: thử chuỗi 10 lần với `--no-wasm-dynamic-tiering`
+(hoặc tránh `fetch` toàn cục trong test, dùng `http.request` với agent riêng), chạy một vòng mỗi lần.
