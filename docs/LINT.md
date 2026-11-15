@@ -8,7 +8,7 @@ Lint không có mức cảnh báo. Có một lỗi thì lệnh thoát với mã 
 
 Cách duy nhất để một vi phạm được chấp nhận là ghi nó vào một trong hai tệp được review (mục 4). Mục ghi vào mà không còn khớp lỗi nào cũng là lỗi, nên ngoại lệ cũ phải được xóa.
 
-Rule dùng đúng mã đang chạy thay vì chép lại. Ví dụ `brief-lint` gọi `briefItems()` và `NEEDS_CMD_RE` của `src/plan-gate.ts`. Lint chạy trên Windows và Linux, Node 22 và 24, không cần mạng, không thêm phụ thuộc.
+Rule dùng đúng mã đang chạy thay vì chép lại. Ví dụ `brief-lint` gọi `briefItems()` và `needsCommand()` của `src/plan-gate.ts`. Lint chạy trên Windows và Linux, Node 22 và 24, không cần mạng, không thêm phụ thuộc.
 
 ## 2. Cách dùng
 
@@ -94,7 +94,7 @@ Rule `agent-format-cochange` cần mốc git. Nó khớp quy ước trong `AGENT
 | `overclaim` | BRIEF-21, BRIEF-22b, phản biện K4 v0.7: câu vượt mức bằng chứng | Tệp kết quả không chứa mẫu trong `scripts/lint/overclaim.json` (chữ trong ngoặc kép, backtick và khối mã được bỏ qua) | Viết lại câu theo đúng mức bằng chứng. |
 | `placeholders` | V4 gói 13 (T7): mục để trống "pha review điền" | Tài liệu Nghiên cứu không còn "(pha review điền)", "chưa điền", TBD, TODO và chỗ giữ tương tự | Điền nội dung hoặc bỏ mục. |
 | `review-verdict` | BRIEF-22b (K4): phản biện bị cắt, hai kết luận mâu thuẫn | Tệp phản biện có đúng một dòng `**Kết luận:** Đạt\|Sửa nhỏ\|Chưa đạt` trong 40 dòng đầu và không có dấu hiệu bị cắt | Chạy lại phản biện cho đủ, giữ một kết luận. |
-| `brief-lint` | BRIEF-D14 đến D16: tên vai không có trong danh sách; BRIEF-22c lần 1: vai chỉ đọc bị đòi chạy lệnh | Đề bài qua được cổng kế hoạch: có hạng mục K, đúng một vai hợp lệ mỗi K, vai không có công cụ chạy lệnh thì không bị đòi chạy lệnh, có phạm vi, nhãn dữ liệu, ngân sách | Sửa đề bài theo thông báo. |
+| `brief-lint` | BRIEF-D14 đến D16: tên vai không có trong danh sách; BRIEF-22c lần 1: vai chỉ đọc bị đòi chạy lệnh | Đề bài qua được cổng kế hoạch: có hạng mục K, đúng một vai hợp lệ mỗi K, vai không có công cụ chạy lệnh thì không bị đòi chạy lệnh (`needsCommand()` có xét phủ định "không cần chạy lệnh", "chưa được phép chạy script"; giới hạn: không hiểu phủ định kép, phủ định sau động từ, "không ai được chạy…", hay phủ định qua dấu `. ; : ,` và xuống dòng), có phạm vi, nhãn dữ liệu, ngân sách | Sửa đề bài theo thông báo. |
 
 ## 4. Ngoại lệ: `allow.json` và `baseline.json`
 
