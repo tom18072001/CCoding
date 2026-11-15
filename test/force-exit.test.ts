@@ -58,7 +58,20 @@ async function runHang(script: string): Promise<{ status: number | null; watchdo
   }
 }
 
-for (const name of ['test', 'test:bench', 'test:research']) {
+// Script đã chứng minh xanh 3 lần liên tiếp trên Windows với --test-force-exit thì giữ cờ. `test` (libuv sập ~1/3 lần
+// toàn bộ bộ: Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), src\winsync.c) và `test:bench` (đỏ 1 lần chưa rõ nguyên nhân)
+// chưa đạt nên chưa bật; vẫn bắt buộc --test-timeout.
+const FORCE_EXIT = ['test:research'];
+const NO_FORCE_EXIT = ['test', 'test:bench'];
+
+for (const name of NO_FORCE_EXIT) {
+  test(`script "${name}" chưa bật --test-force-exit nhưng vẫn có --test-timeout`, () => {
+    assert.doesNotMatch(scripts[name], /--test-force-exit/, `${name}: bật cờ phải kèm bằng chứng 3 lần xanh, rồi chuyển sang FORCE_EXIT`);
+    assert.match(scripts[name], /--test-timeout=\d+/);
+  });
+}
+
+for (const name of FORCE_EXIT) {
   test(`script "${name}" có --test-force-exit`, () => {
     assert.match(scripts[name], /--test-force-exit/, `thiếu --test-force-exit trong script ${name}`);
   });
