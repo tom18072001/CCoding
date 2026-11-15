@@ -52,3 +52,10 @@ test('test-writes-repo: ghi vào thư mục tạm, hoặc chỉ ĐỌC từ HERE
   });
   assert.equal(ok.code, 0, ok.out);
 });
+
+test('test-writes-repo: lời gọi ghi nằm trong chuỗi/template/comment (fixture) không bị tính; trong ${…} của template thì vẫn tính', () => {
+  const inStr = lint({ 'a/x.test.mjs': `${HEAD}const s = "fs.rmSync(path.join(HERE, 'q'))";\n// fs.rmSync(path.join(HERE, 'c'))\nconst t = \`fs.rmSync(path.join(HERE, 'q'))\`;\n` });
+  assert.equal(inStr.code, 0, inStr.out);
+  const inTpl = lint({ 'a/y.test.mjs': `${HEAD}const t = \`x\${fs.rmSync(path.join(HERE, 'q'))}\`;\n` });
+  assert.equal(inTpl.code, 1, inTpl.out);
+});

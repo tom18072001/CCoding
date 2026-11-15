@@ -47,6 +47,38 @@ function taintedVars(src) {
   return t;
 }
 
+/** Mảng boolean: true tại vị trí nằm trong nội dung chuỗi/template (không tính `${…}` là mã) hoặc comment. Mã nhúng trong chuỗi (fixture) không phải lời gọi thật. */
+function stringMask(src) {
+  const mask = new Array(src.length).fill(false);
+  const stack = []; // 'code' | '`' ; mỗi `${` đẩy 'code', `}` khớp thì bật ra
+  let mode = 'code', braces = [];
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i], n = src[i + 1];
+    if (mode === 'code') {
+      if (c === '/' && n === '/') { while (i < src.length && src[i] !== '\n') mask[i++] = true; i--; continue; }
+      if (c === '/' && n === '*') { const e = src.indexOf('*/', i + 2); const end = e < 0 ? src.length : e + 2; for (; i < end; i++) mask[i] = true; i--; continue; }
+      if (c === '"' || c === "'") {
+        mask[i] = true;
+        for (i++; i < src.length && src[i] !== c && src[i] !== '\n'; i++) { mask[i] = true; if (src[i] === '\\') mask[++i] = true; }
+        if (i < src.length) mask[i] = true;
+        continue;
+      }
+      if (c === '`') { mask[i] = true; stack.push(braces); braces = []; mode = '`'; continue; }
+      if (c === '{') braces.push(1);
+      else if (c === '}') {
+        if (braces.length) braces.pop();
+        else if (stack.length) { braces = stack.pop(); mode = '`'; mask[i] = true; }
+      }
+    } else {
+      mask[i] = true;
+      if (c === '\\') mask[++i] = true;
+      else if (c === '`') { braces = stack.pop(); mode = 'code'; }
+      else if (c === '$' && n === '{') { mask[++i] = true; stack.push(braces); braces = []; mode = 'code'; }
+    }
+  }
+  return mask;
+}
+
 export default {
   id: 'test-writes-repo',
   source: 'D22 — test ghi vào cây repo làm test khác đua nhau (ENOENT) và làm bẩn worktree',
@@ -57,7 +89,9 @@ export default {
       const src = ctx.read(file);
       const tainted = taintedVars(src);
       const dirty = (a) => !TMP_REF.test(a) && (REPO_REF.test(a) || [...tainted].some((v) => new RegExp(String.raw`\b${v}\b`).test(a)));
+      const mask = stringMask(src);
       for (const m of src.matchAll(CALL)) {
+        if (mask[m.index]) continue; // nằm trong chuỗi/template/comment (vd. fixture của test rule)
         const before = src.lastIndexOf('\n', m.index);
         if (/^\s*(\/\/|\*|\/\*)/.test(src.slice(before + 1, m.index + 1))) continue;
         const args = splitArgs(src, m.index + m[0].length);
