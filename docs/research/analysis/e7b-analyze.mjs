@@ -7,10 +7,10 @@
 //   node docs/research/analysis/e7b-analyze.mjs --smoke <runs.jsonl của lượt thử>   (QH34: chỉ trường hạ tầng, không đọc verdict)
 // MỘT runs.jsonl của MỘT tiến trình xen kẽ (QH3). Arm trên dòng: R1 → R1b, R2 → R2b. Dùng lại (không sửa) mcnemarExact, latestDone, bootDiff của bench/vs-claude/e7/analyze.mjs.
 // QH THI HÀNH NGOÀI BỘ PHÂN TÍCH (script này không kiểm, không áp; chỗ thi hành ghi cạnh từng mã):
-//   QH3  một tiến trình, --arms R1,R2, --arm-config, bảng Latin: lệnh chính RUNBOOK mục 5; thứ tự mục và bảng Latin ở bench/vs-claude/e7/run.mjs:84-85 (rng(`${doc.seed}|e7|order`), latinOrders); `--arm-config` là D24 (RUNBOOK mục 3, `git grep arm-config`). Script chỉ từ chối arm lạ (QH34).
+//   QH3  một tiến trình, --arms R1,R2, --arm-config, bảng Latin: lệnh chính RUNBOOK mục 5; thứ tự mục và bảng Latin ở bench/vs-claude/e7/run.mjs:122-123 (rng(`${doc.seed}|e7|order`), latinOrders); `--arm-config` là D24 (RUNBOOK mục 3, `git grep arm-config`). Script chỉ từ chối arm lạ (QH34).
 //   QH4  acceptFollowupRounds = 0 ở cả hai tệp cấu hình: test `QH2/QH4/QH6` trong e7b-analyze.test.mjs; RUNBOOK mục 2 ("thiếu khóa này trong tệp thì dừng"). Trên dữ liệu chỉ có hệ quả: acceptCalls = 1 (QH5, script kiểm).
-//   QH32 hết hạn mức ⇒ dừng, chạy lại đúng lệnh cũ: bench/vs-claude/e7/run.mjs:130 (EXIT_RATE_LIMIT, thoát mã 3); RUNBOOK mục 5. Script chỉ loại dòng infra `rate-limit` khỏi luật hết giờ (QH30).
-//   QH33 không dừng/chạy lại vì kết quả, runner không in kết luận: bench/vs-claude/e7/run.mjs:129 (chỉ in "xong | giây | wtok" hoặc "HẠ TẦNG"); RUNBOOK mục 5 ("Chỉ in đếm"). Script chạy sau khi đợt đã đủ.
+//   QH32 hết hạn mức ⇒ dừng, chạy lại đúng lệnh cũ: bench/vs-claude/e7/run.mjs:173 (EXIT_RATE_LIMIT, thoát mã 3); RUNBOOK mục 5. Script chỉ loại dòng infra `rate-limit` khỏi luật hết giờ (QH30).
+//   QH33 không dừng/chạy lại vì kết quả, runner không in kết luận: bench/vs-claude/e7/run.mjs:172 (chỉ in "xong | giây | wtok" hoặc "HẠ TẦNG"); RUNBOOK mục 5 ("Chỉ in đếm"). Script chạy sau khi đợt đã đủ.
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -64,9 +64,9 @@ export function timeoutCond(r) {
   if (!r || r.status !== 'infra' || r.infra === 'rate-limit') return 0;
   const e = String(r.error ?? '');
   if (!e) return 0;
-  if (/^quá hạn chờ \d+s/.test(e)) return 1; // bench/vs-claude/e7/lib.mjs:262 (harness)
-  if (e.includes('Hết thời gian (')) return 2; // src/runtimes/claude-cli.ts:384 (runtime, theo chuỗi)
-  if (/^timeout:/.test(e)) return 3; // chuỗi `<errorKind>: <error>` do runCto ghép (lib.mjs:262), theo loại lỗi của runtime
+  if (/^quá hạn chờ \d+s/.test(e)) return 1; // bench/vs-claude/e7/lib.mjs:277 (`runCto`, chuỗi `quá hạn chờ`; harness)
+  if (e.includes('Hết thời gian (')) return 2; // src/runtimes/claude-cli.ts:387 (runtime, chuỗi `Hết thời gian (`, so theo chuỗi)
+  if (/^timeout:/.test(e)) return 3; // chuỗi `<errorKind>: <error>` do runCto ghép (`runCto`, lib.mjs:277), theo loại lỗi của runtime
   return 0;
 }
 
@@ -107,7 +107,7 @@ export function analyzeE7b({ items, selected, rows, sums = null, final = false, 
     if (b.length) add('QH11', 'acceptAuthSources có giá trị lạ (ngoài ["none"]), kiểm mọi dòng kể cả infra', arm, b.length, JSON.stringify([...new Set(b.map((r) => JSON.stringify(r.acceptAuthSources)))].map((s) => JSON.parse(s))));
     // Riêng dòng done: thiếu trường (hoặc mảng rỗng) ⇒ không xác nhận được ⇒ lỗi. Dòng infra không có lượt accept thì không có trường này, không phải lỗi.
     b = bad((r) => !isStrange(r) && !eqArr(r.acceptAuthSources, LOCK.auth));
-    if (b.length) add('QH11', 'acceptAuthSources thiếu ở dòng done (phải là ["none"])', arm, b.length, '(thiếu)');
+    if (b.length) add('QH11', 'acceptAuthSources thiếu ở dòng done (phải là ["none"])', arm, b.length, JSON.stringify([...new Set(b.map((r) => JSON.stringify(r.acceptAuthSources ?? null)))].map((s) => JSON.parse(s))));
     b = bad((r) => r.acceptCalls !== 1); // QH5 (P1)
     if (b.length) add('QH5', 'acceptCalls phải là 1', arm, b.length, JSON.stringify([...new Set(b.map((r) => r.acceptCalls ?? null))]));
     const x = [...new Set(mine.map((r) => r.extraConfigSha256 ?? null))]; // QH6

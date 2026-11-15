@@ -221,6 +221,34 @@ test('QH19/QH28 (P5, qua analyze → bảng → decision.labels): McNemar có ý
   assert.match(report(a), /nhãn P2: \*\*chưa kết luận\*\*/);
 });
 
+test('QH19/QH28 (P5 chiều ngược, qua analyze → bảng → decision.labels): CI bootstrap không chứa 0 nhưng McNemar không có ý nghĩa ⇒ "chưa kết luận" và nhánh F', () => {
+  // Chỉ mục đúng (clean), 12 mục mỗi bài. Bài A: 3 mục chỉ R1b chặn (hiệu −1), 9 mục cả hai không chặn. Bài B: 8 mục chỉ R1b chặn, 3 mục chỉ R2b chặn (hiệu +1), 1 mục cả hai không chặn.
+  // Tổng chỉ R1b chặn 11, chỉ R2b chặn 3 (14 cặp bất đồng ≥ 10, QH20). McNemar 11–3: p = 0,0574 > 0,05; p Holm = 0,1148 ≥ 0,05 ⇒ không có ý nghĩa.
+  // Bootstrap theo bài (2 bài, B = 4000, seed khóa): CI hiệu R2b − R1b = [−0,6667; −0,0833] ⇒ không chứa 0. Khoảng cách từ 0 tới cận gần nhất (cận trên) = 0,0833 = 2 mục trên 24, nên không sát biên (cận chạm 0 khi khoảng cách = 0).
+  const its = [], sel2 = [], rows = [];
+  for (let i = 0; i < 12; i++) for (const task of ['A', 'B']) { const id = `c${task}${i}`; its.push({ id, task, kind: 'clean' }); sel2.push(id); }
+  const r1Only = new Set(['cA0', 'cA1', 'cA2', ...Array.from({ length: 8 }, (_, i) => `cB${i}`)]);
+  const r2Only = new Set(['cB8', 'cB9', 'cB10']);
+  for (const x of its) {
+    rows.push(R1(x.id, r1Only.has(x.id) ? 'block' : 'pass'));
+    rows.push(R2(x.id, r2Only.has(x.id) ? 'block' : 'pass'));
+  }
+  const a = analyzeE7b({ items: its, selected: sel2, rows, sums: SUMS });
+  assert.equal(a.status, 'ok');
+  const c = a.byMode['chính'].clean;
+  assert.deepEqual([c.aOnly, c.bOnly], [11, 3]);
+  assert.ok(c.p > 0.05 && c.p < 0.06, `p ${c.p}`);
+  assert.ok(c.pAdj >= LOCK.alphaTotal, `p Holm ${c.pAdj}`); // McNemar không có ý nghĩa
+  assert.ok(c.diffBoot[1] < 0, JSON.stringify(c.diffBoot)); // bootstrap: CI không chứa 0
+  assert.ok(Math.abs(c.diffBoot[1] - -0.0833) < 0.001, JSON.stringify(c.diffBoot)); // khoảng cách tới biên ≈ 0,0833, không sát biên
+  assert.equal(c.label, 'chưa kết luận');
+  assert.ok(MODES.every((m) => a.byMode[m].clean.label === 'chưa kết luận')); // đứng ở cả năm cách tính
+  assert.equal(a.decision.labels.P2, 'chưa kết luận');
+  assert.equal(a.decision.branch, 'F');
+  assert.match(report(a), /\| chính \| P2 chặn nhầm \| 24 \| 11 \| 3 \|.*\| chưa kết luận \|/);
+  assert.match(report(a), /nhãn P2: \*\*chưa kết luận\*\*/);
+});
+
 // ---------- QH10: capped và "suy ra" ----------
 test('QH10: thiếu acceptTurnCapped ⇒ "suy ra" = unread; có trường ⇒ chỉ lượt true; không dùng `turns`', () => {
   const noFlag = rows0.map((r) => { const { acceptTurnCapped, ...o } = r; return { ...o, turns: 0 }; });
@@ -258,7 +286,19 @@ test('QH11 (m3): authSource lạ ở dòng infra (kể cả khóa API) ⇒ lỗi
   assert.equal(run({ rows: withInfra({ acceptAuthSources: ['none'] }) }).status, 'ok');
   // dòng done thiếu trường: lỗi "thiếu" riêng (giữ nguyên)
   const miss = run({ rows: rows0.map((r) => { if (!(r.id === 'fA3' && r.arm === 'R1')) return r; const { acceptAuthSources, ...o } = r; return o; }) });
-  assert.deepEqual(miss.checks.map((c) => [c.qh, c.arm, c.seen]), [['QH11', 'R1b', '(thiếu)']]);
+  assert.deepEqual(miss.checks.map((c) => [c.qh, c.arm, c.seen]), [['QH11', 'R1b', '[null]']]);
+});
+
+test('QH11 (K1, 26d): dòng done không xác nhận được ⇒ dừng ở QH11 và in giá trị thật: mảng rỗng in [[]], không có trường in [null]', () => {
+  const pick = (extra) => rows0.map((r) => { if (!(r.id === 'fA3' && r.arm === 'R1')) return r; const { acceptAuthSources, ...o } = r; return extra ? { ...o, ...extra } : o; });
+  const empty = run({ rows: pick({ acceptAuthSources: [] }) });
+  assert.equal(empty.status, 'checks-failed');
+  assert.deepEqual(empty.checks.map((c) => [c.qh, c.arm, c.rows, c.seen]), [['QH11', 'R1b', 1, '[[]]']]);
+  assert.doesNotMatch(report(empty), /Nhãn P1|Kết luận nhánh|Recall|p Holm|Youden/);
+  const none = run({ rows: pick(null) });
+  assert.equal(none.status, 'checks-failed');
+  assert.deepEqual(none.checks.map((c) => [c.qh, c.arm, c.rows, c.seen]), [['QH11', 'R1b', 1, '[null]']]);
+  assert.doesNotMatch(report(none), /Nhãn P1|Kết luận nhánh|Recall|p Holm|Youden/);
 });
 
 // ---------- QH12: trần thực tế ----------
