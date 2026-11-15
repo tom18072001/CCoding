@@ -35,4 +35,15 @@ Thiết kế: `docs/research/preregistration.md` §9 (khối "Đăng ký trướ
 ## Chạy chính (QH3)
 
 - Bắt đầu 15/11/2026 06:59 UTC, một tiến trình, `--arms R1,R2 --arm-config … --selected …`, 128 mục × 2 arm = 256 cặp.
-- _(người chạy ghi tiếp: số cặp done/thiếu theo thời điểm, hạn mức, dòng `infra`, giờ kết thúc. Không ghi kết luận.)_
+- **Đếm theo thời điểm** (chỉ `e7b-count.mjs`): 07:12 14/256; 08:04 90/256; 09:06 177/256; 10:03 251/256. Mọi lần đếm: 0 dòng `infra`, 0 `authSource` lạ, 0 dòng 403.
+- **Kết thúc 10:07:38 UTC** (dòng cuối `runs.jsonl` lúc 10:07:38, dòng đầu 06:59:40). **Một lần gọi `run.mjs`, thoát 0.** Không chạm hạn mức, không có lần dừng hay chạy lại nào, không dùng `--only`.
+- **Kết quả đếm:** 256/256 cặp `done` (128 R1, 128 R2), 0 dòng `infra`, 0 cặp thiếu, 0 mục loại ở bước chuẩn bị.
+- **Trường hạ tầng trên mọi dòng** (người chạy đọc sau khi đủ, trước khi giao phân tích):
+  - `models`: `claude-sonnet-5-5` (R1), `claude-opus-5-5` (R2);
+  - `maxTurns` 6 (R1), 16 (R2);
+  - `acceptCalls` = 1;
+  - `acceptAuthSources` = `["none"]`.
+- **Lưu vào repo:**
+  - `run/`: `runs.jsonl`, `responses/` (256 tệp), `config-2026-11-15T06-59-07-851Z.json`. Runner đã thay đường dẫn máy bằng `<ccoding>`, `<work>`, `<home>`; lint `machine-path` xanh.
+  - `calls-accept/w1|w2/runs/<taskId>/calls.jsonl`: bản rút gọn của `calls.jsonl` trên máy chạy, chỉ lượt `accept` (256 bản ghi), để đối chiếu `--data` (nguồn phụ, Phụ lục (2) (b)). Chỉ có các trường `taskId`, `phase`, `model`, `authSource`, `turnCapped`, `turns`, `toolCalls`, `errorKind`, `stopReason`; không có prompt, văn bản hay đường dẫn. Thư mục dữ liệu app đầy đủ (chưa che PII) giữ trên máy chạy, không commit.
+- Người chạy chưa đọc `verdict`, nội dung `responses/` hay số đo nào. Với `responses/`, người chạy chỉ quét chuỗi đường dẫn máy. Phân tích giao Phòng Nghiên cứu (BRIEF-27).
