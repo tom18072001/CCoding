@@ -34,7 +34,9 @@
 - **Không chạy LLM để đo.**
 - Dữ liệu: **Nội bộ**.
 
-**Kế hoạch:** mỗi hạng mục kế hoạch ghi mã K ở đầu tiêu đề. K4 giao cho `@peer-reviewer`, chỉ đọc.
+**Kế hoạch:**
+- Mỗi hạng mục kế hoạch ghi mã K ở đầu tiêu đề. K4 giao cho `@peer-reviewer`, chỉ đọc.
+- **Mô tả hạng mục của vai chỉ đọc (K1, K4) không nhắc tới việc thực thi lệnh, test hay script, kể cả bằng câu phủ định** (vd. "không cần …"). Lần giao trước, một câu phủ định như vậy trong mô tả K1 khiến cổng kế hoạch chặn nhầm (quy tắc B (vi)); lỗi của cổng đã giao Phòng Dev sửa.
 
 **Lệnh kiểm tra phải xanh** (CCoding tự chạy, `strictChecks` bật): `npm run lint`, `npm run test:research`.
 
@@ -64,7 +66,7 @@ Khối mới ở §9, chỉ thêm, ghi rõ không có số E7b nào được xem
 - **Bảng "quy tắc hiệu lực":**
   - gom mọi quy tắc sau khối chính và hai phụ lục, mỗi dòng gồm: quy tắc, giá trị khóa, khối và mục nguồn;
   - bảng chỉ gom, không thêm quy tắc mới. Script và RUNBOOK dẫn theo bảng này.
-- Thêm khối vào `preregistration.lock.json` bằng `node scripts/lint/prereg-lock.mjs --add-new`.
+- K1 chỉ đọc mã và viết tệp. Tệp khóa do K2 cập nhật.
 
 **K2 — data-scientist: script phân tích và RUNBOOK theo đúng bảng quy tắc hiệu lực**
 - **`docs/research/analysis/e7b-analyze.mjs`:**
@@ -84,6 +86,7 @@ Khối mới ở §9, chỉ thêm, ghi rõ không có số E7b nào được xem
   - kiểm sau khi chạy;
   - phân tích.
   - Sửa chỗ lệch ở dòng 15, 110 cũ. Mục "việc Dev" ghi là đã giao D24. Lệnh chạy được trên PowerShell.
+- Sau khi K1 xong: thêm khối mới của K1 vào `preregistration.lock.json` bằng `node scripts/lint/prereg-lock.mjs --add-new`; báo cáo ghi diff của tệp khóa (chỉ dòng thêm).
 - Không để tệp tạm hay patch trong cây làm việc; báo cáo liệt kê `git status`.
 
 **K3 — academic-writer: bài và tài liệu**
