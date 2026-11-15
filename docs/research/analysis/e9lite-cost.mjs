@@ -144,7 +144,8 @@ export function format(res, { command, inputs = [] } = {}) {
   L.push(`- Nguồn giá: \`${PRICE_SOURCE}\`, PRICING_VERSION = \`${PRICING_VERSION}\`; cache ghi 1 giờ (mặc định của \`costOf\`). Giá niêm yết theo phiên bản này, không phải hóa đơn thực.`);
   L.push(`- Bootstrap theo bài: B = ${res.B}, seed ${res.seed}, percentile 2,5/97,5 (khoảng 95 %), như §9 (6).`);
   L.push(`- Khóa: ${res.nKeys}; lượt tính (done cuối): ${res.nKept}; khóa không có done: ${res.nNoDone}; số bài: ${res.nTasks}. Mỗi bài = trung bình các lần lặp done được chọn.`);
-  L.push('- Chi phí tính trên `usage.tokens` của cả phiên planOnly (route + plan), không gồm phần thực thi; token pha `plan` = `usage.byPhase.plan`.', '');
+  L.push('- Chi phí tính trên `usage.tokens` của cả phiên planOnly (route + plan), không gồm phần thực thi; token pha `plan` = `usage.byPhase.plan`.');
+  L.push('- Giả định và giới hạn (rà soát): giá áp theo model pha plan (`planModel.actual`) cho cả phiên; pha route thật chạy Haiku (`src/config.ts:383`) nên USD của S và O là cận trên; hướng kết luận dự kiến không đổi, độ lớn hiệu có thể lệch khoảng 0,02–0,03 USD/bài (ước tính, chưa đo). Số chính xác cần token thô theo pha; `runs.jsonl` chỉ có `byPhase` đã nhân trọng số, việc này để gói sau.', '');
 
   L.push('## 1. Bảng giá trị tuyệt đối theo arm', '', 'Mỗi ô: trung bình theo bài · trung vị · min–max · (hai cột độ phủ) số bài đạt 1,0.', '',
     '| Đại lượng | S (Sonnet) | O (Opus) | H (Haiku) |', '|---|---|---|---|');

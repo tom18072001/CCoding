@@ -10,6 +10,7 @@ Phân tích khám phá, sau khi thấy dữ liệu, không thuộc đăng ký, c
 - Bootstrap theo bài: B = 4000, seed 20261115, percentile 2,5/97,5 (khoảng 95 %), như §9 (6).
 - Khóa: 117; lượt tính (done cuối): 117; khóa không có done: 0; số bài: 13. Mỗi bài = trung bình các lần lặp done được chọn.
 - Chi phí tính trên `usage.tokens` của cả phiên planOnly (route + plan), không gồm phần thực thi; token pha `plan` = `usage.byPhase.plan`.
+- Giả định và giới hạn (rà soát): giá áp theo model pha plan (`planModel.actual`) cho cả phiên; pha route thật chạy Haiku (`src/config.ts:383`) nên USD của S và O là cận trên; hướng kết luận dự kiến không đổi, độ lớn hiệu có thể lệch khoảng 0,02–0,03 USD/bài (ước tính, chưa đo). Số chính xác cần token thô theo pha; `runs.jsonl` chỉ có `byPhase` đã nhân trọng số, việc này để gói sau.
 
 ## 1. Bảng giá trị tuyệt đối theo arm
 

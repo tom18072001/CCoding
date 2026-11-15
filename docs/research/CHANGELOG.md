@@ -9,6 +9,8 @@
 
 Không sửa `src/`, mã `bench/`, `runs.jsonl`, `gold.json`, `labels.json`; không chạy lại planner, không gọi LLM. Dữ liệu: Nội bộ. Mọi số mới là [Khám phá, sau khi thấy dữ liệu], không thuộc đăng ký.
 
+- **Sửa theo review (S2, 15/11/2026):** (a) `model-per-role.md` (hàng `fastLane.planModel`) và `paper/paper.md` (§6.6, đe dọa 9) ghi giới hạn của USD: chỉ tính phiên route + plan, không phải riêng khâu `plan`; USD của S và O là cận trên vì route (chạy Haiku) được tính theo giá model pha plan (`e9lite-cost.mjs` tính cả `usage.tokens` theo `planModel.actual`). Câu USD ở `model-per-role.md` mang nhãn [Khám phá, sau khi thấy dữ liệu] tại chỗ. (b) "Độ phủ chạm trần" đổi thành "gần trần" (`covMod`: ≥ 12/13 bài đạt 1,0 ở mọi arm) để khớp `report-cost.md` §1 ("chưa bão hòa hoàn toàn"). Không đổi số nào.
+
 - **Đính chính (T6):** `report.md:134` ghi bốn dòng `failed` "không có `usage`". **Sai:** cả bốn có `usage` (tổng token có trọng số 415 205; Haiku 105 551, Opus 309 654; `report-cost.md` §3, audit mục 2). Đã sửa tại chỗ kèm ghi đính chính 15/11/2026. `paper.md` (dòng nguồn của 415 205 / 105 551 / 309 654) từng dẫn sai nguồn, nay dẫn `report-cost.md` §3 và audit mục 2.
 - **K1 (@data-scientist):** khối `preregistration.md` §9 (commit riêng trước khi tính), `analysis/e9lite-cost.mjs` + test, `report-cost.md` (bảng tuyệt đối và USD).
 - **T5:** `model-per-role.md` đổi "rẻ hơn" thành "ít token có trọng số hơn ở khâu `plan`"; thêm kết quả USD (Opus đắt hơn Sonnet; Haiku rẻ hơn Sonnet, khoảng tách 0 ở cả hai bậc giá Haiku); "xu hướng" đổi thành mô tả đếm 7/2/4 (khoảng chưa tách 0); đe dọa 8 thêm khả năng độ phủ chạm trần và "tệp ngoài repo chưa đếm".
