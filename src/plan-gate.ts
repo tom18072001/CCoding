@@ -150,7 +150,25 @@ export function planTargets(brief: string, planSummary: string, repoFiles: strin
 /** Hạng mục đòi chạy lệnh thật (test/build/typecheck/migration/script/đo): cần agent có run_command. */
 export const NEEDS_CMD_RE = /(?<![\p{L}])chạy\s+(?:lại\s+)?(?:các\s+)?(?:lệnh|test|build|typecheck|lint|migration|script|benchmark|đo|\x60)/iu;
 
-const subtaskText = (s: GateSubtask): string => norm(`${s.title}\n${s.description}\n${s.deliverable ?? ''}`);
+const NEGATED_BEFORE_RE = /(?<![\p{L}])(?:không|chưa|chẳng|đừng|khỏi)(?![\p{L}])(?:\s+(?:cần|được|phải|nên|thể|có|tự|hề|phép)(?![\p{L}])){0,3}\s*$/iu;
+
+/**
+ * Văn bản có đòi chạy lệnh không: ít nhất một chỗ khớp NEEDS_CMD_RE không bị phủ định.
+ * Chỗ khớp bị phủ định khi phần đứng ngay trước "chạy" (cắt tại . ; : , hoặc xuống dòng gần nhất) kết thúc bằng
+ * từ phủ định (không|chưa|chẳng|đừng|khỏi) + tối đa 3 từ tình thái (cần|được|phải|nên|thể|có|tự|hề|phép).
+ * Giới hạn: không hiểu phủ định kép ("không thể không chạy"), phủ định đặt sau động từ ("chạy lệnh là không cần"),
+ * phủ định có chủ ngữ chen giữa ("không ai được chạy…"), hay phủ định vượt qua dấu câu.
+ */
+export function needsCommand(text: string): boolean {
+  for (const m of text.matchAll(new RegExp(NEEDS_CMD_RE.source, 'giu'))) {
+    const before = text.slice(0, m.index);
+    const clause = before.slice(Math.max(before.lastIndexOf('.'), before.lastIndexOf(';'), before.lastIndexOf(':'), before.lastIndexOf(','), before.lastIndexOf('\n')) + 1);
+    if (!NEGATED_BEFORE_RE.test(clause)) return true;
+  }
+  return false;
+}
+
+const subtaskText =(s: GateSubtask): string => norm(`${s.title}\n${s.description}\n${s.deliverable ?? ''}`);
 
 /** Quy tắc A: trả các đích chưa có hạng mục nhận. */
 export function checkPlanCoverage(input: Pick<PlanGateInput, 'brief' | 'planSummary' | 'subtasks' | 'outOfScope' | 'repoFiles'>): { targets: string[]; uncovered: string[] } {
@@ -194,7 +212,8 @@ export function checkPlanReadable(input: Pick<PlanGateInput, 'planSummary' | 'su
   for (const s of input.subtasks) {
     if (s.assigneeUnmatched) reasons.push(`(v) ${s.id}: người nhận "${s.assigneeUnmatched}" không có trong roster — không được tự đổi sang ${s.assignee}, trưởng phòng phải giao lại đúng người`);
     const info = input.agentRoles?.[s.assignee.toLowerCase()] ?? input.agentRoles?.[s.assignee];
-    if (info?.tools && !info.tools.includes('run_command') && NEEDS_CMD_RE.test(`${s.title}
+    // (vi) dùng needsCommand(): câu phủ định như "không cần chạy lệnh" không tính là đòi chạy lệnh (giới hạn: xem needsCommand)
+    if (info?.tools && !info.tools.includes('run_command') && needsCommand(`${s.title}
 ${s.description}`)) reasons.push(`(vi) ${s.id}: hạng mục cần chạy lệnh nhưng người nhận ${s.assignee} chỉ đọc/ghi tệp, không có công cụ chạy lệnh — giao cho người có quyền chạy lệnh`);
   }
   if (input.truncated) reasons.push('(iv) JSON kế hoạch bị cắt cụt hoặc không đóng');
