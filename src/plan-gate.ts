@@ -232,8 +232,13 @@ export interface BriefItem {
 
 const ITEM_RE = /^\s*(?:[#>*+-]+\s*)*(?:\*\*)?(K\d+)(?![\p{L}\d])\s*(?:\*\*)?\s*([—–:-])\s*(.*)$/u;
 const REVIEW_ROLES = new Set(['peer-reviewer', 'code-reviewer', 'qa-tester']);
-const SKIP_RE = /(?<![\p{L}])(?:không làm|chờ)(?![\p{L}])/iu;
-const BELOW_SKIP_RE = /^\s*(?:[#>*+-]+\s*)*(?:\*\*)?(?:Phần\s*[^:\n]{1,20}:\s*)?(?:không làm|chờ)(?![\p{L}])/iu;
+// Chữ hoãn chỉ có nghĩa khi là nhãn (K2 D29): theo sau phải là ':', '(', '[', '—', '–', '**' hoặc hết dòng; "có chờ sự kiện", "Không làm hỏng…" giữa câu thì không.
+const SKIP_TAIL = /(?=\s*(?:$|[:(\[—–]|\*\*))/.source;
+// Tiêu đề (phần sau mã K): cho phép ** và tiền tố vai "role:" / "role —" hoặc "Phần …:" trước chữ hoãn.
+// "chờ" ở vị trí nhãn là đủ (đề bài thật viết "K6 — chờ quyết định"); "không làm" còn phải theo sau bởi dấu nhãn/hết dòng để "Không làm hỏng…" không bị coi là hoãn.
+const TITLE_PREFIX = /\s*(?:\*\*)?\s*(?:(?:@?[a-z][a-z0-9-]*|Phần\s*[^:\n]{1,20})\s*[:—–]\s*)?(?:\*\*)?\s*/.source;
+const SKIP_RE = new RegExp('^(?:' + TITLE_PREFIX + /chờ(?![\p{L}])/u.source + '|' + TITLE_PREFIX + /không làm\*{0,2}/.source + SKIP_TAIL + ')', 'iu');
+const BELOW_SKIP_RE = new RegExp(/^\s*(?:[#>*+-]+\s*)*(?:\*\*)?(?:Phần\s*[^:\n]{1,20}:\s*)?(?:không làm|chờ)\*{0,2}/.source + SKIP_TAIL, 'iu');
 const ROLE_AFTER_RE = /^\*{0,2}\s*([a-z][a-z0-9]*(?:-[a-z0-9]+)+)\s*\*{0,2}\s*(?::|—|–|$)/i;
 
 /** Tiêu đề Markdown bất kỳ cấp (# … ######) — kết thúc thân hạng mục. */
