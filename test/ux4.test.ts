@@ -9,7 +9,7 @@ import { loadConfig } from '../src/config.js';
 import { LogStore } from '../src/logger.js';
 import { Store } from '../src/store.js';
 import type { Task } from '../src/types.js';
-import { testApp } from './helpers.js';
+import { closeServer, testApp } from './helpers.js';
 
 // UX-4: mã nhiệm vụ ngắn (CC-94) — số thứ tự lưu trong task.json, đánh số bù cho nhiệm vụ cũ, tra theo mã.
 
@@ -87,7 +87,7 @@ test('mã ngắn: nhiệm vụ mới nhận số tăng dần; API nhận mã ng�
   const s0 = createServer(app);
   await new Promise<void>((r) => s0.listen(0, '127.0.0.1', r));
   const port = (s0.address() as AddressInfo).port;
-  s0.close();
+  await closeServer(s0);
   app.config.server.port = port;
   const srv = createServer(app);
   await new Promise<void>((r) => srv.listen(port, '127.0.0.1', r));
@@ -107,7 +107,7 @@ test('mã ngắn: nhiệm vụ mới nhận số tăng dần; API nhận mã ng�
     assert.equal((await fetch(`http://127.0.0.1:${port}/api/tasks/CC-1/events?limit=5`)).status, 200);
     assert.equal(snapshot(app).taskPrefix, 'CC');
   } finally {
-    srv.close();
+    await closeServer(srv);
     app.cleanup();
   }
 });

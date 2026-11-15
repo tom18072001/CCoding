@@ -5,6 +5,7 @@ import os from 'node:os';
 import type { AddressInfo } from 'node:net';
 import { executeTool, toolsFor } from '../src/tools/workspace.js';
 import type { ToolPolicy } from '../src/types.js';
+import { closeServer } from './helpers.js';
 
 test('công cụ tra cứu: search_papers (OpenAlex), web_search, fetch_url; chặn địa chỉ nội bộ', async () => {
   const srv = http.createServer((req, res) => {
@@ -71,7 +72,7 @@ test('công cụ tra cứu: search_papers (OpenAlex), web_search, fetch_url; ch�
     delete process.env.CCODING_WEB_ALLOW_PRIVATE;
     delete process.env.CCODING_OPENALEX_URL;
     delete process.env.CCODING_WEBSEARCH_URL;
-    srv.close();
+    await closeServer(srv);
   }
 });
 

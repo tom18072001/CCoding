@@ -8,7 +8,7 @@ import path from 'node:path';
 import { buildTimeline } from '../src/timeline.js';
 import { scanJsonl, type JsonlCache } from '../src/util/fsx.js';
 import type { LogEntry, Task } from '../src/types.js';
-import { testApp } from './helpers.js';
+import { closeServer, testApp } from './helpers.js';
 
 // UX-3: dòng thời gian (Gantt) dựng từ calls.jsonl + nhật ký nhiệm vụ.
 
@@ -168,7 +168,7 @@ test('API dòng thời gian của nhiệm vụ chạy thật (runtime mock)', as
   const s0 = createServer(app);
   await new Promise<void>((r) => s0.listen(0, '127.0.0.1', r));
   const port = (s0.address() as AddressInfo).port;
-  s0.close();
+  await closeServer(s0);
   app.config.server.port = port;
   const srv = createServer(app);
   await new Promise<void>((r) => srv.listen(port, '127.0.0.1', r));
@@ -189,7 +189,7 @@ test('API dòng thời gian của nhiệm vụ chạy thật (runtime mock)', as
     assert.equal(tl.stats.calls, d.usage.calls);
     assert.equal((await fetch(`http://127.0.0.1:${port}/api/tasks/KHONG-CO/timeline`)).status, 404);
   } finally {
-    srv.close();
+    await closeServer(srv);
     app.cleanup();
   }
 });

@@ -23,3 +23,22 @@ export function testApp(extra: { reviewRejectRate?: number; acceptRejectRate?: n
 export async function readJson<T>(res: Response): Promise<T> {
   return (await res.json()) as T;
 }
+
+/**
+ * Đóng server http và chờ xong: đóng cả kết nối keep-alive (fetch/undici) rồi đợi socket phía client
+ * nhận FIN và đóng hẳn, và các yêu cầu fs bất đồng bộ còn dở (FSReqCallback) xong. Không đợi thì --test-force-exit thoát giữa lúc handle đang đóng và libuv sập
+ * trên Windows (Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), src\win\async.c).
+ */
+export async function closeServer(srv: import('node:http').Server): Promise<void> {
+  await new Promise<void>((resolve) => {
+    srv.close(() => resolve());
+    srv.closeAllConnections();
+  });
+  const deadline = Date.now() + 2000;
+  while (Date.now() < deadline && process.getActiveResourcesInfo().some((r) => r !== 'PipeWrap' && r !== 'Timeout' && r !== 'Immediate' && r !== 'TTYWrap')) {
+    await new Promise((r) => setTimeout(r, 10));
+  }
+  // vòng lặp sự kiện cần quay thêm một nhịp để libuv đóng xong các async handle nội bộ (không hiện trong getActiveResourcesInfo);
+  // đo trên Windows/Node 24: không chờ ⇒ sập ~50% với selfimprove-route/ux4, chờ ≥ 20 ms ⇒ 8/8 lần thoát sạch
+  await new Promise((r) => setTimeout(r, 50));
+}
