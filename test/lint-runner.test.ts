@@ -229,3 +229,68 @@ test('agent-format-cochange: đổi src/registry.ts mà không đổi AGENTS-GUI
     t.cleanup();
   }
 });
+
+test('lint: không truyền mốc, nhánh có upstream ⇒ tự tìm mốc, in nguồn @{upstream}, không lỗi mốc', () => {
+  const t = tempRepo();
+  const remote = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-lint-remote-'));
+  try {
+    git(remote, 'init', '-q', '--bare');
+    write(t.dir, 'package.json', pkg({ yaml: '^2.0.0' }));
+    writeEntries(t.dir, 'allow', []);
+    writeEntries(t.dir, 'baseline', []);
+    const first = t.commit('init');
+    git(t.dir, 'remote', 'add', 'upstream-tmp', remote);
+    const branch = git(t.dir, 'rev-parse', '--abbrev-ref', 'HEAD');
+    git(t.dir, 'push', '-q', 'upstream-tmp', `HEAD:refs/heads/${branch}`);
+    git(t.dir, 'fetch', '-q', 'upstream-tmp');
+    git(t.dir, 'branch', `--set-upstream-to=upstream-tmp/${branch}`);
+    write(t.dir, 'note.txt', 'sau mốc\n');
+    t.commit('tiếp');
+    const r = lint(t.dir, ['--rule', 'agent-format-cochange']);
+    assert.equal(r.code, 0, r.out);
+    assert.doesNotMatch(r.out, /cần mốc git/);
+    assert.match(r.out, /nguồn: merge-base HEAD với @\{upstream\}/);
+    assert.ok(r.out.includes(first.slice(0, 7)), r.out);
+    const j = JSON.parse(lint(t.dir, ['--rule', 'agent-format-cochange', '--json']).out) as { baseSource: string };
+    assert.match(j.baseSource, /@\{upstream\}/);
+  } finally {
+    t.cleanup();
+    fs.rmSync(remote, { recursive: true, force: true });
+  }
+});
+
+test('lint: không mốc, không upstream, không origin/main ⇒ exit 1 và liệt kê các nguồn đã thử', () => {
+  const t = tempRepo();
+  try {
+    write(t.dir, 'package.json', pkg({ yaml: '^2.0.0' }));
+    writeEntries(t.dir, 'allow', []);
+    writeEntries(t.dir, 'baseline', []);
+    t.commit('init');
+    const r = lint(t.dir, ['--rule', 'agent-format-cochange']);
+    assert.equal(r.code, 1, r.out);
+    assert.match(r.out, /cần mốc git/);
+    assert.match(r.out, /Đã thử: --base, LINT_BASE, CCODING_BASE_REF, @\{upstream\}[^,]*, origin\/main/);
+  } finally {
+    t.cleanup();
+  }
+});
+
+test('lint: tệp test vi phạm chưa git add vẫn bị quét ⇒ exit 1; tệp bị .gitignore thì không', () => {
+  const t = tempRepo();
+  try {
+    write(t.dir, 'package.json', pkg({ yaml: '^2.0.0' }));
+    writeEntries(t.dir, 'allow', []);
+    writeEntries(t.dir, 'baseline', []);
+    write(t.dir, '.gitignore', 'ignored/\n');
+    t.commit('init');
+    const badOnly = `test.${'only'}('a', () => {});\n`; // ghép chuỗi để lint của repo này không bắt chính tệp test
+    write(t.dir, 'ignored/x.test.ts', badOnly);
+    assert.equal(lint(t.dir, ['--rule', 'no-only']).code, 0);
+    write(t.dir, 'test/moi.test.ts', badOnly);
+    const r = lint(t.dir, ['--rule', 'no-only']);
+    assert.equal(r.code, 1, r.out);
+    assert.match(r.out, /test\/moi\.test\.ts:1/);
+  } finally {
+    t.cleanup();
+  }
+});

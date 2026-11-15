@@ -85,11 +85,21 @@ async function main() {
   }
   const errors = [];
 
-  // mốc: --base, LINT_BASE, CCODING_BASE_REF (không có thì rule needsBase báo lỗi)
-  const baseRef = [opt.base, process.env.LINT_BASE, process.env.CCODING_BASE_REF].find((v) => typeof v === 'string' && v.trim())?.trim() ?? null;
+  // mốc: --base → LINT_BASE → CCODING_BASE_REF (tường minh; không phân giải được thì lỗi, không chuyển nguồn)
+  // → merge-base HEAD @{upstream} → merge-base HEAD origin/main. Không có mốc thì rule needsBase báo lỗi.
+  const explicit = [
+    ['--base', opt.base],
+    ['LINT_BASE', process.env.LINT_BASE],
+    ['CCODING_BASE_REF', process.env.CCODING_BASE_REF],
+  ].find(([, v]) => typeof v === 'string' && v.trim());
+  let baseRef = null;
+  let baseSource = null;
   let base = null;
   let baseRev = null;
-  if (baseRef) {
+  const tried = ['--base', 'LINT_BASE', 'CCODING_BASE_REF'];
+  if (explicit) {
+    baseRef = explicit[1].trim();
+    baseSource = explicit[0];
     try {
       base = gitIn(root, ['rev-parse', '--verify', '--quiet', `${baseRef}^{commit}`]).trim();
       try {
@@ -98,9 +108,36 @@ async function main() {
         baseRev = base;
       }
     } catch {
-      errors.push({ rule: RUNNER, file: '(mốc)', line: 0, msg: `mốc "${baseRef}" không phân giải được thành commit (clone nông? thiếu fetch-depth: 0?)` });
+      errors.push({ rule: RUNNER, file: '(mốc)', line: 0, msg: `mốc "${baseRef}" (nguồn: ${baseSource}) không phân giải được thành commit (clone nông? thiếu fetch-depth: 0?)` });
+      baseRef = null;
+      baseSource = null;
+    }
+  } else {
+    let upstream = null;
+    try {
+      upstream = gitIn(root, ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{upstream}']).trim() || null;
+    } catch {
+      upstream = null;
+    }
+    const auto = [];
+    if (upstream) auto.push([upstream, `merge-base HEAD với @{upstream} (${upstream})`]);
+    auto.push(['origin/main', 'merge-base HEAD với origin/main (mặc định)']);
+    tried.push(upstream ? `@{upstream} (${upstream})` : '@{upstream} (nhánh chưa có upstream)', 'origin/main');
+    for (const [ref, source] of auto) {
+      try {
+        const mb = gitIn(root, ['merge-base', 'HEAD', ref]).trim();
+        if (!mb) continue;
+        base = mb;
+        baseRev = mb;
+        baseRef = ref;
+        baseSource = source;
+        break;
+      } catch {
+        // thử nguồn kế tiếp
+      }
     }
   }
+  const baseLine = base ? `Lint: mốc ${baseRef} (nguồn: ${baseSource}) → ${baseRev.slice(0, 7)}` : null;
 
   // nạp rule
   const rulesDir = path.join(HERE, 'rules');
@@ -130,7 +167,9 @@ async function main() {
 
   // ngữ cảnh
   const cache = new Map();
-  const files = gitIn(root, ['ls-files', '-z']).split('\0').filter((f) => f && fs.existsSync(path.join(root, f)));
+  // tệp đã track + tệp chưa track nhưng không bị ignore (--exclude-standard)
+  const untracked = gitIn(root, ['ls-files', '--others', '--exclude-standard', '-z']).split('\0').filter(Boolean);
+  const files = [...new Set([...gitIn(root, ['ls-files', '-z']).split('\0').filter(Boolean), ...untracked])].filter((f) => fs.existsSync(path.join(root, f)));
   const ctx = {
     root,
     files,
@@ -146,7 +185,8 @@ async function main() {
     /** Tệp đổi so với mốc (cây làm việc so với merge-base); null nếu không có mốc. */
     changed() {
       if (!baseRev) return null;
-      return gitIn(root, ['diff', '--name-only', '-z', baseRev]).split('\0').filter(Boolean);
+      const tracked = gitIn(root, ['diff', '--name-only', '-z', baseRev]).split('\0').filter(Boolean);
+      return [...new Set([...tracked, ...untracked])];
     },
   };
 
@@ -154,7 +194,7 @@ async function main() {
   const raw = [];
   for (const r of selected) {
     if (r.needsBase && !base) {
-      raw.push({ rule: r.id, file: '(mốc)', line: 0, msg: 'rule cần mốc git nhưng không có: truyền --base <ref> hoặc đặt LINT_BASE / CCODING_BASE_REF' });
+      raw.push({ rule: r.id, file: '(mốc)', line: 0, msg: `rule cần mốc git nhưng không có. Đã thử: ${tried.join(', ')}. Truyền --base <ref> hoặc đặt LINT_BASE / CCODING_BASE_REF` });
       continue;
     }
     try {
@@ -232,8 +272,9 @@ async function main() {
     byRule.get(e.rule).push(e);
   }
   if (opt.json) {
-    console.log(JSON.stringify({ ok: errors.length === 0, total: errors.length, base: base ? baseRef : null, rules: selected.map((r) => r.id), errors }, null, 2));
+    console.log(JSON.stringify({ ok: errors.length === 0, total: errors.length, base: base ? baseRef : null, baseSource, rules: selected.map((r) => r.id), errors }, null, 2));
   } else {
+    if (baseLine) console.log(baseLine);
     for (const [id, list] of byRule) {
       const src = rules.find((r) => r.id === id)?.source;
       console.log(`\n[${id}] ${list.length} lỗi${src ? ` (nguồn: ${src})` : ''}`);
