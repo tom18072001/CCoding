@@ -218,6 +218,8 @@ Khi CTO chưa nghiệm thu, nhiệm vụ không dừng ngay ở "cần xem". Ph�
 
 **Phân loại tiêu chí.** Lời nhắc nghiệm thu yêu cầu CTO gắn trường `scope` cho mỗi tiêu chí `fail` hoặc `unknown`. Giá trị `in` nghĩa là phòng làm được với quyền và đề bài hiện có. Giá trị `decision` nghĩa là cần giám đốc, người ngoài, quyền mới, hoặc đề bài cấm. Tiêu chí `pass` không cần `scope`. `parseAcceptance` đọc trường này; thiếu hoặc giá trị lạ thì coi là `decision`, vì đó là lựa chọn an toàn.
 
+**Văn bản nói ngược JSON (D27).** Engine chỉ đi theo `accepted` của khối JSON. `parseAcceptance` còn đọc câu đầu mục `## Tóm tắt` (không có mục này thì câu đầu của văn bản) bằng `acceptanceTextVerdict`: "chưa/không nghiệm thu", "nghiệm thu có điều kiện", "chưa/không đạt" là chưa; "nghiệm thu" đứng một mình là đã; không khớp thì không kết luận. Chỉ khi nhận ra được **và** ngược với JSON thì `AcceptResult.textMismatch = true`, `task.acceptance.textMismatch = true`, log `accept.text_mismatch` (warn) và `ACCEPTANCE.md` có thêm một dòng đầu `> **[Hệ thống]** …` nêu kết luận chính thức theo JSON. Khi đọc biên bản: dòng `[Hệ thống]` là đúng, câu "Nghiệm thu."/"Chưa nghiệm thu." ngay dưới nó là sai. Khi không lệch, `ACCEPTANCE.md` giữ nguyên như cũ. Luật mở vòng bổ sung không đổi.
+
 **Điều kiện mở vòng.** `followupDecision` là hàm thuần, chỉ mở vòng khi đủ mọi điều kiện sau:
 
 - lượt nghiệm thu không lỗi (không có `accept.error`) và đọc được kết luận;

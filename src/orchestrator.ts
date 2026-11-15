@@ -1293,8 +1293,11 @@ export class Orchestrator {
     // phần hiển thị: bỏ đúng khối JSON kết luận (khối cuối có accepted/criteria), giữ JSON CTO trích dẫn làm bằng chứng
     const body = r.body || text.trim();
     const rel = 'ACCEPTANCE.md';
-    writeText(path.join(store.runDir(task.id), rel), `${body}\n`);
-    task.acceptance = { ...base, accepted: r.accepted, parsed: r.parsed, summary: r.summary || extractSummary(body, 240), criteria: r.criteria, risks: r.risks, followUps: r.followUps, path: rel };
+    // văn bản nói ngược JSON: thêm dòng đầu do hệ thống ghi; engine vẫn theo JSON
+    const sysLine = r.textMismatch ? `> **[Hệ thống]** Văn bản dưới đây nói ngược khối JSON (accepted: ${r.accepted}) — kết luận chính thức theo JSON: ${r.accepted ? 'ĐÃ nghiệm thu' : 'CHƯA nghiệm thu'}.\n\n` : '';
+    writeText(path.join(store.runDir(task.id), rel), `${sysLine}${body}\n`);
+    task.acceptance = { ...base, accepted: r.accepted, parsed: r.parsed, summary: r.summary || extractSummary(body, 240), criteria: r.criteria, risks: r.risks, followUps: r.followUps, path: rel, ...(r.textMismatch ? { textMismatch: true } : {}) };
+    if (r.textMismatch) logs.write({ level: 'warn', kind: 'accept.text_mismatch', msg: `${task.id}: văn bản nghiệm thu nói ngược JSON — theo JSON: ${r.accepted ? 'nghiệm thu' : 'chưa nghiệm thu'}`, taskId: task.id, projectId: task.projectId, agentId: cto.id, data: { jsonAccepted: r.accepted } });
     const fails = r.criteria.filter((c) => c.result !== 'pass').length;
     logs.write({ level: r.accepted ? 'info' : 'warn', kind: 'accept.done', msg: `${task.id}: CTO ${r.accepted ? 'nghiệm thu' : r.parsed ? `chưa nghiệm thu (${fails}/${r.criteria.length} tiêu chí chưa đạt)` : 'không ghi kết luận đọc được'}`, taskId: task.id, projectId: task.projectId, agentId: cto.id, data: { accepted: r.accepted, parsed: r.parsed, criteria: r.criteria.length, fails } });
     if (r.parsed) logs.write({ level: 'info', kind: 'gate.decision', msg: `${task.id}: cổng CTO ${r.accepted ? 'đạt' : 'chặn'}`, taskId: task.id, projectId: task.projectId, agentId: cto.id, data: { gate: 'cto', verdict: r.accepted ? 'pass' : 'block' } });
