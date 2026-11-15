@@ -11,7 +11,7 @@ Phân loại dữ liệu: **Nội bộ**.
 
 ## Kết luận (theo BRIEF-27b)
 
-**Sửa nhỏ (0 blocker, 0 major, 8 minor).**
+**Kết luận:** Sửa nhỏ — 0 blocker, 0 major, 8 minor.
 
 ## 8 minor (theo BRIEF-27b; không phải trích nguyên văn)
 
