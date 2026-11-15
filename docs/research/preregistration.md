@@ -1508,6 +1508,139 @@ const gateFirst = (row) => {
 - **Nguồn giá.** Tệp `bench/vs-claude/lib/pricing.mjs`, `PRICING_VERSION = '2026-11-04'` (giá Sonnet/Opus: đề bài D11, 3/11/2026; Haiku 5.5: trang `platform.claude.com/docs/en/models/haiku-5-5/overview`, truy cập 4/11/2026, theo chú thích trong tệp). Ngày đọc tệp để khối này: 15/11/2026. Giá là niêm yết theo phiên bản trên; không phải hóa đơn thực.
 - **Giới hạn đã biết.** Chi phí chỉ của pha `route` + `plan` (planOnly); không gồm phần thực thi. Số bài n = 13, bootstrap theo bài; không hiệu chỉnh so sánh bội vì là mô tả.
 
+### Đăng ký trước E7b: đo lại CTO nghiệm thu trên bản mã hiện tại, Sonnet và Opus với trần lượt `accept` cao hơn (ghi 15/11/2026, @methodologist, BRIEF-26 K1; trước mọi lượt gọi LLM của E7b)
+
+**Vị thế.** Mục này chỉ **thêm**, không sửa bản chốt E7 (khối "Bản chốt E7 và E8") và không đổi họ Holm của §2.5. E7b là phép đo mới, không phải chạy lại E7. Giờ chính thức là giờ của commit chứa mục này. Dữ liệu: Nội bộ.
+- **Dữ liệu tác giả đã thấy khi viết (không có dữ liệu E7b):**
+  - `results/e7-cto/report.md` (chặn nhầm R1 42,2 %, R2 6,3 %; recall R1 98,4 %, R2 85,9 %; 13 lượt R2 không đọc được);
+  - đếm dòng của `runs.jsonl` E7 theo `arm`, `status`, `parsed`, `turns`;
+  - `selected.json` (chỉ để định danh, không đọc nhãn theo mục).
+- Không ai xem kết luận từng mục của E7b trước khi đủ (như E7 (7)).
+
+**(a) Câu hỏi.** Trên bản mã hiện tại (sau D15–D23):
+- **(i)** CTO nghiệm thu bằng Sonnet có còn chặn nhầm nhiều không?
+- **(ii)** CTO bằng Opus, với trần lượt `accept` đủ cao để không bị cắt giữa chừng, có giữ chặn nhầm thấp mà recall không thấp hơn Sonnet nhiều không?
+- "Chặn nhầm nhiều" (i) khóa là: **cận dưới Clopper–Pearson 95 % của tỉ lệ chặn nhầm R1b > 10 %** (cùng mốc 10 % dùng ở (h)). Chỉ là nhãn mô tả, không vào họ Holm.
+
+**(b) Arm.** Hai arm, mỗi arm chạy trên cả 128 mục:
+
+| Arm | Model pha `accept` | `phases.toolTurns.accept` | Tương ứng harness |
+|---|---|---|---|
+| `R1b` | Sonnet (mặc định của CTO) | **6** (cấu hình hiện hành, `src/config.ts:385`) | `--arms R1` |
+| `R2b` | Opus (`phaseModels.accept = opus`) | **16** (khóa) | `--arms R2` |
+
+- Hai tệp cấu hình của bản ghim **chỉ khác đúng một khóa**: `phases.toolTurns.accept` (6 so với 16). Không đổi `src/`. Người chạy ghi sha256 hai tệp và `diff` của chúng vào RUNLOG trước lượt đầu.
+- **Cách suy ra 16.** Gồm ba bước, cả ba đều có giới hạn:
+  1. **Quan sát trực tiếp ở E7:** 13/128 lượt R2 (10,2 %; 6 mục lỗi, 7 mục đúng) dừng ở trần 6 mà không có kết luận. Đây là số quan sát bị **cắt phải** (số lượt Opus *cần* chưa biết), nên chỉ là cận dưới: ít nhất 10,2 % lượt cần > 6 lượt.
+  2. **Không có phân bố `turns` của R1/R2.** Trường `turns` của mọi dòng `done` R1 (136) và R2 (136) ở E7 đều bằng 0: runtime CCoding không đẩy số lượt vào dòng chạy (harness chỉ cộng `calls[].turns`). Vì vậy phân vị cao của số lượt R2 **không suy ra được từ dữ liệu của R2**. Thay thế (chỉ làm mốc): `turns` của R3 (Sonnet, `claude -p`, 128 dòng `done` có trường này), cùng đề, cùng công cụ: phân bố 2:5, 3:21, 4:20, 5:23, 6:25, 7:17, 8:10, 9:3, 10:3, 11:1; phân vị 90 % = 8, lớn nhất = 11.
+  3. **Chọn 16** vì: (1) bằng hơn **1,4 lần** giá trị lớn nhất của mốc Sonnet (11), có biên cho việc Opus tra cứu nhiều hơn (E7 báo cáo mục 5); (2) là giá trị đã có sẵn trong thang `toolTurns` của app (`revise: 16`), không thêm một mốc lạ; (3) trần là mức chặn trên, không phải mục tiêu, nên chi phí chỉ tăng ở lượt thật sự cần đọc thêm.
+- **Giới hạn của cách suy ra:**
+  - Mốc R3 dùng thang `num_turns` của `claude -p`, không đồng nhất với thang `--max-turns` của runtime (R3 chạy `--max-turns 6` vẫn báo `turns` tới 11, ví dụ dòng chạm trần báo 7). Đây là mốc thô, không phải ước lượng của Opus.
+  - Opus có thể cần hơn 16 lượt; khi đó lượt đó thành "chạm trần" và được báo (e), (h) nhánh D xử lý. **Không đổi trần giữa chừng**, không điều chỉnh theo kết quả.
+  - R1b và R2b khác nhau ở **cả model lẫn trần** (6 so với 16): so sánh R2b với R1b là so sánh gói "Opus + trần 16" với gói "Sonnet + trần hiện hành", không tách riêng tác động của model. Không có arm "Sonnet + trần 16" hay "Opus + trần 6" trong E7b; kết luận không được viết như hiệu của riêng model (xem (k)). Lý do không thêm: ngân sách của gói và câu hỏi (ii) hỏi đúng về gói Opus đủ trần; E7 đã có Opus trần 6 (mô tả, khác bản mã).
+
+**(c) Mẫu và đợt chạy.**
+- **Mẫu:** đúng 128 mục của `results/e7-cto/selected.json` (64 lỗi, 64 đúng, 8 bài; git blob `5b3e8fcf2ba3816b39fdb5ba9ef021232a4b2f5f`, commit `3adec240`). **Không lấy mẫu lại** và không thay mục. Người chạy ghi sha256 tệp vào RUNLOG trước lượt đầu.
+- **Nhãn:** dùng nhãn đã chốt của E7 (lỗi cài bằng máy, kiểm nhãn 3 lần: 64/64 lỗi trượt 3/3, 64/64 đúng đạt 3/3 ở bước 1 của E7). Bước chuẩn bị chạy lại trên máy của E7b; mục nào không dựng lại được hoặc nhãn không tái lập thì **loại cặp đó khỏi mọi phép so** và báo số, không thay mục.
+- **Bản ghim:** một commit ghim duy nhất cho cả hai arm, chứa `src/` từ gộp D23 (`7beb50c1` trở đi) và hai tệp cấu hình của K2. Hash commit, sha256 `dist` gộp, sha256 hai cấu hình, phiên bản CLI ghi ở `results/e7b-cto/RUNLOG.md` trước lượt đầu. Cùng một bản ghim và cùng đợt thời gian cho hai arm.
+- **Thứ tự mục:** xáo theo `rng("20261104|e7|order")` (seed khóa `20261104|e7|order`), **cùng một thứ tự** cho hai tiến trình.
+- **Ràng buộc của harness (nêu rõ):** `run.mjs` nhận một `--config` mỗi tiến trình, và model của arm cố định trong `lib.mjs` (`ARMS`). Vì vậy **không đặt được trần `accept` khác nhau theo arm trong cùng một tiến trình**, nên không xen kẽ arm trong tiến trình như E7 (bảng Latin).
+- **Phương án chính (khóa):** **hai tiến trình chạy song song cùng thời điểm**, mỗi tiến trình một arm (`--arms R1` với cấu hình trần 6; `--arms R2` với cấu hình trần 16), cùng thứ tự mục, `--out`, `--work` và `--ccoding-data` riêng mỗi tiến trình, cùng `--items`/danh sách chốt. Cùng đăng nhập, cùng bản ghim.
+  - **Đây là sai lệch so với xen kẽ trong tiến trình** (E7 (7)). Hệ quả: hai arm cùng cửa sổ thời gian nhưng không cùng thứ tự chạm lượt trong từng mục; chung hạn mức nên một tiến trình có thể làm chậm tiến trình kia (đe dọa (l)).
+  - Hai tiến trình khởi động cùng lúc; thứ tự mục giống hệt nên hai arm đi cùng "tốc độ" theo mục ở mức xấp xỉ, không đồng bộ từng mục.
+- **Phương án thay thế** (chỉ khi K2 kết luận phải có Dev, ví dụ cần tùy chọn cấu hình theo arm trong `run.mjs`/`lib.mjs`): Dev thêm tùy chọn đó, và E7b chạy **một tiến trình xen kẽ** bảng Latin 2 arm như E7. Việc đổi phương án phải được ghi thành khối "Sai lệch" mới **trước lượt gọi đầu tiên**, kèm lý do. Nếu không chạy song song được (ví dụ hạn mức) thì **không** chuyển sang chạy tuần tự từng arm lặng lẽ: dừng và ghi sai lệch trước.
+
+**(d) R3 (Claude Code đơn): không chạy lại.**
+- **Lý do 1:** câu hỏi (i)–(ii) là chọn model cho vai CTO; không giả thuyết nào của E7b dùng R3.
+- **Lý do 2:** R3 lấy `maxTurns` từ `toolTurns.accept` của app (`run.mjs`: `a.config.phases?.toolTurns?.accept`). Đặt 6 ở tiến trình R1b thì chạy lại R3 y như E7 (không cho thông tin mới, chỉ thêm tiền); đặt 16 thì R3 không còn là mốc Sonnet trần 6. Cả hai đều không sạch.
+- **Lý do 3:** R1 − R3 ở E7 là hiệu của hồ sơ CTO cộng lớp vận hành CCoding; E7b không đổi hồ sơ hay lớp vận hành, nên không thêm gì cho câu hỏi đó.
+- Số R3 của E7 chỉ được nhắc ở phần so sánh mô tả (i).
+
+**(e) Thước đo.** Mỗi mục có kết quả của từng arm; "chặn" = khối JSON đọc được với `accepted = false` (E7 (4)).
+- **Recall** = số mục lỗi bị chặn / 64.
+- **Tỉ lệ chặn nhầm** = số mục đúng bị chặn / 64.
+- Mẫu số là số cặp còn lại sau khi loại cặp thiếu (báo số).
+- CI Clopper–Pearson 95 % từng tỉ lệ.
+- **Không đọc được kết luận (`unread`)**: dòng `done` có `parsed = false` và không có `error`. Báo số theo arm, theo loại mục và theo bài.
+- **Chạm trần lượt (`capped`)** của arm CCoding: E7 ghi R1/R2 **không có trường `capped`** và `turns` = 0, nên khóa định nghĩa vận hành:
+  - **`capped` = `unread` mà lượt gọi `accept` của nhiệm vụ có `capped: 'turns'` ở nhật ký lượt gọi** (runtime đặt cờ này khi `error_max_turns`, `src/runtimes/claude-cli.ts:393`, ghi chú "chạm trần N lượt" ở `:415`). K2 viết cách trích từ nhật ký.
+  - Nếu không trích được cờ này thì dùng **`capped (suy ra)` = `unread`** và gắn nhãn "suy ra" ở mọi chỗ báo. E7 cũng quy 13 lượt `unread` của R2 cho chạm trần theo cách suy ra này (report mục 5).
+  - Không dùng `turns` của dòng R1/R2 để định nghĩa (luôn 0).
+- **USD** theo `bench/vs-claude/lib/pricing.mjs` (`PRICING_VERSION = '2026-11-04'`, `costBasis` ghi từng dòng): tổng và trung bình mỗi mục theo arm, tỉ số R2b/R1b. Báo thêm token có trọng số và thời gian. Mô tả, không thành tiêu chí.
+- **Youden J** = recall − chặn nhầm, mỗi arm. **Chỉ mô tả**, không vào nhánh quyết định.
+- Báo bảng theo bài (8 bài) như E7.
+
+**(f) Quy tắc chính cho lượt `unread`.**
+- **Chính (khóa): `unread` tính là KHÔNG chặn.** Lý do:
+  - khớp bản chốt E7 (4);
+  - khớp hành vi mã hiện tại: `src/orchestrator.ts:1302` chỉ chặn khi `parsed && !accepted`; lượt `unread` (không có `error`) được giao tiếp, còn lượt có `error` đi nhánh lỗi, **không** dùng văn bản làm kết quả (`orchestrator.ts:1275`, D15), nên đã là `infra` chứ không phải `unread`.
+  - Cách tính này **bất lợi cho recall** của arm có nhiều `unread`; vì vậy cũng được đối chiếu với hai độ nhạy dưới.
+- **Độ nhạy bắt buộc, báo kèm:** (S1) `unread` tính là chặn (cách nhìn "CTO không nghiệm thu thì không qua"); (S2) **bỏ cặp** mục có `unread` ở bất kỳ arm nào.
+- **Điều kiện đọc:** mọi nhãn kết luận và mọi nhánh (h) phải **đứng được ở cả ba cách tính** (chính, S1, S2); không đứng được thì ghi "chưa kết luận". Quy tắc này khóa trước, không đổi sau khi thấy số.
+- Lượt có `error` (403, hết hạn mức, hết giờ): xử lý theo (j), không vào `unread`.
+
+**(g) Phép kiểm khóa trước.** Đơn vị ghép cặp là mục; arm là cùng mục, hai tiến trình (c).
+- **McNemar chính xác hai phía** (nhị thức, α = 0,05), R2b so với R1b, **tách hai phép**:
+  - **P1 recall:** trên mục lỗi có kết quả ở cả hai arm;
+  - **P2 chặn nhầm:** trên mục đúng có kết quả ở cả hai arm.
+- **Hiệu chỉnh bội:** hai phép P1, P2 là họ riêng của E7b, xử lý bằng **Holm hai phép** (p nhỏ hơn so với 0,025, p lớn hơn so với 0,05). Không vào họ của §2.5. Báo cả p thô.
+- **Bootstrap hai tầng theo bài:** 4000 vòng, `B = 4000`, hạt giống `20261104`; mỗi vòng lấy mẫu có hoàn lại 8 bài, rồi trong bài lấy mẫu có hoàn lại mục theo từng loại, giữ nguyên cặp (cả hai arm của mục). Tính hiệu R2b − R1b cho recall và cho chặn nhầm; CI phân vị 95 %.
+- **Nhãn kết luận** cho từng phép, mỗi nhãn chỉ có hai giá trị:
+  - **"khác nhau"** khi p Holm < α **và** CI bootstrap không chứa 0 **và** cùng chiều với McNemar;
+  - **"chưa phân biệt được"** trong mọi trường hợp còn lại. Đây **không** phải "tương đương".
+  - Hai bên khác chiều: "chưa kết luận". Số cặp bất đồng < 10 thì p chỉ mô tả (như điều kiện 1 của mục thẩm định K3 ở trên), và nhãn là "chưa phân biệt được".
+- Không phép nào khác ngoài P1, P2 là phép kiểm; mọi thứ còn lại (Youden J, USD, theo bài, `unread`/`capped`) là mô tả.
+
+**(h) Ngưỡng diễn giải khóa trước.** Đọc theo thứ tự D → E → A → B → C → F; nhánh đầu tiên thỏa thì dừng. Số mục tính theo 64 cặp (nếu có cặp bị loại thì quy theo tỉ lệ làm tròn xuống cho "≥", lên cho "≤", và ghi rõ).
+- **Ngưỡng:** chặn nhầm ≤ 10 % nghĩa là ≤ 6/64 (9,4 %); recall ≥ 90 % nghĩa là ≥ 58/64 (90,6 %); "không thấp hơn R1b nhiều" khóa là R1b − R2b ≤ 6 mục lỗi (~9,4 điểm %). Mức 10 %, 90 % và 6 mục là giá trị tham chiếu khóa trước, chọn theo mức chấp nhận của một cổng nghiệm thu (không suy từ kết quả E7b), không phải kết quả của một phép tính cỡ mẫu.
+- **D. Đọc chưa sạch:** `capped` (hoặc `capped (suy ra)`) của R2b > 6/128 (5 %). Recall của R2b **chưa đọc sạch**; **không đề xuất đổi model**; E7c với trần mới phải được đăng ký riêng.
+- **E. (i) đã đổi:** cận dưới CP của chặn nhầm R1b ≤ 10 %. Chặn nhầm của Sonnet không còn "nhiều" trên bản mã mới; không đề xuất đổi model vì lý do chặn nhầm. Báo R2b để mô tả.
+- **A. Đề xuất đổi model CTO sang Opus (chỉ đề xuất, chủ dự án quyết):** đồng thời (1) chặn nhầm R2b ≤ 6/64; (2) recall R2b ≥ 58/64 và R1b − R2b ≤ 6 mục; (3) P2 mang nhãn "khác nhau" theo chiều R2b < R1b; (4) đứng được ở cả ba cách tính (f). Chi phí (USD, E7 ≈ 2,6 lần) báo bên cạnh, **không** là tiêu chí; quyết định có chấp nhận chi phí là của chủ dự án.
+- **B. Opus giữ chặn nhầm thấp, mất recall:** (1) thỏa, (2) không thỏa. Không đề xuất đổi model; đề xuất nghiên cứu chỉnh ngưỡng hoặc hồ sơ CTO.
+- **C. Opus vẫn chặn nhầm cao:** chặn nhầm R2b > 6/64. Không đề xuất đổi model.
+- **F. Còn lại** (gồm A thỏa (1), (2) nhưng không thỏa (3) hay (4)): "chưa kết luận"; báo số, không đề xuất.
+
+**(i) So với E7: chỉ mô tả, không gộp.**
+- Số của E7 (R1 42,2 %/98,4 %; R2 6,3 %/85,9 %) đặt cạnh E7b trong một bảng riêng, ghi rõ **khác bản mã**: E7 chạy ở các bản ghim ghi trong `results/e7-cto/RUNLOG.md` và trường `ccodingCommit` từng dòng (13/11/2026), trước các thay đổi D15–D23. Gồm: lượt có `error` không dùng văn bản làm kết quả (D15), vòng bổ sung, trần lượt theo pha, hết giờ khác hết hạn mức…. Danh sách đầy đủ lấy từ RUNLOG và lịch sử commit, K2/K3 liệt kê.
+- Không tính phép kiểm, CI chung hay hiệu giữa E7 và E7b; không gọi E7b là "lặp lại" hay "xác nhận" E7. E7b dùng cùng 128 mục nên chênh lệch có thể đến từ mã, trần, trôi mô hình hoặc nhiễu, và **không tách được** (k).
+- Hai nhóm 16 lượt E7 từng bị phân loại lại (403) không dùng trong so sánh mô tả, nếu không thì ghi riêng.
+
+**(j) Quy tắc dừng, chạy lại, thử trước (theo E7 (7)–(8) và các sai lệch 13/11; không phụ thuộc kết quả).**
+- **Chạy thử trước đợt chính:** 1 mục dự phòng **ngoài** danh sách chốt, mỗi arm chạy bằng cấu hình của chính nó, vào thư mục `out` riêng; kiểm hạ tầng, `authSource`, trần `accept` thực tế (6 và 16, đọc ở `maxTurns` của dòng) và `promptSha`. Lượt này không vào phân tích. Mục dự phòng lấy theo thứ tự dự phòng đã có của `selected.json`/`prep.jsonl` của E7, chọn trước khi chạy.
+- **Lỗi hạ tầng (`infra`) thì chạy lại.** Quy tắc nhận diện `infra` dựa trên **loại lỗi** (`error`, mã 403/Cloudflare, hết hạn mức, hết giờ), **không bao giờ** dựa vào nội dung kết luận. Chạy lại cùng lệnh, cùng cấu hình, cùng bản ghim.
+- **Lỗi xác thực 403/Cloudflare:** là `infra`, không phải `unread`. Sau D15 lượt có `error` không đi vào phân tích văn bản; nếu thấy dòng `done` mà văn bản là thông báo lỗi 403 thì dừng, báo người điều phối (không phân loại lại sau khi xem kết quả). Nếu nhiều lượt liên tiếp 403 thì dừng đợt.
+- **`authSource`:** mọi dòng ghi `authSource`; chỉ chấp nhận phiên đăng nhập claude.ai, không khóa API. Có dòng khác thì dừng **cả hai** tiến trình (STOP) và ghi sai lệch. Không lẫn `authSource` giữa hai arm.
+- **Hết hạn mức:** dừng **cả hai** tiến trình rồi chạy tiếp đúng lệnh cũ cùng lúc, để hai arm vẫn cùng khoảng thời gian; các cặp đã xong được bỏ qua.
+- **Một cặp (mục, arm) lỗi hạ tầng 3 lần** thì ghi thiếu, loại cặp đó khỏi phép ghép (báo số, theo arm).
+- **Không dừng sớm vì kết quả.** Chỉ dừng vì hạ tầng, hạn mức, `authSource`, hoặc lỗi cấu hình (ví dụ hai tệp cấu hình khác nhau ngoài khóa `accept`, hay `maxTurns` của dòng không phải 6/16): các trường hợp này dừng đợt và ghi khối "Sai lệch", không loại lặng lẽ.
+- **Quan sát:** mỗi cặp (mục, arm) lấy dòng cuối nếu dòng đó `done` (như E7 sau 13/11). Runner không in kết luận khi chạy, chỉ in đếm. Không ai xem `runs.jsonl` hay `responses/` trước khi đủ.
+- **Không chạy lại vì kết quả:** không có quy tắc nào chạy lại một lượt `done` có `parsed = true` hay `unread` (nghĩa là không chạy lại vì "kết luận lạ", "chặn nhầm quá nhiều" hay "chạm trần").
+
+**(k) Câu cấm** (bài báo, deck, RUNLOG, báo cáo):
+- "Opus tốt hơn Sonnet" hoặc "model Opus giảm chặn nhầm" như hiệu của riêng model: R2b khác R1b ở cả model lẫn trần (b).
+- "Đã chứng minh", "xác nhận", "tái lập E7", "lặp lại E7".
+- So E7 với E7b như cùng một đợt, cùng một phép kiểm, hay gộp hai bảng; bất kỳ CI hay p giữa E7 và E7b.
+- "Opus an toàn hơn/ít bỏ sót hơn" khi nhãn recall là "chưa phân biệt được"; viết "chưa phân biệt được", không viết "tương đương".
+- "Nên đổi model" ngoài nhánh A của (h); ở nhánh khác viết đúng nhánh.
+- Nói R1b hay R2b là chất lượng của "cổng nghiệm thu" nói chung: E7b đo lớp CTO trên **lỗi cài bằng máy đã lọt `npm test`**, 8 bài, 1 nhà cung cấp, bàn giao trung tính (E7 (9)).
+- Coi recall R2b là đọc sạch khi nhánh D thỏa.
+- Chạy song song hai tiến trình mà gọi là "xen kẽ".
+- Nói gói Opus + trần 16 "rẻ" hay "đắt" khi chưa có USD.
+- Đo trên một phép tính nào ngoài P1, P2 mà gọi là kiểm định.
+
+**(l) Đe dọa tính hợp lệ.**
+- **Hai tiến trình thay cho xen kẽ:** hai arm không chung thứ tự lượt trong từng mục; chung hạn mức và tải máy nên tốc độ và tỉ lệ `infra` có thể lệch giữa arm. Biện pháp: cùng thứ tự mục, cùng thời điểm khởi động, cùng bản ghim, ghi giờ từng dòng và `infra` theo arm; khi hết hạn mức dừng cả hai. Không loại bỏ được ảnh hưởng thời gian khi hạ tầng suy giảm lệch.
+- **Trần bất cân xứng (6 so với 16):** model và trần lẫn nhau; không tách. Trần cao có thể làm Opus đọc nhiều hơn và đổi hành vi kết luận, không chỉ "không bị cắt". Biện pháp: nêu thẳng (b), (k); không có arm đối chứng riêng.
+- **Mô hình trôi theo thời gian:** E7 chạy 13/11, E7b chạy sau; phiên bản model, CLI, tải của nhà cung cấp có thể đổi. Biện pháp: ghi `models` và `claudeCliVersion` từng dòng; hai arm cùng cửa sổ; so với E7 chỉ mô tả.
+- **n = 64 mỗi phía:** mẫu nhỏ; McNemar có ít cặp bất đồng thì p chỉ mô tả; nửa độ rộng CI Clopper–Pearson cỡ 12 điểm %. Ngưỡng 6/64, 58/64 nằm gần nhiễu mẫu. Biện pháp: bootstrap theo bài, báo CI, nhãn "chưa phân biệt được" thay vì ép kết luận.
+- **Nhãn chuẩn từ E7:** lỗi là đột biến cài bằng máy, chỉ những lỗi **lọt `npm test`** của chính sản phẩm; mục "đúng" là đạt test ẩn. Nhãn "đúng" không đảm bảo sản phẩm hoàn hảo; chặn một sản phẩm đạt test ẩn là chặn nhầm theo nhãn, kể cả khi CTO nêu một rủi ro có thật. Biện pháp: dùng đúng 128 mục E7, kiểm nhãn 3 lần ở bước chuẩn bị, không đổi nhãn sau.
+- **Cùng 128 mục với E7:** CTO đã chạy lên chúng một lần, và tác giả đã thấy kết quả E7; ngưỡng ở (h) có thể bị ảnh hưởng ngầm bởi số của E7 (ví dụ 10 %, 90 %). Biện pháp: khóa trước bằng giá trị tham chiếu của một cổng, nêu ở (h); không đổi sau.
+- **Nhiễu mẫu theo bài:** 8 bài, `c2-burst-alert` chặn nhầm dồn. Biện pháp: bảng theo bài, bootstrap theo bài.
+- **Cấu trúc `unread`:** `capped (suy ra)` có thể lẫn lượt `unread` không phải do trần. Biện pháp: ưu tiên cờ `capped` của nhật ký; ba cách tính ở (f).
+- **Bàn giao trung tính:** CTO thiếu bàn giao thật; kết quả có thể khác theo cả hai chiều (E7 (9)).
+
+**Bản ghim và tệp khóa.** Khối này vào `preregistration.lock.json` qua `node scripts/lint/prereg-lock.mjs --add-new`. Tệp đăng ký và script phân tích của E7b đặt ở `results/e7b-cto/` (K2). Mọi con số khóa ở trên có lý do đi kèm; số nào chưa biết trước khi chạy (hash bản ghim, sha256 cấu hình) do người chạy ghi vào RUNLOG **trước** lượt đầu, không đổi giả thuyết, mẫu, thước đo hay phép kiểm.
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.
