@@ -20,6 +20,7 @@
     "cli": "node dist/cli.js",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
     "test": "tsx --test --test-reporter=spec \"test/**/*.test.ts\"",
+    "pretest:bench": "npm run build",
     "test:bench": "node --test \"bench/vs-claude/test/*.test.mjs\"",
     "test:research": "node --test \"docs/research/**/*.test.mjs\" \"bench/vs-claude/harness/*.test.mjs\"",
     "herdr:up": "node dist/cli.js herdr up",

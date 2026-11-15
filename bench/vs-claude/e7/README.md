@@ -70,3 +70,21 @@ node bench/vs-claude/run.mjs --arms A0-sonnet,B6w4,B6w1 --tasks l1-modules,t2-or
 - Mỗi dòng CCoding có thêm `wallSecTask`, `queueSecTask` và `maxConcSubtasks` (D14 K4).
 - **Kiểm cấu hình khi chạy** (không phải xem kết quả): `maxConcSubtasks` của mọi dòng B6w1 phải ≤ 1. Có dòng ≥ 2 thì dừng đợt và báo giám đốc.
 - Phân tích khi đủ 54 dòng: `node bench/vs-claude/e8/analyze.mjs bench\vs-claude\results\e8-parallel`.
+
+## D24: cấu hình theo arm, danh sách chốt có sẵn, trường lượt `accept`
+
+Hai cờ mới của `run.mjs` (E7b chạy xen kẽ R1b/R2b trong **một** tiến trình, giữ bảng Latin của E7):
+
+- `--arm-config R1=<tệp>,R2=<tệp>[,R3=<tệp>]`: mỗi arm một tệp cấu hình thêm (vd. chỉ khác `phases.toolTurns.accept`). Mọi arm trong `--arms` phải có tệp; thiếu, trùng arm, tệp không tồn tại/không phải JSON hay dùng chung với `--config` ⇒ lỗi tiếng Việt, thoát mã 2 **trước** khi tạo thư mục, chuẩn bị hay gọi LLM. Mỗi arm CCoding (R1, R2) có một app riêng (`createApp(…, { root, configFile })`), dữ liệu ở `<--ccoding-data>/w1`, `/w2` (R3: `w3`); không đặt `CCODING_CONFIG` toàn cục. R3 lấy `maxTurns` từ `phases.toolTurns.accept` của tệp R3.
+- `--selected <tệp>`: dùng danh sách chốt có sẵn (`{"items":["<mã>", …]}`, không rỗng, mọi mã có trong `--items` và bài có trong thư mục bài). Không chạy bước 1, không tạo/sửa `selected.json` hay `prep.jsonl` trong `--out`; chỉ ghi `runs.jsonl`, `responses/`, `config-*.json`. `--smoke` vẫn ưu tiên.
+
+```powershell
+node bench/vs-claude/e7/run.mjs --out <thư-mục-e7b> --work <tạm> --ccoding-data <data> --arms R1,R2 `
+  --arm-config R1=<r1b.json>,R2=<r2b.json> --selected <e7-cto\selected.json> --items <items.json>
+```
+
+Trường mới trên mỗi dòng `runs.jsonl`:
+
+- `extraConfigSha256`: sha256 (byte trên đĩa) của tệp cấu hình của chính arm đó (không có `--arm-config` thì theo `--config`, như cũ). `config-*.json` ghi thêm `armConfigSha256` (arm → sha256) và `selectedSha256`.
+- Dòng R1/R2 (kể cả `infra`), tính từ các bản ghi `calls.jsonl` có `phase = accept`: `acceptCalls`; `acceptAuthSources` (giá trị khác nhau theo thứ tự gặp, bỏ rỗng); `acceptTurnCapped` (có bản ghi `turnCapped === true`); `acceptToolCalls` (tổng `toolCalls`, thiếu tính 0); `acceptTurns` (tổng `turns` nếu **mọi** bản ghi accept có `turns` là số, không thì `null`).
+- Ghi chú về `turns` cũ: công thức `turns` của R1/R2 không đổi (`sum(c.turns ?? 0)`). Dữ liệu E7 **trước K2** có `turns` = 0 vì `calls.jsonl` khi đó không có khóa `turns`: đó là thiếu dữ liệu, không phải 0 vòng. Dùng `acceptTurns` (null khi thiếu) để phân biệt.

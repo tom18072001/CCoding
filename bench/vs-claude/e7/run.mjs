@@ -3,6 +3,9 @@
 //   node bench/vs-claude/e7/run.mjs --items bench/vs-claude/results/e7-cto/items.json --out bench/vs-claude/results/e7-cto \
 //        [--arms R1,R2,R3] [--root <bản checkout CCoding đã build>] [--work <thư mục tạm>] [--ccoding-data <thư mục data của app>]
 //        [--config <tệp cấu hình thêm>] [--claude-bin claude] [--timeout 20] [--limit N] [--only id1,id2] [--prepare-only] [--smoke <mã mục dự phòng>]
+//        [--arm-config R1=<tệp>,R2=<tệp>[,R3=<tệp>]] [--selected <danh sách chốt .json>]
+// --arm-config (D24): mỗi arm một tệp cấu hình thêm, mỗi arm CCoding một app riêng (cùng một tiến trình, giữ xen kẽ bảng Latin); không dùng chung với --config.
+// --selected (D24): dùng danh sách chốt có sẵn, không chạy bước 1, không tạo/sửa selected.json hay prep.jsonl trong --out.
 // Bước 1 (một lần, trước mọi lượt gọi LLM): chuẩn bị và kiểm lại mọi mục, thay mục hỏng bằng dự phòng cùng bài và cùng loại
 //   theo thứ tự đã lấy mẫu → selected.json (danh sách chốt) + prep.jsonl. Bước 2: chạy arm theo lịch xáo cố định.
 // Không in kết luận của arm khi đang chạy (chỉ đếm), không ghi nhãn vào runs.jsonl.
@@ -13,7 +16,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { rng, sample } from '../../../docs/research/analysis/g-mutation.mjs';
 import { EXIT_RATE_LIMIT, cliVersion, gitCommit, latinOrders } from '../lib/queue.mjs';
-import { ARMS, loadCcoding, prepareItem, runCto, runSingle } from './lib.mjs';
+import { ARMS, ARM_DIR, loadCcoding, prepareItem, runCto, runSingle } from './lib.mjs';
 
 const SUITE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
@@ -32,11 +35,48 @@ const claudeBin = flag('claude-bin', 'claude');
 const runtime = flag('runtime', 'claude-cli');
 const limit = Number(flag('limit', '0')) || Infinity;
 const only = flag('only', '') ? new Set(flag('only', '').split(',')) : null;
-if (flag('config')) process.env.CCODING_CONFIG = path.resolve(flag('config'));
-
+const die = (m) => { console.error(`Lỗi: ${m}`); process.exit(2); };
 const doc = JSON.parse(fs.readFileSync(itemsFile, 'utf8'));
 // Thư mục bài: --tasks-dir hoặc VSC_TASKS_DIR; mặc định <suite>/tasks.
 const tasksDir = path.resolve(flag('tasks-dir', process.env.VSC_TASKS_DIR || path.join(SUITE, 'tasks')));
+const byId = new Map([...doc.items, ...Object.values(doc.reserve ?? {}).flatMap((r) => [...r.faulty, ...r.clean])].map((x) => [x.id, x]));
+const fileSha = (f) => (f && fs.existsSync(f) ? crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex') : null);
+
+// ───────────── kiểm cờ (trước mọi thư mục, prep, app và lượt gọi LLM) ─────────────
+/** arm → đường dẫn tuyệt đối của tệp cấu hình thêm */
+const armConfig = {};
+const useArmConfig = has('arm-config');
+if (useArmConfig) {
+  if (flag('config')) die('--arm-config không dùng chung với --config (chọn một trong hai).');
+  const raw = flag('arm-config', '');
+  if (!raw || raw.startsWith('--')) die('--arm-config cần dạng R1=<tệp>,R2=<tệp>[,R3=<tệp>].');
+  for (const part of raw.split(',')) {
+    const i = part.indexOf('=');
+    const a = i < 0 ? part : part.slice(0, i), f = i < 0 ? '' : part.slice(i + 1);
+    if (!ARMS[a]) die(`--arm-config: arm không có: "${a}" (có: ${Object.keys(ARMS).join(', ')}).`);
+    if (!f) die(`--arm-config: arm ${a} thiếu đường dẫn tệp.`);
+    if (a in armConfig) die(`--arm-config: arm ${a} bị trùng.`);
+    armConfig[a] = path.resolve(f);
+  }
+  for (const a of armIds) if (!armConfig[a]) die(`--arm-config: arm ${a} (có trong --arms) chưa có tệp cấu hình.`);
+  for (const a of Object.keys(armConfig)) if (!fs.existsSync(armConfig[a]) || !fs.statSync(armConfig[a]).isFile()) die(`--arm-config: tệp của arm ${a} không tồn tại: ${armConfig[a]}`);
+  for (const a of Object.keys(armConfig)) { try { JSON.parse(fs.readFileSync(armConfig[a], 'utf8')); } catch (e) { die(`--arm-config: tệp của arm ${a} không phải JSON hợp lệ (${e.message}).`); } }
+} else if (flag('config')) process.env.CCODING_CONFIG = path.resolve(flag('config'));
+const armCfgSha = Object.fromEntries(Object.entries(armConfig).map(([a, f]) => [a, fileSha(f)]));
+
+// --selected: danh sách chốt có sẵn (không chạy bước 1)
+const selectedFile = has('selected') ? path.resolve(flag('selected', '')) : null;
+let selectedDoc = null;
+if (has('selected')) {
+  if (!flag('selected') || flag('selected').startsWith('--')) die('--selected cần đường dẫn tệp danh sách chốt.');
+  if (!fs.existsSync(selectedFile)) die(`--selected: tệp không tồn tại: ${selectedFile}`);
+  try { selectedDoc = JSON.parse(fs.readFileSync(selectedFile, 'utf8')); } catch (e) { die(`--selected: tệp không phải JSON hợp lệ (${e.message}).`); }
+  if (!Array.isArray(selectedDoc?.items) || !selectedDoc.items.length) die('--selected: tệp phải có mảng "items" không rỗng.');
+  const missing = selectedDoc.items.filter((id) => !byId.has(id));
+  if (missing.length) die(`--selected: ${missing.length} mã mục không có trong bộ mục (${itemsFile}): ${missing.slice(0, 5).join(', ')}`);
+  const noTask = [...new Set(selectedDoc.items.map((id) => byId.get(id).task))].filter((t) => !fs.existsSync(path.join(tasksDir, t, 'task.json')));
+  if (noTask.length) die(`--selected: bài không có trong thư mục bài ${tasksDir}: ${noTask.join(', ')}`);
+}
 const artifacts = path.resolve(flag('artifacts', path.join(SUITE, 'results', 'study-cloud', 'artifacts')));
 fs.mkdirSync(out, { recursive: true });
 fs.mkdirSync(work, { recursive: true });
@@ -45,9 +85,8 @@ const jl = (f) => (fs.existsSync(f) ? fs.readFileSync(f, 'utf8').split('\n').fil
 const append = (f, row) => fs.appendFileSync(f, `${JSON.stringify(row)}\n`);
 /** Repo công khai: bỏ đường dẫn máy chạy (thư mục tạm, bản checkout, thư mục người dùng) khỏi văn bản lưu lại. */
 const scrub = (t) => [[work, '<work>'], [root, '<ccoding>'], [os.homedir(), '<home>']].reduce((s, [a, b]) => s.split(a).join(b).split(a.replace(/\\/g, '/')).join(b), String(t));
-const fileSha = (f) => (f && fs.existsSync(f) ? crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex') : null);
 // cấu hình của app trong tiến trình (R1/R2): phải giống server bench (chỉ claude-cli, chặn web) — ghi sha256 để đối chiếu
-const meta = { ccodingCommit: gitCommit(root), claudeCliVersion: cliVersion(claudeBin), node: process.version, platform: process.platform, localConfigSha256: fileSha(path.join(root, 'ccoding.local.json')), extraConfigSha256: fileSha(process.env.CCODING_CONFIG) };
+const meta = { ccodingCommit: gitCommit(root), claudeCliVersion: cliVersion(claudeBin), node: process.version, platform: process.platform, localConfigSha256: fileSha(path.join(root, 'ccoding.local.json')), extraConfigSha256: useArmConfig ? null : fileSha(process.env.CCODING_CONFIG) };
 
 // ───────────── bước 1: chốt danh sách mục ─────────────
 const selFile = path.join(out, 'selected.json');
@@ -55,7 +94,7 @@ const prepFile = path.join(out, 'prep.jsonl');
 // chạy thử (§9 E7 (7)): một mục dự phòng KHÔNG thuộc danh sách chốt, vào thư mục riêng; không vào phân tích
 const smoke = flag('smoke', null);
 if (smoke && path.resolve(out) === path.resolve(SUITE, 'results', 'e7-cto')) throw new Error('--smoke phải ghi vào thư mục khác results/e7-cto');
-if (!smoke && !fs.existsSync(selFile)) {
+if (!smoke && !selectedDoc && !fs.existsSync(selFile)) {
   const selected = [], skipped = [];
   const queue = new Map(); // task|kind → dự phòng còn lại
   for (const [task, r] of Object.entries(doc.reserve)) for (const kind of ['faulty', 'clean']) queue.set(`${task}|${kind}`, r[kind].slice());
@@ -79,26 +118,30 @@ if (!smoke && !fs.existsSync(selFile)) {
 if (has('prepare-only')) process.exit(0);
 
 // ───────────── bước 2: chạy ─────────────
-const sel = smoke ? { items: [smoke] } : JSON.parse(fs.readFileSync(selFile, 'utf8'));
-const byId = new Map([...doc.items, ...Object.values(doc.reserve).flatMap((r) => [...r.faulty, ...r.clean])].map((x) => [x.id, x]));
+const sel = smoke ? { items: [smoke] } : selectedDoc ?? JSON.parse(fs.readFileSync(selFile, 'utf8'));
 const order = sample(sel.items, sel.items.length, rng(`${doc.seed}|e7|order`));
 const orders = latinOrders(armIds.length);
 const runsFile = path.join(out, 'runs.jsonl');
 // cặp đã xong = dòng CUỐI của cặp là `done` (13/11/2026: dòng infra phân loại lại ghi sau dòng done → chạy lại cặp đó)
 const lastOf = new Map(jl(runsFile).map((r) => [`${r.id}__${r.arm}`, r]));
 const done = new Set([...lastOf].filter(([, r]) => r.status === 'done').map(([k]) => k));
-fs.writeFileSync(path.join(out, `config-${new Date().toISOString().replace(/[:.]/g, '-')}.json`), JSON.stringify({ argv: argv.map(scrub), out: scrub(out), root: scrub(root), armIds, timeoutMin, runtime, ...meta, startedAt: new Date().toISOString() }, null, 1));
+fs.writeFileSync(path.join(out, `config-${new Date().toISOString().replace(/[:.]/g, '-')}.json`), JSON.stringify({ argv: argv.map(scrub), out: scrub(out), root: scrub(root), armIds, timeoutMin, runtime, ...meta, ...(useArmConfig ? { armConfigSha256: armCfgSha } : {}), ...(selectedDoc ? { selectedSha256: fileSha(selectedFile) } : {}), startedAt: new Date().toISOString() }, null, 1));
 
-let app;
+const apps = new Map();
 const capture = new Map();
-const appFor = () => {
-  if (app) return app;
-  const base = cc.loadConfig({ root });
-  app = cc.createApp({ dataDir: ccData, workspacesDir: path.join(ccData, 'workspaces'), runner: 'process', herdr: { ...base.herdr, notify: false, agentPanes: false } }, { root });
+/** App của arm: có --arm-config → một app riêng mỗi arm (cấu hình riêng, data `<ccoding-data>/<w1|w2|w3>`); không thì một app dùng chung như trước. */
+const appFor = (arm) => {
+  const key = useArmConfig ? arm : '*';
+  if (apps.has(key)) return apps.get(key);
+  const configFile = useArmConfig ? armConfig[arm] : undefined;
+  const base = cc.loadConfig({ root, configFile });
+  const dataDir = useArmConfig ? path.join(ccData, ARM_DIR[arm]) : ccData;
+  const app = cc.createApp({ dataDir, workspacesDir: path.join(dataDir, 'workspaces'), runner: 'process', herdr: { ...base.herdr, notify: false, agentPanes: false } }, { root, ...(configFile ? { configFile } : {}) });
   // chỉ ghi lại văn bản lượt accept để đối chiếu với R3 (promptSha); lượt gọi vẫn đi qua Orchestrator.call() như thường
   const rt = app.runtimes.get(runtime);
   const orig = rt.run.bind(rt);
   rt.run = async (req, hooks) => { if (req.phase === 'accept') capture.set(req.meta?.taskId, { context: req.context, prompt: req.prompt, tools: req.tools, maxTurns: req.toolPolicy?.maxTurns ?? null }); return orig(req, hooks); };
+  apps.set(key, app);
   return app;
 };
 
@@ -116,16 +159,16 @@ for (const [idx, id] of order.entries()) {
     process.stdout.write(`[${n}] ${id} ${arm} … `);
     let r;
     try {
-      if (ARMS[arm].kind === 'cto') r = await runCto(appFor(), cc, prep, arm, { runtime, capture });
+      if (ARMS[arm].kind === 'cto') r = await runCto(appFor(arm), cc, prep, arm, { runtime, capture });
       else {
-        const a = appFor();
+        const a = appFor(arm);
         r = await runSingle(cc, prep, { config: a.config, cto: a.registry.cto(), deptName: a.registry.department('dev').name, bin: claudeBin, timeoutMin, maxTurns: a.config.phases?.toolTurns?.accept });
       }
     } catch (e) { r = { status: 'infra', infra: 'error', error: String(e?.stack ?? e).slice(0, 1500) }; }
     const { text, ...row } = r;
     if (row.error) row.error = scrub(row.error);
     if (text) { fs.mkdirSync(path.join(out, 'responses'), { recursive: true }); fs.writeFileSync(path.join(out, 'responses', `${id}__${arm}.md`), scrub(text)); }
-    append(runsFile, { id, arm, at: new Date().toISOString(), ...row, ...meta });
+    append(runsFile, { id, arm, at: new Date().toISOString(), ...row, ...meta, ...(useArmConfig ? { extraConfigSha256: armCfgSha[arm] } : {}) });
     console.log(r.status === 'done' ? `xong | ${Math.round(r.wallSec ?? 0)}s | ${r.tokens?.weighted ?? 0} wtok` : `HẠ TẦNG (${r.infra}${r.resetsAt ? `, mở lại ${r.resetsAt}` : ''})`);
     if (r.infra === 'rate-limit') { console.error('Dừng vì hạn mức; chạy lại đúng lệnh này để chạy tiếp.'); process.exit(EXIT_RATE_LIMIT); }
   }

@@ -627,6 +627,8 @@ export interface UsageRecord {
   stopReason?: string;
   /** Chạm trần vòng công cụ (lượt hết lượt/trần token đầu vào) — KPI ưu tiên trường này hơn regex trên diag. */
   turnCapped?: boolean;
+  /** Số vòng model của lượt (claude-cli: num_turns của sự kiện result; api: số vòng công cụ). Không có thì không ghi khóa. */
+  turns?: number;
   /** Lần thử của lượt gọi khi hết giờ (1 hoặc 2) — chỉ có ở dòng `stopReason: 'timeout'`. */
   attempt?: number;
   error?: string;

@@ -162,6 +162,8 @@ export class ClaudeStreamParser {
   /** stop_reason của model (sự kiện result, không có thì của thông điệp assistant cuối) — end_turn, max_tokens, tool_use… */
   stopReason?: string;
   sawResult = false;
+  /** num_turns của sự kiện result (kể cả error_max_turns); undefined khi không có hoặc không phải số. */
+  numTurns?: number;
   /** Lượt gọi công cụ của Claude Code, quy về tên công cụ của CCoding — để log tool.call và KPI (kiểm chứng, đọc/ghi) tính được. */
   toolCalls: ToolCallRecord[] = [];
   private pending = new Map<string, { rec: ToolCallRecord; t0: number }>();
@@ -232,6 +234,7 @@ export class ClaudeStreamParser {
         this.sawResult = true;
         if (typeof ev.subtype === 'string') this.subtype = ev.subtype;
         if (typeof ev.stop_reason === 'string' && ev.stop_reason) this.stopReason = ev.stop_reason;
+        if (typeof ev.num_turns === 'number' && Number.isFinite(ev.num_turns)) this.numTurns = ev.num_turns;
         if (typeof ev.result === 'string') this.resultText = ev.result;
         if (ev.usage) this.usage = ev.usage;
         if (typeof ev.total_cost_usd === 'number') this.costUsd = ev.total_cost_usd;
@@ -409,6 +412,7 @@ export class ClaudeCliRuntime implements Runtime {
       error,
       toolCalls: parser.toolCalls.length ? parser.toolCalls : undefined,
       capped,
+      ...(parser.numTurns !== undefined ? { turns: parser.numTurns } : {}),
       stopReason: parser.stopReason,
       diag:
         [
