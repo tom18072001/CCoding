@@ -515,6 +515,8 @@ export interface Task {
   error?: string;
   attachments?: Attachment[];
   pause?: PauseInfo;
+  /** Mã phiên server đang chạy/xếp hàng nhiệm vụ này; khác phiên hiện tại hoặc thiếu → mồ côi sau khi server dừng. */
+  serverBootId?: string;
   /** Mốc cảnh báo ngân sách đã phát (80, 100). */
   budgetAlerted?: number;
   /** Thư mục làm việc thực tế (worktree) và nhánh git của nhiệm vụ. */
