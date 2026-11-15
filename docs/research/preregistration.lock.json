@@ -294,6 +294,10 @@
     {
       "key": "Phụ lục sai lệch E7b (1): khóa `acceptFollowupRounds`, sửa định nghĩa `capped`, nguồn kiểm `authSource`, cặp thiếu theo arm, nhãn khi hai phép khác chiều (ghi 15/11/2026, @methodologist, sửa theo review K4; trước mọi lượt gọi LLM của E7b)",
       "sha256": "34aec27a6d154457da8e8fd5b34d3357b221cf384b1b2650a111c5ce6d161606"
+    },
+    {
+      "key": "Phụ lục sai lệch E7b (2): đổi sang một tiến trình xen kẽ, nguồn kiểm theo dòng `runs.jsonl` của D24, đính chính `toolInputBudget`, luật \"hết giờ\", bảng Quy tắc hiệu lực (ghi 15/11/2026, @methodologist, BRIEF-26b K1; trước mọi lượt gọi LLM của E7b)",
+      "sha256": "14f89e157a49d4db02e187246b18377430bfc5be0fe204fb6992c958115a52f8"
     }
   ],
   "history": [
