@@ -212,6 +212,28 @@ export interface AcceptResult {
   followUps: Array<{ title: string; brief: string; department?: string }>;
   /** Phần hiển thị: câu trả lời bỏ khối JSON kết luận. */
   body: string;
+  /** true khi câu đầu mục Tóm tắt nói ngược `accepted` của JSON (chỉ khi đọc được JSON và nhận ra được văn bản). Engine vẫn theo JSON. */
+  textMismatch?: boolean;
+}
+
+/** Câu đầu của mục `## Tóm tắt` (không có mục thì câu đầu của body), bỏ định dạng markdown thường gặp. */
+function firstSummarySentence(body: string): string {
+  const m = /^#{1,6}[ \t]*Tóm tắt[^\n]*\n([\s\S]*?)(?=\n#{1,6}\s|(?![\s\S]))/im.exec(body);
+  const src = (m ? m[1] : body).trim().replace(/^[>\s*_]+/, '');
+  const end = /[.!?\n]/.exec(src);
+  return (end ? src.slice(0, end.index) : src).replace(/[*_`]/g, '').trim();
+}
+
+/**
+ * Văn bản nghiệm thu nói "đã" hay "chưa" nghiệm thu, đọc từ câu đầu mục Tóm tắt. Mẫu "chưa" xét trước.
+ * Không nhận ra được → undefined (không kết luận gì).
+ */
+export function acceptanceTextVerdict(body: string): 'accepted' | 'not_accepted' | undefined {
+  const s = firstSummarySentence(body).toLowerCase();
+  if (!s) return undefined;
+  if (/(chưa|không)\s+nghiệm\s+thu|nghiệm\s+thu\s+có\s+điều\s+kiện|chưa\s+đạt|không\s+đạt/.test(s)) return 'not_accepted';
+  if (/(^|[^\p{L}])nghiệm\s+thu([^\p{L}]|$)/u.test(s)) return 'accepted';
+  return undefined;
 }
 
 /** Đọc kết luận nghiệm thu của CTO (khối JSON cuối). Không đọc được → chưa coi là nghiệm thu, parsed=false. */
@@ -262,7 +284,9 @@ export function parseAcceptance(text: string): AcceptResult {
     .slice(0, 5);
   // kết luận chung phải khớp bảng: còn tiêu chí không đạt / chưa kiểm được thì chưa nghiệm thu
   const accepted = Boolean(raw.accepted) && criteria.length > 0 && criteria.every((c) => c.result === 'pass');
-  return { accepted, parsed: true, summary: String(raw.summary ?? '').slice(0, 600), criteria, risks, followUps, body };
+  const verdict = acceptanceTextVerdict(body);
+  const textMismatch = verdict !== undefined && (verdict === 'accepted') !== accepted;
+  return { accepted, parsed: true, summary: String(raw.summary ?? '').slice(0, 600), criteria, risks, followUps, body, ...(textMismatch ? { textMismatch: true } : {}) };
 }
 
 export interface RouteResult {

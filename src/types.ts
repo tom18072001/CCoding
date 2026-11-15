@@ -433,6 +433,8 @@ export interface Acceptance {
   criteria: AcceptanceCriterion[];
   risks: string[];
   followUps: Array<{ title: string; brief: string; department?: string }>;
+  /** Văn bản nghiệm thu nói ngược khối JSON (engine theo JSON). Chỉ có khi lệch. */
+  textMismatch?: boolean;
   /** Tệp ACCEPTANCE.md trong thư mục chạy của nhiệm vụ. */
   path?: string;
   /** Dấu vân tay báo cáo tổng hợp lúc nghiệm thu — báo cáo viết lại thì nghiệm thu lại. */
