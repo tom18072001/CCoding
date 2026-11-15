@@ -1,6 +1,11 @@
 // Test không được ghi vào cây repo: tệp test ghi/xóa/chép/đổi tên với đường dẫn ghép từ HERE, ROOT, __dirname,
 // import.meta.dirname (hay biến suy ra từ chúng) mà không qua thư mục tạm. Hai test chạy song song sẽ đua nhau
 // (D22: analyze-sr tạo bài tạm trong bench/vs-claude/tasks/ làm isolation-v43f ENOENT). Ngoại lệ: scripts/lint/allow.json.
+// D23: stringMask nhận regex literal (vd. /'/); biến trung gian gán thẳng từ HERE/ROOT/… hoặc từ biến đã nhiễm cũng bị bắt.
+// GIỚI HẠN CÒN LẠI (phân tích văn bản, không phải trình phân tích cú pháp): (1) đường dẫn repo truyền qua THAM SỐ hàm
+// (function w(dir) { fs.writeFileSync(dir, …) } rồi gọi w(HERE)); (2) THUỘC TÍNH đối tượng (o.dir = HERE; fs.mkdirSync(o.dir)) và
+// destructuring; (3) giá trị IMPORT từ tệp khác (import { repoDir } from './x.mjs'); (4) tên biến khai báo nhiều lần trong
+// tệp bị bỏ qua; (5) regex ngay sau ")" hoặc "}" bị coi là phép chia.
 const TEST_FILE = /\.test\.[cm]?[jt]s$/;
 // Tên hàm -> chỉ số đối số là ĐÍCH ghi (-1: mọi đối số đường dẫn trong 2 đối số đầu).
 const WRITERS = {
@@ -8,8 +13,9 @@ const WRITERS = {
   copyFileSync: [1], cpSync: [1], renameSync: [0, 1], symlinkSync: [1],
   writeFile: [0], appendFile: [0], mkdir: [0], rm: [0], unlink: [0], copyFile: [1], cp: [1], rename: [0, 1],
 };
-const REPO_REF = /\b(?:HERE|ROOT|__dirname)\b|import\.meta\.dirname/;
-const PATHY = /^\s*(?:\([^)]*\)\s*=>\s*|[A-Za-z_$][\w$]*\s*=>\s*)?(?:path\.(?:join|resolve|normalize|dirname|relative)\s*\(|`|'|")/;
+const REPO_REF = /\b(?:HERE|ROOT|__dirname)\b|import\.meta\.(?:dirname|url)/;
+const PATHY = /^\s*(?:\([^)]*\)\s*=>\s*|[A-Za-z_$][\w$]*\s*=>\s*)?(?:path\.(?:join|resolve|normalize|dirname|relative)\s*\(|fileURLToPath\s*\(|`|'|")/;
+const BARE = /^\s*[A-Za-z_$][\w$.]*\s*$/; // gán thẳng một tên (vd. const base = HERE)
 const TMP_REF =/mkdtemp|tmpdir\s*\(/;
 const CALL = new RegExp(String.raw`\b(?:fs\.|fsp\.|promises\.)?(${Object.keys(WRITERS).join('|')})\s*\(`, 'g');
 
@@ -40,11 +46,34 @@ function taintedVars(src) {
     for (const m of decls) {
       if (count.get(m[1]) !== 1 || ['HERE', 'ROOT'].includes(m[1])) continue;
       const rhs = m[2];
-      if (TMP_REF.test(rhs) || !PATHY.test(rhs)) continue; // chỉ biểu thức dựng đường dẫn mới lan nhiễm; đọc dữ liệu từ repo thì không
+      if (TMP_REF.test(rhs) || !(PATHY.test(rhs) || BARE.test(rhs))) continue; // chỉ biểu thức dựng đường dẫn mới lan nhiễm; đọc dữ liệu từ repo thì không
       if (REPO_REF.test(rhs) || [...t].some((v) => new RegExp(String.raw`\b${v}\b`).test(rhs))) t.add(m[1]);
     }
   }
   return t;
+}
+
+const RE_KEYWORD = /^(?:return|typeof|case|in|of|delete|void|throw|new|else|do|yield|await)$/;
+/** Dấu "/" tại i mở regex (true) hay là phép chia (false): xét token đứng trước. */
+function regexAllowed(src, i) {
+  let j = i - 1;
+  while (j >= 0 && /\s/.test(src[j])) j--;
+  if (j < 0) return true;
+  const c = src[j];
+  if (/[\w$]/.test(c)) { let k = j; while (k >= 0 && /[\w$]/.test(src[k])) k--; return RE_KEYWORD.test(src.slice(k + 1, j + 1)); }
+  return !/[)\]}'"`]/.test(c);
+}
+/** Vị trí dấu "/" đóng regex bắt đầu ở i (tính lớp [...] và ký tự thoát); -1 nếu hết dòng mà chưa đóng (không phải regex). */
+function regexEnd(src, i) {
+  let cls = false;
+  for (let k = i + 1; k < src.length && src[k] !== '\n'; k++) {
+    const c = src[k];
+    if (c === '\\') k++;
+    else if (cls) { if (c === ']') cls = false; }
+    else if (c === '[') cls = true;
+    else if (c === '/') { while (/[a-z]/i.test(src[k + 1] ?? '')) k++; return k; }
+  }
+  return -1;
 }
 
 /** Mảng boolean: true tại vị trí nằm trong nội dung chuỗi/template (không tính `${…}` là mã) hoặc comment. Mã nhúng trong chuỗi (fixture) không phải lời gọi thật. */
@@ -57,6 +86,10 @@ function stringMask(src) {
     if (mode === 'code') {
       if (c === '/' && n === '/') { while (i < src.length && src[i] !== '\n') mask[i++] = true; i--; continue; }
       if (c === '/' && n === '*') { const e = src.indexOf('*/', i + 2); const end = e < 0 ? src.length : e + 2; for (; i < end; i++) mask[i] = true; i--; continue; }
+      if (c === '/' && regexAllowed(src, i)) {
+        const e = regexEnd(src, i);
+        if (e > 0) { for (; i <= e; i++) mask[i] = true; i--; continue; }
+      }
       if (c === '"' || c === "'") {
         mask[i] = true;
         for (i++; i < src.length && src[i] !== c && src[i] !== '\n'; i++) { mask[i] = true; if (src[i] === '\\') mask[++i] = true; }
