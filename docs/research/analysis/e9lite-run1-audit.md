@@ -182,3 +182,10 @@ Kỳ vọng: `TRUNG`; `ee49fc5d…ed312f`, `40596992…694025`, `bb004f1f…b436
 2. Các số chính trong `report.md` **đúng định nghĩa §9** (độ phủ, chia thừa, `gateFirst` theo BRIEF-24b, token có trọng số, bootstrap B = 4000, seed 20261115). Tính tay 3 bài (t5-logq chia được, g1-slug-dedupe và t2-orders không chia được, cả hai arm P-O và P-S) **không phát hiện lệch**, ba cận bootstrap khớp đến từng chữ số.
 3. Điểm yếu cần mang sang bài viết: bảng theo arm tuyệt đối chưa có (G1), tầng n = 3 (G5), nhãn nguyên nhân dựa lời khai (G7), chuẩn tệp chỉ là một lời giải (§9 (9)). Mọi kết luận về model chỉ là gợi ý hướng [Khám phá], n = 13, không báo p.
 4. **Chưa kiểm** (cần người có quyền chạy lệnh): sha256 tệp, `diff` thứ tự tự động, chạy lại script (mục 6).
+
+## 9. Tệp khóa `preregistration.lock.json` (xử lý góp ý review)
+
+- `git diff docs/research/preregistration.lock.json`: **+4 dòng, 0 dòng xóa**. Chỉ thêm một phần tử mới vào `blocks` (khóa "Sai lệch được báo minh bạch: lượt `failed` do cổng kế hoạch chặn… (BRIEF-25, K2)", sha256 `150d8aef…c9acdd`). Mọi mã băm khối cũ, kể cả khối E9-lite BRIEF-24b `064967de…a63fd`, và mảng `history` **giữ nguyên**.
+- Nguyên nhân thay đổi: chỉ do khối mới ở cuối §9 (`git diff --numstat` của `preregistration.md` = 17 thêm, 0 xóa). Công cụ `scripts/lint/prereg-lock.mjs --add-new` chỉ thêm và từ chối ghi đè băm cũ, nên khối cũ đổi sẽ báo lỗi.
+- Lý do không chép giải thích này vào khối §9: khối đã được khóa băm; sửa chữ sẽ đổi băm và cần chạy lại công cụ, mà môi trường này chặn `node`. Giải thích nằm ở đây và trong thông điệp commit.
+- Cần người có quyền chạy: `node scripts/lint/prereg-lock.mjs --add-new` (kỳ vọng "Đã thêm 0 khối mới") và `npm run lint`.
