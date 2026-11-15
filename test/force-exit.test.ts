@@ -67,9 +67,10 @@ async function runHang(script: string): Promise<{ status: number | null; watchdo
   }
 }
 
-// Script đã chứng minh xanh 3 lần liên tiếp trên Windows với --test-force-exit thì giữ cờ. `test` (libuv sập ~1/3 lần
-// toàn bộ bộ: Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), src\winsync.c) và `test:bench` (đỏ 1 lần chưa rõ nguyên nhân)
-// chưa đạt nên chưa bật; vẫn bắt buộc --test-timeout.
+// Script đã chứng minh xanh liên tiếp trên Windows với --test-force-exit thì giữ cờ. `test:research` và `test:bench` đã bật
+// (`test:bench`: 10/10 lần xanh tuần tự, docs/test-bench-flaky.md). `test` chưa bật: cả bộ có cờ vẫn sập libuv (D30/K1 2/3 lần,
+// D28b 8/10; Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), file src\win\async.c, line 76), xem docs/force-exit-handles.md.
+// Vẫn bắt buộc --test-timeout.
 const FORCE_EXIT = ['test:research', 'test:bench'];
 const NO_FORCE_EXIT = ['test'];
 

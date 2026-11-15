@@ -69,3 +69,23 @@ Thăm dò 300 vòng: `mkdtemp` + `git init` + `rev-parse --show-toplevel` + `ass
 
 - `e8-arms.test.mjs` (2 chỗ, dòng ~53 và ~99) và `plan-only-arms.test.mjs` (dòng ~112) dùng `srv.close()` trần. Đã đổi thành chờ `close` kèm `closeAllConnections()`; hai tệp chạy riêng 13 pass, 0 fail.
 - Không có `listen`/`createServer` khác trong thư mục này.
+
+## Chuỗi 10 lần trên bản cuối (D30 · K2)
+
+Dữ liệu: **Nội bộ**. Lệnh: `npm run test:bench` (script có `--test-force-exit --test-timeout=300000`), Windows 11, Node v24.14.0, mỗi lần một vòng, tuần tự, không chạy lệnh test nào khác cùng lúc.
+Commit đo: `d79ad430` (gồm bản sửa `DEFAULT_DENY` của K3 và kết quả K1). Sau chuỗi chỉ sửa chú thích và tài liệu (`test/force-exit.test.ts`, `test/helpers.ts`, `docs/`), không sửa mã chạy. Log: `.scratch/k2/run-<n>.log`, `.scratch/k2/summary.txt`.
+
+| Lần | Thời gian | Kết quả | Số test | Ca đỏ |
+|---|---|---|---|---|
+| 1 | 53 s | pass (exit 0) | 295 (pass 295, fail 0) | không |
+| 2 | 53 s | pass (exit 0) | 295 (pass 295, fail 0) | không |
+| 3 | 52 s | pass (exit 0) | 295 (pass 295, fail 0) | không |
+| 4 | 51 s | pass (exit 0) | 295 (pass 295, fail 0) | không |
+| 5 | 52 s | pass (exit 0) | 295 (pass 295, fail 0) | không |
+| 6 | 52 s | pass (exit 0) | 295 (pass 295, fail 0) | không |
+| 7 | 53 s | pass (exit 0) | 295 (pass 295, fail 0) | không |
+| 8 | 53 s | pass (exit 0) | 295 (pass 295, fail 0) | không |
+| 9 | 53 s | pass (exit 0) | 295 (pass 295, fail 0) | không |
+| 10 | 52 s | pass (exit 0) | 295 (pass 295, fail 0) | không |
+
+**10/10 xanh liên tiếp**, không lần nào đỏ nên không cần sửa mã. Đây là số đo trên một máy (Windows, Node 24); chưa kiểm trên CI Node 22.
