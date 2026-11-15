@@ -5,6 +5,15 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 18 (T-20261115-073336-258, BRIEF-25, 15/11/2026): phân tích E9-lite run1 [Khám phá] theo §9 và đưa vào bài báo
+
+Không sửa `src/`, mã `bench/`, `runs.jsonl`, `gold.json`, `labels.json`, `e9lite.mjs`; không chạy lại planner. Mọi số là [Khám phá], n = 13 bài, không p-value. Không phải E9 (E9 vẫn chưa chạy).
+
+- **K1 (@data-scientist):** `bench/vs-claude/results/e9lite/report.md` (đầu ra script nguyên văn + phụ lục bổ sung); chạy lần hai trùng byte; 121 dòng = 117 `done` + 4 `failed`.
+- **K2 (@methodologist):** `analysis/e9lite-run1-audit.md`; `preregistration.md` §9 thêm (chỉ thêm) khối "Sai lệch được báo minh bạch: lượt `failed` do cổng kế hoạch chặn…", hai cách đếm (c1 số dòng 1/0/3; c2 khóa trên 39: 1/39, 0/39, 2/39); tính tay 3 bài.
+- **K3 (@academic-writer):** `paper/paper.md` §6.6 đổi từ "chưa chạy" sang "đã chạy run1", thêm Bảng 24 (hiệu O − S, H − S, khoảng bootstrap 95 %, đếm >0/=0/<0), chia thừa, phân tầng, độ nhạy `mod2Of`, lượt không `done`, đe dọa 7–8 (thiên lệch chọn lọc do chạy lại sau cổng chặn; thiếu bảng tuyệt đối theo arm), dòng ghi chú đầu bản thảo và đoạn "Model theo vai"; `analysis/decisions/model-per-role.md` §4 (gợi ý hướng, mức chắc chắn thấp; không đổi `research-lead` `model: opus` hay `fastLane.planModel` sonnet); `facts.json` khóa `e9lite.*` (độ phủ hiệu, đếm, token, 121/117/4, hai cách đếm, sha256 `report.md`), `e9lite.status` = "đã chạy run1" và mục `numbers` tương ứng. **Chưa có:** độ phủ tuyệt đối theo arm (script không in; audit G1), token pha `plan` riêng (G2).
+- **K4 (@peer-reviewer):** phản biện, chỉ đọc.
+
 ## Vòng 4, gói 17b (T-20261115-051926-8f5, BRIEF-24b, 15/11/2026): đóng tiêu chí còn mở của BRIEF-24 trước khi chạy E9-lite
 
 Không sửa `src/` hay mã `bench/`, không chạy planner, không gọi LLM để đo; không có số kết quả E9-lite. Số 13/13 "chia được" của bản nhãn đầu là số cũ, hết hiệu lực; số hiệu lực là 3 "chia được" / 10 "không chia được".

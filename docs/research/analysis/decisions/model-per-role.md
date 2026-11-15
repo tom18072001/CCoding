@@ -33,3 +33,28 @@ Thang mức bằng chứng (của K4, không trùng M1–M4 của backlog): **V�
 - Bằng chứng ngoài là việc gọi công cụ, tài chính, hội thoại; chưa nguồn nào đo bóc tách cho sửa mã hay model nghiệm thu (khoảng trống 1–2 ở K3 §5).
 - Giá Opus = 2× Sonnet ở mọi thành phần (`improvement-backlog.md` C-5); đổi model ở khâu có phần chênh lớn (accept ~12,1 % token, plan 9,5 %) ảnh hưởng chi phí trực tiếp.
 - Chưa đọc được model thật trên vận hành chính (dự án A): biên bản không nêu [CHƯA KIỂM CHỨNG].
+
+## 4. Cập nhật BRIEF-25: gợi ý từ E9-lite run1 cho vai lập kế hoạch [Khám phá]
+
+**Câu hỏi: model nào phù hợp cho vai lập kế hoạch (trưởng phòng, khâu `plan`)?** Câu trả lời ở mức **gợi ý hướng**, không phải kết luận. Cơ sở: E9-lite run1, [Khám phá], n = 13 bài, 3 lần lặp, làn nhanh, chỉ giai đoạn lập kế hoạch; chuẩn là tập tệp/module mà lời giải mẫu đổi (một cách chia đúng, không phải chuẩn của người). Số lấy từ `bench/vs-claude/results/e9lite/report.md`; khóa `e9lite.*` ở `facts.json`; chi tiết ở `paper/paper.md` §6.6. Đây không phải E9 (E9 chưa chạy). Không báo p.
+
+**Điều số liệu cho thấy (mô tả).**
+- **Độ phủ module (`covMod`):** Opus − Sonnet 0,000 [0,000; 0,000] ở `raw` và `final` (13/13 bài hiệu = 0); Haiku − Sonnet `final` 0,000 [0,000; 0,000], `raw` -0,026 [-0,077; 0,000]. **Chưa phân biệt được** ba model ở độ phủ module.
+- **Độ phủ tệp (`covFile`):** `final` Opus − Sonnet 0,038 [0,000; 0,115] (1 / 12 / 0); Haiku − Sonnet 0,031 [-0,022; 0,115] (1 / 11 / 1). **Chưa phân biệt được.**
+- **Số hạng mục, `replanCount`, `gateFirst`:** mọi khoảng chứa 0 (hoặc có cận "-0,000"), **chưa phân biệt được**.
+- **Chia thừa, tầng "không chia được" (n = 10):** `final.overSplit` Opus − Sonnet 0,167 [0,033; 0,300] (4 / 6 / 0). Khoảng duy nhất nằm trên 0 trong nhóm thước chất lượng; Haiku − Sonnet 0,067 [-0,100; 0,200], chưa phân biệt được. Một khoảng trong nhiều thước, không hiệu chỉnh bội; chưa đủ để nói Opus chia thừa nhiều hơn.
+- **Token có trọng số của khâu lập kế hoạch:** Opus − Sonnet 12505,667 [6471,179; 20638,359] (10 / 0 / 3); Haiku − Sonnet 19621,615 [12306,000; 27931,949] (13 / 0 / 0). Cả hai khoảng nằm trên 0: **Sonnet rẻ hơn cả hai arm kia ở khâu này trên 13 bài** (đây là chênh token có trọng số của pha lập kế hoạch, chưa phải chi phí nhiệm vụ).
+
+**Tác động lên cấu hình hiện tại (khuyến nghị kèm mức chắc chắn; không sửa `src/` hay `config`).**
+
+| Cấu hình | Khuyến nghị | Mức chắc chắn | Lý do và giới hạn |
+|---|---|---|---|
+| `fastLane.planModel` = sonnet (làn nhanh) | **Giữ.** Không có chỗ nào cho thấy Opus hay Haiku cho độ phủ cao hơn; Sonnet tốn token ở khâu `plan` ít hơn cả hai | **Thấp–vừa** (hướng; n = 13, một cấu hình, một seed) | Không phân biệt được ở độ phủ, nên tiêu chí chi phí là yếu tố nghiêng cán cân; chỉ có nghĩa với bài kiểu bench (sửa mã, làn nhanh) |
+| `research-lead` `model: opus` (hồ sơ; ở văn phòng phụ khâu `plan` chạy Opus) | **Chưa đổi dựa trên số này.** E9-lite không đo bài nghiên cứu, không đo trưởng phòng văn phòng phụ | **Rất thấp** | Không có bằng chứng cho giữ hay đổi; việc nghiên cứu khác bài sửa mã của bench. Nếu muốn giảm chi phí khâu `plan`, cần phép đo đúng loại việc trước |
+| Haiku cho khâu `plan` | **Không khuyến nghị** làm mặc định | **Thấp** | Không có lợi độ phủ; token cao hơn Sonnet ở 13/13 bài; số hạng mục có xu hướng cao hơn (`final.items` 7 bài > 0 so với 4 bài < 0) nhưng khoảng chưa tách 0 |
+
+**Không được rút ra từ phần này:** (1) "Opus/Haiku/Sonnet bóc tách tốt hơn" (không có khoảng tách 0 ở thước chất lượng); (2) suy độ khó của bài từ nhãn tầng; (3) kết luận về tầng "chia được" (n = 3, chỉ liệt kê); (4) đổi `research-lead` hay `fastLane.planModel` chỉ dựa trên số này.
+
+**Giới hạn riêng của run1 (xem `paper.md` §6.6, đe dọa 1–8).** Chuẩn là một lời giải mẫu; độ phủ không phạt tệp thừa; `planFinal` đã bị mã sửa nên báo song song `planRaw`; bảng giá trị tuyệt đối theo arm không có (audit G1). **Thiên lệch chọn lọc do chạy lại sau khi cổng chặn:** 4 dòng `failed` (Haiku 1, Opus 3) do cổng kế hoạch luật B (i) chặn theo RUNLOG; (c1) số dòng không `done` Haiku 1, Sonnet 0, Opus 3; (c2) khóa có lượt đầu không `done` trên 39 khóa mỗi arm Haiku 1/39, Sonnet 0/39, Opus 2/39. Chỉ lượt qua cổng mới được tính, nên số của Opus có thể lệch về phía kế hoạch dễ qua cổng.
+
+**Bước tiếp (đề xuất).** Muốn đổi cấu hình cần phép đo có chuẩn do hai người gán độc lập (E9), hoặc ít nhất bảng theo arm tuyệt đối và nhiều bài hơn; với `research-lead`, cần bài nghiên cứu có đáp án.
