@@ -265,6 +265,16 @@ test('QH10: thiếu acceptTurnCapped ⇒ "suy ra" = unread; có trường ⇒ ch
 });
 
 // ---------- QH11: authSource ----------
+// msg của lỗi kiểm chép nguyên văn từ e7b-analyze.mjs (add('QH11', …)): so khớp CẢ CHUỖI, không chỉ cụm con, và kiểm cả dòng in ra trong báo cáo lỗi kiểm.
+const MSG_LA = 'acceptAuthSources có giá trị lạ (ngoài ["none"]), kiểm mọi dòng kể cả infra';
+const MSG_THIEU = 'acceptAuthSources thiếu ở dòng done (phải là ["none"])';
+const assertMsg = (a, want, other, label = '') => {
+  assert.equal(a.checks.length, 1, label);
+  assert.equal(a.checks[0].name, want, label);
+  assert.notEqual(a.checks[0].name, other, label);
+  assert.ok(report(a).includes(`- QH11 · ${want} · arm ${a.checks[0].arm} · `), label); // dòng in ra mang đúng msg của nhánh
+  assert.ok(!report(a).includes(other), label);
+};
 test('QH11: authSource lạ (khóa API / nhãn khác / thiếu) ⇒ lỗi kiểm, không in nhãn', () => {
   for (const bad of [['claude.ai'], ['none', 'oauth'], ['apiKey'], undefined]) {
     const rows = rows0.map((r) => { if (!(r.id === 'fA3' && r.arm === 'R1')) return r; const { acceptAuthSources, ...o } = r; return bad === undefined ? o : { ...o, acceptAuthSources: bad }; });
@@ -272,8 +282,8 @@ test('QH11: authSource lạ (khóa API / nhãn khác / thiếu) ⇒ lỗi kiểm
     assert.equal(a.status, 'checks-failed', JSON.stringify(bad));
     assert.deepEqual(a.checks.map((c) => [c.qh, c.arm]), [['QH11', 'R1b']]);
     // m1: undefined = thiếu ở dòng done; còn lại = giá trị lạ
-    assert.match(a.checks[0].name, bad === undefined ? /thiếu ở dòng done/ : /giá trị lạ/, JSON.stringify(bad));
-    assert.doesNotMatch(a.checks[0].name, bad === undefined ? /giá trị lạ/ : /thiếu ở dòng done/, JSON.stringify(bad));
+    if (bad === undefined) assertMsg(a, MSG_THIEU, MSG_LA, JSON.stringify(bad));
+    else assertMsg(a, MSG_LA, MSG_THIEU, JSON.stringify(bad));
     assert.doesNotMatch(report(a), /Nhãn P1|Kết luận nhánh|Recall|p Holm|Youden/);
   }
 });
@@ -283,8 +293,7 @@ test('QH11 (m3): authSource lạ ở dòng infra (kể cả khóa API) ⇒ lỗi
   const a = run({ rows: withInfra({ acceptAuthSources: ['apiKey'] }) });
   assert.equal(a.status, 'checks-failed');
   assert.deepEqual(a.checks.map((c) => [c.qh, c.arm, c.rows, c.seen]), [['QH11', 'R2b', 1, '[["apiKey"]]']]);
-  assert.match(a.checks[0].name, /giá trị lạ/); // m1
-  assert.doesNotMatch(a.checks[0].name, /thiếu ở dòng done/);
+  assertMsg(a, MSG_LA, MSG_THIEU); // m1
   assert.doesNotMatch(report(a), /Nhãn P1|Kết luận nhánh|Recall|p Holm|Youden/);
   assert.equal(run({ rows: withInfra({}) }).status, 'ok'); // infra không có lượt accept: không có trường, không lỗi
   assert.equal(run({ rows: withInfra({ acceptAuthSources: [] }) }).status, 'ok');
@@ -292,8 +301,7 @@ test('QH11 (m3): authSource lạ ở dòng infra (kể cả khóa API) ⇒ lỗi
   // dòng done thiếu trường: lỗi "thiếu" riêng (giữ nguyên)
   const miss = run({ rows: rows0.map((r) => { if (!(r.id === 'fA3' && r.arm === 'R1')) return r; const { acceptAuthSources, ...o } = r; return o; }) });
   assert.deepEqual(miss.checks.map((c) => [c.qh, c.arm, c.seen]), [['QH11', 'R1b', '[null]']]);
-  assert.match(miss.checks[0].name, /thiếu ở dòng done/); // m1
-  assert.doesNotMatch(miss.checks[0].name, /giá trị lạ/);
+  assertMsg(miss, MSG_THIEU, MSG_LA); // m1
 });
 
 test('QH11 (K1, 26d): dòng done không xác nhận được ⇒ dừng ở QH11 và in giá trị thật: mảng rỗng in [[]], không có trường in [null]', () => {
@@ -301,14 +309,12 @@ test('QH11 (K1, 26d): dòng done không xác nhận được ⇒ dừng ở QH11
   const empty = run({ rows: pick({ acceptAuthSources: [] }) });
   assert.equal(empty.status, 'checks-failed');
   assert.deepEqual(empty.checks.map((c) => [c.qh, c.arm, c.rows, c.seen]), [['QH11', 'R1b', 1, '[[]]']]);
-  assert.match(empty.checks[0].name, /thiếu ở dòng done/); // m1: [] không phải giá trị lạ
-  assert.doesNotMatch(empty.checks[0].name, /giá trị lạ/);
+  assertMsg(empty, MSG_THIEU, MSG_LA); // m1: [] không phải giá trị lạ
   assert.doesNotMatch(report(empty), /Nhãn P1|Kết luận nhánh|Recall|p Holm|Youden/);
   const none = run({ rows: pick(null) });
   assert.equal(none.status, 'checks-failed');
   assert.deepEqual(none.checks.map((c) => [c.qh, c.arm, c.rows, c.seen]), [['QH11', 'R1b', 1, '[null]']]);
-  assert.match(none.checks[0].name, /thiếu ở dòng done/); // m1
-  assert.doesNotMatch(none.checks[0].name, /giá trị lạ/);
+  assertMsg(none, MSG_THIEU, MSG_LA); // m1
   assert.doesNotMatch(report(none), /Nhãn P1|Kết luận nhánh|Recall|p Holm|Youden/);
 });
 
@@ -322,8 +328,7 @@ test('QH11 (m3, 26d): một arm vừa có dòng done [] vừa có dòng done thi
   const a = run({ rows });
   assert.equal(a.status, 'checks-failed');
   assert.deepEqual(a.checks.map((c) => [c.qh, c.arm, c.rows, c.seen]), [['QH11', 'R1b', 2, '[[],null]']]);
-  assert.match(a.checks[0].name, /thiếu ở dòng done/);
-  assert.doesNotMatch(a.checks[0].name, /giá trị lạ/);
+  assertMsg(a, MSG_THIEU, MSG_LA);
   assert.doesNotMatch(report(a), /Nhãn P1|Kết luận nhánh|Recall|p Holm|Youden/);
 });
 
