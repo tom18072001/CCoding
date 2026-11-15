@@ -242,7 +242,10 @@ function clip(text: string, max: number): string {
 
 // ── Danh sách lệnh bị chặn ───────────────────────────────────────────────────
 
-export const DEFAULT_DENY: Array<[RegExp, string]> = [
+const KILL_BY_NAME =
+  'diệt tiến trình theo tên hoặc bộ lọc có thể giết server CCoding và tiến trình của agent khác; hãy dùng PID của tiến trình mình đã chạy (taskkill /PID n /T /F, kill n, Stop-Process -Id n)';
+
+export const DEFAULT_DENY:Array<[RegExp, string]> = [
   [/\bgit\s+push\b/i, 'git push (người dùng tự review và push)'],
   [/\bgit\s+reset\s+--hard\b/i, 'git reset --hard'],
   [/\bgit\s+clean\b[^\n]*-[a-z]*f/i, 'git clean -f'],
@@ -260,6 +263,13 @@ export const DEFAULT_DENY: Array<[RegExp, string]> = [
   [/\b(mkfs|fdisk|diskpart)\b/i, 'thao tác ổ đĩa'],
   [/\bdd\s+if=/i, 'dd'],
   [/\b(shutdown|reboot|halt|poweroff|Stop-Computer|Restart-Computer)\b/i, 'tắt/khởi động lại máy'],
+  // diệt tiến trình theo tên/bộ lọc (sự cố 15/11/2026: mọi node.exe chết, văn phòng dừng ~70 phút) — chỉ diệt theo PID của chính mình
+  [/\btaskkill(\.exe)?\b[^\n]*\s[/-](im|fi)\b/i, KILL_BY_NAME],
+  [/\bStop-Process\b[^\n]*\s-(n[a-z]*|pro[a-z]*)(?=[\s:]|$)/i, KILL_BY_NAME],
+  [/\b(Get-Process|gps)\b[^\n]*\|\s*(Stop-Process|kill|spps)\b/i, KILL_BY_NAME],
+  [/(^|[;&|(`"'])\s*(sudo\s+)?(killall|pkill)\b/i, KILL_BY_NAME],
+  [/\bwmic\b[^\n]*\bprocess\b[^\n]*\b(delete|terminate)\b/i, KILL_BY_NAME],
+  [/(^|[;&|(`"'])\s*(sudo\s+)?kill\s+(?:[^\s;&|]+\s+)*-1\s*($|[;&|)`"'])/i, KILL_BY_NAME],
   [/\b(npm|pnpm|yarn)\s+publish\b/i, 'publish gói'],
   [/\bdocker\s+(system\s+prune|volume\s+(rm|prune)|rm\s+-f)\b/i, 'xóa tài nguyên docker'],
   [/\bkubectl\s+(delete|drain)\b/i, 'kubectl delete'],
