@@ -5,6 +5,18 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 19c (T-20261115-123731-90f, BRIEF-26c, 15/11/2026): đóng m1–m7 của phản biện 26b
+
+Chỉ sửa mã theo luật đã khóa; không sửa `preregistration.md`, `preregistration.lock.json`, `src/`, mã `bench/`; không gọi LLM; không có số kết quả. Dữ liệu: Nội bộ. Tên cờ và tên trường của D24 (`perf/vs-claude-loop`: `--arm-config`, `--selected`, `acceptCalls`, `acceptAuthSources`, `acceptTurnCapped`, `acceptToolCalls`, `acceptTurns`, `extraConfigSha256` theo arm) khớp với tên script đọc; không phải sửa.
+
+- **m1:** luật "hết giờ" (QH30) bỏ nhánh `errorKind`; `error` rỗng không tính, `errorKind` chỉ để đối chiếu. `docs/research/analysis/e7b-analyze.mjs` (`timeoutCond`), `docs/research/analysis/e7b-analyze.test.mjs` (test QH30), `bench/vs-claude/results/e7b-cto/RUNBOOK.md` (mục 6).
+- **m2:** ghi thứ tự xét điều kiện 1, 2, 3 và báo riêng số cặp lẫn số dòng infra theo từng điều kiện. `docs/research/analysis/e7b-analyze.mjs` (chú thích `timeoutCond`, bảng "Cặp thiếu" của báo cáo), `docs/research/analysis/e7b-analyze.test.mjs`, `bench/vs-claude/results/e7b-cto/RUNBOOK.md` (mục 6). Mã QH không đổi.
+- **m3:** kiểm giá trị `authSource` lạ trên mọi dòng arm, gồm `infra`; kiểm "thiếu trường" vẫn riêng cho dòng `done`. `docs/research/analysis/e7b-analyze.mjs` (QH11), `docs/research/analysis/e7b-analyze.test.mjs` (test dòng infra có `["apiKey"]`), `bench/vs-claude/results/e7b-cto/RUNBOOK.md` (mục 6).
+- **m4:** đổi tên test cho khớp nội dung (hai bài 12–12 ⇒ "chưa phân biệt được"); thêm ca xuyên `analyzeE7b` → bảng → `decision.labels` cho P5 (McNemar có ý nghĩa, CI bootstrap chứa 0 ⇒ "chưa kết luận", nhánh F). `docs/research/analysis/e7b-analyze.test.mjs`.
+- **m5:** ghi QH3, QH4, QH32, QH33 thi hành ngoài bộ phân tích, kèm chỗ thi hành từng mã. `docs/research/analysis/e7b-analyze.mjs` (chú thích đầu), `bench/vs-claude/results/e7b-cto/RUNBOOK.md` (mục 6).
+- **m6:** sửa dẫn `ARM_DIR` về `bench/vs-claude/e7/lib.mjs:26`; `waitTimeoutMs` là mặc định của `runCto` (`lib.mjs:215`), không phải của `run.mjs`. `bench/vs-claude/results/e7b-cto/RUNBOOK.md` (mục 1, mục 5).
+- **m7:** kiểm blob `selected.json` (QH1) chạy trước khi gọi `analyzeE7b` (hàm `analyzeChecked`); blob sai thì không phân tích. `docs/research/analysis/e7b-analyze.mjs`, `docs/research/analysis/e7b-analyze.test.mjs` (test đếm lượt gọi), `bench/vs-claude/results/e7b-cto/RUNBOOK.md` (mục 6).
+
 ## Vòng 4, gói 19b (T-20261115-105245-bbd, BRIEF-26b, 15/11/2026): Phụ lục sai lệch E7b (2), E7b chạy xen kẽ một tiến trình, chưa chạy
 
 Không sửa `src/`, mã `bench/`; không gọi LLM; **không có số kết quả E7b**. Dữ liệu: Nội bộ. Mục này chỉ dẫn mã QH đã có trong bảng của phụ lục (2); `BRIEF-26.md` là đề bài lưu trữ, không sửa.

@@ -10,7 +10,7 @@ Thiết kế khóa: `docs/research/preregistration.md` §9, khối "Đăng ký t
 
 | Câu hỏi | Kết luận | Căn cứ |
 |---|---|---|
-| Đặt trần `accept` khác nhau theo arm trong **một** tiến trình? | **Được, nhờ D24.** | `--arm-config R1=<tệp>,R2=<tệp>`: mỗi arm một app riêng nạp tệp của arm, dữ liệu app ở `<--ccoding-data>\w1` (R1) và `\w2` (R2) (`ARM_DIR` ở `lib.mjs:25`). Trước D24: một `--config` mỗi tiến trình (`run.mjs:35`), không đủ. |
+| Đặt trần `accept` khác nhau theo arm trong **một** tiến trình? | **Được, nhờ D24.** | `--arm-config R1=<tệp>,R2=<tệp>`: mỗi arm một app riêng nạp tệp của arm, dữ liệu app ở `<--ccoding-data>\w1` (R1) và `\w2` (R2) (`ARM_DIR` ở `bench/vs-claude/e7/lib.mjs:26`). Trước D24: một `--config` mỗi tiến trình (`run.mjs:35`), không đủ. |
 | Cấu hình thêm chỉ cần khóa `phases.toolTurns.accept`? | **Được.** | `src/config.ts:467-471`: cấu hình thêm được `deepMerge` lên mặc định; các khóa khác của `toolTurns` giữ nguyên. |
 | Model của arm nằm ở đâu? | **Không nằm trong tệp cấu hình.** | `ARMS` ở `lib.mjs:20-24`: R1 dùng model mặc định của CTO (Sonnet), R2 đặt `phaseModels.accept = 'opus'` (`lib.mjs:222`). Lượt thử (mục 4) kiểm `models` của từng arm (QH2). |
 | Danh sách chốt dùng chung, không chạy lại bước 1? | **Được, nhờ D24 `--selected`.** | `--selected <tệp>` dùng danh sách từ tệp, không chạy bước 1, không tạo `selected.json` trong `--out` (QH1). Thứ tự: `sample(sel.items, …, rng(`${doc.seed}|e7|order`))` (`run.mjs:84`), phụ thuộc `items.json` (seed `20261104`) và `selected.json`. `--items` bắt buộc trỏ `results\e7-cto\items.json`. |
@@ -82,7 +82,7 @@ Một lỗi `LỖI` bất kỳ → dừng, ghi khối "Sai lệch", không chạ
 
 ## 5. Chạy chính: MỘT tiến trình (QH3)
 
-Một lệnh, hai arm xen kẽ theo bảng Latin, thứ tự mục theo `rng("20261104|e7|order")`. Ghi giờ bắt đầu vào RUNLOG. Không đặt `--timeout` (chỉ áp cho arm R3, không chạy ở đây); R1/R2 dùng `waitTimeoutMs` của `run.mjs` và `timeoutMsByPhase` của cấu hình.
+Một lệnh, hai arm xen kẽ theo bảng Latin, thứ tự mục theo `rng("20261104|e7|order")`. Ghi giờ bắt đầu vào RUNLOG. Không đặt `--timeout` (chỉ áp cho arm R3, không chạy ở đây); R1/R2 dùng `waitTimeoutMs` là giá trị mặc định của `runCto` (90 phút, `bench/vs-claude/e7/lib.mjs:215`; `run.mjs` không truyền giá trị này) và `timeoutMsByPhase` của cấu hình.
 
 ```powershell
 node bench/vs-claude/e7/run.mjs --arms R1,R2 --arm-config R1=$B\config-R1b.json,R2=$B\config-R2b.json --selected bench\vs-claude\results\e7-cto\selected.json --items $E\items.json --out $B\run --work ..\e7b-work --ccoding-data ..\e7b-data
@@ -98,12 +98,19 @@ node bench/vs-claude/e7/run.mjs --arms R1,R2 --arm-config R1=$B\config-R1b.json,
 ## 6. Kiểm sau khi chạy, rồi phân tích
 
 Kiểm hạ tầng (đây không phải kết luận). Script phân tích chạy các kiểm này **trước mọi tính toán**; có kiểm nào sai thì chỉ in lỗi kiểm, thoát mã 2, **không in nhãn, nhánh, tỉ lệ hay p** (QH35):
-- `acceptAuthSources` = `["none"]` ở mọi dòng `done`; thiếu trường cũng là lỗi (QH11);
-- `maxTurns` = 6 (R1) / 16 (R2) (QH12);
+- `selected.json` đúng blob `5b3e8fcf…` (QH1): kiểm **đầu tiên**, trước khi gọi bộ phân tích; blob sai thì chỉ in lỗi QH1 và không phân tích gì;
+- số mục của `--selected` = 128 (QH1);
+- `acceptAuthSources` không có giá trị lạ (ngoài `["none"]`) ở **mọi dòng của arm, kể cả `infra`**; riêng dòng `done` thiếu trường cũng là lỗi (QH11);
+- `maxTurns` = 6 (R1) / 16 (R2) ở dòng `done` (QH12);
 - `acceptCalls` = 1 ở mọi dòng `done` (QH5);
 - `extraConfigSha256` mỗi arm đúng một giá trị, khớp `SHA256SUMS` (QH6); `ccodingCommit` một giá trị chung (QH6);
-- không có arm ngoài R1/R2 (QH34); không có dòng `done` mang văn bản 403 (QH31);
-- số mục của `--selected` = 128 và `selected.json` đúng blob `5b3e8fcf…` (QH1).
+- không có arm ngoài R1/R2 (QH34); không có dòng `done` mang văn bản 403 (QH31).
+
+**Quy tắc thi hành ngoài bộ phân tích** (script không kiểm; người điều phối thi hành, chỗ thi hành như sau):
+- **QH3** (một tiến trình, `--arms R1,R2`, `--arm-config`, bảng Latin): lệnh chính ở mục 5; thứ tự mục và bảng Latin ở `bench/vs-claude/e7/run.mjs:84-85` (`rng(`${doc.seed}|e7|order`)`, `latinOrders`); `--arm-config` thuộc D24, kiểm bằng `git grep` ở mục 3 và lượt thử ở mục 4.
+- **QH4** (`acceptFollowupRounds = 0` ở cả hai tệp): mục 2 (thiếu khóa thì dừng); test `QH2/QH4/QH6` trong `docs/research/analysis/e7b-analyze.test.mjs`. Trên dữ liệu chỉ kiểm được hệ quả `acceptCalls` = 1 (QH5).
+- **QH32** (hết hạn mức: dừng, chạy lại đúng lệnh cũ): `bench/vs-claude/e7/run.mjs:130` (`EXIT_RATE_LIMIT`, thoát mã 3) và mục 5.
+- **QH33** (không dừng/chạy lại vì kết quả, runner không in kết luận): `bench/vs-claude/e7/run.mjs:129` (chỉ in giây và wtok hoặc "HẠ TẦNG") và mục 5 ("Chỉ in đếm").
 
 Thiếu `acceptTurnCapped` **không** là lỗi kiểm: `capped` chuyển sang "suy ra" = `unread` và nhãn đó hiện ở bảng (QH10).
 
@@ -115,7 +122,7 @@ node docs/research/analysis/e7b-analyze.mjs --runs $B\run\runs.jsonl --data ..\e
 - `--data` là tùy chọn, chỉ để đối chiếu `calls.jsonl` (số lượt `accept`, `authSource`, `turnCapped`); lệch thì ghi vào báo cáo, không chọn nguồn theo kết quả. Không có `--data` thì bỏ phần đối chiếu.
 - Script từ chối in số khi còn cặp (mục, arm) chưa có dòng `done` và chưa đủ 3 lần `infra`, trừ khi thêm `--final` (chỉ khi đã dừng chủ định, ghi lý do vào RUNLOG).
 - Script áp: cách chính (`unread` = không chặn), S1 (`unread` = chặn), S2 (bỏ cặp có `unread`), **S3a/S3b** (cặp thiếu do hết giờ giữ lại như `unread`; QH15, QH30); McNemar chính xác P1 (recall) và P2 (chặn nhầm), Holm hai phép, bootstrap hai tầng theo bài (B = 4000, seed `20261104`; QH17, QH18); nhãn ba giá trị gồm **"chưa kết luận" khi hai phép khác chiều** (QH19); **cặp thiếu theo arm: một arm > 3 cặp thiếu hoặc chênh ≥ 3 ⇒ nhánh F** (QH21, QH22); nhánh D→E→A→B→C→F phải trùng ở cả năm cách tính (QH16, QH24–QH28); USD, Youden J, phân bố `acceptTurns` và `acceptToolCalls`, bảng theo bài, bảng E7 cạnh E7b ghi "khác bản mã" (chỉ mô tả, QH29).
-- Luật "hết giờ" (QH30), trên dòng `infra` của cặp thiếu: `error` khớp `^quá hạn chờ \d+s` (harness `runCto`); `error` chứa `Hết thời gian (` (runtime `claude-cli`); `error` bắt đầu `timeout:` hoặc `errorKind` = `timeout` (qua `callErrors`). Chọn "mọi dòng infra của cặp" đều thỏa một điều kiện; báo số theo điều kiện 1/2/3.
+- Luật "hết giờ" (QH30), trên dòng `infra` của cặp thiếu: `error` khớp `^quá hạn chờ \d+s` (harness `runCto`); `error` chứa `Hết thời gian (` (runtime `claude-cli`); `error` bắt đầu `timeout:` (chuỗi `<errorKind>: <error>` do `runCto` ghép qua `callErrors`). Dòng infra có `error` **rỗng** thì **không tính** (Phụ lục (2) (d)); `errorKind` của `calls.jsonl` chỉ để đối chiếu, script không dùng nó để quyết định. **Thứ tự xét: điều kiện 1, rồi 2, rồi 3**; dòng khớp nhiều điều kiện tính vào điều kiện đứng trước (ví dụ `timeout: Hết thời gian (…)` tính điều kiện 2). Chọn "mọi dòng infra của cặp" đều thỏa một điều kiện; báo riêng số cặp và số dòng infra theo từng điều kiện 1/2/3 (bảng "Cặp thiếu" của báo cáo).
 - Câu cấm (QH36): chỉ nói đúng nhãn và nhánh; không "đã chứng minh", "xác nhận", "tái lập"; không viết hiệu của riêng model (R1b và R2b khác nhau cả model lẫn trần).
 - Không sửa script sau khi thấy số.
 
