@@ -10,6 +10,7 @@ const STEPS = [
   ['test:bench', /^npm run test:bench\b/m],
   ['test:research', /^npm run test:research\b/m],
 ];
+const MAX_TIMEOUT_MIN = 120; // trần timeout-minutes của job: test treo không được giữ runner tới mặc định 6 giờ
 const BAD = [
   [/\bcontinue-on-error\b/, 'continue-on-error'],
   [/\|\|\s*(?:true\b|:(?:\s|$)|exit\s+0\b)/, '`|| true` (hoặc tương đương)'],
@@ -64,6 +65,10 @@ export default {
       for (const o of ['ubuntu-latest', 'windows-latest']) if (!os.includes(o)) err(CI, 0, `${at}: ma trận thiếu ${o}`);
       for (const n of ['22', '24']) if (!node.includes(n)) err(CI, 0, `${at}: ma trận thiếu Node ${n}`);
       if (job?.strategy?.['fail-fast'] === true) err(CI, 0, `${at}: fail-fast: true che mất ô ma trận lỗi — đặt false`);
+      const tm = job?.['timeout-minutes'];
+      if (tm === undefined) err(CI, 0, `${at}: thiếu timeout-minutes — test treo sẽ giữ runner tới giới hạn mặc định 6 giờ (đặt số nguyên dương ≤ ${MAX_TIMEOUT_MIN})`);
+      else if (typeof tm !== 'number' || !Number.isInteger(tm) || tm <= 0) err(CI, 0, `${at}: timeout-minutes phải là số nguyên dương (đang là ${JSON.stringify(tm)})`);
+      else if (tm > MAX_TIMEOUT_MIN) err(CI, 0, `${at}: timeout-minutes ${tm} vượt trần ${MAX_TIMEOUT_MIN} phút`);
       const steps = Array.isArray(job?.steps) ? job.steps : [];
       const checkout = steps.find((s) => /^actions\/checkout@/.test(s?.uses ?? ''));
       if (!checkout) err(CI, 0, `${at}: thiếu actions/checkout`);

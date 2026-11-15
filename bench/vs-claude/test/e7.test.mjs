@@ -357,7 +357,7 @@ test('runCto: runtime treo → quá hạn chờ thì hủy, ghi hạ tầng "err
   assert.ok(Date.now() - t0 < 20_000, 'trả về trong hạn');
   assert.deepEqual([r.status, r.infra, r.verdict], ['infra', 'error', null]);
   assert.match(r.error, /quá hạn chờ/);
-  assert.equal((await app.orchestrator.waitFor(r.taskId)).status, 'cancelled', 'hủy thật: tiến trình runtime bị abort, nhiệm vụ không còn chạy ngầm');
+  assert.equal((await Promise.race([app.orchestrator.waitFor(r.taskId), new Promise((_, rej) => setTimeout(() => rej(new Error('waitFor quá 20 giây — nhiệm vụ bị hủy không kết thúc')), 20_000).unref())])).status, 'cancelled', 'hủy thật: tiến trình runtime bị abort, nhiệm vụ không còn chạy ngầm');
   // hết hạn mức: không chờ trong tiến trình (waitForFastMs = 0), nhiệm vụ tạm dừng → waitFor trả về, runCto hủy và báo rate-limit
   app.config.runtime.waitForFastMs = 0;
   rt.run = async () => { throw new Error('429 rate_limit_error: You have hit your limit · resets 4:50pm'); };
