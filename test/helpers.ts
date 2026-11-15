@@ -27,7 +27,7 @@ export async function readJson<T>(res: Response): Promise<T> {
 /**
  * Đóng server http theo sự kiện: gọi close(), đóng cả kết nối keep-alive (fetch/undici) bằng closeAllConnections(),
  * rồi chờ sự kiện 'close' của server (hạn an toàn, không thăm dò). Sau đó còn một nhịp đệm 50 ms có số đo (xem dưới). Không đợi thì --test-force-exit thoát giữa lúc handle
- * đang đóng và libuv sập trên Windows (Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), src\winsync.c).
+ * đang đóng và libuv sập trên Windows (Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), src\win\async.c).
  * Có hạn an toàn để test không treo vô hạn nếu 'close' không bao giờ tới.
  */
 export async function closeServer(srv: import('node:http').Server | import('node:net').Server, limitMs = 5000): Promise<void> {
