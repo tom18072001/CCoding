@@ -296,8 +296,8 @@ const ctx = (): Ctx => ({ task, dept, project: { id: 'p', name: 'Dự án thử'
 const sha = (s: string) => crypto.createHash('sha256').update(s).digest('hex').slice(0, 16);
 // Cùng fixture và cùng băm với test/s3-incident-difficulty.test.ts (mã trước B-09/B-03); theo nền tảng vì prompt có đoạn riêng cho win32.
 const SNAPSHOT = process.platform === 'win32'
-  ? { execute: '29b87ce4e067cc8f', revise: '93bf7702f2f246d3', synthesize: '82b8ba8ef40d98b8' }
-  : { execute: 'f0c3a63729e64800', revise: '9dcde8fcc4ffcded', synthesize: '82b8ba8ef40d98b8' };
+  ? { execute: 'd7644609379e5dbe', revise: 'd0e84d57a79d65ab', synthesize: '82b8ba8ef40d98b8' }
+  : { execute: 'e7c5ce628f1dc59e', revise: 'c8529610d2e8fa1f', synthesize: '82b8ba8ef40d98b8' };
 
 test('CT-10: selfImprove.enabled=false → băm prompt execute/revise/synthesize trùng bản trước; 0 sự kiện incident.*/selfimprove.*', () => {
   const cfg = loadConfig();
