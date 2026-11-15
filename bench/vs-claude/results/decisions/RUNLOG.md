@@ -52,3 +52,10 @@ node docs/research/analysis/decisions/decomp-metrics.mjs --p <tệp trích P> --
   - điểm co về 60 theo lượng bằng chứng;
   - kèm "việc cần sửa" (`findings`) sinh tự động theo ngưỡng.
 - **Đã bỏ khỏi tệp công khai:** tiêu đề nhiệm vụ. Giữ điểm, bằng chứng, `findings` của từng agent.
+
+## KPI chấm lại (`kpi-office-2026-11-15.json`, 15/11/2026 khoảng 08:58 +07)
+
+- **Lệnh:** `node dist/cli.js kpi --json --days 30`. Chạy ở bản đang phục vụ văn phòng phụ (checkout ở `41992cb9`, đã gộp D16–D21), với thư mục dữ liệu và cấu hình của văn phòng phụ. Chỉ đọc.
+- **Phạm vi:** 33 nhiệm vụ trong 30 ngày: 26 xong, 4 thất bại, 2 hủy, 1 đang chạy (D23, ghi `paused` lúc chạy lệnh). 16 agent có điểm.
+- **Khác lần 14/11:** cửa sổ khác (10 → 33 nhiệm vụ) và KPI đã đổi cách đếm (D18c tách `turnCapped`/`stopReason`). So hai lần chấm chỉ là mô tả, không phải đo đối chứng.
+- **Đã bỏ khỏi tệp công khai:** tiêu đề nhiệm vụ (chỉ giữ id, trạng thái, token).
