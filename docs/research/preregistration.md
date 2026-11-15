@@ -1641,6 +1641,42 @@ const gateFirst = (row) => {
 
 **Bản ghim và tệp khóa.** Khối này vào `preregistration.lock.json` qua `node scripts/lint/prereg-lock.mjs --add-new`. Tệp đăng ký và script phân tích của E7b đặt ở `results/e7b-cto/` (K2). Mọi con số khóa ở trên có lý do đi kèm; số nào chưa biết trước khi chạy (hash bản ghim, sha256 cấu hình) do người chạy ghi vào RUNLOG **trước** lượt đầu, không đổi giả thuyết, mẫu, thước đo hay phép kiểm.
 
+### Phụ lục sai lệch E7b (1): khóa `acceptFollowupRounds`, sửa định nghĩa `capped`, nguồn kiểm `authSource`, cặp thiếu theo arm, nhãn khi hai phép khác chiều (ghi 15/11/2026, @methodologist, sửa theo review K4; trước mọi lượt gọi LLM của E7b)
+
+Phụ lục này chỉ **thêm**; điều nào mâu thuẫn với câu cùng tên ở khối "Đăng ký trước E7b" ngay trên thì **phụ lục thắng**. Không có số E7b nào được xem khi viết. Mọi quy tắc dưới đây không phụ thuộc kết quả.
+
+**(P1) Khóa `acceptFollowupRounds = 0` ở cả hai arm.**
+- Mặc định hiện hành là 1 (`src/config.ts:380`): khi CTO chưa nghiệm thu, mã tự làm một vòng bổ sung rồi nghiệm thu lại (`src/orchestrator.ts:1322`). Khi đó kết luận cuối của nhiệm vụ không còn là kết luận nghiệm thu **đầu tiên** trên sản phẩm đã chốt.
+- E7 chạy trước khi có vòng bổ sung và đo kết luận đầu tiên. E7b khóa `defaults.acceptFollowupRounds = 0` trong **cả hai** tệp cấu hình để cùng đo "kết luận nghiệm thu đầu tiên", không sinh lượt LLM phụ ngoài pha `accept`, và để (b) "chỉ khác khóa `accept`" vẫn đúng giữa hai arm (cả hai có cùng khóa này).
+- Giới hạn: E7b **không** đo cổng nghiệm thu kèm vòng bổ sung; ghi ở (P6). Tệp cấu hình và RUNBOOK phải ghi khóa này (việc của K2); người chạy ghi sha256 hai tệp trước lượt đầu như (b). Nếu thiếu khóa này trong tệp thì dừng, không chạy.
+
+**(P2) Sửa định nghĩa `capped` ở (e).**
+- Câu "runtime đặt cờ `capped: 'turns'` ở nhật ký lượt gọi" **sai về tên trường**. Trường thật ở bản ghi `calls.jsonl` là `turnCapped` (`src/orchestrator.ts:4106`; kiểu ở `src/kpi.ts:42`). Cờ này đúng khi `result.capped` có giá trị (trần lượt **hoặc** trần token công cụ `toolInputBudget`) hoặc `diag` chứa "chạm trần".
+- Khóa lại: **`capped` = `unread` mà bản ghi `calls.jsonl` của lượt `accept` có `turnCapped = true`.** Nếu bản ghi cho phân biệt được trần lượt và trần token (qua `diag`, `stopReason`) thì báo tách; nếu không thì báo gộp là "trần lượt hoặc token". Nếu không trích được `turnCapped` thì giữ `capped (suy ra)` = `unread` như (e).
+- Số ngưỡng của nhánh D là **6 trên 128 lượt** (khóa bằng số lượt), tức 4,7 %; chỗ ghi "6/128 (5 %)" ở (h) đọc là 4,7 %, không phải 5 %.
+- Đe dọa mới: `toolInputBudget.accept = 120000` (`src/config.ts:386`) có thể cắt R2b **trước** khi đủ 16 lượt, nên trần 16 chưa chắc là ràng buộc thật. Đây là suy luận, **chưa kiểm** runtime có áp trần này ở pha `accept` hay không; lượt chạy thử (j) đọc `turnCapped` và `diag` để biết, và nếu thấy trần token cắt thì ghi vào báo cáo, không đổi trần giữa đợt.
+- Thước đo mô tả thêm (khóa): phân bố **số thao tác công cụ của lượt `accept`** (`toolCalls` của `calls.jsonl`, `src/orchestrator.ts:4103`) theo arm, vì `turns` của dòng R1/R2 luôn 0. Chỉ mô tả, không vào phép kiểm hay nhánh (h).
+
+**(P3) Nguồn kiểm `authSource` thay cho câu "mọi dòng ghi `authSource`" ở (j).**
+- Dòng R1/R2 của `runs.jsonl` **không có** `authSource`. Nguồn kiểm khóa: trường `authSource` của bản ghi `calls.jsonl` ở các lượt `accept` (`src/orchestrator.ts:4095`), đọc từ thư mục `--ccoding-data` của từng arm. Script phân tích đọc trường này và đưa vào danh sách `checks`; giá trị khác phiên đăng nhập claude.ai (khóa API) là điều kiện STOP cả hai tiến trình như (j), và không lẫn giữa hai arm.
+- **Bỏ lượt chạy thử R3** ở RUNBOOK: đó là lượt gọi LLM không có trong §9, và chỉ kiểm môi trường `claude -p`, không kiểm lượt gọi trong tiến trình CCoding. Lượt thử của (j) (1 mục dự phòng, mỗi arm một lượt) đã đủ; `authSource` của lượt thử đọc từ `calls.jsonl` của chính nó. Phải **giữ** thư mục `--ccoding-data`. RUNBOOK và script sửa theo phụ lục này (K2).
+
+**(P4) Cặp thiếu có thể phụ thuộc arm.**
+- Opus với trần 16 dễ chạm giới hạn thời gian hơn (`defaults.timeoutMs` = 30 phút mỗi lượt gọi, `src/config.ts:380`; `waitTimeoutMs` = 90 phút mỗi nhiệm vụ, `bench/vs-claude/e7/lib.mjs:215`). Một lượt hết giờ thành `infra`, sau 3 lần bị loại (j); mục khó sẽ rơi chủ yếu ở R2b, khiến phần còn lại thiên có lợi cho R2b.
+- **Khóa:** gọi "cặp thiếu" là mục bị loại ở một arm sau 3 lần `infra`. Nếu **một arm có > 3 cặp thiếu**, hoặc **chênh giữa hai arm ≥ 3**, thì nhãn của mọi phép và nhánh ở (h) là **"chưa kết luận"** (nhánh F), báo số. Lý do chọn 3: mỗi cặp thiếu dịch recall hoặc chặn nhầm 1/64 (1,6 điểm); 3 cặp ≈ 4,7 điểm, nhỏ hơn nửa biên 6 mục (9,4 điểm) của điều kiện R1b − R2b ≤ 6.
+- **Độ nhạy S3 (bắt buộc):** cặp thiếu do **hết giờ** (loại lỗi `timeout`, theo loại lỗi chứ không theo kết luận) được giữ lại và tính như `unread` theo cách chính (không chặn) và theo S1 (chặn). Điều kiện đọc ở (f) mở rộng: nhãn và nhánh phải đứng được ở **cả chính, S1, S2, S3**. Nếu không có cặp thiếu do hết giờ thì S3 trùng cách chính.
+
+**(P5) Nhãn khi hai phép khác chiều: giữ luật E7.**
+- Luật E7 (dòng 1146) gán "chưa kết luận" khi McNemar và bootstrap không cùng cho kết luận; (g) trên gán "chưa phân biệt được" cho "mọi trường hợp còn lại". Khóa thống nhất theo E7: **"khác nhau"** = p Holm < α **và** CI bootstrap không chứa 0 **và** cùng chiều; **"chưa phân biệt được"** = cả hai phép đều không cho ý nghĩa; **"chưa kết luận"** = một phép có ý nghĩa mà phép kia không, hoặc hai phép ngược chiều. Lý do: bất đồng giữa hai phép là thông tin khác với "không thấy khác biệt", và gọi nó "chưa phân biệt được" che mất điều đó.
+- Tác động lên (h): nhánh A đòi P2 là "khác nhau"; "chưa kết luận" không thỏa, nên rơi vào F như cũ. Số cặp bất đồng < 10 vẫn cho nhãn "chưa phân biệt được" và p chỉ mô tả.
+
+**(P6) Thêm vào (l):**
+- **Chỉ đo kết luận nghiệm thu đầu tiên** (P1): không đo hiệu quả của vòng bổ sung; kết luận về "cổng nghiệm thu" không bao gồm vòng đó.
+- **Cặp thiếu lệch theo arm** (P4): thiên có lợi cho R2b nếu mục khó rơi ở R2b; biện pháp: ngưỡng cặp thiếu và độ nhạy S3.
+- **Trần token công cụ** (P2): trần 16 lượt có thể không phải ràng buộc thật; biện pháp: đọc `turnCapped`/`diag` ở lượt thử.
+
+**Khóa.** Phụ lục này vào `preregistration.lock.json` qua `node scripts/lint/prereg-lock.mjs --add-new`.
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.

@@ -17,7 +17,8 @@ Hai giới hạn thấy khi đọc mã (không chặn việc chạy, nhưng ngư
 
 ## 2. Tệp cấu hình và SHA256SUMS
 
-- `config-R1b.json`: `{ "phases": { "toolTurns": { "accept": 6 } } }`. `config-R2b.json`: cùng cấu trúc, `accept` = **16**.
+- `config-R1b.json`: `{ "defaults": { "acceptFollowupRounds": 0 }, "phases": { "toolTurns": { "accept": 6 } } }`. `config-R2b.json`: cùng cấu trúc, `accept` = **16**.
+- `acceptFollowupRounds: 0` ở **cả hai** tệp: tắt vòng bổ sung sau nghiệm thu (mặc định 1, `src/config.ts:380`). Nếu bật, khi CTO chặn mà còn tiêu chí `scope:'in'` thì Dev sửa và CTO nghiệm thu lại (`src/orchestrator.ts` khoảng 1123–1361), còn `lib.mjs` đọc kết luận CUỐI: recall bị kéo xuống giả, chặn nhầm bị che, và R1b (chặn nhiều hơn) lệch nhiều hơn R2b. E7b đo **một** lượt `accept` mỗi mục. Script phân tích dừng nếu một task có hơn một lượt `accept` trong `calls.jsonl`; ở chạy thử phải tự kiểm đúng một lượt.
 - **Hai tệp chỉ khác đúng giá trị `phases.toolTurns.accept`** (6 so với 16). Không có khóa nào khác, không có khóa, token hay đường dẫn máy.
 - **Model không nằm trong tệp.** Model pha `accept` do arm đặt: R1 dùng mặc định của CTO (Sonnet), R2 đặt `phaseModels.accept = 'opus'` trong `lib.mjs`. Không thêm `phases.models.accept` vào cấu hình.
 - `SHA256SUMS` (kiểm bằng `sha256sum -c SHA256SUMS` trong thư mục này, hoặc `Get-FileHash -Algorithm SHA256`). Tệp JSON đã commit với LF; `.gitattributes` có `text=auto`, nếu checkout trên Windows ra CRLF thì sha sẽ lệch: dùng `git show HEAD:<đường dẫn> | sha256sum` để đối chiếu.
@@ -34,9 +35,9 @@ claude --version                      # ghi vào RUNLOG; cùng phiên bản cho 
 Copy-Item <3e>\ccoding.local.json <ghim>\ccoding.local.json
 Remove-Item Env:ANTHROPIC_API_KEY -ErrorAction SilentlyContinue   # chỉ phiên đăng nhập claude.ai, không khóa API
 $E = "bench\vs-claude\results\e7-cto"; $B = "bench\vs-claude\results\e7b-cto"
-sha256sum $B\config-R1b.json $B\config-R2b.json $E\selected.json $E\items.json   # selected.json phải có git blob 5b3e8fcf…
+Get-FileHash -Algorithm SHA256 $B\config-R1b.json, $B\config-R2b.json, $E\selected.json, $E\items.json   # selected.json phải có git blob 5b3e8fcf…
 git rev-parse HEAD:$E/selected.json   # 5b3e8fcf2ba3816b39fdb5ba9ef021232a4b2f5f
-diff $B\config-R1b.json $B\config-R2b.json                                        # chỉ khác dòng accept
+git diff --no-index $B\config-R1b.json $B\config-R2b.json   # chỉ khác dòng accept (diff của PowerShell là Compare-Object, không so nội dung tệp)
 New-Item -ItemType Directory $B\R1b, $B\R2b -Force
 Copy-Item $E\selected.json $B\R1b\selected.json; Copy-Item $E\selected.json $B\R2b\selected.json   # bỏ qua bước 1
 ```
@@ -55,6 +56,8 @@ node bench/vs-claude/e7/run.mjs --smoke 067cd64cc5 --arms R2 --config $B\config-
 node bench/vs-claude/e7/run.mjs --smoke 067cd64cc5 --arms R3 --config $B\config-R1b.json --items $E\items.json --out ..\e7b-smoke-auth --work ..\e7b-work-smoke-auth   # chỉ để đọc authSource của claude -p
 ```
 
+Kiểm thêm (nhật ký lượt gọi, không phải kết quả): trong `..\e7b-data-smoke-R1b\runs\<taskId>\calls.jsonl` và bản R2b, mỗi task có **đúng một** bản ghi `phase:'accept'` (vòng bổ sung đã tắt). Nhiều hơn một → dừng, báo cấu hình.
+
 Chỉ đọc các trường hạ tầng, **không đọc `verdict`**. Mỗi tệp `runs.jsonl` của chạy thử phải có đúng một dòng `done` với:
 - `maxTurns` = **6** (R1b) và **16** (R2b). Khác thì dừng, báo cấu hình (§9 (j));
 - `models` = Sonnet (R1b), Opus (R2b); `promptSha` hai arm giống nhau; `tools` = `["Read","Glob","Grep","Bash"]`;
@@ -68,7 +71,7 @@ Có khớp, hoặc dòng `done` mà văn bản nghiệm thu là thông báo lỗ
 
 ## 5. Chạy chính: hai tiến trình **cùng lúc**
 
-Mở hai cửa sổ, bấm chạy cùng thời điểm (ghi giờ bắt đầu vào RUNLOG). **Không xen kẽ**: gọi đúng là "hai tiến trình song song" (§9 (k)). Cùng thứ tự mục, `--timeout` giống nhau.
+Mở hai cửa sổ, bấm chạy cùng thời điểm (ghi giờ bắt đầu vào RUNLOG). **Không xen kẽ**: gọi đúng là "hai tiến trình song song" (§9 (k)). Cùng thứ tự mục. Hạn thời gian thật: `--timeout 20` (phút) **chỉ áp cho arm R3**; R1/R2 dùng `waitTimeoutMs` của `run.mjs` và `timeoutMsByPhase` của cấu hình, không khác nhau giữa hai tệp. `--timeout` ở hai lệnh dưới không có tác dụng với R1/R2; không đặt giá trị khác nhau theo arm.
 
 ```powershell
 # cửa sổ 1 — R1b
@@ -89,7 +92,7 @@ node bench/vs-claude/e7/run.mjs --arms R2 --config $B\config-R2b.json --items $E
 Trước khi phân tích (đây không phải kết luận, chỉ trường hạ tầng):
 ```powershell
 node -e "const fs=require('fs');const j=f=>fs.readFileSync(f,'utf8').split('\n').filter(Boolean).map(JSON.parse);const b=process.argv[1];const S=new Set;for(const a of ['R1b','R2b']){const r=j(b+'/'+a+'/runs.jsonl');const d=r.filter(x=>x.status==='done');console.log(a,'done',d.length,'infra',r.filter(x=>x.status==='infra').length,'commit',[...new Set(r.map(x=>x.ccodingCommit))],'cfg',[...new Set(r.map(x=>x.extraConfigSha256))],'maxTurns',[...new Set(d.map(x=>x.maxTurns))],'models',[...new Set(d.flatMap(x=>x.models))],'costBasis',[...new Set(d.map(x=>x.costBasis))])}" $B
-sha256sum -c $B\SHA256SUMS      # hai tệp cấu hình không bị sửa
+Get-Content $B\SHA256SUMS | ForEach-Object { $h, $f = $_ -split ' \*'; "$f " + ((Get-FileHash -Algorithm SHA256 "$B\$f").Hash.ToLower() -eq $h) }   # phải in True cho cả hai tệp cấu hình
 ```
 Phải thấy: `ccodingCommit` giống nhau và đúng **một** giá trị mỗi arm; `cfg` mỗi arm một giá trị, **khác nhau** giữa hai arm, và khớp `SHA256SUMS`; `maxTurns` 6 / 16; `costBasis` một giá trị. Không khớp → dừng, ghi sai lệch.
 
@@ -98,7 +101,7 @@ Phân tích (chỉ khi đã đủ; chưa có `runs.jsonl` thì script báo "chư
 node docs/research/analysis/e7b-analyze.mjs --r1b $B\R1b --r2b $B\R2b --data-r1b ..\e7b-data-R1b --data-r2b ..\e7b-data-R2b > $B\report.md
 node docs/research/analysis/e7b-analyze.mjs --r1b $B\R1b --r2b $B\R2b --data-r1b ..\e7b-data-R1b --data-r2b ..\e7b-data-R2b --json > $B\report.json
 ```
-- Có `--data-*` thì `capped` lấy từ cờ `capped:'turns'` của lượt `accept` ở `calls.jsonl` (nhãn "ghi"); thiếu bất kỳ tệp nào của lượt `unread` thì quay về "suy ra" = `unread` và nhãn đó hiện ở bảng. Không có cờ `--data-*` thì luôn "suy ra".
+- Có `--data-*` thì `capped` lấy từ cờ `turnCapped` (hoặc diag "chạm trần") của lượt `accept` ở `calls.jsonl` (nhãn "ghi"); thiếu bất kỳ tệp nào của một dòng có `taskId` thì quay về "suy ra" = `unread` và nhãn đó hiện ở bảng. Không có cờ `--data-*` thì luôn "suy ra". Script từ chối in số khi còn cặp chưa có dòng `done` ở cả hai arm, trừ khi thêm `--final` (chỉ khi đã dừng chủ định, ghi lý do vào RUNLOG); script dừng (mã 2) nếu một task có hơn một lượt `accept`.
 - Script áp: quy tắc chính (`unread` = không chặn), độ nhạy S1 (`unread` = chặn) và S2 (bỏ cặp có `unread`), McNemar chính xác P1 (recall) và P2 (chặn nhầm), Holm hai phép, bootstrap hai tầng theo bài (B = 4000, seed `20261104`), nhãn "khác nhau / chưa phân biệt được / chưa kết luận", nhánh D→E→A→B→C→F phải trùng ở cả ba cách tính, USD theo `lib/pricing.mjs` (đọc `costUsd` đã ghi từng dòng), Youden J (mô tả), bảng theo bài, bảng E7 cạnh E7b ghi "khác bản mã".
 - Cảnh báo cấu hình in ở đầu báo cáo nếu `maxTurns`, `ccodingCommit`, `extraConfigSha256` hay `authSource` sai.
 - Không sửa script sau khi thấy số.

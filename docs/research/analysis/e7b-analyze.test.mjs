@@ -107,14 +107,54 @@ test('holm2, labelOf, branchOf: ca biên', () => {
   assert.equal(branchOf(mk(3, 0, 63, 63, 'khác nhau'), per).id, 'E'); // CP dưới của R1b = 3/64 − 0,1 < 10 %
 });
 
-test('cappedFromCalls đọc cờ capped của lượt accept; thiếu tệp → null', () => {
+// Bản ghi lượt gọi dạng thật (src/orchestrator.ts:4106): `turnCapped: boolean`, không có trường `capped`.
+const withCalls = (fn) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'e7b-'));
+  try { return fn(dir, (taskId, recs) => {
+    fs.mkdirSync(path.join(dir, 'runs', taskId), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'runs', taskId, 'calls.jsonl'), recs.map((r) => JSON.stringify(r)).join('\n') + '\n');
+  }); } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+};
+
+test('cappedFromCalls: turnCapped của lượt accept (và diag "chạm trần") của dòng unread; thiếu tệp → null', () => {
+  withCalls((dir, put) => {
+    put('T-1', [{ phase: 'execute', turnCapped: true }, { phase: 'accept', turnCapped: true }]);
+    put('T-2', [{ phase: 'accept', turnCapped: false }]);
+    put('T-3', [{ phase: 'accept', turnCapped: false, diag: 'chạm trần 16 lượt công cụ' }]);
+    put('T-4', [{ phase: 'accept', turnCapped: true }]); // dòng pass: không tính vào capped của unread
+    put('T-5', [{ phase: 'execute', turnCapped: true }, { phase: 'accept', turnCapped: false }]); // trần ở pha khác: không tính
+    const rows = [
+      { id: 'a', taskId: 'T-1', verdict: 'unparsed' }, { id: 'b', taskId: 'T-2', verdict: 'unparsed' },
+      { id: 'c', taskId: 'T-3', verdict: 'unparsed' }, { id: 'd', taskId: 'T-4', verdict: 'pass' }, { id: 'e', taskId: 'T-5', verdict: 'unparsed' },
+    ];
+    assert.deepEqual([...cappedFromCalls(dir, rows)].sort(), ['a', 'c']);
+    assert.equal(cappedFromCalls(dir, [...rows, { id: 'z', taskId: 'T-9', verdict: 'unparsed' }]), null);
+    // dạng sai cũ (`capped: 'turns'`) không còn được nhận
+    put('T-6', [{ phase: 'accept', capped: 'turns' }]);
+    assert.equal(cappedFromCalls(dir, [{ id: 'f', taskId: 'T-6', verdict: 'unparsed' }]).size, 0);
+  });
+});
+
+test('cappedFromCalls: hơn một lượt accept trong một task (vòng bổ sung còn bật) → ném lỗi', () => {
+  withCalls((dir, put) => {
+    put('T-1', [{ phase: 'accept', turnCapped: false }, { phase: 'execute' }, { phase: 'accept', turnCapped: false }]);
+    assert.throws(() => cappedFromCalls(dir, [{ id: 'a', taskId: 'T-1', verdict: 'block' }]), /2 lượt accept/);
+  });
+});
+
+test('dữ liệu một phần: từ chối in số, thoát 0, nói rõ --final', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'e7b-'));
   try {
-    fs.mkdirSync(path.join(dir, 'runs', 'T-1'), { recursive: true });
-    fs.writeFileSync(path.join(dir, 'runs', 'T-1', 'calls.jsonl'), `${JSON.stringify({ phase: 'accept', capped: 'turns' })}\n`);
-    const rows = [{ id: 'x', taskId: 'T-1', verdict: 'unparsed' }, { id: 'y', taskId: 'T-2', verdict: 'pass' }];
-    assert.deepEqual([...cappedFromCalls(dir, rows)], ['x']);
-    assert.equal(cappedFromCalls(dir, [...rows, { id: 'z', taskId: 'T-3', verdict: 'unparsed' }]), null);
+    for (const [d, arm] of [['R1b', 'R1'], ['R2b', 'R2']]) {
+      fs.mkdirSync(path.join(dir, d));
+      fs.writeFileSync(path.join(dir, d, 'runs.jsonl'), JSON.stringify({ id: 'x1', arm, status: 'done', verdict: 'block' }) + '\n');
+    }
+    const script = path.join(path.dirname(fileURLToPath(import.meta.url)), 'e7b-analyze.mjs');
+    const r = spawnSync(process.execPath, [script, '--r1b', path.join(dir, 'R1b'), '--r2b', path.join(dir, 'R2b')], { encoding: 'utf8' });
+    assert.equal(r.status, 0);
+    assert.match(r.stdout, /chưa đủ dữ liệu/);
+    assert.match(r.stdout, /--final/);
+    assert.ok(!/Recall|Youden|McNemar/i.test(r.stdout), r.stdout);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 

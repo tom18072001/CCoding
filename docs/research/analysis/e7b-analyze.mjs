@@ -39,7 +39,7 @@ export function labelOf({ aOnly, bOnly, pAdj, ci }) {
 const verdictBlocked = (r, mode) => r.verdict === 'block' || (mode === 'S1' && r.verdict === 'unparsed');
 
 /**
- * rows1/rows2: dòng runs.jsonl của R1b và R2b (arm gốc R1/R2 hoặc đã đổi tên). cappedIds: { R1b?: Set, R2b?: Set } mục có cờ `capped:'turns'`
+ * rows1/rows2: dòng runs.jsonl của R1b và R2b (arm gốc R1/R2 hoặc đã đổi tên). cappedIds: { R1b?: Set, R2b?: Set } mục có `turnCapped`
  * ở nhật ký lượt gọi (null → "capped (suy ra)" = unread).
  */
 export function analyzeE7b({ items, selected, rows1, rows2, cappedIds = null }) {
@@ -137,15 +137,22 @@ export function branchOf(res, per) {
   return { id: 'F', text: 'F. Chưa kết luận (thỏa (1), (2) nhưng không thỏa (3) hoặc (4))', thr };
 }
 
-/** Đọc cờ `capped:'turns'` từ <ccoding-data>/runs/<taskId>/calls.jsonl cho các dòng unread; thiếu tệp → trả null (dùng "suy ra"). */
+/**
+ * Đọc nhật ký lượt gọi <ccoding-data>/runs/<taskId>/calls.jsonl của MỌI dòng có taskId. Thiếu tệp → null (dùng "suy ra").
+ * Chạm trần = bản ghi phase 'accept' có `turnCapped === true` (src/orchestrator.ts:4106) hoặc diag chứa "chạm trần" (như kpi.ts).
+ * Một task có nhiều hơn một lượt 'accept' = vòng bổ sung còn bật → ném lỗi (E7b đo đúng một lượt nghiệm thu mỗi mục).
+ * Trả Set mã mục chạm trần của các dòng unread.
+ */
 export function cappedFromCalls(dataDir, rows) {
   const ids = new Set();
   for (const r of rows) {
-    if (r.verdict !== 'unparsed' || !r.taskId) continue;
+    if (!r.taskId) continue;
     const f = path.join(dataDir, 'runs', r.taskId, 'calls.jsonl');
     if (!fs.existsSync(f)) return null;
     const calls = fs.readFileSync(f, 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l));
-    if (calls.some((c) => c.phase === 'accept' && c.capped === 'turns')) ids.add(r.id);
+    const acc = calls.filter((c) => c.phase === 'accept');
+    if (acc.length > 1) throw new Error(`task ${r.taskId} (mục ${r.id}) có ${acc.length} lượt accept trong calls.jsonl: vòng bổ sung chưa tắt, dừng phân tích (RUNBOOK mục 2)`);
+    if (r.verdict === 'unparsed' && acc.some((c) => c.turnCapped === true || /chạm trần/.test(c.diag ?? ''))) ids.add(r.id);
   }
   return ids;
 }
@@ -191,8 +198,18 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   const doc = JSON.parse(fs.readFileSync(path.resolve(flag('items', path.join(e7, 'items.json'))), 'utf8'));
   const items = [...doc.items, ...Object.values(doc.reserve).flatMap((r) => [...r.faulty, ...r.clean])];
   const selected = JSON.parse(fs.readFileSync(path.resolve(flag('selected', path.join(e7, 'selected.json'))), 'utf8')).items;
+  const doneIds = (rows) => new Set(rows.filter((r) => r.status === 'done').map((r) => r.id));
+  const d1s = doneIds(rows1), d2s = doneIds(rows2);
+  const missing = selected.filter((id) => !d1s.has(id) || !d2s.has(id));
+  if (missing.length && !argv.includes('--final')) {
+    console.log(`chưa đủ dữ liệu: còn ${missing.length}/${selected.length} mục chưa có dòng done ở cả hai arm. Không in số. Chạy lại cho đủ, hoặc thêm --final nếu đã dừng chủ định (ghi lý do vào RUNLOG).`);
+    process.exit(0);
+  }
   const dr1 = flag('data-r1b'), dr2 = flag('data-r2b');
-  const cappedIds = dr1 && dr2 ? { R1b: cappedFromCalls(path.resolve(dr1), rows1), R2b: cappedFromCalls(path.resolve(dr2), rows2) } : null;
+  let cappedIds = null;
+  try {
+    cappedIds = dr1 && dr2 ? { R1b: cappedFromCalls(path.resolve(dr1), rows1), R2b: cappedFromCalls(path.resolve(dr2), rows2) } : null;
+  } catch (e) { console.error(String(e.message ?? e)); process.exit(2); }
   const a = analyzeE7b({ items, selected, rows1, rows2, cappedIds: cappedIds?.R1b && cappedIds?.R2b ? cappedIds : null });
   console.log(argv.includes('--json') ? JSON.stringify(a, null, 1) : report(a));
 }
