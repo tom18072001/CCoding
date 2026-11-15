@@ -5,6 +5,17 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 19b (T-20261115-105245-bbd, BRIEF-26b, 15/11/2026): Phụ lục sai lệch E7b (2), E7b chạy xen kẽ một tiến trình, chưa chạy
+
+Không sửa `src/`, mã `bench/`; không gọi LLM; **không có số kết quả E7b**. Dữ liệu: Nội bộ. Mục này chỉ dẫn mã QH đã có trong bảng của phụ lục (2); `BRIEF-26.md` là đề bài lưu trữ, không sửa.
+
+- **Phụ lục sai lệch E7b (2) (K1, `preregistration.md` §9, chỉ thêm):** đổi cách chạy, nguồn kiểm theo dòng `runs.jsonl` của D24, đính chính P2, luật "hết giờ" (QH30), kiểm hạ tầng (QH35) và bảng Quy tắc hiệu lực QH1–QH36. Khi mâu thuẫn với khối chính hay phụ lục (1) thì phụ lục (2) thắng.
+- **Lý do đổi từ hai tiến trình sang một tiến trình xen kẽ (QH3):** D24 gỡ ràng buộc "một `--config` mỗi tiến trình" (`--arm-config`, `--selected`). Một tiến trình giữ đúng thiết kế E7: cùng thứ tự mục và cùng thứ tự chạm lượt, bảng Latin, không có hai tiến trình tranh hạn mức. Phương án hai tiến trình song song bị bỏ, **không còn áp dụng và không được gọi là "xen kẽ"**. Thiếu D24 trong bản ghim thì E7b hoãn.
+- **Đính chính P2 về `toolInputBudget` (phụ lục (2) (c)):** `maxInputTokens` được truyền ở `src/orchestrator.ts:3877` nhưng chỉ đọc ở `src/runtimes/api.ts:378`; `claude-cli` (runtime của E7b) chỉ nhận `--max-turns` và `capped` chỉ có `'turns'`. Đe dọa "trần token cắt R2b trước 16 lượt" vì vậy **không áp cho E7b**. Kết luận từ đọc mã, không phải đo. Điều này sửa đoạn "Đe dọa mới" ở (P2) của phụ lục (1).
+- **Rà chỗ dẫn "§9, mục Có chạy lại R3" (minor 10 của review):** `paper/paper.md` §6.7 từng dẫn sai mục; đã sửa về §9 (d) "R3 (Claude Code đơn): không chạy lại". Trong `docs/research/` chỉ còn `BRIEF-26.md:40` (đề bài lưu trữ, không sửa; câu gốc "Có chạy lại R3 (Claude Code đơn) không", không phải chỗ dẫn mục).
+- **K3 (@academic-writer):** `paper/paper.md` §6.7 mô tả E7b xen kẽ một tiến trình với `--arm-config` (D24), nhãn ba giá trị gồm "chưa kết luận", ba độ nhạy S1–S3, vẫn "đã đăng ký, chưa chạy" và `[chưa chạy]`; `facts.json` nhóm `e7b.*` cập nhật `runMode`, thêm `requiresD24`, `authSourceLocked`, `acceptCallsPerDoneRow`, `rerunR3Ref`, `toolInputBudgetAppliesToE7b`, ngưỡng cặp thiếu và nhãn; không thêm số đo.
+- **Ghi chú:** câu "hai tiến trình song song … (không xen kẽ)" ở mục gói 19 bên dưới là lịch sử của bản đăng ký đầu, nay bị phụ lục (2) thay.
+
 ## Vòng 4, gói 19 (T-20261115-094542-2d1, BRIEF-26, 15/11/2026): đăng ký E7b (đo lại CTO nghiệm thu), chưa chạy
 
 Không sửa `src/`, mã `bench/`; không gọi LLM; **không có số kết quả E7b**. Dữ liệu: Nội bộ.

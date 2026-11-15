@@ -766,7 +766,7 @@
     "e9lite.tests": 23
   },
   "e7b": {
-    "_note": "BRIEF-26 (15/11/2026, K3): tham số thiết kế khóa trước của E7b (preregistration.md §9, khối 'Đăng ký trước E7b'). CHƯA CHẠY: không có trường kết quả. Số của E7 (R1/R2) nằm ở khóa brief22.e7.*, không lặp ở đây và không so trực tiếp (khác bản mã).",
+    "_note": "BRIEF-26 (15/11/2026, K3), cập nhật BRIEF-26b (15/11/2026, K3): tham số thiết kế khóa trước của E7b (preregistration.md §9, khối 'Đăng ký trước E7b' và Phụ lục sai lệch E7b (2), bảng QH1–QH36). CHƯA CHẠY: không có trường kết quả. Số của E7 (R1/R2) nằm ở khóa brief22.e7.*, không lặp ở đây và không so trực tiếp (khác bản mã).",
     "e7b.status": "đã đăng ký, chưa chạy",
     "e7b.items.total": 128,
     "e7b.items.faulty": 64,
@@ -775,7 +775,10 @@
     "e7b.arms.R1b.toolTurnsAccept": 6,
     "e7b.arms.R2b.model": "opus",
     "e7b.arms.R2b.toolTurnsAccept": 16,
-    "e7b.runMode": "hai tiến trình song song, cùng seed thứ tự (không xen kẽ)",
+    "e7b.runMode": "một tiến trình xen kẽ bảng Latin, --arms R1,R2, --arm-config R1=<tệp>,R2=<tệp> (D24), --selected <tệp>",
+    "e7b.requiresD24": true,
+    "e7b.authSourceLocked": "[\"none\"]",
+    "e7b.acceptCallsPerDoneRow": 1,
     "e7b.orderSeed": "20261104|e7|order",
     "e7b.bootstrapB": 4000,
     "e7b.bootstrapSeed": 20261104,
@@ -785,6 +788,11 @@
     "e7b.threshold.recallGapMaxItems": 6,
     "e7b.threshold.cappedMaxOf128": 6,
     "e7b.rerunR3": false,
+    "e7b.rerunR3Ref": "preregistration.md §9 (d)",
+    "e7b.toolInputBudgetAppliesToE7b": false,
+    "e7b.missingPairsPerArmMax": 3,
+    "e7b.missingPairsArmGapMin": 3,
+    "e7b.labels": "khác nhau | chưa phân biệt được | chưa kết luận",
     "e7b.selectedJsonGitBlob": "5b3e8fcf2ba3816b39fdb5ba9ef021232a4b2f5f"
   },
   "numbers": [
