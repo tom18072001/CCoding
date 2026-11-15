@@ -35,6 +35,8 @@ const only = flag('only', '') ? new Set(flag('only', '').split(',')) : null;
 if (flag('config')) process.env.CCODING_CONFIG = path.resolve(flag('config'));
 
 const doc = JSON.parse(fs.readFileSync(itemsFile, 'utf8'));
+// Thư mục bài: --tasks-dir hoặc VSC_TASKS_DIR; mặc định <suite>/tasks.
+const tasksDir = path.resolve(flag('tasks-dir', process.env.VSC_TASKS_DIR || path.join(SUITE, 'tasks')));
 const artifacts = path.resolve(flag('artifacts', path.join(SUITE, 'results', 'study-cloud', 'artifacts')));
 fs.mkdirSync(out, { recursive: true });
 fs.mkdirSync(work, { recursive: true });
@@ -63,7 +65,7 @@ if (!smoke && !fs.existsSync(selFile)) {
     if (item.kind === 'clean' && selected.filter((x) => x.kind === 'clean' && x.task === item.task).length >= (nFaulty[item.task] ?? 0)) { skipped.push({ id: item.id, task: item.task, kind: item.kind, reason: 'match-trim' }); continue; }
     let cand = item;
     while (cand) {
-      const p = await prepareItem(cand, { suite: SUITE, artifacts, workRoot: path.join(work, 'prep'), cc, arms: ['R1'] });
+      const p = await prepareItem(cand, { suite: SUITE, artifacts, workRoot: path.join(work, 'prep'), cc, arms: ['R1'], tasksDir });
       append(prepFile, { at: new Date().toISOString(), id: cand.id, task: cand.task, ok: p.ok, reason: p.reason ?? null, siteMode: p.siteMode ?? null, overlaid: p.overlaid ?? null, baseline: p.baseline ? { ok: p.baseline[0].ok, code: p.baseline[0].code } : null, changesSha: p.changes ? crypto.createHash('sha256').update(p.changes).digest('hex') : null, ...meta });
       if (p.ok) { selected.push(cand); if (cand.kind === 'faulty') nFaulty[cand.task] = (nFaulty[cand.task] ?? 0) + 1; break; }
       skipped.push({ id: cand.id, task: cand.task, kind: cand.kind, reason: p.reason });
@@ -107,7 +109,7 @@ for (const [idx, id] of order.entries()) {
   if (!todo.length) continue;
   if (k++ >= limit) break;
   const item = byId.get(id);
-  const prep = await prepareItem(item, { suite: SUITE, artifacts, workRoot: path.join(work, 'items'), cc, arms: todo });
+  const prep = await prepareItem(item, { suite: SUITE, artifacts, workRoot: path.join(work, 'items'), cc, arms: todo, tasksDir });
   if (!prep.ok) { append(runsFile, { id, arm: todo.join('+'), at: new Date().toISOString(), status: 'infra', infra: 'prep', error: prep.reason, ...meta }); console.log(`${id}: chuẩn bị hỏng (${prep.reason})`); continue; }
   for (const arm of todo) {
     n++;

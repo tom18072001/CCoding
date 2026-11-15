@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Blinded pairwise preference for open-ended deliverables (design, requirements, research review).
 //   node pairwise.mjs results/<run> --x A0-sonnet --y B0 [--model opus] [--judge2-model sonnet] [--categories design,requirements,research]
-//        [--ballots-out <dir>] [--ballot-frac 0.2] [--seed 20261104]
+//        [--ballots-out <dir>] [--ballot-frac 0.2] [--seed 20261104] [--tasks-dir <dir> | VSC_TASKS_DIR]
 // Each (task, repeat) pair is judged twice with the order swapped; disagreement counts as a tie. Writes pairwise.jsonl + pairwise.md + pairwise.summary.json.
 // SR-08a: --judge2-model chạy giám khảo thứ hai (phải khác --model) trên cùng cặp, ghi judge2/winner2 và judgeAgreement (tỉ lệ + Cohen's kappa).
 //         --ballots-out xuất phiếu người chấm (≥ --ballot-frac số cặp): CSV chỉ có mã cặp ẩn danh, tệp A/B đã làm mù; khóa giải mã nằm ở ballots.key.json (KHÔNG đưa cho người chấm).
@@ -36,7 +36,9 @@ const rubric = {
   requirements: 'Every ambiguity and contradiction surfaced with a sensible interim assumption; implementable, testable requirements.',
   research: 'Every claim grounded in the corpus with correct citations; no fabrication; comparability caveats noted; clear synthesis.',
 };
-const taskOf = (name) => JSON.parse(fs.readFileSync(path.join(SUITE, 'tasks', name, 'task.json'), 'utf8'));
+// Thư mục bài: --tasks-dir hoặc VSC_TASKS_DIR; mặc định <suite>/tasks (như run.mjs, analyze.mjs).
+const TASKS_DIR = path.resolve(flag('tasks-dir', process.env.VSC_TASKS_DIR || path.join(SUITE, 'tasks')));
+const taskOf = (name) => JSON.parse(fs.readFileSync(path.join(TASKS_DIR, name, 'task.json'), 'utf8'));
 const pairs = rows.filter((r) => r.arm === X).map((rx) => ({ rx, ry: rows.find((r) => r.arm === Y && r.task === rx.task && r.rep === rx.rep), id: `${rx.task}#${rx.rep}` })).filter((p) => p.ry);
 const opts = (m) => ({ model: m, bin, binArgs });
 for (const { rx, ry, id } of pairs) {

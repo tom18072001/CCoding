@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildPlan, hitRatio, interpret, runDiagnostic, toCsv, MAX_CALLS, buildPrompt } from '../cache-diagnostic.mjs';
@@ -44,7 +45,7 @@ test('fixture: ra đủ 7 hàng, đúng h, diễn giải khớp G1', { skip: has
 });
 
 test('fixture thiếu lượt → lỗi rõ', { skip: hasDist ? false : 'thiếu dist/' }, async () => {
-  const tmp = path.join(here, '..', 'fixtures', '_tmp-missing.json');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccvb-cachediag-')), tmp = path.join(dir, '_tmp-missing.json'); // D23: không ghi vào cây repo
   fs.writeFileSync(tmp, JSON.stringify({ calls: { warmup: {} } }));
-  try { await assert.rejects(runDiagnostic({ fixture: tmp }), /fixture thiếu lượt/); } finally { fs.rmSync(tmp, { force: true }); }
+  try { await assert.rejects(runDiagnostic({ fixture: tmp }), /fixture thiếu lượt/); } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });

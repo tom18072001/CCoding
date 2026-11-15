@@ -8,8 +8,8 @@ Quét `test/` tìm `{ skip: … }`, `t.skip(…)`, `test.skip`, `todo`. Không c
 |---|---|---|---|---|---|
 | `test/agent-probes.test.ts:36` | probe `--self-test` | `dist/kpi.js` không có **và** tự build thất bại | mọi nền tảng | `bench/agent-probes/probe.mjs` import từ `dist/` | Đã sửa (xem dưới): test tự build. Thủ công: `npm run build` |
 | `test/agent-probes.test.ts:43` | probe: API gốc Ollama, `num_ctx`, che PII | như trên | mọi nền tảng | như trên | như trên |
-| `bench/vs-claude/test/cache-diagnostic.test.mjs:29` | fixture: ra đủ 7 hàng, đúng h, diễn giải khớp G1 | thiếu thư mục `dist/` | mọi nền tảng | bài kiểm nạp bản build của CCoding | `npm run build` rồi chạy lại `npm run test:bench` |
-| `bench/vs-claude/test/cache-diagnostic.test.mjs:46` | fixture thiếu lượt → lỗi rõ | như trên | mọi nền tảng | như trên | như trên |
+| `bench/vs-claude/test/cache-diagnostic.test.mjs:30` | fixture: ra đủ 7 hàng, đúng h, diễn giải khớp G1 | thiếu thư mục `dist/` | mọi nền tảng | bài kiểm nạp bản build của CCoding | `npm run build` rồi chạy lại `npm run test:bench` |
+| `bench/vs-claude/test/cache-diagnostic.test.mjs:47` | fixture thiếu lượt → lỗi rõ | như trên | mọi nền tảng | như trên | như trên |
 | `test/bench.test.ts:248` | claude-cli: bashMaxOutput → `BASH_MAX_OUTPUT_LENGTH` | `process.platform === 'win32'` | chỉ chạy Linux/macOS | `claude` giả là script shebang (node); Windows không spawn được tệp không đuôi | Chạy trên Linux/macOS/WSL (`npm test`) |
 | `test/extract.test.ts:504` | PDF qua pdftotext | `pdftotext -v` không chạy được trong PATH | mọi nền tảng | thiếu poppler-utils | Cài poppler (Windows: MSYS2 `mingw-w64-*-poppler`, Linux: `apt install poppler-utils`), đưa vào PATH |
 | `test/extract.test.ts:514` | PDF mã hóa mật khẩu rỗng (qpdf) | `qpdf --version` không chạy được | mọi nền tảng | thiếu qpdf | Cài qpdf (`apt install qpdf` / `winget install qpdf`), đưa vào PATH |
@@ -19,6 +19,10 @@ Quét `test/` tìm `{ skip: … }`, `t.skip(…)`, `test.skip`, `todo`. Không c
 | `test/shell-policy-write-outside.test.ts:40` | thư mục hệ thống Windows | `SystemRoot`/`windir` không đặt | thực tế chỉ Windows (biến này có sẵn); Linux skip | cần dựng đường dẫn thư mục hệ thống Windows | Chạy trên Windows, hoặc đặt `SystemRoot=C:\Windows` (chỉ dùng làm chuỗi, không chạm đĩa) |
 | `test/diff-read-inside.test.ts` | readInside: symlink/junction thư mục trong worktree trỏ ra ngoài bị chặn | không tạo được symlink/junction | mọi nền tảng (Windows dùng junction) | cần liên kết thật | Kiểm quyền/hệ tệp của thư mục tạm |
 | `test/diff-read-inside.test.ts` | readInside: Windows — khác hoa/thường vẫn là cùng thư mục | `process.platform !== 'win32'` | chỉ chạy Windows | Linux/macOS phân biệt hoa/thường nên ca không có nghĩa | Chạy trên Windows |
+| `test/same-path.test.ts:36` | samePath: dạng 8.3 và dạng dài của cùng thư mục là một | `process.platform !== 'win32'` (`t.skip`) | chỉ chạy Windows | tên 8.3 chỉ có trên Windows | Chạy trên Windows |
+| `test/same-path.test.ts:40`, `:64` | samePath: tên 8.3 (hai test) | ổ đĩa tắt tên 8.3 (`fsutil 8dot3name`) hoặc không dịch được (`t.skip`) | chỉ Windows | không có tên ngắn để so | Bật 8.3 cho ổ chứa thư mục tạm |
+
+Ghi chú: các `t.skip(…)` trong thân test (`logview`, `claude-guard-paths`, `same-path`) không nằm trong `test/skips.json` vì rule `skip-registry` chỉ đối chiếu dòng khai báo test có `skip:`/`test.skip`. `skips.json` có 10 mục (2 `cache-diagnostic`, 2 `agent-probes`, `bench`, 2 `extract`, `shell-policy-write-outside`, 2 `diff-read-inside`), khớp id, điều kiện và lý do của các dòng tương ứng trong bảng.
 
 ## Lần chạy thật trên máy này (Windows 11, Node ≥ 22)
 
@@ -32,13 +36,13 @@ Symlink/junction tạo được; `SystemRoot` có.
 
 ## Giải thích 4 / 3 / 1
 
-Tập skip chắc chắn theo nền tảng: **Windows** = bench + logview (2 test cố định). Phần còn lại phụ thuộc môi trường: qpdf, pdftotext, `dist/`.
+Tập skip chắc chắn theo nền tảng: **Windows** = bench + logview (2 test cố định). Phần còn lại phụ thuộc môi trường: qpdf, pdftotext, `SystemRoot` (và `dist/` trước D18d).
 
 - **3 (máy này, và theo ghi nhận là reviewer):** 2 test win32 + qpdf thiếu. Đo trực tiếp, `dist/` có, `pdftotext` có.
-- **4 (CCoding chạy trên Windows):** khớp nhất với 3 ở trên cộng **pdftotext vắng trong PATH của tiến trình CCoding** (extract.test.ts:504). Phương án khác (thiếu `dist/`) sẽ cho **5** (thêm 2 test probe), không khớp 4 nên bị loại. *Giả định, chưa kiểm chứng*: không có log PATH của lượt CCoding để xác nhận; `/mingw64/bin` (nơi có pdftotext) nằm trong PATH của Git Bash nhưng có thể không nằm trong PATH khi CCoding spawn. Cũng có thể trường hợp khác (vd. một test symlink không tạo được liên kết); không loại trừ được.
-- **1 (Linux):** 2 test win32 chạy; chỉ còn qpdf (hoặc pdftotext) thiếu nếu `dist/` đã build và một trong hai công cụ chưa cài. *Giả định*: số liệu 1 chưa có log gốc; khớp khi Linux có poppler nhưng không có qpdf.
+- **4 (CCoding chạy trên Windows):** khớp nhất với 3 ở trên cộng **pdftotext vắng trong PATH của tiến trình CCoding** (extract.test.ts:504). Phương án khác (thiếu `dist/`) sẽ cho **5**, không khớp 4 nên bị loại. **Đã xác nhận bằng số đo** (mục "Đo lại của người điều phối", dòng WMI: pdftotext không, qpdf không, 797 test, 4 bỏ qua): `Git\mingw64\bin` (nơi có pdftotext) có trong PATH của phiên tương tác nhưng không có trong PATH khi tiến trình được tạo như máy chủ văn phòng.
+- **1 (Linux):** đã đo (container cloud, Node 22, commit `d82a239`): máy có **cả pdftotext lẫn qpdf**; test bỏ qua duy nhất là `shell-policy-write-outside.test.ts` vì không đặt `SystemRoot`. Hai test win32 (bench, logview) chạy. Giả định cũ "thiếu qpdf hoặc pdftotext" là sai. Số đo này có trước `same-path.test.ts` (commit `5cba98ee`, không phải tổ tiên của `d82a239`); từ commit đó Linux có thêm 1 test bỏ qua (`same-path.test.ts:36`, chỉ Windows), tức dự kiến **2**, chưa đo lại.
 
-Điểm lệch giữa môi trường (sau khi đã sửa): chỉ còn `PATH` (pdftotext, qpdf) và nền tảng. `dist/` không còn gây lệch.
+Điểm lệch giữa môi trường (sau khi đã sửa): `PATH` (pdftotext, qpdf), biến `SystemRoot`, nền tảng và (với `same-path`) việc ổ đĩa có bật tên 8.3. `dist/` không còn gây lệch.
 
 Ghi chú: chạy xong thì `skipped` của agent-probes luôn 0 nhờ tự build; trước D18d, trạng thái `dist/` (đã `npm run build` hay chưa) làm số skipped dao động ±2, đây là nguồn lệch số có thật giữa D18a và D18c (giả định về thời điểm build, chưa kiểm chứng bằng log).
 
@@ -71,10 +75,10 @@ Người điều phối từng ghi test D17(c) (`followup-paths.test.ts:139`, "v
 ### Số bỏ qua 4 so với 3
 
 Theo bảng "Đo lại của người điều phối": số test bỏ qua phụ thuộc môi trường chỉ ở hai công cụ ngoài trong PATH.
-- **3**: Windows, phiên `cmd` tương tác. Hai test cố định theo nền tảng (`bench.test.ts` win32, `logview.test.ts` win32) cộng `extract.test.ts` qpdf (không có qpdf). `pdftotext` có vì PATH chứa `Git\mingw64in`.
-- **4**: Windows, tiến trình tạo như máy chủ văn phòng. Ba test trên cộng `extract.test.ts` pdftotext, vì PATH hệ thống không có `Git\mingw64in`.
+- **3**: Windows, phiên `cmd` tương tác. Hai test cố định theo nền tảng (`bench.test.ts` win32, `logview.test.ts` win32) cộng `extract.test.ts` qpdf (không có qpdf). `pdftotext` có vì PATH chứa `Git\mingw64\bin`.
+- **4**: Windows, tiến trình tạo như máy chủ văn phòng. Ba test trên cộng `extract.test.ts` pdftotext, vì PATH hệ thống không có `Git\mingw64\bin`.
 - Chênh 1 test = điều kiện skip "`pdftotext -v` không chạy được trong PATH", phụ thuộc PATH của tiến trình chạy test, không phải lỗi mã.
-- Lần chạy `npm test` trong worktree này (Windows): `tests 867 · pass 864 · fail 0 · skipped 3` (pdftotext có trong PATH của phiên này, khớp dòng "3").
+- Lần chạy `npm test` trong worktree này (Windows): `tests 867 · pass 864 · fail 0 · skipped 3` ở D22; baseline D23: `tests 874 · pass 871 · fail 0 · skipped 3` (pdftotext có trong PATH của phiên này, khớp dòng "3").
 
 ### Thư mục mô phỏng (D20b còn mở)
 

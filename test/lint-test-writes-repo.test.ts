@@ -59,3 +59,43 @@ test('test-writes-repo: lời gọi ghi nằm trong chuỗi/template/comment (fi
   const inTpl = lint({ 'a/y.test.mjs': `${HEAD}const t = \`x\${fs.rmSync(path.join(HERE, 'q'))}\`;\n` });
   assert.equal(inTpl.code, 1, inTpl.out);
 });
+
+// D23: stringMask nhận regex literal; biến trung gian.
+test('test-writes-repo D23: regex literal /\'/ đứng trước lời ghi vào repo không làm lệch trạng thái ⇒ vẫn đỏ', () => {
+  const r = lint({ 'a/x.test.mjs': `${HEAD}const re = /'/;\nfs.rmSync(path.join(HERE, 'q'), { recursive: true });\n` });
+  assert.equal(r.code, 1, r.out);
+  const q2 = lint({ 'a/y.test.mjs': `${HEAD}const ok = /"/.test(x) && /\`/.test(y) && /[/'"\`]\//g.test(z);\nfs.rmSync(path.join(HERE, 'q'));\n` });
+  assert.equal(q2.code, 1, q2.out);
+});
+
+test('test-writes-repo D23: regex chứa " hoặc ` hay lớp [...] không lệch trạng thái; lời ghi nằm trong regex vẫn không tính', () => {
+  const neg = lint({ 'a/x.test.mjs': `${HEAD}const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'x-'));\nconst a = /"/.test(s), b = /\`/.test(s), c = /[/"]+/.test(s);\nfs.writeFileSync(path.join(tmp, 'f'), 'x');\nconst doc = /fs\.rmSync\(path\.join\(HERE/;\n` });
+  assert.equal(neg.code, 0, neg.out);
+});
+
+test('test-writes-repo D23: a / b / c là phép chia, không bị hiểu thành regex (lời ghi ở giữa vẫn bị bắt)', () => {
+  const r = lint({ 'a/x.test.mjs': `${HEAD}const n = a / b / c;\nfs.rmSync(path.join(HERE, 'q'));\nconst m = (a) / 2 / 3, k = arr[0] / 4;\n` });
+  assert.equal(r.code, 1, r.out);
+  const noRe = lint({ 'a/y.test.mjs': `${HEAD}const t = fs.mkdtempSync(path.join(os.tmpdir(), 'x-'));\nconst n = a / b; fs.rmSync(path.join(HERE, 'q')); const m = c / d;\n` });
+  assert.equal(noRe.code, 1, noRe.out); // nếu "/ b; fs.rmSync(… / " bị coi là regex thì lời ghi bị nuốt ⇒ sẽ sai ở đây
+});
+
+test('test-writes-repo D23: đường dẫn repo qua biến trung gian ⇒ đỏ; qua thư mục tạm ⇒ xanh', () => {
+  const bare = lint({ 'a/x.test.mjs': `${HEAD}const base = HERE;\nconst dir = path.join(base, 'tasks');\nfs.mkdirSync(dir, { recursive: true });\n` });
+  assert.equal(bare.code, 1, bare.out);
+  const viaUrl = lint({ 'a/y.test.mjs': `import { fileURLToPath } from 'node:url';\nimport fs from 'node:fs';\nimport path from 'node:path';\nconst here = path.dirname(fileURLToPath(import.meta.url));\nconst tasks = path.join(here, 'tasks');\nfs.rmSync(tasks, { recursive: true });\n` });
+  assert.equal(viaUrl.code, 1, viaUrl.out);
+  const tmp = lint({ 'a/z.test.mjs': `${HEAD}const base = fs.mkdtempSync(path.join(os.tmpdir(), 'x-'));\nconst dir = path.join(base, 'tasks');\nconst alias = base;\nfs.mkdirSync(dir, { recursive: true });\nfs.rmSync(alias, { recursive: true });\n` });
+  assert.equal(tmp.code, 0, tmp.out);
+});
+
+test('test-writes-repo D23: giới hạn còn lại — tham số hàm và thuộc tính đối tượng KHÔNG bị bắt (ghi nhận, không phải bảo đảm)', () => {
+  const r = lint({ 'a/x.test.mjs': `${HEAD}function w(d) { fs.rmSync(d, { recursive: true }); }\nw(HERE);\nconst o = { dir: HERE };\nfs.rmSync(o.dir);\n` });
+  assert.equal(r.code, 0, r.out);
+});
+
+test('test-writes-repo D23: giới hạn còn lại — regex ngay sau ")" bị coi là phép chia (cố định hành vi hiện tại; nới heuristic thì cập nhật test)', () => {
+  const r = lint({ 'a/x.test.mjs': `${HEAD}if (ok) /'/.test(s); fs.rmSync(path.join(HERE, 'q')); const z = 'x';
+` });
+  assert.equal(r.code, 0, r.out); // bỏ sót do lệch trạng thái; khi sửa được thì đổi thành 1
+});

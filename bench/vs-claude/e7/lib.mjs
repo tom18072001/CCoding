@@ -97,9 +97,9 @@ export function hiddenPass(dir, hiddenDir, { fileTimeoutMs = 30_000, timeoutMs =
  * Kiểm lại trên máy chạy: `npm test` phải xanh; test ẩn phải trượt (lỗi) hoặc đạt hết (đúng). Không đạt → { ok: false, reason }.
  * Mỗi arm một repo git riêng: commit "base" = starter, cây làm việc = sản phẩm (chưa commit).
  */
-export async function prepareItem(item, { suite, artifacts, workRoot, cc, arms = Object.keys(ARM_DIR), checkTimeoutSec = 600 }) {
-  const task = JSON.parse(fs.readFileSync(path.join(suite, 'tasks', item.task, 'task.json'), 'utf8'));
-  const { repoDir: starterDir, hiddenDir } = taskDirs(suite, task);
+export async function prepareItem(item, { suite, artifacts, workRoot, cc, arms = Object.keys(ARM_DIR), checkTimeoutSec = 600, tasksDir = path.join(suite, 'tasks') }) {
+  const task = JSON.parse(fs.readFileSync(path.join(tasksDir, item.task, 'task.json'), 'utf8'));
+  const { repoDir: starterDir, hiddenDir } = taskDirs(suite, task, tasksDir);
   const artifactDir = path.join(artifacts, item.key);
   if (!fs.existsSync(artifactDir)) return { ok: false, reason: 'missing-artifact' };
   const prod = fs.mkdtempSync(path.join(os.tmpdir(), 'e7-prod-'));
