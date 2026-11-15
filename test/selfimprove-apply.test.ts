@@ -12,7 +12,7 @@ import {
   applyApproved, listProposals, monitorApplied, isEvidenceFile, purgeExpired, runRetention, MIN_RETENTION_DAYS, recordAbDecision, recordAbStarted, recordDirector, recordProposed, rollback, screenPatch, actorFromToken,
   type Deps, type MonitorSource, type TaskMetric,
 } from '../src/selfimprove.js';
-import { testApp } from './helpers.js';
+import { closeServer, testApp } from './helpers.js';
 
 // B-19 phần 2: bước 5–7, an toàn §4, route API. CT-05 (payload đã che), 06, 07, 08, 11, 16, 17, 20.
 
@@ -288,7 +288,7 @@ test('route /api/selfimprove/*: tắt ⇒ 404; bật ⇒ đúng hợp đồng, P
   const srv0 = createServer(app);
   await new Promise<void>((r) => srv0.listen(0, '127.0.0.1', r));
   const port = (srv0.address() as AddressInfo).port;
-  srv0.close();
+  await closeServer(srv0);
   app.config.server.port = port;
   const srv = createServer(app);
   await new Promise<void>((r) => srv.listen(port, '127.0.0.1', r));
@@ -351,7 +351,7 @@ test('route /api/selfimprove/*: tắt ⇒ 404; bật ⇒ đúng hợp đồng, P
     assert.equal(events(app, 'selfimprove.rollback.confirmed').length, 0);
     assert.equal(events(app, 'selfimprove.approved').every((e) => e.data.by === ACTOR.by && e.data.auth === 'server.token'), true);
   } finally {
-    srv.close();
+    await closeServer(srv);
     app.cleanup();
   }
 });

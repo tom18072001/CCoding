@@ -4,14 +4,14 @@ import fs from 'node:fs';
 import type { AddressInfo } from 'node:net';
 import { createServer } from '../src/server.js';
 import { periodStart } from '../src/budgets.js';
-import { readJson, testApp } from './helpers.js';
+import { closeServer, readJson, testApp } from './helpers.js';
 
 async function serve(app: ReturnType<typeof testApp>) {
   const srv = createServer(app);
   await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
   const port = (srv.address() as AddressInfo).port;
   app.config.server.port = port;
-  srv.close();
+  await closeServer(srv);
   const srv2 = createServer(app);
   await new Promise<void>((r) => srv2.listen(port, '127.0.0.1', r));
   const base = `http://127.0.0.1:${port}`;
@@ -42,7 +42,7 @@ test('UI-7 thuộc tính: sửa tiêu đề và ưu tiên, kiểm tra đầu và
     const sys = fs.readFileSync(`${app.config.dataDir}/logs/system.jsonl`, 'utf8');
     assert.match(sys, /task\.updated/);
   } finally {
-    srv.close();
+    await closeServer(srv);
     app.cleanup();
   }
 });
@@ -87,7 +87,7 @@ test('UI-7 ngân sách theo agent: trần cứng tạm dừng nhiệm vụ, ch�
     assert.equal((await json(`/api/budgets/${pol.id}`, undefined, 'DELETE')).status, 404);
     assert.ok(fs.existsSync(`${app.config.dataDir}/budgets.json`));
   } finally {
-    srv.close();
+    await closeServer(srv);
     app.cleanup();
   }
 });
@@ -163,7 +163,7 @@ test('UI-7 agent ngoài: tiến trình stdin/stdout JSON, không lộ biến bí
     assert.equal((got.agent as { id: string }).id, 'backend-dev');
     assert.equal(new ExternalRuntime('far', { type: 'http', baseUrl: 'https://agents.example.com/run', local: true }).local, false, 'máy ở xa không được tự nhận là cục bộ');
   } finally {
-    srv.close();
+    await closeServer(srv);
   }
 
   // đăng ký qua cấu hình
@@ -192,7 +192,7 @@ test('UI-8 backlog: tạo vào backlog không chạy; chuyển qua lại backlog
     assert.equal((await json(`/api/tasks/${t.id}/stage`, { stage: 'backlog' })).status, 409);
     assert.equal((await json('/api/tasks/T-khong-co/stage', { stage: 'todo' })).status, 404);
   } finally {
-    srv.close();
+    await closeServer(srv);
     app.cleanup();
   }
 });
@@ -242,7 +242,7 @@ test('UI-8 thuộc tính: đổi người phụ trách và dự án khi chưa b�
     assert.equal((await json(`/api/tasks/${t2.id}/props`, { projectId: 'nho' })).status, 400);
     assert.match(fs.readFileSync(`${app.config.dataDir}/logs/system.jsonl`, 'utf8'), /người phụ trách/);
   } finally {
-    srv.close();
+    await closeServer(srv);
     app.cleanup();
   }
 });

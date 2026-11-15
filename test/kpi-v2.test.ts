@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { checksOutcome, computeKpi, kpiMarkdown, runtimeLimits, verificationClaim, type CallRow } from '../src/kpi.js';
-import { testApp } from './helpers.js';
+import { closeServer, testApp } from './helpers.js';
 
 type Src = Parameters<typeof computeKpi>[0];
 
@@ -447,7 +447,7 @@ test('KPI v2 (sửa 3): runtime API ghi prompt lớn nhất trong các vòng cô
     assert.equal(r.turns, 3);
     assert.equal(r.maxPromptTokens, 9000);
   } finally {
-    srv.close();
+    await closeServer(srv);
     fs.rmSync(root, { recursive: true, force: true });
   }
 });

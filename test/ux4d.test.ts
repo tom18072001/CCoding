@@ -7,7 +7,7 @@ import { createServer } from '../src/server.js';
 import { auditOf } from '../src/audit.js';
 import { CATCH_UP_MS, describeSchedule, nextRun, Routines } from '../src/routines.js';
 import type { Routine } from '../src/types.js';
-import { testApp } from './helpers.js';
+import { closeServer, testApp } from './helpers.js';
 
 // UX-4d: Kiểm toán, Sản phẩm, Kỹ năng & Kết nối, Việc định kỳ.
 
@@ -173,7 +173,7 @@ test('API: kiểm toán, kiểm chuỗi băm, sản phẩm, kỹ năng & kết n
   const s0 = createServer(app);
   await new Promise<void>((r) => s0.listen(0, '127.0.0.1', r));
   const port = (s0.address() as AddressInfo).port;
-  s0.close();
+  await closeServer(s0);
   app.config.server.port = port;
   const srv = createServer(app);
   await new Promise<void>((r) => srv.listen(port, '127.0.0.1', r));
@@ -254,7 +254,7 @@ test('API: kiểm toán, kiểm chuỗi băm, sản phẩm, kỹ năng & kết n
     assert.equal(t2.routineId, undefined);
     await app.orchestrator.waitFor(t2.id);
   } finally {
-    srv.close();
+    await closeServer(srv);
     app.cleanup();
   }
 });
