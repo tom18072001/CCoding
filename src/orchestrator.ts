@@ -4104,6 +4104,8 @@ export class Orchestrator {
       finishReason: result.finishReason,
       stopReason: result.stopReason,
       turnCapped: result.capped !== undefined || /chạm trần/.test(result.diag ?? ''),
+      // số vòng model của lượt (claude-cli: num_turns); thiếu hoặc không phải số thì không ghi khóa
+      ...(typeof result.turns === 'number' && Number.isFinite(result.turns) ? { turns: result.turns } : {}),
       error: result.error,
     };
     if (result.runtime !== 'n/a') usage.record(rec);
