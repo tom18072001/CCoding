@@ -286,6 +286,10 @@
     {
       "key": "Phân tích khám phá bổ sung sau phản biện E9-lite: bảng độ phủ tuyệt đối và chi phí bằng tiền (BRIEF-25b, K1) — 15/11/2026",
       "sha256": "4d63ce751b878d92fc9d3f3c57fd797a7b0bbdd2b7c5005f44d9eaf835b7e86c"
+    },
+    {
+      "key": "Đăng ký trước E7b: đo lại CTO nghiệm thu trên bản mã hiện tại, Sonnet và Opus với trần lượt `accept` cao hơn (ghi 15/11/2026, @methodologist, BRIEF-26 K1; trước mọi lượt gọi LLM của E7b)",
+      "sha256": "28cdb2c25424f585af3bac0e592ec21700acb66317f9d860855717f190adbdec"
     }
   ],
   "history": [
