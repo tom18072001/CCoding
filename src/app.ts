@@ -29,8 +29,9 @@ export interface App {
 }
 
 /** Lắp ráp toàn bộ thành phần (dùng chung cho server, CLI độc lập và kiểm thử). */
-export function createApp(overrides: Partial<Config> = {}, opts: { root?: string } = {}): App {
-  const base = loadConfig({ root: opts.root });
+export function createApp(overrides: Partial<Config> = {}, opts: { root?: string; configFile?: string } = {}): App {
+  // configFile: cấu hình thêm tường minh cho riêng app này (không truyền thì như cũ: CCODING_CONFIG)
+  const base = loadConfig({ root: opts.root, configFile: opts.configFile });
   const config: Config = { ...base, ...overrides };
   ensureDataDirs(config.dataDir);
   const bus = new EventBus();
