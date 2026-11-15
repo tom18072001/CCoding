@@ -127,7 +127,7 @@ Mọi nội dung phía trên dòng `---` là đầu ra nguyên văn của script
 - sha256 `gold.json` = `ee49fc5da243b1b656c3e2f8fcc9d395c39c3f5a30f325b0f8e1ea7406ed312f` (khớp §9).
 - sha256 `labels.json` = `4059699277ab7df1b6b55dec5876b81feaea6352b59350a1b2807ef543694025` (khớp §9).
 - sha256 phần đầu ra script (117 dòng, phần trên dòng `---`) = `f13eefc6d01044bf7f8354b1e6c58c082d5d0c774b1f2c8b9a0fb50cb248ebcf`.
-- Kiểm tái lập: chạy lần hai ra tệp tạm ngoài repo (`/tmp/r2.md`), `cmp` với bản lưu: **trùng byte** (cùng sha256 như trên).
+- Kiểm tái lập: chạy lần hai ra tệp tạm ngoài repo (`<tệp-tạm>`), `cmp` với bản lưu: **trùng byte** (cùng sha256 như trên).
 - sha256 `runs.jsonl` theo nội dung LF (blob git, `git ls-files --eol`: i/lf) = `bb004f1fda6247524db7015fe2d0a282905d28304eefc69c08e4c01001b436fc`, khớp RUNLOG. Bản checkout trên Windows (autocrlf) có CRLF nên `sha256sum` trực tiếp ra `6babb19a…07da`; chỉ khác kết thúc dòng, không phải khác dữ liệu.
 
 ### Bốn dòng không `done`

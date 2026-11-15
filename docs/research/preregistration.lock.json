@@ -278,6 +278,10 @@
     {
       "key": "Mã băm khóa chuẩn E9-lite — bản thay thế (BRIEF-24b, K1; ghi trước lượt chạy đầu) — 15/11/2026",
       "sha256": "064967de7625395bbf147e4797c25babe615289c6d890a5e47190cf8ed1a63fd"
+    },
+    {
+      "key": "Sai lệch được báo minh bạch: lượt `failed` do cổng kế hoạch chặn, rồi chạy lại cùng khóa (BRIEF-25, K2) — 15/11/2026",
+      "sha256": "150d8aefc316cbe4a500872f8ecac3cbda89b674a7ad2e8598b3c24c29c9acdd"
     }
   ],
   "history": [
