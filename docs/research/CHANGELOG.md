@@ -5,6 +5,15 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 19 (T-20261115-094542-2d1, BRIEF-26, 15/11/2026): đăng ký E7b (đo lại CTO nghiệm thu), chưa chạy
+
+Không sửa `src/`, mã `bench/`; không gọi LLM; **không có số kết quả E7b**. Dữ liệu: Nội bộ.
+
+- **K1 (@methodologist):** `preregistration.md` §9 thêm (chỉ thêm) khối "Đăng ký trước E7b" (a)–(l): arm `R1b` Sonnet trần `accept` 6 và `R2b` Opus trần 16, 128 mục của `selected.json`, hai tiến trình song song cùng seed thứ tự (không xen kẽ), không chạy lại R3, McNemar chính xác P1/P2 + Holm hai phép + bootstrap theo bài, ngưỡng nhánh D→E→A→B→C→F, câu cấm, đe dọa.
+- **K3 (@academic-writer):** `paper/paper.md` thêm §6.7 (khung E7b, trạng thái "đã đăng ký, chưa chạy", chỗ kết quả ghi `[chưa chạy]`, câu "không so trực tiếp với E7 vì khác bản mã"); `facts.json` thêm nhóm `e7b.*` (tham số khóa, không có trường kết quả). Số E7 không đổi.
+- **Deck:** không có ghi chú slide 24 "Hệ thống fail ở đâu" trong repo (`presentation-notes.md` không có slide này), nên không sửa; khi deck có, thêm "E7b đã đăng ký, chưa chạy" ở dòng chặn nhầm CTO.
+- **Chưa làm / cần người khác:** `preregistration.lock.json` (K1, `prereg-lock.mjs --add-new`), cấu hình, RUNLOG và script phân tích (K2).
+
 ## Vòng 4, gói 18b (T-20261115-081112-711, BRIEF-25b, 15/11/2026): sửa nhỏ sau phản biện E9-lite; bảng tuyệt đối, chi phí bằng tiền
 
 Không sửa `src/`, mã `bench/`, `runs.jsonl`, `gold.json`, `labels.json`; không chạy lại planner, không gọi LLM. Dữ liệu: Nội bộ. Mọi số mới là [Khám phá, sau khi thấy dữ liệu], không thuộc đăng ký.
