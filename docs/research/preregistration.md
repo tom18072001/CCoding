@@ -1774,6 +1774,35 @@ Thiếu `acceptTurnCapped` **không** là lỗi kiểm: chuyển sang `capped (s
 
 **Khóa.** Phụ lục này vào `preregistration.lock.json` qua `node scripts/lint/prereg-lock.mjs --add-new` (K2 thực hiện).
 
+### Sai lệch thực thi và phân tích E7b (ghi 15/11/2026, @methodologist, BRIEF-27 K2)
+
+Mục này chỉ **thêm**; không sửa chữ nào của các khối cũ và không đổi phép tính chính. Ghi sau khi E7b chạy xong và đã có `report.md`; số đo đã được xem khi viết. Dữ liệu: Nội bộ. Bằng chứng, phép tính tay và bảng đối chiếu: `docs/research/analysis/e7b-verify.md`.
+
+**Đã đối chiếu và khớp (không phải sai lệch):**
+- bản ghim `5911bf0c` và CLI `2.1.318` ở 256/256 dòng `runs.jsonl`;
+- một tiến trình `--arms R1,R2 --arm-config … --selected …` (QH3), một tệp `config-*.json`, một lần gọi thoát 0;
+- thứ tự Latin: mục lẻ R1 trước, mục chẵn R2 trước, đủ 128 mục;
+- chạy lại và hạn mức (QH7, QH32, QH33): không có tình huống nào xảy ra, không dùng `--only`;
+- cặp thiếu theo arm (QH21, QH22): 0 và 0;
+- `maxTurns` 6/16, `acceptCalls` 1, `acceptAuthSources` `["none"]`, `extraConfigSha256` khớp `SHA256SUMS`, 0 dòng `infra`, 0 lỗi 403.
+
+**Điểm lệch và cách báo trong bài:**
+1. **`--data` dùng `calls-accept/`, không phải `..\e7b-data`.** RUNBOOK mục 6 ghi `--data ..\e7b-data` (thư mục dữ liệu app đầy đủ, chưa che PII, nằm ngoài repo). Lần phân tích dùng bản rút gọn `calls-accept/` (chỉ lượt `accept`, 256 bản ghi) do người điều phối dựng để đưa vào repo. `--data` chỉ là nguồn phụ để đối chiếu; không đổi số chính. Báo trong bài: một câu ở phần phương pháp/giới hạn.
+2. **Số trường của `calls-accept/`.** Giao việc ghi 8 trường kèm `errorKind`; bản ghi mẫu có `stopReason` và không có `errorKind` (một bản ghi được xem). Không ảnh hưởng số (script chỉ đọc `authSource`, `turnCapped`, `turns`). Báo trong bài: chỉ nói "bản rút gọn chỉ lượt `accept`", không liệt kê 8 trường.
+3. **Một dòng `unread` của R2b là lỗi JSON, không phải trần lượt.** Mục `62f9187905` (lỗi, c3-shop-bugs): văn bản kết luận "Chưa nghiệm thu" nhưng khối JSON có dấu phẩy toàn chiều `，` nên `parsed = false`; theo QH9 cách chính tính là không chặn, nên recall R2b chính là 60/64 (S1: 61/64). `capped` = 0. Báo trong bài: nêu số cả hai cách và nguyên nhân (định dạng), không gọi là chạm trần.
+4. **Nhãn P2 "chưa kết luận" do McNemar và bootstrap không cùng ý nghĩa.** p Holm 0,0234 < 0,05 nhưng CI bootstrap [−34,8; 2,9] chứa 0; hai phép cùng chiều (R2b < R1b). Đúng `labelOf` (QH19) nhưng khác hình dung "hai phép ngược chiều" ở tên (P5). Báo trong bài: viết "p Holm 0,0234, CI bootstrap chứa 0", không viết "ngược chiều".
+5. **Cách đọc "ba/bốn/năm cách tính".** Bảng QH16, (f) gốc ghi ba cách (chính, S1, S2); (P4) và QH27 ghi bốn (thêm S3); mã và `report.md` tính năm (S3a, S3b tách). Không sửa chữ cũ. Cách đọc đã dùng: "S3" của QH16/QH27 gồm cả S3a và S3b; nhãn và nhánh phải đứng được ở cả năm. F đứng được ở cả năm cách, nên đúng ở mọi cách đọc. Báo trong bài: ghi "năm cách tính", kèm tên từng cách.
+6. **Max `acceptTurns` R2b = 17, lớn hơn `maxTurns` 16.** `acceptTurns` là `num_turns` của CLI, không cùng thang với `--max-turns` (đã nêu ở (b), giới hạn); `acceptTurnCapped` false ở 256/256 dòng. Báo trong bài: ghi như quan sát mô tả, không như lỗi.
+7. **`responses/` không chứa khối JSON của dòng đã đọc được.** Với dòng `parsed = true`, `accepted` lấy từ kết quả nghiệm thu của CCoding (`lib.mjs:278`), không từ văn bản; đối chiếu `responses/` chỉ so được phần văn bản với `verdict`. Báo trong bài: không nói "đã đọc khối JSON từng lượt".
+
+**Tính lại bằng tay (`e7b-verify.md`, mục 2):** recall 61/64 và 60/64; chặn nhầm 13/64 và 4/64; bất đồng 3/2 (lỗi) và 10/1 (đúng); p McNemar 1 và 24/2048 = 0,01171875; Holm 1 và 0,0234375; theo bài, S1, S2 khớp. Không tính tay được: CI bootstrap và Clopper–Pearson (dựa vào kiểm tái lập byte của K1).
+
+**Nhánh (h):** F, "Chưa kết luận", ở cả năm cách tính. D không thỏa (`capped` 0 ≤ 6). E không thỏa (cận dưới CP chặn nhầm R1b 11,3 % > 10 %). A thỏa (1) và (2) (chặn nhầm R2b 4 ≤ 6; recall 60 ≥ 58; R1b − R2b = 1 ≤ 6) nhưng không thỏa (3) (P2 không "khác nhau"). B không thỏa; C không thỏa (4 ≤ 6).
+
+**Không có sai lệch nào khác** trong các mục đã đối chiếu ở trên; không đổi giả thuyết, mẫu, thước đo hay phép kiểm.
+
+**Khóa.** Khối này chưa vào `preregistration.lock.json`; việc đó thuộc S4, sau khi S3 xong. Sau khi khóa không thêm vào khối này nữa.
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.
