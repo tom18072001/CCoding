@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { samePath } from './tools/guard-paths.js';
+import { loadScratchPatterns, matchScratch } from './scratch.js';
 
 /** Tiện ích git tối thiểu cho worktree của nhiệm vụ (không bao giờ push). */
 
@@ -127,12 +128,65 @@ export function changeSummary(wt: string, base?: string): string {
 }
 
 /** Commit mọi thay đổi của agent trên nhánh worktree (không push). */
-export function commitAll(wt: string, message: string): GitResult {
+export function commitAll(wt: string, message: string, opts: { base?: string } = {}): GitResult & { scratchMoved: string[]; scratchErrors: string[] } {
+  const scratchMoved: string[] = [];
+  const scratchErrors: string[] = [];
+  const patterns = loadScratchPatterns(wt);
+  const strays = patterns ? newFiles(wt, opts.base).filter((f) => !f.startsWith('.scratch/') && matchScratch(f, patterns)) : [];
+  if (strays.length) ensureScratchExcluded(wt); // .scratch/ không bao giờ vào commit, kể cả worktree không do CCoding dựng
+  const failed: string[] = [];
+  for (const f of strays) {
+    try {
+      const dst = path.join(wt, '.scratch', ...f.split('/'));
+      fs.mkdirSync(path.dirname(dst), { recursive: true });
+      fs.renameSync(path.join(wt, ...f.split('/')), dst);
+      git(wt, ['rm', '--cached', '-q', '--ignore-unmatch', '--', f], 30_000); // nếu đã nằm trong index (thao tác của hệ thống)
+      scratchMoved.push(f);
+    } catch {
+      scratchErrors.push(f);
+      failed.push(f);
+    }
+  }
   git(wt, ['add', '-A'], 60_000);
-  const st = git(wt, ['status', '--porcelain'], 30_000);
-  if (st.ok && !st.out) return { ok: true, out: 'không có thay đổi' };
+  // không chuyển được → để nguyên tại chỗ nhưng không commit
+  for (const f of failed) git(wt, ['reset', '-q', '--', f], 30_000);
+  if (strays.length) git(wt, ['reset', '-q', '--', '.scratch'], 30_000); // phòng khi .scratch là tệp/không bị exclude
+  const st = git(wt, ['status', '--porcelain', '--untracked-files=no'], 30_000);
+  const extra = { scratchMoved, scratchErrors };
+  if (st.ok && !st.out) return { ok: true, out: 'không có thay đổi', ...extra };
   // --no-verify: hook của repo (husky, lint-staged, commitlint…) thường không chạy được trong worktree của CCoding và agent không sửa được
-  return git(wt, [...identity(wt), 'commit', '--no-verify', '-m', message], 300_000);
+  return { ...git(wt, [...identity(wt), 'commit', '--no-verify', '-m', message], 300_000), ...extra };
+}
+
+/** Tệp mới của nhiệm vụ: chưa track + không bị ignore, cộng tệp thêm mới so với `base` (nếu có). Đường dẫn tương đối, dùng `/`. */
+function newFiles(wt: string, base?: string): string[] {
+  const out = new Set<string>();
+  const untracked = git(wt, ['ls-files', '--others', '--exclude-standard'], 60_000);
+  if (untracked.ok) for (const f of untracked.out.split('\n')) if (f.trim()) out.add(f.trim().replace(/\\/g, '/'));
+  if (base) {
+    const added = git(wt, ['diff', '--name-only', '--diff-filter=A', base], 60_000);
+    if (added.ok) for (const f of added.out.split('\n')) if (f.trim()) out.add(f.trim().replace(/\\/g, '/'));
+  }
+  return [...out].filter((f) => fs.existsSync(path.join(wt, f)));
+}
+
+/**
+ * Thêm `.scratch/` vào tệp exclude của git của worktree (info/exclude, không đụng .gitignore của repo). Idempotent.
+ * `info/exclude` nằm ở thư mục git chung của repo, nên dùng chung cho mọi worktree của repo đó.
+ */
+export function ensureScratchExcluded(wt: string): boolean {
+  const r = git(wt, ['rev-parse', '--git-path', 'info/exclude'], 15_000);
+  if (!r.ok || !r.out) return false;
+  const file = path.resolve(wt, r.out.split('\n')[0]!.trim());
+  try {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const cur = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+    if (cur.split(/\r?\n/).some((l) => l.trim() === '.scratch/')) return true;
+    fs.writeFileSync(file, `${cur}${cur && !cur.endsWith('\n') ? '\n' : ''}.scratch/\n`);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Đang dở một lần merge (còn MERGE_HEAD). */

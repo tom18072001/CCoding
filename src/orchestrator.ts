@@ -7,6 +7,7 @@ import {
   addWorktree,
   changeSummary,
   commitAll,
+  ensureScratchExcluded,
   commitsAhead,
   copyUntracked,
   currentBranch,
@@ -3113,7 +3114,7 @@ export class Orchestrator {
       if (mergeInProgress(main)) {
         const marked = unmergedFiles(main).filter((f) => hasConflictMarkers(path.join(main, f)));
         if (!marked.length) {
-          const r = commitAll(main, `CCoding ${task.id}: hoàn tất gộp${c ? ` ${c.branch}` : ''} (${st.id})`.slice(0, 200));
+          const r = this.commitScratch(task, main, `CCoding ${task.id}: hoàn tất gộp${c ? ` ${c.branch}` : ''} (${st.id})`.slice(0, 200), st.id);
           if (!r.ok) {
             git(main, ['merge', '--abort'], 60_000);
             fail(`không hoàn tất được merge (${r.out.slice(0, 160)}) — đã hủy merge`);
@@ -3169,9 +3170,10 @@ export class Orchestrator {
         logs.write({ level: 'warn', kind: 'workspace.worktree', msg: `${st.id}: nhánh tạm ${branch} còn sót chưa gộp — đổi tên thành ${keep}`, taskId: task.id, projectId: project.id, subtaskId: st.id });
       }
     }
-    const pre = commitAll(main, `CCoding ${task.id}: phần đã làm trước khi tách ${st.id}`.slice(0, 200));
+    const pre = this.commitScratch(task, main, `CCoding ${task.id}: phần đã làm trước khi tách ${st.id}`.slice(0, 200), st.id);
     if (!pre.ok) logs.write({ level: 'warn', kind: 'workspace.commit', msg: `Không commit được worktree chính trước khi tách ${st.id}: ${pre.out.slice(0, 300)}`, taskId: task.id, projectId: project.id });
     const r = addWorktree(main, wtPath, branch, 'HEAD');
+    if (r.ok) ensureScratchExcluded(wtPath);
     if (!r.ok) {
       logs.write({ level: 'warn', kind: 'workspace.worktree', msg: `Không tạo được worktree con cho ${st.id}: ${r.out.slice(0, 300)} — làm lần lượt trong worktree chính`, taskId: task.id, projectId: project.id, subtaskId: st.id });
       this.message(task, run.department, 'system', 'system', `🔒 ${st.id}: không tách được worktree con (${r.out.slice(0, 160)}) — làm lần lượt trong worktree chính.`, { subtaskId: st.id });
@@ -3307,7 +3309,7 @@ export class Orchestrator {
           if (!isAncestor(wt.path, wt.resolve, 'HEAD')) return unresolved(`nhánh \`${wt.resolve}\` chưa được gộp (merge đã bị hủy?)`);
         }
         syncCcoding(wt.path, main, path.join('.ccoding', safeName(task.id)));
-        const c = commitAll(wt.path, `CCoding ${task.id} ${st.id}: ${st.title}`.slice(0, 200));
+        const c = this.commitScratch(task, wt.path, `CCoding ${task.id} ${st.id}: ${st.title}`.slice(0, 200), st.id, wt.base);
         if (!c.ok) return hold(`không commit được worktree con (${c.out.slice(0, 160)})`);
         head = headCommit(wt.path);
       } else if (fs.existsSync(wt.path)) moveAside(main, wt.path);
@@ -3315,12 +3317,12 @@ export class Orchestrator {
       const ref = head ?? wt.branch;
       const ahead = commitsAhead(main, ref);
       if (ahead) {
-        commitAll(main, `CCoding ${task.id}: phần đã làm trước khi gộp ${st.id}`.slice(0, 200));
+        this.commitScratch(task, main, `CCoding ${task.id}: phần đã làm trước khi gộp ${st.id}`.slice(0, 200), st.id);
         const msg = `CCoding ${task.id}: gộp ${st.id} — ${st.title}`.slice(0, 200);
         let m = mergeBranch(main, ref, msg);
         // lỗi không do xung đột (khóa index, thay đổi chưa commit vừa phát sinh…) → commit lại rồi thử một lần nữa
         if (!m.ok && !m.conflicts.length) {
-          commitAll(main, `CCoding ${task.id}: phần đã làm trước khi gộp ${st.id}`.slice(0, 200));
+          this.commitScratch(task, main, `CCoding ${task.id}: phần đã làm trước khi gộp ${st.id}`.slice(0, 200), st.id);
           m = mergeBranch(main, ref, msg);
         }
         if (!m.ok && !m.conflicts.length) return hold(`không gộp được vào nhánh nhiệm vụ (${m.out.slice(0, 160)})`);
@@ -3391,6 +3393,16 @@ export class Orchestrator {
     }
   }
 
+  /** `commitAll` kèm commit gốc của nhiệm vụ; tệp nháp đã chuyển vào `.scratch/` hoặc không chuyển được thì ghi nhật ký (chỉ đường dẫn tương đối). */
+  private commitScratch(task: Task, wt: string, message: string, subtaskId?: string, base?: string): ReturnType<typeof commitAll> {
+    const r = commitAll(wt, message, { base: base ?? task.baseRef });
+    const meta = { taskId: task.id, projectId: task.projectId, subtaskId };
+    const list = (a: string[]) => `${a.slice(0, 20).join(', ')}${a.length > 20 ? ` … (+${a.length - 20})` : ''}`;
+    if (r.scratchMoved.length) this.d.logs.write({ level: 'info', kind: 'workspace.scratch', msg: `Đã chuyển ${r.scratchMoved.length} tệp nháp vào .scratch/, không commit: ${list(r.scratchMoved)}`, ...meta });
+    if (r.scratchErrors.length) this.d.logs.write({ level: 'warn', kind: 'workspace.scratch', msg: `Không chuyển được ${r.scratchErrors.length} tệp nháp vào .scratch/ (để nguyên, không commit): ${list(r.scratchErrors)}`, ...meta });
+    return r;
+  }
+
   /** Chuẩn bị thư mục làm việc: worktree git riêng (nếu dự án là repo) + .ccoding/<task>/inputs cho agent đọc. */
   private prepareWorkspace(task: Task, project?: ProjectDef): void {
     const { config, logs } = this.d;
@@ -3422,6 +3434,7 @@ export class Orchestrator {
             logs.write({ level: 'warn', kind: 'workspace.base', msg: rb.warning, taskId: task.id, projectId: project.id });
           }
           r = addWorktree(base, wt, branch, from);
+          if (r.ok) ensureScratchExcluded(wt);
         } catch (e) {
           // K5: lệch hai chiều → dừng nhiệm vụ (lỗi lên prepareWorkspace → catch ngoài đặt status 'failed'), không làm việc trên base không rõ
           if (e instanceof BaseDivergedError) {
@@ -3756,7 +3769,7 @@ export class Orchestrator {
       task.branch = cur;
     }
     task.changes = this.workspaceChanges(task);
-    const r = commitAll(task.workspace, `CCoding ${task.id}: ${task.title}`.slice(0, 200));
+    const r = this.commitScratch(task, task.workspace, `CCoding ${task.id}: ${task.title}`.slice(0, 200));
     task.commit = r.ok ? (r.out.split('\n')[0] ?? 'ok').slice(0, 200) : `chưa commit: ${r.out.slice(0, 200)}`;
     // chạy song song: mọi thay đổi đã vào nhánh qua commit + gộp của worktree con → lần commit cuối "không có thay đổi" nhưng nhánh vẫn có việc
     if (r.ok && r.out === 'không có thay đổi' && task.baseRef) {
@@ -4539,7 +4552,12 @@ function hasConflictMarkers(file: string): boolean {
 /** .ccoding/ trong workspace luôn bị git bỏ qua (chứa tài liệu đầu vào & sản phẩm trung gian). */
 function ensureCcIgnore(workspace: string): void {
   const f = path.join(workspace, '.ccoding', '.gitignore');
-  if (!fs.existsSync(f)) writeText(f, '# CCoding: tài liệu đầu vào & sản phẩm trung gian — không commit\n*\n');
+  if (!fs.existsSync(f)) writeText(f, '# CCoding: tài liệu đầu vào & sản phẩm trung gian — không commit\n*\n!scratch.json\n');
+  else {
+    // mẫu tệp nháp của repo (.ccoding/scratch.json) phải được commit
+    const cur = fs.readFileSync(f, 'utf8');
+    if (!/^!scratch\.json\s*$/m.test(cur)) writeText(f, `${cur}${cur.endsWith('\n') ? '' : '\n'}!scratch.json\n`);
+  }
 }
 
 function slugify(s: string): string {

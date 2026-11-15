@@ -1,0 +1,15 @@
+{
+  "patterns": [
+    "_*",
+    "**/*-tmp/**",
+    "*-tmp/**",
+    "**/tmp_*/**",
+    "tmp_*/**",
+    "**/*.tmp",
+    "**/*.bak",
+    "**/*.orig",
+    "**/*.rej",
+    "!bench/vs-claude/results/**",
+    "!bench/vs-claude/tasks/**"
+  ]
+}

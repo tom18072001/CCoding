@@ -22,3 +22,5 @@ Thumbs.db
 
 # bench: dữ liệu mồi của bài t3-api nằm trong starter/ (phải được lưu)
 !bench/vs-claude/tasks/*/starter/data/
+
+.scratch/
