@@ -6,6 +6,11 @@
 //        [--sums bench/vs-claude/results/e7b-cto/SHA256SUMS] [--data <--ccoding-data, có w1/w2: chỉ để đối chiếu calls.jsonl>] [--final] [--json]
 //   node docs/research/analysis/e7b-analyze.mjs --smoke <runs.jsonl của lượt thử>   (QH34: chỉ trường hạ tầng, không đọc verdict)
 // MỘT runs.jsonl của MỘT tiến trình xen kẽ (QH3). Arm trên dòng: R1 → R1b, R2 → R2b. Dùng lại (không sửa) mcnemarExact, latestDone, bootDiff của bench/vs-claude/e7/analyze.mjs.
+// QH THI HÀNH NGOÀI BỘ PHÂN TÍCH (script này không kiểm, không áp; chỗ thi hành ghi cạnh từng mã):
+//   QH3  một tiến trình, --arms R1,R2, --arm-config, bảng Latin: lệnh chính RUNBOOK mục 5; thứ tự mục và bảng Latin ở bench/vs-claude/e7/run.mjs:84-85 (rng(`${doc.seed}|e7|order`), latinOrders); `--arm-config` là D24 (RUNBOOK mục 3, `git grep arm-config`). Script chỉ từ chối arm lạ (QH34).
+//   QH4  acceptFollowupRounds = 0 ở cả hai tệp cấu hình: test `QH2/QH4/QH6` trong e7b-analyze.test.mjs; RUNBOOK mục 2 ("thiếu khóa này trong tệp thì dừng"). Trên dữ liệu chỉ có hệ quả: acceptCalls = 1 (QH5, script kiểm).
+//   QH32 hết hạn mức ⇒ dừng, chạy lại đúng lệnh cũ: bench/vs-claude/e7/run.mjs:130 (EXIT_RATE_LIMIT, thoát mã 3); RUNBOOK mục 5. Script chỉ loại dòng infra `rate-limit` khỏi luật hết giờ (QH30).
+//   QH33 không dừng/chạy lại vì kết quả, runner không in kết luận: bench/vs-claude/e7/run.mjs:129 (chỉ in "xong | giây | wtok" hoặc "HẠ TẦNG"); RUNBOOK mục 5 ("Chỉ in đếm"). Script chạy sau khi đợt đã đủ.
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -49,14 +54,19 @@ export function labelOf({ aOnly, bOnly, pAdj, ci }) {
 
 const verdictBlocked = (v, mode) => v === 'block' || ((mode === 'S1' || mode === 'S3b') && v === 'unparsed'); // QH9, QH13, QH15
 
-/** QH30: luật "hết giờ", ba điều kiện trên dòng infra, theo chuỗi/trường mã thật ghi; không theo nội dung kết luận. Trả 1, 2, 3 hoặc 0 (không tính). */
+/**
+ * QH30: luật "hết giờ", ba điều kiện trên dòng infra, theo chuỗi `error` mã thật ghi; không theo nội dung kết luận. Trả 1, 2, 3 hoặc 0 (không tính).
+ * Phụ lục (2) (d): `error` rỗng ⇒ không tính (0). `errorKind` của calls.jsonl chỉ để đối chiếu, script không đọc nó ở đây.
+ * THỨ TỰ XÉT (m2): điều kiện 1, rồi 2, rồi 3; dòng khớp nhiều điều kiện được tính vào điều kiện đứng trước
+ * (vd `timeout: Hết thời gian (1800s)` khớp cả 2 và 3 ⇒ tính 2). Trình tự này là cách đọc của script, (d) không nêu; báo cáo ghi lại cho người đọc.
+ */
 export function timeoutCond(r) {
   if (!r || r.status !== 'infra' || r.infra === 'rate-limit') return 0;
   const e = String(r.error ?? '');
-  if (!e && r.errorKind !== 'timeout') return 0;
+  if (!e) return 0;
   if (/^quá hạn chờ \d+s/.test(e)) return 1; // bench/vs-claude/e7/lib.mjs:262 (harness)
   if (e.includes('Hết thời gian (')) return 2; // src/runtimes/claude-cli.ts:384 (runtime, theo chuỗi)
-  if (/^timeout:/.test(e) || r.errorKind === 'timeout') return 3; // errorKind của callErrors/errors.ts (runtime, theo loại lỗi)
+  if (/^timeout:/.test(e)) return 3; // chuỗi `<errorKind>: <error>` do runCto ghép (lib.mjs:262), theo loại lỗi của runtime
   return 0;
 }
 
@@ -90,8 +100,14 @@ export function analyzeE7b({ items, selected, rows, sums = null, final = false, 
     const want = LOCK.turns[arm];
     let b = bad((r) => r.maxTurns !== want); // QH12
     if (b.length) add('QH12', `maxTurns phải là ${want}`, arm, b.length, JSON.stringify([...new Set(b.map((r) => r.maxTurns ?? null))]));
-    b = bad((r) => !eqArr(r.acceptAuthSources, LOCK.auth)); // QH11 (P3): mảng đúng ["none"]; thiếu trường ⇒ không xác nhận được ⇒ lỗi
-    if (b.length) add('QH11', 'acceptAuthSources phải là ["none"]', arm, b.length, JSON.stringify([...new Set(b.map((r) => (r.acceptAuthSources === undefined ? '(thiếu)' : r.acceptAuthSources)))]));
+    // QH11 (P3, (e)): giá trị lạ (ngoài tập chấp nhận LOCK.auth) kiểm trên MỌI dòng của arm, gồm dòng infra (m3); QH11 không giới hạn ở dòng done.
+    const authVals = (r) => (Array.isArray(r.acceptAuthSources) ? r.acceptAuthSources : r.acceptAuthSources === undefined ? [] : [r.acceptAuthSources]);
+    const isStrange = (r) => authVals(r).some((v) => !LOCK.auth.includes(v));
+    b = mine.filter(isStrange);
+    if (b.length) add('QH11', 'acceptAuthSources có giá trị lạ (ngoài ["none"]), kiểm mọi dòng kể cả infra', arm, b.length, JSON.stringify([...new Set(b.map((r) => JSON.stringify(r.acceptAuthSources)))].map((s) => JSON.parse(s))));
+    // Riêng dòng done: thiếu trường (hoặc mảng rỗng) ⇒ không xác nhận được ⇒ lỗi. Dòng infra không có lượt accept thì không có trường này, không phải lỗi.
+    b = bad((r) => !isStrange(r) && !eqArr(r.acceptAuthSources, LOCK.auth));
+    if (b.length) add('QH11', 'acceptAuthSources thiếu ở dòng done (phải là ["none"])', arm, b.length, '(thiếu)');
     b = bad((r) => r.acceptCalls !== 1); // QH5 (P1)
     if (b.length) add('QH5', 'acceptCalls phải là 1', arm, b.length, JSON.stringify([...new Set(b.map((r) => r.acceptCalls ?? null))]));
     const x = [...new Set(mine.map((r) => r.extraConfigSha256 ?? null))]; // QH6
@@ -110,6 +126,7 @@ export function analyzeE7b({ items, selected, rows, sums = null, final = false, 
   const infraRows = (id, arm) => rows.filter((r) => r.id === id && r.status === 'infra' && (armOf(r) === arm || (r.infra === 'prep' && String(r.arm).split('+').map((a) => ARM_OF[a]).includes(arm))));
   const prepExcluded = [], unfinished = [], missing = { R1b: [], R2b: [] };
   const timeoutMissing = { R1b: new Map(), R2b: new Map() };
+  const timeoutRows = { R1b: [0, 0, 0], R2b: [0, 0, 0] }; // (d): số DÒNG infra theo điều kiện 1/2/3, trên các cặp tính là hết giờ
   for (const x of sel) {
     const prepN = rows.filter((r) => r.id === x.id && r.status === 'infra' && r.infra === 'prep').length;
     if (!get(x, 'R1b') && !get(x, 'R2b') && prepN >= LOCK.missAfterInfra) { prepExcluded.push(x.id); continue; } // QH23
@@ -119,7 +136,7 @@ export function analyzeE7b({ items, selected, rows, sums = null, final = false, 
       if (inf.length < LOCK.missAfterInfra && !final) { unfinished.push(`${x.id}__${arm}`); continue; }
       missing[arm].push(x.id); // QH7 (hoặc --final)
       const conds = inf.map(timeoutCond); // QH30: chọn "mọi dòng infra của cặp" đều thỏa một điều kiện hết giờ
-      if (inf.length && conds.every((c) => c > 0)) timeoutMissing[arm].set(x.id, conds.at(-1));
+      if (inf.length && conds.every((c) => c > 0)) { timeoutMissing[arm].set(x.id, conds.at(-1)); for (const c of conds) timeoutRows[arm][c - 1]++; } // cặp ghi theo điều kiện của dòng cuối; dòng đếm riêng từng điều kiện
     }
   }
   if (unfinished.length) return { status: 'insufficient', unfinished };
@@ -127,7 +144,7 @@ export function analyzeE7b({ items, selected, rows, sums = null, final = false, 
   const live = sel.filter((x) => !prepExcluded.includes(x.id));
   const planned = { faulty: live.filter((x) => x.kind === 'faulty').length, clean: live.filter((x) => x.kind === 'clean').length };
   const miss = { R1b: missing.R1b.length, R2b: missing.R2b.length };
-  const tmo = Object.fromEntries(ARMS.map((a) => [a, { total: timeoutMissing[a].size, byCond: [1, 2, 3].map((c) => [...timeoutMissing[a].values()].filter((v) => v === c).length) }]));
+  const tmo = Object.fromEntries(ARMS.map((a) => [a, { total: timeoutMissing[a].size, byCond: [1, 2, 3].map((c) => [...timeoutMissing[a].values()].filter((v) => v === c).length), rowsByCond: timeoutRows[a] }]));
   // QH21 (một arm > 3 cặp thiếu) và QH22 (chênh ≥ 3) ⇒ nhánh F, nhãn "chưa kết luận"
   const forcedBy = [];
   for (const a of ARMS) if (miss[a] > LOCK.missingMax) forcedBy.push(`QH21: ${a} có ${miss[a]} cặp thiếu > ${LOCK.missingMax}`);
@@ -218,6 +235,15 @@ export function gitBlobSha(buf) {
   return crypto.createHash('sha1').update(Buffer.concat([Buffer.from(`blob ${b.length}\0`), b])).digest('hex');
 }
 
+/**
+ * QH1 + (e) "trước mọi tính toán": kiểm blob của selected.json TRƯỚC khi gọi phân tích. Blob sai ⇒ trả lỗi kiểm QH1, `analyze` không được gọi.
+ * blob: 8 ký tự đầu của gitBlobSha(selected.json). `analyze` tiêm được để test đếm lượt gọi.
+ */
+export function analyzeChecked({ blob, ...args }, analyze = analyzeE7b) {
+  if (blob !== LOCK.selectedBlob) return { status: 'checks-failed', checks: [{ qh: 'QH1', name: `selected.json phải có git blob ${LOCK.selectedBlob}…`, arm: '—', rows: args.selected.length, seen: blob }] };
+  return analyze(args);
+}
+
 /** Đọc SHA256SUMS: `<sha256> *config-R1b.json` → { R1b, R2b }. */
 export function readSums(file) {
   const m = {};
@@ -289,9 +315,9 @@ export function report(a) {
   const num = (x) => (x == null ? '—' : String(Math.round(x * 10) / 10).replace('.', ','));
   const m = a.byMode['chính'];
   const L = ['# E7b: CTO nghiệm thu, đo lại trên bản mã hiện tại', '', `Mục chốt: ${a.nSelected} (lỗi ${a.planned.faulty}, đúng ${a.planned.clean} sau khi loại ${a.prepExcluded.length} mục không dựng lại được, QH23). Một tiến trình xen kẽ theo bảng Latin (QH3). R1b: Sonnet, trần accept 6. R2b: Opus, trần accept 16 (khác nhau ở cả model lẫn trần; không tách được).`, ''];
-  L.push('## Cặp thiếu (QH7, QH21, QH22, QH30)', '', '| Arm | cặp thiếu | trong đó hết giờ: `quá hạn chờ` / `Hết thời gian (` / `timeout` |', '|---|--:|---|');
-  for (const arm of ARMS) L.push(`| ${arm} | ${a.miss[arm]} | ${a.per[arm].timeoutMissing.total}: ${a.per[arm].timeoutMissing.byCond.join(' / ')} |`);
-  L.push('', `Ngưỡng: một arm > ${LOCK.missingMax} cặp thiếu hoặc chênh ≥ ${LOCK.missingDiff} ⇒ nhánh F. ${a.decision.forcedBy.length ? `**Đã kích hoạt: ${a.decision.forcedBy.join('; ')}.**` : 'Chưa kích hoạt.'} Cặp thiếu chọn "hết giờ" khi mọi dòng infra của cặp thỏa một điều kiện QH30.`, '');
+  L.push('## Cặp thiếu (QH7, QH21, QH22, QH30)', '', '| Arm | cặp thiếu | trong đó hết giờ (cặp): ĐK1 `quá hạn chờ` / ĐK2 `Hết thời gian (` / ĐK3 `timeout:` | dòng infra của các cặp hết giờ: ĐK1 / ĐK2 / ĐK3 |', '|---|--:|---|---|');
+  for (const arm of ARMS) L.push(`| ${arm} | ${a.miss[arm]} | ${a.per[arm].timeoutMissing.total}: ${a.per[arm].timeoutMissing.byCond.join(' / ')} | ${a.per[arm].timeoutMissing.rowsByCond.join(' / ')} |`);
+  L.push('', 'Thứ tự xét điều kiện hết giờ (Phụ lục (2) (d), QH30): ĐK1, rồi ĐK2, rồi ĐK3; dòng khớp nhiều điều kiện tính vào điều kiện đứng trước (ví dụ `timeout: Hết thời gian (…)` tính ĐK2). Dòng infra có `error` rỗng không tính hết giờ. Cột "cặp" xếp mỗi cặp theo điều kiện của dòng infra cuối; cột "dòng" đếm riêng từng dòng infra theo điều kiện.', '', `Ngưỡng: một arm > ${LOCK.missingMax} cặp thiếu hoặc chênh ≥ ${LOCK.missingDiff} ⇒ nhánh F. ${a.decision.forcedBy.length ? `**Đã kích hoạt: ${a.decision.forcedBy.join('; ')}.**` : 'Chưa kích hoạt.'} Cặp thiếu chọn "hết giờ" khi mọi dòng infra của cặp thỏa một điều kiện QH30.`, '');
   L.push('## Thước đo chính (unread = không chặn; QH8, QH9, QH10)', '', '| Arm | Recall | CP 95 % | Chặn nhầm | CP 95 % | Youden J (mô tả) | unread | capped | USD | USD/mục | wtok TB |', '|---|---|---|---|---|---|---|---|---|---|---|');
   for (const arm of ARMS) {
     const p = a.per[arm];
@@ -333,11 +359,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   const selFile = path.resolve(flag('selected', path.join(e7, 'selected.json')));
   const selected = JSON.parse(fs.readFileSync(selFile, 'utf8')).items;
   const sums = readSums(path.resolve(flag('sums', path.join(B, 'SHA256SUMS'))));
-  const a = analyzeE7b({ items, selected, rows, sums, final: argv.includes('--final'), expectN: LOCK.nSelected });
-  if (gitBlobSha(fs.readFileSync(selFile)).slice(0, 8) !== LOCK.selectedBlob && a.status !== 'checks-failed') { // QH1
-    a.checks = [{ qh: 'QH1', name: `selected.json phải có git blob ${LOCK.selectedBlob}…`, arm: '—', rows: selected.length, seen: gitBlobSha(fs.readFileSync(selFile)).slice(0, 8) }];
-    a.status = 'checks-failed';
-  }
+  const a = analyzeChecked({ blob: gitBlobSha(fs.readFileSync(selFile)).slice(0, 8), items, selected, rows, sums, final: argv.includes('--final'), expectN: LOCK.nSelected }); // QH1: kiểm blob trước analyzeE7b
   const data = flag('data');
   if (a.status === 'ok' && data) a.reconcile = reconcileWithCalls([path.join(path.resolve(data), 'w1'), path.join(path.resolve(data), 'w2')], rows);
   console.log(argv.includes('--json') && a.status === 'ok' ? JSON.stringify(a, null, 1) : report(a));

@@ -8,7 +8,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { analyzeE7b, branchOf, holm2, labelOf, timeoutCond, reconcileWithCalls, gitBlobSha, readSums, report, smokeCheck, LOCK, MODES } from './e7b-analyze.mjs';
+import { analyzeChecked, analyzeE7b, branchOf, holm2, labelOf, timeoutCond, reconcileWithCalls, gitBlobSha, readSums, report, smokeCheck, LOCK, MODES } from './e7b-analyze.mjs';
 import { bootDiff } from '../../../bench/vs-claude/e7/analyze.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -55,6 +55,20 @@ test('QH1: mẫu 128 mục, selected.json đúng git blob 5b3e8fcf…', () => {
   const a = analyzeE7b({ items, selected, rows: rows0, sums: SUMS, expectN: 128 });
   assert.equal(a.status, 'checks-failed');
   assert.equal(a.checks[0].qh, 'QH1');
+});
+
+test('QH1 (m7): blob selected.json sai ⇒ KHÔNG gọi phân tích, chỉ trả lỗi kiểm QH1; blob đúng ⇒ gọi đúng một lần', () => {
+  let calls = 0;
+  const spy = (args) => { calls++; return analyzeE7b(args); };
+  const args = { items, selected, rows: rows0, sums: SUMS };
+  const bad = analyzeChecked({ blob: 'deadbeef', ...args }, spy);
+  assert.equal(calls, 0);
+  assert.equal(bad.status, 'checks-failed');
+  assert.deepEqual(bad.checks.map((c) => [c.qh, c.seen]), [['QH1', 'deadbeef']]);
+  assert.doesNotMatch(report(bad), /Nhãn P1|Kết luận nhánh|Recall|p Holm|Youden/);
+  const ok = analyzeChecked({ blob: LOCK.selectedBlob, ...args }, spy);
+  assert.equal(calls, 1);
+  assert.equal(ok.status, 'ok');
 });
 
 test('QH2/QH4/QH6: hai tệp cấu hình chỉ khác accept 6/16, acceptFollowupRounds = 0, sha256 khớp SHA256SUMS', () => {
@@ -169,8 +183,8 @@ test('QH19: nhãn ba giá trị; hai phép khác chiều ⇒ "chưa kết luận
   assert.equal(labelOf({ aOnly: 12, bOnly: 0, pAdj: 0.2, ci: [-0.5, 0.1] }), 'chưa phân biệt được'); // cả hai không
 });
 
-test('QH19 (qua analyze): P2 McNemar có ý nghĩa còn bootstrap chứa 0 ⇒ nhãn "chưa kết luận" ở cả bảng và quyết định', () => {
-  // 1 bài duy nhất có hiệu ±: bootstrap theo bài với 2 bài hiệu trái dấu cho CI chứa 0, McNemar 12-0 vẫn p < 0,05
+test('QH19 (qua analyze): hai bài hiệu trái dấu (12–12) ⇒ cả hai phép không có ý nghĩa ⇒ nhãn "chưa phân biệt được"', () => {
+  // bài A: chỉ R1b chặn (12); bài B: chỉ R2b chặn (12). McNemar p = 1 và CI bootstrap chứa 0: nhánh "cả hai không có ý nghĩa", không phải "chưa kết luận"
   const its = [], sel2 = [], rows = [];
   for (let i = 0; i < 12; i++) for (const [task, kind] of [['A', 'clean'], ['B', 'clean']]) { const id = `c${task}${i}`; its.push({ id, task, kind }); sel2.push(id); }
   for (const x of its) {
@@ -182,6 +196,29 @@ test('QH19 (qua analyze): P2 McNemar có ý nghĩa còn bootstrap chứa 0 ⇒ n
   const c = a.byMode['chính'].clean;
   assert.deepEqual([c.aOnly, c.bOnly], [12, 12]);
   assert.equal(c.label, 'chưa phân biệt được'); // 24 cặp bất đồng nhưng p = 1 và CI chứa 0
+});
+
+test('QH19/QH28 (P5, qua analyze → bảng → decision.labels): McNemar có ý nghĩa nhưng CI bootstrap chứa 0 ⇒ "chưa kết luận" và nhánh F', () => {
+  // Chỉ mục đúng (clean). Bài A: 12 mục chỉ R1b chặn (hiệu −1). Bài B: 12 mục cả hai không chặn (hiệu 0).
+  // McNemar 12–0: p = 2·0,5^12, p Holm < 0,05 ⇒ có ý nghĩa. Bootstrap theo bài (2 bài): kịch bản rút hai lần bài B cho hiệu 0 ⇒ cận trên = 0 ⇒ CI chứa 0 ⇒ không có ý nghĩa.
+  const its = [], sel2 = [], rows = [];
+  for (let i = 0; i < 12; i++) for (const task of ['A', 'B']) { const id = `c${task}${i}`; its.push({ id, task, kind: 'clean' }); sel2.push(id); }
+  for (const x of its) {
+    rows.push(R1(x.id, x.task === 'A' ? 'block' : 'pass'));
+    rows.push(R2(x.id, 'pass'));
+  }
+  const a = analyzeE7b({ items: its, selected: sel2, rows, sums: SUMS });
+  assert.equal(a.status, 'ok');
+  const c = a.byMode['chính'].clean;
+  assert.deepEqual([c.aOnly, c.bOnly], [12, 0]);
+  assert.ok(c.pAdj < LOCK.alphaTotal, `p Holm ${c.pAdj}`); // McNemar có ý nghĩa
+  assert.ok(c.diffBoot[0] < 0 && c.diffBoot[1] >= 0, JSON.stringify(c.diffBoot)); // bootstrap: CI chứa 0
+  assert.equal(c.label, 'chưa kết luận');
+  assert.ok(MODES.every((m) => a.byMode[m].clean.label === 'chưa kết luận')); // đứng ở cả năm cách tính
+  assert.equal(a.decision.labels.P2, 'chưa kết luận'); // decision.labels
+  assert.equal(a.decision.branch, 'F'); // nhánh F: (1), (2) thỏa, (3) không (nhãn không phải "khác nhau")
+  assert.match(report(a), /\| chính \| P2 chặn nhầm \| 24 \| 12 \| 0 \|.*\| chưa kết luận \|/); // bảng
+  assert.match(report(a), /nhãn P2: \*\*chưa kết luận\*\*/);
 });
 
 // ---------- QH10: capped và "suy ra" ----------
@@ -210,6 +247,20 @@ test('QH11: authSource lạ (khóa API / nhãn khác / thiếu) ⇒ lỗi kiểm
   }
 });
 
+test('QH11 (m3): authSource lạ ở dòng infra (kể cả khóa API) ⇒ lỗi kiểm, không in nhãn; infra không có trường hoặc ["none"] thì không lỗi; done thiếu trường vẫn lỗi riêng', () => {
+  const withInfra = (extra) => [...rows0.filter((r) => !(r.id === 'fA5' && r.arm === 'R2')), infra('fA5', 'R2', 'transient: x', extra), infra('fA5', 'R2', 'transient: x'), infra('fA5', 'R2', 'transient: x')];
+  const a = run({ rows: withInfra({ acceptAuthSources: ['apiKey'] }) });
+  assert.equal(a.status, 'checks-failed');
+  assert.deepEqual(a.checks.map((c) => [c.qh, c.arm, c.rows, c.seen]), [['QH11', 'R2b', 1, '[["apiKey"]]']]);
+  assert.doesNotMatch(report(a), /Nhãn P1|Kết luận nhánh|Recall|p Holm|Youden/);
+  assert.equal(run({ rows: withInfra({}) }).status, 'ok'); // infra không có lượt accept: không có trường, không lỗi
+  assert.equal(run({ rows: withInfra({ acceptAuthSources: [] }) }).status, 'ok');
+  assert.equal(run({ rows: withInfra({ acceptAuthSources: ['none'] }) }).status, 'ok');
+  // dòng done thiếu trường: lỗi "thiếu" riêng (giữ nguyên)
+  const miss = run({ rows: rows0.map((r) => { if (!(r.id === 'fA3' && r.arm === 'R1')) return r; const { acceptAuthSources, ...o } = r; return o; }) });
+  assert.deepEqual(miss.checks.map((c) => [c.qh, c.arm, c.seen]), [['QH11', 'R1b', '(thiếu)']]);
+});
+
 // ---------- QH12: trần thực tế ----------
 test('QH12: maxTurns khác 6 (R1) / 16 (R2) ⇒ lỗi kiểm', () => {
   const a = run({ rows: rows0.map((r) => (r.arm === 'R2' && r.id === 'fA4' ? { ...r, maxTurns: 6 } : r)) });
@@ -224,7 +275,9 @@ test('QH30: điều kiện hết giờ theo chuỗi/trường mã ghi; ngoài ba
   assert.equal(s('Hết thời gian (1800s)'), 2); // src/runtimes/claude-cli.ts:384
   assert.equal(s('timeout: Hết thời gian (1800s)'), 2); // chuỗi runtime thắng khi cùng khớp điều kiện 3
   assert.equal(s('timeout: ETIMEDOUT'), 3);
-  assert.equal(s('', { errorKind: 'timeout' }), 3);
+  assert.equal(s('', { errorKind: 'timeout' }), 0); // m1: (d) `error` rỗng không tính; errorKind của calls.jsonl chỉ để đối chiếu
+  assert.equal(s('transient: ECONNRESET', { errorKind: 'timeout' }), 0); // errorKind không thay chuỗi `error`
+  assert.equal(s('', { errorKind: 'timeout', infra: 'rate-limit' }), 0);
   assert.equal(s('transient: ECONNRESET'), 0);
   assert.equal(s('auth: Failed to authenticate. API Error: 403'), 0);
   assert.equal(s('Hết thời gian (1800s)', { infra: 'rate-limit' }), 0);
@@ -236,7 +289,7 @@ test('QH30: điều kiện hết giờ theo chuỗi/trường mã ghi; ngoài ba
 const withS3 = (error) => dropPair(rows0, ['fA5'], 'R2', error);
 test('QH15/QH30: cặp thiếu do `quá hạn chờ` của runCto vào S3 (cặp được giữ như unread)', () => {
   const a = run({ rows: withS3('quá hạn chờ 5400s') });
-  assert.deepEqual(a.per.R2b.timeoutMissing, { total: 1, byCond: [1, 0, 0] });
+  assert.deepEqual(a.per.R2b.timeoutMissing, { total: 1, byCond: [1, 0, 0], rowsByCond: [3, 0, 0] });
   const [main, s3a, s3b, s1] = [a.byMode['chính'], a.byMode.S3a, a.byMode.S3b, a.byMode.S1];
   assert.equal(main.faulty.n, 23); // cặp thiếu bỏ khỏi cách chính
   assert.equal(s3a.faulty.n, 24); // S3a: giữ lại như unread, không chặn → R1b chặn, R2b không: thêm 1 cặp chỉ R1b
@@ -247,7 +300,7 @@ test('QH15/QH30: cặp thiếu do `quá hạn chờ` của runCto vào S3 (cặp
 
 test('QH15/QH30: cặp thiếu do `Hết thời gian` của runtime, hoặc `timeout:` qua callErrors, vào S3; lỗi khác thì không', () => {
   const b = run({ rows: withS3('Hết thời gian (1800s)') });
-  assert.deepEqual(b.per.R2b.timeoutMissing, { total: 1, byCond: [0, 1, 0] });
+  assert.deepEqual(b.per.R2b.timeoutMissing, { total: 1, byCond: [0, 1, 0], rowsByCond: [0, 3, 0] });
   assert.equal(b.byMode.S3a.faulty.n, 24);
   const c = run({ rows: withS3('timeout: ETIMEDOUT') });
   assert.deepEqual(c.per.R2b.timeoutMissing.byCond, [0, 0, 1]);
@@ -258,6 +311,21 @@ test('QH15/QH30: cặp thiếu do `Hết thời gian` của runtime, hoặc `tim
   // lẫn: một dòng infra không phải hết giờ trong cặp ⇒ không tính (chọn "mọi dòng")
   const mixed = [...rows0.filter((r) => !(r.id === 'fA5' && r.arm === 'R2')), infra('fA5', 'R2', 'quá hạn chờ 5400s'), infra('fA5', 'R2', 'transient: ECONNRESET'), infra('fA5', 'R2', 'quá hạn chờ 5400s')];
   assert.equal(run({ rows: mixed }).per.R2b.timeoutMissing.total, 0);
+  // m1: dòng infra `error` rỗng (dù errorKind = 'timeout') ⇒ không tính hết giờ
+  const empty = [...rows0.filter((r) => !(r.id === 'fA5' && r.arm === 'R2')), ...[1, 2, 3].map(() => infra('fA5', 'R2', '', { errorKind: 'timeout' }))];
+  const e = run({ rows: empty });
+  assert.equal(e.per.R2b.timeoutMissing.total, 0);
+  assert.equal(e.byMode.S3a.faulty.n, 23);
+});
+
+test('QH30 (m2): báo riêng số cặp và số dòng infra theo từng điều kiện; dòng khớp 2 và 3 tính vào ĐK2; bảng báo cáo ghi thứ tự xét', () => {
+  // cặp fA5: 3 dòng ĐK1, ĐK2, ĐK3 (mọi dòng đều là hết giờ ⇒ tính); cặp theo dòng cuối (ĐK3); dòng theo từng điều kiện
+  const rows = [...rows0.filter((r) => !(r.id === 'fA5' && r.arm === 'R2')), infra('fA5', 'R2', 'quá hạn chờ 5400s'), infra('fA5', 'R2', 'timeout: Hết thời gian (1800s)'), infra('fA5', 'R2', 'timeout: ETIMEDOUT')];
+  const a = run({ rows });
+  assert.deepEqual(a.per.R2b.timeoutMissing, { total: 1, byCond: [0, 0, 1], rowsByCond: [1, 1, 1] });
+  const text = report(a);
+  assert.match(text, /ĐK1, rồi ĐK2, rồi ĐK3/);
+  assert.match(text, /\| R2b \| 1 \| 1: 0 \/ 0 \/ 1 \| 1 \/ 1 \/ 1 \|/);
 });
 
 test('QH16: nhánh phải giống nhau ở chính, S1, S2, S3 — không thì chưa kết luận', () => {
