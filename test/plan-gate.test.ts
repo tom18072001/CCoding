@@ -259,7 +259,7 @@ test('briefItems: đọc các dạng dòng, vai và cờ review/exempt', () => {
 });
 
 test('briefItems: "không làm" ở phần ngay dưới dòng mã cũng được miễn', () => {
-  const it = briefItems('K1 — việc a\nK2 — việc b\nKhông làm trong gói này.\nK3 — việc c');
+  const it = briefItems('K1 — việc a\nK2 — việc b\nKhông làm: trong gói này.\nK3 — việc c');
   assert.deepEqual(it.map((x) => x.exempt), [false, true, false]);
 });
 

@@ -144,6 +144,8 @@ async function cmdServe(args: string[]): Promise<void> {
     console.log(`   runner: ${app.orchestrator.runner}${app.herdr.insideHerdr() ? ' (trong herdr)' : ''} · agent: ${app.registry.agents.size} · phòng ban: ${app.registry.departments.size} · dữ liệu: ${app.config.dataDir}`);
     for (const e of app.registry.errors) console.log(c.yellow(`   ⚠ ${e}`));
     app.logs.write({ level: 'info', kind: 'server.start', msg: `Server khởi động tại ${host}:${port} (runner ${app.orchestrator.runner})` });
+    // nhiệm vụ mồ côi từ phiên server trước: chuyển paused, ghi đĩa + nhật ký (chỉ đường khởi động server)
+    try { const n = app.orchestrator.recoverOrphans().length; if (n) console.log(c.yellow(`   ⚠ ${n} nhiệm vụ bị gián đoạn khi server dừng → đã chuyển "tạm dừng", bấm Tiếp tục để chạy lại`)); } catch (e) { console.error(c.yellow(`   ⚠ khôi phục nhiệm vụ mồ côi lỗi: ${(e as Error).message}`)); }
     // việc định kỳ: chỉ tiến trình server lập lịch (CLI đọc dữ liệu không giao việc)
     app.routines.start();
     try { runRetention({ cfg: app.config.selfImprove, logs: app.logs, dataDir: app.config.dataDir }); } catch (e) { console.error(c.yellow(`   ⚠ dọn data/self-improve lỗi: ${(e as NodeJS.ErrnoException).code ?? 'unknown'}`)); }
