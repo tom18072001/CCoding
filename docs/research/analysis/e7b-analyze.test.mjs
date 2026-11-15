@@ -224,7 +224,7 @@ test('QH19/QH28 (P5, qua analyze → bảng → decision.labels): McNemar có ý
 test('QH19/QH28 (P5 chiều ngược, qua analyze → bảng → decision.labels): CI bootstrap không chứa 0 nhưng McNemar không có ý nghĩa ⇒ "chưa kết luận" và nhánh F', () => {
   // Chỉ mục đúng (clean), 12 mục mỗi bài. Bài A: 3 mục chỉ R1b chặn (hiệu −1), 9 mục cả hai không chặn. Bài B: 8 mục chỉ R1b chặn, 3 mục chỉ R2b chặn (hiệu +1), 1 mục cả hai không chặn.
   // Tổng chỉ R1b chặn 11, chỉ R2b chặn 3 (14 cặp bất đồng ≥ 10, QH20). McNemar 11–3: p = 0,0574 > 0,05; p Holm = 0,1148 ≥ 0,05 ⇒ không có ý nghĩa.
-  // Bootstrap theo bài (2 bài, B = 4000, seed khóa): CI hiệu R2b − R1b = [−0,6667; −0,0833] ⇒ không chứa 0. Khoảng cách từ 0 tới cận gần nhất (cận trên) = 0,0833 = 2 mục trên 24, nên không sát biên (cận chạm 0 khi khoảng cách = 0).
+  // Bootstrap theo bài (2 bài, B = 4000, seed khóa): CI hiệu R2b − R1b = [−0,6667; −0,0833] ⇒ không chứa 0. Khoảng cách từ 0 tới cận gần nhất (cận trên) = 0,0833 = 2 mục trên 24, nên không sát biên (cận chạm 0 khi khoảng cách = 0). Lưu ý: bootstrap theo bài chỉ có 2 cụm nên CI phụ thuộc mạnh vào seed khóa; khoảng cách 0,0833 là của seed khóa và B = 4000, không phải tính chất của dữ liệu.
   const its = [], sel2 = [], rows = [];
   for (let i = 0; i < 12; i++) for (const task of ['A', 'B']) { const id = `c${task}${i}`; its.push({ id, task, kind: 'clean' }); sel2.push(id); }
   const r1Only = new Set(['cA0', 'cA1', 'cA2', ...Array.from({ length: 8 }, (_, i) => `cB${i}`)]);

@@ -105,7 +105,7 @@ export function analyzeE7b({ items, selected, rows, sums = null, final = false, 
     const isStrange = (r) => authVals(r).some((v) => !LOCK.auth.includes(v));
     b = mine.filter(isStrange);
     if (b.length) add('QH11', 'acceptAuthSources có giá trị lạ (ngoài ["none"]), kiểm mọi dòng kể cả infra', arm, b.length, JSON.stringify([...new Set(b.map((r) => JSON.stringify(r.acceptAuthSources)))].map((s) => JSON.parse(s))));
-    // Riêng dòng done: thiếu trường (hoặc mảng rỗng) ⇒ không xác nhận được ⇒ lỗi. Dòng infra không có lượt accept thì không có trường này, không phải lỗi.
+    // Riêng dòng done: thiếu trường (hoặc mảng rỗng) ⇒ không xác nhận được ⇒ lỗi. Giá trị in là mảng các giá trị riêng: `[null]` nghĩa là không có trường, `[[]]` nghĩa là mảng rỗng. Dòng infra không có lượt accept thì không có trường này, không phải lỗi.
     b = bad((r) => !isStrange(r) && !eqArr(r.acceptAuthSources, LOCK.auth));
     if (b.length) add('QH11', 'acceptAuthSources thiếu ở dòng done (phải là ["none"])', arm, b.length, JSON.stringify([...new Set(b.map((r) => JSON.stringify(r.acceptAuthSources ?? null)))].map((s) => JSON.parse(s))));
     b = bad((r) => r.acceptCalls !== 1); // QH5 (P1)

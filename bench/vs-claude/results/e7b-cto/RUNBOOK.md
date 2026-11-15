@@ -16,7 +16,7 @@ Thiết kế khóa: `docs/research/preregistration.md` §9, khối "Đăng ký t
 | Danh sách chốt dùng chung, không chạy lại bước 1? | **Được, nhờ D24 `--selected`.** | `--selected <tệp>` dùng danh sách từ tệp, không chạy bước 1, không tạo `selected.json` trong `--out` (QH1). Thứ tự: `sample(sel.items, …, rng(`${doc.seed}|e7|order`))` (`bench/vs-claude/e7/run.mjs:122`, biến `order`), phụ thuộc `items.json` (seed `20261104`) và `selected.json`. `--items` bắt buộc trỏ `results\e7-cto\items.json`. |
 | Có phải sửa `src/` hoặc `bench/` ở gói này? | **Không.** | Phần mã là việc của D24 (mục 7). |
 
-**Đã đính chính ở Phụ lục (2) (c):** trần token công cụ `toolInputBudget` không áp cho E7b (chỉ runtime `api` đọc, `api.ts:378`; `claude-cli` chỉ nhận `--max-turns`, `claude-cli.ts:276`, và `capped` chỉ là `'turns'`, `claude-cli.ts:393`). Vì thế `acceptTurnCapped = true` ở E7b là chạm trần **lượt** (QH10); lượt thử không cần dò trần token.
+**Đã đính chính ở Phụ lục (2) (c):** trần token công cụ `toolInputBudget` không áp cho E7b (chỉ runtime `api` đọc, `inputCap` đọc `maxInputTokens`, `src/runtimes/api.ts:378`; `claude-cli` chỉ nhận `--max-turns`, `src/runtimes/claude-cli.ts:279`, và `capped` chỉ là `'turns'`, `src/runtimes/claude-cli.ts:396`). Vì thế `acceptTurnCapped = true` ở E7b là chạm trần **lượt** (QH10); lượt thử không cần dò trần token.
 
 `--ccoding-data` mặc định nằm trong `--work` (thư mục tạm). Luôn đặt tường minh như dưới đây và **giữ** nó đến hết phân tích: nguồn chính của kiểm hạ tầng là các trường trên dòng `runs.jsonl`; `calls.jsonl` trong `w1`/`w2` chỉ để đối chiếu (Phụ lục (2) (b)).
 
