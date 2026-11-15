@@ -26,7 +26,7 @@
 
 ## Hạng mục
 
-**K1 — senior-swe: test force-exit không phụ thuộc phiên bản Node; đóng handle có chờ sự kiện; bật cờ cho `npm test`**
+**K1 — senior-swe: test force-exit không phụ thuộc phiên bản Node; đóng handle theo sự kiện `close`; bật cờ cho `npm test`**
 - **`test/force-exit.test.ts`:** kiểm "test treo bị báo đỏ vì quá hạn" bằng dấu hiệu có ở cả Node 22 và 24 (vd. `testTimeoutFailure` hoặc `timed out`, hoặc tên test bên trong), không bằng tên test riêng của một phiên bản.
   - Ghi trong chú thích: Node 22 báo ở mức tệp, Node 24 báo ở mức test.
   - Có ca test cho cả hai dạng đầu ra (chuỗi TAP mẫu của Node 22 và 24 ở căn cứ).
