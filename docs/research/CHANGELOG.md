@@ -5,6 +5,38 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 19c (T-20261115-123731-90f, BRIEF-26c, 15/11/2026): đóng m1–m7 của phản biện 26b
+
+Chỉ sửa mã theo luật đã khóa; không sửa `preregistration.md`, `preregistration.lock.json`, `src/`, mã `bench/`; không gọi LLM; không có số kết quả. Dữ liệu: Nội bộ. Tên cờ và tên trường của D24 (`perf/vs-claude-loop`: `--arm-config`, `--selected`, `acceptCalls`, `acceptAuthSources`, `acceptTurnCapped`, `acceptToolCalls`, `acceptTurns`, `extraConfigSha256` theo arm) khớp với tên script đọc; không phải sửa.
+
+- **m1:** luật "hết giờ" (QH30) bỏ nhánh `errorKind`; `error` rỗng không tính, `errorKind` chỉ để đối chiếu. `docs/research/analysis/e7b-analyze.mjs` (`timeoutCond`), `docs/research/analysis/e7b-analyze.test.mjs` (test QH30), `bench/vs-claude/results/e7b-cto/RUNBOOK.md` (mục 6).
+- **m2:** ghi thứ tự xét điều kiện 1, 2, 3 và báo riêng số cặp lẫn số dòng infra theo từng điều kiện. `docs/research/analysis/e7b-analyze.mjs` (chú thích `timeoutCond`, bảng "Cặp thiếu" của báo cáo), `docs/research/analysis/e7b-analyze.test.mjs`, `bench/vs-claude/results/e7b-cto/RUNBOOK.md` (mục 6). Mã QH không đổi.
+- **m3:** kiểm giá trị `authSource` lạ trên mọi dòng arm, gồm `infra`; kiểm "thiếu trường" vẫn riêng cho dòng `done`. `docs/research/analysis/e7b-analyze.mjs` (QH11), `docs/research/analysis/e7b-analyze.test.mjs` (test dòng infra có `["apiKey"]`), `bench/vs-claude/results/e7b-cto/RUNBOOK.md` (mục 6).
+- **m4:** đổi tên test cho khớp nội dung (hai bài 12–12 ⇒ "chưa phân biệt được"); thêm ca xuyên `analyzeE7b` → bảng → `decision.labels` cho P5 (McNemar có ý nghĩa, CI bootstrap chứa 0 ⇒ "chưa kết luận", nhánh F). `docs/research/analysis/e7b-analyze.test.mjs`.
+- **m5:** ghi QH3, QH4, QH32, QH33 thi hành ngoài bộ phân tích, kèm chỗ thi hành từng mã. `docs/research/analysis/e7b-analyze.mjs` (chú thích đầu), `bench/vs-claude/results/e7b-cto/RUNBOOK.md` (mục 6).
+- **m6:** sửa dẫn `ARM_DIR` về `bench/vs-claude/e7/lib.mjs:26`; `waitTimeoutMs` là mặc định của `runCto` (`lib.mjs:215`), không phải của `run.mjs`. `bench/vs-claude/results/e7b-cto/RUNBOOK.md` (mục 1, mục 5).
+- **m7:** kiểm blob `selected.json` (QH1) chạy trước khi gọi `analyzeE7b` (hàm `analyzeChecked`); blob sai thì không phân tích. `docs/research/analysis/e7b-analyze.mjs`, `docs/research/analysis/e7b-analyze.test.mjs` (test đếm lượt gọi), `bench/vs-claude/results/e7b-cto/RUNBOOK.md` (mục 6).
+
+## Vòng 4, gói 19b (T-20261115-105245-bbd, BRIEF-26b, 15/11/2026): Phụ lục sai lệch E7b (2), E7b chạy xen kẽ một tiến trình, chưa chạy
+
+Không sửa `src/`, mã `bench/`; không gọi LLM; **không có số kết quả E7b**. Dữ liệu: Nội bộ. Mục này chỉ dẫn mã QH đã có trong bảng của phụ lục (2); `BRIEF-26.md` là đề bài lưu trữ, không sửa.
+
+- **Phụ lục sai lệch E7b (2) (K1, `preregistration.md` §9, chỉ thêm):** đổi cách chạy, nguồn kiểm theo dòng `runs.jsonl` của D24, đính chính P2, luật "hết giờ" (QH30), kiểm hạ tầng (QH35) và bảng Quy tắc hiệu lực QH1–QH36. Khi mâu thuẫn với khối chính hay phụ lục (1) thì phụ lục (2) thắng.
+- **Lý do đổi từ hai tiến trình sang một tiến trình xen kẽ (QH3):** D24 gỡ ràng buộc "một `--config` mỗi tiến trình" (`--arm-config`, `--selected`). Một tiến trình giữ đúng thiết kế E7: cùng thứ tự mục và cùng thứ tự chạm lượt, bảng Latin, không có hai tiến trình tranh hạn mức. Phương án hai tiến trình song song bị bỏ, **không còn áp dụng và không được gọi là "xen kẽ"**. Thiếu D24 trong bản ghim thì E7b hoãn.
+- **Đính chính P2 về `toolInputBudget` (phụ lục (2) (c)):** `maxInputTokens` được truyền ở `src/orchestrator.ts:3877` nhưng chỉ đọc ở `src/runtimes/api.ts:378`; `claude-cli` (runtime của E7b) chỉ nhận `--max-turns` và `capped` chỉ có `'turns'`. Đe dọa "trần token cắt R2b trước 16 lượt" vì vậy **không áp cho E7b**. Kết luận từ đọc mã, không phải đo. Điều này sửa đoạn "Đe dọa mới" ở (P2) của phụ lục (1).
+- **Rà chỗ dẫn "§9, mục Có chạy lại R3" (minor 10 của review):** `paper/paper.md` §6.7 từng dẫn sai mục; đã sửa về §9 (d) "R3 (Claude Code đơn): không chạy lại". Trong `docs/research/` chỉ còn `BRIEF-26.md:40` (đề bài lưu trữ, không sửa; câu gốc "Có chạy lại R3 (Claude Code đơn) không", không phải chỗ dẫn mục).
+- **K3 (@academic-writer):** `paper/paper.md` §6.7 mô tả E7b xen kẽ một tiến trình với `--arm-config` (D24), nhãn ba giá trị gồm "chưa kết luận", ba độ nhạy S1–S3, vẫn "đã đăng ký, chưa chạy" và `[chưa chạy]`; `facts.json` nhóm `e7b.*` cập nhật `runMode`, thêm `requiresD24`, `authSourceLocked`, `acceptCallsPerDoneRow`, `rerunR3Ref`, `toolInputBudgetAppliesToE7b`, ngưỡng cặp thiếu và nhãn; không thêm số đo.
+- **Ghi chú:** câu "hai tiến trình song song … (không xen kẽ)" ở mục gói 19 bên dưới là lịch sử của bản đăng ký đầu, nay bị phụ lục (2) thay.
+
+## Vòng 4, gói 19 (T-20261115-094542-2d1, BRIEF-26, 15/11/2026): đăng ký E7b (đo lại CTO nghiệm thu), chưa chạy
+
+Không sửa `src/`, mã `bench/`; không gọi LLM; **không có số kết quả E7b**. Dữ liệu: Nội bộ.
+
+- **K1 (@methodologist):** `preregistration.md` §9 thêm (chỉ thêm) khối "Đăng ký trước E7b" (a)–(l): arm `R1b` Sonnet trần `accept` 6 và `R2b` Opus trần 16, 128 mục của `selected.json`, hai tiến trình song song cùng seed thứ tự (không xen kẽ), không chạy lại R3, McNemar chính xác P1/P2 + Holm hai phép + bootstrap theo bài, ngưỡng nhánh D→E→A→B→C→F, câu cấm, đe dọa.
+- **K3 (@academic-writer):** `paper/paper.md` thêm §6.7 (khung E7b, trạng thái "đã đăng ký, chưa chạy", chỗ kết quả ghi `[chưa chạy]`, câu "không so trực tiếp với E7 vì khác bản mã"); `facts.json` thêm nhóm `e7b.*` (tham số khóa, không có trường kết quả). Số E7 không đổi.
+- **Deck:** không có ghi chú slide 24 "Hệ thống fail ở đâu" trong repo (`presentation-notes.md` không có slide này), nên không sửa; khi deck có, thêm "E7b đã đăng ký, chưa chạy" ở dòng chặn nhầm CTO.
+- **Chưa làm / cần người khác:** `preregistration.lock.json` (K1, `prereg-lock.mjs --add-new`), cấu hình, RUNLOG và script phân tích (K2).
+
 ## Vòng 4, gói 18b (T-20261115-081112-711, BRIEF-25b, 15/11/2026): sửa nhỏ sau phản biện E9-lite; bảng tuyệt đối, chi phí bằng tiền
 
 Không sửa `src/`, mã `bench/`, `runs.jsonl`, `gold.json`, `labels.json`; không chạy lại planner, không gọi LLM. Dữ liệu: Nội bộ. Mọi số mới là [Khám phá, sau khi thấy dữ liệu], không thuộc đăng ký.
