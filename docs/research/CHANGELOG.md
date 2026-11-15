@@ -5,6 +5,33 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 20 (T-20261115-172258-bab, BRIEF-27, 15/11/2026): E7b điền vào bài (§6.7), nhánh (h) = F, trả lời câu hỏi vai CTO, v0.8.3
+
+Dữ liệu: Nội bộ. Hạng mục K3 (S3, `@academic-writer`). Không sửa `src/`, mã `bench/`, `preregistration.md`, `e7b-analyze.mjs`, `run/`, `calls-accept/`; không chạy lại E7b, không gọi LLM. Số chép nguyên văn từ `bench/vs-claude/results/e7b-cto/report.md` (sha256 `1ea7deea…694e`, `report-provenance.md`); không tính lại.
+
+- **`paper/paper.md` §6.7 (v0.8.3):** đổi tiêu đề và bỏ "đã đăng ký, chưa chạy"; thay mọi `[chưa chạy]` bằng số của `report.md` (Bảng E7b-1 recall, chặn nhầm, CI Clopper–Pearson, unread, capped, USD; E7b-2 lượt `accept`; E7b-3 mười hàng phép kiểm với p thô, p Holm, CI bootstrap và nhãn); nhánh (h) là F ở cả năm cách tính, ghi như `e7b-verify.md` mục 4; bảng so với E7 ghi "KHÁC BẢN MÃ", không so như cùng đợt; bảy sai lệch của khối BRIEF-27 K2; đe dọa §9 (l) còn áp dụng sau Phụ lục (2), mục (P6) và sai lệch mới; câu trả lời "model nào hợp với vai CTO". Đầu tệp thêm khối "Bản thảo v0.8.3"; dòng "Model theo vai" ở §6.5 cập nhật câu về CTO; Phụ lục A thêm R35. §8 và §9 **không chạm** (không có câu nào ở đó về model hay kết luận cho vai CTO; đã tìm "E7b" và câu "đo lại R2"). **Không số cũ nào đổi.**
+- **`analysis/decisions/model-per-role.md`:** dòng CTO ở mục 1 (giữ Sonnet, không đổi; mức "Thấp"; thí nghiệm tiếp theo: tách model khỏi trần); thêm mục 5 "Cập nhật BRIEF-27 (E7b)" (nhánh F, mức chắc chắn, việc tiếp theo). Giữ câu phân biệt CTO (nghiệm thu) với trưởng phòng ở khâu `plan` (đầu tệp, và mục 5 dòng 64).
+- **`facts.json`:** khóa `e7b.*` (kết quả, nhánh, CI, p, sha256 của `report.md` và `report.json`) và 59 mục `numbers` có id `e7b-*`, pattern khớp chữ của `report.md` (bảng của bài giữ đúng định dạng script in, dấu trừ ASCII). Mục `e7b.status` đổi sang "đã chạy".
+- **Chưa kiểm bằng lệnh ở vai này** (không có quyền chạy): `node docs/research/scripts/consistency-check.mjs`, `npm run lint`, `npm run test:research` thuộc S4.
+
+**Danh sách mọi câu về model hoặc kết luận cho vai CTO (để K4 đối chiếu với nhánh (h) = F).** Số dòng tính tại bản giao.
+
+| Tệp:dòng | Câu (rút gọn) | Ghi chú |
+|---|---|---|
+| `paper/paper.md:3` | "§6.7 … nhánh (h) là F … không đề xuất đổi model" (khối v0.8.3) | Theo nhánh F |
+| `paper/paper.md:774` | "giữ sonnet cho … CTO (R1) … E7b … nhánh F … không đề xuất đổi model CTO, mức chắc chắn thấp" (§6.5, "Model theo vai") | Sửa câu cũ "cho tới khi đo lại R2…" |
+| `paper/paper.md:845` | "E7b không đưa ra đề xuất đổi model CTO" (BLUF) | Theo nhánh F |
+| `paper/paper.md:860` | "so R2b với R1b là so gói Opus + trần 16 với gói Sonnet + trần hiện hành…" | Câu thiết kế cũ, giữ |
+| `paper/paper.md:870` | "đề xuất đổi model CTO chỉ ở nhánh A … Nhánh đạt: F" | Câu thiết kế cũ + nhánh đạt |
+| `paper/paper.md:907` | "tả số của hai gói …, không phải hiệu của riêng model" | Theo QH36 |
+| `paper/paper.md:915` | "**Kết luận nhánh: F.**" và đoạn sau (không đủ để đề xuất đổi) | Theo `report.md` |
+| `paper/paper.md:937` | "Trần bất cân xứng: … mọi câu về R2b nói 'gói Opus + trần 16'" | Đe dọa |
+| `paper/paper.md:952–957` | Trả lời "logic nghiệm thu và model nào hợp với vai CTO": chưa chọn được model; giữ cấu hình hiện hành vì không nhánh nào cho phép đổi; việc tiếp theo (i)–(iii); phân biệt CTO với trưởng phòng | Mức chắc chắn thấp |
+| `analysis/decisions/model-per-role.md:21` | "Giữ sonnet (R1); không đổi (E7b … nhánh F …)", mức "Thấp", thí nghiệm tiếp theo | Dòng CTO ở §1 |
+| `analysis/decisions/model-per-role.md:62–78` | Mục 5: trả lời, nhánh F, điều số cho thấy, tác động lên cấu hình, việc tiếp theo, "không được rút ra" | Theo nhánh F |
+
+Các dòng này không dùng "đã chứng minh", "xác nhận", "tái lập", "lặp lại" về E7b; không viết hiệu của riêng model; không "nên đổi model" (chỉ nhắc nhánh A để nói điều kiện chưa thỏa).
+
 ## Vòng 4, gói 19d (T-20261115-130950-674, BRIEF-26d, 15/11/2026): chỗ dẫn mã theo bản có D24, nhãn QH11, ca P5 chiều ngược
 
 Không đổi luật hay phép tính; không sửa `preregistration.md`, `preregistration.lock.json`, `src/`, mã `bench/`; không gọi LLM; không có số kết quả. Dữ liệu: Nội bộ. Diff của `e7b-analyze.mjs` chỉ chạm chú thích và chuỗi in của QH11.
