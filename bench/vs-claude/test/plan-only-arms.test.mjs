@@ -109,7 +109,7 @@ test('run.mjs --runtime mock: đủ trường, có authSource, không score/pass
     assert.equal(seen.length, n + 1, 'chỉ một lượt mới được gửi');
     assert.equal(rows(out).length, n);
     await run(url, out); assert.equal(seen.length, n + 1, 'đã xong hết thì không gửi thêm');
-  } finally { srv.close(); fs.rmSync(out, { recursive: true, force: true }); }
+  } finally { await new Promise((r) => { srv.close(r); srv.closeAllConnections?.(); }); fs.rmSync(out, { recursive: true, force: true }); }
 });
 
 test('model thật của lượt plan lệch planModel của arm → lượt ghi lỗi, không tính là xong', () => {

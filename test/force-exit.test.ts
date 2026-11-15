@@ -70,8 +70,8 @@ async function runHang(script: string): Promise<{ status: number | null; watchdo
 // Script đã chứng minh xanh 3 lần liên tiếp trên Windows với --test-force-exit thì giữ cờ. `test` (libuv sập ~1/3 lần
 // toàn bộ bộ: Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), src\winsync.c) và `test:bench` (đỏ 1 lần chưa rõ nguyên nhân)
 // chưa đạt nên chưa bật; vẫn bắt buộc --test-timeout.
-const FORCE_EXIT = ['test:research'];
-const NO_FORCE_EXIT = ['test', 'test:bench'];
+const FORCE_EXIT = ['test:research', 'test:bench'];
+const NO_FORCE_EXIT = ['test'];
 
 for (const name of NO_FORCE_EXIT) {
   test(`script "${name}" chưa bật --test-force-exit nhưng vẫn có --test-timeout`, () => {
