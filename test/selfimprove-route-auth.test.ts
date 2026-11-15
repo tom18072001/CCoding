@@ -6,7 +6,7 @@ import type { AddressInfo } from 'node:net';
 import { ROOT } from '../src/config.js';
 import { createServer } from '../src/server.js';
 import { actorFromToken, proposalStatus, recordDirector, recordProposed, type Deps } from '../src/selfimprove.js';
-import { testApp } from './helpers.js';
+import { closeServer, testApp } from './helpers.js';
 
 // D13-K1 (sửa M1): route /api/selfimprove/* ghi người duyệt thật (actor từ server.token), không ghi cứng 'director'.
 
@@ -22,7 +22,7 @@ async function setup() {
   const srv0 = createServer(app);
   await new Promise<void>((r) => srv0.listen(0, '127.0.0.1', r));
   const port = (srv0.address() as AddressInfo).port;
-  srv0.close();
+  await closeServer(srv0);
   app.config.server.port = port;
   const srv = createServer(app);
   await new Promise<void>((r) => srv.listen(port, '127.0.0.1', r));
@@ -32,7 +32,7 @@ async function setup() {
   const post = (verb: string, auth?: string) =>
     fetch(`http://127.0.0.1:${port}/api/selfimprove/proposals/P-1/${verb}`, { method: 'POST', headers: { 'content-type': 'application/json', ...(auth ? { authorization: auth } : {}) }, body: '{}' });
   const decisions = () => readEvents(app.logs.fileFor('system')).filter((e) => /^selfimprove\.(approved|rejected|applied|rollback\.confirmed|rolledback)$/.test(e.kind));
-  return { app, srv, si, post, decisions, done: () => { srv.close(); app.cleanup(); } };
+  return { app, srv, si, post, decisions, done: async () => { await closeServer(srv); app.cleanup(); } };
 }
 
 test('K1: thiếu token hoặc token sai ⇒ 401 tiếng Việt, không ghi sự kiện selfimprove.*', async () => {
@@ -48,7 +48,7 @@ test('K1: thiếu token hoặc token sai ⇒ 401 tiếng Việt, không ghi sự
     }
     assert.deepEqual(t.decisions(), []);
   } finally {
-    t.done();
+    await t.done();
   }
 });
 
@@ -63,7 +63,7 @@ test('K1: server.token chưa cấu hình ⇒ 403, không ghi sự kiện', async
     }
     assert.deepEqual(t.decisions(), []);
   } finally {
-    t.done();
+    await t.done();
   }
 });
 
@@ -84,7 +84,7 @@ test('K1: token đúng ⇒ ghi đúng actor { by: token-<8 hex sha256>, auth }, 
     const list = (await (await fetch(`http://127.0.0.1:${t.app.config.server.port}/api/selfimprove/proposals`, { headers: { authorization: `Bearer ${TOKEN}` } })).json()) as Array<{ id: string; status: string }>;
     assert.equal(list.find((x) => x.id === 'P-1')!.status, 'approved');
   } finally {
-    t.done();
+    await t.done();
   }
 });
 
@@ -101,6 +101,6 @@ test('K1: hàm ghi từ chối khi thiếu actor; sự kiện by:director cũ v�
     const fake = [{ kind: 'selfimprove.proposed', data: { pid: 'X' } }, { kind: 'selfimprove.approved', data: { pid: 'X', by: 'token-deadbeef' } }] as Parameters<typeof proposalStatus>[0];
     assert.equal(proposalStatus(fake), 'proposed');
   } finally {
-    t.done();
+    await t.done();
   }
 });

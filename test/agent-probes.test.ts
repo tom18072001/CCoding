@@ -6,6 +6,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import type { AddressInfo } from 'node:net';
+import { closeServer } from './helpers.js';
 
 // Bộ probe chạy bằng dist/ (npm run build). Chưa build thì tự build; chỉ bỏ qua khi build thất bại.
 const ROOT = path.resolve(import.meta.dirname, '..');
@@ -94,7 +95,7 @@ test('probe: API gốc Ollama đặt num_ctx, kết quả chỉ ghi trong data/ 
     assert.equal(bad.code, 2);
     assert.match(bad.out, /không ghi dữ liệu ra ngoài data/);
   } finally {
-    srv.close();
+    await closeServer(srv);
     fs.rmSync(dataDir, { recursive: true, force: true });
   }
 });

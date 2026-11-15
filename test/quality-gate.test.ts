@@ -10,7 +10,7 @@ import { loadConfig } from '../src/config.js';
 import { templateHeadings } from '../src/kpi.js';
 import { briefDemandsReview, classifyChecks, needsReviewer, reviewerReasons, sensitivePaths, templateGate } from '../src/quality-gate.js';
 import type { CheckResult } from '../src/types.js';
-import { testApp } from './helpers.js';
+import { closeServer, testApp } from './helpers.js';
 
 const res = (command: string, ok: boolean): CheckResult => ({ command, code: ok ? 0 : 1, ok, ms: 1, summary: '', tail: ok ? '' : 'FAIL' });
 
@@ -126,9 +126,9 @@ async function gatewayApp() {
     app,
     ws,
     prompts,
-    cleanup: () => {
+    cleanup: async () => {
       srv.closeAllConnections?.();
-      srv.close();
+      await closeServer(srv);
       fs.rmSync(dataDir, { recursive: true, force: true });
       fs.rmSync(ws, { recursive: true, force: true });
     },
@@ -147,7 +147,7 @@ test('B-02: lệnh xanh, mẫu đầu ra đạt, diff không chạm vùng nhạy
     assert.match(done.runs[0].review?.summary ?? '', /Cổng chất lượng/);
     assert.equal(done.attention, undefined);
   } finally {
-    g.cleanup();
+    await g.cleanup();
   }
 });
 
@@ -184,7 +184,7 @@ test('B-02 D-02: dự án không có checkCommands, reviewer có quyền chạy 
     assert.equal(done.attention?.reason, 'review');
     assert.match(done.attention?.detail ?? '', /chưa có kiểm chứng chạy thật/);
   } finally {
-    g.cleanup();
+    await g.cleanup();
   }
 });
 

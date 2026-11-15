@@ -15,6 +15,7 @@ import { parseIncidentLog } from '../src/incident.js';
 import { DIFFICULTY_THRESHOLDS, modelForDifficulty, scoreDifficulty } from '../src/difficulty.js';
 import type { LaneSignals } from '../src/lane.js';
 import type { Task } from '../src/types.js';
+import { closeServer } from './helpers.js';
 
 const reg = new Registry(path.join(ROOT, 'agents'), path.join(ROOT, 'departments'));
 const dept = reg.department('dev');
@@ -199,7 +200,7 @@ for (const withIncident of [true, false]) {
       }
       assert.ok(gates.some((g) => g.data.gate === 'b10' && g.data.verdict === 'pass'), 'b10 pass được ghi');
     } finally {
-      gw.srv.close();
+      await closeServer(gw.srv);
     }
   });
 }
@@ -214,7 +215,7 @@ test('B-03: incidentLog=false → prompt revise không đòi mục và không gh
     await app.orchestrator.waitFor(t.id);
     assert.equal(events(dataDir, t.id).filter((e) => e.kind === 'revise.incident').length, 0);
   } finally {
-    gw.srv.close();
+    await closeServer(gw.srv);
   }
 });
 
@@ -238,7 +239,7 @@ test('B-17 tích hợp: bật → ghi plan.difficulty (không tín hiệu → m�
         assert.equal(done.options.phaseModels?.plan, undefined);
       }
     } finally {
-      gw.srv.close();
+      await closeServer(gw.srv);
     }
   }
 });

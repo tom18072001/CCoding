@@ -9,6 +9,7 @@ import { createApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
 import { commitAll, ensureScratchExcluded, git } from '../src/git.js';
 import { loadScratchPatterns, matchScratch } from '../src/scratch.js';
+import { closeServer } from './helpers.js';
 
 // D26/K1: tệp nháp mới của agent không vào commit — chuyển vào .scratch/ theo .ccoding/scratch.json. Mọi repo tạm nằm trong os.tmpdir().
 
@@ -223,7 +224,7 @@ test('orchestrator: kết thúc nhiệm vụ ghi sự kiện nhật ký workspac
     assert.ok(!ev[0]!.msg.includes(root), 'không ghi đường dẫn tuyệt đối');
     assert.ok(!run(done.workspace!, ['ls-files']).includes('_ed.py'));
   } finally {
-    srv.close();
+    await closeServer(srv);
     fs.rmSync(root, { recursive: true, force: true });
   }
 });

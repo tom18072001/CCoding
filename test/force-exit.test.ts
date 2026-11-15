@@ -15,6 +15,15 @@ const TSX = path.join(ROOT, 'node_modules', 'tsx', 'dist', 'cli.mjs');
 const WATCHDOG_MS = 25_000;
 const TEST_TIMEOUT_MS = 1500;
 
+/**
+ * Nhận diện báo cáo "quá hạn" của trình chạy test, không phụ thuộc phiên bản Node: Node 22 báo ở mức TỆP
+ * (`not ok 1 - …/hang.test.mjs`, failureType 'testTimeoutFailure', error 'test timed out after 1500ms', không có tên test bên trong);
+ * Node 24 báo ở mức TEST (`✖ treo vô hạn… (1501ms)` kèm 'test timed out after 1500ms'). Hai dấu hiệu chung là chuỗi dưới đây.
+ */
+export function isTimeoutReport(out: string): boolean {
+  return /testTimeoutFailure/.test(out) || /timed out after \d+ms/.test(out);
+}
+
 const HANG_WITH_OPEN_HANDLE = "import { test } from 'node:test';\ntest('treo vô hạn, giữ handle', async () => { setInterval(() => {}, 1000); await new Promise(() => {}); });\n";
 
 /** Các cờ `--test-*` của một script trong package.json (bỏ reporter và mẫu tệp; --test-timeout hạ xuống nhỏ). */
@@ -80,7 +89,51 @@ for (const name of FORCE_EXIT) {
     const r = await runHang(name);
     assert.equal(r.watchdog, false, `lệnh không tự thoát sau ${WATCHDOG_MS} ms (đã bị watchdog giết): ${r.out.slice(0, 400)}`);
     assert.ok(r.status !== null && r.status !== 0, `mã thoát phải ≠ 0, nhận ${r.status}: ${r.out.slice(0, 400)}`);
-    assert.match(r.out, /treo vô hạn/, 'phải báo test treo là đỏ (quá hạn)');
+    assert.ok(isTimeoutReport(r.out), `phải báo test treo là đỏ vì quá hạn: ${r.out.slice(0, 400)}`);
     assert.ok(r.ms < WATCHDOG_MS, `thoát quá chậm: ${r.ms} ms`);
   });
 }
+
+// Ca đơn vị cho isTimeoutReport: mẫu Node 22 lấy từ căn cứ (CI lượt 43722751961), mẫu Node 24 từ đầu ra thật (v24.14.0, reporter spec).
+const TAP_NODE22 = `TAP version 13
+# Subtest: /tmp/ccoding-force-exit-x/hang.test.mjs
+not ok 1 - /tmp/ccoding-force-exit-x/hang.test.mjs
+  ---
+  duration_ms: 1560.1
+  type: 'test'
+  location: '/tmp/ccoding-force-exit-x/hang.test.mjs:1:1'
+  failureType: 'testTimeoutFailure'
+  error: 'test timed out after 1500ms'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..1
+`;
+const SPEC_NODE24 = `✖ treo vô hạn, giữ handle (1501.0012ms)
+ℹ tests 1
+ℹ cancelled 1
+
+✖ failing tests:
+
+test at hang.test.mjs:2:1
+✖ treo vô hạn, giữ handle (1501.0012ms)
+  'test timed out after 1500ms'
+`;
+const TAP_PASS = `TAP version 13
+ok 1 - chạy xong
+  ---
+  duration_ms: 1.2
+  ...
+1..1
+# pass 1
+# fail 0
+`;
+
+test('isTimeoutReport: TAP Node 22 (mức tệp, không có tên test) ⇒ true', () => {
+  assert.equal(isTimeoutReport(TAP_NODE22), true);
+});
+test('isTimeoutReport: đầu ra Node 24 (mức test) ⇒ true', () => {
+  assert.equal(isTimeoutReport(SPEC_NODE24), true);
+});
+test('isTimeoutReport: TAP đạt ⇒ false', () => {
+  assert.equal(isTimeoutReport(TAP_PASS), false);
+});

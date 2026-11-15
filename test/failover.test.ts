@@ -8,6 +8,7 @@ import type { AddressInfo } from 'node:net';
 import { createApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
 import { readJsonl } from '../src/util/fsx.js';
+import { closeServer } from './helpers.js';
 
 /** Gateway giả tương thích OpenAI: model "m-quota" luôn báo hết hạn mức, "m-ok" trả lời + gọi công cụ ghi file khi thực thi. */
 async function fakeGateway() {
@@ -99,7 +100,7 @@ test('hết hạn mức → tự chuyển sang model kế tiếp trong chuỗi, 
     assert.match(final2, /Tệp trong thư mục làm việc của nhiệm vụ[\s\S]*tu-agent\.txt/);
     fs.rmSync(ws, { recursive: true, force: true });
   } finally {
-    gw.srv.close();
+    await closeServer(gw.srv);
     fs.rmSync(dataDir, { recursive: true, force: true });
   }
 });
@@ -141,7 +142,7 @@ test('vòng lặp công cụ dừng khi chạm trần token đầu vào và bu�
     assert.equal(calls, 3, '2 lượt công cụ (120k ≥ 100k) rồi 1 lượt viết câu trả lời cuối');
     assert.match(r.diag ?? '', /chạm trần 100000 token/);
   } finally {
-    srv.close();
+    await closeServer(srv);
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
@@ -182,7 +183,7 @@ test('trần token vòng công cụ: phần đọc từ cache tính theo trọng
     assert.equal(r.capped, 'input');
     assert.deepEqual([r.usage.input, r.usage.cacheRead, r.usage.cacheWrite], [11 * 1000, 11 * 55000, 11 * 4000], 'input không gồm phần đọc/ghi cache');
   } finally {
-    srv.close();
+    await closeServer(srv);
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
@@ -227,7 +228,7 @@ test('429 giữa vòng công cụ: chờ ngắn rồi thử lại chính lượt
     assert.equal(calls, 3);
     assert.match(r.diag ?? '', /giới hạn tốc độ — chờ \d+ giây rồi thử lại/);
   } finally {
-    srv.close();
+    await closeServer(srv);
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
@@ -254,7 +255,7 @@ test('mọi tài nguyên hết hạn mức → tạm dừng nhiệm vụ (không
     assert.ok(app.orchestrator.alerts.some((a) => a.kind === 'task.paused.quota'));
     assert.equal(app.usage.all({ task: t.id }).length, 0);
   } finally {
-    gw.srv.close();
+    await closeServer(gw.srv);
     fs.rmSync(dataDir, { recursive: true, force: true });
   }
 });
@@ -302,7 +303,7 @@ test('mất kết nối giữa vòng lặp công cụ: thử lại lượt đó;
       (e: unknown) => e instanceof RuntimeError && e.kind === 'transient' && e.partial?.input === 1000 && e.partial.toolCalls?.length === 1,
     );
   } finally {
-    srv.close();
+    await closeServer(srv);
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
@@ -345,7 +346,7 @@ test('model "báo đã tạo tệp" mà chưa gọi công cụ ghi → nhắc m�
     assert.equal(claimsWrites('Đã hoàn thành việc viết tệp `quy-uoc-nhanh.md`'), true);
     assert.equal(claimsWrites('## Tóm tắt\nPhân tích xong, không cần tệp.'), false);
   } finally {
-    srv.close();
+    await closeServer(srv);
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
@@ -373,7 +374,7 @@ test('model chỉ "suy nghĩ" mà không trả lời → nhắc một lần, l�
     assert.equal(calls, 2);
     assert.match(r.diag ?? '', /chỉ có phần suy nghĩ/);
   } finally {
-    srv.close();
+    await closeServer(srv);
   }
 });
 
@@ -455,7 +456,7 @@ test('ngân sách ngữ cảnh vòng công cụ: toolContextTokens/contextWindow
     );
     assert.ok(Math.max(...sizes) > 30_000, `không ngân sách: lượt lớn nhất ${Math.max(...sizes)}`);
   } finally {
-    srv.close();
+    await closeServer(srv);
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
@@ -507,7 +508,7 @@ test('khảo sát mãi không ghi: đọc liên tiếp N lần → nhắc; 2N l�
     assert.equal(r.toolCalls?.filter((x) => !x.ok).length, 1);
     assert.match(r.diag ?? '', /từ chối 1 lần đọc/);
   } finally {
-    srv.close();
+    await closeServer(srv);
     fs.rmSync(root, { recursive: true, force: true });
   }
 });

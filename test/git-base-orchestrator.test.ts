@@ -8,6 +8,7 @@ import type { AddressInfo } from 'node:net';
 import { createApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
 import { git } from '../src/git.js';
+import { closeServer } from './helpers.js';
 
 // K5: nhánh cục bộ và origin lệch hai chiều → nhiệm vụ dừng ở 'failed' với thông báo tiếng Việt, không tạo worktree,
 // không làm việc trực tiếp trong repo gốc.
@@ -74,7 +75,7 @@ test('K5: base lệch hai chiều → nhiệm vụ failed, không tạo worktree
     assert.ok(!fs.existsSync(path.join(dataDir, 'workspaces', 'p-k5', `wt-${t.id}`)));
     assert.equal(done.runs.length, 0, 'chưa chạy hạng mục nào');
   } finally {
-    gw.srv.close();
+    await closeServer(gw.srv);
     fs.rmSync(root, { recursive: true, force: true });
   }
 });

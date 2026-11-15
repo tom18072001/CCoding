@@ -5,14 +5,14 @@ import path from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { createServer } from '../src/server.js';
 import { fileSafeName } from '../src/uploads.js';
-import { readJson, testApp } from './helpers.js';
+import { closeServer, readJson, testApp } from './helpers.js';
 
 test('tải tệp lên qua API → đính kèm nhiệm vụ → nội dung vào prompt lập kế hoạch, tệp tạm bị xóa', async () => {
   const app = testApp();
   const probe = createServer(app);
   await new Promise<void>((r) => probe.listen(0, '127.0.0.1', r));
   const port = (probe.address() as AddressInfo).port;
-  probe.close();
+  await closeServer(probe);
   app.config.server.port = port;
   const srv = createServer(app);
   await new Promise<void>((r) => srv.listen(port, '127.0.0.1', r));
@@ -52,7 +52,7 @@ test('tải tệp lên qua API → đính kèm nhiệm vụ → nội dung vào 
     const calls = await readJson<object[]>(await fetch(`${base}/api/tasks/${t.id}/calls`));
     assert.ok(calls.length >= 2 && 'sizes' in calls[0]);
   } finally {
-    srv.close();
+    await closeServer(srv);
     app.cleanup();
   }
 });
