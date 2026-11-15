@@ -1,0 +1,12 @@
+`buildReport` giờ chạy 200.000 dòng trong khoảng 320 ms (`npm run bench`), trước đó khoảng 15 giây. `npm test` xanh (3/3).
+
+Tôi viết lại `src/report.js` thành một lượt duyệt dữ liệu, dùng `Map` và `Set` thay cho `find`, `includes` và `filter` lồng nhau. Phần giữ nguyên hành vi:
+- Thứ tự phần tử mảng và thứ tự cộng giữ như cũ, nên số thực ra giống hệt.
+- Sku trùng trong `products` thì bản đầu tiên thắng.
+- Giá trị `-0` được chuẩn hoá về `0`, giống kết quả của bước `JSON.parse(JSON.stringify(...))` trong bản cũ.
+- Ngày không hợp lệ vẫn ném `RangeError`.
+- Các bộ so sánh sắp xếp, kể cả `a.sku < b.sku ? -1 : 1`, được giữ nguyên.
+
+Bản cũ được lưu ở `test/report.legacy.js` (tên không khớp `*.test.js` nên không bị chạy như một test). Test mới trong `test/report.test.js` so sánh kết quả bản mới với bản cũ bằng `deepEqual` và so sánh chuỗi JSON. Test chạy trên 6 bộ dữ liệu sinh ngẫu nhiên với các `topN`, `from`, `to` khác nhau, kể cả đầu vào rỗng và khoảng lọc không có dòng nào, và thêm một ca biên nhỏ (sku trùng, hoàn tiền giá 0, múi giờ âm).
+
+Tôi chưa kiểm tra các đầu vào lệch chuẩn như `qty` không phải số hoặc `customerId` bị thiếu. Bản cũ xử lý chúng qua vòng `JSON`, bản mới có thể khác.

@@ -1,0 +1,5 @@
+I implemented `detectBursts` in `src/alert.js`, and `npm test` passes. That is only the one visible test, and I didn't write any extra tests for the edge cases below.
+
+- **Per-host counting:** It keeps each host's 5xx events (500–599) and sorts them by `ts`. The sort is stable, so equal timestamps stay in input order. A sliding window over `(ts - windowMs, ts]` gives the count, and each event counts as it is processed.
+- **Cooldown:** After an alert, events with `ts < alert.ts + cooldownMs` can't fire, but they still count toward later windows. `cooldownMs` defaults to `windowMs`.
+- **Output:** Alerts are `{ host, ts, count }`, sorted by `ts` and then by `host` ascending. The input array is not mutated, because the sort runs on a separate per-host copy.

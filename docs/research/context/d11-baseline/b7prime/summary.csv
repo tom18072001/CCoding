@@ -1,0 +1,11 @@
+arm,task,category,size,n,score,sd,pass,wtok,usd,wall,errors
+B7cab,t1-duration,coding,2,2,1,0,1,88762,0,85.098,0
+B7cab,t2-orders,coding,6,2,1,0,1,89089,0,75.1055,0
+B7cab,t3-api,coding,4,2,1,0,1,291542,0,235.256,0
+B7cab,t4-perf,coding,1,2,1,0,1,219480.5,0,235.254,0
+B7cab,t5-logq,coding,4,2,1,0,1,193913,0,170.2245,0
+A0-sonnet,t1-duration,coding,2,2,1,0,1,64448,0.1439,54.634,0
+A0-sonnet,t2-orders,coding,6,2,1,0,1,55651,0.1204,45.3895,0
+A0-sonnet,t3-api,coding,4,2,1,0,1,120231.5,0.2587,94.6155,0
+A0-sonnet,t4-perf,coding,1,2,1,0,1,46226,0.1029,45.695,0
+A0-sonnet,t5-logq,coding,4,2,1,0,1,139806.5,0.3124,118.174,0

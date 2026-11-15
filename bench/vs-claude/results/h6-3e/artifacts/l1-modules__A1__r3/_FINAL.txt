@@ -1,0 +1,36 @@
+## Stage 4 — FIX and final report
+
+The self-review found no defects in the code. The only fixes were three wrong expected values I had put in my own new tests. These were the 2025 non-working-day count (11, not 12), the half-token remaining at t=1500, and the sliding-window remaining at t=100. `npm test` is now green: 66 of 66 pass, 0 fail.
+
+I re-read the brief against the code and ran an import/clock scan. The scan confirmed the five modules import nothing, and the only matches for `Date.now`, `setTimeout` and `localeCompare` are comments. There are no new dependencies.
+
+**What was implemented** (each in `src/<name>/index.js`):
+- **money**
+  - All arithmetic is exact BigInt, with half-even rounding applied once at the end.
+  - `parseMoney` follows the stated check order; `formatMoney` round-trips through `parseMoney` for every locale and for both `symbol` and `code` display.
+  - `allocate` gives leftover units to the largest ratio, not the largest decimal remainder.
+  - `convert` uses direct rate pairs only and divides by 100 for the minor unit.
+  - `convertSum` converts and rounds each item separately, then adds.
+- **calendar**
+  - Day-number arithmetic covering 1900–2100, a holiday table, and compensation days derived by the stated rule. The five compensation pairs listed in SPEC.md come out exactly.
+  - Working-day arithmetic, `workingDaysBetween` with the four bounds and reversed ranges, and ISO weeks. A test checks the `isoWeek` ↔ `isoWeekToDate` round trip over every day from 1900 to 2100.
+- **csvcheck**
+  - Parser: BOM stripped once, mixed line endings, blank lines skipped, and row numbers counted by record.
+  - Schema is validated before the text; cell checks run in the spec's order, and a TYPE error stops further checks on that cell.
+- **slug**
+  - `fold`, `slugify` (word-boundary `maxLength`), `uniqueSlug`, `looseEquals` and `looseIncludes`.
+  - `compareVi` and `sortVi` use a hand-built three-level order, with no `Intl` or `localeCompare`.
+- **ratelimit**
+  - Token bucket in scaled BigInt, so `retryAfterMs` is exact, with the clock-going-backwards rule.
+  - Event-exact sliding window, plus `peek`, `reset`, `sweep` and `size`.
+
+**Tests:** I added `test/*.spec.test.js` for each module, covering every example and error code in SPEC.md. The original example tests are untouched.
+
+**Assumptions where the spec is ambiguous:**
+- `convert` validates `m`, then `to`, then `rates`. A `rates` value that is not an object gives `MONEY_INVALID_RATE`.
+- `min`/`max` in a schema are not validated for `string` or `bool` columns, since the spec says they are ignored there.
+- `peek` never changes any state.
+- `slugify` folds before lowercasing, as written in the spec.
+- `now()` returning a non-finite number throws `RL_INVALID_OPTIONS`.
+
+The hidden acceptance suite was not available, so none of this was run against it. I did not commit anything, because you didn't ask for that.

@@ -1,0 +1,14 @@
+Cả 4 tính năng đã xong và `npm test` xanh (6/6). Tôi chỉ chạy các test này qua HTTP thật, chưa chạy bộ nghiệm thu ẩn.
+
+- **Xác thực & phân quyền**: tôi làm đúng thứ tự 401 → 400 (tham số) → 404 → 403 → 400 (body). Member không thấy nhiệm vụ nhóm khác nên nhận 404, không phải 403. Lỗi JSON hỏng của body chỉ báo sau khi qua các bước quyền.
+- **Danh sách**: `GET /tasks` trả `{items,total,page,pageSize}` với đủ bộ lọc, tìm không dấu, sắp xếp và phân trang như đặc tả. Khi nhiều tham số lỗi, tôi báo tham số xuất hiện đầu tiên trên URL (tính theo lần xuất hiện đầu của mỗi tham số).
+- **CSV**: `GET /tasks/export.csv` đặt trước `/tasks/:id`. Nó có BOM, `\r\n`, bọc ngoặc kép kiểu RFC 4180 và thêm `'` chống chèn công thức. `page`/`pageSize` trả 400.
+- **Nhật ký**: `GET /audit` chỉ cho admin, có lọc `taskId`, mới nhất trước.
+
+Code mới nằm trong `src/lib.js` (xác thực, phân tích query, sắp xếp, CSV), cùng `src/handlers/tasks.js` và `src/store.js` đã sửa. Test cũ trong `test/tasks.test.js` đã chuyển sang dạng kết quả mới, và tôi thêm `auth`, `list`, `csv`, `audit` tests.
+
+Những chỗ đặc tả không nói rõ, tôi tự chọn như sau:
+- **Sửa không đổi gì**: `PATCH` hợp lệ nhưng không đổi giá trị nào vẫn ghi một mục nhật ký với `changes: []`.
+- **`assignee` rỗng** (`assignee=`): coi là lọc theo id rỗng nên kết quả rỗng, không báo lỗi.
+- **`dueDate` trong body**: giữ nguyên kiểm tra cũ (chỉ theo dạng `YYYY-MM-DD`, không kiểm tra ngày có thật theo lịch).
+- **Test CSV**: `fetch().text()` tự bỏ BOM, nên test CSV kiểm tra BOM bằng byte thô.

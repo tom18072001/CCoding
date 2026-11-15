@@ -1,0 +1,24 @@
+**3. SELF-REVIEW và 4. FIX**
+
+Tôi đối chiếu lại từng quy tắc trong SPEC với code và test. `npm test` xanh, 11/11 test pass, và không phát hiện lỗi cần sửa nên không có thay đổi nào ở bước FIX. Tôi chưa commit gì.
+
+**Đã làm**
+- `src/duration.js`: hiện thực `parseDuration` và `formatDuration` bằng CommonJS, không dùng thư viện ngoài.
+- `test/duration.test.js`: thêm 8 nhóm test biên mới, giữ nguyên 3 test cũ. Các nhóm gồm:
+  - kiểu input và lỗi (`NaN`, `Infinity`, `null`, `undefined`, object, `BigInt`);
+  - số thuần, dấu, `-0`, làm tròn `±0.5`;
+  - dạng đơn vị: trùng lặp, sai thứ tự, số thuần lẫn đơn vị;
+  - ISO 8601: `P`, `PT`, `P1DT`, `P1Y`, `P1M`, `P1W1D`, dấu phẩy thập phân;
+  - tùy chọn lỗi của `formatDuration`;
+  - `largest` với nhớ qua nhiều đơn vị (ví dụ `6d 23h 59m 31s` largest 2 → `1w`) và đơn vị 0 nằm giữa;
+  - round-trip `parse(format(x)) === parse(x)`, kể cả số rất lớn như `1e21`.
+
+**Giả định về chỗ SPEC chưa rõ**
+- Khoảng trắng giữa dấu và `P` (`"- PT1S"`) được chấp nhận, theo quy tắc 4.
+- `options` là `null` hoặc `undefined` thì dùng mặc định. `options` kiểu nguyên thủy khác (ví dụ chuỗi) thì ném `TypeError`.
+- `style` phân biệt hoa/thường.
+- `largest: undefined` được coi như không đặt.
+
+Mọi phép cộng thành phần và làm tròn khi parse đều dùng BigInt, nên `0.0005s` ra đúng 1 và số rất lớn không sai.
+
+Tôi chỉ kiểm tra qua bộ test do tôi viết, chưa có bộ nghiệm thu ẩn để đối chiếu.

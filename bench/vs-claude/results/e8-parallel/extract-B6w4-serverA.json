@@ -1,0 +1,1538 @@
+{
+ "extractedAt": "2026-11-13T16:47:49.619Z",
+ "server": "main",
+ "tasks": 18,
+ "projects": 18,
+ "rows": [
+  {
+   "task": "58f8dab02d",
+   "project": "P1",
+   "isolation": "worktree",
+   "parallelWorktreesProject": null,
+   "toolAccess": "exec",
+   "classification": "internal",
+   "mode": "project",
+   "status": "done",
+   "lane": "fast",
+   "hasBranch": true,
+   "createdAt": "2026-11-13T15:43:28.028Z",
+   "startedAt": "2026-11-13T15:43:28.043Z",
+   "finishedAt": "2026-11-13T15:46:44.381Z",
+   "checksLatest": {
+    "n": 1,
+    "red": 0
+   },
+   "checksBaseline": {
+    "n": 1,
+    "red": 1
+   },
+   "checksNewRed": 0,
+   "checksDenied": 0,
+   "msg": {
+    "merged": 5,
+    "conflict": 0,
+    "serial": 0,
+    "system": 17
+   },
+   "runs": [
+    {
+     "department": "dev",
+     "status": "done",
+     "startedAt": "2026-11-13T15:43:33.479Z",
+     "finishedAt": "2026-11-13T15:46:22.271Z",
+     "escalatedFrom": null,
+     "subtasks": [
+      {
+       "id": "S1",
+       "status": "done",
+       "startedAt": "2026-11-13T15:43:50.885Z",
+       "finishedAt": "2026-11-13T15:46:19.721Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S2",
+       "status": "done",
+       "startedAt": "2026-11-13T15:43:51.345Z",
+       "finishedAt": "2026-11-13T15:45:48.267Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S3",
+       "status": "done",
+       "startedAt": "2026-11-13T15:43:51.818Z",
+       "finishedAt": "2026-11-13T15:45:33.042Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S4",
+       "status": "done",
+       "startedAt": "2026-11-13T15:43:51.865Z",
+       "finishedAt": "2026-11-13T15:44:57.313Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S5",
+       "status": "done",
+       "startedAt": "2026-11-13T15:44:58.878Z",
+       "finishedAt": "2026-11-13T15:45:53.345Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "task": "4c378c593c",
+   "project": "P2",
+   "isolation": "worktree",
+   "parallelWorktreesProject": null,
+   "toolAccess": "exec",
+   "classification": "internal",
+   "mode": "project",
+   "status": "done",
+   "lane": "fast",
+   "hasBranch": true,
+   "createdAt": "2026-11-13T15:19:38.978Z",
+   "startedAt": "2026-11-13T15:19:38.993Z",
+   "finishedAt": "2026-11-13T15:22:57.077Z",
+   "checksLatest": {
+    "n": 1,
+    "red": 0
+   },
+   "checksBaseline": {
+    "n": 1,
+    "red": 0
+   },
+   "checksNewRed": 0,
+   "checksDenied": 0,
+   "msg": {
+    "merged": 4,
+    "conflict": 0,
+    "serial": 0,
+    "system": 15
+   },
+   "runs": [
+    {
+     "department": "dev",
+     "status": "done",
+     "startedAt": "2026-11-13T15:19:44.190Z",
+     "finishedAt": "2026-11-13T15:22:25.826Z",
+     "escalatedFrom": null,
+     "subtasks": [
+      {
+       "id": "S1",
+       "status": "done",
+       "startedAt": "2026-11-13T15:20:17.901Z",
+       "finishedAt": "2026-11-13T15:21:36.407Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S2",
+       "status": "done",
+       "startedAt": "2026-11-13T15:20:18.383Z",
+       "finishedAt": "2026-11-13T15:20:47.354Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S3",
+       "status": "done",
+       "startedAt": "2026-11-13T15:20:18.869Z",
+       "finishedAt": "2026-11-13T15:20:54.196Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S4",
+       "status": "done",
+       "startedAt": "2026-11-13T15:20:18.942Z",
+       "finishedAt": "2026-11-13T15:22:23.316Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "task": "f6ec1aac4e",
+   "project": "P3",
+   "isolation": "worktree",
+   "parallelWorktreesProject": null,
+   "toolAccess": "exec",
+   "classification": "internal",
+   "mode": "project",
+   "status": "done",
+   "lane": "fast",
+   "hasBranch": true,
+   "createdAt": "2026-11-13T15:14:44.633Z",
+   "startedAt": "2026-11-13T15:14:44.637Z",
+   "finishedAt": "2026-11-13T15:16:24.844Z",
+   "checksLatest": {
+    "n": 1,
+    "red": 0
+   },
+   "checksBaseline": {
+    "n": 1,
+    "red": 0
+   },
+   "checksNewRed": 0,
+   "checksDenied": 0,
+   "msg": {
+    "merged": 4,
+    "conflict": 0,
+    "serial": 0,
+    "system": 15
+   },
+   "runs": [
+    {
+     "department": "dev",
+     "status": "done",
+     "startedAt": "2026-11-13T15:14:50.191Z",
+     "finishedAt": "2026-11-13T15:15:56.946Z",
+     "escalatedFrom": null,
+     "subtasks": [
+      {
+       "id": "S1",
+       "status": "done",
+       "startedAt": "2026-11-13T15:15:17.507Z",
+       "finishedAt": "2026-11-13T15:15:54.515Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S2",
+       "status": "done",
+       "startedAt": "2026-11-13T15:15:17.978Z",
+       "finishedAt": "2026-11-13T15:15:52.318Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S3",
+       "status": "done",
+       "startedAt": "2026-11-13T15:15:18.437Z",
+       "finishedAt": "2026-11-13T15:15:48.831Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S4",
+       "status": "done",
+       "startedAt": "2026-11-13T15:15:18.501Z",
+       "finishedAt": "2026-11-13T15:15:50.027Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "task": "cd04ac22be",
+   "project": "P4",
+   "isolation": "worktree",
+   "parallelWorktreesProject": null,
+   "toolAccess": "exec",
+   "classification": "internal",
+   "mode": "project",
+   "status": "done",
+   "lane": "fast",
+   "hasBranch": true,
+   "createdAt": "2026-11-13T15:09:10.560Z",
+   "startedAt": "2026-11-13T15:09:10.573Z",
+   "finishedAt": "2026-11-13T15:10:39.660Z",
+   "checksLatest": {
+    "n": 1,
+    "red": 0
+   },
+   "checksBaseline": {
+    "n": 1,
+    "red": 0
+   },
+   "checksNewRed": 0,
+   "checksDenied": 0,
+   "msg": {
+    "merged": 3,
+    "conflict": 0,
+    "serial": 0,
+    "system": 13
+   },
+   "runs": [
+    {
+     "department": "dev",
+     "status": "done",
+     "startedAt": "2026-11-13T15:09:15.582Z",
+     "finishedAt": "2026-11-13T15:10:12.517Z",
+     "escalatedFrom": null,
+     "subtasks": [
+      {
+       "id": "S1",
+       "status": "done",
+       "startedAt": "2026-11-13T15:09:34.239Z",
+       "finishedAt": "2026-11-13T15:10:09.937Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S2",
+       "status": "done",
+       "startedAt": "2026-11-13T15:09:34.665Z",
+       "finishedAt": "2026-11-13T15:10:05.699Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S3",
+       "status": "done",
+       "startedAt": "2026-11-13T15:09:34.746Z",
+       "finishedAt": "2026-11-13T15:10:01.418Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "task": "de7f388878",
+   "project": "P5",
+   "isolation": "worktree",
+   "parallelWorktreesProject": null,
+   "toolAccess": "exec",
+   "classification": "internal",
+   "mode": "project",
+   "status": "done",
+   "lane": "fast",
+   "hasBranch": true,
+   "createdAt": "2026-11-13T14:58:15.288Z",
+   "startedAt": "2026-11-13T14:58:15.292Z",
+   "finishedAt": "2026-11-13T15:01:19.181Z",
+   "checksLatest": {
+    "n": 1,
+    "red": 0
+   },
+   "checksBaseline": {
+    "n": 1,
+    "red": 1
+   },
+   "checksNewRed": 0,
+   "checksDenied": 0,
+   "msg": {
+    "merged": 5,
+    "conflict": 0,
+    "serial": 0,
+    "system": 17
+   },
+   "runs": [
+    {
+     "department": "dev",
+     "status": "done",
+     "startedAt": "2026-11-13T14:58:20.968Z",
+     "finishedAt": "2026-11-13T15:00:58.132Z",
+     "escalatedFrom": null,
+     "subtasks": [
+      {
+       "id": "S1",
+       "status": "done",
+       "startedAt": "2026-11-13T14:58:39.907Z",
+       "finishedAt": "2026-11-13T15:00:03.790Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S2",
+       "status": "done",
+       "startedAt": "2026-11-13T14:58:40.398Z",
+       "finishedAt": "2026-11-13T15:00:38.379Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S3",
+       "status": "done",
+       "startedAt": "2026-11-13T14:58:40.898Z",
+       "finishedAt": "2026-11-13T15:00:11.039Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S4",
+       "status": "done",
+       "startedAt": "2026-11-13T14:58:40.982Z",
+       "finishedAt": "2026-11-13T14:59:51.023Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S5",
+       "status": "done",
+       "startedAt": "2026-11-13T14:59:52.597Z",
+       "finishedAt": "2026-11-13T15:00:55.736Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "task": "01da992a0e",
+   "project": "P6",
+   "isolation": "worktree",
+   "parallelWorktreesProject": null,
+   "toolAccess": "exec",
+   "classification": "internal",
+   "mode": "project",
+   "status": "done",
+   "lane": "fast",
+   "hasBranch": true,
+   "createdAt": "2026-11-13T14:42:35.200Z",
+   "startedAt": "2026-11-13T14:42:35.213Z",
+   "finishedAt": "2026-11-13T14:45:39.459Z",
+   "checksLatest": {
+    "n": 1,
+    "red": 0
+   },
+   "checksBaseline": {
+    "n": 1,
+    "red": 0
+   },
+   "checksNewRed": 0,
+   "checksDenied": 0,
+   "msg": {
+    "merged": 4,
+    "conflict": 0,
+    "serial": 0,
+    "system": 17
+   },
+   "runs": [
+    {
+     "department": "dev",
+     "status": "done",
+     "startedAt": "2026-11-13T14:42:40.098Z",
+     "finishedAt": "2026-11-13T14:45:08.347Z",
+     "escalatedFrom": null,
+     "subtasks": [
+      {
+       "id": "S1",
+       "status": "done",
+       "startedAt": "2026-11-13T14:43:09.353Z",
+       "finishedAt": "2026-11-13T14:44:33.859Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S2",
+       "status": "done",
+       "startedAt": "2026-11-13T14:43:09.777Z",
+       "finishedAt": "2026-11-13T14:44:36.385Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S3",
+       "status": "done",
+       "startedAt": "2026-11-13T14:43:10.227Z",
+       "finishedAt": "2026-11-13T14:43:38.187Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S4",
+       "status": "done",
+       "startedAt": "2026-11-13T14:43:10.314Z",
+       "finishedAt": "2026-11-13T14:43:41.876Z",
+       "dependsOn": [],
+       "attempts": 2,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "task": "afc9b4e299",
+   "project": "P7",
+   "isolation": "worktree",
+   "parallelWorktreesProject": null,
+   "toolAccess": "exec",
+   "classification": "internal",
+   "mode": "project",
+   "status": "done",
+   "lane": "fast",
+   "hasBranch": true,
+   "createdAt": "2026-11-13T14:38:11.098Z",
+   "startedAt": "2026-11-13T14:38:11.112Z",
+   "finishedAt": "2026-11-13T14:39:38.057Z",
+   "checksLatest": {
+    "n": 1,
+    "red": 0
+   },
+   "checksBaseline": {
+    "n": 1,
+    "red": 0
+   },
+   "checksNewRed": 0,
+   "checksDenied": 0,
+   "msg": {
+    "merged": 3,
+    "conflict": 0,
+    "serial": 0,
+    "system": 13
+   },
+   "runs": [
+    {
+     "department": "dev",
+     "status": "done",
+     "startedAt": "2026-11-13T14:38:16.377Z",
+     "finishedAt": "2026-11-13T14:39:08.719Z",
+     "escalatedFrom": null,
+     "subtasks": [
+      {
+       "id": "S1",
+       "status": "done",
+       "startedAt": "2026-11-13T14:38:32.843Z",
+       "finishedAt": "2026-11-13T14:39:06.265Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S2",
+       "status": "done",
+       "startedAt": "2026-11-13T14:38:33.321Z",
+       "finishedAt": "2026-11-13T14:39:04.413Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S3",
+       "status": "done",
+       "startedAt": "2026-11-13T14:38:33.374Z",
+       "finishedAt": "2026-11-13T14:39:01.037Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "task": "d4d97b124a",
+   "project": "P8",
+   "isolation": "worktree",
+   "parallelWorktreesProject": null,
+   "toolAccess": "exec",
+   "classification": "internal",
+   "mode": "project",
+   "status": "done",
+   "lane": "fast",
+   "hasBranch": true,
+   "createdAt": "2026-11-13T14:27:03.769Z",
+   "startedAt": "2026-11-13T14:27:03.773Z",
+   "finishedAt": "2026-11-13T14:30:28.054Z",
+   "checksLatest": {
+    "n": 1,
+    "red": 0
+   },
+   "checksBaseline": {
+    "n": 1,
+    "red": 0
+   },
+   "checksNewRed": 0,
+   "checksDenied": 0,
+   "msg": {
+    "merged": 4,
+    "conflict": 0,
+    "serial": 0,
+    "system": 15
+   },
+   "runs": [
+    {
+     "department": "dev",
+     "status": "done",
+     "startedAt": "2026-11-13T14:27:08.899Z",
+     "finishedAt": "2026-11-13T14:29:53.714Z",
+     "escalatedFrom": null,
+     "subtasks": [
+      {
+       "id": "S1",
+       "status": "done",
+       "startedAt": "2026-11-13T14:27:46.227Z",
+       "finishedAt": "2026-11-13T14:29:51.037Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S2",
+       "status": "done",
+       "startedAt": "2026-11-13T14:27:46.726Z",
+       "finishedAt": "2026-11-13T14:28:52.643Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S3",
+       "status": "done",
+       "startedAt": "2026-11-13T14:27:47.203Z",
+       "finishedAt": "2026-11-13T14:28:16.854Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S4",
+       "status": "done",
+       "startedAt": "2026-11-13T14:27:47.258Z",
+       "finishedAt": "2026-11-13T14:28:28.274Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "task": "605749a93e",
+   "project": "P9",
+   "isolation": "worktree",
+   "parallelWorktreesProject": null,
+   "toolAccess": "exec",
+   "classification": "internal",
+   "mode": "project",
+   "status": "done",
+   "lane": "fast",
+   "hasBranch": true,
+   "createdAt": "2026-11-13T14:23:41.244Z",
+   "startedAt": "2026-11-13T14:23:41.248Z",
+   "finishedAt": "2026-11-13T14:26:58.334Z",
+   "checksLatest": {
+    "n": 1,
+    "red": 0
+   },
+   "checksBaseline": {
+    "n": 1,
+    "red": 1
+   },
+   "checksNewRed": 0,
+   "checksDenied": 0,
+   "msg": {
+    "merged": 5,
+    "conflict": 0,
+    "serial": 0,
+    "system": 17
+   },
+   "runs": [
+    {
+     "department": "dev",
+     "status": "done",
+     "startedAt": "2026-11-13T14:23:45.900Z",
+     "finishedAt": "2026-11-13T14:26:35.916Z",
+     "escalatedFrom": null,
+     "subtasks": [
+      {
+       "id": "S1",
+       "status": "done",
+       "startedAt": "2026-11-13T14:24:04.589Z",
+       "finishedAt": "2026-11-13T14:26:33.436Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S2",
+       "status": "done",
+       "startedAt": "2026-11-13T14:24:05.011Z",
+       "finishedAt": "2026-11-13T14:25:41.102Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S3",
+       "status": "done",
+       "startedAt": "2026-11-13T14:24:05.472Z",
+       "finishedAt": "2026-11-13T14:25:24.929Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S4",
+       "status": "done",
+       "startedAt": "2026-11-13T14:24:05.549Z",
+       "finishedAt": "2026-11-13T14:25:00.099Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S5",
+       "status": "done",
+       "startedAt": "2026-11-13T14:25:01.627Z",
+       "finishedAt": "2026-11-13T14:25:42.301Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "task": "a29a4549c2",
+   "project": "P10",
+   "isolation": "worktree",
+   "parallelWorktreesProject": null,
+   "toolAccess": "exec",
+   "classification": "internal",
+   "mode": "project",
+   "status": "done",
+   "lane": "fast",
+   "hasBranch": true,
+   "createdAt": "2026-11-13T13:59:07.316Z",
+   "startedAt": "2026-11-13T13:59:07.330Z",
+   "finishedAt": "2026-11-13T14:02:27.470Z",
+   "checksLatest": {
+    "n": 1,
+    "red": 0
+   },
+   "checksBaseline": {
+    "n": 1,
+    "red": 0
+   },
+   "checksNewRed": 0,
+   "checksDenied": 0,
+   "msg": {
+    "merged": 2,
+    "conflict": 1,
+    "serial": 0,
+    "system": 14
+   },
+   "runs": [
+    {
+     "department": "dev",
+     "status": "done",
+     "startedAt": "2026-11-13T13:59:12.441Z",
+     "finishedAt": "2026-11-13T14:01:51.610Z",
+     "escalatedFrom": null,
+     "subtasks": [
+      {
+       "id": "S1",
+       "status": "done",
+       "startedAt": "2026-11-13T13:59:41.105Z",
+       "finishedAt": "2026-11-13T14:01:00.702Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S2",
+       "status": "done",
+       "startedAt": "2026-11-13T14:01:17.214Z",
+       "finishedAt": "2026-11-13T14:01:48.605Z",
+       "dependsOn": [],
+       "attempts": 2,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "task": "bb439fd54f",
+   "project": "P11",
+   "isolation": "worktree",
+   "parallelWorktreesProject": null,
+   "toolAccess": "exec",
+   "classification": "internal",
+   "mode": "project",
+   "status": "done",
+   "lane": "fast",
+   "hasBranch": true,
+   "createdAt": "2026-11-13T13:57:24.745Z",
+   "startedAt": "2026-11-13T13:57:24.759Z",
+   "finishedAt": "2026-11-13T13:58:59.540Z",
+   "checksLatest": {
+    "n": 1,
+    "red": 0
+   },
+   "checksBaseline": {
+    "n": 1,
+    "red": 0
+   },
+   "checksNewRed": 0,
+   "checksDenied": 0,
+   "msg": {
+    "merged": 4,
+    "conflict": 0,
+    "serial": 0,
+    "system": 15
+   },
+   "runs": [
+    {
+     "department": "dev",
+     "status": "done",
+     "startedAt": "2026-11-13T13:57:29.842Z",
+     "finishedAt": "2026-11-13T13:58:30.839Z",
+     "escalatedFrom": null,
+     "subtasks": [
+      {
+       "id": "S1",
+       "status": "done",
+       "startedAt": "2026-11-13T13:57:53.604Z",
+       "finishedAt": "2026-11-13T13:58:28.321Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S2",
+       "status": "done",
+       "startedAt": "2026-11-13T13:57:54.005Z",
+       "finishedAt": "2026-11-13T13:58:24.779Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S3",
+       "status": "done",
+       "startedAt": "2026-11-13T13:57:54.477Z",
+       "finishedAt": "2026-11-13T13:58:17.909Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S4",
+       "status": "done",
+       "startedAt": "2026-11-13T13:57:54.557Z",
+       "finishedAt": "2026-11-13T13:58:27.124Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "task": "d522d0e125",
+   "project": "P12",
+   "isolation": "worktree",
+   "parallelWorktreesProject": null,
+   "toolAccess": "exec",
+   "classification": "internal",
+   "mode": "project",
+   "status": "done",
+   "lane": "fast",
+   "hasBranch": true,
+   "createdAt": "2026-11-13T13:43:43.448Z",
+   "startedAt": "2026-11-13T13:43:43.462Z",
+   "finishedAt": "2026-11-13T13:47:58.588Z",
+   "checksLatest": {
+    "n": 1,
+    "red": 0
+   },
+   "checksBaseline": {
+    "n": 1,
+    "red": 1
+   },
+   "checksNewRed": 0,
+   "checksDenied": 0,
+   "msg": {
+    "merged": 5,
+    "conflict": 0,
+    "serial": 0,
+    "system": 16
+   },
+   "runs": [
+    {
+     "department": "dev",
+     "status": "done",
+     "startedAt": "2026-11-13T13:43:48.711Z",
+     "finishedAt": "2026-11-13T13:47:37.277Z",
+     "escalatedFrom": null,
+     "subtasks": [
+      {
+       "id": "S1",
+       "status": "done",
+       "startedAt": "2026-11-13T13:44:09.408Z",
+       "finishedAt": "2026-11-13T13:46:01.318Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S2",
+       "status": "done",
+       "startedAt": "2026-11-13T13:44:09.936Z",
+       "finishedAt": "2026-11-13T13:46:03.057Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S3",
+       "status": "done",
+       "startedAt": "2026-11-13T13:46:02.929Z",
+       "finishedAt": "2026-11-13T13:47:34.582Z",
+       "dependsOn": [
+        "S1"
+       ],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S4",
+       "status": "done",
+       "startedAt": "2026-11-13T13:46:04.538Z",
+       "finishedAt": "2026-11-13T13:47:10.939Z",
+       "dependsOn": [
+        "S2"
+       ],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S5",
+       "status": "done",
+       "startedAt": "2026-11-13T13:44:10.049Z",
+       "finishedAt": "2026-11-13T13:45:31.122Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "task": "bb10b9fd8d",
+   "project": "P13",
+   "isolation": "worktree",
+   "parallelWorktreesProject": null,
+   "toolAccess": "exec",
+   "classification": "internal",
+   "mode": "project",
+   "status": "done",
+   "lane": "fast",
+   "hasBranch": true,
+   "createdAt": "2026-11-13T13:32:18.462Z",
+   "startedAt": "2026-11-13T13:32:18.467Z",
+   "finishedAt": "2026-11-13T13:35:20.503Z",
+   "checksLatest": {
+    "n": 1,
+    "red": 0
+   },
+   "checksBaseline": {
+    "n": 1,
+    "red": 1
+   },
+   "checksNewRed": 0,
+   "checksDenied": 0,
+   "msg": {
+    "merged": 5,
+    "conflict": 0,
+    "serial": 0,
+    "system": 17
+   },
+   "runs": [
+    {
+     "department": "dev",
+     "status": "done",
+     "startedAt": "2026-11-13T13:32:24.156Z",
+     "finishedAt": "2026-11-13T13:34:59.057Z",
+     "escalatedFrom": null,
+     "subtasks": [
+      {
+       "id": "S1",
+       "status": "done",
+       "startedAt": "2026-11-13T13:32:43.824Z",
+       "finishedAt": "2026-11-13T13:34:56.487Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S2",
+       "status": "done",
+       "startedAt": "2026-11-13T13:32:44.289Z",
+       "finishedAt": "2026-11-13T13:34:29.086Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S3",
+       "status": "done",
+       "startedAt": "2026-11-13T13:32:44.743Z",
+       "finishedAt": "2026-11-13T13:34:03.992Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S4",
+       "status": "done",
+       "startedAt": "2026-11-13T13:32:44.823Z",
+       "finishedAt": "2026-11-13T13:33:54.041Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S5",
+       "status": "done",
+       "startedAt": "2026-11-13T13:33:55.369Z",
+       "finishedAt": "2026-11-13T13:34:32.631Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "task": "7970ad1145",
+   "project": "P14",
+   "isolation": "worktree",
+   "parallelWorktreesProject": null,
+   "toolAccess": "exec",
+   "classification": "internal",
+   "mode": "project",
+   "status": "done",
+   "lane": "fast",
+   "hasBranch": true,
+   "createdAt": "2026-11-13T12:39:53.539Z",
+   "startedAt": "2026-11-13T12:39:53.551Z",
+   "finishedAt": "2026-11-13T12:42:49.606Z",
+   "checksLatest": {
+    "n": 1,
+    "red": 0
+   },
+   "checksBaseline": {
+    "n": 1,
+    "red": 0
+   },
+   "checksNewRed": 0,
+   "checksDenied": 0,
+   "msg": {
+    "merged": 3,
+    "conflict": 0,
+    "serial": 0,
+    "system": 12
+   },
+   "runs": [
+    {
+     "department": "dev",
+     "status": "done",
+     "startedAt": "2026-11-13T12:39:58.940Z",
+     "finishedAt": "2026-11-13T12:42:22.398Z",
+     "escalatedFrom": null,
+     "subtasks": [
+      {
+       "id": "S1",
+       "status": "done",
+       "startedAt": "2026-11-13T12:40:33.136Z",
+       "finishedAt": "2026-11-13T12:42:19.770Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S2",
+       "status": "done",
+       "startedAt": "2026-11-13T12:40:33.679Z",
+       "finishedAt": "2026-11-13T12:41:35.223Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S3",
+       "status": "done",
+       "startedAt": "2026-11-13T12:40:33.759Z",
+       "finishedAt": "2026-11-13T12:41:03.769Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "task": "7f42cc4dcb",
+   "project": "P15",
+   "isolation": "worktree",
+   "parallelWorktreesProject": null,
+   "toolAccess": "exec",
+   "classification": "internal",
+   "mode": "project",
+   "status": "done",
+   "lane": "fast",
+   "hasBranch": true,
+   "createdAt": "2026-11-13T12:33:28.275Z",
+   "startedAt": "2026-11-13T12:33:28.289Z",
+   "finishedAt": "2026-11-13T12:34:59.681Z",
+   "checksLatest": {
+    "n": 1,
+    "red": 0
+   },
+   "checksBaseline": {
+    "n": 1,
+    "red": 0
+   },
+   "checksNewRed": 0,
+   "checksDenied": 0,
+   "msg": {
+    "merged": 3,
+    "conflict": 0,
+    "serial": 0,
+    "system": 13
+   },
+   "runs": [
+    {
+     "department": "dev",
+     "status": "done",
+     "startedAt": "2026-11-13T12:33:33.878Z",
+     "finishedAt": "2026-11-13T12:34:30.648Z",
+     "escalatedFrom": null,
+     "subtasks": [
+      {
+       "id": "S1",
+       "status": "done",
+       "startedAt": "2026-11-13T12:33:54.318Z",
+       "finishedAt": "2026-11-13T12:34:28.261Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S2",
+       "status": "done",
+       "startedAt": "2026-11-13T12:33:54.776Z",
+       "finishedAt": "2026-11-13T12:34:24.919Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S3",
+       "status": "done",
+       "startedAt": "2026-11-13T12:33:54.855Z",
+       "finishedAt": "2026-11-13T12:34:26.116Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "task": "f9bb659d24",
+   "project": "P16",
+   "isolation": "worktree",
+   "parallelWorktreesProject": null,
+   "toolAccess": "exec",
+   "classification": "internal",
+   "mode": "project",
+   "status": "done",
+   "lane": "fast",
+   "hasBranch": true,
+   "createdAt": "2026-11-13T12:23:03.531Z",
+   "startedAt": "2026-11-13T12:23:03.544Z",
+   "finishedAt": "2026-11-13T12:26:24.497Z",
+   "checksLatest": {
+    "n": 1,
+    "red": 0
+   },
+   "checksBaseline": {
+    "n": 1,
+    "red": 0
+   },
+   "checksNewRed": 0,
+   "checksDenied": 0,
+   "msg": {
+    "merged": 2,
+    "conflict": 0,
+    "serial": 0,
+    "system": 10
+   },
+   "runs": [
+    {
+     "department": "dev",
+     "status": "done",
+     "startedAt": "2026-11-13T12:23:08.770Z",
+     "finishedAt": "2026-11-13T12:25:50.622Z",
+     "escalatedFrom": null,
+     "subtasks": [
+      {
+       "id": "S1",
+       "status": "done",
+       "startedAt": "2026-11-13T12:23:42.965Z",
+       "finishedAt": "2026-11-13T12:25:48.082Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S2",
+       "status": "done",
+       "startedAt": "2026-11-13T12:23:43.001Z",
+       "finishedAt": "2026-11-13T12:24:53.012Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "task": "6ec32a28eb",
+   "project": "P17",
+   "isolation": "worktree",
+   "parallelWorktreesProject": null,
+   "toolAccess": "exec",
+   "classification": "internal",
+   "mode": "project",
+   "status": "done",
+   "lane": "fast",
+   "hasBranch": true,
+   "createdAt": "2026-11-13T12:13:38.075Z",
+   "startedAt": "2026-11-13T12:13:38.089Z",
+   "finishedAt": "2026-11-13T12:16:55.020Z",
+   "checksLatest": {
+    "n": 1,
+    "red": 0
+   },
+   "checksBaseline": {
+    "n": 1,
+    "red": 1
+   },
+   "checksNewRed": 0,
+   "checksDenied": 0,
+   "msg": {
+    "merged": 5,
+    "conflict": 0,
+    "serial": 0,
+    "system": 18
+   },
+   "runs": [
+    {
+     "department": "dev",
+     "status": "done",
+     "startedAt": "2026-11-13T12:13:43.353Z",
+     "finishedAt": "2026-11-13T12:16:36.537Z",
+     "escalatedFrom": null,
+     "subtasks": [
+      {
+       "id": "S1",
+       "status": "done",
+       "startedAt": "2026-11-13T12:14:04.065Z",
+       "finishedAt": "2026-11-13T12:15:59.983Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S2",
+       "status": "done",
+       "startedAt": "2026-11-13T12:14:04.568Z",
+       "finishedAt": "2026-11-13T12:16:01.868Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S3",
+       "status": "done",
+       "startedAt": "2026-11-13T12:14:04.993Z",
+       "finishedAt": "2026-11-13T12:15:42.726Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S4",
+       "status": "done",
+       "startedAt": "2026-11-13T12:14:05.062Z",
+       "finishedAt": "2026-11-13T12:15:11.042Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S5",
+       "status": "done",
+       "startedAt": "2026-11-13T12:15:12.570Z",
+       "finishedAt": "2026-11-13T12:16:33.865Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "task": "1cb22bc027",
+   "project": "P18",
+   "isolation": "worktree",
+   "parallelWorktreesProject": null,
+   "toolAccess": "exec",
+   "classification": "internal",
+   "mode": "project",
+   "status": "done",
+   "lane": "fast",
+   "hasBranch": true,
+   "createdAt": "2026-11-13T11:51:18.396Z",
+   "startedAt": "2026-11-13T11:51:18.413Z",
+   "finishedAt": "2026-11-13T11:52:47.958Z",
+   "checksLatest": {
+    "n": 1,
+    "red": 0
+   },
+   "checksBaseline": {
+    "n": 1,
+    "red": 0
+   },
+   "checksNewRed": 0,
+   "checksDenied": 0,
+   "msg": {
+    "merged": 4,
+    "conflict": 0,
+    "serial": 0,
+    "system": 15
+   },
+   "runs": [
+    {
+     "department": "dev",
+     "status": "done",
+     "startedAt": "2026-11-13T11:51:23.333Z",
+     "finishedAt": "2026-11-13T11:52:23.293Z",
+     "escalatedFrom": null,
+     "subtasks": [
+      {
+       "id": "S1",
+       "status": "done",
+       "startedAt": "2026-11-13T11:51:47.403Z",
+       "finishedAt": "2026-11-13T11:52:19.482Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S2",
+       "status": "done",
+       "startedAt": "2026-11-13T11:51:47.831Z",
+       "finishedAt": "2026-11-13T11:52:20.616Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S3",
+       "status": "done",
+       "startedAt": "2026-11-13T11:51:48.201Z",
+       "finishedAt": "2026-11-13T11:52:18.383Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      },
+      {
+       "id": "S4",
+       "status": "done",
+       "startedAt": "2026-11-13T11:51:48.258Z",
+       "finishedAt": "2026-11-13T11:52:13.914Z",
+       "dependsOn": [],
+       "attempts": 1,
+       "conflict": null,
+       "mainOnly": false,
+       "mergePending": false
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

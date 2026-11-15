@@ -1,0 +1,16 @@
+I reviewed `src/server.js` without changing it and wrote `findings.json` in the repository root with seven findings. I didn't run the app or any tests; this is from reading the code.
+
+| Line | Type | Severity | Issue |
+|---|---|---|---|
+| 11 | `hardcoded-secret` | high | The JWT secret is hardcoded in the source. |
+| 30 | `sqli` | critical | The ticket search query interpolates `q` directly into the SQL string. |
+| 42 | `path-traversal` | high | The report download joins `req.params.name` onto `REPORT_DIR` without checking it stays inside that directory. |
+| 58 | `weak-crypto` | high | Passwords are hashed with unsalted MD5. |
+| 65 | `ssrf` | high | The webhook preview fetches whatever URL the caller supplies. |
+| 70 | `missing-authz` | high | Any logged-in user can delete any ticket, because there is no ownership or admin check. |
+| 84 | `command-injection` | critical | `req.body.format` goes into an `exec` shell string. |
+
+I left out three things I judged not to be real, exploitable issues:
+- **`verifyJwt` (line 18):** it is never imported or defined, so the auth middleware would throw an error and reject requests rather than let them through.
+- **Ping host check (line 78):** the regex allows a leading `-`, which is a minor argument-injection risk, but I rated it too weak to report.
+- **Attachments route (line 47):** it uses a parameterized query, `basename` and an extension allow-list, so I found nothing to flag.

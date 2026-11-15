@@ -1,0 +1,244 @@
+TAP version 13
+# Subtest: parse cơ bản
+ok 1 - parse cơ bản
+  ---
+  duration_ms: 1.669494
+  type: 'test'
+  ...
+# Subtest: format cơ bản
+ok 2 - format cơ bản
+  ---
+  duration_ms: 0.394882
+  type: 'test'
+  ...
+# Subtest: lỗi
+ok 3 - lỗi
+  ---
+  duration_ms: 0.490959
+  type: 'test'
+  ...
+# Subtest: formatDuration: đầu vào không hợp lệ → TypeError
+ok 4 - formatDuration: đầu vào không hợp lệ → TypeError
+  ---
+  duration_ms: 1.923946
+  type: 'test'
+  ...
+# Subtest: formatDuration: style không hợp lệ → TypeError
+ok 5 - formatDuration: style không hợp lệ → TypeError
+  ---
+  duration_ms: 1.401347
+  type: 'test'
+  ...
+# Subtest: formatDuration: style hợp lệ
+ok 6 - formatDuration: style hợp lệ
+  ---
+  duration_ms: 0.389473
+  type: 'test'
+  ...
+# Subtest: formatDuration: largest không hợp lệ → TypeError
+ok 7 - formatDuration: largest không hợp lệ → TypeError
+  ---
+  duration_ms: 0.372106
+  type: 'test'
+  ...
+# Subtest: formatDuration: largest hợp lệ rất lớn = không giới hạn
+ok 8 - formatDuration: largest hợp lệ rất lớn = không giới hạn
+  ---
+  duration_ms: 0.250184
+  type: 'test'
+  ...
+# Subtest: formatDuration: làm tròn ms half away from zero
+ok 9 - formatDuration: làm tròn ms half away from zero
+  ---
+  duration_ms: 0.238553
+  type: 'test'
+  ...
+# Subtest: formatDuration: số 0
+ok 10 - formatDuration: số 0
+  ---
+  duration_ms: 0.24113
+  type: 'test'
+  ...
+# Subtest: formatDuration: phân rã từng đơn vị
+ok 11 - formatDuration: phân rã từng đơn vị
+  ---
+  duration_ms: 0.198594
+  type: 'test'
+  ...
+# Subtest: formatDuration: long, số ít/số nhiều
+ok 12 - formatDuration: long, số ít/số nhiều
+  ---
+  duration_ms: 0.528
+  type: 'test'
+  ...
+# Subtest: formatDuration: số âm
+ok 13 - formatDuration: số âm
+  ---
+  duration_ms: 0.653945
+  type: 'test'
+  ...
+# Subtest: formatDuration: largest bỏ qua đơn vị 0 ở giữa
+ok 14 - formatDuration: largest bỏ qua đơn vị 0 ở giữa
+  ---
+  duration_ms: 0.281622
+  type: 'test'
+  ...
+# Subtest: formatDuration: largest lớn hơn số đơn vị còn lại
+ok 15 - formatDuration: largest lớn hơn số đơn vị còn lại
+  ---
+  duration_ms: 0.144348
+  type: 'test'
+  ...
+# Subtest: formatDuration: largest cắt không làm tròn khi phần còn lại < nửa
+ok 16 - formatDuration: largest cắt không làm tròn khi phần còn lại < nửa
+  ---
+  duration_ms: 0.115411
+  type: 'test'
+  ...
+# Subtest: formatDuration: đúng nửa đơn vị thì làm tròn lên
+ok 17 - formatDuration: đúng nửa đơn vị thì làm tròn lên
+  ---
+  duration_ms: 0.183722
+  type: 'test'
+  ...
+# Subtest: formatDuration: làm tròn vào đơn vị cuối và nhớ lên
+ok 18 - formatDuration: làm tròn vào đơn vị cuối và nhớ lên
+  ---
+  duration_ms: 0.201373
+  type: 'test'
+  ...
+# Subtest: formatDuration: nhớ nhiều tầng
+ok 19 - formatDuration: nhớ nhiều tầng
+  ---
+  duration_ms: 0.114475
+  type: 'test'
+  ...
+# Subtest: formatDuration: round-trip với parseDuration
+ok 20 - formatDuration: round-trip với parseDuration
+  ---
+  duration_ms: 3.243724
+  type: 'test'
+  ...
+# Subtest: formatDuration: round-trip ngẫu nhiên có seed cố định
+ok 21 - formatDuration: round-trip ngẫu nhiên có seed cố định
+  ---
+  duration_ms: 6.638201
+  type: 'test'
+  ...
+# Subtest: number hữu hạn và làm tròn
+ok 22 - number hữu hạn và làm tròn
+  ---
+  duration_ms: 1.517464
+  type: 'test'
+  ...
+# Subtest: number -0 và giá trị làm tròn về 0 trả 0 (không phải -0)
+ok 23 - number -0 và giá trị làm tròn về 0 trả 0 (không phải -0)
+  ---
+  duration_ms: 0.304965
+  type: 'test'
+  ...
+# Subtest: number không hữu hạn → lỗi
+ok 24 - number không hữu hạn → lỗi
+  ---
+  duration_ms: 1.715068
+  type: 'test'
+  ...
+# Subtest: kiểu không hợp lệ và message lỗi
+ok 25 - kiểu không hợp lệ và message lỗi
+  ---
+  duration_ms: 1.461818
+  type: 'test'
+  ...
+# Subtest: chuỗi rỗng / chỉ khoảng trắng
+ok 26 - chuỗi rỗng / chỉ khoảng trắng
+  ---
+  duration_ms: 0.229888
+  type: 'test'
+  ...
+# Subtest: dấu + / -
+ok 27 - dấu + / -
+  ---
+  duration_ms: 1.161239
+  type: 'test'
+  ...
+# Subtest: số thuần
+ok 28 - số thuần
+  ---
+  duration_ms: 0.366827
+  type: 'test'
+  ...
+# Subtest: số thuần: -0 và làm tròn về 0
+ok 29 - số thuần: -0 và làm tròn về 0
+  ---
+  duration_ms: 0.15252
+  type: 'test'
+  ...
+# Subtest: dạng đơn vị: mọi bí danh
+ok 30 - dạng đơn vị: mọi bí danh
+  ---
+  duration_ms: 0.555133
+  type: 'test'
+  ...
+# Subtest: dạng đơn vị: hoa/thường
+ok 31 - dạng đơn vị: hoa/thường
+  ---
+  duration_ms: 0.488752
+  type: 'test'
+  ...
+# Subtest: dạng đơn vị: khoảng trắng
+ok 32 - dạng đơn vị: khoảng trắng
+  ---
+  duration_ms: 0.279089
+  type: 'test'
+  ...
+# Subtest: dạng đơn vị: số thập phân
+ok 33 - dạng đơn vị: số thập phân
+  ---
+  duration_ms: 0.259326
+  type: 'test'
+  ...
+# Subtest: dạng đơn vị: kết hợp đầy đủ
+ok 34 - dạng đơn vị: kết hợp đầy đủ
+  ---
+  duration_ms: 0.136941
+  type: 'test'
+  ...
+# Subtest: dạng đơn vị: sai thứ tự / trùng đơn vị → lỗi
+ok 35 - dạng đơn vị: sai thứ tự / trùng đơn vị → lỗi
+  ---
+  duration_ms: 1.230801
+  type: 'test'
+  ...
+# Subtest: dạng đơn vị: số trộn đơn vị / ký tự lạ → lỗi
+ok 36 - dạng đơn vị: số trộn đơn vị / ký tự lạ → lỗi
+  ---
+  duration_ms: 0.414129
+  type: 'test'
+  ...
+# Subtest: ISO 8601: hợp lệ
+ok 37 - ISO 8601: hợp lệ
+  ---
+  duration_ms: 0.214657
+  type: 'test'
+  ...
+# Subtest: ISO 8601: không hợp lệ
+ok 38 - ISO 8601: không hợp lệ
+  ---
+  duration_ms: 0.665536
+  type: 'test'
+  ...
+# Subtest: làm tròn half away from zero cho kết quả cuối
+ok 39 - làm tròn half away from zero cho kết quả cuối
+  ---
+  duration_ms: 0.137976
+  type: 'test'
+  ...
+1..39
+# tests 39
+# suites 0
+# pass 39
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 249.734196

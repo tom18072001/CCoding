@@ -4,14 +4,14 @@ import fs from 'node:fs';
 import type { AddressInfo } from 'node:net';
 import { createServer } from '../src/server.js';
 import { periodStart } from '../src/budgets.js';
-import { testApp } from './helpers.js';
+import { closeServer, readJson, testApp } from './helpers.js';
 
 async function serve(app: ReturnType<typeof testApp>) {
   const srv = createServer(app);
   await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
   const port = (srv.address() as AddressInfo).port;
   app.config.server.port = port;
-  srv.close();
+  await closeServer(srv);
   const srv2 = createServer(app);
   await new Promise<void>((r) => srv2.listen(port, '127.0.0.1', r));
   const base = `http://127.0.0.1:${port}`;
@@ -28,12 +28,12 @@ test('UI-7 thuộc tính: sửa tiêu đề và ưu tiên, kiểm tra đầu và
     await app.orchestrator.waitFor(t.id);
     let r = await json(`/api/tasks/${t.id}/props`, { title: '  Kiểm tra   email  ', priority: 'high' });
     assert.equal(r.status, 200);
-    let body = await r.json();
+    let body = await readJson<{ title?: string; priority?: string }>(r);
     assert.equal(body.title, 'Kiểm tra email');
     assert.equal(body.priority, 'high');
     assert.equal(app.store.get(t.id)?.priority, 'high');
     r = await json(`/api/tasks/${t.id}/props`, { priority: '' });
-    body = await r.json();
+    body = await readJson<{ title?: string; priority?: string }>(r);
     assert.equal(body.priority, undefined, 'chuỗi rỗng = bỏ ưu tiên');
     assert.equal((await json(`/api/tasks/${t.id}/props`, { priority: 'gấp' })).status, 400);
     assert.equal((await json(`/api/tasks/${t.id}/props`, { title: '   ' })).status, 400);
@@ -42,7 +42,7 @@ test('UI-7 thuộc tính: sửa tiêu đề và ưu tiên, kiểm tra đầu và
     const sys = fs.readFileSync(`${app.config.dataDir}/logs/system.jsonl`, 'utf8');
     assert.match(sys, /task\.updated/);
   } finally {
-    srv.close();
+    await closeServer(srv);
     app.cleanup();
   }
 });
@@ -62,7 +62,7 @@ test('UI-7 ngân sách theo agent: trần cứng tạm dừng nhiệm vụ, ch�
     assert.equal((await app.orchestrator.waitFor(t1.id)).status, 'done');
     let r = await json('/api/budgets', { scope: 'agent', target: 'backend-dev', period: 'day', tokens: 1000, softPct: 50, hard: true });
     assert.equal(r.status, 200);
-    const pol = await r.json();
+    const pol = await readJson<{ id: string; level: string; used: number }>(r);
     assert.equal(pol.level, 'hard');
     assert.ok(pol.used > 1000);
     // trùng phạm vi + đối tượng + kỳ → từ chối
@@ -80,14 +80,14 @@ test('UI-7 ngân sách theo agent: trần cứng tạm dừng nhiệm vụ, ch�
     app.orchestrator.resume(t2.id, {});
     assert.equal((await app.orchestrator.waitFor(t2.id)).status, 'done');
 
-    const list = await (await json('/api/budgets')).json();
+    const list = await readJson<{ policies: { hard: boolean }[] }>(await json('/api/budgets'));
     assert.equal(list.policies.length, 1);
     assert.equal(list.policies[0].hard, false);
     assert.equal((await json(`/api/budgets/${pol.id}`, undefined, 'DELETE')).status, 200);
     assert.equal((await json(`/api/budgets/${pol.id}`, undefined, 'DELETE')).status, 404);
     assert.ok(fs.existsSync(`${app.config.dataDir}/budgets.json`));
   } finally {
-    srv.close();
+    await closeServer(srv);
     app.cleanup();
   }
 });
@@ -163,7 +163,7 @@ test('UI-7 agent ngoài: tiến trình stdin/stdout JSON, không lộ biến bí
     assert.equal((got.agent as { id: string }).id, 'backend-dev');
     assert.equal(new ExternalRuntime('far', { type: 'http', baseUrl: 'https://agents.example.com/run', local: true }).local, false, 'máy ở xa không được tự nhận là cục bộ');
   } finally {
-    srv.close();
+    await closeServer(srv);
   }
 
   // đăng ký qua cấu hình
@@ -179,7 +179,7 @@ test('UI-8 backlog: tạo vào backlog không chạy; chuyển qua lại backlog
   try {
     let r = await json('/api/tasks', { brief: 'Viết hàm nhân hai số kèm test', agentId: 'backend-dev', backlog: true });
     assert.equal(r.status, 201);
-    const t = await r.json();
+    const t = await readJson<{ id: string; status: string; pause: { reason: string } }>(r);
     assert.equal(t.status, 'paused');
     assert.equal(t.pause.reason, 'backlog');
     await new Promise((res) => setTimeout(res, 60));
@@ -192,7 +192,7 @@ test('UI-8 backlog: tạo vào backlog không chạy; chuyển qua lại backlog
     assert.equal((await json(`/api/tasks/${t.id}/stage`, { stage: 'backlog' })).status, 409);
     assert.equal((await json('/api/tasks/T-khong-co/stage', { stage: 'todo' })).status, 404);
   } finally {
-    srv.close();
+    await closeServer(srv);
     app.cleanup();
   }
 });
@@ -209,7 +209,8 @@ test('UI-8 thuộc tính: đổi người phụ trách và dự án khi chưa b�
     // người phụ trách
     let r = await json(`/api/tasks/${t.id}/props`, { agentId: 'backend-dev' });
     assert.equal(r.status, 200);
-    let b = await r.json();
+    type Props = { mode?: string; agentId?: string; department?: string; projectId?: string; classification?: string };
+    let b = await readJson<Props>(r);
     assert.equal(b.mode, 'agent');
     assert.equal(b.agentId, 'backend-dev');
     assert.equal(b.department, 'dev');
@@ -220,16 +221,16 @@ test('UI-8 thuộc tính: đổi người phụ trách và dự án khi chưa b�
     assert.equal(app.store.get(t.id)?.projectId, undefined);
     // dự án Bảo mật → nhãn lên restricted; bỏ dự án → nhãn giữ nguyên
     r = await json(`/api/tasks/${t.id}/props`, { projectId: 'bao-mat' });
-    b = await r.json();
+    b = await readJson<Props>(r);
     assert.equal(b.projectId, 'bao-mat');
     assert.equal(b.classification, 'restricted');
     r = await json(`/api/tasks/${t.id}/props`, { projectId: '' });
-    b = await r.json();
+    b = await readJson<Props>(r);
     assert.equal(b.projectId, undefined);
     assert.equal(b.classification, 'restricted', 'không bao giờ hạ nhãn');
     // bỏ người phụ trách → về điều phối tự động
     r = await json(`/api/tasks/${t.id}/props`, { agentId: '' });
-    b = await r.json();
+    b = await readJson<Props>(r);
     assert.equal(b.mode, 'auto');
     assert.equal(b.agentId, undefined);
     // chạy xong rồi thì khóa
@@ -237,11 +238,11 @@ test('UI-8 thuộc tính: đổi người phụ trách và dự án khi chưa b�
     await app.orchestrator.waitFor(t2.id);
     r = await json(`/api/tasks/${t2.id}/props`, { agentId: 'frontend-dev' });
     assert.equal(r.status, 400);
-    assert.match((await r.json()).error, /chưa bắt đầu/);
+    assert.match((await readJson<{ error: string }>(r)).error, /chưa bắt đầu/);
     assert.equal((await json(`/api/tasks/${t2.id}/props`, { projectId: 'nho' })).status, 400);
     assert.match(fs.readFileSync(`${app.config.dataDir}/logs/system.jsonl`, 'utf8'), /người phụ trách/);
   } finally {
-    srv.close();
+    await closeServer(srv);
     app.cleanup();
   }
 });

@@ -1,0 +1,1 @@
+Trong src/slug.js: (1) thêm hàm uniqueSlugs(titles) theo SPEC.md; (2) đảm bảo `npm test` xanh. Bộ nghiệm thu ẩn kiểm tra thêm các trường hợp biên. Không thêm thư viện ngoài.

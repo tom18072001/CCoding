@@ -1,0 +1,196 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t3-api__B6w4__r3] Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Repo nhỏ (~160 dòng src), nên chia 2 hạng mục chạy song song, mỗi hạng mục sở hữu tệp riêng. Một bên làm xác thực/phân quyền/audit trên các route ghi và route theo id. Bên kia làm danh sách, lọc, sắp xếp, phân trang và xuất CSV trong module và handler mới. Hai bên nối với nhau qua hợp đồng `src/auth.js` bên dưới.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Xác thực, phân quyền, nhật ký thao tác + cập nhật test cũ (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã làm xong xác thực qua `X-User`, phân quyền admin/manager/member, nhật ký thao tác và `GET /audit`. Các route `/tasks/:id`, `POST /tasks` và `/audit` đều đi theo thứ tự 401 → 400 query → 404 → 403 → 400 body. `npm test` xanh, 8/8 test pass. `src/handlers/list.js` hiện chỉ là stub của S1, nên `GET /tasks` chưa có lọc, sắp xếp hay phân trang thật cho đến khi S2 ghi đè.
+
+## Tệp đã tạo/sửa
+- Mới: `src/auth.js` (`authenticate`, `canRead`, `visibleTasks`, và thêm `forbidden`), `src/audit.js` (`record` và route `GET /audit`).
+- Sửa: `src/handlers/tasks.js`, `src/server.js`, `src/store.js`, `test/helpers.js`, `test/tasks.test.js`.
+- Mới (test): `test/auth.test.js`, `test/audit.test.js`.
+- **Stub tạm `src/handlers/list.js`:** chỉ có `GET /tasks`, lọc nhóm theo `visibleTasks` rồi trả `{items,total,page:1,pageSize:20}`. S2 cần ghi đè tệp này và thêm `export.csv`. Nếu gộp nhánh bị xung đột ở tệp này, lấy bản của S2.
+- **Hợp đồng với S2:**
+  - `register(router, store)` nhận chính `Store`, và tôi thêm `store.store = store` để dùng được cả `ctx` lẫn `ctx.store`.
+  - `server.js` đăng ký `list` trước `tasks`, nên `/tasks/export.csv` không bị bắt nhầm là id.
+  - Nhật ký lưu ở `store.audit`.
+
+## Hợp đồng API
+- **Mọi route:** thiếu hoặc sai `X-User` → 401 `UNAUTHENTICATED`.
+- **`GET /tasks/:id`:** member xem nhiệm vụ nhóm khác → 404.
+- **`POST /tasks`:**
+  - Admin được tạo.
+  - Manager chỉ tạo cho nhóm mình, `team` khác → 403.
+  - Member → 403.
+- **`PATCH /tasks/:id`:**
+  - Member: nhiệm vụ nhóm khác → 404. Không giao cho mình, hoặc body có trường khác `status` → 403.
+  - Manager: nhiệm vụ nhóm khác, hoặc chuyển `team` sang nhóm khác → 403.
+  - Admin được sửa mọi thứ.
+  - Body sai (400) chỉ báo sau các kiểm tra quyền.
+- **`DELETE /tasks/:id`:** chỉ admin. Member nhóm khác → 404, các trường hợp còn lại không phải admin → 403.
+- **`GET /audit`:**
+  - Chỉ admin, người khác → 403.
+  - Tham số ngoài `taskId`, hoặc `taskId` lặp → 400 `INVALID_QUERY`.
+  - Kết quả mới nhất trước.
+  - Ghi nhật ký: `seq` từ 1, `at = now().toISOString()`, `changes` sắp a→z, chỉ ghi khi thao tác thành công.
+
+## Migration
+Không áp dụng. Dữ liệu chỉ nằm trong bộ nhớ, không có schema hay migration.
+
+## Kiểm chứng
+- `npm test` → exit 0 (đọc qua `tail`, nên exit code là của `tail`; không có dòng fail nào). Kết quả: tests 8, pass 8, fail 0, skipped 0.
+
+## Việc còn lại
+- **S2:** ghi đè `src/handlers/list.js` (danh sách đầy đủ và `export.csv`, dùng `authenticate` và `visibleTasks` từ `src/auth.js`) cùng `src/query.js`, `src/csv.js` và test của họ. Test `CRUD cơ bản` hiện chỉ kiểm tra `items.length`/`total` trên stub, có thể phải chỉnh lại sau khi S2 gộp.
+- **Chưa làm:** `GET /tasks/:id` không kiểm tra tham số truy vấn, vì đặc tả không yêu cầu.
+- **Biến môi trường mới:** không có.
+
+Bản đầy đủ: `.ccoding/T-20261113-205907-1d6/outputs/dev-S1-backend-dev.md`
+
+### S2 — Danh sách lọc/tìm/sắp xếp/phân trang + xuất CSV (@senior-swe, done)
+
+## Tóm tắt
+S2 đã xong: `query.js`, `csv.js`, `handlers/list.js` và hai tệp test. Test của S2 chạy xanh khi tôi dùng stub tạm cho `auth.js` và nối `server.js`. Hai thứ này thuộc S1 nên tôi đã gỡ stub. Trên worktree sạch, các test của S2 sẽ đỏ cho đến khi gộp với S1.
+
+## Tệp đã tạo/sửa
+- `src/query.js` · parse query theo thứ tự xuất hiện, báo 400 `INVALID_QUERY` kèm `field` cho tham số trùng, lạ hoặc sai giá trị. Gồm kiểm tra ngày theo lịch, lọc, `q` bỏ dấu, sắp xếp và phân trang.
+- `src/csv.js` · xuất CSV theo đặc tả: BOM, header, CRLF kể cả sau dòng cuối, quoting RFC 4180, chống công thức.
+- `src/handlers/list.js` · `register(router, ctx)` đăng ký `GET /tasks` và `GET /tasks/export.csv`. Handler gọi `authenticate` rồi `parseQuery` rồi lọc. Header CSV gửi thẳng bằng `res.writeHead/end`.
+- `test/list.test.js` · 10 test qua HTTP thật.
+- `test/csv.test.js` · 3 test (unit và HTTP).
+- Không sửa `tasks.js`, `server.js`, `helpers.js`, `auth.js`.
+
+## Kiểm chứng
+- `npm test` với stub tạm (đã gỡ) → exit 1, pass 15, fail 1. Test lỗi duy nhất là `CRUD cơ bản` trong `test/tasks.test.js`, vì nó chưa gửi `X-User` và vẫn dùng dạng kết quả cũ. Việc cập nhật test này thuộc S1. Tôi chỉ đọc kết quả pass/fail trong log, chưa kiểm tra riêng từng test.
+- `git status` sau khi gỡ stub → chỉ còn 5 tệp mới của S2.
+- Test helper hiện có (`test/helpers.js`) đã cho phép truyền header, nên các test của S2 gửi `x-user` qua `call` mà không cần sửa helper.
+
+## Quyết định thiết kế
+- `list.js` nhận `ctx` là `Store` hoặc `{ store }`, vì `tasks.register` hiện nhận thẳng `store`.
+- Tham số `page`/`pageSize` ở export bị coi là tham số lạ, nên báo 400 đúng thứ tự xuất hiện.
+- Member vẫn bị lọc theo nhóm ở `filterSort`, ngoài `visibleTasks` của S1. Cách này tránh lộ dữ liệu nếu `visibleTasks` lỏng hơn.
+- Task không có `dueDate` luôn xếp cuối và hòa theo id số, kể cả khi sắp giảm dần.
+
+## Rủi ro & việc còn mở
+- **S1 phải nối `list.register(router, store)` vào `server.js` TRƯỚC `tasks.register`.** Nếu không, `/tasks/export.csv` bị khớp vào `/tasks/:id`. S1 cũng phải xóa route `GET /tasks` cũ trong `tasks.js`.
+- `src/auth.js` phải export `authenticate(req, store)` (throw 401 `UNAUTHENTICATED`) và `visibleTasks(user, tasks)`.
+- `list.js` require `../auth` ngay khi nạp. Nếu `auth.js` chưa có thì `require('../src/server')` sẽ lỗi.
+- Test của S2 giả định seed hiện tại (12 task, user `u1` admin, `u2` manager A, `u3` và `u6` member A, `u4` member B). Nếu seed đổi thì cần chỉnh lại.
+
+## Gộp lại sau xung đột
+Xung đột chỉ nằm ở `src/handlers/list.js`. Tôi đã giải quyết xong, không còn dấu xung đột trong `src/` và `test/`. Sau khi sửa, `npm test` cho 22 test, 22 pass, 0 fail. Lệnh `grep -c` đếm dấu xung đột trả exit 1 vì không có dòng nào khớp, không phải lỗi.
+
+## Tệp đã tạo/sửa
+- `src/handlers/list.js`: xung đột giữa hai bản.
+  - Phía HEAD (S1) là bản stub tạm. Nó chỉ dùng `authenticate` và `visibleTasks` để trả danh sách chưa lọc. Chính ghi chú trong stub cũng nói S2 sẽ ghi đè bằng bản thật.
+  - Phía S2 là bản thật. Nó đăng ký `GET /tasks` và `GET /tasks/export.csv`, dùng `parseQuery`, `filterSort`, `paginate` và `toCsv`.
+  - Tôi giữ bản thật của S2 và bỏ stub. Hàm `register(router, ctx)` vẫn nhận `store` do `server.js` truyền vào. Các import `authenticate` và `visibleTasks` từ `auth.js` của S1 vẫn được dùng.
+- `test/list.test.js` và `test/csv.test.js`: `helpers.js` của S1 nay mặc định gửi `X-User: u1`. Hai test "thiếu X-User" vì vậy trả 400 thay vì 401. Tôi đổi cả hai sang `{ user: null }` để không gửi header.
+
+## Kiểm chứng
+- `npm test` lần đầu sau khi gỡ xung đột → exit 1, 2 test đỏ: "thiếu X-User → 401…" (list.test.js) và "HTTP export.csv…" (csv.test.js). Nguyên nhân là default user của helpers, như nêu ở trên.
+- `npm test` sau khi sửa hai test → 22 test, 22 pass, 0 fail.
+
+## Quyết định thiết kế
+Không áp dụng ngoài việc chọn bản S2 thay cho stub của S1.
+
+## Rủi ro & việc còn mở
+- Chưa tự `git add`/commit. CCoding hoàn tất merge.
+- `server.js` đăng ký `list` trước `tasks`, nên
+…[đã cắt 54 ký tự]
+
+Bản đầy đủ: `.ccoding/T-20261113-205907-1d6/outputs/dev-S2-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+## Thay đổi trong repo
+
+src/audit.js          |  26 +++++++++++
+ src/auth.js           |  24 ++++++++++
+ src/csv.js            |  19 ++++++++
+ src/handlers/list.js  |  29 ++++++++++++
+ src/handlers/tasks.js |  61 +++++++++++++++++++------
+ src/query.js          | 117 +++++++++++++++++++++++++++++++++++++++++++++++
+ src/server.js         |   4 ++
+ src/store.js          |   2 +
+ test/audit.test.js    |  41 +++++++++++++++++
+ test/auth.test.js     |  67 +++++++++++++++++++++++++++
+ test/csv.test.js      |  65 +++++++++++++++++++++++++++
+ test/helpers.js       |   5 ++-
+ test/list.test.js     | 122 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ test/tasks.test.js    |   3 +-
+ 14 files changed, 569 insertions(+), 16 deletions(-)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261113-205907-1d6` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **64 in / 33.8k out**, cache đọc 681.9k, 5 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 44 | 16712 | 511687 | 2 |
+| Backend Developer (@backend-dev) | dev | 14 | 13204 | 148196 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 3450 | 21407 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 451 | 649 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Xác thực, phân quyền, nhật ký thao tác + cập nhật test cũ (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 Danh sách lọc/tìm/sắp xếp/phân trang + xuất CSV (@senior-swe)
+
+### Thay đổi trong repo
+- Worktree: `<root>\ccoding-e78\workspaces\vb-61f850eb5957\wt-T-20261113-205907-1d6` · nhánh: `ccoding/t-20261113-205907-1d6` · commit: 28c87a9a23 — 5 commit trên nhánh từ a9454bdbba (gồm gộp worktree con)
+- Xem thay đổi: `git diff a9454bdbba..ccoding/t-20261113-205907-1d6` · gộp sau khi review: `git merge ccoding/t-20261113-205907-1d6` · dọn worktree: `git worktree remove "<root>\ccoding-e78\workspaces\vb-61f850eb5957\wt-T-20261113-205907-1d6"`
+
+```
+src/audit.js          |  26 +++++++++++
+ src/auth.js           |  24 ++++++++++
+ src/csv.js            |  19 ++++++++
+ src/handlers/list.js  |  29 ++++++++++++
+ src/handlers/tasks.js |  61 +++++++++++++++++++------
+ src/query.js          | 117 +++++++++++++++++++++++++++++++++++++++++++++++
+ src/server.js         |   4 ++
+ src/store.js          |   2 +
+ test/audit.test.js    |  41 +++++++++++++++++
+ test/auth.test.js     |  67 +++++++++++++++++++++++++++
+ test/csv.test.js      |  65 +++++++++++++++++++++++++++
+ test/helpers.js       |   5 ++-
+ test/list.test.js     | 122 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ test/tasks.test.js    |   3 +-
+ 14 files changed, 569 insertions(+), 16 deletions(-)
+```
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 22 · ℹ suites 0 · ℹ pass 22 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 72 | 78 | 100 | 1 | 2 | 528k | 7/26 | — |
+| Backend Developer (@backend-dev) | dev | **70** B | thấp | — | — | 100 | 100 | 95 | 100 | 1 | 1 | 161k | 1/16 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 25k | 0/1 | — |
+| Điều phối viên (@orchestrator) | office | **60** C | thấp | — | — | — | — | 100 | — | 0 | — | 1k | — | — |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 65 B):
+  - Thao tác công cụ lỗi nhiều (7/26, 27%; nhiều nhất ở run_command 7/19) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

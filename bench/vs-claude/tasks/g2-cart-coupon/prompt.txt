@@ -1,0 +1,1 @@
+Thêm applyCoupon(totalCents, coupon) vào src/cart.js theo SPEC.md và đảm bảo `npm test` xanh. Bộ nghiệm thu ẩn kiểm tra thêm các trường hợp biên. Không thêm thư viện ngoài.

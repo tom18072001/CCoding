@@ -1,0 +1,14 @@
+Cả 6 lỗi trong ISSUES.md đã được sửa và `npm test` xanh (14 test, 0 lỗi). Test hồi quy nằm ở `test/regression.test.js`, mỗi lỗi một test. API công khai không đổi.
+
+| # | Nguyên nhân gốc | Cách sửa |
+|---|---|---|
+| 1 | `Math.round(1.005 * 100)` ra 100 vì sai số nhị phân của số thực. | `toCents` dịch dấu thập phân bằng chuỗi rồi làm tròn half away from zero, nên `1.005` → 101 và `-1.005` → -101. `src/checkout.js` dùng `toCents` cho mã giảm cố định. Giá sản phẩm và giá trị đơn tối thiểu vốn đã dùng `toCents`. |
+| 2 | `allocate` chỉ lấy phần nguyên, không chia số xu dư. | Chia theo phần dư lớn nhất: số dư tính bằng số nguyên, phần lẻ bằng nhau thì phần đứng trước được trước. |
+| 3 | `freeUnits` tính `floor(qty / buy) * free`. | Đổi thành `floor(qty / (buy + free)) * free`, chỉ tính các nhóm đủ `buy + free` món. |
+| 4 | `endsAt` được hiểu là 00:00 UTC của ngày đó. | Với `endsAt` dạng `YYYY-MM-DD`, mã hết hạn từ 00:00 UTC ngày hôm sau. |
+| 5 | `updateQty` giữ chỗ lại toàn bộ số lượng mới thay vì phần chênh lệch, và `removeItem` không trả hàng về kho. | `updateQty` giữ thêm hoặc trả về đúng phần chênh lệch. `removeItem` trả lại toàn bộ số lượng của dòng đó. |
+| 6 | Thuế tính trên `gross` thay vì `net`. | `lineTax` giờ nhận `net`. |
+
+Ngoài 6 lỗi, tôi thêm hàm `roundHalf` ở `src/money.js` để làm tròn % giảm giá và thuế mà không bị nhiễu số thực. `src/index.js` re-export toàn bộ `money.js` nên `roundHalf` cũng xuất hiện ở API công khai.
+
+Tôi chưa chạy bộ nghiệm thu ẩn, chỉ có các test trong repo.

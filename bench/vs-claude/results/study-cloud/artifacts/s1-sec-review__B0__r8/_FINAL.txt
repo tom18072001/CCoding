@@ -1,0 +1,79 @@
+# Báo cáo tổng hợp — Security review `src/server.js` (T-20261102-163133-987)
+
+## Tóm tắt
+`findings.json` đã có ở thư mục gốc repo, gồm 7 finding: hardcoded secret (dòng 11), SQLi (30), path traversal (42), MD5 cho mật khẩu (58), SSRF (65), thiếu phân quyền khi xóa ticket (70) và command injection (84). Hai lỗi critical là dòng 30 và dòng 84. `src/` không bị sửa. Lúc tổng hợp, tôi đã tự đọc lại `src/server.js` và `findings.json` để kiểm, vì ghi chú hệ thống nói người review S2 chưa chạy lệnh nào. Không còn blocker.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Rà 9 route, viết `findings.json` | `@security` | Đạt sau khi sửa theo review: bỏ finding `missing-authn` ở dòng 18 | `findings.json`; `.ccoding/T-20261102-163133-987/outputs/dev-S1-security.md`; S1 có ghi đã chạy `grep -n verifyJwt -r src` và parse JSON bằng node |
+| S2 | Rà chéo từng finding: loại false positive, chuẩn hóa số dòng và severity | `@senior-swe` | Đạt, giữ nguyên 7 finding | `.ccoding/T-20261102-163133-987/outputs/dev-S2-senior-swe.md`. Báo cáo S2 ghi đã chạy parse và `git diff`, nhưng ghi chú hệ thống nói reviewer không chạy lệnh nào. Vì vậy tôi đã tự kiểm lại (xem dòng dưới) |
+| Kiểm lúc tổng hợp | Đối chiếu file với mã nguồn | `@dev-lead` | Đạt | Chạy `cat -n src/server.js`, `cat findings.json`, `git status --short`. Kết quả: 7 phần tử, mỗi số dòng trỏ đúng sink, chỉ có `?? findings.json` |
+
+## Quyết định
+- **Chỉ báo lỗi có đường khai thác rõ**, vì đề bài phạt false positive. Mỗi lỗi một finding. Dòng 70 chỉ báo `missing-authz`.
+- **Bỏ dòng 18 (`verifyJwt`).** Hàm này không được import và cũng không được định nghĩa ở đâu, nên khi chạy sẽ ném `ReferenceError` và Express trả 500. Request bị chặn chứ không lọt qua (fail closed). Đây là lỗi chức năng, không phải lỗ hổng bảo mật.
+- **Các mẫu "trông nguy hiểm" nhưng an toàn, nên không báo:**
+  - Dòng 36: tên bảng là hằng số, còn giá trị đi qua `$1`.
+  - Dòng 48: có tham số và có kiểm tra `owner_id`.
+  - Dòng 50–52: dùng `basename` kèm danh sách đuôi file cho phép.
+  - Dòng 76–79: `execFile` truyền tham số dạng mảng, có regex kiểm tra, và chỉ admin gọi được.
+  - XSS/CSRF: không có route nào trả HTML, và API xác thực qua header `Authorization` nên không bị CSRF.
+- **Severity:** dòng 30 và 84 là critical vì user thường đã đăng nhập có thể chiếm DB hoặc chạy lệnh (RCE). Các finding còn lại là high.
+
+## Kết quả review
+- S2 duyệt cả 7 finding, không thấy trùng lặp và không có decoy nào bị báo nhầm.
+- Khi tổng hợp, tôi kiểm lại thì số dòng và loại lỗi đều khớp mã nguồn, mỗi finding có một câu `fix` cụ thể, và JSON đúng schema của đề bài.
+- Tôi cũng xem xét thêm một ý: `res.send(await r.text())` ở dòng 66 trả nội dung tải về với Content-Type mặc định là HTML, nên có thể bị XSS. Tôi không báo riêng vì nó cùng gốc với lỗi SSRF ở dòng 65, và khó khai thác cross-site vì request cần body JSON.
+
+## Việc còn mở & rủi ro
+- **Giả định về dòng 18:** nếu khi chạy thật `verifyJwt` lại là một hàm toàn cục trả `null` thay vì ném lỗi, thì `requireUser` cho mọi token đi qua và dòng 18 thành lỗ hổng bypass xác thực (`missing-authn`, critical). Trong repo không có bằng chứng cho giả định này.
+- Chưa chạy ứng dụng hay `npm audit`. Toàn bộ kết luận đến từ đọc mã tĩnh, đúng phạm vi đề bài.
+- Secret ở dòng 11 đã nằm trong lịch sử git, nên phải rotate chứ chỉ xóa khỏi mã là chưa đủ.
+
+## Bước tiếp theo
+Đề xuất tách thành các nhiệm vụ riêng nếu muốn sửa mã (nằm ngoài đề bài này):
+1. **Sửa 2 lỗi critical (dòng 30, 84)** — `@backend-dev`. Xong khi có test chứng minh `q=' OR 1=1--` không trả toàn bộ bảng và `format=csv;id` không chạy được lệnh.
+2. **Sửa path traversal, SSRF, authz (dòng 42, 65, 70)** — `@backend-dev`. Xong khi có test cho thấy `..%2f` bị chặn, URL tới `127.0.0.1` hoặc `169.254.x.x` bị từ chối, và user thường xóa ticket của người khác nhận 403 hoặc 404.
+3. **Secret và băm mật khẩu (dòng 11, 58)** — `@backend-dev` cùng `@devops`. Xong khi secret được đọc từ env hoặc secret manager và đã rotate, mật khẩu băm bằng bcrypt hoặc argon2, và có kế hoạch rehash mật khẩu cũ.
+4. **Hiện thực `verifyJwt` cho đúng** — `@senior-swe`. Xong khi token sai trả 401 chứ không phải 500, có test, và rủi ro ở dòng 18 được đóng.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-163133-987` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **42 in / 17.0k out**, cache đọc 226.3k, 9 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Chuyên viên ATTT (@security) | dev | 12 | 5704 | 70531 | 2 |
+| QA Engineer (@qa-tester) | dev | 10 | 3024 | 57570 | 2 |
+| Senior Software Engineer (@senior-swe) | dev | 10 | 3432 | 55374 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 8 | 4501 | 40530 | 2 |
+| Điều phối viên (@orchestrator) | office | 2 | 337 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-security.md` — S1 Security review src/server.js và viết findings.json (@security)
+- `outputs/dev-S2-senior-swe.md` — S2 Rà chéo findings: loại false positive, chuẩn hóa dòng và severity (@senior-swe)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Chuyên viên ATTT (@security) | dev | **71** B | 50 | 89 | 100 | 60 | 1 | 2 | 76k | 0/4 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 61k | 0/3 |
+| Senior Software Engineer (@senior-swe) | dev | **74** B | 50 | 100 | 100 | 60 | 1 | 2 | 59k | 0/3 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **80** A | 50 | 100 | 100 | 100 | 0 | — | 45k | 0/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Chuyên viên ATTT** (@security, 71 B):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+  - Qua review lần đầu 0/1 hạng mục, còn blocker ở review cuối 0/1 (bị nêu qua các vòng: 0 blocker, 1 major). Lỗi ở review cuối: —
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 2/2 lần — kết luận dựa trên lời tự khai trong báo cáo.
+- **Senior Software Engineer** (@senior-swe, 74 B):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+  - Qua review lần đầu 0/1 hạng mục, còn blocker ở review cuối 0/1 (bị nêu qua các vòng: 0 blocker, 1 major). Lỗi ở review cuối: —
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

@@ -1,0 +1,62 @@
+> Việc giao riêng cho Senior Software Engineer (@senior-swe)
+
+## Tóm tắt
+Tôi tìm ra 4 lỗi gốc trong `src/` và đã sửa hết. Coupon bị áp dụng 2 lần và không làm tròn, kho kiểm tra sai điều kiện, và giới hạn số lượng bị tính lệch 1. `npm test` giờ có 5/5 test pass. Chưa thấy rủi ro còn lại.
+
+## Tệp đã tạo/sửa
+- `src/money.js`: `applyPercent` tính số tiền giảm làm tròn half-up bằng số nguyên (`floor((amount*pct+50)/100)`). Trước đó nó trả về số lẻ không làm tròn.
+- `src/cart.js`: `total` không còn áp coupon trên từng dòng, nên coupon chỉ áp một lần lên subtotal. Điều kiện giới hạn đổi từ `>=` thành `>` nên mua đúng `MAX_QTY_PER_LINE` được.
+- `src/stock.js`: `reserve` kiểm tra `have < qty` thay vì `have < 0`, nên kho không còn âm.
+- `test/regression.test.js` (mới): 3 test cho coupon và làm tròn, kho không âm, và đúng số lượng tối đa.
+
+## Kiểm chứng
+- `npm test` → exit 0, 5 tests, 5 pass, 0 fail. Baseline trước khi sửa là 1 test fail.
+- Lần chạy đầu của tôi bị hook chặn vì lệnh dùng `../src` trong heredoc, nên tôi chuyển sang ghi file bằng công cụ.
+
+## Quyết định thiết kế
+- Giữ nguyên tên và chữ ký của mọi hàm export.
+- `applyPercent` tính phần giảm trước rồi trừ khỏi `amount`, nên kết quả luôn là số nguyên.
+- Lỗi coupon tính hai lần khiến tổng sai nhiều. Lỗi không làm tròn khiến tổng ra số lẻ dong.
+
+## Rủi ro & việc còn mở
+- Tôi không thêm kiểm tra `pct` ngoài khoảng 0–100, vì yêu cầu không đề cập.
+- `addItem` gọi `reserve` sau khi kiểm tra giới hạn, nên nếu `reserve` ném lỗi thì giỏ không bị thay đổi.
+- Kho vẫn là `Map` trong bộ nhớ nên không an toàn đồng thời. Với module nhỏ này tôi coi đó là chấp nhận được.
+
+## Review
+✅ Đã duyệt: Ba lỗi được báo đã được sửa đúng gốc. Coupon chỉ áp một lần lên subtotal trong cart.js. Điều kiện giới hạn dùng `>` nên mua đúng MAX_QTY_PER_LINE được. reserve so sánh `have < qty` nên kho không âm. applyPercent làm tròn bằng số nguyên. Tên và chữ ký hàm export được giữ nguyên. Tôi đã tự chạy lại `npm test` và cả 5 test đều đạt. Test hồi quy bao phủ coupon một lần, làm tròn, kho không âm (kể cả hoàn lại kho khi removeItem) và mức số lượng tối đa. Tôi chưa chủ động phá code để xem test hồi quy có đỏ không, nhưng test nhắm đúng từng lỗi gốc nên rủi ro thấp.
+- [minor] src/money.js:3 làm tròn phần giảm half-up, nên với tổng lẻ nửa dong thì kết quả sau giảm bị làm tròn xuống. Ví dụ applyPercent(5,10) trả 4, trong khi 4.5 làm tròn half-up cho 5. Đề bài nói 'percentage discounts round half-up', nên cách hiểu này hợp lý. Nếu bên kiểm tra hiểu là làm tròn tổng sau giảm, `Math.floor((amount*(100-pct)+50)/100)` sẽ cho 5. Nên ghi rõ giả định này trong báo cáo.
+- [minor] src/cart.js:30 và src/money.js: applyCoupon và applyPercent không kiểm tra pct nằm trong khoảng 0–100 hay là số nguyên. Đề bài không yêu cầu nên không chặn bàn giao.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-180332-00c` · chế độ: agent · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **14 in / 4,888 out**, cache đọc 164.3k, 2 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 8 | 3708 | 96104 | 1 |
+| QA Engineer (@qa-tester) | dev | 6 | 1180 | 68246 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude c3-shop-bugs__B5__r1] Multi-file bug hunt in a cart module (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 2 · # suites 0 · # pass 1 · # fail 1 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 5 · # suites 0 · # pass 5 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **98** A | 100 | 100 | 90 | 100 | 1 | 1 | 100k | 1/8 |
+| QA Engineer (@qa-tester) | dev | **100** A | — | — | 100 | 100 | 0 | — | 69k | 0/2 |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

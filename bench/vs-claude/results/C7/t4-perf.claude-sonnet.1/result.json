@@ -1,0 +1,84 @@
+{
+ "run": {
+  "exitCode": 0,
+  "status": "done",
+  "wallSec": 45,
+  "costUsd": 0.13845079999999998,
+  "turns": 4,
+  "tokens": {
+   "input": 8,
+   "output": 5693,
+   "cacheRead": 163462,
+   "cacheWrite": 16252
+  },
+  "models": [
+   "claude-haiku-5-5",
+   "claude-sonnet-5-5"
+  ],
+  "modelUsage": {
+   "claude-haiku-5-5": {
+    "inputTokens": 1366,
+    "outputTokens": 28,
+    "cacheReadInputTokens": 0,
+    "cacheCreationInputTokens": 0,
+    "webSearchRequests": 0,
+    "costUSD": 0.0001506,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000,
+    "thinkingTokens": 0,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 0,
+    "canonicalModel": "claude-haiku-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   },
+   "claude-sonnet-5-5": {
+    "inputTokens": 8,
+    "outputTokens": 5693,
+    "cacheReadInputTokens": 163462,
+    "cacheCreationInputTokens": 16252,
+    "webSearchRequests": 0,
+    "costUSD": 0.13830019999999998,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 64000,
+    "thinkingTokens": 1943,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 16252,
+    "canonicalModel": "claude-sonnet-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   }
+  },
+  "finalText": "Tôi đã viết lại `buildReport` trong `src/report.js`. Với 200.000 dòng, `npm run bench` chạy mất khoảng 363 ms, so với ~15 giây trước đây. `npm test` xanh (3/3 test).\n\n**Nguyên nhân chậm:** bản cũ lặp lại các phép quét toàn bộ mảng (`products.find`, `includes`, `filter` lồng nhau) cho từng sản phẩm, danh mục, tháng và khách hàng. Bản mới duyệt `orders` một lượt và gom số liệu bằng `Map`/`Set`.\n\n**Các hành vi lạ của bản cũ vẫn được giữ nguyên:**\n- Khi `sku` trùng trong `products`, vẫn lấy bản ghi đầu tiên.\n- Thứ tự phần tử vẫn theo lần xuất hiện đầu, và các hàm so sánh khi sắp xếp giữ nguyên.\n- Dòng `refunded` mang dấu âm, còn dòng `cancelled` bị bỏ.\n- Sản phẩm có `revenue <= 0` không vào `topProducts`.\n- `refunds` chỉ cộng các dòng có `amount < 0`, còn `orders` và `customers` theo tháng chỉ đếm các dòng `paid`.\n- Phép `JSON.parse(JSON.stringify(...))` của bản cũ biến `NaN` và `Infinity` thành `null`, và `-0` thành `0`. Bản mới làm giống vậy.\n\n**Test mới** nằm ở `test/report.test.js`. Test so sánh kết quả với bản cũ, được giữ nguyên tại `test/report.legacy.js`. Nó dùng `deepStrictEqual` trên 12 bộ dữ liệu sinh ngẫu nhiên, với nhiều tổ hợp `topN`, `from` và `to`. Các trường hợp đặc biệt được kiểm tra gồm: `sku` trùng, giá trị `-0`, đầu vào rỗng, nhiều dòng bằng điểm nhau, và múi giờ âm.\n\nTôi chưa chạy so sánh với bản cũ trên 200.000 dòng, vì bản cũ mất ~15 giây. Test chỉ so trên các bộ nhỏ hơn.",
+  "workdir": "/tmp/bw/C7-t4-perf.claude-sonnet.1-sx31ls/repo"
+ },
+ "task": "t4-perf",
+ "system": "claude-sonnet",
+ "rep": 1,
+ "key": "t4-perf.claude-sonnet.1",
+ "env": "cloud",
+ "startedAt": "2026-11-02T04:51:16.884Z",
+ "finishedAt": "2026-11-02T04:52:06.309Z",
+ "grade": {
+  "hidden": {
+   "pass": 19,
+   "fail": 0,
+   "total": 19,
+   "failed": [],
+   "ms": 2909,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 3,
+   "fail": 0,
+   "total": 3
+  },
+  "changed": [
+   "~src/report.js",
+   "+test/report.legacy.js",
+   "~test/report.test.js"
+  ],
+  "perfMs": 176
+ },
+ "audit": []
+}

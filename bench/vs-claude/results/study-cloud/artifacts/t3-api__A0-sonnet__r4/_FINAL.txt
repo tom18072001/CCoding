@@ -1,0 +1,23 @@
+Cả 4 tính năng trong FEATURES.md đã được hiện thực và `npm test` xanh (6/6 test). Tôi chỉ chạy test, chưa chạy `npm start` hay thử API thủ công.
+
+- **Xác thực & phân quyền:**
+  - Header `X-User` được kiểm tra ở mọi route `/tasks…` và `/audit`; thiếu hoặc sai trả 401.
+  - Quyền admin/manager/member theo đặc tả. Member truy cập nhiệm vụ nhóm khác nhận 404.
+  - Thứ tự kiểm tra là 401, 400 tham số truy vấn, 404, 403, rồi 400 validate body. Body JSON hỏng chỉ báo lỗi sau các kiểm tra quyền.
+- **Lọc/tìm/sắp xếp/phân trang:**
+  - `GET /tasks` trả `{ items, total, page, pageSize }`.
+  - Tham số lạ, tham số lặp hay giá trị sai trả `INVALID_QUERY` kèm `field`, và báo tham số đầu tiên theo thứ tự trên URL.
+  - `q` bỏ dấu tiếng Việt như đặc tả.
+  - Hòa điểm theo `id` số tăng dần, nhiệm vụ không có `dueDate` luôn xuống cuối, `title` so bằng `localeCompare` với locale `vi`.
+- **Xuất CSV:**
+  - `GET /tasks/export.csv` dùng chung bộ lọc, tìm kiếm, sắp xếp và quyền với danh sách; `page`/`pageSize` bị từ chối 400.
+  - Có BOM, `\r\n` sau mọi dòng, quote theo RFC 4180 và thêm `'` chống chèn công thức.
+- **Nhật ký:** Mỗi `POST`, `PATCH`, `DELETE` thành công ghi một mục `{ seq, at, userId, action, taskId, changes }`. `GET /audit` chỉ admin dùng được, trả mới nhất trước, có lọc `taskId`.
+
+Hai điểm tôi quyết định ngoài đặc tả:
+- Manager gửi `team` không hợp lệ (ví dụ `"C"`) khi tạo hoặc sửa nhận 403, vì đó là "khác nhóm mình". Thiếu `team` khi tạo thì vẫn là 400 validate.
+- `dueDate` trong body của `POST`/`PATCH` giờ cũng bị kiểm tra là ngày có thật theo lịch, không chỉ đúng dạng `YYYY-MM-DD`.
+
+Test cũ trong `test/tasks.test.js` đã sửa cho khớp dạng kết quả mới và thêm header `X-User`. `test/features.test.js` là file mới, mỗi tính năng một test. Test CSV kiểm BOM bằng byte thô, vì `fetch().text()` tự bỏ BOM khi giải mã.
+
+Phần code chính nằm ở `src/handlers/tasks.js`; `src/store.js` thêm bộ ghi nhật ký.

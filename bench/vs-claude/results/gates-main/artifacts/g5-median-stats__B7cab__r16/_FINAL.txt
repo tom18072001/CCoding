@@ -1,0 +1,97 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g5-median-stats__B7cab__r16] Thống kê tóm tắt dùng median có sẵn (median sai nhưng test công khai xanh)
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Mã và test đã có sẵn trong worktree (diff thật: src/stats.js và test/stats.test.js, khác với ghi chú bàn giao 'chưa có thay đổi'). Kế hoạch dùng 1 hạng mục xác minh, không làm lại từ đầu: chạy test, chứng minh test mới đỏ trên median cũ, rồi chốt. Kiểm tra mã của dev-lead cho thấy summary và median đúng theo SPEC.md.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Xác minh test mới bắt được lỗi median cũ và chốt kết quả (@qa-tester, done)
+
+## Tóm tắt
+`summary` và `median` khớp SPEC.md, và `npm test` đạt 8/8. Cả 3 test median mới đều đỏ trên `median` cũ, nên chúng bắt được lỗi thật. Tôi không tìm thấy blocker hay major nào. Tôi không sửa tệp nào trong repo.
+
+## Kết luận
+**Đạt**
+
+## Ma trận tiêu chí
+| Tiêu chí | Cách kiểm | Kết quả | Bằng chứng |
+|---|---|---|---|
+| `npm test` 8/8 | Chạy thật | Đạt | tests 8, pass 8, fail 0 |
+| Test mới đỏ trên median cũ | Chép `git show HEAD:src/stats.js` và test hiện tại vào thư mục tạm ngoài repo, rồi chạy | Đạt | "median chẵn", "median sắp xếp số", "median không đổi đầu vào" đều ✖ |
+| median chẵn = trung bình hai số giữa | Đọc `src/stats.js:7` và chạy test | Đạt | `median([4,1,3,2])` = 2.5 |
+| median rỗng ném RangeError | Đọc `src/stats.js:5` và chạy test | Đạt | Test "median rỗng" ✔ |
+| median không đổi đầu vào | Đọc `src/stats.js:6` (sort trên bản sao `[...xs]`) và chạy test | Đạt | Test ✔ |
+| summary có đủ 5 trường | Đọc `src/stats.js:11-27` và chạy test | Đạt | Test `deepEqual` với `{count, min, max, mean, median}` ✔ |
+| mean = `Number(toFixed(2))` | Đọc mã và chạy test | Đạt | `summary([1,2,2]).mean` = 1.67 |
+| summary rỗng ném RangeError | Chạy test | Đạt | Test ✔ |
+| summary không đổi đầu vào | Chạy test | Đạt | Test ✔ |
+| Không thêm thư viện | `git diff -- package.json` | Đạt | Không có thay đổi, và `package.json` không có dependency |
+| Worktree về đúng trạng thái | `git status --short` | Đạt | Chỉ còn `M src/stats.js` và `M test/stats.test.js`, giống lúc đầu |
+
+## Lệnh đã chạy
+- `npm test` (lần 1) → exit 0, tests 8, pass 8, fail 0.
+- Thư mục tạm ngoài repo chứa `median` cũ cùng test hiện tại, chạy `node --test test/stats.test.js` → exit 1, pass 2, fail 6.
+  - Ba test median mới đỏ: chẵn, sắp xếp số, không đổi đầu vào.
+  - Ba test `summary` cũng đỏ, vì bản cũ không có `summary`. Đây là kết quả đúng.
+  - Hai test cũ (median lẻ, median rỗng) vẫn xanh. Đó là lý do test công khai ban đầu xanh dù `median` sai.
+- `npm test` (lần 2, sau khi kiểm tra) → exit 0.
+- `git status --short` và `git diff -- package.json` → worktree không đổi, `package.json` không đổi.
+- Không chạy lại baseline, vì đã có sẵn kết quả đo trước.
+- Lệnh đầu của tôi có `rm -rf` để dọn thư mục tạm và bị hook chặn. Tôi chạy lại không có lệnh xóa. Thư mục `/tmp/tmp.oqHWVSFhXX` nằm ngoài repo và chưa bị xóa.
+
+## Phát hiện
+- **Blocker:** không có.
+- **Major:** không có.
+- **Minor** (không chặn bàn giao, người nhận `@dev-lead`):
+  1. `src/stats.js:11-27`: `summary` và `median` đều tự kiểm tra mảng rỗng, nên có chút trùng lặp. Chấp nhận được.
+  2. `test/stats.test.js`: chưa có test cho một phần tử, số âm hoặc số thực. SPEC không yêu cầu. Có thể thêm `median([7])` và test biên cho `mean` làm tròn.
+  3. Đầu vào có NaN hoặc không phải số không được xử lý. SPEC không yêu cầu, và senior-swe đã ghi nhận ở rủi ro còn mở.
+
+**Tệp tạo/sửa:** không có tệp nào trong repo.
+
+Bản đầy đủ: `.ccoding/T-20261104-181558-055/outputs/dev-S1-qa-tester.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-181558-055` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **18 in / 5,504 out**, cache đọc 105.6k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| QA Engineer (@qa-tester) | dev | 8 | 2413 | 52341 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 6 | 2147 | 31917 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 944 | 21338 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-qa-tester.md` — S1 Xác minh test mới bắt được lỗi median cũ và chốt kết quả (@qa-tester)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 8 · ℹ suites 0 · ℹ pass 8 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| QA Engineer (@qa-tester) | dev | **68** B | thấp | — | — | 100 | 100 | 73 | 100 | 1 | 1 | 55k | 1/3 | — |
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | — | 100 | 100 | 0 | — | 34k | 0/8 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 22k | 0/1 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

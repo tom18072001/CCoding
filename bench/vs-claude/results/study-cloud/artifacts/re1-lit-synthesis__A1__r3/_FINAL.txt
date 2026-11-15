@@ -1,0 +1,8 @@
+**Stage 4: Final report.** I wrote both files at the repo root. `answer.json` parses as valid JSON. `REVIEW.md` is 480 words by `wc -w`, inside the 300–500 range, and cites only [P1]–[P6].
+
+- **q1:** P4 (LogGraphT) has the highest full-split F1, at 0.962. P2's 0.971 is on HDFS-X-small, which P6 says isn't comparable to the full split, so I excluded it.
+- **q2:** P5 reports 0.5% labeled data, on BGL-X.
+- **q3:** The corpus doesn't give an energy figure, so `not_in_corpus` is true. P4 reports only latency (3.1 ms per session on one A100).
+- **q4:** P1 says parsing is necessary and P3 says it is optional, so the pair is P1 and P3.
+
+The review notes that the HDFS-X ranking rests on separate papers, and that P1 and P3 differ in architecture as well as in parsing.

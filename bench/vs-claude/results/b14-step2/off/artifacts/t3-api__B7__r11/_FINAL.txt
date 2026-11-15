@@ -1,0 +1,153 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t3-api__B7__r11] Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Bốn tính năng đã được hiện thực từ làn đơn và `npm test` xanh (9/9). Tôi không làm lại mà giao hai hạng mục song song để đối chiếu từng quy tắc của FEATURES.md qua HTTP thật và sửa chỗ lệch. Mỗi hạng mục sở hữu tệp nguồn và tệp test riêng.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Đối chiếu đặc tả HTTP: danh sách /tasks và export.csv (@senior-swe, done)
+
+## Tóm tắt
+Tôi đối chiếu mục 2 và 3 của FEATURES.md với `src/handlers/tasks.js` qua HTTP thật. Code không lệch quy tắc nào nên không sửa dòng nào. Tôi thêm `test/list-csv.test.js` (5 test) và `npm test` xanh 14/14. Điểm còn mơ hồ của đặc tả nằm ở mục Rủi ro.
+
+## Tệp đã tạo/sửa
+- `test/list-csv.test.js` · mới. Mỗi test mở `createServer` trên cổng ngẫu nhiên, dùng seed riêng và gọi bằng `fetch`.
+- `src/handlers/tasks.js` · không đổi.
+
+Chỗ đã sửa trong code: không có.
+
+## Kiểm chứng
+`npm test` → exit 0, tests 14, pass 14, fail 0. Baseline là 2 test pass, không đo lại.
+
+Các test mới phủ các điểm (a)–(g) như sau:
+- **(a)** `INVALID_QUERY` báo đúng tham số đầu tiên theo thứ tự URL: `page=0&status=zzz` → `page`, `status=zzz&page=0` → `status`. Tham số lạ (`bogus`) và tham số lặp (`team=A&team=B`) đều trả 400.
+- **(b)** Các giá trị `page=1.5`, `page=0`, `page=abc`, `pageSize=101`, `pageSize=0`, `dueBefore=2026-02-30`, `dueBefore=2026-2-3` đều trả 400. Tôi thêm `sort=foo`, `team=C`, `status=todo,x` và đều ra 400.
+- **(c)** `q` bỏ dấu, `Đ`/`đ`→`d`, không phân biệt hoa thường, và `q=` không lọc.
+- **(d)** `dueDate` null luôn cuối cả khi `sort=dueDate` lẫn `sort=-dueDate`. Hòa theo số của `id` (`t2` < `t10`), cả chiều tăng lẫn giảm. `title` sắp theo `localeCompare('vi')`, test kiểm thứ tự `a` < `á` < `b`.
+- **(e)** `page=5&pageSize=2` trả `items: []`, `total: 3`, status 200.
+- **(f)** Member chỉ thấy nhóm mình. Member truyền `team=B` nhận danh sách rỗng, `total: 0`, status 200, không lỗi.
+- **(g)** CSV:
+  - BOM kiểm trên byte thô `EF BB BF`.
+  - Header cột đúng, `\r\n` kể cả sau dòng cuối.
+  - Ô chứa `,`, `"` hoặc `\n` được bọc ngoặc kép, `"` nhân đôi.
+  - `null` ra ô trống, `priority` giữ là số.
+  - Chuỗi bắt đầu bằng `=`, `+`, `-`, `@`, tab hoặc `\r` được thêm `'`.
+  - `page`, `pageSize` và tham số lạ trả 400.
+  - Hai header `Content-Type` và `Content-Disposition` đúng giá trị.
+
+## Quyết định thiết kế
+Không áp dụng. Tôi không đổi thiết kế nào, giữ nguyên hiện thực từ làn đơn.
+
+## Rủi ro & việc còn mở
+- `assignee=` rỗng được coi là bộ lọc khớp không ai, vì đặc tả không nói rõ. Bộ nghiệm thu ẩn có thể kỳ vọng khác.
+- `status=` rỗng trả 400 `INVALID_QUERY`, vì chuỗi rỗng không thuộc `todo`, `doing`, `done`. Đây cũng là suy luận từ đặc tả, chưa có đặc tả nói thẳng.
+- Test `title` chỉ kiểm thứ tự tương đối của vài giá trị, không phủ toàn bộ quy tắc collation của locale `vi`.
+
+## Phát hiện
+Không áp dụng. Không thấy lệch đặc tả ở phần mục 2 và 3.
+
+Bản đầy đủ: `.ccoding/T-20261113-042411-271/outputs/dev-S1-senior-swe.md`
+
+### S2 — Đối chiếu đặc tả HTTP: xác thực, phân quyền, thứ tự kiểm tra, audit (@backend-dev, done)
+
+## Tóm tắt
+Tôi đối chiếu mục 1 và 4 của FEATURES.md với `src/auth.js`, `src/store.js`, `src/handlers/audit.js` và phần quyền/audit trong `tasks.js`. Tôi không tìm thấy chỗ lệch nên không sửa tệp nguồn nào. Tôi thêm `test/auth-audit.test.js` (9 test, assert qua HTTP thật) cho từng quy tắc (a)–(e). `npm test` xanh toàn bộ: 23/23 (gồm test của S1 đang có trong worktree).
+
+## Tệp đã tạo/sửa
+- `test/auth-audit.test.js` (mới).
+- `src/auth.js`, `src/store.js`, `src/handlers/audit.js`: không đổi, vì đã đúng đặc tả.
+- `src/handlers/tasks.js`: không sửa, và không có đề xuất sửa.
+
+## Hợp đồng API
+Thứ tự kiểm tra: 401 → 400 query → 404 → 403 → 400 body.
+- **Mọi route `/tasks…` và `/audit`:** thiếu hoặc sai `X-User` → 401 `UNAUTHENTICATED`. 401 đứng trước cả 400 query và 404.
+- **`GET /audit`:**
+  - Chỉ admin; người khác nhận 403.
+  - Tham số lạ hoặc lặp → 400 `INVALID_QUERY` với `field`, và 400 đứng trước 403 (non-admin kèm tham số lạ nhận 400).
+  - Lọc theo `taskId`, sắp theo `seq` giảm dần.
+- **`POST /tasks`:**
+  - Member → 403.
+  - Manager gửi `team` khác nhóm mình → 403, kiểm trước validate.
+- **`PATCH /tasks/:id`:**
+  - Member:
+    - Nhiệm vụ nhóm khác → 404.
+    - Không giao cho mình → 403.
+    - Body có trường khác `status` → 403, kể cả khi giá trị trùng giá trị cũ.
+  - Manager:
+    - Nhiệm vụ nhóm khác → 403.
+    - Gửi `team` khác nhóm mình → 403.
+- **`DELETE /tasks/:id`:**
+  - Member nhóm khác → 404.
+  - Member nhóm mình → 403.
+  - Manager → 403.
+  - Nhiệm vụ không tồn tại → 404.
+- **Audit:**
+  - `seq` từ 1, `at` = `now().toISOString()` theo đồng hồ tiêm.
+  - `changes` sắp a→z.
+  - Thao tác lỗi (401/403/404/400) không ghi.
+
+## Migration
+Không áp dụng. Audit lưu trong bộ nhớ, giống store hiện có, nên mất khi khởi động lại.
+
+## Kiểm chứng
+- `npm test` → exit 0, tests 23, pass 23, fail 0. Baseline đo sẵn là 2 pass, tôi không đo lại.
+- Tôi không chạy typecheck và lint vì `package.json` không có script này (chưa mở để xác nhận, chỉ thấy `npm test` chạy `node --test`).
+
+## Việc còn lại
+Không có biến môi trường mới và không có phần chưa làm. Các điểm đặc tả mơ hồ và lựa chọn đã dùng (tôi chỉ kiểm chứng bằng test, không đổi code):
+1. **`PATCH` không đổi giá trị nào** (kể cả body `{}`): vẫn ghi `update` với `changes: []`. Đặc tả nói "thao tác ghi thành công thêm một mục", nên tôi giữ lựa chọn này. Test khẳng định hành vi này.
+2. **Member `PATCH` body `{}`** (không có trường nào khác `status`): được phép, trả 200 và ghi `update` rỗng.
+3. **Manager `POST` hoặc `PATCH` với `team` không hợp lệ** (ví dụ `C`, `null`): nhận 403 trước validate, vì `team` khác nhóm mình. Đặc tả xếp 403 đứng trước 400 body.
+4. **JSON hỏng:** quyền kiểm trước. Member sửa nhiệm vụ không giao cho mình kèm JSON hỏng nhận 403; trường hợp còn lại nhận 400 `INVALID_JSON`. Nếu body hỏng thì không kiểm được "trường khác `status`", nên vẫn rơi xuống 400.
+5. **`create`:** `changes` là mọi khóa có trong body (kể cả khóa có giá trị bằng mặc định như `priority: 2`), không gồm các trường tự gán mặc định.
+6. **`update`:** so sánh bằng `!==` với giá trị cũ, đủ cho giá trị nguyên thủy của schema.
+7. **`GET /audit?taskId=`** (rỗng): lọc theo `taskId === ''`, kết quả rỗng, không báo 400. Test không bao quát trường hợp này.
+8. **`seq`** = độ dài mảng audit + 1. Không có thao tác xóa audit nên luôn tăng dần từ 1.
+
+Bản đầy đủ: `.ccoding/T-20261113-042411-271/outputs/dev-S2-backend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261113-042411-271` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **50 in / 34.0k out**, cache đọc 617.4k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 34 | 21783 | 453740 | 2 |
+| Backend Developer (@backend-dev) | dev | 12 | 9614 | 141319 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 2564 | 22337 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Đối chiếu đặc tả HTTP: danh sách /tasks và export.csv (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Đối chiếu đặc tả HTTP: xác thực, phân quyền, thứ tự kiểm tra, audit (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 23 · ℹ suites 0 · ℹ pass 23 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 68 | 98 | 100 | 1 | 1 | 476k | 1/34 | — |
+| Backend Developer (@backend-dev) | dev | **65** B | thấp | — | — | — | 100 | 100 | 100 | 1 | 1 | 151k | 0/11 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 25k | 0/1 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

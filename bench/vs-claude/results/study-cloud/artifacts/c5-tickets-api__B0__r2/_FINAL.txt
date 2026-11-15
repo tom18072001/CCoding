@@ -1,0 +1,90 @@
+# Báo cáo tổng hợp: lọc, sắp xếp và phân trang cursor cho `GET /tickets` (T-20261102-121904-756)
+
+## Tóm tắt
+Tính năng đã xong và chạy được. `GET /tickets` nay nhận `status`, `assignee`, `sort`, `limit` và `cursor` theo đúng đề bài. Gọi không tham số vẫn trả mảng trần sắp theo id, nên client mobile và web hiện tại không bị ảnh hưởng. `npm test` tăng từ 1/1 lên **19/19 pass, exit 0**, trong đó `test/existing.test.js` giữ nguyên không sửa. Review không có blocker hay major, chỉ còn 3 góp ý minor. Một việc chưa làm: chưa cố tình làm hỏng handler để xác nhận test mới sẽ báo đỏ (mutation check).
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Code handler cho lọc, sort, phân trang keyset, kèm 8 test chính | `@backend-dev` | **Đạt** | `src/listTickets.js` (mới), `src/handler.js` (chỉ đổi nhánh `GET /tickets`), `test/tickets-list.test.js`. `npm test` cho 9/9 pass. Chi tiết: `.ccoding/T-20261102-121904-756/outputs/dev-S1-backend-dev.md` |
+| S2 | Test biên và test hồi quy (11 test) | `@qa-tester` | **Đạt** | `test/tickets-list-edge.test.js`. `npm test` cho 19/19 pass, exit 0. Chi tiết: `.ccoding/T-20261102-121904-756/outputs/dev-S2-qa-tester.md` |
+
+**Kết quả `npm test` do CCoding tự chạy, không qua agent:**
+- Trước khi sửa: `npm test` exit 0, 1 test, 1 pass.
+- Sau khi sửa: `npm test` exit 0, 19 test, 19 pass, 0 fail, 0 skipped.
+
+Tôi cũng đã tự đọc `src/listTickets.js`, `src/handler.js` và `git status`. Các tệp thay đổi gồm: sửa `src/handler.js`, thêm `src/listTickets.js` và hai tệp test. `src/data.js` không đổi.
+
+## Quyết định
+- **A1, cursor dạng keyset:** cursor là chuỗi base64url của JSON `{ v: [giá trị sort của phần tử cuối, id], f: "status|assignee|sort" }`, với `sort` mặc định là `id` khi không truyền. Nếu `f` không khớp với các tham số của request hiện tại thì trả `invalid_cursor`.
+  - Tôi đã kiểm tra: `status` chỉ nhận giá trị trong danh sách hợp lệ và `sort` chỉ nhận vài giá trị cố định, cả hai đều không chứa `|`. Vì vậy fingerprint không thể trùng giữa hai bộ tham số khác nhau, kể cả khi tên assignee có chứa `|`.
+- **A2, thứ tự kiểm tra lỗi:** status → assignee → sort → limit → cursor. Gặp lỗi đầu tiên thì trả ngay.
+- **A3, giá trị rỗng:** danh sách có phần tử rỗng (ví dụ `open,,closed` hoặc `status=`) trả `invalid_status` hoặc `invalid_assignee`. Tên assignee nào khác rỗng cũng hợp lệ; nếu không khớp ticket nào thì trả kết quả rỗng.
+- **Gửi `cursor` mà thiếu `limit`:** trả `invalid_cursor`, đúng như đề bài.
+- **Cách tổ chức code:** logic nằm trong hàm thuần `listTickets(tickets, query)`. Hàm này lọc ra bản sao rồi mới sort, nên không làm thay đổi dữ liệu gốc. Không cần làm kiến trúc, BA hay cổng bảo vệ dữ liệu, vì không có schema hay luồng dữ liệu mới.
+
+## Kết quả review
+`@qa-tester` kết luận **Đạt**. Họ đã chạy lại `npm test` (19/19) và đọc code nguồn. Phạm vi test S2 đã cover:
+- Các giá trị `limit` sai: `0`, `101`, `1.5`, `abc`, chuỗi rỗng, `-1`, `+5`, `1e1`, có khoảng trắng.
+- 18 kiểu cursor rác hoặc sai cấu trúc; cursor dùng sai `status`, `assignee` hoặc `sort`.
+- Thứ tự trả lỗi giữa các tham số.
+- Đi hết các trang rồi so với kết quả không phân trang, trên 5 kiểu sort × 5 bộ lọc × 7 giá trị `limit`.
+- Tie-break theo id tăng dần khi sort giảm dần, có ca hòa thật ở `priority`.
+- `assignee=none,an`, tham số lạ bị bỏ qua, và hồi quy khi gọi không tham số.
+
+Có 3 góp ý minor, không chặn:
+1. Định dạng cursor (`[A-Za-z0-9_-]+`) và `limit` (`^\d+$`) bị kiểm chặt. Hành vi này đúng yêu cầu và đã có test.
+2. Dữ liệu seed không có hai ticket trùng `createdAt`, nên tie-break theo `createdAt` mới chỉ được xác nhận bằng đọc code, chưa có test chạy thật.
+3. Fingerprint dùng chuỗi thô, nên `status=open,closed` và `status=closed,open` bị coi là khác nhau. Đây là chủ đích theo A1.
+
+## Việc còn open & rủi ro
+- **Chưa chạy:** mutation check, tức cố tình làm hỏng handler để xem test có đỏ không. Repo không có typecheck hay lint nên cũng không chạy.
+- **Chưa có test tie-break theo `createdAt` chạy thật** (minor 2).
+- **Cursor không có chữ ký.** Client có thể tự tạo cursor có fingerprint hợp lệ để nhảy tới vị trí bất kỳ trong danh sách. Điều này không làm lộ dữ liệu, vì mọi ticket vẫn lọc được bằng tham số công khai, nên chấp nhận được với dữ liệu internal và handler in-memory.
+- **`limit` chấp nhận số 0 ở đầu**, ví dụ `0100` được hiểu là 100. Vẫn là số nguyên trong khoảng 1–100 nên chấp nhận, ghi nhận lại để biết.
+- **Fingerprint phân biệt thứ tự giá trị:** client phải gửi lại đúng chuỗi `status`/`assignee` như lúc nhận cursor. Cần ghi rõ điều này nếu sau này viết tài liệu API.
+
+## Bước tiếp theo
+Các việc còn lại đều nhỏ. Tôi đề xuất tách thành nhiệm vụ riêng, không bắt buộc:
+1. **Kiểm tra độ nhạy của test (`@qa-tester`, cỡ S).** Lần lượt làm hỏng 3 chỗ (bỏ tie-break `|| ia - ib`, bỏ so fingerprint, đổi biên `limit` thành ≤ 101) và xác nhận mỗi lần đều có ít nhất một test đỏ. Sau đó trả code về như cũ. Xong khi có log của 3 lần chạy đỏ và một lần chạy cuối 19/19 xanh.
+2. **Test tie-break theo `createdAt` (`@qa-tester`, cỡ S).** Truyền fixture riêng có hai ticket trùng `createdAt` vào `createHandler(tickets)`. Xong khi có test pass cho cả `createdAt` và `-createdAt`.
+3. **Tài liệu API (`@tech-writer`, cỡ S, nếu Tom cần).** Viết mục README cho `GET /tickets`: tham số, mã lỗi và quy tắc phải giữ nguyên tham số khi dùng cursor.
+
+Chưa commit hay push gì; các thay đổi đang nằm trong working tree để Tom xem lại.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-121904-756` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **38 in / 23.1k out**, cache đọc 249.4k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| QA Engineer (@qa-tester) | dev | 14 | 6339 | 102787 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 12 | 6991 | 72582 | 2 |
+| Backend Developer (@backend-dev) | dev | 10 | 9269 | 71781 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 482 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Hiện thực lọc, sắp xếp, phân trang cursor cho GET /tickets kèm test chính (@backend-dev)
+- `outputs/dev-S2-qa-tester.md` — S2 Test biên và hồi quy cho phân trang, kiểm tra lỗi (@qa-tester)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 1 · # suites 0 · # pass 1 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 19 · # suites 0 · # pass 19 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| QA Engineer (@qa-tester) | dev | **99** A | 100 | 96 | 100 | 100 | 1 | 1 | 109k | 0/8 |
+| Backend Developer (@backend-dev) | dev | **98** A | 100 | 100 | 90 | 100 | 1 | 1 | 81k | 1/8 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **93** A | 100 | 100 | 80 | 83 | 0 | — | 80k | 1/4 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

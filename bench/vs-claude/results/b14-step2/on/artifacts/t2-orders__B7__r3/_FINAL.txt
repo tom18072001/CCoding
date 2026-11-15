@@ -1,0 +1,81 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t2-orders__B7__r3] Sửa 6 lỗi trong thư viện tính tiền giỏ hàng
+
+_Làn đơn: một agent làm trọn đề bài; báo cáo dựng tự động từ bàn giao và kết quả cổng chất lượng (không gọi model)._
+
+## Tóm tắt
+
+Làn đơn: Senior Software Engineer (@senior-swe) làm trọn đề bài trong worktree nhiệm vụ
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — [vs-claude t2-orders__B7__r3] Sửa 6 lỗi trong thư viện tính tiền giỏ hàng (@senior-swe, done)
+
+## Tóm tắt
+Đã sửa đủ 6 lỗi trong ISSUES.md ở nguyên nhân gốc và thêm test hồi quy. `npm test` xanh (13 test pass, 0 fail). Không đổi API công khai. Tôi chưa đối chiếu từng test mới với mã cũ để xem nó đỏ trước khi sửa.
+
+## Tệp đã tạo/sửa
+- `src/money.js`
+  - `toCents` giờ làm tròn half away from zero, xử lý đúng số âm và sai số dấu phẩy động (1.005 → 101, 2.675 → 268).
+  - `allocate` giờ chia phần dư lớn nhất bằng số nguyên; phần lẻ bằng nhau thì phần đứng trước được trước.
+- `src/checkout.js`
+  - Mã giảm cố định dùng `toCents` thay cho `Math.round(amount*100)`.
+  - Thuế tính trên `net` thay vì `gross`.
+- `src/promotions.js`
+  - `freeUnits` dùng nhóm `buy + free`.
+  - `endsAt` có hiệu lực tới hết ngày UTC (cộng thêm một ngày vào mốc so sánh).
+- `src/cart.js`
+  - `updateQty` chỉ giữ chỗ hoặc nhả phần chênh lệch.
+  - `removeItem` nhả lại lượng đã giữ.
+- `test/regression.test.js` (mới): 7 test, mỗi lỗi một test, riêng lỗi 2 có thêm test cho `allocate`.
+
+## Kiểm chứng
+- `npm test` → exit 0; tests 13, pass 13, fail 0.
+- Một lần chạy lệnh đầu bị hook chặn vì chuỗi `../src` trong nội dung heredoc. Tôi đã tách ra và ghi test bằng công cụ Write.
+
+## Quyết định thiết kế
+- `toCents` dùng `toPrecision(15)` để khử sai số nhị phân, rồi áp dấu riêng để đối xứng giữa số âm và số dương.
+- `allocate` giả định `total` không âm, đúng với mọi chỗ gọi hiện tại.
+- `removeItem` bỏ qua nếu sku không có trong giỏ, tránh nhả chỗ hai lần.
+
+## Rủi ro & việc còn mở
+- Giảm theo danh mục vẫn dùng `Math.round` trên từng dòng; ISSUES.md không nêu lỗi ở phần này nên tôi giữ nguyên.
+- `endsAt` giả định định dạng `YYYY-MM-DD`; nếu có mốc giờ thì cách cộng một ngày sẽ sai.
+
+Bản đầy đủ: `.ccoding/T-20261112-235219-583/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng (làn đơn): lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261112-235219-583` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **8 in / 7,360 out**, cache đọc 63.0k, 1 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 8 | 7360 | 63005 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude t2-orders__B7__r3] Sửa 6 lỗi trong thư viện tính tiền giỏ hàng (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 6 · ℹ suites 0 · ℹ pass 6 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 13 · ℹ suites 0 · ℹ pass 13 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 100 | 94 | 100 | 1 | 1 | 70k | 1/13 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

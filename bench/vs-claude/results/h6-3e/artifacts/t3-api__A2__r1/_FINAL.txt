@@ -1,0 +1,17 @@
+Cả 4 tính năng trong `FEATURES.md` đã được hiện thực, và `npm test` xanh (6/6 test đạt). Tôi chưa chạy bộ nghiệm thu ẩn nên chưa biết nó có đạt hay không.
+
+**Các file chính**
+- `src/query.js` (mới): đọc và kiểm tra tham số truy vấn, lọc/tìm/sắp xếp. `q` bỏ dấu tiếng Việt và đổi `đ`/`Đ` thành `d`. Nhiệm vụ không có `dueDate` luôn nằm cuối. Hòa thì xếp theo số trong `id`, tăng dần.
+- `src/csv.js` (mới): xuất CSV có BOM, xuống dòng `\r\n`, chuẩn RFC 4180 và chống chèn công thức.
+- `src/handlers/audit.js` (mới): `GET /audit` chỉ admin dùng được.
+- `src/server.js`, `src/store.js`, `src/handlers/tasks.js`: kiểm tra xác thực trước khi định tuyến, thêm nhật ký thao tác, quyền theo vai trò, và dạng kết quả mới `{ items, total, page, pageSize }`.
+- `test/tasks.test.js`: test cũ chuyển sang dùng header `X-User` và dạng kết quả mới; thêm test riêng cho từng tính năng.
+- `package.json`: tôi đổi phiên bản từ 0.3.0 lên 0.4.0 (đặc tả không yêu cầu, bạn có thể hoàn lại).
+
+**Những chỗ đặc tả chưa nói rõ, tôi tự chọn**
+- Khi một tham số bị trùng, lỗi `INVALID_QUERY` báo vị trí lần xuất hiện đầu tiên của tham số đó trên URL.
+- Tôi siết thêm: `dueDate` trong body của POST/PATCH giờ phải là ngày hợp lệ theo lịch, không chỉ đúng dạng `YYYY-MM-DD`.
+- Khi PATCH hoặc POST, `403` được kiểm tra trước nhưng chỉ sau khi đọc được body JSON. Body JSON hỏng vẫn trả `400 INVALID_JSON`.
+- Một PATCH thành công nhưng không đổi giá trị nào vẫn ghi một mục nhật ký với `changes: []`.
+
+Khi viết test CSV, `fetch` tự bỏ BOM khi giải mã văn bản. Vì vậy test kiểm tra BOM bằng 3 byte đầu của phản hồi thô (`EF BB BF`).

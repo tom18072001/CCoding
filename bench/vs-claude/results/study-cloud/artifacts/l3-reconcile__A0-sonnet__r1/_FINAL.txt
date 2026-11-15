@@ -1,0 +1,8 @@
+October 2026 net revenue is 97,306,916 VND. That comes from 32 distinct paid transactions and 2 distinct refunds, with 5 duplicate rows ignored across the whole file.
+
+`answer.json` contains exactly those four numbers: `net_revenue_vnd`, `paid_count`, `refund_count` and `duplicate_rows_ignored`. `NOTES.md` explains the method.
+
+- **Month boundary:** I converted each `created_at` from UTC to UTC+7 before deciding whether it falls in October.
+- **Duplicates:** The 5 duplicates were exact copies, so keeping one row per `txn_id` was unambiguous.
+- **Refunds:** Both October refunds (T0075 and T0076) are in VND, so they use their negative amounts as given. No USD refunds fell in the month.
+- **Rounding:** USD amounts were converted exactly at 25,400 per dollar. The total was already a whole number of dong, so the half-up rounding at the end changed nothing.

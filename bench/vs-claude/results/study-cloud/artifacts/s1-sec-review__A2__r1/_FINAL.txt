@@ -1,0 +1,16 @@
+I wrote `findings.json` in the repository root with seven findings, and left `src/server.js` unchanged. I haven't run the server or tested any of these.
+
+| Line | Type | Severity | Issue |
+|---|---|---|---|
+| 11 | `hardcoded-secret` | high | The JWT secret is committed in the source. |
+| 30 | `sqli` | critical | The search query `q` is interpolated straight into the SQL string. |
+| 42 | `path-traversal` | high | `req.params.name` is joined onto `REPORT_DIR` with no check that the result stays inside it. |
+| 58 | `weak-crypto` | high | Passwords are hashed with unsalted MD5. |
+| 65 | `ssrf` | high | The server fetches any URL a logged-in user supplies and returns the response body. |
+| 70 | `missing-authz` | high | Any logged-in user can delete any ticket, with no ownership or admin check. |
+| 84 | `command-injection` | critical | `req.body.format` is interpolated into an `exec` shell string. |
+
+I left out a few things on purpose:
+- **Line 18:** `verifyJwt` is never imported or defined, so it looks like a bug rather than an exploitable hole.
+- **Line 79:** the ping host can start with `-`, but the endpoint is admin-only and uses `execFile` with an argument array, so I didn't count it as a real issue.
+- **Lines 36 and 52:** both are safe as written (a constant table name, and `basename` plus an extension allow-list).

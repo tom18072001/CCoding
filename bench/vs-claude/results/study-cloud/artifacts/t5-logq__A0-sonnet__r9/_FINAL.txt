@@ -1,0 +1,12 @@
+logq đã xong theo SPEC.md: ba module `src/parse.js`, `src/query.js`, `src/agg.js` và CLI `bin/logq.js`. `npm test` xanh (11 test, 0 lỗi) và không thêm thư viện ngoài. Tôi chưa có bộ nghiệm thu ẩn nên chưa chạy thử với nó.
+
+Ngoài `npm test`, tôi chạy CLI thật trên một tệp log mẫu: `--stats`, bảng `histogram`, lỗi cú pháp truy vấn (mã 2) và tệp không tồn tại (mã 1) đều cho kết quả đúng đặc tả. Các vị trí lỗi cú pháp tôi kiểm tra bằng test với các mẫu như `(a`, `a)`, `()`, `a AND`, `AND a`, `status>=abc`, `f:` và `x "abc`.
+
+Test mới nằm ở `test/logq.test.js`, gồm cả test chạy CLI qua tiến trình con.
+
+Có mấy chỗ đặc tả không nói rõ nên tôi tự chọn:
+- **Thời gian `@t`:** chỉ nhận chuỗi dạng `YYYY-MM-DDTHH:MM…` (có chữ `T`). Ngày không có giờ thì không sinh `@t`.
+- **Trùng khóa JSON:** khi làm phẳng, khóa có dấu chấm sẽ ghi đè khóa lồng nhau trùng tên theo thứ tự xuất hiện.
+- **Tên trường trong spec tổng hợp:** phải khớp `[A-Za-z_@][A-Za-z0-9_.@-]*`, nếu không là `invalid aggregation`.
+- **Từ khóa spec:** viết hoa như `COUNT` bị coi là spec sai.
+- **CLI:** kiểm tra tùy chọn, truy vấn và spec trước khi đọc tệp, nên lỗi cú pháp trả mã 2 ngay cả khi tệp không tồn tại. Kết quả được gom lại rồi in một lần, nên khi lỗi stdout trống. CLI nhận cả `--query=<q>` và `--` để kết thúc tùy chọn.

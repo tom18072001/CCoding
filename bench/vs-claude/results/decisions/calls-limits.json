@@ -1,0 +1,117 @@
+{
+ "note": "Văn phòng phụ, 146 lượt gọi claude-cli của 10 nhiệm vụ tới 14/11/2026 ~17:45 +07. Chỉ số tổng hợp theo pha, không có văn bản hay mã nhiệm vụ. ratio = output token / maxTokens của lượt (output của claude-cli cộng mọi vòng công cụ). turns = số vòng công cụ ghi trong calls.jsonl.",
+ "byPhase": {
+  "accept": {
+   "n": 9,
+   "maxTokens": [
+    6000
+   ],
+   "ratio_q50": 0.801,
+   "ratio_q90": 0.875,
+   "ratio_max": 0.903,
+   "over1": 0,
+   "turns_q50": null,
+   "turns_max": null,
+   "withTools": 7,
+   "errors": 0
+  },
+  "discuss": {
+   "n": 38,
+   "maxTokens": [
+    700
+   ],
+   "ratio_q50": 1.309,
+   "ratio_q90": 1.624,
+   "ratio_max": 1.77,
+   "over1": 29,
+   "turns_q50": null,
+   "turns_max": null,
+   "withTools": 0,
+   "errors": 0
+  },
+  "execute": {
+   "n": 52,
+   "maxTokens": [
+    32000
+   ],
+   "ratio_q50": 0.499,
+   "ratio_q90": 1.919,
+   "ratio_max": 4.843,
+   "over1": 14,
+   "turns_q50": null,
+   "turns_max": null,
+   "withTools": 50,
+   "errors": 4
+  },
+  "finalize": {
+   "n": 9,
+   "maxTokens": [
+    8000
+   ],
+   "ratio_q50": 0.893,
+   "ratio_q90": 1.27,
+   "ratio_max": 1.326,
+   "over1": 4,
+   "turns_q50": 0.0,
+   "turns_max": 0,
+   "withTools": 7,
+   "errors": 2
+  },
+  "plan": {
+   "n": 15,
+   "maxTokens": [
+    8000
+   ],
+   "ratio_q50": 0.814,
+   "ratio_q90": 1.14,
+   "ratio_max": 1.182,
+   "over1": 4,
+   "turns_q50": null,
+   "turns_max": null,
+   "withTools": 12,
+   "errors": 1
+  },
+  "review": {
+   "n": 6,
+   "maxTokens": [
+    6000
+   ],
+   "ratio_q50": 0.41,
+   "ratio_q90": 0.966,
+   "ratio_max": 1.442,
+   "over1": 1,
+   "turns_q50": null,
+   "turns_max": null,
+   "withTools": 6,
+   "errors": 0
+  },
+  "revise": {
+   "n": 7,
+   "maxTokens": [
+    32000
+   ],
+   "ratio_q50": 0.12,
+   "ratio_q90": 0.266,
+   "ratio_max": 0.279,
+   "over1": 0,
+   "turns_q50": null,
+   "turns_max": null,
+   "withTools": 3,
+   "errors": 0
+  },
+  "synthesize": {
+   "n": 10,
+   "maxTokens": [
+    10000
+   ],
+   "ratio_q50": 0.418,
+   "ratio_q90": 0.522,
+   "ratio_max": 0.584,
+   "over1": 0,
+   "turns_q50": null,
+   "turns_max": null,
+   "withTools": 1,
+   "errors": 1
+  }
+ }
+}

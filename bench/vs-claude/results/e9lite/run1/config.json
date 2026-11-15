@@ -1,0 +1,71 @@
+{
+  "argv": [
+    "--arms",
+    "P-H,P-S,P-O",
+    "--tasks",
+    "g1-slug-dedupe,g2-cart-coupon,g3-qty-rename,g4-gb-unit,g5-median-stats,g6-range-merge,l1-modules,l2-chain,t1-duration,t2-orders,t3-api,t4-perf,t5-logq",
+    "--repeats",
+    "3",
+    "--seed",
+    "e9lite-1",
+    "--out",
+    "bench\\vs-claude\\results\\e9lite\\run1",
+    "--runtime",
+    "claude-cli",
+    "--ccoding-url",
+    "http://127.0.0.1:7441",
+    "--ccoding-data",
+    "<máy-chạy>\\e9-data",
+    "--work",
+    "<máy-chạy>\\vbe9",
+    "--timeout",
+    "30"
+  ],
+  "cfg": {
+    "ccodingUrl": "http://127.0.0.1:7441",
+    "ccodingData": "<máy-chạy>\\e9-data",
+    "ccodingUrlAlt": null,
+    "ccodingDataAlt": null,
+    "runtime": "claude-cli",
+    "timeoutMin": 30,
+    "claudeBin": "claude",
+    "judge": {
+      "enabled": false,
+      "model": "opus"
+    },
+    "seed": "e9lite-1",
+    "window": null,
+    "quotaState": null,
+    "workRoot": "<máy-chạy>\\vbe9",
+    "isolation": "none"
+  },
+  "meta": {
+    "ccodingCommit": "fcd45f2a74abc394e4bfde667337033890fb3d1c",
+    "claudeCliVersion": "2.1.318 (Claude Code)",
+    "window": null,
+    "quotaState": null,
+    "timeoutMin": 30
+  },
+  "armIds": [
+    "P-H",
+    "P-S",
+    "P-O"
+  ],
+  "taskIds": [
+    "g1-slug-dedupe",
+    "g2-cart-coupon",
+    "g3-qty-rename",
+    "g4-gb-unit",
+    "g5-median-stats",
+    "g6-range-merge",
+    "l1-modules",
+    "l2-chain",
+    "t1-duration",
+    "t2-orders",
+    "t3-api",
+    "t4-perf",
+    "t5-logq"
+  ],
+  "repeats": 3,
+  "startedAt": "2026-11-15T00:15:50.121Z"
+}

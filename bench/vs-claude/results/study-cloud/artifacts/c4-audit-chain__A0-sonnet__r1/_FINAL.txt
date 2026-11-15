@@ -1,0 +1,8 @@
+I implemented all four functions in `src/index.js` using only Node built-ins. I added `test/chain.test.js` with 8 tests. `npm test` passes with all 9 tests, which includes the existing smoke test.
+
+- **`canonicalize`**: it sorts object keys by Unicode code point at every depth. It matches `JSON.stringify` for everything else, including `toJSON`, `undefined` in arrays becoming `null`, and a top-level `undefined` returning `undefined`. It throws on circular structures.
+- **`redact`**: it deep-copies the entry and applies the `[EMAIL]` and `[PHONE]` replacements to every string, including strings inside arrays. Emails are replaced first, so an email whose local part looks like a phone number comes out as `[EMAIL]`. It calls `toJSON` first, so a `Date` or similar object can't carry PII past it. Keys are left alone and the input is not mutated.
+- **`append`**: it redacts the entry before computing the hash, so the hash input only ever contains the redacted copy. The record also holds a copy, so changing the original entry afterwards doesn't break verification.
+- **`verify`**: it checks `seq` order, `prev` linkage and the recomputed hash. It returns the index of the first bad record. A malformed record, such as `null` or a non-string hash, counts as bad rather than throwing.
+
+Two limits on what counts as PII. Phone numbers are matched only as unbroken digits, so a number written with spaces or dashes (such as `091 234 5678`) is not redacted. The email pattern is a practical one rather than full RFC 5322. Tell me if you want either widened.

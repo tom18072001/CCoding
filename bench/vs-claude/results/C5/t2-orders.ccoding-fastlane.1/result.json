@@ -1,0 +1,69 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261102-105015-e80",
+  "wallSec": 134,
+  "wallSecHarness": 135,
+  "costUsd": 0.8236389,
+  "tokens": {
+   "input": 64,
+   "output": 28215,
+   "cacheRead": 866461,
+   "cacheWrite": 112111
+  },
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "Làm tròn tiền, phân bổ phần dư lớn nhất, thuế trên net (lỗi 1, 2, 6)"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "Khuyến mãi mua X tặng Y và hạn mã (lỗi 3, 4)"
+   },
+   {
+    "id": "S3",
+    "status": "done",
+    "title": "Giữ chỗ kho khớp với tổng số lượng trong giỏ (lỗi 5)"
+   }
+  ],
+  "workdir": "/home/claude/ccoding-dev/workspaces/b-c5-t2-fastla-1/wt-T-20261102-105015-e80",
+  "branch": "ccoding/t-20261102-105015-e80"
+ },
+ "task": "t2-orders",
+ "system": "ccoding-fastlane",
+ "rep": 1,
+ "key": "t2-orders.ccoding-fastlane.1",
+ "env": "cloud",
+ "startedAt": "2026-11-02T03:50:15.422Z",
+ "finishedAt": "2026-11-02T03:52:31.156Z",
+ "grade": {
+  "hidden": {
+   "pass": 60,
+   "fail": 0,
+   "total": 60,
+   "failed": [],
+   "ms": 173,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 27,
+   "fail": 0,
+   "total": 27
+  },
+  "changed": [
+   "~src/cart.js",
+   "~src/checkout.js",
+   "~src/inventory.js",
+   "~src/money.js",
+   "~src/promotions.js",
+   "+test/checkout-discount-tax.test.js",
+   "+test/inventory.test.js",
+   "+test/money-rounding.test.js",
+   "+test/promotions.test.js"
+  ]
+ },
+ "audit": []
+}

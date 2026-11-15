@@ -1,0 +1,9 @@
+I implemented `parseIisLog(text)` in `src/iis.js` following your rules, and `npm test` passes with both the visible test and one I added.
+
+I added a test to `test/basic.test.js`. It covers several `#Fields:` lines, `-` values, a line with the wrong column count, a line before any `#Fields:`, and CRLF line endings.
+
+A few cases your rules didn't spell out, and how I handled them:
+- **Timestamp:** it only appears when `date` and `time` are both present and form a valid date. Otherwise `@timestamp` is omitted but the line is still returned.
+- **Bad numbers:** a non-numeric `sc-status`, `s-port` or `time-taken` is omitted rather than turned into `NaN`.
+- **`event.duration`:** it is `time-taken` × 1,000,000, rounded to a whole nanosecond.
+- **CRLF:** a trailing `\r` is stripped from each line.

@@ -1,0 +1,12 @@
+Cả 6 lỗi trong ISSUES.md đã được sửa, và `npm test` xanh (14 test đều qua). Các test hồi quy nằm trong `test/regression.test.js`, mỗi lỗi có test riêng. Tôi chưa commit gì.
+
+| # | Nguyên nhân gốc | Cách sửa |
+|---|---|---|
+| 1 | `toCents` nhân `amount * 100` nên 1.005 thành 100.4999… | Dịch dấu thập phân bằng chuỗi (`"1.005e2"`) rồi làm tròn half away from zero. Mã giảm cố định trong `checkout.js` cũng gọi `toCents` thay vì tự làm tròn. |
+| 2 | `allocate` chỉ lấy phần nguyên, không chia phần dư | Làm lại theo phương pháp phần dư lớn nhất. Phần lẻ bằng nhau thì phần đứng trước được trước. |
+| 3 | `freeUnits` dùng `floor(qty/buy)*free` | Đổi thành `floor(qty/(buy+free))*free`. Với mua 2 tặng 1: 2 hộp → 0, 3 → 1, 5 → 1, 6 → 2. |
+| 4 | `endsAt` được hiểu là 00:00 UTC của ngày đó | Hạn chót là 00:00 UTC của ngày kế tiếp, nên mã bị từ chối từ `2026-12-01T00:00:00Z`. |
+| 5 | `updateQty` giữ chỗ lại toàn bộ số lượng mới, và `removeItem` không trả chỗ | `updateQty` giờ giữ hoặc trả phần chênh lệch. `removeItem` trả toàn bộ số lượng của dòng. |
+| 6 | Thuế tính trên `gross` | `lineTax` giờ nhận `net`. |
+
+Phần làm tròn thuế (`lineTax`) và giảm % vẫn dùng `Math.round` trên số thực. Tôi chưa gặp trường hợp sai nên không đổi, nhưng đó là chỗ có thể lệch 1 xu nếu `percent` hoặc thuế suất có phần lẻ.

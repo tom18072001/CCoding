@@ -1,0 +1,8 @@
+`src/duration.js` giờ có đủ `parseDuration` và `formatDuration` theo SPEC.md, và `npm test` xanh (11/11 test pass).
+
+Tôi chỉ chạy test của mình, chưa có cách kiểm tra với bộ nghiệm thu ẩn.
+
+- **Làm tròn:** phần phân tích chuỗi dùng số nguyên lớn (BigInt), nên các ca nửa như `"0.0005s"` → 1 và `"1.0005s"` → 1001 đúng tuyệt đối, không bị sai số số thực.
+- **`formatDuration`:** phần `largest` (làm tròn vào đơn vị cuối, nhớ lên đơn vị lớn hơn) cũng tính bằng BigInt, ví dụ `6d 23h 59m 31s` với largest 2 → `1w`.
+- **Thông báo lỗi:** đầu vào BigInt hoặc object tuần hoàn không làm `JSON.stringify` ném lỗi khác. Tôi dùng `String(input)` thay thế, nên vẫn ra `TypeError`.
+- **Test mới:** đã thêm vào `test/duration.test.js`, gồm kiểu đầu vào, dấu, số thuần, dạng đơn vị (thứ tự, trùng, thiếu đơn vị), ISO 8601, `-0`, `largest`, các lỗi của `formatDuration` và tính chất round-trip.

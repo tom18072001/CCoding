@@ -33,15 +33,27 @@ export class Store {
       const t = readJsonFile<Task | null>(path.join(this.runsDir(), e.name, 'task.json'), null);
       if (!t) continue;
       if (t.status === 'running' || t.status === 'queued') {
-        // tiến trình trước bị dừng giữa chừng → tạm dừng, có thể tiếp tục từ checkpoint
-        t.status = 'paused';
-        t.pause = { reason: 'interrupted', detail: 'Bị gián đoạn do server khởi động lại — bấm "Tiếp tục" để chạy tiếp từ chỗ đã xong', at: new Date().toISOString() };
-        for (const r of t.runs) if (r.status === 'running') r.status = 'paused';
-        for (const r of t.runs) for (const s of r.subtasks) if (s.status === 'running') s.status = 'pending';
+        // tiến trình trước bị dừng giữa chừng → tạm dừng, có thể tiếp tục từ checkpoint.
+        // Chỉ đổi trong bộ nhớ (CLI/logview không ghi đĩa); server ghi đĩa + nhật ký qua Orchestrator.recoverOrphans().
+        this.pendingOrphans.set(t.id, this.markOrphan(t));
       }
       this.tasks.set(t.id, t);
     }
     this.backfillSeq();
+  }
+
+  /** Nhiệm vụ mồ côi phát hiện lúc nạp, chưa ghi đĩa (chờ recoverOrphans ở đường khởi động server). */
+  readonly pendingOrphans = new Map<string, { from: 'running' | 'queued'; returned: number }>();
+
+  /** Chuyển nhiệm vụ running/queued sang paused/interrupted trong bộ nhớ; trả trạng thái cũ và số hạng mục về pending. */
+  markOrphan(t: Task): { from: 'running' | 'queued'; returned: number } {
+    const from = t.status as 'running' | 'queued';
+    let returned = 0;
+    t.status = 'paused';
+    t.pause = { reason: 'interrupted', detail: 'server dừng giữa chừng — bấm "Tiếp tục" để chạy tiếp từ chỗ đã xong', at: new Date().toISOString() };
+    for (const r of t.runs) if (r.status === 'running') r.status = 'paused';
+    for (const r of t.runs) for (const s of r.subtasks) if (s.status === 'running') { s.status = 'pending'; returned++; }
+    return { from, returned };
   }
 
   /** Tệp đếm số thứ tự dùng chung giữa các tiến trình (server, CLI) trên cùng thư mục dữ liệu. */

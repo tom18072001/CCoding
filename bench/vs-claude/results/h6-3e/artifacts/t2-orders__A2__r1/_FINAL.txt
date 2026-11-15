@@ -1,0 +1,10 @@
+Cả 6 lỗi trong ISSUES.md đã được sửa và `npm test` xanh (12 test, 0 lỗi). Các test hồi quy mới nằm ở `test/regression.test.js`, mỗi lỗi một test. Không đổi API công khai: chỉ thêm `roundHalfAway` vào `money.js` và `Inventory.adjust` vào `inventory.js`.
+
+1. **Làm tròn xu:** `toCents` nhân 100 rồi làm tròn, và phép nhân này sinh nhiễu dấu phẩy động (`1.005*100 = 100.4999…`). Tôi thêm `roundHalfAway` để bỏ nhiễu rồi làm tròn half away from zero, nên `1.005` → 101 xu, `-1.005` → -101, `2.675` → 268. Giờ `toCents` dùng nó, và mã giảm cố định cũng gọi `toCents` thay vì `Math.round(amount*100)`. `minSubtotal` vốn đã đi qua `toCents`. Làm tròn giảm giá % và thuế cũng dùng `roundHalfAway`.
+2. **Tổng giảm bị hụt:** `allocate` chỉ lấy phần nguyên và bỏ phần dư. Nay nó chia phần dư theo phương pháp phần dư lớn nhất (phần lẻ bằng nhau thì dòng đứng trước được trước), nên tổng giảm đúng bằng tiền giảm của mã.
+3. **Mua X tặng Y:** `freeUnits` chia theo `buy` thay vì `buy + free`. Nay là `floor(qty/(buy+free))*free`: 2 hộp → 0, 3 → 1, 5 → 1, 6 → 2.
+4. **Hết hạn sớm:** `endsAt` dạng `YYYY-MM-DD` bị hiểu là 00:00 UTC của chính ngày đó. Nay mã dùng được tới hết ngày `endsAt` và bị từ chối từ 00:00 UTC ngày hôm sau.
+5. **Kho:** `updateQty` giữ chỗ thêm cả số lượng mới mà không trừ số đã giữ, còn `removeItem` không trả chỗ. Nay `updateQty` chỉ giữ hoặc trả phần chênh lệch, và `removeItem` trả lại toàn bộ chỗ đang giữ. Nếu chỉnh số lượng vượt tồn kho thì báo hết hàng và lượng giữ chỗ không đổi.
+6. **Thuế:** `checkout.js` tính thuế trên `gross`. Nay tính trên `net` (giá sau giảm) của từng dòng.
+
+Lệnh `cd src && python …` đầu tiên bị lỗi nên các chỉnh sửa không chạy lần đó. Tôi đã chạy lại từ đầu, và `git status` xác nhận các file nguồn đã thay đổi.

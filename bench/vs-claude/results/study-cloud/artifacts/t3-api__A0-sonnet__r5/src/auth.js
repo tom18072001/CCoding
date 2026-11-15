@@ -1,0 +1,16 @@
+'use strict';
+const { HttpError } = require('./http');
+
+/** 401 nếu thiếu/không tồn tại X-User; trả về user. */
+function authenticate(req, store) {
+  const id = req.headers['x-user'];
+  const user = typeof id === 'string' ? store.user(id) : undefined;
+  if (!user) throw new HttpError(401, 'UNAUTHENTICATED', 'Thiếu hoặc sai X-User');
+  return user;
+}
+
+function forbidden(msg = 'Không có quyền') {
+  return new HttpError(403, 'FORBIDDEN', msg);
+}
+
+module.exports = { authenticate, forbidden };

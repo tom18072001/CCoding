@@ -1,0 +1,10 @@
+Cả 6 lỗi trong ISSUES.md đã được sửa và `npm test` xanh (12 test, gồm các test hồi quy mới). Các test hồi quy nằm trong `test/regressions.test.js`, mỗi lỗi có một test. API công khai giữ nguyên.
+
+1. **Làm tròn xu:** `toCents` nhân 100 trong số thực nên `1.005*100` ra `100.4999…`. Giờ nó khử sai số đó rồi làm tròn half away from zero (`1.005` → 101, `-1.005` → -101, `2.675` → 268). Mã giảm cố định trong `checkout.js` giờ dùng `toCents` thay vì `Math.round(amount*100)`. Giá trị đơn tối thiểu vốn đã dùng `toCents` nên tự đúng theo.
+2. **Tổng giảm hụt:** `allocate` chỉ lấy phần nguyên, không chia số xu còn dư. Giờ nó chia theo phương pháp phần dư lớn nhất, phần lẻ bằng nhau thì phần đứng trước được trước. Test có `allocate(1000, [1,1,1])` → `[334, 333, 333]` và giỏ 3 món với mã cố định `10.00` cho tổng giảm đúng 1000 xu.
+3. **Mua X tặng Y:** `freeUnits` giờ tính `floor(qty/(buy+free))*free`. Với mua 2 tặng 1: 2 hộp → 0, 3 → 1, 5 → 1, 6 → 2.
+4. **Hết hạn mã:** `endsAt` dạng `YYYY-MM-DD` giờ có hiệu lực tới hết ngày đó (UTC). Mã vẫn dùng được lúc `2026-11-30T23:59:59.999Z` và bị từ chối từ `2026-12-01T00:00:00Z`.
+5. **Tồn kho:** `updateQty` trước đây giữ chỗ lại toàn bộ số lượng mới thay vì phần chênh lệch, và `removeItem` không trả chỗ. Giờ nó giữ hoặc trả đúng phần chênh lệch, và `removeItem` trả lại số lượng đang giữ.
+6. **Thuế:** thuế giờ tính trên `net` của từng dòng thay vì `gross`.
+
+Ngoài danh sách báo lỗi, tôi sửa thêm một chỗ: `lineTax` trước đây nhân với hệ số thập phân (0.1, 0.05) nên có thể lệch ở các trường hợp .5. Giờ nó tính bằng số nguyên cho chắc.

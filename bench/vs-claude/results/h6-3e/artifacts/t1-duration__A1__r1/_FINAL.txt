@@ -1,0 +1,20 @@
+**SELF-REVIEW:** I went through the spec point by point.
+
+- Bugs found while testing: the regex escapes were mangled when the file was written, and ISO parsing failed because the string had already been lowercased. Both are fixed.
+- Rule 7: `P1DT` and `PT` are rejected by the `endsWith('t')` check (the regex alone would accept them). `P1M`, `P1Y` and `P1W1D` are rejected by the regex.
+- Rule 8: the exact BigInt arithmetic gives `1.0005s` = 1001, with no float drift. `-0` comes back as `0`.
+- `formatDuration`: the `largest` rounding carries upward and `6d 23h 59m 31s` with `largest: 2` gives `1w`. A negative value that rounds to 0 prints no sign.
+
+**FIX:** nothing more to change. The last `npm test` run passed all 11 tests, including the new edge-case suite.
+
+**Final report**
+- `src/duration.js` implements `parseDuration` and `formatDuration` per SPEC.md. It is CommonJS with no external dependencies.
+- `test/edge.test.js` is new. It covers number input, plain numbers, unit form, ISO 8601, error messages, `style` and `largest` validation, rounding and carry, and the parse/format round trip.
+- Assumptions:
+  - Whitespace is allowed between the sign and `P` in ISO strings.
+  - `options: null` is treated as no options.
+  - `largest: Infinity` or `null` throws a `TypeError`.
+  - `style: undefined` and `largest: undefined` mean the defaults.
+  - If `JSON.stringify` throws (BigInt, circular) or returns `undefined` (Symbol, function), the error message falls back to `String(input)` or `undefined`.
+- Not checked: I haven't seen the hidden acceptance suite, so anything it tests that SPEC.md leaves ambiguous may differ from my assumptions.
+- I haven't committed anything.

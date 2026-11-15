@@ -1,0 +1,10 @@
+Cả 6 lỗi trong `ISSUES.md` đã được sửa, và `npm test` xanh (12 test đều qua). Tôi không đổi API công khai nào. Test hồi quy nằm ở `test/regression.test.js`, mỗi lỗi một test.
+
+1. **Làm tròn xu (`src/money.js`):** `toCents` nhân `amount * 100` nên `1.005` thành `100.4999…`. Giờ nó dịch dấu thập phân bằng chuỗi rồi làm tròn half away from zero (`1.005` → 101, `-1.005` → -101, `2.675` → 268). Mã giảm cố định cũng dùng `toCents` thay cho `Math.round(amount*100)` (`src/checkout.js`). Giá trị đơn tối thiểu vốn đã dùng `toCents` nên tự được sửa theo.
+2. **Tổng giảm bị hụt (`src/money.js`):** `allocate` chỉ lấy phần nguyên và bỏ phần dư. Giờ nó chia phần dư theo phương pháp phần dư lớn nhất, bằng nhau thì phần đứng trước được trước. Tổng các phần luôn bằng `total`, nên giỏ 3 món với mã `10.00` giảm đúng 10.00.
+3. **Mua X tặng Y (`src/promotions.js`):** `freeUnits` đổi thành `floor(qty/(buy+free))*free`. Với mua 2 tặng 1: 2 hộp → 0, 3 hộp → 1, 5 hộp → 1, 6 hộp → 2.
+4. **Hết hạn mã (`src/promotions.js`):** mã giờ dùng được tới hết ngày `endsAt` (UTC) và bị từ chối từ `2026-12-01T00:00:00Z`.
+5. **Tồn kho (`src/cart.js`):** nguyên nhân gốc là `updateQty` giữ chỗ thêm toàn bộ số lượng mới thay vì phần chênh lệch, và `removeItem` không trả hàng về kho. Giờ `updateQty` chỉ giữ thêm hoặc trả lại phần chênh lệch, còn `removeItem` trả lại toàn bộ số đang giữ. Số giữ chỗ luôn bằng tổng số lượng trong các giỏ.
+6. **Thuế (`src/checkout.js`):** thuế mỗi dòng giờ tính trên `net` thay vì `gross`.
+
+Ngoài ra, tôi sửa `lineTax` (`src/tax.js`) để làm tròn thuế không bị lệch do sai số dấu phẩy động. `ISSUES.md` không báo lỗi này, nhưng cùng loại với lỗi 1. Tôi chưa có test riêng cho phần này.

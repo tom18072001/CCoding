@@ -1,0 +1,172 @@
+TAP version 13
+# Subtest: nhật ký: seq, at, changes, thao tác lỗi không ghi
+ok 1 - nhật ký: seq, at, changes, thao tác lỗi không ghi
+  ---
+  duration_ms: 100.761033
+  type: 'test'
+  ...
+# Subtest: /audit: chỉ admin, tham số lạ hoặc trùng → 400
+ok 2 - /audit: chỉ admin, tham số lạ hoặc trùng → 400
+  ---
+  duration_ms: 20.248926
+  type: 'test'
+  ...
+# Subtest: 401 UNAUTHENTICATED: thiếu hoặc sai X-User trên mọi route
+ok 3 - 401 UNAUTHENTICATED: thiếu hoặc sai X-User trên mọi route
+  ---
+  duration_ms: 103.333756
+  type: 'test'
+  ...
+# Subtest: danh sách rỗng: BOM + tiêu đề + CRLF
+ok 4 - danh sách rỗng: BOM + tiêu đề + CRLF
+  ---
+  duration_ms: 1.136465
+  type: 'test'
+  ...
+# Subtest: dòng kết thúc bằng CRLF, null thành ô trống, số giữ nguyên
+ok 5 - dòng kết thúc bằng CRLF, null thành ô trống, số giữ nguyên
+  ---
+  duration_ms: 0.53037
+  type: 'test'
+  ...
+# Subtest: dấu phẩy, ngoặc kép, xuống dòng
+ok 6 - dấu phẩy, ngoặc kép, xuống dòng
+  ---
+  duration_ms: 0.216921
+  type: 'test'
+  ...
+# Subtest: tiền tố công thức
+ok 7 - tiền tố công thức
+  ---
+  duration_ms: 0.251493
+  type: 'test'
+  ...
+# Subtest: thêm tiền tố mà vẫn có ký tự đặc biệt thì bọc ngoặc kép
+ok 8 - thêm tiền tố mà vẫn có ký tự đặc biệt thì bọc ngoặc kép
+  ---
+  duration_ms: 0.155063
+  type: 'test'
+  ...
+# Subtest: tiếng Việt giữ nguyên
+ok 9 - tiếng Việt giữ nguyên
+  ---
+  duration_ms: 0.206408
+  type: 'test'
+  ...
+# Subtest: parse: mặc định
+ok 10 - parse: mặc định
+  ---
+  duration_ms: 1.978847
+  type: 'test'
+  ...
+# Subtest: parse: giá trị hợp lệ
+ok 11 - parse: giá trị hợp lệ
+  ---
+  duration_ms: 0.544114
+  type: 'test'
+  ...
+# Subtest: parse: lỗi từng trường
+ok 12 - parse: lỗi từng trường
+  ---
+  duration_ms: 1.987702
+  type: 'test'
+  ...
+# Subtest: parse: tham số đầu tiên theo URL, lặp
+ok 13 - parse: tham số đầu tiên theo URL, lặp
+  ---
+  duration_ms: 0.270256
+  type: 'test'
+  ...
+# Subtest: parse: paging=false từ chối page/pageSize
+ok 14 - parse: paging=false từ chối page/pageSize
+  ---
+  duration_ms: 0.168649
+  type: 'test'
+  ...
+# Subtest: lọc: status, assignee, team, dueBefore
+ok 15 - lọc: status, assignee, team, dueBefore
+  ---
+  duration_ms: 7.26495
+  type: 'test'
+  ...
+# Subtest: lọc q: dấu, không dấu, đ/Đ
+ok 16 - lọc q: dấu, không dấu, đ/Đ
+  ---
+  duration_ms: 0.528042
+  type: 'test'
+  ...
+# Subtest: sắp xếp mọi trường, hai chiều, hòa theo id số
+ok 17 - sắp xếp mọi trường, hai chiều, hòa theo id số
+  ---
+  duration_ms: 0.23976
+  type: 'test'
+  ...
+# Subtest: dueDate null nằm cuối cả hai chiều
+ok 18 - dueDate null nằm cuối cả hai chiều
+  ---
+  duration_ms: 0.283608
+  type: 'test'
+  ...
+# Subtest: phân trang, page vượt, không đổi đầu vào
+ok 19 - phân trang, page vượt, không đổi đầu vào
+  ---
+  duration_ms: 0.443073
+  type: 'test'
+  ...
+# Subtest: total là số khớp trước khi cắt trang; paging=false trả tất cả
+ok 20 - total là số khớp trước khi cắt trang; paging=false trả tất cả
+  ---
+  duration_ms: 0.174604
+  type: 'test'
+  ...
+# Subtest: CRUD cơ bản (admin)
+ok 21 - CRUD cơ bản (admin)
+  ---
+  duration_ms: 64.112518
+  type: 'test'
+  ...
+# Subtest: validate body: 400 VALIDATION
+ok 22 - validate body: 400 VALIDATION
+  ---
+  duration_ms: 9.760892
+  type: 'test'
+  ...
+# Subtest: thứ tự: 404 trước 403 trước 400 body
+ok 23 - thứ tự: 404 trước 403 trước 400 body
+  ---
+  duration_ms: 25.830813
+  type: 'test'
+  ...
+# Subtest: member: thấy nhóm mình, 404 nhóm khác
+ok 24 - member: thấy nhóm mình, 404 nhóm khác
+  ---
+  duration_ms: 9.254653
+  type: 'test'
+  ...
+# Subtest: member PATCH: chỉ status của nhiệm vụ giao cho mình
+ok 25 - member PATCH: chỉ status của nhiệm vụ giao cho mình
+  ---
+  duration_ms: 14.2257
+  type: 'test'
+  ...
+# Subtest: manager: quyền theo nhóm
+ok 26 - manager: quyền theo nhóm
+  ---
+  duration_ms: 21.150507
+  type: 'test'
+  ...
+# Subtest: GET /tasks/export.csv không bị nuốt bởi /tasks/:id
+ok 27 - GET /tasks/export.csv không bị nuốt bởi /tasks/:id
+  ---
+  duration_ms: 9.670239
+  type: 'test'
+  ...
+1..27
+# tests 27
+# suites 0
+# pass 27
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 744.400561

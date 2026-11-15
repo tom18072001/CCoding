@@ -1,0 +1,14 @@
+Đã sửa cả 6 lỗi trong ISSUES.md và `npm test` xanh (13 test đều qua). Test hồi quy nằm ở `test/regression.test.js`, mỗi lỗi có một test; API công khai không đổi.
+
+| # | Nguyên nhân gốc | Cách sửa |
+|---|---|---|
+| 1 | `Math.round(x*100)` bị lệch dấu phẩy động, nên `1.005*100` ra `100.4999…`. Mã giảm cố định cũng dùng cách làm tròn này. | `toCents` làm tròn theo số thập phân (half away from zero, hỗ trợ số âm). `checkout.js` dùng `toCents` cho mã giảm cố định. Giá sản phẩm và giá trị đơn tối thiểu vốn đã đi qua `toCents`. |
+| 2 | `allocate` chỉ lấy phần nguyên, không chia số xu dư. | Chia số xu dư theo phương pháp phần dư lớn nhất, bằng nhau thì phần đứng trước được trước. |
+| 3 | `freeUnits` tính `floor(qty/buy)*free`. | Đổi thành `floor(qty/(buy+free))*free`, tức chỉ tính nhóm đủ `buy+free` món. |
+| 4 | `endsAt` bị hiểu là 00:00 UTC của ngày đó, nên mã hết hạn từ đầu ngày. | Với `endsAt` dạng `YYYY-MM-DD`, mã dùng được đến hết ngày đó và bị từ chối từ 00:00 UTC ngày hôm sau. |
+| 5 | `updateQty` giữ chỗ lại toàn bộ số lượng thay vì phần chênh lệch. `removeItem` không trả hàng về kho. | `updateQty` chỉ giữ chỗ hoặc trả lại phần chênh lệch, và `removeItem` trả lại kho. |
+| 6 | Thuế tính trên `gross`. | Thuế tính trên `net`. Tôi cũng sửa phép làm tròn thuế để không còn sai số dấu phẩy động. |
+
+Về lỗi 3, tôi chỉ tính nhóm đủ `buy+free` món, đúng ba ví dụ trong báo cáo (3 → 1, 5 → 1, 6 → 2). Với cấu hình khác, phần dư lẻ không đủ nhóm thì không được tặng. Ví dụ mua 2 tặng 2, giỏ 3 món vẫn không có món miễn phí. Nếu bên bạn muốn tặng cả phần dư lẻ thì cần nói lại.
+
+Tôi không đổi cách làm tròn của mã giảm % và mã theo danh mục vì báo cáo không nêu lỗi ở đó.

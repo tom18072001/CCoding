@@ -1,0 +1,5 @@
+I brute-forced all 120 possible rotas and wrote the results to `answer.json` in the repository root.
+
+- **Schedule:** Dung is on Monday, Chi on Tuesday, Binh on Wednesday, An on Thursday and Em on Friday. It's the only rota that satisfies all seven rules.
+- **`count_without_rule_2`:** 10 rotas satisfy every rule except rule 2.
+- **`most_permissive_rule`:** 2. Dropping rule 2 allows 10 rotas, while dropping any other single rule allows at most 4.

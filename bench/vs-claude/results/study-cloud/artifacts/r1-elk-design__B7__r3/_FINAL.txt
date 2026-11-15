@@ -1,0 +1,110 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude r1-elk-design__B7__r3] ELK audit platform sizing and design
+
+_Làn đơn: một agent làm trọn đề bài; báo cáo dựng tự động từ bàn giao và kết quả cổng chất lượng (không gọi model)._
+
+## Tóm tắt
+
+Làn đơn: Kiến trúc sư giải pháp (@solution-architect) làm trọn đề bài trong worktree nhiệm vụ
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — [vs-claude r1-elk-design__B7__r3] ELK audit platform sizing and design (@solution-architect, done)
+
+## Tóm tắt
+Tôi đã viết xong `DESIGN.md` ở gốc repo, chưa commit vì môi trường chỉ cho chạy lệnh chỉ đọc. Kiến trúc đề xuất: Beats đẩy log vào Kafka, Logstash mask PII và băm từng event, rồi index vào Elasticsearch với hot 3 ngày và warm 28 ngày để tìm kiếm tương tác trong 31 ngày. Dữ liệu cũ hơn nằm trong snapshot thường và được restore theo yêu cầu trong vòng 24 giờ. Tính toàn vẹn được đảm bảo ở một kho WORM riêng, ngoài ES. Rủi ro lớn nhất là ba mâu thuẫn trong đầu vào: gợi ý searchable snapshots trái với ràng buộc Basic, mask trước khi index trái với "chứng minh không bị sửa", và Basic không có audit logging nên không ghi được ai đã truy cập chứng cứ.
+
+## Bối cảnh & NFR
+- **Tải:** 20.000 EPS × 800 B = 16 MB/s, tức **1,3824 TB/ngày** và **504,6 TB/năm** dữ liệu raw.
+- **Giả định nén (A4/A5, chưa đo):** hot 1,0× raw; warm và snapshot 0,6× (sau forcemerge, best_compression). Đĩa chỉ lấp tới 70 %. Đỉnh tải giả định gấp đôi, 40k EPS.
+- **Dung lượng theo tầng:**
+
+  | Tầng | Dữ liệu |
+  |---|---|
+  | Hot | 4,15 TB primary, 8,29 TB gồm replica |
+  | Warm | 23,22 TB primary, 46,45 TB gồm replica |
+  | Snapshot archive | 302,7 TB |
+  | Cold staging | 74,6 TB (tối đa 90 ngày dữ liệu mỗi yêu cầu) |
+  | WORM | 63,1 TB/năm |
+  | Kafka | 6,22 TB |
+
+- **Node:** 19 node ES (3 master, 6 hot, 6 warm, 4 cold), 5 Logstash, 3 Kafka, 2 Kibana, 2 sealer.
+- **Nhãn dữ liệu:** có dữ liệu cá nhân ở chặng trước khi mask; sau mask là dữ liệu bút danh hoá.
+- **Cấp độ ATTT:** chưa xác định. Tôi ghi là giả định A3, cần chủ đầu tư phân loại HTTT theo NĐ 85/2016 và TT 12/2022.
+
+## Kiến trúc & luồng dữ liệu
+Sơ đồ đầy đủ ở mục 4 của tài liệu. Chặng có PII thô chỉ gồm agent → Kafka `audit.raw` (giữ 24 h) → Logstash. PII thô không bao giờ tới ES, snapshot hay WORM.
+
+Tài liệu có sẵn bản phác các phần sau:
+- Logstash mask bằng HMAC cho field có cấu trúc và regex cho free text, có hai lớp kiểm tra PII sót.
+- ES ingest pipeline `audit-guard` làm lớp chặn cuối, index template với `dynamic: strict`.
+- ILM policy: rollover 50 GB, sau 2 ngày chuyển warm (readonly, forcemerge, best_compression), không có delete phase.
+- Archive job: chỉ snapshot sau khi forcemerge xong, chỉ xoá index khi snapshot đã được xác minh. Cách này tránh repo phình lên khoảng 1,6×.
+- Tính toàn vẹn: hash từng event, gom lô Merkle, chuỗi manifest có chữ ký HSM, dấu thời gian RFC 3161, lưu bucket Object Lock compliance. Mục 7.3 có quy trình kiểm chứng gồm 5 bước.
+
+## ADR
+- **ADR-1:** không dùng searchable snapshots vì chúng cần Enterprise. Nếu khách hàng mua Enterprise thì có thể chuyển sang tầng frozen trên chính repo snapshot.
+- **ADR-2:** dữ liệu cũ dùng snapshot cộng restore theo yêu cầu. Phương án giữ cold online bị loại vì cần khoảng 400 TB block storage thay vì 112 TB staging, tức thêm khoảng 290 TB đĩa.
+- **ADR-3:** mask ở Logstash, có Kafka làm đệm. Processor `redact` của ES bị loại vì thuộc license trả phí, và khi không có license nó cho document đi qua mà không mask.
+- **ADR-4:** viết archive job riêng thay cho SLM và ILM delete. Snapshot repo không bật Object Lock.
+- **ADR-5:** tính toàn vẹn nằm ngoài ES.
+
+## Phát hiện
+- **Cao:**
+  - R-1: searchable snapshots mâu thuẫn với ràng buộc Basic.
+  - R-2: dữ liệu đã mask không còn là bản gốc, nên mâu thuẫn với yêu cầu chứng cứ.
+  - R-3: PII bị mask sót sẽ vào WORM và không xoá được.
+  - R-4: Basic không có audit logging, FLS hay SSO nội tại.
+- **Trung bình:**
+  - SLA 24 h chỉ đảm bảo cho yêu cầu ≤ 90 ngày dữ liệu; để đạt mức này mỗi cold node phải restore được khoảng 260 MB/s.
+  - Các giả định nén và throughput chưa đo.
+  - Kafka giữ PII thô.
+  - Legal hold có thể vượt 12 tháng; quyền xoá dữ liệu cá nhân xung đột với WORM.
+  - DR không có CCR trên Basic.
+- **Thấp:** `raw_sha256` có thể bị dò từ điển; lệch đồng hồ.
+
+Cả 13 rủi ro kèm đề xuất xử lý nằm ở mục 10.
+
+**Cổng `@security`:** chưa chạy. Hệ thống có dữ liệu cá nhân nên cần cổng này trước khi chốt thiết kế.
+
+## Câu hỏi mở
+1. Giữ Basic hay mua Enterprise để dùng searchable snapshots?
+2. Pháp
+…[đã cắt 1033 ký tự]
+
+Bản đầy đủ: `.ccoding/T-20261102-200337-871/outputs/dev-S1-solution-architect.md`
+
+## Review
+
+Đã duyệt: DESIGN.md (417 dòng) đáp ứng đủ các mục brief yêu cầu: tính dung lượng, bố trí node, ingest pipeline, ILM, toàn vẹn, rủi ro và mâu thuẫn trong đầu vào. Tôi tính lại toàn bộ số chính bằng python và đều khớp: 1,3824 TB/ngày, 504,58 TB/năm, hot 4,15 TB primary / 8,29 TB gồm replica, warm 23,22 / 46,45 TB, snapshot 302,7 TB, cold staging 74,6 TB, WORM 63,1 TB, Kafka 6,22 TB, restore 259 MB/s/node. Tài liệu xử lý đúng các mâu thuẫn trong đầu vào: searchable snapshots không có trong Basic, mask với 'provably unaltered', Basic không có audit log. Giả định nén ghi rõ là chưa đo, có kế hoạch PoC. Chỉ còn các lỗi minor, không có blocker hay major. Tài liệu không có test hay build để chạy, nên kiểm bằng đọc và tính lại số.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-200337-871` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **24 in / 39.3k out**, cache đọc 259.2k, 2 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Kiến trúc sư giải pháp (@solution-architect) | dev | 14 | 35057 | 171426 | 1 |
+| QA Engineer (@qa-tester) | dev | 10 | 4265 | 87783 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-solution-architect.md` — S1 [vs-claude r1-elk-design__B7__r3] ELK audit platform sizing and design (@solution-architect)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Kiến trúc sư giải pháp (@solution-architect) | dev | **92** A | — | 100 | 77 | 100 | 1 | 1 | 206k | 2/7 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 92k | 0/4 |
+
+### Việc cần sửa theo agent
+- **Kiến trúc sư giải pháp** (@solution-architect, 92 A):
+  - Thao tác công cụ lỗi nhiều (2/7, 29%; nhiều nhất ở run_command 2/4) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

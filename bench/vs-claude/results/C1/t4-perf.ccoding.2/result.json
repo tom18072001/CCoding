@@ -1,0 +1,60 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261101-183121-69b",
+  "wallSec": 323,
+  "wallSecHarness": 330,
+  "costUsd": 1.0265267,
+  "tokens": {
+   "input": 44,
+   "output": 36734,
+   "cacheRead": 683160,
+   "cacheWrite": 97412
+  },
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "Lưu bản cũ làm oracle + tối ưu buildReport O(n) + test so sánh cơ bản"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "Test so sánh mở rộng: trường hợp biên + fuzz với oracle bản cũ"
+   }
+  ],
+  "workdir": "/home/claude/tom18072001/ccoding/workspaces/b-c1-t4-2/wt-T-20261101-183121-69b",
+  "branch": "ccoding/t-20261101-183121-69b"
+ },
+ "task": "t4-perf",
+ "system": "ccoding",
+ "rep": 2,
+ "key": "t4-perf.ccoding.2",
+ "env": "cloud",
+ "startedAt": "2026-11-01T11:31:19.039Z",
+ "finishedAt": "2026-11-01T11:36:57.769Z",
+ "grade": {
+  "hidden": {
+   "pass": 19,
+   "fail": 0,
+   "total": 19,
+   "failed": [],
+   "ms": 3161,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 14,
+   "fail": 0,
+   "total": 14
+  },
+  "changed": [
+   "~src/report.js",
+   "+test/legacy/report.legacy.js",
+   "+test/report.edge.test.js",
+   "+test/report.equiv.test.js"
+  ],
+  "perfMs": 187
+ },
+ "audit": []
+}

@@ -1,0 +1,206 @@
+{
+ "id": "T-20261102-103833-d71",
+ "title": "[bench C4] t4-perf #1",
+ "brief": "Tối ưu hiệu năng hàm buildReport trong src/report.js theo PERF.md: dưới 1 giây với 200.000 dòng (npm run bench) và kết quả phải giống hệt bản hiện tại với mọi đầu vào hợp lệ — bản hiện tại là đặc tả, kể cả các hành vi trông lạ. Bộ nghiệm thu ẩn so kết quả với bản cũ trên nhiều bộ dữ liệu và đo thời gian. Thêm test so sánh với bản cũ, đảm bảo `npm test` xanh.",
+ "mode": "project",
+ "projectId": "b-c4-t4-fastla-1",
+ "classification": "internal",
+ "status": "done",
+ "departments": [
+  "dev"
+ ],
+ "runs": [
+  {
+   "department": "dev",
+   "status": "done",
+   "subtasks": [
+    {
+     "description": "Chỉ sửa src/report.js, giữ nguyên chữ ký và module.exports. Đọc PERF.md và bản hiện tại (đặc tả), rồi viết lại với độ phức tạp ~O(n):\n- Dựng Map sku->product một lần. `products.find` trả về phần tử ĐẦU TIÊN khớp, nên khi trùng sku phải giữ phần tử đầu.\n- Không dùng includes/filter lồng nhau. Dùng Map/Set và gom nhóm theo category, month, sku, customer trong một lượt.\n- Giữ ĐÚNG thứ tự xuất hiện đầu tiên của category, sku, customer. Giữ tên sản phẩm lấy từ dòng đầu của nhóm. months sắp xếp bằng sort() mặc định. Giữ nguyên các comparator và tie-break.\n- Giữ các hành vi lạ:\n  + `topN ?? 3`, và `slice(0, topN)` với topN bất thường.\n  + Lọc from/to theo chuỗi tháng; bỏ dòng cancelled.\n  + Sản phẩm không có trong danh mục: category 'unknown', name '(không rõ)'.\n  + Chỉ giữ sản phẩm có revenue > 0.\n  + `orders` đếm id khác nhau CHỈ của dòng status 'paid'; `customers` trong monthly cũng chỉ tính dòng paid.\n  + `orders` trong topCustomers chỉ tính dòng paid.\n  + `refunds` là tổng các dòng có amount < 0.\n  + Dòng refunded có amount âm; qtySigned âm.\n  + `runningTotal` cộng dồn theo thứ tự months đã sort.\n  + `share` làm tròn 4 chữ số; chia cho grandTotal === 0 trả về 0.\n  + byMonth có đủ mọi tháng trong `months`, kể cả tháng bằng 0.\n  + Thứ tự cộng số học giữ như cũ (cùng thứ tự dòng) để tránh sai khác dấu phẩy động.\n  + Bước `JSON.parse(JSON.stringify(row))` chỉ đổi giá trị khi dữ liệu bất thường (NaN/undefined). Hãy xem nó có ảnh hưởng đầu ra với đầu vào hợp lệ hay không; nếu có thì mô phỏng lại, nếu không thì bỏ.\n- Không sửa đầu vào, không cache giữa các lần gọi, không thêm thư viện, không dùng worker.\n- Dùng test đối chiếu của S2 (test/report.compare.test.js, khi đã gộp) hoặc tự chạy so sánh với bản cũ lấy từ `git show HEAD:src/report.js`.\nTiêu chí xong: `npm run bench` dưới 1 giây với 200k dòng; `npm test` xanh; deepStrictEqual với bản cũ trên dữ liệu src/gen.js cỡ vừa. Ghi lại thời gian đo thật trong bàn giao.",
+     "dependsOn": [],
+     "status": "done",
+     "attempts": 1,
+     "usage": {
+      "input": 10,
+      "output": 5002,
+      "cacheRead": 137522,
+      "cacheWrite": 15069,
+      "costUsd": 0.1248168,
+      "calls": 1,
+      "estimatedCalls": 0
+     },
+     "id": "S1",
+     "title": "Viết lại buildReport theo Map/một lượt duyệt (<1s)",
+     "assignee": "backend-dev",
+     "deliverable": "src/report.js đã tối ưu, kèm số liệu bench và kết quả npm test",
+     "startedAt": "2026-11-02T03:38:55.982Z",
+     "output": "outputs/dev-S1-backend-dev.md",
+     "summary": "Tôi đã viết lại `buildReport` trong `src/report.js` thành một lượt duyệt dữ liệu bằng Map/Set, độ phức tạp ~O(n). Chữ ký hàm và `module.exports` giữ nguyên. `npm run bench` với 200.000 dòng mất 371 ms. `npm test` xanh (2/2). Kết quả khớp `deepStrictEqual` với bản cũ trên dữ liệu `src/gen.js`.",
+     "finishedAt": "2026-11-02T03:39:34.683Z"
+    },
+    {
+     "description": "Chỉ tạo tệp mới, KHÔNG sửa src/report.js:\n- Chép nguyên bản hiện tại bằng `git show HEAD:src/report.js > test/fixtures/report.old.js` (đổi tên export thành buildReportOld nếu cần; giữ nguyên logic).\n- Viết test/report.compare.test.js (node:test, assert.deepStrictEqual, so sánh cả thứ tự khóa và thứ tự mảng bằng JSON.stringify) giữa `require('../src/report').buildReport` và bản cũ.\n- Phải có các ca sau, chạy cả trên dữ liệu ngẫu nhiên có seed cố định cỡ nhỏ (vài trăm đến vài nghìn dòng):\n  + orders rỗng; tất cả cancelled; grandTotal = 0.\n  + sku không có trong products; products trùng sku.\n  + Nhiều dòng cùng id; cùng khách ở nhiều tháng.\n  + Dòng refunded làm revenue sản phẩm ≤ 0, cùng revenue thì tie-break theo qty rồi sku.\n  + Cùng total giữa các danh mục.\n  + topN = 0, 1, lớn; options.from, to, và cả from và to.\n  + Ngày có múi giờ lệch làm đổi tháng UTC.\n  + Nhiều hơn 5 khách.\n  + Đầu vào không bị sửa (so sánh bản sao sâu trước và sau).\n- Dùng src/gen.js để sinh thêm bộ dữ liệu.\nTiêu chí xong: `node --test test/report.compare.test.js` chạy được; trên bản cũ nó tự so sánh khớp 100%; ghi rõ kết quả chạy thật trong bàn giao (nếu S1 chưa gộp thì ghi là đã chạy với bản nào).",
+     "dependsOn": [],
+     "status": "done",
+     "attempts": 1,
+     "usage": {
+      "input": 14,
+      "output": 10293,
+      "cacheRead": 221875,
+      "cacheWrite": 20966,
+      "costUsd": 0.2097306,
+      "calls": 1,
+      "estimatedCalls": 0
+     },
+     "id": "S2",
+     "title": "Bộ test đối chiếu với bản cũ",
+     "assignee": "qa-tester",
+     "deliverable": "test/report.compare.test.js và test/fixtures/report.old.js",
+     "startedAt": "2026-11-02T03:38:55.983Z",
+     "output": "outputs/dev-S2-qa-tester.md",
+     "summary": "Tôi đã tạo bộ test đối chiếu `buildReport` với bản cũ. `src/report.js` không bị sửa. Cả 11 test pass, nhưng chỉ chạy trên `src/report.js` hiện tại, tức bản gốc chưa có bản viết lại của S1. Vì vậy test mới chứng minh bản cũ khớp chính nó, chưa chứng minh gì về bản S1. Khi S1 gộp vào, cần chạy lại.",
+     "finishedAt": "2026-11-02T03:39:57.620Z"
+    }
+   ],
+   "usage": {
+    "input": 42,
+    "output": 21086,
+    "cacheRead": 621347,
+    "cacheWrite": 69043,
+    "costUsd": 0.5528897,
+    "calls": 4,
+    "estimatedCalls": 0
+   },
+   "startedAt": "2026-11-02T03:38:33.991Z",
+   "stage": "done",
+   "planSummary": "Hàm buildReport không chia được nên giao một người viết lại thành một lượt duyệt dữ liệu bằng Map, giữ nguyên thứ tự và hành vi cũ. Song song, một người khác viết bộ test đối chiếu với bản cũ trong tệp riêng.",
+   "decisions": "",
+   "estimate": {
+    "tokens": 1094467,
+    "budget": 1439762,
+    "at": "2026-11-02T03:38:55.904Z",
+    "basis": "theo lịch sử: @backend-dev ~404.5k/hạng mục (3 mẫu)"
+   },
+   "reviewRound": 0,
+   "review": {
+    "approved": true,
+    "summary": "Bản viết lại buildReport trong src/report.js chạy một lượt bằng Map/Set, độ phức tạp ~O(n). Tôi đọc đối chiếu từng bước với bản cũ (test/fixtures/report.old.js) và không thấy khác biệt hành vi với đầu vào hợp lệ. Cụ thể: Map sku giữ phần tử đầu; thứ tự chèn Map giữ thứ tự xuất hiện đầu tiên của category, sku và customer; thứ tự cộng số học giữ nguyên; tên sản phẩm lấy từ dòng đầu của nhóm; orders và customers chỉ đếm dòng paid; các comparator và tie-break không đổi; topN ?? 3 và slice giữ nguyên. Bước JSON round-trip được thay bằng `+ 0` để đổi -0 thành 0, tương đương với đầu vào hợp lệ. Chữ ký hàm và module.exports không đổi, và chỉ src/report.js bị sửa trong phần mã nguồn. Bộ test S2 (11 test) đã nằm trong worktree. Test này so sánh deepStrictEqual và JSON.stringify trên cả ca biên lẫn dữ liệu ngẫu nhiên có seed. Nó đã nằm trong 13/13 test pass của npm test, nên bản S1 đã được test S2 kiểm chứng. Tôi chạy thêm so sánh độc lập: 360 tổ hợp (40 seed × 9 bộ options, cỡ 50 đến 8000 dòng) đều khớp. Bench đo được 345 ms, đạt mục tiêu dưới 1 giây.",
+    "issues": [
+     {
+      "subtask": "S2",
+      "severity": "minor",
+      "comment": "Test chỉ dùng dữ liệu cỡ nhỏ và không đo thời gian. Phần đo 200k dòng nằm ở npm run bench. Không có ca NaN/undefined, nhưng PERF.md chỉ yêu cầu đầu vào hợp lệ."
+     },
+     {
+      "subtask": "S1",
+      "severity": "minor",
+      "comment": "Với đầu vào không hợp lệ (NaN, undefined, customerId/id không phải kiểu JSON), bản mới có thể khác bản cũ vì bước JSON round-trip đã bị bỏ. Điều này nằm ngoài phạm vi yêu cầu, nhưng nên ghi chú trong bàn giao."
+     }
+    ],
+    "checks": [
+     {
+      "command": "npm test",
+      "exitCode": 0,
+      "ok": true,
+      "note": "CCoding tự chạy — # tests 13 · # suites 0 · # pass 13 · # fail 0 · # skipped 0 · # todo 0"
+     },
+     {
+      "command": "git status --short && cat src/report.js && cat PERF.md && npm test 2>&1 | tail -12; echo EXIT $?; npm run bench 2>&1 | tail -3",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "git show HEAD:src/report.js | sed -n 10,100p",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "git log --oneline | head; git status --short; cat test/fixtures/report.old.js | sed -n 1,100p",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "sed -n 1,30p src/gen.js | head -40; cat > /tmp/claude-0/-home-claude-ccoding-dev-workspaces-b-c4-t4-fastla-1-wt-T-20261102-103833-d71/f0b9113a-3e47-5284-a91d-91f01aca3e1e/scratchpad/c.js <<'EOF'\nconst root=process.argv[2];const g=require(root+'/src/gen.js');const {buildReport}=require(root+'/src/rep",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "cat > /tmp/claude-0/-home-claude-ccoding-dev-workspaces-b-c4-t4-fastla-1-wt-T-20261102-103833-d71/f0b9113a-3e47-5284-a91d-91f01aca3e1e/scratchpad/c.js <<'EOF'\nconst root=process.argv[2];const g=require(root+'/src/gen.js');const {buildReport}=require(root+'/src/report.js');const {buildReportOld}=requ",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "git diff a54c0d9 --stat -- src package.json bench; sed -n 1,40p test/report.compare.test.js",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "node scratchpad/c.js (so sánh độc lập buildReport với buildReportOld, 40 seed × 9 bộ options, deepStrictEqual và JSON.stringify)",
+      "exitCode": 0,
+      "ok": true,
+      "note": "360 so sánh đều khớp"
+     }
+    ],
+    "verified": true
+   },
+   "finalPath": "dev-FINAL.md",
+   "finishedAt": "2026-11-02T03:40:37.831Z"
+  }
+ ],
+ "options": {
+  "discussionRounds": 1,
+  "review": true,
+  "maxParallel": 3,
+  "maxRevisions": 1,
+  "budgetTokens": 1500000,
+  "budgetMode": "complete",
+  "phaseModels": {
+   "plan": "sonnet"
+  }
+ },
+ "usage": {
+  "input": 42,
+  "output": 21086,
+  "cacheRead": 621347,
+  "cacheWrite": 69043,
+  "costUsd": 0.5528897,
+  "calls": 4,
+  "estimatedCalls": 0
+ },
+ "createdAt": "2026-11-02T03:38:33.961Z",
+ "updatedAt": "2026-11-02T03:40:37.870Z",
+ "autoTitle": false,
+ "startedAt": "2026-11-02T03:38:33.961Z",
+ "workspace": "/home/claude/ccoding-dev/workspaces/b-c4-t4-fastla-1/wt-T-20261102-103833-d71",
+ "branch": "ccoding/t-20261102-103833-d71",
+ "baseRef": "a54c0d9fee1827d755700dcf398ce7443740f437",
+ "lane": "fast",
+ "projectChecks": {
+  "baseline": [
+   {
+    "command": "npm test",
+    "code": 0,
+    "ok": true,
+    "ms": 284,
+    "summary": "# tests 2 · # suites 0 · # pass 2 · # fail 0 · # skipped 0 · # todo 0",
+    "tail": "> sales-report@2.1.0 test\n> node --test \"test/**/*.test.js\"\n\nTAP version 13\n# Subtest: báo cáo nhỏ\nok 1 - báo cáo nhỏ\n  ---\n  duration_ms: 2.177577\n  type: 'test'\n  ...\n# Subtest: dữ liệu sinh ngẫu nhiên chạy được\nok 2 - dữ liệu sinh ngẫu nhiên chạy được\n  ---\n  duration_ms: 42.185858\n  type: 'test'\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 114.775239"
+   }
+  ],
+  "baselineAt": "2026-11-02T03:38:34.275Z",
+  "latest": [
+   {
+    "command": "npm test",
+    "code": 0,
+    "ok": true,
+    "ms": 462,
+    "summary": "# tests 13 · # suites 0 · # pass 13 · # fail 0 · # skipped 0 · # todo 0",
+    "tail": "> sales-report@2.1.0 test\n> node --test \"test/**/*.test.js\"\n\nTAP version 13\n# Subtest: orders rỗng\nok 1 - orders rỗng\n  ---\n  duration_ms: 1.819052\n  type: 'test'\n  ...\n# Subtest: tất cả cancelled / grandTotal = 0\nok 2 - tất cả cancelled / grandTotal = 0\n  ---\n  duration_ms: 2.286936\n  type: 'test'\n  ...\n# Subtest: sku không có trong products; products trùng sku\nok 3 - sku không có trong products; products trùng sku\n  ---\n  duration_ms: 0.918721\n  type: 'test'\n  ...\n# Subtest: nhiều dòng cùng id; cùng khách nhiều tháng\nok 4 - nhiều dòng cùng id; cùng khách nhiều tháng\n  ---\n  duration_ms: 0.364405\n  type: 'test'\n  ...\n# Subtest: refunded làm revenue ≤ 0; tie-break theo revenue, qty, sku\nok 5 - refunded làm revenue ≤ 0; tie-break theo revenue, qty, sku\n  ---\n  duration_ms: 2.22535\n  type: 'test'\n  ...\n# Subtest: cùng total giữa các danh mục\nok 6 - cùng total giữa các danh mục\n  ---\n  duration_ms: 0.477216\n  type: 'test'\n  ...\n# Subtest: topN và from/to\nok 7 - topN và from/to\n  ---\n  duration_ms: 92.861677\n  type: 'test'\n  ...\n# Subtest: múi giờ lệch làm đổi tháng UTC\nok 8 - múi giờ lệch làm đổi tháng UTC\n  ---\n  duration_ms: 0.566887\n  type: 'test'\n  ...\n# Subtest: nhiều hơn 5 khách, tie doanh thu theo customerId\nok 9 - nhiều hơn 5 khách, tie doanh thu theo customerId\n  ---\n  duration_ms: 0.650369\n  type: 'test'\n  ...\n# Subtest: không sửa đầu vào (kể cả đóng băng)\nok 10 - không sửa đầu vào (kể cả đóng băng)\n  ---\n  duration_ms: 7.535439\n  type: 'test'\n  ...\n# Subtest: dữ liệu ngẫu nhiên có seed\nok 11 - dữ liệu ngẫu nhiên có seed\n  ---\n  duration_ms: 64.722871\n  type: 'test'\n  ...\n# Subtest: báo cáo nhỏ\nok 12 - báo cáo nhỏ\n  ---\n  duration_ms: 1.848531\n  type: 'test'\n  ...\n# Subtest: dữ liệu sinh ngẫu nhiên chạy được\nok 13 - dữ liệu sinh ngẫu nhiên chạy được\n  ---\n  duration_ms: 8.747894\n  type: 'test'\n  ...\n1..13\n# tests 13\n# suites 0\n# pass 13\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 293.38292"
+   }
+  ],
+  "latestAt": "2026-11-02T03:39:58.366Z",
+  "latestAfter": "execute"
+ },
+ "changes": "src/report.js               | 122 +++++++++++++++++++-------------------\n test/fixtures/report.old.js |  97 ++++++++++++++++++++++++++++++\n test/report.compare.test.js | 140 ++++++++++++++++++++++++++++++++++++++++++++\n 3 files changed, 299 insertions(+), 60 deletions(-)",
+ "commit": "02a6dddf31 — 4 commit trên nhánh từ a54c0d9fee (gồm gộp worktree con)",
+ "finalPath": "FINAL.md",
+ "finishedAt": "2026-11-02T03:40:37.870Z"
+}

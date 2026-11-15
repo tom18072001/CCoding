@@ -1,0 +1,8 @@
+I wrote `answer.json` and `REVIEW.md` at the repository root. `REVIEW.md` is 496 words, inside the 300–500 target. I did not re-read `REVIEW.md` after trimming its trailing note, so it's worth a quick look.
+
+- **q1:** P4 (LogGraphT) has the highest F1 on the full HDFS-X split, 0.962. The other full-split results are P3's RT-AD at 0.948 and P1's TF-LAD at 0.931. P2's 0.971 is on HDFS-X-small, which P6 says is not comparable to the full split.
+- **q2:** P5 is the only paper below 1% labeled data. It uses 0.5% labels on BGL-X.
+- **q3:** The corpus does not say. P4 reports only latency (3.1 ms per session on one A100), so `not_in_corpus` is true.
+- **q4:** P1 and P3 disagree. P1 says parsing into templates is necessary, and P3 says it is optional.
+
+I first wrote q1 as P3 (0.948) and corrected it to P4 (0.962) before finishing. `answer.json` and `REVIEW.md` both give P4.

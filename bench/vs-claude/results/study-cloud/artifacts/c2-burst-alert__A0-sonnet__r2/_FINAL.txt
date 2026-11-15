@@ -1,0 +1,7 @@
+`detectBursts` is implemented in `src/alert.js` and `npm test` passes. The visible suite has only one test, and I didn't write extra tests for the edge cases below.
+
+- **Ordering:** it sorts a copy of the input by `ts` (the sort is stable). Events with equal `ts` therefore stay in input order, and the input isn't mutated.
+- **Filtering and grouping:** it keeps only 5xx events (500–599) and groups them by host.
+- **Window and cooldown:** for each host it slides a pointer over the window `(ts - windowMs, ts]`. An alert fires when the count reaches `threshold` and `ts >= lastAlert + cooldownMs`. Events during cooldown still count toward later windows.
+- **Output:** alerts are `{ host, ts, count }`, sorted by `ts` and then by `host` ascending. Hosts are compared with plain `<`/`>`, not locale-aware ordering.
+- **Defaults:** `cooldownMs` defaults to `windowMs`.

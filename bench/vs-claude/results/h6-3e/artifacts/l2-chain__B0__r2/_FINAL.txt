@@ -1,0 +1,181 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude l2-chain__B0__r2] Thư viện cfgchain: bốn tầng nối tiếp từ đặc tả
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Bốn tầng và compile đã được hiện thực, và `npm test` đang xanh (51/51, theo bàn giao, tôi chưa chạy lại). Việc còn lại là đối chiếu từng quy tắc trong SPEC.md với mã, vì bộ nghiệm thu ẩn kiểm tra từng quy tắc. Tôi chia thành 3 hạng mục song song, mỗi hạng mục sở hữu tệp riêng, và đặc biệt rà các chỗ bàn giao đã tự diễn giải.
+
+Kết quả: 3/3 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Đối chiếu SPEC: lexer + parser (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã đối chiếu lexer và parser với SPEC mục 2–4 và sửa hai điểm. Điểm thứ nhất là `\` ở cuối tệp, nay báo `LEX_BAD_ESCAPE`. Điểm thứ hai là parseProject nay xử lý được tên tệp `__proto__`. `npm test` cho 53/53 pass, exit 0. Việc đối chiếu là đọc mã so với SPEC, không có bộ nghiệm thu ẩn để chạy. Điểm `\` cuối tệp là một cách hiểu SPEC, không phải kết luận chắc chắn.
+
+## Tệp đã tạo/sửa
+- `src/lexer.js`: bỏ nhánh coi `\` cuối tệp là `LEX_UNTERMINATED_STRING`. Ký tự đó giờ rơi vào `LEX_BAD_ESCAPE`, tại vị trí `\`.
+- `src/parser.js`: `parseProject` ghi AST vào `files` bằng `Object.defineProperty`. Trước đó, `parsed['__proto__'] = ast` sẽ đổi prototype thay vì tạo khóa, làm mất tệp khỏi `program.files`.
+- `test/lexer.test.js`: thêm test cho `"a\` ở cuối tệp, `\` trước xuống dòng, `\u12` ở cuối tệp (cả ba là `LEX_BAD_ESCAPE` tại cột 3) và `"abc` (`LEX_UNTERMINATED_STRING` tại cột 1).
+- `test/parser.test.js`: thêm test tên tệp `__proto__`.
+
+## Kiểm chứng
+- `npm test` → exit 0, 53 test, 53 pass, 0 fail. Baseline exit 1 lấy từ bàn giao, tôi không đo lại.
+- Lần chạy đầu sau khi sửa có test đỏ. Lý do là heredoc shell đã nuốt các dấu `\` trong test và làm hỏng tên test; tôi đã sửa lại test, mã nguồn không đổi vì lý do này.
+
+## Quyết định thiết kế
+Đối chiếu từng quy tắc:
+
+**Khớp SPEC, không sửa**
+- **Token và số**
+  - Token `ident`/`keyword`/`number`/`string`/`punct`/`eof`.
+  - Số: chuỗi dài nhất `[0-9A-Za-z_.+-]`, regex đầy đủ, hữu hạn, `-0` thành `0`.
+- **Chuỗi và nội suy**
+  - Escape, `\$`, nội suy `${…}` và `@`, đoạn số không có số 0 đứng đầu.
+  - Hai `Text` không đứng cạnh nhau, `Text` rỗng không xuất hiện, chuỗi `""` có `parts: []`.
+- **Chú thích và vị trí**
+  - Chú thích `#`, `//`, `/* */`.
+  - Cột đếm theo UTF-16. BOM được bỏ và không tính vào cột. `\r\n`, `\r` và `\n` được xử lý đúng.
+- **Lexer**
+  - Lexer dừng ở lỗi đầu tiên theo thứ tự đọc.
+  - Vị trí `eof` là ngay sau ký tự cuối.
+- **Parser**
+  - Parser chạy lexer trọn vẹn trước.
+  - Hình dạng AST và vị trí nút đúng bảng mục 2.
+  - `PARSE_BAD_INCLUDE`, `PARSE_CONST_NOT_TOP`, và `PARSE_UNEXPECTED_EOF`/`PARSE_UNEXPECTED_TOKEN` đúng như SPEC mô tả.
+  - `[,]` và `[1,,2]` là lỗi, `[]` và `[1,]` hợp lệ.
+- **parseProject**
+  - Duyệt tiền thứ tự, kể cả `include` trong khối.
+  - Bỏ qua đường dẫn thiếu, không lặp vô hạn khi include vòng.
+  - Khóa `files` theo thứ tự phân tích; lỗi mang `file`; `PARSE_ENTRY_NOT_FOUND` ở 1:1.
+
+**Cách hiểu của tôi (đã sửa)**
+- **`\` cuối tệp:** SPEC chỉ nói rõ `\u` thiếu hex và `\` trước xuống dòng là `LEX_BAD_ESCAPE`, nên `\` ở cuối tệp tôi xếp cùng loại. `LEX_UNTERMINATED_STRING` chỉ dành cho trường hợp hết dòng hoặc hết tệp mà không có `\` dở dang.
+- **Cạnh của chuỗi:** các ca `"${a`, `"${a"` và `${}` đều ra `LEX_BAD_INTERPOLATION` tại `$`. Ca chuỗi chưa đóng cộng nội suy hỏng ra lỗi nào gặp trước theo thứ tự đọc. Phần này khớp SPEC nên không đổi.
+
+## Rủi ro & việc còn mở
+- Nếu bộ nghiệm thu ẩn muốn `\` cuối tệp là `LEX_UNTERMINATED_STRING`, chỉ cần khôi phục một dòng ở `src/lexer.js` (kiểm `e === undefined`) và đổi test tương ứng.
+- Phần check, merge, evaluate, diff và compile thuộc S2 và S3, tôi không đụng tới.
+
+Bản đầy đủ: `.ccoding/T-20261105-005423-954/outputs/dev-S1-senior-swe.md`
+
+### S2 — Đối chiếu SPEC: check + merge + evaluate (@backend-dev, done)
+
+## Tóm tắt
+Tôi đối chiếu `src/check.js`, `src/merge.js` và `src/evaluate.js` với SPEC mục 5 và 6 và không thấy chỗ nào lệch, nên không sửa mã nguồn. Tôi thêm 4 test cho các quy tắc còn thiếu. `npm test` exit 0, 57/57 test pass.
+
+## Tệp đã tạo/sửa
+- `test/check.test.js`: thêm 3 test.
+  - Các kiểu `null`, `array`, `object`, `any`, `number` và `enum` trên chuỗi.
+  - `closed` khi không có `fields`, và `SEM_UNKNOWN_KEY` trên khối hợp nhất qua include.
+  - Vòng tham chiếu qua mảng và qua hằng, thứ tự lỗi pha B theo tệp, và thứ tự kiểm `SEM_CONST_CONFIG_REF` / `SEM_UNDEFINED_REF`.
+- `test/evaluate.test.js`: thêm 1 test cho `null` làm đích tham chiếu và hằng của từng tệp khi include.
+- `src/check.js`, `src/merge.js`, `src/evaluate.js`: giữ nguyên.
+
+Đối chiếu ngắn các điểm bàn giao tự diễn giải:
+- **Pha A/B/C và việc dừng ở pha đầu tiên có lỗi**: khớp SPEC. Thứ tự lỗi (theo tệp tiền thứ tự, rồi theo `(line, column)`), vòng tham chiếu, `SEM_BAD_INTERPOLATION` và hợp nhất `Block` đều khớp.
+- **`closed: true` không có `fields`**: giữ không báo `SEM_UNKNOWN_KEY`. Rule 3 chỉ áp dụng khi đối tượng "có `fields`". SPEC mơ hồ ở chỗ này, nên có rủi ro bộ nghiệm thu hiểu khác.
+- **Vị trí giá trị từ chuỗi thuần `"${x}"`**: giữ vị trí chuỗi đó cho cả giá trị và mọi thứ bên trong, đúng câu "cho cả giá trị và mọi thứ bên trong nó". Phần bên trong gồm cả khóa của đối tượng được tham chiếu, nên `SEM_UNKNOWN_KEY` ở đó cũng nằm tại vị trí chuỗi. Điều này có thể mâu thuẫn với dòng riêng của `SEM_UNKNOWN_KEY` ("vị trí token khóa"), và SPEC không nói rõ.
+- **`SEM_UNKNOWN_KEY` trên khối hợp nhất**: giữ vị trí `Block` đã khởi tạo đối tượng đó, cùng quy ước với vị trí đối tượng. Chữ "thắng" trong SPEC cũng mơ hồ.
+- **`evaluate` ném `Error` khi gặp vòng tham chiếu**: giữ nguyên. SPEC nói hành vi với chương trình có lỗi là không xác định, nên đây là an toàn chứ không vi phạm.
+
+## Hợp đồng API
+Không áp dụng.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0; 57 test, 57 pass, 0 fail. Baseline là exit 1 và tôi không đo lại.
+
+## Việc còn lại
+- Không có biến môi trường mới.
+- Ba điểm mơ hồ trên (`closed` không `fields`, vị trí khóa trong giá trị từ chuỗi thuần tham chiếu, "Block thắng" của `SEM_UNKNOWN_KEY`) vẫn là diễn giải của người thực hiện. Nếu bộ nghiệm thu hiểu khác thì chỉ cần sửa ở `src/check.js` (`phaseC`) hoặc `src/merge.js` (`overridePos`).
+
+Bản đầy đủ: `.ccoding/T-20261105-005423-954/outputs/dev-S2-backend-dev.md`
+
+### S3 — Đối chiếu SPEC: diff + compile + đường ống đầu cuối (@frontend-dev, done)
+
+## Tóm tắt
+Tôi đối chiếu `src/diff.js` và `src/index.js` với SPEC mục 7–8 và thấy mã đã khớp, nên không sửa mã nguồn. Hai điểm bàn giao tự diễn giải cũng đúng theo SPEC (chi tiết ở mục Việc còn lại). Tôi bổ sung 4 test đầu cuối vào `test/compile.test.js`. `npm test` cho kết quả 61/61 pass, exit 0.
+
+## Tệp đã tạo/sửa
+- `test/compile.test.js`: thêm 4 test.
+  - Ví dụ include + ghi đè trong SPEC mục 9, kèm thứ tự khóa `server`, `mode`.
+  - Lỗi lexer ở tệp include (`file: 'x'`, stage `parse`, đúng 1 lỗi) và dấu phẩy thừa → `PARSE_UNEXPECTED_TOKEN`.
+  - Khi một tầng lỗi thì kết quả không có `config`; mọi hàm công khai đều được export từ `index.js`.
+  - Bất biến `applyDiff(a, diff(a, b))` bằng sâu `b`, chạy qua `compile`.
+- `src/diff.js`, `src/index.js`, `test/diff.test.js`: không đổi.
+
+## Màn hình & trạng thái
+Không áp dụng (thư viện, không có giao diện).
+
+## API sử dụng
+Không áp dụng. Các hàm đã đối chiếu với SPEC:
+- Pointer: `escapePointer`, `unescapePointer`, `parsePointer`, `formatPointer`.
+- Diff: `diff`, `applyDiff`, `formatText`, `formatJson`, `summarize`.
+- `compile`.
+
+## Kiểm chứng
+- `npm test` → exit 0, 61 test, 61 pass, 0 fail. Chưa chạy với bộ nghiệm thu ẩn.
+- Lần chạy đầu bị hook chặn vì chuỗi import tương đối nằm trong heredoc. Tôi chuyển sang dùng Edit, mã không đổi.
+
+## Việc còn lại
+- **`add` vào mảng với chỉ số `-`:** SPEC chỉ cho phép chỉ số ≤ độ dài và nói `diff` không dùng `-`. Mã hiện ném `DIFF_APPLY_FAILED`, giữ nguyên.
+- **Pointer sai trong `applyDiff`:** SPEC mục 7 chỉ quy định `DIFF_BAD_POINTER` cho `parsePointer`/`unescapePointer`, còn `DIFF_APPLY_FAILED` chỉ cho add trùng khóa hoặc remove/replace thiếu khóa. `applyDiff` gọi `parsePointer` nên ném `DIFF_BAD_POINTER`. Đây là cách đọc hợp lý nhất, giữ nguyên, nhưng SPEC không nói thẳng.
+- **Các mục khớp SPEC:**
+  - Escape `~0`/`~1`, thứ tự sắp khóa, và thao tác mảng (add tăng dần, remove giảm dần).
+  - Thứ tự khóa của thao tác, `(root)`, và `Không có thay đổi`.
+  - Gộp lỗi `compile` theo `stage`.
+- **a11y:** không áp dụng.
+
+Bản đầy đủ: `.ccoding/T-20261105-005423-954/outputs/dev-S3-frontend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261105-005423-954` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **84 in / 82.4k out**, cache đọc 1.43M, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 56 | 68004 | 1167889 | 2 |
+| Frontend Developer (@frontend-dev) | dev | 14 | 5020 | 141976 | 1 |
+| Backend Developer (@backend-dev) | dev | 10 | 7135 | 117117 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 2 | 2117 | 4701 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 157 | 649 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Đối chiếu SPEC: lexer + parser (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Đối chiếu SPEC: check + merge + evaluate (@backend-dev)
+- `outputs/dev-S3-frontend-dev.md` — S3 Đối chiếu SPEC: diff + compile + đường ống đầu cuối (@frontend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) · at Test.run (node:internal/test_runner/test:1118:25) · at Test.processPendingSubte |
+| sau thực thi | `npm test` | 0 | ℹ tests 61 · ℹ suites 0 · ℹ pass 61 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **64** C | thấp | — | — | 100 | 13 | 92 | 100 | 1 | 1 | 1.24M | 5/52 | — |
+| Frontend Developer (@frontend-dev) | dev | **70** B | thấp | — | — | 100 | 100 | 94 | 100 | 1 | 1 | 147k | 1/13 | — |
+| Backend Developer (@backend-dev) | dev | **70** B | thấp | — | — | 100 | 100 | 100 | 100 | 1 | 1 | 124k | 0/5 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 88 | 100 | — | 0 | — | 7k | — | — |
+| Điều phối viên (@orchestrator) | office | **60** C | thấp | — | — | — | — | 100 | — | 0 | — | 808 | — | — |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 64 C):
+  - Tốn token gấp 8.4 lần trung vị phòng cho mỗi hạng mục (1236k so với 147k).
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

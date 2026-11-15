@@ -1,0 +1,23 @@
+Cả 4 tính năng trong FEATURES.md đã xong và `npm test` xanh (10/10). Tôi mới chỉ kiểm thử bằng bộ test tự viết, chưa chạy bộ nghiệm thu ẩn.
+
+**Thay đổi chính**
+- **`src/handlers/tasks.js`**:
+  - Xác thực qua `X-User` (401), phân quyền admin/manager/member theo đúng thứ tự 401 → 400 tham số → 404 → 403 → 400 body.
+  - Thêm `GET /tasks/export.csv` (đăng ký trước `/tasks/:id`) và `GET /audit`.
+  - `GET /tasks` trả `{items, total, page, pageSize}`.
+- **`src/query.js`** (mới):
+  - Kiểm tra tham số truy vấn tuần tự theo thứ tự trên URL (tham số lạ hoặc lặp → 400 `INVALID_QUERY` kèm `field`).
+  - Lọc, tìm kiếm không phân biệt dấu/hoa thường (kể cả `đ`), sắp xếp (hòa theo `id` số, `dueDate` null luôn cuối, `title` dùng `localeCompare` locale `vi`), phân trang.
+  - Xuất CSV: BOM, `\r\n`, RFC 4180, chống chèn công thức bằng `'`.
+- **`src/store.js`**: thêm `audit` và `log()`, chỉ ghi khi thao tác thành công.
+- **`test/helpers.js`**: giải mã phản hồi bằng `TextDecoder` với `ignoreBOM`, vì `res.text()` của fetch tự bỏ BOM nên không kiểm tra được CSV.
+- **`test/tasks.test.js`** sửa theo dạng kết quả mới, kèm header `X-User`. **`test/features.test.js`** (mới) có test riêng cho từng tính năng.
+
+**Chỗ đặc tả chưa nói rõ, tôi tự chọn**
+- Manager tạo hoặc sửa với `team` khác nhóm mình (kể cả giá trị không hợp lệ như `C`) trả 403, vì kiểm tra quyền chạy trước validate body.
+- `POST` bởi member trả 403 ngay, không đọc body.
+- Các route `/tasks/:id` và `POST` không kiểm tra tham số truy vấn lạ.
+- Giá trị rỗng cho `status`, `team`, `dueBefore`, `sort`, `page`, `pageSize` bị coi là không hợp lệ. `assignee=` rỗng chỉ lọc, kết quả rỗng.
+- `PATCH` mà không có giá trị nào đổi vẫn ghi một mục nhật ký với `changes: []`.
+
+Chưa commit.

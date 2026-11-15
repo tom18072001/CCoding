@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: khớp bản gốc trên dữ liệu sinh ngẫu nhiên
+ok 1 - khớp bản gốc trên dữ liệu sinh ngẫu nhiên
+  ---
+  duration_ms: 967.089367
+  type: 'test'
+  ...
+# Subtest: khớp bản gốc trên dữ liệu ít sản phẩm / khách (nhiều trùng, hòa điểm)
+ok 2 - khớp bản gốc trên dữ liệu ít sản phẩm / khách (nhiều trùng, hòa điểm)
+  ---
+  duration_ms: 188.837336
+  type: 'test'
+  ...
+# Subtest: khớp bản gốc trên dữ liệu biên tay viết
+ok 3 - khớp bản gốc trên dữ liệu biên tay viết
+  ---
+  duration_ms: 6.515873
+  type: 'test'
+  ...
+# Subtest: khớp bản gốc trên dữ liệu ngẫu nhiên hỗn hợp (múi giờ, hòa, sản phẩm thiếu trường)
+ok 4 - khớp bản gốc trên dữ liệu ngẫu nhiên hỗn hợp (múi giờ, hòa, sản phẩm thiếu trường)
+  ---
+  duration_ms: 79.139596
+  type: 'test'
+  ...
+# Subtest: báo cáo nhỏ
+ok 5 - báo cáo nhỏ
+  ---
+  duration_ms: 3.864244
+  type: 'test'
+  ...
+# Subtest: dữ liệu sinh ngẫu nhiên chạy được
+ok 6 - dữ liệu sinh ngẫu nhiên chạy được
+  ---
+  duration_ms: 14.762313
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1421.708098

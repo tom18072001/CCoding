@@ -1,0 +1,12 @@
+`parseIisLog(text)` is implemented in `src/iis.js` as a named ES module export, and `npm test` passes all 3 tests (the original and two I added).
+
+Self-review found one bug, now fixed. A `#Fields:` column named `constructor` or `toString` made the parser throw instead of being ignored as an unknown field. I added a test for that case.
+
+Where the brief was silent, I assumed:
+- **Timestamp:** `@timestamp` is omitted if `date` or `time` is missing, `-`, or not a valid date.
+- **Numbers:** a non-numeric `sc-status`, `s-port` or `time-taken` is omitted. `event.duration` is rounded to a whole number of nanoseconds.
+- **Line endings and blank lines:** `\r\n` line endings are handled, and whitespace-only lines count as blank.
+- **Spacing:** a line with double spaces has the wrong column count, so it is skipped.
+- **Empty records:** a request line whose values are all `-` or unknown still produces an empty `{}` record.
+
+I added the other tests to `test/basic.test.js`; they cover the full field mapping, `-` values, several `#Fields:` blocks and skipped lines.

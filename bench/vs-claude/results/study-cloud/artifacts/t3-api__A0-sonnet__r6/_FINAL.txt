@@ -1,0 +1,14 @@
+Cả 4 tính năng trong FEATURES.md đã được hiện thực và `npm test` xanh (11/11 test). Tôi mới chỉ chạy bằng test tự viết gọi HTTP thật, chưa chạy thử qua `npm start`. Chưa commit gì.
+
+- **Xác thực và phân quyền:** thiếu hoặc sai `X-User` trả 401. Quyền của admin, manager, member làm đúng đặc tả. Thứ tự kiểm tra là 401, rồi 400 tham số, rồi 404, rồi 403, rồi 400 body. Với PATCH và POST, nếu body là JSON hỏng thì lỗi 400 `INVALID_JSON` chỉ báo sau khi các kiểm tra quyền 403 đã qua.
+- **Danh sách `GET /tasks`:** trả `{items, total, page, pageSize}`. Lọc, tìm không dấu, sắp xếp và phân trang theo đặc tả. Lỗi 400 `INVALID_QUERY` báo tham số đầu tiên xuất hiện trên URL, tham số trùng thì tính theo lần xuất hiện đầu.
+- **CSV `GET /tasks/export.csv`:** đúng header, BOM, `\r\n`, quote theo RFC 4180, chống chèn công thức. Tham số `page`/`pageSize` bị 400.
+- **Nhật ký:** ghi cho create, update, delete thành công. `GET /audit` chỉ admin, mới nhất trước, lọc được theo `taskId`.
+
+Hai chỗ tôi tự quyết vì đặc tả không nói rõ:
+- `dueDate` trong body POST/PATCH nay cũng bị kiểm tra là ngày có thật theo lịch (ví dụ `2026-02-30` bị 400). Trước đây chỉ kiểm tra dạng chuỗi.
+- `assignee=` để trống không báo lỗi mà trả danh sách rỗng.
+
+Test cũ đã cập nhật cho dạng kết quả mới và thêm header `X-User`. Tôi thêm test cho từng tính năng trong `test/auth.test.js`, `test/list.test.js`, `test/audit.test.js`. `test/helpers.js` giờ đọc body dạng byte để giữ BOM, vì `res.text()` của fetch tự bỏ BOM. Tôi cũng nâng `version` trong `package.json` lên 0.4.0.
+
+Code mới nằm ở `src/query.js`, `src/csv.js`, `src/handlers/auth.js` và `src/handlers/audit.js`. Các file `src/handlers/tasks.js`, `src/store.js` và `src/server.js` được sửa.

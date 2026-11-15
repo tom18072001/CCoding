@@ -1,0 +1,13 @@
+Mình đã viết xong `src/parse.js`, `src/query.js`, `src/agg.js` và `bin/logq.js` theo SPEC.md, không dùng thư viện ngoài. `npm test` xanh (21 test, 0 lỗi). Bộ nghiệm thu ẩn thì mình chưa có, nên chỉ kiểm tra được bằng test tự viết.
+
+Test mới nằm trong `test/parse.test.js`, `test/query.test.js`, `test/agg.test.js` và `test/cli.test.js`, ngoài `test/smoke.test.js` có sẵn. Test CLI chạy lệnh thật qua `spawnSync`. Mình cũng chạy tay vài lệnh `bin/logq.js`, kể cả dòng lệnh có `--stats`, lỗi cú pháp và tệp không tồn tại, và kết quả đúng đặc tả.
+
+Mình đã chọn một cách hiểu cho những chỗ đặc tả chưa nói rõ:
+
+- **Thời gian:** `@t` chỉ được thêm khi chuỗi có dạng ISO với chữ `T` giữa ngày và giờ (ví dụ `2024-01-01T10:00:00Z`). `2024-01-01 10:00:00` có dấu cách thì không được thêm `@t`.
+- **`msg` bằng `null`:** khi tìm `WORD`/`QUOTED` đứng một mình, `msg: null` được coi như không có `msg`, nên truy vấn chuyển sang tìm trong `message`.
+- **Tên trường trong spec tổng hợp:** phải khớp dạng `FIELD` của truy vấn (`[A-Za-z_@][A-Za-z0-9_.@-]*`), nếu không thì báo `invalid aggregation`.
+- **Từ khóa spec tổng hợp:** viết hoa (ví dụ `COUNT`) bị coi là không hợp lệ.
+- **Cách ghi tùy chọn CLI:** chỉ nhận dạng dài, và nhận cả `--query=...`. Tùy chọn viết tắt như `-q` bị coi là lạ (mã 2).
+- **Thứ tự kiểm tra trong CLI:** kiểm tra truy vấn và spec tổng hợp trước khi đọc tệp, nên truy vấn sai cộng với tệp không tồn tại cho mã 2 chứ không phải 1.
+- **Khi lỗi:** CLI không in `--stats` ra stderr.

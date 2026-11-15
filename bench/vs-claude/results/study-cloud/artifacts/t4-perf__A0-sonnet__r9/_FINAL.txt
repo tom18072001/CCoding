@@ -1,0 +1,13 @@
+`buildReport` trong `src/report.js` giờ chạy 200.000 dòng trong khoảng 237 ms (`npm run bench`), so với ~15 giây trước đây. `npm test` xanh (3 test).
+
+Tôi viết lại thành một lượt duyệt duy nhất, dùng `Map`/`Set` thay cho các vòng `find`/`includes`/`filter` lồng nhau. Các điểm giữ nguyên theo bản cũ:
+- **SKU trùng:** lấy sản phẩm đầu tiên.
+- **Danh mục `'unknown'`:** gộp chung với danh mục thật tên `unknown`.
+- **Thứ tự cộng dồn:** theo thứ tự dòng, nên kết quả số khớp từng bit.
+- **Thứ tự mảng và tie-break:** các comparator sort giữ nguyên.
+- **Bộ lọc:** `from`/`to` chỉ áp dụng khi truthy.
+- **Ngày không hợp lệ:** vẫn ném `RangeError` như cũ.
+
+Một chỗ khác bản cũ: bản cũ chạy mỗi dòng qua `JSON.parse(JSON.stringify(...))`, tôi bỏ bước này. Với đầu vào hợp lệ (số nguyên hữu hạn) kết quả không đổi. Với đầu vào không hợp lệ như `NaN` hay `undefined`, kết quả có thể khác bản cũ.
+
+Bản cũ được giữ lại ở `test/report.legacy.js`. Test mới trong `test/report.test.js` so sánh bằng `deepStrictEqual` với bản cũ trên 8 bộ dữ liệu sinh ngẫu nhiên × 6 bộ options (có `topN`, `from`, `to`, khoảng rỗng). Ngoài ra có thêm các ca đặc biệt: SKU trùng, danh mục `unknown`, `qty` bằng 0 với đơn hoàn, ngày có múi giờ và đầu vào rỗng.

@@ -1,0 +1,11 @@
+`buildReport` giờ chạy 200.000 dòng trong khoảng 410 ms (trước đó ~15 giây), và `npm test` xanh (3/3 test qua). Tôi chưa thử so sánh ngoài các bộ dữ liệu trong test, nên chưa thể nói chắc với đầu vào bất kỳ.
+
+**Cách làm.** Hàm trong `src/report.js` giờ duyệt dữ liệu một lượt và gom nhóm bằng `Map`/`Set`. Các vòng `filter`, `includes` và `find` lồng nhau trước đây gây ra độ phức tạp bậc hai. Chữ ký hàm không đổi, không có cache giữa các lần gọi, không thêm thư viện.
+
+**Các hành vi lạ của bản cũ tôi giữ nguyên:**
+- **Sản phẩm trùng `sku`:** lấy sản phẩm đầu tiên, như `find()`.
+- **Vòng `JSON.parse(JSON.stringify())` mỗi dòng:** đổi `-0` thành `0` (ví dụ đơn hoàn có số tiền 0) và `NaN`/`Infinity` thành `null`.
+- **Ngày không hợp lệ:** vẫn bị ném lỗi trước bước lọc tháng, vì tôi giữ nguyên thứ tự xử lý.
+- **Thứ tự và tổng:** thứ tự phần tử, các bộ so sánh sắp xếp và thứ tự cộng dồn giữ như cũ.
+
+**Test.** Bản cũ được lưu ở `test/report.legacy.js`, đổi tên hàm thành `buildReportLegacy` và xuất ra như `buildReport`. Nó không khớp mẫu `*.test.js` nên không bị chạy như một test. Test mới trong `test/report.test.js` so sánh kết quả mới với bản cũ bằng `deepStrictEqual`. Nó chạy trên 5 seed ngẫu nhiên với 5 bộ `options` (`topN`, `from`, `to`), cộng các ca biên: `-0`, `sku` trùng, đơn hoàn 0 xu, và đầu vào rỗng.

@@ -1,0 +1,19 @@
+I wrote `SPEC.md` at the repository root. The repo was empty, so nothing in it constrained the design. I haven't committed it.
+
+The request contradicts itself in four places, and the spec says so in a conflicts table:
+- **Unmasked data:** full IPs and usernames conflict with "no personal data leaves the platform unmasked".
+- **Retention:** files kept forever conflict with deleting personal data after 12 months.
+- **Scope:** "the team's logs from last month" is not the same as "everything they can see".
+- **Speed:** an unbounded export can't be guaranteed to finish in 5 seconds.
+
+Two other points are vague: what "like the old system" means, and how "make it simple" squares with the compliance controls.
+
+Until the customer decides, the spec builds the safe version:
+- **Masking:** all exports are masked, server-side. IPs lose the last octet, usernames keep two characters, and a keyed `user_ref` column lets rows be correlated.
+- **Unmasked export:** it is a separate four-eyes flow for a forensic role, behind a disabled feature flag.
+- **Retention:** nothing is kept forever. Every file has an expiry date, and an authorised administrator can place a legal hold on a file or case.
+- **Speed:** 5 seconds is read as the 95th-percentile time up to 100,000 rows. Larger exports run asynchronously.
+
+The `## Open questions and assumptions` section lists 14 questions (Q1–Q14), each with the assumption I used meanwhile and the part of the spec it blocks. Q1 (masking versus forensic use) and Q2 (retention) need to be settled first.
+
+The numbers I picked are placeholders for the customer to confirm: the 5-year retention, 100,000-row threshold, 2,000,000-row maximum, 24-hour link expiry and 5 exports per hour. The spec names Vietnamese data-protection rules only as candidates for the customer's legal team to check, not as legal conclusions.

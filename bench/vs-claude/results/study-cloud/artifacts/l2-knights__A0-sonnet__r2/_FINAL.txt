@@ -1,0 +1,12 @@
+I wrote `answer.json` in the repository root. B and C are healthy, A, D and E are compromised, and that is the only consistent assignment.
+
+```json
+{ "healthy": ["B","C"], "compromised": ["A","D","E"], "unique": true }
+```
+
+I worked it out by cases on A:
+
+- **A healthy:** A's statement makes B compromised, so B's statement is false and E must differ from A, which makes E compromised. E's statement is then false, so D must be healthy. D's statement then forces C healthy-false, meaning C is compromised. That puts B, C and E at three compromised, which would make C's statement true. That contradicts C being compromised.
+- **A compromised:** B is healthy, so A and E are in the same state, which makes E compromised. E's false statement holds because A is not healthy. D's statement reduces to "C is compromised", so D and C are in opposite states.
+  - If C is compromised, D is healthy and A, C, E are three compromised, which makes C's statement true. That contradicts C being compromised.
+  - If C is healthy, D is compromised and A, D, E are three compromised, which matches C's statement. This one is consistent.

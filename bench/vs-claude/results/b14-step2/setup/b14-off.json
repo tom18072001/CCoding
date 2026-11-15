@@ -1,0 +1,31 @@
+{
+  "runner": "process",
+  "runtime": {
+    "default": "auto",
+    "order": [
+      "claude-cli"
+    ],
+    "maxFailover": 2
+  },
+  "runtimes": {
+    "claude-cli": {
+      "command": "claude",
+      "permissionMode": "acceptEdits",
+      "label": "Claude Code CLI (máy giám đốc, gói Max)",
+      "extraArgs": [
+        "--disallowedTools",
+        "WebFetch,WebSearch"
+      ]
+    }
+  },
+  "models": {
+    "claude-cli": {
+      "opus": "opus",
+      "sonnet": "sonnet",
+      "haiku": "haiku"
+    }
+  },
+  "server": {
+    "port": 7427
+  }
+}

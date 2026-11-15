@@ -1,0 +1,23 @@
+I wrote `findings.json` in the repository root with seven findings. I didn't modify `src/server.js`, and I didn't validate the JSON file after writing it.
+
+| Line | Type | Severity |
+|---|---|---|
+| 11 | `hardcoded-secret` | high |
+| 30 | `sqli` | critical |
+| 42 | `path-traversal` | high |
+| 58 | `weak-crypto` | high |
+| 65 | `ssrf` | high |
+| 70 | `missing-authz` | high |
+| 84 | `command-injection` | critical |
+
+- **Line 11:** The JWT secret is hardcoded in source.
+- **Line 30:** The search term `q` is interpolated straight into the SQL string.
+- **Line 42:** `req.params.name` goes into `path.join` and `sendFile` with no check that the result stays inside `/srv/reports`.
+- **Line 58:** Passwords are hashed with unsalted MD5.
+- **Line 65:** The server fetches any URL a logged-in user supplies.
+- **Line 70:** Any authenticated user can delete any ticket.
+- **Line 84:** `req.body.format` is interpolated into a shell command passed to `exec`.
+
+Two things I left out as not clearly exploitable:
+- **Line 18:** `verifyJwt` is never imported, so the code would fail at runtime. That is a bug rather than a security hole, but it also means the JWT check can't be confirmed from this file.
+- **Line 78:** The ping host regex allows a leading `-`, so a host value could be read as a ping option. `execFile` with an argument array rules out shell injection there, so I judged the impact too small to report.

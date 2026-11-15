@@ -1,0 +1,59 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261102-135744-09f",
+  "wallSec": 143,
+  "wallSecHarness": 150,
+  "costUsd": 0.6393509,
+  "tokens": {
+   "input": 40,
+   "output": 27590,
+   "cacheRead": 596052,
+   "cacheWrite": 75037
+  },
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "Viết lại buildReport O(n) giữ nguyên hành vi"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "Test đối chiếu với bản cũ (oracle)"
+   }
+  ],
+  "workdir": "/home/claude/ccoding-dev/workspaces/b-c9-t4-fastla-2/wt-T-20261102-135744-09f",
+  "branch": "ccoding/t-20261102-135744-09f"
+ },
+ "task": "t4-perf",
+ "system": "ccoding-fastlane",
+ "rep": 2,
+ "key": "t4-perf.ccoding-fastlane.2",
+ "env": "cloud",
+ "startedAt": "2026-11-02T06:57:44.646Z",
+ "finishedAt": "2026-11-02T07:00:19.646Z",
+ "grade": {
+  "hidden": {
+   "pass": 19,
+   "fail": 0,
+   "total": 19,
+   "failed": [],
+   "ms": 4064,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 13,
+   "fail": 0,
+   "total": 13
+  },
+  "changed": [
+   "~src/report.js",
+   "+test/fixtures/report.legacy.js",
+   "+test/report.compare.test.js"
+  ],
+  "perfMs": 325
+ },
+ "audit": []
+}

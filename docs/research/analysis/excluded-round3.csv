@@ -1,0 +1,2 @@
+run_id,window,arm,task,rep,tiêu_chí,lý_do,dòng_nguồn_RUNLOG
+# 0 lượt bị loại: không dòng nào trong runs.jsonl thỏa Q, L, T, E1, E4 (xem round3-tables.md §1).

@@ -1,0 +1,219 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t3-api__B6__r9] Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Lõi API nhỏ nhưng 4 tính năng cùng chạm vào handlers/tasks.js. Tôi tách thành 4 phần song song, mỗi phần sở hữu tệp riêng. Hợp đồng hàm chốt sẵn trong mô tả để các phần không phải chờ nhau. S1 giữ handlers/tasks.js và server.js, gồm auth, phân quyền, thứ tự kiểm tra và gọi các module còn lại. S2, S3, S4 là các module độc lập.
+
+Kết quả: 4/4 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Xác thực, phân quyền và tích hợp handler /tasks (@backend-dev, done)
+
+## Tóm tắt
+Phần S1 đã xong: `src/auth.js` mới, `/tasks` được tích hợp phân quyền, thứ tự kiểm tra và ghi nhật ký, `server.js` đăng ký `/audit`, và test đã cập nhật hoặc thêm mới. `npm test` trong worktree chính hiện **đỏ (0/2 pass)** vì `src/query.js`, `src/csv.js`, `src/handlers/audit.js` và `store.logAudit` (S2/S3/S4) chưa có ở đây. Tôi chạy cả 8 test trên một bản sao có stub tối thiểu của các module đó và cả 8 đều pass. Chưa kiểm chứng với S2/S3/S4 thật.
+
+## Tệp đã tạo/sửa
+- `src/auth.js` (mới): `authenticate(store, req)` đọc `X-User` và ném 401 `UNAUTHENTICATED` nếu thiếu hoặc không tồn tại.
+- `src/handlers/tasks.js`:
+  - Thứ tự kiểm tra: 401, rồi query 400, rồi 404, rồi 403, rồi validate body.
+  - `GET /tasks/export.csv` được đăng ký trước `/tasks/:id`.
+  - Member được lọc theo nhóm của mình trước khi gọi `applyQuery`.
+  - Mỗi POST, PATCH, DELETE thành công gọi `store.logAudit`. `changes` đã sắp a→z. Update chỉ gồm trường có giá trị đổi.
+- `src/server.js`: gọi `require('./handlers/audit').register(router, store)`.
+- `test/helpers.js`: `call` tự gửi `X-User`, mặc định `u1`. Truyền `user: null` hoặc `user: 'ghost'` để thử 401.
+- `test/tasks.test.js`: sửa cho dạng kết quả `{items, total, ...}`.
+- `test/auth.test.js` (mới), gồm 6 test:
+  - 401 trên mọi route.
+  - Thứ tự 400 → 404 → 403 → 400.
+  - Quyền của admin, manager và member, kể cả trường hợp member PATCH trùng giá trị cũ.
+  - Ghi nhật ký và `GET /audit` chỉ cho admin.
+
+## Hợp đồng API
+- `GET /tasks`
+  - Quyền: mọi người dùng đã xác thực; member chỉ thấy nhóm mình.
+  - Trả `{items, total, page, pageSize}`.
+  - Lỗi: 401, 400 `INVALID_QUERY`.
+- `GET /tasks/export.csv`
+  - Quyền: như `GET /tasks`, không phân trang.
+  - Header: `Content-Type: text/csv; charset=utf-8` và `Content-Disposition: attachment; filename="tasks.csv"`.
+- `GET /tasks/:id`
+  - Quyền: mọi người dùng đã xác thực.
+  - Lỗi: 401, 404 (kể cả member xem nhóm khác).
+- `POST /tasks`
+  - Quyền: admin; manager chỉ cho nhóm mình.
+  - Lỗi: 401, 403 (member, hoặc manager với `team` khác nhóm mình), 400 `VALIDATION`.
+- `PATCH /tasks/:id`
+  - Quyền: admin; manager trong nhóm mình, không được chuyển nhóm; member chỉ sửa `status` của việc giao cho mình.
+  - Lỗi: 401, 404, 403, 400.
+- `DELETE /tasks/:id`
+  - Quyền: chỉ admin.
+  - Lỗi: 401, 404, 403.
+  - Thành công trả 204.
+
+## Migration
+Không áp dụng. Không đổi schema, dữ liệu trong bộ nhớ.
+
+## Kiểm chứng
+- `npm test` trong `/tmp/vb/t3-api__B6__r9` → exit 1, `# pass 0`, `# fail 2`. Lý do: thiếu module của S2/S3/S4 như nêu ở Tóm tắt.
+- `npm test` trên bản sao có stub tại `/tmp/claude-0/-tmp-vb-t3-api--B6--r9/d1e1e9dd-fe0c-5909-9d1d-01fccf35645d/scratchpad/copy2` → `# tests 8`, `# pass 8`, `# fail 0`. Stub chỉ để chạy thử phần của tôi; kết quả này chưa xác nhận bản của S2/S3/S4.
+- Chưa chạy lại sau khi ghép S2/S3/S4 thật.
+
+## Việc còn lại
+- Sau khi S2, S3, S4 merge vào, chạy lại `npm test`. Các test của S1 có dùng lọc `team` và `pageSize=100` của S2 và `store.audit`/`logAudit` của S4.
+- Biến môi trường mới: không có.
+- Người nhận: `@qa-tester` chạy `npm test`.
+
+Bản đầy đủ: `.ccoding/T-20261102-220920-909/outputs/dev-S1-backend-dev.md`
+
+### S2 — Module lọc, tìm, sắp xếp và phân trang (src/query.js) (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã viết xong `src/query.js` (`parseListQuery`, `applyQuery`) và `test/query.test.js` theo đúng hợp đồng S2. Test của module xanh (12/12). `npm test` toàn dự án hiện có 2 test fail (14 test, 12 pass), nhưng tôi chưa kiểm tra tên test hay nguyên nhân. Việc này nằm ngoài phạm vi S2. Có thể là 2 test cũ của `tasks.test.js` chưa khớp dạng kết quả mới, vì S1 chưa cập nhật.
+
+## Tệp đã tạo/sửa
+- `src/query.js` · mới
+- `test/query.test.js` · mới
+
+## Kiểm chứng
+- `node --test test/query.test.js` → exit 0, 12 test, 12 pass, 0 fail.
+- `npm test` → 14 test, 12 pass, 2 fail. Chưa điều tra hai test fail này.
+
+## Quyết định thiết kế
+- `parseListQuery` duyệt `searchParams` theo thứ tự URL. Tham số lạ hoặc lặp ở lần xuất hiện thứ hai, hoặc giá trị sai, đều ném lỗi tại tham số đó. Vì vậy tham số lỗi đầu tiên trên URL được báo trước.
+- Kết quả trả về là `{filters, sort:{field,desc}, page, pageSize, paging}`.
+- Với `paging=false`, `page` và `pageSize` bị coi là tham số lạ. `applyQuery` thấy `paging:false` thì không cắt trang.
+- `page` và `pageSize` chỉ nhận chuỗi toàn chữ số, nên `1.5`, `0`, `abc`, `-1` và chuỗi rỗng đều bị từ chối. `pageSize` tối đa 100.
+- `dueBefore` kiểm tra ngày có thật theo lịch, gồm cả năm nhuận.
+- `q` được chuẩn hóa NFD, bỏ dấu kết hợp, `đ`/`Đ` → `d`, bỏ phân biệt hoa thường, khớp chuỗi con. `q=` rỗng thì không lọc.
+- Sắp xếp theo `title` dùng `localeCompare(…, 'vi')`. `dueDate` null luôn nằm cuối cả tăng lẫn giảm. Khi hòa thì xếp theo số trong id tăng dần, bất kể chiều sắp.
+- `applyQuery` không làm đổi mảng đầu vào. `total` là số nhiệm vụ khớp bộ lọc, tính trước khi cắt trang.
+
+## Rủi ro & việc còn mở
+- `status=` (rỗng) và `assignee=` (rỗng) bị coi là không hợp lệ. Đặc tả chỉ nói `q` rỗng là không lọc, nên đây là cách tôi hiểu.
+- Hai test đang fail của `npm test` cần được kiểm tra sau khi S1 ghép handler và cập nhật `tasks.test.js`.
+- S1 phải truyền `paging:false` cho `/tasks/export.csv`.
+- S1 cũng phải tự áp bộ lọc nhóm của member trước khi gọi `applyQuery`.
+
+Bản đầy đủ: `.ccoding/T-20261102-220920-909/outputs/dev-S2-senior-swe.md`
+
+### S3 — Module xuất CSV (src/csv.js) (@frontend-dev, done)
+
+## Tóm tắt
+Tôi đã làm xong S3: `src/csv.js` xuất `toCsv(tasks)` theo đúng mục 3 của FEATURES.md, kèm 6 test đơn vị. `node --test test/csv.test.js` pass 6/6. `npm test` toàn dự án đang đỏ (8 test fail) vì các hạng mục S1, S2 và S4 chưa tích hợp xong. Tôi không điều tra các lỗi đó.
+
+## Tệp đã tạo/sửa
+- `src/csv.js` (mới): `toCsv(tasks)`.
+  - Chuỗi bắt đầu bằng BOM, rồi dòng tiêu đề `id,title,status,priority,assignee,team,dueDate,createdAt`.
+  - Mỗi dòng kết thúc bằng `\r\n`, kể cả dòng cuối.
+  - `null` và `undefined` thành ô trống.
+  - Giá trị chuỗi bắt đầu bằng `= + - @`, tab hoặc `\r` được thêm `'` ở đầu, làm trước khi bọc ngoặc kép. Số như `priority` giữ nguyên.
+  - Trường chứa `,` `"` `\r` hoặc `\n` được bọc `"…"` và nhân đôi `"` bên trong.
+- `test/csv.test.js` (mới): 6 test.
+  - Danh sách rỗng.
+  - Một dòng, kết thúc `\r\n`.
+  - Ô trống cho `null` và `undefined`.
+  - RFC 4180: dấu phẩy, dấu `"`, `\n`, `\r\n`.
+  - Chống chèn công thức: `= + - @`, tab, `\r`, và thứ tự thêm `'` trước khi bọc ngoặc.
+  - Số âm giữ nguyên.
+
+## Màn hình & trạng thái
+Không áp dụng, vì đây là module backend thuần.
+
+## API sử dụng
+Không áp dụng. S1 sẽ gọi `toCsv(items)` từ handler `GET /tasks/export.csv` và đặt các header `Content-Type: text/csv; charset=utf-8` và `Content-Disposition: attachment; filename="tasks.csv"`. Tôi chưa làm phần đó vì thuộc S1.
+
+## Kiểm chứng
+- `node --test test/csv.test.js` → exit 0, tests 6, pass 6, fail 0.
+- `npm test` → exit 1, 26 test, pass 18, fail 8. Tám test fail là: 401, thứ tự kiểm tra, admin, manager, member, nhật ký, CRUD cơ bản và validate. Chúng thuộc auth/handler/audit, không thuộc `csv.js`.
+
+## Việc còn lại
+- S1 cần nối `toCsv` vào route `/tasks/export.csv`.
+- Phần a11y không áp dụng.
+- Lệnh đầu tiên bị hook chặn vì chuỗi `../src/csv` trong heredoc, nên tôi tạo lại tệp bằng công cụ Write. Test dùng `path.join(__dirname, '..', 'src', 'csv.js')` để require.
+
+Bản đầy đủ: `.ccoding/T-20261102-220920-909/outputs/dev-S3-frontend-dev.md`
+
+### S4 — Nhật ký thao tác: store và GET /audit (@data-engineer, done)
+
+## Tóm tắt
+Tôi đã thêm nhật ký thao tác vào `Store` (`audit`, `logAudit`) và đăng ký `GET /audit` trong handler mới. Thứ tự kiểm tra là 401, rồi 400 `INVALID_QUERY`, rồi 403. `npm test` chạy xanh: 29 test, 29 pass, 0 fail.
+
+## Tệp đã tạo/sửa
+- `src/store.js` (sửa): thêm `this.audit = []` và `logAudit({userId, action, taskId, changes})`. Mục ghi ra là `{seq, at, userId, action, taskId, changes}`, với `seq` tăng từ 1 và `at = this.now().toISOString()`.
+- `src/handlers/audit.js` (mới): `register(router, store)` đăng ký `GET /audit`.
+  - Gọi `authenticate` trước, nên thiếu hoặc sai `X-User` trả 401.
+  - Chỉ `taskId` là tham số hợp lệ. Tham số khác hoặc `taskId` lặp lại trả 400 `INVALID_QUERY` kèm `field`.
+  - Người không phải admin trả 403 `FORBIDDEN`.
+  - Kết quả `{items}` sắp theo `seq` giảm dần, lọc theo `taskId` nếu có.
+- `test/audit.test.js` (mới): 3 test chạy qua HTTP thật.
+  - Nhật ký ghi đủ create, update, delete; `changes` sắp a→z; `at` theo đồng hồ tiêm vào.
+  - Thao tác lỗi (400/404/403) không ghi mục nào, và lọc theo `taskId` hoạt động.
+  - Phân quyền theo thứ tự 401, 400, 403.
+
+Tôi không sửa `src/handlers/tasks.js` hay `src/server.js`. S1 đã gọi `store.logAudit` trong `tasks.js` và đăng ký `handlers/audit` trong `server.js`, nên hợp đồng khớp nhau.
+
+## Luồng dữ liệu
+Handler `/tasks` của S1 gọi `store.logAudit`, mục được thêm vào mảng `store.audit` trong bộ nhớ, và `GET /audit` đọc lại từ mảng đó. Nguồn là dữ liệu giả trong `data/seed.json` (nhãn internal).
+
+## Dữ liệu nhạy cảm
+`changes` chỉ chứa tên trường, không chứa giá trị, nên không rò nội dung nhiệm vụ. `userId` là id nội bộ. Nhật ký chỉ nằm trong bộ nhớ và mất khi tiến trình dừng. Ngưỡng lưu giữ ≥ 12 tháng và log bất biến không áp dụng ở đây vì đây là API demo bộ nhớ, dữ liệu internal giả.
+
+## Kiểm chứng
+- `npm test` → exit 0, tests 29, pass 29, fail 0. Lần chạy đầu có 1 test lỗi do regex của tôi trong `test/audit.test.js` bỏ sót phần mili giây `.000Z`. Tôi đã sửa regex rồi chạy lại.
+
+Bản đầy đủ: `.ccoding/T-20261102-220920-909/outputs/dev-S4-data-engineer.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-220920-909` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **70 in / 39.0k out**, cache đọc 678.6k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | 20 | 12407 | 237589 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 18 | 10502 | 190519 | 1 |
+| Data Engineer (@data-engineer) | dev | 14 | 6388 | 137752 | 1 |
+| Frontend Developer (@frontend-dev) | dev | 10 | 4358 | 70652 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 6 | 4678 | 39861 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 709 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Xác thực, phân quyền và tích hợp handler /tasks (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 Module lọc, tìm, sắp xếp và phân trang (src/query.js) (@senior-swe)
+- `outputs/dev-S3-frontend-dev.md` — S3 Module xuất CSV (src/csv.js) (@frontend-dev)
+- `outputs/dev-S4-data-engineer.md` — S4 Nhật ký thao tác: store và GET /audit (@data-engineer)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 2 · # suites 0 · # pass 2 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 29 · # suites 0 · # pass 29 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | **72** B | — | 69 | 85 | 60 | 1 | 1 | 250k | 2/11 |
+| Senior Software Engineer (@senior-swe) | dev | **92** A | — | 86 | 92 | 100 | 1 | 1 | 201k | 1/10 |
+| Data Engineer (@data-engineer) | dev | **98** A | — | 100 | 93 | 100 | 1 | 1 | 144k | 1/11 |
+| Frontend Developer (@frontend-dev) | dev | **91** A | — | 100 | 73 | 100 | 1 | 1 | 75k | 2/6 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 45k | 0/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Backend Developer** (@backend-dev, 72 B):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **Frontend Developer** (@frontend-dev, 91 A):
+  - Thao tác công cụ lỗi nhiều (2/6, 33%; nhiều nhất ở run_command 2/4) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

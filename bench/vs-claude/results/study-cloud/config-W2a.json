@@ -1,0 +1,48 @@
+{
+  "argv": [
+    "--arms",
+    "A0-sonnet,B0",
+    "--tasks",
+    "a1,l1,l2,r1",
+    "--repeats",
+    "3",
+    "--judge",
+    "--timeout",
+    "20",
+    "--runtime",
+    "claude-cli",
+    "--ccoding-url",
+    "http://127.0.0.1:7424",
+    "--ccoding-data",
+    "/home/user/ccoding-main/data",
+    "--work",
+    "/tmp/vb",
+    "--out",
+    "bench/vs-claude/results/study-cloud"
+  ],
+  "cfg": {
+    "ccodingUrl": "http://127.0.0.1:7424",
+    "ccodingData": "/home/user/ccoding-main/data",
+    "runtime": "claude-cli",
+    "timeoutMin": 20,
+    "claudeBin": "claude",
+    "judge": {
+      "enabled": true,
+      "model": "opus"
+    },
+    "seed": "ccvb",
+    "workRoot": "/tmp/vb"
+  },
+  "armIds": [
+    "A0-sonnet",
+    "B0"
+  ],
+  "taskIds": [
+    "a1-ambiguous-spec",
+    "l1-oncall",
+    "l2-knights",
+    "r1-elk-design"
+  ],
+  "repeats": 3,
+  "startedAt": "2026-11-02T13:35:16.238Z"
+}

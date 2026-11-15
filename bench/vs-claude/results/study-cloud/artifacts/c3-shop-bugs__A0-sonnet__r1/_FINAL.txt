@@ -1,0 +1,15 @@
+I fixed all three problems, and `npm test` passes (6 tests, 4 of them new). Exported names and signatures are unchanged.
+
+1. **Coupon totals** had two causes:
+   - **Double discount:** `total` in `src/cart.js` applied the coupon to each line and then again to the subtotal. It now sums the lines and applies the coupon once.
+   - **Fractional dong:** `applyPercent` in `src/money.js` never rounded, so it returned fractions. It now rounds the discount half-up to the nearest dong with integer arithmetic.
+2. **Negative stock:** `reserve` in `src/stock.js` only refused when stock was already below zero. It now throws `INSUFFICIENT_STOCK` whenever the requested quantity exceeds what's available.
+3. **Maximum quantity:** the limit check in `addItem` used `>=`, which rejected a line holding exactly `MAX_QTY_PER_LINE`. It is now `>`.
+
+I added the regression tests in `test/cart.test.js`:
+- A coupon applied once across two lines.
+- Half-up rounding.
+- Buying exactly the maximum, and being rejected one over.
+- Stock that never goes negative and is restored when the item is removed.
+
+The rounding assumes whole-number coupon percentages. Fractional percentages, such as 12.5%, may round slightly off in rare cases.

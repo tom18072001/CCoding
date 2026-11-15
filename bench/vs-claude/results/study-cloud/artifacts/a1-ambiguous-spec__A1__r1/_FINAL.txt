@@ -1,0 +1,21 @@
+I wrote the specification to `SPEC.md` at the repo root. It has the required `## Open questions and assumptions` section. The repo had no code or tests, so I couldn't run anything, and the review was a manual read-through of the spec against the brief.
+
+The request contradicts itself in several places. The spec resolves each one with an assumption you should confirm with the customer:
+- **Full IPs and usernames vs. nothing unmasked leaving the platform:** The downloadable CSV is masked and pseudonymised. IPv4 loses its last octet, IPv6 is truncated, and usernames become keyed-hash pseudonyms. Full values are only visible in an approved, view-only forensic screen inside the platform. That screen needs a second approver, expires after 24 hours and is audited.
+- **"Their team's logs" vs. "everything they can see":** The export is whatever the manager is already allowed to read, narrowed by the filters on screen. By default that is the previous calendar month in Asia/Ho_Chi_Minh, for their own team.
+- **5-second limit with unknown data volume:** The download streams, and results over an assumed 100,000 rows are refused with a message to narrow the filters. They are never silently truncated.
+- **Files kept forever vs. deleting personal data after 12 months:** The export file is deleted 12 months after the oldest event in it. A record with no personal data (who exported, when, row count, file hash) is kept forever, so auditors can still prove what was exported.
+- **"Like the old system":** The old CSV format isn't documented, so the column layout in the spec is a placeholder until the customer supplies it.
+
+The open-questions section has 16 items, each with the assumption the spec uses meanwhile. Four of them change the data model and architecture, so don't start building until they are answered:
+- **Q1:** whether masking or full values wins.
+- **Q3:** the old system's CSV format.
+- **Q7:** log volume against the 5-second limit.
+- **Q9:** 12-month deletion vs. keeping files forever.
+
+The spec cites Vietnamese regulations only as things for the bank's legal team to check, not as settled requirements.
+
+The review found three small fixes, which I made:
+- The open-questions heading now matches the required text exactly.
+- The wording on file retention was inconsistent between two sections.
+- The section numbering was out of order after the first fix.

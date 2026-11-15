@@ -1,0 +1,99 @@
+# Báo cáo T-20261102-183932-782: Thiết kế và định cỡ nền tảng audit-log ELK (DESIGN.md)
+
+## Tóm tắt
+`DESIGN.md` đã có ở gốc repo, gồm 13 mục bằng tiếng Anh, và đủ mọi phần đề bài yêu cầu: tính dung lượng, node layout, ingest pipeline, ILM/SLM, cách bảo đảm toàn vẹn, rủi ro và xung đột. Phương án chọn là **P2**: cluster chỉ giữ 30 ngày (hot 7 + warm 23, tổng 30 node dữ liệu). Dữ liệu cũ hơn nằm trong snapshot giữ 12 tháng và được restore khi có yêu cầu. Đề xuất searchable snapshots của khách bị bác vì cần license Enterprise. QA kết luận **Đạt có điều kiện**, không còn blocker. Hai việc lớn còn mở phụ thuộc khách hàng: có cho lưu bản gốc chứa PII không (Q2), và hệ số nén A3 phải đo bằng PoC với log thật.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Mô hình dung lượng có script, node layout, JSON nháp cho pipeline/ILM/SLM | @data-engineer | Đạt | `.ccoding/T-20261102-183932-782/sizing.py`, `sizing-output.txt`, `S1-handoff.md`. Đã chạy `python3 -I sizing.py`, exit 0. Raw là 1,3824 TB/ngày và 504,58 TB/năm. JSON chưa chạy trên cluster. |
+| S2 | Toàn vẹn chứng cứ, masking PII, xung đột license/yêu cầu | @security | Đạt có điều kiện (6 điều kiện) | `S2-handoff.md`, `S2-masking-test.py`. Test chạy ra 10 mẫu dương bị che và 10 mẫu âm giữ nguyên, 0 sai. Đã đọc trang docs Elastic xác nhận searchable snapshots cần Enterprise. |
+| S3 | Viết `DESIGN.md` | @solution-architect | Đạt (còn minor F2) | `DESIGN.md`. Grep tìm khóa/e-mail không ra kết quả. Đã sửa SLM 400d thành 340d. |
+| S4 | Đối chiếu số liệu và độ đầy đủ | @qa-tester | Đạt có điều kiện | `QA-review.md`. Theo báo cáo S4: chạy lại `sizing.py` rồi `diff` không có khác biệt, đã grep 27 số chính, `json.loads` OK 5/5 khối. |
+
+Trong lượt tổng hợp này tôi tự chạy `git status --short --untracked-files=all`, `ls -A` và grep trên DESIGN.md. Kết quả: gốc repo chỉ có `.ccoding/`, `.git/` và `DESIGN.md`, status chỉ có `?? DESIGN.md`. §7.2 có ghi cách suy ra 340d, §10 có ghi nguồn cho dòng "Confirmed".
+
+**Một điểm cần nói rõ:** báo cáo S4 liệt kê các lệnh đã chạy, nhưng khối "Kết luận review" cuối cùng lại ghi reviewer không chạy lệnh kiểm tra nào. Vì vậy các kết quả parse JSON, test masking và diff sizing chỉ có báo cáo của S2/S4 làm chứng, chưa được reviewer cuối tự chạy lại.
+
+## Quyết định
+- **D3 / P2:** cluster chỉ giữ 30 ngày, phần cũ hơn nằm trong snapshot. Tổng lưu trữ 587,52 TB, so với 1.050,62 TB và 112 node của P1. Searchable snapshots/frozen bị bác vì cần Enterprise (đã có nguồn chính thức).
+- **Tách hot 7 + warm 23:** tổng vẫn 30 node vì số node bị chặn bởi đĩa. Lợi ích là chỉ 7 node cần NVMe/CPU cao.
+- **D2 / A3:** hệ số nén cơ sở là 1,0, kèm bảng độ nhạy 0,5 / 1,0 / 1,5, tương ứng 15 / 30 / 44 node hot+warm. Đây là giả định, không phải số đo.
+- **D6:** SHA-256 tính trên bản gốc tại Logstash trước masking, kèm hash chain/Merkle theo lô và neo định kỳ. Bản gốc được mã hóa và lưu WORM. Phương án dự phòng là hash bản đã che theo dạng chuẩn hóa; phương án này yếu hơn vì chỉ chứng minh được toàn vẹn kể từ lúc ingest.
+- **D7:** kho snapshot dùng bucket riêng có versioning, chặn xóa và tách quyền, không đặt trên bucket Object Lock compliance. WORM chỉ dùng cho bản gốc và manifest hash.
+- **D8:** masking toàn bộ ở Logstash bằng HMAC-SHA256, khóa giữ ngoài cluster. Ingest pipeline của ES chỉ làm guard: processor `fail` chặn document thiếu `pii.key_id`/`event.hash`.
+- **SLM `expire_after: 340d`** (S3 sửa từ 400d của S1). Lý do: snapshot cuối chứa ngày D được tạo khoảng D+31 và chỉ cần sống tới khoảng 335 ngày tuổi, cộng 5 ngày đệm. **Xử lý F1:** chấp nhận, vì cách suy ra đã ghi rõ trong §7.2 và QA xác nhận logic đúng.
+
+## Kết quả review
+- **Blocker:** không có.
+- **F1 (major), 340d không có trong `sizing-output.txt`:** chấp nhận. Đây là số suy ra thủ công và cách suy ra đã ghi trong §7.2.
+- **F3 (major), dòng "Confirmed" ở §10:** chấp nhận. Lượt S2 đã đọc trang docs Elastic qua WebFetch và có trích nguyên câu. Các dòng license khác vẫn ghi "not verified online" và được gom vào Q9.
+- **F2 (minor), các số suy ra chưa gắn nhãn** ("36 nodes", "8.6 h buffer", "6.7k EPS", "≈ 8 shards/node/day"): chưa sửa, để mở.
+- **F4 (minor), hai dòng "not used" thừa ở §10:** chưa sửa, không ảnh hưởng nội dung.
+- **F5 (minor), `.ccoding/` không hiện trong `git status`:** chỉ ghi nhận, không cần sửa.
+- **Cổng bảo vệ dữ liệu:** Đạt có điều kiện. DESIGN.md đã đáp ứng điều kiện 1, 2, 5 và 6. Điều kiện 3 (pháp chế) và 4 (PoC masking với log thật) chờ khách.
+
+## Việc còn mở & rủi ro
+- **Q2:** khách chưa quyết định có cho lưu bản gốc chứa PII không. Đây là rủi ro lớn nhất, vì nếu khách từ chối thì phải dùng phương án dự phòng yếu hơn.
+- **A3:** hệ số nén chưa đo. Nếu ratio thực là 1,5 thì cần 44 node hot+warm thay vì 30.
+- **Restore (A6):** với 10 node × 50 MB/s, SLA 24 giờ phủ được khoảng 31 ngày dữ liệu; nếu chỉ đạt 25 MB/s/node thì còn khoảng 15,6 ngày. Truy vấn trải rộng hơn cỡ đó sẽ vượt SLA.
+- **Object Lock với snapshot repo:** không có tài liệu chính thức, chỉ có một thread cộng đồng. Cần PoC.
+- **License:** chỉ dòng searchable snapshots đã có nguồn. Các dòng FLS/DLS, audit log, connector, ILM `wait_for_snapshot` và SLM chưa kiểm chứng trực tuyến (Q9).
+- **Quyền xóa dữ liệu cá nhân và WORM (C8):** crypto-shredding là hướng đề xuất, cần pháp chế xác nhận.
+- **Masking:** regex có thể bỏ sót số điện thoại trần và username tự do. Test hiện chỉ kiểm regex bằng Python, chưa kiểm trên Logstash thật.
+- **Chưa chạy gì trên môi trường thật:** chưa có cluster ES hay Logstash nào được dựng, chưa chạy thử JSON nào, chưa chọn TSA, chưa làm sidecar Merkle.
+- Không commit, không push.
+
+## Bước tiếp theo
+Đề xuất tách thành các nhiệm vụ riêng:
+1. **PoC nén và throughput** (@data-engineer). Nạp ≥ 1 ngày mẫu log thật đã được cấp quyền vào ES 8.x với `best_compression`, đo hệ số A3 và tốc độ restore A6, rồi cập nhật `sizing.py` và DESIGN §3/§9. Xong khi có số đo thay thế A3/A6 và `sizing-output.txt` mới.
+2. **PoC masking** (@data-engineer + @security). Chạy Logstash thật trên log mẫu, đo tỷ lệ false negative. Xong khi có báo cáo tỷ lệ và bộ test chạy được trên Logstash.
+3. **PoC snapshot repository / Object Lock** (@devops). Thử repo trên bucket có versioning và chặn xóa, và thử với Object Lock. Xong khi có biên bản kết quả và DESIGN §7.3 được cập nhật.
+4. **Kiểm chứng license** (@solution-architect), sau khi khách trả lời Q9 (phiên bản cụ thể). Xong khi mọi dòng §10 có nguồn.
+5. **Làm việc với khách và pháp chế** (@dev-lead). Lấy câu trả lời bằng văn bản cho Q1, Q2, Q3, Q5, Q8 và ý kiến pháp chế về C8, rồi chốt phương án integrity (mặc định hay dự phòng).
+6. **Dọn minor F2 và F4** (@solution-architect). Gắn nhãn "derived" cho các số suy ra hoặc đưa chúng vào `sizing.py`. Việc nhỏ, có thể gộp vào nhiệm vụ 1.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-183932-782` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **86 in / 92.8k out**, cache đọc 1.37M, 13 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| QA Engineer (@qa-tester) | dev | 26 | 11582 | 445039 | 3 |
+| Kiến trúc sư giải pháp (@solution-architect) | dev | 18 | 26401 | 378523 | 2 |
+| Chuyên viên ATTT (@security) | dev | 14 | 20434 | 177158 | 2 |
+| Data Engineer (@data-engineer) | dev | 14 | 18630 | 199518 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 12 | 15314 | 152277 | 3 |
+| Điều phối viên (@orchestrator) | office | 2 | 467 | 14680 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-data-engineer.md` — S1 Mô hình dung lượng có script kiểm chứng, node layout, JSON cho ingest pipeline/ILM/SLM (@data-engineer)
+- `outputs/dev-S2-security.md` — S2 Toàn vẹn chứng cứ, masking PII, xung đột license và yêu cầu (@security)
+- `outputs/dev-S3-solution-architect.md` — S3 Viết DESIGN.md ở gốc repo (@solution-architect)
+- `outputs/dev-S4-qa-tester.md` — S4 Review cuối: đối chiếu số liệu và mức độ đầy đủ của DESIGN.md (@qa-tester)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| QA Engineer (@qa-tester) | dev | **88** A | 100 | 76 | 100 | 60 | 1 | 1 | 457k | 0/11 |
+| Kiến trúc sư giải pháp (@solution-architect) | dev | **91** A | 100 | 76 | 84 | 100 | 1 | 1 | 405k | 2/10 |
+| Data Engineer (@data-engineer) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 218k | 0/5 |
+| Chuyên viên ATTT (@security) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 198k | 0/8 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **93** A | 100 | 86 | 80 | 100 | 0 | — | 168k | 1/4 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 15k | — |
+
+### Việc cần sửa theo agent
+- **QA Engineer** (@qa-tester, 88 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+- **Kiến trúc sư giải pháp** (@solution-architect, 91 A):
+  - Thao tác công cụ lỗi nhiều (2/10, 20%; nhiều nhất ở run_command 2/4) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+- **Data Engineer** (@data-engineer, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **Chuyên viên ATTT** (@security, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

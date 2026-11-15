@@ -1,0 +1,12 @@
+Cả 6 lỗi trong `ISSUES.md` đã được sửa và `npm test` xanh (14 test pass, 0 fail). API công khai không đổi, chỉ thêm `roundHalfAway` vào export của `money.js`.
+
+| # | Nguyên nhân gốc | Cách sửa |
+|---|---|---|
+| 1 | `Math.round(x*100)` bị sai số dấu phẩy động (`1.005*100 = 100.4999…`). Mã cố định trong `checkout.js` còn tự nhân 100 thay vì dùng `toCents`. | Thêm `roundHalfAway` (half away from zero, có bỏ nhiễu dấu phẩy động) trong `money.js`. `toCents`, thuế và giảm % đều dùng hàm này, mã cố định gọi `toCents`. |
+| 2 | `allocate` chỉ lấy phần nguyên (`floor`), không chia số xu dư. | Chia phần dư lớn nhất đúng như mô tả; phần lẻ bằng nhau thì phần đứng trước được trước. |
+| 3 | `freeUnits` tính `floor(qty/buy)*free`. | Đổi thành `floor(qty/(buy+free))*free`. |
+| 4 | `endsAt` được hiểu là 00:00 UTC của ngày đó. | Cộng thêm 1 ngày, nên mã dùng được tới hết ngày `endsAt` và bị từ chối từ `2026-12-01T00:00:00Z`. |
+| 5 | `updateQty` giữ chỗ lại toàn bộ số lượng mới, và `removeItem` không nhả kho. | `updateQty` chỉ giữ thêm hoặc nhả phần chênh lệch; `removeItem` nhả toàn bộ số lượng của dòng đó. |
+| 6 | Thuế tính trên `gross`. | Thuế tính trên `net`. |
+
+Test hồi quy cho từng lỗi nằm ở `test/regression.test.js`. Tôi chưa commit gì.

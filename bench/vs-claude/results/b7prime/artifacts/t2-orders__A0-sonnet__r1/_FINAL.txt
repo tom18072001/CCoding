@@ -1,0 +1,10 @@
+Cả 6 lỗi trong ISSUES.md đã được sửa, và `npm test` xanh (14 test, 0 lỗi). Test hồi quy nằm trong `test/regression.test.js`, mỗi lỗi có ít nhất một test. API công khai không đổi.
+
+1. **Sai 1 xu khi giá có 3 chữ số thập phân:** `toCents` nhân 100 trong số thực nên `1.005*100` ra `100.4999…`. Giờ nó làm tròn đúng half away from zero (`1.005`→101, `-1.005`→-101, `2.675`→268). Mã giảm cố định trong `checkout.js` trước đây tự nhân 100 nên cũng bị sai, nay dùng `toCents`. Giá sản phẩm và giá trị đơn tối thiểu đã đi qua `toCents` sẵn.
+2. **Tổng giảm giá bị hụt:** `allocate` chỉ lấy phần nguyên và bỏ phần dư. Giờ nó chia theo phương pháp phần dư lớn nhất; phần lẻ bằng nhau thì phần đứng trước được trước. Tổng các phần luôn bằng `total`.
+3. **Mua X tặng Y:** `freeUnits` dùng `floor(qty/buy)*free`. Giờ là `floor(qty/(buy+free))*free`. Với mua 2 tặng 1: 2 hộp được 0, 5 hộp được 1, 6 hộp được 2.
+4. **Mã hết hạn sớm:** `endsAt` bị hiểu là 00:00 UTC của ngày đó. Giờ mã dùng được đến hết ngày `endsAt` và bị từ chối từ 00:00 UTC ngày hôm sau.
+5. **Kho báo hết hàng sai:** `updateQty` giữ chỗ thêm cả số lượng mới thay vì phần chênh lệch, và `removeItem` không trả hàng về kho. Giờ `updateQty` chỉ giữ thêm hoặc trả lại phần chênh lệch, và `removeItem` trả lại toàn bộ số đang giữ. Nếu giữ chỗ thất bại thì giỏ không bị thay đổi.
+6. **Thuế trên giá chưa giảm:** thuế được tính trên `gross`. Giờ tính trên `net` của từng dòng.
+
+Test #3 ban đầu tôi viết sai kỳ vọng ở trường hợp mua 3 tặng 2 với 9 món. Code đúng, nên tôi sửa test (đổi thành 10 món → 4 món miễn phí).

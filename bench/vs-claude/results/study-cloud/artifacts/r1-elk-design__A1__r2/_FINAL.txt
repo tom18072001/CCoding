@@ -1,0 +1,24 @@
+`DESIGN.md` is written at the repository root and uncommitted. Nothing could be run against it: it's a document, and I checked the arithmetic with a short script.
+
+**Sizing (decimal TB, one day = 1.3824 TB):**
+- **Raw volume:** 1.3824 TB per day and 504.6 TB per year.
+- **Compression:** I assumed on-disk size is 0.8 × raw, with `best_compression`. That is a guess until measured on a day of real data. The document has a sensitivity table for 0.6 and 1.0.
+- **Hot tier:** 7 nodes with 28 TB NVMe, holding 8 days with one replica.
+- **Warm tier:** 8 nodes with 80 TB SSD, holding 23 days with one replica.
+- **Restore pool:** 10 HDD nodes with 140 TB, sized for 90 contiguous days.
+- **Snapshot repository:** about 505 TB.
+- **WORM evidence archive:** about 110 TB.
+
+**Searchable snapshots:** the suggestion doesn't work on Basic, because that feature and the frozen tier need an Enterprise license. The design uses regular snapshots to an object store, with on-demand restore into the restore pool.
+
+**24-hour requirement:** this is the main limit. At about 1.5 GB/s of restore throughput, 90 days restores in about 18.4 hours. All 335 archived days would take about 68.6 hours. For that case the document offers an "everything online" alternative of about 463 TB, and lists the choice as an open question.
+
+**Integrity:** Elasticsearch on Basic can't prove anything is unaltered. The proof lives in a separate archive on S3-style storage with Object Lock, with signed, hash-chained manifests and daily RFC 3161 timestamps. Elasticsearch is only the search copy. The document also covers the ingest pipeline and masking approach, the ILM and snapshot policies, and 16 risks.
+
+**Self-review fixes:** I found and fixed a stale 324 TB figure (it should be 370.5 TB, which needs 4.29 GB/s), an inconsistent disk total, a garbled sentence, and some feature claims stated with more certainty than I have.
+
+**Open items for the customer:**
+- Whether pseudonymisation counts as "masking", and whether the unmasked original may be kept encrypted in the archive. This needs legal sign-off.
+- Which restore scope the 24-hour requirement covers.
+- The Basic-license feature gaps are from memory of Elastic's subscription matrix and should be re-checked against the current one.
+- The compression ratio, the snapshot overhead (assumed 1.25×), and whether the force-merge-after-rollover ILM step works on the chosen version all need a short proof of concept.

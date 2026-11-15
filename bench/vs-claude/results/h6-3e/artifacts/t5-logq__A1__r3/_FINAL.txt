@@ -1,0 +1,28 @@
+## Stages 3 and 4: SELF-REVIEW and FIX
+
+I re-read the spec line by line against the code. `npm test` is now green: 34 tests pass, 0 fail. I also ran the CLI by hand on a CRLF input piped through stdin and on a bad query.
+
+- **First test run:** two tests failed because my expected numbers were wrong, not the code.
+  - The `avg` fixture is 1, 2.5 and 1, which averages 1.5, not 1.125.
+  - The position right after the `>=` in `status>=abc` is 8, and I had written 9 in three places.
+  - I fixed the tests and left `src/` unchanged.
+- **Error ordering:** the tokenizer and term parsing report errors lazily, in token order. So `) "abc` reports position 0, the `)`, not the unclosed quote.
+- **Exit codes:** query, aggregation and usage errors (exit 2) are checked before any file is read, so a bad query beats a missing file (exit 1). Stdout stays empty on every error.
+- **Final check:** the review found no further defects.
+
+## Final report
+
+I built `src/parse.js`, `src/query.js`, `src/agg.js` and `bin/logq.js` as the spec describes, with no external dependencies. Tests are in `test/parse.test.js`, `test/query.test.js`, `test/agg.test.js` and `test/cli.test.js`, which runs the real CLI. Nothing is committed.
+
+**Assumptions where the spec is ambiguous or garbled:**
+- **Histogram unit:** I read the unit as `s`, `m`, `h` or `d` and `k` as an integer ≥ 1. The interval is echoed normalized, so `05m` becomes `5m`.
+- **Blank lines:** they count in both `lines` and `malformed`, because `parseLine` returns `ok:false` for them.
+- **`@t` timestamps:** a timestamp needs the `T` separator, so `2024-01-01 10:00:00` gets no `@t`.
+- **Bucket grouping:** `count by` groups by the raw value, so `500` and `"500"` are separate buckets.
+- **Invalid field in a term:** a term like `:x` or `12:30`, with an invalid field before the `:`, is a syntax error at the token's start.
+- **Quote escapes:** in query quoted strings, unknown escapes keep the backslash, as in logfmt.
+- **Unspecified positions:** when a `)` shows up where an operand is expected, as in `(a AND)`, the error position is that `)`.
+
+**Additions beyond the spec:** the CLI also accepts `--opt=value` and `--`, and it strips a leading UTF-8 BOM from input.
+
+**Known limit:** `histogram` on a very wide time range with a small interval fills every empty bucket, as the spec requires, so memory grows with the range.

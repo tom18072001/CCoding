@@ -1,0 +1,178 @@
+TAP version 13
+# Subtest: mã fixed 10.00 trên giỏ 3 món: tổng giảm đúng 1000, Σ dòng = 1000
+ok 1 - mã fixed 10.00 trên giỏ 3 món: tổng giảm đúng 1000, Σ dòng = 1000
+  ---
+  duration_ms: 1.435995
+  type: 'test'
+  ...
+# Subtest: mã percent: Σ giảm dòng = giảm của mã
+ok 2 - mã percent: Σ giảm dòng = giảm của mã
+  ---
+  duration_ms: 1.454259
+  type: 'test'
+  ...
+# Subtest: thuế tính trên net khi có mã
+ok 3 - thuế tính trên net khi có mã
+  ---
+  duration_ms: 0.796587
+  type: 'test'
+  ...
+# Subtest: không mã: hành vi cũ không đổi
+ok 4 - không mã: hành vi cũ không đổi
+  ---
+  duration_ms: 0.602002
+  type: 'test'
+  ...
+# Subtest: giảm không vượt gross; fixed lớn hơn giỏ
+ok 5 - giảm không vượt gross; fixed lớn hơn giỏ
+  ---
+  duration_ms: 1.132952
+  type: 'test'
+  ...
+# Subtest: giá 1.005 → 101 xu; category percent làm tròn half up
+ok 6 - giá 1.005 → 101 xu; category percent làm tròn half up
+  ---
+  duration_ms: 0.29717
+  type: 'test'
+  ...
+# Subtest: lineTax tính số nguyên, half up
+ok 7 - lineTax tính số nguyên, half up
+  ---
+  duration_ms: 1.007603
+  type: 'test'
+  ...
+# Subtest: tính tiền không mã giảm giá
+ok 8 - tính tiền không mã giảm giá
+  ---
+  duration_ms: 1.477928
+  type: 'test'
+  ...
+# Subtest: giữ chỗ tồn kho khi thêm
+ok 9 - giữ chỗ tồn kho khi thêm
+  ---
+  duration_ms: 0.241584
+  type: 'test'
+  ...
+# Subtest: mã không tồn tại
+ok 10 - mã không tồn tại
+  ---
+  duration_ms: 0.517658
+  type: 'test'
+  ...
+# Subtest: updateQty chỉ giữ phần chênh lệch
+ok 11 - updateQty chỉ giữ phần chênh lệch
+  ---
+  duration_ms: 1.190843
+  type: 'test'
+  ...
+# Subtest: updateQty vượt tồn ném lỗi và giữ nguyên trạng thái
+ok 12 - updateQty vượt tồn ném lỗi và giữ nguyên trạng thái
+  ---
+  duration_ms: 0.502105
+  type: 'test'
+  ...
+# Subtest: updateQty giảm nhả phần chênh, về 0 nhả hết
+ok 13 - updateQty giảm nhả phần chênh, về 0 nhả hết
+  ---
+  duration_ms: 0.188917
+  type: 'test'
+  ...
+# Subtest: removeItem trả tồn cho giỏ khác; sku không có thì bỏ qua
+ok 14 - removeItem trả tồn cho giỏ khác; sku không có thì bỏ qua
+  ---
+  duration_ms: 2.154053
+  type: 'test'
+  ...
+# Subtest: addItem thất bại không đổi trạng thái
+ok 15 - addItem thất bại không đổi trạng thái
+  ---
+  duration_ms: 0.234875
+  type: 'test'
+  ...
+# Subtest: toCents half away from zero
+ok 16 - toCents half away from zero
+  ---
+  duration_ms: 1.841858
+  type: 'test'
+  ...
+# Subtest: toCents ném TypeError
+ok 17 - toCents ném TypeError
+  ---
+  duration_ms: 0.457151
+  type: 'test'
+  ...
+# Subtest: allocate phần dư lớn nhất
+ok 18 - allocate phần dư lớn nhất
+  ---
+  duration_ms: 0.868452
+  type: 'test'
+  ...
+# Subtest: allocate tổng luôn bằng total
+ok 19 - allocate tổng luôn bằng total
+  ---
+  duration_ms: 1.703611
+  type: 'test'
+  ...
+# Subtest: toCents cơ bản
+ok 20 - toCents cơ bản
+  ---
+  duration_ms: 1.382208
+  type: 'test'
+  ...
+# Subtest: formatMoney
+ok 21 - formatMoney
+  ---
+  duration_ms: 0.381707
+  type: 'test'
+  ...
+# Subtest: allocate chia đều
+ok 22 - allocate chia đều
+  ---
+  duration_ms: 0.784604
+  type: 'test'
+  ...
+# Subtest: endsAt hiệu lực tới hết ngày (UTC)
+ok 23 - endsAt hiệu lực tới hết ngày (UTC)
+  ---
+  duration_ms: 1.212617
+  type: 'test'
+  ...
+# Subtest: startsAt hiệu lực từ 00:00Z
+ok 24 - startsAt hiệu lực từ 00:00Z
+  ---
+  duration_ms: 0.205075
+  type: 'test'
+  ...
+# Subtest: minSubtotal: bằng ngưỡng vẫn hợp lệ, thấp hơn bị từ chối
+ok 25 - minSubtotal: bằng ngưỡng vẫn hợp lệ, thấp hơn bị từ chối
+  ---
+  duration_ms: 0.243013
+  type: 'test'
+  ...
+# Subtest: freeUnits mua 2 tặng 1
+ok 26 - freeUnits mua 2 tặng 1
+  ---
+  duration_ms: 0.161564
+  type: 'test'
+  ...
+# Subtest: freeUnits mua 1 tặng 1 và mua 3 tặng 2
+ok 27 - freeUnits mua 1 tặng 1 và mua 3 tặng 2
+  ---
+  duration_ms: 0.176219
+  type: 'test'
+  ...
+# Subtest: freeUnits qty <= 0 → 0
+ok 28 - freeUnits qty <= 0 → 0
+  ---
+  duration_ms: 0.094904
+  type: 'test'
+  ...
+1..28
+# tests 28
+# suites 0
+# pass 28
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 424.411934

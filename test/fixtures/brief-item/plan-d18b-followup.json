@@ -1,0 +1,24 @@
+{
+ "source": "kế hoạch vòng bổ sung thật của D18b (14/11/2026 21:30), bị cổng kiểm theo toàn đề bài và chặn",
+ "brief": "docs/research/BRIEF-D18b.md",
+ "run": 1,
+ "followupCriteria": null,
+ "subtasks": [
+  {
+   "id": "S1",
+   "title": "chainChecker bắt buộc ký khi có khóa: phát hiện log bị gỡ toàn bộ sig",
+   "description": "Đầu vào là minor 2 của vòng trước. Ở src/logger.ts:166–193, nhánh `key && (sig !== undefined || sawSigned)` bỏ qua tệp không có dòng nào mang sig, nên kẻ gỡ hết sig/kid rồi tính lại hash sẽ không bị phát hiện.\n1. Thêm tùy chọn `requireSigned` (tham số tùy chọn, giữ chữ ký hàm cũ) cho verifyChain và verifyChainStream. Khi có khóa CCODING_LOG_HMAC_KEY, mặc định bật: dòng thiếu sig/kid trả về broken với lý do 'thiếu chữ ký', phân biệt với 'chữ ký sai' và 'khóa khác'.\n2. Log cũ chưa ký được đi qua bằng cờ tường minh `--allow-unsigned` của lệnh `logs verify`. Tìm mọi nơi gọi verifyChain/verifyChainStream bằng search để nối tùy chọn.\n3. Thêm test vào test/logger-hmac.test.ts, dùng khóa giả:\n   (a) gỡ sig/kid ở mọi dòng và tính lại hash ⇒ báo sai ở dòng 1;\n   (b) gỡ sig ở một dòng giữa tệp ⇒ báo sai đúng dòng đó;\n   (c) log không ký kèm cờ allow-unsigned ⇒ qua;\n   (d) không có khóa ⇒ hành vi cũ không đổi.\n   Kiểm sức bắt lỗi: tạm khôi phục logic cũ, thấy (a) đỏ, rồi hoàn nguyên.\n4. Cập nhật docs/data-protection-assessment.md (FX21/DET): chế độ bắt buộc ký, cờ cho log cũ, và cách chuyển đổi (niêm phong log cũ rồi bật bắt buộc).\nTiêu chí xong: (a)–(d) xanh; `npm run typecheck` exit 0; `npm test` 0 fail; `git grep` không thấy khóa thật. Không sửa bench/, docs/research/.",
+   "assignee": "security",
+   "dependsOn": []
+  },
+  {
+   "id": "S2",
+   "title": "K5: review hồi quy K1–K4 và bản sửa chainChecker, kết luận theo từng FX",
+   "description": "Review theo tiêu chí xong ở docs/research/analysis/decisions/report.md §6.1 và scorecard.md (chỉ đọc). Đọc `git diff 015c51f5 HEAD`.\n- FX2/FX14/FX18: agents/research/research-lead.md có ngoại lệ bắt buộc tạo hạng mục cho reviewer có mã riêng, và agents/dev/dev-lead.md được rà. src/prompts.ts lấy số hạng mục từ MAX_SUBTASKS. Model theo làn ghi trong hồ sơ và docs/AGENTS-GUIDE.md (đích docs/agents-guide.md; cùng tệp trên Windows). test/registry.test.ts và test/plan-prompt-s1.test.ts phủ các điểm này.\n- FX8: src/kpi.ts tách `truncated` và `turnCapped`, docs/diagnostics/fx8-truncated.md có bảng theo pha. Xác nhận không cần đổi src/config.ts; đối chiếu số đo trong bench/vs-claude/results/decisions/kpi-office.json (chỉ đọc).\n- FX9/FX10: agents/dev/security.md, agents/research/peer-reviewer.md và agents/research/data-scientist.md có bước dò môi trường và dùng công cụ tệp.\n- FX11: miễn no-sources trong src/kpi.ts, có test.\n- FX12: giới hạn cỡ gói trong research-lead.md; checkEstimate ở bước plan (src/orchestrator.ts; xác nhận src/estimate.ts không cần đổi) có test.\n- FX21: dùng kịch bản tấn công tạm, không commit: ghi log ký bằng khóa giả, gỡ toàn bộ sig/kid, tính lại hash ⇒ verify phải báo sai. Kiểm thêm rằng cờ allow-unsigned cho log cũ qua, và không có khóa thì hành vi không đổi. Xong thì xóa tệp tạm.\nChạy `npm run typecheck` và `npm test`, ghi số tests/pass/fail/skipped. Worktree phải sạch khi bàn giao.",
+   "assignee": "qa-tester",
+   "dependsOn": [
+    "S1"
+   ]
+  }
+ ]
+}

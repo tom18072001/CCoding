@@ -1,0 +1,115 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g4-gb-unit__B6__r5] Thêm đơn vị GB vào bộ module kích thước tệp
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Việc nhỏ, gồm 2 hạng mục tuần tự: thêm GB (1024^3 = 1073741824) vào 4 tệp src/ rồi bổ sung test GB trong tệp test riêng. Hạng mục thứ hai chạy sau để `npm test` được kiểm chứng trên mã đã sửa.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Thêm GB vào units, format, parse, validate (@backend-dev, done)
+
+## Tóm tắt
+Đã thêm đơn vị GB (1024³ = 1073741824) vào 4 tệp `src/`: bảng đơn vị, định dạng, phân tích chuỗi và kiểm tra hợp lệ. `npm test` vẫn xanh (2/2 pass). Chưa viết test GB, việc đó thuộc S2.
+
+## Tệp đã tạo/sửa
+- `src/units.js`: thêm `GB: 1024 ** 3`.
+- `src/format.js`: chọn GB khi `bytes >= UNITS.GB`, thứ tự GB > MB > KB > B. Quy tắc 1 chữ số thập phân giữ nguyên.
+- `src/parse.js`: regex thành `(B|KB|MB|GB)`, không phân biệt hoa thường.
+- `src/validate.js`: `VALID` thêm `'GB'`.
+- Không sửa `test/size.test.js`.
+
+## Hợp đồng API
+Không áp dụng.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0, tests 2, pass 2, fail 0.
+- Chạy thử bằng `node -e` (không có exit code riêng):
+  - `formatSize(1.5*1024**3)` → `1.5 GB`
+  - `formatSize(2*1024**3)` → `2 GB`
+  - `formatSize(5*1024**2)` → `5 MB`
+  - `parseSize('1GB')` → `1073741824`
+  - `parseSize('1.5 gb')` → `1610612736`
+  - `isValidUnit('gb')` → `true`
+- Git cảnh báo LF sẽ đổi thành CRLF ở các tệp đã sửa. Đây chỉ là cảnh báo về cuối dòng, không ảnh hưởng kết quả.
+
+## Việc còn lại
+- S2 (`@backend-dev`): viết test GB trong tệp test riêng.
+- Không có biến môi trường mới.
+
+Bản đầy đủ: `.ccoding/T-20261104-195132-29c/outputs/dev-S1-backend-dev.md`
+
+### S2 — Viết test GB (@backend-dev, done)
+
+## Tóm tắt
+Đã tạo `test/gb.test.js` (dùng `node:test`) với 4 test case, bao phủ đủ các ca được yêu cầu cho GB. `npm test` xanh: 6/6 pass, gồm 2 test cũ và 4 test mới. `test/size.test.js` không bị sửa.
+
+## Tệp đã tạo/sửa
+- `test/gb.test.js` (mới):
+  - `UNITS.GB === 1073741824`.
+  - `formatSize`: `1 GB`, `1.5 GB`, và `1024**2` vẫn ra `1 MB`.
+  - `parseSize`: `'1GB'` và `'1.5 gb'` cho đúng giá trị; `'1 TB'` ném `TypeError`.
+  - `isValidUnit('GB')` và `isValidUnit('gb')` đều `true`.
+
+## Hợp đồng API
+Không áp dụng.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0, tests 6, pass 6, fail 0.
+- Lần chạy đầu bị hook chặn vì chuỗi `../src/...` trong heredoc, nên tôi tạo tệp bằng công cụ Write. Việc này không ảnh hưởng kết quả.
+
+## Việc còn lại
+Không có. Không có biến môi trường mới.
+
+Bản đầy đủ: `.ccoding/T-20261104-195132-29c/outputs/dev-S2-backend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-195132-29c` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **30 in / 6,223 out**, cache đọc 170.1k, 5 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | 18 | 3734 | 111728 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 10 | 2083 | 57714 | 2 |
+| Điều phối viên (@orchestrator) | office | 2 | 406 | 649 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Thêm GB vào units, format, parse, validate (@backend-dev)
+- `outputs/dev-S2-backend-dev.md` — S2 Viết test GB (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 6 · ℹ suites 0 · ℹ pass 6 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | **73** B | thấp | — | — | 100 | 100 | 70 | 100 | 2 | 1 | 115k | 3/8 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **68** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 60k | 0/3 | — |
+| Điều phối viên (@orchestrator) | office | **60** C | thấp | — | — | — | — | 100 | — | 0 | — | 1k | — | — |
+
+### Việc cần sửa theo agent
+- **Backend Developer** (@backend-dev, 73 B):
+  - Thao tác công cụ lỗi nhiều (3/8, 38%; nhiều nhất ở run_command 3/7) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

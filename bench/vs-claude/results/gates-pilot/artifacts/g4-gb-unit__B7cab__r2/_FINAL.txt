@@ -1,0 +1,82 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g4-gb-unit__B7cab__r2] Thêm đơn vị GB vào bộ module kích thước tệp
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Đã kiểm tra worktree: việc thêm GB đã có sẵn trong 5 tệp (src/units.js, format.js, parse.js, validate.js, test/size.test.js). Bàn giao ghi 'chưa có thay đổi' là sai, vì git status cho thấy cả 5 tệp đang ở trạng thái modified. Phần còn lại chỉ là chạy lại `npm test` để xác nhận. Tôi không có công cụ chạy lệnh nên giao việc này cho một người chạy lệnh, và không viết lại phần đã làm.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Xác nhận GB trên nền diff hiện có và chạy npm test (@senior-swe, done)
+
+## Tóm tắt
+Diff GB đã có sẵn trong cả 5 tệp, nên tôi không sửa gì thêm. `npm test` chạy lại ở lượt này cho kết quả exit 0, 3/3 test đạt, 0 đỏ. Tôi không thêm test biên vì test `GB` hiện có đã phủ các ca chính. Rủi ro còn lại là lỗi làm tròn có từ trước, ghi ở cuối.
+
+## Tệp đã tạo/sửa
+Lượt này tôi không sửa tệp nào. `git status` và `git diff --stat` xác nhận 5 tệp đã modified (17 dòng thêm, 4 dòng xóa):
+- `src/units.js`: 1 dòng đổi (thêm `GB`).
+- `src/format.js`: 1 dòng đổi.
+- `src/parse.js`: 1 dòng đổi.
+- `src/validate.js`: 1 dòng đổi.
+- `test/size.test.js`: thêm 13 dòng, gồm test `GB`.
+
+Test `GB` kiểm tra các ca sau:
+- `UNITS.GB` bằng 1024 MB.
+- `formatSize` cho `2 GB`, `1.5 GB`, `512 MB`.
+- `parseSize('1 GB')` và `parseSize('0.5gb')`.
+- `isValidUnit('gb')` đúng, `isValidUnit('TB')` sai.
+
+## Kiểm chứng
+- `git status --short` và `git diff --stat` → 5 tệp modified, đúng như trên.
+- `npm test` → exit 0, tests 3, pass 3, fail 0, cancelled 0, skipped 0.
+- Baseline trước khi sửa là 2 test, nên sau khi sửa có thêm đúng 1 test (`GB`).
+
+## Quyết định thiết kế
+Giữ nguyên diff hiện có và không viết lại. Tôi chưa thêm ca biên (`parseSize('1GB')`, `parseSize('abc')` ném `TypeError`, `isValidUnit('GB')`) vì chưa kiểm hành vi của `parseSize` với chuỗi sai. Việc này không bắt buộc cho tiêu chí xong.
+
+## Rủi ro & việc còn mở
+- `formatSize(1024 ** 3 - 1)` trả về `"1024.0 MB"` thay vì `"1 GB"`. Cách làm tròn này có từ trước (KB→MB cũng vậy) và nằm ngoài phạm vi, nên tôi không sửa.
+- Không commit, không push.
+
+Bản đầy đủ: `.ccoding/T-20261104-103926-c2c/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-103926-c2c` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **22 in / 5,084 out**, cache đọc 270.3k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 18 | 4207 | 223739 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 877 | 46529 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Xác nhận GB trên nền diff hiện có và chạy npm test (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 2 · # suites 0 · # pass 2 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 3 · # suites 0 · # pass 3 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **70** B | thấp | — | — | 100 | 100 | 93 | 100 | 1 | 1 | 228k | 1/12 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 47k | 0/1 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

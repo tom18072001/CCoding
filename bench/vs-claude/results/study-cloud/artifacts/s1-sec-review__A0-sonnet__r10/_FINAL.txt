@@ -1,0 +1,17 @@
+I reviewed `src/server.js` without changing it and wrote seven findings to `findings.json` in the repository root. I only read the code; I didn't run the server or exploit anything.
+
+| Line | Type | Severity | Issue |
+|---|---|---|---|
+| 11 | `hardcoded-secret` | high | The JWT secret is a string literal in the source. |
+| 30 | `sqli` | critical | The search query `q` is interpolated directly into the SQL string. |
+| 42 | `path-traversal` | high | `req.params.name` goes into `path.join` and `sendFile`, so a name containing `../` can read files outside `/srv/reports`. |
+| 58 | `weak-crypto` | high | Passwords are hashed with unsalted MD5. |
+| 65 | `ssrf` | high | The server fetches any user-supplied URL and returns the response body. |
+| 70 | `missing-authz` | high | Any authenticated user can delete any ticket. The route is labelled "Delete any ticket" but has no admin or ownership check. |
+| 84 | `command-injection` | critical | `req.body.format` goes straight into an `exec` shell command. |
+
+I left out a few things that looked suspicious but didn't hold up as real issues:
+- **Ping route (line 79):** the `/api/diag/ping` host regex allows a leading `-`, which would permit argument injection. The route is admin-only, so I didn't report it.
+- **Status table name (line 36):** the table name is interpolated, but it's a server-side constant.
+- **Attachments route (lines 47–53):** it takes only the basename, checks the file extension and filters on the owner.
+- **`verifyJwt` (line 18):** it is never imported or defined in this file. That is a bug or a missing import rather than a security finding on its own, so I didn't report it.

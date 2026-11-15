@@ -1,0 +1,9 @@
+I've written `answer.json` in the repo root. I found the answers by checking all 120 possible rotas against the rules.
+
+- **Schedule:** Mon Dung, Tue Chi, Wed Binh, Thu An, Fri Em. It is the only rota that satisfies all seven rules, and I checked it against each rule by hand.
+- **`count_without_rule_2`:** 10 rotas satisfy every rule except rule 2.
+- **`most_permissive_rule`:** 2. Dropping rule 2 allows 10 rotas. Dropping any other single rule allows at most 4, so there is no tie.
+
+I took "consecutive days" to mean neighbouring weekdays, so Friday and Monday don't count as consecutive.
+
+The one change in the last stage was reordering the schedule keys to run Monday to Friday.

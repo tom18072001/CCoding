@@ -1,0 +1,8 @@
+I wrote `answer.json` and `REVIEW.md` at the repository root. `REVIEW.md` is 482 words.
+
+- **q1:** P4 (LogGraphT) has the highest F1 on the full HDFS-X split, at 0.962. P2's 0.971 is on HDFS-X-small, an easier subset that P6 says is not comparable to the full split, so I excluded it.
+- **q2:** P5 reports results with 0.5% labeled data, on BGL-X.
+- **q3:** The corpus has no energy figure for LogGraphT, so I set `not_in_corpus` to true. P4 gives only inference latency (3.1 ms per session on one A100).
+- **q4:** P1 and P3 disagree. P1 says log parsing into templates is necessary, and P3 says it is optional.
+
+The review's other main points are that low-label results exist only on BGL-X, and that cost reporting is thin across the corpus.

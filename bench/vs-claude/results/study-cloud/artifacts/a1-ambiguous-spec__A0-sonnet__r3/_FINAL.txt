@@ -1,0 +1,12 @@
+I wrote `SPEC.md` at the repository root. It includes the `## Open questions and assumptions` section, with 15 questions, each paired with the assumption to use meanwhile. I haven't committed it.
+
+The customer's request contradicts itself in four places, and the spec calls these out up front:
+
+- **Full IPs and usernames vs. no unmasked personal data (C1).** I defaulted to masked exports: partial IP, and a keyed pseudonym for the username. The unmasked path is designed as a separate, restricted capability with four-eyes approval, a reason field and encryption. It stays behind a flag that is off until the customer decides.
+- **Files kept forever vs. delete personal data after 12 months (C4).** I assumed export files holding personal data are deleted after 30 days. Only audit metadata with no personal data is kept forever.
+- **"Last month for their team" vs. "everything they can see" (C2).** I assumed the strict intersection of team, previous calendar month and visible rows, with no custom date range.
+- **5-second completion vs. unknown volume (C3).** I assumed a synchronous path up to 50,000 rows with a 5-second p95 target. Larger exports run as a background job that returns a job ID in under 1 second.
+
+The legacy CSV format ("like the old system") is also unknown, so I used a placeholder column list until the customer sends a sample file.
+
+I included stable requirement IDs, acceptance criteria and a suggested delivery order. The legal references (Decree 13/2023/ND-CP, State Bank of Vietnam circulars) are only candidates for the bank's data-protection officer to confirm. The spec does not give legal advice.

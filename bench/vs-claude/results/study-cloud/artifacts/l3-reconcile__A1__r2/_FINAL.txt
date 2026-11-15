@@ -1,0 +1,30 @@
+**Stage 1, Plan**
+1. Dedupe by `txn_id`, and count the extra rows over the whole file.
+2. Keep only `paid` and `refunded` rows.
+3. Convert `created_at` from UTC to UTC+7 and keep October 2026 local time. The boundary rows need care.
+4. Dates for refunds come from the refund row, not the original payment.
+5. Convert USD at 25,400 using exact arithmetic, and round half-up once at the end.
+6. Write `answer.json` and `NOTES.md`.
+
+I made one assumption: same-`txn_id` rows are exact duplicates. The script asserts this.
+
+**Stage 2, Implement**
+I wrote a Python script with `Decimal` arithmetic. It lives in `/tmp`, outside the repo. It produced `answer.json`.
+
+**Stage 3, Self-review**
+- All five repeated `txn_id`s were exact duplicates, so the assertion held.
+- The boundary rows came out right. T0071 and T0030 fall in October local time, and T0073 (2026-10-31T17:00Z) falls in November.
+- The five refund rows dated in November are excluded.
+- The sign checks passed: paid amounts are positive and refund amounts negative.
+- There were no other currencies and no malformed rows.
+- There are no tests in the repo.
+
+**Stage 4, Fix**
+The review found nothing to fix.
+
+**Result**
+`answer.json`:
+```json
+{"net_revenue_vnd": 97306916, "paid_count": 32, "refund_count": 2, "duplicate_rows_ignored": 5}
+```
+`NOTES.md` explains the method. I did not commit either file.

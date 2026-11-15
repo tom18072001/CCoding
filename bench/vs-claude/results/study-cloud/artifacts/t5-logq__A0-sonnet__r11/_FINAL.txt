@@ -1,0 +1,14 @@
+Mình đã làm xong logq theo SPEC.md: ba module `src/parse.js`, `src/query.js`, `src/agg.js` và CLI `bin/logq.js`, không thêm thư viện ngoài. `npm test` xanh (10 test, 0 lỗi), gồm cả test CLI chạy tiến trình thật. Mình chưa có bộ nghiệm thu ẩn nên chưa đối chiếu được với nó. Mình chưa commit gì.
+
+Test mới nằm ở `test/logq.test.js` (`test/smoke.test.js` có sẵn vẫn chạy). Các test này kiểm tra:
+- cú pháp parse và thời gian `@t`;
+- ngữ nghĩa truy vấn và từng vị trí lỗi;
+- các loại tổng hợp, kể cả điền mốc trống của histogram;
+- CLI: mã thoát 0/1/2, `--stats`, bảng, và stdout rỗng khi lỗi.
+
+Những chỗ SPEC chưa nói rõ, mình chọn như sau:
+- **Thời gian `@t`:** chỉ nhận chuỗi có dạng `YYYY-MM-DDTHH:MM…` (có chữ `T`). Dạng `2024-01-01 10:00:00` có dấu cách sẽ không có `@t`, vì `Date.parse` tính theo múi giờ máy chạy.
+- **Dòng rỗng với `--stats`:** dòng rỗng vẫn tính vào `lines` và cũng tính vào `malformed`, vì SPEC coi mọi dòng `ok: false` là dòng lỗi.
+- **`--format table` không kèm `--agg`:** chỉ báo lỗi mã 2 khi bạn ghi `--format` rõ ràng. Mặc định (json) không có `--agg` vẫn in từng bản ghi như bình thường.
+- **Thứ tự kiểm tra trong CLI:** kiểm tra truy vấn và spec trước khi đọc tệp, nên truy vấn sai cho mã 2 ngay cả khi tệp không tồn tại.
+- **Spec dạng `histogram`:** chấp nhận số có số 0 đứng đầu (ví dụ `05m`) và giữ nguyên chuỗi đó trong `interval`.

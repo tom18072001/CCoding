@@ -1,0 +1,11 @@
+Cả 4 tính năng trong `FEATURES.md` đã xong và `npm test` xanh (9 test pass). Tôi chỉ kiểm tra bằng test gọi API thật qua HTTP trong repo, chưa có bộ nghiệm thu ẩn để chạy thử.
+
+Tôi đã làm theo thứ tự kiểm tra của đặc tả: 401, rồi 400 tham số truy vấn, rồi 404, rồi 403, rồi 400 body. Một vài điểm tôi tự quyết khi đặc tả chưa nói rõ:
+
+- **Tham số truy vấn:** lỗi được báo theo tham số đầu tiên trên URL. Tham số lạ hoặc xuất hiện hai lần đều trả `INVALID_QUERY`. Giá trị rỗng như `status=` hoặc `team=` bị coi là không hợp lệ, còn `q=` thì không lọc. `assignee` với id không tồn tại thì không báo lỗi, chỉ trả về rỗng.
+- **POST và PATCH:** việc đọc body được hoãn lại để 403 đi trước lỗi JSON hay validate. Ví dụ manager sửa nhiệm vụ nhóm khác với body sai vẫn nhận 403, không phải 400.
+- **`dueDate` trong body:** tôi siết validate để kiểm tra ngày có thật trên lịch và phải là chuỗi. Trước đây chỉ kiểm tra dạng `YYYY-MM-DD`.
+- **Nhật ký:** PATCH thành công mà không đổi giá trị nào vẫn ghi một mục với `changes: []`.
+- **Route:** `/tasks/export.csv` được đăng ký trước `/tasks/:id` để không bị nhận nhầm là id.
+
+Về file: code mới nằm ở `src/auth.js`, `src/query.js`, `src/csv.js` và `src/handlers/audit.js`, còn `src/handlers/tasks.js`, `src/store.js` và `src/server.js` được sửa theo. Trong `test/`, `tasks.test.js` đã đổi sang dạng `{items,total,page,pageSize}`. `test/features.test.js` là file mới, phủ cả 4 tính năng. `test/helpers.js` giờ mặc định gửi `X-User: u1` (truyền `as: null` để không gửi) và đọc raw bytes vì `fetch().text()` tự cắt BOM.

@@ -1,0 +1,74 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261102-133615-700",
+  "wallSec": 153,
+  "wallSecHarness": 165,
+  "costUsd": 0.9669036,
+  "tokens": {
+   "input": 62,
+   "output": 30502,
+   "cacheRead": 818735,
+   "cacheWrite": 143161
+  },
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "Lỗi 1+2: làm tròn tiền và allocate (money.js, catalog.js)"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "Lỗi 3+4 (+đổi xu trong mã giảm): promotions.js"
+   },
+   {
+    "id": "S3",
+    "status": "done",
+    "title": "Lỗi 5: giữ chỗ kho (inventory.js, cart.js)"
+   },
+   {
+    "id": "S4",
+    "status": "done",
+    "title": "Lỗi 6: thuế trên giá sau giảm (tax.js, checkout.js)"
+   }
+  ],
+  "workdir": "/home/claude/ccoding-dev/workspaces/b-c9-t2-fastla-1/wt-T-20261102-133615-700",
+  "branch": "ccoding/t-20261102-133615-700"
+ },
+ "task": "t2-orders",
+ "system": "ccoding-fastlane",
+ "rep": 1,
+ "key": "t2-orders.ccoding-fastlane.1",
+ "env": "cloud",
+ "startedAt": "2026-11-02T06:36:15.299Z",
+ "finishedAt": "2026-11-02T06:39:00.993Z",
+ "grade": {
+  "hidden": {
+   "pass": 60,
+   "fail": 0,
+   "total": 60,
+   "failed": [],
+   "ms": 145,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 31,
+   "fail": 0,
+   "total": 31
+  },
+  "changed": [
+   "~src/cart.js",
+   "~src/checkout.js",
+   "~src/money.js",
+   "~src/promotions.js",
+   "~src/tax.js",
+   "+test/inventory.test.js",
+   "+test/money-rounding.test.js",
+   "+test/promotions.test.js",
+   "+test/tax.test.js"
+  ]
+ },
+ "audit": []
+}

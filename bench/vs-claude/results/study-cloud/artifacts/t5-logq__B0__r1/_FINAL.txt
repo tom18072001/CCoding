@@ -1,0 +1,125 @@
+# Báo cáo tổng hợp: công cụ logq (thư viện + CLI) theo SPEC.md — Đạt
+
+## Tóm tắt
+Đã xong thư viện `src/parse.js`, `src/query.js`, `src/agg.js` và CLI `bin/logq.js`, kèm 4 tệp test mới. `npm test` xanh: 77/77 pass, exit 0. Trước khi làm (baseline), 3/3 test đều đỏ. Ở bước review, @qa-tester cố tình làm hỏng 12 quy tắc then chốt; bộ test bắt được 11. Chỗ lọt duy nhất (đệm cột `table`) đã được vá bằng test bổ sung. Không còn blocker hay major, chỉ còn 3 minor. Mọi thay đổi chưa commit (đang ở cây làm việc, nhánh base `2fc82a4`). Không dùng thư viện ngoài và không sửa SPEC.md, `package.json`, `src/index.js`, `test/smoke.test.js`.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | `parseLine`: làm phẳng JSON, logfmt, `@t` | @backend-dev | Đạt | `src/parse.js`, `test/parse.test.js`; `node --test test/parse.test.js` → 9/9 pass. Reviewer chạy thêm ca biên §1 qua script tự viết, khớp SPEC |
+| S2 | `compile` + `QuerySyntaxError`: tokenizer, parser đệ quy, vị trí lỗi | @senior-swe | Đạt | `src/query.js`, `test/query.test.js`; `node --version` → v22.23.4; `node --test test/query.test.js` → 40/40 pass (có 30 ca lỗi kiểm `position` cụ thể) |
+| S3 | `aggregate`: count/by/top, sum/avg/min/max, percentile, histogram | @data-engineer | Đạt | `src/agg.js`, `test/agg.test.js`; `node --test test/agg.test.js` → 9/9 pass (gồm bảng 35 spec sai, mỗi spec thử với cả mảng rỗng lẫn mảng có dữ liệu) |
+| S4 | CLI `bin/logq.js` + test e2e qua process thật | @senior-swe | Đạt | `bin/logq.js`, `test/cli.test.js`; `npm test` → 76/76 pass; chạy tay `printf … \| node bin/logq.js --query 'level:error' --stats` cho đúng stdout và stderr |
+| S5 | Review cuối, đối chiếu SPEC, thử làm hỏng từng module | @qa-tester | Đạt | `.ccoding/T-20261103-042540-f1d/outputs/dev-S5-qa-tester.md`; 13 lần chạy `npm test` trên bản sao tạm (1 đối chứng, 12 mutation); thêm 1 test vào `test/cli.test.js`; `npm test` → 77/77 |
+
+**Lệnh kiểm tra của dự án (CCoding tự chạy):**
+- Trước khi sửa: `npm test` → exit 1, có 3 test, pass 0, fail 3.
+- Sau khi làm: `npm test` → exit 0, có 77 test, pass 77, fail 0. Cụ thể: parse 9, query 40, agg 9, cli 16, smoke 3.
+
+Báo cáo chi tiết của từng hạng mục nằm ở `.ccoding/T-20261103-042540-f1d/outputs/dev-S{1..5}-*.md`.
+
+## Quyết định
+- **D1:** giữ nguyên SPEC.md, vì đây là hợp đồng nghiệm thu. Các điểm mơ hồ được chốt trong kế hoạch và thể hiện bằng test.
+- **D2/D3 (`@t`):** chỉ xét trường đầu tiên có mặt trong thứ tự `@timestamp` → `ts` → `time`.
+  - "Có mặt" nghĩa là key tồn tại, kể cả khi giá trị là null hay số.
+  - Giá trị phải khớp `YYYY-MM-DD[T ]HH:MM` và `Date.parse` phải trả số hữu hạn. Nếu không thì không gán `@t` và không xét trường sau.
+  - Quy tắc áp dụng cho cả JSON lẫn logfmt. Key lồng (ví dụ `a.ts`) không được tính.
+- **D4:** histogram chỉ dùng `@t` khi đó là số hữu hạn. Không giới hạn số mốc và không thêm lỗi ngoài SPEC.
+- **D5:** `aggregate([], spec)` vẫn validate spec đầy đủ và ném `invalid aggregation…` nếu spec sai.
+- **D6 (shape của `QuerySyntaxError`):**
+  - kế thừa `Error`, có `name='QuerySyntaxError'`;
+  - `position` là số;
+  - message có dạng `syntax error at position N: …`.
+- **D8 (thứ tự xử lý trong CLI):**
+  1. Phân tích argv; lỗi thì thoát 2.
+  2. Compile query và validate spec agg; lỗi thì thoát 2.
+  3. Đọc hết các tệp và stdin; tệp lỗi thì in `cannot read <tệp>` và thoát 1.
+  4. Xử lý dữ liệu và ghi stdout.
+  5. `--stats` ghi stderr.
+
+  Nhờ thứ tự này, khi lỗi thì stdout trống và không in stats. CLI dùng `process.exitCode`, không gọi `process.exit()`.
+- **Các quyết định thiết kế nhỏ ở S4 (SPEC không quy định):**
+  - `--query=…` bị coi là tùy chọn lạ và thoát 2.
+  - Tùy chọn lặp lại thì giá trị cuối thắng.
+  - Giá trị của tùy chọn là đối số kế tiếp, kể cả khi đối số đó bắt đầu bằng `-`.
+
+## Kết quả review
+- Kết luận của @qa-tester là **Đạt**: không có blocker, không có major.
+- Đã thử làm hỏng 12 chỗ, bộ test bắt được 11:
+  - vị trí lỗi thiếu `)`;
+  - AND ngầm;
+  - escape regex;
+  - phân biệt `500` với `"500"` (2 cách làm hỏng);
+  - thứ tự bucket khi hòa count;
+  - điền mốc histogram trống;
+  - `@t` không xét trường sau;
+  - stdout trống khi lỗi tệp;
+  - đệm cột `table` (2 cách làm hỏng).
+- Chỗ lọt là độ rộng tối thiểu của cột `key` khi mọi key ngắn hơn 3 ký tự. Đã thêm test, và bản làm hỏng giờ cho test đỏ.
+- Minor:
+  1. Ca đệm cột `table` ở trên: đã xử lý.
+  2. `--query=…` bị từ chối: SPEC không định nghĩa dạng này nên không sai, chỉ cần ghi vào tài liệu.
+  3. Histogram có thể sinh hàng triệu mốc: vẫn mở theo D4.
+- Trong review cuối, reviewer tự chạy lại `npm test` (77/77, exit 0) và các ca biên §1–§3, không thấy lệch so với SPEC.
+
+## Việc còn mở & rủi ro
+- **Chưa commit:** `git status` cho thấy 4 tệp đã sửa (`src/*.js`, `bin/logq.js`) và 4 tệp test mới. Cần Tom duyệt rồi commit vào một nhánh riêng, không commit thẳng lên main.
+- **Rủi ro histogram (D4):** khoảng `@t` rộng mà bước nhỏ có thể tạo hàng triệu bucket và tốn nhiều bộ nhớ. Đã cố ý không giới hạn để bám đúng SPEC.
+- **Bộ nhớ của CLI:** để bảo đảm stdout trống khi lỗi, CLI đọc hết mọi tệp vào bộ nhớ trước khi xử lý, nên tệp rất lớn sẽ tốn nhiều bộ nhớ.
+- **Chưa kiểm:**
+  - stdin là TTY hoặc đã đóng;
+  - hiệu năng với dữ liệu lớn;
+  - mutation cho từng ca vị trí lỗi còn lại của §2 (các ca này đã có test giá trị `position` cụ thể, nhưng chưa có mutation riêng).
+- **Giả định:** bộ nghiệm thu ẩn hiểu các điểm mơ hồ giống D2–D6 và D8. Nếu khác, chỗ dễ lệch nhất là cách hiểu "có mặt" của `@t` và cách xử lý `_exists_:` với tên trường không hợp lệ.
+- **Giới hạn theo SPEC:** key logfmt không chứa `@`, nên `@timestamp` chỉ có thể đến từ JSON.
+
+## Bước tiếp theo
+1. **Commit (Tom duyệt):** tạo nhánh `feat/logq`, commit 8 tệp nêu trên. Xong khi `git log` có commit trên nhánh đó và `npm test` vẫn xanh.
+2. **Nhiệm vụ riêng, nếu cần: giới hạn histogram.** Trước hết cần quyết định ở cấp SPEC (có giới hạn số mốc không, lỗi trả về là gì), sau đó @data-engineer hiện thực và thêm test hiệu năng. Xong khi có test với khoảng thời gian 1 năm, bước `1s`, chạy trong ngưỡng đã chốt.
+3. **Nhiệm vụ riêng, tùy chọn: tài liệu CLI.** @tech-writer viết phần README cho `logq`, gồm cú pháp truy vấn, spec agg, mã thoát và ghi chú `--query=…` không được hỗ trợ. Xong khi các ví dụ trong README chạy ra đúng output.
+4. **Nhiệm vụ riêng, tùy chọn: test bổ sung.** @qa-tester thêm test cho stdin là TTY hoặc đã đóng, và mutation cho các ca vị trí lỗi còn lại của §2. Xong khi mọi mutation mới đều làm test đỏ và `npm test` vẫn xanh.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-042540-f1d` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **94 in / 77.2k out**, cache đọc 835.4k, 14 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 28 | 26227 | 290236 | 3 |
+| QA Engineer (@qa-tester) | dev | 26 | 11649 | 292274 | 3 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 14 | 17235 | 89692 | 3 |
+| Backend Developer (@backend-dev) | dev | 14 | 9587 | 101875 | 2 |
+| Data Engineer (@data-engineer) | dev | 10 | 12155 | 60638 | 2 |
+| Điều phối viên (@orchestrator) | office | 2 | 348 | 649 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 parseLine: JSON làm phẳng, logfmt, @t (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 compile + QuerySyntaxError: tokenizer, parser đệ quy, vị trí lỗi (@senior-swe)
+- `outputs/dev-S3-data-engineer.md` — S3 aggregate: count/by/top, sum/avg/min/max, percentile, histogram (@data-engineer)
+- `outputs/dev-S4-senior-swe.md` — S4 CLI bin/logq.js + test e2e qua process thật (@senior-swe)
+- `outputs/dev-S5-qa-tester.md` — S5 Review cuối: đối chiếu SPEC và thử làm hỏng từng module (@qa-tester)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 3 · # suites 0 · # pass 0 · # fail 3 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 77 · # suites 0 · # pass 77 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **94** A | 100 | 85 | 89 | 100 | 2 | 1 | 316k | 2/15 |
+| QA Engineer (@qa-tester) | dev | **87** A | 100 | 54 | 93 | 100 | 1 | 1 | 304k | 1/12 |
+| Backend Developer (@backend-dev) | dev | **98** A | 100 | 100 | 89 | 100 | 1 | 1 | 111k | 1/7 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | 100 | 100 | 100 | 100 | 0 | — | 107k | 0/4 |
+| Data Engineer (@data-engineer) | dev | **97** A | 100 | 100 | 84 | 100 | 1 | 1 | 73k | 1/5 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 999 | — |
+
+### Việc cần sửa theo agent
+- **Data Engineer** (@data-engineer, 97 A):
+  - Thao tác công cụ lỗi nhiều (1/5, 20%; nhiều nhất ở run_command 1/3) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

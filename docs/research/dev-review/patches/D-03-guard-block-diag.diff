@@ -1,0 +1,52 @@
+# D-03 — Ghi sự kiện `guard.blocked` khi hook claude-guard chặn hoặc nhắc
+#
+# Trạng thái: ĐỀ XUẤT, CHƯA KIỂM --check, chưa typecheck, chưa test. Không áp dụng.
+# Gốc: HEAD e886c04. Tác giả: S5 @solution-architect. Độc lập với D-01 (khác hunk trong claude-cli.ts)
+#   và D-02 (cùng orchestrator.ts nhưng cách xa; git apply chịu được độ lệch dòng).
+# Kiểm (reviewer): git apply --ignore-whitespace --check docs/research/dev-review/patches/D-03-guard-block-diag.diff
+#
+# Vấn đề (S3 §4–5): hook chặn không được log thành sự kiện riêng; CCoding chỉ thấy qua
+#   `tool_result is_error` (src/runtimes/claude-cli.ts:100-103) và ghi chung vào `tool.call ✗`.
+#   Hệ quả: L2–L4 trong bài ghi "số chặn đúng/nhầm: chưa đo"; C-48 (chặn nhầm cú pháp git) "chưa đo";
+#   vòng tự cải thiện (design.md) mất một nguồn sự cố trong khi `capHits` = 0 với claude-cli (K39).
+#   Ngoài ra `error` bị cắt 200 ký tự, mà tiền tố của thông báo hook gồm đường dẫn tới claude-guard.js
+#   — đường dẫn dài có thể đẩy chữ "CCoding chặn" ra ngoài phần giữ lại.
+# Thay đổi: (1) giữ 400 ký tự lỗi công cụ ở claude-cli; (2) sau khi log tool.call, lọc lượt công cụ lỗi
+#   có chữ "CCoding chặn"/"CCoding nhắc" và ghi MỘT sự kiện `guard.blocked` mỗi lượt gọi, kèm số chặn,
+#   số nhắc và danh sách thao tác. Ghi qua LogStore (che PII/bí mật + chuỗi băm) như mọi log khác.
+#
+# Giả thuyết H-D03: có số đếm chặn/nhắc theo vai trò và pha thì (a) đo được hiệu quả L2–L6 và
+#   (b) phân loại chặn nhầm (C-48) để tự đề xuất sửa prompt/danh sách lệnh.
+# Chỉ số: số `guard.blocked` / lượt chạy, tách blocked/nudged, theo agent và pha; tỉ lệ chặn nhầm
+#   (người gán nhãn mẫu ≥ 50 sự kiện). Không kỳ vọng đổi thời gian/chi phí (chỉ thêm log).
+# Cách đo: quan sát trong gói A và F1 của experiment-plan.md (không cần A/B); kiểm nhanh bằng
+#   test đơn vị: ToolCallRecord ok=false, error chứa "CCoding chặn" → 1 sự kiện, blocked = 1.
+# Giả định CHƯA KIỂM: runtime API trả lỗi chính sách với cùng tiền tố "CCoding chặn" — nếu khác,
+#   sự kiện chỉ phản ánh claude-cli (đủ cho benchtest). Việc giữ 400 thay vì 200 ký tự làm log
+#   tool.call dài hơn một chút.
+# Hoàn tác: git apply -R.
+diff --git a/src/runtimes/claude-cli.ts b/src/runtimes/claude-cli.ts
+--- a/src/runtimes/claude-cli.ts
++++ b/src/runtimes/claude-cli.ts
+@@ -99,6 +99,6 @@ export class ClaudeStreamParser {
+           p.rec.outputChars = out.length;
+           if (block.is_error) {
+             p.rec.ok = false;
+-            p.rec.error = out.slice(0, 200);
++            p.rec.error = out.slice(0, 400); // thông báo hook có tiền tố đường dẫn claude-guard.js — giữ đủ để nhận "CCoding chặn/nhắc"
+           }
+         }
+diff --git a/src/orchestrator.ts b/src/orchestrator.ts
+--- a/src/orchestrator.ts
++++ b/src/orchestrator.ts
+@@ -2887,4 +2887,10 @@
+         data: { callId, ...tc },
+       });
++    // hook claude-guard chặn/nhắc → một sự kiện riêng mỗi lượt gọi: đếm chặn đúng/nhầm (L2–L6, C-48) và làm nguồn sự cố cho vòng tự cải thiện
++    const guarded = (result.toolCalls ?? []).filter((tc) => !tc.ok && /CCoding (chặn|nhắc)/.test(tc.error ?? ''));
++    if (guarded.length) {
++      const blocked = guarded.filter((tc) => /CCoding chặn/.test(tc.error ?? '')).length;
++      logs.write({ level: 'warn', kind: 'guard.blocked', msg: `${agent.name} · hook chặn ${blocked}, nhắc ${guarded.length - blocked} thao tác: ${guarded.map((tc) => tc.name).join(', ')}`, taskId: task.id, agentId: agent.id, department: deptId, subtaskId: ctx.subtask?.id, phase, data: { callId, blocked, nudged: guarded.length - blocked, items: guarded.map((tc) => ({ name: tc.name, args: tc.args.slice(0, 160), error: (tc.error ?? '').slice(0, 400) })) } });
++    }
+     if (result.diag) logs.write({ level: 'warn', kind: 'call.diag', msg: `${agent.name} · ${ACTIVITY_BY_PHASE[phase]}: ${result.diag}`, taskId: task.id, agentId: agent.id, department: deptId, subtaskId: ctx.subtask?.id, phase, data: { callId } });
+     if (result.truncated) logs.write({ level: 'warn', kind: 'call.truncated', msg: `${agent.name} · ${ACTIVITY_BY_PHASE[phase]}: đầu ra chạm giới hạn ${req?.maxTokens ?? '?'} token`, taskId: task.id, agentId: agent.id, department: deptId, phase });

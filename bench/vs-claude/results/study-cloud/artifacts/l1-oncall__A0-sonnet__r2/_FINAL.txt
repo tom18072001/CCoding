@@ -1,0 +1,11 @@
+I wrote `answer.json` to the repository root. I found the answers by checking all 120 possible rotas against the seven rules.
+
+- **Schedule:** Mon Dung, Tue Chi, Wed Binh, Thu An, Fri Em. This is the only rota that satisfies all seven rules.
+- **`count_without_rule_2`:** 10 rotas satisfy every rule except rule 2.
+- **`most_permissive_rule`:** 2. Dropping rule 2 allows 10 rotas. Dropping any other single rule allows at most 4 (rule 7 gives 3, rule 3 gives 4).
+
+The file contains:
+
+```json
+{"schedule": {"Mon": "Dung", "Tue": "Chi", "Wed": "Binh", "Thu": "An", "Fri": "Em"}, "count_without_rule_2": 10, "most_permissive_rule": 2}
+```

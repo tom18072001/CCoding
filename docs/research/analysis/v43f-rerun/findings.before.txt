@@ -1,0 +1,72 @@
+### Phát hiện 1: CTO chặn lượt sạch
+
+Lượt sạch có bản ghi cổng cto: 65; CTO chặn 62; test ẩn đạt 63/65.
+
+| Bài | Cỡ bài (size) | Nguồn | Arm | Làn | n | CTO chặn | CP 95 % | test ẩn đạt |
+|---|---|---|---|---|---|---|---|---|
+| t1-duration | 1 | E6 | B0 | single | 3 | 3 | [29,2 %; 100,0 %] | 3/3 |
+| t4-perf | 1 | E6 | B0 | fast | 3 | 3 | [29,2 %; 100,0 %] | 3/3 |
+| t2-orders | 4 | E6 | B0 | fast | 1 | 0 | [0,0 %; 97,5 %] | 1/1 |
+| t2-orders | 4 | E6 | B0 | single | 2 | 1 | [1,3 %; 98,7 %] | 1/2 |
+| t5-logq | 4 | E6 | B0 | fast | 3 | 3 | [29,2 %; 100,0 %] | 3/3 |
+| l1-modules | 5 | E3 | B0 | fast | 1 | 1 | [2,5 %; 100,0 %] | 1/1 |
+| l1-modules | 5 | E3 | B1 | fast | 1 | 1 | [2,5 %; 100,0 %] | 1/1 |
+| l1-modules | 5 | E5′ | B0F | full | 10 | 10 | [69,2 %; 100,0 %] | 10/10 |
+| l1-modules | 5 | E5′ | B1F | full | 10 | 10 | [69,2 %; 100,0 %] | 9/10 |
+| l1-modules | 5 | E6 | B0 | fast | 3 | 3 | [29,2 %; 100,0 %] | 3/3 |
+| t3-api | 6 | E6 | B0 | fast | 3 | 2 | [9,4 %; 99,2 %] | 3/3 |
+| l2-chain | 7 | E3 | B0 | fast | 1 | 1 | [2,5 %; 100,0 %] | 1/1 |
+| l2-chain | 7 | E3 | B1 | fast | 1 | 1 | [2,5 %; 100,0 %] | 1/1 |
+| l2-chain | 7 | E5′ | B0F | full | 10 | 10 | [69,2 %; 100,0 %] | 10/10 |
+| l2-chain | 7 | E5′ | B1F | full | 10 | 10 | [69,2 %; 100,0 %] | 10/10 |
+| l2-chain | 7 | E6 | B0 | fast | 3 | 3 | [29,2 %; 100,0 %] | 3/3 |
+
+| Nhóm theo cỡ bài | n | CTO chặn | CP 95 % |
+|---|---|---|---|
+| size ≤ 4 | 12 | 10 | [51,6 %; 97,9 %] |
+| size 5–6 | 28 | 27 | [81,7 %; 99,9 %] |
+| size ≥ 7 | 25 | 25 | [86,3 %; 100,0 %] |
+
+Theo nhãn test ẩn cuối lượt: đạt → CTO chặn 60/63 [86,7 %; 99,0 %]; không đạt → CTO chặn 2/2.
+
+### Phát hiện 2: B7cab so với B7cabO, chặn trên lượt có test ẩn đạt (khám phá)
+
+| Bài | B7cab chặn/đạt | CP 95 % | B7cabO chặn/đạt | CP 95 % | chỉ Sonnet chặn | chỉ Opus chặn |
+|---|---|---|---|---|---|---|
+| g1-slug-dedupe | 10/16 | [35,4 %; 84,8 %] | 1/16 | [0,2 %; 30,2 %] | 9 | 0 |
+| g2-cart-coupon | 12/16 | [47,6 %; 92,7 %] | 0/16 | [0,0 %; 20,6 %] | 12 | 0 |
+| g5-median-stats | 0/16 | [0,0 %; 20,6 %] | 0/16 | [0,0 %; 20,6 %] | 0 | 0 |
+| g6-range-merge | 1/16 | [0,2 %; 30,2 %] | 0/16 | [0,0 %; 20,6 %] | 1 | 0 |
+
+Gộp: McNemar chính xác 22 so với 0: p = 4,8e-7. Cỡ hiệu ứng thô: 35,9 % so với 1,6 % (B7cab, B7cabO).
+
+Nhãn: **khám phá** (A2 của §9: không có trong (5)/(6), không vào kết luận chính). Cả 64 lượt mỗi arm có test ẩn đạt, nên mọi lần "chặn" là chặn nhầm theo nhãn test ẩn; nhưng nhãn đó không đo "kế hoạch/diff có đạt đề bài", nên không kết luận B7cab "sai".
+
+### Phát hiện 3: R̂ của E5′ = B1F/B0F, tách họp và số hạng mục kế hoạch
+
+| Phép tính (B1F/B0F, TB hình học theo bài, CI 90 % hai tầng, 4000, hạt 20261104) | R̂ | CI 90 % |
+|---|---|---|
+| token có trọng số, như báo cáo | 0,722 | [0,668; 0,790] |
+| token không tính họp (bỏ discuss + finalize khỏi B0F; B1F không có) | 0,807 | [0,746; 0,884] |
+| token trên mỗi hạng mục kế hoạch (gồm họp) | 0,834 | [0,753; 0,922] |
+| token không họp trên mỗi hạng mục kế hoạch | 0,933 | [0,849; 1,028] |
+| số hạng mục kế hoạch (không phải token) | 0,865 | [0,805; 0,924] |
+| token pha execute | 0,789 | [0,725; 0,865] |
+
+Phần của riêng họp: B0F có 10,7 % token ở discuss + finalize (TB theo lượt). Nếu chỉ có họp thì R̂ cỡ 0,893.
+Giảm tổng cộng 27,8 % (R̂ = 0,722). Chia gần đúng thành ba thừa số (mô tả, không có CI riêng, vì tỉ số các trung bình không nhân đúng tuyệt đối): họp 0,895 × số hạng mục 0,865 × token không họp mỗi hạng mục 0,933 = 0,722.
+
+| Pha | B0F TB | B1F TB | B1F/B0F |
+|---|---|---|---|
+| route | 10.204 | 10.239 | 1,003 |
+| plan | 55.032 | 57.297 | 1,041 |
+| discuss | 57.482 | 0 | 0,000 |
+| finalize | 64.994 | 0 | 0,000 |
+| execute | 912.801 | 720.701 | 0,790 |
+| synthesize | 39.400 | 31.372 | 0,796 |
+| accept | 27.157 | 25.367 | 0,934 |
+
+- l1-modules: số hạng mục B0F 6,100 (6,6,6,6,6,6,6,7,5,7), B1F 5,400 (6,6,5,5,5,5,6,6,5,5).
+- l2-chain: số hạng mục B0F 5,800 (7,7,5,5,5,5,6,6,7,5), B1F 4,900 (6,5,5,4,4,4,5,5,6,5).
+
+Lưu ý: số hạng mục lấy sau pha plan/finalize nên có thể là hệ quả của họp (mediator), không phải biến nhiễu độc lập; chuẩn hóa chỉ cho biết phần tiết kiệm đi qua kênh nào, không phải ước lượng nhân quả. n = 10 mỗi ô, 2 bài.

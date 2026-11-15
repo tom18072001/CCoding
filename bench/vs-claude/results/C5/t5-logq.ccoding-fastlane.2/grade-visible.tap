@@ -1,0 +1,214 @@
+TAP version 13
+# Subtest: count
+ok 1 - count
+  ---
+  duration_ms: 1.477992
+  type: 'test'
+  ...
+# Subtest: count by: sắp xếp, bỏ null, giữ kiểu
+ok 2 - count by: sắp xếp, bỏ null, giữ kiểu
+  ---
+  duration_ms: 0.325049
+  type: 'test'
+  ...
+# Subtest: top
+ok 3 - top
+  ---
+  duration_ms: 0.21531
+  type: 'test'
+  ...
+# Subtest: sum/avg/min/max
+ok 4 - sum/avg/min/max
+  ---
+  duration_ms: 0.398033
+  type: 'test'
+  ...
+# Subtest: percentile nearest-rank
+ok 5 - percentile nearest-rank
+  ---
+  duration_ms: 0.299637
+  type: 'test'
+  ...
+# Subtest: histogram điền mốc trống
+ok 6 - histogram điền mốc trống
+  ---
+  duration_ms: 0.590255
+  type: 'test'
+  ...
+# Subtest: spec sai
+ok 7 - spec sai
+  ---
+  duration_ms: 1.703424
+  type: 'test'
+  ...
+# Subtest: in bản ghi, bỏ @t, stats
+ok 8 - in bản ghi, bỏ @t, stats
+  ---
+  duration_ms: 41.715057
+  type: 'test'
+  ...
+# Subtest: agg json, table, stdin
+ok 9 - agg json, table, stdin
+  ---
+  duration_ms: 110.90141
+  type: 'test'
+  ...
+# Subtest: mã thoát
+ok 10 - mã thoát
+  ---
+  duration_ms: 257.16503
+  type: 'test'
+  ...
+# Subtest: dòng rỗng / khoảng trắng / \\r
+ok 11 - dòng rỗng / khoảng trắng / \\r
+  ---
+  duration_ms: 1.973642
+  type: 'test'
+  ...
+# Subtest: JSON làm phẳng
+ok 12 - JSON làm phẳng
+  ---
+  duration_ms: 0.423109
+  type: 'test'
+  ...
+# Subtest: JSON lỗi hoặc không phải object
+ok 13 - JSON lỗi hoặc không phải object
+  ---
+  duration_ms: 0.29355
+  type: 'test'
+  ...
+# Subtest: logfmt số, boolean, null, chuỗi
+ok 14 - logfmt số, boolean, null, chuỗi
+  ---
+  duration_ms: 0.314457
+  type: 'test'
+  ...
+# Subtest: logfmt khoảng trắng, tab, dấu = trong giá trị trần
+ok 15 - logfmt khoảng trắng, tab, dấu = trong giá trị trần
+  ---
+  duration_ms: 0.140659
+  type: 'test'
+  ...
+# Subtest: logfmt ngoặc kép và thoát
+ok 16 - logfmt ngoặc kép và thoát
+  ---
+  duration_ms: 0.10865
+  type: 'test'
+  ...
+# Subtest: logfmt lỗi
+ok 17 - logfmt lỗi
+  ---
+  duration_ms: 0.32948
+  type: 'test'
+  ...
+# Subtest: key trùng: sau thắng
+ok 18 - key trùng: sau thắng
+  ---
+  duration_ms: 0.167155
+  type: 'test'
+  ...
+# Subtest: @t
+ok 19 - @t
+  ---
+  duration_ms: 0.501102
+  type: 'test'
+  ...
+# Subtest: truy vấn rỗng khớp tất cả
+ok 20 - truy vấn rỗng khớp tất cả
+  ---
+  duration_ms: 0.959474
+  type: 'test'
+  ...
+# Subtest: field:value
+ok 21 - field:value
+  ---
+  duration_ms: 1.353045
+  type: 'test'
+  ...
+# Subtest: quoted: chính xác, không wildcard
+ok 22 - quoted: chính xác, không wildcard
+  ---
+  duration_ms: 0.265606
+  type: 'test'
+  ...
+# Subtest: so sánh
+ok 23 - so sánh
+  ---
+  duration_ms: 1.415274
+  type: 'test'
+  ...
+# Subtest: _exists_
+ok 24 - _exists_
+  ---
+  duration_ms: 0.24002
+  type: 'test'
+  ...
+# Subtest: WORD / QUOTED tìm trong msg hoặc message
+ok 25 - WORD / QUOTED tìm trong msg hoặc message
+  ---
+  duration_ms: 0.192483
+  type: 'test'
+  ...
+# Subtest: toán tử và ưu tiên
+ok 26 - toán tử và ưu tiên
+  ---
+  duration_ms: 0.420389
+  type: 'test'
+  ...
+# Subtest: and/or thường là WORD, AND ngầm
+ok 27 - and/or thường là WORD, AND ngầm
+  ---
+  duration_ms: 0.220432
+  type: 'test'
+  ...
+# Subtest: vị trí lỗi: ngoặc
+ok 28 - vị trí lỗi: ngoặc
+  ---
+  duration_ms: 0.799175
+  type: 'test'
+  ...
+# Subtest: vị trí lỗi: AND/OR/NOT
+ok 29 - vị trí lỗi: AND/OR/NOT
+  ---
+  duration_ms: 0.577685
+  type: 'test'
+  ...
+# Subtest: vị trí lỗi: so sánh
+ok 30 - vị trí lỗi: so sánh
+  ---
+  duration_ms: 0.20223
+  type: 'test'
+  ...
+# Subtest: vị trí lỗi: field: và ngoặc kép
+ok 31 - vị trí lỗi: field: và ngoặc kép
+  ---
+  duration_ms: 0.20228
+  type: 'test'
+  ...
+# Subtest: parse JSON và logfmt
+ok 32 - parse JSON và logfmt
+  ---
+  duration_ms: 1.73748
+  type: 'test'
+  ...
+# Subtest: truy vấn cơ bản
+ok 33 - truy vấn cơ bản
+  ---
+  duration_ms: 0.80683
+  type: 'test'
+  ...
+# Subtest: tổng hợp count by
+ok 34 - tổng hợp count by
+  ---
+  duration_ms: 0.482958
+  type: 'test'
+  ...
+1..34
+# tests 34
+# suites 0
+# pass 34
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 692.708454

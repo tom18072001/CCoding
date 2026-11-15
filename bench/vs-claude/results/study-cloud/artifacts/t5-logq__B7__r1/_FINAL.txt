@@ -1,0 +1,82 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t5-logq__B7__r1] Xây công cụ logq (thư viện + CLI) theo đặc tả
+
+_Làn đơn: một agent làm trọn đề bài; báo cáo dựng tự động từ bàn giao và kết quả cổng chất lượng (không gọi model)._
+
+## Tóm tắt
+
+Làn đơn: Senior Software Engineer (@senior-swe) làm trọn đề bài trong worktree nhiệm vụ
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — [vs-claude t5-logq__B7__r1] Xây công cụ logq (thư viện + CLI) theo đặc tả (@senior-swe, done)
+
+## Tóm tắt
+Đã hiện thực `parseLine`, `compile` (cùng `QuerySyntaxError`), `aggregate` và CLI `bin/logq.js` theo SPEC.md, không dùng thư viện ngoài. `npm test` xanh, 19/19 test, gồm test CLI thật qua `spawnSync`. Tôi chưa chạy bộ nghiệm thu ẩn. Một số điểm spec còn mơ hồ nên tôi chọn cách hiểu, liệt kê ở mục Quyết định thiết kế.
+
+## Tệp đã tạo/sửa
+- `src/parse.js`: JSON làm phẳng, logfmt, `@t`.
+- `src/query.js`: lexer, parser đệ quy (`NOT` > `AND` > `OR`, AND ngầm), vị trí lỗi, `QuerySyntaxError`.
+- `src/agg.js`: count, count by, top, sum/avg/min/max, p50/p90/p95/p99 (nearest-rank), histogram có điền mốc trống.
+- `bin/logq.js`: CLI với mã thoát 0/1/2, `--stats`, `--format table`, stdin và `-`.
+- `test/logq.test.js` (mới): test cho parse, query (ngữ nghĩa và 20 ca vị trí lỗi), agg và CLI.
+- `src/index.js` và `test/smoke.test.js` giữ nguyên.
+
+## Kiểm chứng
+- `npm test` → exit 0, `# tests 19 · # pass 19 · # fail 0`. Baseline trước khi sửa là 3 test đỏ; nay xanh cả ba.
+- Lần chạy đầu có 2 test của tôi đỏ vì viết sai kỳ vọng (không phải lỗi của mã nguồn); đã sửa test và chạy lại.
+- Mã thoát 1 và 2 của CLI được kiểm bằng test thật: tệp không đọc được → 1, lỗi cú pháp truy vấn / spec sai / tùy chọn sai → 2, stdout rỗng khi lỗi.
+
+## Quyết định thiết kế
+- **Stdout khi lỗi:** CLI đọc hết rồi mới in một lần, nên khi lỗi stdout không có gì. Spec tổng hợp được kiểm tra trước khi đọc tệp, nên spec sai trả 2 ngay cả khi tệp cũng không đọc được.
+- **`@t`:** chỉ nhận chuỗi dạng `YYYY-MM-DDTHH:mm…` mà `Date.parse` hiểu được. Chuỗi chỉ có ngày thì không có `@t`.
+- **Key logfmt:** `@timestamp=…` trong logfmt là dòng lỗi vì key phải bắt đầu bằng `[A-Za-z_]`. `@timestamp` chỉ dùng được trong JSON.
+- **Cách hiểu spec mơ hồ:**
+  - `field:"…"` vẫn không phân biệt hoa/thường, chỉ bỏ ký tự đại diện.
+  - `msg` bằng `null` thì WORD không khớp, và không rơi sang `message`.
+  - Giá trị hòa cả count lẫn `String(key)` (như `1` và `"1"`) giữ thứ tự xuất hiện đầu tiên.
+  - `histogram 05m` bị coi là spec sai.
+- **Prototype:** key được gán bằng `defineProperty` để key như `__proto__` không làm hỏng bản ghi.
+
+## Rủi ro & việc còn mở
+- Những điểm ở mục trên có thể lệch nếu bộ nghiệm thu ẩn hiểu khác.
+- `histogram` trên khoảng thời gian rất rộng với khoảng 1s sẽ tạo rất nhiều bucket, vì spec yêu cầu điền mốc trống.
+- Chưa commit (không được yêu cầu); các thay đổi đang ở working tree.
+
+Bản đầy đủ: `.ccoding/T-20261102-164119-529/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng (làn đơn): lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-164119-529` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **18 in / 27.4k out**, cache đọc 252.7k, 1 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 18 | 27442 | 252665 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude t5-logq__B7__r1] Xây công cụ logq (thư viện + CLI) theo đặc tả (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 3 · # suites 0 · # pass 0 · # fail 3 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 19 · # suites 0 · # pass 19 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **98** A | — | 100 | 93 | 100 | 1 | 1 | 280k | 1/12 |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

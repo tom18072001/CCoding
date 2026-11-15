@@ -1,0 +1,12 @@
+Đã sửa cả 6 lỗi trong ISSUES.md, mỗi lỗi có test hồi quy trong `test/regression.test.js`. `npm test` xanh (13/13) và API công khai không đổi. Bộ nghiệm thu ẩn thì tôi chưa chạy được, nên chưa kiểm tra theo nó.
+
+1. **Sai 1 xu khi giá có 3 chữ số thập phân:** `toCents` nhân float rồi mới làm tròn nên `1.005*100` ra `100.4999…`. Giờ nó làm tròn theo giá trị tuyệt đối và hoàn lại dấu, nên `1.005 → 101`, `-1.005 → -101`, `2.675 → 268`. Mã giảm cố định (`checkout.js`) trước đây tự nhân 100 và làm tròn, nay dùng chung `toCents`. Giá trị đơn tối thiểu vốn đã gọi `toCents` nên được sửa theo.
+2. **Tổng giảm bị hụt:** `allocate` chỉ lấy phần nguyên (`floor`) mà không chia số xu dư. Giờ nó chia theo phần dư lớn nhất, bằng nhau thì phần đứng trước được trước, và tổng các phần luôn bằng `total`.
+3. **Mua 2 tặng 1:** `freeUnits` chia theo `buy`, nay chia theo nhóm `buy + free`. Kết quả đúng như báo cáo: 2 hộp → 0 tặng, 3 → 1, 5 → 1, 6 → 2.
+4. **Mã hết hạn sớm:** `endsAt` bị hiểu là 00:00 UTC của ngày đó. Giờ mã dùng được tới hết ngày `endsAt` (UTC) và bị từ chối từ `2026-12-01T00:00:00Z`.
+5. **Kho báo hết hàng sai:** có hai nguyên nhân trong `cart.js`.
+   - `updateQty` giữ chỗ thêm toàn bộ số lượng mới thay vì phần chênh lệch. Giờ nó giữ chỗ khi tăng và trả chỗ khi giảm.
+   - `removeItem` không trả chỗ đã giữ, nay đã trả.
+6. **Thuế tính trên giá chưa giảm:** `lineTax` nhận `gross`, nay nhận `net`.
+
+Ngoài các lỗi được báo, tôi đổi `lineTax` (`tax.js`) để làm tròn qua `toPrecision` trước, tránh sai số float ở mức nửa xu.

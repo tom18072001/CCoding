@@ -1,0 +1,139 @@
+{
+  "steps": [
+    {
+      "step": "công bố: dòng trong eval_cases.jsonl",
+      "n": 37
+    },
+    {
+      "step": "quy tắc 2: loại khối mã (```)",
+      "n": 30
+    },
+    {
+      "step": "quy tắc 1: giữ đúng một dòng",
+      "n": 25
+    },
+    {
+      "step": "quy tắc 2: loại câu ngôn ngữ tự nhiên",
+      "n": 15
+    },
+    {
+      "step": "quy tắc 4a: khử trùng trong bộ",
+      "n": 15
+    },
+    {
+      "step": "quy tắc 4b: khử trùng với tập tự viết",
+      "n": 15,
+      "removed": 0,
+      "ownSetSize": 89
+    },
+    {
+      "step": "quy tắc 4c: khử trùng với RedCode (82 ca)",
+      "n": 15,
+      "removed": 0
+    },
+    {
+      "step": "quy tắc 6: rút mẫu nếu > 500",
+      "n": 15,
+      "sampled": false
+    },
+    {
+      "step": "n đo (ghi ra cases-external.jsonl)",
+      "n": 15,
+      "byExpected": {
+        "approved": 7,
+        "blocked": 6,
+        "require_approval": 2
+      }
+    }
+  ],
+  "excluded": [
+    {
+      "id": "unsafe_python_001",
+      "rule": "quy tắc 2: khối mã Python/ngoài shell (```)"
+    },
+    {
+      "id": "unsafe_python_002",
+      "rule": "quy tắc 2: khối mã Python/ngoài shell (```)"
+    },
+    {
+      "id": "benign_open_001",
+      "rule": "quy tắc 2: khối mã Python/ngoài shell (```)"
+    },
+    {
+      "id": "benign_sys_001",
+      "rule": "quy tắc 2: khối mã Python/ngoài shell (```)"
+    },
+    {
+      "id": "unsafe_python_003",
+      "rule": "quy tắc 2: khối mã Python/ngoài shell (```)"
+    },
+    {
+      "id": "unsafe_python_004",
+      "rule": "quy tắc 2: khối mã Python/ngoài shell (```)"
+    },
+    {
+      "id": "ast_dynamic_import_001",
+      "rule": "quy tắc 2: khối mã Python/ngoài shell (```)"
+    },
+    {
+      "id": "shell_base64_pipe_001",
+      "rule": "quy tắc 1: nhiều dòng (kịch bản/tài liệu/ngữ cảnh ngoài chuỗi lệnh)"
+    },
+    {
+      "id": "indirect_html_comment_001",
+      "rule": "quy tắc 1: nhiều dòng (kịch bản/tài liệu/ngữ cảnh ngoài chuỗi lệnh)"
+    },
+    {
+      "id": "indirect_md_comment_001",
+      "rule": "quy tắc 1: nhiều dòng (kịch bản/tài liệu/ngữ cảnh ngoài chuỗi lệnh)"
+    },
+    {
+      "id": "cognitive_reframe_001",
+      "rule": "quy tắc 1: nhiều dòng (kịch bản/tài liệu/ngữ cảnh ngoài chuỗi lệnh)"
+    },
+    {
+      "id": "devops_allowlist_001",
+      "rule": "quy tắc 1: nhiều dòng (kịch bản/tài liệu/ngữ cảnh ngoài chuỗi lệnh)"
+    },
+    {
+      "id": "benign_pytest_001",
+      "rule": "quy tắc 2: câu ngôn ngữ tự nhiên (bắt đầu bằng chữ hoa)"
+    },
+    {
+      "id": "destructive_shell_001",
+      "rule": "quy tắc 2: câu ngôn ngữ tự nhiên (bắt đầu bằng chữ hoa)"
+    },
+    {
+      "id": "credential_exfil_001",
+      "rule": "quy tắc 2: câu ngôn ngữ tự nhiên (bắt đầu bằng chữ hoa)"
+    },
+    {
+      "id": "benign_hosts_001",
+      "rule": "quy tắc 2: câu ngôn ngữ tự nhiên (bắt đầu bằng chữ hoa)"
+    },
+    {
+      "id": "indirect_prompt_001",
+      "rule": "quy tắc 2: câu ngôn ngữ tự nhiên (bắt đầu bằng chữ hoa)"
+    },
+    {
+      "id": "benign_support_001",
+      "rule": "quy tắc 2: câu ngôn ngữ tự nhiên (bắt đầu bằng chữ hoa)"
+    },
+    {
+      "id": "benign_fibonacci_001",
+      "rule": "quy tắc 2: câu ngôn ngữ tự nhiên (bắt đầu bằng chữ hoa)"
+    },
+    {
+      "id": "ambiguous_firewall_001",
+      "rule": "quy tắc 2: câu ngôn ngữ tự nhiên (bắt đầu bằng chữ hoa)"
+    },
+    {
+      "id": "indirect_prompt_002",
+      "rule": "quy tắc 2: câu ngôn ngữ tự nhiên (bắt đầu bằng chữ hoa)"
+    },
+    {
+      "id": "indirect_prompt_003",
+      "rule": "quy tắc 2: câu ngôn ngữ tự nhiên (bắt đầu bằng chữ hoa)"
+    }
+  ]
+}

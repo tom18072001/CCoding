@@ -1,0 +1,12 @@
+October 2026 net revenue is 97,306,916 VND. I wrote `answer.json` and `NOTES.md` in the repository root.
+
+`answer.json` contains:
+```json
+{"net_revenue_vnd": 97306916, "paid_count": 32, "refund_count": 2, "duplicate_rows_ignored": 5}
+```
+
+- **Duplicates:** the 5 duplicate rows were exact copies, so no `txn_id` had conflicting versions.
+- **Refunds:** the file has 7 refunded rows, but only 2 fall in October in Vietnam time (T0075 and T0076). The other 5 are outside the month and aren't counted.
+- **Rounding:** the exact total came to 97,306,916.00, so the half-up rounding changed nothing.
+
+`NOTES.md` explains the method in a few lines: dedupe by `txn_id`, filter to `paid` and `refunded`, shift UTC to UTC+7, convert USD at 25,400, and round once at the end.

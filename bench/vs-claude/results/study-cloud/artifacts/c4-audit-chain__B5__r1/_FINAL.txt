@@ -1,0 +1,67 @@
+> Việc giao riêng cho Senior Software Engineer (@senior-swe)
+
+## Tóm tắt
+Tôi đã cài đặt đủ bốn hàm `canonicalize`, `redact`, `append`, `verify` trong `src/index.js`, chỉ dùng Node built-ins. `npm test` chạy 7 test, tất cả pass, exit 0. PII được che trước khi tính hash, nên không bao giờ vào hash input.
+
+## Tệp đã tạo/sửa
+- `src/index.js`: cài đặt cả bốn hàm.
+- `test/audit.test.js` (mới): 6 test cho canonicalize (có cả thứ tự theo code point), redact, ranh giới số điện thoại, append, và verify khi bị sửa dữ liệu.
+- `test/smoke.test.js`: giữ nguyên.
+
+## Kiểm chứng
+- `npm test` → exit 0, 7 tests, 7 pass, 0 fail. Baseline trước khi sửa là exit 1 (1 test lỗi).
+- Chưa có lệnh typecheck hay lint, vì dự án không có cấu hình cho chúng.
+
+## Quyết định thiết kế
+- **Thứ tự key**: `canonicalize` sắp key theo code point bằng so sánh riêng. `Array.sort` mặc định so theo đơn vị UTF-16 nên sẽ xếp sai các ký tự ngoài BMP (như emoji) so với yêu cầu.
+- **Giống `JSON.stringify`**: phần tử `undefined` hoặc function trong mảng thành `null`. Property `undefined` bị bỏ. `toJSON` (ví dụ `Date`) được gọi. Việc dựng chuỗi và escape dùng chính `JSON.stringify`.
+- **Redact**:
+  - Email được thay trước, rồi mới đến số điện thoại. Vì vậy `0912345678@x.com` thành `[EMAIL]` chứ không để lại phần `[PHONE]@x.com`.
+  - Số điện thoại dùng lookbehind và lookahead `(?<![0-9])` và `(?![0-9])` để thỏa điều kiện "không có chữ số liền trước hoặc liền sau".
+  - Bản sao sâu dựng bằng `Object.fromEntries`, nên key như `__proto__` cũng được xử lý đúng.
+- **Verify**:
+  - Kiểm tra `seq`, `prev` và hash tính lại. Bản ghi hỏng cấu trúc (không phải object, hash không phải chuỗi) cũng trả về `{ ok: false, index }`.
+  - Verify không kiểm tra riêng việc `entry` còn PII hay không. Nếu `entry` bị sửa thì hash lệch và bị phát hiện.
+
+## Rủi ro & việc còn mở
+- Regex email là bản thực dụng, không theo đầy đủ RFC 5322. Địa chỉ quá lạ, ví dụ có dấu ngoặc kép hoặc IP literal, có thể không bị che.
+- Số điện thoại viết có dấu cách hoặc dấu gạch (ví dụ `091 234 5678`) không bị che, vì đề bài chỉ định nghĩa dạng liền 9 chữ số.
+- `append` không tự kiểm tra chain cũ có hợp lệ hay không. Người dùng cần gọi `verify` khi cần.
+
+## Review
+✅ Đã duyệt: Tôi đã đọc src/index.js và chạy lại npm test: 7/7 pass, exit 0. Cả bốn hàm đều khớp đặc tả. canonicalize sắp key theo code point (không dùng thứ tự UTF-16) và xử lý undefined, mảng, toJSON như JSON.stringify. redact là bản sao sâu, không làm thay đổi input. Email được che trước số điện thoại, nên số nằm trong phần local của email không bị lọt. Lookbehind/lookahead (?<![0-9]) và (?![0-9]) đáp ứng điều kiện 'không có chữ số liền trước/sau'. append che PII trước khi hash, nên PII không vào hash input. verify kiểm seq, prev, hash tính lại và trả về index đầu tiên bị lỗi. Tôi không tự chạy thử các ca biên (emoji, `__proto__`, số có dấu cách). Nhận xét về chúng dựa trên đọc code. Không có blocker hay major.
+- [minor] src/index.js:37 — Regex email là bản thực dụng. Phần local không có các ký tự như `'`, `/`, `=`, `!`, nên địa chỉ như `o'brien@x.com` chỉ bị che một phần (còn `o'` + `[EMAIL]`). Với log dùng làm chứng cứ pháp lý, nên mở rộng tập ký tự local theo RFC 5322 atext.
+- [minor] src/index.js:62 — append không kiểm chain cũ và tin chain[seq-1].hash. Chain bị hỏng vẫn được nối tiếp. Cách này chấp nhận được vì đề bài không yêu cầu kiểm, và báo cáo đã nêu rõ. Nên ghi chú trong tài liệu rằng người dùng cần gọi verify.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-235410-cc6` · chế độ: agent · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **14 in / 9,241 out**, cache đọc 80.9k, 2 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 10 | 7996 | 62854 | 1 |
+| QA Engineer (@qa-tester) | dev | 4 | 1245 | 18080 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude c4-audit-chain__B5__r1] Hash-chained audit log with PII redaction (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 1 · # suites 0 · # pass 0 · # fail 1 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 7 · # suites 0 · # pass 7 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **97** A | 100 | 100 | 87 | 100 | 1 | 1 | 71k | 1/6 |
+| QA Engineer (@qa-tester) | dev | **100** A | — | — | 100 | 100 | 0 | — | 19k | 0/2 |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

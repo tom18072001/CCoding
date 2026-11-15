@@ -1,0 +1,17 @@
+I fixed all three problems, and `npm test` passes (6 tests: the 2 existing ones plus 4 new regression tests). Every exported function name and signature is unchanged.
+
+1. **Coupon totals** (`src/money.js`, `src/cart.js`):
+   - **Double discount:** `total` applied the coupon to each line and then again to the subtotal, which is why totals were sometimes off by a lot. It now sums the raw line amounts and applies the coupon once.
+   - **Fractional dong:** `applyPercent` returned fractional amounts. It now rounds the discount half-up with integer arithmetic, so results are whole dong.
+2. **Negative stock** (`src/stock.js`): `reserve` only checked whether current stock was below zero, not whether it covered the requested quantity. It now throws `INSUFFICIENT_STOCK` when `qty` exceeds what's available, and it also rejects a non-integer or non-positive `qty`.
+3. **Maximum quantity** (`src/cart.js`): the check used `>=`, so buying exactly 10 was rejected. It now uses `>`, so 10 is allowed and 11 is not.
+
+I read "percentage discounts round half-up" as rounding the discount, not the final price. For example, 10% off 5 dong gives a discount of 0.5, which rounds up to 1, so the total is 4. If you meant rounding the discounted price instead, that case would come out as 5.
+
+The new tests are in `test/cart.test.js`. They cover:
+- a coupon on a cart with several lines;
+- half-up rounding;
+- stock never going negative;
+- buying exactly the maximum quantity, including across two adds.
+
+I haven't committed anything.

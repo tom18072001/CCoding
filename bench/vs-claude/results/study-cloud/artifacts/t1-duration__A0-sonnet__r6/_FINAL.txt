@@ -1,0 +1,9 @@
+`src/duration.js` giờ đã hiện thực đủ `parseDuration` và `formatDuration` theo SPEC.md, và `npm test` xanh (10/10 test). Tôi chưa commit gì.
+
+Bộ test ẩn có thể kiểm tra theo cách khác, nên có hai chỗ tôi phải tự chọn vì SPEC chưa nói rõ:
+- **Khoảng trắng sau dấu:** tôi cho phép cả với dạng ISO, nên `"- PT1S"` hợp lệ. SPEC chỉ nêu ví dụ `"- 5s"`.
+- **Tùy chọn của `formatDuration`:** `options` là `null` thì coi như không có. `style: null` hoặc `largest: null` thì ném `TypeError`.
+
+Số được tính chính xác bằng số nguyên lớn (BigInt) thay vì số thực. Vì vậy các ca làm tròn như `"1.0005s"` (ra 1001) và việc `parseDuration(formatDuration(x))` luôn bằng `parseDuration(x)` đều đúng, kể cả với số rất lớn như `1e21`.
+
+Tôi thêm vào `test/duration.test.js` các test cho: làm tròn nửa ra xa số 0 và `-0`, dấu và khoảng trắng, thứ tự và trùng đơn vị, số và đơn vị bị trộn, ISO 8601 (kể cả dấu phẩy thập phân và các dạng lỗi như `P`, `PT`, `P1DT`, `P1Y`, `P1M`), `largest` với phép nhớ (như `6d 23h 59m 31s` thành `1w`), các giá trị `style`/`largest` không hợp lệ, và round-trip.

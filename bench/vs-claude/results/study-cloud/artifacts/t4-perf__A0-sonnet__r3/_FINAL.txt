@@ -1,0 +1,24 @@
+`buildReport` giờ chạy 200.000 dòng trong khoảng 420 ms (`npm run bench`), so với khoảng 15 giây trước đó. `npm test` xanh, 3/3 test qua.
+
+**Cách làm**
+- Bản cũ lọc lại toàn bộ mảng cho từng danh mục, tháng và khách. Bản mới gộp nhóm một lượt bằng `Map`/`Set`.
+- Sản phẩm được tra qua `Map` theo `sku`. Nếu trùng `sku` thì vẫn lấy bản đầu tiên, như `find`.
+- Thứ tự xuất hiện và thứ tự cộng giữ nguyên, nên tổng và thứ tự mảng giống bản cũ.
+- Các comparator sắp xếp giữ nguyên.
+
+**Hành vi lạ vẫn giữ**
+- Bản cũ cho mỗi dòng đi qua `JSON.parse(JSON.stringify(...))`, nên `-0` biến thành `0`. Bản mới viết `0 - amount` để cho ra `0` tương tự.
+- Đơn `refunded` có `qty = 0` vẫn cho `0`, không phải `-0`.
+- Đơn `cancelled` bị bỏ.
+- Chỉ đơn `paid` được tính vào số đơn và số khách.
+- Doanh thu `refunded` âm được cộng vào `refunds`.
+- Lọc `from`/`to` vẫn so sánh chuỗi tháng.
+- `Date` không hợp lệ vẫn ném lỗi như cũ.
+
+Tôi chưa xử lý các đầu vào không hợp lệ kiểu `NaN`, vì nó đi qua JSON thành `null` ở bản cũ. Brief chỉ yêu cầu đầu vào hợp lệ.
+
+**Test**
+- Tôi giữ bản cũ làm tham chiếu ở `test/report.legacy.js`.
+- Trong `test/report.test.js` có thêm test `deepStrictEqual` giữa hai bản. Test chạy 8 seed và 6 bộ `options`, cộng thêm `sku` trùng, `qty = 0`, toàn bộ đơn `refunded` và đầu vào rỗng.
+
+Tôi chưa commit gì.

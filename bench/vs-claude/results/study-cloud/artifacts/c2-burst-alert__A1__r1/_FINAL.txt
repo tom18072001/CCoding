@@ -1,0 +1,11 @@
+**3. SELF-REVIEW**
+- The half-open window works: an event exactly `windowMs` earlier is excluded (second check), and one at `windowMs-1` is included (third check).
+- Cooldown: the alert at 1002 suppressed 1003–1005, since 1005 < 1002 + 100.
+- Inputs are not mutated, because I sort per-host copies. `list.sort` runs on arrays I built, not on `events`.
+- Equal-`ts` events are counted one at a time in input order.
+- One thing I'd flag: I compare `ts >= lastAlert + cooldownMs`, which matches the brief's `ts < alert.ts + cooldownMs` suppression rule.
+
+**4. FIX**
+The review found nothing to change.
+
+**Report:** `detectBursts` is implemented in `src/alert.js`. The one visible test passes, and my three ad-hoc checks (window boundary, cooldown, equal-`ts` handling) behaved as expected. Beyond the brief, I assumed host ordering uses plain string comparison, and that `cooldownMs: 0` means no cooldown. I didn't add tests of my own.

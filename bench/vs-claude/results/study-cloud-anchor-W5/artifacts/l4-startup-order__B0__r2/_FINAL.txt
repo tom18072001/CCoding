@@ -1,0 +1,68 @@
+# Báo cáo tổng hợp T-20261103-050432-513: thứ tự khởi động service có vòng phụ thuộc ẩn
+
+## Tóm tắt
+`answer.json` đã được ghi ở thư mục gốc repo, đúng shape `{startup_order, blocked, cycle_members}`. Tôi tự dò lại thuật toán Kahn bằng tay trên `services.txt` và kết quả khớp hoàn toàn: 18 service khởi động được, 4 service bị chặn (`admin-ui`, `etl`, `reporting`, `warehouse`), và vòng là `etl`, `reporting`, `warehouse`. Không có blocker. Có hai lưu ý. Thứ nhất, khảo sát ban đầu ghi nhầm là 19 service khởi động được, con số đúng là 18. Thứ hai, báo cáo của S2 nói đã chạy checker và exit 0, nhưng hệ thống lại ghi chú là reviewer không chạy lệnh nào. Vì vậy tôi coi phần tôi tự dò tay là bằng chứng chính.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Tính `startup_order`/`blocked`/`cycle_members` và ghi `answer.json` | @senior-swe | Đạt | `answer.json` (mới, chưa commit). Báo cáo ở `.ccoding/T-20261103-050432-513/outputs/dev-S1-senior-swe.md` |
+| S2 | Kiểm chứng độc lập theo 6 tiêu chí (a)–(f) | @qa-tester | Đạt, nhưng chưa có bằng chứng chạy thật | `.ccoding/T-20261103-050432-513/outputs/dev-S2-qa-tester.md`. Tệp `chk.py` nằm trong scratchpad. Hệ thống ghi chú reviewer không chạy lệnh. |
+| Lead | Đối chiếu cuối | @dev-lead | Đạt | Đã đọc `services.txt` và `answer.json`, dò Kahn tay từng bước. `git status --short` → `?? answer.json` |
+
+## Quyết định
+- **Thứ tự khởi động:** dùng Kahn, mỗi bước chọn service sẵn sàng có tên nhỏ nhất theo bảng chữ cái, nên đáp án là duy nhất. Khi dò tay, tôi ra đúng chuỗi cache, db-catalog, db-orders, db-users, auth, elastic, fraud-history, queue, feature-store, ml-scorer, fraud, payments, orders, search, catalog, gateway, templates, notifier.
+- **`blocked`:** là các service còn lại sau khi trừ những service khởi động được. 22 − 18 = 4.
+- **`cycle_members`:** chỉ gồm các node tự đi đến được chính nó, tức là nằm trong SCC có từ 2 node trở lên hoặc tự trỏ vào mình. Kết quả là `etl → reporting → warehouse → etl`.
+  - `admin-ui` bị chặn vì phụ thuộc `reporting`, nhưng không nằm trên vòng.
+  - Nhánh `fraud → ml-scorer → feature-store → fraud-history` trông giống vòng nhưng không phải vòng, và vẫn khởi động bình thường.
+
+## Kết quả review
+- Không có phát hiện blocker, major hay minor.
+- Báo cáo S2 ghi đã chạy `python3 -I …/chk.py` với exit 0, nhưng hệ thống ghi chú reviewer không chạy lệnh nào. Tôi không chạy được script vì quyền chỉ cho phép lệnh đọc. Bù lại, tôi đã kiểm tay cả ba khóa trên 22 dòng khai báo và tất cả khớp.
+
+## Việc còn mở & rủi ro
+- `answer.json` chưa được commit. Đề bài không yêu cầu commit, và cũng không được commit vào main.
+- Rủi ro thấp: đầu vào nhỏ (22 service), mọi dependency đều có dòng khai báo riêng, không có service ngầm.
+- Giả định: `cycle_members` chỉ tính các node nằm trên vòng, không tính các node bị chặn vì phụ thuộc vào vòng.
+
+## Bước tiếp theo
+- Nếu muốn có bằng chứng chạy máy, người có quyền chạy lệnh `python3 -I /tmp/claude-0/-tmp-vb-l4-startup-order--B0--r2/d1e1e9dd-fe0c-5909-9d1d-01fccf35645d/scratchpad/chk.py`. Tiêu chí xong: exit 0 và in `d cover True 18 4`.
+- Không cần tách thêm nhiệm vụ nào, phạm vi đã xong trong một gói.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-050432-513` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **32 in / 10.9k out**, cache đọc 170.3k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | 12 | 5017 | 68619 | 2 |
+| QA Engineer (@qa-tester) | dev | 12 | 3625 | 67516 | 2 |
+| Senior Software Engineer (@senior-swe) | dev | 6 | 1751 | 31893 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 482 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Tính thứ tự khởi động, blocked, cycle_members và ghi answer.json (@senior-swe)
+- `outputs/dev-S2-qa-tester.md` — S2 Kiểm chứng độc lập answer.json (@qa-tester)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | **95** A | 100 | 100 | 73 | 100 | 0 | — | 74k | 2/6 |
+| QA Engineer (@qa-tester) | dev | **93** A | 100 | 97 | 100 | 60 | 1 | 1 | 71k | 0/4 |
+| Senior Software Engineer (@senior-swe) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 34k | 0/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Trưởng phòng Phát triển** (@dev-lead, 95 A):
+  - Thao tác công cụ lỗi nhiều (2/6, 33%; nhiều nhất ở run_command 2/3) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+- **QA Engineer** (@qa-tester, 93 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+- **Senior Software Engineer** (@senior-swe, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

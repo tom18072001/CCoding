@@ -1,0 +1,94 @@
+TAP version 13
+# Subtest: tính tiền không mã giảm giá
+ok 1 - tính tiền không mã giảm giá
+  ---
+  duration_ms: 1.149438
+  type: 'test'
+  ...
+# Subtest: giữ chỗ tồn kho khi thêm
+ok 2 - giữ chỗ tồn kho khi thêm
+  ---
+  duration_ms: 0.142617
+  type: 'test'
+  ...
+# Subtest: mã không tồn tại
+ok 3 - mã không tồn tại
+  ---
+  duration_ms: 0.446339
+  type: 'test'
+  ...
+# Subtest: toCents cơ bản
+ok 4 - toCents cơ bản
+  ---
+  duration_ms: 1.001987
+  type: 'test'
+  ...
+# Subtest: formatMoney
+ok 5 - formatMoney
+  ---
+  duration_ms: 0.328965
+  type: 'test'
+  ...
+# Subtest: allocate chia đều
+ok 6 - allocate chia đều
+  ---
+  duration_ms: 0.679611
+  type: 'test'
+  ...
+# Subtest: toCents làm tròn half away from zero
+ok 7 - toCents làm tròn half away from zero
+  ---
+  duration_ms: 0.130191
+  type: 'test'
+  ...
+# Subtest: allocate phần dư lớn nhất
+ok 8 - allocate phần dư lớn nhất
+  ---
+  duration_ms: 0.342493
+  type: 'test'
+  ...
+# Subtest: \#1 giá 1.005 lưu 101 xu; mã fixed và minSubtotal đổi đúng
+ok 9 - \#1 giá 1.005 lưu 101 xu; mã fixed và minSubtotal đổi đúng
+  ---
+  duration_ms: 1.607197
+  type: 'test'
+  ...
+# Subtest: \#2 tổng giảm của các dòng bằng đúng số tiền giảm
+ok 10 - \#2 tổng giảm của các dòng bằng đúng số tiền giảm
+  ---
+  duration_ms: 0.411427
+  type: 'test'
+  ...
+# Subtest: \#3 mua X tặng Y
+ok 11 - \#3 mua X tặng Y
+  ---
+  duration_ms: 0.278928
+  type: 'test'
+  ...
+# Subtest: \#4 endsAt dùng được hết ngày UTC
+ok 12 - \#4 endsAt dùng được hết ngày UTC
+  ---
+  duration_ms: 0.572753
+  type: 'test'
+  ...
+# Subtest: \#5 giữ chỗ tồn kho khớp tổng số lượng trong giỏ
+ok 13 - \#5 giữ chỗ tồn kho khớp tổng số lượng trong giỏ
+  ---
+  duration_ms: 0.376577
+  type: 'test'
+  ...
+# Subtest: \#6 thuế tính trên net
+ok 14 - \#6 thuế tính trên net
+  ---
+  duration_ms: 0.183788
+  type: 'test'
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 163.735789

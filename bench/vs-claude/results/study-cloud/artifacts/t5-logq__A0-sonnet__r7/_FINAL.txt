@@ -1,0 +1,9 @@
+Mình đã hiện thực xong logq theo SPEC.md: `src/parse.js`, `src/query.js`, `src/agg.js` và CLI `bin/logq.js`, không dùng thư viện ngoài. `npm test` xanh, 12/12 test, gồm test mới ở `test/logq.test.js` (CLI được test qua tiến trình thật). Mình chưa commit gì.
+
+Một vài chỗ đặc tả chưa nói rõ, mình chọn như sau:
+- **`@t`:** chỉ nhận chuỗi dạng `YYYY-MM-DDTHH:MM…` (có chữ `T`), nên ngày không có giờ hoặc dạng có dấu cách thay chữ `T` thì không có `@t`.
+- **`histogram`:** `interval` trong kết quả được chuẩn hóa, ví dụ `05m` thành `5m`.
+- **Từ khóa spec tổng hợp:** chỉ nhận chữ thường, nên `COUNT` bị coi là spec sai.
+- **Từ chứa `:` nhưng không đúng dạng `FIELD:value`:** như `12:30`, được coi là từ tìm kiếm thường thay vì báo lỗi.
+
+Thứ tự kiểm tra của CLI: lỗi dùng sai tùy chọn, lỗi cú pháp truy vấn và spec sai đều được phát hiện (mã 2) trước khi đọc tệp. Nếu có tệp không đọc được thì thoát mã 1 và stdout để trống, vì mình gom toàn bộ đầu ra rồi mới in một lần.

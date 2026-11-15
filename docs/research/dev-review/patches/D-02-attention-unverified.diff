@@ -1,0 +1,50 @@
+# D-02 — Bật cờ "cần xem" (task.attention) khi reviewer có quyền chạy lệnh mà không kiểm chứng
+#
+# Trạng thái: ĐỀ XUẤT, CHƯA KIỂM --check, chưa typecheck, chưa test. Không áp dụng.
+# Gốc: HEAD e886c04. Tác giả: S5 @solution-architect.
+# Kiểm (reviewer): git apply --ignore-whitespace --check docs/research/dev-review/patches/D-02-attention-unverified.diff
+#
+# Vấn đề (S3 K19): bài (L15, paper.md:111; challenges.md:112) mô tả cờ "⚠ cần xem" khi reviewer
+#   không chạy lệnh. Trong mã, `verified === false` chỉ ghi log `review.unverified` và cảnh báo trong
+#   tin nhắn (src/orchestrator.ts:1377-1385); `task.attention` chỉ bật khi review chưa duyệt hoặc lệnh
+#   kiểm tra còn lỗi (:1437-1438). Một nhiệm vụ "✅ Duyệt" mà không có bằng chứng chạy thật vẫn kết thúc
+#   không cờ. (`verified` = true khi dự án có checkCommands do CCoding tự chạy, nên cờ mới chỉ bật
+#   ở dự án KHÔNG có lệnh kiểm tra cấu hình sẵn.)
+# Thay đổi: thêm lý do 'unverified' vào kiểu attention; đặt cờ sau hai điều kiện cũ (ưu tiên thấp
+#   nhất); thêm tiêu đề cảnh báo tương ứng.
+#
+# Giả thuyết H-D02: mô tả L15 khớp hành vi; giám đốc thấy được nhiệm vụ duyệt "không bằng chứng".
+# Chỉ số: tỉ lệ nhiệm vụ có sự kiện `review.unverified` mà cũng có `task.attention` — kỳ vọng 100 %
+#   (hiện tại: 0 % theo đọc mã); số cảnh báo "cần xem" giả (giám đốc đánh giá không cần xem) — theo dõi.
+# Cách đo: unit test (nhiệm vụ mock, reviewer có run_command, không chạy lệnh kiểm tra → attention.reason
+#   = 'unverified'); quan sát log trong gói A của experiment-plan.md (không cần A/B — không đổi prompt).
+#   Benchtest có checkCommands nên dự kiến KHÔNG ảnh hưởng số đo hiệu năng.
+# Rủi ro: giao diện `public/` không tham chiếu attention.reason (grep `attention.reason` chỉ thấy
+#   orchestrator.ts:942) — chưa kiểm hiển thị. Cần thêm test vào test/ khi áp dụng.
+# Hoàn tác: git apply -R.
+diff --git a/src/types.ts b/src/types.ts
+--- a/src/types.ts
++++ b/src/types.ts
+@@ -424,6 +424,6 @@
+   lane?: 'fast' | 'full';
+   projectChecks?: ProjectChecks;
+   /** Nhiệm vụ đã chạy xong nhưng cần người xem lại (vd. review cuối chưa duyệt). */
+-  attention?: { reason: 'review' | 'checks'; detail: string; at: string };
++  attention?: { reason: 'review' | 'checks' | 'unverified'; detail: string; at: string };
+   createdAt: string;
+   updatedAt: string;
+diff --git a/src/orchestrator.ts b/src/orchestrator.ts
+--- a/src/orchestrator.ts
++++ b/src/orchestrator.ts
+@@ -941,3 +941,3 @@
+         if (task.attention)
+-          this.alert({ level: 'warn', kind: 'task.attention', title: task.attention.reason === 'review' ? 'Xong nhưng review chưa duyệt' : 'Xong nhưng lệnh kiểm tra còn lỗi', msg: `${task.title}: ${task.attention.detail} — xem báo cáo, "Làm lại từ review" hoặc tách việc còn lại`, taskId: task.id });
++          this.alert({ level: 'warn', kind: 'task.attention', title: task.attention.reason === 'review' ? 'Xong nhưng review chưa duyệt' : task.attention.reason === 'unverified' ? 'Xong nhưng review chưa có bằng chứng chạy lệnh' : 'Xong nhưng lệnh kiểm tra còn lỗi', msg: `${task.title}: ${task.attention.detail} — xem báo cáo, "Làm lại từ review" hoặc tách việc còn lại`, taskId: task.id });
+         void this.d.herdr?.notify(`CCoding: xong ${task.id}${task.attention ? ' (cần xem)' : ''}`, task.title);
+@@ -1436,4 +1436,5 @@
+-      // review cuối chưa duyệt / lệnh kiểm tra còn hỏng → nhiệm vụ vẫn chạy xong nhưng gắn cờ "cần xem"
++      // review cuối chưa duyệt / lệnh kiểm tra còn hỏng / duyệt mà reviewer không chạy lệnh kiểm tra nào → nhiệm vụ vẫn chạy xong nhưng gắn cờ "cần xem"
+       if (run.review && !run.review.approved) task.attention = { reason: 'review', detail: `${dept.short}: ${run.review.summary.slice(0, 280)}`, at: nowIso() };
+       else if (task.projectChecks?.latest?.some((r) => !r.ok)) task.attention = { reason: 'checks', detail: `Lệnh kiểm tra còn lỗi: ${task.projectChecks.latest.filter((r) => !r.ok).map((r) => r.command).join(', ')}`, at: nowIso() };
++      else if (run.review?.verified === false) task.attention = { reason: 'unverified', detail: `${dept.short}: reviewer có quyền chạy lệnh nhưng không chạy lệnh kiểm tra nào — kết luận duyệt chưa có bằng chứng chạy thật`, at: nowIso() };
+       this.save(task);

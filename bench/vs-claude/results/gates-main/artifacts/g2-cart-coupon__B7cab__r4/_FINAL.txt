@@ -1,0 +1,80 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g2-cart-coupon__B7cab__r4] Tổng giỏ hàng theo xu và áp mã giảm giá (lệnh kiểm tra đỏ sẵn)
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Việc đã làm xong trên worktree: `applyCoupon` đã nằm trong src/cart.js, `toCents` đã sửa sang Math.round, và `npm test` xanh 6/6. Tôi đọc SPEC.md và mã nguồn, thấy khớp đặc tả. Chỉ còn một hạng mục kiểm tra biên độc lập, không viết lại gì.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Kiểm tra biên applyCoupon độc lập và vá nếu lệch SPEC (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã viết `test/coupon-edge.test.js` với 8 test biên cho `applyCoupon`. Chạy `npm test` cho 14 test pass, 0 fail, và không có chỗ nào lệch SPEC, nên `src/cart.js` không phải sửa. Tôi giữ nguyên hành vi ném `RangeError` khi `totalCents` không nguyên hoặc âm.
+
+## Tệp đã tạo/sửa
+- `test/coupon-edge.test.js`: tạo mới. Các nhóm test:
+  - percent 0 và 100;
+  - làm tròn nửa lên (5→3, 1→1, 3→2);
+  - fixed 0 và fixed lớn hơn total → 0;
+  - fixed sai (1.5, -1, chuỗi, NaN, Infinity, undefined, null) → `RangeError`;
+  - percent sai (-1, 100.01, NaN, ±Infinity, chuỗi, undefined) → `RangeError`;
+  - coupon sai dạng (null, undefined, `{}`, thiếu type, type lạ, chuỗi, số) → `RangeError`;
+  - `totalCents` không nguyên, âm, NaN, Infinity, chuỗi hoặc undefined → `RangeError`;
+  - `total()` kết hợp `applyCoupon`: price 19.99 × 1 → 1999, giảm 10% → 1799, fixed 999 → 1000.
+- Không sửa `src/cart.js`, `src/money.js` hay `test/cart.test.js` trong lượt này. Các thay đổi `M` trong git status là từ lượt trước.
+
+## Kiểm chứng
+- `npm test` → 14 test, 14 pass, 0 fail.
+- Tôi đã chạy lệnh này qua pipe `| tail`, nên mã `exit=0` in ra là của `tail`, không phải của `npm test`. Kết luận exit 0 dựa vào `fail 0` trong bản tổng kết của test runner.
+- `git status` chỉ có `src/cart.js`, `src/money.js`, `test/cart.test.js` (đã sửa từ trước) và `test/coupon-edge.test.js` (mới). Không có thay đổi ngoài các thư mục cho phép.
+
+## Quyết định thiết kế
+- Giữ `RangeError` cho `totalCents` không hợp lệ, nhất quán với `toCents`. Đây là giả định vì SPEC không nói về trường hợp này, và có test khóa hành vi đó.
+
+## Rủi ro & việc còn mở
+- Danh sách lệch SPEC: không có.
+- Bộ nghiệm thu ẩn vẫn chưa thấy. Nếu bộ đó mong đợi `applyCoupon` không ném lỗi với `totalCents` không nguyên hoặc âm thì sẽ lệch với hành vi hiện tại.
+
+Bản đầy đủ: `.ccoding/T-20261104-123945-fe0/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-123945-fe0` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **18 in / 7,177 out**, cache đọc 107.4k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 14 | 6321 | 85587 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 856 | 21766 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Kiểm tra biên applyCoupon độc lập và vá nếu lệch SPEC (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | at Test.run (node:internal/test_runner/test:1175:12) · at Test.run (node:internal/test_runner/test:1118:25) · at Test.processPendingSubtests (node:internal/test |
+| sau thực thi | `npm test` | 0 | ℹ tests 14 · ℹ suites 0 · ℹ pass 14 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **70** B | thấp | — | — | 100 | 100 | 95 | 100 | 1 | 1 | 92k | 1/15 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 23k | 0/1 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

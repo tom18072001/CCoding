@@ -1,0 +1,92 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t4-perf__B7__r8] Tối ưu buildReport dưới 1 giây trên 200.000 dòng, giữ nguyên hành vi
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Phần hiện thực đã xong trong worktree (src/report.js viết lại một lượt duyệt, test/report.legacy.js là bản cũ làm đặc tả, test/report.test.js có test đối chiếu). Nhiệm vụ này chỉ còn một hạng mục không chia được: rà soát độ tương đương ở các ca biên còn chưa kiểm chứng và chạy lại bench/test để chốt.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Củng cố tương đương hành vi ở ca biên và chốt kiểm chứng (@senior-swe, done)
+
+## Tóm tắt
+Tôi tìm ra một điểm lệch so với bản legacy trong `src/report.js` và đã sửa. Ở dòng không phải `refunded`, `qtySigned` trong legacy giữ nguyên kiểu chuỗi, `null` hoặc `undefined` vì đi qua JSON, còn bản viết lại đã ép hết về `null`. Với `qty` là chuỗi, `qty` của sản phẩm trong báo cáo sẽ ra chuỗi nối thay vì số. Sau sửa, `npm test` đạt 6/6 và `npm run bench` chạy 200.000 dòng trong 259 ms. Các ca ngoài phạm vi hợp lệ (`sku` là NaN hoặc object) vẫn chưa kiểm chứng, chỉ ghi chú rủi ro.
+
+## Tệp đã tạo/sửa
+- `src/report.js`: thêm hàm `pass`, giữ nguyên giá trị không phải số và chuẩn hóa như `norm` với số. Dùng cho `qtySigned` ở dòng không phải `refunded`.
+- `test/report.test.js`: thêm 3 test, đều so với legacy bằng `deepStrictEqual`; với lỗi thì so cả loại lỗi lẫn thông báo.
+  - Test ca biên về kiểu dữ liệu, ngày, múi giờ, `from`/`to`, `topN`.
+  - Test ca biên về thứ tự khi bằng điểm sort, `-0`, `sku` trùng hoặc thiếu.
+  - Test fuzz 300 vòng, seed cố định (LCG, seed 12345).
+- `test/report.legacy.js`: không đổi.
+
+## Kiểm chứng
+- `npm test` → exit 0, `# tests 6`, `# pass 6`, `# fail 0`.
+- `npm run bench` → 200000 dòng: 259 ms, 13 tháng, 11 danh mục (lần chạy trước đó 235 ms). Dưới ngưỡng 1000 ms.
+- Đối chứng: tôi tạm đổi `pass(o.qty)` về `norm(o.qty)` thì `npm test` ra pass 4, fail 2. Tức là các test mới bắt đúng điểm lệch. Sau đó tôi đã hoàn tác và test xanh lại.
+- Tôi có thử `git stash` để đo bản trước khi sửa nhưng lệnh lỗi. Tôi kiểm tra lại, cây làm việc không bị ảnh hưởng.
+
+## Quyết định thiết kế
+- **Chuẩn hóa như JSON:**
+  - Số: `-0` thành `0`, `NaN` và `Infinity` thành `null`.
+  - Chuỗi, `null`, `undefined` đi qua nguyên vẹn.
+  - `amount` luôn là số vì là kết quả của phép nhân nên vẫn dùng `norm`.
+  - Dòng `refunded` dùng `norm(-qty)` vì phép đảo dấu luôn ra số.
+- **Ca biên đã kiểm:**
+  - `qty`/`unitPrice` thuộc `'3'`, `null`, `undefined`, `''`, `'abc'`, `0`, `-0`, âm, `NaN`, `Infinity`, `1.5`, `true`, ở các status `paid`/`refunded`/`pending`.
+  - Ngày không hợp lệ (`'xyz'`, `undefined`, `null`, `0`, `'2025-13-45'`), kể cả dòng `cancelled`; phải ném cùng loại lỗi và cùng thông báo.
+  - Múi giờ `-05:00`, `+09:00`, `+14:00`, `+07:00`.
+  - `from`/`to` ngược nhau, rỗng, không có dòng nào khớp.
+  - `topN` bằng 0, 1, 100, `null`, âm, 1.5, `undefined`.
+  - `sku` trùng trong `products`, `sku` không có trong `products`.
+  - Thứ tự khi bằng điểm sort.
+  - Mảng rỗng.
+- Không thêm thư viện, không cache giữa các lần gọi, không đổi chữ ký hàm.
+
+## Rủi ro & việc còn mở
+- `sku`, `id` hoặc `customerId` là `NaN` hoặc object: `Map`/`Set` và `find`/`includes` xử lý khác nhau. Legacy còn đổi `NaN` thành `null` qua JSON. Chưa kiểm chứng; coi là ngoài phạm vi hợp lệ.
+- Dòng có `toJSON` riêng, hoặc `category`/`name` của sản phẩm là object hoặc `NaN`: chưa kiểm chứng.
+- Fuzz chỉ phủ tập giá trị hữu hạn đã liệt kê, không phải mọi đầu vào.
+
+Bản đầy đủ: `.ccoding/T-20261102-184744-7eb/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-184744-7eb` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **28 in / 14.0k out**, cache đọc 239.0k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 24 | 13024 | 216644 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 990 | 22370 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Củng cố tương đương hành vi ở ca biên và chốt kiểm chứng (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 2 · # suites 0 · # pass 2 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 6 · # suites 0 · # pass 6 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **100** A | — | 100 | 100 | 100 | 1 | 1 | 230k | 0/12 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 23k | 0/1 |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

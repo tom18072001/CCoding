@@ -1,0 +1,12 @@
+I wrote `answer.json` to the repository root. B and C are healthy, A, D and E are compromised, and that is the only consistent assignment.
+
+```json
+{ "healthy": ["B","C"], "compromised": ["A","D","E"], "unique": true }
+```
+
+I worked it out by hand, splitting on whether A is healthy. I didn't run a script to check it.
+
+- **A healthy:** B must be compromised, so B's claim is false and E is compromised. E's claim is false while A is healthy, so D must be healthy. D's claim then forces C to be healthy, which contradicts C being false... more precisely, D being true needs "E is healthy or C is compromised", and E is compromised, so C is compromised. That gives B, C and E compromised, which is exactly three. C's claim would then be true, but C is compromised, so this case fails.
+- **A compromised:** B is healthy, so A and E are in the same state, which makes E compromised. D's claim reduces to "C is compromised", so D is healthy exactly when C is compromised.
+  - **C compromised:** D is healthy. The compromised servers would be A, C and E, which is exactly three, so C's claim would be true. C is compromised, so this branch fails.
+  - **C healthy:** D is compromised. The compromised servers are A, D and E, which is exactly three, so C's claim is true. This is consistent.

@@ -1,0 +1,84 @@
+{
+ "run": {
+  "exitCode": 0,
+  "status": "done",
+  "wallSec": 129,
+  "costUsd": 0.4915447,
+  "turns": 7,
+  "tokens": {
+   "input": 10,
+   "output": 13429,
+   "cacheRead": 227058,
+   "cacheWrite": 22154
+  },
+  "models": [
+   "claude-haiku-5-5",
+   "claude-opus-5-5"
+  ],
+  "modelUsage": {
+   "claude-haiku-5-5": {
+    "inputTokens": 1321,
+    "outputTokens": 298,
+    "cacheReadInputTokens": 0,
+    "cacheCreationInputTokens": 0,
+    "webSearchRequests": 0,
+    "costUSD": 0.00028109999999999995,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 64000,
+    "thinkingTokens": 275,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 0,
+    "canonicalModel": "claude-haiku-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   },
+   "claude-opus-5-5": {
+    "inputTokens": 10,
+    "outputTokens": 13429,
+    "cacheReadInputTokens": 227058,
+    "cacheCreationInputTokens": 22154,
+    "webSearchRequests": 0,
+    "costUSD": 0.4912636,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000,
+    "thinkingTokens": 3452,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 22154,
+    "canonicalModel": "claude-opus-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   }
+  },
+  "finalText": "Tôi đã viết xong `src/duration.js` theo SPEC.md, không dùng thư viện ngoài. `npm test` xanh: 15/15 test qua, gồm 3 test có sẵn và 12 test biên mới trong `test/edge.test.js`.\n\n**Cách hiện thực:**\n- **Tính chính xác:** các số thập phân trong chuỗi được tính bằng `BigInt` (số nguyên lớn) rồi mới làm tròn half away from zero. Nhờ vậy không bị sai số dấu phẩy động, ví dụ `\"1.0005s\"` cho ra 1001 chứ không phải 1000. `-0` luôn được trả về thành `0`.\n- **Ba dạng chuỗi:**\n  - **Số thuần:** `\".5\"`, `\"5.\"`, `\"1e3\"` đều báo lỗi.\n  - **Dạng đơn vị:** chấp nhận đủ các bí danh. Mỗi đơn vị chỉ được xuất hiện một lần và phải theo thứ tự giảm dần. Không cho trộn số thuần với thành phần có đơn vị, và ký tự lạ ở đâu cũng báo lỗi.\n  - **ISO 8601:** `P<n>W` phải đứng một mình. `P`, `PT`, `P1DT`, `P1Y`, `P1M` báo lỗi, còn `PT1M` là 1 phút. Phần thập phân chấp nhận cả `.` lẫn `,`.\n- **Dấu:** chỉ một dấu `-`/`+` ở đầu, cho phép khoảng trắng ngay sau dấu.\n- **`formatDuration`:** phân rã bằng `BigInt` nên đúng cả với số rất lớn như `Number.MAX_VALUE`. `largest` giữ các đơn vị liên tiếp, làm tròn phần còn lại vào đơn vị giữ cuối và nhớ lên đơn vị lớn hơn (`6d 23h 59m 31s` với largest 2 cho `1w`). `style` hoặc `largest` không hợp lệ thì ném `TypeError`.\n- **Message lỗi:** đúng `\"Invalid duration: \" + JSON.stringify(input)`.\n\n**Các test biên mới bao phủ:** làm tròn và `-0`, đủ mọi bí danh (có viết hoa), các trường hợp dấu, rất nhiều chuỗi không hợp lệ, ISO 8601, `largest` có nhớ, và kiểm tra `parseDuration(formatDuration(x)) === parseDuration(x)` trên khoảng 2000 giá trị ngẫu nhiên ở cả hai style.\n\n**Những chỗ SPEC chưa nói rõ, tôi tự chọn cách xử lý:**\n- `formatDuration(x, null)` được coi như không truyền options. Nếu `options` không phải object thì ném `TypeError`.\n- Chuỗi số quá lớn, vượt giới hạn `Number` (ví dụ 400 chữ số), báo lỗi thay vì trả về `Infinity`.\n- `BigInt` hoặc `Symbol` truyền vào vẫn ném `TypeError`. Vì `JSON.stringify` không xử lý được các kiểu này, message dùng `String(input)` thay thế.\n- Cho phép khoảng trắng giữa dấu và ISO (`\"- PT1S\"`), theo mục 4 của SPEC.",
+  "workdir": "/tmp/bw/C1-t1-duration.claude.2-znaf7q/repo"
+ },
+ "task": "t1-duration",
+ "system": "claude",
+ "rep": 2,
+ "key": "t1-duration.claude.2",
+ "env": "cloud",
+ "startedAt": "2026-11-01T11:13:40.703Z",
+ "finishedAt": "2026-11-01T11:15:50.190Z",
+ "grade": {
+  "hidden": {
+   "pass": 148,
+   "fail": 1,
+   "total": 149,
+   "failed": [
+    "đơn vị sai thứ tự / lặp / trộn / ký tự lạ → lỗi \\#76"
+   ],
+   "ms": 251,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 15,
+   "fail": 0,
+   "total": 15
+  },
+  "changed": [
+   "~src/duration.js",
+   "+test/edge.test.js"
+  ]
+ },
+ "audit": []
+}

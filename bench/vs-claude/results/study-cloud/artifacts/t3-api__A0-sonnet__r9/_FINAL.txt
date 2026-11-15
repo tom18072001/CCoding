@@ -1,0 +1,13 @@
+Cả 4 tính năng trong `FEATURES.md` đã xong và `npm test` xanh (6/6). Tôi chưa chạy server thật để gọi thử bằng HTTP ngoài test, và chưa commit.
+
+- **Xác thực & phân quyền**: mã lỗi và thứ tự kiểm tra bám đặc tả (401 → 400 → 404 → 403 → validate body). Mọi route `/tasks…` và `/audit` đều cần header `X-User`.
+- **Danh sách**: `GET /tasks` trả `{items,total,page,pageSize}` với đủ bộ lọc, tìm không dấu, sắp xếp và phân trang. Tham số lạ, trùng hoặc sai giá trị trả `INVALID_QUERY` kèm `field` của tham số lỗi đầu tiên theo thứ tự trên URL. Ngày được kiểm tra theo lịch.
+- **CSV**: `GET /tasks/export.csv` có BOM, `\r\n`, quote theo RFC 4180, chống chèn công thức và đúng header HTTP. `page`/`pageSize` trả 400.
+- **Nhật ký**: `GET /audit` chỉ admin dùng được, mới nhất trước, lọc được theo `taskId`. Thao tác lỗi không ghi nhật ký.
+
+Chỗ đặc tả không nói rõ, tôi tự chọn:
+- Member gọi `POST /tasks` bị 403 ngay, trước khi đọc body. Manager `POST` mà `team` khác nhóm mình (kể cả giá trị không hợp lệ như `"C"`) cũng bị 403 trước validate; nếu thiếu `team` thì vẫn ra 400 `VALIDATION`.
+- `PATCH` thành công mà không đổi trường nào vẫn ghi nhật ký, với `changes: []`.
+- Với `GET /audit`, tôi kiểm tra tham số truy vấn (400) trước khi kiểm tra quyền admin (403), theo thứ tự chung của đặc tả.
+
+Tôi cập nhật `test/tasks.test.js` cho dạng kết quả mới (thêm header `X-User`, `total` thay cho độ dài mảng). Test cho cả 4 tính năng nằm trong `test/features.test.js`. Tôi cũng sửa `test/helpers.js` vì `res.text()` của `fetch` tự cắt BOM, nên giờ nó giải mã từ buffer thô để test CSV thấy được BOM. Logic chính nằm ở `src/handlers/tasks.js`, nhật ký ở `src/store.js`.

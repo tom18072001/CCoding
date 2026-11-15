@@ -1,0 +1,85 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t3-api__B7__r6] Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật
+
+_Làn đơn: một agent làm trọn đề bài; báo cáo dựng tự động từ bàn giao và kết quả cổng chất lượng (không gọi model)._
+
+## Tóm tắt
+
+Làn đơn: Senior Software Engineer (@senior-swe) làm trọn đề bài trong worktree nhiệm vụ
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — [vs-claude t3-api__B7__r6] Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật (@senior-swe, done)
+
+## Tóm tắt
+Cả 4 tính năng trong FEATURES.md đã được hiện thực trong `src/` và có test HTTP thật cho từng tính năng. `npm test` xanh (6/6 pass, exit 0). Tôi chưa chạy bộ nghiệm thu ẩn nên chưa biết nó có khớp hết các trường hợp biên của đặc tả không.
+
+## Tệp đã tạo/sửa
+- `src/handlers/tasks.js`:
+  - Xác thực `X-User` và phân quyền admin/manager/member.
+  - `GET /tasks` có lọc, tìm không dấu, sắp xếp, phân trang, trả `{items,total,page,pageSize}`.
+  - Thêm `GET /tasks/export.csv` và `GET /audit`.
+  - Ghi audit sau mỗi POST/PATCH/DELETE thành công.
+- `src/store.js`: thêm `audit[]` và `log()`. `seq` bắt đầu từ 1, `at` lấy từ `now()` của `createServer`, `changes` được sắp a→z.
+- `test/tasks.test.js`: test CRUD cũ đổi sang header `X-User` và dạng `items`. Thêm 4 test mới: xác thực & phân quyền, lọc/sắp xếp/phân trang, CSV, nhật ký.
+
+## Kiểm chứng
+- `npm test` → exit 0, 6 test pass, 0 fail. Lần chạy đầu có 2 test lỗi:
+  - Một kỳ vọng sai trong test của tôi (hòa → id tăng dần, nên `t3` đứng trước `t10`).
+  - `fetch().text()` tự bỏ BOM, nên test kiểm tra byte thô.
+  - Cả hai đều là lỗi ở test, không phải lỗi code; đã sửa test, còn code `src/` không đổi.
+- Không chạy lint hay typecheck vì repo không có.
+
+## Quyết định thiết kế
+- Route `/tasks/export.csv` đăng ký trước `/tasks/:id` để không bị bắt nhầm thành id.
+- Thứ tự kiểm tra: 401 → query 400 → 404 → 403 → validate body, kể cả `/audit` (người không phải admin gửi query sai nhận 400 trước 403).
+- Duyệt tham số theo thứ tự trên URL. Tham số lạ hoặc lặp báo lỗi ngay tại tham số đó.
+- `export.csv` chỉ chấp nhận tham số lọc/sắp xếp, nên `page`/`pageSize` → 400 `INVALID_QUERY`.
+- Member PATCH: kiểm tra 404 nhóm khác, rồi 403 nếu không phải người được giao, rồi mới đọc body. Body có trường khác `status` → 403 trước khi validate.
+- Manager POST/PATCH: `team` khác nhóm mình → 403 trước khi validate. Vì vậy `team` không hợp lệ (ví dụ `Z`) cũng nhận 403 chứ không phải 400.
+- PATCH không đổi giá trị nào vẫn ghi audit với `changes: []`.
+
+## Rủi ro & việc còn mở
+- Đặc tả không nói rõ vài trường hợp, tôi tự chọn như sau:
+  - `assignee=` rỗng được coi là id không khớp ai nên trả danh sách rỗng.
+  - Body JSON hỏng với member chưa qua kiểm tra quyền thì nhận 403, không phải 400.
+- Thứ tự `title` với `localeCompare('vi')` phụ thuộc ICU của Node; chưa kiểm tra trên bản Node khác.
+- Không có `ESCALATE`.
+
+Bản đầy đủ: `.ccoding/T-20261113-002803-1d7/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng (làn đơn): lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261113-002803-1d7` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **18 in / 17.8k out**, cache đọc 265.7k, 1 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 18 | 17845 | 265652 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude t3-api__B7__r6] Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 6 · ℹ suites 0 · ℹ pass 6 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **70** B | thấp | — | — | 100 | 100 | 97 | 100 | 1 | 1 | 284k | 1/23 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

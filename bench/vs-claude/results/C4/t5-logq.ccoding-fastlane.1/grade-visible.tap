@@ -1,0 +1,256 @@
+TAP version 13
+# Subtest: count
+ok 1 - count
+  ---
+  duration_ms: 1.947198
+  type: 'test'
+  ...
+# Subtest: count by: bỏ thiếu/null, giữ kiểu, sắp xếp và hòa
+ok 2 - count by: bỏ thiếu/null, giữ kiểu, sắp xếp và hòa
+  ---
+  duration_ms: 0.525107
+  type: 'test'
+  ...
+# Subtest: top n
+ok 3 - top n
+  ---
+  duration_ms: 0.425755
+  type: 'test'
+  ...
+# Subtest: sum/avg/min/max
+ok 4 - sum/avg/min/max
+  ---
+  duration_ms: 0.599775
+  type: 'test'
+  ...
+# Subtest: percentile nearest-rank
+ok 5 - percentile nearest-rank
+  ---
+  duration_ms: 1.818395
+  type: 'test'
+  ...
+# Subtest: histogram
+ok 6 - histogram
+  ---
+  duration_ms: 0.897291
+  type: 'test'
+  ...
+# Subtest: spec sai
+ok 7 - spec sai
+  ---
+  duration_ms: 0.956339
+  type: 'test'
+  ...
+# Subtest: in bản ghi khớp, không có @t, xử lý CRLF và dòng cuối thiếu \\n
+ok 8 - in bản ghi khớp, không có @t, xử lý CRLF và dòng cuối thiếu \\n
+  ---
+  duration_ms: 36.273181
+  type: 'test'
+  ...
+# Subtest: --stats và tùy chọn đứng sau tệp
+ok 9 - --stats và tùy chọn đứng sau tệp
+  ---
+  duration_ms: 39.321067
+  type: 'test'
+  ...
+# Subtest: --stats: tệp kết thúc bằng \\n không thêm dòng ảo
+ok 10 - --stats: tệp kết thúc bằng \\n không thêm dòng ảo
+  ---
+  duration_ms: 48.174711
+  type: 'test'
+  ...
+# Subtest: stdin và "-"
+ok 11 - stdin và "-"
+  ---
+  duration_ms: 81.824529
+  type: 'test'
+  ...
+# Subtest: nhiều tệp theo thứ tự
+ok 12 - nhiều tệp theo thứ tự
+  ---
+  duration_ms: 38.927445
+  type: 'test'
+  ...
+# Subtest: table scalar và null
+ok 13 - table scalar và null
+  ---
+  duration_ms: 74.559194
+  type: 'test'
+  ...
+# Subtest: table count by căn cột
+ok 14 - table count by căn cột
+  ---
+  duration_ms: 43.968568
+  type: 'test'
+  ...
+# Subtest: table: cột key tối thiểu theo chữ "key"
+ok 15 - table: cột key tối thiểu theo chữ "key"
+  ---
+  duration_ms: 36.516281
+  type: 'test'
+  ...
+# Subtest: không khớp gì vẫn exit 0, stdout rỗng
+ok 16 - không khớp gì vẫn exit 0, stdout rỗng
+  ---
+  duration_ms: 30.721865
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp truy vấn → 2, stdout rỗng
+ok 17 - lỗi cú pháp truy vấn → 2, stdout rỗng
+  ---
+  duration_ms: 32.592893
+  type: 'test'
+  ...
+# Subtest: spec tổng hợp sai → 2
+ok 18 - spec tổng hợp sai → 2
+  ---
+  duration_ms: 30.894498
+  type: 'test'
+  ...
+# Subtest: dùng sai tùy chọn → 2
+ok 19 - dùng sai tùy chọn → 2
+  ---
+  duration_ms: 214.923878
+  type: 'test'
+  ...
+# Subtest: tệp không đọc được → 1 và không để lại output
+ok 20 - tệp không đọc được → 1 và không để lại output
+  ---
+  duration_ms: 36.099767
+  type: 'test'
+  ...
+# Subtest: dòng rỗng / khoảng trắng / \\r
+ok 21 - dòng rỗng / khoảng trắng / \\r
+  ---
+  duration_ms: 1.628998
+  type: 'test'
+  ...
+# Subtest: JSON làm phẳng
+ok 22 - JSON làm phẳng
+  ---
+  duration_ms: 0.431776
+  type: 'test'
+  ...
+# Subtest: JSON lỗi hoặc không phải object
+ok 23 - JSON lỗi hoặc không phải object
+  ---
+  duration_ms: 0.148245
+  type: 'test'
+  ...
+# Subtest: JSON mảng ở gốc → false
+ok 24 - JSON mảng ở gốc → false
+  ---
+  duration_ms: 1.04975
+  type: 'test'
+  ...
+# Subtest: logfmt ép kiểu
+ok 25 - logfmt ép kiểu
+  ---
+  duration_ms: 0.518038
+  type: 'test'
+  ...
+# Subtest: logfmt tab và nhiều dấu cách
+ok 26 - logfmt tab và nhiều dấu cách
+  ---
+  duration_ms: 0.126051
+  type: 'test'
+  ...
+# Subtest: logfmt value trong ngoặc kép
+ok 27 - logfmt value trong ngoặc kép
+  ---
+  duration_ms: 0.169481
+  type: 'test'
+  ...
+# Subtest: logfmt lỗi → false
+ok 28 - logfmt lỗi → false
+  ---
+  duration_ms: 0.118658
+  type: 'test'
+  ...
+# Subtest: logfmt key hợp lệ và trùng
+ok 29 - logfmt key hợp lệ và trùng
+  ---
+  duration_ms: 0.349318
+  type: 'test'
+  ...
+# Subtest: @t
+ok 30 - @t
+  ---
+  duration_ms: 0.514671
+  type: 'test'
+  ...
+# Subtest: truy vấn rỗng khớp tất cả
+ok 31 - truy vấn rỗng khớp tất cả
+  ---
+  duration_ms: 0.855192
+  type: 'test'
+  ...
+# Subtest: field:value không phân biệt hoa/thường, toàn chuỗi
+ok 32 - field:value không phân biệt hoa/thường, toàn chuỗi
+  ---
+  duration_ms: 1.247389
+  type: 'test'
+  ...
+# Subtest: wildcard * ? và escape regex
+ok 33 - wildcard * ? và escape regex
+  ---
+  duration_ms: 1.439282
+  type: 'test'
+  ...
+# Subtest: QUOTED value khớp chính xác, không wildcard
+ok 34 - QUOTED value khớp chính xác, không wildcard
+  ---
+  duration_ms: 0.375621
+  type: 'test'
+  ...
+# Subtest: so sánh số
+ok 35 - so sánh số
+  ---
+  duration_ms: 0.320864
+  type: 'test'
+  ...
+# Subtest: _exists_ và tìm chuỗi con
+ok 36 - _exists_ và tìm chuỗi con
+  ---
+  duration_ms: 0.516741
+  type: 'test'
+  ...
+# Subtest: toán tử, ưu tiên, từ khóa chỉ khi HOA
+ok 37 - toán tử, ưu tiên, từ khóa chỉ khi HOA
+  ---
+  duration_ms: 0.302351
+  type: 'test'
+  ...
+# Subtest: vị trí lỗi cú pháp
+ok 38 - vị trí lỗi cú pháp
+  ---
+  duration_ms: 0.424073
+  type: 'test'
+  ...
+# Subtest: parse JSON và logfmt
+ok 39 - parse JSON và logfmt
+  ---
+  duration_ms: 1.997367
+  type: 'test'
+  ...
+# Subtest: truy vấn cơ bản
+ok 40 - truy vấn cơ bản
+  ---
+  duration_ms: 1.063836
+  type: 'test'
+  ...
+# Subtest: tổng hợp count by
+ok 41 - tổng hợp count by
+  ---
+  duration_ms: 0.643203
+  type: 'test'
+  ...
+1..41
+# tests 41
+# suites 0
+# pass 41
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1076.467877

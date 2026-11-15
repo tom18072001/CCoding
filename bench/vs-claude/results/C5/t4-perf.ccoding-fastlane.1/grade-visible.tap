@@ -1,0 +1,70 @@
+TAP version 13
+# Subtest: dữ liệu sinh từ gen.js, nhiều seed × nhiều tùy chọn
+ok 1 - dữ liệu sinh từ gen.js, nhiều seed × nhiều tùy chọn
+  ---
+  duration_ms: 1730.23321
+  type: 'test'
+  ...
+# Subtest: fuzz 300 bộ dữ liệu nhỏ có seed cố định
+ok 2 - fuzz 300 bộ dữ liệu nhỏ có seed cố định
+  ---
+  duration_ms: 254.542758
+  type: 'test'
+  ...
+# Subtest: hòa doanh thu: khách hàng và sản phẩm
+ok 3 - hòa doanh thu: khách hàng và sản phẩm
+  ---
+  duration_ms: 1.187493
+  type: 'test'
+  ...
+# Subtest: 0 và -0 với refunded
+ok 4 - 0 và -0 với refunded
+  ---
+  duration_ms: 0.670262
+  type: 'test'
+  ...
+# Subtest: đầu vào rỗng và toàn bộ cancelled
+ok 5 - đầu vào rỗng và toàn bộ cancelled
+  ---
+  duration_ms: 3.452958
+  type: 'test'
+  ...
+# Subtest: ngày không hợp lệ: cùng loại lỗi
+ok 6 - ngày không hợp lệ: cùng loại lỗi
+  ---
+  duration_ms: 1.01774
+  type: 'test'
+  ...
+# Subtest: đầu vào không bị sửa (đóng băng sâu)
+ok 7 - đầu vào không bị sửa (đóng băng sâu)
+  ---
+  duration_ms: 7.090073
+  type: 'test'
+  ...
+# Subtest: gọi lặp lại cho cùng kết quả (không cache giữa các lần gọi)
+ok 8 - gọi lặp lại cho cùng kết quả (không cache giữa các lần gọi)
+  ---
+  duration_ms: 13.879519
+  type: 'test'
+  ...
+# Subtest: báo cáo nhỏ
+ok 9 - báo cáo nhỏ
+  ---
+  duration_ms: 1.91024
+  type: 'test'
+  ...
+# Subtest: dữ liệu sinh ngẫu nhiên chạy được
+ok 10 - dữ liệu sinh ngẫu nhiên chạy được
+  ---
+  duration_ms: 13.057756
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2132.979961

@@ -1,0 +1,160 @@
+TAP version 13
+# Subtest: tính tiền không mã giảm giá
+ok 1 - tính tiền không mã giảm giá
+  ---
+  duration_ms: 1.18122
+  type: 'test'
+  ...
+# Subtest: giữ chỗ tồn kho khi thêm
+ok 2 - giữ chỗ tồn kho khi thêm
+  ---
+  duration_ms: 0.147468
+  type: 'test'
+  ...
+# Subtest: mã không tồn tại
+ok 3 - mã không tồn tại
+  ---
+  duration_ms: 0.383385
+  type: 'test'
+  ...
+# Subtest: kho 4: thêm 2 rồi sửa thành 3 thành công
+ok 4 - kho 4: thêm 2 rồi sửa thành 3 thành công
+  ---
+  duration_ms: 0.936369
+  type: 'test'
+  ...
+# Subtest: giảm số lượng trả lại giữ chỗ
+ok 5 - giảm số lượng trả lại giữ chỗ
+  ---
+  duration_ms: 0.144658
+  type: 'test'
+  ...
+# Subtest: đặt về 0 và removeItem trả lại giữ chỗ
+ok 6 - đặt về 0 và removeItem trả lại giữ chỗ
+  ---
+  duration_ms: 0.16144
+  type: 'test'
+  ...
+# Subtest: vượt kho thật vẫn ném OutOfStockError và không đổi giữ chỗ
+ok 7 - vượt kho thật vẫn ném OutOfStockError và không đổi giữ chỗ
+  ---
+  duration_ms: 1.132126
+  type: 'test'
+  ...
+# Subtest: hai giỏ: giữ chỗ bằng tổng số lượng các giỏ
+ok 8 - hai giỏ: giữ chỗ bằng tổng số lượng các giỏ
+  ---
+  duration_ms: 0.303168
+  type: 'test'
+  ...
+# Subtest: toCents làm tròn half away from zero với 3 chữ số thập phân
+ok 9 - toCents làm tròn half away from zero với 3 chữ số thập phân
+  ---
+  duration_ms: 1.006546
+  type: 'test'
+  ...
+# Subtest: allocate: 10.00 chia 3 dòng bằng nhau tổng 1000, phần dư cho dòng đầu
+ok 10 - allocate: 10.00 chia 3 dòng bằng nhau tổng 1000, phần dư cho dòng đầu
+  ---
+  duration_ms: 0.827333
+  type: 'test'
+  ...
+# Subtest: allocate: phần dư lớn nhất được ưu tiên
+ok 11 - allocate: phần dư lớn nhất được ưu tiên
+  ---
+  duration_ms: 0.134715
+  type: 'test'
+  ...
+# Subtest: allocate: trọng số 0 và tổng 0
+ok 12 - allocate: trọng số 0 và tổng 0
+  ---
+  duration_ms: 0.141988
+  type: 'test'
+  ...
+# Subtest: allocate: giảm % trên nhiều dòng giữ đúng tổng
+ok 13 - allocate: giảm % trên nhiều dòng giữ đúng tổng
+  ---
+  duration_ms: 0.188866
+  type: 'test'
+  ...
+# Subtest: allocate: khớp cách tính phần dư nguyên trên nhiều ca ngẫu nhiên
+ok 14 - allocate: khớp cách tính phần dư nguyên trên nhiều ca ngẫu nhiên
+  ---
+  duration_ms: 83.162733
+  type: 'test'
+  ...
+# Subtest: allocate: ca phần dư từng bị xếp sai và các ca bằng nhau
+ok 15 - allocate: ca phần dư từng bị xếp sai và các ca bằng nhau
+  ---
+  duration_ms: 0.246313
+  type: 'test'
+  ...
+# Subtest: toCents cơ bản
+ok 16 - toCents cơ bản
+  ---
+  duration_ms: 0.93305
+  type: 'test'
+  ...
+# Subtest: formatMoney
+ok 17 - formatMoney
+  ---
+  duration_ms: 0.324362
+  type: 'test'
+  ...
+# Subtest: allocate chia đều
+ok 18 - allocate chia đều
+  ---
+  duration_ms: 0.680124
+  type: 'test'
+  ...
+# Subtest: freeUnits mua 2 tặng 1
+ok 19 - freeUnits mua 2 tặng 1
+  ---
+  duration_ms: 1.629445
+  type: 'test'
+  ...
+# Subtest: freeUnits cấu hình khác
+ok 20 - freeUnits cấu hình khác
+  ---
+  duration_ms: 0.215097
+  type: 'test'
+  ...
+# Subtest: endsAt dạng ngày: dùng được tới hết ngày, từ chối từ đầu ngày kế
+ok 21 - endsAt dạng ngày: dùng được tới hết ngày, từ chối từ đầu ngày kế
+  ---
+  duration_ms: 0.806631
+  type: 'test'
+  ...
+# Subtest: endsAt có giờ giữ nguyên thời điểm
+ok 22 - endsAt có giờ giữ nguyên thời điểm
+  ---
+  duration_ms: 0.213673
+  type: 'test'
+  ...
+# Subtest: startsAt vẫn hiệu lực từ đầu ngày
+ok 23 - startsAt vẫn hiệu lực từ đầu ngày
+  ---
+  duration_ms: 0.243587
+  type: 'test'
+  ...
+# Subtest: thuế tính trên net sau giảm phần trăm
+ok 24 - thuế tính trên net sau giảm phần trăm
+  ---
+  duration_ms: 1.71678
+  type: 'test'
+  ...
+# Subtest: mã cố định: tổng giảm các dòng bằng đúng số tiền của mã, thuế trên net
+ok 25 - mã cố định: tổng giảm các dòng bằng đúng số tiền của mã, thuế trên net
+  ---
+  duration_ms: 0.358322
+  type: 'test'
+  ...
+1..25
+# tests 25
+# suites 0
+# pass 25
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 392.216324

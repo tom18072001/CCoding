@@ -1,0 +1,86 @@
+{
+ "run": {
+  "exitCode": 0,
+  "status": "done",
+  "wallSec": 42,
+  "costUsd": 0.1555273,
+  "turns": 6,
+  "tokens": {
+   "input": 12,
+   "output": 5764,
+   "cacheRead": 269317,
+   "cacheWrite": 17695
+  },
+  "models": [
+   "claude-haiku-5-5",
+   "claude-sonnet-5-5"
+  ],
+  "modelUsage": {
+   "claude-haiku-5-5": {
+    "inputTokens": 1351,
+    "outputTokens": 33,
+    "cacheReadInputTokens": 0,
+    "cacheCreationInputTokens": 0,
+    "webSearchRequests": 0,
+    "costUSD": 0.0001516,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000,
+    "thinkingTokens": 0,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 0,
+    "canonicalModel": "claude-haiku-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   },
+   "claude-sonnet-5-5": {
+    "inputTokens": 12,
+    "outputTokens": 5764,
+    "cacheReadInputTokens": 269317,
+    "cacheCreationInputTokens": 17695,
+    "webSearchRequests": 0,
+    "costUSD": 0.1553757,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 64000,
+    "thinkingTokens": 1353,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 17695,
+    "canonicalModel": "claude-sonnet-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   }
+  },
+  "finalText": "Cả 6 lỗi trong `ISSUES.md` đã được sửa, `npm test` xanh (14 test, 0 lỗi). Test hồi quy mới nằm ở `test/regression.test.js`. API công khai không đổi.\n\n1. **Sai 1 xu:** `toCents` nhân float (`1.005*100 = 100.4999…`). Giờ nó dịch dấu thập phân bằng chuỗi rồi làm tròn trên giá trị tuyệt đối, nên `1.005` → 101 và `-1.005` → -101. Mã giảm cố định trong `checkout.js` trước đây tự làm tròn bằng `Math.round(amount*100)`, giờ gọi `toCents`. `minSubtotal` vốn đã dùng `toCents`, nên được sửa theo.\n2. **Giảm giá hụt:** `allocate` chỉ lấy phần nguyên. Giờ nó chia phần xu còn dư cho các dòng có phần lẻ lớn nhất, ngang nhau thì dòng đứng trước được trước. Tổng các phần luôn bằng `total`.\n3. **Mua X tặng Y:** `freeUnits` chia cho `buy`. Đúng ra phải chia theo nhóm `buy + free`. Mua 2 tặng 1 giờ cho 2 hộp → 0, 3 → 1, 5 → 1, 6 → 2.\n4. **Hết hạn:** `endsAt` dạng `YYYY-MM-DD` giờ có hiệu lực tới hết ngày đó (UTC) và bị từ chối từ 00:00Z ngày kế tiếp. Nếu `endsAt` có kèm giờ thì giữ nguyên như cũ.\n5. **Kho:**\n   - `updateQty` trước đây giữ chỗ thêm cả số lượng mới. Giờ nó chỉ giữ thêm phần chênh lệch, hoặc trả lại phần giảm.\n   - `removeItem` (và `updateQty(…, 0)`) trước đây không trả chỗ. Giờ nó trả lại.\n   - Nếu `updateQty` vượt tồn kho thì trạng thái giữ nguyên.\n6. **Thuế:** `checkout.js` giờ tính thuế trên `net` thay vì `gross`.\n\nNgoài ra tôi đổi cách làm tròn trong `lineTax` sang phép chia số nguyên, để các trường hợp đúng .5 không bị lệch do float. Kết quả cũ không đổi.",
+  "workdir": "/tmp/bw/C7-t2-orders.claude-sonnet.2-s9m65u/repo"
+ },
+ "task": "t2-orders",
+ "system": "claude-sonnet",
+ "rep": 2,
+ "key": "t2-orders.claude-sonnet.2",
+ "env": "cloud",
+ "startedAt": "2026-11-02T04:56:02.392Z",
+ "finishedAt": "2026-11-02T04:56:44.348Z",
+ "grade": {
+  "hidden": {
+   "pass": 60,
+   "fail": 0,
+   "total": 60,
+   "failed": [],
+   "ms": 162,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 14,
+   "fail": 0,
+   "total": 14
+  },
+  "changed": [
+   "~src/cart.js",
+   "~src/checkout.js",
+   "~src/money.js",
+   "~src/promotions.js",
+   "~src/tax.js",
+   "+test/regression.test.js"
+  ]
+ },
+ "audit": []
+}

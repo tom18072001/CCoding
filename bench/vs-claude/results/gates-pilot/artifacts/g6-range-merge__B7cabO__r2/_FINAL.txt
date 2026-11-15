@@ -1,0 +1,68 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g6-range-merge__B7cabO__r2] Gộp khoảng thời gian nửa mở dùng overlaps có sẵn (overlaps tính cả điểm chạm, tes
+
+_Làn đơn: một agent làm trọn đề bài; báo cáo dựng tự động từ bàn giao và kết quả cổng chất lượng (không gọi model)._
+
+## Tóm tắt
+
+Làn đơn: Senior Software Engineer (@senior-swe) làm trọn đề bài trong worktree nhiệm vụ
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — [vs-claude g6-range-merge__B7cabO__r2] Gộp khoảng thời gian nửa mở dùng overlaps có sẵn (overlaps tính cả điểm chạm, tes (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã thêm `mergeRanges` vào `src/range.js` theo SPEC.md. `overlaps` có sẵn tính cả điểm chạm, trái với SPEC, nên tôi sửa nó thành so sánh chặt (`<`) rồi tái dùng. `npm test` xanh, 9/9 test pass.
+
+## Tệp đã tạo/sửa
+- `src/range.js`: sửa `overlaps` thành `a.start < b.end && b.start < a.end`. Thêm `mergeRanges`: kiểm tra đầu vào, sao chép rồi sắp theo start, gộp bằng `overlaps`.
+- `test/range.test.js`: thêm 7 test. Chúng gồm điểm chạm không chồng, mảng rỗng, gộp và sắp xếp, giữ riêng khoảng chạm đầu mút, khoảng lồng nhau, `RangeError` và không đổi đầu vào.
+
+## Kiểm chứng
+`npm test` → exit 0, tests 9, pass 9, fail 0. Baseline là 2 pass, đúng như CCoding đã đo sẵn.
+
+## Quyết định thiết kế
+- Sửa `overlaps` vì SPEC yêu cầu điểm chạm đầu mút KHÔNG chồng. Hai test cũ của `overlaps` vẫn pass.
+- `mergeRanges` sao chép từng khoảng trước khi sắp xếp và gộp, nên mảng và đối tượng đầu vào không bị đổi.
+- Ngoài `start >= end`, hàm cũng ném `RangeError` khi `start` hoặc `end` không phải số nguyên. SPEC nói khoảng là số nguyên nhưng không nói rõ trường hợp này.
+
+## Rủi ro & việc còn mở
+Không có nơi nào khác trong repo gọi `overlaps` (repo chỉ có 4 tệp), nên đổi ngữ nghĩa của nó không ảnh hưởng chỗ khác. Hook của môi trường chặn một lệnh heredoc có chuỗi `../src/range`, nên tôi dùng công cụ Write/Edit thay thế.
+
+Bản đầy đủ: `.ccoding/T-20261104-104337-47b/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng (làn đơn): lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-104337-47b` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **8 in / 3,619 out**, cache đọc 96.0k, 1 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 8 | 3619 | 96021 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude g6-range-merge__B7cabO__r2] Gộp khoảng thời gian nửa mở dùng overlaps có sẵn (overlaps tính cả điểm chạm, tes (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 2 · # suites 0 · # pass 2 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 9 · # suites 0 · # pass 9 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **69** B | thấp | — | — | 100 | 100 | 90 | 100 | 1 | 1 | 100k | 1/8 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

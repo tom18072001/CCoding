@@ -1,0 +1,115 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t1-duration__B6__r8] Duration parse/format theo đặc tả, nhiều trường hợp biên
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Tách thành hai phần độc lập, chạy song song, mỗi phần có tệp nguồn và tệp test riêng. Phần parse nằm trong src/duration.js. Phần format nằm trong src/format-duration.js và được duration.js re-export. Test của hai phần ghép lại và chạy bằng `npm test`.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — parseDuration + export module (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã hiện thực `parseDuration` trong `src/duration.js` theo SPEC mục 7–8 và viết `test/parse.test.js` với 7 test nhiều trường hợp biên. Cả 7 test pass khi chạy với một stub `format-duration.js` tạm. Tôi đã xóa stub, nên `npm test` chưa chạy được lúc này vì `src/format-duration.js` (phần S2) chưa có.
+
+Cách làm: cộng các thành phần bằng BigInt chính xác (không cộng float) rồi mới làm tròn half-away-from-zero, nên `-0` trả về `0`.
+
+## Tệp đã tạo/sửa
+- `src/duration.js`: sửa. Có `const { formatDuration } = require('./format-duration');` và `module.exports = { parseDuration, formatDuration }`.
+- `test/parse.test.js`: tạo mới. Test chỉ import `parseDuration` từ `../src/duration`.
+
+## Hợp đồng API
+Không áp dụng (module thư viện). Lỗi đầu vào là `TypeError('Invalid duration: ' + JSON.stringify(input))`, và `'Invalid duration: undefined'` khi input là `undefined`.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `node --test test/parse.test.js`, chạy với stub `src/format-duration.js` tạm → 7 test, 7 pass, 0 fail. Stub đã xóa sau khi chạy.
+- `npm test`: chưa chạy với trạng thái cuối, vì thiếu `src/format-duration.js` nên `require` sẽ lỗi cho đến khi S2 bàn giao. Baseline trước khi sửa là exit 1 với 3 test fail.
+- `test/duration.test.js` có sẵn: tôi không đọc và không chạy riêng. Nó vẫn nằm trong baseline fail, chưa xác minh có pass hay không.
+
+## Việc còn lại
+- @senior-swe (S2) cần tạo `src/format-duration.js` export `{ formatDuration }` cùng test của họ. CCoding gộp xong thì chạy lại `npm test`.
+- Giả định của tôi: khoảng trắng giữa dấu và `P` được chấp nhận (`"- PT1S"` = −1000). SPEC mục 4 cho phép khoảng trắng sau dấu, còn mục 7 chỉ nói "không khoảng trắng bên trong". Nếu bộ nghiệm thu hiểu khác thì chỉ cần sửa một dòng.
+- Không có biến môi trường mới.
+
+Bản đầy đủ: `.ccoding/T-20261102-214528-d8f/outputs/dev-S1-backend-dev.md`
+
+### S2 — formatDuration (tệp riêng) + test (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã hiện thực `formatDuration` trong tệp riêng `src/format-duration.js` và viết `test/format.test.js` với 5 test. Cả `node --test test/format.test.js` và `npm test` đều xanh. `npm test` chạy 15 test, trong đó có phần S1 (parse) đã có mặt trong repo. Chưa thấy rủi ro nào còn lại.
+
+## Tệp đã tạo/sửa
+- `src/format-duration.js` · mới. Export `{ formatDuration }`, không import `src/duration.js`.
+- `test/format.test.js` · mới. Có 5 nhóm test: cơ bản và số 0, làm tròn và dấu, `largest`, lỗi, round-trip với `parseDuration`.
+
+## Kiểm chứng
+- `node --test test/format.test.js` → exit 0 (5 test, 5 pass, 0 fail).
+- `npm test` → exit 0 (15 test, 15 pass, 0 fail). Baseline trước đó là exit 1 với 3 fail.
+- Lần chạy đầu có 1 test fail do tôi viết sai kỳ vọng: 999ms với `largest: 1` phải ra `999ms`, không phải `1s`. Tôi đã sửa test, mã nguồn không đổi.
+- Một lệnh bash đầu bị hook chặn vì chuỗi `../src/...` nằm trong heredoc. Tôi tạo tệp bằng công cụ Write thay thế.
+
+## Quyết định thiết kế
+- Làm tròn bằng `Math.round(Math.abs(ms))`, lấy dấu riêng. Kết quả làm tròn về 0 thì không có dấu `-`.
+- `largest` xử lý như sau:
+  - Tìm đơn vị lớn nhất `U` khác 0.
+  - Đơn vị giữ cuối là `min(U + largest, 6) - 1`.
+  - Làm tròn lên khi `rem*2 >= size`.
+  - Phân rã lại từ giá trị đã làm tròn, nên phép nhớ và đơn vị mới (như `1w`) tự xảy ra.
+- Thông báo lỗi dùng `JSON.stringify` có `try/catch`. Giá trị không stringify được hoặc là `undefined` thì ra `"undefined"`.
+- `options` là `null` hoặc `undefined` thì coi như rỗng. `style` hoặc `largest` sai kiểu ném `TypeError`.
+- Round-trip với `parseDuration` được kiểm trong test cho 11 giá trị, cả short lẫn long.
+
+## Rủi ro & việc còn mở
+- `options` không phải object (ví dụ chuỗi) cũng ném `TypeError`. SPEC không nói rõ trường hợp này nên đây là giả định của tôi.
+- `src/duration.js` cần re-export `formatDuration` từ `./format-duration`. `npm test` xanh nên phần này đã có sẵn.
+
+Bản đầy đủ: `.ccoding/T-20261102-214528-d8f/outputs/dev-S2-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-214528-d8f` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **28 in / 20.0k out**, cache đọc 198.0k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 12 | 7649 | 98982 | 1 |
+| Backend Developer (@backend-dev) | dev | 10 | 10136 | 76031 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 1805 | 20717 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 373 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 parseDuration + export module (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 formatDuration (tệp riêng) + test (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 3 · # suites 0 · # pass 0 · # fail 3 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 15 · # suites 0 · # pass 15 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **92** A | — | 90 | 89 | 100 | 1 | 1 | 107k | 1/7 |
+| Backend Developer (@backend-dev) | dev | **96** A | — | 100 | 87 | 100 | 1 | 1 | 86k | 1/6 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 23k | 0/1 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

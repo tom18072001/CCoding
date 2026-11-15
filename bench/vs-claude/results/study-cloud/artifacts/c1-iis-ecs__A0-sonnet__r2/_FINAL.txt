@@ -1,0 +1,9 @@
+`parseIisLog(text)` is now implemented in `src/iis.js`, and `npm test` passes both tests (the visible one and the one I added).
+
+It follows all five rules from your brief. A few edge cases the brief didn't spell out, and how I handled them:
+- **Line endings:** CRLF line endings are handled.
+- **Missing timestamp:** `@timestamp` is only set when both `date` and `time` are present and valid. Otherwise the key is omitted.
+- **Non-numeric values:** a non-numeric `sc-status`, `s-port` or `time-taken` is omitted instead of becoming `NaN`.
+- **Duration:** `event.duration` is rounded to a whole number of nanoseconds.
+
+The new test is in `test/basic.test.js`. It covers several `#Fields:` lines, `-` values, CRLF, the `+` to space replacement in the user agent, the nanosecond conversion, a line with the wrong column count, and a line before any `#Fields:`.

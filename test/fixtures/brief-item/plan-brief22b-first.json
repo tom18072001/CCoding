@@ -1,0 +1,59 @@
+{
+ "source": "kế hoạch thật lần đầu của BRIEF-22b (14/11/2026 20:55): đủ việc nhưng tiêu đề dùng mã phát hiện, không ghi K; không có peer-reviewer",
+ "brief": "docs/research/BRIEF-22b.md",
+ "run": 0,
+ "followupCriteria": null,
+ "subtasks": [
+  {
+   "id": "S1",
+   "title": "C1: chèn nguyên văn Khối A/B/C vào backlog và §10 vào run-plan; sửa câu 'chưa chèn'",
+   "description": "Đầu vào: docs/research/analysis/decisions/backlog-b20-insert.md, run-plan-s10-insert.md, mục C1 (dòng 33–44) của docs/research/context/k7-brief22-review-2026-11-14.md. (1) Chèn nguyên văn Khối A/B/C vào docs/research/improvement-backlog.md theo đúng neo ghi trong tệp chèn. Chèn nội dung run-plan-s10-insert.md vào docs/research/run-plan.md làm §10. Chỉ thêm dòng, không sửa hay xóa dòng có sẵn. Chỉ bỏ phần đầu và chú thích neo của tệp chèn. Không sửa tham chiếu tệp:dòng; việc đó để lại cho bước C2. (2) Sửa các câu 'chưa chèn' trong docs/research/analysis/decisions/report.md (khoảng :187, :242, :283) và trong bench/vs-claude/results/*/report.md nếu có, để trỏ tới tệp đích kèm mục cụ thể (B-xx, §10). (3) Không xóa hai tệp chèn. Không ghi đường dẫn tuyệt đối. Tiêu chí xong: backlog có đủ B-20…B-49; run-plan có §10; có danh sách dòng neo đã dùng và các câu 'chưa chèn' đã sửa (tệp:dòng).",
+   "assignee": "academic-writer",
+   "dependsOn": []
+  },
+  {
+   "id": "S2",
+   "title": "M1–M5 (M3 gộp câu E8), m1–m5",
+   "description": "Đầu vào: bản phản biện K7 (M1–M5 ở dòng 69–105, m1–m5 ở dòng 106–113); paper.md (:644-648, :709-711, :727, :737, :739, :903, :954); model-per-role.md (:16, :19, :27); report.md; CHANGELOG.md (khối v0.8); facts.json; preregistration.md. (M1) Giữ cả hai giá trị P-1/P-2, mỗi giá trị kèm định nghĩa và mẫu số: 42/54 là lượt có ≥ 2 hạng mục, 42/56 là mọi lượt phòng; 27,5 % gộp phút so với 29,2 % nghịch đảo trung vị. Dùng nhất quán trong paper.md, report.md, CHANGELOG.md. Trong facts.json, tách thành hai mục, mỗi mục có pattern riêng. Sửa dòng 'Số đổi giá trị: không có' ở khối v0.8. (M2, M4, M5) Sửa theo đề xuất của phản biện. M5 chỉ dùng nguồn đã có trong danh mục; ghi khóa trích dẫn. (M3 + câu E8) Viết lại câu 'song song gần như giảm nửa thời gian mà không tốn thêm token' ở report.md §2. Câu mới nói rõ: token của E8 là thước đo phụ, chỉ mô tả, CI [0,942; 1,075], không kết luận được tăng hay giảm. Grep 'không tốn thêm|không tăng token|không thêm token|không tốn token|chi phí token không đổi' cùng các biến thể trong docs/research và bench/vs-claude/results/*/report.md, rồi sửa mọi chỗ. (m1–m5) m1: sửa chữ; số dòng do C2 kiểm lại. m2: thống nhất tên gọi F-A8. m3: chép ghi chú 'có thể khác cửa sổ chạy' vào report.md. m4: theo phản biện. m5: thêm câu dẫn ở §9, chỉ thêm, không sửa chữ cũ. Mục nào không sửa thì ghi lý do. m6 để lại cho S4. Không sửa câu 'chưa chèn' (đã xử lý ở S1). Không ghi đường dẫn tuyệt đối. Tiêu chí xong: có bảng 'phát hiện → tệp:dòng sau sửa → sửa/lý do' cho M1–M5, E8, m1–m5; cụm câu E8 cũ không còn khớp nào ngoài context/; có danh sách mọi số đổi giá trị.",
+   "assignee": "academic-writer",
+   "dependsOn": [
+    "S1"
+   ]
+  },
+  {
+   "id": "S3",
+   "title": "K3: bảng điểm đủ 20/20 agent, có --check",
+   "description": "Sửa docs/research/analysis/decisions/scorecard.mjs và scorecard.md. Thêm dòng cho 6 agent không có trong bench/vs-claude/results/decisions/kpi-office.json: orchestrator (điều phối viên), solution-architect, frontend-dev, data-engineer, business-analyst, ba-presales. Các dòng này ghi 'không có dữ liệu trong 30 ngày', không cho điểm, không tính vào trung bình hay xếp hạng. Dòng điều phối viên thêm chi phí khâu route từ bench, nhãn [Mô tả]. Lấy số từ docs/research/performance/token-analysis.md và đối chiếu report.md:91 (route 2,0 % tổng token) và :105 (trung vị 3,7 %, haiku ×169 lượt). Ghi định nghĩa và mẫu số của từng số, kèm tệp nguồn. Thêm cờ --check: đủ 20 dòng, khớp đúng 20 tệp agents/*.md và agents/*/*.md, thiếu hoặc thừa thì exit 1. Sinh lại scorecard.md bằng script. Thử bỏ một agent, xác nhận exit 1, rồi khôi phục. Không chạy bench, không ghi CHANGELOG, không ghi đường dẫn tuyệt đối. Tiêu chí xong: `node docs/research/analysis/decisions/scorecard.mjs --check` exit 0; consistency-check exit 0; commit riêng.",
+   "assignee": "data-scientist",
+   "dependsOn": []
+  },
+  {
+   "id": "S4",
+   "title": "Kiểm và dọn C1; FX20 quét đường dẫn máy; ngoại lệ neo theo đoạn chữ (m6)",
+   "description": "(C1) Chạy `git diff 015c51f5 --numstat -- docs/research/improvement-backlog.md docs/research/run-plan.md` và xác nhận cột xóa bằng 0. Nếu khác 0 thì khôi phục dòng bị đổi về nguyên văn. Sau đó `git rm` hai tệp backlog-b20-insert.md và run-plan-s10-insert.md. Grep docs/research và sửa chỗ còn trỏ tới hai tệp này (CHANGELOG cũ và context/ được giữ, ghi rõ). Chép đầu ra numstat và grep vào RUNLOG. (FX20) Trong docs/research/scripts/consistency-check.mjs, thêm mục quét docs/research/**/*.md với các mẫu: `[A-Za-z]:[\\\\/]Users[\\\\/]`, `/home/<tên>/`, `/Users/<tên>/`, và đường dẫn tạm của máy cloud (chốt danh sách trong chú thích, vd. `/tmp/`, `/var/folders/`, `/mnt/`). Danh sách ngoại lệ đọc từ một cấu hình duy nhất, gồm các tệp dữ liệu thô ghi ở mục 'Sau gói 15' của CHANGELOG.md. Gặp đường dẫn thì báo tệp:dòng và exit 1. Đường dẫn thật đang có trong tài liệu thì thay bằng đường dẫn tương đối hoặc `<repo>`. (Anchor, đóng m6) Hỗ trợ `\"anchor\": \"<cụm duy nhất>\"`: bỏ qua dòng chứa cụm đó; anchor không thấy hoặc không duy nhất thì báo lỗi. Vẫn chấp nhận dạng `\"line\": N` cũ. Chuyển mọi ngoại lệ `\"line\"` trong facts.json (gồm c1c8-single-labeller) sang anchor, trên bản facts.json đã có các mục M1. Viết docs/research/scripts/consistency-check.test.mjs (node --test, tệp tạm trong thư mục tạm của hệ thống), gồm các ca: có đường dẫn máy thì exit 1; sạch thì exit 0; anchor khớp thì bỏ đúng dòng; anchor không duy nhất thì lỗi; dạng line cũ vẫn chạy. Tiêu chí xong: test pass; consistency-check exit 0 trên repo; facts.json không còn `\"line\":`; commit riêng.",
+   "assignee": "data-scientist",
+   "dependsOn": [
+    "S2"
+   ]
+  },
+  {
+   "id": "S5",
+   "title": "C2 + FX19: mốc 015c51f5 cho mọi tệp:dòng và logic-map-check.mjs",
+   "description": "Ghi hash mốc 015c51f5 ở đầu docs/research/analysis/decisions/logic-map.md. (FX19) Viết docs/research/scripts/logic-map-check.mjs. Đầu vào mặc định: logic-map.md, analysis/decisions/report.md, improvement-backlog.md; cho phép truyền tệp khác. Script tìm mọi tham chiếu `đường/dẫn.ext:N` hoặc `:N-M` kèm ký hiệu trong ngoặc, gồm cả dạng viết tắt như `orch:1253` (bảng ánh xạ tên viết tắt sang tệp đặt trong script), rồi dùng `git show <mốc>:<tệp>` kiểm dòng hoặc khoảng đó có chứa ký hiệu. Hash đọc từ đầu logic-map.md, ghi đè được bằng --base. Script báo tổng số tham chiếu và số tham chiếu lệch kèm danh sách; có lệch thì exit 1. (C2) Sửa mọi tham chiếu trong ba tệp trên, gồm B-20…B-49 và các chỗ của m1 (chooseLane khai báo ở lane.ts:129), theo mốc mới. Tham chiếu chưa có ký hiệu thì bổ sung một định danh có thật ở dòng đó mà đoạn văn nói tới, và liệt kê trong RUNLOG. Viết logic-map-check.test.mjs gồm hai ca: chạy trên mốc ra exit 0; một bản sao tạm có một tham chiếu cố ý lệch một dòng ra exit 1. Không sửa src/, không ghi đường dẫn tuyệt đối. Tiêu chí xong: logic-map-check exit 0 với N ≥ 34 tham chiếu; test pass; consistency-check exit 0; commit riêng.",
+   "assignee": "data-scientist",
+   "dependsOn": [
+    "S4"
+   ]
+  },
+  {
+   "id": "S6",
+   "title": "Bảng đóng phát hiện, CHANGELOG gói 16b, chạy toàn bộ lệnh kiểm tra",
+   "description": "Tạo docs/research/context/brief22b-closure-2026-11-14.md, gồm: (a) Bảng cho C1, C2, M1–M5, m1–m6, câu E8, FX19, FX20, anchor, K3. Cột: trạng thái, tệp:dòng sau sửa, bằng chứng (lệnh kèm đầu ra rút gọn). Số lấy từ bàn giao S1–S5 và kiểm lại trên cây hiện tại. (b) Kết quả grep đường dẫn máy (cùng mẫu FX20) trên bench/vs-claude/results/*/report.md. (c) Đánh giá bảo vệ dữ liệu ngắn theo AGENTS.md: nhãn Nội bộ; không có DLCN mới; repo công khai nên không có đường dẫn máy; có khuyến nghị cho chủ dự án. Thêm mục gói 16b (BRIEF-22b) vào CHANGELOG.md, ghi các số đổi giá trị từ S2. Chạy và chép kết quả: npm run typecheck; npm test; node docs/research/scripts/consistency-check.mjs; node docs/research/scripts/logic-map-check.mjs; node --test docs/research/scripts/; node docs/research/analysis/decisions/scorecard.mjs --check; node docs/research/performance/scripts/token-analysis.mjs --check docs/research/performance/token-analysis.md; node --test bench/vs-claude/harness/stats.test.mjs. Xác nhận `git diff 015c51f5 --stat -- src bench ':!bench/vs-claude/results'` rỗng. Commit, rồi xác nhận git status sạch. Không ghi đường dẫn tuyệt đối. Tiêu chí xong: mọi lệnh exit 0; closure có dòng cho mọi phát hiện; không có đường dẫn máy.",
+   "assignee": "data-scientist",
+   "dependsOn": [
+    "S3",
+    "S5"
+   ]
+  }
+ ]
+}

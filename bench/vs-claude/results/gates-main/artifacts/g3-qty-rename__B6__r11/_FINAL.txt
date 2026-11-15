@@ -1,0 +1,129 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g3-qty-rename__B6__r11] Đổi tên trường qty thành quantity trên toàn bộ module nghiệp vụ
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Việc nhỏ: chỉ có 5 chỗ `qty` trong 4 tệp src và 1 tệp test. Chia 3 hạng mục độc lập, mỗi hạng mục sở hữu tệp riêng. Đổi `it.qty` / `item.qty` thành `.quantity`, không thêm thư viện. Tên package `qty-rename` trong package.json giữ nguyên.
+
+Kết quả: 3/3 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Đổi qty → quantity trong order.js và test (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã đổi `qty` thành `quantity` trong `src/order.js` và `test/order.test.js`. `grep -n qty` trên hai tệp này không còn kết quả. `npm test` hiện chưa xanh vì `src/stock.js` (hạng mục S2) vẫn đọc `qty`, nên `units` ra `NaN`. Lỗi này nằm ngoài phạm vi S1 và sẽ hết khi S2 và S3 được gộp.
+
+## Tệp đã tạo/sửa
+- `src/order.js`: dòng 3, `item.qty` thành `item.quantity`.
+- `test/order.test.js`: dòng 7, dữ liệu mẫu `qty: 2` và `qty: 1` thành `quantity`.
+
+## Hợp đồng API
+Không áp dụng.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `grep -n qty src/order.js test/order.test.js` → không còn kết quả.
+- `npm test` → chưa xanh, tôi chỉ xem phần cuối của đầu ra nên không biết exit code. Một test lỗi với `actual: { lines: 2, units: NaN, total: 250 }`, `expected: { lines: 2, units: 3, total: 250 }`. `total` đã đúng (250), còn `units` bị `NaN` vì `stock.js` chưa đổi sang `quantity`.
+
+## Việc còn lại
+- Chờ S2 (`src/stock.js`, @senior-swe) và S3 (`src/export.js` và `src/report.js`, @frontend-dev) gộp vào, rồi chạy lại `npm test` để xác nhận xanh.
+- Không có biến môi trường mới.
+
+Bản đầy đủ: `.ccoding/T-20261104-184625-5bb/outputs/dev-S1-backend-dev.md`
+
+### S2 — Đổi qty → quantity trong stock.js (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã sửa `src/stock.js`: cả hai chỗ `it.qty` (dòng 7 và 8) giờ là `it.quantity`. Thông điệp lỗi 'Thiếu hàng: ' giữ nguyên. `grep -n qty src/stock.js` không còn kết quả, nên hạng mục S2 đạt tiêu chí. `npm test` vẫn đỏ vì `src/report.js` và `src/export.js` còn `qty`. Hai tệp đó thuộc S3, không thuộc phần của tôi.
+
+## Tệp đã tạo/sửa
+- `src/stock.js` · đổi `it.qty` thành `it.quantity` ở phép so sánh thiếu hàng (dòng 7) và phép trừ tồn (dòng 8).
+
+## Kiểm chứng
+- `grep -n qty src/stock.js` → không có kết quả (grep exit 1, tức không khớp), đạt tiêu chí.
+- `npm test` → exit 1. Một test lỗi với `deepStrictEqual`: thực tế `units: NaN`, mong đợi `units: 3`. Nguyên nhân là `src/report.js:5` còn `it.qty`, ngoài phạm vi S2.
+- `grep -rn qty src test` → `qty` còn ở `src/export.js:4-5` và `src/report.js:5`, cả hai thuộc S3. `src/order.js` và test không còn `qty`.
+
+## Quyết định thiết kế
+Không áp dụng. Tôi chỉ đổi tên trường, không có nhánh nào đọc lại `qty`.
+
+## Rủi ro & việc còn mở
+- `npm test` sẽ xanh khi S3 sửa xong `report.js` và `export.js`. Cần chạy lại sau khi S3 hoàn tất.
+- `export.js:5` có chuỗi header `'sku,qty,price'`. Đây là tên cột CSV, không phải đọc trường. Người làm S3 cần quyết định có đổi thành `quantity` hay không.
+
+Bản đầy đủ: `.ccoding/T-20261104-184625-5bb/outputs/dev-S2-senior-swe.md`
+
+### S3 — Đổi qty → quantity trong export.js và report.js (@frontend-dev, done)
+
+## Tóm tắt
+Đã đổi `qty` thành `quantity` trong `src/export.js` và `src/report.js`. Khóa đầu ra `units` vẫn giữ nguyên. `npm test` xanh (2/2 pass).
+
+## Tệp đã tạo/sửa
+- `src/export.js`: dòng 4 đổi `it.qty` thành `it.quantity`. Dòng 5 đổi tiêu đề CSV thành `sku,quantity,price`.
+- `src/report.js`: dòng 5 đổi `it.qty` thành `it.quantity`.
+
+## Màn hình & trạng thái
+Không áp dụng. Đây là thay đổi logic, không có giao diện.
+
+## API sử dụng
+Không áp dụng.
+
+## Kiểm chứng
+- `grep -n qty src/export.js src/report.js` → không còn kết quả (grep trả mã 1, nghĩa là không có dòng khớp).
+- `npm test` → exit 0, tests 2, pass 2, fail 0.
+
+## Việc còn lại
+- Không áp dụng a11y.
+- Tôi chưa chạy `grep -rn qty src test` trên toàn repo. Kết quả này còn phụ thuộc S1 (`order.js` và test) và S2 (`stock.js`), nên cần kiểm sau khi gộp.
+
+Bản đầy đủ: `.ccoding/T-20261104-184625-5bb/outputs/dev-S3-frontend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-184625-5bb` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **28 in / 5,030 out**, cache đọc 148.9k, 5 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 8 | 1324 | 46908 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 6 | 1279 | 36778 | 1 |
+| Frontend Developer (@frontend-dev) | dev | 6 | 1150 | 33152 | 1 |
+| Backend Developer (@backend-dev) | dev | 6 | 829 | 31375 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 448 | 649 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Đổi qty → quantity trong order.js và test (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 Đổi qty → quantity trong stock.js (@senior-swe)
+- `outputs/dev-S3-frontend-dev.md` — S3 Đổi qty → quantity trong export.js và report.js (@frontend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 73 | 100 | 100 | 1 | 1 | 48k | 0/4 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 38k | 0/2 | — |
+| Frontend Developer (@frontend-dev) | dev | **70** B | thấp | — | — | 100 | 100 | 100 | 100 | 1 | 1 | 34k | 0/5 | — |
+| Backend Developer (@backend-dev) | dev | **65** B | thấp | — | — | — | 100 | 100 | 100 | 1 | 1 | 32k | 0/2 | — |
+| Điều phối viên (@orchestrator) | office | **60** C | thấp | — | — | — | — | 100 | — | 0 | — | 1k | — | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

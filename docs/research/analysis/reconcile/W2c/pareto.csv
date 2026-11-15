@@ -1,0 +1,3 @@
+arm,meanScore,meanWeightedTokens,meanUsd,medianWallSec,scorePerMillionWtok,runs
+A0-sonnet,1,19082.8571,0.0416,12.684,52.4031,7
+B0,1,183627,0,140.179,5.4458,7

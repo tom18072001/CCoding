@@ -1,0 +1,122 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t4-perf__B7__r12] Tối ưu buildReport dưới 1 giây trên 200.000 dòng, giữ nguyên hành vi
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Bản viết lại buildReport trong src/report.js đã có sẵn trong worktree (bench 561 ms, npm test 44/44), nên tôi không làm lại. Kế hoạch chỉ gồm hai việc song song, mỗi việc sở hữu tệp riêng: đối chiếu sâu với bản cũ ở các điểm bàn giao chưa kiểm tra, và bổ sung test biên. Cả hai chỉ dùng git status, git diff và các lệnh test/bench để xác nhận trạng thái thật, vì bàn giao ghi 'chưa có thay đổi' trong khi git status báo src/report.js đã sửa.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Đối chiếu sâu bản mới với bản cũ và sửa lệch hành vi (@senior-swe, done)
+
+## Tóm tắt
+Tôi đối chiếu `src/report.js` (bản viết lại) với bản cũ và không thấy khác biệt nào, nên không sửa code. Kết quả giống hệt ở 140 lần so sánh trên 20 seed (5.000–20.000 dòng) và ở một lần chạy 200.000 dòng. `npm run bench` mất 560 ms, `npm test` đạt 44/44. Tôi chưa kiểm tra đầu vào không hợp lệ ngoài trường hợp ngày sai.
+
+## Tệp đã tạo/sửa
+- `src/report.js` · giữ nguyên bản viết lại của phòng trước, đã xác nhận bằng `git status`.
+- `scripts/diff-check.js` · script tạm ngoài `test/`, chưa commit. Có thể xóa nếu không cần giữ.
+
+## Kiểm chứng
+- `node scripts/diff-check.js big` → exit 0:
+  - **20 seed:** 140 lần so sánh, kích thước 5.000–20.000 dòng, 7 bộ option mỗi seed (gồm `topN` 0/1/10, `from`/`to`, khoảng rỗng, `from` ngoài dữ liệu). Mỗi lần so bằng `deepStrictEqual` và `JSON.stringify` (bắt sai thứ tự khóa), kèm `Object.is` trên `grandTotal`.
+  - **Dữ liệu biến thể:** sku trùng trong `products`, `qty = 0`, `unitPrice = 0`, sản phẩm thiếu `category`, sku không có trong danh mục.
+  - **Ngày không hợp lệ:** bản mới và bản cũ ném cùng lỗi (`RangeError: Invalid time value`).
+  - **200.000 dòng (2.000 sản phẩm, 3.000 khách, seed 42):** bản cũ 39.649 ms, bản mới 711 ms, kết quả giống hệt. Bản cũ chậm hơn ~15 giây trong `PERF.md`.
+- `npm test` → exit 0, tests 44, pass 44, fail 0.
+- `npm run bench` → `200000 dòng: 560 ms · 13 tháng · 11 danh mục · tổng 11445199250` (dưới 1.000 ms).
+
+## Quyết định thiết kế
+- Tôi đọc code và đối chiếu từng điểm bàn giao nêu, kết quả đều khớp:
+  - thứ tự cộng dồn theo từng nhóm trong bản cũ giống thứ tự cộng dồn trong bản mới, nên không lệch float;
+  - thứ tự phần tử trước `sort` theo thứ tự xuất hiện đầu tiên, nên kết quả sau `sort` giống nhau khi các khóa bằng nhau;
+  - `-0` được các tổng khởi đầu từ 0 hấp thụ;
+  - `Set` và `includes` đều dùng SameValueZero;
+  - ngày biên `from`/`to` so sánh chuỗi tháng như cũ.
+- Vì không có lệch nào nên tôi không sửa gì trong `src/report.js`.
+
+## Rủi ro & việc còn mở
+- Đầu vào không hợp lệ (`qty`/giá là `NaN`, `undefined` hoặc chuỗi) chưa kiểm tra. Bản cũ qua JSON roundtrip nên có thể khác. Đây là ngoài phạm vi "đầu vào hợp lệ".
+- Lần 200.000 dòng chỉ chạy một seed (42). Bộ nghiệm thu ẩn có thể dùng dữ liệu khác.
+- Bench ngoài vòng đo cho 560–711 ms tùy lần chạy, vẫn có dư địa dưới 1.000 ms.
+
+## Phát hiện
+Không áp dụng. Không thấy lệch hành vi.
+
+Bản đầy đủ: `.ccoding/T-20261113-043742-3e7/outputs/dev-S1-senior-swe.md`
+
+### S2 — Bổ sung test biên so sánh với bản cũ (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã tạo `test/compare.edge.test.js` gồm 8 test biên. Mỗi test so sánh `src/report.js` với `test/fixtures/report.legacy.js` bằng `deepStrictEqual`. `npm test` xanh: 52 test, 52 pass, 0 fail. Bản mới giống bản cũ ở mọi ca này, nên không phát hiện lệch hành vi. Tôi không sửa `src/report.js` hay `test/compare.test.js`.
+
+## Tệp đã tạo/sửa
+- `test/compare.edge.test.js` (mới). Các ca phủ:
+  - **Biên from/to**: các mốc tháng, lệch 1 ms, múi giờ ±; `from` > `to`, `from`/`to` rỗng, khoảng ngoài dữ liệu.
+  - **Trạng thái đơn**: paid, refunded, cancelled lẫn nhau, hoàn tiền một phần, `qty` 0, hoàn tiền giá 0.
+  - **Khách và sắp xếp**: khách lặp qua 12 tháng; doanh thu hòa (hòa cả `qty` để sort rơi về `sku`); `topN` 0/1/2/3/5/100, lớn hơn số sản phẩm; khách hòa doanh thu.
+  - **Options**: bỏ trống, `undefined`, `null`.
+  - **sku đặc biệt**: ký tự đặc biệt, `__proto__`, `constructor`, sku không có trong danh mục.
+  - **Số thực**: `unitPrice` 0.1/0.2 và `qty` 0.3 để kiểm tra thứ tự cộng dồn, thêm một lượt chạy với đầu vào đảo ngược.
+  - **Dữ liệu lớn**: ~20.000 dòng, 3 seed (21, 22, 23), mỗi seed với 2 bộ option.
+
+## Hợp đồng API
+Không áp dụng.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0 · tests 52 · pass 52 · fail 0 (baseline 44 test của lượt trước, thêm 8).
+- `node --test test/compare.edge.test.js` → 8/8 pass.
+
+## Việc còn lại
+- Không có biến môi trường mới.
+- Số thực lẻ (0.1, 0.2) vượt ngoài đặc tả `unitPrice` là số nguyên xu. Tôi dùng chúng vì brief yêu cầu kiểm tra thứ tự cộng dồn float, và cả hai bản cho kết quả giống nhau.
+- Chưa phủ đầu vào không hợp lệ (`NaN`, chuỗi, ngày sai), đúng phạm vi brief.
+
+Bản đầy đủ: `.ccoding/T-20261113-043742-3e7/outputs/dev-S2-backend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261113-043742-3e7` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **36 in / 22.5k out**, cache đọc 308.3k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 26 | 16038 | 239743 | 2 |
+| Backend Developer (@backend-dev) | dev | 8 | 4501 | 63888 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 2 | 1943 | 4701 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Đối chiếu sâu bản mới với bản cũ và sửa lệch hành vi (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Bổ sung test biên so sánh với bản cũ (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 52 · ℹ suites 0 · ℹ pass 52 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 63 | 81 | 100 | 1 | 1 | 256k | 4/17 | — |
+| Backend Developer (@backend-dev) | dev | **70** B | thấp | — | — | 100 | 100 | 100 | 100 | 1 | 1 | 68k | 0/6 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 7k | — | — |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 65 B):
+  - Thao tác công cụ lỗi nhiều (4/17, 24%; nhiều nhất ở run_command 4/9) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

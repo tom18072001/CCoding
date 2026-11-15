@@ -1,0 +1,107 @@
+# Năm module money, calendar, csvcheck, slug, ratelimit: báo cáo tổng hợp
+
+## Tóm tắt
+Cả năm module đã được hiện thực trong `src/<tên>/index.js`, kèm test trong `test/<tên>.test.js`. `npm test` cho kết quả sau khi thực thi là exit 0, 179/179 pass. Trước khi sửa, baseline là exit 1. Review cuối của @qa-tester kết luận **Đạt**, không có blocker hay major. Phần còn mở: chưa ai đối chiếu toàn bộ SPEC với test, và vài chỗ SPEC chưa rõ do dev tự quyết (xem bên dưới). Bộ nghiệm thu ẩn có thể kiểm đúng các điểm này.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Module money + test | @backend-dev | Đạt (S7: 4 mutation đều bị bắt) | `src/money/index.js`, `test/money.test.js`; `node --test test/money.test.js` → 68/68 pass |
+| S2 | Module calendar + test | @senior-swe | Đạt (S7: 5 mutation đều bị bắt) | `src/calendar/index.js`, `test/calendar.test.js`; 48/48 pass ở TZ=UTC, Asia/Ho_Chi_Minh, America/New_York |
+| S3 | Module csvcheck + test | @senior-swe | Đạt (S7: 4 mutation đều bị bắt) | `src/csvcheck/index.js`, `test/csvcheck.test.js`; 23/23 pass |
+| S4 | Module slug + test | @backend-dev | Đạt (3/4 mutation bị bắt, 1 mutant tương đương) | `src/slug/index.js`, `test/slug.test.js`; 18/18 pass |
+| S5 | Module ratelimit + test | @backend-dev | Đạt (S7: 5 mutation đều bị bắt) | `src/ratelimit/index.js`, `test/ratelimit.test.js`; 22/22 pass |
+| S6 | Tích hợp, `npm test` | @senior-swe | Đạt, nhưng chưa rà từng quy tắc SPEC | `npm test` → exit 0, 179 pass; không có dependency; tên export khớp stub ở cả 5 module |
+| S7 | Review cuối + mutation | @qa-tester | Đạt | 22 mutation trên bản sao tạm: 21 bị bắt; `git status` vẫn đúng 10 tệp M |
+
+Chi tiết từng hạng mục nằm ở `.ccoding/T-20261105-162021-f3f/outputs/dev-S1-backend-dev.md` đến `dev-S7-qa-tester.md`. Mỗi file có bảng quy tắc SPEC → tên test.
+
+**Lệnh kiểm tra của dự án (CCoding chạy):**
+- Trước khi sửa: `npm test` → exit 1.
+- Sau thực thi: `npm test` → exit 0, tests 179, pass 179, fail 0, skipped 0.
+
+## Quyết định
+- Năm module độc lập, không import chéo, không có helper dùng chung. Money không dùng `fold` của slug.
+- Ngày bù trong calendar: duyệt lễ theo thời gian. Ngày bù là ngày thứ Hai–Sáu đầu tiên sau lễ, không nằm trong bảng lễ và chưa bị lễ trước lấy làm ngày bù. Có test cho ca hai lễ Bảy + Chủ nhật liền nhau.
+- Thứ tự báo lỗi theo đúng SPEC: parseMoney bước 1→6, csvcheck theo row → cột trong lược đồ → thứ tự kiểm một ô, ratelimit theo khóa → cost → sức chứa.
+- Mutation chỉ chạy trên bản sao tạm ngoài repo. Không có `git reset` hay `checkout`.
+- Không có `git commit` hay `push` nào được thực hiện.
+
+## Kết quả review
+- @qa-tester: **Đạt**. `npm test` chạy độc lập 179/179. 21/22 mutation bị bắt.
+- Blocker: không có. Major: không có.
+- **m1:** mutation bỏ tiebreak theo chỉ số trong `sortVi` (`src/slug/index.js:179`) không làm test đỏ. Đây là mutant tương đương vì sort đã ổn định. Chấp nhận, không bắt buộc sửa.
+- **m2:** các quyết định của S1 ở chỗ SPEC chưa rõ chưa ai đối chiếu với SPEC. Việc này còn mở, xem mục dưới.
+- **m3:** git cảnh báo LF sẽ đổi thành CRLF. Chỉ là cuối dòng, không ảnh hưởng test. Chấp nhận. Có thể thêm `.gitattributes` nếu cần.
+
+## Việc còn mở & rủi ro
+- **Chưa rà độ phủ từng quy tắc SPEC.** S6 và S7 đều ghi rõ chưa đọc hết SPEC. Bằng chứng hiện có là test xanh, bảng tự đối chiếu của từng dev và mutation. Chưa có kiểm chứng độc lập rằng mọi quy tắc đều có test và được hiện thực đúng.
+- **Quyết định tự đặt ở chỗ SPEC chưa rõ, chưa xác minh với SPEC** (đây là các điểm bộ nghiệm thu ẩn dễ kiểm nhất):
+  - money: `convert` kiểm `to` trước `m`, `convertSum` kiểm `list` trước `to`. `parseMoney` cho khoảng trắng trong ngoặc, ví dụ `"( $5 )"`. `convert` phân biệt `MONEY_INVALID_RATE` (có mặt nhưng không phải đối tượng) với `MONEY_MISSING_RATE` (thiếu hẳn).
+  - csvcheck: `name` rỗng vẫn hợp lệ. `delimiter` phải có `length === 1` theo UTF-16. `options` không phải object thì ném `CSV_INVALID_INPUT`. Lược đồ được kiểm trước cả khi `text` không phải chuỗi.
+  - slug: `options` là null hoặc thiếu `maxLength` thì không giới hạn. Dấu kết hợp lạ bị bỏ qua trong `compareVi`.
+  - calendar: `workingDaysBetween` với from > to đổi dấu của khoảng cùng hai biên. Theo S2, cách làm này khớp ví dụ ở SPEC:250.
+  - ratelimit: ca đồng hồ lùi của cửa sổ trượt không có test vì SPEC không quy định.
+- Chỉ calendar được chạy với nhiều TZ. Bốn module còn lại không dùng thời gian thật hoặc múi giờ (theo tự báo cáo của dev, chưa chạy kiểm).
+- S5 không lấy được exit code thật của `node --test test/ratelimit.test.js` vì dẫn qua `| tail`. Lệnh `npm test` toàn bộ sau đó đã xanh.
+- Thư mục tạm `/tmp/tmp.p9P9vovhOX` của mutation chưa được dọn. Nó nằm ngoài repo và hook chặn `rm -r`.
+
+## Bước tiếp theo
+Đề xuất tách thành các nhiệm vụ nhỏ, mỗi nhiệm vụ một gói:
+1. **Rà SPEC từng quy tắc cho money và calendar** (@qa-tester).
+   - Việc: đọc SPEC.md:1–268, đối chiếu từng quy tắc với code và test, đặc biệt các điểm "tự quyết" của S1.
+   - Xong khi: có bảng quy tắc → test → kết quả. Mọi lệch được sửa hoặc ghi lý do chấp nhận. `npm test` xanh.
+2. **Rà SPEC cho csvcheck, slug và ratelimit** (@qa-tester).
+   - Việc: đọc SPEC.md:269–500 và làm tương tự gói 1.
+   - Xong khi: cùng tiêu chí như gói 1.
+3. **Bổ sung nhỏ** (@backend-dev, không bắt buộc).
+   - Thêm test tính ổn định của `sortVi` (hai chuỗi NFC/NFD so bằng nhau, thứ tự đầu vào đảo ngược).
+   - Thêm `.gitattributes` để thống nhất cuối dòng.
+   - Xong khi: `npm test` xanh và mutant m1 bị bắt.
+
+Gói 1 và 2 chạm các tệp khác nhau nên có thể chạy song song nếu chỉ đọc và sửa riêng module của mình. Chạy `npm test` toàn bộ thì làm lần lượt.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261105-162021-f3f` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **110 in / 125.8k out**, cache đọc 1.21M, 14 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 40 | 42189 | 535992 | 4 |
+| Backend Developer (@backend-dev) | dev | 42 | 63132 | 489677 | 4 |
+| QA Engineer (@qa-tester) | dev | 16 | 6812 | 129412 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 10 | 12938 | 52200 | 3 |
+| Điều phối viên (@orchestrator) | office | 2 | 710 | 649 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Hiện thực module money + test (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 Hiện thực module calendar + test (@senior-swe)
+- `outputs/dev-S3-senior-swe.md` — S3 Hiện thực module csvcheck + test (@senior-swe)
+- `outputs/dev-S4-backend-dev.md` — S4 Hiện thực module slug + test (@backend-dev)
+- `outputs/dev-S5-backend-dev.md` — S5 Hiện thực module ratelimit + test (@backend-dev)
+- `outputs/dev-S6-senior-swe.md` — S6 Tích hợp, chạy npm test, rà độ phủ quy tắc SPEC (@senior-swe)
+- `outputs/dev-S7-qa-tester.md` — S7 Review cuối và kiểm bằng mutation (@qa-tester)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | at Test.run (node:internal/test_runner/test:1175:12) · at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) { · at Test.run (node:interna |
+| sau thực thi | `npm test` | 0 | ℹ tests 179 · ℹ suites 0 · ℹ pass 179 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **70** B | vừa | — | — | — | 97 | 87 | 100 | 3 | 1 | 578k | 1/26 | — |
+| Backend Developer (@backend-dev) | dev | **76** B | vừa | — | — | 100 | 83 | 89 | 100 | 3 | 1 | 553k | 3/22 | — |
+| QA Engineer (@qa-tester) | dev | **69** B | thấp | — | — | 100 | 100 | 87 | 100 | 1 | 1 | 136k | 1/6 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **75** B | thấp | — | — | 100 | 93 | 100 | 100 | 0 | — | 65k | 0/2 | — |
+| Điều phối viên (@orchestrator) | office | **60** C | thấp | — | — | — | — | 100 | — | 0 | — | 1k | — | — |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 70 B):
+  - 1 lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp.
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

@@ -1,0 +1,16 @@
+`src/duration.js` đã được hiện thực theo SPEC.md (`parseDuration` và `formatDuration`), và `npm test` xanh: 11 test pass, 0 fail. Không thêm thư viện ngoài.
+
+- **Tính toán chính xác:** phần cộng các thành phần, làm tròn half away from zero và phân rã trong `formatDuration` đều dùng BigInt, không bị sai số số thực. Nhờ vậy `parseDuration(formatDuration(x)) === parseDuration(x)` vẫn đúng với các giá trị lớn như `1e21`.
+- **Test bổ sung** trong `test/duration.test.js` cho các nhóm sau:
+  - làm tròn và `-0`;
+  - dấu và khoảng trắng;
+  - bí danh đơn vị, thứ tự và trùng lặp;
+  - ISO 8601 (kể cả `P`, `PT`, `P1DT`, `P1Y`, `P1M`, `P1W` kèm thành phần khác);
+  - `formatDuration` với `largest` (làm tròn, nhớ lên đơn vị lớn hơn, ví dụ `6d 23h 59m 31s` với `largest: 2` ra `1w`);
+  - đầu vào sai và tính chất round-trip.
+
+Spec không nói rõ vài chỗ, tôi chọn như sau:
+- Với chuỗi ISO, khoảng trắng giữa dấu và `P` (ví dụ `"- P1D"`) bị coi là lỗi, vì spec cấm khoảng trắng bên trong dạng ISO. Dạng đơn vị thì cho phép khoảng trắng sau dấu, đúng như `"- 5s"`.
+- Trong `formatDuration`, `options` là `null` hoặc `undefined` thì dùng mặc định. `style: undefined` và `largest: undefined` cũng dùng mặc định, còn `null` ở hai trường này là lỗi.
+
+Tôi chưa commit gì.

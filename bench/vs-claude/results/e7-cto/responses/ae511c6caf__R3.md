@@ -1,0 +1,25 @@
+## Tóm tắt
+
+Cả 6 lỗi trong ISSUES.md đều đã được sửa ở nguyên nhân gốc trong `src/`, và mỗi lỗi có test hồi quy trong `test/regression.test.js`. API công khai không đổi. Tôi đọc diff `db5c2e9..HEAD` và file test, nhưng không tự chạy lại `npm test` vì lệnh cần phê duyệt. Kết quả test dựa vào bằng chứng CCoding đã chạy trong báo cáo: 14/14 đạt, baseline là 6/6.
+
+## Tiêu chí nghiệm thu
+
+| Tiêu chí | Kết quả | Bằng chứng |
+|---|---|---|
+| #1 Đổi tiền sang xu làm tròn half away from zero ở mọi chỗ (giá sản phẩm, mã cố định, minSubtotal) | Đạt | `toCents` ở `src/money.js` làm tròn theo chữ số thập phân. `catalog.js:13` và `promotions.js:32` đã dùng `toCents`. `checkout.js` đổi `Math.round(amount*100)` thành `toCents`. Test `#1` kiểm 1.005→101, -1.005→-101, 2.675→268. |
+| #2 Tổng giảm của các dòng bằng đúng số tiền mã, chia theo phần dư lớn nhất | Đạt | `allocate` ở `src/money.js` phân bổ phần dư. Test kiểm `allocate(1000,[1,1,1])=[334,333,333]` và tổng giảm đúng 1000 cho mã cố định lẫn mã %. |
+| #3 Mua X tặng Y: cần đủ X+Y món mới được tặng | Đạt | `freeUnits` ở `src/promotions.js` đổi thành `floor(qty/(buy+free))*free`. Test kiểm các trường hợp (2,2,1)→0, (3,2,1)→1, (6,2,1)→2, (7,3,2)→2. |
+| #4 Mã dùng được tới hết ngày `endsAt` (UTC) | Đạt | `endExclusive` ở `src/promotions.js` cộng thêm một ngày cho `endsAt` dạng `YYYY-MM-DD`. Test kiểm 10:00 và 23:59:59.999 ngày 30/11 vẫn dùng được, 00:00 ngày 1/12 bị từ chối. |
+| #5 Số lượng giữ chỗ luôn bằng tổng số lượng trong các giỏ | Đạt | `src/cart.js`: `updateQty` chỉ reserve hoặc release phần chênh lệch, `removeItem` release số lượng đang giữ. Test kiểm kho 4 → giữ 3 còn 1 → xóa còn 4. |
+| #6 Thuế tính trên `net` (sau giảm) | Đạt | `checkout.js` đổi `lineTax(l.gross…)` thành `lineTax(l.net…)`. `tax.js` cũng làm tròn tính thuế chính xác hơn. Test `#6` kiểm giảm 50% thì thuế là 50. |
+| Không đổi API công khai, không làm hỏng hành vi đang đúng | Đạt (có giới hạn) | Diff chỉ sửa thân hàm, không đổi tên hàm, tham số hay dạng kết quả. Baseline 6 test cũ vẫn xanh trong lần chạy sau thực thi. Bộ ẩn có thể còn kiểm thêm hành vi mà tôi không thấy. |
+| `npm test` xanh, có test hồi quy trong `test/` | Đạt | Báo cáo ghi sau thực thi `npm test` exit 0, 14 pass, 0 fail. `test/regression.test.js` thêm 8 test. Tôi không tự chạy lại. |
+
+## Rủi ro / việc còn mở
+- `toCents` dựa vào `toFixed(10)` rồi cắt chuỗi, nên các giá trị rất sát biên (ví dụ nhiều chữ số lẻ) có thể làm tròn sai. Test chỉ phủ vài ca.
+- `endsAt` chỉ được cộng thêm một ngày khi có dạng `YYYY-MM-DD`. Dạng ngày giờ đầy đủ giữ nguyên hành vi cũ (loại trừ tại thời điểm đó), và đề không yêu cầu đổi.
+- Chưa có test cho `allocate` với tổng âm, trọng số 0, hay trọng số lệch (nhánh `weights[i] > 0`). Chưa có test cho mã `category` và `buyXgetY` qua `computeTotals`. Chưa có test cho `Cart.addItem` gọi lại cùng sku.
+
+```json
+{"accepted": true, "summary": "Cả 6 lỗi đã được sửa ở nguyên nhân gốc, mỗi lỗi có test hồi quy và API công khai không đổi; báo cáo ghi npm test xanh 14/14 (tôi không tự chạy lại). Còn vài ca biên chưa có test.", "criteria": [{"name": "#1 toCents half away from zero ở mọi chỗ", "result": "pass", "evidence": "src/money.js toCents; catalog.js:13, promotions.js:32, checkout.js dùng toCents; test #1"}, {"name": "#2 Tổng giảm bằng đúng số tiền mã (phần dư lớn nhất)", "result": "pass", "evidence": "allocate trong src/money.js; test #2 kiểm [334,333,333] và tổng giảm 1000/100"}, {"name": "#3 Mua X tặng Y", "result": "pass", "evidence": "freeUnits = floor(qty/(buy+free))*free; test #3"}, {"name": "#4 endsAt tới hết ngày UTC", "result": "pass", "evidence": "endExclusive trong src/promotions.js; test #4 kiểm biên 23:59:59.999 và 00:00 hôm sau"}, {"name": "#5 Giữ chỗ tồn kho khớp tổng số lượng trong giỏ", "result": "pass", "evidence": "cart.js updateQty reserve/release phần chênh lệch, removeItem release; test #5"}, {"name": "#6 Thuế tính trên net", "result": "pass", "evidence": "checkout.js lineTax(l.net); test #6 thuế 50"}, {"name": "Không đổi API công khai, không phá hành vi đúng", "result": "pass", "evidence": "Diff chỉ sửa thân hàm; 6 test baseline vẫn xanh trong lần chạy sau thực thi"}, {"name": "npm test xanh và có test hồi quy trong test/", "result": "pass", "evidence": "Báo cáo: sau thực thi npm test exit 0, 14 pass 0 fail; test/regression.test.js thêm 8 test (chưa tự chạy lại)"}], "risks": ["toCents dùng toFixed(10) và cắt chuỗi, có thể sai ở giá trị rất sát biên", "endsAt dạng ngày giờ đầy đủ giữ hành vi cũ (loại trừ tại thời điểm đó)", "Thiếu test cho allocate với tổng âm/trọng số 0 hoặc lệch, mã category/buyXgetY qua computeTotals, và addItem gọi lại cùng sku", "Tôi không tự chạy lại npm test, kết quả dựa vào báo cáo của CCoding"], "followUps": [{"title": "Bổ sung test biên cho money/allocate/promotions", "brief": "Thêm test cho toCents với các giá trị biên (0.005, 1.015, 1e14, số âm), allocate với tổng âm/trọng số 0/trọng số lệch, endsAt dạng ngày giờ đầy đủ, và tổng hợp mã category/buyXgetY trong computeTotals. Không đổi API công khai và giữ npm test xanh.", "department": "dev"}]}
+```

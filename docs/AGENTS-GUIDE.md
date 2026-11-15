@@ -24,6 +24,10 @@ sources:
 ---
 ```
 
+### Model theo làn (trưởng phòng)
+
+Trường `model` của trưởng phòng (opus) áp dụng cho pha `plan` ở làn đầy đủ/đơn. Làn nhanh dùng `fastLane.planModel` (mặc định `sonnet`) nên chạy sonnet ở pha `plan` dù hồ sơ ghi opus; `phases.models.plan` hoặc `planner.difficultyModel` (mặc định tắt) có thể ghi đè. Số hạng mục tối đa mỗi kế hoạch là `MAX_SUBTASKS` (`src/planner.ts`), dùng chung hai làn.
+
 ### Công cụ (`tools`)
 
 Chỉ dùng các tên sau; runtime API ánh xạ sang công cụ sandbox trong thư mục dự án:

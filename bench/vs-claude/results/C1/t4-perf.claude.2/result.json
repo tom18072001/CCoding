@@ -1,0 +1,84 @@
+{
+ "run": {
+  "exitCode": 0,
+  "status": "done",
+  "wallSec": 328,
+  "costUsd": 0.8780524000000001,
+  "turns": 17,
+  "tokens": {
+   "input": 26,
+   "output": 22987,
+   "cacheRead": 716449,
+   "cacheWrite": 34319
+  },
+  "models": [
+   "claude-haiku-5-5",
+   "claude-opus-5-5"
+  ],
+  "modelUsage": {
+   "claude-haiku-5-5": {
+    "inputTokens": 1366,
+    "outputTokens": 460,
+    "cacheReadInputTokens": 0,
+    "cacheCreationInputTokens": 0,
+    "webSearchRequests": 0,
+    "costUSD": 0.0003666,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 64000,
+    "thinkingTokens": 440,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 0,
+    "canonicalModel": "claude-haiku-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   },
+   "claude-opus-5-5": {
+    "inputTokens": 26,
+    "outputTokens": 22987,
+    "cacheReadInputTokens": 716449,
+    "cacheCreationInputTokens": 34319,
+    "webSearchRequests": 0,
+    "costUSD": 0.8776858000000001,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000,
+    "thinkingTokens": 10113,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 34319,
+    "canonicalModel": "claude-opus-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   }
+  },
+  "finalText": "Xong. `buildReport` giờ chạy hết **~290 ms** với 200.000 dòng (`npm run bench`), trước đây là **~16,7 s**. `npm test` xanh, 6/6.\n\n**Thay đổi trong `src/report.js`**\n- Bản cũ chậm vì lồng vòng lặp: `products.find`, `includes` và `filter` được gọi lặp lại trên mọi dòng, nên thời gian tăng theo bình phương số dòng. Bản mới chỉ duyệt dữ liệu một lượt, gom số liệu theo tháng, danh mục, sản phẩm và khách hàng bằng `Map`/`Set`. Tháng của mỗi ngày được tính một lần cho mỗi giá trị `date` khác nhau, và chỉ nhớ trong một lần gọi.\n- Chữ ký hàm giữ nguyên, không sửa dữ liệu đầu vào, không thêm thư viện.\n\n**Các hành vi lạ của bản cũ vẫn được giữ**\n- **Bản cũ sao mỗi dòng qua `JSON.parse(JSON.stringify(...))`, và việc này làm đổi giá trị:** `NaN`/`Infinity` thành `null`, `-0` thành `0`, khóa `undefined` bị bỏ, còn `category`/`id` là object thì mỗi dòng thành một bản sao riêng nên không bao giờ gộp nhóm được. Với giá trị kiểu nguyên thủy, bản mới làm lại đúng các biến đổi này. Nếu một dòng có giá trị không nguyên thủy (object, hàm, `toJSON`, bigint) thì dòng đó chạy nguyên đoạn mã gốc.\n- **Thứ tự cộng:** mọi tổng vẫn cộng theo đúng thứ tự dòng, bắt đầu từ 0. Điều này quan trọng với số thực và với `qty` dạng chuỗi, vì khi đó `+` nối chuỗi thay vì cộng số.\n- **Sắp xếp:** mảng trước khi sắp xếp có cùng thứ tự xuất hiện và dùng cùng comparator, nên các trường hợp hòa ra kết quả như cũ.\n- **Tìm sản phẩm:** khi `sku` trùng thì lấy sản phẩm đầu tiên; `sku` là `NaN` thì không khớp. Các lỗi cũ vẫn bị ném ra như trước: ngày không hợp lệ, kể cả ở đơn đã hủy; phần tử sản phẩm `null` nằm trước sản phẩm khớp.\n\n**Test**\n- Bản gốc được giữ làm đặc tả ở `test/fixtures/report-legacy.js`.\n- `test/report.equivalence.test.js` so kết quả, kể cả lỗi bị ném ra, bằng `deepStrictEqual` nên phân biệt được cả `-0` và `0`. Các bộ dữ liệu gồm:\n  - dữ liệu sinh với 7 seed và 13 bộ tùy chọn;\n  - một bộ 20.000 dòng;\n  - 60 bộ dữ liệu biên ngẫu nhiên;\n  - khoảng 20 trường hợp lạ viết tay.\n- Mỗi lần so sánh còn kiểm tra rằng đầu vào không bị sửa.\n- Tôi cố ý cài lỗi vào code mới để xem test có bắt được không, và test bắt được cả hai lỗi đã thử.\n- Riêng bộ 200.000 dòng của bench tôi chỉ so một lần thủ công, kết quả khớp. Bộ này không nằm trong `npm test` vì bản cũ mất khoảng 17 s mỗi lần chạy.\n\nTôi chưa commit; các thay đổi đang nằm trong working tree.",
+  "workdir": "/tmp/bw/C1-t4-perf.claude.2-l4k18b/repo"
+ },
+ "task": "t4-perf",
+ "system": "claude",
+ "rep": 2,
+ "key": "t4-perf.claude.2",
+ "env": "cloud",
+ "startedAt": "2026-11-01T11:25:42.462Z",
+ "finishedAt": "2026-11-01T11:31:18.896Z",
+ "grade": {
+  "hidden": {
+   "pass": 19,
+   "fail": 0,
+   "total": 19,
+   "failed": [],
+   "ms": 2797,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 6,
+   "fail": 0,
+   "total": 6
+  },
+  "changed": [
+   "~src/report.js",
+   "+test/fixtures/report-legacy.js",
+   "+test/report.equivalence.test.js"
+  ],
+  "perfMs": 185
+ },
+ "audit": []
+}

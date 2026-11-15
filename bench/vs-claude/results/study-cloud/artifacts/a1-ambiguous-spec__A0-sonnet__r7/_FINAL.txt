@@ -1,0 +1,12 @@
+I've written `SPEC.md` at the repository root, with the `## Open questions and assumptions` section as the last section. It has 16 questions, each paired with the assumption I'd use until the customer answers. I haven't run or tested anything, since the repository was empty and this is only a spec.
+
+The request contradicts itself in four places. The spec resolves each one provisionally, and Q1–Q3 and Q8 in the open questions cover them:
+
+- **Unmasked versus masked data:** Exports are masked by default. Masking keeps the first two IP octets (IPv6 /48) and replaces usernames with a stable keyed hash (HMAC pseudonym). A separate unmasked forensic export is designed in the spec (restricted role, second approver, encrypted single-use link). It stays disabled until the customer approves it in writing.
+- **"Everything they can see" versus "their team's logs":** The scope is the manager's own team, and the server enforces it. It is never wider than their existing permissions.
+- **"Kept forever" versus deleting personal data after 12 months:** Personal data and export files are deleted 12 months after the log event. Only an audit record with no personal data (internal user IDs, file hash) is kept longer.
+- **"Within 5 seconds" with no volume limit:** The 5-second target applies to exports up to a row cap, provisionally 200,000 rows. Larger exports run in the background and notify the user. The real log volumes are still needed to set that cap.
+
+For "simple", I read it as one button with a fixed period: the previous calendar month in Vietnam time (Asia/Ho_Chi_Minh), with no filters.
+
+The questions that matter most to the customer are the legal basis for any unmasked export and what "like the old system" means. For the second one, we need a sample file from the old system to match its columns and format. The spec also lists the endpoints, the CSV format (including protection against spreadsheet formula injection), rate limits, acceptance criteria, and tests.

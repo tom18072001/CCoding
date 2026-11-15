@@ -1,0 +1,24 @@
+**SELF-REVIEW**
+
+I checked each requirement against the code and the tests.
+- **Backward compatibility:** calls with no params, unknown params, or `query` undefined still return the bare array sorted by id.
+- **Filters:** `status` and `assignee` are covered, including `none` mixed with names.
+- **Sort:** tie-break by id ascending is tested in both directions.
+- **Paging:** I walk all pages for three sort modes. An exact-fit last page returns a null cursor.
+- **Errors:** all `invalid_*` cases and cursor binding are tested.
+
+I found no defects. Two behaviors are my assumptions:
+- Cursor binding uses normalized sets, so `status=open,closed` and `status=closed,open` count as the same.
+- A repeated or non-string query value (such as an array) gives `invalid_<param>`.
+
+**FIX:** nothing needed.
+
+**Final report**
+
+`GET /tickets` now supports `status`, `assignee`, `sort`, `limit` and `cursor`, as specified. All 8 tests pass (`npm test`). The changes are in `src/handler.js`, with new tests in `test/list.test.js`.
+
+- **Cursor:** it is an opaque base64url keyset cursor, so paging stays stable if tickets change between requests.
+- **Assumptions:**
+  - **Empty values:** an empty value (such as `status=` or `status=open,`) is invalid.
+  - **Several bad params:** the first error wins, in the order status, assignee, sort, limit, cursor.
+  - **`cursor` without `limit`:** it returns `invalid_cursor`.

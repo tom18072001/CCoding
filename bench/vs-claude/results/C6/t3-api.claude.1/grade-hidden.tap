@@ -1,0 +1,532 @@
+TAP version 13
+# Subtest: 401 khi thiếu X-User: GET /tasks
+ok 1 - 401 khi thiếu X-User: GET /tasks
+  ---
+  duration_ms: 73.134051
+  type: 'test'
+  ...
+# Subtest: 401 khi thiếu X-User: GET /tasks/t1
+ok 2 - 401 khi thiếu X-User: GET /tasks/t1
+  ---
+  duration_ms: 10.765619
+  type: 'test'
+  ...
+# Subtest: 401 khi thiếu X-User: POST /tasks
+ok 3 - 401 khi thiếu X-User: POST /tasks
+  ---
+  duration_ms: 14.762467
+  type: 'test'
+  ...
+# Subtest: 401 khi thiếu X-User: PATCH /tasks/t1
+ok 4 - 401 khi thiếu X-User: PATCH /tasks/t1
+  ---
+  duration_ms: 7.404771
+  type: 'test'
+  ...
+# Subtest: 401 khi thiếu X-User: DELETE /tasks/t1
+ok 5 - 401 khi thiếu X-User: DELETE /tasks/t1
+  ---
+  duration_ms: 5.835375
+  type: 'test'
+  ...
+# Subtest: 401 khi thiếu X-User: GET /tasks/export.csv
+ok 6 - 401 khi thiếu X-User: GET /tasks/export.csv
+  ---
+  duration_ms: 6.102823
+  type: 'test'
+  ...
+# Subtest: 401 khi thiếu X-User: GET /audit
+ok 7 - 401 khi thiếu X-User: GET /audit
+  ---
+  duration_ms: 5.975731
+  type: 'test'
+  ...
+# Subtest: 401 khi thiếu X-User: GET /tasks?bogus=1
+ok 8 - 401 khi thiếu X-User: GET /tasks?bogus=1
+  ---
+  duration_ms: 8.03644
+  type: 'test'
+  ...
+# Subtest: 401 khi X-User không tồn tại
+ok 9 - 401 khi X-User không tồn tại
+  ---
+  duration_ms: 13.795085
+  type: 'test'
+  ...
+# Subtest: danh sách mặc định: dạng kết quả và thứ tự createdAt
+ok 10 - danh sách mặc định: dạng kết quả và thứ tự createdAt
+  ---
+  duration_ms: 10.786211
+  type: 'test'
+  ...
+# Subtest: lọc/sắp: status=todo
+ok 11 - lọc/sắp: status=todo
+  ---
+  duration_ms: 5.675176
+  type: 'test'
+  ...
+# Subtest: lọc/sắp: status=todo,doing
+ok 12 - lọc/sắp: status=todo,doing
+  ---
+  duration_ms: 4.825952
+  type: 'test'
+  ...
+# Subtest: lọc/sắp: assignee=u4
+ok 13 - lọc/sắp: assignee=u4
+  ---
+  duration_ms: 4.795363
+  type: 'test'
+  ...
+# Subtest: lọc/sắp: assignee=none
+ok 14 - lọc/sắp: assignee=none
+  ---
+  duration_ms: 6.571272
+  type: 'test'
+  ...
+# Subtest: lọc/sắp: team=B
+ok 15 - lọc/sắp: team=B
+  ---
+  duration_ms: 4.940525
+  type: 'test'
+  ...
+# Subtest: lọc/sắp: q=dac ta
+ok 16 - lọc/sắp: q=dac ta
+  ---
+  duration_ms: 4.573867
+  type: 'test'
+  ...
+# Subtest: lọc/sắp: q=DỮ LIỆU
+ok 17 - lọc/sắp: q=DỮ LIỆU
+  ---
+  duration_ms: 3.424737
+  type: 'test'
+  ...
+# Subtest: lọc/sắp: q=Đào
+ok 18 - lọc/sắp: q=Đào
+  ---
+  duration_ms: 2.84758
+  type: 'test'
+  ...
+# Subtest: lọc/sắp: q=API
+ok 19 - lọc/sắp: q=API
+  ---
+  duration_ms: 2.853699
+  type: 'test'
+  ...
+# Subtest: lọc/sắp: q=
+ok 20 - lọc/sắp: q=
+  ---
+  duration_ms: 4.78036
+  type: 'test'
+  ...
+# Subtest: lọc/sắp: dueBefore=2026-11-05
+ok 21 - lọc/sắp: dueBefore=2026-11-05
+  ---
+  duration_ms: 3.707135
+  type: 'test'
+  ...
+# Subtest: lọc/sắp: sort=dueDate
+ok 22 - lọc/sắp: sort=dueDate
+  ---
+  duration_ms: 3.726181
+  type: 'test'
+  ...
+# Subtest: lọc/sắp: sort=-dueDate
+ok 23 - lọc/sắp: sort=-dueDate
+  ---
+  duration_ms: 3.208051
+  type: 'test'
+  ...
+# Subtest: lọc/sắp: sort=priority
+ok 24 - lọc/sắp: sort=priority
+  ---
+  duration_ms: 3.081447
+  type: 'test'
+  ...
+# Subtest: lọc/sắp: sort=-priority
+ok 25 - lọc/sắp: sort=-priority
+  ---
+  duration_ms: 3.099247
+  type: 'test'
+  ...
+# Subtest: lọc/sắp: sort=-createdAt
+ok 26 - lọc/sắp: sort=-createdAt
+  ---
+  duration_ms: 3.250876
+  type: 'test'
+  ...
+# Subtest: lọc/sắp: status=todo&team=A&sort=-priority
+ok 27 - lọc/sắp: status=todo&team=A&sort=-priority
+  ---
+  duration_ms: 2.929932
+  type: 'test'
+  ...
+# Subtest: lọc/sắp: status=done&assignee=u3&dueBefore=2026-11-01
+ok 28 - lọc/sắp: status=done&assignee=u3&dueBefore=2026-11-01
+  ---
+  duration_ms: 3.991758
+  type: 'test'
+  ...
+# Subtest: sort=title theo locale vi (các tiêu đề bắt đầu bằng chữ)
+ok 29 - sort=title theo locale vi (các tiêu đề bắt đầu bằng chữ)
+  ---
+  duration_ms: 14.245174
+  type: 'test'
+  ...
+# Subtest: phân trang
+ok 30 - phân trang
+  ---
+  duration_ms: 8.656142
+  type: 'test'
+  ...
+# Subtest: phân trang kết hợp sắp xếp
+ok 31 - phân trang kết hợp sắp xếp
+  ---
+  duration_ms: 3.033801
+  type: 'test'
+  ...
+# Subtest: 400 INVALID_QUERY: status=open
+ok 32 - 400 INVALID_QUERY: status=open
+  ---
+  duration_ms: 2.246375
+  type: 'test'
+  ...
+# Subtest: 400 INVALID_QUERY: status=todo,,doing
+ok 33 - 400 INVALID_QUERY: status=todo,,doing
+  ---
+  duration_ms: 2.157886
+  type: 'test'
+  ...
+# Subtest: 400 INVALID_QUERY: status=
+ok 34 - 400 INVALID_QUERY: status=
+  ---
+  duration_ms: 2.283118
+  type: 'test'
+  ...
+# Subtest: 400 INVALID_QUERY: team=C
+ok 35 - 400 INVALID_QUERY: team=C
+  ---
+  duration_ms: 2.407609
+  type: 'test'
+  ...
+# Subtest: 400 INVALID_QUERY: dueBefore=2026-02-30
+ok 36 - 400 INVALID_QUERY: dueBefore=2026-02-30
+  ---
+  duration_ms: 2.413162
+  type: 'test'
+  ...
+# Subtest: 400 INVALID_QUERY: dueBefore=2026-2-3
+ok 37 - 400 INVALID_QUERY: dueBefore=2026-2-3
+  ---
+  duration_ms: 5.201146
+  type: 'test'
+  ...
+# Subtest: 400 INVALID_QUERY: sort=name
+ok 38 - 400 INVALID_QUERY: sort=name
+  ---
+  duration_ms: 3.988208
+  type: 'test'
+  ...
+# Subtest: 400 INVALID_QUERY: sort=--title
+ok 39 - 400 INVALID_QUERY: sort=--title
+  ---
+  duration_ms: 4.565095
+  type: 'test'
+  ...
+# Subtest: 400 INVALID_QUERY: page=0
+ok 40 - 400 INVALID_QUERY: page=0
+  ---
+  duration_ms: 3.389039
+  type: 'test'
+  ...
+# Subtest: 400 INVALID_QUERY: page=1.5
+ok 41 - 400 INVALID_QUERY: page=1.5
+  ---
+  duration_ms: 5.254787
+  type: 'test'
+  ...
+# Subtest: 400 INVALID_QUERY: page=abc
+ok 42 - 400 INVALID_QUERY: page=abc
+  ---
+  duration_ms: 4.984569
+  type: 'test'
+  ...
+# Subtest: 400 INVALID_QUERY: pageSize=101
+ok 43 - 400 INVALID_QUERY: pageSize=101
+  ---
+  duration_ms: 3.761035
+  type: 'test'
+  ...
+# Subtest: 400 INVALID_QUERY: pageSize=0
+ok 44 - 400 INVALID_QUERY: pageSize=0
+  ---
+  duration_ms: 5.476601
+  type: 'test'
+  ...
+# Subtest: 400 INVALID_QUERY: foo=1
+ok 45 - 400 INVALID_QUERY: foo=1
+  ---
+  duration_ms: 2.897983
+  type: 'test'
+  ...
+# Subtest: 400 INVALID_QUERY: status=todo&status=done
+ok 46 - 400 INVALID_QUERY: status=todo&status=done
+  ---
+  duration_ms: 3.125501
+  type: 'test'
+  ...
+# Subtest: 400 INVALID_QUERY: page=0&status=bad
+ok 47 - 400 INVALID_QUERY: page=0&status=bad
+  ---
+  duration_ms: 2.844661
+  type: 'test'
+  ...
+# Subtest: 400 INVALID_QUERY: status=bad&page=0
+ok 48 - 400 INVALID_QUERY: status=bad&page=0
+  ---
+  duration_ms: 3.942187
+  type: 'test'
+  ...
+# Subtest: 400 INVALID_QUERY: team=A&limit=5
+ok 49 - 400 INVALID_QUERY: team=A&limit=5
+  ---
+  duration_ms: 2.74921
+  type: 'test'
+  ...
+# Subtest: member chỉ thấy nhóm mình
+ok 50 - member chỉ thấy nhóm mình
+  ---
+  duration_ms: 2.748149
+  type: 'test'
+  ...
+# Subtest: member lọc team nhóm khác → rỗng
+ok 51 - member lọc team nhóm khác → rỗng
+  ---
+  duration_ms: 3.169222
+  type: 'test'
+  ...
+# Subtest: member GET nhiệm vụ nhóm khác → 404, nhóm mình → 200
+ok 52 - member GET nhiệm vụ nhóm khác → 404, nhóm mình → 200
+  ---
+  duration_ms: 5.307706
+  type: 'test'
+  ...
+# Subtest: manager thấy mọi nhóm
+ok 53 - manager thấy mọi nhóm
+  ---
+  duration_ms: 4.5634
+  type: 'test'
+  ...
+# Subtest: quyền: member tạo → 403
+ok 54 - quyền: member tạo → 403
+  ---
+  duration_ms: 6.500832
+  type: 'test'
+  ...
+# Subtest: quyền: member sửa status việc của mình → 200
+ok 55 - quyền: member sửa status việc của mình → 200
+  ---
+  duration_ms: 3.823143
+  type: 'test'
+  ...
+# Subtest: quyền: member sửa việc nhóm mình không giao cho mình → 403
+ok 56 - quyền: member sửa việc nhóm mình không giao cho mình → 403
+  ---
+  duration_ms: 4.076557
+  type: 'test'
+  ...
+# Subtest: quyền: member sửa trường khác status → 403
+ok 57 - quyền: member sửa trường khác status → 403
+  ---
+  duration_ms: 3.299518
+  type: 'test'
+  ...
+# Subtest: quyền: member sửa status kèm trường khác → 403
+ok 58 - quyền: member sửa status kèm trường khác → 403
+  ---
+  duration_ms: 3.148898
+  type: 'test'
+  ...
+# Subtest: quyền: member sửa việc nhóm khác → 404
+ok 59 - quyền: member sửa việc nhóm khác → 404
+  ---
+  duration_ms: 2.915391
+  type: 'test'
+  ...
+# Subtest: quyền: member sửa status sai giá trị → 400
+ok 60 - quyền: member sửa status sai giá trị → 400
+  ---
+  duration_ms: 3.447008
+  type: 'test'
+  ...
+# Subtest: quyền: member xóa việc nhóm mình → 403
+ok 61 - quyền: member xóa việc nhóm mình → 403
+  ---
+  duration_ms: 2.999382
+  type: 'test'
+  ...
+# Subtest: quyền: member xóa việc nhóm khác → 404
+ok 62 - quyền: member xóa việc nhóm khác → 404
+  ---
+  duration_ms: 4.478831
+  type: 'test'
+  ...
+# Subtest: quyền: manager tạo cho nhóm mình → 201
+ok 63 - quyền: manager tạo cho nhóm mình → 201
+  ---
+  duration_ms: 3.25563
+  type: 'test'
+  ...
+# Subtest: quyền: manager tạo cho nhóm khác → 403
+ok 64 - quyền: manager tạo cho nhóm khác → 403
+  ---
+  duration_ms: 4.41567
+  type: 'test'
+  ...
+# Subtest: quyền: manager sửa việc nhóm khác → 403
+ok 65 - quyền: manager sửa việc nhóm khác → 403
+  ---
+  duration_ms: 7.139047
+  type: 'test'
+  ...
+# Subtest: quyền: manager chuyển việc sang nhóm khác → 403
+ok 66 - quyền: manager chuyển việc sang nhóm khác → 403
+  ---
+  duration_ms: 12.532784
+  type: 'test'
+  ...
+# Subtest: quyền: manager sửa nhiều trường việc nhóm mình → 200
+ok 67 - quyền: manager sửa nhiều trường việc nhóm mình → 200
+  ---
+  duration_ms: 5.230497
+  type: 'test'
+  ...
+# Subtest: quyền: manager xóa → 403
+ok 68 - quyền: manager xóa → 403
+  ---
+  duration_ms: 7.870369
+  type: 'test'
+  ...
+# Subtest: quyền: manager xóa việc không tồn tại → 404
+ok 69 - quyền: manager xóa việc không tồn tại → 404
+  ---
+  duration_ms: 9.524393
+  type: 'test'
+  ...
+# Subtest: quyền: admin xóa → 204
+ok 70 - quyền: admin xóa → 204
+  ---
+  duration_ms: 2.592114
+  type: 'test'
+  ...
+# Subtest: quyền: admin sửa việc không tồn tại → 404
+ok 71 - quyền: admin sửa việc không tồn tại → 404
+  ---
+  duration_ms: 2.693623
+  type: 'test'
+  ...
+# Subtest: quyền: admin tạo body sai → 400 VALIDATION
+ok 72 - quyền: admin tạo body sai → 400 VALIDATION
+  ---
+  duration_ms: 2.323666
+  type: 'test'
+  ...
+# Subtest: thao tác bị cấm không làm đổi dữ liệu
+ok 73 - thao tác bị cấm không làm đổi dữ liệu
+  ---
+  duration_ms: 6.455184
+  type: 'test'
+  ...
+# Subtest: 405 cho phương thức không hỗ trợ (có X-User)
+ok 74 - 405 cho phương thức không hỗ trợ (có X-User)
+  ---
+  duration_ms: 2.644843
+  type: 'test'
+  ...
+# Subtest: CSV: header HTTP, BOM, dòng tiêu đề, CRLF
+ok 75 - CSV: header HTTP, BOM, dòng tiêu đề, CRLF
+  ---
+  duration_ms: 2.926253
+  type: 'test'
+  ...
+# Subtest: CSV: nội dung chính xác (lọc + sắp, ô xuống dòng)
+ok 76 - CSV: nội dung chính xác (lọc + sắp, ô xuống dòng)
+  ---
+  duration_ms: 2.59846
+  type: 'test'
+  ...
+# Subtest: CSV: chống chèn công thức + ngoặc kép + ô trống
+ok 77 - CSV: chống chèn công thức + ngoặc kép + ô trống
+  ---
+  duration_ms: 2.158433
+  type: 'test'
+  ...
+# Subtest: CSV: tiền tố công thức cho @ + tab, bọc \\r
+ok 78 - CSV: tiền tố công thức cho @ + tab, bọc \\r
+  ---
+  duration_ms: 7.015461
+  type: 'test'
+  ...
+# Subtest: CSV: page/pageSize → 400
+ok 79 - CSV: page/pageSize → 400
+  ---
+  duration_ms: 3.81438
+  type: 'test'
+  ...
+# Subtest: CSV: member chỉ xuất nhóm mình
+ok 80 - CSV: member chỉ xuất nhóm mình
+  ---
+  duration_ms: 1.91155
+  type: 'test'
+  ...
+# Subtest: CSV: tham số sai → 400
+ok 81 - CSV: tham số sai → 400
+  ---
+  duration_ms: 2.035456
+  type: 'test'
+  ...
+# Subtest: nhật ký: ghi đúng thứ tự, trường đổi, bỏ thao tác lỗi
+ok 82 - nhật ký: ghi đúng thứ tự, trường đổi, bỏ thao tác lỗi
+  ---
+  duration_ms: 9.783261
+  type: 'test'
+  ...
+# Subtest: nhật ký: cập nhật không đổi giá trị → changes rỗng
+ok 83 - nhật ký: cập nhật không đổi giá trị → changes rỗng
+  ---
+  duration_ms: 3.525321
+  type: 'test'
+  ...
+# Subtest: nhật ký: chỉ admin
+ok 84 - nhật ký: chỉ admin
+  ---
+  duration_ms: 4.225874
+  type: 'test'
+  ...
+# Subtest: nhật ký: tham số lạ → 400
+ok 85 - nhật ký: tham số lạ → 400
+  ---
+  duration_ms: 2.11087
+  type: 'test'
+  ...
+# Subtest: hồi quy: tạo với giá trị mặc định
+ok 86 - hồi quy: tạo với giá trị mặc định
+  ---
+  duration_ms: 2.260153
+  type: 'test'
+  ...
+# Subtest: hồi quy: đường dẫn lạ → 404
+ok 87 - hồi quy: đường dẫn lạ → 404
+  ---
+  duration_ms: 1.943412
+  type: 'test'
+  ...
+1..87
+# tests 87
+# suites 0
+# pass 87
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 568.836927

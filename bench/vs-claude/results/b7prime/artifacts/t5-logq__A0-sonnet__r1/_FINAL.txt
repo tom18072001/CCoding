@@ -1,0 +1,12 @@
+Đã xây xong logq theo SPEC.md, và `npm test` xanh (10 test, 0 lỗi). Tôi chưa commit gì.
+
+- **Thư viện:** `src/parse.js`, `src/query.js`, `src/agg.js` hiện thực đủ `parseLine`, `compile` (cùng `QuerySyntaxError` có `position`) và `aggregate`.
+- **CLI:** `bin/logq.js` xử lý các tùy chọn, `--format json|table`, `--stats` ra stderr và mã thoát 0/1/2. Nó kiểm tra truy vấn và spec trước khi đọc tệp, và gom toàn bộ output rồi mới in, nên khi lỗi stdout để trống.
+- **Test:** `test/logq.test.js` phủ cả ba module và CLI chạy thật (vị trí lỗi truy vấn, mã thoát, bảng, `--stats`).
+
+Đặc tả để mở ở một số chỗ, nên tôi chọn như sau; bộ nghiệm thu ẩn có thể hiểu khác:
+- `@t` chỉ thêm khi chuỗi thời gian có dạng `YYYY-MM-DDTHH:MM…` (dấu `T`). Ngày trần hoặc dạng có dấu cách thay `T` thì không có `@t`.
+- Token truy vấn có dấu `:` nhưng không bắt đầu bằng tên trường hợp lệ (ví dụ `10:30`, `:foo`) bị coi là lỗi cú pháp, vị trí là đầu token.
+- Trong `field:"..."`, so khớp chính xác vẫn không phân biệt hoa/thường.
+- Tìm chuỗi con trần (`WORD`/`QUOTED` đứng một mình) dùng `msg`, hoặc `message` khi `msg` vắng mặt hay là `null`.
+- `)` đứng ở chỗ đáng lẽ là toán hạng (ví dụ `(a AND)`) báo lỗi tại vị trí của `)`.

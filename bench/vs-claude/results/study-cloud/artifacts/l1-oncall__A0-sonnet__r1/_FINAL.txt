@@ -1,0 +1,17 @@
+I brute-forced all 120 possible rotas and wrote the result to `answer.json` in the repository root.
+
+- **Schedule:** Mon Dung, Tue Chi, Wed Binh, Thu An, Fri Em. This is the only rota that satisfies all seven rules.
+- **`count_without_rule_2`:** 10 rotas satisfy every rule except rule 2.
+- **`most_permissive_rule`:** 2. Dropping a single rule allows these numbers of rotas:
+
+| Rule dropped | Rotas allowed |
+|---|---|
+| 1 | 2 |
+| 2 | 10 |
+| 3 | 4 |
+| 4 | 2 |
+| 5 | 2 |
+| 6 | 2 |
+| 7 | 3 |
+
+Rule 2 is the clear winner, with no tie.

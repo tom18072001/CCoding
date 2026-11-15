@@ -1,0 +1,153 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t3-api__B7__r4] Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Cả 4 tính năng đã được làm xong ở làn đơn và `npm test` xanh (9/9). Kế hoạch này không làm lại từ đầu. Hai hạng mục chạy song song, mỗi hạng mục đối chiếu từng quy tắc của FEATURES.md với code hiện có, sửa chỗ lệch và bổ sung test cho đúng phần mình, vì bộ nghiệm thu ẩn gọi HTTP thật. Tôi chưa mở FEATURES.md hay chạy lệnh nào ở bước lập kế hoạch này.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Đối chiếu đặc tả: xác thực, phân quyền, lọc/tìm/sắp xếp/phân trang (@senior-swe, done)
+
+## Tóm tắt
+Tôi đối chiếu từng quy tắc xác thực, phân quyền, lọc/tìm/sắp xếp/phân trang trong FEATURES.md với `src/auth.js`, `src/query.js`, `src/handlers/tasks.js` và `src/server.js`. Code đã khớp đặc tả ở mọi điểm tôi kiểm tra, nên tôi không sửa tệp nguồn nào. Tôi thêm `test/auth_query.test.js` với 7 test gọi HTTP thật. `npm test` xanh (16/16, exit 0). Rủi ro còn lại ở mục cuối.
+
+## Tệp đã tạo/sửa
+- `test/auth_query.test.js` (mới): test biên cho 401, thứ tự kiểm tra, phân quyền member và manager, INVALID_QUERY, lọc/tìm/phân trang, sắp xếp.
+- `src/*`: không sửa (không thấy chỗ lệch).
+
+## Kiểm chứng
+- `npm test` → exit 0; tests 16, pass 16, fail 0.
+- Lần chạy đầu có 1 test fail do tôi viết sai kỳ vọng: tìm "dac ta" phải khớp t4 và t12 vì không phân biệt dấu. Tôi sửa test, không sửa code.
+
+## Quy tắc đã đối chiếu
+- **Thứ tự kiểm tra:**
+  - Thứ tự 401 → 400 query → 404 → 403 → 400 body đúng ở mọi route, kể cả POST và PATCH.
+  - 401 xảy ra trước 400 và 404.
+  - `INVALID_JSON` chỉ trả sau khi qua 404 và 403.
+- **Xác thực:** thiếu hoặc sai `X-User` → 401 `UNAUTHENTICATED`.
+- **Dạng lỗi:** 403 `FORBIDDEN`, 404 `NOT_FOUND`, 400 `INVALID_QUERY` kèm `field`.
+- **Admin:** làm được mọi việc.
+- **Manager:**
+  - Đọc được mọi nhóm.
+  - POST và PATCH nhóm khác, hoặc chuyển `team` sang nhóm khác, → 403.
+  - DELETE → 403.
+  - `/audit` → 403.
+- **Member:**
+  - Chỉ thấy nhóm mình; GET, PATCH, DELETE nhiệm vụ nhóm khác → 404.
+  - POST và DELETE → 403.
+  - PATCH chỉ được khi nhiệm vụ giao cho mình và body chỉ có `status`; body có trường khác, kể cả trùng giá trị cũ, → 403.
+  - Truyền `team` của nhóm khác → danh sách rỗng, không lỗi.
+- **Whitelist query:** tham số lạ hoặc lặp → 400.
+- **Giá trị query:** kiểm tra `status`, `team`, `dueBefore` (có kiểm tra ngày thật theo lịch), `sort`, `page` (số nguyên ≥ 1), `pageSize` (1–100). Nhiều lỗi thì báo tham số đầu tiên theo thứ tự trên URL.
+- **Tìm kiếm:** `q` không phân biệt hoa/thường và dấu, `đ` → `d`; `q=` không lọc.
+- **Lọc khác:** `assignee=none` và `dueBefore` (loại nhiệm vụ không có `dueDate`).
+- **Sắp xếp:**
+  - Hòa theo `id` tăng dần theo số, cả hai chiều.
+  - `dueDate` null luôn ở cuối.
+  - `title` dùng `localeCompare` với locale `vi`.
+  - Mặc định `createdAt` tăng dần.
+- **Phân trang:** dạng `{items,total,page,pageSize}`; `page` vượt quá số trang → `items: []`, `total` đúng.
+- **Route:** `/tasks/export.csv` đăng ký trước `/tasks/:id`, và `server.js` đăng ký `/audit`.
+
+## Quyết định thiết kế
+- Giữ nguyên code hiện có vì không có điểm lệch.
+- Query string của `GET /tasks/:id`, POST, PATCH và DELETE vẫn không bị kiểm tra. Đặc tả chỉ định nghĩa tham số cho danh sách, CSV và audit.
+
+## Rủi ro & việc còn mở
+- Nếu bộ nghiệm thu ẩn kỳ vọng 400 cho tham số lạ trên `/tasks/:id`, POST, PATCH, DELETE thì sẽ lệch. Đặc tả không nói rõ nên tôi giữ nguyên.
+- Request dùng phương thức không hỗ trợ trên `/tasks` sẽ nhận 405 trước 401, vì kiểm tra này nằm ở `server.js`.
+- `dueDate` trong body chỉ kiểm tra dạng `YYYY-MM-DD`, không kiểm tra ngày có thật theo lịch. Đặc tả không yêu cầu điều này cho body.
+- Tôi chưa chạy bộ nghiệm thu ẩn.
+
+Bản đầy đủ: `.ccoding/T-20261113-000310-359/outputs/dev-S1-senior-swe.md`
+
+### S2 — Đối chiếu đặc tả: xuất CSV và nhật ký thao tác (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã đối chiếu phần CSV và audit trong FEATURES.md với `src/csv.js`, `src/handlers/audit.js`, `src/store.js` và các route liên quan trong `tasks.js`. Tôi không thấy chỗ lệch nào nên không sửa code nguồn. Tôi chỉ thêm `test/csv_audit.test.js` (5 test gọi HTTP thật). `npm test` xanh, 21/21 pass.
+
+## Tệp đã tạo/sửa
+- `test/csv_audit.test.js` (mới): 5 test gồm 3 test CSV và 2 test audit.
+- `src/csv.js`, `src/handlers/audit.js`, `src/store.js`: không đổi, vì đã khớp đặc tả.
+
+Những điểm tôi đã đối chiếu và thấy khớp:
+- **CSV**
+  - BOM, thứ tự và tên cột, `\r\n` kể cả sau dòng cuối.
+  - Bọc ngoặc kép theo RFC 4180 và nhân đôi `"`.
+  - Chống chèn công thức với chuỗi bắt đầu bằng `= + - @`, tab hoặc `\r`; số `priority` giữ nguyên; `null` thành ô trống.
+  - Header `Content-Type` và `Content-Disposition` đúng đặc tả.
+  - Route CSV dùng chung `filterSort` và phân quyền với danh sách.
+  - `page` và `pageSize` trả 400.
+- **Audit**
+  - `seq` từ 1, `at` lấy từ `now()` của `createServer`.
+  - `changes` được sắp a→z.
+  - `GET /audit` chỉ admin được xem; sắp `seq` giảm dần, lọc theo `taskId`.
+  - Thứ tự kiểm tra là 401 → 400 query → 403.
+  - Thao tác lỗi (400 hoặc 404) không ghi audit.
+
+Một lưu ý khi viết test: `fetch().text()` tự bỏ BOM. Test BOM vì vậy kiểm tra byte thô qua `arrayBuffer` (`EF BB BF`).
+
+## Hợp đồng API
+- `GET /tasks/export.csv`: mọi người dùng hợp lệ; member chỉ thấy nhóm mình. Lỗi: 401, 400 `INVALID_QUERY` (kể cả `page` và `pageSize`).
+- `GET /audit?taskId=`: chỉ admin. Lỗi: 401, 400 `INVALID_QUERY`, 403 `FORBIDDEN`.
+
+## Migration
+Không áp dụng. Store nằm trong bộ nhớ, không có schema.
+
+## Kiểm chứng
+- `npm test` → exit 0; tests 21, pass 21, fail 0. Chạy sau khi sửa lỗi BOM trong test của chính tôi; lần chạy đầu có 1 test đỏ do lỗi này.
+- Không có typecheck hay lint trong repo.
+
+## Việc còn lại
+Không có yêu cầu thay đổi nào cho `src/handlers/tasks.js`. Có hai điểm cần lưu ý cho `@senior-swe` (S1) hoặc nghiệm thu:
+- `PATCH` ghi audit kể cả khi `changes` rỗng, tức là không đổi giá trị nào. Đặc tả không nói rõ trường hợp này.
+- `changes` của `update` so sánh bằng `!==`. Nếu giá trị là object hay mảng thì cách so sánh này có thể không đúng, nhưng các trường hiện tại đều là kiểu nguyên thủy.
+
+Không có biến môi trường mới.
+
+Bản đầy đủ: `.ccoding/T-20261113-000310-359/outputs/dev-S2-backend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261113-000310-359` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **44 in / 37.5k out**, cache đọc 502.0k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 26 | 27496 | 304494 | 2 |
+| Backend Developer (@backend-dev) | dev | 16 | 8200 | 190678 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 2 | 1828 | 6859 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Đối chiếu đặc tả: xác thực, phân quyền, lọc/tìm/sắp xếp/phân trang (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Đối chiếu đặc tả: xuất CSV và nhật ký thao tác (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 21 · ℹ suites 0 · ℹ pass 21 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 74 | 98 | 100 | 1 | 1 | 332k | 1/36 | — |
+| Backend Developer (@backend-dev) | dev | **70** B | thấp | — | — | 100 | 100 | 94 | 100 | 1 | 1 | 199k | 1/14 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 9k | — | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

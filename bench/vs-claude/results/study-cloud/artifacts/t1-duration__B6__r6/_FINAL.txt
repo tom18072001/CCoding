@@ -1,0 +1,120 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t1-duration__B6__r6] Duration parse/format theo đặc tả, nhiều trường hợp biên
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Tách theo hợp đồng hai hàm: parseDuration và formatDuration nằm ở hai tệp riêng, mỗi người tự viết test riêng. src/duration.js chỉ re-export. Hai hạng mục chạy song song, không ghi chung tệp.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Hiện thực parseDuration + test biên + tệp re-export (@senior-swe, done)
+
+## Tóm tắt
+`src/parse.js` (`parseDuration`) đã xong, và `src/duration.js` đã chuyển thành tệp re-export. Test của phần parse xanh: 7/7 pass, exit 0. `npm test` chưa chạy được vì `src/format.js` (phần S2) chưa có, nên `require('./format')` trong `src/duration.js` sẽ lỗi cho đến khi S2 xong.
+
+## Tệp đã tạo/sửa
+- `src/parse.js` · mới, export `parseDuration`.
+- `src/duration.js` · chỉ còn `require('./parse')` và `require('./format')` rồi export lại hai hàm.
+- `test/parse.test.js` · mới, 7 nhóm test biên. `test/duration.test.js` không bị sửa.
+
+## Kiểm chứng
+- `node --test test/parse.test.js` → exit 0 (tests 7, pass 7, fail 0). Lần chạy đầu fail ở nhóm ISO vì regex chưa có cờ `i` trong khi chuỗi đã hạ chữ thường. Đã sửa rồi chạy lại.
+- `npm test` → chưa chạy, vì `src/format.js` của S2 chưa tồn tại lúc tôi dừng.
+- Baseline `npm test` (exit 1, 3 test fail) lấy từ prompt, không đo lại.
+
+## Quyết định thiết kế
+- **Tính bằng BigInt:** mỗi số thập phân (cả dấu phẩy ISO) được đổi thành phân số BigInt, cộng chính xác rồi mới làm tròn. Cách này tránh sai số float, ví dụ `1.0005s` ra đúng 1001.
+- **Làm tròn:** half away from zero thực hiện trên giá trị dương rồi mới áp dấu. `-0` luôn trả về `0`.
+- **Tách token:** dùng regex sticky `\s*(số)\s*([a-z]+)` kèm bảng alias. Đơn vị khớp theo cả cụm chữ cái, nên `1m5ms` tách thành `m` rồi `ms` và không bị nhầm. Sai thứ tự hoặc trùng đơn vị thì báo lỗi theo chỉ số trong thứ tự w > d > h > m > s > ms.
+- **Tra alias:** dùng `hasOwnProperty` để chuỗi như `toString` không khớp nhầm vào prototype.
+- **ISO:** có regex riêng cho `P<n>W`, tách khỏi regex `P[nD][T…]`. Các trường hợp `P`, `PT`, `P1DT` bị chặn bằng kiểm tra riêng.
+- **Message lỗi:** `JSON.stringify` được bọc try/catch để đầu vào BigInt không làm hàm ném lỗi khác.
+
+## Rủi ro & việc còn mở
+- Cần chạy lại `npm test` sau khi S2 giao `src/format.js` (export `formatDuration`). Phần property `parse(format(x)) === parse(x)` chỉ kiểm được sau bước đó.
+- Một lần chạy sed đã sửa `src/parse.js` ngay trên đĩa (thêm cờ `i`). Hệ thống đã báo thay đổi này và nó đúng ý tôi.
+
+Bản đầy đủ: `.ccoding/T-20261102-210403-526/outputs/dev-S1-senior-swe.md`
+
+### S2 — Hiện thực formatDuration + test biên (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã hiện thực `formatDuration` trong `src/format.js` và viết 7 test biên trong `test/format.test.js`. `node --test test/format.test.js` xanh (7/7) và `npm test` xanh (17/17). `src/duration.js` đã re-export cả `parseDuration` lẫn `formatDuration` từ `src/parse.js` và `src/format.js`, nên ca property đã chạy thật với `parseDuration`.
+
+## Tệp đã tạo/sửa
+- `src/format.js` — mới. CommonJS, `'use strict'`, không import `src/parse.js`.
+- `test/format.test.js` — mới.
+
+Ca property trong test lấy `parseDuration` từ `src/duration`. Nó kiểm tra cả style short và long trên khoảng 218 giá trị, gồm 200 giá trị ngẫu nhiên. Test này không cố định seed.
+
+Điểm chính của `src/format.js`:
+- **Làm tròn và dấu:** làm tròn half away from zero, dấu `-` chỉ có khi kết quả sau làm tròn khác 0.
+- **`largest`:** giữ N đơn vị liên tiếp từ đơn vị lớn nhất khác 0. Nếu phần dư ≥ nửa đơn vị cuối thì cộng thêm 1 đơn vị đó, rồi phân rã lại toàn bộ. Cách này tự nhớ dây chuyền và tự sinh đơn vị lớn hơn, ví dụ `6d 23h 59m 31s` với largest 2 ra `1w`.
+- **Đơn vị cuối `ms`:** không có phần dư để làm tròn.
+- **Lỗi:** `ms` không hợp lệ ném `TypeError` với message `'Invalid duration: ' + JSON.stringify(ms)`. `style` không hợp lệ hoặc `largest` không phải số nguyên ≥ 1 cũng ném `TypeError`.
+
+## Hợp đồng API
+`formatDuration(ms, { style?: 'short'|'long', largest?: integer ≥ 1 }) → string`. Đầu vào sai ném `TypeError`. Không áp dụng cho method/path/quyền.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- Lượt chạy đầu có 2 ca fail, do tôi viết test sai chứ không phải lỗi ở code:
+  - `12h` với `largest: 1` đúng ra là `12h`, tôi đã đổi sang ca `D + 12h` → `2d`.
+  - Regex cho `Number.MAX_SAFE_INTEGER` không tính đơn vị 0 bị bỏ, tôi đã đổi sang so sánh chuỗi chính xác `'14892855w 6d 8h 59m 991ms'`.
+- `node --test test/format.test.js` → exit 0, pass 7, fail 0.
+- `npm test` → exit 0, tests 17, pass 17, fail 0. Baseline trước khi sửa là 3 test fail.
+- Một lần chạy heredoc bị hook chặn nhầm vì chuỗi `../src/format`. Tôi chuyển sang ghi tệp bằng công cụ Write, không ảnh hưởng kết quả.
+
+## Việc còn lại
+Không có biến môi trường mới. Tôi chưa commit gì.
+
+Bản đầy đủ: `.ccoding/T-20261102-210403-526/outputs/dev-S2-backend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-210403-526` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **36 in / 23.1k out**, cache đọc 308.3k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 14 | 11650 | 137674 | 1 |
+| Backend Developer (@backend-dev) | dev | 14 | 9053 | 129439 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 6 | 2149 | 38986 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 263 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Hiện thực parseDuration + test biên + tệp re-export (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Hiện thực formatDuration + test biên (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 3 · # suites 0 · # pass 0 · # fail 3 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 17 · # suites 0 · # pass 17 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **95** A | — | 96 | 91 | 100 | 1 | 1 | 149k | 1/9 |
+| Backend Developer (@backend-dev) | dev | **93** A | — | 100 | 80 | 100 | 1 | 1 | 139k | 2/8 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 41k | 0/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Backend Developer** (@backend-dev, 93 A):
+  - Thao tác công cụ lỗi nhiều (2/8, 25%; nhiều nhất ở run_command 2/6) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

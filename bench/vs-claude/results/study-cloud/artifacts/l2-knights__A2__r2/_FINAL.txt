@@ -1,0 +1,10 @@
+I wrote `answer.json` in the repository root. B and C are healthy, A, D and E are compromised, and the assignment is unique.
+
+I split on A's state:
+
+- **A healthy:** A's statement makes B compromised. B's statement is then false, so A and E differ, which makes E compromised. E's statement is then false, so D must be healthy. D's statement then forces C healthy-or-false resolution: for D to be truthful, either E is healthy or C is compromised, and E is compromised, so C must be compromised. But then B, C and E are compromised, which is exactly three, so C's statement would be true. That contradicts C being compromised. This case fails.
+- **A compromised:** B is healthy. B's statement is then true, so A and E share a state, and E is compromised. D's statement reduces to "C is compromised", so D and C are opposite.
+  - If C is healthy, D is compromised and the compromised set is A, D, E. That is exactly three, so C's statement is true, which is consistent.
+  - If C is compromised, D is healthy and the compromised set is A, C, E. That is exactly three, so C's statement would be true, which contradicts C being compromised.
+
+Only the first sub-case works, so there is exactly one consistent assignment.

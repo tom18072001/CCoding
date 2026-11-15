@@ -1,0 +1,7 @@
+I wrote `answer.json` in the repository root. I generated it with a script that starts the alphabetically smallest ready service each time.
+
+- **Startup order:** 18 services can start, beginning with `cache`, `db-catalog`, `db-orders` and `db-users`. `notifier` is last, after `templates`.
+- **Blocked:** `admin-ui`, `etl`, `reporting` and `warehouse`.
+- **Cycle members:** `etl`, `reporting` and `warehouse`, which depend on each other in a loop (`reporting` → `warehouse` → `etl` → `reporting`). `admin-ui` is blocked only because it depends on `reporting`; it isn't part of the cycle.
+
+I didn't run any further checks on the file beyond printing it.

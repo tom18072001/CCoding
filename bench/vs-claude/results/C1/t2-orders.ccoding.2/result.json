@@ -1,0 +1,61 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261101-182144-be5",
+  "wallSec": 139,
+  "wallSecHarness": 150,
+  "costUsd": 0.7922576,
+  "tokens": {
+   "input": 40,
+   "output": 21496,
+   "cacheRead": 549219,
+   "cacheWrite": 81568
+  },
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "Sửa lỗi tiền tệ: #1 làm tròn xu, #2 phân bổ giảm giá, #6 thuế trên net"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "Sửa lỗi khuyến mãi và tồn kho: #3 mua X tặng Y, #4 hạn endsAt, #5 giữ chỗ kho"
+   }
+  ],
+  "workdir": "/home/claude/tom18072001/ccoding/workspaces/b-c1-t2-2/wt-T-20261101-182144-be5",
+  "branch": "ccoding/t-20261101-182144-be5"
+ },
+ "task": "t2-orders",
+ "system": "ccoding",
+ "rep": 2,
+ "key": "t2-orders.ccoding.2",
+ "env": "cloud",
+ "startedAt": "2026-11-01T11:21:44.385Z",
+ "finishedAt": "2026-11-01T11:24:14.942Z",
+ "grade": {
+  "hidden": {
+   "pass": 60,
+   "fail": 0,
+   "total": 60,
+   "failed": [],
+   "ms": 193,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 21,
+   "fail": 0,
+   "total": 21
+  },
+  "changed": [
+   "~src/cart.js",
+   "~src/checkout.js",
+   "~src/money.js",
+   "~src/promotions.js",
+   "+test/money-checkout.regression.test.js",
+   "+test/promotions-cart.regression.test.js"
+  ]
+ },
+ "audit": []
+}

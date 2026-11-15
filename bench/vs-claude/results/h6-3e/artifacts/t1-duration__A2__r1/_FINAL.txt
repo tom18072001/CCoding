@@ -1,0 +1,11 @@
+`src/duration.js` now implements `parseDuration` and `formatDuration` per SPEC.md. `npm test` passes: 10 tests, 0 failures, including the original three and the edge-case tests I added to `test/duration.test.js`.
+
+- **Parsing:** I used exact BigInt decimal arithmetic. Values like `"1.0005s"` therefore round to the correct millisecond without floating-point error. The numeric `-0` case returns `0`.
+- **`largest` in `formatDuration`:** it rounds the remainder into the last kept unit and carries upward. For example, `6d 23h 59m 31s` with `largest: 2` gives `1w`.
+- **Added tests:** they cover rounding and signs, ISO forms (including the comma decimal), a long list of invalid inputs, the exact error messages, `largest` carry cases, `long` style, bad `style`/`largest` values, and the parse-after-format round-trip.
+
+The new tests only encode my own reading of the spec, not the hidden suite.
+
+I made two choices the spec leaves open. `formatDuration` accepts `options` as `undefined` or an object, and throws `TypeError` for `null` or a non-object. `largest: null` is rejected rather than treated as unset.
+
+I haven't committed anything.

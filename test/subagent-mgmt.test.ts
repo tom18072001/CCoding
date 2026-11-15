@@ -14,6 +14,7 @@ import { executeTool, toolsFor } from '../src/tools/workspace.js';
 import { cliTools } from '../src/orchestrator.js';
 import { ClaudeStreamParser } from '../src/runtimes/claude-cli.js';
 import { subtaskHistory } from '../src/estimate.js';
+import { closeServer } from './helpers.js';
 
 // Quản lý sub-agent (đợt 1/11): giao việc theo năng lực công cụ, git chỉ đọc cho vai trò không có shell,
 // giới hạn khảo sát + giữ lệnh shell trong worktree cho claude-cli, baseline song song với lập kế hoạch, ước tính theo runtime.
@@ -98,7 +99,7 @@ test('claude-guard: shell chỉ git đọc cho vai trò không có quyền chạ
   const root = path.resolve('workspaces/nd57/wt-demo');
   const cfg: GuardConfig = { root, deny: [], allowGitCommit: true, shell: 'git-read' };
   assert.equal(guardDecision({ tool_name: 'Bash', tool_input: { command: 'git log --oneline -20' } }, cfg), undefined);
-  assert.match(guardDecision({ tool_name: 'Bash', tool_input: { command: 'npm test' } }, cfg) ?? '', /lệnh CHỈ ĐỌC/);
+  assert.match(guardDecision({ tool_name: 'Bash', tool_input: { command: 'npm test' } }, cfg) ?? '', /câu 1: `npm` không phải lệnh chỉ đọc/);
   assert.equal(guardDecision({ tool_name: 'Bash', tool_input: { command: 'npm test' } }, { ...cfg, shell: 'full' }), undefined);
   assert.match(guardDecision({ tool_name: 'Bash', tool_input: { command: 'cat /c/Users/admin/nd57-du-lieu-that/x.json' } }, { ...cfg, shell: 'full' }) ?? '', /ngoài thư mục làm việc/);
   assert.ok(guardDecision({ tool_name: 'Grep', tool_input: { path: 'C:/Users/admin' } }, cfg));
@@ -241,6 +242,7 @@ test('kế hoạch thấy năng lực công cụ từng người; kiến trúc s
     runtime: { ...base.runtime, default: 'auto', order: ['fake'] },
     runtimes: { fake: { type: 'openai-api', baseUrl: gw.url, tags: 'none', local: false } },
     models: { fake: { opus: ['m-ok'], sonnet: ['m-ok'], haiku: ['m-ok'] } },
+    lanes: { ...base.lanes, single: { ...base.lanes.single, enabled: false } }, // các test này kiểm luồng multi-agent: tắt làn đơn tự chọn
     herdr: { ...base.herdr, notify: false, agentPanes: false },
   });
   try {
@@ -263,7 +265,7 @@ test('kế hoạch thấy năng lực công cụ từng người; kiến trúc s
     assert.ok(iBase >= 0 && iPlan >= 0 && iBase < iPlan, `baseline ${iBase} trước kế hoạch ${iPlan}`);
     assert.equal(done.projectChecks?.baseline?.[0].ok, true);
   } finally {
-    gw.srv.close();
+    await closeServer(gw.srv);
     fs.rmSync(dataDir, { recursive: true, force: true });
     fs.rmSync(ws, { recursive: true, force: true });
   }

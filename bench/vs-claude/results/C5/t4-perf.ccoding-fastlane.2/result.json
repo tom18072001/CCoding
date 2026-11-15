@@ -1,0 +1,59 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261102-111544-1fa",
+  "wallSec": 134,
+  "wallSecHarness": 135,
+  "costUsd": 0.5600217,
+  "tokens": {
+   "input": 34,
+   "output": 21809,
+   "cacheRead": 500945,
+   "cacheWrite": 72052
+  },
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "Viết lại buildReport thành O(n) bằng Map, giữ nguyên kết quả"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "Bộ test đối chiếu với bản cũ (legacy)"
+   }
+  ],
+  "workdir": "/home/claude/ccoding-dev/workspaces/b-c5-t4-fastla-2/wt-T-20261102-111544-1fa",
+  "branch": "ccoding/t-20261102-111544-1fa"
+ },
+ "task": "t4-perf",
+ "system": "ccoding-fastlane",
+ "rep": 2,
+ "key": "t4-perf.ccoding-fastlane.2",
+ "env": "cloud",
+ "startedAt": "2026-11-02T04:15:44.857Z",
+ "finishedAt": "2026-11-02T04:18:05.222Z",
+ "grade": {
+  "hidden": {
+   "pass": 19,
+   "fail": 0,
+   "total": 19,
+   "failed": [],
+   "ms": 4698,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 83,
+   "fail": 0,
+   "total": 83
+  },
+  "changed": [
+   "~src/report.js",
+   "+test/fixtures/legacy-report.js",
+   "+test/report.compare.test.js"
+  ],
+  "perfMs": 310
+ },
+ "audit": []
+}

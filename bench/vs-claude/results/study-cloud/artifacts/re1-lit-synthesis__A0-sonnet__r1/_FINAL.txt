@@ -1,0 +1,6 @@
+I wrote `answer.json` and `REVIEW.md` at the repository root. `REVIEW.md` is about 490 words, inside the 300–500 range.
+
+- **q1:** P4 (LogGraphT) has the highest F1 on the full HDFS-X split, at 0.962. P3's RT-AD scores 0.948 and P1's TF-LAD scores 0.931. P2's 0.971 is on HDFS-X-small, which P6 says is not comparable to the full split, so I excluded it.
+- **q2:** P5 reports results with less than 1% labeled data, 0.5%, on BGL-X.
+- **q3:** The corpus does not contain this. P4 gives only inference latency (3.1 ms per session on one A100) and no energy figure, so `not_in_corpus` is true.
+- **q4:** P1 and P3 disagree. P1 says template parsing is necessary, and P3 says it is optional.

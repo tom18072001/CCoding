@@ -1,0 +1,9 @@
+[
+  {"line":11,"type":"hardcoded-secret","severity":"high","fix":"Load the JWT signing secret from an environment variable or secret manager, and rotate the exposed value."},
+  {"line":30,"type":"sqli","severity":"critical","fix":"Use a bound parameter, e.g. db.query(\"SELECT id, title FROM tickets WHERE title LIKE $1\", ['%' + q + '%'])."},
+  {"line":42,"type":"path-traversal","severity":"high","fix":"Reduce req.params.name with path.basename (or resolve and verify the result stays inside REPORT_DIR) before calling sendFile."},
+  {"line":58,"type":"weak-crypto","severity":"medium","fix":"Hash passwords with a salted, slow algorithm such as bcrypt, scrypt or argon2 instead of MD5."},
+  {"line":65,"type":"ssrf","severity":"high","fix":"Validate req.body.url against an allow-list of hosts and schemes and block private, loopback and link-local addresses before fetching."},
+  {"line":71,"type":"missing-authz","severity":"high","fix":"Restrict the DELETE to the ticket owner or an admin, e.g. add AND owner_id = $2 or apply requireAdmin."},
+  {"line":84,"type":"command-injection","severity":"critical","fix":"Replace exec with execFile and an argument array, and validate req.body.format against a fixed allow-list."}
+]

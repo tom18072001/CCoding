@@ -1,0 +1,73 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261102-110524-5ed",
+  "wallSec": 188,
+  "wallSecHarness": 195,
+  "costUsd": 1.1737086999999997,
+  "tokens": {
+   "input": 70,
+   "output": 51038,
+   "cacheRead": 1145929,
+   "cacheWrite": 135829
+  },
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "src/parse.js: parseLine (JSON, logfmt, @t)"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "src/query.js: compile + QuerySyntaxError"
+   },
+   {
+    "id": "S3",
+    "status": "done",
+    "title": "src/agg.js: aggregate"
+   },
+   {
+    "id": "S4",
+    "status": "done",
+    "title": "bin/logq.js: CLI"
+   }
+  ],
+  "workdir": "/home/claude/ccoding-dev/workspaces/b-c5-t5-fastla-1/wt-T-20261102-110524-5ed",
+  "branch": "ccoding/t-20261102-110524-5ed"
+ },
+ "task": "t5-logq",
+ "system": "ccoding-fastlane",
+ "rep": 1,
+ "key": "t5-logq.ccoding-fastlane.1",
+ "env": "cloud",
+ "startedAt": "2026-11-02T04:05:24.396Z",
+ "finishedAt": "2026-11-02T04:08:41.598Z",
+ "grade": {
+  "hidden": {
+   "pass": 146,
+   "fail": 0,
+   "total": 146,
+   "failed": [],
+   "ms": 943,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 48,
+   "fail": 0,
+   "total": 48
+  },
+  "changed": [
+   "~bin/logq.js",
+   "~src/agg.js",
+   "~src/parse.js",
+   "~src/query.js",
+   "+test/agg.test.js",
+   "+test/cli.test.js",
+   "+test/parse.test.js",
+   "+test/query.test.js"
+  ]
+ },
+ "audit": []
+}

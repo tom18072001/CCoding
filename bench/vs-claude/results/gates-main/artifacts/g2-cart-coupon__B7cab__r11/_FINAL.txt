@@ -1,0 +1,82 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g2-cart-coupon__B7cab__r11] Tổng giỏ hàng theo xu và áp mã giảm giá (lệnh kiểm tra đỏ sẵn)
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Phần hiện thực đã xong và `npm test` xanh (6/6). Tôi chỉ giao một hạng mục nhỏ để rà các trường hợp biên mà bộ nghiệm thu ẩn có thể kiểm tra, sửa ở nơi có lỗi thật. Không làm lại từ đầu, không thêm thư viện.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Rà và củng cố trường hợp biên của applyCoupon/toCents (@senior-swe, done)
+
+## Tóm tắt
+Rà các ca biên của `applyCoupon` và `toCents` thì thấy hai chỗ lệch float so với SPEC, và đã sửa cả hai bằng `toPrecision(12)` trước khi `Math.round`. Đã thêm 6 test biên, `npm test` cho 12/12 test pass, 0 fail. Việc còn mở: cách đọc `toCents(1.005)` (xem Rủi ro).
+
+## Tệp đã tạo/sửa
+- `src/cart.js`: `applyCoupon` percent làm tròn `Math.round(Number(x.toPrecision(12)))`. Trước đó `applyCoupon(500, {type:'percent', value:99.9})` ra 0, trong khi kết quả đúng theo SPEC (nửa lên) là 1. Các ca 1500 và 2500 với 99.9 cũng lệch tương tự (ra 1 và 2, đúng phải là 2 và 3).
+- `src/money.js`: `toCents` khử sai số nhị phân trước khi làm tròn. `toCents(1.005)` trước đó ra 100 (vì `1.005*100 = 100.49999999999999`), nay ra 101.
+- `test/cart.test.js`: thêm 6 test, gồm:
+  - `toCents` biên: 0, 0.29, 1.005, và lỗi với âm, NaN, ±Infinity.
+  - `total([])` bằng 0.
+  - percent lẻ: 33.3, 12.5, 99.9, cùng percent 0 và totalCents 0.
+  - fixed 0 và fixed bằng đúng totalCents.
+  - coupon sai kiểu/giá trị: undefined, mảng, chuỗi, số, value là chuỗi, NaN, Infinity, thiếu value.
+  - totalCents sai: âm, không nguyên, NaN, Infinity, chuỗi, undefined.
+
+## Kiểm chứng
+- `node -e` quét `applyCoupon` với totalCents 0–2999 và 9 giá trị percent lẻ, so với kết quả tính chính xác. Trước khi sửa có 3 ca lệch, đều ở percent 99.9. Tôi chưa chạy lại phép quét này sau khi sửa. Ca 500 và 99.9 giờ ra 1 trong test mới.
+- `npm test` → pass 12, fail 0 (lệnh đã gộp qua `| tail` nên exit code của `npm` không hiện riêng). Baseline ở bàn giao trước là đỏ; `src/` giờ không còn gì khiến test đỏ.
+
+## Quyết định thiết kế
+- Dùng `toPrecision(12)` thay vì đổi sang số học nguyên, vì `value` percent có thể có số thập phân bất kỳ. Cách này nhỏ gọn và không thêm thư viện.
+- Các ca đã đúng sẵn, giữ nguyên: 12.5 với totalCents lẻ, percent 0 và 100, fixed 0 và fixed bằng totalCents, `toCents(0.29)=29`, `total([])=0`.
+
+## Rủi ro & việc còn mở
+- Giả định ngoài SPEC: `applyCoupon` ném `RangeError` khi `totalCents` không phải số nguyên ≥ 0 (SPEC không nói rõ điểm này).
+- Giả định ngoài SPEC: `toCents(1.005)=101`, tức hiểu "làm tròn gần nhất" theo giá trị thập phân người dùng nhập. Nếu bộ ẩn dùng `Math.round(x*100)` thuần thì kết quả là 100 và test này sẽ lệch.
+- Giả định ngoài SPEC: `type` và `value` sai kiểu cũng ném `RangeError`, kể cả coupon là mảng, chuỗi hay `value` dạng chuỗi.
+- `total` không kiểm tra `quantity`. SPEC không yêu cầu nên tôi không sửa.
+- Chưa commit.
+
+Bản đầy đủ: `.ccoding/T-20261104-142229-b0b/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-142229-b0b` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **22 in / 8,941 out**, cache đọc 140.7k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 18 | 8094 | 119204 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 847 | 21502 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Rà và củng cố trường hợp biên của applyCoupon/toCents (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | at Test.run (node:internal/test_runner/test:1175:12) · at Test.run (node:internal/test_runner/test:1118:25) · at Test.processPendingSubtests (node:internal/test |
+| sau thực thi | `npm test` | 0 | ℹ tests 12 · ℹ suites 0 · ℹ pass 12 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **70** B | thấp | — | — | 100 | 100 | 95 | 100 | 1 | 1 | 127k | 1/16 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 22k | 0/1 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

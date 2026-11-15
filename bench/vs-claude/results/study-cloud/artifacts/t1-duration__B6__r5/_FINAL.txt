@@ -1,0 +1,119 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t1-duration__B6__r5] Duration parse/format theo đặc tả, nhiều trường hợp biên
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Tách `src/duration.js` thành 2 phần độc lập chạy song song: parse (`src/parse.js`) và format (`src/format.js`). `src/duration.js` chỉ re-export hai hàm. Mỗi người tự viết test biên vào tệp test riêng. Hợp đồng theo SPEC.md; CCoding sẽ tự chạy `npm test` sau khi gộp.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — parseDuration + tệp export src/duration.js (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã hiện thực `parseDuration` trong `src/parse.js` theo SPEC, và `src/duration.js` giờ chỉ re-export từ `parse.js` và `format.js`. `node --test test/parse.test.js` cho 8 test pass, 0 fail. `npm test` toàn bộ chưa chạy, vì `src/format.js` của S2 chưa có trong lượt này nên `require('./format')` sẽ lỗi cho đến khi S2 gộp vào.
+
+## Tệp đã tạo/sửa
+- `src/parse.js` · mới, export `{ parseDuration }`.
+- `src/duration.js` · ghi lại thành re-export `parseDuration` và `formatDuration`.
+- `test/parse.test.js` · mới, 8 test biên. Tôi không sửa `test/duration.test.js` hay `format.test.js`.
+
+## Kiểm chứng
+- `node --test test/parse.test.js` → tests 8, pass 8, fail 0. Exit code không đo trực tiếp vì lệnh có pipe qua `tail`. Kết quả pass/fail lấy từ output của test runner.
+- `npm test` → chưa chạy (lý do ở Tóm tắt).
+
+## Quyết định thiết kế
+- **Số học:** dùng BigInt với phân số thập phân chính xác, không dùng float. Nhờ vậy `0.5ms`, `1.0005s`, `1.0015s` làm tròn đúng. Làm tròn half-away-from-zero trên giá trị tuyệt đối rồi mới áp dấu, và `-0` trả về `0`.
+- **Đầu vào kiểu number:** làm tròn bằng `Math.round(Math.abs(x))`. Ca `0.49999999999999994` ra 0 đúng.
+- **Thông báo lỗi:** `JSON.stringify` có thể ném lỗi hoặc trả `undefined` (với `BigInt`, `Symbol`, `undefined`). `fail()` bắt các trường hợp đó nên vẫn ném `TypeError('Invalid duration: ...')`.
+- **Cách phân tích chuỗi:**
+  - Bỏ khoảng trắng đầu/cuối, tách dấu, rồi rẽ nhánh: ISO (bắt đầu bằng `P`), số thuần, hoặc dạng đơn vị.
+  - Dạng đơn vị dùng regex sticky từng thành phần, tra bí danh, và kiểm tra thứ tự giảm dần để chặn lặp.
+  - ISO dùng regex riêng cho `P<n>W` và cho `P[nD][T…]`, có kiểm tra `P` rỗng và `T` rỗng.
+
+## Rủi ro & việc còn mở
+- **Giả định về khoảng trắng sau dấu:** SPEC chỉ nói rõ cho dạng đơn vị (`"- 5s"` hợp lệ). Tôi áp dụng cho cả ISO, nên `"- PT1H"` được chấp nhận. Nếu bộ nghiệm thu coi đó là lỗi thì phải sửa.
+- **Phụ thuộc S2:** cần `src/format.js` export `{ formatDuration }` thì `npm test` mới chạy được.
+
+Bản đầy đủ: `.ccoding/T-20261102-204425-9c9/outputs/dev-S1-senior-swe.md`
+
+### S2 — formatDuration (+ test biên, property roundtrip) (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã tạo `src/format.js` (`formatDuration`) và `test/format.test.js`. `node --test test/format.test.js` cho 8/8 pass. Toàn bộ `npm test` cho 19/19 pass, tức là phần parse của S1 đã có và test roundtrip chạy thật, không bị skip.
+
+## Tệp đã tạo/sửa
+- `src/format.js` (mới, CommonJS, export `{ formatDuration }`)
+  - Kiểm tra `ms` là number hữu hạn, nếu không ném `TypeError('Invalid duration: ' + JSON.stringify(ms))`.
+  - Kiểm tra `style` (`short` hoặc `long`) và `largest` (số nguyên ≥ 1), sai thì ném `TypeError`.
+  - Làm tròn half-away-from-zero trên trị tuyệt đối. Giá trị làm tròn về 0 không có dấu.
+  - Với `largest`, tôi làm tròn số ms tuyệt đối về bội của đơn vị giữ cuối cùng, rồi phân rã lại. Cách này tự xử lý nhớ nhiều tầng, ví dụ `6d 23h 59m 31s` với `largest: 2` ra `1w`.
+- `test/format.test.js` (mới), gồm các nhóm:
+  - cơ bản short/long, số ít/nhiều;
+  - âm và làm tròn (`-0.4` → `0ms`, `-1500` ở dạng long);
+  - biên `largest`: 1, lớn hơn số đơn vị, nhớ nhiều tầng (`59m 59.5s`), đơn vị 0 ở giữa (`1d 5s` với `largest: 3` → `1d`);
+  - `largest` không hợp lệ (0, 1.5, `'2'`, NaN, -1, null, Infinity), `style` sai, `ms` không hợp lệ;
+  - roundtrip `parseDuration(formatDuration(x)) === parseDuration(x)` cho cả short và long. Test này tự skip nếu `src/duration.js` chưa có `parseDuration`.
+
+Tôi không sửa `src/duration.js` hay `src/parse.js`.
+
+## Hợp đồng API
+Không áp dụng. Đây là hàm thư viện, không có endpoint. Hàm ném `TypeError` khi `ms` không hợp lệ, `style` khác `short`/`long`, hoặc `largest` không phải số nguyên ≥ 1.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `node --test test/format.test.js` → exit 0, pass 8, fail 0, skipped 0.
+- `npm test` → exit 0, tests 19, pass 19, fail 0. Baseline trước đó là fail 3.
+- Lần chạy đầu có 1 test của tôi sai kỳ vọng (`largest: 4` thay vì `3` ở ca `D + 30s`). Tôi đã sửa test, code không đổi.
+
+## Việc còn lại
+Không có biến môi trường mới. Không còn phần nào chưa làm trong S2.
+
+Bản đầy đủ: `.ccoding/T-20261102-204425-9c9/outputs/dev-S2-backend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-204425-9c9` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **24 in / 20.8k out**, cache đọc 155.0k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | 10 | 7404 | 75684 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 8 | 10898 | 56398 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 2094 | 20715 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 365 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 parseDuration + tệp export src/duration.js (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 formatDuration (+ test biên, property roundtrip) (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 3 · # suites 0 · # pass 0 · # fail 3 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 19 · # suites 0 · # pass 19 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | **92** A | — | 90 | 87 | 100 | 1 | 1 | 83k | 1/6 |
+| Senior Software Engineer (@senior-swe) | dev | **96** A | — | 100 | 89 | 100 | 1 | 1 | 67k | 1/7 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 23k | 0/1 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

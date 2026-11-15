@@ -1,0 +1,130 @@
+TAP version 13
+# Subtest: nhật ký thao tác
+ok 1 - nhật ký thao tác
+  ---
+  duration_ms: 80.858355
+  type: 'test'
+  ...
+# Subtest: thiếu hoặc sai X-User → 401 trên mọi route /tasks… và /audit
+ok 2 - thiếu hoặc sai X-User → 401 trên mọi route /tasks… và /audit
+  ---
+  duration_ms: 67.27526
+  type: 'test'
+  ...
+# Subtest: 401 đứng trước 400 tham số truy vấn
+ok 3 - 401 đứng trước 400 tham số truy vấn
+  ---
+  duration_ms: 8.396024
+  type: 'test'
+  ...
+# Subtest: member chỉ thấy nhóm mình; nhiệm vụ nhóm khác → 404
+ok 4 - member chỉ thấy nhóm mình; nhiệm vụ nhóm khác → 404
+  ---
+  duration_ms: 18.810903
+  type: 'test'
+  ...
+# Subtest: member: không tạo, không xóa; chỉ sửa status nhiệm vụ của mình
+ok 5 - member: không tạo, không xóa; chỉ sửa status nhiệm vụ của mình
+  ---
+  duration_ms: 18.236643
+  type: 'test'
+  ...
+# Subtest: manager: đọc mọi nhóm, tạo/sửa chỉ nhóm mình, không xóa
+ok 6 - manager: đọc mọi nhóm, tạo/sửa chỉ nhóm mình, không xóa
+  ---
+  duration_ms: 19.534448
+  type: 'test'
+  ...
+# Subtest: admin làm được mọi việc
+ok 7 - admin làm được mọi việc
+  ---
+  duration_ms: 7.907793
+  type: 'test'
+  ...
+# Subtest: header HTTP, BOM, CRLF, tiêu đề
+ok 8 - header HTTP, BOM, CRLF, tiêu đề
+  ---
+  duration_ms: 37.97116
+  type: 'test'
+  ...
+# Subtest: nội dung: quote RFC 4180, null rỗng, chống công thức
+ok 9 - nội dung: quote RFC 4180, null rỗng, chống công thức
+  ---
+  duration_ms: 2.841279
+  type: 'test'
+  ...
+# Subtest: ô CSV
+ok 10 - ô CSV
+  ---
+  duration_ms: 0.186672
+  type: 'test'
+  ...
+# Subtest: quyền và tham số
+ok 11 - quyền và tham số
+  ---
+  duration_ms: 10.966187
+  type: 'test'
+  ...
+# Subtest: dạng kết quả và mặc định
+ok 12 - dạng kết quả và mặc định
+  ---
+  duration_ms: 38.309876
+  type: 'test'
+  ...
+# Subtest: lọc status, assignee, team, dueBefore
+ok 13 - lọc status, assignee, team, dueBefore
+  ---
+  duration_ms: 14.613086
+  type: 'test'
+  ...
+# Subtest: tìm q không phân biệt hoa thường và dấu
+ok 14 - tìm q không phân biệt hoa thường và dấu
+  ---
+  duration_ms: 8.665978
+  type: 'test'
+  ...
+# Subtest: sắp xếp
+ok 15 - sắp xếp
+  ---
+  duration_ms: 15.23858
+  type: 'test'
+  ...
+# Subtest: phân trang
+ok 16 - phân trang
+  ---
+  duration_ms: 3.316696
+  type: 'test'
+  ...
+# Subtest: tham số không hợp lệ → 400 INVALID_QUERY với field đầu tiên trên URL
+ok 17 - tham số không hợp lệ → 400 INVALID_QUERY với field đầu tiên trên URL
+  ---
+  duration_ms: 24.960864
+  type: 'test'
+  ...
+# Subtest: ngày nhuận hợp lệ
+ok 18 - ngày nhuận hợp lệ
+  ---
+  duration_ms: 6.964926
+  type: 'test'
+  ...
+# Subtest: CRUD cơ bản
+ok 19 - CRUD cơ bản
+  ---
+  duration_ms: 79.500496
+  type: 'test'
+  ...
+# Subtest: validate
+ok 20 - validate
+  ---
+  duration_ms: 14.389147
+  type: 'test'
+  ...
+1..20
+# tests 20
+# suites 0
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 869.852961

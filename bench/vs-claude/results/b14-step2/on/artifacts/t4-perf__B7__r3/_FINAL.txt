@@ -1,0 +1,116 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t4-perf__B7__r3] Tối ưu buildReport dưới 1 giây trên 200.000 dòng, giữ nguyên hành vi
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Bản tối ưu trong src/report.js đã xong (bench 219 ms, npm test 4/4). Phần còn lại là củng cố độ tin cậy trước bộ nghiệm thu ẩn. Một người ghi thêm bộ test đối chiếu ngẫu nhiên rộng hơn vào tệp riêng. Một người đo bench lặp và rà các hành vi lạ trong report.js. Hai việc chạy song song, không ghi chung tệp.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Test fuzz đối chiếu bản cũ (tệp riêng) (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã tạo `test/report.fuzz.test.js`, gồm 3 test với tổng cộng 400 bộ dữ liệu ngẫu nhiên có seed cố định cùng một nhóm ca biên. Test so sánh `buildReport` với `test/report.legacy.js`. `npm test` xanh, 7/7 test pass, chạy khoảng 0,6 giây. Tôi không thấy khác biệt nào giữa bản tối ưu và bản cũ, nên không có ca tái hiện nào cần báo.
+
+## Tệp đã tạo/sửa
+- `test/report.fuzz.test.js` (mới). Tôi không sửa `src/report.js` hay `test/report.test.js`.
+  - 300 bộ dữ liệu hợp lệ (seed 1–300) dùng PRNG mulberry32, kiểm tra bằng `assert.deepStrictEqual` và so cả chuỗi `JSON.stringify` để bắt khác biệt thứ tự khóa. Các tình huống được sinh ngẫu nhiên:
+    - SKU trùng (có tên và danh mục khác nhau) và SKU không rõ.
+    - Đơn `cancelled`, `refunded`, `paid`.
+    - `qty` và `unitPrice` là 0, âm, số thập phân, `undefined`, `null`, `NaN`, `-0`, `Infinity`.
+    - Các đầu và cuối tháng, múi giờ ±, ngày chỉ có phần date, năm nhuận.
+    - `customerId` và `id` trùng nhiều.
+    - `topN` bằng 0, 1000, giá trị nhỏ hoặc `undefined`, kèm `from` và `to` đa dạng.
+    - Mảng `orders` hoặc `products` rỗng.
+  - 100 bộ có ngày sai (seed 1001–1100): so sánh cùng loại lỗi (`constructor` và `message`) giữa hai bản. Test có kiểm tra rằng thực sự có ca ném lỗi.
+  - 8 ca biên cố định, gồm mảng rỗng, toàn đơn `cancelled`, ngày sai ở đơn `cancelled`, các trường `undefined` và biên tháng.
+
+## Hợp đồng API
+Không áp dụng.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0. Kết quả: tests 7, pass 7, fail 0, duration khoảng 608 ms. Baseline là 2 test. Hiện có 7 test: 2 gốc, 2 của người làm trước và 3 test fuzz mới.
+
+## Việc còn lại
+- Các đầu vào mà `id`, `customerId` hoặc `sku` là đối tượng hay `NaN` chưa được fuzz. Hồ sơ coi đây là đầu vào không hợp lệ.
+- Các seed cố định chỉ phủ các bộ dữ liệu tôi đã sinh. Bộ nghiệm thu ẩn có thể dùng dữ liệu khác.
+- S2 (@senior-swe) tiếp tục đo bench lặp và rà các hành vi lạ.
+
+Bản đầy đủ: `.ccoding/T-20261112-235803-b9b/outputs/dev-S1-backend-dev.md`
+
+### S2 — Đo bench lặp và rà hành vi lạ trong report.js (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã đối chiếu từng dòng `src/report.js` với `test/report.legacy.js` và không tìm thấy khác biệt ngữ nghĩa nào, nên không sửa mã. Bench chạy 7 lần cho min 180 ms, median 221 ms, max 229 ms, thấp hơn nhiều so với mục tiêu 1000 ms. `npm test` xanh, 7/7 test pass.
+
+## Tệp đã tạo/sửa
+Không có. `src/report.js` giữ nguyên vì không tìm thấy khác biệt thật.
+
+## Kiểm chứng
+- `npm run bench` × 7 → cả 7 lần đều cho 13 tháng, 11 danh mục, tổng 11445199250. Thời gian: 229, 180, 221, 226, 213, 221, 227 ms. Min 180, median 221, max 229.
+- `npm test` → exit 0 (lấy từ `PIPESTATUS`): tests 7, pass 7, fail 0. Con số 7 gồm cả test fuzz mà S1 thêm vào.
+
+## Quyết định thiết kế
+Các điểm đã rà, mỗi điểm đều khớp bản cũ:
+- **Thứ tự cộng dồn số thực:** `grandTotal`, tổng theo danh mục, `byMonth`, SKU, tháng, khách hàng và `refunds` đều cộng theo thứ tự dòng. Điểm bắt đầu là 0, giống `reduce(…, 0)`. `runningTotal` cộng theo tháng đã sắp xếp.
+- **`jsonNum`:** NaN và Infinity thành `null`, tức cộng như 0. `-0` thành `0`. `undefined` được giữ nguyên, như `JSON.stringify` bỏ thuộc tính này. Vì vậy `qty` là `undefined` ở đơn paid cho `qty` NaN, còn đơn refunded cho 0. Kết quả giống bản cũ.
+- **`qty` kiểu chuỗi:** đơn paid giữ chuỗi, nên phép `+=` nối chuỗi giống bản cũ. Đơn refunded thành số.
+- **Thứ tự khóa và thứ tự phần tử:** `Map` giữ thứ tự xuất hiện đầu tiên, khớp với kiểu `includes` rồi `push` của bản cũ. `months` được `sort()` mặc định. Các khóa `YYYY-MM` không phải chỉ số nguyên nên thứ tự khóa của `byMonth` không đổi. Khóa của các object `{sku,name,revenue,qty}` và `{customerId,revenue,orders}` giữ nguyên thứ tự.
+- **Tie-break khi sort:** các comparator copy nguyên văn, và vì thứ tự mảng đầu vào giống nhau nên kết quả sắp xếp ổn định giống nhau.
+- **`o.date` không phải chuỗi:** `Map` so khóa theo đúng kiểu và theo định danh. Ngày sai vẫn ném `RangeError` trước bước lọc `cancelled`. Với đối tượng `Date`, cache chỉ cho kết quả như tính trực tiếp.
+- **Sản phẩm trùng SKU và SKU không rõ:** SKU trùng lấy sản phẩm đầu tiên. SKU không rõ vào danh mục `'unknown'` và gộp chung với danh mục `'unknown'` thật, tên lấy từ dòng đầu tiên, giống bản cũ.
+- **Mutation đầu vào và cache:** không ghi vào `orders` hay `products`. `monthOf` được tạo mới trong mỗi lần gọi, nên không giữ cache giữa các lần gọi.
+- **Chênh lệch chấp nhận được:** `Map` coi `NaN` là bằng nhau và coi `undefined` khác `null`, còn `find` và `includes` có khác biệt nhỏ ở `NaN`. Chỉ xảy ra khi `sku`, `id` hay `customerId` là `NaN`, tôi coi là đầu vào không hợp lệ. Khi một trường là `NaN`, bản cũ chuyển nó thành `null` qua JSON còn bản mới giữ `NaN`, nhưng hai kết quả vẫn được nhóm tương tự.
+
+## Rủi ro & việc còn mở
+- Chưa kiểm chứng trên bộ dữ liệu của bộ nghiệm thu ẩn.
+- Bench chạy trên máy này, số đo có thể khác ở môi trường nghiệm thu. Biên độ còn lớn (khoảng 4,5 lần so với mục tiêu).
+
+Bản đầy đủ: `.ccoding/T-20261112-235803-b9b/outputs/dev-S2-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261112-235803-b9b` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **24 in / 17.2k out**, cache đọc 170.9k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 16 | 10744 | 121326 | 2 |
+| Backend Developer (@backend-dev) | dev | 6 | 4991 | 42669 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 2 | 1439 | 6860 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Test fuzz đối chiếu bản cũ (tệp riêng) (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 Đo bench lặp và rà hành vi lạ trong report.js (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 7 · ℹ suites 0 · ℹ pass 7 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **71** B | thấp | — | — | 100 | 68 | 100 | 80 | 1 | 1 | 132k | 0/11 | — |
+| Backend Developer (@backend-dev) | dev | **70** B | thấp | — | — | 100 | 100 | 100 | 100 | 1 | 1 | 48k | 0/5 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 8k | — | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

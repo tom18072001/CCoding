@@ -1,0 +1,33 @@
+{
+ "startup_order": [
+  "cache",
+  "db-catalog",
+  "db-orders",
+  "db-users",
+  "auth",
+  "elastic",
+  "fraud-history",
+  "queue",
+  "feature-store",
+  "ml-scorer",
+  "fraud",
+  "payments",
+  "orders",
+  "search",
+  "catalog",
+  "gateway",
+  "templates",
+  "notifier"
+ ],
+ "blocked": [
+  "admin-ui",
+  "etl",
+  "reporting",
+  "warehouse"
+ ],
+ "cycle_members": [
+  "etl",
+  "reporting",
+  "warehouse"
+ ]
+}

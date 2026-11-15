@@ -1,0 +1,80 @@
+# Báo cáo: `parseIisLog` (log IIS W3C → ECS) — T-20261102-123134-bd5
+
+## Tóm tắt
+`parseIisLog(text)` trong `src/iis.js` đã chạy được và làm đúng cả 5 quy tắc của đề bài. Export và định dạng ES module giữ nguyên, không thêm dependency. Trước khi sửa, `npm test` thoát với mã 1 (0/1 test qua). Sau khi sửa, `npm test` thoát với mã 0 (11/11 test qua), gồm test có sẵn và 10 test mới. Không còn blocker. Một việc chưa làm: chưa ai cố tình làm hỏng code để xem bộ test có báo đỏ không (kiểm bộ kiểm).
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Viết `parseIisLog` theo 5 quy tắc | `@data-engineer` | Đạt | Tệp `src/iis.js` (chỉ sửa tệp này). Reviewer đã đọc code và chạy `npm test`. Báo cáo: `.ccoding/T-20261102-123134-bd5/outputs/dev-S1-data-engineer.md` |
+| S2 | Bộ test theo từng quy tắc | `@backend-dev` | Đạt | Tệp `test/iis-rules.test.js` (mới, 10 test, dữ liệu giả). `npm test`: 11 pass / 0 fail, exit 0. Báo cáo: `.ccoding/T-20261102-123134-bd5/outputs/dev-S2-backend-dev.md` |
+
+Kết quả `npm test` do CCoding tự chạy, không qua agent:
+- Trước khi sửa: exit 1, `# tests 1 · # pass 0 · # fail 1`
+- Sau khi sửa: exit 0, `# tests 11 · # pass 11 · # fail 0`
+
+`git status` chỉ cho thấy `M src/iis.js` và `?? test/iis-rules.test.js`. Test có sẵn `test/basic.test.js` không bị đổi.
+
+## Quyết định
+- Việc nhỏ, chỉ đụng 3 tệp, nên không cần kiến trúc, BA hay cổng bảo vệ dữ liệu. Chia 2 hạng mục làm lần lượt vì dùng chung worktree.
+- Các giả định đã đặt tên và đã áp dụng:
+  - **A1:** dòng được tách bằng `/\r?\n/`, phần `\r` thừa ở cuối dòng bị bỏ, nên đọc được log CRLF của Windows.
+  - **A2:** `@timestamp` chỉ được tạo khi có đủ `date` và `time` (đều khác `-`) và ghép lại thành ngày hợp lệ.
+  - **A3:** không sinh object con rỗng.
+  - **A4:** `event.duration` = `time-taken` × 1e6, có làm tròn.
+- Thêm một quyết định ngoài đề bài: nếu `sc-status`, `s-port` hoặc `time-taken` không phải số thì bỏ key đó, thay vì ghi `NaN`.
+
+## Kết quả review
+- Reviewer kết luận **Đạt**, không có blocker hay major. Reviewer đã đọc `src/iis.js`, đối chiếu từng quy tắc và tự chạy lại `npm test`: 11/11, exit 0, không dùng pipe.
+- Giới hạn của review: reviewer chưa đọc chi tiết `test/iis-rules.test.js` và chưa kiểm bộ kiểm. Tôi đã xem lại danh sách 10 test: chúng khớp với các ca S2 báo cáo (dòng đầy đủ, kiểu number, `-`, nhiều `#Fields:`, directive khác/dòng trống, dòng trước `#Fields:`, sai số cột, field không biết, CRLF, chuỗi rỗng).
+
+## Việc còn mở & rủi ro
+- **Ghi nhận nhỏ khi đọc lại code:** dòng có số cột đúng nhưng mọi giá trị đều là `-` vẫn sinh ra một object rỗng `{}`. Đề bài không cấm điều này. Tôi giữ nguyên, nhưng phần xử lý phía sau nên biết.
+- **Trường hợp chưa có test:** giá trị số không hợp lệ, `date`/`time` sai định dạng, dòng `#Fields:` rỗng. Code đã xử lý các trường hợp này (bỏ key hoặc bỏ dòng), nhưng chưa có test nào kiểm chứng.
+- **Chưa kiểm bộ kiểm:** chưa có bằng chứng rằng bộ test sẽ báo đỏ khi code hỏng.
+- **Dữ liệu cá nhân:** `client.ip`, `user.name` và `user_agent.original` có thể là dữ liệu cá nhân. Hàm không che các trường này vì đề bài không yêu cầu. Nếu đưa log thật vào index thì cần che ở bước sau; `@security` quyết định cách che và thời hạn lưu giữ.
+- Chưa commit. Chưa push.
+
+## Bước tiếp theo
+Hai phần dưới đây là đề xuất tùy chọn, mỗi phần nên tách thành một nhiệm vụ riêng:
+1. **Bổ sung test biên và kiểm bộ kiểm** (`@qa-tester`, cỡ S): thêm test cho số không hợp lệ, `date`/`time` sai, dòng toàn `-`. Sau đó cố tình làm hỏng lần lượt từng quy tắc trong code tạm thời để xem test có báo đỏ không. Xong khi: `npm test` thoát mã 0, và có biên bản cho thấy mỗi lần làm hỏng một quy tắc đều có ít nhất một test fail.
+2. **Che dữ liệu cá nhân trước khi index** (`@security` + `@data-engineer`, cỡ S–M): chỉ làm nếu log thật sẽ được đưa vào ELK. Xong khi: có quy tắc che hoặc hash cho `client.ip` và `user.name`, có test, và có quy định thời hạn lưu giữ được duyệt.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-123134-bd5` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **28 in / 14.0k out**, cache đọc 149.6k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | 8 | 5175 | 54139 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 8 | 4846 | 40097 | 2 |
+| Data Engineer (@data-engineer) | dev | 6 | 2503 | 33555 | 1 |
+| QA Engineer (@qa-tester) | dev | 4 | 1038 | 19525 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 390 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-data-engineer.md` — S1 Viết parseIisLog (IIS W3C → ECS) trong src/iis.js (@data-engineer)
+- `outputs/dev-S2-backend-dev.md` — S2 Bộ test theo từng quy tắc của đề bài (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 1 · # suites 0 · # pass 0 · # fail 1 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 11 · # suites 0 · # pass 11 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | **91** A | 100 | 80 | 80 | 100 | 1 | 1 | 59k | 1/4 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | 100 | 100 | 100 | 100 | 0 | — | 45k | 0/2 |
+| Data Engineer (@data-engineer) | dev | **100** A | 100 | 100 | 100 | 100 | 1 | 1 | 36k | 0/4 |
+| QA Engineer (@qa-tester) | dev | **100** A | — | — | 100 | 100 | 0 | — | 21k | 0/1 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

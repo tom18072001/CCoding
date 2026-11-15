@@ -1,0 +1,17 @@
+**Stage 3: Self-review.** The brute force found exactly one consistent assignment, so `unique` is true. My hand analysis had a slip. In the case where A is healthy, I forgot that C is then compromised. That makes three compromised servers, so C's claim would be true, which is a contradiction. The code is right and the hand count was wrong.
+
+I checked the surviving assignment (A, D, E compromised; B, C healthy) against each statement:
+- **A** (compromised) says "B is compromised." B is healthy, so the statement is false, as it should be.
+- **B** (healthy) says "A and E are in the same state." Both are compromised, so it's true.
+- **C** (healthy) says "exactly three are compromised." A, D and E make three, so it's true.
+- **D** (compromised) says "E is healthy, or C is compromised." Both parts are false, so the statement is false.
+- **E** (compromised) says "A is healthy and D is compromised." A is not healthy, so it's false.
+
+The file has sorted letters and valid JSON.
+
+**Stage 4: Fix.** Nothing needs fixing. The only error was in my hand reasoning, and the written file is correct.
+
+**Final report:** `answer.json` is written in the repo root:
+```json
+{"healthy": ["B", "C"], "compromised": ["A", "D", "E"], "unique": true}
+```

@@ -1,0 +1,15 @@
+{
+  "id": "c5-tickets-api",
+  "category": "coding",
+  "size": 1,
+  "sizeBasis": "functions: GET /tickets trong handler.js (một điểm vào)",
+  "sizeLegacy": 5,
+  "title": "Filtering, sorting and cursor pagination for a tickets API",
+  "hypotheses": [
+    "H8",
+    "H10"
+  ],
+  "deliverable": "src/handler.js",
+  "brief": "Extend `GET /tickets` in `src/handler.js` (in-memory handler, see existing code and tests). Mobile and web clients already call it without parameters and expect the current response (a bare array sorted by id) - that must not change.\n\nAdd query parameters (all values arrive as strings):\n1. `status`: comma-separated list; keep tickets whose status is in the list. Each value must be one of `STATUSES` in `src/data.js`.\n2. `assignee`: comma-separated list of names; the special value `none` matches tickets with `assignee === null`.\n3. `sort`: one of `id`, `priority`, `createdAt`, optionally prefixed with `-` for descending. Ties are broken by `id` ascending regardless of direction. Default `id`.\n4. `limit`: integer 1-100. When `limit` is present the response body becomes `{ items, nextCursor }`, where `nextCursor` is an opaque string, or `null` on the last page. Passing `cursor` returns the next page. A cursor is only valid with the same `status`, `assignee` and `sort` values it was issued for.\n5. Validation: any invalid parameter (unknown status, bad sort field, limit out of range or not an integer, malformed or mismatched cursor, `cursor` without `limit`) returns status 400 with body `{ error: 'invalid_<param>' }`, e.g. `invalid_limit`. Unknown query parameters are ignored.\n\nWithout `limit`, filters and sort still apply and the body stays a bare array. Add tests; `npm test` runs them.",
+  "grader": "code"
+}

@@ -1,0 +1,12 @@
+`GET /tickets` now supports `status`, `assignee`, `sort`, `limit` and `cursor`, implemented in `src/handler.js`. `npm test` passes: the existing test plus 9 new ones in `test/list.test.js`.
+
+With no parameters the response is still the bare array sorted by id. Unknown parameters are ignored, and without `limit` the filters and sort apply but the body stays a bare array.
+
+Behaviours the brief left open:
+- **Cursor:** it is a base64url string holding the last item's sort key and id, plus the raw `status`, `assignee` and `sort` strings it was issued for. A cursor reused with different values for any of those returns `invalid_cursor`. A missing parameter counts as an empty string. Because the cursor is keyed on position rather than offset, pages stay consistent if tickets change between requests.
+- **`limit`:** only plain digits are accepted. `1.5`, `-1`, an empty string and `abc` all return `invalid_limit`.
+- **Empty values:** `status=` or a trailing comma (`open,`) returns `invalid_status`.
+- **`assignee`:** names are not validated, since the brief defines no `invalid_assignee`. An unknown name simply matches nothing.
+- **Which error:** if several parameters are invalid, the first one checked is reported. The order is status, assignee, sort, limit, cursor.
+
+The tests cover filters, every sort direction with the id tiebreak, and paging through all pages for each sort. They also cover the exact-fit last page (`nextCursor` is `null`), the invalid-parameter cases, and cursor mismatch.

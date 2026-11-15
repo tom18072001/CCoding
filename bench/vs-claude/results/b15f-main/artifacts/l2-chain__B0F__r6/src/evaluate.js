@@ -1,0 +1,7 @@
+// Tầng 3 — đánh giá thành JSON. Xem SPEC.md mục 6.
+import { buildModel, evaluateTarget } from './merge.js';
+
+export function evaluate(program) {
+  const model = buildModel(program);
+  return evaluateTarget(model, { kind: 'obj', obj: model.root });
+}

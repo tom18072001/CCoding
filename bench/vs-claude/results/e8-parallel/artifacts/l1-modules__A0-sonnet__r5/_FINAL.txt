@@ -1,0 +1,11 @@
+Cả năm module đã được hiện thực ở `src/<tên>/index.js` và `npm test` xanh: 47 test pass, 0 fail. Đó là các test mẫu có sẵn cộng thêm 5 tệp `test/*.spec.test.js` do tôi viết. Chúng bao phủ các ví dụ và mã lỗi trong SPEC.md, kể cả vòng parse/format của `money`. Tôi không thêm thư viện ngoài.
+
+Một số chỗ SPEC.md để mở, tôi tự chọn:
+- **`convert`:** kiểm `to` trước rồi mới kiểm `m`.
+- **`csvcheck`:** `min`/`max` trong lược đồ chỉ bị kiểm khi cột là `int`, `number` hoặc `date`; với `string` và `bool` thì bỏ qua, không ném lỗi.
+- **`calendar`:** `from > to` trong `workingDaysBetween` làm biên của `from` và `to` giữ nguyên nghĩa khi đảo chiều, như SPEC mô tả.
+- **`slug`:** tôi chuyển các dấu kết hợp trong mã nguồn sang dạng `\uXXXX` để không phụ thuộc cách lưu tệp.
+
+Tôi chưa chạy bộ nghiệm thu ẩn nên không biết các lựa chọn trên có khớp với nó không.
+
+Tôi chưa commit gì. Các thay đổi đang nằm trong working tree.

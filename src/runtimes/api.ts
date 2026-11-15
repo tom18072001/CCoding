@@ -591,6 +591,7 @@ export class OpenAiApiRuntime implements Runtime {
       runtime: this.id,
       durationMs: Date.now() - started,
       finishReason: finish,
+      stopReason: finish,
       truncated: finish === 'length',
       turns,
       toolCalls: records.length ? records : undefined,

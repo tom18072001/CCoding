@@ -1,0 +1,6 @@
+I wrote `answer.json` and `REVIEW.md` at the repository root. `REVIEW.md` is 485 words by `wc` and cites [P1]–[P6].
+
+- **q1:** P4, F1 0.962 (LogGraphT on the full HDFS-X split). RT-AD in P3 is next at 0.948 and TF-LAD in P1 at 0.931. P2's 0.971 is on HDFS-X-small, which P6 says is not comparable to the full split, so I left it out.
+- **q2:** P5, on BGL-X. It reports F1 0.861 with 0.5% labeled data.
+- **q3:** `not_in_corpus` is true. P4 gives only inference latency (3.1 ms per session on one A100) and no energy figure.
+- **q4:** P1 and P3. P1 says parsing is necessary, and P3 says it is optional.

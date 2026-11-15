@@ -1,0 +1,24 @@
+I wrote `DESIGN.md` at the repository root. I did not run any of the configs or code in it, and I could not check Elastic's current license matrix, so the licensing claims need re-confirming before contract. I did not commit anything.
+
+**The main conflict:** searchable snapshots need an Enterprise license, so they can't be used on Basic. Instead, data from about day 8 to day 365 sits in plain snapshots in object storage. For a request on older data, a restore job loads it onto a standby tier. The 24-hour requirement only holds if it is scoped per request. One 31-day window restores in about 14 hours at an assumed 0.5 GB/s. A full-year request can't fit in 24 hours.
+
+**Capacity arithmetic** (decimal TB):
+- **Daily:** 1.728 billion events, 1.38 TB raw.
+- **Yearly:** about 505 TB raw.
+- **Compression assumption:** 0.6× raw on disk. This is the figure most likely to be wrong, so the document includes a sensitivity table and a proof-of-concept step to measure it.
+- **Interactive tier:** 51.4 TB stored for the 31 days held, with one replica. The node layout provisions 83 TB of disk for it across 6 hot and 6 warm nodes.
+- **Older data:** about 296 TB of snapshots, plus 4 restore nodes with 40 TB of disk.
+- **Evidence archive:** 84 to 91 TB.
+
+**Integrity:** Basic has no immutability, no Elasticsearch audit log, and no document-level security. Elasticsearch is therefore treated as the search copy only. The evidence lives in a locked S3 archive, written as per-partition hash-chained batches. A key held in a KMS or HSM signs each batch, and an external timestamp anchors each day. A nightly job checks Elasticsearch against the archive.
+
+**Masking:** it happens in Logstash, before indexing or archiving. It uses keyed pseudonyms, and a leak check runs before anything is written to the archive. This matters because archived data can't be deleted.
+
+**Other conflicts in the inputs:**
+- **Masking and evidence:** masking alters the legal evidence, so the sealed copy is the masked one. Legal must confirm that is admissible.
+- **Erasure and retention:** pseudonymised data is still personal data, which conflicts with the archive lock.
+- **Unmasked data in transit:** unmasked data exists briefly in Kafka and Logstash queues.
+- **Basic limits:** Basic lacks SSO and document-level security.
+- **Missing details:** "interactive", peak event rate and legal hold are undefined.
+
+All of these are listed in the document with proposed resolutions and customer questions.

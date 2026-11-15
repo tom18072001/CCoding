@@ -1,0 +1,1380 @@
+{
+ "generatedAt": "2026-11-14T09:20:25.268Z",
+ "source": "văn phòng phụ (dự án ccoding-dev, ccoding-research), lệnh `node dist/cli.js kpi --json --days 30` của bản đang chạy văn phòng (ccoding-e78), chạy chỉ đọc 14/11/2026",
+ "tasksCounted": 7,
+ "tasksByStatus": {
+  "cancelled": 1,
+  "paused": 2,
+  "done": 6,
+  "failed": 1
+ },
+ "method": "KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3).",
+ "departments": [
+  {
+   "id": "dev",
+   "agents": 7,
+   "tokens": 9367248,
+   "calls": 53,
+   "score": 81
+  },
+  {
+   "id": "office",
+   "agents": 1,
+   "tokens": 241789,
+   "calls": 6,
+   "score": 73
+  },
+  {
+   "id": "research",
+   "agents": 6,
+   "tokens": 49235709,
+   "calls": 53,
+   "score": 76
+  }
+ ],
+ "agents": [
+  {
+   "agentId": "backend-dev",
+   "name": "Backend Developer",
+   "role": "member",
+   "department": "dev",
+   "models": {
+    "claude-haiku-5-5": 4,
+    "claude-sonnet-5-5": 8,
+    "<synthetic>": 1
+   },
+   "score": 85,
+   "scoreRaw": 92,
+   "grade": "A",
+   "confidence": "high",
+   "scores": {
+    "quality": 100,
+    "outcome": 88,
+    "efficiency": 93,
+    "reliability": 76,
+    "compliance": 100
+   },
+   "quality": {
+    "reviewed": 2,
+    "firstPassOk": 2,
+    "finalClean": 2,
+    "blocker": 0,
+    "major": 0,
+    "minor": 2,
+    "topIssues": []
+   },
+   "outcome": {
+    "tasks": 3,
+    "checksPass": 3,
+    "checksRegressed": 0,
+    "checksFixed": 1,
+    "checksStillFailing": 0,
+    "acceptTasks": 3,
+    "accepted": 1,
+    "criteria": 24,
+    "criteriaFailed": 2,
+    "acceptUnmeasured": 0
+   },
+   "honesty": {
+    "claims": 0,
+    "unbacked": 0,
+    "examples": [],
+    "unmeasured": 0
+   },
+   "compliance": {
+    "outputs": 6,
+    "missing": [],
+    "summaryOk": 6,
+    "templateCoverage": 100
+   },
+   "format": {
+    "reviewUnparsed": 0,
+    "acceptUnparsed": 0,
+    "emptyOutputs": 0
+   },
+   "evidence": {
+    "execEligible": 6,
+    "execWithCommands": 6,
+    "doi": 0,
+    "urls": 0,
+    "unverified": 0,
+    "webCalls": 0
+   },
+   "evidenceN": 11,
+   "findings": [
+    "2 lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp.",
+    "CTO nghiệm thu đạt 1/3 nhiệm vụ (2/24 tiêu chí không đạt)."
+   ],
+   "findingKeys": [
+    "truncated",
+    "acceptance-fail"
+   ],
+   "calls": 13,
+   "failedCalls": 0,
+   "infraFailedCalls": 0,
+   "failovers": 0,
+   "truncated": 2,
+   "attemptsAvg": 1,
+   "attemptsMax": 3,
+   "subtasks": 8,
+   "tokens": {
+    "input": 4999,
+    "cache": 3654360,
+    "output": 71969,
+    "total": 3731328,
+    "subtaskWork": 3718976,
+    "perSubtask": 464872
+   },
+   "durationSec": 2535,
+   "phases": {
+    "discuss": 4,
+    "execute": 8,
+    "revise": 1
+   },
+   "tasks": 5
+  },
+  {
+   "agentId": "senior-swe",
+   "name": "Senior Software Engineer",
+   "role": "member",
+   "department": "dev",
+   "models": {
+    "claude-haiku-5-5": 3,
+    "claude-sonnet-5-5": 6,
+    "<synthetic>": 1
+   },
+   "score": 82,
+   "scoreRaw": 90,
+   "grade": "A",
+   "confidence": "high",
+   "scores": {
+    "quality": 100,
+    "outcome": 88,
+    "efficiency": 86,
+    "reliability": 74,
+    "compliance": 100
+   },
+   "quality": {
+    "reviewed": 2,
+    "firstPassOk": 2,
+    "finalClean": 2,
+    "blocker": 0,
+    "major": 0,
+    "minor": 0,
+    "topIssues": []
+   },
+   "outcome": {
+    "tasks": 3,
+    "checksPass": 3,
+    "checksRegressed": 0,
+    "checksFixed": 1,
+    "checksStillFailing": 0,
+    "acceptTasks": 3,
+    "accepted": 1,
+    "criteria": 24,
+    "criteriaFailed": 2,
+    "acceptUnmeasured": 0
+   },
+   "honesty": {
+    "claims": 0,
+    "unbacked": 0,
+    "examples": [],
+    "unmeasured": 0
+   },
+   "compliance": {
+    "outputs": 4,
+    "missing": [],
+    "summaryOk": 4,
+    "templateCoverage": 100
+   },
+   "format": {
+    "reviewUnparsed": 0,
+    "acceptUnparsed": 0,
+    "emptyOutputs": 0
+   },
+   "evidence": {
+    "execEligible": 4,
+    "execWithCommands": 4,
+    "doi": 0,
+    "urls": 0,
+    "unverified": 2,
+    "webCalls": 0
+   },
+   "evidenceN": 8,
+   "findings": [
+    "2 lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp.",
+    "CTO nghiệm thu đạt 1/3 nhiệm vụ (2/24 tiêu chí không đạt)."
+   ],
+   "findingKeys": [
+    "truncated",
+    "acceptance-fail"
+   ],
+   "calls": 10,
+   "failedCalls": 0,
+   "infraFailedCalls": 0,
+   "failovers": 0,
+   "truncated": 2,
+   "attemptsAvg": 1.2,
+   "attemptsMax": 3,
+   "subtasks": 5,
+   "tokens": {
+    "input": 4640,
+    "cache": 1709475,
+    "output": 50214,
+    "total": 1764329,
+    "subtaskWork": 1755420,
+    "perSubtask": 351084
+   },
+   "durationSec": 2412,
+   "phases": {
+    "discuss": 3,
+    "execute": 6,
+    "revise": 1
+   },
+   "tasks": 4
+  },
+  {
+   "agentId": "qa-tester",
+   "name": "QA Engineer",
+   "role": "reviewer",
+   "department": "dev",
+   "models": {
+    "claude-haiku-5-5": 4,
+    "claude-sonnet-5-5": 5
+   },
+   "score": 78,
+   "scoreRaw": 85,
+   "grade": "B",
+   "confidence": "high",
+   "scores": {
+    "quality": 90,
+    "outcome": 81,
+    "honesty": 100,
+    "efficiency": 100,
+    "reliability": 39,
+    "compliance": 100
+   },
+   "quality": {
+    "reviewed": 1,
+    "firstPassOk": 1,
+    "finalClean": 1,
+    "blocker": 0,
+    "major": 0,
+    "minor": 3,
+    "topIssues": []
+   },
+   "outcome": {
+    "tasks": 1,
+    "checksPass": 1,
+    "checksRegressed": 0,
+    "checksFixed": 1,
+    "checksStillFailing": 0,
+    "acceptTasks": 1,
+    "accepted": 0,
+    "criteria": 8,
+    "criteriaFailed": 1,
+    "acceptUnmeasured": 0
+   },
+   "honesty": {
+    "claims": 1,
+    "unbacked": 0,
+    "examples": [],
+    "unmeasured": 0
+   },
+   "compliance": {
+    "outputs": 1,
+    "missing": [],
+    "summaryOk": 1,
+    "templateCoverage": 100
+   },
+   "format": {
+    "reviewUnparsed": 1,
+    "acceptUnparsed": 0,
+    "emptyOutputs": 0
+   },
+   "evidence": {
+    "execEligible": 1,
+    "execWithCommands": 1,
+    "doi": 0,
+    "urls": 0,
+    "unverified": 0,
+    "webCalls": 0
+   },
+   "evidenceN": 8,
+   "findings": [
+    "4 lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp."
+   ],
+   "findingKeys": [
+    "truncated"
+   ],
+   "calls": 9,
+   "failedCalls": 0,
+   "infraFailedCalls": 0,
+   "failovers": 0,
+   "truncated": 4,
+   "attemptsAvg": 0.5,
+   "attemptsMax": 2,
+   "subtasks": 4,
+   "tokens": {
+    "input": 94,
+    "cache": 1229606,
+    "output": 30269,
+    "total": 1259969,
+    "subtaskWork": 670402,
+    "perSubtask": 167601
+   },
+   "durationSec": 1283,
+   "phases": {
+    "discuss": 4,
+    "review": 3,
+    "execute": 1,
+    "revise": 1
+   },
+   "tasks": 5
+  },
+  {
+   "agentId": "devops",
+   "name": "DevOps / SRE",
+   "role": "member",
+   "department": "dev",
+   "models": {
+    "claude-haiku-5-5": 1,
+    "claude-sonnet-5-5": 1
+   },
+   "score": 71,
+   "scoreRaw": 88,
+   "grade": "B",
+   "confidence": "low",
+   "scores": {
+    "quality": 100,
+    "outcome": 81,
+    "honesty": 100,
+    "efficiency": 60,
+    "reliability": 92,
+    "compliance": 92
+   },
+   "quality": {
+    "reviewed": 1,
+    "firstPassOk": 1,
+    "finalClean": 1,
+    "blocker": 0,
+    "major": 0,
+    "minor": 1,
+    "topIssues": []
+   },
+   "outcome": {
+    "tasks": 1,
+    "checksPass": 1,
+    "checksRegressed": 0,
+    "checksFixed": 1,
+    "checksStillFailing": 0,
+    "acceptTasks": 1,
+    "accepted": 0,
+    "criteria": 8,
+    "criteriaFailed": 1,
+    "acceptUnmeasured": 0
+   },
+   "honesty": {
+    "claims": 1,
+    "unbacked": 0,
+    "examples": [],
+    "unmeasured": 0
+   },
+   "compliance": {
+    "outputs": 1,
+    "missing": [
+     {
+      "heading": "Checklist triển khai",
+      "count": 1
+     }
+    ],
+    "summaryOk": 1,
+    "templateCoverage": 86
+   },
+   "format": {
+    "reviewUnparsed": 0,
+    "acceptUnparsed": 0,
+    "emptyOutputs": 0
+   },
+   "evidence": {
+    "execEligible": 1,
+    "execWithCommands": 1,
+    "doi": 0,
+    "urls": 0,
+    "unverified": 0,
+    "webCalls": 0
+   },
+   "evidenceN": 2,
+   "findings": [
+    "Tốn token gấp 2.4 lần trung vị phòng cho mỗi hạng mục (987k so với 408k)."
+   ],
+   "findingKeys": [
+    "tokens"
+   ],
+   "calls": 2,
+   "failedCalls": 0,
+   "infraFailedCalls": 0,
+   "failovers": 0,
+   "truncated": 0,
+   "attemptsAvg": 1,
+   "attemptsMax": 1,
+   "subtasks": 1,
+   "tokens": {
+    "input": 46,
+    "cache": 972104,
+    "output": 18230,
+    "total": 990380,
+    "subtaskWork": 987057,
+    "perSubtask": 987057
+   },
+   "durationSec": 355,
+   "phases": {
+    "discuss": 1,
+    "execute": 1
+   },
+   "tasks": 1
+  },
+  {
+   "agentId": "dev-lead",
+   "name": "Trưởng phòng Phát triển",
+   "role": "lead",
+   "department": "dev",
+   "models": {
+    "claude-opus-5-5": 12,
+    "claude-sonnet-5-5": 3,
+    "<synthetic>": 1
+   },
+   "score": 88,
+   "scoreRaw": 94,
+   "grade": "A",
+   "confidence": "high",
+   "scores": {
+    "quality": 100,
+    "efficiency": 100,
+    "outcome": 75,
+    "honesty": 100,
+    "reliability": 93,
+    "compliance": 100
+   },
+   "quality": {
+    "reviewed": 0,
+    "firstPassOk": 0,
+    "finalClean": 0,
+    "blocker": 0,
+    "major": 0,
+    "minor": 0,
+    "topIssues": []
+   },
+   "outcome": {
+    "tasks": 0,
+    "checksPass": 0,
+    "checksRegressed": 0,
+    "checksFixed": 0,
+    "checksStillFailing": 0,
+    "acceptTasks": 3,
+    "accepted": 1,
+    "criteria": 24,
+    "criteriaFailed": 2,
+    "acceptUnmeasured": 0
+   },
+   "honesty": {
+    "claims": 1,
+    "unbacked": 0,
+    "examples": [],
+    "unmeasured": 0
+   },
+   "compliance": {
+    "outputs": 3,
+    "missing": [],
+    "summaryOk": 3,
+    "templateCoverage": 100
+   },
+   "format": {
+    "reviewUnparsed": 0,
+    "acceptUnparsed": 0,
+    "emptyOutputs": 0
+   },
+   "evidence": {
+    "execEligible": 0,
+    "execWithCommands": 0,
+    "doi": 0,
+    "urls": 0,
+    "unverified": 2,
+    "webCalls": 0
+   },
+   "evidenceN": 14,
+   "findings": [
+    "CTO nghiệm thu đạt 1/3 nhiệm vụ (2/24 tiêu chí không đạt)."
+   ],
+   "findingKeys": [
+    "acceptance-fail"
+   ],
+   "calls": 16,
+   "failedCalls": 1,
+   "infraFailedCalls": 0,
+   "failovers": 1,
+   "truncated": 0,
+   "attemptsAvg": 0,
+   "attemptsMax": 0,
+   "subtasks": 0,
+   "tokens": {
+    "input": 3471,
+    "cache": 873116,
+    "output": 78187,
+    "total": 954774,
+    "subtaskWork": 0,
+    "perSubtask": 0
+   },
+   "durationSec": 778,
+   "phases": {
+    "plan": 8,
+    "finalize": 4,
+    "synthesize": 4
+   },
+   "tasks": 5
+  },
+  {
+   "agentId": "security",
+   "name": "Chuyên viên ATTT",
+   "role": "member",
+   "department": "dev",
+   "models": {
+    "claude-haiku-5-5": 1,
+    "claude-sonnet-5-5": 1
+   },
+   "score": 68,
+   "scoreRaw": 80,
+   "grade": "B",
+   "confidence": "low",
+   "scores": {
+    "outcome": 81,
+    "efficiency": 77,
+    "reliability": 70,
+    "compliance": 100
+   },
+   "quality": {
+    "reviewed": 0,
+    "firstPassOk": 0,
+    "finalClean": 0,
+    "blocker": 0,
+    "major": 0,
+    "minor": 0,
+    "topIssues": []
+   },
+   "outcome": {
+    "tasks": 1,
+    "checksPass": 1,
+    "checksRegressed": 0,
+    "checksFixed": 0,
+    "checksStillFailing": 0,
+    "acceptTasks": 1,
+    "accepted": 0,
+    "criteria": 8,
+    "criteriaFailed": 1,
+    "acceptUnmeasured": 0
+   },
+   "honesty": {
+    "claims": 0,
+    "unbacked": 0,
+    "examples": [],
+    "unmeasured": 0
+   },
+   "compliance": {
+    "outputs": 1,
+    "missing": [],
+    "summaryOk": 1,
+    "templateCoverage": 100
+   },
+   "format": {
+    "reviewUnparsed": 0,
+    "acceptUnparsed": 0,
+    "emptyOutputs": 0
+   },
+   "evidence": {
+    "execEligible": 1,
+    "execWithCommands": 1,
+    "doi": 0,
+    "urls": 0,
+    "unverified": 0,
+    "webCalls": 0
+   },
+   "evidenceN": 2,
+   "findings": [
+    "Thao tác công cụ lỗi nhiều (5/20, 25%; nhiều nhất ở edit_file 3/3) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).",
+    "1 lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp."
+   ],
+   "findingKeys": [
+    "tools-fail",
+    "truncated"
+   ],
+   "calls": 2,
+   "failedCalls": 0,
+   "infraFailedCalls": 0,
+   "failovers": 0,
+   "truncated": 1,
+   "attemptsAvg": 1,
+   "attemptsMax": 1,
+   "subtasks": 1,
+   "tokens": {
+    "input": 30,
+    "cache": 636318,
+    "output": 26506,
+    "total": 662854,
+    "subtaskWork": 661131,
+    "perSubtask": 661131
+   },
+   "durationSec": 309,
+   "phases": {
+    "discuss": 1,
+    "execute": 1
+   },
+   "tasks": 1
+  },
+  {
+   "agentId": "tech-writer",
+   "name": "Technical Writer",
+   "role": "member",
+   "department": "dev",
+   "models": {
+    "claude-haiku-5-5": 1
+   },
+   "score": 65,
+   "scoreRaw": 79,
+   "grade": "B",
+   "confidence": "low",
+   "scores": {
+    "efficiency": 100,
+    "reliability": 100
+   },
+   "quality": {
+    "reviewed": 0,
+    "firstPassOk": 0,
+    "finalClean": 0,
+    "blocker": 0,
+    "major": 0,
+    "minor": 0,
+    "topIssues": []
+   },
+   "honesty": {
+    "claims": 0,
+    "unbacked": 0,
+    "examples": [],
+    "unmeasured": 0
+   },
+   "compliance": {
+    "outputs": 0,
+    "missing": [],
+    "summaryOk": 0
+   },
+   "format": {
+    "reviewUnparsed": 0,
+    "acceptUnparsed": 0,
+    "emptyOutputs": 0
+   },
+   "evidence": {
+    "execEligible": 0,
+    "execWithCommands": 0,
+    "doi": 0,
+    "urls": 0,
+    "unverified": 0,
+    "webCalls": 0
+   },
+   "evidenceN": 1,
+   "findings": [],
+   "findingKeys": [],
+   "calls": 1,
+   "failedCalls": 0,
+   "infraFailedCalls": 0,
+   "failovers": 0,
+   "truncated": 0,
+   "attemptsAvg": 0,
+   "attemptsMax": 0,
+   "subtasks": 1,
+   "tokens": {
+    "input": 2,
+    "cache": 3015,
+    "output": 597,
+    "total": 3614,
+    "subtaskWork": 0,
+    "perSubtask": 0
+   },
+   "durationSec": 7,
+   "phases": {
+    "discuss": 1
+   },
+   "tasks": 1
+  },
+  {
+   "agentId": "cto",
+   "name": "CTO",
+   "role": "cto",
+   "department": "office",
+   "models": {
+    "claude-sonnet-5-5": 6
+   },
+   "score": 73,
+   "scoreRaw": 79,
+   "grade": "B",
+   "confidence": "medium",
+   "scores": {
+    "quality": 100,
+    "reliability": 93
+   },
+   "quality": {
+    "reviewed": 0,
+    "firstPassOk": 0,
+    "finalClean": 0,
+    "blocker": 0,
+    "major": 0,
+    "minor": 0,
+    "topIssues": []
+   },
+   "honesty": {
+    "claims": 0,
+    "unbacked": 0,
+    "examples": [],
+    "unmeasured": 0
+   },
+   "compliance": {
+    "outputs": 0,
+    "missing": [],
+    "summaryOk": 0
+   },
+   "format": {
+    "reviewUnparsed": 0,
+    "acceptUnparsed": 0,
+    "emptyOutputs": 0
+   },
+   "evidence": {
+    "execEligible": 0,
+    "execWithCommands": 0,
+    "doi": 0,
+    "urls": 0,
+    "unverified": 0,
+    "webCalls": 0
+   },
+   "evidenceN": 6,
+   "findings": [],
+   "findingKeys": [],
+   "calls": 6,
+   "failedCalls": 0,
+   "infraFailedCalls": 0,
+   "failovers": 0,
+   "truncated": 0,
+   "attemptsAvg": 0,
+   "attemptsMax": 0,
+   "subtasks": 0,
+   "tokens": {
+    "input": 28,
+    "cache": 212297,
+    "output": 29464,
+    "total": 241789,
+    "subtaskWork": 0,
+    "perSubtask": 0
+   },
+   "durationSec": 199,
+   "phases": {
+    "accept": 6
+   },
+   "tasks": 6
+  },
+  {
+   "agentId": "data-scientist",
+   "name": "Data Scientist",
+   "role": "member",
+   "department": "research",
+   "models": {
+    "claude-haiku-5-5": 4,
+    "claude-sonnet-5-5+claude-haiku-5-5": 2,
+    "claude-sonnet-5-5": 7
+   },
+   "score": 78,
+   "scoreRaw": 83,
+   "grade": "B",
+   "confidence": "high",
+   "scores": {
+    "outcome": 81,
+    "honesty": 100,
+    "efficiency": 79,
+    "reliability": 61,
+    "compliance": 100
+   },
+   "quality": {
+    "reviewed": 0,
+    "firstPassOk": 0,
+    "finalClean": 0,
+    "blocker": 0,
+    "major": 0,
+    "minor": 0,
+    "topIssues": []
+   },
+   "outcome": {
+    "tasks": 3,
+    "checksPass": 3,
+    "checksRegressed": 0,
+    "checksFixed": 0,
+    "checksStillFailing": 0,
+    "acceptTasks": 3,
+    "accepted": 0,
+    "criteria": 26,
+    "criteriaFailed": 4,
+    "acceptUnmeasured": 0
+   },
+   "honesty": {
+    "claims": 4,
+    "unbacked": 0,
+    "examples": [],
+    "unmeasured": 0
+   },
+   "compliance": {
+    "outputs": 7,
+    "missing": [],
+    "summaryOk": 7,
+    "templateCoverage": 100
+   },
+   "format": {
+    "reviewUnparsed": 0,
+    "acceptUnparsed": 0,
+    "emptyOutputs": 0
+   },
+   "evidence": {
+    "execEligible": 7,
+    "execWithCommands": 7,
+    "doi": 0,
+    "urls": 0,
+    "unverified": 5,
+    "webCalls": 2
+   },
+   "evidenceN": 12,
+   "findings": [
+    "Đọc/tìm code bằng lệnh shell (88 lệnh cat/grep/sed… so với 24 lần read_file/search/list_files) — không có số dòng, không tính vào giới hạn khảo sát, dễ sai mã hóa và tốn lượt; đọc/tìm bằng công cụ file.",
+    "3 lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp.",
+    "CTO nghiệm thu đạt 0/3 nhiệm vụ (4/26 tiêu chí không đạt)."
+   ],
+   "findingKeys": [
+    "shell-reads",
+    "truncated",
+    "acceptance-fail"
+   ],
+   "calls": 13,
+   "failedCalls": 0,
+   "infraFailedCalls": 0,
+   "failovers": 0,
+   "truncated": 3,
+   "attemptsAvg": 0.9,
+   "attemptsMax": 2,
+   "subtasks": 9,
+   "tokens": {
+    "input": 560,
+    "cache": 26882862,
+    "output": 315900,
+    "total": 27199322,
+    "subtaskWork": 27190759,
+    "perSubtask": 3021195
+   },
+   "durationSec": 3733,
+   "phases": {
+    "discuss": 4,
+    "execute": 8,
+    "revise": 1
+   },
+   "tasks": 4
+  },
+  {
+   "agentId": "academic-writer",
+   "name": "Academic Writer",
+   "role": "member",
+   "department": "research",
+   "models": {
+    "claude-haiku-5-5": 3,
+    "claude-sonnet-5-5": 2
+   },
+   "score": 74,
+   "scoreRaw": 82,
+   "grade": "B",
+   "confidence": "medium",
+   "scores": {
+    "outcome": 83,
+    "honesty": 100,
+    "efficiency": 85,
+    "reliability": 67,
+    "compliance": 70
+   },
+   "quality": {
+    "reviewed": 0,
+    "firstPassOk": 0,
+    "finalClean": 0,
+    "blocker": 0,
+    "major": 0,
+    "minor": 0,
+    "topIssues": []
+   },
+   "outcome": {
+    "tasks": 2,
+    "checksPass": 2,
+    "checksRegressed": 0,
+    "checksFixed": 0,
+    "checksStillFailing": 0,
+    "acceptTasks": 2,
+    "accepted": 0,
+    "criteria": 18,
+    "criteriaFailed": 2,
+    "acceptUnmeasured": 0
+   },
+   "honesty": {
+    "claims": 1,
+    "unbacked": 0,
+    "examples": [],
+    "unmeasured": 0
+   },
+   "compliance": {
+    "outputs": 2,
+    "missing": [],
+    "summaryOk": 2,
+    "templateCoverage": 100
+   },
+   "format": {
+    "reviewUnparsed": 0,
+    "acceptUnparsed": 0,
+    "emptyOutputs": 0
+   },
+   "evidence": {
+    "execEligible": 0,
+    "execWithCommands": 0,
+    "doi": 0,
+    "urls": 0,
+    "unverified": 4,
+    "webCalls": 0
+   },
+   "evidenceN": 5,
+   "findings": [
+    "Không có nguồn kiểm chứng được (DOI/URL) và không dùng công cụ tra cứu.",
+    "3 lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp.",
+    "CTO nghiệm thu đạt 0/2 nhiệm vụ (2/18 tiêu chí không đạt)."
+   ],
+   "findingKeys": [
+    "no-sources",
+    "truncated",
+    "acceptance-fail"
+   ],
+   "calls": 5,
+   "failedCalls": 0,
+   "infraFailedCalls": 0,
+   "failovers": 0,
+   "truncated": 3,
+   "attemptsAvg": 0.7,
+   "attemptsMax": 1,
+   "subtasks": 3,
+   "tokens": {
+    "input": 170,
+    "cache": 9691057,
+    "output": 124686,
+    "total": 9815913,
+    "subtaskWork": 9808272,
+    "perSubtask": 3269424
+   },
+   "durationSec": 846,
+   "phases": {
+    "discuss": 3,
+    "execute": 2
+   },
+   "tasks": 3
+  },
+  {
+   "agentId": "research-lead",
+   "name": "Trưởng phòng Nghiên cứu",
+   "role": "lead",
+   "department": "research",
+   "models": {
+    "claude-opus-5-5": 10,
+    "claude-sonnet-5-5": 3,
+    "<synthetic>": 1
+   },
+   "score": 77,
+   "scoreRaw": 81,
+   "grade": "B",
+   "confidence": "high",
+   "scores": {
+    "efficiency": 77,
+    "outcome": 67,
+    "honesty": 100,
+    "reliability": 70,
+    "compliance": 100
+   },
+   "quality": {
+    "reviewed": 0,
+    "firstPassOk": 0,
+    "finalClean": 0,
+    "blocker": 0,
+    "major": 0,
+    "minor": 0,
+    "topIssues": []
+   },
+   "outcome": {
+    "tasks": 1,
+    "checksPass": 1,
+    "checksRegressed": 0,
+    "checksFixed": 0,
+    "checksStillFailing": 0,
+    "acceptTasks": 3,
+    "accepted": 0,
+    "criteria": 26,
+    "criteriaFailed": 4,
+    "acceptUnmeasured": 0
+   },
+   "honesty": {
+    "claims": 2,
+    "unbacked": 0,
+    "examples": [],
+    "unmeasured": 0
+   },
+   "compliance": {
+    "outputs": 4,
+    "missing": [],
+    "summaryOk": 4,
+    "templateCoverage": 100
+   },
+   "format": {
+    "reviewUnparsed": 0,
+    "acceptUnparsed": 0,
+    "emptyOutputs": 0
+   },
+   "evidence": {
+    "execEligible": 0,
+    "execWithCommands": 0,
+    "doi": 0,
+    "urls": 7,
+    "unverified": 10,
+    "webCalls": 0
+   },
+   "evidenceN": 13,
+   "findings": [
+    "2 lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp.",
+    "Phòng dùng 2,2 lần ngân sách (52.17M/24.00M) — kế hoạch ôm quá nhiều việc cho một nhiệm vụ: chia theo gói/giai đoạn, mỗi hạng mục có tiêu chí xong đo được trong một lượt.",
+    "CTO nghiệm thu đạt 0/3 nhiệm vụ (4/26 tiêu chí không đạt)."
+   ],
+   "findingKeys": [
+    "truncated",
+    "budget",
+    "acceptance-fail"
+   ],
+   "calls": 14,
+   "failedCalls": 0,
+   "infraFailedCalls": 0,
+   "failovers": 0,
+   "truncated": 2,
+   "attemptsAvg": 0.5,
+   "attemptsMax": 1,
+   "subtasks": 2,
+   "tokens": {
+    "input": 9902,
+    "cache": 5478221,
+    "output": 236512,
+    "total": 5724635,
+    "subtaskWork": 5261295,
+    "perSubtask": 2630648
+   },
+   "durationSec": 1959,
+   "phases": {
+    "plan": 6,
+    "finalize": 4,
+    "synthesize": 3,
+    "execute": 1
+   },
+   "tasks": 4
+  },
+  {
+   "agentId": "methodologist",
+   "name": "Methodologist",
+   "role": "member",
+   "department": "research",
+   "models": {
+    "claude-haiku-5-5": 4,
+    "claude-sonnet-5-5": 5
+   },
+   "score": 74,
+   "scoreRaw": 78,
+   "grade": "B",
+   "confidence": "high",
+   "scores": {
+    "outcome": 81,
+    "efficiency": 100,
+    "reliability": 58,
+    "compliance": 70
+   },
+   "quality": {
+    "reviewed": 0,
+    "firstPassOk": 0,
+    "finalClean": 0,
+    "blocker": 0,
+    "major": 0,
+    "minor": 0,
+    "topIssues": []
+   },
+   "outcome": {
+    "tasks": 3,
+    "checksPass": 3,
+    "checksRegressed": 0,
+    "checksFixed": 0,
+    "checksStillFailing": 0,
+    "acceptTasks": 3,
+    "accepted": 0,
+    "criteria": 26,
+    "criteriaFailed": 4,
+    "acceptUnmeasured": 0
+   },
+   "honesty": {
+    "claims": 0,
+    "unbacked": 0,
+    "examples": [],
+    "unmeasured": 0
+   },
+   "compliance": {
+    "outputs": 5,
+    "missing": [],
+    "summaryOk": 5,
+    "templateCoverage": 100
+   },
+   "format": {
+    "reviewUnparsed": 0,
+    "acceptUnparsed": 0,
+    "emptyOutputs": 0
+   },
+   "evidence": {
+    "execEligible": 0,
+    "execWithCommands": 0,
+    "doi": 0,
+    "urls": 0,
+    "unverified": 3,
+    "webCalls": 0
+   },
+   "evidenceN": 9,
+   "findings": [
+    "Không có nguồn kiểm chứng được (DOI/URL) và không dùng công cụ tra cứu.",
+    "3 lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp.",
+    "CTO nghiệm thu đạt 0/3 nhiệm vụ (4/26 tiêu chí không đạt)."
+   ],
+   "findingKeys": [
+    "no-sources",
+    "truncated",
+    "acceptance-fail"
+   ],
+   "calls": 9,
+   "failedCalls": 0,
+   "infraFailedCalls": 0,
+   "failovers": 0,
+   "truncated": 3,
+   "attemptsAvg": 0.8,
+   "attemptsMax": 1,
+   "subtasks": 6,
+   "tokens": {
+    "input": 128,
+    "cache": 3193471,
+    "output": 100133,
+    "total": 3293732,
+    "subtaskWork": 3284852,
+    "perSubtask": 547475
+   },
+   "durationSec": 780,
+   "phases": {
+    "discuss": 4,
+    "execute": 5
+   },
+   "tasks": 4
+  },
+  {
+   "agentId": "peer-reviewer",
+   "name": "Peer Reviewer",
+   "role": "reviewer",
+   "department": "research",
+   "models": {
+    "claude-haiku-5-5": 4,
+    "claude-opus-5-5+claude-haiku-5-5": 1
+   },
+   "score": 68,
+   "scoreRaw": 81,
+   "grade": "B",
+   "confidence": "low",
+   "scores": {
+    "outcome": 83,
+    "efficiency": 95,
+    "reliability": 53,
+    "compliance": 100
+   },
+   "quality": {
+    "reviewed": 0,
+    "firstPassOk": 0,
+    "finalClean": 0,
+    "blocker": 0,
+    "major": 0,
+    "minor": 0,
+    "topIssues": []
+   },
+   "outcome": {
+    "tasks": 1,
+    "checksPass": 1,
+    "checksRegressed": 0,
+    "checksFixed": 0,
+    "checksStillFailing": 0,
+    "acceptTasks": 1,
+    "accepted": 0,
+    "criteria": 9,
+    "criteriaFailed": 2,
+    "acceptUnmeasured": 0
+   },
+   "honesty": {
+    "claims": 0,
+    "unbacked": 0,
+    "examples": [],
+    "unmeasured": 0
+   },
+   "compliance": {
+    "outputs": 1,
+    "missing": [],
+    "summaryOk": 1,
+    "templateCoverage": 100
+   },
+   "format": {
+    "reviewUnparsed": 0,
+    "acceptUnparsed": 0,
+    "emptyOutputs": 0
+   },
+   "evidence": {
+    "execEligible": 0,
+    "execWithCommands": 0,
+    "doi": 0,
+    "urls": 2,
+    "unverified": 2,
+    "webCalls": 1
+   },
+   "evidenceN": 2,
+   "findings": [
+    "Thao tác công cụ lỗi nhiều (5/23, 22%; nhiều nhất ở run_command 3/6) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).",
+    "4 lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp."
+   ],
+   "findingKeys": [
+    "tools-fail",
+    "truncated"
+   ],
+   "calls": 5,
+   "failedCalls": 0,
+   "infraFailedCalls": 0,
+   "failovers": 0,
+   "truncated": 4,
+   "attemptsAvg": 1,
+   "attemptsMax": 1,
+   "subtasks": 1,
+   "tokens": {
+    "input": 52,
+    "cache": 2223969,
+    "output": 42202,
+    "total": 2266223,
+    "subtaskWork": 2257147,
+    "perSubtask": 2257147
+   },
+   "durationSec": 398,
+   "phases": {
+    "discuss": 4,
+    "execute": 1
+   },
+   "tasks": 4
+  },
+  {
+   "agentId": "literature-researcher",
+   "name": "Literature Researcher",
+   "role": "member",
+   "department": "research",
+   "models": {
+    "claude-haiku-5-5": 4,
+    "claude-sonnet-5-5+claude-haiku-5-5": 3
+   },
+   "score": 77,
+   "scoreRaw": 84,
+   "grade": "B",
+   "confidence": "medium",
+   "scores": {
+    "outcome": 81,
+    "efficiency": 100,
+    "reliability": 61,
+    "compliance": 100
+   },
+   "quality": {
+    "reviewed": 0,
+    "firstPassOk": 0,
+    "finalClean": 0,
+    "blocker": 0,
+    "major": 0,
+    "minor": 0,
+    "topIssues": []
+   },
+   "outcome": {
+    "tasks": 3,
+    "checksPass": 3,
+    "checksRegressed": 0,
+    "checksFixed": 0,
+    "checksStillFailing": 0,
+    "acceptTasks": 3,
+    "accepted": 0,
+    "criteria": 26,
+    "criteriaFailed": 4,
+    "acceptUnmeasured": 0
+   },
+   "honesty": {
+    "claims": 0,
+    "unbacked": 0,
+    "examples": [],
+    "unmeasured": 0
+   },
+   "compliance": {
+    "outputs": 3,
+    "missing": [],
+    "summaryOk": 3,
+    "templateCoverage": 100
+   },
+   "format": {
+    "reviewUnparsed": 0,
+    "acceptUnparsed": 0,
+    "emptyOutputs": 0
+   },
+   "evidence": {
+    "execEligible": 0,
+    "execWithCommands": 0,
+    "doi": 1,
+    "urls": 20,
+    "unverified": 11,
+    "webCalls": 29
+   },
+   "evidenceN": 7,
+   "findings": [
+    "3 lượt đầu ra chạm giới hạn độ dài — yêu cầu viết gọn, chi tiết đưa vào tệp.",
+    "CTO nghiệm thu đạt 0/3 nhiệm vụ (4/26 tiêu chí không đạt)."
+   ],
+   "findingKeys": [
+    "truncated",
+    "acceptance-fail"
+   ],
+   "calls": 7,
+   "failedCalls": 0,
+   "infraFailedCalls": 0,
+   "failovers": 0,
+   "truncated": 3,
+   "attemptsAvg": 0.8,
+   "attemptsMax": 1,
+   "subtasks": 4,
+   "tokens": {
+    "input": 70,
+    "cache": 898482,
+    "output": 37332,
+    "total": 935884,
+    "subtaskWork": 927740,
+    "perSubtask": 231935
+   },
+   "durationSec": 414,
+   "phases": {
+    "discuss": 4,
+    "execute": 3
+   },
+   "tasks": 4
+  }
+ ]
+}

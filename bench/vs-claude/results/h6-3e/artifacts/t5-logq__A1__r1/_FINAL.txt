@@ -1,0 +1,18 @@
+**FIX / Final report**
+
+The review turned up no implementation bugs, only the three test mistakes already corrected. `npm test` is green with 42 tests passing, and I added no external libraries. I didn't commit.
+
+**What was built**
+- `src/parse.js`, `src/query.js`, `src/agg.js` and `bin/logq.js` follow SPEC.md. `src/index.js` was already in place.
+- The tests are `test/parse.test.js`, `test/query.test.js`, `test/agg.test.js` and `test/cli.test.js`. The CLI tests run the real `bin/logq.js` and check stdout, stderr and exit codes. The existing `smoke.test.js` is untouched.
+
+**Assumptions where the spec was silent**
+- **Query error positions:** a stray `)` after an operator (`a AND )`) is reported at the `)`. A malformed word like `:foo` is reported at the start of the word.
+- **Quote errors:** an unclosed quote is only reported when the parser reaches it, so an earlier error is reported first.
+- **`msg: null`:** it counts as absent, so free-text search falls back to `message`.
+- **Aggregation specs:** keywords are lowercase only, so `COUNT` is invalid. The `histogram` interval is echoed as written, and its unit is one of `s`, `m`, `h`, `d`.
+- **Bucket keys:** `1` and `"1"` are separate buckets in `count by`.
+- **`--stats`:** `malformed` counts every line that failed to parse, blank lines included, and `lines` counts blank lines too.
+- **Check order and extras:**
+  - The CLI checks the query and spec before reading any file, so a bad query exits 2 even if a file is also missing.
+  - It also accepts `--opt=value` and `--`, and strips a UTF-8 BOM from the start of a file.

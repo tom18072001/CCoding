@@ -1,0 +1,17 @@
+Cả 4 tính năng trong `FEATURES.md` đã xong và `npm test` xanh (6 test pass). Tôi mới kiểm tra qua các test tự viết gọi API thật qua HTTP, chưa có bộ nghiệm thu ẩn nào để đối chiếu.
+
+**Những gì đã làm**
+- **Xác thực và phân quyền:** header `X-User` bắt buộc cho `/tasks…` và `/audit`. Thiếu hoặc sai trả 401, cấm trả 403, member xem nhiệm vụ nhóm khác trả 404. Thứ tự kiểm tra là 401 → tham số truy vấn 400 → 404 → 403 → validate body 400.
+- **Danh sách:** `GET /tasks` trả `{items, total, page, pageSize}` với đủ lọc, tìm không phân biệt dấu, sắp xếp và phân trang. Lỗi tham số báo `INVALID_QUERY` kèm `field` là tham số đầu tiên theo thứ tự trên URL.
+- **Xuất CSV:** `GET /tasks/export.csv` có BOM, `\r\n`, bọc ngoặc kép theo RFC 4180 và chèn `'` trước giá trị dễ bị hiểu thành công thức. Route này đăng ký trước `/tasks/:id`.
+- **Nhật ký:** `GET /audit` chỉ admin, mới nhất trước, lọc được theo `taskId`. Thao tác lỗi không ghi.
+- **Test:** viết lại `test/tasks.test.js` cho dạng kết quả mới và thêm test riêng cho từng tính năng. `test/helpers.js` giờ giữ nguyên BOM khi đọc phản hồi, vì `fetch().text()` mặc định xóa BOM.
+- **Không thêm thư viện ngoài.** Tôi cũng tăng phiên bản trong `package.json` lên 0.4.0.
+
+**Những chỗ đặc tả chưa nói rõ, tôi tự chọn**
+- `dueDate` trong body POST/PATCH giờ kiểm tra theo lịch như tham số truy vấn, nên `2026-02-30` bị 400.
+- PATCH không đổi trường nào vẫn ghi một mục `update` với `changes: []`.
+- Với body JSON hỏng, các kiểm tra 404 và 403 không cần body vẫn chạy trước, rồi mới báo 400 `INVALID_JSON`.
+- `/audit` kiểm tra tham số truy vấn (400) trước quyền admin (403), đúng thứ tự trong đặc tả. Nghĩa là người không phải admin gửi tham số sai sẽ nhận 400 chứ không phải 403.
+
+Chưa có thay đổi nào được commit.

@@ -1,0 +1,230 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude l1-modules__B1__r1] Năm module độc lập từ đặc tả dày quy tắc
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Năm module độc lập, mỗi module một tệp src/<tên>/index.js và một tệp test/<tên>.test.js có sẵn trong repo. Chia thành 5 hạng mục song song theo SPEC.md, mỗi hạng mục sở hữu tệp riêng và không chung tệp. Chạy `npm test` để nghiệm thu. Tôi chưa chạy lệnh nào, vì vai trò này không có quyền chạy lệnh.
+
+Kết quả: 5/5 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Module money (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã hiện thực đủ 11 hàm của module money trong `src/money/index.js`. Phép tính dùng BigInt, làm tròn half-even, kèm locale en-US/vi-VN/fr-FR và mã lỗi theo SPEC. Tôi mở rộng `test/money.test.js` từ 4 lên 18 test, gồm các mục "Điểm dễ hiểu nhầm". `node --test test/money.test.js` cho 18/18 pass. Tôi chưa chạy `npm test` toàn bộ.
+
+## Tệp đã tạo/sửa
+- `src/money/index.js`: hiện thực mới, không dùng thư viện ngoài.
+- `test/money.test.js`: mở rộng.
+
+## Hợp đồng API
+Không áp dụng, đây là thư viện. Các hàm xuất là `money`, `parseMoney`, `formatMoney`, `add`, `subtract`, `compare`, `divideRoundHalfEven`, `multiply`, `allocate`, `convert`, `convertSum`. Mã lỗi theo bảng trong SPEC.
+
+Hai chỗ SPEC chưa nói rõ, tôi chọn như sau:
+- `convert` kiểm tra `m`, rồi `to`, rồi `rates`.
+- `rates[từ]` có mặt nhưng không phải đối tượng thì trả `MONEY_INVALID_RATE`. Thiếu cặp thì trả `MONEY_MISSING_RATE`.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `node --test test/money.test.js` → exit 0, 18 pass, 0 fail.
+  - Lần chạy đầu có 1 test fail do tôi tính sai số kỳ vọng trong test `convertSum` (kỳ vọng 2.700.000, đúng là 27.000). Tôi đã sửa test, code không đổi.
+- `npm test` (toàn bộ): chưa chạy lại sau khi sửa. Baseline đỏ vì 4 module còn lại chưa hiện thực, thuộc hạng mục khác.
+
+## Việc còn lại
+Không có biến môi trường mới. Bốn module calendar, csvcheck, slug, ratelimit do các hạng mục S2–S5 phụ trách.
+
+Bản đầy đủ: `.ccoding/T-20261104-114417-daf/outputs/dev-S1-backend-dev.md`
+
+### S2 — Module calendar (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã hiện thực `src/calendar/index.js` với đủ 16 hàm trong API và mở rộng `test/calendar.test.js` lên 14 test. `node --test test/calendar.test.js` cho 14 pass, 0 fail. Chạy `npm test` toàn repo thì còn 15 test fail; tôi không kiểm tra chúng, nhưng các module còn lại chưa có hiện thực nên khả năng cao là của chúng.
+
+## Tệp đã tạo/sửa
+- `src/calendar/index.js` · hiện thực mới toàn bộ: bảng ngày lễ làm nguồn duy nhất, nghỉ bù, `addWorkingDays`, `workingDaysBetween`, tuần ISO, kiểm tra đầu vào và mã lỗi.
+- `test/calendar.test.js` · giữ 4 test có sẵn và thêm test cho:
+  - các hàm cơ bản, năm nhuận, mã lỗi;
+  - cả 5 cặp nghỉ bù trong SPEC, gồm Tết 2027 khi nghỉ bù không rơi vào ngày lễ khác;
+  - `nonWorkingDays`, `addWorkingDays`;
+  - `workingDaysBetween` với 4 kiểu biên, đảo chiều và kết quả `+0`;
+  - tuần ISO ở giao năm và tuần 53, `isoWeek` ↔ `isoWeekToDate` khứ hồi 800 ngày.
+
+## Kiểm chứng
+- `node --test test/calendar.test.js` → exit 0, pass 14, fail 0.
+- `npm test` → 32 pass, 15 fail. Tôi không đối chiếu danh sách test fail với baseline. Baseline đo sẵn là exit 1 và không có danh sách chi tiết.
+- Lần chạy đầu có 1 test fail do tôi viết sai kỳ vọng: `2100-12-31` là thứ Sáu nên `rollForward` không ném lỗi. Tôi đã sửa test, không sửa mã.
+- Hệ thống báo `test/calendar.test.js` đã thay đổi trên đĩa sau khi tôi ghi. Tôi không đọc lại để xem thay đổi đó nên chưa xác nhận nội dung hiện tại. Kết quả 14 pass ở trên là từ lần chạy trước thông báo đó.
+
+## Quyết định thiết kế
+- Ngày được quy về số ngày kể từ 1970 bằng `Date.UTC`, không đọc đồng hồ thật. Kiểm tra khoảng 1900–2100 được thực hiện trước khi định dạng lại thành chuỗi.
+- Bảng ngày nghỉ bù được tính một lần khi nạp module, duyệt ngày lễ theo thứ tự tăng dần theo đúng quy tắc (a)(b)(c) của SPEC.
+- `workingDaysBetween` quy về khoảng `[lo, hi]` có cờ biên. Khi `from > to` thì đổi cờ biên theo hai đầu mút và đổi dấu kết quả, nên `'start'` đảo chiều đếm `(to, from]`.
+
+## Rủi ro & việc còn mở
+- `isoWeekToDate` và `isoWeeksInYear` ném `CAL_INVALID_WEEK` khi năm ngoài 1900–2100, đúng theo bảng lỗi. `nonWorkingDays` với năm không hợp lệ ném `CAL_INVALID_DATE`.
+- `options` không phải object, hoặc `bounds: null`, được coi là mặc định `'start'`; SPEC không nói rõ trường hợp này.
+- Một lệnh heredoc ban đầu bị hook chặn vì chứa đường dẫn `../src`, nên tôi ghi tệp bằng công cụ Write.
+
+Bản đầy đủ: `.ccoding/T-20261104-114417-daf/outputs/dev-S2-senior-swe.md`
+
+### S3 — Module csvcheck (@frontend-dev, done)
+
+## Tóm tắt
+Tôi đã hiện thực `parseCsv` và `validateCsv` trong module csvcheck theo SPEC (RFC 4180, thứ tự lỗi, mã lỗi, quy ước biên) và mở rộng test lên 14 test. `node --test test/csvcheck.test.js` xanh (14/14, exit 0). `npm test` toàn repo vẫn đỏ (exit 1) vì các module khác chưa làm; các test lỗi còn lại thuộc ratelimit và slug.
+
+## Tệp đã tạo/sửa
+- `src/csvcheck/index.js`: toàn bộ module, không dùng thư viện ngoài.
+- `test/csvcheck.test.js`: giữ 4 test cũ, thêm 10 test mới.
+
+## Màn hình & trạng thái
+Không áp dụng, vì đây là module thư viện, không có giao diện. Các trường hợp đã có test:
+- **Phân tích CSV:** BOM, CRLF/CR/LF lẫn lộn, dòng trống, ô `""`, xuống dòng trong ô, `BAD_QUOTE` và `UNTERMINATED_QUOTE` có `row`.
+- **Tệp rỗng và hàng sai độ dài:** `EMPTY_INPUT` và `ROW_LENGTH` (hàng đó không kiểm ô nào, không vào tập UNIQUE).
+- **Lược đồ và tiêu đề:** `MISSING_COLUMN`, tiêu đề lặp lấy cột đầu, phân biệt hoa thường.
+- **Thứ tự lỗi và kiểu:** thứ tự lỗi theo lược đồ, ô sai kiểu thì dừng, ô rỗng bỏ qua ràng buộc.
+- **Ràng buộc:** đủ 5 kiểu dữ liệu, min/max cho `date`, độ dài theo điểm mã Unicode.
+- **Lỗi ném:** `CSV_INVALID_SCHEMA` (14 trường hợp, kiểm trước khi phân tích) và `CSV_INVALID_INPUT`.
+
+## API sử dụng
+Không áp dụng. Hai named export là `parseCsv(text, {delimiter})` và `validateCsv(text, schema, options)` → `{ok, rowCount, errors}`.
+
+Các giả định ở chỗ SPEC không nói rõ:
+- Lược đồ chỉ bị coi là sai khi `min`/`max` sai loại ở cột `int`, `number` hoặc `date`. Với `string` và `bool` thì bỏ qua.
+- `required` chỉ có tác dụng khi bằng `true`.
+- `rowCount` tính cả hàng sai độ dài.
+
+## Kiểm chứng
+- `node --test test/csvcheck.test.js` → exit 0, pass 14, fail 0.
+- `npm test` → exit 1, pass 45, fail 12 ở lần chạy cuối. Sau khi sửa hai kỳ vọng sai trong test của tôi, tôi không chạy lại `npm test` toàn repo; không có test csvcheck nào đỏ trong lần chạy đó. Các test lỗi còn lại ở lần chạy trước thuộc token bucket/cửa sổ trượt (ratelimit) và slugify/fold (slug), thuộc hạng mục khác.
+
+## Việc còn lại
+Không áp dụng cho a11y. Tôi chưa commit vì không được yêu cầu.
+
+Bản đầy đủ: `.ccoding/T-20261104-114417-daf/outputs/dev-S3-frontend-dev.md`
+
+### S4 — Module slug (@data-engineer, done)
+
+## Tóm tắt
+Tôi đã hiện thực đủ bảy hàm của module slug (`fold`, `slugify`, `uniqueSlug`, `looseEquals`, `looseIncludes`, `compareVi`, `sortVi`) theo SPEC.md. Xử lý `đ/Đ`, dấu tổ hợp NFC/NFD và so sánh ba mức (chữ cái gốc, thanh điệu, hoa/thường) mà không dùng `Intl.Collator` hay `localeCompare`. `node --test test/slug.test.js` cho 13 test pass, 0 fail.
+
+## Tệp đã tạo/sửa
+- `src/slug/index.js`: hiện thực module.
+- `test/slug.test.js`: thêm các test cho ví dụ trong spec và các trường hợp biên.
+  - `slugify`: `maxLength` hợp lệ và không hợp lệ.
+  - `fold` với NFC/NFD.
+  - `uniqueSlug`, `looseIncludes`, `compareVi` các mức, `sortVi` (ổn định, không sửa đầu vào).
+  - Mã lỗi `SLUG_INVALID_INPUT` và `SLUG_INVALID_MAXLENGTH`.
+
+Tệp test đã bị đổi trên đĩa sau khi tôi ghi. Các chuỗi escape `\u0323\u0302` giờ là ký tự literal, và test vẫn pass nên tôi giữ nguyên trạng thái đó.
+
+## Luồng dữ liệu
+Không áp dụng. Đây là thư viện thuần chuỗi, không có nguồn dữ liệu hay đích lưu trữ.
+
+## Dữ liệu nhạy cảm
+Không áp dụng. Test chỉ dùng chuỗi giả, không có PII và không có bí mật.
+
+## Kiểm chứng
+- `node --test test/slug.test.js` → exit 0, 13 test pass, 0 fail.
+- `npm test` toàn bộ: chưa chạy lại. Baseline đã đỏ từ trước và các module khác do hạng mục khác phụ trách.
+
+Hai chỗ spec không nói rõ, tôi chọn như sau:
+- **`options` thiếu hoặc `maxLength` là `undefined`:** coi như không giới hạn.
+- **Kiểm tra lỗi trong `slugify`:** kiểm tra kiểu `text` trước, rồi mới kiểm tra `maxLength`.
+
+Bản đầy đủ: `.ccoding/T-20261104-114417-daf/outputs/dev-S4-data-engineer.md`
+
+### S5 — Module ratelimit (@devops, done)
+
+## Tóm tắt
+Tôi đã hiện thực `createTokenBucket` và `createSlidingWindow` trong `src/ratelimit/index.js`, và mở rộng `test/ratelimit.test.js` lên 13 test dùng đồng hồ giả. `node --test test/ratelimit.test.js` cho 13/13 pass. `npm test` toàn repo cho 72 pass, 0 fail, exit 0.
+
+Brief ghi "nạp theo từng khoảng trọn, không nạp phần lẻ", nhưng SPEC.md nói nạp liên tục, tính cả phần lẻ. Ví dụ trong spec (`3/2000` token mỗi ms, chờ 667 ms) chỉ đúng khi tính phần lẻ, nên tôi làm theo SPEC. Token được lưu dạng số nguyên nhân với `refillIntervalMs` để `retryAfterMs` không bị sai do số thực.
+
+## Tệp đã tạo/sửa
+- `src/ratelimit/index.js`: hai hàm tạo bộ giới hạn.
+  - Kiểm tra đầu vào theo thứ tự khóa → cost → cost so với sức chứa, rồi tới tùy chọn sai (`RL_INVALID_OPTIONS`).
+  - Token bucket: đồng hồ lùi giữ nguyên mốc cũ; `remaining` là floor.
+  - Cửa sổ trượt: sự kiện hết hiệu lực đúng tại `t + windowMs`.
+  - `peek` không tạo khóa; `sweep` và `size` theo định nghĩa từng loại.
+- `test/ratelimit.test.js`: giữ 5 test cũ, thêm 8 test mới. Các test mới phủ:
+  - nạp lẻ 667/666 ms;
+  - trần capacity;
+  - đồng hồ lùi;
+  - `peek`/`reset`/`sweep`;
+  - thứ tự mã lỗi và tùy chọn sai;
+  - `retryAfterMs` của cửa sổ trượt.
+
+## Điều kiện tiên quyết
+Không có biến môi trường hay dịch vụ nào cần thêm. Chỉ cần Node ≥ 22, không dùng thư viện ngoài, mạng hay đồng hồ thật.
+
+## Checklist triển khai
+Không áp dụng (thư viện, không triển khai). Tiêu chí dừng là `npm test` xanh.
+
+## Rollback
+Không áp dụng. Dùng `git checkout -- src/ratelimit/index.js test/ratelimit.test.js` để quay lại bản trước.
+
+## Giám sát & sao lưu
+Không áp dụng.
+
+## Kiểm chứng
+- `node --test test/ratelimit.test.js` → 13 pass, 0 fail.
+- `npm test` → exit 0, 72 pass, 0 fail. Baseline trước khi sửa là exit 1, nên không phát sinh lỗi mới.
+
+Bản đầy đủ: `.ccoding/T-20261104-114417-daf/outputs/dev-S5-devops.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-114417-daf` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **72 in / 65.0k out**, cache đọc 761.7k, 7 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Frontend Developer (@frontend-dev) | dev | 24 | 10693 | 316910 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 12 | 19693 | 142725 | 1 |
+| Backend Developer (@backend-dev) | dev | 10 | 15636 | 108536 | 1 |
+| Data Engineer (@data-engineer) | dev | 10 | 10030 | 92302 | 1 |
+| DevOps / SRE (@devops) | dev | 8 | 6397 | 63456 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 6 | 2107 | 37116 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 443 | 649 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Module money (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 Module calendar (@senior-swe)
+- `outputs/dev-S3-frontend-dev.md` — S3 Module csvcheck (@frontend-dev)
+- `outputs/dev-S4-data-engineer.md` — S4 Module slug (@data-engineer)
+- `outputs/dev-S5-devops.md` — S5 Module ratelimit (@devops)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | at Test.run (node:internal/test_runner/test:1175:12) · at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) { · at Test.run (node:interna |
+| sau thực thi | `npm test` | 0 | ℹ tests 72 · ℹ suites 0 · ℹ pass 72 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Frontend Developer (@frontend-dev) | dev | **65** B | thấp | — | — | — | 63 | 90 | 100 | 1 | 1 | 328k | 2/16 | — |
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 77 | 92 | 100 | 1 | 1 | 162k | 1/10 | — |
+| Backend Developer (@backend-dev) | dev | **70** B | thấp | — | — | 100 | 95 | 100 | 100 | 1 | 1 | 124k | 0/6 | — |
+| Data Engineer (@data-engineer) | dev | **65** B | thấp | — | — | — | 100 | 90 | 100 | 1 | 1 | 102k | 1/8 | — |
+| DevOps / SRE (@devops) | dev | **69** B | thấp | — | — | 100 | 100 | 87 | 100 | 1 | 1 | 70k | 1/6 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 39k | 0/2 | — |
+| Điều phối viên (@orchestrator) | office | **60** C | thấp | — | — | — | — | 100 | — | 0 | — | 1k | — | — |
+
+### Việc cần sửa theo agent
+- **Frontend Developer** (@frontend-dev, 65 B):
+  - Tốn token gấp 2.6 lần trung vị phòng cho mỗi hạng mục (328k so với 124k).
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

@@ -1,13 +1,15 @@
 import http from 'node:http';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import type { App } from './app.js';
 import type { BusEvent } from './events.js';
 import { nowIso } from './util/ids.js';
 import { readJsonl, scanJsonl, type JsonlCache } from './util/fsx.js';
 import { MAX_UPLOAD_BYTES } from './uploads.js';
-import { clearFixedFeedback, FINDING_LABELS, kpiReport } from './kpi.js';
+import { cacheReport, clearFixedFeedback, FINDING_LABELS, kpiReport, type CallRow } from './kpi.js';
 import { isSafeRef } from './git.js';
+import { isPlanModel } from './orchestrator.js';
 import { DiffError, diffSummary, fileDiff, isSha, locate as locateDiff, ownersOf, repoDirFor } from './diff.js';
 import { ShipError } from './ship.js';
 import { buildTimeline } from './timeline.js';
@@ -15,6 +17,8 @@ import { AUDIT_CATS, auditOf, type AuditRow } from './audit.js';
 import { listArtifacts } from './artifacts.js';
 import { describeSchedule, RoutineError } from './routines.js';
 import { verifyChainStream } from './logger.js';
+import { ROOT } from './config.js';
+import { actorFromToken, applyApproved, listProposals, recordDirector, rollback, tokenEquals, type Actor, type Deps as SiDeps } from './selfimprove.js';
 import { deniedReason } from './tools/workspace.js';
 import type { BudgetMode, Classification, LogEntry, Phase, ProjectDef, TaskMode, ToolAccess } from './types.js';
 import type { UsageDim } from './usage.js';
@@ -150,12 +154,16 @@ export function createServer(app: App): http.Server {
     if (origin && req.method !== 'GET' && !allowedHosts.has(origin.replace(/^https?:\/\//, ''))) throw new HttpError(403, 'Origin không hợp lệ');
 
     if (p.startsWith('/api/')) {
+      // B-19: thao tác ghi của vòng tự cải thiện bắt buộc có danh tính xác thực bằng token, kể cả khi cấu hình bị sửa sau lúc khởi động
+      if (req.method !== 'GET' && p.startsWith('/api/selfimprove/') && config.selfImprove.enabled && !config.server.token) throw new HttpError(403, 'Chưa cấu hình server.token — không xác định được người duyệt');
+      let actor: Actor | undefined;
       if (config.server.token) {
         const auth = req.headers.authorization ?? '';
         const tok = auth.startsWith('Bearer ') ? auth.slice(7) : url.searchParams.get('token');
-        if (tok !== config.server.token) throw new HttpError(401, 'Thiếu hoặc sai token');
+        if (!tok || !tokenEquals(tok, config.server.token)) throw new HttpError(401, 'Thiếu hoặc sai token');
+        actor = actorFromToken(config.server.token);
       }
-      return api(req, res, url);
+      return api(req, res, url, actor);
     }
 
     // File tĩnh
@@ -166,7 +174,7 @@ export function createServer(app: App): http.Server {
     fs.createReadStream(file).pipe(res);
   };
 
-  const api = async (req: http.IncomingMessage, res: http.ServerResponse, url: URL) => {
+  const api = async (req: http.IncomingMessage, res: http.ServerResponse, url: URL, actor?: Actor) => {
     let p = url.pathname;
     // mọi API của nhiệm vụ nhận cả mã ngắn (CC-94): quy về mã đầy đủ trước khi khớp route (giao diện, CLI, liên kết dán)
     const tm = /^\/api\/tasks\/([^/]+)(\/.*)?$/.exec(p);
@@ -201,6 +209,9 @@ export function createServer(app: App): http.Server {
       // String({...}) = "[object Object]" — 28/10 một nhiệm vụ mất trọn đề bài vì client gửi brief dạng đối tượng
       if (typeof b.brief !== 'string' || !b.brief.trim()) throw new HttpError(400, 'brief phải là chuỗi văn bản, không rỗng');
       if (b.title !== undefined && typeof b.title !== 'string') throw new HttpError(400, 'title phải là chuỗi');
+      // D1: nhãn arm đo theo model — không để planModel sai rơi lặng lẽ về model mặc định
+      if (b.options && typeof b.options === 'object' && (b.options as Record<string, unknown>).planModel !== undefined && !isPlanModel((b.options as Record<string, unknown>).planModel))
+        throw new HttpError(400, 'options.planModel không hợp lệ: chỉ nhận "haiku", "sonnet" hoặc "opus"');
       try {
         const t = orchestrator.submit({
           brief: String(b.brief ?? ''),
@@ -476,6 +487,19 @@ export function createServer(app: App): http.Server {
       return send(res, 200, kpiReport(app, { tasks, days, department: q('dept') || undefined, project: q('project') || undefined, resolve: q('raw') !== '1', by: q('by') === 'model' ? 'model' : 'agent' }));
     }
 
+    // [B-13] tỉ lệ trúng cache theo lượt gọi / pha / runtime — chỉ số token và tên model, đọc từ calls.jsonl của nhiệm vụ
+    if (p === '/api/cache') {
+      const days = Number(q('days') ?? 0) || undefined;
+      const since = days ? Date.now() - days * 86_400_000 : 0;
+      const ids = q('task')?.split(',').map((x) => x.trim()).filter(Boolean);
+      const calls = store
+        .list()
+        .filter((t) => (!ids?.length || ids.includes(t.id)) && (!since || Date.parse(t.createdAt) >= since) && t.status !== 'queued')
+        .flatMap((t) => readJsonl<CallRow>(store.callsFile(t.id)));
+      const { calls_, ...stats } = cacheReport(calls);
+      return send(res, 200, { ...stats, rows: calls_.slice(-Number(q('limit') ?? 50)).reverse() });
+    }
+
     if (p === '/api/agents') return send(res, 200, snapshot(app).agents);
     if ((mm = m(/^\/api\/agents\/([^/]+)$/))) {
       const a = registry.agents.get(mm[1]);
@@ -605,6 +629,7 @@ export function createServer(app: App): http.Server {
       if (b.toolAccess && !ACCESS.includes(b.toolAccess)) throw new HttpError(400, 'Quyền công cụ không hợp lệ');
       if (b.budgetMode && !BUDGET_MODES.includes(b.budgetMode)) throw new HttpError(400, 'Chế độ ngân sách không hợp lệ');
       if (b.baseRef && !isSafeRef(String(b.baseRef))) throw new HttpError(400, 'Nhánh xuất phát không hợp lệ');
+      if (b.lane !== undefined && b.lane !== null && b.lane !== '' && !['auto', 'single', 'fast', 'full'].includes(b.lane)) throw new HttpError(400, 'Làn xử lý không hợp lệ (auto | single | fast | full)');
       const cmdList = (v: unknown) => (Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean).slice(0, 20) : undefined);
       const setupCommands = cmdList(b.setupCommands);
       const checkCommands = cmdList(b.checkCommands);
@@ -635,12 +660,14 @@ export function createServer(app: App): http.Server {
         budgetMode: b.budgetMode || undefined,
         toolAccess: b.toolAccess || undefined,
         isolation: b.isolation === 'none' || b.isolation === 'worktree' ? b.isolation : undefined,
+        lane: b.lane !== undefined ? (b.lane && b.lane !== 'auto' ? b.lane : undefined) : existing?.lane,
         baseRef: b.baseRef !== undefined ? String(b.baseRef).trim() || undefined : existing?.baseRef,
         worktreeCopy: Array.isArray(b.worktreeCopy) ? b.worktreeCopy.map(String).filter((x: string) => /^[\w.-]+$/.test(x)) : existing?.worktreeCopy,
         denyCommands: Array.isArray(b.denyCommands) ? b.denyCommands.map(String).slice(0, 50) : existing?.denyCommands,
         setupCommands: setupCommands ?? existing?.setupCommands,
         checkCommands: checkCommands ?? existing?.checkCommands,
         parallelWorktrees: typeof b.parallelWorktrees === 'boolean' ? b.parallelWorktrees : existing?.parallelWorktrees,
+        strictChecks: typeof b.strictChecks === 'boolean' ? b.strictChecks || undefined : existing?.strictChecks,
         planApproval: typeof b.planApproval === 'boolean' ? b.planApproval || undefined : existing?.planApproval,
         createdAt: existing?.createdAt ?? nowIso(),
       };
@@ -661,10 +688,58 @@ export function createServer(app: App): http.Server {
     }
 
     // ── UX-4d: Kiểm toán, Sản phẩm, Kỹ năng & Kết nối, Việc định kỳ ──────────────────────────────
+    // ── B-19: vòng tự cải thiện (khi selfImprove.enabled=false: 404, giao diện dựa vào đó để ẩn mục) ──
+    if (p.startsWith('/api/selfimprove/')) {
+      if (!config.selfImprove.enabled) throw new HttpError(404, 'Không tìm thấy');
+      const si: SiDeps = { cfg: config.selfImprove, logs, dataDir: config.dataDir, root: ROOT };
+      if (p === '/api/selfimprove/proposals' && req.method === 'GET') return send(res, 200, listProposals(si));
+      if ((mm = m(/^\/api\/selfimprove\/proposals\/([^/]+)\/(approve|reject|apply|rollback-confirm)$/)) && req.method === 'POST') {
+        // không có danh tính đã xác thực ⇒ không ghi sự kiện selfimprove.* nào (phòng thủ thêm ngoài kiểm ở handler)
+        if (!actor) throw new HttpError(403, 'Chưa cấu hình server.token — không xác định được người duyệt');
+        const pid = decodeURIComponent(mm[1]);
+        const act = mm[2];
+        const known = listProposals(si).find((x) => x.id === pid);
+        if (!known) throw new HttpError(404, 'Không có đề xuất');
+        const b = act === 'reject' ? await readBody(req) : {};
+        try {
+          if (act === 'approve') {
+            if (known.status !== 'proposed') throw new HttpError(409, `Đề xuất đang ở trạng thái ${known.status}, không duyệt được`);
+            if (!known.screening.ok) throw new HttpError(409, 'Bản vá vi phạm danh sách cấm, không duyệt được');
+            return send(res, 200, { ok: true, event: recordDirector('approved', pid, si, actor) });
+          }
+          if (act === 'reject') {
+            if (known.status !== 'proposed' && known.status !== 'approved') throw new HttpError(409, `Đề xuất đang ở trạng thái ${known.status}, không từ chối được`);
+            return send(res, 200, { ok: true, event: recordDirector('rejected', pid, si, actor, String(b.reason ?? '')) });
+          }
+          if (act === 'apply') {
+            const r = applyApproved(pid, si, { actor });
+            return send(res, 200, { ok: true, event: { kind: 'selfimprove.applied', data: { pid, ...r, ...actor } } });
+          }
+          if (known.status !== 'applied' && known.status !== 'rollback.proposed') throw new HttpError(409, `Đề xuất đang ở trạng thái ${known.status}, không rollback được`);
+          const event = recordDirector('rollback.confirmed', pid, si, actor);
+          const r = rollback(pid, si, actor);
+          return send(res, 200, { ok: true, event, rollback: r });
+        } catch (e) {
+          if (e instanceof HttpError) throw e;
+          // lỗi git/hệ thống có thể chứa đường dẫn cục bộ: chỉ trả dòng đầu, che đường dẫn, cắt ngắn
+          // che trước các gốc đã biết (dataDir, repo, thư mục tạm; kể cả khi có dấu cách), rồi che mọi đường dẫn còn lại
+          let first = (e as Error).message.split(/\r?\n/)[0];
+          const win = process.platform === 'win32';
+          for (const base of [config.dataDir, ROOT, os.tmpdir()].flatMap((x) => [x, path.resolve(x)]).filter((x, i, a) => x && a.indexOf(x) === i).sort((a, b) => b.length - a.length)) {
+            const esc = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            first = first.replace(new RegExp(esc, win ? 'gi' : 'g'), '<đường dẫn>');
+          }
+          const msg = first.replace(/(?:[A-Za-z]:)?[\\/][^\s'"]*[\\/][^\s'"]*/g, '<đường dẫn>').slice(0, 200);
+          throw new HttpError(409, msg);
+        }
+      }
+      throw new HttpError(404, 'Không tìm thấy');
+    }
+
     if (p === '/api/audit/verify') {
-      // kiểm chuỗi băm của nhật ký hệ thống (đọc luồng toàn tệp — chỉ chạy khi bấm, không chặn server)
+      // kiểm chuỗi băm của nhật ký hệ thống; ?allowUnsigned=1 cho phép log cũ chưa ký như CLI --allow-unsigned (đọc luồng toàn tệp — chỉ chạy khi bấm, không chặn server)
       const file = logs.fileFor('system');
-      return send(res, 200, { file: path.join('data', path.relative(config.dataDir, file)).replace(/\\/g, '/'), ...(await verifyChainStream(file)) });
+      return send(res, 200, { file: path.join('data', path.relative(config.dataDir, file)).replace(/\\/g, '/'), ...(await verifyChainStream(file, { allowUnsigned: ['1', 'true'].includes((q('allowUnsigned') ?? '').toLowerCase()) })) });
     }
     if (p === '/api/audit') {
       const rows = scanJsonl(logs.fileFor('system'), (e) => auditOf(e) ?? undefined, auditCache);

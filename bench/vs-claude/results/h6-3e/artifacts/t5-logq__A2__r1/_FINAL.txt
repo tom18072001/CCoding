@@ -1,0 +1,10 @@
+`logq` đã xong theo SPEC.md: `src/parse.js`, `src/query.js`, `src/agg.js` và `bin/logq.js`, không dùng thư viện ngoài. `npm test` xanh, 19 test, gồm test mới ở `test/logq.test.js` và smoke test có sẵn. Test CLI chạy bằng `node bin/logq.js` thật.
+
+Vài chỗ đặc tả chưa nói rõ, tôi đã chọn như sau:
+
+- **Dòng rỗng trong `--stats`:** vì `parseLine` trả `ok: false` cho dòng rỗng nên chúng được đếm vào cả `lines` lẫn `malformed`.
+- **Thứ tự kiểm tra lỗi CLI:** kiểm tra tùy chọn, cú pháp truy vấn và spec tổng hợp trước khi đọc tệp (lỗi mã 2 ưu tiên hơn mã 1). Kết quả được gom lại rồi in một lần ở cuối, nên khi lỗi stdout luôn rỗng.
+- **Thời gian có dấu cách:** `@t` chấp nhận cả dạng `2024-01-02 03:04:05` lẫn dạng có `T`. Chuỗi chỉ có ngày thì không có `@t`.
+- **WORD tìm trong `msg`:** nếu `msg` là `null` thì chuyển sang `message`.
+- **`field:` rồi `)`:** ví dụ `(f:)` báo lỗi tại vị trí ngay sau dấu `:`.
+- **Từ có dấu `:` mà phần trước không phải FIELD hợp lệ:** ví dụ `12:30` báo lỗi tại đầu từ đó.

@@ -1,0 +1,73 @@
+# Báo cáo T-20261103-031552-145: Thứ tự khởi động dịch vụ có vòng ẩn
+
+## Tóm tắt
+`answer.json` đã được ghi ở thư mục gốc repo và đúng ở cả 3 khóa. Có 18 dịch vụ khởi động được, 4 dịch vụ bị chặn (`admin-ui`, `etl`, `reporting`, `warehouse`). Vòng thật là `reporting → warehouse → etl → reporting`. Chuỗi `payments → fraud → ml-scorer → feature-store → fraud-history` không phải vòng. Bên review (S2) kết luận **Đạt**. Tuy nhiên, hệ thống ghi chú rằng reviewer không chạy lệnh kiểm tra nào, nên kết quả chạy script của S2 chỉ là tự báo cáo. Để bù lại, tôi đã đọc trực tiếp `services.txt` và `answer.json` rồi tự mô phỏng tay thuật toán. Kết quả khớp từng phần tử. Tệp chưa được commit.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Tính thứ tự khởi động, dịch vụ bị chặn, thành viên vòng; ghi `answer.json` | @senior-swe | Đạt | `answer.json` (tạo mới, chưa theo dõi). S1 báo đã chạy script Kahn + min-heap và Tarjan, exit 0, các assert đều qua. Chi tiết ở `.ccoding/T-20261103-031552-145/outputs/dev-S1-senior-swe.md` |
+| S2 | Kiểm chứng độc lập `answer.json` | @qa-tester | Đạt, không có blocker, major hay minor | S2 báo đã mô phỏng lặp và tìm vòng bằng DFS cho từng node, khớp từng phần tử. Hệ thống ghi chú reviewer không có lệnh chạy thật, nên phần này chưa có bằng chứng chạy. Chi tiết ở `.ccoding/T-20261103-031552-145/outputs/dev-S2-qa-tester.md` |
+| (Trưởng phòng) | Đối chiếu cuối | @dev-lead | Khớp | Tôi đọc `services.txt` (22 dịch vụ) và `answer.json`, rồi mô phỏng tay: mỗi bước chọn dịch vụ nhỏ nhất theo chữ cái trong số các dịch vụ đã đủ phụ thuộc. Kết quả trùng cả 18 vị trí của `startup_order`. `blocked` và `cycle_members` cũng khớp |
+
+Kết quả chốt:
+- **`startup_order`** (18 dịch vụ): cache, db-catalog, db-orders, db-users, auth, elastic, fraud-history, queue, feature-store, ml-scorer, fraud, payments, orders, search, catalog, gateway, templates, notifier
+- **`blocked`**: admin-ui, etl, reporting, warehouse
+- **`cycle_members`**: etl, reporting, warehouse
+
+## Quyết định
+- Đây là việc nhỏ nên chỉ chia 2 hạng mục (tính rồi kiểm chứng độc lập), không cần kiến trúc, BA hay cổng bảo vệ dữ liệu.
+- `cycle_members` chỉ gồm các node thật sự nằm trên vòng. `admin-ui` bị chặn vì phụ thuộc `reporting`, nhưng không nằm trên vòng nên không thuộc `cycle_members`.
+- Dịch vụ không có phụ thuộc (dòng để trống phần phụ thuộc như `elastic`, `templates`) vẫn được tính là node và khởi động được.
+- Cả hai giả thuyết trong kế hoạch ban đầu đều đã được xác nhận: chuỗi fraud không phải vòng, còn `admin-ui` bị chặn chứ không phải thành viên vòng.
+
+## Kết quả review
+- S2: **Đạt**, không có blocker, major hay minor.
+- Lưu ý về độ tin cậy: theo ghi chú hệ thống, reviewer không có lệnh chạy thật, nên các output script trong báo cáo S2 chưa được xác thực. Phần kiểm chứng tôi có bằng chứng trực tiếp là đọc tệp và mô phỏng tay. Môi trường của tôi chặn mọi lệnh không chỉ-đọc, nên tôi không chạy được script.
+
+## Việc còn mở & rủi ro
+- `answer.json` chưa được commit. Theo S1, `git status` chỉ có `?? answer.json`. Tôi không tự chạy được `git status` vì lệnh bị hook chặn.
+- Các script kiểm chứng nằm trong scratchpad, ngoài repo, nên không ảnh hưởng đến sản phẩm giao.
+- Rủi ro còn lại thấp: đầu vào nhỏ (22 dịch vụ) và kết quả đã được đối chiếu bằng 3 cách độc lập.
+
+## Bước tiếp theo
+- Tom duyệt rồi commit `answer.json` lên một nhánh riêng, không commit thẳng vào main. Tiêu chí xong: `git status` sạch và commit chỉ chứa `answer.json`.
+- (Tùy chọn) Nếu muốn có bằng chứng chạy thật, người có quyền chạy lệnh này:
+  `python3 -c "import json;d=json.load(open('answer.json'));print(len(d['startup_order']),d['blocked'],d['cycle_members'])"`
+  Kết quả mong đợi: `18 ['admin-ui', 'etl', 'reporting', 'warehouse'] ['etl', 'reporting', 'warehouse']`.
+- Không cần tách thêm nhiệm vụ nào khác.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-031552-145` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **28 in / 11.0k out**, cache đọc 141.5k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | 10 | 5095 | 53564 | 2 |
+| QA Engineer (@qa-tester) | dev | 10 | 3208 | 53593 | 2 |
+| Senior Software Engineer (@senior-swe) | dev | 6 | 2180 | 32118 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 497 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Tính thứ tự khởi động, dịch vụ bị chặn, thành viên vòng và ghi answer.json (@senior-swe)
+- `outputs/dev-S2-qa-tester.md` — S2 Kiểm chứng độc lập answer.json (@qa-tester)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | **96** A | 100 | 100 | 80 | 100 | 0 | — | 59k | 1/4 |
+| QA Engineer (@qa-tester) | dev | **93** A | 100 | 97 | 100 | 60 | 1 | 1 | 57k | 0/3 |
+| Senior Software Engineer (@senior-swe) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 34k | 0/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **QA Engineer** (@qa-tester, 93 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+- **Senior Software Engineer** (@senior-swe, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

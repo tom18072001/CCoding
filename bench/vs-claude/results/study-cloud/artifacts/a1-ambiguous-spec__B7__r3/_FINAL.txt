@@ -1,0 +1,72 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude a1-ambiguous-spec__B7__r3] Spec from an ambiguous, self-contradicting brief
+
+_Làn đơn: một agent làm trọn đề bài; báo cáo dựng tự động từ bàn giao và kết quả cổng chất lượng (không gọi model)._
+
+## Tóm tắt
+
+Làn đơn: Chuyên viên ATTT (@security) làm trọn đề bài trong worktree nhiệm vụ
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — [vs-claude a1-ambiguous-spec__B7__r3] Spec from an ambiguous, self-contradicting brief (@security, done)
+
+## Tóm tắt
+Đã viết `SPEC.md` ở thư mục gốc repo, gồm các mục chức năng, bảo mật, tiêu chí nghiệm thu và mục `## Open questions and assumptions` (18 câu hỏi, mỗi câu có giả định tạm dùng). Brief có 6 điểm tự mâu thuẫn. Rủi ro lớn nhất là xuất IP/username đầy đủ trong khi cấm dữ liệu cá nhân chưa che, và lưu file "mãi mãi" trong khi phải xóa dữ liệu cá nhân sau 12 tháng.
+
+## Kết luận
+ĐẠT CÓ ĐIỀU KIỆN. Đây là cổng thiết kế, chưa phải cổng phát hành. Spec chỉ được coi là chốt khi khách hàng xác nhận Q1 (che hay không che) và Q5 (thời hạn lưu giữ).
+
+## Phát hiện
+- **Cao** · C1, mục 2 · IP/username đầy đủ mâu thuẫn với việc cấm dữ liệu cá nhân chưa che · Mặc định xuất file đã che. Bản xuất không che chỉ làm dưới dạng "Forensic Export" tách riêng, cần hai người duyệt, ghi vết, và tắt bằng feature flag cho đến khi có văn bản chấp thuận · @dev-lead
+- **Cao** · C4, mục 2 · Lưu file mãi mãi mâu thuẫn với xóa dữ liệu cá nhân quá 12 tháng · File chứa dữ liệu cá nhân hết hạn sau tối đa 12 tháng (giả định thêm: 30 ngày với file BM). Chỉ bản ghi audit không chứa PII được giữ lâu dài · @dev-lead
+- **Trung bình** · C2/C3, mục 2 · "Xuất mọi thứ nhìn thấy" mâu thuẫn với phạm vi team và tháng trước. Giới hạn 5 giây không đo được khi chưa biết khối lượng · Phạm vi = quyền hiện có ∩ team ∩ tháng trước. Xuất đồng bộ tối đa 100.000 dòng với p95 ≤ 5 giây (giả định, cần xác nhận ở Q9), vượt ngưỡng thì chạy bất đồng bộ · @qa-tester
+- **Trung bình** · C5, C6, mục 2 · "Như hệ thống cũ" chưa được mô tả. "Đơn giản" không được bỏ các kiểm soát bắt buộc · Giả định bộ cột ở mục 5.2. Chống CSV injection, chống IDOR và audit vẫn giữ · @dev-lead
+
+## Điều kiện bắt buộc
+- Có văn bản khách hàng trả lời Q1 (che/không che, ngoại lệ forensic) và Q5 (thời hạn lưu, giữ hồ sơ pháp lý). Cách kiểm: văn bản trả lời đính kèm hồ sơ.
+- Hoàn tất đánh giá tác động xử lý dữ liệu cá nhân (Q11). Các căn cứ pháp lý cụ thể ghi "cần soát lại", không trích số điều.
+- Tám tiêu chí nghiệm thu ở mục 7 của `SPEC.md` đều đạt. Cách kiểm: test tự động trên dữ liệu giả lập và báo cáo load test p50/p95.
+
+## Kiểm chứng
+- Chưa chạy lệnh nào: repo chỉ có commit `base` và không có code hay test. Tôi đã kiểm tra lại các tiêu chí bằng cách đối chiếu nội dung `SPEC.md` với brief.
+
+## Tệp đã ghi
+- `/tmp/vb/a1-ambiguous-spec__B7__r3/SPEC.md`
+
+Bản đầy đủ: `.ccoding/T-20261102-201048-d3d/outputs/dev-S1-security.md`
+
+## Review
+
+Đã duyệt: SPEC.md đạt yêu cầu. Spec nêu đủ 6 mâu thuẫn của brief (che hay không che IP/username, giữ mãi mãi hay xóa sau 12 tháng, phạm vi 'mọi thứ nhìn thấy', 5 giây, 'như hệ thống cũ', 'đơn giản'). Mỗi mâu thuẫn có cách xử lý mặc định an toàn. Mục `## Open questions and assumptions` có đủ 18 câu hỏi, mỗi câu kèm giả định tạm dùng. Spec có yêu cầu chức năng, yêu cầu bảo mật và 8 tiêu chí nghiệm thu kiểm chứng được. Các điểm đã kiểm: chống CSV injection, chống IDOR, bản ghi audit không chứa PII, ranh giới tháng ở múi giờ UTC+7, không trích số điều luật. Có 4 điểm nhỏ cần lưu ý (xem issues). Báo cáo của @security nói spec nằm ở mục 'Open questions' là mục 8, nhưng tiêu đề đúng yêu cầu `## Open questions and assumptions` đã có trong tệp; báo cáo gọi nhầm 'mục 7' cho tiêu chí nghiệm thu thì đúng. Repo chỉ có SPEC.md (đã stage) và không có code hay test, nên không có lệnh test hay typecheck nào để chạy.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-201048-d3d` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **10 in / 8,594 out**, cache đọc 49.0k, 2 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Chuyên viên ATTT (@security) | dev | 6 | 7152 | 31384 | 1 |
+| QA Engineer (@qa-tester) | dev | 4 | 1442 | 17634 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-security.md` — S1 [vs-claude a1-ambiguous-spec__B7__r3] Spec from an ambiguous, self-contradicting brief (@security)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Chuyên viên ATTT (@security) | dev | **90** A | — | 100 | 100 | 60 | 1 | 1 | 39k | 0/2 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 19k | 0/1 |
+
+### Việc cần sửa theo agent
+- **Chuyên viên ATTT** (@security, 90 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

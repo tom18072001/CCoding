@@ -1,0 +1,12 @@
+{
+  "id": "re2-stream-synthesis",
+  "category": "research",
+  "set": "exploratory",
+  "size": 4,
+  "sizeBasis": "answers: q1, q2, q3, q4",
+  "title": "Grounded literature synthesis over a closed corpus (streaming logs)",
+  "hypotheses": [],
+  "deliverable": "answer.json",
+  "brief": "The folder `corpus/` holds six short paper summaries (P1-P6). Using ONLY this corpus (no outside knowledge, no web), answer the questions below and write `answer.json` at the repository root. Then write `REVIEW.md`: a 300-500 word synthesis of the state of the art, citing papers as [P1]..[P6].\n\nQuestions:\n- q1: Which method has the highest reported F1 on the full SPR-Y split? Give the paper id and the F1 value.\n- q2: Which paper reports results with less than 1% labeled data, on which dataset?\n- q3: What is the GPU memory footprint of StreamSift?\n- q4: Which two papers disagree on whether windowing of the event stream is necessary?\n\nShape: `{ \"q1\": { \"paper\": \"Px\", \"f1\": <number>, \"citations\": [\"Px\"] }, \"q2\": { \"paper\": \"Px\", \"dataset\": \"...\", \"citations\": [...] }, \"q3\": { \"answer\": \"...\", \"not_in_corpus\": true|false, \"citations\": [...] }, \"q4\": { \"papers\": [\"Px\", \"Py\"], \"citations\": [...] } }`. If the corpus does not contain an answer, set `not_in_corpus` to true rather than guessing.",
+  "grader": "research"
+}

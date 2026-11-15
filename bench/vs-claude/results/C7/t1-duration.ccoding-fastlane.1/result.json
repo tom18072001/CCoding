@@ -1,0 +1,52 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261102-114744-d33",
+  "wallSec": 109,
+  "wallSecHarness": 120,
+  "costUsd": 0.39836459999999996,
+  "tokens": {
+   "input": 18,
+   "output": 16375,
+   "cacheRead": 229886,
+   "cacheWrite": 52239
+  },
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "Hiện thực src/duration.js (parseDuration + formatDuration)"
+   }
+  ],
+  "workdir": "/home/claude/ccoding-dev/workspaces/b-c7-t1-fastla-1/wt-T-20261102-114744-d33",
+  "branch": "ccoding/t-20261102-114744-d33"
+ },
+ "task": "t1-duration",
+ "system": "ccoding-fastlane",
+ "rep": 1,
+ "key": "t1-duration.ccoding-fastlane.1",
+ "env": "cloud",
+ "startedAt": "2026-11-02T04:47:44.222Z",
+ "finishedAt": "2026-11-02T04:49:44.873Z",
+ "grade": {
+  "hidden": {
+   "pass": 149,
+   "fail": 0,
+   "total": 149,
+   "failed": [],
+   "ms": 252,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 11,
+   "fail": 0,
+   "total": 11
+  },
+  "changed": [
+   "~src/duration.js",
+   "+test/edge.test.js"
+  ]
+ },
+ "audit": []
+}

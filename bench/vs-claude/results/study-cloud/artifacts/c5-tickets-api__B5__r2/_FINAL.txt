@@ -1,0 +1,68 @@
+> Việc giao riêng cho Senior Software Engineer (@senior-swe)
+
+## Tóm tắt
+`GET /tickets` giờ hỗ trợ `status`, `assignee`, `sort`, `limit` và `cursor`, và lỗi trả về dạng `invalid_<param>`. Khi không có tham số nào, phản hồi vẫn là mảng thuần sắp theo id như cũ. `npm test` chạy 9 test, 9 pass, exit 0 (baseline là 1 test). Tôi chưa chạy kiểm thử tải hay dữ liệu lớn.
+
+## Tệp đã tạo/sửa
+- `src/handler.js`: thêm `listTickets` (lọc, sắp xếp, phân trang, validate) và mã hóa/giải mã cursor. Route `/tickets/:id` giữ nguyên.
+- `test/list.test.js`: 8 test mới. Chúng phủ các trường hợp sau:
+  - mặc định không tham số;
+  - lọc theo status và assignee (kể cả `none`);
+  - sort asc/desc kèm tie-break theo id;
+  - đi hết mọi trang với cả 6 kiểu sort, mỗi ticket xuất hiện đúng một lần;
+  - trang cuối và kết quả rỗng;
+  - 18 ca lỗi 400;
+  - tham số lạ bị bỏ qua.
+
+## Kiểm chứng
+- `npm test` → exit 0; `# tests 9 · # pass 9 · # fail 0`.
+- Chạy lại `npm test` lần nữa → exit 0.
+
+## Quyết định thiết kế
+- Cursor là base64url của JSON `{fp, v, id}`: `fp` là chuỗi gốc của `status`, `assignee`, `sort`, còn `v` và `id` là khóa của phần tử cuối trang. Trang kế tiếp lấy các ticket đứng sau khóa đó theo đúng thứ tự sort (keyset pagination), nên không bị lệch trang khi dữ liệu thay đổi.
+- Cursor chỉ hợp lệ khi `fp` khớp với các tham số của request hiện tại. So sánh theo chuỗi gốc, nên `status=open,closed` và `status=closed,open` được coi là khác nhau. Tôi chọn cách này vì đơn giản và an toàn.
+- Mọi lỗi giải mã cursor (sai định dạng, JSON hỏng, sai kiểu `v` hoặc `id`) đều trả `invalid_cursor`.
+- Giá trị rỗng của `status`, `assignee`, `sort` hoặc `limit` (kể cả phần tử rỗng như `open,`) bị coi là không hợp lệ.
+- `cursor` mà không có `limit` trả `invalid_cursor`. Thứ tự kiểm tra: status, assignee, sort, limit, rồi cursor.
+
+## Rủi ro & việc còn mở
+- Cursor không được ký, nên client có thể tự tạo một cursor hợp lệ về mặt hình thức. Hậu quả chỉ là nhảy tới vị trí tùy ý trong cùng tập kết quả, không lộ dữ liệu.
+- Mỗi request lọc và sắp xếp lại toàn bộ mảng (O(n log n)), chấp nhận được với handler in-memory này.
+
+## Review
+✅ Đã duyệt: Tôi đọc src/handler.js và chạy lại npm test (9/9 đạt). Không có blocker hay major. Khi không có tham số, handler vẫn trả mảng thuần sắp theo id. Lọc status và assignee (kể cả `none`) hoạt động đúng. Sort dùng `dir*cmp || a.id-b.id`, nên tie-break theo id tăng dần dù sort giảm dần. Phân trang là keyset, dùng so sánh theo thứ tự sort đầy đủ. Cursor gắn với chuỗi gốc của status, assignee và sort nên cursor sai bộ tham số bị từ chối. Mọi lỗi trả `invalid_<param>` đúng quy ước, và tham số lạ bị bỏ qua. Tôi không chạy mutation test cho bộ test mới, nên chưa xác nhận từng test có đỏ khi code bị làm hỏng.
+- [minor] src/handler.js, đoạn tạo `fp`: `status=open,closed` và `status=closed,open` cho fingerprint khác nhau, nên cursor cấp cho cách viết này bị từ chối ở cách viết kia. Hành vi này an toàn và đã được ghi nhận. Có thể chuẩn hóa (sort và dedupe) nếu muốn bớt chặt.
+- [minor] Cursor không được ký. Client tự tạo cursor hợp lệ về hình thức chỉ nhảy được tới vị trí tùy ý trong cùng tập kết quả, không lộ dữ liệu, nên chấp nhận được.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-000712-dbb` · chế độ: agent · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **14 in / 9,449 out**, cache đọc 89.6k, 2 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 10 | 8443 | 71517 | 1 |
+| QA Engineer (@qa-tester) | dev | 4 | 1006 | 18036 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude c5-tickets-api__B5__r2] Filtering, sorting and cursor pagination for a tickets API (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 1 · # suites 0 · # pass 1 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 9 · # suites 0 · # pass 9 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **97** A | 100 | 100 | 87 | 100 | 1 | 1 | 80k | 1/6 |
+| QA Engineer (@qa-tester) | dev | **100** A | — | — | 100 | 100 | 0 | — | 19k | 0/1 |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

@@ -1,0 +1,12 @@
+Cả 6 lỗi trong ISSUES.md đã được sửa. Tôi đã thêm `test/regression.test.js` với test hồi quy cho từng lỗi, và `npm test` xanh (14 test đều qua). API công khai giữ nguyên.
+
+1. **Làm tròn xu** (`money.js`): `toCents` nhân `x*100` theo số nhị phân nên `1.005` ra `100.4999…`. Giờ nó dịch dấu thập phân qua chuỗi, làm tròn half away from zero, nên `1.005` → 101, `-1.005` → -101 và `2.675` → 268. `checkout.js` cũng dùng `toCents` cho mã giảm cố định thay vì `Math.round(amount*100)`.
+2. **Tổng giảm bị hụt** (`allocate`): trước đây chỉ lấy phần nguyên nên mất xu dư. Giờ chia theo phần dư lớn nhất, hòa thì dòng đứng trước được trước, và tổng các phần luôn bằng `total`.
+3. **Mua X tặng Y** (`freeUnits`): giờ tính `floor(qty / (buy + free)) * free`. Với mua 2 tặng 1, 2 hộp → 0, 3 → 1, 5 → 1, 6 → 2.
+4. **Hết hạn mã** (`checkValidity`): `endsAt` giờ có hiệu lực tới hết ngày UTC. Mã `2026-11-30` dùng được lúc 23:59:59.999Z và bị từ chối từ `2026-12-01T00:00:00Z`.
+5. **Kho** (`cart.js`):
+   - `updateQty` trước đây giữ chỗ lại toàn bộ số lượng mới thay vì phần chênh. Giờ nó giữ thêm phần tăng hoặc trả phần giảm.
+   - `removeItem` trước đây không trả tồn kho. Giờ nó trả lại lượng đang giữ.
+6. **Thuế** (`checkout.js`): thuế giờ tính trên `net` thay vì `gross`.
+
+Ngoài danh sách báo lỗi, tôi sửa thêm một chỗ ở `tax.js`: thuế giờ tính bằng số nguyên theo phần trăm (`amount * 10 / 100`, rồi làm tròn). Làm vậy để tránh sai số dấu phẩy động của `amount * 0.1`.

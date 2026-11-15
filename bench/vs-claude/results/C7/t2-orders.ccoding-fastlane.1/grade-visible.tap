@@ -1,0 +1,112 @@
+TAP version 13
+# Subtest: tính tiền không mã giảm giá
+ok 1 - tính tiền không mã giảm giá
+  ---
+  duration_ms: 1.299782
+  type: 'test'
+  ...
+# Subtest: giữ chỗ tồn kho khi thêm
+ok 2 - giữ chỗ tồn kho khi thêm
+  ---
+  duration_ms: 0.163201
+  type: 'test'
+  ...
+# Subtest: mã không tồn tại
+ok 3 - mã không tồn tại
+  ---
+  duration_ms: 0.460818
+  type: 'test'
+  ...
+# Subtest: thêm 2 rồi sửa thành 3 khi kho còn 4: không báo hết hàng, giữ chỗ = 3
+ok 4 - thêm 2 rồi sửa thành 3 khi kho còn 4: không báo hết hàng, giữ chỗ = 3
+  ---
+  duration_ms: 1.000211
+  type: 'test'
+  ...
+# Subtest: sửa giảm số lượng nhả phần chênh lệch
+ok 5 - sửa giảm số lượng nhả phần chênh lệch
+  ---
+  duration_ms: 0.168894
+  type: 'test'
+  ...
+# Subtest: sửa vượt tồn kho vẫn ném OutOfStockError và không đổi giữ chỗ
+ok 6 - sửa vượt tồn kho vẫn ném OutOfStockError và không đổi giữ chỗ
+  ---
+  duration_ms: 0.428578
+  type: 'test'
+  ...
+# Subtest: xóa món khỏi giỏ nhả giữ chỗ, giỏ khác mua được
+ok 7 - xóa món khỏi giỏ nhả giữ chỗ, giỏ khác mua được
+  ---
+  duration_ms: 1.054939
+  type: 'test'
+  ...
+# Subtest: sửa về 0 nhả toàn bộ giữ chỗ
+ok 8 - sửa về 0 nhả toàn bộ giữ chỗ
+  ---
+  duration_ms: 0.198865
+  type: 'test'
+  ...
+# Subtest: lỗi 1: toCents làm tròn half away from zero
+ok 9 - lỗi 1: toCents làm tròn half away from zero
+  ---
+  duration_ms: 1.181722
+  type: 'test'
+  ...
+# Subtest: lỗi 1: giá sản phẩm ở catalog
+ok 10 - lỗi 1: giá sản phẩm ở catalog
+  ---
+  duration_ms: 0.303955
+  type: 'test'
+  ...
+# Subtest: lỗi 2: allocate tổng bằng số gốc, phần dư lớn nhất
+ok 11 - lỗi 2: allocate tổng bằng số gốc, phần dư lớn nhất
+  ---
+  duration_ms: 1.215428
+  type: 'test'
+  ...
+# Subtest: lỗi 2: mã cố định 10.00 trên giỏ 3 món giảm đúng 10.00
+ok 12 - lỗi 2: mã cố định 10.00 trên giỏ 3 món giảm đúng 10.00
+  ---
+  duration_ms: 0.62925
+  type: 'test'
+  ...
+# Subtest: lỗi 2: mã % giảm đúng tổng
+ok 13 - lỗi 2: mã % giảm đúng tổng
+  ---
+  duration_ms: 1.492286
+  type: 'test'
+  ...
+# Subtest: lỗi 6: thuế tính trên net
+ok 14 - lỗi 6: thuế tính trên net
+  ---
+  duration_ms: 0.229776
+  type: 'test'
+  ...
+# Subtest: toCents cơ bản
+ok 15 - toCents cơ bản
+  ---
+  duration_ms: 1.404515
+  type: 'test'
+  ...
+# Subtest: formatMoney
+ok 16 - formatMoney
+  ---
+  duration_ms: 0.358874
+  type: 'test'
+  ...
+# Subtest: allocate chia đều
+ok 17 - allocate chia đều
+  ---
+  duration_ms: 1.036029
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 268.016812

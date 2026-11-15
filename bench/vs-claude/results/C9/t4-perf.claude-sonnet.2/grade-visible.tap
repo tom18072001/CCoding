@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: báo cáo nhỏ
+ok 1 - báo cáo nhỏ
+  ---
+  duration_ms: 2.32308
+  type: 'test'
+  ...
+# Subtest: dữ liệu sinh ngẫu nhiên chạy được
+ok 2 - dữ liệu sinh ngẫu nhiên chạy được
+  ---
+  duration_ms: 11.616239
+  type: 'test'
+  ...
+# Subtest: giống bản gốc trên dữ liệu sinh ngẫu nhiên
+ok 3 - giống bản gốc trên dữ liệu sinh ngẫu nhiên
+  ---
+  duration_ms: 716.078715
+  type: 'test'
+  ...
+# Subtest: giống bản gốc ở các trường hợp biên
+ok 4 - giống bản gốc ở các trường hợp biên
+  ---
+  duration_ms: 1.72986
+  type: 'test'
+  ...
+# Subtest: giống bản gốc trên dữ liệu lộn xộn (fuzz)
+ok 5 - giống bản gốc trên dữ liệu lộn xộn (fuzz)
+  ---
+  duration_ms: 41.000967
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 846.805754

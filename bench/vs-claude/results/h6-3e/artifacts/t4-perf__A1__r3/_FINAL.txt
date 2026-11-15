@@ -1,0 +1,13 @@
+`buildReport` now chạy 200.000 dòng trong khoảng 230 ms (`npm run bench`, trước đây ~15 s). `npm test` xanh, 7/7 test pass.
+
+**Cách làm.** Bản cũ chậm vì lặp `includes`, `filter` và `find` trên toàn bộ dữ liệu, tức O(n²). Tôi viết lại thành một lượt duyệt dùng `Map`/`Set`. Các hành vi lạ của bản cũ được giữ nguyên:
+- Trùng sku trong `products` thì lấy bản đầu tiên.
+- Sku không có trong `products` cho danh mục `'unknown'` và tên `'(không rõ)'`.
+- Ngày không hợp lệ vẫn ném `RangeError`, kể cả ở dòng bị huỷ hoặc bị lọc.
+- `from`/`to` chỉ áp dụng khi truthy, và `topN` đưa thẳng vào `slice`.
+- Giá trị không hữu hạn (như `qty` là NaN) tính là 0, `-0` thành 0, và trường `undefined` không gây lỗi.
+- Các hàm so sánh khi sort giữ nguyên, nên thứ tự khi hòa điểm không đổi; tổng cộng dồn theo đúng thứ tự dòng.
+
+**Test.** `test/reference-report.js` là bản gốc nguyên văn. `test/equivalence.test.js` so sánh bản mới với bản gốc bằng `deepStrictEqual` và so chuỗi JSON, nên thứ tự khóa cũng được kiểm. Nó chạy trên 12 bộ dữ liệu sinh với nhiều tổ hợp `options`, các ca biên, và 30 bộ ngẫu nhiên có nhiều dòng hòa điểm. Ngoài ra có một test hiệu năng yêu cầu dưới 1 giây và kiểm tra đầu vào không bị sửa.
+
+**Giới hạn.** Tôi giả định đầu vào hợp lệ là `qty` và `unitPrice` kiểu số và `date` là ISO. Nếu `qty` là chuỗi thì bản cũ cho ra kết quả khác (nối chuỗi) mà tôi không tái hiện. Test hiệu năng đo thời gian thật nên có thể chập chờn trên máy rất chậm, dù hiện còn dư khoảng 3 lần.

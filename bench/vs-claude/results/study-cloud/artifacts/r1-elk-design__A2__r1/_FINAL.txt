@@ -1,0 +1,19 @@
+I wrote `DESIGN.md` at the repository root. I haven't committed it, and I haven't tested any of the pipeline or ILM snippets.
+
+**Capacity**
+- **Daily and yearly volume:** 20,000 events/s × 800 B is 16 MB/s, or about 1.38 TB/day raw. That is about 504.6 TB over 365 days.
+- **Compression assumption:** 0.70 of raw size when hot and 0.50 once warm data is force-merged. These are my estimates, not measured values. The document has a sensitivity table, and it recommends a proof-of-concept on one real day of data before ordering hardware.
+- **Hot tier:** 7 days with one replica is 13.5 TB, on 6 nodes with 23 TB of NVMe.
+- **Warm tier:** days 7–30 with one replica is 31.8 TB, on 6 nodes with 48 TB of SSD.
+- **Older data:** about 252 TB of Elasticsearch snapshots in object storage, plus about 111 TB for the tamper-evident evidence archive.
+- **Restore on request:** older data comes back through 3 restore nodes that are normally powered off. I estimate 8–14 hours end to end against the 24-hour requirement.
+
+**Problems in the customer's inputs**
+- **Searchable snapshots:** they and the frozen tier need an Enterprise licence, so they can't be used on Basic. The design uses ordinary snapshots with restore on request instead. Because the 24-hour requirement doesn't need older data to be online, this still meets it. The cost is that nothing older than 30 days can be searched ad hoc until it is restored.
+- **Masking versus legal evidence:** once usernames, e-mails and phone numbers are masked, the stored record is no longer the original. The document presents an optional encrypted vault of the originals and flags this as a decision for the customer's legal team.
+- **Basic licence gaps:** Basic has no Elasticsearch security audit log, no field-level security, no single sign-on, and no immutable indices. The document lists a compensating control for each.
+- **Retention versus erasure:** the write-once lock on the evidence archive can't be shortened, which may conflict with privacy-law erasure.
+
+**Integrity design:** hash-chained, signed, externally timestamped blocks are written to a write-once object store, separate from Elasticsearch.
+
+I assumed an S3-compatible object store with Object Lock and a three-zone layout, since the brief doesn't specify either. The Basic-licence feature list is from memory, so check it against Elastic's current subscription page before sign-off.

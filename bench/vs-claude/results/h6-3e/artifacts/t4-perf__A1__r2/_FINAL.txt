@@ -1,0 +1,32 @@
+`buildReport` giờ chạy 200.000 dòng trong khoảng 214 ms (`npm run bench`, trước đó ~15 giây), và `npm test` xanh (4/4). Tôi chưa commit gì.
+
+**1. PLAN**
+- Phải dưới 1 giây với 200.000 dòng.
+- Kết quả phải giống hệt bản cũ: cùng giá trị, thứ tự mảng và thứ tự khóa. Chữ ký hàm giữ nguyên, không sửa đầu vào, không cache giữa các lần gọi, không thêm thư viện hay worker.
+- Hành vi lạ của bản cũ cần giữ:
+  - Dòng `cancelled` bị bỏ.
+  - `refunded` làm cả `amount` và `qty` âm.
+  - Status khác ba giá trị trên được tính như `paid`: có doanh thu, nhưng không tính vào số đơn hay số khách.
+  - Sản phẩm không có trong danh sách thì dùng category `unknown` và tên `(không rõ)`. Nếu `sku` trùng thì lấy sản phẩm đầu tiên.
+  - Bộ lọc `from`/`to` chỉ áp dụng khi truyền giá trị khác rỗng.
+  - Ngày không hợp lệ vẫn ném `RangeError`.
+  - `JSON.parse(JSON.stringify(row))` làm NaN/Infinity thành `null`, `-0` thành `0`, và bỏ field `undefined`.
+  - Sản phẩm chỉ được đưa vào `topProducts` khi doanh thu lớn hơn 0.
+  - Các thứ tự sắp xếp và các hàm so sánh giữ nguyên.
+- Giả định: "đầu vào hợp lệ" nghĩa là số nguyên và chuỗi như tài liệu mô tả. Tôi vẫn giữ các hành vi biên ở trên, nhưng không mô phỏng trường hợp id là object, vì bản cũ nhân bản chúng nên mỗi cái thành một giá trị riêng.
+
+**2. IMPLEMENT**
+- `src/report.js` giờ duyệt `orders` một lượt, gom nhóm theo tháng, danh mục, sản phẩm và khách bằng `Map`/`Set`. Thứ tự lần xuất hiện đầu tiên được giữ như bản cũ.
+- Tôi giữ nguyên các hàm so sánh và cách tính `share`.
+- Bản cũ được giữ làm tài liệu tham chiếu ở `test/report.legacy.js`. Glob của `npm test` không chạy file này như một test.
+- `test/report.test.js` có thêm hai test so sánh với bản cũ:
+  - 12 seed, mỗi seed chạy cả dữ liệu thường và dữ liệu đã bị biến dạng, với 10 bộ option. Dữ liệu biến dạng gồm `qty` bằng 0 hoặc `undefined`, status lạ, `sku` thiếu, ngày kiểu `Date`, đơn giá 0, `customerId` kiểu số và sản phẩm thiếu category hoặc trùng. Test dùng `deepStrictEqual` và so cả chuỗi JSON để kiểm tra thứ tự khóa.
+  - Đầu vào rỗng, không có sản phẩm, bị lọc hết và toàn đơn `cancelled`.
+
+**3. SELF-REVIEW**
+Tôi đối chiếu lại từng yêu cầu ở trên với code và test. Ngoài ra tôi chạy một lần so sánh với bản cũ ở 20.000 dòng, `topN` = 5: kết quả khớp từng ký tự.
+
+**4. FIX**
+Review không tìm thấy lỗi cần sửa.
+
+**Chưa kiểm tra:** tôi chưa chạy so sánh với bản cũ ở đúng 200.000 dòng, vì bản cũ mất khoảng 15 giây. Bản mới ở cỡ đó chỉ được đo thời gian.

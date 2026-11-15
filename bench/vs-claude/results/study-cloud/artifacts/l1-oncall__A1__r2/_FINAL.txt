@@ -1,0 +1,22 @@
+**Stage 3: Self-review**
+- There is exactly one full solution, so the schedule is unique, as the brief says.
+- Checking the schedule by hand:
+  - Rule 1: An is on Thursday, so it holds.
+  - Rule 2: Chi is on Tuesday and Binh on Wednesday, so it holds.
+  - Rule 3: Dung (Monday) comes before An (Thursday), so it holds.
+  - Rule 4: Em (Friday) and Binh (Wednesday) are not adjacent, so it holds.
+  - Rule 5: Chi is on Tuesday, so it holds.
+  - Rule 6: Em is on Friday, so it holds.
+  - Rule 7: Dung (Monday) and Em (Friday) are not adjacent, so it holds.
+- Counts with each rule removed alone are 2, 10, 4, 2, 2, 2, 3 for rules 1–7. Rule 2 gives the largest count with no tie, so the tie-break assumption wasn't needed.
+- The JSON keys and shape match the brief, and the counts are integers.
+
+**Stage 4: Fix**
+The review found nothing to fix.
+
+**Final report:** `answer.json` is written in the repo root.
+- **Schedule:** Mon Dung, Tue Chi, Wed Binh, Thu An, Fri Em.
+- **`count_without_rule_2`:** 10.
+- **`most_permissive_rule`:** 2.
+
+I computed all of this by brute force over all 120 permutations. The script is `/tmp/s.py`, outside the repo.

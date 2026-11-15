@@ -1,0 +1,6 @@
+**Stage 3: Self-review.** A brute-force check of all 32 assignments found exactly one consistent one: A, D and E compromised, B and C healthy. That matches my hand derivation. The JSON has the required keys, sorted letters and `unique: true`. My written derivation for the "A healthy" branch was messy, but its conclusion (a contradiction) is right.
+
+**Stage 4: Fix.** Nothing needed fixing.
+
+**Final report:** `answer.json` is in the repository root:
+`{ "healthy": ["B","C"], "compromised": ["A","D","E"], "unique": true }`

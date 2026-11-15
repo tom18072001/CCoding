@@ -1,0 +1,14 @@
+I fixed all three problems, and `npm test` passes (6 tests: the 2 existing and 4 new regression tests).
+
+**Root causes**
+1. **Coupon totals** (`src/cart.js`, `src/money.js`):
+   - `total()` applied the coupon to every line and then again to the subtotal, so the coupon counted twice. It now sums the lines and applies the coupon once.
+   - `applyPercent` returned `amount - amount*pct/100`, which can leave fractional dong. It now rounds the discount half-up with integer arithmetic: `amount - floor((amount*pct + 50)/100)`.
+2. **Negative stock** (`src/stock.js`): `reserve` only checked `have < 0`, so a reservation larger than what was left went through. It now throws `INSUFFICIENT_STOCK` when `have < qty`. It also rejects a non-integer or non-positive `qty`.
+3. **Max quantity** (`src/cart.js`): the check was `current + qty >= MAX_QTY_PER_LINE`, an off-by-one. It is now `>`, so exactly 10 units can be bought on one line.
+
+**Tests** (`test/cart.test.js`): coupon applied once, integer results with half-up rounding, stock never negative, and exactly `MAX_QTY_PER_LINE` allowed with one more rejected.
+
+**Rounding choice:** I round the discount amount half-up, so the customer pays the subtotal minus that rounded discount. For example, 50% off 999 gives a discount of 500 and a total of 499. Rounding the final price half-up instead would give 500 in that case. Tell me if you want it that way.
+
+All exported names and signatures are unchanged.

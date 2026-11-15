@@ -1,0 +1,17 @@
+Cả 4 tính năng đã xong và `npm test` xanh (9/9 test). Tôi chưa gọi thử server bằng HTTP ngoài bộ test.
+
+**Đã làm**
+- **Xác thực và phân quyền:** kiểm tra `X-User` chạy ngay trong `src/server.js` cho mọi đường dẫn `/tasks…` và `/audit`, trước cả 404 và 405. Quyền admin, manager, member nằm trong `src/handlers/tasks.js` theo đúng thứ tự 401 → 400 query → 404 → 403 → 400 body.
+- **Lọc, tìm, sắp xếp, phân trang:** `GET /tasks` trả `{items, total, page, pageSize}`. Phần parse query và sắp xếp nằm trong `src/handlers/query.js`. Lỗi query báo tham số đầu tiên theo thứ tự trên URL, kể cả tham số lạ hoặc lặp.
+- **Xuất CSV:** `GET /tasks/export.csv` (`src/handlers/csv.js`) làm đúng đặc tả: BOM, CRLF, RFC 4180, thêm `'` chống công thức. Route được đăng ký trước `/tasks/:id`.
+- **Nhật ký:** `store.log` ghi `create`, `update`, `delete` chỉ khi thao tác thành công. `GET /audit` chỉ admin, có lọc `taskId` (`src/handlers/audit.js`).
+- **Test:** `test/tasks.test.js` được cập nhật cho dạng kết quả mới và thêm test cho từng tính năng. `test/helpers.js` giờ đọc body bằng byte thô, vì `res.text()` của fetch tự bỏ BOM và làm test BOM sai.
+
+**Các giả định tôi chọn** (đặc tả chưa nói rõ):
+- Manager `POST` thiếu `team` → 400 VALIDATION, vì chưa có gì để cấm.
+- Manager gửi `team` lạ như `"Z"` → 403, vì 403 đứng trước validate.
+- `assignee=` rỗng hoặc id lạ → kết quả rỗng, không lỗi.
+- `GET /audit` có query sai → 400 trước 403, đúng thứ tự trong đặc tả.
+- Member `PATCH` với body `{}` → 200 và vẫn ghi một mục audit với `changes: []`.
+
+**Chưa xử lý:** đường dẫn có `%` sai định dạng (ví dụ `/tasks/%E0`) làm `decodeURIComponent` trong `src/router.js` ném lỗi và trả 500. Lỗi này có sẵn từ trước, tôi chưa sửa.

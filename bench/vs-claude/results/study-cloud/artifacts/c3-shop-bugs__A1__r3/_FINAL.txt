@@ -1,0 +1,29 @@
+**Stage 4: FIX.** The review found nothing that needed changing. The new tests fail on the original code and pass on the fixed code.
+
+## Final report
+
+I found four root causes, one in each of `src/money.js`, `src/stock.js` and `src/cart.js`, and fixed them. `npm test` passes all 10 tests. No exported names or signatures changed.
+
+- **Wrong totals with a coupon (`cart.js`, `money.js`):**
+  - `total` discounted every line and then discounted the subtotal again, so the coupon was applied twice. That was the large error. It now sums the lines and applies the coupon once.
+  - `applyPercent` returned fractional dong. It now rounds the discount half-up using integer arithmetic.
+  - The existing "10% coupon on 100000" test failed on the original code, so the double discount was already visible there.
+- **Negative stock (`stock.js`):** `reserve` only refused when stock was already below zero. It now throws `INSUFFICIENT_STOCK` when stock is less than the requested quantity. A failed reserve leaves the cart and the stock unchanged.
+- **Can't buy the maximum on one line (`cart.js`):** the check used `>=`, so reaching `MAX_QTY_PER_LINE` was rejected. It is now `>`.
+
+I made two assumptions:
+- **Rounding:** the discount amount is rounded half-up, and the total is the amount minus that discount.
+- **Input checks (my addition):** `applyCoupon` now throws `BAD_COUPON` for anything that isn't a number from 0 to 100. `reserve` now rejects a quantity that isn't a positive integer.
+
+The new tests cover the following cases:
+- a coupon across several lines
+- rounding at the half-way point
+- 0% and 100% coupons
+- an invalid coupon
+- stock going negative, with stock left unchanged after a failure
+- an unknown SKU
+- exactly the maximum quantity allowed, and one more rejected
+- topping up an existing line to the cap
+- stock being released when an item is removed
+
+Seven of the ten tests fail against the original source.

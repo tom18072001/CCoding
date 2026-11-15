@@ -1,0 +1,41 @@
+{
+  "issues": [
+    {
+      "type": "hardcoded-secret",
+      "anchor": "const MAIL_API_KEY ="
+    },
+    {
+      "type": "xss",
+      "anchor": "<h1>Results for ${req.query.q}</h1>"
+    },
+    {
+      "type": "sqli",
+      "anchor": "WHERE email = '\" + email"
+    },
+    {
+      "type": "weak-crypto",
+      "anchor": "Math.random().toString(36)"
+    },
+    {
+      "type": "missing-authn",
+      "anchor": "app.get('/api/admin/export', async"
+    },
+    {
+      "type": "info-leak",
+      "anchor": "error: err.stack"
+    }
+  ],
+  "decoys": [
+    {
+      "anchor": "ORDER BY ${col}"
+    },
+    {
+      "anchor": "<pre>${escapeHtml(t.note)}</pre>"
+    },
+    {
+      "anchor": "crypto.randomBytes(16)"
+    }
+  ],
+  "bonus": [],
+  "note": "decoys: báo vào đây KHÔNG tính FP (D5), chỉ đếm decoyHits"
+}

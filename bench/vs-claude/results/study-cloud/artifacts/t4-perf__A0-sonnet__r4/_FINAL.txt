@@ -1,0 +1,12 @@
+Tôi đã viết lại `buildReport` trong `src/report.js`. Với 200.000 dòng, `npm run bench` chạy hết khoảng 261 ms (trước đây ~15 giây). `npm test` xanh, 3/3 test qua.
+
+Bản cũ chậm vì mỗi bước đều quét lại toàn bộ mảng (`products.find`, `includes`, `filter` lồng nhau). Bản mới duyệt `orders` một lần và gom số liệu bằng `Map`/`Set`. Thứ tự cộng dồn, thứ tự phần tử mảng và các hành vi lạ của bản cũ được giữ nguyên:
+- Khi `sku` trùng trong `products`, lấy sản phẩm đầu tiên.
+- Dòng bị hoàn tiền có `amount` âm.
+- Tháng không có dữ liệu của một danh mục vẫn có giá trị 0 trong `byMonth`.
+- `topN` đi qua `slice` như cũ.
+- Ngày không hợp lệ vẫn ném `RangeError`.
+
+Bản cũ được lưu nguyên ở `test/report.legacy.js`. Test mới trong `test/report.test.js` so sánh kết quả hai bản bằng `deepStrictEqual` trên 6 bộ dữ liệu sinh ngẫu nhiên và 6 tổ hợp tùy chọn (`topN`, `from`, `to`). Dữ liệu có thêm một sku trùng và một dòng hoàn tiền với `qty` 0, ngoài ra còn thử trường hợp đầu vào rỗng.
+
+Bản cũ có một bước `JSON.parse(JSON.stringify(row))` mà tôi bỏ đi. Nó chỉ ảnh hưởng tới giá trị `NaN` hoặc trường `undefined`, mà đầu vào hợp lệ không có. Vì vậy test so sánh không bao phủ các trường hợp đó.

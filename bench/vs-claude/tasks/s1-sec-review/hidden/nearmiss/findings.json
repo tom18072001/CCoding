@@ -1,0 +1,44 @@
+[
+ {
+  "line": 11,
+  "type": "hardcoded-secret",
+  "severity": "high",
+  "fix": "reference"
+ },
+ {
+  "line": 30,
+  "type": "sqli",
+  "severity": "high",
+  "fix": "reference"
+ },
+ {
+  "line": 42,
+  "type": "path-traversal",
+  "severity": "high",
+  "fix": "reference"
+ },
+ {
+  "line": 58,
+  "type": "weak-crypto",
+  "severity": "high",
+  "fix": "reference"
+ },
+ {
+  "line": 65,
+  "type": "ssrf",
+  "severity": "high",
+  "fix": "reference"
+ },
+ {
+  "line": 71,
+  "type": "missing-authz",
+  "severity": "high",
+  "fix": "reference"
+ },
+ {
+  "line": 1,
+  "type": "other",
+  "severity": "low",
+  "fix": "near-miss: finding sai chỗ"
+ }
+]

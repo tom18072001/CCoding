@@ -1,0 +1,74 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g5-median-stats__B7cabO__r9] Thống kê tóm tắt dùng median có sẵn (median sai nhưng test công khai xanh)
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Code và test đã có sẵn trong worktree (median đã sửa, summary đã thêm, 9 test xanh) và khớp SPEC.md, nên không cần làm lại. Chỉ còn một hạng mục xác minh nhỏ: chứng minh các test mới bắt được lỗi median cũ, rồi chạy lại npm test. Việc này nhỏ và không chia song song được.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Xác minh test bắt được lỗi median cũ và chạy lại npm test (@senior-swe, done)
+
+## Tóm tắt
+Không cần sửa mã: `src/stats.js` và `test/stats.test.js` đã khớp SPEC.md. `npm test` cho kết quả 9 pass, 0 fail. Trên bản `median` cũ (sort mặc định, sửa tại chỗ), 5 test mới bị đỏ, gồm cả 3 test cần kiểm tra là "median chẵn", "sắp theo số" và "không đổi đầu vào". Việc kiểm tra chạy trong thư mục tạm nên worktree không bị đụng tới.
+
+## Tệp đã tạo/sửa
+Không áp dụng. Tôi không sửa tệp nào trong repo. Diff hiện có vẫn là `src/stats.js` và `test/stats.test.js` (` M`), không commit, không push.
+
+## Kiểm chứng
+- `npm test` (trước khi thử median cũ) → exit 0, tests 9, pass 9, fail 0.
+- Thử trên bản median cũ: chạy `node --test test/stats.test.js` trong thư mục tạm. Thư mục này chứa test mới và `stats.js` hiện tại, với thân `median` thay bằng bản cũ `xs.sort(); return s[floor(len/2)]`. Tôi không dùng `git stash`. Kết quả: pass 4, fail 5.
+  - Đỏ: `median chẵn`, `median sắp theo số, không theo chuỗi`, `median không đổi đầu vào`, `summary cơ bản` (median sai khi số phần tử chẵn), `summary không đổi đầu vào` (median cũ sort tại chỗ làm đổi mảng).
+  - Xanh: `median lẻ`, `median rỗng`, `summary làm tròn mean`, `summary rỗng`.
+- Sau đó `git status --short` vẫn cho ` M src/stats.js` và ` M test/stats.test.js`. `npm test` chạy lại → exit 0, 9 pass, 0 fail.
+
+## Quyết định thiết kế
+- Thử trong thư mục tạm bên ngoài repo, vì đây là cách ít rủi ro nhất cho worktree dùng chung.
+- Tôi không xử lý NaN hay phần tử không phải số, vì SPEC không đề cập.
+
+## Rủi ro & việc còn mở
+- Git cảnh báo LF sẽ đổi thành CRLF ở `src/stats.js`. Cảnh báo này chỉ liên quan tới line ending, không ảnh hưởng kết quả test.
+- Không còn việc mở nào khác.
+
+Bản đầy đủ: `.ccoding/T-20261104-135251-8ff/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-135251-8ff` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **18 in / 4,918 out**, cache đọc 106.4k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 14 | 3900 | 84967 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 1018 | 21421 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Xác minh test bắt được lỗi median cũ và chạy lại npm test (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 9 · ℹ suites 0 · ℹ pass 9 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 100 | 100 | 100 | 1 | 1 | 89k | 0/10 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 22k | 0/1 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

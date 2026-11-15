@@ -1,0 +1,13 @@
+**SELF-REVIEW**
+- No undefined dependencies, so assumption 5 didn't come into play.
+- The cycle is reporting → warehouse → etl → reporting. `admin-ui` is blocked only because it depends on `reporting`, so it isn't a cycle member.
+- Spot-checking the order, each service appears after all its dependencies. For example, `fraud-history` comes after `db-orders`, `feature-store` after `queue` and `fraud-history`, and `gateway` after `auth`, `catalog` and `orders`.
+- At each step the smallest ready service was chosen. Early on, `cache` goes first, then `db-catalog`, `db-orders`, `db-users`, and only then `auth`, which became ready once `db-users` and `cache` had started.
+- All 22 services are accounted for: 18 in the order plus 4 blocked.
+
+**FIX**: Nothing needed.
+
+**Final report**: `answer.json` is in the repo root.
+- **`startup_order`:** 18 services start, beginning with `cache` and ending with `templates` then `notifier`.
+- **`blocked`:** `admin-ui`, `etl`, `reporting` and `warehouse`.
+- **`cycle_members`:** `etl`, `reporting` and `warehouse`.

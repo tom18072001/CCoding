@@ -1,0 +1,1 @@
+SR-24: answer.json: q4 chọn nhầm cặp (P1, P2) thay vì (P1, P3)

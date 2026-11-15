@@ -1,0 +1,82 @@
+TAP version 13
+# Subtest: nhật ký thao tác
+ok 1 - nhật ký thao tác
+  ---
+  duration_ms: 86.95863
+  type: 'test'
+  ...
+# Subtest: 401 khi thiếu/sai X-User, trước cả 400 và 404
+ok 2 - 401 khi thiếu/sai X-User, trước cả 400 và 404
+  ---
+  duration_ms: 66.791233
+  type: 'test'
+  ...
+# Subtest: member: chỉ thấy nhóm mình, không tạo/xóa, chỉ sửa status việc của mình
+ok 3 - member: chỉ thấy nhóm mình, không tạo/xóa, chỉ sửa status việc của mình
+  ---
+  duration_ms: 31.383503
+  type: 'test'
+  ...
+# Subtest: manager: đọc mọi nhóm, ghi chỉ nhóm mình, không xóa
+ok 4 - manager: đọc mọi nhóm, ghi chỉ nhóm mình, không xóa
+  ---
+  duration_ms: 20.699704
+  type: 'test'
+  ...
+# Subtest: admin làm mọi việc; JSON hỏng → 400 sau 403
+ok 5 - admin làm mọi việc; JSON hỏng → 400 sau 403
+  ---
+  duration_ms: 7.267538
+  type: 'test'
+  ...
+# Subtest: xuất CSV: header, BOM, escape, chống công thức, quyền
+ok 6 - xuất CSV: header, BOM, escape, chống công thức, quyền
+  ---
+  duration_ms: 64.915981
+  type: 'test'
+  ...
+# Subtest: hàm toCsv: ô null, số, tab/CR
+ok 7 - hàm toCsv: ô null, số, tab/CR
+  ---
+  duration_ms: 0.533739
+  type: 'test'
+  ...
+# Subtest: danh sách: dạng kết quả, lọc, tìm, sắp xếp, phân trang
+ok 8 - danh sách: dạng kết quả, lọc, tìm, sắp xếp, phân trang
+  ---
+  duration_ms: 73.729782
+  type: 'test'
+  ...
+# Subtest: danh sách: tham số sai → 400 INVALID_QUERY theo thứ tự trên URL
+ok 9 - danh sách: tham số sai → 400 INVALID_QUERY theo thứ tự trên URL
+  ---
+  duration_ms: 30.824733
+  type: 'test'
+  ...
+# Subtest: sắp xếp theo title dùng locale vi
+ok 10 - sắp xếp theo title dùng locale vi
+  ---
+  duration_ms: 10.130711
+  type: 'test'
+  ...
+# Subtest: CRUD cơ bản
+ok 11 - CRUD cơ bản
+  ---
+  duration_ms: 55.283573
+  type: 'test'
+  ...
+# Subtest: validate
+ok 12 - validate
+  ---
+  duration_ms: 10.659618
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 860.241106

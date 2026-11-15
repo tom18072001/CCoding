@@ -1,0 +1,10 @@
+I wrote `answer.json`. The solution is unique: B and C are healthy, and A, D and E are compromised.
+
+```json
+{ "healthy": ["B","C"], "compromised": ["A","D","E"], "unique": true }
+```
+
+I checked both possible states for A:
+
+- **A healthy:** A's statement makes B compromised. B's statement is then false, so A and E differ, which makes E compromised. E's statement is false while A is healthy, so D must be healthy. D's statement then forces C to be compromised. That makes B, C and E compromised, exactly three, so C's statement would be true. But C is compromised and cannot tell the truth, so this fails.
+- **A compromised:** A's statement is false, so B is healthy. B's statement is true, so A and E are in the same state, which makes E compromised. D's statement is then true only if C is compromised, so exactly one of C and D is compromised. With A and E compromised, that makes exactly three, so C's statement is true and C is healthy. D is then compromised, which agrees with its statement being false. Every statement checks out.

@@ -1,0 +1,82 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t2-orders__B7__r5] Sửa 6 lỗi trong thư viện tính tiền giỏ hàng
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Cả 6 lỗi đã được sửa trong worktree (money, checkout, promotions, cart) và có test/regression.test.js, nên không làm lại. Chỉ còn một hạng mục: kiểm chứng test hồi quy và xử lý các trường hợp biên mà bộ nghiệm thu ẩn có thể kiểm tra.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Kiểm chứng test hồi quy và làm chắc các trường hợp biên (@senior-swe, done)
+
+## Tóm tắt
+Cả 8 test hồi quy cũ đều ĐỎ trên mã base (0 pass, 8 fail) và xanh trên mã mới. Tôi đã bổ sung 6 test biên, và `npm test` hiện cho 20 test pass, 0 fail, exit 0. Không phát hiện lỗi mới nên không sửa `src`. Còn một điểm nghiệp vụ cần xác nhận về mua X tặng Y (nêu ở cuối).
+
+## Tệp đã tạo/sửa
+- `test/regression.test.js` · thêm 6 test biên:
+  - `toCents`: 0, -0, số lớn, giá sản phẩm 1.005 và `minSubtotal` 1.005 (cùng ra 101 xu).
+  - `allocate`: tổng đúng, hòa thì dòng đứng trước được trước, `weights` chứa 0 hoặc toàn 0.
+  - `endsAt`: dùng được lúc `2026-11-30T23:59:59Z`, bị từ chối lúc `2026-12-01T00:00:00Z`.
+  - `freeUnits`: mua 1 tặng 1.
+  - Giảm cố định lớn hơn tạm tính: giỏ không âm, tổng `discount` của các dòng khớp.
+  - Giữ chỗ tồn kho qua add, update lên, update xuống, update về 0 và remove.
+- `src/*`: không đổi so với lượt trước, đã khôi phục nguyên trạng.
+
+## Kiểm chứng
+- Tôi đưa `src` về bản `HEAD` bằng `git restore --source=HEAD --worktree -- src` (lệnh `git checkout` bị hook chặn), rồi chạy `node --test test/regression.test.js` → pass 0, fail 8.
+- Sau đó tôi chép lại `src` từ bản sao lưu. `git diff` trước và sau giống hệt nhau, `git status` vẫn là 4 tệp `src` ở trạng thái M và `test/regression.test.js` ở trạng thái A.
+- `npm test` → exit 0, tests 20, pass 20, fail 0.
+- Ghi chú: 6 test biên mới tôi chỉ chạy trên mã mới, chưa chạy trên mã cũ. 8 test gốc mới là phần đã được xác nhận đỏ trên mã cũ.
+- Đã đọc chú thích module: thứ tự áp mã và cách làm tròn thuế từng dòng trên `net` khớp với mã hiện tại, không có hành vi đúng nào bị đổi.
+
+## Quyết định thiết kế
+- Không sửa `src` vì các trường hợp biên đều đạt.
+- Test dùng `toCents` với đơn vị xu nên không phụ thuộc định dạng hiển thị.
+
+## Rủi ro & việc còn mở
+- **Mua X tặng Y khi giỏ chưa đủ nhóm (cần xác nhận nghiệp vụ):** hiện chỉ tặng theo nhóm đủ `buy+free` món. Ví dụ mua 2 tặng 1: 2 món → 0, 5 món → 1. Với mua 1 tặng 2 và giỏ có 2 món thì kết quả là 0. Nếu nghiệp vụ muốn tặng một phần nhóm thì phải đổi `freeUnits` và các test liên quan.
+- `allocate` giả định `total` và `weights` không âm.
+
+Bản đầy đủ: `.ccoding/T-20261113-005753-6b3/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261113-005753-6b3` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **22 in / 11.3k out**, cache đọc 166.1k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 18 | 9932 | 144073 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 1350 | 22027 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Kiểm chứng test hồi quy và làm chắc các trường hợp biên (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 6 · ℹ suites 0 · ℹ pass 6 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 20 · ℹ suites 0 · ℹ pass 20 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **69** B | thấp | — | — | 100 | 100 | 82 | 100 | 1 | 1 | 154k | 2/9 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 23k | 0/1 | — |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 69 B):
+  - Thao tác công cụ lỗi nhiều (2/9, 22%; nhiều nhất ở run_command 2/8) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

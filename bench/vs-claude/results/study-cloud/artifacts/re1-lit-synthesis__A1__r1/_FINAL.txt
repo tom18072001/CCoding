@@ -1,0 +1,10 @@
+**Stage 4: Fix and final report**
+
+I wrote `answer.json` and `REVIEW.md` at the repo root. `answer.json` parses as valid JSON. `REVIEW.md` is 494 words by `wc` (468 once markdown symbols are stripped), so it is within 300–500 either way.
+
+- **q1:** P4 (LogGraphT) has the highest full-split HDFS-X F1, at 0.962. P2's 0.971 is on HDFS-X-small, a different and easier test set that P6 says isn't comparable, so I excluded it.
+- **q2:** P5 reports results with 0.5% labeled data on BGL-X.
+- **q3:** The corpus doesn't give an answer, so `not_in_corpus` is true. P4 reports only latency (3.1 ms per session on one A100), not energy.
+- **q4:** P1 says parsing is necessary and P3 says it is optional.
+
+I cited papers as [P1]..[P6] and used nothing from outside the corpus.

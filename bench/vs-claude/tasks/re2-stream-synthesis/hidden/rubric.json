@@ -1,0 +1,7 @@
+{
+  "note": "SR-11: rubric của re2 (gradeResearch đọc tệp này; re1 không có và dùng rubric mặc định). dataset là regex không phân biệt hoa thường.",
+  "valid": ["P1", "P2", "P3", "P4", "P5", "P6"],
+  "q1": { "paper": "P2", "f1": 0.917 },
+  "q2": { "paper": "P3", "dataset": "OSK-?Y" },
+  "q4": ["P1", "P4"]
+}

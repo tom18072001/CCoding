@@ -1,0 +1,13 @@
+`buildReport` giờ chạy 200.000 dòng trong khoảng 390 ms (trước đó ~15 giây), và `npm test` xanh (4/4 test đạt).
+
+**Cách làm.** Bản cũ lặp lại các thao tác `includes`, `filter` và `products.find` trên toàn bộ mảng. Tôi viết lại thành một lượt duyệt dữ liệu, dùng `Map`/`Set` để nhóm theo sản phẩm, danh mục, tháng và khách hàng. Phần chỉnh sửa nằm trong `src/report.js`.
+
+**Giữ nguyên hành vi của bản cũ:**
+- Thứ tự phần tử mảng và các hàm so sánh khi sắp xếp được giữ như cũ. Các tổng cộng dồn theo đúng thứ tự dòng, nên kết quả số thực không lệch.
+- Với sản phẩm trùng `sku`, vẫn lấy bản ghi đầu tiên.
+- Ngày không hợp lệ vẫn gây lỗi, kể cả ở dòng `cancelled` hoặc dòng bị lọc theo tháng.
+- Bản cũ có bước `JSON.parse(JSON.stringify(row))`. Tôi mô phỏng tác dụng của nó mà không cần chạy JSON: số không hữu hạn (NaN, Infinity) thành `null` và `-0` thành `0`.
+
+**Test so sánh với bản cũ.** Bản gốc được lưu ở `test/report.orig.js`. `test/compare.test.js` so sánh bằng `deepStrictEqual` trên 5 bộ dữ liệu sinh ngẫu nhiên với nhiều tùy chọn khác nhau, cộng thêm một bộ trường hợp biên. Bộ biên gồm: `sku` trùng, sản phẩm không rõ, hoàn tiền, tiền bằng 0, `qty` thiếu, số thực lẻ, múi giờ khác và đầu vào rỗng.
+
+Tôi chưa kiểm tra các đầu vào lạ hơn như `id` hay `sku` là object, hoặc `qty` là chuỗi. Với những trường hợp đó, kết quả có thể khác bản cũ.

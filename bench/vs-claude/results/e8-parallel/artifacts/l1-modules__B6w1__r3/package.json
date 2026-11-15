@@ -1,0 +1,1 @@
+{"name":"l1-modules","private":true,"type":"module","scripts":{"test":"node --test"}}

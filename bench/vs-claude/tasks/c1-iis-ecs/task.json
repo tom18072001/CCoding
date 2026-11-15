@@ -1,0 +1,14 @@
+{
+  "id": "c1-iis-ecs",
+  "category": "coding",
+  "size": 1,
+  "sizeBasis": "functions: parseIisLog",
+  "sizeLegacy": 2,
+  "title": "IIS W3C log to ECS parser",
+  "hypotheses": [
+    "H10"
+  ],
+  "deliverable": "src/iis.js",
+  "brief": "In this repository, implement `parseIisLog(text)` in `src/iis.js`. It takes the full text of an IIS W3C extended log file and returns an array of ECS-style objects, one per request line.\n\nRules:\n1. Lines starting with `#` are directives. `#Fields:` defines the column order for the lines that follow; a file may contain several `#Fields:` lines and each applies until the next one. Other directives are ignored. Blank lines are ignored.\n2. Columns are separated by single spaces. A value of `-` means absent: omit that key entirely.\n3. Map fields: `date`+`time` -> `@timestamp` as ISO 8601 UTC with milliseconds (e.g. `2026-10-01T08:15:02.000Z`); `s-ip` -> `server.ip`; `c-ip` -> `client.ip`; `cs-method` -> `http.request.method`; `cs-uri-stem` -> `url.path`; `cs-uri-query` -> `url.query`; `sc-status` -> `http.response.status_code` (number); `time-taken` (milliseconds) -> `event.duration` in nanoseconds (number); `cs(User-Agent)` -> `user_agent.original` with every `+` replaced by a space; `cs-username` -> `user.name`; `s-port` -> `server.port` (number). Unknown fields are ignored.\n4. Output uses nested objects (`{ http: { request: { method: 'GET' } } }`), not dotted keys.\n5. Lines whose column count does not match the active `#Fields:` are skipped. Lines before any `#Fields:` are skipped.\n\nKeep the existing export name and ES module format. Run `npm test` to check the visible tests; you may add tests.",
+  "grader": "code"
+}

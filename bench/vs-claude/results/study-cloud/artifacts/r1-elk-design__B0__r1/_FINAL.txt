@@ -1,0 +1,96 @@
+# Báo cáo tổng hợp T-20261102-134142-c5b: Thiết kế và định cỡ nền tảng audit-log ELK
+
+## Tóm tắt
+Đã có `DESIGN.md` ở thư mục gốc (599 dòng, tiếng Anh, 9 mục và 1 phụ lục), chưa commit. Tài liệu có đủ các phần đề bài yêu cầu: phép tính dung lượng, bố trí node, ingest pipeline, ILM, cơ chế toàn vẹn, rủi ro và xung đột. Các số chính: raw 1.3824 TB/ngày, 504.576 TB/năm. Khuyến nghị plan A: hot 9 node, warm 12 node HDD replica 0. Đề xuất searchable snapshots của khách bị bác vì cần license Enterprise.
+
+Về bằng chứng review: báo cáo S4 ghi đã chạy lại `sizing.py` (exit 0) và parse được 5/5 khối JSON. Tuy vậy, hệ thống điều phối lại đánh dấu reviewer *không* chạy lệnh kiểm tra nào. Hai nguồn mâu thuẫn, nên tôi coi kết quả review là **chưa có bằng chứng chạy thật được xác nhận độc lập**. Tôi chỉ kiểm chứng bằng lệnh đọc: DESIGN.md tồn tại và đủ mục, các tệp work/ có mặt. Tôi không chạy lại script.
+
+Còn mở: 1 minor chưa sửa (số 343.222272), và các giả định về nén, throughput restore, Logstash/reroute chưa được đo trên cụm thật.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Script tính dung lượng, bố trí node, pipeline, ILM | @data-engineer | Đạt | `work/sizing.py`, `work/sizing_output.txt` (S1 báo exit 0, 169 dòng); `work/pii_regex_test.py` (S1 báo exit 0, dữ liệu giả); `work/S1-sizing-pipeline-ilm.md` |
+| S2 | Toàn vẹn chứng cứ, che PII, xung đột và rủi ro | @security | Đạt có điều kiện (cổng thiết kế); S3 báo đã thỏa 6 điều kiện | `work/S2-integrity-masking-risks.md`; chỉ đọc `sizing_output.txt`, không tra lại tài liệu license Elastic |
+| S3 | Ráp DESIGN.md | @solution-architect | Đạt, còn 1 minor mở | `DESIGN.md` (§1–§9 và phụ lục, tôi đã xác nhận bằng `grep "^#"`); trạng thái git: chưa track |
+| S4 | QA số liệu và license | @qa-tester | Đạt (0 blocker, 0 major, 2 minor), nhưng bằng chứng chạy đang mâu thuẫn như nêu ở Tóm tắt | `work/S4-review.md` |
+
+Các đường dẫn `work/` ở trên đều nằm dưới `.ccoding/T-20261102-134142-c5b/`.
+
+## Quyết định
+- **D1:** hạn 24h tính từ lúc khách gửi yêu cầu đến lúc dữ liệu tìm được trong Kibana. Định nghĩa này vẫn đưa vào câu hỏi mở Q1 để khách xác nhận.
+- **D2/K4:** bản gốc pháp lý là raw chưa che, lưu trong WORM (S3 Object Lock compliance, giữ ≥395 ngày). Mỗi sự kiện có SHA-256; mỗi phút gom thành Merkle root, ký và đóng tem RFC 3161. Elasticsearch chỉ giữ bản dẫn xuất đã che, với `_id` bằng hash raw.
+- **D3/K1:** bác searchable snapshots và frozen tier vì cần Enterprise. Dữ liệu cũ chỉ dùng tính năng có trong Basic: data tiers, ILM, force_merge, read-only, snapshot/restore.
+- **K2:** chọn plan A (warm HDD replica 0, tổng 757.361664 TB không tính WORM) thay cho plan B (chỉ giữ snapshot, 414.139392 TB). Lý do: mỗi yêu cầu, plan B chỉ restore được khoảng 31.25 ngày dữ liệu, chỉ dư 0.72 h so với hạn, và con số đó dựa trên 100 MB/s chưa đo.
+- **D4/K3:** che PII ở Logstash (HMAC-SHA256 qua `fingerprint` có `key`, kèm `gsub`), không dùng `redact` vì cần Platinum. Ingest pipeline của ES chỉ làm lưới an toàn cuối: gắn tag `pii_suspect` rồi `reroute` sang index quarantine.
+- **D5/K5:** Basic không có audit logging của ES, nên thay bằng log của reverse proxy, auditd và log truy cập object store, tất cả đẩy sang WORM.
+- **Repo snapshot không đặt Object Lock compliance**, vì ES cần xóa blob khi dọn snapshot. S2 đề xuất ngược lại; S3 chốt như trên và chuyển phương án repo theo tháng thành PoC (R7).
+- **S3 sửa cấu hình Logstash của S1:** S1 dùng `data_stream_type => "audit"` (không hợp lệ), S3 đổi sang `index` + `action => create` + `data_stream => false`.
+
+## Kết quả review
+- **Đạt theo S4:** các số ở §3–4 khớp đầu ra script; phép cộng tổng và sức chứa được kiểm lại (hot 69.12 ≥ 64.28 TB, warm 384 ≥ 347.33 TB, khoảng 586 shard/node, dưới 600); đủ 9 mục; không tham chiếu `.ccoding`/`work/`; các từ khóa ngoài Basic chỉ xuất hiện trong ngữ cảnh bị bác.
+- **Minor 1, chưa sửa:** `DESIGN.md:135` có `343.222272 TB`, là hiệu số (757.361664 − 414.139392) không in ra nguyên văn trong script, trái với D6 nếu đọc chặt. Tôi chấp nhận mức minor vì giá trị đúng. Cách sửa: ghi "(derived)" hoặc cho script in thêm dòng này.
+- **Minor 2, chấp nhận:** cấu hình Logstash và `reroute` chưa chạy thật. Phụ lục "validation still required" đã ghi việc này.
+- **Lưu ý bằng chứng:** cần chạy lại `sizing.py` và parse JSON trong một lượt có log lưu lại, để bỏ mâu thuẫn về việc reviewer có chạy lệnh hay không.
+
+## Việc còn mở & rủi ro
+- **Cao:** các giả định A3 (nén 0.6), A12 (restore 100 MB/s/node), A13, A15 chưa benchmark. Nếu tỉ lệ nén là 0.8 thì cần 12 hot và 16 warm.
+- **Cao:** WORM compliance mâu thuẫn với quyền xóa/đính chính dữ liệu cá nhân (C5), cần luật sư/DPO.
+- **Cao:** mất khóa KMS của WORM là mất chứng cứ (R3). Cần sao lưu khóa, deletion window dài và dual control.
+- **Trung bình:** username trong text tự do không che được bằng regex (R8). Raw nhiều dòng làm vỡ định dạng mỗi dòng một bản ghi trong WORM (R10).
+- **Chưa kiểm chứng:** phạm vi license Basic hiện hành (alerting, S3 repository, `reroute` cần Stack ≥ 8.8, A17) chưa được tra lại với tài liệu Elastic.
+- DESIGN.md chưa commit. Theo quy tắc, tôi không commit vào main.
+
+## Bước tiếp theo
+Đề xuất tách thành các nhiệm vụ riêng:
+1. **Sửa minor và xác nhận bằng chứng** (@solution-architect + @qa-tester, S). Ghi chú "(derived)" ở `DESIGN.md:135`, chạy lại `sizing.py`, diff với `sizing_output.txt`, parse 5 khối JSON và lưu log. *Xong khi* diff rỗng, 5/5 JSON hợp lệ, có log.
+2. **Benchmark nén và restore** (@data-engineer, M). Dựng cụm thử, nạp 1 ngày dữ liệu tổng hợp 800 B/sự kiện, đo tỉ lệ nén (A3) và MB/s restore mỗi node (A12), rồi cập nhật script và DESIGN.md. *Xong khi* có số đo thay cho A3/A12 và chạy lại sizing.
+3. **PoC pipeline Logstash và ES** (@data-engineer, M). Chạy cấu hình §5.3/§5.4 trên Stack ≥ 8.8 bản Basic; kiểm `fingerprint` HMAC, `gsub`, `dynamic: strict`, `reroute` sang quarantine và raw nhiều dòng. *Xong khi* sự kiện mẫu vào đúng index và PII không lọt.
+4. **PoC WORM, Object Lock và sealer** (@security + @devops, M). Thử ghi raw kèm hash list, ký Merkle root, đóng tem RFC 3161 và chạy quy trình kiểm chứng 9 bước ở §7.3; thử snapshot repo theo tháng. *Xong khi* kiểm chứng end-to-end thành công trên dữ liệu giả.
+5. **Thu thập trả lời khách cho Q1–Q10** (@dev-lead, S), đặc biệt Q1 (hạn 24h), Q3 (bản chứng cứ), C5 (DPO). *Xong khi* có văn bản khách xác nhận.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-134142-c5b` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **78 in / 103.6k out**, cache đọc 952.8k, 13 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Kiến trúc sư giải pháp (@solution-architect) | dev | 20 | 31190 | 456178 | 2 |
+| Data Engineer (@data-engineer) | dev | 14 | 37550 | 184306 | 2 |
+| QA Engineer (@qa-tester) | dev | 18 | 7906 | 161688 | 3 |
+| Chuyên viên ATTT (@security) | dev | 14 | 12289 | 95995 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 10 | 14085 | 52389 | 3 |
+| Điều phối viên (@orchestrator) | office | 2 | 533 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-data-engineer.md` — S1 Tính dung lượng (script), bố trí node, ingest pipeline và ILM (@data-engineer)
+- `outputs/dev-S2-security.md` — S2 Toàn vẹn chứng cứ, che PII và danh sách xung đột/rủi ro (@security)
+- `outputs/dev-S3-solution-architect.md` — S3 Viết DESIGN.md hoàn chỉnh (tiếng Anh) (@solution-architect)
+- `outputs/dev-S4-qa-tester.md` — S4 Kiểm định DESIGN.md: số liệu và license (@qa-tester)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Kiến trúc sư giải pháp (@solution-architect) | dev | **80** A | 100 | 34 | 84 | 100 | 1 | 1 | 487k | 2/10 |
+| Data Engineer (@data-engineer) | dev | **88** A | 100 | 76 | 100 | 60 | 1 | 1 | 222k | 0/5 |
+| QA Engineer (@qa-tester) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 170k | 0/8 |
+| Chuyên viên ATTT (@security) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 108k | 0/5 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | 100 | 100 | 100 | 100 | 0 | — | 66k | 0/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Kiến trúc sư giải pháp** (@solution-architect, 80 A):
+  - Thao tác công cụ lỗi nhiều (2/10, 20%; nhiều nhất ở run_command 2/4) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+  - Tốn token gấp 2.9 lần trung vị phòng cho mỗi hạng mục (484k so với 165k).
+- **Data Engineer** (@data-engineer, 88 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **QA Engineer** (@qa-tester, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+- **Chuyên viên ATTT** (@security, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

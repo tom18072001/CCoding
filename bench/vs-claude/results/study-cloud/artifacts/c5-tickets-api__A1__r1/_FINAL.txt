@@ -1,0 +1,23 @@
+**3. SELF-REVIEW**
+
+I checked each requirement against the code and the tests.
+- **No-param response:** `GET /tickets` with no parameters still returns the bare array sorted by id. The existing test and a new one cover this.
+- **Filters and sort:** `status`, `assignee` (including `none`) and all sort fields in both directions pass. Ties break by id ascending.
+- **Pagination:** every sort walks all pages exactly once. The last page, including an exact-fit one, has `nextCursor: null`.
+- **Cursor binding:** a cursor is rejected if `status`, `assignee` or `sort` differ from when it was issued. An absent `sort` counts the same as `sort=id`.
+- **Validation:** each invalid case returns 400 with the matching `invalid_<param>`. Unknown parameters are ignored.
+- **One bug found:** the first test run had one failure, caused by an inverted comparison in my own sort test, not in the handler.
+
+**4. FIX**
+
+I corrected the test sign, and all 9 tests now pass.
+
+**Final report**
+- `src/handler.js` now has a `listTickets` function. It validates the parameters, filters, sorts, and paginates with an opaque base64url keyset cursor.
+- The new tests are in `test/list.test.js`.
+- Assumptions I made:
+  - Empty list items such as `status=` or `assignee=an,` are invalid.
+  - `limit` must be a plain digit string.
+  - Cursor matching compares the raw `status` and `assignee` strings, so `open,closed` and `closed,open` count as different filters.
+  - If several parameters are invalid, the error reports the first in this order: status, assignee, sort, limit, cursor.
+- I haven't committed anything.

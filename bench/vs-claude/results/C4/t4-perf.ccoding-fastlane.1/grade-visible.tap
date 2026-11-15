@@ -1,0 +1,88 @@
+TAP version 13
+# Subtest: orders rỗng
+ok 1 - orders rỗng
+  ---
+  duration_ms: 2.345506
+  type: 'test'
+  ...
+# Subtest: tất cả cancelled / grandTotal = 0
+ok 2 - tất cả cancelled / grandTotal = 0
+  ---
+  duration_ms: 2.212194
+  type: 'test'
+  ...
+# Subtest: sku không có trong products; products trùng sku
+ok 3 - sku không có trong products; products trùng sku
+  ---
+  duration_ms: 0.945594
+  type: 'test'
+  ...
+# Subtest: nhiều dòng cùng id; cùng khách nhiều tháng
+ok 4 - nhiều dòng cùng id; cùng khách nhiều tháng
+  ---
+  duration_ms: 0.430801
+  type: 'test'
+  ...
+# Subtest: refunded làm revenue ≤ 0; tie-break theo revenue, qty, sku
+ok 5 - refunded làm revenue ≤ 0; tie-break theo revenue, qty, sku
+  ---
+  duration_ms: 2.054199
+  type: 'test'
+  ...
+# Subtest: cùng total giữa các danh mục
+ok 6 - cùng total giữa các danh mục
+  ---
+  duration_ms: 0.428472
+  type: 'test'
+  ...
+# Subtest: topN và from/to
+ok 7 - topN và from/to
+  ---
+  duration_ms: 99.374558
+  type: 'test'
+  ...
+# Subtest: múi giờ lệch làm đổi tháng UTC
+ok 8 - múi giờ lệch làm đổi tháng UTC
+  ---
+  duration_ms: 0.570042
+  type: 'test'
+  ...
+# Subtest: nhiều hơn 5 khách, tie doanh thu theo customerId
+ok 9 - nhiều hơn 5 khách, tie doanh thu theo customerId
+  ---
+  duration_ms: 0.619425
+  type: 'test'
+  ...
+# Subtest: không sửa đầu vào (kể cả đóng băng)
+ok 10 - không sửa đầu vào (kể cả đóng băng)
+  ---
+  duration_ms: 10.529925
+  type: 'test'
+  ...
+# Subtest: dữ liệu ngẫu nhiên có seed
+ok 11 - dữ liệu ngẫu nhiên có seed
+  ---
+  duration_ms: 68.821571
+  type: 'test'
+  ...
+# Subtest: báo cáo nhỏ
+ok 12 - báo cáo nhỏ
+  ---
+  duration_ms: 2.242739
+  type: 'test'
+  ...
+# Subtest: dữ liệu sinh ngẫu nhiên chạy được
+ok 13 - dữ liệu sinh ngẫu nhiên chạy được
+  ---
+  duration_ms: 10.261515
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 309.773621

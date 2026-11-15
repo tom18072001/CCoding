@@ -2,6 +2,8 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { samePath } from './tools/guard-paths.js';
+import { loadScratchPatterns, matchScratch } from './scratch.js';
 
 /** Tiện ích git tối thiểu cho worktree của nhiệm vụ (không bao giờ push). */
 
@@ -53,6 +55,54 @@ export function addWorktree(repo: string, wtPath: string, branch: string, startP
   return git(repo, ['worktree', 'add', '--no-track', '-b', branch, wtPath, startPoint]);
 }
 
+/** Nhánh cục bộ và origin lệch hai chiều — nhiệm vụ phải dừng, không được làm việc trên base không rõ. */
+export class BaseDivergedError extends Error {}
+
+export interface ResolvedBase {
+  /** Ref dùng làm điểm xuất phát (nhánh cục bộ hoặc `origin/<nhánh>`). */
+  ref: string;
+  /** Commit đầy đủ của ref tại thời điểm chọn (undefined nếu không phân giải được). */
+  commit?: string;
+  source: 'local' | 'remote';
+  warning?: string;
+}
+
+/**
+ * Chọn base cho worktree nhiệm vụ. Nếu `baseRef` là nhánh cục bộ và repo có remote `origin`: fetch đúng nhánh đó (có timeout),
+ * rồi so hai phía. Cục bộ đi sau, không đi trước → dùng `origin/<baseRef>`; bằng nhau hoặc chỉ đi trước → dùng cục bộ;
+ * lệch hai chiều → ném lỗi (không tạo worktree). Fetch lỗi → dùng cục bộ kèm cảnh báo. Không sửa nhánh cục bộ, không force.
+ * `baseRef` không phải nhánh (commit, HEAD, nhánh nối từ nhiệm vụ trước) hoặc không có remote → giữ hành vi cũ.
+ */
+export function resolveBase(repo: string, baseRef: string | undefined, fetchTimeoutMs = 60_000): ResolvedBase {
+  const name = baseRef || 'HEAD';
+  const full = (ref: string) => {
+    const r = git(repo, ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], 15_000);
+    return r.ok ? r.out.trim().split('\n')[0] : undefined;
+  };
+  const legacy: ResolvedBase = { ref: name, commit: full(name), source: 'local' };
+  if (name === 'HEAD' || !isSafeRef(name)) return legacy;
+  if (!git(repo, ['rev-parse', '--verify', '--quiet', `refs/heads/${name}`], 15_000).ok) return legacy;
+  const remote = 'origin';
+  if (!git(repo, ['remote', 'get-url', remote], 15_000).ok) return legacy;
+  const f = git(repo, ['fetch', '--quiet', remote, name], fetchTimeoutMs);
+  const remoteRef = `${remote}/${name}`;
+  const remoteCommit = f.ok ? full(`refs/remotes/${remoteRef}`) : undefined;
+  if (!remoteCommit) {
+    const why = f.ok ? `không thấy nhánh ${remoteRef} sau khi fetch` : `fetch ${remote} ${name} lỗi: ${f.out.slice(0, 160)}`;
+    return { ...legacy, warning: `Không cập nhật được base từ remote (${why}) — dùng nhánh cục bộ \`${name}\` có thể đã cũ.` };
+  }
+  const c = git(repo, ['rev-list', '--left-right', '--count', `${name}...refs/remotes/${remoteRef}`], 30_000);
+  const [ahead, behind] = c.ok ? c.out.trim().split(/\s+/).map(Number) : [NaN, NaN];
+  if (!Number.isFinite(ahead) || !Number.isFinite(behind)) {
+    return { ...legacy, warning: `Không so được \`${name}\` với \`${remoteRef}\` (${c.out.slice(0, 160)}) — dùng nhánh cục bộ.` };
+  }
+  if (ahead > 0 && behind > 0) {
+    throw new BaseDivergedError(`Nhánh cục bộ \`${name}\` và \`${remoteRef}\` đã lệch nhau (cục bộ có ${ahead} commit riêng, remote có ${behind} commit riêng). Không tạo worktree — hãy hợp nhất hoặc chọn nhánh nào làm base rồi chạy lại.`);
+  }
+  if (behind > 0) return { ref: remoteRef, commit: remoteCommit, source: 'remote' };
+  return legacy;
+}
+
 /** File chưa track (vd. .env) chép từ repo gốc sang worktree để chạy test/migration — không bao giờ đọc nội dung. */
 export function copyUntracked(repo: string, wtPath: string, names: string[]): string[] {
   const copied: string[] = [];
@@ -78,12 +128,65 @@ export function changeSummary(wt: string, base?: string): string {
 }
 
 /** Commit mọi thay đổi của agent trên nhánh worktree (không push). */
-export function commitAll(wt: string, message: string): GitResult {
+export function commitAll(wt: string, message: string, opts: { base?: string } = {}): GitResult & { scratchMoved: string[]; scratchErrors: string[] } {
+  const scratchMoved: string[] = [];
+  const scratchErrors: string[] = [];
+  const patterns = loadScratchPatterns(wt);
+  const strays = patterns ? newFiles(wt, opts.base).filter((f) => !f.startsWith('.scratch/') && matchScratch(f, patterns)) : [];
+  if (strays.length) ensureScratchExcluded(wt); // .scratch/ không bao giờ vào commit, kể cả worktree không do CCoding dựng
+  const failed: string[] = [];
+  for (const f of strays) {
+    try {
+      const dst = path.join(wt, '.scratch', ...f.split('/'));
+      fs.mkdirSync(path.dirname(dst), { recursive: true });
+      fs.renameSync(path.join(wt, ...f.split('/')), dst);
+      git(wt, ['rm', '--cached', '-q', '--ignore-unmatch', '--', f], 30_000); // nếu đã nằm trong index (thao tác của hệ thống)
+      scratchMoved.push(f);
+    } catch {
+      scratchErrors.push(f);
+      failed.push(f);
+    }
+  }
   git(wt, ['add', '-A'], 60_000);
-  const st = git(wt, ['status', '--porcelain'], 30_000);
-  if (st.ok && !st.out) return { ok: true, out: 'không có thay đổi' };
+  // không chuyển được → để nguyên tại chỗ nhưng không commit
+  for (const f of failed) git(wt, ['reset', '-q', '--', f], 30_000);
+  if (strays.length) git(wt, ['reset', '-q', '--', '.scratch'], 30_000); // phòng khi .scratch là tệp/không bị exclude
+  const st = git(wt, ['status', '--porcelain', '--untracked-files=no'], 30_000);
+  const extra = { scratchMoved, scratchErrors };
+  if (st.ok && !st.out) return { ok: true, out: 'không có thay đổi', ...extra };
   // --no-verify: hook của repo (husky, lint-staged, commitlint…) thường không chạy được trong worktree của CCoding và agent không sửa được
-  return git(wt, [...identity(wt), 'commit', '--no-verify', '-m', message], 300_000);
+  return { ...git(wt, [...identity(wt), 'commit', '--no-verify', '-m', message], 300_000), ...extra };
+}
+
+/** Tệp mới của nhiệm vụ: chưa track + không bị ignore, cộng tệp thêm mới so với `base` (nếu có). Đường dẫn tương đối, dùng `/`. */
+function newFiles(wt: string, base?: string): string[] {
+  const out = new Set<string>();
+  const untracked = git(wt, ['ls-files', '--others', '--exclude-standard'], 60_000);
+  if (untracked.ok) for (const f of untracked.out.split('\n')) if (f.trim()) out.add(f.trim().replace(/\\/g, '/'));
+  if (base) {
+    const added = git(wt, ['diff', '--name-only', '--diff-filter=A', base], 60_000);
+    if (added.ok) for (const f of added.out.split('\n')) if (f.trim()) out.add(f.trim().replace(/\\/g, '/'));
+  }
+  return [...out].filter((f) => fs.existsSync(path.join(wt, f)));
+}
+
+/**
+ * Thêm `.scratch/` vào tệp exclude của git của worktree (info/exclude, không đụng .gitignore của repo). Idempotent.
+ * `info/exclude` nằm ở thư mục git chung của repo, nên dùng chung cho mọi worktree của repo đó.
+ */
+export function ensureScratchExcluded(wt: string): boolean {
+  const r = git(wt, ['rev-parse', '--git-path', 'info/exclude'], 15_000);
+  if (!r.ok || !r.out) return false;
+  const file = path.resolve(wt, r.out.split('\n')[0]!.trim());
+  try {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const cur = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+    if (cur.split(/\r?\n/).some((l) => l.trim() === '.scratch/')) return true;
+    fs.writeFileSync(file, `${cur}${cur && !cur.endsWith('\n') ? '\n' : ''}.scratch/\n`);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Đang dở một lần merge (còn MERGE_HEAD). */
@@ -96,11 +199,6 @@ export function unmergedFiles(wt: string): string[] {
   const u = git(wt, ['diff', '--name-only', '--diff-filter=U'], 30_000);
   return u.ok ? u.out.split('\n').map((s) => s.trim()).filter(Boolean) : [];
 }
-
-const samePath = (a: string, b: string) => {
-  const n = (p: string) => path.resolve(p).replace(/[\\/]+$/, '');
-  return process.platform === 'win32' ? n(a).toLowerCase() === n(b).toLowerCase() : n(a) === n(b);
-};
 
 /**
  * `dir` đúng là một worktree (gốc của chính nó, không phải thư mục con của repo khác) thuộc cùng repo với `peer`.
@@ -120,7 +218,7 @@ export function isWorktreeOf(dir: string, peer: string): boolean {
 }
 
 /** Repo chưa cấu hình người commit → dùng danh tính CCoding cho riêng lệnh này. */
-function identity(wt: string): string[] {
+export function identity(wt: string): string[] {
   const hasIdentity = git(wt, ['config', 'user.email'], 10_000).out.includes('@');
   return hasIdentity ? [] : ['-c', 'user.name=CCoding Office', '-c', 'user.email=ccoding@localhost'];
 }

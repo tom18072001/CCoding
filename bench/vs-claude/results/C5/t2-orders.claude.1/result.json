@@ -1,0 +1,85 @@
+{
+ "run": {
+  "exitCode": 0,
+  "status": "done",
+  "wallSec": 93,
+  "costUsd": 0.4640292,
+  "turns": 8,
+  "tokens": {
+   "input": 14,
+   "output": 9601,
+   "cacheRead": 325413,
+   "cacheWrite": 25840
+  },
+  "models": [
+   "claude-haiku-5-5",
+   "claude-opus-5-5"
+  ],
+  "modelUsage": {
+   "claude-haiku-5-5": {
+    "inputTokens": 1351,
+    "outputTokens": 31,
+    "cacheReadInputTokens": 0,
+    "cacheCreationInputTokens": 0,
+    "webSearchRequests": 0,
+    "costUSD": 0.0001506,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 64000,
+    "thinkingTokens": 0,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 0,
+    "canonicalModel": "claude-haiku-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   },
+   "claude-opus-5-5": {
+    "inputTokens": 14,
+    "outputTokens": 9601,
+    "cacheReadInputTokens": 325413,
+    "cacheCreationInputTokens": 25840,
+    "webSearchRequests": 0,
+    "costUSD": 0.4638786,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000,
+    "thinkingTokens": 2053,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 25840,
+    "canonicalModel": "claude-opus-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   }
+  },
+  "finalText": "Đã sửa xong cả 6 lỗi trong ISSUES.md và `npm test` xanh: 21/21 test đạt. Tôi cũng chạy bộ test mới trên mã gốc: 15 test hồi quy đều đỏ, còn 6 test đúng sẵn từ trước vẫn đạt. Không đổi API công khai (tên hàm/lớp, tham số, dạng kết quả).\n\n| # | Nguyên nhân gốc | Cách sửa |\n|---|---|---|\n| 1 | `toCents` tính `Math.round(amount * 100)`, mà `1.005 * 100` ra `100.4999…` do sai số số thực. Ngoài ra mã giảm cố định trong `checkout.js` không dùng `toCents` mà tự nhân 100 y như vậy. | `src/money.js`: dịch dấu phẩy trên dạng chữ số thập phân của số rồi mới làm tròn half away from zero (`-1.005` → `-101`). `checkout.js` giờ dùng `toCents`. Giá trị đơn tối thiểu vốn đã gọi `toCents` nên tự đúng theo. |\n| 2 | `allocate` chỉ lấy phần nguyên của từng dòng, bỏ mất số xu dư. | Cài đúng phương pháp phần dư lớn nhất: xu dư chia cho phần lẻ lớn nhất, bằng nhau thì dòng đứng trước được trước. Phần dư so sánh bằng số nguyên nên không bị sai số. |\n| 3 | `freeUnits` chia `qty / buy`, tức có 2 hộp là đã được tặng. | Đổi thành `floor(qty / (buy + free)) * free`. |\n| 4 | Mã bị coi là hết hạn ngay từ `00:00Z` của ngày `endsAt`. | Cho dùng được tới trước `endsAt + DAY_MS` (hằng số này đã có sẵn trong code nhưng chưa được dùng). |\n| 5 | `updateQty` giữ chỗ thêm toàn bộ số lượng mới thay vì phần chênh lệch, còn `removeItem` không trả lại hàng giữ chỗ. | `src/cart.js`: chỉ giữ chỗ hoặc trả lại phần chênh lệch. `removeItem` (kể cả khi sửa số lượng về 0) trả lại số đang giữ. Nếu báo hết hàng thì giỏ không thay đổi. |\n| 6 | Thuế tính trên `gross`. | Tính trên `net`. |\n\nTest hồi quy nằm ở `test/regressions.test.js`. Ngoài đúng các ca khách báo, tôi thêm vài ca biên: số rất lớn/rất nhỏ, kết quả `-0`, trọng số 0, cấu hình mua 3 tặng 2, mốc `23:59:59.999Z`, hai giỏ dùng chung một kho, và giảm cố định lớn hơn giá trị giỏ.\n\nCó một điểm tôi phải tự chọn cách hiểu ở lỗi 3. Tôi chỉ tặng khi đủ trọn nhóm `buy + free` món, đúng theo câu \"phải có đủ 3 hộp\". Với cấu hình tặng nhiều hơn 1 món, nhóm thiếu sẽ không được tặng phần nào. Ví dụ mua 1 tặng 2 mà lấy 2 món thì không món nào miễn phí. Nếu nghiệp vụ muốn tặng một phần cho nhóm thiếu thì cần đổi lại.\n\nTôi chưa commit. Thay đổi đang nằm trong working tree.",
+  "workdir": "/tmp/bw/C5-t2-orders.claude.1-8tfad1/repo"
+ },
+ "task": "t2-orders",
+ "system": "claude",
+ "rep": 1,
+ "key": "t2-orders.claude.1",
+ "env": "cloud",
+ "startedAt": "2026-11-02T03:50:11.876Z",
+ "finishedAt": "2026-11-02T03:51:45.027Z",
+ "grade": {
+  "hidden": {
+   "pass": 60,
+   "fail": 0,
+   "total": 60,
+   "failed": [],
+   "ms": 158,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 21,
+   "fail": 0,
+   "total": 21
+  },
+  "changed": [
+   "~src/cart.js",
+   "~src/checkout.js",
+   "~src/money.js",
+   "~src/promotions.js",
+   "+test/regressions.test.js"
+  ]
+ },
+ "audit": []
+}

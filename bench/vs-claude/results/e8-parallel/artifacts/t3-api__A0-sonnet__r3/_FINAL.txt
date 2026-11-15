@@ -1,0 +1,15 @@
+Cả 4 tính năng trong `FEATURES.md` đã làm xong và `npm test` xanh (7/7 test pass). Tôi chưa gọi thử API thật bằng tay ngoài các test này.
+
+**Thay đổi chính**
+- **Xác thực & phân quyền** (`src/auth.js`, `src/handlers/tasks.js`): thiếu hoặc sai `X-User` trả 401. Thứ tự kiểm tra là 401 → tham số truy vấn 400 → 404 → 403 → validate body 400. Member xem nhiệm vụ nhóm khác nhận 404.
+- **Lọc/tìm/sắp xếp/phân trang** (`src/query.js`): `GET /tasks` trả `{items,total,page,pageSize}`. Tham số lạ hoặc lặp trả 400 `INVALID_QUERY` với `field` là tham số đầu tiên lỗi theo thứ tự trên URL. Tìm `q` không phân biệt dấu và `đ`. Khi hòa, sắp theo `id` tăng theo số.
+- **Xuất CSV** (`src/csv.js`): `GET /tasks/export.csv` có BOM, `\r\n` sau mọi dòng, chống chèn công thức bằng dấu `'`, theo chuẩn RFC 4180. `page` và `pageSize` trả 400.
+- **Nhật ký** (`src/handlers/audit.js`, `store.log`): `GET /audit` chỉ dành cho admin, mới nhất trước, lọc được theo `taskId`.
+
+**Chỗ đặc tả chưa nói rõ, tôi tự quyết**
+- `POST` của manager có `team` khác nhóm mình (kể cả giá trị không hợp lệ như `"C"`) trả 403 chứ không phải 400, vì 403 đứng trước validate body.
+- `PATCH` không đổi gì vẫn ghi một mục nhật ký với `changes: []`.
+- Tôi siết `dueDate` trong body của `POST`/`PATCH` thành ngày hợp lệ theo lịch. Trước đây chỉ kiểm tra dạng `YYYY-MM-DD`, nên `2026-02-30` giờ bị 400.
+- `assignee=` (rỗng) không báo lỗi, chỉ lọc ra danh sách rỗng.
+
+Test cũ trong `test/tasks.test.js` đã sửa cho khớp kết quả mới và có thêm test cho từng tính năng. `fetch().text()` tự bỏ BOM nên test CSV kiểm tra BOM trên byte thô.

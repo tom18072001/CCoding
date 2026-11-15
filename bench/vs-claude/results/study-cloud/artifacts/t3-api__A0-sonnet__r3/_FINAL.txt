@@ -1,0 +1,18 @@
+Cả 4 tính năng trong `FEATURES.md` đã được hiện thực, và `npm test` xanh (9/9 test). Tôi chưa chạy server thật qua HTTP bằng tay ngoài bộ test.
+
+**Cấu trúc mã**
+- Xác thực `X-User` (401) chạy trong `src/server.js`, trước cả bước chọn route, nên áp cho mọi đường dẫn `/tasks…` và `/audit`.
+- `src/query.js` kiểm tra tham số truy vấn theo thứ tự xuất hiện trên URL. Nó cũng lọc, tìm bỏ dấu tiếng Việt và sắp xếp (`dueDate` rỗng luôn nằm cuối, hòa theo số của `id`, `title` dùng `localeCompare('vi')`).
+- `src/csv.js` tạo CSV (BOM, `\r\n`, RFC 4180, thêm `'` chống công thức). Route `/tasks/export.csv` được đăng ký trước `/tasks/:id`.
+- `src/handlers/tasks.js` có phân quyền, phân trang và ghi nhật ký. `src/handlers/audit.js` phục vụ `GET /audit`. `src/store.js` thêm nơi lưu nhật ký.
+
+**Cách tôi hiểu những chỗ đặc tả chưa nói rõ**
+- Với `POST`, tôi kiểm tra quyền (403) trước khi đọc body. Manager gửi `team` sai nhóm bị 403 trước lỗi validate. Nếu thiếu hẳn `team` thì trả 400 `VALIDATION`.
+- Tham số truy vấn trùng nhau bị báo lỗi tại lần xuất hiện thứ hai. Ví dụ `a=x&b=bad&a=y` báo `b`, vì `b` lỗi trước.
+- `PATCH` thành công mà không đổi gì vẫn ghi một mục nhật ký với `changes: []`.
+- `dueDate` trong body `POST`/`PATCH` vẫn chỉ kiểm tra theo dạng `YYYY-MM-DD`, không kiểm tra ngày có thật, vì đặc tả chỉ yêu cầu kiểm tra theo lịch cho tham số `dueBefore`.
+
+**Test**
+- `test/helpers.js` giờ mặc định gửi `X-User: u1`, và test có sẵn đã đổi sang dạng `{ items, total, … }`.
+- `test/features.test.js` mới có test cho xác thực, phân quyền member và manager, lọc/sắp xếp/phân trang, tham số lỗi, CSV và nhật ký.
+- Test CSV đọc byte thô để kiểm tra BOM, vì `fetch().text()` tự bỏ BOM.

@@ -1,0 +1,190 @@
+TAP version 13
+# Subtest: ghi nhật ký create/update/delete với seq, at, changes a→z
+ok 1 - ghi nhật ký create/update/delete với seq, at, changes a→z
+  ---
+  duration_ms: 58.468331
+  type: 'test'
+  ...
+# Subtest: thao tác lỗi không ghi nhật ký; lọc theo taskId
+ok 2 - thao tác lỗi không ghi nhật ký; lọc theo taskId
+  ---
+  duration_ms: 24.99098
+  type: 'test'
+  ...
+# Subtest: /audit: chỉ admin; tham số lạ → 400 trước 403
+ok 3 - /audit: chỉ admin; tham số lạ → 400 trước 403
+  ---
+  duration_ms: 12.605338
+  type: 'test'
+  ...
+# Subtest: 401 khi thiếu hoặc sai X-User, trên mọi route
+ok 4 - 401 khi thiếu hoặc sai X-User, trên mọi route
+  ---
+  duration_ms: 75.562018
+  type: 'test'
+  ...
+# Subtest: member: thấy nhóm mình, nhóm khác 404
+ok 5 - member: thấy nhóm mình, nhóm khác 404
+  ---
+  duration_ms: 22.005391
+  type: 'test'
+  ...
+# Subtest: member: chỉ sửa status của nhiệm vụ giao cho mình
+ok 6 - member: chỉ sửa status của nhiệm vụ giao cho mình
+  ---
+  duration_ms: 15.986655
+  type: 'test'
+  ...
+# Subtest: manager: tạo/sửa trong nhóm mình, không xóa, không chuyển nhóm
+ok 7 - manager: tạo/sửa trong nhóm mình, không xóa, không chuyển nhóm
+  ---
+  duration_ms: 12.940339
+  type: 'test'
+  ...
+# Subtest: admin làm mọi việc
+ok 8 - admin làm mọi việc
+  ---
+  duration_ms: 8.635293
+  type: 'test'
+  ...
+# Subtest: danh sách rỗng: BOM + tiêu đề + CRLF
+ok 9 - danh sách rỗng: BOM + tiêu đề + CRLF
+  ---
+  duration_ms: 0.676673
+  type: 'test'
+  ...
+# Subtest: một dòng thường, null → ô trống, CRLF cuối
+ok 10 - một dòng thường, null → ô trống, CRLF cuối
+  ---
+  duration_ms: 0.295664
+  type: 'test'
+  ...
+# Subtest: tiếng Việt giữ nguyên
+ok 11 - tiếng Việt giữ nguyên
+  ---
+  duration_ms: 0.192435
+  type: 'test'
+  ...
+# Subtest: dấu phẩy, ngoặc kép, xuống dòng được bọc và nhân đôi
+ok 12 - dấu phẩy, ngoặc kép, xuống dòng được bọc và nhân đôi
+  ---
+  duration_ms: 0.187125
+  type: 'test'
+  ...
+# Subtest: chống chèn công thức
+ok 13 - chống chèn công thức
+  ---
+  duration_ms: 0.277535
+  type: 'test'
+  ...
+# Subtest: thêm ' trước khi bọc ngoặc kép; áp dụng cho id/assignee; số giữ nguyên
+ok 14 - thêm ' trước khi bọc ngoặc kép; áp dụng cho id/assignee; số giữ nguyên
+  ---
+  duration_ms: 0.107194
+  type: 'test'
+  ...
+# Subtest: mặc định: createdAt tăng, hòa theo số của id, page=1 pageSize=20
+ok 15 - mặc định: createdAt tăng, hòa theo số của id, page=1 pageSize=20
+  ---
+  duration_ms: 2.171049
+  type: 'test'
+  ...
+# Subtest: tham số lạ / lặp → INVALID_QUERY, field là tham số đầu tiên
+ok 16 - tham số lạ / lặp → INVALID_QUERY, field là tham số đầu tiên
+  ---
+  duration_ms: 0.800355
+  type: 'test'
+  ...
+# Subtest: giá trị không hợp lệ
+ok 17 - giá trị không hợp lệ
+  ---
+  duration_ms: 1.807703
+  type: 'test'
+  ...
+# Subtest: paginate:false: page/pageSize → INVALID_QUERY, trả toàn bộ
+ok 18 - paginate:false: page/pageSize → INVALID_QUERY, trả toàn bộ
+  ---
+  duration_ms: 0.447412
+  type: 'test'
+  ...
+# Subtest: status nhiều giá trị, assignee, none, team
+ok 19 - status nhiều giá trị, assignee, none, team
+  ---
+  duration_ms: 0.493446
+  type: 'test'
+  ...
+# Subtest: q: không phân biệt hoa thường và dấu tiếng Việt, đ→d, q rỗng = không lọc
+ok 20 - q: không phân biệt hoa thường và dấu tiếng Việt, đ→d, q rỗng = không lọc
+  ---
+  duration_ms: 0.834198
+  type: 'test'
+  ...
+# Subtest: dueBefore: ≤, loại task không có dueDate
+ok 21 - dueBefore: ≤, loại task không có dueDate
+  ---
+  duration_ms: 0.291903
+  type: 'test'
+  ...
+# Subtest: sort dueDate: null luôn cuối cả hai chiều, hòa theo id số tăng dần
+ok 22 - sort dueDate: null luôn cuối cả hai chiều, hòa theo id số tăng dần
+  ---
+  duration_ms: 0.200626
+  type: 'test'
+  ...
+# Subtest: sort priority / createdAt giảm: hòa theo id tăng dần
+ok 23 - sort priority / createdAt giảm: hòa theo id tăng dần
+  ---
+  duration_ms: 0.4802
+  type: 'test'
+  ...
+# Subtest: sort title dùng localeCompare vi
+ok 24 - sort title dùng localeCompare vi
+  ---
+  duration_ms: 10.466828
+  type: 'test'
+  ...
+# Subtest: phân trang và page vượt
+ok 25 - phân trang và page vượt
+  ---
+  duration_ms: 0.499697
+  type: 'test'
+  ...
+# Subtest: forceTeam áp thêm AND
+ok 26 - forceTeam áp thêm AND
+  ---
+  duration_ms: 0.204286
+  type: 'test'
+  ...
+# Subtest: CRUD cơ bản (admin)
+ok 27 - CRUD cơ bản (admin)
+  ---
+  duration_ms: 56.294946
+  type: 'test'
+  ...
+# Subtest: validate
+ok 28 - validate
+  ---
+  duration_ms: 11.366703
+  type: 'test'
+  ...
+# Subtest: GET /tasks/export.csv được nối vào route (không bị /tasks/:id nuốt)
+ok 29 - GET /tasks/export.csv được nối vào route (không bị /tasks/:id nuốt)
+  ---
+  duration_ms: 4.935009
+  type: 'test'
+  ...
+# Subtest: member chỉ thấy nhóm mình trong danh sách và export
+ok 30 - member chỉ thấy nhóm mình trong danh sách và export
+  ---
+  duration_ms: 7.218783
+  type: 'test'
+  ...
+1..30
+# tests 30
+# suites 0
+# pass 30
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 645.078118

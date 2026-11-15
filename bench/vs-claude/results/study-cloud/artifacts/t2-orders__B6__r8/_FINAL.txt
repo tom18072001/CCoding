@@ -1,0 +1,163 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t2-orders__B6__r8] Sửa 6 lỗi trong thư viện tính tiền giỏ hàng
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Repo nhỏ (~300 dòng), 6 lỗi nằm ở các module riêng nên chia 3 hạng mục song song, mỗi hạng mục sở hữu tệp nguồn và tệp test riêng. Không đổi API công khai. CCoding sẽ gộp lại, chạy `npm test` và review.
+
+Kết quả: 3/3 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Lỗi 1+2: làm tròn xu và phân bổ giảm giá (money.js) (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã sửa cả hai lỗi trong `src/money.js` và thêm test hồi quy. `npm test` xanh: 9 test, 9 pass, 0 fail. Còn hai chỗ ngoài phạm vi của tôi vẫn tự làm tròn và có thể vẫn sai, ghi ở mục Rủi ro.
+
+## Tệp đã tạo/sửa
+- `src/money.js`
+  - `toCents` hết bị lệch dấu phẩy động: nhân 100 rồi làm tròn về 15 chữ số có nghĩa, sau đó làm tròn half away from zero theo giá trị tuyệt đối rồi gắn lại dấu.
+  - `allocate` dùng phương pháp phần dư lớn nhất: lấy phần nguyên, số xu dư chia cho các phần có phần lẻ lớn nhất, bằng nhau thì phần đứng trước được trước. Phần có trọng số 0 không nhận xu dư, và total âm vẫn chạy được.
+- `test/money-rounding.test.js` (mới)
+  - Kiểm tra `toCents` với 1.005→101, -1.005→-101, 2.675→268.
+  - Kiểm tra giảm 10.00 chia 3 dòng bằng nhau ra [334, 333, 333].
+  - Kiểm tra tổng các phần luôn bằng total.
+
+## Kiểm chứng
+- `npm test` → exit 0; # tests 9, # pass 9, # fail 0. Baseline là 6 test, nay thêm 3 test mới.
+- Tôi không chạy test đỏ trước khi sửa, vì brief nói không đo lại baseline.
+
+## Quyết định thiết kế
+- Giữ nguyên chữ ký hàm công khai.
+- Chọn `toPrecision(15)` thay vì chuyển qua chuỗi, vì cách này đủ chính xác cho tiền và ngắn gọn.
+
+## Rủi ro & việc còn mở
+Ghi chú nơi gọi (tôi không sửa, vì thuộc S2/S3):
+- `src/catalog.js:13` và `src/promotions.js:27` (giá trị đơn tối thiểu) đã gọi `toCents` từ `money.js`, nên được sửa theo.
+- `src/checkout.js:34`: mã giảm cố định dùng `Math.round(promo.amount * 100)` thay vì `toCents`, nên vẫn dính lỗi làm tròn. Cần đổi sang `toCents(promo.amount)`. Việc này thuộc S3.
+- `src/checkout.js:30` và `:37`: giảm % dùng `Math.round(x * percent / 100)`. Phép này không nhân với số lẻ nên ít rủi ro, nhưng `Math.round` làm tròn nửa xu về phía +∞, không phải half away from zero. Chỉ khác nhau khi giá trị âm.
+- `src/checkout.js:37`: giảm % theo danh mục tính riêng từng dòng, không qua `allocate`. Tổng giảm có thể lệch so với tổng giảm tính một lần. Nếu cần khớp "tổng các phần = số tiền giảm" cho mã %, S3 nên tính tổng một lần rồi dùng `allocate`.
+- `src/checkout.js:31` và `:35` gọi `allocate` đúng cách, nên được sửa theo.
+- `src/tax.js:9` dùng `Math.round(amountCents * rate)` và cũng có thể lệch dấu phẩy động, thuộc S3.
+
+Bản đầy đủ: `.ccoding/T-20261102-220255-98d/outputs/dev-S1-senior-swe.md`
+
+### S2 — Lỗi 3+4: mua X tặng Y và hạn mã (promotions.js) (@backend-dev, done)
+
+## Tóm tắt
+Đã sửa lỗi 3 (mua X tặng Y) và lỗi 4 (hạn mã) trong `src/promotions.js`, và thêm test hồi quy trong `test/promotions.test.js`. `npm test` đang xanh (14/14 pass), tính cả test của S1 trong cây làm việc. API công khai không đổi.
+
+## Tệp đã tạo/sửa
+- `src/promotions.js`:
+  - **Lỗi 3, `freeUnits`:** nguyên nhân gốc là công thức cũ `floor(qty/buy)*free` bỏ qua chu kỳ `buy+free`. Công thức mới là `floor(qty/(X+Y))*Y + max(0, (qty % (X+Y)) − X)`, đúng với mọi cấu hình X, Y. Mua 2 tặng 1 cho kết quả 2→0, 3→1, 5→1, 6→2.
+  - **Lỗi 4, `checkValidity`:** nguyên nhân gốc là `endsAt` dạng `YYYY-MM-DD` bị hiểu là 00:00Z của chính ngày đó, nên mã hết hạn sớm một ngày. Thêm hàm `endMs`: nếu `endsAt` là ngày thuần thì cộng `DAY_MS`, tức hết hạn từ 00:00Z của ngày kế tiếp. Nếu `endsAt` có kèm giờ thì giữ nguyên.
+  - **`startsAt`:** `new Date('YYYY-MM-DD')` đã là 00:00Z, nên hành vi đúng và tôi không sửa. Test mới chốt lại hành vi này.
+- `test/promotions.test.js` (mới): 5 test.
+  - `freeUnits`: mua 2 tặng 1, mua 3 tặng 2 và mua 1 tặng 1.
+  - `endsAt` dạng ngày: 23:59:59Z còn hợp lệ, 2026-12-01T00:00:00Z bị từ chối.
+  - `endsAt` có giờ: `2026-11-30T10:00Z` còn hợp lệ trước 10:00 và bị từ chối từ đúng 10:00.
+  - `startsAt`: hiệu lực từ 00:00Z.
+- `src/catalog.js` và `money.js`: không động tới.
+
+## Hợp đồng API
+Không áp dụng. Đây là thư viện, tên hàm, tham số và dạng kết quả giữ nguyên.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0, tests 14, pass 14, fail 0.
+- Lần chạy đầu có 1 test fail do tôi gõ sai kỳ vọng trong test (mua 3 tặng 2 với 8 món phải là 2, không phải 3). Công thức đúng, tôi đã sửa kỳ vọng và chạy lại.
+- Tôi không chạy test xác nhận 5 test mới fail trên code cũ.
+
+## Việc còn lại
+- `src/checkout.js` gọi `freeUnits`; tôi chưa kiểm tra đường đi đó ngoài việc `npm test` xanh.
+- Không có biến môi trường mới.
+
+Bản đầy đủ: `.ccoding/T-20261102-220255-98d/outputs/dev-S2-backend-dev.md`
+
+### S3 — Lỗi 5+6: giữ chỗ kho và thuế sau giảm (inventory/cart/tax/checkout) (@frontend-dev, done)
+
+## Tóm tắt
+Đã sửa lỗi 5 (giữ chỗ kho) và lỗi 6 (thuế sau giảm). `npm test` xanh: 19 test, 19 pass, 0 fail. Đã thêm test hồi quy cho cả hai lỗi.
+
+## Tệp đã tạo/sửa
+- `src/cart.js`:
+  - **Nguyên nhân lỗi 5:** `updateQty` giữ chỗ lại toàn bộ số lượng mới, cộng dồn lên phần đã giữ.
+  - **Sửa:** `updateQty` chỉ giữ chỗ phần tăng thêm (`qty - cur`) và trả lại phần giảm.
+  - `removeItem` (cũng được `updateQty(…, 0)` gọi) nay trả lại toàn bộ phần giữ chỗ của món đó. Gọi lần hai trên món đã xóa thì không trả thừa.
+  - Nếu giữ chỗ phần tăng thêm bị báo hết hàng, giỏ và kho giữ nguyên.
+- `src/checkout.js`:
+  - **Nguyên nhân lỗi 6:** thuế dòng được tính trên `gross`.
+  - **Sửa:** `lineTax(l.net, …)`. Tổng thuế và `total` trên hóa đơn tính theo cách này nên khớp.
+- `src/inventory.js`, `src/tax.js`: không cần sửa.
+- `test/inventory.test.js` (mới): 4 test.
+  - Thêm 2 rồi sửa thành 3 khi kho còn 4 thì thành công.
+  - Giảm số lượng thì trả lại giữ chỗ.
+  - Xóa món, kể cả bằng `updateQty` về 0, thì trả lại cho khách khác và không trả thừa khi xóa lần hai.
+  - Sửa vượt tồn kho vẫn báo hết hàng và giữ nguyên giỏ.
+- `test/tax.test.js` (mới): 1 test. Giảm 50% thì thuế tính trên `net`: `net` 5000, thuế 500, tổng 5500.
+
+## Màn hình & trạng thái
+Không áp dụng (thư viện, không có giao diện).
+
+## API sử dụng
+Không áp dụng. API công khai không đổi.
+
+## Kiểm chứng
+- `npm test` → exit 0, `# tests 19 · # pass 19 · # fail 0`. Con số này gồm cả thay đổi của S1/S2 đang có trong cùng worktree (`money.js`, `promotions.js`).
+
+## Việc còn lại
+- Cart chưa có API xóa giỏ hay thanh toán, nên chưa có chỗ trả giữ chỗ cho hai trường hợp này. Tôi không thêm API mới vì yêu cầu là không đổi API công khai.
+- Mã giảm cố định trong `checkout.js` vẫn dùng `Math.round(promo.amount * 100)`. Đây là lỗi 1 (đổi số tiền sang xu), thuộc S1. Nên đổi sang `toCents` khi gộp.
+- a11y không áp dụng.
+
+Bản đầy đủ: `.ccoding/T-20261102-220255-98d/outputs/dev-S3-frontend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-220255-98d` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **38 in / 16.2k out**, cache đọc 249.6k, 5 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | 14 | 5282 | 102463 | 1 |
+| Frontend Developer (@frontend-dev) | dev | 10 | 4639 | 75580 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 8 | 3899 | 48533 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 2020 | 20750 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 383 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Lỗi 1+2: làm tròn xu và phân bổ giảm giá (money.js) (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Lỗi 3+4: mua X tặng Y và hạn mã (promotions.js) (@backend-dev)
+- `outputs/dev-S3-frontend-dev.md` — S3 Lỗi 5+6: giữ chỗ kho và thuế sau giảm (inventory/cart/tax/checkout) (@frontend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 6 · # suites 0 · # pass 6 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 19 · # suites 0 · # pass 19 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | **87** A | — | 74 | 93 | 100 | 1 | 1 | 108k | 1/11 |
+| Frontend Developer (@frontend-dev) | dev | **96** A | — | 100 | 87 | 100 | 1 | 1 | 80k | 1/6 |
+| Senior Software Engineer (@senior-swe) | dev | **95** A | — | 100 | 84 | 100 | 1 | 1 | 52k | 1/5 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 23k | 0/1 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 95 A):
+  - Thao tác công cụ lỗi nhiều (1/5, 20%; nhiều nhất ở run_command 1/4) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

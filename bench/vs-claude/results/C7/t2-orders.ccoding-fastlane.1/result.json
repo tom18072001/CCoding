@@ -1,0 +1,70 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261102-114945-ee8",
+  "wallSec": 71,
+  "wallSecHarness": 75,
+  "costUsd": 0.39624230000000005,
+  "tokens": {
+   "input": 30,
+   "output": 12951,
+   "cacheRead": 387597,
+   "cacheWrite": 56176
+  },
+  "attention": "review",
+  "approved": false,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "Lỗi 1, 2, 6: làm tròn tiền, phân bổ giảm giá, thuế sau giảm"
+   },
+   {
+    "id": "S3",
+    "status": "done",
+    "title": "Lỗi 5: giữ chỗ tồn kho khớp với giỏ hàng"
+   }
+  ],
+  "workdir": "/home/claude/ccoding-dev/workspaces/b-c7-t2-fastla-1/wt-T-20261102-114945-ee8",
+  "branch": "ccoding/t-20261102-114945-ee8"
+ },
+ "task": "t2-orders",
+ "system": "ccoding-fastlane",
+ "rep": 1,
+ "key": "t2-orders.ccoding-fastlane.1",
+ "env": "cloud",
+ "startedAt": "2026-11-02T04:49:45.012Z",
+ "finishedAt": "2026-11-02T04:51:00.616Z",
+ "grade": {
+  "hidden": {
+   "pass": 52,
+   "fail": 8,
+   "total": 60,
+   "failed": [
+    "\\#3 mua 2 tặng 1, 2 món → 0 miễn phí",
+    "\\#3 mua 2 tặng 1, 5 món → 1 miễn phí",
+    "\\#3 mua 2 tặng 1, 6 món → 2 miễn phí",
+    "\\#3 mua 3 tặng 2, 4 món → 0 miễn phí",
+    "\\#3 mua 3 tặng 2, 10 món → 4 miễn phí",
+    "\\#3 mua 1 tặng 1, 7 món → 3 miễn phí",
+    "\\#4 mã NOV lúc 2026-11-30T10:00:00Z → nhận",
+    "\\#4 mã NOV lúc 2026-11-30T23:59:59.999Z → nhận"
+   ],
+   "ms": 175,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 17,
+   "fail": 0,
+   "total": 17
+  },
+  "changed": [
+   "~src/cart.js",
+   "~src/checkout.js",
+   "~src/money.js",
+   "+test/inventory-fixes.test.js",
+   "+test/money-checkout-fixes.test.js"
+  ]
+ },
+ "audit": []
+}

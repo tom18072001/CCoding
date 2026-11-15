@@ -1,0 +1,184 @@
+TAP version 13
+# Subtest: sinh dữ liệu: 0 dòng, 5 seed × mọi options
+ok 1 - sinh dữ liệu: 0 dòng, 5 seed × mọi options
+  ---
+  duration_ms: 30.70613
+  type: 'test'
+  ...
+# Subtest: sinh dữ liệu: 1 dòng, 5 seed × mọi options
+ok 2 - sinh dữ liệu: 1 dòng, 5 seed × mọi options
+  ---
+  duration_ms: 32.390384
+  type: 'test'
+  ...
+# Subtest: sinh dữ liệu: 50 dòng, 5 seed × mọi options
+ok 3 - sinh dữ liệu: 50 dòng, 5 seed × mọi options
+  ---
+  duration_ms: 347.501553
+  type: 'test'
+  ...
+# Subtest: sinh dữ liệu: 2000 dòng, 5 seed × mọi options
+ok 4 - sinh dữ liệu: 2000 dòng, 5 seed × mọi options
+  ---
+  duration_ms: 3641.349766
+  type: 'test'
+  ...
+# Subtest: sinh dữ liệu: 20000 dòng, 2 seed
+ok 5 - sinh dữ liệu: 20000 dòng, 2 seed
+  ---
+  duration_ms: 4918.691458
+  type: 'test'
+  ...
+# Subtest: orders rỗng, products rỗng
+ok 6 - orders rỗng, products rỗng
+  ---
+  duration_ms: 0.720052
+  type: 'test'
+  ...
+# Subtest: sku trùng trong products: find lấy bản đầu
+ok 7 - sku trùng trong products: find lấy bản đầu
+  ---
+  duration_ms: 0.608002
+  type: 'test'
+  ...
+# Subtest: sku không có trong products -> unknown / (không rõ)
+ok 8 - sku không có trong products -> unknown / (không rõ)
+  ---
+  duration_ms: 0.422085
+  type: 'test'
+  ...
+# Subtest: product thiếu name hoặc category
+ok 9 - product thiếu name hoặc category
+  ---
+  duration_ms: 1.341289
+  type: 'test'
+  ...
+# Subtest: status lạ ngoài paid/refunded/cancelled
+ok 10 - status lạ ngoài paid/refunded/cancelled
+  ---
+  duration_ms: 0.903751
+  type: 'test'
+  ...
+# Subtest: đơn nhiều dòng, trải nhiều tháng
+ok 11 - đơn nhiều dòng, trải nhiều tháng
+  ---
+  duration_ms: 0.716496
+  type: 'test'
+  ...
+# Subtest: date lệch múi giờ làm đổi tháng UTC
+ok 12 - date lệch múi giờ làm đổi tháng UTC
+  ---
+  duration_ms: 0.757905
+  type: 'test'
+  ...
+# Subtest: qty/unitPrice = 0 và -0 khi refunded
+ok 13 - qty/unitPrice = 0 và -0 khi refunded
+  ---
+  duration_ms: 0.578166
+  type: 'test'
+  ...
+# Subtest: toàn bộ dòng refunded: grandTotal âm hoặc 0, share
+ok 14 - toàn bộ dòng refunded: grandTotal âm hoặc 0, share
+  ---
+  duration_ms: 0.84895
+  type: 'test'
+  ...
+# Subtest: hòa revenue và qty giữa sản phẩm (so sku)
+ok 15 - hòa revenue và qty giữa sản phẩm (so sku)
+  ---
+  duration_ms: 0.834746
+  type: 'test'
+  ...
+# Subtest: hòa total giữa danh mục; sắp xếp theo tên
+ok 16 - hòa total giữa danh mục; sắp xếp theo tên
+  ---
+  duration_ms: 0.4362
+  type: 'test'
+  ...
+# Subtest: hòa revenue giữa khách; id/customerId lẫn kiểu số và chuỗi
+ok 17 - hòa revenue giữa khách; id/customerId lẫn kiểu số và chuỗi
+  ---
+  duration_ms: 3.075188
+  type: 'test'
+  ...
+# Subtest: top 5 khách: > 5 khách, nhiều khách hòa
+ok 18 - top 5 khách: > 5 khách, nhiều khách hòa
+  ---
+  duration_ms: 0.735112
+  type: 'test'
+  ...
+# Subtest: dòng có trường thừa / thiếu / ghi đè field dẫn xuất
+ok 19 - dòng có trường thừa / thiếu / ghi đè field dẫn xuất
+  ---
+  duration_ms: 1.443415
+  type: 'test'
+  ...
+# Subtest: NaN / Infinity / thiếu / chuỗi trong qty, unitPrice
+ok 20 - NaN / Infinity / thiếu / chuỗi trong qty, unitPrice
+  ---
+  duration_ms: 8.960896
+  type: 'test'
+  ...
+# Subtest: date: null / số / dạng không đầy đủ (bản cũ không ném)
+ok 21 - date: null / số / dạng không đầy đủ (bản cũ không ném)
+  ---
+  duration_ms: 0.924043
+  type: 'test'
+  ...
+# Subtest: options lạ: topN âm / thập phân / chuỗi, from/to không phải YYYY-MM
+ok 22 - options lạ: topN âm / thập phân / chuỗi, from/to không phải YYYY-MM
+  ---
+  duration_ms: 3.585603
+  type: 'test'
+  ...
+# Subtest: tham số sai kiểu: ném cùng constructor
+ok 23 - tham số sai kiểu: ném cùng constructor
+  ---
+  duration_ms: 2.625924
+  type: 'test'
+  ...
+# Subtest: date không hợp lệ -> RangeError ở cả hai bản (kể cả cancelled)
+ok 24 - date không hợp lệ -> RangeError ở cả hai bản (kể cả cancelled)
+  ---
+  duration_ms: 4.712479
+  type: 'test'
+  ...
+# Subtest: dòng cancelled bị bỏ; tất cả cancelled
+ok 25 - dòng cancelled bị bỏ; tất cả cancelled
+  ---
+  duration_ms: 0.655539
+  type: 'test'
+  ...
+# Subtest: sku NaN: product sku NaN không khớp (find dùng ===), order sku NaN
+ok 26 - sku NaN: product sku NaN không khớp (find dùng ===), order sku NaN
+  ---
+  duration_ms: 1.212049
+  type: 'test'
+  ...
+# Subtest: -0 trong sku / customerId / id / name / category (JSON clone biến thành 0)
+ok 27 - -0 trong sku / customerId / id / name / category (JSON clone biến thành 0)
+  ---
+  duration_ms: 1.527779
+  type: 'test'
+  ...
+# Subtest: báo cáo nhỏ
+ok 28 - báo cáo nhỏ
+  ---
+  duration_ms: 4.614
+  type: 'test'
+  ...
+# Subtest: dữ liệu sinh ngẫu nhiên chạy được
+ok 29 - dữ liệu sinh ngẫu nhiên chạy được
+  ---
+  duration_ms: 16.106151
+  type: 'test'
+  ...
+1..29
+# tests 29
+# suites 0
+# pass 29
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 9269.706041

@@ -1,0 +1,48 @@
+{
+ "source": "kế hoạch thật của văn phòng phụ (14/11/2026), chỉ giữ id, tiêu đề, mô tả, người nhận, phụ thuộc",
+ "brief": "docs/research/BRIEF-23.md",
+ "subtasks": [
+  {
+   "id": "S1",
+   "title": "K1: ghi mục §9 'Đo lại trục 2 (b) sau vá' trước khi đo",
+   "description": "Chỉ THÊM một mục mới vào cuối §9 của `docs/research/preregistration.md`, sau đoạn 'Sai lệch / làm rõ khi thực thi trục 2 (b) — 14/11/2026 13:48 (S2)' (khoảng dòng 1240) và trước '## 10. Đạo đức & dữ liệu'. Không sửa chữ nào ở các mục cũ. Tiêu đề ghi ngày 14/11/2026 và vai @methodologist, kèm câu 'giờ chính thức là giờ của commit chứa mục này'.\n(1) RedCode: cùng 82 ca trong `bench/vs-claude/results/axis2-guard/cases-normalized.jsonl`, chạy trên mã sau vá theo đúng cách đo cũ. Gắn nhãn 'hồi quy sau vá, không phải ước lượng độc lập', lý do: D16/D16b được thiết kế sau khi đã thấy các ca lọt, dù test của Dev không chép lệnh RedCode. Báo theo tầng (git-read, full), theo nhóm Index và theo rule, có cả `outside-root-write`. Ghi tham chiếu trước vá: full 30/82 = 36,6 % [26,2; 48,0], git-read 82/82. Kiểm chéo: script mới chạy trên bản 618cb2c phải ra lại 30/82.\n(2) Bộ dự phòng `ole-tail/agentic-execution-guardrail-eval`: kiểm giấy phép trên thẻ dữ liệu và ghi nguồn CC BY 4.0; quy ca theo quy tắc 1–7 ở dòng 1215, dẫn số quy tắc chứ không viết lại; nhãn theo dòng 1213; ghi sha256 danh sách ca vào RUNLOG và commit trước khi đo; đo hai bản mã, trước vá (`git archive 618cb2c src` vào thư mục tạm trong worktree, xóa trước khi commit, không dùng `git worktree`) và sau vá (HEAD). Quy ước: blocked là chặn đúng; approved là chặn nhầm trên bộ ngoài (phép đo chặn nhầm đầu tiên của trục 2); require_approval báo riêng. Thống kê: n, k, Clopper–Pearson 95 %. Nhãn [Khám phá], lý do: bộ được chọn dùng sau khi đã thấy kết quả RedCode, và chỉ có 37 dòng. Nếu không có trường `expected_verdict` thì ghi 'chưa đo chặn nhầm'.\n(3) Giữ ngưỡng diễn giải đã khóa của (b) và dẫn dòng cụ thể. Ghi danh sách câu cấm (xem decisions).\n(4) Đánh giá bảo vệ dữ liệu ngắn: nhãn Nội bộ; bộ ngoài công khai, CC BY 4.0, lệnh tổng hợp, không DLCN, không chuyển xuyên biên giới.\nTiêu chí xong: `git diff` trên preregistration.md chỉ có dòng thêm, mục nằm trong §9, không có số đo mới nào, đã commit.",
+   "assignee": "methodologist",
+   "dependsOn": []
+  },
+  {
+   "id": "S2",
+   "title": "K3: kiểm lại phép tính cascade nghiệm thu trên E7 [Khám phá]",
+   "description": "Viết script mới `docs/research/analysis/e7-cascade.mjs`, chỉ đọc `bench/vs-claude/results/e7-cto/` (runs.jsonl, items.json, selected.json, label-trials.jsonl, report.md). Dùng lại logic chọn dòng của `bench/vs-claude/e7/analyze.mjs` và `reclassify.mjs` bằng import hoặc sao chép, không sửa các script đó. Ngữ nghĩa đã khóa: lấy dòng cuối mỗi cặp, áp phân loại lại theo preregistration dòng 1155–1170 (R3 chạm max-turns; 16 lượt lỗi 403 của R1/R2 chuyển thành infra và dùng lượt chạy lại).\nTính ba cách: cascade (R1 chặn trước; chỉ ca R1 chặn mới xét R2; chặn khi cả hai chặn), R2 đơn, R1 đơn. Mỗi cách báo recall trên mục lỗi và chặn nhầm trên mục đúng (k/n, Clopper–Pearson 95 %, dùng `bench/vs-claude/harness/stats`), cùng chi phí USD từ `costUsd`. Với cascade, chi phí Opus chỉ tính trên ca R1 chặn. Dòng thiếu cost thì xử lý theo decisions.\nThêm hai bảng độ nhạy: (i) coi 'không đọc được kết luận' là chặn; (ii) bỏ các mục có cặp bị phân loại lại. Thêm mục 'Đối chiếu tính nhanh', so từng con số với `docs/research/context/decomposition-literature-2026-11-14.md` §4 (55/64 = 85,9 %; 3/64 = 4,7 %; R1 chặn 27 mục đúng; Opus chạy trên ~90/128; chi phí ≈ R1 + 0,7 × R2). Số nào sai thì ghi rõ sai ở đâu và vì sao, ví dụ không xử lý ca 'không đọc được' hoặc không phân loại lại. Không sửa tệp context. Gắn nhãn [Khám phá]. Không gọi LLM.\nTiêu chí xong: `node docs/research/analysis/e7-cascade.mjs` in ra đúng các bảng trong `docs/research/analysis/e7-cascade.md`, bảng nào cũng có n/k/CI; `npm test` và `node docs/research/scripts/consistency-check.mjs` đạt; đã commit.",
+   "assignee": "data-scientist",
+   "dependsOn": []
+  },
+  {
+   "id": "S3",
+   "title": "K2: đo lại trục 2 (b): RedCode sau vá, bộ dự phòng trước/sau vá",
+   "description": "Chỉ bắt đầu khi mục §9 của S1 đã có trên nhánh. Ghi hash commit đó và giờ commit vào RUNLOG; mọi lệnh đo phải chạy sau mốc này. Script mới `docs/research/analysis/axis2/replay-axis2-postfix.mjs`, sao từ `replay-axis2.mjs` và thêm `--src <đường dẫn>`, `--cases <jsonl>`, `--out <thư mục>`. Không sửa script cũ, `src/`, mã `bench/` hay `results/axis2-guard/`.\nBước A, RedCode: trước hết kiểm chéo script mới trên bản 618cb2c, phải ra lại full 30/82 và git-read 82/82; lệch thì dừng và ghi RUNLOG. Sau đó chạy 82 ca trên `src/` HEAD. Báo theo tầng, nhóm Index và rule (có `outside-root-write`). Lập bảng trước/sau vá và liệt kê các ca chuyển trạng thái.\nBước B, bộ dự phòng: tải `ole-tail/agentic-execution-guardrail-eval` vào thư mục riêng ngoài thư mục script (dữ liệu không tin cậy, không chạy mã trong đó). Đọc thẻ dữ liệu: nếu license không phải cc-by-4.0 hoặc không có `expected_verdict` thì làm theo decisions. Quy ca theo quy tắc 1–7 (dòng 1215) mà chưa chạy guardDecision. Ghi `cases-external.jsonl`, sha256 và n sau mỗi bước loại vào RUNLOG, rồi COMMIT riêng trước khi đo. Sau đó dựng bản trước vá bằng `git archive 618cb2c src` vào thư mục tạm, đo cả trước vá và sau vá, rồi xóa thư mục tạm và thư mục tải về trước khi commit.\nBáo cáo: n, k, Clopper–Pearson 95 % theo bộ, tầng, rule và nhóm; require_approval báo riêng; approved bị chặn là chặn nhầm. Liệt kê ca còn lọt sau vá kèm nguyên nhân (đã che lệnh nhạy cảm) và ca bị chặn nhầm. Nhãn: RedCode là 'hồi quy sau vá, không phải ước lượng độc lập'; bộ ngoài là [Khám phá]; ghi nguồn CC BY 4.0. Không gọi LLM.\nTiêu chí xong: `bench/vs-claude/results/axis2-guard-postfix/{RUNLOG.md, report.md, results.json, cases-redcode.jsonl, cases-external.jsonl}` đầy đủ; số trong report.md trùng results.json; không còn thư mục tạm; `git status` sạch; `npm test` và consistency-check đạt.",
+   "assignee": "data-scientist",
+   "dependsOn": [
+    "S1"
+   ]
+  },
+  {
+   "id": "S4",
+   "title": "K4: đưa kết quả K2, K3 vào paper, facts.json, CHANGELOG",
+   "description": "Lấy số từ bàn giao S2 (`docs/research/analysis/e7-cascade.md`) và S3 (`bench/vs-claude/results/axis2-guard-postfix/report.md`, `results.json`), không tự tính lại.\nTrong `docs/research/paper/paper.md`, trục 2 §6.3.2: thêm kết quả sau vá với nhãn 'hồi quy sau vá, không phải ước lượng độc lập', bảng trước/sau vá theo tầng và rule, và kết quả bộ ngoài [Khám phá] có ghi nguồn CC BY 4.0, trong đó có phép đo chặn nhầm đầu tiên (hoặc 'chưa đo' nếu S3 ghi như vậy). Không viết 'bộ kiểm chặn X % tấn công'.\nTrục 1, phần E7: thêm cascade [Khám phá] và hai bảng độ nhạy. Nếu S2 thấy bản tính nhanh sai thì dùng số của S2 và thêm một câu ghi chú rằng bản tính nhanh đã được sửa, kèm lý do theo S2.\nĐồng bộ `docs/research/facts.json` (mỗi số mới có một khóa trỏ về tệp nguồn) và `docs/research/CHANGELOG.md` (nâng bản, liệt kê thay đổi). Không sửa preregistration, context hay kết quả.\nTiêu chí xong: mọi số mới trong paper có khóa facts.json; không câu nào vượt nhãn; CHANGELOG có mục mới.",
+   "assignee": "academic-writer",
+   "dependsOn": [
+    "S2",
+    "S3"
+   ]
+  },
+  {
+   "id": "S5",
+   "title": "Chạy lệnh kiểm tra dự án, sửa chỗ lệch số",
+   "description": "Sau S4, chạy:\n- `node docs/research/scripts/consistency-check.mjs`\n- `node --test bench/vs-claude/harness/stats.test.mjs`\n- `node docs/research/performance/scripts/token-analysis.mjs --check docs/research/performance/token-analysis.md`\n- `npm run typecheck`\n- `npm test`\n- `node docs/research/analysis/e7-cascade.mjs`, rồi đối chiếu với e7-cascade.md\n- `node docs/research/analysis/axis2/replay-axis2-postfix.mjs` trên HEAD, đối chiếu với results.json\nLệch số thì sửa paper.md hoặc facts.json theo nguồn, không sửa nguồn. Ghi đầu ra của từng lệnh vào cuối `bench/vs-claude/results/axis2-guard-postfix/RUNLOG.md`. Kiểm `git status` sạch, không còn thư mục tạm chứa bản trước vá hay dữ liệu tải về, và `git diff` của preregistration.md so với main chỉ có dòng thêm.\nTiêu chí xong: mọi lệnh exit 0, có đầu ra trích trong RUNLOG, đã commit.",
+   "assignee": "data-scientist",
+   "dependsOn": [
+    "S4"
+   ]
+  }
+ ]
+}

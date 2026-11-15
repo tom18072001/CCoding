@@ -1,0 +1,12 @@
+I wrote the specification to `SPEC.md` at the repository root. It includes the `## Open questions and assumptions` section, with 14 items. Each has the assumption I'd use until the customer answers. I haven't committed it.
+
+The request contradicts itself in several places, so the spec resolves each one with a conservative default:
+
+- **Masking vs. forensics:** the default and only export in v1 is masked. The last octet of the IP is hidden, and usernames become stable keyed pseudonyms. Unmasked export is out of scope until the bank's data-protection officer confirms who may have it and under what approval.
+- **Keep forever vs. delete after 12 months:** only the audit record and the file's SHA-256 hash are kept long term. The file itself is deleted within 12 months, and a daily job removes personal identifiers from old records.
+- **5 seconds vs. "everything they can see":** scope is fixed to the manager's team for the previous calendar month (Asia/Ho_Chi_Minh time), with no parameters. Up to 100,000 rows are returned synchronously with p95 ≤ 5 s measured server-side. Larger exports run as async jobs.
+- **"Like the old system":** the old CSV format is unknown, so the spec assumes eight columns and asks for a sample.
+
+Beyond that, the spec covers an API, UI, audit event per export, CSV-injection protection, rate limits and acceptance criteria.
+
+The 100,000-row cap, the 10-year audit retention default and the column list are my assumptions, not customer figures. I haven't had the legal basis (Vietnamese data-protection law and State Bank rules) reviewed. The spec flags this as a question for the customer.

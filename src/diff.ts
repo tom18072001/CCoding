@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { isWorktreeOf } from './git.js';
+import { realInsideRoot } from './tools/guard-paths.js';
 import { redact } from './util/redact.js';
 import type { ProjectDef, Task } from './types.js';
 
@@ -191,10 +192,11 @@ function untracked(src: Source): string[] {
 }
 
 /** Đọc tệp trong worktree, không theo symlink ra ngoài thư mục. */
-function readInside(dir: string, rel: string, limit: number): { buf?: Buffer; size: number } {
+export function readInside(dir: string, rel: string, limit: number): { buf?: Buffer; size: number } {
   const abs = path.resolve(dir, rel);
   const root = path.resolve(dir);
-  if (abs !== root && !abs.startsWith(root + path.sep)) return { size: 0 };
+  // Cùng chuẩn với claude-guard: realpath (8.3, symlink, junction), không phân biệt hoa/thường trên Windows, bỏ dấu phân cách cuối.
+  if (!realInsideRoot(root, abs)) return { size: 0 };
   try {
     const st = fs.lstatSync(abs);
     if (!st.isFile()) return { size: 0 };

@@ -1,0 +1,9 @@
+[
+{"line":11,"type":"hardcoded-secret","severity":"high","fix":"Load the JWT secret from an environment variable or secret manager and rotate the leaked value."},
+{"line":30,"type":"sqli","severity":"critical","fix":"Use a parameterized query such as `LIKE $1` with `['%' + q + '%']`."},
+{"line":42,"type":"path-traversal","severity":"high","fix":"Use path.basename on the name (or resolve and verify the result stays within REPORT_DIR) before sending."},
+{"line":58,"type":"weak-crypto","severity":"high","fix":"Hash passwords with a salted slow KDF such as bcrypt, scrypt or argon2 instead of MD5."},
+{"line":65,"type":"ssrf","severity":"high","fix":"Validate the URL against an allow-list of hosts/schemes and block private, loopback and link-local addresses."},
+{"line":70,"type":"missing-authz","severity":"high","fix":"Check that the user owns the ticket or is an admin (e.g. add requireAdmin or an owner_id condition) before deleting."},
+{"line":84,"type":"command-injection","severity":"critical","fix":"Use execFile with an argument array and validate format against an allow-list such as csv/json."}
+]

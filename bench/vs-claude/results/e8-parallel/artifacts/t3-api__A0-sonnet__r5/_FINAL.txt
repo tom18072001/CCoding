@@ -1,0 +1,15 @@
+Cả 4 tính năng trong `FEATURES.md` đã được hiện thực và `npm test` xanh (8/8 test qua). Tôi chưa chạy bộ nghiệm thu ẩn nên chưa biết nó có khớp hết các quy tắc hay không.
+
+Các phần chính:
+- **Xác thực & phân quyền:** `src/handlers/tasks.js` kiểm tra theo đúng thứ tự 401 → 400 tham số → 404 → 403 → 400 body. Quyền của admin, manager, member theo đặc tả. Member không thấy nhiệm vụ nhóm khác (404).
+- **Lọc/tìm/sắp xếp/phân trang:** `src/query.js`. Kết quả `GET /tasks` có dạng `{items,total,page,pageSize}`.
+- **Xuất CSV:** `src/csv.js`, route `GET /tasks/export.csv`. Có BOM, `\r\n`, quote theo RFC 4180, chống chèn công thức. Test kiểm tra BOM bằng byte thô vì `fetch().text()` tự bỏ BOM.
+- **Nhật ký:** `store.log` ghi sau mỗi thao tác thành công. `GET /audit` chỉ cho admin, mới nhất trước, lọc được theo `taskId`.
+
+Test: tôi sửa `test/tasks.test.js` cho khớp dạng kết quả mới (thêm header `X-User`, đọc `total`/`items`), và thêm `test/features.test.js` cho từng tính năng.
+
+Hai chỗ đặc tả chưa nói rõ, tôi tự chọn:
+- **Tham số lặp:** khi trùng tên, tôi tính vị trí của tham số theo lần xuất hiện đầu tiên trên URL để xác định `field` báo lỗi.
+- **POST của manager:** nếu thiếu `team`, trả 400 validate chứ không phải 403.
+
+Tôi chưa commit gì.

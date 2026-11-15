@@ -1,0 +1,12 @@
+`buildReport` giờ chạy 200.000 dòng trong khoảng 300 ms (trước đây ~15 giây). `npm test` xanh, 4/4 test đạt.
+
+**Cách làm:** tôi thay các phép `find`, `includes`, `filter` lồng nhau bằng `Map`/`Set` và một lượt duyệt dữ liệu. Thứ tự phần tử, thứ tự khóa của `byMonth` và các comparator sắp xếp đều giữ nguyên.
+
+**Hành vi cũ được giữ lại:**
+- Với sku trùng trong `products`, sản phẩm đầu tiên được dùng.
+- Việc `JSON.parse(JSON.stringify(...))` trước đây làm thay đổi giá trị vẫn được mô phỏng: số không hữu hạn thành `null`, `-0` thành `0`, trường `undefined` bị bỏ. Phần này tôi viết tay chứ không chạy lại JSON round-trip, nên là chỗ đáng soát lại nếu bộ ẩn có dữ liệu lạ.
+- Với sku không có trong `products`, category là `'unknown'` và name là `'(không rõ)'`.
+
+**Test thêm:** `test/report.legacy.js` là bản cũ nguyên vẹn. `test/report.compare.test.js` so bản mới với bản cũ bằng `deepEqual` và so cả chuỗi JSON để bắt sai thứ tự khóa. Nó chạy trên 12 seed ngẫu nhiên với 7 tổ hợp option (`topN`, `from`, `to`), cộng các trường hợp biên: sku trùng, sku lạ, `qty` 0, đơn hoàn tiền, đơn hủy, `products` rỗng, `orders` rỗng và lệch múi giờ.
+
+Tôi chưa thử các đầu vào không hợp lệ như `qty` là chuỗi hay `date` sai định dạng. Date sai vẫn ném lỗi như bản cũ vì dùng cùng đoạn code.

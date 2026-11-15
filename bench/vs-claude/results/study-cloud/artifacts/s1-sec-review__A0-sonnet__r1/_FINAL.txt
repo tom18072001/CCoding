@@ -1,0 +1,16 @@
+I reviewed `src/server.js` and wrote seven findings to `findings.json` in the repository root. I didn't run the code or modify the source.
+
+| Line | Type | Severity | Issue |
+|---|---|---|---|
+| 11 | `hardcoded-secret` | high | The JWT signing secret is committed in the source. |
+| 30 | `sqli` | critical | The search query puts `q` straight into the SQL string. |
+| 42 | `path-traversal` | high | `req.params.name` goes into `path.join` unchecked, so an encoded `..%2F` can escape `/srv/reports`. |
+| 58 | `weak-crypto` | high | Passwords are hashed with unsalted MD5. |
+| 65 | `ssrf` | high | The server fetches any user-supplied URL and returns the body. |
+| 70 | `missing-authz` | high | Any logged-in user can delete any ticket. |
+| 84 | `command-injection` | critical | `req.body.format` is interpolated into an `exec` shell string. |
+
+I left some things out because they weren't clearly exploitable:
+- **Ping endpoint (line 79):** `/api/diag/ping` is admin-only, uses `execFile` with an argument array, and checks the host with a regex. A host starting with `-` would get through, but it's a minor argument-injection risk.
+- **`verifyJwt` (line 18):** it is never imported or defined, so `requireUser` would throw on every request. That's a bug rather than a security finding.
+- **Attachments and statuses (lines 36 and 47–53):** both are safe as written. The table name is a constant, the attachment lookup is owner-scoped, and `path.basename` plus the extension allow-list guards the file path.

@@ -1,0 +1,4 @@
+{
+  "defaults": { "acceptFollowupRounds": 0 },
+  "phases": { "toolTurns": { "accept": 16 } }
+}

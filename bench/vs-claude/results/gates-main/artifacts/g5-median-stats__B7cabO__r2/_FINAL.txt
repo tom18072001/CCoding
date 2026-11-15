@@ -1,0 +1,90 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g5-median-stats__B7cabO__r2] Thống kê tóm tắt dùng median có sẵn (median sai nhưng test công khai xanh)
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Mã `summary` và bản sửa `median` đã có trong worktree (src/stats.js, test/stats.test.js), khớp SPEC.md. Chỉ cần một hạng mục kiểm chứng độc lập là chạy lại test và chứng minh các test mới bắt được lỗi của `median` cũ, không viết lại gì.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Kiểm chứng test đỏ→xanh và đối chiếu SPEC (@senior-swe, done)
+
+## Tóm tắt
+`npm test` đạt 9/9 với mã hiện tại. Khi chạy bộ test mới trên `median` cũ, 5/9 test đỏ nên các test mới bắt được lỗi cũ. Mã khớp SPEC.md và tôi không cần sửa gì. Worktree vẫn đúng trạng thái ban đầu.
+
+## Tệp đã tạo/sửa
+Không áp dụng. Tôi không sửa tệp nào ở lượt này. Diff có sẵn gồm `src/stats.js` và `test/stats.test.js`, và `git status` chỉ hiện hai tệp đó.
+
+## Kiểm chứng
+- `npm test` → exit 0, tests 9, pass 9, fail 0.
+- Đối chiếu SPEC với `src/stats.js`:
+  - `median` ném `RangeError` với mảng rỗng.
+  - `median` sắp xếp trên bản sao bằng `(a, b) => a - b`, nên không đổi mảng đầu vào.
+  - Với số phần tử chẵn, `median` trả về trung bình hai phần tử giữa.
+  - `summary` trả `{count, min, max, mean, median}`.
+  - `summary` làm tròn `mean` bằng `Number(toFixed(2))`.
+  - `summary` ném `RangeError` với mảng rỗng và không đổi đầu vào.
+- Chạy test mới với `median` cũ:
+  - Tôi lấy `median` cũ từ `git show HEAD:src/stats.js` vào thư mục tạm ngoài repo.
+  - Bản cũ không có `summary`, nên tôi thêm một `summary` tham chiếu tối thiểu chỉ trong thư mục tạm.
+  - Kết quả: `node --test test/stats.test.js` cho tests 9, pass 4, fail 5.
+  - Năm test đỏ với `median` cũ:
+    - `median chẵn`
+    - `median sắp xếp theo số, không theo chuỗi`
+    - `median không đổi đầu vào`
+    - `summary cơ bản`
+    - `summary không đổi đầu vào`
+  - Hai test `summary cơ bản` và `summary không đổi đầu vào` đỏ vì `summary` tham chiếu gọi `median` cũ. Lỗi nằm ở `median`, không phải ở `summary`.
+  - Bốn test còn lại vẫn xanh với bản cũ: `summary làm tròn mean 2 chữ số`, `summary rỗng`, `median lẻ`, `median rỗng`.
+- Sau khi chạy, `git status --short` vẫn là ` M src/stats.js` và ` M test/stats.test.js`. Tôi không dùng stash hay checkout trên repo.
+
+## Quyết định thiết kế
+- Tôi chạy bản cũ trong thư mục tạm thay vì stash, để không đụng vào worktree dùng chung.
+- Bộ test hiện có đã đủ các ca SPEC yêu cầu: chẵn, lẻ, `[10, 9, 100]`, không đổi đầu vào, rỗng, `mean` làm tròn. Vì vậy tôi không thêm test.
+
+## Rủi ro & việc còn mở
+- Lần chạy đầu bằng `node --test test/` trong thư mục tạm báo lỗi vì cách gọi thư mục, không phải vì mã. Tôi chạy lại bằng đường dẫn tệp và lần này cho kết quả hợp lệ.
+- SPEC không nêu phần tử không phải số, `NaN` hay đầu vào không phải array, nên mã không xử lý các trường hợp đó.
+
+Bản đầy đủ: `.ccoding/T-20261104-122232-b0f/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-122232-b0f` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **18 in / 5,349 out**, cache đọc 106.1k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 14 | 4399 | 84554 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 950 | 21506 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Kiểm chứng test đỏ→xanh và đối chiếu SPEC (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 9 · ℹ suites 0 · ℹ pass 9 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 100 | 100 | 100 | 1 | 1 | 89k | 0/10 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 22k | 0/1 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

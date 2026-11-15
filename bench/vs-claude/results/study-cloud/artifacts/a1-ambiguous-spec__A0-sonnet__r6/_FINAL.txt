@@ -1,0 +1,13 @@
+I wrote the spec to `SPEC.md` at the repo root. It includes the `## Open questions and assumptions` section (section 9), with 15 questions, each paired with the assumption I'd use meanwhile.
+
+The customer's request contradicts itself in several places. I resolved each one toward the safer reading and flagged it for confirmation:
+
+- **Full IPs and usernames versus no unmasked personal data:** the button exports masked data only. The last octet of the IP is masked, and usernames become stable pseudonyms so activity can still be correlated. Unmasked data is available only through a separate forensic flow. That flow needs a case ID and a second person's approval, stays inside the bank's environment, and is feature-flagged off until the customer answers Q1.
+- **Exports kept forever versus deleting personal data after 12 months:** export files are not kept forever. They expire after 7 days (24 hours if unmasked). Each export also leaves a permanent audit record that contains no personal data, which gives the audit trail without breaking the 12-month rule.
+- **5-second limit:** I read it as a target of p95 ≤ 5 s for up to 100,000 rows. Larger exports run asynchronously and notify the user in-platform.
+- **"Everything they can see" versus "their team, last month":** the export is capped by the user's permissions, their team, and the previous calendar month in `Asia/Ho_Chi_Minh`. The server enforces this, and the client never supplies the scope.
+- **"Like the old system":** no sample was provided, so the CSV columns are a placeholder allowlist. Free-text columns are excluded, and cells are protected against CSV formula injection.
+
+One item needs Legal rather than the customer: whether Vietnamese banking or cybersecurity rules require logs to be kept longer than 12 months (Q5). I did not verify any legal citations, so the spec names the regulations only as items to check.
+
+I didn't commit anything.

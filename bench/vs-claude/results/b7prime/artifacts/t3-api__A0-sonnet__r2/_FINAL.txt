@@ -1,0 +1,19 @@
+Cả 4 tính năng trong `FEATURES.md` đã xong và `npm test` xanh (6/6 test). Tôi chưa chạy `npm start` rồi gọi thử bằng curl; mọi kiểm tra đều qua test, và test gọi HTTP thật trên cổng ngẫu nhiên.
+
+- **Xác thực & phân quyền:** server kiểm tra `X-User` cho mọi đường dẫn `/tasks…` và `/audit`. Thiếu hoặc sai thì trả 401. Thứ tự kiểm tra là 401 → 400 (tham số) → 404 → 403 → 400 (body). Quyền của admin, manager và member làm đúng đặc tả. Member truy cập nhiệm vụ nhóm khác nhận 404.
+- **Lọc, tìm, sắp xếp, phân trang:** `GET /tasks` trả `{items, total, page, pageSize}`. Mã nằm trong `src/query.js`.
+  - Tham số lạ hoặc xuất hiện hai lần trả 400 `INVALID_QUERY`; với nhiều lỗi, báo tham số đầu tiên theo thứ tự trên URL.
+  - `dueBefore` kiểm tra ngày theo lịch, nên `2026-02-30` bị từ chối.
+  - `q` không phân biệt dấu tiếng Việt, kể cả `đ`.
+  - Các quy tắc sắp xếp (hòa theo `id` số, `dueDate` rỗng nằm cuối, `title` theo `vi`) làm đúng đặc tả.
+- **Xuất CSV:** `GET /tasks/export.csv` dùng chung bộ lọc và quyền với danh sách, nhưng `page`/`pageSize` bị từ chối. Nội dung có BOM, CRLF, theo RFC 4180, và thêm `'` chống chèn công thức. Mã nằm trong `src/csv.js`.
+- **Nhật ký thao tác:** `POST`, `PATCH` và `DELETE` thành công mới ghi mục nhật ký (`changes` đã sắp xếp), thao tác lỗi thì không ghi. `GET /audit` chỉ admin dùng được, trả mục mới nhất trước và lọc được theo `taskId`.
+
+Tôi sửa `test/tasks.test.js` cho hợp với dạng kết quả mới và thêm test cho từng tính năng. Test CSV đọc byte thô để kiểm tra BOM, vì `fetch().text()` tự bỏ BOM. Tôi cũng nâng `package.json` lên 0.4.0.
+
+Có mấy chỗ đặc tả không nói rõ, tôi tự chọn như sau:
+- Manager tạo hoặc sửa nhiệm vụ với `team` khác nhóm mình (kể cả `C`) nhận 403. Nếu thiếu `team` khi tạo thì nhận 400.
+- Member sửa nhiệm vụ có body rỗng thì không bị 403, mà đi tiếp tới validate.
+- `assignee=` (rỗng) không báo lỗi và không khớp nhiệm vụ nào.
+- `/audit` kiểm tra tham số (400) trước quyền admin (403), theo đúng thứ tự trong đặc tả.
+- `PATCH` không đổi giá trị nào vẫn ghi một mục `update` với `changes` rỗng.

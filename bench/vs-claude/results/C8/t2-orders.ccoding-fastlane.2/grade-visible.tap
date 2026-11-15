@@ -1,0 +1,142 @@
+TAP version 13
+# Subtest: tính tiền không mã giảm giá
+ok 1 - tính tiền không mã giảm giá
+  ---
+  duration_ms: 1.346729
+  type: 'test'
+  ...
+# Subtest: giữ chỗ tồn kho khi thêm
+ok 2 - giữ chỗ tồn kho khi thêm
+  ---
+  duration_ms: 0.167771
+  type: 'test'
+  ...
+# Subtest: mã không tồn tại
+ok 3 - mã không tồn tại
+  ---
+  duration_ms: 0.446416
+  type: 'test'
+  ...
+# Subtest: kho 4, thêm 2 rồi sửa thành 3 thì còn 1
+ok 4 - kho 4, thêm 2 rồi sửa thành 3 thì còn 1
+  ---
+  duration_ms: 0.870173
+  type: 'test'
+  ...
+# Subtest: sửa giảm số lượng nhả chỗ
+ok 5 - sửa giảm số lượng nhả chỗ
+  ---
+  duration_ms: 0.221112
+  type: 'test'
+  ...
+# Subtest: xóa món thì khách khác mua được
+ok 6 - xóa món thì khách khác mua được
+  ---
+  duration_ms: 0.37208
+  type: 'test'
+  ...
+# Subtest: updateQty về 0 nhả hết; removeItem sku không có không ảnh hưởng
+ok 7 - updateQty về 0 nhả hết; removeItem sku không có không ảnh hưởng
+  ---
+  duration_ms: 0.209862
+  type: 'test'
+  ...
+# Subtest: hết hàng khi sửa/thêm giữ nguyên trạng thái
+ok 8 - hết hàng khi sửa/thêm giữ nguyên trạng thái
+  ---
+  duration_ms: 0.289838
+  type: 'test'
+  ...
+# Subtest: reserved bằng tổng số lượng các giỏ dùng chung Inventory
+ok 9 - reserved bằng tổng số lượng các giỏ dùng chung Inventory
+  ---
+  duration_ms: 0.246553
+  type: 'test'
+  ...
+# Subtest: toCents làm tròn half away from zero theo giá trị thập phân
+ok 10 - toCents làm tròn half away from zero theo giá trị thập phân
+  ---
+  duration_ms: 0.841453
+  type: 'test'
+  ...
+# Subtest: allocate: tổng đúng, tie-break, weights có 0
+ok 11 - allocate: tổng đúng, tie-break, weights có 0
+  ---
+  duration_ms: 1.00685
+  type: 'test'
+  ...
+# Subtest: checkout fixed/percent 3 dòng: tổng giảm đúng
+ok 12 - checkout fixed/percent 3 dòng: tổng giảm đúng
+  ---
+  duration_ms: 0.65049
+  type: 'test'
+  ...
+# Subtest: thuế tính trên net sau giảm
+ok 13 - thuế tính trên net sau giảm
+  ---
+  duration_ms: 0.153004
+  type: 'test'
+  ...
+# Subtest: toCents cơ bản
+ok 14 - toCents cơ bản
+  ---
+  duration_ms: 1.017253
+  type: 'test'
+  ...
+# Subtest: formatMoney
+ok 15 - formatMoney
+  ---
+  duration_ms: 0.295808
+  type: 'test'
+  ...
+# Subtest: allocate chia đều
+ok 16 - allocate chia đều
+  ---
+  duration_ms: 0.736969
+  type: 'test'
+  ...
+# Subtest: freeUnits mua 2 tặng 1
+ok 17 - freeUnits mua 2 tặng 1
+  ---
+  duration_ms: 1.180752
+  type: 'test'
+  ...
+# Subtest: freeUnits mua 3 tặng 2
+ok 18 - freeUnits mua 3 tặng 2
+  ---
+  duration_ms: 0.211324
+  type: 'test'
+  ...
+# Subtest: checkValidity endsAt dùng được tới hết ngày
+ok 19 - checkValidity endsAt dùng được tới hết ngày
+  ---
+  duration_ms: 0.434049
+  type: 'test'
+  ...
+# Subtest: checkValidity startsAt hiệu lực từ 00:00Z
+ok 20 - checkValidity startsAt hiệu lực từ 00:00Z
+  ---
+  duration_ms: 0.147595
+  type: 'test'
+  ...
+# Subtest: checkValidity minSubtotal
+ok 21 - checkValidity minSubtotal
+  ---
+  duration_ms: 0.189787
+  type: 'test'
+  ...
+# Subtest: checkValidity minSubtotal 1.005 khớp ngưỡng 101 xu
+ok 22 - checkValidity minSubtotal 1.005 khớp ngưỡng 101 xu
+  ---
+  duration_ms: 0.140118
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 278.727615

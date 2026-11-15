@@ -1,0 +1,67 @@
+BRIEF-18 K4 (T-20261104-135425-669 S4, @research-lead, 4/11/2026): bản vá R17 cho docs/research/improvement-backlog.md.
+Phân loại dữ liệu: Nội bộ. Chỉ đổi B-14, B-15 và thêm ghi chú arm null; không đụng số E3, E4, E6.
+Lý do là tệp bản vá: phiên S4 chỉ có công cụ ghi đè cả tệp, mà backlog dài 141 KB, vượt giới hạn một lượt ghi.
+Áp (index là LF, bản làm việc CRLF, nên áp vào index rồi checkout):
+  git apply --check --cached docs/research/context/k4-backlog-r17-2026-11-04.patch
+  git apply --cached docs/research/context/k4-backlog-r17-2026-11-04.patch
+  git checkout -- docs/research/improvement-backlog.md
+git apply bỏ qua phần chữ trước dòng "diff --git".
+
+diff --git a/docs/research/improvement-backlog.md b/docs/research/improvement-backlog.md
+--- a/docs/research/improvement-backlog.md
++++ b/docs/research/improvement-backlog.md
+@@ -11,1 +11,2 @@
++> Cập nhật R17 (T-20261104-135425-669, S4, @research-lead, 4/11/2026; BRIEF-18 K4): **B-14:** giám đốc đã duyệt bước 2 (96 lượt) lúc 12:50 ngày 4/11 (`results/local-3e/RUNLOG.md:23`, `9e3c410`), nên trạng thái chuyển sang `cần đo`. Tiền điều kiện (6) đạt: script `4e546f4`, dòng hash ở `results/b14-step2/RUNLOG.md:2`, commit `c6fd35f`. Tiền điều kiện (7) chưa đạt, chờ D13 K6: thiếu 3 ca (kết luận K3(b), `f211bc7`). **B-15:** E5′ đã đăng ký (§9 V4-3e-E5′, `f36a1d9`) và đã duyệt; sổ chạy `results/b15f-main/RUNLOG.md`, chạy sau E6. Thêm ghi chú đo lường về arm null trên `t2-orders`, `t4-perf` (§0), áp cho lần đo sau, không đổi đợt 3e. Thứ tự còn lại của đợt 3e: `run-plan.md` §5.4.4. Không mở điểm E3, E4, E6.
+ > Nguyên tắc của giám đốc: mọi nâng cấp phải dựa vào nghiên cứu; mỗi thay đổi của Phòng Dev ghi mã `B-xx`; benchtest chạy theo `preregistration.md` để kiểm lại.
+@@ -32,3 +33,3 @@
+ | — | **B-13** (R14) | Chỉ số trúng cache theo lượt gọi/pha/runtime + ghi `model` và `byPhase` đủ 4 thành phần token | đề xuất 1 của tài liệu "4 hướng"; `cache-sensitivity.md` C-0, C-2; T-2 | 3 | 2 | 1,5 | Có (đổi schema `runs.jsonl` của bench) | D9 | `BRIEF-D9.md` mục 5 |
+-| — | **B-14** (R14) | Chẩn đoán cache claude-cli (≤ 8 lượt), rồi ổn định tiền tố theo kết quả | đề xuất 2 (và câu hỏi TTL của đề xuất 8); `cache-diagnostic-spec.md` Phần 1; C-1, C-3, C-5 | 3 | 2 | 1,5 | Có (gọi `claude -p`; đổi bộ công cụ chạm hook) | cần giám đốc duyệt (E1 xong; bước 2 đã đăng ký, 96 lượt) | `BRIEF-D9.md` mục 6: script chẩn đoán và công tắc `stablePrefix` (mặc định tắt). Chỉ còn đo sau D9: chẩn đoán ≤ 8 lượt `claude -p` (6 đo, 1 khởi động, 1 dự phòng; B-14 trường 4), chạy ngoài hook. E1 xong: đổi bộ công cụ là nguồn ghi cache. Bước 2 (A/B trên bench) đã đăng ký, 96 lượt, chờ giám đốc duyệt; giới hạn ở `preregistration.md` §9 V4-3e-K3 |
+-| — | **B-15** (R14) | Đo họp bằng arm B1 (`discussionRounds: 0`) trên bài lớn | đề xuất 3; `cache-diagnostic-spec.md` Phần 2 | chưa chấm | 3 | — | Có (mở đo mới) | cần đo (E3 không đo được với B0/B1; chờ E5′) | E3 xong: B0 không có `discuss` ở cả hai bài (l1-modules: quy tắc 3 của `chooseLane` chọn làn nhanh; l2-chain: làn đơn được nâng lên làn nhanh; hai làn này không họp), nên B0/B1 không đo được họp. Đang chờ §9 V4-3e-E5′ (đã đăng ký; B0F so với B1F, 10 lượt × 2 arm × 2 bài = 40 lượt), chờ D12 và giám đốc duyệt. Tiên quyết đã xong: `task.json` của hai bài (`3ff7df3`, D8) |
++| — | **B-14** (R14) | Chẩn đoán cache claude-cli (≤ 8 lượt), rồi ổn định tiền tố theo kết quả | đề xuất 2 (và câu hỏi TTL của đề xuất 8); `cache-diagnostic-spec.md` Phần 1; C-1, C-3, C-5 | 3 | 2 | 1,5 | Có (gọi `claude -p`; đổi bộ công cụ chạm hook) | cần đo (E1 xong; bước 2 đã duyệt, 96 lượt; (6) đạt, (7) chờ D13 K6) | `BRIEF-D9.md` mục 6: script chẩn đoán và công tắc `stablePrefix` (mặc định tắt). Chỉ còn đo sau D9: chẩn đoán ≤ 8 lượt `claude -p` (6 đo, 1 khởi động, 1 dự phòng; B-14 trường 4), chạy ngoài hook. E1 xong: đổi bộ công cụ là nguồn ghi cache. Bước 2 (A/B trên bench, 96 lượt) giám đốc duyệt lúc 12:50 ngày 4/11 (`results/local-3e/RUNLOG.md:23`, `9e3c410`), chạy local sau E5′, sổ chạy `results/b14-step2/RUNLOG.md`. Tiền điều kiện (6) đạt (script `4e546f4`, dòng hash `c6fd35f`); (7) chưa đạt, thiếu 3 ca, chờ D13 K6 (`f211bc7`); chi tiết ở §5 B-14. Giới hạn ở `preregistration.md` §9 V4-3e-K3 |
++| — | **B-15** (R14) | Đo họp bằng arm B1 (`discussionRounds: 0`) trên bài lớn | đề xuất 3; `cache-diagnostic-spec.md` Phần 2 | chưa chấm | 3 | — | Có (mở đo mới) | cần đo (E3 không đo được với B0/B1; E5′ đã đăng ký và duyệt, chạy sau E6) | E3 xong: B0 không có `discuss` ở cả hai bài (l1-modules: quy tắc 3 của `chooseLane` chọn làn nhanh; l2-chain: làn đơn được nâng lên làn nhanh; hai làn này không họp), nên B0/B1 không đo được họp. E5′ đã đăng ký (§9 V4-3e-E5′, `f36a1d9`; B0F so với B1F, 10 lượt × 2 arm × 2 bài = 40 lượt), D12 đã gộp (`57148de`), giám đốc duyệt lúc 12:50 ngày 4/11 (`9e3c410`). Sổ chạy `results/b15f-main/RUNLOG.md`; chạy sau E6 (§5 B-15). Tiên quyết đã xong: `task.json` của hai bài (`3ff7df3`, D8) |
+@@ -43,2 +44,4 @@
++
++**Ghi chú đo lường (R17, BRIEF-18 K4): arm null ăn điểm cao trên `t2-orders` (0,53) và `t4-perf` (0,84).** Theo kết luận K3(a) (`context/k3-open-points-2026-11-04.md` a.1–a.6, commit `f211bc7`), hai bài này làm H6 nghiêng về phía "tương đương giả", không về phía suy biến. Đề xuất S3(a) cho **lần đo sau** (mục a.6): (1) thêm test ẩn để sàn null ≤ 0,25 ở hai bài, kèm rà diff và khóa lại `hidden/`; (2) điểm chuẩn hóa (score − null)/(oracle − null) chỉ làm phân tích phụ; (3) tiêu chí nhận bài vào họ H là null ≤ 0,25 (có thể thêm oracle − nearmiss ≥ 0,05, nhưng tiêu chí này loại thêm bốn bài); (4) báo Δ_i theo bài song song với Δ trung bình. **Không áp cho đợt 3e:** không đổi bài, tham số, H1–H10, biên hay họ Holm. Đợt 3e chỉ thêm phân tích độ nhạy mô tả "bỏ t2, t4" ở cuối `preregistration.md` §9, nhãn "đặt trước dữ liệu E6".
+
+ ---
+@@ -541,3 +544,3 @@
+
+-### B-14 — Chẩn đoán cache claude-cli, rồi ổn định tiền tố (vòng 4 gói 3; 3/11/2026; @research-lead) — **cần giám đốc duyệt** (E1 xong, đổi bộ công cụ là nguồn ghi cache; bước 2 đã đăng ký, 96 lượt, chờ duyệt; giới hạn ở §9 V4-3e-K3)
++### B-14 — Chẩn đoán cache claude-cli, rồi ổn định tiền tố (vòng 4 gói 3; 3/11/2026; @research-lead) — **cần đo** (E1 xong, đổi bộ công cụ là nguồn ghi cache; bước 2, 96 lượt, giám đốc duyệt 12:50 ngày 4/11; tiền điều kiện (6) đạt, (7) chờ D13 K6; giới hạn ở §9 V4-3e-K3; trước đó: cần giám đốc duyệt)
+
+@@ -556,4 +559,21 @@
+ | **9. Giám đốc duyệt** | **Có**: bước 1 gọi `claude -p` (tốn hạn mức nhỏ, ≤ 8 lượt); bước 2 đổi cấu hình công cụ và chạm hook. |
++
++**Trạng thái bước 2 (R17, BRIEF-18 K4, 4/11/2026).** Chỉ dẫn kết luận đã commit của S1 và S3.
++
++| Mục | Trạng thái | Nguồn |
++|---|---|---|
++| Duyệt | **Đã duyệt**: bước 2, 96 lượt, A/B `runtimes.claude-cli.stablePrefix`, chạy local, sau E5′ | Giám đốc duyệt lúc 12:50 ngày 4/11/2026 (`bench/vs-claude/results/local-3e/RUNLOG.md:23`, commit `9e3c410`) |
++| Đăng ký | `preregistration.md` §9, mục "Đăng ký trước bước 2 của B-14"; giới hạn và độ nhạy ở `V4-3e-K3` (c) | Mốc khóa `8941103` (`results/b14-step2/RUNLOG.md:1`) |
++| Sổ chạy | `bench/vs-claude/results/b14-step2/RUNLOG.md`; dữ liệu ở `results/b14-step2/on/` và `off/` | Thứ tự và điều kiện bắt đầu: `run-plan.md` §5.4.4 |
++| Tiền điều kiện (6): script phân tích có test, commit, hash ghi trước lượt đầu | **Đạt.** `docs/research/analysis/b14-step2.mjs` và `b14-step2.test.mjs`, commit `4e546f47d2c17002971718492108c2dd330439b4` (`4e546f4`), 10/10 test xanh theo bàn giao S1. Script chưa chạy trên dữ liệu thật vì chưa có dữ liệu. Ô "Tiền điều kiện (6)" ở dòng 12 của sổ vẫn ghi "Chưa có", do BRIEF-18 S5 chốt | Dòng hash ở `results/b14-step2/RUNLOG.md:2`, commit `c6fd35f`; gộp vào nhánh nhiệm vụ ở `f12816e` |
++| Tiền điều kiện (7): bộ test lệnh ác ý cho `stablePrefix` (trường 7(c)) xanh trên commit ghim | **Chưa đạt, chờ D13 K6.** 5/8 ca có test ở chế độ `stablePrefix`. Thiếu 3 ca: (3) heredoc; (7) `awk 'BEGIN{system(...)}'`; (8) `.env` | Kết luận K3(b): `results/b14-step2/RUNLOG.md:13` và mục "Tiền điều kiện (7): đối chiếu ca lệnh ác ý" (`:18-39`); `context/k3-open-points-2026-11-04.md` (b); commit `f211bc7`, gộp ở `e6f5999` |
++| Hệ quả | Chưa được chạy lượt đầu. Bước 2 chỉ bắt đầu khi E5′ xong **và** D13 K6 đã thêm 3 ca trên, bộ test xanh trên commit ghim | `run-plan.md` §5.4.4, bước 4 |
++
++Danh sách ca giao D13 K6, chép từ `results/b14-step2/RUNLOG.md:33-37`: khung `hook(...)` của `test/claude-stable-prefix.test.ts` (dòng 49-50), pha chỉ đọc `plan`/`review`/`synthesize`/`accept`/`finalize`, `stablePrefix: true`.
++
++- Ca 3: `Bash` ``cat <<'EOF' > a.txt\nx\nEOF`` và ``cat <<EOF\nx\nEOF`` → bị chặn, khớp `/chỉ đọc/`.
++- Ca 7: `Bash` `awk 'BEGIN{system("rm -rf src")}'` (thêm `awk 'BEGIN{"id" | getline x; print x}'`, `awk -f prog.awk f`) → bị chặn, khớp `/chỉ đọc/`.
++- Ca 8: `Bash` `cat .env`, `grep KEY app/.env.local` → bị chặn (`/chỉ đọc/` ở pha chỉ đọc; `env-file` ở `execute`). `Read` `${root}/.env`, `Grep`/`Glob` `${root}/.env.local` ở `plan` → bị chặn bởi `env-file`, thông báo khớp `/\.env/`; đối chứng `.env.example` không bị chặn.
+
+-### B-15 — Đo họp bằng arm B1 trên bài lớn (vòng 4 gói 3; 3/11/2026; @research-lead) — **cần đo** (E3 cho thấy không đo được với B0/B1; chờ §9 V4-3e-E5′ đã đăng ký, D12 và giám đốc duyệt)
++### B-15 — Đo họp bằng arm B1 trên bài lớn (vòng 4 gói 3; 3/11/2026; @research-lead) — **cần đo** (E3 cho thấy không đo được với B0/B1; E5′ đã đăng ký ở §9 V4-3e-E5′, D12 đã gộp, giám đốc duyệt 12:50 ngày 4/11; chạy sau E6)
+
+@@ -572,2 +592,12 @@
+ | **9. Giám đốc duyệt** | **Có**: mở đo mới (`task.json` đã tạo ở `3ff7df3`). |
++
++**Trạng thái E5′ (R17, BRIEF-18 K4, 4/11/2026).**
++
++| Mục | Trạng thái | Nguồn |
++|---|---|---|
++| Đăng ký | **Đã đăng ký**: `preregistration.md` §9 `V4-3e-E5′`. B0F so với B1F, ép làn đầy đủ để lượt đối chứng có pha `discuss`; 10 lượt × 2 arm × 2 bài (`l1-modules`, `l2-chain`) = 40 lượt; R̂ = B1F/B0F, CI 90 % bootstrap phân tầng, không p | Gộp ở `f36a1d9` (BRIEF-17); arm `B0F`, `B1F` của D12 gộp ở `57148de` |
++| Duyệt | **Đã duyệt** | Giám đốc duyệt lúc 12:50 ngày 4/11/2026 (`results/local-3e/RUNLOG.md:23`, commit `9e3c410`) |
++| Sổ chạy | `bench/vs-claude/results/b15f-main/RUNLOG.md`, ghi trước lượt đầu lúc 13:55; `--out` `results/b15f-main` | Commit `5346275`, `8c6d2d1` |
++| Thời điểm | **Chạy sau E6.** Cổng (3)(iii) của sổ: kịch bản `run3e-c.ps1` chờ dòng "XONG phan sau" của `run3e-b.ps1` | `results/b15f-main/RUNLOG.md:11`, `:16`; `run-plan.md` §5.4.4, bước 3 |
++| Kết quả | Chưa có lượt E5′ nào | `results/b15f-main/RUNLOG.md:5` |
+

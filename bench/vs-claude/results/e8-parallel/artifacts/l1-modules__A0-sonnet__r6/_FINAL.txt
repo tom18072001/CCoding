@@ -1,0 +1,10 @@
+Cả năm module đã xong theo SPEC.md, và `npm test` xanh (48 test, không lỗi). Bộ nghiệm thu ẩn thì tôi không chạy được, nên chưa biết kết quả trên đó. Tôi chưa commit gì.
+
+Mỗi module nằm ở `src/<tên>/index.js`, không import lẫn nhau, không thêm thư viện. Tôi giữ các test mẫu có sẵn và viết thêm vào `test/` cho từng module, gồm cả các ví dụ trong đặc tả.
+
+Một số chỗ đặc tả chưa nói rõ, tôi tự chọn như sau:
+- **`convert`:** kiểm `m` trước rồi mới tới `to`, theo thứ tự chung của các hàm khác. Nếu bộ nghiệm thu muốn kiểm `to` trước thì chỉ cần đổi thứ tự hai dòng đầu hàm.
+- **`csvcheck` (tên cột):** `name` rỗng vẫn được chấp nhận trong lược đồ; chỉ `name` không phải chuỗi hoặc trùng mới ném `CSV_INVALID_SCHEMA`.
+- **`csvcheck` (`min`/`max`):** với cột `string` hoặc `bool`, `min`/`max` bị bỏ qua chứ không bị coi là lược đồ sai.
+- **`slugify`:** làm đúng thứ tự "bỏ dấu rồi mới đổi chữ thường", nên `İ` hoa có chấm cho ra `i-`.
+- **`compareVi`:** dấu thanh chỉ tính trên nguyên âm `a e i o u y`; dấu kết hợp trên chữ khác bị bỏ qua.

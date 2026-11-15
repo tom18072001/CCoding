@@ -1,0 +1,11 @@
+`GET /tickets` in `src/handler.js` now supports `status`, `assignee`, `sort`, `limit` and `cursor`, and `npm test` passes (11 tests). A call with no parameters still returns the bare array sorted by id.
+
+New tests are in `test/list.test.js`. They check that paging through every sort order returns each item once and in the right order.
+
+A few behaviours you might not assume:
+- **Cursor contents:** it is a base64url string holding the last item's sort value and id, plus the filters and sort it was issued for. Paging therefore continues from that item's position rather than an offset.
+- **Cursor matching:** `status=open,closed` and `status=closed,open` count as the same filter. A cursor issued for one is accepted for the other. Changing `status`, `assignee` or `sort` gives `invalid_cursor`.
+- **Last page:** `nextCursor` is `null` when nothing remains, including when the item count is an exact multiple of `limit`.
+- **Validation:** `limit` must be digits only, so `1.5`, `-3` and an empty string give `invalid_limit`. An empty `status` gives `invalid_status`. `cursor` without `limit` gives `invalid_cursor`.
+- **Assignee:** it isn't validated. A name that matches no ticket just returns an empty list.
+- **Dates:** `createdAt` sorting compares parsed dates, not strings.

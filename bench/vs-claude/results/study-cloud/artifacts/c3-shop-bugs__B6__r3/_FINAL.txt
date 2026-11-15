@@ -1,0 +1,118 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude c3-shop-bugs__B6__r3] Multi-file bug hunt in a cart module
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Ba lỗi gốc nằm ở money.js (applyPercent không làm tròn half-up), stock.js (reserve kiểm tra sai điều kiện, cho phép tồn kho âm) và cart.js (giới hạn dùng >= thay vì >, và coupon bị áp hai lần: trên từng dòng rồi trên subtotal). Chia hai hạng mục song song, mỗi hạng mục sở hữu tệp nguồn và tệp test riêng.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Sửa money.js + cart.js (coupon, làm tròn, giới hạn số lượng) (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã sửa ba lỗi thuộc S1 trong `money.js` và `cart.js`, và thêm 7 test hồi quy. `npm test` chạy xanh: 9 test, 9 pass, exit 0. Chưa có rủi ro nào còn lại trong phạm vi S1.
+
+## Tệp đã tạo/sửa
+- `src/money.js`: `applyPercent` giờ trả `amount - Math.floor((amount*pct + 50)/100)`. Dùng số nguyên nên không còn dong lẻ, và phần giảm làm tròn half-up.
+- `src/cart.js`: điều kiện giới hạn đổi từ `>=` thành `>`, nên mua đúng 10 được, 11 báo `QTY_LIMIT`. `total()` chỉ còn tính subtotal = Σ(unitPrice×qty) rồi áp coupon một lần. Trước đó coupon bị áp trên từng dòng rồi áp lại trên subtotal.
+- `test/cart-money.test.js` (mới) gồm 7 test:
+  - coupon áp một lần với nhiều dòng;
+  - 15% của 333 ra 283;
+  - 10% của 5 ra 4, đúng trường hợp .5 làm tròn lên;
+  - tổng là số nguyên;
+  - mua đúng 10 thành công;
+  - mua 11 báo `QTY_LIMIT`;
+  - mua 10 rồi thêm 1 báo `QTY_LIMIT` và tồn kho giữ nguyên 90.
+
+  Mỗi test dùng sku riêng với `setStock`.
+
+## Kiểm chứng
+- `npm test` → exit 0, tests 9, pass 9, fail 0. Baseline trước khi sửa là 1 test đỏ trong 2 test.
+- Tôi không chạy từng test đỏ trước khi sửa, nên "đỏ rồi xanh" chưa được chứng minh riêng cho từng test mới.
+- `src/stock.js` chưa được sửa trong hạng mục này (thuộc S2).
+
+## Quyết định thiết kế
+- Dùng số học nguyên (`Math.floor((amount*pct+50)/100)`) thay cho `Math.round` trên số float, để tránh sai số float.
+- Giữ nguyên thứ tự trong `addItem`: kiểm tra giới hạn trước, `reserve` sau. Vì vậy khi báo `QTY_LIMIT` thì tồn kho không bị trừ.
+- Lệnh shell đầu tiên bị hook chặn vì chuỗi `../src/...` trong heredoc, nên tôi chuyển sang dùng công cụ Edit/Write.
+
+## Rủi ro & việc còn mở
+- Tồn kho âm nằm ở `src/stock.js`, thuộc S2, nên tôi không đụng tới.
+- `applyPercent` giả định `pct` và `amount` là số nguyên. Nếu `pct` có phần thập phân thì kết quả có thể không nguyên.
+
+Bản đầy đủ: `.ccoding/T-20261103-020543-8f9/outputs/dev-S1-senior-swe.md`
+
+### S2 — Sửa stock.js (tồn kho không âm) + test (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã sửa `reserve` trong `src/stock.js`: giờ nó ném `Error('INSUFFICIENT_STOCK')` khi `have < qty`, và không đổi tồn kho khi ném lỗi. Tôi cũng thêm `test/stock.test.js` gồm 6 test hồi quy. `npm test` chạy 15 test, 15 pass, 0 fail (hiện cả các sửa lỗi của S1).
+
+## Tệp đã tạo/sửa
+- `src/stock.js`: điều kiện kiểm tra đổi từ `have < 0` thành `!Number.isInteger(qty) || qty < 0 || have < qty`. Chữ ký `setStock`, `available`, `reserve`, `release` giữ nguyên.
+- `test/stock.test.js` (mới), 6 test:
+  - Reserve vượt tồn kho ném lỗi và tồn kho giữ nguyên.
+  - Reserve đúng bằng tồn kho thành công và về 0.
+  - Release sau reserve hoàn lại tồn kho.
+  - Sku chưa có, reserve 1 thì ném lỗi.
+  - `addItem` vượt tồn kho ném lỗi, không tạo dòng giỏ và tồn kho không đổi.
+  - `addItem` vượt tồn kho trên dòng đã có thì dòng giữ nguyên `qty` và tồn kho không đổi.
+
+## Hợp đồng API
+Không áp dụng. Đây là thư viện thuần, không có endpoint.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0, `# tests 15 · # pass 15 · # fail 0`. Baseline trước khi sửa là exit 1 với 1 test lỗi.
+
+## Việc còn lại
+Không có. Điều kiện `qty < 0` và `Number.isInteger` trong `reserve` là phần tôi thêm ngoài yêu cầu, để chặn qty âm hoặc không nguyên làm tăng tồn kho. `addItem` đã kiểm tra `BAD_QTY` trước đó nên luồng giỏ hàng không bị ảnh hưởng.
+
+Bản đầy đủ: `.ccoding/T-20261103-020543-8f9/outputs/dev-S2-backend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-020543-8f9` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **24 in / 8,861 out**, cache đọc 135.2k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 8 | 3907 | 47959 | 1 |
+| Backend Developer (@backend-dev) | dev | 8 | 2891 | 48610 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 6 | 1605 | 36349 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 458 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Sửa money.js + cart.js (coupon, làm tròn, giới hạn số lượng) (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Sửa stock.js (tồn kho không âm) + test (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 2 · # suites 0 · # pass 1 · # fail 1 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 15 · # suites 0 · # pass 15 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **96** A | — | 100 | 89 | 100 | 1 | 1 | 52k | 1/7 |
+| Backend Developer (@backend-dev) | dev | **96** A | — | 100 | 87 | 100 | 1 | 1 | 52k | 1/6 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 38k | 0/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

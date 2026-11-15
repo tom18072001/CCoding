@@ -1,0 +1,1 @@
+đột biến t5-logq: 360; dựng lại đúng vị trí: 360; nhãn thật cũ 311; trượt ≥ 1/3 lần nay: 309; khớp nhãn: 358

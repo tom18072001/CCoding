@@ -1,0 +1,7 @@
+`parseIisLog(text)` is now implemented in `src/iis.js`. The visible test passes under `npm test`.
+
+I also ran one extra check by hand. It had CRLF line endings, a user agent containing `+`, a `time-taken` value, and a `-` username, and all of them came out as the brief describes. I didn't add any new test files.
+
+Two behaviours the brief didn't cover:
+- **Numeric fields:** a value that isn't a valid number (for `sc-status`, `s-port` or `time-taken`) is left out, and the line is still returned.
+- **`@timestamp`:** it is left out if `date` or `time` is missing or can't be parsed.

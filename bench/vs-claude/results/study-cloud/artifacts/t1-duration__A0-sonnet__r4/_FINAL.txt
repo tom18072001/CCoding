@@ -1,0 +1,18 @@
+`src/duration.js` đã hiện thực xong `parseDuration` và `formatDuration` theo SPEC.md, và `npm test` xanh (10/10 test, không thêm thư viện).
+
+- **Làm tròn:** phần parse tính bằng số nguyên lớn (BigInt) nên không bị sai số dấu phẩy động. Ví dụ `"0.0005s"` ra đúng 1 và `"-0.5"` ra −1. Kết quả `-0` được trả về `0`.
+- **`largest`:** phần dư được làm tròn vào đơn vị giữ cuối cùng, và phép +1 nhớ lên đơn vị lớn hơn. Ví dụ `6d 23h 59m 31s` với `largest: 2` ra `1w`.
+- **Test bổ sung:** thêm vào `test/duration.test.js` các nhóm:
+  - kiểu đầu vào sai và thông điệp lỗi;
+  - dấu và khoảng trắng;
+  - số thuần không hợp lệ (`.5`, `5.`, `1e3`);
+  - thứ tự và lặp đơn vị;
+  - ISO 8601 hợp lệ và không hợp lệ (`P`, `PT`, `P1DT`, `P1Y`, `P1W1D`…);
+  - `largest` với việc làm tròn và nhớ;
+  - style long, số âm, lỗi của các option;
+  - tính chất `parse(format(x)) === parse(x)`.
+
+Một số chỗ SPEC không nói rõ, tôi tự chọn như sau, nên bộ nghiệm thu ẩn có thể kiểm tra khác:
+- `options: null` được coi như không có option.
+- `largest: null` bị coi là lỗi.
+- Với ISO có dấu, khoảng trắng giữa dấu và `P` vẫn được chấp nhận, ví dụ `"- PT1S"`.

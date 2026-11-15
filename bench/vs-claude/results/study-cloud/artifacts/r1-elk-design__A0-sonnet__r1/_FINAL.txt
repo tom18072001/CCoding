@@ -1,0 +1,23 @@
+I wrote `DESIGN.md` at the repository root. It is a design document only: I haven't run or tested any of it. The compression ratios, node specs and the Logstash config are assumptions or sketches to confirm in a proof of concept on real traffic.
+
+**Capacity**
+- Raw volume is 1.3824 TB/day and 504.6 TB/year (630 billion events).
+- I assumed 0.8× raw for hot data and 0.5× raw for warm and snapshots, with 1 replica on hot and warm.
+- That gives 17.7 TB of data on hot, 33.2 TB on warm, a 252 TB snapshot repository for the full 12 months, and a 126 TB sealed archive of the originals.
+- The document also gives node counts and specs per tier, plus a sensitivity table.
+
+**Customer suggestion: searchable snapshots.** They need an Enterprise license, so they can't be used on Basic.
+- Instead, months 2–12 live as plain snapshots in object storage.
+- On request they are restored into a small on-demand tier of 5 nodes. Restoring a 30-day window takes about 6 hours, which fits the 24-hour requirement.
+- A small custom job takes the snapshots and deletes the live index only after the snapshot is verified. If the job fails, data stays on disk rather than being deleted unsnapshotted.
+
+**Integrity.** Elasticsearch Basic can't prove that data is unaltered, so the proof is built outside it.
+- Each event gets a Kafka-based ID and is stored in signed, hash-chained blocks in write-once storage.
+- Daily external timestamps anchor the chain.
+- A verifier re-hashes indexed and restored data against the sealed records.
+
+**Main conflict in the inputs.** Masking before indexing alters the event, which conflicts with "provably unaltered". The design keeps the raw event sealed and encrypted, and ties the masked copy to it by hash.
+- This means holding personal data for 12 months, so the document marks it as a decision for legal counsel.
+- The alternative of masking at the collector is also described.
+
+The document also covers the ingest pipeline and masking method, the ILM policy, 14 risks, and open questions for the customer. One risk is that the Basic license lacks features such as audit logging and single sign-on, which I flagged to re-check against Elastic's current license table before sign-off.

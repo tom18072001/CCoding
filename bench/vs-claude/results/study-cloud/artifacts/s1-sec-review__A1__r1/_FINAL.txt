@@ -1,0 +1,16 @@
+**SELF-REVIEW**
+- The JSON parses and has 7 entries.
+- Line numbers match the `cat -n` output: 11, 30, 42, 58, 65, 70 and 84.
+- All types come from the allowed list.
+- Each entry has a one-sentence fix.
+- Only `findings.json` was added; the source is untouched.
+- One check was borderline: on line 42, `path.join` normalizes `..`, and `sendFile` with an absolute path and no root does not block it. I kept it as a real finding.
+- Another borderline case I left out is line 79, where a host beginning with `-` could inject a ping option. Only admins can reach it and the impact is minimal.
+
+**FIX**: nothing needed.
+
+**Final report:** `findings.json` is in the repository root with 7 findings:
+- **Critical:** SQL injection (line 30) and command injection (line 84).
+- **High:** hardcoded JWT secret (line 11), path traversal in report download (line 42), MD5 password hashing (line 58), SSRF in the webhook preview (line 65), and missing authorization on ticket deletion (line 70).
+
+I did not run the app or any tests; this is a static review.

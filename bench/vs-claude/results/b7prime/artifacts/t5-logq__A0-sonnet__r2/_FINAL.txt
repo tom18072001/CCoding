@@ -1,0 +1,9 @@
+Mình đã hiện thực xong logq theo SPEC.md: `src/parse.js`, `src/query.js`, `src/agg.js` và CLI `bin/logq.js`. `npm test` xanh: cả 10 test đều qua, gồm 3 test smoke có sẵn và 7 test mới trong `test/logq.test.js` (parse, query, vị trí lỗi, agg, CLI). Mình không thêm thư viện ngoài, và chưa commit gì.
+
+Một vài chỗ đặc tả để mở, mình chọn như sau:
+
+- **`@t`:** chỉ nhận chuỗi có chữ `T` giữa ngày và giờ, nên `2024-01-01 10:00:00` (dấu cách thay `T`) và `2024-01-01` không sinh `@t`.
+- **Tìm chuỗi con:** dùng `msg` nếu nó khác `null`, nếu không thì dùng `message`.
+- **Lỗi cú pháp truy vấn:** ngoặc kép không đóng được báo khi parser đi tới đó, nên lỗi nằm sớm hơn trong truy vấn sẽ được báo trước.
+- **Spec tổng hợp:** từ khóa phải viết thường; số lượng trong `top` và `histogram` phải là số nguyên dương.
+- **CLI:** kiểm tra truy vấn và spec tổng hợp trước khi đọc tệp, nên các lỗi mã 2 luôn được báo trước lỗi tệp. Kết quả được gom lại rồi in một lần, nên khi lỗi stdout không in gì.

@@ -1,0 +1,16 @@
+The assignment is unique, and I wrote it to `answer.json`: B and C are healthy, and A, D and E are compromised.
+
+The reasoning is a case split on A:
+
+- **A healthy:** B is compromised, so B's statement is false and A and E are in different states. That makes E compromised. E's statement is false, so D must be healthy. D's statement is true, and with E compromised that forces C to be healthy... but D's statement can only hold if C is compromised. So C is compromised. Then B, C and E are compromised, which is exactly three. That makes C's statement true, but C is compromised, so this is a contradiction.
+- **A compromised:** B is healthy, so A and E share a state, and E is compromised.
+  - If C is healthy, D's statement is false, so D is compromised. That gives three compromised (A, D, E), so C's statement is true, which is consistent.
+  - If C is compromised, D is healthy. That also gives three compromised (A, C, E), so C's statement would be true, which contradicts C being compromised.
+
+Only the case with C healthy survives.
+
+The file contains:
+
+```json
+{ "healthy": ["B","C"], "compromised": ["A","D","E"], "unique": true }
+```

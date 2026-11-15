@@ -1,0 +1,26 @@
+## Giai đoạn 4 — FIX và báo cáo
+
+Review không tìm ra lỗi nào trong mã nguồn. Các lỗi tìm được đều nằm ở test do tôi viết:
+- Một số test đếm sai cột.
+- Hai test của evaluate ghi đè khóa trong cùng một tệp, vi phạm luật `SEM_DUPLICATE_KEY` của pha A. Tôi đã viết lại để ghi đè qua `include`.
+- Một test kiểm tra `${a-}` là nội suy hỏng, nhưng `a-` thực ra là định danh hợp lệ. Tôi đã bỏ trường hợp đó.
+
+Kết quả cuối: `npm test` chạy 48 test, 48 đạt. Ví dụ mục 9 cho đúng lỗi `5:29` và đúng kết quả `evaluate`.
+
+**Các tệp:**
+- `src/lexer.js`, `src/parser.js` (tầng 1)
+- `src/check.js` (tầng 2, ba pha)
+- `src/evaluate.js` (tầng 3)
+- `src/diff.js` (tầng 4)
+- `src/index.js` (thêm `compile`)
+- `src/merge.js` (tệp nội bộ thêm): hợp nhất, phân giải tham chiếu và gắn vị trí, dùng chung cho `check` và `evaluate`
+- Test mới: `test/lexer.test.js`, `parser.test.js`, `check.test.js`, `evaluate.test.js`, `diff.test.js`, `compile.test.js`. Tôi giữ nguyên `smoke.test.js`.
+
+Không dùng thư viện ngoài. Tôi chưa commit gì.
+
+**Giả định ở những chỗ đặc tả chưa rõ** (nếu bộ nghiệm thu hiểu khác thì đổi ở đúng chỗ này):
+1. `\` ngay trước hết tệp trong chuỗi báo `LEX_BAD_ESCAPE`.
+2. Đoạn trong `${…}` được phép trùng từ khóa (ví dụ `${true}`), nên lỗi là `SEM_UNDEFINED_REF` chứ không phải `LEX_BAD_INTERPOLATION`.
+3. Đối tượng đến từ chuỗi thuần tham chiếu lấy vị trí chuỗi đó cho mọi thứ bên trong, kể cả vị trí của `SEM_UNKNOWN_KEY`.
+4. `closed: true` chỉ có tác dụng khi đặc tả có `fields`, đúng theo chữ của quy tắc 3.
+5. `applyDiff` ném `DIFF_APPLY_FAILED` khi `remove` ở gốc hoặc `op` lạ; pointer sai thì để `DIFF_BAD_POINTER` lan ra.

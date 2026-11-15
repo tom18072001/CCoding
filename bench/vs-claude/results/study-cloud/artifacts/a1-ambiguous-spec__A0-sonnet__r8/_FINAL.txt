@@ -1,0 +1,15 @@
+I wrote the spec to `SPEC.md` at the repository root. It includes the required `## Open questions and assumptions` section, with 15 questions, each paired with the assumption I'd use until it's answered.
+
+The customer's request contradicts itself in five places. The spec picks a default for each, and each default is one of the open questions:
+
+- **Full IPs and usernames vs. nothing unmasked:** exports are masked by default, with usernames pseudonymised and IPs truncated. A separate forensic export with full values needs a second approver and stays switched off until the bank's data-protection officer signs off.
+- **"Everything they can see" vs. "their team, last month":** the spec exports what the user can see within their team and the previous calendar month, in Vietnam time. There are no cross-branch exports.
+- **5-second limit:** the 5-second target applies up to 100,000 rows. Larger exports run in the background with a notification.
+- **Keep forever vs. delete after 12 months:** export files containing personal data are deleted under the 12-month rule. A record of each export with no personal data in it is kept indefinitely.
+- **"Make it simple":** the user sees one button and one confirmation. Masking, audit and expiry all happen on the server.
+
+The spec also covers CSV formula-injection protection, the audit trail, daily purge including backups, acceptance criteria and test notes.
+
+It names the likely Vietnamese regulations but makes no legal claim about which applies. Question 10 sends that to the bank's legal and data-protection team.
+
+I also don't have a sample of the old system's export. The column list in the spec is a placeholder until the customer sends one (question 5).

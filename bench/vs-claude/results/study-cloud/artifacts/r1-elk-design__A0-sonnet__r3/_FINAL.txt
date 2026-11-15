@@ -1,0 +1,21 @@
+I wrote `DESIGN.md` at the repo root. I haven't committed it, and none of the sizing has been tested against real events.
+
+**Sizing**
+- **Raw volume:** 1.728 billion events a day, which is 1.38 TB/day or 16 MB/s. A year is 504.6 TB.
+- **Hot tier (days 0–7):** 6 nodes with 4 TB NVMe each. It holds 13.5 TB of data including one replica, and needs about 19.4 TB of disk at 70 % full.
+- **Warm tier (days 8–30):** 6 nodes with 8 TB each. It holds 31.8 TB of data including one replica, and needs about 45.4 TB of disk at 70 % full.
+- **Restore tier:** 4 on-demand nodes with 8 TB each, for data older than 30 days.
+- **Object storage:** about 387 TB for 400 days. That is roughly 111 TB of signed evidence archive plus about 276 TB of snapshots.
+- **Compression:** I assumed index size is 0.7× raw on hot and 0.5× raw after merging. If real data compresses worse, disk needs rise by roughly 45 %. The document says to pilot with 1–2 days of real events before buying hardware.
+
+**Conflicts in the brief**
+- **Searchable snapshots:** the customer's suggestion cannot work, because they need an Enterprise license and the budget is Basic. The design uses ordinary snapshots plus a restore tier instead. A restore of 30 days takes about 11.5 hours, so the 24-hour requirement holds for requests up to about 30 days of data.
+- **Masking vs "provably unaltered":** masking changes the original event, so what the customer can prove unaltered is the masked record. Legal needs to decide whether that is acceptable.
+- **Unmasked data in the buffer:** raw events sit unmasked in the Kafka buffer for up to 48 hours before masking.
+- **Basic license gaps:** Basic has no native audit log, no document- or field-level security, and no LDAP or SAML. The design compensates with proxy and OS logging.
+
+Integrity does not rely on Elasticsearch. Each event gets a SHA-256 hash, and signed, timestamped, hash-chained batch manifests go to write-once (S3 Object Lock) storage. A daily job re-verifies the chain against what Elasticsearch holds. The snapshot copy itself cannot sit under Object Lock, so it is checked against the archive on restore.
+
+The document also covers the node layout, the ingest pipeline with masking rules, the ILM and snapshot-policy JSON, and the restore procedure. It ends with the risk register and what changes if the customer buys Enterprise.
+
+I wrote the license claims and some ILM options from memory, so verify them before this goes to the customer. The license claims are the Basic vs Enterprise/Gold feature split. The ILM option is `index_codec` on force-merge, which only exists in newer 8.x/9.x. Also check the restore throughput figure (about 500 MB/s across 4 nodes).

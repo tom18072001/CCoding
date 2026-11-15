@@ -1,0 +1,60 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261102-133429-a8b",
+  "wallSec": 104,
+  "wallSecHarness": 105,
+  "costUsd": 0.524572,
+  "tokens": {
+   "input": 32,
+   "output": 20572,
+   "cacheRead": 443455,
+   "cacheWrite": 67788
+  },
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "parseDuration + tệp re-export duration.js"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "formatDuration (module riêng)"
+   }
+  ],
+  "workdir": "/home/claude/ccoding-dev/workspaces/b-c9-t1-fastla-1/wt-T-20261102-133429-a8b",
+  "branch": "ccoding/t-20261102-133429-a8b"
+ },
+ "task": "t1-duration",
+ "system": "ccoding-fastlane",
+ "rep": 1,
+ "key": "t1-duration.ccoding-fastlane.1",
+ "env": "cloud",
+ "startedAt": "2026-11-02T06:34:29.506Z",
+ "finishedAt": "2026-11-02T06:36:15.181Z",
+ "grade": {
+  "hidden": {
+   "pass": 149,
+   "fail": 0,
+   "total": 149,
+   "failed": [],
+   "ms": 226,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 17,
+   "fail": 0,
+   "total": 17
+  },
+  "changed": [
+   "~src/duration.js",
+   "+src/format.js",
+   "+src/parse.js",
+   "+test/format.test.js",
+   "+test/parse.test.js"
+  ]
+ },
+ "audit": []
+}

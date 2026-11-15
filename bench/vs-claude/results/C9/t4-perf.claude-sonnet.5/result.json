@@ -1,0 +1,84 @@
+{
+ "run": {
+  "exitCode": 0,
+  "status": "done",
+  "wallSec": 58,
+  "costUsd": 0.1525846,
+  "turns": 4,
+  "tokens": {
+   "input": 8,
+   "output": 7020,
+   "cacheRead": 166480,
+   "cacheWrite": 16340
+  },
+  "models": [
+   "claude-haiku-5-5",
+   "claude-sonnet-5-5"
+  ],
+  "modelUsage": {
+   "claude-haiku-5-5": {
+    "inputTokens": 1366,
+    "outputTokens": 448,
+    "cacheReadInputTokens": 0,
+    "cacheCreationInputTokens": 0,
+    "webSearchRequests": 0,
+    "costUSD": 0.0003606,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000,
+    "thinkingTokens": 423,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 0,
+    "canonicalModel": "claude-haiku-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   },
+   "claude-sonnet-5-5": {
+    "inputTokens": 8,
+    "outputTokens": 7020,
+    "cacheReadInputTokens": 166480,
+    "cacheCreationInputTokens": 16340,
+    "webSearchRequests": 0,
+    "costUSD": 0.152224,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 64000,
+    "thinkingTokens": 2381,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 16340,
+    "canonicalModel": "claude-sonnet-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   }
+  },
+  "finalText": "Tôi đã viết lại `buildReport` trong `src/report.js`. Với 200.000 dòng, `npm run bench` giờ chạy khoảng 236 ms, so với ~15 giây trước đó. `npm test` xanh, 6/6 test đạt.\n\n**Cách làm.** Bản cũ quét lại toàn bộ mảng cho mỗi danh mục, tháng, sku và khách, và dùng `includes`/`find` tuyến tính. Bản mới chỉ duyệt đơn hàng một lần, gom số liệu bằng `Map`/`Set`. Chữ ký hàm giữ nguyên, không đổi dữ liệu vào, không có bộ nhớ đệm giữa các lần gọi. Bộ nhớ đệm tháng chỉ tồn tại trong một lần gọi.\n\n**Các hành vi lạ của bản cũ vẫn giữ nguyên:**\n- Khi trùng `sku` trong `products`, lấy bản ghi đầu tiên.\n- Thứ tự phần tử mảng, các phép so sánh khi sắp xếp và `months.sort()` mặc định đều như cũ.\n- `refunds` cộng mọi dòng có `amount < 0`, kể cả dòng `paid` có `qty` âm.\n- Với `status` không phải `paid`/`refunded`/`cancelled`, dòng vẫn tính doanh thu nhưng không đếm vào số đơn và số khách.\n- Ngày không hợp lệ vẫn ném lỗi, và lỗi xảy ra trước khi lọc theo trạng thái.\n- Bước `JSON.parse(JSON.stringify(...))` của bản cũ biến `NaN`/`Infinity` thành `null` (coi như 0 khi cộng) và `-0` thành `0`. Bản mới cho kết quả tương đương mà không tạo lại từng đối tượng.\n\n**Test.** Tôi giữ bản cũ nguyên vẹn ở `test/helpers/report.legacy.js` làm đặc tả. File `test/equivalence.test.js` so sánh hai bản bằng `deepStrictEqual` trên:\n- Dữ liệu sinh với nhiều seed và các tuỳ chọn `topN`, `from`, `to`.\n- Dữ liệu ngẫu nhiên có `qty` bằng 0, `sku` trùng hoặc thiếu, nhiều múi giờ, hoàn trả, và các dòng hoà điểm.\n- Mảng rỗng, số âm, tổng bằng 0 và ngày không hợp lệ.\n\nTôi chưa chạy bộ nghiệm thu ẩn nên chưa biết nó có bắt được trường hợp nào ngoài các test trên. Tôi cũng không kiểm tra đầu vào không hợp lệ ngoài ngày sai, ví dụ `qty` là chuỗi hay `id` là object.",
+  "workdir": "/tmp/bw/C9-t4-perf.claude-sonnet.5-7l3dr1/repo"
+ },
+ "task": "t4-perf",
+ "system": "claude-sonnet",
+ "rep": 5,
+ "key": "t4-perf.claude-sonnet.5",
+ "env": "cloud",
+ "startedAt": "2026-11-02T07:09:21.705Z",
+ "finishedAt": "2026-11-02T07:10:23.653Z",
+ "grade": {
+  "hidden": {
+   "pass": 19,
+   "fail": 0,
+   "total": 19,
+   "failed": [],
+   "ms": 2671,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 6,
+   "fail": 0,
+   "total": 6
+  },
+  "changed": [
+   "~src/report.js",
+   "+test/equivalence.test.js",
+   "+test/helpers/report.legacy.js"
+  ],
+  "perfMs": 150
+ },
+ "audit": []
+}

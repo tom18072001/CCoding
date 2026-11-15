@@ -1,0 +1,13 @@
+Tôi đã viết lại `buildReport` trong `src/report.js` theo kiểu một lượt duyệt, dùng `Map`/`Set` thay cho `find`/`includes`/`filter` lồng nhau. `npm run bench` với 200.000 dòng giờ mất khoảng 510 ms, so với ~15 giây trước đó. `npm test` xanh, cả 3 test đều qua.
+
+Tôi giữ nguyên các hành vi của bản cũ mà bản mới phải tái tạo:
+- **Thứ tự lọc:** lọc theo `from`/`to` rồi mới bỏ dòng `cancelled`. Ngày không hợp lệ vẫn ném lỗi, kể cả ở dòng `cancelled`.
+- **SKU trùng:** nếu nhiều sản phẩm trùng `sku` thì lấy sản phẩm đầu tiên. SKU không có trong danh sách thì thành `unknown` / `(không rõ)`.
+- **Hoàn tiền:** dòng `refunded` có số tiền và số lượng âm. Cột `refunds` chỉ cộng các dòng có số tiền âm.
+- **Đếm đơn và khách theo tháng:** chỉ tính dòng `paid`, và một `id` nhiều dòng trong cùng tháng chỉ tính một lần.
+- **Giá trị không hữu hạn:** bản cũ có bước `JSON.parse(JSON.stringify(...))`. Bước này biến `NaN`/`Infinity` thành `null` và `-0` thành `0`, khi cộng dồn thì như 0. Bản mới làm tương tự.
+- **Thứ tự phần tử:** thứ tự cộng dồn, thứ tự xuất hiện đầu tiên và các hàm so sánh khi sắp xếp đều như cũ, nên thứ tự mảng và kết quả số thực trùng khớp.
+
+Tôi chưa tái tạo `qty` dạng chuỗi, vì khi đó bản cũ sẽ nối chuỗi thay vì cộng số, và tôi coi đó là đầu vào không hợp lệ. Tôi cũng bỏ qua trường hợp `id`/`customerId`/`sku` là object, nơi bước JSON của bản cũ tạo bản sao nên so sánh theo tham chiếu không bao giờ khớp.
+
+Bản cũ được lưu ở `test/fixtures/report.old.js`. Test mới trong `test/report.test.js` so sánh bản mới với bản cũ bằng `deepStrictEqual`. Nó chạy 12 bộ dữ liệu sinh ngẫu nhiên, mỗi bộ thêm SKU lạ, sản phẩm trùng SKU và dòng hoàn tiền với `qty` 0. Mỗi bộ chạy với 6 tổ hợp tùy chọn (`topN`, `from`, `to`), và có thêm trường hợp đầu vào rỗng.

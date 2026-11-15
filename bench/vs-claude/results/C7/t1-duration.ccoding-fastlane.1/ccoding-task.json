@@ -1,0 +1,164 @@
+{
+ "id": "T-20261102-114744-d33",
+ "title": "[bench C7] t1-duration #1",
+ "brief": "Hiện thực module src/duration.js theo đúng đặc tả trong SPEC.md (parseDuration và formatDuration). Bộ nghiệm thu ẩn sẽ kiểm tra rất nhiều trường hợp biên của đặc tả, không chỉ test có sẵn trong test/. Bổ sung test cho các trường hợp biên vào test/, và đảm bảo `npm test` xanh. Không thêm thư viện ngoài.",
+ "mode": "project",
+ "projectId": "b-c7-t1-fastla-1",
+ "classification": "internal",
+ "status": "done",
+ "departments": [
+  "dev"
+ ],
+ "runs": [
+  {
+   "department": "dev",
+   "status": "done",
+   "subtasks": [
+    {
+     "description": "Sở hữu duy nhất src/duration.js (CommonJS, không thêm thư viện, module.exports = { parseDuration, formatDuration }). Bám sát từng quy tắc SPEC.md:\n- Lỗi: TypeError('Invalid duration: ' + JSON.stringify(input)), với undefined thì 'Invalid duration: undefined'.\n- parse: number hữu hạn; chuỗi trim và không phân biệt hoa/thường; dấu đầu duy nhất, cho phép khoảng trắng sau dấu; số thuần (không '.5', '5.', '1e3'); dạng đơn vị với đủ bí danh, mỗi đơn vị tối đa một lần, thứ tự giảm dần w>d>h>m>s>ms, không trộn số thuần với đơn vị; ISO 8601 (PnW riêng, P[nD][T[nH][nM][nS]], dấu thập phân '.' hoặc ','; 'P', 'PT', 'P1DT', 'P1Y', 'P1M' → lỗi).\n- Làm tròn half-away-from-zero ở kết quả cuối; -0 → 0.\n- format: validate ms, options.style ('short'|'long'), options.largest (số nguyên ≥ 1), TypeError nếu sai. Phân rã w/d/h/m/s/ms; largest giữ các đơn vị liên tiếp từ đơn vị lớn nhất khác 0 (tính cả đơn vị 0 nằm giữa), làm tròn phần còn lại vào đơn vị cuối với nhớ lên (6d 23h 59m 31s largest 2 → '1w'); '0ms' / '0 milliseconds'; số ít/nhiều ở style long; dấu '-' ở đầu chuỗi, không có dấu khi làm tròn về 0.\n- Tính chất parse(format(x)) === parse(x).\nTiêu chí xong: `npm test` xanh (gồm test có sẵn và test của S2).",
+     "dependsOn": [],
+     "status": "done",
+     "attempts": 1,
+     "usage": {
+      "input": 8,
+      "output": 12135,
+      "cacheRead": 109305,
+      "cacheWrite": 22867,
+      "costUsd": 0.22446429999999998,
+      "calls": 1,
+      "estimatedCalls": 0
+     },
+     "id": "S1",
+     "title": "Hiện thực src/duration.js (parseDuration + formatDuration)",
+     "assignee": "backend-dev",
+     "deliverable": "src/duration.js hoàn chỉnh, `npm test` chạy xanh",
+     "startedAt": "2026-11-02T04:47:59.283Z",
+     "output": "outputs/dev-S1-backend-dev.md",
+     "summary": "Tôi đã hiện thực `src/duration.js` (CommonJS, không thêm thư viện) gồm `parseDuration` và `formatDuration` theo SPEC.md. Tôi cũng thêm `test/edge.test.js` cho các trường hợp biên. `npm test` xanh: 11 test pass, 0 fail.",
+     "finishedAt": "2026-11-02T04:49:09.800Z"
+    }
+   ],
+   "usage": {
+    "input": 18,
+    "output": 16375,
+    "cacheRead": 229886,
+    "cacheWrite": 52239,
+    "costUsd": 0.39836459999999996,
+    "calls": 3,
+    "estimatedCalls": 0
+   },
+   "startedAt": "2026-11-02T04:47:44.309Z",
+   "stage": "done",
+   "reviewFocus": "- Bộ test biên độc lập theo SPEC.md: Sở hữu duy nhất tệp test/duration.edge.test.js (dùng node:test + node:assert, không sửa test/duration.test.js và src/duration.js). Viết test từ SPEC.md, require('../src/duration') và gọi hàm export. Phủ: mọi bí danh đơn vị; chữ hoa/thường, khoảng trắng; dấu (+/-, '- 5s', '1h-30m' lỗi); số thuần ('.5', '5.', '1e3' lỗi); thứ tự/trùng đơn vị ('30m1h', '1h1h', '1h 30' lỗi); ISO ('PT0,5S', 'P1W', 'P1W1D' lỗi, 'P', 'PT', 'P1DT', 'P1Y', 'P1M', 'PT1M'); làm tròn ±0.5, -0 → 0; message lỗi chính xác kể cả undefined, null, NaN, Infinity, boolean, object; format: style, largest và nhớ lên (60m→1h, 24h→1d,",
+   "planSummary": "Việc nhỏ trong một tệp. Một dev hiện thực src/duration.js theo SPEC.md, một dev khác song song viết bộ test biên độc lập vào tệp riêng dựa trên SPEC.md để đối chiếu.",
+   "decisions": "",
+   "estimate": {
+    "tokens": 587987,
+    "budget": 1440000,
+    "at": "2026-11-02T04:47:59.235Z",
+    "basis": "theo lịch sử: @backend-dev ~198.0k/hạng mục (8 mẫu)"
+   },
+   "reviewRound": 0,
+   "review": {
+    "approved": true,
+    "summary": "src/duration.js khớp SPEC.md ở mọi ca biên tôi kiểm tra. Code dùng BigInt nên phần làm tròn thập phân không lệch do float, và không thêm thư viện ngoài. Tôi đọc toàn bộ code, chạy lại npm test, rồi chạy thêm khoảng 70 ca biên bằng node -e. Mọi ca ra đúng kết quả đặc tả. Hai điểm minor ở dưới là về diễn giải SPEC, không phải lỗi. test/edge.test.js của dev cũng xanh. Tệp test/duration.edge.test.js mà đề yêu cầu chưa thấy trong worktree này, nên tôi chưa tự chạy tệp đó.",
+    "issues": [
+     {
+      "subtask": "S1",
+      "severity": "minor",
+      "comment": "Với NaN/Infinity, message là 'Invalid duration: null' vì JSON.stringify(NaN) trả 'null'. Đúng chữ SPEC ('\"Invalid duration: \" + JSON.stringify(input)') nên giữ nguyên. Nếu bộ nghiệm thu kỳ vọng chuỗi 'NaN' thì sẽ lệch, nhưng đây là rủi ro diễn giải, không phải lỗi code."
+     },
+     {
+      "subtask": "S1",
+      "severity": "minor",
+      "comment": "src/duration.js:~108 (hàm invalid): input là function hoặc symbol, JSON.stringify trả undefined nên code cho ra chuỗi 'undefined'. Hành vi này hợp lý và SPEC không nói tới trường hợp đó."
+     }
+    ],
+    "checks": [
+     {
+      "command": "npm test",
+      "exitCode": 0,
+      "ok": true,
+      "note": "CCoding tự chạy — # tests 11 · # suites 0 · # pass 11 · # fail 0 · # skipped 0 · # todo 0"
+     },
+     {
+      "command": "cat SPEC.md; cat src/duration.js; ls test; npm test 2>&1 | tail -15",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "node -e \"\nconst {parseDuration:p,formatDuration:f}=require('./src/duration');\nconst t=(fn)=>{try{return fn()}catch(e){return e.constructor.name+':'+e.message}};\nfor(const s of ['- 5s','1h-30m','.5','5.','1e3','30m1h','1h1h','1h 30','PT0,5S','P1W','P1W1D','P','PT','P1DT','P1Y','P1M','PT1M','-pt1h','2",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "node -e (khoảng 70 ca biên theo SPEC)",
+      "exitCode": 0,
+      "ok": true,
+      "note": "Các nhóm ca đã kiểm: dấu ('- 5s', '--1h', '1h-30m'), số thuần ('.5', '5.', '1e3'), thứ tự/trùng đơn vị, bí danh và chữ hoa/thường, ISO ('PT0,5S', 'P1W1D', 'P', 'PT', 'P1DT', 'P1Y', 'P1M', 'PT1M', 'P1.5D'), làm tròn ±0.5 và -0 → 0, message lỗi (undefined, null, NaN, boolean, object, array). Format: n"
+     }
+    ],
+    "verified": true
+   },
+   "finalPath": "dev-FINAL.md",
+   "finishedAt": "2026-11-02T04:49:33.349Z"
+  }
+ ],
+ "options": {
+  "discussionRounds": 1,
+  "review": true,
+  "maxParallel": 3,
+  "maxRevisions": 1,
+  "budgetTokens": 1500000,
+  "budgetMode": "complete",
+  "phaseModels": {
+   "plan": "sonnet"
+  }
+ },
+ "usage": {
+  "input": 18,
+  "output": 16375,
+  "cacheRead": 229886,
+  "cacheWrite": 52239,
+  "costUsd": 0.39836459999999996,
+  "calls": 3,
+  "estimatedCalls": 0
+ },
+ "createdAt": "2026-11-02T04:47:44.271Z",
+ "updatedAt": "2026-11-02T04:49:33.396Z",
+ "autoTitle": false,
+ "startedAt": "2026-11-02T04:47:44.272Z",
+ "workspace": "/home/claude/ccoding-dev/workspaces/b-c7-t1-fastla-1/wt-T-20261102-114744-d33",
+ "branch": "ccoding/t-20261102-114744-d33",
+ "baseRef": "1258b66da2e0d7c2edd2f17fecfc22cc7bb2d706",
+ "lane": "fast",
+ "projectChecks": {
+  "baseline": [
+   {
+    "command": "npm test",
+    "code": 1,
+    "ok": false,
+    "ms": 644,
+    "summary": "# tests 3 · # suites 0 · # pass 0 · # fail 3 · # skipped 0 · # todo 0",
+    "tail": "> duration@0.1.0 test\n> node --test \"test/**/*.test.js\"\n\nTAP version 13\n# Subtest: parse cơ bản\nnot ok 1 - parse cơ bản\n  ---\n  duration_ms: 1.236889\n  type: 'test'\n  location: '/home/claude/ccoding-dev/workspaces/b-c7-t1-fastla-1/wt-T-20261102-114744-d33/test/duration.test.js:6:1'\n  failureType: 'testCodeFailure'\n  error: 'chưa hiện thực'\n  code: 'ERR_TEST_FAILURE'\n  stack: |-\n    parseDuration (/home/claude/ccoding-dev/workspaces/b-c7-t1-fastla-1/wt-T-20261102-114744-d33/src/duration.js:5:9)\n    TestContext.<anonymous> (/home/claude/ccoding-dev/workspaces/b-c7-t1-fastla-1/wt-T-20261102-114744-d33/test/duration.test.js:7:16)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.start (node:internal/test_runner/test:944:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)\n  ...\n# Subtest: format cơ bản\nnot ok 2 - format cơ bản\n  ---\n  duration_ms: 0.137318\n  type: 'test'\n  location: '/home/claude/ccoding-dev/workspaces/b-c7-t1-fastla-1/wt-T-20261102-114744-d33/test/duration.test.js:12:1'\n  failureType: 'testCodeFailure'\n  error: 'chưa hiện thực'\n  code: 'ERR_TEST_FAILURE'\n  stack: |-\n    formatDuration (/home/claude/ccoding-dev/workspaces/b-c7-t1-fastla-1/wt-T-20261102-114744-d33/src/duration.js:9:9)\n    TestContext.<anonymous> (/home/claude/ccoding-dev/workspaces/b-c7-t1-fastla-1/wt-T-20261102-114744-d33/test/duration.test.js:13:16)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.processPendingSubtests (node:internal/test_runner/test:744:18)\n    Test.postRun (node:internal/test_runner/test:1173:19)\n    Test.run (node:internal/test_runner/test:1101:12)\n    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)\n  ...\n# Subtest: lỗi\nnot ok 3 - lỗi\n  ---\n  duration_ms: 0.706877\n  type: 'test'\n  location: '/home/claude/ccoding-dev/workspaces/b-c7-t1-fastla-1/wt-T-20261102-114744-d33/test/duration.test.js:18:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    The error is expected to be an instance of \"TypeError\". Received \"Error\"\n    \n    Error message:\n    \n    chưa hiện thực\n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  stack: |-\n    TestContext.<anonymous> (/home/claude/ccoding-dev/workspaces/b-c7-t1-fastla-1/wt-T-20261102-114744-d33/test/duration.test.js:19:10)\n    Test.runInAsyncScope (node:async_hooks:214:14)\n    Test.run (node:internal/test_runner/test:1047:25)\n    Test.processPendingSubtests (node:internal/test_runner/test:744:18)\n    Test.postRun (node:internal/test_runner/test:1173:19)\n    Test.run (node:internal/test_runner/test:1101:12)\n    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)\n  ...\n1..3\n# tests 3\n# suites 0\n# pass 0\n# fail 3\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 316.183093"
+   }
+  ],
+  "baselineAt": "2026-11-02T04:47:44.953Z",
+  "latest": [
+   {
+    "command": "npm test",
+    "code": 0,
+    "ok": true,
+    "ms": 317,
+    "summary": "# tests 11 · # suites 0 · # pass 11 · # fail 0 · # skipped 0 · # todo 0",
+    "tail": "> duration@0.1.0 test\n> node --test \"test/**/*.test.js\"\n\nTAP version 13\n# Subtest: parse cơ bản\nok 1 - parse cơ bản\n  ---\n  duration_ms: 1.539315\n  type: 'test'\n  ...\n# Subtest: format cơ bản\nok 2 - format cơ bản\n  ---\n  duration_ms: 0.305127\n  type: 'test'\n  ...\n# Subtest: lỗi\nok 3 - lỗi\n  ---\n  duration_ms: 0.383329\n  type: 'test'\n  ...\n# Subtest: parse số & dấu\nok 4 - parse số & dấu\n  ---\n  duration_ms: 1.534917\n  type: 'test'\n  ...\n# Subtest: parse dạng đơn vị\nok 5 - parse dạng đơn vị\n  ---\n  duration_ms: 0.343713\n  type: 'test'\n  ...\n# Subtest: parse ISO\nok 6 - parse ISO\n  ---\n  duration_ms: 0.575619\n  type: 'test'\n  ...\n# Subtest: parse lỗi\nok 7 - parse lỗi\n  ---\n  duration_ms: 2.519107\n  type: 'test'\n  ...\n# Subtest: format\nok 8 - format\n  ---\n  duration_ms: 0.420539\n  type: 'test'\n  ...\n# Subtest: format largest\nok 9 - format largest\n  ---\n  duration_ms: 0.16314\n  type: 'test'\n  ...\n# Subtest: format lỗi\nok 10 - format lỗi\n  ---\n  duration_ms: 0.374189\n  type: 'test'\n  ...\n# Subtest: round-trip\nok 11 - round-trip\n  ---\n  duration_ms: 0.48769\n  type: 'test'\n  ...\n1..11\n# tests 11\n# suites 0\n# pass 11\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 136.421204"
+   }
+  ],
+  "latestAt": "2026-11-02T04:49:10.409Z",
+  "latestAfter": "execute"
+ },
+ "changes": "src/duration.js   | 166 +++++++++++++++++++++++++++++++++++++++++++++++++++++-\n test/edge.test.js |  76 +++++++++++++++++++++++++\n 2 files changed, 239 insertions(+), 3 deletions(-)",
+ "commit": "2b6f318126 — 2 commit trên nhánh từ 1258b66da2 (gồm gộp worktree con)",
+ "finalPath": "FINAL.md",
+ "finishedAt": "2026-11-02T04:49:33.395Z"
+}

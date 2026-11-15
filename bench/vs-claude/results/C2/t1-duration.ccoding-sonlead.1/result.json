@@ -1,0 +1,58 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261101-183754-7c1",
+  "wallSec": 266,
+  "wallSecHarness": 271,
+  "costUsd": 0.48334010000000005,
+  "tokens": {
+   "input": 8835,
+   "output": 22294,
+   "cacheRead": 281718,
+   "cacheWrite": 57505
+  },
+  "attention": "review",
+  "approved": false,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "Hiện thực src/duration.js (parseDuration, formatDuration)"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "Bổ sung test trường hợp biên vào test/"
+   }
+  ],
+  "workdir": "/home/claude/tom18072001/ccoding/workspaces/b-c2-t1-sonlea-1/wt-T-20261101-183754-7c1",
+  "branch": "ccoding/t-20261101-183754-7c1"
+ },
+ "task": "t1-duration",
+ "system": "ccoding-sonlead",
+ "rep": 1,
+ "key": "t1-duration.ccoding-sonlead.1",
+ "env": "cloud",
+ "startedAt": "2026-11-01T11:37:54.681Z",
+ "finishedAt": "2026-11-01T11:42:26.406Z",
+ "grade": {
+  "hidden": {
+   "pass": 149,
+   "fail": 0,
+   "total": 149,
+   "failed": [],
+   "ms": 492,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 16,
+   "fail": 0,
+   "total": 16
+  },
+  "changed": [
+   "~src/duration.js",
+   "+test/duration.edge.test.js"
+  ]
+ },
+ "audit": []
+}

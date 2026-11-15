@@ -1,0 +1,72 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261102-103114-68f",
+  "wallSec": 247,
+  "wallSecHarness": 255,
+  "costUsd": 1.4040691,
+  "tokens": {
+   "input": 92,
+   "output": 54083,
+   "cacheRead": 1578632,
+   "cacheWrite": 174592
+  },
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "Xác thực, phân quyền, ghi thao tác & nhật ký /audit"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "GET /tasks lọc/tìm/sắp xếp/phân trang + route export.csv"
+   },
+   {
+    "id": "S3",
+    "status": "done",
+    "title": "Hàm sinh CSV (RFC 4180, BOM, chống công thức)"
+   }
+  ],
+  "workdir": "/home/claude/ccoding-dev/workspaces/b-c4-t3-fastla-1/wt-T-20261102-103114-68f",
+  "branch": "ccoding/t-20261102-103114-68f"
+ },
+ "task": "t3-api",
+ "system": "ccoding-fastlane",
+ "rep": 1,
+ "key": "t3-api.ccoding-fastlane.1",
+ "env": "cloud",
+ "startedAt": "2026-11-02T03:31:14.051Z",
+ "finishedAt": "2026-11-02T03:35:30.933Z",
+ "grade": {
+  "hidden": {
+   "pass": 87,
+   "fail": 0,
+   "total": 87,
+   "failed": [],
+   "ms": 597,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 26,
+   "fail": 0,
+   "total": 26
+  },
+  "changed": [
+   "+src/audit.js",
+   "+src/auth.js",
+   "+src/csv.js",
+   "+src/handlers/list.js",
+   "~src/handlers/tasks.js",
+   "+src/query.js",
+   "~src/server.js",
+   "~src/store.js",
+   "+test/auth-audit.test.js",
+   "+test/csv.test.js",
+   "+test/list.test.js",
+   "~test/tasks.test.js"
+  ]
+ },
+ "audit": []
+}

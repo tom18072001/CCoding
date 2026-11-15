@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "rule": "chia_duoc ⇔ số module khác nhau của files[] có change ∈ {added, modified} ≥ 2 (tệp ở gốc = module \".\"; deleted bị bỏ, B1)",
+  "goldSha256": "fixture",
+  "taskCount": 1,
+  "counts": {
+    "chia_duoc": 1,
+    "khong_chia_duoc": 0
+  },
+  "degenerate": true,
+  "sensitivityCounts": {
+    "chia_duoc": 1,
+    "khong_chia_duoc": 0
+  },
+  "labels": {
+    "a": {
+      "label": "chia_duoc",
+      "moduleCount": 2,
+      "fileCount": 2,
+      "deletedIgnored": 0,
+      "modules": [
+        "src",
+        "test"
+      ],
+      "sensitivity": {
+        "label": "chia_duoc",
+        "moduleCount": 2,
+        "modules": [
+          "src",
+          "test"
+        ]
+      }
+    }
+  }
+}

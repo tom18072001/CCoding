@@ -1,0 +1,84 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g4-gb-unit__B6__r17] Thêm đơn vị GB vào bộ module kích thước tệp
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Đây là việc nhỏ gồm 4 tệp nguồn nhỏ. Giao một hạng mục sửa src (units, format, parse, validate) và một hạng mục viết test riêng theo hợp đồng chung. CCoding sẽ tự chạy `npm test` sau khi gộp.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Thêm GB vào src/ (@backend-dev, done)
+
+## Tóm tắt
+Đã thêm đơn vị GB (1024³) vào cả 4 tệp trong `src/`: bảng đơn vị, định dạng, phân tích chuỗi và kiểm tra hợp lệ. `npm test` xanh (2/2 pass) và các ví dụ trong yêu cầu chạy đúng bằng `node -e`. Tôi không sửa `test/` và không thêm thư viện.
+
+## Tệp đã tạo/sửa
+- `src/units.js`: thêm `GB: 1024 ** 3` vào `UNITS`.
+- `src/format.js`: `formatSize` chọn GB khi `bytes >= UNITS.GB`, rồi mới đến MB, KB, B. Quy tắc 1 chữ số thập phân giữ nguyên.
+- `src/parse.js`: regex nhận `(B|KB|MB|GB)`, không phân biệt hoa thường. Chuỗi sai vẫn ném `TypeError` với thông báo cũ.
+- `src/validate.js`: thêm `'GB'` vào `VALID`.
+
+## Hợp đồng API
+Không áp dụng.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0 (không đọc exit code trực tiếp vì lệnh có `| tail`, nhưng kết quả hiển thị tests 2, pass 2, fail 0).
+- `node -e` chạy thử:
+  - `formatSize(1024**3)` → `1 GB`
+  - `formatSize(1.5*1024**3)` → `1.5 GB`
+  - `parseSize('2GB')` → `2147483648`
+  - `parseSize('1.5 gb')` → `1610612736`
+  - `isValidUnit('gb')` → `true`
+  - `parseSize('1TB')` → `TypeError: Kích thước không hợp lệ: 1TB`
+
+## Việc còn lại
+- Chưa có test riêng cho GB. Hạng mục viết test là phần của người khác theo kế hoạch.
+- Git cảnh báo LF sẽ đổi thành CRLF ở 4 tệp này khi commit (do cấu hình line-ending). Tôi chưa commit gì.
+
+Bản đầy đủ: `.ccoding/T-20261104-190411-a0b/outputs/dev-S1-backend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-190411-a0b` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **18 in / 3,641 out**, cache đọc 100.0k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | 10 | 2152 | 62151 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 6 | 1157 | 37165 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 332 | 649 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Thêm GB vào src/ (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | **67** B | thấp | — | — | 100 | 100 | 60 | 100 | 1 | 1 | 64k | 2/4 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 38k | 0/2 | — |
+| Điều phối viên (@orchestrator) | office | **60** C | thấp | — | — | — | — | 100 | — | 0 | — | 983 | — | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

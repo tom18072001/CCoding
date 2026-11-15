@@ -1,0 +1,19 @@
+`buildReport` giờ chạy 200.000 dòng trong khoảng 350–500 ms (`npm run bench`, hai lần đo), từ ~15 giây trước đây. `npm test` xanh, 5/5 test đạt.
+
+**Thay đổi trong `src/report.js`:**
+- Hàm giờ chỉ duyệt đơn hàng một lượt, dùng `Map`/`Set` thay cho các phép `find`, `includes`, `filter` quét lặp lại.
+- Chữ ký hàm không đổi, không có cache giữa các lần gọi, không thêm thư viện.
+- Các hành vi lạ của bản cũ đều giữ nguyên:
+  - Khi trùng `sku` trong `products`, lấy sản phẩm đầu tiên.
+  - `NaN` hoặc `Infinity` thành `null`, giống bước `JSON.parse(JSON.stringify(...))` ở bản cũ; trường `undefined` vẫn giữ nguyên.
+  - Thứ tự cộng số thực và các comparator sắp xếp giữ như cũ.
+  - Ngày không hợp lệ vẫn ném `RangeError`.
+
+**Test so sánh với bản cũ:**
+- Bản cũ nằm ở `test/fixtures/report.old.js`, test ở `test/compare.test.js`.
+- Test dùng `deepStrictEqual` trên nhiều seed và nhiều bộ lọc `topN`/`from`/`to`.
+- Test cũng chạy các ca biên: `sku` trùng, thiếu `name` hoặc `category`, `qty` thiếu, `NaN`, `Infinity`, đơn giá âm, `id` hoặc `customerId` thiếu, mảng rỗng, ngày sai.
+
+Lần chạy đầu của test biên báo lệch ở trường `sku` của một dòng có `sku: NaN`: bản cũ trả `null`, bản mới trả `NaN`. Tôi đã sửa bằng cách chuẩn hóa `sku`, `id`, `customerId`, `name` và `category` giống bản cũ.
+
+Còn một giới hạn: tôi chỉ chuẩn hóa số không hữu hạn. Các giá trị kiểu đối tượng lồng nhau hoặc `Date` đặt trong trường `sku`/`id`/`customerId` thì bản cũ sẽ biến đổi qua JSON còn bản mới thì không. Tôi coi đó là đầu vào không hợp lệ theo mô tả trong `report.js`.

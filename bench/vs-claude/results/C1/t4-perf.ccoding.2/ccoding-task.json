@@ -1,0 +1,184 @@
+{
+ "id": "T-20261101-183121-69b",
+ "title": "[bench C1] t4-perf #2",
+ "brief": "Tối ưu hiệu năng hàm buildReport trong src/report.js theo PERF.md: dưới 1 giây với 200.000 dòng (npm run bench) và kết quả phải giống hệt bản hiện tại với mọi đầu vào hợp lệ — bản hiện tại là đặc tả, kể cả các hành vi trông lạ. Bộ nghiệm thu ẩn so kết quả với bản cũ trên nhiều bộ dữ liệu và đo thời gian. Thêm test so sánh với bản cũ, đảm bảo `npm test` xanh.",
+ "mode": "project",
+ "projectId": "b-c1-t4-2",
+ "classification": "internal",
+ "status": "done",
+ "departments": [
+  "dev"
+ ],
+ "runs": [
+  {
+   "department": "dev",
+   "status": "done",
+   "subtasks": [
+    {
+     "description": "Đầu vào: src/report.js (commit baa4144), PERF.md, bench/run.js, src/gen.js, test/report.test.js.\n\nBƯỚC 1, LÀM TRƯỚC KHI SỬA: chép nguyên văn bản cũ bằng `git show baa4144:src/report.js > test/legacy/report.legacy.js`, không sửa dòng nào. Tệp này là đặc tả.\n\nBƯỚC 2: viết lại buildReport trong src/report.js. Giữ chữ ký và module.exports. Không thêm thư viện, không dùng worker, không cache giữa các lần gọi; Map cục bộ trong một lần gọi thì được. Không sửa mảng hay object đầu vào. Cách làm: tra product bằng Map sku→product chỉ giữ lần xuất hiện ĐẦU TIÊN, vì find() trả phần tử đầu khi sku trùng. Tính month bằng `new Date(o.date).toISOString().slice(0,7)` y như cũ; được cache theo giá trị date nguyên thủy trong một lần gọi; date không hợp lệ vẫn phải ném RangeError. Gom dữ liệu theo category, (category, month), (category, sku), month và customer trong một lượt duyệt.\n\nCÁC HÀNH VI PHẢI GIỮ (bản cũ là đặc tả):\n(a) Thứ tự lọc: from/to so chuỗi và chỉ áp dụng khi truthy (from='' thì bỏ qua). Lọc tháng TRƯỚC, bỏ 'cancelled' sau. Mọi dòng có lỗi date đều ném lỗi, kể cả dòng cancelled.\n(b) JSON.parse(JSON.stringify(row)) có tác dụng phụ. Amount hay qtySigned là NaN/Infinity thì thành null, và khi cộng dồn null tương đương 0. -0 thành 0. Field có giá trị undefined thì bị bỏ: product tồn tại nhưng thiếu category hoặc name thì category/name là undefined, KHÁC trường hợp không có product (lúc đó là 'unknown' / '(không rõ)'). Category, id hoặc customerId là NaN thì thành null. Id hoặc customerId là object thì mỗi dòng thành một bản sao riêng, nên đếm như các giá trị khác nhau. Nên chuẩn hóa từng giá trị như JSON làm (hoặc chỉ round-trip đúng các field dùng tới) thay vì tự đoán.\n(c) Status khác 'paid', 'refunded', 'cancelled' (vd. 'pending') thì amount dương, nhưng KHÔNG được đếm vào orders/customers của monthly và orders của topCustomers.\n(d) Thứ tự: categories, skus và customers phải theo thứ tự xuất hiện đầu tiên trong rows TRƯỚC khi sort, vì comparator `a.sku < b.sku ? -1 : 1` không nhất quán với giá trị trùng hoặc khác kiểu, nên kết quả phụ thuộc thứ tự đầu vào. Dùng đúng các comparator cũ. Months dùng sort() mặc định. Tính duy nhất theo SameValueZero, khớp với cách Map hoạt động.\n(e) Các tổng cộng theo đúng thứ tự dòng. byMonth phải có đủ mọi tháng của months, kể cả giá trị 0, và có thứ tự key như cũ. prods lọc revenue > 0. Refunds tính bằng a - amount trên các dòng amount < 0. Share làm tròn y như cũ. topProducts dùng slice(0, topN) với topN = options.topN ?? 3, kể cả topN âm, 0 hoặc undefined. topCustomers lấy slice(0,5). Output không được có field thừa.\n\nBƯỚC 3: thêm test/report.equiv.test.js. Test này deepStrictEqual kết quả bản mới với test/legacy/report.legacy.js trên: generate() với nhiều seed và kích thước (≈2k–20k dòng, giữ thời gian chạy test hợp lý vì bản cũ là O(n²)); các tổ hợp topN (0, 1, 3, 5, lớn hơn số sp) và from/to (không có, một đầu, hai đầu, khoảng rỗng); một bộ thủ công nhỏ có sku trùng trong products, sku không có product, status lạ, refunded có qty 0, đầu vào rỗng. Thêm một test xác nhận đầu vào không bị sửa (so với structuredClone trước khi gọi).\n\nTIÊU CHÍ XONG: `npm test` xanh, test cũ giữ nguyên. `npm run bench` dưới 1000 ms; chạy 3 lần và ghi lại cả 3 số. `git diff baa4144 -- test/legacy/` rỗng sau khi tạo, tức tệp giống hệt bản gốc. Commit vào nhánh ccoding/t-20261101-183121-69b, không push.",
+     "dependsOn": [],
+     "status": "done",
+     "attempts": 1,
+     "usage": {
+      "input": 14,
+      "output": 13130,
+      "cacheRead": 240761,
+      "cacheWrite": 25823,
+      "costUsd": 0.2595411,
+      "calls": 1,
+      "estimatedCalls": 0
+     },
+     "id": "S1",
+     "title": "Lưu bản cũ làm oracle + tối ưu buildReport O(n) + test so sánh cơ bản",
+     "assignee": "backend-dev",
+     "deliverable": "src/report.js bản tối ưu; test/legacy/report.legacy.js (bản cũ nguyên văn); test/report.equiv.test.js; log của npm test và 3 lần npm run bench trong bàn giao",
+     "startedAt": "2026-11-01T11:32:27.685Z",
+     "output": "outputs/dev-S1-backend-dev.md",
+     "summary": "Tôi đã viết lại `buildReport` thành một lượt duyệt O(n) dùng Map/Set cục bộ. Bản cũ được lưu nguyên văn làm oracle. `npm test` xanh (7/7, gồm 2 test cũ và 5 test so sánh mới), và `npm run bench` với 200.000 dòng chạy trong khoảng 232–284 ms. Đã commit `b24d23a` trên nhánh `ccoding/t-20261101-183121-69b--s1`, chưa push.",
+     "finishedAt": "2026-11-01T11:33:56.898Z"
+    },
+    {
+     "description": "Đầu vào: bàn giao S1 (src/report.js mới, test/legacy/report.legacy.js). Chỉ tạo tệp MỚI test/report.edge.test.js, không sửa các tệp của S1. Nếu phát hiện lệch thì ghi trong bàn giao, kèm input tối thiểu tái hiện được, để S1/lead xử lý.\n\nViết các ca deepStrictEqual giữa bản mới và bản legacy, gồm:\n(1) Fuzz có seed cố định với vài trăm bộ nhỏ (5–200 dòng), sinh ngẫu nhiên từ các nhóm sau. Id và customerId: chuỗi, số, trộn '1' với 1. Sku: có và không có trong products; products có sku trùng mà category hoặc name khác nhau; product thiếu category hoặc name. Status: paid, refunded, cancelled và một status lạ. Qty: 0, âm hoặc thiếu. Date: có hoặc không có múi giờ, sát ranh giới tháng UTC (vd. '2025-01-31T23:30:00-02:00'), dạng timestamp số. From/to: rỗng, '' hoặc chỉ một đầu. TopN: undefined, 0, âm hoặc lớn.\n(2) Các ca nhiều phần tử hòa doanh thu, để kiểm tra thứ tự sort của categories, topProducts và topCustomers.\n(3) Grand total bằng 0, nên share = 0.\n(4) Date không hợp lệ: cả hai bản cùng ném lỗi cùng loại, kể cả khi dòng đó là cancelled.\n(5) Amount bị tràn thành Infinity hoặc NaN, kiểm tra hành vi null của JSON round-trip.\nChỉ dùng đầu vào hợp lệ theo nghĩa rộng; ghi rõ trong bàn giao những ca nằm ngoài miền hợp lệ mà bạn bỏ qua và lý do.\n\nTIÊU CHÍ XONG: `npm test` xanh với mọi tệp test, tổng thời gian test hợp lý (< ~60 s). Chạy `npm run bench` 3 lần, cả 3 đều < 1000 ms; ghi số liệu thật. Review code src/report.js theo rubric blocker/major/minor, nhất là các hành vi (a)–(e) nêu ở S1. Commit tệp test vào nhánh nhiệm vụ, không push.",
+     "dependsOn": [
+      "S1"
+     ],
+     "status": "done",
+     "attempts": 1,
+     "usage": {
+      "input": 14,
+      "output": 13595,
+      "cacheRead": 241943,
+      "cacheWrite": 28638,
+      "costUsd": 0.2756428,
+      "calls": 1,
+      "estimatedCalls": 0
+     },
+     "id": "S2",
+     "title": "Test so sánh mở rộng: trường hợp biên + fuzz với oracle bản cũ",
+     "assignee": "qa-tester",
+     "deliverable": "test/report.edge.test.js; báo cáo review (blocker/major/minor) kèm log npm test và 3 lần npm run bench; danh sách ca lệch nếu có, kèm input tái hiện",
+     "startedAt": "2026-11-01T11:33:57.118Z",
+     "output": "outputs/dev-S2-qa-tester.md",
+     "summary": "`src/report.js` bản mới khớp bản legacy trên toàn bộ test S2 viết: 400 bộ fuzz, các ca hòa doanh thu, grand total 0, date không hợp lệ và amount tràn. Tôi không tìm thấy ca lệch nào, cũng không có blocker hay major. `npm test` xanh (14/14, khoảng 3 giây). Cả 3 lần `npm run bench` đều dưới 350 ms. Tôi đã commit `e8ca29e…",
+     "finishedAt": "2026-11-01T11:35:50.039Z"
+    }
+   ],
+   "usage": {
+    "input": 44,
+    "output": 36734,
+    "cacheRead": 683160,
+    "cacheWrite": 97412,
+    "costUsd": 1.0265267,
+    "calls": 5,
+    "estimatedCalls": 0
+   },
+   "startedAt": "2026-11-01T11:31:21.110Z",
+   "stage": "done",
+   "planSummary": "Việc nhỏ trong repo một tệp (src/report.js, 98 dòng). Ta viết lại buildReport thành vài lượt duyệt O(n) dùng Map và giữ nguyên thứ tự xuất hiện, vì bản cũ chậm do products.find, includes và filter lồng nhau nên là O(n²). Mọi hành vi lạ của bản cũ được giữ nguyên. Bản cũ được lưu nguyên văn làm oracle để kiểm thử so sánh. Gồm 2 hạng mục chạy nối tiếp: (S1) hiện thực, lưu bản cũ, viết test so sánh cơ bản và đo bench; (S2) QA viết bộ test so sánh với các trường hợp biên và fuzz trên tệp test riêng, chạy lại test và bench.",
+   "decisions": "",
+   "estimate": {
+    "tokens": 955680,
+    "budget": 1408199,
+    "at": "2026-11-01T11:32:27.642Z",
+    "basis": "theo lịch sử: @backend-dev ~219.6k/hạng mục (8 mẫu), @qa-tester ~346.1k/hạng mục (2 mẫu)"
+   },
+   "reviewRound": 0,
+   "review": {
+    "approved": true,
+    "summary": "Bản mới của buildReport (src/report.js) chạy một lượt O(n) và giữ nguyên chữ ký và module.exports. Tôi đối chiếu code với bản cũ ở các hành vi (a)–(e) và chúng khớp. Cụ thể là sku trùng lấy product đầu tiên, sku NaN không khớp product, lọc tháng trước rồi mới bỏ cancelled, và date lỗi vẫn ném RangeError kể cả dòng cancelled. Trường hợp NaN/Infinity thành null và -0 thành 0 (hàm norm) cũng khớp. Status lạ không được đếm vào orders/customers. Categories, skus, customers theo thứ tự xuất hiện đầu tiên và dùng đúng các comparator cũ. byMonth có đủ mọi tháng và share làm tròn như cũ. test/legacy/report.legacy.js giống hệt baa4144:src/report.js. npm test xanh 14/14 (khoảng 3 giây). Bench 3 lần đều dưới 260 ms so với ngưỡng 1000 ms. Tôi chưa tự chạy lại bước cố ý làm hỏng code để kiểm bộ test mà S2 báo cáo; phần đó dựa vào báo cáo của S2. Không có blocker hay major. Còn hai điểm minor là nhánh norm() cho kiểu lạ (BigInt, toJSON, object lồng) chưa có test, và qty/unitPrice là chuỗi cho kết quả nối chuỗi giống bản cũ, nằm ngoài miền hợp lệ.",
+    "issues": [
+     {
+      "subtask": "S1",
+      "severity": "minor",
+      "comment": "src/report.js, hàm norm(), nhánh default: các kiểu ngoài miền (toJSON tùy biến, object lồng) đi qua JSON round-trip nhưng chưa có test. BigInt ném TypeError ở cả hai bản. Có thể giữ nguyên vì ngoài miền hợp lệ."
+     },
+     {
+      "subtask": "S2",
+      "severity": "minor",
+      "comment": "Các ca ngoài miền như qty/unitPrice là chuỗi không phải số, hay from/to sai định dạng, không được fuzz. Việc này đã được ghi rõ trong bàn giao, nên không cần sửa."
+     }
+    ],
+    "checks": [
+     {
+      "command": "npm test",
+      "exitCode": 0,
+      "ok": true,
+      "note": "CCoding tự chạy — # tests 14 · # suites 0 · # pass 14 · # fail 0 · # skipped 0 · # todo 0"
+     },
+     {
+      "command": "git status --short | head; git log --oneline | head -5; npm test 2>&1 | tail -12; echo EXIT ${PIPESTATUS[0]}; for i in 1 2 3; do npm run bench 2>&1 | tail -3; done; cat src/report.js; git show baa4144:src/report.js | diff - test/legacy/report.legacy.js && echo IDENT",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "cat test/legacy/report.legacy.js | sed -n 10,97p",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "npm run bench (3 lần)",
+      "exitCode": 0,
+      "ok": true,
+      "note": "241 ms, 251 ms, 238 ms với 200.000 dòng, 13 tháng, 11 danh mục, tổng 11445199250 (cùng kết quả cả 3 lần)"
+     }
+    ],
+    "verified": true
+   },
+   "finalPath": "dev-FINAL.md",
+   "finishedAt": "2026-11-01T11:36:44.031Z"
+  }
+ ],
+ "options": {
+  "discussionRounds": 1,
+  "review": true,
+  "maxParallel": 3,
+  "maxRevisions": 1,
+  "budgetTokens": 1500000,
+  "budgetMode": "complete"
+ },
+ "usage": {
+  "input": 44,
+  "output": 36734,
+  "cacheRead": 683160,
+  "cacheWrite": 97412,
+  "costUsd": 1.0265267,
+  "calls": 5,
+  "estimatedCalls": 0
+ },
+ "createdAt": "2026-11-01T11:31:21.079Z",
+ "updatedAt": "2026-11-01T11:36:44.087Z",
+ "autoTitle": false,
+ "startedAt": "2026-11-01T11:31:21.080Z",
+ "workspace": "/home/claude/tom18072001/ccoding/workspaces/b-c1-t4-2/wt-T-20261101-183121-69b",
+ "branch": "ccoding/t-20261101-183121-69b",
+ "baseRef": "baa414420056f99eee4a317a4caba50a13d584af",
+ "projectChecks": {
+  "baseline": [
+   {
+    "command": "npm test",
+    "code": 0,
+    "ok": true,
+    "ms": 394,
+    "summary": "# tests 2 · # suites 0 · # pass 2 · # fail 0 · # skipped 0 · # todo 0",
+    "tail": "> sales-report@2.1.0 test\n> node --test \"test/**/*.test.js\"\n\nTAP version 13\n# Subtest: báo cáo nhỏ\nok 1 - báo cáo nhỏ\n  ---\n  duration_ms: 2.33193\n  type: 'test'\n  ...\n# Subtest: dữ liệu sinh ngẫu nhiên chạy được\nok 2 - dữ liệu sinh ngẫu nhiên chạy được\n  ---\n  duration_ms: 40.296342\n  type: 'test'\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 125.213205"
+   }
+  ],
+  "baselineAt": "2026-11-01T11:31:21.504Z",
+  "latest": [
+   {
+    "command": "npm test",
+    "code": 0,
+    "ok": true,
+    "ms": 2913,
+    "summary": "# tests 14 · # suites 0 · # pass 14 · # fail 0 · # skipped 0 · # todo 0",
+    "tail": "> sales-report@2.1.0 test\n> node --test \"test/**/*.test.js\"\n\nTAP version 13\n# Subtest: fuzz seed cố định: 400 bộ nhỏ\nok 1 - fuzz seed cố định: 400 bộ nhỏ\n  ---\n  duration_ms: 390.194496\n  type: 'test'\n  ...\n# Subtest: fuzz: oracle trả kết quả (không phải toàn lỗi) trên phần lớn bộ\nok 2 - fuzz: oracle trả kết quả (không phải toàn lỗi) trên phần lớn bộ\n  ---\n  duration_ms: 22.395432\n  type: 'test'\n  ...\n# Subtest: hòa doanh thu: thứ tự categories, topProducts, topCustomers\nok 3 - hòa doanh thu: thứ tự categories, topProducts, topCustomers\n  ---\n  duration_ms: 3.916176\n  type: 'test'\n  ...\n# Subtest: grand total = 0 → share = 0\nok 4 - grand total = 0 → share = 0\n  ---\n  duration_ms: 1.991793\n  type: 'test'\n  ...\n# Subtest: date không hợp lệ: cùng lỗi, kể cả dòng cancelled / ngoài khoảng lọc\nok 5 - date không hợp lệ: cùng lỗi, kể cả dòng cancelled / ngoài khoảng lọc\n  ---\n  duration_ms: 3.101169\n  type: 'test'\n  ...\n# Subtest: date null / Date object / số: cùng kết quả\nok 6 - date null / Date object / số: cùng kết quả\n  ---\n  duration_ms: 0.423162\n  type: 'test'\n  ...\n# Subtest: amount tràn Infinity/NaN → null theo JSON round-trip\nok 7 - amount tràn Infinity/NaN → null theo JSON round-trip\n  ---\n  duration_ms: 1.395268\n  type: 'test'\n  ...\n# Subtest: generate(): nhiều seed và kích thước\nok 8 - generate(): nhiều seed và kích thước\n  ---\n  duration_ms: 685.653803\n  type: 'test'\n  ...\n# Subtest: generate(): tổ hợp topN và from/to\nok 9 - generate(): tổ hợp topN và from/to\n  ---\n  duration_ms: 1345.33658\n  type: 'test'\n  ...\n# Subtest: bộ thủ công: sku trùng, thiếu product, status lạ, qty 0, rỗng\nok 10 - bộ thủ công: sku trùng, thiếu product, status lạ, qty 0, rỗng\n  ---\n  duration_ms: 1.540466\n  type: 'test'\n  ...\n# Subtest: date không hợp lệ ném RangeError, kể cả dòng cancelled\nok 11 - date không hợp lệ ném RangeError, kể cả dòng cancelled\n  ---\n  duration_ms: 0.52298\n  type: 'test'\n  ...\n# Subtest: đầu vào không bị sửa\nok 12 - đầu vào không bị sửa\n  ---\n  duration_ms: 9.110387\n  type: 'test'\n  ...\n# Subtest: báo cáo nhỏ\nok 13 - báo cáo nhỏ\n  ---\n  duration_ms: 3.223313\n  type: 'test'\n  ...\n# Subtest: dữ liệu sinh ngẫu nhiên chạy được\nok 14 - dữ liệu sinh ngẫu nhiên chạy được\n  ---\n  duration_ms: 13.769432\n  type: 'test'\n  ...\n1..14\n# tests 14\n# suites 0\n# pass 14\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 2700.886208"
+   }
+  ],
+  "latestAt": "2026-11-01T11:35:53.131Z",
+  "latestAfter": "execute"
+ },
+ "changes": "src/report.js                | 177 ++++++++++++++++++++++++++++---------------\n test/legacy/report.legacy.js |  97 ++++++++++++++++++++++++\n test/report.edge.test.js     | 168 ++++++++++++++++++++++++++++++++++++++++\n test/report.equiv.test.js    |  71 +++++++++++++++++\n 4 files changed, 453 insertions(+), 60 deletions(-)",
+ "commit": "3a78692248 — 4 commit trên nhánh từ baa4144200 (gồm gộp worktree con)",
+ "finalPath": "FINAL.md",
+ "finishedAt": "2026-11-01T11:36:44.087Z"
+}

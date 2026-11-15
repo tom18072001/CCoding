@@ -1,0 +1,80 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g5-median-stats__B7cabO__r14] Thống kê tóm tắt dùng median có sẵn (median sai nhưng test công khai xanh)
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Mã nguồn và test đã có trong worktree: `median` đã sửa đúng SPEC (so sánh số, sắp xếp trên bản sao, trung bình hai phần tử giữa khi chẵn) và `summary` đã thêm. Tôi đã đọc `SPEC.md` và `src/stats.js`, thấy khớp SPEC. Tôi chưa chạy `npm test`. Việc còn lại là một lượt kiểm chứng độc lập, không viết lại.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Kiểm chứng độc lập summary/median và bổ sung test biên còn thiếu (@senior-swe, done)
+
+## Tóm tắt
+`summary` và `median` trong `src/stats.js` khớp SPEC, nên tôi không sửa tệp này. Tôi bổ sung 2 test biên vào `test/stats.test.js`, và `npm test` cho 12/12 pass, exit 0. Trên `median` cũ (HEAD), 3 test median mới đỏ đúng như dự kiến. Các test `summary` cũng đỏ, nhưng do bản cũ chưa có `summary`, không phải do lỗi median.
+
+## Tệp đã tạo/sửa
+- `test/stats.test.js`: thêm 2 test. Một test cho `median` (1 phần tử, số âm, `[-4,4]` → 0). Một test cho `summary` với số phần tử chẵn và có số âm: `[100,-10,9,10]` → `{count:4, min:-10, max:100, mean:27.25, median:9.5}`.
+- `src/stats.js`: không đổi so với trạng thái đã bàn giao, API `{count,min,max,mean,median}` giữ nguyên.
+- `.ccoding/T-20261104-173611-74f/oldcheck/`: thư mục tạm chứa `median` cũ để chạy kiểm chứng. Tôi chưa xóa được (xem phần rủi ro), nên cần dọn tay hoặc bỏ qua.
+
+## Kiểm chứng
+- `npm test` (sau khi thêm test) → exit 0. Tests 12, pass 12, fail 0.
+- Chạy `node --test test/stats.test.js` trong thư mục tạm với `src/stats.js` lấy từ `git show HEAD:src/stats.js` → tests 12, pass 2, fail 10. Tôi không đo exit code của lần chạy này.
+  - Đỏ trên `median` cũ: `median chẵn`, `median so sánh số, không phải chuỗi`, `median không đổi đầu vào`, `median một phần tử và số âm`.
+  - Pass trên `median` cũ: `median lẻ`, `median rỗng`.
+  - Cả 6 test `summary` đều đỏ trên bản cũ vì HEAD chưa có `summary` (không tính là bằng chứng lỗi median). Test `summary median đúng khi số phần tử chẵn, có số âm` cũng nằm trong 10 test đỏ.
+  - Cả 12 test xanh trên bản mới.
+- Lệnh đầu tiên bị hook chặn vì có `rm -rf` dọn thư mục tạm. Lệnh chặn không chạy gì, và tôi chạy lại không có lệnh xóa.
+
+## Quyết định thiết kế
+- Dùng thư mục tạm trong `.ccoding` thay cho stash, để không đụng vào thay đổi chưa commit.
+- Các ca đã có từ trước và khớp yêu cầu: mảng rỗng ném `RangeError` cho cả hai hàm, làm tròn mean `[1,2,2]` → 1.67, `summary` không đổi đầu vào. Vì vậy tôi chỉ thêm ca còn thiếu.
+
+## Rủi ro & việc còn mở
+- Thư mục `oldcheck` còn lại; cần xóa thủ công vì hook chặn xóa đệ quy.
+- Shell báo cảnh báo LF sẽ đổi thành CRLF khi git ghi tệp. Tôi không xử lý.
+- Chưa commit.
+- Không kiểm tra đầu vào có phải số hay không, vì SPEC không yêu cầu (như bàn giao trước đã ghi).
+
+Bản đầy đủ: `.ccoding/T-20261104-173611-74f/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-173611-74f` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **22 in / 6,144 out**, cache đọc 141.5k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 18 | 5036 | 119884 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 1108 | 21580 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Kiểm chứng độc lập summary/median và bổ sung test biên còn thiếu (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 2 · ℹ suites 0 · ℹ pass 2 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 12 · ℹ suites 0 · ℹ pass 12 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **70** B | thấp | — | — | 100 | 100 | 93 | 100 | 1 | 1 | 125k | 1/12 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 23k | 0/1 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

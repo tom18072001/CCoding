@@ -1,0 +1,82 @@
+# Báo cáo tổng hợp: Audit log nối chuỗi hash, có che PII (T-20261102-114748-17e)
+
+## Tóm tắt
+Cả 4 hàm `canonicalize`, `redact`, `append`, `verify` đã được viết trong `src/index.js`, chỉ dùng `node:crypto`, không thêm dependency. Bộ test có 16 test, `npm test` chạy qua hết. Trước khi sửa, `npm test` → exit 1 (0/1 pass, vì hàm còn là stub). Sau khi sửa, `npm test` → exit 0 (16/16 pass); CCoding đã tự chạy cả hai lần. Đã kiểm chứng PII không lọt vào đầu vào hash qua giá trị chuỗi. Còn một điểm cần Tom quyết: theo đặc tả, khóa của object không bị che, nên PII nằm trong khóa vẫn được đưa vào hash.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Viết 4 hàm và test cơ bản | @backend-dev | Đạt | `src/index.js`, `test/audit.test.js` (6 test). Lúc S1 xong, `npm test` cho 7/7 pass. Chi tiết: `.ccoding/T-20261102-114748-17e/outputs/dev-S1-backend-dev.md` |
+| S2 | Test đối kháng: trường hợp biên và bất biến "không có PII trong hash" | @senior-swe | Đạt | `test/edge.test.js` (9 test), không sửa code. `npm test` cho 16/16 pass. Chi tiết: `.ccoding/T-20261102-114748-17e/outputs/dev-S2-senior-swe.md` |
+
+Reviewer đã chạy lại `npm test` (đạt), `git status --short` và đọc `src/index.js`. Trạng thái repo: `src/index.js` đã sửa, có thêm 2 tệp test mới, `package.json` không đổi. Chưa commit.
+
+## Quyết định
+- **Quy mô**: chia 2 hạng mục chạy nối tiếp, không cần kiến trúc, BA hay cổng bảo vệ dữ liệu riêng. Lý do là yêu cầu về PII đã cụ thể và kiểm chứng được trực tiếp bằng test.
+- **`canonicalize`**: tự viết hàm đệ quy, sắp khóa theo code point (`codePointAt`) chứ không dùng sort mặc định theo UTF-16. Hàm gọi `toJSON`, bỏ thuộc tính `undefined`/function/symbol trong object, đổi chúng thành `null` khi nằm trong mảng. Escape chuỗi và số dùng lại `JSON.stringify`.
+- **Thứ tự che trong `redact`**: che e-mail trước, số điện thoại sau. Nhờ vậy `0912345678@example.com` được thay trọn thành `[EMAIL]`. Regex số điện thoại là `(?<!\d)(?:\+84|0)[35789]\d{8}(?!\d)`.
+- **`append`**: redact trước rồi mới tính hash. Bản ghi giữ một bản sao đã redact riêng, không dùng chung tham chiếu với input của người gọi.
+- **Test độc lập với code**: test tự tính lại hash bằng `node:crypto`, không chép logic từ `src/index.js`. Dữ liệu trong test đều là chuỗi giả.
+
+## Kết quả review
+- Kết luận: **Đạt**, không có blocker hay major.
+- Đã đối chiếu với đề bài:
+  - Thứ tự khóa theo code point: emoji đứng sau `\uFFFF`.
+  - Kết quả khớp `JSON.stringify` với `-0`, `1e21`, `NaN`, `Infinity`, `Date` và surrogate lẻ.
+  - Ranh giới số điện thoại: đầu số 3/5/7/8/9 bị che. Đầu số 1/2/4/6 không bị che. Chuỗi thừa hoặc thiếu chữ số, hay dính liền chữ số khác, cũng không bị che.
+  - Không mutate input.
+  - `verify` báo đúng index của bản ghi lỗi đầu tiên khi hoán đổi, xóa, sửa sâu, và khi sửa một bản ghi rồi tính lại hash của chính nó.
+- Reviewer ghi chú: chưa chạy mutation testing, tức chưa cố ý làm hỏng code để xác nhận test sẽ báo đỏ.
+
+## Việc còn mở & rủi ro
+1. **PII trong khóa object** (rủi ro chính với dữ liệu dùng làm chứng cứ pháp lý): đặc tả yêu cầu giữ nguyên khóa, nên `{ "0912345678": … }` sẽ đưa số điện thoại thật vào hash và vào log. Muốn chặn thì phải đổi đặc tả, ví dụ từ chối entry có khóa chứa PII hoặc che cả khóa. Việc này cần Tom quyết.
+2. **Regex e-mail chỉ bắt ASCII**: e-mail có ký tự Unicode (IDN, phần local có dấu) sẽ không bị che. Đặc tả không quy định rõ.
+3. **`+84` đứng sau một chữ số** (ví dụ `1+84912345678`) vẫn bị che. Cách hiểu này nghiêng về che thừa, an toàn hơn cho PII.
+4. **Giới hạn nhỏ**: `canonicalize` gọi `toJSON()` mà không truyền tham số key, khác `JSON.stringify` một chút. Chỉ ảnh hưởng nếu `toJSON` tự định nghĩa có dùng tham số key; không ảnh hưởng các kiểu có sẵn như `Date`.
+5. Thay đổi chưa được commit. Theo quy định, không commit vào main nếu Tom chưa yêu cầu.
+
+## Bước tiếp theo
+- **Nhiệm vụ A (Tom quyết)**: chọn chính sách cho PII trong khóa: (a) giữ đúng đặc tả và ghi rủi ro vào tài liệu; (b) `append` ném lỗi khi khóa có PII; hoặc (c) che cả khóa. Đề xuất chọn (b): không đổi dữ liệu một cách ngầm định, và chặn được PII trước khi vào hash. Tiêu chí xong: có test chứng minh khóa chứa e-mail hoặc số điện thoại bị xử lý đúng chính sách đã chọn, và `npm test` pass.
+- **Nhiệm vụ B (tùy chọn, @qa-tester)**: chạy mutation testing thủ công trên một nhánh riêng, ví dụ bỏ bước redact trong `append`, đổi sort về mặc định, bỏ lookbehind trong regex. Tiêu chí xong: mỗi đột biến làm ít nhất một test báo đỏ.
+- **Nhiệm vụ C (tùy chọn)**: mở rộng regex e-mail sang Unicode/IDN nếu dữ liệu thật có loại e-mail này. Tiêu chí xong: có test với e-mail Unicode bị che.
+- Commit trên một nhánh tính năng khi Tom đồng ý.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-114748-17e` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **30 in / 20.8k out**, cache đọc 167.5k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | 10 | 6970 | 56510 | 2 |
+| Backend Developer (@backend-dev) | dev | 8 | 7169 | 50978 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 6 | 4806 | 37185 | 1 |
+| QA Engineer (@qa-tester) | dev | 4 | 1509 | 20626 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 321 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-backend-dev.md` — S1 Hiện thực canonicalize/redact/append/verify kèm test cơ bản (@backend-dev)
+- `outputs/dev-S2-senior-swe.md` — S2 Test đối kháng cho trường hợp biên và bất biến PII trong hash (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 1 · # suites 0 · # pass 0 · # fail 1 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 16 · # suites 0 · # pass 16 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | 100 | 100 | 100 | 100 | 0 | — | 63k | 0/3 |
+| Backend Developer (@backend-dev) | dev | **93** A | 100 | 86 | 84 | 100 | 1 | 1 | 58k | 1/5 |
+| Senior Software Engineer (@senior-swe) | dev | **100** A | 100 | 100 | 100 | 100 | 1 | 1 | 42k | 0/4 |
+| QA Engineer (@qa-tester) | dev | **100** A | — | — | 100 | 100 | 0 | — | 22k | 0/1 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Backend Developer** (@backend-dev, 93 A):
+  - Thao tác công cụ lỗi nhiều (1/5, 20%; nhiều nhất ở run_command 1/3) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

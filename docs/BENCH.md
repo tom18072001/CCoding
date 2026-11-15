@@ -35,7 +35,7 @@
     { "id": "V2", "label": "Cắt 12k + bản đồ gọn", "options": { "bashMaxOutput": 12000, "repoMapMode": "compact" } }
   ],
   "repeats": 2,
-  "accept": ["node C:/Users/admin/ccoding-bench/accept/run-accept.cjs C:/Users/admin/ccoding-bench/accept/goi3d.test.js app/server/src"],
+  "accept": ["node <máy-chạy>/ccoding-bench/accept/run-accept.cjs <máy-chạy>/ccoding-bench/accept/goi3d.test.js app/server/src"],
   "idle": { "quietSec": 180, "pollSec": 20, "maxWaitMin": 720 },
   "runTimeoutMin": 60,
   "gapSec": 0

@@ -1,0 +1,18 @@
+PATCH P4 — agent tự ghi nhật ký sự cố ngắn khi sửa theo review (mồi cho vòng tự cải thiện)
+Mục tiêu : C-14 (tự cải thiện sub-agent còn thủ công); FM-3 (kiểm chứng/kết thúc) — lỗi bị review nêu là nguồn sự cố có cấu trúc
+Tệp đích : src/prompts.ts, hàm revisePrompt (dòng 524 ở commit cf3ae6c)
+Giả thuyết: agent vừa bị review nêu lỗi biết rõ nhất nguyên nhân trực tiếp; yêu cầu tối đa 3 dòng "nguyên nhân + đề xuất sửa prompt"
+            cho ra tín hiệu dùng được cho bước 'nguyên nhân gốc' (design.md §3) với chi phí đầu ra nhỏ (≤ ~150 token/lượt sửa).
+            Đây là bản vá THU THẬP dữ liệu, không kỳ vọng cải thiện chỉ số hiệu năng; chỉ kiểm tra nó không làm xấu đi.
+Chỉ số    : (chính) tỉ lệ lượt sửa có mục "## Nhật ký sự cố" đúng định dạng (đếm bằng regex ở src/kpi.ts, hook mới đề xuất ở design.md §4);
+            (chính) tỉ lệ đề xuất được người duyệt chấp nhận để đưa vào bước A/B (đánh giá tay, n lượt ghi rõ);
+            (an toàn) token đầu ra pha revise — bảng T-c của S2; số vòng sửa; test ẩn đạt / 461.
+Cách đo   : theo dõi trong mọi lượt chạy của nhánh B; không cần A/B riêng cho chỉ số chính (đây là đếm tần suất), nhưng chỉ số an toàn dùng cổng A/B §5.
+Rủi ro    : agent bịa nguyên nhân (không có bằng chứng). Do đó đề xuất chỉ được xem là GIẢ THUYẾT và phải qua cổng A/B + giám đốc duyệt; không bao giờ tự áp dụng.
+            Đề xuất có thể lẫn dữ liệu nhạy cảm → ghi qua LogStore (redactDeep), không ghi thẳng ra tệp.
+Áp dụng   : git apply --unidiff-zero --ignore-whitespace --check <tệp này>
+--- a/src/prompts.ts
++++ b/src/prompts.ts
+@@ -524 +524 @@
+-Xử lý triệt để từng góp ý (sửa file thật nếu có công cụ). Trả về BẢN HOÀN CHỈNH MỚI của báo cáo bàn giao (không chỉ phần thay đổi), mở đầu bằng "## Tóm tắt" và thêm mục "## Đã sửa theo review".`,
++Xử lý triệt để từng góp ý (sửa file thật nếu có công cụ). Trả về BẢN HOÀN CHỈNH MỚI của báo cáo bàn giao (không chỉ phần thay đổi), mở đầu bằng "## Tóm tắt" và thêm mục "## Đã sửa theo review".\n\nCuối báo cáo thêm mục "## Nhật ký sự cố" gồm TỐI ĐA 3 dòng, mỗi dòng dạng "- [mã góp ý] nguyên nhân trực tiếp (dựa trên bằng chứng bạn đã thấy) → đề xuất sửa hồ sơ/prompt (một câu)". Chỉ nêu điều bạn có bằng chứng; không đoán; không chép dữ liệu cá nhân, khóa hay bí mật. Đây chỉ là đề xuất để giám đốc xem, KHÔNG phải chỉ dẫn bạn tự áp dụng.`,

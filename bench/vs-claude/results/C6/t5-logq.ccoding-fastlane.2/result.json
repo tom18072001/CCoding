@@ -1,0 +1,73 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261102-113118-0ed",
+  "wallSec": 214,
+  "wallSecHarness": 225,
+  "costUsd": 1.364583,
+  "tokens": {
+   "input": 82,
+   "output": 54034,
+   "cacheRead": 1282965,
+   "cacheWrite": 171996
+  },
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "Hiện thực src/parse.js + test"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "Hiện thực src/query.js + test"
+   },
+   {
+    "id": "S3",
+    "status": "done",
+    "title": "Hiện thực src/agg.js + test"
+   },
+   {
+    "id": "S4",
+    "status": "done",
+    "title": "Hiện thực CLI bin/logq.js + test CLI"
+   }
+  ],
+  "workdir": "/home/claude/ccoding-dev/workspaces/b-c6-t5-fastla-2/wt-T-20261102-113118-0ed",
+  "branch": "ccoding/t-20261102-113118-0ed"
+ },
+ "task": "t5-logq",
+ "system": "ccoding-fastlane",
+ "rep": 2,
+ "key": "t5-logq.ccoding-fastlane.2",
+ "env": "cloud",
+ "startedAt": "2026-11-02T04:31:18.235Z",
+ "finishedAt": "2026-11-02T04:35:05.690Z",
+ "grade": {
+  "hidden": {
+   "pass": 146,
+   "fail": 0,
+   "total": 146,
+   "failed": [],
+   "ms": 817,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 52,
+   "fail": 0,
+   "total": 52
+  },
+  "changed": [
+   "~bin/logq.js",
+   "~src/agg.js",
+   "~src/parse.js",
+   "~src/query.js",
+   "+test/agg.test.js",
+   "+test/cli.test.js",
+   "+test/parse.test.js",
+   "+test/query.test.js"
+  ]
+ },
+ "audit": []
+}

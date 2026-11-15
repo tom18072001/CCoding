@@ -1,0 +1,15 @@
+`buildReport` giờ chạy 200.000 dòng trong khoảng 270 ms (trước đây ~15 giây), và `npm test` xanh với 3 test.
+
+**Cách làm:** viết lại `src/report.js` thành một lượt duyệt duy nhất, gom số liệu theo tháng, danh mục và khách hàng bằng `Map`/`Set`. Cách cũ quét lại toàn bộ mảng nhiều lần (`includes`, `filter`, `find`).
+
+**Giữ nguyên các hành vi của bản cũ:**
+- Thứ tự phần tử mảng và các comparator sắp xếp giữ nguyên.
+- Dòng bị lọc theo tháng hoặc bị huỷ vẫn không được tính.
+- Ngày không hợp lệ vẫn ném lỗi, như bản cũ.
+- Với sản phẩm trùng `sku`, dòng đầu tiên vẫn được dùng.
+- Phép `JSON.parse(JSON.stringify(...))` của bản cũ được mô phỏng: số không hữu hạn thành `null`, `-0` thành `0`.
+- Thứ tự cộng các số giữ nguyên, nên kết quả số thực không lệch.
+
+**Test so sánh:** bản cũ được lưu nguyên làm `test/report.legacy.js`. Test mới trong `test/report.test.js` so sánh bằng `deepStrictEqual` trên 12 seed dữ liệu và 5 bộ `options`, cộng thêm một dòng hoàn tiền có `qty` bằng 0 và một đầu vào rỗng. Tất cả đều khớp.
+
+Bộ nghiệm thu ẩn thì tôi không chạy được.

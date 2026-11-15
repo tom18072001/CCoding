@@ -1,0 +1,17 @@
+PATCH P1 — giới hạn đầu ra báo cáo bàn giao ở pha execute
+Mục tiêu : O5 (giới hạn đầu ra); liên quan C-02 (chi phí lặp), C-13 (cache/token còn mở)
+Tệp đích : src/prompts.ts, hàm executePrompt (dòng 480 ở commit cf3ae6c)
+Giả thuyết: báo cáo bàn giao dài là đầu vào của review/synthesize/hạng mục phụ thuộc (được gửi lại nhiều lượt).
+            Giới hạn độ dài từng mục (không giới hạn danh sách tệp/lệnh bắt buộc) làm GIẢM token đầu ra của
+            pha execute và token đầu vào của pha review/synthesize, mà KHÔNG làm giảm tỉ lệ test ẩn đạt.
+Chỉ số    : (chính) tổng token quy đổi mỗi lượt chạy (đầu vào + đầu ra + cache ghi + 0,1 × cache đọc) — bảng T-e (mã O5) của S2;
+            (phụ) token đầu ra theo pha execute — bảng T-c của S2 (token theo pha; tên bảng theo hợp đồng S2, cần đối chiếu khi S2 xong);
+            (an toàn) số test ẩn đạt / 461 trong runs.csv; tỉ lệ review "approved" ở vòng đầu; templateCoverage (src/kpi.ts).
+Cách đo   : chạy A/B theo docs/research/self-improvement/design.md §5 (nhánh A = prompt hiện tại, nhánh B = bản vá này).
+Rủi ro    : báo cáo quá ngắn làm reviewer thiếu bằng chứng → thêm vòng sửa. Theo dõi review.firstPassOk.
+Áp dụng   : git apply --unidiff-zero --ignore-whitespace --check <tệp này>   (working tree là CRLF, index là LF)
+--- a/src/prompts.ts
++++ b/src/prompts.ts
+@@ -480 +480 @@
+-Câu trả lời CUỐI CÙNG phải là sản phẩm bàn giao hoàn chỉnh theo "Mẫu đầu ra" trong hồ sơ vị trí của bạn, mở đầu bằng mục "## Tóm tắt" (2–4 câu).`,
++Câu trả lời CUỐI CÙNG phải là sản phẩm bàn giao hoàn chỉnh theo "Mẫu đầu ra" trong hồ sơ vị trí của bạn, mở đầu bằng mục "## Tóm tắt" (2–4 câu). Giữ báo cáo gọn: mỗi mục ≤ ~120 từ (trừ danh sách tệp đã tạo/sửa và danh sách lệnh kiểm chứng kèm exit code — hai danh sách này luôn đầy đủ); không chép lại nội dung tệp, đề bài hay bàn giao của hạng mục khác.`,

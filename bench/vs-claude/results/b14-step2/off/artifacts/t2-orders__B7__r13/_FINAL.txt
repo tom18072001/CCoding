@@ -1,0 +1,90 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t2-orders__B7__r13] Sửa 6 lỗi trong thư viện tính tiền giỏ hàng
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Cả 6 lỗi đã được sửa trong worktree (src/money.js, src/checkout.js, src/promotions.js, src/cart.js, src/tax.js) kèm test/regression.test.js, và `npm test` đạt 13/13. Kế hoạch chỉ có 1 hạng mục kiểm chứng. Hạng mục này xác nhận test hồi quy đỏ trên code cũ, rà các biên của từng bản sửa và vá tối thiểu nếu thấy lỗ hổng.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Kiểm chứng test hồi quy đỏ trên code cũ và rà hành vi đang đúng (money, checkout, promotions, cart, tax) (@senior-swe, done)
+
+## Tóm tắt
+Cả 6 lỗi đều có ít nhất một test đỏ trên code gốc `38532e5`, và `npm test` trên worktree chính vẫn xanh 13/13. Tôi không thấy lỗ hổng ở các biên đã rà nên không vá thêm gì. Thư mục tạm `tmp_old/` vẫn còn trong worktree vì hook chặn lệnh dọn dẹp (xem phần rủi ro), cần xóa tay.
+
+## Tệp đã tạo/sửa
+- Không sửa `src/` hay `test/` nào thêm trong lượt này.
+- `tmp_old/` (chưa được dọn): bản `git archive 38532e5` kèm `test/regression.test.js`, tạo để chạy kiểm chứng.
+
+## Kiểm chứng
+- `git archive 38532e5` giải nén vào `tmp_old/`, chép `test/regression.test.js` vào rồi chạy `npm test`. Kết quả: 6 test cũ xanh, 7 test hồi quy đỏ. Tôi chỉ đếm lại các dòng `✔/✖`, không ghi nhận exit code của lần chạy này.
+
+| Lỗi | Test đỏ trên code cũ |
+|---|---|
+| 1 | `#1 toCents half away from zero` |
+| 2 | `#2 allocate largest remainder & tổng giảm đúng`, `#2b fixed 10.00 trên 3 món giá lẻ` |
+| 3 | `#3 mua X tặng Y` |
+| 4 | `#4 endsAt tới hết ngày UTC` |
+| 5 | `#5 giữ chỗ tồn kho theo giỏ` |
+| 6 | `#6 thuế tính trên net` |
+
+- `npm test` trên worktree chính → exit 0 theo kết quả in ra: tests 13, pass 13, fail 0. Tôi chưa đọc mã thoát trực tiếp.
+- Tôi chỉ chạy `git diff` và `git status` để đọc, không dùng `stash`, `reset` hay `checkout`.
+
+## Quyết định thiết kế
+Tôi đối chiếu `ISSUES.md` với diff (chỉ đọc code, không chạy thêm test biên ngoài `regression.test.js`):
+- **Lỗi 1:** `toCents` làm tròn trên giá trị tuyệt đối với `toPrecision(15)`, nên `1.005` → 101 và `-1.005` → -101. Mã giảm cố định và `minSubtotal` đều đi qua `toCents`.
+- **Lỗi 2:** `allocate` chia theo phần dư lớn nhất, phần dư bằng nhau thì phần đứng trước được trước. Khi `total = 0` thì `left = 0` nên vòng lặp thoát ngay, không có lỗi.
+- **Lỗi 3:** `floor(qty/(buy+free))*free`. Mua 2 tặng 1: qty 2 → 0, qty 3 → 1, qty 5 → 1, qty 6 → 2, khớp `ISSUES.md`.
+- **Lỗi 4:** `endsAt` + 1 ngày UTC. 23:59:59.999Z vẫn dùng được, 00:00Z ngày kế tiếp bị từ chối. Kiểm tra `startsAt` không đổi.
+- **Lỗi 5:** `updateQty` chỉ giữ chỗ hoặc nhả phần chênh lệch (qty bằng nhau thì không làm gì). `removeItem` nhả toàn bộ số lượng đang giữ và bỏ qua nếu món không có trong giỏ.
+- **Lỗi 6:** thuế tính trên `l.net`. Việc làm tròn thuế trong `src/tax.js` là sửa phòng ngừa từ lượt trước, không thuộc 6 lỗi báo.
+
+## Rủi ro & việc còn mở
+- **Cần dọn `tmp_old/`:** `rm -r` bị hook `claude-guard` chặn nên tôi không dọn được. Tôi không tìm cách vòng qua hook. `tmp_old/` không nằm trong 6 mục thay đổi, nhưng đang hiện là `??` trong `git status` và có thể bị `npm test` quét lẫn, hoặc bị commit nhầm nếu dùng `git add .`. Cần xóa tay: `rm -rf tmp_old`, hoặc cho phép tôi xóa.
+- Test của lượt trước chưa được đối chiếu với bộ nghiệm thu ẩn.
+- Các mã giảm `category` và `bxgy` không qua `allocate`, giữ nguyên theo tài liệu module.
+
+Bản đầy đủ: `.ccoding/T-20261113-063718-406/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261113-063718-406` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **24 in / 12.2k out**, cache đọc 170.6k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 20 | 9951 | 159654 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 2278 | 10977 | 2 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Kiểm chứng test hồi quy đỏ trên code cũ và rà hành vi đang đúng (money, checkout, promotions, cart, tax) (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 6 · ℹ suites 0 · ℹ pass 6 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 13 · ℹ suites 0 · ℹ pass 13 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 100 | 84 | 100 | 1 | 1 | 170k | 2/10 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **68** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 13k | — | — |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 65 B):
+  - Thao tác công cụ lỗi nhiều (2/10, 20%; nhiều nhất ở run_command 2/9) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

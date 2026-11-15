@@ -1,0 +1,85 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude c3-shop-bugs__B7__r3] Multi-file bug hunt in a cart module
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Các sửa lỗi cho cả 3 lỗi đã có sẵn trong worktree (src/cart.js, src/money.js, src/stock.js, test/cart.test.js), nên chỉ lập một hạng mục duy nhất: xác nhận test hồi quy đỏ trên mã cũ và xanh trên mã mới, rồi rà các trường hợp biên của ba tệp nguồn.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Xác nhận test hồi quy và rà biên cart/money/stock (@senior-swe, done)
+
+## Tóm tắt
+Tôi giữ nguyên các sửa trong worktree và không sửa thêm gì. Trên mã hiện tại `npm test` đạt 6/6. Trên mã cũ (sau `git stash push src/`) có 5/6 test đỏ, gồm cả bốn test hồi quy cần kiểm. Sau `git stash pop`, worktree xanh lại 6/6. Rà biên không thấy lỗi thật.
+
+## Tệp đã tạo/sửa
+Không sửa thêm. Các thay đổi đã có từ trước vẫn nguyên: `src/cart.js`, `src/money.js`, `src/stock.js`, `test/cart.test.js`. Tôi không commit và không push.
+
+## Kiểm chứng
+- Mã hiện tại: `npm test` → tests 6, pass 6, fail 0.
+- Mã cũ (`git stash push src/`, test giữ nguyên): `npm test` → tests 6, pass 1, fail 5. Test đỏ:
+  - #2 `10% coupon on 100000`
+  - #3 `coupon applies once across multiple lines, integer result`
+  - #4 `applyPercent rounds half-up to integer dong`
+  - #5 `can buy exactly MAX_QTY_PER_LINE, not more`
+  - #6 `stock never goes negative`
+- Test #2 là test cũ, không phải test mới thêm. Trước đây nó cũng đỏ ở baseline, khớp với số liệu "1 pass, 1 fail" của lần đo sẵn.
+- Sau `git stash pop`: `npm test` → pass 6, fail 0. `git status` vẫn hiện 4 tệp đã sửa.
+- Lệnh `echo exit=$?` in ra `exit=0` nhưng đó là mã thoát của `grep`, không phải của `npm test`. Kết quả pass 6 / fail 0 là bằng chứng chính.
+
+## Quyết định thiết kế
+Không áp dụng. Không có thay đổi mới.
+
+## Rủi ro & việc còn mở
+Kết quả rà biên:
+- **`removeItem`:** gọi `release(sku, qty của dòng)` rồi xóa dòng, nên hoàn kho đúng. Nếu sku không có trong giỏ thì hàm thoát sớm và không đổi gì.
+- **`addItem`:** kiểm tra `BAD_QTY` và `QTY_LIMIT` trước, rồi mới `reserve`. Nếu `reserve` ném `INSUFFICIENT_STOCK` thì giỏ chưa bị sửa, không để lại trạng thái dở.
+- **`applyPercent` với pct=0:** giảm = `floor(50/100)` = 0, kết quả bằng amount, là số nguyên.
+- **`applyPercent` với pct=100:** giảm = amount, kết quả = 0, là số nguyên.
+- Còn lại là các điểm không thuộc phạm vi đề bài, tôi không sửa:
+  - `applyCoupon` không kiểm tra `pct` ngoài 0–100.
+  - `addItem` không kiểm tra `unitPrice` có phải số nguyên hay không.
+  - Nếu cùng sku được thêm lại với giá khác, giá cũ của dòng được giữ nguyên.
+
+Bản đầy đủ: `.ccoding/T-20261102-201749-66c/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-201749-66c` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **22 in / 6,811 out**, cache đọc 123.6k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 16 | 4998 | 96237 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 6 | 1813 | 27384 | 2 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Xác nhận test hồi quy và rà biên cart/money/stock (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 2 · # suites 0 · # pass 1 · # fail 1 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 6 · # suites 0 · # pass 6 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **96** A | — | 100 | 89 | 100 | 1 | 1 | 101k | 1/7 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 29k | 0/1 |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

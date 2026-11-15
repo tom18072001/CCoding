@@ -1,0 +1,73 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261102-103016-309",
+  "wallSec": 405,
+  "wallSecHarness": 405,
+  "costUsd": 1.8911447000000001,
+  "tokens": {
+   "input": 76,
+   "output": 70181,
+   "cacheRead": 1101322,
+   "cacheWrite": 225376
+  },
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "Hiện thực src/parse.js (parseLine) + test"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "Hiện thực src/query.js (compile, QuerySyntaxError) + test"
+   },
+   {
+    "id": "S3",
+    "status": "done",
+    "title": "Hiện thực src/agg.js (aggregate) + test"
+   },
+   {
+    "id": "S4",
+    "status": "done",
+    "title": "CLI bin/logq.js + test chạy CLI thật"
+   }
+  ],
+  "workdir": "/home/claude/tom18072001/ccoding/workspaces/b-c2-t5--2/wt-T-20261102-103016-309",
+  "branch": "ccoding/t-20261102-103016-309"
+ },
+ "task": "t5-logq",
+ "system": "ccoding",
+ "rep": 2,
+ "key": "t5-logq.ccoding.2",
+ "env": "cloud",
+ "startedAt": "2026-11-02T03:30:16.678Z",
+ "finishedAt": "2026-11-02T03:37:04.236Z",
+ "grade": {
+  "hidden": {
+   "pass": 146,
+   "fail": 0,
+   "total": 146,
+   "failed": [],
+   "ms": 982,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 50,
+   "fail": 0,
+   "total": 50
+  },
+  "changed": [
+   "~bin/logq.js",
+   "~src/agg.js",
+   "~src/parse.js",
+   "~src/query.js",
+   "+test/agg.test.js",
+   "+test/cli.test.js",
+   "+test/parse.test.js",
+   "+test/query.test.js"
+  ]
+ },
+ "audit": []
+}

@@ -1,0 +1,1 @@
+Đổi tên trường `qty` của dòng hàng thành `quantity` trong mọi module của src/ (dữ liệu đầu vào dùng `quantity`; không còn đọc `qty`). Cập nhật test công khai cho khớp và đảm bảo `npm test` xanh. Không thêm thư viện ngoài.

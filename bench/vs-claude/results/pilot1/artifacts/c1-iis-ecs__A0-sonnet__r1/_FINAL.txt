@@ -1,0 +1,7 @@
+`parseIisLog(text)` is now implemented in `src/iis.js`, and `npm test` passes. That is the one visible test, and I didn't add any tests of my own.
+
+I handled a few cases the brief doesn't spell out:
+- **Line endings:** Windows `\r\n` line endings are handled.
+- **Timestamp:** `@timestamp` is only set when both `date` and `time` are present and not `-`. The line is still returned without it otherwise.
+- **Bad numbers:** a non-numeric value in a numeric field (`sc-status`, `s-port`, `time-taken`) is dropped rather than turned into `NaN`.
+- **Duration:** `time-taken` is converted from milliseconds to nanoseconds and rounded to a whole number.

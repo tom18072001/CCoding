@@ -1,0 +1,1 @@
+SR-24: src/money/index.js:97: "||" -> "&&" (một chỗ trên lời giải tham chiếu); điểm khi sinh = 0.974; test trượt: parseMoney: dấu và ký hiệu ở en-US | parseMoney: mã loại tiền, VND | parseMoney: vi-VN và fr-FR

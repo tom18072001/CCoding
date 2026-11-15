@@ -1,0 +1,1 @@
+Thêm đơn vị GB (1024 MB) vào bộ module kích thước trong src/ để mọi chức năng (bảng đơn vị, định dạng, phân tích chuỗi, kiểm tra hợp lệ) hỗ trợ GB như đã hỗ trợ MB. Bổ sung test và đảm bảo `npm test` xanh. Không thêm thư viện ngoài.

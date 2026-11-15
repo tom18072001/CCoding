@@ -1,0 +1,51 @@
+{
+ "source": "kế hoạch thật của BRIEF-22c giao lại (14/11/2026 23:30): tách K1 thành K1a, K1b; cổng brief-item chặn nhầm K1",
+ "brief": "docs/research/BRIEF-22c.md",
+ "run": 0,
+ "followupCriteria": null,
+ "subtasks": [
+  {
+   "id": "S1",
+   "title": "K1a — Làm cứng FX19: ký hiệu đặc thù, khớp đúng dòng, --strict mặc định, --sample/--seed, kèm test",
+   "description": "Sửa `docs/research/scripts/logic-map-check.mjs`:\n(1) Mỗi tham chiếu `tệp:dòng` phải kèm ký hiệu đặc thù: tên hàm, hằng, tiêu đề mục, hoặc cụm chữ ≥ 12 ký tự. Ký hiệu phải có trên đúng dòng đó trong `git show ccc76cc0:<tệp>`.\n(2) Khớp đúng dòng, bỏ cách khớp theo dải.\n(3) `--strict` bật mặc định, thêm `--no-strict`. Ở strict, tham chiếu thiếu ký hiệu đặc thù hoặc chỉ có ký hiệu ngắn/chung là lỗi.\n(4) Phủ tham chiếu vào `agents/*.md`, `src/**` (gồm `src/quality-gate.ts`) và `bench/**`.\n(5) Quét các tệp `analysis/decisions/logic-map.md`, `analysis/decisions/report.md`, `improvement-backlog.md` (từ khối B-20) và `paper/paper.md` §4.4.\n(6) Thêm `--sample N --seed S`: chọn mẫu bằng PRNG có seed, tái lập được. Với mỗi mẫu in `tệp:dòng`, ký hiệu, đoạn chữ quanh tham chiếu trong bài và dòng thật ở `ccc76cc0`.\nTest trong `docs/research/scripts/logic-map-check.test.mjs`:\n- 14 ca sai C2-r ghi nguyên văn (gồm `research-lead.md:51`→`:58`, `dev-lead.md:57`→`:61`), phải đỏ;\n- ca đúng phải xanh;\n- lệch cố ý một dòng ⇒ exit 1;\n- ký hiệu ngắn/chung ⇒ lỗi ở strict;\n- cùng seed cho cùng mẫu.\nChưa sửa bài. Tiêu chí xong: `node --test \"docs/research/scripts/*.test.mjs\"` exit 0. Chạy script trên các tệp thật, lưu danh sách lệch (tổng, số lệch, liệt kê) cho S2. Commit.",
+   "assignee": "data-scientist",
+   "dependsOn": []
+  },
+  {
+   "id": "S2",
+   "title": "K1b — Sửa mọi tham chiếu đến khi --strict exit 0; chuẩn bị đầu vào cho K2",
+   "description": "(A) Dùng danh sách lệch của S1, sửa mọi tham chiếu trong `logic-map.md`, `report.md`, `improvement-backlog.md` (B-20 trở đi) và `paper.md` §4.4.\n- Số dòng và ký hiệu lấy theo `git show ccc76cc0:<tệp>`, không theo HEAD.\n- Thiếu ký hiệu đặc thù thì thêm ký hiệu có thật trên dòng đó; không có thì đổi sang dòng thật hoặc bỏ số dòng.\n- Không nới script hay test để cho qua.\n- Ghi số tham chiếu đã sửa và các ca đổi dòng/bỏ số dòng vào `docs/research/CHANGELOG.md`.\n(B) Lưu `docs/research/context/brief22c-k2-inputs.md` (không chứa đường dẫn máy), gồm:\n- với mỗi lỗi nêu trong `logic-map.md`/backlog: dòng mã thật ở mốc, và gói + commit hash nếu đã sửa sau mốc (D16b, D17, D18a, D18b, D18c), tra bằng `git log`;\n- giá trị các khóa `brief22-p1-a-*`, `brief22-p2-a-pct` trong `facts.json`, kèm giá trị ở nguồn (`tệp:dòng`);\n- trích nguyên văn số lượt gọi pha plan theo model từ `bench/vs-claude/results/decisions/kpi-office.json` và `calls-limits.json`, kèm câu '5/5 lượt Opus' hiện có trong `paper.md` §6.5 và `model-per-role.md`.\nTiêu chí xong: `logic-map-check.mjs` exit 0, `consistency-check.mjs` exit 0, test S1 xanh. Commit.",
+   "assignee": "data-scientist",
+   "dependsOn": [
+    "S1"
+   ]
+  },
+  {
+   "id": "S3",
+   "title": "K2 — M-r1, M-r2, số còn treo (5/5 lượt Opus, số tác giả arXiv), đồng bộ facts/CHANGELOG",
+   "description": "Đầu vào: `docs/research/context/brief22c-k2-inputs.md` (S2 lập sẵn: dòng mã ở mốc, commit hash, giá trị nguồn).\nM-r1: sửa mô tả lỗi trong `logic-map.md` và trạng thái trong `improvement-backlog.md` cho khớp mã ở mốc. Lỗi đã sửa sau mốc thì ghi 'đã sửa ở <gói>, commit <hash>'. Giữ nguyên số dòng và ký hiệu S2 đã chốt; chỉ sửa câu chữ ngoài phần tham chiếu.\nM-r2: lập bảng xác nhận khóa `brief22-p1-a-*`, `brief22-p2-a-pct` khớp nguồn, kèm `tệp:dòng`.\nSố treo:\n(a) Câu '5/5 lượt Opus ở khâu plan' trong `paper.md` §6.5 và `model-per-role.md`: sửa theo số đã trích từ `kpi-office.json`/`calls-limits.json`. Số liệu không đủ để khẳng định thì ghi rõ giới hạn.\n(b) arXiv:2512.08296: đọc trang arXiv chính (fetch_url). Ghi số tác giả đúng, nêu lệch giữa danh mục và dòng đầu trang nếu có, kèm phiên bản và ngày đối chiếu.\nĐồng bộ `facts.json`, `CHANGELOG.md`. Không sửa `src/`, `bench/`; `preregistration.md` chỉ thêm ở §9. Ghi danh sách mọi số và khóa đã đổi để S4 kiểm.",
+   "assignee": "academic-writer",
+   "dependsOn": [
+    "S2"
+   ]
+  },
+  {
+   "id": "S4",
+   "title": "K3 — Lệnh glob trong README, chạy kiểm hộ phản biện, lưu nguyên văn đầu ra",
+   "description": "(1) Ghi lệnh kiểm chuẩn dạng glob vào `docs/research/README.md` (hoặc chỗ dự án đang ghi lệnh kiểm): `node --test \"docs/research/scripts/*.test.mjs\" \"docs/research/analysis/*.test.mjs\"`. Ghi chú `node --test docs/research/scripts/` cho exit 1 trên Node 24 Windows.\n(2) `consistency-check` đỏ do số S3 đổi thì đồng bộ `facts.json` hoặc câu chữ cho khớp nguồn; không sửa `bench/`.\n(3) Commit, rồi chạy:\n- `logic-map-check.mjs --strict`;\n- `logic-map-check.mjs --sample 10 --seed <S>`;\n- `consistency-check.mjs`;\n- `scorecard.mjs --check`;\n- test glob;\n- `git status --short`.\n(4) Lưu nguyên văn từng lệnh, exit code và đầu ra vào `docs/research/context/brief22c-checks-2026-11-14.md`, ghi seed, không chứa đường dẫn máy. Commit, chạy `git status --short` lần cuối và ghi kết quả vào báo cáo.\nTiêu chí xong: mọi lệnh kiểm exit 0; worktree sạch.",
+   "assignee": "data-scientist",
+   "dependsOn": [
+    "S3"
+   ]
+  },
+  {
+   "id": "S5",
+   "title": "K4 — Phản biện lại, chỉ đọc, kết luận ở dòng đầu",
+   "description": "Dòng đầu là kết luận: `**Kết luận:** Đạt`, `Sửa nhỏ` hoặc `Chưa đạt`; chi tiết viết sau. Không đọc lại toàn bộ bài. Nguồn duy nhất: tệp `docs/research/context/brief22c-checks-2026-11-14.md` và kết quả kiểm CCoding đưa. Xét ba điểm:\n(a) Các mục logic-map strict, consistency, scorecard và test glob trong tệp đều ghi exit 0. Thiếu nguyên văn thì ghi 'chưa kiểm được'.\n(b) 10 mẫu: so dòng thật ở `ccc76cc0` in sẵn trong tệp với ký hiệu và ý bài nêu.\n(c) Mục trạng thái worktree trong tệp rỗng.\nĐọc lướt bảng đối chiếu M-r1/M-r2/số treo của S3. Ghi phát hiện theo blocker/major/minor, kèm `tệp:dòng`. Gọn trong ≤ 15 thao tác.",
+   "assignee": "peer-reviewer",
+   "dependsOn": [
+    "S4"
+   ]
+  }
+ ]
+}

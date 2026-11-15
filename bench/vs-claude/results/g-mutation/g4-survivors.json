@@ -1,0 +1,1942 @@
+[
+{
+"key": "c2-burst-alert__A0-sonnet__r1",
+"task": "c2-burst-alert",
+"arm": "A0-sonnet",
+"i": 8,
+"file": "src/alert.js",
+"line": 18,
+"op": "AOR",
+"repl": "+"
+},
+{
+"key": "c5-tickets-api__B0__r2",
+"task": "c5-tickets-api",
+"arm": "B0",
+"i": 3,
+"file": "src/handler.js",
+"line": 10,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "c5-tickets-api__B0__r2",
+"task": "c5-tickets-api",
+"arm": "B0",
+"i": 4,
+"file": "src/handler.js",
+"line": 11,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "c5-tickets-api__B0__r2",
+"task": "c5-tickets-api",
+"arm": "B0",
+"i": 6,
+"file": "src/handler.js",
+"line": 7,
+"op": "LCR",
+"repl": "||"
+},
+{
+"key": "c5-tickets-api__B0__r2",
+"task": "c5-tickets-api",
+"arm": "B0",
+"i": 7,
+"file": "src/handler.js",
+"line": 12,
+"op": "COND",
+"repl": "!(t)"
+},
+{
+"key": "c5-tickets-api__B0__r2",
+"task": "c5-tickets-api",
+"arm": "B0",
+"i": 8,
+"file": "src/handler.js",
+"line": 11,
+"op": "CRP",
+"repl": "3"
+},
+{
+"key": "c5-tickets-api__B0__r2",
+"task": "c5-tickets-api",
+"arm": "B0",
+"i": 10,
+"file": "src/handler.js",
+"line": 10,
+"op": "COND",
+"repl": "!(req.method === 'GET' && /^\\/tickets\\/\\d+$/.test(req.path))"
+},
+{
+"key": "c5-tickets-api__B0__r2",
+"task": "c5-tickets-api",
+"arm": "B0",
+"i": 11,
+"file": "src/handler.js",
+"line": 12,
+"op": "CRP",
+"repl": "405"
+},
+{
+"key": "c5-tickets-api__A0-sonnet__r2",
+"task": "c5-tickets-api",
+"arm": "A0-sonnet",
+"i": 1,
+"file": "src/handler.js",
+"line": 96,
+"op": "CRP",
+"repl": "405"
+},
+{
+"key": "c5-tickets-api__A0-sonnet__r1",
+"task": "c5-tickets-api",
+"arm": "A0-sonnet",
+"i": 2,
+"file": "src/handler.js",
+"line": 91,
+"op": "COND",
+"repl": "!(t)"
+},
+{
+"key": "c3-shop-bugs__A0-sonnet__r2",
+"task": "c3-shop-bugs",
+"arm": "A0-sonnet",
+"i": 0,
+"file": "src/cart.js",
+"line": 19,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "c2-burst-alert__A0-sonnet__r3",
+"task": "c2-burst-alert",
+"arm": "A0-sonnet",
+"i": 0,
+"file": "src/alert.js",
+"line": 31,
+"op": "AOR",
+"repl": "+"
+},
+{
+"key": "c2-burst-alert__A0-sonnet__r3",
+"task": "c2-burst-alert",
+"arm": "A0-sonnet",
+"i": 1,
+"file": "src/alert.js",
+"line": 31,
+"op": "COND",
+"repl": "!(a.host < b.host)"
+},
+{
+"key": "c2-burst-alert__A0-sonnet__r3",
+"task": "c2-burst-alert",
+"arm": "A0-sonnet",
+"i": 2,
+"file": "src/alert.js",
+"line": 24,
+"op": "ROR",
+"repl": "<"
+},
+{
+"key": "c2-burst-alert__A0-sonnet__r3",
+"task": "c2-burst-alert",
+"arm": "A0-sonnet",
+"i": 6,
+"file": "src/alert.js",
+"line": 31,
+"op": "LCR",
+"repl": "&&"
+},
+{
+"key": "c2-burst-alert__A0-sonnet__r3",
+"task": "c2-burst-alert",
+"arm": "A0-sonnet",
+"i": 11,
+"file": "src/alert.js",
+"line": 31,
+"op": "ROR",
+"repl": ">="
+},
+{
+"key": "c2-burst-alert__B0__r3",
+"task": "c2-burst-alert",
+"arm": "B0",
+"i": 11,
+"file": "src/alert.js",
+"line": 3,
+"op": "CRP",
+"repl": "60001"
+},
+{
+"key": "c2-burst-alert__A0-sonnet__r2",
+"task": "c2-burst-alert",
+"arm": "A0-sonnet",
+"i": 0,
+"file": "src/alert.js",
+"line": 22,
+"op": "AOR",
+"repl": "+"
+},
+{
+"key": "c2-burst-alert__A0-sonnet__r2",
+"task": "c2-burst-alert",
+"arm": "A0-sonnet",
+"i": 5,
+"file": "src/alert.js",
+"line": 9,
+"op": "CRP",
+"repl": "600"
+},
+{
+"key": "c2-burst-alert__A0-sonnet__r2",
+"task": "c2-burst-alert",
+"arm": "A0-sonnet",
+"i": 7,
+"file": "src/alert.js",
+"line": 3,
+"op": "CRP",
+"repl": "60001"
+},
+{
+"key": "c2-burst-alert__A0-sonnet__r2",
+"task": "c2-burst-alert",
+"arm": "A0-sonnet",
+"i": 10,
+"file": "src/alert.js",
+"line": 30,
+"op": "LCR",
+"repl": "&&"
+},
+{
+"key": "c3-shop-bugs__A0-sonnet__r3",
+"task": "c3-shop-bugs",
+"arm": "A0-sonnet",
+"i": 1,
+"file": "src/cart.js",
+"line": 20,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "c3-shop-bugs__A0-sonnet__r3",
+"task": "c3-shop-bugs",
+"arm": "A0-sonnet",
+"i": 4,
+"file": "src/cart.js",
+"line": 20,
+"op": "ROR",
+"repl": "<="
+},
+{
+"key": "t2-orders__A0-sonnet__r1",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 6,
+"file": "src/checkout.js",
+"line": 37,
+"op": "CRP",
+"repl": "101"
+},
+{
+"key": "t2-orders__A0-sonnet__r1",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 9,
+"file": "src/money.js",
+"line": 27,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "t2-orders__A0-sonnet__r1",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 10,
+"file": "src/checkout.js",
+"line": 39,
+"op": "COND",
+"repl": "!(l.sku === promo.sku)"
+},
+{
+"key": "t2-orders__A0-sonnet__r2",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 1,
+"file": "src/cart.js",
+"line": 15,
+"op": "ROR",
+"repl": "<"
+},
+{
+"key": "t2-orders__A0-sonnet__r2",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 7,
+"file": "src/money.js",
+"line": 15,
+"op": "CRP",
+"repl": "101"
+},
+{
+"key": "t2-orders__B6__r2",
+"task": "t2-orders",
+"arm": "B6",
+"i": 5,
+"file": "src/money.js",
+"line": 45,
+"op": "CRP",
+"repl": "2"
+},
+{
+"key": "t2-orders__B6__r2",
+"task": "t2-orders",
+"arm": "B6",
+"i": 6,
+"file": "src/money.js",
+"line": 23,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "t2-orders__B6__r2",
+"task": "t2-orders",
+"arm": "B6",
+"i": 9,
+"file": "src/checkout.js",
+"line": 36,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "t2-orders__A0-sonnet__r3",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 9,
+"file": "src/cart.js",
+"line": 23,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "t2-orders__A0-sonnet__r3",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 11,
+"file": "src/promotions.js",
+"line": 30,
+"op": "ROR",
+"repl": ">="
+},
+{
+"key": "t2-orders__B6__r3",
+"task": "t2-orders",
+"arm": "B6",
+"i": 0,
+"file": "src/money.js",
+"line": 15,
+"op": "CRP",
+"repl": "101"
+},
+{
+"key": "t2-orders__B6__r3",
+"task": "t2-orders",
+"arm": "B6",
+"i": 1,
+"file": "src/money.js",
+"line": 39,
+"op": "AOR",
+"repl": "+"
+},
+{
+"key": "t2-orders__B6__r3",
+"task": "t2-orders",
+"arm": "B6",
+"i": 2,
+"file": "src/checkout.js",
+"line": 38,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "t2-orders__B6__r3",
+"task": "t2-orders",
+"arm": "B6",
+"i": 3,
+"file": "src/checkout.js",
+"line": 39,
+"op": "AOR",
+"repl": "/"
+},
+{
+"key": "t5-logq__A0-sonnet__r3",
+"task": "t5-logq",
+"arm": "A0-sonnet",
+"i": 4,
+"file": "src/agg.js",
+"line": 37,
+"op": "AOR",
+"repl": "+"
+},
+{
+"key": "t1-duration__B7__r1",
+"task": "t1-duration",
+"arm": "B7",
+"i": 5,
+"file": "src/duration.js",
+"line": 17,
+"op": "CRP",
+"repl": "5"
+},
+{
+"key": "t2-orders__B7__r1",
+"task": "t2-orders",
+"arm": "B7",
+"i": 6,
+"file": "src/money.js",
+"line": 34,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "t2-orders__B7__r1",
+"task": "t2-orders",
+"arm": "B7",
+"i": 9,
+"file": "src/inventory.js",
+"line": 21,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "t2-orders__B7__r1",
+"task": "t2-orders",
+"arm": "B7",
+"i": 10,
+"file": "src/tax.js",
+"line": 3,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "t2-orders__B7__r2",
+"task": "t2-orders",
+"arm": "B7",
+"i": 6,
+"file": "src/checkout.js",
+"line": 39,
+"op": "AOR",
+"repl": "/"
+},
+{
+"key": "t2-orders__B7__r2",
+"task": "t2-orders",
+"arm": "B7",
+"i": 7,
+"file": "src/checkout.js",
+"line": 39,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "t2-orders__B7__r3",
+"task": "t2-orders",
+"arm": "B7",
+"i": 2,
+"file": "src/checkout.js",
+"line": 37,
+"op": "AOR",
+"repl": "/"
+},
+{
+"key": "t2-orders__B7__r3",
+"task": "t2-orders",
+"arm": "B7",
+"i": 3,
+"file": "src/checkout.js",
+"line": 33,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "t2-orders__B7__r3",
+"task": "t2-orders",
+"arm": "B7",
+"i": 6,
+"file": "src/cart.js",
+"line": 43,
+"op": "AOR",
+"repl": "-"
+},
+{
+"key": "t2-orders__B7__r3",
+"task": "t2-orders",
+"arm": "B7",
+"i": 9,
+"file": "src/checkout.js",
+"line": 37,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "t1-duration__A0-sonnet__r4",
+"task": "t1-duration",
+"arm": "A0-sonnet",
+"i": 9,
+"file": "src/duration.js",
+"line": 145,
+"op": "ROR",
+"repl": ">"
+},
+{
+"key": "t2-orders__A0-sonnet__r4",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 0,
+"file": "src/checkout.js",
+"line": 33,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "t2-orders__B7__r4",
+"task": "t2-orders",
+"arm": "B7",
+"i": 6,
+"file": "src/checkout.js",
+"line": 37,
+"op": "COND",
+"repl": "!(l.category === promo.category)"
+},
+{
+"key": "t2-orders__B7__r4",
+"task": "t2-orders",
+"arm": "B7",
+"i": 7,
+"file": "src/money.js",
+"line": 39,
+"op": "AOR",
+"repl": "-"
+},
+{
+"key": "t2-orders__B7__r4",
+"task": "t2-orders",
+"arm": "B7",
+"i": 9,
+"file": "src/checkout.js",
+"line": 39,
+"op": "COND",
+"repl": "!(l.sku === promo.sku)"
+},
+{
+"key": "t2-orders__B7__r5",
+"task": "t2-orders",
+"arm": "B7",
+"i": 9,
+"file": "src/promotions.js",
+"line": 25,
+"op": "ROR",
+"repl": "<="
+},
+{
+"key": "t5-logq__B7__r5",
+"task": "t5-logq",
+"arm": "B7",
+"i": 0,
+"file": "src/query.js",
+"line": 186,
+"op": "ROR",
+"repl": ">"
+},
+{
+"key": "t5-logq__A0-sonnet__r6",
+"task": "t5-logq",
+"arm": "A0-sonnet",
+"i": 11,
+"file": "src/query.js",
+"line": 27,
+"op": "ROR",
+"repl": ">="
+},
+{
+"key": "t2-orders__A0-sonnet__r6",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 6,
+"file": "src/cart.js",
+"line": 43,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "t2-orders__A0-sonnet__r6",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 11,
+"file": "src/money.js",
+"line": 34,
+"op": "ROR",
+"repl": "<="
+},
+{
+"key": "t2-orders__B7__r6",
+"task": "t2-orders",
+"arm": "B7",
+"i": 1,
+"file": "src/money.js",
+"line": 34,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "t2-orders__A0-sonnet__r7",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 9,
+"file": "src/money.js",
+"line": 12,
+"op": "CRP",
+"repl": "101"
+},
+{
+"key": "t5-logq__B7__r6",
+"task": "t5-logq",
+"arm": "B7",
+"i": 5,
+"file": "src/agg.js",
+"line": 65,
+"op": "COND",
+"repl": "!(b > a)"
+},
+{
+"key": "t2-orders__B7__r7",
+"task": "t2-orders",
+"arm": "B7",
+"i": 0,
+"file": "src/checkout.js",
+"line": 39,
+"op": "COND",
+"repl": "!(l.sku === promo.sku)"
+},
+{
+"key": "t2-orders__B7__r7",
+"task": "t2-orders",
+"arm": "B7",
+"i": 7,
+"file": "src/tax.js",
+"line": 3,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "t2-orders__B7__r7",
+"task": "t2-orders",
+"arm": "B7",
+"i": 8,
+"file": "src/promotions.js",
+"line": 25,
+"op": "ROR",
+"repl": ">="
+},
+{
+"key": "t1-duration__B7__r7",
+"task": "t1-duration",
+"arm": "B7",
+"i": 2,
+"file": "src/duration.js",
+"line": 134,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "t5-logq__A0-sonnet__r7",
+"task": "t5-logq",
+"arm": "A0-sonnet",
+"i": 3,
+"file": "src/query.js",
+"line": 182,
+"op": "ROR",
+"repl": "<"
+},
+{
+"key": "t5-logq__B7__r8",
+"task": "t5-logq",
+"arm": "B7",
+"i": 4,
+"file": "src/agg.js",
+"line": 94,
+"op": "CRP",
+"repl": "2"
+},
+{
+"key": "t5-logq__B7__r8",
+"task": "t5-logq",
+"arm": "B7",
+"i": 6,
+"file": "src/agg.js",
+"line": 93,
+"op": "AOR",
+"repl": "+"
+},
+{
+"key": "t5-logq__A0-sonnet__r8",
+"task": "t5-logq",
+"arm": "A0-sonnet",
+"i": 4,
+"file": "src/agg.js",
+"line": 79,
+"op": "CRP",
+"repl": "2"
+},
+{
+"key": "t2-orders__A0-sonnet__r8",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 4,
+"file": "src/money.js",
+"line": 34,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "t2-orders__A0-sonnet__r8",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 8,
+"file": "src/promotions.js",
+"line": 25,
+"op": "LCR",
+"repl": "||"
+},
+{
+"key": "t2-orders__A0-sonnet__r8",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 10,
+"file": "src/cart.js",
+"line": 15,
+"op": "ROR",
+"repl": "<"
+},
+{
+"key": "t2-orders__B7__r8",
+"task": "t2-orders",
+"arm": "B7",
+"i": 0,
+"file": "src/money.js",
+"line": 41,
+"op": "LCR",
+"repl": "&&"
+},
+{
+"key": "t2-orders__B7__r8",
+"task": "t2-orders",
+"arm": "B7",
+"i": 3,
+"file": "src/checkout.js",
+"line": 37,
+"op": "CRP",
+"repl": "101"
+},
+{
+"key": "t2-orders__B7__r8",
+"task": "t2-orders",
+"arm": "B7",
+"i": 7,
+"file": "src/checkout.js",
+"line": 36,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "t2-orders__B7__r9",
+"task": "t2-orders",
+"arm": "B7",
+"i": 1,
+"file": "src/checkout.js",
+"line": 37,
+"op": "COND",
+"repl": "!(l.category === promo.category)"
+},
+{
+"key": "t2-orders__B7__r9",
+"task": "t2-orders",
+"arm": "B7",
+"i": 6,
+"file": "src/cart.js",
+"line": 23,
+"op": "ROR",
+"repl": "<="
+},
+{
+"key": "t2-orders__B7__r9",
+"task": "t2-orders",
+"arm": "B7",
+"i": 9,
+"file": "src/checkout.js",
+"line": 39,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "t2-orders__B7__r9",
+"task": "t2-orders",
+"arm": "B7",
+"i": 10,
+"file": "src/money.js",
+"line": 22,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "t2-orders__A0-sonnet__r9",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 6,
+"file": "src/checkout.js",
+"line": 33,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "t2-orders__A0-sonnet__r9",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 9,
+"file": "src/inventory.js",
+"line": 21,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "c2-burst-alert__B7__r1",
+"task": "c2-burst-alert",
+"arm": "B7",
+"i": 1,
+"file": "src/alert.js",
+"line": 30,
+"op": "AOR",
+"repl": "+"
+},
+{
+"key": "c2-burst-alert__B7__r1",
+"task": "c2-burst-alert",
+"arm": "B7",
+"i": 3,
+"file": "src/alert.js",
+"line": 23,
+"op": "AOR",
+"repl": "+"
+},
+{
+"key": "c2-burst-alert__B7__r1",
+"task": "c2-burst-alert",
+"arm": "B7",
+"i": 6,
+"file": "src/alert.js",
+"line": 30,
+"op": "ROR",
+"repl": ">="
+},
+{
+"key": "c2-burst-alert__B7__r1",
+"task": "c2-burst-alert",
+"arm": "B7",
+"i": 8,
+"file": "src/alert.js",
+"line": 17,
+"op": "AOR",
+"repl": "+"
+},
+{
+"key": "c5-tickets-api__B7__r1",
+"task": "c5-tickets-api",
+"arm": "B7",
+"i": 4,
+"file": "src/handler.js",
+"line": 83,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "c5-tickets-api__B7__r2",
+"task": "c5-tickets-api",
+"arm": "B7",
+"i": 1,
+"file": "src/handler.js",
+"line": 91,
+"op": "CRP",
+"repl": "405"
+},
+{
+"key": "c5-tickets-api__B7__r2",
+"task": "c5-tickets-api",
+"arm": "B7",
+"i": 4,
+"file": "src/handler.js",
+"line": 91,
+"op": "COND",
+"repl": "!(t)"
+},
+{
+"key": "c3-shop-bugs__B7__r2",
+"task": "c3-shop-bugs",
+"arm": "B7",
+"i": 10,
+"file": "src/cart.js",
+"line": 20,
+"op": "COND",
+"repl": "!(i < 0)"
+},
+{
+"key": "c2-burst-alert__B7__r2",
+"task": "c2-burst-alert",
+"arm": "B7",
+"i": 4,
+"file": "src/alert.js",
+"line": 26,
+"op": "LCR",
+"repl": "&&"
+},
+{
+"key": "c2-burst-alert__B7__r2",
+"task": "c2-burst-alert",
+"arm": "B7",
+"i": 5,
+"file": "src/alert.js",
+"line": 21,
+"op": "ROR",
+"repl": ">"
+},
+{
+"key": "c2-burst-alert__B7__r2",
+"task": "c2-burst-alert",
+"arm": "B7",
+"i": 9,
+"file": "src/alert.js",
+"line": 26,
+"op": "COND",
+"repl": "!(a.host < b.host)"
+},
+{
+"key": "c2-burst-alert__B7__r2",
+"task": "c2-burst-alert",
+"arm": "B7",
+"i": 11,
+"file": "src/alert.js",
+"line": 26,
+"op": "AOR",
+"repl": "+"
+},
+{
+"key": "c2-burst-alert__B7__r3",
+"task": "c2-burst-alert",
+"arm": "B7",
+"i": 1,
+"file": "src/alert.js",
+"line": 29,
+"op": "AOR",
+"repl": "+"
+},
+{
+"key": "t5-logq__B6__r4",
+"task": "t5-logq",
+"arm": "B6",
+"i": 6,
+"file": "src/agg.js",
+"line": 3,
+"op": "CRP",
+"repl": "1001"
+},
+{
+"key": "t2-orders__B6__r5",
+"task": "t2-orders",
+"arm": "B6",
+"i": 2,
+"file": "src/money.js",
+"line": 15,
+"op": "AOR",
+"repl": "*"
+},
+{
+"key": "t2-orders__B6__r7",
+"task": "t2-orders",
+"arm": "B6",
+"i": 2,
+"file": "src/checkout.js",
+"line": 38,
+"op": "COND",
+"repl": "!(promo.type === 'bxgy')"
+},
+{
+"key": "t5-logq__B6__r7",
+"task": "t5-logq",
+"arm": "B6",
+"i": 1,
+"file": "src/agg.js",
+"line": 4,
+"op": "CRP",
+"repl": "86400001"
+},
+{
+"key": "t1-duration__B6__r8",
+"task": "t1-duration",
+"arm": "B6",
+"i": 2,
+"file": "src/duration.js",
+"line": 91,
+"op": "CRP",
+"repl": "2"
+},
+{
+"key": "t5-logq__B6__r9",
+"task": "t5-logq",
+"arm": "B6",
+"i": 0,
+"file": "src/agg.js",
+"line": 78,
+"op": "AOR",
+"repl": "+"
+},
+{
+"key": "t5-logq__B6__r9",
+"task": "t5-logq",
+"arm": "B6",
+"i": 1,
+"file": "src/parse.js",
+"line": 90,
+"op": "LCR",
+"repl": "&&"
+},
+{
+"key": "t2-orders__A0-sonnet__r10",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 4,
+"file": "src/checkout.js",
+"line": 37,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "t2-orders__A0-sonnet__r10",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 6,
+"file": "src/money.js",
+"line": 21,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "t2-orders__A0-sonnet__r11",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 3,
+"file": "src/money.js",
+"line": 6,
+"op": "LCR",
+"repl": "&&"
+},
+{
+"key": "t2-orders__A0-sonnet__r11",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 4,
+"file": "src/promotions.js",
+"line": 25,
+"op": "ROR",
+"repl": "<="
+},
+{
+"key": "t2-orders__A0-sonnet__r11",
+"task": "t2-orders",
+"arm": "A0-sonnet",
+"i": 10,
+"file": "src/promotions.js",
+"line": 32,
+"op": "AOR",
+"repl": "/"
+},
+{
+"key": "t5-logq__A0-sonnet__r10",
+"task": "t5-logq",
+"arm": "A0-sonnet",
+"i": 10,
+"file": "src/query.js",
+"line": 75,
+"op": "LCR",
+"repl": "||"
+},
+{
+"key": "c5-tickets-api__B5__r1",
+"task": "c5-tickets-api",
+"arm": "B5",
+"i": 9,
+"file": "src/handler.js",
+"line": 96,
+"op": "CRP",
+"repl": "405"
+},
+{
+"key": "c5-tickets-api__B5__r2",
+"task": "c5-tickets-api",
+"arm": "B5",
+"i": 3,
+"file": "src/handler.js",
+"line": 83,
+"op": "CRP",
+"repl": "3"
+},
+{
+"key": "c5-tickets-api__B5__r2",
+"task": "c5-tickets-api",
+"arm": "B5",
+"i": 11,
+"file": "src/handler.js",
+"line": 82,
+"op": "COND",
+"repl": "!(req.method === 'GET' && /^\\/tickets\\/\\d+$/.test(req.path))"
+},
+{
+"key": "c2-burst-alert__B5__r1",
+"task": "c2-burst-alert",
+"arm": "B5",
+"i": 6,
+"file": "src/alert.js",
+"line": 8,
+"op": "CRP",
+"repl": "600"
+},
+{
+"key": "c2-burst-alert__B5__r2",
+"task": "c2-burst-alert",
+"arm": "B5",
+"i": 2,
+"file": "src/alert.js",
+"line": 22,
+"op": "ROR",
+"repl": "<"
+},
+{
+"key": "c2-burst-alert__B5__r2",
+"task": "c2-burst-alert",
+"arm": "B5",
+"i": 3,
+"file": "src/alert.js",
+"line": 9,
+"op": "LCR",
+"repl": "||"
+},
+{
+"key": "c2-burst-alert__B5__r2",
+"task": "c2-burst-alert",
+"arm": "B5",
+"i": 5,
+"file": "src/alert.js",
+"line": 31,
+"op": "LCR",
+"repl": "&&"
+},
+{
+"key": "c2-burst-alert__B5__r2",
+"task": "c2-burst-alert",
+"arm": "B5",
+"i": 6,
+"file": "src/alert.js",
+"line": 31,
+"op": "AOR",
+"repl": "+"
+},
+{
+"key": "c2-burst-alert__B5__r2",
+"task": "c2-burst-alert",
+"arm": "B5",
+"i": 7,
+"file": "src/alert.js",
+"line": 24,
+"op": "AOR",
+"repl": "-"
+},
+{
+"key": "c3-shop-bugs__B5__r2",
+"task": "c3-shop-bugs",
+"arm": "B5",
+"i": 4,
+"file": "src/cart.js",
+"line": 20,
+"op": "COND",
+"repl": "!(i < 0)"
+},
+{
+"key": "c3-shop-bugs__B5__r2",
+"task": "c3-shop-bugs",
+"arm": "B5",
+"i": 11,
+"file": "src/cart.js",
+"line": 20,
+"op": "ROR",
+"repl": "<="
+},
+{
+"key": "c5-tickets-api__B5__r3",
+"task": "c5-tickets-api",
+"arm": "B5",
+"i": 10,
+"file": "src/handler.js",
+"line": 88,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "c3-shop-bugs__B5__r3",
+"task": "c3-shop-bugs",
+"arm": "B5",
+"i": 2,
+"file": "src/cart.js",
+"line": 20,
+"op": "ROR",
+"repl": ">="
+},
+{
+"key": "c3-shop-bugs__B6__r1",
+"task": "c3-shop-bugs",
+"arm": "B6",
+"i": 2,
+"file": "src/cart.js",
+"line": 20,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "c3-shop-bugs__B6__r1",
+"task": "c3-shop-bugs",
+"arm": "B6",
+"i": 3,
+"file": "src/cart.js",
+"line": 20,
+"op": "ROR",
+"repl": ">="
+},
+{
+"key": "c5-tickets-api__B6__r1",
+"task": "c5-tickets-api",
+"arm": "B6",
+"i": 4,
+"file": "src/handler.js",
+"line": 102,
+"op": "CRP",
+"repl": "405"
+},
+{
+"key": "c5-tickets-api__B6__r1",
+"task": "c5-tickets-api",
+"arm": "B6",
+"i": 7,
+"file": "src/handler.js",
+"line": 100,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "c5-tickets-api__B6__r2",
+"task": "c5-tickets-api",
+"arm": "B6",
+"i": 1,
+"file": "src/handler.js",
+"line": 13,
+"op": "CRP",
+"repl": "3"
+},
+{
+"key": "c5-tickets-api__B6__r2",
+"task": "c5-tickets-api",
+"arm": "B6",
+"i": 2,
+"file": "src/handler.js",
+"line": 7,
+"op": "LCR",
+"repl": "||"
+},
+{
+"key": "c5-tickets-api__B6__r2",
+"task": "c5-tickets-api",
+"arm": "B6",
+"i": 8,
+"file": "src/handler.js",
+"line": 13,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "c5-tickets-api__B6__r2",
+"task": "c5-tickets-api",
+"arm": "B6",
+"i": 9,
+"file": "src/handler.js",
+"line": 12,
+"op": "COND",
+"repl": "!(req.method === 'GET' && /^\\/tickets\\/\\d+$/.test(req.path))"
+},
+{
+"key": "c5-tickets-api__B6__r2",
+"task": "c5-tickets-api",
+"arm": "B6",
+"i": 11,
+"file": "src/handler.js",
+"line": 12,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "c2-burst-alert__B5__r3",
+"task": "c2-burst-alert",
+"arm": "B5",
+"i": 0,
+"file": "src/alert.js",
+"line": 27,
+"op": "AOR",
+"repl": "+"
+},
+{
+"key": "c2-burst-alert__B5__r3",
+"task": "c2-burst-alert",
+"arm": "B5",
+"i": 4,
+"file": "src/alert.js",
+"line": 27,
+"op": "LCR",
+"repl": "&&"
+},
+{
+"key": "c2-burst-alert__B5__r3",
+"task": "c2-burst-alert",
+"arm": "B5",
+"i": 6,
+"file": "src/alert.js",
+"line": 6,
+"op": "LCR",
+"repl": "||"
+},
+{
+"key": "c5-tickets-api__B6__r3",
+"task": "c5-tickets-api",
+"arm": "B6",
+"i": 3,
+"file": "src/handler.js",
+"line": 9,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "c5-tickets-api__B6__r3",
+"task": "c5-tickets-api",
+"arm": "B6",
+"i": 7,
+"file": "src/handler.js",
+"line": 6,
+"op": "LCR",
+"repl": "||"
+},
+{
+"key": "c5-tickets-api__B6__r3",
+"task": "c5-tickets-api",
+"arm": "B6",
+"i": 10,
+"file": "src/handler.js",
+"line": 10,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "c3-shop-bugs__B6__r3",
+"task": "c3-shop-bugs",
+"arm": "B6",
+"i": 3,
+"file": "src/cart.js",
+"line": 19,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "c2-burst-alert__A1__r1",
+"task": "c2-burst-alert",
+"arm": "A1",
+"i": 0,
+"file": "src/alert.js",
+"line": 30,
+"op": "AOR",
+"repl": "+"
+},
+{
+"key": "c2-burst-alert__A1__r1",
+"task": "c2-burst-alert",
+"arm": "A1",
+"i": 3,
+"file": "src/alert.js",
+"line": 8,
+"op": "CRP",
+"repl": "600"
+},
+{
+"key": "c2-burst-alert__A1__r1",
+"task": "c2-burst-alert",
+"arm": "A1",
+"i": 7,
+"file": "src/alert.js",
+"line": 8,
+"op": "LCR",
+"repl": "||"
+},
+{
+"key": "c2-burst-alert__A1__r1",
+"task": "c2-burst-alert",
+"arm": "A1",
+"i": 9,
+"file": "src/alert.js",
+"line": 21,
+"op": "ROR",
+"repl": "<"
+},
+{
+"key": "c5-tickets-api__A1__r1",
+"task": "c5-tickets-api",
+"arm": "A1",
+"i": 3,
+"file": "src/handler.js",
+"line": 91,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "c5-tickets-api__A1__r2",
+"task": "c5-tickets-api",
+"arm": "A1",
+"i": 3,
+"file": "src/handler.js",
+"line": 62,
+"op": "COND",
+"repl": "!(statuses)"
+},
+{
+"key": "c5-tickets-api__A1__r2",
+"task": "c5-tickets-api",
+"arm": "A1",
+"i": 5,
+"file": "src/handler.js",
+"line": 95,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "c5-tickets-api__A1__r2",
+"task": "c5-tickets-api",
+"arm": "A1",
+"i": 9,
+"file": "src/handler.js",
+"line": 57,
+"op": "CRP",
+"repl": "2"
+},
+{
+"key": "c2-burst-alert__A1__r2",
+"task": "c2-burst-alert",
+"arm": "A1",
+"i": 4,
+"file": "src/alert.js",
+"line": 7,
+"op": "LCR",
+"repl": "&&"
+},
+{
+"key": "c2-burst-alert__A1__r2",
+"task": "c2-burst-alert",
+"arm": "A1",
+"i": 5,
+"file": "src/alert.js",
+"line": 20,
+"op": "ROR",
+"repl": ">"
+},
+{
+"key": "c2-burst-alert__A1__r2",
+"task": "c2-burst-alert",
+"arm": "A1",
+"i": 7,
+"file": "src/alert.js",
+"line": 20,
+"op": "ROR",
+"repl": "<"
+},
+{
+"key": "c2-burst-alert__A1__r2",
+"task": "c2-burst-alert",
+"arm": "A1",
+"i": 8,
+"file": "src/alert.js",
+"line": 13,
+"op": "AOR",
+"repl": "+"
+},
+{
+"key": "c2-burst-alert__A1__r2",
+"task": "c2-burst-alert",
+"arm": "A1",
+"i": 9,
+"file": "src/alert.js",
+"line": 3,
+"op": "CRP",
+"repl": "60001"
+},
+{
+"key": "c2-burst-alert__A1__r2",
+"task": "c2-burst-alert",
+"arm": "A1",
+"i": 11,
+"file": "src/alert.js",
+"line": 16,
+"op": "ROR",
+"repl": "<="
+},
+{
+"key": "c3-shop-bugs__A1__r2",
+"task": "c3-shop-bugs",
+"arm": "A1",
+"i": 3,
+"file": "src/cart.js",
+"line": 20,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "c2-burst-alert__A1__r3",
+"task": "c2-burst-alert",
+"arm": "A1",
+"i": 3,
+"file": "src/alert.js",
+"line": 3,
+"op": "CRP",
+"repl": "60001"
+},
+{
+"key": "c2-burst-alert__A1__r3",
+"task": "c2-burst-alert",
+"arm": "A1",
+"i": 6,
+"file": "src/alert.js",
+"line": 8,
+"op": "LCR",
+"repl": "&&"
+},
+{
+"key": "c2-burst-alert__A1__r3",
+"task": "c2-burst-alert",
+"arm": "A1",
+"i": 9,
+"file": "src/alert.js",
+"line": 31,
+"op": "AOR",
+"repl": "+"
+},
+{
+"key": "c5-tickets-api__A1__r3",
+"task": "c5-tickets-api",
+"arm": "A1",
+"i": 10,
+"file": "src/handler.js",
+"line": 109,
+"op": "COND",
+"repl": "!(t)"
+},
+{
+"key": "c3-shop-bugs__A2__r1",
+"task": "c3-shop-bugs",
+"arm": "A2",
+"i": 1,
+"file": "src/cart.js",
+"line": 19,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "c3-shop-bugs__A2__r1",
+"task": "c3-shop-bugs",
+"arm": "A2",
+"i": 8,
+"file": "src/cart.js",
+"line": 20,
+"op": "COND",
+"repl": "!(i < 0)"
+},
+{
+"key": "c2-burst-alert__A2__r1",
+"task": "c2-burst-alert",
+"arm": "A2",
+"i": 0,
+"file": "src/alert.js",
+"line": 31,
+"op": "COND",
+"repl": "!(a.host < b.host)"
+},
+{
+"key": "c2-burst-alert__A2__r1",
+"task": "c2-burst-alert",
+"arm": "A2",
+"i": 4,
+"file": "src/alert.js",
+"line": 9,
+"op": "LCR",
+"repl": "||"
+},
+{
+"key": "c2-burst-alert__A2__r1",
+"task": "c2-burst-alert",
+"arm": "A2",
+"i": 7,
+"file": "src/alert.js",
+"line": 3,
+"op": "CRP",
+"repl": "60001"
+},
+{
+"key": "c2-burst-alert__A2__r1",
+"task": "c2-burst-alert",
+"arm": "A2",
+"i": 11,
+"file": "src/alert.js",
+"line": 24,
+"op": "ROR",
+"repl": "<"
+},
+{
+"key": "c5-tickets-api__A2__r1",
+"task": "c5-tickets-api",
+"arm": "A2",
+"i": 6,
+"file": "src/handler.js",
+"line": 42,
+"op": "ROR",
+"repl": ">="
+},
+{
+"key": "c5-tickets-api__A2__r1",
+"task": "c5-tickets-api",
+"arm": "A2",
+"i": 9,
+"file": "src/handler.js",
+"line": 83,
+"op": "CRP",
+"repl": "405"
+},
+{
+"key": "c1-iis-ecs__A2__r1",
+"task": "c1-iis-ecs",
+"arm": "A2",
+"i": 0,
+"file": "src/iis.js",
+"line": 49,
+"op": "AOR",
+"repl": "/"
+},
+{
+"key": "c1-iis-ecs__A2__r1",
+"task": "c1-iis-ecs",
+"arm": "A2",
+"i": 1,
+"file": "src/iis.js",
+"line": 50,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "c1-iis-ecs__A2__r1",
+"task": "c1-iis-ecs",
+"arm": "A2",
+"i": 7,
+"file": "src/iis.js",
+"line": 47,
+"op": "COND",
+"repl": "!(f === 'time-taken')"
+},
+{
+"key": "c5-tickets-api__A2__r2",
+"task": "c5-tickets-api",
+"arm": "A2",
+"i": 0,
+"file": "src/handler.js",
+"line": 60,
+"op": "COND",
+"repl": "!(a === 'none')"
+},
+{
+"key": "c5-tickets-api__A2__r2",
+"task": "c5-tickets-api",
+"arm": "A2",
+"i": 7,
+"file": "src/handler.js",
+"line": 44,
+"op": "CRP",
+"repl": "2"
+},
+{
+"key": "c2-burst-alert__A2__r2",
+"task": "c2-burst-alert",
+"arm": "A2",
+"i": 2,
+"file": "src/alert.js",
+"line": 8,
+"op": "LCR",
+"repl": "&&"
+},
+{
+"key": "c2-burst-alert__A2__r2",
+"task": "c2-burst-alert",
+"arm": "A2",
+"i": 6,
+"file": "src/alert.js",
+"line": 6,
+"op": "CRP",
+"repl": "600"
+},
+{
+"key": "c2-burst-alert__A2__r2",
+"task": "c2-burst-alert",
+"arm": "A2",
+"i": 7,
+"file": "src/alert.js",
+"line": 23,
+"op": "LCR",
+"repl": "&&"
+},
+{
+"key": "c3-shop-bugs__A2__r2",
+"task": "c3-shop-bugs",
+"arm": "A2",
+"i": 10,
+"file": "src/cart.js",
+"line": 19,
+"op": "EQ",
+"repl": "!=="
+},
+{
+"key": "t2-orders__B0__r1",
+"task": "t2-orders",
+"arm": "B0",
+"i": 0,
+"file": "src/tax.js",
+"line": 3,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "t2-orders__B0__r1",
+"task": "t2-orders",
+"arm": "B0",
+"i": 6,
+"file": "src/money.js",
+"line": 14,
+"op": "CRP",
+"repl": "101"
+},
+{
+"key": "t2-orders__B0__r1",
+"task": "t2-orders",
+"arm": "B0",
+"i": 9,
+"file": "src/checkout.js",
+"line": 36,
+"op": "COND",
+"repl": "!(promo.type === 'category')"
+},
+{
+"key": "t3-api__A0-sonnet__r2",
+"task": "t3-api",
+"arm": "A0-sonnet",
+"i": 8,
+"file": "src/handlers/tasks.js",
+"line": 119,
+"op": "ROR",
+"repl": "<="
+},
+{
+"key": "t3-api__A0-sonnet__r2",
+"task": "t3-api",
+"arm": "A0-sonnet",
+"i": 11,
+"file": "src/handlers/tasks.js",
+"line": 119,
+"op": "COND",
+"repl": "!(a.createdAt > b.createdAt)"
+},
+{
+"key": "t3-api__A0-sonnet__r3",
+"task": "t3-api",
+"arm": "A0-sonnet",
+"i": 1,
+"file": "src/query.js",
+"line": 77,
+"op": "EQ",
+"repl": "=="
+},
+{
+"key": "t3-api__A0-sonnet__r3",
+"task": "t3-api",
+"arm": "A0-sonnet",
+"i": 10,
+"file": "src/handlers/tasks.js",
+"line": 14,
+"op": "CRP",
+"repl": "2"
+},
+{
+"key": "t3-api__B7__r1",
+"task": "t3-api",
+"arm": "B7",
+"i": 9,
+"file": "src/query.js",
+"line": 99,
+"op": "ROR",
+"repl": "<="
+},
+{
+"key": "t3-api__A0-sonnet__r4",
+"task": "t3-api",
+"arm": "A0-sonnet",
+"i": 11,
+"file": "src/handlers/tasks.js",
+"line": 107,
+"op": "COND",
+"repl": "!(an || bn)"
+},
+{
+"key": "t3-api__B7__r4",
+"task": "t3-api",
+"arm": "B7",
+"i": 4,
+"file": "src/query.js",
+"line": 87,
+"op": "ROR",
+"repl": "<="
+},
+{
+"key": "t3-api__B7__r4",
+"task": "t3-api",
+"arm": "B7",
+"i": 11,
+"file": "src/query.js",
+"line": 87,
+"op": "COND",
+"repl": "!(a.dueDate < b.dueDate)"
+},
+{
+"key": "t3-api__A0-sonnet__r5",
+"task": "t3-api",
+"arm": "A0-sonnet",
+"i": 5,
+"file": "src/server.js",
+"line": 24,
+"op": "CRP",
+"repl": "406"
+},
+{
+"key": "t3-api__B7__r6",
+"task": "t3-api",
+"arm": "B7",
+"i": 9,
+"file": "src/query.js",
+"line": 84,
+"op": "COND",
+"repl": "!(a.createdAt < b.createdAt)"
+},
+{
+"key": "t3-api__B7__r6",
+"task": "t3-api",
+"arm": "B7",
+"i": 11,
+"file": "src/query.js",
+"line": 77,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "t3-api__A0-sonnet__r6",
+"task": "t3-api",
+"arm": "A0-sonnet",
+"i": 8,
+"file": "src/handlers/tasks.js",
+"line": 25,
+"op": "UOI",
+"repl": ""
+},
+{
+"key": "t3-api__A0-sonnet__r7",
+"task": "t3-api",
+"arm": "A0-sonnet",
+"i": 5,
+"file": "src/handlers/tasks.js",
+"line": 69,
+"op": "CRP",
+"repl": "3"
+},
+{
+"key": "t3-api__B7__r7",
+"task": "t3-api",
+"arm": "B7",
+"i": 1,
+"file": "src/query.js",
+"line": 103,
+"op": "CRP",
+"repl": "1"
+},
+{
+"key": "t3-api__B7__r7",
+"task": "t3-api",
+"arm": "B7",
+"i": 11,
+"file": "src/query.js",
+"line": 82,
+"op": "ROR",
+"repl": ">"
+},
+{
+"key": "t3-api__B7__r8",
+"task": "t3-api",
+"arm": "B7",
+"i": 2,
+"file": "src/handlers/tasks.js",
+"line": 174,
+"op": "CRP",
+"repl": "3"
+},
+{
+"key": "t3-api__A0-sonnet__r9",
+"task": "t3-api",
+"arm": "A0-sonnet",
+"i": 8,
+"file": "src/handlers/tasks.js",
+"line": 17,
+"op": "UOI",
+"repl": ""
+},
+{
+"key": "t3-api__B6__r8",
+"task": "t3-api",
+"arm": "B6",
+"i": 3,
+"file": "src/query.js",
+"line": 112,
+"op": "COND",
+"repl": "!(a.dueDate > b.dueDate)"
+},
+{
+"key": "t3-api__B6__r9",
+"task": "t3-api",
+"arm": "B6",
+"i": 4,
+"file": "src/handlers/tasks.js",
+"line": 16,
+"op": "CRP",
+"repl": "401"
+}
+]

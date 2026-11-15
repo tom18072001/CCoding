@@ -1,0 +1,22 @@
+Cả 4 tính năng trong `FEATURES.md` đã xong và `npm test` xanh (6/6 test). Tôi chưa chạy `npm start` rồi gọi API thật; các test đều chạy qua HTTP bằng server khởi tạo từ `createServer`.
+
+Phần code nằm trong `src/handlers/tasks.js` và `src/store.js`:
+
+- **Xác thực và phân quyền:**
+  - Header `X-User` thiếu hoặc sai trả 401.
+  - Admin, manager và member bị giới hạn đúng như đặc tả.
+  - Với member, nhiệm vụ nhóm khác trả 404 (không lộ sự tồn tại).
+  - Thứ tự kiểm tra: xác thực, tham số truy vấn, 404, 403, rồi validate body.
+- **Danh sách:** `GET /tasks` giờ trả `{items, total, page, pageSize}`, có lọc, tìm kiếm không phân biệt dấu, sắp xếp và phân trang. Tham số lạ, trùng, hoặc sai giá trị trả `INVALID_QUERY` với tên tham số đầu tiên theo thứ tự trên URL.
+- **Xuất CSV:** `GET /tasks/export.csv` dùng cùng bộ lọc và quyền, nhưng `page`/`pageSize` bị 400. File có BOM, xuống dòng `\r\n`, quote theo RFC 4180 và thêm `'` để chống chèn công thức.
+- **Nhật ký:** mỗi `POST`/`PATCH`/`DELETE` thành công ghi một mục vào nhật ký. `GET /audit` chỉ admin dùng được, mới nhất trước, và nhận tham số `taskId`.
+
+Trong `test/tasks.test.js`, tôi sửa hai test cũ cho hợp dạng kết quả mới (thêm header `X-User` và dùng `total`). Tôi thêm bốn test mới cho từng tính năng.
+
+Vài chỗ đặc tả chưa nói rõ, tôi chọn như sau:
+- **JSON hỏng:** với `PATCH`, body JSON hỏng trả 400 trước các kiểm tra 403 phụ thuộc nội dung body. Member sửa nhiệm vụ không giao cho mình vẫn bị 403 trước khi đọc body.
+- **Manager chưa có `team`:** manager `POST` mà thiếu `team` thì rơi vào validate (400), không phải 403.
+- **`assignee=` rỗng:** coi là lọc theo id rỗng, nên kết quả rỗng thay vì lỗi.
+- **Chưa xác thực:** các route không tồn tại hoặc sai phương thức (404/405) vẫn trả lỗi đó trước khi kiểm tra xác thực.
+
+Khi test BOM, `fetch().text()` tự bỏ BOM, nên test đọc byte thô để kiểm tra ba byte đầu.

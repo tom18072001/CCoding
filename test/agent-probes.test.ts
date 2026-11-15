@@ -6,11 +6,22 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import type { AddressInfo } from 'node:net';
+import { closeServer } from './helpers.js';
 
-// Bộ probe chạy bằng dist/ (npm run build). Chưa build thì bỏ qua — không đoán.
+// Bộ probe chạy bằng dist/ (npm run build). Chưa build thì tự build; chỉ bỏ qua khi build thất bại.
 const ROOT = path.resolve(import.meta.dirname, '..');
 const PROBE = path.join(ROOT, 'bench', 'agent-probes', 'probe.mjs');
-const built = fs.existsSync(path.join(ROOT, 'dist', 'kpi.js'));
+const KPI_JS = path.join(ROOT, 'dist', 'kpi.js');
+
+/** Không phụ thuộc trạng thái build ngẫu nhiên: chưa có dist/ thì tự build một lần (tsc), chỉ bỏ qua khi build thất bại. */
+function ensureBuilt(): string | false {
+  if (fs.existsSync(KPI_JS)) return false;
+  const tsc = path.join(ROOT, 'node_modules', 'typescript', 'bin', 'tsc');
+  const r = spawnSync(process.execPath, [tsc, '-p', 'tsconfig.json'], { cwd: ROOT, encoding: 'utf8', timeout: 300_000 });
+  if (fs.existsSync(KPI_JS)) return false;
+  return `mọi nền tảng: thiếu dist/kpi.js và tự build thất bại (exit ${r.status}); chạy npm run build rồi thử lại`;
+}
+const skipReason = ensureBuilt();
 
 /** Chạy probe.mjs bất đồng bộ (máy chủ giả chạy trong cùng tiến trình test nên không dùng spawnSync). */
 function runProbe(args: string[], env: Record<string, string>): Promise<{ code: number | null; out: string }> {
@@ -23,14 +34,14 @@ function runProbe(args: string[], env: Record<string, string>): Promise<{ code: 
   });
 }
 
-test('probe --self-test: đáp án mẫu 1.00; rác, chép đề và câu trả lời đối kháng (gian lận bộ chấm, báo nhầm mồi nhử, đọc khóa) bị chấm thấp', { skip: !built && 'chưa build dist/' }, () => {
+test('probe --self-test: đáp án mẫu 1.00; rác, chép đề và câu trả lời đối kháng (gian lận bộ chấm, báo nhầm mồi nhử, đọc khóa) bị chấm thấp', { skip: skipReason ? 'thiếu dist/kpi.js và tự build thất bại — chạy npm run build' : false }, () => {
   const r = spawnSync(process.execPath, [PROBE, '--self-test'], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, PROBE_API_KEY: 'sk-probe-selftest-777' }, timeout: 120_000 });
   assert.equal(r.status, 0, r.stdout + r.stderr);
   assert.match(r.stdout, /(\d+)\/\1 cặp agent × probe/);
   assert.match(r.stdout, /(\d+)\/\1 câu trả lời đối kháng/);
 });
 
-test('probe: API gốc Ollama đặt num_ctx, kết quả chỉ ghi trong data/ đã che PII/bí mật, lỗi hạ tầng không tính điểm và được chạy lại', { skip: !built && 'chưa build dist/' }, async () => {
+test('probe: API gốc Ollama đặt num_ctx, kết quả chỉ ghi trong data/ đã che PII/bí mật, lỗi hạ tầng không tính điểm và được chạy lại', { skip: skipReason ? 'thiếu dist/kpi.js và tự build thất bại — chạy npm run build' : false }, async () => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccoding-probe-'));
   const bodies: Array<Record<string, any>> = [];
   let fail = true;
@@ -84,7 +95,7 @@ test('probe: API gốc Ollama đặt num_ctx, kết quả chỉ ghi trong data/ 
     assert.equal(bad.code, 2);
     assert.match(bad.out, /không ghi dữ liệu ra ngoài data/);
   } finally {
-    srv.close();
+    await closeServer(srv);
     fs.rmSync(dataDir, { recursive: true, force: true });
   }
 });

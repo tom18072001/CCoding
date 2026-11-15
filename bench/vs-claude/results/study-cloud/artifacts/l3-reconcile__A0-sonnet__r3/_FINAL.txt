@@ -1,0 +1,12 @@
+October 2026 net revenue is 97,306,916 VND. I wrote `answer.json` and `NOTES.md` in the repository root.
+
+```json
+{"net_revenue_vnd": 97306916, "paid_count": 32, "refund_count": 2, "duplicate_rows_ignored": 5}
+```
+
+- **Duplicates:** 5 extra rows were exact copies of earlier rows, so each `txn_id` counts once.
+- **Month boundary:** I converted `created_at` to UTC+7 before checking for October, so a row's month can differ from its UTC date.
+- **Refunds:** Only 2 refunds fall in October. The refunds dated 1, 4 and 10 November are excluded.
+- **Rounding:** The exact sum came out as a whole number of dong, so the half-up rounding changed nothing.
+
+`NOTES.md` has the short method write-up.

@@ -1,0 +1,6 @@
+`detectBursts` is now implemented in `src/alert.js`, and `npm test` passes. The visible suite is only one test, and I didn't write any extra tests of my own.
+
+It follows the brief:
+- **Window and counting:** each host's 5xx events are sorted by `ts` with a stable sort, so equal timestamps keep input order. Each event is counted against the half-open window `(ts - windowMs, ts]`.
+- **Cooldown:** an alert is suppressed while `ts < lastAlert + cooldownMs`. Suppressed events still count toward later windows.
+- **Output:** alerts are sorted by `ts`, then by `host` with plain string comparison. The input array isn't mutated.

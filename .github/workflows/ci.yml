@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
 
 jobs:
@@ -13,12 +13,49 @@ jobs:
         os: [ubuntu-latest, windows-latest]
         node: [22, 24]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
+      - name: Tính mốc LINT_BASE
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_REF: ${{ github.base_ref }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          set -eu
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="origin/$PR_BASE_REF"
+          elif printf '%s' "$PUSH_BEFORE" | grep -Eq '^0+$'; then
+            # nhánh mới: before toàn số 0
+            base="$(git merge-base origin/main HEAD)"
+          else
+            base="$PUSH_BEFORE"
+          fi
+          if [ -z "$base" ] || ! git rev-parse --verify --quiet "$base^{commit}" >/dev/null; then
+            echo "Không tính được mốc LINT_BASE (base='$base')" >&2
+            exit 1
+          fi
+          echo "LINT_BASE=$base" >> "$GITHUB_ENV"
+          echo "LINT_BASE=$base"
       - run: npm run typecheck
+      - run: npm run lint
       - run: npm test
+      - run: npm run test:bench
+      - run: npm run test:research
+      - name: Cây làm việc phải sạch
+        shell: bash
+        run: |
+          status="$(git status --porcelain)"
+          if [ -n "$status" ]; then
+            echo "Cây làm việc không sạch sau khi chạy CI:" >&2
+            echo "$status" >&2
+            exit 1
+          fi

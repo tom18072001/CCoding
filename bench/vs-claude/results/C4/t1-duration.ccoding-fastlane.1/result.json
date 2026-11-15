@@ -1,0 +1,66 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261102-103531-c98",
+  "wallSec": 170,
+  "wallSecHarness": 182,
+  "costUsd": 0.8079622999999999,
+  "tokens": {
+   "input": 36,
+   "output": 37459,
+   "cacheRead": 484668,
+   "cacheWrite": 95107
+  },
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "Hiện thực parseDuration + re-export"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "Hiện thực formatDuration"
+   },
+   {
+    "id": "S3",
+    "status": "done",
+    "title": "Bộ test biên độc lập từ SPEC (round-trip + lỗi)"
+   }
+  ],
+  "workdir": "/home/claude/ccoding-dev/workspaces/b-c4-t1-fastla-1/wt-T-20261102-103531-c98",
+  "branch": "ccoding/t-20261102-103531-c98"
+ },
+ "task": "t1-duration",
+ "system": "ccoding-fastlane",
+ "rep": 1,
+ "key": "t1-duration.ccoding-fastlane.1",
+ "env": "cloud",
+ "startedAt": "2026-11-02T03:35:31.050Z",
+ "finishedAt": "2026-11-02T03:38:33.833Z",
+ "grade": {
+  "hidden": {
+   "pass": 149,
+   "fail": 0,
+   "total": 149,
+   "failed": [],
+   "ms": 197,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 34,
+   "fail": 0,
+   "total": 34
+  },
+  "changed": [
+   "~src/duration.js",
+   "+src/format.js",
+   "+src/parse.js",
+   "+test/format.test.js",
+   "+test/parse.test.js",
+   "+test/spec-edge.test.js"
+  ]
+ },
+ "audit": []
+}

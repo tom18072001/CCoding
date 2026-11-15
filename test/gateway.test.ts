@@ -6,6 +6,7 @@ import { gatewayHeaders, resolveSecret } from '../src/runtimes/api.js';
 import { RuntimeManager } from '../src/runtimes/index.js';
 import { loadConfig } from '../src/config.js';
 import { parseAgent } from '../src/registry.js';
+import { closeServer } from './helpers.js';
 
 const agent = parseAgent('data-engineer.md', '---\nid: data-engineer\nname: Data Engineer\ndepartment: dev\nrole: member\n---\nbody');
 const meta = { taskId: 'T-20261026-210000-abc', department: 'dev', projectId: 'elk-iis', subtaskId: 'S2', callId: 'T-20261026-210000-abc-7' };
@@ -78,7 +79,7 @@ test('runtime tùy biến "bifrost" gọi API tương thích OpenAI, gửi heade
     assert.equal(rm.allowed('bifrost', 'confidential'), false);
     assert.equal(rm.allowed('ollama', 'confidential'), true);
   } finally {
-    srv.close();
+    await closeServer(srv);
   }
 });
 

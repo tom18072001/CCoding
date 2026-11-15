@@ -1,0 +1,9 @@
+I wrote `answer.json` and `REVIEW.md` at the repository root. `answer.json` parses as valid JSON, and `REVIEW.md` is 489 words including headings.
+
+**Answers**
+- **q1:** P4 (LogGraphT) has the highest F1 on the full HDFS-X split, at 0.962. P3 has 0.948 and P1 has 0.931. P2's 0.971 is on HDFS-X-small, which P6 says is not comparable, so I left it out.
+- **q2:** P5 reports results with 0.5% labeled data, on BGL-X.
+- **q3:** The corpus has no energy figure for LogGraphT, so `not_in_corpus` is true. P4 gives only inference latency, 3.1 ms per session on one A100, and no training cost.
+- **q4:** P1 and P3 disagree. P1 says template parsing is necessary, and P3 says it is optional.
+
+`REVIEW.md` cites all six papers. In the self-review I removed two claims the summaries don't support: that the papers used different training setups, and that P1's ablation missed P3's evolving-log case.

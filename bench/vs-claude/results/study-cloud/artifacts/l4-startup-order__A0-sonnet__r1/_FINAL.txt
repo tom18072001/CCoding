@@ -1,0 +1,7 @@
+I wrote `answer.json` in the repository root.
+
+- **Startup order:** 18 services can start, beginning with `cache`, `db-catalog`, `db-orders` and `db-users`, and ending with `templates` and `notifier`. At each step I picked the alphabetically smallest service whose dependencies had all started.
+- **Cycle members:** `etl`, `reporting` and `warehouse` form a dependency cycle (`reporting` needs `warehouse`, which needs `etl`, which needs `reporting`).
+- **Blocked:** those same three can never start, and neither can `admin-ui`, because it depends on `reporting`.
+
+I generated the file with a throwaway script at `/tmp/s.py`, outside the repository.

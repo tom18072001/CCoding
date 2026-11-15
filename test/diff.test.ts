@@ -7,7 +7,7 @@ import path from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { DiffError, diffSummary, fileDiff, locate } from '../src/diff.js';
 import { createServer } from '../src/server.js';
-import { testApp } from './helpers.js';
+import { closeServer, testApp } from './helpers.js';
 
 // Diff thay đổi của nhiệm vụ cho giao diện: worktree (gồm phần chưa commit, tệp mới), nhánh (worktree đã gỡ), từng commit gộp hạng mục.
 
@@ -136,7 +136,7 @@ test('API diff và lọc nhật ký theo hạng mục', async () => {
   const srv0 = createServer(app);
   await new Promise<void>((r) => srv0.listen(0, '127.0.0.1', r));
   const port = (srv0.address() as AddressInfo).port;
-  srv0.close();
+  await closeServer(srv0);
   app.config.server.port = port;
   const srv = createServer(app);
   await new Promise<void>((r) => srv.listen(port, '127.0.0.1', r));
@@ -167,7 +167,7 @@ test('API diff và lọc nhật ký theo hạng mục', async () => {
     const ev = (await (await get('/api/tasks/T-DIFF/events?kind=tool.call&subtask=S1')).json()) as Array<{ msg: string }>;
     assert.deepEqual(ev.map((e) => e.msg), ['a']);
   } finally {
-    srv.close();
+    await closeServer(srv);
     app.cleanup();
     fs.rmSync(f.root, { recursive: true, force: true });
   }

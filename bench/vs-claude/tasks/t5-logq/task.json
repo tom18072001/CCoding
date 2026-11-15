@@ -1,0 +1,18 @@
+{
+  "id": "t5-logq",
+  "category": "coding",
+  "size": 4,
+  "sizeBasis": "files: bin/logq.js, src/agg.js, parse.js, query.js",
+  "sizeLegacy": 4,
+  "sizeReason": "Bốn phần theo SPEC.md: parseLine, compile (truy vấn), aggregate và CLI bin/logq.js",
+  "title": "Xây công cụ logq (thư viện + CLI) theo đặc tả",
+  "hypotheses": [
+    "H1",
+    "H10"
+  ],
+  "deliverable": "src/, bin/logq.js",
+  "brief": "Xây dựng công cụ logq theo đúng đặc tả trong SPEC.md: thư viện (src/parse.js, src/query.js, src/agg.js) và CLI bin/logq.js. Đặc tả có nhiều quy tắc chi tiết (cú pháp truy vấn, vị trí lỗi, thứ tự bucket, mã thoát CLI) — bộ nghiệm thu ẩn kiểm tra từng quy tắc qua API và qua CLI thật. Viết test cho các module, đảm bảo `npm test` xanh. Không thêm thư viện ngoài.",
+  "grader": "code",
+  "repoDir": "starter",
+  "solutionDir": "ref"
+}

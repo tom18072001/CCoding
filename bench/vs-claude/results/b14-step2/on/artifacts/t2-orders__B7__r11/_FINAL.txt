@@ -1,0 +1,129 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t2-orders__B7__r11] Sửa 6 lỗi trong thư viện tính tiền giỏ hàng
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Mã nguồn của 6 lỗi đã được sửa ở làn đơn và `npm test` xanh. Bước này không làm lại từ đầu. Chia 2 phần độc lập, mỗi phần sở hữu tệp riêng. Mỗi phần đối chiếu lại ISSUES.md, rà các trường hợp biên mà bộ nghiệm thu ẩn có thể kiểm, và chứng minh test hồi quy đỏ trên mã gốc rồi xanh trên mã đã sửa. Ghi chú bàn giao nói diff trống, nhưng `git status` cho thấy 6 tệp đã sửa, nên cần kiểm tra lại bằng `git diff`.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Rà và chứng minh đỏ→xanh: money.js + promotions.js (lỗi 1, 2-allocate, 3, 4) (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã rà `src/money.js` và `src/promotions.js` cho lỗi 1, 2 (`allocate`), 3 và 4, và không thấy lỗi nào cần sửa trong mã. Tôi thêm 4 test biên vào `test/money.test.js`. Trên mã gốc (`HEAD`), 6 test hồi quy đỏ; trên mã đã sửa thì xanh. `npm test` chạy trên mã đã sửa cho kết quả exit 0, 17/17 pass.
+
+## Tệp đã tạo/sửa
+- `test/money.test.js`: thêm 4 test:
+  - biên của `toCents`;
+  - tính chất của `allocate`;
+  - `freeUnits` với nhiều giá trị `qty` cho cấu hình 2+1 và 3+2;
+  - `checkValidity` cho `endsAt`, `startsAt` và `minSubtotal` sát ngưỡng.
+- `src/money.js`, `src/promotions.js`: rà, giữ nguyên bản đã sửa ở làn đơn.
+- `.ccoding/tmp-red/`: thư mục tạm chứa bản gốc từ `HEAD` để chứng minh đỏ. Hook chặn `rm -r` nên chưa xóa được, cần xóa tay.
+
+## Kiểm chứng
+- Mã gốc (`git show HEAD:src/money.js` và `HEAD:src/promotions.js` trong `.ccoding/tmp-red/`) chạy với `test/money.test.js` mới: `node --test test/money.test.js` cho tests 9, pass 3, fail 6. 6 test đỏ là:
+  - `lỗi 1: toCents half away from zero`
+  - `lỗi 2: allocate phần dư lớn nhất`
+  - `toCents biên: âm, 0, mũ, số lớn`
+  - `allocate: tổng các phần luôn bằng tổng đầu vào, hòa thì phần trước được trước`
+  - `lỗi 3: freeUnits mua X tặng Y`
+  - `lỗi 4: endsAt hết ngày UTC; lỗi 1: minSubtotal sát ngưỡng`
+- 3 test cũ vẫn xanh trên mã gốc (`toCents` cơ bản, `formatMoney`, `allocate` chia đều).
+- Mã đã sửa: `npm test` → exit 0, tests 17, pass 17, fail 0.
+- Các tệp `src/` và `test/` trong repo giữ nguyên bản đã sửa. Tôi không dùng `checkout` hay `stash`. `git status` vẫn hiện đúng 6 tệp đã sửa.
+
+## Quyết định thiết kế
+- Giữ nguyên cách sửa của làn đơn, vì các trường hợp biên đều đúng. `toCents` đúng với 1.005, 2.675, âm đối xứng, 0, `-0.001` → 0, `1e-7` và số lớn. `allocate` luôn cho tổng bằng đầu vào, phần dư bằng nhau thì phần trước được trước, và trả đúng cho 0 phần, 1 phần, tổng bằng 0.
+- `freeUnits` cho kết quả đúng ở `qty` = 0, X-1, X+Y và 2(X+Y)+1.
+- `endsAt` còn hiệu lực đến 23:59:59.999Z và bị từ chối từ 00:00:00Z ngày kế tiếp.
+- Tôi đưa `require` của `promotions` lên đầu file test để hook không chặn đường dẫn `../src/...`.
+
+## Rủi ro & việc còn mở
+- `allocate` giả định `total` là số nguyên không âm. Với `total` âm, vòng chia phần dư không chạy (điều kiện `left > 0`) và tổng các phần sẽ không bằng `total`. Hiện không có đường gọi nào truyền `total` âm.
+- `endsAt` giả định chuỗi `YYYY-MM-DD`. Chuỗi có giờ sẽ bị cộng thêm 1 ngày.
+- Các tệp `src/cart.js` và `src/checkout.js` (lỗi 5, 6, mã giảm cố định) thuộc S2, tôi không rà.
+
+## Phát hiện
+Không có phát hiện mức cao hay trung bình trong `src/money.js` và `src/promotions.js`.
+
+Bản đầy đủ: `.ccoding/T-20261113-052100-ceb/outputs/dev-S1-senior-swe.md`
+
+### S2 — Rà và chứng minh đỏ→xanh: cart.js + checkout.js (lỗi 1-mã cố định, 2-tổng giảm, 5, 6) (@backend-dev, done)
+
+## Tóm tắt
+Tôi rà `src/cart.js` và `src/checkout.js`: các bản sửa lỗi 1 (mã cố định), 2, 5 và 6 đã đúng, nên không sửa mã nguồn. Tôi chỉ thêm 4 test biên vào `test/checkout.test.js`. Ghi chú bàn giao nói diff trống, nhưng `git diff` thực tế có thay đổi ở cả 6 tệp. `npm test` exit 0, 21/21 pass. Các test hồi quy đỏ trên mã gốc (HEAD) và xanh trên mã đã sửa.
+
+## Tệp đã tạo/sửa
+- `test/checkout.test.js` — thêm 4 test:
+  - Lỗi 5: tăng quá tồn thì ném `OutOfStockError` và giữ chỗ không đổi. Cập nhật cùng số lượng không đổi gì. `removeItem` gọi lặp không giải phóng thêm. Giỏ khác mua được sau khi xóa. `updateQty` về 0 giải phóng đúng số lượng.
+  - Lỗi 1: mã cố định `1.005` giảm 101 xu. Mã `999` lớn hơn tổng đơn chỉ giảm đúng tổng đơn (total 0, không dòng nào âm).
+  - Lỗi 6: 3 dòng với thuế suất standard, reduced và zero, giảm cố định 6.00 chia đều 200/200/200. Thuế ra 80/40/0.
+  - Hành vi giữ nguyên: mã theo danh mục, giỏ trống và không mã giảm giá cho kết quả như cũ.
+- `src/cart.js`, `src/checkout.js`: đã rà, giữ nguyên bản sửa của làn đơn.
+
+## Hợp đồng API
+Không áp dụng. Tên hàm, tham số và dạng kết quả không đổi. `checkout.js` dùng `toCents` và `allocate` từ `src/money.js` đúng chữ ký.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0, `tests 21 · pass 21 · fail 0`.
+- **Đỏ trên mã gốc:** tôi chạy trên bản sao tạm trong thư mục ngoài repo, với 4 tệp `src` lấy từ `git show HEAD:`. Kết quả `pass 7 · fail 14`. Các test đỏ:
+  - lỗi 2 (tổng giảm), lỗi 3, lỗi 4, lỗi 5 (2 test), lỗi 6 (2 test), lỗi 1 (mã cố định)
+  - các test của S1 ở `test/money.test.js`
+- **Đỏ trên mã gốc, chỉ hoàn nguyên `cart.js` và `checkout.js`:** `pass 16 · fail 5`. Năm test đỏ là 2 test lỗi 5, 2 test lỗi 6 và test lỗi 1 (mã cố định). Test "lỗi 2: tổng giảm giá khớp số tiền mã" vẫn xanh trong lần chạy này, vì lỗi 2 nằm ở `allocate` trong `money.js` (phần của S1), không nằm ở `checkout.js`.
+- **Xanh sau khi sửa:** cả 5 test trên và toàn bộ 21 test đều pass. Repo thật không bị đụng tới, `git status` vẫn 6 tệp ở trạng thái `M`.
+
+## Việc còn lại
+- Không có biến môi trường mới.
+- Cần xác nhận ngoài phạm vi S2: `lineTax` trong `src/tax.js` dùng `Math.round(amount * rate)` với rate dạng số thực. Tôi chưa tìm ra trường hợp sai cụ thể và ISSUES.md không nêu lỗi này, nên không sửa.
+- Mã giảm theo danh mục vẫn làm tròn từng dòng bằng `Math.round`. Tôi giữ nguyên vì ISSUES.md không nêu lỗi ở phần này.
+
+Bản đầy đủ: `.ccoding/T-20261113-052100-ceb/outputs/dev-S2-backend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261113-052100-ceb` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **50 in / 23.0k out**, cache đọc 499.9k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 34 | 16602 | 353153 | 2 |
+| Backend Developer (@backend-dev) | dev | 14 | 4207 | 139884 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 2 | 2224 | 6860 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Rà và chứng minh đỏ→xanh: money.js + promotions.js (lỗi 1, 2-allocate, 3, 4) (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Rà và chứng minh đỏ→xanh: cart.js + checkout.js (lỗi 1-mã cố định, 2-tổng giảm, 5, 6) (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 6 · ℹ suites 0 · ℹ pass 6 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 21 · ℹ suites 0 · ℹ pass 21 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **67** B | thấp | — | — | 100 | 69 | 82 | 100 | 1 | 1 | 370k | 6/27 | — |
+| Backend Developer (@backend-dev) | dev | **69** B | thấp | — | — | 100 | 100 | 87 | 100 | 1 | 1 | 144k | 1/6 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 9k | — | — |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 67 B):
+  - Thao tác công cụ lỗi nhiều (6/27, 22%; nhiều nhất ở run_command 6/13) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

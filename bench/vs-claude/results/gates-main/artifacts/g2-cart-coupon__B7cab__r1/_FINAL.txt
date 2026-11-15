@@ -1,0 +1,81 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g2-cart-coupon__B7cab__r1] Tổng giỏ hàng theo xu và áp mã giảm giá (lệnh kiểm tra đỏ sẵn)
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Mã nguồn đã đủ theo SPEC.md: `applyCoupon` có trong `src/cart.js`, và `toCents` đã sửa từ floor sang round. Tôi chỉ đọc SPEC và mã, chưa chạy `npm test`; bàn giao trước ghi 6/6 pass. Tôi chỉ giao một hạng mục độc lập để xử lý các trường hợp biên mà bộ nghiệm thu ẩn có thể kiểm tra, trên tệp riêng.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Rà trường hợp biên của applyCoupon/toCents và bổ sung test riêng (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã thêm `test/edge.test.js` với 10 test cho các biên của `applyCoupon`, `total` và `toCents`. `npm test` chạy xanh, 16/16 pass. Tôi không sửa `src/cart.js` và `src/money.js` vì mã hiện tại đã đúng SPEC ở mọi biên được liệt kê.
+
+## Tệp đã tạo/sửa
+- `test/edge.test.js` (mới). Gồm các nhóm sau:
+  - percent 0 và 100.
+  - Làm tròn nửa lên: total=1 percent=50 ra 1, total=3 percent=50 ra 2.
+  - fixed lớn hơn total, fixed bằng total và fixed=0.
+  - fixed âm hoặc không nguyên, percent -1 và 100.01 → `RangeError`.
+  - coupon null, undefined, chuỗi, số, thiếu type, value là chuỗi/NaN/Infinity, type lạ → `RangeError`.
+  - totalCents âm, không nguyên, NaN, Infinity, chuỗi, null, undefined → `RangeError`.
+  - `total([])` ra 0.
+  - toCents(0) ra 0, toCents(-1/NaN/±Infinity) → `RangeError`.
+  - toCents 19.99, 0.29, 0.57, 1.1.
+- `src/cart.js`, `src/money.js`, `test/cart.test.js`: không đổi trong lượt này.
+
+## Kiểm chứng
+- `npm test` → exit 0, 16 test pass, 0 fail (6 test cũ và 10 test mới).
+- Baseline đỏ đã có từ trước, tôi không đo lại.
+
+## Quyết định thiết kế
+- Không đổi `toCents` sang cách làm tròn theo chuỗi thập phân. SPEC chỉ nói "làm tròn gần nhất", và `Math.round(x*100)` đúng với 19.99, 0.29, 0.57, 1.1.
+- Tôi không đưa 1.005 vào test. `1.005*100` ra 100.4999… nên `toCents(1.005)` trả 100, trong khi giá trị thập phân đúng sẽ làm tròn thành 101. SPEC không quy định trường hợp này nên tôi không ghim hành vi nào.
+- Tôi chưa chạy `toCents(1.005)` để xác nhận. Giá trị 100 ở trên là suy ra từ độ chính xác float, không phải kết quả chạy thật.
+
+## Rủi ro & việc còn mở
+- Nếu bộ nghiệm thu ẩn kiểm tra `toCents(1.005) === 101`, mã hiện tại sẽ trượt. Cách sửa là làm tròn theo biểu diễn thập phân, ví dụ `Math.round(Number(x + 'e2'))`, nhưng cần xử lý số có dạng mũ như 1e-7. Tôi chưa áp dụng vì SPEC không đòi hỏi và đó là suy đoán về bộ ẩn.
+
+Bản đầy đủ: `.ccoding/T-20261104-170928-67e/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-170928-67e` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **18 in / 8,027 out**, cache đọc 107.5k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 14 | 7052 | 85823 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 975 | 21644 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Rà trường hợp biên của applyCoupon/toCents và bổ sung test riêng (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | at Test.run (node:internal/test_runner/test:1175:12) · at Test.run (node:internal/test_runner/test:1118:25) · at Test.processPendingSubtests (node:internal/test |
+| sau thực thi | `npm test` | 0 | ℹ tests 16 · ℹ suites 0 · ℹ pass 16 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **70** B | thấp | — | — | 100 | 100 | 95 | 100 | 1 | 1 | 93k | 1/16 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 23k | 0/1 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

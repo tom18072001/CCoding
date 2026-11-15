@@ -1,0 +1,118 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t1-duration__B6__r9] Duration parse/format theo đặc tả, nhiều trường hợp biên
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Việc nhỏ trong một tệp nguồn. Chia hai hạng mục song song: một người hiện thực src/duration.js, một người viết bộ test biên độc lập từ SPEC.md vào tệp test riêng. CCoding sẽ gộp và chạy npm test.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Hiện thực src/duration.js (parseDuration + formatDuration) (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã hiện thực `src/duration.js` với `parseDuration` và `formatDuration` theo SPEC.md. `npm test` cho kết quả 3/3 pass (exit 0), baseline là 3 fail. Phần số thập phân dùng BigInt để tính chính xác, nên `'1.005s'` ra 1005 và `'1.0015s'` ra 1002. Tôi không thêm test biên nào, vì hạng mục S2 phụ trách phần đó.
+
+## Tệp đã tạo/sửa
+- `src/duration.js`: viết lại toàn bộ (CommonJS, không thêm thư viện, export đúng `{ parseDuration, formatDuration }`).
+
+## Kiểm chứng
+- `npm test` → exit 0, `# pass 3`, `# fail 0` (lần chạy cuối, sau khi sửa lỗi bí danh).
+- `node -e` chạy thử các ví dụ trong SPEC, kết quả đúng:
+  - `'-1h30m'` → −5400000, `'- 5s'` → −5000, `'PT0,5S'` → 500, `'PT1M'` → 60000, `'1m5ms'` → 60005, `'5msec'` → 5, `'1min'` → 60000, `'P2W'` → 1209600000, `'-0.5'` → −1.
+  - Các chuỗi sai (`'1h-30m'`, `'30m1h'`, `'1h 30'`, `'P'`, `'PT'`, `'P1DT'`, `'P1Y'`, `'P1M'`, `'.5'`, `'5.'`, `'1e3'`, `''`, `'1h1h'`, `'P1W1D'`, `'5msecx'`) đều ném `TypeError`.
+  - `formatDuration(6d23h59m31s, {largest:2})` → `'1w'`, `formatDuration(3599500, {largest:1})` → `'1h'`, `formatDuration(-0.4)` → `'0ms'`, bản long ra `'1 hour 30 minutes'` và `'2 weeks 1 day'`.
+  - Round-trip `parseDuration(formatDuration(x)) === parseDuration(x)` đúng với `1e21`, `123456789.5`, `-1.5e15`, `0.5`.
+  - Message lỗi: `p(undefined)` ra `Invalid duration: undefined`, `largest: 1.5` ném `TypeError`.
+
+## Quyết định thiết kế
+- Mỗi thành phần được đọc thành số nguyên BigInt kèm số chữ số thập phân. Các thành phần cộng chính xác rồi làm tròn half-away-from-zero một lần ở cuối.
+- `-0` được đổi thành `0`.
+- `formatDuration` cũng tính bằng BigInt. Làm tròn theo `largest` được làm bằng cách cộng thêm một đơn vị cuối rồi phân rã lại, nên phép nhớ lên đơn vị lớn hơn và việc sinh ra đơn vị mới tự đúng, kể cả với số rất lớn.
+- Số nhập vào dạng `number` thì dùng `Math.round(abs)` kèm dấu.
+
+## Rủi ro & việc còn mở
+- Tôi chưa chạy bộ test biên của S2 (CCoding sẽ gộp và chạy).
+- `parseDuration` coi các khoảng trắng Unicode mà `String.prototype.trim` nhận ra là khoảng trắng đầu/cuối. Nếu bộ nghiệm thu muốn chỉ cho phép khoảng trắng ASCII thì cần chỉnh lại.
+- `options` không phải object (và khác `null`) ném `TypeError`. SPEC không nói rõ trường hợp này.
+
+Bản đầy đủ: `.ccoding/T-20261102-222352-507/outputs/dev-S1-senior-swe.md`
+
+### S2 — Bộ test trường hợp biên theo SPEC (tệp riêng) (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã tạo `test/duration-edge.test.js` với 35 khối `test()`, trong đó có hơn 350 assertion nhỏ. Các kỳ vọng đều tính tay từ SPEC.md. Chạy `node --test test/duration-edge.test.js` với `src/duration.js` hiện có (165 dòng, S1 đã có) cho 35/35 pass.
+
+## Tệp đã tạo/sửa
+- `test/duration-edge.test.js` (mới). Không sửa `src/` hay `test/duration.test.js`.
+- Phủ các nhóm (a) đến (g) theo yêu cầu:
+  - **Parse number, chuỗi, đơn vị, ISO:** gồm làm tròn, `-0`, trim, dấu, số thuần, mọi bí danh đơn vị và các ca lỗi. Message lỗi được kiểm tra chính xác, kể cả trường hợp `undefined`.
+  - **Format:** gồm short/long, số ít/nhiều, số âm, làm tròn, và các `ms`, `style`, `largest` không hợp lệ.
+  - **`largest`:** gồm làm tròn, nhớ lên đơn vị lớn hơn, đơn vị 0 nằm giữa, và `largest` lớn hơn số đơn vị có.
+  - **Round-trip:** 27 giá trị gồm âm và thập phân, cả hai style.
+
+## Hợp đồng API
+Không áp dụng.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `node --test test/duration-edge.test.js` → exit 0, `# tests 35 · # pass 35 · # fail 0`.
+- Tôi chưa chạy `npm test` toàn bộ.
+
+## Việc còn lại
+- **Hai ca trong yêu cầu gốc có kỳ vọng không khớp SPEC, nên tôi đã tính lại:**
+  - "59m30s largest 2 → '1h'" sai với SPEC: largest 2 giữ cả m và s nên ra `59m 30s`. Test dùng `largest: 1` cho kết quả `1h`, và `largest: 2` cho kết quả `59m 30s`.
+  - "1d 0h 0m 40s largest 3" ra `1d 1m`, vì phần còn lại 40s ≥ nửa phút.
+- **Chưa kiểm tra:** SPEC không nói rõ cách xử lý `'+ PT1S'` có khoảng trắng sau dấu. Tôi chỉ giữ `'- PT1S'` = −1000, dựa trên mục 4 (khoảng trắng giữa dấu và phần còn lại). Nếu `@senior-swe` hiểu khác thì xem lại ca này.
+
+Bản đầy đủ: `.ccoding/T-20261102-222352-507/outputs/dev-S2-backend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-222352-507` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **22 in / 24.9k out**, cache đọc 139.9k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | 8 | 14699 | 60028 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 8 | 6815 | 56932 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 2982 | 20715 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 453 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Hiện thực src/duration.js (parseDuration + formatDuration) (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Bộ test trường hợp biên theo SPEC (tệp riêng) (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 3 · # suites 0 · # pass 0 · # fail 3 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 38 · # suites 0 · # pass 38 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | **92** A | — | 93 | 84 | 100 | 1 | 1 | 75k | 1/5 |
+| Senior Software Engineer (@senior-swe) | dev | **90** A | — | 100 | 100 | 60 | 1 | 1 | 64k | 0/3 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 24k | 0/1 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Backend Developer** (@backend-dev, 92 A):
+  - Thao tác công cụ lỗi nhiều (1/5, 20%; nhiều nhất ở run_command 1/3) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+- **Senior Software Engineer** (@senior-swe, 90 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

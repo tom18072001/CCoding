@@ -1,0 +1,292 @@
+TAP version 13
+# Subtest: count
+ok 1 - count
+  ---
+  duration_ms: 1.447601
+  type: 'test'
+  ...
+# Subtest: count by: bỏ thiếu/null, sắp giảm dần, hòa theo chuỗi
+ok 2 - count by: bỏ thiếu/null, sắp giảm dần, hòa theo chuỗi
+  ---
+  duration_ms: 0.395841
+  type: 'test'
+  ...
+# Subtest: count by giữ kiểu số
+ok 3 - count by giữ kiểu số
+  ---
+  duration_ms: 0.283836
+  type: 'test'
+  ...
+# Subtest: top
+ok 4 - top
+  ---
+  duration_ms: 0.319422
+  type: 'test'
+  ...
+# Subtest: sum/avg/min/max
+ok 5 - sum/avg/min/max
+  ---
+  duration_ms: 0.364044
+  type: 'test'
+  ...
+# Subtest: percentile nearest-rank
+ok 6 - percentile nearest-rank
+  ---
+  duration_ms: 1.318161
+  type: 'test'
+  ...
+# Subtest: histogram điền mốc trống
+ok 7 - histogram điền mốc trống
+  ---
+  duration_ms: 0.708998
+  type: 'test'
+  ...
+# Subtest: spec sai
+ok 8 - spec sai
+  ---
+  duration_ms: 0.815714
+  type: 'test'
+  ...
+# Subtest: in bản ghi khớp, bỏ @t
+ok 9 - in bản ghi khớp, bỏ @t
+  ---
+  duration_ms: 39.521968
+  type: 'test'
+  ...
+# Subtest: tùy chọn sau tệp, nhiều tệp, và stdin "-"
+ok 10 - tùy chọn sau tệp, nhiều tệp, và stdin "-"
+  ---
+  duration_ms: 30.351784
+  type: 'test'
+  ...
+# Subtest: --stats tính cả dòng rỗng
+ok 11 - --stats tính cả dòng rỗng
+  ---
+  duration_ms: 29.839377
+  type: 'test'
+  ...
+# Subtest: agg json và table
+ok 12 - agg json và table
+  ---
+  duration_ms: 125.036336
+  type: 'test'
+  ...
+# Subtest: bảng bucket rỗng chỉ có header
+ok 13 - bảng bucket rỗng chỉ có header
+  ---
+  duration_ms: 28.718561
+  type: 'test'
+  ...
+# Subtest: lỗi cú pháp truy vấn → 2
+ok 14 - lỗi cú pháp truy vấn → 2
+  ---
+  duration_ms: 35.016291
+  type: 'test'
+  ...
+# Subtest: agg sai → 2
+ok 15 - agg sai → 2
+  ---
+  duration_ms: 34.889221
+  type: 'test'
+  ...
+# Subtest: dùng sai tùy chọn → 2
+ok 16 - dùng sai tùy chọn → 2
+  ---
+  duration_ms: 127.786131
+  type: 'test'
+  ...
+# Subtest: tệp không đọc được → 1, stdout rỗng
+ok 17 - tệp không đọc được → 1, stdout rỗng
+  ---
+  duration_ms: 37.651268
+  type: 'test'
+  ...
+# Subtest: không khớp gì vẫn mã 0
+ok 18 - không khớp gì vẫn mã 0
+  ---
+  duration_ms: 32.947884
+  type: 'test'
+  ...
+# Subtest: blank lines and CR
+ok 19 - blank lines and CR
+  ---
+  duration_ms: 2.093841
+  type: 'test'
+  ...
+# Subtest: JSON flatten
+ok 20 - JSON flatten
+  ---
+  duration_ms: 0.539586
+  type: 'test'
+  ...
+# Subtest: JSON failures
+ok 21 - JSON failures
+  ---
+  duration_ms: 0.216192
+  type: 'test'
+  ...
+# Subtest: logfmt basics and coercion
+ok 22 - logfmt basics and coercion
+  ---
+  duration_ms: 0.489185
+  type: 'test'
+  ...
+# Subtest: logfmt quoted
+ok 23 - logfmt quoted
+  ---
+  duration_ms: 0.252015
+  type: 'test'
+  ...
+# Subtest: logfmt malformed
+ok 24 - logfmt malformed
+  ---
+  duration_ms: 1.131165
+  type: 'test'
+  ...
+# Subtest: duplicate keys: last wins
+ok 25 - duplicate keys: last wins
+  ---
+  duration_ms: 0.163344
+  type: 'test'
+  ...
+# Subtest: @t from timestamp fields
+ok 26 - @t from timestamp fields
+  ---
+  duration_ms: 0.365171
+  type: 'test'
+  ...
+# Subtest: @t precedence and non-fallthrough
+ok 27 - @t precedence and non-fallthrough
+  ---
+  duration_ms: 0.5888
+  type: 'test'
+  ...
+# Subtest: @t requires ISO date and time string
+ok 28 - @t requires ISO date and time string
+  ---
+  duration_ms: 0.507457
+  type: 'test'
+  ...
+# Subtest: truy vấn rỗng khớp tất cả
+ok 29 - truy vấn rỗng khớp tất cả
+  ---
+  duration_ms: 1.147518
+  type: 'test'
+  ...
+# Subtest: field:value toàn bộ, không phân biệt hoa/thường, wildcard
+ok 30 - field:value toàn bộ, không phân biệt hoa/thường, wildcard
+  ---
+  duration_ms: 1.730778
+  type: 'test'
+  ...
+# Subtest: giá trị trong ngoặc kép khớp chính xác
+ok 31 - giá trị trong ngoặc kép khớp chính xác
+  ---
+  duration_ms: 1.314776
+  type: 'test'
+  ...
+# Subtest: so sánh số
+ok 32 - so sánh số
+  ---
+  duration_ms: 0.433271
+  type: 'test'
+  ...
+# Subtest: _exists_
+ok 33 - _exists_
+  ---
+  duration_ms: 0.164012
+  type: 'test'
+  ...
+# Subtest: WORD/QUOTED tìm trong msg rồi message
+ok 34 - WORD/QUOTED tìm trong msg rồi message
+  ---
+  duration_ms: 0.187678
+  type: 'test'
+  ...
+# Subtest: từ khóa chỉ khi HOA
+ok 35 - từ khóa chỉ khi HOA
+  ---
+  duration_ms: 0.203252
+  type: 'test'
+  ...
+# Subtest: ưu tiên NOT > AND > OR và AND ngầm
+ok 36 - ưu tiên NOT > AND > OR và AND ngầm
+  ---
+  duration_ms: 0.360369
+  type: 'test'
+  ...
+# Subtest: lỗi: thiếu ) -> query.length
+ok 37 - lỗi: thiếu ) -> query.length
+  ---
+  duration_ms: 0.674816
+  type: 'test'
+  ...
+# Subtest: lỗi: thừa ) -> vị trí )
+ok 38 - lỗi: thừa ) -> vị trí )
+  ---
+  duration_ms: 0.387469
+  type: 'test'
+  ...
+# Subtest: lỗi: () rỗng -> vị trí )
+ok 39 - lỗi: () rỗng -> vị trí )
+  ---
+  duration_ms: 0.161977
+  type: 'test'
+  ...
+# Subtest: lỗi: thiếu toán hạng ở cuối -> length
+ok 40 - lỗi: thiếu toán hạng ở cuối -> length
+  ---
+  duration_ms: 0.233157
+  type: 'test'
+  ...
+# Subtest: lỗi: AND/OR ở đầu, sau (, sau từ khóa khác -> vị trí từ khóa
+ok 41 - lỗi: AND/OR ở đầu, sau (, sau từ khóa khác -> vị trí từ khóa
+  ---
+  duration_ms: 0.211875
+  type: 'test'
+  ...
+# Subtest: lỗi: so sánh vế phải sai -> ngay sau toán tử
+ok 42 - lỗi: so sánh vế phải sai -> ngay sau toán tử
+  ---
+  duration_ms: 0.189925
+  type: 'test'
+  ...
+# Subtest: lỗi: field: rỗng -> ngay sau :
+ok 43 - lỗi: field: rỗng -> ngay sau :
+  ---
+  duration_ms: 0.090321
+  type: 'test'
+  ...
+# Subtest: lỗi: ngoặc kép không đóng -> vị trí " mở
+ok 44 - lỗi: ngoặc kép không đóng -> vị trí " mở
+  ---
+  duration_ms: 0.089668
+  type: 'test'
+  ...
+# Subtest: parse JSON và logfmt
+ok 45 - parse JSON và logfmt
+  ---
+  duration_ms: 2.295145
+  type: 'test'
+  ...
+# Subtest: truy vấn cơ bản
+ok 46 - truy vấn cơ bản
+  ---
+  duration_ms: 1.643629
+  type: 'test'
+  ...
+# Subtest: tổng hợp count by
+ok 47 - tổng hợp count by
+  ---
+  duration_ms: 0.643146
+  type: 'test'
+  ...
+1..47
+# tests 47
+# suites 0
+# pass 47
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 826.609893

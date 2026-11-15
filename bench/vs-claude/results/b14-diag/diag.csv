@@ -1,0 +1,8 @@
+pair,call,model,gap_s,cw,cr,in,out,h
+warmup,warmup,sonnet,0,25012,15865,2,4,0.3881
+a,a1,sonnet,0,25012,15865,2,4,0.3881
+a,a2,sonnet,0,815,40059,2,4,0.98
+b,b1,sonnet,0,25013,15865,2,4,0.3881
+b,b2,sonnet,0,41464,0,2,4,0
+c,c1,sonnet,0,25015,15865,2,4,0.3881
+c,c2,sonnet,0,815,40063,2,5,0.98

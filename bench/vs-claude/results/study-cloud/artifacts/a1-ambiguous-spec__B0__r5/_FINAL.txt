@@ -1,0 +1,93 @@
+# Báo cáo tổng hợp: SPEC.md cho tính năng "Log Export" (T-20261103-022301-7e9)
+
+## Tóm tắt
+`SPEC.md` đã có ở thư mục gốc repo (225 dòng) và đáp ứng đề bài. Tệp có đúng một mục `## Open questions and assumptions` với 14 câu hỏi (OQ-1 đến OQ-14). Mỗi câu hỏi nêu điểm cần khách xác nhận, câu gốc gây mâu thuẫn, giả định tạm dùng và ảnh hưởng nếu giả định sai. Spec che dữ liệu mặc định, chỉ giữ vĩnh viễn audit metadata không chứa dữ liệu cá nhân, và tách export đồng bộ ≤ 5 giây với export bất đồng bộ. Còn mở: khách phải trả lời các OQ chặn thiết kế (OQ-1, 2, 3, 7, 11, 14). Tệp chưa được commit.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) | Tệp |
+|---|---|---|---|---|---|
+| S1 | Soạn SPEC.md: phạm vi, actor, US-1..5, FR-1..10, NFR-1..7, ERR-1..10, OQ-1..13 | @business-analyst | Đạt | [`dev-S1-business-analyst.md`](.ccoding/T-20261103-022301-7e9/outputs/dev-S1-business-analyst.md) | `SPEC.md` |
+| S2 | Rà bảo vệ dữ liệu, sửa mục 5, 6, FR-5, FR-9, NFR-3, thêm OQ-14 | @security | Đạt có điều kiện (cổng thiết kế) | [`dev-S2-security.md`](.ccoding/T-20261103-022301-7e9/outputs/dev-S2-security.md) | `SPEC.md` |
+
+**Bằng chứng tôi tự kiểm.** Reviewer cuối không chạy lệnh nào, nên tôi kiểm lại:
+- Grep các tiêu đề `^## `: mục 1–8, `## Open questions and assumptions` xuất hiện đúng một lần ở dòng 126, sau đó là `## Review notes (security)`.
+- Grep `### OQ-`: đủ từ OQ-1 đến OQ-14, các mâu thuẫn (a) đến (k) đều được gắn nhãn.
+- Đọc dòng 126–225: OQ nào cũng có đủ Question, Why, Assumption và Impact.
+- `git status --short` trả về `?? SPEC.md`, nghĩa là tệp chưa được theo dõi.
+- Tôi chưa chạy được lệnh quét IP thật trong một lệnh gộp vì hook chặn. Kết quả "không có IP thật" là theo báo cáo của @security, tôi chưa kiểm lại.
+
+## Quyết định
+- **Che dữ liệu mặc định (OQ-1).**
+  - IPv4 cắt về /24, IPv6 về /48.
+  - Username được thay bằng bút danh HMAC có khóa bí mật ≥ 256 bit, khóa riêng cho từng export.
+  - Dữ liệu đã che vẫn coi là dữ liệu cá nhân.
+  - Export không che phục vụ điều tra là một quy trình riêng, có phê duyệt, không nằm trong MVP.
+- **Phạm vi export (OQ-2).** Lấy phần giao giữa team của người dùng và quyền xem của họ. Mặc định là tháng dương lịch trước theo giờ Asia/Ho_Chi_Minh; người dùng có thể chọn khoảng tối đa 31 ngày, lùi không quá 12 tháng.
+- **Lưu giữ (OQ-3, OQ-14).**
+  - Chỉ audit metadata, không chứa dữ liệu cá nhân, được giữ vĩnh viễn.
+  - Tệp export hết hạn sau tối đa 30 ngày và không muộn hơn 12 tháng tính từ sự kiện cũ nhất trong tệp.
+  - Backup được giả định quay vòng trong tối đa 35 ngày.
+- **5 giây (OQ-10).** Mốc p95 ≤ 5 giây áp cho export đồng bộ đến 50.000 dòng. Export lớn hơn chạy bất đồng bộ, trần 5 triệu dòng hoặc 1 GiB.
+- **"Make it simple" (OQ-12).** Giao diện chỉ một nút, các kiểm soát chạy ngầm. Có chủ ý không thêm quy trình phê duyệt, DLP hay watermark.
+- **Pháp lý (OQ-11).** Spec chỉ nêu Nghị định 13/2023/NĐ-CP và quy định ATTT của NHNN dưới dạng câu hỏi cần khách xác nhận. Không dẫn hay khẳng định nội dung điều khoản nào.
+- **Tổ chức công việc.** Không cần kiến trúc sư, code hay test, vì đề bài chỉ yêu cầu spec.
+
+## Kết quả review
+- @security kết luận **đạt có điều kiện**. Bốn phát hiện mức Cao đã được sửa thẳng vào spec:
+  - khóa HMAC;
+  - audit log còn chứa IP và filter tự do (đã bỏ);
+  - lỗ hổng IDOR khi tải tệp (thêm kiểm tra chủ tệp, ID ngẫu nhiên, link 15 phút, 404 giống nhau);
+  - danh sách ký tự chống formula injection còn thiếu TAB và CR.
+- Reviewer cuối kết luận "Đã duyệt" nhưng **không chạy lệnh kiểm tra nào**. Phần bằng chứng có chạy thật là phần tôi tự kiểm ở trên.
+- Góp ý nhỏ của tôi: mục `## Review notes (security)` là ghi chú nội bộ. Nên bỏ hoặc chuyển ra ngoài trước khi gửi spec cho khách.
+
+## Việc còn mở & rủi ro
+- **OQ chặn thiết kế:** OQ-1, OQ-3, OQ-2, OQ-7, OQ-11, OQ-14. Rủi ro lớn nhất là khách vẫn cần IP và username đầy đủ ngay trong nút export. Khi đó mục 5 và FR-6 phải làm lại, và phải thêm quy trình phê duyệt cùng ngoại lệ chính sách.
+- **Ngưỡng tự đặt, chưa có dữ liệu thật:** 50.000 dòng, 5 triệu dòng, 1 GiB, 5 lần export mỗi giờ, 30 ngày, 35 ngày. Khách chưa cho khối lượng log (OQ-10) hay tệp mẫu của hệ thống cũ (OQ-4).
+- **Bản đã tải về** nằm ngoài tầm kiểm soát của nền tảng. Câu "không rời nền tảng khi chưa che" chỉ đúng nhờ việc che dữ liệu.
+- **Chưa kiểm chứng hành vi** cho FR-5, FR-9, NFR-3 vì chưa có mã nguồn.
+- **`SPEC.md` chưa commit.**
+
+## Bước tiếp theo
+1. **Nhiệm vụ "Chốt câu hỏi với khách"** (@business-analyst). Gửi danh sách OQ theo thứ tự ưu tiên ở dòng 214–215, kèm yêu cầu tệp mẫu của hệ thống cũ và số liệu khối lượng log. *Xong khi:* mỗi OQ có câu trả lời ghi lại trong SPEC.md, và mục 2, 5, 6, 7 đã cập nhật theo.
+2. **Nhiệm vụ "Làm sạch và commit spec"** (@tech-writer). Bỏ mục Review notes nội bộ, commit trên một branch riêng, không commit vào main. *Xong khi:* `git log` có commit chứa SPEC.md, và `grep -c '^## Open questions and assumptions' SPEC.md` trả về 1.
+3. **Nhiệm vụ "Thiết kế giải pháp và cổng ATTT"** (@solution-architect và @security), chỉ làm sau bước 1. Viết ADR cho kho lưu tệp, quản lý khóa HMAC và cách chạy export đồng bộ/bất đồng bộ. *Xong khi:* có ADR và @security cho đạt cổng thiết kế, không còn điều kiện mở.
+4. **Nhiệm vụ "Hiện thực MVP và test"** (@backend-dev, @frontend-dev, @qa-tester), tách theo FR. *Xong khi:* các test FR-5 (injection), FR-9 (IDOR), NFR-3 (quét audit log tìm dữ liệu cá nhân) và test retention ở mục 6 đều đạt.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-022301-7e9` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **32 in / 27.3k out**, cache đọc 197.5k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | 12 | 8136 | 76114 | 2 |
+| Chuyên viên ATTT (@security) | dev | 6 | 5510 | 44537 | 1 |
+| Business Analyst (@business-analyst) | dev | 6 | 10450 | 34787 | 1 |
+| QA Engineer (@qa-tester) | dev | 6 | 2195 | 39796 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 989 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-business-analyst.md` — S1 Soạn SPEC.md cho tính năng Log Export (@business-analyst)
+- `outputs/dev-S2-security.md` — S2 Rà bảo vệ dữ liệu và chỉnh SPEC.md (@security)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | **97** A | 100 | 100 | 84 | 100 | 0 | — | 84k | 1/5 |
+| Chuyên viên ATTT (@security) | dev | **93** A | 100 | 95 | 100 | 60 | 1 | 1 | 50k | 0/2 |
+| Business Analyst (@business-analyst) | dev | **100** A | 100 | 100 | 100 | 100 | 1 | 1 | 45k | 0/3 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 42k | 0/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Trưởng phòng Phát triển** (@dev-lead, 97 A):
+  - Thao tác công cụ lỗi nhiều (1/5, 20%; nhiều nhất ở run_command 1/3) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+- **Chuyên viên ATTT** (@security, 93 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

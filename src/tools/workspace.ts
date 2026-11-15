@@ -5,7 +5,7 @@ import path from 'node:path';
 import { killTree } from '../runtimes/spawn.js';
 import { redact } from '../util/redact.js';
 import { fetchUrl, searchPapers, WebError, webSearch } from './web.js';
-import { gitReadArgsReason, outsidePathReason, splitArgs } from './shell-policy.js';
+import { gitReadArgsReason, outsidePathReason, outsideWriteDecision, splitArgs } from './shell-policy.js';
 import type { CheckResult, Phase, ToolAccess, ToolName, ToolPolicy } from '../types.js';
 
 /**
@@ -242,6 +242,9 @@ function clip(text: string, max: number): string {
 
 // ── Danh sách lệnh bị chặn ───────────────────────────────────────────────────
 
+const KILL_BY_NAME =
+  'diệt tiến trình theo tên hoặc bộ lọc có thể giết server CCoding và tiến trình của agent khác; hãy dùng PID của tiến trình mình đã chạy (taskkill /PID n /T /F, kill n, Stop-Process -Id n)';
+
 export const DEFAULT_DENY: Array<[RegExp, string]> = [
   [/\bgit\s+push\b/i, 'git push (người dùng tự review và push)'],
   [/\bgit\s+reset\s+--hard\b/i, 'git reset --hard'],
@@ -260,6 +263,20 @@ export const DEFAULT_DENY: Array<[RegExp, string]> = [
   [/\b(mkfs|fdisk|diskpart)\b/i, 'thao tác ổ đĩa'],
   [/\bdd\s+if=/i, 'dd'],
   [/\b(shutdown|reboot|halt|poweroff|Stop-Computer|Restart-Computer)\b/i, 'tắt/khởi động lại máy'],
+  // diệt tiến trình theo tên/bộ lọc (sự cố 15/11/2026: mọi node.exe chết, văn phòng dừng ~70 phút) — chỉ diệt theo PID của chính mình
+  [/\btaskkill(\.exe)?\b[^\n]*\s[/-](im|fi)\b/i, KILL_BY_NAME],
+  [/\b(Stop-Process|spps)\b[^\n]*\s-(n[a-z]*|pro[a-z]*)(?=[\s:]|$)/i, KILL_BY_NAME],
+  // lối lách đã biết (D29): thay thế lệnh con, xargs, CIM/WMI, node -e — chỉ là lớp chặn theo chuỗi lệnh, xem docs/TOOLS.md
+  [/\bkill\b[^\n]*(\$\(|`)\s*(pgrep|pidof)\b/i, KILL_BY_NAME],
+  [/\bxargs\b[^\n|;&]*\b(pkill|killall)\b/i, KILL_BY_NAME],
+  [/\b(pgrep|pidof)\b[^\n]*\|\s*(sudo\s+)?xargs\b[^\n]*\bkill\b/i, KILL_BY_NAME],
+  [/\b(Invoke-CimMethod|Invoke-WmiMethod|Get-CimInstance|Get-WmiObject|gcim|gwmi)\b[^\n]*\bTerminate\b/i, KILL_BY_NAME],
+  [/\bWin32_Process\b[^\n]*\b(Remove-CimInstance|Remove-WmiObject)\b/i, KILL_BY_NAME],
+  [/\bnode(\.exe)?\b[^\n]*\s(-e|-p|--eval|--print)\b[^\n]*\bprocess\.kill\s*\(\s*(?!\d+\s*[,)])/i, KILL_BY_NAME],
+  [/\b(Get-Process|gps)\b[^\n]*\|\s*(Stop-Process|kill|spps)\b/i, KILL_BY_NAME],
+  [/(^|[;&|(`"'])\s*(sudo\s+)?(killall|pkill)\b/i, KILL_BY_NAME],
+  [/\bwmic\b[^\n]*\bprocess\b[^\n]*\b(delete|terminate)\b/i, KILL_BY_NAME],
+  [/(^|[;&|(`"'])\s*(sudo\s+)?kill\s+(?:[^\s;&|]+\s+)*-1\s*($|[;&|)`"'])/i, KILL_BY_NAME],
   [/\b(npm|pnpm|yarn)\s+publish\b/i, 'publish gói'],
   [/\bdocker\s+(system\s+prune|volume\s+(rm|prune)|rm\s+-f)\b/i, 'xóa tài nguyên docker'],
   [/\bkubectl\s+(delete|drain)\b/i, 'kubectl delete'],
@@ -351,7 +368,7 @@ function walk(root: string, dir: string, depth: number, out: string[], limit: nu
   }
 }
 
-async function runShell(command: string, cwd: string, timeoutSec: number, maxChars: number, signal?: AbortSignal): Promise<{ code: number | null; out: string; timedOut: boolean }> {
+async function runShell(command: string, cwd: string, timeoutSec: number, maxChars: number, signal?: AbortSignal, extraEnv?: Record<string, string>): Promise<{ code: number | null; out: string; timedOut: boolean }> {
   const [file, args] = isWin
     ? [
         'powershell.exe',
@@ -366,7 +383,7 @@ async function runShell(command: string, cwd: string, timeoutSec: number, maxCha
         ],
       ]
     : [fs.existsSync('/bin/bash') ? '/bin/bash' : '/bin/sh', ['-c', command]];
-  return runProc(file, args as string[], cwd, timeoutSec, maxChars, signal);
+  return runProc(file, args as string[], cwd, timeoutSec, maxChars, signal, extraEnv);
 }
 
 /** Chạy một chương trình (không qua shell khi gọi trực tiếp) — gộp stdout/stderr, cắt đầu ra, hết giờ/hủy thì dừng cả cây tiến trình. */
@@ -611,6 +628,8 @@ export async function executeTool(name: string, rawArgs: unknown, policy: ToolPo
         if (reader) throw new ToolError(`Không dùng run_command để ${reader}.`);
         const away = outsidePathReason(command, fs.realpathSync(root));
         if (away) throw new ToolError(`Lệnh bị chặn: ${away}.`);
+        const wv = outsideWriteDecision(command, fs.realpathSync(root));
+        if (wv) throw new ToolError(`Lệnh bị chặn: ${wv.message}.`);
         const timeout = Math.min(policy.commandTimeoutSec, Math.max(5, Number(args.timeout_sec) || 300));
         // một lệnh tại một thời điểm trong cùng workspace (agent song song có thể ở các tiến trình/pane khác nhau)
         const unlock = await lockWorkspace(fs.realpathSync(root), timeout, signal);
@@ -694,7 +713,7 @@ export function checkSummary(out: string): string {
 export async function runCheckCommand(
   command: string,
   root: string,
-  o: { denyCommands: string[]; timeoutSec: number; maxChars: number; signal?: AbortSignal },
+  o: { denyCommands: string[]; timeoutSec: number; maxChars: number; signal?: AbortSignal; env?: Record<string, string> },
 ): Promise<CheckResult> {
   const t0 = Date.now();
   const why = deniedReason(command, o.denyCommands, false);
@@ -702,7 +721,7 @@ export async function runCheckCommand(
   const real = fs.realpathSync(root);
   const unlock = await lockWorkspace(real, o.timeoutSec, o.signal);
   try {
-    const r = await runShell(command, real, o.timeoutSec, o.maxChars, o.signal);
+    const r = await runShell(command, real, o.timeoutSec, o.maxChars, o.signal, o.env);
     const out = r.out.trim();
     return {
       command,

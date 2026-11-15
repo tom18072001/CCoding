@@ -1,0 +1,79 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g4-gb-unit__B7cabO__r2] Thêm đơn vị GB vào bộ module kích thước tệp
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Phần bàn giao có thật: worktree đang có 5 tệp đã sửa (units, format, parse, validate, test/size.test.js), dù mục diff ghi 'chưa có thay đổi'. Tôi đã đối chiếu bằng `git status` và grep, và GB đã có ở cả bốn module cùng test. Chỉ còn một hạng mục xác minh, không làm lại.
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Xác minh lại việc thêm GB và chạy npm test (@senior-swe, done)
+
+## Tóm tắt
+GB đã có đủ ở bốn module (units, format, parse, validate) cùng test. `npm test` exit 0 với 3 test pass và 0 fail. Tôi rà các ca biên theo yêu cầu, không thấy lỗi thật nên không sửa thêm gì. Không còn rủi ro đáng kể.
+
+## Tệp đã tạo/sửa
+Không sửa thêm gì trong lượt này. Phần đã làm từ trước, chưa commit:
+- `src/units.js`: thêm `GB: 1024 ** 3`.
+- `src/format.js`: chọn GB khi `bytes >= UNITS.GB`.
+- `src/parse.js`: regex nhận thêm `GB`, không phân biệt hoa thường.
+- `src/validate.js`: thêm `'GB'` vào `VALID`.
+- `test/size.test.js`: thêm test GB.
+
+## Kiểm chứng
+- `npm test` → exit 0, `# tests 3`, `# pass 3`, `# fail 0`.
+- `git diff --stat` → 5 tệp (format, parse, units, validate, test/size.test.js), 18 dòng thêm, 4 dòng xóa. Không có tệp nào khác.
+- Chạy thử bằng `node -e`:
+  - `formatSize`: 1023 MB cho "1023 MB", đúng 1024 MB cho "1 GB", 1e15 byte cho "931322.6 GB" (không lỗi).
+  - `parseSize`: '1gb' ra 1073741824, '1.5 GB' ra 1610612736, '2GB' ra 2147483648. 'TB', chuỗi rỗng và '1 TB' đều bị từ chối.
+  - `isValidUnit('gb')` → true, `isValidUnit('TB')` → false.
+- `parseSize('gb')` (không có số) bị từ chối, đúng như mong đợi, vì chuỗi phải có phần số.
+
+## Quyết định thiết kế
+Giữ nguyên cách làm hiện có, không refactor: `UNITS` là nguồn duy nhất cho các phép nhân, còn `VALID` và regex vẫn khai báo riêng.
+
+## Rủi ro & việc còn mở
+Giá trị cực lớn vẫn hiển thị bằng GB (ví dụ "931322.6 GB") vì chưa có TB. Đề bài không yêu cầu TB.
+
+Bản đầy đủ: `.ccoding/T-20261104-104036-671/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-104036-671` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **20 in / 4,812 out**, cache đọc 240.6k, 3 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 16 | 3929 | 194222 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 883 | 46412 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Xác minh lại việc thêm GB và chạy npm test (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 2 · # suites 0 · # pass 2 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 3 · # suites 0 · # pass 3 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 100 | 92 | 100 | 1 | 1 | 198k | 1/10 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 47k | 0/1 | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

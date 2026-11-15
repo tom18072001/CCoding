@@ -1,0 +1,238 @@
+TAP version 13
+# Subtest: 401: thiếu hoặc sai X-User trên mọi route
+ok 1 - 401: thiếu hoặc sai X-User trên mọi route
+  ---
+  duration_ms: 73.75251
+  type: 'test'
+  ...
+# Subtest: 401 đứng trước 400 truy vấn
+ok 2 - 401 đứng trước 400 truy vấn
+  ---
+  duration_ms: 15.26088
+  type: 'test'
+  ...
+# Subtest: admin làm được mọi việc
+ok 3 - admin làm được mọi việc
+  ---
+  duration_ms: 8.29488
+  type: 'test'
+  ...
+# Subtest: manager: đọc mọi nhóm, ghi chỉ nhóm mình, không xóa
+ok 4 - manager: đọc mọi nhóm, ghi chỉ nhóm mình, không xóa
+  ---
+  duration_ms: 18.453319
+  type: 'test'
+  ...
+# Subtest: member: thấy nhóm mình (404 nhóm khác), không tạo/xóa, chỉ sửa status việc của mình
+ok 5 - member: thấy nhóm mình (404 nhóm khác), không tạo/xóa, chỉ sửa status việc của mình
+  ---
+  duration_ms: 23.067757
+  type: 'test'
+  ...
+# Subtest: thứ tự kiểm tra: 404 → 403 → 400 body
+ok 6 - thứ tự kiểm tra: 404 → 403 → 400 body
+  ---
+  duration_ms: 15.273647
+  type: 'test'
+  ...
+# Subtest: GET /tasks: dạng kết quả, lọc, tìm, sắp xếp
+ok 7 - GET /tasks: dạng kết quả, lọc, tìm, sắp xếp
+  ---
+  duration_ms: 20.125729
+  type: 'test'
+  ...
+# Subtest: GET /tasks: phân trang
+ok 8 - GET /tasks: phân trang
+  ---
+  duration_ms: 5.975228
+  type: 'test'
+  ...
+# Subtest: GET /tasks: member tự lọc theo nhóm mình
+ok 9 - GET /tasks: member tự lọc theo nhóm mình
+  ---
+  duration_ms: 9.319402
+  type: 'test'
+  ...
+# Subtest: GET /tasks: INVALID_QUERY và field đầu tiên theo thứ tự trên URL
+ok 10 - GET /tasks: INVALID_QUERY và field đầu tiên theo thứ tự trên URL
+  ---
+  duration_ms: 25.015616
+  type: 'test'
+  ...
+# Subtest: lỗi truy vấn (400) đứng trước 404
+ok 11 - lỗi truy vấn (400) đứng trước 404
+  ---
+  duration_ms: 3.073342
+  type: 'test'
+  ...
+# Subtest: GET /tasks/export.csv: header, BOM, CRLF, escape, chống công thức
+ok 12 - GET /tasks/export.csv: header, BOM, CRLF, escape, chống công thức
+  ---
+  duration_ms: 3.853544
+  type: 'test'
+  ...
+# Subtest: CSV: không phân trang, cùng bộ lọc/quyền, page/pageSize → 400
+ok 13 - CSV: không phân trang, cùng bộ lọc/quyền, page/pageSize → 400
+  ---
+  duration_ms: 11.619352
+  type: 'test'
+  ...
+# Subtest: nhật ký: seq, at, userId, action, changes; thao tác lỗi không ghi
+ok 14 - nhật ký: seq, at, userId, action, changes; thao tác lỗi không ghi
+  ---
+  duration_ms: 18.80922
+  type: 'test'
+  ...
+# Subtest: /audit: chỉ admin; tham số lạ → 400; thứ tự 401 → 400 → 403
+ok 15 - /audit: chỉ admin; tham số lạ → 400; thứ tự 401 → 400 → 403
+  ---
+  duration_ms: 6.317771
+  type: 'test'
+  ...
+# Subtest: record: seq từ 1, at theo now()
+ok 16 - record: seq từ 1, at theo now()
+  ---
+  duration_ms: 2.843371
+  type: 'test'
+  ...
+# Subtest: list: giảm dần theo seq, lọc taskId
+ok 17 - list: giảm dần theo seq, lọc taskId
+  ---
+  duration_ms: 0.3559
+  type: 'test'
+  ...
+# Subtest: diffChanges / createChanges
+ok 18 - diffChanges / createChanges
+  ---
+  duration_ms: 0.406525
+  type: 'test'
+  ...
+# Subtest: authenticate
+ok 19 - authenticate
+  ---
+  duration_ms: 1.74461
+  type: 'test'
+  ...
+# Subtest: canSee / visibleFilter
+ok 20 - canSee / visibleFilter
+  ---
+  duration_ms: 0.40252
+  type: 'test'
+  ...
+# Subtest: authorizeCreate
+ok 21 - authorizeCreate
+  ---
+  duration_ms: 0.500028
+  type: 'test'
+  ...
+# Subtest: authorizeUpdate
+ok 22 - authorizeUpdate
+  ---
+  duration_ms: 0.675669
+  type: 'test'
+  ...
+# Subtest: authorizeDelete
+ok 23 - authorizeDelete
+  ---
+  duration_ms: 0.299242
+  type: 'test'
+  ...
+# Subtest: danh sách rỗng chỉ có BOM + header
+ok 24 - danh sách rỗng chỉ có BOM + header
+  ---
+  duration_ms: 1.169112
+  type: 'test'
+  ...
+# Subtest: BOM đầu, CRLF cuối mọi dòng
+ok 25 - BOM đầu, CRLF cuối mọi dòng
+  ---
+  duration_ms: 0.478655
+  type: 'test'
+  ...
+# Subtest: chống công thức
+ok 26 - chống công thức
+  ---
+  duration_ms: 0.260682
+  type: 'test'
+  ...
+# Subtest: dấu phẩy, nháy kép, xuống dòng
+ok 27 - dấu phẩy, nháy kép, xuống dòng
+  ---
+  duration_ms: 0.193564
+  type: 'test'
+  ...
+# Subtest: null/undefined → ô trống
+ok 28 - null/undefined → ô trống
+  ---
+  duration_ms: 0.259367
+  type: 'test'
+  ...
+# Subtest: mặc định
+ok 29 - mặc định
+  ---
+  duration_ms: 2.159572
+  type: 'test'
+  ...
+# Subtest: tham số lạ / lặp / thứ tự lỗi
+ok 30 - tham số lạ / lặp / thứ tự lỗi
+  ---
+  duration_ms: 0.501114
+  type: 'test'
+  ...
+# Subtest: giá trị không hợp lệ
+ok 31 - giá trị không hợp lệ
+  ---
+  duration_ms: 0.90528
+  type: 'test'
+  ...
+# Subtest: lọc
+ok 32 - lọc
+  ---
+  duration_ms: 1.582977
+  type: 'test'
+  ...
+# Subtest: q không phân biệt dấu/hoa thường
+ok 33 - q không phân biệt dấu/hoa thường
+  ---
+  duration_ms: 1.078673
+  type: 'test'
+  ...
+# Subtest: sắp xếp, dueDate null cuối, hòa theo id số
+ok 34 - sắp xếp, dueDate null cuối, hòa theo id số
+  ---
+  duration_ms: 0.748942
+  type: 'test'
+  ...
+# Subtest: phân trang
+ok 35 - phân trang
+  ---
+  duration_ms: 0.318457
+  type: 'test'
+  ...
+# Subtest: CRUD cơ bản
+ok 36 - CRUD cơ bản
+  ---
+  duration_ms: 57.631569
+  type: 'test'
+  ...
+# Subtest: validate
+ok 37 - validate
+  ---
+  duration_ms: 12.511815
+  type: 'test'
+  ...
+# Subtest: thiếu X-User → 401
+ok 38 - thiếu X-User → 401
+  ---
+  duration_ms: 4.094311
+  type: 'test'
+  ...
+1..38
+# tests 38
+# suites 0
+# pass 38
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 782.249733

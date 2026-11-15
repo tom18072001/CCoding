@@ -1,0 +1,86 @@
+# Báo cáo tổng hợp: SPEC.md cho tính năng "Log Export" của ngân hàng khách hàng
+
+## Tóm tắt
+`SPEC.md` đã có ở gốc repo, sẵn sàng để xác nhận với khách hàng. Spec gồm 13 yêu cầu chức năng (FR-01..FR-14, có FR-11a), 12 yêu cầu phi chức năng (NFR-01..NFR-12), phần định dạng CSV, audit trail, truy vết từ brief sang yêu cầu, và phần bảo vệ dữ liệu. Mục `## Open questions and assumptions` có 12 câu hỏi OQ-a..OQ-l. Mỗi câu nêu câu hỏi, giả định tạm, yêu cầu bị ảnh hưởng và mức tác động. Tất cả mâu thuẫn trong brief đều đã thành câu hỏi có giả định tạm: đủ IP và tên người dùng hay che, ai được export, 5 giây hay xuất tất cả, giữ mãi mãi hay xóa sau 12 tháng. @security cho kết quả **đạt có điều kiện**: phải có pháp chế/DPO (người phụ trách bảo vệ dữ liệu) của khách xác nhận trước khi xây dựng. Tệp chưa được commit.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Soạn SPEC.md: yêu cầu kiểm chứng được và mục câu hỏi mở/giả định | @business-analyst | Đạt | `SPEC.md`. BA chạy `grep -c '^## Open questions and assumptions$' SPEC.md` → 1. Báo cáo: `.ccoding/T-20261103-025943-a16/outputs/dev-S1-business-analyst.md` |
+| S2 | Rà bảo vệ dữ liệu và an toàn thông tin, sửa trực tiếp | @security | Đạt có điều kiện | Thêm mục 8 và "Security review notes" trong `SPEC.md`. Đã quét mẫu IPv4: chỉ còn địa chỉ thuộc dải dành cho tài liệu, IPv6 chưa quét. Báo cáo: `.ccoding/T-20261103-025943-a16/outputs/dev-S2-security.md` |
+| QA | Review cuối | @qa-tester | Duyệt, chỉ còn góp ý nhỏ | Reviewer **không chạy lệnh nào**, kết luận chỉ dựa trên việc đọc tài liệu. |
+
+Tôi đã tự kiểm tra lại bằng thao tác chỉ đọc (Grep/Read trên `SPEC.md`):
+- Có đúng một tiêu đề `## Open questions and assumptions` (dòng 242).
+- Có đủ 12 mục con OQ-a..OQ-l (dòng 246–314).
+- Đã đọc OQ-a..OQ-f: mỗi mục có đủ câu hỏi, giả định, yêu cầu bị ảnh hưởng và mức tác động.
+
+Repo không có test hay build nên không có gì để chạy.
+
+## Quyết định
+- **Che dữ liệu mặc định.** Bản xuất thường che địa chỉ IP: IPv4 bỏ octet cuối, IPv6 chỉ giữ 48 bit đầu. Tên người dùng được thay bằng bí danh tạo bằng HMAC có khóa. Bản không che chỉ dành cho vai trò Forensic, phải có lý do, có người duyệt khác người yêu cầu, tệp được mã hóa, link dùng một lần và mọi bước đều được audit (OQ-a).
+- **Ai được export.** Chỉ Branch Manager được export, và chỉ trong phạm vi team/chi nhánh của mình. Phạm vi lấy từ danh tính phía server; quyền xem không kéo theo quyền export (OQ-b).
+- **"Tháng trước"** là tháng dương lịch liền trước, theo giờ Asia/Ho_Chi_Minh (OQ-c).
+- **Giới hạn 5 giây.** Áp cho export đồng bộ khi dưới 50.000 dòng, đo ở p95. Vượt ngưỡng thì chạy bất đồng bộ và báo khi xong. Tất cả số liệu này là giả định, chưa đo (OQ-d).
+- **Giữ mãi mãi hay xóa sau 12 tháng.** Metadata và hash của lần export được giữ 7 năm làm bằng chứng audit. Tệp đã che bị xóa 12 tháng sau khi tạo, tệp không che bị xóa sau 30 ngày (OQ-e).
+- **Theo nguyên tắc tương xứng**, @security đã bỏ các phần thừa: giới hạn số job đồng thời, DLP/DRM và tệp nén có mật khẩu.
+- **Quy mô kế hoạch.** Không cần kiến trúc sư hay hạng mục code, vì sản phẩm chỉ là một tài liệu.
+
+## Kết quả review
+- **Không còn lỗi chặn (blocker).** QA chỉ có góp ý nhỏ.
+- **Cảnh báo về bằng chứng:** reviewer QA không chạy lệnh nào. Các lệnh duy nhất đã chạy là grep của S1, grep của S2 và phần tự kiểm tra chỉ đọc của tôi ở trên.
+- **Các phát hiện mức cao của @security đã được sửa ngay trong spec:** mâu thuẫn che/không che, nguy cơ export vượt phạm vi team (thêm 6 test âm vào NFR-04), và quy định lưu giữ.
+- **Điểm còn để ngỏ:** S1 chưa ghi cột "ai trả lời" cho từng OQ. Mặc định người trả lời là khách hàng; riêng OQ-a, OQ-e và OQ-l do compliance/DPO trả lời. Tôi chấp nhận để nguyên vì không ảnh hưởng tính đầy đủ của spec.
+
+## Việc còn mở & rủi ro
+- **Pháp lý (rủi ro lớn nhất).** Chưa tra hay trích văn bản luật nào. Thời hạn 12 tháng, 30 ngày và 7 năm đều là giả định, cần pháp chế/DPO xác nhận.
+- **Tính mốc 12 tháng từ ngày tạo tệp có thể lệch với brief.** Tệp tạo ngày 1 chứa log của cả tháng trước, nên khi xóa thì dữ liệu cũ nhất đã khoảng 13 tháng. Brief yêu cầu xóa dữ liệu cá nhân cũ hơn 12 tháng, nên nếu tính theo ngày sự kiện thì cần xóa sớm hơn. OQ-e đã hỏi điểm này. Nếu khách chọn tính theo ngày sự kiện, FR-13 phải đổi.
+- **Backup** vẫn còn giữ dữ liệu đã xóa cho đến khi bản backup hết hạn. Cần khách hàng chấp nhận điều này.
+- **Bản đã tải về máy người dùng** nằm ngoài khả năng xóa của nền tảng (OQ-f).
+- **Các ví dụ IPv6 trong spec chưa được quét bằng lệnh.**
+- **`SPEC.md` chưa được commit.**
+
+## Bước tiếp theo
+1. **Gửi khách hàng xác nhận các OQ.** Ưu tiên OQ-a, OQ-b, OQ-e, OQ-f, OQ-j và OQ-l. Xong khi có phản hồi bằng văn bản và đã ghi vào từng mục OQ trong `SPEC.md`.
+2. **Commit `SPEC.md`** lên một nhánh riêng, không phải main. Cần Tom đồng ý trước.
+3. **Nhiệm vụ riêng (sau khi có trả lời): cập nhật spec.** @business-analyst chuyển các giả định đã được xác nhận thành yêu cầu chính thức và sửa FR-13 nếu cần. Xong khi không còn OQ có mức tác động H nào chưa được trả lời.
+4. **Nhiệm vụ riêng: spike hiệu năng.** @data-engineer đo thời gian export trên dữ liệu giả lập một chi nhánh trong một tháng, để chốt ngưỡng 50.000 dòng và mục tiêu 5 giây ở p95. Xong khi có báo cáo đo kèm lệnh chạy lại được.
+5. **Nhiệm vụ riêng: hiện thực.** Bắt đầu bằng ADR ngắn và cổng bảo vệ dữ liệu, sau đó hiện thực theo từng gói: (a) phạm vi, truy vấn và 6 test âm của NFR-04; (b) che dữ liệu và CSV, kèm script quét tệp không còn IP hay tên người dùng đầy đủ; (c) luồng Forensic có phê duyệt; (d) job xóa tệp theo hạn lưu giữ.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-025943-a16` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **32 in / 30.7k out**, cache đọc 197.9k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | 12 | 8121 | 74353 | 2 |
+| Chuyên viên ATTT (@security) | dev | 6 | 8531 | 44984 | 1 |
+| Business Analyst (@business-analyst) | dev | 6 | 10913 | 34078 | 1 |
+| QA Engineer (@qa-tester) | dev | 6 | 2259 | 42214 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 827 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-business-analyst.md` — S1 Soạn SPEC.md: yêu cầu kiểm chứng được và mục câu hỏi mở / giả định (@business-analyst)
+- `outputs/dev-S2-security.md` — S2 Rà bảo vệ dữ liệu và ATTT cho SPEC.md, bổ sung trực tiếp (@security)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Trưởng phòng Phát triển (@dev-lead) | dev | **94** A | 100 | 100 | 68 | 100 | 0 | — | 82k | 2/5 |
+| Chuyên viên ATTT (@security) | dev | **92** A | 100 | 92 | 100 | 60 | 1 | 1 | 54k | 0/2 |
+| Business Analyst (@business-analyst) | dev | **100** A | 100 | 100 | 100 | 100 | 1 | 1 | 45k | 0/3 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 44k | 0/2 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Trưởng phòng Phát triển** (@dev-lead, 94 A):
+  - Thao tác công cụ lỗi nhiều (2/5, 40%; nhiều nhất ở run_command 2/3) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+- **Chuyên viên ATTT** (@security, 92 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

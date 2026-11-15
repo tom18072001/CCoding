@@ -1,0 +1,81 @@
+# Báo cáo tổng hợp T-20261102-121104-c19: Tổng hợp tài liệu từ corpus đóng (P1–P6)
+
+## Tóm tắt
+Hai tệp đã có ở thư mục gốc repo: `answer.json` trả lời đủ 4 câu và `REVIEW.md` dài 497 từ, trích dẫn cả sáu bài P1–P6. Đáp án: q1 là P4 với F1 0.962. q2 là P5 trên BGL-X với 0.5% nhãn. q3 không có trong corpus. q4 là cặp P1 và P3. Mọi đáp án đều là trích dẫn nguyên văn từ corpus, và reviewer không phát hiện blocker nào. Còn một việc mở: chưa có lệnh nào kiểm tra JSON chạy được, vì hook chỉ cho phép lệnh đọc. Tôi đã đọc lại tệp và thấy cú pháp hợp lệ.
+
+## Kết quả theo RQ
+| Câu | Kết luận | Bằng chứng | Mức chắc chắn |
+|---|---|---|---|
+| q1 | P4 (LogGraphT), F1 0.962 | Trên full split: P1 đạt 0.931, P3 đạt 0.948, P4 đạt 0.962. P2 đạt 0.971 nhưng trên HDFS-X-small, và [P6] cảnh báo con số này không so sánh được với full split, nên tôi loại P2. | Cao |
+| q2 | P5, dataset BGL-X | [P5]: "With 0.5% labeled data on BGL-X… F1 0.861" | Cao |
+| q3 | `not_in_corpus: true` | [P4] chỉ báo cáo latency 3.1 ms/session trên A100, không có số liệu năng lượng | Cao |
+| q4 | P1 và P3 | [P1] nói parsing là "necessary first step", còn [P3] nói "Parsing is optional". P2 dùng raw log nhưng không phát biểu gì về việc parsing có cần hay không. | Cao |
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Tệp |
+|---|---|---|---|---|
+| S1 | Trích bằng chứng và ghi `answer.json` | @literature-researcher | **Đạt.** Đúng shape của brief, xử lý đúng bẫy q1 (P2/HDFS-X-small) và q3 (latency ≠ năng lượng). | `answer.json`, `.ccoding/T-20261102-121104-c19/outputs/research-S1-literature-researcher.md` |
+| S2 | Viết tổng quan `REVIEW.md` | @academic-writer | **Đạt.** 497 từ (trong khoảng 300–500, sát trần). Tôi đếm lại: mỗi bài P1, P2, P3, P5, P6 được trích 6 lần, P4 được trích 5 lần. Mọi số liệu đều đối chiếu được với corpus. | `REVIEW.md`, `.ccoding/T-20261102-121104-c19/outputs/research-S2-academic-writer.md` |
+
+## Phương pháp & giới hạn
+- **Quyết định chính:** Chỉ dùng `corpus/` (không web, không kiến thức ngoài). Kết quả trên HDFS-X-small không được xếp hạng cùng full split. Khi thiếu dữ liệu thì ghi `not_in_corpus` chứ không suy đoán.
+- **Giả định và rủi ro:**
+  - Thứ tự trên BGL-X (P1 0.874, P2 0.902, P4 0.915) chỉ là tạm thời, vì corpus không nói các bài có dùng cùng giao thức hay không.
+  - Kết luận "best on full split" là do P4 tự báo cáo.
+  - Các paper là tóm tắt hư cấu nên không có DOI.
+- **Việc còn mở:**
+  - Chưa chạy được `python3 -m json.tool answer.json` vì hook chặn. Tôi đã đọc lại tệp và thấy cấu trúc cùng kiểu dữ liệu đúng (number, bool, array).
+  - `REVIEW.md` sát trần 500 từ. Nếu cách đếm của người chấm khác `wc -w`, bài có thể vượt giới hạn một chút.
+  - Hai tệp còn ở trạng thái untracked, chưa commit.
+
+## Phản biện đã xử lý
+Reviewer kết luận "Đã duyệt", không có blocker hay lỗi major. Góp ý nhỏ thứ nhất là JSON chưa được kiểm bằng công cụ: tôi đã kiểm bằng mắt và nêu ở mục trên. Góp ý nhỏ thứ hai là số từ sát trần: bài vẫn trong giới hạn nên tôi giữ nguyên.
+
+## Bước tiếp theo
+1. **Kiểm JSON và commit (cho người có quyền chạy lệnh):** chạy `python3 -m json.tool answer.json`, sau đó commit `answer.json` và `REVIEW.md`. Tiêu chí xong: lệnh in JSON không lỗi và commit chứa đúng 2 tệp này.
+2. (Tùy chọn) Rút `REVIEW.md` xuống khoảng 470 từ để có biên an toàn. Tiêu chí xong: `wc -w` ≤ 480, vẫn trích dẫn đủ P1–P6, nội dung không đổi.
+
+Không cần tách thêm nhiệm vụ nào.
+
+## Tài liệu tham khảo
+- [P1]–[P6]: `corpus/P1.md` … `corpus/P6.md` (corpus đóng, hư cấu, không có DOI hay URL).
+
+*Lưu ý: hai tệp này là bản nháp để Tom sở hữu. Nếu dùng trong học thuật, Tom cần tuân thủ quy định liêm chính và chính sách dùng AI của trường.*
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-121104-c19` · chế độ: project · phòng: research · phân loại dữ liệu: internal
+- Tổng: **40 in / 15.8k out**, cache đọc 269.8k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Academic Writer (@academic-writer) | research | 12 | 6505 | 99061 | 1 |
+| Trưởng phòng Nghiên cứu (@research-lead) | research | 10 | 4220 | 59708 | 2 |
+| Peer Reviewer (@peer-reviewer) | research | 8 | 2420 | 57045 | 1 |
+| Literature Researcher (@literature-researcher) | research | 8 | 2227 | 51719 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 410 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/research-S1-literature-researcher.md` — S1 Extract evidence from the corpus and write answer.json (@literature-researcher)
+- `outputs/research-S2-academic-writer.md` — S2 Write REVIEW.md: a state-of-the-art synthesis (@academic-writer)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+| Academic Writer (@academic-writer) | research | **87** A | 100 | 76 | 87 | 70 | 1 | 1 | 106k | 2/12 |
+| Trưởng phòng Nghiên cứu (@research-lead) | research | **90** A | 100 | 100 | 73 | 70 | 0 | — | 64k | 1/3 |
+| Peer Reviewer (@peer-reviewer) | research | **42** D | — | — | 73 | 0 | 0 | — | 59k | 1/3 |
+| Literature Researcher (@literature-researcher) | research | **90** A | 100 | 100 | 73 | 70 | 1 | 1 | 54k | 1/3 |
+
+### Việc cần sửa theo agent
+- **Academic Writer** (@academic-writer, 87 A):
+  - Không có nguồn kiểm chứng được (DOI/URL) và không dùng công cụ tra cứu.
+- **Peer Reviewer** (@peer-reviewer, 42 D):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+- **Literature Researcher** (@literature-researcher, 90 A):
+  - Không có nguồn kiểm chứng được (DOI/URL) và không dùng công cụ tra cứu.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

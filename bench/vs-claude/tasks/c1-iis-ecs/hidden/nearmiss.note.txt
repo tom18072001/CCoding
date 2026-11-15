@@ -1,0 +1,1 @@
+SR-24: src/iis.js:24: "||" -> "&&" (một chỗ trên lời giải tham chiếu); điểm khi sinh = 0.500; test trượt: full field mapping | fields directive changes mid file | status and port are numbers, nested objects not dotted keys

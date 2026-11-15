@@ -18,11 +18,16 @@
     "serve": "node dist/cli.js serve",
     "dev": "tsx watch src/cli.ts serve",
     "cli": "node dist/cli.js",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx --test --test-reporter=spec \"test/**/*.test.ts\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "test": "tsx --test --test-timeout=300000 --test-reporter=spec \"test/**/*.test.ts\"",
+    "pretest:bench": "npm run build",
+    "test:bench": "node --test --test-force-exit --test-timeout=300000 \"bench/vs-claude/test/*.test.mjs\"",
+    "test:research": "node --test --test-timeout=300000 --test-force-exit \"docs/research/**/*.test.mjs\" \"bench/vs-claude/harness/*.test.mjs\"",
     "herdr:up": "node dist/cli.js herdr up",
     "doctor": "node dist/cli.js doctor",
-    "demo": "node dist/cli.js task \"Thiết kế API quản lý hồ sơ nhân sự bằng Node.js/TypeScript, có phân quyền và log kiểm toán\" --mode auto --runtime mock --wait"
+    "demo": "node dist/cli.js task \"Thiết kế API quản lý hồ sơ nhân sự bằng Node.js/TypeScript, có phân quyền và log kiểm toán\" --mode auto --runtime mock --wait",
+    "lint": "node scripts/lint/run.mjs",
+    "check": "npm run typecheck && npm run lint && npm test && npm run test:bench && npm run test:research"
   },
   "dependencies": {
     "yaml": "^2.8.1"

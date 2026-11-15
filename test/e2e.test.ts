@@ -6,7 +6,7 @@ import type { AddressInfo } from 'node:net';
 import { createServer } from '../src/server.js';
 import { totalTokens } from '../src/types.js';
 import { verifyChain } from '../src/logger.js';
-import { testApp } from './helpers.js';
+import { closeServer, readJson, testApp } from './helpers.js';
 
 test('luồng đầy đủ: định tuyến → kế hoạch → họp → thực thi → review/sửa → báo cáo', async () => {
   const app = testApp({ reviewRejectRate: 1 });
@@ -156,24 +156,24 @@ test('API: trạng thái, chống CSRF/DNS rebinding, giao việc', async () => 
   const port = (srv.address() as AddressInfo).port;
   app.config.server.port = port;
   const srv2 = createServer(app); // tạo lại để danh sách host hợp lệ có cổng thật
-  srv.close();
+  await closeServer(srv);
   await new Promise<void>((r) => srv2.listen(port, '127.0.0.1', r));
   const base = `http://127.0.0.1:${port}`;
   try {
-    const st = await (await fetch(`${base}/api/state`)).json();
+    const st = await readJson<{ agents: unknown[] }>(await fetch(`${base}/api/state`));
     assert.equal(st.agents.length, 20);
     assert.equal((await fetch(`${base}/api/tasks`, { method: 'POST', body: '{"brief":"x"}' })).status, 415);
     assert.equal((await fetch(`${base}/api/tasks`, { method: 'POST', headers: { 'content-type': 'application/json', origin: 'http://evil.example' }, body: '{"brief":"x"}' })).status, 403);
     const res = await fetch(`${base}/api/tasks`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ brief: 'Viết tổng quan tài liệu', mode: 'department', department: 'research' }) });
     assert.equal(res.status, 201);
-    const t = await res.json();
+    const t = await readJson<{ id: string }>(res);
     await app.orchestrator.waitFor(t.id);
-    const usage = await (await fetch(`${base}/api/usage?by=department`)).json();
+    const usage = await readJson<{ rows: { key: string }[] }>(await fetch(`${base}/api/usage?by=department`));
     assert.ok(usage.rows.some((r: { key: string }) => r.key === 'research'));
     const fin = await fetch(`${base}/api/tasks/${t.id}/file?path=../../../etc/passwd`);
     assert.equal(fin.status, 404);
   } finally {
-    srv2.close();
+    await closeServer(srv2);
     app.cleanup();
   }
 });

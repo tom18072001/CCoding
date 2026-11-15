@@ -1,0 +1,196 @@
+TAP version 13
+# Subtest: tính tiền không mã giảm giá
+ok 1 - tính tiền không mã giảm giá
+  ---
+  duration_ms: 1.146563
+  type: 'test'
+  ...
+# Subtest: giữ chỗ tồn kho khi thêm
+ok 2 - giữ chỗ tồn kho khi thêm
+  ---
+  duration_ms: 0.13592
+  type: 'test'
+  ...
+# Subtest: mã không tồn tại
+ok 3 - mã không tồn tại
+  ---
+  duration_ms: 0.422235
+  type: 'test'
+  ...
+# Subtest: thêm 2 rồi sửa thành 3 khi kho còn 4 thì được
+ok 4 - thêm 2 rồi sửa thành 3 khi kho còn 4 thì được
+  ---
+  duration_ms: 0.892627
+  type: 'test'
+  ...
+# Subtest: giảm số lượng nhả phần chênh lệch
+ok 5 - giảm số lượng nhả phần chênh lệch
+  ---
+  duration_ms: 0.231542
+  type: 'test'
+  ...
+# Subtest: xóa và đặt về 0 nhả đúng phần đã giữ; khách khác mua được
+ok 6 - xóa và đặt về 0 nhả đúng phần đã giữ; khách khác mua được
+  ---
+  duration_ms: 0.776841
+  type: 'test'
+  ...
+# Subtest: thêm lại sau khi xóa và thêm cùng SKU cộng dồn
+ok 7 - thêm lại sau khi xóa và thêm cùng SKU cộng dồn
+  ---
+  duration_ms: 0.218122
+  type: 'test'
+  ...
+# Subtest: nhiều giỏ: reserved bằng tổng số lượng các giỏ
+ok 8 - nhiều giỏ: reserved bằng tổng số lượng các giỏ
+  ---
+  duration_ms: 0.284259
+  type: 'test'
+  ...
+# Subtest: thất bại không đổi trạng thái
+ok 9 - thất bại không đổi trạng thái
+  ---
+  duration_ms: 0.269706
+  type: 'test'
+  ...
+# Subtest: toCents làm tròn half away from zero
+ok 10 - toCents làm tròn half away from zero
+  ---
+  duration_ms: 0.98909
+  type: 'test'
+  ...
+# Subtest: Catalog dùng toCents cho giá
+ok 11 - Catalog dùng toCents cho giá
+  ---
+  duration_ms: 0.234335
+  type: 'test'
+  ...
+# Subtest: allocate: 3 dòng chia 1000 xu, tổng đúng
+ok 12 - allocate: 3 dòng chia 1000 xu, tổng đúng
+  ---
+  duration_ms: 0.677916
+  type: 'test'
+  ...
+# Subtest: allocate: theo trọng số, phần dư lớn nhất, hòa thì đứng trước
+ok 13 - allocate: theo trọng số, phần dư lớn nhất, hòa thì đứng trước
+  ---
+  duration_ms: 0.218495
+  type: 'test'
+  ...
+# Subtest: allocate: số âm, tổng 0, trọng số 0
+ok 14 - allocate: số âm, tổng 0, trọng số 0
+  ---
+  duration_ms: 0.213752
+  type: 'test'
+  ...
+# Subtest: allocate: tổng luôn bằng total
+ok 15 - allocate: tổng luôn bằng total
+  ---
+  duration_ms: 1.89172
+  type: 'test'
+  ...
+# Subtest: toCents cơ bản
+ok 16 - toCents cơ bản
+  ---
+  duration_ms: 1.013878
+  type: 'test'
+  ...
+# Subtest: formatMoney
+ok 17 - formatMoney
+  ---
+  duration_ms: 0.26906
+  type: 'test'
+  ...
+# Subtest: allocate chia đều
+ok 18 - allocate chia đều
+  ---
+  duration_ms: 0.809879
+  type: 'test'
+  ...
+# Subtest: freeUnits mua 2 tặng 1
+ok 19 - freeUnits mua 2 tặng 1
+  ---
+  duration_ms: 1.204939
+  type: 'test'
+  ...
+# Subtest: freeUnits tổng quát
+ok 20 - freeUnits tổng quát
+  ---
+  duration_ms: 0.221732
+  type: 'test'
+  ...
+# Subtest: endsAt dạng ngày dùng được hết ngày (UTC)
+ok 21 - endsAt dạng ngày dùng được hết ngày (UTC)
+  ---
+  duration_ms: 0.309846
+  type: 'test'
+  ...
+# Subtest: endsAt bị từ chối từ 00:00Z ngày kế tiếp
+ok 22 - endsAt bị từ chối từ 00:00Z ngày kế tiếp
+  ---
+  duration_ms: 0.397398
+  type: 'test'
+  ...
+# Subtest: endsAt dạng ISO đầy đủ giữ nguyên hành vi
+ok 23 - endsAt dạng ISO đầy đủ giữ nguyên hành vi
+  ---
+  duration_ms: 0.177818
+  type: 'test'
+  ...
+# Subtest: startsAt có hiệu lực từ đầu ngày UTC
+ok 24 - startsAt có hiệu lực từ đầu ngày UTC
+  ---
+  duration_ms: 0.164228
+  type: 'test'
+  ...
+# Subtest: minSubtotal đổi xu bằng toCents
+ok 25 - minSubtotal đổi xu bằng toCents
+  ---
+  duration_ms: 0.919588
+  type: 'test'
+  ...
+# Subtest: lineTax làm tròn half away from zero, chính xác
+ok 26 - lineTax làm tròn half away from zero, chính xác
+  ---
+  duration_ms: 1.189367
+  type: 'test'
+  ...
+# Subtest: không mã giảm: thuế trên giá gốc như cũ
+ok 27 - không mã giảm: thuế trên giá gốc như cũ
+  ---
+  duration_ms: 1.927131
+  type: 'test'
+  ...
+# Subtest: mã giảm cố định: thuế trên net
+ok 28 - mã giảm cố định: thuế trên net
+  ---
+  duration_ms: 1.738219
+  type: 'test'
+  ...
+# Subtest: mã giảm %: thuế trên net, nhiều thuế suất
+ok 29 - mã giảm %: thuế trên net, nhiều thuế suất
+  ---
+  duration_ms: 1.254763
+  type: 'test'
+  ...
+# Subtest: mã giảm cố định dùng toCents: 1.005 → 101 xu
+ok 30 - mã giảm cố định dùng toCents: 1.005 → 101 xu
+  ---
+  duration_ms: 0.320813
+  type: 'test'
+  ...
+# Subtest: mã giảm %: nửa xu làm tròn lên, không lệch float
+ok 31 - mã giảm %: nửa xu làm tròn lên, không lệch float
+  ---
+  duration_ms: 0.427424
+  type: 'test'
+  ...
+1..31
+# tests 31
+# suites 0
+# pass 31
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 332.113267

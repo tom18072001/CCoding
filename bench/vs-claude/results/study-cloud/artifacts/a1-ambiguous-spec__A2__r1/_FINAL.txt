@@ -1,0 +1,15 @@
+I wrote the spec to `SPEC.md` at the repo root. It includes the `## Open questions and assumptions` section: 14 questions, each with the assumption I used meanwhile. It's a draft and shouldn't be built until the customer answers the four blocking questions below. I didn't commit anything.
+
+**The request contradicts itself in four places.** The spec lists these up front and resolves each one with a safe default:
+- **Masking:** "Full IPs and usernames" conflicts with "no personal data leaves the platform unmasked." The default export is masked: usernames are pseudonymized with a keyed hash and the last octet of the IP is hidden. An unmasked export is described but not built unless compliance approves it in writing. If it is built, it needs a separate permission, a reason, a second approver, and a short file expiry.
+- **Scope:** "Everything they can see" conflicts with "team, last month." v1 exports the manager's own team for the previous calendar month only.
+- **Retention:** "Keep forever" conflicts with "delete personal data after 12 months." Only the audit record of each export is kept (5 years, no raw IPs or usernames). The files themselves expire after 30 days, or 7 days if unmasked.
+- **Speed:** Five seconds can't hold for unbounded volume. It applies up to 50,000 rows; larger exports run in the background.
+
+**Safeguards I added beyond the request:** CSV-injection protection, per-team scoping enforced on the server, short-lived download links, rate limits, and an audit record of every attempt. The spec also has acceptance criteria and a retention table.
+
+**Blocking questions:** Q1 (masking), Q2 (retention rule), Q3 (what "kept forever" means) and Q7 (export scope). They change the data model. Q4, Q5, Q6 and Q8 shape the design but have workable defaults.
+
+Two things to check:
+- The numbers (50,000 rows, 30-day and 5-year retention, 20 concurrent users) are my placeholders for the customer to confirm.
+- The legal references (Decree 13/2023, the 2026 data-protection law, State Bank of Vietnam rules) are flagged for the bank's legal team to validate. I haven't verified them.

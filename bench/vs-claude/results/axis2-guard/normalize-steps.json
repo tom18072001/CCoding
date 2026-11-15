@@ -1,0 +1,49 @@
+[
+  {
+    "step": "công bố: mục Bash trong bash2text_dataset_json",
+    "n": 600
+  },
+  {
+    "step": "quy tắc 1: đúng một dòng lệnh (sau bỏ shebang/chú thích/dòng trống)",
+    "n": 82
+  },
+  {
+    "step": "quy tắc 2: loại mã Python/PowerShell",
+    "n": 82
+  },
+  {
+    "step": "quy tắc 4a: khử trùng trong bộ (chuẩn hóa khoảng trắng)",
+    "n": 82
+  },
+  {
+    "step": "quy tắc 4b: khử trùng với tập tự viết",
+    "n": 82,
+    "removed": 0,
+    "ownSet": {
+      "ALLOWED": 23,
+      "DENIED": 60,
+      "claude-guard.test (command: + mảng)": 7,
+      "chuỗi duy nhất sau chuẩn hóa": 89
+    }
+  },
+  {
+    "step": "quy tắc 4c: khử trùng giữa hai bộ (bộ dự phòng không tải: bộ chính quy được ≥ 30 ca)",
+    "n": 82,
+    "removed": 0
+  },
+  {
+    "step": "quy tắc 6: rút mẫu nếu > 500",
+    "n": 82,
+    "sampled": false
+  },
+  {
+    "step": "n đo (ghi ra cases-normalized.jsonl)",
+    "n": 82,
+    "byGroup": {
+      "2": 30,
+      "4": 2,
+      "8": 20,
+      "9": 30
+    }
+  }
+]

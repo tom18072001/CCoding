@@ -1,0 +1,112 @@
+TAP version 13
+# Subtest: parse: JSON làm phẳng, mảng giữ nguyên, đối tượng rỗng bỏ
+ok 1 - parse: JSON làm phẳng, mảng giữ nguyên, đối tượng rỗng bỏ
+  ---
+  duration_ms: 2.516881
+  type: 'test'
+  ...
+# Subtest: parse: logfmt
+ok 2 - parse: logfmt
+  ---
+  duration_ms: 1.689981
+  type: 'test'
+  ...
+# Subtest: parse: @t
+ok 3 - parse: @t
+  ---
+  duration_ms: 0.415884
+  type: 'test'
+  ...
+# Subtest: query: ngữ nghĩa
+ok 4 - query: ngữ nghĩa
+  ---
+  duration_ms: 2.23712
+  type: 'test'
+  ...
+# Subtest: query: toán tử và ưu tiên
+ok 5 - query: toán tử và ưu tiên
+  ---
+  duration_ms: 0.675328
+  type: 'test'
+  ...
+# Subtest: query: vị trí lỗi
+ok 6 - query: vị trí lỗi
+  ---
+  duration_ms: 1.027631
+  type: 'test'
+  ...
+# Subtest: agg: count, count by, top
+ok 7 - agg: count, count by, top
+  ---
+  duration_ms: 1.029407
+  type: 'test'
+  ...
+# Subtest: agg: số học và percentile
+ok 8 - agg: số học và percentile
+  ---
+  duration_ms: 0.801013
+  type: 'test'
+  ...
+# Subtest: agg: histogram
+ok 9 - agg: histogram
+  ---
+  duration_ms: 1.036453
+  type: 'test'
+  ...
+# Subtest: agg: spec sai
+ok 10 - agg: spec sai
+  ---
+  duration_ms: 1.622333
+  type: 'test'
+  ...
+# Subtest: cli: lọc, bỏ @t, stats
+ok 11 - cli: lọc, bỏ @t, stats
+  ---
+  duration_ms: 40.106872
+  type: 'test'
+  ...
+# Subtest: cli: stdin và -
+ok 12 - cli: stdin và -
+  ---
+  duration_ms: 63.560731
+  type: 'test'
+  ...
+# Subtest: cli: table
+ok 13 - cli: table
+  ---
+  duration_ms: 99.846017
+  type: 'test'
+  ...
+# Subtest: cli: mã thoát
+ok 14 - cli: mã thoát
+  ---
+  duration_ms: 251.354091
+  type: 'test'
+  ...
+# Subtest: parse JSON và logfmt
+ok 15 - parse JSON và logfmt
+  ---
+  duration_ms: 2.541673
+  type: 'test'
+  ...
+# Subtest: truy vấn cơ bản
+ok 16 - truy vấn cơ bản
+  ---
+  duration_ms: 1.263538
+  type: 'test'
+  ...
+# Subtest: tổng hợp count by
+ok 17 - tổng hợp count by
+  ---
+  duration_ms: 0.789916
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 619.014772

@@ -1,0 +1,23 @@
+I wrote `answer.json`. B and C are healthy, A, D and E are compromised, and that is the only consistent assignment.
+
+```json
+{ "healthy": ["B","C"], "compromised": ["A","D","E"], "unique": true }
+```
+
+I split on A's state, since A's statement ties A to B.
+
+**If A is healthy:**
+1. A's statement makes B compromised.
+2. B's statement is then false, so A and E differ, which makes E compromised.
+3. E's statement is false and A is healthy, so D must be healthy.
+4. D's statement is true and E is compromised, so C must be compromised.
+5. Compromised servers would then be B, C and E, which is exactly three. That makes C's statement true, but C is compromised, so this is a contradiction.
+
+**If A is compromised:**
+1. A's statement is false, so B is healthy.
+2. B's statement is true, so A and E are in the same state, which makes E compromised.
+3. D says "E is healthy, or C is compromised", and E is compromised, so D is healthy exactly when C is compromised.
+4. If C is healthy, D is compromised. Compromised servers would then be A, D and E, which is three, so C's statement is true and C is healthy. That is consistent.
+5. If C is compromised, D is healthy. Compromised servers would then be A, C and E, which is also three, so C's statement would be true, which contradicts C being compromised.
+
+Only the C-healthy branch survives. D's statement is false there (E is compromised and C is healthy), which matches D being compromised.

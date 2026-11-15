@@ -1,0 +1,106 @@
+TAP version 13
+# Subtest: lỗi: thông báo chính xác theo kiểu đầu vào
+ok 1 - lỗi: thông báo chính xác theo kiểu đầu vào
+  ---
+  duration_ms: 1.963528
+  type: 'test'
+  ...
+# Subtest: số thuần
+ok 2 - số thuần
+  ---
+  duration_ms: 0.43999
+  type: 'test'
+  ...
+# Subtest: input kiểu number
+ok 3 - input kiểu number
+  ---
+  duration_ms: 1.603213
+  type: 'test'
+  ...
+# Subtest: dấu
+ok 4 - dấu
+  ---
+  duration_ms: 0.434038
+  type: 'test'
+  ...
+# Subtest: bí danh đơn vị và hoa/thường
+ok 5 - bí danh đơn vị và hoa/thường
+  ---
+  duration_ms: 0.567563
+  type: 'test'
+  ...
+# Subtest: thứ tự và lặp đơn vị
+ok 6 - thứ tự và lặp đơn vị
+  ---
+  duration_ms: 0.278869
+  type: 'test'
+  ...
+# Subtest: ISO 8601
+ok 7 - ISO 8601
+  ---
+  duration_ms: 0.626526
+  type: 'test'
+  ...
+# Subtest: làm tròn half away from zero và -0
+ok 8 - làm tròn half away from zero và -0
+  ---
+  duration_ms: 0.207067
+  type: 'test'
+  ...
+# Subtest: formatDuration: style và largest không hợp lệ
+ok 9 - formatDuration: style và largest không hợp lệ
+  ---
+  duration_ms: 0.576068
+  type: 'test'
+  ...
+# Subtest: formatDuration: cơ bản short/long
+ok 10 - formatDuration: cơ bản short/long
+  ---
+  duration_ms: 0.577155
+  type: 'test'
+  ...
+# Subtest: formatDuration: số âm và làm tròn về 0
+ok 11 - formatDuration: số âm và làm tròn về 0
+  ---
+  duration_ms: 0.209117
+  type: 'test'
+  ...
+# Subtest: formatDuration: largest
+ok 12 - formatDuration: largest
+  ---
+  duration_ms: 0.257401
+  type: 'test'
+  ...
+# Subtest: vòng lặp parse(format(x)) === parse(x) với seed cố định
+ok 13 - vòng lặp parse(format(x)) === parse(x) với seed cố định
+  ---
+  duration_ms: 40.748307
+  type: 'test'
+  ...
+# Subtest: parse cơ bản
+ok 14 - parse cơ bản
+  ---
+  duration_ms: 1.536346
+  type: 'test'
+  ...
+# Subtest: format cơ bản
+ok 15 - format cơ bản
+  ---
+  duration_ms: 0.291263
+  type: 'test'
+  ...
+# Subtest: lỗi
+ok 16 - lỗi
+  ---
+  duration_ms: 0.428262
+  type: 'test'
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 231.678386

@@ -1,0 +1,17 @@
+**4. FIX and final report**
+
+The review found nothing to fix, so I made no changes after the first implementation.
+
+`detectBursts` is implemented in `src/alert.js`, and `npm test` passes (1 of 1). I also ran my own edge checks, and all of them behaved as the brief says:
+- **Equal ts:** three events at the same ts give a count of 3 at that ts.
+- **Window boundary:** an event exactly `windowMs` earlier is excluded.
+- **Cooldown:** events suppressed during cooldown still count toward later windows. In one case an alert at ts 8 was followed by one at ts 13 with count 6.
+- **Non-5xx events:** a 404 is ignored.
+- **Hosts:** each host is handled independently, and output is ordered by ts and then by host.
+- **Input:** the input array is not mutated.
+
+Each host's events are sorted by ts with a stable sort, and a two-pointer pass counts the window.
+
+With equal ts, the order among a host's same-ts events doesn't change the result, so input order is respected.
+
+I only checked the three-event equal-ts case against the brief's wording, since the visible test suite has just the one test.

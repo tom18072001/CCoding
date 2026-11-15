@@ -1,0 +1,11 @@
+`GET /tickets` in `src/handler.js` now supports `status`, `assignee`, `sort`, `limit` and `cursor` as you described. `npm test` passes, including the new tests in `test/list.test.js`. A request with no parameters still returns the bare array sorted by id.
+
+- **Without `limit`:** filters and sort apply and the body stays a bare array.
+- **With `limit`:** the body is `{ items, nextCursor }`. The cursor is a base64url token tied to the `status`, `assignee` and `sort` values it was issued for, so changing any of them returns `invalid_cursor`. A cursor that is garbled, or sent without `limit`, also returns `invalid_cursor`.
+- **Paging:** each cursor points just past the last item returned, so no ticket is skipped or repeated across pages.
+- **Validation:** any invalid parameter returns 400 with `{ error: 'invalid_<param>' }`, and unknown query parameters are ignored. If several parameters are invalid, the error names the first in this order: `status`, `assignee`, `sort`, `limit`, `cursor`.
+
+You didn't specify these cases, so I chose:
+- `limit` must be plain digits, so `1.5`, `+5`, `-1` and an empty string are all `invalid_limit`.
+- An empty entry in a comma list, such as `assignee=an,`, is rejected. For `assignee` that gives `invalid_assignee`.
+- A repeated parameter that arrives as an array rather than a string is rejected as invalid.

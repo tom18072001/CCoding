@@ -1,0 +1,84 @@
+{
+ "run": {
+  "exitCode": 0,
+  "status": "done",
+  "wallSec": 186,
+  "costUsd": 0.6024956000000001,
+  "turns": 9,
+  "tokens": {
+   "input": 18,
+   "output": 15256,
+   "cacheRead": 442355,
+   "cacheWrite": 26063
+  },
+  "models": [
+   "claude-haiku-5-5",
+   "claude-opus-5-5"
+  ],
+  "modelUsage": {
+   "claude-haiku-5-5": {
+    "inputTokens": 1366,
+    "outputTokens": 384,
+    "cacheReadInputTokens": 0,
+    "cacheCreationInputTokens": 0,
+    "webSearchRequests": 0,
+    "costUSD": 0.0003286,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 64000,
+    "thinkingTokens": 364,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 0,
+    "canonicalModel": "claude-haiku-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   },
+   "claude-opus-5-5": {
+    "inputTokens": 18,
+    "outputTokens": 15256,
+    "cacheReadInputTokens": 442355,
+    "cacheCreationInputTokens": 26063,
+    "webSearchRequests": 0,
+    "costUSD": 0.6021670000000001,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000,
+    "thinkingTokens": 5746,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 26063,
+    "canonicalModel": "claude-opus-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   }
+  },
+  "finalText": "`buildReport` giờ chạy 200.000 dòng trong khoảng **217 ms** với `npm run bench`, trước đây mất khoảng **13,7 s**. Kết quả `deepStrictEqual` với bản cũ ở cả bộ dữ liệu bench 200k lẫn các bộ test, và `npm test` xanh (7/7).\n\n**Cách làm (`src/report.js`):** bản cũ dò lại toàn bộ danh sách nhiều lần cho mỗi nhóm (`products.find`, `filter`, `includes` lồng nhau). Bản mới chỉ duyệt một lượt qua các dòng, dùng `Map`/`Set` để cộng dồn theo tháng, danh mục, sku và khách. Chữ ký hàm giữ nguyên, không sửa đầu vào, không đệm gì giữa các lần gọi; phần ghi nhớ ngày → tháng chỉ tồn tại trong một lần gọi.\n\n**Các hành vi lạ của bản cũ vẫn được giữ đúng:**\n- **Sao chép qua JSON:** mỗi dòng ở bản cũ đi qua `JSON.parse(JSON.stringify())`. Bản mới làm lại hiệu ứng đó bằng hàm `norm`: NaN/Infinity thành `null`, `-0` thành `0`, trường `undefined` bị bỏ. Giá trị kiểu object thì mỗi dòng có một bản sao riêng, nên không gộp chung nhóm.\n- **Tra sản phẩm:** lấy sản phẩm đầu tiên có sku `===` khớp, giống `find`. Riêng sku là `NaN` thì không khớp với gì.\n- **Thứ tự cộng và sắp xếp:** các tổng được cộng theo đúng thứ tự dòng, bắt đầu từ 0. Mảng đưa vào `sort` có cùng thứ tự xuất hiện đầu tiên và cùng hàm so sánh như bản cũ, nên thứ tự lúc hòa vẫn giống hệt.\n- **Lọc:** lọc tháng theo UTC; `from`/`to` là chuỗi rỗng thì không lọc; `topN` rỗng thì lấy mặc định là 3.\n\n**Test:**\n- `test/fixtures/report.legacy.js` là bản gốc lấy nguyên từ commit đầu, dùng làm đặc tả.\n- `test/report.equivalence.test.js` so kết quả với bản cũ trên:\n  - nhiều seed, nhiều kích thước dữ liệu và 15 bộ tùy chọn (`topN` gồm cả 0, âm, `null`; `from`/`to` gồm cả khoảng ngược và chuỗi rỗng);\n  - các trường hợp biên: sku trùng, sku không có trong danh sách sản phẩm, thiếu `name`/`category`, `qty` = 0 hoặc âm, đổi tháng theo múi giờ, id kiểu số;\n  - 30 bộ dữ liệu ngẫu nhiên nhiều trùng lặp.\n- Test cũng kiểm tra đầu vào không bị sửa và có một bài đo 200k dòng phải dưới 1 giây.\n\nNgoài bộ test, tôi chạy thử riêng các đầu vào \"dị\" như NaN, `undefined`, `qty` dạng chuỗi, `customerId` là object, `date` là `Date` hoặc số: kết quả cũng khớp. Những trường hợp này chưa có trong file test.\n\nTôi chưa commit gì.",
+  "workdir": "/tmp/bw/C5-t4-perf.claude.1-3e8yxi/repo"
+ },
+ "task": "t4-perf",
+ "system": "claude",
+ "rep": 1,
+ "key": "t4-perf.claude.1",
+ "env": "cloud",
+ "startedAt": "2026-11-02T03:54:22.098Z",
+ "finishedAt": "2026-11-02T03:57:35.926Z",
+ "grade": {
+  "hidden": {
+   "pass": 19,
+   "fail": 0,
+   "total": 19,
+   "failed": [],
+   "ms": 2389,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 7,
+   "fail": 0,
+   "total": 7
+  },
+  "changed": [
+   "~src/report.js",
+   "+test/fixtures/report.legacy.js",
+   "+test/report.equivalence.test.js"
+  ],
+  "perfMs": 141
+ },
+ "audit": []
+}

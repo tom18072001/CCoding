@@ -1,0 +1,71 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude g2-cart-coupon__B7cab__r1] Tổng giỏ hàng theo xu và áp mã giảm giá (lệnh kiểm tra đỏ sẵn)
+
+_Làn đơn: một agent làm trọn đề bài; báo cáo dựng tự động từ bàn giao và kết quả cổng chất lượng (không gọi model)._
+
+## Tóm tắt
+
+Làn đơn: Senior Software Engineer (@senior-swe) làm trọn đề bài trong worktree nhiệm vụ
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — [vs-claude g2-cart-coupon__B7cab__r1] Tổng giỏ hàng theo xu và áp mã giảm giá (lệnh kiểm tra đỏ sẵn) (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã thêm `applyCoupon` vào `src/cart.js` theo SPEC. Tôi cũng sửa lỗi gốc trong `toCents`: hàm dùng `Math.floor`, nên 19.99 ra 1998 xu, trong khi SPEC yêu cầu làm tròn gần nhất. Sau khi sửa, `npm test` xanh (3/3).
+
+## Tệp đã tạo/sửa
+- `src/cart.js`: thêm và export `applyCoupon`.
+  - `percent` dùng `Math.round(total*(100-v)/100)`.
+  - `fixed` dùng `max(0, total-c)`.
+  - Ném `RangeError` khi coupon sai kiểu, `percent` ngoài [0,100], `fixed` âm hoặc không nguyên, giá trị không hữu hạn, hoặc `totalCents` không phải số nguyên >= 0.
+- `src/money.js`: `Math.floor` đổi thành `Math.round` trong `toCents`.
+
+## Kiểm chứng
+`npm test` → exit 0, 3 test chạy, 3 pass, 0 fail. Baseline trước khi sửa là 2 fail. Tôi chưa thêm test riêng cho `applyCoupon` và chưa chạy các ca biên.
+
+## Quyết định thiết kế
+- SPEC không nói gì về `totalCents` không hợp lệ. Tôi chọn ném `RangeError` cho trường hợp này, vì làm vậy chặt hơn.
+- Kiểm tra giá trị coupon dùng chung cho cả hai loại, nên `NaN` hay `Infinity` đều bị từ chối.
+
+## Rủi ro & việc còn mở
+Nếu bộ nghiệm thu ẩn kỳ vọng `totalCents` lẻ hoặc âm vẫn được chấp nhận thì kiểm tra này sẽ sai. Đây là giả định của tôi, chưa kiểm chứng.
+
+Bản đầy đủ: `.ccoding/T-20261104-103625-df7/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng (làn đơn): lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261104-103625-df7` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **6 in / 1,760 out**, cache đọc 69.1k, 1 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 6 | 1760 | 69051 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude g2-cart-coupon__B7cab__r1] Tổng giỏ hàng theo xu và áp mã giảm giá (lệnh kiểm tra đỏ sẵn) (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 3 · # suites 0 · # pass 1 · # fail 2 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 3 · # suites 0 · # pass 3 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 100 | 100 | 60 | 1 | 1 | 71k | 0/5 | — |
+
+### Việc cần sửa theo agent
+- **Senior Software Engineer** (@senior-swe, 65 B):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

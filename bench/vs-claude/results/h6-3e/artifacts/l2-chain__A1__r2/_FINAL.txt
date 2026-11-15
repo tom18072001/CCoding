@@ -1,0 +1,22 @@
+Cả bốn tầng và `compile` đã hiện thực xong, và `npm test` xanh (51 test, 0 lỗi). Các test do tôi tự viết, chưa chạy với bộ nghiệm thu ẩn.
+
+**Tệp đã thêm hoặc sửa**
+- `src/lexer.js`, `src/parser.js`: tách từ, `parse` và `parseProject`.
+- `src/check.js`: ba pha A/B/C.
+- `src/evaluate.js`, `src/diff.js`, `src/index.js`: đánh giá, so sánh và `compile`.
+- `src/core.js` là tệp mới. Nó chứa mô hình hợp nhất và phân giải tham chiếu dùng chung cho `check.js` và `evaluate.js`, để hai tầng không lệch nhau.
+- Test mới: `test/{lexer,parser,check,evaluate,diff,compile}.test.js`. Tôi giữ nguyên `test/smoke.test.js`.
+
+**Review:** tôi đối chiếu từng mục của SPEC với mã và chạy test. Các lần test đỏ ban đầu đều do tôi đếm cột sai hoặc viết test có khóa trùng, nên tôi sửa test. Mã không phải sửa.
+
+**Giả định ở chỗ đặc tả mơ hồ**
+- `\` ngay trước hết tệp báo `LEX_BAD_ESCAPE`, giống `\` trước xuống dòng.
+- Đoạn `ident` trong `${…}` không loại từ khóa, nên `${true}` vẫn hợp lệ ở lexer.
+- `closed: true` mà không có `fields` thì không làm gì, vì mục 5 phần 3 chỉ áp dụng khi có `fields`.
+- `SEM_UNKNOWN_KEY` báo tại khối khởi tạo của khóa, hoặc `Assign` cuối cùng nếu khóa bị ghi đè.
+- Khóa nằm trong giá trị lấy từ chuỗi thuần tham chiếu cũng báo tại vị trí chuỗi đó. Tôi hiểu "mọi thứ bên trong nó" là gồm cả khóa.
+- `applyDiff` chỉ nhận chỉ số mảng là số nguyên không âm không có số 0 đứng đầu, không nhận `-`.
+
+Hai giả định đáng chú ý nhất là đoạn `ident` không loại từ khóa và vị trí báo `SEM_UNKNOWN_KEY` trong giá trị từ chuỗi thuần tham chiếu. Nếu bộ nghiệm thu ẩn hiểu khác ở hai chỗ này thì cần đổi, nhưng sửa chỉ ở vài dòng trong `lexer.js` và `check.js`.
+
+Tôi chưa commit gì, vì bạn không yêu cầu.

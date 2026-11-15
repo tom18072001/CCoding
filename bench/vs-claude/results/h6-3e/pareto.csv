@@ -1,0 +1,4 @@
+arm,meanScore,meanWeightedTokens,meanUsd,medianWallSec,scorePerMillionWtok,runs
+A1,0.9997,276604.8571,0.5654,158.804,3.6141,21
+A2,1,687109.2143,1.4162,486.77,1.4554,14
+B0,0.9992,442670.7143,0,270.336,2.2572,21

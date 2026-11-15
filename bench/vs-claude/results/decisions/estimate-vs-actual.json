@@ -1,0 +1,458 @@
+{
+ "note": "Ước lượng (run.estimate lúc lập kế hoạch) so với token thật của 5 gói Nghiên cứu trên văn phòng phụ; chỉ số tổng, không có văn bản. Trích 14/11/2026 bởi người điều phối cho D18d K4b.",
+ "rows": [
+  {
+   "brief": "BRIEF-19",
+   "department": "research",
+   "lane": "full",
+   "subtasks": 6,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 2390000,
+    "budget": 5822029,
+    "at": "2026-11-12T16:59:57.502Z",
+    "basis": "theo hằng số cấu hình (chưa đủ lịch sử)"
+   },
+   "actual": {
+    "input": 322,
+    "output": 260662,
+    "cacheRead": 13564213,
+    "cacheWrite": 786074,
+    "total": 14611271,
+    "costUsd": 7.36,
+    "calls": 15
+   }
+  },
+  {
+   "brief": "BRIEF-20",
+   "department": "research",
+   "lane": "full",
+   "subtasks": 6,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 13395807,
+    "budget": 5660148,
+    "at": "2026-11-14T06:43:26.871Z",
+    "basis": "theo lịch sử: @data-scientist ~5.80M/hạng mục (2 mẫu), @methodologist ~513.8k/hạng mục (3 mẫu)"
+   },
+   "actual": {
+    "input": 324,
+    "output": 339126,
+    "cacheRead": 13913149,
+    "cacheWrite": 1049514,
+    "total": 15302113,
+    "costUsd": 12.58,
+    "calls": 15
+   }
+  },
+  {
+   "brief": "BRIEF-21",
+   "department": "research",
+   "lane": "full",
+   "subtasks": 7,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 12465604,
+    "budget": 5817189,
+    "at": "2026-11-14T08:34:19.300Z",
+    "basis": "theo lịch sử: @data-scientist ~3.51M/hạng mục (4 mẫu), @literature-researcher ~365.3k/hạng mục (2 mẫu), @methodologist ~670.3k/hạng mục (4 mẫu)"
+   },
+   "actual": {
+    "input": 442,
+    "output": 256551,
+    "cacheRead": 20885219,
+    "cacheWrite": 985716,
+    "total": 22127928,
+    "costUsd": 9.92,
+    "calls": 18
+   }
+  },
+  {
+   "brief": "BRIEF-22",
+   "department": "research",
+   "lane": "full",
+   "subtasks": 8,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 12687173,
+    "budget": 5685803,
+    "at": "2026-11-14T09:39:33.393Z",
+    "basis": "theo lịch sử: @methodologist ~513.8k/hạng mục (5 mẫu), @data-scientist ~2.68M/hạng mục (7 mẫu), @literature-researcher ~316.4k/hạng mục (3 mẫu), @academic-writer ~5.08M/hạng mục (2 mẫu)"
+   },
+   "actual": {
+    "input": 484,
+    "output": 376901,
+    "cacheRead": 19853737,
+    "cacheWrite": 1199485,
+    "total": 21430607,
+    "costUsd": 14.69,
+    "calls": 18
+   }
+  },
+  {
+   "brief": "BRIEF-23",
+   "department": "research",
+   "lane": "full",
+   "subtasks": 5,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 11413302,
+    "budget": 5689959,
+    "at": "2026-11-14T10:10:43.775Z",
+    "basis": "theo lịch sử: @methodologist ~513.8k/hạng mục (7 mẫu), @data-scientist ~1.97M/hạng mục (8 mẫu), @academic-writer ~4.61M/hạng mục (3 mẫu)"
+   },
+   "actual": {
+    "input": 216,
+    "output": 127230,
+    "cacheRead": 4619009,
+    "cacheWrite": 419855,
+    "total": 5166310,
+    "costUsd": 3.52,
+    "calls": 13
+   }
+  },
+  {
+   "brief": "BRIEF-D18a",
+   "task": "T-20261114-205113-c45",
+   "department": "dev",
+   "lane": "full",
+   "runtime": "claude-cli",
+   "status": "done",
+   "runs": 1,
+   "subtasks": 6,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 3817147,
+    "budget": 5662051,
+    "at": "2026-11-14T13:54:21.642Z",
+    "basis": "theo lịch sử: @backend-dev ~879.8k/hạng mục (8 mẫu), @senior-swe ~509.7k/hạng mục (5 mẫu), @qa-tester ~248.2k/hạng mục (4 mẫu)"
+   },
+   "actual": {
+    "input": 386,
+    "output": 203918,
+    "cacheRead": 9550616,
+    "cacheWrite": 741396,
+    "total": 10496316,
+    "costUsd": 6.1,
+    "calls": 19
+   }
+  },
+  {
+   "brief": "BRIEF-D18b",
+   "task": "T-20261114-205129-d6a",
+   "department": "dev",
+   "lane": "full",
+   "runtime": "claude-cli",
+   "status": "failed",
+   "runs": 2,
+   "subtasks": 5,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 4582528,
+    "budget": 5779272,
+    "at": "2026-11-14T14:05:20.105Z",
+    "basis": "theo lịch sử: @backend-dev ~997.1k/hạng mục (8 mẫu), @senior-swe ~698.5k/hạng mục (6 mẫu), @security ~1.25M/hạng mục (2 mẫu), @qa-tester ~248.2k/hạng mục (4 mẫu)"
+   },
+   "actual": {
+    "input": 178,
+    "output": 99207,
+    "cacheRead": 2680739,
+    "cacheWrite": 436274,
+    "total": 3216398,
+    "costUsd": 3.45,
+    "calls": 17
+   }
+  },
+  {
+   "brief": "BRIEF-22b",
+   "task": "T-20261114-214506-fe1",
+   "department": "research",
+   "lane": "full",
+   "runtime": "claude-cli",
+   "status": "done",
+   "runs": 1,
+   "subtasks": 5,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 10130162,
+    "budget": 5733717,
+    "at": "2026-11-14T14:47:52.205Z",
+    "basis": "theo lịch sử: @academic-writer ~4.13M/hạng mục (4 mẫu), @data-scientist ~828.2k/hạng mục (8 mẫu), @peer-reviewer ~3.13M/hạng mục (2 mẫu)",
+    "work": 9740162,
+    "criticalPathEstimate": 8911917,
+    "parallelism": 1.09
+   },
+   "actual": {
+    "input": 640,
+    "output": 306742,
+    "cacheRead": 21510895,
+    "cacheWrite": 969963,
+    "total": 22788240,
+    "costUsd": 10.53,
+    "calls": 20
+   }
+  },
+  {
+   "brief": "BRIEF-D18c",
+   "task": "T-20261114-214523-e25",
+   "department": "dev",
+   "lane": "full",
+   "runtime": "claude-cli",
+   "status": "done",
+   "runs": 1,
+   "subtasks": 5,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 3753263,
+    "budget": 5647946,
+    "at": "2026-11-14T14:47:22.778Z",
+    "basis": "theo lịch sử: @backend-dev ~750.4k/hạng mục (8 mẫu), @senior-swe ~773.7k/hạng mục (8 mẫu), @security ~726.9k/hạng mục (3 mẫu), @qa-tester ~361.9k/hạng mục (6 mẫu)",
+    "work": 3363263,
+    "criticalPathEstimate": 1886003,
+    "parallelism": 1.78
+   },
+   "actual": {
+    "input": 302,
+    "output": 99550,
+    "cacheRead": 5667274,
+    "cacheWrite": 425133,
+    "total": 6192259,
+    "costUsd": 3.33,
+    "calls": 16
+   }
+  },
+  {
+   "brief": "BRIEF-D18d",
+   "task": "T-20261114-221940-1bc",
+   "department": "dev",
+   "lane": "full",
+   "runtime": "claude-cli",
+   "status": "done",
+   "runs": 2,
+   "subtasks": 4,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 3726040,
+    "budget": 5776341,
+    "at": "2026-11-14T15:33:27.690Z",
+    "basis": "theo lịch sử: @senior-swe ~873.4k/hạng mục (8 mẫu), @backend-dev ~1.14M/hạng mục (8 mẫu), @qa-tester ~447.4k/hạng mục (7 mẫu)",
+    "work": 3336040,
+    "criticalPathEstimate": 2194169,
+    "parallelism": 1.52
+   },
+   "actual": {
+    "input": 124,
+    "output": 62790,
+    "cacheRead": 1419400,
+    "cacheWrite": 326468,
+    "total": 1808782,
+    "costUsd": 2.49,
+    "calls": 18
+   }
+  },
+  {
+   "brief": "BRIEF-D19",
+   "task": "T-20261114-214714-563",
+   "department": "dev",
+   "lane": "full",
+   "runtime": "claude-cli",
+   "status": "done",
+   "runs": 1,
+   "subtasks": 4,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 3470450,
+    "budget": 5689671,
+    "at": "2026-11-14T15:16:39.549Z",
+    "basis": "theo lịch sử: @backend-dev ~879.8k/hạng mục (8 mẫu), @senior-swe ~873.4k/hạng mục (8 mẫu), @qa-tester ~447.4k/hạng mục (7 mẫu)",
+    "work": 3080450,
+    "criticalPathEstimate": 2207081,
+    "parallelism": 1.4
+   },
+   "actual": {
+    "input": 476,
+    "output": 166236,
+    "cacheRead": 10232051,
+    "cacheWrite": 516179,
+    "total": 10914942,
+    "costUsd": 4.84,
+    "calls": 23
+   }
+  },
+  {
+   "brief": "BRIEF-22c",
+   "task": "T-20261114-233050-491",
+   "department": "research",
+   "lane": "full",
+   "runtime": "claude-cli",
+   "status": "done",
+   "runs": 1,
+   "subtasks": 5,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 10727826,
+    "budget": 5804100,
+    "at": "2026-11-14T17:07:03.659Z",
+    "basis": "theo lịch sử: @data-scientist ~1.08M/hạng mục (8 mẫu), @academic-writer ~4.61M/hạng mục (5 mẫu), @peer-reviewer ~2.50M/hạng mục (3 mẫu)",
+    "work": 10337826,
+    "criticalPathEstimate": 10337826,
+    "parallelism": 1
+   },
+   "actual": {
+    "input": 360,
+    "output": 218510,
+    "cacheRead": 13228231,
+    "cacheWrite": 706451,
+    "total": 14153552,
+    "costUsd": 7.12,
+    "calls": 18
+   }
+  },
+  {
+   "brief": "BRIEF-D20",
+   "task": "T-20261114-233050-abe",
+   "department": "dev",
+   "lane": "full",
+   "runtime": "claude-cli",
+   "status": "done",
+   "runs": 1,
+   "subtasks": 8,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 4493659,
+    "budget": 5705114,
+    "at": "2026-11-14T17:11:02.865Z",
+    "basis": "theo lịch sử: @senior-swe ~873.4k/hạng mục (8 mẫu), @security ~697.6k/hạng mục (4 mẫu), @backend-dev ~1.02M/hạng mục (8 mẫu), @qa-tester ~415.8k/hạng mục (8 mẫu)",
+    "work": 4103659,
+    "criticalPathEstimate": 2486794,
+    "parallelism": 1.65
+   },
+   "actual": {
+    "input": 550,
+    "output": 297391,
+    "cacheRead": 16160624,
+    "cacheWrite": 943817,
+    "total": 17402382,
+    "costUsd": 8.95,
+    "calls": 22
+   }
+  },
+  {
+   "brief": "BRIEF-22d",
+   "task": "T-20261115-015344-bb3",
+   "department": "research",
+   "lane": "full",
+   "runtime": "claude-cli",
+   "status": "done",
+   "runs": 1,
+   "subtasks": 5,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 11863421,
+    "budget": 5784659,
+    "at": "2026-11-14T19:20:06.434Z",
+    "basis": "theo lịch sử: @data-scientist ~1.63M/hạng mục (8 mẫu), @academic-writer ~4.13M/hạng mục (6 mẫu), @peer-reviewer ~2.46M/hạng mục (4 mẫu)",
+    "work": 11473421,
+    "criticalPathEstimate": 9843766,
+    "parallelism": 1.17
+   },
+   "actual": {
+    "input": 256,
+    "output": 128126,
+    "cacheRead": 4639702,
+    "cacheWrite": 517990,
+    "total": 5286074,
+    "costUsd": 5,
+    "calls": 18
+   }
+  },
+  {
+   "brief": "BRIEF-D20b",
+   "task": "T-20261115-023432-27c",
+   "department": "dev",
+   "lane": "full",
+   "runtime": "claude-cli",
+   "status": "done",
+   "runs": 1,
+   "subtasks": 4,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 4173968,
+    "budget": 5680600,
+    "at": "2026-11-14T20:00:13.976Z",
+    "basis": "theo lịch sử: @backend-dev ~1.02M/hạng mục (8 mẫu), @devops ~1.36M/hạng mục (2 mẫu), @senior-swe ~862.6k/hạng mục (8 mẫu), @qa-tester ~541.0k/hạng mục (8 mẫu)",
+    "work": 3783968,
+    "criticalPathEstimate": 2767103,
+    "parallelism": 1.37
+   },
+   "actual": {
+    "input": 368,
+    "output": 126481,
+    "cacheRead": 9210669,
+    "cacheWrite": 463620,
+    "total": 9801138,
+    "costUsd": 4.28,
+    "calls": 17
+   }
+  },
+  {
+   "brief": "BRIEF-D21",
+   "task": "T-20261115-030720-e7f",
+   "department": "dev",
+   "lane": "full",
+   "runtime": "claude-cli",
+   "status": "done",
+   "runs": 1,
+   "subtasks": 4,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 4144977,
+    "budget": 5663000,
+    "at": "2026-11-14T20:44:21.394Z",
+    "basis": "theo lịch sử: @backend-dev ~1.49M/hạng mục (8 mẫu), @senior-swe ~862.6k/hạng mục (8 mẫu), @qa-tester ~541.0k/hạng mục (8 mẫu)",
+    "work": 3754977,
+    "criticalPathEstimate": 2029741,
+    "parallelism": 1.85
+   },
+   "actual": {
+    "input": 146,
+    "output": 79742,
+    "cacheRead": 2227514,
+    "cacheWrite": 319262,
+    "total": 2626664,
+    "costUsd": 2.6,
+    "calls": 13
+   }
+  },
+  {
+   "brief": "BRIEF-24",
+   "task": "T-20261115-042813-dc1",
+   "department": "research",
+   "lane": "full",
+   "runtime": "claude-cli",
+   "status": "done",
+   "runs": 1,
+   "subtasks": 5,
+   "budgetTokens": 6000000,
+   "estimate": {
+    "tokens": 11978283,
+    "budget": 5692965,
+    "at": "2026-11-14T21:30:22.784Z",
+    "basis": "theo lịch sử: @methodologist ~480.5k/hạng mục (8 mẫu), @data-scientist ~1.40M/hạng mục (8 mẫu), @academic-writer ~3.65M/hạng mục (7 mẫu), @peer-reviewer ~2.42M/hạng mục (5 mẫu)",
+    "work": 11588283,
+    "criticalPathEstimate": 9706439,
+    "parallelism": 1.19
+   },
+   "actual": {
+    "input": 314,
+    "output": 182304,
+    "cacheRead": 6479949,
+    "cacheWrite": 712502,
+    "total": 7375069,
+    "costUsd": 6.7,
+    "calls": 21
+   }
+  }
+ ],
+ "note2": "Thêm 15/11/2026 bởi người điều phối cho D21b K3: 12 nhiệm vụ đã xong trên văn phòng phụ từ D18a tới BRIEF-24 (Dev và Nghiên cứu). Ước lượng là run.estimate của run đầu tiên; thực tế là usage cả nhiệm vụ (mọi run, gồm vòng bổ sung). Trường basis cho biết ước lượng theo hằng số hay theo lịch sử vai."
+}

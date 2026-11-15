@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { archiveRun, createBench, parseSpec, reportMarkdown, runBench, runInput, runMetrics, schedule, summarize, weighted, type BenchClient, type BenchState } from '../src/bench.js';
+import { archiveRun, createBench, gateDecisions, parseSpec, reportMarkdown, runBench, runInput, runMetrics, schedule, summarize, weighted, type BenchClient, type BenchState } from '../src/bench.js';
 import type { CallRow } from '../src/kpi.js';
 import { variantOptions } from '../src/orchestrator.js';
 import { selectHistory } from '../src/history.js';
@@ -245,7 +245,7 @@ test('bản đồ repo gọn: ≤ 6k ký tự, thư mục theo số dòng, tệp
   }
 });
 
-test('claude-cli: bashMaxOutput của nhiệm vụ → BASH_MAX_OUTPUT_LENGTH; không đặt thì giữ mặc định của CLI', { skip: process.platform === 'win32' }, async () => {
+test('claude-cli: bashMaxOutput của nhiệm vụ → BASH_MAX_OUTPUT_LENGTH; không đặt thì giữ mặc định của CLI', { skip: process.platform === 'win32' && 'chỉ Linux/macOS: claude giả là script shebang (node), Windows không thực thi được tệp không đuôi qua spawn' }, async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-fake-claude-'));
   try {
     const bin = path.join(dir, 'fake-claude');
@@ -310,4 +310,39 @@ test('bench cách ly lượt: lưu nhánh thành bundle + patch rồi gỡ workt
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('[B-13] byPhase thêm đủ bốn thành phần token, ms và model; trường cũ không đổi, không có events thì không có gates', () => {
+  const calls = [
+    call({ phase: 'plan', model: 'opus', input: 10, output: 100, cacheRead: 7, cacheWrite: 1000, durationMs: 4000 } as never),
+    call({ phase: 'plan', model: 'opus', input: 2, output: 1, cacheRead: 3, cacheWrite: 0, durationMs: 1000 } as never),
+    call({ phase: 'execute', model: 'sonnet', input: 5, output: 200, cacheRead: 10_000, durationMs: 60_000 } as never),
+  ];
+  const m = runMetrics(fakeTask(), calls);
+  assert.deepEqual(m.byPhase.plan, { calls: 2, sec: 5, weighted: weighted({ input: 12, output: 101, cacheRead: 10, cacheWrite: 1000 }), output: 101, input: 12, cacheRead: 10, cacheWrite: 1000, ms: 5000, models: ['opus'] });
+  assert.deepEqual(m.byPhase.execute.models, ['sonnet']);
+  assert.equal(m.gates, undefined);
+});
+
+test('[B-12] gateDecisions: fixture sự kiện gate.decision theo hợp đồng; thiếu dữ liệu → null', () => {
+  const ev = [
+    { kind: 'task.start', data: {} },
+    { kind: 'gate.decision', data: { gate: 'b02', verdict: 'block', rounds: 1, subtaskId: 's1' } },
+    { kind: 'gate.decision', data: { gate: 'b02', verdict: 'pass' } },
+    { kind: 'gate.decision', data: { gate: 'b10', verdict: 'block' } },
+    { kind: 'gate.decision', data: { gate: 'cto', verdict: 'pass' } },
+    { kind: 'gate.decision', data: { gate: 'khác', verdict: 'block' } },
+  ];
+  assert.deepEqual(gateDecisions(ev), { b02: { blocked: true, rounds: 1, checksRed: null }, b10: { blocked: true }, cto: { pass: true } });
+  assert.deepEqual(gateDecisions([]), { b02: null, b10: null, cto: null });
+  assert.deepEqual(gateDecisions([{ kind: 'gate.decision', gate: 'cto', verdict: 'block' }]).cto, { pass: false });
+  assert.deepEqual(runMetrics(fakeTask(), [], undefined, ev).gates?.b10, { blocked: true });
+});
+
+test('[B-12] gateDecisions: sự kiện mới có checks → checksRed; sự kiện cũ → null; trường cũ không đổi', () => {
+  const mới = [{ kind: 'gate.decision', data: { gate: 'b02', verdict: 'block', rounds: 2, checks: { red: 1, total: 3 } } }];
+  assert.deepEqual(gateDecisions(mới).b02, { blocked: true, rounds: 2, checksRed: 1 });
+  const cũ = [{ kind: 'gate.decision', data: { gate: 'b02', verdict: 'block', rounds: 2 } }];
+  assert.deepEqual(gateDecisions(cũ).b02, { blocked: true, rounds: 2, checksRed: null });
+  assert.equal(gateDecisions([{ kind: 'gate.decision', data: { gate: 'b02', verdict: 'pass', checks: { red: 0, total: 2 } } }]).b02?.checksRed, 0);
 });

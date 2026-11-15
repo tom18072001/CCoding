@@ -1,0 +1,8 @@
+`parseIisLog` is now implemented in `src/iis.js`, and `npm test` passes both tests (the visible one and a new one I added). The new test, in `test/basic.test.js`, covers several `#Fields:` lines, `-` values, `+` in user agents, and skipped lines. I only exercised the parser through those two tests.
+
+I made some choices where your rules were silent:
+- **Bad numbers:** If a numeric field (`sc-status`, `s-port`, `time-taken`) isn't a valid number, I leave that key out and still return the line.
+- **Bad timestamps:** If `date` and `time` don't form a valid timestamp, I leave out `@timestamp` and still return the line.
+- **Fractional seconds:** I accept them in `time`.
+- **`time-taken`:** A fractional `time-taken` is converted to nanoseconds and rounded.
+- **Line endings:** Windows (CRLF) line endings are handled.

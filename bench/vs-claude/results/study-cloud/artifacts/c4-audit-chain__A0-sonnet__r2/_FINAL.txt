@@ -1,0 +1,9 @@
+I implemented `canonicalize`, `redact`, `append` and `verify` in `src/index.js`. I added tests in `test/audit.test.js`, and `npm test` passes all 7 tests, including the existing smoke test.
+
+- **Key ordering:** `canonicalize` sorts keys by Unicode code point, not JavaScript's default sort, which orders by UTF-16 units. The two differ for emoji versus characters like U+FFFF, and a test covers that case.
+- **JSON.stringify behaviour:** it otherwise follows `JSON.stringify`. `undefined` properties are dropped, `undefined` in arrays becomes `null`, and `toJSON` is honoured.
+- **PII handling:** `append` redacts the entry first and hashes only the redacted copy, so PII never reaches the hash input. A test checks that the hash matches the redacted record and that the original e-mail is absent from the chain.
+- **Redaction order:** e-mails are replaced before phones, so digits inside an address are consumed with it. For example, `0912345678@x.com` becomes `[EMAIL]`, not `[PHONE]@x.com`.
+- **Redaction safety:** `redact` calls `toJSON()` before redacting, so a `Date` or custom object can't carry PII past it.
+- **Phone matching:** only the exact format from your brief is matched, with no spaces, dots or dashes inside the number. A number like `091 234 5678` would not be redacted. Say if you want separators handled.
+- **`verify`:** it checks that `seq` matches the index, `prev` matches the previous hash, and the hash recomputes. It returns `{ ok: false, index }` for the first bad record and doesn't throw on malformed records such as `null`.

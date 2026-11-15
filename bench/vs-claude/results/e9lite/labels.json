@@ -1,0 +1,236 @@
+{
+  "version": 1,
+  "rule": "chia_duoc ⇔ số module khác nhau của files[] có change ∈ {added, modified} ≥ 2 (tệp ở gốc = module \".\"; deleted bị bỏ, B1)",
+  "goldSha256": "a33c08865a433ac2d2b53e0a7eb2001556ae0a782bcb0eedfa666ca6a6c3251d",
+  "taskCount": 13,
+  "counts": {
+    "chia_duoc": 3,
+    "khong_chia_duoc": 10
+  },
+  "degenerate": false,
+  "sensitivityCounts": {
+    "chia_duoc": 4,
+    "khong_chia_duoc": 9
+  },
+  "labels": {
+    "g1-slug-dedupe": {
+      "label": "khong_chia_duoc",
+      "moduleCount": 1,
+      "fileCount": 1,
+      "deletedIgnored": 3,
+      "modules": [
+        "src"
+      ],
+      "sensitivity": {
+        "label": "khong_chia_duoc",
+        "moduleCount": 1,
+        "modules": [
+          "src"
+        ]
+      }
+    },
+    "g2-cart-coupon": {
+      "label": "khong_chia_duoc",
+      "moduleCount": 1,
+      "fileCount": 2,
+      "deletedIgnored": 3,
+      "modules": [
+        "src"
+      ],
+      "sensitivity": {
+        "label": "khong_chia_duoc",
+        "moduleCount": 1,
+        "modules": [
+          "src"
+        ]
+      }
+    },
+    "g3-qty-rename": {
+      "label": "chia_duoc",
+      "moduleCount": 2,
+      "fileCount": 5,
+      "deletedIgnored": 1,
+      "modules": [
+        "src",
+        "test"
+      ],
+      "sensitivity": {
+        "label": "chia_duoc",
+        "moduleCount": 2,
+        "modules": [
+          "src",
+          "test"
+        ]
+      }
+    },
+    "g4-gb-unit": {
+      "label": "khong_chia_duoc",
+      "moduleCount": 1,
+      "fileCount": 4,
+      "deletedIgnored": 2,
+      "modules": [
+        "src"
+      ],
+      "sensitivity": {
+        "label": "khong_chia_duoc",
+        "moduleCount": 1,
+        "modules": [
+          "src"
+        ]
+      }
+    },
+    "g5-median-stats": {
+      "label": "khong_chia_duoc",
+      "moduleCount": 1,
+      "fileCount": 1,
+      "deletedIgnored": 3,
+      "modules": [
+        "src"
+      ],
+      "sensitivity": {
+        "label": "khong_chia_duoc",
+        "moduleCount": 1,
+        "modules": [
+          "src"
+        ]
+      }
+    },
+    "g6-range-merge": {
+      "label": "khong_chia_duoc",
+      "moduleCount": 1,
+      "fileCount": 1,
+      "deletedIgnored": 3,
+      "modules": [
+        "src"
+      ],
+      "sensitivity": {
+        "label": "khong_chia_duoc",
+        "moduleCount": 1,
+        "modules": [
+          "src"
+        ]
+      }
+    },
+    "l1-modules": {
+      "label": "khong_chia_duoc",
+      "moduleCount": 1,
+      "fileCount": 5,
+      "deletedIgnored": 7,
+      "modules": [
+        "src"
+      ],
+      "sensitivity": {
+        "label": "chia_duoc",
+        "moduleCount": 5,
+        "modules": [
+          "src/calendar",
+          "src/csvcheck",
+          "src/money",
+          "src/ratelimit",
+          "src/slug"
+        ]
+      }
+    },
+    "l2-chain": {
+      "label": "khong_chia_duoc",
+      "moduleCount": 1,
+      "fileCount": 7,
+      "deletedIgnored": 3,
+      "modules": [
+        "src"
+      ],
+      "sensitivity": {
+        "label": "khong_chia_duoc",
+        "moduleCount": 1,
+        "modules": [
+          "src"
+        ]
+      }
+    },
+    "t1-duration": {
+      "label": "khong_chia_duoc",
+      "moduleCount": 1,
+      "fileCount": 1,
+      "deletedIgnored": 3,
+      "modules": [
+        "src"
+      ],
+      "sensitivity": {
+        "label": "khong_chia_duoc",
+        "moduleCount": 1,
+        "modules": [
+          "src"
+        ]
+      }
+    },
+    "t2-orders": {
+      "label": "khong_chia_duoc",
+      "moduleCount": 1,
+      "fileCount": 4,
+      "deletedIgnored": 8,
+      "modules": [
+        "src"
+      ],
+      "sensitivity": {
+        "label": "khong_chia_duoc",
+        "moduleCount": 1,
+        "modules": [
+          "src"
+        ]
+      }
+    },
+    "t3-api": {
+      "label": "chia_duoc",
+      "moduleCount": 2,
+      "fileCount": 7,
+      "deletedIgnored": 8,
+      "modules": [
+        "src",
+        "test"
+      ],
+      "sensitivity": {
+        "label": "chia_duoc",
+        "moduleCount": 3,
+        "modules": [
+          "src",
+          "src/handlers",
+          "test"
+        ]
+      }
+    },
+    "t4-perf": {
+      "label": "khong_chia_duoc",
+      "moduleCount": 1,
+      "fileCount": 1,
+      "deletedIgnored": 5,
+      "modules": [
+        "src"
+      ],
+      "sensitivity": {
+        "label": "khong_chia_duoc",
+        "moduleCount": 1,
+        "modules": [
+          "src"
+        ]
+      }
+    },
+    "t5-logq": {
+      "label": "chia_duoc",
+      "moduleCount": 2,
+      "fileCount": 4,
+      "deletedIgnored": 3,
+      "modules": [
+        "bin",
+        "src"
+      ],
+      "sensitivity": {
+        "label": "chia_duoc",
+        "moduleCount": 2,
+        "modules": [
+          "bin",
+          "src"
+        ]
+      }
+    }
+  }
+}

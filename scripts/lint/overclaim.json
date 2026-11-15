@@ -1,0 +1,65 @@
+{
+  "note": "Mẫu câu vượt mức bằng chứng, rule `overclaim` quét paper/**, analysis/**/report.md, improvement-backlog.md, bench/vs-claude/results/*/report.md. Chữ trong ngoặc kép hoặc backtick (trích để phê bình) được bỏ qua. Thêm mẫu: đủ pattern (regex JS, cờ iu), reason, source. Sửa tệp này bắt buộc reviewer.",
+  "patterns": [
+    {
+      "id": "khong-ton-them-token",
+      "pattern": "không\\s+tốn\\s+thêm\\s+token",
+      "reason": "token của E8 là thước đo phụ, chỉ mô tả; CI [0,942; 1,075] chứa 1 nhưng không chứng minh hai arm tốn như nhau",
+      "source": "BRIEF-21 K1 (E8); BRIEF-22b (câu \"song song gần như giảm nửa thời gian mà không tốn thêm token\" ở analysis/decisions/report.md §2); context/k4-v07-review-2026-11-14.md #1, #14"
+    },
+    {
+      "id": "token-khong-doi",
+      "pattern": "(?<!(?:nếu|khi|giả\\s+sử|với)\\s)token\\s+(?:không\\s+đổi|như\\s+nhau|bằng\\s+nhau)",
+      "reason": "CI chứa 1 chỉ nghĩa là không phát hiện được thay đổi, không phải bằng chứng bằng nhau; token là thước đo phụ của E8. Câu điều kiện (\"nếu/khi token không đổi\", giả định về cách tính USD) được phép, như K4 đã chấp nhận ở paper.md:630",
+      "source": "BRIEF-21 K1 (E8: không viết \"token không đổi\"); context/k4-v07-review-2026-11-14.md #1 (mẫu \"token không đổi\", \"token như nhau\")"
+    },
+    {
+      "id": "diem-chat-luong-khong-doi",
+      "pattern": "(?:điểm(?:\\s+test\\s+ẩn)?|chất\\s+lượng)\\s+không\\s+đổi",
+      "reason": "\"không đổi\" vượt kết quả gốc (Δ −0,000, không phân biệt được; n nhỏ, mô tả)",
+      "source": "context/k4-v07-review-2026-11-14.md #20, #32 (mẫu cấm #6/#10 của paper/v07-axes-threats-draft.md)"
+    },
+    {
+      "id": "khong-co-hieu-ung",
+      "pattern": "(?<!là\\s)không\\s+có\\s+hiệu\\s+ứng",
+      "reason": "B-14: CI rộng, power ≈ 0,38; chỉ được viết \"không phân biệt được\" kèm CI và power",
+      "source": "BRIEF-21 K1 (B-14: viết \"không phân biệt được\", không viết \"không có hiệu ứng\"); context/k4-v07-review-2026-11-14.md (bảng kiểm B-14)"
+    },
+    {
+      "id": "chan-x-phan-tram-tan-cong",
+      "pattern": "chặn(?:\\s+được)?\\s+\\d+(?:[,.]\\d+)?\\s*%\\s+(?:số\\s+)?(?:ca\\s+)?tấn\\s+công",
+      "reason": "trục 2 (b): tỉ lệ trên một bộ ngoài, chỉ tầng chính sách tĩnh; phải viết \"chặn k/n ca của bộ này\" kèm CP 95 %",
+      "source": "BRIEF-21 K1 (trục 2 (b): không viết \"chặn X % tấn công\"); context/k4-v07-review-2026-11-14.md #2"
+    },
+    {
+      "id": "nguon-ghi-cache-la-bo-cong-cu",
+      "pattern": "nguồn\\s+ghi\\s+cache\\s+là\\s+bộ\\s+công\\s+cụ",
+      "reason": "chẩn đoán cache n = 1 mỗi cặp, lời nhắc giả, chưa kiểm trên bài thật: chỉ là cách đọc",
+      "source": "context/k4-v07-review-2026-11-14.md #7, #21"
+    },
+    {
+      "id": "72-gio-cho-moi-vi-pham",
+      "pattern": "72\\s+giờ\\s+cho\\s+mọi\\s+vi\\s+phạm",
+      "reason": "Nghị định 356 chỉ nêu 72 giờ ở Điều 8 khoản 3 và Điều 29 khoản 1 điểm a; mốc chung của Luật BVDLCN chưa kiểm",
+      "source": "context/k4-v07-review-2026-11-14.md #4"
+    },
+    {
+      "id": "mau-kpi-da-duyet",
+      "pattern": "mẫu\\s+KPI\\s+đã\\s+được\\s+giám\\s+đốc\\s+duyệt",
+      "reason": "tiêu chí (5) của BRIEF-20 chưa đạt: mẫu KPI là giả định của phòng, chờ giám đốc duyệt",
+      "source": "context/k4-v07-review-2026-11-14.md #3"
+    },
+    {
+      "id": "khong-co-loi-the-chat-luong",
+      "pattern": "không\\s+có\\s+(?:lợi\\s+thế|thêm)\\s+chất\\s+lượng",
+      "reason": "điểm chạm trần nghĩa là bộ đo không phát hiện được, không phải không có",
+      "source": "context/k4-v07-review-2026-11-14.md #34 (mẫu cấm #25)"
+    },
+    {
+      "id": "phan-lon-la-thieu-luc",
+      "pattern": "phần\\s+lớn\\s+là\\s+thiếu\\s+lực",
+      "reason": "\"phần lớn\" là lượng hóa không có số; viết power và mức hiệu ứng cụ thể",
+      "source": "context/k4-v07-review-2026-11-14.md #33"
+    }
+  ]
+}

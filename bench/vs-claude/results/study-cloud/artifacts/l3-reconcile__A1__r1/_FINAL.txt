@@ -1,0 +1,20 @@
+**Net revenue for October 2026 is 97,306,916 VND.** That comes from 32 paid transactions and 2 refund transactions, with 5 duplicate rows ignored. `answer.json` and `NOTES.md` are in the repository root.
+
+**1. Plan.** I took the brief as these rules:
+- Use the Vietnam calendar month (UTC+7) for `created_at`.
+- Count only `paid` and `refunded` rows, and ignore `void` and `pending`.
+- Count each `txn_id` once.
+- Count refunds in the month of the refund row.
+- Convert USD at 25,400 and round half-up once at the end.
+
+**2. Implement.** I wrote a short Python script (not saved in the repo). It uses exact decimal arithmetic and reads the file as 85 data rows.
+
+**3. Self-review.**
+- **Duplicates:** the 5 repeated `txn_id` rows are exact copies with no conflicts. That leaves 80 distinct transactions, which matches the highest id, `T0080`.
+- **Month edges:** a row at 2026-09-30T16:59:59Z is October 1 in Vietnam, so it counts. Four refunds created in November are excluded: `T0078`, `T0079`, `T0077` and `T0080`.
+- **Signs:** every counted paid amount is positive and every counted refund is negative.
+- **Rounding:** the exact sum is 97,306,916.00, so no rounding was needed.
+
+**4. Fix.** The review found nothing to correct.
+
+I read "duplicate rows in the whole file" as the number of extra rows beyond the first for each `txn_id`.

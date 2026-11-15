@@ -1,0 +1,22 @@
+Cả 4 tính năng trong `FEATURES.md` đã xong và `npm test` xanh (10/10 test). Tôi chưa chạy server thật bằng `npm start`, nhưng test đều gọi qua HTTP thật.
+
+**Code mới và đã sửa**
+- `src/auth.js` (mới): xác thực qua header `X-User`, trả 401 `UNAUTHENTICATED` khi thiếu hoặc sai.
+- `src/query.js` (mới): kiểm tra tham số truy vấn, lọc, tìm không dấu, sắp xếp, phân trang.
+- `src/csv.js` (mới): dựng nội dung CSV.
+- `src/handlers/audit.js` (mới): route `GET /audit`.
+- `src/handlers/tasks.js`, `src/store.js`, `src/server.js` được sửa để áp quyền theo vai trò, ghi nhật ký và đăng ký route mới.
+- `GET /tasks/export.csv` được đăng ký trước `/tasks/:id` để không bị nhận nhầm thành id.
+
+**Test**
+- `test/tasks.test.js` đã sửa cho khớp dạng kết quả mới của `GET /tasks` (`{items, total, page, pageSize}`) và thêm header `X-User`.
+- `test/features.test.js` (mới) có test riêng cho xác thực, phân quyền member/manager, lọc/tìm, sắp xếp/phân trang, `INVALID_QUERY`, CSV và nhật ký.
+
+**Những chỗ đặc tả không nói rõ, tôi tự chọn**
+- **JSON body sai cú pháp:** kiểm tra quyền chạy trước, nên người không đủ quyền nhận 403 thay vì 400 `INVALID_JSON`.
+- **`assignee=` rỗng:** không báo lỗi, chỉ cho kết quả rỗng.
+- **Tham số lặp hoặc lạ:** lỗi được tính tại lần xuất hiện đầu tiên của tham số đó trên URL.
+- **`dueDate` trong body POST/PATCH:** vẫn chỉ kiểm tra đúng dạng `YYYY-MM-DD`, không kiểm tra ngày có thật trên lịch. Chỉ `dueBefore` trong query mới kiểm tra lịch.
+- **`GET /tasks/:id` kèm tham số truy vấn lạ:** không bị kiểm tra, vì đặc tả chỉ nêu tham số cho danh sách, CSV và audit.
+
+`fetch().text()` tự bỏ BOM, nên test CSV kiểm tra BOM bằng byte thô (`EF BB BF`).

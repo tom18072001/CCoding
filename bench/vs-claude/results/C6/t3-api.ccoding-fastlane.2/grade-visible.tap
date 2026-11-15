@@ -1,0 +1,232 @@
+TAP version 13
+# Subtest: audit: seq, at theo now tiêm, changes sắp a→z
+ok 1 - audit: seq, at theo now tiêm, changes sắp a→z
+  ---
+  duration_ms: 78.469114
+  type: 'test'
+  ...
+# Subtest: audit: thao tác lỗi không ghi; lọc taskId
+ok 2 - audit: thao tác lỗi không ghi; lọc taskId
+  ---
+  duration_ms: 31.002256
+  type: 'test'
+  ...
+# Subtest: audit: quyền và tham số
+ok 3 - audit: quyền và tham số
+  ---
+  duration_ms: 20.497686
+  type: 'test'
+  ...
+# Subtest: 401 khi thiếu hoặc sai X-User, trên mọi route
+ok 4 - 401 khi thiếu hoặc sai X-User, trên mọi route
+  ---
+  duration_ms: 102.151069
+  type: 'test'
+  ...
+# Subtest: 401 đi trước 400 truy vấn và 404
+ok 5 - 401 đi trước 400 truy vấn và 404
+  ---
+  duration_ms: 10.818219
+  type: 'test'
+  ...
+# Subtest: member: chỉ thấy nhóm mình, nhóm khác 404 (trước 403)
+ok 6 - member: chỉ thấy nhóm mình, nhóm khác 404 (trước 403)
+  ---
+  duration_ms: 16.738952
+  type: 'test'
+  ...
+# Subtest: member: không tạo, không xóa (403 trước validate body)
+ok 7 - member: không tạo, không xóa (403 trước validate body)
+  ---
+  duration_ms: 6.026235
+  type: 'test'
+  ...
+# Subtest: member: chỉ PATCH status của task giao cho mình
+ok 8 - member: chỉ PATCH status của task giao cho mình
+  ---
+  duration_ms: 16.908572
+  type: 'test'
+  ...
+# Subtest: manager: đọc mọi nhóm, tạo/sửa chỉ nhóm mình, không xóa
+ok 9 - manager: đọc mọi nhóm, tạo/sửa chỉ nhóm mình, không xóa
+  ---
+  duration_ms: 30.463385
+  type: 'test'
+  ...
+# Subtest: INVALID_JSON đặt sau 403
+ok 10 - INVALID_JSON đặt sau 403
+  ---
+  duration_ms: 10.351632
+  type: 'test'
+  ...
+# Subtest: BOM, header và \\r\\n cuối
+ok 11 - BOM, header và \\r\\n cuối
+  ---
+  duration_ms: 1.308456
+  type: 'test'
+  ...
+# Subtest: dấu phẩy, ngoặc kép, xuống dòng
+ok 12 - dấu phẩy, ngoặc kép, xuống dòng
+  ---
+  duration_ms: 0.311324
+  type: 'test'
+  ...
+# Subtest: null/undefined thành ô trống
+ok 13 - null/undefined thành ô trống
+  ---
+  duration_ms: 0.26848
+  type: 'test'
+  ...
+# Subtest: chống công thức cho từng ký tự
+ok 14 - chống công thức cho từng ký tự
+  ---
+  duration_ms: 0.252269
+  type: 'test'
+  ...
+# Subtest: vừa công thức vừa có dấu phẩy
+ok 15 - vừa công thức vừa có dấu phẩy
+  ---
+  duration_ms: 0.243126
+  type: 'test'
+  ...
+# Subtest: số giữ nguyên
+ok 16 - số giữ nguyên
+  ---
+  duration_ms: 0.169116
+  type: 'test'
+  ...
+# Subtest: export.csv: header HTTP, BOM, dòng tiêu đề
+ok 17 - export.csv: header HTTP, BOM, dòng tiêu đề
+  ---
+  duration_ms: 61.891326
+  type: 'test'
+  ...
+# Subtest: export.csv: member chỉ thấy nhóm mình, không phân trang
+ok 18 - export.csv: member chỉ thấy nhóm mình, không phân trang
+  ---
+  duration_ms: 14.331253
+  type: 'test'
+  ...
+# Subtest: export.csv: 401, page/pageSize → 400, không bị nhầm với /tasks/:id
+ok 19 - export.csv: 401, page/pageSize → 400, không bị nhầm với /tasks/:id
+  ---
+  duration_ms: 12.229818
+  type: 'test'
+  ...
+# Subtest: GET /tasks: dạng kết quả, phân trang, lỗi truy vấn
+ok 20 - GET /tasks: dạng kết quả, phân trang, lỗi truy vấn
+  ---
+  duration_ms: 61.409098
+  type: 'test'
+  ...
+# Subtest: GET /tasks: member bị ép lọc nhóm mình
+ok 21 - GET /tasks: member bị ép lọc nhóm mình
+  ---
+  duration_ms: 13.868425
+  type: 'test'
+  ...
+# Subtest: mặc định
+ok 22 - mặc định
+  ---
+  duration_ms: 1.833549
+  type: 'test'
+  ...
+# Subtest: status, team, sort hợp lệ
+ok 23 - status, team, sort hợp lệ
+  ---
+  duration_ms: 0.424448
+  type: 'test'
+  ...
+# Subtest: giá trị sai
+ok 24 - giá trị sai
+  ---
+  duration_ms: 0.568092
+  type: 'test'
+  ...
+# Subtest: page/pageSize
+ok 25 - page/pageSize
+  ---
+  duration_ms: 1.716198
+  type: 'test'
+  ...
+# Subtest: paging:false coi page/pageSize là lạ
+ok 26 - paging:false coi page/pageSize là lạ
+  ---
+  duration_ms: 0.224921
+  type: 'test'
+  ...
+# Subtest: tham số lạ và trùng
+ok 27 - tham số lạ và trùng
+  ---
+  duration_ms: 0.283013
+  type: 'test'
+  ...
+# Subtest: lỗi đầu tiên theo thứ tự URL
+ok 28 - lỗi đầu tiên theo thứ tự URL
+  ---
+  duration_ms: 0.355862
+  type: 'test'
+  ...
+# Subtest: dueBefore
+ok 29 - dueBefore
+  ---
+  duration_ms: 0.811468
+  type: 'test'
+  ...
+# Subtest: normalizeText
+ok 30 - normalizeText
+  ---
+  duration_ms: 0.646861
+  type: 'test'
+  ...
+# Subtest: lọc
+ok 31 - lọc
+  ---
+  duration_ms: 1.072574
+  type: 'test'
+  ...
+# Subtest: q bỏ dấu tiếng Việt
+ok 32 - q bỏ dấu tiếng Việt
+  ---
+  duration_ms: 0.454543
+  type: 'test'
+  ...
+# Subtest: hòa theo id số tăng dần bất kể chiều
+ok 33 - hòa theo id số tăng dần bất kể chiều
+  ---
+  duration_ms: 0.345464
+  type: 'test'
+  ...
+# Subtest: dueDate null ở cuối cả hai chiều
+ok 34 - dueDate null ở cuối cả hai chiều
+  ---
+  duration_ms: 0.187104
+  type: 'test'
+  ...
+# Subtest: sort title và phân trang
+ok 35 - sort title và phân trang
+  ---
+  duration_ms: 7.694716
+  type: 'test'
+  ...
+# Subtest: CRUD cơ bản (admin)
+ok 36 - CRUD cơ bản (admin)
+  ---
+  duration_ms: 59.861274
+  type: 'test'
+  ...
+# Subtest: validate
+ok 37 - validate
+  ---
+  duration_ms: 12.761155
+  type: 'test'
+  ...
+1..37
+# tests 37
+# suites 0
+# pass 37
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1157.257037

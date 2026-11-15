@@ -1,0 +1,9 @@
+Tôi đã hiện thực `parseDuration` và `formatDuration` trong `src/duration.js` theo SPEC.md, và `npm test` xanh (9 test, 0 lỗi). Bộ nghiệm thu ẩn thì tôi chưa thấy nên chưa biết nó có qua hết không.
+
+- **Parse:** hàm xử lý số, số thuần dạng chuỗi, dạng đơn vị và ISO 8601. Phần cộng và làm tròn dùng BigInt, nên các trường hợp nửa mili giây như `"0.0005s"` → 1 không bị lệch do số thực.
+- **Format:** hàm cũng dùng BigInt, nên số rất lớn (ví dụ `1e21`) vẫn giữ đúng tính chất parse(format(x)) === parse(x). `largest` làm tròn vào đơn vị giữ cuối và nhớ lên đơn vị lớn hơn, ví dụ `6d 23h 59m 31s` với `largest: 2` ra `1w`.
+- **Test thêm trong `test/duration.test.js`:** dấu, `-0`, làm tròn, ISO, các dạng lỗi, `largest` và nhớ, âm, tùy chọn sai, round-trip. Một assertion ban đầu của tôi tính sai số (2 ngày là 172800000, không phải 187200000), tôi đã sửa lại test.
+
+Hai chỗ SPEC không nói rõ, tôi tự chọn:
+- `options` là `null` thì coi như không truyền, dùng mặc định. Nếu `options` không phải object thì ném `TypeError`.
+- Khoảng trắng giữa dấu và `P` của chuỗi ISO (`"- PT1H"`) được chấp nhận, theo quy tắc chung về dấu ở mục 4.

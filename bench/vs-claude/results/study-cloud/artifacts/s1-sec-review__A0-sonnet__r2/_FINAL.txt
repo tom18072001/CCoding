@@ -1,0 +1,17 @@
+I wrote `findings.json` in the repo root with 7 findings. I did not modify `src/server.js`, and I only read the code, so none of these were tested against a running server.
+
+| Line | Type | Severity | Issue |
+|---|---|---|---|
+| 11 | `hardcoded-secret` | high | The JWT secret is hardcoded in the source. |
+| 30 | `sqli` | critical | `q` is interpolated straight into the `LIKE` query. |
+| 42 | `path-traversal` | high | `req.params.name` goes through `path.join` with no check that the result stays inside `REPORT_DIR`. |
+| 58 | `weak-crypto` | high | Passwords are hashed with unsalted MD5. |
+| 65 | `ssrf` | high | `fetch` is called on a user-supplied URL, and the response is returned to the caller. |
+| 70 | `missing-authz` | high | Any logged-in user can delete any ticket. |
+| 84 | `command-injection` | critical | `req.body.format` is interpolated into a shell string passed to `exec`. |
+
+I left a few things out on purpose:
+- **`verifyJwt` (line 18):** it is never imported or defined, so the auth middleware would throw. That is a bug, but I didn't count it as an exploitable security issue.
+- **Ping route (line 76):** the host regex allows a leading `-`, so option injection is conceivable. It is admin-only and `execFile` avoids a shell, so I treated it as not worth reporting.
+- **Status query (line 36):** it interpolates `STATUS_TABLE`, but that is a server-side constant, so it is not injectable.
+- **Attachment download (line 47):** it uses a parameterized query, `path.basename` and an extension allow-list, so it looks safe.

@@ -1,0 +1,116 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude c1-iis-ecs__B6__r2] IIS W3C log to ECS parser
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Đây là việc nhỏ trong một hàm duy nhất của `src/iis.js`. Chia làm hai hạng mục song song với tệp riêng: một người viết bản hiện thực, một người viết bộ test độc lập cho các trường hợp biên. Test chạy bằng `npm test`.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Hiện thực parseIisLog trong src/iis.js (@senior-swe, done)
+
+## Tóm tắt
+Tôi đã hiện thực `parseIisLog` trong `src/iis.js` theo đúng brief. `npm test` chạy xanh với test hiện có (1/1 pass). Tôi chưa viết test biên riêng, vì phần đó thuộc S2.
+
+## Tệp đã tạo/sửa
+`src/iis.js` · hiện thực hàm; giữ nguyên `export function parseIisLog(text)` và định dạng ES module.
+
+## Kiểm chứng
+`npm test` → exit 0. Kết quả: tests 1, pass 1, fail 0. Baseline trước khi sửa là exit 1 với 1 test lỗi.
+
+## Quyết định thiết kế
+- **Tách dòng và cột:** tách dòng bằng `/\r?\n/`, bỏ dòng trống. Cột tách bằng đúng một dấu cách. Dòng lệch số cột, hoặc nằm trước `#Fields:`, bị bỏ. Mỗi `#Fields:` mới đặt lại danh sách cột.
+- **Giá trị `-`:** bỏ key.
+- **`@timestamp`:** tạo từ `new Date(`${date}T${time}Z`).toISOString()`. Nếu thiếu `date` hoặc `time`, hoặc giá trị không hợp lệ, thì bỏ key và không ném lỗi.
+- **Trường số:** `sc-status`, `s-port` và `time-taken` chỉ nhận chuỗi dạng `^\d+(\.\d+)?$`. Giá trị khác thì bỏ key. `time-taken` nhân 1e6 để ra nanosecond.
+- **`cs(User-Agent)`:** thay mọi `+` bằng dấu cách.
+- **Đầu ra:** lồng nhau qua hàm `setPath`, không dùng key có dấu chấm. Trường lạ bị bỏ qua.
+
+## Rủi ro & việc còn mở
+- Tôi chưa tự chạy các ca biên như CRLF, nhiều `#Fields:` hay `-` ở nhiều trường. Bộ test S2 (`test/iis-edge.test.js`) sẽ kiểm tra chúng.
+- Chuỗi số có dấu âm hoặc dạng mũ (ví dụ `1e3`) bị coi là không hợp lệ và bỏ key. Brief không nói rõ ca này.
+
+Bản đầy đủ: `.ccoding/T-20261103-012313-10a/outputs/dev-S1-senior-swe.md`
+
+### S2 — Bộ test biên độc lập test/iis-edge.test.js (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã tạo `test/iis-edge.test.js` với 11 test cho các trường hợp biên của `parseIisLog`. `npm test` chạy với `src/iis.js` hiện có trong repo và cho kết quả 12 test, tất cả pass. Không có test nào fail nên không có lỗi nào của hiện thực hay của test cần báo.
+
+## Tệp đã tạo/sửa
+- Tạo mới: `test/iis-edge.test.js`. Tôi không sửa `src/iis.js` hay `test/basic.test.js`.
+- Các ca được phủ:
+  - Input rỗng trả về `[]`.
+  - Nhiều dòng `#Fields:` với thứ tự cột khác nhau.
+  - Dòng trước `#Fields:` bị bỏ.
+  - Số cột lệch bị bỏ.
+  - Directive khác và dòng trống bị bỏ qua.
+  - `-` làm key biến mất, kể cả với object lồng nhau.
+  - `+` trong user-agent thành dấu cách.
+  - `sc-status`, `s-port` và `event.duration` kiểu number (15 → 15000000).
+  - `@timestamp` đúng định dạng ISO có milliseconds.
+  - Trường lạ bị bỏ qua.
+  - Đầu ra lồng nhau, không có key chứa dấu chấm.
+  - CRLF.
+
+## Hợp đồng API
+Không áp dụng.
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` → exit 0 theo kết quả `node --test`: `# tests 12 · # pass 12 · # fail 0 · # skipped 0`. Tôi chỉ đọc phần cuối của output, nên không có exit code đo riêng.
+- Baseline trước đó là 1 test fail. Lần chạy này không còn test nào fail.
+- Lần chạy đầu bị hook chặn vì chuỗi `../src/iis.js` nằm trong heredoc. Tôi tạo lại tệp bằng công cụ Write rồi chạy lại.
+
+## Việc còn lại
+Không có.
+
+Bản đầy đủ: `.ccoding/T-20261103-012313-10a/outputs/dev-S2-backend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-012313-10a` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **20 in / 9,393 out**, cache đọc 106.5k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | 8 | 5111 | 50168 | 1 |
+| Senior Software Engineer (@senior-swe) | dev | 6 | 2215 | 32964 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 4 | 1655 | 21135 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 412 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Hiện thực parseIisLog trong src/iis.js (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Bộ test biên độc lập test/iis-edge.test.js (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 1 · # suites 0 · # pass 0 · # fail 1 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 12 · # suites 0 · # pass 12 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Backend Developer (@backend-dev) | dev | **86** A | — | 82 | 80 | 100 | 1 | 1 | 55k | 1/4 |
+| Senior Software Engineer (@senior-swe) | dev | **100** A | — | 100 | 100 | 100 | 1 | 1 | 35k | 0/4 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **100** A | — | 100 | 100 | — | 0 | — | 23k | 0/1 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

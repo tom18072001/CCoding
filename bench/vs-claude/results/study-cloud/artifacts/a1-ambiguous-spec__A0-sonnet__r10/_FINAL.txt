@@ -1,0 +1,14 @@
+I wrote the spec to `SPEC.md` at the repository root. It includes the required `## Open questions and assumptions` section, with 14 questions, each paired with the assumption I'd build on in the meantime.
+
+The request contradicts itself in four places, and the spec calls each one out and proposes a resolution:
+
+- **Full IPs and usernames vs. no unmasked personal data:** Standard exports are always masked. They hide the last IPv4 octet and replace usernames with a stable pseudonym. Unmasked data is available only in a separate forensic mode for a security role, with a case ID and a second approver. Branch managers never get it.
+- **"Team, last month" vs. "everything they can see":** The scope is the manager's own branch. The default period is last month, but they can pick any period still in the retained data.
+- **Keep exports forever vs. delete personal data after 12 months:** Masked export files aren't stored. What's kept forever is an audit record of each export, which holds no subject IPs or usernames. Any retained forensic file is encrypted and handled under legal hold, with its retention set by the customer's legal team.
+- **5-second limit:** The 5 seconds is a target for exports up to 100,000 rows, which is my guess at typical volume. Larger exports run as background jobs, and there is a hard cap of 2,000,000 rows.
+
+"Like the old system" has no definition, so the CSV columns and format are my guess, and I've asked for a sample file from the old system.
+
+The spec also covers roles and access, the CSV format with formula-injection protection, the export audit record, a simple UI, security, nine acceptance criteria and what's out of scope.
+
+Nothing is committed.

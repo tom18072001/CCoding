@@ -1,0 +1,2742 @@
+{
+ "seed": "20261104",
+ "cap": 10,
+ "survivorsSha256": "8a16ae33eac5a1a8e70745084f327ffb1f7f37199ee995a1f1572a9eac4e0315",
+ "gSha256": "782dc8b033b477f24f172509ac3962eec18e7072272b8685012b434919f92a51",
+ "counts": {
+  "c1-iis-ecs": {
+   "faulty": 1,
+   "clean": 1
+  },
+  "c2-burst-alert": {
+   "faulty": 10,
+   "clean": 10
+  },
+  "c3-shop-bugs": {
+   "faulty": 10,
+   "clean": 10
+  },
+  "c5-tickets-api": {
+   "faulty": 10,
+   "clean": 10
+  },
+  "t1-duration": {
+   "faulty": 4,
+   "clean": 4
+  },
+  "t2-orders": {
+   "faulty": 10,
+   "clean": 10
+  },
+  "t3-api": {
+   "faulty": 10,
+   "clean": 10
+  },
+  "t5-logq": {
+   "faulty": 10,
+   "clean": 10
+  }
+ },
+ "items": [
+  {
+   "id": "7fea96ee2a",
+   "kind": "faulty",
+   "task": "c1-iis-ecs",
+   "key": "c1-iis-ecs__A2__r1",
+   "arm": "A2",
+   "site": {
+    "i": 0,
+    "file": "src/iis.js",
+    "line": 49,
+    "op": "AOR",
+    "repl": "/"
+   }
+  },
+  {
+   "id": "7b43e0ef6e",
+   "kind": "clean",
+   "task": "c1-iis-ecs",
+   "key": "c1-iis-ecs__A1__r1",
+   "arm": "A1"
+  },
+  {
+   "id": "79f590666e",
+   "kind": "faulty",
+   "task": "c2-burst-alert",
+   "key": "c2-burst-alert__A1__r1",
+   "arm": "A1",
+   "site": {
+    "i": 0,
+    "file": "src/alert.js",
+    "line": 30,
+    "op": "AOR",
+    "repl": "+"
+   }
+  },
+  {
+   "id": "54e6ad7a37",
+   "kind": "faulty",
+   "task": "c2-burst-alert",
+   "key": "c2-burst-alert__B7__r2",
+   "arm": "B7",
+   "site": {
+    "i": 11,
+    "file": "src/alert.js",
+    "line": 26,
+    "op": "AOR",
+    "repl": "+"
+   }
+  },
+  {
+   "id": "230b0c0de8",
+   "kind": "faulty",
+   "task": "c2-burst-alert",
+   "key": "c2-burst-alert__B5__r2",
+   "arm": "B5",
+   "site": {
+    "i": 3,
+    "file": "src/alert.js",
+    "line": 9,
+    "op": "LCR",
+    "repl": "||"
+   }
+  },
+  {
+   "id": "83bcca3b8b",
+   "kind": "faulty",
+   "task": "c2-burst-alert",
+   "key": "c2-burst-alert__A0-sonnet__r1",
+   "arm": "A0-sonnet",
+   "site": {
+    "i": 8,
+    "file": "src/alert.js",
+    "line": 18,
+    "op": "AOR",
+    "repl": "+"
+   }
+  },
+  {
+   "id": "1461faf428",
+   "kind": "faulty",
+   "task": "c2-burst-alert",
+   "key": "c2-burst-alert__A1__r2",
+   "arm": "A1",
+   "site": {
+    "i": 11,
+    "file": "src/alert.js",
+    "line": 16,
+    "op": "ROR",
+    "repl": "<="
+   }
+  },
+  {
+   "id": "7e3c7b6414",
+   "kind": "faulty",
+   "task": "c2-burst-alert",
+   "key": "c2-burst-alert__B0__r3",
+   "arm": "B0",
+   "site": {
+    "i": 11,
+    "file": "src/alert.js",
+    "line": 3,
+    "op": "CRP",
+    "repl": "60001"
+   }
+  },
+  {
+   "id": "0d45d1eed4",
+   "kind": "faulty",
+   "task": "c2-burst-alert",
+   "key": "c2-burst-alert__B5__r1",
+   "arm": "B5",
+   "site": {
+    "i": 6,
+    "file": "src/alert.js",
+    "line": 8,
+    "op": "CRP",
+    "repl": "600"
+   }
+  },
+  {
+   "id": "6b761afbe7",
+   "kind": "faulty",
+   "task": "c2-burst-alert",
+   "key": "c2-burst-alert__A0-sonnet__r3",
+   "arm": "A0-sonnet",
+   "site": {
+    "i": 1,
+    "file": "src/alert.js",
+    "line": 31,
+    "op": "COND",
+    "repl": "!(a.host < b.host)"
+   }
+  },
+  {
+   "id": "aeb804f715",
+   "kind": "faulty",
+   "task": "c2-burst-alert",
+   "key": "c2-burst-alert__B7__r3",
+   "arm": "B7",
+   "site": {
+    "i": 1,
+    "file": "src/alert.js",
+    "line": 29,
+    "op": "AOR",
+    "repl": "+"
+   }
+  },
+  {
+   "id": "eebaaf0cdf",
+   "kind": "faulty",
+   "task": "c2-burst-alert",
+   "key": "c2-burst-alert__B7__r1",
+   "arm": "B7",
+   "site": {
+    "i": 1,
+    "file": "src/alert.js",
+    "line": 30,
+    "op": "AOR",
+    "repl": "+"
+   }
+  },
+  {
+   "id": "6909e9226f",
+   "kind": "clean",
+   "task": "c2-burst-alert",
+   "key": "c2-burst-alert__B0__r2",
+   "arm": "B0"
+  },
+  {
+   "id": "a394ea7fad",
+   "kind": "clean",
+   "task": "c2-burst-alert",
+   "key": "c2-burst-alert__A0-sonnet__r2",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "2fdbf89d67",
+   "kind": "clean",
+   "task": "c2-burst-alert",
+   "key": "c2-burst-alert__A2__r2",
+   "arm": "A2"
+  },
+  {
+   "id": "3c1e60b77f",
+   "kind": "clean",
+   "task": "c2-burst-alert",
+   "key": "c2-burst-alert__B6__r2",
+   "arm": "B6"
+  },
+  {
+   "id": "d865b966ee",
+   "kind": "clean",
+   "task": "c2-burst-alert",
+   "key": "c2-burst-alert__A1__r3",
+   "arm": "A1"
+  },
+  {
+   "id": "3ea2fd148f",
+   "kind": "clean",
+   "task": "c2-burst-alert",
+   "key": "c2-burst-alert__B6__r1",
+   "arm": "B6"
+  },
+  {
+   "id": "841e0f9c23",
+   "kind": "clean",
+   "task": "c2-burst-alert",
+   "key": "c2-burst-alert__A2__r1",
+   "arm": "A2"
+  },
+  {
+   "id": "133eacee29",
+   "kind": "clean",
+   "task": "c2-burst-alert",
+   "key": "c2-burst-alert__B5__r3",
+   "arm": "B5"
+  },
+  {
+   "id": "6ce377269e",
+   "kind": "clean",
+   "task": "c2-burst-alert",
+   "key": "c2-burst-alert__B0__r1",
+   "arm": "B0"
+  },
+  {
+   "id": "c847c4bfe5",
+   "kind": "clean",
+   "task": "c2-burst-alert",
+   "key": "c2-burst-alert__B6__r3",
+   "arm": "B6"
+  },
+  {
+   "id": "83695732ac",
+   "kind": "faulty",
+   "task": "c3-shop-bugs",
+   "key": "c3-shop-bugs__B5__r3",
+   "arm": "B5",
+   "site": {
+    "i": 2,
+    "file": "src/cart.js",
+    "line": 20,
+    "op": "ROR",
+    "repl": ">="
+   }
+  },
+  {
+   "id": "62f9187905",
+   "kind": "faulty",
+   "task": "c3-shop-bugs",
+   "key": "c3-shop-bugs__A2__r2",
+   "arm": "A2",
+   "site": {
+    "i": 10,
+    "file": "src/cart.js",
+    "line": 19,
+    "op": "EQ",
+    "repl": "!=="
+   }
+  },
+  {
+   "id": "2fae2e9baf",
+   "kind": "faulty",
+   "task": "c3-shop-bugs",
+   "key": "c3-shop-bugs__A2__r1",
+   "arm": "A2",
+   "site": {
+    "i": 8,
+    "file": "src/cart.js",
+    "line": 20,
+    "op": "COND",
+    "repl": "!(i < 0)"
+   }
+  },
+  {
+   "id": "5525544ed6",
+   "kind": "faulty",
+   "task": "c3-shop-bugs",
+   "key": "c3-shop-bugs__A0-sonnet__r3",
+   "arm": "A0-sonnet",
+   "site": {
+    "i": 4,
+    "file": "src/cart.js",
+    "line": 20,
+    "op": "ROR",
+    "repl": "<="
+   }
+  },
+  {
+   "id": "fcdbbb8546",
+   "kind": "faulty",
+   "task": "c3-shop-bugs",
+   "key": "c3-shop-bugs__B5__r2",
+   "arm": "B5",
+   "site": {
+    "i": 4,
+    "file": "src/cart.js",
+    "line": 20,
+    "op": "COND",
+    "repl": "!(i < 0)"
+   }
+  },
+  {
+   "id": "58575de7c0",
+   "kind": "faulty",
+   "task": "c3-shop-bugs",
+   "key": "c3-shop-bugs__A0-sonnet__r2",
+   "arm": "A0-sonnet",
+   "site": {
+    "i": 0,
+    "file": "src/cart.js",
+    "line": 19,
+    "op": "EQ",
+    "repl": "!=="
+   }
+  },
+  {
+   "id": "6ac6f0e878",
+   "kind": "faulty",
+   "task": "c3-shop-bugs",
+   "key": "c3-shop-bugs__B6__r3",
+   "arm": "B6",
+   "site": {
+    "i": 3,
+    "file": "src/cart.js",
+    "line": 19,
+    "op": "EQ",
+    "repl": "!=="
+   }
+  },
+  {
+   "id": "03995f2c6c",
+   "kind": "faulty",
+   "task": "c3-shop-bugs",
+   "key": "c3-shop-bugs__A1__r2",
+   "arm": "A1",
+   "site": {
+    "i": 3,
+    "file": "src/cart.js",
+    "line": 20,
+    "op": "CRP",
+    "repl": "1"
+   }
+  },
+  {
+   "id": "4f88461bc2",
+   "kind": "faulty",
+   "task": "c3-shop-bugs",
+   "key": "c3-shop-bugs__B6__r1",
+   "arm": "B6",
+   "site": {
+    "i": 3,
+    "file": "src/cart.js",
+    "line": 20,
+    "op": "ROR",
+    "repl": ">="
+   }
+  },
+  {
+   "id": "79e79d2fa9",
+   "kind": "faulty",
+   "task": "c3-shop-bugs",
+   "key": "c3-shop-bugs__B7__r2",
+   "arm": "B7",
+   "site": {
+    "i": 10,
+    "file": "src/cart.js",
+    "line": 20,
+    "op": "COND",
+    "repl": "!(i < 0)"
+   }
+  },
+  {
+   "id": "b63bfad77f",
+   "kind": "clean",
+   "task": "c3-shop-bugs",
+   "key": "c3-shop-bugs__B7__r1",
+   "arm": "B7"
+  },
+  {
+   "id": "3611bc20bb",
+   "kind": "clean",
+   "task": "c3-shop-bugs",
+   "key": "c3-shop-bugs__B7__r3",
+   "arm": "B7"
+  },
+  {
+   "id": "62587c1295",
+   "kind": "clean",
+   "task": "c3-shop-bugs",
+   "key": "c3-shop-bugs__B0__r2",
+   "arm": "B0"
+  },
+  {
+   "id": "aa856b5d33",
+   "kind": "clean",
+   "task": "c3-shop-bugs",
+   "key": "c3-shop-bugs__A0-sonnet__r1",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "8fa6177f20",
+   "kind": "clean",
+   "task": "c3-shop-bugs",
+   "key": "c3-shop-bugs__B0__r1",
+   "arm": "B0"
+  },
+  {
+   "id": "132a39ee62",
+   "kind": "clean",
+   "task": "c3-shop-bugs",
+   "key": "c3-shop-bugs__B0__r3",
+   "arm": "B0"
+  },
+  {
+   "id": "b21e09035b",
+   "kind": "clean",
+   "task": "c3-shop-bugs",
+   "key": "c3-shop-bugs__A1__r3",
+   "arm": "A1"
+  },
+  {
+   "id": "935d1efc8c",
+   "kind": "clean",
+   "task": "c3-shop-bugs",
+   "key": "c3-shop-bugs__A0-sonnet__r3",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "7a874b8602",
+   "kind": "clean",
+   "task": "c3-shop-bugs",
+   "key": "c3-shop-bugs__B7__r2",
+   "arm": "B7"
+  },
+  {
+   "id": "71f4b8d09e",
+   "kind": "clean",
+   "task": "c3-shop-bugs",
+   "key": "c3-shop-bugs__B5__r3",
+   "arm": "B5"
+  },
+  {
+   "id": "bba88b7b48",
+   "kind": "faulty",
+   "task": "c5-tickets-api",
+   "key": "c5-tickets-api__B0__r2",
+   "arm": "B0",
+   "site": {
+    "i": 11,
+    "file": "src/handler.js",
+    "line": 12,
+    "op": "CRP",
+    "repl": "405"
+   }
+  },
+  {
+   "id": "f06f7dd390",
+   "kind": "faulty",
+   "task": "c5-tickets-api",
+   "key": "c5-tickets-api__A1__r2",
+   "arm": "A1",
+   "site": {
+    "i": 5,
+    "file": "src/handler.js",
+    "line": 95,
+    "op": "EQ",
+    "repl": "!=="
+   }
+  },
+  {
+   "id": "4fd67a7cf0",
+   "kind": "faulty",
+   "task": "c5-tickets-api",
+   "key": "c5-tickets-api__B7__r1",
+   "arm": "B7",
+   "site": {
+    "i": 4,
+    "file": "src/handler.js",
+    "line": 83,
+    "op": "EQ",
+    "repl": "!=="
+   }
+  },
+  {
+   "id": "c8b5bed3ec",
+   "kind": "faulty",
+   "task": "c5-tickets-api",
+   "key": "c5-tickets-api__B6__r3",
+   "arm": "B6",
+   "site": {
+    "i": 7,
+    "file": "src/handler.js",
+    "line": 6,
+    "op": "LCR",
+    "repl": "||"
+   }
+  },
+  {
+   "id": "114d08564f",
+   "kind": "faulty",
+   "task": "c5-tickets-api",
+   "key": "c5-tickets-api__B6__r1",
+   "arm": "B6",
+   "site": {
+    "i": 7,
+    "file": "src/handler.js",
+    "line": 100,
+    "op": "EQ",
+    "repl": "!=="
+   }
+  },
+  {
+   "id": "83e889c1b1",
+   "kind": "faulty",
+   "task": "c5-tickets-api",
+   "key": "c5-tickets-api__A1__r3",
+   "arm": "A1",
+   "site": {
+    "i": 10,
+    "file": "src/handler.js",
+    "line": 109,
+    "op": "COND",
+    "repl": "!(t)"
+   }
+  },
+  {
+   "id": "9cf48f885a",
+   "kind": "faulty",
+   "task": "c5-tickets-api",
+   "key": "c5-tickets-api__B5__r1",
+   "arm": "B5",
+   "site": {
+    "i": 9,
+    "file": "src/handler.js",
+    "line": 96,
+    "op": "CRP",
+    "repl": "405"
+   }
+  },
+  {
+   "id": "73d06a4e2b",
+   "kind": "faulty",
+   "task": "c5-tickets-api",
+   "key": "c5-tickets-api__A2__r2",
+   "arm": "A2",
+   "site": {
+    "i": 7,
+    "file": "src/handler.js",
+    "line": 44,
+    "op": "CRP",
+    "repl": "2"
+   }
+  },
+  {
+   "id": "67eed00f34",
+   "kind": "faulty",
+   "task": "c5-tickets-api",
+   "key": "c5-tickets-api__B7__r2",
+   "arm": "B7",
+   "site": {
+    "i": 1,
+    "file": "src/handler.js",
+    "line": 91,
+    "op": "CRP",
+    "repl": "405"
+   }
+  },
+  {
+   "id": "66473ff6c4",
+   "kind": "faulty",
+   "task": "c5-tickets-api",
+   "key": "c5-tickets-api__A0-sonnet__r2",
+   "arm": "A0-sonnet",
+   "site": {
+    "i": 1,
+    "file": "src/handler.js",
+    "line": 96,
+    "op": "CRP",
+    "repl": "405"
+   }
+  },
+  {
+   "id": "b2d7631b74",
+   "kind": "clean",
+   "task": "c5-tickets-api",
+   "key": "c5-tickets-api__A2__r1",
+   "arm": "A2"
+  },
+  {
+   "id": "a68a6b4e39",
+   "kind": "clean",
+   "task": "c5-tickets-api",
+   "key": "c5-tickets-api__A0-sonnet__r1",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "e7aadcf538",
+   "kind": "clean",
+   "task": "c5-tickets-api",
+   "key": "c5-tickets-api__B7__r3",
+   "arm": "B7"
+  },
+  {
+   "id": "bef8526df9",
+   "kind": "clean",
+   "task": "c5-tickets-api",
+   "key": "c5-tickets-api__B0__r3",
+   "arm": "B0"
+  },
+  {
+   "id": "342289e76c",
+   "kind": "clean",
+   "task": "c5-tickets-api",
+   "key": "c5-tickets-api__A1__r1",
+   "arm": "A1"
+  },
+  {
+   "id": "f9697dd28e",
+   "kind": "clean",
+   "task": "c5-tickets-api",
+   "key": "c5-tickets-api__B5__r2",
+   "arm": "B5"
+  },
+  {
+   "id": "b7ba38a712",
+   "kind": "clean",
+   "task": "c5-tickets-api",
+   "key": "c5-tickets-api__B6__r2",
+   "arm": "B6"
+  },
+  {
+   "id": "7727264e7a",
+   "kind": "clean",
+   "task": "c5-tickets-api",
+   "key": "c5-tickets-api__A0-sonnet__r3",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "077698c1b8",
+   "kind": "clean",
+   "task": "c5-tickets-api",
+   "key": "c5-tickets-api__B5__r3",
+   "arm": "B5"
+  },
+  {
+   "id": "8c28f90875",
+   "kind": "clean",
+   "task": "c5-tickets-api",
+   "key": "c5-tickets-api__B0__r1",
+   "arm": "B0"
+  },
+  {
+   "id": "8a46e4c08b",
+   "kind": "faulty",
+   "task": "t1-duration",
+   "key": "t1-duration__A0-sonnet__r4",
+   "arm": "A0-sonnet",
+   "site": {
+    "i": 9,
+    "file": "src/duration.js",
+    "line": 145,
+    "op": "ROR",
+    "repl": ">"
+   }
+  },
+  {
+   "id": "3852ee5f6a",
+   "kind": "faulty",
+   "task": "t1-duration",
+   "key": "t1-duration__B7__r7",
+   "arm": "B7",
+   "site": {
+    "i": 2,
+    "file": "src/duration.js",
+    "line": 134,
+    "op": "CRP",
+    "repl": "1"
+   }
+  },
+  {
+   "id": "12e71b2f74",
+   "kind": "faulty",
+   "task": "t1-duration",
+   "key": "t1-duration__B6__r8",
+   "arm": "B6",
+   "site": {
+    "i": 2,
+    "file": "src/duration.js",
+    "line": 91,
+    "op": "CRP",
+    "repl": "2"
+   }
+  },
+  {
+   "id": "6598a890ab",
+   "kind": "faulty",
+   "task": "t1-duration",
+   "key": "t1-duration__B7__r1",
+   "arm": "B7",
+   "site": {
+    "i": 5,
+    "file": "src/duration.js",
+    "line": 17,
+    "op": "CRP",
+    "repl": "5"
+   }
+  },
+  {
+   "id": "ce08766025",
+   "kind": "clean",
+   "task": "t1-duration",
+   "key": "t1-duration__B6__r7",
+   "arm": "B6"
+  },
+  {
+   "id": "d4894edfc1",
+   "kind": "clean",
+   "task": "t1-duration",
+   "key": "t1-duration__B7__r9",
+   "arm": "B7"
+  },
+  {
+   "id": "0c31847132",
+   "kind": "clean",
+   "task": "t1-duration",
+   "key": "t1-duration__A0-sonnet__r7",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "9f240e2899",
+   "kind": "clean",
+   "task": "t1-duration",
+   "key": "t1-duration__A0-sonnet__r6",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "425173ac94",
+   "kind": "faulty",
+   "task": "t2-orders",
+   "key": "t2-orders__A0-sonnet__r6",
+   "arm": "A0-sonnet",
+   "site": {
+    "i": 11,
+    "file": "src/money.js",
+    "line": 34,
+    "op": "ROR",
+    "repl": "<="
+   }
+  },
+  {
+   "id": "413114a7c7",
+   "kind": "faulty",
+   "task": "t2-orders",
+   "key": "t2-orders__B7__r2",
+   "arm": "B7",
+   "site": {
+    "i": 6,
+    "file": "src/checkout.js",
+    "line": 39,
+    "op": "AOR",
+    "repl": "/"
+   }
+  },
+  {
+   "id": "0554356953",
+   "kind": "faulty",
+   "task": "t2-orders",
+   "key": "t2-orders__B7__r3",
+   "arm": "B7",
+   "site": {
+    "i": 6,
+    "file": "src/cart.js",
+    "line": 43,
+    "op": "AOR",
+    "repl": "-"
+   }
+  },
+  {
+   "id": "579737a262",
+   "kind": "faulty",
+   "task": "t2-orders",
+   "key": "t2-orders__A0-sonnet__r11",
+   "arm": "A0-sonnet",
+   "site": {
+    "i": 4,
+    "file": "src/promotions.js",
+    "line": 25,
+    "op": "ROR",
+    "repl": "<="
+   }
+  },
+  {
+   "id": "8827fb8398",
+   "kind": "faulty",
+   "task": "t2-orders",
+   "key": "t2-orders__B6__r5",
+   "arm": "B6",
+   "site": {
+    "i": 2,
+    "file": "src/money.js",
+    "line": 15,
+    "op": "AOR",
+    "repl": "*"
+   }
+  },
+  {
+   "id": "0c03bea855",
+   "kind": "faulty",
+   "task": "t2-orders",
+   "key": "t2-orders__A0-sonnet__r10",
+   "arm": "A0-sonnet",
+   "site": {
+    "i": 4,
+    "file": "src/checkout.js",
+    "line": 37,
+    "op": "EQ",
+    "repl": "!=="
+   }
+  },
+  {
+   "id": "ae511c6caf",
+   "kind": "faulty",
+   "task": "t2-orders",
+   "key": "t2-orders__B7__r8",
+   "arm": "B7",
+   "site": {
+    "i": 0,
+    "file": "src/money.js",
+    "line": 41,
+    "op": "LCR",
+    "repl": "&&"
+   }
+  },
+  {
+   "id": "691a025627",
+   "kind": "faulty",
+   "task": "t2-orders",
+   "key": "t2-orders__B7__r4",
+   "arm": "B7",
+   "site": {
+    "i": 9,
+    "file": "src/checkout.js",
+    "line": 39,
+    "op": "COND",
+    "repl": "!(l.sku === promo.sku)"
+   }
+  },
+  {
+   "id": "7d47c6f5c7",
+   "kind": "faulty",
+   "task": "t2-orders",
+   "key": "t2-orders__B7__r5",
+   "arm": "B7",
+   "site": {
+    "i": 9,
+    "file": "src/promotions.js",
+    "line": 25,
+    "op": "ROR",
+    "repl": "<="
+   }
+  },
+  {
+   "id": "f27e7121de",
+   "kind": "faulty",
+   "task": "t2-orders",
+   "key": "t2-orders__B6__r7",
+   "arm": "B6",
+   "site": {
+    "i": 2,
+    "file": "src/checkout.js",
+    "line": 38,
+    "op": "COND",
+    "repl": "!(promo.type === 'bxgy')"
+   }
+  },
+  {
+   "id": "5cd7189c2d",
+   "kind": "clean",
+   "task": "t2-orders",
+   "key": "t2-orders__B7__r9",
+   "arm": "B7"
+  },
+  {
+   "id": "344dc77204",
+   "kind": "clean",
+   "task": "t2-orders",
+   "key": "t2-orders__B0__r1",
+   "arm": "B0"
+  },
+  {
+   "id": "4294bc6469",
+   "kind": "clean",
+   "task": "t2-orders",
+   "key": "t2-orders__B7__r6",
+   "arm": "B7"
+  },
+  {
+   "id": "038c9b2c5c",
+   "kind": "clean",
+   "task": "t2-orders",
+   "key": "t2-orders__B6__r2",
+   "arm": "B6"
+  },
+  {
+   "id": "43ad1c9066",
+   "kind": "clean",
+   "task": "t2-orders",
+   "key": "t2-orders__B7__r7",
+   "arm": "B7"
+  },
+  {
+   "id": "ee29c6997c",
+   "kind": "clean",
+   "task": "t2-orders",
+   "key": "t2-orders__A0-sonnet__r3",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "d86ee873b7",
+   "kind": "clean",
+   "task": "t2-orders",
+   "key": "t2-orders__A0-sonnet__r2",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "4ab094f890",
+   "kind": "clean",
+   "task": "t2-orders",
+   "key": "t2-orders__A0-sonnet__r9",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "4e85aacb36",
+   "kind": "clean",
+   "task": "t2-orders",
+   "key": "t2-orders__A0-sonnet__r1",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "4fe64610a3",
+   "kind": "clean",
+   "task": "t2-orders",
+   "key": "t2-orders__A0-sonnet__r4",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "530c5f3a97",
+   "kind": "faulty",
+   "task": "t3-api",
+   "key": "t3-api__B7__r1",
+   "arm": "B7",
+   "site": {
+    "i": 9,
+    "file": "src/query.js",
+    "line": 99,
+    "op": "ROR",
+    "repl": "<="
+   }
+  },
+  {
+   "id": "83a50beb23",
+   "kind": "faulty",
+   "task": "t3-api",
+   "key": "t3-api__A0-sonnet__r7",
+   "arm": "A0-sonnet",
+   "site": {
+    "i": 5,
+    "file": "src/handlers/tasks.js",
+    "line": 69,
+    "op": "CRP",
+    "repl": "3"
+   }
+  },
+  {
+   "id": "a3b75ec1ff",
+   "kind": "faulty",
+   "task": "t3-api",
+   "key": "t3-api__B7__r8",
+   "arm": "B7",
+   "site": {
+    "i": 2,
+    "file": "src/handlers/tasks.js",
+    "line": 174,
+    "op": "CRP",
+    "repl": "3"
+   }
+  },
+  {
+   "id": "3e6d1fdce0",
+   "kind": "faulty",
+   "task": "t3-api",
+   "key": "t3-api__B7__r4",
+   "arm": "B7",
+   "site": {
+    "i": 11,
+    "file": "src/query.js",
+    "line": 87,
+    "op": "COND",
+    "repl": "!(a.dueDate < b.dueDate)"
+   }
+  },
+  {
+   "id": "5804a3ff5e",
+   "kind": "faulty",
+   "task": "t3-api",
+   "key": "t3-api__A0-sonnet__r9",
+   "arm": "A0-sonnet",
+   "site": {
+    "i": 8,
+    "file": "src/handlers/tasks.js",
+    "line": 17,
+    "op": "UOI",
+    "repl": ""
+   }
+  },
+  {
+   "id": "7aab934fee",
+   "kind": "faulty",
+   "task": "t3-api",
+   "key": "t3-api__A0-sonnet__r2",
+   "arm": "A0-sonnet",
+   "site": {
+    "i": 11,
+    "file": "src/handlers/tasks.js",
+    "line": 119,
+    "op": "COND",
+    "repl": "!(a.createdAt > b.createdAt)"
+   }
+  },
+  {
+   "id": "de11eac961",
+   "kind": "faulty",
+   "task": "t3-api",
+   "key": "t3-api__B6__r8",
+   "arm": "B6",
+   "site": {
+    "i": 3,
+    "file": "src/query.js",
+    "line": 112,
+    "op": "COND",
+    "repl": "!(a.dueDate > b.dueDate)"
+   }
+  },
+  {
+   "id": "02230f1bce",
+   "kind": "faulty",
+   "task": "t3-api",
+   "key": "t3-api__A0-sonnet__r3",
+   "arm": "A0-sonnet",
+   "site": {
+    "i": 1,
+    "file": "src/query.js",
+    "line": 77,
+    "op": "EQ",
+    "repl": "=="
+   }
+  },
+  {
+   "id": "d333b91eb0",
+   "kind": "faulty",
+   "task": "t3-api",
+   "key": "t3-api__B7__r7",
+   "arm": "B7",
+   "site": {
+    "i": 1,
+    "file": "src/query.js",
+    "line": 103,
+    "op": "CRP",
+    "repl": "1"
+   }
+  },
+  {
+   "id": "e74bd97338",
+   "kind": "faulty",
+   "task": "t3-api",
+   "key": "t3-api__A0-sonnet__r6",
+   "arm": "A0-sonnet",
+   "site": {
+    "i": 8,
+    "file": "src/handlers/tasks.js",
+    "line": 25,
+    "op": "UOI",
+    "repl": ""
+   }
+  },
+  {
+   "id": "282681447d",
+   "kind": "clean",
+   "task": "t3-api",
+   "key": "t3-api__B7__r3",
+   "arm": "B7"
+  },
+  {
+   "id": "0b3feb1ba1",
+   "kind": "clean",
+   "task": "t3-api",
+   "key": "t3-api__B7__r5",
+   "arm": "B7"
+  },
+  {
+   "id": "83940135a0",
+   "kind": "clean",
+   "task": "t3-api",
+   "key": "t3-api__A0-sonnet__r1",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "445e7d5b99",
+   "kind": "clean",
+   "task": "t3-api",
+   "key": "t3-api__B7__r9",
+   "arm": "B7"
+  },
+  {
+   "id": "9eef7f1caa",
+   "kind": "clean",
+   "task": "t3-api",
+   "key": "t3-api__A0-sonnet__r5",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "72f07cdf02",
+   "kind": "clean",
+   "task": "t3-api",
+   "key": "t3-api__B6__r9",
+   "arm": "B6"
+  },
+  {
+   "id": "16d993bd74",
+   "kind": "clean",
+   "task": "t3-api",
+   "key": "t3-api__A0-sonnet__r8",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "9655ae693d",
+   "kind": "clean",
+   "task": "t3-api",
+   "key": "t3-api__A0-sonnet__r10",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "ccc020c13e",
+   "kind": "clean",
+   "task": "t3-api",
+   "key": "t3-api__A0-sonnet__r11",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "23f50e3ada",
+   "kind": "clean",
+   "task": "t3-api",
+   "key": "t3-api__A0-sonnet__r4",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "f9c465ade3",
+   "kind": "faulty",
+   "task": "t5-logq",
+   "key": "t5-logq__A0-sonnet__r10",
+   "arm": "A0-sonnet",
+   "site": {
+    "i": 10,
+    "file": "src/query.js",
+    "line": 75,
+    "op": "LCR",
+    "repl": "||"
+   }
+  },
+  {
+   "id": "fb0117bb43",
+   "kind": "faulty",
+   "task": "t5-logq",
+   "key": "t5-logq__B6__r9",
+   "arm": "B6",
+   "site": {
+    "i": 1,
+    "file": "src/parse.js",
+    "line": 90,
+    "op": "LCR",
+    "repl": "&&"
+   }
+  },
+  {
+   "id": "dd9a661f16",
+   "kind": "faulty",
+   "task": "t5-logq",
+   "key": "t5-logq__A0-sonnet__r8",
+   "arm": "A0-sonnet",
+   "site": {
+    "i": 4,
+    "file": "src/agg.js",
+    "line": 79,
+    "op": "CRP",
+    "repl": "2"
+   }
+  },
+  {
+   "id": "9118500576",
+   "kind": "faulty",
+   "task": "t5-logq",
+   "key": "t5-logq__B7__r8",
+   "arm": "B7",
+   "site": {
+    "i": 4,
+    "file": "src/agg.js",
+    "line": 94,
+    "op": "CRP",
+    "repl": "2"
+   }
+  },
+  {
+   "id": "f1f46c0da8",
+   "kind": "faulty",
+   "task": "t5-logq",
+   "key": "t5-logq__A0-sonnet__r3",
+   "arm": "A0-sonnet",
+   "site": {
+    "i": 4,
+    "file": "src/agg.js",
+    "line": 37,
+    "op": "AOR",
+    "repl": "+"
+   }
+  },
+  {
+   "id": "a9af1a7159",
+   "kind": "faulty",
+   "task": "t5-logq",
+   "key": "t5-logq__B7__r5",
+   "arm": "B7",
+   "site": {
+    "i": 0,
+    "file": "src/query.js",
+    "line": 186,
+    "op": "ROR",
+    "repl": ">"
+   }
+  },
+  {
+   "id": "8bc548098a",
+   "kind": "faulty",
+   "task": "t5-logq",
+   "key": "t5-logq__B6__r7",
+   "arm": "B6",
+   "site": {
+    "i": 1,
+    "file": "src/agg.js",
+    "line": 4,
+    "op": "CRP",
+    "repl": "86400001"
+   }
+  },
+  {
+   "id": "bda1fb9b76",
+   "kind": "faulty",
+   "task": "t5-logq",
+   "key": "t5-logq__B7__r6",
+   "arm": "B7",
+   "site": {
+    "i": 5,
+    "file": "src/agg.js",
+    "line": 65,
+    "op": "COND",
+    "repl": "!(b > a)"
+   }
+  },
+  {
+   "id": "563af1e6d7",
+   "kind": "faulty",
+   "task": "t5-logq",
+   "key": "t5-logq__A0-sonnet__r6",
+   "arm": "A0-sonnet",
+   "site": {
+    "i": 11,
+    "file": "src/query.js",
+    "line": 27,
+    "op": "ROR",
+    "repl": ">="
+   }
+  },
+  {
+   "id": "8e62f5d9c8",
+   "kind": "faulty",
+   "task": "t5-logq",
+   "key": "t5-logq__B6__r4",
+   "arm": "B6",
+   "site": {
+    "i": 6,
+    "file": "src/agg.js",
+    "line": 3,
+    "op": "CRP",
+    "repl": "1001"
+   }
+  },
+  {
+   "id": "aa9e161a54",
+   "kind": "clean",
+   "task": "t5-logq",
+   "key": "t5-logq__A0-sonnet__r4",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "6cf8620cc9",
+   "kind": "clean",
+   "task": "t5-logq",
+   "key": "t5-logq__A0-sonnet__r1",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "397e3c4ffa",
+   "kind": "clean",
+   "task": "t5-logq",
+   "key": "t5-logq__B6__r3",
+   "arm": "B6"
+  },
+  {
+   "id": "207a390c4f",
+   "kind": "clean",
+   "task": "t5-logq",
+   "key": "t5-logq__A0-sonnet__r11",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "e59884e561",
+   "kind": "clean",
+   "task": "t5-logq",
+   "key": "t5-logq__A0-sonnet__r2",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "211ed9f9d3",
+   "kind": "clean",
+   "task": "t5-logq",
+   "key": "t5-logq__B6__r8",
+   "arm": "B6"
+  },
+  {
+   "id": "0bb51824b9",
+   "kind": "clean",
+   "task": "t5-logq",
+   "key": "t5-logq__B0__r1",
+   "arm": "B0"
+  },
+  {
+   "id": "8dbb35a1df",
+   "kind": "clean",
+   "task": "t5-logq",
+   "key": "t5-logq__B6__r6",
+   "arm": "B6"
+  },
+  {
+   "id": "a64a293df6",
+   "kind": "clean",
+   "task": "t5-logq",
+   "key": "t5-logq__A0-sonnet__r7",
+   "arm": "A0-sonnet"
+  },
+  {
+   "id": "da4d3bf28c",
+   "kind": "clean",
+   "task": "t5-logq",
+   "key": "t5-logq__B7__r3",
+   "arm": "B7"
+  }
+ ],
+ "reserve": {
+  "c1-iis-ecs": {
+   "faulty": [],
+   "clean": [
+    {
+     "id": "067cd64cc5",
+     "kind": "clean",
+     "task": "c1-iis-ecs",
+     "key": "c1-iis-ecs__A1__r3",
+     "arm": "A1"
+    },
+    {
+     "id": "20018b4e1e",
+     "kind": "clean",
+     "task": "c1-iis-ecs",
+     "key": "c1-iis-ecs__B7__r3",
+     "arm": "B7"
+    },
+    {
+     "id": "3e9c0502ec",
+     "kind": "clean",
+     "task": "c1-iis-ecs",
+     "key": "c1-iis-ecs__B5__r3",
+     "arm": "B5"
+    },
+    {
+     "id": "3b1abe0f92",
+     "kind": "clean",
+     "task": "c1-iis-ecs",
+     "key": "c1-iis-ecs__A1__r2",
+     "arm": "A1"
+    },
+    {
+     "id": "bc0b65eaf2",
+     "kind": "clean",
+     "task": "c1-iis-ecs",
+     "key": "c1-iis-ecs__A2__r2",
+     "arm": "A2"
+    },
+    {
+     "id": "0b2e93355f",
+     "kind": "clean",
+     "task": "c1-iis-ecs",
+     "key": "c1-iis-ecs__B6__r2",
+     "arm": "B6"
+    },
+    {
+     "id": "702a975a59",
+     "kind": "clean",
+     "task": "c1-iis-ecs",
+     "key": "c1-iis-ecs__B5__r1",
+     "arm": "B5"
+    },
+    {
+     "id": "60f619f307",
+     "kind": "clean",
+     "task": "c1-iis-ecs",
+     "key": "c1-iis-ecs__B6__r3",
+     "arm": "B6"
+    },
+    {
+     "id": "5f95f1958a",
+     "kind": "clean",
+     "task": "c1-iis-ecs",
+     "key": "c1-iis-ecs__A0-sonnet__r3",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "559689d1d9",
+     "kind": "clean",
+     "task": "c1-iis-ecs",
+     "key": "c1-iis-ecs__B7__r2",
+     "arm": "B7"
+    },
+    {
+     "id": "3bae1f7824",
+     "kind": "clean",
+     "task": "c1-iis-ecs",
+     "key": "c1-iis-ecs__B0__r2",
+     "arm": "B0"
+    },
+    {
+     "id": "5e35fcee1e",
+     "kind": "clean",
+     "task": "c1-iis-ecs",
+     "key": "c1-iis-ecs__B7__r1",
+     "arm": "B7"
+    },
+    {
+     "id": "2f8af180b0",
+     "kind": "clean",
+     "task": "c1-iis-ecs",
+     "key": "c1-iis-ecs__B0__r3",
+     "arm": "B0"
+    },
+    {
+     "id": "2c19a42fe8",
+     "kind": "clean",
+     "task": "c1-iis-ecs",
+     "key": "c1-iis-ecs__A0-sonnet__r1",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "cb03f199d1",
+     "kind": "clean",
+     "task": "c1-iis-ecs",
+     "key": "c1-iis-ecs__B5__r2",
+     "arm": "B5"
+    },
+    {
+     "id": "94da6de3b3",
+     "kind": "clean",
+     "task": "c1-iis-ecs",
+     "key": "c1-iis-ecs__B0__r1",
+     "arm": "B0"
+    },
+    {
+     "id": "caedfbfc43",
+     "kind": "clean",
+     "task": "c1-iis-ecs",
+     "key": "c1-iis-ecs__A0-sonnet__r2",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "a9f2732412",
+     "kind": "clean",
+     "task": "c1-iis-ecs",
+     "key": "c1-iis-ecs__B6__r1",
+     "arm": "B6"
+    },
+    {
+     "id": "50348fe215",
+     "kind": "clean",
+     "task": "c1-iis-ecs",
+     "key": "c1-iis-ecs__A2__r1",
+     "arm": "A2"
+    }
+   ]
+  },
+  "c2-burst-alert": {
+   "faulty": [
+    {
+     "id": "af7b23155b",
+     "kind": "faulty",
+     "task": "c2-burst-alert",
+     "key": "c2-burst-alert__A1__r3",
+     "arm": "A1",
+     "site": {
+      "i": 9,
+      "file": "src/alert.js",
+      "line": 31,
+      "op": "AOR",
+      "repl": "+"
+     }
+    },
+    {
+     "id": "f8cf7952fa",
+     "kind": "faulty",
+     "task": "c2-burst-alert",
+     "key": "c2-burst-alert__A2__r1",
+     "arm": "A2",
+     "site": {
+      "i": 0,
+      "file": "src/alert.js",
+      "line": 31,
+      "op": "COND",
+      "repl": "!(a.host < b.host)"
+     }
+    },
+    {
+     "id": "238c90ce89",
+     "kind": "faulty",
+     "task": "c2-burst-alert",
+     "key": "c2-burst-alert__A0-sonnet__r2",
+     "arm": "A0-sonnet",
+     "site": {
+      "i": 0,
+      "file": "src/alert.js",
+      "line": 22,
+      "op": "AOR",
+      "repl": "+"
+     }
+    },
+    {
+     "id": "9538f57727",
+     "kind": "faulty",
+     "task": "c2-burst-alert",
+     "key": "c2-burst-alert__A2__r2",
+     "arm": "A2",
+     "site": {
+      "i": 6,
+      "file": "src/alert.js",
+      "line": 6,
+      "op": "CRP",
+      "repl": "600"
+     }
+    },
+    {
+     "id": "3231688f3b",
+     "kind": "faulty",
+     "task": "c2-burst-alert",
+     "key": "c2-burst-alert__B5__r3",
+     "arm": "B5",
+     "site": {
+      "i": 0,
+      "file": "src/alert.js",
+      "line": 27,
+      "op": "AOR",
+      "repl": "+"
+     }
+    }
+   ],
+   "clean": [
+    {
+     "id": "2d2f6d1d08",
+     "kind": "clean",
+     "task": "c2-burst-alert",
+     "key": "c2-burst-alert__A0-sonnet__r3",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "6501a23977",
+     "kind": "clean",
+     "task": "c2-burst-alert",
+     "key": "c2-burst-alert__B5__r1",
+     "arm": "B5"
+    },
+    {
+     "id": "d4b2b9a793",
+     "kind": "clean",
+     "task": "c2-burst-alert",
+     "key": "c2-burst-alert__B0__r3",
+     "arm": "B0"
+    },
+    {
+     "id": "7e330b76c6",
+     "kind": "clean",
+     "task": "c2-burst-alert",
+     "key": "c2-burst-alert__B7__r2",
+     "arm": "B7"
+    },
+    {
+     "id": "edc28d0b87",
+     "kind": "clean",
+     "task": "c2-burst-alert",
+     "key": "c2-burst-alert__B7__r3",
+     "arm": "B7"
+    },
+    {
+     "id": "cc95720dd6",
+     "kind": "clean",
+     "task": "c2-burst-alert",
+     "key": "c2-burst-alert__A0-sonnet__r1",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "2e32e03a58",
+     "kind": "clean",
+     "task": "c2-burst-alert",
+     "key": "c2-burst-alert__A1__r1",
+     "arm": "A1"
+    },
+    {
+     "id": "f90712d844",
+     "kind": "clean",
+     "task": "c2-burst-alert",
+     "key": "c2-burst-alert__B5__r2",
+     "arm": "B5"
+    },
+    {
+     "id": "e635f5fc0e",
+     "kind": "clean",
+     "task": "c2-burst-alert",
+     "key": "c2-burst-alert__B7__r1",
+     "arm": "B7"
+    },
+    {
+     "id": "af66f8610c",
+     "kind": "clean",
+     "task": "c2-burst-alert",
+     "key": "c2-burst-alert__A1__r2",
+     "arm": "A1"
+    }
+   ]
+  },
+  "c3-shop-bugs": {
+   "faulty": [],
+   "clean": [
+    {
+     "id": "c604e62498",
+     "kind": "clean",
+     "task": "c3-shop-bugs",
+     "key": "c3-shop-bugs__B5__r2",
+     "arm": "B5"
+    },
+    {
+     "id": "8eb0baece3",
+     "kind": "clean",
+     "task": "c3-shop-bugs",
+     "key": "c3-shop-bugs__B6__r3",
+     "arm": "B6"
+    },
+    {
+     "id": "d700f23cae",
+     "kind": "clean",
+     "task": "c3-shop-bugs",
+     "key": "c3-shop-bugs__A0-sonnet__r2",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "94e5ec82a8",
+     "kind": "clean",
+     "task": "c3-shop-bugs",
+     "key": "c3-shop-bugs__A2__r1",
+     "arm": "A2"
+    },
+    {
+     "id": "fe46d2df7f",
+     "kind": "clean",
+     "task": "c3-shop-bugs",
+     "key": "c3-shop-bugs__A2__r2",
+     "arm": "A2"
+    },
+    {
+     "id": "46ee72b05a",
+     "kind": "clean",
+     "task": "c3-shop-bugs",
+     "key": "c3-shop-bugs__B6__r1",
+     "arm": "B6"
+    },
+    {
+     "id": "6e632d476a",
+     "kind": "clean",
+     "task": "c3-shop-bugs",
+     "key": "c3-shop-bugs__A1__r2",
+     "arm": "A1"
+    }
+   ]
+  },
+  "c5-tickets-api": {
+   "faulty": [
+    {
+     "id": "a16e7b5bc1",
+     "kind": "faulty",
+     "task": "c5-tickets-api",
+     "key": "c5-tickets-api__A0-sonnet__r1",
+     "arm": "A0-sonnet",
+     "site": {
+      "i": 2,
+      "file": "src/handler.js",
+      "line": 91,
+      "op": "COND",
+      "repl": "!(t)"
+     }
+    },
+    {
+     "id": "dec40faea9",
+     "kind": "faulty",
+     "task": "c5-tickets-api",
+     "key": "c5-tickets-api__B6__r2",
+     "arm": "B6",
+     "site": {
+      "i": 1,
+      "file": "src/handler.js",
+      "line": 13,
+      "op": "CRP",
+      "repl": "3"
+     }
+    },
+    {
+     "id": "b50ec60d78",
+     "kind": "faulty",
+     "task": "c5-tickets-api",
+     "key": "c5-tickets-api__A2__r1",
+     "arm": "A2",
+     "site": {
+      "i": 9,
+      "file": "src/handler.js",
+      "line": 83,
+      "op": "CRP",
+      "repl": "405"
+     }
+    },
+    {
+     "id": "963d88e82e",
+     "kind": "faulty",
+     "task": "c5-tickets-api",
+     "key": "c5-tickets-api__B5__r3",
+     "arm": "B5",
+     "site": {
+      "i": 10,
+      "file": "src/handler.js",
+      "line": 88,
+      "op": "EQ",
+      "repl": "!=="
+     }
+    },
+    {
+     "id": "b12cbc4fc6",
+     "kind": "faulty",
+     "task": "c5-tickets-api",
+     "key": "c5-tickets-api__B5__r2",
+     "arm": "B5",
+     "site": {
+      "i": 3,
+      "file": "src/handler.js",
+      "line": 83,
+      "op": "CRP",
+      "repl": "3"
+     }
+    },
+    {
+     "id": "f6f9e16b5b",
+     "kind": "faulty",
+     "task": "c5-tickets-api",
+     "key": "c5-tickets-api__A1__r1",
+     "arm": "A1",
+     "site": {
+      "i": 3,
+      "file": "src/handler.js",
+      "line": 91,
+      "op": "EQ",
+      "repl": "!=="
+     }
+    }
+   ],
+   "clean": [
+    {
+     "id": "d34c5ced71",
+     "kind": "clean",
+     "task": "c5-tickets-api",
+     "key": "c5-tickets-api__B7__r1",
+     "arm": "B7"
+    },
+    {
+     "id": "62efb208e2",
+     "kind": "clean",
+     "task": "c5-tickets-api",
+     "key": "c5-tickets-api__B0__r2",
+     "arm": "B0"
+    },
+    {
+     "id": "e854f478c0",
+     "kind": "clean",
+     "task": "c5-tickets-api",
+     "key": "c5-tickets-api__B6__r1",
+     "arm": "B6"
+    },
+    {
+     "id": "44b80d8225",
+     "kind": "clean",
+     "task": "c5-tickets-api",
+     "key": "c5-tickets-api__B7__r2",
+     "arm": "B7"
+    },
+    {
+     "id": "c1ed390558",
+     "kind": "clean",
+     "task": "c5-tickets-api",
+     "key": "c5-tickets-api__A2__r2",
+     "arm": "A2"
+    },
+    {
+     "id": "5fc1f982d9",
+     "kind": "clean",
+     "task": "c5-tickets-api",
+     "key": "c5-tickets-api__B6__r3",
+     "arm": "B6"
+    },
+    {
+     "id": "b15e023eea",
+     "kind": "clean",
+     "task": "c5-tickets-api",
+     "key": "c5-tickets-api__B5__r1",
+     "arm": "B5"
+    },
+    {
+     "id": "0f52a482a1",
+     "kind": "clean",
+     "task": "c5-tickets-api",
+     "key": "c5-tickets-api__A0-sonnet__r2",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "d24df2a17a",
+     "kind": "clean",
+     "task": "c5-tickets-api",
+     "key": "c5-tickets-api__A1__r2",
+     "arm": "A1"
+    },
+    {
+     "id": "25ef65e9c4",
+     "kind": "clean",
+     "task": "c5-tickets-api",
+     "key": "c5-tickets-api__A1__r3",
+     "arm": "A1"
+    }
+   ]
+  },
+  "t1-duration": {
+   "faulty": [],
+   "clean": [
+    {
+     "id": "936bcca3b2",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__A0-sonnet__r1",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "25c862f789",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__A0-sonnet__r9",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "5e8e502b2d",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__A0-sonnet__r5",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "0fb7f11818",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__A0-sonnet__r2",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "1ac065d087",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__B6__r9",
+     "arm": "B6"
+    },
+    {
+     "id": "883b6b5b8e",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__B6__r5",
+     "arm": "B6"
+    },
+    {
+     "id": "df0c954292",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__B6__r4",
+     "arm": "B6"
+    },
+    {
+     "id": "a238293f1f",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__A0-sonnet__r8",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "1fb77d92b4",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__B7__r6",
+     "arm": "B7"
+    },
+    {
+     "id": "307eea739e",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__B6__r1",
+     "arm": "B6"
+    },
+    {
+     "id": "d4620e8aaf",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__B6__r2",
+     "arm": "B6"
+    },
+    {
+     "id": "1bf782a0ad",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__B6__r3",
+     "arm": "B6"
+    },
+    {
+     "id": "fe59578d53",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__B0__r1",
+     "arm": "B0"
+    },
+    {
+     "id": "eec7b9a0ed",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__B6__r6",
+     "arm": "B6"
+    },
+    {
+     "id": "896ceb047e",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__B7__r4",
+     "arm": "B7"
+    },
+    {
+     "id": "ed59abdd98",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__A0-sonnet__r11",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "8436b51a6c",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__B7__r5",
+     "arm": "B7"
+    },
+    {
+     "id": "dd9e026969",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__A0-sonnet__r3",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "285790bbd3",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__B7__r8",
+     "arm": "B7"
+    },
+    {
+     "id": "3355180b54",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__B7__r7",
+     "arm": "B7"
+    },
+    {
+     "id": "03cb47bc15",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__A0-sonnet__r4",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "3cf0dbf31d",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__B7__r1",
+     "arm": "B7"
+    },
+    {
+     "id": "3e018f47e6",
+     "kind": "clean",
+     "task": "t1-duration",
+     "key": "t1-duration__B6__r8",
+     "arm": "B6"
+    }
+   ]
+  },
+  "t2-orders": {
+   "faulty": [
+    {
+     "id": "ceb76d379c",
+     "kind": "faulty",
+     "task": "t2-orders",
+     "key": "t2-orders__A0-sonnet__r3",
+     "arm": "A0-sonnet",
+     "site": {
+      "i": 11,
+      "file": "src/promotions.js",
+      "line": 30,
+      "op": "ROR",
+      "repl": ">="
+     }
+    },
+    {
+     "id": "a88fdb7829",
+     "kind": "faulty",
+     "task": "t2-orders",
+     "key": "t2-orders__B7__r1",
+     "arm": "B7",
+     "site": {
+      "i": 10,
+      "file": "src/tax.js",
+      "line": 3,
+      "op": "CRP",
+      "repl": "1"
+     }
+    },
+    {
+     "id": "ca7d29529f",
+     "kind": "faulty",
+     "task": "t2-orders",
+     "key": "t2-orders__A0-sonnet__r8",
+     "arm": "A0-sonnet",
+     "site": {
+      "i": 8,
+      "file": "src/promotions.js",
+      "line": 25,
+      "op": "LCR",
+      "repl": "||"
+     }
+    },
+    {
+     "id": "46905396d2",
+     "kind": "faulty",
+     "task": "t2-orders",
+     "key": "t2-orders__A0-sonnet__r2",
+     "arm": "A0-sonnet",
+     "site": {
+      "i": 7,
+      "file": "src/money.js",
+      "line": 15,
+      "op": "CRP",
+      "repl": "101"
+     }
+    },
+    {
+     "id": "0affba4794",
+     "kind": "faulty",
+     "task": "t2-orders",
+     "key": "t2-orders__A0-sonnet__r7",
+     "arm": "A0-sonnet",
+     "site": {
+      "i": 9,
+      "file": "src/money.js",
+      "line": 12,
+      "op": "CRP",
+      "repl": "101"
+     }
+    },
+    {
+     "id": "3a75c3194d",
+     "kind": "faulty",
+     "task": "t2-orders",
+     "key": "t2-orders__A0-sonnet__r4",
+     "arm": "A0-sonnet",
+     "site": {
+      "i": 0,
+      "file": "src/checkout.js",
+      "line": 33,
+      "op": "CRP",
+      "repl": "1"
+     }
+    },
+    {
+     "id": "0e8a4d73b6",
+     "kind": "faulty",
+     "task": "t2-orders",
+     "key": "t2-orders__A0-sonnet__r9",
+     "arm": "A0-sonnet",
+     "site": {
+      "i": 6,
+      "file": "src/checkout.js",
+      "line": 33,
+      "op": "CRP",
+      "repl": "1"
+     }
+    },
+    {
+     "id": "5888b4eed2",
+     "kind": "faulty",
+     "task": "t2-orders",
+     "key": "t2-orders__B6__r3",
+     "arm": "B6",
+     "site": {
+      "i": 2,
+      "file": "src/checkout.js",
+      "line": 38,
+      "op": "EQ",
+      "repl": "!=="
+     }
+    },
+    {
+     "id": "ef48f55aca",
+     "kind": "faulty",
+     "task": "t2-orders",
+     "key": "t2-orders__B6__r2",
+     "arm": "B6",
+     "site": {
+      "i": 6,
+      "file": "src/money.js",
+      "line": 23,
+      "op": "CRP",
+      "repl": "1"
+     }
+    },
+    {
+     "id": "4ace0b3ca6",
+     "kind": "faulty",
+     "task": "t2-orders",
+     "key": "t2-orders__B7__r6",
+     "arm": "B7",
+     "site": {
+      "i": 1,
+      "file": "src/money.js",
+      "line": 34,
+      "op": "CRP",
+      "repl": "1"
+     }
+    },
+    {
+     "id": "2fb60da967",
+     "kind": "faulty",
+     "task": "t2-orders",
+     "key": "t2-orders__A0-sonnet__r1",
+     "arm": "A0-sonnet",
+     "site": {
+      "i": 6,
+      "file": "src/checkout.js",
+      "line": 37,
+      "op": "CRP",
+      "repl": "101"
+     }
+    },
+    {
+     "id": "5f22a173b1",
+     "kind": "faulty",
+     "task": "t2-orders",
+     "key": "t2-orders__B7__r9",
+     "arm": "B7",
+     "site": {
+      "i": 9,
+      "file": "src/checkout.js",
+      "line": 39,
+      "op": "EQ",
+      "repl": "!=="
+     }
+    },
+    {
+     "id": "f5284f1a8e",
+     "kind": "faulty",
+     "task": "t2-orders",
+     "key": "t2-orders__B0__r1",
+     "arm": "B0",
+     "site": {
+      "i": 6,
+      "file": "src/money.js",
+      "line": 14,
+      "op": "CRP",
+      "repl": "101"
+     }
+    },
+    {
+     "id": "2b047bf2a3",
+     "kind": "faulty",
+     "task": "t2-orders",
+     "key": "t2-orders__B7__r7",
+     "arm": "B7",
+     "site": {
+      "i": 0,
+      "file": "src/checkout.js",
+      "line": 39,
+      "op": "COND",
+      "repl": "!(l.sku === promo.sku)"
+     }
+    }
+   ],
+   "clean": [
+    {
+     "id": "bf62ec8ed4",
+     "kind": "clean",
+     "task": "t2-orders",
+     "key": "t2-orders__A0-sonnet__r8",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "2e592d02d8",
+     "kind": "clean",
+     "task": "t2-orders",
+     "key": "t2-orders__A0-sonnet__r5",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "c65f8c4c5a",
+     "kind": "clean",
+     "task": "t2-orders",
+     "key": "t2-orders__B6__r3",
+     "arm": "B6"
+    },
+    {
+     "id": "6a34940d21",
+     "kind": "clean",
+     "task": "t2-orders",
+     "key": "t2-orders__A0-sonnet__r7",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "52065f0850",
+     "kind": "clean",
+     "task": "t2-orders",
+     "key": "t2-orders__B7__r1",
+     "arm": "B7"
+    },
+    {
+     "id": "dc2866378f",
+     "kind": "clean",
+     "task": "t2-orders",
+     "key": "t2-orders__B6__r5",
+     "arm": "B6"
+    },
+    {
+     "id": "6b22938650",
+     "kind": "clean",
+     "task": "t2-orders",
+     "key": "t2-orders__B7__r8",
+     "arm": "B7"
+    },
+    {
+     "id": "035ef4fb73",
+     "kind": "clean",
+     "task": "t2-orders",
+     "key": "t2-orders__B6__r7",
+     "arm": "B6"
+    },
+    {
+     "id": "7739a74c97",
+     "kind": "clean",
+     "task": "t2-orders",
+     "key": "t2-orders__B7__r2",
+     "arm": "B7"
+    },
+    {
+     "id": "0c11785e3b",
+     "kind": "clean",
+     "task": "t2-orders",
+     "key": "t2-orders__A0-sonnet__r6",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "ec716e8135",
+     "kind": "clean",
+     "task": "t2-orders",
+     "key": "t2-orders__A0-sonnet__r11",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "51dd6f18df",
+     "kind": "clean",
+     "task": "t2-orders",
+     "key": "t2-orders__B7__r5",
+     "arm": "B7"
+    },
+    {
+     "id": "18a60ba29f",
+     "kind": "clean",
+     "task": "t2-orders",
+     "key": "t2-orders__B7__r4",
+     "arm": "B7"
+    },
+    {
+     "id": "59fc34feda",
+     "kind": "clean",
+     "task": "t2-orders",
+     "key": "t2-orders__B7__r3",
+     "arm": "B7"
+    },
+    {
+     "id": "cd8a88afff",
+     "kind": "clean",
+     "task": "t2-orders",
+     "key": "t2-orders__A0-sonnet__r10",
+     "arm": "A0-sonnet"
+    }
+   ]
+  },
+  "t3-api": {
+   "faulty": [
+    {
+     "id": "17695d11f5",
+     "kind": "faulty",
+     "task": "t3-api",
+     "key": "t3-api__B6__r9",
+     "arm": "B6",
+     "site": {
+      "i": 4,
+      "file": "src/handlers/tasks.js",
+      "line": 16,
+      "op": "CRP",
+      "repl": "401"
+     }
+    },
+    {
+     "id": "dcec7ce348",
+     "kind": "faulty",
+     "task": "t3-api",
+     "key": "t3-api__A0-sonnet__r4",
+     "arm": "A0-sonnet",
+     "site": {
+      "i": 11,
+      "file": "src/handlers/tasks.js",
+      "line": 107,
+      "op": "COND",
+      "repl": "!(an || bn)"
+     }
+    },
+    {
+     "id": "2e8317e1dc",
+     "kind": "faulty",
+     "task": "t3-api",
+     "key": "t3-api__A0-sonnet__r5",
+     "arm": "A0-sonnet",
+     "site": {
+      "i": 5,
+      "file": "src/server.js",
+      "line": 24,
+      "op": "CRP",
+      "repl": "406"
+     }
+    },
+    {
+     "id": "0017da0117",
+     "kind": "faulty",
+     "task": "t3-api",
+     "key": "t3-api__B7__r6",
+     "arm": "B7",
+     "site": {
+      "i": 9,
+      "file": "src/query.js",
+      "line": 84,
+      "op": "COND",
+      "repl": "!(a.createdAt < b.createdAt)"
+     }
+    }
+   ],
+   "clean": [
+    {
+     "id": "7bcb33d6d7",
+     "kind": "clean",
+     "task": "t3-api",
+     "key": "t3-api__B6__r5",
+     "arm": "B6"
+    },
+    {
+     "id": "3bc55a3660",
+     "kind": "clean",
+     "task": "t3-api",
+     "key": "t3-api__B6__r6",
+     "arm": "B6"
+    },
+    {
+     "id": "b07d6b6e3c",
+     "kind": "clean",
+     "task": "t3-api",
+     "key": "t3-api__B6__r2",
+     "arm": "B6"
+    },
+    {
+     "id": "5496fd195f",
+     "kind": "clean",
+     "task": "t3-api",
+     "key": "t3-api__B6__r1",
+     "arm": "B6"
+    },
+    {
+     "id": "70e319623e",
+     "kind": "clean",
+     "task": "t3-api",
+     "key": "t3-api__B6__r4",
+     "arm": "B6"
+    },
+    {
+     "id": "fc5226097f",
+     "kind": "clean",
+     "task": "t3-api",
+     "key": "t3-api__B6__r3",
+     "arm": "B6"
+    },
+    {
+     "id": "f7811ffb18",
+     "kind": "clean",
+     "task": "t3-api",
+     "key": "t3-api__B0__r1",
+     "arm": "B0"
+    },
+    {
+     "id": "a1593cb13a",
+     "kind": "clean",
+     "task": "t3-api",
+     "key": "t3-api__B7__r2",
+     "arm": "B7"
+    },
+    {
+     "id": "eba9d22e67",
+     "kind": "clean",
+     "task": "t3-api",
+     "key": "t3-api__B7__r6",
+     "arm": "B7"
+    },
+    {
+     "id": "42621b5117",
+     "kind": "clean",
+     "task": "t3-api",
+     "key": "t3-api__B6__r7",
+     "arm": "B6"
+    },
+    {
+     "id": "e732921afe",
+     "kind": "clean",
+     "task": "t3-api",
+     "key": "t3-api__B7__r1",
+     "arm": "B7"
+    },
+    {
+     "id": "8553ce8930",
+     "kind": "clean",
+     "task": "t3-api",
+     "key": "t3-api__A0-sonnet__r2",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "97172faee3",
+     "kind": "clean",
+     "task": "t3-api",
+     "key": "t3-api__B7__r4",
+     "arm": "B7"
+    },
+    {
+     "id": "3174f7a77f",
+     "kind": "clean",
+     "task": "t3-api",
+     "key": "t3-api__B6__r8",
+     "arm": "B6"
+    },
+    {
+     "id": "ca51faf6c5",
+     "kind": "clean",
+     "task": "t3-api",
+     "key": "t3-api__A0-sonnet__r9",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "56baa0fc0b",
+     "kind": "clean",
+     "task": "t3-api",
+     "key": "t3-api__B7__r8",
+     "arm": "B7"
+    },
+    {
+     "id": "9ef6320050",
+     "kind": "clean",
+     "task": "t3-api",
+     "key": "t3-api__B7__r7",
+     "arm": "B7"
+    },
+    {
+     "id": "7519c606d5",
+     "kind": "clean",
+     "task": "t3-api",
+     "key": "t3-api__A0-sonnet__r3",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "a785cd5bc7",
+     "kind": "clean",
+     "task": "t3-api",
+     "key": "t3-api__A0-sonnet__r6",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "d5336f5b93",
+     "kind": "clean",
+     "task": "t3-api",
+     "key": "t3-api__A0-sonnet__r7",
+     "arm": "A0-sonnet"
+    }
+   ]
+  },
+  "t5-logq": {
+   "faulty": [
+    {
+     "id": "9559ed26dc",
+     "kind": "faulty",
+     "task": "t5-logq",
+     "key": "t5-logq__A0-sonnet__r7",
+     "arm": "A0-sonnet",
+     "site": {
+      "i": 3,
+      "file": "src/query.js",
+      "line": 182,
+      "op": "ROR",
+      "repl": "<"
+     }
+    }
+   ],
+   "clean": [
+    {
+     "id": "e8f8ace829",
+     "kind": "clean",
+     "task": "t5-logq",
+     "key": "t5-logq__B6__r2",
+     "arm": "B6"
+    },
+    {
+     "id": "2207c1b957",
+     "kind": "clean",
+     "task": "t5-logq",
+     "key": "t5-logq__B7__r7",
+     "arm": "B7"
+    },
+    {
+     "id": "8d05bad417",
+     "kind": "clean",
+     "task": "t5-logq",
+     "key": "t5-logq__B7__r9",
+     "arm": "B7"
+    },
+    {
+     "id": "b3973fdf41",
+     "kind": "clean",
+     "task": "t5-logq",
+     "key": "t5-logq__A0-sonnet__r9",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "c94699a1da",
+     "kind": "clean",
+     "task": "t5-logq",
+     "key": "t5-logq__B7__r2",
+     "arm": "B7"
+    },
+    {
+     "id": "e56383e4ec",
+     "kind": "clean",
+     "task": "t5-logq",
+     "key": "t5-logq__B6__r1",
+     "arm": "B6"
+    },
+    {
+     "id": "cc4034b1d5",
+     "kind": "clean",
+     "task": "t5-logq",
+     "key": "t5-logq__A0-sonnet__r5",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "7407752773",
+     "kind": "clean",
+     "task": "t5-logq",
+     "key": "t5-logq__B6__r5",
+     "arm": "B6"
+    },
+    {
+     "id": "8f1d818c57",
+     "kind": "clean",
+     "task": "t5-logq",
+     "key": "t5-logq__B7__r1",
+     "arm": "B7"
+    },
+    {
+     "id": "a1dde04fc1",
+     "kind": "clean",
+     "task": "t5-logq",
+     "key": "t5-logq__B7__r4",
+     "arm": "B7"
+    },
+    {
+     "id": "22ca6a78b1",
+     "kind": "clean",
+     "task": "t5-logq",
+     "key": "t5-logq__B7__r5",
+     "arm": "B7"
+    },
+    {
+     "id": "ada7885df9",
+     "kind": "clean",
+     "task": "t5-logq",
+     "key": "t5-logq__B7__r8",
+     "arm": "B7"
+    },
+    {
+     "id": "0860e32329",
+     "kind": "clean",
+     "task": "t5-logq",
+     "key": "t5-logq__A0-sonnet__r3",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "d6b3b2c901",
+     "kind": "clean",
+     "task": "t5-logq",
+     "key": "t5-logq__B7__r6",
+     "arm": "B7"
+    },
+    {
+     "id": "b4e0b3d04e",
+     "kind": "clean",
+     "task": "t5-logq",
+     "key": "t5-logq__B6__r7",
+     "arm": "B6"
+    },
+    {
+     "id": "7e5a39a0c3",
+     "kind": "clean",
+     "task": "t5-logq",
+     "key": "t5-logq__B6__r9",
+     "arm": "B6"
+    },
+    {
+     "id": "4727ca9870",
+     "kind": "clean",
+     "task": "t5-logq",
+     "key": "t5-logq__A0-sonnet__r8",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "c6f8fb920f",
+     "kind": "clean",
+     "task": "t5-logq",
+     "key": "t5-logq__A0-sonnet__r10",
+     "arm": "A0-sonnet"
+    },
+    {
+     "id": "6e4c4aac87",
+     "kind": "clean",
+     "task": "t5-logq",
+     "key": "t5-logq__B6__r4",
+     "arm": "B6"
+    },
+    {
+     "id": "2e38fb95a9",
+     "kind": "clean",
+     "task": "t5-logq",
+     "key": "t5-logq__A0-sonnet__r6",
+     "arm": "A0-sonnet"
+    }
+   ]
+  }
+ }
+}

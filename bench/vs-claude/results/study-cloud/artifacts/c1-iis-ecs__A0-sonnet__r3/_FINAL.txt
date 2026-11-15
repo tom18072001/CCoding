@@ -1,0 +1,14 @@
+`parseIisLog(text)` is now implemented in `src/iis.js`, following your rules and keeping the existing export name and ES module format. `npm test` passes both tests: the visible one and a second I added to `test/basic.test.js`.
+
+My added test covers:
+- several `#Fields:` lines
+- `-` values
+- a line whose column count doesn't match
+- a line before any `#Fields:`
+- CRLF line endings
+- the `+` to space replacement in the user agent
+- the `time-taken` conversion from milliseconds to nanoseconds
+
+Two choices go beyond the brief:
+- If a numeric field (status, port, time-taken) isn't a valid number, I omit that key.
+- If the date and time don't form a valid timestamp, I omit `@timestamp`. The line itself is still kept.

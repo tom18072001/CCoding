@@ -1,0 +1,104 @@
+# Báo cáo tổng hợp T-20261102-140650-8f4: DESIGN.md cho nền tảng ELK lưu audit log (thiết kế và tính dung lượng)
+
+## Tóm tắt
+`DESIGN.md` (tiếng Anh) đã có ở gốc repo. Tài liệu đủ §1–§11 và hai phụ lục A (output script) và B (công thức). Các phần đề bài yêu cầu đều có: phép tính dung lượng, bố trí node, pipeline, ILM/SLM, toàn vẹn chứng cứ, rủi ro và xung đột trong đầu vào. Review cuối duyệt bản sửa, và hai lỗi major của vòng trước đã được xử lý. Bạn cần biết ba điều trước khi giao:
+- **Review cuối không chạy lệnh nào.** Bằng chứng số liệu chạy thật chỉ có ở vòng review đầu.
+- **`capacity.py` không có trong repo.** Khách hàng chỉ tính lại được bằng tay theo Appendix B.
+- **`DESIGN.md` chưa commit** (`?? DESIGN.md`).
+
+SLA 24 giờ cho dữ liệu cũ chỉ đạt có điều kiện.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Script tính dung lượng, nháp Logstash/ILM/SLM/restore | @data-engineer | Đạt | `.ccoding/T-20261102-140650-8f4/s1-capacity-pipeline.md`. Lệnh `python3 -I capacity.py` exit 0. JSON/YAML parse OK, regex che PII đã thử bằng Ruby. Chưa chạy `logstash -t` và chưa áp cấu hình lên cluster. Script nằm trong scratchpad, không có trong repo. |
+| S2 | Toàn vẹn chứng cứ, che PII, phần Basic còn thiếu | @security | Đạt có điều kiện (C1–C8) | `.ccoding/T-20261102-140650-8f4/s2-integrity-masking.md`. Các khẳng định về Object Lock và license chưa kiểm với nguồn chính thức. |
+| S3 | Ghép DESIGN.md và sửa theo review | @solution-architect | Đạt (review cuối) | `DESIGN.md`. Nhãn "verify against current Elastic subscription page" xuất hiện 8 lần. Tôi đã kiểm lại `grep -n "^## "`: đủ §1–§11, A, B. |
+| S4 | Review, chạy lại script, đối chiếu số | @qa-tester | Vòng 1: đạt có điều kiện, 2 major. Vòng cuối: đã duyệt. | `.ccoding/T-20261102-140650-8f4/s4-review.md`. Vòng 1 đã chạy lại script, `diff` Appendix A với output cho kết quả rỗng, 7 JSON và 2 YAML parse OK. **Vòng cuối không chạy lệnh**, chỉ tính tay. |
+
+## Quyết định
+- **D1/D2:** Elasticsearch chỉ giữ 30 ngày (hot 7 ngày, warm 23 ngày, replica=1). Dữ liệu cũ hơn nằm trong snapshot SLM và WORM, khi cần thì restore vào nhóm 5 node restore. Gợi ý searchable snapshots của khách xung đột với ràng buộc chỉ dùng Basic, nên ghi giá là "cần báo giá Elastic", không bịa con số. Phương án giữ 365 ngày trên đĩa (49–76 data node) chỉ dùng để so sánh với phương án chọn (12 data node).
+- **D4, đã điều chỉnh:** Che PII bằng HMAC-SHA256 tại Logstash, sau khi hash raw thành `event.hash`. Hai nhánh `worm` và `mask` chạy **song song**, lệch so với D4 gốc. Phần lệch được bù bằng `ensure_delivery`, I5 (phát hiện khoảng trống), I10 (đối soát ES ↔ WORM) và I1b (manifest có ký). Chấp nhận vì xếp nối tiếp cũng không cho thêm đảm bảo nào: output `s3` ack sớm.
+- **D6:** Chứng cứ chính là raw trong Bucket A (Object Lock compliance) cùng digest có ký. Snapshot ES nằm ở bucket riêng, không bật lock.
+- **D8, số chính:** Ở tỷ lệ index/raw 1,1× (dùng để cấp phát):
+  - Raw 1,3824 TB/ngày, 504,58 TB/năm.
+  - Hot 26,61 TB, warm 87,44 TB.
+  - Repository snapshot 555 TB, WORM 85,15 TB.
+  - Node: 3 master, 7 hot, 5 warm, 5 restore, 5 Logstash.
+
+## Kết quả review
+- Vòng 1 có hai major: tài liệu ghi thứ tự xử lý là bắt buộc, sai so với cách pipeline chạy thật; và `prune` loại trường `user.*` khỏi bản WORM. Cả hai đã được sửa ở S3, và review cuối xác nhận.
+- Các minor đã xử lý: codec nén, số primary shard (10 thành 7), Appendix B, cách bỏ ILM khi restore (`ignore_index_settings`).
+- Hạn chế về bằng chứng: Appendix A khớp output script ở vòng 1. Sau bản sửa, chưa ai chạy lại `diff`. S3 nói không đụng vào khối output, nhưng chưa được kiểm bằng lệnh.
+
+## Việc còn mở & rủi ro
+- **SLA 24 giờ:** chỉ đạt khi băng thông tới repository ≥ 0,875 GB/s (giả định 10 Gbit/s × 70%) và mỗi yêu cầu ≤ 37 ngày dữ liệu (ở 1,1×).
+  - Với 1,1×, restore 30 ngày mất 14,5 giờ, biên còn 3,5 giờ.
+  - Nếu link chỉ 2,5 Gbit/s thì mỗi yêu cầu restore được tối đa 9 ngày.
+- **Object Lock và snapshot repository:** chưa có PoC (C3). Bucket snapshot cần lifecycle rule cho các version cũ (R-g).
+- **R-order:** event có thể tìm thấy trong ES khoảng 5 phút trước khi bản raw được commit vào Bucket A. Khách hàng cần chấp nhận cửa sổ này hoặc chọn biến thể nghiêm ngặt.
+- **R-rawmsg:** agent phải gửi bản ghi chưa parse. Nếu không, phạm vi hash bị thu hẹp.
+- **Thời hạn giữ:** snapshot thực tế giữ khoảng 395 ngày chứ không phải 365. Legal cần xác nhận.
+- **Các điểm khác:**
+  - R-dup: `document_id = event.hash` sẽ gộp hai event có raw giống hệt nhau.
+  - Regex không bắt được username đứng tự do trong văn bản.
+  - Raw chứa dữ liệu cá nhân và không xóa được trong thời hạn lock, cần quyết định pháp lý.
+- **Giả định chưa kiểm:** tỷ lệ 0,7×/1,1×, gzip ×0,15, envelope ≤ 100 B, tên vai trò giữ khóa, các khẳng định license, và trích dẫn NĐ 13/2023.
+- **Chưa chạy:** `logstash -t`, áp ILM/SLM/template lên cluster, chạy lại script sau bản sửa.
+- `DESIGN.md` đang untracked, chưa commit (không commit vào main khi chưa được duyệt).
+
+## Bước tiếp theo
+1. **Bàn giao script (S, @data-engineer):** commit `capacity.py` vào repo, cùng tham chiếu từ Appendix A. Xong khi `python3 -I capacity.py` exit 0 và `diff` với Appendix A rỗng (chạy bởi @qa-tester).
+2. **Commit DESIGN.md (S, Tom duyệt):** commit lên một nhánh riêng, không đẩy thẳng vào main.
+3. **Nhiệm vụ riêng, PoC dung lượng (M, @data-engineer):** đo tỷ lệ index/raw với `best_compression` và mapping cuối, đo kích thước envelope, và `logstash -t` cho §5.3. Xong khi có số đo thật thay cho A-RATIO và A-WORM, và chạy lại sizing.
+4. **Nhiệm vụ riêng, PoC Object Lock và restore (M, @security cùng @data-engineer):** chạy repository snapshot trên bucket C, restore 1 ngày dữ liệu và đo thông lượng thật, kiểm `_ilm/explain` trả `managed:false`. Xong khi C3 đóng và giới hạn N ngày mỗi yêu cầu được tính lại bằng số đo.
+5. **Gửi khách hàng 14 câu hỏi ở §10:** ưu tiên băng thông, giới hạn 37 ngày mỗi yêu cầu, cửa sổ R-order, 12 hay 13 tháng, người giữ khóa, báo giá Elastic, và xác nhận license trên trang subscription hiện hành.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-140650-8f4` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **146 in / 134.5k out**, cache đọc 2.36M, 15 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Kiến trúc sư giải pháp (@solution-architect) | dev | 70 | 53330 | 1583972 | 3 |
+| QA Engineer (@qa-tester) | dev | 32 | 16135 | 356122 | 4 |
+| Data Engineer (@data-engineer) | dev | 18 | 39239 | 265970 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 12 | 13428 | 80039 | 3 |
+| Chuyên viên ATTT (@security) | dev | 12 | 11856 | 75995 | 2 |
+| Điều phối viên (@orchestrator) | office | 2 | 539 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-data-engineer.md` — S1 Tính dung lượng bằng script + nháp pipeline Logstash, ILM, SLM (@data-engineer)
+- `outputs/dev-S2-security.md` — S2 Thiết kế toàn vẹn chứng cứ, che PII và rủi ro license Basic (@security)
+- `outputs/dev-S3-solution-architect.md` — S3 Viết DESIGN.md ở gốc repo (@solution-architect)
+- `outputs/dev-S4-qa-tester.md` — S4 Review và kiểm chứng số liệu DESIGN.md (@qa-tester)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Kiến trúc sư giải pháp (@solution-architect) | dev | **56** C | 50 | 17 | 85 | 100 | 1 | 2 | 1.64M | 9/49 |
+| QA Engineer (@qa-tester) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 372k | 0/12 |
+| Data Engineer (@data-engineer) | dev | **86** A | 100 | 93 | 77 | 48 | 1 | 1 | 305k | 2/7 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **78** B | 88 | 52 | 73 | 100 | 0 | — | 93k | 1/3 |
+| Chuyên viên ATTT (@security) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 88k | 0/4 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Kiến trúc sư giải pháp** (@solution-architect, 56 C):
+  - Qua review lần đầu 0/1 hạng mục, còn blocker ở review cuối 0/1 (bị nêu qua các vòng: 0 blocker, 2 major). Lỗi ở review cuối: —
+  - Tốn token gấp 5.8 lần trung vị phòng cho mỗi hạng mục (1634k so với 281k).
+- **QA Engineer** (@qa-tester, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+  - Review không kiểm chứng bằng công cụ 2/2 lần — kết luận dựa trên lời tự khai trong báo cáo.
+- **Data Engineer** (@data-engineer, 86 A):
+  - Thao tác công cụ lỗi nhiều (2/7, 29%; nhiều nhất ở run_command 2/7) — agent.md cần bước dò môi trường/lệnh của repo trước khi chạy (scripts trong package.json, shell PowerShell/bash, dịch vụ cần bật).
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+- **Trưởng phòng Phát triển** (@dev-lead, 78 B):
+  - Phòng dùng 1,9 lần ngân sách (2.86M/1.50M) — kế hoạch ôm quá nhiều việc cho một nhiệm vụ: chia theo gói/giai đoạn, mỗi hạng mục có tiêu chí xong đo được trong một lượt.
+- **Chuyên viên ATTT** (@security, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

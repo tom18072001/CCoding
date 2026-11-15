@@ -1,0 +1,54 @@
+{
+  "argv": [
+    "--arms",
+    "B0F,B1F",
+    "--tasks",
+    "l1-modules,l2-chain",
+    "--repeats",
+    "1",
+    "--timeout",
+    "40",
+    "--out",
+    "bench\\vs-claude\\results\\b15f-main",
+    "--runtime",
+    "claude-cli",
+    "--ccoding-url",
+    "http://127.0.0.1:7426",
+    "--ccoding-data",
+    "C:\\Users\\admin\\ccoding-vs-claude\\ccoding-e5f\\data",
+    "--work",
+    "C:\\Users\\admin\\ccoding-vs-claude\\vbe5f"
+  ],
+  "cfg": {
+    "ccodingUrl": "http://127.0.0.1:7426",
+    "ccodingData": "C:\\Users\\admin\\ccoding-vs-claude\\ccoding-e5f\\data",
+    "runtime": "claude-cli",
+    "timeoutMin": 40,
+    "claudeBin": "claude",
+    "judge": {
+      "enabled": false,
+      "model": "opus"
+    },
+    "seed": "ccvb",
+    "window": null,
+    "quotaState": null,
+    "workRoot": "C:\\Users\\admin\\ccoding-vs-claude\\vbe5f"
+  },
+  "meta": {
+    "ccodingCommit": "57148de026103e5fe9451ffc068650580bb4c399",
+    "claudeCliVersion": "2.1.318 (Claude Code)",
+    "window": null,
+    "quotaState": null,
+    "timeoutMin": 40
+  },
+  "armIds": [
+    "B0F",
+    "B1F"
+  ],
+  "taskIds": [
+    "l1-modules",
+    "l2-chain"
+  ],
+  "repeats": 1,
+  "startedAt": "2026-11-04T20:10:17.651Z"
+}

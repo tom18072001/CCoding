@@ -1,0 +1,22 @@
+I wrote `DESIGN.md` at the repository root. I did not run any of it, and the sizing rests on a compression ratio I assumed, so a proof of concept on real data should confirm it before hardware is ordered.
+
+**Searchable snapshots.** They need an Enterprise licence, so the customer's suggestion can't be used on Basic. In its place, the document keeps 35 days online and stores the other months as ordinary snapshots in an object store. Those are restored on request into a temporary restore tier. That meets the 24-hour rule, and I estimate about 12 hours end to end.
+
+**Capacity (compression ratios are my assumptions):**
+- **Raw volume:** 1.3824 TB per day and 504.6 TB per year.
+- **Hot tier:** days 0–7 at 0.6× compression, 11.6 TB with replicas.
+- **Warm tier:** days 7–35 at 0.45×, 34.8 TB with replicas.
+- **Archive:** 227 TB of snapshots plus about 76 TB of raw vault, roughly 303 TB of object storage in total.
+- **Sensitivity:** a table shows how the sizes change if compression turns out better or worse.
+
+**Integrity.** Elasticsearch can't prove immutability. The evidence of record is a write-once object-store vault holding the original events, with hash-chained, signed and timestamped manifests. Each indexed document carries a hash and a pointer back to its vault object.
+
+**Conflicts and risks it flags:**
+- **Masking vs. evidence:** masking changes the event, so keeping the unmasked original in the vault is a legal decision the customer must make.
+- **Basic-licence gaps:** no Elasticsearch audit log, no field-level security and no single sign-on.
+- **Restore speed:** at the default throttle a 30-day restore takes about 32 hours, so the recovery rate limits need raising.
+- **Snapshot size:** snapshots taken before force-merge would inflate the archive about 2.3×, which is why a small archiver job replaces the built-in ILM delete.
+
+A final section lists the decisions needed from the customer.
+
+I also made two small wording edits to the file after writing it.

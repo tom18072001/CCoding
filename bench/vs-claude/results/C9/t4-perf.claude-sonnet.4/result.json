@@ -1,0 +1,84 @@
+{
+ "run": {
+  "exitCode": 0,
+  "status": "done",
+  "wallSec": 71,
+  "costUsd": 0.15434219999999998,
+  "turns": 4,
+  "tokens": {
+   "input": 8,
+   "output": 7124,
+   "cacheRead": 164611,
+   "cacheWrite": 16583
+  },
+  "models": [
+   "claude-haiku-5-5",
+   "claude-sonnet-5-5"
+  ],
+  "modelUsage": {
+   "claude-haiku-5-5": {
+    "inputTokens": 1366,
+    "outputTokens": 313,
+    "cacheReadInputTokens": 0,
+    "cacheCreationInputTokens": 0,
+    "webSearchRequests": 0,
+    "costUSD": 0.0002931,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000,
+    "thinkingTokens": 291,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 0,
+    "canonicalModel": "claude-haiku-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   },
+   "claude-sonnet-5-5": {
+    "inputTokens": 8,
+    "outputTokens": 7124,
+    "cacheReadInputTokens": 164611,
+    "cacheCreationInputTokens": 16583,
+    "webSearchRequests": 0,
+    "costUSD": 0.1540491,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 64000,
+    "thinkingTokens": 2751,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 16583,
+    "canonicalModel": "claude-sonnet-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   }
+  },
+  "finalText": "Tôi đã tối ưu `buildReport` trong `src/report.js`: `npm run bench` với 200.000 dòng giờ mất khoảng 287 ms, trước đó là 15.239 ms. Tổng doanh thu bench in ra vẫn là 11445199250 như bản cũ, và `npm test` xanh (5/5 test đạt).\n\n**Cách làm:** hàm giờ duyệt `orders` đúng một lần. Nó tra sản phẩm bằng `Map`, và gom số liệu theo danh mục, tháng, SKU và khách bằng `Map`/`Set`. Trước đây mỗi dòng gọi `products.find`, rồi các bước sau lại `filter`/`includes` lặp lại trên toàn bộ dòng.\n\n**Những hành vi lạ của bản cũ mà tôi giữ nguyên:**\n- Khi SKU trùng trong `products`, hàm dùng bản đầu tiên.\n- SKU không có trong `products` thì được xếp vào danh mục `'unknown'` với tên `'(không rõ)'`.\n- Danh mục, SKU và khách giữ thứ tự xuất hiện đầu tiên trước khi sắp xếp, với cùng hàm so sánh như cũ.\n- Dòng có `amount < 0` đều được tính vào `refunds`, không chỉ dòng `refunded`.\n- Ngày không hợp lệ vẫn ném `RangeError`, và vẫn ném trước khi lọc tháng.\n- `-0` được đổi thành `0`, còn `NaN`/`Infinity` thành `null`, giống như phép `JSON.parse(JSON.stringify(...))` của bản cũ.\n\n**Bộ nhớ đệm:** có một cache từ chuỗi ngày sang tháng, nhưng nó chỉ sống trong một lần gọi nên không vi phạm điều cấm cache giữa các lần gọi.\n\n**Test mới:** bản cũ được lưu ở `test/fixtures/report.legacy.js`, và `test/report.test.js` so sánh với nó bằng `deepEqual`:\n- 400 bộ dữ liệu kỳ quặc: SKU trùng, SKU lạ, số âm, các múi giờ, ranh giới tháng, các giá trị `topN` và `from`/`to` khác nhau. Test cũng kiểm tra đầu vào không bị sửa.\n- Dữ liệu sinh bằng `src/gen.js`, 3 seed với 3 bộ tuỳ chọn.\n- Ngày không hợp lệ ném cùng loại lỗi ở cả hai bản.\n\nTôi không xử lý trường hợp `sku` là `NaN` (bản cũ so sánh bằng `===`, bản mới dùng `Map`) hay `qty` là chuỗi. Tôi coi đó là đầu vào không hợp lệ.",
+  "workdir": "/tmp/bw/C9-t4-perf.claude-sonnet.4-30zswi/repo"
+ },
+ "task": "t4-perf",
+ "system": "claude-sonnet",
+ "rep": 4,
+ "key": "t4-perf.claude-sonnet.4",
+ "env": "cloud",
+ "startedAt": "2026-11-02T07:01:26.223Z",
+ "finishedAt": "2026-11-02T07:02:40.068Z",
+ "grade": {
+  "hidden": {
+   "pass": 19,
+   "fail": 0,
+   "total": 19,
+   "failed": [],
+   "ms": 2527,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 5,
+   "fail": 0,
+   "total": 5
+  },
+  "changed": [
+   "~src/report.js",
+   "+test/fixtures/report.legacy.js",
+   "~test/report.test.js"
+  ],
+  "perfMs": 158
+ },
+ "audit": []
+}

@@ -1,0 +1,131 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t2-orders__B7__r3] Sửa 6 lỗi trong thư viện tính tiền giỏ hàng
+
+_Làn nhanh: báo cáo dựng tự động từ kế hoạch, bàn giao của từng hạng mục và kết quả review (không gọi model)._
+
+## Tóm tắt
+
+Cả 6 lỗi đã được sửa trong worktree (src/cart, checkout, money, promotions, tax, kèm test/regression.test.js, `npm test` 13/13 xanh). Phần còn lại là xác minh độc lập và rà các điểm rủi ro đã nêu trong bàn giao. Chia 2 hạng mục song song, mỗi hạng mục sở hữu tệp riêng, và không làm lại từ đầu.
+
+Kết quả: 2/2 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — Xác minh test hồi quy fail trên mã cũ và rà rủi ro trong src/ (@senior-swe, done)
+
+## Tóm tắt
+Cả 6 lỗi đã được xác minh: test hồi quy fail trên mã gốc `221f2a6` và pass trên mã đã sửa. Rà rủi ro tìm ra 2 lỗi nhỏ thật, đã sửa: `toCents` trả `-0`, và `endsAt` có kèm giờ bị cộng nhầm một ngày. Thay đổi ở `tax.js` không đổi hành vi nào. `npm test` xanh, 14/14.
+
+## Tệp đã tạo/sửa
+- `src/money.js`: `toCents` không còn trả `-0`. Ví dụ `toCents(-0.004)` trước đây ra `-0`, nay ra `0`. Điều này quan trọng vì `assert.equal` strict phân biệt `-0` với `0`.
+- `src/promotions.js`: thêm hàm nội bộ `endExclusive`. Chỉ `endsAt` dạng `YYYY-MM-DD` mới được cộng thêm 1 ngày; `endsAt` có kèm giờ giữ nguyên mốc.
+- `test/regression.test.js`: thêm 1 test cho hai chỉnh sửa trên.
+- `src/tax.js`, `src/checkout.js`, `src/cart.js`: giữ nguyên, không sửa thêm.
+
+## Kiểm chứng
+- **Cách chạy trên mã cũ:** tôi giải nén `221f2a6` bằng `git archive` vào thư mục tạm, chép `test/regression.test.js` vào và chạy `node --test`. Không dùng stash, reset hay checkout trên worktree chính.
+- **Kết quả trên mã cũ:** 7/7 test hồi quy fail, tức đủ 6 lỗi (lỗi 2 có 2 test). Test mới thêm sau đó chưa chạy trên mã cũ.
+- **Kết quả trên mã đã sửa:** cả 7 test này pass.
+
+| Lỗi | Trước sửa | Sau sửa |
+|---|---|---|
+| #1 `toCents` (1.005, 2.675) | fail | pass |
+| #2 `allocate` và tổng giảm | fail (2 test) | pass |
+| #3 mua X tặng Y | fail | pass |
+| #4 `endsAt` | fail | pass |
+| #5 giữ chỗ tồn kho | fail | pass |
+| #6 thuế trên `net` | fail | pass |
+
+- **`npm test` sau chỉnh sửa:** exit 0, tests 14, pass 14, fail 0.
+- **Lần chạy đầu bị lỗi, đã khắc phục:** lần đầu có 1 fail do regex `endExclusive` mất dấu `\`. Tôi đã sửa và chạy lại ra kết quả xanh ở trên.
+- **Lệnh bị hook chặn:** lệnh có `rm -rf` để dọn thư mục tạm bị chặn nên tôi không chạy. Thư mục tạm của hệ thống vẫn còn đó.
+
+## Quyết định thiết kế
+- **(a) `tax.js`:** tôi so sánh `Math.round(a*rate)` của mã cũ với bản số nguyên cho mọi `a` từ 0 đến 200000 và cả 3 loại thuế. Kết quả có 0 điểm khác biệt, nên không cần hoàn nguyên. Bản số nguyên vẫn đúng half up và an toàn hơn về sai số float, nên tôi giữ.
+- **(b) `endsAt`:** dạng `YYYY-MM-DD` vẫn hết hạn đúng từ `2026-12-01T00:00:00Z`. Dạng có giờ (ví dụ `2026-11-30T12:00:00Z`) hết hạn đúng tại mốc giờ đó.
+- **(c) `percent` không nguyên:** với 12.5, `gross*12.5` là phép tính chính xác nên các ca nửa xu vẫn đúng. Tôi không sửa.
+- **(d) `toCents`:** các giá trị 0, số âm (`-2.675` ra `-268`), `1e12` và `1e15` đều ra kết quả đúng. Điểm lỗi duy nhất là `-0` ở trên.
+
+## Rủi ro & việc còn mở
+- Với `percent` lẻ như 33.3, `Math.round(gross*percent/100)` có thể sai ở các ca biên hiếm do float. Tôi chưa tìm thấy ca sai thật nên không đổi.
+- Các số lớn hơn khoảng 1e15 xu mất độ chính xác do giới hạn của `number` trong JavaScript. Đây là giới hạn chung, ngoài phạm vi các lỗi đã báo.
+
+## Phát hiện
+- Thấp · `src/money.js` (`toCents`) · trả `-0` khi nhập số âm rất nhỏ · đã sửa.
+- Thấp · `src/promotions.js` (`checkValidity`) · cộng 1 ngày kể cả khi `endsAt` có giờ · đã sửa bằng `endExclusive`.
+- Không có phát hiện nào khác.
+
+Bản đầy đủ: `.ccoding/T-20261112-231440-a0b/outputs/dev-S1-senior-swe.md`
+
+### S2 — Bộ test bảo vệ hành vi đang đúng (non-regression, tệp riêng) (@backend-dev, done)
+
+## Tóm tắt
+Tôi đã tạo `test/behavior.test.js` gồm 20 test bảo vệ các hành vi đang đúng. Test mới chạy hết trên mã `src/` hiện tại, tôi không sửa `src/` hay test khác. `npm test` xanh: 33 test, 33 pass.
+
+## Tệp đã tạo/sửa
+- `test/behavior.test.js` (mới, style `node:test`). Các nhóm hành vi được bao phủ:
+  - **Tiền tệ:** `toCents` (số thường, số âm, không ra `-0`) và `formatMoney`.
+  - **Giảm giá:** giảm % toàn giỏ, giảm theo danh mục, mã cố định bằng hoặc vượt tổng (net không âm), mã cố định nhỏ hơn tổng, `bxgy` trong `computeTotals`.
+  - **Mã và điều kiện:** `minSubtotal` ở đúng ngưỡng và dưới ngưỡng, mã không tồn tại, mã sau thay mã trước, `removeCoupon`.
+  - **`allocate`:** tổng các phần bằng số gốc với số âm, nhiều phần và trọng số 0; kết quả cụ thể `[4,3,3]`.
+  - **Thuế:** các mức `standard`, `reduced`, `zero`, làm tròn half up, loại thuế không hợp lệ.
+  - **Giỏ hàng và tồn kho:** thêm, tăng, giảm, xóa; hết hàng thật vẫn báo lỗi và không đổi trạng thái; hai giỏ dùng chung kho; xóa món không có trong giỏ không nhả nhầm của giỏ khác; kiểm tra đầu vào.
+  - **Khuyến mãi theo ngày:** `freeUnits` ở các biên, `endsAt` (ngày hết hạn và các mốc quanh `2026-12-01T00:00:00Z`) và `startsAt`.
+
+## Hợp đồng API
+Không áp dụng (không đổi API).
+
+## Migration
+Không áp dụng.
+
+## Kiểm chứng
+- `npm test` lần đầu → 1 test fail: `freeUnits các biên`, dòng `freeUnits(2,1,1)` tôi kỳ vọng 2 nhưng thực tế 1. Đây là kỳ vọng sai của tôi: mua 1 tặng 1 với 2 món thì chỉ có `floor(2/2)*1 = 1` món tặng, nên `src/` không có lỗi. Tôi đã sửa test thành kỳ vọng 1.
+- `npm test` sau khi sửa → exit 0, tests 33, pass 33, fail 0, skipped 0.
+
+## Việc còn lại
+- Danh sách test fail trên mã hiện tại: không có.
+- Điểm chưa kiểm tra, không có test: mã giảm % với `percent` không nguyên (ví dụ 12.5), vì `Math.round` của JS có thể lệch ở các trường hợp biên hiếm (đã nêu trong bàn giao trước).
+- Với `allocate` và tổng âm, test chỉ khẳng định tổng các phần bằng số gốc. Tôi không khẳng định cách chia từng phần, vì mô tả trong `src/` không nêu rõ cho trường hợp âm.
+- Người nhận: @senior-swe (S1) xác minh test hồi quy của `regression.test.js` có fail trên mã cũ hay không.
+
+Bản đầy đủ: `.ccoding/T-20261112-231440-a0b/outputs/dev-S2-backend-dev.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng: lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+Lệnh kiểm tra reviewer đã chạy: npm test (đạt)
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261112-231440-a0b` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **34 in / 20.6k out**, cache đọc 296.8k, 4 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 24 | 11731 | 221406 | 2 |
+| Backend Developer (@backend-dev) | dev | 8 | 7169 | 70644 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 2 | 1727 | 4701 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 Xác minh test hồi quy fail trên mã cũ và rà rủi ro trong src/ (@senior-swe)
+- `outputs/dev-S2-backend-dev.md` — S2 Bộ test bảo vệ hành vi đang đúng (non-regression, tệp riêng) (@backend-dev)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | ℹ tests 6 · ℹ suites 0 · ℹ pass 6 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+| sau thực thi | `npm test` | 0 | ℹ tests 33 · ℹ suites 0 · ℹ pass 33 · ℹ fail 0 · ℹ skipped 0 · ℹ todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Độ tin | Chất lượng | Kết quả thật | Trung thực | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi | Ngữ cảnh đầy nhất |
+|---|---|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **65** B | thấp | — | — | — | 71 | 92 | 100 | 1 | 1 | 233k | 2/19 | — |
+| Backend Developer (@backend-dev) | dev | **65** B | thấp | — | — | — | 100 | 100 | 100 | 1 | 1 | 78k | 0/4 | — |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **65** B | thấp | — | — | — | 100 | 100 | — | 0 | — | 6k | — | — |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: KPI v2 — Chất lượng 25%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ không còn blocker ở review cuối; người review/CTO thêm độ đúng của kết luận so với kết quả thật · Kết quả thật 20% (chỉ nhiệm vụ đã xong): lệnh kiểm tra của dự án sau cùng so với lúc phòng bắt đầu (đạt 1, vẫn lỗi 0,4, hồi quy 0) — gán cho người thực thi đã sửa tệp của phòng đó; tiêu chí CTO nghiệm thu đạt / tổng tiêu chí (unknown tính như chưa đạt, quá nửa unknown thì không đo được) — gán cho mọi người thực thi và trưởng phòng; mỗi người lấy trung bình phần mình có · Trung thực 15%: khẳng định đã chạy test/typecheck/build phải có lệnh kiểm chứng cùng loại chạy THÀNH CÔNG trong chính lượt đó (hoặc lệnh kiểm tra của dự án đạt); runtime không ghi công cụ thì không đo được · Hiệu quả 15%: token (60%) và thời gian (40%) mỗi hạng mục so với trung vị phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 15%: lượt hỏng do agent, công cụ lỗi, chạm trần, đầu ra bị cắt, kết luận không đọc được, sản phẩm rỗng (lỗi hạ tầng và prompt vượt cửa sổ ngữ cảnh không tính điểm, chỉ báo) · Tuân thủ 10%: mẫu đầu ra + bằng chứng. Người review/CTO: chất lượng thêm độ đúng của kết luận (kết luận gốc của reviewer; chỉ tính hồi quy so với baseline). Nhóm không có dữ liệu bỏ qua; có dữ liệu < 50% trọng số thì tối đa 79. Điểm co về 60 theo lượng bằng chứng n = max(hạng mục, sản phẩm) + max(review, quyết định) + nhiệm vụ có kết quả thật + kế hoạch: (n·thô + 3·60)/(n + 3)._

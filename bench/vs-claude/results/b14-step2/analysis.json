@@ -1,0 +1,220 @@
+{
+  "n": 96,
+  "nLabel": "đủ 96",
+  "pairsKept": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "T": -0.001400711305862501,
+  "R": 0.9986002692323482,
+  "ci95": [
+    0.8861525292811567,
+    1.1266167937519789
+  ],
+  "p": 0.9832016798320168,
+  "verdict": "không phân biệt được",
+  "perm": {
+    "n": 3,
+    "exact": false,
+    "nPerm": 10000,
+    "skipped": [],
+    "label": "p"
+  },
+  "permArgs": {
+    "alt": "two",
+    "margin": 0,
+    "M": 10000,
+    "seed": 20261104
+  },
+  "cells": [
+    {
+      "task": "t2-orders",
+      "nOff": 16,
+      "nOn": 16
+    },
+    {
+      "task": "t3-api",
+      "nOff": 16,
+      "nOn": 16
+    },
+    {
+      "task": "t4-perf",
+      "nOff": 16,
+      "nOn": 16
+    }
+  ],
+  "skipped": [],
+  "drops": {
+    "dòng hạ tầng (infra), chạy lại cùng khóa — không phải quan sát": 88,
+    "status ≠ done (failed), thay bằng lượt cùng khóa": 2
+  },
+  "assignments": [
+    {
+      "arm": "off",
+      "task": "t3-api",
+      "rep": 15,
+      "replaces": 15,
+      "pair": 4,
+      "sameKey": true
+    },
+    {
+      "arm": "off",
+      "task": "t4-perf",
+      "rep": 14,
+      "replaces": 14,
+      "pair": 4,
+      "sameKey": true
+    }
+  ],
+  "secondary": {
+    "byTaskArm": [
+      {
+        "task": "t2-orders",
+        "arm": "off",
+        "n": 16,
+        "hMedian": 0.7847024543874042,
+        "cacheWriteShare": 0.401947349658018
+      },
+      {
+        "task": "t3-api",
+        "arm": "off",
+        "n": 16,
+        "hMedian": 0.8398097465957209,
+        "cacheWriteShare": 0.3407750042490298
+      },
+      {
+        "task": "t4-perf",
+        "arm": "off",
+        "n": 16,
+        "hMedian": 0.7849500281073543,
+        "cacheWriteShare": 0.39133498360700314
+      },
+      {
+        "task": "t2-orders",
+        "arm": "on",
+        "n": 16,
+        "hMedian": 0.7945269601732712,
+        "cacheWriteShare": 0.37593953375380607
+      },
+      {
+        "task": "t3-api",
+        "arm": "on",
+        "n": 16,
+        "hMedian": 0.8347424318588869,
+        "cacheWriteShare": 0.3315314702425326
+      },
+      {
+        "task": "t4-perf",
+        "arm": "on",
+        "n": 16,
+        "hMedian": 0.7617313963684132,
+        "cacheWriteShare": 0.39771598205224373
+      }
+    ],
+    "byArm": {
+      "off": {
+        "n": 48,
+        "pass": 47,
+        "passRate": 0.9791666666666666,
+        "passCP95": [
+          0.8893038394068478,
+          0.9994726847465769
+        ],
+        "scoreMean": 0.9996527777777778,
+        "wallSecMean": 189.71270833333335,
+        "wallSecMedian": 180.3385,
+        "callsMean": 3.9791666666666665,
+        "callsMedian": 5
+      },
+      "on": {
+        "n": 48,
+        "pass": 44,
+        "passRate": 0.9166666666666666,
+        "passCP95": [
+          0.8001719858006187,
+          0.9768265048632392
+        ],
+        "scoreMean": 0.996765350877193,
+        "wallSecMean": 192.88720833333335,
+        "wallSecMedian": 200.36599999999999,
+        "callsMean": 3.9583333333333335,
+        "callsMedian": 5
+      }
+    }
+  },
+  "sensitivity": {
+    "leaveOneTaskOut": [
+      {
+        "dropped": "t2-orders",
+        "R": 0.9883502973099573,
+        "ci95": [
+          0.8730865140922555,
+          1.1166631105294544
+        ],
+        "nhayVoiBai": false
+      },
+      {
+        "dropped": "t3-api",
+        "R": 0.9993446529299158,
+        "ci95": [
+          0.8737999232390825,
+          1.1390300735408574
+        ],
+        "nhayVoiBai": false
+      },
+      {
+        "dropped": "t4-perf",
+        "R": 1.0082049981232162,
+        "ci95": [
+          0.8467672602207952,
+          1.1980384541220133
+        ],
+        "nhayVoiBai": true
+      }
+    ],
+    "sigma": {
+      "sigmaObserved": 0.3116537678792264,
+      "sigmaPlanned": 0.182,
+      "df": 90,
+      "seT": 0.06361605897665788,
+      "mdeLn": 0.17822581051029188,
+      "mdeSavingPct": 16.324654557056206,
+      "powerAtPlanDelta": 0.38080105904218087,
+      "powerAt5pct": 0.12715319144962173,
+      "note": "xấp xỉ chuẩn, cùng công thức §9 (4); chỉ mô tả"
+    }
+  },
+  "retryMode": "last",
+  "exclude": [],
+  "retryNotes": {
+    "off": {
+      "infra": 75,
+      "retried": [
+        {
+          "task": "t4-perf",
+          "rep": 14,
+          "status": "failed",
+          "sameKeyDone": true
+        },
+        {
+          "task": "t3-api",
+          "rep": 15,
+          "status": "failed",
+          "sameKeyDone": true
+        }
+      ],
+      "dupAfterDone": 0
+    },
+    "on": {
+      "infra": 13,
+      "retried": [],
+      "dupAfterDone": 0
+    }
+  },
+  "notes": [
+    "permStratified nằm ở bench/vs-claude/lib/stats.mjs:272; §9 (6) ghi :162 là số dòng trước D12.",
+    "ceilGuard mặc định tắt vì margin = 0; ∏C(32,16) > 10⁶ nên hàm chạy Monte Carlo, p = (k + 1)/(M + 1)."
+  ]
+}

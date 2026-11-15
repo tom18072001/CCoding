@@ -1,0 +1,508 @@
+TAP version 13
+# Subtest: rỗng
+ok 1 - rỗng
+  ---
+  duration_ms: 2.299385
+  type: 'test'
+  ...
+# Subtest: orders rỗng, có products
+ok 2 - orders rỗng, có products
+  ---
+  duration_ms: 0.353345
+  type: 'test'
+  ...
+# Subtest: products rỗng
+ok 3 - products rỗng
+  ---
+  duration_ms: 1.202093
+  type: 'test'
+  ...
+# Subtest: sku không có trong products
+ok 4 - sku không có trong products
+  ---
+  duration_ms: 0.401644
+  type: 'test'
+  ...
+# Subtest: sku trùng trong products (lấy phần tử đầu)
+ok 5 - sku trùng trong products (lấy phần tử đầu)
+  ---
+  duration_ms: 0.404087
+  type: 'test'
+  ...
+# Subtest: toàn cancelled
+ok 6 - toàn cancelled
+  ---
+  duration_ms: 0.21329
+  type: 'test'
+  ...
+# Subtest: toàn refunded (grandTotal âm)
+ok 7 - toàn refunded (grandTotal âm)
+  ---
+  duration_ms: 0.315917
+  type: 'test'
+  ...
+# Subtest: grandTotal = 0 (paid + refunded bù nhau)
+ok 8 - grandTotal = 0 (paid + refunded bù nhau)
+  ---
+  duration_ms: 0.263389
+  type: 'test'
+  ...
+# Subtest: qty/unitPrice = 0
+ok 9 - qty/unitPrice = 0
+  ---
+  duration_ms: 0.388282
+  type: 'test'
+  ...
+# Subtest: hòa điểm doanh thu và qty
+ok 10 - hòa điểm doanh thu và qty
+  ---
+  duration_ms: 0.756391
+  type: 'test'
+  ...
+# Subtest: hòa doanh thu khác qty
+ok 11 - hòa doanh thu khác qty
+  ---
+  duration_ms: 0.273658
+  type: 'test'
+  ...
+# Subtest: hòa danh mục
+ok 12 - hòa danh mục
+  ---
+  duration_ms: 0.224954
+  type: 'test'
+  ...
+# Subtest: chuỗi gần giống nhau
+ok 13 - chuỗi gần giống nhau
+  ---
+  duration_ms: 0.65066
+  type: 'test'
+  ...
+# Subtest: đơn nhiều dòng; cùng id khác tháng/trạng thái
+ok 14 - đơn nhiều dòng; cùng id khác tháng/trạng thái
+  ---
+  duration_ms: 0.313179
+  type: 'test'
+  ...
+# Subtest: khách chỉ có dòng refunded
+ok 15 - khách chỉ có dòng refunded
+  ---
+  duration_ms: 0.161317
+  type: 'test'
+  ...
+# Subtest: trường thừa / undefined / null trong dòng
+ok 16 - trường thừa / undefined / null trong dòng
+  ---
+  duration_ms: 0.333835
+  type: 'test'
+  ...
+# Subtest: from/to \#0 {}
+ok 17 - from/to \#0 {}
+  ---
+  duration_ms: 0.352236
+  type: 'test'
+  ...
+# Subtest: from/to \#1 {"from":"2025-02"}
+ok 18 - from/to \#1 {"from":"2025-02"}
+  ---
+  duration_ms: 0.248382
+  type: 'test'
+  ...
+# Subtest: from/to \#2 {"to":"2025-03"}
+ok 19 - from/to \#2 {"to":"2025-03"}
+  ---
+  duration_ms: 0.221243
+  type: 'test'
+  ...
+# Subtest: from/to \#3 {"from":"2025-02","to":"2025-04"}
+ok 20 - from/to \#3 {"from":"2025-02","to":"2025-04"}
+  ---
+  duration_ms: 0.212054
+  type: 'test'
+  ...
+# Subtest: from/to \#4 {"from":"2025-03","to":"2025-03"}
+ok 21 - from/to \#4 {"from":"2025-03","to":"2025-03"}
+  ---
+  duration_ms: 0.25746
+  type: 'test'
+  ...
+# Subtest: from/to \#5 {"from":"2025-04","to":"2025-02"}
+ok 22 - from/to \#5 {"from":"2025-04","to":"2025-02"}
+  ---
+  duration_ms: 0.13859
+  type: 'test'
+  ...
+# Subtest: from/to \#6 {"from":"2030-01"}
+ok 23 - from/to \#6 {"from":"2030-01"}
+  ---
+  duration_ms: 0.110356
+  type: 'test'
+  ...
+# Subtest: from/to \#7 {"to":"2000-01"}
+ok 24 - from/to \#7 {"to":"2000-01"}
+  ---
+  duration_ms: 0.102754
+  type: 'test'
+  ...
+# Subtest: from/to \#8 {"from":"","to":""}
+ok 25 - from/to \#8 {"from":"","to":""}
+  ---
+  duration_ms: 0.244214
+  type: 'test'
+  ...
+# Subtest: from/to \#9 {"from":"2025-01","to":"2025-01"}
+ok 26 - from/to \#9 {"from":"2025-01","to":"2025-01"}
+  ---
+  duration_ms: 0.164988
+  type: 'test'
+  ...
+# Subtest: topN = 0
+ok 27 - topN = 0
+  ---
+  duration_ms: 0.321765
+  type: 'test'
+  ...
+# Subtest: topN = 1
+ok 28 - topN = 1
+  ---
+  duration_ms: 0.274583
+  type: 'test'
+  ...
+# Subtest: topN = 2
+ok 29 - topN = 2
+  ---
+  duration_ms: 0.264264
+  type: 'test'
+  ...
+# Subtest: topN = 3
+ok 30 - topN = 3
+  ---
+  duration_ms: 0.303728
+  type: 'test'
+  ...
+# Subtest: topN = 100
+ok 31 - topN = 100
+  ---
+  duration_ms: 0.270663
+  type: 'test'
+  ...
+# Subtest: topN = undefined
+ok 32 - topN = undefined
+  ---
+  duration_ms: 0.267418
+  type: 'test'
+  ...
+# Subtest: topN = null
+ok 33 - topN = null
+  ---
+  duration_ms: 0.321609
+  type: 'test'
+  ...
+# Subtest: topN = -1
+ok 34 - topN = -1
+  ---
+  duration_ms: 0.28033
+  type: 'test'
+  ...
+# Subtest: options bỏ trống (mặc định)
+ok 35 - options bỏ trống (mặc định)
+  ---
+  duration_ms: 0.322307
+  type: 'test'
+  ...
+# Subtest: options = {}
+ok 36 - options = {}
+  ---
+  duration_ms: 1.505705
+  type: 'test'
+  ...
+# Subtest: múi giờ đổi tháng UTC
+ok 37 - múi giờ đổi tháng UTC
+  ---
+  duration_ms: 0.229294
+  type: 'test'
+  ...
+# Subtest: múi giờ, không lọc
+ok 38 - múi giờ, không lọc
+  ---
+  duration_ms: 0.182733
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=1
+ok 39 - gen ngẫu nhiên seed=1
+  ---
+  duration_ms: 2.797911
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=2
+ok 40 - gen ngẫu nhiên seed=2
+  ---
+  duration_ms: 3.868357
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=3
+ok 41 - gen ngẫu nhiên seed=3
+  ---
+  duration_ms: 2.147333
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=4
+ok 42 - gen ngẫu nhiên seed=4
+  ---
+  duration_ms: 2.857039
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=5
+ok 43 - gen ngẫu nhiên seed=5
+  ---
+  duration_ms: 3.411691
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=6
+ok 44 - gen ngẫu nhiên seed=6
+  ---
+  duration_ms: 3.937812
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=7
+ok 45 - gen ngẫu nhiên seed=7
+  ---
+  duration_ms: 1.892509
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=8
+ok 46 - gen ngẫu nhiên seed=8
+  ---
+  duration_ms: 2.440266
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=9
+ok 47 - gen ngẫu nhiên seed=9
+  ---
+  duration_ms: 1.346484
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=10
+ok 48 - gen ngẫu nhiên seed=10
+  ---
+  duration_ms: 4.564258
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=11
+ok 49 - gen ngẫu nhiên seed=11
+  ---
+  duration_ms: 2.221059
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=12
+ok 50 - gen ngẫu nhiên seed=12
+  ---
+  duration_ms: 2.459967
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=13
+ok 51 - gen ngẫu nhiên seed=13
+  ---
+  duration_ms: 1.424898
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=14
+ok 52 - gen ngẫu nhiên seed=14
+  ---
+  duration_ms: 2.700153
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=15
+ok 53 - gen ngẫu nhiên seed=15
+  ---
+  duration_ms: 2.222313
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=16
+ok 54 - gen ngẫu nhiên seed=16
+  ---
+  duration_ms: 3.075686
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=17
+ok 55 - gen ngẫu nhiên seed=17
+  ---
+  duration_ms: 1.659629
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=18
+ok 56 - gen ngẫu nhiên seed=18
+  ---
+  duration_ms: 2.798175
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=19
+ok 57 - gen ngẫu nhiên seed=19
+  ---
+  duration_ms: 1.173933
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=20
+ok 58 - gen ngẫu nhiên seed=20
+  ---
+  duration_ms: 6.130141
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=21
+ok 59 - gen ngẫu nhiên seed=21
+  ---
+  duration_ms: 5.886758
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=22
+ok 60 - gen ngẫu nhiên seed=22
+  ---
+  duration_ms: 4.413122
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=23
+ok 61 - gen ngẫu nhiên seed=23
+  ---
+  duration_ms: 1.99083
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=24
+ok 62 - gen ngẫu nhiên seed=24
+  ---
+  duration_ms: 3.57468
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=25
+ok 63 - gen ngẫu nhiên seed=25
+  ---
+  duration_ms: 3.605909
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=26
+ok 64 - gen ngẫu nhiên seed=26
+  ---
+  duration_ms: 5.221158
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=27
+ok 65 - gen ngẫu nhiên seed=27
+  ---
+  duration_ms: 2.537164
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=28
+ok 66 - gen ngẫu nhiên seed=28
+  ---
+  duration_ms: 4.181944
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=29
+ok 67 - gen ngẫu nhiên seed=29
+  ---
+  duration_ms: 2.036481
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=30
+ok 68 - gen ngẫu nhiên seed=30
+  ---
+  duration_ms: 4.808965
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=31
+ok 69 - gen ngẫu nhiên seed=31
+  ---
+  duration_ms: 3.343742
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=32
+ok 70 - gen ngẫu nhiên seed=32
+  ---
+  duration_ms: 0.858252
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=33
+ok 71 - gen ngẫu nhiên seed=33
+  ---
+  duration_ms: 3.076398
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=34
+ok 72 - gen ngẫu nhiên seed=34
+  ---
+  duration_ms: 3.147579
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=35
+ok 73 - gen ngẫu nhiên seed=35
+  ---
+  duration_ms: 3.099726
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=36
+ok 74 - gen ngẫu nhiên seed=36
+  ---
+  duration_ms: 5.766355
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=37
+ok 75 - gen ngẫu nhiên seed=37
+  ---
+  duration_ms: 2.455427
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=38
+ok 76 - gen ngẫu nhiên seed=38
+  ---
+  duration_ms: 3.76707
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=39
+ok 77 - gen ngẫu nhiên seed=39
+  ---
+  duration_ms: 0.997518
+  type: 'test'
+  ...
+# Subtest: gen ngẫu nhiên seed=40
+ok 78 - gen ngẫu nhiên seed=40
+  ---
+  duration_ms: 3.14135
+  type: 'test'
+  ...
+# Subtest: ngẫu nhiên nhiều hòa điểm
+ok 79 - ngẫu nhiên nhiều hòa điểm
+  ---
+  duration_ms: 3.818643
+  type: 'test'
+  ...
+# Subtest: bộ vừa ~5.000 dòng
+ok 80 - bộ vừa ~5.000 dòng
+  ---
+  duration_ms: 74.348306
+  type: 'test'
+  ...
+# Subtest: bộ vừa, lọc tháng, topN=7
+ok 81 - bộ vừa, lọc tháng, topN=7
+  ---
+  duration_ms: 52.217308
+  type: 'test'
+  ...
+# Subtest: báo cáo nhỏ
+ok 82 - báo cáo nhỏ
+  ---
+  duration_ms: 1.802068
+  type: 'test'
+  ...
+# Subtest: dữ liệu sinh ngẫu nhiên chạy được
+ok 83 - dữ liệu sinh ngẫu nhiên chạy được
+  ---
+  duration_ms: 9.266885
+  type: 'test'
+  ...
+1..83
+# tests 83
+# suites 0
+# pass 83
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 468.303649

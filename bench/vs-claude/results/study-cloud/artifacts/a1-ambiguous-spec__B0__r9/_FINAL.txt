@@ -1,0 +1,93 @@
+# Báo cáo tổng hợp: SPEC.md cho tính năng "Log Export" (T-20261103-024701-0be)
+
+## Tóm tắt
+`SPEC.md` (v0.2, 255 dòng) đã nằm ở gốc repo. Tiêu đề `## Open questions and assumptions` xuất hiện đúng một lần, ở dòng 165. Mục này gồm Q-a đến Q-k và Q-m; mỗi câu có câu hỏi, assumption tạm dùng và tác động nếu sai, trừ Q-k còn thiếu (xem mục Kết quả review). Cả 5 mâu thuẫn chính trong brief đều được tách ra và có hướng xử lý: IP/username đầy đủ ↔ mask, team ↔ "everything", 5 giây ↔ "everything", "giữ mãi" ↔ xóa sau 12 tháng, và "simple" ↔ phạm vi. Spec mới đạt ở mức thiết kế và có điều kiện: DPO/pháp chế của ngân hàng phải trả lời Q-a, Q-e và Q-m trước khi hiện thực. `SPEC.md` chưa được commit (`git status`: `?? SPEC.md`).
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Soạn SPEC.md: US-1..5, FR-1..13, NFR, mục Open questions | @business-analyst | Đạt sau 1 vòng sửa (1 major về phạm vi MVP/FR-13, 2 minor) | `SPEC.md`; đầu ra `.ccoding/T-20261103-024701-0be/outputs/dev-S1-business-analyst.md`. BA chỉ dùng Grep, lệnh shell bị hook chặn. |
+| S2 | Rà và chỉnh phần dữ liệu cá nhân, lưu giữ, audit | @security | Đạt có điều kiện ở cổng thiết kế (sau 1 vòng sửa: 1 major về A-1, 3 minor) | `SPEC.md` mục 6, 7, FR-9, FR-12, Q-m, A-12..14; đầu ra `.ccoding/T-20261103-024701-0be/outputs/dev-S2-security.md` |
+
+Reviewer cuối không chạy lệnh nào. Tôi đã tự kiểm lại bằng Grep/Read (chỉ đọc):
+- Thứ tự các mục: 1–8, rồi `## Open questions and assumptions` (dòng 165), rồi `## 9. Verification`.
+- Có đủ Q-a..Q-k và Q-m.
+- Không còn tham chiếu `Q-l`.
+- A-1 khớp với FR-9 và Q-a.
+- Phạm vi MVP ở Q-j có FR-13.
+
+Tôi chưa đọc toàn văn spec để rà nhất quán từ đầu đến cuối.
+
+## Quyết định
+- **Mask (Q-a):** BM nhận bản export đã pseudonymise. IP và username được thay bằng HMAC-SHA-256 có khóa, rút còn 16 hex, khóa lưu trong KMS. Không dùng hash không khóa. Prefix /24 (IPv4) hoặc /48 (IPv6) chỉ thêm khi DPO đồng ý. Bản pseudonymise vẫn được coi là dữ liệu cá nhân.
+- **Forensic không mask:** để sang phase 2 (FR-12, US-4). Chỉ vai trò FSA riêng được dùng, cần case id và người thứ hai phê duyệt. Tệp chỉ xem trong platform, không tải về.
+- **Lưu giữ (Q-e):** "giữ mãi" chỉ áp cho bản ghi audit, và bản ghi này không chứa dữ liệu cá nhân. Tệp export bị xóa khi bản ghi nguồn cũ nhất trong tệp quá 12 tháng, xóa luôn các bản sao và cache.
+- **Phạm vi và hiệu năng:** BM chỉ export team của mình, tháng dương lịch trước, theo giờ Asia/Ho_Chi_Minh. Export đồng bộ khi ≤ 50.000 dòng với mục tiêu ≤ 5 s p95. Lớn hơn thì chạy async, tối đa 1.000.000 dòng. Các ngưỡng này và chỉ số p95 là giả định của ta, brief không nêu.
+- **MVP (Q-j):** FR-1..6, FR-9..11, FR-13, audit và purge.
+- **Repo trống** nên không có hạng mục code, kiến trúc hay hiện thực trong nhiệm vụ này.
+
+## Kết quả review
+- Các blocker và major từ cả hai vòng review đều đã sửa xong.
+- Còn 3 điểm minor, tôi chấp nhận để lại cho v0.3 vì không làm sai hướng của spec:
+  1. Thời hạn link tải chưa thống nhất. FR-11 ghi 5 phút cho sync và 24 giờ cho async, nhưng Q-h và A-10 chỉ ghi "24 h".
+  2. Q-k thiếu dòng "Question" và "Impact" riêng; chỉ có assumption.
+  3. Q-i và Q-m trùng nội dung một phần (căn cứ pháp lý). Nên gộp lại hoặc dẫn chéo.
+- Không có test hay build vì sản phẩm là tài liệu.
+
+## Việc còn mở & rủi ro
+- **Rủi ro cao nhất:** DPO có thể không chấp nhận pseudonymise là "masked". Khi đó phải chuyển sang ẩn hẳn dữ liệu, và giá trị forensic của bản export cho BM giảm mạnh.
+- **Nguồn team/vai trò chưa rõ (Q-g):** nếu xác định sai phạm vi team thì dữ liệu team khác bị lộ.
+- **Ngưỡng 50.000 / 1.000.000 dòng và 5 s p95 chưa có số liệu volume thật.**
+- **Định dạng CSV "như hệ thống cũ" chưa có mẫu (Q-f).**
+- **Spec không trích số hiệu văn bản pháp luật nào.** Mọi căn cứ pháp lý chờ pháp chế ngân hàng xác nhận.
+- **`SPEC.md` chưa commit.** Cần người có quyền commit lên nhánh làm việc, không commit vào main.
+
+## Bước tiếp theo
+1. **Gửi câu hỏi cho khách hàng.** Gửi Q-a..Q-m cho Business, DPO/pháp chế, IAM owner và Ops; kèm xin mẫu CSV cũ và số liệu volume. Xong khi có văn bản trả lời cho Q-a, Q-e, Q-m, Q-f, Q-g và Q-d.
+2. **Spec v0.3** (@business-analyst, cỡ S). Sửa 3 điểm minor ở trên và cập nhật theo câu trả lời của khách hàng. Xong khi các giả định đã được xác nhận chuyển thành yêu cầu, và grep không còn mâu thuẫn về thời hạn link.
+3. **Kiến trúc và ADR** (@solution-architect + @security, cỡ M; làm sau bước 2). Gồm luồng sync/async, KMS và xoay vòng khóa HMAC, purge job, lược đồ audit. Xong khi có ADR và cổng bảo vệ dữ liệu được ký duyệt.
+4. **Hiện thực MVP** (@backend-dev / @frontend-dev, tách theo FR). Xong khi có các test @security đã nêu:
+   - pseudonym khác SHA-256 không khóa;
+   - quét regex không thấy IP/username thô trong CSV và audit;
+   - purge xóa mọi bản sao;
+   - endpoint tệp không mask trả 403.
+5. **Phase 2 forensic** (FR-12, US-4, reverse lookup), làm thành nhiệm vụ riêng sau khi DPO trả lời Q-a.
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-024701-0be` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **66 in / 40.2k out**, cache đọc 479.1k, 9 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Business Analyst (@business-analyst) | dev | 24 | 15055 | 197062 | 2 |
+| Chuyên viên ATTT (@security) | dev | 18 | 12692 | 140015 | 2 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 12 | 7741 | 77271 | 2 |
+| QA Engineer (@qa-tester) | dev | 10 | 3789 | 62536 | 2 |
+| Điều phối viên (@orchestrator) | office | 2 | 961 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-business-analyst.md` — S1 Soạn SPEC.md cho tính năng Log Export (@business-analyst)
+- `outputs/dev-S2-security.md` — S2 Rà và chỉnh phần bảo vệ dữ liệu, lưu giữ, kiểm toán trong SPEC.md (@security)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Business Analyst (@business-analyst) | dev | **75** B | 50 | 86 | 91 | 100 | 1 | 2 | 212k | 2/18 |
+| Chuyên viên ATTT (@security) | dev | **74** B | 50 | 100 | 100 | 60 | 1 | 2 | 153k | 0/7 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **77** B | 50 | 100 | 87 | 100 | 0 | — | 85k | 1/6 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 66k | 0/3 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **Business Analyst** (@business-analyst, 75 B):
+  - Qua review lần đầu 0/1 hạng mục, còn blocker ở review cuối 0/1 (bị nêu qua các vòng: 0 blocker, 1 major). Lỗi ở review cuối: —
+- **Chuyên viên ATTT** (@security, 74 B):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+  - Qua review lần đầu 0/1 hạng mục, còn blocker ở review cuối 0/1 (bị nêu qua các vòng: 0 blocker, 1 major). Lỗi ở review cuối: —
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 2/2 lần — kết luận dựa trên lời tự khai trong báo cáo.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

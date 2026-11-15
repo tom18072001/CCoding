@@ -1,0 +1,17 @@
+I reviewed `src/server.js` and wrote seven findings to `findings.json` in the repository root. I did not run the code or modify the source.
+
+| Line | Type | Severity | Issue |
+|---|---|---|---|
+| 11 | `hardcoded-secret` | high | The JWT secret is hardcoded in the source. |
+| 30 | `sqli` | critical | The search query is interpolated straight into the SQL string. |
+| 42 | `path-traversal` | high | `req.params.name` is joined onto `REPORT_DIR` with no check that the result stays inside it. |
+| 58 | `weak-crypto` | high | Passwords are hashed with unsalted MD5. |
+| 65 | `ssrf` | high | The server fetches any URL a logged-in user supplies. |
+| 70 | `missing-authz` | high | Any logged-in user can delete any ticket. |
+| 84 | `command-injection` | critical | `req.body.format` goes into a shell command through `exec`. |
+
+I left out several things that looked suspicious but are not exploitable as written:
+- **Status table name (line 36):** it is a server-side constant.
+- **Attachments route (lines 47–53):** it uses `basename`, an extension allow-list, and an owner check.
+- **Ping route (lines 76–80):** it validates the host and uses `execFile` with an argument array.
+- **`verifyJwt` (line 18):** it is never imported, so the auth middleware would throw. That is a bug, not a security issue I could report.

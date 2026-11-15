@@ -1,0 +1,23 @@
+Thư viện cfgchain đã hiện thực xong cả bốn tầng cùng `compile`, và `npm test` xanh (50 test, 0 lỗi). Ví dụ mục 9 trong đặc tả chạy đúng: lỗi dấu phẩy thừa báo ở 5:29, và bản đã sửa cho ra cấu hình mong đợi.
+
+**Các tệp:**
+- Tầng 1: `src/lexer.js`, `src/parser.js`.
+- Tầng 2: `src/check.js`, với ba pha A, B, C theo đặc tả.
+- Tầng 3: `src/evaluate.js`.
+- Tầng 4: `src/diff.js`, gồm các hàm con trỏ JSON, `diff`, `applyDiff` và các hàm định dạng.
+- `src/index.js` có thêm `compile`.
+- Tôi thêm `src/merge.js` (ngoài danh sách tệp trong đề bài), chứa mô hình hợp nhất mà tầng 2 và 3 dùng chung để chúng phân giải tham chiếu giống nhau. Các tầng vẫn chỉ nhập từ nhau và từ module này.
+- Test nằm ở `test/` (`lexer`, `parser`, `check`, `evaluate`, `diff`, `compile`), cạnh `smoke.test.js` có sẵn.
+
+**Khi rà soát:**
+- Lỗi nằm ở test: một số test dùng cột sai hoặc khóa trùng trong cùng một tệp (vốn là lỗi `SEM_DUPLICATE_KEY`). Tôi đã đếm lại cột bằng tay từng trường hợp và sửa lại test; mã nguồn không phải sửa.
+- Trong lúc sửa, `test/check.test.js` bị hỏng do lệnh shell của tôi, tôi đã khôi phục.
+
+**Những chỗ đặc tả chưa rõ, tôi tự chọn:**
+- Dấu `\` ở cuối tệp trong chuỗi → `LEX_BAD_ESCAPE`.
+- `SEM_UNKNOWN_KEY` đặt tại token khóa của câu lệnh đã tạo mục đó (khối tạo đối tượng, hoặc `Assign` cuối).
+- `closed` chỉ có tác dụng khi có `fields`, đúng chữ của quy tắc 3.
+- Một `Ref` không phải hằng nằm trong giá trị `const` (đã bị báo `SEM_CONST_CONFIG_REF`) vẫn được tính là một cạnh khi xét vòng tham chiếu, miễn là nó phân giải được.
+- `applyDiff` ném `DIFF_APPLY_FAILED` khi `remove` gốc, và chấp nhận `-` làm chỉ số `add` (thêm cuối mảng).
+
+Test đã phủ các quy tắc và mã lỗi chính của từng tầng, nhưng bộ nghiệm thu ẩn có thể chọn các trường hợp biên khác với test của tôi. Tôi chưa commit gì.

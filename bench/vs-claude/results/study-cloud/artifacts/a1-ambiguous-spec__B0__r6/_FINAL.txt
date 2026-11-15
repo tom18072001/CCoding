@@ -1,0 +1,100 @@
+# Báo cáo tổng hợp: Đặc tả "Log Export" cho khách hàng ngân hàng (T-20261103-022945-2b8)
+
+## Tóm tắt
+`SPEC.md` đã được viết ở gốc repo và đáp ứng yêu cầu của đề bài, trong đó có mục `## Open questions and assumptions` gồm 13 câu hỏi. Mỗi câu hỏi đều kèm giả định tạm dùng. Spec giải quyết các mâu thuẫn trong yêu cầu bằng thiết kế hai tầng:
+- **Tầng 1:** trưởng chi nhánh tự xuất CSV đã che dữ liệu.
+- **Tầng 2:** bản đầy đủ chỉ cấp cho vai trò Điều tra/ATTT, phải có phê duyệt.
+
+Tệp xuất bị xóa sau thời gian ngắn, chỉ giữ lâu dài audit metadata. Reviewer không chạy lệnh nào, nên tôi đã tự chạy các lệnh kiểm chứng chỉ đọc (ghi ở dưới). Còn ba điểm nhỏ chưa xử lý. `SPEC.md` chưa được commit.
+
+## Kết quả theo hạng mục
+| Mã | Hạng mục | Phụ trách | Đạt? (theo review) | Bằng chứng (tệp, lệnh đã chạy) |
+|---|---|---|---|---|
+| S1 | Phân tích bảo vệ dữ liệu và các mâu thuẫn trong yêu cầu | @security | Đạt có điều kiện (cổng thiết kế) | `.ccoding/T-20261103-022945-2b8/dp-analysis.md`. Lệnh `grep -c '^## '` ra 7 (S1 tự chạy). Căn cứ pháp lý chưa được tra cứu. |
+| S2 | Viết `SPEC.md` kèm mục câu hỏi mở | @business-analyst | Đạt. Reviewer chỉ đọc kỹ Q1–Q2 và không chạy lệnh | `SPEC.md`. Tôi đã chạy lại: `grep -n '^## ' SPEC.md` cho ra 8 mục đánh số và `237:## Open questions and assumptions`. `grep -c '^### Q'` ra 13. `grep -c -i 'working assumption'` ra 14, tức Q1–Q13 đều có giả định. |
+
+Các điều kiện bắt buộc của S1 đều đã có trong spec:
+- Che IP và username, dùng mã giả HMAC cho tầng tự phục vụ.
+- Schema audit bất biến (mục 7).
+- Kiểm quyền phía server.
+- Chống formula injection, link tải hết hạn, mã hóa lưu trữ.
+- Vòng đời xóa tệp xuất (mục 6).
+- Các câu hỏi pháp lý nằm ở Q11.
+
+## Quyết định
+- **IP/username đầy đủ ↔ cấm dữ liệu cá nhân chưa che:** dùng hai tầng. Tầng 1 che dữ liệu và chạy tự phục vụ. Tầng 2 xuất đầy đủ, cần ticket, người phê duyệt và audit.
+- **"Giữ vĩnh viễn" ↔ "xóa sau 12 tháng":** "bằng chứng audit" được hiểu là audit metadata cộng SHA-256 của tệp, không phải bản thân tệp. Tệp Tầng 1 bị xóa sau 24 giờ, link tải hết hạn sau 15 phút.
+- **"Team" ↔ "mọi thứ thấy được":** phạm vi xuất là giao của quyền xem và cây chi nhánh, kiểm tra phía server.
+- **Mốc 5 giây:** chỉ áp dụng khi bản xuất có tối đa N = 100.000 dòng. Vượt mức này thì chuyển sang xuất bất đồng bộ, trần M = 2.000.000 dòng.
+- Toàn bộ các ngưỡng trên là giả định, đã đánh dấu **[ASSUMPTION]** trong spec. Không có số nào lấy từ khách hàng.
+- Không cần kiến trúc, không viết code. Phần hiện thực sẽ làm sau khi khách hàng trả lời.
+
+## Kết quả review
+- Reviewer chấp nhận spec. Lưu ý: reviewer **không chạy lệnh nào** và chỉ kiểm Q3–Q13 qua tiêu đề. Các lệnh `grep` ở bảng trên là tôi chạy bổ sung.
+- Còn ba điểm minor, tôi chấp nhận và chuyển sang việc còn mở:
+  1. Chưa gắn ưu tiên MoSCoW cho FR/NFR.
+  2. Audit metadata được giữ lâu dài nhưng vẫn chứa `requester_id` dạng mã giả và `source_ip_hash`. Đây vẫn là dữ liệu cá nhân đã giả danh hóa. Bảng ở mục 6 ghi "No raw IP/username", chưa thật nhất quán với câu "pseudonymised data is still personal data" ngay phía trên.
+  3. Tầng 2 dựa vào giả định "môi trường được kiểm soát".
+- Không có blocker.
+
+## Việc còn mở & rủi ro
+- **13 câu hỏi cho khách hàng (Q1–Q13)**, quan trọng nhất là:
+  - Q1: có được xuất IP/username đầy đủ không;
+  - Q6/Q11: thời hạn lưu theo luật có thể buộc giữ log lâu hơn 12 tháng;
+  - Q2/Q9: phạm vi "team" và nguồn cây tổ chức;
+  - Q4: định dạng CSV của hệ thống cũ.
+- **Pháp lý:** NĐ 13/2023/NĐ-CP, Luật BVDLCN 2025 và TT 09/2020/TT-NHNN chỉ được nêu để pháp chế khách hàng xác nhận. Chưa ai tra cứu các văn bản này.
+- **Rủi ro:** nếu khách hàng bác thiết kế hai tầng và đòi tệp tự phục vụ có dữ liệu thô, thì phải mở lại cổng bảo vệ dữ liệu.
+- **Chưa thực hiện:** commit `SPEC.md` (tệp đang ở trạng thái untracked), và cổng phát hành của @security.
+
+## Bước tiếp theo
+1. **Gửi câu hỏi cho khách hàng.** Gửi Q1–Q13 kèm giả định đề xuất. Xong khi mọi câu hỏi có câu trả lời, hoặc được ghi rõ là chấp nhận giả định.
+2. **Chỉnh sửa spec nhỏ** (@business-analyst, cỡ S):
+   - gắn MoSCoW cho FR-1..9 và NFR-1..5;
+   - sửa bảng ở mục 6 cho thống nhất về dữ liệu đã giả danh hóa trong audit, kèm thời hạn giữ;
+   - cập nhật theo câu trả lời của khách hàng.
+
+   Xong khi mọi FR/NFR có nhãn ưu tiên và mục câu hỏi mở phản ánh đúng câu trả lời.
+3. **Commit `SPEC.md`** lên một nhánh riêng, không commit vào main. Cần Tom duyệt.
+4. **Tách nhiệm vụ riêng sau khi khách hàng chốt:**
+   - Spike hiệu năng xuất 100k dòng trong 5 giây (@data-engineer). Xong khi có số đo thật.
+   - ADR và thiết kế lưu trữ, audit (@solution-architect + @security).
+   - Hiện thực Tầng 1 (@backend-dev + @frontend-dev).
+   - Hiện thực Tầng 2 với luồng phê duyệt.
+   - Bộ test nghiệm thu theo các tiêu chí Given/When/Then (@qa-tester).
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-022945-2b8` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **42 in / 28.1k out**, cache đọc 310.0k, 6 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Business Analyst (@business-analyst) | dev | 12 | 12695 | 114649 | 1 |
+| QA Engineer (@qa-tester) | dev | 10 | 2157 | 86541 | 1 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | 12 | 7162 | 73587 | 2 |
+| Chuyên viên ATTT (@security) | dev | 6 | 5056 | 33005 | 1 |
+| Điều phối viên (@orchestrator) | office | 2 | 994 | 2247 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-security.md` — S1 Phân tích bảo vệ dữ liệu và mâu thuẫn trong yêu cầu Log Export (@security)
+- `outputs/dev-S2-business-analyst.md` — S2 Viết SPEC.md sẵn sàng hiện thực, kèm mục câu hỏi mở và giả định (@business-analyst)
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Business Analyst (@business-analyst) | dev | **89** A | 100 | 65 | 90 | 100 | 1 | 1 | 127k | 1/8 |
+| QA Engineer (@qa-tester) | dev | **57** C | — | — | 100 | 0 | 0 | — | 89k | 0/4 |
+| Trưởng phòng Phát triển (@dev-lead) | dev | **96** A | 100 | 100 | 80 | 100 | 0 | — | 81k | 1/4 |
+| Chuyên viên ATTT (@security) | dev | **94** A | 100 | 100 | 100 | 60 | 1 | 1 | 38k | 0/3 |
+| Điều phối viên (@orchestrator) | office | **100** A | — | — | 100 | — | 0 | — | 3k | — |
+
+### Việc cần sửa theo agent
+- **QA Engineer** (@qa-tester, 57 C):
+  - Review không kiểm chứng bằng công cụ 1/1 lần — kết luận dựa trên lời tự khai trong báo cáo.
+- **Chuyên viên ATTT** (@security, 94 A):
+  - Có quyền chạy lệnh nhưng ít kiểm chứng (0/1 lượt thực thi có chạy test/typecheck/lint/build) — Definition of Done phải bắt buộc lệnh kiểm chứng + exit code thật.
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

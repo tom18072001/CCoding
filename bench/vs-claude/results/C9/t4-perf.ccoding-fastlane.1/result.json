@@ -1,0 +1,59 @@
+{
+ "run": {
+  "status": "done",
+  "taskId": "T-20261102-134447-258",
+  "wallSec": 126,
+  "wallSecHarness": 135,
+  "costUsd": 0.496177,
+  "tokens": {
+   "input": 26,
+   "output": 18968,
+   "cacheRead": 346038,
+   "cacheWrite": 67063
+  },
+  "approved": true,
+  "subtasks": [
+   {
+    "id": "S1",
+    "status": "done",
+    "title": "Tối ưu buildReport trong src/report.js (giữ nguyên hành vi)"
+   },
+   {
+    "id": "S2",
+    "status": "done",
+    "title": "Bộ test đối chiếu với bản cũ (test/report.compare.test.js)"
+   }
+  ],
+  "workdir": "/home/claude/ccoding-dev/workspaces/b-c9-t4-fastla-1/wt-T-20261102-134447-258",
+  "branch": "ccoding/t-20261102-134447-258"
+ },
+ "task": "t4-perf",
+ "system": "ccoding-fastlane",
+ "rep": 1,
+ "key": "t4-perf.ccoding-fastlane.1",
+ "env": "cloud",
+ "startedAt": "2026-11-02T06:44:47.952Z",
+ "finishedAt": "2026-11-02T06:47:08.806Z",
+ "grade": {
+  "hidden": {
+   "pass": 19,
+   "fail": 0,
+   "total": 19,
+   "failed": [],
+   "ms": 4468,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 15,
+   "fail": 0,
+   "total": 15
+  },
+  "changed": [
+   "~src/report.js",
+   "+test/fixtures/report.reference.js",
+   "+test/report.compare.test.js"
+  ],
+  "perfMs": 317
+ },
+ "audit": []
+}

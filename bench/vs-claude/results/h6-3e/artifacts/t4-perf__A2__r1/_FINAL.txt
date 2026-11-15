@@ -1,0 +1,13 @@
+`buildReport` giờ chạy 200.000 dòng trong khoảng 573 ms (`npm run bench`), so với khoảng 30 giây ở bản cũ trên máy này. `npm test` xanh, 3/3 test pass.
+
+**Cách làm.** Bản cũ lặp lại `filter`/`includes`/`find` trên toàn bộ dữ liệu cho từng danh mục, tháng và khách, nên chậm theo bậc hai. Bản mới duyệt `orders` một lần, gom số liệu bằng `Map`/`Set`, rồi sắp xếp bằng đúng các comparator cũ. Thứ tự cộng dồn và thứ tự phần tử giữ nguyên, nên kết quả giống hệt.
+
+**Các hành vi lạ vẫn giữ:**
+- Sản phẩm trùng `sku` thì lấy bản ghi đầu tiên.
+- Sản phẩm không có trong danh mục thì vào danh mục `'unknown'` với tên `'(không rõ)'`.
+- Số không hữu hạn (NaN, Infinity) bị `JSON.parse(JSON.stringify(...))` đổi thành `null`, tức là tính như 0 khi cộng. Tôi mô phỏng lại đúng điều này.
+- Ngày không hợp lệ vẫn ném lỗi như cũ.
+
+**Test.** Bản cũ được giữ nguyên ở `test/report.legacy.js`. Test mới trong `test/report.test.js` so sánh với bản cũ bằng `deepStrictEqual`, trên 12 bộ dữ liệu sinh ngẫu nhiên và 5 bộ tùy chọn (`topN`, `from`, `to`). Test cũng có thêm các ca lạ: sku trùng, sku không có trong danh mục, đơn hoàn tiền với `qty` 0, và đầu vào rỗng.
+
+Tôi không so sánh với bản cũ trên đầu vào kiểu lạ như `qty` là chuỗi, hay `id` là object. Tôi coi đó là đầu vào không hợp lệ.

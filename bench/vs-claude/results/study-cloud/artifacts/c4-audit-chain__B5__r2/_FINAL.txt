@@ -1,0 +1,66 @@
+> Việc giao riêng cho Senior Software Engineer (@senior-swe)
+
+## Tóm tắt
+Tôi đã cài đặt cả bốn hàm `canonicalize`, `redact`, `append` và `verify` trong `src/index.js`, chỉ dùng Node built-ins. `npm test` chạy 7 test, tất cả pass, exit 0 (baseline trước đó là exit 1). Rủi ro còn lại nhỏ: regex e-mail là xấp xỉ thực dụng, không bám đầy đủ RFC 5322.
+
+## Tệp đã tạo/sửa
+- `src/index.js` · cài đặt `canonicalize`, `redact`, `append`, `verify`.
+- `test/audit.test.js` · mới, 6 test. Cùng `test/smoke.test.js` có sẵn là 7 test.
+
+## Kiểm chứng
+- `npm test` → exit 0, `# tests 7`, `# pass 7`, `# fail 0`.
+- Chưa chạy typecheck hay lint, vì repo không có cấu hình cho hai việc này.
+
+## Quyết định thiết kế
+- **PII không vào hash:** `append` gọi `redact` trước, rồi hash đúng bản đã redact và lưu chính bản đó. Một test kiểm tra hash khớp với entry đã redact.
+- **Thứ tự key:** `canonicalize` sắp key theo code point bằng comparator riêng, vì `Array.sort` mặc định sắp theo UTF-16 unit và sẽ lệch với ký tự ngoài BMP. Phần còn lại bám `JSON.stringify`:
+  - property có giá trị `undefined`, function hoặc symbol bị bỏ qua;
+  - phần tử mảng loại này thành `null`;
+  - `toJSON` (ví dụ `Date`) được gọi.
+- **Thứ tự redact:** e-mail được thay trước số điện thoại, nên `0912345678@x.com` thành `[EMAIL]`.
+- **Số điện thoại:** regex `(?<!\d)(?:\+84|0)[35789]\d{8}(?!\d)` thể hiện đúng ràng buộc "không có chữ số liền trước hoặc liền sau".
+- **Deep copy:** `redact` sao chép đệ quy qua mảng và object, không đổi key, không sửa input. Nó gán key bằng `defineProperty` để key như `__proto__` không gây prototype pollution.
+- **`verify`:** kiểm tra `seq`, `prev` và hash tính lại. Record sai định dạng hoặc entry không serialize được thì trả về `{ ok: false, index }` thay vì ném lỗi.
+
+## Rủi ro & việc còn mở
+- Regex e-mail không bám RFC 5322 đầy đủ. Địa chỉ dạng quoted-string hiếm gặp có thể không bị che.
+- Số điện thoại có dấu cách hoặc dấu gạch (ví dụ `091 234 5678`) không nằm trong định nghĩa của yêu cầu nên không bị che.
+- `verify` chỉ phát hiện sửa đổi bên trong chuỗi. Nếu cắt bớt các record ở cuối chuỗi thì `verify` vẫn trả `ok`, vì không có anchor bên ngoài (ví dụ hash đầu mút đã công bố).
+
+## Review
+✅ Đã duyệt: Đã đọc src/index.js và test/audit.test.js, và tự chạy lại npm test (exit 0, 7/7 pass). Cả bốn hàm đều đúng yêu cầu. canonicalize sắp key theo code point bằng comparator riêng và có test cho ký tự ngoài BMP. Regex phone đúng ràng buộc về chữ số liền trước và liền sau. append redact trước rồi mới hash, và lưu đúng bản đã redact, nên PII không vào hash input. redact là deep copy, không đổi key và không sửa input. Dùng defineProperty nên key __proto__ không gây prototype pollution. verify bắt được sửa entry, prev, seq, hash và việc xóa record đầu. Tôi không chạy mutation test để xác nhận từng test từng đỏ khi code bị làm hỏng. Hai góp ý minor, không chặn bàn giao.
+- [minor] src/index.js:40 (EMAIL_RE): local-part chỉ cho phép [\p{L}\p{N}._%+-]. Địa chỉ có ký tự hợp lệ khác như o'brien@x.com sẽ chỉ bị che một phần (thành "o'[EMAIL]"), nên PII còn sót lại trong entry và trong hash. Hệ thống dùng làm bằng chứng pháp lý nên nên mở rộng tập ký tự theo RFC 5322 atext (!#$&'*/=?^`{|}~). Cũng nên thêm test cho trường hợp này.
+- [minor] test/audit.test.js: chưa có test cho key __proto__, cho mảng chứa chuỗi PII lồng sâu, và cho verify khi chuỗi bị cắt ở cuối. Trường hợp cuối là giới hạn đã nêu trong báo cáo dev, nên ghi rõ là hạn chế đã biết.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261103-001033-2b6` · chế độ: agent · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **14 in / 9,658 out**, cache đọc 81.2k, 2 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 10 | 8157 | 63147 | 1 |
+| QA Engineer (@qa-tester) | dev | 4 | 1501 | 18063 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude c4-audit-chain__B5__r2] Hash-chained audit log with PII redaction (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 1 | # tests 1 · # suites 0 · # pass 0 · # fail 1 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 7 · # suites 0 · # pass 7 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **97** A | 100 | 100 | 87 | 100 | 1 | 1 | 71k | 1/6 |
+| QA Engineer (@qa-tester) | dev | **100** A | — | — | 100 | 100 | 0 | — | 20k | 0/2 |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

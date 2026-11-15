@@ -1,0 +1,7 @@
+I wrote `answer.json` in the repository root, with 18 services in `startup_order`.
+
+- **Blocked:** `admin-ui`, `etl`, `reporting` and `warehouse` can never start.
+- **Cycle:** `reporting` needs `warehouse`, `warehouse` needs `etl`, and `etl` needs `reporting`, so those three form the cycle (`cycle_members`).
+- **`admin-ui`:** it isn't on the cycle itself. It is blocked only because it depends on `reporting`.
+
+I generated the file with a script that starts the alphabetically smallest ready service each time. I did not separately check the order by hand.

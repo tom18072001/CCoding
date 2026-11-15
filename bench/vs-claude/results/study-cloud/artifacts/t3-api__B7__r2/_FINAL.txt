@@ -1,0 +1,79 @@
+# Báo cáo Phòng Phát triển Dự án — [vs-claude t3-api__B7__r2] Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật
+
+_Làn đơn: một agent làm trọn đề bài; báo cáo dựng tự động từ bàn giao và kết quả cổng chất lượng (không gọi model)._
+
+## Tóm tắt
+
+Làn đơn: Senior Software Engineer (@senior-swe) làm trọn đề bài trong worktree nhiệm vụ
+
+Kết quả: 1/1 hạng mục xong.
+
+## Từng hạng mục
+
+### S1 — [vs-claude t3-api__B7__r2] Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật (@senior-swe, done)
+
+## Tóm tắt
+Cả 4 tính năng trong FEATURES.md đã xong: xác thực & phân quyền, lọc/tìm/sắp xếp/phân trang, xuất CSV, nhật ký thao tác. Không thêm thư viện ngoài. `npm test` xanh (6/6 pass, exit 0). Các test mới chỉ kiểm tra ở mức vừa phải. Chưa chạy bộ nghiệm thu ẩn nên không biết kết quả ở đó. Hai chỗ đặc tả chưa rõ đã chọn cách hiểu riêng (xem mục Rủi ro).
+
+## Tệp đã tạo/sửa
+- `src/handlers/helpers.js` (mới) · `authenticate`, `parseQuery`, `filterAndSort`, `toCsv`.
+- `src/handlers/tasks.js` · thêm route `GET /tasks/export.csv` (đăng ký trước `/tasks/:id`) và `GET /audit`. Các route `/tasks…` đều xác thực, kiểm tra quyền theo vai trò và ghi nhật ký.
+- `src/store.js` · thêm `auditLog`, `auditSeq`, `addAudit()`.
+- `test/helpers.js` · đọc body bằng `arrayBuffer` + `TextDecoder({ignoreBOM:true})`, vì `res.text()` của fetch tự bỏ BOM nên không kiểm tra được BOM.
+- `test/tasks.test.js` · cập nhật theo dạng `{items,total,page,pageSize}` và thêm header `X-User`.
+- `test/features.test.js` (mới) · 4 test, mỗi tính năng một test.
+
+## Kiểm chứng
+- `npm test` → exit 0; tests 6, pass 6, fail 0. Baseline là 2 test, 2 pass.
+
+## Quyết định thiết kế
+- Thứ tự kiểm tra là 401 → 400 query → 404 → 403 → 400 body.
+  - Body được đọc trước nhưng lỗi JSON chỉ ném sau các bước kiểm tra quyền, để 403 đứng trước 400.
+  - Với `/audit`, tham số lạ (400) được kiểm tra trước quyền admin (403), đúng thứ tự trong đặc tả.
+- Member được trả 404 với nhiệm vụ nhóm khác, nên không lộ sự tồn tại. Manager đọc được mọi nhóm nhưng PATCH nhiệm vụ nhóm khác bị 403.
+- Tên tham số lạ hoặc tham số xuất hiện hai lần được báo lỗi theo vị trí **lần xuất hiện đầu tiên** trên URL.
+- Các tham số `page`/`pageSize` bị loại khỏi danh sách tham số hợp lệ của export. Vì vậy export tự trả 400 `INVALID_QUERY` khi gặp chúng.
+- Sắp xếp: hòa thì xếp theo `id` tăng dần theo số, `dueDate` null luôn nằm cuối, `title` dùng `localeCompare('vi')`.
+- `changes` của `update` chỉ gồm trường có giá trị mới khác giá trị cũ, so sánh bằng `!==`.
+
+## Rủi ro & việc còn mở
+- Ví dụ "lỗi đầu tiên" trong đặc tả chưa phân biệt được vị trí lần xuất hiện đầu hay thứ hai của một tham số bị lặp. Ví dụ `page=1&status=x&page=2` hiện báo `page`.
+- `POST` với `team` không hợp lệ (ví dụ `"C"`) do manager gửi sẽ ra 403 chứ không phải 400, vì `team` khác nhóm mình.
+- `dueDate` trong body POST/PATCH vẫn chỉ kiểm tra theo dạng `YYYY-MM-DD`, chưa kiểm tra ngày có thật trên lịch vì đặc tả không yêu cầu.
+
+Bản đầy đủ: `.ccoding/T-20261102-170300-20a/outputs/dev-S1-senior-swe.md`
+
+## Review
+
+Đã duyệt: Cổng chất lượng (làn đơn): lệnh kiểm tra đều xanh, mẫu đầu ra đạt, diff không chạm vùng bảo mật — không thuộc diện bắt buộc review.
+
+
+---
+
+## Phụ lục: token & sản phẩm (CCoding)
+
+- Nhiệm vụ: `T-20261102-170300-20a` · chế độ: project · phòng: dev · phân loại dữ liệu: internal
+- Tổng: **20 in / 17.4k out**, cache đọc 253.0k, 1 lượt gọi · ngân sách 1.50M (chạy tới khi hoàn thành)
+
+| Agent | Phòng | Input | Output | Cache đọc | Lượt |
+|---|---|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | 20 | 17447 | 252976 | 1 |
+
+### File đầu ra
+- `outputs/dev-S1-senior-swe.md` — S1 [vs-claude t3-api__B7__r2] Thêm 4 tính năng cho API quản lý nhiệm vụ, chấm qua HTTP thật (@senior-swe)
+
+### Lệnh kiểm tra của dự án (CCoding tự chạy)
+| Lúc | Lệnh | Exit | Tổng kết |
+|---|---|---|---|
+| trước khi sửa | `npm test` | 0 | # tests 2 · # suites 0 · # pass 2 · # fail 0 · # skipped 0 · # todo 0 |
+| sau thực thi | `npm test` | 0 | # tests 6 · # suites 0 · # pass 6 · # fail 0 · # skipped 0 · # todo 0 |
+
+### KPI agent trong nhiệm vụ
+| Agent | Phòng | Điểm | Chất lượng | Hiệu quả | Tin cậy | Tuân thủ | Hạng mục | Lần chạy TB | Token | Công cụ lỗi |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Senior Software Engineer (@senior-swe) | dev | **96** A | — | 100 | 87 | 100 | 1 | 1 | 270k | 2/12 |
+
+### Việc cần sửa theo agent
+- (không có phát hiện vượt ngưỡng)
+
+_Cách chấm: Chất lượng 40%: nửa theo tỉ lệ hạng mục không bị blocker/major ở lần review đầu, nửa theo tỉ lệ hạng mục không còn blocker ở lần review cuối · Hiệu quả 25%: token thực thi+sửa mỗi hạng mục so với trung vị đồng nghiệp cùng phòng, trừ 15 điểm mỗi lần chạy vượt 2 · Tin cậy 20%: lượt gọi hỏng do agent (không tính lỗi hạ tầng: hạn mức, đăng nhập, mạng), thao tác công cụ lỗi, chạm trần vòng công cụ, đầu ra bị cắt · Tuân thủ 15%: đủ mục trong "Mẫu đầu ra" của agent.md + bằng chứng (lệnh kiểm chứng với agent chạy lệnh, nguồn DOI/URL với agent tra cứu; reviewer: có kiểm chứng bằng công cụ). Nhóm không có dữ liệu thì bỏ qua và chia lại trọng số._

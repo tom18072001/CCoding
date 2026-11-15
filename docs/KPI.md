@@ -115,6 +115,33 @@ Chi tiết: [`bench/agent-probes/README.md`](../bench/agent-probes/README.md). T
 3. Đặt `contextWindow` khớp `num_ctx`.
 4. Chạy việc thật một tuần, rồi `ccoding kpi --by model --days 7` và xử lý "việc cần sửa".
 
+## Số nhiệm vụ và KPI điều phối viên (FX17)
+
+Lựa chọn: **làm hai số khớp nhau** và ghi định nghĩa vào chính tệp xuất (`definitions` trong `kpi --json`).
+
+- `tasksCounted` = độ dài `tasks` = tổng `tasksByStatus`: mọi nhiệm vụ sau lọc (`--task/--days/--project`), trừ `queued`; gồm cả đang chạy, tạm dừng, hủy, lỗi.
+- `tasksFinished` = số nhiệm vụ `done` — tập duy nhất vào điểm "Kết quả thật" và hiệu chỉnh người duyệt. Trước đây một số đếm riêng (7) lệch với tổng trạng thái (10); nay không còn số nào ngoài ba trường trên.
+- `coordinator` (điều phối viên, lượt `route`): `routed` (nhiệm vụ đã định tuyến), `routeCalls`/`routeTokens`/`avgRouteTokens` (chi phí route, token = input+output+cache), `fallbackToKeywords` (có gọi LLM route nhưng kết quả bị bỏ → `keywordRoute`), `keywordOnly` (định tuyến từ khóa từ đầu, làn đơn ép định tuyến — không tính là lùi), `fallbackRate = fallbackToKeywords / số nhiệm vụ có lượt route` (null khi chưa có). Nguồn: `calls.jsonl` (pha `route`) và `task.routing.by` (`keywords` hay id router); không thêm trường log. `kpiMarkdown` in một dòng tóm tắt.
+- Điểm KPI của agent router vẫn nằm trong `agents` như mọi agent; `coordinator` là phần chi phí/độ tin của việc định tuyến mà điểm agent không nói.
+
+## Ước lượng đường găng (FX13)
+
+`estimatePlanDetail` (`estimatePlan` vẫn trả tổng token): `work` = tổng token các hạng mục chưa xong (không gồm phần cố định `base` và review); `criticalPathEstimate` = chuỗi `dependsOn` tốn token nhất; `parallelism = work / criticalPathEstimate` (làm tròn 2 chữ số; 1 khi không có việc). Ghi vào `run.estimate` và log `plan.estimate`. Dùng để so với song song thực tế khi đo.
+
+## Độ đầy ngữ cảnh và số vòng (`turns`)
+
+Từ đợt D24 (T-20261115-103458-b90) lượt `claude-cli` ghi `turns` (số vòng model, `num_turns`) vào `calls.jsonl`; bản ghi không có số này thì không có khóa `turns`. `src/kpi.ts` (khoảng dòng 602–624) tính độ đầy ngữ cảnh của một lượt = prompt của một vòng / cửa sổ ngữ cảnh, với `prompt = input + cacheRead + cacheWrite`:
+
+1. Bản ghi có `maxPrompt` (prompt lớn nhất của một vòng, runtime báo): dùng `maxPrompt`.
+2. Không có `maxPrompt`, bản ghi có `turns > 1`: dùng **prompt chia số vòng** (prompt cộng dồn của mọi vòng chia `turns`).
+3. Không có `maxPrompt` lẫn `turns` (bản ghi trước D24): dùng **prompt cộng dồn** như một vòng — cách tính cũ, phóng đại độ đầy với `claude-cli` nhiều vòng vì cộng prompt lặp lại của từng vòng.
+
+Chia số vòng cho ra giá trị trung bình, thường thấp hơn vòng cuối (vòng cuối lớn nhất), nên là ước lượng thấp thay vì phóng đại.
+
+`avgTurns` / `maxTurns` (`tools` của từng agent) chỉ tính trên bản ghi có `turns > 1`; bản ghi một vòng, `turns = 0` hoặc không có `turns` không vào trung bình, nên không có bản ghi nào như vậy thì cả hai bằng 0. `avgTurns` làm tròn một chữ số thập phân.
+
+**Lưu ý khi so sánh:** độ đầy ngữ cảnh (`maxFillPct`, `nearLimit`, `overLimit`) của đợt trước D24 và sau D24 dùng hai cách tính khác nhau (cộng dồn so với chia số vòng). Khi so hai đợt phải nêu rõ điều này; không đọc mức giảm là cải thiện thật nếu chưa loại phần do đổi cách tính.
+
 ## Giới hạn đã biết
 
 - Nhận diện "khẳng định đã kiểm chứng" bằng biểu thức chính quy (VI/EN); có thể bỏ sót cách viết khác. Chỉnh `CLAIM_RE` trong `src/kpi.ts` sau khi xem dữ liệu thật. Phủ định ("không thể chạy", "chưa chạy", "cần chạy") chỉ xét trong cùng vế câu với khẳng định (tách theo `;`, `.`, "nhưng") — "14/14 đạt; cần chạy lại e2e" vẫn là khẳng định. Dạng "đã chạy <lệnh> … thành công" chỉ tính khi lệnh là lệnh kiểm chứng (test/typecheck/lint/build…), không tính `npm install`/`npm ci`.
@@ -134,3 +161,10 @@ Các mục dưới đây chưa làm vì cần quyết định thiết kế của
 | Chặn mạng trong sandbox probe | Mô hình quyền của Node 22 không chặn mạng; muốn chặn cần container/namespace mạng của hệ điều hành (khác nhau giữa Windows/Linux). Đã giảm rủi ro bằng env tối thiểu (không còn bí mật để lộ) |
 | Ngưỡng `unknown` (quá 50% → không đo được) | Chọn theo lập luận, chưa hiệu chỉnh trên dữ liệu thật; đổi ở `MAX_UNKNOWN_SHARE` trong `src/kpi.ts` |
 | Dữ liệu cũ | Bản ghi trước bản sửa: không có `maxPrompt` (độ đầy ngữ cảnh lượt nhiều vòng vẫn là ước lượng), không có `projectChecks.depts` (nhiệm vụ nhiều phòng không gán lệnh kiểm tra cho ai), không có `reviewerApproved` (nhận ra qua ghi chú "CCoding: … → không duyệt" trong summary) |
+
+## Cờ "cắt" và quy tắc miễn nguồn (FX8, FX11)
+
+- `truncated` = đầu ra bị cắt **thật** (runtime báo `max_tokens`/`length`). Với bản ghi cũ không có cờ, chỉ suy từ output ≥ 98% `maxTokens` khi lượt một vòng, không công cụ, và runtime **không** phải `claude-cli`. `claude-cli` không áp `max_tokens` và cộng dồn output qua các vòng công cụ nên tỉ số đó không nói lên điều gì.
+- `turnCapped` = chạm trần vòng công cụ (`r.turnCapped`, hoặc `diag` chứa "chạm trần"). Khóa việc cần sửa riêng: `turn-capped`.
+- `no-sources` (phòng research): miễn cho sản phẩm của hạng mục **không đòi nguồn ngoài** — mô tả/tiêu đề hạng mục nói thiết kế hoặc viết lại từ tệp trong repo (`viết lại`, `thiết kế`, `từ tệp`, `trong repo`…), không chứa dấu hiệu cần nguồn (`tổng quan`, `literature`, `trích dẫn`, `tra cứu`, `bài báo`, `DOI`…), và lượt có đọc tệp (read_file/list_files/search). Chỉ báo khi còn sản phẩm không được miễn. Hạng mục tổng quan tài liệu vẫn bị báo.
+- Chẩn đoán chi tiết: `docs/diagnostics/fx8-truncated.md`.

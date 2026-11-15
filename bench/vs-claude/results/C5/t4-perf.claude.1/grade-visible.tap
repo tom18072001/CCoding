@@ -1,0 +1,52 @@
+TAP version 13
+# Subtest: khớp bản gốc trên dữ liệu sinh ngẫu nhiên, nhiều seed và tùy chọn
+ok 1 - khớp bản gốc trên dữ liệu sinh ngẫu nhiên, nhiều seed và tùy chọn
+  ---
+  duration_ms: 3525.390445
+  type: 'test'
+  ...
+# Subtest: khớp bản gốc trên dữ liệu trung bình (bench thu nhỏ)
+ok 2 - khớp bản gốc trên dữ liệu trung bình (bench thu nhỏ)
+  ---
+  duration_ms: 1196.102278
+  type: 'test'
+  ...
+# Subtest: khớp bản gốc với các trường hợp biên
+ok 3 - khớp bản gốc với các trường hợp biên
+  ---
+  duration_ms: 8.324528
+  type: 'test'
+  ...
+# Subtest: khớp bản gốc trên dữ liệu ngẫu nhiên có trùng lặp và hỗn hợp
+ok 4 - khớp bản gốc trên dữ liệu ngẫu nhiên có trùng lặp và hỗn hợp
+  ---
+  duration_ms: 31.867717
+  type: 'test'
+  ...
+# Subtest: hiệu năng: 200.000 dòng dưới 1 giây
+ok 5 - hiệu năng: 200.000 dòng dưới 1 giây
+  ---
+  duration_ms: 407.061988
+  type: 'test'
+  ...
+# Subtest: báo cáo nhỏ
+ok 6 - báo cáo nhỏ
+  ---
+  duration_ms: 1.97336
+  type: 'test'
+  ...
+# Subtest: dữ liệu sinh ngẫu nhiên chạy được
+ok 7 - dữ liệu sinh ngẫu nhiên chạy được
+  ---
+  duration_ms: 8.61599
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5288.538021

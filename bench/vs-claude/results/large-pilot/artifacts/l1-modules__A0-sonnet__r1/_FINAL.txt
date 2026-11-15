@@ -1,0 +1,9 @@
+Cả năm module đã được hiện thực ở `src/<tên>/index.js` và `npm test` xanh: 50 test, 0 lỗi. Gồm 23 test có sẵn và 27 test mới, thêm vào các tệp `test/*.spec.test.js`. Test mới bám theo các ví dụ trong SPEC.md, thêm các trường hợp biên và mã lỗi. Tôi chưa commit.
+
+Một vài chỗ SPEC.md không nói rõ, tôi tự chọn như sau:
+- **`convert`**: kiểm `to` trước rồi mới kiểm `m`, theo cách đọc chữ "kiểm trước" trong đặc tả.
+- **`validateCsv`, cột `unique`**: mọi ô qua được bước kiểm `TYPE` đều vào tập `UNIQUE`, kể cả khi ô đó có lỗi `ENUM` hay `PATTERN`.
+- **`validateCsv`, `min`/`max` trong lược đồ**: chỉ kiểm cho cột `int`, `number` và `date`. Cột `string` hay `bool` có khai `min`/`max` thì bị bỏ qua, không ném `CSV_INVALID_SCHEMA`.
+- **`ratelimit`, `now()`**: tôi giả định `now()` trả số nguyên mili giây.
+
+Nếu bộ nghiệm thu ẩn hiểu khác ở các điểm này thì đó là chỗ có thể lệch.

@@ -1,0 +1,231 @@
+{
+ "id": "T-20261102-140751-cd2",
+ "title": "[bench C9] t2-orders #3",
+ "brief": "Sửa toàn bộ các lỗi khách hàng báo trong ISSUES.md của thư viện tính tiền giỏ hàng này. Với mỗi lỗi: tìm nguyên nhân gốc, sửa, và thêm test hồi quy vào test/. Không đổi API công khai (tên hàm/lớp, tham số, dạng kết quả). Bộ nghiệm thu ẩn sẽ kiểm tra từng lỗi và cả các hành vi đang đúng. Đảm bảo `npm test` xanh.",
+ "mode": "project",
+ "projectId": "b-c9-t2-fastla-3",
+ "classification": "internal",
+ "status": "done",
+ "departments": [
+  "dev"
+ ],
+ "runs": [
+  {
+   "department": "dev",
+   "status": "done",
+   "subtasks": [
+    {
+     "description": "Sở hữu src/money.js, src/catalog.js và test/money-rounding.test.js (tệp mới). Lỗi 1: hàm đổi số tiền sang xu bị sai do sai số nhị phân dấu phẩy động (1.005 phải ra 1.01, 2.675 phải ra 2.68, -1.005 phải ra -1.01, làm tròn half away from zero). Sửa tận gốc ở một hàm đổi duy nhất, ví dụ xử lý theo chuỗi thập phân hoặc dùng epsilon/Number.EPSILON an toàn, và dùng hàm đó trong catalog.js. Lỗi 2: sửa `allocate` theo đúng chú thích của nó, tức phương pháp phần dư lớn nhất, sao cho tổng các phần bằng đúng số tiền gốc (10.00 chia 3 dòng phải ra 3.34+3.33+3.33). Ghi rõ trong bàn giao mọi chỗ ngoài hai tệp trên (promotions.js, checkout.js) gọi đổi sang xu. KHÔNG sửa promotions.js/checkout.js, vì S2 và S3 sở hữu hai tệp đó và gọi theo cùng tên hàm money.js hiện có. Không đổi tên hàm hay chữ ký công khai. Kiểm chứng: `npm test`; test mới phải đỏ trên mã cũ và xanh sau khi sửa.",
+     "dependsOn": [],
+     "status": "done",
+     "attempts": 1,
+     "usage": {
+      "input": 10,
+      "output": 4323,
+      "cacheRead": 131860,
+      "cacheWrite": 12950,
+      "costUsd": 0.1089433,
+      "calls": 1,
+      "estimatedCalls": 0
+     },
+     "id": "S1",
+     "title": "Lỗi 1 + 2: làm tròn tiền và chia phần dư lớn nhất",
+     "assignee": "backend-dev",
+     "deliverable": "Sửa src/money.js, src/catalog.js; test/money-rounding.test.js; ghi chú nguyên nhân gốc",
+     "startedAt": "2026-11-02T07:08:16.424Z",
+     "output": "outputs/dev-S1-backend-dev.md",
+     "summary": "Tôi đã sửa lỗi 1 (`toCents`) và lỗi 2 (`allocate`) trong `src/money.js`, và thêm test hồi quy. `npm test` chạy xong exit 0 với 9/9 pass (baseline là 6). Tôi chưa chạy test mới trên mã cũ để xác nhận nó đỏ. **Nguyên nhân gốc** - **Lỗi 1:** `Math.round(amount * 100)` bị lệch nhị phân. Ví dụ `1.005*100 = 100.4999999999999…",
+     "finishedAt": "2026-11-02T07:08:57.791Z"
+    },
+    {
+     "description": "Sở hữu src/promotions.js và test/promotions.test.js (tệp mới). Lỗi 3: mua X tặng Y phải yêu cầu đủ nhóm (X+Y) món mới có Y món miễn phí, nên 2 hộp thì 0 miễn phí, 3 hộp thì 1, 5 hộp thì 1, 6 hộp thì 2. Dùng floor(qty/(X+Y))*Y, và kiểm tra cho mọi cấu hình X, Y. Lỗi 4: so sánh `endsAt` (dạng 'YYYY-MM-DD') phải coi mã dùng được tới hết ngày đó theo UTC và bị từ chối từ T00:00:00Z của ngày kế tiếp. Dùng Date.UTC, không dùng giờ cục bộ. Đồng thời kiểm tra chỗ promotions.js đổi giá trị mã giảm cố định và đơn tối thiểu sang xu: phải đi qua hàm đổi sang xu chung của money.js, không dùng Math.round(x*100) tự viết. S1 đang sửa hàm chung này nên đừng sửa money.js. Không đổi API công khai. Kiểm chứng: `npm test`.",
+     "dependsOn": [],
+     "status": "done",
+     "attempts": 1,
+     "usage": {
+      "input": 14,
+      "output": 4675,
+      "cacheRead": 200575,
+      "cacheWrite": 15750,
+      "costUsd": 0.1308289,
+      "calls": 1,
+      "estimatedCalls": 0
+     },
+     "id": "S2",
+     "title": "Lỗi 3 + 4 (+ phần xu của lỗi 1 trong mã giảm): promotions",
+     "assignee": "data-engineer",
+     "deliverable": "Sửa src/promotions.js; test/promotions.test.js",
+     "startedAt": "2026-11-02T07:08:16.468Z",
+     "output": "outputs/dev-S2-data-engineer.md",
+     "summary": "Tôi đã sửa lỗi 3 và lỗi 4 trong `src/promotions.js` và thêm `test/promotions.test.js`. Chạy `npm test` được 10/11 test đạt. Test thứ 11 (`minSubtotal` 1.005) đang đỏ vì `toCents(1.005)` trong `money.js` vẫn trả 100. Đó là lỗi 1, thuộc S1. Test này sẽ xanh khi gộp phần của S1.",
+     "finishedAt": "2026-11-02T07:09:22.575Z"
+    },
+    {
+     "description": "Sở hữu src/inventory.js, src/cart.js, src/tax.js, src/checkout.js và test/inventory-tax.test.js (tệp mới). Lỗi 5: số lượng giữ chỗ phải luôn bằng tổng số lượng trong các giỏ. Hiện tại sửa số lượng (2→3 khi kho 4) bị cộng dồn thay vì chỉ giữ thêm phần chênh lệch, và xóa món khỏi giỏ không trả lại phần đã giữ. Sửa cả đường thêm, sửa và xóa trong cart.js/inventory.js, và test các kịch bản kho 4: thêm 2 rồi sửa thành 3 thì được, xóa món rồi khách khác mua được, giảm số lượng thì trả bớt. Lỗi 6: thuế phải tính trên `net` (giá sau giảm) của từng dòng thay vì giá gốc, sửa ở tax.js/checkout.js. Test khi có mã giảm. Không sửa money.js/promotions.js (do S1, S2 sở hữu); chỉ gọi chúng theo tên hàm hiện có. Không đổi API công khai. Kiểm chứng: `npm test`.",
+     "dependsOn": [],
+     "status": "done",
+     "attempts": 2,
+     "usage": {
+      "input": 18,
+      "output": 7634,
+      "cacheRead": 239832,
+      "cacheWrite": 29268,
+      "costUsd": 0.21891950000000004,
+      "calls": 2,
+      "estimatedCalls": 0
+     },
+     "id": "S3",
+     "title": "Lỗi 5 + 6: kho giữ chỗ và thuế sau giảm",
+     "assignee": "frontend-dev",
+     "deliverable": "Sửa src/inventory.js, src/cart.js, src/tax.js, src/checkout.js; test/inventory-tax.test.js",
+     "startedAt": "2026-11-02T07:08:16.472Z",
+     "output": "outputs/dev-S3-frontend-dev.md",
+     "summary": "Tôi đã sửa lỗi 5 (giữ chỗ kho) và lỗi 6 (thuế sau giảm), rồi xử lý hai góp ý review ở `src/checkout.js`. `npm test` chạy 22 test, 22 pass, 0 fail, exit 0. Con số 22 gồm cả test của các hạng mục S1 và S2 đã có trong worktree, không chỉ test của S3.",
+     "finishedAt": "2026-11-02T07:09:00.963Z"
+    }
+   ],
+   "usage": {
+    "input": 66,
+    "output": 23663,
+    "cacheRead": 910838,
+    "cacheWrite": 103780,
+    "costUsd": 0.7495871999999999,
+    "calls": 7,
+    "estimatedCalls": 0
+   },
+   "startedAt": "2026-11-02T07:07:51.957Z",
+   "stage": "done",
+   "planSummary": "Repo nhỏ (8 tệp nguồn, 6 lỗi), chia 3 hạng mục độc lập theo tệp sở hữu để chạy song song. Mỗi hạng mục tự tìm nguyên nhân gốc, sửa và viết test hồi quy vào tệp test riêng. CCoding sẽ gộp các phần rồi chạy `npm test` và review.",
+   "decisions": "",
+   "estimate": {
+    "tokens": 897132,
+    "budget": 1440745,
+    "at": "2026-11-02T07:08:16.338Z",
+    "basis": "theo lịch sử: @backend-dev ~147.5k/hạng mục (8 mẫu), @data-engineer ~171.6k/hạng mục (8 mẫu), @frontend-dev ~188.0k/hạng mục (8 mẫu)"
+   },
+   "reviewRound": 1,
+   "review": {
+    "approved": true,
+    "summary": "Cả 6 lỗi trong ISSUES.md đã được sửa đúng nguyên nhân gốc và có test hồi quy. Tôi chạy `npm test` trong worktree: 22/22 đạt, exit 0. Tôi cũng chạy lại bộ test hiện tại trên bản sao dùng `money.js` và `cart.js` gốc: 8 test đỏ, gồm các test về làm tròn, `allocate`, giữ chỗ kho và `minSubtotal`. Vậy các test mới thật sự bắt được lỗi cũ. Tôi gọi trực tiếp `toCents` và `allocate` với các ca biên: 1.005→101, 2.675→268, -1.005→-101, 10.00 chia 3 ra 334/333/333, `total` âm đúng dấu, tổng trọng số bằng 0 ra toàn 0. Hàm đổi xu `toCents` là hàm duy nhất, `catalog.js`, `promotions.js` và `checkout.js` đều gọi nó. `freeUnits` dùng floor(qty/(X+Y))*Y. Biên `endsAt` tính theo UTC bằng `Date.UTC`. Kho giữ chỗ chỉ cộng hoặc trả phần chênh lệch, và xóa món thì trả lại đúng số đã giữ. Thuế tính trên `net`. API công khai không đổi. Ngoài ra có hai góp ý minor.",
+    "issues": [
+     {
+      "subtask": "S3",
+      "severity": "minor",
+      "comment": "src/checkout.js `percentOf`: `toCents(percent)` làm tròn percent về 2 chữ số thập phân, nên percent có từ 3 chữ số thập phân trở lên (ví dụ 33.333) bị cắt bớt so với `Math.round(x*percent/100)` cũ. Hiếm gặp và không nằm trong ISSUES.md. Cần ghi chú giới hạn này hoặc dùng độ chính xác cao hơn."
+     },
+     {
+      "subtask": "S1",
+      "severity": "minor",
+      "comment": "src/tax.js:9 `Math.round(amountCents * rate)` có tỉ lệ 0.1/0.05 (số dấu phẩy động). Với số xu nguyên thì chưa thấy sai ở các ca tôi nghĩ ra, nhưng tôi chưa duyệt toàn bộ miền giá trị. Có thể làm bằng số nguyên cho chắc. Không chặn."
+     }
+    ],
+    "checks": [
+     {
+      "command": "npm test",
+      "exitCode": 0,
+      "ok": true,
+      "note": "CCoding tự chạy — # tests 22 · # suites 0 · # pass 22 · # fail 0 · # skipped 0 · # todo 0"
+     },
+     {
+      "command": "npm test 2>&1 | tail -15; cat ISSUES.md; git diff src; cat src/inventory.js",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "git diff src/cart.js src/money.js src/promotions.js; cat src/cart.js | head -60; cat src/tax.js",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "git status --short; git log --oneline | head -3; cat src/money.js; sed -n 1,50p src/promotions.js; node -e \"\nconst {toCents,allocate}=require('./src/money');\nconsole.log(toCents(1.005),toCents(2.675),toCents(-1.005),toCents(-2.675),toCents(0.285),toCents(1.255),toCents(8.345),toCents(1e6+0.005),allo",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "B=$(git rev-list --max-parents=0 HEAD | tail -1); D=/tmp/claude-0/-home-claude-ccoding-dev-workspaces-b-c9-t2-fastla-3-wt-T-20261102-140751-cd2/f0b9113a-3e47-5284-a91d-91f01aca3e1e/scratchpad/old; rm -rf $D; mkdir -p $D; cp -r src test package.json $D/; git show $B:src/money.js > $D/src/money.js; gi",
+      "ok": false,
+      "note": "lỗi: PreToolUse:Bash hook error: [node \"/home/claude/ccoding-dev/dist/tools/claude-guard.js\"]: CCoding chặn lệnh: xóa đệ quy (rm -r)"
+     },
+     {
+      "command": "B=$(git rev-list --max-parents=0 HEAD | tail -1); D=/tmp/claude-0/-home-claude-ccoding-dev-workspaces-b-c9-t2-fastla-3-wt-T-20261102-140751-cd2/f0b9113a-3e47-5284-a91d-91f01aca3e1e/scratchpad/old2; mkdir -p $D; cp -r src test package.json $D/; git show $B:src/money.js > $D/src/money.js; git show $B:",
+      "ok": true,
+      "note": "chạy qua công cụ"
+     },
+     {
+      "command": "node -e (toCents/allocate các ca biên)",
+      "exitCode": 0,
+      "ok": true,
+      "note": "101, 268, -101, -268; allocate(1000,[1,1,1]) = [334,333,333]; total âm đúng dấu; tổng trọng số 0 ra toàn 0"
+     },
+     {
+      "command": "npm test trên bản sao dùng money.js và cart.js gốc (thư mục tạm)",
+      "exitCode": 1,
+      "ok": false,
+      "note": "8 test đỏ, 14 đạt, xác nhận test hồi quy bắt được lỗi cũ"
+     }
+    ],
+    "verified": true
+   },
+   "finalPath": "dev-FINAL.md",
+   "finishedAt": "2026-11-02T07:10:49.093Z"
+  }
+ ],
+ "options": {
+  "discussionRounds": 1,
+  "review": true,
+  "maxParallel": 3,
+  "maxRevisions": 1,
+  "budgetTokens": 1500000,
+  "budgetMode": "complete",
+  "phaseModels": {
+   "plan": "sonnet"
+  }
+ },
+ "usage": {
+  "input": 66,
+  "output": 23663,
+  "cacheRead": 910838,
+  "cacheWrite": 103780,
+  "costUsd": 0.7495871999999999,
+  "calls": 7,
+  "estimatedCalls": 0
+ },
+ "createdAt": "2026-11-02T07:07:51.926Z",
+ "updatedAt": "2026-11-02T07:10:49.242Z",
+ "autoTitle": false,
+ "startedAt": "2026-11-02T07:07:51.927Z",
+ "workspace": "/home/claude/ccoding-dev/workspaces/b-c9-t2-fastla-3/wt-T-20261102-140751-cd2",
+ "branch": "ccoding/t-20261102-140751-cd2",
+ "baseRef": "fb6ab2119a984adbcd26f27f6a66b444e68b580b",
+ "lane": "fast",
+ "projectChecks": {
+  "baseline": [
+   {
+    "command": "npm test",
+    "code": 0,
+    "ok": true,
+    "ms": 283,
+    "summary": "# tests 6 · # suites 0 · # pass 6 · # fail 0 · # skipped 0 · # todo 0",
+    "tail": "> shop-pricing@1.4.2 test\n> node --test \"test/**/*.test.js\"\n\nTAP version 13\n# Subtest: tính tiền không mã giảm giá\nok 1 - tính tiền không mã giảm giá\n  ---\n  duration_ms: 1.111722\n  type: 'test'\n  ...\n# Subtest: giữ chỗ tồn kho khi thêm\nok 2 - giữ chỗ tồn kho khi thêm\n  ---\n  duration_ms: 0.146496\n  type: 'test'\n  ...\n# Subtest: mã không tồn tại\nok 3 - mã không tồn tại\n  ---\n  duration_ms: 0.407759\n  type: 'test'\n  ...\n# Subtest: toCents cơ bản\nok 4 - toCents cơ bản\n  ---\n  duration_ms: 1.465986\n  type: 'test'\n  ...\n# Subtest: formatMoney\nok 5 - formatMoney\n  ---\n  duration_ms: 0.319783\n  type: 'test'\n  ...\n# Subtest: allocate chia đều\nok 6 - allocate chia đều\n  ---\n  duration_ms: 0.704228\n  type: 'test'\n  ...\n1..6\n# tests 6\n# suites 0\n# pass 6\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 131.33989"
+   }
+  ],
+  "baselineAt": "2026-11-02T07:07:52.240Z",
+  "latest": [
+   {
+    "command": "npm test",
+    "code": 0,
+    "ok": true,
+    "ms": 505,
+    "summary": "# tests 22 · # suites 0 · # pass 22 · # fail 0 · # skipped 0 · # todo 0",
+    "tail": "> shop-pricing@1.4.2 test\n> node --test \"test/**/*.test.js\"\n\nTAP version 13\n# Subtest: tính tiền không mã giảm giá\nok 1 - tính tiền không mã giảm giá\n  ---\n  duration_ms: 1.831117\n  type: 'test'\n  ...\n# Subtest: giữ chỗ tồn kho khi thêm\nok 2 - giữ chỗ tồn kho khi thêm\n  ---\n  duration_ms: 0.241627\n  type: 'test'\n  ...\n# Subtest: mã không tồn tại\nok 3 - mã không tồn tại\n  ---\n  duration_ms: 0.537192\n  type: 'test'\n  ...\n# Subtest: thêm 2 rồi sửa thành 3 khi kho 4: chỉ giữ thêm chênh lệch\nok 4 - thêm 2 rồi sửa thành 3 khi kho 4: chỉ giữ thêm chênh lệch\n  ---\n  duration_ms: 1.355098\n  type: 'test'\n  ...\n# Subtest: sửa vượt kho thì báo hết hàng và không đổi giữ chỗ\nok 5 - sửa vượt kho thì báo hết hàng và không đổi giữ chỗ\n  ---\n  duration_ms: 2.1442\n  type: 'test'\n  ...\n# Subtest: giảm số lượng trả bớt giữ chỗ\nok 6 - giảm số lượng trả bớt giữ chỗ\n  ---\n  duration_ms: 0.248693\n  type: 'test'\n  ...\n# Subtest: xóa món (và sửa về 0) trả lại giữ chỗ cho khách khác\nok 7 - xóa món (và sửa về 0) trả lại giữ chỗ cho khách khác\n  ---\n  duration_ms: 0.245544\n  type: 'test'\n  ...\n# Subtest: thuế tính trên net sau giảm (mã giảm cố định)\nok 8 - thuế tính trên net sau giảm (mã giảm cố định)\n  ---\n  duration_ms: 0.894013\n  type: 'test'\n  ...\n# Subtest: thuế theo net với mã giảm danh mục; dòng không giảm giữ nguyên\nok 9 - thuế theo net với mã giảm danh mục; dòng không giảm giữ nguyên\n  ---\n  duration_ms: 0.362818\n  type: 'test'\n  ...\n# Subtest: mã giảm cố định 1.005 làm tròn đúng thành 101 xu (không lệch nhị phân)\nok 10 - mã giảm cố định 1.005 làm tròn đúng thành 101 xu (không lệch nhị phân)\n  ---\n  duration_ms: 0.206845\n  type: 'test'\n  ...\n# Subtest: mã giảm % thập phân làm tròn half up ở biên .5\nok 11 - mã giảm % thập phân làm tròn half up ở biên .5\n  ---\n  duration_ms: 0.300925\n  type: 'test'\n  ...\n# Subtest: toCents làm tròn half away from zero, không lệch nhị phân\nok 12 - toCents làm tròn half away from zero, không lệch nhị phân\n  ---\n  duration_ms: 1.462192\n  type: 'test'\n  ...\n# Subtest: Catalog dùng toCents đúng\nok 13 - Catalog dùng toCents đúng\n  ---\n  duration_ms: 0.400711\n  type: 'test'\n  ...\n# Subtest: allocate: phần dư lớn nhất, tổng bằng gốc\nok 14 - allocate: phần dư lớn nhất, tổng bằng gốc\n  ---\n  duration_ms: 1.29351\n  type: 'test'\n  ...\n# Subtest: toCents cơ bản\nok 15 - toCents cơ bản\n  ---\n  duration_ms: 1.727966\n  type: 'test'\n  ...\n# Subtest: formatMoney\nok 16 - formatMoney\n  ---\n  duration_ms: 0.670761\n  type: 'test'\n  ...\n# Subtest: allocate chia đều\nok 17 - allocate chia đều\n  ---\n  duration_ms: 1.817058\n  type: 'test'\n  ...\n# Subtest: freeUnits mua 2 tặng 1: cần đủ nhóm 3\nok 18 - freeUnits mua 2 tặng 1: cần đủ nhóm 3\n  ---\n  duration_ms: 1.214994\n  type: 'test'\n  ...\n# Subtest: freeUnits mọi cấu hình X, Y\nok 19 - freeUnits mọi cấu hình X, Y\n  ---\n  duration_ms: 0.44805\n  type: 'test'\n  ...\n# Subtest: endsAt: dùng được tới hết ngày theo UTC\nok 20 - endsAt: dùng được tới hết ngày theo UTC\n  ---\n  duration_ms: 2.3354\n  type: 'test'\n  ...\n# Subtest: startsAt: hiệu lực từ 00:00Z\nok 21 - startsAt: hiệu lực từ 00:00Z\n  ---\n  duration_ms: 0.388725\n  type: 'test'\n  ...\n# Subtest: minSubtotal đổi xu half away from zero\nok 22 - minSubtotal đổi xu half away from zero\n  ---\n  duration_ms: 0.271727\n  type: 'test'\n  ...\n1..22\n# tests 22\n# suites 0\n# pass 22\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 356.149201"
+   }
+  ],
+  "latestAt": "2026-11-02T07:10:14.826Z",
+  "latestAfter": "revise",
+  "staleAt": "2026-11-02T07:09:45.623Z"
+ },
+ "changes": "src/cart.js                 |  7 +++-\n src/checkout.js             | 16 +++++---\n src/money.js                | 14 ++++++-\n src/promotions.js           | 13 +++++--\n test/inventory-tax.test.js  | 94 +++++++++++++++++++++++++++++++++++++++++++++\n test/money-rounding.test.js | 28 ++++++++++++++\n test/promotions.test.js     | 34 ++++++++++++++++\n 7 files changed, 195 insertions(+), 11 deletions(-)",
+ "commit": "[ccoding/t-20261102-140751-cd2 bb421b3] CCoding T-20261102-140751-cd2: [bench C9] t2-orders #3",
+ "finalPath": "FINAL.md",
+ "finishedAt": "2026-11-02T07:10:49.242Z"
+}

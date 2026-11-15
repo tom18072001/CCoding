@@ -1,0 +1,64 @@
+TAP version 13
+# Subtest: dữ liệu sinh ngẫu nhiên, nhiều seed và tùy chọn
+ok 1 - dữ liệu sinh ngẫu nhiên, nhiều seed và tùy chọn
+  ---
+  duration_ms: 1691.293216
+  type: 'test'
+  ...
+# Subtest: dữ liệu lớn hơn
+ok 2 - dữ liệu lớn hơn
+  ---
+  duration_ms: 303.236007
+  type: 'test'
+  ...
+# Subtest: sản phẩm trùng sku, sku lạ, danh mục "unknown" thật, danh mục/tên thiếu
+ok 3 - sản phẩm trùng sku, sku lạ, danh mục "unknown" thật, danh mục/tên thiếu
+  ---
+  duration_ms: 37.962448
+  type: 'test'
+  ...
+# Subtest: ranh giới múi giờ, hòa điểm, hoàn tiền thuần, rỗng
+ok 4 - ranh giới múi giờ, hòa điểm, hoàn tiền thuần, rỗng
+  ---
+  duration_ms: 4.277944
+  type: 'test'
+  ...
+# Subtest: kiểu dữ liệu lạ: số làm id, NaN/Infinity, chuỗi số, Date, trường thừa
+ok 5 - kiểu dữ liệu lạ: số làm id, NaN/Infinity, chuỗi số, Date, trường thừa
+  ---
+  duration_ms: 2.765256
+  type: 'test'
+  ...
+# Subtest: ngày không hợp lệ ném lỗi giống bản cũ
+ok 6 - ngày không hợp lệ ném lỗi giống bản cũ
+  ---
+  duration_ms: 0.49061
+  type: 'test'
+  ...
+# Subtest: không sửa dữ liệu đầu vào
+ok 7 - không sửa dữ liệu đầu vào
+  ---
+  duration_ms: 4.656194
+  type: 'test'
+  ...
+# Subtest: báo cáo nhỏ
+ok 8 - báo cáo nhỏ
+  ---
+  duration_ms: 2.307205
+  type: 'test'
+  ...
+# Subtest: dữ liệu sinh ngẫu nhiên chạy được
+ok 9 - dữ liệu sinh ngẫu nhiên chạy được
+  ---
+  duration_ms: 12.286171
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2198.895181

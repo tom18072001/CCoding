@@ -1,0 +1,20 @@
+Cả 4 tính năng trong FEATURES.md đã được hiện thực. `npm test` xanh (16 test, 0 lỗi). Tôi mới chạy qua test tự viết, chưa tự gọi server thật ngoài test nên chưa đối chiếu với bộ nghiệm thu ẩn.
+
+**Mã nguồn mới/sửa**
+- `src/auth.js`: xác thực bằng `X-User` (401), và lỗi 403.
+- `src/query.js`: đọc và kiểm tra tham số truy vấn, lọc, tìm không phân biệt dấu tiếng Việt, sắp xếp. Hòa thì xếp theo `id` số tăng dần; `dueDate` rỗng luôn ở cuối.
+- `src/csv.js`: xuất CSV theo đúng đặc tả (BOM, `\r\n`, RFC 4180, chống chèn công thức).
+- `src/handlers/audit.js`: route `GET /audit`.
+- `src/handlers/tasks.js`: viết lại các route theo thứ tự 401 → 400 query → 404 → 403 → 400 body. `export.csv` đăng ký trước `/tasks/:id`.
+- `src/store.js`, `src/server.js`: thêm nhật ký thao tác và đăng ký route `/audit`.
+
+**Test**
+- `test/tasks.test.js` đã sửa cho dạng `{ items, total, page, pageSize }` và có header `X-User`.
+- Thêm `test/auth.test.js`, `test/list.test.js`, `test/export.test.js`, `test/audit.test.js`.
+
+**Chỗ đặc tả chưa nói rõ, tôi tự chọn**
+- Khi nhiều tham số lỗi, tôi báo tham số đầu tiên gặp lỗi khi duyệt URL từ trái sang phải. Tham số lặp tính là lỗi ở lần xuất hiện thứ hai.
+- `PATCH` có body rỗng `{}` vẫn ghi một mục nhật ký với `changes: []`.
+- `GET /audit` kiểm tra tham số truy vấn (400) trước quyền admin (403), theo thứ tự chung của đặc tả.
+- `assignee=` (rỗng) không báo lỗi, chỉ cho ra kết quả rỗng.
+- Mỗi thao tác chỉ gọi `now()` một lần, dùng chung cho `createdAt` và `at` của nhật ký.

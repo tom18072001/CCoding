@@ -1,0 +1,13 @@
+Tôi đã tối ưu `buildReport` trong `src/report.js`. `npm run bench` với 200.000 dòng chạy hết khoảng 370 ms (trước đó ~15 giây). `npm test` xanh, cả 3 test đều qua.
+
+**Cách làm:** bản cũ lọc lại toàn bộ mảng và dùng `includes`/`find` lồng nhau, nên độ phức tạp bậc hai. Bản mới tra sản phẩm theo sku bằng `Map`, rồi gộp theo tháng, danh mục và khách hàng trong một lượt, dùng `Map`/`Set` để đếm phần tử khác nhau.
+
+**Giữ nguyên hành vi của bản cũ:**
+- Thứ tự cộng và thứ tự phần tử mảng không đổi: các nhóm vẫn xếp theo lần xuất hiện đầu tiên, và các hàm so sánh để sắp xếp giữ nguyên.
+- Khi trùng sku, sản phẩm đầu tiên được dùng, giống `find`.
+- `new Date(o.date).toISOString()` vẫn chạy trước khi lọc, nên ngày sai vẫn gây lỗi như cũ.
+- Bản cũ có bước `JSON.parse(JSON.stringify(row))` làm `-0` thành `0`. Tôi thay bằng `+ 0` để kết quả vẫn y hệt.
+
+**Test mới** trong `test/report.test.js` so sánh bản mới với bản cũ bằng `deepEqual` strict (phân biệt cả `-0`). Bản cũ được lưu ở `test/fixtures/report.legacy.js`. Test chạy trên 7 bộ dữ liệu sinh ngẫu nhiên với các tuỳ chọn `topN`, `from`, `to` khác nhau, kể cả rỗng và lọc ra không còn dòng nào. Thêm một bộ dữ liệu tay gồm sku trùng, sku không có trong danh mục, giá 0, số lượng âm và hoàn tiền với `qty` 0.
+
+Tôi không so sánh với dữ liệu không hợp lệ, ví dụ `NaN` hoặc `qty` bị thiếu, vì brief chỉ yêu cầu đầu vào hợp lệ.

@@ -1,0 +1,18 @@
+**3. SELF-REVIEW**
+
+- Lỗi 1: `toCents` dùng biểu diễn thập phân ngắn nhất của số. Trường hợp dạng mũ (`1e-7`, số rất lớn) có nhánh riêng, và không trả `-0`. Mã `fixed` giờ dùng `toCents`. `minSubtotal` và giá sản phẩm đã đi qua `toCents`.
+- Lỗi 2: `allocate` đã chia theo phần dư lớn nhất, so sánh bằng số nguyên `t*w − base*sum`, và phần đứng trước được ưu tiên khi bằng nhau. Test kiểm tra tổng giảm của các dòng khớp số tiền mã cho cả mã cố định và mã %.
+- Lỗi 3: Công thức mới là `floor(qty/(buy+free))*free`.
+- Lỗi 4: `endsAt` dạng `YYYY-MM-DD` được cộng 1 ngày UTC làm mốc hết hạn. Định dạng khác giữ nguyên so sánh cũ.
+- Lỗi 5: `updateQty` chỉ giữ chỗ phần chênh lệch hoặc nhả phần giảm. `removeItem` nhả chỗ, và gọi lần hai thì không nhả thêm. Nếu `updateQty` bị báo hết hàng thì số lượng trong giỏ và số đang giữ chỗ không đổi.
+- Lỗi 6: Thuế tính trên `net` bằng số nguyên, nên không còn sai số float ở các ca .5.
+- API công khai không đổi.
+- Chưa xử lý: mã giảm đã áp vào giỏ không được kiểm tra lại khi giỏ thay đổi. Issue không nhắc tới nên tôi không đụng vào.
+
+**4. FIX**
+
+Review chỉ tìm ra một lỗi, và là lỗi trong test của tôi (giá trị kỳ vọng sai cho `freeUnits` với 3 tặng 2). Tôi đã sửa test, code không cần sửa.
+
+**Báo cáo cuối**
+
+`npm test` xanh: 15 test pass, 0 fail. Sáu lỗi trong ISSUES.md đã sửa ở `money.js`, `checkout.js`, `promotions.js`, `tax.js`, `cart.js`. Test hồi quy cho từng lỗi nằm trong `test/regression.test.js`. Tôi chưa commit.

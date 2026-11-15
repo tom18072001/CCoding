@@ -1,0 +1,250 @@
+TAP version 13
+# Subtest: nhật ký rỗng lúc đầu
+ok 1 - nhật ký rỗng lúc đầu
+  ---
+  duration_ms: 70.28711
+  type: 'test'
+  ...
+# Subtest: create / update / delete: seq, at, userId, action, taskId, changes; mới nhất trước
+ok 2 - create / update / delete: seq, at, userId, action, taskId, changes; mới nhất trước
+  ---
+  duration_ms: 30.512477
+  type: 'test'
+  ...
+# Subtest: create: changes là các trường có trong body, sắp a→z
+ok 3 - create: changes là các trường có trong body, sắp a→z
+  ---
+  duration_ms: 10.585331
+  type: 'test'
+  ...
+# Subtest: update: chỉ ghi trường thật sự đổi; member đổi status được ghi với userId của họ
+ok 4 - update: chỉ ghi trường thật sự đổi; member đổi status được ghi với userId của họ
+  ---
+  duration_ms: 16.01635
+  type: 'test'
+  ...
+# Subtest: seq tăng dần từ 1, mới nhất trước
+ok 5 - seq tăng dần từ 1, mới nhất trước
+  ---
+  duration_ms: 15.800494
+  type: 'test'
+  ...
+# Subtest: thao tác lỗi không ghi nhật ký
+ok 6 - thao tác lỗi không ghi nhật ký
+  ---
+  duration_ms: 34.632312
+  type: 'test'
+  ...
+# Subtest: chỉ admin xem được nhật ký; 401 khi thiếu user
+ok 7 - chỉ admin xem được nhật ký; 401 khi thiếu user
+  ---
+  duration_ms: 9.946114
+  type: 'test'
+  ...
+# Subtest: lọc theo taskId
+ok 8 - lọc theo taskId
+  ---
+  duration_ms: 10.946332
+  type: 'test'
+  ...
+# Subtest: tham số khác / trùng → 400 INVALID_QUERY; 400 đứng trước 403
+ok 9 - tham số khác / trùng → 400 INVALID_QUERY; 400 đứng trước 403
+  ---
+  duration_ms: 15.755159
+  type: 'test'
+  ...
+# Subtest: 401: thiếu hoặc sai X-User trên mọi route
+ok 10 - 401: thiếu hoặc sai X-User trên mọi route
+  ---
+  duration_ms: 134.525237
+  type: 'test'
+  ...
+# Subtest: admin: làm được mọi việc
+ok 11 - admin: làm được mọi việc
+  ---
+  duration_ms: 26.7326
+  type: 'test'
+  ...
+# Subtest: manager (nhóm A): đọc mọi nhóm, ghi chỉ nhóm mình, không xóa
+ok 12 - manager (nhóm A): đọc mọi nhóm, ghi chỉ nhóm mình, không xóa
+  ---
+  duration_ms: 30.536919
+  type: 'test'
+  ...
+# Subtest: member: chỉ thấy nhóm mình; không tạo/xóa; chỉ sửa status việc giao cho mình
+ok 13 - member: chỉ thấy nhóm mình; không tạo/xóa; chỉ sửa status việc giao cho mình
+  ---
+  duration_ms: 41.552686
+  type: 'test'
+  ...
+# Subtest: thứ tự kiểm tra: 401 → 400 → 404 → 403 → 400 validate
+ok 14 - thứ tự kiểm tra: 401 → 400 → 404 → 403 → 400 validate
+  ---
+  duration_ms: 25.138244
+  type: 'test'
+  ...
+# Subtest: header HTTP và BOM
+ok 15 - header HTTP và BOM
+  ---
+  duration_ms: 53.987813
+  type: 'test'
+  ...
+# Subtest: toàn bộ chuỗi CSV mặc định khớp từng byte
+ok 16 - toàn bộ chuỗi CSV mặc định khớp từng byte
+  ---
+  duration_ms: 9.725757
+  type: 'test'
+  ...
+# Subtest: kết quả rỗng: BOM + dòng tiêu đề + CRLF
+ok 17 - kết quả rỗng: BOM + dòng tiêu đề + CRLF
+  ---
+  duration_ms: 15.043151
+  type: 'test'
+  ...
+# Subtest: dùng chung lọc / tìm / sắp xếp với danh sách
+ok 18 - dùng chung lọc / tìm / sắp xếp với danh sách
+  ---
+  duration_ms: 37.674177
+  type: 'test'
+  ...
+# Subtest: quyền: member chỉ xuất nhóm mình, manager xuất mọi nhóm
+ok 19 - quyền: member chỉ xuất nhóm mình, manager xuất mọi nhóm
+  ---
+  duration_ms: 14.352195
+  type: 'test'
+  ...
+# Subtest: 401 và 400
+ok 20 - 401 và 400
+  ---
+  duration_ms: 21.243815
+  type: 'test'
+  ...
+# Subtest: export.csv không bị nhầm với /tasks/:id
+ok 21 - export.csv không bị nhầm với /tasks/:id
+  ---
+  duration_ms: 5.555166
+  type: 'test'
+  ...
+# Subtest: chống chèn công thức, bọc ngoặc kép; số giữ nguyên
+ok 22 - chống chèn công thức, bọc ngoặc kép; số giữ nguyên
+  ---
+  duration_ms: 37.719275
+  type: 'test'
+  ...
+# Subtest: ô null để trống: assignee và dueDate
+ok 23 - ô null để trống: assignee và dueDate
+  ---
+  duration_ms: 4.148175
+  type: 'test'
+  ...
+# Subtest: mặc định: createdAt tăng dần, dạng kết quả, page=1 pageSize=20
+ok 24 - mặc định: createdAt tăng dần, dạng kết quả, page=1 pageSize=20
+  ---
+  duration_ms: 52.065766
+  type: 'test'
+  ...
+# Subtest: lọc status, assignee, team
+ok 25 - lọc status, assignee, team
+  ---
+  duration_ms: 23.662898
+  type: 'test'
+  ...
+# Subtest: q: không phân biệt hoa/thường và dấu tiếng Việt
+ok 26 - q: không phân biệt hoa/thường và dấu tiếng Việt
+  ---
+  duration_ms: 21.261764
+  type: 'test'
+  ...
+# Subtest: dueBefore: ≤ ngày, loại việc không có dueDate
+ok 27 - dueBefore: ≤ ngày, loại việc không có dueDate
+  ---
+  duration_ms: 7.922734
+  type: 'test'
+  ...
+# Subtest: sort: từng trường, hai chiều, null cuối, hòa theo id số
+ok 28 - sort: từng trường, hai chiều, null cuối, hòa theo id số
+  ---
+  duration_ms: 19.511063
+  type: 'test'
+  ...
+# Subtest: sort kết hợp bộ lọc: null cuối khi lọc, hòa t2 < t10
+ok 29 - sort kết hợp bộ lọc: null cuối khi lọc, hòa t2 < t10
+  ---
+  duration_ms: 6.230231
+  type: 'test'
+  ...
+# Subtest: phân trang: page, pageSize, vượt trang, total
+ok 30 - phân trang: page, pageSize, vượt trang, total
+  ---
+  duration_ms: 11.097411
+  type: 'test'
+  ...
+# Subtest: 400 INVALID_QUERY kèm field
+ok 31 - 400 INVALID_QUERY kèm field
+  ---
+  duration_ms: 28.675024
+  type: 'test'
+  ...
+# Subtest: nhiều lỗi: báo tham số đầu tiên theo thứ tự trên URL
+ok 32 - nhiều lỗi: báo tham số đầu tiên theo thứ tự trên URL
+  ---
+  duration_ms: 9.900056
+  type: 'test'
+  ...
+# Subtest: member tự lọc theo nhóm mình
+ok 33 - member tự lọc theo nhóm mình
+  ---
+  duration_ms: 7.834086
+  type: 'test'
+  ...
+# Subtest: manager thấy mọi nhóm, lọc team tùy ý
+ok 34 - manager thấy mọi nhóm, lọc team tùy ý
+  ---
+  duration_ms: 9.131702
+  type: 'test'
+  ...
+# Subtest: CRUD cơ bản
+ok 35 - CRUD cơ bản
+  ---
+  duration_ms: 78.327718
+  type: 'test'
+  ...
+# Subtest: validate
+ok 36 - validate
+  ---
+  duration_ms: 16.512685
+  type: 'test'
+  ...
+# Subtest: 401 thiếu X-User, 403 member tạo, 400 query trước 403
+ok 37 - 401 thiếu X-User, 403 member tạo, 400 query trước 403
+  ---
+  duration_ms: 16.739587
+  type: 'test'
+  ...
+# Subtest: list: lọc, phân trang, query lỗi
+ok 38 - list: lọc, phân trang, query lỗi
+  ---
+  duration_ms: 14.715392
+  type: 'test'
+  ...
+# Subtest: export CSV có BOM và header
+ok 39 - export CSV có BOM và header
+  ---
+  duration_ms: 14.497479
+  type: 'test'
+  ...
+# Subtest: audit ghi create/update/delete
+ok 40 - audit ghi create/update/delete
+  ---
+  duration_ms: 15.458674
+  type: 'test'
+  ...
+1..40
+# tests 40
+# suites 0
+# pass 40
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1367.658672

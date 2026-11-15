@@ -1,0 +1,9 @@
+Cả năm module đã xong ở `src/<tên>/index.js` và `npm test` xanh: 27 test đạt, 0 lỗi. Tôi chưa commit gì.
+
+Test nằm ở `test/<tên>.test.js`, mỗi module một file, và tôi đã ghi đè các test mẫu cũ. Test phủ các ví dụ trong SPEC.md cùng các mã lỗi và thứ tự báo lỗi. Bộ nghiệm thu ẩn thì tôi không chạy được, nên chưa biết nó có khớp hết không.
+
+Có hai chỗ SPEC.md không nói rõ, tôi chọn như sau:
+- **`convert`:** thứ tự kiểm lỗi là giá trị tiền, rồi loại tiền đích, rồi bảng tỉ giá.
+- **`slugify`:** làm đúng chữ trong đặc tả, tức bỏ dấu rồi mới đổi chữ thường. Kết quả của chữ lạ như `İ` có thể khác một bản cài đặt khác.
+
+Mọi phép tính tiền dùng BigInt, nên làm tròn half-even chính xác kể cả khi số rất lớn.

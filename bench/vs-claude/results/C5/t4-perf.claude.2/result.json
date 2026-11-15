@@ -1,0 +1,84 @@
+{
+ "run": {
+  "exitCode": 0,
+  "status": "done",
+  "wallSec": 219,
+  "costUsd": 0.650708,
+  "turns": 9,
+  "tokens": {
+   "input": 18,
+   "output": 17373,
+   "cacheRead": 449972,
+   "cacheWrite": 26603
+  },
+  "models": [
+   "claude-haiku-5-5",
+   "claude-opus-5-5"
+  ],
+  "modelUsage": {
+   "claude-haiku-5-5": {
+    "inputTokens": 1366,
+    "outputTokens": 442,
+    "cacheReadInputTokens": 0,
+    "cacheCreationInputTokens": 0,
+    "webSearchRequests": 0,
+    "costUSD": 0.0003576,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 64000,
+    "thinkingTokens": 420,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 0,
+    "canonicalModel": "claude-haiku-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   },
+   "claude-opus-5-5": {
+    "inputTokens": 18,
+    "outputTokens": 17373,
+    "cacheReadInputTokens": 449972,
+    "cacheCreationInputTokens": 26603,
+    "webSearchRequests": 0,
+    "costUSD": 0.6503504,
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000,
+    "thinkingTokens": 7293,
+    "cacheCreationEphemeral5mInputTokens": 0,
+    "cacheCreationEphemeral1hInputTokens": 26603,
+    "canonicalModel": "claude-opus-5-5",
+    "provider": "firstParty",
+    "costBasis": "list"
+   }
+  },
+  "finalText": "Xong. `buildReport` giờ chạy khoảng **290 ms** với 200.000 dòng (`npm run bench`), trước đây khoảng 14,9 s. Kết quả giống hệt bản cũ trong mọi trường hợp tôi đã thử, và `npm test` xanh (9/9). Tôi cũng so trực tiếp với bản cũ trên đúng bộ 200.000 dòng của bench, với hai bộ tùy chọn: kết quả trùng khớp hoàn toàn.\n\n**Thay đổi trong `src/report.js`:** chữ ký hàm giữ nguyên, không sửa đầu vào, không cache giữa các lần gọi, không thêm thư viện.\n- **Tra sản phẩm bằng Map** thay cho `products.find`. Map giữ sản phẩm *đầu tiên* khi trùng sku, và sku `NaN` không khớp sản phẩm nào, đúng như cách so `===` của bản cũ.\n- **Bỏ `JSON.parse(JSON.stringify(row))`** và thay bằng hàm chuẩn hóa tái hiện đúng luật JSON cho từng giá trị:\n  - `NaN`/`Infinity` thành `null`, nên khi cộng dồn được tính như 0;\n  - `-0` thành `0`;\n  - `undefined`, hàm, symbol thì mất khóa.\n\n  Dòng nào có giá trị không nguyên thủy (ngày kiểu `Date`, id là object, `qty` là chuỗi…) vẫn đi qua JSON thật, nên các hành vi lạ vẫn giữ nguyên. Ví dụ: `qty: \"3\"` vẫn bị nối chuỗi khi cộng, và id là object thì mỗi dòng vẫn được đếm là một đơn riêng.\n- **Gom nhóm một lượt** bằng Map/Set (cách so khớp giống `Array#includes`). Các tổng được cộng theo đúng thứ tự dòng như bản cũ, nên kết quả số thực dấu phẩy động trùng từng bit.\n- **Sắp xếp như cũ:** trước khi sort, danh sách vẫn theo thứ tự xuất hiện đầu tiên và các hàm so sánh giữ nguyên, nên kết quả hòa điểm (và cả khi dữ liệu trộn nhiều kiểu) ra cùng thứ tự. Thứ tự khóa trong `byMonth` cũng không đổi.\n- **Tháng tính từ chuỗi ngày** được nhớ tạm trong phạm vi một lần gọi.\n\n**Test mới:**\n- `test/legacy-report.js` là bản sao nguyên văn của bản cũ, dùng làm đặc tả.\n- `test/equivalence.test.js` so từng kết quả bằng `deepStrictEqual`, so thêm chuỗi JSON để bắt thứ tự khóa, và kiểm tra thứ tự khóa của `byMonth`. Các tình huống được thử:\n  - nhiều seed và kích thước dữ liệu;\n  - các giá trị `topN` 0, âm, `null`, lớn;\n  - các bộ `from`/`to`: chuỗi rỗng, khoảng ngược, ranh giới múi giờ;\n  - sku trùng hoặc không tồn tại; một danh mục thật tên `\"unknown\"`; danh mục `__proto__`; danh mục hoặc tên bị thiếu;\n  - hòa điểm, đơn chỉ có hoàn tiền, dữ liệu rỗng;\n  - kiểu dữ liệu lạ: id là số, `±0`, `NaN`, chuỗi số, `Date`, trường thừa, thiếu `status`;\n  - ngày không hợp lệ phải ném lỗi giống bản cũ;\n  - đầu vào không bị sửa.\n\nCó một chỗ khác bản cũ, và chỉ xảy ra với đầu vào hỏng. Nếu mảng `products` chứa phần tử `null`, bản mới ném lỗi ngay khi dựng Map, kể cả khi không có dòng nào tra tới phần tử đó; bản cũ chỉ ném lỗi khi `find` thực sự quét qua nó. Vì đây không phải đầu vào hợp lệ nên tôi để nguyên.\n\nTôi chưa commit; các thay đổi đang nằm trong working tree.",
+  "workdir": "/tmp/bw/C5-t4-perf.claude.2-ozlsbd/repo"
+ },
+ "task": "t4-perf",
+ "system": "claude",
+ "rep": 2,
+ "key": "t4-perf.claude.2",
+ "env": "cloud",
+ "startedAt": "2026-11-02T04:08:11.399Z",
+ "finishedAt": "2026-11-02T04:11:55.947Z",
+ "grade": {
+  "hidden": {
+   "pass": 19,
+   "fail": 0,
+   "total": 19,
+   "failed": [],
+   "ms": 3412,
+   "timedOut": false
+  },
+  "visible": {
+   "pass": 9,
+   "fail": 0,
+   "total": 9
+  },
+  "changed": [
+   "~src/report.js",
+   "+test/equivalence.test.js",
+   "+test/legacy-report.js"
+  ],
+  "perfMs": 249
+ },
+ "audit": []
+}

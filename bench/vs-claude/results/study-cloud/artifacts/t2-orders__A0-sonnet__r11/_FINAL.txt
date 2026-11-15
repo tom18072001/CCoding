@@ -1,0 +1,12 @@
+Cả 6 lỗi trong `ISSUES.md` đã được sửa, và `npm test` xanh (14 test, không test nào lỗi). Các test hồi quy mới nằm trong `test/regression.test.js`, mỗi lỗi có ít nhất một test. API công khai không đổi.
+
+1. **Sai 1 xu:** `toCents` nhân `amount * 100` nên dính sai số nhị phân (`1.005*100 = 100.4999…`). Giờ hàm dịch dấu thập phân qua chuỗi rồi làm tròn half away from zero, nên `1.005` ra `101`, `-1.005` ra `-101`, `2.675` ra `268`. Mã giảm cố định trong `checkout.js` trước đây tự nhân 100 và làm tròn, giờ cũng dùng `toCents`. Giá sản phẩm và `minSubtotal` vốn đã đi qua `toCents`, nên được sửa theo.
+2. **Giảm giá bị hụt:** `allocate` chỉ lấy phần nguyên, làm rơi số xu dư. Giờ hàm chia phần dư lớn nhất theo đúng mô tả, các phần bằng nhau thì phần đứng trước được trước. Tổng các phần luôn bằng `total`.
+3. **Mua X tặng Y:** công thức cũ `floor(qty/buy)*free` tặng quá sớm. Giờ là `floor(qty/(buy+free))*free`, nên 2 hộp thì 0 miễn phí, 3 hộp thì 1, 5 hộp thì 1, 6 hộp thì 2.
+4. **Mã hết hạn sớm:** `endsAt` được hiểu là 00:00 UTC của chính ngày đó. Giờ mã dùng được tới hết ngày `endsAt`, và bị từ chối từ 00:00Z ngày hôm sau.
+5. **Kho:** `updateQty` giữ chỗ lại toàn bộ số lượng mới thay vì phần chênh lệch, còn `removeItem` không trả hàng về kho. Giờ `updateQty` chỉ giữ thêm hoặc trả bớt phần chênh, và `removeItem` trả đủ số đang giữ. `updateQty(sku, 0)` đi qua `removeItem` nên cũng trả hàng.
+6. **Thuế:** thuế được tính trên `gross`. Giờ tính trên `net` của từng dòng.
+
+Ngoài `ISSUES.md`, tôi còn đổi `lineTax` sang phép chia số nguyên (`amountCents * ratePercent / 100`) để tránh sai số dấu phẩy động khi làm tròn thuế. Kết quả với các giá trị thông thường không đổi.
+
+Tôi không đụng tới phần làm tròn của mã giảm theo %, vì giá trị đó luôn không âm và test hiện tại đều đúng.
