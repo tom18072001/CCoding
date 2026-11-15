@@ -1,6 +1,6 @@
-# Phòng Dev, gói D30: tìm handle làm libuv sập khi `npm test` có `--test-force-exit`; chuỗi 10 lần xanh của `test:bench`; sửa chú thích lỗi thời
+# Phòng Dev, gói D30: tìm handle làm libuv sập khi `npm test` có `--test-force-exit`; chuỗi 10 lần xanh của `test:bench`; sửa chú thích lỗi thời; bịt thêm lối diệt tiến trình theo tên; thử khởi động lại server thật
 
-**Gói vừa: 3 hạng mục. Ngân sách 5M token.** Giao 16/11/2026.
+**Gói vừa: 4 hạng mục. Ngân sách 7M token.** Giao 16/11/2026.
 
 **Căn cứ:** biên bản CTO của D28b (T-20261115-211946-3fc). D28/D28b đã gộp vào `perf/vs-claude-loop`; CI GitHub 4/4 xanh, gồm Node 22 (lượt `43742232787`). CTO chưa nghiệm thu trọn vì các điểm sau.
 - **`npm test` chưa bật được `--test-force-exit`.** Có cờ thì libuv sập 8/10 lần (`Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)`). Nguyên nhân gốc mới là nghi vấn (`test/selfimprove-route.test.ts`, khoảng dòng 21–27), chưa chứng minh.
@@ -10,10 +10,14 @@
   - F3: chú thích trong `test/force-exit.test.ts` ghi sai đường dẫn tệp nguồn của libuv;
   - F4: chú thích `FORCE_EXIT`/`NO_FORCE_EXIT` còn nói `test:bench` chưa bật cờ;
   - F5: `docs/LINT.md`, mục kết quả K1, còn câu cũ.
+- **Biên bản CTO của D29** (T-20261116-005855-f7d):
+  - `DEFAULT_DENY` còn các lối lách đã biết: `spps -Name …` (bí danh của `Stop-Process`), `kill $(pgrep …)`, `Invoke-CimMethod … Terminate`, `… | xargs pkill`, `node -e "process.kill(…)"`;
+  - thiếu khoảng trắng ở dòng khai báo `DEFAULT_DENY`;
+  - `recoverOrphans` (nhiệm vụ mồ côi thành `paused` khi server khởi động) mới có test, chưa thử trên server thật.
 - **Sự cố 15/11** (quyết định 15): hai vòng `npm test` chạy song song trong cùng một thư mục, rồi mọi tiến trình `node.exe` trên máy chết. Khi chạy lặp, chỉ chạy **một** vòng mỗi lần, tuần tự, và **không** diệt tiến trình theo tên. Văn phòng đã chặn các lệnh đó.
 
 **Phạm vi:**
-- **Được sửa:** `test/`, `bench/vs-claude/test/`, `package.json` (chỉ script test), `docs/` (trừ `docs/research/`), `src/` chỉ khi handle mở nằm trong mã sản phẩm (nêu rõ và kèm test).
+- **Được sửa:** `test/`, `bench/vs-claude/test/`, `package.json` (chỉ script test), `docs/` (trừ `docs/research/`), `src/tools/workspace.ts` (chỉ `DEFAULT_DENY`, K3), `src/` khác chỉ khi handle mở nằm trong mã sản phẩm (nêu rõ và kèm test).
 - **Không sửa:** `bench/vs-claude/results/`, `docs/research/`, `.github/workflows/ci.yml`.
 - Không chạy benchmark, không gọi `claude -p` thật. Tệp nháp, log chạy lặp chỉ để trong `.scratch/`.
 - Dữ liệu: **Nội bộ**.
@@ -35,9 +39,19 @@
 - Sửa F3, F4, F5 cho khớp mã hiện tại. Đường dẫn tệp nguồn libuv lấy đúng từ thông báo lỗi; không đọc được thì không ghi đường dẫn.
 - Tìm mọi câu trong `docs/` và chú thích test còn nói trạng thái cũ của cờ `--test-force-exit`, và sửa.
 
-**K3 — qa-tester: review**
+**K3 — senior-swe: bịt thêm lối diệt tiến trình theo tên; thử khởi động lại server thật**
+- Thêm vào `DEFAULT_DENY` các mẫu cho những lối lách ở căn cứ, mỗi mẫu có ca dương và ca âm. Lối không chặn được bằng chuỗi lệnh thì ghi rõ trong `docs/TOOLS.md` là giới hạn. Lớp chặn theo chuỗi lệnh không phải biên bảo vệ; biên thật là sandbox hệ điều hành.
+- Sửa khoảng trắng ở dòng khai báo `DEFAULT_DENY`.
+- **Thử thật `recoverOrphans`:**
+  - chạy server thử ở một cổng khác 7430, với thư mục dữ liệu tạm có một nhiệm vụ `running` giả;
+  - dừng server thử bằng **PID của chính nó**, khởi động lại;
+  - xác nhận nhiệm vụ thành `paused`, có sự kiện `task.orphaned`, `resume` chạy được;
+  - ghi kết quả vào `docs/`. Không chạm server 7430, không diệt tiến trình theo tên.
+
+**K4 — qa-tester: review**
 - Kết luận theo mẫu JSON. Khối JSON đặt **cuối** câu trả lời, đúng mẫu, để hệ thống đọc được.
 - **Thử sức bắt lỗi:**
   - gỡ bản sửa handle của K1 ⇒ chạy tệp đó với cờ thì sập lại (hoặc ghi rõ vì sao không tái hiện);
-  - bỏ cờ khỏi một script ở nhóm `FORCE_EXIT` ⇒ test đỏ.
+  - bỏ cờ khỏi một script ở nhóm `FORCE_EXIT` ⇒ test đỏ;
+  - bỏ một mẫu mới của K3 khỏi `DEFAULT_DENY` ⇒ test đỏ.
 - Chạy `npm test`, `npm run test:bench`, `npm run test:research` 3 lần **tuần tự** với cờ cuối cùng; ghi thời gian và kết quả.
