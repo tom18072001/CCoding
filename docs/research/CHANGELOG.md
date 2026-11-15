@@ -5,6 +5,18 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 18b (T-20261115-081112-711, BRIEF-25b, 15/11/2026): sửa nhỏ sau phản biện E9-lite; bảng tuyệt đối, chi phí bằng tiền
+
+Không sửa `src/`, mã `bench/`, `runs.jsonl`, `gold.json`, `labels.json`; không chạy lại planner, không gọi LLM. Dữ liệu: Nội bộ. Mọi số mới là [Khám phá, sau khi thấy dữ liệu], không thuộc đăng ký.
+
+- **Đính chính (T6):** `report.md:134` ghi bốn dòng `failed` "không có `usage`". **Sai:** cả bốn có `usage` (tổng token có trọng số 415 205; Haiku 105 551, Opus 309 654; `report-cost.md` §3, audit mục 2). Đã sửa tại chỗ kèm ghi đính chính 15/11/2026. `paper.md` (dòng nguồn của 415 205 / 105 551 / 309 654) từng dẫn sai nguồn, nay dẫn `report-cost.md` §3 và audit mục 2.
+- **K1 (@data-scientist):** khối `preregistration.md` §9 (commit riêng trước khi tính), `analysis/e9lite-cost.mjs` + test, `report-cost.md` (bảng tuyệt đối và USD).
+- **T5:** `model-per-role.md` đổi "rẻ hơn" thành "ít token có trọng số hơn ở khâu `plan`"; thêm kết quả USD (Opus đắt hơn Sonnet; Haiku rẻ hơn Sonnet, khoảng tách 0 ở cả hai bậc giá Haiku); "xu hướng" đổi thành mô tả đếm 7/2/4 (khoảng chưa tách 0); đe dọa 8 thêm khả năng độ phủ chạm trần và "tệp ngoài repo chưa đếm".
+- **`paper.md` v0.8.2:** §6.6 thêm câu chi phí USD và đe dọa 9; đe dọa 8 cập nhật.
+- **`facts.json`:** ghi rõ sha256 tính trên LF; thêm khóa `e9lite.abs.*` và `e9lite.cost.*`. sha256 của `report.md` mới do S4 điền.
+- **Chênh lệch so với brief:** "covMod hiệu 0 ở 13/13 bài" chỉ đúng cho O − S; H − S là 12/13 (1 bài hiệu âm).
+- **`e9lite-run1-audit.md` mục 9 và `k2-tmp/`:** đã kiểm, không còn (`git status --porcelain` rỗng; `find . -name k2-tmp` không thấy; `git diff` trên `docs/research/analysis/e9lite-run1-audit.md` không có thay đổi chưa commit). Không tạo commit giả.
+
 ## Vòng 4, gói 18 (T-20261115-073336-258, BRIEF-25, 15/11/2026): phân tích E9-lite run1 [Khám phá] theo §9 và đưa vào bài báo
 
 Không sửa `src/`, mã `bench/`, `runs.jsonl`, `gold.json`, `labels.json`, `e9lite.mjs`; không chạy lại planner. Mọi số là [Khám phá], n = 13 bài, không p-value. Không phải E9 (E9 vẫn chưa chạy).

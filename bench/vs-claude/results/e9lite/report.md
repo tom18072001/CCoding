@@ -131,7 +131,7 @@ Mọi nội dung phía trên dòng `---` là đầu ra nguyên văn của script
 - sha256 `runs.jsonl` theo nội dung LF (blob git, `git ls-files --eol`: i/lf) = `bb004f1fda6247524db7015fe2d0a282905d28304eefc69c08e4c01001b436fc`, khớp RUNLOG. Bản checkout trên Windows (autocrlf) có CRLF nên `sha256sum` trực tiếp ra `6babb19a…07da`; chỉ khác kết thúc dòng, không phải khác dữ liệu.
 
 ### Bốn dòng không `done`
-`error` trống ở cả 4 dòng nên nhãn `causeOf` của script rơi về `status` = `failed` (không khớp regex hạ tầng, nên không bị gán nhầm bởi chuỗi con `rate`). `planGate` = null, `replanCount` = null, `authSource` = null, không có `usage`/`planRaw`. `planModel.match` = true ở cả 4.
+`error` trống ở cả 4 dòng nên nhãn `causeOf` của script rơi về `status` = `failed` (không khớp regex hạ tầng, nên không bị gán nhầm bởi chuỗi con `rate`). `planGate` = null, `replanCount` = null, `authSource` = null, không có `planRaw`; các dòng này **có** `usage` (tổng token có trọng số 415 205: Haiku 105 551, Opus 309 654). [Đính chính 15/11/2026: bản trước ghi "không có `usage`/`planRaw`", phần `usage` sai; số lấy từ `report-cost.md` §3 và `analysis/e9lite-run1-audit.md` mục 2.] `planModel.match` = true ở cả 4.
 
 | # | Khóa | Arm | Dòng trong runs.jsonl | Lượt của khóa | status | Nhãn `causeOf` đã in | Nhãn phân loại tay | Dẫn chứng | Kết cục khóa |
 |---|---|---|---|---|---|---|---|---|---|
