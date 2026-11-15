@@ -1480,6 +1480,34 @@ const gateFirst = (row) => {
 - `bench/vs-claude/results/e9lite/labels.json`: sha256 = `4059699277ab7df1b6b55dec5876b81feaea6352b59350a1b2807ef543694025`.
 - **Số nhãn thật do script sinh ra (nhãn chính, sau B1):** 3 "chia được", 10 "không chia được"; phân tầng không suy biến. Độ nhạy (mod2Of): 4 "chia được", 9 "không chia được".
 
+#### Sai lệch được báo minh bạch: lượt `failed` do cổng kế hoạch chặn, rồi chạy lại cùng khóa (BRIEF-25, K2) — 15/11/2026
+
+**Thời điểm, nói thẳng.** Khối này được viết **sau khi E9-lite đã chạy xong**, sau khi đã thấy số đếm của `bench/vs-claude/results/e9lite/run1/RUNLOG.md` (121 dòng = 117 `done` + 4 `failed`) và phụ lục bổ sung của K1 trong `bench/vs-claude/results/e9lite/report.md`. Đây là **sai lệch được báo minh bạch**, không phải điều khoản đăng ký trước. Khối chỉ thêm, không sửa chữ cũ; **không đổi phép tính chính** và không đổi bất kỳ số nào đã in trong `report.md`.
+
+**(a) Ca chưa được quy định.** Mục (7) ở trên cho chạy lại `error`/`failed`/`infra`, nhưng chỉ quy định cách báo cho hai ca: model lệch và lỗi hạ tầng (403, hết hạn mức, ngắt kết nối). Ca thứ ba đã xảy ra: **cổng kế hoạch luật B (i) chặn** lượt chạy (RUNLOG: nguyên nhân `plan-unreadable`, tóm tắt tự khai số hạng mục khác số phân tích được), dòng `runs.jsonl` ghi `status: 'failed'`, `planRaw`/`planFinal`/`planGate`/`replanCount` = `null`; sau đó khóa được chạy lại bằng đúng lệnh cũ, cùng `--out` và `--seed`. Đây không phải lỗi hạ tầng, và cũng không phải model lệch.
+
+**(b) Phép tính chính không đổi.** Mỗi khóa `{task, arm, rep}` chỉ tính **dòng `done` cuối cùng** (mục (7)); mọi dòng không `done` của khóa nằm ngoài phân tích và chỉ được báo ở phụ lục. Khóa phải cùng bài, cùng arm, cùng lần lặp (`rep`) và cùng `configHash` với lượt đầu; chạy lại không đổi `planModel` của arm.
+
+**(c) Cách báo (bắt buộc, hai mẫu số tách bạch, không lẫn).**
+- **(c1) Số dòng không `done` theo arm** (mọi dòng, kể cả lượt chạy lại lần hai của cùng khóa lại `failed`). Số thật: P-H 1, P-S 0, P-O 3, tổng 4.
+- **(c2) Tỉ lệ khóa có lượt đầu không `done` trên 39 khóa mỗi arm** (13 bài × 3 lần lặp). Số thật: P-H 1/39, P-S 0/39, P-O 2/39 (3 dòng của P-O nằm trên 2 khóa vì `t2-orders__P-O__r3` `failed` hai lần); tổng 3/117 khóa. Mẫu số 39 chỉ dùng cho (c2), không dùng cho (c1).
+- Kèm **nguyên nhân từng dòng** và **kết cục của khóa** (khóa còn không `done` sau cùng: 0). Báo thêm, mô tả, token có trọng số của các dòng `failed` (lượt bị chặn đã tiêu token): tổng 415 205 (P-H 105 551; P-O 309 654), tính bằng `weighted()` như (5); không cộng vào token của lượt được tính.
+
+**(d) Phân loại nguyên nhân.** `causeOf()` trong `docs/research/analysis/e9lite.mjs` **không có nhóm "cổng kế hoạch chặn"**: dòng `failed` mà `error` trống rơi về nhãn `failed`, nên dòng "theo arm/nguyên nhân" của script **không phân biệt** cổng chặn với hạ tầng. Mã không bị sửa. **Nơi phân loại là phụ lục bổ sung của K1** trong `report.md` (nhãn tay "cổng kế hoạch chặn", dẫn RUNLOG) và bảng đối chiếu ở `docs/research/analysis/e9lite-run1-audit.md`. Hạn chế đã biết: `runs.jsonl` không chứa `error`/`planGate` cho 4 dòng này, nên nhãn "cổng kế hoạch chặn" dựa vào lời khai RUNLOG (đọc `attention.reason` trong `task.json` giữ trên máy chạy), chưa tự kiểm lại từ dữ liệu gốc.
+
+**(e) Ngưỡng diễn giải: chỉ mô tả.** Không đặt ngưỡng loại bỏ hay hiệu chỉnh. Đây là **đe dọa tính hợp lệ (thiên lệch chọn lọc)**, nặng nhất với arm Opus (2/39 khóa, 3 dòng): chỉ lượt qua được cổng mới được tính, và lượt chạy lại có thể cho kế hoạch khác lượt đầu, nên tập lượt được tính có thể thiên về kế hoạch dễ qua cổng (số hạng mục khớp tóm tắt). Không dùng khối này để chỉnh số, để loại khóa, hay để kết luận về nguyên nhân; mọi câu về arm Opus phải kèm (c1), (c2) và nhãn [Khám phá].
+
+#### Phân tích khám phá bổ sung sau phản biện E9-lite: bảng độ phủ tuyệt đối và chi phí bằng tiền (BRIEF-25b, K1) — 15/11/2026
+
+**Đây là phân tích khám phá, sau khi thấy dữ liệu, không thuộc đăng ký, chỉ mô tả.** Dữ liệu `bench/vs-claude/results/e9lite/run1/runs.jsonl` đã được xem và đã được phân tích ở các khối trên; khối này được ghi trước khi viết hay chạy script mới. Không đổi giả thuyết, thước đo, luật chọn dòng hay phân tích chính nào đã khóa. Không gọi LLM, không chạy lại planner. Script: `docs/research/analysis/e9lite-cost.mjs`; đầu ra: `bench/vs-claude/results/e9lite/report-cost.md`.
+
+- **(a) Bảng giá trị tuyệt đối theo arm (S/O/H).** Trên dòng `done` được chọn như `selectRuns()` của `e9lite.mjs`, gộp 3 lần lặp thành một giá trị theo bài (như (6)). Bốn đại lượng: độ phủ tệp `raw.covFile`, độ phủ module `raw.covMod`, số hạng mục `raw.items`, token có trọng số pha `plan` (`weighted()` trên `usage.tokens`, giữ nguyên định nghĩa của `e9lite.mjs`). Mỗi ô: trung bình theo bài, trung vị, min–max; với hai cột độ phủ thêm số bài đạt 1,0. Mục đích: trả lời độ phủ có đang ở mức trần (bão hòa) hay không, và đếm số bài có hiệu `covMod` bằng 0 cho O − S và H − S.
+- **(b) Chi phí bằng USD theo arm.** Tính trên `usage.tokens` của dòng `done` được chọn, giá theo `planModel.actual` của từng dòng, bằng `costOf()` trong `bench/vs-claude/lib/pricing.mjs`, cache ghi 1 giờ (mặc định của tệp). Báo trung bình và trung vị theo arm; hiệu O − S và H − S theo bài (gộp lần lặp rồi trừ), bootstrap theo bài như (6): B = 4000, seed 20261115, percentile 2,5/97,5, khoảng 95 %. Chỉ dùng "rẻ hơn"/"đắt hơn" khi khoảng tách 0 ở cả hai bậc giá; còn lại ghi "chưa phân biệt được về chi phí bằng tiền". Không báo p.
+- **(c) Haiku báo cả hai bậc giá.** `usage.tokens` là số cộng dồn của cả phiên, không biết bậc của từng request, nên Haiku 5.5 báo cả `costUsdLow` (bậc ≤ 100K prompt, cận dưới) và `costUsd` (bậc > 100K, cận trên). Sonnet và Opus không có bậc. Hiệu H − S được tính ở cả hai cận; O − S giống nhau ở hai cận.
+- **(d) Dòng `failed`.** Không vào phép so. Báo riêng số dòng, tổng token có trọng số (đối chiếu 415 205 / 105 551 / 309 654 đã ghi ở khối BRIEF-25) và USD của chúng.
+- **Nguồn giá.** Tệp `bench/vs-claude/lib/pricing.mjs`, `PRICING_VERSION = '2026-11-04'` (giá Sonnet/Opus: đề bài D11, 3/11/2026; Haiku 5.5: trang `platform.claude.com/docs/en/models/haiku-5-5/overview`, truy cập 4/11/2026, theo chú thích trong tệp). Ngày đọc tệp để khối này: 15/11/2026. Giá là niêm yết theo phiên bản trên; không phải hóa đơn thực.
+- **Giới hạn đã biết.** Chi phí chỉ của pha `route` + `plan` (planOnly); không gồm phần thực thi. Số bài n = 13, bootstrap theo bài; không hiệu chỉnh so sánh bội vì là mô tả.
+
 ## 10. Đạo đức & dữ liệu
 
 - **Người tham gia:** không có. Không áp dụng đồng ý có hiểu biết.

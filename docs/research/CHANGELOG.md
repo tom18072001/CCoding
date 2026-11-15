@@ -5,6 +5,29 @@
 > Mã R1 = `dev-review.md` §7. BRIEF-2 = `BRIEF-2.md`. T-x = bảng trong `performance/token-analysis.md`.
 > Toàn bộ kết quả RQ3 là **minh họa**: n nhỏ, C7 chỉ 1 lượt làn nhanh và 2 lượt Sonnet mỗi bài, 8 phép kiểm định không hiệu chỉnh bội.
 
+## Vòng 4, gói 18b (T-20261115-081112-711, BRIEF-25b, 15/11/2026): sửa nhỏ sau phản biện E9-lite; bảng tuyệt đối, chi phí bằng tiền
+
+Không sửa `src/`, mã `bench/`, `runs.jsonl`, `gold.json`, `labels.json`; không chạy lại planner, không gọi LLM. Dữ liệu: Nội bộ. Mọi số mới là [Khám phá, sau khi thấy dữ liệu], không thuộc đăng ký.
+
+- **Sửa theo review (S2, 15/11/2026):** (a) `model-per-role.md` (hàng `fastLane.planModel`) và `paper/paper.md` (§6.6, đe dọa 9) ghi giới hạn của USD: chỉ tính phiên route + plan, không phải riêng khâu `plan`; USD của S và O là cận trên vì route (chạy Haiku) được tính theo giá model pha plan (`e9lite-cost.mjs` tính cả `usage.tokens` theo `planModel.actual`). Câu USD ở `model-per-role.md` mang nhãn [Khám phá, sau khi thấy dữ liệu] tại chỗ. (b) "Độ phủ chạm trần" đổi thành "gần trần" (`covMod`: ≥ 12/13 bài đạt 1,0 ở mọi arm) để khớp `report-cost.md` §1 ("chưa bão hòa hoàn toàn"). Không đổi số nào.
+
+- **Đính chính (T6):** `report.md:134` ghi bốn dòng `failed` "không có `usage`". **Sai:** cả bốn có `usage` (tổng token có trọng số 415 205; Haiku 105 551, Opus 309 654; `report-cost.md` §3, audit mục 2). Đã sửa tại chỗ kèm ghi đính chính 15/11/2026. `paper.md` (dòng nguồn của 415 205 / 105 551 / 309 654) từng dẫn sai nguồn, nay dẫn `report-cost.md` §3 và audit mục 2.
+- **K1 (@data-scientist):** khối `preregistration.md` §9 (commit riêng trước khi tính), `analysis/e9lite-cost.mjs` + test, `report-cost.md` (bảng tuyệt đối và USD).
+- **T5:** `model-per-role.md` đổi "rẻ hơn" thành "ít token có trọng số hơn ở khâu `plan`"; thêm kết quả USD (Opus đắt hơn Sonnet; Haiku rẻ hơn Sonnet, khoảng tách 0 ở cả hai bậc giá Haiku); "xu hướng" đổi thành mô tả đếm 7/2/4 (khoảng chưa tách 0); đe dọa 8 thêm khả năng độ phủ chạm trần và "tệp ngoài repo chưa đếm".
+- **`paper.md` v0.8.2:** §6.6 thêm câu chi phí USD và đe dọa 9; đe dọa 8 cập nhật.
+- **`facts.json`:** ghi rõ sha256 tính trên LF; thêm khóa `e9lite.abs.*` và `e9lite.cost.*`. sha256 của `report.md` mới do S4 điền.
+- **Chênh lệch so với brief:** "covMod hiệu 0 ở 13/13 bài" chỉ đúng cho O − S; H − S là 12/13 (1 bài hiệu âm).
+- **`e9lite-run1-audit.md` mục 9 và `k2-tmp/`:** đã kiểm, không còn (`git status --porcelain` rỗng; `find . -name k2-tmp` không thấy; `git diff` trên `docs/research/analysis/e9lite-run1-audit.md` không có thay đổi chưa commit). Không tạo commit giả.
+
+## Vòng 4, gói 18 (T-20261115-073336-258, BRIEF-25, 15/11/2026): phân tích E9-lite run1 [Khám phá] theo §9 và đưa vào bài báo
+
+Không sửa `src/`, mã `bench/`, `runs.jsonl`, `gold.json`, `labels.json`, `e9lite.mjs`; không chạy lại planner. Mọi số là [Khám phá], n = 13 bài, không p-value. Không phải E9 (E9 vẫn chưa chạy).
+
+- **K1 (@data-scientist):** `bench/vs-claude/results/e9lite/report.md` (đầu ra script nguyên văn + phụ lục bổ sung); chạy lần hai trùng byte; 121 dòng = 117 `done` + 4 `failed`.
+- **K2 (@methodologist):** `analysis/e9lite-run1-audit.md`; `preregistration.md` §9 thêm (chỉ thêm) khối "Sai lệch được báo minh bạch: lượt `failed` do cổng kế hoạch chặn…", hai cách đếm (c1 số dòng 1/0/3; c2 khóa trên 39: 1/39, 0/39, 2/39); tính tay 3 bài.
+- **K3 (@academic-writer):** `paper/paper.md` §6.6 đổi từ "chưa chạy" sang "đã chạy run1", thêm Bảng 24 (hiệu O − S, H − S, khoảng bootstrap 95 %, đếm >0/=0/<0), chia thừa, phân tầng, độ nhạy `mod2Of`, lượt không `done`, đe dọa 7–8 (thiên lệch chọn lọc do chạy lại sau cổng chặn; thiếu bảng tuyệt đối theo arm), dòng ghi chú đầu bản thảo và đoạn "Model theo vai"; `analysis/decisions/model-per-role.md` §4 (gợi ý hướng, mức chắc chắn thấp; không đổi `research-lead` `model: opus` hay `fastLane.planModel` sonnet); `facts.json` khóa `e9lite.*` (độ phủ hiệu, đếm, token, 121/117/4, hai cách đếm, sha256 `report.md`), `e9lite.status` = "đã chạy run1" và mục `numbers` tương ứng. **Chưa có:** độ phủ tuyệt đối theo arm (script không in; audit G1), token pha `plan` riêng (G2).
+- **K4 (@peer-reviewer):** phản biện, chỉ đọc.
+
 ## Vòng 4, gói 17b (T-20261115-051926-8f5, BRIEF-24b, 15/11/2026): đóng tiêu chí còn mở của BRIEF-24 trước khi chạy E9-lite
 
 Không sửa `src/` hay mã `bench/`, không chạy planner, không gọi LLM để đo; không có số kết quả E9-lite. Số 13/13 "chia được" của bản nhãn đầu là số cũ, hết hiệu lực; số hiệu lực là 3 "chia được" / 10 "không chia được".
