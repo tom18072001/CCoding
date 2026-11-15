@@ -6,7 +6,7 @@ import type { AddressInfo } from 'node:net';
 import { createServer } from '../src/server.js';
 import { totalTokens } from '../src/types.js';
 import { verifyChain } from '../src/logger.js';
-import { readJson, testApp } from './helpers.js';
+import { closeServer, readJson, testApp } from './helpers.js';
 
 test('luồng đầy đủ: định tuyến → kế hoạch → họp → thực thi → review/sửa → báo cáo', async () => {
   const app = testApp({ reviewRejectRate: 1 });
@@ -156,7 +156,7 @@ test('API: trạng thái, chống CSRF/DNS rebinding, giao việc', async () => 
   const port = (srv.address() as AddressInfo).port;
   app.config.server.port = port;
   const srv2 = createServer(app); // tạo lại để danh sách host hợp lệ có cổng thật
-  srv.close();
+  await closeServer(srv);
   await new Promise<void>((r) => srv2.listen(port, '127.0.0.1', r));
   const base = `http://127.0.0.1:${port}`;
   try {
@@ -173,7 +173,7 @@ test('API: trạng thái, chống CSRF/DNS rebinding, giao việc', async () => 
     const fin = await fetch(`${base}/api/tasks/${t.id}/file?path=../../../etc/passwd`);
     assert.equal(fin.status, 404);
   } finally {
-    srv2.close();
+    await closeServer(srv2);
     app.cleanup();
   }
 });

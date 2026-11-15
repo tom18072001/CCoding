@@ -6,7 +6,7 @@ import path from 'node:path';
 import { ROOT } from '../src/config.js';
 import { createServer } from '../src/server.js';
 import { actorFromToken, recordDirector, recordProposed, type Deps } from '../src/selfimprove.js';
-import { testApp } from './helpers.js';
+import { closeServer, testApp } from './helpers.js';
 
 // B-19 / D10b-S1: lỗi 409 của route /api/selfimprove/* phải che đường dẫn cục bộ (D4); thao tác ghi cần token.
 // Route dùng ROOT thật làm repo: test KHÔNG sửa tệp trong repo; "tệp đích bị sửa ngoài luồng" mô phỏng bằng bản vá có ngữ cảnh không còn khớp.
@@ -21,7 +21,7 @@ test('route 409 che đường dẫn (apply sai trạng thái; apply khi tệp đ
   const srv0 = createServer(app);
   await new Promise<void>((r) => srv0.listen(0, '127.0.0.1', r));
   const port = (srv0.address() as AddressInfo).port;
-  srv0.close();
+  await closeServer(srv0);
   app.config.server.port = port;
   const srv = createServer(app);
   await new Promise<void>((r) => srv.listen(port, '127.0.0.1', r));
@@ -63,11 +63,12 @@ test('route 409 che đường dẫn (apply sai trạng thái; apply khi tệp đ
     for (const verb of ['approve', 'reject', 'apply', 'rollback-confirm']) {
       const res = await call(`/api/selfimprove/proposals/P-1/${verb}`, false);
       assert.equal(res.status, 401, verb);
+      await res.arrayBuffer(); // đọc hết thân để socket keep-alive không còn dở khi đóng server
     }
     const list = (await (await fetch(`http://127.0.0.1:${port}/api/selfimprove/proposals`, { headers: { authorization: `Bearer ${TOKEN}` } })).json()) as Array<{ id: string; status: string }>;
     assert.equal(list.find((x) => x.id === 'P-1')!.status, 'approved');
   } finally {
-    srv.close();
+    await closeServer(srv);
     app.cleanup();
   }
 });

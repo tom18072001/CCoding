@@ -9,7 +9,7 @@ import { createApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
 import { parseReview } from '../src/planner.js';
 import { compactHistory, toolName, wantsCacheControl, withCacheMarks } from '../src/runtimes/api.js';
-import { readJson, testApp } from './helpers.js';
+import { closeServer, readJson, testApp } from './helpers.js';
 
 // Các cải tiến quy trình sau đợt đánh giá performance 26/10: chạy lệnh lần lượt trong repo dùng chung, review có bằng chứng,
 // ước lượng/tách nhiệm vụ, ngân sách theo hạng mục, né model vừa bị 429, rút gọn lịch sử theo đợt + điểm cache.
@@ -102,7 +102,7 @@ test('repo dự án dùng chung: hạng mục chạy lệnh làm lần lượt, 
         assert.ok(gw.stats.peakRunners > 1, 'tắt serializeWriters thì chạy song song như trước');
       }
     } finally {
-      gw.srv.close();
+      await closeServer(gw.srv);
       fs.rmSync(dataDir, { recursive: true, force: true });
       fs.rmSync(ws, { recursive: true, force: true });
     }
@@ -213,7 +213,7 @@ test('model vừa báo 429 bị xếp sau model khác cho tới khi gọi thành
     app.runtimes.markOk('fake::m-a');
     assert.deepEqual(await order(), ['m-a', 'm-b'], 'gọi thành công lại → về vị trí cũ');
   } finally {
-    srv.close();
+    await closeServer(srv);
     fs.rmSync(dataDir, { recursive: true, force: true });
   }
 });
@@ -371,7 +371,7 @@ test('API dự án: lưu baseRef, worktreeCopy rỗng, lệnh cấm; từ chối
   const probe = createServer(app);
   await new Promise<void>((r) => probe.listen(0, '127.0.0.1', r));
   const port = (probe.address() as AddressInfo).port;
-  probe.close();
+  await closeServer(probe);
   app.config.server.port = port;
   const srv = createServer(app);
   await new Promise<void>((r) => srv.listen(port, '127.0.0.1', r));
@@ -408,7 +408,7 @@ test('API dự án: lưu baseRef, worktreeCopy rỗng, lệnh cấm; từ chối
     assert.equal((await post({ id: 'nd-test', name: 'Thử', checkCommands: ['docker compose up'] })).status, 400, 'docker bị cấm ở dự án');
     assert.equal((await post({ id: 'nd-test', name: 'Thử', checkCommands: ['git push origin main'] })).status, 400, 'git push bị cấm mặc định');
   } finally {
-    srv.close();
+    await closeServer(srv);
   }
 });
 
@@ -517,7 +517,7 @@ test('hạng mục chạm trần công cụ khi chưa xong → chạy tiếp v�
     assert.deepEqual(seen.filter((x, i) => x !== seen[i - 1]), ['S1', 'S1-cont', 'frontend-dev'], 'S2 chỉ chạy sau khi S1 xong thật (mỗi phần tử: các lượt của một lần gọi)');
     assert.ok(app.logs.query({ task: t.id, limit: 2000 }).some((e) => e.kind === 'subtask.continue'));
   } finally {
-    srv.close();
+    await closeServer(srv);
     fs.rmSync(dataDir, { recursive: true, force: true });
     fs.rmSync(ws, { recursive: true, force: true });
   }
@@ -591,7 +591,7 @@ test('hạng mục vẫn chưa xong sau các lần chạy tiếp → nhiệm v�
     assert.equal(second.runs[0].subtasks.find((s) => s.id === 'S1')!.incomplete, undefined);
     assert.equal(second.runs[0].subtasks.find((s) => s.id === 'S2')!.status, 'done');
   } finally {
-    srv.close();
+    await closeServer(srv);
     fs.rmSync(dataDir, { recursive: true, force: true });
     fs.rmSync(ws, { recursive: true, force: true });
   }
@@ -639,7 +639,7 @@ test('vòng công cụ: đọc trùng không gửi lại nội dung; chưa ghi t
     assert.equal(nudges.length, 2, 'nhắc hai lần (≈35% và ≈65%)');
     assert.match(r.diag ?? '', /nhắc ghi tệp lần 1 ở lượt 4.*nhắc ghi tệp lần 2 ở lượt 7/);
   } finally {
-    srv.close();
+    await closeServer(srv);
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
@@ -703,8 +703,8 @@ test('lỗi giữa vòng công cụ sau khi đã ghi workspace (vd. 429) → l�
     assert.match(prompts[0], /Lần thử trước bị ngắt giữa chừng/);
     assert.match(prompts[0], /write_file .*api\.js/);
   } finally {
-    sa.close();
-    sb.close();
+    await closeServer(sa);
+    await closeServer(sb);
     fs.rmSync(dataDir, { recursive: true, force: true });
     fs.rmSync(ws, { recursive: true, force: true });
   }
@@ -731,7 +731,7 @@ test('luồng trả lời treo (không byte nào trong idleTimeoutMs) → lỗi 
     assert.ok(Date.now() - t0 < 5000, `${Date.now() - t0} ms`);
   } finally {
     srv.closeAllConnections?.();
-    srv.close();
+    await closeServer(srv);
   }
 });
 
@@ -827,7 +827,7 @@ test('CCoding tự chạy lệnh chuẩn bị + kiểm tra của dự án: basel
     assert.match(fs.readFileSync(path.join(ws, '.ccoding', t.id, 'repo-map.md'), 'utf8'), /check\.js/);
     assert.match(gw.prompts.execute[0], /BẢN ĐỒ REPO: `\.ccoding\/[^`]+\/repo-map\.md`/);
   } finally {
-    gw.srv.close();
+    await closeServer(gw.srv);
     fs.rmSync(dataDir, { recursive: true, force: true });
     fs.rmSync(ws, { recursive: true, force: true });
   }
@@ -850,7 +850,7 @@ test('review cuối chưa duyệt → nhiệm vụ xong nhưng gắn cờ "cần
     assert.ok(docker?.denied, 'lệnh bị chặn theo danh sách cấm của dự án');
     assert.match(app.store.readRunFile(t.id, 'FINAL.md') ?? '', /Cần xem lại/);
   } finally {
-    gw.srv.close();
+    await closeServer(gw.srv);
     fs.rmSync(dataDir, { recursive: true, force: true });
     fs.rmSync(ws, { recursive: true, force: true });
   }
@@ -1048,8 +1048,8 @@ test('pha nặng: model nhanh bị 429 và sắp mở lại → tạm dừng ch�
     assert.ok(c2.list.every((x) => x.runtime.id !== 'b'), 'runtime đã tắt không được dùng');
     assert.ok(app.runtimes.isSlow({ model: 'm-b' }) && !app.runtimes.isSlow({ model: 'm-a' }));
   } finally {
-    sa.close();
-    sb.close();
+    await closeServer(sa);
+    await closeServer(sb);
     fs.rmSync(dataDir, { recursive: true, force: true });
     fs.rmSync(ws, { recursive: true, force: true });
   }
@@ -1138,7 +1138,7 @@ test('tạm dừng giữa vòng sửa rồi tiếp tục: sửa tiếp theo revi
     assert.equal(done.projectChecks?.latest?.[0].ok, true, 'lệnh kiểm tra chạy lại sau khi sửa xong');
     assert.equal(done.runs[0].revising, undefined);
   } finally {
-    srv.close();
+    await closeServer(srv);
     fs.rmSync(dataDir, { recursive: true, force: true });
     fs.rmSync(ws, { recursive: true, force: true });
   }

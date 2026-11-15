@@ -9,6 +9,7 @@ import { createApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
 import { clusterIncidents, clusterSummary, listProposals, loadIncidents, persistClusters, recordProposed, type SkipReason } from '../src/selfimprove.js';
 import type { Classification } from '../src/types.js';
+import { closeServer } from './helpers.js';
 
 // K4 (D13): chạy cả vòng Orchestrator bằng gateway giả (không LLM thật, không claude -p) cho khối nguồn sự cố B-19.
 // Reviewer từ chối ở lần đầu (major) → nguồn review.issue; lượt sửa trả mục "Nhật ký sự cố" → nguồn revise.incident.
@@ -80,7 +81,7 @@ async function runTask(selfImprove: Record<string, unknown>, classification: Cla
     assert.equal(done.classification, classification, 'nhãn dữ liệu của nhiệm vụ lấy từ dự án');
     return { dataDir, taskId: t.id, ev: allEvents(dataDir), app };
   } finally {
-    gw.srv.close();
+    await closeServer(gw.srv);
   }
 }
 

@@ -40,9 +40,19 @@ test('SR-24: mọi bài (kể cả a2/re2/s2) có hidden/nearmiss/ không rỗng
   }
 });
 
+/**
+ * Oracle chấm lại tối đa 3 lần khi chưa đạt 1: t4-perf có test ẩn đo thời gian (< 1000 ms, tốt nhất trong 3 lần) nên đỏ ngẫu nhiên khi máy bận
+ * (đã thấy 18/19 = 0,947 ở 1 trong 10 lần chạy test:bench, xem docs/test-bench-flaky.md). Oracle sai thật thì cả 3 lần đều sai.
+ */
+export async function gradeOracle(id, gradeFn = grade, buildFn = build, attempts = 3) {
+  let o;
+  for (let k = 0; k < attempts; k++) { o = await gradeFn(id, buildFn(id, false)); if (o.score === 1) break; }
+  return o;
+}
+
 test('SR-24: nearmiss < oracle = 1,00 và nearmiss > null ở từng bài', async () => {
   for (const id of ids) {
-    const o = await grade(id, build(id, false));
+    const o = await gradeOracle(id);
     const n = await grade(id, build(id, true));
     assert.equal(o.score, 1, `${id}: oracle`);
     assert.ok(n.score < 1 && n.score > 0, `${id}: nearmiss ${n.score} phải trong (0, 1)`);
@@ -72,4 +82,12 @@ test('SR-24: run.mjs --arms oracle,nearmiss chạy thật trên bài cũ (g1) v�
     assert.equal(n.costUsd, 0);
     assert.equal(n.status, 'done');
   }
+});
+
+test('SR-24: gradeOracle thử lại khi điểm < 1 do nhiễu thời gian, nhưng oracle sai thật vẫn đỏ', async () => {
+  const seq = [{ score: 0.95 }, { score: 1 }];
+  assert.equal((await gradeOracle('x', async () => seq.shift(), () => 'd')).score, 1);
+  let n = 0;
+  assert.equal((await gradeOracle('x', async () => { n++; return { score: 0.5 }; }, () => 'd')).score, 0.5);
+  assert.equal(n, 3);
 });

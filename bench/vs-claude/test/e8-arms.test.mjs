@@ -50,7 +50,7 @@ test('runCcoding ghi wallSecTask từ nhiệm vụ cuối, vẫn giữ wallSec c
     assert.equal(r.research.wallSecTask, 63.5);
     assert.equal(r.research.queueSecTask, 2);
     assert.equal(typeof r.wallSec, 'number');
-  } finally { srv.close(); }
+  } finally { await new Promise((r) => { srv.close(r); srv.closeAllConnections?.(); }); }
 });
 
 test('run.mjs: arm server "alt" cần --ccoding-url-alt và --ccoding-data-alt, và server đó phải chạy', () => {
@@ -96,7 +96,7 @@ test('K4: tạm dừng rồi tiếp tục → wallSecTask gồm cả thời gian
     assert.equal(r.research.wallSecTask, 40, 'gồm cả thời gian dừng');
     assert.equal(r.research.pauseCount, 1);
     assert.ok(r.research.pausedSecObserved >= 9, `pausedSecObserved=${r.research.pausedSecObserved}`);
-  } finally { srv.close(); }
+  } finally { await new Promise((r) => { srv.close(r); srv.closeAllConnections?.(); }); }
 });
 
 test('e8/analyze:Δ ln theo bài, hoán vị trong bài, kiểm B6w1 không chạy chồng', async () => {

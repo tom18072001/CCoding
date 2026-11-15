@@ -8,6 +8,7 @@ import path from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { createApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
+import { closeServer } from './helpers.js';
 
 // Hạng mục chạy lệnh làm SONG SONG trong worktree con riêng, CCoding gộp vào nhánh nhiệm vụ; xung đột → làm lại lần lượt.
 
@@ -147,7 +148,7 @@ test('repo git: hạng mục chạy lệnh chạy song song trong worktree con r
         assert.match(msgs, /làm lần lượt/);
       }
     } finally {
-      gw.srv.close();
+      await closeServer(gw.srv);
       fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
       fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
@@ -193,7 +194,7 @@ test('gộp worktree con bị xung đột → giải quyết trong worktree con 
     assert.doesNotMatch(gitc(repo, 'branch', '--list'), /--s\d/i);
     assert.doesNotMatch(gitc(repo, 'worktree', 'list'), /--s\d/i);
   } finally {
-    gw.srv.close();
+    await closeServer(gw.srv);
     fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
@@ -229,7 +230,7 @@ test('trong lúc một hạng mục giải quyết xung đột, hạng mục kh�
     assert.equal(gitc(repo, 'show', `${done.branch}:c.txt`), 'tu frontend');
     assert.equal(gitc(repo, 'show', `${done.branch}:shared.txt`), 'tu backend-dev\ntu devops');
   } finally {
-    gw.srv.close();
+    await closeServer(gw.srv);
     fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
@@ -260,7 +261,7 @@ test('vai trò không có quyền chạy lệnh (Kiến trúc sư) vẫn giải 
     assert.equal(gitc(repo, 'show', `${done.branch}:shared.txt`), 'tu backend-dev\ntu solution-architect');
     assert.match(gitc(repo, 'log', '--format=%s', done.branch), /gộp lại ccoding\/[^ ]+-xd1 \(S2\)/, 'CCoding tự hoàn tất merge');
   } finally {
-    gw.srv.close();
+    await closeServer(gw.srv);
     fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
@@ -291,7 +292,7 @@ test('lượt giải quyết xung đột để lại dấu xung đột → KHÔN
     assert.doesNotMatch(gitc(repo, 'worktree', 'list'), /--s\d/i, 'worktree của lượt giải quyết đã gỡ');
     assert.notEqual(done.status, 'done');
   } finally {
-    gw.srv.close();
+    await closeServer(gw.srv);
     fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
@@ -331,7 +332,7 @@ test('đường dự phòng (resolveRounds: 0): làm lại lần lượt trong w
     assert.equal(gitc(repo, 'show', `${done.branch}:shared.txt`), 'tu backend-dev\ntu devops');
     assert.doesNotMatch(gitc(repo, 'branch', '--list'), /--s\d/i);
   } finally {
-    gw.srv.close();
+    await closeServer(gw.srv);
     fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
@@ -355,7 +356,7 @@ test('hook commit của repo không chặn CCoding commit/gộp worktree con', {
     assert.equal(done.status, 'done', done.error);
     for (const f of Object.values(files)) assert.match(gitc(repo, 'show', `${done.branch}:${f}`), /^tu /);
   } finally {
-    gw.srv.close();
+    await closeServer(gw.srv);
     fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
@@ -423,7 +424,7 @@ test('phụ thuộc mới cài trong worktree con rồi gộp → chạy lại l
     assert.match(done.commit ?? '', /^[0-9a-f]{10} — \d+ commit trên nhánh từ [0-9a-f]{10}/);
     assert.match(a.store.readRunFile(t.id, 'FINAL.md') ?? '', /commit: [0-9a-f]{10} — \d+ commit/);
   } finally {
-    gw.srv.close();
+    await closeServer(gw.srv);
     fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
@@ -464,7 +465,7 @@ test('hạng mục chỉ ghi tài liệu cũng làm trong worktree con (không b
     assert.equal(setups.length, 1, 'lệnh chuẩn bị chỉ chạy cho hạng mục chạy lệnh');
     assert.match(setups[0], /S1 worktree con/);
   } finally {
-    gw.srv.close();
+    await closeServer(gw.srv);
     fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
@@ -497,7 +498,7 @@ test('runSubSetup: lệnh chuẩn bị trong worktree con nhận CCODING_BASE_RE
     assert.ok(seen.length >= 1, 'lệnh chuẩn bị đã chạy trong worktree con');
     for (const v of seen) assert.equal(v, done.baseRef, 'mỗi lần chạy thấy mốc của nhiệm vụ');
   } finally {
-    gw.srv.close();
+    await closeServer(gw.srv);
     fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }

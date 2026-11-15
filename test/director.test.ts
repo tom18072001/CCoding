@@ -5,14 +5,14 @@ import { createServer } from '../src/server.js';
 import { systemFor } from '../src/prompts.js';
 import { pickRateHeaders } from '../src/runtimes/api.js';
 import { readJsonl } from '../src/util/fsx.js';
-import { readJson, testApp } from './helpers.js';
+import { closeServer, readJson, testApp } from './helpers.js';
 
 async function serve(app: ReturnType<typeof testApp>) {
   const srv = createServer(app);
   await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
   const port = (srv.address() as AddressInfo).port;
   app.config.server.port = port;
-  srv.close();
+  await closeServer(srv);
   const srv2 = createServer(app);
   await new Promise<void>((r) => srv2.listen(port, '127.0.0.1', r));
   const base = `http://127.0.0.1:${port}`;
@@ -95,7 +95,7 @@ test('góp ý cho agent: lưu, bật/tắt, đưa vào hồ sơ (system prompt) 
     assert.equal(t.agentId, 'devops');
     await app.orchestrator.waitFor(t.id);
   } finally {
-    srv.close();
+    await closeServer(srv);
     app.cleanup();
   }
 });
@@ -176,7 +176,7 @@ test('giám đốc duyệt / yêu cầu sửa bằng tay: sửa theo yêu cầu 
       assert.equal((await json(`/api/tasks/${q.id}/review`, { decision: 'xyz' })).status, 409);
       assert.equal((await json(`/api/tasks/${q.id}/review`, { decision: 'approve' })).status, 200);
     } finally {
-      srv.close();
+      await closeServer(srv);
     }
   } finally {
     app.cleanup();
@@ -245,7 +245,7 @@ test('việc cần sửa: chấm bản cuối mỗi hạng mục; tự hết sau
       assert.equal(((await fb.json()) as { finding?: string }).finding, 'template');
       assert.equal((await json('/api/kpi')).status, 200);
     } finally {
-      srv.close();
+      await closeServer(srv);
     }
   } finally {
     app.cleanup();

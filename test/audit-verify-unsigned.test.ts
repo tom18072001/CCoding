@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from '../src/server.js';
 import type { AddressInfo } from 'node:net';
-import { testApp } from './helpers.js';
+import { closeServer, testApp } from './helpers.js';
 
 // m2 (D18d): /api/audit/verify nhận allowUnsigned như CLI --allow-unsigned.
 const ENV = 'CCODING_LOG_HMAC_KEY';
@@ -13,7 +13,7 @@ async function withServer(fn: (verify: (qs?: string) => Promise<{ ok: boolean; r
   const s0 = createServer(app);
   await new Promise<void>((r) => s0.listen(0, '127.0.0.1', r));
   const port = (s0.address() as AddressInfo).port;
-  s0.close();
+  await closeServer(s0);
   app.config.server.port = port;
   const srv = createServer(app);
   await new Promise<void>((r) => srv.listen(port, '127.0.0.1', r));
@@ -23,7 +23,7 @@ async function withServer(fn: (verify: (qs?: string) => Promise<{ ok: boolean; r
   } finally {
     if (old === undefined) delete process.env[ENV];
     else process.env[ENV] = old;
-    srv.close();
+    await closeServer(srv);
     app.cleanup();
   }
 }
